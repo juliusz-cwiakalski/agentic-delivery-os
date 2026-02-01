@@ -2,7 +2,7 @@
 change:
   ref: GH-1
   type: feat
-  status: Proposed
+   status: Implemented
   slug: set-up-pm-agent-workflow-and-issue-tracking
   title: "Set up PM agent workflow and issue tracking"
   owners: [juliusz-cwiakalski]
