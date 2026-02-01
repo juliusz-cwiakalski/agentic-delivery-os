@@ -10,7 +10,7 @@ owners: ["engineering"]
 summary: "Repository documentation structure, conventions, and workflow."
 ---
 
-# Documentation Handbook — Structure, Conventions & Workflow (Per‑Repository Standard)
+# Documentation Handbook - Structure, Conventions & Workflow (Per-Repository Standard)
 
 > **Audience:** Engineers, product/design, operators, and AI coding/analysis agents.
 >
@@ -184,7 +184,7 @@ summary: "Repository documentation structure, conventions, and workflow."
   `/ops/runbooks` are for on-call procedures, `/guides` are for day-to-day development workflows.
 
 - **`/changes/Nxx/NNN-short-title/`**:
-  - `chg-NNN-spec-short-title.md` (required): The proposal  accepted change (CHANGE SPEC).
+  - `chg-NNN-spec-short-title.md` (required): The proposal accepted change (CHANGE SPEC).
   - `chg-NNN-plan-short-title.md` (recommended): Work breakdown, risks, rollout/rollback (IMPLEMENTATION PLAN).
   - `chg-NNN-tests-short-title.md` (recommended): Per-change test plan/spec aligned to the CHANGE SPEC and IMPLEMENTATION PLAN.
   - `examples.json` (optional): Requests/responses, UI screenshots links.

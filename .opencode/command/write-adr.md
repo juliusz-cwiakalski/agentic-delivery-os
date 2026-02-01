@@ -179,18 +179,17 @@ last_updated: <last-updated-date-utc>
 status: <Proposed|Accepted|Deprecated|Superseded>
 summary: <Short one-line summary of the decision>
 owners:
-
-- <owner-or-team>
-  service: <primary impacted service or domain>
-  links:
-    related_changes:
-      - <workItemRef-or-empty>
-    supersedes: []
-    superseded_by: []
-    spec: []
-    contracts: []
-    diagrams: []
-    adr: []
+  - <owner-or-team>
+service: <primary impacted service or domain>
+links:
+  related_changes:
+    - <workItemRef-or-empty>
+  supersedes: []
+  superseded_by: []
+  spec: []
+  contracts: []
+  diagrams: []
+  adr: []
 
 ---
 
@@ -264,7 +263,7 @@ Objective reframing of the problem, focusing on underlying causes rather than sy
 ## Confidence Rating
 
 - Confidence: <Low|Medium|High>.
-- Factors influencing confidence (data, precedent, validation.
+- Factors influencing confidence: data, precedent, validation.
 
 ## Lessons Learned (Retrospective)
 
