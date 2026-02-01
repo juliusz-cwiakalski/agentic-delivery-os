@@ -124,7 +124,10 @@ Usage rules:
    - Draft Given/When/Then acceptance criteria.
    - Discuss rollout: migration, dark launch, rollback triggers, communication.
 
-10. **Consolidation and readiness check** - Maintain explicit list of Open Questions (BLOCKING / NON-BLOCKING with owner). - Resolve as many as possible; confirm user is comfortable proceeding. - Synthesize final `<change_planning_summary>`.
+10. **Consolidation and readiness check**
+   - Maintain explicit list of Open Questions (BLOCKING / NON-BLOCKING with owner).
+   - Resolve as many as possible; confirm user is comfortable proceeding.
+   - Synthesize final `<change_planning_summary>`.
     </session_flow>
 
 <questioning_strategy>
