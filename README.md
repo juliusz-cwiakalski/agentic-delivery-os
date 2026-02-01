@@ -1,3 +1,16 @@
+<p align="center">
+  <a href="./assets/hero.png">
+    <picture>
+      <source srcset="assets/hero.webp" type="image/webp" />
+      <img
+        src="./assets/hero.png"
+        alt="Agentic Delivery OS - Ship faster. Break less. AI-Native SDLC"
+        width="880"
+      />
+    </picture>
+  </a>
+</p>
+
 # Agentic Delivery OS
 
 Turn AI from "chat assistance" into a repeatable, auditable delivery system:
@@ -98,4 +111,8 @@ Open-source. See `LICENSE`.
 
 ## Author
 
-Maintained by Juliusz Cwiakalski (JCW).
+Maintained by Juliusz Ćwiąkalski. If you find this useful, follow me or drop by my homepage (blog + newsletter):
+
+- Website (blog + newsletter): https://www.cwiakalski.com
+- LinkedIn: https://www.linkedin.com/in/juliusz-cwiakalski/
+- X: https://x.com/cwiakalski
