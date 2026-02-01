@@ -1,0 +1,35 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "pm",
+  "mcp": {
+    "github-mcp": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-github"],
+      "environment": {
+        //Go GitHub https://github.com/settings/tokens
+        //Settings -> Developer Settings -> Personal access tokens (classic).
+        //Generate new token with following permissions: repo, read:org i user
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_API_TOKEN}"
+      },
+      "enabled": true
+    }
+  },
+  "tools": {
+    //by default disable github tools for all agents - enable only for pm agent below
+    "github*": false
+  },
+  "agent": {
+    "pm": {
+      "tools": {
+        "github*": true,
+        "read": true,
+        "write": true,
+        "edit": true,
+        "bash": false
+      }
+    }
+  }
+}
