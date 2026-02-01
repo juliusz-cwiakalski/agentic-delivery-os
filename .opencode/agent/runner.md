@@ -1,7 +1,8 @@
 ---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/juliusz-cwiakalski)
-#
 # MIT License - see LICENSE file for full terms
+# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/runner.md
+#
 description: Run commands, save logs, summarize output.
 mode: subagent
 model: github-copilot/grok-code-fast-1

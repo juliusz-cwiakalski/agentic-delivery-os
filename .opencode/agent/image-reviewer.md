@@ -1,7 +1,8 @@
 ---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-#
 # MIT License - see LICENSE file for full terms
+# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/image-reviewer.md
+#
 description: >-
   Use this agent when another agent or the user needs expert analysis of an
   input image, screenshot, mockup, photo, or visual artifact. This agent is
