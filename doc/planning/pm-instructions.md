@@ -29,14 +29,17 @@ Map change lifecycle to GitHub issue states and labels:
 ## Issue Creation & Management
 
 ### Creating New Changes
-1. Use `gh_create_issue` MCP tool with:
+
+1. Before creating, check for existing issues using `gh_list_issues` with `state:open`, `labels:change`. Also present user draft of a task for review before creating it.
+
+2. Use `gh_create_issue` MCP tool with:
    - `owner`: `juliusz-cwiakalski`
    - `repo`: `agentic-delivery-os`
    - `title`: Descriptive change title
    - `body`: Initial description with context, problem statement, goals
    - `labels`: `["change"]`
 
-2. Record the returned `issue_number` as `workItemRef` in format `GH-{number}`
+3. Record the returned `issue_number` as `workItemRef` in format `GH-{number}`
 
 ### Updating Issues
 - Use `gh_update_issue` for state changes (open/closed)
