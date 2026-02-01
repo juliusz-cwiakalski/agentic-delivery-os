@@ -53,20 +53,20 @@ I use this repo to evolve and validate an AI-native delivery operating model on 
 
 ## Docs at a glance
 
-- How to use the agents/commands: `doc/guides/opencode-agents-and-commands-guide.md`
-- Change folder + naming convention (workItemRef, branches, files): `doc/guides/unified-change-convention-tracker-agnostic-specification.md`
-- Broader docs layout standard (some details may differ per repo): `doc/documentation-handbook.md`
+- How to use the agents/commands: [doc/guides/opencode-agents-and-commands-guide.md](doc/guides/opencode-agents-and-commands-guide.md)
+- Change folder + naming convention (workItemRef, branches, files): [doc/guides/unified-change-convention-tracker-agnostic-specification.md](doc/guides/unified-change-convention-tracker-agnostic-specification.md)
+- Broader docs layout standard (some details may differ per repo): [doc/documentation-handbook.md](doc/documentation-handbook.md)
 
 ## What is implemented here
 
-OpenCode tooling (see `.opencode/README.md` for the authoritative list):
+OpenCode tooling (see the main README for the authoritative list):
 
 - Agents for common SDLC roles: `@pm`, `@delivery-agent`, `@spec-writer`, `@plan-writer`, `@test-plan-writer`, `@executor`, `@reviewer`, `@doc-syncer`, `@pr-manager`, `@runner`, `@fixer`, `@committer`, `@architect`, `@editor`, `@designer`, `@image-reviewer`.
 - Commands that compose them into a repeatable workflow: `/plan-change`, `/write-spec`, `/write-plan`, `/write-test-plan`, `/run-plan`, `/review`, `/review-deep`, `/sync-docs`, `/check`, `/check-fix`, `/pr`, `/commit`, `/plan-decision`, `/write-adr`.
 
 ## Typical workflow (manual)
 
-For the detailed walkthrough, see `doc/guides/opencode-agents-and-commands-guide.md`. The common flow is:
+For the detailed walkthrough, see [doc/guides/opencode-agents-and-commands-guide.md](doc/guides/opencode-agents-and-commands-guide.md). The common flow is:
 
 ```text
 /plan-change <workItemRef?>
@@ -101,18 +101,17 @@ Branches follow conventional-commit-aligned types:
 ├── .opencode/        # OpenCode agents and commands (repo-local tooling)
 └── doc/
     ├── guides/       # how-to guides (OpenCode workflow, naming conventions)
-    ├── tmp/          # drafts/scratch (not canonical)
     └── documentation-handbook.md
 ```
 
 ## License
 
-Open-source. See `LICENSE`.
+Open-source. See [LICENSE](LICENSE).
 
 ## Author
 
 Maintained by Juliusz Ćwiąkalski. If you find this useful, follow me or drop by my homepage (blog + newsletter):
 
+- LinkedIn: [@juliusz-cwiakalski](https://www.linkedin.com/in/juliusz-cwiakalski/)
+- X: [@cwiakalski](https://x.com/cwiakalski)
 - Website (blog + newsletter): https://www.cwiakalski.com
-- LinkedIn: https://www.linkedin.com/in/juliusz-cwiakalski/
-- X: https://x.com/cwiakalski
