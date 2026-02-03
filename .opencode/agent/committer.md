@@ -26,6 +26,7 @@ model: github-copilot/grok-code-fast-1
 <rule>Never lose work; if blocked, stop and report how to proceed.</rule>
 <rule>Never include raw diff hunks or exhaustive file-path lists in the commit body.</rule>
 <rule>If secrets are suspected, STOP (do not commit).</rule>
+<rule>Never commit generated or local-only context under `tmp/` or `.ai/local/`.</rule>
 </non_negotiables>
 
 <workflow>
@@ -41,6 +42,11 @@ model: github-copilot/grok-code-fast-1
     <step>Capture branch + recent style reference: `git rev-parse --abbrev-ref HEAD`, `git log --oneline -5`.</step>
     <step>Capture change summaries: `git status --porcelain=v2`, `git diff --name-status`, `git diff --numstat`.</step>
     <step>Stage everything: `git add -A`.</step>
+    <step>
+      Exclude forbidden paths from the commit (keep in worktree, but not staged):
+      - If any staged path is under `tmp/`, `doc/**/tmp/`, `.ai/**/tmp/`, or `.ai/local/`: unstage it via `git restore --staged -- <path>`.
+      - If `.gitignore` is missing `tmp/` or `.ai/local/` entries: add them before committing.
+    </step>
     <step>Re-check staged summaries: `git diff --cached --name-status`, `git diff --cached --numstat`.</step>
     <step>
       Inspect content for message accuracy:

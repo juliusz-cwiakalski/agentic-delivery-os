@@ -95,19 +95,47 @@ Stable, slug-free filenames:
 - `chg-<workItemRef>-spec.md`
 - `chg-<workItemRef>-plan.md`
 - `chg-<workItemRef>-test-plan.md`
+- `chg-<workItemRef>-pm-notes.yaml` (**mandatory**: PM progress + decisions + open questions)
 - `chg-<workItemRef>-notes.md` (optional)
 
-### AI context subfolder
-Per-change agent context artifacts:
-- `ai/` subfolder inside the change folder
+### PM notes (change-scoped)
+PM progress notes are stored directly in the change folder:
 
-Example:
-- `ai/product-manager-context.md` (optional)
-- `ai/debug-test-runner-context.md` (optional)
+- `chg-<workItemRef>-pm-notes.yaml`
+
+This file is **mandatory** for every change. It serves as:
+- PM's long-term memory for the change
+- Status tracking across sessions (phases started/completed)
+- Traceability via git history
+- Decisions, open questions, and blockers log
 
 Rules:
-- Keep agent context **change-scoped**.
+
+- Keep notes change-scoped.
 - Do not store secrets, tokens, or credentials.
+- Commit this file to git (it is NOT gitignored).
+
+Structure (see `doc/guides/change-lifecycle.md` for full details):
+
+```yaml
+change_id: GH-5
+title: "..."
+phases:
+  clarify_scope: { started: null, completed: null }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions: []
+open_questions: []
+blockers: []
+notes: ""
+```
 
 ---
 
@@ -198,33 +226,24 @@ Given no `workItemRef`:
 
 ## Change Lifecycle (Recommended Operating Procedure)
 
-### 1) Create / select ticket
-- Create or pick the tracker ticket.
-- Decide `type` (feat/fix/refactor/etc.) and `slug`.
+For detailed phase-by-phase guidance with agent responsibilities, see `doc/guides/change-lifecycle.md`.
 
-### 2) Create change folder and artifacts
-- Create `doc/changes/YYYY-MM/YYYY-MM-DD--workItemRef--slug/`.
-- Add:
-  - `chg-workItemRef-spec.md`
-  - `chg-workItemRef-plan.md`
-  - `chg-workItemRef-test-plan.md`
-  - optional notes/context under `ai/`
+### Summary
 
-### 3) Create feature branches
-- Create branch: `<type>/<workItemRef>/<slug>` in each impacted repo.
-- Record branch name in the ticket.
+The PM agent (`@pm`) orchestrates these phases:
 
-### 4) Implement incrementally
-- Keep spec/plan/test-plan updated as the change evolves.
-- Use `ai/` context files only for change-scoped agent state.
+1. **clarify_scope** — Ensure requirements are unambiguous
+2. **specification** — Create `chg-<workItemRef>-spec.md` via `@spec-writer`
+3. **test_planning** — Create `chg-<workItemRef>-test-plan.md` via `@test-plan-writer`
+4. **delivery_planning** — Create `chg-<workItemRef>-plan.md` via `@plan-writer`
+5. **delivery** — Hand over to `@delivery-agent` for implementation
+6. **system_spec_update** — Reconcile system docs via `@doc-syncer`
+7. **review_fix** — Review and fix cycle via `@reviewer`
+8. **quality_gates** — Run builds/tests via `@runner`
+9. **dod_check** — Final acceptance gate (PM verifies all phases complete)
+10. **pr_creation** — Create PR/MR via `@pr-manager`, assign to human, STOP
 
-### 5) Update central system specification before closure
-- Before closing the ticket, update the central “current” specification(s) so the system’s truth is preserved.
-
-### 6) Close ticket
-- Close the ticket only when Acceptance Criteria (AC) and Definition of Done (DoD) are satisfied.
-- If later a regression appears after the ticket is truly closed:
-  - open a **new** ticket and create a **new** change folder.
+Phases can be reopened if gaps are discovered in later phases.
 
 ---
 
@@ -239,7 +258,7 @@ Minimum recommended sections:
 - Dependencies
 
 ### Plan (`chg-<workItemRef>-plan.md`)
-- Implementation steps (ordered)
+- Implementation phases and steps (ordered)
 - Migration / rollout considerations
 - Observability (logging/metrics/alerts)
 
@@ -283,6 +302,7 @@ Files:
 - `chg-PDEV-123-spec.md`
 - `chg-PDEV-123-plan.md`
 - `chg-PDEV-123-test-plan.md`
+- `chg-PDEV-123-pm-notes.yaml`
 
 ### GitHub fix
 Path:
@@ -295,6 +315,7 @@ Files:
 - `chg-GH-456-spec.md`
 - `chg-GH-456-plan.md`
 - `chg-GH-456-test-plan.md`
+- `chg-GH-456-pm-notes.yaml`
 
 ---
 
@@ -303,7 +324,7 @@ Files:
 - Use start-date in folder name (not sequence numbers).
 - One ticket maps to one change folder.
 - Stable filenames include `workItemRef` and do not depend on slug.
-- Per-change AI context is stored under `<changeFolder>/ai/`.
+- PM progress notes live in `chg-<workItemRef>-pm-notes.yaml` directly in the change folder (**mandatory**).
 - Optional local-only context lives under `.ai/local/` and is gitignored.
 - Branch names follow `<type>/<workItemRef>/<slug>` and are identical across repos when the same ticket spans multiple repositories.
-
+- Change lifecycle is documented in `doc/guides/change-lifecycle.md`.

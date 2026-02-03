@@ -130,23 +130,13 @@ Infer tracker type from `workItemRef` prefix:
 
 - Prefixes like `PDEV`, `PROJ`, `JIRA`, or other uppercase 2-6 char prefixes → Jira
 - Prefix `GH` → GitHub Issues
-- If ambiguous, check `doc/planning/pm-instructions.md` for tracker config
+- If ambiguous, check `.ai/agent/pm-instructions.md` for tracker config
 - If still unclear, skip ticket fetch (do not fail)
 </tracker_detection>
 
 <mcp_operations>
-Use MCP tools to fetch ticket data:
-
-**Jira:**
-
-- `jira_get_issue(issueKey)` → returns issue summary, description, status, comments
-
-**GitHub Issues:**
-
-- `gh_get_issue(owner, repo, number)` → returns issue title, body, state, comments
-- Extract `owner/repo` from `git remote get-url origin`
-- Extract issue number from `workItemRef` (e.g., `GH-456` → number `456`)
-  </mcp_operations>
+Use MCP tools to fetch ticket data as described in `.ai/agent/pm-instructions.md` and/or `AGENTS.md`.
+</mcp_operations>
 
 <output_file>
 Write extracted ticket context to: `tmp/pr/<branchPath>/tickets-context.md`

@@ -5,6 +5,7 @@
 #
 description: Orchestrate end-to-end delivery of an already-specified change
 mode: all
+#model: github-copilot/grok-code-fast-1
 model: github-copilot/grok-code-fast-1
 ---
 
@@ -37,9 +38,9 @@ Given `workItemRef`:
 Folder structure:
 
 - `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`
-- Files: `chg-<workItemRef>-spec.md`, `chg-<workItemRef>-plan.md`, `chg-<workItemRef>-test-plan.md`
-  </discovery_rules>
-  </inputs>
+- Files: `chg-<workItemRef>-spec.md`, `chg-<workItemRef>-plan.md`, `chg-<workItemRef>-test-plan.md`, `chg-<workItemRef>-pm-notes.yaml`
+</discovery_rules>
+</inputs>
 
 <delegation_inventory>
 | Task | Agent |
