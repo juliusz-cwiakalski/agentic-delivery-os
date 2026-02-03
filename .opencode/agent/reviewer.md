@@ -28,6 +28,7 @@ model: deepseek/deepseek-reasoner
 <rule>If not found, search: `doc/changes/**/chg-<workItemRef>-spec.md`</rule>
 <rule>Spec file: `chg-<workItemRef>-spec.md`</rule>
 <rule>Plan file: `chg-<workItemRef>-plan.md`</rule>
+<rule>PM notes file: `chg-<workItemRef>-pm-notes.yaml` (for phase tracking)</rule>
 <rule>Folder pattern: `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`</rule>
 </discovery_rules>
 

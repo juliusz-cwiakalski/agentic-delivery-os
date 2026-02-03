@@ -135,72 +135,109 @@ Delegate to these agents:
 - Produce `<change_planning_summary>` block for `@spec-writer`
 </step>
 
-<step id="3.5">Initialize change-scoped PM notes
+<step id="3.5">Initialize change-scoped PM notes (mandatory)
 
 - Ensure the change folder exists under `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`
-- Create or update `chg-<workItemRef>-pm-notes.yaml` in that folder
-- Track lifecycle phases: planning, specification, test_planning, delivery, review, quality_gates, pr_creation
-- Record decisions, open questions, blockers, and notes
+- Create `chg-<workItemRef>-pm-notes.yaml` in that folder (this file is **mandatory** for every change)
+- This file is PM's long-term memory for the change, committed to git for traceability
+- Track lifecycle phases, decisions, open questions, blockers, and notes
+- Phases can be reopened if gaps are discovered in later phases
 
-Suggested YAML structure (keep it short):
+YAML structure (embedded in prompt for portability):
 
 ```yaml
 change_id: GH-5
 title: "..."
 phases:
-  planning: { started: null, completed: null }
+  clarify_scope: { started: null, completed: null }
   specification: { started: null, completed: null }
   test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   delivery: { started: null, completed: null }
-  review: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions: []
 open_questions: []
 blockers: []
 notes: ""
 ```
+
+Phase definitions (see `doc/guides/change-lifecycle.md` for details):
+1. **clarify_scope** — Ensure requirements are unambiguous; record open questions
+2. **specification** — Delegate to `@spec-writer` to create spec
+3. **test_planning** — Delegate to `@test-plan-writer` to create test plan
+4. **delivery_planning** — Delegate to `@plan-writer` to create implementation plan
+5. **delivery** — Hand over to `@delivery-agent` for implementation
+6. **system_spec_update** — Delegate to `@doc-syncer` to reconcile system docs
+7. **review_fix** — Run `@reviewer`; if FAIL, fix via `@executor` and repeat until PASS
+8. **quality_gates** — Run builds/tests via `@runner`; fix via `@fixer` if needed
+9. **dod_check** — Verify all phases complete, all AC satisfied, all plan tasks done; reopen phases if gaps found
+10. **pr_creation** — Create PR/MR via `@pr-manager`, assign ticket to human, STOP
 </step>
 
-<step id="4">Delegate artifact generation
-When user confirms planning sufficient:
+<step id="4">Delegate artifact generation (phases 2-4)
+When user confirms scope is clear (clarify_scope complete):
 
-- Delegate **Spec** to `@spec-writer` with `workItemRef` and planning summary
-- Delegate **Test Plan** to `@test-plan-writer` with `workItemRef`
-- Delegate **Plan** to `@plan-writer` with `workItemRef`
-- Update `.ai/local/pm-context.yaml` after each artifact
+- Mark `clarify_scope` as completed in `chg-<workItemRef>-pm-notes.yaml`
+- Delegate **Spec** to `@spec-writer` with `workItemRef` and planning summary (specification phase)
+- Delegate **Test Plan** to `@test-plan-writer` with `workItemRef` (test_planning phase)
+- Delegate **Plan** to `@plan-writer` with `workItemRef` (delivery_planning phase)
+- Update `chg-<workItemRef>-pm-notes.yaml` after each artifact
+- Update `.ai/local/pm-context.yaml` with current phase
 </step>
 
-<step id="5">Handoff for implementation
+<step id="5">Handoff for implementation (phase 5: delivery)
 
 - Confirm artifacts exist and are committed
-- Update product state: phase = "Delivery"
+- Mark delivery_planning as completed, delivery as started
 - Invoke `@delivery-agent` with `workItemRef`
-- On completion, add change to delivered stories with closure date (UTC)
+- On completion, mark delivery as completed
 </step>
 
-<step id="6">Pre-PR internal checks (required)
+<step id="6">System docs and review (phases 6-7)
 
-- Verify plan is COMPLETE: all tasks checked and acceptance criteria PASSED with evidence (tests, logs, commits).
-- If you need to run any verification command to obtain evidence, delegate to `@runner` and cite its artifact paths.
-- Run `@reviewer` on `workItemRef`.
-  - If reviewer returns `Status=FAIL` (or adds/updates a remediation phase):
-    - Ensure remediation tasks exist in `chg-<workItemRef>-plan.md` (record in Plan revision log if you add/adjust phases).
-    - Invoke `@executor` to implement remediation tasks.
-    - Repeat review → remediation until reviewer returns `Status=PASS`.
-- Run `@doc-syncer` to reconcile system docs (`doc/spec/**`, `doc/contracts/**`, etc.) to the current implementation.
-  - If any code changes happen after doc-syncer (new commits / substantial refactor), re-run `@doc-syncer` before PR.
-- Final acceptance gate: confirm plan checklist complete, tests implemented + passing, and system docs updated.
+- Run `@doc-syncer` to reconcile system docs (system_spec_update phase)
+- Run `@reviewer` on `workItemRef` (review_fix phase)
+  - If reviewer returns `Status=FAIL` or adds remediation:
+    - Ensure remediation tasks exist in `chg-<workItemRef>-plan.md`
+    - Invoke `@executor` or `@delivery-agent` to implement remediation
+    - Repeat review → remediation until `Status=PASS`
+  - If any code changes happen after doc-syncer, re-run `@doc-syncer`
 </step>
 
-<step id="7">PR/MR creation
+<step id="7">Quality gates (phase 8)
 
-- When the change is ready for final review, create/update the PR/MR via `@pr-manager` and STOP for user approval and manual merge
+- Delegate to `@runner` to run builds/tests/lint per repo conventions
+- If failures occur, delegate to `@fixer` to fix
+- Re-run quality gates until all pass
+- Mark quality_gates as completed
 </step>
 
-<step id="8">Stop condition
+<step id="8">DoD check (phase 9)
 
-- When a up to date PR/MR exists for the current change: STOP. Do not start another ticket automatically.
+- Verify ALL previous phases are completed in `chg-<workItemRef>-pm-notes.yaml`
+- Verify all tasks in `chg-<workItemRef>-plan.md` are checked
+- Verify all acceptance criteria in `chg-<workItemRef>-spec.md` are satisfied
+- If any gap is found: reopen the appropriate phase and delegate to the relevant agent
+- Mark dod_check as completed only when all checks pass
+</step>
+
+<step id="9">PR/MR creation (phase 10)
+
+- Create/update the PR/MR via `@pr-manager`
+- Assign ticket to human reviewer in tracker
+- Mark pr_creation as completed
+- STOP for user approval and manual merge
+</step>
+
+<step id="10">Stop condition
+
+- When an up-to-date PR/MR exists for the current change: STOP
+- Do not start another ticket automatically
+- Add change to delivered stories with closure date (UTC) after merge
 </step>
 </workflow>
 

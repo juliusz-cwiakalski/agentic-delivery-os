@@ -16,29 +16,26 @@ available tools (agents and commands) and describes two primary workflows: **Man
 control) and **Autopilot** (for high-level delegation).
 
 <!-- TOC -->
-
-- [Opencode Agents & Commands Guide](#opencode-agents--commands-guide)
-  - [1. Overview](#1-overview)
-  - [2. Reference: Agents & Commands](#2-reference-agents--commands)
-    - [2.1 Commands (Automation Macros)](#21-commands-automation-macros)
-    - [2.2 Agents (Autonomous Roles)](#22-agents-autonomous-roles)
-  - [3. Workflow 1: Manual Change Orchestration](#3-workflow-1-manual-change-orchestration)
-    - [Step 1: Plan the Change](#step-1-plan-the-change)
-    - [Step 2: Generate the Spec](#step-2-generate-the-spec)
-    - [Step 3: Generate Plans](#step-3-generate-plans)
-    - [Step 4: Implement (Phased Loop)](#step-4-implement-phased-loop)
-    - [Step 5: Review & Refine](#step-5-review--refine)
-    - [Step 6: Reconcile Docs](#step-6-reconcile-docs)
-    - [Step 7: Finalize](#step-7-finalize)
-  - [4. Workflow 2: Autopilot (Product Manager Orchestration)](#4-workflow-2-autopilot-product-manager-orchestration)
-    - [Step 1: High-Level Handoff](#step-1-high-level-handoff)
-    - [Step 2: PM Orchestration (Autonomous)](#step-2-pm-orchestration-autonomous)
-    - [Step 3: Delivery (Autonomous)](#step-3-delivery-autonomous)
-    - [Step 4: User Acceptance](#step-4-user-acceptance)
-  - [5. Best Practices](#5-best-practices)
-  <!-- TOC -->
-
----
+* [Opencode Agents & Commands Guide](#opencode-agents--commands-guide)
+  * [1. Overview](#1-overview)
+  * [2. Reference: Agents & Commands](#2-reference-agents--commands)
+    * [2.1 Commands (Automation Macros)](#21-commands-automation-macros)
+    * [2.2 Agents (Autonomous Roles)](#22-agents-autonomous-roles)
+  * [3. Workflow 1: Manual Change Orchestration](#3-workflow-1-manual-change-orchestration)
+    * [Step 1: Plan the Change](#step-1-plan-the-change)
+    * [Step 2: Generate the Spec](#step-2-generate-the-spec)
+    * [Step 3: Generate Plans](#step-3-generate-plans)
+    * [Step 4: Implement (Phased Loop)](#step-4-implement-phased-loop)
+    * [Step 5: Review & Refine](#step-5-review--refine)
+    * [Step 6: Reconcile Docs](#step-6-reconcile-docs)
+    * [Step 7: Finalize](#step-7-finalize)
+  * [4. Workflow 2: Autopilot (Product Manager Orchestration)](#4-workflow-2-autopilot-product-manager-orchestration)
+    * [Step 1: High-Level Handoff](#step-1-high-level-handoff)
+    * [Step 2: PM Orchestration (10 Phases)](#step-2-pm-orchestration-10-phases)
+    * [Step 3: User Acceptance](#step-3-user-acceptance)
+  * [5. Best Practices](#5-best-practices)
+  * [6. Related Documentation](#6-related-documentation)
+<!-- TOC -->
 
 ## 1. Overview
 
@@ -60,8 +57,8 @@ Use these when you want to trigger a specific step in the process.
 | :----------------------- | :------------------------------------------------------------ | :----------------------------------------- |
 | `/plan-change`           | Interactive session to define a change (scope, goals, risks). | **Step 1**: To start a new feature or fix. |
 | `/write-spec <ref>`      | Generates the canonical `chg-<ref>-spec.md` file.             | **Step 2**: After planning is complete.    |
-| `/write-plan <ref>`      | Generates the phased `chg-<ref>-plan.md`.                     | **Step 3**: After the spec is approved.    |
-| `/write-test-plan <ref>` | Generates the test strategy `chg-<ref>-test-plan.md`.         | **Step 4**: Before implementation starts.  |
+| `/write-test-plan <ref>` | Generates the test strategy `chg-<ref>-test-plan.md`.         | **Step 3**: After the spec is approved.    |
+| `/write-plan <ref>`      | Generates the phased `chg-<ref>-plan.md`.                     | **Step 4**: After the test plan.           |
 | `/run-plan <ref>`        | Launches the **Executor** to code the active phase.           | **Step 5**: To write code.                 |
 | `/review <ref>`          | Launches the **Reviewer** to critique work.                   | **Step 6**: After coding a phase.          |
 | `/sync-docs <ref>`       | Reconciles `doc/spec` with the implemented change.            | **Step 7**: Before merging.                |
@@ -130,8 +127,7 @@ Create the test plan and implementation plan based on the spec.
 
 _Output_: `chg-<ref>-test-plan.md` and `chg-<ref>-plan.md`
 
-> **Recommendation**: Review the plan and test plan files. Ensure the implementation phases
-> make logical sense and the test scenarios cover the acceptance criteria before starting execution.
+> **Note**: The order is spec → test plan → implementation plan. This ensures the test plan informs implementation priorities.
 
 ### Step 4: Implement (Phased Loop)
 
@@ -191,6 +187,7 @@ In this workflow, you act as the **Stakeholder**. You provide the "What" and "Wh
 orchestrates the "How" by coordinating other agents.
 
 > **Repo configuration**: `@pm` reads `.ai/agent/pm-instructions.md` for tracker configuration, labels, and status mapping.
+> **Lifecycle reference**: See `doc/guides/change-lifecycle.md` for detailed phase-by-phase guidance.
 
 ### Step 1: High-Level Handoff
 
@@ -199,44 +196,33 @@ Invoke the PM agent with your requirements or reference a backlog item.
 > **User**: "Agent, please act as @pm. I want to add a new 'Dark Mode' feature to the settings page. It
 > should persist in the user profile."
 
-### Step 2: PM Orchestration (Autonomous)
+### Step 2: PM Orchestration (10 Phases)
 
-The `@pm` will:
+The `@pm` orchestrates these phases (see `doc/guides/change-lifecycle.md` for details):
 
-1. **Intake**: Clarify requirements with you if needed.
-2. **Ticket**: Query or create the tracker ticket (Jira/GitHub) via MCP; record branch name and artifact links.
-3. **Plan**: Internally run the planning process.
-4. **Delegate**:
-   - Call `@spec-writer` to create the spec.
-   - Call `@test-plan-writer` to create the test plan.
-   - Call `@plan-writer` to create the plan.
-5. **Sync**: Update ticket status and link artifacts back to the tracker.
-6. **Handoff**: Once artifacts are ready, hand off to the `@delivery-agent`.
+1. **clarify_scope** — Ensure requirements are unambiguous; record in `chg-<ref>-pm-notes.yaml`
+2. **specification** — Delegate to `@spec-writer` to create `chg-<ref>-spec.md`
+3. **test_planning** — Delegate to `@test-plan-writer` to create `chg-<ref>-test-plan.md`
+4. **delivery_planning** — Delegate to `@plan-writer` to create `chg-<ref>-plan.md`
+5. **delivery** — Hand over to `@delivery-agent` for implementation
+6. **system_spec_update** — Delegate to `@doc-syncer` to reconcile system docs
+7. **review_fix** — Run `@reviewer`; if FAIL, fix and repeat until PASS
+8. **quality_gates** — Run builds/tests via `@runner`; fix via `@fixer` if needed
+9. **dod_check** — PM verifies all phases complete and all AC satisfied
+10. **pr_creation** — Create PR/MR via `@pr-manager`, assign to human, STOP
 
-> **Note**: In Autopilot mode, the `@pm` performs validation steps internally (reviewing spec vs plan vs
-> tests) or will explicitly ask for your approval at key gates. This removes the need for you to manually review every
-> intermediate file unless requested.
+> **Note**: Phases can be reopened. If PM discovers incomplete work in a later phase, PM reopens the relevant phase.
 
-### Step 3: Delivery (Autonomous)
-
-The `@delivery-agent` will:
-
-1. **Cross-check** the plans.
-2. **Execute** the implementation phases (calling `@executor`, `@designer` etc.).
-3. **Review** the work (calling `@reviewer`).
-4. **Reconcile** docs (calling `@doc-syncer`).
-5. **Verify** quality gates (calling `@runner` first; escalate to `@fixer` only if fixes are required).
-6. **Handoff to PM for pre-PR gate**: `@pm` re-runs required internal checks (review + doc sync) before creating/updating the PR/MR.
-
-### Step 4: User Acceptance
+### Step 3: User Acceptance
 
 The `@pm` will report back when the change is ready for final verification and then STOP.
 
-Before creating/updating the PR/MR, `@pm` must run a **pre-PR internal gate**:
+Before creating/updating the PR/MR, `@pm` runs the **dod_check** phase:
 
-1. Run `@reviewer` (and if it returns `Status=FAIL` / adds remediation: ensure tasks are captured in the change plan and executed via `@executor`, then re-review until `Status=PASS`).
-2. Run `@doc-syncer` to reconcile system docs (and re-run it if substantial refactors happened after the last doc sync).
-3. Confirm plan tasks + acceptance criteria are complete, tests are implemented and passing, and system specs are updated.
+1. Verify all phases completed (check `chg-<ref>-pm-notes.yaml`).
+2. Verify all delivery plan tasks complete.
+3. Verify all acceptance criteria satisfied.
+4. If any gap is found, reopen the appropriate phase.
 
 Then `@pm` creates/updates the PR/MR via `@pr-manager` and stops for user approval and manual merge.
 You review and merge manually.
@@ -254,3 +240,11 @@ You review and merge manually.
   and settled.
 - **Tracker is Source of Truth**: The external tracker (Jira/GitHub) owns workflow status. `@pm` syncs status via MCP;
   Git artifacts support implementation and auditability but do not replace tracker state.
+- **PM Notes are Mandatory**: Every change must have a `chg-<ref>-pm-notes.yaml` file for tracking phases, decisions, and open questions.
+
+---
+
+## 6. Related Documentation
+
+- **Change Lifecycle**: `doc/guides/change-lifecycle.md` — Detailed phase-by-phase guide with agent responsibilities
+- **Unified Change Convention**: `doc/guides/unified-change-convention-tracker-agnostic-specification.md` — Folder/file naming conventions

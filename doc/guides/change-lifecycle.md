@@ -11,185 +11,312 @@ summary: "End-to-end change delivery workflow (planning to PR) with PM-led gates
 
 # Change Lifecycle
 
-This guide defines the canonical change workflow for this repository.
+This guide defines the canonical change workflow for this repository. The PM agent (`@pm`) orchestrates the entire lifecycle, delegating to specialized agents at each phase.
 
-Principles:
+## Principles
 
 - One ticket = one change.
 - The ticket tracker is the source of truth for status.
 - Change artifacts live under `doc/changes/` following the Unified Change Convention.
 - Local, ephemeral agent state lives under `.ai/local/` and is git-ignored.
 - `@pm` focuses on one ticket per conversation unless the user explicitly requests a planning-only session.
+- Phases can be reopened: if PM discovers incomplete work in a later phase, PM reopens the relevant phase and delegates to the appropriate agent.
 
 ## Required Artifacts (per change)
 
 Inside the change folder `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`:
 
-- `chg-<workItemRef>-spec.md`
-- `chg-<workItemRef>-test-plan.md`
-- `chg-<workItemRef>-plan.md`
-- `chg-<workItemRef>-pm-notes.yaml` (PM progress + decisions + open questions)
-
-Optional (only when needed):
-
-- `chg-<workItemRef>-notes.md` (free-form notes, experiments, links)
+| Artifact | Purpose | Mandatory |
+|----------|---------|-----------|
+| `chg-<workItemRef>-spec.md` | Canonical specification (problem, goals, AC, DoD) | Yes |
+| `chg-<workItemRef>-test-plan.md` | Test strategy and traceability to AC | Yes |
+| `chg-<workItemRef>-plan.md` | Phased implementation plan with checklists | Yes |
+| `chg-<workItemRef>-pm-notes.yaml` | PM progress tracking, decisions, open questions (git-committed for traceability) | **Yes** |
+| `chg-<workItemRef>-notes.md` | Free-form notes, experiments, links | No |
 
 ## Change Phases (PM-controlled)
 
 Phases are ordered and gated. A phase is not complete unless its artifacts exist and are consistent.
 
-### 1) Clarify scope
+**Key**: Phases can be reopened. If PM discovers incomplete work in a later phase (e.g., `dod_check` finds missing delivery tasks), PM reopens the relevant phase (`delivery`) and delegates to the appropriate agent.
 
-Goal:
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          CHANGE LIFECYCLE                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  1. clarify_scope ──► 2. specification ──► 3. test_planning ──►            │
+│  4. delivery_planning ──► 5. delivery ──► 6. system_spec_update ──►        │
+│  7. review_fix ──► 8. quality_gates ──► 9. dod_check ──► 10. pr_creation   │
+│                                                                             │
+│  ◄──────────── Phases can be reopened if gaps are discovered ──────────►   │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-- Ensure requirements are unambiguous enough to start drafting artifacts.
+### 1) clarify_scope
 
-Actions:
+**Owner**: `@pm`
 
-- Read the ticket.
+**Goal**: Ensure requirements are unambiguous enough to start drafting artifacts.
+
+**Actions**:
+
+- Read the ticket from the tracker (via MCP).
 - Identify missing inputs or ambiguity.
 - Ask open questions in the issue tracker only when it creates durable value (knowledge base).
 - Record all open questions and assumptions in `chg-<workItemRef>-pm-notes.yaml`.
 
-Exit criteria:
+**Outcome**: Scope, acceptance criteria, and constraints are clear enough to write the spec.
 
-- Scope, acceptance criteria, and constraints are clear enough to write the spec.
+**Exit criteria**:
 
-### 2) Create change spec
+- No blocking open questions remain.
+- PM notes updated with assumptions and clarifications.
 
-Goal:
+### 2) specification
 
-- Produce the canonical specification that drives planning and delivery.
+**Owner**: `@pm` delegates to `@spec-writer`
 
-Actions:
+**Goal**: Produce the canonical specification that drives planning and delivery.
 
-- Create or update `chg-<workItemRef>-spec.md`.
+**Actions**:
 
-Exit criteria:
+- `@pm` delegates to `@spec-writer` with `workItemRef` and planning summary.
+- `@spec-writer` creates or updates `chg-<workItemRef>-spec.md`.
 
+**Outcome**: A complete spec with problem statement, goals, scope, acceptance criteria, and definition of done.
+
+**Exit criteria**:
+
+- `chg-<workItemRef>-spec.md` exists and is committed.
 - Spec is complete enough for test planning and implementation planning.
 
-### 3) Create change test plan
+### 3) test_planning
 
-Goal:
+**Owner**: `@pm` delegates to `@test-plan-writer`
 
-- Define verification strategy and traceability to acceptance criteria.
+**Goal**: Define verification strategy and traceability to acceptance criteria.
 
-Actions:
+**Actions**:
 
-- Create or update `chg-<workItemRef>-test-plan.md`.
+- `@pm` delegates to `@test-plan-writer` with `workItemRef`.
+- `@test-plan-writer` creates or updates `chg-<workItemRef>-test-plan.md`.
 
-Exit criteria:
+**Outcome**: A test plan with test strategy, test cases, and traceability matrix linking tests to AC.
 
+**Exit criteria**:
+
+- `chg-<workItemRef>-test-plan.md` exists and is committed.
 - Every acceptance criterion is covered or explicitly marked TODO with an open question.
 
-### 4) Create change implementation/delivery plan
+### 4) delivery_planning
 
-Goal:
+**Owner**: `@pm` delegates to `@plan-writer`
 
-- Produce an actionable phased plan for implementation.
+**Goal**: Produce an actionable phased plan for implementation.
 
-Actions:
+**Actions**:
 
-- Create or update `chg-<workItemRef>-plan.md`.
+- `@pm` delegates to `@plan-writer` with `workItemRef`.
+- `@plan-writer` creates or updates `chg-<workItemRef>-plan.md`.
 
-Exit criteria:
+**Outcome**: A phased implementation plan with check-listable tasks aligned with the spec and test plan.
 
+**Exit criteria**:
+
+- `chg-<workItemRef>-plan.md` exists and is committed.
 - Plan is phased, check-listable, and aligns with the spec and test plan.
 
-### 5) Run change delivery (handover to delivery agent)
+### 5) delivery
 
-Goal:
+**Owner**: `@pm` hands over to `@delivery-agent`
 
-- Implement the change in code according to the plan.
+**Goal**: Implement the change in code according to the plan.
 
-Actions:
+**Actions**:
 
-- `@pm` hands over to `@delivery-agent`.
-- `@delivery-agent` executes the plan in phases (delegating to `@executor`, `@runner`, `@fixer`, etc.).
+- `@pm` invokes `@delivery-agent` with `workItemRef`.
+- `@delivery-agent` executes the plan in phases, delegating to:
+  - `@executor` for implementation tasks
+  - `@designer` for UI/UX work
+  - `@runner` for running commands and capturing logs
+  - `@fixer` for debugging and fixing failures
+  - `@architect` for technical/architectural decisions
+  - `@committer` for checkpointing progress
 
-Exit criteria:
+**Outcome**: All implementation phases in the plan are complete with code changes committed.
 
-- Plan tasks for implementation phases are complete with evidence.
+**Exit criteria**:
 
-### 6) Update current system specification
+- Plan tasks for implementation phases are complete with evidence (commits, tests, logs).
+- All implementation-related checkboxes in the plan are checked.
 
-Goal:
+### 6) system_spec_update
 
-- Ensure repo-level system specs/docs reflect the new truth.
+**Owner**: `@pm` delegates to `@doc-syncer`
 
-Actions:
+**Goal**: Ensure repo-level system specs/docs reflect the new truth.
 
-- Run doc reconciliation (typically via `@doc-syncer`).
+**Actions**:
 
-Exit criteria:
+- `@pm` invokes `@doc-syncer` with `workItemRef`.
+- `@doc-syncer` reconciles `doc/spec/**`, `doc/contracts/**`, and other system documentation.
 
-- System specification is updated and consistent with the implementation.
+**Outcome**: System specification is updated and consistent with the implementation.
 
-### 7) Review-fix cycle
+**Exit criteria**:
 
-Goal:
+- System docs updated and committed.
+- No discrepancies between implementation and documented system state.
 
-- Ensure the implementation matches the spec and plan.
+### 7) review_fix
 
-Actions:
+**Owner**: `@pm` delegates to `@reviewer`, then `@delivery-agent`/`@executor` for fixes
 
-- Run `@reviewer`.
-- If reviewer returns FAIL or adds remediation tasks:
-  - Update `chg-<workItemRef>-plan.md` with remediation tasks/phases.
-  - Run `@delivery-agent` (or `@executor`) to address remediation.
-  - Re-run `@reviewer` until PASS.
+**Goal**: Ensure the implementation matches the spec and plan.
 
-Exit criteria:
+**Actions**:
 
-- Reviewer returns PASS.
+- `@pm` invokes `@reviewer` with `workItemRef`.
+- `@reviewer` audits code vs. spec/plan, checks test coverage, identifies gaps.
+- If reviewer returns `Status=FAIL` or adds remediation tasks:
+  - Remediation phase is appended to `chg-<workItemRef>-plan.md`.
+  - `@pm` invokes `@delivery-agent` or `@executor` to address remediation.
+  - Re-run `@reviewer` until `Status=PASS`.
 
-### 8) Quality gates verification
+**Outcome**: All review findings addressed; implementation verified against spec.
 
-Goal:
+**Exit criteria**:
 
-- Ensure builds/tests and repo conventions pass.
+- `@reviewer` returns `Status=PASS`.
+- No open remediation tasks in the plan.
 
-Actions:
+### 8) quality_gates
 
-- Run quality gates per repo conventions (typically via `@runner`).
+**Owner**: `@pm` delegates to `@runner`, then `@fixer` if needed
 
-Exit criteria:
+**Goal**: Ensure builds/tests and repo conventions pass.
 
-- Required checks pass, logs/evidence captured if needed.
+**Actions**:
 
-### 9) DoD check (Definition of Done)
+- `@pm` invokes `@runner` to run quality gates per repo conventions (build, test, lint, etc.).
+- If failures occur:
+  - `@pm` invokes `@fixer` to diagnose and fix.
+  - Re-run quality gates until all pass.
 
-Goal:
+**Outcome**: All required checks pass; logs/evidence captured.
 
-- Confirm the change is actually done.
+**Exit criteria**:
 
-Checklist:
+- Build passes.
+- Tests pass.
+- Lint/format checks pass.
+- Any other repo-specific quality gates pass.
 
-- All phases above completed.
-- Delivery plan tasks complete.
-- Acceptance criteria double-checked.
-- No pending TODOs without an explicit follow-up ticket.
+### 9) dod_check
 
-Exit criteria:
+**Owner**: `@pm`
+
+**Goal**: Confirm the change is actually done — final acceptance gate.
+
+**Actions**:
+
+- `@pm` performs a checklist review:
+  - All phases above completed (check `chg-<workItemRef>-pm-notes.yaml`).
+  - All delivery plan tasks complete (all checkboxes checked in `chg-<workItemRef>-plan.md`).
+  - All acceptance criteria satisfied (verify against `chg-<workItemRef>-spec.md`).
+  - No pending TODOs without an explicit follow-up ticket.
+- **If any gap is found**: reopen the appropriate phase and delegate to the relevant agent.
+  - Example: if a delivery plan task is incomplete, reopen `delivery` and delegate to `@delivery-agent`.
+
+**Outcome**: Full verification that the change meets the Definition of Done.
+
+**Exit criteria**:
 
 - DoD satisfied.
+- `chg-<workItemRef>-pm-notes.yaml` updated with all phases completed.
 
-### 10) PR/MR creation and human handoff
+### 10) pr_creation
 
-Goal:
+**Owner**: `@pm` delegates to `@pr-manager`
 
-- Create the PR/MR and hand off to a human reviewer.
+**Goal**: Create the PR/MR and hand off to a human reviewer.
 
-Actions:
+**Actions**:
 
-- Create/update PR/MR via `@pr-manager`.
-- Assign the ticket to a human reviewer in the tracker.
-- Stop: do not start another ticket automatically.
+- `@pm` invokes `@pr-manager` to create or update the PR/MR.
+- `@pm` assigns the ticket to a human reviewer in the tracker.
+- **STOP**: Do not start another ticket automatically.
 
-Exit criteria:
+**Outcome**: PR/MR is ready for human review; ticket is assigned.
 
-- PR/MR exists and ticket is assigned for review.
+**Exit criteria**:
+
+- PR/MR exists and is up to date.
+- Ticket is assigned to a human reviewer.
+- `@pm` stops and waits for human approval and merge.
+
+---
+
+## Phase Reopening
+
+Phases are not strictly linear. If PM discovers incomplete work in a later phase, PM can reopen an earlier phase:
+
+| Discovery in... | Gap found | Action |
+|-----------------|-----------|--------|
+| `dod_check` | Delivery plan task incomplete | Reopen `delivery`, delegate to `@delivery-agent` |
+| `dod_check` | AC not satisfied | Reopen `delivery` or `specification` as needed |
+| `quality_gates` | Test failure reveals missing implementation | Reopen `delivery`, delegate to `@fixer` or `@executor` |
+| `review_fix` | Spec ambiguity discovered | Reopen `clarify_scope` or `specification` |
+
+After addressing the gap, PM continues from the reopened phase through the remaining phases.
+
+---
+
+## PM Notes Structure (`chg-<workItemRef>-pm-notes.yaml`)
+
+The PM notes file is **mandatory** for every change. It serves as:
+- PM's long-term memory for the change
+- Status tracking across sessions
+- Traceability via git history
+
+```yaml
+change_id: GH-5
+title: "Improve PM agent configuration and context storage"
+phases:
+  clarify_scope: { started: "2026-02-02T10:00:00Z", completed: "2026-02-02T10:30:00Z" }
+  specification: { started: "2026-02-02T10:30:00Z", completed: "2026-02-02T11:00:00Z" }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions: []
+open_questions: []
+blockers: []
+notes: ""
+```
+
+---
+
+## Agent Responsibilities Summary
+
+| Phase | Primary Agent | Supporting Agents |
+|-------|---------------|-------------------|
+| 1. clarify_scope | `@pm` | — |
+| 2. specification | `@spec-writer` | — |
+| 3. test_planning | `@test-plan-writer` | — |
+| 4. delivery_planning | `@plan-writer` | — |
+| 5. delivery | `@delivery-agent` | `@executor`, `@designer`, `@runner`, `@fixer`, `@architect`, `@committer` |
+| 6. system_spec_update | `@doc-syncer` | — |
+| 7. review_fix | `@reviewer` | `@delivery-agent`, `@executor` |
+| 8. quality_gates | `@runner` | `@fixer` |
+| 9. dod_check | `@pm` | — |
+| 10. pr_creation | `@pr-manager` | — |
+
+---
 
 ## Issue Tracker Communication Policy
 
