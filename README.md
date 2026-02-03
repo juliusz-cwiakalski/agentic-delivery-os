@@ -61,6 +61,7 @@ I use this repo to evolve and validate an AI-native delivery operating model on 
 ## Docs at a glance
 
 - How to use the agents/commands: [doc/guides/opencode-agents-and-commands-guide.md](doc/guides/opencode-agents-and-commands-guide.md)
+- Change delivery lifecycle (10-phase workflow): [doc/guides/change-lifecycle.md](doc/guides/change-lifecycle.md)
 - Change folder + naming convention (workItemRef, branches, files): [doc/guides/unified-change-convention-tracker-agnostic-specification.md](doc/guides/unified-change-convention-tracker-agnostic-specification.md)
 - Broader docs layout standard (some details may differ per repo): [doc/documentation-handbook.md](doc/documentation-handbook.md)
 - Tooling definitions (agents/commands): [.opencode/README.md](.opencode/README.md)
@@ -114,6 +115,7 @@ Changes are identified by `workItemRef` (for example `PDEV-123` for Jira or `GH-
   - `chg-<workItemRef>-spec.md`
   - `chg-<workItemRef>-plan.md`
   - `chg-<workItemRef>-test-plan.md`
+  - `chg-<workItemRef>-pm-notes.yaml` (progress tracking, decisions, open questions)
 
 After the change is implemented and accepted, the workflow reconciles the "current truth" docs (via [/sync-docs](.opencode/command/sync-docs.md)):
 
