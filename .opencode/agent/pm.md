@@ -155,16 +155,22 @@ notes: "Resuming GH-5 after dependency resolved"
 
 <step id="3">Clarify scope (phase 1: clarify_scope)
 
+Goal: Fully understand the change intention and ensure all information is complete to minimize late-discovered gaps that would require returning to earlier phases.
+
 - Read the ticket from tracker via MCP
+- **Review current system specification** (`doc/spec/**`) to understand existing behavior, contracts, and constraints relevant to this change
+- Cross-check ticket requirements against system specification:
+  - Identify contradictions between requested changes and existing system behavior
+  - Identify dependencies on existing features or contracts
+  - Identify edge cases that may not be addressed in the ticket
 - Analyze requirements for completeness: acceptance criteria, constraints, dependencies, edge cases
-- Identify any gaps, contradictions, or missing key information
-- If issues are found:
-  1. Add a comment to the ticket with specific questions
+- If gaps, contradictions, or missing info found:
+  1. Add a comment to the ticket with specific questions (reference system spec where relevant)
   2. Assign the ticket back to the human owner
   3. Record questions in `chg-<workItemRef>-pm-notes.yaml`
   4. **STOP and wait** for human feedback
   5. Resume only after feedback is provided
-- If requirements are complete: proceed to artifact generation
+- If requirements are complete and consistent with system spec: proceed to artifact generation
 - Mark phase as started in `chg-<workItemRef>-pm-notes.yaml`
 </step>
 
@@ -199,7 +205,7 @@ notes: ""
 ```
 
 Phase definitions (see `doc/guides/change-lifecycle.md` for details):
-1. **clarify_scope** — Verify ticket has all info needed; if gaps found, ask human via ticket comment, assign back, STOP and wait
+1. **clarify_scope** — Review ticket AND system spec (`doc/spec/**`); cross-check for gaps/contradictions; if issues found, ask human via ticket comment, assign back, STOP and wait
 2. **specification** — Delegate to `@spec-writer` to create spec
 3. **test_planning** — Delegate to `@test-plan-writer` to create test plan
 4. **delivery_planning** — Delegate to `@plan-writer` to create implementation plan

@@ -81,26 +81,32 @@ flowchart TD
 
 **Owner**: `@pm`
 
-**Goal**: Verify that the ticket contains everything relevant for change implementation in the current repository. Identify any gaps, contradictions, or missing key information before proceeding.
+**Goal**: Fully understand the intention of the change and ensure all information is complete before proceeding. This phase aims to minimize late-discovered gaps that would require returning to earlier phases.
 
 **Actions**:
 
 - Read the ticket from the tracker (via MCP).
+- **Review current system specification** (`doc/spec/**`) to understand existing behavior, contracts, and constraints relevant to this change.
+- Cross-check ticket requirements against system specification:
+  - Identify contradictions between requested changes and existing system behavior.
+  - Identify dependencies on existing features or contracts.
+  - Identify edge cases that may not be addressed in the ticket.
 - Analyze requirements for completeness: acceptance criteria, constraints, dependencies, edge cases.
 - Identify any gaps, contradictions, or missing key information.
 - If issues are found:
-  1. Add a comment to the ticket with specific questions.
+  1. Add a comment to the ticket with specific questions (referencing system spec where relevant).
   2. Assign the ticket back to the human owner.
   3. **STOP and wait** for human feedback.
   4. Resume only after feedback is provided.
 - Record all open questions, assumptions, and clarifications in `chg-<workItemRef>-pm-notes.yaml`.
 
-**Outcome**: Requirements are complete and unambiguous enough to write the spec, OR ticket is assigned back to human with questions.
+**Outcome**: Requirements are complete, unambiguous, and consistent with the current system specification — ready to write the spec, OR ticket is assigned back to human with questions.
 
 **Exit criteria**:
 
 - No blocking open questions remain (all answered by human).
-- PM notes updated with assumptions and clarifications.
+- Requirements are consistent with current system specification.
+- PM notes updated with assumptions, clarifications, and relevant system spec references.
 - Ticket is assigned to PM (not waiting on human).
 
 ### 2) specification
