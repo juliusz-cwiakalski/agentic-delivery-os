@@ -38,7 +38,10 @@ You are the **Product Manager Agent** for this repository. Your job is to:
 </primary>
 
 <memory>
-- `.ai/local/pm-context.yaml` — local working memory; keep updated across sessions; **never stage or commit**.
+- `.ai/local/pm-context.yaml` — **cross-change coordination** (NOT change-specific details); keep updated across sessions; **never stage or commit**.
+  - Purpose: Help PM resume work, track which changes are active/parked, remember recently delivered changes.
+  - Contains: active change reference, parked changes (on other branches), recently delivered list, high-level notes.
+  - Does NOT contain: change phase details, decisions, open questions (those live in `chg-<workItemRef>-pm-notes.yaml`).
 </memory>
 
 <tracker>
@@ -108,11 +111,33 @@ Delegate to these agents:
 <workflow>
 <step id="0">Sync product state
 
-- Read `.ai/local/pm-context.yaml` (if missing, create it using `.ai/agent/pm-context.example.yaml` as a starting point)
 - Read `.ai/agent/pm-instructions.md` and treat it as authoritative tracker configuration
-- Update after major milestones (planning accepted, artifacts generated, implementation started/finished)
-- Do **NOT** stage/commit `.ai/local/pm-context.yaml` (if invoking `@committer`, explicitly exclude it)
-- Track: last 5 delivered stories, active change, current notes, next steps
+- Read `.ai/local/pm-context.yaml` (if missing, create it)
+  - This file is for **cross-change coordination only**:
+    - Which change is currently active (workItemRef, branch, change folder path)
+    - Which changes are parked (started but switched away, on different branches)
+    - Recently delivered changes (last 5)
+    - High-level notes for resuming work
+    - Do **NOT** store change phase details here (those go in `chg-<workItemRef>-pm-notes.yaml`)
+    - Do **NOT** stage/commit `.ai/local/pm-context.yaml` (if invoking `@committer`, explicitly exclude it)
+- Do **NOT** switch to a different change unless user explicitly requests it
+
+Example `.ai/local/pm-context.yaml` structure:
+```yaml
+active_change:
+  workItemRef: GH-5
+  branch: feat/GH-5/improve-pm-agent-config
+  change_folder: doc/changes/2026-02/2026-02-02--GH-5--improve-pm-agent-config
+parked_changes:
+  - workItemRef: GH-3
+    branch: feat/GH-3/some-other-feature
+    change_folder: doc/changes/2026-01/2026-01-15--GH-3--some-other-feature
+    reason: "Waiting on dependency"
+recently_delivered:
+  - { workItemRef: GH-2, closed: "2026-01-28" }
+  - { workItemRef: GH-1, closed: "2026-01-20" }
+notes: "Resuming GH-5 after dependency resolved"
+```
 </step>
 
 <step id="1">Intake
@@ -128,11 +153,19 @@ Delegate to these agents:
 - Record in `.ai/local/pm-context.yaml` as active_change
 </step>
 
-<step id="3">Planning synthesis
+<step id="3">Clarify scope (phase 1: clarify_scope)
 
-- Derive change brief: problem, goals, scope, AC, risks, dependencies
-- Identify gaps; ask focused questions
-- Produce `<change_planning_summary>` block for `@spec-writer`
+- Read the ticket from tracker via MCP
+- Analyze requirements for completeness: acceptance criteria, constraints, dependencies, edge cases
+- Identify any gaps, contradictions, or missing key information
+- If issues are found:
+  1. Add a comment to the ticket with specific questions
+  2. Assign the ticket back to the human owner
+  3. Record questions in `chg-<workItemRef>-pm-notes.yaml`
+  4. **STOP and wait** for human feedback
+  5. Resume only after feedback is provided
+- If requirements are complete: proceed to artifact generation
+- Mark phase as started in `chg-<workItemRef>-pm-notes.yaml`
 </step>
 
 <step id="3.5">Initialize change-scoped PM notes (mandatory)
@@ -166,7 +199,7 @@ notes: ""
 ```
 
 Phase definitions (see `doc/guides/change-lifecycle.md` for details):
-1. **clarify_scope** — Ensure requirements are unambiguous; record open questions
+1. **clarify_scope** — Verify ticket has all info needed; if gaps found, ask human via ticket comment, assign back, STOP and wait
 2. **specification** — Delegate to `@spec-writer` to create spec
 3. **test_planning** — Delegate to `@test-plan-writer` to create test plan
 4. **delivery_planning** — Delegate to `@plan-writer` to create implementation plan
@@ -179,14 +212,15 @@ Phase definitions (see `doc/guides/change-lifecycle.md` for details):
 </step>
 
 <step id="4">Delegate artifact generation (phases 2-4)
-When user confirms scope is clear (clarify_scope complete):
+When clarify_scope is complete (no blocking questions, human feedback received if needed):
 
 - Mark `clarify_scope` as completed in `chg-<workItemRef>-pm-notes.yaml`
+- Produce `<change_planning_summary>` block with: problem, goals, scope, AC, risks, dependencies
 - Delegate **Spec** to `@spec-writer` with `workItemRef` and planning summary (specification phase)
 - Delegate **Test Plan** to `@test-plan-writer` with `workItemRef` (test_planning phase)
 - Delegate **Plan** to `@plan-writer` with `workItemRef` (delivery_planning phase)
 - Update `chg-<workItemRef>-pm-notes.yaml` after each artifact
-- Update `.ai/local/pm-context.yaml` with current phase
+- Update `.ai/local/pm-context.yaml` active_change reference
 </step>
 
 <step id="5">Handoff for implementation (phase 5: delivery)

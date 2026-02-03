@@ -40,37 +40,68 @@ Phases are ordered and gated. A phase is not complete unless its artifacts exist
 
 **Key**: Phases can be reopened. If PM discovers incomplete work in a later phase (e.g., `dod_check` finds missing delivery tasks), PM reopens the relevant phase (`delivery`) and delegates to the appropriate agent.
 
+```mermaid
+flowchart TD
+    subgraph "Artifact Creation"
+        A[1. clarify_scope<br/>@pm] --> B[2. specification<br/>@spec-writer]
+        B --> C[3. test_planning<br/>@test-plan-writer]
+        C --> D[4. delivery_planning<br/>@plan-writer]
+    end
+    
+    subgraph "Implementation"
+        D --> E[5. delivery<br/>@delivery-agent]
+        E --> F[6. system_spec_update<br/>@doc-syncer]
+    end
+    
+    subgraph "Verification"
+        F --> G[7. review_fix<br/>@reviewer]
+        G --> H[8. quality_gates<br/>@runner]
+        H --> I[9. dod_check<br/>@pm]
+    end
+    
+    subgraph "Finalization"
+        I --> J[10. pr_creation<br/>@pr-manager]
+        J --> K((STOP<br/>Human Review))
+    end
+    
+    %% Feedback loops - gaps discovered
+    A -.->|gaps/questions| W((Wait for Human))
+    W -.->|feedback received| A
+    G -.->|remediation needed| E
+    H -.->|fixes needed| E
+    I -.->|gaps found| E
+    I -.->|spec issues| B
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          CHANGE LIFECYCLE                                   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  1. clarify_scope ──► 2. specification ──► 3. test_planning ──►            │
-│  4. delivery_planning ──► 5. delivery ──► 6. system_spec_update ──►        │
-│  7. review_fix ──► 8. quality_gates ──► 9. dod_check ──► 10. pr_creation   │
-│                                                                             │
-│  ◄──────────── Phases can be reopened if gaps are discovered ──────────►   │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+
+**Legend**:
+- Solid arrows: normal forward flow
+- Dashed arrows: feedback loops (phase reopening when gaps are discovered)
 
 ### 1) clarify_scope
 
 **Owner**: `@pm`
 
-**Goal**: Ensure requirements are unambiguous enough to start drafting artifacts.
+**Goal**: Verify that the ticket contains everything relevant for change implementation in the current repository. Identify any gaps, contradictions, or missing key information before proceeding.
 
 **Actions**:
 
 - Read the ticket from the tracker (via MCP).
-- Identify missing inputs or ambiguity.
-- Ask open questions in the issue tracker only when it creates durable value (knowledge base).
-- Record all open questions and assumptions in `chg-<workItemRef>-pm-notes.yaml`.
+- Analyze requirements for completeness: acceptance criteria, constraints, dependencies, edge cases.
+- Identify any gaps, contradictions, or missing key information.
+- If issues are found:
+  1. Add a comment to the ticket with specific questions.
+  2. Assign the ticket back to the human owner.
+  3. **STOP and wait** for human feedback.
+  4. Resume only after feedback is provided.
+- Record all open questions, assumptions, and clarifications in `chg-<workItemRef>-pm-notes.yaml`.
 
-**Outcome**: Scope, acceptance criteria, and constraints are clear enough to write the spec.
+**Outcome**: Requirements are complete and unambiguous enough to write the spec, OR ticket is assigned back to human with questions.
 
 **Exit criteria**:
 
-- No blocking open questions remain.
+- No blocking open questions remain (all answered by human).
 - PM notes updated with assumptions and clarifications.
+- Ticket is assigned to PM (not waiting on human).
 
 ### 2) specification
 
