@@ -35,10 +35,12 @@ summary: "Repository documentation structure, conventions, and workflow."
 
 1. **Separation of Concerns:**
    - Humans primarily read and write under `/doc`.
-   - AI agent logic, prompts, and context indexes live under `/.ai`.
+   - OpenCode tooling (agents/commands) lives under `/.opencode`.
+   - Repo-specific agent instructions live under `/.ai/agent`.
+   - Local agent context lives under `/.ai/local` and is git-ignored.
 2. **Single Source of Truth:** Contracts (OpenAPI/AsyncAPI/schemas) are canonical under `/doc/contracts` in the **owning
    ** repo; consumers pull them as versioned artifacts.
-3. **Evolution is Trackable:** New behavior starts as a **Change** (`/doc/changes/NNN-…`), settles with an **ADR**, and
+3. **Evolution is Trackable:** New behavior starts as a **Change** (`/doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`), settles with an **ADR**, and
    updates the **Spec** (`/doc/spec`).
 4. **Predictable Conventions:** Numbering, front-matter, and naming are consistent and enforced by lightweight checks.
 
@@ -51,18 +53,14 @@ summary: "Repository documentation structure, conventions, and workflow."
 /CONTRIBUTING.md                  # PR/MR rules, coding & docs conventions
 /CHANGELOG.md                     # Keep a Changelog style (optional)
 
-/.ai/                              # Agent-only area (hidden from most dev flows)
-  /agents/                         # One file per in-house agent prompt (Archie, Tim, Tessa, Stella, Lexi)
-    archie.md
-    tim.md
-    tessa.md
-    stella.md
-    lexi.md
-  /commands/                       # Repeatable AI commands/macros
-  /rules/                          # Org-wide rules (spec workflow, coding principles)
-  /context-maps/                   # Indices: what agents should load for tasks
-    coding-agent-index.md
-    research-index.md
+/.opencode/                         # OpenCode agents + commands (repo-local tooling)
+  /agent/                           # One file per agent prompt
+  /command/                          # Repeatable commands/macros
+
+/.ai/                               # Repo-specific agent config + local context
+  /agent/                            # Repo-specific agent instructions (committed)
+  /local/                            # Local agent context (git-ignored)
+  /rules/                            # Optional org-wide rules
 
 /doc/
   00-index.md                      # Manual TOC + “For humans”/“For AI agents” entry points
@@ -77,18 +75,14 @@ summary: "Repository documentation structure, conventions, and workflow."
     features/                      # Feature-level specs (UI or service)
     api/                           # Endpoint/operation descriptions (human layer)
     nonfunctional.md               # Perf, security, scalability envelopes
-  /changes/                        # Proposed & accepted changes (evolution log; batched 100 per folder)
-    0xx/                           # 000–099
-      001-short-title/
-        chg-001-spec-short-title.md    # Canonical change spec (with front-matter)
-        chg-001-plan-short-title.md    # Implementation plan (phases/tasks)
-        chg-001-tests-short-title.md   # Per-change test plan/spec
-    1xx/                           # 100–199
-      123-example-change/
-        chg-123-spec-example-change.md
-        chg-123-plan-example-change.md
-        chg-123-tests-example-change.md
-      examples.json                # Sample payloads/screens (optional)
+  /changes/                        # Proposed & accepted changes (evolution log)
+    YYYY-MM/
+      YYYY-MM-DD--<workItemRef>--<slug>/
+        chg-<workItemRef>-spec.md       # Canonical change spec (with front-matter)
+        chg-<workItemRef>-test-plan.md  # Per-change test plan (traceable to AC)
+        chg-<workItemRef>-plan.md       # Implementation plan (phases/tasks)
+        chg-<workItemRef>-pm-notes.yaml # PM progress + decisions + open questions
+        chg-<workItemRef>-notes.md      # Optional free-form notes
   /adr/                            # Architecture Decision Records
     ADR-0001-short-title.md
   /contracts/
@@ -133,14 +127,14 @@ summary: "Repository documentation structure, conventions, and workflow."
 
 ### 4.1 `/.ai/` (for Agents)
 
-- **`/agents/`**: Stable role prompts (Archie = architectural advisor, Tim = requirements/changes, Tessa = test specs,
-  Stella = social copy, Lexi = research listener). Keep short, _capability-focused_ docs here; reference repo paths they
-  should load.
-- **`/commands/`**: Reusable instructions (e.g., “Generate implementation plan from change spec”, “Upgrade OpenAPI and
-  regenerate client”).
-- **`/rules/`**: Immutable or slow-changing rules such as the **specification workflow**, naming conventions, review
-  criteria.
-- **`/context-maps/`**: Minimal, curated **file lists** for common tasks. Example for coding:
+- **`/agent/`**: Repo-specific instructions that agents must follow (committed).
+- **`/local/`**: Local-only agent context (git-ignored). Never commit content from here.
+- **`/rules/`**: Optional rules such as the spec workflow, naming conventions, review criteria.
+
+### 4.1a `/.opencode/` (OpenCode tooling)
+
+- **`/agent/`**: Agent prompts.
+- **`/command/`**: CLI commands that compose agents.
 
   ```md
   # coding-agent-index.md (excerpt)
@@ -149,7 +143,7 @@ summary: "Repository documentation structure, conventions, and workflow."
 
   Load these paths:
 
-  - `/doc/changes/**/<N>-spec.md` # Current change spec
+  - `/doc/changes/**/chg-<workItemRef>-spec.md` # Current change spec
   - `/doc/adr/**` # Any referenced ADRs from the spec
   - `/doc/spec/**` # Affected features/api sections
   - `/doc/contracts/rest/openapi.yaml` # If HTTP endpoints change
@@ -183,15 +177,16 @@ summary: "Repository documentation structure, conventions, and workflow."
   environment setup, debugging procedures, and using repository-specific tooling (e.g., AI-powered MR helpers). While
   `/ops/runbooks` are for on-call procedures, `/guides` are for day-to-day development workflows.
 
-- **`/changes/Nxx/NNN-short-title/`**:
-  - `chg-NNN-spec-short-title.md` (required): The proposal accepted change (CHANGE SPEC).
-  - `chg-NNN-plan-short-title.md` (recommended): Work breakdown, risks, rollout/rollback (IMPLEMENTATION PLAN).
-  - `chg-NNN-tests-short-title.md` (recommended): Per-change test plan/spec aligned to the CHANGE SPEC and IMPLEMENTATION PLAN.
+- **`/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`**:
+  - `chg-<workItemRef>-spec.md` (required): The proposal accepted change (CHANGE SPEC).
+  - `chg-<workItemRef>-test-plan.md` (recommended): Per-change test plan aligned to the CHANGE SPEC.
+  - `chg-<workItemRef>-plan.md` (recommended): Work breakdown, risks, rollout/rollback (IMPLEMENTATION PLAN).
+  - `chg-<workItemRef>-pm-notes.yaml` (recommended): PM progress + decisions + open questions.
   - `examples.json` (optional): Requests/responses, UI screenshots links.
 
 - **`/adr/ADR-####-short-title.md`**: Final decisions. A change may produce 0..n ADRs. Link them both ways:
   - From the change front-matter: `links.adr: ["ADR-0021"]`
-  - From the ADR: `context: CHG-0043` in the body or front-matter `links.related_changes`.
+  - From the ADR: reference the `workItemRef` in the body or via front-matter `links.related_changes`.
 
 - **`/contracts/`**:
   - `rest/openapi.yaml`: HTTP contracts (server = owner). Generated clients should come from this file’s versioned
@@ -239,7 +234,7 @@ Use front-matter on **every** doc under `/doc` so humans & agents can parse meta
 
 ```yaml
 ---
-id: CHG-0043 # or ADR-0021, SPEC-UNITS-DISPLAY, etc.
+id: GH-456 # or ADR-0021, SPEC-UNITS-DISPLAY, etc.
 status: Proposed # Proposed | Accepted | Rejected | Superseded | Deprecated
 created: 2025-09-05
 last_updated: 2025-09-05
@@ -248,16 +243,22 @@ service: "recipes-service" # or "ui-app"
 links:
   adr: ["ADR-0021"]
   supersedes: []
-  related_changes: ["CHG-0041"]
+  related_changes: ["GH-455"]
   contracts:
     - "contracts/rest/openapi.yaml#/paths/~1recipes~1search"
 summary: "Unify units display across UI using unit IDs + i18n."
 ---
 ```
 
-**Numbering conventions:**
+**Change conventions:**
 
-- Changes: `<bucket>/NNN-short-title/chg-NNN-spec-short-title.md`, where `<bucket>` = `<floor(N/100)>xx` (e.g., 0xx for 000–099, 1xx for 100–199, 15xx for 1500–1599). Use zero-padded numbers for N where applicable. Implementation plans and test plans live alongside the spec as `chg-NNN-plan-short-title.md` and `chg-NNN-tests-short-title.md`.
+- Folder: `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`.
+- Filenames are stable and slug-free:
+  - `chg-<workItemRef>-spec.md`
+  - `chg-<workItemRef>-test-plan.md`
+  - `chg-<workItemRef>-plan.md`
+  - `chg-<workItemRef>-pm-notes.yaml`
+- `workItemRef` is tracker-linked (e.g., `PDEV-123`, `GH-456`).
 - ADRs: `ADR-####-short-title.md` with zero-padded 4-digit numbers.
 - Kebab-case filenames, short and descriptive.
 
@@ -265,12 +266,12 @@ summary: "Unify units display across UI using unit IDs + i18n."
 
 ## 6) Lifecycle: From Change → ADR → Spec → Contracts
 
-1. **Propose a change** in `/doc/changes/<bucket>/NNN-short-title/chg-NNN-spec-short-title.md` using the template (or via `/document-change-spec N`).
+1. **Propose a change** in `/doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/chg-<workItemRef>-spec.md` (or via `/write-spec <workItemRef>`).
 2. **Discuss & revise** until Accepted/Rejected.
-3. **If the change settles a decision**, write an ADR under `/doc/adr/` (or use `/start-technical-decision` + `/document-technical-decision`) and link it from the change.
-4. **Create or update the IMPLEMENTATION PLAN** alongside the spec as `chg-NNN-plan-short-title.md` (or via `/document-implementation-plan N`).
-5. **Create or update the per-change TEST PLAN** alongside the spec as `chg-NNN-tests-short-title.md` (or via `/document-change-test-plan N`).
-6. **Update `/doc/spec/`** to reflect the _final_, coherent behavior (ideally via `/update-system-spec-from-change N`).
+3. **If the change settles a decision**, write an ADR under `/doc/adr/` (or use `/plan-decision` + `/write-adr`) and link it from the change.
+4. **Create or update the per-change TEST PLAN** alongside the spec as `chg-<workItemRef>-test-plan.md` (or via `/write-test-plan <workItemRef>`).
+5. **Create or update the IMPLEMENTATION PLAN** alongside the spec as `chg-<workItemRef>-plan.md` (or via `/write-plan <workItemRef>`).
+6. **Update `/doc/spec/`** to reflect the _final_, coherent behavior (ideally via `/sync-docs <workItemRef>`).
 7. **Update `/doc/contracts/`** (OpenAPI/AsyncAPI/schemas) if any external surface changes.
 8. **Align test specs** under `/doc/quality/test-specs/` with the per-change TEST PLAN.
 9. **Implementation**: code + tests, referencing the change ID in commit/PR titles.
@@ -298,11 +299,12 @@ summary: "Unify units display across UI using unit IDs + i18n."
 - **Plan & Implement:** load the current Change spec, referenced ADRs, impacted Spec sections, Contracts, and testing strategy per
   `/.ai/context-maps/coding-agent-index.md` and `.opencode/command/*.md`.
 - **Write artifacts to the right place:**
-  - Implementation plan -> `/doc/changes/<bucket>/NNN-*/chg-NNN-plan-*.md` (or via `/document-implementation-plan N`)
-  - Per-change TEST PLAN/spec -> `/doc/changes/<bucket>/NNN-*/chg-NNN-tests-*.md` (or via `/document-change-test-plan N`)
+  - Implementation plan -> `/doc/changes/**/chg-<workItemRef>-plan.md` (or via `/write-plan <workItemRef>`)
+  - Per-change TEST PLAN -> `/doc/changes/**/chg-<workItemRef>-test-plan.md` (or via `/write-test-plan <workItemRef>`)
+  - PM progress notes -> `/doc/changes/**/chg-<workItemRef>-pm-notes.yaml`
   - Broader test specs -> `/doc/quality/test-specs/`
   - Updated OpenAPI/AsyncAPI -> `/doc/contracts/**`
-  - Final edits to `/doc/spec/**` per the change outcome (ideally via `/update-system-spec-from-change N`)
+  - Final edits to `/doc/spec/**` per the change outcome (ideally via `/sync-docs <workItemRef>`)
 
 - **Cross-linking:** update front-matter `links.*` so the web of docs stays navigable.
 
@@ -389,12 +391,12 @@ The table below indicates what is **shared across repos** (kept identical or cen
 
 ### New Feature/Change
 
-- [ ] Create `/doc/changes/<bucket>/NNN-short-title/chg-NNN-spec-short-title.md` from template or via `/document-change-spec N`.
+- [ ] Create `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/chg-<workItemRef>-spec.md` from template or via `/write-spec <workItemRef>`.
 - [ ] Add front-matter; link related ADRs/contracts.
-- [ ] Create/Update IMPLEMENTATION PLAN as `chg-NNN-plan-short-title.md` (or via `/document-implementation-plan N`).
-- [ ] Create/Update per-change TEST PLAN as `chg-NNN-tests-short-title.md` (or via `/document-change-test-plan N`), then align broader test specs under `/doc/quality/test-specs/` to it.
+- [ ] Create/Update per-change TEST PLAN as `chg-<workItemRef>-test-plan.md` (or via `/write-test-plan <workItemRef>`), then align broader test specs under `/doc/quality/test-specs/` to it.
+- [ ] Create/Update IMPLEMENTATION PLAN as `chg-<workItemRef>-plan.md` (or via `/write-plan <workItemRef>`).
 - [ ] Update `/doc/contracts/**` if surfaces change; bump version.
-- [ ] Update `/doc/spec/**` to reflect final behavior (ideally via `/update-system-spec-from-change N`).
+- [ ] Update `/doc/spec/**` to reflect final behavior (ideally via `/sync-docs <workItemRef>`).
 - [ ] Ensure `/scripts/doc-checks.sh` passes.
 
 ### New Cross‑cutting Decision
@@ -416,18 +418,20 @@ The table below indicates what is **shared across repos** (kept identical or cen
 ### 13.1 Example Change Folder
 
 ```
-/doc/changes/0xx/043-units-unified-display/
-  chg-043-spec-units-unified-display.md
-  chg-043-plan-units-unified-display.md
-  chg-043-tests-units-unified-display.md
+/doc/changes/2026-01/2026-01-22--GH-456--units-unified-display/
+  chg-GH-456-spec.md
+  chg-GH-456-test-plan.md
+  chg-GH-456-plan.md
+  chg-GH-456-pm-notes.yaml
+  chg-GH-456-notes.md
   examples.json
 ```
 
-**`chg-043-spec-units-unified-display.md` (excerpt):**
+**`chg-GH-456-spec.md` (excerpt):**
 
 ```markdown
 ---
-id: CHG-0043
+id: GH-456
 status: Accepted
 created: 2025-09-05
 owners: ["juliusz"]
@@ -465,7 +469,7 @@ id: ADR-0021
 status: Accepted
 created: 2025-09-05
 links:
-  related_changes: ["CHG-0043"]
+related_changes: ["GH-456"]
 ---
 
 # Decision
@@ -529,9 +533,12 @@ Load:
 
 - **`/scripts/doc-checks.sh`** should validate:
   - Front-matter presence and required keys.
-  - Numbering and layout for changes: bucket `<floor(N/100)>xx/`, folder `NNN-<short-title>/`, spec file `chg-NNN-spec-<short-title>.md`, implementation plan `chg-NNN-plan-<short-title>.md`, and per-change test plan `chg-NNN-tests-<short-title>.md` when present; ADRs: `ADR-####-short-title.md`.
+  - Change folder and file naming:
+    - Folder: `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`
+    - Files: `chg-<workItemRef>-spec.md`, `chg-<workItemRef>-test-plan.md`, `chg-<workItemRef>-plan.md` (and optionally `chg-<workItemRef>-pm-notes.yaml`).
+    - ADRs: `ADR-####-short-title.md`.
   - No broken relative links in `/doc/**`.
-  - Test specs exist under `/doc/changes/**/chg-NNN-tests-*.md` and `/doc/quality/test-specs/test-spec-<feature>.md` with traceability to the Change ID.
+  - Traceability: acceptance criteria in `chg-<workItemRef>-spec.md` are covered by `chg-<workItemRef>-test-plan.md`.
   - If a change is `Accepted`, Spec sections it touches were updated.
 - **Docs site (optional):** Use `mkdocs` + `mkdocs-mermaid2-plugin` for a searchable site in CI.
 
