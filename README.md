@@ -64,7 +64,7 @@ I use this repo to evolve and validate an AI-native delivery operating model on 
 - Change folder + naming convention (workItemRef, branches, files): [doc/guides/unified-change-convention-tracker-agnostic-specification.md](doc/guides/unified-change-convention-tracker-agnostic-specification.md)
 - Broader docs layout standard (some details may differ per repo): [doc/documentation-handbook.md](doc/documentation-handbook.md)
 - Tooling definitions (agents/commands): [.opencode/README.md](.opencode/README.md)
-- Tracker/PM setup for autopilot mode: [doc/planning/pm-instructions.md](doc/planning/pm-instructions.md)
+- Tracker/PM setup for autopilot mode: [.ai/agent/pm-instructions.md](.ai/agent/pm-instructions.md)
 
 ## What is implemented here
 

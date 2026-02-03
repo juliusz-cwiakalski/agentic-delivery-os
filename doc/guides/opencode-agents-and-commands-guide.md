@@ -121,14 +121,14 @@ _Output_: `doc/changes/.../chg-<ref>-spec.md`
 
 ### Step 3: Generate Plans
 
-Create the implementation and test plans based on the spec.
+Create the test plan and implementation plan based on the spec.
 
 ```bash
-/write-plan <ref>
 /write-test-plan <ref>
+/write-plan <ref>
 ```
 
-_Output_: `chg-<ref>-plan.md` and `chg-<ref>-test-plan.md`
+_Output_: `chg-<ref>-test-plan.md` and `chg-<ref>-plan.md`
 
 > **Recommendation**: Review the plan and test plan files. Ensure the implementation phases
 > make logical sense and the test scenarios cover the acceptance criteria before starting execution.
@@ -190,7 +190,7 @@ If there are uncommitted changes, `/pr` will auto-commit via `@committer` and th
 In this workflow, you act as the **Stakeholder**. You provide the "What" and "Why", and the **PM Agent**
 orchestrates the "How" by coordinating other agents.
 
-> **Repo configuration**: `@pm` reads `doc/planning/pm-instructions.md` for Jira/GitHub project keys, labels, and status mapping.
+> **Repo configuration**: `@pm` reads `.ai/agent/pm-instructions.md` for tracker configuration, labels, and status mapping.
 
 ### Step 1: High-Level Handoff
 
@@ -208,8 +208,8 @@ The `@pm` will:
 3. **Plan**: Internally run the planning process.
 4. **Delegate**:
    - Call `@spec-writer` to create the spec.
-   - Call `@plan-writer` to create the plan.
    - Call `@test-plan-writer` to create the test plan.
+   - Call `@plan-writer` to create the plan.
 5. **Sync**: Update ticket status and link artifacts back to the tracker.
 6. **Handoff**: Once artifacts are ready, hand off to the `@delivery-agent`.
 

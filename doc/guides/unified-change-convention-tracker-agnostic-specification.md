@@ -95,18 +95,17 @@ Stable, slug-free filenames:
 - `chg-<workItemRef>-spec.md`
 - `chg-<workItemRef>-plan.md`
 - `chg-<workItemRef>-test-plan.md`
+- `chg-<workItemRef>-pm-notes.yaml` (recommended: PM progress + decisions + open questions)
 - `chg-<workItemRef>-notes.md` (optional)
 
-### AI context subfolder
-Per-change agent context artifacts:
-- `ai/` subfolder inside the change folder
+### PM notes (change-scoped)
+PM progress notes are stored directly in the change folder:
 
-Example:
-- `ai/product-manager-context.md` (optional)
-- `ai/debug-test-runner-context.md` (optional)
+- `chg-<workItemRef>-pm-notes.yaml`
 
 Rules:
-- Keep agent context **change-scoped**.
+
+- Keep notes change-scoped.
 - Do not store secrets, tokens, or credentials.
 
 ---
@@ -208,7 +207,8 @@ Given no `workItemRef`:
   - `chg-workItemRef-spec.md`
   - `chg-workItemRef-plan.md`
   - `chg-workItemRef-test-plan.md`
-  - optional notes/context under `ai/`
+  - `chg-workItemRef-pm-notes.yaml`
+  - optional free-form notes in `chg-workItemRef-notes.md`
 
 ### 3) Create feature branches
 - Create branch: `<type>/<workItemRef>/<slug>` in each impacted repo.
@@ -216,7 +216,7 @@ Given no `workItemRef`:
 
 ### 4) Implement incrementally
 - Keep spec/plan/test-plan updated as the change evolves.
-- Use `ai/` context files only for change-scoped agent state.
+- Keep PM progress notes in `chg-<workItemRef>-pm-notes.yaml`.
 
 ### 5) Update central system specification before closure
 - Before closing the ticket, update the central “current” specification(s) so the system’s truth is preserved.
@@ -239,7 +239,7 @@ Minimum recommended sections:
 - Dependencies
 
 ### Plan (`chg-<workItemRef>-plan.md`)
-- Implementation steps (ordered)
+- Implementation phases and steps (ordered)
 - Migration / rollout considerations
 - Observability (logging/metrics/alerts)
 
@@ -303,7 +303,6 @@ Files:
 - Use start-date in folder name (not sequence numbers).
 - One ticket maps to one change folder.
 - Stable filenames include `workItemRef` and do not depend on slug.
-- Per-change AI context is stored under `<changeFolder>/ai/`.
+- PM progress notes live in `chg-<workItemRef>-pm-notes.yaml` directly in the change folder.
 - Optional local-only context lives under `.ai/local/` and is gitignored.
 - Branch names follow `<type>/<workItemRef>/<slug>` and are identical across repos when the same ticket spans multiple repositories.
-

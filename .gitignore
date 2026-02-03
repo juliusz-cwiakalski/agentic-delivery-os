@@ -1,3 +1,6 @@
 .idea/
 tmp/
 doc/**/tmp/
+.ai/**/tmp/
+.ai/local/
+.ai/local
