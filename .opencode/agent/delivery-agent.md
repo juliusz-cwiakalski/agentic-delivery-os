@@ -6,7 +6,7 @@
 description: Orchestrate end-to-end delivery of an already-specified change
 mode: all
 #model: github-copilot/grok-code-fast-1
-model: github-copilot/grok-code-fast-1
+model: deepseek/deepseek-reasoner
 ---
 
 <role>

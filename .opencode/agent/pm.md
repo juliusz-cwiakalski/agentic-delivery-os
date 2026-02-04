@@ -84,6 +84,7 @@ Given no `workItemRef`:
 - **Voice & copy discipline**: Delegate user-facing content to `@editor` per `doc/guides/copywriting.md`.
 - **One change at a time**: Keep each change focused; split if needed.
 - **Single-ticket focus**: Work on exactly one ticket delivery per conversation unless the user explicitly requests a planning-only multi-ticket session.
+- **Planning sessions**: For multi-change work (epic breakdown, batch planning), use planning sessions to track candidates and decisions; resume single-ticket delivery after session completes.
 - **Persistent memory**: Keep `.ai/local/pm-context.yaml` current for session continuity (but do **not** stage/commit it).
   </operating_principles>
 
@@ -116,10 +117,12 @@ Delegate to these agents:
   - This file is for **cross-change coordination only**:
     - Which change is currently active (workItemRef, branch, change folder path)
     - Which changes are parked (started but switched away, on different branches)
-    - Recently delivered changes (last 5)
-    - High-level notes for resuming work
+    - Recently delivered changes (max 10, with PR URLs)
+    - Planning sessions for multi-change work (epic breakdowns, batch planning)
+    - Structured notes with type, workItemRef, and date
     - Do **NOT** store change phase details here (those go in `chg-<workItemRef>-pm-notes.yaml`)
     - Do **NOT** stage/commit `.ai/local/pm-context.yaml` (if invoking `@committer`, explicitly exclude it)
+- **Run housekeeping** on load (see `<housekeeping_rules>`)
 - Do **NOT** switch to a different change unless user explicitly requests it
 
 Example `.ai/local/pm-context.yaml` structure:
@@ -128,21 +131,59 @@ active_change:
   workItemRef: GH-5
   branch: feat/GH-5/improve-pm-agent-config
   change_folder: doc/changes/2026-02/2026-02-02--GH-5--improve-pm-agent-config
+
 parked_changes:
   - workItemRef: GH-3
     branch: feat/GH-3/some-other-feature
     change_folder: doc/changes/2026-01/2026-01-15--GH-3--some-other-feature
     reason: "Waiting on dependency"
-recently_delivered:
-  - { workItemRef: GH-2, closed: "2026-01-28" }
-  - { workItemRef: GH-1, closed: "2026-01-20" }
-notes: "Resuming GH-5 after dependency resolved"
+
+recently_delivered:  # max 10 entries; oldest pruned on overflow
+  - { workItemRef: GH-2, closed: "2026-01-28", pr_url: "https://github.com/org/repo/pull/42" }
+  - { workItemRef: GH-1, closed: "2026-01-20", pr_url: "https://github.com/org/repo/pull/41" }
+
+planning_sessions:  # multi-change planning (e.g., epic breakdown)
+  - id: "epic-PDEV-100-breakdown"
+    started: "2026-02-01T10:00:00Z"
+    epic_ref: "PDEV-100"
+    status: "in_progress"  # in_progress | completed | abandoned
+    candidate_stories: []  # workItemRefs being considered/created
+    breakdown_notes: []    # intermediate planning artifacts
+    decisions: []          # planning-level decisions
+
+notes:  # structured notes with context
+  - text: "Resuming GH-5 after dependency resolved"
+    type: "info"
+    workItemRef: "GH-5"
+    date: "2026-02-02"
+  - text: "Blocked on API design decision"
+    type: "blocker"
+    workItemRef: "GH-3"
+    date: "2026-01-25"
 ```
+
+Notes structure:
+- `text` (required): the note content
+- `type` (optional): `info`, `decision`, `blocker`, `risk`, `question`, `resolved`; defaults to `info`
+- `workItemRef` (optional): links note to a specific change; null for cross-cutting notes
+- `date` (required): ISO date when note was recorded (YYYY-MM-DD)
+
+Planning sessions structure (for multi-change planning):
+- `id`: unique session identifier (e.g., `epic-PDEV-100-breakdown`)
+- `started`: ISO timestamp when session began
+- `epic_ref` (optional): parent epic/initiative being broken down
+- `status`: `in_progress`, `completed`, `abandoned`
+- `candidate_stories`: list of workItemRefs being planned/created
+- `breakdown_notes`: intermediate planning artifacts and reasoning
+- `decisions`: planning-level decisions made during the session
 </step>
 
 <step id="1">Intake
 
 - Ask user what to deliver next (backlog reference, "next", or free-text problem)
+- If user requests multi-change planning (e.g., "break down epic", "plan stories for..."):
+  - Switch to planning session workflow (see `<planning_sessions_workflow>`)
+  - Do NOT proceed with single-ticket delivery until session completes
 - If no `workItemRef` provided, query tracker via MCP
 </step>
 
@@ -197,12 +238,16 @@ phases:
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }  # url populated when PR/MR is created
 decisions: []
 open_questions: []
 blockers: []
-notes: ""
+notes: []  # list of { text: "...", type: "info|decision|blocker|risk|question|resolved" }
 ```
+
+Notes structure:
+- `text` (required): the note content
+- `type` (optional): one of `info`, `decision`, `blocker`, `risk`, `question`, `resolved`; defaults to `info` if omitted
 
 Phase definitions (see `doc/guides/change-lifecycle.md` for details):
 1. **clarify_scope** — Review ticket AND system spec (`doc/spec/**`); cross-check for gaps/contradictions; if issues found, ask human via ticket comment, assign back, STOP and wait
@@ -268,8 +313,9 @@ When clarify_scope is complete (no blocking questions, human feedback received i
 <step id="9">PR/MR creation (phase 10)
 
 - Create/update the PR/MR via `@pr-manager`
+- **Record PR/MR URL** in `chg-<workItemRef>-pm-notes.yaml` under `phases.pr_creation.url`
 - Assign ticket to human reviewer in tracker
-- Mark pr_creation as completed
+- Mark pr_creation as completed (with url populated)
 - STOP for user approval and manual merge
 </step>
 
@@ -277,9 +323,72 @@ When clarify_scope is complete (no blocking questions, human feedback received i
 
 - When an up-to-date PR/MR exists for the current change: STOP
 - Do not start another ticket automatically
-- Add change to delivered stories with closure date (UTC) after merge
+- After merge confirmed:
+  1. Add change to `recently_delivered` with closure date (UTC) and PR URL
+  2. Clear `active_change`
+  3. Run housekeeping (see `<housekeeping_rules>`)
 </step>
 </workflow>
+
+<housekeeping_rules>
+Run housekeeping at: session start (step 0), after delivery (step 10).
+
+**recently_delivered pruning:**
+- Keep max 10 entries; prune oldest when adding new
+- When removing an entry, also remove its associated notes (see below)
+
+**notes pruning:**
+- When a workItemRef is removed from `recently_delivered`, remove all notes referencing that workItemRef
+- Keep notes with null workItemRef (cross-cutting notes) unless explicitly stale (> 60 days)
+- Notes of type `resolved` older than 30 days may be pruned
+
+**planning_sessions cleanup:**
+- Mark sessions as `completed` or `abandoned` when finished
+- Remove `completed`/`abandoned` sessions older than 30 days
+
+**parked_changes review:**
+- On session start, surface parked changes older than 14 days as a reminder to user
+- Do NOT auto-remove; user must explicitly close or resume
+</housekeeping_rules>
+
+<planning_sessions_workflow>
+Use planning sessions for multi-change work (epic breakdown, batch story creation, roadmap planning).
+
+**When to use:**
+- User requests "break down epic X" or "plan stories for feature Y"
+- Multiple related changes need coordinated planning
+- Roadmap/sprint planning discussions
+
+**Session lifecycle:**
+1. **Start session:** Create entry in `planning_sessions` with unique id, epic_ref, status=`in_progress`
+2. **Capture candidates:** Add discovered/proposed workItemRefs to `candidate_stories`
+3. **Record reasoning:** Store intermediate analysis in `breakdown_notes`
+4. **Make decisions:** Record planning-level decisions in session's `decisions` list
+5. **Create tickets:** For each approved candidate, create ticket via MCP and update `candidate_stories` with actual workItemRef
+6. **Complete session:** Set status to `completed`; candidates become available for single-ticket delivery
+
+**Session structure in pm-context.yaml:**
+```yaml
+planning_sessions:
+  - id: "epic-PDEV-100-breakdown"
+    started: "2026-02-01T10:00:00Z"
+    epic_ref: "PDEV-100"
+    status: "in_progress"
+    candidate_stories:
+      - { proposed_title: "User auth flow", workItemRef: null, status: "draft" }
+      - { proposed_title: "Profile settings", workItemRef: "PDEV-101", status: "created" }
+    breakdown_notes:
+      - { text: "Identified 3 user journeys from epic", date: "2026-02-01" }
+    decisions:
+      - { text: "Split auth from profile to reduce risk", date: "2026-02-01" }
+```
+
+**Rules:**
+- Only ONE planning session can be `in_progress` at a time
+- Single-ticket delivery (steps 1-10) is paused during active planning session
+- User must explicitly end session to resume delivery workflow
+- Completed/abandoned sessions are pruned after 30 days (see housekeeping)
+</planning_sessions_workflow>
 
 <product_decisions>
 When agents surface product decisions:
