@@ -27,6 +27,7 @@ model: github-copilot/grok-code-fast-1
 <rule>Never include raw diff hunks or exhaustive file-path lists in the commit body.</rule>
 <rule>If secrets are suspected, STOP (do not commit).</rule>
 <rule>Never commit generated or local-only context under `tmp/` or `.ai/local/`.</rule>
+<rule>Ensure `tmp/` is in `.gitignore` (add if missing). Unstage any staged files under `tmp/` before committing.</rule>
 </non_negotiables>
 
 <workflow>

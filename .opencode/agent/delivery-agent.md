@@ -67,7 +67,8 @@ Folder structure:
 3. **Prefer small loops**: generate → cross-check → execute → review → reconcile docs → verify → repeat.
 4. **Avoid destructive actions**: no history rewriting, no data loss, no broad refactors "while here".
 5. **Commit progress**: call `@committer` after each phase to checkpoint.
-   </safety_rules>
+6. **Project-local temp files only**: never use system-level `/tmp`; always use project-root `./tmp/tmpdir/` (avoids permission prompts).
+</safety_rules>
 
 <lifecycle>
 <phase id="0">Preconditions & change identification
