@@ -424,9 +424,76 @@ Use MCP tools for external tracker operations:
 Sync ticket status at lifecycle milestones:
 
 - Planning started → transition per `.ai/agent/pm-instructions.md`
-- Spec/Plan/Tests created → add comment with artifact links
 - Delivery started / Ready for review / Done → transition per `.ai/agent/pm-instructions.md`
 </ticket_operations>
+
+<ticket_comments_policy>
+**Purpose of comments:**
+1. **Decision log**: Decisions made, options considered, rationale (especially for non-obvious choices).
+2. **Blockers and questions**: What is blocking progress, what human input is needed.
+3. **Cross-agent communication**: Information other AI agents (in other repos) need to deliver the change.
+4. **Gap identification**: Missing requirements, contradictions, or ambiguities discovered during analysis.
+
+**Never comment on:**
+- Status transitions (visible in Jira/GitHub activity log)
+- Label changes (visible in activity log)
+- Assignee changes (visible in activity log)
+- Field updates like branch name (visible in issue fields)
+- Summary of description content (already in description)
+- "Planning complete" or "Ready for X" announcements (use transitions instead)
+- Scope summaries that duplicate the description
+- Lists of "changes made" to the ticket itself
+
+**Comment quality rules:**
+- Each comment adds unique information not available elsewhere in the ticket.
+- State the information once; do not repeat what is in description or other comments.
+- Use minimal words; remove filler phrases like "This ticket has been refined to..."
+- If a decision was made, state: decision + brief rationale. Skip options analysis unless non-obvious.
+- If blocked, state: what is needed + from whom + specific question.
+- If communicating to another agent/repo, state: what action is needed + where + why.
+
+**Examples of good comments:**
+- "Decided to fix both issues in one PR since they share the same component and deployment. Splitting would duplicate testing."
+- "Blocked: Need UX confirmation on button padding when text wraps to 2 lines. @designer please advise."
+- "For menuvivo-web-page: search input must use same `SearchInput` component from listing page to maintain consistency."
+
+**Examples of bad comments (do not add):**
+- "Planning Complete – Ready for Implementation. Labels added: change, todo-docs..."
+- "Transitioning to In Progress as planning is complete."
+- "The following updates have been made: description expanded, assignee set..."
+- "Scope Summary: [repeats description content]"
+</ticket_comments_policy>
+
+<ticket_content_quality>
+**Principle**: Information stated once, in one place, using minimal words.
+
+**For ticket descriptions:**
+- Each section has a distinct purpose; do not repeat information across sections.
+- Problem: What is broken or missing (user perspective).
+- Goals: What the change achieves (outcomes, not tasks).
+- Non-goals: Only include if there is genuine ambiguity to exclude.
+- Scope: Implementation boundaries (repos, components, approach constraints).
+- Acceptance Criteria: Testable conditions for done; each AC is unique and non-overlapping.
+- Risks & Dependencies: Only if non-trivial; omit section if none.
+- Do NOT include: "Original Issue Details" if already captured in structured sections.
+- Do NOT summarize AC in Goals or repeat Goals in Scope.
+
+**Word efficiency:**
+- Remove filler: "In order to", "It should be noted that", "The following", "This ticket".
+- Prefer active voice and direct statements.
+- Use bullet points over paragraphs where possible.
+- If a section would be empty or trivial, omit it entirely.
+
+**Multi-component changes:**
+- If a change spans multiple repos, use labels (e.g., `todo-web-page`, `todo-docs`) to indicate affected repos.
+- In description, briefly note what changes in each component (1 line each) only if it adds clarity beyond labels.
+- Do NOT create a separate "Affected Implementation Repositories" section that just repeats label meanings.
+
+**Content review before saving:**
+- Re-read the description: Can any sentence be removed without losing meaning?
+- Is any information stated twice? Merge or remove the duplicate.
+- Would a developer understand what to build and how to verify it from this description alone?
+</ticket_content_quality>
 
 <output_expectations>
 For each completed handoff, provide:
