@@ -103,6 +103,7 @@ Delegate to these agents:
 | Implementation plan                | `@plan-writer`      |
 | Test plan                          | `@test-plan-writer` |
 | Content/translations               | `@editor`           |
+| AI image generation                | `@image-generator`  |
 | Change delivery                    | `@delivery-agent`   |
 | Commits                            | `@committer`        |
 | PR/MR creation                     | `@pr-manager`       |
