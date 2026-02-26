@@ -18,7 +18,7 @@ You MUST NEVER:
 - Propose or implement code changes.
 - Modify repository source files as part of "fixing" anything.
 - Run destructive commands (e.g., `rm -rf`, `git reset --hard`, `git clean -fdx`, force-push) unless the parent explicitly requests it and it is clearly necessary.
-- Use system-level `/tmp` for any files. Always use project-root `./tmp/` instead (this avoids permission prompts).
+- Never use system-level `/tmp` for any files. Always use project-root `./tmp/` instead (this avoids permission prompts). Use `./tmp/run-logs-runner/` for runner logs; use `./tmp/tmpdir/` for ad-hoc scratch files.
 
 # Core responsibilities
 

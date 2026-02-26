@@ -104,6 +104,7 @@ Delegate to these agents:
 | Test plan                          | `@test-plan-writer` |
 | Content/translations               | `@editor`           |
 | AI image generation                | `@image-generator`  |
+| Screenshot/visual artifact review  | `@image-reviewer`   |
 | Change delivery                    | `@delivery-agent`   |
 | Commits                            | `@committer`        |
 | PR/MR creation                     | `@pr-manager`       |
@@ -148,9 +149,9 @@ planning_sessions:  # multi-change planning (e.g., epic breakdown)
     started: "2026-02-01T10:00:00Z"
     epic_ref: "PDEV-100"
     status: "in_progress"  # in_progress | completed | abandoned
-    candidate_stories: []  # workItemRefs being considered/created
-    breakdown_notes: []    # intermediate planning artifacts
-    decisions: []          # planning-level decisions
+    candidate_stories: []  # list of { proposed_title, workItemRef, status } objects (see planning_sessions_workflow)
+    breakdown_notes: []    # list of { text, date } objects
+    decisions: []          # list of { text, date } objects
 
 notes:  # structured notes with context
   - text: "Resuming GH-5 after dependency resolved"
@@ -243,12 +244,13 @@ phases:
 decisions: []
 open_questions: []
 blockers: []
-notes: []  # list of { text: "...", type: "info|decision|blocker|risk|question|resolved" }
+notes: []  # list of { text: "...", type: "info|decision|blocker|risk|question|resolved", date: "YYYY-MM-DD" }
 ```
 
-Notes structure:
+Notes structure (same as global notes, minus `workItemRef` which is implicit from the change):
 - `text` (required): the note content
 - `type` (optional): one of `info`, `decision`, `blocker`, `risk`, `question`, `resolved`; defaults to `info` if omitted
+- `date` (required): ISO date when note was recorded (YYYY-MM-DD)
 
 Phase definitions (see `doc/guides/change-lifecycle.md` for details):
 1. **clarify_scope** — Review ticket AND system spec (`doc/spec/**`); cross-check for gaps/contradictions; if issues found, ask human via ticket comment, assign back, STOP and wait
@@ -347,6 +349,10 @@ Run housekeeping at: session start (step 0), after delivery (step 10).
 - Mark sessions as `completed` or `abandoned` when finished
 - Remove `completed`/`abandoned` sessions older than 30 days
 
+**active_change validation:**
+- On session start, if `active_change` exists: verify the branch still exists (`git branch --list <branch>`) and the ticket is not closed (query tracker via MCP)
+- If branch is missing or ticket is closed: surface to user and suggest clearing or parking the stale entry
+
 **parked_changes review:**
 - On session start, surface parked changes older than 14 days as a reminder to user
 - Do NOT auto-remove; user must explicitly close or resume
@@ -388,6 +394,9 @@ planning_sessions:
 - Only ONE planning session can be `in_progress` at a time
 - Single-ticket delivery (steps 1-10) is paused during active planning session
 - User must explicitly end session to resume delivery workflow
+  - Recognized end phrases: "end planning session", "done planning", "let's start delivering", "finish planning", "close session"
+  - When user ends session: set status to `completed`, summarize outcomes, then resume single-ticket delivery workflow
+  - If user abandons: set status to `abandoned` with reason
 - Completed/abandoned sessions are pruned after 30 days (see housekeeping)
 </planning_sessions_workflow>
 
@@ -467,6 +476,7 @@ Sync ticket status at lifecycle milestones:
 
 <ticket_content_quality>
 **Principle**: Information stated once, in one place, using minimal words.
+**Companion**: See `<ticket_comments_policy>` for comment-specific rules; descriptions and comments are complementary — do not duplicate information between them.
 
 **For ticket descriptions:**
 - Each section has a distinct purpose; do not repeat information across sections.

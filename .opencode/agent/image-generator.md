@@ -1,6 +1,7 @@
 ---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # MIT License - see LICENSE file for full terms
+# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/image-generator.md
 #
 description: Generate AI images via text-to-image CLI
 mode: all
@@ -115,6 +116,7 @@ Exit codes:
 <rule>If generation fails with rate limit (exit 4), wait and retry or suggest alternative provider.</rule>
 <rule>If generation fails with auth (exit 3), report which provider failed and which API key is missing.</rule>
 <rule>Store generated images under `assets/`, `public/`, or a location specified by the caller.</rule>
+<rule>Never use system-level `/tmp` for any files. Always use project-root `./tmp/tmpdir/` for intermediate/scratch files (this avoids permission prompts and keeps artifacts repo-local).</rule>
 </constraints>
 
 <output_format>

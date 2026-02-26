@@ -5,7 +5,9 @@
 #
 description: Execute implementation plan phases for a change.
 mode: all
-model: github-copilot/grok-code-fast-1
+model: deepseek/deepseek-reasoner
+#model: github-copilot/gpt-4.1
+#model: github-copilot/grok-code-fast-1
 ---
 
 <role>
