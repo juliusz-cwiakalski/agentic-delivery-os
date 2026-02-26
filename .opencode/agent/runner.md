@@ -5,7 +5,8 @@
 #
 description: Run commands, save logs, summarize output.
 mode: subagent
-model: github-copilot/grok-code-fast-1
+model: github-copilot/gpt-4.1
+#model: github-copilot/grok-code-fast-1
 ---
 
 You are `@runner`.

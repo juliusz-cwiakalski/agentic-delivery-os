@@ -5,8 +5,8 @@
 #
 description: Create/update PR/MR title and description.
 mode: all
-#model: github-copilot/gpt-4.1
-model: github-copilot/grok-code-fast-1
+model: github-copilot/gpt-4.1
+#model: github-copilot/grok-code-fast-1
 ---
 
 <purpose>

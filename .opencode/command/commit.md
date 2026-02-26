@@ -6,8 +6,8 @@
 description: Delegate a single Conventional Commit.
 agent: committer
 subtask: true
-#model: github-copilot/gpt-4.1
-model: github-copilot/grok-code-fast-1
+model: github-copilot/gpt-4.1
+#model: github-copilot/grok-code-fast-1
 ---
 
 <purpose>Trigger the @committer agent to create exactly one Conventional Commit.</purpose>
