@@ -30,6 +30,11 @@
         "edit": true,
         "bash": false
       }
+    },
+    "pr-manager": {
+      "tools": {
+        "github*": true
+      }
     }
   }
 }

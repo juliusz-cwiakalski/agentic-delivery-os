@@ -5,8 +5,8 @@
 #
 description: Create/update PR/MR title and description.
 mode: all
-#model: github-copilot/gpt-4.1
-model: github-copilot/grok-code-fast-1
+model: github-copilot/gpt-4.1
+#model: github-copilot/grok-code-fast-1
 ---
 
 <purpose>
@@ -252,9 +252,16 @@ If still unknown and no override flag is provided: output `NEEDS_INPUT` with an 
     - After commit: verify `git status --porcelain` is empty; otherwise STOP.
   </step>
   <step id="3">
-    Ensure the branch is pushed:
-    - If no upstream tracking branch: `git push -u origin HEAD`.
-    - Else if the branch is ahead of upstream (new commits were created): `git push`.
+    CRITICAL: Ensure the branch is pushed to the remote before ANY PR/MR operation.
+    The remote server cannot create a PR/MR for a branch it has never seen.
+
+    - Check if upstream tracking branch exists: `git rev-parse --abbrev-ref @{upstream} 2>/dev/null`
+    - If no upstream: push with tracking: `git push -u origin HEAD`
+    - If upstream exists: check if local is ahead: `git rev-list @{upstream}..HEAD --count`
+      - If count > 0 (local has unpushed commits): `git push`
+    - After push: verify success. If push fails: STOP and surface the error (do not proceed to PR/MR creation).
+
+    Hard rule: Do NOT attempt to create or update a PR/MR until the branch exists on the remote with all commits pushed.
   </step>
   <step id="4">
     Detect platform and verify tooling/auth:
@@ -475,6 +482,7 @@ TARGET_BRANCH="$(printf '%s' "$MR_VIEW_JSON" | jq -r '.target_branch')"
 <constraints>
   <rule>Never merge, approve, or close the PR/MR.</rule>
   <rule>If the worktree is dirty, auto-commit via `@committer` and continue (do not stop and ask the user).</rule>
+  <rule>Branch MUST be pushed to remote before any PR/MR create/update. A PR/MR for a non-existent remote branch will fail or create an empty diff.</rule>
   <rule>Do not fabricate change intent; base title/body on the diff, commits, and ticket context.</rule>
   <rule>If there is no diff vs base: still write the file and explain why in the body.</rule>
   <rule>Create is forbidden unless the existence check (step 5) succeeded and returned empty.</rule>

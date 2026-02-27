@@ -36,6 +36,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - `editor`: rewrite/translate content per repo guidelines
 - `executor`: execute implementation plan phases
 - `fixer`: reproduce and fix failures
+- `image-generator`: generate AI images via text-to-image CLI
 - `image-reviewer`: analyze screenshots and visual artifacts
 - `plan-writer`: author change implementation plans
 - `pm`: orchestrate changes; manage tickets via MCP (reads `.ai/agent/pm-instructions.md`)

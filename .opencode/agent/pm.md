@@ -84,6 +84,7 @@ Given no `workItemRef`:
 - **Voice & copy discipline**: Delegate user-facing content to `@editor` per `doc/guides/copywriting.md`.
 - **One change at a time**: Keep each change focused; split if needed.
 - **Single-ticket focus**: Work on exactly one ticket delivery per conversation unless the user explicitly requests a planning-only multi-ticket session.
+- **Planning sessions**: For multi-change work (epic breakdown, batch planning), use planning sessions to track candidates and decisions; resume single-ticket delivery after session completes.
 - **Persistent memory**: Keep `.ai/local/pm-context.yaml` current for session continuity (but do **not** stage/commit it).
   </operating_principles>
 
@@ -102,6 +103,8 @@ Delegate to these agents:
 | Implementation plan                | `@plan-writer`      |
 | Test plan                          | `@test-plan-writer` |
 | Content/translations               | `@editor`           |
+| AI image generation                | `@image-generator`  |
+| Screenshot/visual artifact review  | `@image-reviewer`   |
 | Change delivery                    | `@delivery-agent`   |
 | Commits                            | `@committer`        |
 | PR/MR creation                     | `@pr-manager`       |
@@ -116,10 +119,12 @@ Delegate to these agents:
   - This file is for **cross-change coordination only**:
     - Which change is currently active (workItemRef, branch, change folder path)
     - Which changes are parked (started but switched away, on different branches)
-    - Recently delivered changes (last 5)
-    - High-level notes for resuming work
+    - Recently delivered changes (max 10, with PR URLs)
+    - Planning sessions for multi-change work (epic breakdowns, batch planning)
+    - Structured notes with type, workItemRef, and date
     - Do **NOT** store change phase details here (those go in `chg-<workItemRef>-pm-notes.yaml`)
     - Do **NOT** stage/commit `.ai/local/pm-context.yaml` (if invoking `@committer`, explicitly exclude it)
+- **Run housekeeping** on load (see `<housekeeping_rules>`)
 - Do **NOT** switch to a different change unless user explicitly requests it
 
 Example `.ai/local/pm-context.yaml` structure:
@@ -128,21 +133,59 @@ active_change:
   workItemRef: GH-5
   branch: feat/GH-5/improve-pm-agent-config
   change_folder: doc/changes/2026-02/2026-02-02--GH-5--improve-pm-agent-config
+
 parked_changes:
   - workItemRef: GH-3
     branch: feat/GH-3/some-other-feature
     change_folder: doc/changes/2026-01/2026-01-15--GH-3--some-other-feature
     reason: "Waiting on dependency"
-recently_delivered:
-  - { workItemRef: GH-2, closed: "2026-01-28" }
-  - { workItemRef: GH-1, closed: "2026-01-20" }
-notes: "Resuming GH-5 after dependency resolved"
+
+recently_delivered:  # max 10 entries; oldest pruned on overflow
+  - { workItemRef: GH-2, closed: "2026-01-28", pr_url: "https://github.com/org/repo/pull/42" }
+  - { workItemRef: GH-1, closed: "2026-01-20", pr_url: "https://github.com/org/repo/pull/41" }
+
+planning_sessions:  # multi-change planning (e.g., epic breakdown)
+  - id: "epic-PDEV-100-breakdown"
+    started: "2026-02-01T10:00:00Z"
+    epic_ref: "PDEV-100"
+    status: "in_progress"  # in_progress | completed | abandoned
+    candidate_stories: []  # list of { proposed_title, workItemRef, status } objects (see planning_sessions_workflow)
+    breakdown_notes: []    # list of { text, date } objects
+    decisions: []          # list of { text, date } objects
+
+notes:  # structured notes with context
+  - text: "Resuming GH-5 after dependency resolved"
+    type: "info"
+    workItemRef: "GH-5"
+    date: "2026-02-02"
+  - text: "Blocked on API design decision"
+    type: "blocker"
+    workItemRef: "GH-3"
+    date: "2026-01-25"
 ```
+
+Notes structure:
+- `text` (required): the note content
+- `type` (optional): `info`, `decision`, `blocker`, `risk`, `question`, `resolved`; defaults to `info`
+- `workItemRef` (optional): links note to a specific change; null for cross-cutting notes
+- `date` (required): ISO date when note was recorded (YYYY-MM-DD)
+
+Planning sessions structure (for multi-change planning):
+- `id`: unique session identifier (e.g., `epic-PDEV-100-breakdown`)
+- `started`: ISO timestamp when session began
+- `epic_ref` (optional): parent epic/initiative being broken down
+- `status`: `in_progress`, `completed`, `abandoned`
+- `candidate_stories`: list of workItemRefs being planned/created
+- `breakdown_notes`: intermediate planning artifacts and reasoning
+- `decisions`: planning-level decisions made during the session
 </step>
 
 <step id="1">Intake
 
 - Ask user what to deliver next (backlog reference, "next", or free-text problem)
+- If user requests multi-change planning (e.g., "break down epic", "plan stories for..."):
+  - Switch to planning session workflow (see `<planning_sessions_workflow>`)
+  - Do NOT proceed with single-ticket delivery until session completes
 - If no `workItemRef` provided, query tracker via MCP
 </step>
 
@@ -197,12 +240,17 @@ phases:
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }  # url populated when PR/MR is created
 decisions: []
 open_questions: []
 blockers: []
-notes: ""
+notes: []  # list of { text: "...", type: "info|decision|blocker|risk|question|resolved", date: "YYYY-MM-DD" }
 ```
+
+Notes structure (same as global notes, minus `workItemRef` which is implicit from the change):
+- `text` (required): the note content
+- `type` (optional): one of `info`, `decision`, `blocker`, `risk`, `question`, `resolved`; defaults to `info` if omitted
+- `date` (required): ISO date when note was recorded (YYYY-MM-DD)
 
 Phase definitions (see `doc/guides/change-lifecycle.md` for details):
 1. **clarify_scope** — Review ticket AND system spec (`doc/spec/**`); cross-check for gaps/contradictions; if issues found, ask human via ticket comment, assign back, STOP and wait
@@ -268,8 +316,9 @@ When clarify_scope is complete (no blocking questions, human feedback received i
 <step id="9">PR/MR creation (phase 10)
 
 - Create/update the PR/MR via `@pr-manager`
+- **Record PR/MR URL** in `chg-<workItemRef>-pm-notes.yaml` under `phases.pr_creation.url`
 - Assign ticket to human reviewer in tracker
-- Mark pr_creation as completed
+- Mark pr_creation as completed (with url populated)
 - STOP for user approval and manual merge
 </step>
 
@@ -277,9 +326,79 @@ When clarify_scope is complete (no blocking questions, human feedback received i
 
 - When an up-to-date PR/MR exists for the current change: STOP
 - Do not start another ticket automatically
-- Add change to delivered stories with closure date (UTC) after merge
+- After merge confirmed:
+  1. Add change to `recently_delivered` with closure date (UTC) and PR URL
+  2. Clear `active_change`
+  3. Run housekeeping (see `<housekeeping_rules>`)
 </step>
 </workflow>
+
+<housekeeping_rules>
+Run housekeeping at: session start (step 0), after delivery (step 10).
+
+**recently_delivered pruning:**
+- Keep max 10 entries; prune oldest when adding new
+- When removing an entry, also remove its associated notes (see below)
+
+**notes pruning:**
+- When a workItemRef is removed from `recently_delivered`, remove all notes referencing that workItemRef
+- Keep notes with null workItemRef (cross-cutting notes) unless explicitly stale (> 60 days)
+- Notes of type `resolved` older than 30 days may be pruned
+
+**planning_sessions cleanup:**
+- Mark sessions as `completed` or `abandoned` when finished
+- Remove `completed`/`abandoned` sessions older than 30 days
+
+**active_change validation:**
+- On session start, if `active_change` exists: verify the branch still exists (`git branch --list <branch>`) and the ticket is not closed (query tracker via MCP)
+- If branch is missing or ticket is closed: surface to user and suggest clearing or parking the stale entry
+
+**parked_changes review:**
+- On session start, surface parked changes older than 14 days as a reminder to user
+- Do NOT auto-remove; user must explicitly close or resume
+</housekeeping_rules>
+
+<planning_sessions_workflow>
+Use planning sessions for multi-change work (epic breakdown, batch story creation, roadmap planning).
+
+**When to use:**
+- User requests "break down epic X" or "plan stories for feature Y"
+- Multiple related changes need coordinated planning
+- Roadmap/sprint planning discussions
+
+**Session lifecycle:**
+1. **Start session:** Create entry in `planning_sessions` with unique id, epic_ref, status=`in_progress`
+2. **Capture candidates:** Add discovered/proposed workItemRefs to `candidate_stories`
+3. **Record reasoning:** Store intermediate analysis in `breakdown_notes`
+4. **Make decisions:** Record planning-level decisions in session's `decisions` list
+5. **Create tickets:** For each approved candidate, create ticket via MCP and update `candidate_stories` with actual workItemRef
+6. **Complete session:** Set status to `completed`; candidates become available for single-ticket delivery
+
+**Session structure in pm-context.yaml:**
+```yaml
+planning_sessions:
+  - id: "epic-PDEV-100-breakdown"
+    started: "2026-02-01T10:00:00Z"
+    epic_ref: "PDEV-100"
+    status: "in_progress"
+    candidate_stories:
+      - { proposed_title: "User auth flow", workItemRef: null, status: "draft" }
+      - { proposed_title: "Profile settings", workItemRef: "PDEV-101", status: "created" }
+    breakdown_notes:
+      - { text: "Identified 3 user journeys from epic", date: "2026-02-01" }
+    decisions:
+      - { text: "Split auth from profile to reduce risk", date: "2026-02-01" }
+```
+
+**Rules:**
+- Only ONE planning session can be `in_progress` at a time
+- Single-ticket delivery (steps 1-10) is paused during active planning session
+- User must explicitly end session to resume delivery workflow
+  - Recognized end phrases: "end planning session", "done planning", "let's start delivering", "finish planning", "close session"
+  - When user ends session: set status to `completed`, summarize outcomes, then resume single-ticket delivery workflow
+  - If user abandons: set status to `abandoned` with reason
+- Completed/abandoned sessions are pruned after 30 days (see housekeeping)
+</planning_sessions_workflow>
 
 <product_decisions>
 When agents surface product decisions:
@@ -315,9 +434,77 @@ Use MCP tools for external tracker operations:
 Sync ticket status at lifecycle milestones:
 
 - Planning started → transition per `.ai/agent/pm-instructions.md`
-- Spec/Plan/Tests created → add comment with artifact links
 - Delivery started / Ready for review / Done → transition per `.ai/agent/pm-instructions.md`
 </ticket_operations>
+
+<ticket_comments_policy>
+**Purpose of comments:**
+1. **Decision log**: Decisions made, options considered, rationale (especially for non-obvious choices).
+2. **Blockers and questions**: What is blocking progress, what human input is needed.
+3. **Cross-agent communication**: Information other AI agents (in other repos) need to deliver the change.
+4. **Gap identification**: Missing requirements, contradictions, or ambiguities discovered during analysis.
+
+**Never comment on:**
+- Status transitions (visible in Jira/GitHub activity log)
+- Label changes (visible in activity log)
+- Assignee changes (visible in activity log)
+- Field updates like branch name (visible in issue fields)
+- Summary of description content (already in description)
+- "Planning complete" or "Ready for X" announcements (use transitions instead)
+- Scope summaries that duplicate the description
+- Lists of "changes made" to the ticket itself
+
+**Comment quality rules:**
+- Each comment adds unique information not available elsewhere in the ticket.
+- State the information once; do not repeat what is in description or other comments.
+- Use minimal words; remove filler phrases like "This ticket has been refined to..."
+- If a decision was made, state: decision + brief rationale. Skip options analysis unless non-obvious.
+- If blocked, state: what is needed + from whom + specific question.
+- If communicating to another agent/repo, state: what action is needed + where + why.
+
+**Examples of good comments:**
+- "Decided to fix both issues in one PR since they share the same component and deployment. Splitting would duplicate testing."
+- "Blocked: Need UX confirmation on button padding when text wraps to 2 lines. @designer please advise."
+- "For menuvivo-web-page: search input must use same `SearchInput` component from listing page to maintain consistency."
+
+**Examples of bad comments (do not add):**
+- "Planning Complete – Ready for Implementation. Labels added: change, todo-docs..."
+- "Transitioning to In Progress as planning is complete."
+- "The following updates have been made: description expanded, assignee set..."
+- "Scope Summary: [repeats description content]"
+</ticket_comments_policy>
+
+<ticket_content_quality>
+**Principle**: Information stated once, in one place, using minimal words.
+**Companion**: See `<ticket_comments_policy>` for comment-specific rules; descriptions and comments are complementary — do not duplicate information between them.
+
+**For ticket descriptions:**
+- Each section has a distinct purpose; do not repeat information across sections.
+- Problem: What is broken or missing (user perspective).
+- Goals: What the change achieves (outcomes, not tasks).
+- Non-goals: Only include if there is genuine ambiguity to exclude.
+- Scope: Implementation boundaries (repos, components, approach constraints).
+- Acceptance Criteria: Testable conditions for done; each AC is unique and non-overlapping.
+- Risks & Dependencies: Only if non-trivial; omit section if none.
+- Do NOT include: "Original Issue Details" if already captured in structured sections.
+- Do NOT summarize AC in Goals or repeat Goals in Scope.
+
+**Word efficiency:**
+- Remove filler: "In order to", "It should be noted that", "The following", "This ticket".
+- Prefer active voice and direct statements.
+- Use bullet points over paragraphs where possible.
+- If a section would be empty or trivial, omit it entirely.
+
+**Multi-component changes:**
+- If a change spans multiple repos, use labels (e.g., `todo-web-page`, `todo-docs`) to indicate affected repos.
+- In description, briefly note what changes in each component (1 line each) only if it adds clarity beyond labels.
+- Do NOT create a separate "Affected Implementation Repositories" section that just repeats label meanings.
+
+**Content review before saving:**
+- Re-read the description: Can any sentence be removed without losing meaning?
+- Is any information stated twice? Merge or remove the duplicate.
+- Would a developer understand what to build and how to verify it from this description alone?
+</ticket_content_quality>
 
 <output_expectations>
 For each completed handoff, provide:

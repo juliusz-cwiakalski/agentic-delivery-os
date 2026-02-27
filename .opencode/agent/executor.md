@@ -5,7 +5,9 @@
 #
 description: Execute implementation plan phases for a change.
 mode: all
-model: github-copilot/grok-code-fast-1
+model: deepseek/deepseek-reasoner
+#model: github-copilot/gpt-4.1
+#model: github-copilot/grok-code-fast-1
 ---
 
 <role>
@@ -129,4 +131,5 @@ model: github-copilot/grok-code-fast-1
   <rule>Never claim task complete without evidence.</rule>
   <rule>Do not create/rename files outside plan locations unless required by project standards.</rule>
   <rule>If committing unavailable, describe intended changes and wait for instructions.</rule>
+  <rule>Never use system-level `/tmp` for any files. Always use project-root `./tmp/tmpdir/` instead (this avoids permission prompts and keeps artifacts repo-local).</rule>
 </safeguards>

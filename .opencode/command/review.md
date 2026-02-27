@@ -6,7 +6,9 @@
 description: Review change vs spec & plan; append remediation phase if needed.
 agent: reviewer
 subtask: true
-model: github-copilot/grok-code-fast-1
+model: deepseek/deepseek-reasoner
+#model: github-copilot/gpt-4.1
+#model: github-copilot/grok-code-fast-1
 ---
 
 <purpose>
