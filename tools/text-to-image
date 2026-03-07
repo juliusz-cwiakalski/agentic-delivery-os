@@ -124,10 +124,10 @@ trap '_on_interrupt' INT TERM
 # ============================================================================
 # UTILITIES
 # ============================================================================
-log_info()  { printf '[INFO]  %s %s\n' "${LOG_TAG}" "$*"; if [[ -n "$MAIN_LOG_FILE" ]]; then local ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"; _jq -n --arg ts "$ts" --arg msg "$*" '{timestamp: $ts, level: "INFO", message: $msg}' >> "${MAIN_LOG_FILE}"; fi; if [[ -n "${JOB_LOG_FILE:-}" ]]; then local ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"; _jq -n --arg ts "$ts" --arg msg "$*" '{timestamp: $ts, level: "INFO", message: $msg}' >> "${JOB_LOG_FILE}"; fi; }
-log_warn()  { printf '[WARN]  %s %s\n' "${LOG_TAG}" "$*"; if [[ -n "$MAIN_LOG_FILE" ]]; then local ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"; _jq -n --arg ts "$ts" --arg msg "$*" '{timestamp: $ts, level: "WARN", message: $msg}' >> "${MAIN_LOG_FILE}"; fi; if [[ -n "${JOB_LOG_FILE:-}" ]]; then local ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"; _jq -n --arg ts "$ts" --arg msg "$*" '{timestamp: $ts, level: "WARN", message: $msg}' >> "${JOB_LOG_FILE}"; fi; }
+log_info()  { printf '[INFO]  %s %s\n' "${LOG_TAG}" "$*" >&2; if [[ -n "$MAIN_LOG_FILE" ]]; then local ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"; _jq -n --arg ts "$ts" --arg msg "$*" '{timestamp: $ts, level: "INFO", message: $msg}' >> "${MAIN_LOG_FILE}"; fi; if [[ -n "${JOB_LOG_FILE:-}" ]]; then local ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"; _jq -n --arg ts "$ts" --arg msg "$*" '{timestamp: $ts, level: "INFO", message: $msg}' >> "${JOB_LOG_FILE}"; fi; }
+log_warn()  { printf '[WARN]  %s %s\n' "${LOG_TAG}" "$*" >&2; if [[ -n "$MAIN_LOG_FILE" ]]; then local ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"; _jq -n --arg ts "$ts" --arg msg "$*" '{timestamp: $ts, level: "WARN", message: $msg}' >> "${MAIN_LOG_FILE}"; fi; if [[ -n "${JOB_LOG_FILE:-}" ]]; then local ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"; _jq -n --arg ts "$ts" --arg msg "$*" '{timestamp: $ts, level: "WARN", message: $msg}' >> "${JOB_LOG_FILE}"; fi; }
 log_err()   { printf '[ERROR] %s %s\n' "${LOG_TAG}" "$*" >&2; if [[ -n "$MAIN_LOG_FILE" ]]; then local ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"; _jq -n --arg ts "$ts" --arg msg "$*" '{timestamp: $ts, level: "ERROR", message: $msg}' >> "${MAIN_LOG_FILE}"; fi; if [[ -n "${JOB_LOG_FILE:-}" ]]; then local ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"; _jq -n --arg ts "$ts" --arg msg "$*" '{timestamp: $ts, level: "ERROR", message: $msg}' >> "${JOB_LOG_FILE}"; fi; }
-log_debug() { [[ "${VERBOSE}" == "true" ]] && printf '[DEBUG] %s %s\n' "${LOG_TAG}" "$*"; if [[ "${VERBOSE}" == "true" && -n "$MAIN_LOG_FILE" ]]; then local ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"; _jq -n --arg ts "$ts" --arg msg "$*" '{timestamp: $ts, level: "DEBUG", message: $msg}' >> "${MAIN_LOG_FILE}"; fi; if [[ "${VERBOSE}" == "true" && -n "${JOB_LOG_FILE:-}" ]]; then local ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"; _jq -n --arg ts "$ts" --arg msg "$*" '{timestamp: $ts, level: "DEBUG", message: $msg}' >> "${JOB_LOG_FILE}"; fi; }
+log_debug() { [[ "${VERBOSE}" == "true" ]] && printf '[DEBUG] %s %s\n' "${LOG_TAG}" "$*" >&2; if [[ "${VERBOSE}" == "true" && -n "$MAIN_LOG_FILE" ]]; then local ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"; _jq -n --arg ts "$ts" --arg msg "$*" '{timestamp: $ts, level: "DEBUG", message: $msg}' >> "${MAIN_LOG_FILE}"; fi; if [[ "${VERBOSE}" == "true" && -n "${JOB_LOG_FILE:-}" ]]; then local ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"; _jq -n --arg ts "$ts" --arg msg "$*" '{timestamp: $ts, level: "DEBUG", message: $msg}' >> "${JOB_LOG_FILE}"; fi; }
 log_fatal() { 
   output_json_error "$@" "${EXIT_GENERAL_ERROR}"
   log_err "$@"; 
@@ -1942,7 +1942,19 @@ siliconflow|stabilityai/stable-diffusion-xl-1.0|SDXL 1.0|SiliconFlow hosted SDXL
     local json_output="["
     while IFS='|' read -r provider model_id model_name description quality cost limits; do
       [[ -z "$provider" ]] && continue
-      json_output+="{\"provider\":\"$provider\",\"model\":\"$model_id\",\"name\":\"$model_name\",\"description\":\"$description\",\"quality\":\"$quality\",\"cost\":\"$cost\",\"limitations\":\"$limits\"},"
+      local is_configured
+      is_configured=false
+      for avail in "${available_providers[@]}"; do
+        if [[ "$avail" == "$provider" ]]; then
+          is_configured=true
+          break
+        fi
+      done
+      if [[ "$all_models" == "true" ]]; then
+        json_output+="{\"provider\":\"$provider\",\"model\":\"$model_id\",\"name\":\"$model_name\",\"description\":\"$description\",\"quality\":\"$quality\",\"cost\":\"$cost\",\"limitations\":\"$limits\",\"configured\":$is_configured},"
+      else
+        json_output+="{\"provider\":\"$provider\",\"model\":\"$model_id\",\"name\":\"$model_name\",\"description\":\"$description\",\"quality\":\"$quality\",\"cost\":\"$cost\",\"limitations\":\"$limits\",\"configured\":true},"
+      fi
     done <<< "$filtered_data"
     json_output="${json_output%,}]"
     echo "$json_output"
@@ -1957,7 +1969,11 @@ siliconflow|stabilityai/stable-diffusion-xl-1.0|SDXL 1.0|SiliconFlow hosted SDXL
     echo ""
     
     # Print table header
-    printf "%-12s | %-30s | %-8s | %-10s | %s\n" "Provider" "Model ID" "Quality" "Cost" "Description"
+    if [[ "$all_models" == "true" ]]; then
+      printf "%-6s | %-12s | %-30s | %-8s | %-10s | %s\n" "Status" "Provider" "Model ID" "Quality" "Cost" "Description"
+    else
+      printf "%-12s | %-30s | %-8s | %-10s | %s\n" "Provider" "Model ID" "Quality" "Cost" "Description"
+    fi
     printf "%s\n" "-------------------------------------------------------------------------------------------------------------------"
     
     while IFS='|' read -r provider model_id model_name description quality cost limits; do
@@ -1965,7 +1981,21 @@ siliconflow|stabilityai/stable-diffusion-xl-1.0|SDXL 1.0|SiliconFlow hosted SDXL
       # Truncate description if too long
       local short_desc="${description:0:40}"
       [[ ${#description} -gt 40 ]] && short_desc="${short_desc}..."
-      printf "%-12s | %-30s | %-8s | %-10s | %s\n" "$provider" "$model_id" "$quality" "$cost" "$short_desc"
+      if [[ "$all_models" == "true" ]]; then
+        local status_icon="-"
+        local is_configured
+        is_configured=false
+        for avail in "${available_providers[@]}"; do
+          if [[ "$avail" == "$provider" ]]; then
+            is_configured=true
+            break
+          fi
+        done
+        [[ "$is_configured" == "true" ]] && status_icon="✓"
+        printf "  %-4s | %-12s | %-30s | %-8s | %-10s | %s\n" "$status_icon" "$provider" "$model_id" "$quality" "$cost" "$short_desc"
+      else
+        printf "%-12s | %-30s | %-8s | %-10s | %s\n" "$provider" "$model_id" "$quality" "$cost" "$short_desc"
+      fi
     done <<< "$filtered_data"
     
     if [[ "$all_models" != "true" ]]; then
@@ -2003,11 +2033,6 @@ main() {
   GOOGLE_LOCATION="${GOOGLE_LOCATION:-us-central1}"
   GOOGLE_AUTH_METHOD="${GOOGLE_AUTH_METHOD:-auto}"
 
-  if [[ "$LIST_MODELS" == "true" ]]; then
-    list_models "$ALL_MODELS"
-    exit 0
-  fi
-
   # Create directory structure
   ensure_directories
 
@@ -2016,6 +2041,11 @@ main() {
 
   # Load .env if exists
   load_dotenv
+
+  if [[ "$LIST_MODELS" == "true" ]]; then
+    list_models "$ALL_MODELS"
+    exit 0
+  fi
 
   # Automatic version check (silent, non-blocking)
   _check_version

@@ -786,6 +786,35 @@ test_doc_base_url_defined() {
   assert_contains "$DOC_BASE_URL" "doc/tools/text-to-image.md" "Should point to tool doc"
 }
 
+test_list_models_configured_column() {
+  export OPENAI_API_KEY="test"
+  unset STABILITY_API_KEY 2>/dev/null || true
+  unset GOOGLE_CREDENTIALS 2>/dev/null || true
+  unset GOOGLE_API_KEY 2>/dev/null || true
+  unset HF_API_KEY 2>/dev/null || true
+  unset BFL_API_KEY 2>/dev/null || true
+  unset REPLICATE_API_TOKEN 2>/dev/null || true
+  unset SILICONFLOW_API_KEY 2>/dev/null || true
+  local output
+  output="$(list_models true)"
+  assert_contains "$output" "Status" "Should have Status header when all_models=true"
+  # openai rows should have ✓
+  local openai_line
+  openai_line="$(printf '%s\n' "$output" | grep "dall-e-3" | head -1)"
+  assert_contains "$openai_line" "✓" "openai row should show ✓ when configured"
+  # huggingface rows should have -
+  local hf_line
+  hf_line="$(printf '%s\n' "$output" | grep "huggingface" | head -1)"
+  assert_contains "$hf_line" " - " "huggingface row should show - when not configured"
+}
+
+test_list_models_no_status_when_filtered() {
+  export OPENAI_API_KEY="test"
+  local output
+  output="$(list_models false)"
+  assert_not_contains "$output" "Status" "Should NOT have Status header when all_models=false"
+}
+
 # ============================================================================
 # RUN TESTS
 # ============================================================================
@@ -846,6 +875,8 @@ main() {
   run_test "doc-linked error messages" test_doc_linked_error_messages
   run_test "provider doc anchors defined" test_provider_doc_anchors_defined
   run_test "doc base URL defined" test_doc_base_url_defined
+  run_test "list models configured column" test_list_models_configured_column
+  run_test "list models no status when filtered" test_list_models_no_status_when_filtered
 
   print_summary
 }
