@@ -264,6 +264,85 @@ shell_escape() {
     printf '%q' "$1"
 }
 
+# Ensure the output file's actual image format matches the requested extension.
+# Detects format via file(1) and converts via ImageMagick when there is a mismatch.
+# Gracefully degrades (warning only) when ImageMagick is not installed.
+ensure_output_format() {
+  local output_path="$1"
+
+  # Extract requested extension (lowercase)
+  local requested_ext
+  requested_ext="${output_path##*.}"
+  requested_ext="${requested_ext,,}"
+
+  # Normalize jpeg -> jpg for comparison
+  local requested_normalized="$requested_ext"
+  [[ "$requested_normalized" == "jpeg" ]] && requested_normalized="jpg"
+
+  # Only handle supported formats
+  case "$requested_normalized" in
+    png|jpg|webp) ;;
+    *)
+      log_debug "ensure_output_format: unsupported target format '$requested_ext', skipping conversion"
+      return 0
+      ;;
+  esac
+
+  # Detect actual format via file(1)
+  local actual_mime
+  actual_mime="$(file --mime-type -b "$output_path" 2>/dev/null)" || {
+    log_debug "ensure_output_format: file(1) failed, skipping format check"
+    return 0
+  }
+
+  # Map mime type to normalized extension
+  local actual_normalized
+  case "$actual_mime" in
+    image/png)  actual_normalized="png" ;;
+    image/jpeg) actual_normalized="jpg" ;;
+    image/webp) actual_normalized="webp" ;;
+    *)
+      log_debug "ensure_output_format: unknown mime type '$actual_mime', skipping conversion"
+      return 0
+      ;;
+  esac
+
+  # If formats match, nothing to do
+  if [[ "$actual_normalized" == "$requested_normalized" ]]; then
+    log_debug "ensure_output_format: format matches ($actual_normalized), no conversion needed"
+    return 0
+  fi
+
+  log_debug "ensure_output_format: format mismatch detected — file is $actual_mime ($actual_normalized) but extension is .$requested_ext ($requested_normalized)"
+
+  # Find ImageMagick convert command
+  local convert_cmd=""
+  if command -v magick >/dev/null 2>&1; then
+    convert_cmd="magick"
+  elif command -v convert >/dev/null 2>&1; then
+    convert_cmd="convert"
+  fi
+
+  if [[ -z "$convert_cmd" ]]; then
+    log_warn "Downloaded image is actually $actual_normalized but output file has .$requested_ext extension. Install ImageMagick to enable automatic format conversion."
+    return 0
+  fi
+
+  # Convert in-place: ImageMagick reads input format from content, writes output format from extension
+  local tmp_converted
+  tmp_converted="$(mktemp "${output_path}.convert.XXXXXX.$requested_ext")"
+
+  if "$convert_cmd" "$output_path" "$tmp_converted" 2>/dev/null; then
+    mv -f "$tmp_converted" "$output_path"
+    log_debug "ensure_output_format: converted $actual_normalized -> $requested_normalized successfully"
+    return 0
+  else
+    rm -f "$tmp_converted"
+    log_warn "ensure_output_format: ImageMagick conversion from $actual_normalized to $requested_normalized failed"
+    return 1
+  fi
+}
+
 # Retry curl with exponential backoff
 retry_curl() {
   local max_retries=3
@@ -470,6 +549,9 @@ generate_image() {
   if [[ "${DRY_RUN}" == "true" ]]; then
     return "$exit_code"
   fi
+
+  # Ensure output format matches requested extension (e.g., convert WebP -> PNG)
+  ensure_output_format "$output_path" || true
 
   # Store in cache
   cache_store "$cache_key" "$output_path" "$prompt" "$negative_prompt" "$width" "$height" "$quality" "$provider" "$model"

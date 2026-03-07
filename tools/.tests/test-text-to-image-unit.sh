@@ -816,6 +816,155 @@ test_list_models_no_status_when_filtered() {
 }
 
 # ============================================================================
+# ENSURE OUTPUT FORMAT TESTS
+# ============================================================================
+
+test_ensure_output_format_detects_png() {
+  # Create a minimal 1x1 PNG using ImageMagick
+  if ! command -v convert >/dev/null 2>&1 && ! command -v magick >/dev/null 2>&1; then
+    # Skip if ImageMagick not available
+    return 0
+  fi
+  local img="${_test_tmpdir}/test.png"
+  convert -size 1x1 xc:red "$img" 2>/dev/null || magick -size 1x1 xc:red "$img" 2>/dev/null
+  local mime
+  mime="$(file --mime-type -b "$img")"
+  assert_eq "image/png" "$mime" "Should detect PNG mime type"
+}
+
+test_ensure_output_format_detects_webp() {
+  if ! command -v convert >/dev/null 2>&1 && ! command -v magick >/dev/null 2>&1; then
+    return 0
+  fi
+  local img="${_test_tmpdir}/test.webp"
+  convert -size 1x1 xc:red "$img" 2>/dev/null || magick -size 1x1 xc:red "$img" 2>/dev/null
+  local mime
+  mime="$(file --mime-type -b "$img")"
+  assert_eq "image/webp" "$mime" "Should detect WebP mime type"
+}
+
+test_ensure_output_format_converts_webp_to_png() {
+  if ! command -v convert >/dev/null 2>&1 && ! command -v magick >/dev/null 2>&1; then
+    return 0
+  fi
+  # Create a WebP file but save it with .png extension (simulating the bug)
+  local webp_src="${_test_tmpdir}/source.webp"
+  local mismatched="${_test_tmpdir}/output.png"
+  convert -size 1x1 xc:blue "$webp_src" 2>/dev/null || magick -size 1x1 xc:blue "$webp_src" 2>/dev/null
+  cp "$webp_src" "$mismatched"
+
+  # Verify it's WebP before conversion
+  local mime_before
+  mime_before="$(file --mime-type -b "$mismatched")"
+  assert_eq "image/webp" "$mime_before" "Should be WebP before conversion"
+
+  # Run conversion
+  ensure_output_format "$mismatched"
+
+  # Verify it's now PNG
+  local mime_after
+  mime_after="$(file --mime-type -b "$mismatched")"
+  assert_eq "image/png" "$mime_after" "Should be PNG after conversion"
+}
+
+test_ensure_output_format_converts_webp_to_jpg() {
+  if ! command -v convert >/dev/null 2>&1 && ! command -v magick >/dev/null 2>&1; then
+    return 0
+  fi
+  local webp_src="${_test_tmpdir}/source.webp"
+  local mismatched="${_test_tmpdir}/output.jpg"
+  convert -size 1x1 xc:green "$webp_src" 2>/dev/null || magick -size 1x1 xc:green "$webp_src" 2>/dev/null
+  cp "$webp_src" "$mismatched"
+
+  ensure_output_format "$mismatched"
+
+  local mime_after
+  mime_after="$(file --mime-type -b "$mismatched")"
+  assert_eq "image/jpeg" "$mime_after" "Should be JPEG after conversion"
+}
+
+test_ensure_output_format_noop_when_matching() {
+  if ! command -v convert >/dev/null 2>&1 && ! command -v magick >/dev/null 2>&1; then
+    return 0
+  fi
+  # Create a real PNG saved as .png — no conversion needed
+  local img="${_test_tmpdir}/correct.png"
+  convert -size 1x1 xc:red "$img" 2>/dev/null || magick -size 1x1 xc:red "$img" 2>/dev/null
+
+  # Record file hash before
+  local hash_before
+  hash_before="$(sha256sum "$img" | cut -d' ' -f1)"
+
+  ensure_output_format "$img"
+
+  # File should be unchanged
+  local hash_after
+  hash_after="$(sha256sum "$img" | cut -d' ' -f1)"
+  assert_eq "$hash_before" "$hash_after" "File should be unchanged when format matches"
+}
+
+test_ensure_output_format_graceful_without_imagemagick() {
+  if ! command -v convert >/dev/null 2>&1 && ! command -v magick >/dev/null 2>&1; then
+    # If ImageMagick is truly not available, we can't create the test fixture
+    return 0
+  fi
+  # Create a WebP file with .png extension
+  local webp_src="${_test_tmpdir}/source.webp"
+  local mismatched="${_test_tmpdir}/output.png"
+  convert -size 1x1 xc:red "$webp_src" 2>/dev/null || magick -size 1x1 xc:red "$webp_src" 2>/dev/null
+  cp "$webp_src" "$mismatched"
+
+  # Hide ImageMagick by overriding PATH
+  local old_path="$PATH"
+  local empty_dir="${_test_tmpdir}/empty_bin"
+  mkdir -p "$empty_dir"
+  # Keep only file(1) available by symlinking it
+  local file_path
+  file_path="$(command -v file)"
+  ln -sf "$file_path" "$empty_dir/file"
+  PATH="$empty_dir"
+
+  # Run — should warn but not fail
+  local stderr_output exit_code=0
+  stderr_output="$(ensure_output_format "$mismatched" 2>&1)" || exit_code=$?
+  PATH="$old_path"
+
+  assert_eq 0 "$exit_code" "Should return 0 (graceful degradation)"
+
+  # File should still be WebP (no conversion happened)
+  local mime_after
+  mime_after="$(file --mime-type -b "$mismatched")"
+  assert_eq "image/webp" "$mime_after" "File should remain WebP when ImageMagick unavailable"
+}
+
+test_ensure_output_format_unsupported_ext_skips() {
+  # Create a dummy file with unsupported extension
+  local img="${_test_tmpdir}/output.tiff"
+  printf 'dummy' > "$img"
+
+  # Should return 0 and skip
+  local exit_code=0
+  ensure_output_format "$img" || exit_code=$?
+  assert_eq 0 "$exit_code" "Should skip unsupported extensions gracefully"
+}
+
+test_ensure_output_format_converts_png_to_webp() {
+  if ! command -v convert >/dev/null 2>&1 && ! command -v magick >/dev/null 2>&1; then
+    return 0
+  fi
+  local png_src="${_test_tmpdir}/source.png"
+  local mismatched="${_test_tmpdir}/output.webp"
+  convert -size 1x1 xc:red "$png_src" 2>/dev/null || magick -size 1x1 xc:red "$png_src" 2>/dev/null
+  cp "$png_src" "$mismatched"
+
+  ensure_output_format "$mismatched"
+
+  local mime_after
+  mime_after="$(file --mime-type -b "$mismatched")"
+  assert_eq "image/webp" "$mime_after" "Should be WebP after conversion"
+}
+
+# ============================================================================
 # RUN TESTS
 # ============================================================================
 main() {
@@ -877,6 +1026,15 @@ main() {
   run_test "doc base URL defined" test_doc_base_url_defined
   run_test "list models configured column" test_list_models_configured_column
   run_test "list models no status when filtered" test_list_models_no_status_when_filtered
+  # ensure_output_format tests
+  run_test "ensure_output_format detects PNG" test_ensure_output_format_detects_png
+  run_test "ensure_output_format detects WebP" test_ensure_output_format_detects_webp
+  run_test "ensure_output_format converts WebP to PNG" test_ensure_output_format_converts_webp_to_png
+  run_test "ensure_output_format converts WebP to JPG" test_ensure_output_format_converts_webp_to_jpg
+  run_test "ensure_output_format no-op when matching" test_ensure_output_format_noop_when_matching
+  run_test "ensure_output_format graceful without ImageMagick" test_ensure_output_format_graceful_without_imagemagick
+  run_test "ensure_output_format skips unsupported extensions" test_ensure_output_format_unsupported_ext_skips
+  run_test "ensure_output_format converts PNG to WebP" test_ensure_output_format_converts_png_to_webp
 
   print_summary
 }
