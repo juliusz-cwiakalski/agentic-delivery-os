@@ -39,7 +39,7 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 readonly TOOL_PATH="${SCRIPT_DIR}/../text-to-image"
 readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd -P)"
 
-PROMPT="${PROMPT:-A simple geometric shape on a white background}"
+PROMPT="${PROMPT:-Photorealistic aerial view of a modern residential garden design by a landscape architect, featuring a curved stone pathway through lush green lawn, raised wooden deck with outdoor dining furniture, ornamental grasses and lavender borders, a small water feature with natural stones, mature olive tree providing shade, warm golden hour sunlight, professional architectural visualization}"
 OUTPUT_PREFIX="${OUTPUT_PREFIX:-e2e}"
 OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/tmp/e2e-provider-tests}"
 TIMEOUT="${TIMEOUT:-120}"

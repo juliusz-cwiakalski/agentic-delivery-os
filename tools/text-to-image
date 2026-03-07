@@ -1127,15 +1127,24 @@ generate_image_replicate() {
     return "$EXIT_AUTH_FAILED"
   fi
 
-  local payload
-  payload="$(_jq -n --arg prompt "$prompt" --arg version "$model" '{version: $version, input: {prompt: $prompt}}' 2>/dev/null)"
+  local api_url payload
+  if [[ "$model" == *:* ]]; then
+    # Versioned community model: POST /v1/predictions with version hash
+    local version_hash="${model##*:}"
+    api_url="https://api.replicate.com/v1/predictions"
+    payload="$(_jq -n --arg prompt "$prompt" --arg version "$version_hash" '{version: $version, input: {prompt: $prompt}}' 2>/dev/null)"
+  else
+    # Official model: POST /v1/models/{owner}/{name}/predictions without version
+    api_url="https://api.replicate.com/v1/models/${model}/predictions"
+    payload="$(_jq -n --arg prompt "$prompt" '{input: {prompt: $prompt}}' 2>/dev/null)"
+  fi
 
   local response
   if [[ "${DRY_RUN}" == "true" ]]; then
-    log_info "[DRY-RUN] Would call: curl -s -X POST https://api.replicate.com/v1/predictions -H Authorization: Bearer $(sanitize_token "$api_key") -H Content-Type: application/json -d '$payload'"
+    log_info "[DRY-RUN] Would call: curl -s -X POST $api_url -H Authorization: Bearer $(sanitize_token "$api_key") -H Content-Type: application/json -d '$payload'"
     return "$EXIT_SUCCESS"
   fi
-  response="$(retry_curl --max-time 60 -s -X POST "https://api.replicate.com/v1/predictions" \
+  response="$(retry_curl --max-time 60 -s -X POST "$api_url" \
     -H "Authorization: Bearer $api_key" \
     -H "Content-Type: application/json" \
     -d "$payload" 2>/dev/null)"
@@ -1167,7 +1176,8 @@ generate_image_replicate() {
     status="$(_jq -r '.status // empty' <<< "$response" 2>/dev/null)"
     if [[ "$status" == "succeeded" ]]; then
       local url
-      url="$(_jq -r '.output[0] // empty' <<< "$response" 2>/dev/null)"
+      # Official models return output as string; community models as array
+      url="$(_jq -r 'if (.output | type) == "array" then .output[0] // empty elif (.output | type) == "string" then .output // empty else empty end' <<< "$response" 2>/dev/null)"
       if [[ -n "$url" ]]; then
         _curl -s -o "$output_path" "$url"
         log_info "Image generated with Replicate ($model)"
@@ -1888,7 +1898,7 @@ google|imagen-4.0-fast-generate-001|Imagen 4 Fast|Google Imagen 4 fast generatio
 google|imagen-3.0-generate-001|Imagen 3|Google Imagen 3 generation model|high|~$0.050|Vertex AI, service account or gcloud auth
 huggingface|stabilityai/stable-diffusion-2-1|Stable Diffusion 2.1|Open source model via HF Inference|low|Free tier limited|Rate limited, slow
 huggingface|runwayml/stable-diffusion-v1-5|Stable Diffusion 1.5|Older but reliable|low|Free tier limited|Rate limited
-huggingface|black-forest-labs/flux-1.1-pro|FLUX 1.1 Pro|"Via Hugging Face"|high|~$0.010|Requires HF API key
+huggingface|black-forest-labs/flux-1.1-pro|FLUX 1.1 Pro|Via Hugging Face|high|~$0.010|Requires HF API key
 bfl|flux-1.1-pro|FLUX 1.1 Pro|Black Forest Labs flagship model|high|~$0.015|Fast, high quality
 bfl|flux-1.0-pro|FLUX 1.0 Pro|Previous version|medium|~$0.010|Good quality
 replicate|stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b|SDXL|Stability AI SDXL on Replicate|medium|~$0.005|Per-second billing
@@ -1937,23 +1947,35 @@ siliconflow|stabilityai/stable-diffusion-xl-1.0|SDXL 1.0|SiliconFlow hosted SDXL
   if [[ "${OUTPUT_FORMAT:-text}" == "json" ]]; then
     # JSON output
     local json_output="["
+    local first=true
     while IFS='|' read -r provider model_id model_name description quality cost limits; do
       [[ -z "$provider" ]] && continue
-      local is_configured
-      is_configured=false
+      local is_configured=false
       for avail in "${available_providers[@]}"; do
         if [[ "$avail" == "$provider" ]]; then
           is_configured=true
           break
         fi
       done
+      local configured_val
       if [[ "$all_models" == "true" ]]; then
-        json_output+="{\"provider\":\"$provider\",\"model\":\"$model_id\",\"name\":\"$model_name\",\"description\":\"$description\",\"quality\":\"$quality\",\"cost\":\"$cost\",\"limitations\":\"$limits\",\"configured\":$is_configured},"
+        configured_val="$is_configured"
       else
-        json_output+="{\"provider\":\"$provider\",\"model\":\"$model_id\",\"name\":\"$model_name\",\"description\":\"$description\",\"quality\":\"$quality\",\"cost\":\"$cost\",\"limitations\":\"$limits\",\"configured\":true},"
+        configured_val="true"
       fi
+      [[ "$first" == "true" ]] && first=false || json_output+=","
+      json_output+="$(_jq -n \
+        --arg provider "$provider" \
+        --arg model "$model_id" \
+        --arg name "$model_name" \
+        --arg description "$description" \
+        --arg quality "$quality" \
+        --arg cost "$cost" \
+        --arg limitations "$limits" \
+        --argjson configured "$configured_val" \
+        '{provider:$provider,model:$model,name:$name,description:$description,quality:$quality,cost:$cost,limitations:$limitations,configured:$configured}')"
     done <<< "$filtered_data"
-    json_output="${json_output%,}]"
+    json_output+="]"
     echo "$json_output"
   else
     # ASCII table output
