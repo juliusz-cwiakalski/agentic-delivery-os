@@ -5,7 +5,7 @@
 id: DOC-HANDBOOK
 status: Accepted
 created: 2025-09-22
-last_updated: 2025-12-17
+last_updated: 2026-03-07
 owners: ["engineering"]
 summary: "Repository documentation structure, conventions, and workflow."
 ---
@@ -110,6 +110,7 @@ summary: "Repository documentation structure, conventions, and workflow."
   /analytics/
     tracking-taxonomy.md           # App/UX events mapping (UI repos esp.)
   /i18n/                           # Translation notes, error terms (UI repos)
+  /tools/                          # User guides for CLI tools in tools/ (one per tool)
   /diagrams/                       # Mermaid/PlantUML sources; exported PNG/SVG
   /examples/                       # Payloads, fixtures, UI mocks (shared samples)
   /templates/                      # ADR, change, feature, test, MR templates
@@ -210,6 +211,11 @@ summary: "Repository documentation structure, conventions, and workflow."
   - `observability/` (dashboards, metrics, log fields, trace spans)
   - `troubleshooting/` (known issues, queries, checklists)
   - `incident-reviews/` (postmortems)
+
+- **`/tools/`**:
+  User guides for standalone CLI tools published under `tools/` at the repo root. Each tool gets a dedicated file:
+  `doc/tools/<tool-name>.md` with version, provider/backend setup, usage examples, configuration, troubleshooting,
+  CLI reference, and changelog. See `doc/guides/tools-convention.md` for the full standard.
 
 - **`/analytics/`**: Tracking taxonomy & mapping to GA/PostHog (mostly UI repos).
 - **`/i18n/`**: Internationalization specifics (UI repos).
