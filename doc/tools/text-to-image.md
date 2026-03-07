@@ -8,6 +8,46 @@
 
 > Version 1.0.0 | [Changelog](#100-2026-03-07)
 
+<!-- TOC -->
+* [text-to-image User Guide](#text-to-image-user-guide)
+  * [Overview](#overview)
+  * [Requirements](#requirements)
+  * [Installation](#installation)
+  * [Provider Setup](#provider-setup)
+    * [OpenAI](#openai)
+    * [Stability AI](#stability-ai)
+    * [Google Imagen](#google-imagen)
+    * [Hugging Face](#hugging-face)
+    * [Black Forest Labs](#black-forest-labs)
+    * [Replicate](#replicate)
+    * [SiliconFlow](#siliconflow)
+  * [Usage Examples](#usage-examples)
+    * [Single image generation](#single-image-generation)
+    * [Specify provider and model](#specify-provider-and-model)
+    * [Quality profiles](#quality-profiles)
+    * [Custom dimensions](#custom-dimensions)
+    * [Negative prompts](#negative-prompts)
+    * [Multi-model comparison](#multi-model-comparison)
+    * [Batch processing (YAML)](#batch-processing-yaml)
+    * [Dry run](#dry-run)
+    * [Metadata embedding](#metadata-embedding)
+    * [JSON output (for agents and scripts)](#json-output-for-agents-and-scripts)
+    * [Model discovery](#model-discovery)
+    * [Google Imagen with specific auth method](#google-imagen-with-specific-auth-method)
+  * [Configuration](#configuration)
+    * [Configuration directory](#configuration-directory)
+    * [`.env` file](#env-file)
+    * [Environment variable overrides](#environment-variable-overrides)
+    * [Caching](#caching)
+  * [Troubleshooting](#troubleshooting)
+    * [Common errors](#common-errors)
+    * [Debugging](#debugging)
+    * [Version check](#version-check)
+  * [CLI Reference](#cli-reference)
+  * [Changelog](#changelog)
+    * [1.0.0 (2026-03-07)](#100-2026-03-07)
+<!-- TOC -->
+
 ## Overview
 
 `text-to-image` is a standalone, agent-agnostic CLI tool that generates images from text prompts using seven AI image-generation providers. It provides a unified interface with quality-based provider selection, response caching, batch processing, metadata embedding, and machine-readable JSON output.

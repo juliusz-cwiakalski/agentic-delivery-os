@@ -42,7 +42,7 @@ VERBOSE="${VERBOSE:-false}"
 readonly GITHUB_BASE="https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main"
 
 # Default paths to process when no arguments provided
-readonly DEFAULT_PATHS=(".opencode/agent" ".opencode/command" "doc/guides" "doc/documentation-handbook.md")
+readonly DEFAULT_PATHS=(".opencode/agent" ".opencode/command" "doc/guides" "doc/documentation-handbook.md" "tools")
 
 # ============================================================================
 # TRAPS

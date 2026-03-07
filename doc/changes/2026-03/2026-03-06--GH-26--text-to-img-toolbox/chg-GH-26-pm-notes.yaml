@@ -10,7 +10,7 @@ phases:
   review_fix: { started: "2026-03-07", completed: "2026-03-07" }
   quality_gates: { started: "2026-03-07", completed: "2026-03-07" }
   dod_check: { started: "2026-03-07", completed: "2026-03-07" }
-  pr_creation: { started: "2026-03-07", completed: null, url: null }
+  pr_creation: { started: "2026-03-07", completed: "2026-03-07", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/30" }
 decisions:
   - text: "Tool location: tools/ directory for PATH-able CLIs (no .sh extension); scripts/ stays for repo-internal automation"
     date: "2026-03-06"
@@ -78,4 +78,16 @@ notes:
     date: "2026-03-07"
   - text: "DoD check: all phases completed, all AC satisfied, all plan tasks done. Ready for PR."
     type: info
+    date: "2026-03-07"
+  - text: "Post-PR fixes: (1) improved API error diagnostics — extract_api_error() helper, retry_curl outputs response on failure. (2) Fixed garbled verbose output — log calls inside retry_curl now redirect to stderr. (3) Fixed empty negative prompt causing Stability API rejection. (4) Removed invalid stable-diffusion-3-medium from model list (v2beta-only model). Changed Stability default to SDXL."
+    type: info
+    date: "2026-03-07"
+  - text: "Created follow-up GH-31: Add Stability AI v2beta API support (SD3.5, Stable Image Core/Ultra). Deferred from GH-26 to avoid scope creep."
+    type: decision
+    date: "2026-03-07"
+  - text: "Post-PR fix round 2: (1) Fixed --list-models execution order bug — moved ensure_directories + load_dotenv before list_models early-exit in main(), so providers from .env are detected. (2) Added Status column (✓/-) to --list-models --all-models showing configured vs unconfigured providers. (3) Fixed critical log_info/log_warn/log_debug writing to stdout instead of stderr — caused Google Imagen auth failure when VERBOSE=true because debug messages polluted access_token captured via $(). All 83 tests pass. Real API tests: OpenAI ✓, Stability ✓, Google Imagen ✓."
+    type: info
+    date: "2026-03-07"
+  - text: "log_info/log_warn/log_debug were writing to stdout, not stderr. Only log_err had >&2. This is a systemic issue — any log call inside $() subshell pollutes captured return value. Diagnosed via bash xtrace showing access_token='[DEBUG] Auto-detected gcloud CLI...' instead of the actual token. Should have been caught in original delivery — blueprint source had same bug."
+    type: retro
     date: "2026-03-07"
