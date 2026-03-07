@@ -577,8 +577,8 @@ generate_image_stability() {
 
   # Validate model — only v1 engine IDs are supported
   case "$model" in
-    stable-diffusion-v1-6|stable-diffusion-xl-1024-v1-0) ;;
-    *) log_err "Unsupported Stability AI model: $model. Supported v1 engines: stable-diffusion-v1-6, stable-diffusion-xl-1024-v1-0"; return "$EXIT_INVALID_PARAMS" ;;
+    stable-diffusion-xl-1024-v1-0) ;;
+    *) log_err "Unsupported Stability AI model: $model. Supported v1 engines: stable-diffusion-xl-1024-v1-0"; return "$EXIT_INVALID_PARAMS" ;;
   esac
 
   local payload
@@ -873,7 +873,7 @@ google_imagen_build_payload() {
 #   - imagen-4.0-ultra-generate-001 (Imagen 4 ultra)
 #   - imagen-4.0-fast-generate-001 (Imagen 4 fast)
 #   - imagen-3.0-generate-001 (Imagen 3)
-#   - imagegeneration (legacy Imagen 2)
+
 generate_image_google() {
   local prompt="$1"
   local negative_prompt="$2"
@@ -913,11 +913,10 @@ generate_image_google() {
   # Validate model
   case "$model" in
     imagen-4.0-generate-001|imagen-4.0-ultra-generate-001|imagen-4.0-fast-generate-001|\
-    imagen-3.0-generate-001|imagen-3.0-capability-001|\
-    imagegeneration)
+    imagen-3.0-generate-001|imagen-3.0-capability-001)
       ;;
     *)
-      log_err "Unsupported Google Imagen model: $model. Supported: imagen-4.0-generate-001, imagen-4.0-ultra-generate-001, imagen-4.0-fast-generate-001, imagen-3.0-generate-001, imagegeneration"
+      log_err "Unsupported Google Imagen model: $model. Supported: imagen-4.0-generate-001, imagen-4.0-ultra-generate-001, imagen-4.0-fast-generate-001, imagen-3.0-generate-001"
       return "$EXIT_INVALID_PARAMS"
       ;;
   esac
@@ -1882,13 +1881,11 @@ list_models() {
   local models_data='
 openai|dall-e-3|DALL-E 3|OpenAI latest image generation model|high|~$0.040|1024x1024 max, no negative prompt
 openai|dall-e-2|DALL-E 2|OpenAI previous generation model|medium|~$0.020|512x512 max, lower quality
-stability|stable-diffusion-v1-6|Stable Diffusion v1.6|Legacy v1 engine|medium|~$0.002|Legacy, supports negative prompts
 stability|stable-diffusion-xl-1024-v1-0|SDXL 1024|Legacy v1 engine, best quality|high|~$0.004|Legacy, 1024x1024 optimal
 google|imagen-4.0-generate-001|Imagen 4 Standard|Google Imagen 4 standard generation|high|~$0.040|Vertex AI, service account or gcloud auth
 google|imagen-4.0-ultra-generate-001|Imagen 4 Ultra|Google Imagen 4 ultra-high quality|high|~$0.080|Vertex AI, service account or gcloud auth
 google|imagen-4.0-fast-generate-001|Imagen 4 Fast|Google Imagen 4 fast generation|medium|~$0.020|Vertex AI, service account or gcloud auth
 google|imagen-3.0-generate-001|Imagen 3|Google Imagen 3 generation model|high|~$0.050|Vertex AI, service account or gcloud auth
-google|imagegeneration|Imagen 2 (legacy)|Google legacy image generation model|medium|~$0.035|Vertex AI, legacy
 huggingface|stabilityai/stable-diffusion-2-1|Stable Diffusion 2.1|Open source model via HF Inference|low|Free tier limited|Rate limited, slow
 huggingface|runwayml/stable-diffusion-v1-5|Stable Diffusion 1.5|Older but reliable|low|Free tier limited|Rate limited
 huggingface|black-forest-labs/flux-1.1-pro|FLUX 1.1 Pro|"Via Hugging Face"|high|~$0.010|Requires HF API key

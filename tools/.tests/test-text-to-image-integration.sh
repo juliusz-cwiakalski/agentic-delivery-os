@@ -349,7 +349,7 @@ test_models_multiple() {
    # Simulate the multiple models logic
    local prompt="test prompt"
    local output="${_test_tmpdir}/test.png"
-   local models="dall-e-3,stable-diffusion-v1-6"
+   local models="dall-e-3,stable-diffusion-xl-1024-v1-0"
    local model_list
    IFS=',' read -ra model_list <<< "$models"
    local results=()
@@ -373,7 +373,7 @@ test_models_multiple() {
    assert_eq "${#results[@]}" 2
    assert_contains "${results[0]}" "SUCCESS"
    assert_contains "${results[0]}" "test-dall-e-3.png"
-   assert_contains "${results[1]}" "test-stable-diffusion-v1-6.png"
+   assert_contains "${results[1]}" "test-stable-diffusion-xl-1024-v1-0.png"
 }
 
 test_cache_with_model() {

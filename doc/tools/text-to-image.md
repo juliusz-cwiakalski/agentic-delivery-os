@@ -151,7 +151,6 @@ export STABILITY_API_KEY="sk-your-stability-key"
 | Model ID | Name | Quality | Cost | Notes |
 |----------|------|---------|------|-------|
 | `stable-diffusion-xl-1024-v1-0` | SDXL 1024 (default) | High | ~$0.004/img | Legacy, optimal at 1024x1024 |
-| `stable-diffusion-v1-6` | Stable Diffusion v1.6 | Medium | ~$0.002/img | Legacy, supports negative prompts |
 
 > **Note:** Stability AI offers newer models (SD3, SD3.5, Stable Image Core, Stable Image Ultra) via their v2beta REST API. Support for v2beta is planned. The models listed above are the only ones available through the current v1 integration.
 
@@ -220,7 +219,6 @@ Valid methods: `auto`, `json`, `service-account`, `gcloud`, `api-key`.
 | `imagen-4.0-ultra-generate-001` | Imagen 4 Ultra | High | ~$0.080/img | Highest quality |
 | `imagen-4.0-fast-generate-001` | Imagen 4 Fast | Medium | ~$0.020/img | Faster, lower cost |
 | `imagen-3.0-generate-001` | Imagen 3 | High | ~$0.050/img | Previous generation |
-| `imagegeneration` | Imagen 2 (legacy) | Medium | ~$0.035/img | Legacy endpoint |
 
 **Gotchas:**
 

@@ -858,9 +858,9 @@ All bash testing follows `.ai/rules/bash.md` sections 10-12:
 - Mocked curl
 
 **Steps**:
-1. Define models `dall-e-3,stable-diffusion-v1-6`
+1. Define models `dall-e-3,stable-diffusion-xl-1024-v1-0`
 2. For each model, derive output filename: `base-<model>.ext`
-3. Verify output files would be `test-dall-e-3.png` and `test-stable-diffusion-v1-6.png`
+3. Verify output files would be `test-dall-e-3.png` and `test-stable-diffusion-xl-1024-v1-0.png`
 
 **Expected Outcome**:
 - Each model generates a separate file with model name in filename
