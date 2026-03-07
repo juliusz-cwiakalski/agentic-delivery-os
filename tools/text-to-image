@@ -239,6 +239,26 @@ sanitize_token() {
   fi
 }
 
+# Extract human-readable error message from provider JSON error response
+# Tries common patterns across all providers:
+#   OpenAI:      {"error": {"message": "...", "type": "...", "code": "..."}}
+#   Stability:   {"message": "...", "name": "..."}
+#   Google:      {"error": {"message": "...", "status": "...", "code": ...}}
+#   HuggingFace: {"error": "..."} or {"error": {"message": "..."}}
+#   BFL:         {"detail": "..."} or {"error": "..."}
+#   Replicate:   {"detail": "..."}
+#   SiliconFlow:  {"message": "...", "code": ...}
+extract_api_error() {
+  local response="$1"
+  local msg=""
+  msg="$(_jq -r '.error.message // .message // .detail // .error // empty' <<< "$response" 2>/dev/null)" || true
+  if [[ -n "$msg" && "$msg" != "null" ]]; then
+    printf '%s' "$msg"
+  else
+    printf '%s' "${response:0:200}"
+  fi
+}
+
 # Shell-escape a value for safe eval
 shell_escape() {
     printf '%q' "$1"
@@ -289,7 +309,9 @@ retry_curl() {
       log_warn "Server error ($http_code), retrying in $delay seconds (attempt $((attempt+1))/$max_retries)"
     else
       log_err "Request failed with HTTP $http_code"
+      log_debug "Response body: ${response:0:500}"
       rm -f "$stderr_file"
+      echo "$response"
       return "$EXIT_NETWORK_ERROR"
     fi
 
@@ -512,7 +534,10 @@ generate_image_openai() {
 
   local exit_code=$?
   if (( exit_code != 0 )); then
-    log_err "OpenAI API call failed: $(sanitize_token "$api_key")"
+    local api_error
+    api_error="$(extract_api_error "$response" 2>/dev/null)"
+    log_err "OpenAI API call failed: ${api_error:-unknown error}"
+    log_debug "Full response: ${response:0:500}"
     return "$exit_code"
   fi
 
@@ -565,7 +590,10 @@ generate_image_stability() {
 
   local exit_code=$?
   if (( exit_code != 0 )); then
-    log_err "Stability API call failed: $(sanitize_token "$api_key")"
+    local api_error
+    api_error="$(extract_api_error "$response" 2>/dev/null)"
+    log_err "Stability API call failed: ${api_error:-unknown error}"
+    log_debug "Full response: ${response:0:500}"
     return "$exit_code"
   fi
 
@@ -902,7 +930,10 @@ generate_image_google() {
 
   local exit_code=$?
   if (( exit_code != 0 )); then
-    log_err "Google Imagen API call failed: $(sanitize_token "$access_token")"
+    local api_error
+    api_error="$(extract_api_error "$response" 2>/dev/null)"
+    log_err "Google Imagen API call failed: ${api_error:-unknown error}"
+    log_debug "Full response: ${response:0:500}"
     return "$exit_code"
   fi
 
@@ -965,7 +996,10 @@ generate_image_huggingface() {
 
   local exit_code=$?
   if (( exit_code != 0 )); then
-    log_err "HF API call failed: $(sanitize_token "$api_key")"
+    local api_error
+    api_error="$(extract_api_error "$response" 2>/dev/null)"
+    log_err "HF API call failed: ${api_error:-unknown error}"
+    log_debug "Full response: ${response:0:500}"
     return "$exit_code"
   fi
 
@@ -1019,7 +1053,10 @@ generate_image_bfl() {
 
   local exit_code=$?
   if (( exit_code != 0 )); then
-    log_err "BFL API call failed: $(sanitize_token "$api_key")"
+    local api_error
+    api_error="$(extract_api_error "$response" 2>/dev/null)"
+    log_err "BFL API call failed: ${api_error:-unknown error}"
+    log_debug "Full response: ${response:0:500}"
     return "$exit_code"
   fi
 
@@ -1093,7 +1130,10 @@ generate_image_replicate() {
 
   local exit_code=$?
   if (( exit_code != 0 )); then
-    log_err "Replicate API call failed: $(sanitize_token "$api_key")"
+    local api_error
+    api_error="$(extract_api_error "$response" 2>/dev/null)"
+    log_err "Replicate API call failed: ${api_error:-unknown error}"
+    log_debug "Full response: ${response:0:500}"
     return "$exit_code"
   fi
 
@@ -1164,7 +1204,10 @@ generate_image_siliconflow() {
 
   local exit_code=$?
   if (( exit_code != 0 )); then
-    log_err "SiliconFlow API call failed: $(sanitize_token "$api_key")"
+    local api_error
+    api_error="$(extract_api_error "$response" 2>/dev/null)"
+    log_err "SiliconFlow API call failed: ${api_error:-unknown error}"
+    log_debug "Full response: ${response:0:500}"
     return "$exit_code"
   fi
 
