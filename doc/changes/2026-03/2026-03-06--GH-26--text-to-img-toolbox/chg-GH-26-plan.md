@@ -291,18 +291,19 @@ This change delivers six interrelated deliverables that together establish the f
 
 **Tasks**:
 
-- [ ] Update `process_path()` in `scripts/add-header-location.sh` to accept bash scripts: detect files with `.sh` extension or files whose first line matches `#!/usr/bin/env bash` or `#!/bin/bash` (AC-HEADER-1, AC-HEADER-2)
-- [ ] Create `process_bash_file()` function that adds the 3-line MIT license header as bash comments (`# Copyright...`, `# MIT License...`, `# Latest version:...`) after the shebang line (AC-HEADER-1, AC-HEADER-2)
-- [ ] Handle bash files without extension (like `tools/text-to-image`): detect by shebang line (AC-HEADER-2)
-- [ ] Ensure idempotency: skip if header already present
-- [ ] Update `find_markdown_files()` or add `find_bash_files()` to also discover bash scripts when processing directories
-- [ ] Update `usage()` help text to mention bash script support
-- [ ] Add tests to `scripts/.tests/test-add-header-location.sh`:
-  - [ ] Test `.sh` extension file gets bash-style header (AC-HEADER-1)
-  - [ ] Test shebang-detected file (no `.sh` extension) gets bash-style header after shebang (AC-HEADER-2)
-  - [ ] Test bash file with existing header is idempotent
-  - [ ] Test directory processing finds both `.md` and `.sh` files
-  - [ ] Test dry-run mode with bash files
+- [x] Update `process_path()` in `scripts/add-header-location.sh` to accept bash scripts: detect files with `.sh` extension or files whose first line matches `#!/usr/bin/env bash` or `#!/bin/bash` (AC-HEADER-1, AC-HEADER-2) — added `is_bash_file()` and updated `process_path()`
+- [x] Create `process_bash_file()` function that adds the 3-line MIT license header as bash comments (`# Copyright...`, `# MIT License...`, `# Latest version:...`) after the shebang line (AC-HEADER-1, AC-HEADER-2) — inserts after shebang or at top if no shebang
+- [x] Handle bash files without extension (like `tools/text-to-image`): detect by shebang line (AC-HEADER-2) — `is_bash_file()` checks first line for `#!/usr/bin/env bash` or `#!/bin/bash`
+- [x] Ensure idempotency: skip if header already present — `bash_has_header()` checks all 3 lines
+- [x] Update `find_markdown_files()` or add `find_bash_files()` to also discover bash scripts when processing directories — added `find_bash_files()` finding .sh and shebang-detected files
+- [x] Update `usage()` help text to mention bash script support — added file types section, bash examples
+- [x] Add tests to `scripts/.tests/test-add-header-location.sh` — 6 new tests, all 18/18 pass:
+  - [x] Test `.sh` extension file gets bash-style header (AC-HEADER-1) — `test_bash_sh_extension_gets_header`
+  - [x] Test shebang-detected file (no `.sh` extension) gets bash-style header after shebang (AC-HEADER-2) — `test_bash_shebang_no_extension_gets_header`
+  - [x] Test `#!/bin/bash` shebang detected — `test_bash_bin_bash_shebang_detected`
+  - [x] Test bash file with existing header is idempotent — `test_bash_existing_header_idempotent`
+  - [x] Test directory processing finds both `.md` and bash files — `test_bash_directory_finds_both_md_and_sh`
+  - [x] Test dry-run mode with bash files — `test_bash_dry_run_mode`
 
 **Acceptance Criteria**:
 
@@ -422,4 +423,5 @@ This change delivers six interrelated deliverables that together establish the f
 | 1 | 2026-03-07 | DONE | Core tool ported as `tools/text-to-image` (~2075 lines). Commit: `a9331db` |
 | 2 | 2026-03-07 | DONE | 3 test suites ported (52+21+8=81 tests, all pass). Commit: `702ccda` |
 | 3 | 2026-03-07 | DONE | User doc `doc/tools/text-to-image.md` (644 lines), 7 provider sections with stable anchors. Commit: `d1bd5b8` |
-| 4 | 2026-03-07 | DONE | Agent tuned: model discovery step, routing table, updated tool_reference, 4 examples. Commit: pending |
+| 4 | 2026-03-07 | DONE | Agent tuned: model discovery step, routing table, updated tool_reference, 4 examples. Commit: `44589f3` |
+| 5 | 2026-03-07 | DONE | Header script enhanced: `is_bash_file()`, `process_bash_file()`, `find_bash_files()`, 6 new tests, 18/18 pass. Commit: pending |

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# add-header-location.sh — Add GitHub location line to markdown frontmatter
+# add-header-location.sh — Add MIT license headers to markdown and bash files
 #
 # Dependencies: bash>=4, git, grep, sed
 # Usage: ./add-header-location.sh [options] [PATH]
@@ -130,13 +130,36 @@ compute_relative_path() {
   printf '%s' "${rel_path}"
 }
 
-# Check if file already has location line
 # Check if file already has source line with exact prefix
 has_source_line() {
   local -r file="$1"
   local -r prefix="Latest version:"
   local -r pattern="^#[[:space:]]*${prefix}[[:space:]]*${GITHUB_BASE}/"
   _grep -q "${pattern}" "${file}" 2>/dev/null
+}
+
+# Detect whether a file is a bash script (by .sh extension or shebang)
+is_bash_file() {
+  local -r file="$1"
+  # Check .sh extension
+  if [[ "${file}" == *.sh ]]; then
+    return 0
+  fi
+  # Check shebang line
+  local first_line
+  first_line="$(head -1 "${file}" 2>/dev/null)" || return 1
+  if [[ "${first_line}" == "#!/usr/bin/env bash"* ]] || [[ "${first_line}" == "#!/bin/bash"* ]]; then
+    return 0
+  fi
+  return 1
+}
+
+# Check if bash file already has the MIT license header
+bash_has_header() {
+  local -r file="$1"
+  _grep -q "^# Copyright.*2025-2026" "${file}" 2>/dev/null && \
+  _grep -q "^# MIT License.*see LICENSE" "${file}" 2>/dev/null && \
+  has_source_line "${file}"
 }
 
 # Update source line with prefix, replace existing URL line if present
@@ -374,10 +397,83 @@ process_file() {
   fi
 }
 
+# Process a single bash script file
+process_bash_file() {
+  local -r file="$1"
+  local -r repo_root="$2"
+  
+  log_debug "Processing bash file ${file}"
+  
+  # Check idempotency: if already has complete header, skip
+  if bash_has_header "${file}"; then
+    log_debug "Skipping ${file} (already has bash header)"
+    return 1
+  fi
+  
+  # Compute relative path and header lines
+  local rel_path
+  rel_path="$(compute_relative_path "${repo_root}" "${file}")" || return $?
+  local -r copyright_line="# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)"
+  local -r mit_line="# MIT License - see LICENSE file for full terms"
+  local -r source_line="# Latest version: ${GITHUB_BASE}/${rel_path}"
+  
+  local -r temp_file="$(mktemp)"
+  local first_line
+  first_line="$(head -1 "${file}")"
+  
+  if [[ "${first_line}" == "#!"* ]]; then
+    # Has shebang: insert header after shebang line
+    {
+      echo "${first_line}"
+      echo "${copyright_line}"
+      echo "${mit_line}"
+      echo "${source_line}"
+      tail -n +2 "${file}"
+    } > "${temp_file}"
+  else
+    # No shebang: insert header at the very top
+    {
+      echo "${copyright_line}"
+      echo "${mit_line}"
+      echo "${source_line}"
+      cat "${file}"
+    } > "${temp_file}"
+  fi
+  
+  # Replace if changed
+  if ! diff -q "${file}" "${temp_file}" >/dev/null 2>&1; then
+    run_cmd cp "${temp_file}" "${file}"
+    log_info "Updated bash header in ${file}"
+    rm -f "${temp_file}"
+    return 0
+  fi
+  
+  rm -f "${temp_file}"
+  log_debug "No changes needed for ${file}"
+  return 1
+}
+
 # Find markdown files under given directory
 find_markdown_files() {
   local -r dir="$1"
   find "${dir}" -type f -name '*.md' | sort
+}
+
+# Find bash script files under given directory (.sh extension or shebang)
+find_bash_files() {
+  local -r dir="$1"
+  {
+    # Find .sh files
+    find "${dir}" -type f -name '*.sh' 2>/dev/null
+    # Find files with bash shebang (no .sh extension, exclude .md files)
+    find "${dir}" -type f ! -name '*.md' ! -name '*.sh' ! -name '*.yaml' ! -name '*.yml' ! -name '*.json' ! -name '*.txt' ! -name '*.log' ! -name '*.metadata' 2>/dev/null | while IFS= read -r f; do
+      local first_line
+      first_line="$(head -1 "${f}" 2>/dev/null)" || continue
+      if [[ "${first_line}" == "#!/usr/bin/env bash"* ]] || [[ "${first_line}" == "#!/bin/bash"* ]]; then
+        echo "${f}"
+      fi
+    done
+  } | sort -u
 }
 
 # Process a path (file or directory)
@@ -389,17 +485,26 @@ process_path() {
   local count=0 updated=0 skipped=0
   
   if [[ -f "${path}" && "${path}" == *.md ]]; then
-    # Single file
-    log_info "Processing file ${path}"
+    # Single markdown file
+    log_info "Processing markdown file ${path}"
     count=1
     if process_file "${path}" "${repo_root}"; then
       updated=1
     else
       skipped=1
     fi
+  elif [[ -f "${path}" ]] && is_bash_file "${path}"; then
+    # Single bash script file
+    log_info "Processing bash file ${path}"
+    count=1
+    if process_bash_file "${path}" "${repo_root}"; then
+      updated=1
+    else
+      skipped=1
+    fi
   elif [[ -d "${path}" ]]; then
-    # Directory
-    log_info "Processing markdown files under ${path}"
+    # Directory — process both markdown and bash files
+    log_info "Processing markdown and bash files under ${path}"
     while IFS= read -r file; do
       count=$((count + 1))
       if process_file "${file}" "${repo_root}"; then
@@ -408,8 +513,16 @@ process_path() {
         skipped=$((skipped + 1))
       fi
     done < <(find_markdown_files "${path}")
+    while IFS= read -r file; do
+      count=$((count + 1))
+      if process_bash_file "${file}" "${repo_root}"; then
+        updated=$((updated + 1))
+      else
+        skipped=$((skipped + 1))
+      fi
+    done < <(find_bash_files "${path}")
   else
-    log_err "Path is not a markdown file or directory: ${path}"
+    log_err "Path is not a markdown file, bash script, or directory: ${path}"
     return "${EXIT_USAGE}"
   fi
   
@@ -423,10 +536,14 @@ usage() {
   cat <<EOF
 Usage: ${APP_NAME} [options] [PATH]
 
-Add GitHub location line to markdown frontmatter (after MIT License line).
+Add MIT license headers to markdown frontmatter and bash scripts.
+
+Supported file types:
+  - Markdown (.md): Adds 3-line YAML frontmatter header (copyright, MIT, source URL)
+  - Bash scripts (.sh or shebang-detected): Adds 3-line bash comment header after shebang
 
 Arguments:
-  PATH          Directory to process (default: .opencode)
+  PATH          File or directory to process (default: .opencode)
 
 Options:
   -h, --help      Show this help message
@@ -438,6 +555,8 @@ Examples:
   ${APP_NAME} .opencode
   ${APP_NAME} --dry-run .opencode/agent
   ${APP_NAME} --verbose doc
+  ${APP_NAME} tools/text-to-image
+  ${APP_NAME} scripts/
 
 Environment:
   DRY_RUN     Set to 'true' to skip writing

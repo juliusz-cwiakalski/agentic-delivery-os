@@ -407,7 +407,7 @@ test_non_markdown_file() {
   
   # Should exit with usage error (EXIT_USAGE=2)
   assert_exit_code 2 "${exit_code}" "Non-markdown file should cause usage error"
-  assert_contains "${stdout}" "not a markdown file or directory" "Should mention markdown requirement"
+  assert_contains "${stdout}" "not a markdown file" "Should mention markdown requirement"
 }
 
 test_default_paths() {
@@ -537,11 +537,194 @@ description: Missing MIT line
 }
 
 # ============================================================================
+# BASH FILE TESTS
+# ============================================================================
+
+test_bash_sh_extension_gets_header() {
+  local -r test_file="${_test_tmpdir}/test-script.sh"
+  create_test_file "${test_file}" '#!/usr/bin/env bash
+# test-script.sh — A test script
+set -Eeuo pipefail
+
+echo "hello"
+'
+  
+  # Run script
+  local stdout exit_code=0
+  stdout="$(DRY_RUN=false "${SCRIPT_DIR}/add-header-location.sh" "${test_file}" 2>&1)" || exit_code=$?
+  
+  assert_exit_code 0 "${exit_code}" "Script should succeed"
+  
+  local content
+  content="$(get_file_content "${test_file}")"
+  
+  # Header should be present as bash comments
+  assert_contains "${content}" "# Copyright (c) 2025-2026" "Should have copyright line"
+  assert_contains "${content}" "# MIT License - see LICENSE file for full terms" "Should have MIT line"
+  assert_contains "${content}" "# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main" "Should have source URL"
+  
+  # Shebang should still be first line
+  local lines
+  mapfile -t lines < "${test_file}"
+  assert_eq "#!/usr/bin/env bash" "${lines[0]}" "First line should be shebang"
+  assert_contains "${lines[1]}" "# Copyright" "Second line should be copyright"
+  assert_contains "${lines[2]}" "# MIT License" "Third line should be MIT license"
+  assert_contains "${lines[3]}" "# Latest version:" "Fourth line should be source URL"
+  
+  # Original content should be preserved
+  assert_contains "${content}" "echo \"hello\"" "Original content should remain"
+}
+
+test_bash_shebang_no_extension_gets_header() {
+  local -r test_file="${_test_tmpdir}/my-tool"
+  create_test_file "${test_file}" '#!/usr/bin/env bash
+# my-tool — A tool without .sh extension
+set -Eeuo pipefail
+
+main() {
+  echo "running"
+}
+
+main "$@"
+'
+  
+  # Run script
+  local stdout exit_code=0
+  stdout="$(DRY_RUN=false "${SCRIPT_DIR}/add-header-location.sh" "${test_file}" 2>&1)" || exit_code=$?
+  
+  assert_exit_code 0 "${exit_code}" "Script should succeed"
+  
+  local content
+  content="$(get_file_content "${test_file}")"
+  
+  # Header should be present after shebang
+  local lines
+  mapfile -t lines < "${test_file}"
+  assert_eq "#!/usr/bin/env bash" "${lines[0]}" "First line should be shebang"
+  assert_contains "${lines[1]}" "# Copyright" "Header should start after shebang"
+  assert_contains "${lines[2]}" "# MIT License" "MIT line after copyright"
+  assert_contains "${lines[3]}" "# Latest version:" "Source URL after MIT"
+  
+  # Original content should be preserved
+  assert_contains "${content}" "main() {" "Original content should remain"
+}
+
+test_bash_bin_bash_shebang_detected() {
+  local -r test_file="${_test_tmpdir}/alt-shebang-tool"
+  create_test_file "${test_file}" '#!/bin/bash
+echo "alt shebang"
+'
+  
+  # Run script
+  local stdout exit_code=0
+  stdout="$(DRY_RUN=false "${SCRIPT_DIR}/add-header-location.sh" "${test_file}" 2>&1)" || exit_code=$?
+  
+  assert_exit_code 0 "${exit_code}" "Script should succeed"
+  
+  local content
+  content="$(get_file_content "${test_file}")"
+  
+  # Header should be present
+  assert_contains "${content}" "# Copyright (c) 2025-2026" "Should have copyright line"
+  assert_contains "${content}" "# MIT License" "Should have MIT line"
+  assert_contains "${content}" "# Latest version:" "Should have source URL"
+  
+  # Shebang preserved as first line
+  local first_line
+  first_line="$(head -1 "${test_file}")"
+  assert_eq "#!/bin/bash" "${first_line}" "Shebang should be preserved"
+}
+
+test_bash_existing_header_idempotent() {
+  local -r test_file="${_test_tmpdir}/already-has-header.sh"
+  create_test_file "${test_file}" '#!/usr/bin/env bash
+# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+# MIT License - see LICENSE file for full terms
+# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/test/already-has-header.sh
+set -Eeuo pipefail
+echo "existing"
+'
+  
+  # Get original hash
+  local original_hash
+  original_hash="$(sha256sum "${test_file}" | cut -d' ' -f1)"
+  
+  # Run script (should be idempotent)
+  local stdout exit_code=0
+  stdout="$(DRY_RUN=false "${SCRIPT_DIR}/add-header-location.sh" "${test_file}" 2>&1)" || exit_code=$?
+  
+  assert_exit_code 0 "${exit_code}" "Script should succeed"
+  
+  # Get new hash — file should not change
+  local new_hash
+  new_hash="$(sha256sum "${test_file}" | cut -d' ' -f1)"
+  assert_eq "${original_hash}" "${new_hash}" "Bash file with existing header should not change"
+}
+
+test_bash_directory_finds_both_md_and_sh() {
+  local -r test_dir="${_test_tmpdir}/mixed-dir"
+  mkdir -p "${test_dir}"
+  
+  # Create markdown file
+  create_test_file "${test_dir}/readme.md" "# Readme\nSome content."
+  # Create .sh file
+  create_test_file "${test_dir}/setup.sh" '#!/usr/bin/env bash
+echo "setup"
+'
+  # Create shebang file without extension
+  create_test_file "${test_dir}/my-tool" '#!/usr/bin/env bash
+echo "tool"
+'
+  
+  # Run on directory
+  local stdout exit_code=0
+  stdout="$(DRY_RUN=false "${SCRIPT_DIR}/add-header-location.sh" "${test_dir}" 2>&1)" || exit_code=$?
+  
+  assert_exit_code 0 "${exit_code}" "Directory processing should succeed"
+  
+  # All three files should have headers
+  local md_content sh_content tool_content
+  md_content="$(get_file_content "${test_dir}/readme.md")"
+  sh_content="$(get_file_content "${test_dir}/setup.sh")"
+  tool_content="$(get_file_content "${test_dir}/my-tool")"
+  
+  assert_contains "${md_content}" "# Copyright" "Markdown file should have header"
+  assert_contains "${sh_content}" "# Copyright" ".sh file should have header"
+  assert_contains "${tool_content}" "# Copyright" "Shebang-detected file should have header"
+}
+
+test_bash_dry_run_mode() {
+  local -r test_file="${_test_tmpdir}/dry-run-bash.sh"
+  create_test_file "${test_file}" '#!/usr/bin/env bash
+echo "no header yet"
+'
+  
+  # Get original content
+  local original_content
+  original_content="$(get_file_content "${test_file}")"
+  
+  # Run with dry-run
+  local stdout exit_code=0
+  stdout="$(DRY_RUN=true "${SCRIPT_DIR}/add-header-location.sh" "${test_file}" 2>&1)" || exit_code=$?
+  
+  assert_exit_code 0 "${exit_code}" "Dry-run should succeed"
+  
+  # File should not change in dry-run mode
+  local current_content
+  current_content="$(get_file_content "${test_file}")"
+  assert_eq "${original_content}" "${current_content}" "Bash file should not change in dry-run mode"
+  
+  # Output should contain DRY-RUN message
+  assert_contains "${stdout}" "DRY-RUN" "Should mention DRY-RUN in output"
+}
+
+# ============================================================================
 # RUN TESTS
 # ============================================================================
 main() {
   printf '%s Running tests...\n' "${TEST_TAG}"
   
+  # Markdown tests
   run_test "File without frontmatter gets full header" test_file_without_frontmatter
   run_test "File with frontmatter but no copyright gets header added" test_file_with_frontmatter_no_copyright
   run_test "File with complete header remains unchanged" test_file_with_complete_header
@@ -554,6 +737,14 @@ main() {
   run_test "Multiple files as arguments work" test_multiple_files_argument
   run_test "Unicode copyright line handled idempotently" test_unicode_copyright_idempotent
   run_test "Missing MIT line gets added with source line" test_missing_mit_line
+  
+  # Bash file tests
+  run_test "Bash .sh file gets license header after shebang" test_bash_sh_extension_gets_header
+  run_test "Bash shebang-detected file (no .sh) gets header after shebang" test_bash_shebang_no_extension_gets_header
+  run_test "Bash #!/bin/bash shebang detected" test_bash_bin_bash_shebang_detected
+  run_test "Bash file with existing header is idempotent" test_bash_existing_header_idempotent
+  run_test "Directory processing finds both .md and bash files" test_bash_directory_finds_both_md_and_sh
+  run_test "Bash dry-run mode doesn't modify files" test_bash_dry_run_mode
   
   print_summary
 }
