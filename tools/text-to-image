@@ -287,7 +287,7 @@ retry_curl() {
       local curl_stderr
       curl_stderr="$(cat "$stderr_file")"
       if [[ -n "$curl_stderr" ]]; then
-        log_debug "Curl stderr: $curl_stderr"
+        log_debug "Curl stderr: $curl_stderr" >&2
       fi
     fi
 
@@ -304,12 +304,12 @@ retry_curl() {
       if [[ -n "$retry_after" ]] && [[ "$retry_after" =~ ^[0-9]+$ ]]; then
         delay="$retry_after"
       fi
-      log_warn "Rate limited (429), retrying in $delay seconds"
+      log_warn "Rate limited (429), retrying in $delay seconds" >&2
     elif (( http_code >= 500 )); then
-      log_warn "Server error ($http_code), retrying in $delay seconds (attempt $((attempt+1))/$max_retries)"
+      log_warn "Server error ($http_code), retrying in $delay seconds (attempt $((attempt+1))/$max_retries)" >&2
     else
       log_err "Request failed with HTTP $http_code"
-      log_debug "Response body: ${response:0:500}"
+      log_debug "Response body: ${response:0:500}" >&2
       rm -f "$stderr_file"
       echo "$response"
       return "$EXIT_NETWORK_ERROR"
@@ -574,8 +574,13 @@ generate_image_stability() {
   fi
 
   local payload
-  payload="$(_jq -n --arg prompt "$prompt" --arg negative "$negative_prompt" --arg w "$width" --arg h "$height" \
-    '{text_prompts: [{text: $prompt}, {text: $negative, weight: -1}], cfg_scale: 7, height: ($h|tonumber), width: ($w|tonumber), samples: 1, steps: 20}' 2>/dev/null)"
+  if [[ -n "$negative_prompt" ]]; then
+    payload="$(_jq -n --arg prompt "$prompt" --arg negative "$negative_prompt" --argjson w "$width" --argjson h "$height" \
+      '{text_prompts: [{text: $prompt}, {text: $negative, weight: -1}], cfg_scale: 7, height: $h, width: $w, samples: 1, steps: 20}' 2>/dev/null)"
+  else
+    payload="$(_jq -n --arg prompt "$prompt" --argjson w "$width" --argjson h "$height" \
+      '{text_prompts: [{text: $prompt}], cfg_scale: 7, height: $h, width: $w, samples: 1, steps: 20}' 2>/dev/null)"
+  fi
 
   local response
   if [[ "${DRY_RUN}" == "true" ]]; then
