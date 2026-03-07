@@ -11,12 +11,12 @@
 #
 # Dependencies: bash>=4, jq, timeout (GNU coreutils)
 #
-# Usage: ./tools/.tests/test-text-to-image-e2e-providers.sh [options]
+# Usage: bash tools/.tests/test-text-to-image-e2e-providers.sh [options]
 #
 # Environment variables:
 #   PROMPT       - Text prompt for image generation (default: "A simple geometric shape on a white background")
 #   OUTPUT_PREFIX - Filename prefix (default: "e2e")
-#   OUTPUT_DIR   - Output directory for generated images (default: ./tmp/e2e-provider-tests)
+#   OUTPUT_DIR   - Output directory for generated images (default: <repo>/tmp/e2e-provider-tests)
 #   TIMEOUT      - Timeout in seconds per model generation (default: 120)
 #   VERBOSE      - Set to 'true' for debug output
 #
@@ -35,11 +35,13 @@ IFS=$'\n\t'
 readonly APP_NAME="test-text-to-image-e2e-providers"
 readonly LOG_TAG="(${APP_NAME})"
 
-readonly TOOL_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)/text-to-image"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+readonly TOOL_PATH="${SCRIPT_DIR}/../text-to-image"
+readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd -P)"
 
 PROMPT="${PROMPT:-A simple geometric shape on a white background}"
 OUTPUT_PREFIX="${OUTPUT_PREFIX:-e2e}"
-OUTPUT_DIR="${OUTPUT_DIR:-./tmp/e2e-provider-tests}"
+OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/tmp/e2e-provider-tests}"
 TIMEOUT="${TIMEOUT:-120}"
 VERBOSE="${VERBOSE:-false}"
 
@@ -282,12 +284,14 @@ run_all_tests() {
 # CLI
 # ============================================================================
 usage() {
-  cat <<EOF
+  cat >&2 <<EOF
 Usage: ${APP_NAME} [options]
 
 End-to-end test: generate images from every known model across all providers.
 Calls real APIs for configured providers. Skips unconfigured providers and
 already-generated files (safe to re-run).
+
+Output goes to <repo>/tmp/e2e-provider-tests/ by default.
 
 Options:
   -h, --help      Show this help message
@@ -296,14 +300,23 @@ Options:
 Environment variables:
   PROMPT         Text prompt (default: "A simple geometric shape on a white background")
   OUTPUT_PREFIX  Filename prefix (default: "e2e")
-  OUTPUT_DIR     Output directory (default: ./tmp/e2e-provider-tests)
+  OUTPUT_DIR     Output directory (default: <repo>/tmp/e2e-provider-tests)
   TIMEOUT        Timeout per model in seconds (default: 120)
   VERBOSE        Set to 'true' for debug output
 
 Examples:
-  ${APP_NAME}
-  PROMPT="A red circle" TIMEOUT=60 ${APP_NAME}
-  OUTPUT_DIR=./tmp/my-test ${APP_NAME} --verbose
+  # Run from repo root (default prompt and output dir):
+  bash tools/.tests/test-text-to-image-e2e-providers.sh
+
+  # Run with custom prompt and timeout:
+  PROMPT="A red circle on white" TIMEOUT=60 bash tools/.tests/test-text-to-image-e2e-providers.sh
+
+  # Verbose mode, custom output directory:
+  bash tools/.tests/test-text-to-image-e2e-providers.sh --verbose
+  OUTPUT_DIR=./tmp/my-test bash tools/.tests/test-text-to-image-e2e-providers.sh
+
+  # Re-run to fill gaps (skips already-generated images):
+  bash tools/.tests/test-text-to-image-e2e-providers.sh
 EOF
 }
 
