@@ -205,8 +205,8 @@ This change delivers six interrelated deliverables that together establish the f
 
 **Tasks**:
 
-- [ ] Create `doc/tools/` directory (AC-DOC-1)
-- [ ] Write `doc/tools/text-to-image.md` with all required sections per `doc/guides/tools-convention.md` (AC-DOC-1, AC-DOC-2):
+- [x] Create `doc/tools/` directory (AC-DOC-1) — created
+- [x] Write `doc/tools/text-to-image.md` with all required sections per `doc/guides/tools-convention.md` (AC-DOC-1, AC-DOC-2) — 644 lines, all sections present:
   - Title + version near top linking to changelog: `> Version 1.0.0 | [Changelog](#100-2026-03-07)` (AC-DOC-2)
   - Overview: what the tool does, 7 supported providers, agent-agnostic design
   - Requirements: bash 4+, curl (required); jq, yq, exiftool (optional with fallbacks)
@@ -224,8 +224,8 @@ This change delivers six interrelated deliverables that together establish the f
   - Troubleshooting: common errors (missing API key, invalid dimensions, network, rate limit, permissions), debugging with `--verbose`
   - CLI Reference: full options table
   - Changelog section with `### 1.0.0 (2026-03-07)` initial release entry (AC-DOC-2)
-- [ ] Verify all 7 provider headings produce correct GitHub anchor URLs matching `PROVIDER_DOC_ANCHORS` in the script (AC-F10-1, AC-DOC-1)
-- [ ] Add ADOS MIT license header (YAML frontmatter for markdown) (G-6)
+- [x] Verify all 7 provider headings produce correct GitHub anchor URLs matching `PROVIDER_DOC_ANCHORS` in the script (AC-F10-1, AC-DOC-1) — verified: openai, stability-ai, google-imagen, hugging-face, black-forest-labs, replicate, siliconflow
+- [x] Add ADOS MIT license header (YAML frontmatter for markdown) (G-6) — 3-line YAML frontmatter added
 
 **Acceptance Criteria**:
 
@@ -416,4 +416,8 @@ This change delivers six interrelated deliverables that together establish the f
 
 ## Execution Log
 
-_No phases executed yet._
+| Phase | Date | Status | Summary |
+|-------|------|--------|---------|
+| 1 | 2026-03-07 | DONE | Core tool ported as `tools/text-to-image` (~2075 lines). Commit: `a9331db` |
+| 2 | 2026-03-07 | DONE | 3 test suites ported (52+21+8=81 tests, all pass). Commit: `702ccda` |
+| 3 | 2026-03-07 | DONE | User doc `doc/tools/text-to-image.md` (644 lines), 7 provider sections with stable anchors. Commit: pending |
