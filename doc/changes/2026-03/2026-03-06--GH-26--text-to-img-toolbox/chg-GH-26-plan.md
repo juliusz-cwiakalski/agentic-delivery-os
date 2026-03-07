@@ -116,20 +116,20 @@ This change delivers six interrelated deliverables that together establish the f
 
 **Tasks**:
 
-- [ ] Create `tools/` and `tools/.tests/` directories (AC-F1-1, AC-F1-2)
-- [ ] Copy source script to `tools/text-to-image` and make executable (`chmod +x`) (AC-F1-1)
-- [ ] Rename all occurrences: `text-to-img` to `text-to-image`, `TEXT_TO_IMG` to `TEXT_TO_IMAGE` throughout the script (AC-F1-1, AC-CLEAN-1)
-- [ ] Update `APP_NAME` to `text-to-image`, `LOG_TAG` to `(text-to-image)` (AC-F1-1)
-- [ ] Update config directory default from `~/.ai/text-to-img` to `~/.ai/text-to-image` (AC-DM1-1)
-- [ ] Remove all private project references (menuvivo, PDEV-*, internal URLs, private doc paths) (AC-CLEAN-1)
-- [ ] Rewrite `show_help()` per tools convention: include tool name+version, usage syntax, basic examples (3-5), options reference, doc link to `doc/tools/text-to-image.md` on GitHub, license info (AC-F1-1)
-- [ ] Rewrite `show_version()` per tools convention: multi-line with name+version, copyright, MIT, latest-version URL (AC-F1-2)
-- [ ] Implement `_check_version()` function: fetch raw script from GitHub, extract `APP_VERSION`, compare, 24h cache in `~/.ai/text-to-image/version-check`, silent failure, opt-out via `TEXT_TO_IMAGE_NO_VERSION_CHECK=true` (AC-F9-1, AC-F9-2, AC-F9-3)
-- [ ] Implement doc-linked error messages: define `DOC_BASE_URL` constant, `PROVIDER_DOC_ANCHORS` associative array mapping provider names to doc heading anchors, update `provider_not_configured_error()` to include GitHub URL to provider-specific doc section (AC-F10-1)
-- [ ] Add ADOS MIT license header (3-line bash comment after shebang) (G-6)
-- [ ] Verify `--dry-run` works end-to-end with new naming (AC-F1-3)
-- [ ] Verify `--list-models` and `--all-models` work with `--output-format json` (AC-F4-1, AC-F4-2)
-- [ ] Run `grep -r` for private project identifiers to confirm zero matches (AC-CLEAN-1)
+- [x] Create `tools/` and `tools/.tests/` directories (AC-F1-1, AC-F1-2) — created
+- [x] Copy source script to `tools/text-to-image` and make executable (`chmod +x`) (AC-F1-1) — ported ~2100 lines
+- [x] Rename all occurrences: `text-to-img` to `text-to-image`, `TEXT_TO_IMG` to `TEXT_TO_IMAGE` throughout the script (AC-F1-1, AC-CLEAN-1) — sed bulk rename
+- [x] Update `APP_NAME` to `text-to-image`, `LOG_TAG` to `(text-to-image)` (AC-F1-1) — verified
+- [x] Update config directory default from `~/.ai/text-to-img` to `~/.ai/text-to-image` (AC-DM1-1) — verified
+- [x] Remove all private project references (menuvivo, PDEV-*, internal URLs, private doc paths) (AC-CLEAN-1) — grep confirms 0 matches
+- [x] Rewrite `show_help()` per tools convention: include tool name+version, usage syntax, basic examples (3-5), options reference, doc link to `doc/tools/text-to-image.md` on GitHub, license info (AC-F1-1) — convention-compliant
+- [x] Rewrite `show_version()` per tools convention: multi-line with name+version, copyright, MIT, latest-version URL (AC-F1-2) — convention-compliant
+- [x] Implement `_check_version()` function: fetch raw script from GitHub, extract `APP_VERSION`, compare, 24h cache in `~/.ai/text-to-image/version-check`, silent failure, opt-out via `TEXT_TO_IMAGE_NO_VERSION_CHECK=true` (AC-F9-1, AC-F9-2, AC-F9-3) — implemented
+- [x] Implement doc-linked error messages: define `DOC_BASE_URL` constant, `PROVIDER_DOC_ANCHORS` associative array mapping provider names to doc heading anchors, update `provider_not_configured_error()` to include GitHub URL to provider-specific doc section (AC-F10-1) — implemented with 7 provider anchors
+- [x] Add ADOS MIT license header (3-line bash comment after shebang) (G-6) — added
+- [x] Verify `--dry-run` works end-to-end with new naming (AC-F1-3) — exits 0
+- [x] Verify `--list-models` and `--all-models` work with `--output-format json` (AC-F4-1, AC-F4-2) — valid JSON output
+- [x] Run `grep -r` for private project identifiers to confirm zero matches (AC-CLEAN-1) — confirmed 0 matches
 
 **Acceptance Criteria**:
 
