@@ -30,7 +30,7 @@ The tool follows the `tools/` convention defined in `doc/guides/tools-convention
 | Provider | Default Model | Auth Env Var |
 |----------|--------------|-------------|
 | OpenAI | dall-e-3 | `OPENAI_API_KEY` |
-| Stability AI | stable-diffusion-v1-6 | `STABILITY_API_KEY` |
+| Stability AI | stable-diffusion-xl-1024-v1-0 | `STABILITY_API_KEY` |
 | Google Imagen | imagen-4.0-generate-001 | `GOOGLE_CREDENTIALS` / `GOOGLE_API_KEY` / gcloud |
 | Hugging Face | stabilityai/stable-diffusion-2-1 | `HF_API_KEY` |
 | Black Forest Labs | flux-1.1-pro | `BFL_API_KEY` |

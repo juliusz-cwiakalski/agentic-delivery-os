@@ -477,7 +477,7 @@ test_get_provider_model() {
   assert_eq "dall-e-3" "$model"
 
   model="$(get_provider_model "stability")"
-  assert_eq "stable-diffusion-v1-6" "$model"
+  assert_eq "stable-diffusion-xl-1024-v1-0" "$model"
 
   model="$(get_provider_model "google")"
   assert_eq "imagen-4.0-generate-001" "$model"

@@ -17,7 +17,7 @@ Supported providers:
 | Provider | Default Model | Auth Env Var |
 |----------|--------------|-------------|
 | OpenAI | dall-e-3 | `OPENAI_API_KEY` |
-| Stability AI | stable-diffusion-v1-6 | `STABILITY_API_KEY` |
+| Stability AI | stable-diffusion-xl-1024-v1-0 | `STABILITY_API_KEY` |
 | Google Imagen | imagen-4.0-generate-001 | `GOOGLE_CREDENTIALS` / `GOOGLE_API_KEY` / gcloud |
 | Hugging Face | stabilityai/stable-diffusion-2-1 | `HF_API_KEY` |
 | Black Forest Labs | flux-1.1-pro | `BFL_API_KEY` |
@@ -106,17 +106,18 @@ export OPENAI_API_KEY="sk-your-openai-key"
 export STABILITY_API_KEY="sk-your-stability-key"
 ```
 
-**Models:**
+**Models (v1 API — legacy engines):**
 
 | Model ID | Name | Quality | Cost | Notes |
 |----------|------|---------|------|-------|
-| `stable-diffusion-v1-6` | Stable Diffusion v1.6 (default) | Medium | ~$0.002/img | Supports negative prompts |
-| `stable-diffusion-3-medium` | Stable Diffusion 3 Medium | High | ~$0.008/img | Limited availability |
-| `stable-diffusion-xl-1024-v1-0` | SDXL 1024 | High | ~$0.004/img | Optimal at 1024x1024 |
+| `stable-diffusion-xl-1024-v1-0` | SDXL 1024 (default) | High | ~$0.004/img | Legacy, optimal at 1024x1024 |
+| `stable-diffusion-v1-6` | Stable Diffusion v1.6 | Medium | ~$0.002/img | Legacy, supports negative prompts |
+
+> **Note:** Stability AI offers newer models (SD3, SD3.5, Stable Image Core, Stable Image Ultra) via their v2beta REST API. Support for v2beta is planned. The models listed above are the only ones available through the current v1 integration.
 
 **Gotchas:**
 
-- Different models have different endpoint patterns — the tool handles this automatically
+- Only legacy v1 engine IDs are currently supported; newer models require v2beta API (planned)
 - SDXL produces best results at 1024x1024; non-square outputs may have artifacts
 - Stability AI credits must be purchased separately from the API key
 - Negative prompts are supported and recommended for quality control
@@ -351,10 +352,10 @@ tools/text-to-image --prompt "portrait of a cat" --negative-prompt "blurry, low 
 Generate the same prompt across multiple models simultaneously:
 
 ```bash
-tools/text-to-image --prompt "futuristic city" --models "dall-e-3,stable-diffusion-v1-6,flux-1.1-pro" --output city.png
+tools/text-to-image --prompt "futuristic city" --models "dall-e-3,stable-diffusion-xl-1024-v1-0,flux-1.1-pro" --output city.png
 ```
 
-This produces model-suffixed output files: `city-dall-e-3.png`, `city-stable-diffusion-v1-6.png`, `city-flux-1.1-pro.png`.
+This produces model-suffixed output files: `city-dall-e-3.png`, `city-stable-diffusion-xl-1024-v1-0.png`, `city-flux-1.1-pro.png`.
 
 ### Batch processing (YAML)
 

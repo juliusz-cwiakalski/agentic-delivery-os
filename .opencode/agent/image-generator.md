@@ -39,7 +39,7 @@ You translate visual requirements into effective prompts and produce image files
 - Quality profile: `high` | `medium` | `low` (default: `high`)
 - Dimensions: width/height in pixels (default: 1024x1024)
 - Provider preference: `openai`, `stability`, `google`, `huggingface`, `bfl`, `replicate`, `siliconflow`
-- Model preference: specific model ID (e.g., `dall-e-3`, `stable-diffusion-v1-6`, `flux-1.1-pro`)
+- Model preference: specific model ID (e.g., `dall-e-3`, `stable-diffusion-xl-1024-v1-0`, `flux-1.1-pro`)
 - Negative prompt: elements to avoid in the image
 - Metadata: artist, copyright, keywords, description for embedding
 </optional>
@@ -95,9 +95,9 @@ Select provider/model based on task type and available models (discovered via `-
 | Task Type | Recommended Models | Rationale |
 |-----------|-------------------|-----------|
 | Photorealistic / photography | `dall-e-3` (OpenAI), `imagen-4.0-generate-001` or `imagen-4.0-ultra-generate-001` (Google) | Best photorealism and detail |
-| Illustration / artistic | `stable-diffusion-v1-6` or `stable-diffusion-3-medium` (Stability), `flux-1.1-pro` (BFL) | Negative prompt support, style control |
+| Illustration / artistic | `stable-diffusion-xl-1024-v1-0` (Stability), `flux-1.1-pro` (BFL) | Negative prompt support, style control. Note: Stability v2beta models (SD3, SD3.5, Stable Image Core/Ultra) are not yet supported. |
 | Quick drafts / mockups | `imagen-4.0-fast-generate-001` (Google), HF default (Hugging Face) | Lower cost, faster generation |
-| Icons / UI elements | `stable-diffusion-v1-6` (Stability) with negative prompts | Clean output, prompt control |
+| Icons / UI elements | `stable-diffusion-xl-1024-v1-0` (Stability) with negative prompts | Clean output, prompt control |
 | Product photography | `dall-e-3` (OpenAI), `imagen-4.0-generate-001` (Google) | High quality, natural lighting |
 | Budget / high-volume | `siliconflow` models, `huggingface` free tier | Lowest cost per image |
 
@@ -177,7 +177,7 @@ If FAILED, include:
 <example id="discovery-and-generate">
 Input: "Generate a hero image for the landing page showing a mountain sunrise"
 Step 1 — Discover: `tools/text-to-image --list-models --output-format json`
-Output: `[{"provider":"openai","model":"dall-e-3",...},{"provider":"stability","model":"stable-diffusion-v1-6",...}]`
+Output: `[{"provider":"openai","model":"dall-e-3",...},{"provider":"stability","model":"stable-diffusion-xl-1024-v1-0",...}]`
 Step 2 — Select: Task is photorealistic → routing table recommends dall-e-3 → available → use it
 Step 3 — Generate: `tools/text-to-image --prompt "majestic mountain sunrise, golden hour lighting, dramatic clouds, photorealistic landscape photography, wide angle" --provider openai --model dall-e-3 --output public/images/hero-mountain.png --quality high --width 1920 --height 1080 --output-format json`
 </example>
@@ -191,8 +191,8 @@ Step 3 — Generate: `tools/text-to-image --prompt "minimalist settings gear ico
 
 <example id="comparison">
 Input: "Generate a product mockup, compare different AI models"
-Command: `tools/text-to-image --prompt "modern smartphone displaying app interface, floating on gradient background, soft shadows" --models dall-e-3,stable-diffusion-v1-6,flux-1.1-pro --output assets/mockup.png --output-format json`
-Output: Creates `mockup-dall-e-3.png`, `mockup-stable-diffusion-v1-6.png`, `mockup-flux-1.1-pro.png`
+Command: `tools/text-to-image --prompt "modern smartphone displaying app interface, floating on gradient background, soft shadows" --models dall-e-3,stable-diffusion-xl-1024-v1-0,flux-1.1-pro --output assets/mockup.png --output-format json`
+Output: Creates `mockup-dall-e-3.png`, `mockup-stable-diffusion-xl-1024-v1-0.png`, `mockup-flux-1.1-pro.png`
 </example>
 
 <example id="fallback-on-missing-provider">
