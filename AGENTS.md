@@ -145,8 +145,8 @@ Detail: [doc/guides/unified-change-convention-tracker-agnostic-specification.md]
 │   └── rules/            # language/tool rules (bash.md)
 ├── scripts/              # repo-internal automation (.sh extension)
 │   └── .tests/           # test files for scripts (test-*.sh)
-├── tools/                # PATH-able CLI utilities (no .sh extension) [planned]
-│   └── .tests/           # test files for tools (test-*.sh) [planned]
+├── tools/                # PATH-able CLI utilities (no .sh extension)
+│   └── .tests/           # test files for tools (test-*.sh)
 └── doc/
     ├── changes/          # change artifacts (spec, plan, test-plan per workItemRef)
     ├── guides/           # how-to guides
@@ -156,7 +156,7 @@ Detail: [doc/guides/unified-change-convention-tracker-agnostic-specification.md]
 
 ## `tools/` and `scripts/` conventions
 
-| Aspect | `tools/` (planned) | `scripts/` |
+| Aspect | `tools/` | `scripts/` |
 |--------|-------------------|------------|
 | Purpose | PATH-able CLI utilities for use beyond this repo | Repo-internal automation |
 | Extension | No `.sh` — invoked by name (e.g., `tools/my-tool`) | `.sh` required |
@@ -168,7 +168,7 @@ Test files follow the pattern `test-*.sh` inside `.tests/` subdirectories. Run w
 
 ## License headers
 
-Every Markdown file carries a three-line YAML frontmatter: copyright, MIT license reference, and canonical URL. Run `scripts/add-header-location.sh <file-or-directory>` to add or update it.
+Every Markdown file carries a three-line YAML frontmatter: copyright, MIT license reference, and canonical URL. Bash scripts carry the same three lines as comments after the shebang. Run `scripts/add-header-location.sh <file-or-directory>` to add or update headers for both file types.
 
 ## Key references
 
@@ -181,3 +181,5 @@ Every Markdown file carries a three-line YAML frontmatter: copyright, MIT licens
 | [.ai/agent/pm-instructions.md](.ai/agent/pm-instructions.md) | PM tracker configuration (GitHub/Jira setup) |
 | [.ai/rules/bash.md](.ai/rules/bash.md) | Bash coding rules |
 | [doc/documentation-handbook.md](doc/documentation-handbook.md) | Documentation layout standard |
+| [doc/tools/text-to-image.md](doc/tools/text-to-image.md) | text-to-image CLI tool user guide and provider setup |
+| [doc/guides/tools-convention.md](doc/guides/tools-convention.md) | Standard for building CLI tools in tools/ |

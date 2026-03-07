@@ -4,7 +4,7 @@
 # Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/changes/2026-03/2026-03-06--GH-26--text-to-img-toolbox/chg-GH-26-plan.md
 
 id: chg-GH-26-text-to-img-toolbox
-status: Proposed
+status: Complete
 created: "2026-03-07T00:00:00Z"
 last_updated: "2026-03-07T00:00:00Z"
 owners: [Juliusz Ćwiąkalski]
@@ -332,18 +332,19 @@ This change delivers six interrelated deliverables that together establish the f
 
 **Tasks**:
 
-- [ ] Update `AGENTS.md` Key References table: add rows for `doc/tools/text-to-image.md` ("text-to-image CLI tool user guide and provider setup") and `doc/guides/tools-convention.md` ("Standard for building CLI tools in tools/") (AC-AGENTS-1)
-- [ ] Remove `[planned]` tag from `tools/` entries in AGENTS.md repo structure section (since tools/ now exists) (AC-AGENTS-1)
-- [ ] Run `scripts/add-header-location.sh` on all new files to ensure MIT license headers (the enhanced version from Phase 5 can handle both markdown and bash files)
-- [ ] Run full grep for private project identifiers across entire repository: `grep -rn "menuvivo\|text-to-img\|PDEV-" tools/ doc/tools/` — expect zero matches (AC-CLEAN-1)
-- [ ] Run all test suites one final time:
-  - `bash tools/.tests/test-text-to-image-unit.sh` (AC-TEST-1)
-  - `bash tools/.tests/test-text-to-image-integration.sh` (AC-TEST-2)
-  - `bash tools/.tests/test-text-to-image-performance.sh` (AC-TEST-3)
-  - `bash scripts/.tests/test-add-header-location.sh` (AC-HEADER-1, AC-HEADER-2)
-- [ ] Verify `tools/text-to-image --help` shows correct doc URL (AC-F1-1)
-- [ ] Verify `tools/text-to-image --version` shows correct latest-version URL (AC-F1-2)
-- [ ] Reconcile spec: verify all 17 acceptance criteria from spec are addressed
+- [x] Update `AGENTS.md` Key References table: add rows for `doc/tools/text-to-image.md` and `doc/guides/tools-convention.md` (AC-AGENTS-1) — added
+- [x] Remove `[planned]` tag from `tools/` entries in AGENTS.md repo structure and conventions table (AC-AGENTS-1) — removed from both locations
+- [x] Update License headers section in AGENTS.md to mention bash script support — updated
+- [x] Run `scripts/add-header-location.sh` on all new files to ensure MIT license headers — all files already have headers, 0 updates needed
+- [x] Run full grep for private project identifiers across repository (AC-CLEAN-1) — only `PDEV-123` in AGENTS.md (example text), zero real matches in tools/doc
+- [x] Run all test suites one final time:
+  - `bash tools/.tests/test-text-to-image-unit.sh` (AC-TEST-1) — 52/52 PASS
+  - `bash tools/.tests/test-text-to-image-integration.sh` (AC-TEST-2) — 21/21 PASS
+  - `bash tools/.tests/test-text-to-image-performance.sh` (AC-TEST-3) — 8/8 PASS
+  - `bash scripts/.tests/test-add-header-location.sh` (AC-HEADER-1, AC-HEADER-2) — 18/18 PASS
+- [x] Verify `tools/text-to-image --help` shows correct doc URL (AC-F1-1) — `Full guide: .../doc/tools/text-to-image.md` ✓
+- [x] Verify `tools/text-to-image --version` shows correct latest-version URL (AC-F1-2) — `Latest version: .../tools/text-to-image` ✓
+- [x] Reconcile spec: all 17 acceptance criteria verified (see below)
 
 **Acceptance Criteria**:
 
@@ -424,4 +425,5 @@ This change delivers six interrelated deliverables that together establish the f
 | 2 | 2026-03-07 | DONE | 3 test suites ported (52+21+8=81 tests, all pass). Commit: `702ccda` |
 | 3 | 2026-03-07 | DONE | User doc `doc/tools/text-to-image.md` (644 lines), 7 provider sections with stable anchors. Commit: `d1bd5b8` |
 | 4 | 2026-03-07 | DONE | Agent tuned: model discovery step, routing table, updated tool_reference, 4 examples. Commit: `44589f3` |
-| 5 | 2026-03-07 | DONE | Header script enhanced: `is_bash_file()`, `process_bash_file()`, `find_bash_files()`, 6 new tests, 18/18 pass. Commit: pending |
+| 5 | 2026-03-07 | DONE | Header script enhanced: `is_bash_file()`, `process_bash_file()`, `find_bash_files()`, 6 new tests, 18/18 pass. Commit: `af9caeb` |
+| 6 | 2026-03-07 | DONE | AGENTS.md updated, [planned] removed, all tests pass (99/99), zero private refs, all 17 AC verified. Commit: pending |
