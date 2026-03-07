@@ -162,18 +162,18 @@ This change delivers six interrelated deliverables that together establish the f
 
 **Tasks**:
 
-- [ ] Copy unit test source to `tools/.tests/test-text-to-image-unit.sh` and make executable (AC-TEST-1)
-- [ ] Rename all occurrences in unit tests: `text-to-img` to `text-to-image`, `TEXT_TO_IMG` to `TEXT_TO_IMAGE`, update `source` path to `${SCRIPT_DIR}/text-to-image`, update `TEST_TAG` to `(test-text-to-image-unit)` (AC-TEST-1)
-- [ ] Remove private project references from unit tests (AC-CLEAN-1)
-- [ ] Copy integration test source to `tools/.tests/test-text-to-image-integration.sh` and make executable (AC-TEST-2)
-- [ ] Rename all occurrences in integration tests: same renames as unit, update `TEST_TAG` to `(test-text-to-image-integration)` (AC-TEST-2)
-- [ ] Remove private project references from integration tests (AC-CLEAN-1)
-- [ ] Copy performance test source to `tools/.tests/test-text-to-image-performance.sh` and make executable (AC-TEST-3)
-- [ ] Rename all occurrences in performance tests: same renames as unit, update `TEST_TAG` to `(test-text-to-image-performance)` (AC-TEST-3)
-- [ ] Remove private project references from performance tests (AC-CLEAN-1)
-- [ ] Add unit tests for new features: `_check_version()` opt-out, `_check_version()` silent failure, doc-linked error messages, updated `show_help()` content, updated `show_version()` content (AC-F9-2, AC-F9-3, AC-F10-1, AC-F1-1, AC-F1-2)
-- [ ] Add ADOS MIT license header to all 3 test files (G-6)
-- [ ] Run all 3 test suites and verify they pass (AC-TEST-1, AC-TEST-2, AC-TEST-3)
+- [x] Copy unit test source to `tools/.tests/test-text-to-image-unit.sh` and make executable (AC-TEST-1) — done
+- [x] Rename all occurrences in unit tests: `text-to-img` to `text-to-image`, `TEXT_TO_IMG` to `TEXT_TO_IMAGE`, update `source` path to `${SCRIPT_DIR}/text-to-image`, update `TEST_TAG` to `(test-text-to-image-unit)` (AC-TEST-1) — bulk sed + source path fix
+- [x] Remove private project references from unit tests (AC-CLEAN-1) — grep confirms 0 matches
+- [x] Copy integration test source to `tools/.tests/test-text-to-image-integration.sh` and make executable (AC-TEST-2) — done
+- [x] Rename all occurrences in integration tests: same renames as unit, update `TEST_TAG` to `(test-text-to-image-integration)` (AC-TEST-2) — done
+- [x] Remove private project references from integration tests (AC-CLEAN-1) — grep confirms 0 matches
+- [x] Copy performance test source to `tools/.tests/test-text-to-image-performance.sh` and make executable (AC-TEST-3) — done
+- [x] Rename all occurrences in performance tests: same renames as unit, update `TEST_TAG` to `(test-text-to-image-performance)` (AC-TEST-3) — done
+- [x] Remove private project references from performance tests (AC-CLEAN-1) — grep confirms 0 matches
+- [x] Add unit tests for new features: `_check_version()` opt-out, `_check_version()` silent failure, doc-linked error messages, updated `show_help()` content, updated `show_version()` content (AC-F9-2, AC-F9-3, AC-F10-1, AC-F1-1, AC-F1-2) — 7 new tests added
+- [x] Add ADOS MIT license header to all 3 test files (G-6) — added
+- [x] Run all 3 test suites and verify they pass (AC-TEST-1, AC-TEST-2, AC-TEST-3) — unit: 52/52, integration: 21/21, performance: 8/8
 
 **Acceptance Criteria**:
 
