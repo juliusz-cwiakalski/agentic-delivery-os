@@ -1,0 +1,81 @@
+change_id: GH-26
+title: "Add text-to-image CLI tool to ADOS toolbox and tune @image-generator agent"
+phases:
+  clarify_scope: { started: "2026-03-06", completed: "2026-03-07" }
+  specification: { started: "2026-03-07", completed: "2026-03-07" }
+  test_planning: { started: "2026-03-07", completed: "2026-03-07" }
+  delivery_planning: { started: "2026-03-07", completed: "2026-03-07" }
+  delivery: { started: "2026-03-07", completed: "2026-03-07" }
+  system_spec_update: { started: "2026-03-07", completed: "2026-03-07" }
+  review_fix: { started: "2026-03-07", completed: "2026-03-07" }
+  quality_gates: { started: "2026-03-07", completed: "2026-03-07" }
+  dod_check: { started: "2026-03-07", completed: "2026-03-07" }
+  pr_creation: { started: "2026-03-07", completed: null, url: null }
+decisions:
+  - text: "Tool location: tools/ directory for PATH-able CLIs (no .sh extension); scripts/ stays for repo-internal automation"
+    date: "2026-03-06"
+  - text: "AGENTS.md split into separate ticket GH-27, delivered first to establish conventions"
+    date: "2026-03-06"
+  - text: "Agent tuning scope: model discovery (--list-models with availability check), task-based routing table (production vs draft), updated CLI reference"
+    date: "2026-03-06"
+  - text: "add-header-location.sh enhancement: detect bash scripts by .sh extension or shebang line"
+    date: "2026-03-06"
+  - text: "License header: standard ADOS copyright+MIT+latest-version-URL, same as agent prompts"
+    date: "2026-03-06"
+  - text: "Config dir renamed to ~/.ai/text-to-image/ (consistent with tool name)"
+    date: "2026-03-07"
+  - text: "--version output: multi-line with name+version, copyright, MIT, latest-version URL"
+    date: "2026-03-07"
+  - text: "--help output: includes basic examples, link to doc on GitHub, and license info at bottom"
+    date: "2026-03-07"
+  - text: "User doc (doc/tools/text-to-image.md): per-provider setup with sign-up URL, console URL, env var, gotchas, pricing. Stable markdown headings for deterministic GitHub anchors."
+    date: "2026-03-07"
+  - text: "Script error messages for unconfigured providers link to provider-specific doc section on GitHub"
+    date: "2026-03-07"
+  - text: "Version check: auto-check from GitHub raw, 24h cache in config dir, silent failure, opt-out via TEXT_TO_IMAGE_NO_VERSION_CHECK=true"
+    date: "2026-03-07"
+  - text: "Doc versioning: version near top linking to changelog subsection; each version is a subsection in changelog"
+    date: "2026-03-07"
+  - text: "Tools convention guide: doc/guides/tools-convention.md — PM writes initial version directly to preserve context; part of GH-26"
+    date: "2026-03-07"
+  - text: "Design principle: tools are standalone, agent-agnostic CLIs. Not coupled to OpenCode, Claude Code, or any specific AI tool. Any user or agent can invoke from terminal."
+    date: "2026-03-07"
+open_questions: []
+blockers:
+  - text: "Blocked on GH-27 (AGENTS.md) which establishes tools/ convention"
+    date: "2026-03-06"
+    resolved_date: "2026-03-07"
+notes:
+  - text: "Blueprint from private menuvivo project (PDEV-29). Script ~2100 lines, battle-tested with 15 phases of review. Tests: 26 unit, 6 integration, 4 performance."
+    type: info
+    date: "2026-03-06"
+  - text: "Clarify scope complete: all user questions resolved, GH-26 description updated, GH-27 created as dependency"
+    type: info
+    date: "2026-03-06"
+  - text: "Second clarify round (2026-03-07): added user doc with provider guides, --help/--version license info, version check feature, tools convention guide. All confirmed by user."
+    type: info
+    date: "2026-03-07"
+  - text: "Spec created by @spec-writer: 17 AC, 12 functional capabilities, 10 NFRs, 6 risks."
+    type: info
+    date: "2026-03-07"
+  - text: "Test plan created by @test-plan-writer: 71 test scenarios across 9 categories, all 17 AC covered."
+    type: info
+    date: "2026-03-07"
+  - text: "Implementation plan created by @plan-writer: 6 phases, all tasks mapped to spec ACs."
+    type: info
+    date: "2026-03-07"
+  - text: "Delivery: all 6 plan phases completed by @coder. 10 commits. All 17 AC verified."
+    type: info
+    date: "2026-03-07"
+  - text: "Doc-syncer: created feature-text-to-image-tool.md, feature-license-header-script.md, test-spec-text-to-image-tool.md. Updated documentation-handbook.md."
+    type: info
+    date: "2026-03-07"
+  - text: "Review: PASS — 17/17 AC verified, 58/58 plan tasks done, 0 findings, no remediation needed."
+    type: info
+    date: "2026-03-07"
+  - text: "Quality gates: ALL PASS — unit 52/52, integration 21/21, performance 8/8, header 18/18. Executable OK, --help OK, --version OK. No private refs."
+    type: info
+    date: "2026-03-07"
+  - text: "DoD check: all phases completed, all AC satisfied, all plan tasks done. Ready for PR."
+    type: info
+    date: "2026-03-07"
