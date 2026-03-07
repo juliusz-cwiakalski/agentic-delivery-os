@@ -254,17 +254,18 @@ This change delivers six interrelated deliverables that together establish the f
 
 **Tasks**:
 
-- [ ] Add model discovery step to `<process>`: before generating, run `tools/text-to-image --list-models --output-format json` to discover available providers and models (AC-AGENT-1)
-- [ ] Add task-based model routing guidance to `<constraints>` or a new `<routing>` section:
+- [x] Add model discovery step to `<process>`: before generating, run `tools/text-to-image --list-models --output-format json` to discover available providers and models (AC-AGENT-1) — added as step 1, includes JSON parsing and error handling
+- [x] Add task-based model routing guidance to a new `<routing>` section (AC-AGENT-1) — 6-row routing table:
   - Photorealistic/photography: prefer DALL-E 3 or Imagen 4 Ultra
   - Illustration/art: prefer Stable Diffusion or FLUX
   - Quick drafts/mockups: prefer Imagen 4 Fast or Hugging Face (low quality profile)
   - Icons/UI elements: prefer Stable Diffusion with negative prompts
   - Product photography: prefer DALL-E 3 or Imagen 4 Standard
-- [ ] Update `<tool_reference>` section with `--list-models` and `--all-models` flags, `--output-format json` for model listing (AC-AGENT-1)
-- [ ] Add instruction to parse JSON model listing response and select appropriate model based on task type and available providers (AC-AGENT-1)
-- [ ] Update examples to show model discovery workflow (AC-AGENT-1)
-- [ ] Add reference to user documentation: `doc/tools/text-to-image.md` for provider setup troubleshooting
+  - Budget/high-volume: prefer SiliconFlow or Hugging Face free tier
+- [x] Update `<tool_reference>` section with `--list-models`, `--all-models`, `--google-credentials`, `--google-auth-method` flags, and JSON model listing example (AC-AGENT-1) — done, includes example JSON response format
+- [x] Add instruction to parse JSON model listing response and select appropriate model based on task type and available providers (AC-AGENT-1) — in process step 1 and step 2
+- [x] Update examples to show model discovery workflow (AC-AGENT-1) — 4 examples: discovery-and-generate, with-constraints, comparison, fallback-on-missing-provider
+- [x] Add reference to user documentation: `doc/tools/text-to-image.md` for provider setup troubleshooting — in tool_reference header and process steps 1, 5
 
 **Acceptance Criteria**:
 
@@ -420,4 +421,5 @@ This change delivers six interrelated deliverables that together establish the f
 |-------|------|--------|---------|
 | 1 | 2026-03-07 | DONE | Core tool ported as `tools/text-to-image` (~2075 lines). Commit: `a9331db` |
 | 2 | 2026-03-07 | DONE | 3 test suites ported (52+21+8=81 tests, all pass). Commit: `702ccda` |
-| 3 | 2026-03-07 | DONE | User doc `doc/tools/text-to-image.md` (644 lines), 7 provider sections with stable anchors. Commit: pending |
+| 3 | 2026-03-07 | DONE | User doc `doc/tools/text-to-image.md` (644 lines), 7 provider sections with stable anchors. Commit: `d1bd5b8` |
+| 4 | 2026-03-07 | DONE | Agent tuned: model discovery step, routing table, updated tool_reference, 4 examples. Commit: pending |
