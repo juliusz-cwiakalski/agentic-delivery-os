@@ -853,6 +853,18 @@ generate_image() {
   # Check cache unless force is set
   if [[ "${FORCE}" != "true" ]]; then
     if cache_lookup "$cache_key" "$output_path"; then
+      # If YAML sidecar was not restored from cache, generate a basic one
+      if [[ "${SAVE_GENERATION_INFO}" == "true" ]]; then
+        local output_yaml="${output_path%.*}.yaml"
+        if [[ ! -f "$output_yaml" ]]; then
+          write_generation_info "$output_path" "$prompt" "$negative_prompt" "$width" "$height" "$quality" "$provider" "$model" 0
+          # Back-fill cache with the newly created YAML
+          local cache_file="${CACHE_DIR}/${cache_key}"
+          if [[ -f "$output_yaml" ]]; then
+            cp "$output_yaml" "${cache_file}.yaml" 2>/dev/null || true
+          fi
+        fi
+      fi
       return "$EXIT_SUCCESS"
     fi
   fi
@@ -1962,6 +1974,13 @@ cache_lookup() {
     if [[ "$stored_hash" == "$cache_key" ]]; then
       log_debug "Cache hit: copying from $cache_file to $output_path"
       if cp "$cache_file" "$output_path"; then
+        # Also restore YAML sidecar if cached
+        local cache_yaml="${cache_file}.yaml"
+        if [[ -f "$cache_yaml" ]]; then
+          local output_yaml="${output_path%.*}.yaml"
+          cp "$cache_yaml" "$output_yaml" 2>/dev/null || true
+          log_debug "Restored cached YAML sidecar to $output_yaml"
+        fi
         log_info "Image retrieved from cache"
         return 0
       fi
@@ -2005,6 +2024,11 @@ cache_store() {
       '{cache_key: $cache_key, timestamp: $timestamp, provider: $provider, model: $model, prompt: $prompt, negative_prompt: $negative_prompt, width: ($width|tonumber), height: ($height|tonumber), quality: $quality}' 2>/dev/null)"
 
     if echo "$metadata" > "$metadata_file"; then
+      # Also cache YAML sidecar if it exists
+      local output_yaml="${output_path%.*}.yaml"
+      if [[ -f "$output_yaml" ]]; then
+        cp "$output_yaml" "${cache_file}.yaml" 2>/dev/null || true
+      fi
       log_debug "Image cached with key $cache_key"
       return 0
     fi
@@ -2270,7 +2294,7 @@ cache_cleanup() {
     # Remove oldest files (by mtime)
     find "$CACHE_DIR" -type f -name "*.metadata" -printf '%T@ %p\n' 2>/dev/null | sort -n | head -n 10 | cut -d' ' -f2- | while read -r metadata_file; do
       local cache_file="${metadata_file%.metadata}"
-      rm -f "$cache_file" "$metadata_file"
+      rm -f "$cache_file" "$metadata_file" "${cache_file}.yaml"
     done
   fi
 }
