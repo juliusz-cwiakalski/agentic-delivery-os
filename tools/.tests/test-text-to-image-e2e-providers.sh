@@ -14,11 +14,15 @@
 # Usage: bash tools/.tests/test-text-to-image-e2e-providers.sh [options]
 #
 # Environment variables:
-#   PROMPT       - Text prompt for image generation (default: "A simple geometric shape on a white background")
-#   OUTPUT_PREFIX - Filename prefix (default: "e2e")
-#   OUTPUT_DIR   - Output directory for generated images (default: <repo>/tmp/e2e-provider-tests)
-#   TIMEOUT      - Timeout in seconds per model generation (default: 120)
-#   VERBOSE      - Set to 'true' for debug output
+#   PROMPT          - Text prompt for image generation (default: landscape architect garden scene)
+#   OUTPUT_PREFIX   - Filename prefix (default: "e2e")
+#   OUTPUT_DIR      - Output directory for generated images (default: <repo>/tmp/e2e-provider-tests)
+#   TIMEOUT         - Timeout in seconds per model generation (default: 120)
+#   VERBOSE         - Set to 'true' for debug output
+#   WIDTH           - Image width passed as --width to the tool (default: tool default 1024)
+#   HEIGHT          - Image height passed as --height to the tool (default: tool default 1024)
+#   QUALITY         - Quality profile passed as --quality to the tool (default: tool default "high")
+#   NEGATIVE_PROMPT - Negative prompt passed as --negative-prompt to the tool (default: not passed)
 #
 # Exit codes:
 #   0 - All configured models passed (or were skipped)
@@ -44,6 +48,10 @@ OUTPUT_PREFIX="${OUTPUT_PREFIX:-e2e}"
 OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/tmp/e2e-provider-tests}"
 TIMEOUT="${TIMEOUT:-120}"
 VERBOSE="${VERBOSE:-false}"
+WIDTH="${WIDTH:-}"
+HEIGHT="${HEIGHT:-}"
+QUALITY="${QUALITY:-}"
+NEGATIVE_PROMPT="${NEGATIVE_PROMPT:-}"
 
 # Exit codes
 readonly EXIT_SUCCESS=0
@@ -178,12 +186,20 @@ test_single_model() {
   stderr_file="$(mktemp)"
   local exit_code=0
 
+  local -a extra_args=()
+  [[ -n "${WIDTH:-}" ]] && extra_args+=(--width "${WIDTH}")
+  [[ -n "${HEIGHT:-}" ]] && extra_args+=(--height "${HEIGHT}")
+  [[ -n "${QUALITY:-}" ]] && extra_args+=(--quality "${QUALITY}")
+  [[ -n "${NEGATIVE_PROMPT:-}" ]] && extra_args+=(--negative-prompt "${NEGATIVE_PROMPT}")
+
+  # shellcheck disable=SC2086
   timeout "${TIMEOUT}" \
     "${TOOL_PATH}" \
     --prompt "${PROMPT}" \
     --output "${output_file}" \
     --provider "${provider}" \
     --model "${model}" \
+    ${extra_args[@]+"${extra_args[@]}"} \
     --verbose \
     2>"${stderr_file}" || exit_code=$?
 
@@ -221,9 +237,29 @@ print_summary_table() {
   local -r col_model=50
   local sep
 
+  local prompt_display="${PROMPT}"
+  if [[ "${#prompt_display}" -gt 80 ]]; then
+    prompt_display="${prompt_display:0:80}..."
+  fi
+
+  local settings_display="defaults"
+  local -a settings_parts=()
+  if [[ -n "${WIDTH:-}" || -n "${HEIGHT:-}" ]]; then
+    settings_parts+=("${WIDTH:-1024}x${HEIGHT:-1024}")
+  fi
+  if [[ -n "${QUALITY:-}" ]]; then
+    settings_parts+=("quality=${QUALITY}")
+  fi
+  if [[ ${#settings_parts[@]} -gt 0 ]]; then
+    settings_display="$(printf '%s, ' "${settings_parts[@]}")"
+    settings_display="${settings_display%, }"
+  fi
+
   printf '\n'
   printf '=================================================================\n'
   printf 'End-to-End Provider Test Results\n'
+  printf 'Prompt: %s\n' "${prompt_display}"
+  printf 'Settings: %s\n' "${settings_display}"
   printf '=================================================================\n'
   printf '  %-*s | %-*s | %-*s | %s\n' "${col_status}" "Status" "${col_provider}" "Provider" "${col_model}" "Model" "Details"
   sep="$(printf '%0.s-' {1..140})"
@@ -270,6 +306,10 @@ run_all_tests() {
   log_info "Prompt: ${PROMPT}"
   log_info "Output directory: ${OUTPUT_DIR}"
   log_info "Timeout per model: ${TIMEOUT}s"
+  [[ -n "${WIDTH:-}" ]] && log_info "Width: ${WIDTH}"
+  [[ -n "${HEIGHT:-}" ]] && log_info "Height: ${HEIGHT}"
+  [[ -n "${QUALITY:-}" ]] && log_info "Quality: ${QUALITY}"
+  [[ -n "${NEGATIVE_PROMPT:-}" ]] && log_info "Negative prompt: ${NEGATIVE_PROMPT}"
   printf '\n' >&2
 
   mkdir -p "${OUTPUT_DIR}"
@@ -298,11 +338,15 @@ Options:
   -v, --verbose   Enable debug output
 
 Environment variables:
-  PROMPT         Text prompt (default: "A simple geometric shape on a white background")
-  OUTPUT_PREFIX  Filename prefix (default: "e2e")
-  OUTPUT_DIR     Output directory (default: <repo>/tmp/e2e-provider-tests)
-  TIMEOUT        Timeout per model in seconds (default: 120)
-  VERBOSE        Set to 'true' for debug output
+  PROMPT          Text prompt (default: landscape architect garden scene)
+  OUTPUT_PREFIX   Filename prefix (default: "e2e")
+  OUTPUT_DIR      Output directory (default: <repo>/tmp/e2e-provider-tests)
+  TIMEOUT         Timeout per model in seconds (default: 120)
+  VERBOSE         Set to 'true' for debug output
+  WIDTH           Image width (passed as --width to tool; default: tool default 1024)
+  HEIGHT          Image height (passed as --height to tool; default: tool default 1024)
+  QUALITY         Quality profile (passed as --quality; default: tool default "high")
+  NEGATIVE_PROMPT Negative prompt (passed as --negative-prompt; default: not passed)
 
 Examples:
   # Run from repo root (default prompt and output dir):
