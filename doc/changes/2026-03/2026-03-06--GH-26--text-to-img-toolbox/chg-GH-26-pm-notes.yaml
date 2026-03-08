@@ -118,3 +118,6 @@ notes:
   - text: "YAML sidecar cache gap was a design oversight — cache_store/cache_lookup only handled image files, not the YAML metadata. Discovered during E2E suite re-runs where cached images had no sidecar. Required cache architecture change (store/restore/backfill). Should have been considered when YAML sidecar feature was designed in round 7."
     type: retro
     date: "2026-03-08"
+  - text: "Post-PR fix round 9: Added --force-refresh to E2E suite (passes --force to tool, bypasses both tool cache and file-existence skip). Fixed providers script file-existence guard to respect FORCE env var. Re-ran full suite: 112 GENERATING attempts, 0 SKIPPED, 56 images + 56 YAMLs with complete request/response/timing data. Commit 01cd1fe."
+    type: info
+    date: "2026-03-08"
