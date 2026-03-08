@@ -91,3 +91,12 @@ notes:
   - text: "log_info/log_warn/log_debug were writing to stdout, not stderr. Only log_err had >&2. This is a systemic issue — any log call inside $() subshell pollutes captured return value. Diagnosed via bash xtrace showing access_token='[DEBUG] Auto-detected gcloud CLI...' instead of the actual token. Should have been caught in original delivery — blueprint source had same bug."
     type: retro
     date: "2026-03-07"
+  - text: "BUG: Replicate FLUX 1.1 Pro returns WebP image data but tool saves with .png extension (user-requested format). File is 243KB (WebP compression) vs 1.7-3.0MB for actual PNGs. Discovered when image-reviewer rejected the file: 'image was specified using image/png media type, but appears to be image/webp'. Root cause: providers return whatever native format they choose; tool blindly saves to user-specified path without format verification."
+    type: info
+    date: "2026-03-07"
+  - text: "Decision: auto-convert downloaded images to match user-requested format. Detect actual format via `file --mime-type`, convert via ImageMagick `convert` if mismatch. Graceful degradation: if conversion tool not installed, warn and save with correct extension for actual format. Conversion point: in generate_image() after provider succeeds, before cache_store and embed_metadata."
+    type: decision
+    date: "2026-03-07"
+  - text: "Post-PR fix round 3: Added ensure_output_format() — detects actual image format via file(1), converts via ImageMagick if mismatch, graceful degradation if ImageMagick not installed. 8 new unit tests (62 total). All 91 tests pass (62 unit + 21 integration + 8 performance). Commit d21991d."
+    type: info
+    date: "2026-03-07"

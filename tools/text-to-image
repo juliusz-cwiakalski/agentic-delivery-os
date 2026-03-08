@@ -294,6 +294,75 @@ get_native_format() {
   esac
 }
 
+# Check whether an output path has a recognized image file extension.
+# Returns 0 (true) if the basename contains a dot followed by a known image format,
+# 1 (false) otherwise. Handles edge cases: dots in directory paths, trailing dots,
+# and unrecognized extensions (e.g., .txt).
+# Usage: has_recognized_image_extension <output_path>
+has_recognized_image_extension() {
+  local output_path="$1"
+  local output_basename
+  output_basename="$(basename "$output_path")"
+
+  # No dot in basename → no extension
+  if [[ "$output_basename" != *.* ]]; then
+    return 1
+  fi
+
+  local ext="${output_basename##*.}"
+
+  # Trailing dot (empty extension) → no recognized extension
+  if [[ -z "$ext" ]]; then
+    return 1
+  fi
+
+  case "${ext,,}" in
+    png|jpg|jpeg|webp|avif|tiff|tif) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Resolve the output path by appending a native format extension when the user
+# did not specify a recognized image extension. Uses provider+model to determine
+# the native format; falls back to png if no provider can be resolved.
+# Prints the (possibly updated) output path to stdout.
+# Usage: resolve_output_extension <output> <provider> <model> <quality>
+resolve_output_extension() {
+  local output="$1"
+  local provider="${2:-}"
+  local model="${3:-}"
+  local quality="${4:-high}"
+
+  if [[ -z "$output" ]]; then
+    printf '%s' "$output"
+    return 0
+  fi
+
+  if has_recognized_image_extension "$output"; then
+    printf '%s' "$output"
+    return 0
+  fi
+
+  # No recognized extension — resolve native format
+  local resolved_provider="${provider}"
+  local resolved_model="${model}"
+  if [[ -z "$resolved_provider" ]]; then
+    resolved_provider="$(select_provider "$quality" 2>/dev/null)" || true
+  fi
+  if [[ -n "$resolved_provider" && -z "$resolved_model" ]]; then
+    resolved_model="$(get_provider_model "$resolved_provider")"
+  fi
+  if [[ -n "$resolved_provider" ]]; then
+    local native_ext
+    native_ext="$(get_native_format "$resolved_provider" "$resolved_model")"
+    log_info "No output format specified, using native format: ${native_ext}"
+    printf '%s' "${output}.${native_ext}"
+  else
+    log_info "No output format specified, defaulting to png"
+    printf '%s' "${output}.png"
+  fi
+}
+
 # Determine the best available conversion command for a source→target format pair.
 # Prints the command name to use, or empty string if no tool is available.
 # Prefers specialized tools (cwebp, avifenc) over ImageMagick for quality and speed.
@@ -2208,22 +2277,45 @@ siliconflow|stabilityai/stable-diffusion-xl-1.0|SDXL 1.0|SiliconFlow hosted SDXL
     fi
     echo ""
     
+    # Column widths
+    local -r col_status=6 col_provider=12 col_model=40 col_fmt=4 col_quality=8 col_cost=15 col_desc=40
+
+    # Helper: build separator line with + at intersections
+    _repeat_char() { local -r ch="$1" n="$2"; printf '%*s' "$n" '' | tr ' ' "$ch"; }
+
+    local separator
+    if [[ "$all_models" == "true" ]]; then
+      separator="$(_repeat_char '-' "$col_status")+$(_repeat_char '-' "$((col_provider + 2))")+$(_repeat_char '-' "$((col_model + 2))")+$(_repeat_char '-' "$((col_fmt + 2))")+$(_repeat_char '-' "$((col_quality + 2))")+$(_repeat_char '-' "$((col_cost + 2))")+$(_repeat_char '-' "$((col_desc + 2))")"
+    else
+      separator="$(_repeat_char '-' "$col_provider")+$(_repeat_char '-' "$((col_model + 2))")+$(_repeat_char '-' "$((col_fmt + 2))")+$(_repeat_char '-' "$((col_quality + 2))")+$(_repeat_char '-' "$((col_cost + 2))")+$(_repeat_char '-' "$((col_desc + 2))")"
+    fi
+
     # Print table header
     if [[ "$all_models" == "true" ]]; then
-      printf "%-6s | %-12s | %-30s | %-6s | %-8s | %-10s | %s\n" "Status" "Provider" "Model ID" "Format" "Quality" "Cost" "Description"
+      printf "%-${col_status}s | %-${col_provider}s | %-${col_model}s | %-${col_fmt}s | %-${col_quality}s | %-${col_cost}s | %-${col_desc}s\n" \
+        "Status" "Provider" "Model ID" "Fmt" "Quality" "Cost" "Description"
     else
-      printf "%-12s | %-30s | %-6s | %-8s | %-10s | %s\n" "Provider" "Model ID" "Format" "Quality" "Cost" "Description"
+      printf "%-${col_provider}s | %-${col_model}s | %-${col_fmt}s | %-${col_quality}s | %-${col_cost}s | %-${col_desc}s\n" \
+        "Provider" "Model ID" "Fmt" "Quality" "Cost" "Description"
     fi
-    printf "%s\n" "-------------------------------------------------------------------------------------------------------------------"
+    printf '%s\n' "$separator"
     
     while IFS='|' read -r provider model_id model_name description quality cost limits native_fmt; do
       [[ -z "$provider" ]] && continue
       # Truncate description if too long
-      local short_desc="${description:0:40}"
-      [[ ${#description} -gt 40 ]] && short_desc="${short_desc}..."
+      local short_desc="${description:0:${col_desc}}"
+      [[ ${#description} -gt $col_desc ]] && short_desc="${description:0:$((col_desc - 2))}.."
+      # Truncate model ID if too long
+      local short_model_id="$model_id"
+      if [[ ${#model_id} -gt $col_model ]]; then
+        short_model_id="${model_id:0:$((col_model - 3))}..."
+      fi
+      # Truncate cost if too long
+      local short_cost="${cost:0:${col_cost}}"
+      [[ ${#cost} -gt $col_cost ]] && short_cost="${cost:0:$((col_cost - 2))}.."
       local fmt="${native_fmt:-png}"
       if [[ "$all_models" == "true" ]]; then
-        local status_icon="-"
+        local status_icon="[ ]"
         local is_configured
         is_configured=false
         for avail in "${available_providers[@]}"; do
@@ -2232,10 +2324,12 @@ siliconflow|stabilityai/stable-diffusion-xl-1.0|SDXL 1.0|SiliconFlow hosted SDXL
             break
           fi
         done
-        [[ "$is_configured" == "true" ]] && status_icon="✓"
-        printf "  %-4s | %-12s | %-30s | %-6s | %-8s | %-10s | %s\n" "$status_icon" "$provider" "$model_id" "$fmt" "$quality" "$cost" "$short_desc"
+        [[ "$is_configured" == "true" ]] && status_icon="[x]"
+        printf " %-5s | %-${col_provider}s | %-${col_model}s | %-${col_fmt}s | %-${col_quality}s | %-${col_cost}s | %s\n" \
+          "$status_icon" "$provider" "$short_model_id" "$fmt" "$quality" "$short_cost" "$short_desc"
       else
-        printf "%-12s | %-30s | %-6s | %-8s | %-10s | %s\n" "$provider" "$model_id" "$fmt" "$quality" "$cost" "$short_desc"
+        printf "%-${col_provider}s | %-${col_model}s | %-${col_fmt}s | %-${col_quality}s | %-${col_cost}s | %s\n" \
+          "$provider" "$short_model_id" "$fmt" "$quality" "$short_cost" "$short_desc"
       fi
     done <<< "$filtered_data"
     
@@ -2301,6 +2395,11 @@ main() {
 
   # Set OUTPUT_FORMAT consistently
   OUTPUT_FORMAT="$output_format"
+
+  # Auto-append native format extension if output has no recognized image extension
+  if [[ -n "$output" ]]; then
+    output="$(resolve_output_extension "$output" "$provider" "$model" "$quality")"
+  fi
 
   # Check for batch mode: if config file has jobs array
   local is_batch=false

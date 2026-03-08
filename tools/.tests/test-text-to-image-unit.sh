@@ -798,14 +798,14 @@ test_list_models_configured_column() {
   local output
   output="$(list_models true)"
   assert_contains "$output" "Status" "Should have Status header when all_models=true"
-  # openai rows should have ✓
+  # openai rows should have [x]
   local openai_line
   openai_line="$(printf '%s\n' "$output" | grep "dall-e-3" | head -1)"
-  assert_contains "$openai_line" "✓" "openai row should show ✓ when configured"
-  # huggingface rows should have -
+  assert_contains "$openai_line" "[x]" "openai row should show [x] when configured"
+  # huggingface rows should have [ ]
   local hf_line
   hf_line="$(printf '%s\n' "$output" | grep "huggingface" | head -1)"
-  assert_contains "$hf_line" " - " "huggingface row should show - when not configured"
+  assert_contains "$hf_line" "[ ]" "huggingface row should show [ ] when not configured"
 }
 
 test_list_models_no_status_when_filtered() {
@@ -1104,7 +1104,7 @@ test_validate_config_format_mismatch_no_converter() {
 test_list_models_format_column() {
   local output
   output="$(list_models true)"
-  assert_contains "$output" "Format" "Should have Format column header"
+  assert_contains "$output" "Fmt" "Should have Fmt column header"
   # Check specific format values appear in output
   local bfl_line
   bfl_line="$(printf '%s\n' "$output" | grep "flux-1.1-pro" | grep "bfl" | head -1)"
@@ -1117,6 +1117,176 @@ test_list_models_json_format_field() {
   output="$(OUTPUT_FORMAT=json list_models true)"
   assert_contains "$output" '"format"' "JSON should contain format field"
   assert_contains "$output" '"png"' "JSON should contain png format value"
+}
+
+# ============================================================================
+# AUTO-EXTENSION RESOLUTION TESTS
+# ============================================================================
+
+test_has_recognized_image_extension_png() {
+  has_recognized_image_extension "image.png"
+  assert_eq 0 $? "image.png should be recognized"
+}
+
+test_has_recognized_image_extension_jpg() {
+  has_recognized_image_extension "photo.jpg"
+  assert_eq 0 $? "photo.jpg should be recognized"
+}
+
+test_has_recognized_image_extension_jpeg() {
+  has_recognized_image_extension "photo.jpeg"
+  assert_eq 0 $? "photo.jpeg should be recognized"
+}
+
+test_has_recognized_image_extension_webp() {
+  has_recognized_image_extension "photo.webp"
+  assert_eq 0 $? "photo.webp should be recognized"
+}
+
+test_has_recognized_image_extension_avif() {
+  has_recognized_image_extension "photo.avif"
+  assert_eq 0 $? "photo.avif should be recognized"
+}
+
+test_has_recognized_image_extension_tiff() {
+  has_recognized_image_extension "photo.tiff"
+  assert_eq 0 $? "photo.tiff should be recognized"
+}
+
+test_auto_extension_no_ext() {
+  # Output path without extension should get native format appended
+  local result
+  result="$(resolve_output_extension "/tmp/image" "openai" "dall-e-3" "high" 2>/dev/null)"
+  assert_eq "/tmp/image.png" "$result" "Should append .png for openai dall-e-3"
+
+  result="$(resolve_output_extension "/tmp/photo" "bfl" "flux-1.1-pro" "high" 2>/dev/null)"
+  assert_eq "/tmp/photo.jpg" "$result" "Should append .jpg for bfl flux-1.1-pro"
+
+  result="$(resolve_output_extension "/tmp/art" "huggingface" "black-forest-labs/flux-1.1-pro" "high" 2>/dev/null)"
+  assert_eq "/tmp/art.webp" "$result" "Should append .webp for HF flux-1.1-pro"
+}
+
+test_auto_extension_with_recognized_ext() {
+  # Output path with recognized extension should be unchanged
+  local result
+  result="$(resolve_output_extension "/tmp/image.png" "bfl" "flux-1.1-pro" "high" 2>/dev/null)"
+  assert_eq "/tmp/image.png" "$result" "Should keep .png unchanged even if provider native is jpg"
+
+  result="$(resolve_output_extension "/tmp/photo.jpg" "openai" "dall-e-3" "high" 2>/dev/null)"
+  assert_eq "/tmp/photo.jpg" "$result" "Should keep .jpg unchanged"
+
+  result="$(resolve_output_extension "/tmp/art.webp" "openai" "dall-e-3" "high" 2>/dev/null)"
+  assert_eq "/tmp/art.webp" "$result" "Should keep .webp unchanged"
+}
+
+test_auto_extension_unrecognized_ext() {
+  # Output path with unrecognized extension (.txt) should get native format appended
+  local result
+  result="$(resolve_output_extension "/tmp/image.txt" "openai" "dall-e-3" "high" 2>/dev/null)"
+  assert_eq "/tmp/image.txt.png" "$result" "Should append .png after .txt for openai"
+
+  result="$(resolve_output_extension "/tmp/data.csv" "bfl" "flux-1.1-pro" "high" 2>/dev/null)"
+  assert_eq "/tmp/data.csv.jpg" "$result" "Should append .jpg after .csv for bfl"
+}
+
+test_auto_extension_dot_in_dir() {
+  # Dot in directory path but not in filename — should detect no extension in basename
+  local result
+  result="$(resolve_output_extension "/tmp/my.project/image" "openai" "dall-e-3" "high" 2>/dev/null)"
+  assert_eq "/tmp/my.project/image.png" "$result" "Should append .png when dot is only in dir path"
+
+  result="$(resolve_output_extension "/home/user/v2.0/output" "bfl" "flux-1.1-pro" "high" 2>/dev/null)"
+  assert_eq "/home/user/v2.0/output.jpg" "$result" "Should append .jpg when dot is only in dir path"
+}
+
+test_auto_extension_trailing_dot() {
+  # Trailing dot — treat as no recognized extension
+  local result
+  result="$(resolve_output_extension "/tmp/image." "openai" "dall-e-3" "high" 2>/dev/null)"
+  assert_eq "/tmp/image..png" "$result" "Should append .png after trailing dot"
+}
+
+test_auto_extension_no_provider_fallback() {
+  # When no provider can be resolved, should fall back to png.
+  # We mock select_provider to always fail, simulating no configured providers.
+  select_provider() { return 1; }
+
+  local result
+  result="$(resolve_output_extension "/tmp/image" "" "" "high" 2>/dev/null)"
+  assert_eq "/tmp/image.png" "$result" "Should fall back to png when no provider available"
+}
+
+test_auto_extension_empty_output() {
+  # Empty output should return empty (no crash)
+  local result
+  result="$(resolve_output_extension "" "openai" "dall-e-3" "high" 2>/dev/null)"
+  assert_eq "" "$result" "Empty output should return empty"
+}
+
+# ============================================================================
+# TABLE ALIGNMENT & ASCII STATUS TESTS
+# ============================================================================
+
+test_list_models_ascii_status() {
+  export OPENAI_API_KEY="test"
+  unset STABILITY_API_KEY HF_API_KEY BFL_API_KEY REPLICATE_API_TOKEN SILICONFLOW_API_KEY GOOGLE_CREDENTIALS GOOGLE_API_KEY 2>/dev/null || true
+  local output
+  output="$(list_models true)"
+  # Should contain [x] for configured providers
+  assert_contains "$output" "[x]" "Should use [x] for configured providers"
+  # Should contain [ ] for unconfigured providers
+  assert_contains "$output" "[ ]" "Should use [ ] for unconfigured providers"
+  # Should NOT contain the old ✓ character
+  assert_not_contains "$output" "✓" "Should NOT use ✓ character"
+}
+
+test_list_models_long_model_id_truncated() {
+  local output
+  output="$(list_models true)"
+  # The replicate SDXL model has a very long ID with SHA hash
+  # It should be truncated with ...
+  local sdxl_line
+  sdxl_line="$(printf '%s\n' "$output" | grep "stability-ai/sdxl" | head -1)"
+  assert_contains "$sdxl_line" "..." "Long model ID should be truncated with ..."
+  # The full SHA should NOT appear
+  assert_not_contains "$sdxl_line" "39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b" \
+    "Full SHA hash should not appear in truncated output"
+}
+
+test_list_models_column_alignment() {
+  local output
+  output="$(list_models true)"
+  # Extract all data rows (skip header, separator, title lines)
+  # All data rows should have the same pipe positions
+  local pipe_positions=""
+  local line_count=0
+  local misaligned=false
+  while IFS= read -r line; do
+    # Skip empty lines, title, separator
+    [[ -z "$line" ]] && continue
+    [[ "$line" == "Available"* ]] && continue
+    [[ "$line" == "===="* ]] && continue
+    [[ "$line" == *"+"* && "$line" != *"|"* ]] && continue
+    # Must contain pipe
+    [[ "$line" != *"|"* ]] && continue
+    # Get pipe positions by finding indices of '|'
+    local positions=""
+    local i
+    for (( i=0; i<${#line}; i++ )); do
+      [[ "${line:$i:1}" == "|" ]] && positions+="$i "
+    done
+    if [[ -z "$pipe_positions" ]]; then
+      pipe_positions="$positions"
+    elif [[ "$positions" != "$pipe_positions" ]]; then
+      misaligned=true
+      printf '  Line: %s\n  Expected pipes at: %s\n  Actual pipes at:   %s\n' "$line" "$pipe_positions" "$positions" >&2
+      break
+    fi
+    (( line_count++ ))
+  done <<< "$output"
+  [[ "$misaligned" == "false" ]] || return 1
+  # Verify we checked at least the header + a few data rows
+  [[ $line_count -ge 5 ]] || { printf '  Only checked %d lines, expected at least 5\n' "$line_count" >&2; return 1; }
 }
 
 # ============================================================================
@@ -1201,6 +1371,24 @@ main() {
   run_test "validate_config format mismatch no converter" test_validate_config_format_mismatch_no_converter
   run_test "list_models format column" test_list_models_format_column
   run_test "list_models JSON format field" test_list_models_json_format_field
+  # Table alignment & ASCII status tests
+  run_test "list_models ASCII status icons" test_list_models_ascii_status
+  run_test "list_models long model ID truncated" test_list_models_long_model_id_truncated
+  run_test "list_models column alignment" test_list_models_column_alignment
+  # Auto-extension resolution tests
+  run_test "has_recognized_image_extension png" test_has_recognized_image_extension_png
+  run_test "has_recognized_image_extension jpg" test_has_recognized_image_extension_jpg
+  run_test "has_recognized_image_extension jpeg" test_has_recognized_image_extension_jpeg
+  run_test "has_recognized_image_extension webp" test_has_recognized_image_extension_webp
+  run_test "has_recognized_image_extension avif" test_has_recognized_image_extension_avif
+  run_test "has_recognized_image_extension tiff" test_has_recognized_image_extension_tiff
+  run_test "auto extension no ext" test_auto_extension_no_ext
+  run_test "auto extension with recognized ext" test_auto_extension_with_recognized_ext
+  run_test "auto extension unrecognized ext" test_auto_extension_unrecognized_ext
+  run_test "auto extension dot in dir" test_auto_extension_dot_in_dir
+  run_test "auto extension trailing dot" test_auto_extension_trailing_dot
+  run_test "auto extension no provider fallback" test_auto_extension_no_provider_fallback
+  run_test "auto extension empty output" test_auto_extension_empty_output
 
   print_summary
 }
