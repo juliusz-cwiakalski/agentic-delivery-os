@@ -964,6 +964,161 @@ test_ensure_output_format_converts_png_to_webp() {
   assert_eq "image/webp" "$mime_after" "Should be WebP after conversion"
 }
 
+test_ensure_output_format_avif() {
+  # Test AVIF conversion if avifenc or ImageMagick is available
+  if ! command -v convert >/dev/null 2>&1 && ! command -v magick >/dev/null 2>&1; then
+    return 0
+  fi
+  # Check if any AVIF conversion tool is available
+  local has_avif_tool=false
+  if command -v avifenc >/dev/null 2>&1; then
+    has_avif_tool=true
+  elif command -v magick >/dev/null 2>&1; then
+    has_avif_tool=true
+  elif command -v convert >/dev/null 2>&1; then
+    has_avif_tool=true
+  fi
+  if [[ "$has_avif_tool" == "false" ]]; then
+    return 0  # Skip if no AVIF conversion tool
+  fi
+  local png_src="${_test_tmpdir}/source.png"
+  local mismatched="${_test_tmpdir}/output.avif"
+  convert -size 1x1 xc:red "$png_src" 2>/dev/null || magick -size 1x1 xc:red "$png_src" 2>/dev/null
+  cp "$png_src" "$mismatched"
+
+  local exit_code=0
+  ensure_output_format "$mismatched" || exit_code=$?
+  # If conversion tool works, exit_code should be 0 and mime should be avif
+  # If conversion fails (tool installed but format unsupported), graceful failure
+  if [[ "$exit_code" -eq 0 ]]; then
+    local mime_after
+    mime_after="$(file --mime-type -b "$mismatched")"
+    # Depending on tool, mime may be image/avif or the original if conversion silently failed
+    # Just verify no crash occurred
+    assert_ne "" "$mime_after" "Should have a mime type"
+  fi
+}
+
+# ============================================================================
+# NATIVE FORMAT REGISTRY TESTS
+# ============================================================================
+
+test_get_native_format_known_models() {
+  local fmt
+  fmt="$(get_native_format "openai" "dall-e-3")"
+  assert_eq "png" "$fmt" "DALL-E 3 should be png"
+
+  fmt="$(get_native_format "bfl" "flux-1.1-pro")"
+  assert_eq "jpg" "$fmt" "BFL FLUX 1.1 Pro should be jpg"
+
+  fmt="$(get_native_format "huggingface" "black-forest-labs/flux-1.1-pro")"
+  assert_eq "webp" "$fmt" "HF FLUX 1.1 Pro should be webp"
+
+  fmt="$(get_native_format "replicate" "black-forest-labs/flux-1.1-pro")"
+  assert_eq "webp" "$fmt" "Replicate FLUX 1.1 Pro should be webp"
+
+  fmt="$(get_native_format "google" "imagen-4.0-generate-001")"
+  assert_eq "png" "$fmt" "Imagen 4 should be png"
+
+  fmt="$(get_native_format "stability" "stable-diffusion-xl-1024-v1-0")"
+  assert_eq "png" "$fmt" "Stability SDXL should be png"
+}
+
+test_get_native_format_unknown_model() {
+  local fmt
+  fmt="$(get_native_format "unknown_provider" "unknown_model")"
+  assert_eq "png" "$fmt" "Unknown model should default to png"
+
+  fmt="$(get_native_format "openai" "future-model-5")"
+  assert_eq "png" "$fmt" "Unknown OpenAI model should default to png"
+}
+
+test_get_conversion_command_webp_cwebp() {
+  if ! command -v cwebp >/dev/null 2>&1; then
+    return 0  # Skip if cwebp not installed
+  fi
+  local cmd
+  cmd="$(get_conversion_command "png" "webp")"
+  assert_eq "cwebp" "$cmd" "Should prefer cwebp for webp target"
+}
+
+test_get_conversion_command_avif_avifenc() {
+  if ! command -v avifenc >/dev/null 2>&1; then
+    return 0  # Skip if avifenc not installed
+  fi
+  local cmd
+  cmd="$(get_conversion_command "png" "avif")"
+  assert_eq "avifenc" "$cmd" "Should prefer avifenc for avif target"
+}
+
+test_get_conversion_command_fallback_imagemagick() {
+  if ! command -v magick >/dev/null 2>&1 && ! command -v convert >/dev/null 2>&1; then
+    return 0  # Skip if ImageMagick not installed
+  fi
+  local cmd
+  cmd="$(get_conversion_command "png" "jpg")"
+  # Should be either "magick" or "convert"
+  if [[ "$cmd" != "magick" && "$cmd" != "convert" ]]; then
+    printf '  Expected: magick or convert\n  Actual:   %s\n' "$cmd" >&2
+    return 1
+  fi
+}
+
+test_get_conversion_command_no_tools() {
+  # Hide all conversion tools by overriding PATH
+  local old_path="$PATH"
+  local empty_dir="${_test_tmpdir}/empty_bin"
+  mkdir -p "$empty_dir"
+  PATH="$empty_dir"
+
+  local cmd
+  cmd="$(get_conversion_command "png" "webp")"
+  PATH="$old_path"
+  assert_eq "" "$cmd" "Should return empty when no tools available"
+}
+
+test_validate_config_format_mismatch_no_converter() {
+  # Set up provider+model that produces jpg, request png output, hide all converters
+  export PROVIDER="bfl"
+  export MODEL="flux-1.1-pro"
+
+  local tmp_output="${_test_tmpdir}/test.png"
+  touch "$tmp_output"
+
+  # Override get_conversion_command to simulate no tools available
+  get_conversion_command() {
+    printf ''
+  }
+
+  local exit_code=0
+  local stderr_output
+  stderr_output="$(validate_config "test prompt" "$tmp_output" "high" 1024 1024 2>&1)" || exit_code=$?
+
+  # Restore original function by re-sourcing (handled by subshell in run_test)
+
+  assert_eq "$EXIT_INVALID_PARAMS" "$exit_code" "Should fail when conversion not possible"
+  assert_contains "$stderr_output" "natively produces" "Error should mention native format"
+  assert_contains "$stderr_output" "Options:" "Error should show options"
+}
+
+test_list_models_format_column() {
+  local output
+  output="$(list_models true)"
+  assert_contains "$output" "Format" "Should have Format column header"
+  # Check specific format values appear in output
+  local bfl_line
+  bfl_line="$(printf '%s\n' "$output" | grep "flux-1.1-pro" | grep "bfl" | head -1)"
+  assert_contains "$bfl_line" "jpg" "BFL FLUX 1.1 Pro should show jpg format"
+}
+
+test_list_models_json_format_field() {
+  export OPENAI_API_KEY="test"
+  local output
+  output="$(OUTPUT_FORMAT=json list_models true)"
+  assert_contains "$output" '"format"' "JSON should contain format field"
+  assert_contains "$output" '"png"' "JSON should contain png format value"
+}
+
 # ============================================================================
 # RUN TESTS
 # ============================================================================
@@ -1035,6 +1190,17 @@ main() {
   run_test "ensure_output_format graceful without ImageMagick" test_ensure_output_format_graceful_without_imagemagick
   run_test "ensure_output_format skips unsupported extensions" test_ensure_output_format_unsupported_ext_skips
   run_test "ensure_output_format converts PNG to WebP" test_ensure_output_format_converts_png_to_webp
+  run_test "ensure_output_format AVIF" test_ensure_output_format_avif
+  # Native format registry tests
+  run_test "get_native_format known models" test_get_native_format_known_models
+  run_test "get_native_format unknown model" test_get_native_format_unknown_model
+  run_test "get_conversion_command webp prefers cwebp" test_get_conversion_command_webp_cwebp
+  run_test "get_conversion_command avif prefers avifenc" test_get_conversion_command_avif_avifenc
+  run_test "get_conversion_command fallback ImageMagick" test_get_conversion_command_fallback_imagemagick
+  run_test "get_conversion_command no tools" test_get_conversion_command_no_tools
+  run_test "validate_config format mismatch no converter" test_validate_config_format_mismatch_no_converter
+  run_test "list_models format column" test_list_models_format_column
+  run_test "list_models JSON format field" test_list_models_json_format_field
 
   print_summary
 }

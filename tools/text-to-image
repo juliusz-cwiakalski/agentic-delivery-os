@@ -264,9 +264,83 @@ shell_escape() {
     printf '%q' "$1"
 }
 
+# Return the native output format for a given provider+model combination.
+# This is the format the API returns without any conversion.
+# Usage: get_native_format <provider> <model>
+# Prints: png, jpg, or webp (defaults to png for unknown models)
+get_native_format() {
+  local provider="$1"
+  local model="$2"
+  local key="${provider}::${model}"
+
+  case "$key" in
+    openai::dall-e-3)                                     printf 'png' ;;
+    openai::dall-e-2)                                     printf 'png' ;;
+    stability::stable-diffusion-xl-1024-v1-0)             printf 'png' ;;
+    google::imagen-4.0-generate-001)                      printf 'png' ;;
+    google::imagen-4.0-ultra-generate-001)                printf 'png' ;;
+    google::imagen-4.0-fast-generate-001)                 printf 'png' ;;
+    google::imagen-3.0-generate-001)                      printf 'png' ;;
+    huggingface::stabilityai/stable-diffusion-2-1)        printf 'png' ;;
+    huggingface::runwayml/stable-diffusion-v1-5)          printf 'png' ;;
+    huggingface::black-forest-labs/flux-1.1-pro)          printf 'webp' ;;
+    bfl::flux-1.1-pro)                                    printf 'jpg' ;;
+    bfl::flux-1.0-pro)                                    printf 'jpg' ;;
+    replicate::stability-ai/sdxl:39ed52f*)                printf 'png' ;;
+    replicate::black-forest-labs/flux-1.1-pro)            printf 'webp' ;;
+    siliconflow::stabilityai/stable-diffusion-3-medium)   printf 'png' ;;
+    siliconflow::stabilityai/stable-diffusion-xl-1.0)     printf 'png' ;;
+    *)                                                    printf 'png' ;;
+  esac
+}
+
+# Determine the best available conversion command for a source→target format pair.
+# Prints the command name to use, or empty string if no tool is available.
+# Prefers specialized tools (cwebp, avifenc) over ImageMagick for quality and speed.
+# Usage: get_conversion_command <source_format> <target_format>
+get_conversion_command() {
+  local source_format="$1"
+  local target_format="$2"
+
+  # No conversion needed if formats match
+  if [[ "$source_format" == "$target_format" ]]; then
+    printf ''
+    return 0
+  fi
+
+  case "$target_format" in
+    webp)
+      if command -v cwebp >/dev/null 2>&1; then
+        printf 'cwebp'
+      elif command -v magick >/dev/null 2>&1; then
+        printf 'magick'
+      elif command -v convert >/dev/null 2>&1; then
+        printf 'convert'
+      fi
+      ;;
+    avif)
+      if command -v avifenc >/dev/null 2>&1; then
+        printf 'avifenc'
+      elif command -v magick >/dev/null 2>&1; then
+        printf 'magick'
+      elif command -v convert >/dev/null 2>&1; then
+        printf 'convert'
+      fi
+      ;;
+    png|jpg)
+      if command -v magick >/dev/null 2>&1; then
+        printf 'magick'
+      elif command -v convert >/dev/null 2>&1; then
+        printf 'convert'
+      fi
+      ;;
+  esac
+}
+
 # Ensure the output file's actual image format matches the requested extension.
-# Detects format via file(1) and converts via ImageMagick when there is a mismatch.
-# Gracefully degrades (warning only) when ImageMagick is not installed.
+# Detects format via file(1) and converts using the best available tool.
+# Prefers specialized converters (cwebp for WebP, avifenc for AVIF) over ImageMagick.
+# Gracefully degrades (warning only) when no conversion tool is installed.
 ensure_output_format() {
   local output_path="$1"
 
@@ -281,7 +355,7 @@ ensure_output_format() {
 
   # Only handle supported formats
   case "$requested_normalized" in
-    png|jpg|webp) ;;
+    png|jpg|webp|avif) ;;
     *)
       log_debug "ensure_output_format: unsupported target format '$requested_ext', skipping conversion"
       return 0
@@ -301,6 +375,7 @@ ensure_output_format() {
     image/png)  actual_normalized="png" ;;
     image/jpeg) actual_normalized="jpg" ;;
     image/webp) actual_normalized="webp" ;;
+    image/avif) actual_normalized="avif" ;;
     *)
       log_debug "ensure_output_format: unknown mime type '$actual_mime', skipping conversion"
       return 0
@@ -315,30 +390,45 @@ ensure_output_format() {
 
   log_debug "ensure_output_format: format mismatch detected — file is $actual_mime ($actual_normalized) but extension is .$requested_ext ($requested_normalized)"
 
-  # Find ImageMagick convert command
-  local convert_cmd=""
-  if command -v magick >/dev/null 2>&1; then
-    convert_cmd="magick"
-  elif command -v convert >/dev/null 2>&1; then
-    convert_cmd="convert"
-  fi
+  # Find the best conversion tool for this format pair
+  local converter
+  converter="$(get_conversion_command "$actual_normalized" "$requested_normalized")"
 
-  if [[ -z "$convert_cmd" ]]; then
-    log_warn "Downloaded image is actually $actual_normalized but output file has .$requested_ext extension. Install ImageMagick to enable automatic format conversion."
+  if [[ -z "$converter" ]]; then
+    log_warn "Downloaded image is actually $actual_normalized but output file has .$requested_ext extension. Install a conversion tool to enable automatic format conversion."
     return 0
   fi
 
-  # Convert in-place: ImageMagick reads input format from content, writes output format from extension
+  # Convert using the best available tool
   local tmp_converted
-  tmp_converted="$(mktemp "${output_path}.convert.XXXXXX.$requested_ext")"
+  tmp_converted="$(mktemp "${output_path}.convert.XXXXXX.${requested_ext}")"
 
-  if "$convert_cmd" "$output_path" "$tmp_converted" 2>/dev/null; then
+  local convert_ok=false
+  case "$converter" in
+    cwebp)
+      if cwebp -q 90 "$output_path" -o "$tmp_converted" >/dev/null 2>&1; then
+        convert_ok=true
+      fi
+      ;;
+    avifenc)
+      if avifenc --min 20 --max 30 "$output_path" "$tmp_converted" >/dev/null 2>&1; then
+        convert_ok=true
+      fi
+      ;;
+    magick|convert)
+      if "$converter" "$output_path" "$tmp_converted" 2>/dev/null; then
+        convert_ok=true
+      fi
+      ;;
+  esac
+
+  if [[ "$convert_ok" == "true" ]]; then
     mv -f "$tmp_converted" "$output_path"
-    log_debug "ensure_output_format: converted $actual_normalized -> $requested_normalized successfully"
+    log_debug "ensure_output_format: converted $actual_normalized -> $requested_normalized via $converter successfully"
     return 0
   else
     rm -f "$tmp_converted"
-    log_warn "ensure_output_format: ImageMagick conversion from $actual_normalized to $requested_normalized failed"
+    log_warn "ensure_output_format: conversion from $actual_normalized to $requested_normalized via $converter failed"
     return 1
   fi
 }
@@ -1480,10 +1570,58 @@ validate_config() {
     return "$EXIT_INVALID_PARAMS"
   fi
 
-  # Warn about unsupported output formats (optional)
+  # Output format validation
   local ext="${output##*.}"
-  case "$ext" in
-    tiff|tif|webp)
+  ext="${ext,,}"
+  local ext_normalized="$ext"
+  [[ "$ext_normalized" == "jpeg" ]] && ext_normalized="jpg"
+
+  case "$ext_normalized" in
+    png|jpg|webp|avif)
+      # Supported format — validate conversion feasibility if provider+model are known
+      if [[ -n "${PROVIDER:-}" ]]; then
+        local val_model="${MODEL:-}"
+        if [[ -z "$val_model" ]]; then
+          val_model="$(get_provider_model "$PROVIDER")"
+        fi
+        local native_fmt
+        native_fmt="$(get_native_format "$PROVIDER" "$val_model")"
+        if [[ "$native_fmt" != "$ext_normalized" ]]; then
+          # Conversion will be needed — check if tools are available
+          local converter
+          converter="$(get_conversion_command "$native_fmt" "$ext_normalized")"
+          if [[ -z "$converter" ]]; then
+            # Build actionable error message
+            local install_hint=""
+            case "$ext_normalized" in
+              webp) install_hint="Install cwebp: sudo apt install webp\n       Or install ImageMagick: sudo apt install imagemagick" ;;
+              avif) install_hint="Install avifenc: sudo apt install libavif-apps\n       Or install ImageMagick: sudo apt install imagemagick" ;;
+              png|jpg) install_hint="Install ImageMagick: sudo apt install imagemagick" ;;
+            esac
+            # Suggest alternative models that natively produce the requested format
+            local alt_models=""
+            case "$ext_normalized" in
+              png) alt_models="dall-e-3, imagen-4.0-generate-001, stable-diffusion-xl-1024-v1-0" ;;
+              jpg) alt_models="flux-1.1-pro (bfl), flux-1.0-pro (bfl)" ;;
+              webp) alt_models="black-forest-labs/flux-1.1-pro (huggingface or replicate)" ;;
+            esac
+            printf >&2 "Error: Model '%s' natively produces %s images, but you requested %s output.\n" "$val_model" "${native_fmt^^}" "${ext_normalized^^}"
+            printf >&2 "       Conversion requires a tool but none is installed.\n"
+            printf >&2 "\n"
+            printf >&2 "       Options:\n"
+            printf >&2 "         1. %b\n" "$install_hint"
+            printf >&2 "         2. Use the model's native format: --output image.%s\n" "$native_fmt"
+            if [[ -n "$alt_models" ]]; then
+              printf >&2 "         3. Choose a model that natively produces %s (e.g., %s)\n" "${ext_normalized^^}" "$alt_models"
+            fi
+            return "$EXIT_INVALID_PARAMS"
+          else
+            log_debug "validate_config: will convert $native_fmt -> $ext_normalized via $converter after download"
+          fi
+        fi
+      fi
+      ;;
+    tiff|tif)
       log_warn "Output format .$ext may not be supported by all providers; PNG/JPG recommended for best compatibility"
       ;;
   esac
@@ -1882,7 +2020,7 @@ OPTIONS:
   -n, --dry-run                 Show what would be done without executing API calls
   -v, --verbose                 Enable debug logging
   --prompt TEXT                 Text prompt for image generation (required, supports spaces)
-  --output FILE                 Output image file path (required, e.g., image.png)
+  --output FILE                 Output image file path (required, supports: .png, .jpg, .webp, .avif)
   --quality high|medium|low     Quality profile (default: high)
                                  - high: OpenAI → Stability → Google
                                  - medium: Stability → OpenAI → Replicate
@@ -1969,24 +2107,24 @@ parse_args() {
 list_models() {
   local all_models="${1:-false}"
   
-  # Model data: provider|model_id|model_name|description|quality_tier|cost_per_image|limitations
+  # Model data: provider|model_id|model_name|description|quality_tier|cost_per_image|limitations|native_format
   local models_data='
-openai|dall-e-3|DALL-E 3|OpenAI latest image generation model|high|~$0.040|1024x1024 max, no negative prompt
-openai|dall-e-2|DALL-E 2|OpenAI previous generation model|medium|~$0.020|512x512 max, lower quality
-stability|stable-diffusion-xl-1024-v1-0|SDXL 1024|Legacy v1 engine, best quality|high|~$0.004|Legacy, 1024x1024 optimal
-google|imagen-4.0-generate-001|Imagen 4 Standard|Google Imagen 4 standard generation|high|~$0.040|Vertex AI, service account or gcloud auth
-google|imagen-4.0-ultra-generate-001|Imagen 4 Ultra|Google Imagen 4 ultra-high quality|high|~$0.080|Vertex AI, service account or gcloud auth
-google|imagen-4.0-fast-generate-001|Imagen 4 Fast|Google Imagen 4 fast generation|medium|~$0.020|Vertex AI, service account or gcloud auth
-google|imagen-3.0-generate-001|Imagen 3|Google Imagen 3 generation model|high|~$0.050|Vertex AI, service account or gcloud auth
-huggingface|stabilityai/stable-diffusion-2-1|Stable Diffusion 2.1|Open source model via HF Inference|low|Free tier limited|Rate limited, slow
-huggingface|runwayml/stable-diffusion-v1-5|Stable Diffusion 1.5|Older but reliable|low|Free tier limited|Rate limited
-huggingface|black-forest-labs/flux-1.1-pro|FLUX 1.1 Pro|Via Hugging Face|high|~$0.010|Requires HF API key
-bfl|flux-1.1-pro|FLUX 1.1 Pro|Black Forest Labs flagship model|high|~$0.015|Fast, high quality
-bfl|flux-1.0-pro|FLUX 1.0 Pro|Previous version|medium|~$0.010|Good quality
-replicate|stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b|SDXL|Stability AI SDXL on Replicate|medium|~$0.005|Per-second billing
-replicate|black-forest-labs/flux-1.1-pro|FLUX 1.1 Pro|BFL FLUX via Replicate|high|~$0.020|Per-second billing
-siliconflow|stabilityai/stable-diffusion-3-medium|SD3 Medium|SiliconFlow hosted SD3|high|~$0.003|Chinese provider
-siliconflow|stabilityai/stable-diffusion-xl-1.0|SDXL 1.0|SiliconFlow hosted SDXL|medium|~$0.002|Chinese provider
+openai|dall-e-3|DALL-E 3|OpenAI latest image generation model|high|~$0.040|1024x1024 max, no negative prompt|png
+openai|dall-e-2|DALL-E 2|OpenAI previous generation model|medium|~$0.020|512x512 max, lower quality|png
+stability|stable-diffusion-xl-1024-v1-0|SDXL 1024|Legacy v1 engine, best quality|high|~$0.004|Legacy, 1024x1024 optimal|png
+google|imagen-4.0-generate-001|Imagen 4 Standard|Google Imagen 4 standard generation|high|~$0.040|Vertex AI, service account or gcloud auth|png
+google|imagen-4.0-ultra-generate-001|Imagen 4 Ultra|Google Imagen 4 ultra-high quality|high|~$0.080|Vertex AI, service account or gcloud auth|png
+google|imagen-4.0-fast-generate-001|Imagen 4 Fast|Google Imagen 4 fast generation|medium|~$0.020|Vertex AI, service account or gcloud auth|png
+google|imagen-3.0-generate-001|Imagen 3|Google Imagen 3 generation model|high|~$0.050|Vertex AI, service account or gcloud auth|png
+huggingface|stabilityai/stable-diffusion-2-1|Stable Diffusion 2.1|Open source model via HF Inference|low|Free tier limited|Rate limited, slow|png
+huggingface|runwayml/stable-diffusion-v1-5|Stable Diffusion 1.5|Older but reliable|low|Free tier limited|Rate limited|png
+huggingface|black-forest-labs/flux-1.1-pro|FLUX 1.1 Pro|Via Hugging Face|high|~$0.010|Requires HF API key|webp
+bfl|flux-1.1-pro|FLUX 1.1 Pro|Black Forest Labs flagship model|high|~$0.015|Fast, high quality|jpg
+bfl|flux-1.0-pro|FLUX 1.0 Pro|Previous version|medium|~$0.010|Good quality|jpg
+replicate|stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b|SDXL|Stability AI SDXL on Replicate|medium|~$0.005|Per-second billing|png
+replicate|black-forest-labs/flux-1.1-pro|FLUX 1.1 Pro|BFL FLUX via Replicate|high|~$0.020|Per-second billing|webp
+siliconflow|stabilityai/stable-diffusion-3-medium|SD3 Medium|SiliconFlow hosted SD3|high|~$0.003|Chinese provider|png
+siliconflow|stabilityai/stable-diffusion-xl-1.0|SDXL 1.0|SiliconFlow hosted SDXL|medium|~$0.002|Chinese provider|png
 '
   
   # Determine which providers have API keys
@@ -2006,19 +2144,19 @@ siliconflow|stabilityai/stable-diffusion-xl-1.0|SDXL 1.0|SiliconFlow hosted SDXL
   
   # Filter models
   local filtered_data=""
-  while IFS='|' read -r provider model_id model_name description quality cost limits; do
+  while IFS='|' read -r provider model_id model_name description quality cost limits native_fmt; do
     # Skip empty lines
     [[ -z "$provider" ]] && continue
     # Skip comment lines
     [[ "$provider" == \#* ]] && continue
     
     if [[ "$all_models" == "true" ]]; then
-      filtered_data+="$provider|$model_id|$model_name|$description|$quality|$cost|$limits"$'\n'
+      filtered_data+="$provider|$model_id|$model_name|$description|$quality|$cost|$limits|$native_fmt"$'\n'
     else
       # Check if provider is available
       for avail in "${available_providers[@]}"; do
         if [[ "$avail" == "$provider" ]]; then
-          filtered_data+="$provider|$model_id|$model_name|$description|$quality|$cost|$limits"$'\n'
+          filtered_data+="$provider|$model_id|$model_name|$description|$quality|$cost|$limits|$native_fmt"$'\n'
           break
         fi
       done
@@ -2030,7 +2168,7 @@ siliconflow|stabilityai/stable-diffusion-xl-1.0|SDXL 1.0|SiliconFlow hosted SDXL
     # JSON output
     local json_output="["
     local first=true
-    while IFS='|' read -r provider model_id model_name description quality cost limits; do
+    while IFS='|' read -r provider model_id model_name description quality cost limits native_fmt; do
       [[ -z "$provider" ]] && continue
       local is_configured=false
       for avail in "${available_providers[@]}"; do
@@ -2054,8 +2192,9 @@ siliconflow|stabilityai/stable-diffusion-xl-1.0|SDXL 1.0|SiliconFlow hosted SDXL
         --arg quality "$quality" \
         --arg cost "$cost" \
         --arg limitations "$limits" \
+        --arg format "${native_fmt:-png}" \
         --argjson configured "$configured_val" \
-        '{provider:$provider,model:$model,name:$name,description:$description,quality:$quality,cost:$cost,limitations:$limitations,configured:$configured}')"
+        '{provider:$provider,model:$model,name:$name,description:$description,quality:$quality,cost:$cost,limitations:$limitations,format:$format,configured:$configured}')"
     done <<< "$filtered_data"
     json_output+="]"
     echo "$json_output"
@@ -2071,17 +2210,18 @@ siliconflow|stabilityai/stable-diffusion-xl-1.0|SDXL 1.0|SiliconFlow hosted SDXL
     
     # Print table header
     if [[ "$all_models" == "true" ]]; then
-      printf "%-6s | %-12s | %-30s | %-8s | %-10s | %s\n" "Status" "Provider" "Model ID" "Quality" "Cost" "Description"
+      printf "%-6s | %-12s | %-30s | %-6s | %-8s | %-10s | %s\n" "Status" "Provider" "Model ID" "Format" "Quality" "Cost" "Description"
     else
-      printf "%-12s | %-30s | %-8s | %-10s | %s\n" "Provider" "Model ID" "Quality" "Cost" "Description"
+      printf "%-12s | %-30s | %-6s | %-8s | %-10s | %s\n" "Provider" "Model ID" "Format" "Quality" "Cost" "Description"
     fi
     printf "%s\n" "-------------------------------------------------------------------------------------------------------------------"
     
-    while IFS='|' read -r provider model_id model_name description quality cost limits; do
+    while IFS='|' read -r provider model_id model_name description quality cost limits native_fmt; do
       [[ -z "$provider" ]] && continue
       # Truncate description if too long
       local short_desc="${description:0:40}"
       [[ ${#description} -gt 40 ]] && short_desc="${short_desc}..."
+      local fmt="${native_fmt:-png}"
       if [[ "$all_models" == "true" ]]; then
         local status_icon="-"
         local is_configured
@@ -2093,9 +2233,9 @@ siliconflow|stabilityai/stable-diffusion-xl-1.0|SDXL 1.0|SiliconFlow hosted SDXL
           fi
         done
         [[ "$is_configured" == "true" ]] && status_icon="✓"
-        printf "  %-4s | %-12s | %-30s | %-8s | %-10s | %s\n" "$status_icon" "$provider" "$model_id" "$quality" "$cost" "$short_desc"
+        printf "  %-4s | %-12s | %-30s | %-6s | %-8s | %-10s | %s\n" "$status_icon" "$provider" "$model_id" "$fmt" "$quality" "$cost" "$short_desc"
       else
-        printf "%-12s | %-30s | %-8s | %-10s | %s\n" "$provider" "$model_id" "$quality" "$cost" "$short_desc"
+        printf "%-12s | %-30s | %-6s | %-8s | %-10s | %s\n" "$provider" "$model_id" "$fmt" "$quality" "$cost" "$short_desc"
       fi
     done <<< "$filtered_data"
     
