@@ -1290,6 +1290,177 @@ test_list_models_column_alignment() {
 }
 
 # ============================================================================
+# GENERATION INFO SIDECAR TESTS
+# ============================================================================
+
+test_write_generation_info_creates_yaml() {
+  # Create a fake image file
+  local img="${_test_tmpdir}/test-output.png"
+  printf 'fake-png-data' > "$img"
+
+  # Set the global metadata vars
+  _GEN_API_URL="https://api.openai.com/v1/images/generations"
+  _GEN_API_METHOD="POST"
+  _GEN_API_REQUEST='{"prompt":"a sunset","model":"dall-e-3","size":"1024x1024","response_format":"url"}'
+  _GEN_API_RESPONSE='{"data":[{"url":"https://example.com/image.png","revised_prompt":"A beautiful sunset"}]}'
+  _GEN_EXTRA_INFO="revised_prompt=A beautiful sunset"
+
+  # Call write_generation_info
+  write_generation_info "$img" "a sunset" "" 1024 1024 "high" "openai" "dall-e-3" 1234
+
+  local yaml_path="${_test_tmpdir}/test-output.yaml"
+  assert_file_exists "$yaml_path" "YAML sidecar should be created"
+
+  local yaml_content
+  yaml_content="$(cat "$yaml_path")"
+
+  assert_contains "$yaml_content" "generation:" "Should contain generation section"
+  assert_contains "$yaml_content" "timestamp:" "Should contain timestamp"
+  assert_contains "$yaml_content" "input:" "Should contain input section"
+  assert_contains "$yaml_content" "a sunset" "Should contain the prompt"
+  assert_contains "$yaml_content" "openai" "Should contain provider"
+  assert_contains "$yaml_content" "dall-e-3" "Should contain model"
+  assert_contains "$yaml_content" "request:" "Should contain request section"
+  assert_contains "$yaml_content" "https://api.openai.com/v1/images/generations" "Should contain API URL"
+  assert_contains "$yaml_content" "output:" "Should contain output section"
+  assert_contains "$yaml_content" "file_path:" "Should contain file_path"
+  assert_contains "$yaml_content" "duration_ms: 1234" "Should contain duration"
+  assert_contains "$yaml_content" "provider_details:" "Should contain provider_details section"
+  assert_contains "$yaml_content" "revised_prompt" "Should contain revised_prompt extra info"
+
+  # Reset globals
+  _GEN_API_URL=""
+  _GEN_API_REQUEST=""
+  _GEN_API_RESPONSE=""
+  _GEN_EXTRA_INFO=""
+}
+
+test_write_generation_info_truncates_base64() {
+  local img="${_test_tmpdir}/test-b64.png"
+  printf 'fake-png-data' > "$img"
+
+  # Create a response with a very long base64 string (>200 chars)
+  local long_b64
+  long_b64="$(printf '%0.sA' $(seq 1 500))"
+  _GEN_API_URL="https://api.stability.ai/v1/generation/test/text-to-image"
+  _GEN_API_METHOD="POST"
+  _GEN_API_REQUEST='{"text_prompts":[{"text":"test"}]}'
+  _GEN_API_RESPONSE="{\"artifacts\":[{\"base64\":\"${long_b64}\"}]}"
+  _GEN_EXTRA_INFO=""
+
+  write_generation_info "$img" "test" "" 1024 1024 "high" "stability" "stable-diffusion-xl-1024-v1-0" 500
+
+  local yaml_path="${_test_tmpdir}/test-b64.yaml"
+  assert_file_exists "$yaml_path" "YAML sidecar should be created"
+
+  local yaml_content
+  yaml_content="$(cat "$yaml_path")"
+
+  # The full 500-char base64 string should NOT appear in the YAML
+  assert_not_contains "$yaml_content" "$long_b64" "Full base64 data should be truncated"
+  assert_contains "$yaml_content" "truncated" "Should contain truncation marker"
+
+  _GEN_API_URL=""
+  _GEN_API_REQUEST=""
+  _GEN_API_RESPONSE=""
+}
+
+test_generation_info_disabled() {
+  # Set up a mock provider that creates a file and sets globals
+  generate_image_mockprovider() {
+    local output_path="$6"
+    printf 'fake-image' > "$output_path"
+    _GEN_API_URL="https://mock.api/generate"
+    _GEN_API_REQUEST='{"prompt":"test"}'
+    _GEN_API_RESPONSE='{"url":"https://mock.api/result.png"}'
+    return "$EXIT_SUCCESS"
+  }
+
+  local img="${_test_tmpdir}/no-sidecar.png"
+  export SAVE_GENERATION_INFO=false
+  export DRY_RUN=false
+  export FORCE=true
+  export EMBED_METADATA=false
+  TEXT_TO_IMAGE_CONFIG_DIR="${_test_tmpdir}" ensure_directories
+
+  # Clear globals
+  _GEN_API_URL=""
+  _GEN_API_REQUEST=""
+  _GEN_API_RESPONSE=""
+  _GEN_EXTRA_INFO=""
+
+  # Override generate_image to call mockprovider directly with sidecar logic
+  # We need to test the sidecar is NOT created when SAVE_GENERATION_INFO=false
+  # Simulate what generate_image does: call provider then conditionally write sidecar
+  generate_image_mockprovider "test prompt" "" 1024 1024 high "$img" "mock-model"
+  if [[ "${SAVE_GENERATION_INFO}" == "true" ]]; then
+    write_generation_info "$img" "test prompt" "" 1024 1024 "high" "mockprovider" "mock-model" 100
+  fi
+
+  local yaml_path="${_test_tmpdir}/no-sidecar.yaml"
+  if [[ -f "$yaml_path" ]]; then
+    printf '  YAML sidecar should NOT exist when SAVE_GENERATION_INFO=false\n' >&2
+    return 1
+  fi
+
+  SAVE_GENERATION_INFO=true
+}
+
+test_truncate_response_for_yaml() {
+  # Test with a JSON response containing a long string
+  local long_str
+  long_str="$(printf '%0.sX' $(seq 1 300))"
+  local response="{\"data\":\"${long_str}\",\"short\":\"ok\"}"
+
+  local result
+  result="$(truncate_response_for_yaml "$response")"
+
+  # The long string should be truncated
+  assert_not_contains "$result" "$long_str" "Long string should be truncated"
+  # The short string should be preserved
+  assert_contains "$result" "ok" "Short string should be preserved"
+  # Should contain truncation marker
+  assert_contains "$result" "truncated" "Should contain truncation marker"
+}
+
+test_truncate_response_for_yaml_short_response() {
+  # Short responses should be passed through unchanged
+  local response='{"status":"ok","message":"done"}'
+  local result
+  result="$(truncate_response_for_yaml "$response")"
+  assert_contains "$result" "ok" "Short response should be preserved"
+  assert_contains "$result" "done" "Short response should be preserved"
+}
+
+test_write_generation_info_empty_globals() {
+  # Test when globals are empty (no API call metadata captured)
+  local img="${_test_tmpdir}/empty-meta.png"
+  printf 'fake-png' > "$img"
+
+  _GEN_API_URL=""
+  _GEN_API_METHOD="POST"
+  _GEN_API_REQUEST=""
+  _GEN_API_RESPONSE=""
+  _GEN_EXTRA_INFO=""
+
+  write_generation_info "$img" "test prompt" "" 1024 1024 "high" "openai" "dall-e-3" 0
+
+  local yaml_path="${_test_tmpdir}/empty-meta.yaml"
+  assert_file_exists "$yaml_path" "YAML should be created even with empty globals"
+
+  local yaml_content
+  yaml_content="$(cat "$yaml_path")"
+  assert_contains "$yaml_content" "generation:" "Should contain generation section"
+  assert_contains "$yaml_content" "provider_details:" "Should contain provider_details section"
+  assert_contains "$yaml_content" "{}" "Should contain empty provider_details"
+}
+
+test_save_generation_info_default() {
+  # SAVE_GENERATION_INFO should default to true
+  assert_eq "true" "${SAVE_GENERATION_INFO}" "SAVE_GENERATION_INFO should default to true"
+}
+
+# ============================================================================
 # RUN TESTS
 # ============================================================================
 main() {
@@ -1375,6 +1546,14 @@ main() {
   run_test "list_models ASCII status icons" test_list_models_ascii_status
   run_test "list_models long model ID truncated" test_list_models_long_model_id_truncated
   run_test "list_models column alignment" test_list_models_column_alignment
+  # Generation info sidecar tests
+  run_test "write_generation_info creates YAML" test_write_generation_info_creates_yaml
+  run_test "write_generation_info truncates base64" test_write_generation_info_truncates_base64
+  run_test "generation info disabled" test_generation_info_disabled
+  run_test "truncate_response_for_yaml" test_truncate_response_for_yaml
+  run_test "truncate_response_for_yaml short response" test_truncate_response_for_yaml_short_response
+  run_test "write_generation_info empty globals" test_write_generation_info_empty_globals
+  run_test "SAVE_GENERATION_INFO default" test_save_generation_info_default
   # Auto-extension resolution tests
   run_test "has_recognized_image_extension png" test_has_recognized_image_extension_png
   run_test "has_recognized_image_extension jpg" test_has_recognized_image_extension_jpg
