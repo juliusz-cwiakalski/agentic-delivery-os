@@ -23,6 +23,7 @@
 #   HEIGHT          - Image height passed as --height to the tool (default: tool default 1024)
 #   QUALITY         - Quality profile passed as --quality to the tool (default: tool default "high")
 #   NEGATIVE_PROMPT - Negative prompt passed as --negative-prompt to the tool (default: not passed)
+#   FORCE           - Set to 'true' to bypass cache and regenerate all images (default: false)
 #
 # Exit codes:
 #   0 - All configured models passed (or were skipped)
@@ -52,6 +53,7 @@ WIDTH="${WIDTH:-}"
 HEIGHT="${HEIGHT:-}"
 QUALITY="${QUALITY:-}"
 NEGATIVE_PROMPT="${NEGATIVE_PROMPT:-}"
+FORCE="${FORCE:-false}"
 
 # Exit codes
 readonly EXIT_SUCCESS=0
@@ -169,8 +171,8 @@ test_single_model() {
     return 0
   fi
 
-  # Already exists → skip
-  if [[ -f "${output_file}" && -s "${output_file}" ]]; then
+  # Already exists → skip (unless force refresh)
+  if [[ "${FORCE:-}" != "true" && -f "${output_file}" && -s "${output_file}" ]]; then
     local existing_size
     existing_size="$(format_file_size "${output_file}")"
     log_info "SKIPPED (exists): ${provider}/${model} → ${output_file} (${existing_size})"
@@ -191,6 +193,7 @@ test_single_model() {
   [[ -n "${HEIGHT:-}" ]] && extra_args+=(--height "${HEIGHT}")
   [[ -n "${QUALITY:-}" ]] && extra_args+=(--quality "${QUALITY}")
   [[ -n "${NEGATIVE_PROMPT:-}" ]] && extra_args+=(--negative-prompt "${NEGATIVE_PROMPT}")
+  [[ "${FORCE:-}" == "true" ]] && extra_args+=(--force)
 
   # shellcheck disable=SC2086
   timeout "${TIMEOUT}" \
@@ -310,6 +313,7 @@ run_all_tests() {
   [[ -n "${HEIGHT:-}" ]] && log_info "Height: ${HEIGHT}"
   [[ -n "${QUALITY:-}" ]] && log_info "Quality: ${QUALITY}"
   [[ -n "${NEGATIVE_PROMPT:-}" ]] && log_info "Negative prompt: ${NEGATIVE_PROMPT}"
+  [[ "${FORCE:-}" == "true" ]] && log_info "Force refresh: enabled (bypassing cache)"
   printf '\n' >&2
 
   mkdir -p "${OUTPUT_DIR}"
@@ -347,6 +351,7 @@ Environment variables:
   HEIGHT          Image height (passed as --height to tool; default: tool default 1024)
   QUALITY         Quality profile (passed as --quality; default: tool default "high")
   NEGATIVE_PROMPT Negative prompt (passed as --negative-prompt; default: not passed)
+  FORCE           Set to 'true' to bypass cache and regenerate (default: false)
 
 Examples:
   # Run from repo root (default prompt and output dir):
@@ -361,6 +366,9 @@ Examples:
 
   # Re-run to fill gaps (skips already-generated images):
   bash tools/.tests/test-text-to-image-e2e-providers.sh
+
+  # Force regeneration (bypass cache):
+  FORCE=true bash tools/.tests/test-text-to-image-e2e-providers.sh
 EOF
 }
 

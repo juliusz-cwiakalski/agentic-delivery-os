@@ -20,6 +20,7 @@
 #   SUITE_OUTPUT_DIR  Output directory (default: <repo>/tmp/e2e-suite)
 #   TIMEOUT           Timeout per model in seconds (default: 180)
 #   VERBOSE           Set to 'true' for debug output
+#   FORCE_REFRESH     Set to 'true' to bypass cache and regenerate all images
 #
 # Exit codes:
 #   0 - All runs completed (individual models may have failed)
@@ -44,6 +45,7 @@ readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd -P)"
 SUITE_OUTPUT_DIR="${SUITE_OUTPUT_DIR:-${REPO_ROOT}/tmp/e2e-suite}"
 TIMEOUT="${TIMEOUT:-180}"
 VERBOSE="${VERBOSE:-false}"
+FORCE_REFRESH="${FORCE_REFRESH:-false}"
 DRY_RUN=false
 
 # CLI filters
@@ -213,7 +215,9 @@ run_combination() {
   log_info "================================================================"
 
   if [[ "${DRY_RUN}" == "true" ]]; then
-    log_info "[DRY-RUN] Would execute: PROMPT=<${use_case}> OUTPUT_PREFIX=${output_prefix} WIDTH=${width} HEIGHT=${height} QUALITY=${quality} bash ${E2E_PROVIDERS_SCRIPT}"
+    local force_display=""
+    [[ "${FORCE_REFRESH}" == "true" ]] && force_display=" FORCE=true"
+    log_info "[DRY-RUN] Would execute: PROMPT=<${use_case}> OUTPUT_PREFIX=${output_prefix} WIDTH=${width} HEIGHT=${height} QUALITY=${quality}${force_display} bash ${E2E_PROVIDERS_SCRIPT}"
     RUN_USE_CASE+=("${use_case}")
     RUN_SETTINGS+=("${settings_profile}")
     RUN_EXIT_CODE+=("0")
@@ -221,6 +225,8 @@ run_combination() {
   fi
 
   local exit_code=0
+  local force_env="false"
+  [[ "${FORCE_REFRESH}" == "true" ]] && force_env="true"
   PROMPT="${prompt}" \
   OUTPUT_PREFIX="${output_prefix}" \
   OUTPUT_DIR="${SUITE_OUTPUT_DIR}" \
@@ -229,6 +235,7 @@ run_combination() {
   QUALITY="${quality}" \
   TIMEOUT="${TIMEOUT}" \
   VERBOSE="${VERBOSE}" \
+  FORCE="${force_env}" \
     bash "${E2E_PROVIDERS_SCRIPT}" || exit_code=$?
 
   RUN_USE_CASE+=("${use_case}")
@@ -334,6 +341,7 @@ Options:
   -v, --verbose        Enable debug output
   --use-case NAME      Run only this use case (hero|product|blog|logo)
   --settings PROFILE   Run only this settings profile (default|max)
+  --force-refresh      Bypass cache and regenerate all images with fresh API calls
   --list-cases         Show all use cases and their prompts
   --dry-run            Show what would be run without executing
 
@@ -341,6 +349,7 @@ Environment variables:
   SUITE_OUTPUT_DIR     Output directory (default: <repo>/tmp/e2e-suite)
   TIMEOUT              Timeout per model in seconds (default: 180)
   VERBOSE              Set to 'true' for debug output
+  FORCE_REFRESH        Set to 'true' to bypass cache and regenerate
 
 Examples:
   # Full suite (all 8 combinations):
@@ -357,6 +366,9 @@ Examples:
 
   # Re-run to fill gaps (skips existing images):
   bash tools/.tests/test-text-to-image-e2e-suite.sh
+
+  # Force regeneration (bypass cache, fresh API calls):
+  bash tools/.tests/test-text-to-image-e2e-suite.sh --force-refresh
 EOF
 }
 
@@ -376,6 +388,7 @@ parse_args() {
         FILTER_SETTINGS="$1"
         ;;
       --list-cases) list_cases; exit 0 ;;
+      --force-refresh) FORCE_REFRESH=true ;;
       --dry-run) DRY_RUN=true ;;
       --) shift; break ;;
       -*) die "Unknown option: $1" ;;
@@ -429,6 +442,7 @@ main() {
   log_info "Timeout per model: ${TIMEOUT}s"
   [[ -n "${FILTER_USE_CASE}" ]] && log_info "Filter use case: ${FILTER_USE_CASE}"
   [[ -n "${FILTER_SETTINGS}" ]] && log_info "Filter settings: ${FILTER_SETTINGS}"
+  [[ "${FORCE_REFRESH}" == "true" ]] && log_info "Force refresh: enabled (bypassing cache)"
   [[ "${DRY_RUN}" == "true" ]] && log_info "Mode: DRY-RUN (no actual API calls)"
 
   if [[ "${DRY_RUN}" != "true" ]]; then
