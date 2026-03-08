@@ -100,3 +100,21 @@ notes:
   - text: "Post-PR fix round 3: Added ensure_output_format() — detects actual image format via file(1), converts via ImageMagick if mismatch, graceful degradation if ImageMagick not installed. 8 new unit tests (62 total). All 91 tests pass (62 unit + 21 integration + 8 performance). Commit d21991d."
     type: info
     date: "2026-03-07"
+  - text: "Post-PR fix round 4: Native format registry (16 provider+model combos mapped to png/jpg/webp), AVIF/WebP output support, pre-validation with actionable errors. All 91 tests pass. Commit 536e3d0."
+    type: info
+    date: "2026-03-08"
+  - text: "Post-PR fix round 5: Auto-append native extension when no ext specified; fix --list-models table alignment (ASCII [x]/[ ], truncate long IDs, dynamic separator). All 91 tests pass. Commit 29e0841."
+    type: info
+    date: "2026-03-08"
+  - text: "Post-PR fix round 6: E2E battle-test suite — 4 web-dev use cases x 2 settings (default + max), --use-case/--settings/--dry-run/--list-cases options. 56 images generated, all YAML sidecars created. Commit 11b6a96."
+    type: info
+    date: "2026-03-08"
+  - text: "Post-PR fix round 7: YAML sidecar metadata — full audit trail with request/response/timing/image-metadata for every generated image. 4 new unit tests (95 total). All 124 tests pass (95 unit + 21 integration + 8 performance). Commit 327e992."
+    type: info
+    date: "2026-03-08"
+  - text: "Post-PR fix round 8: Fix YAML sidecar not created on cache hits. cache_store() now caches YAML sidecar alongside image; cache_lookup() restores it; old cache entries get back-filled basic YAML. All 124 tests pass. Commit db27cc0."
+    type: info
+    date: "2026-03-08"
+  - text: "YAML sidecar cache gap was a design oversight — cache_store/cache_lookup only handled image files, not the YAML metadata. Discovered during E2E suite re-runs where cached images had no sidecar. Required cache architecture change (store/restore/backfill). Should have been considered when YAML sidecar feature was designed in round 7."
+    type: retro
+    date: "2026-03-08"
