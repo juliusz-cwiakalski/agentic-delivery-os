@@ -172,6 +172,18 @@ yaml_get_list() {
   ' "${file}" 2>/dev/null || true
 }
 
+# Extract a multi-line YAML literal block value (e.g., input.prompt)
+# Reads lines after "  prompt: |" until the next key at same or lower indentation
+yaml_get_prompt() {
+  local -r file="$1"
+  awk '
+    /^  prompt: \|/ { found=1; next }
+    found && /^    / { gsub(/^    /, ""); line = (line ? line "\n" : "") $0; next }
+    found && !/^    / { exit }
+    END { if (line) print line }
+  ' "${file}" 2>/dev/null || true
+}
+
 # ============================================================================
 # DATA COLLECTION
 # ============================================================================
@@ -193,6 +205,9 @@ declare -a EVAL_RECOMMENDATIONS=()
 # Per-category scores stored as "idx:category:score"
 declare -a EVAL_CATEGORY_SCORES=()
 declare -a EVAL_CATEGORY_NOTES=()
+
+# Per-use-case prompt text (same prompt for all models within a use case)
+declare -A USE_CASE_PROMPTS=()
 
 # Unique lists
 declare -a UNIQUE_USE_CASES=()
@@ -265,6 +280,19 @@ collect_eval_data() {
       EVAL_CATEGORY_SCORES+=("${idx}:${cat}:${score}")
       EVAL_CATEGORY_NOTES+=("${idx}:${cat}:${notes}")
     done
+
+    # Try to read prompt from the generation YAML sidecar
+    local gen_yaml="${eval_file%.eval.yaml}.yaml"
+    if [[ -n "${use_case}" && -f "${gen_yaml}" ]]; then
+      local _existing_prompt="${USE_CASE_PROMPTS["${use_case}"]:-}"
+      if [[ -z "${_existing_prompt}" ]]; then
+        local prompt_text
+        prompt_text="$(yaml_get_prompt "${gen_yaml}")"
+        if [[ -n "${prompt_text}" ]]; then
+          USE_CASE_PROMPTS["${use_case}"]="${prompt_text}"
+        fi
+      fi
+    fi
 
     log_debug "Parsed: ${use_case}/${settings} — ${provider}/${model} — ${percentage}%"
     idx=$(( idx + 1 ))
@@ -666,6 +694,33 @@ _html_header() {
   .gallery-item .caption {
     font-size: 0.8rem; color: #6b7280; margin-top: 4px;
   }
+  .prompt-section {
+    margin: 0.5rem 0 1rem 0;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 0;
+  }
+  .prompt-section summary {
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #475569;
+    font-weight: 500;
+  }
+  .prompt-section summary:hover { background: #f1f5f9; border-radius: 6px; }
+  .prompt-text {
+    padding: 12px 16px;
+    font-size: 0.85rem;
+    line-height: 1.7;
+    color: #334155;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    border-top: 1px solid #e2e8f0;
+    max-height: 400px;
+    overflow-y: auto;
+  }
   details { margin: 4px 0; }
   details summary {
     cursor: pointer; font-size: 0.85rem; color: #3b82f6;
@@ -799,6 +854,14 @@ _html_per_use_case_sections() {
     local ucl="${UNIQUE_USE_CASE_LABELS[${uc_idx}]}"
 
     printf '<h2>%s</h2>\n' "$(_html_escape "${ucl}")"
+
+    # Show generation prompt if available for this use case
+    if [[ -n "${USE_CASE_PROMPTS[${uc}]:-}" ]]; then
+      printf '<details class="prompt-section">\n'
+      printf '<summary>View generation prompt</summary>\n'
+      printf '<div class="prompt-text">%s</div>\n' "$(_html_escape "${USE_CASE_PROMPTS[${uc}]}")"
+      printf '</details>\n'
+    fi
 
     # Image gallery per settings profile
     local setting
@@ -991,6 +1054,16 @@ _md_per_use_case_tables() {
     local ucl="${UNIQUE_USE_CASE_LABELS[${uc_idx}]}"
 
     printf '## %s\n\n' "${ucl}"
+
+    # Show generation prompt if available for this use case
+    if [[ -n "${USE_CASE_PROMPTS[${uc}]:-}" ]]; then
+      printf '<details>\n<summary>Generation prompt</summary>\n\n'
+      # Output each line as a blockquote
+      while IFS= read -r _prompt_line; do
+        printf '> %s\n' "${_prompt_line}"
+      done <<< "${USE_CASE_PROMPTS[${uc}]}"
+      printf '\n</details>\n\n'
+    fi
 
     local setting
     for setting in "${UNIQUE_SETTINGS[@]}"; do
