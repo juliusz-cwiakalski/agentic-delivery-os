@@ -121,3 +121,6 @@ notes:
   - text: "Post-PR fix round 9: Added --force-refresh to E2E suite (passes --force to tool, bypasses both tool cache and file-existence skip). Fixed providers script file-existence guard to respect FORCE env var. Re-ran full suite: 112 GENERATING attempts, 0 SKIPPED, 56 images + 56 YAMLs with complete request/response/timing data. Commit 01cd1fe."
     type: info
     date: "2026-03-08"
+  - text: "Post-PR fix round 10: Extended E2E suite from 4 to 24 use cases across 3 tiers (12 Tier 1 core, 6 Tier 2 marketing, 6 Tier 3 specialty). Added --tier filter (1/2/3/all, default: tier 1). Created evaluation workflow: evaluate-e2e-images.md (8-category scoring rubric for @image-reviewer) and generate-e2e-report.sh (HTML visual comparison + Markdown scoring reports from .eval.yaml files). Commit 6f496de."
+    type: info
+    date: "2026-03-09"
