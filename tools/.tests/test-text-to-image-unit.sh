@@ -1303,6 +1303,7 @@ test_write_generation_info_creates_yaml() {
   _GEN_API_METHOD="POST"
   _GEN_API_REQUEST='{"prompt":"a sunset","model":"dall-e-3","size":"1024x1024","response_format":"url"}'
   _GEN_API_RESPONSE='{"data":[{"url":"https://example.com/image.png","revised_prompt":"A beautiful sunset"}]}'
+  _GEN_HTTP_CODE="200"
   _GEN_EXTRA_INFO="revised_prompt=A beautiful sunset"
 
   # Call write_generation_info
@@ -1316,12 +1317,17 @@ test_write_generation_info_creates_yaml() {
 
   assert_contains "$yaml_content" "generation:" "Should contain generation section"
   assert_contains "$yaml_content" "timestamp:" "Should contain timestamp"
+  assert_contains "$yaml_content" 'status: "success"' "Should contain success status"
+  assert_contains "$yaml_content" 'error_message: ""' "Should contain empty error_message on success"
   assert_contains "$yaml_content" "input:" "Should contain input section"
   assert_contains "$yaml_content" "a sunset" "Should contain the prompt"
   assert_contains "$yaml_content" "openai" "Should contain provider"
   assert_contains "$yaml_content" "dall-e-3" "Should contain model"
   assert_contains "$yaml_content" "request:" "Should contain request section"
   assert_contains "$yaml_content" "https://api.openai.com/v1/images/generations" "Should contain API URL"
+  assert_contains "$yaml_content" "headers:" "Should contain headers section"
+  assert_contains "$yaml_content" "content_type:" "Should contain content_type header"
+  assert_contains "$yaml_content" "http_code: 200" "Should contain HTTP status code"
   assert_contains "$yaml_content" "output:" "Should contain output section"
   assert_contains "$yaml_content" "file_path:" "Should contain file_path"
   assert_contains "$yaml_content" "duration_ms: 1234" "Should contain duration"
@@ -1332,6 +1338,7 @@ test_write_generation_info_creates_yaml() {
   _GEN_API_URL=""
   _GEN_API_REQUEST=""
   _GEN_API_RESPONSE=""
+  _GEN_HTTP_CODE=""
   _GEN_EXTRA_INFO=""
 }
 
@@ -1339,13 +1346,14 @@ test_write_generation_info_truncates_base64() {
   local img="${_test_tmpdir}/test-b64.png"
   printf 'fake-png-data' > "$img"
 
-  # Create a response with a very long base64 string (>200 chars)
+  # Create a response with a very long base64 string (>1000 chars, simulating real image data)
   local long_b64
-  long_b64="$(printf '%0.sA' $(seq 1 500))"
+  long_b64="$(printf '%0.sA' $(seq 1 1500))"
   _GEN_API_URL="https://api.stability.ai/v1/generation/test/text-to-image"
   _GEN_API_METHOD="POST"
   _GEN_API_REQUEST='{"text_prompts":[{"text":"test"}]}'
   _GEN_API_RESPONSE="{\"artifacts\":[{\"base64\":\"${long_b64}\"}]}"
+  _GEN_HTTP_CODE=""
   _GEN_EXTRA_INFO=""
 
   write_generation_info "$img" "test" "" 1024 1024 "high" "stability" "stable-diffusion-xl-1024-v1-0" 500
@@ -1356,13 +1364,14 @@ test_write_generation_info_truncates_base64() {
   local yaml_content
   yaml_content="$(cat "$yaml_path")"
 
-  # The full 500-char base64 string should NOT appear in the YAML
-  assert_not_contains "$yaml_content" "$long_b64" "Full base64 data should be truncated"
-  assert_contains "$yaml_content" "truncated" "Should contain truncation marker"
+  # The full 1500-char base64 string should NOT appear in the YAML (redacted as image data)
+  assert_not_contains "$yaml_content" "$long_b64" "Full base64 data should be redacted"
+  assert_contains "$yaml_content" "base64 image data" "Should contain base64 redaction marker"
 
   _GEN_API_URL=""
   _GEN_API_REQUEST=""
   _GEN_API_RESPONSE=""
+  _GEN_HTTP_CODE=""
 }
 
 test_generation_info_disabled() {
@@ -1441,6 +1450,7 @@ test_write_generation_info_empty_globals() {
   _GEN_API_METHOD="POST"
   _GEN_API_REQUEST=""
   _GEN_API_RESPONSE=""
+  _GEN_HTTP_CODE=""
   _GEN_EXTRA_INFO=""
 
   write_generation_info "$img" "test prompt" "" 1024 1024 "high" "openai" "dall-e-3" 0
@@ -1458,6 +1468,113 @@ test_write_generation_info_empty_globals() {
 test_save_generation_info_default() {
   # SAVE_GENERATION_INFO should default to true
   assert_eq "true" "${SAVE_GENERATION_INFO}" "SAVE_GENERATION_INFO should default to true"
+}
+
+test_write_generation_info_error_status() {
+  # Test that write_generation_info records error status when exit_code != 0
+  local img="${_test_tmpdir}/error-test.png"
+  # No image file created (simulating error path)
+
+  _GEN_API_URL="https://api.openai.com/v1/images/generations"
+  _GEN_API_METHOD="POST"
+  _GEN_API_REQUEST='{"prompt":"test","model":"dall-e-3"}'
+  _GEN_API_RESPONSE='{"error":{"message":"Invalid API key","type":"invalid_request_error","code":"invalid_api_key"}}'
+  _GEN_HTTP_CODE="401"
+  _GEN_EXTRA_INFO=""
+
+  write_generation_info "$img" "test" "" 1024 1024 "high" "openai" "dall-e-3" 500 6
+
+  local yaml_path="${_test_tmpdir}/error-test.yaml"
+  assert_file_exists "$yaml_path" "YAML sidecar should be created on error"
+
+  local yaml_content
+  yaml_content="$(cat "$yaml_path")"
+
+  assert_contains "$yaml_content" 'status: "error"' "Should contain error status"
+  assert_contains "$yaml_content" "Invalid API key" "Should contain error message from response"
+  assert_contains "$yaml_content" "http_code: 401" "Should contain HTTP 401 status code"
+  assert_contains "$yaml_content" "invalid_api_key" "Should preserve error details in response"
+
+  _GEN_API_URL=""
+  _GEN_API_REQUEST=""
+  _GEN_API_RESPONSE=""
+  _GEN_HTTP_CODE=""
+}
+
+test_sanitize_response_for_yaml_redacts_credentials() {
+  # Test that sensitive fields are redacted in response
+  local response='{"access_token":"secret123","api_key":"key456","data":"safe-data"}'
+  local result
+  result="$(sanitize_response_for_yaml "$response")"
+  assert_not_contains "$result" "secret123" "access_token value should be redacted"
+  assert_not_contains "$result" "key456" "api_key value should be redacted"
+  assert_contains "$result" "REDACTED" "Should contain REDACTED placeholder"
+  assert_contains "$result" "safe-data" "Non-sensitive data should be preserved"
+}
+
+test_sanitize_response_for_yaml_preserves_short_strings() {
+  # Short strings should NOT be truncated (only base64 image data > 1000 chars is replaced)
+  local response='{"status":"ok","message":"Image generated successfully","url":"https://example.com/image.png"}'
+  local result
+  result="$(sanitize_response_for_yaml "$response")"
+  assert_contains "$result" "Image generated successfully" "Short message should be preserved verbatim"
+  assert_contains "$result" "https://example.com/image.png" "URL should be preserved verbatim"
+}
+
+test_sanitize_request_for_yaml_redacts_credentials() {
+  # Test that sensitive fields in request payload are redacted
+  local request='{"prompt":"test","api_key":"should-be-redacted","password":"secret"}'
+  local result
+  result="$(sanitize_request_for_yaml "$request")"
+  assert_not_contains "$result" "should-be-redacted" "api_key should be redacted"
+  assert_not_contains "$result" "secret" "password should be redacted"
+  assert_contains "$result" "REDACTED" "Should contain REDACTED placeholder"
+  assert_contains "$result" "test" "Non-sensitive data should be preserved"
+}
+
+test_sanitize_request_for_yaml_passes_clean_payload() {
+  # Normal request payloads (no credentials) should pass through unchanged
+  local request='{"prompt":"a sunset","model":"dall-e-3","size":"1024x1024"}'
+  local result
+  result="$(sanitize_request_for_yaml "$request")"
+  assert_contains "$result" "a sunset" "Prompt should be preserved"
+  assert_contains "$result" "dall-e-3" "Model should be preserved"
+  assert_contains "$result" "1024x1024" "Size should be preserved"
+}
+
+test_sanitize_response_for_yaml_empty_input() {
+  local result
+  result="$(sanitize_response_for_yaml "")"
+  assert_eq "" "$result" "Empty input should return empty"
+}
+
+test_sanitize_request_for_yaml_empty_input() {
+  local result
+  result="$(sanitize_request_for_yaml "")"
+  assert_eq "" "$result" "Empty input should return empty"
+}
+
+test_gen_http_code_global_exists() {
+  # _GEN_HTTP_CODE should be declared
+  [[ "${_GEN_HTTP_CODE+x}" == "x" ]] || return 1
+}
+
+test_retry_curl_sets_http_code_on_success() {
+  # Mock curl to return 200
+  _curl() { printf 'response body\n200'; }
+  _GEN_HTTP_CODE=""
+  retry_curl "http://example.com" >/dev/null
+  assert_eq "200" "$_GEN_HTTP_CODE" "Should set _GEN_HTTP_CODE to 200 on success"
+}
+
+test_retry_curl_sets_http_code_on_client_error() {
+  # Mock curl to return 400
+  _curl() { printf 'error body\n400'; }
+  _GEN_HTTP_CODE=""
+  local exit_code=0
+  retry_curl "http://example.com" >/dev/null 2>/dev/null || exit_code=$?
+  assert_ne "0" "$exit_code" "Should return non-zero on 400"
+  assert_eq "400" "$_GEN_HTTP_CODE" "Should set _GEN_HTTP_CODE to 400 on client error"
 }
 
 # ============================================================================
@@ -1554,6 +1671,17 @@ main() {
   run_test "truncate_response_for_yaml short response" test_truncate_response_for_yaml_short_response
   run_test "write_generation_info empty globals" test_write_generation_info_empty_globals
   run_test "SAVE_GENERATION_INFO default" test_save_generation_info_default
+  # Error sidecar and enhanced logging tests
+  run_test "write_generation_info error status" test_write_generation_info_error_status
+  run_test "sanitize_response_for_yaml redacts credentials" test_sanitize_response_for_yaml_redacts_credentials
+  run_test "sanitize_response_for_yaml preserves short strings" test_sanitize_response_for_yaml_preserves_short_strings
+  run_test "sanitize_request_for_yaml redacts credentials" test_sanitize_request_for_yaml_redacts_credentials
+  run_test "sanitize_request_for_yaml passes clean payload" test_sanitize_request_for_yaml_passes_clean_payload
+  run_test "sanitize_response_for_yaml empty input" test_sanitize_response_for_yaml_empty_input
+  run_test "sanitize_request_for_yaml empty input" test_sanitize_request_for_yaml_empty_input
+  run_test "_GEN_HTTP_CODE global exists" test_gen_http_code_global_exists
+  run_test "retry_curl sets http_code on success" test_retry_curl_sets_http_code_on_success
+  run_test "retry_curl sets http_code on client error" test_retry_curl_sets_http_code_on_client_error
   # Auto-extension resolution tests
   run_test "has_recognized_image_extension png" test_has_recognized_image_extension_png
   run_test "has_recognized_image_extension jpg" test_has_recognized_image_extension_jpg

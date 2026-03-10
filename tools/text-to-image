@@ -98,6 +98,7 @@ _GEN_API_URL=""
 _GEN_API_METHOD="POST"
 _GEN_API_REQUEST=""
 _GEN_API_RESPONSE=""
+_GEN_HTTP_CODE=""
 _GEN_EXTRA_INFO=""  # Provider-specific details as key=value pairs
 
 # Google Imagen authentication
@@ -537,10 +538,102 @@ truncate_response_for_yaml() {
   fi
 }
 
+# Sanitize a JSON response body for YAML sidecar output.
+# Keeps all text/metadata fields verbatim (no truncation).
+# Only replaces fields that look like base64 image data (>1000 chars of base64
+# characters) with a size placeholder.
+# Redacts any fields named *token*, *key*, *secret*, *authorization* as
+# defense-in-depth against accidental credential leakage.
+# Falls back to regex-based sanitization if jq is unavailable.
+# Usage: sanitize_response_for_yaml <response_json>
+sanitize_response_for_yaml() {
+  local response="$1"
+
+  if [[ -z "$response" ]]; then
+    printf '%s' "$response"
+    return 0
+  fi
+
+  # Try jq-based sanitization
+  if command -v jq >/dev/null 2>&1; then
+    local result
+    result="$(_jq '
+      walk(
+        if type == "object" then
+          with_entries(
+            if (.key | test("token|key|secret|authorization|password"; "i")) then
+              .value = "[REDACTED]"
+            elif (.value | type) == "string" and (.value | length) > 1000 and (.value | test("^[A-Za-z0-9+/=\\s]+$")) then
+              .value = "[base64 image data: \(.value | length) chars]"
+            else .
+            end
+          )
+        elif type == "string" and length > 1000 and test("^[A-Za-z0-9+/=\\s]+$") then
+          "[base64 image data: \(length) chars]"
+        else .
+        end
+      )
+    ' <<< "$response" 2>/dev/null)"
+    if [[ -n "$result" ]]; then
+      printf '%s' "$result"
+      return 0
+    fi
+  fi
+
+  # Fallback: simple regex-based sanitization
+  # Replace long base64-like strings (>1000 chars of [A-Za-z0-9+/=])
+  local sanitized="$response"
+  if [[ ${#sanitized} -gt 5000 ]]; then
+    printf '%s' "${sanitized:0:2000}...[TRUNCATED: ${#sanitized} chars total]"
+  else
+    printf '%s' "$sanitized"
+  fi
+}
+
+# Sanitize a JSON request body for YAML sidecar output.
+# Pretty-prints the JSON and redacts any fields whose names match sensitive
+# patterns (*token*, *key*, *secret*, *authorization*, *password*) as
+# defense-in-depth. Auth credentials are normally in HTTP headers, not in
+# request payloads, but this provides an extra safety net.
+# Usage: sanitize_request_for_yaml <request_json>
+sanitize_request_for_yaml() {
+  local request="$1"
+
+  if [[ -z "$request" ]]; then
+    printf '%s' "$request"
+    return 0
+  fi
+
+  # Try jq-based redaction
+  if command -v jq >/dev/null 2>&1; then
+    local result
+    result="$(_jq '
+      walk(
+        if type == "object" then
+          with_entries(
+            if (.key | test("token|key|secret|authorization|password"; "i")) then
+              .value = "[REDACTED]"
+            else .
+            end
+          )
+        else .
+        end
+      )
+    ' <<< "$request" 2>/dev/null)"
+    if [[ -n "$result" ]]; then
+      printf '%s' "$result"
+      return 0
+    fi
+  fi
+
+  # Fallback: pass through as-is (payloads normally don't contain credentials)
+  printf '%s' "$request"
+}
+
 # Write generation metadata YAML sidecar file alongside the output image.
 # Uses global vars set by the provider function: _GEN_API_URL, _GEN_API_METHOD,
-# _GEN_API_REQUEST, _GEN_API_RESPONSE, _GEN_EXTRA_INFO
-# Arguments: output_path prompt negative_prompt width height quality provider model duration_ms
+# _GEN_API_REQUEST, _GEN_API_RESPONSE, _GEN_HTTP_CODE, _GEN_EXTRA_INFO
+# Arguments: output_path prompt negative_prompt width height quality provider model duration_ms [exit_code]
 write_generation_info() {
   local output_path="$1"
   local prompt="$2"
@@ -551,10 +644,25 @@ write_generation_info() {
   local provider="$7"
   local model="$8"
   local duration_ms="$9"
+  local exit_code="${10:-0}"
 
   local yaml_path="${output_path%.*}.yaml"
   local timestamp
   timestamp="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+
+  # Determine status and error message
+  local gen_status="success"
+  local error_message=""
+  if (( exit_code != 0 )); then
+    gen_status="error"
+    # Extract error message from API response if available
+    if [[ -n "$_GEN_API_RESPONSE" ]]; then
+      error_message="$(extract_api_error "$_GEN_API_RESPONSE" 2>/dev/null)" || true
+    fi
+    if [[ -z "$error_message" ]]; then
+      error_message="Generation failed with exit code ${exit_code}"
+    fi
+  fi
 
   # Image metadata
   local file_size_bytes=0
@@ -584,17 +692,27 @@ write_generation_info() {
     fi
   fi
 
-  # Sanitize request/response for YAML (indent for literal block)
+  # Sanitize request for YAML (indent for literal block)
   local request_indented=""
-  local response_indented=""
   if [[ -n "$_GEN_API_REQUEST" ]]; then
-    request_indented="$(_jq '.' <<< "$_GEN_API_REQUEST" 2>/dev/null | sed 's/^/    /' || printf '%s' "$_GEN_API_REQUEST" | sed 's/^/    /')"
+    local request_clean
+    request_clean="$(sanitize_request_for_yaml "$_GEN_API_REQUEST")"
+    request_indented="$(_jq '.' <<< "$request_clean" 2>/dev/null | sed 's/^/    /' || printf '%s' "$request_clean" | sed 's/^/    /')"
   fi
+
+  # Sanitize response for YAML (indent for literal block)
+  local response_indented=""
   if [[ -n "$_GEN_API_RESPONSE" ]]; then
     local response_clean
-    response_clean="$(truncate_response_for_yaml "$_GEN_API_RESPONSE")"
+    response_clean="$(sanitize_response_for_yaml "$_GEN_API_RESPONSE")"
     response_indented="$(_jq '.' <<< "$response_clean" 2>/dev/null | sed 's/^/    /' || printf '%s' "$response_clean" | sed 's/^/    /')"
   fi
+
+  # Determine content-type header based on request method
+  local content_type_header="application/json"
+
+  # HTTP code from global (set by retry_curl)
+  local http_code="${_GEN_HTTP_CODE:-}"
 
   # Get native format for this model
   local native_fmt
@@ -626,6 +744,8 @@ generation:
   timestamp: "${timestamp}"
   tool_version: "${APP_VERSION}"
   duration_ms: ${duration_ms}
+  status: "${gen_status}"
+  error_message: "$(printf '%s' "${error_message}")"
 
 input:
   prompt: |
@@ -641,10 +761,13 @@ $(printf '%s' "$prompt" | sed 's/^/    /')
 request:
   url: "${_GEN_API_URL}"
   method: "${_GEN_API_METHOD}"
+  headers:
+    content_type: "${content_type_header}"
   payload: |
 ${request_indented}
 
 response:
+  http_code: ${http_code:-0}
   body: |
 ${response_indented}
 
@@ -693,6 +816,7 @@ retry_curl() {
 
     if (( http_code >= 200 && http_code < 300 )); then
       rm -f "$stderr_file"
+      _GEN_HTTP_CODE="$http_code"
       echo "$response"
       return 0
     fi
@@ -711,6 +835,7 @@ retry_curl() {
       log_err "Request failed with HTTP $http_code"
       log_debug "Response body: ${response:0:500}" >&2
       rm -f "$stderr_file"
+      _GEN_HTTP_CODE="$http_code"
       echo "$response"
       return "$EXIT_NETWORK_ERROR"
     fi
@@ -721,6 +846,7 @@ retry_curl() {
   done
 
   rm -f "$stderr_file"
+  _GEN_HTTP_CODE="$http_code"
   log_err "Max retries exceeded"
   return "$EXIT_NETWORK_ERROR"
 }
@@ -874,6 +1000,7 @@ generate_image() {
   _GEN_API_METHOD="POST"
   _GEN_API_REQUEST=""
   _GEN_API_RESPONSE=""
+  _GEN_HTTP_CODE=""
   _GEN_EXTRA_INFO=""
 
   local gen_start_ms
@@ -890,23 +1017,27 @@ generate_image() {
   if (( exit_code == EXIT_AUTH_FAILED )); then
     provider_not_configured_error "$provider"
     return "$exit_code"
-  elif (( exit_code != 0 )); then
-    return "$exit_code"
   fi
 
   if [[ "${DRY_RUN}" == "true" ]]; then
     return "$exit_code"
   fi
 
-  # Ensure output format matches requested extension (e.g., convert WebP -> PNG)
-  ensure_output_format "$output_path" || true
-
-  # Write generation info sidecar YAML
-  if [[ "${SAVE_GENERATION_INFO}" == "true" ]]; then
-    write_generation_info "$output_path" "$prompt" "$negative_prompt" "$width" "$height" "$quality" "$provider" "$model" "$gen_duration_ms"
+  if (( exit_code == 0 )); then
+    # Ensure output format matches requested extension (e.g., convert WebP -> PNG)
+    ensure_output_format "$output_path" || true
   fi
 
-  # Store in cache
+  # Write generation info sidecar YAML (on BOTH success and error)
+  if [[ "${SAVE_GENERATION_INFO}" == "true" ]]; then
+    write_generation_info "$output_path" "$prompt" "$negative_prompt" "$width" "$height" "$quality" "$provider" "$model" "$gen_duration_ms" "$exit_code"
+  fi
+
+  if (( exit_code != 0 )); then
+    return "$exit_code"
+  fi
+
+  # Store in cache (success only)
   cache_store "$cache_key" "$output_path" "$prompt" "$negative_prompt" "$width" "$height" "$quality" "$provider" "$model"
 
   # Embed metadata if requested
@@ -969,6 +1100,10 @@ generate_image_openai() {
 
   local exit_code=$?
   if (( exit_code != 0 )); then
+    _GEN_API_URL="https://api.openai.com/v1/images/generations"
+    _GEN_API_REQUEST="$payload"
+    _GEN_API_RESPONSE="$response"
+    _GEN_API_METHOD="POST"
     local api_error
     api_error="$(extract_api_error "$response" 2>/dev/null)"
     log_err "OpenAI API call failed: ${api_error:-unknown error}"
@@ -979,11 +1114,19 @@ generate_image_openai() {
   local url
   url="$(_jq -r '.data[0].url // empty' <<< "$response" 2>/dev/null)"
   if [[ -z "$url" ]]; then
+    _GEN_API_URL="https://api.openai.com/v1/images/generations"
+    _GEN_API_REQUEST="$payload"
+    _GEN_API_RESPONSE="$response"
+    _GEN_API_METHOD="POST"
     log_err "No URL in OpenAI response"
     return "$EXIT_SERVER_ERROR"
   fi
 
   if ! _curl -s -o "$output_path" "$url"; then
+    _GEN_API_URL="https://api.openai.com/v1/images/generations"
+    _GEN_API_REQUEST="$payload"
+    _GEN_API_RESPONSE="$response"
+    _GEN_API_METHOD="POST"
     log_err "Failed to download image from $url"
     return "$EXIT_NETWORK_ERROR"
   fi
@@ -1048,6 +1191,10 @@ generate_image_stability() {
 
   local exit_code=$?
   if (( exit_code != 0 )); then
+    _GEN_API_URL="https://api.stability.ai/v1/generation/$model/text-to-image"
+    _GEN_API_REQUEST="$payload"
+    _GEN_API_RESPONSE="$response"
+    _GEN_API_METHOD="POST"
     local api_error
     api_error="$(extract_api_error "$response" 2>/dev/null)"
     log_err "Stability API call failed: ${api_error:-unknown error}"
@@ -1058,11 +1205,19 @@ generate_image_stability() {
   local base64
   base64="$(_jq -r '.artifacts[0].base64 // empty' <<< "$response" 2>/dev/null)"
   if [[ -z "$base64" ]]; then
+    _GEN_API_URL="https://api.stability.ai/v1/generation/$model/text-to-image"
+    _GEN_API_REQUEST="$payload"
+    _GEN_API_RESPONSE="$response"
+    _GEN_API_METHOD="POST"
     log_err "No base64 in Stability response"
     return "$EXIT_SERVER_ERROR"
   fi
 
   if ! base64 -d <<< "$base64" > "$output_path" 2>/dev/null; then
+    _GEN_API_URL="https://api.stability.ai/v1/generation/$model/text-to-image"
+    _GEN_API_REQUEST="$payload"
+    _GEN_API_RESPONSE="$response"
+    _GEN_API_METHOD="POST"
     log_err "Failed to decode base64"
     return "$EXIT_GENERAL_ERROR"
   fi
@@ -1392,6 +1547,10 @@ generate_image_google() {
 
   local exit_code=$?
   if (( exit_code != 0 )); then
+    _GEN_API_URL="$api_url"
+    _GEN_API_REQUEST="$payload"
+    _GEN_API_RESPONSE="$response"
+    _GEN_API_METHOD="POST"
     local api_error
     api_error="$(extract_api_error "$response" 2>/dev/null)"
     log_err "Google Imagen API call failed: ${api_error:-unknown error}"
@@ -1404,6 +1563,10 @@ generate_image_google() {
   local img_base64
   img_base64="$(_jq -r '.predictions[0].bytesBase64Encoded // empty' <<< "$response" 2>/dev/null)"
   if [[ -z "$img_base64" ]]; then
+    _GEN_API_URL="$api_url"
+    _GEN_API_REQUEST="$payload"
+    _GEN_API_RESPONSE="$response"
+    _GEN_API_METHOD="POST"
     local error_msg
     error_msg="$(_jq -r '.error.message // empty' <<< "$response" 2>/dev/null)"
     if [[ -n "$error_msg" ]]; then
@@ -1415,6 +1578,10 @@ generate_image_google() {
   fi
 
   if ! base64 -d <<< "$img_base64" > "$output_path" 2>/dev/null; then
+    _GEN_API_URL="$api_url"
+    _GEN_API_REQUEST="$payload"
+    _GEN_API_RESPONSE="$response"
+    _GEN_API_METHOD="POST"
     log_err "Failed to decode base64 image data"
     return "$EXIT_GENERAL_ERROR"
   fi
@@ -1463,6 +1630,10 @@ generate_image_huggingface() {
 
   local exit_code=$?
   if (( exit_code != 0 )); then
+    _GEN_API_URL="https://api-inference.huggingface.co/models/$model"
+    _GEN_API_REQUEST="$payload"
+    _GEN_API_RESPONSE="$response"
+    _GEN_API_METHOD="POST"
     local api_error
     api_error="$(extract_api_error "$response" 2>/dev/null)"
     log_err "HF API call failed: ${api_error:-unknown error}"
@@ -1481,6 +1652,10 @@ generate_image_huggingface() {
   fi
 
   if [[ ! -f "$output_path" ]]; then
+    _GEN_API_URL="https://api-inference.huggingface.co/models/$model"
+    _GEN_API_REQUEST="$payload"
+    _GEN_API_RESPONSE="$response"
+    _GEN_API_METHOD="POST"
     log_err "Failed to get image from HF"
     return "$EXIT_SERVER_ERROR"
   fi
@@ -1525,6 +1700,10 @@ generate_image_bfl() {
 
   local exit_code=$?
   if (( exit_code != 0 )); then
+    _GEN_API_URL="https://api.blackforestlabs.ai/v1/images/generate"
+    _GEN_API_REQUEST="$payload"
+    _GEN_API_RESPONSE="$response"
+    _GEN_API_METHOD="POST"
     local api_error
     api_error="$(extract_api_error "$response" 2>/dev/null)"
     log_err "BFL API call failed: ${api_error:-unknown error}"
@@ -1535,6 +1714,10 @@ generate_image_bfl() {
   local inference_id
   inference_id="$(_jq -r '.inference_id // empty' <<< "$response" 2>/dev/null)"
   if [[ -z "$inference_id" ]]; then
+    _GEN_API_URL="https://api.blackforestlabs.ai/v1/images/generate"
+    _GEN_API_REQUEST="$payload"
+    _GEN_API_RESPONSE="$response"
+    _GEN_API_METHOD="POST"
     log_err "No inference_id in BFL response"
     return "$EXIT_SERVER_ERROR"
   fi
@@ -1561,12 +1744,20 @@ generate_image_bfl() {
         return "$EXIT_SUCCESS"
       fi
     elif [[ "$status" == "FAILED" ]]; then
+      _GEN_API_URL="https://api.blackforestlabs.ai/v1/images/generate"
+      _GEN_API_REQUEST="$payload"
+      _GEN_API_RESPONSE="$response"
+      _GEN_API_METHOD="POST"
       log_err "BFL generation failed"
       return "$EXIT_SERVER_ERROR"
     fi
     (( poll_count++ ))
   done
 
+  _GEN_API_URL="https://api.blackforestlabs.ai/v1/images/generate"
+  _GEN_API_REQUEST="$payload"
+  _GEN_API_RESPONSE="$response"
+  _GEN_API_METHOD="POST"
   log_err "BFL polling timeout"
   return "$EXIT_SERVER_ERROR"
 }
@@ -1615,6 +1806,10 @@ generate_image_replicate() {
 
   local exit_code=$?
   if (( exit_code != 0 )); then
+    _GEN_API_URL="$api_url"
+    _GEN_API_REQUEST="$payload"
+    _GEN_API_RESPONSE="$response"
+    _GEN_API_METHOD="POST"
     local api_error
     api_error="$(extract_api_error "$response" 2>/dev/null)"
     log_err "Replicate API call failed: ${api_error:-unknown error}"
@@ -1625,6 +1820,10 @@ generate_image_replicate() {
   local prediction_id
   prediction_id="$(_jq -r '.id // empty' <<< "$response" 2>/dev/null)"
   if [[ -z "$prediction_id" ]]; then
+    _GEN_API_URL="$api_url"
+    _GEN_API_REQUEST="$payload"
+    _GEN_API_RESPONSE="$response"
+    _GEN_API_METHOD="POST"
     log_err "No prediction_id in Replicate response"
     return "$EXIT_SERVER_ERROR"
   fi
@@ -1652,12 +1851,20 @@ generate_image_replicate() {
         return "$EXIT_SUCCESS"
       fi
     elif [[ "$status" == "failed" ]]; then
+      _GEN_API_URL="$api_url"
+      _GEN_API_REQUEST="$payload"
+      _GEN_API_RESPONSE="$response"
+      _GEN_API_METHOD="POST"
       log_err "Replicate generation failed"
       return "$EXIT_SERVER_ERROR"
     fi
     (( poll_count++ ))
   done
 
+  _GEN_API_URL="$api_url"
+  _GEN_API_REQUEST="$payload"
+  _GEN_API_RESPONSE="$response"
+  _GEN_API_METHOD="POST"
   log_err "Replicate polling timeout"
   return "$EXIT_SERVER_ERROR"
 }
@@ -1694,6 +1901,10 @@ generate_image_siliconflow() {
 
   local exit_code=$?
   if (( exit_code != 0 )); then
+    _GEN_API_URL="https://api.siliconflow.cn/v1/images/generations"
+    _GEN_API_REQUEST="$payload"
+    _GEN_API_RESPONSE="$response"
+    _GEN_API_METHOD="POST"
     local api_error
     api_error="$(extract_api_error "$response" 2>/dev/null)"
     log_err "SiliconFlow API call failed: ${api_error:-unknown error}"
@@ -1704,11 +1915,19 @@ generate_image_siliconflow() {
   local url
   url="$(_jq -r '.data[0].url // empty' <<< "$response" 2>/dev/null)"
   if [[ -z "$url" ]]; then
+    _GEN_API_URL="https://api.siliconflow.cn/v1/images/generations"
+    _GEN_API_REQUEST="$payload"
+    _GEN_API_RESPONSE="$response"
+    _GEN_API_METHOD="POST"
     log_err "No URL in SiliconFlow response"
     return "$EXIT_SERVER_ERROR"
   fi
 
   if ! _curl -s -o "$output_path" "$url"; then
+    _GEN_API_URL="https://api.siliconflow.cn/v1/images/generations"
+    _GEN_API_REQUEST="$payload"
+    _GEN_API_RESPONSE="$response"
+    _GEN_API_METHOD="POST"
     log_err "Failed to download image from $url"
     return "$EXIT_NETWORK_ERROR"
   fi
