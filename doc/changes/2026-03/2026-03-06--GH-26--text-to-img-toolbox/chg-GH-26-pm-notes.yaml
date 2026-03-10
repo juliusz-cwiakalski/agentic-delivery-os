@@ -124,3 +124,15 @@ notes:
   - text: "Post-PR fix round 10: Extended E2E suite from 4 to 24 use cases across 3 tiers (12 Tier 1 core, 6 Tier 2 marketing, 6 Tier 3 specialty). Added --tier filter (1/2/3/all, default: tier 1). Created evaluation workflow: evaluate-e2e-images.md (8-category scoring rubric for @image-reviewer) and generate-e2e-report.sh (HTML visual comparison + Markdown scoring reports from .eval.yaml files). Commit 6f496de."
     type: info
     date: "2026-03-09"
+  - text: "Post-PR fix round 10.1: Show generation prompt per use case in reports (both HTML and Markdown). Commit 1cddc87."
+    type: info
+    date: "2026-03-09"
+  - text: "Post-PR fix round 11: Write YAML sidecar even on generation errors (status: error, with error details). Added raw request/response logging in sidecar for debugging failed API calls. All 134 tests pass (105 unit + 21 integration + 8 performance). Commit 2b48659."
+    type: info
+    date: "2026-03-10"
+  - text: "Post-PR fix round 12: Evidence-based @image-generator agent rewrite. Evaluated 168 images across 12 Tier 1 use cases × 7 providers × 2 resolutions. Agent now uses explicit --provider/--model routing based on real evaluation data instead of quality profiles. Key finding: built-in quality profiles are wrong (put weakest models first). Google Imagen 4.0 Ultra (80.2%) and Fast (79.4%) dominate; OpenAI DALL-E 3 (61.0%) is mediocre. Updated doc/tools/text-to-image.md with quality profile advisory and evaluation results. Updated --help text. Commit 335ab0e."
+    type: info
+    date: "2026-03-10"
+  - text: "Quality profiles (high/medium/low) in the tool are based on assumptions, not data. E2E evaluation of 168 images showed the default 'high' chain (OpenAI→Stability→Google) puts the weakest models first. Agent prompt was rewritten to bypass profiles entirely and use explicit provider+model. Quality profiles should be reworked in a future change based on evaluation data."
+    type: retro
+    date: "2026-03-10"

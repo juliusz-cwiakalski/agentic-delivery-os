@@ -6,7 +6,7 @@
 change:
   ref: GH-26
   type: feat
-  status: Proposed
+  status: Complete
   slug: text-to-img-toolbox
   title: "Publish text-to-image CLI tool, agent tuning, and tools convention"
   owners: [Juliusz Ćwiąkalski]
