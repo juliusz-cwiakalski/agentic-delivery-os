@@ -2585,6 +2585,12 @@ OPTIONS:
 DOCUMENTATION:
   Full guide: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/tools/${APP_NAME}.md
 
+SIDECAR OUTPUT:
+  Every generation writes a .yaml sidecar alongside the output image (e.g., img.avif -> img.yaml).
+  Contains: full request payload, response body, HTTP code, timing, provider/model, error details.
+  On errors, the sidecar is still written for debugging — inspect generation.status and response fields.
+  Use --no-generation-info to disable sidecar creation.
+
 EXIT CODES:
   0 - Success
   1 - General error

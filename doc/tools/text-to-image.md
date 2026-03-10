@@ -26,6 +26,7 @@
     * [Specify provider and model](#specify-provider-and-model)
     * [Quality profiles](#quality-profiles)
     * [Custom dimensions](#custom-dimensions)
+    * [Output formats](#output-formats)
     * [Negative prompts](#negative-prompts)
     * [Multi-model comparison](#multi-model-comparison)
     * [Batch processing (YAML)](#batch-processing-yaml)
@@ -39,6 +40,8 @@
     * [`.env` file](#env-file)
     * [Environment variable overrides](#environment-variable-overrides)
     * [Caching](#caching)
+    * [YAML sidecar metadata](#yaml-sidecar-metadata)
+      * [Debugging with sidecars](#debugging-with-sidecars)
   * [Troubleshooting](#troubleshooting)
     * [Common errors](#common-errors)
     * [Debugging](#debugging)
@@ -373,11 +376,66 @@ tools/text-to-image --prompt "illustration" --quality medium --output illustrati
 tools/text-to-image --prompt "quick sketch" --quality low --output sketch.png
 ```
 
+> **Important: Quality profiles vs. direct model selection**
+>
+> The built-in quality profiles route to providers based on API key availability, **not** actual model quality. An E2E evaluation of 168 images across 12 use cases showed Google Imagen 4.0 models consistently outperform alternatives (80% avg vs 61% for DALL-E 3 and 23–53% for SDXL). The current fallback chains (`high: OpenAI → Stability → Google`) put weaker models first.
+>
+> **For best results, specify `--provider` and `--model` directly:**
+>
+> ```bash
+> # Recommended: explicit model selection based on quality data
+> tools/text-to-image --prompt "product photo" --provider google --model imagen-4.0-ultra-generate-001 --output product.avif
+>
+> # Best value: Imagen 4.0 Fast at ~$0.020/img scores 79.4% avg
+> tools/text-to-image --prompt "illustration" --provider google --model imagen-4.0-fast-generate-001 --output illustration.avif
+> ```
+>
+> **Recommended models by use case (from E2E evaluation):**
+>
+> | Use Case | Best Model | Score | Cost |
+> |----------|-----------|-------|------|
+> | Product photography | `google / imagen-4.0-generate-001` | 88.0% | ~$0.040 |
+> | Interior / real estate | `google / imagen-4.0-ultra-generate-001` | 87.5% | ~$0.080 |
+> | Team headshots | `google / imagen-4.0-ultra-generate-001` | 86.5% | ~$0.080 |
+> | Food photography | `google / imagen-4.0-ultra-generate-001` | 85.0% | ~$0.080 |
+> | Icons / UI elements | `replicate / flux-1.1-pro` | 85.1% | ~$0.020 |
+> | Hero banners (text) | `google / imagen-4.0-ultra-generate-001` | 84.6% | ~$0.080 |
+> | Blog illustrations | `google / imagen-4.0-ultra-generate-001` | 83.3% | ~$0.080 |
+> | Social media stories | `google / imagen-4.0-generate-001` | 83.6% | ~$0.040 |
+> | Social media posts | `google / imagen-4.0-fast-generate-001` | 81.0% | ~$0.020 |
+> | Abstract backgrounds | `google / imagen-3.0-generate-001` | 74.9% | ~$0.050 |
+> | Logos | `google / imagen-4.0-fast-generate-001` | 73.4% | ~$0.020 |
+> | Testimonial cards | `google / imagen-4.0-ultra-generate-001` | 71.1% | ~$0.080 |
+
 ### Custom dimensions
 
 ```bash
 tools/text-to-image --prompt "panoramic landscape" --width 2048 --height 1024 --output panorama.png
 ```
+
+### Output formats
+
+The tool supports multiple output image formats: **PNG** (default), **JPG**, **WebP**, and **AVIF**.
+
+The output format is determined by the file extension in `--output`:
+
+```bash
+# PNG (default, lossless)
+tools/text-to-image --prompt "landscape" --output landscape.png
+
+# AVIF (recommended — best compression/quality ratio)
+tools/text-to-image --prompt "landscape" --output landscape.avif
+
+# WebP (good compression, wide browser support)
+tools/text-to-image --prompt "landscape" --output landscape.webp
+
+# JPG (lossy, smallest for photos)
+tools/text-to-image --prompt "landscape" --output landscape.jpg
+```
+
+If no recognized extension is specified, the tool auto-appends the provider's native format (usually `.png`).
+
+**AVIF** is recommended for production assets — it provides 50–80% smaller files than PNG at equivalent visual quality. Conversion requires `avifenc` (from libavif). For WebP, `cwebp` is needed. ImageMagick (`convert`) serves as a universal fallback for format conversion.
 
 ### Negative prompts
 
@@ -542,6 +600,85 @@ Images are cached in `~/.ai/text-to-image/cache/` using SHA-256 hashes of genera
 - **Cache cleanup:** Automatic when cache exceeds 100MB (configurable via `CACHE_MAX_SIZE_MB`)
 - **Clear cache manually:** `rm -rf ~/.ai/text-to-image/cache/*`
 
+### YAML sidecar metadata
+
+Every image generation writes a YAML sidecar file alongside the output image (same path with `.yaml` extension). This sidecar captures the full generation context for debugging, auditing, and reproducibility.
+
+**Example:** generating `assets/hero.avif` also creates `assets/hero.yaml`.
+
+**Sidecar schema:**
+
+```yaml
+generation:
+  timestamp: "2026-03-10T14:30:00Z"
+  tool_version: "1.0.0"
+  duration_ms: 4500
+  status: "success"         # or "error"
+  error_message: ""         # populated on errors
+
+input:
+  prompt: |
+    The full prompt text...
+  negative_prompt: ""
+  provider: "google"
+  model: "imagen-4.0-generate-001"
+  width: 1024
+  height: 1024
+  quality: "high"
+  native_format: "png"
+
+request:
+  url: "https://..."
+  method: "POST"
+  headers:
+    content_type: "application/json"
+  payload: |
+    { full sanitized request JSON }
+
+response:
+  http_code: 200
+  body: |
+    { full sanitized response JSON, base64 data replaced with size placeholder }
+
+output:
+  file_path: "/path/to/output.avif"
+  file_size_bytes: 123456
+  file_size_human: "121K"
+  format_detected: "image/png"
+  format_requested: "avif"
+  width_px: 1024
+  height_px: 1024
+```
+
+**Disabling:** Use `--no-generation-info` to suppress sidecar creation.
+
+**Error sidecars:** Sidecars are written even when generation fails. The `generation.status` field is set to `"error"` and `generation.error_message` contains the failure reason. The `response` section captures the raw HTTP response for provider-specific error diagnosis.
+
+#### Debugging with sidecars
+
+When a generation fails, inspect the sidecar to diagnose the issue:
+
+```bash
+# Check status and error message
+yq '.generation.status, .generation.error_message' assets/hero.yaml
+
+# Check HTTP response code
+yq '.response.http_code' assets/hero.yaml
+
+# Inspect the full response body for provider-specific errors
+yq '.response.body' assets/hero.yaml
+
+# Review the request payload that was sent
+yq '.request.payload' assets/hero.yaml
+```
+
+Common patterns:
+
+- **HTTP 400:** Bad request — prompt too long, unsupported dimensions, or content policy violation. Check `response.body`.
+- **HTTP 401/403:** Auth failure — check `input.provider` and verify the corresponding API key.
+- **HTTP 429:** Rate limited — wait and retry, or switch to a different provider/model.
+- **HTTP 500/502/503:** Server error — retry with `--force`, or switch provider.
+
 ## Troubleshooting
 
 ### Common errors
@@ -644,7 +781,10 @@ OPTIONS:
   --google-credentials FILE     Path to Google service account JSON key file
   --google-location REGION      Google Cloud region (default: us-central1)
   --google-auth-method METHOD   Google auth: auto, json, service-account, gcloud,
-                                 api-key (default: auto)
+                                  api-key (default: auto)
+
+  --no-generation-info          Disable YAML sidecar with request/response details
+                                  (enabled by default; sidecar written alongside output image)
 
   --list-models                 List available models for configured providers
   --all-models                  List all known models (including unconfigured)
@@ -681,3 +821,7 @@ EXIT CODES:
 - Google Imagen multi-auth (service account, gcloud, API key)
 - Machine-readable JSON output (`--output-format json`)
 - Model discovery (`--list-models`, `--all-models`)
+- YAML sidecar with request/response logging (enabled by default, `--no-generation-info` to disable)
+- Error YAML sidecar (written even on failure for debugging)
+- AVIF and WebP output format support with auto-conversion
+- Native format auto-detection and extension appending
