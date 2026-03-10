@@ -37,7 +37,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - `external-researcher`: research external sources via MCP (context7, deepwiki, perplexity)
 - `fixer`: reproduce and fix failures
 - `image-generator`: generate AI images via text-to-image CLI
-- `image-reviewer`: analyze screenshots and visual artifacts
+- `image-reviewer`: analyze images, screenshots, and visual artifacts
 - `plan-writer`: author change implementation plans
 - `pm`: orchestrate changes; manage tickets via MCP (reads `.ai/agent/pm-instructions.md`)
 - `pr-manager`: create/update PR/MR for branch; enriches description with ticket context via MCP
