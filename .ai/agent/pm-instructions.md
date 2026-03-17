@@ -34,7 +34,18 @@ Map change lifecycle to GitHub issue states and labels:
 
 ## Issue Creation & Management
 
-### Creating New Changes
+### Ticket Creation Policy
+
+**PM must NEVER create new tickets autonomously.** When the PM identifies scope that could be extracted or split from the current ticket:
+
+1. **Describe the potential extraction** to the human — what would be separated, why it could make sense, and what the tradeoff is (smaller focused tickets vs. keeping coupled scope together).
+2. **Ask explicitly**: "Should I create a separate ticket for this, or keep it in the current scope?"
+3. **Respect the decision**: The human may intentionally keep large scope in a single ticket for good reasons (coupling, delivery efficiency, context preservation). Do not second-guess.
+4. **Only create a ticket when the human explicitly approves it.**
+
+This rule applies to all ticket creation — scope splits, follow-up work, discovered issues, etc. The PM proposes; the human decides.
+
+### Creating New Changes (when human-approved)
 
 1. Before creating, check for existing issues using `gh_list_issues` with `state:open`, `labels:change`. Present the user a draft of the new issue for review before creating it.
 
