@@ -47,10 +47,11 @@ Agents reference this table for every PR/MR operation. Each row maps an abstract
 
 **Step 1: Get the GitLab API token and project ID** (once per session):
 ```bash
-GITLAB_TOKEN=$(glab config get token --host gitlab.com 2>/dev/null || glab auth status -t 2>&1 | grep -oP 'Token: \K\S+')
+GITLAB_TOKEN=$(glab auth status -t 2>&1 | grep -oP '(Token|token):?\s*\K\S+' | head -1)
 PROJECT_ID=$(glab api "projects/:id" | jq -r '.id')
-GITLAB_HOST="https://gitlab.com"
+GITLAB_HOST="https://gitlab.com"  <!-- Change for self-hosted -->
 ```
+Note: `glab` typically uses OAuth2 tokens. Use `Authorization: Bearer` header (not `PRIVATE-TOKEN`) for OAuth tokens. If your token is a personal access token (PAT), use `PRIVATE-TOKEN` instead.
 
 **Step 2: Fetch diff_refs** (once per review session):
 ```bash
@@ -63,7 +64,7 @@ HEAD_SHA=$(echo "$DIFF_REFS" | jq -r '.head_sha')
 **Step 3: Create inline discussion** on an added/changed line:
 ```bash
 curl -s -X POST "$GITLAB_HOST/api/v4/projects/$PROJECT_ID/merge_requests/$IID/discussions" \
-  -H "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+  -H "Authorization: Bearer $GITLAB_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "body": "'"$BODY"'",
@@ -98,7 +99,7 @@ PAYLOAD=$(jq -n \
   '{body: $body, position: {position_type: "text", base_sha: $base, start_sha: $start, head_sha: $head, old_path: $old_path, new_path: $new_path, new_line: $line}}')
 
 curl -s -X POST "$GITLAB_HOST/api/v4/projects/$PROJECT_ID/merge_requests/$IID/discussions" \
-  -H "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+  -H "Authorization: Bearer $GITLAB_TOKEN" \
   -H "Content-Type: application/json" \
   -d "$PAYLOAD"
 ```
