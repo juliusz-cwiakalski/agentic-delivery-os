@@ -35,6 +35,16 @@
       "tools": {
         "github*": true
       }
+    },
+    "code-reviewer": {
+      "tools": {
+        "github*": true
+      }
+    },
+    "review-feedback-applier": {
+      "tools": {
+        "github*": true
+      }
     }
   }
 }
