@@ -225,9 +225,10 @@ Before any review work, verify ALL of the following. STOP with a clear message i
     Publish (only when --publish AND user confirms):
 
     - Cap inline comments at 30. Remaining findings go into the summary comment.
-    - Post summary comment to PR/MR using the "Publish summary comment" operation from the Operations Reference.
-    - Post inline comments at diff positions using the "Publish inline review" operation from the Operations Reference.
-    - If inline positioning fails for a finding: include it in the summary comment with file:line reference.
+    - If the Operations Reference has an "Inline Discussion" section or a "Fetch diff_refs" operation (e.g., GitLab): fetch the diff_refs first, then use them to create inline discussions at exact diff positions. Follow the line placement rules from the Operations Reference.
+    - Post summary comment to PR/MR using the "Publish summary comment" / "Publish summary note" operation.
+    - Post inline comments at diff positions using the "Publish inline review" / "Publish inline discussion" operation. Always use the exact commands from the Operations Reference — do NOT assume `glab mr note` or similar high-level commands support inline positioning.
+    - If inline positioning fails for a finding (e.g., API returns 400/422): include it in the summary comment with file:line reference.
 
     Save publish results to `tmp/code-review/<branchPath>/publish-report.json`.
   </step>
