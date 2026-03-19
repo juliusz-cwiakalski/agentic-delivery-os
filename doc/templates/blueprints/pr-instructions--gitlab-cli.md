@@ -40,54 +40,83 @@ Agents reference this table for every PR/MR operation. Each row maps an abstract
 
 ## Inline Discussion (line-specific comments)
 
-`glab mr note` only creates **general MR comments**, NOT line-specific discussions. For inline diff comments, use `glab api` with the Discussions API and a `position` payload.
+`glab mr note` only creates **general MR comments**, NOT line-specific discussions.
+`glab api --raw-field "position[key]=value"` sends flat form fields — GitLab does NOT parse these as a nested `position` object, resulting in `DiscussionNote` (general) instead of `DiffNote` (inline).
 
-**Step 1: Fetch diff_refs** (once per review session):
+**The reliable method is `curl` with a JSON body** containing a properly nested `position` object.
+
+**Step 1: Get the GitLab API token and project ID** (once per session):
 ```bash
-BASE_SHA=$(glab api "projects/:id/merge_requests/$IID" --jq '.diff_refs.base_sha')
-START_SHA=$(glab api "projects/:id/merge_requests/$IID" --jq '.diff_refs.start_sha')
-HEAD_SHA=$(glab api "projects/:id/merge_requests/$IID" --jq '.diff_refs.head_sha')
+GITLAB_TOKEN=$(glab config get token --host gitlab.com 2>/dev/null || glab auth status -t 2>&1 | grep -oP 'Token: \K\S+')
+PROJECT_ID=$(glab api "projects/:id" | jq -r '.id')
+GITLAB_HOST="https://gitlab.com"
 ```
 
-**Step 2: Create inline discussion** on an added/changed line:
+**Step 2: Fetch diff_refs** (once per review session):
 ```bash
-glab api --method POST "projects/:id/merge_requests/$IID/discussions" \
-  --raw-field "body=$BODY" \
-  --raw-field "position[position_type]=text" \
-  --raw-field "position[base_sha]=$BASE_SHA" \
-  --raw-field "position[start_sha]=$START_SHA" \
-  --raw-field "position[head_sha]=$HEAD_SHA" \
-  --raw-field "position[old_path]=$FILE_PATH" \
-  --raw-field "position[new_path]=$FILE_PATH" \
-  --raw-field "position[new_line]=$LINE"
+DIFF_REFS=$(glab api "projects/:id/merge_requests/$IID" | jq '.diff_refs')
+BASE_SHA=$(echo "$DIFF_REFS" | jq -r '.base_sha')
+START_SHA=$(echo "$DIFF_REFS" | jq -r '.start_sha')
+HEAD_SHA=$(echo "$DIFF_REFS" | jq -r '.head_sha')
+```
+
+**Step 3: Create inline discussion** on an added/changed line:
+```bash
+curl -s -X POST "$GITLAB_HOST/api/v4/projects/$PROJECT_ID/merge_requests/$IID/discussions" \
+  -H "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "body": "'"$BODY"'",
+    "position": {
+      "position_type": "text",
+      "base_sha": "'"$BASE_SHA"'",
+      "start_sha": "'"$START_SHA"'",
+      "head_sha": "'"$HEAD_SHA"'",
+      "old_path": "'"$FILE_PATH"'",
+      "new_path": "'"$FILE_PATH"'",
+      "new_line": '$LINE'
+    }
+  }'
 ```
 
 **Line placement rules:**
-- Added/modified line (green in diff): use `position[new_line]` only
-- Removed line (red in diff): use `position[old_line]` only
-- Unchanged/context line: use both `position[old_line]` and `position[new_line]`
+- Added/modified line (green in diff): include `"new_line"` only
+- Removed line (red in diff): include `"old_line"` only
+- Unchanged/context line: include both `"old_line"` and `"new_line"`
 - Always send both `old_path` and `new_path` (same value unless file was renamed)
+
+**Important**: The `body` field in the JSON must have special characters escaped (newlines as `\n`, double quotes as `\"`, backslashes as `\\`). When constructing the JSON payload programmatically, use `jq` to safely encode the body:
+```bash
+PAYLOAD=$(jq -n \
+  --arg body "$BODY" \
+  --arg base "$BASE_SHA" \
+  --arg start "$START_SHA" \
+  --arg head "$HEAD_SHA" \
+  --arg old_path "$FILE_PATH" \
+  --arg new_path "$FILE_PATH" \
+  --argjson line "$LINE" \
+  '{body: $body, position: {position_type: "text", base_sha: $base, start_sha: $start, head_sha: $head, old_path: $old_path, new_path: $new_path, new_line: $line}}')
+
+curl -s -X POST "$GITLAB_HOST/api/v4/projects/$PROJECT_ID/merge_requests/$IID/discussions" \
+  -H "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "$PAYLOAD"
+```
 
 **Capture discussion ID** for later reply/resolve:
 ```bash
-glab api --method POST "projects/:id/merge_requests/$IID/discussions" \
-  --raw-field "body=$BODY" \
-  --raw-field "position[position_type]=text" \
-  --raw-field "position[base_sha]=$BASE_SHA" \
-  --raw-field "position[start_sha]=$START_SHA" \
-  --raw-field "position[head_sha]=$HEAD_SHA" \
-  --raw-field "position[old_path]=$FILE_PATH" \
-  --raw-field "position[new_path]=$FILE_PATH" \
-  --raw-field "position[new_line]=$LINE" \
-  --jq '{discussion_id: .id, note_id: .notes[0].id}'
+RESULT=$(curl -s -X POST ... -d "$PAYLOAD")
+DISCUSSION_ID=$(echo "$RESULT" | jq -r '.id')
+NOTE_ID=$(echo "$RESULT" | jq -r '.notes[0].id')
 ```
 
-**Fallback**: If the API returns 400 (position cannot be resolved — line no longer in diff), fall back to a general MR note referencing the file and line in the body text.
+**Fallback**: If the API returns 400 (position cannot be resolved — line no longer in diff), fall back to a general MR note via `glab mr note "$IID" --message "..."`.
 
 ## Platform-Specific Notes
 
-- `glab api` supports `:id` placeholder which auto-resolves to the current project ID from git context.
+- `glab api` supports `:id` placeholder which auto-resolves to the current project ID from git context. For `curl`, resolve the numeric project ID first.
 - `glab mr list` does NOT support `--state` flag in some versions — filter the JSON output with `jq` instead.
-- For self-hosted GitLab: change Host above and ensure `glab config set host gitlab.yourcompany.com`.
+- `glab api --raw-field` does NOT create nested objects — use `curl` with JSON for inline discussions.
+- For self-hosted GitLab: change `GITLAB_HOST` and ensure `glab config set host gitlab.yourcompany.com`.
 - Pagination: `glab api --paginate` works for most endpoints. For notes, use `per_page=100&page=N` manually.
 - Discussions created via the API are resolvable threads. Whether unresolved threads block merge depends on project settings.

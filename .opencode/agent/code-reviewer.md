@@ -343,6 +343,14 @@ Severity guide:
 - **major**: Significant logic error, missing error handling, or design concern.
 - **minor**: Code quality issue, naming improvement, or missing documentation.
 - **nit**: Style preference, trivial improvement, or optional enhancement.
+
+When publishing inline comments, format the body with a severity emoji prefix:
+- 🔴 **Critical** — `title`
+- 🟠 **Major** — `title`
+- 🟡 **Minor** — `title`
+- ⚪ **Nit** — `title`
+
+Followed by 1-3 sentences of description and a suggested fix.
 </finding_format>
 
 <inline_comment_cap>
