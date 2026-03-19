@@ -127,17 +127,27 @@ Before any review work, verify ALL of the following. STOP with a clear message i
   <step id="4.1">
     Checkout the exact PR/MR head commit so the agent has access to the full source code (not just the diff):
     - Extract the head commit SHA from the PR/MR metadata (`context.json`).
-    - Save the current branch: `ORIGINAL_BRANCH="$(git rev-parse --abbrev-ref HEAD)"`
     - Checkout the head commit: `git checkout --detach <head_sha>`
-    - After review is complete (after step 11): restore original branch: `git checkout "$ORIGINAL_BRANCH"`
     This ensures the agent can read full file context around changed lines, not just diff hunks.
+  </step>
+
+  <step id="4.2">
+    Fetch ticket context (if a workItemRef is detected):
+    - Scan the PR/MR metadata (title, description, branch name) for a workItemRef pattern (uppercase prefix + hyphen + digits, e.g., `GH-36`, `PDEV-123`).
+    - If found: read `.ai/agent/pm-instructions.md` to determine the issue tracker type and configuration (GitHub Issues, Jira, etc.).
+    - Fetch the ticket details using the tracker's MCP tools or CLI as described in `pm-instructions.md`.
+    - Save ticket context to `tmp/code-review/<branchPath>/ticket-context.json`.
+    - Use the ticket's acceptance criteria, description, and goals as additional review input — verify the implementation aligns with what was requested.
+    - If `pm-instructions.md` is absent or ticket fetch fails: skip silently (ticket context is optional enrichment, not a hard requirement).
   </step>
 
   <step id="5">
     Load repository-local review configuration (graceful fallback when absent):
 
     - Check for `.ai/agent/code-review-instructions.md` — if present, read it and use it as the complete source of repository-local review guidance (priorities, checklist items, conventions, special patterns).
-    - If the file is absent: use built-in general-purpose review heuristics (see built_in_heuristics).
+    - Check for `.ai/rules/` — if present, read any rule files relevant to the languages in the diff (e.g., `.ai/rules/bash.md`, `.ai/rules/java.md`). These contain language-specific coding rules and review criteria.
+    - If neither is present: use built-in general-purpose review heuristics (see built_in_heuristics).
+    - If ticket context was fetched (step 4.2): use the ticket's acceptance criteria and goals as additional review criteria — verify the implementation addresses what was requested.
   </step>
 
   <step id="6">
@@ -224,7 +234,6 @@ Before any review work, verify ALL of the following. STOP with a clear message i
 
   <step id="11">
     Report:
-    - Restore original branch: `git checkout "$ORIGINAL_BRANCH"`
     - Findings count and severity breakdown.
     - Duplicates suppressed.
     - Files written under `tmp/code-review/<branchPath>/`.
@@ -290,37 +299,9 @@ is present, its guidance takes priority — it may extend, narrow, or override t
 - License compliance: new dependencies with incompatible licenses (GPL in MIT project, etc.).
 - Build impact: changes that would break CI, increase build time significantly, or affect artifact size.
 
-**Language-specific (applied when the diff contains the relevant language)**
-
-*Bash/Shell:*
-- Missing `set -euo pipefail` or equivalent safety flags.
-- Unquoted variables in command arguments (word splitting, globbing risk).
-- Missing exit code checks on critical commands.
-- Portability: bashisms in `#!/bin/sh` scripts, Linux-only paths in cross-platform scripts.
-
-*Java/Kotlin/JVM:*
-- Nullability: missing `@Nullable`/`@NonNull` annotations, unchecked `.get()` on Optional.
-- Stream overhead: complex stream pipelines where a simple loop would be clearer and faster.
-- Concurrency: unsynchronized access to shared state, incorrect use of volatile/atomic.
-- Resource closure: `Closeable` resources not in try-with-resources.
-
-*JavaScript/TypeScript/React:*
-- Hook rules: hooks called conditionally, missing dependencies in useEffect arrays.
-- Render frequency: expensive computation in render path without memoization.
-- Type safety: `any` type usage, missing type annotations on public APIs.
-- State immutability: direct mutation of state objects instead of creating new references.
-
-*Python:*
-- Mutable default arguments (`def f(x=[])`).
-- Missing type hints on public functions.
-- Bare `except:` clauses that catch SystemExit/KeyboardInterrupt.
-- f-string injection in SQL/shell contexts.
-
-*Docker/YAML/Config:*
-- Unpinned base images (`FROM node:latest` instead of specific digest/tag).
-- Secrets in Dockerfiles or config files.
-- Unnecessary layers, large image size.
-- YAML indentation errors that silently change semantics.
+Language-specific review rules (e.g., Bash quoting, Java nullability, React hooks, Python type hints)
+belong in repository-specific configuration: `.ai/agent/code-review-instructions.md` and `.ai/rules/`.
+The agent loads those files when present and applies language-specific guidance from there.
 </built_in_heuristics>
 
 <finding_format>
@@ -355,6 +336,7 @@ All state is persisted under `tmp/code-review/<branchPath>/`:
 | `context.json` | PR/MR metadata (platform, number, branch, base, title, author) |
 | `diff.patch` | Full diff of the PR/MR |
 | `comments-snapshot.json` | Existing PR/MR comments (for deduplication) |
+| `ticket-context.json` | Ticket details from issue tracker (optional, when workItemRef detected) |
 | `review-draft.md` | Human-readable review draft for preview |
 | `findings.json` | Structured findings with severity, file, line, description, fix |
 | `publish-report.json` | Results of publishing (comment URLs, errors) |
