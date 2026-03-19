@@ -11,7 +11,7 @@ owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
   related_changes: ["GH-36", "GH-39"]
-summary: "Two agent/command pairs for remote code review and review-feedback application on GitHub and GitLab, with repository-local checklists, draft generation, deduplication, three-tier feedback classification, and externalized platform access via pr-instructions.md."
+summary: "Two agent/command pairs for remote code review and review-feedback application on GitHub and GitLab, with repository-local review guidance, draft generation, deduplication, three-tier feedback classification, and externalized platform access via pr-instructions.md."
 ---
 
 # Feature: Remote Code Review and Review-Feedback Application
@@ -20,7 +20,7 @@ summary: "Two agent/command pairs for remote code review and review-feedback app
 
 ADOS provides two complementary workflows for interacting with remote PR/MR review systems:
 
-1. **Remote code review** — the `code-reviewer` agent (`.opencode/agent/code-reviewer.md`) and `/review-remote` command (`.opencode/command/review-remote.md`) analyze an open PR/MR diff against repository-local checklists, free-form instructions, and built-in heuristics. The agent produces structured findings, generates a review draft for preview, deduplicates against existing comments, and optionally publishes findings to the remote platform.
+1. **Remote code review** — the `code-reviewer` agent (`.opencode/agent/code-reviewer.md`) and `/review-remote` command (`.opencode/command/review-remote.md`) analyze an open PR/MR diff against repository-local review guidance and built-in heuristics. The agent produces structured findings, generates a review draft for preview, deduplicates against existing comments, and optionally publishes findings to the remote platform.
 
 2. **Review feedback application** — the `review-feedback-applier` agent (`.opencode/agent/review-feedback-applier.md`) and `/apply-review-feedback` command (`.opencode/command/apply-review-feedback.md`) read review comments from an open PR/MR, classify each as accepted/rejected/ambiguous using a three-tier system, and apply accepted changes to local source files without committing or pushing.
 
@@ -50,9 +50,8 @@ Both workflows support GitHub (`gh`) and GitLab (`glab`) from v1. Platform acces
 - **Remote code review (F-1):** The `code-reviewer` agent fetches a PR/MR diff and metadata, analyzes it against review criteria, and produces structured findings with severity (critical/major/minor/nit) and confidence (high/medium/low).
 - **Review feedback application (F-2):** The `review-feedback-applier` agent fetches review threads, classifies each comment, and applies accepted changes to local files.
 - **Platform access via pr-instructions (F-3):** All three PR/MR-facing agents (`code-reviewer`, `review-feedback-applier`, `pr-manager`) read `.ai/agent/pr-instructions.md` for platform type, access method, and an Operations Reference table mapping every PR/MR operation to a concrete CLI command. When `pr-instructions.md` is absent, agents fall back to auto-detecting the platform from `git remote get-url origin` (GitHub vs GitLab), then to CLI auth status checks, and finally to manual override via `--github`/`--gitlab` flags.
-- **Repository-local review configuration (F-4):** Two optional files customize review behavior:
-  - `.ai/checklists/code-review.md` — structured checklist of review criteria (checkbox-based).
-  - `.ai/agent/code-review-instructions.md` — free-form review instructions and priorities.
+- **Repository-local review configuration (F-4):** One optional file customizes review behavior:
+  - `.ai/agent/code-review-instructions.md` — repository-local review guidance including priorities, checklist items, conventions, and special patterns.
   - When absent, the agent falls back to built-in general-purpose heuristics with no errors.
 - **Review draft generation (F-5):** The `code-reviewer` generates a `review-draft.md` file locally before any publishing occurs. Publishing is a separate explicit action requiring user approval.
 - **Finding deduplication (F-6):** Before publishing, the `code-reviewer` compares new findings against existing PR/MR comments by file path, line range, and semantic similarity. Duplicates are suppressed.
@@ -71,7 +70,6 @@ Flow 1: Remote code review
   → Load .ai/agent/pr-instructions.md (if present; else auto-detect platform)
   → Pre-flight checks (clean tree, auth, active PR/MR)
   → Fetch diff + metadata + existing comments (via Operations Reference)
-  → Load .ai/checklists/code-review.md (if present)
   → Load .ai/agent/code-review-instructions.md (if present)
   → Analyze diff → produce findings
   → Generate review-draft.md
@@ -111,8 +109,7 @@ Flow 2: Apply review feedback
 | `.opencode/command/review-remote.md` | Review remote command | Thin entry point delegating to `code-reviewer` agent |
 | `.opencode/command/apply-review-feedback.md` | Apply review feedback command | Thin entry point delegating to `review-feedback-applier` agent |
 | `.ai/agent/pr-instructions.md` | PR/MR platform instructions | Repository-local platform config with Operations Reference table; read by `code-reviewer`, `review-feedback-applier`, and `pr-manager` |
-| `.ai/checklists/code-review.md` | Review checklist | Optional repository-local checklist of review criteria |
-| `.ai/agent/code-review-instructions.md` | Review instructions | Optional repository-local free-form review instructions |
+| `.ai/agent/code-review-instructions.md` | Review guidance | Optional repository-local review guidance (priorities, checklist, conventions, patterns) |
 
 ### State Persistence
 
@@ -178,7 +175,7 @@ A template (`doc/templates/pr-instructions-template.md`) covers four integration
 | NFR-3 | Feedback safety | `/apply-review-feedback` never auto-commits or auto-pushes | Local changes only |
 | NFR-4 | Deduplication | Re-running `/review-remote` on unchanged PR/MR publishes zero new comments | Zero duplicates |
 | NFR-5 | Ambiguity safety | Ambiguous feedback items are never auto-applied | Listed in `skipped-items.md` only |
-| NFR-6 | Graceful degradation | Both agents function when `.ai/checklists/code-review.md` and `.ai/agent/code-review-instructions.md` are absent | Built-in heuristics used |
+| NFR-6 | Graceful degradation | Both agents function when `.ai/agent/code-review-instructions.md` is absent | Built-in heuristics used |
 | NFR-7 | State isolation | Review artifacts for different branches are isolated under separate `<branchPath>/` directories | No cross-contamination |
 | NFR-8 | Platform config fallback | All three PR/MR-facing agents function when `.ai/agent/pr-instructions.md` is absent | Auto-detection from `git remote get-url origin` |
 
@@ -190,7 +187,7 @@ A template (`doc/templates/pr-instructions-template.md`) covers four integration
 |-------|-------|-------|
 | Structural | Agent prompt content validation | Verify agents contain required sections: platform detection, pre-flight, CLI references, state paths |
 | Structural | Command delegation verification | Verify commands contain `agent:` and `subtask: true` in frontmatter |
-| Structural | Config file validation | Verify `.ai/checklists/code-review.md` contains checkbox items; `.ai/agent/code-review-instructions.md` contains free-form instructions |
+| Structural | Config file validation | Verify `.ai/agent/code-review-instructions.md` contains review guidance (priorities, checklist items, conventions) |
 | Manual | End-to-end review workflow | Run `/review-remote` on a branch with an open PR; verify draft generation and optional publishing |
 | Manual | End-to-end feedback workflow | Run `/apply-review-feedback` on a PR with review comments; verify classification and application |
 | Manual | Existing reviewer preservation | `git diff main -- .opencode/agent/reviewer.md` returns empty |
@@ -200,8 +197,7 @@ A template (`doc/templates/pr-instructions-template.md`) covers four integration
 ### Configuration
 
 - **PR/MR platform instructions:** `.ai/agent/pr-instructions.md` — repository-local platform config with Operations Reference table. Generated by `@bootstrapper` or copied from `doc/templates/pr-instructions-template.md`. When absent, agents auto-detect platform from `git remote get-url origin`.
-- **Review checklist:** `.ai/checklists/code-review.md` — optional, human-authored, evolves with repository review standards.
-- **Review instructions:** `.ai/agent/code-review-instructions.md` — optional, human-authored, repository-specific priorities and patterns.
+- **Review guidance:** `.ai/agent/code-review-instructions.md` — optional, human-authored, repository-specific priorities, checklist items, conventions, and patterns.
 - **State directories:** `tmp/code-review/` and `tmp/review-feedback/` — git-ignored, ephemeral, no automated cleanup required.
 - **Agent models:** Both agents use `anthropic/claude-opus-4-6`.
 
@@ -223,7 +219,6 @@ A template (`doc/templates/pr-instructions-template.md`) covers four integration
 - **PR/MR platform instructions:** `.ai/agent/pr-instructions.md`
 - **PR/MR platform instructions template:** `doc/templates/pr-instructions-template.md`
 - **PR/MR platform integration guide:** [doc/guides/pr-platform-integration.md](../../guides/pr-platform-integration.md)
-- **Review checklist:** `.ai/checklists/code-review.md`
-- **Review instructions:** `.ai/agent/code-review-instructions.md`
+- **Review guidance:** `.ai/agent/code-review-instructions.md`
 - **Agent inventory:** [.opencode/README.md](../../../.opencode/README.md)
 - **System bootstrap:** [AGENTS.md](../../../AGENTS.md)

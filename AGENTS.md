@@ -150,8 +150,7 @@ Detail: [doc/guides/unified-change-convention-tracker-agnostic-specification.md]
 │   ├── agent/            # agents (one .md each)
 │   └── command/          # commands (one .md each)
 ├── .ai/
-│   ├── agent/            # PM tracker config (pm-instructions.md), PR/MR platform config (pr-instructions.md), code-review instructions
-│   ├── checklists/       # review checklists (code-review.md)
+│   ├── agent/            # PM tracker config (pm-instructions.md), PR/MR platform config (pr-instructions.md), code-review instructions (incl. checklist)
 │   ├── local/            # git-ignored ephemeral state
 │   └── rules/            # language/tool rules (bash.md)
 ├── scripts/              # repo-internal automation (.sh extension)

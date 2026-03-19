@@ -20,7 +20,7 @@ tools:
 ---
 
 <purpose>
-Analyze an open PR/MR diff against repository-local checklists, instructions, and built-in heuristics.
+Analyze an open PR/MR diff against repository-local review guidance and built-in heuristics.
 Produce structured review findings and optionally publish them to the remote platform.
 
 This agent is READ-ONLY with respect to source code — it never modifies files in the working tree.
@@ -140,10 +140,8 @@ Before any review work, verify ALL of the following. STOP with a clear message i
   <step id="5">
     Load repository-local review configuration (graceful fallback when absent):
 
-    - Check for `.ai/checklists/code-review.md` — if present, read it and use each checkbox item as a review criterion to evaluate against the diff.
-    - Check for `.ai/agent/code-review-instructions.md` — if present, read it and follow the instructions during review.
-    - If neither file exists: use built-in general-purpose review heuristics (see built_in_heuristics).
-    - If one exists but not the other: use whichever is available plus built-in heuristics for the missing aspect.
+    - Check for `.ai/agent/code-review-instructions.md` — if present, read it and use it as the complete source of repository-local review guidance (priorities, checklist items, conventions, special patterns).
+    - If the file is absent: use built-in general-purpose review heuristics (see built_in_heuristics).
   </step>
 
   <step id="6">
@@ -151,7 +149,7 @@ Before any review work, verify ALL of the following. STOP with a clear message i
 
     - Read the diff patch file.
     - For each changed file, examine the hunks.
-    - Evaluate against: repo-local checklist items (if loaded), repo-local instructions (if loaded), and built-in heuristics.
+    - Evaluate against: repo-local review guidance (if loaded from `code-review-instructions.md`) and built-in heuristics.
     - For each issue found, create a structured finding (see finding_format).
     - Assign confidence: high, medium, or low.
     - Cap at 50 total findings; prioritize by severity (critical > major > minor > nit). The publishing cap of 30 inline comments (see step 10) is applied separately.
@@ -240,7 +238,7 @@ Before any review work, verify ALL of the following. STOP with a clear message i
 </process>
 
 <built_in_heuristics>
-When no repository-local checklist or instructions are present, apply these general-purpose review heuristics:
+When no repository-local review guidance is present (`.ai/agent/code-review-instructions.md` absent), apply these general-purpose review heuristics:
 
 - **Error handling**: Missing error checks, swallowed errors, generic catch blocks.
 - **Security**: Hardcoded secrets, injection risks, unsafe deserialization, missing input validation.

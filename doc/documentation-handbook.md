@@ -57,8 +57,7 @@ summary: "Repository documentation structure, conventions, and workflow."
   /command/                          # Repeatable commands/macros
 
 /.ai/                               # Repo-specific agent config + local context
-  /agent/                            # Repo-specific agent instructions (committed)
-  /checklists/                       # Review checklists (e.g., code-review.md)
+  /agent/                            # Repo-specific agent instructions (committed, incl. code-review checklist)
   /local/                            # Local agent context (git-ignored)
   /rules/                            # Optional org-wide rules
 

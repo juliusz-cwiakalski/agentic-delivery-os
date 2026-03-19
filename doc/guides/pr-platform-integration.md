@@ -206,5 +206,4 @@ Alternatively, run `/bootstrap` — the bootstrapper will ask about your Git pla
 |------|---------|---------|
 | `.ai/agent/pm-instructions.md` | Issue tracker access (Jira/GitHub Issues) | Same pattern — tells `@pm` HOW to access the tracker |
 | `.ai/agent/pr-instructions.md` | PR/MR platform access (GitHub/GitLab) | This file — tells PR/MR agents HOW to access the platform |
-| `.ai/agent/code-review-instructions.md` | Code review priorities and conventions | Different — tells `@code-reviewer` WHAT to focus on during review |
-| `.ai/checklists/code-review.md` | Code review checklist items | Different — defines WHAT items to check during review |
+| `.ai/agent/code-review-instructions.md` | Code review guidance (priorities, checklist, conventions) | Different — tells `@code-reviewer` WHAT to focus on and check during review |
