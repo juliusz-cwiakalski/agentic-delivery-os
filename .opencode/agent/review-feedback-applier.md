@@ -70,24 +70,13 @@ If unknown flags are provided: output `NEEDS_INPUT` with an exact rerun suggesti
 </argument_parsing>
 
 <platform_access>
-Load PR/MR platform configuration from `.ai/agent/pr-instructions.md` if it exists.
-This file defines the platform type, access method, and an Operations Reference table
-mapping each abstract operation (list PRs, fetch diff, fetch comments, etc.) to the
-concrete CLI or MCP command. Use it as the single source of truth for all platform
-interactions in steps 2–4.
+Load PR/MR platform configuration from `.ai/agent/pr-instructions.md`.
+This file is REQUIRED. It defines the platform type, access method, and an Operations Reference
+table mapping each abstract operation (list PRs, fetch diff, publish comment, etc.) to the
+concrete CLI or MCP command. Use it as the single source of truth for all platform interactions.
 
-**Graceful fallback** — if `.ai/agent/pr-instructions.md` does not exist:
-Detect platform from `git remote get-url origin` host:
-
-- `github.com` (or host contains `github`) → GitHub (use `gh`)
-- `gitlab.com` (or host contains `gitlab`) → GitLab (use `glab`)
-
-If still unclear:
-
-- If `gh auth status` succeeds → GitHub
-- Else if `glab auth status` succeeds → GitLab
-
-If still unknown and no override flag is provided: output `NEEDS_INPUT` with an exact rerun suggestion using `--github` or `--gitlab`.
+If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
+"Missing `.ai/agent/pr-instructions.md`. This file is required for platform access. Copy a blueprint from `doc/templates/blueprints/` and customize for your project. See `doc/guides/pr-platform-integration.md` for setup instructions."
 </platform_access>
 
 <pre_flight>
@@ -95,8 +84,8 @@ Before any work, verify ALL of the following. STOP with a clear message if any c
 
 1. **Git repo**: Current directory is a git repository with HEAD on a branch (not detached).
 2. **Clean working tree**: `git status --porcelain` is empty. If dirty: STOP with message "Working tree is dirty. Please commit or stash your changes before applying review feedback."
-3. **Platform CLI available**: `gh` (GitHub) or `glab` (GitLab) is installed.
-4. **Platform CLI authenticated**: `gh auth status` or `glab auth status` succeeds.
+3. **Platform instructions exist**: `.ai/agent/pr-instructions.md` is present and readable.
+4. **Platform tooling available and authenticated**: Run the "Check auth" operation from the Operations Reference. If it fails: STOP with actionable message.
 5. **Active PR/MR exists**: An open PR/MR exists for the current branch (or the specified number resolves to an open PR/MR).
 </pre_flight>
 
@@ -153,28 +142,26 @@ Three-tier feedback classification:
 
   <step id="2">
     Load platform configuration and verify tooling/auth:
-    - Read `.ai/agent/pr-instructions.md` if it exists — use the Operations Reference table for all subsequent commands.
-    - If the file is absent: fall back to auto-detection (see platform_access).
-    - Verify the platform CLI is installed and authenticated using the "Check auth" operation from the instructions (or fallback: `gh auth status` / `glab auth status`).
+    - Read `.ai/agent/pr-instructions.md` — use the Operations Reference table for all subsequent commands.
+    - Verify the platform tooling is installed and authenticated using the "Check auth" operation.
     If missing/auth fails: stop with a short actionable message.
   </step>
 
   <step id="3">
     Resolve PR/MR:
     - If explicit number provided: verify it exists and is open.
-    - Else: find the open PR/MR for the current branch using the "List open PRs for branch" operation from `pr-instructions.md` (or fallback auto-detection commands).
+    - Else: find the open PR/MR for the current branch using the "List open PRs for branch" operation from the Operations Reference.
     If no open PR/MR found: STOP with message.
   </step>
 
   <step id="4">
     Fetch all review threads and comments. Save to `tmp/review-feedback/<branchPath>/`.
-    Use the Operations Reference from `pr-instructions.md` for:
+    Use the Operations Reference for:
     - "Fetch inline review comments" → save to `inline-comments.json`
     - "Fetch issue comments" → save to `issue-comments.json`
     - "Fetch reviews" → save to `reviews-snapshot.json`
     After fetching, merge the inline and issue comment arrays into a single `threads-snapshot.json`.
     Do NOT use shell append (`>>`) to combine JSON files — read both arrays and merge them programmatically.
-    If `pr-instructions.md` is absent, use fallback auto-detection commands for the detected platform.
   </step>
 
   <step id="5">

@@ -23,7 +23,7 @@ This agent:
 
 1. Generates `tmp/pr/<branchPath>/description.md` from the current branch diff vs the PR/MR base branch.
 2. Detects GitHub vs GitLab from the `origin` remote.
-3. Creates or updates the PR/MR via `gh` (GitHub) or `glab` (GitLab).
+3. Creates or updates the PR/MR via the platform tooling defined in `.ai/agent/pr-instructions.md`.
 
 Hard rule: NEVER merge. After creating/updating the PR/MR, stop and ask the user to review + merge manually.
 </purpose>
@@ -226,24 +226,13 @@ Body guidance (use only sections that apply; keep it tight):
   </output_contract>
 
 <platform_access>
-Load PR/MR platform configuration from `.ai/agent/pr-instructions.md` if it exists.
-This file defines the platform type, access method, and an Operations Reference table
-mapping each abstract operation (list PRs, create PR, update PR, fetch metadata, etc.)
-to the concrete CLI or MCP command. Use it as the single source of truth for all
-platform interactions in steps 4, 5, and 9.
+Load PR/MR platform configuration from `.ai/agent/pr-instructions.md`.
+This file is REQUIRED. It defines the platform type, access method, and an Operations Reference
+table mapping each abstract operation (list PRs, fetch diff, publish comment, etc.) to the
+concrete CLI or MCP command. Use it as the single source of truth for all platform interactions.
 
-**Graceful fallback** — if `.ai/agent/pr-instructions.md` does not exist:
-Detect platform from `git remote get-url origin` host:
-
-- `github.com` (or host contains `github`) → GitHub (use `gh`)
-- `gitlab.com` (or host contains `gitlab`) → GitLab (use `glab`)
-
-If still unclear:
-
-- If `gh auth status` succeeds → GitHub
-- Else if `glab auth status` succeeds → GitLab
-
-If still unknown and no override flag is provided: output `NEEDS_INPUT` with an exact rerun suggestion using `--github` or `--gitlab`.
+If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
+"Missing `.ai/agent/pr-instructions.md`. This file is required for platform access. Copy a blueprint from `doc/templates/blueprints/` and customize for your project. See `doc/guides/pr-platform-integration.md` for setup instructions."
 </platform_access>
 
 <process>
@@ -274,9 +263,7 @@ If still unknown and no override flag is provided: output `NEEDS_INPUT` with an 
   </step>
   <step id="4">
     Load platform configuration and verify tooling/auth:
-    - Read `.ai/agent/pr-instructions.md` if it exists — use the Operations Reference table for all subsequent platform commands.
-    - If the file is absent: fall back to auto-detection (see platform_access).
-    - Verify the platform CLI is installed and authenticated using the "Check auth" operation from the instructions (or fallback: `gh auth status` / `glab auth status`).
+    - Load platform configuration from `.ai/agent/pr-instructions.md`. Verify tooling is installed and authenticated using the "Check auth" operation.
     - JSON parsing: require `jq`.
     If missing/auth fails: stop with a short actionable message.
   </step>
@@ -288,7 +275,7 @@ If still unknown and no override flag is provided: output `NEEDS_INPUT` with an 
   </step>
   <step id="5">
     Mandatory existence check (GATING STEP): locate an existing OPEN PR/MR for the current branch.
-    Use the "List open PRs for branch" operation from `pr-instructions.md` (or fallback auto-detection commands).
+    Use the "List open PRs for branch" operation from the Operations Reference.
 
     This step MUST run successfully before any create attempt.
 
@@ -410,9 +397,8 @@ If still unknown and no override flag is provided: output `NEEDS_INPUT` with an 
     Create `tmp/pr/<branchPath>/body.md` from line 3+ (do not echo content to stdout).
   </step>
   <step id="9">
-    Create or update PR/MR using the Operations Reference from `pr-instructions.md`:
+    Create or update PR/MR using the Operations Reference:
     - "Create PR" / "Update PR" / "View PR (confirm)" operations.
-    If `pr-instructions.md` is absent, use fallback auto-detection commands for the detected platform.
 
     Hard rule:
     - NEVER attempt "create" when `mode=update`.
@@ -436,28 +422,6 @@ If still unknown and no override flag is provided: output `NEEDS_INPUT` with an 
   </step>
   <step id="10">Report: actionTaken (created-new vs updated-existing), platform, base branch, PR/MR URL, and the written file paths under `tmp/pr/<branchPath>/`. Then STOP and ask the user to review and merge manually.</step>
 </process>
-
-<cli_reference>
-For concrete CLI commands, read `.ai/agent/pr-instructions.md` — the Operations Reference table
-maps each operation (list PRs, create PR, update PR, view PR, check auth) to the exact CLI command.
-If `pr-instructions.md` is absent, fall back to auto-detected platform commands.
-
-Helper patterns (platform-independent):
-
-```bash
-BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-BRANCH_PATH="$(printf '%s' "$BRANCH" | tr -c 'A-Za-z0-9._/-' '_' | sed 's#\.\.#__#g; s#^/*##')"
-mkdir -p "tmp/pr/$BRANCH_PATH"
-
-TITLE="$(head -n 1 "tmp/pr/$BRANCH_PATH/description.md")"
-tail -n +3 "tmp/pr/$BRANCH_PATH/description.md" > "tmp/pr/$BRANCH_PATH/body.md"
-```
-
-Robustness rules:
-- Do NOT treat CLI invocation errors as "no PR/MR".
-- Only conclude "not found" when the CLI succeeds and returns an empty result.
-- If the command fails (non-zero exit, auth error, etc.), STOP and report the error.
-</cli_reference>
 
 <constraints>
   <rule>Never merge, approve, or close the PR/MR.</rule>

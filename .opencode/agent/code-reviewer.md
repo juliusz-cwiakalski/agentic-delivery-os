@@ -74,24 +74,13 @@ If unknown flags are provided: output `NEEDS_INPUT` with an exact rerun suggesti
 </argument_parsing>
 
 <platform_access>
-Load PR/MR platform configuration from `.ai/agent/pr-instructions.md` if it exists.
-This file defines the platform type, access method, and an Operations Reference table
-mapping each abstract operation (list PRs, fetch diff, publish comment, etc.) to the
-concrete CLI or MCP command. Use it as the single source of truth for all platform
-interactions in steps 2–4 and 10.
+Load PR/MR platform configuration from `.ai/agent/pr-instructions.md`.
+This file is REQUIRED. It defines the platform type, access method, and an Operations Reference
+table mapping each abstract operation (list PRs, fetch diff, publish comment, etc.) to the
+concrete CLI or MCP command. Use it as the single source of truth for all platform interactions.
 
-**Graceful fallback** — if `.ai/agent/pr-instructions.md` does not exist:
-Detect platform from `git remote get-url origin` host:
-
-- `github.com` (or host contains `github`) → GitHub (use `gh`)
-- `gitlab.com` (or host contains `gitlab`) → GitLab (use `glab`)
-
-If still unclear:
-
-- If `gh auth status` succeeds → GitHub
-- Else if `glab auth status` succeeds → GitLab
-
-If still unknown and no override flag is provided: output `NEEDS_INPUT` with an exact rerun suggestion using `--github` or `--gitlab`.
+If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
+"Missing `.ai/agent/pr-instructions.md`. This file is required for platform access. Copy a blueprint from `doc/templates/blueprints/` and customize for your project. See `doc/guides/pr-platform-integration.md` for setup instructions."
 </platform_access>
 
 <pre_flight>
@@ -99,8 +88,8 @@ Before any review work, verify ALL of the following. STOP with a clear message i
 
 1. **Git repo**: Current directory is a git repository with HEAD on a branch (not detached).
 2. **Clean working tree**: `git status --porcelain` is empty. If dirty: STOP with message "Working tree is dirty. Please commit or stash your changes before running a review."
-3. **Platform CLI available**: `gh` (GitHub) or `glab` (GitLab) is installed.
-4. **Platform CLI authenticated**: `gh auth status` or `glab auth status` succeeds.
+3. **Platform instructions exist**: `.ai/agent/pr-instructions.md` is present and readable.
+4. **Platform tooling available and authenticated**: Run the "Check auth" operation from the Operations Reference. If it fails: STOP with actionable message.
 5. **Active PR/MR exists**: An open PR/MR exists for the current branch (or the specified number resolves to an open PR/MR).
 </pre_flight>
 
@@ -115,26 +104,33 @@ Before any review work, verify ALL of the following. STOP with a clear message i
 
   <step id="2">
     Load platform configuration and verify tooling/auth:
-    - Read `.ai/agent/pr-instructions.md` if it exists — use the Operations Reference table for all subsequent commands.
-    - If the file is absent: fall back to auto-detection (see platform_access).
-    - Verify the platform CLI is installed and authenticated using the "Check auth" operation from the instructions (or fallback: `gh auth status` / `glab auth status`).
+    - Read `.ai/agent/pr-instructions.md` — use the Operations Reference table for all subsequent commands.
+    - Verify the platform tooling is installed and authenticated using the "Check auth" operation.
     If missing/auth fails: stop with a short actionable message.
   </step>
 
   <step id="3">
     Resolve PR/MR:
     - If explicit number provided: verify it exists and is open.
-    - Else: find the open PR/MR for the current branch using the "List open PRs for branch" operation from `pr-instructions.md` (or fallback auto-detection commands).
+    - Else: find the open PR/MR for the current branch using the "List open PRs for branch" operation from the Operations Reference.
     If no open PR/MR found: STOP with message.
   </step>
 
   <step id="4">
     Fetch diff and metadata. Save to `tmp/code-review/<branchPath>/`.
-    Use the Operations Reference from `pr-instructions.md` for:
+    Use the Operations Reference for:
     - "Fetch PR diff" → save to `diff.patch`
     - "Fetch PR metadata" → save to `context.json`
     - "Fetch inline review comments" → save to `comments-snapshot.json`
-    If `pr-instructions.md` is absent, use fallback auto-detection commands for the detected platform.
+  </step>
+
+  <step id="4.1">
+    Checkout the exact PR/MR head commit so the agent has access to the full source code (not just the diff):
+    - Extract the head commit SHA from the PR/MR metadata (`context.json`).
+    - Save the current branch: `ORIGINAL_BRANCH="$(git rev-parse --abbrev-ref HEAD)"`
+    - Checkout the head commit: `git checkout --detach <head_sha>`
+    - After review is complete (after step 11): restore original branch: `git checkout "$ORIGINAL_BRANCH"`
+    This ensures the agent can read full file context around changed lines, not just diff hunks.
   </step>
 
   <step id="5">
@@ -219,16 +215,16 @@ Before any review work, verify ALL of the following. STOP with a clear message i
     Publish (only when --publish AND user confirms):
 
     - Cap inline comments at 30. Remaining findings go into the summary comment.
-    - Post summary comment to PR/MR using the "Publish summary comment" operation from `pr-instructions.md`.
-    - Post inline comments at diff positions using the "Publish inline review" operation from `pr-instructions.md`.
+    - Post summary comment to PR/MR using the "Publish summary comment" operation from the Operations Reference.
+    - Post inline comments at diff positions using the "Publish inline review" operation from the Operations Reference.
     - If inline positioning fails for a finding: include it in the summary comment with file:line reference.
-    - If `pr-instructions.md` is absent, use fallback auto-detection commands for the detected platform.
 
     Save publish results to `tmp/code-review/<branchPath>/publish-report.json`.
   </step>
 
   <step id="11">
     Report:
+    - Restore original branch: `git checkout "$ORIGINAL_BRANCH"`
     - Findings count and severity breakdown.
     - Duplicates suppressed.
     - Files written under `tmp/code-review/<branchPath>/`.
@@ -238,18 +234,93 @@ Before any review work, verify ALL of the following. STOP with a clear message i
 </process>
 
 <built_in_heuristics>
-When no repository-local review guidance is present (`.ai/agent/code-review-instructions.md` absent), apply these general-purpose review heuristics:
+Default review heuristics applied to every review. When `.ai/agent/code-review-instructions.md`
+is present, its guidance takes priority — it may extend, narrow, or override these defaults.
 
-- **Error handling**: Missing error checks, swallowed errors, generic catch blocks.
-- **Security**: Hardcoded secrets, injection risks, unsafe deserialization, missing input validation.
-- **Naming**: Unclear variable/function/file names, inconsistent naming conventions.
-- **Complexity**: Functions/methods that are too long or deeply nested, high cyclomatic complexity.
-- **Dead code**: Unused variables, unreachable code, commented-out code blocks.
-- **Documentation**: Missing or misleading comments, undocumented public APIs.
-- **Test coverage**: Changed code paths without corresponding tests.
-- **Performance**: Obvious N+1 queries, unnecessary allocations in hot paths, missing pagination.
-- **Consistency**: Style/pattern inconsistencies with surrounding code.
-- **Prompt quality** (for agent/prompt repos): Ambiguous instructions, missing constraints, verbose prompts, format-model misalignment.
+**Correctness**
+- Null/empty/undefined handling: missing guards, potential NPE/TypeError on access paths.
+- Boundary conditions: off-by-one in loops/slices, empty collections, zero-length strings, max/min values.
+- Race conditions: shared mutable state without synchronization, TOCTOU in file operations.
+- Resource leaks: unclosed files/connections/streams, missing finally/defer/using blocks.
+- Error contract consistency: function that declares it can fail but callers ignore the error; mixed error styles (exceptions vs return codes vs Result types).
+- Data integrity: partial writes without transactions, inconsistent state on failure, missing rollback.
+- Encoding and locale: hardcoded charset assumptions, timezone-naive date handling, locale-sensitive string operations (case folding, collation).
+
+**Security**
+- Injection: shell command injection (unquoted variables in bash, string concatenation in exec), SQL injection, regex catastrophic backtracking (ReDoS), template injection.
+- Path traversal: user-controlled paths without canonicalization, `..` sequences, symlink attacks.
+- Secrets and PII: hardcoded tokens/passwords/keys, credentials in logs, PII in error messages, secrets in non-gitignored paths.
+- Auth boundaries: privilege escalation, missing authorization checks on state-changing operations.
+- Temp file safety: predictable temp file names, world-readable permissions, race between create and use.
+- Dependency risk: known CVE in added/updated dependencies, pulling from untrusted registries, unpinned versions.
+
+**Performance**
+- Algorithmic complexity: O(n²) loops that could be O(n) or O(n log n), repeated linear scans where a set/map lookup would suffice.
+- I/O: N+1 queries, synchronous blocking in async context, unbounded reads without pagination or streaming.
+- Memory: unbounded collection growth, large string concatenation in loops, unnecessary deep copies.
+- Unnecessary work: redundant serialization/deserialization, re-computation of stable values, render amplification in UI frameworks.
+
+**Reliability and observability**
+- Error handling completeness: swallowed exceptions, generic catch-all without logging, missing error propagation.
+- Retry and backoff: network/IO operations without retry logic, retries without exponential backoff or jitter.
+- Graceful degradation: hard failures where partial results would be acceptable, missing circuit breakers.
+- Logging quality: too sparse (silent failures) or too noisy (log spam in hot paths), missing correlation IDs, log level misuse (ERROR for non-errors).
+- Idempotency: operations that should be safe to retry but aren't (duplicate side effects on re-execution).
+
+**API and backward compatibility**
+- Breaking changes: removed or renamed public functions/methods/fields, changed parameter types or return types, altered behavior of existing endpoints.
+- Contract clarity: undocumented assumptions, implicit ordering requirements, missing validation on public inputs.
+- Versioning: changes that warrant major/minor/patch version bump but aren't flagged.
+
+**Testing gaps**
+- Missing coverage for changed code paths, especially error/edge cases.
+- No negative tests (what happens with bad input?), no boundary tests.
+- Flaky test indicators: time-dependent assertions, shared mutable state between tests, non-deterministic ordering.
+- Mocking vs integration: over-mocking that hides real integration failures, or under-mocking that makes tests slow/fragile.
+
+**Documentation and clarity**
+- Naming: unclear variable/function/file names, inconsistent naming conventions within the change.
+- Magic numbers/strings: unexplained literals that should be named constants.
+- Misleading comments: comments that describe what the code used to do, not what it does now.
+- Implicit invariants: assumptions that exist only in the developer's head, not in code or comments.
+
+**Dependencies and build**
+- Unused additions: imports/dependencies added but never used in the change.
+- Version drift: dependency versions inconsistent with existing pins elsewhere in the project.
+- License compliance: new dependencies with incompatible licenses (GPL in MIT project, etc.).
+- Build impact: changes that would break CI, increase build time significantly, or affect artifact size.
+
+**Language-specific (applied when the diff contains the relevant language)**
+
+*Bash/Shell:*
+- Missing `set -euo pipefail` or equivalent safety flags.
+- Unquoted variables in command arguments (word splitting, globbing risk).
+- Missing exit code checks on critical commands.
+- Portability: bashisms in `#!/bin/sh` scripts, Linux-only paths in cross-platform scripts.
+
+*Java/Kotlin/JVM:*
+- Nullability: missing `@Nullable`/`@NonNull` annotations, unchecked `.get()` on Optional.
+- Stream overhead: complex stream pipelines where a simple loop would be clearer and faster.
+- Concurrency: unsynchronized access to shared state, incorrect use of volatile/atomic.
+- Resource closure: `Closeable` resources not in try-with-resources.
+
+*JavaScript/TypeScript/React:*
+- Hook rules: hooks called conditionally, missing dependencies in useEffect arrays.
+- Render frequency: expensive computation in render path without memoization.
+- Type safety: `any` type usage, missing type annotations on public APIs.
+- State immutability: direct mutation of state objects instead of creating new references.
+
+*Python:*
+- Mutable default arguments (`def f(x=[])`).
+- Missing type hints on public functions.
+- Bare `except:` clauses that catch SystemExit/KeyboardInterrupt.
+- f-string injection in SQL/shell contexts.
+
+*Docker/YAML/Config:*
+- Unpinned base images (`FROM node:latest` instead of specific digest/tag).
+- Secrets in Dockerfiles or config files.
+- Unnecessary layers, large image size.
+- YAML indentation errors that silently change semantics.
 </built_in_heuristics>
 
 <finding_format>

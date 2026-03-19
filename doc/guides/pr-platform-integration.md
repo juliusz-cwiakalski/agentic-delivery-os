@@ -32,9 +32,14 @@ The agent prompts define **what** operations to perform (list PRs, fetch diff, p
 | `@code-reviewer` | List PRs, fetch diff, fetch metadata, fetch comments, publish comment, publish inline review, check auth |
 | `@review-feedback-applier` | List PRs, fetch comments, fetch reviews, check auth |
 
-### Graceful fallback
+### Required configuration files
 
-If `.ai/agent/pr-instructions.md` does not exist, all three agents fall back to **auto-detection**: they parse `git remote get-url origin` for `github.com` or `gitlab.com` host patterns, then try `gh auth status` / `glab auth status`. This preserves backward compatibility with repositories that have not yet created the file.
+For full PR/MR platform integration, two files are involved:
+
+1. **`.ai/agent/pr-instructions.md`** — HOW to access the platform (required). Defines platform type, access method, and the Operations Reference table that agents use for all platform commands.
+2. **`.ai/agent/code-review-instructions.md`** — WHAT to focus on during review (recommended). Repository-specific review guidance that extends the code-reviewer agent's built-in heuristics.
+
+If `.ai/agent/pr-instructions.md` does not exist, agents will STOP with an actionable error message directing the user to copy a blueprint from `doc/templates/blueprints/`.
 
 ---
 
@@ -190,10 +195,13 @@ Is your repo on GitHub?
 
 ## Setup Instructions
 
-1. Copy the template: `cp doc/templates/pr-instructions-template.md .ai/agent/pr-instructions.md`
-2. Uncomment the section matching your platform.
-3. Update the `Host` field if using a self-hosted instance.
-4. Verify the CLI is installed and authenticated.
+1. Copy a blueprint matching your platform:
+   - GitHub CLI: `cp doc/templates/blueprints/pr-instructions--github-cli.md .ai/agent/pr-instructions.md`
+   - GitLab CLI: `cp doc/templates/blueprints/pr-instructions--gitlab-cli.md .ai/agent/pr-instructions.md`
+   - GitHub MCP: `cp doc/templates/blueprints/pr-instructions--github-mcp.md .ai/agent/pr-instructions.md`
+2. Update the `Host` field if using a self-hosted instance.
+3. Verify the CLI is installed and authenticated.
+4. (Recommended) Copy the code review blueprint: `cp doc/templates/blueprints/code-review-instructions--example.md .ai/agent/code-review-instructions.md` and customize for your repository.
 5. Test by running `/review-remote --dry-run` or `/pr`.
 
 Alternatively, run `/bootstrap` — the bootstrapper will ask about your Git platform and generate `pr-instructions.md` automatically.
@@ -206,4 +214,4 @@ Alternatively, run `/bootstrap` — the bootstrapper will ask about your Git pla
 |------|---------|---------|
 | `.ai/agent/pm-instructions.md` | Issue tracker access (Jira/GitHub Issues) | Same pattern — tells `@pm` HOW to access the tracker |
 | `.ai/agent/pr-instructions.md` | PR/MR platform access (GitHub/GitLab) | This file — tells PR/MR agents HOW to access the platform |
-| `.ai/agent/code-review-instructions.md` | Code review guidance (priorities, checklist, conventions) | Different — tells `@code-reviewer` WHAT to focus on and check during review |
+| `.ai/agent/code-review-instructions.md` | Code review guidance (priorities, checklist, conventions) | Different — tells `@code-reviewer` WHAT to focus on and check during review. Copy blueprint from `doc/templates/blueprints/code-review-instructions--example.md` |
