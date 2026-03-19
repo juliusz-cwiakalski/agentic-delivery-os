@@ -132,13 +132,42 @@ Before any review work, verify ALL of the following. STOP with a clear message i
   </step>
 
   <step id="4.2">
-    Fetch ticket context (if a workItemRef is detected):
+    Fetch ticket context and linked issues (if a workItemRef is detected):
+
+    **4.2a. Detect workItemRef:**
     - Scan the PR/MR metadata (title, description, branch name) for a workItemRef pattern (uppercase prefix + hyphen + digits, e.g., `GH-36`, `PDEV-123`).
-    - If found: read `.ai/agent/pm-instructions.md` to determine the issue tracker type and configuration (GitHub Issues, Jira, etc.).
+    - Also check for issue references in the PR/MR platform's native format (e.g., `#123` for GitHub, `!456` for GitLab MRs, `closes #789`).
+    - If no reference found: skip this step silently.
+
+    **4.2b. Fetch primary ticket:**
+    - Read `.ai/agent/pm-instructions.md` to determine the issue tracker type and configuration (GitHub Issues, Jira, etc.).
     - Fetch the ticket details using the tracker's MCP tools or CLI as described in `pm-instructions.md`.
-    - Save ticket context to `tmp/code-review/<branchPath>/ticket-context.json`.
-    - Use the ticket's acceptance criteria, description, and goals as additional review input — verify the implementation aligns with what was requested.
-    - If `pm-instructions.md` is absent or ticket fetch fails: skip silently (ticket context is optional enrichment, not a hard requirement).
+    - Extract: title, description, acceptance criteria, labels, comments (especially decision comments).
+
+    **4.2c. Traverse linked issues (depth up to 2-3):**
+    - Scan the primary ticket's description and comments for references to other issues (e.g., `#123`, `GH-45`, `PDEV-789`, `depends on`, `related to`, `blocks`, `part of`).
+    - For each linked issue that appears relevant to the code change (same component, same feature area, dependency relationship):
+      - Fetch the linked ticket details (depth 1).
+      - If the linked ticket references further issues that are clearly relevant (e.g., parent epic, design decision): fetch those too (depth 2-3).
+    - Relevance heuristic: a linked issue is relevant if it shares labels, mentions the same files/components, or has an explicit dependency relationship (`depends on`, `blocks`, `part of`, `parent`).
+    - Cap: fetch at most 5 linked issues total to avoid excessive API calls.
+    - Skip closed/resolved linked issues unless they contain architectural decisions or acceptance criteria referenced by the primary ticket.
+
+    **4.2d. Save and use context:**
+    - Save all ticket context to `tmp/code-review/<branchPath>/ticket-context.json` with structure:
+      ```json
+      {
+        "primary": { "ref": "GH-36", "title": "...", "description": "...", "acceptance_criteria": [...], "labels": [...] },
+        "linked": [
+          { "ref": "GH-35", "relationship": "depends on", "title": "...", "description": "...", "relevance": "same component" }
+        ]
+      }
+      ```
+    - Use the ticket's acceptance criteria, description, goals, and linked issue context as additional review input:
+      - Verify the implementation addresses the primary ticket's requirements.
+      - Check for contradictions with linked issue decisions or constraints.
+      - Flag if the change seems to miss requirements mentioned in linked issues.
+    - If `pm-instructions.md` is absent or any ticket fetch fails: skip silently (ticket context is optional enrichment, not a hard requirement).
   </step>
 
   <step id="5">

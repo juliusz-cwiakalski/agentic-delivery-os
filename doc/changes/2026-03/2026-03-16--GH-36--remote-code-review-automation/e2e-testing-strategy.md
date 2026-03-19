@@ -2,7 +2,7 @@
 
 ## Overview
 
-E2E tests validate the code-reviewer agent against real PRs/MRs on three platforms:
+E2E tests validate the **code-reviewer** and **review-feedback-applier** agents against real PRs/MRs on three platforms:
 1. **GitLab CLI** (`glab` + `curl` for inline discussions)
 2. **GitHub CLI** (`gh`)
 3. **GitHub MCP** (`mcp_github-mcp_*` tools)
@@ -89,6 +89,41 @@ Each test uses a separate clone with a **verbatim copy of the corresponding blue
 | PR | Branch | What was tested | Result |
 |----|--------|-----------------|--------|
 | #2 | `test/ados-code-review-gh-mcp` | Full review with MCP tools + publish | PASS — 12 findings total (5C/4M/1m), 8 deduplicated against existing Copilot comments, 4 new published inline via `mcp_github-mcp_create_pull_request_review`, summary via `mcp_github-mcp_add_issue_comment` with ADOS footer |
+
+---
+
+## Review Feedback Applier Test Results
+
+Each test uses the review comments already posted by the code-reviewer (automated) plus 4 human feedback comments added manually with specific classification signals: 1 explicit `AI-APPLY`, 1 implicit accept ("good catch, will fix"), 1 ambiguous ("interesting, I'll think about it"), 1 rejected ("no, this is intentional").
+
+### Verification Checklist (feedback-applier)
+
+- [ ] `AI-APPLY` marker detected → explicit-accept → change applied
+- [ ] Implicit acceptance pattern detected → implicit-accept → change applied with reasoning
+- [ ] Ambiguous feedback → skipped, listed in `skipped-items.md`
+- [ ] Rejected feedback → not applied, listed in `skipped-items.md`
+- [ ] Classification report generated with reasoning for each classification
+- [ ] Applied changes are correct (match the reviewer's suggestion)
+- [ ] No auto-commit or auto-push — changes local only
+- [ ] All artifacts under `tmp/review-feedback/<branchPath>/`
+
+### GitLab CLI — Feedback Applier
+
+| MR | What was tested | Result |
+|----|-----------------|--------|
+| !24 | Classify + apply feedback on 4 human comments | PASS — 2 applied (1 explicit AI-APPLY on line 3: API key → env var, 1 implicit "will fix" on line 19: SQL injection → parameterized query), 1 ambiguous skipped (line 12: "will think about"), 1 rejected (line 24: "intentional"). All artifacts generated. |
+
+### GitHub CLI — Feedback Applier
+
+| PR | What was tested | Result |
+|----|-----------------|--------|
+| #1 | Classify + apply feedback on 4 human comments | PASS — 2 applied (1 explicit AI-APPLY on line 9: password → `System.getenv()`, 1 implicit "will fix" on line 13: SQL injection → PreparedStatement with try-with-resources), 1 ambiguous skipped (line 19: "I'll think about"), 1 rejected (line 28: "intentional"). |
+
+### GitHub MCP — Feedback Applier
+
+| PR | What was tested | Result |
+|----|-----------------|--------|
+| #2 | Classify + apply feedback on 4 human comments | PASS — 2 applied (1 explicit AI-APPLY on line 10: AWS key → `System.getenv()`, 1 implicit "agreed, I'll update" on line 14: password removed from logs), 1 ambiguous skipped (line 34: "maybe later?"), 1 rejected (line 32: "this is fine"). |
 
 ---
 
