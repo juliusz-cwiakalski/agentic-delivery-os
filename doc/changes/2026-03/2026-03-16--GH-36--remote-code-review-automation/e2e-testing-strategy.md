@@ -77,18 +77,21 @@ Each test uses a separate clone with a **verbatim copy of the corresponding blue
 | !22 | `test/ados-code-review-e2e-v2` | Corrected pr-instructions with glab api | PASS (DiffNote inline comments via curl, summary too verbose) |
 | !23 | `test/ados-code-review-e2e-v3` | Improved summary format | FAIL (glab api --raw-field created DiscussionNote, not DiffNote) |
 | !24 | `test/ados-code-review-e2e-v4` | curl-based inline + improved summary + emoji | PASS (DiffNote confirmed, summary high-level, emoji present) |
+| !25 | `test/ados-e2e-round2-glab` | **Round 2**: fresh env, verbatim blueprint, unified reviewer, ADOS installed globally | PASS — 11 DiffNote inline findings (6C/3M/2m), high-level summary with ADOS footer. All DiffNote verified. |
 
 ### GitHub CLI (`gh`)
 
 | PR | Branch | What was tested | Result |
 |----|--------|-----------------|--------|
 | #1 | `test/ados-code-review-gh-cli` | Full review with gh CLI + publish | PASS — 16 inline comments on correct lines via `gh api .../reviews -X POST --input`, 2 reviews (overview + summary with 9 findings: 6C/2M/1m), all pointing at ReviewTestService.java |
+| #3 | `test/ados-e2e-round2-gh-cli` | **Round 2**: fresh env, verbatim blueprint, unified reviewer, ADOS installed globally | PASS — 16 inline review comments (7C/6M/3m), summary with ADOS footer. |
 
 ### GitHub MCP (`mcp_github-mcp_*`)
 
 | PR | Branch | What was tested | Result |
 |----|--------|-----------------|--------|
 | #2 | `test/ados-code-review-gh-mcp` | Full review with MCP tools + publish | PASS — 12 findings total (5C/4M/1m), 8 deduplicated against existing Copilot comments, 4 new published inline via `mcp_github-mcp_create_pull_request_review`, summary via `mcp_github-mcp_add_issue_comment` with ADOS footer |
+| #4 | `test/ados-e2e-round2-gh-mcp` | **Round 2**: fresh env, verbatim blueprint, unified reviewer, ADOS installed globally | PASS — 15 inline findings (6C/4M/5m), summary with ADOS footer. No dedup (clean PR). |
 
 ---
 
@@ -111,19 +114,22 @@ Each test uses the review comments already posted by the reviewer (remote mode, 
 
 | MR | What was tested | Result |
 |----|-----------------|--------|
-| !24 | Classify + apply feedback on 4 human comments | PASS — 2 applied (1 explicit AI-APPLY on line 3: API key → env var, 1 implicit "will fix" on line 19: SQL injection → parameterized query), 1 ambiguous skipped (line 12: "will think about"), 1 rejected (line 24: "intentional"). All artifacts generated. |
+| !24 | Round 1: Classify + apply 4 human comments | PASS — 2 applied, 1 ambiguous, 1 rejected |
+| !25 | **Round 2**: Fresh env, verbatim blueprint, unified reviewer | PASS — 2 applied (AI-APPLY: API key → env var; implicit: SQL injection → parameterized), 1 ambiguous ("maybe later"), 1 rejected ("intentional"). All DiffNote. |
 
 ### GitHub CLI — Feedback Applier
 
 | PR | What was tested | Result |
 |----|-----------------|--------|
-| #1 | Classify + apply feedback on 4 human comments | PASS — 2 applied (1 explicit AI-APPLY on line 9: password → `System.getenv()`, 1 implicit "will fix" on line 13: SQL injection → PreparedStatement with try-with-resources), 1 ambiguous skipped (line 19: "I'll think about"), 1 rejected (line 28: "intentional"). |
+| #1 | Round 1: Classify + apply 4 human comments | PASS — 2 applied, 1 ambiguous, 1 rejected |
+| #3 | **Round 2**: Fresh env, verbatim blueprint, unified reviewer | PASS — 2 applied (AI-APPLY: DB password → `System.getenv()`; implicit: SQL injection → PreparedStatement), 1 ambiguous ("think about later"), 1 rejected ("needed for bug repro"). |
 
 ### GitHub MCP — Feedback Applier
 
 | PR | What was tested | Result |
 |----|-----------------|--------|
-| #2 | Classify + apply feedback on 4 human comments | PASS — 2 applied (1 explicit AI-APPLY on line 10: AWS key → `System.getenv()`, 1 implicit "agreed, I'll update" on line 14: password removed from logs), 1 ambiguous skipped (line 34: "maybe later?"), 1 rejected (line 32: "this is fine"). |
+| #2 | Round 1: Classify + apply 4 human comments | PASS — 2 applied, 1 ambiguous, 1 rejected |
+| #4 | **Round 2**: Fresh env, verbatim blueprint, unified reviewer | PASS — 2 applied (AI-APPLY: AWS key → `System.getenv()`; implicit: password removed from logs), 1 ambiguous ("maybe follow-up?"), 1 rejected ("acceptable for repro"). |
 
 ---
 
@@ -137,6 +143,7 @@ Each test uses the review comments already posted by the reviewer (remote mode, 
 - `glab mr list --state` flag not available in all versions — filter JSON output with `jq`.
 - `glab auth status -t` token format varies — regex must handle "Token: X" and "Token found: X".
 - `glab` uses OAuth2 tokens by default — use `Authorization: Bearer` header, not `PRIVATE-TOKEN`.
+- `glab` snap version numbering changes the config path (e.g., `/home/<user>/snap/glab/5516/` → `/home/<user>/snap/glab/5520/`). Do not hardcode the snap version number — use `glab auth status` to discover the active config path.
 
 ### GitHub CLI
 
