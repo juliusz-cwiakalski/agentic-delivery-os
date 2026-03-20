@@ -6,11 +6,11 @@ phases:
   test_planning: { started: "2026-03-16T18:00:00Z", completed: "2026-03-16T18:15:00Z" }
   delivery_planning: { started: "2026-03-16T18:00:00Z", completed: "2026-03-16T18:20:00Z" }
   delivery: { started: "2026-03-16T18:30:00Z", completed: "2026-03-20T08:00:00Z" }
-  system_spec_update: { started: "2026-03-16T18:50:00Z", completed: null }
-  review_fix: { started: "2026-03-20T09:00:00Z", completed: null }
-  quality_gates: { started: null, completed: null }
-  dod_check: { started: null, completed: null }
-  pr_creation: { started: "2026-03-16T19:25:00Z", completed: null, url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/38" }
+  system_spec_update: { started: "2026-03-16T18:50:00Z", completed: "2026-03-20T09:00:00Z" }
+  review_fix: { started: "2026-03-20T09:00:00Z", completed: "2026-03-20T09:50:00Z" }
+  quality_gates: { started: "2026-03-20T09:50:00Z", completed: "2026-03-20T09:55:00Z" }
+  dod_check: { started: "2026-03-20T09:55:00Z", completed: "2026-03-20T10:00:00Z" }
+  pr_creation: { started: "2026-03-16T19:25:00Z", completed: "2026-03-20T10:05:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/38" }
 decisions:
   - text: "Single ticket delivery — do not split into multiple tickets despite large scope"
     date: "2026-03-16"
@@ -22,17 +22,21 @@ decisions:
     date: "2026-03-16"
   - text: "PM must NEVER create tickets autonomously — added policy to pm-instructions.md"
     date: "2026-03-16"
-  - text: "Merged .ai/checklists/code-review.md into .ai/agent/code-review-instructions.md — single file for review guidance"
+  - text: "Merged .ai/checklists/code-review.md into .ai/agent/code-review-instructions.md — single file for review guidance (DEC-14)"
     date: "2026-03-16"
-  - text: "Agent prompts made platform-agnostic: pr-instructions.md is REQUIRED, no fallback auto-detection"
+  - text: "Agent prompts made platform-agnostic: pr-instructions.md is REQUIRED, no fallback auto-detection (DEC-15)"
     date: "2026-03-19"
-  - text: "Language-specific heuristics removed from agent prompt — belong in repo-specific .ai/rules/ and code-review-instructions.md"
+  - text: "Language-specific heuristics removed from agent prompt — belong in repo-specific .ai/rules/"
     date: "2026-03-19"
-  - text: "glab api --raw-field does NOT create nested JSON objects — confirmed via e2e test. curl with JSON body required for GitLab inline discussions"
+  - text: "glab api --raw-field does NOT create nested JSON objects — curl with JSON body required for GitLab inline discussions"
     date: "2026-03-19"
-  - text: "Merged code-reviewer + reviewer into single unified reviewer agent with local and remote modes"
+  - text: "Merged code-reviewer + reviewer into single unified reviewer agent with local and remote modes (DEC-13)"
     date: "2026-03-20"
   - text: "PM step 6 enriched with reviewer context; /review and /review-deep commands aligned with unified agent"
+    date: "2026-03-20"
+  - text: "Local review artifacts added: findings-iter-N.json and review-iter-N.md persisted in change folder/code-review/"
+    date: "2026-03-20"
+  - text: "PR feedback addressed: 7 Copilot comments (3 fixed, 2 outdated, 2 already fixed) + 2 human comments fixed"
     date: "2026-03-20"
 open_questions: []
 blockers: []
@@ -43,9 +47,12 @@ notes:
   - text: "Significant scope evolution post-initial-review: checklist merge, platform-agnostic agents, blueprints, glab inline fix, e2e testing (3 platforms × 2 agents), reviewer unification, PM/command alignment."
     type: retro
     date: "2026-03-20"
-  - text: "E2E testing discovered glab api --raw-field limitation (DiscussionNote not DiffNote), glab token extraction issues, opencode CLI session requirements. All documented in e2e-testing-strategy.md."
+  - text: "E2E testing discovered glab api --raw-field limitation, glab token extraction issues, opencode CLI session requirements. All documented in e2e-testing-strategy.md."
     type: retro
     date: "2026-03-19"
-  - text: "E2E results: code-reviewer PASS on GitLab CLI (MR !24), GitHub CLI (PR #1), GitHub MCP (PR #2). review-feedback-applier PASS on all 3 platforms."
+  - text: "Review found 10 findings (3 major, 4 minor, 3 nit) — all documentation gaps from post-plan architectural decisions. All remediated in one pass."
     type: info
-    date: "2026-03-19"
+    date: "2026-03-20"
+  - text: "Quality gates: 91/91 tests passing (19 header + 43 install + 29 uninstall)."
+    type: info
+    date: "2026-03-20"
