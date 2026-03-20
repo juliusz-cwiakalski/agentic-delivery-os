@@ -294,12 +294,19 @@ Before delegating ANY work to ANY agent, verify `chg-<workItemRef>-pm-notes.yaml
 <step id="6">System docs and review (phases 6-7)
 
 - Run `@doc-syncer` to reconcile system docs (system_spec_update phase)
-- Run `@reviewer` on `workItemRef` (review_fix phase)
-  - If reviewer returns `Status=FAIL` or adds remediation:
-    - Ensure remediation tasks exist in `chg-<workItemRef>-plan.md`
-    - Invoke `@coder` (via `/run-plan <workItemRef> execute all remaining phases no review`) to implement remediation
-    - Repeat review → remediation until `Status=PASS`
-  - If any code changes happen after doc-syncer, re-run `@doc-syncer`
+- Invoke `@reviewer` for local review (review_fix phase), providing rich context:
+  - `workItemRef` (e.g., `GH-36`)
+  - Change folder path (e.g., `doc/changes/2026-03/2026-03-16--GH-36--some-feature/`)
+  - Branch info: current change branch and base branch
+  - Iteration hint: "first review" or "re-review after remediation iteration N"
+  - Example invocation: `/review GH-36` — the reviewer discovers spec, plan, and ticket from the workItemRef
+  - The reviewer applies BOTH spec/plan compliance checks AND code quality heuristics (security, performance, correctness, etc.)
+- If reviewer returns `Status=FAIL` or adds remediation:
+  - Ensure remediation tasks exist in `chg-<workItemRef>-plan.md`
+  - Invoke `@coder` (via `/run-plan <workItemRef> execute all remaining phases no review`) to implement remediation
+  - Re-run `@reviewer` — the reviewer is idempotent; re-running after remediation should produce PASS or new findings
+  - Repeat review → remediation until `Status=PASS` (max 3 iterations; escalate to human if still failing)
+- If any code changes happen after doc-syncer, re-run `@doc-syncer`
 </step>
 
 <step id="7">Quality gates (phase 8)

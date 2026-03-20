@@ -4,14 +4,14 @@
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/command/review-deep.md
 #
 # Identical to /review but uses a stronger reasoning model for thorough analysis
-description: Deep review of change vs spec & plan (stronger model).
+description: Review change vs spec, plan, code quality heuristics, and repo rules; append remediation phase if needed.
 agent: reviewer
 subtask: true
 model: xai/grok-4-1-fast
 ---
 
 <purpose>
-Perform thorough code review of diff between base branch and canonical change branch. Uses a stronger reasoning model for deeper analysis. Validate alignment against specification, implementation plan, and repository rules. If gaps found, append remediation phase to the plan.
+Invoke the unified reviewer in local mode with a stronger reasoning model for deeper analysis. Same comprehensive review framework as /review — validates against specification, implementation plan, code quality heuristics, and repository rules.
 </purpose>
 
 <command>
@@ -68,13 +68,24 @@ Directives (case-insensitive):
    </pre_flight>
 
 <review_method>
+The reviewer agent applies its full review framework:
 
-- Scope compliance: changed files align with spec capabilities.
-- Plan alignment: tasks & acceptance criteria covered.
-- Quality dimensions: readability, dead code, error handling, security, tests.
-- Out-of-scope detection: changes to files not in plan.
-- Evidence of under-tested capabilities or NFRs.
-  </review_method>
+**Spec/plan compliance (local mode):**
+- Scope compliance: changed files align with spec capabilities
+- Plan alignment: all tasks done, acceptance criteria have evidence
+- Plan task audit: OPEN_TASKS, DONE_BUT_UNCHECKED, CHECKED_BUT_MISSING
+- Out-of-scope detection: changes to files not in plan
+
+**Code quality heuristics (both modes):**
+- Full built-in heuristic framework: correctness, security, performance, reliability, API compat, testing gaps, documentation, dependencies
+- Repository-local rules from `.ai/agent/code-review-instructions.md` and `.ai/rules/`
+
+**Ticket context (when available):**
+- Acceptance criteria verification against implementation
+- Linked issue traversal for additional constraints and decisions
+
+The reviewer loads all available context — spec, plan, ticket, repo rules, heuristics — and applies them holistically. Do not duplicate heuristic definitions here; they live in the reviewer agent prompt.
+</review_method>
 
 <findings_format>
 `[severity: major|minor|nit] <file>[:line] — <description>; fix: <action>`
