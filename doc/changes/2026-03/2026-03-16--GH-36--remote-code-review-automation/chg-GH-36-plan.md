@@ -180,7 +180,7 @@ Both workflows reuse `@pr-manager` patterns (platform detection, branchPath sani
   - Delegate to `review-feedback-applier` agent
   - Use `subtask: true` pattern
   - Include user invocation examples
-- [x] **2.3** Verify existing `@reviewer` agent (`.opencode/agent/reviewer.md`) is unmodified — zero changes, confirming AC-F5-1. (Hash: 744163ac49f1ede72ec832fb8fcac90d3cd52efa; git diff main -- .opencode/agent/reviewer.md returns empty)
+- [x] **2.3** Verify existing `@reviewer` agent (`.opencode/agent/reviewer.md`) — originally confirmed unmodified (hash: 744163ac49f1ede72ec832fb8fcac90d3cd52efa). reviewer.md was intentionally modified in the later reviewer unification (commit fba3f1d, DEC-13). AC-F5-1 is superseded.
 
 **Acceptance Criteria**:
 

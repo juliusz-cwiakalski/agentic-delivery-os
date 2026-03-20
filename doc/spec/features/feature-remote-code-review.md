@@ -177,7 +177,7 @@ A template (`doc/templates/pr-instructions-template.md`) covers four integration
 | NFR-5 | Ambiguity safety | Ambiguous feedback items are never auto-applied | Listed in `skipped-items.md` only |
 | NFR-6 | Graceful degradation | Both agents function when `.ai/agent/code-review-instructions.md` is absent | Built-in heuristics used |
 | NFR-7 | State isolation | Review artifacts for different branches are isolated under separate `<branchPath>/` directories | No cross-contamination |
-| NFR-8 | Platform config fallback | All three PR/MR-facing agents function when `.ai/agent/pr-instructions.md` is absent | Auto-detection from `git remote get-url origin` |
+| NFR-8 | Platform config required | `.ai/agent/pr-instructions.md` is required for remote mode. Agents stop with a clear, actionable error message when absent (DEC-15). No auto-detection fallback. | Deterministic failure with setup instructions |
 
 ## Quality Assurance Strategy
 

@@ -5,34 +5,47 @@ phases:
   specification: { started: "2026-03-16T17:20:00Z", completed: "2026-03-16T17:30:00Z" }
   test_planning: { started: "2026-03-16T18:00:00Z", completed: "2026-03-16T18:15:00Z" }
   delivery_planning: { started: "2026-03-16T18:00:00Z", completed: "2026-03-16T18:20:00Z" }
-  delivery: { started: "2026-03-16T18:30:00Z", completed: "2026-03-16T21:00:00Z" }
-  system_spec_update: { started: "2026-03-16T18:50:00Z", completed: "2026-03-16T21:30:00Z" }
-  review_fix: { started: "2026-03-16T21:30:00Z", completed: "2026-03-16T22:00:00Z" }
-  quality_gates: { started: "2026-03-16T22:00:00Z", completed: "2026-03-16T22:10:00Z" }
-  dod_check: { started: "2026-03-16T22:10:00Z", completed: "2026-03-16T22:15:00Z" }
-  pr_creation: { started: "2026-03-16T19:25:00Z", completed: "2026-03-16T22:20:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/38" }
+  delivery: { started: "2026-03-16T18:30:00Z", completed: "2026-03-20T08:00:00Z" }
+  system_spec_update: { started: "2026-03-16T18:50:00Z", completed: null }
+  review_fix: { started: "2026-03-20T09:00:00Z", completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: "2026-03-16T19:25:00Z", completed: null, url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/38" }
 decisions:
-  - text: "Single ticket delivery — do not split into multiple tickets despite large scope (2 agents + 2 commands + config + docs)"
+  - text: "Single ticket delivery — do not split into multiple tickets despite large scope"
     date: "2026-03-16"
-  - text: "Platform-neutral from the start — GitHub and GitLab both supported in v1 (ADOS=GitHub, Menuvivo=GitLab). Drop 'GitLab-first' framing from the ticket."
+  - text: "Platform-neutral from the start — GitHub and GitLab both supported in v1"
     date: "2026-03-16"
-  - text: "Reuse @pr-manager patterns for platform detection, tmp/ workspace conventions, and CLI reference. Review for efficiency during design."
+  - text: "Reuse @pr-manager patterns for platform detection, tmp/ workspace conventions"
     date: "2026-03-16"
-  - text: "Ticket's 'PM must use @toolsmith' → corrected to standard ADOS flow: @coder executes plan and delegates to @toolsmith as needed."
+  - text: "GH-39 scope merged into GH-36: extract hardcoded platform access into .ai/agent/pr-instructions.md"
     date: "2026-03-16"
-  - text: "Ticket's embedded 4-phase implementation plan → treated as input context for spec-writer, not the actual plan."
+  - text: "PM must NEVER create tickets autonomously — added policy to pm-instructions.md"
     date: "2026-03-16"
-  - text: "GH-39 scope merged into GH-36: extract hardcoded platform access into .ai/agent/pr-instructions.md. Reopened delivery phase. GH-39 closed as duplicate."
+  - text: "Merged .ai/checklists/code-review.md into .ai/agent/code-review-instructions.md — single file for review guidance"
     date: "2026-03-16"
+  - text: "Agent prompts made platform-agnostic: pr-instructions.md is REQUIRED, no fallback auto-detection"
+    date: "2026-03-19"
+  - text: "Language-specific heuristics removed from agent prompt — belong in repo-specific .ai/rules/ and code-review-instructions.md"
+    date: "2026-03-19"
+  - text: "glab api --raw-field does NOT create nested JSON objects — confirmed via e2e test. curl with JSON body required for GitLab inline discussions"
+    date: "2026-03-19"
+  - text: "Merged code-reviewer + reviewer into single unified reviewer agent with local and remote modes"
+    date: "2026-03-20"
+  - text: "PM step 6 enriched with reviewer context; /review and /review-deep commands aligned with unified agent"
+    date: "2026-03-20"
 open_questions: []
 blockers: []
 notes:
-  - text: "Ticket authored from ChatGPT conversation without ADOS context. PM instructed to correct discrepancies rather than changing ADOS conventions."
+  - text: "Ticket authored from ChatGPT conversation without ADOS context. PM instructed to correct discrepancies."
     type: info
     date: "2026-03-16"
-  - text: "Confirmed file paths: .opencode/agent/*.md, .opencode/command/*.md, tmp/code-review/<branch>/, tmp/review-feedback/<branch>/, .ai/checklists/code-review.md, .ai/agent/code-review-instructions.md"
-    type: info
-    date: "2026-03-16"
-  - text: "Delivery phases 1-3 complete, then scope expanded with GH-39 merge. Reopened delivery, system_spec_update, review_fix, quality_gates, dod_check phases for the new scope."
+  - text: "Significant scope evolution post-initial-review: checklist merge, platform-agnostic agents, blueprints, glab inline fix, e2e testing (3 platforms × 2 agents), reviewer unification, PM/command alignment."
     type: retro
-    date: "2026-03-16"
+    date: "2026-03-20"
+  - text: "E2E testing discovered glab api --raw-field limitation (DiscussionNote not DiffNote), glab token extraction issues, opencode CLI session requirements. All documented in e2e-testing-strategy.md."
+    type: retro
+    date: "2026-03-19"
+  - text: "E2E results: code-reviewer PASS on GitLab CLI (MR !24), GitHub CLI (PR #1), GitHub MCP (PR #2). review-feedback-applier PASS on all 3 platforms."
+    type: info
+    date: "2026-03-19"

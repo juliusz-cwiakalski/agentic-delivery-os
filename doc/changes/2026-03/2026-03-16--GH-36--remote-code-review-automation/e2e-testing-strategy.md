@@ -2,7 +2,7 @@
 
 ## Overview
 
-E2E tests validate the **code-reviewer** and **review-feedback-applier** agents against real PRs/MRs on three platforms:
+E2E tests validate the **reviewer (remote mode)** and **review-feedback-applier** agents against real PRs/MRs on three platforms:
 1. **GitLab CLI** (`glab` + `curl` for inline discussions)
 2. **GitHub CLI** (`gh`)
 3. **GitHub MCP** (`mcp_github-mcp_*` tools)
@@ -33,7 +33,7 @@ Each test uses a separate clone with a **verbatim copy of the corresponding blue
 - **Local clone**: `tmp/code-review-e2e-test/gh-mcp-test/quarkus-bug/`
 - **Blueprint**: `doc/templates/blueprints/pr-instructions--github-mcp.md`
 - **Review-bait file**: Same Java file
-- **Extra config**: `.opencode/opencode.jsonc` with `github-mcp` MCP server and `"code-reviewer": { "tools": { "github*": true } }`
+- **Extra config**: `.opencode/opencode.jsonc` with `github-mcp` MCP server and `"reviewer": { "tools": { "github*": true } }`
 
 ---
 
@@ -42,7 +42,7 @@ Each test uses a separate clone with a **verbatim copy of the corresponding blue
 1. Clone the target repo into the platform-specific test directory
 2. Copy the corresponding blueprint **verbatim** to `.ai/agent/pr-instructions.md`
 3. Create `.ai/agent/code-review-instructions.md` with repo-specific review rules
-4. (MCP only) Create `.opencode/opencode.jsonc` enabling `github-mcp` for `code-reviewer`
+4. (MCP only) Create `.opencode/opencode.jsonc` enabling `github-mcp` for `reviewer`
 5. Create a review-bait source file with intentional issues
 6. Create a branch, commit, push, create PR/MR
 7. Install ADOS globally: `./scripts/install.sh --global --branch <branch>`
@@ -94,7 +94,7 @@ Each test uses a separate clone with a **verbatim copy of the corresponding blue
 
 ## Review Feedback Applier Test Results
 
-Each test uses the review comments already posted by the code-reviewer (automated) plus 4 human feedback comments added manually with specific classification signals: 1 explicit `AI-APPLY`, 1 implicit accept ("good catch, will fix"), 1 ambiguous ("interesting, I'll think about it"), 1 rejected ("no, this is intentional").
+Each test uses the review comments already posted by the reviewer (remote mode, automated) plus 4 human feedback comments added manually with specific classification signals: 1 explicit `AI-APPLY`, 1 implicit accept ("good catch, will fix"), 1 ambiguous ("interesting, I'll think about it"), 1 rejected ("no, this is intentional").
 
 ### Verification Checklist (feedback-applier)
 
@@ -150,13 +150,13 @@ Each test uses the review comments already posted by the code-reviewer (automate
 - `mcp_github-mcp_get_pull_request_files` returns per-file patches, not unified diff — agent works with per-file patches.
 - `mcp_github-mcp_create_pull_request_review` accepts `comments` array with `{path, line, body}` — native support for inline review comments.
 - `mcp_github-mcp_add_issue_comment` is used for the summary comment (posted as issue comment, not review).
-- Requires `.opencode/opencode.jsonc` enabling `github*` tools for `code-reviewer` agent.
+- Requires `.opencode/opencode.jsonc` enabling `github*` tools for `reviewer` agent.
 - Deduplication against existing comments (e.g., Copilot) works correctly — 8 of 12 findings suppressed in the test.
 
 ---
 
 ## Known Limitations
 
-1. `opencode run --agent code-reviewer` requires an active server session — cannot be run as a one-shot subprocess from a different process. E2E tests must be run interactively via opencode TUI or delegated as agent tasks.
+1. `opencode run --agent reviewer` (remote mode) requires an active server session — cannot be run as a one-shot subprocess from a different process. E2E tests must be run interactively via opencode TUI or delegated as agent tasks.
 2. The review-bait approach (intentional vulnerabilities) only tests detection — it does not test false positive rates on clean code.
 3. Deduplication is semantic (approximate matching) — edge cases may exist where similar but distinct findings are incorrectly suppressed.

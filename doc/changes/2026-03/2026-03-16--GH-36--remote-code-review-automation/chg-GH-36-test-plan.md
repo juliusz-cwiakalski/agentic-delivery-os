@@ -736,12 +736,12 @@ There are **no unit tests, integration tests, E2E tests, or performance tests** 
 
 ---
 
-#### TC-REG-001 - `@reviewer` agent has zero modifications
+#### TC-REG-001 - `@reviewer` agent local mode behavior preserved
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: G-5, AC-F5-1
+**Related IDs**: G-5, AC-F5-1 (superseded by DEC-13)
 **Test Type(s)**: Regression Check
 **Automation Level**: Semi-automated
 **Target Layer / Location**: `.opencode/agent/reviewer.md`
@@ -753,12 +753,15 @@ There are **no unit tests, integration tests, E2E tests, or performance tests** 
 
 **Steps**:
 
-1. Compare `@reviewer` agent against the base branch: `git diff main -- .opencode/agent/reviewer.md` — expect empty output.
-2. If on a feature branch, also verify: `git show main:.opencode/agent/reviewer.md | md5sum` vs `md5sum .opencode/agent/reviewer.md` — expect identical hashes.
+1. reviewer.md is intentionally modified to include remote mode capabilities (reviewer unification DEC-13). Regression check: verify local mode behavior is preserved — local mode steps, spec compliance audit, plan task audit, and remediation generation are all present.
+2. Verify local mode steps: `grep -qi "local mode" .opencode/agent/reviewer.md && echo OK`.
+3. Verify spec compliance audit: `grep -qi "spec compliance" .opencode/agent/reviewer.md && echo OK`.
+4. Verify plan task audit: `grep -qi "plan task audit" .opencode/agent/reviewer.md && echo OK`.
+5. Verify remediation generation: `grep -qi "remediation" .opencode/agent/reviewer.md && echo OK`.
 
 **Expected Outcome**:
 
-- `.opencode/agent/reviewer.md` has zero differences from the `main` branch. The existing reviewer agent is completely unchanged.
+- `.opencode/agent/reviewer.md` preserves all local mode behavior: local mode steps, spec compliance audit, plan task audit, and remediation generation are present. Remote mode capabilities are additive (DEC-13).
 
 ---
 

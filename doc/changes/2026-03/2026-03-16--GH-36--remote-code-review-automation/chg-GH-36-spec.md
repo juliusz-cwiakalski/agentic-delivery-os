@@ -85,7 +85,7 @@ Because ADOS lacks a workflow for reviewing open PRs/MRs against repository-spec
 | F-3 | `/review-remote` command as user-facing entry point for remote code review | Provides a standard ADOS command interface for the review workflow |
 | F-4 | `/apply-review-feedback` command as user-facing entry point for feedback application | Provides a standard ADOS command interface for the feedback workflow |
 | F-5 | Platform detection mirroring `@pr-manager` patterns (auto-detect from `origin` remote) | Ensures consistent platform behavior across ADOS commands |
-| F-6 | Repository-local review configuration via `.ai/checklists/code-review.md` and `.ai/agent/code-review-instructions.md` | Allows each repository to define its own review rules and conventions |
+| F-6 | Repository-local review configuration via `.ai/agent/code-review-instructions.md` (originally also `.ai/checklists/code-review.md`, consolidated per DEC-14) | Allows each repository to define its own review rules and conventions |
 | F-7 | Review draft generation before publishing | Gives users a preview and control over what gets published |
 | F-8 | Finding deduplication against existing PR/MR comments | Prevents duplicate review comments across multiple runs |
 | F-9 | Feedback acceptance detection via explicit `AI-APPLY` markers and conservative fuzzy matching | Enables reliable classification of which comments the author wants applied |
@@ -234,7 +234,7 @@ N/A
 
 | ID | Element | Description |
 |----|---------|-------------|
-| DM-1 | `.ai/checklists/code-review.md` | Optional repository-local review checklist (checkbox-based, human-authored) |
+| DM-1 | `.ai/agent/code-review-instructions.md` | Repository-local review guidance (originally `.ai/checklists/code-review.md`, consolidated per DEC-14) |
 | DM-2 | `.ai/agent/code-review-instructions.md` | Optional repository-local free-form review instructions |
 | DM-3 | `tmp/code-review/<branchPath>/context.json` | Review context: platform, PR/MR ID, branch, base, metadata |
 | DM-4 | `tmp/code-review/<branchPath>/findings.json` | Structured review findings with severity, file, line, description, fix |
@@ -328,12 +328,15 @@ N/A — agent prompts and command definitions only; no runtime telemetry applica
 | DEC-10 | Extract platform access into `.ai/agent/pr-instructions.md` (from GH-39) | Mirrors `pm-instructions.md` pattern. Agent prompts define WHAT to do; `pr-instructions.md` defines HOW. Eliminates hardcoded CLI commands from 3 agents. | 2026-03-16 |
 | DEC-11 | Graceful fallback when `pr-instructions.md` absent | Preserves backward compatibility — agents auto-detect from `git remote get-url origin` as before. Zero breaking changes for existing repos. | 2026-03-16 |
 | DEC-12 | Operations Reference table as the contract format | A Markdown table mapping operation names to commands is human-readable, agent-parseable, and version-controllable. Simpler than YAML/JSON config. | 2026-03-16 |
+| DEC-13 | Merged code-reviewer into unified reviewer agent | Merged code-reviewer into unified reviewer agent. Single agent handles both local (spec/plan compliance) and remote (PR/MR) review modes. code-reviewer.md deleted. | 2026-03-20 |
+| DEC-14 | Merged .ai/checklists/code-review.md into .ai/agent/code-review-instructions.md | Single file for all repo-specific review guidance. Eliminates separate checklists directory for code review. | 2026-03-16 |
+| DEC-15 | pr-instructions.md is required, not optional | pr-instructions.md is required for remote mode. Agents do not fall back to auto-detection. Deterministic behavior preferred over magic detection. | 2026-03-19 |
 
 ## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
 
 | Component | Impact |
 |-----------|--------|
-| `.opencode/agent/code-reviewer.md` | New — remote code review agent |
+| `.opencode/agent/code-reviewer.md` | New — remote code review agent (superseded: unified into `reviewer.md` per DEC-13) |
 | `.opencode/agent/review-feedback-applier.md` | New — review feedback application agent |
 | `.opencode/command/review-remote.md` | New — remote review command |
 | `.opencode/command/apply-review-feedback.md` | New — feedback application command |
@@ -357,7 +360,7 @@ N/A — agent prompts and command definitions only; no runtime telemetry applica
 | AC-F1-1 | **Given** `.opencode/agent/code-reviewer.md` exists, **when** the agent is invoked on a branch with an open GitHub PR, **then** it fetches the PR diff and metadata via `gh` and produces structured findings. | F-1, F-5 |
 | AC-F1-2 | **Given** `.opencode/agent/code-reviewer.md` exists, **when** the agent is invoked on a branch with an open GitLab MR, **then** it fetches the MR diff and metadata via `glab` and produces structured findings. | F-1, F-5 |
 | AC-F3-1 | **Given** `.opencode/command/review-remote.md` exists, **when** the user runs `/review-remote`, **then** it delegates to the `code-reviewer` agent and accepts optional arguments (platform override, dry-run, publish). | F-3 |
-| AC-F6-1 | **Given** `.ai/checklists/code-review.md` exists in the repository, **when** the `code-reviewer` agent runs, **then** it loads and evaluates each checklist item against the diff. | F-6 |
+| AC-F6-1 | **Given** `.ai/agent/code-review-instructions.md` exists in the repository (originally `.ai/checklists/code-review.md`, consolidated per DEC-14), **when** the reviewer agent runs, **then** it loads and evaluates the review guidance against the diff. | F-6 |
 | AC-F6-2 | **Given** `.ai/checklists/code-review.md` does NOT exist, **when** the `code-reviewer` agent runs, **then** it falls back to built-in general-purpose review heuristics with no errors. | F-6 |
 | AC-F6-3 | **Given** `.ai/agent/code-review-instructions.md` exists in the repository, **when** the `code-reviewer` agent runs, **then** it loads and follows the instructions. | F-6 |
 | AC-F7-1 | **Given** the `code-reviewer` agent completes analysis, **when** it generates output, **then** a `review-draft.md` file is written to `tmp/code-review/<branchPath>/` before any publishing occurs. | F-7, F-11 |
@@ -385,7 +388,7 @@ N/A — agent prompts and command definitions only; no runtime telemetry applica
 
 | ID | Criterion | Linked |
 |----|-----------|--------|
-| AC-F5-1 | **Given** `.opencode/agent/reviewer.md`, **when** comparing it before and after this change, **then** its content is identical (zero modifications). | G-5 |
+| AC-F5-1 | Superseded by DEC-13 (reviewer unification). `reviewer.md` was intentionally modified to include remote review mode capabilities. Local mode behavior is preserved. | G-5 |
 
 ### Documentation
 
@@ -400,7 +403,7 @@ N/A — agent prompts and command definitions only; no runtime telemetry applica
 |----|-----------|--------|
 | AC-F13-1 | **Given** `.ai/agent/pr-instructions.md` exists, **then** it contains an Operations Reference table mapping all PR/MR operations to concrete CLI commands. | F-13 |
 | AC-F14-1 | **Given** `.ai/agent/pr-instructions.md` exists, **when** `@code-reviewer`, `@review-feedback-applier`, or `@pr-manager` runs, **then** it reads `pr-instructions.md` for platform access commands. | F-14 |
-| AC-F14-2 | **Given** `.ai/agent/pr-instructions.md` does NOT exist, **when** any of the three agents runs, **then** it falls back to auto-detection from `git remote get-url origin` (current behavior preserved). | F-14 |
+| AC-F14-2 | **Given** `.ai/agent/pr-instructions.md` does NOT exist, **when** any of the three agents runs, **then** it stops with an actionable error message directing the user to create `pr-instructions.md` (DEC-15: pr-instructions.md is required, not optional). | F-14 |
 | AC-F15-1 | **Given** `doc/templates/pr-instructions-template.md` exists, **then** it includes commented-out examples for GitHub CLI, GitLab CLI, GitHub MCP, and Azure DevOps MCP. | F-15 |
 | AC-F16-1 | **Given** `doc/guides/pr-platform-integration.md` exists, **then** it documents all supported integration types with setup instructions and a decision flowchart. | F-16 |
 | AC-F17-1 | **Given** `.opencode/agent/bootstrapper.md`, **then** it includes PR/MR platform in interview questions, `pr_instructions` in state schema, and `pr-instructions.md` in artifact generation. | F-17 |

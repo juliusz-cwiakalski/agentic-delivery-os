@@ -156,6 +156,7 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
     - "Fetch PR diff" → save to `tmp/code-review/<branchPath>/diff.patch`
     - "Fetch PR metadata" → save to `tmp/code-review/<branchPath>/context.json`
     - "Fetch inline review comments" AND "Fetch issue comments" → merge both into `tmp/code-review/<branchPath>/comments-snapshot.json` (inline review comments come from the PR reviews API; issue-level comments come from the issues API and include summary comments from prior reviews)
+    - Save current branch name: `original_branch=$(git rev-parse --abbrev-ref HEAD)`.
     - Checkout exact PR/MR head commit for full source access: extract head SHA from metadata, `git checkout --detach <head_sha>`.
   </step>
 
@@ -197,7 +198,7 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
     - Evaluate against: repo-local review guidance + built-in heuristics + ticket AC (if available).
     - For each issue found, create a structured finding (see finding_format).
     - Assign severity and confidence.
-    - Cap at 50 total findings; prioritize by severity (critical > major > minor > nit).
+    - Cap at 50 total findings (50 is the analysis cap; the publishing cap of 30 inline comments in step 11 is applied separately — overflow goes to the summary comment); prioritize by severity (critical > major > minor > nit).
   </step>
 
   <step id="7" modes="both" name="Spec and Plan Audit">
@@ -319,6 +320,10 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
     Save publish results to `tmp/code-review/<branchPath>/publish-report.json`.
 
     **Final report:** findings count/severity, duplicates suppressed, files written, comment URLs (if published).
+  </step>
+
+  <step id="12" modes="remote" name="[Remote] Restore Original Branch">
+    After review is complete (whether PASS or FAIL): restore the original branch: `git checkout <original_branch>` (where `original_branch` was saved before the detached HEAD checkout in step 4).
   </step>
 
 </process>
