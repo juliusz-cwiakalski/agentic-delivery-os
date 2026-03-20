@@ -20,11 +20,11 @@ summary: "Two agent/command pairs for remote code review and review-feedback app
 
 ADOS provides two complementary workflows for interacting with remote PR/MR review systems:
 
-1. **Remote code review** — the `code-reviewer` agent (`.opencode/agent/code-reviewer.md`) and `/review-remote` command (`.opencode/command/review-remote.md`) analyze an open PR/MR diff against repository-local review guidance and built-in heuristics. The agent produces structured findings, generates a review draft for preview, deduplicates against existing comments, and optionally publishes findings to the remote platform.
+1. **Remote code review** — the `reviewer` agent (`.opencode/agent/reviewer.md`) and `/review-remote` command (`.opencode/command/review-remote.md`) analyze an open PR/MR diff against repository-local review guidance and built-in heuristics. The agent produces structured findings, generates a review draft for preview, deduplicates against existing comments, and optionally publishes findings to the remote platform.
 
 2. **Review feedback application** — the `review-feedback-applier` agent (`.opencode/agent/review-feedback-applier.md`) and `/apply-review-feedback` command (`.opencode/command/apply-review-feedback.md`) read review comments from an open PR/MR, classify each as accepted/rejected/ambiguous using a three-tier system, and apply accepted changes to local source files without committing or pushing.
 
-Both workflows support GitHub (`gh`) and GitLab (`glab`) from v1. Platform access is externalized into `.ai/agent/pr-instructions.md` — a repository-local configuration file that maps abstract operations (fetch diff, publish comment, etc.) to concrete CLI commands. Each agent reads this file at startup and falls back to auto-detection from `git remote get-url origin` when it is absent. This mirrors the `pm-instructions.md` pattern for issue tracker access and keeps agent prompts platform-neutral. Both workflows are entirely separate from the existing `@reviewer` agent, which validates implementation against change specs and plans locally.
+Both workflows support GitHub (`gh`) and GitLab (`glab`) from v1. Platform access is externalized into `.ai/agent/pr-instructions.md` — a repository-local configuration file that maps abstract operations (fetch diff, publish comment, etc.) to concrete CLI commands. Each agent reads this file at startup and falls back to auto-detection from `git remote get-url origin` when it is absent. This mirrors the `pm-instructions.md` pattern for issue tracker access and keeps agent prompts platform-neutral. Both workflows are handled by the unified `@reviewer` agent, which also validates implementation against change specs and plans locally.
 
 ## Business Context
 
@@ -38,7 +38,7 @@ Both workflows support GitHub (`gh`) and GitLab (`glab`) from v1. Platform acces
 
 - **Primary Goal:** Enable AI-driven code review and automated feedback application for PR/MR workflows on both GitHub and GitLab.
 - **KPIs:**
-  - 2 agents (`code-reviewer`, `review-feedback-applier`) operational on both platforms.
+  - 2 agents (`reviewer`, `review-feedback-applier`) operational on both platforms.
   - 2 commands (`/review-remote`, `/apply-review-feedback`) invocable.
   - Re-running `/review-remote` on an unchanged PR/MR publishes zero duplicate comments.
   - Ambiguous feedback is never auto-applied.
@@ -47,14 +47,14 @@ Both workflows support GitHub (`gh`) and GitLab (`glab`) from v1. Platform acces
 
 ### Capabilities
 
-- **Remote code review (F-1):** The `code-reviewer` agent fetches a PR/MR diff and metadata, analyzes it against review criteria, and produces structured findings with severity (critical/major/minor/nit) and confidence (high/medium/low).
+- **Remote code review (F-1):** The `reviewer` agent fetches a PR/MR diff and metadata, analyzes it against review criteria, and produces structured findings with severity (critical/major/minor/nit) and confidence (high/medium/low).
 - **Review feedback application (F-2):** The `review-feedback-applier` agent fetches review threads, classifies each comment, and applies accepted changes to local files.
-- **Platform access via pr-instructions (F-3):** All three PR/MR-facing agents (`code-reviewer`, `review-feedback-applier`, `pr-manager`) read `.ai/agent/pr-instructions.md` for platform type, access method, and an Operations Reference table mapping every PR/MR operation to a concrete CLI command. When `pr-instructions.md` is absent, agents fall back to auto-detecting the platform from `git remote get-url origin` (GitHub vs GitLab), then to CLI auth status checks, and finally to manual override via `--github`/`--gitlab` flags.
+- **Platform access via pr-instructions (F-3):** All three PR/MR-facing agents (`reviewer`, `review-feedback-applier`, `pr-manager`) read `.ai/agent/pr-instructions.md` for platform type, access method, and an Operations Reference table mapping every PR/MR operation to a concrete CLI command. When `pr-instructions.md` is absent, agents fall back to auto-detecting the platform from `git remote get-url origin` (GitHub vs GitLab), then to CLI auth status checks, and finally to manual override via `--github`/`--gitlab` flags.
 - **Repository-local review configuration (F-4):** One optional file customizes review behavior:
   - `.ai/agent/code-review-instructions.md` — repository-local review guidance including priorities, checklist items, conventions, and special patterns.
   - When absent, the agent falls back to built-in general-purpose heuristics with no errors.
-- **Review draft generation (F-5):** The `code-reviewer` generates a `review-draft.md` file locally before any publishing occurs. Publishing is a separate explicit action requiring user approval.
-- **Finding deduplication (F-6):** Before publishing, the `code-reviewer` compares new findings against existing PR/MR comments by file path, line range, and semantic similarity. Duplicates are suppressed.
+- **Review draft generation (F-5):** The `reviewer` generates a `review-draft.md` file locally before any publishing occurs. Publishing is a separate explicit action requiring user approval.
+- **Finding deduplication (F-6):** Before publishing, the `reviewer` compares new findings against existing PR/MR comments by file path, line range, and semantic similarity. Duplicates are suppressed.
 - **Three-tier feedback classification (F-7):**
   - **Explicit acceptance:** Comment contains an `AI-APPLY` marker (case-insensitive, standalone token) — always applied.
   - **Implicit acceptance:** Comment matches conservative agreement patterns ("agreed", "good point", "will fix", etc.) — applied with documented reasoning.
@@ -104,11 +104,11 @@ Flow 2: Apply review feedback
 
 | Path | Component | Responsibility |
 |------|-----------|----------------|
-| `.opencode/agent/code-reviewer.md` | Code reviewer agent | Analyze PR/MR diff, produce findings, generate draft, deduplicate, publish |
+| `.opencode/agent/reviewer.md` | Reviewer agent | Analyze PR/MR diff, produce findings, generate draft, deduplicate, publish |
 | `.opencode/agent/review-feedback-applier.md` | Review feedback applier agent | Fetch threads, classify feedback, apply accepted changes locally |
-| `.opencode/command/review-remote.md` | Review remote command | Thin entry point delegating to `code-reviewer` agent |
+| `.opencode/command/review-remote.md` | Review remote command | Thin entry point delegating to `reviewer` agent |
 | `.opencode/command/apply-review-feedback.md` | Apply review feedback command | Thin entry point delegating to `review-feedback-applier` agent |
-| `.ai/agent/pr-instructions.md` | PR/MR platform instructions | Repository-local platform config with Operations Reference table; read by `code-reviewer`, `review-feedback-applier`, and `pr-manager` |
+| `.ai/agent/pr-instructions.md` | PR/MR platform instructions | Repository-local platform config with Operations Reference table; read by `reviewer`, `review-feedback-applier`, and `pr-manager` |
 | `.ai/agent/code-review-instructions.md` | Review guidance | Optional repository-local review guidance (priorities, checklist, conventions, patterns) |
 
 ### State Persistence
@@ -206,13 +206,13 @@ A template (`doc/templates/pr-instructions-template.md`) covers four integration
 - **Depends on (config):** `.ai/agent/pr-instructions.md` for platform access commands (optional — agents fall back to auto-detection when absent).
 - **Depends on (pattern):** `@pr-manager` agent for `branchPath` sanitization and `tmp/` conventions (pattern reuse, not code dependency).
 - **Depends on (tool):** `gh` CLI for GitHub operations; `glab` CLI for GitLab operations.
-- **Does not affect:** `@reviewer` agent (existing local review agent is unchanged).
+- **Extends:** `@reviewer` agent (unified agent handles both local and remote review).
 - **Risk:** Large PRs may produce many findings — mitigated by 30-inline-comment cap and severity prioritization.
 - **Risk:** Fuzzy acceptance detection may produce false positives — mitigated by conservative classification patterns and no auto-commit.
 
 ## Related Documentation
 
-- **Code reviewer agent:** `.opencode/agent/code-reviewer.md`
+- **Reviewer agent:** `.opencode/agent/reviewer.md`
 - **Review feedback applier agent:** `.opencode/agent/review-feedback-applier.md`
 - **Review remote command:** `.opencode/command/review-remote.md`
 - **Apply review feedback command:** `.opencode/command/apply-review-feedback.md`
