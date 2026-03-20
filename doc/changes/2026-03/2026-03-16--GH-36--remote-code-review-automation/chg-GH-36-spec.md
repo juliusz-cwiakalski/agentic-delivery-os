@@ -317,7 +317,7 @@ N/A — agent prompts and command definitions only; no runtime telemetry applica
 | ID | Decision | Rationale | Date |
 |----|----------|-----------|------|
 | DEC-1 | Platform-neutral from start — GitHub + GitLab both supported in v1 | Original ticket specified "GitLab first" but ADOS convention is platform-neutral. Both `gh` and `glab` are mature CLIs. Designing for both from the start avoids refactoring. | 2026-03-16 |
-| DEC-2 | Standard ADOS delivery flow, not "PM must use @toolsmith" | Original ticket required @toolsmith for prompt authoring. ADOS convention is standard delivery via @coder, with @toolsmith consulted for prompt quality. | 2026-03-16 |
+| DEC-2 | Standard ADOS delivery flow, not "PM must use @toolsmith" | Original ticket required PM to directly invoke @toolsmith for prompt authoring. ADOS convention: @coder handles delivery and delegates to @toolsmith for agent/command file creation (per AGENTS.md). PM orchestrates; @coder executes; @toolsmith specializes. | 2026-03-16 |
 | DEC-3 | Separate agents for review and feedback application | Different responsibilities, different safety profiles (read-only vs write), different invocation patterns. Combining would violate single-responsibility. | 2026-03-16 |
 | DEC-4 | Reuse `@pr-manager` patterns (platform detection, branchPath, tmp/, CLI reference) | Proven patterns reduce risk and ensure consistency across ADOS commands. | 2026-03-16 |
 | DEC-5 | Dirty tree blocks both commands (no auto-commit) | Unlike `@pr-manager` which auto-commits, review workflows need a predictable starting state. Auto-committing before review could change the diff being reviewed. | 2026-03-16 |

@@ -66,7 +66,7 @@ Parse invocation text into:
 - `workItemRef`: from positional arg or detected from branch/PR title
 - `platform`: forced by `--github`/`--gitlab`, else detected (remote mode)
 - `prNumber`: from `--pr <N>` or `--mr <N>` or bare number, else auto-detected (remote mode)
-- `publishMode`: `--publish` → publish after user approval; default → dry-run (remote mode)
+- `publishMode`: `--publish` → publish findings (flag is user's explicit confirmation); default → dry-run (remote mode)
 - `baseBranch`: from `base=<branch>`, else `main`, fallback `master` (local mode)
 - `headRef`: from `head=<ref>`, else changeBranch, fallback current HEAD (local mode)
 - `commitEnabled`: true unless `no commit` directive (local mode)
@@ -130,10 +130,6 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
 
 <process>
 
-  <!-- ═══════════════════════════════════════════════════ -->
-  <!-- SHARED: Steps 1-2 (both modes)                      -->
-  <!-- ═══════════════════════════════════════════════════ -->
-
   <step id="1" modes="both" name="Resolve Mode and Context">
     - Parse invocation arguments (see argument_parsing).
     - Determine mode (local or remote) via auto-detection if not explicit.
@@ -148,10 +144,6 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
     - These extend/override built-in heuristics.
   </step>
 
-  <!-- ═══════════════════════════════════════════════════ -->
-  <!-- REMOTE: Steps 3-5 (remote mode only)               -->
-  <!-- ═══════════════════════════════════════════════════ -->
-
   <step id="3" modes="remote" name="Platform Setup and PR/MR Resolution">
     - Read `.ai/agent/pr-instructions.md` — use Operations Reference table for all platform commands.
     - Verify platform tooling is installed and authenticated ("Check auth" operation).
@@ -163,7 +155,7 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
   <step id="4" modes="remote" name="Fetch Diff and Metadata">
     - "Fetch PR diff" → save to `tmp/code-review/<branchPath>/diff.patch`
     - "Fetch PR metadata" → save to `tmp/code-review/<branchPath>/context.json`
-    - "Fetch inline review comments" → save to `tmp/code-review/<branchPath>/comments-snapshot.json`
+    - "Fetch inline review comments" AND "Fetch issue comments" → merge both into `tmp/code-review/<branchPath>/comments-snapshot.json` (inline review comments come from the PR reviews API; issue-level comments come from the issues API and include summary comments from prior reviews)
     - Checkout exact PR/MR head commit for full source access: extract head SHA from metadata, `git checkout --detach <head_sha>`.
   </step>
 
@@ -197,10 +189,6 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
     - If not found: proceed with code quality heuristics and ticket AC only.
     - If `pm-instructions.md` absent or ticket fetch fails: skip silently (optional enrichment).
   </step>
-
-  <!-- ═══════════════════════════════════════════════════ -->
-  <!-- SHARED: Steps 6-8 (both modes)                      -->
-  <!-- ═══════════════════════════════════════════════════ -->
 
   <step id="6" modes="both" name="Analyze Diff">
     - Read the diff (local: `git diff` output; remote: `diff.patch` file).
@@ -237,12 +225,13 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
     - In local mode: check for existing remediation phases in the plan to avoid duplicate remediation tasks. Ensure idempotency.
   </step>
 
-  <!-- ═══════════════════════════════════════════════════ -->
-  <!-- MODE-SPECIFIC: Output (steps 9-11)                  -->
-  <!-- ═══════════════════════════════════════════════════ -->
-
   <step id="9" modes="local" name="[Local] Generate Report and Remediation">
     **Findings report:** compile findings list.
+
+    **Persist review artifacts** to the change folder for durable record:
+    - Save findings to `<change_folder>/code-review/findings-iter-<N>.json` where N is the review iteration number (1, 2, 3...). Determine N by counting existing `findings-iter-*.json` files + 1.
+    - Save a brief review summary to `<change_folder>/code-review/review-iter-<N>.md` with: date, finding count, severity breakdown, key themes, and PASS/FAIL status.
+    - On subsequent review iterations, load previous findings from `<change_folder>/code-review/` to understand what was already found and what's new.
 
     **Remediation (if findings exist):**
     - Determine next phase number (X = max existing phase + 1).
@@ -301,9 +290,9 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
   <step id="11" modes="remote" name="[Remote] Present and Optionally Publish">
     - Display review draft summary (finding count, severity breakdown, suppressed count).
     - In dry-run mode (default): report findings and STOP. Remind user they can rerun with `--publish`.
-    - In publish mode (`--publish`): ask user to confirm before publishing.
+    - In publish mode (`--publish`): the flag itself is the user's explicit confirmation to publish.
 
-    **Publish (only when --publish AND user confirms):**
+    **Publish (only when --publish is set):**
 
     **11a. Post inline discussions first:**
     - Cap inline comments at 30. Overflow goes into summary.
@@ -431,7 +420,7 @@ If findings exceed 30: publish top 30 by severity as inline; bundle remaining in
 </inline_comment_cap>
 
 <state_files>
-Remote mode artifacts persisted under `tmp/code-review/<branchPath>/`:
+**Remote mode** artifacts persisted under `tmp/code-review/<branchPath>/`:
 
 | File | Purpose |
 |------|---------|
@@ -442,6 +431,13 @@ Remote mode artifacts persisted under `tmp/code-review/<branchPath>/`:
 | `review-draft.md` | Human-readable review draft for preview |
 | `findings.json` | Structured findings with severity, file, line, description, fix |
 | `publish-report.json` | Results of publishing (comment URLs, errors) |
+
+**Local mode** artifacts persisted under `<change_folder>/code-review/`:
+
+| File | Purpose |
+|------|---------|
+| `findings-iter-<N>.json` | Structured findings for review iteration N |
+| `review-iter-<N>.md` | Review summary for iteration N (date, counts, severity breakdown, themes, PASS/FAIL) |
 </state_files>
 
 <safety_rules>
@@ -458,7 +454,7 @@ Remote mode artifacts persisted under `tmp/code-review/<branchPath>/`:
 
 **Remote mode:**
 - Write only to `tmp/code-review/<branchPath>/`. After review, `git status --porcelain` must show zero changes to tracked files.
-- Dry-run by default; publishing requires `--publish` flag AND user confirmation.
+- Dry-run by default; publishing requires `--publish` flag (the flag is the user's confirmation).
 - Cap inline comments at 30; bundle overflow into summary comment.
 - If working tree is dirty: STOP immediately.
 - If no open PR/MR found: STOP with clear message.

@@ -4,7 +4,6 @@
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/command/review-remote.md
 description: Review open PR/MR and publish findings.
 agent: reviewer
-subtask: true
 ---
 
 <purpose>

@@ -35,8 +35,8 @@ Both workflows reuse `@pr-manager` patterns (platform detection, branchPath sani
 
 - **OQ-1**: Support both self-review and others' PRs — the user decides when to invoke. (Resolved)
 - **OQ-2**: `AI-APPLY` markers are case-insensitive, standalone tokens. (Resolved)
-- **OQ-3**: Confidence scores per finding — decision needed, consult `@architect` during implementation.
-- **OQ-4**: Maximum inline comments per review — decision needed, consult `@architect` during implementation.
+- **OQ-3**: Confidence scores per finding — Resolved: include high/medium/low confidence per finding (DEC-8)
+- **OQ-4**: Maximum inline comments per review — Resolved: cap at 30 inline comments, bundle overflow into summary (DEC-9)
 
 **Delegation:** Agent and command creation MUST be delegated to `@toolsmith` per AGENTS.md extension guidance.
 
