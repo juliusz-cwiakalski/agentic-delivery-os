@@ -14,7 +14,7 @@ summary: "Guide for configuring PR/MR platform integration via .ai/agent/pr-inst
 
 > **Audience:** Developers and AI agents working with ADOS in repositories that use pull requests or merge requests.
 >
-> **Goal:** Explain how to configure `.ai/agent/pr-instructions.md` so that ADOS agents (`@pr-manager`, `@code-reviewer`, `@review-feedback-applier`) can interact with your PR/MR platform.
+> **Goal:** Explain how to configure `.ai/agent/pr-instructions.md` so that ADOS agents (`@pr-manager`, `@reviewer`, `@review-feedback-applier`) can interact with your PR/MR platform.
 
 ---
 
@@ -29,7 +29,7 @@ The agent prompts define **what** operations to perform (list PRs, fetch diff, p
 | Agent | Operations used |
 |-------|-----------------|
 | `@pr-manager` | List PRs, create PR, update PR, view PR, check auth |
-| `@code-reviewer` | List PRs, fetch diff, fetch metadata, fetch comments, publish comment, publish inline review, check auth |
+| `@reviewer` (remote mode) | List PRs, fetch diff, fetch metadata, fetch comments, publish comment, publish inline review, check auth |
 | `@review-feedback-applier` | List PRs, fetch comments, fetch reviews, check auth |
 
 ### Required configuration files
@@ -37,7 +37,7 @@ The agent prompts define **what** operations to perform (list PRs, fetch diff, p
 For full PR/MR platform integration, two files are involved:
 
 1. **`.ai/agent/pr-instructions.md`** — HOW to access the platform (required). Defines platform type, access method, and the Operations Reference table that agents use for all platform commands.
-2. **`.ai/agent/code-review-instructions.md`** — WHAT to focus on during review (recommended). Repository-specific review guidance that extends the code-reviewer agent's built-in heuristics.
+2. **`.ai/agent/code-review-instructions.md`** — WHAT to focus on during review (recommended). Repository-specific review guidance that extends the reviewer agent's built-in heuristics.
 
 If `.ai/agent/pr-instructions.md` does not exist, agents will STOP with an actionable error message directing the user to copy a blueprint from `doc/templates/blueprints/`.
 
@@ -214,4 +214,4 @@ Alternatively, run `/bootstrap` — the bootstrapper will ask about your Git pla
 |------|---------|---------|
 | `.ai/agent/pm-instructions.md` | Issue tracker access (Jira/GitHub Issues) | Same pattern — tells `@pm` HOW to access the tracker |
 | `.ai/agent/pr-instructions.md` | PR/MR platform access (GitHub/GitLab) | This file — tells PR/MR agents HOW to access the platform |
-| `.ai/agent/code-review-instructions.md` | Code review guidance (priorities, checklist, conventions) | Different — tells `@code-reviewer` WHAT to focus on and check during review. Copy blueprint from `doc/templates/blueprints/code-review-instructions--example.md` |
+| `.ai/agent/code-review-instructions.md` | Code review guidance (priorities, checklist, conventions) | Different — tells `@reviewer` WHAT to focus on and check during review. Copy blueprint from `doc/templates/blueprints/code-review-instructions--example.md` |

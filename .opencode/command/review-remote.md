@@ -3,12 +3,12 @@
 # MIT License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/command/review-remote.md
 description: Review open PR/MR and publish findings.
-agent: code-reviewer
+agent: reviewer
 subtask: true
 ---
 
 <purpose>
-Run the code-reviewer agent on the current branch's open PR/MR.
+Run the reviewer agent in remote mode on the current branch's open PR/MR.
 Analyzes the diff against repository-local checklists, instructions, and built-in heuristics.
 Generates a review draft locally; optionally publishes findings to the remote platform.
 </purpose>
@@ -34,10 +34,10 @@ Examples:
 </inputs>
 
 <instructions>
-  <step>Parse $ARGUMENTS and delegate to the `code-reviewer` agent with the parsed options.</step>
+  <step>Parse $ARGUMENTS and delegate to the `reviewer` agent (remote mode) with the parsed options.</step>
   <step>The agent handles all platform detection, pre-flight checks, review, and optional publishing.</step>
   <constraints>
-    <rule>This command is a thin entry point — all logic lives in the `code-reviewer` agent.</rule>
+    <rule>This command is a thin entry point — all logic lives in the `reviewer` agent.</rule>
     <rule>Non-interactive: do not depend on follow-up questions; use $ARGUMENTS, safe defaults, or NEEDS_INPUT.</rule>
     <rule>Idempotent: reruns are safe; deduplication prevents duplicate comments.</rule>
   </constraints>

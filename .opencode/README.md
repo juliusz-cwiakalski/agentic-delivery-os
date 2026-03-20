@@ -28,7 +28,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - Tool suites: when a workflow spans multiple tools, tune them together (contracts, arguments, outputs, delegation).
 - Hygiene: update this file whenever you add/rename/remove a tool or materially change its intent.
 - PM tracker config: `@pm` reads `.ai/agent/pm-instructions.md` (repo-specific Jira/GitHub workflow).
-- PR/MR platform config: `@pr-manager`, `@code-reviewer`, `@review-feedback-applier` read `.ai/agent/pr-instructions.md` (repo-specific PR/MR platform and CLI commands).
+- PR/MR platform config: `@pr-manager`, `@reviewer`, `@review-feedback-applier` read `.ai/agent/pr-instructions.md` (repo-specific PR/MR platform and CLI commands).
 - PM delegation: `@pm` delegates debugging to `@fixer` and command execution to `@runner`.
 - Pre-PR gate (autopilot): `@pm` runs `@reviewer` + `@doc-syncer` before `@pr-manager`.
 
@@ -36,7 +36,6 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 
 - `architect`: architecture decisions and decision record authoring (ADR/PDR/TDR/BDR/ODR)
 - `bootstrapper`: automate ADOS adoption for existing projects
-- `code-reviewer`: review open PR/MR diff against repo-local rules and publish findings
 - `coder`: implement plan phases by writing code for a change
 - `committer`: create one Conventional Commit
 - `designer`: visual design and UI implementation
@@ -50,7 +49,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - `pm`: orchestrate changes; manage tickets via MCP (reads `.ai/agent/pm-instructions.md`)
 - `pr-manager`: create/update PR/MR for branch; enriches description with ticket context via MCP
 - `review-feedback-applier`: classify and apply accepted review feedback from PR/MR
-- `reviewer`: review change vs spec/plan
+- `reviewer`: review changes against spec, plan, code quality heuristics, and repo rules (local + remote modes)
 - `runner`: run commands and capture logs
 - `spec-writer`: author change specifications
 - `test-plan-writer`: author change test plans
@@ -69,7 +68,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - `/pr`: create/update PR/MR and sync title/description (`tmp/pr/<branch>/description.md`, via `@pr-manager`); fetches ticket context from Jira/GitHub when `workItemRef` is detected
 - `/review`: review a change vs spec/plan
 - `/review-deep`: deeper review vs spec/plan
-- `/review-remote`: review open PR/MR diff and optionally publish findings (via `@code-reviewer`)
+- `/review-remote`: review open PR/MR diff and optionally publish findings (via `@reviewer` remote mode)
 - `/run-plan`: execute an implementation plan
 - `/sync-docs`: reconcile system specs from a change
 - `/write-decision`: write a decision record (ADR/PDR/TDR/BDR/ODR) from planning context

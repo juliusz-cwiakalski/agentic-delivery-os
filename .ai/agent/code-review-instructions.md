@@ -5,12 +5,12 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ai/
 ---
 # Code Review Instructions
 
-<!-- This file EXTENDS the code-reviewer agent's built-in review heuristics with
+<!-- This file EXTENDS the reviewer agent's built-in review heuristics with
      repository-specific rules. Items here take priority over built-in defaults.
      To create this file for a new project, copy the example blueprint from
      doc/templates/blueprints/code-review-instructions--example.md -->
 
-Repository-specific review guidance for the `code-reviewer` agent when reviewing ADOS PRs/MRs. This file is the single source of repository-local review configuration — context, priorities, checklist, and patterns.
+Repository-specific review guidance for the `reviewer` agent when reviewing ADOS changes (local and remote modes). This file is the single source of repository-local review configuration — context, priorities, checklist, and patterns.
 
 ## Repository Context
 
@@ -29,7 +29,7 @@ Repository-specific review guidance for the `code-reviewer` agent when reviewing
 
 ## Review Checklist
 
-The `code-reviewer` agent evaluates each applicable item against the PR/MR diff.
+The `reviewer` agent evaluates each applicable item against the diff.
 
 ### Prompt Quality (agents and commands)
 

@@ -7,7 +7,7 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 
 <!-- Copy this file to `.ai/agent/code-review-instructions.md` in your project. -->
 <!-- Customize the sections below for your repository's specific conventions. -->
-<!-- This file EXTENDS the code-reviewer agent's built-in heuristics. -->
+<!-- This file EXTENDS the reviewer agent's built-in heuristics. -->
 <!-- Items here take priority over built-in defaults on any conflict. -->
 
 ## Repository Context

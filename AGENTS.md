@@ -54,9 +54,8 @@ Detail: [doc/guides/change-lifecycle.md](doc/guides/change-lifecycle.md)
 - `editor` — content rewrites and translations
 
 ### Verification
-- `code-reviewer` — review open PR/MR diff against repo-local rules and publish findings
 - `review-feedback-applier` — classify and apply accepted review feedback from PR/MR
-- `reviewer` — review change vs spec/plan; append remediation if FAIL
+- `reviewer` — review changes against spec, plan, code quality heuristics, and repo rules (local + remote modes)
 - `fixer` — reproduce failures and apply targeted fixes
 - `runner` — execute commands, capture logs (subagent)
 
