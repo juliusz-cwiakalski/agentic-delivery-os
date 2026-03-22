@@ -61,10 +61,59 @@ Use CLI when MCP tools don't cover the operation or when a unified diff is neede
 | **Check CLI auth** | `gh auth status` | Verify CLI is authenticated |
 | **Detect platform** | `git remote get-url origin` | Parse for `github.com` host |
 
+### Resolve/Unresolve PR Review Threads (GraphQL via `gh`)
+
+GitHub has no REST API or MCP tool for resolving PR review threads. Use `gh api graphql` with the `resolveReviewThread` mutation.
+
+**Step 1: Find thread node IDs** for a PR:
+
+```bash
+gh api graphql -f query='
+  query($owner:String!, $repo:String!, $number:Int!) {
+    repository(owner:$owner, name:$repo) {
+      pullRequest(number:$number) {
+        reviewThreads(first:200) {
+          nodes {
+            id
+            isResolved
+            path
+            line
+            comments(first:5) { nodes { id author { login } bodyText } }
+          }
+        }
+      }
+    }
+  }' -F owner="juliusz-cwiakalski" -F repo="agentic-delivery-os" -F number=$NUMBER
+```
+
+**Step 2: Resolve a thread** (given its node ID):
+
+```bash
+gh api graphql -f query='
+  mutation($threadId:ID!) {
+    resolveReviewThread(input:{threadId:$threadId}) {
+      thread { id isResolved resolvedBy { login } }
+    }
+  }' -f threadId="$THREAD_NODE_ID"
+```
+
+**Step 3: Unresolve** (if needed):
+
+```bash
+gh api graphql -f query='
+  mutation($threadId:ID!) {
+    unresolveReviewThread(input:{threadId:$threadId}) {
+      thread { id isResolved }
+    }
+  }' -f threadId="$THREAD_NODE_ID"
+```
+
+**Matching comment to thread**: REST API comment objects include a `node_id` field (GraphQL ID). Match it against the `comments.nodes[].id` in the `reviewThreads` query above to find the owning thread.
+
 ## Platform-Specific Notes
 
-- GitHub does NOT have a REST API endpoint for resolving/unresolving PR review threads (unlike GitLab discussions). Thread resolution is a web UI feature only (or via GraphQL `resolveReviewThread` mutation).
 - `mcp_github-mcp_get_pull_request_files` returns per-file patches, not a unified diff. For full unified diffs, use `gh pr diff`.
 - `mcp_github-mcp_create_pull_request_review` with `event: "COMMENT"` posts a review with inline comments without approving or requesting changes.
 - `mcp_github-mcp_add_issue_comment` posts to the PR timeline (issue comments and PR comments share the same API on GitHub).
 - MCP tools require `owner` and `repo` parameters — derive from `git remote get-url origin` or use the values documented above.
+- Thread resolution requires GraphQL via `gh api graphql` — no REST endpoint or MCP tool available.

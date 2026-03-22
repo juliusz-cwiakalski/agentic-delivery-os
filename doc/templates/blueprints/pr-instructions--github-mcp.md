@@ -88,6 +88,20 @@ The project must have an `.opencode/opencode.jsonc` with the GitHub MCP server c
 
 Set the `GITHUB_API_TOKEN` environment variable with a personal access token that has `repo`, `read:org`, and `user` permissions.
 
+## Resolve/Unresolve PR Review Threads (GraphQL via `gh`)
+
+No MCP tool or REST endpoint exists for resolving PR review threads. Use `gh api graphql`:
+
+```bash
+# Find thread node IDs for a PR
+gh api graphql -f query='query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:200){nodes{id isResolved path line comments(first:5){nodes{id author{login} bodyText}}}}}}}' -F owner="OWNER" -F repo="REPO" -F number=PULL_NUMBER
+
+# Resolve a thread
+gh api graphql -f query='mutation($threadId:ID!){resolveReviewThread(input:{threadId:$threadId}){thread{id isResolved resolvedBy{login}}}}' -f threadId="THREAD_NODE_ID"
+```
+
+Match REST comment `node_id` to GraphQL `comments.nodes[].id` to find the owning thread.
+
 ## Platform-Specific Notes
 
 - MCP tools handle authentication through the MCP server configuration. If MCP tools respond successfully, auth is valid.
@@ -95,5 +109,5 @@ Set the `GITHUB_API_TOKEN` environment variable with a personal access token tha
 - `mcp_github-mcp_get_pull_request_files` returns per-file patches, not a unified diff. For full unified diffs, use `gh pr diff "$NUMBER"` (CLI fallback).
 - `mcp_github-mcp_create_pull_request_review` with `event: "COMMENT"` posts inline comments without approving or requesting changes.
 - `mcp_github-mcp_add_issue_comment` posts to the PR timeline (GitHub treats PR comments and issue comments identically).
-- GitHub does NOT have a REST/MCP API for resolving PR review threads — thread resolution is a web UI feature only (or via GraphQL `resolveReviewThread` mutation).
+- Thread resolution requires `gh api graphql` — no MCP tool or REST endpoint available.
 - MCP tool names follow the `mcp_<server>_<operation>` convention. The `github-mcp` prefix matches the server name in `opencode.jsonc`.

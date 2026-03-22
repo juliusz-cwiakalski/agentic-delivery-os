@@ -36,3 +36,21 @@ Agents reference this table for every PR/MR operation. Each row maps an abstract
 | **View PR (confirm)** | `gh pr view "$NUMBER" --json number,baseRefName,url --jq '{number,baseRefName,url}'` | Confirm PR state after create/update |
 | **Check auth** | `gh auth status` | Verify CLI is authenticated |
 | **Detect platform** | `git remote get-url origin` | Parse for `github.com` host |
+| **Reply to review comment** | `gh api "repos/{owner}/{repo}/pulls/$NUMBER/comments/$COMMENT_ID/replies" -X POST -f body="$BODY"` | Reply to an existing review comment thread |
+
+## Resolve/Unresolve PR Review Threads (GraphQL via `gh`)
+
+GitHub has no REST endpoint for resolving PR review threads. Use `gh api graphql`:
+
+```bash
+# Find thread node IDs for a PR
+gh api graphql -f query='query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:200){nodes{id isResolved path line comments(first:5){nodes{id author{login} bodyText}}}}}}}' -F owner="OWNER" -F repo="REPO" -F number=PULL_NUMBER
+
+# Resolve a thread
+gh api graphql -f query='mutation($threadId:ID!){resolveReviewThread(input:{threadId:$threadId}){thread{id isResolved resolvedBy{login}}}}' -f threadId="THREAD_NODE_ID"
+
+# Unresolve a thread
+gh api graphql -f query='mutation($threadId:ID!){unresolveReviewThread(input:{threadId:$threadId}){thread{id isResolved}}}' -f threadId="THREAD_NODE_ID"
+```
+
+Match REST comment `node_id` to GraphQL `comments.nodes[].id` to find the owning thread.
