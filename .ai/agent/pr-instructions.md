@@ -10,27 +10,61 @@ Repository-level configuration for PR/MR platform access. Agents read this file 
 ## Platform
 
 - **Type**: GitHub
-- **Access method**: CLI (`gh`)
+- **Access methods**: MCP (`github-mcp`) + CLI (`gh`)
 - **Host**: `github.com`
-- **Auth**: `gh auth login` (pre-configured; agents verify via `gh auth status`)
+- **Owner**: `juliusz-cwiakalski`
+- **Repo**: `agentic-delivery-os`
+
+## Access Method Preference
+
+This repo has **both** GitHub MCP tools and `gh` CLI available.
+
+**Prefer MCP** for: reading PR data, posting reviews, posting comments, creating/updating PRs — MCP tools are structured, type-safe, and don't require shell escaping.
+
+**Use CLI (`gh`)** for: fetching full unified diffs (`gh pr diff`), operations not available via MCP (e.g., `gh api` for GraphQL queries), and when MCP tools are unavailable.
+
+**Auth**:
+- MCP: handled by the MCP server (configured in `.opencode/opencode.jsonc` with `GITHUB_PERSONAL_ACCESS_TOKEN`)
+- CLI: `gh auth login` (pre-configured; verify via `gh auth status`)
 
 ## Operations Reference
 
-Agents reference this table for every PR/MR operation. Each row maps an abstract operation to the concrete CLI command.
+### MCP Tools (preferred)
+
+| Operation | MCP Tool | Parameters |
+|-----------|----------|------------|
+| **List open PRs for branch** | `mcp_github-mcp_list_pull_requests` | `owner`, `repo`, `head: "$BRANCH"`, `state: "open"` |
+| **Fetch PR metadata** | `mcp_github-mcp_get_pull_request` | `owner`, `repo`, `pull_number` |
+| **Fetch PR changed files** | `mcp_github-mcp_get_pull_request_files` | `owner`, `repo`, `pull_number` |
+| **Fetch inline review comments** | `mcp_github-mcp_get_pull_request_comments` | `owner`, `repo`, `pull_number` |
+| **Fetch reviews** | `mcp_github-mcp_get_pull_request_reviews` | `owner`, `repo`, `pull_number` |
+| **Fetch PR status checks** | `mcp_github-mcp_get_pull_request_status` | `owner`, `repo`, `pull_number` |
+| **Publish review with inline comments** | `mcp_github-mcp_create_pull_request_review` | `owner`, `repo`, `pull_number`, `body`, `event: "COMMENT"`, `comments: [{path, line, body}]` |
+| **Publish summary comment** | `mcp_github-mcp_add_issue_comment` | `owner`, `repo`, `issue_number` (same as PR number), `body` |
+| **Reply to review comment** | `mcp_github-mcp_create_pull_request_review` | Use `comments` array targeting same file/line, or use CLI fallback |
+| **Create PR** | `mcp_github-mcp_create_pull_request` | `owner`, `repo`, `title`, `head`, `base`, `body` |
+| **Merge PR** | `mcp_github-mcp_merge_pull_request` | `owner`, `repo`, `pull_number`, `merge_method` |
+| **Update PR branch** | `mcp_github-mcp_update_pull_request_branch` | `owner`, `repo`, `pull_number` |
+| **Get issue details** | `mcp_github-mcp_get_issue` | `owner`, `repo`, `issue_number` |
+| **Create issue** | `mcp_github-mcp_create_issue` | `owner`, `repo`, `title`, `body`, `labels` |
+| **Update issue** | `mcp_github-mcp_update_issue` | `owner`, `repo`, `issue_number`, `state`, `labels`, etc. |
+| **Add issue comment** | `mcp_github-mcp_add_issue_comment` | `owner`, `repo`, `issue_number`, `body` |
+
+### CLI Fallback (`gh`)
+
+Use CLI when MCP tools don't cover the operation or when a unified diff is needed.
 
 | Operation | Command | Notes |
 |-----------|---------|-------|
-| **List open PRs for branch** | `gh pr list --head "$BRANCH" --state open --json number,baseRefName,url,title,body,headRefName,updatedAt --jq 'sort_by(.updatedAt) \| reverse \| .[0]'` | Returns most recently updated open PR |
-| **Fetch PR diff** | `gh pr diff "$NUMBER"` | Full unified diff to stdout |
-| **Fetch PR metadata** | `gh pr view "$NUMBER" --json number,baseRefName,headRefName,title,body,url,author,labels,reviewRequests,comments,reviews --jq '.'` | JSON metadata |
-| **Fetch inline review comments** | `gh api "repos/{owner}/{repo}/pulls/$NUMBER/comments" --paginate` | Inline (diff-level) comments |
-| **Fetch issue comments** | `gh api "repos/{owner}/{repo}/issues/$NUMBER/comments" --paginate` | Top-level PR comments |
-| **Fetch reviews** | `gh api "repos/{owner}/{repo}/pulls/$NUMBER/reviews" --paginate` | Review objects (approved, changes requested, etc.) |
-| **Publish summary comment** | `gh pr comment "$NUMBER" --body-file "$FILE"` | Post a top-level comment from file |
-| **Publish inline review** | `gh api "repos/{owner}/{repo}/pulls/$NUMBER/reviews" -X POST --input "$PAYLOAD_FILE"` | Submit review with inline comments |
-| **Publish MR note** | N/A (GitHub) | — |
-| **Create PR** | `gh pr create --base "$BASE" --title "$TITLE" --body-file "$BODY_FILE"` | Creates new PR |
-| **Update PR** | `gh pr edit "$NUMBER" --base "$BASE" --title "$TITLE" --body-file "$BODY_FILE"` | Updates existing PR |
-| **View PR (confirm)** | `gh pr view "$NUMBER" --json number,baseRefName,url --jq '{number,baseRefName,url}'` | Confirm PR state after create/update |
-| **Check auth** | `gh auth status` | Verify CLI is authenticated |
+| **Fetch PR diff** | `gh pr diff "$NUMBER"` | Full unified diff — MCP only returns per-file patches |
+| **Reply to PR comment thread** | `gh api "repos/{owner}/{repo}/pulls/$NUMBER/comments/$COMMENT_ID/replies" -X POST -f body="$BODY"` | MCP doesn't have a direct reply-to-comment tool |
+| **Check CLI auth** | `gh auth status` | Verify CLI is authenticated |
 | **Detect platform** | `git remote get-url origin` | Parse for `github.com` host |
+
+## Platform-Specific Notes
+
+- GitHub does NOT have a REST API endpoint for resolving/unresolving PR review threads (unlike GitLab discussions). Thread resolution is a web UI feature only (or via GraphQL `resolveReviewThread` mutation).
+- `mcp_github-mcp_get_pull_request_files` returns per-file patches, not a unified diff. For full unified diffs, use `gh pr diff`.
+- `mcp_github-mcp_create_pull_request_review` with `event: "COMMENT"` posts a review with inline comments without approving or requesting changes.
+- `mcp_github-mcp_add_issue_comment` posts to the PR timeline (issue comments and PR comments share the same API on GitHub).
+- MCP tools require `owner` and `repo` parameters — derive from `git remote get-url origin` or use the values documented above.
