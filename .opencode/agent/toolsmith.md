@@ -5,9 +5,6 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 #
 description: Create OpenCode agents/commands/skills.
 mode: all
-#model: openai/gpt-5.2
-model: anthropic/claude-opus-4-6
-#model: anthropic/claude-opus-4-5
 temperature: 0.2
 
 # Reasoning effort set to maximum — toolsmith quality directly impacts all downstream tooling

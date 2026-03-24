@@ -1,0 +1,25 @@
+change_id: GH-44
+title: "Remove Anthropic config and hardcode models from agent definitions"
+phases:
+  clarify_scope: { started: "2026-03-24T07:05:00Z", completed: "2026-03-24T07:10:00Z" }
+  specification: { started: "2026-03-24T07:10:00Z", completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions: []
+open_questions: []
+blockers: []
+notes:
+  - text: "Clarify scope started - analyzing ticket requirements against system spec"
+    type: info
+    workItemRef: GH-44
+    date: "2026-03-24"
+  - text: "Scope analysis complete - requirements are clear and complete. No contradictions with system spec. All 20 agent files have hardcoded model lines to remove."
+    type: info
+    workItemRef: GH-44
+    date: "2026-03-24"

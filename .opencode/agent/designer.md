@@ -8,8 +8,6 @@ description: >-
   Applies the documented visual design system to UI components, layouts,
   navigation chrome, and widget styling.
 mode: all
-#model: github-copilot/grok-code-fast-1
-model: anthropic/claude-opus-4-6
 ---
 
 # Role

@@ -5,8 +5,6 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 #
 description: Create/update PR/MR title and description.
 mode: all
-model: anthropic/claude-sonnet-4-6
-#model: github-copilot/grok-code-fast-1
 tools:
   "github*": true
 ---
