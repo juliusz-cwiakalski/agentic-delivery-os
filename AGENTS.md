@@ -118,6 +118,7 @@ Guide: [doc/guides/opencode-agents-and-commands-guide.md](doc/guides/opencode-ag
 
 When adding or modifying agents, commands, or skills:
 
+- **Delegate to `@toolsmith`** — it specializes in prompt engineering, model-format-aware design, and quality gates for OpenCode tooling. Do not hand-edit agent/command files directly.
 - **Tune related tools together** — agents hand off to each other; changing one agent's output format can break another's input. Check upstream inputs and downstream consumers.
 - **Test through the delivery process** — run modified agents on a real change to validate.
 - **Update [.opencode/README.md](.opencode/README.md)** when adding, removing, or renaming tools.

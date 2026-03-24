@@ -1,5 +1,5 @@
 change_id: GH-44
-title: "Remove Anthropic config and hardcode models from agent definitions"
+title: "Remove Anthropic config and hardcoded models from agent definitions"
 phases:
   clarify_scope: { started: "2026-03-24T07:05:00Z", completed: "2026-03-24T07:10:00Z" }
   specification: { started: "2026-03-24T07:10:00Z", completed: "2026-03-24T07:12:00Z" }
