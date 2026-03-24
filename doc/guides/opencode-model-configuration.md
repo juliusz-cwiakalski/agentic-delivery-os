@@ -16,11 +16,16 @@ This separation enables:
 - **Team consistency** — Share model configs via git
 - **Flexibility** — Override models per-project or per-user
 
+**Official documentation:**
+- [OpenCode Models](https://opencode.ai/docs/en/models/) — Model configuration syntax
+- [OpenCode Config](https://opencode.ai/docs/config/) — Configuration locations and precedence
+- [OpenCode Providers](https://opencode.ai/docs/providers/) — Supported providers
+
 ---
 
 ## 1. Configuration Locations
 
-OpenCode configs can live in several locations, merged in this order (later overrides earlier):
+OpenCode configs are **merged**, not replaced. Later configs override earlier ones only for conflicting keys.
 
 | Precedence | Location | Use case |
 |------------|----------|----------|
@@ -31,9 +36,7 @@ OpenCode configs can live in several locations, merged in this order (later over
 | 5 | `.opencode/opencode.jsonc` | Project-specific (alongside agents) |
 | 6 (highest) | `OPENCODE_CONFIG_CONTENT` env var | Runtime inline config |
 
-**Recommendation for ADOS teams:** Use `opencode.jsonc` in the project root, committed to git, so all team members use the same model configuration.
-
-**Recommendation for individual users:** Use `~/.config/opencode/opencode.jsonc` for personal preferences that apply across all repos.
+**ADOS recommendation:** Use `.opencode/opencode-<provider>.jsonc` for provider-specific configs (committed to git, shared with team).
 
 ---
 
@@ -48,9 +51,9 @@ Model assignments go in the `"agent"` section of your config:
   
   "agent": {
     "pm":               { "model": "github-copilot/claude-sonnet-4.6" },
-    "coder":            { "model": "github-copilot/gpt-5.2-codex" },
-    "committer":        { "model": "github-copilot/claude-haiku-4.5" },
-    "runner":            { "model": "github-copilot/gpt-5-mini" }
+    "coder":            { "model": "github-copilot/gpt-5.3-codex" },
+    "architect":        { "model": "github-copilot/claude-opus-4.6" },
+    "committer":        { "model": "github-copilot/gpt-5-mini" }
     // ... all 22 agents
   }
 }
@@ -58,88 +61,190 @@ Model assignments go in the `"agent"` section of your config:
 
 Each agent key matches the filename (without `.md`) from `.opencode/agent/`.
 
+### Agent Override Behavior
+
+Agent-specific model assignments override global defaults:
+
+```jsonc
+{
+  "model": "anthropic/claude-sonnet-4-5",  // Global default
+  "small_model": "anthropic/claude-haiku-4-5",  // For lightweight tasks
+  
+  "agent": {
+    "architect": { "model": "anthropic/claude-opus-4-6" },  // Override for architect
+    "coder": { "model": "openai/gpt-5.3-codex" }  // Override for coder
+  }
+}
+```
+
 ---
 
 ## 3. Model ID Format
 
-Model IDs use the format `provider/model-name`:
+Model IDs use the format `provider_id/model_id`:
 
-| Provider prefix | Description |
-|-----------------|-------------|
-| `github-copilot/` | GitHub Copilot subscription |
-| `anthropic/` | Anthropic direct API |
-| `openai/` | OpenAI direct API |
-| `deepseek/` | DeepSeek API |
-| `google-vertex-ai/` | Google Vertex AI |
-| `openrouter/` | OpenRouter (multi-provider) |
-| `ollama/` | Local models via Ollama |
+```jsonc
+"github-copilot/claude-opus-4.6"
+"anthropic/claude-sonnet-4-5"
+"openai/gpt-5"
+"ollama/llama-3.1"
+"lmstudio/google/gemma-3n-e4b"
+```
 
-See [OpenCode providers documentation](https://opencode.ai/docs/providers/) for the full list.
+### Supported Provider Prefixes
 
----
+OpenCode supports 75+ providers via AI SDK and Models.dev. Major providers:
 
-## 4. Example Configuration
+| Category | Provider IDs |
+|----------|-------------|
+| **Direct APIs** | `anthropic`, `openai`, `google-vertex`, `gemini`, `deepseek` |
+| **Cloud platforms** | `amazon-bedrock`, `azure-openai`, `azure-cognitive` |
+| **Aggregators** | `openrouter`, `vercel`, `cloudflare-ai-gateway`, `helicone` |
+| **Subscriptions** | `github-copilot`, `gitlab` (Duo) |
+| **Local** | `ollama`, `lmstudio`, `llama.cpp` |
 
-ADOS ships an example project-level config in `.opencode/opencode-github-copilot.jsonc` showing all agents with tiered model assignments optimized for GitHub Copilot subscriptions.
-
-### How to Customize
-
-1. **For your project** — Edit `.opencode/opencode-github-copilot.jsonc` directly (committed to git, shared with team)
-
-2. **For your user** — Create `~/.config/opencode/opencode.jsonc` to override project settings with personal preferences:
-   
-   ```jsonc
-   {
-     "$schema": "https://opencode.ai/config.json",
-     "agent": {
-       // Use a different model for architect
-       "architect": { "model": "github-copilot/claude-opus-4.6" }
-     }
-   }
-   ```
-
-3. **Environment variables** — For API keys and tokens:
-   
-   ```bash
-   # GitHub Copilot uses your subscription - authenticate via:
-   opencode auth login
-   
-   # For other providers, set API keys:
-   export ANTHROPIC_API_KEY=sk-ant-...
-   export OPENAI_API_KEY=sk-...
-   ```
+See [OpenCode Providers](https://opencode.ai/docs/providers/) for the full list.
 
 ---
 
-## 5. Cost Optimization Strategy
+## 4. Quick Setup
 
-### Tiering by Agent Role
+### GitHub Copilot (ADOS default)
 
-Not all agents need powerful models. Match model capability to task complexity:
+ADOS includes `.opencode/opencode-github-copilot.jsonc` optimized for GitHub Copilot subscriptions:
 
-| Tier | Agent Examples | Model Class |
-|------|----------------|-------------|
-| **Critical reasoning** | `architect`, `reviewer`, `bootstrapper` | Opus / top-tier |
-| **Core work** | `pm`, `coder`, `fixer`, `plan-writer`, `spec-writer` | Sonnet / Codex |
-| **Well-scoped** | `committer`, `doc-syncer`, `pr-manager`, `editor` | Haiku / Flash |
-| **Fast/cheap** | `external-researcher` | Grok Code Fast |
-| **Trivial** | `runner` | Free models (GPT-5 mini) |
+```bash
+# Already configured - just authenticate and run
+opencode auth login
+opencode
+```
 
-### GitHub Copilot Cost Multipliers
+The default config uses tiered model assignment for cost optimization:
+- **Tier 1 (3.0x)**: Critical reasoning — `architect`, `reviewer`, `bootstrapper`, `pm`, `toolsmith`, `plan-writer`, `doc-syncer`, `review-feedback-applier`
+- **Tier 2 (1.0x)**: Core work — `coder`, `fixer`, `spec-writer`, `test-plan-writer`, `designer`, `pr-manager`, `editor`
+- **Tier 3 (0.33x)**: Well-scoped — `image-reviewer`, `image-generator`
+- **Tier 5 (free)**: Trivial — `committer`, `external-researcher`, `runner`
 
-| Multiplier | Models | Best for |
-|------------|--------|----------|
-| **3.0x** | Claude Opus 4.6 | Highest-value reasoning only |
-| **1.0x** | Claude Sonnet 4.6, GPT-5.2, GPT-5.2-Codex | Core delivery work |
-| **0.33x** | Claude Haiku 4.5, Gemini 3 Flash | Well-scoped tasks |
-| **0.25x** | Grok Code Fast 1 | Fast, cheap tasks |
-| **free** | GPT-4.1, GPT-4o, GPT-5 mini | Command execution, log capture |
+### Other Providers
+
+Create `.opencode/opencode-<provider>.jsonc`:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "pm",
+  
+  "agent": {
+    "pm": { "model": "anthropic/claude-sonnet-4-6" },
+    "coder": { "model": "anthropic/claude-sonnet-4-6" },
+    "architect": { "model": "anthropic/claude-opus-4-6" }
+    // ... configure all 22 agents
+  }
+}
+```
+
+Set API key:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+# or: export OPENAI_API_KEY=sk-...
+# or: export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+```
 
 ---
 
-## 6. Complete Agent List
+## 5. Environment Variables
 
-All ADOS agents require model configuration:
+### Configuration Variables
+
+| Variable | Purpose |
+|----------|---------|
+| `OPENCODE_CONFIG` | Path to custom config file |
+| `OPENCODE_CONFIG_DIR` | Path to custom config directory |
+| `OPENCODE_CONFIG_CONTENT` | Inline JSON config (highest precedence) |
+
+### API Key Variables
+
+Use `{env:VARIABLE_NAME}` for secure substitution:
+
+```jsonc
+{
+  "provider": {
+    "anthropic": {
+      "options": {
+        "apiKey": "{env:ANTHROPIC_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+**Provider-specific environment variables:**
+
+| Provider | Key Environment Variables |
+|----------|---------------------------|
+| Anthropic | `ANTHROPIC_API_KEY` |
+| OpenAI | `OPENAI_API_KEY` |
+| AWS Bedrock | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_PROFILE` |
+| Azure OpenAI | `AZURE_RESOURCE_NAME` |
+| Google Vertex | `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_CLOUD_PROJECT`, `VERTEX_LOCATION` |
+| Cloudflare | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_GATEWAY_ID`, `CLOUDFLARE_API_TOKEN` |
+| GitLab Duo | `GITLAB_INSTANCE_URL`, `GITLAB_TOKEN` |
+
+### File Substitution
+
+Load sensitive values from files:
+
+```jsonc
+{
+  "provider": {
+    "openai": {
+      "options": {
+        "apiKey": "{file:~/.secrets/openai-key}"
+      }
+    }
+  }
+}
+```
+
+---
+
+## 6. ADOS-Specific Considerations
+
+### Model Selection by Agent Tier
+
+ADOS agents have different complexity levels. Match model capability to task:
+
+| Tier | Agents | Recommended Models |
+|------|--------|-------------------|
+| **Critical reasoning** | `architect`, `reviewer`, `bootstrapper`, `pm`, `toolsmith` | Claude Opus 4.6, GPT-5.3-Codex |
+| **Core work** | `coder`, `fixer`, `plan-writer`, `spec-writer`, `test-plan-writer` | Claude Sonnet 4.6, GPT-5.2-Codex |
+| **Well-scoped** | `committer`, `doc-syncer`, `pr-manager`, `editor` | Claude Haiku 4.5, Gemini 3 Flash |
+| **Light** | `external-researcher` | Grok Code Fast 1 |
+| **Trivial** | `runner` | Free models (GPT-5 mini, GPT-4o) |
+
+### Agent-to-Agent Communication
+
+Changing one agent's output format may break another agent that consumes it. When changing models:
+- Test the full delivery pipeline (`@pm` → `@spec-writer` → `@plan-writer` → `@coder` → `@reviewer`)
+- Verify artifact formats remain compatible
+- Use stable providers for critical agents
+
+### Default Agent
+
+ADOS sets `default_agent: "pm"` so the PM agent starts by default:
+
+```jsonc
+{
+  "default_agent": "pm"
+}
+```
+
+This must be a primary agent (not a subagent).
+
+---
+
+## 7. Complete Agent List
 
 | Agent | Tier | Typical Model |
 |-------|------|----------------|
@@ -166,24 +271,64 @@ All ADOS agents require model configuration:
 
 ---
 
-## 7. Environment Variables
+## 8. Advanced Configuration
 
-| Variable | Purpose |
-|----------|---------|
-| `OPENCODE_CONFIG` | Path to custom config file |
-| `OPENCODE_CONFIG_CONTENT` | Inline JSON config (highest precedence) |
-| `ANTHROPIC_API_KEY` | API key for Anthropic models |
-| `OPENAI_API_KEY` | API key for OpenAI models |
-| `GITHUB_API_TOKEN` | GitHub token for GitHub MCP |
+### Provider Variants
 
-Reference env vars in config:
+Configure model variants for different reasoning levels:
 
 ```jsonc
 {
-  "mcp": {
-    "github-mcp": {
-      "environment": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_API_TOKEN}"
+  "provider": {
+    "openai": {
+      "models": {
+        "gpt-5": {
+          "variants": {
+            "high": { "reasoningEffort": "high", "textVerbosity": "low" },
+            "low": { "reasoningEffort": "low" }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Built-in variants: Anthropic (`high`, `max`), OpenAI (`none`, `minimal`, `low`, `medium`, `high`, `xhigh`), Google (`low`, `high`).
+
+### Custom Providers
+
+Add OpenAI-compatible providers:
+
+```jsonc
+{
+  "provider": {
+    "myprovider": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "My AI Provider",
+      "options": {
+        "baseURL": "https://api.myprovider.com/v1"
+      },
+      "models": {
+        "my-model": { "name": "My Model Display Name" }
+      }
+    }
+  }
+}
+```
+
+Use `/connect` → **Other** to store API credentials separately from config.
+
+### Timeout Configuration
+
+```jsonc
+{
+  "provider": {
+    "anthropic": {
+      "options": {
+        "timeout": 600000,      // Request timeout in ms (default: 300000)
+        "chunkTimeout": 30000,  // Timeout between streamed chunks
+        "setCacheKey": true     // Enable caching
       }
     }
   }
@@ -192,34 +337,58 @@ Reference env vars in config:
 
 ---
 
-## 8. Project Example
+## 9. Troubleshooting
 
-ADOS includes `.opencode/opencode-github-copilot.jsonc` as a ready-to-use configuration for GitHub Copilot subscriptions. This file demonstrates tiered model assignment (critical/core/scoped/light/trivial) optimized for cost-effectiveness.
+### Tool Calls Not Working with Local Models
 
-### File Locations Summary
+For Ollama, increase context window:
 
-| Location | Purpose | Commit? |
-|----------|---------|---------|
-| `opencode.jsonc` (project root) | Project-wide defaults | Yes (team-shared) |
-| `.opencode/opencode-<provider>.jsonc` | Provider-specific config | Yes (team-shared) |
-| `~/.config/opencode/opencode.jsonc` | User-wide overrides | No (personal) |
+```jsonc
+{
+  "provider": {
+    "ollama": {
+      "options": {
+        "num_ctx": 32000  // Increase from default (usually ~4k)
+      }
+    }
+  }
+}
+```
 
----
+### GitLab Duo Compliance
 
-## 9. Creating Your Own Configuration
+Prevent data leakage outside self-hosted instance:
 
-To create a configuration for a different provider:
+```jsonc
+{
+  "small_model": "gitlab/duo-chat-haiku-4-5",
+  "share": "disabled"
+}
+```
 
-1. **Copy** `.opencode/opencode-github-copilot.jsonc` to `.opencode/opencode-<provider>.jsonc`
-2. **Replace** all `github-copilot/` model prefixes with your provider (e.g., `anthropic/`, `openai/`, `ollama/`)
-3. **Adjust** tier assignments based on your provider's pricing model
-4. **Document** cost considerations with comments (multipliers, free tiers, etc.)
+### Azure Content Filter Errors
+
+Change content filter from `DefaultV2` to `Default` in your Azure resource.
+
+### Provider Not Loading
+
+Use `enabled_providers` / `disabled_providers` to control loading:
+
+```jsonc
+{
+  "enabled_providers": ["anthropic", "openai"],
+  "disabled_providers": ["gemini"]
+}
+```
+
+`disabled_providers` takes precedence over `enabled_providers`.
 
 ---
 
 ## 10. Related Documentation
 
-- [OpenCode Configuration Docs](https://opencode.ai/docs/config/) — config locations and precedence
-- [OpenCode Providers Docs](https://opencode.ai/docs/providers/) — supported model providers
-- [AGENTS.md](../../AGENTS.md) — agent descriptions and team structure
-- [.opencode/README.md](../../.opencode/README.md) — agent/command inventory
+- [OpenCode Models](https://opencode.ai/docs/en/models/) — Model configuration syntax
+- [OpenCode Config](https://opencode.ai/docs/config/) — Configuration locations and precedence
+- [OpenCode Providers](https://opencode.ai/docs/providers/) — Supported providers (75+)
+- [AGENTS.md](../../AGENTS.md) — ADOS agent descriptions and team structure
+- [.opencode/README.md](../../.opencode/README.md) — Agent/command inventory
