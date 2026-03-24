@@ -6,10 +6,6 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 description: Delegate a single Conventional Commit.
 agent: committer
 subtask: true
-model: anthropic/claude-sonnet-4-6
-#model: github-copilot/gpt-5-mini
-#model: github-copilot/gpt-4.1
-#model: github-copilot/grok-code-fast-1
 ---
 
 <purpose>Trigger the @committer agent to create exactly one Conventional Commit.</purpose>

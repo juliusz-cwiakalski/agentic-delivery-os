@@ -8,10 +8,10 @@ mode: all
 temperature: 0.2
 
 # Reasoning effort set to maximum — toolsmith quality directly impacts all downstream tooling
-#reasoningEffort: high
-reasoningEffort: xhigh
+reasoningEffort: high
+#reasoningEffort: xhigh
 effort: high
-variant: max
+#variant: max
 
 textVerbosity: low
 tools:

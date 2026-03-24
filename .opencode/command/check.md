@@ -5,8 +5,6 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 #
 description: Run this repo's quality gates script and summarize results via the run-logs-runner.
 agent: runner
-model: github-copilot/gpt-4.1
-#model: github-copilot/grok-code-fast-1
 ---
 
 <purpose>

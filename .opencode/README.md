@@ -29,8 +29,9 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - Hygiene: update this file whenever you add/rename/remove a tool or materially change its intent.
 - PM tracker config: `@pm` reads `.ai/agent/pm-instructions.md` (repo-specific Jira/GitHub workflow).
 - PR/MR platform config: `@pr-manager`, `@reviewer`, `@review-feedback-applier` read `.ai/agent/pr-instructions.md` (repo-specific PR/MR platform and CLI commands).
-- PM delegation: `@pm` delegates debugging to `@fixer` and command execution to `@runner`.
+- PM delegation: `@pm` delegates debugging to `@fixer`, commits to `@committer`, and command execution to `@runner`.
 - Pre-PR gate (autopilot): `@pm` runs `@reviewer` + `@doc-syncer` before `@pr-manager`.
+- Model configuration: models are assigned in `opencode*.jsonc` config files, NOT in agent/command definitions. Agent files describe behavior; config files define which model runs them.
 
 ## Agents
 
