@@ -61,7 +61,7 @@ grep -o '"[a-z-]*":' .opencode/opencode.jsonc | sort
 grep -o '"[a-z-]*":' .opencode/opencode-github-copilot.jsonc | sort
 ```
 
-**Expected**: All 22 agent names present in both configs
+**Expected**: All 20 agent names present in config
 
 ### VT6: AGENTS.md Updated
 

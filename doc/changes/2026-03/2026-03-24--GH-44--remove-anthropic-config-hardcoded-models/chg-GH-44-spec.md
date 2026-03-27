@@ -7,7 +7,7 @@ Two related issues:
 1. **Anthropic OAuth ToS violation**: The `.opencode/opencode-anthropic.jsonc` configuration file encourages use of Anthropic models via OAuth authentication. However, Anthropic's Claude Code Terms of Service explicitly states that OAuth tokens from Claude Free/Pro/Max accounts are intended exclusively for Claude Code and Claude.ai. Using them in third-party tools like OpenCode is not permitted and constitutes a violation of the Consumer Terms of Service. This has been confirmed by community reports showing subscription keys being blocked (OpenCode issues #10937, #10956, #6930).
 
 2. **Hardcoded models in agent definitions**: All 20 agent files in `.opencode/agent/*.md` contain hardcoded `model:` frontmatter lines (e.g., `model: anthropic/claude-opus-4-6`). This creates:
-   - **Duplication**: Model assignments exist in both agent files AND `opencode*.jsonc` config files
+   - **Duplication**: Model assignments existed in both agent files AND `.opencode/opencode-github-copilot.jsonc`
    - **Portability issues**: Users switching providers must edit 20+ files
    - **Maintenance drift**: Model updates require changes in multiple places
    - **Architecture misalignment**: Agent definitions should describe behavior; model selection is deployment configuration
