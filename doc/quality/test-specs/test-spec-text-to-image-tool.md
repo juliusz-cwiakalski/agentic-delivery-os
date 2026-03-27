@@ -6,11 +6,11 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: TEST-SPEC-TEXT-TO-IMAGE-TOOL
 status: Current
 created: 2026-03-07
-last_updated: 2026-03-07
+last_updated: 2026-03-27
 owners: [Juliusz Ćwiąkalski]
 service: tools
 links:
-  related_changes: ["GH-26"]
+  related_changes: ["GH-26", "GH-47"]
   feature_spec: "doc/spec/features/feature-text-to-image-tool.md"
 summary: "Test specification for the text-to-image CLI tool — 81 automated tests across unit, integration, and performance suites."
 ---

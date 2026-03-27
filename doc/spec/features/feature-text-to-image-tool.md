@@ -6,11 +6,11 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: SPEC-TEXT-TO-IMAGE-TOOL
 status: Current
 created: 2026-03-07
-last_updated: 2026-03-07
+last_updated: 2026-03-27
 owners: [Juliusz Ćwiąkalski]
 service: tools
 links:
-  related_changes: ["GH-26"]
+  related_changes: ["GH-26", "GH-47"]
   guides:
     - "doc/tools/text-to-image.md"
     - "doc/guides/tools-convention.md"
@@ -147,12 +147,16 @@ Created automatically on first run with permissions `700`. Location overridable 
 
 ## Integration with Agents
 
-The `@image-generator` agent uses the tool for image generation. The agent workflow is:
+The `@image-generator` agent invokes `text-to-image` as a **system PATH command** (not a project-relative path). The agent workflow is:
 
-1. Run `tools/text-to-image --list-models --output-format json` to discover available providers and models
+1. Run `text-to-image --list-models --output-format json` to discover available providers and models
+   - If the command fails with "command not found" (exit code 127), the agent reports that the tool must be installed and added to PATH, with a link to `doc/tools/text-to-image.md#installation`
+   - If the command succeeds but returns an empty providers list, the agent reports that no providers are configured, with a link to `doc/tools/text-to-image.md#provider-setup`
 2. Select an appropriate model based on task type and available providers
 3. Invoke the tool with the selected provider/model and `--output-format json`
 4. Parse JSON response for status and output path
+
+**Prerequisite**: The tool must be installed system-wide and added to PATH. Project-relative invocation is not supported. See `doc/tools/text-to-image.md#installation` for setup instructions.
 
 ## Related Documentation
 
