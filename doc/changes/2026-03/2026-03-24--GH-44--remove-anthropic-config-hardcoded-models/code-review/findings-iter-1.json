@@ -1,0 +1,62 @@
+{
+  "iteration": 1,
+  "date": "2026-03-24T09:30:00Z",
+  "workItemRef": "GH-44",
+  "branch": "chore/GH-44/remove-anthropic-config-hardcoded-models",
+  "status": "PASS",
+  "findings": [
+    {
+      "id": 1,
+      "severity": "nit",
+      "confidence": "high",
+      "file": ".opencode/opencode-github-copilot.jsonc",
+      "line": 67,
+      "title": "Missing trailing newline",
+      "description": "The config file ends without a trailing newline. POSIX convention requires text files to end with a newline character. Some tools may warn about this.",
+      "suggestedFix": "Add a blank line at the end of the file to ensure it ends with a newline."
+    }
+  ],
+  "acceptance_criteria": {
+    "AC1": { "description": "Anthropic config deleted", "status": "PASS", "evidence": ".opencode/opencode-anthropic.jsonc does not exist" },
+    "AC2": { "description": "No model: in frontmatter", "status": "PASS", "evidence": "grep '^model:' found 0 matches in agent files; grep '#model:' found 0 matches. Note: toolsmith.md contains 'model:' in example template content (lines 227+), NOT in frontmatter" },
+    "AC3": { "description": "No #model: remnants", "status": "PASS", "evidence": "grep '#model:' found 0 matches in both agent/ and command/ directories" },
+    "AC4": { "description": "Config files have all agents", "status": "PASS", "evidence": "opencode-github-copilot.jsonc contains 22 agent configurations covering all 20 agent files plus model assignments" },
+    "AC5": { "description": "AGENTS.md documented", "status": "PASS", "evidence": "Line 126 added: 'Model configuration is separate — models are assigned in opencode*.jsonc config files, not in agent definitions'" },
+    "AC6": { "description": "toolsmith.md model_profiles preserved", "status": "PASS", "evidence": "model_profiles section exists in toolsmith.md body (lines 227+, within template examples)" }
+  },
+  "spec_compliance": {
+    "files_deleted": {
+      "expected": [".opencode/opencode-anthropic.jsonc"],
+      "actual": [".opencode/opencode-anthropic.jsonc"],
+      "status": "PASS"
+    },
+    "files_modified": {
+      "expected": "20 agent files + AGENTS.md",
+      "actual": "20 agent files + 6 command files + AGENTS.md + README.md + config file + doc/guides/opencode-model-configuration.md",
+      "status": "PASS",
+      "notes": "Additional file modifications documented in PM notes as scope clarification. Command file model removal aligns with goal. README.md update aligns with AGENTS.md. Config file fixes documented. Model configuration guide rewrite adds value."
+    }
+  },
+  "plan_compliance": {
+    "phase_1": { "status": "PASS", "task": "Delete .opencode/opencode-anthropic.jsonc" },
+    "phase_2": { "status": "PASS", "tasks": "All 20 agent files had model: frontmatter removed" },
+    "phase_3": { "status": "PASS", "task": "AGENTS.md updated with model config policy" },
+    "additional_scope": {
+      "command_files": "6 command files had model: frontmatter removed (consistent with goal)",
+      "readme": ".opencode/README.md updated with model config convention",
+      "config_fix": ".opencode/opencode-github-copilot.jsonc syntax fixed and clarified as active config",
+      "doc_guide": "doc/guides/opencode-model-configuration.md rewritten with official OpenCode references",
+      "pm_policy": ".opencode/agent/pm.md delegation_policy fixed to require @committer for commits",
+      "blueprint_cleanup": "Removed mistaken blueprint file from doc/templates/blueprints/",
+      "all_documented": true,
+      "notes": "PM notes correctly document scope clarifications"
+    }
+  },
+  "code_quality": {
+    "correctness": "PASS - All model: frontmatter correctly removed; config file has valid structure",
+    "security": "PASS - ToS-violating Anthropic OAuth config deleted; no hardcoded secrets",
+    "documentation": "PASS - AGENTS.md, README.md, and model configuration guide all updated appropriately",
+    "consistency": "PASS - All agent and command files follow same convention; model config centralized in JSONC files"
+  },
+  "summary": "Implementation fully satisfies all acceptance criteria and goals. Scope was properly clarified via PM notes to include command files, README.md, config fixes, and documentation rewrite. One minor nit: config file missing trailing newline. Implementation is complete and ready for merge."
+}
