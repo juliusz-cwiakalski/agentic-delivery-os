@@ -86,6 +86,10 @@ The tool is designed to be invoked by humans, shell scripts, CI/CD pipelines, an
 
 ## Installation
 
+`text-to-image` is a **system-level CLI tool** designed to be installed once and shared across multiple projects. It is not a per-project dependency.
+
+### For Human Users (CLI usage)
+
 1. Clone the repository (or copy the tool file):
 
 ```bash
@@ -98,14 +102,41 @@ git clone https://github.com/juliusz-cwiakalski/agentic-delivery-os.git
 tools/text-to-image --version
 ```
 
-3. Optionally, add `tools/` to your PATH for convenience:
+3. **Install to PATH (required for AI agents, recommended for all users):**
 
 ```bash
+# Add to your shell profile (~/.bashrc, ~/.zshrc, etc.)
 export PATH="$PATH:/path/to/agentic-delivery-os/tools"
+
+# Then reload your shell or source the profile
+source ~/.bashrc  # or ~/.zshrc
+```
+
+4. Verify PATH installation:
+
+```bash
 text-to-image --version
 ```
 
-4. On first run, the tool creates `~/.ai/text-to-image/` (permissions `700`) for configuration, cache, and logs.
+5. On first run, the tool creates `~/.ai/text-to-image/` (permissions `700`) for configuration, cache, and logs.
+
+### For AI Agent Integration
+
+> **IMPORTANT: PATH installation is required for AI agent usage.**
+>
+> AI agents like `@image-generator` invoke `text-to-image` as a system command, not a project-relative path. You must add the `tools/` directory to your PATH for AI agents to discover and use this tool.
+
+### System Tool vs. Per-Project Dependency
+
+| Aspect | System Tool (this tool) | Per-Project Dependency |
+|--------|------------------------|------------------------|
+| Installation location | One central location (e.g., `~/tools/`) | Inside project's `node_modules/` or `vendor/` |
+| Version management | Manual (single version) | Per-project lockfile |
+| Updates | Global update affects all projects | Isolated per project |
+| PATH requirement | **Required** | Usually integrated by package manager |
+| AI agent access | Automatic (PATH lookup) | Requires project-relative path |
+
+This tool follows the **system tool** pattern: install once, use everywhere.
 
 ## Provider Setup
 
@@ -186,7 +217,7 @@ The service account needs the `roles/aiplatform.user` role. Requires `openssl` a
 You can also pass the path via CLI flag:
 
 ```bash
-tools/text-to-image --google-credentials /path/to/service-account.json --provider google --prompt "..." --output img.png
+text-to-image --google-credentials /path/to/service-account.json --provider google --prompt "..." --output img.png
 ```
 
 **Method 2: gcloud CLI (recommended for development)**
@@ -209,7 +240,7 @@ export GOOGLE_PROJECT_ID="your-google-project-id"
 **Override auto-detection:**
 
 ```bash
-tools/text-to-image --google-auth-method gcloud --provider google --prompt "..." --output img.png
+text-to-image --google-auth-method gcloud --provider google --prompt "..." --output img.png
 ```
 
 Valid methods: `auto`, `json`, `service-account`, `gcloud`, `api-key`.
@@ -255,7 +286,7 @@ export HF_API_KEY="hf-your-huggingface-token"
 
 ```bash
 export HF_MODEL="CompVis/stable-diffusion-v1-4"
-tools/text-to-image --provider huggingface --prompt "..." --output img.png
+text-to-image --provider huggingface --prompt "..." --output img.png
 ```
 
 **Gotchas:**
@@ -313,7 +344,7 @@ export REPLICATE_API_TOKEN="your-replicate-token"
 
 ```bash
 export REPLICATE_MODEL="owner/model-name:version"
-tools/text-to-image --provider replicate --prompt "..." --output img.png
+text-to-image --provider replicate --prompt "..." --output img.png
 ```
 
 **Gotchas:**
@@ -352,13 +383,13 @@ export SILICONFLOW_API_KEY="your-siliconflow-key"
 ### Single image generation
 
 ```bash
-tools/text-to-image --prompt "sunset over mountains" --output sunset.png
+text-to-image --prompt "sunset over mountains" --output sunset.png
 ```
 
 ### Specify provider and model
 
 ```bash
-tools/text-to-image --prompt "portrait" --provider openai --model dall-e-3 --output portrait.png
+text-to-image --prompt "portrait" --provider openai --model dall-e-3 --output portrait.png
 ```
 
 ### Quality profiles
@@ -367,13 +398,13 @@ Quality profiles automatically select the best available provider based on your 
 
 ```bash
 # High quality (default): OpenAI -> Stability -> Google
-tools/text-to-image --prompt "product photo" --quality high --output product.png
+text-to-image --prompt "product photo" --quality high --output product.png
 
 # Medium quality: Stability -> OpenAI -> Replicate
-tools/text-to-image --prompt "illustration" --quality medium --output illustration.png
+text-to-image --prompt "illustration" --quality medium --output illustration.png
 
 # Low quality (fastest, cheapest): Hugging Face -> Stability -> SiliconFlow
-tools/text-to-image --prompt "quick sketch" --quality low --output sketch.png
+text-to-image --prompt "quick sketch" --quality low --output sketch.png
 ```
 
 > **Important: Quality profiles vs. direct model selection**
@@ -384,10 +415,10 @@ tools/text-to-image --prompt "quick sketch" --quality low --output sketch.png
 >
 > ```bash
 > # Recommended: explicit model selection based on quality data
-> tools/text-to-image --prompt "product photo" --provider google --model imagen-4.0-ultra-generate-001 --output product.avif
+> text-to-image --prompt "product photo" --provider google --model imagen-4.0-ultra-generate-001 --output product.avif
 >
 > # Best value: Imagen 4.0 Fast at ~$0.020/img scores 79.4% avg
-> tools/text-to-image --prompt "illustration" --provider google --model imagen-4.0-fast-generate-001 --output illustration.avif
+> text-to-image --prompt "illustration" --provider google --model imagen-4.0-fast-generate-001 --output illustration.avif
 > ```
 >
 > **Recommended models by use case (from E2E evaluation):**
@@ -410,7 +441,7 @@ tools/text-to-image --prompt "quick sketch" --quality low --output sketch.png
 ### Custom dimensions
 
 ```bash
-tools/text-to-image --prompt "panoramic landscape" --width 2048 --height 1024 --output panorama.png
+text-to-image --prompt "panoramic landscape" --width 2048 --height 1024 --output panorama.png
 ```
 
 ### Output formats
@@ -421,16 +452,16 @@ The output format is determined by the file extension in `--output`:
 
 ```bash
 # PNG (default, lossless)
-tools/text-to-image --prompt "landscape" --output landscape.png
+text-to-image --prompt "landscape" --output landscape.png
 
 # AVIF (recommended — best compression/quality ratio)
-tools/text-to-image --prompt "landscape" --output landscape.avif
+text-to-image --prompt "landscape" --output landscape.avif
 
 # WebP (good compression, wide browser support)
-tools/text-to-image --prompt "landscape" --output landscape.webp
+text-to-image --prompt "landscape" --output landscape.webp
 
 # JPG (lossy, smallest for photos)
-tools/text-to-image --prompt "landscape" --output landscape.jpg
+text-to-image --prompt "landscape" --output landscape.jpg
 ```
 
 If no recognized extension is specified, the tool auto-appends the provider's native format (usually `.png`).
@@ -440,7 +471,7 @@ If no recognized extension is specified, the tool auto-appends the provider's na
 ### Negative prompts
 
 ```bash
-tools/text-to-image --prompt "portrait of a cat" --negative-prompt "blurry, low quality, distorted" --output cat.png
+text-to-image --prompt "portrait of a cat" --negative-prompt "blurry, low quality, distorted" --output cat.png
 ```
 
 ### Multi-model comparison
@@ -448,7 +479,7 @@ tools/text-to-image --prompt "portrait of a cat" --negative-prompt "blurry, low 
 Generate the same prompt across multiple models simultaneously:
 
 ```bash
-tools/text-to-image --prompt "futuristic city" --models "dall-e-3,stable-diffusion-xl-1024-v1-0,flux-1.1-pro" --output city.png
+text-to-image --prompt "futuristic city" --models "dall-e-3,stable-diffusion-xl-1024-v1-0,flux-1.1-pro" --output city.png
 ```
 
 This produces model-suffixed output files: `city-dall-e-3.png`, `city-stable-diffusion-xl-1024-v1-0.png`, `city-flux-1.1-pro.png`.
@@ -481,10 +512,10 @@ Run sequentially or in parallel:
 
 ```bash
 # Sequential
-tools/text-to-image --config batch.yaml
+text-to-image --config batch.yaml
 
 # Parallel (up to 4 concurrent jobs)
-tools/text-to-image --config batch.yaml --parallel --max-parallel 4
+text-to-image --config batch.yaml --parallel --max-parallel 4
 ```
 
 ### Dry run
@@ -492,7 +523,7 @@ tools/text-to-image --config batch.yaml --parallel --max-parallel 4
 Validate command structure and see what API calls would be made:
 
 ```bash
-tools/text-to-image --dry-run --prompt "test image" --output test.png
+text-to-image --dry-run --prompt "test image" --output test.png
 ```
 
 ### Metadata embedding
@@ -500,7 +531,7 @@ tools/text-to-image --dry-run --prompt "test image" --output test.png
 Embed EXIF/XMP metadata in generated images (requires `exiftool`, falls back to `.metadata` JSON sidecar):
 
 ```bash
-tools/text-to-image --prompt "landscape" --output landscape.jpg \
+text-to-image --prompt "landscape" --output landscape.jpg \
   --metadata --artist "AI Generator" --copyright "2026" \
   --keywords "ai,generated,landscape" --description "AI-generated landscape"
 ```
@@ -509,11 +540,11 @@ tools/text-to-image --prompt "landscape" --output landscape.jpg \
 
 ```bash
 # Image generation with JSON result
-tools/text-to-image --prompt "test" --output test.png --output-format json
+text-to-image --prompt "test" --output test.png --output-format json
 # Output: {"status":"success","output":"/path/to/test.png"}
 
 # Model listing with JSON
-tools/text-to-image --list-models --output-format json
+text-to-image --list-models --output-format json
 # Output: [{"provider":"openai","model":"dall-e-3","name":"DALL-E 3",...}, ...]
 ```
 
@@ -521,25 +552,25 @@ tools/text-to-image --list-models --output-format json
 
 ```bash
 # List models for configured providers
-tools/text-to-image --list-models
+text-to-image --list-models
 
 # List all known models (including unconfigured providers)
-tools/text-to-image --all-models
+text-to-image --all-models
 ```
 
 ### Google Imagen with specific auth method
 
 ```bash
 # Force gcloud authentication
-tools/text-to-image --provider google --google-auth-method gcloud \
+text-to-image --provider google --google-auth-method gcloud \
   --prompt "gourmet dish" --output dish.png
 
 # Use service account JSON
-tools/text-to-image --provider google --google-credentials /path/to/sa.json \
+text-to-image --provider google --google-credentials /path/to/sa.json \
   --prompt "product photo" --output product.png
 
 # Specify region
-tools/text-to-image --provider google --google-location europe-west1 \
+text-to-image --provider google --google-location europe-west1 \
   --prompt "cityscape" --output city.png
 ```
 
@@ -721,7 +752,7 @@ ls -la "$(dirname output.png)"
 Enable verbose output for detailed execution logs:
 
 ```bash
-tools/text-to-image --verbose --prompt "test" --output test.png
+text-to-image --verbose --prompt "test" --output test.png
 ```
 
 Verbose mode shows:

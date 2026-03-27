@@ -84,16 +84,16 @@ This change addresses a usability issue where the `@image-generator` agent refer
 
 **Tasks**:
 
-- [ ] **1.1** Restructure Installation section to emphasize system-level tool requirement
-- [ ] **1.2** Remove "optionally" from PATH instructions (make clear it's required for AI agents)
-- [ ] **1.3** Add clarification box explaining system tool vs. per-project dependency
-- [ ] **1.4** Add explicit note: "For AI agent usage, PATH installation is required"
+- [x] **1.1** Restructure Installation section to emphasize system-level tool requirement — PASSED (restructured into subsections For Human Users / For AI Agent Integration)
+- [x] **1.2** Remove "optionally" from PATH instructions (make clear it's required for AI agents) — PASSED (PATH now required, marked as IMPORTANT)
+- [x] **1.3** Add clarification box explaining system tool vs. per-project dependency — PASSED (added comparison table)
+- [x] **1.4** Add explicit note: "For AI agent usage, PATH installation is required" — PASSED (blockquote with IMPORTANT callout)
 
 **Acceptance Criteria**:
 
-- Must: Installation section states PATH installation is required for AI agent usage (AC-F5-1)
-- Must: Documentation explains this is a system-level tool shared across projects (AC-F5-2)
-- Should: Users can easily distinguish between CLI usage and AI agent requirements
+- Must: Installation section states PATH installation is required for AI agent usage (AC-F5-1) — PASSED (explicit callout in "For AI Agent Integration" section)
+- Must: Documentation explains this is a system-level tool shared across projects (AC-F5-2) — PASSED (comparison table explains system tool vs per-project)
+- Should: Users can easily distinguish between CLI usage and AI agent requirements — PASSED (separate subsections for different use cases)
 
 **Files and modules**:
 
@@ -208,6 +208,6 @@ This change addresses a usability issue where the `@image-generator` agent refer
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| 1 | Not Started | - | - | - | Documentation clarification |
+| 1 | Completed | 2026-03-27 | 2026-03-27 | - | Documentation: Installation section restructured with PATH requirement, system tool comparison table |
 | 2 | Not Started | - | - | - | Agent prompt fix |
 | 3 | Not Started | - | - | - | Finalization |
