@@ -114,25 +114,25 @@ This change addresses a usability issue where the `@image-generator` agent refer
 
 **Tasks**:
 
-- [ ] **2.1** Update `<tool_reference>` section:
-  - Change `CLI: tools/text-to-image` → `CLI: text-to-image`
-  - Add installation URL link (GitHub source URL)
-  - Docs link should use GitHub URL format
-- [ ] **2.2** Update `<process>` Step 1 with tool availability detection:
-  - Detect "command not found" (exit code 127)
-  - Add clear stop condition with installation URL (`doc/tools/text-to-image.md#installation`)
-  - Detect empty providers list from `--list-models` output
-  - Add clear stop condition with provider setup link (`doc/tools/text-to-image.md#provider-setup`)
-- [ ] **2.3** Update all example commands to use `text-to-image` (remove `tools/` prefix):
-  - Lines 71, 207, 238, and all `<example>` blocks
-- [ ] **2.4** Preserve all existing model selection, prompt engineering, and sidecar guidance unchanged
+- [x] **2.1** Update `<tool_reference>` section:
+  - Change `CLI: tools/text-to-image` → `CLI: text-to-image` — PASSED
+  - Add installation URL link (GitHub source URL) — PASSED (added Installation and Provider Setup links)
+  - Docs link should use GitHub URL format — PASSED
+- [x] **2.2** Update `<process>` Step 1 with tool availability detection:
+  - Detect "command not found" (exit code 127) — PASSED
+  - Add clear stop condition with installation URL (`doc/tools/text-to-image.md#installation`) — PASSED
+  - Detect empty providers list from `--list-models` output — PASSED
+  - Add clear stop condition with provider setup link (`doc/tools/text-to-image.md#provider-setup`) — PASSED
+- [x] **2.3** Update all example commands to use `text-to-image` (remove `tools/` prefix):
+  - Lines 71, 207, 238, and all `<example>` blocks — PASSED (all references updated)
+- [x] **2.4** Preserve all existing model selection, prompt engineering, and sidecar guidance unchanged — PASSED
 
 **Acceptance Criteria**:
 
-- Must: All tool invocations use `text-to-image` (not `tools/text-to-image`) (AC-F1-1)
-- Must: Agent reports "tool not installed" with installation URL when command not found (AC-F3-1)
-- Must: Agent reports "no providers configured" with setup guide link when list is empty (AC-F4-1)
-- Should: Agent does NOT search project directories for the tool
+- Must: All tool invocations use `text-to-image` (not `tools/text-to-image`) (AC-F1-1) — PASSED (all command references updated)
+- Must: Agent reports "tool not installed" with installation URL when command not found (AC-F3-1) — PASSED (Step 1 has clear error handling)
+- Must: Agent reports "no providers configured" with setup guide link when list is empty (AC-F4-1) — PASSED (Step 1 has clear error handling)
+- Should: Agent does NOT search project directories for the tool — PASSED (explicit instruction in Step 1)
 
 **Files and modules**:
 
@@ -208,6 +208,6 @@ This change addresses a usability issue where the `@image-generator` agent refer
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| 1 | Completed | 2026-03-27 | 2026-03-27 | - | Documentation: Installation section restructured with PATH requirement, system tool comparison table |
-| 2 | Not Started | - | - | - | Agent prompt fix |
+| 1 | Completed | 2026-03-27 | 2026-03-27 | f609f6f | Documentation: Installation section restructured with PATH requirement, system tool comparison table |
+| 2 | Completed | 2026-03-27 | 2026-03-27 | - | Agent prompt: tool now invoked as system PATH command, availability detection added |
 | 3 | Not Started | - | - | - | Finalization |

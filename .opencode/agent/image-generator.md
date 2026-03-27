@@ -43,8 +43,12 @@ Generate images using the `text-to-image` CLI tool. Classify requests by use cas
 </inputs>
 
 <tool_reference>
-CLI: `tools/text-to-image`
+CLI: `text-to-image` (system PATH command)
 Docs: `doc/tools/text-to-image.md`
+Installation: `doc/tools/text-to-image.md#installation`
+Provider Setup: `doc/tools/text-to-image.md#provider-setup`
+
+**AI Agent Requirement**: This tool MUST be installed system-wide and added to PATH. It is NOT a project-relative script. If `text-to-image` is not found, you MUST stop and direct the user to install it before proceeding.
 
 Key options:
 - `--prompt TEXT` — image description (required)
@@ -68,10 +72,10 @@ Key options:
 
 Model discovery (JSON format):
 ```bash
-tools/text-to-image --list-models --output-format json
+text-to-image --list-models --output-format json
 ```
 
-Exit codes: 0=success, 2=invalid params, 3=auth failed, 4=rate limited, 5=server error, 6=network error, 7=filesystem error
+Exit codes: 0=success, 127=command not found (tool not installed), 2=invalid params, 3=auth failed, 4=rate limited, 5=server error, 6=network error, 7=filesystem error
 </tool_reference>
 
 <use_case_classification>
@@ -203,9 +207,31 @@ When generation fails:
 </sidecar_yaml>
 
 <process>
-<step id="1">Discover available models
-Run `tools/text-to-image --list-models --output-format json` and parse the result.
-If no providers are available, report error and link to `doc/tools/text-to-image.md`.
+<step id="1">Verify tool availability
+Run `text-to-image --list-models --output-format json` and parse the result.
+
+**Error handling:**
+- If the command fails with "command not found" (exit code 127 or similar): STOP and report:
+  ```
+  text-to-image is not installed or not in PATH.
+  
+  This is a system-level CLI tool that must be installed and added to PATH.
+  AI agents require PATH installation to invoke the tool.
+  
+  Installation guide: doc/tools/text-to-image.md#installation
+  After installation, run `text-to-image --version` to verify.
+  ```
+  Do NOT search project directories for the tool. Do NOT delegate to subagents. Direct the user to install the tool.
+
+- If the command succeeds but returns an empty list `[]` or `{"models": []}`: STOP and report:
+  ```
+  No image generation providers are configured.
+  
+  Set up at least one provider API key to use this tool.
+  Provider setup guide: doc/tools/text-to-image.md#provider-setup
+  ```
+
+If successful, proceed with model discovery.
 </step>
 
 <step id="2">Classify the request
@@ -235,7 +261,7 @@ Skip for simple, low-cost requests.
 </step>
 
 <step id="7">Generate the image
-Execute `tools/text-to-image` with `--provider`, `--model`, `--output-format json`, and all relevant options.
+Execute `text-to-image` with `--provider`, `--model`, `--output-format json`, and all relevant options.
 For important/high-value requests (brand assets, hero images, or when caller says "best quality" or "options"), suggest multi-model comparison with `--models`.
 </step>
 
@@ -296,12 +322,12 @@ If FAILED, include:
 
 <example id="photorealistic-product">
 Input: "Generate a hero image for the landing page showing a mountain sunrise"
-Step 1 — Discover: `tools/text-to-image --list-models --output-format json`
+Step 1 — Discover: `text-to-image --list-models --output-format json`
 Step 2 — Classify: Photorealistic scene → routing table primary: `google / imagen-4.0-generate-001` (88.0%)
 Step 3 — Available check: model is in discovered list → use it
 Step 4 — Generate:
 ```bash
-tools/text-to-image \
+text-to-image \
   --prompt "Majestic mountain sunrise, golden hour lighting at 3200K color temperature, dramatic cirrus clouds lit from below, shot with 24mm wide-angle lens at f/11, deep depth of field, photorealistic landscape photography. No text, no watermarks, no borders." \
   --provider google --model imagen-4.0-generate-001 \
   --output assets/hero-mountain.avif --width 1920 --height 1080 \
@@ -311,11 +337,11 @@ tools/text-to-image \
 
 <example id="icon-generation">
 Input: "Create an icon for the settings page, minimalist style, 256x256"
-Step 1 — Discover: `tools/text-to-image --list-models --output-format json`
+Step 1 — Discover: `text-to-image --list-models --output-format json`
 Step 2 — Classify: Branding & identity (icons) → routing table primary: `replicate / flux-1.1-pro` (85.1%)
 Step 3 — Generate:
 ```bash
-tools/text-to-image \
+text-to-image \
   --prompt "Minimalist settings gear icon, #333333 on #FFFFFF background, flat vector style, clean geometric lines, centered, no gradients, no shadows, no 3D, no textures. Scalable." \
   --provider replicate --model flux-1.1-pro \
   --output public/icons/settings.avif --width 256 --height 256 \
@@ -325,11 +351,11 @@ tools/text-to-image \
 
 <example id="abstract-background">
 Input: "Generate a subtle background for the pricing section"
-Step 1 — Discover: `tools/text-to-image --list-models --output-format json`
+Step 1 — Discover: `text-to-image --list-models --output-format json`
 Step 2 — Classify: Abstract & decorative → routing table primary: `google / imagen-3.0-generate-001` (74.9% — older model wins for abstracts)
 Step 3 — Generate:
 ```bash
-tools/text-to-image \
+text-to-image \
   --prompt "Subtle abstract gradient background, soft pastel blues and whites, gentle flowing shapes, large negative space in center for text overlay, minimal, clean. No distinct objects, no text, no watermarks." \
   --provider google --model imagen-3.0-generate-001 \
   --output assets/bg-pricing.avif --width 1920 --height 1080 \
@@ -339,11 +365,11 @@ tools/text-to-image \
 
 <example id="multi-model-comparison">
 Input: "Generate a product photo for our app, best quality, show me options"
-Step 1 — Discover: `tools/text-to-image --list-models --output-format json`
+Step 1 — Discover: `text-to-image --list-models --output-format json`
 Step 2 — Classify: Photorealistic (product) → caller wants options → use multi-model comparison
 Step 3 — Generate:
 ```bash
-tools/text-to-image \
+text-to-image \
   --prompt "Modern smartphone displaying app interface, floating on soft gradient background, studio lighting with soft shadows, product photography, 85mm lens, f/2.8. No text, no watermarks." \
   --models imagen-4.0-ultra-generate-001,imagen-4.0-generate-001,flux-1.1-pro \
   --output assets/product-mockup.avif \
