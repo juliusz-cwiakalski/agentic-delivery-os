@@ -1,0 +1,184 @@
+{
+  "iteration": 1,
+  "date": "2026-03-27",
+  "reviewer": "reviewer",
+  "branch": "fix/GH-47/fix-image-generator-tool-path",
+  "base": "main",
+  "status": "PASS",
+  "findings": [],
+  "plan_compliance": {
+    "tasks_checked": [
+      {
+        "task": "1.1",
+        "description": "Restructure Installation section to emphasize system-level tool requirement",
+        "status": "PASSED",
+        "evidence": "Installation section in doc/tools/text-to-image.md now has subsections 'For Human Users' and 'For AI Agent Integration' with comparison table"
+      },
+      {
+        "task": "1.2",
+        "description": "Remove 'optionally' from PATH instructions",
+        "status": "PASSED",
+        "evidence": "PATH installation now explicitly marked as 'required for AI agents, recommended for all users' with IMPORTANT callout"
+      },
+      {
+        "task": "1.3",
+        "description": "Add clarification box explaining system tool vs. per-project dependency",
+        "status": "PASSED",
+        "evidence": "Comparison table added at lines 131-138 explaining System Tool vs Per-Project Dependency"
+      },
+      {
+        "task": "1.4",
+        "description": "Add explicit note: PATH installation required for AI agent usage",
+        "status": "PASSED",
+        "evidence": "IMPORTANT blockquote at lines 125-127 explicitly states PATH installation is required for AI agent usage"
+      },
+      {
+        "task": "2.1",
+        "description": "Update <tool_reference> section with system PATH invocation and installation links",
+        "status": "PASSED",
+        "evidence": "Line 46: 'CLI: text-to-image (system PATH command)', lines 48-49: Installation and Provider Setup links"
+      },
+      {
+        "task": "2.2",
+        "description": "Update <process> Step 1 with tool availability detection and error handling",
+        "status": "PASSED",
+        "evidence": "Lines 210-234: Complete error handling for 'command not found' (exit 127) and 'empty providers' scenarios with documentation links"
+      },
+      {
+        "task": "2.3",
+        "description": "Update all example commands to use text-to-image (remove tools/ prefix)",
+        "status": "PASSED",
+        "evidence": "All 4 examples (lines 325, 340, 354, 368) use 'text-to-image' without 'tools/' prefix. Grep confirms only doc path refs remain"
+      },
+      {
+        "task": "2.4",
+        "description": "Preserve all existing model selection, prompt engineering, and sidecar guidance unchanged",
+        "status": "PASSED",
+        "evidence": "Model routing table, use_case_classification, prompt_engineering, and sidecar_yaml sections unchanged"
+      },
+      {
+        "task": "3.1",
+        "description": "Review both modified files for consistency and accuracy",
+        "status": "PASSED",
+        "evidence": "Both files aligned: agent links to doc anchors, doc provides anchored sections"
+      },
+      {
+        "task": "3.2",
+        "description": "Verify no remaining tools/text-to-image references in agent prompt",
+        "status": "PASSED",
+        "evidence": "Grep shows only 'doc/tools/text-to-image.md' path refs remain (4 occurrences, all correct doc links)"
+      },
+      {
+        "task": "3.3",
+        "description": "Verify documentation links are correct and resolvable",
+        "status": "PASSED",
+        "evidence": "Anchors verified: #installation anchor at line 87, #provider-setup anchor at line 141"
+      }
+    ],
+    "all_tasks_done": true,
+    "plan_gaps": {
+      "open_tasks": [],
+      "done_but_unchecked": [],
+      "checked_but_missing": []
+    }
+  },
+  "spec_compliance": {
+    "acceptance_criteria": [
+      {
+        "id": "AC-F1-1",
+        "criterion": "All tool invocations use text-to-image (not tools/text-to-image)",
+        "status": "PASSED",
+        "evidence": "All command invocations in agent prompt use bare 'text-to-image'; doc refs to 'doc/tools/text-to-image.md' are documentation paths, not invocations"
+      },
+      {
+        "id": "AC-F3-1",
+        "criterion": "Agent reports 'tool not installed' with installation URL, does NOT search project directories",
+        "status": "PASSED",
+        "evidence": "Lines 214-224 in agent: explicit 'command not found' handling with installation URL and explicit instruction 'Do NOT search project directories'"
+      },
+      {
+        "id": "AC-F4-1",
+        "criterion": "Agent reports 'no providers configured' with link to Provider Setup section",
+        "status": "PASSED",
+        "evidence": "Lines 226-232 in agent: explicit empty providers handling with link to '#provider-setup'"
+      },
+      {
+        "id": "AC-F5-1",
+        "criterion": "Documentation states PATH installation is required for AI agent usage",
+        "status": "PASSED",
+        "evidence": "Lines 125-127 in doc: IMPORTANT callout explicitly states 'PATH installation is required for AI agent usage'"
+      },
+      {
+        "id": "AC-F5-2",
+        "criterion": "Documentation explains system-level tool shared across projects",
+        "status": "PASSED",
+        "evidence": "Lines 129-138 in doc: comparison table explains System Tool vs Per-Project Dependency pattern"
+      }
+    ],
+    "all_criteria_met": true
+  },
+  "code_quality": {
+    "prompt_quality": {
+      "status": "PASS",
+      "notes": [
+        "XML structure used correctly for Claude/Grok models",
+        "Description frontmatter is concise (line 6: 'Generate AI images via text-to-image CLI')",
+        "Constraints are explicit and complete in <constraints> section",
+        "Inputs/outputs clearly defined",
+        "No verbose prose - structured tags preferred",
+        "Agent respects single responsibility (generation only)",
+        "Delegation boundaries clear (@image-reviewer for quality verification)"
+      ]
+    },
+    "naming_conventions": {
+      "status": "PASS",
+      "notes": [
+        "File name uses kebab-case: image-generator.md",
+        "Agent name matches filename",
+        "Branch naming follows convention: fix/GH-47/<slug>"
+      ]
+    },
+    "documentation": {
+      "status": "PASS",
+      "notes": [
+        "doc/spec/features/ updated via doc-syncer (feature-text-to-image-tool.md)",
+        "CHANGE_FOLDER convention followed correctly",
+        "License headers present on all modified Markdown files"
+      ]
+    },
+    "security": {
+      "status": "PASS",
+      "notes": [
+        "No hardcoded secrets",
+        "No sensitive data in tmp/ paths",
+        "Error messages guide users to install/configure without exposing internals"
+      ]
+    },
+    "error_handling": {
+      "status": "PASS",
+      "notes": [
+        "Exit code 127 handling for 'command not found' is correct",
+        "Empty providers detection is distinct from tool-not-installed",
+        "Clear error messages with actionable guidance and documentation links"
+      ]
+    }
+  },
+  "doc_sync_verification": {
+    "file": "doc/spec/features/feature-text-to-image-tool.md",
+    "changes": {
+      "line_11": "last_updated updated to 2026-03-27",
+      "line_13": "related_changes updated to include GH-47",
+      "lines_150-159": "Integration with Agents section updated to describe PATH invocation and error handling"
+    },
+    "status": "PASS",
+    "notes": "System spec correctly reflects the agent integration changes"
+  },
+  "summary": {
+    "total_findings": 0,
+    "critical": 0,
+    "major": 0,
+    "minor": 0,
+    "nit": 0,
+    "recommendation": "PASS - No remediation required. All acceptance criteria met, all plan tasks completed correctly, code quality heuristics satisfied."
+  }
+}

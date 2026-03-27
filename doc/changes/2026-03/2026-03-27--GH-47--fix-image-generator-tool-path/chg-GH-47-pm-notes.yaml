@@ -1,0 +1,23 @@
+change_id: GH-47
+title: "image-generator agent references system tool with project-relative path and lacks install guidance"
+phases:
+  clarify_scope: { started: "2026-03-27", completed: "2026-03-27" }
+  specification: { started: "2026-03-27", completed: "2026-03-27" }
+  test_planning: { started: "2026-03-27", completed: "2026-03-27" }
+  delivery_planning: { started: "2026-03-27", completed: "2026-03-27" }
+  delivery: { started: "2026-03-27", completed: "2026-03-27" }
+  system_spec_update: { started: "2026-03-27", completed: "2026-03-27" }
+  review_fix: { started: "2026-03-27", completed: "2026-03-27" }
+  quality_gates: { started: "2026-03-27", completed: "2026-03-27" }
+  dod_check: { started: "2026-03-27", completed: "2026-03-27" }
+  pr_creation: { started: null, completed: null, url: null }
+decisions: []
+open_questions: []
+blockers: []
+notes:
+  - text: "Issue created from failed image-generator usage in external project. User hit 'command not found' and agent got lost searching project directories instead of guiding to install the tool."
+    type: info
+    date: "2026-03-27"
+  - text: "Scope is clear: fix agent prompt to use system PATH invocation and clarify documentation about system-level tool installation."
+    type: info
+    date: "2026-03-27"
