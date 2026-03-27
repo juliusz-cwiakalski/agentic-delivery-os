@@ -57,15 +57,24 @@ Use CLI when MCP tools don't cover the operation or when a unified diff is neede
 | Operation | Command | Notes |
 |-----------|---------|-------|
 | **Fetch PR diff** | `gh pr diff "$NUMBER"` | Full unified diff — MCP only returns per-file patches |
-| **Reply to PR comment thread** | `gh api "repos/{owner}/{repo}/pulls/$NUMBER/comments/$COMMENT_ID/replies" -X POST -f body="$BODY"` | MCP doesn't have a direct reply-to-comment tool |
 | **Check CLI auth** | `gh auth status` | Verify CLI is authenticated |
 | **Detect platform** | `git remote get-url origin` | Parse for `github.com` host |
 
-### Resolve/Unresolve PR Review Threads (GraphQL via `gh`)
+### PR Review Thread Management (GraphQL via `gh`)
 
-GitHub has no REST API or MCP tool for resolving PR review threads. Use `gh api graphql` with the `resolveReviewThread` mutation.
+GitHub has no REST API for thread resolution or thread replies. MCP tools also lack these capabilities. Use `gh api graphql` for:
 
-**Step 1: Find thread node IDs** for a PR:
+- Fetching review threads (with resolution status)
+- Replying to threads
+- Resolving/unresolving threads
+
+**Key GraphQL IDs:**
+- `PullRequestReviewThread.id` — thread node ID (used for resolve/unresolve)
+- `PullRequestReviewComment.id` — comment node ID (used for replies)
+
+---
+
+#### Fetch All Review Threads
 
 ```bash
 gh api graphql -f query='
@@ -78,7 +87,7 @@ gh api graphql -f query='
             isResolved
             path
             line
-            comments(first:5) { nodes { id author { login } bodyText } }
+            comments(first:10) { nodes { id author { login } body } }
           }
         }
       }
@@ -86,7 +95,31 @@ gh api graphql -f query='
   }' -F owner="juliusz-cwiakalski" -F repo="agentic-delivery-os" -F number=$NUMBER
 ```
 
-**Step 2: Resolve a thread** (given its node ID):
+Returns thread node IDs (`id`) and resolution status (`isResolved`) for all threads.
+
+---
+
+#### Reply to a Thread (Preferred Method)
+
+Use `addPullRequestReviewThreadReply` mutation with the thread node ID:
+
+```bash
+gh api graphql -f query='
+  mutation($threadId:ID!, $body:String!) {
+    addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$threadId, body:$body}) {
+      comment { id body author { login } }
+    }
+  }' -f threadId="$THREAD_NODE_ID" -f body="Your reply text here"
+```
+
+**Alternative (REST fallback):** If you have the REST comment ID (integer), use:
+```bash
+gh api "repos/{owner}/{repo}/pulls/$NUMBER/comments/$COMMENT_ID/replies" -X POST -f body="$BODY"
+```
+
+---
+
+#### Resolve a Thread
 
 ```bash
 gh api graphql -f query='
@@ -97,7 +130,9 @@ gh api graphql -f query='
   }' -f threadId="$THREAD_NODE_ID"
 ```
 
-**Step 3: Unresolve** (if needed):
+---
+
+#### Unresolve a Thread
 
 ```bash
 gh api graphql -f query='
@@ -108,7 +143,56 @@ gh api graphql -f query='
   }' -f threadId="$THREAD_NODE_ID"
 ```
 
-**Matching comment to thread**: REST API comment objects include a `node_id` field (GraphQL ID). Match it against the `comments.nodes[].id` in the `reviewThreads` query above to find the owning thread.
+---
+
+#### Bulk Resolve Multiple Threads (Efficient)
+
+Use GraphQL aliases to resolve multiple threads in a single request:
+
+```bash
+gh api graphql -f query='
+  mutation {
+    r1: resolveReviewThread(input:{threadId:"THREAD_ID_1"}) { thread { id isResolved } }
+    r2: resolveReviewThread(input:{threadId:"THREAD_ID_2"}) { thread { id isResolved } }
+    r3: resolveReviewThread(input:{threadId:"THREAD_ID_3"}) { thread { id isResolved } }
+  }'
+```
+
+**Best practices:**
+- Chunk requests to 20-50 threads per request to avoid payload limits
+- Check `isResolved` in response to confirm success
+- Implement exponential backoff for rate limiting
+- Skip already-resolved threads (check before resolving)
+
+---
+
+#### Mapping REST Comment ID to GraphQL Thread
+
+REST comment objects include `node_id` (GraphQL ID). To find the thread for a REST comment:
+
+1. List REST comments: `GET /repos/{owner}/{repo}/pulls/{pull_number}/comments`
+2. Find the comment's `node_id` field
+3. Query GraphQL reviewThreads and match `comments.nodes[].id` to the REST `node_id`
+4. The parent thread ID is the `PullRequestReviewThread.id`
+
+---
+
+### MCP Tool Gaps (Use GraphQL Fallback)
+
+MCP tools currently lack:
+
+| Capability | MCP Tool | Workaround |
+|------------|----------|------------|
+| Fetch review threads | Not available | Use `gh api graphql` with `reviewThreads` query |
+| Reply to thread | Not available | Use `addPullRequestReviewThreadReply` mutation |
+| Resolve thread | Not available | Use `resolveReviewThread` mutation |
+| Unresolve thread | Not available | Use `unresolveReviewThread` mutation |
+
+**Recommended MCP additions** (for future):
+- `mcp_github-mcp_get_pull_request_review_threads(owner, repo, pull_number, first)`
+- `mcp_github-mcp_add_pull_request_review_thread_reply(owner, repo, thread_id, body)`
+- `mcp_github-mcp_resolve_review_thread(owner, repo, thread_id)`
+- `mcp_github-mcp_unresolve_review_thread(owner, repo, thread_id)`
 
 ## Platform-Specific Notes
 
