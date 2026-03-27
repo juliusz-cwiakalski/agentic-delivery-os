@@ -123,6 +123,7 @@ When adding or modifying agents, commands, or skills:
 - **Test through the delivery process** — run modified agents on a real change to validate.
 - **Update [.opencode/README.md](.opencode/README.md)** when adding, removing, or renaming tools.
 - **Keep prompts tight** — verbose prompts waste tokens and reduce quality; prefer XML structure for Claude models.
+- **Model configuration is separate** — models are assigned in `opencode*.jsonc` config files, not in agent definitions. Agent files describe behavior; config files define which model runs them.
 
 ## Change artifacts
 
@@ -183,7 +184,32 @@ Test files follow the pattern `test-*.sh` inside `.tests/` subdirectories. Run w
 
 ## License headers
 
-Every Markdown file carries a three-line YAML frontmatter: copyright, MIT license reference, and canonical URL. Bash scripts carry the same three lines as comments after the shebang. Run `scripts/add-header-location.sh <file-or-directory>` to add or update headers for both file types.
+**AI agents must never add license headers.** Headers are managed exclusively by `scripts/add-header-location.sh` for specific paths.
+
+### Where headers are required
+
+The script adds headers only to files that are installed when users onboard ADOS:
+- `.opencode/agent/` — agent definitions
+- `.opencode/command/` — command definitions
+- `doc/guides/` — reusable guides
+- `doc/documentation-handbook.md` — documentation handbook
+- `tools/` — CLI utilities
+
+### Where headers are NOT required
+
+- `doc/changes/` — change artifacts (spec, plan, test-plan, pm-notes) are temporary working files
+- `doc/decisions/` — decision records are project-specific
+- `doc/planning/` — internal planning notes
+- `.ai/` — configuration and ephemeral state
+
+### How to add headers
+
+Run the script on configured paths:
+
+```bash
+scripts/add-header-location.sh .opencode/agent
+scripts/add-header-location.sh doc/guides
+```
 
 ## Key references
 

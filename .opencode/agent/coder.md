@@ -5,9 +5,6 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 #
 description: Implement plan phases by writing code for a change.
 mode: all
-model: anthropic/claude-opus-4-6
-#model: github-copilot/gpt-4.1
-#model: github-copilot/grok-code-fast-1
 ---
 
 <role>

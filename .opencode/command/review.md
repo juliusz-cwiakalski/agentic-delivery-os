@@ -6,9 +6,6 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 description: Review change vs spec, plan, code quality heuristics, and repo rules; append remediation phase if needed.
 agent: reviewer
 subtask: true
-model: deepseek/deepseek-reasoner
-#model: github-copilot/gpt-4.1
-#model: github-copilot/grok-code-fast-1
 ---
 
 <purpose>

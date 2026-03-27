@@ -6,8 +6,6 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 description: Create/update PR/MR title and description.
 agent: pr-manager
 subtask: true
-model: github-copilot/gpt-4.1
-#model: github-copilot/grok-code-fast-1
 ---
 
 <purpose>Trigger the @pr-manager agent to create/update the PR/MR for the current branch (writes `tmp/pr/<branch>/description.md`).</purpose>

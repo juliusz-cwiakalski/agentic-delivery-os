@@ -5,7 +5,6 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 #
 description: Generate AI images via text-to-image CLI
 mode: all
-model: anthropic/claude-opus-4-6
 tools:
   read: true
   glob: true

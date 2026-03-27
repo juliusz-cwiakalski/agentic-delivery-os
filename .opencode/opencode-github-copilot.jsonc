@@ -1,6 +1,20 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "default_agent": "pm",
+  
+  // ============================================================================
+  // PROJECT-LEVEL MODEL CONFIGURATION
+  // ============================================================================
+  // This file assigns models to agents for GitHub Copilot subscription.
+  // It is merged with opencode.jsonc (base) and takes precedence.
+  //
+  // OpenCode configs are merged (not replaced), so you can:
+  //   - Override only the agents you want with different models
+  //   - Create provider-specific configs (opencode-<provider>.jsonc)
+  //
+  // Agent model precedence: opencode.jsonc (base) → opencode-<provider>.jsonc
+  // See: https://opencode.ai/docs/config/ for config locations and precedence
+  // ============================================================================
 
   // GitHub Copilot subscription model assignment.
   //
@@ -20,32 +34,34 @@
 
   "agent": {
     // --- Tier 1 (3.0x) — deep reasoning, architecture, thorough review ---
-    "architect":        { "model": "github-copilot/claude-opus-4.6" },
-    "bootstrapper":     { "model": "github-copilot/claude-opus-4.6" },
-    "reviewer":         { "model": "github-copilot/claude-opus-4.6" },
+    "architect":               { "model": "github-copilot/claude-opus-4.6" },
+    "bootstrapper":            { "model": "github-copilot/claude-opus-4.6" },
+    "reviewer":                { "model": "github-copilot/claude-opus-4.6" },
+    "plan-writer":             { "model": "github-copilot/claude-opus-4.6" },
+    "pm":                      { "model": "github-copilot/claude-opus-4.6" },
+    "review-feedback-applier": { "model": "github-copilot/claude-opus-4.6" },
+    "doc-syncer":              { "model": "github-copilot/claude-opus-4.6" },
+    "toolsmith":               { "model": "github-copilot/claude-opus-4.6" },
 
     // --- Tier 2 (1.0x) — core work: orchestration, code, plans, specs, fixing ---
-    "pm":               { "model": "github-copilot/claude-sonnet-4.6" },
-    "coder":            { "model": "github-copilot/gpt-5.2-codex" },
-    "fixer":            { "model": "github-copilot/claude-sonnet-4.6" },
-    "toolsmith":        { "model": "github-copilot/claude-sonnet-4.6" },
-    "plan-writer":      { "model": "github-copilot/claude-sonnet-4.6" },
-    "spec-writer":      { "model": "github-copilot/claude-sonnet-4.6" },
-    "test-plan-writer": { "model": "github-copilot/claude-sonnet-4.6" },
-    "designer":         { "model": "github-copilot/gemini-2.5-pro" },
+    "coder":                   { "model": "github-copilot/gpt-5.3-codex" },
+    "fixer":                   { "model": "github-copilot/gpt-5.3-codex" },
+    "spec-writer":             { "model": "github-copilot/gpt-5.3-codex" },
+    "test-plan-writer":        { "model": "github-copilot/gpt-5.3-codex" },
+    "designer":                { "model": "github-copilot/gemini-2.5-pro" },
+    "pr-manager":              { "model": "github-copilot/gpt-5.3-codex" },
+    "editor":                  { "model": "github-copilot/gemini-2.5-pro" },
 
     // --- Tier 3 (0.33x) — well-scoped: commits, docs, descriptions, images ---
-    "committer":        { "model": "github-copilot/claude-haiku-4.5" },
-    "doc-syncer":       { "model": "github-copilot/claude-haiku-4.5" },
-    "pr-manager":       { "model": "github-copilot/claude-haiku-4.5" },
-    "image-reviewer":   { "model": "github-copilot/gemini-3-flash-preview" },
-    "image-generator":  { "model": "github-copilot/gemini-3-flash-preview" },
-    "editor":           { "model": "github-copilot/claude-haiku-4.5" },
+    "image-reviewer":          { "model": "github-copilot/gemini-3-flash-preview" },
+    "image-generator":         { "model": "github-copilot/gemini-3-flash-preview" },
 
     // --- Tier 4 (0.25x) — fast/cheap: research, simple tasks ---
-    "external-researcher": { "model": "github-copilot/grok-code-fast-1" },
+    // example models: "github-copilot/grok-code-fast-1"
 
     // --- Tier 5 (free) — trivial: command execution, log capture ---
-    "runner":           { "model": "github-copilot/gpt-5-mini" }
+    "committer":               { "model": "github-copilot/gpt-5-mini" },
+    "external-researcher":     { "model": "github-copilot/gpt-5-mini" },
+    "runner":                  { "model": "github-copilot/gpt-5-mini" }
   }
 }

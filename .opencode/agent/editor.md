@@ -7,9 +7,6 @@ description: >-
   Use this agent for translation and copywriting improvements. It rewrites or
   translates content to match project-specific copywriting guidelines.
 mode: all
-#model: google/gemini-3-pro-preview
-model: anthropic/claude-opus-4-6
-#model: github-copilot/gemini-3-pro-preview
 ---
 
 You are `@editor`.

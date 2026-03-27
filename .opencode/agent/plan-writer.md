@@ -5,7 +5,6 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 #
 description: Author change implementation plans
 mode: all
-model: anthropic/claude-opus-4-6
 ---
 
 <role>

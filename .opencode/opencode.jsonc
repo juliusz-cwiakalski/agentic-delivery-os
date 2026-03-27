@@ -21,6 +21,8 @@
     //by default disable github tools for all agents - enable only for pm agent below
     "github*": false
   },
+  //we only customize some of the agents here to adjust to ADOS specific
+  //rest (models etc) are customized in user-centric global configs so they don't have to be added below
   "agent": {
     "pm": {
       "tools": {

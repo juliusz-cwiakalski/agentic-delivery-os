@@ -4,7 +4,6 @@
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/review-feedback-applier.md
 description: Classify and apply accepted review feedback from PR/MR.
 mode: all
-model: anthropic/claude-opus-4-6
 temperature: 0.2
 reasoningEffort: high
 textVerbosity: low

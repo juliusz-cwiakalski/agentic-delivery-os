@@ -6,9 +6,6 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 description: Execute quality gates, fix any issues found, and create a single high-quality Conventional Commit summarizing all changes made.
 agent: fixer
 subtask: true
-model: deepseek/deepseek-reasoner
-#model: github-copilot/gpt-4.1
-#model: github-copilot/grok-code-fast-1
 ---
 
 Run quality gates and make sure everything is fine.
