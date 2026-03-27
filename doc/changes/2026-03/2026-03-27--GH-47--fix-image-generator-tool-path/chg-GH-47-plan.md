@@ -3,7 +3,7 @@
 # MIT License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/changes/2026-03/2026-03-27--GH-47--fix-image-generator-tool-path/chg-GH-47-plan.md
 id: chg-GH-47-fix-image-generator-tool-path
-status: Proposed
+status: Completed
 created: 2026-03-27T00:00:00Z
 last_updated: 2026-03-27T00:00:00Z
 owners:
@@ -154,17 +154,17 @@ This change addresses a usability issue where the `@image-generator` agent refer
 
 **Tasks**:
 
-- [ ] **3.1** Review both modified files for consistency and accuracy
-- [ ] **3.2** Verify no remaining `tools/text-to-image` references in agent prompt (search the file)
-- [ ] **3.3** Verify documentation links are correct and resolvable
-- [ ] **3.4** Stage changes (both files)
-- [ ] **3.5** Create final commit
+- [x] **3.1** Review both modified files for consistency and accuracy — PASSED (verified alignment between docs and agent prompt)
+- [x] **3.2** Verify no remaining `tools/text-to-image` references in agent prompt (search the file) — PASSED (only doc path refs remain: `doc/tools/text-to-image.md`)
+- [x] **3.3** Verify documentation links are correct and resolvable — PASSED (`#installation` anchor at line 87, `#provider-setup` anchor at line 141)
+- [x] **3.4** Stage changes (both files) — PASSED
+- [x] **3.5** Create final commit — PASSED
 
 **Acceptance Criteria**:
 
-- Must: All acceptance criteria from spec are met
-- Must: No `<...>` placeholders remain
-- Must: Documentation links are valid
+- Must: All acceptance criteria from spec are met — PASSED
+- Must: No `<...>` placeholders remain — PASSED (none introduced)
+- Must: Documentation links are valid — PASSED (anchors verified)
 
 **Files and modules**:
 
@@ -173,8 +173,8 @@ This change addresses a usability issue where the `@image-generator` agent refer
 
 **Tests**:
 
-- Grep search: Verify no `tools/text-to-image` in agent file
-- Link validation: Verify `doc/tools/text-to-image.md#installation` and `#provider-setup` anchors exist
+- Grep search: Verify no `tools/text-to-image` in agent file — PASSED (only doc path refs: `doc/tools/text-to-image.md`)
+- Link validation: Verify `doc/tools/text-to-image.md#installation` and `#provider-setup` anchors exist — PASSED
 
 **Completion signal**: `docs(GH-47): finalize plan — text-to-image PATH fix`
 
@@ -209,5 +209,5 @@ This change addresses a usability issue where the `@image-generator` agent refer
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
 | 1 | Completed | 2026-03-27 | 2026-03-27 | f609f6f | Documentation: Installation section restructured with PATH requirement, system tool comparison table |
-| 2 | Completed | 2026-03-27 | 2026-03-27 | - | Agent prompt: tool now invoked as system PATH command, availability detection added |
-| 3 | Not Started | - | - | - | Finalization |
+| 2 | Completed | 2026-03-27 | 2026-03-27 | 070867d | Agent prompt: tool now invoked as system PATH command, availability detection added |
+| 3 | Completed | 2026-03-27 | 2026-03-27 | - | Finalization: verified no remaining tools/ refs in commands, docs anchors valid |
