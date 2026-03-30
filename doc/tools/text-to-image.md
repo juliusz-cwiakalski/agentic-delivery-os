@@ -90,16 +90,17 @@ The tool is designed to be invoked by humans, shell scripts, CI/CD pipelines, an
 
 ### For Human Users (CLI usage)
 
-1. Clone the repository (or copy the tool file):
+1. Clone the repository:
 
 ```bash
 git clone https://github.com/juliusz-cwiakalski/agentic-delivery-os.git
+cd agentic-delivery-os
 ```
 
-2. The tool is already executable. Verify:
+2. Verify the tool is executable:
 
 ```bash
-tools/text-to-image --version
+./tools/text-to-image --version
 ```
 
 3. **Install to PATH (required for AI agents, recommended for all users):**

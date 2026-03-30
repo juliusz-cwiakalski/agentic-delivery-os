@@ -10,7 +10,7 @@ phases:
   review_fix: { started: "2026-03-27", completed: "2026-03-27" }
   quality_gates: { started: "2026-03-27", completed: "2026-03-27" }
   dod_check: { started: "2026-03-27", completed: "2026-03-27" }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: "2026-03-27", completed: "2026-03-27", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/48" }
 decisions: []
 open_questions: []
 blockers: []

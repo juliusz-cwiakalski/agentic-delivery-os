@@ -150,13 +150,13 @@ Created automatically on first run with permissions `700`. Location overridable 
 The `@image-generator` agent invokes `text-to-image` as a **system PATH command** (not a project-relative path). The agent workflow is:
 
 1. Run `text-to-image --list-models --output-format json` to discover available providers and models
-   - If the command fails with "command not found" (exit code 127), the agent reports that the tool must be installed and added to PATH, with a link to `doc/tools/text-to-image.md#installation`
-   - If the command succeeds but returns an empty providers list, the agent reports that no providers are configured, with a link to `doc/tools/text-to-image.md#provider-setup`
+   - If the command fails with "command not found" (exit code 127), the agent reports that the tool must be installed and added to PATH, with a link to https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/tools/text-to-image.md#installation
+   - If the command succeeds but returns an empty providers list, the agent reports that no providers are configured, with a link to https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/tools/text-to-image.md#provider-setup
 2. Select an appropriate model based on task type and available providers
 3. Invoke the tool with the selected provider/model and `--output-format json`
 4. Parse JSON response for status and output path
 
-**Prerequisite**: The tool must be installed system-wide and added to PATH. Project-relative invocation is not supported. See `doc/tools/text-to-image.md#installation` for setup instructions.
+**Prerequisite**: For the `@image-generator` agent, the tool must be installed system-wide and added to PATH; the agent does not support project-relative invocation. See `doc/tools/text-to-image.md#installation` for setup instructions.
 
 ## Related Documentation
 

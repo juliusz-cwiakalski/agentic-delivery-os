@@ -44,9 +44,9 @@ Generate images using the `text-to-image` CLI tool. Classify requests by use cas
 
 <tool_reference>
 CLI: `text-to-image` (system PATH command)
-Docs: `doc/tools/text-to-image.md`
-Installation: `doc/tools/text-to-image.md#installation`
-Provider Setup: `doc/tools/text-to-image.md#provider-setup`
+Docs: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/tools/text-to-image.md
+Installation: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/tools/text-to-image.md#installation
+Provider Setup: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/tools/text-to-image.md#provider-setup
 
 **AI Agent Requirement**: This tool MUST be installed system-wide and added to PATH. It is NOT a project-relative script. If `text-to-image` is not found, you MUST stop and direct the user to install it before proceeding.
 
@@ -214,11 +214,11 @@ Run `text-to-image --list-models --output-format json` and parse the result.
 - If the command fails with "command not found" (exit code 127 or similar): STOP and report:
   ```
   text-to-image is not installed or not in PATH.
-  
+
   This is a system-level CLI tool that must be installed and added to PATH.
   AI agents require PATH installation to invoke the tool.
-  
-  Installation guide: doc/tools/text-to-image.md#installation
+
+  Installation guide: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/tools/text-to-image.md#installation
   After installation, run `text-to-image --version` to verify.
   ```
   Do NOT search project directories for the tool. Do NOT delegate to subagents. Direct the user to install the tool.
@@ -226,9 +226,9 @@ Run `text-to-image --list-models --output-format json` and parse the result.
 - If the command succeeds but returns an empty list `[]` or `{"models": []}`: STOP and report:
   ```
   No image generation providers are configured.
-  
+
   Set up at least one provider API key to use this tool.
-  Provider setup guide: doc/tools/text-to-image.md#provider-setup
+  Provider setup guide: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/tools/text-to-image.md#provider-setup
   ```
 
 If successful, proceed with model discovery.
