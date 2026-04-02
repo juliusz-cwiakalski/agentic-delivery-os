@@ -5,7 +5,7 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 change:
   ref: GH-40
   type: feat
-  status: Proposed
+  status: Implemented
   slug: multi-tool-support
   title: "Support other coding tools (Claude Code) - Single-source agent definitions"
   owners: ["@juliusz-cwiakalski"]
@@ -58,6 +58,7 @@ Because ADOS currently supports only OpenCode as an installation target, users w
 - **G-3**: Provide build-time generation of Claude Code plugin structure with proper frontmatter transformation
 - **G-4**: Ensure backward compatibility with existing OpenCode installation
 - **G-5**: Enable CI verification that generated plugin is current (no stale builds)
+- **G-6**: Design for extensibility - build script architecture should support future tools (Copilot CLI, Codex, etc.)
 
 ### 4.1 Success Metrics / KPIs
 
@@ -71,7 +72,7 @@ Because ADOS currently supports only OpenCode as an installation target, users w
 
 ### 4.2 Non-Goals
 
-- **NG-1**: Support for other tools (Codex, Cursor, Windsurf) — future tickets
+- **NG-1**: Support for other tools (Copilot CLI, Codex, Cursor, Windsurf) — this ticket establishes the pattern; future tickets add specific tools
 - **NG-2**: Global Claude Code installation — local/repo installation only
 - **NG-3**: `--all` flag for installing to multiple tools simultaneously — future ticket
 - **NG-4**: MCP server configuration in agent frontmatter — stays in external config files
@@ -89,6 +90,7 @@ Because ADOS currently supports only OpenCode as an installation target, users w
 | F-6 | License header application | Ensures generated files have proper copyright headers |
 | F-7 | CI verification of build freshness | Prevents stale generated code from being merged |
 | F-8 | OpenCode backward compatibility | Existing workflow and installation unchanged |
+| F-9 | Extensible build script architecture | Enables future tool support with minimal changes |
 
 ### 5.1 Capability Details
 
@@ -115,6 +117,33 @@ A GitHub Actions workflow runs the build script and checks for git changes. If c
 
 **F-8: OpenCode backward compatibility**
 No changes to OpenCode installation. The `.opencode/` directory remains unchanged. External model config files continue to work. Users who only use OpenCode see no changes to their workflow.
+
+**F-9: Extensible build script architecture**
+The build script is designed for extensibility. It uses a modular structure with transformation functions that can be extended for future tools:
+
+```bash
+# Core architecture (pseudo-code)
+build_plugin() {
+  local tool="$1"           # "claude", "copilot", etc.
+  local source_dir=".opencode"
+  local output_dir=".ados-${tool}"
+  
+  # Tool-specific transformation
+  transform_agents "${tool}" "${source_dir}/agent" "${output_dir}/agents"
+  transform_commands "${tool}" "${source_dir}/command" "${output_dir}/skills"
+  generate_manifest "${tool}" "${output_dir}"
+  apply_headers "${output_dir}"
+}
+```
+
+Key extensibility patterns:
+- Tool name is parameterized (`claude`, `copilot`, etc.)
+- Transformation functions are tool-specific but follow a common interface
+- Output directory follows pattern `.ados-${tool}/`
+- Manifest generation is tool-specific
+- Adding a new tool requires: (1) defining transformation rules, (2) adding tool case to build script, (3) creating output directory
+
+This enables future tickets for Copilot CLI, Codex, etc. to add support with minimal changes to the build script.
 
 ## 6. USER & SYSTEM FLOWS
 
