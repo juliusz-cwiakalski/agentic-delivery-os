@@ -353,22 +353,22 @@ This plan delivers Claude Code support for ADOS through a build-time transformat
 
 **Tasks**:
 
-- [ ] **6.1** Run all existing repository tests
-- [ ] **6.2** Verify OpenCode installation:
+- [x] **6.1** Run all existing repository tests
+- [x] **6.2** Verify OpenCode installation:
   - Confirm agents still load
   - Confirm commands still work
   - Confirm `claude:` key ignored
-- [ ] **6.3** Manual verification: Claude Code plugin loading:
-  - Verify `.ados-claude/.claude-plugin/plugin.json` valid JSON
-  - Verify generated agent frontmatter valid YAML
-  - Verify generated skill frontmatter valid YAML
-- [ ] **6.4** Verify build script reproducibility:
+- [x] **6.3** Manual verification: Claude Code plugin loading:
+  - Verify `.ados-claude/.claude-plugin/plugin.json` valid JSON ✓
+  - Verify generated agent frontmatter valid YAML ✓
+  - Verify generated skill frontmatter valid YAML ✓
+- [x] **6.4** Verify build script reproducibility:
   - Run build script twice
-  - Compare outputs (should be identical)
-- [ ] **6.5** Verify CI workflow:
+  - Compare outputs (should be identical) ✓
+- [x] **6.5** Verify CI workflow:
   - Run CI locally or in test branch
   - Confirm stale build detection works
-- [ ] **6.6** Update plan file with completion status
+- [x] **6.6** Update plan file with completion status
 
 **Acceptance Criteria**:
 
