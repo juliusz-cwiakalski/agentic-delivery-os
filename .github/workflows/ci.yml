@@ -1,0 +1,38 @@
+# CI workflow for Agentic Delivery OS
+# Verifies that generated files are up-to-date and runs quality checks
+
+name: CI
+
+on:
+  push:
+    branches: [main, feat/**, fix/**]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify-claude-build:
+    name: Verify Claude Code plugin is current
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Make build script executable
+        run: chmod +x scripts/build-claude-plugin.sh
+
+      - name: Build Claude Code plugin
+        run: ./scripts/build-claude-plugin.sh --verbose
+
+      - name: Check for changes
+        run: |
+          if git diff --exit-code .ados-claude/; then
+            echo "✓ Generated plugin is current"
+          else
+            echo "::error::Generated plugin is stale. Run 'scripts/build-claude-plugin.sh' and commit the changes."
+            exit 1
+          fi
+
+  # Future: Add additional quality gates here
+  # - test
+  # - lint
+  # - check

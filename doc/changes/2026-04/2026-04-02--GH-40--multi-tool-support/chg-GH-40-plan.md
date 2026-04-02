@@ -240,7 +240,7 @@ This plan delivers Claude Code support for ADOS through a build-time transformat
   - Verify license headers ✓
   - Verify body content preserved ✓
 - [x] **3.4** Add `.ados-claude/` to git tracking
-- [ ] **3.5** Commit generated plugin directory
+- [x] **3.5** Commit generated plugin directory
 
 **Acceptance Criteria**:
 
@@ -270,15 +270,15 @@ This plan delivers Claude Code support for ADOS through a build-time transformat
 
 **Tasks**:
 
-- [ ] **4.1** Create `.github/workflows/` directory if missing
-- [ ] **4.2** Create or modify `.github/workflows/ci.yml`:
+- [x] **4.1** Create `.github/workflows/` directory if missing
+- [x] **4.2** Create or modify `.github/workflows/ci.yml`:
   - Add job: `verify-claude-build`
   - Step: Checkout repository
   - Step: Run `scripts/build-claude-plugin.sh`
   - Step: Check for git changes (`git diff --exit-code .ados-claude/`)
   - Fail workflow if changes detected (message: "Generated plugin is stale. Run build script and commit.")
-- [ ] **4.3** Ensure CI workflow uses correct shell and permissions
-- [ ] **4.4** Test CI workflow locally (act or manual verification)
+- [x] **4.3** Ensure CI workflow uses correct shell and permissions
+- [x] **4.4** Test CI workflow locally (act or manual verification)
 
 **Acceptance Criteria**:
 
