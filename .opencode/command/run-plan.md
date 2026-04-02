@@ -6,6 +6,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 description: Execute implementation plan phases for a change.
 agent: coder
 subtask: true
+claude:
+  model: sonnet
 ---
 
 <purpose>

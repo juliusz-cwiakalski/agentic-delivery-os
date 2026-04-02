@@ -5,6 +5,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 #
 description: Generate a Decision Record (ADR/PDR/TDR/BDR/ODR) from planning context.
 agent: architect
+claude:
+  model: sonnet
 ---
 
 <purpose>

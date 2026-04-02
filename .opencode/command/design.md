@@ -5,6 +5,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 #
 description: Generate and update visual design assets per the project's design system.
 agent: designer
+claude:
+  model: sonnet
 ---
 
 # Visual Design Command

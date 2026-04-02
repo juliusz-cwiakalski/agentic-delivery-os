@@ -106,11 +106,11 @@ This plan delivers Claude Code support for ADOS through a build-time transformat
 
 **Tasks**:
 
-- [ ] **1.1** Add `claude.model: opus` to Opus-assigned agents (15 agents: pm, architect, bootstrapper, coder, fixer, reviewer, toolsmith, plan-writer, spec-writer, test-plan-writer, image-generator, image-reviewer, designer, doc-syncer, editor)
-- [ ] **1.2** Add `claude.model: sonnet` to Sonnet-assigned agents (4 agents: committer, external-researcher, pr-manager, runner)
-- [ ] **1.3** Add `claude.model: sonnet` (default) to all 18 command files
-- [ ] **1.4** Verify OpenCode still parses all files correctly (ignores unknown `claude:` key)
-- [ ] **1.5** Run existing test suite to confirm no regression
+- [x] **1.1** Add `claude.model: opus` to Opus-assigned agents (15 agents: pm, architect, bootstrapper, coder, fixer, reviewer, toolsmith, plan-writer, spec-writer, test-plan-writer, image-generator, image-reviewer, designer, doc-syncer, editor)
+- [x] **1.2** Add `claude.model: sonnet` to Sonnet-assigned agents (4 agents: committer, external-researcher, pr-manager, runner)
+- [x] **1.3** Add `claude.model: sonnet` (default) to all 18 command files
+- [x] **1.4** Verify OpenCode still parses all files correctly (ignores unknown `claude:` key)
+- [x] **1.5** Run existing test suite to confirm no regression
 
 **Acceptance Criteria**:
 
@@ -153,37 +153,48 @@ This plan delivers Claude Code support for ADOS through a build-time transformat
 
 ### Phase 2: Create Build Script
 
-**Goal**: Implement `scripts/build-claude-plugin.sh` that transforms `.opencode/` definitions to Claude Code plugin format at `.ados-claude/`.
+**Goal**: Implement `scripts/build-claude-plugin.sh` that transforms `.opencode/` definitions to Claude Code plugin format at `.ados-claude/`. Design for extensibility to support future tools.
 
 **Tasks**:
 
 - [ ] **2.1** Create `scripts/build-claude-plugin.sh` with Bash scaffolding (shebang, error handling, usage)
-- [ ] **2.2** Implement agent frontmatter transformation:
+- [ ] **2.2** Design extensible architecture:
+  - Parameterize tool name (`tool="claude"`)
+  - Parameterize output directory pattern (`.ados-${tool}/`)
+  - Create transformation functions with consistent interface:
+    - `transform_agent_frontmatter <tool> <source_file> <output_file>`
+    - `transform_command_to_skill <tool> <source_file> <output_dir>`
+    - `generate_manifest <tool> <output_dir>`
+  - Document extension points in script comments
+- [ ] **2.3** Implement agent frontmatter transformation:
   - Extract `name` from filename (basename without extension)
   - Extract `description` from source frontmatter
   - Extract `model` from `claude.model` (default: `sonnet`)
   - Strip OpenCode-specific fields (`mode`, `tools` with old format)
   - Generate `allowed-tools` array including `"mcp__*"` for MCP tool access
   - Preserve body content unchanged
-- [ ] **2.3** Implement command-to-skill conversion:
+- [ ] **2.4** Implement command-to-skill conversion:
   - Create `skills/<name>/SKILL.md` directory structure
   - Extract `description` from source frontmatter
   - Extract `model` from `claude.model` (default: `sonnet`)
   - Set `allowed-tools` based on command purpose (inferred: Read, Grep, Bash for analysis commands; full tools for execution commands)
   - Preserve body content unchanged
-- [ ] **2.4** Implement plugin manifest generation:
+- [ ] **2.5** Implement plugin manifest generation:
   - Create `.ados-claude/.claude-plugin/plugin.json`
   - Set `name: "ados"`, `version: "1.0.0"`, `author: "Juliusz Ćwiąkalski"`
-- [ ] **2.5** Implement license header application:
+- [ ] **2.6** Implement license header application:
   - Generate ADOS license header block (copyright, source URL)
   - Apply to all generated agent and skill files
-- [ ] **2.6** Ensure script idempotency:
+- [ ] **2.7** Ensure script idempotency:
   - Remove existing `.ados-claude/` before regeneration
   - Produce deterministic output (sorted, consistent formatting)
-- [ ] **2.7** Add error handling:
+- [ ] **2.8** Add error handling:
   - Validate input files exist
   - Fail fast on parse errors
   - Return non-zero exit code on failure
+- [ ] **2.9** Add extensibility documentation:
+  - Comment at top explaining how to add new tools
+  - Reference future ticket for Copilot CLI, Codex, etc.
 
 **Acceptance Criteria**:
 
@@ -192,6 +203,7 @@ This plan delivers Claude Code support for ADOS through a build-time transformat
 - Must: AC-F4-1 — Command converted to skill directory `skills/<name>/SKILL.md` with correct frontmatter
 - Must: AC-F5-1 — Manifest exists with required fields
 - Must: AC-F6-1 — All generated files have ADOS license headers
+- Must: AC-F9-1 — Build script architecture supports adding future tools with minimal changes
 - Must: NFR-3 — Running build twice produces identical output
 
 **Files and modules**:
@@ -302,10 +314,16 @@ This plan delivers Claude Code support for ADOS through a build-time transformat
   - Document `claude:` frontmatter key purpose
   - Note that OpenCode ignores tool-specific keys
 - [ ] **5.3** Create `doc/guides/adding-tool-support.md`:
-  - Document pattern: add tool-specific frontmatter key
+  - Document pattern: add tool-specific frontmatter key (e.g., `copilot:` for GitHub Copilot CLI)
   - Document pattern: build script transforms source to tool format
   - Document pattern: CI verifies generated output
+  - Document build script extension points
   - Provide template for future tool support
+  - Note: GitHub Copilot CLI research confirms feasibility (similar Markdown + YAML frontmatter format)
+- [ ] **5.4** Add extensibility notes to build script:
+  - Top-of-file comment explaining tool parameterization
+  - Reference to `doc/guides/adding-tool-support.md`
+  - Example: `# To add a new tool: (1) define transformation functions, (2) add tool case to build_plugin(), (3) create output directory`
 
 **Acceptance Criteria**:
 

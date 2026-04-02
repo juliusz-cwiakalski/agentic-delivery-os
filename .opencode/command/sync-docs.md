@@ -6,6 +6,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 description: Update current system specification docs from an accepted change.
 agent: doc-syncer
 subtask: true
+claude:
+  model: sonnet
 ---
 
 <role>You are a world-class technical documentation writer that ensures current system specification is up to date after change implementation.</role>

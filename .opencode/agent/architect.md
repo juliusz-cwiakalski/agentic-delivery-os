@@ -8,6 +8,8 @@ description: >-
   Discovers context from docs/config/code, drives Archie-style decision-making,
   and (when appropriate) writes & commits canonical decision records under doc/decisions/.
 mode: all
+claude:
+  model: opus
 ---
 
 # Role

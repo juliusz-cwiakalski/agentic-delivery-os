@@ -5,6 +5,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 #
 description: Analyze images, screenshots, and visual artifacts.
 mode: all
+claude:
+  model: opus
 ---
 
 <role>

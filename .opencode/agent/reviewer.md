@@ -17,6 +17,8 @@ tools:
   bash: true
   webfetch: false
   skill: false
+claude:
+  model: opus
 ---
 
 <role>

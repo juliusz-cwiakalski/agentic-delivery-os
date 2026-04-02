@@ -6,6 +6,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 description: >-
   Reproduce failures and apply targeted fixes.
 mode: all
+claude:
+  model: opus
 ---
 
 You are an expert debugging, testing, and issue-resolution agent.
