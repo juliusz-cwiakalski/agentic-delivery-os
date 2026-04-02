@@ -157,8 +157,8 @@ This plan delivers Claude Code support for ADOS through a build-time transformat
 
 **Tasks**:
 
-- [ ] **2.1** Create `scripts/build-claude-plugin.sh` with Bash scaffolding (shebang, error handling, usage)
-- [ ] **2.2** Design extensible architecture:
+- [x] **2.1** Create `scripts/build-claude-plugin.sh` with Bash scaffolding (shebang, error handling, usage)
+- [x] **2.2** Design extensible architecture:
   - Parameterize tool name (`tool="claude"`)
   - Parameterize output directory pattern (`.ados-${tool}/`)
   - Create transformation functions with consistent interface:
@@ -166,33 +166,33 @@ This plan delivers Claude Code support for ADOS through a build-time transformat
     - `transform_command_to_skill <tool> <source_file> <output_dir>`
     - `generate_manifest <tool> <output_dir>`
   - Document extension points in script comments
-- [ ] **2.3** Implement agent frontmatter transformation:
+- [x] **2.3** Implement agent frontmatter transformation:
   - Extract `name` from filename (basename without extension)
   - Extract `description` from source frontmatter
   - Extract `model` from `claude.model` (default: `sonnet`)
   - Strip OpenCode-specific fields (`mode`, `tools` with old format)
   - Generate `allowed-tools` array including `"mcp__*"` for MCP tool access
   - Preserve body content unchanged
-- [ ] **2.4** Implement command-to-skill conversion:
+- [x] **2.4** Implement command-to-skill conversion:
   - Create `skills/<name>/SKILL.md` directory structure
   - Extract `description` from source frontmatter
   - Extract `model` from `claude.model` (default: `sonnet`)
   - Set `allowed-tools` based on command purpose (inferred: Read, Grep, Bash for analysis commands; full tools for execution commands)
   - Preserve body content unchanged
-- [ ] **2.5** Implement plugin manifest generation:
+- [x] **2.5** Implement plugin manifest generation:
   - Create `.ados-claude/.claude-plugin/plugin.json`
   - Set `name: "ados"`, `version: "1.0.0"`, `author: "Juliusz Ćwiąkalski"`
-- [ ] **2.6** Implement license header application:
+- [x] **2.6** Implement license header application:
   - Generate ADOS license header block (copyright, source URL)
   - Apply to all generated agent and skill files
-- [ ] **2.7** Ensure script idempotency:
+- [x] **2.7** Ensure script idempotency:
   - Remove existing `.ados-claude/` before regeneration
   - Produce deterministic output (sorted, consistent formatting)
-- [ ] **2.8** Add error handling:
+- [x] **2.8** Add error handling:
   - Validate input files exist
   - Fail fast on parse errors
   - Return non-zero exit code on failure
-- [ ] **2.9** Add extensibility documentation:
+- [x] **2.9** Add extensibility documentation:
   - Comment at top explaining how to add new tools
   - Reference future ticket for Copilot CLI, Codex, etc.
 
