@@ -202,6 +202,45 @@ The script adds headers only to files that are installed when users onboard ADOS
 - `doc/planning/` — internal planning notes
 - `.ai/` — configuration and ephemeral state
 
+## Multi-tool support
+
+ADOS uses a **single source of truth** architecture for agent and command definitions:
+
+- **`.opencode/`** — Canonical source for all agent/command definitions (OpenCode format)
+- **`.ados-claude/`** — Generated Claude Code plugin (committed to repo)
+
+### Tool-specific frontmatter
+
+Agent and command files support optional frontmatter keys for different tools:
+
+```yaml
+---
+description: <agent description>
+mode: all                    # OpenCode-specific
+claude:                      # Claude Code-specific
+  model: opus                 # opus | sonnet | haiku
+---
+```
+
+OpenCode ignores the `claude:` key. Claude Code uses `claude.model` for model assignment.
+
+### Build script
+
+The build script `scripts/build-claude-plugin.sh` transforms `.opencode/` definitions to Claude Code format:
+
+```bash
+./scripts/build-claude-plugin.sh    # Generate .ados-claude/
+```
+
+Generated files include:
+- ADOS license headers with source reference
+- Transformed frontmatter (name, description, model, allowed-tools)
+- Preserved body content from source
+
+### Adding new tools
+
+See [doc/guides/adding-tool-support.md](doc/guides/adding-tool-support.md) for the extensibility pattern.
+
 ### How to add headers
 
 Run the script on configured paths:

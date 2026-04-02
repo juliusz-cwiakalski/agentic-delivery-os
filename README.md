@@ -111,6 +111,31 @@ OpenCode tooling (see [.opencode/README.md](.opencode/README.md) for the authori
 - **16 commands** that compose them into a repeatable workflow:
   - [/plan-change](.opencode/command/plan-change.md), [/write-spec](.opencode/command/write-spec.md), [/write-plan](.opencode/command/write-plan.md), [/write-test-plan](.opencode/command/write-test-plan.md), [/run-plan](.opencode/command/run-plan.md), [/review](.opencode/command/review.md), [/review-deep](.opencode/command/review-deep.md), [/sync-docs](.opencode/command/sync-docs.md), [/check](.opencode/command/check.md), [/check-fix](.opencode/command/check-fix.md), [/pr](.opencode/command/pr.md), [/commit](.opencode/command/commit.md), [/plan-decision](.opencode/command/plan-decision.md), [/write-decision](.opencode/command/write-decision.md), [/bootstrap](.opencode/command/bootstrap.md), [/design](.opencode/command/design.md).
 
+## Multi-tool support
+
+ADOS supports multiple AI coding tools while maintaining a **single source of truth** for agent and command definitions:
+
+- **`.opencode/`** — Canonical source for all agent/command definitions
+- **`.ados-claude/`** — Generated Claude Code plugin (committed to repo)
+
+The build script `scripts/build-claude-plugin.sh` transforms `.opencode/` definitions to Claude Code format. This ensures:
+
+1. No duplicate definitions to maintain
+2. All tools get the same prompts
+3. Model assignments are tool-specific (via `claude.model` frontmatter)
+
+**For Claude Code users:**
+
+The generated `.ados-claude/` directory is ready to use. Point Claude Code to the `agents/` and `skills/` directories.
+
+**For OpenCode users:**
+
+No changes — continue using `.opencode/` as before. The `claude:` frontmatter key is ignored by OpenCode.
+
+**Adding new tools:**
+
+See [doc/guides/adding-tool-support.md](doc/guides/adding-tool-support.md) for the extensibility pattern.
+
 ## Autopilot (PM-driven)
 
 Autopilot mode is a high-level handoff: you provide a ticket reference (or URL) and the [@pm](.opencode/agent/pm.md) agent orchestrates the full delivery loop (including [/review](.opencode/command/review.md), [/sync-docs](.opencode/command/sync-docs.md), and [/check](.opencode/command/check.md)), then creates/updates a PR/MR via [/pr](.opencode/command/pr.md) only when it's ready for human review.

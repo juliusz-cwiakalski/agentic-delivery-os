@@ -304,23 +304,23 @@ This plan delivers Claude Code support for ADOS through a build-time transformat
 
 **Tasks**:
 
-- [ ] **5.1** Update `README.md`:
+- [x] **5.1** Update `README.md`:
   - Add "Claude Code support" section
   - Document build script usage: `scripts/build-claude-plugin.sh`
   - Explain generated `.ados-claude/` directory
   - Note that generated plugin is committed to repo
-- [ ] **5.2** Update `AGENTS.md`:
+- [x] **5.2** Update `AGENTS.md`:
   - Add note about multi-tool support in agent/command definitions
   - Document `claude:` frontmatter key purpose
   - Note that OpenCode ignores tool-specific keys
-- [ ] **5.3** Create `doc/guides/adding-tool-support.md`:
+- [x] **5.3** Create `doc/guides/adding-tool-support.md`:
   - Document pattern: add tool-specific frontmatter key (e.g., `copilot:` for GitHub Copilot CLI)
   - Document pattern: build script transforms source to tool format
   - Document pattern: CI verifies generated output
   - Document build script extension points
   - Provide template for future tool support
   - Note: GitHub Copilot CLI research confirms feasibility (similar Markdown + YAML frontmatter format)
-- [ ] **5.4** Add extensibility notes to build script:
+- [x] **5.4** Add extensibility notes to build script:
   - Top-of-file comment explaining tool parameterization
   - Reference to `doc/guides/adding-tool-support.md`
   - Example: `# To add a new tool: (1) define transformation functions, (2) add tool case to build_plugin(), (3) create output directory`
