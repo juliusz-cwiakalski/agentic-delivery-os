@@ -36,8 +36,8 @@ phases:
     notes: "All AC met, all NFRs satisfied, all phases complete"
   pr_creation:
     started: "2026-04-02T15:15:00Z"
-    completed: null
-    url: null
+    completed: "2026-04-02T15:20:00Z"
+    url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/50"
 
 decisions:
   - text: "Use plugin-root structure for Claude Code (official pattern) instead of Justyna's .claude/ approach"
@@ -91,6 +91,14 @@ notes:
     workItemRef: GH-40
     date: "2026-04-02"
   - text: "Delivery completed - all 7 phases executed by @coder"
+    type: resolved
+    workItemRef: GH-40
+    date: "2026-04-02"
+  - text: "DoD check completed - all acceptance criteria met, all NFRs satisfied"
+    type: resolved
+    workItemRef: GH-40
+    date: "2026-04-02"
+  - text: "PR created: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/50"
     type: resolved
     workItemRef: GH-40
     date: "2026-04-02"
