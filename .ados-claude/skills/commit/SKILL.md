@@ -1,0 +1,36 @@
+---
+# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+# MIT License - see LICENSE file for full terms
+# source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/command/commit.md
+name: commit
+description: Delegate a single Conventional Commit.
+model: sonnet
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
+  - Bash
+  - WebFetch
+  - "mcp__*"
+---
+
+<purpose>Trigger the @committer agent to create exactly one Conventional Commit.</purpose>
+
+<inputs>
+  <optional>
+    <intent>$ARGUMENTS</intent>
+  </optional>
+</inputs>
+
+<instructions>
+  <rule>Invoke `@committer` now.</rule>
+  <rule>Do not restate its workflow; do not add extra commentary.</rule>
+  <rule>If blocked, surface the agent's message without alteration.</rule>
+  <rule>If successful, return exactly the agent's output.</rule>
+</instructions>
+
+<intent>
+$ARGUMENTS
+</intent>

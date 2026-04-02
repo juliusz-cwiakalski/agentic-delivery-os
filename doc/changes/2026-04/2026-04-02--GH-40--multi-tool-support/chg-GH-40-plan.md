@@ -230,16 +230,16 @@ This plan delivers Claude Code support for ADOS through a build-time transformat
 
 **Tasks**:
 
-- [ ] **3.1** Run `scripts/build-claude-plugin.sh`
-- [ ] **3.2** Verify generated structure:
-  - Check `.ados-claude/.claude-plugin/plugin.json` exists
-  - Check `.ados-claude/agents/` contains 19 files
-  - Check `.ados-claude/skills/` contains 18 directories
-- [ ] **3.3** Review generated files for correctness:
-  - Verify frontmatter format
-  - Verify license headers
-  - Verify body content preserved
-- [ ] **3.4** Add `.ados-claude/` to git tracking
+- [x] **3.1** Run `scripts/build-claude-plugin.sh`
+- [x] **3.2** Verify generated structure:
+  - Check `.ados-claude/.claude-plugin/plugin.json` exists ✓
+  - Check `.ados-claude/agents/` contains 20 files (plan noted 19, actual is 20 with review-feedback-applier)
+  - Check `.ados-claude/skills/` contains 18 directories ✓
+- [x] **3.3** Review generated files for correctness:
+  - Verify frontmatter format ✓
+  - Verify license headers ✓
+  - Verify body content preserved ✓
+- [x] **3.4** Add `.ados-claude/` to git tracking
 - [ ] **3.5** Commit generated plugin directory
 
 **Acceptance Criteria**:
