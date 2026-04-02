@@ -1,0 +1,12 @@
+{
+  "customInstructions": "Use @pm agent to deliver changes.",
+  "mcpServers": {
+    "github-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ]
+    }
+  }
+}
