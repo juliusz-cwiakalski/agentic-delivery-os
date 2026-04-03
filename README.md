@@ -49,26 +49,52 @@ Agentic Delivery OS codifies a predictable pipeline where quality and traceabili
 - A versioned, human-readable system spec under `doc/spec/**` that acts as the baseline input for planning the next change (kept up to date via [`/sync-docs`](.opencode/command/sync-docs.md)).
 - Commands that compose those agents into repeatable workflows (manual or autopilot).
 
-## Quick start
+## Installation
 
-> **Requires:** [OpenCode](https://opencode.ai) — the AI coding agent that runs ADOS agents and commands.
+### Quick Start
 
-**Global install** (one-liner — gives you ADOS agents in every project):
+**For OpenCode users:**
 
 ```bash
+# Global (all projects)
 curl -fsSL https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/scripts/install.sh | bash -s -- --global
-```
 
-**Set up a specific project:**
-
-```bash
-~/.ados/repo/scripts/install.sh --local    # copy artifacts into current project
+# Local (current project)
+~/.ados/repo/scripts/install.sh --local
 ```
 
 Then in your AI coding agent:
 
 ```text
 /bootstrap                                  # AI-guided configuration
+```
+
+**For Claude Code users:**
+
+The `.ados-claude/` directory is already in the repo - no installation needed for local use.
+Just point Claude Code to `.ados-claude/agents/` and `.ados-claude/skills/`.
+
+For global installation:
+
+```bash
+~/.ados/repo/scripts/install.sh --global --tool claude
+```
+
+### Installation Modes
+
+| Mode | OpenCode Target | Claude Code Target |
+|------|-----------------|-------------------|
+| `--global` | `~/.config/opencode/agent/` | `~/.claude/agents/` |
+| `--local` | `./.opencode/agent/` | `./.claude/agents/` |
+
+Both modes use `~/.ados/repo` as source.
+
+### Tool Selection
+
+```bash
+--tool opencode    # OpenCode only (default)
+--tool claude      # Claude Code only
+--tool all         # Both tools
 ```
 
 **Uninstall:** `~/.ados/repo/scripts/uninstall.sh --global` or `~/.ados/repo/scripts/uninstall.sh --local`
@@ -116,7 +142,7 @@ OpenCode tooling (see [.opencode/README.md](.opencode/README.md) for the authori
 ADOS supports multiple AI coding tools while maintaining a **single source of truth** for agent and command definitions:
 
 - **`.opencode/`** — Canonical source for all agent/command definitions
-- **`.ados-claude/`** — Generated Claude Code plugin (committed to repo)
+- **`.ados-claude/`** — Generated Claude Code plugin (committed to repo, ready to use)
 
 The build script `scripts/build-claude-plugin.sh` transforms `.opencode/` definitions to Claude Code format. This ensures:
 
@@ -126,7 +152,8 @@ The build script `scripts/build-claude-plugin.sh` transforms `.opencode/` defini
 
 **For Claude Code users:**
 
-The generated `.ados-claude/` directory is ready to use. Point Claude Code to the `agents/` and `skills/` directories.
+The `.ados-claude/` directory is pre-generated and committed to the repo. No build step required.
+Point Claude Code to `.ados-claude/agents/` and `.ados-claude/skills/` directories.
 
 **For OpenCode users:**
 
