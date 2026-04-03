@@ -928,6 +928,46 @@ test_auto_fetch_skips_explicit_source() {
 }
 
 # ============================================================================
+# --TOOL FLAG TESTS
+# ============================================================================
+
+test_tool_opencode_flag() {
+  # Reset TOOL to default before test
+  TOOL="opencode"
+  
+  parse_args --tool opencode
+  assert_eq "opencode" "${TOOL}" "TOOL should be opencode"
+}
+
+test_tool_claude_flag() {
+  # Reset TOOL to default before test
+  TOOL="opencode"
+  
+  parse_args --tool claude
+  assert_eq "claude" "${TOOL}" "TOOL should be claude"
+}
+
+test_tool_all_flag() {
+  # Reset TOOL to default before test
+  TOOL="opencode"
+  
+  parse_args --tool all
+  assert_eq "all" "${TOOL}" "TOOL should be all"
+}
+
+test_tool_invalid_flag() {
+  # Reset TOOL to default before test
+  TOOL="opencode"
+  
+  local exit_code=0
+  # parse_args calls die() on invalid tool, which exits
+  (parse_args --tool invalid 2>/dev/null) || exit_code=$?
+  
+  # Should exit with error code 2 (usage error from die())
+  assert_exit_code "${EXIT_USAGE}" "${exit_code}" "Should exit with usage error for invalid tool"
+}
+
+# ============================================================================
 # RUN TESTS
 # ============================================================================
 main() {
@@ -995,6 +1035,12 @@ main() {
   # Auto-fetch tests
   run_test "auto-fetch skips with --no-fetch" test_auto_fetch_skips_with_no_fetch
   run_test "auto-fetch skips with explicit ADOS_SOURCE_DIR" test_auto_fetch_skips_explicit_source
+
+  # --tool flag tests
+  run_test "--tool opencode sets TOOL variable" test_tool_opencode_flag
+  run_test "--tool claude sets TOOL variable" test_tool_claude_flag
+  run_test "--tool all sets TOOL variable" test_tool_all_flag
+  run_test "invalid --tool value shows error" test_tool_invalid_flag
 
   print_summary
 }
