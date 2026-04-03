@@ -521,4 +521,4 @@ This plan delivers Claude Code support for ADOS through a build-time transformat
 | 5 | Completed | 2026-04-02 | 2026-04-02 | 6a0812f | Updated docs, created adding-tool-support.md |
 | 6 | Completed | 2026-04-02 | 2026-04-02 | 3519c07 | Validated: tests pass, idempotent, valid YAML/JSON |
  | 7 | Completed | 2026-04-02 | 2026-04-02 | 2f85afe | Finalized - spec status updated, plan complete |
-| 8 | In Progress | 2026-04-03 | — | — | Marketplace support and documentation enhancements |
+| 8 | Completed | 2026-04-03 | 2026-04-03 | 891f609 | Marketplace support and documentation enhancements |
