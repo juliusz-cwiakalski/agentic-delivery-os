@@ -64,7 +64,7 @@ Because ADOS currently supports only OpenCode as an installation target, users w
 
 | Metric | Target |
 |--------|--------|
-| Agent count in generated plugin | 19 agents (100% coverage) |
+| Agent count in generated plugin | 20 agents (100% coverage) |
 | Command count converted to skills | 18 commands (100% coverage) |
 | Build script execution time | < 5 seconds |
 | CI verification overhead | < 10 seconds added to pipeline |
@@ -172,19 +172,22 @@ Flow 3: OpenCode user continues unchanged
 - Building `scripts/build-claude-plugin.sh` to generate Claude Code plugin
 - Generating `.ados-claude/` directory structure with agents and skills
 - Plugin manifest at `.ados-claude/.claude-plugin/plugin.json`
+- Marketplace file at `.claude-plugin/marketplace.json` for Claude Code plugin discovery
 - CI workflow to verify generated plugin is current
 - License header application to generated files
-- Documentation updates (README.md, AGENTS.md, new guide)
+- Test suite for build script (`scripts/.tests/test-build-claude-plugin.sh`)
+- Documentation updates (README.md, AGENTS.md, new guide, onboarding guide, feature spec)
+- Install script testing for multi-tool support
 
 ### 7.2 Out of Scope
 
 - [OUT] Support for other coding tools (Codex, Cursor, Windsurf)
-- [OUT] Global Claude Code installation (outside repository)
-- [OUT] `--all` flag for multi-tool installation
+- [OUT] `--all` flag for multi-tool installation (install.sh --tool claude is deprecated)
 - [OUT] MCP server configuration in agent frontmatter
 - [OUT] Hot-reload or watch mode for regeneration
 - [OUT] OpenCode model assignment changes (stays in external config)
 - [OUT] Justyna's old `.claude-code/` directory (already deleted)
+- [OUT] Global Claude Code installation via install.sh (use marketplace instead)
 
 ### 7.3 Deferred / Maybe-Later
 
@@ -231,7 +234,7 @@ N/A — this change does not add or modify event schemas.
 | ID | Requirement | Threshold |
 |----|-------------|-----------|
 | NFR-1 | Build script execution time | < 5 seconds for full regeneration |
-| NFR-2 | Generated file count | 19 agents + 18 skills + 1 manifest = 38 files |
+| NFR-2 | Generated file count | 20 agents + 18 skills + 1 manifest + 1 marketplace = 40 files |
 | NFR-3 | Idempotency | Running build script twice produces identical output |
 | NFR-4 | CI overhead | < 10 seconds added to existing pipeline |
 | NFR-5 | Source file modification | Minimal — only frontmatter additions, no body changes |
@@ -283,19 +286,26 @@ N/A — this is a build-time tool change with no runtime telemetry. CI failure p
 | DEC-6 | Add `claude.model` to source frontmatter | Build-time transform to Claude format | 2026-04-02 |
 | DEC-7 | Build script generates plugin and commits to repo | Generated code is committed; CI verifies freshness | 2026-04-02 |
 | DEC-8 | License headers applied by build script | Ensures generated files have proper copyright | 2026-04-02 |
+| DEC-9 | Marketplace.json at repo root for Claude Code discovery | Claude Code requires marketplace.json at repo root, not in plugin directory | 2026-04-02 |
+| DEC-10 | Tests required for all scripts per .ai/rules/bash.md | Build script has test suite; install script tests updated | 2026-04-02 |
 
 ## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
 
 | Component | Impact |
 |-----------|--------|
-| `.opencode/agent/*.md` | Updated — Add `claude:` frontmatter key (19 files) |
+| `.opencode/agent/*.md` | Updated — Add `claude:` frontmatter key (20 files) |
 | `.opencode/command/*.md` | Updated — Add `claude:` frontmatter key (18 files) |
 | `scripts/build-claude-plugin.sh` | New — Build script for Claude Code plugin |
+| `scripts/.tests/test-build-claude-plugin.sh` | New — Tests for build script |
+| `scripts/.tests/test-install.sh` | Updated — Tests for multi-tool install |
 | `.ados-claude/` | New — Generated plugin directory |
-| `.github/workflows/` | Updated — CI to verify build is current |
-| `README.md` | Updated — Document multi-tool support |
+| `.claude-plugin/marketplace.json` | New — Marketplace file at repo root for Claude Code plugin discovery |
+| `.github/workflows/ci.yml` | New — CI to verify build is current |
+| `README.md` | Updated — Document multi-tool support and Claude Code installation |
 | `AGENTS.md` | Updated — Note single-source architecture |
 | `doc/guides/adding-tool-support.md` | New — Guide for future tool support |
+| `doc/guides/onboarding-existing-project.md` | Updated — Multi-tool support section |
+| `doc/spec/features/feature-onboarding-guide.md` | Updated — F-8 multi-tool capability |
 
 ## 17. ACCEPTANCE CRITERIA
 
@@ -310,7 +320,7 @@ N/A — this is a build-time tool change with no runtime telemetry. CI failure p
 | AC-F6-1 | **Given** build script runs, **when** examining generated files, **then** each file has ADOS license header comment block | F-6 |
 | AC-F7-1 | **Given** CI workflow runs, **when** build script output differs from committed `.ados-claude/`, **then** CI fails with clear message about stale build | F-7 |
 | AC-F8-1 | **Given** existing OpenCode installation, **when** reading `.opencode/agent/*.md` files, **then** `claude:` key is ignored and workflow unchanged | F-8 |
-| AC-COV-1 | **Given** 19 agents in `.opencode/agent/`, **when** build completes, **then** 19 agent files exist in `.ados-claude/agents/` | F-2 |
+| AC-COV-1 | **Given** 20 agents in `.opencode/agent/`, **when** build completes, **then** 20 agent files exist in `.ados-claude/agents/` | F-2 |
 | AC-COV-2 | **Given** 18 commands in `.opencode/command/`, **when** build completes, **then** 18 skill directories exist in `.ados-claude/skills/` | F-4 |
 
 ## 18. ROLLOUT & CHANGE MANAGEMENT (HIGH-LEVEL)
@@ -424,6 +434,9 @@ allowed-tools:
 ### Appendix C: Claude Code Plugin Directory Structure
 
 ```
+.claude-plugin/
+└── marketplace.json          # Marketplace entry at repo root
+
 .ados-claude/
 ├── .claude-plugin/
 │   └── plugin.json
@@ -431,7 +444,7 @@ allowed-tools:
 │   ├── pm.md
 │   ├── coder.md
 │   ├── spec-writer.md
-│   └── ... (19 files)
+│   └── ... (20 files)
 └── skills/
     ├── run-plan/
     │   └── SKILL.md
@@ -440,11 +453,32 @@ allowed-tools:
     └── ... (18 directories)
 ```
 
+### Appendix D: Claude Code Installation
+
+**Recommended: Install from GitHub Marketplace**
+
+```bash
+# Step 1: Add ADOS marketplace (one-time setup)
+/plugin marketplace add juliusz-cwiakalski/agentic-delivery-os
+
+# Step 2: Install ADOS plugin
+/plugin install ados@ados
+```
+
+**For Local Development:**
+
+```bash
+claude --plugin-dir .ados-claude
+```
+
+The marketplace file `.claude-plugin/marketplace.json` at the repo root enables Claude Code to discover the plugin. The `git-subdir` source in the marketplace entry points to `.ados-claude/` where the actual plugin files reside.
+
 ## 25. DOCUMENT HISTORY
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-04-02 | @juliusz-cwiakalski | Initial specification |
+| 1.1 | 2026-04-02 | @juliusz-cwiakalski | Expanded scope: marketplace support, tests, doc updates; corrected agent count to 20 |
 
 ---
 
