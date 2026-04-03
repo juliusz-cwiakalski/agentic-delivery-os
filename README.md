@@ -71,14 +71,28 @@ Then in your AI coding agent:
 
 **For Claude Code users:**
 
-The `.ados-claude/` directory is already in the repo - no installation needed for local use.
-Just point Claude Code to `.ados-claude/agents/` and `.ados-claude/skills/`.
+**Option 1: Direct from GitHub (recommended for local use)**
 
-For global installation:
+```bash
+claude --plugin-dir .ados-claude
+```
+
+This loads ADOS directly from the repo - no installation needed.
+
+**Option 2: From marketplace (coming soon)**
+
+Once published to Claude Code marketplace:
+```bash
+/plugin install ados@pleaseai
+```
+
+**Option 3: Global installation**
 
 ```bash
 ~/.ados/repo/scripts/install.sh --global --tool claude
 ```
+
+This copies `.ados-claude/` to `~/.claude/` for use across all projects.
 
 ### Installation Modes
 

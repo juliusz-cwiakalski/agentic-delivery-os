@@ -437,6 +437,44 @@ This plan delivers Claude Code support for ADOS through a build-time transformat
 
 ---
 
+### Phase 8: Marketplace Support and Documentation Enhancements
+
+**Goal**: Add Claude Code marketplace.json and improve documentation for multi-tool support with clearer installation options.
+
+**Tasks**:
+
+- [x] **8.1** Create `.ados-claude/.claude-plugin/marketplace.json` with ADOS plugin entry (created marketplace.json)
+- [x] **8.2** Update `README.md` with three Claude Code installation options (added 3 options: direct, marketplace, global)
+- [x] **8.3** Update `doc/guides/onboarding-existing-project.md` with multi-tool section (added section after Prerequisites)
+- [x] **8.4** Update `doc/spec/features/feature-onboarding-guide.md` with F-8 capability (added F-8 and NFR-5)
+- [x] **8.5** Update `AGENTS.md` multi-tool support section (clarified 3 Claude Code usage options)
+
+**Acceptance Criteria**:
+
+- Must: `.ados-claude/.claude-plugin/marketplace.json` exists with valid schema — PASSED (created, valid JSON)
+- Must: README clearly explains 3 options for Claude Code users — PASSED (Option 1: direct, Option 2: marketplace, Option 3: global)
+- Must: Onboarding guide includes multi-tool section after Prerequisites — PASSED (new "Supported AI Coding Tools" section)
+- Must: Feature spec updated with F-8 capability — PASSED (F-8 and NFR-5 added)
+- Must: AGENTS.md multi-tool section clarifies usage — PASSED (3 Claude Code options documented)
+
+**Files and modules**:
+
+- `.ados-claude/.claude-plugin/marketplace.json` (new)
+- `README.md` (updated)
+- `doc/guides/onboarding-existing-project.md` (updated)
+- `doc/spec/features/feature-onboarding-guide.md` (updated)
+- `AGENTS.md` (updated)
+
+**Tests**:
+
+- Unit: Verify marketplace.json is valid JSON
+- Manual: Review README clarity
+- Manual: Review onboarding guide updates
+
+**Completion signal**: `feat(GH-40): add marketplace support and improve multi-tool docs`
+
+---
+
 ## Test Scenarios
 
 | ID | Scenario | Phases | AC |
@@ -482,4 +520,5 @@ This plan delivers Claude Code support for ADOS through a build-time transformat
 | 4 | Completed | 2026-04-02 | 2026-04-02 | 5bd2804 | Added CI verification workflow |
 | 5 | Completed | 2026-04-02 | 2026-04-02 | 6a0812f | Updated docs, created adding-tool-support.md |
 | 6 | Completed | 2026-04-02 | 2026-04-02 | 3519c07 | Validated: tests pass, idempotent, valid YAML/JSON |
-| 7 | Completed | 2026-04-02 | 2026-04-02 | 2f85afe | Finalized - spec status updated, plan complete |
+ | 7 | Completed | 2026-04-02 | 2026-04-02 | 2f85afe | Finalized - spec status updated, plan complete |
+| 8 | In Progress | 2026-04-03 | — | — | Marketplace support and documentation enhancements |

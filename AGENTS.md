@@ -204,10 +204,37 @@ The script adds headers only to files that are installed when users onboard ADOS
 
 ## Multi-tool support
 
-ADOS uses a **single source of truth** architecture for agent and command definitions:
+ADOS supports multiple AI coding tools while maintaining a **single source of truth** for agent and command definitions:
 
 - **`.opencode/`** — Canonical source for all agent/command definitions (OpenCode format)
-- **`.ados-claude/`** — Generated Claude Code plugin (committed to repo)
+- **`.ados-claude/`** — Generated Claude Code plugin (committed to repo, ready to use)
+
+The build script `scripts/build-claude-plugin.sh` transforms `.opencode/` definitions to Claude Code format. This ensures:
+
+1. No duplicate definitions to maintain
+2. All tools get the same prompts
+3. Model assignments are tool-specific (via `claude.model` frontmatter)
+
+**For Claude Code users:**
+
+**Option 1: Direct from repo (recommended):**
+```bash
+claude --plugin-dir .ados-claude
+```
+
+**Option 2: From marketplace (coming soon):**
+```bash
+/plugin install ados@pleaseai
+```
+
+**Option 3: Global installation:**
+```bash
+~/.ados/repo/scripts/install.sh --global --tool claude
+```
+
+**For OpenCode users:**
+
+No changes — continue using `.opencode/` as before.
 
 ### Tool-specific frontmatter
 

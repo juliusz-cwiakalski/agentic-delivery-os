@@ -18,13 +18,13 @@ tools:
   read: true
   glob: true
   grep: true
-claude:
-  model: opus
   write: true
   edit: true
   bash: true
   webfetch: false
   skill: true
+claude:
+  model: opus
 ---
 
 <agent_identity>

@@ -38,6 +38,11 @@ phases:
     started: "2026-04-02T15:15:00Z"
     completed: "2026-04-02T15:20:00Z"
     url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/50"
+  # Additional phases for merged GH-51 scope
+  additional_delivery:
+    started: "2026-04-02T15:25:00Z"
+    completed: "2026-04-02T16:00:00Z"
+    notes: "GH-51 scope merged: tests, docs, install script"
 
 decisions:
   - text: "Use plugin-root structure for Claude Code (official pattern) instead of Justyna's .claude/ approach"
@@ -100,5 +105,13 @@ notes:
     date: "2026-04-02"
   - text: "PR created: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/50"
     type: resolved
+    workItemRef: GH-40
+    date: "2026-04-02"
+  - text: "GH-51 scope merged into GH-40: tests, documentation, install script improvements"
+    type: info
+    workItemRef: GH-40
+    date: "2026-04-02"
+  - text: "Additional scope: test-build-claude-plugin.sh, README updates, install.sh --tool flag"
+    type: info
     workItemRef: GH-40
     date: "2026-04-02"
