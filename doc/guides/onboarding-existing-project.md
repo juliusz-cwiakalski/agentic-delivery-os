@@ -135,22 +135,25 @@ curl -fsSL https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery
 
 ### Claude Code (Plugin)
 
-Claude Code users can use ADOS as a plugin:
+Claude Code users can install ADOS as a plugin:
 
-**Direct from repo (recommended):**
+**Recommended: Install from GitHub marketplace**
+
+```bash
+# Step 1: Add ADOS marketplace (one-time setup)
+/plugin marketplace add juliusz-cwiakalski/agentic-delivery-os
+
+# Step 2: Install ADOS plugin
+/plugin install ados@ados
+```
+
+**For local development (contributors):**
+
 ```bash
 claude --plugin-dir .ados-claude
 ```
 
-**Global installation:**
-```bash
-~/.ados/repo/scripts/install.sh --global --tool claude
-```
-
-**Via marketplace (coming soon):**
-```bash
-/plugin install ados@pleaseai
-```
+This loads ADOS directly from the local repo.
 
 ### Other tools
 

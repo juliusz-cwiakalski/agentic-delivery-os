@@ -3,16 +3,25 @@
   "name": "ados",
   "version": "1.0.0",
   "description": "Agentic Delivery OS - AI-powered software delivery system with 10-phase workflow (spec → plan → code → review → PR)",
-  "author": {
-    "name": "Juliusz Ćwiąkalski",
-    "email": "contact@cwiakalski.com"
-  },
-  "homepage": "https://github.com/juliusz-cwiakalski/agentic-delivery-os",
-  "repository": "https://github.com/juliusz-cwiakalski/agentic-delivery-os",
-  "license": "MIT",
-  "keywords": ["agentic", "delivery", "automation", "sdls", "spec-driven", "ai-native"],
-  "categories": ["developer-tools", "devops", "workflow"],
-  "plugin": {
-    "directory": ".ados-claude"
-  }
+  "plugins": [
+    {
+      "name": "ados",
+      "description": "Agentic Delivery OS - spec-driven software delivery",
+      "version": "1.0.0",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/juliusz-cwiakalski/agentic-delivery-os.git",
+        "path": ".ados-claude",
+        "ref": "main"
+      },
+      "author": {
+        "name": "Juliusz Ćwiąkalski",
+        "email": "contact@cwiakalski.com"
+      },
+      "homepage": "https://github.com/juliusz-cwiakalski/agentic-delivery-os",
+      "license": "MIT",
+      "keywords": ["agentic", "delivery", "automation", "sdls", "spec-driven"],
+      "categories": ["developer-tools", "devops", "workflow"]
+    }
+  ]
 }

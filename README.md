@@ -71,44 +71,39 @@ Then in your AI coding agent:
 
 **For Claude Code users:**
 
-**Option 1: Direct from GitHub (recommended for local use)**
+**Recommended: Install from GitHub marketplace**
+
+```bash
+# Step 1: Add ADOS marketplace (one-time setup)
+/plugin marketplace add juliusz-cwiakalski/agentic-delivery-os
+
+# Step 2: Install ADOS plugin
+/plugin install ados@ados
+```
+
+This uses the `git-subdir` source to load ADOS directly from the GitHub repository.
+
+**For local development (contributors):**
 
 ```bash
 claude --plugin-dir .ados-claude
 ```
 
-This loads ADOS directly from the repo - no installation needed.
-
-**Option 2: From marketplace (coming soon)**
-
-Once published to Claude Code marketplace:
-```bash
-/plugin install ados@pleaseai
-```
-
-**Option 3: Global installation**
-
-```bash
-~/.ados/repo/scripts/install.sh --global --tool claude
-```
-
-This copies `.ados-claude/` to `~/.claude/` for use across all projects.
+This loads ADOS directly from the local repo — useful for contributors testing changes.
 
 ### Installation Modes
 
 | Mode | OpenCode Target | Claude Code Target |
 |------|-----------------|-------------------|
-| `--global` | `~/.config/opencode/agent/` | `~/.claude/agents/` |
-| `--local` | `./.opencode/agent/` | `./.claude/agents/` |
+| `--global` | `~/.config/opencode/` | Use `/plugin marketplace add` |
+| `--local` | `./.opencode/` | `claude --plugin-dir .ados-claude` |
 
-Both modes use `~/.ados/repo` as source.
-
-### Tool Selection
+### Tool Selection (OpenCode only)
 
 ```bash
 --tool opencode    # OpenCode only (default)
---tool claude      # Claude Code only
---tool all         # Both tools
+--tool claude      # Not needed - use /plugin commands instead
+--tool all         # Not needed - install separately per tool
 ```
 
 **Uninstall:** `~/.ados/repo/scripts/uninstall.sh --global` or `~/.ados/repo/scripts/uninstall.sh --local`

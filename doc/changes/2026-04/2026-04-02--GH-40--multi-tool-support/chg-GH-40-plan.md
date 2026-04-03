@@ -522,3 +522,28 @@ This plan delivers Claude Code support for ADOS through a build-time transformat
 | 6 | Completed | 2026-04-02 | 2026-04-02 | 3519c07 | Validated: tests pass, idempotent, valid YAML/JSON |
  | 7 | Completed | 2026-04-02 | 2026-04-02 | 2f85afe | Finalized - spec status updated, plan complete |
 | 8 | Completed | 2026-04-03 | 2026-04-03 | 891f609 | Marketplace support and documentation enhancements |
+| 8.2 | Completed | 2026-04-04 | 2026-04-04 | 7e1f037 | Fixed Claude Code marketplace installation format |
+
+---
+
+### Phase 8.2: Fix Claude Code Marketplace Installation
+
+**Goal**: Correct marketplace.json to use `git-subdir` source format and simplify documentation for Claude Code plugin installation.
+
+**Tasks**:
+
+- [x] **8.2.1** Update `.ados-claude/.claude-plugin/marketplace.json` to use `git-subdir` source pointing to `.ados-claude/` — done: valid JSON with plugins array and git-subdir source
+- [x] **8.2.2** Update `README.md` Claude Code installation: make GitHub marketplace primary (`/plugin marketplace add` + `/plugin install`), `--plugin-dir` secondary — done
+- [x] **8.2.3** Update `doc/guides/onboarding-existing-project.md` with proper Claude Code marketplace installation — done
+- [x] **8.2.4** Update `AGENTS.md` multi-tool support section: remove "coming soon" marketplace, make GitHub installation primary — done
+- [x] **8.2.5** Simplify `scripts/install.sh`: remove or deprecate `--tool claude` (Claude Code has its own plugin system) — done: added deprecation warning
+
+**Acceptance Criteria**:
+
+- Must: marketplace.json uses `git-subdir` source pointing to `.ados-claude/` — PASSED (valid JSON with plugins array, git-subdir source with path: .ados-claude)
+- Must: README recommends `/plugin marketplace add` + `/plugin install` as primary — PASSED
+- Must: README shows `--plugin-dir` as secondary local option — PASSED
+- Must: No mention of future marketplace in README or AGENTS.md — PASSED (updated to show marketplace as available now)
+- Must: install.sh `--tool claude` removed or deprecated with clear guidance — PASSED (deprecation warning added to both global and local install paths)
+
+**Completion signal**: `fix(GH-40): correct Claude Code marketplace installation format`

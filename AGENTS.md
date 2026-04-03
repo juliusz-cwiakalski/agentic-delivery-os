@@ -217,24 +217,36 @@ The build script `scripts/build-claude-plugin.sh` transforms `.opencode/` defini
 
 **For Claude Code users:**
 
-**Option 1: Direct from repo (recommended):**
+**Recommended: Install from GitHub marketplace**
+
+```bash
+# Step 1: Add ADOS marketplace (one-time setup)
+/plugin marketplace add juliusz-cwiakalski/agentic-delivery-os
+
+# Step 2: Install ADOS plugin
+/plugin install ados@ados
+```
+
+This uses the `git-subdir` source to load ADOS directly from the GitHub repository.
+
+**For project-specific use (local development):**
+
 ```bash
 claude --plugin-dir .ados-claude
 ```
 
-**Option 2: From marketplace (coming soon):**
-```bash
-/plugin install ados@pleaseai
-```
-
-**Option 3: Global installation:**
-```bash
-~/.ados/repo/scripts/install.sh --global --tool claude
-```
+This loads ADOS directly from the local repo — useful for contributors.
 
 **For OpenCode users:**
 
 No changes — continue using `.opencode/` as before.
+
+### Installation Modes
+
+| Mode | OpenCode Target | Claude Code Target |
+|------|-----------------|-------------------|
+| `--global` | `~/.config/opencode/` | Use `/plugin marketplace add` |
+| `--local` | `./.opencode/` | `claude --plugin-dir .ados-claude` |
 
 ### Tool-specific frontmatter
 

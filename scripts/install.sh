@@ -443,6 +443,18 @@ install_global_files() {
   
   # Install for Claude Code
   if [[ "${TOOL}" == "claude" || "${TOOL}" == "all" ]]; then
+    log_warn ""
+    log_warn "=== DEPRECATION NOTICE ==="
+    log_warn "The --tool claude option is deprecated."
+    log_warn ""
+    log_warn "Claude Code has its own plugin system. Instead, use:"
+    log_warn "  /plugin marketplace add juliusz-cwiakalski/agentic-delivery-os"
+    log_warn "  /plugin install ados@ados"
+    log_warn ""
+    log_warn "For local development: claude --plugin-dir .ados-claude"
+    log_warn "=========================="
+    log_warn ""
+    
     local -r claude_agent_src="${ADOS_REPO_DIR}/.ados-claude/agents"
     local -r claude_skill_src="${ADOS_REPO_DIR}/.ados-claude/skills"
     local -r claude_agent_dest="${CLAUDE_GLOBAL_DIR}/agents"
@@ -669,8 +681,23 @@ install_local_files() {
   ensure_gitignore_entry ".gitignore" ".ai/local/"
   ensure_gitignore_entry ".gitignore" ".ai/local"
   
-  # --- Tool-specific: Copy .ados-claude/ for Claude Code ---
+  --- Tool-specific: Copy .ados-claude/ for Claude Code ---
+  # NOTE: --tool claude is deprecated for local mode too.
+  # For local development, use: claude --plugin-dir .ados-claude
+  # For global installation, use Claude Code's plugin system:
+  #   /plugin marketplace add juliusz-cwiakalski/agentic-delivery-os
+  #   /plugin install ados@ados
   if [[ "${TOOL}" == "claude" || "${TOOL}" == "all" ]]; then
+    log_warn ""
+    log_warn "=== DEPRECATION NOTICE ==="
+    log_warn "The --tool claude option is deprecated."
+    log_warn "For local development: claude --plugin-dir .ados-claude"
+    log_warn "For global installation, use Claude Code's plugin system:"
+    log_warn "  /plugin marketplace add juliusz-cwiakalski/agentic-delivery-os"
+    log_warn "  /plugin install ados@ados"
+    log_warn "=========================="
+    log_warn ""
+    
     local -r claude_src="${source_dir}/.ados-claude"
     if [[ -d "${claude_src}" ]]; then
       log_info "Copying Claude Code plugin..."
@@ -743,7 +770,12 @@ do_local_install() {
       log_info "     and customize AGENTS.md for your project."
     fi
     if [[ "${TOOL}" == "claude" || "${TOOL}" == "all" ]]; then
-      log_info "  For Claude Code: Point Claude Code to ./.claude/agents/ and ./.claude/skills/"
+      log_info ""
+      log_info "  For Claude Code: Use Claude Code's plugin system instead:"
+      log_info "    /plugin marketplace add juliusz-cwiakalski/agentic-delivery-os"
+      log_info "    /plugin install ados@ados"
+      log_info ""
+      log_info "  For local development: claude --plugin-dir .ados-claude"
     fi
   else
     log_info "Project artifacts updated to latest ADOS version"
@@ -772,8 +804,8 @@ Modes:
 Tool Selection:
       --tool <name>  Which AI coding tool to install for (default: opencode)
                      opencode: Install for OpenCode only
-                     claude:   Install for Claude Code only
-                     all:      Install for both tools
+                     claude:   [DEPRECATED] Use /plugin marketplace add instead
+                     all:      [DEPRECATED] Install for both tools
 
 Options:
   -h, --help             Show this help message
@@ -795,9 +827,11 @@ Installation targets:
   OpenCode (default):
     --global: ~/.config/opencode/agent/ and ~/.config/opencode/command/
     --local:  ./.opencode/agent/ and ./.opencode/command/
-  Claude Code (--tool claude):
-    --global: ~/.claude/agents/ and ~/.claude/skills/
-    --local:  ./.claude/agents/ and ./.claude/skills/
+  Claude Code:
+    --tool claude is DEPRECATED. Use Claude Code's plugin system instead:
+      /plugin marketplace add juliusz-cwiakalski/agentic-delivery-os
+      /plugin install ados@ados
+    For local development: claude --plugin-dir .ados-claude
 
 One-liner global install:
   curl -fsSL ${ADOS_RAW_URL}/scripts/install.sh | bash -s -- --global
