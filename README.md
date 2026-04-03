@@ -164,6 +164,10 @@ The build script `scripts/build-claude-plugin.sh` transforms `.opencode/` defini
 The `.ados-claude/` directory is pre-generated and committed to the repo. No build step required.
 Point Claude Code to `.ados-claude/agents/` and `.ados-claude/skills/` directories.
 
+**Marketplace structure:**
+- `.claude-plugin/marketplace.json` (repo root) - Tells Claude Code where to find the ADOS plugin
+- `.ados-claude/.claude-plugin/plugin.json` - The actual plugin manifest (inside the plugin directory)
+
 **For OpenCode users:**
 
 No changes — continue using `.opencode/` as before. The `claude:` frontmatter key is ignored by OpenCode.
