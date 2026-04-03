@@ -490,4 +490,7 @@ EOF
     build_plugin "${TOOL}" "${SOURCE_DIR}" "${OUTPUT_DIR}"
 }
 
-main "$@"
+# Testable main guard (allows sourcing for tests)
+if [[ "${BASH_SOURCE[0]:-}" == "${0}" ]]; then
+    main "$@"
+fi
