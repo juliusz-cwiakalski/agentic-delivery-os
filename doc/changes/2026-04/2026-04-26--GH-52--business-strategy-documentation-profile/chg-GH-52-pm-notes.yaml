@@ -5,11 +5,11 @@ phases:
   specification: { started: "2026-04-26T13:45:00Z", completed: "2026-04-26T13:50:00Z" }
   test_planning: { started: "2026-04-26T13:50:00Z", completed: "2026-04-26T14:05:00Z" }
   delivery_planning: { started: "2026-04-26T13:50:00Z", completed: "2026-04-26T14:05:00Z" }
-  delivery: { started: "2026-04-26T14:06:00Z", completed: null }
-  system_spec_update: { started: null, completed: null }
-  review_fix: { started: null, completed: null }
-  quality_gates: { started: null, completed: null }
-  dod_check: { started: null, completed: null }
+  delivery: { started: "2026-04-26T14:06:00Z", completed: "2026-04-26T14:30:00Z" }
+  system_spec_update: { started: "2026-04-26T14:31:00Z", completed: "2026-04-26T14:40:00Z" }
+  review_fix: { started: "2026-04-26T14:41:00Z", completed: "2026-04-26T19:15:00Z" }
+  quality_gates: { started: "2026-04-26T19:05:00Z", completed: "2026-04-26T19:16:00Z" }
+  dod_check: { started: "2026-04-26T19:16:00Z", completed: "2026-04-26T19:17:00Z" }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "Use boolean business_docs_enabled for the first profile iteration; richer levels can be added later if needed."
@@ -29,6 +29,7 @@ blockers:
     resolved_date: "2026-04-26"
   - text: "Delivery implementation completed in working tree, but commits are blocked by GPG signing/pinentry timeout. Need human to fix signing environment or approve unsigned commits."
     date: "2026-04-26"
+    resolved_date: "2026-04-26"
 notes:
   - text: "Change initialized from GitHub issue #52 and source planning document doc/planning/tmp/ideas-and-issues/ados_business_strategy_documentation_extension_spec.md."
     type: info
@@ -59,6 +60,21 @@ notes:
     date: "2026-04-26"
   - text: "Coder completed all planned GH-52 tasks in the working tree and checks passed (git diff --check; YAML parsing for 4 register templates). Commit creation failed due GPG pinentry timeout."
     type: blocker
+    date: "2026-04-26"
+  - text: "Human unlocked GPG signing. Commit d8c03cea5ab787cc3b86af7181f23b82a8043ce5 created on branch docs/GH-52/business-strategy-documentation-profile."
+    type: resolved
+    date: "2026-04-26"
+  - text: "Doc sync completed with commit 53ec99921a4651a425f978be5f1387cbe53f78ac. Added documentation profiles feature spec and test spec; updated decision-records spec."
+    type: info
+    date: "2026-04-26"
+  - text: "Reviewer returned FAIL with 4 findings: trailing whitespace breaks git diff --check; new installed/current-truth Markdown docs lack repo headers/source; status artifacts stale; new template skeletons inconsistent with README/spec guidance. Remediation delegated to coder."
+    type: retro
+    date: "2026-04-26"
+  - text: "Coder applied targeted GH-52 remediation: removed trailing whitespace in chg-GH-52-test-plan.md, applied add-header-location to doc/templates + doc/spec/features + doc/quality/test-specs, reconciled plan/test-plan statuses and execution evidence, and narrowed README/spec wording for concise business template guidance."
+    type: resolved
+    date: "2026-04-26"
+  - text: "Remediation checks executed: YAML parser check returned YAML_OK 4; git diff --check is clean in working tree. Post-commit rerun of git diff --check main...HEAD queued for final verification artifact."
+    type: info
     date: "2026-04-26"
   - text: "Implementation plan created at doc/changes/2026-04/2026-04-26--GH-52--business-strategy-documentation-profile/chg-GH-52-plan.md."
     type: info

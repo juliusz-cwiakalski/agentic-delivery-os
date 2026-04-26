@@ -91,13 +91,15 @@ ADOS maintains templates in `doc/templates/` that serve as the structural source
 
 ### Template Structure
 
-Every template follows a consistent pattern:
+Core ADOS templates follow a consistent pattern:
 
 1. **License header** — Standard ADOS three-line header
 2. **Front-matter skeleton** — YAML with placeholders and inline comments explaining each field
 3. **Template instructions** — HTML comment block with copy/usage instructions
 4. **Section headings** — All required sections for the document type
 5. **Inline guidance** — HTML comments within each section explaining expected content
+
+Business Markdown skeleton templates intentionally stay concise (headings + front matter) and YAML register templates prioritize parseable schema fields over narrative inline commentary.
 
 ### User Flow (Manual Authoring)
 
@@ -106,7 +108,7 @@ Every template follows a consistent pattern:
 2. Copy the appropriate template to the target location
 3. Replace all <...> placeholders with actual values
 4. Remove template instruction comments
-5. Fill in section content following inline guidance
+5. Fill in section content following available guidance (inline comments for core templates; section headings/metadata for concise business templates)
 ```
 
 ### User Flow (Agent Authoring)
@@ -152,7 +154,7 @@ The fallback-to-defaults pattern ensures agents work correctly even when templat
 |----|----------|-------------|-----------|
 | NFR-1 | Completeness | Core templates and required GH-52 business/register templates exist | 100% required files present |
 | NFR-2 | Validity | Each template renders as valid GitHub-flavored Markdown | All sections render |
-| NFR-3 | Guidance | Each template contains inline HTML-comment guidance for every section | 100% section coverage |
+| NFR-3 | Guidance | Core templates contain inline HTML-comment guidance; business Markdown skeleton templates and YAML registers may use concise heading/schema guidance | 100% required template types follow documented guidance style |
 | NFR-4 | Fallback | Agents produce valid documents when templates are absent | No errors, default structure used |
 | NFR-5 | Consistency | Template structure matches the Documentation Handbook requirements | Handbook section 17 fulfilled |
 
