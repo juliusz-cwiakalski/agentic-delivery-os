@@ -10,7 +10,7 @@ phases:
   review_fix: { started: "2026-04-26T14:41:00Z", completed: "2026-04-26T19:15:00Z" }
   quality_gates: { started: "2026-04-26T19:05:00Z", completed: "2026-04-26T19:16:00Z" }
   dod_check: { started: "2026-04-26T19:16:00Z", completed: "2026-04-26T19:17:00Z" }
-  pr_creation: { started: "2026-04-26T16:45:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-04-26T16:45:00Z", completed: "2026-04-26T16:55:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/53" }
 decisions:
   - text: "Use boolean business_docs_enabled for the first profile iteration; richer levels can be added later if needed."
     date: "2026-04-26"
@@ -87,4 +87,7 @@ notes:
     date: "2026-04-26"
   - text: "Final local review passed with zero findings. Quality gates passed: git diff --check main...HEAD, YAML parse for 4 register templates, and scripts/.tests/test-add-header-location.sh (19/19). Logs under tmp/run-logs-runner/2026-04-26/."
     type: resolved
+    date: "2026-04-26"
+  - text: "PR created for human review: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/53."
+    type: info
     date: "2026-04-26"
