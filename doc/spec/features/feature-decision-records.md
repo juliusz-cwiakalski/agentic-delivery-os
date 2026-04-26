@@ -42,10 +42,10 @@ ADOS provides a tracker-agnostic standard for recording and managing significant
 | Type | Prefix | Scope |
 |------|--------|-------|
 | Architecture Decision Record | `ADR` | System design, infrastructure patterns, API boundaries |
-| Product Decision Record | `PDR` | Feature scoping, UX strategy, product positioning |
+| Product Decision Record | `PDR` | Product scope, roadmap priority, product experience direction |
 | Technical Decision Record | `TDR` | Technology choices, libraries, implementation approach |
-| Business Decision Record | `BDR` | Business rules, compliance, process policies |
-| Operational Decision Record | `ODR` | Infrastructure, deployment, monitoring, incident response |
+| Business Decision Record | `BDR` | ICP, pricing, GTM, positioning, business model choices |
+| Operational Decision Record | `ODR` | Cadence, responsibilities, process, operating model choices |
 
 ### Capabilities
 
@@ -96,7 +96,7 @@ Proposed → Under Review → Accepted → (Deprecated | Superseded)
 
 ### When to Create a Decision Record
 
-Create a record when a decision is hard to reverse, has cross-component impact, involves trade-offs, changes security posture, introduces a new dependency, or is likely to be questioned later. Do not create records for implementation details, bug fixes, or documentation-only changes.
+Create a record when a decision is hard to reverse, has cross-component impact, involves trade-offs, changes security posture, introduces a new dependency, establishes business/product/operating direction, or is likely to be questioned later. Pricing decisions default to BDR unless product or operating scope makes PDR or ODR more appropriate. Do not create records for implementation details, bug fixes, or routine documentation-only changes.
 
 ## Technical Architecture & Codebase Map
 
