@@ -12,6 +12,12 @@ summary: "<Short one-line summary>"
 owners:
   - <owner-or-team>                      # At least one entry required
 service: <primary-impacted-service>      # e.g., "delivery-os", "billing-service"
+decision_area: null                       # optional: architecture | product | business | operations | mixed
+decision_scope: null                      # optional: repo | product-line | org
+reversibility: null                       # optional: easy | moderate | hard
+review_date: null                         # optional: YYYY-MM-DD
+business_impact: null                     # optional short impact statement
+customer_impact: null                     # optional short impact statement
 links:
   related_changes: []                    # workItemRef identifiers (e.g., "GH-32", "PDEV-123")
   supersedes: []                         # Decision IDs this record replaces
@@ -20,13 +26,17 @@ links:
   contracts: []                          # Paths to related contract files
   diagrams: []                           # Paths to related diagram files
   decisions: []                          # Other related decision record IDs
+  experiments: []                        # optional experiment IDs/docs
+  metrics: []                            # optional metric IDs/docs
+  roadmap_items: []                      # optional roadmap item IDs/docs
 ---
 
 <!-- TEMPLATE INSTRUCTIONS
 1. Copy this file to doc/decisions/<TYPE>-<zeroPad4>-<slug>.md
 2. Replace all <...> placeholders with actual values
 3. Remove these instructions before finalizing
-4. See doc/guides/decision-records-management.md for the full standard
+4. Business/product/operational metadata fields are optional for ADR/TDR; use when relevant
+5. See doc/guides/decision-records-management.md for the full standard
 -->
 
 # <TYPE>-<zeroPad4>: <Title>

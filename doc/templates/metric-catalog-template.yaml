@@ -1,0 +1,15 @@
+catalog_id: METRIC-CATALOG-001
+status: draft
+owners:
+  - <owner-or-team>
+last_updated: <YYYY-MM-DD>
+metrics:
+  - id: METRIC-001
+    name: <metric-name>
+    formula: <how-calculated>
+    owner: <owner-or-team>
+    cadence: weekly
+    related_decisions: []
+    related_experiments: []
+    related_roadmap_items: []
+    related_changes: []

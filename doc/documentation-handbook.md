@@ -5,7 +5,7 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: DOC-HANDBOOK
 status: Accepted
 created: 2025-09-22
-last_updated: 2026-03-07
+last_updated: 2026-04-26
 owners: ["engineering"]
 summary: "Repository documentation structure, conventions, and workflow."
 ---
@@ -42,6 +42,83 @@ summary: "Repository documentation structure, conventions, and workflow."
 3. **Evolution is Trackable:** New behavior starts as a **Change** (`/doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`), settles with a **Decision Record**, and
    updates the **Spec** (`/doc/spec`).
 4. **Predictable Conventions:** Numbering, front-matter, and naming are consistent and enforced by lightweight checks.
+
+## 2a) Documentation Profiles (Safety Gate Before Writing)
+
+Before creating new documentation areas, humans and agents must determine the active repository profile.
+
+### Supported profiles
+
+- `engineering-repo`
+- `central-product-docs-repo`
+- `business-strategy-repo`
+- `mixed-product-engineering-repo`
+
+### Repository profile contract (`doc/documentation-profile.md`)
+
+If present, this file is the deterministic write-safety contract for docs creation:
+
+- `id`
+- `status`
+- `profile`
+- `business_docs_enabled`
+- `business_docs_root`
+- `canonical_strategy_repo`
+- `allowed_write_roots`
+- `forbidden_write_roots`
+- `owners`
+- `last_updated`
+
+### Missing-profile fallback (required)
+
+If `doc/documentation-profile.md` is missing, assume:
+
+- `profile: engineering-repo`
+- `business_docs_enabled: false`
+- No new `doc/business/**` content should be created unless a user explicitly requests it.
+
+If a user asks for business artifacts while disabled, explain the constraint and suggest either:
+
+1. Using the canonical strategy repository configured by the team, or
+2. Intentionally adding/updating `doc/documentation-profile.md` first.
+
+### Optional business documentation capability map (not a bootstrap tree)
+
+When business docs are enabled, `doc/business/**` may be used as a capability map (create only what is needed):
+
+- `context/`
+- `market/`
+- `customers/`
+- `product-strategy/`
+- `discovery/`
+- `growth/`
+- `marketing/`
+- `sales/`
+- `customer-success/`
+- `finance/`
+- `metrics/`
+- `operations/`
+- `research/`
+
+This is an optional map for navigation and ownership boundaries, not a requirement to create a full empty folder tree or placeholder documents.
+
+### Current truth vs raw evidence
+
+- Current-truth docs represent accepted strategy and should be maintained.
+- Raw notes (interviews, feedback, research, meeting notes) are supporting evidence and should not override current truth until synthesized.
+- Raw evidence should include:
+  - `source_type` (for example: interview, sales-call, support-feedback, market-research)
+  - `synthesis_status` (`raw`, `in-review`, `synthesized`)
+
+### Minimal examples policy
+
+Keep examples intentionally minimal for first iteration safety:
+
+1. Engineering profile example
+2. Central product docs profile example
+3. BDR example
+4. Experiment register example
+5. Minimal business index example
 
 ---
 
@@ -267,6 +344,10 @@ summary: "Unify units display across UI using unit IDs + i18n."
 9. **Implementation**: code + tests, referencing the change ID in commit/PR titles.
 10. **Release notes**: Use `/doc/prompts/` to generate drafts, then publish.
 
+For significant business/product strategy changes, reuse the same lifecycle and naming (`chg-*`) and capture validation
+with methods such as interviews, experiments, landing-page checks, sales calls, metric checks, launch criteria, stop
+criteria, and pivot criteria.
+
 > Agents: see `AGENTS.md` for the delivery workflow and `.opencode/command/*.md` for per-step context loading.
 
 ---
@@ -274,7 +355,8 @@ summary: "Unify units display across UI using unit IDs + i18n."
 ## 7) How Humans Work with the Docs
 
 - **New feature/behavior:** start with a Change spec (template in `/doc/templates/`).
-- **Decision needed:** author an ADR; link it to the Change.
+- **Decision needed:** author an ADR/TDR/PDR/BDR/ODR under `doc/decisions/`; link it to the Change. Pricing defaults to
+  BDR unless product scope (PDR) or operational scope (ODR) is a better fit.
 - **Keep Spec fresh:** any merged change must update `/doc/spec/` in the same PR.
 - **Contracts:**
   - If you own the API/event: edit `/doc/contracts/**`, bump version, regenerate clients.
@@ -297,6 +379,8 @@ summary: "Unify units display across UI using unit IDs + i18n."
   - Final edits to `/doc/spec/**` per the change outcome (ideally via `/sync-docs <workItemRef>`)
 
 - **Cross-linking:** update front-matter `links.*` so the web of docs stays navigable.
+- **Decision compatibility:** business/product/operational metadata fields in the decision template are optional; ADR/TDR
+  records remain valid without them.
 
 ---
 
@@ -363,6 +447,9 @@ The table below indicates what is **shared across repos** (kept identical or cen
   npm/maven/container images/docs package). Consumers **import** instead of copying.
 - **Global Docs**: For UL, Glossary, templates, and AI rules/agents, prefer a **single central repo** and sync to all
   service repos via submodule/subtree or automation.
+- **Business strategy ownership:** In multi-repo setups, canonical business/product strategy belongs in a central
+  product/business repository. Implementation repositories keep implementation truth (`doc/spec/**`, contracts,
+  operations, local technical decisions) and link back to canonical strategy instead of duplicating it.
 
 ---
 
@@ -386,7 +473,7 @@ The table below indicates what is **shared across repos** (kept identical or cen
 - [ ] Create/Update IMPLEMENTATION PLAN as `chg-<workItemRef>-plan.md` (or via `/write-plan <workItemRef>`).
 - [ ] Update `/doc/contracts/**` if surfaces change; bump version.
 - [ ] Update `/doc/spec/**` to reflect final behavior (ideally via `/sync-docs <workItemRef>`).
-- [ ] Ensure `/scripts/doc-checks.sh` passes.
+- [ ] If a docs validation entry point exists, run it. If absent, run `git diff --check` + manual docs review and record follow-up.
 
 ### New Cross‑cutting Decision
 
@@ -518,16 +605,23 @@ Agents load context per `.opencode/command/*.md`:
 
 ## 14) Tooling & Automation
 
-- **`/scripts/doc-checks.sh`** should validate:
-  - Front-matter presence and required keys.
-  - Change folder and file naming:
-    - Folder: `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`
-    - Files: `chg-<workItemRef>-spec.md`, `chg-<workItemRef>-test-plan.md`, `chg-<workItemRef>-plan.md` (and optionally `chg-<workItemRef>-pm-notes.yaml`).
-    - Decision records: `<TYPE>-<zeroPad4>-<slug>.md` (e.g., `ADR-0001-event-bus-selection.md`).
-  - No broken relative links in `/doc/**`.
-  - Traceability: acceptance criteria in `chg-<workItemRef>-spec.md` are covered by `chg-<workItemRef>-test-plan.md`.
-  - If a change is `Accepted`, Spec sections it touches were updated.
-- **Docs site (optional):** Use `mkdocs` + `mkdocs-mermaid2-plugin` for a searchable site in CI.
+Current repository note: no `scripts/doc-checks.sh` or `scripts/doc/doc-checks.sh` entry point is present at this time.
+
+### Until a validator entry point exists
+
+- Run `git diff --check`.
+- Perform manual checks for front matter, naming, and link/path correctness.
+- For changed `.yaml` templates, run YAML parsing checks.
+
+### Follow-up scope for future lightweight profile-aware docs checks
+
+- Validate required `doc/documentation-profile.md` fields when profile file is present.
+- Validate `business_docs_enabled` is boolean.
+- Warn when engineering-profile repos introduce `doc/business/**` content.
+- Validate decision record prefix naming (`ADR/TDR/PDR/BDR/ODR`).
+- Parse `.yaml` register templates and fail on syntax errors.
+
+**Docs site (optional):** Use `mkdocs` + `mkdocs-mermaid2-plugin` for a searchable site in CI.
 
 ---
 
@@ -559,9 +653,21 @@ A: The **producer** (the service that exposes the API or publishes the event). C
 - Always cross-link Change ↔ ADR ↔ Spec ↔ Contracts via front-matter `links.*`.
 - Docs update is **part of the PR**; code without docs is not done.
 
+## 16a) Rollback Guidance for Profile-Aware Documentation Updates
+
+If profile-aware behavior proves unsafe before release:
+
+1. Revert profile-specific handbook additions and template index additions in one docs-only revert.
+2. Remove newly added business templates/register templates from index references.
+3. Keep the existing engineering defaults and unified decision-record model intact.
+
+If only validation wording is incorrect, update/revert the validation subsection without removing the profile model.
+
 ---
 
 ## 17) Appendix: Template Index
+
+### Core ADOS templates
 
 - `doc/templates/change-spec-template.md`
 - `doc/templates/decision-record-template.md`
@@ -572,7 +678,32 @@ A: The **producer** (the service that exposes the API or publishes the event). C
 - `doc/templates/north-star-template.md`
 - `doc/templates/pr-instructions-template.md`
 
-(Keep these **shared** and versioned; link to canonical sources.)
+### Profile-aware business/product strategy templates (optional)
+
+- `doc/templates/documentation-profile-template.md`
+- `doc/templates/business-north-star-template.md`
+- `doc/templates/business-model-template.md`
+- `doc/templates/strategic-assumptions-template.md`
+- `doc/templates/ideal-customer-profile-template.md`
+- `doc/templates/persona-template.md`
+- `doc/templates/jobs-to-be-done-template.md`
+- `doc/templates/customer-problem-template.md`
+- `doc/templates/product-roadmap-template.md`
+- `doc/templates/business-experiment-template.md`
+- `doc/templates/business-validation-plan-template.md`
+- `doc/templates/north-star-metric-template.md`
+- `doc/templates/content-strategy-template.md`
+- `doc/templates/sales-strategy-template.md`
+- `doc/templates/customer-success-strategy-template.md`
+
+### YAML register templates (optional)
+
+- `doc/templates/product-roadmap-register-template.yaml`
+- `doc/templates/experiment-register-template.yaml`
+- `doc/templates/metric-catalog-template.yaml`
+- `doc/templates/content-calendar-template.yaml`
+
+(Keep these **shared** and versioned; use only templates allowed by repository profile.)
 
 ---
 

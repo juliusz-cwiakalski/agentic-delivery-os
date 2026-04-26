@@ -1,0 +1,14 @@
+register_id: ROADMAP-REGISTER-001
+status: draft
+owners:
+  - <owner-or-team>
+last_updated: <YYYY-MM-DD>
+items:
+  - id: ROADMAP-ITEM-001
+    title: <roadmap-item-title>
+    status: proposed
+    horizon: now
+    related_decisions: []
+    related_experiments: []
+    related_metrics: []
+    related_changes: []

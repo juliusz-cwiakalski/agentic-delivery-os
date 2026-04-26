@@ -139,6 +139,14 @@ doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/
 
 Branches: `<type>/<workItemRef>/<slug>` (e.g., `feat/GH-456/some-feature`)
 
+### Profile-aware documentation safety
+
+Before creating new documentation areas, agents should inspect `doc/documentation-profile.md` when present.
+
+- If missing, assume `engineering-repo` behavior.
+- Do not create `doc/business/**` content unless profile enables it or the user explicitly requests a profile change.
+- Prefer linking to a canonical strategy repository instead of writing business docs into implementation repositories.
+
 Detail: [doc/guides/unified-change-convention-tracker-agnostic-specification.md](doc/guides/unified-change-convention-tracker-agnostic-specification.md)
 
 ## Repo structure

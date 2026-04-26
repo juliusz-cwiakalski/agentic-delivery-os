@@ -25,6 +25,7 @@ change:
 2. Replace all <...> placeholders with actual values
 3. Remove these instructions before finalizing
 4. See doc/documentation-handbook.md for conventions
+5. Business/product strategy changes still use this same `chg-*` lifecycle and naming convention
 -->
 
 # CHANGE SPECIFICATION

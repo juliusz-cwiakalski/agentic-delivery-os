@@ -44,6 +44,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 | [Test Plan](templates/test-plan-template.md) | Per-change test plans |
 | [Implementation Plan](templates/implementation-plan-template.md) | Per-change implementation plans |
 
+Additional profile-aware templates are listed in [templates/README.md](templates/README.md), including optional business/product strategy templates and YAML register templates.
+
 ## Decision Records
 
 | Document | Description |

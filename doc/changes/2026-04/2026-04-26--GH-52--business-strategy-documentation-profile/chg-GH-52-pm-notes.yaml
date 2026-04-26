@@ -1,0 +1,65 @@
+change_id: GH-52
+title: "Extend documentation handbook with optional business strategy documentation profile"
+phases:
+  clarify_scope: { started: "2026-04-26T13:30:00Z", completed: "2026-04-26T13:38:00Z" }
+  specification: { started: "2026-04-26T13:45:00Z", completed: "2026-04-26T13:50:00Z" }
+  test_planning: { started: "2026-04-26T13:50:00Z", completed: "2026-04-26T14:05:00Z" }
+  delivery_planning: { started: "2026-04-26T13:50:00Z", completed: "2026-04-26T14:05:00Z" }
+  delivery: { started: "2026-04-26T14:06:00Z", completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions:
+  - text: "Use boolean business_docs_enabled for the first profile iteration; richer levels can be added later if needed."
+    date: "2026-04-26"
+  - text: "Keep standard chg-*-test-plan.md lifecycle naming; add business-validation-plan-template.md for business strategy validation guidance."
+    date: "2026-04-26"
+  - text: "Markdown remains canonical for narrative strategy; YAML registers are optional structured support for roadmap, experiments, metrics, and content calendars."
+    date: "2026-04-26"
+  - text: "Use profile as the canonical front-matter field name in doc/documentation-profile.md, with business_docs_enabled boolean, business_docs_root, canonical_strategy_repo, allowed_write_roots, and forbidden_write_roots for deterministic AI write decisions."
+    date: "2026-04-26"
+  - text: "Treat the full doc/business/** tree as a capability map, not a bootstrap tree; implementation must not create exhaustive empty business folder hierarchies or generic placeholder docs."
+    date: "2026-04-26"
+open_questions: []
+blockers:
+  - text: "Cannot complete test_planning via @test-plan-writer because .ai/rules/testing-strategy.md is missing and the agent has a hard fail rule, even though .ai/rules/README.md says missing rules may use defaults. Need human decision: create testing strategy rule, change test-plan-writer behavior, or allow a one-off test plan workaround."
+    date: "2026-04-26"
+    resolved_date: "2026-04-26"
+  - text: "Delivery implementation completed in working tree, but commits are blocked by GPG signing/pinentry timeout. Need human to fix signing environment or approve unsigned commits."
+    date: "2026-04-26"
+notes:
+  - text: "Change initialized from GitHub issue #52 and source planning document doc/planning/tmp/ideas-and-issues/ados_business_strategy_documentation_extension_spec.md."
+    type: info
+    date: "2026-04-26"
+  - text: "Clarify scope completed: issue requirements align with existing documentation handbook, document templates spec, and decision records spec. No blocking contradictions found."
+    type: info
+    date: "2026-04-26"
+  - text: "GitHub MCP issue label/status update failed because the update tool sends invalid milestone=0; avoid duplicate ticket operations and continue local delivery artifacts."
+    type: retro
+    date: "2026-04-26"
+  - text: "User supplied final implementation remarks. Key additions: profile-aware behavior is the highest constraint; missing profile defaults to engineering-repo; clarify doc/overview vs doc/business; route business changes through doc/changes; update or explicitly defer doc-check validation support; keep examples minimal."
+    type: info
+    date: "2026-04-26"
+  - text: "Spec created at doc/changes/2026-04/2026-04-26--GH-52--business-strategy-documentation-profile/chg-GH-52-spec.md with 33 acceptance criteria."
+    type: info
+    date: "2026-04-26"
+  - text: "Test-plan-writer initially failed because .ai/rules/testing-strategy.md is missing, despite .ai/rules/README.md saying missing rule files should be noted and reasonable defaults used. Retrying with explicit repo README context; if still blocked, escalate to human/process fix."
+    type: retro
+    date: "2026-04-26"
+  - text: "Second test-plan-writer attempt failed for the same hard missing-testing-strategy rule. Delivery paused before implementation handoff to avoid bypassing mandatory lifecycle artifacts without approval."
+    type: blocker
+    date: "2026-04-26"
+  - text: "Human approved proceeding with recommended fix. Added .ai/rules/testing-strategy.md as a prerequisite to unblock test planning."
+    type: resolved
+    date: "2026-04-26"
+  - text: "Test plan created at doc/changes/2026-04/2026-04-26--GH-52--business-strategy-documentation-profile/chg-GH-52-test-plan.md, covering all spec ACs with 15 scenarios."
+    type: info
+    date: "2026-04-26"
+  - text: "Coder completed all planned GH-52 tasks in the working tree and checks passed (git diff --check; YAML parsing for 4 register templates). Commit creation failed due GPG pinentry timeout."
+    type: blocker
+    date: "2026-04-26"
+  - text: "Implementation plan created at doc/changes/2026-04/2026-04-26--GH-52--business-strategy-documentation-profile/chg-GH-52-plan.md."
+    type: info
+    date: "2026-04-26"
