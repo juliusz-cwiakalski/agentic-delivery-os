@@ -76,6 +76,9 @@ notes:
   - text: "Remediation checks executed: YAML parser check returned YAML_OK 4; git diff --check is clean in working tree. Post-commit rerun of git diff --check main...HEAD queued for final verification artifact."
     type: info
     date: "2026-04-26"
+  - text: "Remediation commit da7c7bb14a5fca2a25ea47406a5e53177bb1e959 recorded all reviewer-targeted fixes; git diff --check main...HEAD now passes with no output."
+    type: resolved
+    date: "2026-04-26"
   - text: "Implementation plan created at doc/changes/2026-04/2026-04-26--GH-52--business-strategy-documentation-profile/chg-GH-52-plan.md."
     type: info
     date: "2026-04-26"

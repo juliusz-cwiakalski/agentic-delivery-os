@@ -2,7 +2,7 @@
 id: chg-GH-52-business-strategy-documentation-profile
 status: Implemented
 created: 2026-04-26T13:39:24Z
-last_updated: 2026-04-26T19:10:00Z
+last_updated: 2026-04-26T19:22:00Z
 owners: [juliusz]
 service: documentation-system
 labels: [documentation, business-strategy, templates, ai-agent-rules]
@@ -308,7 +308,7 @@ Open questions:
 - [x] **7.3** Confirm DoD: handbook updated, profile template added, business templates added, YAML register templates valid, decision template compatible, template/spec indexes synchronized, validation scope explicit, agent-facing rules updated if needed. (DoD pass completed with file-by-file verification.)
 - [x] **7.4** Perform final spec reconciliation against `chg-GH-52-spec.md` and update the execution log with validation outcomes and any documented follow-up. (Reconciled and logged explicit validation follow-up in handbook §14.)
 - [x] **7.5** Apply version bump per repo conventions for `version_impact: minor`; if this repo has no release/version artifact for docs-only changes, record “No version artifact present; documented as minor change only.” (No version artifact present; documented as minor docs change only.)
-- [x] **7.6** Prepare final commit/PR summary with AC mapping and explicit validation deferral or implementation note. (Summary prepared in execution/acceptance logs; commit blocked by GPG signing timeout.)
+- [x] **7.6** Prepare final commit/PR summary with AC mapping and explicit validation deferral or implementation note. (Remediation commit created: `da7c7bb`.)
 
 **Acceptance Criteria**:
 
@@ -393,8 +393,8 @@ AC mapping summary:
 | 3 | Completed | 2026-04-26 | 2026-04-26 | d8c03ce | Decision template/lifecycle guidance extended with optional metadata. |
 | 4 | Completed | 2026-04-26 | 2026-04-26 | d8c03ce | Narrow agent profile-safety rules implemented. |
 | 5 | Completed | 2026-04-26 | 2026-04-26 | 53ec999 | Feature specs and index sync committed during docs reconciliation. |
-| 6 | Completed (remediated) | 2026-04-26 | 2026-04-26 | PENDING | Applied reviewer-targeted fixes: whitespace cleanup, header/source normalization, status reconciliation, and guidance wording correction. |
-| 7 | In progress (remediation validation) | 2026-04-26 | 2026-04-26 | PENDING | Re-ran YAML parse check (`YAML_OK 4`); final `git diff --check main...HEAD` pass will be recorded after remediation commit is created. |
+| 6 | Completed (remediated) | 2026-04-26 | 2026-04-26 | da7c7bb | Applied reviewer-targeted fixes: whitespace cleanup, header/source normalization, status reconciliation, and guidance wording correction. |
+| 7 | Completed | 2026-04-26 | 2026-04-26 | da7c7bb | Re-ran YAML parse check (`YAML_OK 4`) and `git diff --check main...HEAD` (PASS, no output) after remediation commit. |
 
 ### Acceptance Pass (Execution)
 
@@ -404,4 +404,4 @@ AC mapping summary:
 - Phase 4 criteria (`AC-F9-*`, `AC-F12-2`, `AC-AI-1/2/3/8`) — PASSED (`AGENTS.md` + `.opencode/agent/coder.md` profile-safe rules; explicit validation follow-up in handbook §14; no validator entry point found).
 - Phase 5 criteria (`AC-F8-*`, `AC-F12-2`, `AC-F13-1`) — PASSED (`feature-document-templates.md` and `feature-decision-records.md` updated; central index refreshed).
 - Phase 6 review criteria — PASSED after remediation (targeted fixes applied for trailing whitespace, missing headers/source front matter in installed/current-truth docs, stale status artifacts, and template-guidance wording drift).
-- Phase 7 closure criteria — IN PROGRESS (YAML parsing PASS; `git diff --check main...HEAD` validation to be finalized post-remediation commit; docs-only version artifact remains N/A).
+- Phase 7 closure criteria — PASSED (`YAML_OK 4`; `git diff --check main...HEAD` PASS after commit `da7c7bb`; docs-only version artifact remains N/A).
