@@ -2,7 +2,7 @@
 id: chg-GH-52-test-plan
 status: Implemented
 created: 2026-04-26T13:55:24Z
-last_updated: 2026-04-26T19:22:00Z
+last_updated: 2026-04-26T20:05:00Z
 owners: [juliusz]
 service: documentation-system
 labels: [documentation, business-strategy, templates, ai-agent-rules]
@@ -607,23 +607,24 @@ Minimum quality gates before completion:
 |---------|------|--------|---------|
 | 1.0 | 2026-04-26 | test-plan-writer | Initial canonical test plan for GH-52. |
 | 1.1 | 2026-04-26 | coder | Added remediation execution evidence for YAML parse and whitespace checks; updated implementation status for re-review readiness. |
+| 1.2 | 2026-04-26 | coder | Reconciled execution log statuses for manual acceptance scenarios with explicit remediation evidence and file-level references. |
 
 ## 10. Test Execution Log
 
 | TC ID | Run Date | Result | Notes |
 |-------|----------|--------|-------|
-| TC-BIZDOCS-001 |  | Not Run |  |
-| TC-BIZDOCS-002 |  | Not Run |  |
-| TC-BIZDOCS-003 |  | Not Run |  |
-| TC-BIZDOCS-004 |  | Not Run |  |
-| TC-BIZDOCS-005 |  | Not Run |  |
-| TC-BIZDOCS-006 |  | Not Run |  |
+| TC-BIZDOCS-001 | 2026-04-26 | Passed | Manual handbook review confirmed four distinct profiles in `doc/documentation-handbook.md` §2a. |
+| TC-BIZDOCS-002 | 2026-04-26 | Passed | Manual fallback/agent-safety review confirmed missing-profile default and no business writes by default in handbook + `AGENTS.md` + `.opencode/agent/coder.md`. |
+| TC-BIZDOCS-003 | 2026-04-26 | Passed | Reviewed `doc/templates/documentation-profile-template.md` required deterministic fields (`profile`, `business_docs_enabled`, roots, owners, `last_updated`). |
+| TC-BIZDOCS-004 | 2026-04-26 | Passed | Handbook capability map reviewed as optional (not bootstrap tree) and aligned with ICP template pathing guidance. |
+| TC-BIZDOCS-005 | 2026-04-26 | Passed | Manual review confirmed current-truth vs raw-evidence rules with `source_type` and `synthesis_status` metadata remain explicit in handbook/template guidance. |
+| TC-BIZDOCS-006 | 2026-04-26 | Passed | Markdown template readability/render review completed for business templates and handbook narrative sections; Markdown remains canonical strategy format. |
 | TC-BIZDOCS-007 | 2026-04-26 | Passed | `python3` YAML parse check completed for four register templates (`YAML_OK 4`). |
-| TC-BIZDOCS-008 |  | Not Run |  |
-| TC-BIZDOCS-009 |  | Not Run |  |
-| TC-BIZDOCS-010 | 2026-04-26 | Passed | Header/source front matter normalized via `./scripts/add-header-location.sh doc/templates doc/spec/features doc/quality/test-specs`; template inventory wording aligned to concise business skeleton behavior. |
-| TC-BIZDOCS-011 |  | Not Run |  |
-| TC-BIZDOCS-012 |  | Not Run |  |
+| TC-BIZDOCS-008 | 2026-04-26 | Passed | Manual lifecycle review confirmed business strategy changes remain on canonical `chg-*` artifacts; validation follow-up wording present where checks are deferred. |
+| TC-BIZDOCS-009 | 2026-04-26 | Passed | Decision guidance review + search check confirmed no `doc/business/decisions/**` fork; unified `doc/decisions/**` model retained. |
+| TC-BIZDOCS-010 | 2026-04-26 | Passed | Inventory reconciliation completed across `doc/templates/README.md`, handbook §17, and feature specs; stale wording corrected; no missing required template/register entries. |
+| TC-BIZDOCS-011 | 2026-04-26 | Passed | Agent-facing review confirmed deterministic profile-loading behavior and missing-profile fallback in `AGENTS.md` and `.opencode/agent/coder.md`; stale rules README note removed. |
+| TC-BIZDOCS-012 | 2026-04-26 | Passed | Handbook multi-repo ownership + overview guidance reviewed; implementation repos remain summary-oriented with canonical strategy repo preference. |
 | TC-BIZDOCS-013 | 2026-04-26 | Passed | Executed `git diff --check` (clean) and post-commit `git diff --check main...HEAD` (clean); explicit validation-follow-up path remains documented. |
-| TC-BIZDOCS-014 |  | Not Run |  |
-| TC-BIZDOCS-015 |  | Not Run |  |
+| TC-BIZDOCS-014 | 2026-04-26 | Passed | Manual review confirmed no Astro/custom UI implementation added; structured front matter/links in templates and registers remain future-rendering compatible. |
+| TC-BIZDOCS-015 | 2026-04-26 | Passed | Scope/minimality pass confirmed no `doc/business/**` bootstrap tree and no broad unrelated handbook rewrite; remediation remained targeted. |

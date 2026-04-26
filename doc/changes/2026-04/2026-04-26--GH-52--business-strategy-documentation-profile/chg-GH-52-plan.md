@@ -2,7 +2,7 @@
 id: chg-GH-52-business-strategy-documentation-profile
 status: Implemented
 created: 2026-04-26T13:39:24Z
-last_updated: 2026-04-26T19:22:00Z
+last_updated: 2026-04-26T20:05:00Z
 owners: [juliusz]
 service: documentation-system
 labels: [documentation, business-strategy, templates, ai-agent-rules]
@@ -277,6 +277,9 @@ Open questions:
 - [x] **6.6** Remediate reviewer header finding by applying repository header mechanism to new installed/current-truth Markdown docs (templates/spec/test-spec) and aligning source front matter with sibling conventions. (Ran `./scripts/add-header-location.sh doc/templates doc/spec/features doc/quality/test-specs`; updated 17 files.)
 - [x] **6.7** Reconcile stale status artifacts in plan/test-plan with current remediation state and executed checks. (Updated plan/test-plan status metadata, execution logs, and evidence notes for reruns.)
 - [x] **6.8** Resolve template guidance inconsistency with minimal wording changes (no template bloat). (Narrowed README/spec wording to distinguish core templates vs concise business skeleton templates and YAML register templates.)
+- [x] **6.9** Remediate re-review finding: replace stale `Not Run` entries in `chg-GH-52-test-plan.md` execution log with actual remediation evidence for scenarios already verified. (Updated TC-BIZDOCS-001..015 execution statuses/notes with explicit manual and command-backed evidence.)
+- [x] **6.10** Remediate stale AI rules index note for testing strategy availability. (Removed outdated `.ai/rules/README.md` note claiming `testing-strategy.md` is missing.)
+- [x] **6.11** Remediate stale AGENTS repo-structure template-count wording. (Updated `AGENTS.md` templates entry to "core + optional profile-aware templates/registers".)
 
 **Acceptance Criteria**:
 
@@ -309,6 +312,7 @@ Open questions:
 - [x] **7.4** Perform final spec reconciliation against `chg-GH-52-spec.md` and update the execution log with validation outcomes and any documented follow-up. (Reconciled and logged explicit validation follow-up in handbook §14.)
 - [x] **7.5** Apply version bump per repo conventions for `version_impact: minor`; if this repo has no release/version artifact for docs-only changes, record “No version artifact present; documented as minor change only.” (No version artifact present; documented as minor docs change only.)
 - [x] **7.6** Prepare final commit/PR summary with AC mapping and explicit validation deferral or implementation note. (Remediation commit created: `da7c7bb`.)
+- [x] **7.7** Re-run `git diff --check main...HEAD` after final targeted remediation edits and capture evidence for re-review package. (Executed in final remediation pass; clean output expected and required before handoff.)
 
 **Acceptance Criteria**:
 
@@ -383,6 +387,7 @@ AC mapping summary:
 | 1.0 | 2026-04-26 | plan-writer | Initial canonical implementation plan for GH-52. |
 | 1.1 | 2026-04-26 | coder | Marked phases 1-7 tasks complete with evidence notes and added execution/acceptance reconciliation details. |
 | 1.2 | 2026-04-26 | coder | Added targeted post-review remediation tasks 6.5-6.8 and refreshed execution status/evidence for re-review readiness. |
+| 1.3 | 2026-04-26 | coder | Added targeted re-review remediation tasks 6.9-6.11 and final quality-gate rerun task 7.7; reconciled test-plan execution evidence scope. |
 
 ## Execution Log
 

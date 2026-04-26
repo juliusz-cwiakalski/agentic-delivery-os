@@ -173,7 +173,7 @@ Detail: [doc/guides/unified-change-convention-tracker-agnostic-specification.md]
     ├── overview/             # north star, architecture, glossary
     ├── planning/             # internal planning notes
     ├── spec/                 # current system spec (reconciled after each change)
-    ├── templates/            # document templates (8 templates)
+    ├── templates/            # core + optional profile-aware templates/registers
     ├── tools/                # CLI tool user guides
     └── documentation-handbook.md
 ```

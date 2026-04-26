@@ -82,3 +82,6 @@ notes:
   - text: "Implementation plan created at doc/changes/2026-04/2026-04-26--GH-52--business-strategy-documentation-profile/chg-GH-52-plan.md."
     type: info
     date: "2026-04-26"
+  - text: "Re-review returned FAIL for targeted stale-status/docs wording gaps. Applied focused remediation only: reconciled test-plan execution evidence (manual scenarios no longer left as Not Run), removed stale testing-strategy-missing note from .ai/rules/README.md, and aligned AGENTS.md template description with profile-aware template/register model."
+    type: resolved
+    date: "2026-04-26"
