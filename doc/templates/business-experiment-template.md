@@ -20,7 +20,13 @@ summary: "<Experiment summary>"
 
 # Business Experiment
 
+_Scope each experiment to one primary uncertainty and a clear decision it will inform._
+
 ## Hypothesis
+_Write a falsifiable statement linking target segment, intervention, and expected outcome._
 ## Method
+_Describe test design, sample/source, timebox, and instrumentation._
 ## Success / stop / pivot criteria
+_Define thresholds before running the test to reduce hindsight bias._
 ## Results and decision
+_Record outcomes, confidence, and resulting decision or next action._

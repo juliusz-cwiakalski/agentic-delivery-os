@@ -20,7 +20,13 @@ summary: "<Sales strategy summary>"
 
 # Sales Strategy
 
+_Keep this strategy explicit about focus segments, motion, and economics._
+
 ## Target segments and qualification
+_Define who sales should prioritize and the qualification standard for each segment._
 ## Positioning and pricing narrative
+_Describe value framing, packaging/pricing story, and common objection handling._
 ## Motion and pipeline assumptions
+_State sales motion choices, funnel assumptions, and critical dependencies._
 ## Success metrics
+_List leading and lagging sales metrics tied to strategic outcomes._

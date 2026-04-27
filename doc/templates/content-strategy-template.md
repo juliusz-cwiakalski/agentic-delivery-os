@@ -20,7 +20,13 @@ summary: "<Content strategy summary>"
 
 # Content Strategy
 
+_Focus on how content supports strategic goals across the full customer journey._
+
 ## Audience and goals
+_Define priority audiences and the business/customer outcomes content should drive._
 ## Core narratives
+_Capture key messages, proof points, and tone constraints to keep messaging consistent._
 ## Channel strategy
+_List channels by role (awareness, activation, retention) and expected contribution._
 ## Measurement plan
+_Define performance metrics, review cadence, and decision thresholds._

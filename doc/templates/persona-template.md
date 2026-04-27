@@ -20,7 +20,13 @@ summary: "<Persona summary>"
 
 # Persona
 
+_Use personas to support decisions, not storytelling. Anchor statements in observed behavior where possible._
+
 ## Role and context
+_Describe the persona's responsibilities, environment, and constraints._
 ## Goals and motivations
+_Capture what success looks like for this persona and why it matters to them._
 ## Frictions and blockers
+_List recurring barriers in their current workflow or buying/adoption journey._
 ## Decision criteria
+_Summarize criteria this persona uses to evaluate options and make decisions._

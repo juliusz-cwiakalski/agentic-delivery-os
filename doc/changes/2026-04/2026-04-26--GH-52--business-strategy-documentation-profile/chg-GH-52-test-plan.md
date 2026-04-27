@@ -2,7 +2,7 @@
 id: chg-GH-52-test-plan
 status: Implemented
 created: 2026-04-26T13:55:24Z
-last_updated: 2026-04-26T20:05:00Z
+last_updated: 2026-04-27T09:40:00Z
 owners: [juliusz]
 service: documentation-system
 labels: [documentation, business-strategy, templates, ai-agent-rules]
@@ -608,6 +608,7 @@ Minimum quality gates before completion:
 | 1.0 | 2026-04-26 | test-plan-writer | Initial canonical test plan for GH-52. |
 | 1.1 | 2026-04-26 | coder | Added remediation execution evidence for YAML parse and whitespace checks; updated implementation status for re-review readiness. |
 | 1.2 | 2026-04-26 | coder | Reconciled execution log statuses for manual acceptance scenarios with explicit remediation evidence and file-level references. |
+| 1.3 | 2026-04-27 | coder | Added focused PR #53 inline-guidance rerun evidence for business template readability/inventory checks and `main...HEAD` whitespace + YAML parsing checks. |
 
 ## 10. Test Execution Log
 
@@ -628,3 +629,6 @@ Minimum quality gates before completion:
 | TC-BIZDOCS-013 | 2026-04-26 | Passed | Executed `git diff --check` (clean) and post-commit `git diff --check main...HEAD` (clean); explicit validation-follow-up path remains documented. |
 | TC-BIZDOCS-014 | 2026-04-26 | Passed | Manual review confirmed no Astro/custom UI implementation added; structured front matter/links in templates and registers remain future-rendering compatible. |
 | TC-BIZDOCS-015 | 2026-04-26 | Passed | Scope/minimality pass confirmed no `doc/business/**` bootstrap tree and no broad unrelated handbook rewrite; remediation remained targeted. |
+| TC-BIZDOCS-006 | 2026-04-27 | Passed | Re-reviewed all GH-52 business Markdown templates after inline authoring prompts were added; guidance remains concise and Markdown-first without heavy boilerplate. |
+| TC-BIZDOCS-010 | 2026-04-27 | Passed | Reconciled `doc/templates/README.md` and `doc/spec/features/feature-document-templates.md` wording with the new concise section-level guidance style. |
+| TC-BIZDOCS-013 | 2026-04-27 | Passed | Re-ran focused checks: `git diff --check main...HEAD` (no output) and YAML parse for four register templates (`YAML_OK 4`). |

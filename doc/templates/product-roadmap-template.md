@@ -20,7 +20,13 @@ summary: "<Product roadmap summary>"
 
 # Product Roadmap
 
+_Keep this roadmap outcome-focused. Avoid overcommitting exact dates unless necessary._
+
 ## Strategic outcomes
+_Define the business/customer outcomes the roadmap must achieve._
 ## Roadmap themes
+_Group work into themes that explain intent, not only feature lists._
 ## Priority bets
+_List highest-priority bets with rationale, confidence, and expected impact._
 ## Risks and dependencies
+_Capture key risks, assumptions, and cross-team dependencies that may change priorities._

@@ -20,8 +20,15 @@ summary: "<Business north star summary>"
 
 # Business North Star
 
+_Keep this document directional and stable. Use short sections (2-5 bullets each) and link supporting decisions/metrics._
+
 ## Vision
+_Describe the long-term outcome this business is trying to create._
 ## Target customers
+_Name primary customer segments you intentionally serve first._
 ## Value proposition
+_Explain why those customers should choose this offer over alternatives._
 ## Strategic constraints
+_Capture non-negotiables (focus boundaries, capacity, regulatory, or channel limits)._
 ## Success signals
+_List leading indicators and lagging signals that show strategy is working._

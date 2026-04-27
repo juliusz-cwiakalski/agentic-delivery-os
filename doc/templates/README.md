@@ -63,5 +63,5 @@ Use these only when repository profile enables business docs.
 ## Conventions
 
 - Templates are **shared** and versioned; link to canonical sources.
-- Core ADOS templates include YAML front-matter skeletons and inline HTML comment guidance; optional business Markdown skeleton templates stay concise by design, and YAML register templates provide structured schema-only guidance.
+- Core ADOS templates include YAML front-matter skeletons and inline HTML comment guidance; optional business Markdown templates stay concise with short section-level authoring prompts, and YAML register templates provide structured schema-only guidance.
 - See `doc/documentation-handbook.md` §17 for the full template index and profile-aware usage rules.

@@ -20,7 +20,13 @@ summary: "<North star metric summary>"
 
 # North Star Metric
 
+_Pick one metric that best reflects delivered customer value and sustainable business progress._
+
 ## Metric definition
+_Define the metric formula, unit, and reporting window unambiguously._
 ## Why this metric matters
+_Explain the strategic logic linking this metric to long-term outcomes._
 ## Input metrics and guardrails
+_List leading inputs and guardrails that prevent optimizing the metric in harmful ways._
 ## Review cadence
+_Set review frequency, owners, and decision triggers for metric movement._

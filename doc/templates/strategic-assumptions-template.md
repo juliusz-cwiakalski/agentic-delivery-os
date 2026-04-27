@@ -20,7 +20,13 @@ summary: "<Strategic assumptions summary>"
 
 # Strategic Assumptions
 
+_Document only assumptions that materially change strategy, roadmap, or investment decisions._
+
 ## Assumption list
+_List each assumption as a testable statement with an owner._
 ## Confidence and evidence
+_For each assumption, note current confidence and the strongest supporting/contradicting evidence._
 ## Validation plan links
+_Link related experiments, interviews, or decision records used to validate assumptions._
 ## Review cadence
+_Define how often assumptions are re-checked and what triggers immediate review._

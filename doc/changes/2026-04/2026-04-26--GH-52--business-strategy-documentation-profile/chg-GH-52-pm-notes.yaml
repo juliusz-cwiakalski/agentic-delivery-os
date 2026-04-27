@@ -22,6 +22,8 @@ decisions:
     date: "2026-04-26"
   - text: "Treat the full doc/business/** tree as a capability map, not a bootstrap tree; implementation must not create exhaustive empty business folder hierarchies or generic placeholder docs."
     date: "2026-04-26"
+  - text: "Keep inline authoring guidance for GH-52 business templates in scope of PR #53, but use concise section-level instructions rather than full fictional case studies."
+    date: "2026-04-27"
 open_questions: []
 blockers:
   - text: "Cannot complete test_planning via @test-plan-writer because .ai/rules/testing-strategy.md is missing and the agent has a hard fail rule, even though .ai/rules/README.md says missing rules may use defaults. Need human decision: create testing strategy rule, change test-plan-writer behavior, or allow a one-off test plan workaround."
@@ -91,3 +93,9 @@ notes:
   - text: "PR created for human review: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/53."
     type: info
     date: "2026-04-26"
+  - text: "Human requested adding inline authoring guidance to GH-52 business documentation templates within the existing PR #53 scope. Reopening delivery/review gates for a focused PR update."
+    type: decision
+    date: "2026-04-27"
+  - text: "Focused GH-52 PR #53 update implemented: concise inline authoring prompts added to business Markdown templates; README/spec wording aligned; focused checks rerun (`git diff --check main...HEAD`, YAML parse `YAML_OK 4`)."
+    type: resolved
+    date: "2026-04-27"

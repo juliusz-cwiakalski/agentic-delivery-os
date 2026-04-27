@@ -20,8 +20,15 @@ summary: "<Business model summary>"
 
 # Business Model
 
+_Use this as a concise strategy snapshot. Prefer explicit choices and trade-offs over long prose._
+
 ## Customer segments
+_Identify priority segments and why they matter now._
 ## Value proposition
+_State the core promise for each priority segment._
 ## Revenue model
+_Summarize how value is monetized (pricing logic, packaging, and timing)._
 ## Cost model
+_Capture primary cost drivers and margin assumptions._
 ## Distribution and channels
+_Describe how demand is created, converted, and delivered._

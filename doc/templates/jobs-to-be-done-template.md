@@ -20,7 +20,13 @@ summary: "<JTBD summary>"
 
 # Jobs To Be Done
 
+_Keep the job statement stable; update outcomes and alternatives as evidence improves._
+
 ## Job statement
+_Write the core job in plain language ("When..., I want to..., so I can...")._
 ## Functional, emotional, social outcomes
+_List outcomes customers seek across practical, emotional, and social dimensions._
 ## Current alternatives
+_Document what customers do today, including manual workarounds and competitors._
 ## Success criteria
+_Define observable criteria that indicate the job is solved well enough._

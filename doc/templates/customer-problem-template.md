@@ -22,7 +22,13 @@ summary: "<Customer problem summary>"
 
 # Customer Problem
 
+_Use this template for evidence capture and synthesis. Keep facts separate from interpretation._
+
 ## Problem statement
+_State the customer problem in customer language, not solution language._
 ## Evidence summary
+_Summarize strongest evidence (quotes, observations, metrics) and link to sources when available._
 ## Impact and urgency
+_Describe who is affected, how often, and business/customer impact if unresolved._
 ## Synthesis notes
+_Capture current interpretation and confidence level; update status when synthesis is complete._

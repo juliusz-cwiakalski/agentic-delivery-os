@@ -20,7 +20,13 @@ summary: "<Validation plan summary>"
 
 # Business Validation Plan
 
+_Use this plan to coordinate evidence collection before major strategic commitments._
+
 ## Objectives
+_List the key decisions this validation cycle must de-risk._
 ## Validation methods (interviews, landing page, sales calls, metric checks)
+_Choose only methods needed for current uncertainties; note owner and timeline for each._
 ## Launch / stop / pivot criteria
+_Define objective thresholds for proceeding, stopping, or changing direction._
 ## Evidence capture and synthesis
+_Define where raw evidence lives and how synthesized conclusions update current-truth docs._

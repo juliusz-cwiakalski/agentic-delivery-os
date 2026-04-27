@@ -99,7 +99,7 @@ Core ADOS templates follow a consistent pattern:
 4. **Section headings** — All required sections for the document type
 5. **Inline guidance** — HTML comments within each section explaining expected content
 
-Business Markdown skeleton templates intentionally stay concise (headings + front matter) and YAML register templates prioritize parseable schema fields over narrative inline commentary.
+Business Markdown templates intentionally stay concise (front matter + headings + short section-level prompts) and YAML register templates prioritize parseable schema fields over narrative inline commentary.
 
 ### User Flow (Manual Authoring)
 
@@ -108,7 +108,7 @@ Business Markdown skeleton templates intentionally stay concise (headings + fron
 2. Copy the appropriate template to the target location
 3. Replace all <...> placeholders with actual values
 4. Remove template instruction comments
-5. Fill in section content following available guidance (inline comments for core templates; section headings/metadata for concise business templates)
+5. Fill in section content following available guidance (inline comments for core templates; concise section-level prompts/metadata for business templates)
 ```
 
 ### User Flow (Agent Authoring)

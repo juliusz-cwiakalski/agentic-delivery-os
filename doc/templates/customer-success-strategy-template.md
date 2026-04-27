@@ -20,7 +20,13 @@ summary: "<Customer success strategy summary>"
 
 # Customer Success Strategy
 
+_Use this strategy to align post-sale outcomes, retention health, and expansion opportunities._
+
 ## Onboarding and adoption approach
+_Describe onboarding milestones, activation expectations, and ownership model._
 ## Retention risks and mitigations
+_List top churn risks, leading warning signals, and planned mitigations._
 ## Expansion model
+_Explain how and when expansion opportunities are identified and pursued._
 ## Success metrics
+_Define customer success KPIs and review cadence tied to strategy decisions._
