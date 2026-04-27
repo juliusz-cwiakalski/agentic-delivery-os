@@ -24,6 +24,8 @@ decisions:
     date: "2026-04-26"
   - text: "Keep inline authoring guidance for GH-52 business templates in scope of PR #53, but use concise section-level instructions rather than full fictional case studies."
     date: "2026-04-27"
+  - text: "Treat PR #53 AI reviewer comments about root configurability, raw-evidence source metadata, enabled-profile write roots, experiment ID/status consistency, and template inventory wording as valid focused consistency improvements."
+    date: "2026-04-27"
 open_questions: []
 blockers:
   - text: "Cannot complete test_planning via @test-plan-writer because .ai/rules/testing-strategy.md is missing and the agent has a hard fail rule, even though .ai/rules/README.md says missing rules may use defaults. Need human decision: create testing strategy rule, change test-plan-writer behavior, or allow a one-off test plan workaround."
@@ -98,4 +100,7 @@ notes:
     date: "2026-04-27"
   - text: "Focused GH-52 PR #53 update implemented: concise inline authoring prompts added to business Markdown templates; README/spec wording aligned; focused checks rerun (`git diff --check main...HEAD`, YAML parse `YAML_OK 4`)."
     type: resolved
+    date: "2026-04-27"
+  - text: "Review feedback applier handled eight Copilot AI review threads for PR #53: all accepted as deterministic/profile-safety improvements or consistency fixes; local edits applied without creating `doc/business/**`. Final checks and human commit/push remain pending."
+    type: info
     date: "2026-04-27"

@@ -75,7 +75,7 @@ If `doc/documentation-profile.md` is missing, assume:
 
 - `profile: engineering-repo`
 - `business_docs_enabled: false`
-- No new `doc/business/**` content should be created unless a user explicitly requests it.
+- No new business documentation content should be created unless a user explicitly requests it. Because the profile is missing, there is no configured `business_docs_root`; if business docs are intentionally enabled later, assume the default root is `doc/business/**` unless `doc/documentation-profile.md` specifies a different `business_docs_root`.
 
 If a user asks for business artifacts while disabled, explain the constraint and suggest either:
 
@@ -84,7 +84,7 @@ If a user asks for business artifacts while disabled, explain the constraint and
 
 ### Optional business documentation capability map (not a bootstrap tree)
 
-When business docs are enabled, `doc/business/**` may be used as a capability map (create only what is needed):
+When business docs are enabled, the configured `business_docs_root` may be used as a capability map (default: `doc/business/**`; create only what is needed). The areas below are relative to that configured root:
 
 - `context/`
 - `market/`
@@ -678,9 +678,12 @@ If only validation wording is incorrect, update/revert the validation subsection
 - `doc/templates/north-star-template.md`
 - `doc/templates/pr-instructions-template.md`
 
-### Profile-aware business/product strategy templates (optional)
+### Documentation profile contract template
 
 - `doc/templates/documentation-profile-template.md`
+
+### Profile-aware business/product strategy templates (optional; enabled business docs only)
+
 - `doc/templates/business-north-star-template.md`
 - `doc/templates/business-model-template.md`
 - `doc/templates/strategic-assumptions-template.md`

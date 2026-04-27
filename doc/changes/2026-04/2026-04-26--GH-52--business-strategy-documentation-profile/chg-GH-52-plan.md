@@ -2,7 +2,7 @@
 id: chg-GH-52-business-strategy-documentation-profile
 status: Implemented
 created: 2026-04-26T13:39:24Z
-last_updated: 2026-04-27T09:40:00Z
+last_updated: 2026-04-27T10:10:00Z
 owners: [juliusz]
 service: documentation-system
 labels: [documentation, business-strategy, templates, ai-agent-rules]
@@ -282,6 +282,7 @@ Open questions:
 - [x] **6.11** Remediate stale AGENTS repo-structure template-count wording. (Updated `AGENTS.md` templates entry to "core + optional profile-aware templates/registers".)
 - [x] **6.12** Add concise inline authoring guidance to GH-52 business Markdown templates without adding fictional case studies or `doc/business/**` content. (Added short section-level prompts in all required GH-52 business templates under `doc/templates/`.)
 - [x] **6.13** Reconcile template-inventory/spec wording so guidance style remains accurate and lightweight. (Updated `doc/templates/README.md` conventions and `doc/spec/features/feature-document-templates.md` structure text for concise section-level prompts.)
+- [x] **6.14** Address PR #53 AI reviewer feedback with focused consistency fixes: root-relative business capability guidance, placeholder raw-evidence source types, enabled-profile write-root example, experiment ID/status alignment, and template inventory wording separation. (Applied without creating `doc/business/**`.)
 
 **Acceptance Criteria**:
 
@@ -316,6 +317,7 @@ Open questions:
 - [x] **7.6** Prepare final commit/PR summary with AC mapping and explicit validation deferral or implementation note. (Remediation commit created: `da7c7bb`.)
 - [x] **7.7** Re-run `git diff --check main...HEAD` after final targeted remediation edits and capture evidence for re-review package. (Executed in final remediation pass; clean output expected and required before handoff.)
 - [x] **7.8** Re-run focused post-update checks for PR #53 inline-guidance remediation: `git diff --check main...HEAD` and YAML parser validation for register templates. (`git diff --check main...HEAD` PASS with no output; `python3` YAML parse check `YAML_OK 4`.)
+- [x] **7.9** Re-run focused post-review checks after AI reviewer feedback remediation: `git diff --check main...HEAD` and YAML parser validation for changed/new `doc/templates/*.yaml` files. (`git diff --check main...HEAD` PASS with no output; `python3` YAML parse check `YAML_OK 4`.)
 
 **Acceptance Criteria**:
 
@@ -392,6 +394,7 @@ AC mapping summary:
 | 1.2 | 2026-04-26 | coder | Added targeted post-review remediation tasks 6.5-6.8 and refreshed execution status/evidence for re-review readiness. |
 | 1.3 | 2026-04-26 | coder | Added targeted re-review remediation tasks 6.9-6.11 and final quality-gate rerun task 7.7; reconciled test-plan execution evidence scope. |
 | 1.4 | 2026-04-27 | coder | Added focused PR #53 remediation tasks for concise inline guidance in GH-52 business templates plus focused rerun evidence (`main...HEAD` whitespace + YAML parse). |
+| 1.5 | 2026-04-27 | review-feedback-applier | Added PR #53 AI reviewer feedback handling evidence for root configurability, template metadata consistency, and inventory wording fixes. |
 
 ## Execution Log
 
@@ -404,6 +407,7 @@ AC mapping summary:
 | 5 | Completed | 2026-04-26 | 2026-04-26 | 53ec999 | Feature specs and index sync committed during docs reconciliation. |
 | 6 | Completed (remediated) | 2026-04-26 | 2026-04-26 | da7c7bb | Applied reviewer-targeted fixes: whitespace cleanup, header/source normalization, status reconciliation, and guidance wording correction. |
 | 7 | Completed | 2026-04-26 | 2026-04-26 | da7c7bb | Re-ran YAML parse check (`YAML_OK 4`) and `git diff --check main...HEAD` (PASS, no output) after remediation commit. |
+| 8 | Completed locally | 2026-04-27 | 2026-04-27 | Pending human commit | Applied PR #53 AI reviewer feedback locally; reran `git diff --check main...HEAD` (PASS, no output) and YAML parse for four register templates (`YAML_OK 4`). |
 
 ### Acceptance Pass (Execution)
 
@@ -414,3 +418,4 @@ AC mapping summary:
 - Phase 5 criteria (`AC-F8-*`, `AC-F12-2`, `AC-F13-1`) — PASSED (`feature-document-templates.md` and `feature-decision-records.md` updated; central index refreshed).
 - Phase 6 review criteria — PASSED after remediation (targeted fixes applied for trailing whitespace, missing headers/source front matter in installed/current-truth docs, stale status artifacts, and template-guidance wording drift).
 - Phase 7 closure criteria — PASSED (`YAML_OK 4`; `git diff --check main...HEAD` PASS after commit `da7c7bb`; docs-only version artifact remains N/A).
+- PR #53 AI reviewer feedback pass — PASSED locally (all eight AI comments accepted as focused consistency improvements; no `doc/business/**` content created; `YAML_OK 4`; `git diff --check main...HEAD` PASS). Commit/push remains a human action.

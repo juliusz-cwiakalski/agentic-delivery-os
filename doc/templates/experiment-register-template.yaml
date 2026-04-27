@@ -4,10 +4,10 @@ owners:
   - <owner-or-team>
 last_updated: <YYYY-MM-DD>
 experiments:
-  - id: EXP-001
+  - id: EXP-<slug>
     title: <experiment-title>
     hypothesis: <testable-hypothesis>
-    state: planned
+    status: planned
     success_criteria: []
     stop_criteria: []
     pivot_criteria: []

@@ -50,11 +50,18 @@ ADOS maintains templates in `doc/templates/` that serve as the structural source
 | `test-spec-template.md` | Test specification for `doc/quality/test-specs/` | `@doc-syncer` |
 | `north-star-template.md` | Product north star document for `doc/overview/01-north-star.md` | `@bootstrapper` |
 
-### Optional Business/Product Strategy Templates (profile-aware)
+### Documentation Profile Contract Template
 
 | Template | Purpose | Scope |
 |----------|---------|-------|
 | `documentation-profile-template.md` | Repository docs profile contract | Profile configuration |
+
+Repositories may use this template to make the documentation profile explicit whether business docs are enabled or disabled.
+
+### Optional Business/Product Strategy Templates (enabled business docs only)
+
+| Template | Purpose | Scope |
+|----------|---------|-------|
 | `business-north-star-template.md` | Business north star narrative | Strategy |
 | `business-model-template.md` | Business model narrative | Strategy |
 | `strategic-assumptions-template.md` | Assumptions + validation cadence | Strategy |
@@ -85,7 +92,7 @@ ADOS maintains templates in `doc/templates/` that serve as the structural source
 - **Agent runtime reading (F-2):** Agents (`@spec-writer`, `@plan-writer`, `@test-plan-writer`, `@doc-syncer`) read the corresponding template from `doc/templates/` to guide document structure.
 - **Graceful fallback (F-3):** If a template file does not exist, agents fall back to their embedded default structures with no errors. This ensures ADOS works in projects that haven't copied the templates directory.
 - **Human authoring (F-4):** Templates include deterministic placeholders for manual and agent usage.
-- **Profile-aware safety (F-6):** Business templates are optional and should be used only when repository profile enables business docs.
+- **Profile-aware safety (F-6):** The profile contract template may be used to make disabled or enabled behavior explicit; business strategy templates are optional and should be used only when the repository profile enables business docs.
 - **Structured registers (F-7):** `.yaml` register templates provide valid YAML skeletons with stable IDs and cross-link fields.
 - **Consistency enforcement (F-5):** Templates define structure; agent prompts define quality rules and domain-specific logic. This separation prevents drift.
 

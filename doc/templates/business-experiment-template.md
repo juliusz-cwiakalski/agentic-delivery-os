@@ -3,7 +3,7 @@
 # MIT License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/templates/business-experiment-template.md
 id: EXP-<slug>
-status: Planned
+status: planned # planned | running | completed | stopped | pivoted
 created: <YYYY-MM-DD>
 last_updated: <YYYY-MM-DD>
 owners: [<owner-or-team>]

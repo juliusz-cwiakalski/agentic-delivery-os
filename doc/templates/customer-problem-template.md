@@ -9,7 +9,7 @@ last_updated: <YYYY-MM-DD>
 owners: [<owner-or-team>]
 area: discovery
 document_classification: raw-evidence
-source_type: interview
+source_type: <source_type> # interview | sales-call | support-feedback | market-research | other
 synthesis_status: raw # raw | in-review | synthesized
 links:
   related_decisions: []

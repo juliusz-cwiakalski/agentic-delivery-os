@@ -29,13 +29,20 @@ Agent prompts define quality rules and domain-specific logic; templates define o
 | `north-star-template.md` | Product north star document (`doc/overview/01-north-star.md`) |
 | `pr-instructions-template.md` | PR/MR platform instructions (`.ai/agent/pr-instructions.md`) |
 
+## Documentation Profile Contract Template
+
+Use this template when a repository needs to make its documentation profile explicit, including repositories where business docs remain disabled.
+
+| Template | Purpose |
+|----------|---------|
+| `documentation-profile-template.md` | Repository documentation profile contract (`doc/documentation-profile.md`) |
+
 ## Business/Product Strategy Templates (Optional Profile)
 
 Use these only when repository profile enables business docs.
 
 | Template | Purpose |
 |----------|---------|
-| `documentation-profile-template.md` | Repository documentation profile contract (`doc/documentation-profile.md`) |
 | `business-north-star-template.md` | Canonical business north star document |
 | `business-model-template.md` | Business model assumptions and choices |
 | `strategic-assumptions-template.md` | Strategic assumptions with validation status |
@@ -63,5 +70,5 @@ Use these only when repository profile enables business docs.
 ## Conventions
 
 - Templates are **shared** and versioned; link to canonical sources.
-- Core ADOS templates include YAML front-matter skeletons and inline HTML comment guidance; optional business Markdown templates stay concise with short section-level authoring prompts, and YAML register templates provide structured schema-only guidance.
+- Core lifecycle templates (change/test/spec/plan/decision) include YAML front-matter skeletons and inline HTML comment guidance; `pr-instructions-template.md` primarily points to blueprints, optional business Markdown templates stay concise with short section-level authoring prompts, and YAML register templates provide structured schema-only guidance.
 - See `doc/documentation-handbook.md` §17 for the full template index and profile-aware usage rules.

@@ -28,3 +28,17 @@ Use this file as the write-safety contract for humans and agents.
 - If this file is missing, default behavior is `engineering-repo` and business docs remain disabled.
 - Keep `allowed_write_roots` and `forbidden_write_roots` deterministic and explicit.
 - Set `business_docs_root` only when `business_docs_enabled: true`.
+- When enabling business docs, update all related fields together: set `business_docs_enabled: true`, set `business_docs_root`, add that root to `allowed_write_roots`, and remove it from `forbidden_write_roots`.
+
+Example enabled configuration excerpt:
+
+```yaml
+business_docs_enabled: true
+business_docs_root: doc/business
+allowed_write_roots:
+  - doc/changes
+  - doc/spec
+  - doc/decisions
+  - doc/business
+forbidden_write_roots: []
+```

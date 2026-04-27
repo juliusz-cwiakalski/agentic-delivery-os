@@ -45,7 +45,7 @@ ADOS uses documentation profiles to determine which documentation areas a reposi
 | Profile | Responsibility | Business documentation behavior |
 |---------|----------------|---------------------------------|
 | `engineering-repo` | Implementation specs, contracts, operations, quality docs, local technical decisions | Disabled by default; link to canonical strategy repository when needed |
-| `central-product-docs-repo` | Product and business strategy truth across repositories | May enable `doc/business/**` and strategy templates |
+| `central-product-docs-repo` | Product and business strategy truth across repositories | May enable the configured `business_docs_root` (default `doc/business/**`) and strategy templates |
 | `business-strategy-repo` | Dedicated business strategy knowledge base | May enable business strategy docs as its primary documentation area |
 | `mixed-product-engineering-repo` | Combined product/business and implementation responsibility | May enable business docs while retaining engineering current-truth docs |
 
@@ -72,13 +72,13 @@ If `doc/documentation-profile.md` is absent, agents assume:
 
 - `profile: engineering-repo`
 - `business_docs_enabled: false`
-- no new `doc/business/**` content is created unless the user explicitly requests a profile change or explicitly directs business-document creation.
+- no new business documentation content is created unless the user explicitly requests a profile change or explicitly directs business-document creation. With no profile, there is no configured `business_docs_root`; if enabled later, the default root is `doc/business/**` unless the profile specifies otherwise.
 
 When a user asks for business artifacts while business docs are disabled, agents explain the disabled area and suggest using the canonical strategy repository or intentionally updating the repository profile first.
 
 ### 3.4 Optional Business Capability Map
 
-When business docs are enabled, `doc/business/**` is an optional capability map, not a required empty folder tree. Repositories create only the areas they need:
+When business docs are enabled, the configured `business_docs_root` is an optional capability map (default: `doc/business/**`), not a required empty folder tree. Repositories create only the areas they need relative to that root:
 
 - `context/`
 - `market/`

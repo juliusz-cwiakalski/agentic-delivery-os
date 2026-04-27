@@ -2,7 +2,7 @@
 id: chg-GH-52-test-plan
 status: Implemented
 created: 2026-04-26T13:55:24Z
-last_updated: 2026-04-27T09:40:00Z
+last_updated: 2026-04-27T10:10:00Z
 owners: [juliusz]
 service: documentation-system
 labels: [documentation, business-strategy, templates, ai-agent-rules]
@@ -609,6 +609,7 @@ Minimum quality gates before completion:
 | 1.1 | 2026-04-26 | coder | Added remediation execution evidence for YAML parse and whitespace checks; updated implementation status for re-review readiness. |
 | 1.2 | 2026-04-26 | coder | Reconciled execution log statuses for manual acceptance scenarios with explicit remediation evidence and file-level references. |
 | 1.3 | 2026-04-27 | coder | Added focused PR #53 inline-guidance rerun evidence for business template readability/inventory checks and `main...HEAD` whitespace + YAML parsing checks. |
+| 1.4 | 2026-04-27 | review-feedback-applier | Added focused PR #53 AI reviewer feedback handling evidence for profile root configurability, raw-evidence metadata placeholders, experiment register consistency, and template inventory wording. |
 
 ## 10. Test Execution Log
 
@@ -632,3 +633,8 @@ Minimum quality gates before completion:
 | TC-BIZDOCS-006 | 2026-04-27 | Passed | Re-reviewed all GH-52 business Markdown templates after inline authoring prompts were added; guidance remains concise and Markdown-first without heavy boilerplate. |
 | TC-BIZDOCS-010 | 2026-04-27 | Passed | Reconciled `doc/templates/README.md` and `doc/spec/features/feature-document-templates.md` wording with the new concise section-level guidance style. |
 | TC-BIZDOCS-013 | 2026-04-27 | Passed | Re-ran focused checks: `git diff --check main...HEAD` (no output) and YAML parse for four register templates (`YAML_OK 4`). |
+| TC-BIZDOCS-003 | 2026-04-27 | Passed | PR #53 AI reviewer remediation added enabled-business-docs write-root example and verified profile fields remain deterministic. |
+| TC-BIZDOCS-005 | 2026-04-27 | Passed | PR #53 AI reviewer remediation changed raw-evidence `source_type` to a placeholder with allowed examples. |
+| TC-BIZDOCS-007 | 2026-04-27 | Passed | PR #53 AI reviewer remediation aligned experiment register `id`/`status` fields with Markdown experiment template; YAML parse rerun returned `YAML_OK 4`. |
+| TC-BIZDOCS-010 | 2026-04-27 | Passed | PR #53 AI reviewer remediation separated profile contract template from enabled-business-doc templates in README/spec/handbook index. |
+| TC-BIZDOCS-013 | 2026-04-27 | Passed | Post-remediation checks passed: `git diff --check main...HEAD` (no output) and YAML parse for four register templates (`YAML_OK 4`). |
