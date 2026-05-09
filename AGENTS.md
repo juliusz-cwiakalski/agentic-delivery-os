@@ -65,7 +65,7 @@ Detail: [doc/guides/change-lifecycle.md](doc/guides/change-lifecycle.md)
 - `pr-manager` — create/update PR/MR; enrich with ticket context via MCP
 
 ### Specialized
-- `external-researcher` — research via MCP (context7, deepwiki, perplexity)
+- `external-researcher` — research external sources via MCP
 - `image-generator` — generate AI images via text-to-image CLI
 - `image-reviewer` — analyze images, screenshots, and visual artifacts
 - `toolsmith` — create and tune agents, commands, and skills
