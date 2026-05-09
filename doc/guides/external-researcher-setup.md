@@ -63,8 +63,8 @@ No free tier — credit-based billing. Add a card and purchase credits upfront.
 
 Raw structured web search with domain filtering, recency control, and up to 50 results per query.
 
-1. Sign up at <https://z.ai>.
-2. Go to <https://z.ai/manage-apikey/apikey-list>.
+1. Sign up at [https://z.ai/](https://z.ai/subscribe?ic=MMUPBUJ7PN).
+2. Go to [https://z.ai/manage-apikey/apikey-list](https://z.ai/manage-apikey/apikey-list).
 3. Click **Create a new API key**.
 4. Export the key:
 
