@@ -96,7 +96,7 @@ Use these when you need intelligent analysis or orchestration.
 | `@pr-manager`     | **PR/MR Manager**. Creates/updates PR/MR for current branch.                               | Use at the end of delivery; never merges.       |
 | `@toolsmith`      | **Toolsmith**. Creates and tunes OpenCode agents/commands/skills.                          | Use to create or improve tooling.               |
 | `@bootstrapper`   | **Bootstrapper**. Automates ADOS adoption for existing projects.                           | Use when onboarding a new project to ADOS.      |
-| `@external-researcher` | **Researcher**. Researches external sources via MCP (context7, deepwiki, perplexity). | Use when you need external technical research.  |
+| `@external-researcher` | **Researcher**. Researches external sources via MCP servers. | Use when you need external technical research.  |
 
 ---
 
