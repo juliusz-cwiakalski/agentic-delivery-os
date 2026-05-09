@@ -59,6 +59,8 @@ export PERPLEXITY_API_KEY="your-key-here"
 
 No free tier — credit-based billing. Add a card and purchase credits upfront.
 
+> **Supply-chain note:** `npx -y` auto-installs the package without confirmation. Consider pinning the version (e.g., `@perplexity-ai/mcp-server@1.2.3`) or verifying the package before first use.
+
 ### web-search-prime (Z.AI)
 
 Raw structured web search with domain filtering, recency control, and up to 50 results per query.
@@ -130,6 +132,8 @@ By default, MCP tools are available to **all** agents. To restrict these tools s
 }
 ```
 
+Note: the Z.AI tool is named `web-search-prime`, so the global disable uses `web-search-prime*`. The agent frontmatter uses the shorter glob `web-search*` which also matches `web-search-prime*`. See [Naming reference](#naming-reference) below for the full mapping.
+
 **Step 2:** The agent frontmatter in `.opencode/agent/external-researcher.md` already re-enables them:
 
 ```yaml
@@ -164,7 +168,11 @@ The same integration is referenced by different names depending on context:
 | `ZAI_MCP_TOOLS_KEY` | web-search-prime | Yes |
 | — | DeepWiki | No key needed |
 
-Set these in your shell profile (e.g., `~/.bashrc`, `~/.zshrc`) or in a `.env` file sourced before launching OpenCode.
+Set these in your shell profile (e.g., `~/.bashrc`, `~/.zshrc`) or in a `.env` file sourced before launching OpenCode. Ensure `.env` is listed in `.gitignore` — never commit API keys to version control.
+
+## Security considerations
+
+The agent prompt instructs it to treat all external content as untrusted data and ignore prompt-injection attempts. This defense is **behavioral, not cryptographic** — it depends on the LLM following the instructions. Avoid routing `@external-researcher` to arbitrary user-supplied URLs in security-sensitive contexts.
 
 ## Tool routing in the agent
 
