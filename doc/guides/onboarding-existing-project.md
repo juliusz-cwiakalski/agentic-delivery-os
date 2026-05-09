@@ -135,7 +135,7 @@ curl -fsSL https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery
 
 ### Claude Code (Plugin)
 
-Claude Code users can install ADOS as a plugin:
+Claude Code users can install ADOS as a plugin. Claude Code supports multiple model providers — see [Claude Code Setup Guide](claude-code-setup.md) for provider configuration (Anthropic API, Z.AI GLM Coding Plan).
 
 **Recommended: Install from GitHub marketplace**
 
