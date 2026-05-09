@@ -107,12 +107,53 @@ Add the servers to your `opencode.jsonc` under the `"mcp"` key. Only include the
   "web-search-mcp": {
     "type": "remote",
     "url": "https://api.z.ai/api/mcp/web_search_prime/mcp",
+    "enabled": true,
     "headers": {
       "Authorization": "Bearer {env:ZAI_MCP_TOOLS_KEY}"
     }
   }
 }
 ```
+
+## Scoping tools to external-researcher only
+
+By default, MCP tools are available to **all** agents. To restrict these tools so only `@external-researcher` can use them, apply the global-disable + agent-enable pattern:
+
+**Step 1:** Disable the tools globally in `opencode.jsonc`:
+
+```jsonc
+"tools": {
+  "context7*": false,
+  "perplexity*": false,
+  "deepwiki*": false,
+  "web-search-prime*": false
+}
+```
+
+**Step 2:** The agent frontmatter in `.opencode/agent/external-researcher.md` already re-enables them:
+
+```yaml
+tools:
+  "context7*": true
+  "perplexity*": true
+  "web-search*": true
+  "deepwiki*": true
+```
+
+The agent-level `true` overrides the global `false`, so only `@external-researcher` has access.
+
+> Reference: [OpenCode MCP docs — Per Agent](https://opencode.ai/docs/mcp-servers/#per-agent)
+
+## Naming reference
+
+The same integration is referenced by different names depending on context:
+
+| Context | Name | Example |
+|---------|------|---------|
+| Provider / service | `web-search-prime` | Z.AI's search engine |
+| OpenCode `mcp` key | `web-search-mcp` | Config key in `opencode.jsonc` |
+| Tool name (glob pattern) | `web-search-prime*` | Global `tools` disable rule |
+| Agent routing | `web-search` | Short name in agent prompt |
 
 ## Environment variables summary
 
