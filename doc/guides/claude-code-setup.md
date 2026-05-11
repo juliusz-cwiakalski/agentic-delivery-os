@@ -53,11 +53,20 @@ Z.AI offers a subscription plan that provides access to GLM models (GLM-5.1, GLM
 
 #### Quick setup with `zclaude` (recommended)
 
-The `zclaude` tool included in ADOS configures everything in one step — no file editing, no env var juggling. It stores your API key securely (`~/.ai/zclaude/api-key`, chmod 600) and launches Claude Code with the correct endpoint, model mapping, and timeout settings.
+The `zclaude` tool configures everything in one step — no file editing, no env var juggling. It stores your API key securely (`~/.ai/zclaude/api-key`, chmod 600) and launches Claude Code with the correct endpoint, model mapping, and timeout settings.
+
+**Install zclaude (one-liner):**
 
 ```bash
-# From the ADOS repo root:
-./tools/zclaude
+curl -fsSL https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/scripts/install-zclaude.sh | bash
+```
+
+Works on Linux, macOS, Windows (Git Bash, WSL). See [zclaude User Guide](../tools/zclaude.md#installation) for `wget` alternative.
+
+**Then launch:**
+
+```bash
+zclaude
 ```
 
 On first run, `zclaude` detects that no API key is configured and offers interactive setup:

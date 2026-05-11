@@ -116,11 +116,15 @@ Guide: [doc/guides/opencode-agents-and-commands-guide.md](doc/guides/opencode-ag
 
 ### Using Z.AI GLM with Claude Code
 
-The `zclaude` convenience wrapper (`tools/zclaude`) configures Claude Code to use Z.AI GLM Coding Plan as the model provider — no manual `settings.json` editing required. Key and `claude` coexist: use `claude` for Anthropic, `zclaude` for Z.AI.
+The `zclaude` convenience wrapper (`tools/zclaude`) configures Claude Code to use Z.AI GLM Coding Plan as the model provider — no manual `settings.json` editing required. `claude` and `zclaude` coexist: use `claude` for Anthropic, `zclaude` for Z.AI.
 
 ```bash
-./tools/zclaude        # Interactive first-time setup, then launches Claude Code
-./tools/zclaude env    # Show masked key and environment variables
+# One-liner install (Linux, macOS, Git Bash, WSL):
+curl -fsSL https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/scripts/install-zclaude.sh | bash
+
+# Then:
+zclaude        # Interactive first-time setup, then launches Claude Code
+zclaude env    # Show masked key and environment variables
 ```
 
 Guide: [doc/tools/zclaude.md](doc/tools/zclaude.md) | Setup: [doc/guides/claude-code-setup.md](doc/guides/claude-code-setup.md)

@@ -66,6 +66,44 @@ The key advantage: **`claude` and `zclaude` coexist**. Use `claude` when you wan
 - **Claude Code CLI** (`claude`) installed and in PATH
 - **A Z.AI GLM Coding Plan subscription** — [sign up](https://z.ai/subscribe?ic=MMUPBUJ7PN) (affiliate link: author earns commission, buyer gets 10% discount)
 
+## Installation
+
+### One-liner (recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/scripts/install-zclaude.sh | bash
+```
+
+Or with `wget`:
+
+```bash
+wget -qO- https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/scripts/install-zclaude.sh | bash
+```
+
+This downloads `zclaude` to `~/.local/bin/` and makes it executable. If `~/.local/bin` is not in your PATH, the installer shows the command to add it.
+
+Works on Linux, macOS, Windows (Git Bash, WSL).
+
+### From the ADOS repo
+
+If you already have the ADOS repo cloned:
+
+```bash
+./tools/zclaude        # run directly, no install needed
+```
+
+Or install to PATH:
+
+```bash
+cp tools/zclaude ~/.local/bin/
+```
+
+### Verify
+
+```bash
+zclaude --version
+```
+
 ## First-time setup
 
 Run `zclaude` — if no API key is found, it offers interactive setup:
