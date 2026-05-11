@@ -51,37 +51,55 @@ Z.AI offers a subscription plan that provides access to GLM models (GLM-5.1, GLM
 
 > **Affiliate disclosure:** This is an affiliate link. The author earns a commission **and** the buyer receives a **10% discount** on their first subscription purchase. The plan supports Claude Code, Cline, and 20+ other coding tools, starting at $18/month.
 
-**Generate an API key:** [https://z.ai/manage-apikey/apikey-list](https://z.ai/manage-apikey/apikey-list)
+#### Quick setup with `zclaude` (recommended)
 
-**Configure Claude Code** — edit `~/.claude/settings.json` (or `%USERPROFILE%\.claude\settings.json` on Windows):
+The `zclaude` tool included in ADOS configures everything in one step — no file editing, no env var juggling. It stores your API key securely (`~/.ai/zclaude/api-key`, chmod 600) and launches Claude Code with the correct endpoint, model mapping, and timeout settings.
 
-```json
-{
-  "env": {
-    "ANTHROPIC_AUTH_TOKEN": "your_zai_api_key",
-    "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
-    "API_TIMEOUT_MS": "3000000"
-  }
-}
+```bash
+# From the ADOS repo root:
+./tools/zclaude
 ```
 
-**Key points:**
+On first run, `zclaude` detects that no API key is configured and offers interactive setup:
 
-- Use `ANTHROPIC_AUTH_TOKEN` (not `ANTHROPIC_API_KEY`) — this is Z.AI's documented variable for Claude Code
-- Use the Anthropic endpoint (`/api/anthropic`), **not** the OpenAI-compatible endpoint (`/api/coding/paas/v4`) — the wrong endpoint will not route through your subscription correctly
-- `API_TIMEOUT_MS: 3000000` (50 minutes) prevents timeouts during long agent sessions
+```
+[INFO]  (zclaude) No Z.AI API key configured.
+  To use zclaude, you need a Z.AI GLM Coding Plan subscription.
 
-#### Model mapping
+  1. Create a subscription: https://z.ai/subscribe?ic=MMUPBUJ7PN
+     (affiliate link — you get 10% discount, author earns a bonus)
+  2. Generate an API key:   https://z.ai/manage-apikey/apikey-list
 
-By default, Z.AI maps Claude model names to GLM models:
+  Set up now? [Y/n]
+```
 
-| Claude slot | Default GLM model |
-|-------------|-------------------|
-| Opus | GLM-4.7 |
-| Sonnet | GLM-4.7 |
-| Haiku | GLM-4.5-Air |
+Press Enter, paste your API key (input is hidden), and Claude Code launches immediately.
 
-To use newer GLM models, add model mapping variables to `settings.json`:
+**Why `zclaude` over manual setup:**
+
+| Aspect | `zclaude` | Manual `settings.json` |
+|--------|-----------|----------------------|
+| Setup | One command, guided | Edit JSON file by hand |
+| Key storage | `~/.ai/zclaude/api-key` (chmod 600) | Plaintext in `settings.json` |
+| Isolation | Process-scoped — does not touch `~/.claude/` | Global — affects all Claude Code sessions |
+| Model mapping | Pre-configured for ADOS (glm-5.1) | Must set manually |
+| Switching | `claude` = Anthropic, `zclaude` = Z.AI — use both | Must edit settings to switch providers |
+| Diagnostics | `zclaude env` shows masked key + all vars | `env \| grep ANTHROPIC` |
+
+After initial setup, `zclaude` remembers your key. Subsequent launches skip straight to Claude Code.
+
+Other `zclaude` commands:
+
+```bash
+zclaude setup   # Reconfigure or replace your API key
+zclaude env     # Show masked key and environment variables (diagnostics)
+```
+
+See [zclaude User Guide](../tools/zclaude.md) for full reference.
+
+#### Advanced: manual `settings.json` configuration
+
+If you prefer to configure Claude Code globally (e.g., you only use Z.AI and never Anthropic directly), edit `~/.claude/settings.json` (or `%USERPROFILE%\.claude\settings.json` on Windows):
 
 ```json
 {
@@ -96,11 +114,34 @@ To use newer GLM models, add model mapping variables to `settings.json`:
 }
 ```
 
+**Key points:**
+
+- Use `ANTHROPIC_AUTH_TOKEN` (not `ANTHROPIC_API_KEY`) — this is Z.AI's documented variable for Claude Code
+- Use the Anthropic endpoint (`/api/anthropic`), **not** the OpenAI-compatible endpoint (`/api/coding/paas/v4`) — the wrong endpoint will not route through your subscription correctly
+- `API_TIMEOUT_MS: 3000000` (50 minutes) prevents timeouts during long agent sessions
+
+**Model mapping:**
+
+| Claude slot | Recommended GLM model |
+|-------------|----------------------|
+| Opus | `glm-5.1` |
+| Sonnet | `glm-5.1` |
+| Haiku | `glm-4.5-air` |
+
 **Recommendation for ADOS:** Map both Sonnet and Opus to `glm-5.1`. Claude Code routes most planning and execution through these slots, so using the most capable model gives better results for the autonomous multi-agent workflow. Use `glm-5-turbo` or `glm-4.7` for faster/cheaper execution when you don't need maximum reasoning.
 
 > **Note:** Claude Code's UI may still display Claude model names even when GLM models are active underneath. This is expected — the server-side mapping is transparent.
 
 #### Verify the setup
+
+**With `zclaude`:**
+
+```bash
+zclaude env     # Shows masked key and environment
+zclaude         # Launches Claude Code
+```
+
+**With manual configuration:**
 
 Open a new terminal (to pick up the `settings.json` changes), then:
 
@@ -124,16 +165,6 @@ env | grep ANTHROPIC
 ```
 
 > **Tip:** If you have a stale `ANTHROPIC_API_KEY` in your environment, unset it (`unset ANTHROPIC_API_KEY`). While `ANTHROPIC_AUTH_TOKEN` takes precedence, leftover variables can make debugging confusing.
-
-#### Automatic setup (alternative)
-
-Z.AI provides a helper tool:
-
-```bash
-npx @z_ai/coding-helper
-```
-
-This can configure Claude Code, OpenCode, and other supported tools. For reproducible, version-controlled setups, prefer the manual `settings.json` approach documented above — but never commit your real API key.
 
 ## Install ADOS as a Claude Code plugin
 
