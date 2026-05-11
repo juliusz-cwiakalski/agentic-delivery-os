@@ -1,0 +1,447 @@
+#!/usr/bin/env bash
+# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+# MIT License - see LICENSE file for full terms
+# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/zclaude
+#
+# zclaude — Launch Claude Code with Z.AI GLM Coding Plan as provider.
+#
+# Dependencies: bash>=4, claude (Claude Code CLI), curl, date
+#
+# Environment:
+#   ZAI_API_KEY              - Z.AI API key (overrides file-based key)
+#   ZCLAUDE_HAIKU_MODEL      - Override haiku model mapping (default: glm-4.5-air)
+#   ZCLAUDE_SONNET_MODEL     - Override sonnet model mapping (default: glm-5.1)
+#   ZCLAUDE_OPUS_MODEL       - Override opus model mapping (default: glm-5.1)
+#   ZCLAUDE_BASE_URL         - Override API endpoint (default: https://api.z.ai/api/anthropic)
+#   ZCLAUDE_TIMEOUT_MS       - Override timeout (default: 3000000)
+#   ZCLAUDE_CONFIG_DIR       - Override config directory (default: ~/.ai/zclaude)
+#   ZCLAUDE_NO_VERSION_CHECK - Set to 'true' to skip version check
+#   CLAUDE_CMD               - Override claude command (default: claude)
+#   CURL_CMD                 - Override curl command (default: curl)
+#
+# Exit codes:
+#   0 - Success
+#   2 - Usage error
+#   3 - Configuration error (missing key, claude not found)
+
+set -Eeuo pipefail
+set -o errtrace
+shopt -s inherit_errexit 2>/dev/null || true
+IFS=$'\n\t'
+
+# ============================================================================
+# SETTINGS
+# ============================================================================
+readonly APP_NAME="zclaude"
+readonly APP_VERSION="1.0.0"
+readonly LOG_TAG="(${APP_NAME})"
+
+# Exit codes
+readonly EXIT_SUCCESS=0
+readonly EXIT_USAGE=2
+readonly EXIT_CONFIG=3
+readonly EXIT_RUNTIME=4
+
+# Configurable via environment (not readonly — must be overridable for testing)
+CONFIG_DIR="${ZCLAUDE_CONFIG_DIR:-${HOME}/.ai/zclaude}"
+API_KEY_FILE="${CONFIG_DIR}/api-key"
+
+# Z.AI defaults
+readonly DEFAULT_BASE_URL="https://api.z.ai/api/anthropic"
+readonly DEFAULT_TIMEOUT_MS="3000000"
+readonly DEFAULT_HAIKU_MODEL="glm-4.5-air"
+readonly DEFAULT_SONNET_MODEL="glm-5.1"
+readonly DEFAULT_OPUS_MODEL="glm-5.1"
+
+VERBOSE="${VERBOSE:-false}"
+
+# ============================================================================
+# TRAPS
+# ============================================================================
+_on_err() {
+  local -r line="$1" cmd="$2" code="$3"
+  log_err "line ${line}: '${cmd}' exited with ${code}"
+}
+
+_on_exit() {
+  # Cleanup — no persistent temp files in this script
+  :
+}
+
+_on_interrupt() {
+  log_warn "Interrupted"
+  exit 130
+}
+
+trap '_on_err $LINENO "$BASH_COMMAND" $?' ERR
+trap '_on_exit' EXIT
+trap '_on_interrupt' INT TERM
+
+# ============================================================================
+# UTILITIES
+# ============================================================================
+log_info()  { printf '[INFO]  %s %s\n' "${LOG_TAG}" "$*"; }
+log_warn()  { printf '[WARN]  %s %s\n' "${LOG_TAG}" "$*" >&2; }
+log_err()   { printf '[ERROR] %s %s\n' "${LOG_TAG}" "$*" >&2; }
+log_debug() { [[ "${VERBOSE}" == "true" ]] && printf '[DEBUG] %s %s\n' "${LOG_TAG}" "$*" || true; }
+log_fatal() { log_err "$@"; exit "${EXIT_RUNTIME}"; }
+
+die() { log_err "$@"; exit "${EXIT_USAGE}"; }
+
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || {
+    log_err "Required command not found: $1"
+    exit "${EXIT_CONFIG}"
+  }
+}
+
+ensure_config_dir() {
+  if [[ ! -d "${CONFIG_DIR}" ]]; then
+    mkdir -p "${CONFIG_DIR}"
+    chmod 700 "${CONFIG_DIR}"
+    log_debug "Created config directory: ${CONFIG_DIR}"
+  fi
+}
+
+# ============================================================================
+# MOCKABLE WRAPPERS (for testing)
+# ============================================================================
+_claude() { "${CLAUDE_CMD:-claude}" "$@"; }
+_curl()   { "${CURL_CMD:-curl}" "$@"; }
+
+# ============================================================================
+# VERSION CHECK
+# ============================================================================
+_check_version() {
+  local check_file="${CONFIG_DIR}/version-check"
+  local now
+  now="$(date +%s)"
+
+  # Opt-out
+  if [[ "${ZCLAUDE_NO_VERSION_CHECK:-false}" == "true" ]]; then
+    return 0
+  fi
+
+  # 24h cache
+  if [[ -f "$check_file" ]]; then
+    local last_check
+    last_check="$(<"$check_file")" 2>/dev/null || last_check=0
+    if (( now - last_check < 86400 )); then
+      return 0
+    fi
+  fi
+
+  # Ensure config dir exists before writing check file
+  ensure_config_dir
+
+  # Fetch and compare (silent on failure)
+  {
+    local raw_url="https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/tools/${APP_NAME}"
+    local remote_version
+    remote_version="$(_curl -sS --max-time 5 "$raw_url" 2>/dev/null | grep -oP 'APP_VERSION="\K[^"]+' || true)"
+
+    printf '%s' "$now" > "$check_file" 2>/dev/null || true
+
+    if [[ -n "$remote_version" && "$remote_version" != "${APP_VERSION}" ]]; then
+      if [[ "$(printf '%s\n%s' "${APP_VERSION}" "$remote_version" | sort -V | tail -1)" == "$remote_version" ]]; then
+        log_warn "A newer version is available ($remote_version vs your ${APP_VERSION})."
+        printf '[WARN]  (%s)   Update: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/%s\n' "${APP_NAME}" "${APP_NAME}" >&2
+      fi
+    fi
+  } 2>/dev/null || true
+}
+
+# ============================================================================
+# API KEY MANAGEMENT
+# ============================================================================
+
+# Read API key: env var > file
+read_api_key() {
+  local key=""
+
+  # Env var takes priority
+  if [[ -n "${ZAI_API_KEY:-}" ]]; then
+    printf '%s' "${ZAI_API_KEY}"
+    return 0
+  fi
+
+  # Then file (use read -r to avoid UUOC)
+  if [[ -f "${API_KEY_FILE}" ]]; then
+    key=""
+    read -r key < "${API_KEY_FILE}" 2>/dev/null || true
+    key="$(printf '%s' "${key}" | tr -d '[:space:]')"
+    if [[ -n "$key" ]]; then
+      printf '%s' "${key}"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+save_api_key() {
+  local -r key="$1"
+  ensure_config_dir
+  printf '%s' "${key}" > "${API_KEY_FILE}"
+  chmod 600 "${API_KEY_FILE}"
+  log_info "API key saved to ${API_KEY_FILE}"
+}
+
+prompt_for_key() {
+  printf '  Enter your Z.AI API key (input hidden): '
+  local key=""
+  read -rs key
+  printf '\n'
+  key="$(printf '%s' "${key}" | tr -d '[:space:]')"
+
+  if [[ -z "$key" ]]; then
+    log_err "API key cannot be empty."
+    return 1
+  fi
+
+  local masked="${key:0:4}****${key: -4}"
+  log_info "Key received: ${masked}"
+  printf '%s' "${key}"
+}
+
+# ============================================================================
+# COMMANDS
+# ============================================================================
+
+_print_get_key_info() {
+  printf '  1. Create a subscription: https://z.ai/subscribe?ic=MMUPBUJ7PN\n'
+  printf '     (affiliate link — you get 10%% discount, author earns a bonus)\n'
+  printf '  2. Generate an API key:   https://z.ai/manage-apikey/apikey-list\n'
+  printf '\n'
+}
+
+cmd_setup() {
+  log_info "Z.AI GLM Coding Plan setup"
+  printf '\n'
+
+  local existing_key=""
+  if existing_key="$(read_api_key)" 2>/dev/null; then
+    local masked
+    masked="${existing_key:0:4}****${existing_key: -4}"
+    log_info "Existing key found: ${masked}"
+    printf '  Replace it? [y/N] '
+    local answer
+    read -r answer
+    [[ "${answer}" =~ ^[Yy]$ ]] || {
+      log_info "Keeping existing key."
+      return 0
+    }
+  else
+    printf '  Get your API key:\n'
+    printf '\n'
+    _print_get_key_info
+  fi
+
+  local key
+  key="$(prompt_for_key)" || exit 1
+  save_api_key "${key}"
+
+  printf '\n'
+  log_info "Setup complete. Run 'zclaude' to launch Claude Code with Z.AI."
+}
+
+cmd_env() {
+  local key
+  key="$(read_api_key)" || {
+    log_err "No API key configured. Run 'zclaude setup' first."
+    exit "${EXIT_CONFIG}"
+  }
+
+  local base_url sonnet_model opus_model haiku_model timeout_ms
+  base_url="${ZCLAUDE_BASE_URL:-${DEFAULT_BASE_URL}}"
+  timeout_ms="${ZCLAUDE_TIMEOUT_MS:-${DEFAULT_TIMEOUT_MS}}"
+  haiku_model="${ZCLAUDE_HAIKU_MODEL:-${DEFAULT_HAIKU_MODEL}}"
+  sonnet_model="${ZCLAUDE_SONNET_MODEL:-${DEFAULT_SONNET_MODEL}}"
+  opus_model="${ZCLAUDE_OPUS_MODEL:-${DEFAULT_OPUS_MODEL}}"
+
+  local masked_key="${key:0:8}...${key: -4}"
+
+  cat <<EOF
+# Z.AI Claude Code environment
+ANTHROPIC_AUTH_TOKEN=${masked_key}
+ANTHROPIC_BASE_URL=${base_url}
+API_TIMEOUT_MS=${timeout_ms}
+ANTHROPIC_DEFAULT_HAIKU_MODEL=${haiku_model}
+ANTHROPIC_DEFAULT_SONNET_MODEL=${sonnet_model}
+ANTHROPIC_DEFAULT_OPUS_MODEL=${opus_model}
+
+# Model mapping (Claude slot -> GLM model)
+#   Opus   -> ${opus_model}
+#   Sonnet -> ${sonnet_model}
+#   Haiku  -> ${haiku_model}
+EOF
+}
+
+cmd_launch() {
+  # Validate prerequisites
+  require_cmd claude
+
+  local key
+  key="$(read_api_key)" || {
+    # No key found — offer interactive first-time setup
+    printf '\n'
+    log_info "No Z.AI API key configured."
+    printf '  To use zclaude, you need a Z.AI GLM Coding Plan subscription.\n'
+    printf '\n'
+    _print_get_key_info
+    printf '  Set up now? [Y/n] '
+    local answer
+    read -r answer
+    if [[ "${answer}" =~ ^[Nn]$ ]]; then
+      log_info "Cancelled. Run 'zclaude setup' when ready."
+      exit "${EXIT_CONFIG}"
+    fi
+
+    printf '\n'
+    local new_key
+    new_key="$(prompt_for_key)" || exit 1
+    save_api_key "${new_key}"
+    key="${new_key}"
+    printf '\n'
+    log_info "Starting Claude Code with Z.AI..."
+    printf '\n'
+  }
+
+  local base_url timeout_ms haiku_model sonnet_model opus_model
+  base_url="${ZCLAUDE_BASE_URL:-${DEFAULT_BASE_URL}}"
+  timeout_ms="${ZCLAUDE_TIMEOUT_MS:-${DEFAULT_TIMEOUT_MS}}"
+  haiku_model="${ZCLAUDE_HAIKU_MODEL:-${DEFAULT_HAIKU_MODEL}}"
+  sonnet_model="${ZCLAUDE_SONNET_MODEL:-${DEFAULT_SONNET_MODEL}}"
+  opus_model="${ZCLAUDE_OPUS_MODEL:-${DEFAULT_OPUS_MODEL}}"
+
+  # Unset conflicting Anthropic vars to avoid credential confusion
+  unset ANTHROPIC_API_KEY 2>/dev/null || true
+
+  log_debug "ANTHROPIC_AUTH_TOKEN=${key:0:8}..."
+  log_debug "ANTHROPIC_BASE_URL=${base_url}"
+  log_debug "Models: haiku=${haiku_model} sonnet=${sonnet_model} opus=${opus_model}"
+
+  # Launch Claude with Z.AI env vars
+  ANTHROPIC_AUTH_TOKEN="${key}" \
+  ANTHROPIC_BASE_URL="${base_url}" \
+  API_TIMEOUT_MS="${timeout_ms}" \
+  ANTHROPIC_DEFAULT_HAIKU_MODEL="${haiku_model}" \
+  ANTHROPIC_DEFAULT_SONNET_MODEL="${sonnet_model}" \
+  ANTHROPIC_DEFAULT_OPUS_MODEL="${opus_model}" \
+  _claude "$@"
+}
+
+cmd_help() {
+  cat <<EOF
+zclaude ${APP_VERSION} — Launch Claude Code with Z.AI GLM Coding Plan as provider.
+
+Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com)
+MIT License - see LICENSE file for full terms
+Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/zclaude
+
+USAGE:
+  zclaude [COMMAND] [OPTIONS] [-- CLAUDE_ARGS...]
+
+COMMANDS:
+  setup             Configure Z.AI API key (first-time setup)
+  env               Show environment variables that will be set
+  help              Show this help message
+
+  (default)         Launch Claude Code with Z.AI provider
+
+EXAMPLES:
+  zclaude setup                     # First-time: save your Z.AI API key
+  zclaude                           # Launch Claude with Z.AI in current dir
+  zclaude --chat                    # Pass --chat flag to Claude
+  zclaude -- --plugin-dir .ados     # Launch with ADOS plugin
+  zclaude env                       # Debug: show env vars
+
+CONFIGURATION:
+  API key:  ${API_KEY_FILE}
+  Override: ZAI_API_KEY environment variable
+
+  Model mapping (defaults, overridable via env vars):
+    Opus   -> ${DEFAULT_OPUS_MODEL}
+    Sonnet -> ${DEFAULT_SONNET_MODEL}
+    Haiku  -> ${DEFAULT_HAIKU_MODEL}
+
+ENVIRONMENT:
+  ZAI_API_KEY              Z.AI API key (overrides file)
+  ZCLAUDE_SONNET_MODEL     Sonnet slot model (default: ${DEFAULT_SONNET_MODEL})
+  ZCLAUDE_OPUS_MODEL       Opus slot model (default: ${DEFAULT_OPUS_MODEL})
+  ZCLAUDE_HAIKU_MODEL      Haiku slot model (default: ${DEFAULT_HAIKU_MODEL})
+  ZCLAUDE_BASE_URL         API endpoint (default: ${DEFAULT_BASE_URL})
+  ZCLAUDE_TIMEOUT_MS       Timeout in ms (default: ${DEFAULT_TIMEOUT_MS})
+  ZCLAUDE_CONFIG_DIR       Config directory (default: ${CONFIG_DIR})
+  ZCLAUDE_NO_VERSION_CHECK Set to 'true' to skip version check
+
+DOCUMENTATION:
+  Full guide: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/tools/zclaude.md
+
+EXIT CODES:
+  0 - Success
+  2 - Usage error
+  3 - Configuration error (missing key, claude not found)
+EOF
+}
+
+# ============================================================================
+# CLI
+# ============================================================================
+parse_args() {
+  while (($#)); do
+    case "$1" in
+      -h|--help)
+        cmd_help
+        exit 0
+        ;;
+      -V|--version)
+        printf '%s %s\n' "${APP_NAME}" "${APP_VERSION}"
+        exit 0
+        ;;
+      -v|--verbose)
+        VERBOSE=true
+        shift
+        ;;
+      setup|env|help)
+        local cmd="$1"
+        shift
+        case "${cmd}" in
+          setup) cmd_setup "$@" ;;
+          env)   cmd_env "$@" ;;
+          help)  cmd_help ;;
+        esac
+        return $?
+        ;;
+      --)
+        shift
+        cmd_launch "$@"
+        return $?
+        ;;
+      -*)
+        # Unknown flags — pass through to Claude
+        break
+        ;;
+      *)
+        # Positional arg that's not a command — pass to Claude
+        break
+        ;;
+    esac
+  done
+
+  # Default: launch Claude with all remaining args
+  cmd_launch "$@"
+}
+
+# ============================================================================
+# MAIN
+# ============================================================================
+main() {
+  _check_version
+  parse_args "$@"
+}
+
+# Testable main guard
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi
