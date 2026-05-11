@@ -188,10 +188,12 @@ save_api_key() {
 }
 
 prompt_for_key() {
-  printf '  Enter your Z.AI API key (input hidden): '
+  # All user-facing output goes to stderr so only the key value is captured
+  # by the caller's $(...) command substitution.
+  printf '  Enter your Z.AI API key (input hidden): ' >&2
   local key=""
   read -rs key
-  printf '\n'
+  printf '\n' >&2
   key="$(printf '%s' "${key}" | tr -d '[:space:]')"
 
   if [[ -z "$key" ]]; then
@@ -200,7 +202,7 @@ prompt_for_key() {
   fi
 
   local masked="${key:0:4}****${key: -4}"
-  log_info "Key received: ${masked}"
+  printf '[INFO]  %s Key received: %s\n' "${LOG_TAG}" "${masked}" >&2
   printf '%s' "${key}"
 }
 
