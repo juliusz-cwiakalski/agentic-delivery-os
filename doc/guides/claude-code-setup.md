@@ -5,18 +5,50 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 ---
 # Claude Code Setup Guide
 
-How to install Claude Code CLI, configure a model provider, and run ADOS as a Claude Code plugin.
+How to install Claude Code CLI, configure a provider, and run ADOS as a Claude Code plugin.
+
+<!-- TOC -->
+* [Claude Code Setup Guide](#claude-code-setup-guide)
+  * [Prerequisites](#prerequisites)
+  * [Install Claude Code](#install-claude-code)
+  * [Provider and authentication options](#provider-and-authentication-options)
+    * [Option A: Anthropic account subscription](#option-a-anthropic-account-subscription)
+    * [Option B: Anthropic API key](#option-b-anthropic-api-key)
+    * [Option C: Z.AI GLM Coding Plan](#option-c-zai-glm-coding-plan)
+      * [Quick setup with `zclaude` (recommended)](#quick-setup-with-zclaude-recommended)
+      * [Advanced: manual Z.AI configuration](#advanced-manual-zai-configuration)
+      * [Verify provider setup](#verify-provider-setup)
+  * [Install ADOS as a Claude Code plugin](#install-ados-as-a-claude-code-plugin)
+    * [From the marketplace](#from-the-marketplace)
+    * [From a local ADOS branch for development testing](#from-a-local-ados-branch-for-development-testing)
+      * [Local branch smoke test](#local-branch-smoke-test)
+  * [Using ADOS with Claude Code](#using-ados-with-claude-code)
+  * [Troubleshooting](#troubleshooting)
+    * [Claude Code uses an API key when you expected subscription login](#claude-code-uses-an-api-key-when-you-expected-subscription-login)
+    * [Claude Code asks for Anthropic login instead of using Z.AI](#claude-code-asks-for-anthropic-login-instead-of-using-zai)
+    * [Z.AI subscription quota is not being used](#zai-subscription-quota-is-not-being-used)
+    * [Model appears as Claude but should be GLM](#model-appears-as-claude-but-should-be-glm)
+    * [Timeout errors during long agent sessions](#timeout-errors-during-long-agent-sessions)
+    * [Local plugin changes do not appear](#local-plugin-changes-do-not-appear)
+  * [Related documentation](#related-documentation)
+<!-- TOC -->
 
 ## Prerequisites
 
-- **Node.js 18+** — required by Claude Code CLI
-- **A model provider** — either a direct Anthropic API key or a third-party provider with an Anthropic-compatible endpoint
+- **Claude Code CLI** — install it with the official native installer below.
+- **A Claude Code auth option** — Anthropic account subscription, Anthropic API key, or an Anthropic-compatible provider such as [Z.AI](https://z.ai/subscribe?ic=MMUPBUJ7PN).
+- **Git** — required when testing ADOS from a feature branch.
 
 ## Install Claude Code
 
-```bash
-npm install -g @anthropic-ai/claude-code
-```
+Prefer the official native installers from the [Claude Code quickstart](https://code.claude.com/docs/en/quickstart). The older npm package appears in some references, but the native installer is the recommended path in the [Claude Code GitHub README](https://github.com/anthropics/claude-code/blob/main/README.md).
+
+| Platform | Recommended install |
+|----------|---------------------|
+| macOS, Linux, WSL | `curl -fsSL https://claude.ai/install.sh \| bash` |
+| Windows PowerShell | `irm https://claude.ai/install.ps1 \| iex` |
+| Windows WinGet | `winget install Anthropic.ClaudeCode` |
+| Legacy/fallback | `npm install -g @anthropic-ai/claude-code` |
 
 Verify:
 
@@ -24,46 +56,77 @@ Verify:
 claude --version
 ```
 
-## Provider options
+## Provider and authentication options
 
-Claude Code connects to an Anthropic Messages-compatible API. You have two options:
+Claude Code can use first-party Anthropic authentication or a compatible third-party API endpoint.
 
-| Provider | Cost | Setup |
-|----------|------|-------|
-| **Anthropic API** (direct) | Pay-per-token | API key only |
-| **Z.AI GLM Coding Plan** | Flat subscription from $18/month | API key + endpoint override |
+| Option | Best for | Setup | Links |
+|--------|----------|-------|-------|
+| **Anthropic account subscription** | Interactive Claude Code use with Claude Pro/Max/Team/Enterprise-style plans | Run `claude` and complete browser login; use `claude auth login --console` when needed | [Claude plans](https://claude.com/pricing), [authentication docs](https://code.claude.com/docs/en/authentication), [CLI reference](https://code.claude.com/docs/en/cli-reference) |
+| **Anthropic API key** | Pay-per-token API usage, CI, automation | Create a key in Console and set `ANTHROPIC_API_KEY` | [Anthropic Console](https://console.anthropic.com/), [API pricing](https://platform.claude.com/docs/en/about-claude/pricing) |
+| **Z.AI GLM Coding Plan** | Flat subscription access to GLM coding models through an Anthropic-compatible endpoint | Use `zclaude` or set `ANTHROPIC_AUTH_TOKEN` + `ANTHROPIC_BASE_URL` | [Sign up](https://z.ai/subscribe?ic=MMUPBUJ7PN), [Claude Code docs](https://docs.z.ai/devpack/tool/claude), [FAQ](https://docs.z.ai/devpack/faq) |
 
-### Option A: Anthropic API (direct)
+> **Z.AI affiliate disclosure:** Z.AI signup links in this guide use `https://z.ai/subscribe?ic=MMUPBUJ7PN`. The author earns a commission and the buyer receives a 10% discount on the first subscription purchase.
 
-Set your API key:
+### Option A: Anthropic account subscription
+
+Use this path when you want Claude Code to use your Anthropic account subscription instead of a raw API key.
+
+```bash
+claude
+```
+
+Claude Code opens a browser login flow. If the browser cannot open automatically (SSH, WSL, container), follow the terminal prompt to copy the login URL or enter the displayed login code. See the [Claude Code authentication docs](https://code.claude.com/docs/en/authentication).
+
+For console-oriented authentication, use:
+
+```bash
+claude auth login --console
+```
+
+> **Tip:** If `ANTHROPIC_API_KEY` is set in your shell, Claude Code may prefer that API key over your logged-in subscription credentials. To use subscription login, unset it and restart Claude Code:
+>
+> ```bash
+> unset ANTHROPIC_API_KEY
+> claude
+> ```
+
+### Option B: Anthropic API key
+
+Use this path for pay-per-token API billing, CI, or automation.
+
+1. Create an API key in the [Anthropic Console](https://console.anthropic.com/).
+2. Review [Anthropic API pricing](https://platform.claude.com/docs/en/about-claude/pricing).
+3. Export the key before launching Claude Code:
 
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
+claude
 ```
 
-No additional configuration needed — Claude Code uses `api.anthropic.com` by default.
+Do not commit shell profiles, `.env` files, or config files that contain API keys.
 
-### Option B: Z.AI GLM Coding Plan
+### Option C: Z.AI GLM Coding Plan
 
-Z.AI offers a subscription plan that provides access to GLM models (GLM-5.1, GLM-5-Turbo, GLM-4.7) through an Anthropic-compatible endpoint. Claude Code is an officially supported tool.
+Z.AI offers a GLM Coding Plan for Claude Code and other coding tools through an Anthropic-compatible endpoint. Use the [Z.AI Claude Code docs](https://docs.z.ai/devpack/tool/claude) and [Z.AI FAQ](https://docs.z.ai/devpack/faq) as the source of truth.
 
 **Sign up:** [https://z.ai/subscribe?ic=MMUPBUJ7PN](https://z.ai/subscribe?ic=MMUPBUJ7PN)
 
-> **Affiliate disclosure:** This is an affiliate link. The author earns a commission **and** the buyer receives a **10% discount** on their first subscription purchase. The plan supports Claude Code, Cline, and 20+ other coding tools, starting at $18/month.
+> **Affiliate disclosure:** This is an affiliate link. The author earns a commission and the buyer receives a 10% discount on the first subscription purchase.
 
 #### Quick setup with `zclaude` (recommended)
 
-The `zclaude` tool configures everything in one step — no file editing, no env var juggling. It stores your API key securely (`~/.ai/zclaude/api-key`, chmod 600) and launches Claude Code with the correct endpoint, model mapping, and timeout settings.
+The `zclaude` tool launches Claude Code with the Z.AI endpoint, model mapping, and timeout settings without editing `~/.claude/settings.json`. It stores your Z.AI API key at `~/.ai/zclaude/api-key` with `chmod 600`.
 
-**Install zclaude (one-liner):**
+Install `zclaude`:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/scripts/install-zclaude.sh | bash
 ```
 
-Works on Linux, macOS, Windows (Git Bash, WSL). See [zclaude User Guide](../tools/zclaude.md#installation) for `wget` alternative.
+Works on Linux, macOS, Windows Git Bash, and WSL. See the [zclaude User Guide](../tools/zclaude.md#installation) for the `wget` alternative.
 
-**Then launch:**
+Launch:
 
 ```bash
 zclaude
@@ -71,7 +134,7 @@ zclaude
 
 On first run, `zclaude` detects that no API key is configured and offers interactive setup:
 
-```
+```text
 [INFO]  (zclaude) No Z.AI API key configured.
   To use zclaude, you need a Z.AI GLM Coding Plan subscription.
 
@@ -87,28 +150,26 @@ Press Enter, paste your API key (input is hidden), and Claude Code launches imme
 **Why `zclaude` over manual setup:**
 
 | Aspect | `zclaude` | Manual `settings.json` |
-|--------|-----------|----------------------|
+|--------|-----------|------------------------|
 | Setup | One command, guided | Edit JSON file by hand |
-| Key storage | `~/.ai/zclaude/api-key` (chmod 600) | Plaintext in `settings.json` |
-| Isolation | Process-scoped — does not touch `~/.claude/` | Global — affects all Claude Code sessions |
-| Model mapping | Pre-configured for ADOS (glm-5.1) | Must set manually |
-| Switching | `claude` = Anthropic, `zclaude` = Z.AI — use both | Must edit settings to switch providers |
-| Diagnostics | `zclaude env` shows masked key + all vars | `env \| grep ANTHROPIC` |
-
-After initial setup, `zclaude` remembers your key. Subsequent launches skip straight to Claude Code.
+| Key storage | `~/.ai/zclaude/api-key` with `chmod 600` | Plaintext in `settings.json` |
+| Isolation | Process-scoped; does not touch `~/.claude/` | Global; affects all Claude Code sessions |
+| Model mapping | Preconfigured for ADOS (`glm-5.1`) | Must set manually |
+| Switching | `claude` = Anthropic, `zclaude` = Z.AI | Edit settings or env vars to switch |
+| Diagnostics | `zclaude env` shows masked key and variables | Inspect environment/settings manually |
 
 Other `zclaude` commands:
 
 ```bash
 zclaude setup   # Reconfigure or replace your API key
-zclaude env     # Show masked key and environment variables (diagnostics)
+zclaude env     # Show masked key and environment variables
 ```
 
-See [zclaude User Guide](../tools/zclaude.md) for full reference.
+See the [zclaude User Guide](../tools/zclaude.md) for the full reference.
 
-#### Advanced: manual `settings.json` configuration
+#### Advanced: manual Z.AI configuration
 
-If you prefer to configure Claude Code globally (e.g., you only use Z.AI and never Anthropic directly), edit `~/.claude/settings.json` (or `%USERPROFILE%\.claude\settings.json` on Windows):
+If you prefer to configure Claude Code globally for Z.AI, edit `~/.claude/settings.json` (or `%USERPROFILE%\.claude\settings.json` on Windows):
 
 ```json
 {
@@ -125,86 +186,119 @@ If you prefer to configure Claude Code globally (e.g., you only use Z.AI and nev
 
 **Key points:**
 
-- Use `ANTHROPIC_AUTH_TOKEN` (not `ANTHROPIC_API_KEY`) — this is Z.AI's documented variable for Claude Code
-- Use the Anthropic endpoint (`/api/anthropic`), **not** the OpenAI-compatible endpoint (`/api/coding/paas/v4`) — the wrong endpoint will not route through your subscription correctly
-- `API_TIMEOUT_MS: 3000000` (50 minutes) prevents timeouts during long agent sessions
-
-**Model mapping:**
+- Use `ANTHROPIC_AUTH_TOKEN` for the Z.AI key.
+- Use `ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic` for the Anthropic-compatible endpoint.
+- Use `API_TIMEOUT_MS=3000000` (50 minutes) for long ADOS agent sessions.
+- Map Opus and Sonnet to `glm-5.1`; map Haiku to `glm-4.5-air`.
 
 | Claude slot | Recommended GLM model |
-|-------------|----------------------|
+|-------------|-----------------------|
 | Opus | `glm-5.1` |
 | Sonnet | `glm-5.1` |
 | Haiku | `glm-4.5-air` |
 
-**Recommendation for ADOS:** Map both Sonnet and Opus to `glm-5.1`. Claude Code routes most planning and execution through these slots, so using the most capable model gives better results for the autonomous multi-agent workflow. Use `glm-5-turbo` or `glm-4.7` for faster/cheaper execution when you don't need maximum reasoning.
+> **Note:** Claude Code may still display Claude model names while requests are routed to GLM models. This is expected when using an Anthropic-compatible gateway.
 
-> **Note:** Claude Code's UI may still display Claude model names even when GLM models are active underneath. This is expected — the server-side mapping is transparent.
+#### Verify provider setup
 
-#### Verify the setup
-
-**With `zclaude`:**
+With `zclaude`:
 
 ```bash
-zclaude env     # Shows masked key and environment
-zclaude         # Launches Claude Code
+zclaude env
+zclaude
 ```
 
-**With manual configuration:**
-
-Open a new terminal (to pick up the `settings.json` changes), then:
+With `claude` and Anthropic login or manual settings:
 
 ```bash
-cd your-project
 claude
 ```
 
-If prompted about using the API key, choose **Yes**.
+Inside Claude Code:
 
-Inside Claude Code, check model status:
-
-```
+```text
 /status
 ```
 
-You can also verify environment variables are loaded:
-
-```bash
-env | grep ANTHROPIC
-```
-
-> **Tip:** If you have a stale `ANTHROPIC_API_KEY` in your environment, unset it (`unset ANTHROPIC_API_KEY`). While `ANTHROPIC_AUTH_TOKEN` takes precedence, leftover variables can make debugging confusing.
-
 ## Install ADOS as a Claude Code plugin
 
-Once Claude Code is configured with a provider, install ADOS:
+Once Claude Code is configured with a provider, install ADOS.
 
-**From GitHub marketplace (recommended):**
+### From the marketplace
 
-```
+Use the marketplace path when you want the published ADOS plugin:
+
+```text
 /plugin marketplace add juliusz-cwiakalski/agentic-delivery-os
 /plugin install ados@ados
 ```
 
-**For local development (contributors):**
+See the [Onboarding Guide](onboarding-existing-project.md) for full project setup.
+
+### From a local ADOS branch for development testing
+
+Use this path to test ADOS agents and skills from a feature branch before publishing or installing a marketplace version. This is the right path for `feat/GH-40/multi-tool-support`.
+
+Clone or update the ADOS repo:
 
 ```bash
-claude --plugin-dir .ados-claude
+git clone https://github.com/juliusz-cwiakalski/agentic-delivery-os.git
+cd agentic-delivery-os
+git fetch origin
+git switch feat/GH-40/multi-tool-support
 ```
 
-See [Onboarding Guide](onboarding-existing-project.md) for full project setup.
+Regenerate the Claude Code plugin from the OpenCode source files:
+
+```bash
+scripts/build-claude-plugin.sh
+```
+
+Launch Claude Code with the local generated plugin directory:
+
+```bash
+claude --plugin-dir "$PWD/.ados-claude"
+```
+
+If you use Z.AI through `zclaude`, launch the same local plugin with:
+
+```bash
+zclaude --plugin-dir "$PWD/.ados-claude"
+```
+
+This uses the local branch contents directly. You do not need to publish or install the marketplace plugin to test branch changes.
+
+**Source-of-truth rule:** `.opencode/` contains the canonical ADOS agent and command definitions. `.ados-claude/` is generated output for Claude Code. When changing agents, commands, or skills, edit `.opencode/`, run `scripts/build-claude-plugin.sh`, and test with `--plugin-dir "$PWD/.ados-claude"`.
+
+#### Local branch smoke test
+
+Inside Claude Code:
+
+1. Check plugin/command help if your Claude Code version exposes it:
+
+   ```text
+   /help
+   ```
+
+2. Run a safe read-only prompt:
+
+   ```text
+   @pm What ADOS version or branch am I testing? Do not modify files.
+   ```
+
+3. Confirm ADOS slash commands are visible or accepted, for example `/write-spec`, `/run-plan`, `/review`, and `/pr`. Do not run ticket-creating or file-writing commands as the first smoke test unless you are in a disposable repo.
 
 ## Using ADOS with Claude Code
 
 ADOS commands and agents work the same way in Claude Code as in OpenCode:
 
-```
+```text
 @pm deliver change GH-1
 ```
 
 Or manually:
 
-```
+```text
 /write-spec GH-1
 /write-test-plan GH-1
 /write-plan GH-1
@@ -214,25 +308,55 @@ Or manually:
 /pr
 ```
 
-See [Agents & Commands Guide](opencode-agents-and-commands-guide.md) for the full reference.
+See the [Agents & Commands Guide](opencode-agents-and-commands-guide.md) for the full reference.
 
 ## Troubleshooting
 
-### "Claude Code asks for Anthropic login" instead of using the API key
+### Claude Code uses an API key when you expected subscription login
 
-This means `ANTHROPIC_AUTH_TOKEN` is not being picked up. Ensure `~/.claude/settings.json` exists with the correct `env` block and restart Claude Code in a new terminal.
+Unset API-key variables and restart Claude Code:
 
-### Z.AI subscription quota not being used
+```bash
+unset ANTHROPIC_API_KEY
+unset ANTHROPIC_AUTH_TOKEN
+claude
+```
 
-Verify you're using the Anthropic endpoint (`https://api.z.ai/api/anthropic`), not the OpenAI-compatible one. Check `/status` inside Claude Code to confirm the connection.
+### Claude Code asks for Anthropic login instead of using Z.AI
+
+If using manual Z.AI setup, ensure `~/.claude/settings.json` has the correct `env` block. If using `zclaude`, run:
+
+```bash
+zclaude env
+```
+
+### Z.AI subscription quota is not being used
+
+Verify that Claude Code is launched through `zclaude` or that manual settings use `ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic`. Check `/status` inside Claude Code.
 
 ### Model appears as Claude but should be GLM
 
-This is expected — Claude Code's UI shows Claude model names while Z.AI maps them server-side. The model mapping variables control which GLM model is actually used.
+This can happen with Anthropic-compatible gateways. Confirm your model mapping variables; Z.AI still serves GLM models behind the compatible interface.
 
 ### Timeout errors during long agent sessions
 
-Increase `API_TIMEOUT_MS` in `settings.json`. The recommended value of `3000000` (50 minutes) should be sufficient for most ADOS workflows.
+Increase `API_TIMEOUT_MS`. The recommended value for ADOS with Z.AI is `3000000` (50 minutes).
+
+### Local plugin changes do not appear
+
+Regenerate and relaunch:
+
+```bash
+scripts/build-claude-plugin.sh
+claude --plugin-dir "$PWD/.ados-claude"
+```
+
+For Z.AI:
+
+```bash
+scripts/build-claude-plugin.sh
+zclaude --plugin-dir "$PWD/.ados-claude"
+```
 
 ## Related documentation
 
@@ -240,6 +364,9 @@ Increase `API_TIMEOUT_MS` in `settings.json`. The recommended value of `3000000`
 |----------|-------------|
 | [Onboarding Guide](onboarding-existing-project.md) | Full ADOS project setup |
 | [Agents & Commands Guide](opencode-agents-and-commands-guide.md) | How to use ADOS agents and commands |
-| [External Researcher Setup](external-researcher-setup.md) | MCP server setup (also uses Z.AI for web search) |
+| [zclaude User Guide](../tools/zclaude.md) | Z.AI wrapper for Claude Code |
+| [External Researcher Setup](external-researcher-setup.md) | MCP server setup |
 | [Adding Tool Support](adding-tool-support.md) | Extending ADOS to other AI tools |
+| [Claude Code quickstart](https://code.claude.com/docs/en/quickstart) | Official Claude Code installation docs |
+| [Claude Code authentication](https://code.claude.com/docs/en/authentication) | Official auth and login docs |
 | [Z.AI Claude Code docs](https://docs.z.ai/devpack/tool/claude) | Official Z.AI documentation for Claude Code integration |
