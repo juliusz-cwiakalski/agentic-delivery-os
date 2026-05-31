@@ -328,10 +328,18 @@ EOF
 generate_manifest() {
     cat <<'EOF'
 {
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "ados",
   "version": "1.0.0",
-  "author": "Juliusz Ćwiąkalski",
-  "description": "Agentic Delivery OS - AI-powered software delivery system"
+  "description": "Agentic Delivery OS - AI-powered software delivery system",
+  "author": {
+    "name": "Juliusz Ćwiąkalski",
+    "url": "https://www.linkedin.com/in/juliusz-cwiakalski/"
+  },
+  "homepage": "https://github.com/juliusz-cwiakalski/agentic-delivery-os",
+  "repository": "https://github.com/juliusz-cwiakalski/agentic-delivery-os",
+  "license": "MIT",
+  "keywords": ["agentic-delivery-os", "ados", "spec-driven", "software-delivery", "opencode", "claude-code"]
 }
 EOF
 }

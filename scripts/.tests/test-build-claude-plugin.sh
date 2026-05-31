@@ -314,6 +314,46 @@ test_build_creates_output_structure() {
   assert_file_exists "${output_dir}/.claude-plugin/plugin.json" "Should create plugin.json"
 }
 
+test_manifest_uses_valid_metadata_schema() {
+  local source_dir="${_test_tmpdir}/source"
+  local output_dir="${_test_tmpdir}/.ados-claude"
+
+  create_minimal_opencode_source "${source_dir}"
+
+  build_plugin "claude" "${source_dir}/.opencode" "${output_dir}"
+
+  local manifest
+  manifest="$(cat "${output_dir}/.claude-plugin/plugin.json")"
+
+  assert_contains "${manifest}" '"$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json"' "Manifest should declare SchemaStore schema"
+  assert_contains "${manifest}" '"author": {' "Author must be an object for Claude Code plugin schema"
+  assert_contains "${manifest}" '"name": "Juliusz Ćwiąkalski"' "Author object should include author name"
+  assert_contains "${manifest}" '"url": "https://www.linkedin.com/in/juliusz-cwiakalski/"' "Author object should include LinkedIn author URL"
+  assert_contains "${manifest}" '"homepage": "https://github.com/juliusz-cwiakalski/agentic-delivery-os"' "Manifest should include GitHub homepage"
+  assert_contains "${manifest}" '"repository": "https://github.com/juliusz-cwiakalski/agentic-delivery-os"' "Manifest should include repository"
+  assert_contains "${manifest}" '"license": "MIT"' "Manifest should include license"
+  assert_contains "${manifest}" '"claude-code"' "Manifest should include Claude Code keyword"
+  assert_not_contains "${manifest}" '"author": "Juliusz Ćwiąkalski"' "Author must not be a string"
+}
+
+test_marketplace_manifest_uses_valid_metadata_schema() {
+  local -r repo_root="$(cd "${TEST_DIR}/../.." && pwd)"
+  local -r marketplace_path="${repo_root}/.claude-plugin/marketplace.json"
+
+  assert_file_exists "${marketplace_path}" "Marketplace manifest should exist"
+
+  local marketplace
+  marketplace="$(cat "${marketplace_path}")"
+
+  assert_contains "${marketplace}" '"$schema": "https://json.schemastore.org/claude-code-marketplace.json"' "Marketplace should declare SchemaStore schema"
+  assert_contains "${marketplace}" '"owner": {' "Marketplace schema requires top-level owner object"
+  assert_contains "${marketplace}" '"url": "https://www.linkedin.com/in/juliusz-cwiakalski/"' "Owner/author URL should use LinkedIn profile"
+  assert_contains "${marketplace}" '"homepage": "https://github.com/juliusz-cwiakalski/agentic-delivery-os"' "Plugin homepage should use GitHub repo page"
+  assert_contains "${marketplace}" '"repository": "https://github.com/juliusz-cwiakalski/agentic-delivery-os"' "Plugin entry should include repository"
+  assert_contains "${marketplace}" '"source": "git-subdir"' "Plugin source should use git-subdir"
+  assert_contains "${marketplace}" '"path": ".ados-claude"' "Plugin source should point to generated plugin directory"
+}
+
 test_build_creates_agent_files() {
   local source_dir="${_test_tmpdir}/source"
   local output_dir="${_test_tmpdir}/.ados-claude"
@@ -414,6 +454,8 @@ main() {
   run_test "license header applied" test_license_header_applied
   run_test "generated warning applied" test_generated_warning_applied
   run_test "build creates output structure" test_build_creates_output_structure
+  run_test "manifest uses valid metadata schema" test_manifest_uses_valid_metadata_schema
+  run_test "marketplace manifest uses valid metadata schema" test_marketplace_manifest_uses_valid_metadata_schema
   run_test "build creates agent files" test_build_creates_agent_files
   run_test "build creates skill files" test_build_creates_skill_files
   run_test "idempotency - running twice produces same output" test_idempotency

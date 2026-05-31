@@ -1,8 +1,12 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "ados",
   "version": "1.0.0",
   "description": "Agentic Delivery OS - AI-powered software delivery system with 10-phase workflow",
+  "owner": {
+    "name": "Juliusz Ćwiąkalski",
+    "url": "https://www.linkedin.com/in/juliusz-cwiakalski/"
+  },
   "plugins": [
     {
       "name": "ados",
@@ -15,11 +19,13 @@
         "ref": "main"
       },
       "author": {
-        "name": "Juliusz Ćwiąkalski"
+        "name": "Juliusz Ćwiąkalski",
+        "url": "https://www.linkedin.com/in/juliusz-cwiakalski/"
       },
       "homepage": "https://github.com/juliusz-cwiakalski/agentic-delivery-os",
+      "repository": "https://github.com/juliusz-cwiakalski/agentic-delivery-os",
       "license": "MIT",
-      "keywords": ["agentic", "delivery", "automation", "sdls"],
+      "keywords": ["agentic-delivery-os", "ados", "spec-driven", "software-delivery", "automation", "claude-code"],
       "categories": ["developer-tools", "devops"]
     }
   ]

@@ -30,6 +30,7 @@ How to install Claude Code CLI, configure a provider, and run ADOS as a Claude C
     * [Model appears as Claude but should be GLM](#model-appears-as-claude-but-should-be-glm)
     * [Timeout errors during long agent sessions](#timeout-errors-during-long-agent-sessions)
     * [Local plugin changes do not appear](#local-plugin-changes-do-not-appear)
+    * [Local plugin manifest is invalid](#local-plugin-manifest-is-invalid)
   * [Related documentation](#related-documentation)
 <!-- TOC -->
 
@@ -357,6 +358,17 @@ For Z.AI:
 scripts/build-claude-plugin.sh
 zclaude --plugin-dir "$PWD/.ados-claude"
 ```
+
+### Local plugin manifest is invalid
+
+If Claude Code reports that `.ados-claude/.claude-plugin/plugin.json` is invalid, regenerate the plugin from `.opencode/` and relaunch:
+
+```bash
+scripts/build-claude-plugin.sh
+claude --plugin-dir "$PWD/.ados-claude"
+```
+
+Do not hand-edit generated plugin files as a long-term fix; update the generator or `.opencode/` source and rebuild.
 
 ## Related documentation
 
