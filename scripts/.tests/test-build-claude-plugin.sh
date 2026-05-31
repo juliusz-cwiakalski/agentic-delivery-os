@@ -32,7 +32,10 @@ _test_setup() {
 }
 
 _test_teardown() {
-  [[ -n "${_test_tmpdir}" && -d "${_test_tmpdir}" ]] && rm -rf "${_test_tmpdir}"
+  if [[ -n "${_test_tmpdir}" && -d "${_test_tmpdir}" ]]; then
+    rm -rf "${_test_tmpdir}"
+  fi
+  return 0
 }
 
 trap '_test_teardown' EXIT
@@ -191,7 +194,7 @@ claude:
 This command has claude.model set to haiku.
 EOF
 
-  printf '%s' "${base}"
+  return 0
 }
 
 # ============================================================================
@@ -270,6 +273,23 @@ test_license_header_applied() {
   assert_contains "${transformed}" "Copyright (c) 2025-2026" "Should have copyright"
   assert_contains "${transformed}" "MIT License" "Should have MIT License"
   assert_contains "${transformed}" "source:" "Should have source reference"
+}
+
+test_generated_warning_applied() {
+  local source_dir="${_test_tmpdir}/source"
+  create_minimal_opencode_source "${source_dir}"
+
+  local transformed_agent transformed_skill
+  transformed_agent="$(transform_agent_frontmatter "${source_dir}/.opencode/agent/test-agent-no-claude.md")"
+  transformed_skill="$(transform_command_to_skill "${source_dir}/.opencode/command/test-command-no-claude.md")"
+
+  assert_contains "${transformed_agent}" "GENERATED FILE — DO NOT EDIT DIRECTLY" "Agent should warn that it is generated"
+  assert_contains "${transformed_agent}" "Source of truth: .opencode/agent/test-agent-no-claude.md" "Agent should identify source file"
+  assert_contains "${transformed_agent}" "Regenerate with: scripts/build-claude-plugin.sh" "Agent should identify regeneration command"
+
+  assert_contains "${transformed_skill}" "GENERATED FILE — DO NOT EDIT DIRECTLY" "Skill should warn that it is generated"
+  assert_contains "${transformed_skill}" "Source of truth: .opencode/command/test-command-no-claude.md" "Skill should identify source file"
+  assert_contains "${transformed_skill}" "Regenerate with: scripts/build-claude-plugin.sh" "Skill should identify regeneration command"
 }
 
 # ============================================================================
@@ -392,6 +412,7 @@ main() {
   run_test "frontmatter transformation preserves claude model" test_frontmatter_transformation_preserves_claude_model
   run_test "command to skill transformation" test_command_to_skill_transformation
   run_test "license header applied" test_license_header_applied
+  run_test "generated warning applied" test_generated_warning_applied
   run_test "build creates output structure" test_build_creates_output_structure
   run_test "build creates agent files" test_build_creates_agent_files
   run_test "build creates skill files" test_build_creates_skill_files

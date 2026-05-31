@@ -114,21 +114,6 @@ Full definitions: `.opencode/command/*.md`
 
 Guide: [doc/guides/opencode-agents-and-commands-guide.md](doc/guides/opencode-agents-and-commands-guide.md)
 
-### Using Z.AI GLM with Claude Code
-
-The `zclaude` convenience wrapper (`tools/zclaude`) configures Claude Code to use Z.AI GLM Coding Plan as the model provider — no manual `settings.json` editing required. `claude` and `zclaude` coexist: use `claude` for Anthropic, `zclaude` for Z.AI.
-
-```bash
-# One-liner install (Linux, macOS, Git Bash, WSL):
-curl -fsSL https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/scripts/install-zclaude.sh | bash
-
-# Then:
-zclaude        # Interactive first-time setup, then launches Claude Code
-zclaude env    # Show masked key and environment variables
-```
-
-Guide: [doc/tools/zclaude.md](doc/tools/zclaude.md) | Setup: [doc/guides/claude-code-setup.md](doc/guides/claude-code-setup.md)
-
 ## Extending the system
 
 When adding or modifying agents, commands, or skills:
@@ -219,49 +204,30 @@ The script adds headers only to files that are installed when users onboard ADOS
 
 ## Multi-tool support
 
-ADOS supports multiple AI coding tools while maintaining a **single source of truth** for agent and command definitions:
+ADOS maintains a **single source of truth** for all agent/command definitions:
 
-- **`.opencode/`** — Canonical source for all agent/command definitions (OpenCode format)
-- **`.ados-claude/`** — Generated Claude Code plugin (committed to repo, ready to use)
+- **`.opencode/`** — Canonical source (OpenCode format)
+- **`.ados-claude/`** — Generated Claude Code plugin (committed, kept in sync by CI)
 
-The build script `scripts/build-claude-plugin.sh` transforms `.opencode/` definitions to Claude Code format. This ensures:
+### Generated plugin rule (important)
 
-1. No duplicate definitions to maintain
-2. All tools get the same prompts
-3. Model assignments are tool-specific (via `claude.model` frontmatter)
+**Never hand-edit `.ados-claude/` files.** They are generated artifacts.
 
-**For Claude Code users:**
+If you need to change an agent, command, model assignment, tool access, or Claude Code plugin behavior:
 
-**Recommended: Install from GitHub marketplace**
+1. Edit the source in `.opencode/agent/*.md` or `.opencode/command/*.md`
+2. Update `scripts/build-claude-plugin.sh` only if the transformation itself must change
+3. Run `scripts/build-claude-plugin.sh`
+4. Commit the `.opencode/` source change and regenerated `.ados-claude/` output together
 
-```bash
-# Step 1: Add ADOS marketplace (one-time setup)
-/plugin marketplace add juliusz-cwiakalski/agentic-delivery-os
+Generated `.ados-claude/**/*.md` files include comments naming their source file and regeneration command. Treat those comments as authoritative.
 
-# Step 2: Install ADOS plugin
-/plugin install ados@ados
-```
+### When modifying agents or commands
 
-This uses the `git-subdir` source to load ADOS directly from the GitHub repository.
-
-**For project-specific use (local development):**
-
-```bash
-claude --plugin-dir .ados-claude
-```
-
-This loads ADOS directly from the local repo — useful for contributors.
-
-**For OpenCode users:**
-
-No changes — continue using `.opencode/` as before.
-
-### Installation Modes
-
-| Mode | OpenCode Target | Claude Code Target |
-|------|-----------------|-------------------|
-| `--global` | `~/.config/opencode/` | Use `/plugin marketplace add` |
-| `--local` | `./.opencode/` | `claude --plugin-dir .ados-claude` |
+1. Edit only `.opencode/agent/*.md` and `.opencode/command/*.md`
+2. Run `scripts/build-claude-plugin.sh` to regenerate the Claude Code plugin
+3. Commit both source and generated files together
+4. CI verifies the generated plugin is current (fails if stale)
 
 ### Tool-specific frontmatter
 
@@ -277,19 +243,6 @@ claude:                      # Claude Code-specific
 ```
 
 OpenCode ignores the `claude:` key. Claude Code uses `claude.model` for model assignment.
-
-### Build script
-
-The build script `scripts/build-claude-plugin.sh` transforms `.opencode/` definitions to Claude Code format:
-
-```bash
-./scripts/build-claude-plugin.sh    # Generate .ados-claude/
-```
-
-Generated files include:
-- ADOS license headers with source reference
-- Transformed frontmatter (name, description, model, allowed-tools)
-- Preserved body content from source
 
 ### Adding new tools
 

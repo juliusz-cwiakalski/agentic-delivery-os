@@ -391,7 +391,10 @@ test_behavior_version() {
   stdout="$("${SCRIPT_DIR}/zclaude" --version 2>&1)" || exit_code=$?
 
   assert_exit_code 0 "${exit_code}" "--version should succeed"
-  assert_eq "zclaude 1.0.0" "${stdout}" "Version output should match"
+  assert_contains "${stdout}" "zclaude 1.0.0" "Version should include version string"
+  assert_contains "${stdout}" "Copyright (c) 2025-2026" "Version should include copyright"
+  assert_contains "${stdout}" "MIT License" "Version should include license"
+  assert_contains "${stdout}" "Latest version:" "Version should include URL"
 }
 
 test_behavior_env_with_env_var_key() {

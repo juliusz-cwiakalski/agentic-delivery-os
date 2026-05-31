@@ -13,6 +13,11 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
   * [Overview](#overview)
   * [Requirements](#requirements)
   * [Installation](#installation)
+    * [One-liner install (recommended)](#one-liner-install-recommended)
+    * [Verify](#verify)
+    * [Manual install](#manual-install)
+    * [For AI Agent Integration](#for-ai-agent-integration)
+    * [System Tool vs. Per-Project Dependency](#system-tool-vs-per-project-dependency)
   * [Provider Setup](#provider-setup)
     * [OpenAI](#openai)
     * [Stability AI](#stability-ai)
@@ -88,22 +93,31 @@ The tool is designed to be invoked by humans, shell scripts, CI/CD pipelines, an
 
 `text-to-image` is a **system-level CLI tool** designed to be installed once and shared across multiple projects. It is not a per-project dependency.
 
-### For Human Users (CLI usage)
-
-1. Clone the repository:
+### One-liner install (recommended)
 
 ```bash
-git clone https://github.com/juliusz-cwiakalski/agentic-delivery-os.git
-cd agentic-delivery-os
+curl -fsSL https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/scripts/install-text-to-image.sh | bash
 ```
 
-2. Verify the tool is executable:
+Or with `wget`:
 
 ```bash
-./tools/text-to-image --version
+wget -qO- https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/scripts/install-text-to-image.sh | bash
 ```
 
-3. **Install to PATH (required for AI agents, recommended for all users):**
+This downloads `text-to-image` to `~/.local/bin/` and makes it executable. If `~/.local/bin` is not in your PATH, the installer shows the command to add it.
+
+Works on Linux, macOS, Windows (Git Bash, WSL).
+
+### Verify
+
+```bash
+text-to-image --version
+```
+
+### Manual install
+
+If you prefer manual installation or already have the ADOS repo cloned:
 
 ```bash
 # Add to your shell profile (~/.bashrc, ~/.zshrc, etc.)
@@ -113,13 +127,7 @@ export PATH="$PATH:/path/to/agentic-delivery-os/tools"
 source ~/.bashrc  # or ~/.zshrc
 ```
 
-4. Verify PATH installation:
-
-```bash
-text-to-image --version
-```
-
-5. On first run, the tool creates `~/.ai/text-to-image/` (permissions `700`) for configuration, cache, and logs.
+On first run, the tool creates `~/.ai/text-to-image/` (permissions `700`) for configuration, cache, and logs.
 
 ### For AI Agent Integration
 
@@ -131,9 +139,9 @@ text-to-image --version
 
 | Aspect | System Tool (this tool) | Per-Project Dependency |
 |--------|------------------------|------------------------|
-| Installation location | One central location (e.g., `~/tools/`) | Inside project's `node_modules/` or `vendor/` |
+| Installation location | One central location (e.g., `~/.local/bin/`) | Inside project's `node_modules/` or `vendor/` |
 | Version management | Manual (single version) | Per-project lockfile |
-| Updates | Global update affects all projects | Isolated per project |
+| Updates | Re-run installer or `git pull` | Isolated per project |
 | PATH requirement | **Required** | Usually integrated by package manager |
 | AI agent access | Automatic (PATH lookup) | Requires project-relative path |
 

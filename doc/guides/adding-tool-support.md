@@ -235,6 +235,7 @@ allowed-tools:
 - **Never manually edit generated files** — they are overwritten by build script
 - **Modify `.opencode/` files only** — changes propagate to all tools
 - **Commit generated output** — keeps output in sync with source
+- **Mark generated files clearly** — generated Markdown frontmatter must include `GENERATED FILE — DO NOT EDIT DIRECTLY`, source path, and regeneration command
 
 ### Extensibility
 
@@ -252,6 +253,7 @@ allowed-tools:
 
 - **Apply to all generated files** — maintain ADOS licensing
 - **Include source reference** — point back to original `.opencode/` file
+- **Include regeneration hint** — tell contributors and AI agents to edit `.opencode/` and run the generator
 - **Format consistently** — match existing header style
 
 ## Troubleshooting

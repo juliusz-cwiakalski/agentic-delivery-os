@@ -55,6 +55,9 @@ readonly DEFAULT_OPUS_MODEL="glm-5.1"
 
 VERBOSE="${VERBOSE:-false}"
 
+# Documentation URL for error messages
+readonly DOC_URL="https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/tools/zclaude.md"
+
 # ============================================================================
 # TRAPS
 # ============================================================================
@@ -149,6 +152,19 @@ _check_version() {
       fi
     fi
   } 2>/dev/null || true
+}
+
+show_version() {
+  local claude_ver="unknown"
+  claude_ver="$(_claude --version 2>/dev/null | head -1 || true)"
+
+  cat <<EOF
+${APP_NAME} ${APP_VERSION}
+claude ${claude_ver}
+Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+MIT License - see LICENSE file for full terms
+Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/${APP_NAME}
+EOF
 }
 
 # ============================================================================
@@ -251,6 +267,7 @@ cmd_env() {
   local key
   key="$(read_api_key)" || {
     log_err "No API key configured. Run 'zclaude setup' first."
+    printf '[ERROR] (%s)   %s#first-time-setup\n' "${APP_NAME}" "${DOC_URL}" >&2
     exit "${EXIT_CONFIG}"
   }
 
@@ -335,37 +352,46 @@ cmd_launch() {
 
 cmd_help() {
   cat <<EOF
-zclaude ${APP_VERSION} — Launch Claude Code with Z.AI GLM Coding Plan as provider.
+zclaude ${APP_VERSION} — Claude Code with Z.AI GLM Coding Plan
 
 Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com)
 MIT License - see LICENSE file for full terms
-Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/zclaude
 
 USAGE:
-  zclaude [COMMAND] [OPTIONS] [-- CLAUDE_ARGS...]
+  zclaude [setup|env]                  — zclaude-specific commands
+  zclaude [CLAUDE_ARGS...]             — launch Claude Code with Z.AI (default)
+  zclaude --version                    — show zclaude + claude versions
+  zclaude --help-claude                — show Claude Code's own help
 
-COMMANDS:
-  setup             Configure Z.AI API key (first-time setup)
-  env               Show environment variables that will be set
-  help              Show this help message
+ZCLAUDE COMMANDS:
+  setup            Configure Z.AI API key (first-time or reconfigure)
+  env              Show environment variables that will be set (diagnostics)
 
-  (default)         Launch Claude Code with Z.AI provider
+HOW IT WORKS:
+  zclaude is a thin wrapper around Claude Code. It sets the correct
+  environment variables for Z.AI GLM (endpoint, model mapping, timeout)
+  and then launches Claude Code with whatever arguments you pass.
+
+  All Claude Code arguments are passed through transparently — no need
+  for -- separators or special syntax.
 
 EXAMPLES:
-  zclaude setup                     # First-time: save your Z.AI API key
-  zclaude                           # Launch Claude with Z.AI in current dir
-  zclaude --chat                    # Pass --chat flag to Claude
-  zclaude -- --plugin-dir .ados     # Launch with ADOS plugin
-  zclaude env                       # Debug: show env vars
+  zclaude                            # Launch Claude Code with Z.AI
+  zclaude --chat                     # Start in chat mode
+  zclaude --plugin-dir .ados-claude  # Use ADOS plugin
+  zclaude -p "explain this code"     # One-shot prompt
+  zclaude setup                      # First-time: save your Z.AI API key
+  zclaude env                        # Debug: show env vars
+
+MODEL MAPPING:
+  Claude slot -> GLM model (defaults, overridable via env vars)
+    Opus   -> ${DEFAULT_OPUS_MODEL}
+    Sonnet -> ${DEFAULT_SONNET_MODEL}
+    Haiku  -> ${DEFAULT_HAIKU_MODEL}
 
 CONFIGURATION:
   API key:  ${API_KEY_FILE}
   Override: ZAI_API_KEY environment variable
-
-  Model mapping (defaults, overridable via env vars):
-    Opus   -> ${DEFAULT_OPUS_MODEL}
-    Sonnet -> ${DEFAULT_SONNET_MODEL}
-    Haiku  -> ${DEFAULT_HAIKU_MODEL}
 
 ENVIRONMENT:
   ZAI_API_KEY              Z.AI API key (overrides file)
@@ -391,48 +417,39 @@ EOF
 # CLI
 # ============================================================================
 parse_args() {
-  while (($#)); do
-    case "$1" in
-      -h|--help)
-        cmd_help
-        exit 0
-        ;;
-      -V|--version)
-        printf '%s %s\n' "${APP_NAME}" "${APP_VERSION}"
-        exit 0
-        ;;
-      -v|--verbose)
-        VERBOSE=true
-        shift
-        ;;
-      setup|env|help)
-        local cmd="$1"
-        shift
-        case "${cmd}" in
-          setup) cmd_setup "$@" ;;
-          env)   cmd_env "$@" ;;
-          help)  cmd_help ;;
-        esac
-        return $?
-        ;;
-      --)
-        shift
-        cmd_launch "$@"
-        return $?
-        ;;
-      -*)
-        # Unknown flags — pass through to Claude
-        break
-        ;;
-      *)
-        # Positional arg that's not a command — pass to Claude
-        break
-        ;;
-    esac
-  done
-
-  # Default: launch Claude with all remaining args
-  cmd_launch "$@"
+  # zclaude intercepts only: setup, env, --version, --help, --help-claude
+  # Everything else passes through to Claude Code transparently.
+  case "${1:-}" in
+    setup)
+      shift
+      cmd_setup "$@"
+      return $?
+      ;;
+    env)
+      shift
+      cmd_env "$@"
+      return $?
+      ;;
+    -V|--version)
+      show_version
+      exit 0
+      ;;
+    -h|--help)
+      cmd_help
+      exit 0
+      ;;
+    --help-claude|-H)
+      shift
+      require_cmd claude
+      _claude --help "$@"
+      return $?
+      ;;
+    *)
+      # Everything else — launch Claude with all args passed through
+      cmd_launch "$@"
+      return $?
+      ;;
+  esac
 }
 
 # ============================================================================

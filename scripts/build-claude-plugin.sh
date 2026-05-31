@@ -62,11 +62,16 @@ readonly TOOL="${TOOL:-claude}"
 readonly SOURCE_DIR="${REPO_ROOT}/.opencode"
 readonly OUTPUT_DIR="${REPO_ROOT}/.ados-${TOOL}"
 
-# License header for generated files
-# Note: Each file gets copyright, license, and source URL
-generate_license_header() {
+# Generated-file header for generated Markdown frontmatter.
+# Note: Each file gets a clear generated warning, local source path,
+# regeneration command, copyright, license, and source URL.
+generate_generated_header() {
     local source_path="$1"
     cat <<EOF
+# GENERATED FILE — DO NOT EDIT DIRECTLY.
+# Source of truth: ${source_path}
+# Regenerate with: scripts/build-claude-plugin.sh
+# If behavior must change, edit the source file above and rebuild.
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # MIT License - see LICENSE file for full terms
 # source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/${source_path}
@@ -260,7 +265,7 @@ transform_agent_frontmatter() {
     # The user can override this in Claude Code settings
     cat <<EOF
 ---
-$(generate_license_header ".opencode/agent/${agent_name}.md")
+$(generate_generated_header ".opencode/agent/${agent_name}.md")
 name: ${agent_name}
 description: ${description}
 model: ${model}
@@ -301,7 +306,7 @@ transform_command_to_skill() {
     # Skills typically need read/analysis tools
     cat <<EOF
 ---
-$(generate_license_header ".opencode/command/${skill_name}.md")
+$(generate_generated_header ".opencode/command/${skill_name}.md")
 name: ${skill_name}
 description: ${description}
 model: ${model}

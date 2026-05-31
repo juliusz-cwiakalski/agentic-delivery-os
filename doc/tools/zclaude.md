@@ -8,12 +8,55 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 
 > Version 1.0.0 | [Changelog](#100-2026-05-11)
 
+## Quick start
+
+Install `zclaude`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/scripts/install-zclaude.sh | bash
+```
+
+The installer also checks for Claude Code CLI. If `claude` is missing, it offers to install it using Anthropic's official installer.
+
+Start it:
+
+```bash
+zclaude
+```
+
+On first run, `zclaude` detects that no Z.AI API key is configured. It shows where to create a Z.AI subscription and API key, asks you to paste the key (input hidden), saves it to `~/.ai/zclaude/api-key`, and immediately launches Claude Code with Z.AI GLM models.
+
+After that, just use:
+
+```bash
+zclaude   # Claude Code via Z.AI GLM
+```
+
+Your regular `claude` command remains unchanged:
+
+```bash
+claude    # your normal Claude Code setup, e.g. Anthropic/default provider
+zclaude   # Claude Code using Z.AI GLM Coding Plan
+```
+
+## Why zclaude exists
+
+`zclaude` lets you use Claude Code with Z.AI GLM models **without changing your Claude Code configuration**.
+
+If you configure Z.AI manually in `~/.claude/settings.json`, that setting affects regular `claude` sessions too. `zclaude` avoids that by keeping Z.AI credentials separate, setting Z.AI environment variables only for the current process, and passing Claude Code arguments through unchanged.
+
 <!-- TOC -->
 * [zclaude User Guide](#zclaude-user-guide)
+  * [Quick start](#quick-start)
+  * [Why zclaude exists](#why-zclaude-exists)
   * [Overview](#overview)
   * [Problem it solves](#problem-it-solves)
   * [Why use zclaude](#why-use-zclaude)
   * [Requirements](#requirements)
+  * [Installation](#installation)
+    * [One-liner (recommended)](#one-liner-recommended)
+    * [From the ADOS repo](#from-the-ados-repo)
+    * [Verify](#verify)
   * [First-time setup](#first-time-setup)
   * [Usage](#usage)
   * [Configuration](#configuration)
@@ -22,13 +65,18 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
     * [Model mapping](#model-mapping)
   * [CLI Reference](#cli-reference)
   * [Troubleshooting](#troubleshooting)
+    * ["No Z.AI API key configured" and setup prompt not appearing](#no-zai-api-key-configured-and-setup-prompt-not-appearing)
+    * [Claude Code starts but shows API errors](#claude-code-starts-but-shows-api-errors)
+    * [Claude Code shows "Claude" model names instead of GLM](#claude-code-shows-claude-model-names-instead-of-glm)
+    * [Timeout errors during long agent sessions](#timeout-errors-during-long-agent-sessions)
+    * [Key was saved incorrectly (contains extra text)](#key-was-saved-incorrectly-contains-extra-text)
   * [Changelog](#changelog)
     * [1.0.0 (2026-05-11)](#100-2026-05-11)
 <!-- TOC -->
 
 ## Overview
 
-`zclaude` is a convenience wrapper that launches Claude Code with Z.AI GLM Coding Plan as the model provider. It configures the correct endpoint, model mapping, and timeout settings, then starts Claude Code — no file editing or environment variable setup required.
+`zclaude` is `claude` with process-local Z.AI settings. It sets the Z.AI endpoint, auth token, timeout, and GLM model mapping, then starts Claude Code.
 
 ## Problem it solves
 
@@ -43,9 +91,11 @@ ANTHROPIC_DEFAULT_OPUS_MODEL    — glm-5.1
 ANTHROPIC_DEFAULT_HAIKU_MODEL   — glm-4.5-air
 ```
 
-Plus you need to unset `ANTHROPIC_API_KEY` if it exists (to avoid credential confusion), and store the API key somewhere secure.
+You also need to avoid credential confusion with `ANTHROPIC_API_KEY` and store the Z.AI key somewhere secure.
 
-Doing this manually means either editing `~/.claude/settings.json` (which affects all Claude Code sessions globally) or exporting env vars every time you open a terminal.
+Doing this manually means either editing `~/.claude/settings.json` (global side effect) or exporting env vars every time you open a terminal. It also makes provider switching awkward: your normal `claude` command may unexpectedly use Z.AI when you wanted Anthropic, or vice versa.
+
+`zclaude` avoids that by keeping Z.AI configuration separate from Claude Code's global settings and applying it only to the `zclaude` process.
 
 ## Why use zclaude
 
@@ -63,7 +113,7 @@ The key advantage: **`claude` and `zclaude` coexist**. Use `claude` when you wan
 ## Requirements
 
 - **Bash** 4.0 or higher
-- **Claude Code CLI** (`claude`) installed and in PATH
+- **Claude Code CLI** (`claude`) installed and in PATH — the one-liner installer can install it for you if missing
 - **A Z.AI GLM Coding Plan subscription** — [sign up](https://z.ai/subscribe?ic=MMUPBUJ7PN) (affiliate link: author earns commission, buyer gets 10% discount)
 
 ## Installation
@@ -80,7 +130,7 @@ Or with `wget`:
 wget -qO- https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/scripts/install-zclaude.sh | bash
 ```
 
-This downloads `zclaude` to `~/.local/bin/` and makes it executable. If `~/.local/bin` is not in your PATH, the installer shows the command to add it.
+This downloads `zclaude`, makes it executable, and chooses the best user-local install directory available. If the install directory is not in your PATH, the installer prints the line to add to your shell profile and can append it for you.
 
 Works on Linux, macOS, Windows (Git Bash, WSL).
 
@@ -106,10 +156,10 @@ zclaude --version
 
 ## First-time setup
 
-Run `zclaude` — if no API key is found, it offers interactive setup:
+Run `zclaude`. If no API key is found, it starts interactive setup:
 
 ```bash
-./tools/zclaude
+zclaude
 ```
 
 ```
@@ -123,25 +173,27 @@ Run `zclaude` — if no API key is found, it offers interactive setup:
   Set up now? [Y/n]
 ```
 
-Press Enter to accept, paste your API key (input is hidden), and Claude Code launches immediately.
+Press Enter to accept, paste your API key (input is hidden), and Claude Code launches immediately. The key is saved for future runs.
 
 ## Usage
 
+`zclaude` passes Claude Code arguments directly to `claude` — no special syntax or `--` separator needed.
+
 ```bash
-# Launch Claude Code with Z.AI (default command)
+# Launch Claude Code with Z.AI (same as 'claude' but with Z.AI provider)
 zclaude
 
-# Reconfigure or replace your API key
-zclaude setup
+# All Claude Code flags work transparently
+zclaude --chat
+zclaude -p "explain this code"
+zclaude --plugin-dir .ados-claude
 
-# Show masked key and all environment variables (diagnostics)
-zclaude env
-
-# Show version
-zclaude --version
-
-# Show help
-zclaude --help
+# zclaude-specific commands
+zclaude setup                     # First-time: save your Z.AI API key
+zclaude env                       # Debug: show env vars that will be set
+zclaude --version                 # Show zclaude + claude versions
+zclaude --help                    # Show this wrapper's help
+zclaude --help-claude             # Show Claude Code's own help
 ```
 
 ## Configuration
@@ -191,19 +243,25 @@ This mapping is optimized for ADOS autonomous multi-agent workflows where reason
 ## CLI Reference
 
 ```
-zclaude 1.0.0 — Launch Claude Code with Z.AI GLM Coding Plan
+zclaude 1.0.0 — Claude Code with Z.AI GLM Coding Plan
 
 USAGE:
-  zclaude [COMMAND]
+  zclaude [setup|env]                  — zclaude-specific commands
+  zclaude [CLAUDE_ARGS...]             — launch Claude Code with Z.AI (default)
+  zclaude --version                    — show zclaude + claude versions
+  zclaude --help                       — show this wrapper's help
+  zclaude --help-claude                — show Claude Code's own help
 
-COMMANDS:
-  (default)    Launch Claude Code with Z.AI GLM models
-  setup        Configure or replace your Z.AI API key
-  env          Show masked key and environment variables
+ZCLAUDE COMMANDS:
+  setup            Configure Z.AI API key (first-time or reconfigure)
+  env              Show environment variables that will be set (diagnostics)
 
-FLAGS:
-  -h, --help       Show help message and exit
-  -V, --version    Show version and exit
+PASSTHROUGH:
+  All other arguments are passed directly to Claude Code.
+  No -- separator needed. Examples:
+    zclaude --chat
+    zclaude -p "explain this code"
+    zclaude --plugin-dir .ados-claude
 
 ENVIRONMENT:
   ZAI_API_KEY              Z.AI API key (overrides file)
@@ -213,7 +271,7 @@ ENVIRONMENT:
   ZCLAUDE_HAIKU_MODEL      Haiku model override
   ZCLAUDE_SONNET_MODEL     Sonnet model override
   ZCLAUDE_OPUS_MODEL       Opus model override
-  VERBOSE                  Enable debug output
+  ZCLAUDE_NO_VERSION_CHECK Set to 'true' to skip version check
 
 EXIT CODES:
   0   Success
