@@ -42,7 +42,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - `designer`: visual design and UI implementation
 - `doc-syncer`: reconcile system docs with change
 - `editor`: rewrite/translate content per repo guidelines
-- `external-researcher`: research external sources via MCP (context7, deepwiki, perplexity)
+- `external-researcher`: research external sources via MCP
 - `fixer`: reproduce and fix failures
 - `image-generator`: generate AI images via text-to-image CLI
 - `image-reviewer`: analyze images, screenshots, and visual artifacts
@@ -76,5 +76,4 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - `/write-plan`: generate an implementation plan
 - `/write-spec`: generate a change spec
 - `/write-test-plan`: generate a change test plan
-
 

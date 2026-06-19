@@ -104,3 +104,6 @@ notes:
   - text: "Review feedback applier handled eight Copilot AI review threads for PR #53: all accepted as deterministic/profile-safety improvements or consistency fixes; local edits applied without creating `doc/business/**`. Final checks and human commit/push remain pending."
     type: info
     date: "2026-04-27"
+  - text: "Resumed delivery: completed in-progress merge of origin/main (brought in GH-54 external-researcher changes); verified conflict resolution coherent and quality gates green."
+    type: info
+    date: "2026-06-19"
