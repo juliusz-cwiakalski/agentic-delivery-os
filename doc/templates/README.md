@@ -29,6 +29,12 @@ Agent prompts define quality rules and domain-specific logic; templates define o
 | `north-star-template.md` | Product north star document (`doc/overview/01-north-star.md`) |
 | `pr-instructions-template.md` | PR/MR platform instructions (`.ai/agent/pr-instructions.md`) |
 
+## Meeting Notes Template
+
+| Template | Purpose |
+|----------|---------|
+| `meeting-notes-template.md` | Combined agenda + minutes + decisions + action items for repo-scoped meetings (`doc/meetings/`) or business meetings (`doc/business/meetings/`) |
+
 ## Documentation Profile Contract Template
 
 Use this template when a repository needs to make its documentation profile explicit, including repositories where business docs remain disabled.

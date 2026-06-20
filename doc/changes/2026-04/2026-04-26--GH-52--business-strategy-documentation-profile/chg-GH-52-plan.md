@@ -2,7 +2,7 @@
 id: chg-GH-52-business-strategy-documentation-profile
 status: Implemented
 created: 2026-04-26T13:39:24Z
-last_updated: 2026-04-27T10:10:00Z
+last_updated: 2026-06-20T00:00:00Z
 owners: [juliusz]
 service: documentation-system
 labels: [documentation, business-strategy, templates, ai-agent-rules]
@@ -341,6 +341,41 @@ Open questions:
 
 ---
 
+### Phase 8b: Meeting documentation conventions (scope extension)
+
+**Goal**: Add meeting documentation conventions for repo-scoped and cross-repo/business meetings per human request (issue #52 comment, 2026-06-20).
+
+**Tasks**:
+
+- [x] **8b.1** Create `doc/templates/meeting-notes-template.md` with combined agenda/minutes/decisions/action-items structure and front matter including meeting_date, meeting_type, attendees, recording_url, document_classification, source_type, synthesis_status, area, and links. (Created with classification and storage-rule guidance.)
+- [x] **8b.2** Add §2b "Meeting documentation conventions" to handbook covering storage rules (repo-scoped vs business), filename convention, and classification. (Added after §2a minimal examples policy.)
+- [x] **8b.3** Add `doc/meetings/` to handbook §3 standard tree and §4.2 folder guide. (Added both entries.)
+- [x] **8b.4** Add `meetings/` to business capability map in handbook §2a and feature-documentation-profiles.md §3.4. (Added to both.)
+- [x] **8b.5** Add `doc/meetings` to default `allowed_write_roots` in documentation-profile-template.md and to the enabled-business-docs example. (Added to both.)
+- [x] **8b.6** Add meeting-notes-template to template README and feature-document-templates.md. (Added to both.)
+- [x] **8b.7** Update chg-GH-52-spec.md with F-14, AC-F14-1..3, DM-6, NFR-9, scope and affected-components entries. (Added all.)
+- [x] **8b.8** Update chg-GH-52-test-plan.md with meeting documentation test scenarios. (Added TC-MEETING-001..003.)
+
+**Acceptance Criteria**:
+
+- Must: `AC-F14-1`, `AC-F14-2`, `AC-F14-3`, `NFR-9`.
+- Should: Meeting template is usable as-is for both repo-scoped and business meetings without modification.
+
+**Files and modules**:
+
+- `doc/templates/meeting-notes-template.md` (new)
+- `doc/documentation-handbook.md` (updated)
+- `doc/templates/documentation-profile-template.md` (updated)
+- `doc/templates/README.md` (updated)
+- `doc/spec/features/feature-documentation-profiles.md` (updated)
+- `doc/spec/features/feature-document-templates.md` (updated)
+- `doc/changes/2026-04/2026-04-26--GH-52--business-strategy-documentation-profile/chg-GH-52-spec.md` (updated)
+- `doc/changes/2026-04/2026-04-26--GH-52--business-strategy-documentation-profile/chg-GH-52-test-plan.md` (updated)
+
+**Completion signal**: `docs(GH-52): add meeting documentation conventions`
+
+---
+
 ## Test Scenarios
 
 | ID | Scenario | Phases | AC |
@@ -395,6 +430,9 @@ AC mapping summary:
 | 1.3 | 2026-04-26 | coder | Added targeted re-review remediation tasks 6.9-6.11 and final quality-gate rerun task 7.7; reconciled test-plan execution evidence scope. |
 | 1.4 | 2026-04-27 | coder | Added focused PR #53 remediation tasks for concise inline guidance in GH-52 business templates plus focused rerun evidence (`main...HEAD` whitespace + YAML parse). |
 | 1.5 | 2026-04-27 | review-feedback-applier | Added PR #53 AI reviewer feedback handling evidence for root configurability, template metadata consistency, and inventory wording fixes. |
+| 1.6 | 2026-06-19 | pm | Refreshed branch against current main (merged GH-54 external-researcher); conflict resolution verified coherent; no plan content changes required. |
+| 1.7 | 2026-06-20 | pm | Added re-review remediation scope for red team and reviewer findings (C-1, C-2, M-1, M-2, M-3, plus path/area/plan-log nits). |
+| 1.8 | 2026-06-20 | pm | Added Phase 8b for meeting documentation scope extension per human request (issue #52 comment 4759036904). |
 
 ## Execution Log
 
@@ -407,7 +445,8 @@ AC mapping summary:
 | 5 | Completed | 2026-04-26 | 2026-04-26 | 53ec999 | Feature specs and index sync committed during docs reconciliation. |
 | 6 | Completed (remediated) | 2026-04-26 | 2026-04-26 | da7c7bb | Applied reviewer-targeted fixes: whitespace cleanup, header/source normalization, status reconciliation, and guidance wording correction. |
 | 7 | Completed | 2026-04-26 | 2026-04-26 | da7c7bb | Re-ran YAML parse check (`YAML_OK 4`) and `git diff --check main...HEAD` (PASS, no output) after remediation commit. |
-| 8 | Completed locally | 2026-04-27 | 2026-04-27 | Pending human commit | Applied PR #53 AI reviewer feedback locally; reran `git diff --check main...HEAD` (PASS, no output) and YAML parse for four register templates (`YAML_OK 4`). |
+| 8 | Completed | 2026-04-27 | 2026-04-27 | cd55170, 4c01516 | Applied PR #53 AI reviewer feedback; reran `git diff --check main...HEAD` (PASS, no output) and YAML parse for four register templates (`YAML_OK 4`). |
+| 8b | Completed | 2026-06-20 | 2026-06-20 | Pending commit | Meeting documentation conventions added: template, handbook §2b, standard tree entries, capability map, profile template, feature specs, spec ACs. |
 
 ### Acceptance Pass (Execution)
 
@@ -418,4 +457,4 @@ AC mapping summary:
 - Phase 5 criteria (`AC-F8-*`, `AC-F12-2`, `AC-F13-1`) — PASSED (`feature-document-templates.md` and `feature-decision-records.md` updated; central index refreshed).
 - Phase 6 review criteria — PASSED after remediation (targeted fixes applied for trailing whitespace, missing headers/source front matter in installed/current-truth docs, stale status artifacts, and template-guidance wording drift).
 - Phase 7 closure criteria — PASSED (`YAML_OK 4`; `git diff --check main...HEAD` PASS after commit `da7c7bb`; docs-only version artifact remains N/A).
-- PR #53 AI reviewer feedback pass — PASSED locally (all eight AI comments accepted as focused consistency improvements; no `doc/business/**` content created; `YAML_OK 4`; `git diff --check main...HEAD` PASS). Commit/push remains a human action.
+- PR #53 AI reviewer feedback pass — PASSED (all eight AI comments accepted as focused consistency improvements; no `doc/business/**` content created; `YAML_OK 4`; `git diff --check main...HEAD` PASS). Applied in commits `cd55170` and `4c01516`.

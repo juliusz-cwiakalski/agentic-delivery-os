@@ -144,6 +144,7 @@ Branches: `<type>/<workItemRef>/<slug>` (e.g., `feat/GH-456/some-feature`)
 Before creating new documentation areas, agents should inspect `doc/documentation-profile.md` when present.
 
 - If missing, assume `engineering-repo` behavior.
+- If present but malformed, unparseable, missing required fields, or contains conflicting write roots, treat the repository as `engineering-repo` (business docs disabled) and ask the user to fix the profile before proceeding; do not guess which root wins.
 - Do not create `doc/business/**` content unless profile enables it or the user explicitly requests a profile change.
 - Prefer linking to a canonical strategy repository instead of writing business docs into implementation repositories.
 

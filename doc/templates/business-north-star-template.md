@@ -7,7 +7,7 @@ status: Draft
 created: <YYYY-MM-DD>
 last_updated: <YYYY-MM-DD>
 owners: [<owner-or-team>]
-area: strategy
+area: context
 document_classification: current-truth
 links:
   related_decisions: []

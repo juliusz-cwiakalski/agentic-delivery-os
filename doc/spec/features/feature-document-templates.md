@@ -50,6 +50,12 @@ ADOS maintains templates in `doc/templates/` that serve as the structural source
 | `test-spec-template.md` | Test specification for `doc/quality/test-specs/` | `@doc-syncer` |
 | `north-star-template.md` | Product north star document for `doc/overview/01-north-star.md` | `@bootstrapper` |
 
+### Meeting Notes Template
+
+| Template | Purpose | Scope |
+|----------|---------|-------|
+| `meeting-notes-template.md` | Combined agenda + minutes + decisions + action items | Repo-scoped (`doc/meetings/`) or business (`doc/business/meetings/`) |
+
 ### Documentation Profile Contract Template
 
 | Template | Purpose | Scope |

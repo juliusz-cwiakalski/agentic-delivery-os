@@ -2,7 +2,7 @@
 id: chg-GH-52-test-plan
 status: Implemented
 created: 2026-04-26T13:55:24Z
-last_updated: 2026-04-27T10:10:00Z
+last_updated: 2026-06-20T00:00:00Z
 owners: [juliusz]
 service: documentation-system
 labels: [documentation, business-strategy, templates, ai-agent-rules]
@@ -540,6 +540,16 @@ Module-to-test mapping:
 
 - Examples remain minimal, and the handbook is not broadly rewritten outside GH-52 scope.
 
+### 5.3 Meeting Documentation Scenarios (scope extension)
+
+Added in Phase 8b to cover the meeting documentation conventions (F-14, DM-6, NFR-9).
+
+| ID | Scenario | Phases | AC |
+|----|----------|--------|----|
+| TC-MEETING-001 | Verify meeting-notes-template.md exists with required front-matter fields (meeting_date, meeting_type, attendees, recording_url, document_classification, source_type, synthesis_status, area, links). | 8b | AC-F14-1, AC-F14-3, DM-6, NFR-9 |
+| TC-MEETING-002 | Verify handbook §2b defines storage rules for repo-scoped meetings (doc/meetings/) and cross-repo/business meetings (doc/business/meetings/). | 8b | AC-F14-1, AC-F14-2 |
+| TC-MEETING-003 | Verify documentation-profile-template.md includes doc/meetings in default allowed_write_roots (engineering-safe). | 8b | AC-F14-1 |
+
 ## 6. Environments and Test Data
 
 - **Environment**: Local repository checkout is sufficient for docs/template verification.
@@ -610,6 +620,8 @@ Minimum quality gates before completion:
 | 1.2 | 2026-04-26 | coder | Reconciled execution log statuses for manual acceptance scenarios with explicit remediation evidence and file-level references. |
 | 1.3 | 2026-04-27 | coder | Added focused PR #53 inline-guidance rerun evidence for business template readability/inventory checks and `main...HEAD` whitespace + YAML parsing checks. |
 | 1.4 | 2026-04-27 | review-feedback-applier | Added focused PR #53 AI reviewer feedback handling evidence for profile root configurability, raw-evidence metadata placeholders, experiment register consistency, and template inventory wording. |
+| 1.5 | 2026-06-19 | pm | Refreshed branch against current main (merged GH-54 external-researcher); conflict resolution verified coherent; no test-plan content changes required. |
+| 1.6 | 2026-06-20 | pm | Added meeting documentation test scenarios (TC-MEETING-001..003) for scope extension. |
 
 ## 10. Test Execution Log
 

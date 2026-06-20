@@ -102,6 +102,7 @@ Because the ADOS documentation standard is currently engineering-centric and lac
 | F-11 | Overview vs business documentation distinction | Repo overview documents should remain short entry points or repo-scoped summaries, while canonical business truth lives in enabled central strategy repositories. |
 | F-12 | Validation support decision | Documentation checks must be profile-aware where feasible, or a documented follow-up must make the gap explicit. |
 | F-13 | Future rendering compatibility | Business documents should use stable metadata and links so future Astro rendering remains possible without requiring it now. |
+| F-14 | Meeting documentation conventions | Teams need a consistent place and format for meeting agendas, minutes/summaries, and transcripts, with clear rules distinguishing repo-scoped meetings from cross-repo/business meetings. |
 
 ### 5.1 Capability Details
 
@@ -118,6 +119,7 @@ Because the ADOS documentation standard is currently engineering-centric and lac
 - **F-11 Overview vs business documentation distinction**: Overview north star and roadmap documents remain concise entry points or repo-scoped summaries. Canonical business north star, roadmap, ICP, pricing, experiments, and business metrics live in the enabled business documentation area of the canonical strategy repository.
 - **F-12 Validation support decision**: The change must make profile-aware validation expectations visible. If validation checks cannot be updated in this iteration, the handbook must explicitly state the follow-up rather than implying enforcement exists.
 - **F-13 Future rendering compatibility**: Important business documents use front matter, stable IDs, predictable links, and structured registers where useful, but no rendering implementation is part of this change.
+- **F-14 Meeting documentation conventions**: Repo-scoped meetings live in `doc/meetings/` of the implementation repository (engineering-safe, allowed by default). Cross-repo, product, or business meetings live in `doc/business/meetings/` of the canonical strategy repository when business docs are enabled. A single combined `meeting-notes-template.md` covers agenda, minutes, decisions, and action items. Raw notes are `raw-evidence` with `source_type: meeting`; accepted summaries become `current-truth`. Significant decisions are filed as ADR/PDR/BDR records.
 
 ## 6. USER & SYSTEM FLOWS
 
@@ -157,6 +159,7 @@ An engineering change references business strategy → The implementation reposi
 - Add profile-aware AI-agent reading and writing rules.
 - Add concrete multi-repo guidance for canonical strategy repositories and implementation repositories.
 - Add or explicitly defer profile-aware documentation validation support.
+- Define meeting documentation conventions for repo-scoped and cross-repo/business meetings, including storage location, template, and classification rules.
 
 ### 7.2 Out of Scope
 
@@ -192,10 +195,11 @@ N/A. This documentation change does not introduce or modify runtime events or me
 | ID | Element | Description |
 |----|---------|-------------|
 | DM-1 | Documentation profile | Repository-specific metadata model declaring the active profile, business documentation enablement, business root, canonical strategy repository, allowed write roots, forbidden write roots, owners, and last-updated date. |
-| DM-2 | Business document front matter | Common metadata for important business documents, including stable ID, status, owners, area, summary, and links to decisions, experiments, roadmap items, metrics, and changes. |
+| DM-2 | Business document front matter | Common metadata for important business documents, including stable ID, status, owners, area, summary, `document_classification` (`current-truth` or `raw-evidence`), and links to decisions, experiments, roadmap items, metrics, and changes. |
 | DM-3 | Decision record metadata | Extended decision metadata for BDR, PDR, and ODR records, including decision area, scope, reversibility, review date, business impact, customer impact, and related links. |
 | DM-4 | Raw evidence metadata | Raw notes, research notes, interviews, and feedback include `source_type` and `synthesis_status` so agents do not treat unsynthesized evidence as current truth. |
 | DM-5 | Structured registers | Optional YAML registers for roadmap, experiments, metrics, and content calendars use valid YAML and stable IDs for future parsing. |
+| DM-6 | Meeting notes front matter | Meeting documents include `meeting_date`, `meeting_type`, `attendees`, `recording_url`, `document_classification`, `source_type: meeting`, `synthesis_status`, and links to related decisions, changes, and documents. |
 
 ### 8.4 External Integrations
 
@@ -220,6 +224,7 @@ N/A. Future static-site rendering is a compatibility consideration only and is n
 | NFR-6 | Validation explicitness | Documentation validation support is explicitly addressed with either profile-aware checks or a named follow-up; zero silent omissions. |
 | NFR-7 | Examples minimality | The handbook uses no more than five minimal examples for the first iteration: engineering profile, central product docs profile, BDR example, experiment register example, and minimal business index example. |
 | NFR-8 | AI usability question coverage | 10/10 deterministic AI usability questions are answered in the handbook or templates. |
+| NFR-9 | Meeting documentation | Handbook defines where repo-scoped vs business meetings live and how to classify raw notes vs accepted summaries | Explicit handbook section + template |
 
 ## 10. TELEMETRY & OBSERVABILITY REQUIREMENTS
 
@@ -288,6 +293,7 @@ N/A for runtime telemetry. Documentation observability is satisfied through trac
 | Decision record guidance | Updated |
 | AI agent documentation rules | Updated |
 | Documentation validation guidance | Updated or explicitly deferred |
+| Meeting documentation conventions | New |
 | System specifications for templates and decisions | Updated after implementation outcome |
 
 ## 17. ACCEPTANCE CRITERIA
@@ -317,6 +323,9 @@ N/A for runtime telemetry. Documentation observability is satisfied through trac
 | AC-F12-1 | **Given** documentation validation support is feasible, **when** the change is implemented, **then** validation checks are profile-aware and do not require business docs when disabled. | F-12, NFR-6 |
 | AC-F12-2 | **Given** documentation validation support is not feasible in this iteration, **when** the handbook is updated, **then** it explicitly marks validation support as a follow-up and describes the expected future checks. | F-12, NFR-6 |
 | AC-F13-1 | **Given** future Astro rendering may be added later, **when** business documents are specified, **then** front matter, stable IDs, predictable links, and structured registers are supported without requiring a renderer now. | F-13 |
+| AC-F14-1 | **Given** a repo-scoped meeting (e.g., a service planning session), **when** an agent or human records the notes, **then** they are stored in `doc/meetings/` of the implementation repository using the meeting notes template. | F-14 |
+| AC-F14-2 | **Given** a cross-repo, product, or business meeting, **when** an agent or human records the notes, **then** they are stored in `doc/business/meetings/` of the canonical strategy repository (requires `business_docs_enabled: true`). | F-14, F-2 |
+| AC-F14-3 | **Given** raw meeting notes, **when** they are authored, **then** they include `source_type: meeting`, `document_classification`, and `synthesis_status` metadata so they are not treated as current truth until synthesized. | F-14, F-4, DM-6 |
 | AC-AI-1 | **Given** an agent asks “Is this repository allowed to contain business strategy docs?”, **when** it reads the documentation profile, **then** it can answer from `business_docs_enabled` and enabled/disabled documentation areas. | F-2, F-9 |
 | AC-AI-2 | **Given** an agent asks “If yes, where is the business docs root?”, **when** business docs are enabled, **then** it can answer from `business_docs_root`. | F-2, F-9 |
 | AC-AI-3 | **Given** an agent asks “If no, what should the agent do instead?”, **when** business docs are disabled or profile is missing, **then** the guidance says to avoid writing business docs, use the canonical strategy repository if configured, or ask before changing the profile. | F-2, F-9, F-10 |

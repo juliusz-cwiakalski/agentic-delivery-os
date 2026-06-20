@@ -7,7 +7,7 @@ status: planned # planned | running | completed | stopped | pivoted
 created: <YYYY-MM-DD>
 last_updated: <YYYY-MM-DD>
 owners: [<owner-or-team>]
-area: discovery
+area: discovery # or growth
 document_classification: current-truth
 links:
   related_decisions: []

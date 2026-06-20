@@ -107,3 +107,15 @@ notes:
   - text: "Resumed delivery: completed in-progress merge of origin/main (brought in GH-54 external-researcher changes); verified conflict resolution coherent and quality gates green."
     type: info
     date: "2026-06-19"
+  - text: "User requested final detailed review + red team review of GH-52 PR #53, plus triage of 8 open Copilot PR comments. Confirmed via explore agent that all 8 Copilot comments are already applied in commit 4c01516 (working tree clean). Red team returned 2 MAJOR + 3 MINOR + 1 NIT. Reviewer returned 3 additional MINOR + 3 NIT. Decision: apply 10 of 11 actionable findings (defer section renumbering N-1 as out of scope, defer pre-existing 7-vs-8 template count nit as pre-existing)."
+    type: info
+    date: "2026-06-20"
+  - text: "Red team MAJOR C-1: Handbook §3 (L197) and §4.3 (L293) contradict §14 (L608) about whether doc-checks.sh exists. In-scope: contradiction was introduced by this PR's §14 rewrite. Apply fix."
+    type: risk
+    date: "2026-06-20"
+  - text: "Red team MAJOR C-2: Agent rules in coder.md and AGENTS.md only define missing-profile fallback, not malformed/partial/contradictory-profile fallback. Closes the only real determinism hole in the safety model. Apply fix."
+    type: risk
+    date: "2026-06-20"
+  - text: "Human requested slight scope extension (issue #52 comment 4759036904, 2026-06-20): add meeting documentation conventions (agendas, minutes/summaries, transcripts). Two storage patterns: repo-scoped meetings in doc/meetings/ (engineering-safe, always allowed); cross-repo/business/product meetings in doc/business/meetings/ (profile-gated). Single combined meeting-notes-template.md, meetings/ added to business capability map, doc/meetings added to default allowed_write_roots. Implemented in same PR #53."
+    type: decision
+    date: "2026-06-20"

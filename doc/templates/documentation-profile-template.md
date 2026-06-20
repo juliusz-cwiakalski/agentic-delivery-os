@@ -12,6 +12,7 @@ allowed_write_roots:
   - doc/changes
   - doc/spec
   - doc/decisions
+  - doc/meetings
 forbidden_write_roots:
   - doc/business
 owners:
@@ -39,6 +40,7 @@ allowed_write_roots:
   - doc/changes
   - doc/spec
   - doc/decisions
+  - doc/meetings
   - doc/business
 forbidden_write_roots: []
 ```

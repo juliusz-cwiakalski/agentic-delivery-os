@@ -75,7 +75,7 @@ If `doc/documentation-profile.md` is missing, assume:
 
 - `profile: engineering-repo`
 - `business_docs_enabled: false`
-- No new business documentation content should be created unless a user explicitly requests it. Because the profile is missing, there is no configured `business_docs_root`; if business docs are intentionally enabled later, assume the default root is `doc/business/**` unless `doc/documentation-profile.md` specifies a different `business_docs_root`.
+- No new business documentation content should be created unless a user explicitly requests it. Because the profile is missing, there is no configured `business_docs_root`; if business docs are intentionally enabled later, assume the default root is `doc/business` (contents under `doc/business/**`) unless `doc/documentation-profile.md` specifies a different `business_docs_root`.
 
 If a user asks for business artifacts while disabled, explain the constraint and suggest either:
 
@@ -84,7 +84,7 @@ If a user asks for business artifacts while disabled, explain the constraint and
 
 ### Optional business documentation capability map (not a bootstrap tree)
 
-When business docs are enabled, the configured `business_docs_root` may be used as a capability map (default: `doc/business/**`; create only what is needed). The areas below are relative to that configured root:
+When business docs are enabled, the configured `business_docs_root` may be used as a capability map (default: `doc/business`, i.e., the tree under `doc/business/**`; create only what is needed). The areas below are relative to that configured root:
 
 - `context/`
 - `market/`
@@ -99,6 +99,7 @@ When business docs are enabled, the configured `business_docs_root` may be used 
 - `metrics/`
 - `operations/`
 - `research/`
+- `meetings/`
 
 This is an optional map for navigation and ownership boundaries, not a requirement to create a full empty folder tree or placeholder documents.
 
@@ -110,15 +111,36 @@ This is an optional map for navigation and ownership boundaries, not a requireme
   - `source_type` (for example: interview, sales-call, support-feedback, market-research)
   - `synthesis_status` (`raw`, `in-review`, `synthesized`)
 
-### Minimal examples policy
+### Minimal examples policy (cap, not manifest)
 
-Keep examples intentionally minimal for first iteration safety:
+The first iteration commits at most the following examples; none are required and none have been committed yet. Treat this list as a ceiling, not an inventory.
 
 1. Engineering profile example
 2. Central product docs profile example
 3. BDR example
 4. Experiment register example
 5. Minimal business index example
+
+### Meeting documentation conventions
+
+Meeting agendas, minutes/summaries, and transcripts use a single combined `meeting-notes-template.md` with distinct sections for agenda, discussion, decisions, and action items.
+
+**Storage rules:**
+
+- **Repo-scoped meetings** (e.g., a microservice planning session, a service team retro) live in `doc/meetings/` of the implementation repository. This is engineering-safe and allowed by default in all profiles.
+- **Cross-repo, product, or business meetings** (e.g., product strategy review, all-hands, leadership sync) live in `doc/business/meetings/` of the canonical strategy repository. This requires `business_docs_enabled: true` or explicit user direction.
+- When in doubt, an agent asks the user whether the meeting is repo-scoped or cross-repo before selecting the write location.
+
+**Filename convention:**
+
+- `doc/meetings/YYYY-MM-DD-<topic-slug>.md` — single file with agenda + minutes + decisions + action items.
+- Transcripts are large artifacts; link them via `recording_url` in front matter rather than inlining.
+
+**Classification:**
+
+- Raw agendas, live notes, and transcripts are `document_classification: raw-evidence` with `source_type: meeting`.
+- When the summary, decisions, and action items are accepted, update the document to `document_classification: current-truth` and `synthesis_status: synthesized`.
+- Significant decisions recorded in a meeting should also be filed as ADR/PDR/BDR records in `doc/decisions/` and cross-linked via `related_decisions`.
 
 ---
 
@@ -189,12 +211,13 @@ Keep examples intentionally minimal for first iteration safety:
   /tools/                          # User guides for CLI tools in tools/ (one per tool)
   /diagrams/                       # Mermaid/PlantUML sources; exported PNG/SVG
   /examples/                       # Payloads, fixtures, UI mocks (shared samples)
+  /meetings/                       # Repo-scoped meeting notes (agenda + minutes + decisions)
   /templates/                      # Authoring templates (change spec, decision record, feature, test, plan)
   /prompts/                        # Human-facing generation prompts (copy/UX)
 
 /scripts/
   doc/
-    doc-checks.sh                    # Lints front-matter, numbering, links
+    doc-checks.sh                    # Lints front-matter, numbering, links (optional; see §14 for current availability)
     build-docs.sh                    # Optional mkdocs/docusaurus export
 ```
 
@@ -282,6 +305,7 @@ Keep examples intentionally minimal for first iteration safety:
 - **`/i18n/`**: Internationalization specifics (UI repos).
 - **`/diagrams/`**: Source first (mermaid/PUML), plus exported artifacts.
 - **`/examples/`**: Cross-cutting example payloads & mocks.
+- **`/meetings/`**: Repo-scoped meeting notes following the `meeting-notes-template.md`. Filename: `YYYY-MM-DD-<topic-slug>.md`. See §2b for cross-repo/business meeting storage rules.
 - **`/templates/`**: All authoring templates (change spec, decision record, feature spec, test spec, test plan, implementation plan).
 - **`/prompts/`**: Human-facing content prompts (marketing copy, release notes). Agent system prompts remain in
   `.opencode/agent/`.
@@ -290,7 +314,7 @@ Keep examples intentionally minimal for first iteration safety:
 
 ### 4.3 `/scripts/doc`
 
-- **`doc-checks.sh`**: Lints front-matter and file naming, checks cross-links.
+- **`doc-checks.sh`** *(optional; see §14 for current availability)*: Lints front-matter and file naming, checks cross-links.
 - **`build-docs.sh`**: Optional static site build (mkdocs + mermaid plugin recommended).
 
 ---

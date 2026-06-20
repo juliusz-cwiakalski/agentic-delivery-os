@@ -45,7 +45,7 @@ ADOS uses documentation profiles to determine which documentation areas a reposi
 | Profile | Responsibility | Business documentation behavior |
 |---------|----------------|---------------------------------|
 | `engineering-repo` | Implementation specs, contracts, operations, quality docs, local technical decisions | Disabled by default; link to canonical strategy repository when needed |
-| `central-product-docs-repo` | Product and business strategy truth across repositories | May enable the configured `business_docs_root` (default `doc/business/**`) and strategy templates |
+| `central-product-docs-repo` | Product and business strategy truth across repositories | May enable the configured `business_docs_root` (default `doc/business`, i.e., the tree under `doc/business/**`) and strategy templates |
 | `business-strategy-repo` | Dedicated business strategy knowledge base | May enable business strategy docs as its primary documentation area |
 | `mixed-product-engineering-repo` | Combined product/business and implementation responsibility | May enable business docs while retaining engineering current-truth docs |
 
@@ -72,13 +72,13 @@ If `doc/documentation-profile.md` is absent, agents assume:
 
 - `profile: engineering-repo`
 - `business_docs_enabled: false`
-- no new business documentation content is created unless the user explicitly requests a profile change or explicitly directs business-document creation. With no profile, there is no configured `business_docs_root`; if enabled later, the default root is `doc/business/**` unless the profile specifies otherwise.
+- no new business documentation content is created unless the user explicitly requests a profile change or explicitly directs business-document creation. With no profile, there is no configured `business_docs_root`; if enabled later, the default root is `doc/business` (contents under `doc/business/**`) unless the profile specifies otherwise.
 
 When a user asks for business artifacts while business docs are disabled, agents explain the disabled area and suggest using the canonical strategy repository or intentionally updating the repository profile first.
 
 ### 3.4 Optional Business Capability Map
 
-When business docs are enabled, the configured `business_docs_root` is an optional capability map (default: `doc/business/**`), not a required empty folder tree. Repositories create only the areas they need relative to that root:
+When business docs are enabled, the configured `business_docs_root` is an optional capability map (default: `doc/business`, i.e., the tree under `doc/business/**`), not a required empty folder tree. Repositories create only the areas they need relative to that root:
 
 - `context/`
 - `market/`
@@ -93,8 +93,11 @@ When business docs are enabled, the configured `business_docs_root` is an option
 - `metrics/`
 - `operations/`
 - `research/`
+- `meetings/`
 
 Canonical business north star, roadmap, ICP, pricing, experiments, and business metrics live in the enabled business documentation area of the canonical strategy repository. `doc/overview/**` remains a concise entry point or repo-scoped summary.
+
+Repo-scoped meeting notes live in `doc/meetings/` of the implementation repository (engineering-safe, allowed by default). Cross-repo, product, or business meetings live in `doc/business/meetings/` of the canonical strategy repository when business docs are enabled. See handbook §2b for the meeting documentation convention.
 
 ### 3.5 Current Truth and Raw Evidence
 
@@ -126,10 +129,11 @@ Documentation profiles are a docs-only metadata contract interpreted by agents a
 | `doc/templates/*business*template.md` and related templates | Business strategy templates | Optional authoring guidance when the profile enables business docs |
 | `doc/templates/*.yaml` register templates | Structured registers | Optional roadmap, experiment, metric, and content-calendar YAML skeletons |
 | `doc/decisions/**` | Unified decisions area | Stores ADR/TDR/PDR/BDR/ODR records together |
+| `doc/meetings/` | Repo-scoped meeting notes | Engineering-safe area for implementation-repo meeting agendas, minutes, and decisions |
 
 ### 4.3 Data Architecture
 
-The profile is represented as Markdown front matter. Business documents use Markdown front matter with stable IDs, status, owners, area, summary, and links. Optional structured registers use YAML with stable IDs and cross-link fields.
+The profile is represented as Markdown front matter. Business documents use Markdown front matter with stable IDs, status, owners, area, summary, `document_classification` (`current-truth` or `raw-evidence`), and links. Optional structured registers use YAML with stable IDs and cross-link fields. The `area` value should match one of the capability-map folders defined in §3.4 (e.g., `context`, `market`, `customers`, `product-strategy`, `discovery`, `growth`, `marketing`, `sales`, `customer-success`, `finance`, `metrics`, `operations`, `research`).
 
 ### 4.4 API & Interface Contracts
 
@@ -166,7 +170,7 @@ Documentation observability comes from front matter, stable IDs, cross-links to 
 
 ### 7.3 Validation Follow-Up
 
-This repository currently has no `scripts/doc-checks.sh` or `scripts/doc/doc-checks.sh` entry point. Until a validator exists, authors run `git diff --check`, manual front-matter/link checks, and YAML parsing for changed register templates. Future lightweight validation should check profile fields, boolean `business_docs_enabled`, forbidden business-folder creation for engineering profiles, decision prefixes, and YAML register syntax.
+This repository currently has no `scripts/doc-checks.sh` or `scripts/doc/doc-checks.sh` entry point. Until a validator exists, authors run `git diff --check`, manual front-matter/link checks, and YAML parsing for changed register templates. Future lightweight validation should check profile fields, boolean `business_docs_enabled`, forbidden business-folder creation for engineering profiles, decision prefixes, and YAML register syntax. Until a validator ships, `forbidden_write_roots` is advisory and enforced only via agent prompts (see `AGENTS.md` and `.opencode/agent/coder.md`); it is not a hard write barrier.
 
 ## 8. Dependencies & Risks
 
