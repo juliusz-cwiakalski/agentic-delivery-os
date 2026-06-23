@@ -1,0 +1,142 @@
+change_id: GH-52
+title: "Extend documentation handbook with optional business strategy documentation profile"
+phases:
+  clarify_scope: { started: "2026-04-26T13:30:00Z", completed: "2026-04-26T13:38:00Z" }
+  specification: { started: "2026-04-26T13:45:00Z", completed: "2026-04-26T13:50:00Z" }
+  test_planning: { started: "2026-04-26T13:50:00Z", completed: "2026-04-26T14:05:00Z" }
+  delivery_planning: { started: "2026-04-26T13:50:00Z", completed: "2026-04-26T14:05:00Z" }
+  delivery: { started: "2026-04-26T14:06:00Z", completed: "2026-04-26T14:30:00Z" }
+  system_spec_update: { started: "2026-04-26T14:31:00Z", completed: "2026-04-26T14:40:00Z" }
+  review_fix: { started: "2026-04-26T14:41:00Z", completed: "2026-04-26T19:15:00Z" }
+  quality_gates: { started: "2026-04-26T19:05:00Z", completed: "2026-04-26T19:16:00Z" }
+  dod_check: { started: "2026-04-26T19:16:00Z", completed: "2026-04-26T19:17:00Z" }
+  pr_creation: { started: "2026-04-26T16:45:00Z", completed: "2026-04-26T16:55:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/53" }
+decisions:
+  - text: "Use boolean business_docs_enabled for the first profile iteration; richer levels can be added later if needed."
+    date: "2026-04-26"
+  - text: "Keep standard chg-*-test-plan.md lifecycle naming; add business-validation-plan-template.md for business strategy validation guidance."
+    date: "2026-04-26"
+  - text: "Markdown remains canonical for narrative strategy; YAML registers are optional structured support for roadmap, experiments, metrics, and content calendars."
+    date: "2026-04-26"
+  - text: "Use profile as the canonical front-matter field name in doc/documentation-profile.md, with business_docs_enabled boolean, business_docs_root, canonical_strategy_repo, allowed_write_roots, and forbidden_write_roots for deterministic AI write decisions."
+    date: "2026-04-26"
+  - text: "Treat the full doc/business/** tree as a capability map, not a bootstrap tree; implementation must not create exhaustive empty business folder hierarchies or generic placeholder docs."
+    date: "2026-04-26"
+  - text: "Keep inline authoring guidance for GH-52 business templates in scope of PR #53, but use concise section-level instructions rather than full fictional case studies."
+    date: "2026-04-27"
+  - text: "Treat PR #53 AI reviewer comments about root configurability, raw-evidence source metadata, enabled-profile write roots, experiment ID/status consistency, and template inventory wording as valid focused consistency improvements."
+    date: "2026-04-27"
+open_questions: []
+blockers:
+  - text: "Cannot complete test_planning via @test-plan-writer because .ai/rules/testing-strategy.md is missing and the agent has a hard fail rule, even though .ai/rules/README.md says missing rules may use defaults. Need human decision: create testing strategy rule, change test-plan-writer behavior, or allow a one-off test plan workaround."
+    date: "2026-04-26"
+    resolved_date: "2026-04-26"
+  - text: "Delivery implementation completed in working tree, but commits are blocked by GPG signing/pinentry timeout. Need human to fix signing environment or approve unsigned commits."
+    date: "2026-04-26"
+    resolved_date: "2026-04-26"
+notes:
+  - text: "Change initialized from GitHub issue #52 and source planning document doc/planning/tmp/ideas-and-issues/ados_business_strategy_documentation_extension_spec.md."
+    type: info
+    date: "2026-04-26"
+  - text: "Clarify scope completed: issue requirements align with existing documentation handbook, document templates spec, and decision records spec. No blocking contradictions found."
+    type: info
+    date: "2026-04-26"
+  - text: "GitHub MCP issue label/status update failed because the update tool sends invalid milestone=0; avoid duplicate ticket operations and continue local delivery artifacts."
+    type: retro
+    date: "2026-04-26"
+  - text: "User supplied final implementation remarks. Key additions: profile-aware behavior is the highest constraint; missing profile defaults to engineering-repo; clarify doc/overview vs doc/business; route business changes through doc/changes; update or explicitly defer doc-check validation support; keep examples minimal."
+    type: info
+    date: "2026-04-26"
+  - text: "Spec created at doc/changes/2026-04/2026-04-26--GH-52--business-strategy-documentation-profile/chg-GH-52-spec.md with 33 acceptance criteria."
+    type: info
+    date: "2026-04-26"
+  - text: "Test-plan-writer initially failed because .ai/rules/testing-strategy.md is missing, despite .ai/rules/README.md saying missing rule files should be noted and reasonable defaults used. Retrying with explicit repo README context; if still blocked, escalate to human/process fix."
+    type: retro
+    date: "2026-04-26"
+  - text: "Second test-plan-writer attempt failed for the same hard missing-testing-strategy rule. Delivery paused before implementation handoff to avoid bypassing mandatory lifecycle artifacts without approval."
+    type: blocker
+    date: "2026-04-26"
+  - text: "Human approved proceeding with recommended fix. Added .ai/rules/testing-strategy.md as a prerequisite to unblock test planning."
+    type: resolved
+    date: "2026-04-26"
+  - text: "Test plan created at doc/changes/2026-04/2026-04-26--GH-52--business-strategy-documentation-profile/chg-GH-52-test-plan.md, covering all spec ACs with 15 scenarios."
+    type: info
+    date: "2026-04-26"
+  - text: "Coder completed all planned GH-52 tasks in the working tree and checks passed (git diff --check; YAML parsing for 4 register templates). Commit creation failed due GPG pinentry timeout."
+    type: blocker
+    date: "2026-04-26"
+  - text: "Human unlocked GPG signing. Commit d8c03cea5ab787cc3b86af7181f23b82a8043ce5 created on branch docs/GH-52/business-strategy-documentation-profile."
+    type: resolved
+    date: "2026-04-26"
+  - text: "Doc sync completed with commit 53ec99921a4651a425f978be5f1387cbe53f78ac. Added documentation profiles feature spec and test spec; updated decision-records spec."
+    type: info
+    date: "2026-04-26"
+  - text: "Reviewer returned FAIL with 4 findings: trailing whitespace breaks git diff --check; new installed/current-truth Markdown docs lack repo headers/source; status artifacts stale; new template skeletons inconsistent with README/spec guidance. Remediation delegated to coder."
+    type: retro
+    date: "2026-04-26"
+  - text: "Coder applied targeted GH-52 remediation: removed trailing whitespace in chg-GH-52-test-plan.md, applied add-header-location to doc/templates + doc/spec/features + doc/quality/test-specs, reconciled plan/test-plan statuses and execution evidence, and narrowed README/spec wording for concise business template guidance."
+    type: resolved
+    date: "2026-04-26"
+  - text: "Remediation checks executed: YAML parser check returned YAML_OK 4; git diff --check is clean in working tree. Post-commit rerun of git diff --check main...HEAD queued for final verification artifact."
+    type: info
+    date: "2026-04-26"
+  - text: "Remediation commit da7c7bb14a5fca2a25ea47406a5e53177bb1e959 recorded all reviewer-targeted fixes; git diff --check main...HEAD now passes with no output."
+    type: resolved
+    date: "2026-04-26"
+  - text: "Implementation plan created at doc/changes/2026-04/2026-04-26--GH-52--business-strategy-documentation-profile/chg-GH-52-plan.md."
+    type: info
+    date: "2026-04-26"
+  - text: "Re-review returned FAIL for targeted stale-status/docs wording gaps. Applied focused remediation only: reconciled test-plan execution evidence (manual scenarios no longer left as Not Run), removed stale testing-strategy-missing note from .ai/rules/README.md, and aligned AGENTS.md template description with profile-aware template/register model."
+    type: resolved
+    date: "2026-04-26"
+  - text: "Final local review passed with zero findings. Quality gates passed: git diff --check main...HEAD, YAML parse for 4 register templates, and scripts/.tests/test-add-header-location.sh (19/19). Logs under tmp/run-logs-runner/2026-04-26/."
+    type: resolved
+    date: "2026-04-26"
+  - text: "PR created for human review: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/53."
+    type: info
+    date: "2026-04-26"
+  - text: "Human requested adding inline authoring guidance to GH-52 business documentation templates within the existing PR #53 scope. Reopening delivery/review gates for a focused PR update."
+    type: decision
+    date: "2026-04-27"
+  - text: "Focused GH-52 PR #53 update implemented: concise inline authoring prompts added to business Markdown templates; README/spec wording aligned; focused checks rerun (`git diff --check main...HEAD`, YAML parse `YAML_OK 4`)."
+    type: resolved
+    date: "2026-04-27"
+  - text: "Review feedback applier handled eight Copilot AI review threads for PR #53: all accepted as deterministic/profile-safety improvements or consistency fixes; local edits applied without creating `doc/business/**`. Final checks and human commit/push remain pending."
+    type: info
+    date: "2026-04-27"
+  - text: "Resumed delivery: completed in-progress merge of origin/main (brought in GH-54 external-researcher changes); verified conflict resolution coherent and quality gates green."
+    type: info
+    date: "2026-06-19"
+  - text: "User requested final detailed review + red team review of GH-52 PR #53, plus triage of 8 open Copilot PR comments. Confirmed via explore agent that all 8 Copilot comments are already applied in commit 4c01516 (working tree clean). Red team returned 2 MAJOR + 3 MINOR + 1 NIT. Reviewer returned 3 additional MINOR + 3 NIT. Decision: apply 10 of 11 actionable findings (defer section renumbering N-1 as out of scope, defer pre-existing 7-vs-8 template count nit as pre-existing)."
+    type: info
+    date: "2026-06-20"
+  - text: "Red team MAJOR C-1: Handbook §3 (L197) and §4.3 (L293) contradict §14 (L608) about whether doc-checks.sh exists. In-scope: contradiction was introduced by this PR's §14 rewrite. Apply fix."
+    type: risk
+    date: "2026-06-20"
+  - text: "Red team MAJOR C-2: Agent rules in coder.md and AGENTS.md only define missing-profile fallback, not malformed/partial/contradictory-profile fallback. Closes the only real determinism hole in the safety model. Apply fix."
+    type: risk
+    date: "2026-06-20"
+  - text: "Human requested slight scope extension (issue #52 comment 4759036904, 2026-06-20): add meeting documentation conventions (agendas, minutes/summaries, transcripts). Two storage patterns: repo-scoped meetings in doc/meetings/ (engineering-safe, always allowed); cross-repo/business/product meetings in doc/business/meetings/ (profile-gated). Single combined meeting-notes-template.md, meetings/ added to business capability map, doc/meetings added to default allowed_write_roots. Implemented in same PR #53."
+    type: decision
+    date: "2026-06-20"
+  - text: "Remediation + scope extension committed as a1a5294 and pushed to origin. Quality gates all PASS: git diff --check clean, YAML_OK for all register/profile/meeting templates, add-header-location test 19/19, no doc/business/ created."
+    type: resolved
+    date: "2026-06-20"
+  - text: "PR #53 top-level comment posted (4759199633) resolving all 8 Copilot review threads with per-finding resolution table and commit references. No Copilot findings were rejected — all 8 accepted as valid improvements."
+    type: info
+    date: "2026-06-20"
+  - text: "Issue #52 reply posted (4759199630) confirming meeting documentation scope extension with storage rules, template, classification, and profile model details."
+    type: info
+    date: "2026-06-20"
+  - text: "User requested enhancement of meeting-notes-template.md (2026-06-20): (1) add transcript_url field + transcripts/ subfolder storage; (2) keep single combined doc (agenda before meeting, summary after) with copy/paste-friendly agenda block; (3) support two workflow patterns — copy/paste agenda into calendar invite OR git-native PR-based invite link; (4) add research-informed sections: ideas, parked items (parking lot), open questions, notes worth keeping, meeting goal, decision framework, roles. Research completed via @external-researcher (meeting summaries, preparation, organization best practices from HBR/Atlassian/MIT/Asana/Rootly)."
+    type: decision
+    date: "2026-06-20"
+  - text: "Enhanced meeting-notes-template.md committed (71144a3) and pushed. Template now has 10 body sections (Agenda & Preparation, Discussion, Decisions, Action Items, Ideas, Open Questions, Parked Items, Notes Worth Keeping, Follow-Up, Links), 17 front-matter fields (incl. transcript_url, facilitator, note_taker, timekeeper), two agenda-sharing workflows, and expanded meeting_type enum (brainstorming, war-room, incident, design-review, technical-spike). Handbook §2b updated with lifecycle, transcript storage, and workflows. New comprehensive guide created: doc/guides/meeting-preparation-and-summarization.md (9 sections, before/during/after lifecycle, meeting-type table, best practices, checklists). Quality gates all PASS."
+    type: resolved
+    date: "2026-06-20"
+  - text: "Created meeting-organizer agent (.opencode/agent/meeting-organizer.md) via @toolsmith. Agent covers two phases: (A) prepare agenda from ticket/meeting context with copy/paste or git-native PR workflow; (B) post-meeting summarization from transcript (place transcript in transcripts/ subfolder, fill meeting notes per best practices, update classification, suggest decision records). Profile-aware safety encoded. 118-line XML-structured prompt. Updated .opencode/README.md and AGENTS.md inventory."
+    type: info
+    date: "2026-06-23"
+  - text: "Red team review of 3 recent commits (a1a5294, 71144a3, 4cf2217) returned 2 MAJOR + 8 MINOR. MAJOR M-1: §2b heading was unnumbered h3, referenced by 7+ files — promoted to ## 2b). MAJOR M-2: meeting_type enum diverged across template/agent/guide — aligned to 15-type superset. All 8 MINORs applied: profile safety split, area:meetings in §4.3, 1:1 privacy warning, plan log commits, live-meeting non-goal, catch-all meeting_type rule, guide enum labels, timing alignment. Remediation committed 715c56d and pushed."
+    type: resolved
+    date: "2026-06-23"

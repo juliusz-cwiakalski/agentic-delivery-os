@@ -173,7 +173,7 @@ ADOS is both a framework you adopt **and** a system that uses itself. Some artif
 | Documentation handbook | `doc/documentation-handbook.md` | Auto-installed | `install.sh --local` installs and keeps updated |
 | **Recommended** | | | |
 | Documentation index | `doc/00-index.md` | Auto-installed, customize | Update links to match your docs |
-| Document templates | `doc/templates/` | Auto-installed | 7 templates — agents read at runtime |
+| Document templates | `doc/templates/` | Auto-installed | Core ADOS templates + optional profile-aware strategy/register templates |
 | Decision records dir | `doc/decisions/` | Auto-installed | README.md + 00-index.md stubs |
 | AI rules index | `.ai/rules/README.md` | Auto-installed, customize | Add project-specific rules to routing table |
 | ADOS guides | `doc/guides/` | Auto-installed | 9 framework guides — change lifecycle, conventions, etc. |

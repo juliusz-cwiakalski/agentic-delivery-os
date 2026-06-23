@@ -6,22 +6,22 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: SPEC-DOCUMENT-TEMPLATES
 status: Current
 created: 2026-03-10
-last_updated: 2026-03-10
+last_updated: 2026-04-26
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
-  related_changes: ["GH-32"]
+  related_changes: ["GH-32", "GH-52"]
   guides:
     - "doc/documentation-handbook.md"
     - "doc/guides/onboarding-existing-project.md"
-summary: "Seven document templates in doc/templates/ that agents read at runtime for structural guidance and humans use for manual authoring, with graceful fallback to embedded defaults."
+summary: "Core ADOS templates plus optional profile-aware business/product strategy templates and YAML register templates in doc/templates/, all readable by agents at runtime with graceful fallback to embedded defaults."
 ---
 
 # Feature: Document Templates
 
 ## Overview
 
-ADOS maintains a set of seven document templates in `doc/templates/` that serve as the structural source of truth for the core document types produced during the change delivery lifecycle and project-level artifacts. Agents read these templates at runtime to guide document structure; if a template is absent, agents fall back gracefully to their embedded default structures. Humans use the same templates for manual authoring.
+ADOS maintains templates in `doc/templates/` that serve as the structural source of truth for core delivery artifacts and optional profile-aware business/product strategy artifacts. Agents read templates at runtime to guide document structure; if a template is absent, agents fall back gracefully to embedded defaults. Humans use the same templates for manual authoring.
 
 ## Business Context
 
@@ -34,11 +34,11 @@ ADOS maintains a set of seven document templates in `doc/templates/` that serve 
 ### Goals & Success Metrics
 
 - **Primary Goal:** Single source of structural truth for all core ADOS document types, readable by both agents and humans.
-- **KPIs:** All 7 templates exist, render as valid GitHub-flavored Markdown, and are referenced by the corresponding agents or guides.
+- **KPIs:** Core templates remain complete, required GH-52 business templates exist, YAML register templates parse as YAML, and inventories stay synchronized across handbook/README/spec.
 
 ## User Experience & Functionality
 
-### Templates
+### Core ADOS Templates
 
 | Template | Purpose | Agent Consumer |
 |----------|---------|---------------|
@@ -50,23 +50,69 @@ ADOS maintains a set of seven document templates in `doc/templates/` that serve 
 | `test-spec-template.md` | Test specification for `doc/quality/test-specs/` | `@doc-syncer` |
 | `north-star-template.md` | Product north star document for `doc/overview/01-north-star.md` | `@bootstrapper` |
 
+### Meeting Notes Template
+
+| Template | Purpose | Scope |
+|----------|---------|-------|
+| `meeting-notes-template.md` | Combined agenda + summary with research-informed sections (ideas, parked items, open questions, notes worth keeping) and transcript storage | Repo-scoped (`doc/meetings/`) or business (`doc/business/meetings/`) |
+
+### Documentation Profile Contract Template
+
+| Template | Purpose | Scope |
+|----------|---------|-------|
+| `documentation-profile-template.md` | Repository docs profile contract | Profile configuration |
+
+Repositories may use this template to make the documentation profile explicit whether business docs are enabled or disabled.
+
+### Optional Business/Product Strategy Templates (enabled business docs only)
+
+| Template | Purpose | Scope |
+|----------|---------|-------|
+| `business-north-star-template.md` | Business north star narrative | Strategy |
+| `business-model-template.md` | Business model narrative | Strategy |
+| `strategic-assumptions-template.md` | Assumptions + validation cadence | Strategy |
+| `ideal-customer-profile-template.md` | ICP definition | Customers |
+| `persona-template.md` | Persona definition | Customers |
+| `jobs-to-be-done-template.md` | JTBD analysis | Customers |
+| `customer-problem-template.md` | Problem framing with raw-evidence metadata | Discovery |
+| `product-roadmap-template.md` | Narrative roadmap | Product strategy |
+| `business-experiment-template.md` | Experiment plan/results | Discovery/Growth |
+| `business-validation-plan-template.md` | Validation plan for strategy changes | Discovery |
+| `north-star-metric-template.md` | NSM definition and guardrails | Metrics |
+| `content-strategy-template.md` | Content strategy | Marketing |
+| `sales-strategy-template.md` | Sales strategy | Sales |
+| `customer-success-strategy-template.md` | Customer success strategy | Customer success |
+
+### Optional YAML Register Templates
+
+| Template | Purpose |
+|----------|---------|
+| `product-roadmap-register-template.yaml` | Structured roadmap register |
+| `experiment-register-template.yaml` | Structured experiment register |
+| `metric-catalog-template.yaml` | Structured metrics catalog |
+| `content-calendar-template.yaml` | Structured content calendar |
+
 ### Capabilities
 
-- **Structural guidance (F-1):** Each template includes front-matter skeleton, all required sections, and inline HTML-comment guidance explaining what to put in each section.
+- **Structural guidance (F-1):** Templates include front matter or stable register schema and concise section guidance.
 - **Agent runtime reading (F-2):** Agents (`@spec-writer`, `@plan-writer`, `@test-plan-writer`, `@doc-syncer`) read the corresponding template from `doc/templates/` to guide document structure.
 - **Graceful fallback (F-3):** If a template file does not exist, agents fall back to their embedded default structures with no errors. This ensures ADOS works in projects that haven't copied the templates directory.
-- **Human authoring (F-4):** Templates include copy instructions (file path, placeholder replacement steps) for manual use.
+- **Human authoring (F-4):** Templates include deterministic placeholders for manual and agent usage.
+- **Profile-aware safety (F-6):** The profile contract template may be used to make disabled or enabled behavior explicit; business strategy templates are optional and should be used only when the repository profile enables business docs.
+- **Structured registers (F-7):** `.yaml` register templates provide valid YAML skeletons with stable IDs and cross-link fields.
 - **Consistency enforcement (F-5):** Templates define structure; agent prompts define quality rules and domain-specific logic. This separation prevents drift.
 
 ### Template Structure
 
-Every template follows a consistent pattern:
+Core ADOS templates follow a consistent pattern:
 
 1. **License header** — Standard ADOS three-line header
 2. **Front-matter skeleton** — YAML with placeholders and inline comments explaining each field
 3. **Template instructions** — HTML comment block with copy/usage instructions
 4. **Section headings** — All required sections for the document type
 5. **Inline guidance** — HTML comments within each section explaining expected content
+
+Business Markdown templates intentionally stay concise (front matter + headings + short section-level prompts) and YAML register templates prioritize parseable schema fields over narrative inline commentary.
 
 ### User Flow (Manual Authoring)
 
@@ -75,7 +121,7 @@ Every template follows a consistent pattern:
 2. Copy the appropriate template to the target location
 3. Replace all <...> placeholders with actual values
 4. Remove template instruction comments
-5. Fill in section content following inline guidance
+5. Fill in section content following available guidance (inline comments for core templates; concise section-level prompts/metadata for business templates)
 ```
 
 ### User Flow (Agent Authoring)
@@ -95,7 +141,7 @@ Every template follows a consistent pattern:
 
 | Path | Component | Responsibility |
 |------|-----------|----------------|
-| `doc/templates/` | Templates directory | Contains all 7 templates and a README |
+| `doc/templates/` | Templates directory | Contains core templates plus optional business/profile/register templates |
 | `doc/templates/README.md` | Directory overview | Purpose, template inventory, usage instructions |
 | `doc/templates/change-spec-template.md` | Change spec template | 25-section structure matching the change spec standard |
 | `doc/templates/implementation-plan-template.md` | Plan template | Phased implementation plan structure |
@@ -119,9 +165,9 @@ The fallback-to-defaults pattern ensures agents work correctly even when templat
 
 | ID | Category | Requirement | Threshold |
 |----|----------|-------------|-----------|
-| NFR-1 | Completeness | All 7 templates exist in `doc/templates/` | 7/7 present |
+| NFR-1 | Completeness | Core templates and required GH-52 business/register templates exist | 100% required files present |
 | NFR-2 | Validity | Each template renders as valid GitHub-flavored Markdown | All sections render |
-| NFR-3 | Guidance | Each template contains inline HTML-comment guidance for every section | 100% section coverage |
+| NFR-3 | Guidance | Core templates contain inline HTML-comment guidance; business Markdown skeleton templates and YAML registers may use concise heading/schema guidance | 100% required template types follow documented guidance style |
 | NFR-4 | Fallback | Agents produce valid documents when templates are absent | No errors, default structure used |
 | NFR-5 | Consistency | Template structure matches the Documentation Handbook requirements | Handbook section 17 fulfilled |
 
@@ -131,7 +177,8 @@ The fallback-to-defaults pattern ensures agents work correctly even when templat
 
 | Level | Scope | Notes |
 |-------|-------|-------|
-| Manual | Template rendering | Open each template on GitHub; verify valid Markdown and all sections visible |
+| Manual | Template rendering | Open changed Markdown templates; verify structure and readability |
+| Automated | YAML parsing | Parse changed `.yaml` templates with a YAML parser |
 | Manual | Agent fallback | Remove `doc/templates/` directory; run `/write-spec`; verify document is produced with embedded defaults |
 | Manual | Agent template reading | With templates present; run `/write-spec`; verify document follows template structure |
 
@@ -148,6 +195,6 @@ When agent prompt structure changes, the corresponding template should be update
 
 ## Related Documentation
 
-- **Documentation Handbook:** [doc/documentation-handbook.md](../../documentation-handbook.md) — section 17 defines the template inventory
+- **Documentation Handbook:** [doc/documentation-handbook.md](../../documentation-handbook.md) — section 17 defines core and optional template inventories
 - **Templates directory:** [doc/templates/](../../templates/)
 - **Onboarding guide:** [doc/guides/onboarding-existing-project.md](../../guides/onboarding-existing-project.md) — recommends copying templates during adoption

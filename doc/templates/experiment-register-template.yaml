@@ -1,0 +1,17 @@
+register_id: EXPERIMENT-REGISTER-001
+status: draft
+owners:
+  - <owner-or-team>
+last_updated: <YYYY-MM-DD>
+experiments:
+  - id: EXP-<slug>
+    title: <experiment-title>
+    hypothesis: <testable-hypothesis>
+    status: planned
+    success_criteria: []
+    stop_criteria: []
+    pivot_criteria: []
+    related_decisions: []
+    related_metrics: []
+    related_roadmap_items: []
+    related_changes: []

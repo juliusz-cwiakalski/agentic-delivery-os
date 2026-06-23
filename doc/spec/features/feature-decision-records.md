@@ -6,21 +6,21 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: SPEC-DECISION-RECORDS
 status: Current
 created: 2026-03-10
-last_updated: 2026-03-10
+last_updated: 2026-04-26
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
-  related_changes: ["GH-32"]
+  related_changes: ["GH-32", "GH-52"]
   guides:
     - "doc/guides/decision-records-management.md"
-summary: "Tracker-agnostic decision records standard supporting five decision types (ADR, PDR, TDR, BDR, ODR) with lifecycle management, templates, and agent integration."
+summary: "Tracker-agnostic decision records standard supporting ADR/PDR/TDR/BDR/ODR with unified storage, optional business/product/operational metadata, and lifecycle integration."
 ---
 
 # Feature: Decision Records Management
 
 ## Overview
 
-ADOS provides a tracker-agnostic standard for recording and managing significant project decisions. The system supports five decision types — Architecture (ADR), Product (PDR), Technical (TDR), Business (BDR), and Operational (ODR) — all co-located in a flat `doc/decisions/` directory. The standard includes a management guide, a reusable template, agent tooling integration, and a defined lifecycle.
+ADOS provides a tracker-agnostic standard for recording and managing significant project decisions. The system supports five decision types — Architecture (ADR), Product (PDR), Technical (TDR), Business (BDR), and Operational (ODR) — all co-located in a flat `doc/decisions/` directory. GH-52 extends the template with optional metadata for business/product/operational context while preserving ADR/TDR compatibility.
 
 ## Business Context
 
@@ -42,14 +42,16 @@ ADOS provides a tracker-agnostic standard for recording and managing significant
 | Type | Prefix | Scope |
 |------|--------|-------|
 | Architecture Decision Record | `ADR` | System design, infrastructure patterns, API boundaries |
-| Product Decision Record | `PDR` | Feature scoping, UX strategy, product positioning |
+| Product Decision Record | `PDR` | Product scope, roadmap priority, product experience direction |
 | Technical Decision Record | `TDR` | Technology choices, libraries, implementation approach |
-| Business Decision Record | `BDR` | Business rules, compliance, process policies |
-| Operational Decision Record | `ODR` | Infrastructure, deployment, monitoring, incident response |
+| Business Decision Record | `BDR` | ICP, pricing, GTM, positioning, business model choices |
+| Operational Decision Record | `ODR` | Cadence, responsibilities, process, operating model choices |
 
 ### Capabilities
 
 - **Structured authoring (F-1):** Template with front-matter skeleton and required sections (Context, Problem Framing, Decision Drivers, Alternatives, Decision, Consequences, Verification Criteria).
+- **Optional extended metadata (F-7):** `decision_area`, `decision_scope`, `reversibility`, `review_date`, `business_impact`, `customer_impact`, and optional links to experiments/metrics/roadmap items.
+- **Compatibility (F-8):** ADR/TDR usage remains valid without extended fields.
 - **Lifecycle management (F-2):** Status transitions from Proposed → Under Review → Accepted → (Deprecated | Superseded).
 - **Immutability after acceptance (F-3):** Accepted decisions are not modified; changes create new superseding records.
 - **Cross-linking (F-4):** Decision records link to change specs via `links.related_changes` and vice versa via `links.decisions`.
@@ -94,7 +96,7 @@ Proposed → Under Review → Accepted → (Deprecated | Superseded)
 
 ### When to Create a Decision Record
 
-Create a record when a decision is hard to reverse, has cross-component impact, involves trade-offs, changes security posture, introduces a new dependency, or is likely to be questioned later. Do not create records for implementation details, bug fixes, or documentation-only changes.
+Create a record when a decision is hard to reverse, has cross-component impact, involves trade-offs, changes security posture, introduces a new dependency, establishes business/product/operating direction, or is likely to be questioned later. Pricing decisions default to BDR unless product or operating scope makes PDR or ODR more appropriate. Do not create records for implementation details, bug fixes, or routine documentation-only changes.
 
 ## Technical Architecture & Codebase Map
 
@@ -123,6 +125,12 @@ last_updated: 2026-03-10
 summary: "Short one-line summary"
 owners: ["team-platform"]
 service: "delivery-os"
+decision_area: null         # optional
+decision_scope: null        # optional
+reversibility: null         # optional
+review_date: null           # optional
+business_impact: null       # optional
+customer_impact: null       # optional
 links:
   related_changes: []        # workItemRef identifiers
   supersedes: []             # Decision IDs this record replaces
@@ -131,6 +139,9 @@ links:
   contracts: []              # Related contract paths
   diagrams: []               # Related diagram paths
   decisions: []              # Other related decision record IDs
+  experiments: []            # optional
+  metrics: []                # optional
+  roadmap_items: []          # optional
 ```
 
 ### Required Sections
@@ -151,7 +162,7 @@ links:
 | ID | Category | Requirement | Threshold |
 |----|----------|-------------|-----------|
 | NFR-1 | Completeness | Guide defines all 5 decision types with lifecycle, naming, and governance | 100% coverage |
-| NFR-2 | Template validity | Template renders as valid GitHub-flavored Markdown | All sections present |
+| NFR-2 | Template validity | Template renders as valid GitHub-flavored Markdown and keeps extended metadata optional | All sections present; ADR/TDR-compatible |
 | NFR-3 | Agent alignment | `@architect`, `/write-decision`, `/plan-decision` all target `doc/decisions/` | Zero references to `doc/adr/` |
 
 ## Quality Assurance Strategy

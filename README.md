@@ -250,7 +250,7 @@ Branches follow conventional-commit-aligned types:
     ├── overview/             # north star, architecture, glossary
     ├── planning/             # internal planning notes
     ├── spec/                 # current system spec (reconciled after each change)
-    ├── templates/            # document templates (7 templates)
+    ├── templates/            # core + optional profile-aware document templates
     ├── tools/                # CLI tool user guides
     └── documentation-handbook.md
 ```

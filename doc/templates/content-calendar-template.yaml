@@ -1,0 +1,14 @@
+calendar_id: CONTENT-CALENDAR-001
+status: draft
+owners:
+  - <owner-or-team>
+last_updated: <YYYY-MM-DD>
+entries:
+  - id: CONTENT-001
+    publish_date: <YYYY-MM-DD>
+    channel: <channel-name>
+    topic: <topic>
+    objective: <objective>
+    related_metrics: []
+    related_decisions: []
+    related_changes: []

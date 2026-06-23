@@ -61,6 +61,7 @@ Detail: [doc/guides/change-lifecycle.md](doc/guides/change-lifecycle.md)
 
 ### Documentation & release
 - `doc-syncer` — reconcile system docs with completed changes
+- `meeting-organizer` — prepare agendas and summarize meeting docs
 - `committer` — create one Conventional Commit
 - `pr-manager` — create/update PR/MR; enrich with ticket context via MCP
 
@@ -139,6 +140,15 @@ doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/
 
 Branches: `<type>/<workItemRef>/<slug>` (e.g., `feat/GH-456/some-feature`)
 
+### Profile-aware documentation safety
+
+Before creating new documentation areas, agents should inspect `doc/documentation-profile.md` when present.
+
+- If missing, assume `engineering-repo` behavior.
+- If present but malformed, unparseable, missing required fields, or contains conflicting write roots, treat the repository as `engineering-repo` (business docs disabled) and ask the user to fix the profile before proceeding; do not guess which root wins.
+- Do not create `doc/business/**` content unless profile enables it or the user explicitly requests a profile change.
+- Prefer linking to a canonical strategy repository instead of writing business docs into implementation repositories.
+
 Detail: [doc/guides/unified-change-convention-tracker-agnostic-specification.md](doc/guides/unified-change-convention-tracker-agnostic-specification.md)
 
 ## Repo structure
@@ -165,7 +175,7 @@ Detail: [doc/guides/unified-change-convention-tracker-agnostic-specification.md]
     ├── overview/             # north star, architecture, glossary
     ├── planning/             # internal planning notes
     ├── spec/                 # current system spec (reconciled after each change)
-    ├── templates/            # document templates (8 templates)
+    ├── templates/            # core + optional profile-aware templates/registers
     ├── tools/                # CLI tool user guides
     └── documentation-handbook.md
 ```

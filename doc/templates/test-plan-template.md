@@ -22,6 +22,7 @@ links:
 2. Replace all <...> placeholders with actual values
 3. Remove these instructions before finalizing
 4. Derive all requirements from the change spec — do not invent
+5. For business/product strategy work, you may reference `doc/templates/business-validation-plan-template.md`
 -->
 
 # Test Plan - <Change Title>

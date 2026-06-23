@@ -30,8 +30,6 @@ Agents (especially `@plan-writer` and `@coder`) should consult this index to det
 | Installer scripts | `installer.md` | Cross-platform installer UX, PATH handling, dependency installation rules |
 | Testing strategy | `testing-strategy.md` | Test types, coverage requirements, framework conventions |
 
-> **Note:** `testing-strategy.md` does not exist yet — create it per project needs when establishing a testing strategy.
-
 ## How agents use rules
 
 1. Before starting implementation, check this index for rule files relevant to the task.
