@@ -133,7 +133,7 @@ Documentation profiles are a docs-only metadata contract interpreted by agents a
 
 ### 4.3 Data Architecture
 
-The profile is represented as Markdown front matter. Business documents use Markdown front matter with stable IDs, status, owners, area, summary, `document_classification` (`current-truth` or `raw-evidence`), and links. Optional structured registers use YAML with stable IDs and cross-link fields. The `area` value should match one of the capability-map folders defined in §3.4 (e.g., `context`, `market`, `customers`, `product-strategy`, `discovery`, `growth`, `marketing`, `sales`, `customer-success`, `finance`, `metrics`, `operations`, `research`).
+The profile is represented as Markdown front matter. Business documents use Markdown front matter with stable IDs, status, owners, area, summary, `document_classification` (`current-truth` or `raw-evidence`), and links. Optional structured registers use YAML with stable IDs and cross-link fields. The `area` value should match one of the capability-map folders defined in §3.4 (e.g., `context`, `market`, `customers`, `product-strategy`, `discovery`, `growth`, `marketing`, `sales`, `customer-success`, `finance`, `metrics`, `operations`, `research`, `meetings`).
 
 ### 4.4 API & Interface Contracts
 

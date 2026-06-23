@@ -5,7 +5,7 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: MEETING-<YYYY-MM-DD>-<slug>
 status: Draft # Draft | Accepted
 meeting_date: <YYYY-MM-DD>
-meeting_type: standup # standup | planning | review | retro | 1-1 | all-hands | interview | working-session | brainstorming | war-room | incident | design-review | technical-spike | other
+meeting_type: standup # standup | planning | review | retro | decision | 1-1 | all-hands | interview | working-session | brainstorming | war-room | incident | design-review | technical-spike | other
 attendees: [<name1>, <name2>]
 recording_url: null # link to video/audio recording if available
 transcript_url: null # relative path to doc/meetings/transcripts/<file> or external URL

@@ -457,7 +457,7 @@ AC mapping summary:
 | 6 | Completed (remediated) | 2026-04-26 | 2026-04-26 | da7c7bb | Applied reviewer-targeted fixes: whitespace cleanup, header/source normalization, status reconciliation, and guidance wording correction. |
 | 7 | Completed | 2026-04-26 | 2026-04-26 | da7c7bb | Re-ran YAML parse check (`YAML_OK 4`) and `git diff --check main...HEAD` (PASS, no output) after remediation commit. |
 | 8 | Completed | 2026-04-27 | 2026-04-27 | cd55170, 4c01516 | Applied PR #53 AI reviewer feedback; reran `git diff --check main...HEAD` (PASS, no output) and YAML parse for four register templates (`YAML_OK 4`). |
-| 8b | Completed | 2026-06-20 | 2026-06-20 | Pending commit | Meeting documentation conventions added: template, handbook §2b, standard tree entries, capability map, profile template, feature specs, spec ACs. |
+| 8b | Completed | 2026-06-20 | 2026-06-23 | a1a5294, 71144a3, 4cf2217 | Meeting documentation conventions added: template, handbook §2b, standard tree entries, capability map, profile template, feature specs, spec ACs. Enhanced with research-informed sections, guide, and meeting-organizer agent. |
 
 ### Acceptance Pass (Execution)
 

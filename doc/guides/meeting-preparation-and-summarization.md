@@ -194,7 +194,7 @@ Meeting information has a half-life. Finalize the summary while memories are fre
 Action items buried in a long summary are rarely acted on. Send action items separately and quickly:
 
 - Extract action items into a short message (Slack, email, or PR comment).
-- Send within 30-60 minutes of meeting end while context is fresh.
+- Send within 60 minutes of meeting end while context is fresh.
 - Include: task, owner, due date, and link to the full meeting notes.
 
 ### 4.3 File significant decisions
@@ -286,23 +286,27 @@ Different meeting types need different documentation focus. Use the `meeting_typ
 
 | Meeting type | Typical length | Cadence | Documentation focus | Key sections |
 |-------------|---------------|---------|---------------------|--------------|
-| **Standup** | 15 min | Daily | Blockers, commitments | Updates, Blockers, Action Items, Parked Items |
-| **Planning** | 30-60 min | Weekly / per sprint | Scope, commitments, dependencies | Goal, Decisions, Action Items, Open Questions |
-| **Review** | 30-60 min | Per milestone | Feedback, decisions, revisions | Discussion (by area), Decisions, Action Items |
-| **Retrospective** | 45-60 min | Per sprint / milestone | Improvements, patterns | Discussion (what went well / what didn't), Action Items |
-| **1:1** | 25-30 min | Weekly / biweekly | Career, blockers, concerns | Discussion (career / blockers / concerns), Action Items |
-| **All-hands** | 30-60 min | Monthly | Announcements, Q&A | Discussion (announcements / Q&A), Action Items |
-| **Interview** | 30-60 min | As needed | Customer/(candidate insights | Discussion (by question), Notes Worth Keeping |
-| **Brainstorming** | 60-90 min | As needed | Raw idea generation | Ideas (all), Evaluation (post-meeting) |
-| **War room / Incident** | As long as needed | During incident | Timeline, root cause, resolution | Discussion (timeline / root cause), Decisions, Action Items |
-| **Design review** | 60-90 min | As needed | Feedback by area, revisions | Discussion (feedback by area), Decisions, Action Items |
-| **Technical spike** | Variable | As needed | Findings, recommendations | Discussion (findings), Decisions, Notes Worth Keeping |
+| **Standup** (`standup`) | 15 min | Daily | Blockers, commitments | Updates, Blockers, Action Items, Parked Items |
+| **Planning** (`planning`) | 30-60 min | Weekly / per sprint | Scope, commitments, dependencies | Goal, Decisions, Action Items, Open Questions |
+| **Review** (`review`) | 30-60 min | Per milestone | Feedback, decisions, revisions | Discussion (by area), Decisions, Action Items |
+| **Retrospective** (`retro`) | 45-60 min | Per sprint / milestone | Improvements, patterns | Discussion (what went well / what didn't), Action Items |
+| **Decision** (`decision`) | 30-60 min | As needed | Framework, decision, rationale | Goal, Decision Framework, Decisions, Action Items |
+| **1:1** (`1-1`) | 25-30 min | Weekly / biweekly | Career, blockers, concerns | Discussion (career / blockers / concerns), Action Items |
+| **All-hands** (`all-hands`) | 30-60 min | Monthly | Announcements, Q&A | Discussion (announcements / Q&A), Action Items |
+| **Interview** (`interview`) | 30-60 min | As needed | Customer/(candidate insights | Discussion (by question), Notes Worth Keeping |
+| **Working session** (`working-session`) | 60-120 min | As needed | Collaboration, pairing, problem-solving | Discussion, Notes Worth Keeping, Action Items |
+| **Brainstorming** (`brainstorming`) | 60-90 min | As needed | Raw idea generation | Ideas (all), Evaluation (post-meeting) |
+| **War room / Incident** (`war-room` \| `incident`) | As long as needed | During incident | Timeline, root cause, resolution | Discussion (timeline / root cause), Decisions, Action Items |
+| **Design review** (`design-review`) | 60-90 min | As needed | Feedback by area, revisions | Discussion (feedback by area), Decisions, Action Items |
+| **Technical spike** (`technical-spike`) | Variable | As needed | Findings, recommendations | Discussion (findings), Decisions, Notes Worth Keeping |
+
+For `other` meeting types, use the default agenda and summary structure from the template.
 
 ### Special notes:
 
 - **Brainstorming:** enforce "no evaluation during generation." Capture every idea. Evaluate post-meeting using a feasibility x impact matrix. Move accepted ideas to Decisions or Action Items.
 - **War room / Incident:** capture the timeline as it unfolds (timestamps for each event). Keep it blameless — focus on process, not people. After resolution, file a postmortem in `doc/ops/incident-reviews/` and link from the meeting notes.
-- **1:1:** notes are typically private (manager-direct report only). Focus on career development and blockers, not task status (use async for that).
+- **1:1:** notes are typically private (manager-direct report only). Focus on career development and blockers, not task status (use async for that). Default to NOT committing 1-1 notes to a shared repo; confirm with the user or use a private/local location, since 1-1 content may include sensitive career or feedback discussions.
 - **Retrospective:** use structured sections (What Went Well, What Didn't Work, Action Items). Ensure every action item is traceable to an identified issue.
 
 ---

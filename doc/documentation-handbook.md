@@ -121,7 +121,7 @@ The first iteration commits at most the following examples; none are required an
 4. Experiment register example
 5. Minimal business index example
 
-### Meeting documentation conventions
+## 2b) Meeting documentation conventions
 
 Meeting agendas, minutes/summaries, and transcripts use a single combined `meeting-notes-template.md` that starts as an **agenda** before the meeting and is extended into a **summary** afterward. The document has distinct sections for agenda/prep (copy/paste-friendly), discussion, decisions, action items, ideas, open questions, parked items, and notes worth keeping.
 
