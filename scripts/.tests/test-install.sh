@@ -45,12 +45,15 @@ run_test() {
 
   _test_setup
 
-  if ( set -e; "${func}" ); then
+  local _rc=0
+  ( set -e; "${func}" ) || _rc=$?
+
+  if [[ ${_rc} -eq 0 ]]; then
     _test_passed=$((_test_passed + 1))
     printf '%s[PASS]%s %s\n' "${_GREEN}" "${_RESET}" "${name}"
   else
     _test_failed=$((_test_failed + 1))
-    printf '%s[FAIL]%s %s\n' "${_RED}" "${_RESET}" "${name}" >&2
+    printf '%s[FAIL]%s %s (exit %d)\n' "${_RED}" "${_RESET}" "${name}" "${_rc}" >&2
   fi
 
   _test_teardown

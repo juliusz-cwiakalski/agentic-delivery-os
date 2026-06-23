@@ -681,7 +681,7 @@ install_local_files() {
   ensure_gitignore_entry ".gitignore" ".ai/local/"
   ensure_gitignore_entry ".gitignore" ".ai/local"
   
-  --- Tool-specific: Copy .ados-claude/ for Claude Code ---
+  # Tool-specific: Copy .ados-claude/ for Claude Code
   # NOTE: --tool claude is deprecated for local mode too.
   # For local development, use: claude --plugin-dir .ados-claude
   # For global installation, use Claude Code's plugin system:

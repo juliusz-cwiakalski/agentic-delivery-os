@@ -162,6 +162,8 @@ You MAY always run read-only exploration commands directly (listing files, readi
 <safeguards>
   <rule>Never claim task complete without evidence.</rule>
   <rule>Do not create/rename files outside plan locations unless required by project standards.</rule>
+  <rule>Before creating new documentation areas, inspect `doc/documentation-profile.md` when present; if missing, assume `engineering-repo` and avoid creating `doc/business/**` unless explicitly requested.</rule>
+  <rule>If `doc/documentation-profile.md` is present but malformed, unparseable, missing required fields, or contains conflicting write roots (e.g., the same path in both `allowed_write_roots` and `forbidden_write_roots`), treat the repository as `engineering-repo` (business docs disabled), ask the user to fix the profile before proceeding, and do not guess which root wins.</rule>
   <rule>If committing unavailable, describe intended changes and wait for instructions.</rule>
   <rule>Never use system-level `/tmp` for any files. Always use project-root `./tmp/tmpdir/` instead (this avoids permission prompts and keeps artifacts repo-local).</rule>
 </safeguards>

@@ -59,6 +59,14 @@ readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Tool configuration (extensible pattern)
 readonly TOOL="${TOOL:-claude}"
+
+# Safety: TOOL flows into OUTPUT_DIR and is later rm -rf'd. Validate it is a
+# simple identifier (letters, digits, hyphen, underscore) to prevent path
+# traversal via values like "../../evil".
+if [[ ! "${TOOL}" =~ ^[A-Za-z0-9_-]+$ ]]; then
+    error "Invalid TOOL value: '${TOOL}'. Only letters, digits, hyphen, and underscore are allowed."
+fi
+
 readonly SOURCE_DIR="${REPO_ROOT}/.opencode"
 readonly OUTPUT_DIR="${REPO_ROOT}/.ados-${TOOL}"
 

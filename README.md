@@ -162,7 +162,17 @@ The build script `scripts/build-claude-plugin.sh` transforms `.opencode/` defini
 **For Claude Code users:**
 
 The `.ados-claude/` directory is pre-generated and committed to the repo. No build step required.
-Point Claude Code to `.ados-claude/agents/` and `.ados-claude/skills/` directories.
+
+Install options:
+
+- **Marketplace (recommended):**
+  ```
+  /plugin marketplace add juliusz-cwiakalski/agentic-delivery-os
+  /plugin install ados@ados
+  ```
+- **Local development:** `claude --plugin-dir .ados-claude`
+
+Point Claude Code at the plugin root (`.ados-claude/`), not at the `agents/` or `skills/` subdirectories — Claude Code reads `.claude-plugin/plugin.json` from the directory you pass.
 
 **Marketplace structure:**
 - `.claude-plugin/marketplace.json` (repo root) - Tells Claude Code where to find the ADOS plugin

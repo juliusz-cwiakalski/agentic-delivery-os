@@ -379,8 +379,14 @@ offer_path_setup() {
       log_info "[DRY-RUN] Would append PATH update to ${rc_file}"
     else
       mkdir -p "$(dirname "${rc_file}")"
-      printf '\n# Added by install-zclaude.sh\nexport PATH="%s:$PATH"\n' "${dir}" >> "${rc_file}"
-      log_info "Updated ${rc_file}"
+      # Idempotent: skip if we already added this exact dir previously.
+      local -r marker="# Added by install-zclaude.sh (${dir})"
+      if [[ -f "${rc_file}" ]] && grep -qF "${marker}" "${rc_file}" 2>/dev/null; then
+        log_info "${rc_file} already contains a PATH entry for ${dir}; skipping"
+      else
+        printf '\n%s\nexport PATH="%s:$PATH"\n' "${marker}" "${dir}" >> "${rc_file}"
+        log_info "Updated ${rc_file}"
+      fi
     fi
   fi
 

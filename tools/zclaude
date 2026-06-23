@@ -141,7 +141,7 @@ _check_version() {
   {
     local raw_url="https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/tools/${APP_NAME}"
     local remote_version
-    remote_version="$(_curl -sS --max-time 5 "$raw_url" 2>/dev/null | grep -oP 'APP_VERSION="\K[^"]+' || true)"
+    remote_version="$(_curl -sS --max-time 5 "$raw_url" 2>/dev/null | sed -n 's/^APP_VERSION="\([^"]*\)".*/\1/p' || true)"
 
     printf '%s' "$now" > "$check_file" 2>/dev/null || true
 
@@ -206,9 +206,14 @@ save_api_key() {
 prompt_for_key() {
   # All user-facing output goes to stderr so only the key value is captured
   # by the caller's $(...) command substitution.
+  # Read from /dev/tty so this works even when stdin is a pipe (per .ai/rules/installer.md).
+  if [[ ! -t 0 && ! -r /dev/tty ]]; then
+    log_err "No TTY available for interactive key entry. Set ZAI_API_KEY env var or run 'zclaude setup' in an interactive shell."
+    return 1
+  fi
   printf '  Enter your Z.AI API key (input hidden): ' >&2
   local key=""
-  read -rs key
+  read -rs key </dev/tty
   printf '\n' >&2
   key="$(printf '%s' "${key}" | tr -d '[:space:]')"
 
@@ -244,7 +249,7 @@ cmd_setup() {
     log_info "Existing key found: ${masked}"
     printf '  Replace it? [y/N] '
     local answer
-    read -r answer
+    read -r answer </dev/tty 2>/dev/null || answer=""
     [[ "${answer}" =~ ^[Yy]$ ]] || {
       log_info "Keeping existing key."
       return 0
@@ -310,7 +315,7 @@ cmd_launch() {
     _print_get_key_info
     printf '  Set up now? [Y/n] '
     local answer
-    read -r answer
+    read -r answer </dev/tty 2>/dev/null || answer=""
     if [[ "${answer}" =~ ^[Nn]$ ]]; then
       log_info "Cancelled. Run 'zclaude setup' when ready."
       exit "${EXIT_CONFIG}"
