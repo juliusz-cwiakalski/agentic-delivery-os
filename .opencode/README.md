@@ -46,6 +46,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - `fixer`: reproduce and fix failures
 - `image-generator`: generate AI images via text-to-image CLI
 - `image-reviewer`: analyze images, screenshots, and visual artifacts
+- `meeting-organizer`: prepare agendas and summarize meeting docs
 - `plan-writer`: author change implementation plans
 - `pm`: orchestrate changes; manage tickets via MCP (reads `.ai/agent/pm-instructions.md`)
 - `pr-manager`: create/update PR/MR for branch; enriches description with ticket context via MCP
@@ -76,4 +77,3 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - `/write-plan`: generate an implementation plan
 - `/write-spec`: generate a change spec
 - `/write-test-plan`: generate a change test plan
-

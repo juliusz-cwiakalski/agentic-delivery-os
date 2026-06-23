@@ -360,6 +360,7 @@ Open questions:
 - [x] **8b.11** Update spec DM-6, F-14, AC-F14-1 with enhanced front matter fields (transcript_url, facilitator, note_taker, timekeeper) and section inventory. (Updated.)
 - [x] **8b.12** Update handbook §3 standard tree and §4.2 folder guide with transcripts/ subfolder and enhanced meeting notes description. (Updated.)
 - [x] **8b.13** Create comprehensive guide `doc/guides/meeting-preparation-and-summarization.md` covering before/during/after meeting lifecycle, what to store where, meeting-type-specific guidance, best practices from research, two agenda-sharing workflows, and quick checklists. (Created.)
+- [x] **8b.14** Create meeting organizer agent (`.opencode/agent/meeting-organizer.md`) for meeting agenda preparation and post-meeting summarization. (Created.)
 
 **Acceptance Criteria**:
 
@@ -375,6 +376,7 @@ Open questions:
 - `doc/templates/README.md` (updated)
 - `doc/spec/features/feature-documentation-profiles.md` (updated)
 - `doc/spec/features/feature-document-templates.md` (updated)
+- `.opencode/agent/meeting-organizer.md` (new)
 - `doc/changes/2026-04/2026-04-26--GH-52--business-strategy-documentation-profile/chg-GH-52-spec.md` (updated)
 - `doc/changes/2026-04/2026-04-26--GH-52--business-strategy-documentation-profile/chg-GH-52-test-plan.md` (updated)
 
@@ -441,6 +443,7 @@ AC mapping summary:
 | 1.8 | 2026-06-20 | pm | Added Phase 8b for meeting documentation scope extension per human request (issue #52 comment 4759036904). |
 | 1.9 | 2026-06-20 | pm | Enhanced meeting docs per user feedback + external research: transcript storage, research-informed sections, two agenda-sharing workflows. |
 | 2.0 | 2026-06-20 | pm | Added comprehensive meeting preparation and summarization guide. |
+| 2.1 | 2026-06-23 | toolsmith | Created meeting organizer agent for agenda prep and post-meeting summarization. |
 
 ## Execution Log
 

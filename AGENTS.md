@@ -61,6 +61,7 @@ Detail: [doc/guides/change-lifecycle.md](doc/guides/change-lifecycle.md)
 
 ### Documentation & release
 - `doc-syncer` — reconcile system docs with completed changes
+- `meeting-organizer` — prepare agendas and summarize meeting docs
 - `committer` — create one Conventional Commit
 - `pr-manager` — create/update PR/MR; enrich with ticket context via MCP
 
