@@ -137,3 +137,6 @@ notes:
   - text: "Created meeting-organizer agent (.opencode/agent/meeting-organizer.md) via @toolsmith. Agent covers two phases: (A) prepare agenda from ticket/meeting context with copy/paste or git-native PR workflow; (B) post-meeting summarization from transcript (place transcript in transcripts/ subfolder, fill meeting notes per best practices, update classification, suggest decision records). Profile-aware safety encoded. 118-line XML-structured prompt. Updated .opencode/README.md and AGENTS.md inventory."
     type: info
     date: "2026-06-23"
+  - text: "Red team review of 3 recent commits (a1a5294, 71144a3, 4cf2217) returned 2 MAJOR + 8 MINOR. MAJOR M-1: §2b heading was unnumbered h3, referenced by 7+ files — promoted to ## 2b). MAJOR M-2: meeting_type enum diverged across template/agent/guide — aligned to 15-type superset. All 8 MINORs applied: profile safety split, area:meetings in §4.3, 1:1 privacy warning, plan log commits, live-meeting non-goal, catch-all meeting_type rule, guide enum labels, timing alignment. Remediation committed 715c56d and pushed."
+    type: resolved
+    date: "2026-06-23"
