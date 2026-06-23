@@ -54,7 +54,7 @@ ADOS maintains templates in `doc/templates/` that serve as the structural source
 
 | Template | Purpose | Scope |
 |----------|---------|-------|
-| `meeting-notes-template.md` | Combined agenda + minutes + decisions + action items | Repo-scoped (`doc/meetings/`) or business (`doc/business/meetings/`) |
+| `meeting-notes-template.md` | Combined agenda + summary with research-informed sections (ideas, parked items, open questions, notes worth keeping) and transcript storage | Repo-scoped (`doc/meetings/`) or business (`doc/business/meetings/`) |
 
 ### Documentation Profile Contract Template
 

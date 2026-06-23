@@ -119,3 +119,15 @@ notes:
   - text: "Human requested slight scope extension (issue #52 comment 4759036904, 2026-06-20): add meeting documentation conventions (agendas, minutes/summaries, transcripts). Two storage patterns: repo-scoped meetings in doc/meetings/ (engineering-safe, always allowed); cross-repo/business/product meetings in doc/business/meetings/ (profile-gated). Single combined meeting-notes-template.md, meetings/ added to business capability map, doc/meetings added to default allowed_write_roots. Implemented in same PR #53."
     type: decision
     date: "2026-06-20"
+  - text: "Remediation + scope extension committed as a1a5294 and pushed to origin. Quality gates all PASS: git diff --check clean, YAML_OK for all register/profile/meeting templates, add-header-location test 19/19, no doc/business/ created."
+    type: resolved
+    date: "2026-06-20"
+  - text: "PR #53 top-level comment posted (4759199633) resolving all 8 Copilot review threads with per-finding resolution table and commit references. No Copilot findings were rejected — all 8 accepted as valid improvements."
+    type: info
+    date: "2026-06-20"
+  - text: "Issue #52 reply posted (4759199630) confirming meeting documentation scope extension with storage rules, template, classification, and profile model details."
+    type: info
+    date: "2026-06-20"
+  - text: "User requested enhancement of meeting-notes-template.md (2026-06-20): (1) add transcript_url field + transcripts/ subfolder storage; (2) keep single combined doc (agenda before meeting, summary after) with copy/paste-friendly agenda block; (3) support two workflow patterns — copy/paste agenda into calendar invite OR git-native PR-based invite link; (4) add research-informed sections: ideas, parked items (parking lot), open questions, notes worth keeping, meeting goal, decision framework, roles. Research completed via @external-researcher (meeting summaries, preparation, organization best practices from HBR/Atlassian/MIT/Asana/Rootly)."
+    type: decision
+    date: "2026-06-20"

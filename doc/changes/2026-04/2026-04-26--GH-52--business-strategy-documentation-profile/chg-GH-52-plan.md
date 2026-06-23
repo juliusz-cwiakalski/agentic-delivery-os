@@ -355,6 +355,11 @@ Open questions:
 - [x] **8b.6** Add meeting-notes-template to template README and feature-document-templates.md. (Added to both.)
 - [x] **8b.7** Update chg-GH-52-spec.md with F-14, AC-F14-1..3, DM-6, NFR-9, scope and affected-components entries. (Added all.)
 - [x] **8b.8** Update chg-GH-52-test-plan.md with meeting documentation test scenarios. (Added TC-MEETING-001..003.)
+- [x] **8b.9** Enhance meeting-notes-template.md based on external research (@external-researcher) and user feedback: add transcript_url field + transcripts/ subfolder storage, research-informed sections (meeting goal, ideas, parked items/parking lot, open questions, notes worth keeping, decision framework, roles), copy/paste-friendly agenda block, and two agenda-sharing workflows (copy/paste vs git-native PR link). (Template rewritten with all enhancements.)
+- [x] **8b.10** Update handbook §2b with document lifecycle, two agenda-sharing workflows, transcript storage convention, and transcripts/ subfolder. (Updated.)
+- [x] **8b.11** Update spec DM-6, F-14, AC-F14-1 with enhanced front matter fields (transcript_url, facilitator, note_taker, timekeeper) and section inventory. (Updated.)
+- [x] **8b.12** Update handbook §3 standard tree and §4.2 folder guide with transcripts/ subfolder and enhanced meeting notes description. (Updated.)
+- [x] **8b.13** Create comprehensive guide `doc/guides/meeting-preparation-and-summarization.md` covering before/during/after meeting lifecycle, what to store where, meeting-type-specific guidance, best practices from research, two agenda-sharing workflows, and quick checklists. (Created.)
 
 **Acceptance Criteria**:
 
@@ -364,6 +369,7 @@ Open questions:
 **Files and modules**:
 
 - `doc/templates/meeting-notes-template.md` (new)
+- `doc/guides/meeting-preparation-and-summarization.md` (new)
 - `doc/documentation-handbook.md` (updated)
 - `doc/templates/documentation-profile-template.md` (updated)
 - `doc/templates/README.md` (updated)
@@ -433,6 +439,8 @@ AC mapping summary:
 | 1.6 | 2026-06-19 | pm | Refreshed branch against current main (merged GH-54 external-researcher); conflict resolution verified coherent; no plan content changes required. |
 | 1.7 | 2026-06-20 | pm | Added re-review remediation scope for red team and reviewer findings (C-1, C-2, M-1, M-2, M-3, plus path/area/plan-log nits). |
 | 1.8 | 2026-06-20 | pm | Added Phase 8b for meeting documentation scope extension per human request (issue #52 comment 4759036904). |
+| 1.9 | 2026-06-20 | pm | Enhanced meeting docs per user feedback + external research: transcript storage, research-informed sections, two agenda-sharing workflows. |
+| 2.0 | 2026-06-20 | pm | Added comprehensive meeting preparation and summarization guide. |
 
 ## Execution Log
 

@@ -33,7 +33,7 @@ Agent prompts define quality rules and domain-specific logic; templates define o
 
 | Template | Purpose |
 |----------|---------|
-| `meeting-notes-template.md` | Combined agenda + minutes + decisions + action items for repo-scoped meetings (`doc/meetings/`) or business meetings (`doc/business/meetings/`) |
+| `meeting-notes-template.md` | Combined agenda + summary (decisions, action items, ideas, parked items, open questions, notes worth keeping) for repo-scoped meetings (`doc/meetings/`) or business meetings (`doc/business/meetings/`). Supports copy/paste agenda sharing and git-native PR-based invites. Transcripts stored in `transcripts/` subfolder. |
 
 ## Documentation Profile Contract Template
 

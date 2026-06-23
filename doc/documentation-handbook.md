@@ -123,7 +123,18 @@ The first iteration commits at most the following examples; none are required an
 
 ### Meeting documentation conventions
 
-Meeting agendas, minutes/summaries, and transcripts use a single combined `meeting-notes-template.md` with distinct sections for agenda, discussion, decisions, and action items.
+Meeting agendas, minutes/summaries, and transcripts use a single combined `meeting-notes-template.md` that starts as an **agenda** before the meeting and is extended into a **summary** afterward. The document has distinct sections for agenda/prep (copy/paste-friendly), discussion, decisions, action items, ideas, open questions, parked items, and notes worth keeping.
+
+**Document lifecycle:**
+
+- Before the meeting: fill in the "Agenda & Preparation" block (goal, time-boxed topics, prep, attendees, roles).
+- During the meeting: capture discussion, decisions, action items, ideas, open questions, parked items.
+- After the meeting: finalize the summary, update `status` to `Accepted`, `document_classification` to `current-truth`, `synthesis_status` to `synthesized`. Send action items within 60 minutes; distribute the full summary within 24 hours.
+
+**Two ways to share the agenda:**
+
+- **Copy/paste:** select the "Agenda & Preparation" block from the meeting notes file and paste it into the calendar invite.
+- **Git-native:** commit the meeting notes file (or open a PR) before the meeting and share the file/PR URL as the calendar invite link. Collaborators can comment on the agenda, ask questions, and propose additions before the meeting starts.
 
 **Storage rules:**
 
@@ -131,10 +142,12 @@ Meeting agendas, minutes/summaries, and transcripts use a single combined `meeti
 - **Cross-repo, product, or business meetings** (e.g., product strategy review, all-hands, leadership sync) live in `doc/business/meetings/` of the canonical strategy repository. This requires `business_docs_enabled: true` or explicit user direction.
 - When in doubt, an agent asks the user whether the meeting is repo-scoped or cross-repo before selecting the write location.
 
-**Filename convention:**
+**Filename and transcript convention:**
 
-- `doc/meetings/YYYY-MM-DD-<topic-slug>.md` — single file with agenda + minutes + decisions + action items.
-- Transcripts are large artifacts; link them via `recording_url` in front matter rather than inlining.
+- `doc/meetings/YYYY-MM-DD-<topic-slug>.md` — single file with agenda + summary + decisions + action items.
+- `doc/meetings/transcripts/YYYY-MM-DD-<topic-slug>.txt` — full transcripts stored in a `transcripts/` subfolder (one click away, not inlined).
+- For business meetings: `doc/business/meetings/YYYY-MM-DD-<topic-slug>.md` and `doc/business/meetings/transcripts/`.
+- Link transcripts and recordings via `transcript_url` and `recording_url` in front matter.
 
 **Classification:**
 
@@ -211,7 +224,8 @@ Meeting agendas, minutes/summaries, and transcripts use a single combined `meeti
   /tools/                          # User guides for CLI tools in tools/ (one per tool)
   /diagrams/                       # Mermaid/PlantUML sources; exported PNG/SVG
   /examples/                       # Payloads, fixtures, UI mocks (shared samples)
-  /meetings/                       # Repo-scoped meeting notes (agenda + minutes + decisions)
+  /meetings/                       # Repo-scoped meeting notes (agenda + summary + decisions + action items)
+    /transcripts/                  # Full meeting transcripts (linked via transcript_url, not inlined)
   /templates/                      # Authoring templates (change spec, decision record, feature, test, plan)
   /prompts/                        # Human-facing generation prompts (copy/UX)
 
@@ -305,7 +319,7 @@ Meeting agendas, minutes/summaries, and transcripts use a single combined `meeti
 - **`/i18n/`**: Internationalization specifics (UI repos).
 - **`/diagrams/`**: Source first (mermaid/PUML), plus exported artifacts.
 - **`/examples/`**: Cross-cutting example payloads & mocks.
-- **`/meetings/`**: Repo-scoped meeting notes following the `meeting-notes-template.md`. Filename: `YYYY-MM-DD-<topic-slug>.md`. See §2b for cross-repo/business meeting storage rules.
+- **`/meetings/`**: Repo-scoped meeting notes following the `meeting-notes-template.md`. Filename: `YYYY-MM-DD-<topic-slug>.md`. Each meeting file starts as an agenda and is extended into a summary. Transcripts live in `/meetings/transcripts/`. See §2b for lifecycle, cross-repo/business meeting storage rules, and agenda-sharing workflows.
 - **`/templates/`**: All authoring templates (change spec, decision record, feature spec, test spec, test plan, implementation plan).
 - **`/prompts/`**: Human-facing content prompts (marketing copy, release notes). Agent system prompts remain in
   `.opencode/agent/`.

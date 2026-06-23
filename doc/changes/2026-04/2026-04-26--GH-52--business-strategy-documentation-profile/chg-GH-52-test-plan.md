@@ -546,9 +546,10 @@ Added in Phase 8b to cover the meeting documentation conventions (F-14, DM-6, NF
 
 | ID | Scenario | Phases | AC |
 |----|----------|--------|----|
-| TC-MEETING-001 | Verify meeting-notes-template.md exists with required front-matter fields (meeting_date, meeting_type, attendees, recording_url, document_classification, source_type, synthesis_status, area, links). | 8b | AC-F14-1, AC-F14-3, DM-6, NFR-9 |
+| TC-MEETING-001 | Verify meeting-notes-template.md exists with required front-matter fields (meeting_date, meeting_type, attendees, recording_url, transcript_url, facilitator, note_taker, timekeeper, document_classification, source_type, synthesis_status, area, links) and body sections (agenda & preparation, discussion, decisions, action items, ideas, open questions, parked items, notes worth keeping, follow-up, links). | 8b | AC-F14-1, AC-F14-3, DM-6, NFR-9 |
 | TC-MEETING-002 | Verify handbook §2b defines storage rules for repo-scoped meetings (doc/meetings/) and cross-repo/business meetings (doc/business/meetings/). | 8b | AC-F14-1, AC-F14-2 |
 | TC-MEETING-003 | Verify documentation-profile-template.md includes doc/meetings in default allowed_write_roots (engineering-safe). | 8b | AC-F14-1 |
+| TC-MEETING-004 | Verify handbook §2b documents transcript storage convention (doc/meetings/transcripts/ subfolder, transcript_url front-matter linkage) and two agenda-sharing workflows (copy/paste into invite, git-native PR link). | 8b | AC-F14-1, AC-F14-2 |
 
 ## 6. Environments and Test Data
 
@@ -622,6 +623,7 @@ Minimum quality gates before completion:
 | 1.4 | 2026-04-27 | review-feedback-applier | Added focused PR #53 AI reviewer feedback handling evidence for profile root configurability, raw-evidence metadata placeholders, experiment register consistency, and template inventory wording. |
 | 1.5 | 2026-06-19 | pm | Refreshed branch against current main (merged GH-54 external-researcher); conflict resolution verified coherent; no test-plan content changes required. |
 | 1.6 | 2026-06-20 | pm | Added meeting documentation test scenarios (TC-MEETING-001..003) for scope extension. |
+| 1.7 | 2026-06-20 | pm | Enhanced TC-MEETING-001 for research-informed sections; added TC-MEETING-004 for transcript storage and agenda-sharing workflows. |
 
 ## 10. Test Execution Log
 
