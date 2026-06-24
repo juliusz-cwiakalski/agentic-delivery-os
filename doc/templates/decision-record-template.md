@@ -60,6 +60,38 @@ links:
      Separate facts from assumptions.
 -->
 
+## Constraints (Hard Requirements)
+
+<!-- List the binary, non-negotiable gates that alternatives must satisfy to be eligible.
+     Constraints are PASS/FAIL gates — they ELIMINATE alternatives rather than rank them.
+     This is distinct from Decision Drivers (continuous preferences used to rank survivors).
+
+     Authoring guidance:
+     - An EMPTY section is a conscious author choice, not an omission. If a decision
+       genuinely has no hard requirements, state that explicitly (e.g., "No non-negotiable
+       constraints identified.") so the emptiness is deliberate and reviewable.
+     - TABLE-STAKES constraints (those every alternative already satisfies) receive a brief
+       acknowledgment rather than a per-constraint entry — list them once in a sentence.
+
+     Record each constraint as a structured entry (see the template below). Assign compact
+     identifiers C-1, C-2, … so the Alternatives Considered and Decision sections can
+     cross-reference specific constraints.
+-->
+
+### C-1: <constraint statement>
+
+<!-- State the non-negotiable requirement as a pass/fail test. -->
+
+- **Statement:** <!-- The requirement, phrased so compliance is verifiable (pass/fail). -->
+- **Source:** <!-- One of: regulatory | contractual | prior decision | AC | internal standard -->
+- **Verification:** <!-- One of: test | audit | code review | architect sign-off | demonstration
+      (verification is NOT limited to automated checks — non-code constraints such as
+      regulatory requirements are first-class). -->
+- **Negotiable:** <!-- yes | no. "no" = a violation disqualifies the alternative; "yes" = a
+      documented accepted-risk exception may be recorded in the Decision section. -->
+
+<!-- Duplicate this block for each constraint (C-2, C-3, …). -->
+
 ## Decision Drivers
 
 <!-- List and prioritize the factors that this decision optimizes for.
@@ -85,7 +117,30 @@ links:
 ## Alternatives Considered
 
 <!-- Include at least two substantive alternatives plus a do-nothing baseline.
-     For each alternative: -->
+      For each alternative: -->
+
+### Per-Alterative Constraint-Compliance Evaluation
+
+<!-- Every alternative MUST include an explicit evaluation of its compliance with each
+     documented constraint (C-1, C-2, …) from the Constraints section above — NOT only
+     pros/cons against drivers. This eliminates silent constraint violations.
+
+     Choose the presentation format via this readability heuristic:
+     - PROSE (1–2 sentences per alternative): when all alternatives satisfy the constraints,
+       or only one or two violations need explanation.
+     - MATRIX (constraints × alternatives): when ≥3 constraints have mixed compliance across
+       alternatives, or when prose would exceed ~3 sentences per alternative. Example:
+
+       |          | C-1 | C-2 | C-3 |
+       |----------|-----|-----|-----|
+       | Alt 0    | ✅  | ❌  | ✅  |
+       | Alt 1    | ✅  | ✅  | ✅  |
+       | Alt 2    | ❌  | ✅  | ⚠️  |
+
+     - DEFAULT TO MATRIX when unsure.
+     - TABLE-STAKES constraints (every alternative satisfies them) get a brief one-line
+       acknowledgment rather than a per-alternative compliance listing.
+-->
 
 ### Alternative 0 — Do Nothing / Keep Current Approach
 
@@ -94,6 +149,8 @@ links:
 - **Summary:** <!-- Brief description -->
 - **Pros:** <!-- Benefits of inaction -->
 - **Cons:** <!-- Risks of inaction -->
+- **Constraint compliance:** <!-- Explicit evaluation vs each constraint (C-1, C-2, …),
+      or a matrix row. State pass/fail and reference the constraint ID for any failure. -->
 - **Why rejected/chosen:** <!-- Link rationale to drivers -->
 
 ### Alternative 1 — <Name>
@@ -101,6 +158,8 @@ links:
 - **Summary:** <!-- Brief description -->
 - **Pros:** <!-- Benefits, aligned with drivers -->
 - **Cons:** <!-- Risks, costs, constraints violated -->
+- **Constraint compliance:** <!-- Explicit evaluation vs each constraint (C-1, C-2, …),
+      or a matrix row. -->
 - **Why rejected/chosen:** <!-- Link rationale to drivers -->
 
 ### Alternative 2 — <Name>
@@ -108,14 +167,36 @@ links:
 - **Summary:** <!-- Brief description -->
 - **Pros:** <!-- Benefits -->
 - **Cons:** <!-- Risks -->
+- **Constraint compliance:** <!-- Explicit evaluation vs each constraint (C-1, C-2, …),
+      or a matrix row. -->
 - **Why rejected/chosen:** <!-- Link rationale to drivers -->
 
 ## Decision
 
 <!-- State the final decision clearly.
-     - Tie rationale explicitly back to decision drivers
-     - List key assumptions
-     - Note any conditions under which this decision should be revisited
+      - Tie rationale explicitly back to decision drivers
+      - List key assumptions
+      - Note any conditions under which this decision should be revisited
+-->
+
+### Constraint Compliance Attestation
+
+<!-- The Decision section MUST explicitly attest that the chosen alternative satisfies EVERY
+     documented constraint (C-1, C-2, …). Two cases:
+
+     1. FULL COMPLIANCE — attest it explicitly, e.g., "The chosen alternative satisfies all
+        constraints C-1 … C-n."
+
+     2. ACCEPTED-RISK EXCEPTION — for any constraint the chosen alternative violates,
+        document an accepted-risk exception. This is permitted ONLY for constraints marked
+        `negotiable: yes`. A non-negotiable constraint (`negotiable: no`) that the chosen
+        alternative violates is DISQUALIFYING by definition and must not be waved through.
+
+     Exception format (one per violated negotiable constraint):
+     - Constraint ID: C-<n> (negotiable: yes)
+     - Nature of the violation: <what fails>
+     - Accepted risk: <why the violation is consciously accepted>
+     - Mitigation / revisit trigger: <how/when this is revisited>
 -->
 
 ## Trade-offs & Consequences

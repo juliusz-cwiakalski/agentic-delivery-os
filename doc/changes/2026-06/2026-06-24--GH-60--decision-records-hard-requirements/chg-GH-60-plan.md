@@ -133,31 +133,38 @@ phases 2–5 mirror and that phase 6 verifies against.
 
 **Tasks**:
 
-- [ ] **1.1** Insert a new top-level section **"Constraints (Hard Requirements)"**
+- [x] **1.1** Insert a new top-level section **"Constraints (Hard Requirements)"**
   immediately after *Problem Framing (Clarified)* and immediately before *Decision
   Drivers*. The target body order becomes: Context → Problem Framing → **Constraints
   (Hard Requirements)** → Decision Drivers → Mental Models & Techniques → Alternatives
   Considered → Decision → Trade-offs & Consequences → … → References.
-- [ ] **1.2** Define the **constraint entry structure** inside the section (spec DM-1,
+  *(Done: `## Constraints (Hard Requirements)` now at line 63, between Problem Framing (56) and Decision Drivers (95).)*
+- [x] **1.2** Define the **constraint entry structure** inside the section (spec DM-1,
   DEC-7): each constraint has five fields — **ID** (`C-1`, `C-2`, … per DEC-6/DM-3),
   **Statement**, **Source** (∈ {regulatory, contractual, prior decision, AC, internal
   standard}), **Verification** (∈ {test, audit, code review, architect sign-off,
   demonstration} — not limited to automated checks), **Negotiable** (∈ {yes, no}).
-- [ ] **1.3** Add inline authoring guidance (spec F-1): an empty section is a *conscious*
+  *(Done: `### C-1:` block with all five fields + both enums at lines 81–93.)*
+- [x] **1.3** Add inline authoring guidance (spec F-1): an empty section is a *conscious*
   author choice, not an omission; table-stakes constraints (all alternatives satisfy them)
   receive a brief acknowledgment rather than per-constraint listing (DEC-4).
-- [ ] **1.4** Update the *Alternatives Considered* section to **require a per-alternative
+  *(Done: both rules documented in the Constraints section comment.)*
+- [x] **1.4** Update the *Alternatives Considered* section to **require a per-alternative
   constraint-compliance evaluation** (spec F-2, AC-GH60-3): author chooses **prose** vs
   **matrix** (constraints × alternatives) via a documented readability heuristic,
   **default to matrix when unsure** (DEC-4).
-- [ ] **1.5** Update the *Decision* section to **require explicit compliance attestation**
+  *(Done: `### Per-Alterative Constraint-Compliance Evaluation` block + `Constraint compliance:` field on each alternative.)*
+- [x] **1.5** Update the *Decision* section to **require explicit compliance attestation**
   (spec F-3, AC-GH60-4): attest the chosen alternative satisfies every constraint, or
   document an accepted-risk exception — permitted **only** for constraints marked
   `negotiable: yes`; a non-negotiable (`negotiable: no`) violation is disqualifying.
-- [ ] **1.6** Confirm the new section and rules apply **uniformly across all five decision
+  *(Done: `### Constraint Compliance Attestation` block at line 182.)*
+- [x] **1.6** Confirm the new section and rules apply **uniformly across all five decision
   types** (ADR/PDR/TDR/BDR/ODR); no type-specific carve-out or type-only behavior (spec F-7).
-- [ ] **1.7** Confirm the edit is **strictly additive** — no existing section renamed,
+  *(Confirmed: a single shared template governs all five types; no per-type variant exists.)*
+- [x] **1.7** Confirm the edit is **strictly additive** — no existing section renamed,
   renumbered, reordered, or removed (backward compatibility, spec NFR-2, AC-GH60-11).
+  *(Confirmed: heading scan shows all pre-existing sections retain original relative order; only insertion + tightened authoring text.)*
 
 **Acceptance Criteria**:
 
