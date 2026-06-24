@@ -22,7 +22,7 @@ Turn AI from "chat assistance" into a repeatable, auditable delivery system:
 
 ticket -> spec -> plan -> test plan -> code -> [/review](.opencode/command/review.md) -> [/sync-docs](.opencode/command/sync-docs.md) -> [/check](.opencode/command/check.md) -> [/pr](.opencode/command/pr.md) -> release
 
-This repo is a practical reference implementation of a spec-driven workflow using OpenCode:
+This repo is a practical reference implementation of a spec-driven workflow using OpenCode (and supporting Claude Code):
 
 - Artifacts are first-class (versioned in Git), not trapped in chats.
 - Deterministic quality gates define "done".
@@ -30,6 +30,28 @@ This repo is a practical reference implementation of a spec-driven workflow usin
 - The repo maintains a continuously updated "current system spec" under `doc/spec/**` (created if missing; reconciled after each accepted change).
 
 > Note: `doc/spec/**` may not exist in a fresh repo; it's created/updated by the workflow (see [/sync-docs](.opencode/command/sync-docs.md)).
+
+<!-- TOC -->
+* [Agentic Delivery OS (ADOS)](#agentic-delivery-os-ados)
+  * [Why this exists](#why-this-exists)
+  * [What this gives you](#what-this-gives-you)
+  * [Installation](#installation)
+    * [Quick Start](#quick-start)
+      * [For Claude Code users](#for-claude-code-users)
+    * [Installation Modes](#installation-modes)
+    * [Tool Selection (OpenCode only)](#tool-selection-opencode-only)
+  * [Benefits](#benefits)
+  * [Intention](#intention)
+  * [Docs at a glance](#docs-at-a-glance)
+  * [What is implemented here](#what-is-implemented-here)
+  * [Multi-tool support](#multi-tool-support)
+  * [Autopilot (PM-driven)](#autopilot-pm-driven)
+  * [Typical workflow (manual)](#typical-workflow-manual)
+  * [Change artifacts (tracker-agnostic)](#change-artifacts-tracker-agnostic)
+  * [Repo structure](#repo-structure)
+  * [License](#license)
+  * [Author](#author)
+<!-- TOC -->
 
 ## Why this exists
 
@@ -69,7 +91,7 @@ Then in your AI coding agent:
 /bootstrap                                  # AI-guided configuration
 ```
 
-**For Claude Code users:**
+#### For Claude Code users
 
 **Recommended: Install from GitHub marketplace**
 
