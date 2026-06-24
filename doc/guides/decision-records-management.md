@@ -165,15 +165,38 @@ Every decision record must include these sections in order:
 1. **Title**: `# <TYPE>-<zeroPad4>: <Title>`
 2. **Context**: Background, triggers, and constraints
 3. **Problem Framing**: Objective reframing of the problem
-4. **Decision Drivers**: Prioritized factors (business, technical, operational)
-5. **Alternatives Considered**: At least 2 options + do-nothing baseline
-6. **Decision**: Final choice with rationale tied to drivers
-7. **Consequences**: Positive outcomes, negative outcomes, unresolved questions
-8. **Verification Criteria**: How to measure the decision's success
-9. **Status**: Current lifecycle state
-10. **References**: Links to related artifacts
+4. **Constraints (Hard Requirements)**: Binary, non-negotiable gates that eliminate alternatives (pass/fail), recorded as structured entries (see §6.1)
+5. **Decision Drivers**: Prioritized factors (business, technical, operational)
+6. **Alternatives Considered**: At least 2 options + do-nothing baseline; each alternative includes an explicit constraint-compliance evaluation
+7. **Decision**: Final choice with rationale tied to drivers, plus a constraint-compliance attestation
+8. **Consequences**: Positive outcomes, negative outcomes, unresolved questions
+9. **Verification Criteria**: How to measure the decision's success
+10. **Status**: Current lifecycle state
+11. **References**: Links to related artifacts
 
 See `doc/templates/decision-record-template.md` for the full template with inline guidance.
+
+### 6.1 Constraints (Hard Requirements) — authoring discipline
+
+**Constraints vs drivers.** *Decision drivers* are continuous preferences the decision optimizes for (tradeable; used to rank alternatives). *Constraints (hard requirements)* are binary, pass/fail gates that **eliminate** alternatives rather than rank them. Keeping them separate prevents an alternative from winning on driver scores while silently violating a non-negotiable gate.
+
+**Constraint entry fields.** Each constraint is a structured entry with five fields, assigned a compact identifier so the *Alternatives Considered* and *Decision* sections can cross-reference it:
+
+| Field | Value |
+|-------|-------|
+| **ID** | `C-1`, `C-2`, … (per record) |
+| **Statement** | The requirement phrased as a pass/fail test |
+| **Source** | One of: `regulatory` \| `contractual` \| `prior decision` \| `AC` \| `internal standard` |
+| **Verification** | One of: `test` \| `audit` \| `code review` \| `architect sign-off` \| `demonstration` (not limited to automated checks) |
+| **Negotiable** | `yes` \| `no` (`no` = a violation is disqualifying; `yes` = a documented accepted-risk exception may be recorded) |
+
+**Empty section is a conscious choice.** When a decision genuinely has no hard requirements, the author states that explicitly (e.g., "No non-negotiable constraints identified.") so the emptiness is deliberate and reviewable — it is never an omission.
+
+**Table-stakes constraints** (every alternative already satisfies them) receive a brief one-line acknowledgment rather than a per-constraint entry.
+
+**Per-alternative compliance evaluation.** Every alternative must include an explicit evaluation of its compliance against each constraint (C-1, C-2, …), not only pros/cons against drivers. Choose the format via a readability heuristic: **prose** (1–2 sentences per alternative) when all alternatives comply or only one or two violations need explanation; a **matrix** (constraints × alternatives) when ≥3 constraints have mixed compliance or prose would exceed ~3 sentences per alternative. **Default to matrix when unsure.**
+
+**Decision-section attestation.** The *Decision* section must explicitly attest that the chosen alternative satisfies every constraint. For any constraint it violates, the author documents an **accepted-risk exception** — permitted **only** for constraints marked `negotiable: yes`. A non-negotiable constraint (`negotiable: no`) that the chosen alternative violates is **disqualifying** by definition and must not be waved through.
 
 ---
 
@@ -227,6 +250,8 @@ The `@architect` agent owns the decision workflow for all decision types (ADR, P
 - Create decision records via the `/plan-decision` + `/write-decision` workflow
 - Scan `doc/decisions/` for existing records to inform new decisions
 - Link decision records to change specs
+
+In `/plan-decision`, hard requirements (constraints) are elicited as a **distinct factor class, separate from decision drivers**, with overlap detection that warns when the same factor appears in both buckets and requires the author to categorize it into exactly one. The captured constraints flow into a `hard_requirements:` field in the planning summary (distinct from `decision_drivers:`), which `/write-decision` then renders as the *Constraints (Hard Requirements)* section. See §6.1 for the authoring discipline.
 
 ### Other Agents
 

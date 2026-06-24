@@ -198,17 +198,21 @@ guide so the guide's *Required Sections* list matches the template exactly (spec
 
 **Tasks**:
 
-- [ ] **2.1** Update **§6 Required Sections** to list **"Constraints (Hard Requirements)"**
+- [x] **2.1** Update **§6 Required Sections** to list **"Constraints (Hard Requirements)"**
   in the correct ordinal position — between *Problem Framing* and *Decision Drivers*
   (spec AC-GH60-9).
-- [ ] **2.2** Document the **constraint entry fields and ID scheme** (`C-1`, `C-2`, …) and
+  *(Done: §6 list item 4, between Problem Framing (3) and Decision Drivers (5).)*
+- [x] **2.2** Document the **constraint entry fields and ID scheme** (`C-1`, `C-2`, …) and
   the Source/Verification/Negotiable enums, mirroring the template (spec DM-1, DM-3).
-- [ ] **2.3** Document the **compliance-evaluation heuristic** (prose vs matrix, default to
+  *(Done: new §6.1 table with ID/Statement/Source/Verification/Negotiable + both enums.)*
+- [x] **2.3** Document the **compliance-evaluation heuristic** (prose vs matrix, default to
   matrix, table-stakes acknowledgment) and the **Decision attestation / accepted-risk
   exception** rule so authors understand the discipline (spec F-2, F-3, DEC-4).
-- [ ] **2.4** Review **§9 Agent Integration** for consistency with the updated planning flow
+  *(Done: §6.1 documents the heuristic + attestation/exception gate.)*
+- [x] **2.4** Review **§9 Agent Integration** for consistency with the updated planning flow
   (the new hard-requirements elicitation step in `/plan-decision`), adjusting wording if it
   references the old conflated single step (spec §5.1 F-4, F-8).
+  *(Done: §9 @architect subsection now describes hard requirements as a distinct factor class + `hard_requirements:` summary field + overlap detection.)*
 
 **Acceptance Criteria**:
 
