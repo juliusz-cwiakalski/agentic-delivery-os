@@ -13,7 +13,7 @@ phases:
   review_fix: { started: "2026-06-24", completed: "2026-06-24", iteration: 1, status: "PASS", findings: "3 MINOR (non-blocking) — being fixed in Phase 8 before PR", review_commit: "ac27cc6" }
   quality_gates: { started: "2026-06-24", completed: "2026-06-24", status: "PASS-in-scope", caveat: "3 unrelated pre-existing failures in tools/.tests/test-text-to-image-* (perf timing + external API e2e). These tests cover the text-to-image CLI tool and have no dependency on doc/templates/.opencode markdown files modified by this change. Failures are environmental (system load, external API availability). Not caused by GH-60; should be tracked separately if recurrent." }
   dod_check: { started: "2026-06-24", completed: "2026-06-24", status: "PASS" }
-  pr_creation: { started: "2026-06-24", completed: null, url: null }
+  pr_creation: { started: "2026-06-24", completed: "2026-06-24", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/61", pr_number: 61 }
 
 decisions:
   - text: "RD-1: Constraints section placed between Problem Framing and Decision Drivers."
