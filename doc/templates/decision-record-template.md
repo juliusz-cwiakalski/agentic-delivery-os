@@ -68,8 +68,8 @@ links:
 
      Authoring guidance:
      - An EMPTY section is a conscious author choice, not an omission. If a decision
-       genuinely has no hard requirements, state that explicitly (e.g., "No non-negotiable
-       constraints identified.") so the emptiness is deliberate and reviewable.
+       genuinely has no hard requirements, state that explicitly (e.g., "No constraints
+       identified.") so the emptiness is deliberate and reviewable.
      - TABLE-STAKES constraints (those every alternative already satisfies) receive a brief
        acknowledgment rather than a per-constraint entry — list them once in a sentence.
 

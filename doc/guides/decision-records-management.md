@@ -165,7 +165,7 @@ Every decision record must include these sections in order:
 1. **Title**: `# <TYPE>-<zeroPad4>: <Title>`
 2. **Context**: Background, triggers, and ambient constraints (situational facts, not pass/fail gates)
 3. **Problem Framing**: Objective reframing of the problem
-4. **Constraints (Hard Requirements)**: Binary, non-negotiable gates that eliminate alternatives (pass/fail), recorded as structured entries (see §6.1)
+4. **Constraints (Hard Requirements)**: Binary pass/fail gates that eliminate alternatives, recorded as structured entries (see §6.1)
 5. **Decision Drivers**: Prioritized factors (business, technical, operational)
 6. **Alternatives Considered**: At least 2 options + do-nothing baseline; each alternative includes an explicit constraint-compliance evaluation
 7. **Decision**: Final choice with rationale tied to drivers, plus a constraint-compliance attestation
@@ -190,7 +190,7 @@ See `doc/templates/decision-record-template.md` for the full template with inlin
 | **Verification** | One of: `test` \| `audit` \| `code review` \| `architect sign-off` \| `demonstration` (not limited to automated checks) |
 | **Negotiable** | `yes` \| `no` (`no` = a violation is disqualifying; `yes` = a documented accepted-risk exception may be recorded) |
 
-**Empty section is a conscious choice.** When a decision genuinely has no hard requirements, the author states that explicitly (e.g., "No non-negotiable constraints identified.") so the emptiness is deliberate and reviewable — it is never an omission.
+**Empty section is a conscious choice.** When a decision genuinely has no hard requirements, the author states that explicitly (e.g., "No constraints identified.") so the emptiness is deliberate and reviewable — it is never an omission.
 
 **Table-stakes constraints** (every alternative already satisfies them) receive a brief one-line acknowledgment rather than a per-constraint entry.
 
