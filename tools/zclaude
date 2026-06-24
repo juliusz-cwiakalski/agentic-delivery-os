@@ -11,7 +11,7 @@
 #   ZAI_API_KEY              - Z.AI API key (overrides file-based key)
 #   ZCLAUDE_HAIKU_MODEL      - Override haiku model mapping (default: glm-4.5-air)
 #   ZCLAUDE_SONNET_MODEL     - Override sonnet model mapping (default: glm-5.1)
-#   ZCLAUDE_OPUS_MODEL       - Override opus model mapping (default: glm-5.1)
+#   ZCLAUDE_OPUS_MODEL       - Override opus model mapping (default: glm-5.2)
 #   ZCLAUDE_BASE_URL         - Override API endpoint (default: https://api.z.ai/api/anthropic)
 #   ZCLAUDE_TIMEOUT_MS       - Override timeout (default: 3000000)
 #   ZCLAUDE_CONFIG_DIR       - Override config directory (default: ~/.ai/zclaude)
@@ -51,7 +51,7 @@ readonly DEFAULT_BASE_URL="https://api.z.ai/api/anthropic"
 readonly DEFAULT_TIMEOUT_MS="3000000"
 readonly DEFAULT_HAIKU_MODEL="glm-4.5-air"
 readonly DEFAULT_SONNET_MODEL="glm-5.1"
-readonly DEFAULT_OPUS_MODEL="glm-5.1"
+readonly DEFAULT_OPUS_MODEL="glm-5.2"
 
 VERBOSE="${VERBOSE:-false}"
 
@@ -400,8 +400,8 @@ CONFIGURATION:
 
 ENVIRONMENT:
   ZAI_API_KEY              Z.AI API key (overrides file)
-  ZCLAUDE_SONNET_MODEL     Sonnet slot model (default: ${DEFAULT_SONNET_MODEL})
   ZCLAUDE_OPUS_MODEL       Opus slot model (default: ${DEFAULT_OPUS_MODEL})
+  ZCLAUDE_SONNET_MODEL     Sonnet slot model (default: ${DEFAULT_SONNET_MODEL})
   ZCLAUDE_HAIKU_MODEL      Haiku slot model (default: ${DEFAULT_HAIKU_MODEL})
   ZCLAUDE_BASE_URL         API endpoint (default: ${DEFAULT_BASE_URL})
   ZCLAUDE_TIMEOUT_MS       Timeout in ms (default: ${DEFAULT_TIMEOUT_MS})
