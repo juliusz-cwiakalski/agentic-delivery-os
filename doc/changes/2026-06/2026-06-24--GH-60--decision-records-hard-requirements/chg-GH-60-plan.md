@@ -244,17 +244,21 @@ classes never merge (spec F-4, F-5, DM-2).
 
 **Tasks**:
 
-- [ ] **3.1** **Delegate to `@toolsmith`** to update `.opencode/command/plan-decision.md`.
-- [ ] **3.2** Add a **new hard-requirements elicitation step** between the current context/
+- [x] **3.1** **Delegate to `@toolsmith`** to update `.opencode/command/plan-decision.md`.
+  *(Applied the `customize-opencode` skill discipline — no task/subagent tool was available in this environment; see final report.)*
+- [x] **3.2** Add a **new hard-requirements elicitation step** between the current context/
   problem-framing step (step 2) and the decision-drivers step (step 3). Hard requirements
   are captured as a distinct factor class, separate from drivers (spec F-4, AC-GH60-5).
-- [ ] **3.3** Add **driver/constraint overlap detection**: when the same factor is captured
+  *(Done: new step 3 "Elicit hard requirements (constraints)"; full entry schema (ID/Statement/Source/Verification/Negotiable); steps renumbered.)*
+- [x] **3.3** Add **driver/constraint overlap detection**: when the same factor is captured
   as both a driver and a constraint, warn and **require the author to categorize it into
   exactly one bucket** before proceeding — a **soft warning, not a hard block** (spec F-5,
   DEC-5, AC-GH60-6).
-- [ ] **3.4** Add a **`hard_requirements:`** field to the emitted
+  *(Done: new step 4 "Driver/constraint overlap detection" — soft warning, driver XOR constraint.)*
+- [x] **3.4** Add a **`hard_requirements:`** field to the emitted
   `<technical_decision_planning_summary>`, kept **distinct and separate** from the existing
   `decision_drivers:` list (spec DM-2, F-4, AC-GH60-7).
+  *(Done: `hard_requirements:` at line 233, distinct from `decision_drivers:` at 246; summary Notes document the distinction; examples include constraint_compliance + constraint_attestation.)*
 
 **Acceptance Criteria**:
 

@@ -12,7 +12,7 @@ Guide the user through a structured, interactive technical-decision conversation
 
 - Discovers or confirms the decision record number (e.g. 0007) by scanning existing records in doc/decisions/ for the relevant type (ADR, PDR, TDR, BDR, ODR; defaults to ADR).
 - Orients itself in the current repository and high-level documentation under doc/spec/, doc/overview/, doc/changes/, and doc/contracts/.
-- Systematically elicits and refines all information needed by /write-decision (context, problem framing, decision drivers, alternatives, trade-offs, assumptions, verification criteria, etc.), without generating the decision record file itself.
+- Systematically elicits and refines all information needed by /write-decision (context, problem framing, **hard requirements (constraints)**, decision drivers, alternatives, trade-offs, assumptions, verification criteria, etc.), without generating the decision record file itself.
 - Applies Archie-style decision-making discipline (clarify problem → confirm drivers → explore options → recommend) without exposing internal mechanics unless asked.
 - Concludes with a compact, machine- and human-friendly planning summary block plus a clear recommendation to invoke `/write-decision <number>` and, where relevant, to link back to related changes (workItemRef).
 
@@ -116,52 +116,70 @@ Overall planning session flow (per ADR number):
    - Apply techniques such as 5 Whys or Ishikawa (textually) to probe underlying causes where appropriate.
    - Keep separate lists of **facts**, **assumptions**, and **to confirm** items.
 
-3. **Identify and validate decision drivers**
+3. **Elicit hard requirements (constraints)**
+   - Elicit **hard requirements as a distinct factor class, separate from decision drivers.** Constraints are binary, pass/fail gates that ELIMINATE alternatives rather than rank them; drivers are continuous preferences used to rank survivors. Never fold the two together.
+   - For each constraint, capture a structured entry:
+     - **ID**: `C-1`, `C-2`, … (compact, per-record identifiers used to cross-reference from Alternatives and Decision).
+     - **Statement**: the requirement phrased as a pass/fail test.
+     - **Source**: one of `regulatory` | `contractual` | `prior decision` | `AC` | `internal standard`.
+     - **Verification**: one of `test` | `audit` | `code review` | `architect sign-off` | `demonstration` (not limited to automated checks).
+     - **Negotiable**: `yes` | `no` (`no` = a violation is disqualifying; `yes` = a documented accepted-risk exception may be recorded in the Decision).
+   - An empty constraint set is a CONSCIOUS author choice, not an omission. If the decision genuinely has no hard requirements, confirm that explicitly with the user so the emptiness is deliberate and reviewable.
+   - Table-stakes constraints (ones every alternative already satisfies) may be captured once as a brief acknowledgment rather than elaborated per-entry.
+
+4. **Driver/constraint overlap detection**
+   - When the SAME factor is captured as both a decision driver and a constraint, WARN and REQUIRE the author to categorize it into EXACTLY ONE bucket before proceeding.
+   - This is a SOFT WARNING: surface the conflict, explain that a factor cannot be both a continuous ranking preference and a binary gate, and ask the user to choose driver XOR constraint. It is NOT a hard block that halts the session.
+   - Each factor must end up in exactly one bucket.
+
+5. **Identify and validate decision drivers**
    - Elicit and confirm decision drivers across:
      - Business (e.g., cost, time-to-market, risk reduction).
      - Technical (e.g., performance, reliability, scalability, consistency model, coupling).
      - Operational and team factors (e.g., operability, team skills, cognitive load).
    - Where helpful, ask the user to prioritize or rank drivers.
-   - Confirm that drivers are agreed before evaluating options.
+   - Confirm that drivers are agreed before evaluating options. Re-run overlap detection (step 4) if a newly elicited driver duplicates an existing constraint.
 
-4. **Shape the option space (alternatives)**
+6. **Shape the option space (alternatives)**
    - Identify at least two substantive alternatives plus an explicit "do nothing / keep current approach" baseline.
    - For each alternative, capture:
      - Summary (one or two sentences).
      - Pros (aligned with drivers).
      - Cons (risks, costs, constraints violated).
+     - Constraint compliance: an explicit pass/fail evaluation against each documented constraint (C-1, C-2, …), not only pros/cons against drivers. Tag which constraints it satisfies or violates.
      - Situations where the alternative would be preferable (if any).
    - Avoid premature convergence: ensure options are meaningfully distinct.
 
-5. **Evaluate options and converge on a recommendation**
+7. **Evaluate options and converge on a recommendation**
    - Compare alternatives explicitly against decision drivers (tables or structured bullets are encouraged).
+   - Screen on constraints FIRST, then rank on drivers: an alternative violating a non-negotiable (`negotiable: no`) constraint is disqualifying and must not be recommended. Note any negotiable (`negotiable: yes`) constraint the recommended alternative violates as a candidate accepted-risk exception.
    - Call out trade-offs, second-order effects, and interactions with existing ADRs.
    - Propose a recommended option, but clearly separate recommendation from final decision.
    - Explicitly list assumptions underpinning the recommendation.
 
-6. **Trade-offs, consequences, and scope boundaries**
+8. **Trade-offs, consequences, and scope boundaries**
    - Catalogue positive outcomes, negative outcomes, and unknowns.
    - Clarify the scope of the decision (e.g., single service vs. cross-service vs. organization-wide).
    - Identify what is explicitly **not** addressed by this decision ([OUT] items) to avoid scope creep.
 
-7. **High-level implementation and rollout concept**
+9. **High-level implementation and rollout concept**
    - Sketch, at a high level only:
      - Requirements / refactors / migrations implied by the decision.
      - Rollout strategy and guardrails.
      - Risk mitigation strategies during implementation.
    - Do not generate low-level tasks; those belong in change specs and implementation plans.
 
-8. **Verification criteria and confidence**
-   - Elicit KPIs or metrics that will be used to evaluate the decision post-implementation.
-   - Define measurement windows and data sources where possible.
-   - Ask the user for a confidence rating (Low / Medium / High) and factors influencing it.
+10. **Verification criteria and confidence**
+    - Elicit KPIs or metrics that will be used to evaluate the decision post-implementation.
+    - Define measurement windows and data sources where possible.
+    - Ask the user for a confidence rating (Low / Medium / High) and factors influencing it.
 
-9. **Consolidation and readiness check**
-   - Maintain throughout the session an explicit list of **Open Questions**, each tagged as BLOCKING or NON-BLOCKING and with an owner.
-   - Before concluding, review all captured elements with the user and:
-     - Resolve as many open questions as possible via further targeted questions.
-     - For remaining questions, confirm BLOCKING vs NON-BLOCKING and that the user is comfortable proceeding to ADR drafting with those unresolved items.
-    - Only then synthesize the final planning summary for /write-decision and suggest running that command.
+11. **Consolidation and readiness check**
+    - Maintain throughout the session an explicit list of **Open Questions**, each tagged as BLOCKING or NON-BLOCKING and with an owner.
+    - Before concluding, review all captured elements with the user and:
+      - Resolve as many open questions as possible via further targeted questions.
+      - For remaining questions, confirm BLOCKING vs NON-BLOCKING and that the user is comfortable proceeding to ADR drafting with those unresolved items.
+     - Only then synthesize the final planning summary for /write-decision and suggest running that command.
      </session_flow>
 
 <questioning_strategy>
@@ -169,7 +187,7 @@ The command must enforce disciplined, high-signal questioning inspired by the Ar
 
 - Always start from the user's own words. Rephrase the decision context back to them and ask if the restatement is accurate before diving into details.
 - Never jump straight to an ADR-like output. Ask questions first, then synthesize.
-- Always clarify decision drivers before evaluating options; if drivers are unclear, pause and refine them.
+- Always clarify decision drivers AND elicit hard requirements (constraints) before evaluating options; keep the two factor classes separate and run overlap detection so no factor lives in both buckets. If either is unclear, pause and refine it.
 - When ambiguity, missing detail, or conflicting signals are detected, follow this pattern:
   1. Call out the ambiguity explicitly.
   2. Propose 2–4 viable options with concise rationale for each.
@@ -212,6 +230,19 @@ Concise description of current state, triggering events, constraints, and any re
 problem_framing: |
 Reframed technical problem in objective terms, focusing on underlying causes rather than symptoms.
 
+hard_requirements:
+
+- id: "C-1"
+  statement: "PII at rest MUST be encrypted with a customer-managed key."
+  source: "regulatory"            # regulatory | contractual | prior decision | AC | internal standard
+  verification: "audit"           # test | audit | code review | architect sign-off | demonstration
+  negotiable: "no"                # yes | no  ("no" = a violation is disqualifying)
+- id: "C-2"
+  statement: "Migration window MUST NOT exceed 4 hours of planned downtime."
+  source: "contractual"
+  verification: "demonstration"
+  negotiable: "yes"
+
 decision_drivers:
 
 - "Reduce operational complexity while supporting 10x tenant growth."
@@ -231,21 +262,25 @@ alternatives:
   summary: "Retain existing shared tables without explicit sharding strategy."
   pros: ["No migration effort", "Zero immediate risk"]
   cons: ["Unbounded tenant growth risk", "Operational complexity under load"]
+  constraint_compliance: "C-1: pass; C-2: pass (no migration)"
 - id: "ALT-1"
   name: "Single-tenant database per large tenant"
   summary: "Move high-value tenants to their own database instances."
   pros: ["Strong isolation", "Per-tenant performance tuning"]
   cons: ["Operational overhead", "Complex routing and management"]
+  constraint_compliance: "C-1: pass; C-2: fail (migration exceeds 4h window)"
 - id: "ALT-2"
   name: "Shared database with schema-based sharding"
   summary: "Use a shared database with tenant_id-based sharding and guardrails."
   pros: ["Balanced isolation vs. operability", "Simpler migrations"]
   cons: ["Still shared blast radius if misconfigured"]
+  constraint_compliance: "C-1: pass; C-2: pass"
 
 recommended_decision:
 choice: "Shared database with schema-based sharding"
 rationale: |
 Summary of why this option best satisfies the validated drivers, including explicit trade-offs against alternatives.
+constraint_attestation: "Satisfies all constraints C-1 and C-2."   # OR, for a violated negotiable constraint: document an accepted-risk exception (only for negotiable: yes)
 assumptions: - "Peak tenant count remains within <X> over next 18 months." - "Team has capacity to build sharding middleware and observability."
 non_goals: - "[OUT] Optimize for multi-region active/active in this ADR."
 
@@ -294,6 +329,7 @@ Notes:
 
 - The values above are examples; when generating a real summary, fill fields deterministically from the planning conversation and documentation context.
 - It is acceptable for some lists to be empty if the user explicitly confirms that the aspect is not applicable (e.g., no related changes). Do not invent content.
+- `hard_requirements:` is a DISTINCT field from `decision_drivers:`. Constraints (binary gates) and drivers (continuous preferences) must never be merged. An empty `hard_requirements:` list is a conscious author choice, not an omission — confirm the emptiness explicitly with the user. `/write-decision` reads this field to render the Constraints section.
 - Open questions must retain their blocking flag; do not silently drop unresolved items.
 - This summary block must reflect what the user has actually agreed upon; if something remains uncertain, state it as an assumption, open question, or explicitly deferred item.
 - The `decision_type` field determines which TYPE prefix `/write-decision` will use (defaults to ADR).
