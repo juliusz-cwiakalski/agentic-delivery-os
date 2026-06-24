@@ -75,7 +75,7 @@ Because ADOS generalized only the decision-**record artifact** (never the agent,
 | Drift surface | Body section order has exactly 1 source of truth (the template); agent prompt contains 0 baked-in body structure |
 | Backward compatibility | 100% of existing-template records remain valid; legacy planning-summary tag/fields accepted via alias |
 | Reference integrity | 0 stale `@architect` references after sweep; Claude plugin regenerated and in sync |
-| Dogfood | ADR-0001 exists, recording GH-46's RD-1…RD-14 |
+| Dogfood | ADR-0001 exists, recording GH-46's RD-1…RD-16 |
 
 ### 4.2 Non-Goals
 
@@ -141,9 +141,9 @@ Because ADOS generalized only the decision-**record artifact** (never the agent,
 
 **F-6 — `@decision-advisor`.** Domain-neutral orchestrator (renamed from `@architect`; no separate `@architect` retained — architecture depth is the advisor's type-aware context mode that reads specs/contracts/config/source). Type-aware context modes: ADR/TDR → specs/contracts/source; PDR → roadmap/UX; BDR → strategy/ICP/pricing; ODR → runbooks/infra. Runs triage → classify → rigor → rights → planning. **References the template for body structure rather than baking it in.** Preserves recommendation/decision separation; requests human approval for R2/R3.
 
-**F-7 — `@decision-critic` + `/review-decision <ID>`.** Read-only independent challenger: detects framing errors, missing options, violated constraints, fragile assumptions/arbitrary weights, runs a premortem, identifies stakeholder harm, flags unsupported certainty and automation bias. Returns **PASS / PASS_WITH_RISKS / REWORK**. `/review-decision` produces a review artifact/verdict, is read-only by default, and is independent of the advisor (the critic receives problem/evidence/constraints/options and, where practical, not the recommendation initially).
+**F-7 — `@decision-critic` + `/review-decision <ID>`.** Read-only independent challenger: detects framing errors, missing options, violated constraints, fragile assumptions/arbitrary weights, runs a premortem, identifies stakeholder harm, flags unsupported certainty and automation bias. Returns **PASS / PASS_WITH_RISKS / REWORK**. `/review-decision` produces a review artifact/verdict, is read-only by default, and is independent of the advisor (the critic receives problem/evidence/constraints/options and, where practical, not the recommendation initially). **Independence honesty (RD-16):** for a **single-model configuration** `@decision-critic` is a **first-pass check, NOT independent assurance** (same-model/same-prompt lineage is not independent evidence); **R3 ALWAYS requires a human reviewer** regardless of the critic's verdict. Where a different model family is configured, assigning it to the critic is **recommended, not mandated**, to provide genuine independence.
 
-**F-8 — Decision-Making Guide.** New process-first guide (supersedes the records-management guide, which is demoted to a record-artifact reference): (1) When to decide (record-worthiness, R0 escape hatch); (2) the kernel D0–D14; (3) R0–R3 + emergency; (4) four-axis classification → routing; (5) decision rights; (6) AI authority model; (7) per-type nuance matrix (context anchors, typical approver, fitting framework) — condensed, not 18 files; (8) constraints vs drivers discipline (GH-60 fixes); (9) the record artifact (naming/front matter/lifecycle — demoted); (10) agent & command integration.
+**F-8 — Decision-Making Guide.** New process-first guide (supersedes the records-management guide, which is demoted to a record-artifact reference): (1) When to decide (record-worthiness, R0 escape hatch); (2) the kernel D0–D14; (3) R0–R3 + emergency; (4) four-axis classification → routing; (5) decision rights; (6) AI authority model; (7) per-type nuance matrix (context anchors, typical approver, fitting framework) — condensed, not 18 files; (8) constraints vs drivers discipline (GH-60 fixes); (9) the record artifact (naming/front matter/lifecycle — demoted); (10) agent & command integration. **Skimmability guardrail (RD-14 / RT-09):** the guide MUST remain a single condensed, skimmable document — not a multi-thousand-line tome — so the process is not bypassed for being too heavy; per-type nuance stays a condensed matrix (per RD-14), not proliferated files, and a length budget appropriate to a quick-reference guide is enforced.
 
 **F-9 — Rigor-aware template (additive).** Adds **optional** front matter: classification (domains/archetype/environment/rigor/reversibility/stakes/urgency/uncertainty/blast-radius/recurrence), governance (driver/decider/contributors/reviewers/performers/informed), `ai_assistance`, `review_date`/revisit triggers. Adds proportional-rendering guidance (R1 compact subset / R2 standard / R3 full). Fixes GH-60 defects: neutralize "non-negotiable" → use `negotiable: no` consistently; drop "constraints" from the *Context* description; standardize the per-alternative heading wording across all sources. Existing extended-metadata fields remain valid.
 
@@ -153,7 +153,7 @@ Because ADOS generalized only the decision-**record artifact** (never the agent,
 
 **F-12 — Reference sweep + plugin regen.** Update every `@architect` reference repo-wide (orchestration, spec/plan writers, coder, bootstrapper, meeting organizer, PM instructions, top-level docs, READMEs, guides, feature specs, templates) to `@decision-advisor`; update inbound links to the renamed guide; regenerate the generated Claude Code plugin via the build script so source and generated output stay in sync.
 
-**F-13 — Dogfood.** Produce ADR-0001 recording GH-46's decisions (RD-1…RD-14) using `/plan-decision` + `/write-decision` against the new process.
+**F-13 — Dogfood.** Produce ADR-0001 recording GH-46's decisions (RD-1…RD-16) using `/plan-decision` + `/write-decision` against the new process.
 
 ## 6. USER & SYSTEM FLOWS
 
@@ -255,7 +255,7 @@ N/A. (The research basis is local and git-ignored; it is not referenced in deliv
 | NFR-1 | Proportionality — rigor profiles must demonstrably scale ceremony | R0 mandatory record count = 0; R1 required output is a strict proper subset of R3; R1 cycle ≤ 1 business day; R2/R3 retain full evidence + ≥2 alternatives + baseline + review date |
 | NFR-2 | Backward compatibility | 100% of existing-template records remain valid; legacy planning-summary tag and `adr.*` fields accepted via alias with 0 behavior change |
 | NFR-3 | No architecture-bias leakage | Domain-neutral path emits the generic `<decision_planning_summary>`; 0 `adr.*` required fields in the generic path; type defaults to ADR only when type is genuinely unspecified |
-| NFR-4 | Cross-source section-order consistency (GH-60 NFR-1) preserved | Exactly 1 source of truth for body section order (the template); section order identical across the template and the write command's structure definition — 0 mismatches |
+| NFR-4 | Cross-source section-order consistency (GH-60 NFR-1) preserved | Exactly 1 source of truth for body section order (the template); section order identical across the template and the write command's structure definition — 0 mismatches. "Single source of truth" means the template is canonical AND `/write-decision` contains **at most ONE** structural definition that references it (no embedded full-body duplicate alongside the ordered structure block) |
 | NFR-5 | Git-native, no proprietary runtime | All artifacts are Markdown + YAML front matter; 0 new runtime services; 0 proprietary-binary artifacts |
 | NFR-6 | No hidden chain-of-thought | Records capture decision + rationale + assumptions only; 0 stored raw model chain-of-thought/logs in committed records |
 
@@ -270,7 +270,7 @@ N/A. The subsystem is documentation + agent prompts; no runtime metrics, logs, t
 | RSK-1 | Agent rename breaks inbound references / user muscle memory | M | M | Full repo-wide reference sweep; migration note; CI gate that regenerates and verifies the Claude plugin is in sync | L |
 | RSK-2 | Removing baked-in structure lets the agent drift from required section order | M | M | Agent references the template; section-order consistency checked across the reduced source set (NFR-4); dogfood ADR-0001 exercises it end-to-end | L |
 | RSK-3 | Over-engineering — pulling in deferred machinery (catalogs, schemas, verifier) from the 3.3k-line research basis | M | M | RD-13 explicit defer list enforced as Out-of-Scope; NFR-1 proportionality gate; condensed guide (RD-14) | L |
-| RSK-4 | `@decision-critic` independence is illusory (same model/prompt lineage) → false assurance | H | M | Guide states same-model ≠ independent evidence; critic receives problem/evidence/options without the recommendation where practical; recommend a different model or human reviewer for R3 | M |
+| RSK-4 | `@decision-critic` independence is illusory (same model/prompt lineage) → false assurance | H | M | Honesty-first framing (RD-16): for a single-model setup the critic is documented as a **first-pass check, NOT independent assurance**; **R3 ALWAYS requires a human reviewer** regardless of the critic's verdict; the guide's AI-authority section (F-8 §6) and the critic prompt state this explicitly; assigning a different model family to the critic is recommended (not mandated) where one is configured | M (documented limitation — not residual false assurance) |
 | RSK-5 | Proportional rendering ambiguity → inconsistent R1 records | L | M | Template carries proportional-rendering guidance; guide defines the explicit R1 subset; one-template approach (OQ-A lean) minimizes drift | L |
 | RSK-6 | Backward-compat break for any consumer of the legacy summary tag/fields | L | L | Explicit back-compat alias mapping (DM-5, NFR-2) | L |
 | RSK-7 | Recommendation/decision boundary eroded by AI auto-accepting R2/R3 | H | M | `/write-decision` must not mark Accepted without an authorized human decision; `ai_assistance.human_decider` required; reviewer independence (F-7) | M |
@@ -321,6 +321,8 @@ N/A. The subsystem is documentation + agent prompts; no runtime metrics, logs, t
 | DEC-14 | Condensed master driver checklist + per-type matrix live in the guide, not 18 catalog files (RD-14) | Keeps v1 maintainable; catalogs can be added later | 2026-06-24 |
 | DEC-15 | OQ-A — proportional rendering of one template (no separate lite template) | Minimizes drift (NFR-1); confirmed lean | 2026-06-24 |
 | DEC-16 | OQ-B — rename summary tag to `<decision_planning_summary>` with back-compat alias | Removes architecture bias (NFR-3) while preserving backward compatibility (NFR-2) | 2026-06-24 |
+| DEC-17 | Evidence discipline in v1 = prose FACT/ASSUMPTION/UNKNOWN/TO-CONFIRM labels + source references, tightened; structured evidence-ledger YAML deferred (RD-13) (RD-15) | Reuses the existing labeling pattern instead of introducing deferred YAML machinery | 2026-06-24 |
+| DEC-18 | `@decision-critic` independence is honest about its limit: single-model = first-pass check, NOT independent assurance; R3 ALWAYS requires a human reviewer; recommend (not mandate) a different model family where configured (RD-16 / RT-04) | Converts RSK-4 residual into a documented limitation rather than implicit false assurance | 2026-06-24 |
 
 ## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
 
@@ -356,7 +358,7 @@ N/A. The subsystem is documentation + agent prompts; no runtime metrics, logs, t
 | AC-GH46-10 | **Given** a meeting that reaches a durable decision, **when** `@meeting-organizer` summarizes it, **then** the discussion is usable as evidence input to `/plan-decision`, durable decisions route to `/write-decision`, the guide references `@decision-advisor`, and three decision modes are documented. | F-11 |
 | AC-GH46-11 | **Given** the repository, **when** the reference sweep completes, **then** every `@architect` reference is updated to `@decision-advisor`, inbound links to the renamed guide are updated, and the generated Claude plugin is regenerated and in sync. | F-12, NFR-5 |
 | AC-GH46-12 | **Given** the reduced source set after removing baked-in structure, **when** section order is checked, **then** the template remains the single source of truth and the write command's structure definition matches it with zero mismatches (GH-60 NFR-1 preserved). | F-6, F-9, NFR-4 |
-| AC-GH46-13 | **Given** the new process, **when** GH-46 is recorded, **then** ADR-0001 exists and captures decisions RD-1…RD-14. | F-13 |
+| AC-GH46-13 | **Given** the new process, **when** GH-46 is recorded, **then** ADR-0001 exists and captures decisions RD-1…RD-16. | F-13 |
 | AC-GH46-14 | **Given** any existing decision record authored with the current template, **when** the change lands, **then** the record remains valid and no proprietary runtime or stored raw chain-of-thought is introduced. | DM-1, DM-2, DM-3, NFR-2, NFR-5, NFR-6 |
 
 ## 18. ROLLOUT & CHANGE MANAGEMENT (HIGH-LEVEL)
@@ -411,7 +413,7 @@ Removing the baked-in body structure reduces the drift surface to one source of 
 
 ## AUTHORING GUIDELINES
 
-- Authored from the GH-46 ticket (authoritative scope), the PM planning summary (authoritative decisions RD-1…RD-14 and OQ-A/OQ-B leans), and the local research basis under `.ai/local/decision-process/` (the ADOS AI-Driven Decision Intelligence Framework + executive conclusion).
+- Authored from the GH-46 ticket (authoritative scope), the PM planning summary (authoritative decisions RD-1…RD-16 and OQ-A/OQ-B leans), and the local research basis under `.ai/local/decision-process/` (the ADOS AI-Driven Decision Intelligence Framework + executive conclusion).
 - The 3.3k-line research basis was **distilled**, not pasted: the kernel (D0–D14), rigor profiles (R0–R3 + emergency), four-axis model, AI-authority model, agent architecture, and command behavior were summarized tightly as feature requirements.
 - Current-state claims (e.g., `@architect`'s architecture-only identity contradicting its all-five-types contract; the baked-in body structure; architecture-biased `adr.*` fields) are grounded in the actual current file contents.
 - GH-60 carryover defects were verified against current files ("non-negotiable" wording coexisting with `negotiable: yes/no`; "constraints" in the *Context* description; per-alternative heading drift).

@@ -57,11 +57,12 @@ This change introduces:
 - A **repo-wide reference sweep** with the generated Claude plugin regenerated.
 - A **dogfood** — GH-46 itself recorded as `ADR-0001` via the new process.
 
-All planning decisions are locked in the spec's Decision Log (DEC-1 … DEC-16,
-mirroring the PM notes' RD-1 … RD-14) and the two open questions resolved in lean
-(OQ-A: proportional rendering of one template; OQ-B: rename the planning-summary
-tag with a back-compat alias). **This plan implements those decisions; it does not
-re-decide them.**
+All planning decisions are locked in the spec's Decision Log (DEC-1 … DEC-18,
+covering the PM decisions RD-1 … RD-16 plus the OQ-A/OQ-B resolutions) and the
+two open questions resolved in lean (OQ-A: proportional rendering of one template;
+OQ-B: rename the planning-summary tag with a back-compat alias). **This plan
+implements those decisions; it does not re-decide them.** The dogfood ADR-0001
+records the decision set RD-1 … RD-16.
 
 The single most critical invariant is **cross-source section-order consistency
 (spec NFR-4, preserving GH-60's NFR-1)**: after removing the agent's baked-in body
@@ -141,7 +142,7 @@ The change propagates across roughly **fifteen live artifacts** routed through
   and `feature-document-templates.md` reconciled (spec F-12).
 - **Plugin regeneration** of `.ados-claude/**` via `scripts/build-claude-plugin.sh`
   (spec F-12).
-- **Dogfood** `ADR-0001` recording GH-46's decisions RD-1 … RD-14 via the new
+- **Dogfood** `ADR-0001` recording GH-46's decisions RD-1 … RD-16 via the new
   process (spec F-13).
 
 ### Out of Scope
@@ -243,7 +244,7 @@ The change propagates across roughly **fifteen live artifacts** routed through
 | Decision-record body sections/sections rendered: R0 mandatory records = **0**; R1 output is a strict proper subset of R3; R1 cycle <= 1 business day | All three hold |
 | Existing decision records requiring migration | **0** |
 | Source-code / CI / build files changed | **0** |
-| Dogfood ADR-0001 records RD-1 … RD-14 | **1/1** |
+| Dogfood ADR-0001 records RD-1 … RD-16 | **1/1** |
 
 ## Phases
 
@@ -265,13 +266,19 @@ verifies against. Also land the GH-60 carryover defect fixes here (template side
   (5) **decision rights** (DACI: driver/decider/contributors/reviewers/performers/informed)
   with who-typically-decides-per-type-and-risk, per spec F-4; (6) the **bounded
   AI-authority model** (allowed roles, autonomous-action bounds, recommendation !=
-  decision, privacy/provenance), per spec F-5; (7) the **per-type nuance matrix**
+  decision, privacy/provenance), per spec F-5 — **including the honesty framing (RD-16
+  / RT-04): for a single-model setup `@decision-critic` is a first-pass check, NOT
+  independent assurance, and R3 ALWAYS requires a human reviewer**; (7) the **per-type nuance matrix**
   (context anchors, typical approver, fitting framework) — condensed, one matrix,
   NOT 18 catalog files (RD-14); (8) **constraints vs drivers discipline** with the
   GH-60 fixes folded in; (9) the **record artifact** reference (naming / front
   matter / lifecycle — demoted, links to the template); (10) **agent & command
   integration** (reference `@decision-advisor`, `@decision-critic`,
   `/plan-decision`, `/write-decision`, `/review-decision`, the three decision modes).
+  **Skimmability guardrail (RD-14 / RT-09):** keep the guide a single condensed,
+  skimmable document — NOT a multi-thousand-line tome — so the process is not bypassed
+  for being too heavy; per-type nuance stays a condensed matrix (per RD-14), not
+  proliferated files; target a length budget appropriate to a quick-reference guide.
 - [ ] **1.2** **Demote** `doc/guides/decision-records-management.md` to a thin
   record-artifact reference: keep the naming/front-matter/lifecycle content as an
   appendix, replace its process narrative with a redirect pointer to
@@ -296,17 +303,26 @@ verifies against. Also land the GH-60 carryover defect fixes here (template side
   choice + rationale, owner, revisit trigger), the R2 standard record, and the R3
   full record (independent challenge + human final decision + review date). State
   R0 produces no record.
-- [ ] **1.5** **Fix GH-60 defects in the template**: (a) neutralize the English
-  phrase "non-negotiable" -> use the `negotiable: no` data field consistently
-  (the phrase currently coexists with `negotiable: yes|no`); (b) drop "constraints"
-  from the *Context* section description (template Context comment line ~52 says
-  "Relevant constraints (technical, organizational, regulatory)", which conflates
-  *Context* with the *Constraints* section — reword to situational facts/triggers
-  that are NOT pass/fail gates); (c) standardize the per-alternative
-  heading/wording so it matches across the template, the new guide, and (in Phase
-  3) the write command. (Note: the specific "Per-Alterative" typo flagged in the
-  pm-notes appears only in this change's own pm-notes description, not in any live
-  source — verify and confirm clean; no live edit needed if already correct.)
+- [ ] **1.5** **Fix GH-60 carryover defects across ALL sources that carry the wording**
+  (RT-03). The defect is cross-source, so the fix MUST be cross-source — every source is
+  named below so none is missed:
+  - **(a) "non-negotiable" → `negotiable: no` (or neutral pass/fail wording)** — the phrase
+    currently coexists with the `negotiable: yes|no` data field. Fix in ALL **five** sources:
+    `doc/templates/decision-record-template.md`, `doc/guides/decision-records-management.md`
+    (**2 places**), `.opencode/command/write-decision.md`, and
+    `.opencode/command/plan-decision.md`.
+  - **(b) Context-conflation ("constraints" in the Context description)** — fix in BOTH
+    sources: `doc/templates/decision-record-template.md` (Context comment line ~52:
+    "Relevant constraints (technical, organizational, regulatory)" → reword to situational
+    facts/triggers that are NOT pass/fail gates) AND `.opencode/command/write-decision.md`
+    (the Context authoring rule currently says "and relevant constraints").
+  - **(c) per-alternative heading/wording** — standardize so it matches across the template,
+    the new guide, and (in Phase 3) both commands.
+  - **Routing:** the template + guide edits land in this phase (docs flow); the
+    `write-decision.md` and `plan-decision.md` edits are delivered via `@toolsmith` in
+    Phase 3 (tasks 3.1 and 3.2). (Note: the "Per-Alterative" typo flagged in the pm-notes
+    appears only in this change's own pm-notes description, not in any live source — verify
+    and confirm clean; no live edit needed if already correct.)
 - [ ] **1.6** Confirm the template edit is **strictly additive** — no existing
   body section renamed/renumbered/reordered/removed; GH-60's section order
   preserved (spec NG-8, NFR-2). Body section order remains: Context, Problem
@@ -390,7 +406,12 @@ structure** — it references the template (RD-3, the single biggest drift fix).
   - **Independent of the advisor**: receives problem / evidence / constraints /
     options and, where practical, NOT the recommendation initially (spec F-7,
     RSK-4 mitigation). State explicitly that same-model/same-prompt agents are
-    NOT independent evidence.
+    NOT independent evidence. **Independence honesty (RD-16 / RT-04):** for a
+    single-model configuration the critic is explicitly a **first-pass check, NOT
+    independent assurance**; **R3 ALWAYS requires a human reviewer** regardless of
+    the critic's verdict; **recommend (do not mandate)** assigning a different
+    model family to the critic where one is configured. This converts RSK-4's
+    residual into a documented limitation rather than implicit false assurance.
   - Returns a verdict: **PASS / PASS_WITH_RISKS / REWORK**.
   - Frontmatter `description` + `mode: all` + `claude.model`. Read-only by default
     (no write to decision records).
@@ -457,6 +478,9 @@ R2/R3, and an independent review command.
     field) — do not regress GH-60.
   - Add rigor/governance/ai-assistance capture to the summary so `/write-decision`
     can render proportionally.
+  - **GH-60 carryover (RT-03):** neutralize the "non-negotiable" wording in
+    `.opencode/command/plan-decision.md` → `negotiable: no` / neutral pass/fail wording
+    (one of the five sources coordinated with task 1.5).
 - [ ] **3.2** **Delegate to `@toolsmith`** to generalize
   `.opencode/command/write-decision.md`:
   - Update frontmatter `agent: architect` -> `agent: decision-advisor`.
@@ -471,10 +495,13 @@ R2/R3, and an independent review command.
   - **Do not mark Accepted for R2/R3 without an authorized human decision**;
     require `ai_assistance.human_decider` before any Accepted transition (spec
     F-10, RSK-7).
-  - **Keep the body structure definition** (`<decision_structure>`) as the
-    template's single mirror — it MUST match the template's section order with 0
-    mismatches (NFR-4; verified in Phase 8). Fix any GH-60 "non-negotiable"
-    wording here too (neutralize to `negotiable: no`).
+  - **Structural definition (RT-02):** after consolidating to ONE structural
+    definition (task 3.5), it MUST match the template's section order with 0
+    mismatches (NFR-4; verified in Phase 8). **GH-60 carryover (RT-03):** fix BOTH
+    the "non-negotiable" wording (→ `negotiable: no`) AND the Context-conflation
+    (drop "constraints" from the Context authoring rule) in `write-decision.md` —
+    one of the five non-negotiable sources and one of the two Context-conflation
+    sources (coordinated with task 1.5).
 - [ ] **3.3** **Delegate to `@toolsmith`** to create new
   `.opencode/command/review-decision.md`:
   - Frontmatter `agent: decision-critic`.
@@ -485,6 +512,14 @@ R2/R3, and an independent review command.
 - [ ] **3.4** Confirm the command `agent:` frontmatter fields are all updated
   (`plan-decision`, `write-decision` -> `decision-advisor`; `review-decision` ->
   `decision-critic`).
+- [ ] **3.5** **Consolidate the two structural copies in `/write-decision`** (RT-02).
+  The command currently carries BOTH `<decision_structure>` (the ordered heading list)
+  AND `<embedded_template>` (a full body duplicate) — two structural definitions of the
+  same record. Consolidate into **exactly ONE** structural definition that **references**
+  `doc/templates/decision-record-template.md` as canonical — remove the redundant
+  full-body `<embedded_template>` duplicate. **Goal:** `write-decision.md` contains
+  exactly ONE structural definition, which references (not duplicates) the template.
+  Phase 8 task 8.1 and TC-GH46-019 verify there is no second structural enumeration.
 
 **Acceptance Criteria**:
 
@@ -578,6 +613,10 @@ Do NOT touch frozen change artifacts or this change's own spec/pm-notes.
   in live docs/guides/specs/templates/top-level files:
   - `AGENTS.md` (the agent-team table + the `coder` delegation line) -> reference
     `@decision-advisor`; add a one-line **migration note** documenting the rename.
+  - `AGENTS.md` commands table (NFR-3, RT-07): rewrite the `/plan-decision`
+    description from "Interactive architecture decision session" to a
+    **domain-neutral** description (e.g., "Interactive decision planning session") —
+    removes architecture-bias leakage.
   - `README.md` (the agent links list: replace `[@architect](.opencode/agent/architect.md)`
     with `[@decision-advisor](.opencode/agent/decision-advisor.md)`).
   - `.opencode/README.md` (agent/command inventory: rename `architect` entry, add
@@ -652,7 +691,8 @@ qualifying new files via the script (never by hand).
 - [ ] **6.1** Run `scripts/build-claude-plugin.sh` to regenerate `.ados-claude/**`
   from the `.opencode/` source. Expected outputs: `.ados-claude/agents/decision-advisor.md`
   (was `architect.md`), new `.ados-claude/agents/decision-critic.md`, new
-  `.ados-claude/commands/review-decision.md`, and updated
+  `.ados-claude/skills/review-decision/SKILL.md` (commands are transformed into skill
+  *directories* by `transform_command_to_skill`, NOT `commands/*.md`), and updated
   `.ados-claude/agents/{pm,spec-writer,plan-writer,coder,bootstrapper,meeting-organizer}.md`
   (auto-swept of `@architect`).
 - [ ] **6.2** **Verify the generated plugin is in sync**: the generated files'
@@ -698,7 +738,7 @@ qualifying new files via the script (never by hand).
 ### Phase 7: Dogfood — produce ADR-0001 via the new process
 
 **Goal**: Validate the new process end-to-end on its own delivery by recording
-GH-46's decisions (RD-1 … RD-14) as `ADR-0001` using `/plan-decision` +
+GH-46's decisions (RD-1 … RD-16) as `ADR-0001` using `/plan-decision` +
 `/write-decision` against the new process. This is intentionally **last**: the
 dogfood ADR can only be cleanly produced AFTER the new commands/agents exist
 (chicken-and-egg).
@@ -711,7 +751,7 @@ dogfood ADR can only be cleanly produced AFTER the new commands/agents exist
   a full record and keep `status: Proposed` (do not auto-Accept — require an
   authorized human decision per the new AI-authority model).
 - [ ] **7.2** Run the new `/plan-decision` flow to produce a
-  `<decision_planning_summary>` capturing GH-46's decisions RD-1 … RD-14 (one
+  `<decision_planning_summary>` capturing GH-46's decisions RD-1 … RD-16 (one
   generalized orchestrator; rename to `@decision-advisor`; remove baked-in
   structure; process-first guide; consolidate into GH-46; dogfood; universal kernel
   + R0-R3 + emergency; DACI rights; bounded AI authority; lean critic +
@@ -728,7 +768,7 @@ dogfood ADR can only be cleanly produced AFTER the new commands/agents exist
 
 **Acceptance Criteria**:
 
-- Must: AC-GH46-13 (ADR-0001 exists and captures RD-1 … RD-14).
+- Must: AC-GH46-13 (ADR-0001 exists and captures RD-1 … RD-16).
 - Should: AC-GH46-5 (the `/review-decision` path is exercised if run).
 
 **Files and modules**:
@@ -758,10 +798,14 @@ stored chain-of-thought (NFR-6) — and confirm every AC is met before review/PR
 
 - [ ] **8.1** **Cross-source section-order verification (NFR-4 / GH-60 NFR-1):**
   extract the decision-record body section order from (a)
-  `doc/templates/decision-record-template.md` and (b) the `<decision_structure>` in
-  `.opencode/command/write-decision.md`; diff them -> expect **0 mismatches**.
-  Confirm `decision-advisor.md` contains **0** baked-in body-section list (the
-  agent is no longer a source to sync — single source of truth is the template).
+  `doc/templates/decision-record-template.md` and (b) **ALL** structural enumerations in
+  `.opencode/command/write-decision.md` (e.g., `<decision_structure>` AND any
+  `<embedded_template>` / body block). After the RT-02 consolidation (task 3.5) there
+  must be **exactly ONE** structural definition in `write-decision.md`; assert the count
+  is 1 (guards against re-proliferation of a second full-body copy) and diff it against
+  the template -> expect **0 mismatches**. Confirm `decision-advisor.md` contains **0**
+  baked-in body-section list (the agent is no longer a source to sync — single source of
+  truth is the template).
 - [ ] **8.2** **Stale-reference grep:** `rg '@architect|architect\.md'` across
   live sources only (exclude `doc/changes/**`, this change's spec/pm-notes, and
   `.ados-claude/**`) -> expect **0** matches. Confirm `.ados-claude/**` also has
@@ -839,7 +883,7 @@ stored chain-of-thought (NFR-6) — and confirm every AC is met before review/PR
 | TS-10 | Meeting discussion is evidence input to `/plan-decision`; durable decisions route to `/write-decision`; guide references `@decision-advisor`; 3 modes documented | 4 | AC-GH46-10 |
 | TS-11 | Every live `@architect` reference -> `@decision-advisor`; inbound links updated; plugin regenerated and in sync | 5, 6, 8 | AC-GH46-11 |
 | TS-12 | Template is the single source of truth for body order; write-decision structure matches with 0 mismatches | 3, 8 | AC-GH46-12 |
-| TS-13 | ADR-0001 exists and records RD-1 … RD-14 | 7 | AC-GH46-13 |
+| TS-13 | ADR-0001 exists and records RD-1 … RD-16 | 7 | AC-GH46-13 |
 | TS-14 | Existing records remain valid; 0 new runtime; 0 stored chain-of-thought | 1, 8 | AC-GH46-14 |
 
 ## Task-to-AC coverage

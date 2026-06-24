@@ -41,7 +41,7 @@ This change rebuilds the decision-making subsystem end-to-end as a **documentati
 ## 2. References
 
 - **Change Specification (authoritative):** `./chg-GH-46-spec.md` — defines F-1…F-13, AC-GH46-1…14, NFR-1…6, DM-1…DM-5, RSK-1…7, DEC-1…16.
-- **PM notes / decisions:** `./chg-GH-46-pm-notes.yaml` — RD-1…RD-15, OQ-A/OQ-B.
+- **PM notes / decisions:** `./chg-GH-46-pm-notes.yaml` — RD-1…RD-16, OQ-A/OQ-C.
 - **Ticket:** `GH-46` (github.com/juliusz-cwiakalski/agentic-delivery-os/issues/46).
 - **Implementation plan:** `./chg-GH-46-plan.md` — *pending* (not yet authored at test-planning time; scenarios will be reconciled against it once it exists).
 - **Testing strategy:** `.ai/rules/testing-strategy.md` — doc/template changes use static/diff + content checks; no automated tests exist → manual verification + `git diff --check`.
@@ -65,7 +65,7 @@ This change rebuilds the decision-making subsystem end-to-end as a **documentati
 | AC-GH46-10 | Meeting integration: evidence input, durable→write-decision, `@decision-advisor`, 3 modes | TC-GH46-020, TC-GH46-021 | Covered |
 | AC-GH46-11 | Repo-wide `@architect` sweep (0 stale); inbound links updated; plugin regenerated & in sync | TC-GH46-022, TC-GH46-023, TC-GH46-024 | Covered |
 | AC-GH46-12 | Template = single source of truth; write-decision structure matches with 0 mismatches | TC-GH46-019 | Covered |
-| AC-GH46-13 | ADR-0001 exists, records RD-1…RD-14, via new process | TC-GH46-025 | Covered |
+| AC-GH46-13 | ADR-0001 exists, records RD-1…RD-16, via new process | TC-GH46-025 | Covered |
 | AC-GH46-14 | Legacy record stays valid; no proprietary runtime; no stored chain-of-thought | TC-GH46-026, TC-GH46-027, TC-GH46-028 | Covered |
 
 All 14 acceptance criteria are covered (0 TODO).
@@ -135,7 +135,7 @@ All run commands use `rg` (ripgrep; `grep -rn` is an acceptable substitute). Wor
 | TC-GH46-022 | Repo-wide `@architect` sweep: 0 stale live references | Grep | Critical | High | AC-11, NFR-5 |
 | TC-GH46-023 | Claude plugin regenerated and in sync (idempotent build) | Manual (build + diff) | Critical | High | AC-11, NFR-5 |
 | TC-GH46-024 | Inbound links to renamed/superseded guide updated | Grep + structural | Important | Medium | AC-11 |
-| TC-GH46-025 | ADR-0001 exists, records RD-1…RD-14, new-process front matter | Structural | Important | High | AC-13 |
+| TC-GH46-025 | ADR-0001 exists, records RD-1…RD-16, new-process front matter | Structural | Important | High | AC-13 |
 | TC-GH46-026 | Backward compatibility: sample legacy record remains valid | Structural (manual) | Important | High | AC-14, NFR-2 |
 | TC-GH46-027 | No proprietary runtime introduced (Markdown + YAML only) | Structural + grep | Important | Medium | AC-14, NFR-5 |
 | TC-GH46-028 | No stored raw chain-of-thought in records | Structural + grep | Important | Medium | AC-14, NFR-6 |
@@ -156,7 +156,7 @@ All run commands use `rg` (ripgrep; `grep -rn` is an acceptable substitute). Wor
 
 **Preconditions**:
 
-- Change delivered on branch `feat/GH-46/decision-making-framework`.
+- Change delivered on branch `refactor/GH-46/decision-making-framework`.
 
 **Steps**:
 
@@ -565,7 +565,7 @@ All run commands use `rg` (ripgrep; `grep -rn` is an acceptable substitute). Wor
 **Related IDs**: F-9, AC-GH46-7, NFR-4
 **Test Type(s)**: Manual
 **Automation Level**: Semi-automated
-**Target Layer / Location**: `doc/templates/decision-record-template.md`, `doc/guides/decision-records-management.md`, `doc/guides/decision-making.md`
+**Target Layer / Location**: `doc/templates/decision-record-template.md`, `doc/guides/decision-records-management.md`, `doc/guides/decision-making.md`, `.opencode/command/write-decision.md`, `.opencode/command/plan-decision.md`
 **Tags**: @backend, @docs
 
 **Preconditions**:
@@ -574,7 +574,7 @@ All run commands use `rg` (ripgrep; `grep -rn` is an acceptable substitute). Wor
 
 **Steps**:
 
-1. `rg -n "non-negotiable" doc/templates/decision-record-template.md doc/guides/decision-records-management.md doc/guides/decision-making.md` → expect **0** matches in the decision-record subsystem wording.
+1. `rg -n "non-negotiable" doc/templates/decision-record-template.md doc/guides/decision-records-management.md doc/guides/decision-making.md .opencode/command/write-decision.md .opencode/command/plan-decision.md` → expect **0** matches in the decision-record subsystem wording.
 2. Confirm the only data field used is `negotiable: yes|no` (consistent across sources).
 
 **Expected Outcome**:
@@ -595,7 +595,7 @@ All run commands use `rg` (ripgrep; `grep -rn` is an acceptable substitute). Wor
 **Related IDs**: F-9, AC-GH46-7, NFR-4
 **Test Type(s)**: Manual
 **Automation Level**: Semi-automated
-**Target Layer / Location**: `doc/templates/decision-record-template.md`, `doc/guides/decision-records-management.md`
+**Target Layer / Location**: `doc/templates/decision-record-template.md`, `doc/guides/decision-records-management.md`, `.opencode/command/write-decision.md`, `.opencode/command/plan-decision.md`
 **Tags**: @backend, @docs
 
 **Preconditions**:
@@ -604,9 +604,9 @@ All run commands use `rg` (ripgrep; `grep -rn` is an acceptable substitute). Wor
 
 **Steps**:
 
-1. Inspect the **Context** section description/comment in `decision-record-template.md` (and the Context row in the records guide's Required Sections table).
+1. Inspect the **Context** section description/comment in `decision-record-template.md` (and the Context row in the records guide's Required Sections table), plus the Context authoring rule in `.opencode/command/write-decision.md`.
 2. Confirm it describes the situation/triggers only and does **not** conflate Context with the *Constraints (Hard Requirements)* section.
-3. `rg -n "Relevant constraints" doc/templates/decision-record-template.md` → expect **0** (the offending phrase removed/reworded).
+3. `rg -ni "relevant constraints" doc/templates/decision-record-template.md .opencode/command/write-decision.md .opencode/command/plan-decision.md` → expect **0** (the offending conflation removed/reworded; the commands are included so the fix is asserted across every source that can carry the wording).
 
 **Expected Outcome**:
 
@@ -658,13 +658,13 @@ All run commands use `rg` (ripgrep; `grep -rn` is an acceptable substitute). Wor
 **Steps**:
 
 1. Extract the body section heading order from `doc/templates/decision-record-template.md`.
-2. Extract the structure definition from `.opencode/command/write-decision.md` (its `<decision_structure>` / embedded template block).
+2. Extract **ALL** structural enumerations from `.opencode/command/write-decision.md` (e.g., `<decision_structure>` AND any `<embedded_template>` / body block). After the RT-02 consolidation there must be **exactly ONE**; assert the count is 1 (guards against re-proliferation of a second full-body duplicate).
 3. Diff the two heading lists → expect **0 mismatches** in section order.
-4. Confirm the advisor has **0** baked-in structure (re-check TC-GH46-003), so the only structural duplication is template ↔ write-decision, and they match exactly.
+4. Confirm the advisor has **0** baked-in structure (re-check TC-GH46-003), so the only structural duplication is template ↔ write-decision, `write-decision.md` carries exactly ONE structural definition, and it matches the template exactly.
 
 **Expected Outcome**:
 
-- Exactly 1 source of truth for body section order (the template); write-decision matches it with 0 mismatches; agent prompt carries none (NFR-4 / GH-60 NFR-1 preserved).
+- Exactly 1 source of truth for body section order (the template); `write-decision.md` carries exactly ONE structural definition (no embedded full-body duplicate) and matches the template with 0 mismatches; agent prompt carries none (NFR-4 / GH-60 NFR-1 preserved).
 
 **Notes / Clarifications**:
 
@@ -779,7 +779,7 @@ All run commands use `rg` (ripgrep; `grep -rn` is an acceptable substitute). Wor
 1. `bash scripts/build-claude-plugin.sh` (regenerate).
 2. `git status --porcelain .ados-claude/` → expect **empty** (the committed output was already current → build is idempotent).
 3. `ls .ados-claude/agent/architect.md` → absent; `ls .ados-claude/agent/decision-advisor.md` + `.ados-claude/agent/decision-critic.md` → present.
-4. `ls .ados-claude/command/review-decision.md` → present.
+4. `ls .ados-claude/skills/review-decision/SKILL.md` → present (commands are transformed into skill *directories* by `transform_command_to_skill`, NOT `commands/*.md`).
 5. `rg -l "@decision-advisor" .ados-claude/` → ≥1; `rg -l "@architect" .ados-claude/` → 0 (mirror reflects the sweep).
 
 **Expected Outcome**:
@@ -815,7 +815,7 @@ All run commands use `rg` (ripgrep; `grep -rn` is an acceptable substitute). Wor
 
 ---
 
-#### TC-GH46-025 - ADR-0001 exists, records RD-1…RD-14, new-process front matter
+#### TC-GH46-025 - ADR-0001 exists, records RD-1…RD-16, new-process front matter
 
 **Scenario Type**: Happy Path
 **Impact Level**: Important
@@ -834,12 +834,12 @@ All run commands use `rg` (ripgrep; `grep -rn` is an acceptable substitute). Wor
 
 1. `ls doc/decisions/ADR-0001-*.md` → exists.
 2. Read front matter → `decision_type: adr`, `status` set, `decision_date` set when Accepted, `created`/`last_updated` present.
-3. Read the body → confirm it captures GH-46's decisions **RD-1 … RD-14** (the orchestrator name, the rename, the template-as-source-of-truth, the process-first guide, consolidation, dogfood, kernel+R0–R3, DACI rights, bounded AI authority, agent name, critic+review-decision, meeting integration, defer list, condensed matrix).
+3. Read the body → confirm it captures GH-46's decisions **RD-1 … RD-16** (the orchestrator name, the rename, the template-as-source-of-truth, the process-first guide, consolidation, dogfood, kernel+R0–R3, DACI rights, bounded AI authority, agent name, critic+review-decision, meeting integration, defer list, condensed matrix).
 4. Confirm the body follows the new template section order (no `<...>` placeholders).
 
 **Expected Outcome**:
 
-- ADR-0001 present, recording RD-1…RD-14 via the new process with compliant front matter and structure.
+- ADR-0001 present, recording RD-1…RD-16 via the new process with compliant front matter and structure.
 
 ---
 

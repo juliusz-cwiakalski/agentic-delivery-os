@@ -28,9 +28,10 @@ decisions:
   - { text: "RD-13 DEFER to follow-up tickets (non-goals for GH-46): @decision-verifier + /verify-decision + /decision-retro; JSON schemas + validator/index tools; 18 YAML domain catalogs; structured evidence-ledger YAML; probabilistic forecasting fields; @decision-researcher (reuse @external-researcher).", date: 2026-06-24 }
   - { text: "RD-14 Keep a CONDENSED master driver checklist in the guide (not 18 files). Per-type nuance captured as a matrix in the guide, not separate catalogs.", date: 2026-06-24 }
   - { text: "RD-15 Evidence discipline in v1 = prose FACT/ASSUMPTION/UNKNOWN/TO-CONFIRM labels + source references (existing pattern), tightened; structured evidence-ledger YAML deferred (RD-13).", date: 2026-06-24 }
+  - { text: "RD-16 (red-team RT-04) @decision-critic independence is honest about its limit: for a single-model setup it is a FIRST-PASS CHECK, not independent assurance; R3 ALWAYS requires a human reviewer. Recommend (do not mandate) a different model family for the critic where one is configured. Converts RSK-4 residual into a documented limitation rather than implicit false assurance.", date: 2026-06-24 }
 open_questions:
   - { text: "OQ-A R1 rendering: separate lite template vs proportional rendering of one template? PM leans proportional rendering of one template (less drift).", date: 2026-06-24 }
-  - { text: "OQ-B Where do machine-readable framework bits live in v1? v1 has none (deferred per RD-13), so moot for now; revisit when catalogs/schemas land.", date: 2026-06-24 }
+  - { text: "OQ-C (renamed from pm-notes OQ-B to avoid clash with ticket OQ-B) Where do machine-readable framework bits live in v1? v1 has none (deferred per RD-13), so moot; revisit when catalogs/schemas land.", date: 2026-06-24 }
 blockers: []
 notes:
   - text: "Research source: .ai/local/decision-process/ (3 files, incl. 3389-line ADOS AI-Driven Decision Intelligence Framework spec). Key thesis: standardize the record + quality principles, route analysis/authority/evidence by decision nature & risk. Strongest adoptable ideas: universal kernel, R0-R3 proportional rigor, decision rights, AI authority model, independent challenge. Heaviest ideas DEFERRED for ADOS efficiency: 18 domain catalogs, JSON schemas+validators, verifier/reto commands, forecasting."
