@@ -4,6 +4,8 @@
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/meeting-organizer.md
 description: Prepare and summarize meeting docs
 mode: all
+claude:
+  model: sonnet
 ---
 
 <role>

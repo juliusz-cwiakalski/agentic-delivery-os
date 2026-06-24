@@ -8,6 +8,8 @@ description: >-
   Applies the documented visual design system to UI components, layouts,
   navigation chrome, and widget styling.
 mode: all
+claude:
+  model: sonnet
 ---
 
 # Role

@@ -5,6 +5,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 #
 description: Author canonical change specifications
 mode: all
+claude:
+  model: opus
 ---
 
 <role>

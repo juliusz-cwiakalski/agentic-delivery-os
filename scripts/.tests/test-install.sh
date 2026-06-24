@@ -16,6 +16,9 @@ _test_count=0
 _test_passed=0
 _test_failed=0
 _test_tmpdir=""
+# Per-test failure flag. Asserts set this on failure. run_test checks it so a
+# failing assert in the middle of a test is never masked by a later success.
+_current_test_failed=0
 
 # Colors (disabled if not a terminal)
 if [[ -t 1 ]]; then
@@ -38,19 +41,36 @@ _test_teardown() {
 trap '_test_teardown' EXIT
 
 # Run a test function
+#
+# The test function runs in the CURRENT shell (not a subshell) with errexit
+# temporarily disabled. This is deliberate:
+#   - Running in the current shell means shared counters (e.g. _added/_updated)
+#     modified inside the function under test are visible to the assertions.
+#   - Disabling errexit during the run lets every assertion in a test execute
+#     and report, while _current_test_failed captures any failure.
+# A subshell `( set -e; func )` was tried first but is unreliable here: bash
+# does not always abort on a mid-function failure, which silently masked
+# failing assertions as PASS.
 run_test() {
   local -r name="$1"
   local -r func="$2"
   _test_count=$((_test_count + 1))
 
   _test_setup
+  _current_test_failed=0
 
-  if ( set -e; "${func}" ); then
-    _test_passed=$((_test_passed + 1))
-    printf '%s[PASS]%s %s\n' "${_GREEN}" "${_RESET}" "${name}"
-  else
+  local _rc=0
+  set +e
+  "${func}"
+  _rc=$?
+  set -e
+
+  if [[ ${_current_test_failed} -ne 0 || ${_rc} -ne 0 ]]; then
     _test_failed=$((_test_failed + 1))
     printf '%s[FAIL]%s %s\n' "${_RED}" "${_RESET}" "${name}" >&2
+  else
+    _test_passed=$((_test_passed + 1))
+    printf '%s[PASS]%s %s\n' "${_GREEN}" "${_RESET}" "${name}"
   fi
 
   _test_teardown
@@ -63,6 +83,7 @@ assert_eq() {
   if [[ "${expected}" != "${actual}" ]]; then
     printf '  Expected: %s\n  Actual:   %s\n' "${expected}" "${actual}" >&2
     [[ -n "${msg}" ]] && printf '  Message:  %s\n' "${msg}" >&2
+    _current_test_failed=1
     return 1
   fi
 }
@@ -72,6 +93,7 @@ assert_contains() {
   if [[ "${haystack}" != *"${needle}"* ]]; then
     printf '  Haystack: %s\n  Needle:   %s\n' "${haystack}" "${needle}" >&2
     [[ -n "${msg}" ]] && printf '  Message:  %s\n' "${msg}" >&2
+    _current_test_failed=1
     return 1
   fi
 }
@@ -81,6 +103,7 @@ assert_not_contains() {
   if [[ "${haystack}" == *"${needle}"* ]]; then
     printf '  Haystack should not contain: %s\n  Needle: %s\n' "${haystack}" "${needle}" >&2
     [[ -n "${msg}" ]] && printf '  Message: %s\n' "${msg}" >&2
+    _current_test_failed=1
     return 1
   fi
 }
@@ -90,6 +113,7 @@ assert_file_exists() {
   if [[ ! -f "${path}" ]]; then
     printf '  File does not exist: %s\n' "${path}" >&2
     [[ -n "${msg}" ]] && printf '  Message: %s\n' "${msg}" >&2
+    _current_test_failed=1
     return 1
   fi
 }
@@ -99,6 +123,7 @@ assert_dir_exists() {
   if [[ ! -d "${path}" ]]; then
     printf '  Directory does not exist: %s\n' "${path}" >&2
     [[ -n "${msg}" ]] && printf '  Message: %s\n' "${msg}" >&2
+    _current_test_failed=1
     return 1
   fi
 }
@@ -108,6 +133,7 @@ assert_exit_code() {
   if [[ "${expected}" -ne "${actual}" ]]; then
     printf '  Expected exit code: %s\n  Actual exit code:   %s\n' "${expected}" "${actual}" >&2
     [[ -n "${msg}" ]] && printf '  Message: %s\n' "${msg}" >&2
+    _current_test_failed=1
     return 1
   fi
 }
@@ -159,16 +185,18 @@ create_mock_ados_source() {
   printf '# Documentation Handbook\n' > "${base}/doc/documentation-handbook.md"
   printf '# Doc Index\n' > "${base}/doc/00-index.md"
 
-  # Guide files (9 guides)
+  # Guide files — MUST match the ADOS_UPDATABLE_FILES manifest in install.sh.
   printf '# Change Lifecycle\n' > "${base}/doc/guides/change-lifecycle.md"
-  printf '# Unified Change Convention\n' > "${base}/doc/guides/unified-change-convention-tracker-agnostic-specification.md"
-  printf '# Decision Records Management\n' > "${base}/doc/guides/decision-records-management.md"
-  printf '# Opencode Agents and Commands Guide\n' > "${base}/doc/guides/opencode-agents-and-commands-guide.md"
-  printf '# Opencode Model Configuration\n' > "${base}/doc/guides/opencode-model-configuration.md"
-  printf '# Tools Convention\n' > "${base}/doc/guides/tools-convention.md"
+  printf '# Claude Code Setup\n' > "${base}/doc/guides/claude-code-setup.md"
   printf '# Copywriting\n' > "${base}/doc/guides/copywriting.md"
-  printf '# System Dependencies\n' > "${base}/doc/guides/system-dependencies.md"
+  printf '# Decision Records Management\n' > "${base}/doc/guides/decision-records-management.md"
+  printf '# External Researcher Setup\n' > "${base}/doc/guides/external-researcher-setup.md"
+  printf '# Meeting Preparation And Summarization\n' > "${base}/doc/guides/meeting-preparation-and-summarization.md"
   printf '# Onboarding Existing Project\n' > "${base}/doc/guides/onboarding-existing-project.md"
+  printf '# Opencode Agents And Commands Guide\n' > "${base}/doc/guides/opencode-agents-and-commands-guide.md"
+  printf '# Opencode Model Configuration\n' > "${base}/doc/guides/opencode-model-configuration.md"
+  printf '# PR Platform Integration\n' > "${base}/doc/guides/pr-platform-integration.md"
+  printf '# Unified Change Convention\n' > "${base}/doc/guides/unified-change-convention-tracker-agnostic-specification.md"
 
   # Decision stubs
   printf '# Decisions README\n' > "${base}/doc/decisions/README.md"
@@ -704,18 +732,23 @@ test_local_dry_run() {
 }
 
 test_local_requires_git_dir() {
-  local project_dir="${_test_tmpdir}/no-git-project"
-  mkdir -p "${project_dir}"
+  # Deterministic: create a real git repo and run --local from a subdirectory
+  # (no .git in CWD). This reliably hits the "Not a project root" branch
+  # regardless of where TMPDIR lives. (Previously the result depended on
+  # whether TMPDIR itself sat inside a git repo.)
+  local repo="${_test_tmpdir}/repo"
+  mkdir -p "${repo}/subdir"
+  git -C "${repo}" init -q
 
   local stdout exit_code=0
   stdout="$(
-    cd "${project_dir}" && \
+    cd "${repo}/subdir" && \
     ADOS_SOURCE_DIR="${_test_tmpdir}" \
     "${SCRIPT_DIR}/install.sh" --local 2>&1
   )" || exit_code=$?
 
-  assert_exit_code 2 "${exit_code}" "Should fail without .git directory"
-  assert_contains "${stdout}" "Not a project root" "Should mention missing .git"
+  assert_exit_code 2 "${exit_code}" "Should fail when not at git root"
+  assert_contains "${stdout}" "Not a project root" "Should mention not a project root"
 }
 
 # ============================================================================
@@ -735,16 +768,18 @@ test_local_install_creates_guides() {
     install_local_files "${source_dir}"
   )
 
-  # Check all 9 guide files were created
+  # Check all manifest guide files were created
   assert_file_exists "${project_dir}/doc/guides/change-lifecycle.md"
-  assert_file_exists "${project_dir}/doc/guides/unified-change-convention-tracker-agnostic-specification.md"
+  assert_file_exists "${project_dir}/doc/guides/claude-code-setup.md"
+  assert_file_exists "${project_dir}/doc/guides/copywriting.md"
   assert_file_exists "${project_dir}/doc/guides/decision-records-management.md"
+  assert_file_exists "${project_dir}/doc/guides/external-researcher-setup.md"
+  assert_file_exists "${project_dir}/doc/guides/meeting-preparation-and-summarization.md"
+  assert_file_exists "${project_dir}/doc/guides/onboarding-existing-project.md"
   assert_file_exists "${project_dir}/doc/guides/opencode-agents-and-commands-guide.md"
   assert_file_exists "${project_dir}/doc/guides/opencode-model-configuration.md"
-  assert_file_exists "${project_dir}/doc/guides/tools-convention.md"
-  assert_file_exists "${project_dir}/doc/guides/copywriting.md"
-  assert_file_exists "${project_dir}/doc/guides/system-dependencies.md"
-  assert_file_exists "${project_dir}/doc/guides/onboarding-existing-project.md"
+  assert_file_exists "${project_dir}/doc/guides/pr-platform-integration.md"
+  assert_file_exists "${project_dir}/doc/guides/unified-change-convention-tracker-agnostic-specification.md"
 }
 
 test_local_install_creates_decision_stubs() {
@@ -860,8 +895,9 @@ test_interactive_mode_with_accept() {
   INTERACTIVE=true
   reset_counters
 
-  # Pipe "y" to simulate user acceptance
-  printf 'y\n' | copy_file_with_diff "${src}" "${dest}" "test.md"
+  # Feed "y" via here-string (NOT a pipe): a pipe would run copy_file_with_diff
+  # in a subshell and lose the _updated counter increment.
+  copy_file_with_diff "${src}" "${dest}" "test.md" <<< 'y'
 
   assert_eq "1" "${_updated}" "Should count as updated"
   local content
@@ -881,7 +917,8 @@ test_interactive_mode_with_reject() {
   INTERACTIVE=true
   reset_counters
 
-  printf 'n\n' | copy_file_with_diff "${src}" "${dest}" "test.md"
+  # Feed "n" via here-string (NOT a pipe) so counters stay in this shell.
+  copy_file_with_diff "${src}" "${dest}" "test.md" <<< 'n'
 
   assert_eq "1" "${_unchanged}" "Should count as unchanged"
   local content
@@ -925,6 +962,46 @@ test_auto_fetch_skips_explicit_source() {
   fi
 
   assert_contains "${output}" "ADOS_SOURCE_DIR" "Should mention ADOS_SOURCE_DIR in skip message"
+}
+
+# ============================================================================
+# --TOOL FLAG TESTS
+# ============================================================================
+
+test_tool_opencode_flag() {
+  # Reset TOOL to default before test
+  TOOL="opencode"
+  
+  parse_args --tool opencode
+  assert_eq "opencode" "${TOOL}" "TOOL should be opencode"
+}
+
+test_tool_claude_flag() {
+  # Reset TOOL to default before test
+  TOOL="opencode"
+  
+  parse_args --tool claude
+  assert_eq "claude" "${TOOL}" "TOOL should be claude"
+}
+
+test_tool_all_flag() {
+  # Reset TOOL to default before test
+  TOOL="opencode"
+  
+  parse_args --tool all
+  assert_eq "all" "${TOOL}" "TOOL should be all"
+}
+
+test_tool_invalid_flag() {
+  # Reset TOOL to default before test
+  TOOL="opencode"
+  
+  local exit_code=0
+  # parse_args calls die() on invalid tool, which exits
+  (parse_args --tool invalid 2>/dev/null) || exit_code=$?
+  
+  # Should exit with error code 2 (usage error from die())
+  assert_exit_code "${EXIT_USAGE}" "${exit_code}" "Should exit with usage error for invalid tool"
 }
 
 # ============================================================================
@@ -995,6 +1072,12 @@ main() {
   # Auto-fetch tests
   run_test "auto-fetch skips with --no-fetch" test_auto_fetch_skips_with_no_fetch
   run_test "auto-fetch skips with explicit ADOS_SOURCE_DIR" test_auto_fetch_skips_explicit_source
+
+  # --tool flag tests
+  run_test "--tool opencode sets TOOL variable" test_tool_opencode_flag
+  run_test "--tool claude sets TOOL variable" test_tool_claude_flag
+  run_test "--tool all sets TOOL variable" test_tool_all_flag
+  run_test "invalid --tool value shows error" test_tool_invalid_flag
 
   print_summary
 }

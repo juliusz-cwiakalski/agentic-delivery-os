@@ -29,9 +29,17 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 |----------|-------------|
 | [Agents & Commands Guide](guides/opencode-agents-and-commands-guide.md) | How to use AI agents and commands |
 | [Onboarding Existing Project](guides/onboarding-existing-project.md) | Adopt ADOS in an existing project |
+| [Claude Code Setup](guides/claude-code-setup.md) | Claude Code CLI provider setup (Anthropic, Z.AI) |
 | [Decision Records Management](guides/decision-records-management.md) | Decision record types, lifecycle, governance |
 | [Meeting Preparation and Summarization](guides/meeting-preparation-and-summarization.md) | How to prepare, run, document, and follow up on meetings |
 | [Tools Convention](guides/tools-convention.md) | Standard for building CLI tools |
+
+## Tools
+
+| Tool | Description |
+|------|-------------|
+| [zclaude](tools/zclaude.md) | Launch Claude Code with Z.AI GLM Coding Plan |
+| [text-to-image](tools/text-to-image.md) | Generate images from text prompts (7 providers) |
 
 ## Templates
 

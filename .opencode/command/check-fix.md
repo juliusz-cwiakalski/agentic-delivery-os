@@ -6,6 +6,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 description: Execute quality gates, fix any issues found, and create a single high-quality Conventional Commit summarizing all changes made.
 agent: fixer
 subtask: true
+claude:
+  model: sonnet
 ---
 
 Run quality gates and make sure everything is fine.

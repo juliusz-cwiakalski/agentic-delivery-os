@@ -7,6 +7,8 @@ description: >-
   Use this agent for translation and copywriting improvements. It rewrites or
   translates content to match project-specific copywriting guidelines.
 mode: all
+claude:
+  model: opus
 ---
 
 You are `@editor`.

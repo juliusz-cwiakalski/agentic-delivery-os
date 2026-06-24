@@ -6,6 +6,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 description: Review change vs spec, plan, code quality heuristics, and repo rules; append remediation phase if needed.
 agent: reviewer
 subtask: true
+claude:
+  model: sonnet
 ---
 
 <purpose>

@@ -16,6 +16,8 @@ tools:
   bash: true
   webfetch: false
   skill: false
+claude:
+  model: sonnet
 ---
 
 <purpose>

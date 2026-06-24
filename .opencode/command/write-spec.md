@@ -6,6 +6,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 description: Generate canonical change specification
 agent: spec-writer
 subtask: true
+claude:
+  model: sonnet
 ---
 
 <purpose>

@@ -48,6 +48,7 @@ The guide serves as the manual adoption path, complementing the automated `/boot
 - **Bootstrap alternative (F-5):** References the automated `/bootstrap` command as an alternative to manual setup.
 - **Troubleshooting (F-6):** Covers common issues (tracker not found, templates not used, decision records workflow, wrong artifact location, missing directories).
 - **Related guides table (F-7):** Links to all relevant ADOS guides (change lifecycle, change convention, agents & commands, tools convention, documentation handbook, decision records).
+- **Multi-tool support (F-8):** Documents installation for OpenCode and Claude Code.
 
 ### Guide Structure
 
@@ -90,6 +91,7 @@ The guide references and links to:
 | NFR-2 | Completeness | Includes tracker configuration for GitHub Issues and Jira | Both examples present |
 | NFR-3 | Completeness | Includes decision records setup instructions | Linked to management guide |
 | NFR-4 | Completeness | Links to all relevant ADOS guides | All 6 guides linked |
+| NFR-5 | Completeness | Documents multi-tool installation options | OpenCode + Claude Code coverage |
 
 ## Dependencies & Risks
 

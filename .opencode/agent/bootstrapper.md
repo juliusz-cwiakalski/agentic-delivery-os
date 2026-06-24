@@ -4,6 +4,8 @@
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/bootstrapper.md
 description: Automate ADOS adoption for existing projects
 mode: all
+claude:
+  model: opus
 ---
 
 <role>

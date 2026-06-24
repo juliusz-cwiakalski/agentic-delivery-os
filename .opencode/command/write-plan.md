@@ -6,6 +6,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 description: Generate or update implementation plan
 agent: plan-writer
 subtask: true
+claude:
+  model: sonnet
 ---
 
 <purpose>

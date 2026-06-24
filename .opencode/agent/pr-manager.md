@@ -7,6 +7,8 @@ description: Create/update PR/MR title and description.
 mode: all
 tools:
   "github*": true
+claude:
+  model: sonnet
 ---
 
 <purpose>

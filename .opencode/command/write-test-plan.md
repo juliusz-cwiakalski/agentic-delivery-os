@@ -6,6 +6,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 description: Generate or update change test plan
 agent: test-plan-writer
 subtask: true
+claude:
+  model: sonnet
 ---
 
 <purpose>

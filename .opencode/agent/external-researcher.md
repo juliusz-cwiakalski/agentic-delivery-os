@@ -15,6 +15,8 @@ tools:
   "perplexity*": true
   "web-search*": true
   "deepwiki*": true
+claude:
+  model: sonnet
 ---
 
 You are `@external-researcher`, an agent that gathers, synthesizes, and delivers external knowledge using MCP servers.

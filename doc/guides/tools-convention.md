@@ -16,6 +16,8 @@ Tools are **standalone, agent-agnostic CLI utilities**. They are not coupled to 
 - Self-contained documentation and help
 - Works in CI/CD pipelines, shell scripts, and interactive terminals
 
+**Exception:** Wrapper/launcher tools (like `zclaude`) that exist specifically to configure and launch another CLI. These are transparent proxies — all arguments pass through to the wrapped tool. Wrappers only intercept a few commands (e.g., `setup`, `env`, `--version`) and pass everything else through. Wrappers do not need `--dry-run` or `--verbose` flags since those pass to the underlying tool.
+
 ## Naming and Location
 
 | Aspect | Convention |
@@ -353,7 +355,116 @@ All tools follow `.ai/rules/bash.md`. Key requirements:
 - Mockable external commands via wrapper functions (e.g., `_curl()`, `_jq()`)
 - Testable main guard: `if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then main "$@"; fi`
 - Structured sections: settings → traps → utilities → domain → CLI → main
-- Functions: small, single-purpose, verb-named
+
+## Standalone Installation
+
+Tools that are useful independently of the ADOS repo can have a dedicated installer script for one-liner setup.
+
+### When to add an installer
+
+Add `scripts/install-<tool-name>.sh` when the tool is useful as a **standalone system utility** — i.e., users might want it even if they don't have the full ADOS repo cloned.
+
+Examples:
+- `zclaude` — useful to any Claude Code + Z.AI user
+- `text-to-image` — useful to anyone who needs AI image generation from the CLI
+
+Do NOT add an installer for tools tightly coupled to the ADOS delivery workflow (e.g., build scripts, change management helpers).
+
+### Installer conventions
+
+| Aspect | Convention |
+|--------|-----------|
+| Location | `scripts/install-<tool-name>.sh` |
+| Naming | Matches tool name: `install-zclaude.sh`, `install-text-to-image.sh` |
+| Extension | `.sh` required (it's in `scripts/`, not `tools/`) |
+| Dependencies | `bash>=4`, `curl` or `wget` |
+| Install target | `~/.local/bin/<tool-name>` (overridable via `<TOOL_NAME_UPPER>_INSTALL_DIR`) |
+
+### What the installer must do
+
+1. **Detect download method** — use `curl` if available, fall back to `wget`
+2. **Download** — fetch the tool from GitHub raw content (`https://raw.githubusercontent.com/.../main/tools/<tool-name>`)
+3. **Install** — write to `~/.local/bin/<tool-name>` with `chmod +x`
+4. **Verify** — run `<tool> --version` to confirm
+5. **PATH check** — detect if `~/.local/bin` is in PATH; if not, show the `export PATH=...` line and which shell rc file to add it to
+6. **Cross-platform** — work on Linux, macOS, Git Bash (Windows), WSL
+
+### One-liner pattern
+
+The installer is designed to be curl-piped:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/scripts/install-<tool-name>.sh | bash
+```
+
+Or with `wget`:
+
+```bash
+wget -qO- https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/scripts/install-<tool-name>.sh | bash
+```
+
+### Testing on a branch
+
+Before the tool is merged to `main`, replace `main` with the branch name in the raw URL:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/feat/my-branch/scripts/install-<tool-name>.sh | bash
+```
+
+### Installer script template
+
+```bash
+#!/usr/bin/env bash
+# install-<tool-name>.sh — Install <tool-name> to ~/.local/bin/ for system-wide use
+#
+# Dependencies: bash>=4, curl or wget
+# Usage: curl -fsSL <url> | bash
+#
+# Environment:
+#   <TOOL_NAME_UPPER>_INSTALL_DIR  - Override install directory (default: ~/.local/bin)
+#   DRY_RUN     - Set to 'true' to preview changes
+#   VERBOSE     - Set to 'true' for debug output
+#
+# Exit codes:
+#   0 - Success
+#   2 - Usage error
+#   3 - Configuration error
+#   4 - Runtime error
+#   5 - External command failure
+
+set -Eeuo pipefail
+set -o errtrace
+shopt -s inherit_errexit 2>/dev/null || true
+IFS=$'\n\t'
+
+# Settings, traps, utilities — same as bash.md conventions
+# ...
+
+readonly TOOL_RAW_URL="https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/tools/<tool-name>"
+INSTALL_DIR="${<TOOL_NAME_UPPER>_INSTALL_DIR:-${HOME}/.local/bin}"
+
+main() {
+  local -r dest="${INSTALL_DIR}/<tool-name>"
+  log_info "Installing <tool-name> to ${dest}"
+  [[ -d "${INSTALL_DIR}" ]] || mkdir -p "${INSTALL_DIR}"
+  download_tool "${dest}"   # curl or wget
+  chmod +x "${dest}"
+  "${dest}" --version       # verify
+  offer_path_setup          # PATH check + shell rc hint
+}
+
+# Testable main guard
+if [[ -z "${BASH_SOURCE[0]:-}" || "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi
+```
+
+### Documentation update
+
+When adding an installer, update the tool's doc (`doc/tools/<tool-name>.md`):
+- Add the one-liner as the **recommended** installation method
+- Keep manual install as an alternative
+- Include the `wget` variant
 
 ## Checklist for New Tools
 
@@ -364,11 +475,14 @@ When creating a new tool, verify:
 - [ ] `APP_VERSION` set with semver
 - [ ] `--help` with examples, doc link, license info
 - [ ] `--version` with name, version, copyright, MIT, URL
+- [ ] `-n, --dry-run` flag (show what would be done)
+- [ ] `-v, --verbose` flag (debug output)
 - [ ] Automatic version check with 24h cache and opt-out
 - [ ] Config directory at `~/.ai/<tool-name>/`
 - [ ] Semantic exit codes
 - [ ] Doc links in configuration error messages
 - [ ] Documentation at `doc/tools/<tool-name>.md` with version, provider setup, changelog
 - [ ] Unit tests at `tools/.tests/test-<tool-name>-unit.sh`
+- [ ] Standalone installer at `scripts/install-<tool-name>.sh` (if tool is useful independently)
 - [ ] `AGENTS.md` Key References updated (if applicable)
 - [ ] No coupling to any specific AI coding tool framework

@@ -5,6 +5,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 description: Classify and apply accepted PR/MR review feedback.
 agent: review-feedback-applier
 subtask: true
+claude:
+  model: sonnet
 ---
 
 <purpose>

@@ -4,6 +4,8 @@
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/command/plan-change.md
 #
 description: Interactive change-planning session to prepare context for /write-spec.
+claude:
+  model: sonnet
 ---
 
 <purpose>

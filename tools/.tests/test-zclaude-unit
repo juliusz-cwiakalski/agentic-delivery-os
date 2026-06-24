@@ -1,0 +1,456 @@
+#!/usr/bin/env bash
+# test-zclaude-unit — Unit and behavior tests for zclaude
+set -Eeuo pipefail
+set -o errtrace
+shopt -s inherit_errexit 2>/dev/null || true
+IFS=$'\n\t'
+
+# ============================================================================
+# TEST FRAMEWORK (embedded)
+# ============================================================================
+readonly TEST_TAG="(test-zclaude-unit)"
+_test_count=0
+_test_passed=0
+_test_failed=0
+_test_tmpdir=""
+
+if [[ -t 1 ]]; then
+  readonly _RED=$'\033[0;31m'
+  readonly _GREEN=$'\033[0;32m'
+  readonly _YELLOW=$'\033[0;33m'
+  readonly _RESET=$'\033[0m'
+else
+  readonly _RED="" _GREEN="" _YELLOW="" _RESET=""
+fi
+
+_test_setup() {
+  _test_tmpdir="$(mktemp -d)"
+}
+
+_test_teardown() {
+  [[ -n "${_test_tmpdir}" && -d "${_test_tmpdir}" && "${_test_tmpdir}" != "/" ]] \
+    && rm -rf "${_test_tmpdir}" || true
+}
+
+trap '_test_teardown' EXIT
+
+run_test() {
+  local -r name="$1"
+  local -r func="$2"
+  ((++_test_count))
+
+  _test_setup
+
+  if (set -e; "${func}"); then
+    ((++_test_passed))
+    printf '%s[PASS]%s %s\n' "${_GREEN}" "${_RESET}" "${name}"
+  else
+    ((++_test_failed))
+    printf '%s[FAIL]%s %s\n' "${_RED}" "${_RESET}" "${name}" >&2
+  fi
+
+  _test_teardown
+  _test_tmpdir=""
+}
+
+assert_eq() {
+  local -r expected="$1" actual="$2" msg="${3:-}"
+  if [[ "${expected}" != "${actual}" ]]; then
+    printf '  Expected: %s\n  Actual:   %s\n' "${expected}" "${actual}" >&2
+    [[ -n "${msg}" ]] && printf '  Message:  %s\n' "${msg}" >&2
+    return 1
+  fi
+}
+
+assert_contains() {
+  local -r haystack="$1" needle="$2" msg="${3:-}"
+  if [[ "${haystack}" != *"${needle}"* ]]; then
+    printf '  Haystack: %s\n  Needle:   %s\n' "${haystack}" "${needle}" >&2
+    [[ -n "${msg}" ]] && printf '  Message:  %s\n' "${msg}" >&2
+    return 1
+  fi
+}
+
+assert_exit_code() {
+  local -r expected="$1" actual="$2" msg="${3:-}"
+  if [[ "${expected}" -ne "${actual}" ]]; then
+    printf '  Expected exit code: %s\n  Actual exit code:   %s\n' "${expected}" "${actual}" >&2
+    [[ -n "${msg}" ]] && printf '  Message:  %s\n' "${msg}" >&2
+    return 1
+  fi
+}
+
+assert_file_exists() {
+  local -r path="$1" msg="${2:-}"
+  if [[ ! -f "${path}" ]]; then
+    printf '  File does not exist: %s\n' "${path}" >&2
+    [[ -n "${msg}" ]] && printf '  Message:  %s\n' "${msg}" >&2
+    return 1
+  fi
+}
+
+print_summary() {
+  printf '\n%s Summary: %d/%d passed' "${TEST_TAG}" "${_test_passed}" "${_test_count}"
+  if [[ "${_test_failed}" -gt 0 ]]; then
+    printf ' (%s%d failed%s)\n' "${_RED}" "${_test_failed}" "${_RESET}"
+    return 1
+  else
+    printf ' %s(all passed)%s\n' "${_GREEN}" "${_RESET}"
+    return 0
+  fi
+}
+
+# ============================================================================
+# SOURCE THE SCRIPT UNDER TEST
+# ============================================================================
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+# shellcheck source=/dev/null
+source "${SCRIPT_DIR}/zclaude"
+
+# ============================================================================
+# TEST FIXTURES
+# ============================================================================
+
+# Override config paths to use temp dir — call INSIDE each test function
+setup_test_config() {
+  local cfg="${_test_tmpdir}/config"
+  mkdir -p "${cfg}"
+  CONFIG_DIR="${cfg}"
+  API_KEY_FILE="${cfg}/api-key"
+  export ZCLAUDE_NO_VERSION_CHECK="true"
+  unset ZAI_API_KEY
+  unset ZCLAUDE_BASE_URL ZCLAUDE_TIMEOUT_MS ZCLAUDE_HAIKU_MODEL ZCLAUDE_SONNET_MODEL ZCLAUDE_OPUS_MODEL
+}
+
+# Write a fake API key to the test config
+write_test_key() {
+  local -r key="${1:-test_api_key_12345678}"
+  printf '%s' "${key}" > "${API_KEY_FILE}"
+  chmod 600 "${API_KEY_FILE}"
+}
+
+# Capture stdout/stderr/exit-code of a function
+capture_output() {
+  local -n _co_stdout="$1"
+  local -n _co_stderr="$2"
+  local -n _co_exit="$3"
+  shift 3
+
+  local _co_tout _coterr
+  _co_tout="$(mktemp)"
+  _coterr="$(mktemp)"
+
+  _co_exit=0
+  "$@" >"${_co_tout}" 2>"${_coterr}" || _co_exit=$?
+
+  _co_stdout="$(<"${_co_tout}")"
+  _co_stderr="$(<"${_coterr}")"
+
+  rm -f "${_co_tout}" "${_coterr}"
+}
+
+# ============================================================================
+# UNIT TESTS — read_api_key
+# ============================================================================
+
+test_read_api_key_from_env_var() {
+  setup_test_config
+  export ZAI_API_KEY="env_var_key_abc123"
+
+  local result
+  result="$(read_api_key)"
+
+  assert_eq "env_var_key_abc123" "${result}" "Should read key from env var"
+}
+
+test_read_api_key_from_file() {
+  setup_test_config
+  write_test_key "file_key_xyz789"
+
+  local result
+  result="$(read_api_key)"
+
+  assert_eq "file_key_xyz789" "${result}" "Should read key from file"
+}
+
+test_read_api_key_env_overrides_file() {
+  setup_test_config
+  export ZAI_API_KEY="env_wins_key"
+  write_test_key "file_loses_key"
+
+  local result
+  result="$(read_api_key)"
+
+  assert_eq "env_wins_key" "${result}" "Env var should take priority over file"
+}
+
+test_read_api_key_missing_returns_failure() {
+  setup_test_config
+  # No env var, no file
+
+  local result=""
+  local exit_code=0
+  result="$(read_api_key)" || exit_code=$?
+
+  assert_exit_code 1 "${exit_code}" "Should return 1 when no key found"
+}
+
+# ============================================================================
+# UNIT TESTS — save_api_key
+# ============================================================================
+
+test_save_api_key_creates_file() {
+  setup_test_config
+
+  save_api_key "new_saved_key_123"
+
+  assert_file_exists "${API_KEY_FILE}"
+  local content
+  content="$(<"${API_KEY_FILE}")"
+  assert_eq "new_saved_key_123" "${content}" "Saved key should match"
+}
+
+test_save_api_key_creates_config_dir() {
+  local cfg="${_test_tmpdir}/fresh_dir"
+  mkdir -p "${cfg}"
+
+  # Point to non-existent subdir
+  CONFIG_DIR="${cfg}/sub"
+  API_KEY_FILE="${cfg}/sub/api-key"
+
+  save_api_key "auto_created_dir_key"
+
+  assert_file_exists "${cfg}/sub/api-key"
+}
+
+test_save_api_key_sets_permissions() {
+  setup_test_config
+
+  save_api_key "permission_test_key"
+
+  local perms
+  perms="$(stat -c '%a' "${API_KEY_FILE}" 2>/dev/null || stat -f '%Lp' "${API_KEY_FILE}" 2>/dev/null || true)"
+  assert_eq "600" "${perms}" "Key file should have 600 permissions"
+}
+
+# ============================================================================
+# UNIT TESTS — cmd_env
+# ============================================================================
+
+test_cmd_env_shows_masked_key() {
+  setup_test_config
+  export ZAI_API_KEY="alongapikey1234567890"
+
+  local stdout stderr exit_code=0
+  capture_output stdout stderr exit_code cmd_env
+
+  assert_exit_code 0 "${exit_code}" "cmd_env should succeed with key"
+  assert_contains "${stdout}" "ANTHROPIC_AUTH_TOKEN=alongapi...7890" "Should show masked key"
+  assert_contains "${stdout}" "ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic" "Should show default base URL"
+  assert_contains "${stdout}" "ANTHROPIC_DEFAULT_SONNET_MODEL=glm-5.1" "Should show default sonnet model"
+  assert_contains "${stdout}" "ANTHROPIC_DEFAULT_OPUS_MODEL=glm-5.1" "Should show default opus model"
+  assert_contains "${stdout}" "ANTHROPIC_DEFAULT_HAIKU_MODEL=glm-4.5-air" "Should show default haiku model"
+}
+
+test_cmd_env_respects_overrides() {
+  setup_test_config
+  export ZAI_API_KEY="testkey12345678"
+  export ZCLAUDE_SONNET_MODEL="glm-5-turbo"
+  export ZCLAUDE_BASE_URL="https://custom.api.example.com"
+
+  local stdout stderr exit_code=0
+  capture_output stdout stderr exit_code cmd_env
+
+  assert_contains "${stdout}" "glm-5-turbo" "Should use overridden sonnet model"
+  assert_contains "${stdout}" "https://custom.api.example.com" "Should use overridden base URL"
+}
+
+test_cmd_env_fails_without_key() {
+  setup_test_config
+  # No key set — run as subprocess because cmd_env uses exit
+
+  local stdout exit_code=0
+  stdout="$(ZCLAUDE_NO_VERSION_CHECK=true ZCLAUDE_CONFIG_DIR="${CONFIG_DIR}" ZAI_API_KEY="" "${SCRIPT_DIR}/zclaude" env 2>&1)" || exit_code=$?
+
+  assert_exit_code 3 "${exit_code}" "cmd_env should fail with EXIT_CONFIG when no key"
+  assert_contains "${stdout}" "No API key configured" "Should show helpful error"
+}
+
+# ============================================================================
+# UNIT TESTS — cmd_launch (mocked claude)
+# ============================================================================
+
+test_cmd_launch_sets_env_vars() {
+  setup_test_config
+  export ZAI_API_KEY="launch_test_key_1234"
+
+  # Mock claude to capture env vars
+  local captured_env_file="${_test_tmpdir}/claude_env.txt"
+  _claude() {
+    {
+      printf 'ANTHROPIC_AUTH_TOKEN=%s\n' "${ANTHROPIC_AUTH_TOKEN}"
+      printf 'ANTHROPIC_BASE_URL=%s\n' "${ANTHROPIC_BASE_URL}"
+      printf 'API_TIMEOUT_MS=%s\n' "${API_TIMEOUT_MS}"
+      printf 'ANTHROPIC_DEFAULT_SONNET_MODEL=%s\n' "${ANTHROPIC_DEFAULT_SONNET_MODEL}"
+      printf 'ANTHROPIC_DEFAULT_OPUS_MODEL=%s\n' "${ANTHROPIC_DEFAULT_OPUS_MODEL}"
+      printf 'ANTHROPIC_DEFAULT_HAIKU_MODEL=%s\n' "${ANTHROPIC_DEFAULT_HAIKU_MODEL}"
+    } > "${captured_env_file}"
+  }
+  require_cmd() { :; }
+
+  cmd_launch
+
+  local env_output
+  env_output="$(<"${captured_env_file}")"
+  assert_contains "${env_output}" "ANTHROPIC_AUTH_TOKEN=launch_test_key_1234"
+  assert_contains "${env_output}" "ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic"
+  assert_contains "${env_output}" "ANTHROPIC_DEFAULT_SONNET_MODEL=glm-5.1"
+  assert_contains "${env_output}" "ANTHROPIC_DEFAULT_OPUS_MODEL=glm-5.1"
+  assert_contains "${env_output}" "ANTHROPIC_DEFAULT_HAIKU_MODEL=glm-4.5-air"
+}
+
+test_cmd_launch_fails_without_key() {
+  setup_test_config
+  # No key set — run as subprocess because cmd_launch uses exit
+  # Pipe "n" to stdin to decline the interactive setup prompt
+
+  local stdout exit_code=0
+  stdout="$(printf 'n\n' | ZCLAUDE_NO_VERSION_CHECK=true ZCLAUDE_CONFIG_DIR="${CONFIG_DIR}" ZAI_API_KEY="" "${SCRIPT_DIR}/zclaude" 2>&1)" || exit_code=$?
+
+  assert_exit_code 3 "${exit_code}" "cmd_launch should fail with EXIT_CONFIG when no key"
+  assert_contains "${stdout}" "No Z.AI API key configured"
+}
+
+test_cmd_launch_unsets_anthropic_api_key() {
+  setup_test_config
+  export ZAI_API_KEY="zai_key_test_12345"
+  export ANTHROPIC_API_KEY="should_be_unset"
+
+  local captured_env_file="${_test_tmpdir}/claude_env2.txt"
+  _claude() {
+    printf 'ANTHROPIC_API_KEY=%s\n' "${ANTHROPIC_API_KEY:-__UNSET__}" > "${captured_env_file}"
+  }
+  require_cmd() { :; }
+
+  cmd_launch
+
+  local env_output
+  env_output="$(<"${captured_env_file}")"
+  assert_contains "${env_output}" "__UNSET__" "ANTHROPIC_API_KEY should be unset"
+
+  unset ANTHROPIC_API_KEY
+}
+
+# ============================================================================
+# UNIT TESTS — ensure_config_dir
+# ============================================================================
+
+test_ensure_config_dir_creates_dir() {
+  local fresh="${_test_tmpdir}/new_config"
+  CONFIG_DIR="${fresh}"
+  API_KEY_FILE="${fresh}/api-key"
+
+  [[ ! -d "${fresh}" ]] || rm -rf "${fresh}"
+
+  ensure_config_dir
+
+  [[ -d "${fresh}" ]]
+  local perms
+  perms="$(stat -c '%a' "${fresh}" 2>/dev/null || stat -f '%Lp' "${fresh}" 2>/dev/null || true)"
+  assert_eq "700" "${perms}" "Config dir should have 700 permissions"
+}
+
+test_ensure_config_dir_idempotent() {
+  local cfg="${_test_tmpdir}/idempotent_config"
+  CONFIG_DIR="${cfg}"
+  mkdir -p "${cfg}"
+  chmod 700 "${cfg}"
+
+  ensure_config_dir
+
+  [[ -d "${cfg}" ]]
+}
+
+# ============================================================================
+# BEHAVIOR TESTS — CLI (script as subprocess)
+# ============================================================================
+
+test_behavior_help() {
+  local stdout exit_code=0
+  stdout="$("${SCRIPT_DIR}/zclaude" --help 2>&1)" || exit_code=$?
+
+  assert_exit_code 0 "${exit_code}" "--help should succeed"
+  assert_contains "${stdout}" "zclaude" "Help should mention tool name"
+  assert_contains "${stdout}" "COMMANDS:" "Help should list commands"
+  assert_contains "${stdout}" "setup" "Help should mention setup command"
+  assert_contains "${stdout}" "EXIT CODES:" "Help should show exit codes"
+}
+
+test_behavior_version() {
+  local stdout exit_code=0
+  stdout="$("${SCRIPT_DIR}/zclaude" --version 2>&1)" || exit_code=$?
+
+  assert_exit_code 0 "${exit_code}" "--version should succeed"
+  assert_contains "${stdout}" "zclaude 1.0.0" "Version should include version string"
+  assert_contains "${stdout}" "Copyright (c) 2025-2026" "Version should include copyright"
+  assert_contains "${stdout}" "MIT License" "Version should include license"
+  assert_contains "${stdout}" "Latest version:" "Version should include URL"
+}
+
+test_behavior_env_with_env_var_key() {
+  local stdout exit_code=0
+  stdout="$(ZAI_API_KEY="benvarenv12345678" ZCLAUDE_NO_VERSION_CHECK=true "${SCRIPT_DIR}/zclaude" env 2>&1)" || exit_code=$?
+
+  assert_exit_code 0 "${exit_code}" "env with key should succeed"
+  assert_contains "${stdout}" "ANTHROPIC_AUTH_TOKEN=benvare...5678"
+  assert_contains "${stdout}" "ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic"
+}
+
+test_behavior_env_no_key() {
+  local stdout exit_code=0
+  stdout="$(ZAI_API_KEY="" ZCLAUDE_CONFIG_DIR="${_test_tmpdir}/nokey" ZCLAUDE_NO_VERSION_CHECK=true "${SCRIPT_DIR}/zclaude" env 2>&1)" || exit_code=$?
+
+  assert_contains "${stdout}" "No API key configured" "Should report missing key"
+}
+
+# ============================================================================
+# RUN TESTS
+# ============================================================================
+main() {
+  printf '%s Running tests...\n' "${TEST_TAG}"
+
+  # Unit: read_api_key
+  run_test "read_api_key: from env var" test_read_api_key_from_env_var
+  run_test "read_api_key: from file" test_read_api_key_from_file
+  run_test "read_api_key: env overrides file" test_read_api_key_env_overrides_file
+  run_test "read_api_key: missing returns failure" test_read_api_key_missing_returns_failure
+
+  # Unit: save_api_key
+  run_test "save_api_key: creates file" test_save_api_key_creates_file
+  run_test "save_api_key: creates config dir" test_save_api_key_creates_config_dir
+  run_test "save_api_key: sets 600 permissions" test_save_api_key_sets_permissions
+
+  # Unit: cmd_env
+  run_test "cmd_env: shows masked key and defaults" test_cmd_env_shows_masked_key
+  run_test "cmd_env: respects env overrides" test_cmd_env_respects_overrides
+  run_test "cmd_env: fails without key" test_cmd_env_fails_without_key
+
+  # Unit: cmd_launch
+  run_test "cmd_launch: sets correct env vars" test_cmd_launch_sets_env_vars
+  run_test "cmd_launch: fails without key" test_cmd_launch_fails_without_key
+  run_test "cmd_launch: unsets ANTHROPIC_API_KEY" test_cmd_launch_unsets_anthropic_api_key
+
+  # Unit: ensure_config_dir
+  run_test "ensure_config_dir: creates with 700" test_ensure_config_dir_creates_dir
+  run_test "ensure_config_dir: idempotent" test_ensure_config_dir_idempotent
+
+  # Behavior: CLI
+  run_test "behavior: --help" test_behavior_help
+  run_test "behavior: --version" test_behavior_version
+  run_test "behavior: env with key" test_behavior_env_with_env_var_key
+  run_test "behavior: env without key" test_behavior_env_no_key
+
+  print_summary
+}
+
+main "$@"

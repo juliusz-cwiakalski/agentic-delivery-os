@@ -5,8 +5,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 #
 description: Orchestrate changes; manage tickets via MCP (Jira/GitHub)
 mode: all
-tools:
-  "github*": true
+claude:
+  model: opus
 ---
 
 <role>

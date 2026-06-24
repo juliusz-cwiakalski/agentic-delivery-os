@@ -1,0 +1,38 @@
+---
+# GENERATED FILE — DO NOT EDIT DIRECTLY.
+# Source of truth: .opencode/command/pr.md
+# Regenerate with: scripts/build-claude-plugin.sh
+# If behavior must change, edit the source file above and rebuild.
+# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+# MIT License - see LICENSE file for full terms
+# source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/command/pr.md
+name: pr
+description: Create/update PR/MR title and description.
+model: sonnet
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
+  - Bash
+  - WebFetch
+  - "mcp__*"
+---
+
+<purpose>Trigger the @pr-manager agent to create/update the PR/MR for the current branch (writes `tmp/pr/<branch>/description.md`).</purpose>
+
+<inputs>
+  <optional>
+    <args>$ARGUMENTS</args>
+  </optional>
+</inputs>
+
+<instructions>
+  <rule>Invoke `@pr-manager` now with the provided args.</rule>
+  <rule>Do not restate its workflow; do not add extra commentary.</rule>
+  <rule>If blocked, surface the agent's message without alteration.</rule>
+  <rule>If successful, return exactly the agent's output.</rule>
+</instructions>
+
+<user_input>$ARGUMENTS</user_input>

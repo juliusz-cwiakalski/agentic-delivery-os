@@ -5,6 +5,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 #
 description: Reconcile system specs and docs with a completed change.
 mode: all
+claude:
+  model: opus
 ---
 
 <role>

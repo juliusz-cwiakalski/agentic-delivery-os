@@ -212,6 +212,52 @@ The script adds headers only to files that are installed when users onboard ADOS
 - `doc/planning/` — internal planning notes
 - `.ai/` — configuration and ephemeral state
 
+## Multi-tool support
+
+ADOS maintains a **single source of truth** for all agent/command definitions:
+
+- **`.opencode/`** — Canonical source (OpenCode format)
+- **`.ados-claude/`** — Generated Claude Code plugin (committed, kept in sync by CI)
+
+### Generated plugin rule (important)
+
+**Never hand-edit `.ados-claude/` files.** They are generated artifacts.
+
+If you need to change an agent, command, model assignment, tool access, or Claude Code plugin behavior:
+
+1. Edit the source in `.opencode/agent/*.md` or `.opencode/command/*.md`
+2. Update `scripts/build-claude-plugin.sh` only if the transformation itself must change
+3. Run `scripts/build-claude-plugin.sh`
+4. Commit the `.opencode/` source change and regenerated `.ados-claude/` output together
+
+Generated `.ados-claude/**/*.md` files include comments naming their source file and regeneration command. Treat those comments as authoritative.
+
+### When modifying agents or commands
+
+1. Edit only `.opencode/agent/*.md` and `.opencode/command/*.md`
+2. Run `scripts/build-claude-plugin.sh` to regenerate the Claude Code plugin
+3. Commit both source and generated files together
+4. CI verifies the generated plugin is current (fails if stale)
+
+### Tool-specific frontmatter
+
+Agent and command files support optional frontmatter keys for different tools:
+
+```yaml
+---
+description: <agent description>
+mode: all                    # OpenCode-specific
+claude:                      # Claude Code-specific
+  model: opus                 # opus | sonnet | haiku
+---
+```
+
+OpenCode ignores the `claude:` key. Claude Code uses `claude.model` for model assignment.
+
+### Adding new tools
+
+See [doc/guides/adding-tool-support.md](doc/guides/adding-tool-support.md) for the extensibility pattern.
+
 ### How to add headers
 
 Run the script on configured paths:

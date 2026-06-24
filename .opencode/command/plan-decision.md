@@ -5,6 +5,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 #
 description: Interactive technical-decision planning session to prepare canonical context and decision number for /write-decision.
 agent: architect
+claude:
+  model: sonnet
 ---
 
 <purpose>

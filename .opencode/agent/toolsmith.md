@@ -23,6 +23,8 @@ tools:
   bash: true
   webfetch: false
   skill: true
+claude:
+  model: opus
 ---
 
 <agent_identity>

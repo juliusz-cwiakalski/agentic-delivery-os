@@ -5,6 +5,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 #
 description: Implement plan phases by writing code for a change.
 mode: all
+claude:
+  model: sonnet
 ---
 
 <role>

@@ -80,14 +80,16 @@ readonly ADOS_UPDATABLE_FILES=(
   "doc/00-index.md"
   # Generic ADOS guides (framework docs, not project-specific)
   "doc/guides/change-lifecycle.md"
-  "doc/guides/unified-change-convention-tracker-agnostic-specification.md"
+  "doc/guides/claude-code-setup.md"
+  "doc/guides/copywriting.md"
   "doc/guides/decision-records-management.md"
+  "doc/guides/external-researcher-setup.md"
+  "doc/guides/meeting-preparation-and-summarization.md"
+  "doc/guides/onboarding-existing-project.md"
   "doc/guides/opencode-agents-and-commands-guide.md"
   "doc/guides/opencode-model-configuration.md"
-  "doc/guides/tools-convention.md"
-  "doc/guides/copywriting.md"
-  "doc/guides/system-dependencies.md"
-  "doc/guides/onboarding-existing-project.md"
+  "doc/guides/pr-platform-integration.md"
+  "doc/guides/unified-change-convention-tracker-agnostic-specification.md"
   # Decision records stubs
   "doc/decisions/README.md"
   "doc/decisions/00-index.md"
@@ -135,6 +137,10 @@ ALLOW_NON_ROOT="${ALLOW_NON_ROOT:-false}"
 
 # Install mode: "global" or "local"
 INSTALL_MODE=""
+
+# Tool selection: "opencode", "claude", or "all"
+TOOL="${TOOL:-opencode}"
+CLAUDE_GLOBAL_DIR="${CLAUDE_GLOBAL_DIR:-${HOME}/.claude}"
 
 # ============================================================================
 # TRAPS
@@ -401,36 +407,93 @@ clone_or_update_repo() {
 install_global_files() {
   local -r agent_src="${ADOS_REPO_DIR}/.opencode/agent"
   local -r command_src="${ADOS_REPO_DIR}/.opencode/command"
-  local -r agent_dest="${OPENCODE_GLOBAL_DIR}/agent"
-  local -r command_dest="${OPENCODE_GLOBAL_DIR}/command"
+  
+  # Install for OpenCode
+  if [[ "${TOOL}" == "opencode" || "${TOOL}" == "all" ]]; then
+    local -r agent_dest="${OPENCODE_GLOBAL_DIR}/agent"
+    local -r command_dest="${OPENCODE_GLOBAL_DIR}/command"
 
-  ensure_dir "${agent_dest}" "~/.config/opencode/agent"
-  ensure_dir "${command_dest}" "~/.config/opencode/command"
+    ensure_dir "${agent_dest}" "~/.config/opencode/agent"
+    ensure_dir "${command_dest}" "~/.config/opencode/command"
 
-  # Copy agent definitions
-  if [[ -d "${agent_src}" ]]; then
-    local agent_file
-    for agent_file in "${agent_src}"/*.md; do
-      [[ -f "${agent_file}" ]] || continue
-      local name
-      name="$(basename "${agent_file}")"
-      copy_file_with_diff "${agent_file}" "${agent_dest}/${name}" "agent/${name}"
-    done
-  else
-    log_warn "Agent source directory not found: ${agent_src}"
+    # Copy agent definitions
+    if [[ -d "${agent_src}" ]]; then
+      local agent_file
+      for agent_file in "${agent_src}"/*.md; do
+        [[ -f "${agent_file}" ]] || continue
+        local name
+        name="$(basename "${agent_file}")"
+        copy_file_with_diff "${agent_file}" "${agent_dest}/${name}" "agent/${name}"
+      done
+    else
+      log_warn "Agent source directory not found: ${agent_src}"
+    fi
+
+    # Copy command definitions
+    if [[ -d "${command_src}" ]]; then
+      local cmd_file
+      for cmd_file in "${command_src}"/*.md; do
+        [[ -f "${cmd_file}" ]] || continue
+        local name
+        name="$(basename "${cmd_file}")"
+        copy_file_with_diff "${cmd_file}" "${command_dest}/${name}" "command/${name}"
+      done
+    else
+      log_warn "Command source directory not found: ${command_src}"
+    fi
   fi
+  
+  # Install for Claude Code
+  if [[ "${TOOL}" == "claude" || "${TOOL}" == "all" ]]; then
+    log_warn ""
+    log_warn "=== DEPRECATION NOTICE ==="
+    log_warn "The --tool claude option is deprecated."
+    log_warn ""
+    log_warn "Claude Code has its own plugin system. Instead, use:"
+    log_warn "  /plugin marketplace add juliusz-cwiakalski/agentic-delivery-os"
+    log_warn "  /plugin install ados@ados"
+    log_warn ""
+    log_warn "For local development: claude --plugin-dir .ados-claude"
+    log_warn "=========================="
+    log_warn ""
+    
+    local -r claude_agent_src="${ADOS_REPO_DIR}/.ados-claude/agents"
+    local -r claude_skill_src="${ADOS_REPO_DIR}/.ados-claude/skills"
+    local -r claude_agent_dest="${CLAUDE_GLOBAL_DIR}/agents"
+    local -r claude_skill_dest="${CLAUDE_GLOBAL_DIR}/skills"
 
-  # Copy command definitions
-  if [[ -d "${command_src}" ]]; then
-    local cmd_file
-    for cmd_file in "${command_src}"/*.md; do
-      [[ -f "${cmd_file}" ]] || continue
-      local name
-      name="$(basename "${cmd_file}")"
-      copy_file_with_diff "${cmd_file}" "${command_dest}/${name}" "command/${name}"
-    done
-  else
-    log_warn "Command source directory not found: ${command_src}"
+    ensure_dir "${claude_agent_dest}" "~/.claude/agents"
+    ensure_dir "${claude_skill_dest}" "~/.claude/skills"
+
+    # Copy agent definitions
+    if [[ -d "${claude_agent_src}" ]]; then
+      local agent_file
+      for agent_file in "${claude_agent_src}"/*.md; do
+        [[ -f "${agent_file}" ]] || continue
+        local name
+        name="$(basename "${agent_file}")"
+        copy_file_with_diff "${agent_file}" "${claude_agent_dest}/${name}" "agents/${name}"
+      done
+    else
+      log_warn "Claude agent source directory not found: ${claude_agent_src}"
+    fi
+
+    # Copy skill directories
+    if [[ -d "${claude_skill_src}" ]]; then
+      local skill_dir
+      for skill_dir in "${claude_skill_src}"/*/; do
+        [[ -d "${skill_dir}" ]] || continue
+        local skill_name
+        skill_name="$(basename "${skill_dir}")"
+        local skill_file="${skill_dir}SKILL.md"
+        if [[ -f "${skill_file}" ]]; then
+          ensure_dir "${claude_skill_dest}/${skill_name}" "skills/${skill_name}"
+          copy_file_with_diff "${skill_file}" "${claude_skill_dest}/${skill_name}/SKILL.md" "skills/${skill_name}/SKILL.md"
+        fi
+      done
+    else
+      log_warn "Claude skill source directory not found: ${claude_skill_src}"
+    fi
   fi
 }
 
@@ -441,7 +504,13 @@ do_global_install() {
   log_info "=== ADOS Global Install ==="
   log_info "ADOS_HOME:          ${ADOS_HOME}"
   log_info "ADOS_REPO_DIR:      ${ADOS_REPO_DIR}"
-  log_info "OPENCODE_GLOBAL_DIR: ${OPENCODE_GLOBAL_DIR}"
+  log_info "TOOL:               ${TOOL}"
+  if [[ "${TOOL}" == "opencode" || "${TOOL}" == "all" ]]; then
+    log_info "OPENCODE_GLOBAL_DIR: ${OPENCODE_GLOBAL_DIR}"
+  fi
+  if [[ "${TOOL}" == "claude" || "${TOOL}" == "all" ]]; then
+    log_info "CLAUDE_GLOBAL_DIR:  ${CLAUDE_GLOBAL_DIR}"
+  fi
   [[ "${ADOS_BRANCH}" != "main" ]] && log_info "Branch:             ${ADOS_BRANCH}"
 
   clone_or_update_repo
@@ -582,12 +651,22 @@ install_local_files() {
   # --- Project-specific files (preserve local edits) ---
   local file
   for file in "${ADOS_PROJECT_FILES[@]}"; do
-    copy_file_with_diff "${source_dir}/${file}" "${file}" "${file}"
+    if [[ -f "${source_dir}/${file}" ]]; then
+      copy_file_with_diff "${source_dir}/${file}" "${file}" "${file}"
+    else
+      log_warn "Skipping (not in source): ${file}"
+    fi
   done
 
   # --- Updatable files (always track upstream) ---
+  # A stale manifest entry (file renamed/removed upstream) must not abort the
+  # whole install: warn and skip so the remaining files still get installed.
   for file in "${ADOS_UPDATABLE_FILES[@]}"; do
-    copy_updatable_file "${source_dir}/${file}" "${file}" "${file}"
+    if [[ -f "${source_dir}/${file}" ]]; then
+      copy_updatable_file "${source_dir}/${file}" "${file}" "${file}"
+    else
+      log_warn "Skipping (not in source): ${file}"
+    fi
   done
 
   # --- Templates (always track upstream) ---
@@ -613,6 +692,61 @@ install_local_files() {
   # --- .gitignore entries ---
   ensure_gitignore_entry ".gitignore" ".ai/local/"
   ensure_gitignore_entry ".gitignore" ".ai/local"
+  
+  # Tool-specific: Copy .ados-claude/ for Claude Code
+  # NOTE: --tool claude is deprecated for local mode too.
+  # For local development, use: claude --plugin-dir .ados-claude
+  # For global installation, use Claude Code's plugin system:
+  #   /plugin marketplace add juliusz-cwiakalski/agentic-delivery-os
+  #   /plugin install ados@ados
+  if [[ "${TOOL}" == "claude" || "${TOOL}" == "all" ]]; then
+    log_warn ""
+    log_warn "=== DEPRECATION NOTICE ==="
+    log_warn "The --tool claude option is deprecated."
+    log_warn "For local development: claude --plugin-dir .ados-claude"
+    log_warn "For global installation, use Claude Code's plugin system:"
+    log_warn "  /plugin marketplace add juliusz-cwiakalski/agentic-delivery-os"
+    log_warn "  /plugin install ados@ados"
+    log_warn "=========================="
+    log_warn ""
+    
+    local -r claude_src="${source_dir}/.ados-claude"
+    if [[ -d "${claude_src}" ]]; then
+      log_info "Copying Claude Code plugin..."
+      
+      # Copy agents
+      if [[ -d "${claude_src}/agents" ]]; then
+        local claude_agent_dest="./.claude/agents"
+        ensure_dir "${claude_agent_dest}" "./.claude/agents"
+        local agent_file
+        for agent_file in "${claude_src}/agents"/*.md; do
+          [[ -f "${agent_file}" ]] || continue
+          local agent_name
+          agent_name="$(basename "${agent_file}")"
+          copy_file_with_diff "${agent_file}" "${claude_agent_dest}/${agent_name}" ".claude/agents/${agent_name}"
+        done
+      fi
+      
+      # Copy skills
+      if [[ -d "${claude_src}/skills" ]]; then
+        local claude_skill_dest="./.claude/skills"
+        ensure_dir "${claude_skill_dest}" "./.claude/skills"
+        local skill_dir
+        for skill_dir in "${claude_src}/skills"/*/; do
+          [[ -d "${skill_dir}" ]] || continue
+          local skill_name
+          skill_name="$(basename "${skill_dir}")"
+          local skill_file="${skill_dir}SKILL.md"
+          if [[ -f "${skill_file}" ]]; then
+            ensure_dir "${claude_skill_dest}/${skill_name}" ".claude/skills/${skill_name}"
+            copy_file_with_diff "${skill_file}" "${claude_skill_dest}/${skill_name}/SKILL.md" ".claude/skills/${skill_name}/SKILL.md"
+          fi
+        done
+      fi
+    else
+      log_warn "Claude Code plugin directory not found: ${claude_src}"
+    fi
+  fi
 }
 
 do_local_install() {
@@ -628,6 +762,7 @@ do_local_install() {
   log_info "=== ADOS Local Install ==="
   log_info "Source:  ${source_dir}"
   log_info "Target:  $(pwd)"
+  log_info "TOOL:    ${TOOL}"
   [[ "${ADOS_BRANCH}" != "main" ]] && log_info "Branch:  ${ADOS_BRANCH}"
   [[ "${FORCE}" == "true" ]] && log_info "Mode:    force (overwrite existing files)"
   [[ "${INTERACTIVE}" == "true" ]] && log_info "Mode:    interactive (prompt on diff)"
@@ -640,10 +775,20 @@ do_local_install() {
   printf '\n'
   if [[ "${_added}" -gt 0 ]]; then
     log_info "Next steps:"
-    log_info "  1. Open this project in OpenCode (https://opencode.ai)"
-    log_info "  2. Run /bootstrap to complete setup with AI-guided configuration"
-    log_info "     The bootstrapper will detect your tracker, generate PM instructions,"
-    log_info "     and customize AGENTS.md for your project."
+    if [[ "${TOOL}" == "opencode" || "${TOOL}" == "all" ]]; then
+      log_info "  1. Open this project in OpenCode (https://opencode.ai)"
+      log_info "  2. Run /bootstrap to complete setup with AI-guided configuration"
+      log_info "     The bootstrapper will detect your tracker, generate PM instructions,"
+      log_info "     and customize AGENTS.md for your project."
+    fi
+    if [[ "${TOOL}" == "claude" || "${TOOL}" == "all" ]]; then
+      log_info ""
+      log_info "  For Claude Code: Use Claude Code's plugin system instead:"
+      log_info "    /plugin marketplace add juliusz-cwiakalski/agentic-delivery-os"
+      log_info "    /plugin install ados@ados"
+      log_info ""
+      log_info "  For local development: claude --plugin-dir .ados-claude"
+    fi
   else
     log_info "Project artifacts updated to latest ADOS version"
     log_info "Templates, guides, and handbook updated; project-specific files preserved"
@@ -668,6 +813,12 @@ Modes:
                      Re-running updates templates, guides, and handbook to latest
                      ADOS while preserving project-specific files (pm-instructions.md).
 
+Tool Selection:
+      --tool <name>  Which AI coding tool to install for (default: opencode)
+                     opencode: Install for OpenCode only
+                     claude:   [DEPRECATED] Use /plugin marketplace add instead
+                     all:      [DEPRECATED] Install for both tools
+
 Options:
   -h, --help             Show this help message
   -V, --version          Show version
@@ -684,11 +835,24 @@ File handling (--local mode):
   Project-specific files (pm-instructions.md) are preserved if they exist locally.
   Use --interactive to review each diff, or --force to overwrite everything.
 
+Installation targets:
+  OpenCode (default):
+    --global: ~/.config/opencode/agent/ and ~/.config/opencode/command/
+    --local:  ./.opencode/agent/ and ./.opencode/command/
+  Claude Code:
+    --tool claude is DEPRECATED. Use Claude Code's plugin system instead:
+      /plugin marketplace add juliusz-cwiakalski/agentic-delivery-os
+      /plugin install ados@ados
+    For local development: claude --plugin-dir .ados-claude
+
 One-liner global install:
   curl -fsSL ${ADOS_RAW_URL}/scripts/install.sh | bash -s -- --global
 
 Install from a specific branch (for testing pre-merge changes):
   curl -fsSL ${ADOS_RAW_URL}/scripts/install.sh | bash -s -- --global -b feat/my-branch
+
+Install for Claude Code globally:
+  curl -fsSL ${ADOS_RAW_URL}/scripts/install.sh | bash -s -- --global --tool claude
 
 Local project install (after global install):
   ${ADOS_REPO_DIR}/scripts/install.sh --local
@@ -699,6 +863,7 @@ Environment:
   ADOS_HOME              Override ~/.ados directory
   ADOS_REPO_DIR          Override ~/.ados/repo directory
   OPENCODE_GLOBAL_DIR    Override ~/.config/opencode directory
+  CLAUDE_GLOBAL_DIR      Override ~/.claude directory
   ADOS_SOURCE_DIR        Override source repo for local install (disables auto-fetch)
   DRY_RUN                Set to 'true' to preview changes
   VERBOSE                Set to 'true' for debug output
@@ -719,6 +884,13 @@ parse_args() {
       -i|--interactive) INTERACTIVE=true ;;
       --no-fetch) NO_FETCH=true ;;
       --allow-non-root) ALLOW_NON_ROOT=true ;;
+      --tool)
+        shift
+        case "${1}" in
+          opencode|claude|all) TOOL="${1}" ;;
+          *) die "Invalid tool: ${1}. Must be opencode, claude, or all" ;;
+        esac
+        ;;
       --) shift; break ;;
       -*) die "Unknown option: $1" ;;
       *) break ;;
@@ -740,6 +912,7 @@ main() {
 
   log_debug "INSTALL_MODE=${INSTALL_MODE}"
   log_debug "ADOS_BRANCH=${ADOS_BRANCH}"
+  log_debug "TOOL=${TOOL}"
   log_debug "DRY_RUN=${DRY_RUN}"
   log_debug "VERBOSE=${VERBOSE}"
   log_debug "FORCE=${FORCE}"

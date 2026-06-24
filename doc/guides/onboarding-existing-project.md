@@ -121,6 +121,46 @@ Before starting, ensure you have:
 
 ---
 
+## Supported AI Coding Tools
+
+ADOS supports multiple AI coding tools:
+
+### OpenCode (Primary)
+
+OpenCode is the primary target for ADOS. Install with:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/scripts/install.sh | bash -s -- --global
+```
+
+### Claude Code (Plugin)
+
+Claude Code users can install ADOS as a plugin. Claude Code supports multiple model providers — see [Claude Code Setup Guide](claude-code-setup.md) for provider configuration (Anthropic API, Z.AI GLM Coding Plan).
+
+**Recommended: Install from GitHub marketplace**
+
+```bash
+# Step 1: Add ADOS marketplace (one-time setup)
+/plugin marketplace add juliusz-cwiakalski/agentic-delivery-os
+
+# Step 2: Install ADOS plugin
+/plugin install ados@ados
+```
+
+**For local development (contributors):**
+
+```bash
+claude --plugin-dir .ados-claude
+```
+
+This loads ADOS directly from the local repo.
+
+### Other tools
+
+See [doc/guides/adding-tool-support.md](adding-tool-support.md) for extending ADOS to other tools (Copilot CLI, Codex, etc.)
+
+---
+
 ## Artifact Checklist
 
 ADOS is both a framework you adopt **and** a system that uses itself. Some artifacts are generic (copy as-is from the ADOS repo), while others must be written specifically for your project. Use this table to plan your setup:

@@ -22,7 +22,7 @@ Turn AI from "chat assistance" into a repeatable, auditable delivery system:
 
 ticket -> spec -> plan -> test plan -> code -> [/review](.opencode/command/review.md) -> [/sync-docs](.opencode/command/sync-docs.md) -> [/check](.opencode/command/check.md) -> [/pr](.opencode/command/pr.md) -> release
 
-This repo is a practical reference implementation of a spec-driven workflow using OpenCode:
+This repo is a practical reference implementation of a spec-driven workflow using OpenCode (and supporting Claude Code):
 
 - Artifacts are first-class (versioned in Git), not trapped in chats.
 - Deterministic quality gates define "done".
@@ -30,6 +30,28 @@ This repo is a practical reference implementation of a spec-driven workflow usin
 - The repo maintains a continuously updated "current system spec" under `doc/spec/**` (created if missing; reconciled after each accepted change).
 
 > Note: `doc/spec/**` may not exist in a fresh repo; it's created/updated by the workflow (see [/sync-docs](.opencode/command/sync-docs.md)).
+
+<!-- TOC -->
+* [Agentic Delivery OS (ADOS)](#agentic-delivery-os-ados)
+  * [Why this exists](#why-this-exists)
+  * [What this gives you](#what-this-gives-you)
+  * [Installation](#installation)
+    * [Quick Start](#quick-start)
+      * [For Claude Code users](#for-claude-code-users)
+    * [Installation Modes](#installation-modes)
+    * [Tool Selection (OpenCode only)](#tool-selection-opencode-only)
+  * [Benefits](#benefits)
+  * [Intention](#intention)
+  * [Docs at a glance](#docs-at-a-glance)
+  * [What is implemented here](#what-is-implemented-here)
+  * [Multi-tool support](#multi-tool-support)
+  * [Autopilot (PM-driven)](#autopilot-pm-driven)
+  * [Typical workflow (manual)](#typical-workflow-manual)
+  * [Change artifacts (tracker-agnostic)](#change-artifacts-tracker-agnostic)
+  * [Repo structure](#repo-structure)
+  * [License](#license)
+  * [Author](#author)
+<!-- TOC -->
 
 ## Why this exists
 
@@ -49,26 +71,61 @@ Agentic Delivery OS codifies a predictable pipeline where quality and traceabili
 - A versioned, human-readable system spec under `doc/spec/**` that acts as the baseline input for planning the next change (kept up to date via [`/sync-docs`](.opencode/command/sync-docs.md)).
 - Commands that compose those agents into repeatable workflows (manual or autopilot).
 
-## Quick start
+## Installation
 
-> **Requires:** [OpenCode](https://opencode.ai) — the AI coding agent that runs ADOS agents and commands.
+### Quick Start
 
-**Global install** (one-liner — gives you ADOS agents in every project):
+**For OpenCode users:**
 
 ```bash
+# Global (all projects)
 curl -fsSL https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/scripts/install.sh | bash -s -- --global
-```
 
-**Set up a specific project:**
-
-```bash
-~/.ados/repo/scripts/install.sh --local    # copy artifacts into current project
+# Local (current project)
+~/.ados/repo/scripts/install.sh --local
 ```
 
 Then in your AI coding agent:
 
 ```text
 /bootstrap                                  # AI-guided configuration
+```
+
+#### For Claude Code users
+
+**Recommended: Install from GitHub marketplace**
+
+```bash
+# Step 1: Add ADOS marketplace (one-time setup)
+/plugin marketplace add juliusz-cwiakalski/agentic-delivery-os
+
+# Step 2: Install ADOS plugin
+/plugin install ados@ados
+```
+
+This uses the `git-subdir` source to load ADOS directly from the GitHub repository.
+
+**For local development (contributors):**
+
+```bash
+claude --plugin-dir .ados-claude
+```
+
+This loads ADOS directly from the local repo — useful for contributors testing changes.
+
+### Installation Modes
+
+| Mode | OpenCode Target | Claude Code Target |
+|------|-----------------|-------------------|
+| `--global` | `~/.config/opencode/` | Use `/plugin marketplace add` |
+| `--local` | `./.opencode/` | `claude --plugin-dir .ados-claude` |
+
+### Tool Selection (OpenCode only)
+
+```bash
+--tool opencode    # OpenCode only (default)
+--tool claude      # Not needed - use /plugin commands instead
+--tool all         # Not needed - install separately per tool
 ```
 
 **Uninstall:** `~/.ados/repo/scripts/uninstall.sh --global` or `~/.ados/repo/scripts/uninstall.sh --local`
@@ -110,6 +167,46 @@ OpenCode tooling (see [.opencode/README.md](.opencode/README.md) for the authori
   - [@pm](.opencode/agent/pm.md), [@coder](.opencode/agent/coder.md), [@spec-writer](.opencode/agent/spec-writer.md), [@plan-writer](.opencode/agent/plan-writer.md), [@test-plan-writer](.opencode/agent/test-plan-writer.md), [@reviewer](.opencode/agent/reviewer.md), [@doc-syncer](.opencode/agent/doc-syncer.md), [@pr-manager](.opencode/agent/pr-manager.md), [@runner](.opencode/agent/runner.md), [@fixer](.opencode/agent/fixer.md), [@committer](.opencode/agent/committer.md), [@architect](.opencode/agent/architect.md), [@editor](.opencode/agent/editor.md), [@designer](.opencode/agent/designer.md), [@image-generator](.opencode/agent/image-generator.md), [@image-reviewer](.opencode/agent/image-reviewer.md), [@bootstrapper](.opencode/agent/bootstrapper.md), [@external-researcher](.opencode/agent/external-researcher.md), [@toolsmith](.opencode/agent/toolsmith.md).
 - **16 commands** that compose them into a repeatable workflow:
   - [/plan-change](.opencode/command/plan-change.md), [/write-spec](.opencode/command/write-spec.md), [/write-plan](.opencode/command/write-plan.md), [/write-test-plan](.opencode/command/write-test-plan.md), [/run-plan](.opencode/command/run-plan.md), [/review](.opencode/command/review.md), [/review-deep](.opencode/command/review-deep.md), [/sync-docs](.opencode/command/sync-docs.md), [/check](.opencode/command/check.md), [/check-fix](.opencode/command/check-fix.md), [/pr](.opencode/command/pr.md), [/commit](.opencode/command/commit.md), [/plan-decision](.opencode/command/plan-decision.md), [/write-decision](.opencode/command/write-decision.md), [/bootstrap](.opencode/command/bootstrap.md), [/design](.opencode/command/design.md).
+
+## Multi-tool support
+
+ADOS supports multiple AI coding tools while maintaining a **single source of truth** for agent and command definitions:
+
+- **`.opencode/`** — Canonical source for all agent/command definitions
+- **`.ados-claude/`** — Generated Claude Code plugin (committed to repo, ready to use)
+
+The build script `scripts/build-claude-plugin.sh` transforms `.opencode/` definitions to Claude Code format. This ensures:
+
+1. No duplicate definitions to maintain
+2. All tools get the same prompts
+3. Model assignments are tool-specific (via `claude.model` frontmatter)
+
+**For Claude Code users:**
+
+The `.ados-claude/` directory is pre-generated and committed to the repo. No build step required.
+
+Install options:
+
+- **Marketplace (recommended):**
+  ```
+  /plugin marketplace add juliusz-cwiakalski/agentic-delivery-os
+  /plugin install ados@ados
+  ```
+- **Local development:** `claude --plugin-dir .ados-claude`
+
+Point Claude Code at the plugin root (`.ados-claude/`), not at the `agents/` or `skills/` subdirectories — Claude Code reads `.claude-plugin/plugin.json` from the directory you pass.
+
+**Marketplace structure:**
+- `.claude-plugin/marketplace.json` (repo root) - Tells Claude Code where to find the ADOS plugin
+- `.ados-claude/.claude-plugin/plugin.json` - The actual plugin manifest (inside the plugin directory)
+
+**For OpenCode users:**
+
+No changes — continue using `.opencode/` as before. The `claude:` frontmatter key is ignored by OpenCode.
+
+**Adding new tools:**
+
+See [doc/guides/adding-tool-support.md](doc/guides/adding-tool-support.md) for the extensibility pattern.
 
 ## Autopilot (PM-driven)
 

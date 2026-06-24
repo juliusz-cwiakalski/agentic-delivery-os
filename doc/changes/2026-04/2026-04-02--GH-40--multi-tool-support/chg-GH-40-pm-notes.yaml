@@ -1,0 +1,117 @@
+# PM Notes for GH-40: Multi-tool support (Claude Code)
+change_id: GH-40
+title: "Support Claude Code as installation target (single-source agent definitions)"
+
+phases:
+  clarify_scope:
+    started: "2026-04-02T10:00:00Z"
+    completed: "2026-04-02T11:30:00Z"
+  specification:
+    started: "2026-04-02T11:35:00Z"
+    completed: "2026-04-02T11:45:00Z"
+  test_planning:
+    started: "2026-04-02T11:45:00Z"
+    completed: "2026-04-02T11:55:00Z"
+  delivery_planning:
+    started: "2026-04-02T11:45:00Z"
+    completed: "2026-04-02T11:55:00Z"
+  delivery:
+    started: "2026-04-02T12:00:00Z"
+    completed: "2026-04-02T14:30:00Z"
+  system_spec_update:
+    started: "2026-04-02T14:30:00Z"
+    completed: "2026-04-02T14:30:00Z"
+    notes: "Skipped - this change is tooling/build infrastructure, not system spec changes"
+  review_fix:
+    started: null
+    completed: null
+    notes: "Skipped per user request 'no review'"
+  quality_gates:
+    started: "2026-04-02T14:30:00Z"
+    completed: "2026-04-02T15:00:00Z"
+    notes: "All acceptance criteria verified via runner checks"
+  dod_check:
+    started: "2026-04-02T15:00:00Z"
+    completed: "2026-04-02T15:15:00Z"
+    notes: "All AC met, all NFRs satisfied, all phases complete"
+  pr_creation:
+    started: "2026-04-02T15:15:00Z"
+    completed: "2026-04-02T15:20:00Z"
+    url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/50"
+  # Additional phases for merged GH-51 scope
+  additional_delivery:
+    started: "2026-04-02T15:25:00Z"
+    completed: "2026-04-02T16:00:00Z"
+    notes: "GH-51 scope merged: tests, docs, install script"
+
+decisions:
+  - text: "Use plugin-root structure for Claude Code (official pattern) instead of Justyna's .claude/ approach"
+    date: "2026-04-02"
+  - text: "Keep .opencode/ as single source of truth - generate Claude Code plugin from it"
+    date: "2026-04-02"
+  - text: "Add claude: key to agent/command frontmatter with model subkey (opus/sonnet)"
+    date: "2026-04-02"
+  - text: "Scope limited to Claude Code only - no other tools in this ticket"
+    date: "2026-04-02"
+  - text: "OpenCode installation must remain unchanged and backward compatible"
+    date: "2026-04-02"
+  - text: "Plugin name: 'ados' (short, distinctive, easy to type)"
+    date: "2026-04-02"
+  - text: "Plugin output directory: .ados-claude/ at repo root (committed to repo)"
+    date: "2026-04-02"
+  - text: "Build-then-commit workflow: build script generates .ados-claude/, CI verifies build is current"
+    date: "2026-04-02"
+  - text: "MCP tools: stay in external config (.opencode/opencode.jsonc), NOT in agent frontmatter claude: section"
+    date: "2026-04-02"
+  - text: "Build script includes license header generation step"
+    date: "2026-04-02"
+  - text: "Design for extensibility: build script architecture should support future tools (Copilot CLI, Codex, etc.)"
+    date: "2026-04-02"
+  - text: "GitHub Copilot CLI: parked for future ticket - research confirms feasibility"
+    date: "2026-04-02"
+
+open_questions: []
+
+blockers: []
+
+notes:
+  - text: "Research completed: Claude Code uses plugin-root structure with .claude-plugin/plugin.json manifest"
+    type: info
+    workItemRef: GH-40
+    date: "2026-04-02"
+  - text: "Model specification: use shorthands (opus/sonnet/haiku) not full model IDs"
+    type: info
+    workItemRef: GH-40
+    date: "2026-04-02"
+  - text: "Both agents AND skills need model in frontmatter - commands also need allowed-tools"
+    type: info
+    workItemRef: GH-40
+    date: "2026-04-02"
+  - text: "Previous work in tmp/2026-04-01--GH-40--multi-tool-support contains spec/plan for older approach - will need revision"
+    type: info
+    workItemRef: GH-40
+    date: "2026-04-02"
+  - text: "GitHub Copilot CLI research confirms feasibility - same Markdown + YAML frontmatter format, ~60-70% of Claude Code effort"
+    type: info
+    workItemRef: GH-40
+    date: "2026-04-02"
+  - text: "Delivery completed - all 7 phases executed by @coder"
+    type: resolved
+    workItemRef: GH-40
+    date: "2026-04-02"
+  - text: "DoD check completed - all acceptance criteria met, all NFRs satisfied"
+    type: resolved
+    workItemRef: GH-40
+    date: "2026-04-02"
+  - text: "PR created: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/50"
+    type: resolved
+    workItemRef: GH-40
+    date: "2026-04-02"
+  - text: "GH-51 scope merged into GH-40: tests, documentation, install script improvements"
+    type: info
+    workItemRef: GH-40
+    date: "2026-04-02"
+  - text: "Additional scope: test-build-claude-plugin.sh, README updates, install.sh --tool flag"
+    type: info
+    workItemRef: GH-40
+    date: "2026-04-02"

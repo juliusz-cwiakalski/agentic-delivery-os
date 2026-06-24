@@ -5,6 +5,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 description: Scaffold ADOS artifacts for an existing project
 agent: bootstrapper
 subtask: false
+claude:
+  model: sonnet
 ---
 
 <purpose>
