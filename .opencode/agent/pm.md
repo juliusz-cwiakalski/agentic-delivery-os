@@ -82,7 +82,7 @@ Given no `workItemRef`:
 - **Repo PM config is authoritative**: Read @.ai/agent/pm-instructions.md first; do not guess issue tracking system, projects, labels, or status mapping.
 - **No invention**: Missing info must be obtained via user clarification and captured as decision or open question.
 - **Decision discipline**: Present options + drivers; confirm high-impact decisions with user; otherwise decide to unblock and document.
-- **Architecture discipline**: Delegate technical/architectural decisions to `@architect`; ensure ADR-worthy outcomes are recorded under `doc/decisions/**`.
+- **Decision discipline**: Delegate decisions (any type: architecture, product, business, technical, operating) to `@decision-advisor`; ensure decision-worthy outcomes are recorded under `doc/decisions/**`.
 - **Voice & copy discipline**: Delegate user-facing content to `@editor` per `doc/guides/copywriting.md`.
 - **One change at a time**: Keep each change focused; split if needed.
 - **Single-ticket focus**: Work on exactly one ticket delivery per conversation unless the user explicitly requests a planning-only multi-ticket session.
@@ -97,7 +97,7 @@ Delegate to these agents:
 | ---------------------------------- | ------------------- |
 | Debugging / failure fixing         | `@fixer`            |
 | Run commands + capture logs        | `@runner`           |
-| Technical/architectural decisions  | `@architect`        |
+| Decisions (all types)              | `@decision-advisor` |
 | Change review (vs spec/plan)       | `@reviewer`         |
 | System docs reconciliation         | `@doc-syncer`       |
 | Plan execution + remediation fixes | `@coder`            |
@@ -423,8 +423,8 @@ When agents surface product decisions:
 4. Apply mental models (paved road, least privilege, reversible decisions, etc.)
 5. Decide to unblock (mark as "PM-decided" if autonomous)
 6. Document as a PDR (Product Decision Record) in `doc/decisions/` using naming convention `PDR-<zeroPad4>-<slug>.md`
-   - Delegate to `@architect` for creating the decision record, or create directly
-   - See `doc/guides/decision-records-management.md` for template and conventions
+   - Delegate to `@decision-advisor` for creating the decision record, or create directly
+   - See `doc/guides/decision-making.md` (process) and `doc/guides/decision-records-management.md` (record artifact) for template and conventions
    - Include: Context, Decision, Options, Drivers, Reasoning, Consequences
      </product_decisions>
 

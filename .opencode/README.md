@@ -35,7 +35,8 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 
 ## Agents
 
-- `architect`: architecture decisions and decision record authoring (ADR/PDR/TDR/BDR/ODR)
+- `decision-advisor`: decisions of all types (architecture, product, business, technical, operating); decision record authoring (ADR/PDR/TDR/BDR/ODR) _(formerly `architect`)_
+- `decision-critic`: independent, read-only decision challenger; tri-state verdict (PASS / PASS_WITH_RISKS / REWORK)
 - `bootstrapper`: automate ADOS adoption for existing projects
 - `coder`: implement plan phases by writing code for a change
 - `committer`: create one Conventional Commit
@@ -66,10 +67,11 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - `/commit`: create one Conventional Commit
 - `/design`: generate/update visual design assets
 - `/plan-change`: plan a change (prep context)
-- `/plan-decision`: plan a technical decision (prep context)
+- `/plan-decision`: interactive decision session (any type: architecture, product, business, technical, operating)
 - `/pr`: create/update PR/MR and sync title/description (`tmp/pr/<branch>/description.md`, via `@pr-manager`); fetches ticket context from Jira/GitHub when `workItemRef` is detected
 - `/review`: review a change vs spec/plan
 - `/review-deep`: deeper review vs spec/plan
+- `/review-decision`: independent decision challenge (delegates to `@decision-critic`)
 - `/review-remote`: review open PR/MR diff and optionally publish findings (via `@reviewer` remote mode)
 - `/run-plan`: execute an implementation plan
 - `/sync-docs`: reconcile system specs from a change

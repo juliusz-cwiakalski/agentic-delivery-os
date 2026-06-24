@@ -33,8 +33,9 @@
   //   Tier 5 (free)  — trivial: command execution, log capture
 
   "agent": {
-    // --- Tier 1 (3.0x) — deep reasoning, architecture, thorough review ---
-    "architect":               { "model": "github-copilot/claude-opus-4.6" },
+    // --- Tier 1 (3.0x) — deep reasoning, decisions, thorough review ---
+    "decision-advisor":        { "model": "github-copilot/claude-opus-4.6" },
+    "decision-critic":         { "model": "github-copilot/claude-opus-4.6" },
     "bootstrapper":            { "model": "github-copilot/claude-opus-4.6" },
     "reviewer":                { "model": "github-copilot/claude-opus-4.6" },
     "plan-writer":             { "model": "github-copilot/claude-opus-4.6" },

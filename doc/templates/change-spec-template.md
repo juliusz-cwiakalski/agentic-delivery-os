@@ -172,7 +172,7 @@ Flow 1: ...
 <!-- Table format:
 | ID | Question | Context | Status |
 |----|----------|---------|--------|
-| OQ-1 | ... | ... | Decision needed: consult `@architect` |
+| OQ-1 | ... | ... | Decision needed: consult `@decision-advisor` |
 -->
 
 ## 15. DECISION LOG

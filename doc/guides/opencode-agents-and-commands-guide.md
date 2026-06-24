@@ -66,8 +66,9 @@ Use these when you want to trigger a specific step in the process.
 | `/commit`                | Creates one Conventional Commit.                              | When saving progress.                      |
 | `/pr`                    | Creates/updates a PR/MR and syncs title + description.        | When preparing for review/merge.           |
 | `/design`                | Generate/update visual identity and UX assets.                | When working on UI/brand assets.           |
-| `/plan-decision`         | Interactive session for architectural decisions.              | When a complex trade-off needs an ADR.     |
+| `/plan-decision`         | Interactive session for decisions (any type).                | When a complex trade-off needs a record.   |
 | `/write-decision`        | Generates the formal decision record (ADR/PDR/TDR/BDR/ODR).  | After the decision session.                |
+| `/review-decision`       | Independent decision challenge (via `@decision-critic`).     | When a decision needs a second look.       |
 | `/bootstrap`             | AI-guided project setup for ADOS adoption.                    | When onboarding a new project to ADOS.     |
 | `/check`                 | Runs quality gates and summarizes logs to files.              | When you need clean, shareable results.    |
 | `/check-fix`             | Runs quality gates and auto-fixes failures.                   | When you want automatic remediation.       |
@@ -80,7 +81,7 @@ Use these when you need intelligent analysis or orchestration.
 | :---------------- | :----------------------------------------------------------------------------------------- | :---------------------------------------------- |
 | `@pm`             | **Orchestrator**. Manages tickets (Jira/GitHub) and turns backlog into accepted artifacts. | Use for **Autopilot** (see Section 4).          |
 | `@coder`          | **Implementer**. Writes code per implementation plan phases.                               | Invoked by PM or via `/run-plan`.               |
-| `@architect`      | **Advisor**. CTO-level sparring partner.                                                   | Use for complex design decisions or ADRs.       |
+| `@decision-advisor` | **Decision Advisor**. Decisions of all types (architecture, product, business, technical, operating); decision record authoring. | Use for complex decisions or ADR/PDR/BDR/TDR/ODR. |
 | `@spec-writer`    | **Spec Author**. Generates canonical change specifications.                                | Invoked by PM or via `/write-spec`.             |
 | `@plan-writer`    | **Plan Author**. Generates phased implementation plans.                                    | Invoked by PM or via `/write-plan`.             |
 | `@test-plan-writer` | **Test Plan Author**. Generates test plans with traceable coverage.                      | Invoked by PM or via `/write-test-plan`.        |

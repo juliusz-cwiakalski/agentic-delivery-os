@@ -59,7 +59,7 @@ UNINSTALL_MODE=""
 # Known ADOS agent files (installed globally)
 readonly ADOS_AGENT_FILES=(
   bootstrapper.md doc-syncer.md test-plan-writer.md plan-writer.md
-  spec-writer.md architect.md pm.md image-reviewer.md image-generator.md
+  spec-writer.md decision-advisor.md decision-critic.md pm.md image-reviewer.md image-generator.md
   toolsmith.md committer.md designer.md reviewer.md runner.md coder.md
   fixer.md pr-manager.md external-researcher.md editor.md
 )

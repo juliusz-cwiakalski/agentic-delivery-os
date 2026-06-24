@@ -609,7 +609,7 @@ Do NOT touch frozen change artifacts or this change's own spec/pm-notes.
 
 **Tasks**:
 
-- [ ] **5.1** **Documentation track** — sweep `@architect` -> `@decision-advisor`
+- [x] **5.1** **Documentation track** — sweep `@architect` -> `@decision-advisor`
   in live docs/guides/specs/templates/top-level files:
   - `AGENTS.md` (the agent-team table + the `coder` delegation line) -> reference
     `@decision-advisor`; add a one-line **migration note** documenting the rename.
@@ -627,18 +627,20 @@ Do NOT touch frozen change artifacts or this change's own spec/pm-notes.
     `decision-making.md` where appropriate.
   - `doc/guides/opencode-agents-and-commands-guide.md` (the agent table row for
     `@architect`).
+  - `doc/guides/opencode-model-configuration.md` (all `architect` model tier
+    references -> `decision-advisor`/`decision-critic`).
   - `doc/templates/change-spec-template.md` (the OPEN-QUESTIONS table example
     "Decision needed: consult `@architect`" -> `@decision-advisor`).
   - `.ai/agent/pm-instructions.md` (line ~110: "Delegate to `@architect`" ->
     `@decision-advisor`).
-- [ ] **5.2** **`.opencode/` track (via `@toolsmith`)** — sweep `@architect` ->
+- [x] **5.2** **`.opencode/` track (via `@toolsmith`)** — sweep `@architect` ->
   `@decision-advisor` in the orchestration/implementation agents:
   - `.opencode/agent/pm.md` (~lines 85, 100, 426).
   - `.opencode/agent/spec-writer.md` (~line 171).
   - `.opencode/agent/plan-writer.md` (~line 99).
   - `.opencode/agent/coder.md` (~lines 36, 91, 133).
   - `.opencode/agent/bootstrapper.md` (~line 19).
-- [ ] **5.3** **System-spec reconciliation (doc-syncer-equivalent):** update
+- [x] **5.3** **System-spec reconciliation (doc-syncer-equivalent):** update
   `doc/spec/features/feature-decision-records.md` (KPIs line ~36, F-5 line ~58,
   NFR-3 line ~171, Dependencies line ~185; the governance/Codebase-Map entries
   referencing `.opencode/agent/architect.md`) to reflect `@decision-advisor`,
@@ -648,7 +650,7 @@ Do NOT touch frozen change artifacts or this change's own spec/pm-notes.
   table row: `decision-record-template.md` consumer `@architect` ->
   `@decision-advisor`; verify the body-section count stays accurate). Update both
   files' `last_updated` and `links.related_changes` (add `GH-46`).
-- [ ] **5.4** Confirm the sweep **excludes** frozen artifacts: `chg-GH-60-*`,
+- [x] **5.4** Confirm the sweep **excludes** frozen artifacts: `chg-GH-60-*`,
   `chg-GH-52-*`, `chg-GH-32-*`, `chg-GH-36-*`, `chg-GH-26-*` and their
   feedback/test-plan/red-team files, plus this change's own `chg-GH-46-spec.md`
   and `chg-GH-46-pm-notes.yaml` (immutable history).
@@ -955,4 +957,5 @@ widely distributed (Phases 5, 6, 8).
 | 1 | COMPLETED | 2026-06-24 | 2026-06-24 | c8af272 | New decision-making.md (10 sections); demoted records-mgmt guide; additive template front matter + proportional rendering; GH-60 defects fixed in docs (template+guide); body order preserved (additive). |
 | 2 | COMPLETED | 2026-06-24 | 2026-06-24 | f86edb6 | git mv architect.md -> decision-advisor.md (history preserved) + rewrite (domain-neutral, 5 types, type-aware modes, no baked-in structure, references template, R2/R3 human approval); new decision-critic.md (read-only, RD-16 independence honesty, tri-state verdict). @toolsmith not spawnable -> applied customize-opencode skill discipline (GH-60 precedent). |
 | 3 | COMPLETED | 2026-06-24 | 2026-06-24 | 4a49bdf | plan-decision.md generalized (triage->classify->rigor->rights; <decision_planning_summary> + legacy alias; GH-60 wording fixed); write-decision.md generalized (proportional rendering, ai_assistance, rec!=decision, no auto-Accept R2/R3; RT-02: embedded_template removed -> single structural definition mirroring template; GH-60 fixes); new review-decision.md (read-only critic, tri-state verdict). |
-| 4 | COMPLETED | 2026-06-24 | 2026-06-24 | _(pending commit)_ | meeting-organizer.md routes via @decision-advisor (evidence input -> /plan-decision; durable -> /write-decision); delegation_policy @architect -> @decision-advisor; three decision modes documented. Meeting guide §2.4 documents three modes; §4.3 cross-links Decision-Making Guide + @decision-advisor. 0 @architect in meeting files. |
+| 4 | COMPLETED | 2026-06-24 | 2026-06-24 | 9743477 | meeting-organizer.md routes via @decision-advisor (evidence input -> /plan-decision; durable -> /write-decision); delegation_policy @architect -> @decision-advisor; three decision modes documented. Meeting guide §2.4 documents three modes; §4.3 cross-links Decision-Making Guide + @decision-advisor. 0 @architect in meeting files. |
+| 5 | COMPLETED | 2026-06-24 | 2026-06-24 | _(pending commit)_ | Documentation track: AGENTS.md (agent team + command table + /plan-decision RT-07 domain-neutral), README.md (19→20 agents, 16→17 commands), .opencode/README.md (agent+command inventory), change-lifecycle.md, onboarding guide, agents-and-commands guide, model-config guide (all 6 architect refs), change-spec-template, pm-instructions.md. .opencode/ track: pm.md (3 edits), coder.md (3 edits), spec-writer.md, plan-writer.md, bootstrapper.md. System-spec: feature-decision-records.md (agent refs + codebase map + last_updated + GH-46), feature-document-templates.md. Config: opencode-github-copilot.jsonc (architect→decision-advisor + decision-critic). scripts/uninstall.sh. Frozen artifacts untouched. |

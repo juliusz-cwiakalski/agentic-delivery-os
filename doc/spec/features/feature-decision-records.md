@@ -6,12 +6,13 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: SPEC-DECISION-RECORDS
 status: Current
 created: 2026-03-10
-last_updated: 2026-04-26
+last_updated: 2026-06-24
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
-  related_changes: ["GH-32", "GH-52"]
+  related_changes: ["GH-32", "GH-52", "GH-46"]
   guides:
+    - "doc/guides/decision-making.md"
     - "doc/guides/decision-records-management.md"
 summary: "Tracker-agnostic decision records standard supporting ADR/PDR/TDR/BDR/ODR with unified storage, optional business/product/operational metadata, and lifecycle integration."
 ---
@@ -33,7 +34,7 @@ ADOS provides a tracker-agnostic standard for recording and managing significant
 ### Goals & Success Metrics
 
 - **Primary Goal:** Every precedent-setting decision has a discoverable, structured record with context, alternatives, and rationale.
-- **KPIs:** Decision records directory exists and is integrated with agent tooling (`@architect`, `/plan-decision`, `/write-decision`).
+- **KPIs:** Decision records directory exists and is integrated with agent tooling (`@decision-advisor`, `/plan-decision`, `/write-decision`).
 
 ## User Experience & Functionality
 
@@ -55,7 +56,7 @@ ADOS provides a tracker-agnostic standard for recording and managing significant
 - **Lifecycle management (F-2):** Status transitions from Proposed → Under Review → Accepted → (Deprecated | Superseded).
 - **Immutability after acceptance (F-3):** Accepted decisions are not modified; changes create new superseding records.
 - **Cross-linking (F-4):** Decision records link to change specs via `links.related_changes` and vice versa via `links.decisions`.
-- **Agent integration (F-5):** `@architect` creates records via `/plan-decision` + `/write-decision`; records target `doc/decisions/`.
+- **Agent integration (F-5):** `@decision-advisor` creates records via `/plan-decision` + `/write-decision`; records target `doc/decisions/`.
 - **Index maintenance (F-6):** `doc/decisions/00-index.md` provides a table of all records.
 
 ### Naming Convention
@@ -107,11 +108,14 @@ Create a record when a decision is hard to reverse, has cross-component impact, 
 | `doc/decisions/` | Decision records directory | Flat directory containing all decision records, co-located by type prefix |
 | `doc/decisions/README.md` | Directory overview | Purpose, naming convention, lifecycle summary, and references |
 | `doc/decisions/00-index.md` | Index | Table of all decision records with ID, type, title, status, date, owners |
-| `doc/guides/decision-records-management.md` | Management guide | Full standard: types, naming, lifecycle, front matter, required sections, governance |
-| `doc/templates/decision-record-template.md` | Authoring template | Reusable template with front-matter skeleton, all sections, and inline HTML-comment guidance |
-| `.opencode/agent/architect.md` | Architect agent | Creates decision records; targets `doc/decisions/` |
-| `.opencode/command/write-decision.md` | Write Decision command | Generates decision record from planning context |
-| `.opencode/command/plan-decision.md` | Plan Decision command | Interactive decision planning session |
+| `doc/guides/decision-making.md` | Decision-making guide | Process-first guide: decision kernel (D0–D14), rigor levels (R0–R3 + emergency overlay), four-axis classification, DACI rights, AI-authority model, three decision modes |
+| `doc/guides/decision-records-management.md` | Record-artifact reference | Record standard: types, naming, lifecycle, front matter, governance (thin redirect to decision-making.md for process) |
+| `doc/templates/decision-record-template.md` | Authoring template | Reusable template with front-matter skeleton, proportional rendering guidance, and inline HTML-comment guidance |
+| `.opencode/agent/decision-advisor.md` | Decision advisor agent | Creates decision records; domain-neutral across all five types; targets `doc/decisions/` _(formerly `architect.md`)_
+| `.opencode/agent/decision-critic.md` | Decision critic agent | Independent, read-only decision challenger; tri-state verdict (PASS / PASS_WITH_RISKS / REWORK) |
+| `.opencode/command/write-decision.md` | Write Decision command | Generates decision record from planning context (proportional rendering by rigor level) |
+| `.opencode/command/plan-decision.md` | Plan Decision command | Interactive decision planning session (triage → classify → rigor → rights) |
+| `.opencode/command/review-decision.md` | Review Decision command | Independent decision challenge (delegates to `@decision-critic`) |
 
 ### Front Matter Schema
 
@@ -168,7 +172,7 @@ links:
 |----|----------|-------------|-----------|
 | NFR-1 | Completeness | Guide defines all 5 decision types with lifecycle, naming, and governance | 100% coverage |
 | NFR-2 | Template validity | Template renders as valid GitHub-flavored Markdown and keeps extended metadata optional | All sections present; ADR/TDR-compatible |
-| NFR-3 | Agent alignment | `@architect`, `/write-decision`, `/plan-decision` all target `doc/decisions/` | Zero references to `doc/adr/` |
+| NFR-3 | Agent alignment | `@decision-advisor`, `/write-decision`, `/plan-decision` all target `doc/decisions/` | Zero references to `doc/adr/` |
 
 ## Quality Assurance Strategy
 
@@ -182,13 +186,14 @@ links:
 
 ## Dependencies & Risks
 
-- **Depends on:** `@architect` agent for automated creation workflow
+- **Depends on:** `@decision-advisor` agent for automated creation workflow
 - **Depends on:** Document templates feature for the decision record template
 - **Risk:** Process overhead may discourage adoption — mitigated by lightweight design (single template, flat directory, familiar lifecycle)
 
 ## Related Documentation
 
-- **Management guide:** [doc/guides/decision-records-management.md](../../guides/decision-records-management.md) — full standard
+- **Process guide:** [doc/guides/decision-making.md](../../guides/decision-making.md) — decision kernel, rigor levels, classification, AI-authority model
+- **Record standard:** [doc/guides/decision-records-management.md](../../guides/decision-records-management.md) — record artifact standard
 - **Template:** [doc/templates/decision-record-template.md](../../templates/decision-record-template.md)
 - **Directory:** [doc/decisions/](../../decisions/)
 - **Onboarding guide:** [doc/guides/onboarding-existing-project.md](../../guides/onboarding-existing-project.md) — includes decision records setup instructions

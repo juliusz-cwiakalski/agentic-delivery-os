@@ -46,7 +46,7 @@ ADOS maintains templates in `doc/templates/` that serve as the structural source
 | `implementation-plan-template.md` | Implementation plan structure | `@plan-writer` |
 | `test-plan-template.md` | Test plan structure | `@test-plan-writer` |
 | `feature-spec-template.md` | Feature specification for `doc/spec/features/` | `@doc-syncer` |
-| `decision-record-template.md` | Decision record (all types) | `@architect` |
+| `decision-record-template.md` | Decision record (all types) | `@decision-advisor` |
 | `test-spec-template.md` | Test specification for `doc/quality/test-specs/` | `@doc-syncer` |
 | `north-star-template.md` | Product north star document for `doc/overview/01-north-star.md` | `@bootstrapper` |
 

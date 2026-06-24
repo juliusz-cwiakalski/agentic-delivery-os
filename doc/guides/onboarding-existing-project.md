@@ -272,7 +272,7 @@ Configures the `@pm` agent for your specific issue tracker and workflow.
 | **Definition of Ready (DoR)** | When tickets need pre-conditions before work starts | 5-9 point checklist: AC defined, dependencies identified, etc. |
 | **Estimation Methodology** | When team uses story points or T-shirt sizing | "Fibonacci scale (1-89), split at 100+, triangulate against reference stories" |
 | **PR/MR Workflow Customizations** | When merge process has repo-specific steps | "Squash-only merge, i18n completeness check before MR, human-only merge" |
-| **Decision Documentation** | When product decisions need formal records | "Delegate to `@architect`; use PDRs in `doc/decisions/`" |
+| **Decision Documentation** | When decisions need formal records | "Delegate to `@decision-advisor`; use ADR/PDR/BDR/TDR/ODR in `doc/decisions/`" |
 
 #### What NOT to include
 
@@ -597,7 +597,7 @@ Verify `doc/templates/` exists and contains the template files. Agents fall back
 
 ### "Decision records workflow doesn't work"
 
-Ensure `doc/decisions/` directory exists. The `@architect` agent writes decision records there. See [Decision Records Management Guide](decision-records-management.md).
+Ensure `doc/decisions/` directory exists. The `@decision-advisor` agent writes decision records there. See [Decision-Making Guide](decision-making.md) (process) and [Decision Records Management Guide](decision-records-management.md) (record artifact).
 
 ### "Change artifacts are in the wrong location"
 

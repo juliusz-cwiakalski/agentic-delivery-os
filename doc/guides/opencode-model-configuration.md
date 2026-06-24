@@ -52,7 +52,7 @@ Model assignments go in the `"agent"` section of your config:
   "agent": {
     "pm":               { "model": "github-copilot/claude-sonnet-4.6" },
     "coder":            { "model": "github-copilot/gpt-5.3-codex" },
-    "architect":        { "model": "github-copilot/claude-opus-4.6" },
+    "decision-advisor":  { "model": "github-copilot/claude-opus-4.6" },
     "committer":        { "model": "github-copilot/gpt-5-mini" }
     // ... all 22 agents
   }
@@ -71,7 +71,7 @@ Agent-specific model assignments override global defaults:
   "small_model": "anthropic/claude-haiku-4-5",  // For lightweight tasks
   
   "agent": {
-    "architect": { "model": "anthropic/claude-opus-4-6" },  // Override for architect
+    "decision-advisor": { "model": "anthropic/claude-opus-4-6" },  // Override for decision-advisor
     "coder": { "model": "openai/gpt-5.3-codex" }  // Override for coder
   }
 }
@@ -120,7 +120,7 @@ opencode
 ```
 
 The default config uses tiered model assignment for cost optimization:
-- **Tier 1 (3.0x)**: Critical reasoning — `architect`, `reviewer`, `bootstrapper`, `pm`, `toolsmith`, `plan-writer`, `doc-syncer`, `review-feedback-applier`
+- **Tier 1 (3.0x)**: Critical reasoning — `decision-advisor`, `decision-critic`, `reviewer`, `bootstrapper`, `pm`, `toolsmith`, `plan-writer`, `doc-syncer`, `review-feedback-applier`
 - **Tier 2 (1.0x)**: Core work — `coder`, `fixer`, `spec-writer`, `test-plan-writer`, `designer`, `pr-manager`, `editor`
 - **Tier 3 (0.33x)**: Well-scoped — `image-reviewer`, `image-generator`
 - **Tier 5 (free)**: Trivial — `committer`, `external-researcher`, `runner`
@@ -137,7 +137,7 @@ Create `.opencode/opencode-<provider>.jsonc`:
   "agent": {
     "pm": { "model": "anthropic/claude-sonnet-4-6" },
     "coder": { "model": "anthropic/claude-sonnet-4-6" },
-    "architect": { "model": "anthropic/claude-opus-4-6" }
+    "decision-advisor": { "model": "anthropic/claude-opus-4-6" }
     // ... configure all 22 agents
   }
 }
@@ -217,7 +217,7 @@ ADOS agents have different complexity levels. Match model capability to task:
 
 | Tier | Agents | Recommended Models |
 |------|--------|-------------------|
-| **Critical reasoning** | `architect`, `reviewer`, `bootstrapper`, `pm`, `toolsmith` | Claude Opus 4.6, GPT-5.3-Codex |
+| **Critical reasoning** | `decision-advisor`, `decision-critic`, `reviewer`, `bootstrapper`, `pm`, `toolsmith` | Claude Opus 4.6, GPT-5.3-Codex |
 | **Core work** | `coder`, `fixer`, `plan-writer`, `spec-writer`, `test-plan-writer` | Claude Sonnet 4.6, GPT-5.2-Codex |
 | **Well-scoped** | `committer`, `doc-syncer`, `pr-manager`, `editor` | Claude Haiku 4.5, Gemini 3 Flash |
 | **Light** | `external-researcher` | Grok Code Fast 1 |
@@ -248,7 +248,8 @@ This must be a primary agent (not a subagent).
 
 | Agent | Tier | Typical Model |
 |-------|------|----------------|
-| `architect` | Critical | opus |
+| `decision-advisor` | Critical | opus |
+| `decision-critic` | Critical | opus |
 | `bootstrapper` | Critical | opus |
 | `reviewer` | Critical | opus |
 | `review-feedback-applier` | Critical | opus |

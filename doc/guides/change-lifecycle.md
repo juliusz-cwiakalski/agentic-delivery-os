@@ -174,7 +174,7 @@ flowchart TD
 - `@pm` invokes `@coder` (via `/run-plan <workItemRef> execute all remaining phases no review`).
 - `@coder` executes all plan phases, delegating to:
   - `@designer` for UI/UX work
-  - `@architect` for technical/architectural decisions
+  - `@decision-advisor` for decisions (any type)
   - `@committer` for checkpointing progress
   - `@runner` for heavy command execution (full builds, full test suites)
 
@@ -344,7 +344,7 @@ notes: [] # { text, type, date }
 | 2. specification | `@spec-writer` | — |
 | 3. test_planning | `@test-plan-writer` | — |
 | 4. delivery_planning | `@plan-writer` | — |
-| 5. delivery | `@coder` | `@designer`, `@architect`, `@committer`, `@runner` |
+| 5. delivery | `@coder` | `@designer`, `@decision-advisor`, `@committer`, `@runner` |
 | 6. system_spec_update | `@doc-syncer` | — |
 | 7. review_fix | `@reviewer` | `@coder` |
 | 8. quality_gates | `@runner` | `@fixer` |
