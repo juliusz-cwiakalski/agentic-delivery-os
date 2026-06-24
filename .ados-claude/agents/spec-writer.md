@@ -179,7 +179,7 @@ MUST NOT appear: Implementation tasks, file paths, code-level instructions, merg
 - NFRs quantified (thresholds, percentiles, durations)
 - Risks include Impact & Probability (H/M/L), Mitigation, Residual Risk
 - Interfaces specify contracts without implementation directives
-- If an architectural decision is needed but unresolved, capture under OPEN QUESTIONS with note: "Decision needed: consult `@architect`"
+- If a decision is needed but unresolved, capture under OPEN QUESTIONS with note: "Decision needed: consult `@decision-advisor`"
   </authoring_rules>
 
 <template_reading>

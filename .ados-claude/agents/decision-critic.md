@@ -1,14 +1,23 @@
 ---
+# GENERATED FILE — DO NOT EDIT DIRECTLY.
+# Source of truth: .opencode/agent/decision-critic.md
+# Regenerate with: scripts/build-claude-plugin.sh
+# If behavior must change, edit the source file above and rebuild.
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # MIT License - see LICENSE file for full terms
-source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/decision-critic.md
-description: >-
-  Read-only independent challenger for decision records. Detects framing
-  errors, missing options, violated constraints, fragile assumptions, and
-  automation bias; runs a premortem; returns PASS / PASS_WITH_RISKS / REWORK.
-mode: all
-claude:
-  model: sonnet
+# source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/decision-critic.md
+name: decision-critic
+description: Read-only independent challenger for decision records. Detects framing   errors, missing options, violated constraints, fragile assumptions, and   automation bias; runs a premortem; returns PASS / PASS_WITH_RISKS / REWORK.
+model: sonnet
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
+  - Bash
+  - WebFetch
+  - "mcp__*"
 ---
 
 # Role

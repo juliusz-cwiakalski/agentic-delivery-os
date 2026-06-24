@@ -7,7 +7,7 @@
 # MIT License - see LICENSE file for full terms
 # source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/command/write-decision.md
 name: write-decision
-description: Generate a Decision Record (ADR/PDR/TDR/BDR/ODR) from planning context.
+description: Generate a Decision Record (ADR/PDR/TDR/BDR/ODR) from planning context, rendered proportionally by rigor.
 model: sonnet
 allowed-tools:
   - Read
@@ -23,10 +23,12 @@ allowed-tools:
 <purpose>
 Generate a COMPLETE, rationale-focused Decision Record for a given decision number, strictly from planning-session context and existing documentation. Supports all five decision types: ADR (Architecture), PDR (Product), TDR (Technical), BDR (Business), and ODR (Operational).
 
+Renders the record **proportionally by rigor** (R1 compact subset / R2 standard / R3 full), records AI-assistance provenance, keeps the **recommendation separate from the authorized decision**, and refuses to mark R2/R3 records `Accepted` without an authorized human decision.
+
 User invocation:
 /write-decision <number>
 
-Inputs other than <number> MUST be sourced from the active technical-decision planning context (especially the `<technical_decision_planning_summary>` block) and relevant repository docs; NOTHING may be invented.
+Inputs other than <number> MUST be sourced from the active decision planning context (especially the `<decision_planning_summary>` block; the legacy `<technical_decision_planning_summary>` tag and `adr.*` fields are accepted via alias) and relevant repository docs; NOTHING may be invented.
 
 The resulting decision record becomes the canonical record of the decision and its rationale, and should be linked from related changes and specs.
 </purpose>
@@ -34,7 +36,7 @@ The resulting decision record becomes the canonical record of the decision and i
 <inputs>
 - number='$1': string — REQUIRED (digits only; will be normalized and zero-padded to 4 digits)
 - allArguments='$ARGUMENTS': string — starts with number and may be followed by user hints (e.g., title refinements, decision type override)
-- previous conversation context from /plan-decision planning session, including `<technical_decision_planning_summary>`
+- previous conversation context from /plan-decision planning session, including `<decision_planning_summary>` (or the legacy `<technical_decision_planning_summary>` alias)
 </inputs>
 
 <directory_rules>
@@ -84,13 +86,13 @@ Validation:
 <context_lookup>
 The decision record generator must base its content on:
 
-- The `<technical_decision_planning_summary>` block produced by `/plan-decision <number>` in the current or recent conversation.
+- The `<decision_planning_summary>` block produced by `/plan-decision <number>` in the current or recent conversation. The legacy `<technical_decision_planning_summary>` tag and `adr.*` fields (`adr.number`, `adr.slug_hint`, `adr.title`) are accepted via **back-compat alias** with 0 behavior change (legacy `adr.number` → `record_number`, etc.; generic fields take precedence when both are present).
 - Relevant change specs under `doc/changes/**/*--*--*/chg-*-spec.md` when `related_changes` are present.
 - Existing decision records under `doc/decisions/**` referenced from planning context (for supersedes/related decisions).
-- Use `doc/templates/decision-record-template.md` as the structural guide for generating the decision record body.
+- Use `doc/templates/decision-record-template.md` as the **single source of truth** for the decision record body structure (section order) and proportional-rendering guidance.
 - System specs under `doc/spec/**` and contracts under `doc/contracts/**` where the decision materially affects them.
 
-If a `<technical_decision_planning_summary>` for this number is NOT available in context, the command MUST:
+If a `<decision_planning_summary>` (or legacy alias) for this number is NOT available in context, the command MUST:
 
 - Ask the user to either:
   - Re-run `/plan-decision <number>` and complete the planning summary, OR
@@ -99,7 +101,9 @@ If a `<technical_decision_planning_summary>` for this number is NOT available in
   </context_lookup>
 
 <decision_structure>
-The decision record markdown body (after front matter) MUST follow this structure and order:
+**`doc/templates/decision-record-template.md` is the single source of truth for the decision record body structure.** The heading order below is a mirror of the template's section order and MUST stay in sync with zero mismatches (NFR-4). Render proportionally by rigor (see the template's proportional-rendering guidance): R0 produces no record; R1 renders the compact subset; R2 the standard record; R3 the full record. Do NOT enumerate a second body structure elsewhere — this is the ONE structural definition in this command.
+
+The decision record markdown body (after front matter) MUST follow this structure and order (mirror of `doc/templates/decision-record-template.md`):
 
 1. `# <TYPE>-<number>: <Title>`
 2. `## Context`
@@ -109,24 +113,28 @@ The decision record markdown body (after front matter) MUST follow this structur
 6. `## Mental Models & Techniques Used`
 7. `## Alternatives Considered`
 8. `## Decision`
-9. `## Trade-offs & Consequences`
-10. `### Positive Outcomes`
-11. `### Negative Outcomes`
-12. `### Unresolved Questions`
-13. `## Implementation Plan`
-14. `## Verification Criteria`
-15. `## Confidence Rating`
-16. `## Lessons Learned (Retrospective)`
-17. `## Examples & Usage (Optional)`
-18. `## References`
+9. `## Trade-offs & Consequences` (with `### Positive Outcomes`, `### Negative Outcomes`, `### Unresolved Questions`)
+10. `## Implementation Plan`
+11. `## Verification Criteria`
+12. `## Confidence Rating`
+13. `## Lessons Learned (Retrospective)`
+14. `## Examples & Usage (Optional)`
+15. `## References`
 
 No extra top-level sections may be introduced before or between these headings. Additional subsections may be added **within** these sections if they are clearly nested and consistent with the template.
+
+### Proportional rendering by rigor (R1 ⊂ R3)
+
+- **R0:** no record (optional note/commit/ticket comment only).
+- **R1 (lightweight):** compact brief — render ONLY: Context, Problem Framing, Constraints (Hard Requirements), Decision Drivers, Alternatives Considered (baseline + ≥1 option), Decision, owner, revisit trigger. Omit the R3-only sections (Mental Models, full Implementation Plan, Verification Criteria, Confidence Rating, Lessons Learned, Examples). Resolves within 1 business day. R1 output is a STRICT PROPER SUBSET of R3.
+- **R2 (standard):** the full canonical record above.
+- **R3 (high assurance):** the full canonical record PLUS independent challenge (`@decision-critic` via `/review-decision`), a human final decision, and a review_date. `status` stays `Proposed` until an authorized human decides.
 </decision_structure>
 
 <authoring_rules>
 
 - Use ONLY planning context and existing documentation; do not invent new requirements, drivers, or constraints.
-- "Context" MUST describe the situation (architectural, product, technical, business, or operational as appropriate to the decision type), why the decision is needed now, and relevant constraints.
+- "Context" MUST describe the situation (architectural, product, technical, business, or operational as appropriate to the decision type), why the decision is needed now, and prior decisions/metrics/events that inform it. It must describe **situational facts only** — do NOT list binary constraints here (those belong in the Constraints section).
 - "Problem Framing (Clarified)" MUST reframe the user problem in objective technical terms, highlighting underlying causes.
 - "Constraints (Hard Requirements)" MUST be rendered from the planning summary's `hard_requirements:` field (distinct from `decision_drivers:`). Each constraint is rendered with the fields **ID** (`C-1`, `C-2`, …), **Statement**, **Source** (∈ regulatory | contractual | prior decision | AC | internal standard), **Verification** (∈ test | audit | code review | architect sign-off | demonstration), and **Negotiable** (yes | no). If `hard_requirements:` is empty or absent, render the section as a CONSCIOUS empty choice with an explicit statement (e.g., "No constraints identified.") — emptiness is never an omission. Constraints and drivers MUST be kept in their separate sections; never merge them.
 - "Decision Drivers" MUST list explicit, prioritized drivers (business, technical, operational, organizational) that the decision optimizes for. Drivers are continuous preferences used to rank alternatives; they are NOT binary gates (those live in Constraints).
@@ -139,7 +147,7 @@ No extra top-level sections may be introduced before or between these headings. 
   - State the final decision clearly.
   - Tie rationale explicitly back to decision drivers.
   - List key assumptions.
-  - Explicitly ATTEST that the chosen alternative satisfies every constraint, OR document an accepted-risk exception for any constraint it violates. An accepted-risk exception is permitted ONLY for constraints marked `negotiable: yes`; a non-negotiable (`negotiable: no`) constraint that the chosen alternative violates is DISQUALIFYING and must not be waved through.
+  - Explicitly ATTEST that the chosen alternative satisfies every constraint, OR document an accepted-risk exception for any constraint it violates. An accepted-risk exception is permitted ONLY for constraints marked `negotiable: yes`; a constraint marked `negotiable: no` that the chosen alternative violates is DISQUALIFYING and must not be waved through.
 - "Trade-offs & Consequences" MUST:
   - Separate positive outcomes, negative outcomes, and unresolved questions.
   - Make second-order and operational consequences explicit where known.
@@ -151,7 +159,14 @@ No extra top-level sections may be introduced before or between these headings. 
 - "Lessons Learned (Retrospective)" MAY initially contain a brief TODO-style note if the decision has not yet been implemented; this section is expected to evolve over time.
 - "Examples & Usage (Optional)" MAY be omitted for early decision records, but when present should reference representative scenarios, not code internals.
 - "References" MUST link to relevant changes, specs, contracts, decision records, and external sources.
-- Where planning context contains explicit labels like FACT, ASSUMPTION, TO CONFIRM, these MAY be retained as bold labels in the ADR where useful.
+- Where planning context contains explicit labels like FACT, ASSUMPTION, TO CONFIRM, these MAY be retained as bold labels in the record where useful.
+
+### AI-assistance provenance, recommendation vs decision, and the no-auto-Accept rule (F-5, F-10, RSK-7)
+
+- **Record `ai_assistance` provenance** in the front matter whenever AI was used: `used`, `roles`, `external_data_shared`, `citations_verified`, `human_decider`, `reviewers`. This records roles/provenance only — never store raw model chain-of-thought or logs (NFR-6).
+- **Recommendation ≠ decision.** The analyst/AI recommendation is always rendered SEPARATELY from the authorized decision (e.g., the "Decision" section states the recommendation as a recommendation, and the authorized decision — if any — is attributed to the human decider). Do not present an AI recommendation as an authorized decision.
+- **Never auto-Accept R2/R3.** For R2/R3 records, create the record at `status: Proposed` with `decision_date: null`. Do NOT transition to `Accepted` or set `decision_date` unless `ai_assistance.human_decider` (an authorized human decision) is present. R3 ALWAYS requires a human reviewer regardless of any AI critique.
+- **Optional `classification` and `governance` front matter.** When the planning summary carries them, write the `classification:` (domains/archetype/environment/rigor/reversibility/stakes/urgency/uncertainty/blast_radius/recurrence) and `governance:` (driver/decider/contributors/reviewers/performers/informed) blocks into the record's front matter. All such blocks are optional and additive.
   </authoring_rules>
 
 <placeholder_rules>
@@ -165,9 +180,9 @@ No extra top-level sections may be introduced before or between these headings. 
 
 <process>
 1. Read `$1` as rawNumber; normalize to digits-only and zero-pad to 4 digits.
-2. Obtain or reconstruct the `<technical_decision_planning_summary>` for this number from the planning session or explicit user-provided data.
+2. Obtain or reconstruct the `<decision_planning_summary>` (or legacy `<technical_decision_planning_summary>` alias) for this number from the planning session or explicit user-provided data. Apply the back-compat alias mapping for legacy `adr.*` fields if present.
 3. Derive:
-   - decisionType from planning summary `decision_type` field (defaults to ADR if not specified).
+   - decisionType from planning summary `decision_type` field (defaults to ADR ONLY when the type is genuinely unspecified — not when a non-architecture decision was misrouted).
    - Title from planning summary title field.
    - slugHint from slug_hint or by slugifying the title.
    - owners, service, labels, related_changes, decision_scope, and other meta fields from the planning summary.
@@ -178,8 +193,11 @@ No extra top-level sections may be introduced before or between these headings. 
    - If it does not exist: treat this as a NEW decision record.
 7. Construct front matter per <front_matter_rules>:
    - On creation: set created = today (UTC); last_updated = today; status = Proposed; decision_date = null; decision_type from step 3.
-   - On update: preserve created; set last_updated = today; retain existing status and decision_date unless explicitly overridden by user.
-8. Generate or update decision record body using <decision_structure>, <authoring_rules>, and planning context:
+   - Include the optional `classification`, `governance`, `ai_assistance`, and revisit-trigger blocks from the planning summary when present.
+   - **R2/R3:** status MUST remain Proposed with decision_date null UNLESS `ai_assistance.human_decider` is present (no auto-Accept).
+   - On update: preserve created; set last_updated = today; retain existing status and decision_date unless explicitly overridden by an authorized human decision.
+8. Generate or update decision record body using <decision_structure> (the single structural definition mirroring the template), <authoring_rules>, and planning context:
+   - Render proportionally by rigor (R1 compact subset / R2 standard / R3 full) per <decision_structure>.
    - For NEW records: synthesize complete sections from planning summary and referenced docs.
    - For UPDATES: merge new planning information without rewriting historical sections; append to "Unresolved Questions", "Lessons Learned", and "References" instead of erasing prior content.
 9. Write decision record markdown to fullPath.
@@ -190,140 +208,15 @@ No extra top-level sections may be introduced before or between these headings. 
 12. Stop. Do not modify change specs, implementation plans, or system specs in this command; those are updated via their dedicated commands.
 </process>
 
-<embedded_template format="markdown">
-
-
-id: <TYPE>-<number>
-decision_type: <adr|pdr|tdr|bdr|odr>
-created: <created-date-utc>
-decision_date: <decision-date-or-null>
-last_updated: <last-updated-date-utc>
-status: <Proposed|Under Review|Accepted|Deprecated|Superseded>
-summary: <Short one-line summary of the decision>
-owners:
-  - <owner-or-team>
-service: <primary impacted service or domain>
-links:
-  related_changes:
-    - <workItemRef-or-empty>
-  supersedes: []
-  superseded_by: []
-  spec: []
-  contracts: []
-  diagrams: []
-  decisions: []
-
-
-# <TYPE>-<number>: <Title>
-
-## Context
-
-Concise description of the technical/architectural situation, triggers for this decision, and relevant constraints.
-
-## Problem Framing (Clarified)
-
-Objective reframing of the problem, focusing on underlying causes rather than symptoms.
-
-## Constraints (Hard Requirements)
-
-Binary pass/fail gates that ELIMINATE alternatives — distinct from Decision Drivers (continuous ranking preferences). Rendered from the planning summary `hard_requirements:` field. If no hard requirements exist, state that explicitly here as a conscious empty choice (e.g., "No constraints identified.").
-
-### C-1: <constraint statement>
-
-- **Statement:** <the requirement phrased as a pass/fail test>
-- **Source:** <regulatory | contractual | prior decision | AC | internal standard>
-- **Verification:** <test | audit | code review | architect sign-off | demonstration>
-- **Negotiable:** <yes | no>  (`no` = a violation is disqualifying; `yes` = a documented accepted-risk exception may be recorded in the Decision)
-
-## Decision Drivers
-
-- Business drivers (e.g., cost, time-to-market, risk).
-- Technical drivers (e.g., performance, reliability, coupling).
-- Operational and organizational drivers (e.g., operability, cognitive load).
-
-## Mental Models & Techniques Used
-
-- List of mental models and techniques applied (e.g., First Principles, Inversion, Second-Order Thinking, 5 Whys).
-
-## Alternatives Considered
-
-Each alternative MUST include an explicit constraint-compliance evaluation against every documented constraint (C-1, C-2, …), not only pros/cons against drivers. Choose format via the readability heuristic (prose vs matrix; default to matrix when unsure). Table-stakes constraints all alternatives satisfy get a one-line acknowledgment.
-
-1. **Alternative A — <Name>**
-   - Summary: <short summary>
-   - Pros: <bullets>
-   - Cons: <bullets>
-   - Constraint compliance: <explicit pass/fail per constraint C-1, C-2, …, or a matrix row>
-   - Why rejected / chosen: <link to drivers>
-
-2. **Alternative B — <Name>**
-   - ...
-   - Constraint compliance: <explicit pass/fail per constraint>
-
-3. **Alternative 0 — Do nothing / keep current approach (if applicable)**
-   - Summary: <what happens if we do nothing>
-   - Pros / Cons compared to other options.
-   - Constraint compliance: <explicit pass/fail per constraint>
-
-## Decision
-
-- Final decision statement.
-- Core rationale, explicitly linked to decision drivers.
-- Explicit assumptions acknowledged.
-- Constraint compliance attestation: explicitly attest the chosen alternative satisfies every constraint, OR document an accepted-risk exception for any violated constraint — permitted ONLY for constraints marked `negotiable: yes` (a `negotiable: no` violation is disqualifying).
-
-## Trade-offs & Consequences
-
-### Positive Outcomes
-
-- Benefits expected from this decision.
-
-### Negative Outcomes
-
-- Known downsides, additional complexity, or risks introduced by this decision.
-
-### Unresolved Questions
-
-- Remaining risks, information gaps, or areas requiring validation, each with an owner where possible.
-
-## Implementation Plan
-
-1. High-level requirements and refactors implied by the decision.
-2. Rollout strategy and guardrails.
-3. Risk mitigation during implementation.
-4. Design details at the conceptual/architecture level (no low-level tasks or code).
-
-## Verification Criteria
-
-- KPIs or metrics to track decision impact.
-- Timeframe and tools to validate success or failure.
-
-## Confidence Rating
-
-- Confidence: <Low|Medium|High>.
-- Factors influencing confidence: data, precedent, validation.
-
-## Lessons Learned (Retrospective)
-
-- To be populated as the decision is implemented and observed.
-
-## Examples & Usage (Optional)
-
-- Representative flows, configurations, or scenarios where this decision is applied.
-
-## References
-
-- Linked change specs, technical docs, diagrams, prior decision records.
-- External sources or research influencing the decision.
-
-
-</embedded_template>
+<record_template_reference>
+**Do NOT duplicate the decision record body structure here.** `doc/templates/decision-record-template.md` is the single source of truth for the record body (section order, front-matter skeleton, inline guidance, and proportional-rendering rules). Read it at runtime and follow its section order verbatim. This command keeps exactly ONE structural definition — the `<decision_structure>` mirror above — which MUST match the template with zero mismatches (NFR-4).
+</record_template_reference>
 
 <output_contract>
 
-- Writes exactly one decision record file: `<TYPE>-<adrNumber>-<slug>.md`.
+- Writes exactly one decision record file: `<TYPE>-<number>-<slug>.md`.
 - File is placed under: `doc/decisions/`.
-- Content follows <decision_structure> and is semantically aligned with `doc/templates/decision-record-template.md`.
+- Content follows <decision_structure> (the single structural mirror) and is generated from `doc/templates/decision-record-template.md` as the canonical source.
 - No `<...>` placeholders remain; any missing information is called out explicitly as TODO or unresolved questions.
   </output_contract>
 

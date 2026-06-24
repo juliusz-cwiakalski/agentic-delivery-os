@@ -1,11 +1,23 @@
 ---
+# GENERATED FILE — DO NOT EDIT DIRECTLY.
+# Source of truth: .opencode/command/review-decision.md
+# Regenerate with: scripts/build-claude-plugin.sh
+# If behavior must change, edit the source file above and rebuild.
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # MIT License - see LICENSE file for full terms
-source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/command/review-decision.md
+# source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/command/review-decision.md
+name: review-decision
 description: Review a decision record via @decision-critic for an independent challenge (read-only; returns PASS / PASS_WITH_RISKS / REWORK).
-agent: decision-critic
-claude:
-  model: sonnet
+model: sonnet
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
+  - Bash
+  - WebFetch
+  - "mcp__*"
 ---
 
 <purpose>

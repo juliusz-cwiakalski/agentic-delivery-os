@@ -107,7 +107,7 @@ IMPLEMENTATION PLAN sections (EXACT order):
 
 - Extract maximum context from spec; do not invent requirements
 - Missing info → bullet under "Open questions" in Context and Goals
-- If architectural decision needed: note "Decision needed: consult `@architect`" and include ADR placeholder
+- If a decision is needed: note "Decision needed: consult `@decision-advisor`" and include decision-record placeholder
 
 Phase formatting:
 
