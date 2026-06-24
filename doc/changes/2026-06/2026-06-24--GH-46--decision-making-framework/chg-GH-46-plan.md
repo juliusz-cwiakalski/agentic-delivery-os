@@ -461,7 +461,7 @@ R2/R3, and an independent review command.
 
 **Tasks**:
 
-- [ ] **3.1** **Delegate to `@toolsmith`** to generalize
+- [x] **3.1** **Delegate to `@toolsmith`** to generalize
   `.opencode/command/plan-decision.md`:
   - Update frontmatter `agent: architect` -> `agent: decision-advisor`; update
     `description` from "Interactive technical-decision planning session" to a
@@ -481,7 +481,7 @@ R2/R3, and an independent review command.
   - **GH-60 carryover (RT-03):** neutralize the "non-negotiable" wording in
     `.opencode/command/plan-decision.md` → `negotiable: no` / neutral pass/fail wording
     (one of the five sources coordinated with task 1.5).
-- [ ] **3.2** **Delegate to `@toolsmith`** to generalize
+- [x] **3.2** **Delegate to `@toolsmith`** to generalize
   `.opencode/command/write-decision.md`:
   - Update frontmatter `agent: architect` -> `agent: decision-advisor`.
   - **Consume the generic `<decision_planning_summary>`** (and accept the legacy
@@ -502,17 +502,17 @@ R2/R3, and an independent review command.
     (drop "constraints" from the Context authoring rule) in `write-decision.md` —
     one of the five non-negotiable sources and one of the two Context-conflation
     sources (coordinated with task 1.5).
-- [ ] **3.3** **Delegate to `@toolsmith`** to create new
+- [x] **3.3** **Delegate to `@toolsmith`** to create new
   `.opencode/command/review-decision.md`:
   - Frontmatter `agent: decision-critic`.
   - Invocation `/review-decision <ID>`; loads the decision record read-only;
     delegates to `@decision-critic` for independent challenge (D10); produces a
     review artifact/verdict (PASS / PASS_WITH_RISKS / REWORK) and **modifies
     nothing** by default (spec F-7).
-- [ ] **3.4** Confirm the command `agent:` frontmatter fields are all updated
+- [x] **3.4** Confirm the command `agent:` frontmatter fields are all updated
   (`plan-decision`, `write-decision` -> `decision-advisor`; `review-decision` ->
   `decision-critic`).
-- [ ] **3.5** **Consolidate the two structural copies in `/write-decision`** (RT-02).
+- [x] **3.5** **Consolidate the two structural copies in `/write-decision`** (RT-02).
   The command currently carries BOTH `<decision_structure>` (the ordered heading list)
   AND `<embedded_template>` (a full body duplicate) — two structural definitions of the
   same record. Consolidate into **exactly ONE** structural definition that **references**
@@ -953,4 +953,5 @@ widely distributed (Phases 5, 6, 8).
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
 | 1 | COMPLETED | 2026-06-24 | 2026-06-24 | c8af272 | New decision-making.md (10 sections); demoted records-mgmt guide; additive template front matter + proportional rendering; GH-60 defects fixed in docs (template+guide); body order preserved (additive). |
-| 2 | COMPLETED | 2026-06-24 | 2026-06-24 | _(pending commit)_ | git mv architect.md -> decision-advisor.md (history preserved) + rewrite (domain-neutral, 5 types, type-aware modes, no baked-in structure, references template, R2/R3 human approval); new decision-critic.md (read-only, RD-16 independence honesty, tri-state verdict). @toolsmith not spawnable -> applied customize-opencode skill discipline (GH-60 precedent). |
+| 2 | COMPLETED | 2026-06-24 | 2026-06-24 | f86edb6 | git mv architect.md -> decision-advisor.md (history preserved) + rewrite (domain-neutral, 5 types, type-aware modes, no baked-in structure, references template, R2/R3 human approval); new decision-critic.md (read-only, RD-16 independence honesty, tri-state verdict). @toolsmith not spawnable -> applied customize-opencode skill discipline (GH-60 precedent). |
+| 3 | COMPLETED | 2026-06-24 | 2026-06-24 | _(pending commit)_ | plan-decision.md generalized (triage->classify->rigor->rights; <decision_planning_summary> + legacy alias; GH-60 wording fixed); write-decision.md generalized (proportional rendering, ai_assistance, rec!=decision, no auto-Accept R2/R3; RT-02: embedded_template removed -> single structural definition mirroring template; GH-60 fixes); new review-decision.md (read-only critic, tri-state verdict). |
