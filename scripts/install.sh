@@ -80,14 +80,16 @@ readonly ADOS_UPDATABLE_FILES=(
   "doc/00-index.md"
   # Generic ADOS guides (framework docs, not project-specific)
   "doc/guides/change-lifecycle.md"
-  "doc/guides/unified-change-convention-tracker-agnostic-specification.md"
+  "doc/guides/claude-code-setup.md"
+  "doc/guides/copywriting.md"
   "doc/guides/decision-records-management.md"
+  "doc/guides/external-researcher-setup.md"
+  "doc/guides/meeting-preparation-and-summarization.md"
+  "doc/guides/onboarding-existing-project.md"
   "doc/guides/opencode-agents-and-commands-guide.md"
   "doc/guides/opencode-model-configuration.md"
-  "doc/guides/tools-convention.md"
-  "doc/guides/copywriting.md"
-  "doc/guides/system-dependencies.md"
-  "doc/guides/onboarding-existing-project.md"
+  "doc/guides/pr-platform-integration.md"
+  "doc/guides/unified-change-convention-tracker-agnostic-specification.md"
   # Decision records stubs
   "doc/decisions/README.md"
   "doc/decisions/00-index.md"
@@ -649,12 +651,22 @@ install_local_files() {
   # --- Project-specific files (preserve local edits) ---
   local file
   for file in "${ADOS_PROJECT_FILES[@]}"; do
-    copy_file_with_diff "${source_dir}/${file}" "${file}" "${file}"
+    if [[ -f "${source_dir}/${file}" ]]; then
+      copy_file_with_diff "${source_dir}/${file}" "${file}" "${file}"
+    else
+      log_warn "Skipping (not in source): ${file}"
+    fi
   done
 
   # --- Updatable files (always track upstream) ---
+  # A stale manifest entry (file renamed/removed upstream) must not abort the
+  # whole install: warn and skip so the remaining files still get installed.
   for file in "${ADOS_UPDATABLE_FILES[@]}"; do
-    copy_updatable_file "${source_dir}/${file}" "${file}" "${file}"
+    if [[ -f "${source_dir}/${file}" ]]; then
+      copy_updatable_file "${source_dir}/${file}" "${file}" "${file}"
+    else
+      log_warn "Skipping (not in source): ${file}"
+    fi
   done
 
   # --- Templates (always track upstream) ---
