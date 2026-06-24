@@ -18,6 +18,33 @@ reversibility: null                       # optional: easy | moderate | hard
 review_date: null                         # optional: YYYY-MM-DD
 business_impact: null                     # optional short impact statement
 customer_impact: null                     # optional short impact statement
+# --- GH-46 optional additive blocks (all optional; omit for any record) ---
+classification:                           # optional (DM-1): drives routing & rendering
+  domains: []                             # e.g., [architecture, security]
+  archetype: null                         # selection | design | policy | go_no_go | ...
+  environment: null                       # Cynefin: clear | complicated | complex | chaotic
+  rigor: null                             # R0 | R1 | R2 | R3 (R0 produces no record)
+  reversibility: null                     # easy | moderate | hard
+  stakes: null                            # low | medium | high
+  urgency: null                           # low | medium | high
+  uncertainty: null                       # low | medium | high
+  blast_radius: null                      # local | team | org | customers | market
+  recurrence: null                        # one-off | recurring
+governance:                               # optional (DM-2): DACI decision rights
+  driver: null                            # who coordinates the process
+  decider: null                           # the one accountable authority
+  contributors: []                        # expertise/evidence providers
+  reviewers: []                           # required reviewers/agreers
+  performers: []                          # who executes the decision
+  informed: []                            # who is notified
+ai_assistance:                            # optional (DM-3): provenance; recommendation != decision
+  used: false                             # was AI assistance used in this record?
+  roles: []                               # e.g., [researcher, analyst, critic, record-writer]
+  external_data_shared: false             # was any data sent to an external AI?
+  citations_verified: false               # were AI-provided citations checked?
+  human_decider: null                     # the authorized human decider (required before Accepted for R2/R3)
+  reviewers: []                           # human reviewers of the AI-assisted output
+revisit_triggers: []                      # optional (DM-4): conditions that should reopen this decision
 links:
   related_changes: []                    # workItemRef identifiers (e.g., "GH-32", "PDEV-123")
   supersedes: []                         # Decision IDs this record replaces
@@ -36,7 +63,21 @@ links:
 2. Replace all <...> placeholders with actual values
 3. Remove these instructions before finalizing
 4. Business/product/operational metadata fields are optional for ADR/TDR; use when relevant
-5. See doc/guides/decision-records-management.md for the full standard
+5. See doc/guides/decision-making.md for the decision PROCESS (kernel, rigor, rights, AI authority)
+6. See doc/guides/decision-records-management.md for the record-artifact standard
+
+PROPORTIONAL RENDERING (render by rigor; one template, scaled depth):
+- R0 (routine/delegated): NO record — optional note/commit/ticket comment only.
+- R1 (lightweight): compact brief — render ONLY: Context, Problem Framing,
+  Constraints (Hard Requirements), Decision Drivers, Alternatives Considered
+  (baseline + >=1 option), Decision, owner, revisit trigger. Omit the R3-only
+  sections (Mental Models, full Implementation Plan, Verification Criteria,
+  Confidence Rating, Lessons Learned, Examples). R1 resolves within 1 business
+  day; it is a STRICT PROPER SUBSET of the R3 record.
+- R2 (standard): the full canonical record below.
+- R3 (high assurance): the full canonical record PLUS independent challenge
+  (@decision-critic via /review-decision), a human final decision, and a
+  review_date. status stays Proposed until an authorized human decides.
 -->
 
 # <TYPE>-<zeroPad4>: <Title>
@@ -45,12 +86,14 @@ links:
 
 ## Context
 
-<!-- Describe the technical/architectural situation that prompted this decision.
-     Include:
-     - What is happening now (current state)
-     - Why a decision is needed (triggers)
-     - Relevant constraints (technical, organizational, regulatory)
-     - Prior decisions that inform this one
+<!-- Describe the situation that prompted this decision (situational facts, not pass/fail gates).
+      Include:
+      - What is happening now (current state)
+      - Why a decision is needed (triggers)
+      - Prior decisions, metrics, or events that inform this one
+      NOTE: do NOT list binary constraints here — those belong in the
+      Constraints (Hard Requirements) section below. Context is situational
+      facts only.
 -->
 
 ## Problem Framing (Clarified)
@@ -191,8 +234,8 @@ links:
 
      2. ACCEPTED-RISK EXCEPTION — for any constraint the chosen alternative violates,
         document an accepted-risk exception. This is permitted ONLY for constraints marked
-        `negotiable: yes`. A non-negotiable constraint (`negotiable: no`) that the chosen
-        alternative violates is DISQUALIFYING by definition and must not be waved through.
+         `negotiable: yes`. A constraint marked `negotiable: no` that the chosen
+         alternative violates is DISQUALIFYING by definition and must not be waved through.
 
      Exception format (one per violated negotiable constraint):
      - Constraint ID: C-<n> (negotiable: yes)

@@ -256,7 +256,7 @@ verifies against. Also land the GH-60 carryover defect fixes here (template side
 
 **Tasks**:
 
-- [ ] **1.1** Create new `doc/guides/decision-making.md` (process-first; supersedes
+- [x] **1.1** Create new `doc/guides/decision-making.md` (process-first; supersedes
   the artifact-centric guide). Author all ten required content areas per spec F-8:
   (1) When to decide — record-worthiness + the R0 escape hatch; (2) the universal
   kernel **D0-D14** (use the spec's F-1 stage list verbatim as the index);
@@ -279,13 +279,13 @@ verifies against. Also land the GH-60 carryover defect fixes here (template side
   skimmable document — NOT a multi-thousand-line tome — so the process is not bypassed
   for being too heavy; per-type nuance stays a condensed matrix (per RD-14), not
   proliferated files; target a length budget appropriate to a quick-reference guide.
-- [ ] **1.2** **Demote** `doc/guides/decision-records-management.md` to a thin
+- [x] **1.2** **Demote** `doc/guides/decision-records-management.md` to a thin
   record-artifact reference: keep the naming/front-matter/lifecycle content as an
   appendix, replace its process narrative with a redirect pointer to
   `decision-making.md`, and update its `@architect` references to
   `@decision-advisor` (its §9 "Agent Integration" subsection and §References
   link). The full process now lives in the new guide.
-- [ ] **1.3** Update `doc/templates/decision-record-template.md` with **optional,
+- [x] **1.3** Update `doc/templates/decision-record-template.md` with **optional,
   additive** front-matter blocks (all optional so existing records stay valid):
   - `classification:` (domains, archetype, environment, rigor R0-R3, reversibility,
     stakes, urgency, uncertainty, blast-radius, recurrence) — spec DM-1.
@@ -297,13 +297,13 @@ verifies against. Also land the GH-60 carryover defect fixes here (template side
   Existing extended-metadata fields (`decision_area`, `decision_scope`,
   `reversibility`, `review_date`, `business_impact`, `customer_impact`, optional
   links) MUST remain valid.
-- [ ] **1.4** Add **proportional-rendering guidance** to the template (OQ-A
+- [x] **1.4** Add **proportional-rendering guidance** to the template (OQ-A
   confirmed lean: one template, rendered proportionally): define the explicit
   R1 compact subset (problem, constraints, top drivers, baseline + >=1 option,
   choice + rationale, owner, revisit trigger), the R2 standard record, and the R3
   full record (independent challenge + human final decision + review date). State
   R0 produces no record.
-- [ ] **1.5** **Fix GH-60 carryover defects across ALL sources that carry the wording**
+- [x] **1.5** **Fix GH-60 carryover defects across ALL sources that carry the wording**
   (RT-03). The defect is cross-source, so the fix MUST be cross-source — every source is
   named below so none is missed:
   - **(a) "non-negotiable" → `negotiable: no` (or neutral pass/fail wording)** — the phrase
@@ -323,7 +323,7 @@ verifies against. Also land the GH-60 carryover defect fixes here (template side
     Phase 3 (tasks 3.1 and 3.2). (Note: the "Per-Alterative" typo flagged in the pm-notes
     appears only in this change's own pm-notes description, not in any live source — verify
     and confirm clean; no live edit needed if already correct.)
-- [ ] **1.6** Confirm the template edit is **strictly additive** — no existing
+- [x] **1.6** Confirm the template edit is **strictly additive** — no existing
   body section renamed/renumbered/reordered/removed; GH-60's section order
   preserved (spec NG-8, NFR-2). Body section order remains: Context, Problem
   Framing, Constraints (Hard Requirements), Decision Drivers, Mental Models &
@@ -950,4 +950,6 @@ widely distributed (Phases 5, 6, 8).
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| _To be populated during `/run-plan GH-46`. Commit each phase via `@committer` (Conventional Commits). Never stage `.ai/local/`._ |
+| Phase | Status | Started | Completed | Commit | Notes |
+|-------|--------|---------|-----------|--------|-------|
+| 1 | COMPLETED | 2026-06-24 | 2026-06-24 | _(pending commit)_ | New decision-making.md (10 sections); demoted records-mgmt guide; additive template front matter + proportional rendering; GH-60 defects fixed in docs (template+guide); body order preserved (additive). |
