@@ -52,3 +52,9 @@ notes:
   - text: "RETRO: @coder cannot invoke @toolsmith or @doc-syncer because subagent invocation tool isn't available in its environment. This is a workflow gap — either (a) PM should explicitly delegate .opencode/ edits to @toolsmith BEFORE invoking @coder, or (b) @coder's environment needs the task tool. Worth surfacing for process improvement."
     type: retro
     date: "2026-06-24"
+  - text: "Copilot PR review (7 comments) on PR #61: all VALID. Notable — Copilot caught a wording/spec drift that @reviewer missed ('non-negotiable' used as a generic descriptor for the Constraints section, contradicting the Negotiable: yes/no field). Fixed in commits 3d6fcbd (7 enumerated fixes) and a6e3ba8 (3 follow-up fixes from grep sweep). Reply posted to PR. RETRO: @reviewer should grep for terminology consistency across related sections, not just sample positions."
+    type: retro
+    date: "2026-06-24"
+  - text: "Post-merge sync (2026-06-24): PR #50 (GH-40 Claude Code support) merged to main (acc5e26, 111 files / 15,892 insertions). Merged origin/main into feat/GH-60 branch (merge commit 53fadc8) — clean, no conflicts. 3 overlap files (architect.md, plan-decision.md, write-decision.md) merged cleanly because GH-40 changes were in frontmatter (claude: key) and GH-60 changes in body (Constraints section). User ran scripts/build-claude-plugin.sh to regenerate .ados-claude/ — verified build output matches working tree exactly (0-byte diff), 15/15 build tests pass."
+    type: info
+    date: "2026-06-24"

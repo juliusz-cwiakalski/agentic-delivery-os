@@ -186,28 +186,29 @@ Follow the decision record rules in this prompt:
 5. **Decision record body structure (must be exact in this order)**
 
 6. `# <TYPE>-<zeroPad4>: <Title>`
-6. `## Context`
-7. `## Problem Framing (Clarified)`
-8. `## Decision Drivers`
-9. `## Mental Models & Techniques Used`
-10. `## Alternatives Considered`
-11. `## Decision`
-12. `## Trade-offs & Consequences`
-13. `### Positive Outcomes`
-14. `### Negative Outcomes`
-15. `### Unresolved Questions`
-16. `## Implementation Plan`
-17. `## Verification Criteria`
-18. `## Confidence Rating`
-19. `## Lessons Learned (Retrospective)`
-20. `## Examples & Usage (Optional)`
-21. `## References`
+7. `## Context`
+8. `## Problem Framing (Clarified)`
+9. `## Constraints (Hard Requirements)`
+10. `## Decision Drivers`
+11. `## Mental Models & Techniques Used`
+12. `## Alternatives Considered`
+13. `## Decision`
+14. `## Trade-offs & Consequences`
+15. `### Positive Outcomes`
+16. `### Negative Outcomes`
+17. `### Unresolved Questions`
+18. `## Implementation Plan`
+19. `## Verification Criteria`
+20. `## Confidence Rating`
+21. `## Lessons Learned (Retrospective)`
+22. `## Examples & Usage (Optional)`
+23. `## References`
 
-22. **Git safety**
+24. **Git safety**
     - Abort if there are unrelated staged changes.
     - Stage ONLY the decision record file.
 
-23. **Commit**
+25. **Commit**
     - New: `docs(<type>): add <TYPE>-<zeroPad4>-<slug>` (e.g., `docs(adr): add ADR-0001-event-bus`)
     - Update: `docs(<type>): refine <TYPE>-<zeroPad4>-<slug>`
 

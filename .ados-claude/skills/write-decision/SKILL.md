@@ -104,20 +104,21 @@ The decision record markdown body (after front matter) MUST follow this structur
 1. `# <TYPE>-<number>: <Title>`
 2. `## Context`
 3. `## Problem Framing (Clarified)`
-4. `## Decision Drivers`
-5. `## Mental Models & Techniques Used`
-6. `## Alternatives Considered`
-7. `## Decision`
-8. `## Trade-offs & Consequences`
-9. `### Positive Outcomes`
-10. `### Negative Outcomes`
-11. `### Unresolved Questions`
-12. `## Implementation Plan`
-13. `## Verification Criteria`
-14. `## Confidence Rating`
-15. `## Lessons Learned (Retrospective)`
-16. `## Examples & Usage (Optional)`
-17. `## References`
+4. `## Constraints (Hard Requirements)`
+5. `## Decision Drivers`
+6. `## Mental Models & Techniques Used`
+7. `## Alternatives Considered`
+8. `## Decision`
+9. `## Trade-offs & Consequences`
+10. `### Positive Outcomes`
+11. `### Negative Outcomes`
+12. `### Unresolved Questions`
+13. `## Implementation Plan`
+14. `## Verification Criteria`
+15. `## Confidence Rating`
+16. `## Lessons Learned (Retrospective)`
+17. `## Examples & Usage (Optional)`
+18. `## References`
 
 No extra top-level sections may be introduced before or between these headings. Additional subsections may be added **within** these sections if they are clearly nested and consistent with the template.
 </decision_structure>
@@ -127,15 +128,18 @@ No extra top-level sections may be introduced before or between these headings. 
 - Use ONLY planning context and existing documentation; do not invent new requirements, drivers, or constraints.
 - "Context" MUST describe the situation (architectural, product, technical, business, or operational as appropriate to the decision type), why the decision is needed now, and relevant constraints.
 - "Problem Framing (Clarified)" MUST reframe the user problem in objective technical terms, highlighting underlying causes.
-- "Decision Drivers" MUST list explicit, prioritized drivers (business, technical, operational, organizational) that the decision optimizes for.
+- "Constraints (Hard Requirements)" MUST be rendered from the planning summary's `hard_requirements:` field (distinct from `decision_drivers:`). Each constraint is rendered with the fields **ID** (`C-1`, `C-2`, …), **Statement**, **Source** (∈ regulatory | contractual | prior decision | AC | internal standard), **Verification** (∈ test | audit | code review | architect sign-off | demonstration), and **Negotiable** (yes | no). If `hard_requirements:` is empty or absent, render the section as a CONSCIOUS empty choice with an explicit statement (e.g., "No constraints identified.") — emptiness is never an omission. Constraints and drivers MUST be kept in their separate sections; never merge them.
+- "Decision Drivers" MUST list explicit, prioritized drivers (business, technical, operational, organizational) that the decision optimizes for. Drivers are continuous preferences used to rank alternatives; they are NOT binary gates (those live in Constraints).
 - "Mental Models & Techniques Used" should summarize which reasoning tools were applied (e.g., First Principles, Inversion, Second-Order Thinking, 5 Whys) as captured in planning.
 - "Alternatives Considered" MUST:
   - Include at least two substantive alternatives plus a "do nothing / keep current approach" baseline when applicable.
   - For each alternative, include summary, pros, cons, and why it was rejected or chosen.
+  - For each alternative, include an EXPLICIT constraint-compliance evaluation against each documented constraint (C-1, C-2, …), not only pros/cons against drivers. Choose format via a readability heuristic: PROSE (1–2 sentences/alternative) when all comply or few violations need explanation; a MATRIX (constraints × alternatives) when ≥3 constraints have mixed compliance or prose would exceed ~3 sentences/alternative. DEFAULT TO MATRIX when unsure. Table-stakes constraints (all alternatives satisfy) get a brief one-line acknowledgment rather than per-alternative listing.
 - "Decision" MUST:
   - State the final decision clearly.
   - Tie rationale explicitly back to decision drivers.
   - List key assumptions.
+  - Explicitly ATTEST that the chosen alternative satisfies every constraint, OR document an accepted-risk exception for any constraint it violates. An accepted-risk exception is permitted ONLY for constraints marked `negotiable: yes`; a non-negotiable (`negotiable: no`) constraint that the chosen alternative violates is DISQUALIFYING and must not be waved through.
 - "Trade-offs & Consequences" MUST:
   - Separate positive outcomes, negative outcomes, and unresolved questions.
   - Make second-order and operational consequences explicit where known.
@@ -220,6 +224,17 @@ Concise description of the technical/architectural situation, triggers for this 
 
 Objective reframing of the problem, focusing on underlying causes rather than symptoms.
 
+## Constraints (Hard Requirements)
+
+Binary pass/fail gates that ELIMINATE alternatives — distinct from Decision Drivers (continuous ranking preferences). Rendered from the planning summary `hard_requirements:` field. If no hard requirements exist, state that explicitly here as a conscious empty choice (e.g., "No constraints identified.").
+
+### C-1: <constraint statement>
+
+- **Statement:** <the requirement phrased as a pass/fail test>
+- **Source:** <regulatory | contractual | prior decision | AC | internal standard>
+- **Verification:** <test | audit | code review | architect sign-off | demonstration>
+- **Negotiable:** <yes | no>  (`no` = a violation is disqualifying; `yes` = a documented accepted-risk exception may be recorded in the Decision)
+
 ## Decision Drivers
 
 - Business drivers (e.g., cost, time-to-market, risk).
@@ -232,24 +247,30 @@ Objective reframing of the problem, focusing on underlying causes rather than sy
 
 ## Alternatives Considered
 
+Each alternative MUST include an explicit constraint-compliance evaluation against every documented constraint (C-1, C-2, …), not only pros/cons against drivers. Choose format via the readability heuristic (prose vs matrix; default to matrix when unsure). Table-stakes constraints all alternatives satisfy get a one-line acknowledgment.
+
 1. **Alternative A — <Name>**
    - Summary: <short summary>
    - Pros: <bullets>
    - Cons: <bullets>
+   - Constraint compliance: <explicit pass/fail per constraint C-1, C-2, …, or a matrix row>
    - Why rejected / chosen: <link to drivers>
 
 2. **Alternative B — <Name>**
    - ...
+   - Constraint compliance: <explicit pass/fail per constraint>
 
 3. **Alternative 0 — Do nothing / keep current approach (if applicable)**
    - Summary: <what happens if we do nothing>
    - Pros / Cons compared to other options.
+   - Constraint compliance: <explicit pass/fail per constraint>
 
 ## Decision
 
 - Final decision statement.
 - Core rationale, explicitly linked to decision drivers.
 - Explicit assumptions acknowledged.
+- Constraint compliance attestation: explicitly attest the chosen alternative satisfies every constraint, OR document an accepted-risk exception for any violated constraint — permitted ONLY for constraints marked `negotiable: yes` (a `negotiable: no` violation is disqualifying).
 
 ## Trade-offs & Consequences
 
