@@ -1,0 +1,47 @@
+change_id: GH-46
+title: "Decision-making refactor: universal kernel, proportional rigor, unified agent, process-first guide"
+branch: refactor/GH-46/decision-making-framework
+phases:
+  clarify_scope: { started: 2026-06-24, completed: 2026-06-24 }
+  specification: { started: 2026-06-24, completed: 2026-06-24 }
+  test_planning: { started: 2026-06-24, completed: 2026-06-24 }
+  delivery_planning: { started: 2026-06-24, completed: 2026-06-24 }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions:
+  - { text: "RD-1 One generalized orchestrator agent (not a split by domain). Domain expertise comes from humans + repo docs, not the agent.", date: 2026-06-24 }
+  - { text: "RD-2 Rename @architect (broadening-only leaves the discovery failure unfixed).", date: 2026-06-24 }
+  - { text: "RD-3 Remove baked-in body structure from agent prompt; reference the template as single source of truth (drops agent from the 'sources to sync' set).", date: 2026-06-24 }
+  - { text: "RD-4 Convert records guide into a process-first Decision-Making Guide with per-type nuances.", date: 2026-06-24 }
+  - { text: "RD-5 Consolidate ALL decision-making work into GH-46 (no split).", date: 2026-06-24 }
+  - { text: "RD-6 Dogfood: record GH-46 itself as an ADR.", date: 2026-06-24 }
+  - { text: "RD-7 Adopt the research's 'universal kernel + adaptive playbooks' model: standardize record + quality principles, route workflow/methods by decision conditions. Adopt R0-R3 rigor profiles + emergency overlay.", date: 2026-06-24 }
+  - { text: "RD-8 Decision rights (DACI-style: driver/decider/contributors/reviewers/performers/informed) are first-class in the record and the planning session.", date: 2026-06-24 }
+  - { text: "RD-9 AI authority model: AI recommends/facilitates; AI may autonomously ACT only within explicitly delegated, reversible, bounded R0/R1 with audit trail + escalation; R2/R3 always require human final decision. Separation of recommendation and decision is enforced.", date: 2026-06-24 }
+  - { text: "RD-10 Agent name = @decision-advisor (research-aligned; honest — it advises/facilitates, humans decide). Resolves OQ-1.", date: 2026-06-24 }
+  - { text: "RD-11 v1 includes a lean @decision-critic agent + /review-decision for independent challenge (R3 governance primitive + anti-automation-bias; research §16.3). Same-model/same-prompt agents are NOT independent evidence.", date: 2026-06-24 }
+  - { text: "RD-12 Meeting integration: @meeting-organizer + meeting guide route durable meeting decisions into /plan-decision + /write-decision; meeting discussion is legitimate evidence input. Resolves the user's meeting→decision concern.", date: 2026-06-24 }
+  - { text: "RD-13 DEFER to follow-up tickets (non-goals for GH-46): @decision-verifier + /verify-decision + /decision-retro; JSON schemas + validator/index tools; 18 YAML domain catalogs; structured evidence-ledger YAML; probabilistic forecasting fields; @decision-researcher (reuse @external-researcher).", date: 2026-06-24 }
+  - { text: "RD-14 Keep a CONDENSED master driver checklist in the guide (not 18 files). Per-type nuance captured as a matrix in the guide, not separate catalogs.", date: 2026-06-24 }
+  - { text: "RD-15 Evidence discipline in v1 = prose FACT/ASSUMPTION/UNKNOWN/TO-CONFIRM labels + source references (existing pattern), tightened; structured evidence-ledger YAML deferred (RD-13).", date: 2026-06-24 }
+open_questions:
+  - { text: "OQ-A R1 rendering: separate lite template vs proportional rendering of one template? PM leans proportional rendering of one template (less drift).", date: 2026-06-24 }
+  - { text: "OQ-B Where do machine-readable framework bits live in v1? v1 has none (deferred per RD-13), so moot for now; revisit when catalogs/schemas land.", date: 2026-06-24 }
+blockers: []
+notes:
+  - text: "Research source: .ai/local/decision-process/ (3 files, incl. 3389-line ADOS AI-Driven Decision Intelligence Framework spec). Key thesis: standardize the record + quality principles, route analysis/authority/evidence by decision nature & risk. Strongest adoptable ideas: universal kernel, R0-R3 proportional rigor, decision rights, AI authority model, independent challenge. Heaviest ideas DEFERRED for ADOS efficiency: 18 domain catalogs, JSON schemas+validators, verifier/reto commands, forecasting."
+    type: info
+    date: 2026-06-24
+  - text: "Right-sizing rationale: the research proposes 6 agents + 4 commands + schemas + validators + catalogs. That is not deliverable in one PR nor 'efficient for ADOS'. v1 cut = 1 rename (@architect→@decision-advisor) + 1 new lean agent (@decision-critic) + 1 new command (/review-decision) + process-first guide + rigor-aware template + 2 command refactors + reference sweep + meeting integration + dogfood ADR. Deferred items are explicit non-gools for follow-up tickets."
+    type: decision
+    date: 2026-06-24
+  - text: "Meeting angle (user-raised): decisions arise in 3 modes — (1) interactive AI session with human driver/decider (/plan-decision), (2) meeting discussion as evidence input → /plan-decision, (3) AI autonomous action within delegated R0/R1 bounds. All three must be documented in the guide + reflected in agent prompts."
+    type: info
+    date: 2026-06-24
+  - text: "GH-60 carryover defects (merged via PR #61) folded in: 'non-negotiable' vs negotiable:yes wording (4+ places); guide §6 Context line still says 'constraints'; 'Per-Alterative' typo; architect.md TOC-as-numbered-list (self-resolves via RD-3)."
+    type: info
+    date: 2026-06-24
