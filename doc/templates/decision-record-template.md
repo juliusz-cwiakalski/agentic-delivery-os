@@ -137,6 +137,8 @@ links:
        | Alt 1    | ✅  | ✅  | ✅  |
        | Alt 2    | ❌  | ✅  | ⚠️  |
 
+       Legend: ✅ = passes · ❌ = fails · ⚠️ = passes only via an accepted-risk exception (the constraint must be marked `Negotiable: yes`)
+
      - DEFAULT TO MATRIX when unsure.
      - TABLE-STAKES constraints (every alternative satisfies them) get a brief one-line
        acknowledgment rather than a per-alternative compliance listing.

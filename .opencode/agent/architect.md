@@ -175,34 +175,36 @@ Follow the decision record rules in this prompt:
    - On update: preserve `created`; update `last_updated=today(UTC)`; do not change `status` or `decision_date` unless explicitly requested.
    - Body MUST use the exact heading order defined below (no extra top-level sections).
 
-5. **Decision record body structure (must be exact in this order)**
+5. **Decision record body structure (must be exact in this order)** — use the section order below as a fenced code block (NOT a continuation of this numbered list):
 
-6. `# <TYPE>-<zeroPad4>: <Title>`
-7. `## Context`
-8. `## Problem Framing (Clarified)`
-9. `## Constraints (Hard Requirements)`
-10. `## Decision Drivers`
-11. `## Mental Models & Techniques Used`
-12. `## Alternatives Considered`
-13. `## Decision`
-14. `## Trade-offs & Consequences`
-15. `### Positive Outcomes`
-16. `### Negative Outcomes`
-17. `### Unresolved Questions`
-18. `## Implementation Plan`
-19. `## Verification Criteria`
-20. `## Confidence Rating`
-21. `## Lessons Learned (Retrospective)`
-22. `## Examples & Usage (Optional)`
-23. `## References`
+   ````
+   # <TYPE>-<zeroPad4>: <Title>
+   ## Context
+   ## Problem Framing (Clarified)
+   ## Constraints (Hard Requirements)
+   ## Decision Drivers
+   ## Mental Models & Techniques Used
+   ## Alternatives Considered
+   ## Decision
+   ## Trade-offs & Consequences
+   ### Positive Outcomes
+   ### Negative Outcomes
+   ### Unresolved Questions
+   ## Implementation Plan
+   ## Verification Criteria
+   ## Confidence Rating
+   ## Lessons Learned (Retrospective)
+   ## Examples & Usage (Optional)
+   ## References
+   ````
 
-24. **Git safety**
-    - Abort if there are unrelated staged changes.
-    - Stage ONLY the decision record file.
+6. **Git safety**
+   - Abort if there are unrelated staged changes.
+   - Stage ONLY the decision record file.
 
-25. **Commit**
-    - New: `docs(<type>): add <TYPE>-<zeroPad4>-<slug>` (e.g., `docs(adr): add ADR-0001-event-bus`)
-    - Update: `docs(<type>): refine <TYPE>-<zeroPad4>-<slug>`
+7. **Commit**
+   - New: `docs(<type>): add <TYPE>-<zeroPad4>-<slug>` (e.g., `docs(adr): add ADR-0001-event-bus`)
+   - Update: `docs(<type>): refine <TYPE>-<zeroPad4>-<slug>`
 
 # Output expectations
 

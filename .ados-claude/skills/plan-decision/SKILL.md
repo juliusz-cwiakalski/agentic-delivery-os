@@ -290,17 +290,25 @@ alternatives:
   constraint_compliance: "C-1: pass; C-2: pass"
 
 recommended_decision:
-choice: "Shared database with schema-based sharding"
-rationale: |
-Summary of why this option best satisfies the validated drivers, including explicit trade-offs against alternatives.
-constraint_attestation: "Satisfies all constraints C-1 and C-2."   # OR, for a violated negotiable constraint: document an accepted-risk exception (only for negotiable: yes)
-assumptions: - "Peak tenant count remains within <X> over next 18 months." - "Team has capacity to build sharding middleware and observability."
-non_goals: - "[OUT] Optimize for multi-region active/active in this ADR."
+  choice: "Shared database with schema-based sharding"
+  rationale: |
+    Summary of why this option best satisfies the validated drivers, including explicit trade-offs against alternatives.
+  constraint_attestation: "Satisfies all constraints C-1 and C-2."   # OR, for a violated negotiable constraint: document an accepted-risk exception (only for negotiable: yes)
+  assumptions:
+    - "Peak tenant count remains within <X> over next 18 months."
+    - "Team has capacity to build sharding middleware and observability."
+  non_goals:
+    - "[OUT] Optimize for multi-region active/active in this ADR."
 
 tradeoffs_and_consequences:
-positive: - "Improved scalability for high-traffic tenants." - "Clearer ownership boundaries for sharded data."
-negative: - "Increased complexity in routing and migration tooling." - "Potential for uneven shard utilization requiring rebalancing."
-unknowns: - "Long-term cost profile of managing many shards."
+  positive:
+    - "Improved scalability for high-traffic tenants."
+    - "Clearer ownership boundaries for sharded data."
+  negative:
+    - "Increased complexity in routing and migration tooling."
+    - "Potential for uneven shard utilization requiring rebalancing."
+  unknowns:
+    - "Long-term cost profile of managing many shards."
 
 implementation_plan_high_level:
 

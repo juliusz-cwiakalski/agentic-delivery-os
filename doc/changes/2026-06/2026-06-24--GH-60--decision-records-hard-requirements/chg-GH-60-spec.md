@@ -157,6 +157,8 @@ Flow 2 — Writing the decision record:
 
 - **D-1**: An optional front-matter field (e.g., a constraints count or index) to make constraints machine-queryable across the decision corpus. Deferred to a future change once a real querying need exists.
 - **D-2**: A definition-of-ready (DoR) gate that automatically checks constraint compliance during change intake (see dependency GH-57).
+- **D-3**: Constraint interactions / conditional constraints. v1 treats every constraint as an independent gate. Real decisions may have constraints that are individually passable but jointly infeasible (e.g., "≤4h downtime" + "zero data loss" may be jointly impossible for some migration), or conditional ("C-2 applies only if C-1 holds"). A future change could extend DM-1 with a `depends_on` or `joint_feasibility` field.
+- **D-4**: Inverse problem — soft constraints hidden as drivers. This change fixes "constraint folded into driver"; it does not fix the inverse (a driver that is secretly a soft constraint, e.g., "minimize cost" treated as a driver when there is actually a hard budget ceiling). The `/plan-decision` overlap detection partially catches this only when both are explicitly captured. A future change could prompt authors during driver elicitation: "Is this actually a hard ceiling in disguise?".
 
 ## 8. INTERFACES & INTEGRATION CONTRACTS
 

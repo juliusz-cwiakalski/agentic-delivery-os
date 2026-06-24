@@ -148,15 +148,19 @@ links:
 
 1. Title (`# <TYPE>-<zeroPad4>: <Title>`)
 2. Context
-3. Problem Framing
+3. Problem Framing (Clarified)
 4. Constraints (Hard Requirements)
 5. Decision Drivers
-6. Alternatives Considered (at least 2 options + do-nothing baseline)
-7. Decision
-8. Consequences (positive, negative, unresolved)
-9. Verification Criteria
-10. Status
-11. References
+6. Mental Models & Techniques Used
+7. Alternatives Considered (at least 2 options + do-nothing baseline; each alternative includes a constraint-compliance evaluation)
+8. Decision (with constraint-compliance attestation or, for negotiable constraints, a documented accepted-risk exception)
+9. Trade-offs & Consequences (positive outcomes, negative outcomes, unresolved questions)
+10. Implementation Plan
+11. Verification Criteria
+12. Confidence Rating
+13. Lessons Learned (Retrospective)
+14. Examples & Usage (Optional)
+15. References
 
 ## Non-Functional Requirements
 

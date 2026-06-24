@@ -68,7 +68,7 @@ Objectives:
 | AC-GH60-1 | Constraints section exists immediately after Problem Framing, before Decision Drivers (template) | TC-GH60-001 | Covered |
 | AC-GH60-2 | Constraint recorded with fields ID, Statement, Source, Verification, Negotiable | TC-GH60-002 | Covered |
 | AC-GH60-3 | Per-alternative constraint-compliance evaluation with prose/matrix heuristic (default matrix) | TC-GH60-003 | Covered |
-| AC-GH60-4 | Decision section attests compliance or documents accepted-risk exception (negotiable only) | TC-GH60-004 | Covered |
+| AC-GH60-4 | Decision section attests compliance or documents accepted-risk exception (negotiable only) | TC-GH60-004, TC-GH60-015, TC-GH60-016 | Covered |
 | AC-GH60-5 | plan-decision elicits hard requirements as a distinct step separate from drivers | TC-GH60-005 | Covered |
 | AC-GH60-6 | plan-decision warns on driver/constraint overlap and requires categorization (soft warn) | TC-GH60-006 | Covered |
 | AC-GH60-7 | Planning summary includes `hard_requirements` field distinct from `decision_drivers` | TC-GH60-007 | Covered |
@@ -141,6 +141,8 @@ Execution: all checks run from the repository root on the working tree of branch
 | TC-GH60-012 | architect agent — baked-in body structure includes Constraints | Structural inspection | Critical | High | AC-GH60-12 |
 | TC-GH60-013 | Cross-source consistency — section order identical across 4 sources | Consistency check | Critical | High | NFR-1 (synthesis) |
 | TC-GH60-014 | Static hygiene — `git diff --check` clean, zero source/CI files changed | Static/diff check | Important | High | NFR-4 |
+| TC-GH60-015 | Disqualifying violation prevents alternative selection | Behavioral / narrative walkthrough | Critical | High | AC-GH60-4, AC-GH60-3 |
+| TC-GH60-016 | Accepted-risk exception path for negotiable constraint | Behavioral / narrative walkthrough | Critical | High | AC-GH60-4 |
 
 ### 5.2 Scenario Details
 
@@ -519,11 +521,16 @@ Execution: all checks run from the repository root on the working tree of branch
    - `grep -nE 'Problem Framing|Constraints|Decision Drivers|Alternatives' .opencode/command/write-decision.md`
    - `grep -nE 'Problem Framing|Constraints|Decision Drivers|Alternatives' .opencode/agent/architect.md`
 2. Compare the relative order of the key sequence across all four.
+3. **Full section-list consistency check** (strengthens NFR-1): for each of the four authoritative sources, extract the *entire* ordered list of body sections and assert they are identical — not just the 5-heading window around the insertion point:
+   - `grep -nE '^## ' doc/templates/decision-record-template.md`
+   - `grep -nE '## (Context|Problem Framing|Constraints|Decision Drivers|Mental Models|Alternatives Considered|Decision|Trade-offs|Implementation Plan|Verification Criteria|Confidence Rating|Lessons Learned|Examples|References)' doc/guides/decision-records-management.md`
+   - plus equivalent extractions from `write-decision` (`<decision_structure>`) and the `architect` body structure.
 
 **Expected Outcome**:
 
 - All four sources agree on the identical ordinal position for Constraints: **Context → Problem Framing → Constraints (Hard Requirements) → Decision Drivers → …** (Constraints sits between Problem Framing and Decision Drivers in every source).
 - Count of sources in agreement = **4 / 4** (template, guide §6, write-decision structure/embedded template, architect body structure).
+- The extracted full body-section lists MUST match exactly across all 4 sources — **15 items: title + 14 body sections** (Context, Problem Framing (Clarified), Constraints (Hard Requirements), Decision Drivers, Mental Models & Techniques Used, Alternatives Considered, Decision, Trade-offs & Consequences, Implementation Plan, Verification Criteria, Confidence Rating, Lessons Learned (Retrospective), Examples & Usage (Optional), References). Any drift — e.g., a source listing only 11 sections, a phantom body "Status" (status is front matter, not body), or "Consequences" instead of "Trade-offs & Consequences" — fails this test.
 - This is the primary drift guard for RSK-1/RSK-2.
 
 **Notes / Clarifications**:
@@ -560,6 +567,53 @@ Execution: all checks run from the repository root on the working tree of branch
 - The changed-file set contains **only** documentation/`.opencode` artifacts (the five affected artifacts, plus this change's own `doc/changes/...` artifacts) and **zero** source-code, build, or CI/configuration files.
 - NFR-4 satisfied: 0 source-code changes; 0 CI/build configuration changes.
 
+### TC-GH60-015 — Disqualifying violation prevents alternative selection
+
+**Linked AC**: AC-GH60-4 (Decision-section compliance attestation), AC-GH60-3 (per-alternative compliance evaluation)
+**Type**: Behavioral / narrative walkthrough
+**Linked NFR**: NFR-1 (cross-artifact consistency)
+
+**Scenario**:
+Given a decision record with:
+- Two constraints: C-1 (`Negotiable: no`, "must be GDPR-compliant") and C-2 (`Negotiable: yes`, "should support 10k RPS")
+- Three alternatives:
+  - Alt 0 (do nothing): violates C-1 (GDPR), satisfies C-2
+  - Alt 1: satisfies both; **highest driver score**
+  - Alt 2: **highest driver score overall**, violates C-1 (GDPR)
+
+When the author applies the framework to write the Decision section:
+
+Then:
+- Alt 2 MUST NOT be selectable despite having the highest driver score — its C-1 violation is disqualifying (`Negotiable: no`)
+- Alt 1 MUST be selected (only alternative that satisfies both constraints AND scores competitively on drivers)
+- The Decision section's attestation MUST explicitly state "Chosen option satisfies all hard requirements" (no accepted-risk exception possible for C-1)
+- Alt 0 cannot be saved by an accepted-risk exception either — C-1's `Negotiable: no` blocks the exception path
+
+**Verification**: manual narrative walkthrough following the framework end-to-end. If a future edit allows Alt 2 to be selected with a "highest driver score" rationale while ignoring C-1, this test fails — surfacing regression of the change's central guarantee.
+
+---
+
+### TC-GH60-016 — Accepted-risk exception path for negotiable constraint
+
+**Linked AC**: AC-GH60-4
+**Type**: Behavioral / narrative walkthrough
+
+**Scenario**:
+Given a decision record with one constraint C-1 (`Negotiable: yes`, "should ship within 6 months") and:
+- Alt 1: satisfies C-1, mediocre driver scores
+- Alt 2: violates C-1 (ships in 9 months), best driver scores overall
+
+When the author applies the framework:
+
+Then:
+- Alt 2 MAY be selected via the accepted-risk exception path (C-1 is `Negotiable: yes`)
+- The Decision section's attestation MUST document the exception explicitly: "Chosen option violates C-1 with accepted risk: [rationale + mitigation]"
+- The violation is surfaced explicitly, never silently waived
+
+**Verification**: manual narrative walkthrough. The exception must appear in the Decision section text, not just in the Alternatives evaluation.
+
+---
+
 ## 6. Environments and Test Data
 
 - **Environment:** a single local repository checkout on branch `feat/GH-60/decision-records-hard-requirements`. No test, staging, or runtime environment is required (no executable surface).
@@ -586,6 +640,8 @@ Per the repo testing strategy, `doc/**` and `.opencode/**` artifacts have **no a
 | TC-GH60-012 | Manual structural inspection | `grep -nE '## (Problem Framing|Constraints|Decision Drivers)' .opencode/agent/architect.md` | To Verify |
 | TC-GH60-013 | Manual cross-source consistency | four `grep` commands (see TC steps) | To Verify |
 | TC-GH60-014 | Static/diff gate | `git diff --check` + `git diff --name-only <base>..HEAD` | To Verify |
+| TC-GH60-015 | Manual narrative walkthrough | disqualifying-violation walkthrough (Alt 2 fails C-1, must not be selected) | To Verify |
+| TC-GH60-016 | Manual narrative walkthrough | accepted-risk exception walkthrough (Alt 2 violates negotiable C-1, explicit exception) | To Verify |
 
 **Mocking requirements:** none — no runtime, no I/O to mock.
 **Automation note:** automated unit/integration tests are **N/A** for this change per the testing-strategy fallback for docs-only changes.
@@ -617,6 +673,7 @@ Per the repo testing strategy, `doc/**` and `.opencode/**` artifacts have **no a
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-06-24 | @test-plan-writer | Initial test plan authored from `chg-GH-60-spec.md`. 14 test cases; 12/12 ACs covered (100%); NFR-1/2/3/4 and DM-1/2/3 mapped. |
+| 1.1 | 2026-06-24 | @coder | Red-team remediation: added TC-GH60-015/016 (first behavioral coverage of the disqualifying-violation + accepted-risk guarantees — AC-GH60-4); strengthened TC-GH60-013 to compare the FULL body-section list across all 4 sources (15 items), not just the 5-heading window. 16 test cases. |
 
 ## 10. Test Execution Log
 
