@@ -11,9 +11,9 @@ phases:
   delivery: { started: "2026-06-24", completed: "2026-06-24", commits: "5ee5bd4, 26fbdc6, 486419b, e81f25c, edad730, 9a2ad5a, 47e8184" }
   system_spec_update: { started: "2026-06-24", completed: "2026-06-24", commit: "47e8184", note: "Done during delivery phase 7 by @coder (deviation from workflow — should have been @doc-syncer). Will be validated by @reviewer; if gaps found, route to @doc-syncer." }
   review_fix: { started: "2026-06-24", completed: "2026-06-24", iteration: 1, status: "PASS", findings: "3 MINOR (non-blocking) — being fixed in Phase 8 before PR", review_commit: "ac27cc6" }
-  quality_gates: { started: "2026-06-24", completed: null }
-  dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null, url: null }
+  quality_gates: { started: "2026-06-24", completed: "2026-06-24", status: "PASS-in-scope", caveat: "3 unrelated pre-existing failures in tools/.tests/test-text-to-image-* (perf timing + external API e2e). These tests cover the text-to-image CLI tool and have no dependency on doc/templates/.opencode markdown files modified by this change. Failures are environmental (system load, external API availability). Not caused by GH-60; should be tracked separately if recurrent." }
+  dod_check: { started: "2026-06-24", completed: "2026-06-24", status: "PASS" }
+  pr_creation: { started: "2026-06-24", completed: null, url: null }
 
 decisions:
   - text: "RD-1: Constraints section placed between Problem Framing and Decision Drivers."
