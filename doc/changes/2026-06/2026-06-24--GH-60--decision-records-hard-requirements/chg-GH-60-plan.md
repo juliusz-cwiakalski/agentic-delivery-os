@@ -466,6 +466,46 @@ review/PR (spec §18).
 
 **Completion signal**: `docs(GH-60): finalize decision-records hard-requirements change`
 
+---
+
+### Phase 8: Code Review Remediation (Iteration 1)
+
+**Goal**: Address the 3 MINOR findings from review iteration 1 (`code-review/findings-iter-1.json`).
+These are **optional polish items — non-blocking; the change is merge-ready as-is**.
+They are tracked here for completeness and idempotency.
+
+**Tasks**:
+
+- [ ] **8.1** Renumber the decision-record body-structure ordered list in
+  `.opencode/agent/architect.md` (≈ lines 176–195) so no list-item digit repeats. The minimal
+  insertion in Phase 5 left a pre-existing duplicate (`6.`) and introduced a new duplicate
+  (`9.` for both Decision Drivers and Mental Models). Markdown auto-renumbers on render so
+  NFR-1 ordinal position is unaffected — this is a source readability fix only.
+  *(finding 1, minor)*
+- [ ] **8.2** Fix the list indentation regression in `.opencode/command/plan-decision.md`
+  step 11 last sub-bullet (`Only then synthesize the final planning summary...`, ≈ line 182):
+  re-indent from 5 spaces to 6 spaces to match its sibling sub-bullets.
+  *(finding 2, minor)*
+- [ ] **8.3** Correct the section count in `doc/spec/features/feature-document-templates.md`
+  (≈ line 150) from "13 sections" to "14 sections" (the template has 14 top-level `##` body
+  sections; the prior "12" and the bumped "13" are both off-by-one).
+  *(finding 3, minor)*
+
+**Acceptance Criteria**:
+
+- Should: the three files above contain no duplicate ordered-list digits, consistent
+  indentation, and an accurate section count.
+
+**Files and modules**:
+
+- `.opencode/agent/architect.md` (optional polish)
+- `.opencode/command/plan-decision.md` (optional polish)
+- `doc/spec/features/feature-document-templates.md` (optional polish)
+
+**Completion signal**: `docs(GH-60): apply review-iteration-1 minor polish`
+
+---
+
 ## Test Scenarios
 
 | ID | Scenario | Phases | AC |
@@ -505,6 +545,7 @@ review/PR (spec §18).
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-06-24 | plan-writer | Initial plan authored from `chg-GH-60-spec.md`; 7 phases across two routing tracks (documentation + `.opencode/` via `@toolsmith`); AC coverage 1–12; section-order consistency as a dedicated verification phase. |
+| 1.1 | 2026-06-24 | reviewer | Appended Phase 8 (Code Review Remediation, iteration 1) from `/review GH-60` findings: 3 MINOR optional polish items (architect list numbering, plan-decision indentation, document-templates section count). Non-blocking; merge-ready. |
 
 ## Execution Log
 
@@ -517,3 +558,4 @@ review/PR (spec §18).
 | 5 | Done | 2026-06-24 | 2026-06-24 | edad730 | architect: baked-in body structure lists Constraints between Problem Framing and Decision Drivers. `customize-opencode` skill applied. spec-writer/plan-writer untouched. |
 | 6 | Done | 2026-06-24 | 2026-06-24 | 9a2ad5a | Cross-source consistency: 4/4 sources agree (NFR-1 PASSED); 5/5 types (NFR-3); compliance+attestation consistent. No drift. |
 | 7 | Done | 2026-06-24 | 2026-06-24 | (this commit) | All 12 ACs + 4 NFRs PASSED; strictly additive; spec reconciled (feature-decision-records.md, feature-document-templates.md); version impact none. Ready for `/review GH-60`. |
+| Review i1 | Done | 2026-06-24 | 2026-06-24 | — | `/review GH-60` iteration 1 = PASS (0c/0M/3m/0n). Phase 8 appended for 3 optional minor polish items. Artifacts: `code-review/findings-iter-1.json`, `code-review/review-iter-1.md`. |

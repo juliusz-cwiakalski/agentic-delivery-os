@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "severity": "minor",
+    "confidence": "high",
+    "file": ".opencode/agent/architect.md",
+    "line": 176,
+    "title": "Ordered-list numbering collisions in decision-record body structure (duplicate 6 and 9)",
+    "description": "The minimal-additive insertion of `## Constraints (Hard Requirements)` at item 8 pushed `## Decision Drivers` to 9, but `## Mental Models & Techniques Used` was already 9, creating a NEW duplicate. A pre-existing duplicate (`6.` for both the H1 Title and `## Context`) was left unfixed. Markdown renderers auto-renumber so the ordinal position is preserved (NFR-1 still holds), but the raw source numbers are misleading and hurt readability of an agent prompt that other agents model on.",
+    "suggestedFix": "Renumber the body-structure list sequentially 1..18 (or 6..23 under the existing header scheme) so no digit repeats. This is a one-pass cosmetic fix; it does not change any section's position."
+  },
+  {
+    "id": 2,
+    "severity": "minor",
+    "confidence": "high",
+    "file": ".opencode/command/plan-decision.md",
+    "line": 182,
+    "title": "List indentation regression in step 11 (Consolidation and readiness check)",
+    "description": "During the renumbering of the session_flow (3..8 -> 3..11), the final sub-bullet `Only then synthesize the final planning summary...` was left at 5-space indentation while its sibling sub-bullets (Resolve... / For remaining...) are at 6 spaces. This is an inconsistent list nesting introduced by the edit, not present as a mismatch in the prior version's structure.",
+    "suggestedFix": "Re-indent the `Only then synthesize...` bullet to 6 spaces to match its sibling sub-bullets under `Before concluding, review all captured elements...`."
+  },
+  {
+    "id": 3,
+    "severity": "minor",
+    "confidence": "high",
+    "file": "doc/spec/features/feature-document-templates.md",
+    "line": 150,
+    "title": "Section count '13' is still off-by-one (template has 14 ## sections)",
+    "description": "The reconciliation bumped '12 sections' to '13 sections' after inserting the Constraints section. However the template now contains 14 top-level `##` body sections (Context, Problem Framing, Constraints, Decision Drivers, Mental Models, Alternatives, Decision, Trade-offs, Implementation Plan, Verification, Confidence Rating, Lessons Learned, Examples, References). The original '12' was itself off-by-one; the edit propagated the pre-existing inaccuracy rather than correcting it.",
+    "suggestedFix": "Change '13 sections' to '14 sections' (or explicitly document the counting convention, e.g., '14 body sections excluding the H1 title')."
+  }
+]
