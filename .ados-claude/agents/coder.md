@@ -8,7 +8,7 @@
 # source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/coder.md
 name: coder
 description: Implement plan phases by writing code for a change.
-model: opus
+model: sonnet
 allowed-tools:
   - Read
   - Write

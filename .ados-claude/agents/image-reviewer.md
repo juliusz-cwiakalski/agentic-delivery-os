@@ -8,7 +8,7 @@
 # source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/image-reviewer.md
 name: image-reviewer
 description: Analyze images, screenshots, and visual artifacts.
-model: opus
+model: sonnet
 allowed-tools:
   - Read
   - Write

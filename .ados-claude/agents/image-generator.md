@@ -8,7 +8,7 @@
 # source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/image-generator.md
 name: image-generator
 description: Generate AI images via text-to-image CLI
-model: opus
+model: sonnet
 allowed-tools:
   - Read
   - Write

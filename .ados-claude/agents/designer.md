@@ -8,7 +8,7 @@
 # source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/designer.md
 name: designer
 description: Visual design and UI implementation assistant.   Applies the documented visual design system to UI components, layouts,   navigation chrome, and widget styling.
-model: opus
+model: sonnet
 allowed-tools:
   - Read
   - Write

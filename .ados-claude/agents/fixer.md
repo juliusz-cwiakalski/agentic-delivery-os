@@ -8,7 +8,7 @@
 # source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/fixer.md
 name: fixer
 description: Reproduce failures and apply targeted fixes.
-model: opus
+model: sonnet
 allowed-tools:
   - Read
   - Write

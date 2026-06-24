@@ -8,7 +8,7 @@
 # source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/review-feedback-applier.md
 name: review-feedback-applier
 description: Classify and apply accepted review feedback from PR/MR.
-model: opus
+model: sonnet
 allowed-tools:
   - Read
   - Write

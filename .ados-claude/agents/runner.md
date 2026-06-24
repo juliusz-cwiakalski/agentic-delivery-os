@@ -8,7 +8,7 @@
 # source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/runner.md
 name: runner
 description: Run commands, save logs, summarize output.
-model: sonnet
+model: haiku
 allowed-tools:
   - Read
   - Write

@@ -8,7 +8,7 @@
 # source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/test-plan-writer.md
 name: test-plan-writer
 description: Author change test plans with traceable coverage
-model: opus
+model: sonnet
 allowed-tools:
   - Read
   - Write
