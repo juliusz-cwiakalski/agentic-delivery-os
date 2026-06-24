@@ -1,0 +1,48 @@
+change_id: GH-60
+title: "Decision records: distinguish hard requirements (constraints) from drivers"
+branch: feat/GH-60/decision-records-hard-requirements
+ticket_url: https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/60
+
+phases:
+  clarify_scope: { started: "2026-06-24", completed: "2026-06-24" }
+  specification: { started: "2026-06-24", completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+
+decisions:
+  - text: "RD-1: Constraints section placed between Problem Framing and Decision Drivers."
+    date: "2026-06-24"
+  - text: "RD-2: Section name 'Constraints (Hard Requirements)'."
+    date: "2026-06-24"
+  - text: "RD-3: Constraints have a `negotiable` field; each alternative must include explicit compliance evaluation; Decision section attests compliance or documents accepted-risk exception."
+    date: "2026-06-24"
+  - text: "RD-4: Compliance evaluation format chosen by author (prose vs. matrix) based on readability heuristic; default to matrix when unsure."
+    date: "2026-06-24"
+  - text: "RD-5: `/plan-decision` warns on driver/constraint overlap; user must categorize before proceeding."
+    date: "2026-06-24"
+  - text: "Constraint IDs: C-1, C-2, ... per decision record (compact reference from alternatives)."
+    date: "2026-06-24"
+  - text: "Verification field: not limited to automated checks — can be test, audit, code review, architect sign-off, or demonstration."
+    date: "2026-06-24"
+  - text: "No new front-matter field for v1; constraints live in body. No separate example decision records — template inline comments must be complete enough."
+    date: "2026-06-24"
+  - text: "Scope expanded after agent audit: `.opencode/agent/architect.md` also bakes in section structure (lines 176-194) and needs update via @toolsmith. @spec-writer and @plan-writer do NOT bake it in."
+    date: "2026-06-24"
+
+open_questions: []
+
+blockers: []
+
+notes:
+  - text: "Change originated from consultation on decision management process. User confirmed Option A (dedicated Constraints section + per-alternative compliance evaluation). All 5 OQs resolved in ticket comment; 6 additional details confirmed in chat."
+    type: info
+    date: "2026-06-24"
+  - text: "Files in scope: doc/templates/decision-record-template.md, doc/guides/decision-records-management.md (normal flow); .opencode/command/plan-decision.md, .opencode/command/write-decision.md, .opencode/agent/architect.md (via @toolsmith per AGENTS.md)."
+    type: info
+    date: "2026-06-24"
