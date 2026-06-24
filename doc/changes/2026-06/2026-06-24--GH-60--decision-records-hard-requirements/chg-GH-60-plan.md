@@ -291,19 +291,24 @@ correct position with the correct authoring rules (spec F-6).
 
 **Tasks**:
 
-- [ ] **4.1** **Delegate to `@toolsmith`** to update `.opencode/command/write-decision.md`.
-- [ ] **4.2** Update the **`<decision_structure>`** to insert the Constraints section
+- [x] **4.1** **Delegate to `@toolsmith`** to update `.opencode/command/write-decision.md`.
+  *(Applied the `customize-opencode` skill discipline — no task/subagent tool available in this environment; see final report.)*
+- [x] **4.2** Update the **`<decision_structure>`** to insert the Constraints section
   **between Problem Framing and Decision Drivers**, matching the template exactly (spec F-6,
   AC-GH60-8).
-- [ ] **4.3** Update the **embedded template** to render constraint entries (ID `C-n`,
+  *(Done: `## Constraints (Hard Requirements)` is item 4 in `<decision_structure>` (line 94) and item 4 region in `<embedded_template>` (line 216), between Problem Framing (3) and Decision Drivers (5).)*
+- [x] **4.3** Update the **embedded template** to render constraint entries (ID `C-n`,
   Statement, Source, Verification, Negotiable) and a per-alternative compliance evaluation
   (prose/matrix, default matrix) read from `hard_requirements:` (spec F-1, F-2, DM-1).
-- [ ] **4.4** Update **`<authoring_rules>`** to **require compliance attestation** in the
+  *(Done: embedded `### C-1:` entry block + per-alternative `Constraint compliance:` field + heuristic note.)*
+- [x] **4.4** Update **`<authoring_rules>`** to **require compliance attestation** in the
   Decision section, with an accepted-risk exception permitted only for
   `negotiable: yes` constraints (spec F-3, AC-GH60-4).
-- [ ] **4.5** Ensure the writer **reads `hard_requirements:` from the planning summary** and
+  *(Done: Decision authoring rule + embedded template attestation bullet; `negotiable: no` violation = disqualifying.)*
+- [x] **4.5** Ensure the writer **reads `hard_requirements:` from the planning summary** and
   renders the section at the F-1 position; if the summary has no hard requirements, the
   section is rendered as a conscious empty choice (spec F-1, Flow 2 in §6).
+  *(Done: authoring rule states render from `hard_requirements:`; empty/absent → conscious empty choice statement.)*
 
 **Acceptance Criteria**:
 
