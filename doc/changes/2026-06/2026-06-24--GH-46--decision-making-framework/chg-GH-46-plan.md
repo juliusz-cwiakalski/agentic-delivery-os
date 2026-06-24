@@ -798,7 +798,7 @@ stored chain-of-thought (NFR-6) — and confirm every AC is met before review/PR
 
 **Tasks**:
 
-- [ ] **8.1** **Cross-source section-order verification (NFR-4 / GH-60 NFR-1):**
+- [x] **8.1** **Cross-source section-order verification (NFR-4 / GH-60 NFR-1):**
   extract the decision-record body section order from (a)
   `doc/templates/decision-record-template.md` and (b) **ALL** structural enumerations in
   `.opencode/command/write-decision.md` (e.g., `<decision_structure>` AND any
@@ -808,28 +808,28 @@ stored chain-of-thought (NFR-6) — and confirm every AC is met before review/PR
   the template -> expect **0 mismatches**. Confirm `decision-advisor.md` contains **0**
   baked-in body-section list (the agent is no longer a source to sync — single source of
   truth is the template).
-- [ ] **8.2** **Stale-reference grep:** `rg '@architect|architect\.md'` across
+- [x] **8.2** **Stale-reference grep:** `rg '@architect|architect\.md'` across
   live sources only (exclude `doc/changes/**`, this change's spec/pm-notes, and
   `.ados-claude/**`) -> expect **0** matches. Confirm `.ados-claude/**` also has
   **0** `@architect` matches.
-- [ ] **8.3** **Proportionality check (NFR-1):** confirm the guide + template +
+- [x] **8.3** **Proportionality check (NFR-1):** confirm the guide + template +
   commands define R0 = no record, R1 = strict proper subset of R3, R1 cycle <= 1
   business day, R2/R3 = full evidence + >=2 alternatives + baseline + review date.
-- [ ] **8.4** **Backward-compat check (NFR-2):** confirm the legacy
+- [x] **8.4** **Backward-compat check (NFR-2):** confirm the legacy
   `<technical_decision_planning_summary>` tag and `adr.*` fields are accepted via
   alias with 0 behavior change; confirm all new template front-matter blocks are
   optional.
-- [ ] **8.5** **Architecture-bias check (NFR-3):** confirm the generic path emits
+- [x] **8.5** **Architecture-bias check (NFR-3):** confirm the generic path emits
   `<decision_planning_summary>` with 0 required `adr.*` fields; type defaults to
   ADR only when genuinely unspecified.
-- [ ] **8.6** **No-hidden-CoT / git-native (NFR-5, NFR-6):** confirm records
+- [x] **8.6** **No-hidden-CoT / git-native (NFR-5, NFR-6):** confirm records
   capture decision + rationale + assumptions only; 0 new runtime services; 0
   stored raw model chain-of-thought; 0 proprietary-binary artifacts.
-- [ ] **8.7** **Spec reconciliation confirmation:** confirm
+- [x] **8.7** **Spec reconciliation confirmation:** confirm
   `feature-decision-records.md` and `feature-document-templates.md` reflect the
   rename + new capabilities + new guide; confirm `version_impact: none` (no version
   bump).
-- [ ] **8.8** **AC walk:** walk every AC-GH46-1 … AC-GH46-14 against the artifacts
+- [x] **8.8** **AC walk:** walk every AC-GH46-1 … AC-GH46-14 against the artifacts
   and mark each satisfied (see the AC coverage map below). Hand off to review
   (`/review GH-46`).
 
@@ -960,4 +960,5 @@ widely distributed (Phases 5, 6, 8).
 | 4 | COMPLETED | 2026-06-24 | 2026-06-24 | 9743477 | meeting-organizer.md routes via @decision-advisor (evidence input -> /plan-decision; durable -> /write-decision); delegation_policy @architect -> @decision-advisor; three decision modes documented. Meeting guide §2.4 documents three modes; §4.3 cross-links Decision-Making Guide + @decision-advisor. 0 @architect in meeting files. |
 | 5 | COMPLETED | 2026-06-24 | 2026-06-24 | 345fe44 | Documentation track: AGENTS.md (agent team + command table + /plan-decision RT-07 domain-neutral), README.md (19→20 agents, 16→17 commands), .opencode/README.md (agent+command inventory), change-lifecycle.md, onboarding guide, agents-and-commands guide, model-config guide (all 6 architect refs), change-spec-template, pm-instructions.md. .opencode/ track: pm.md (3 edits), coder.md (3 edits), spec-writer.md, plan-writer.md, bootstrapper.md. System-spec: feature-decision-records.md (agent refs + codebase map + last_updated + GH-46), feature-document-templates.md. Config: opencode-github-copilot.jsonc (architect→decision-advisor + decision-critic). scripts/uninstall.sh. Frozen artifacts untouched. |
 | 6 | COMPLETED | 2026-06-24 | 2026-06-24 | 8124c5f | build-claude-plugin.sh: 22 agents, 19 skills; architect.md removed, decision-advisor.md + decision-critic.md exist, review-decision skill exists; 0 stale @architect (only intentional migration note in decision-advisor.md). add-header-location.sh: 3 new files got headers (decision-critic.md, review-decision.md, decision-making.md). NFR-5: no secrets/runtime/network calls. |
-| 7 | COMPLETED | 2026-06-24 | 2026-06-24 | _(pending commit)_ | ADR-0001-decision-making-framework.md produced via dogfood. Rigor: R3 (org-wide agent-behavior change); status: Proposed (no auto-Accept — requires human decider). Full front matter (classification, governance, ai_assistance, revisit_triggers). Body order matches template exactly (13 sections, optional Examples omitted). All 16 RDs captured (DEC-1…DEC-18). 00-index.md updated. |
+| 7 | COMPLETED | 2026-06-24 | 2026-06-24 | 608f6a7 | ADR-0001-decision-making-framework.md produced via dogfood. Rigor: R3 (org-wide agent-behavior change); status: Proposed (no auto-Accept — requires human decider). Full front matter (classification, governance, ai_assistance, revisit_triggers). Body order matches template exactly (13 sections, optional Examples omitted). All 16 RDs captured (DEC-1…DEC-18). 00-index.md updated. |
+| 8 | COMPLETED | 2026-06-24 | 2026-06-24 | _(pending commit)_ | All verification checks PASSED. 8.1: 1 structural definition in write-decision.md, 0 baked-in body in agent (NFR-4). 8.2: 0 stale @architect in live sources + .ados-claude/ (AC-GH46-11). 8.3: R0=no record, R1=strict subset ≤1 day, R2/R3=full (NFR-1). 8.4: legacy tag + adr.* alias works, all new front-matter optional (NFR-2). 8.5: generic <decision_planning_summary>, 0 required adr.* (NFR-3). 8.6: 0 runtime/secrets/CoT (NFR-5/NFR-6). 8.7: specs reconciled, version_impact: none. 8.8: AC-GH46-1…14 all PASSED. |
