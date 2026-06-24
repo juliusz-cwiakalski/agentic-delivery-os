@@ -62,7 +62,7 @@ links:
 
 ## Constraints (Hard Requirements)
 
-<!-- List the binary, non-negotiable gates that alternatives must satisfy to be eligible.
+<!-- List the binary pass/fail gates that alternatives must satisfy to be eligible.
      Constraints are PASS/FAIL gates — they ELIMINATE alternatives rather than rank them.
      This is distinct from Decision Drivers (continuous preferences used to rank survivors).
 
@@ -80,7 +80,7 @@ links:
 
 ### C-1: <constraint statement>
 
-<!-- State the non-negotiable requirement as a pass/fail test. -->
+<!-- State the requirement as a pass/fail test. -->
 
 - **Statement:** <!-- The requirement, phrased so compliance is verifiable (pass/fail). -->
 - **Source:** <!-- One of: regulatory | contractual | prior decision | AC | internal standard -->
@@ -119,7 +119,7 @@ links:
 <!-- Include at least two substantive alternatives plus a do-nothing baseline.
       For each alternative: -->
 
-### Per-Alterative Constraint-Compliance Evaluation
+### Per-Alternative Constraint-Compliance Evaluation
 
 <!-- Every alternative MUST include an explicit evaluation of its compliance with each
      documented constraint (C-1, C-2, …) from the Constraints section above — NOT only

@@ -163,7 +163,7 @@ links:
 Every decision record must include these sections in order:
 
 1. **Title**: `# <TYPE>-<zeroPad4>: <Title>`
-2. **Context**: Background, triggers, and constraints
+2. **Context**: Background, triggers, and ambient constraints (situational facts, not pass/fail gates)
 3. **Problem Framing**: Objective reframing of the problem
 4. **Constraints (Hard Requirements)**: Binary, non-negotiable gates that eliminate alternatives (pass/fail), recorded as structured entries (see §6.1)
 5. **Decision Drivers**: Prioritized factors (business, technical, operational)

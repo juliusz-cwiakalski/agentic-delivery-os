@@ -115,7 +115,7 @@ No extra top-level sections may be introduced before or between these headings. 
 - Use ONLY planning context and existing documentation; do not invent new requirements, drivers, or constraints.
 - "Context" MUST describe the situation (architectural, product, technical, business, or operational as appropriate to the decision type), why the decision is needed now, and relevant constraints.
 - "Problem Framing (Clarified)" MUST reframe the user problem in objective technical terms, highlighting underlying causes.
-- "Constraints (Hard Requirements)" MUST be rendered from the planning summary's `hard_requirements:` field (distinct from `decision_drivers:`). Each constraint is rendered with the fields **ID** (`C-1`, `C-2`, …), **Statement**, **Source** (∈ regulatory | contractual | prior decision | AC | internal standard), **Verification** (∈ test | audit | code review | architect sign-off | demonstration), and **Negotiable** (yes | no). If `hard_requirements:` is empty or absent, render the section as a CONSCIOUS empty choice with an explicit statement (e.g., "No non-negotiable constraints identified.") — emptiness is never an omission. Constraints and drivers MUST be kept in their separate sections; never merge them.
+- "Constraints (Hard Requirements)" MUST be rendered from the planning summary's `hard_requirements:` field (distinct from `decision_drivers:`). Each constraint is rendered with the fields **ID** (`C-1`, `C-2`, …), **Statement**, **Source** (∈ regulatory | contractual | prior decision | AC | internal standard), **Verification** (∈ test | audit | code review | architect sign-off | demonstration), and **Negotiable** (yes | no). If `hard_requirements:` is empty or absent, render the section as a CONSCIOUS empty choice with an explicit statement (e.g., "No constraints identified.") — emptiness is never an omission. Constraints and drivers MUST be kept in their separate sections; never merge them.
 - "Decision Drivers" MUST list explicit, prioritized drivers (business, technical, operational, organizational) that the decision optimizes for. Drivers are continuous preferences used to rank alternatives; they are NOT binary gates (those live in Constraints).
 - "Mental Models & Techniques Used" should summarize which reasoning tools were applied (e.g., First Principles, Inversion, Second-Order Thinking, 5 Whys) as captured in planning.
 - "Alternatives Considered" MUST:
@@ -215,7 +215,7 @@ Objective reframing of the problem, focusing on underlying causes rather than sy
 
 ## Constraints (Hard Requirements)
 
-Binary, non-negotiable gates that ELIMINATE alternatives (pass/fail) — distinct from Decision Drivers (continuous ranking preferences). Rendered from the planning summary `hard_requirements:` field. If no hard requirements exist, state that explicitly here as a conscious empty choice (e.g., "No non-negotiable constraints identified.").
+Binary pass/fail gates that ELIMINATE alternatives — distinct from Decision Drivers (continuous ranking preferences). Rendered from the planning summary `hard_requirements:` field. If no hard requirements exist, state that explicitly here as a conscious empty choice (e.g., "No constraints identified.").
 
 ### C-1: <constraint statement>
 

@@ -153,7 +153,7 @@ phases 2–5 mirror and that phase 6 verifies against.
   constraint-compliance evaluation** (spec F-2, AC-GH60-3): author chooses **prose** vs
   **matrix** (constraints × alternatives) via a documented readability heuristic,
   **default to matrix when unsure** (DEC-4).
-  *(Done: `### Per-Alterative Constraint-Compliance Evaluation` block + `Constraint compliance:` field on each alternative.)*
+  *(Done: `### Per-Alternative Constraint-Compliance Evaluation` block + `Constraint compliance:` field on each alternative.)*
 - [x] **1.5** Update the *Decision* section to **require explicit compliance attestation**
   (spec F-3, AC-GH60-4): attest the chosen alternative satisfies every constraint, or
   document an accepted-risk exception — permitted **only** for constraints marked
