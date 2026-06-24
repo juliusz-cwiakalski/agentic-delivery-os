@@ -375,7 +375,7 @@ structure** — it references the template (RD-3, the single biggest drift fix).
 
 **Tasks**:
 
-- [ ] **2.1** **Delegate to `@toolsmith`** to `git mv
+- [x] **2.1** **Delegate to `@toolsmith`** to `git mv
   .opencode/agent/architect.md` -> `.opencode/agent/decision-advisor.md` (preserve
   history), then rewrite the file:
   - Frontmatter `description`: domain-neutral orchestrator for **all five types**
@@ -397,7 +397,7 @@ structure** — it references the template (RD-3, the single biggest drift fix).
   - Keep the decision-record workflow contract (resolve number, one file, stage
     only that file, commit message format) but reference the template for body
   structure.
-- [ ] **2.2** **Delegate to `@toolsmith`** to create new
+- [x] **2.2** **Delegate to `@toolsmith`** to create new
   `.opencode/agent/decision-critic.md` (read-only independent challenger per spec
   F-7):
   - Mission: detect framing errors, missing options, violated constraints, fragile
@@ -415,10 +415,10 @@ structure** — it references the template (RD-3, the single biggest drift fix).
   - Returns a verdict: **PASS / PASS_WITH_RISKS / REWORK**.
   - Frontmatter `description` + `mode: all` + `claude.model`. Read-only by default
     (no write to decision records).
-- [ ] **2.3** Confirm the advisor's `decision_type` default handling: type
+- [x] **2.3** Confirm the advisor's `decision_type` default handling: type
   defaults to ADR **only when type is genuinely unspecified** (not when a
   non-architecture decision was misrouted) — spec NFR-3.
-- [ ] **2.4** Confirm **no baked-in body structure remains** in
+- [x] **2.4** Confirm **no baked-in body structure remains** in
   `decision-advisor.md` (grep for the fenced section list -> 0); confirm the
   advisor instructs reading the template.
 
@@ -952,4 +952,5 @@ widely distributed (Phases 5, 6, 8).
 |-------|--------|---------|-----------|--------|-------|
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| 1 | COMPLETED | 2026-06-24 | 2026-06-24 | _(pending commit)_ | New decision-making.md (10 sections); demoted records-mgmt guide; additive template front matter + proportional rendering; GH-60 defects fixed in docs (template+guide); body order preserved (additive). |
+| 1 | COMPLETED | 2026-06-24 | 2026-06-24 | c8af272 | New decision-making.md (10 sections); demoted records-mgmt guide; additive template front matter + proportional rendering; GH-60 defects fixed in docs (template+guide); body order preserved (additive). |
+| 2 | COMPLETED | 2026-06-24 | 2026-06-24 | _(pending commit)_ | git mv architect.md -> decision-advisor.md (history preserved) + rewrite (domain-neutral, 5 types, type-aware modes, no baked-in structure, references template, R2/R3 human approval); new decision-critic.md (read-only, RD-16 independence honesty, tri-state verdict). @toolsmith not spawnable -> applied customize-opencode skill discipline (GH-60 precedent). |
