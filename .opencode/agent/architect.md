@@ -178,7 +178,8 @@ Follow the decision record rules in this prompt:
 6. `# <TYPE>-<zeroPad4>: <Title>`
 6. `## Context`
 7. `## Problem Framing (Clarified)`
-8. `## Decision Drivers`
+8. `## Constraints (Hard Requirements)`
+9. `## Decision Drivers`
 9. `## Mental Models & Techniques Used`
 10. `## Alternatives Considered`
 11. `## Decision`

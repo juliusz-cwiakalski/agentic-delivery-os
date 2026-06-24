@@ -343,13 +343,16 @@ with the template so authors see one consistent structure (spec F-8, AC-GH60-12)
 
 **Tasks**:
 
-- [ ] **5.1** **Delegate to `@toolsmith`** to update `.opencode/agent/architect.md`.
-- [ ] **5.2** Update the **baked-in decision-record body section list (≈ lines 176–194)** to
+- [x] **5.1** **Delegate to `@toolsmith`** to update `.opencode/agent/architect.md`.
+  *(Applied the `customize-opencode` skill discipline — no task/subagent tool available in this environment; see final report.)*
+- [x] **5.2** Update the **baked-in decision-record body section list (≈ lines 176–194)** to
   insert **Constraints (Hard Requirements)** in the same ordinal position — between *Problem
   Framing* and *Decision Drivers* — as the template and commands (spec F-8, AC-GH60-12).
-- [ ] **5.3** Confirm **no other agent is touched**: `@spec-writer` and `@plan-writer` do
+  *(Done: `## Constraints (Hard Requirements)` inserted at line 181, between Problem Framing (180) and Decision Drivers (182). Minimal additive insertion; pre-existing list numbering left untouched.)*
+- [x] **5.3** Confirm **no other agent is touched**: `@spec-writer` and `@plan-writer` do
   **not** bake in the decision-record body structure and are therefore out of scope
   (spec DEC-9, NG-6).
+  *(Confirmed: `git diff --name-only d4fc1f0..HEAD -- .opencode/` lists only plan-decision.md, write-decision.md, architect.md — spec-writer.md and plan-writer.md unchanged.)*
 
 **Acceptance Criteria**:
 
