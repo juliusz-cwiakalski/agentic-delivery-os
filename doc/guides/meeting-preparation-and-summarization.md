@@ -106,6 +106,16 @@ Specify how decisions will be made so attendees know the rules:
 
 State the framework in the agenda. For non-decision meetings (brainstorming, status, retro), mark "N/A."
 
+**Three decision modes** (see the [Decision-Making Guide](decision-making.md)) — know which one a meeting uses:
+
+| Mode | When | How |
+|------|------|-----|
+| **(a) Interactive AI session** | A human driver/decider wants structured help | `/plan-decision` → `@decision-advisor` plans → `/write-decision` renders → human decides |
+| **(b) Meeting-driven** | A meeting reaches a durable decision | Meeting discussion is **evidence input** to `/plan-decision`; durable decisions route to `/write-decision` |
+| **(c) Delegated AI autonomous** | Routine/reversible R0–R1 choices within delegated bounds | AI acts within bounded authority with audit + escalation; minimal/no record |
+
+For mode (b), capture the discussion, options, and rationale during the meeting so `/plan-decision` has high-quality evidence to work from.
+
 ### 2.5 Two ways to share the agenda
 
 **Option A: Copy/paste workflow**
@@ -199,7 +209,7 @@ Action items buried in a long summary are rarely acted on. Send action items sep
 
 ### 4.3 File significant decisions
 
-If the meeting produced a durable decision (architecture choice, pricing decision, process change), file it as a decision record:
+If the meeting produced a durable decision (architecture choice, pricing decision, process change), file it as a decision record. The decision process — when to record, how much ceremony, who decides — is defined in the **[Decision-Making Guide](decision-making.md)**; meeting discussion is legitimate **evidence input** to `/plan-decision`, and durable decisions route to `/write-decision` (delegate via `@decision-advisor`).
 
 | Decision type | Record type | Location |
 |---------------|-------------|----------|

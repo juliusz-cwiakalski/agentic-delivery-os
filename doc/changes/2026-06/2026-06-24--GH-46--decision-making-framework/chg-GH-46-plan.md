@@ -563,7 +563,7 @@ update `@meeting-organizer` and the meeting guide to reference `@decision-adviso
 
 **Tasks**:
 
-- [ ] **4.1** **Delegate to `@toolsmith`** to update `.opencode/agent/meeting-organizer.md`:
+- [x] **4.1** **Delegate to `@toolsmith`** to update `.opencode/agent/meeting-organizer.md`:
   - In Phase B (Summarize), change "Identify significant durable decisions ...
     delegate to `@architect` or suggest `/write-decision`" to route via
     `@decision-advisor`, and add: meeting discussion becomes **evidence input to
@@ -573,7 +573,7 @@ update `@meeting-organizer` and the meeting guide to reference `@decision-adviso
   - Reference the **three decision modes**: (a) interactive AI session with human
     driver/decider; (b) meeting-driven (discussion as evidence input); (c)
     delegated AI autonomous action within R0-R1 bounds (spec F-11).
-- [ ] **4.2** Update `doc/guides/meeting-preparation-and-summarization.md`:
+- [x] **4.2** Update `doc/guides/meeting-preparation-and-summarization.md`:
   - In §4.3 "File significant decisions", cross-link the new Decision-Making Guide
     and reference `@decision-advisor` (not `@architect`); note meeting discussion
     as evidence input to `/plan-decision`.
@@ -954,4 +954,5 @@ widely distributed (Phases 5, 6, 8).
 |-------|--------|---------|-----------|--------|-------|
 | 1 | COMPLETED | 2026-06-24 | 2026-06-24 | c8af272 | New decision-making.md (10 sections); demoted records-mgmt guide; additive template front matter + proportional rendering; GH-60 defects fixed in docs (template+guide); body order preserved (additive). |
 | 2 | COMPLETED | 2026-06-24 | 2026-06-24 | f86edb6 | git mv architect.md -> decision-advisor.md (history preserved) + rewrite (domain-neutral, 5 types, type-aware modes, no baked-in structure, references template, R2/R3 human approval); new decision-critic.md (read-only, RD-16 independence honesty, tri-state verdict). @toolsmith not spawnable -> applied customize-opencode skill discipline (GH-60 precedent). |
-| 3 | COMPLETED | 2026-06-24 | 2026-06-24 | _(pending commit)_ | plan-decision.md generalized (triage->classify->rigor->rights; <decision_planning_summary> + legacy alias; GH-60 wording fixed); write-decision.md generalized (proportional rendering, ai_assistance, rec!=decision, no auto-Accept R2/R3; RT-02: embedded_template removed -> single structural definition mirroring template; GH-60 fixes); new review-decision.md (read-only critic, tri-state verdict). |
+| 3 | COMPLETED | 2026-06-24 | 2026-06-24 | 4a49bdf | plan-decision.md generalized (triage->classify->rigor->rights; <decision_planning_summary> + legacy alias; GH-60 wording fixed); write-decision.md generalized (proportional rendering, ai_assistance, rec!=decision, no auto-Accept R2/R3; RT-02: embedded_template removed -> single structural definition mirroring template; GH-60 fixes); new review-decision.md (read-only critic, tri-state verdict). |
+| 4 | COMPLETED | 2026-06-24 | 2026-06-24 | _(pending commit)_ | meeting-organizer.md routes via @decision-advisor (evidence input -> /plan-decision; durable -> /write-decision); delegation_policy @architect -> @decision-advisor; three decision modes documented. Meeting guide §2.4 documents three modes; §4.3 cross-links Decision-Making Guide + @decision-advisor. 0 @architect in meeting files. |

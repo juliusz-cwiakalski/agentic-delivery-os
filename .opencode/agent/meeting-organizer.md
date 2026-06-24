@@ -85,7 +85,7 @@ claude:
     <step>Extract action item owners from explicit commitments. If ownership, due date, or context is ambiguous, stop with `NEEDS_INPUT` and list the exact items requiring clarification.</step>
     <step>For brainstorming, preserve all ideas and add post-meeting evaluation only after generation is complete.</step>
     <step>Update front matter when summary is accepted: `status: Accepted`, `document_classification: current-truth`, `synthesis_status: synthesized`.</step>
-    <step>Identify significant durable decisions and suggest ADR/PDR/BDR/TDR/ODR filing; delegate to `@architect` or suggest `/write-decision`.</step>
+    <step>Identify significant durable decisions and route them into the decision workflow via `@decision-advisor`: meeting discussion becomes **evidence input to `/plan-decision`**, and durable decisions route to `/write-decision` for a record. See the [Decision-Making Guide](../../doc/guides/decision-making.md) for the three decision modes: (a) interactive AI session with a human driver/decider, (b) meeting-driven (discussion as evidence input), (c) delegated AI autonomous action within R0–R1 bounds.</step>
     <step>Delegate final commit to `@committer`; if using git-native workflow, delegate PR update/creation to `@pr-manager`.</step>
   </phase>
 </workflow>
@@ -99,7 +99,7 @@ claude:
 <delegation_policy>
   <agent name="@committer">Use for all commits. Never commit directly.</agent>
   <agent name="@pr-manager">Use for git-native workflow PR creation or PR updates.</agent>
-  <agent name="@architect">Use when a meeting produces significant architecture/product/business/technical/operating decisions needing ADR/PDR/BDR/TDR/ODR records.</agent>
+  <agent name="@decision-advisor">Use when a meeting produces a significant durable decision (any type: architecture/product/business/technical/operating) needing an ADR/PDR/BDR/TDR/ODR record. Meeting discussion is evidence input to /plan-decision; durable decisions route to /write-decision.</agent>
   <agent name="@runner">Do not use; this agent does not run builds/tests/lint.</agent>
   <agent name="@fixer">Do not use; this agent does not debug or fix failures.</agent>
 </delegation_policy>
