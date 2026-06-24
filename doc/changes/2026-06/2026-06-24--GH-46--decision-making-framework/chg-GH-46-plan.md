@@ -747,26 +747,26 @@ dogfood ADR can only be cleanly produced AFTER the new commands/agents exist
 
 **Tasks**:
 
-- [ ] **7.1** Determine the decision's rigor for the dogfood: GH-46 is a
+- [x] **7.1** Determine the decision's rigor for the dogfood: GH-46 is a
   medium-risk refactor of a governance subsystem affecting all agents -> at least
   **R2**, arguably **R3** (org-wide agent-behavior change). Treat as R2/R3: produce
   a full record and keep `status: Proposed` (do not auto-Accept — require an
   authorized human decision per the new AI-authority model).
-- [ ] **7.2** Run the new `/plan-decision` flow to produce a
+- [x] **7.2** Run the new `/plan-decision` flow to produce a
   `<decision_planning_summary>` capturing GH-46's decisions RD-1 … RD-16 (one
   generalized orchestrator; rename to `@decision-advisor`; remove baked-in
   structure; process-first guide; consolidate into GH-46; dogfood; universal kernel
   + R0-R3 + emergency; DACI rights; bounded AI authority; lean critic +
   `/review-decision`; meeting integration; defer the heavy machinery; condensed
   guide matrix) plus OQ-A/OQ-B leans.
-- [ ] **7.3** Run `/write-decision` to produce
+- [x] **7.3** Run `/write-decision` to produce
   `doc/decisions/ADR-0001-<slug>.md` with full front matter (including the new
   optional `classification`/`governance`/`ai_assistance` blocks), the canonical
   body (referencing the template order), `status: Proposed`, and
   `ai_assistance.human_decider` recorded. Confirm recommendation != decision.
-- [ ] **7.4** Optionally run `/review-decision ADR-0001` via `@decision-critic` to
+- [x] **7.4** Optionally run `/review-decision ADR-0001` via `@decision-critic` to
   exercise the independent-challenge path and capture a verdict.
-- [ ] **7.5** Update `doc/decisions/00-index.md` to list ADR-0001.
+- [x] **7.5** Update `doc/decisions/00-index.md` to list ADR-0001.
 
 **Acceptance Criteria**:
 
@@ -959,4 +959,5 @@ widely distributed (Phases 5, 6, 8).
 | 3 | COMPLETED | 2026-06-24 | 2026-06-24 | 4a49bdf | plan-decision.md generalized (triage->classify->rigor->rights; <decision_planning_summary> + legacy alias; GH-60 wording fixed); write-decision.md generalized (proportional rendering, ai_assistance, rec!=decision, no auto-Accept R2/R3; RT-02: embedded_template removed -> single structural definition mirroring template; GH-60 fixes); new review-decision.md (read-only critic, tri-state verdict). |
 | 4 | COMPLETED | 2026-06-24 | 2026-06-24 | 9743477 | meeting-organizer.md routes via @decision-advisor (evidence input -> /plan-decision; durable -> /write-decision); delegation_policy @architect -> @decision-advisor; three decision modes documented. Meeting guide §2.4 documents three modes; §4.3 cross-links Decision-Making Guide + @decision-advisor. 0 @architect in meeting files. |
 | 5 | COMPLETED | 2026-06-24 | 2026-06-24 | 345fe44 | Documentation track: AGENTS.md (agent team + command table + /plan-decision RT-07 domain-neutral), README.md (19→20 agents, 16→17 commands), .opencode/README.md (agent+command inventory), change-lifecycle.md, onboarding guide, agents-and-commands guide, model-config guide (all 6 architect refs), change-spec-template, pm-instructions.md. .opencode/ track: pm.md (3 edits), coder.md (3 edits), spec-writer.md, plan-writer.md, bootstrapper.md. System-spec: feature-decision-records.md (agent refs + codebase map + last_updated + GH-46), feature-document-templates.md. Config: opencode-github-copilot.jsonc (architect→decision-advisor + decision-critic). scripts/uninstall.sh. Frozen artifacts untouched. |
-| 6 | COMPLETED | 2026-06-24 | 2026-06-24 | _(pending commit)_ | build-claude-plugin.sh: 22 agents, 19 skills; architect.md removed, decision-advisor.md + decision-critic.md exist, review-decision skill exists; 0 stale @architect (only intentional migration note in decision-advisor.md). add-header-location.sh: 3 new files got headers (decision-critic.md, review-decision.md, decision-making.md). NFR-5: no secrets/runtime/network calls. |
+| 6 | COMPLETED | 2026-06-24 | 2026-06-24 | 8124c5f | build-claude-plugin.sh: 22 agents, 19 skills; architect.md removed, decision-advisor.md + decision-critic.md exist, review-decision skill exists; 0 stale @architect (only intentional migration note in decision-advisor.md). add-header-location.sh: 3 new files got headers (decision-critic.md, review-decision.md, decision-making.md). NFR-5: no secrets/runtime/network calls. |
+| 7 | COMPLETED | 2026-06-24 | 2026-06-24 | _(pending commit)_ | ADR-0001-decision-making-framework.md produced via dogfood. Rigor: R3 (org-wide agent-behavior change); status: Proposed (no auto-Accept — requires human decider). Full front matter (classification, governance, ai_assistance, revisit_triggers). Body order matches template exactly (13 sections, optional Examples omitted). All 16 RDs captured (DEC-1…DEC-18). 00-index.md updated. |

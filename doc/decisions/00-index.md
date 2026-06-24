@@ -9,4 +9,4 @@ All decision records for this repository, ordered by type and number.
 
 | ID | Type | Title | Status | Date | Owners |
 |----|------|-------|--------|------|--------|
-<!-- Add entries as decisions are created -->
+| ADR-0001 | ADR | Decision-Making Framework Refactor | Proposed | 2026-06-24 | Juliusz Ćwiąkalski |
