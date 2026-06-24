@@ -147,7 +147,7 @@ Business Markdown templates intentionally stay concise (front matter + headings 
 | `doc/templates/implementation-plan-template.md` | Plan template | Phased implementation plan structure |
 | `doc/templates/test-plan-template.md` | Test plan template | Test plan structure with scope, strategy, and traceability matrix |
 | `doc/templates/feature-spec-template.md` | Feature spec template | 9-section feature specification structure |
-| `doc/templates/decision-record-template.md` | Decision record template | Front matter + 12 sections for all decision types |
+| `doc/templates/decision-record-template.md` | Decision record template | Front matter + 13 sections for all decision types |
 | `doc/templates/test-spec-template.md` | Test spec template | Enduring test specification structure |
 
 ### Agent Integration

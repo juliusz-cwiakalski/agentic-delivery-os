@@ -430,18 +430,24 @@ review/PR (spec §18).
 
 **Tasks**:
 
-- [ ] **7.1** Walk **every AC-GH60-1 … AC-GH60-12** against the five artifacts and mark each
+- [x] **7.1** Walk **every AC-GH60-1 … AC-GH60-12** against the five artifacts and mark each
   satisfied (see the AC coverage map below).
-- [ ] **7.2** Confirm **backward compatibility** (NFR-2: existing records valid, 0 require
+  *(All 12 ACs PASSED. AC-1: template L63; AC-2: template L81–93 five fields; AC-3: template+write-decision compliance eval (prose/matrix, default matrix); AC-4: template+write-decision attestation (negotiable:yes only); AC-5: plan-decision step 3 distinct step; AC-6: plan-decision step 4 soft-warn overlap; AC-7: plan-decision hard_requirements: distinct field; AC-8: write-decision structure/embedded template match template; AC-9: guide §6 item 4; AC-10: single shared structure, 5/5 types; AC-11: additive only; AC-12: architect L181.)*
+- [x] **7.2** Confirm **backward compatibility** (NFR-2: existing records valid, 0 require
   migration) and **no source-code / CI / build changes** (NFR-4: 0 changed).
-- [ ] **7.3** Confirm **strictly additive**: no existing decision-record section renamed,
+  *(PASSED. `git diff --name-only d4fc1f0..HEAD` shows only doc/ + .opencode/ files (5 artifacts + this change's planning artifacts); `git diff --check` clean; change strictly additive so prior-structure records remain valid; 0 migrations, 0 exist.)*
+- [x] **7.3** Confirm **strictly additive**: no existing decision-record section renamed,
   renumbered, reordered, or removed across all five artifacts (spec NFR-2, RSK-3).
-- [ ] **7.4** **Spec reconciliation**: reconcile `doc/spec/**` (system spec) with the
+  *(PASSED. Every edit is an insertion or tightening of authoring text; pre-existing Context/Problem Framing/Decision Drivers/.../References retain their original relative order in all five artifacts.)*
+- [x] **7.4** **Spec reconciliation**: reconcile `doc/spec/**` (system spec) with the
   completed change via `@doc-syncer` if any system-spec text describes the decision-record
   body structure; if none does, record that no system-spec edit is needed.
-- [ ] **7.5** **Version impact = none**: confirm no version bump is required per repo
+  *(System spec DID describe the body structure in 2 files → reconciled directly (doc/spec is normal-doc track; no task tool for @doc-syncer). Edits: feature-decision-records.md F-1 capability list + Required Sections list (Constraints inserted between Problem Framing and Decision Drivers); feature-document-templates.md "12 sections" → "13 sections".)*
+- [x] **7.5** **Version impact = none**: confirm no version bump is required per repo
   conventions (this is a documentation/agent-prompt change; spec `version_impact: none`).
-- [ ] **7.6** Produce the final review checklist and hand off to review (`/review GH-60`).
+  *(Confirmed — documentation/agent-prompt-framework change only; no version bump.)*
+- [x] **7.6** Produce the final review checklist and hand off to review (`/review GH-60`).
+  *(Final AC/NFR matrix recorded above; change ready for `/review GH-60` — PM triggers review separately per execution mode.)*
 
 **Acceptance Criteria**:
 
@@ -504,10 +510,10 @@ review/PR (spec §18).
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| 1 | Not started | — | — | — | — |
-| 2 | Not started | — | — | — | — |
-| 3 | Not started | — | — | — | Delegated to `@toolsmith` |
-| 4 | Not started | — | — | — | Delegated to `@toolsmith` |
-| 5 | Not started | — | — | — | Delegated to `@toolsmith` |
-| 6 | Not started | — | — | — | Cross-source consistency verification |
-| 7 | Not started | — | — | — | Finalize and release |
+| 1 | Done | 2026-06-24 | 2026-06-24 | 5ee5bd4 | Template: Constraints section + entry schema + compliance eval + attestation. Documentation track. |
+| 2 | Done | 2026-06-24 | 2026-06-24 | 26fbdc6 | Guide §6 + new §6.1 discipline; §9 planning-flow wording. Documentation track. |
+| 3 | Done | 2026-06-24 | 2026-06-24 | 486419b | plan-decision: hard-requirements elicitation step + overlap detection + hard_requirements: summary field. `customize-opencode` skill applied (no @toolsmith subagent available). |
+| 4 | Done | 2026-06-24 | 2026-06-24 | e81f25c | write-decision: `<decision_structure>` + embedded template + authoring rules render Constraints + attestation. `customize-opencode` skill applied. |
+| 5 | Done | 2026-06-24 | 2026-06-24 | edad730 | architect: baked-in body structure lists Constraints between Problem Framing and Decision Drivers. `customize-opencode` skill applied. spec-writer/plan-writer untouched. |
+| 6 | Done | 2026-06-24 | 2026-06-24 | 9a2ad5a | Cross-source consistency: 4/4 sources agree (NFR-1 PASSED); 5/5 types (NFR-3); compliance+attestation consistent. No drift. |
+| 7 | Done | 2026-06-24 | 2026-06-24 | (this commit) | All 12 ACs + 4 NFRs PASSED; strictly additive; spec reconciled (feature-decision-records.md, feature-document-templates.md); version impact none. Ready for `/review GH-60`. |
