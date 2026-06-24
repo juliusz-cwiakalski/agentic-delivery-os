@@ -179,7 +179,7 @@ Overall planning session flow (per ADR number):
     - Before concluding, review all captured elements with the user and:
       - Resolve as many open questions as possible via further targeted questions.
       - For remaining questions, confirm BLOCKING vs NON-BLOCKING and that the user is comfortable proceeding to ADR drafting with those unresolved items.
-     - Only then synthesize the final planning summary for /write-decision and suggest running that command.
+      - Only then synthesize the final planning summary for /write-decision and suggest running that command.
      </session_flow>
 
 <questioning_strategy>

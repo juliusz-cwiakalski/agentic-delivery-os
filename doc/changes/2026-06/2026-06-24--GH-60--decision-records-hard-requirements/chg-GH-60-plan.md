@@ -476,20 +476,20 @@ They are tracked here for completeness and idempotency.
 
 **Tasks**:
 
-- [ ] **8.1** Renumber the decision-record body-structure ordered list in
+- [x] **8.1** Renumber the decision-record body-structure ordered list in
   `.opencode/agent/architect.md` (≈ lines 176–195) so no list-item digit repeats. The minimal
   insertion in Phase 5 left a pre-existing duplicate (`6.`) and introduced a new duplicate
   (`9.` for both Decision Drivers and Mental Models). Markdown auto-renumbers on render so
   NFR-1 ordinal position is unaffected — this is a source readability fix only.
-  *(finding 1, minor)*
-- [ ] **8.2** Fix the list indentation regression in `.opencode/command/plan-decision.md`
+  *(finding 1, minor)* *(Done: body-structure list renumbered sequentially — 18 entries now 6..23; Git safety → 24, Commit → 25 so the whole creation list reads 1..25 with no duplicate digits. Verified via `grep -nE '^[0-9]+\.' | uniq -d` = empty. Only leading numbers changed, no content edits. `customize-opencode` skill applied.)*
+- [x] **8.2** Fix the list indentation regression in `.opencode/command/plan-decision.md`
   step 11 last sub-bullet (`Only then synthesize the final planning summary...`, ≈ line 182):
   re-indent from 5 spaces to 6 spaces to match its sibling sub-bullets.
-  *(finding 2, minor)*
-- [ ] **8.3** Correct the section count in `doc/spec/features/feature-document-templates.md`
+  *(finding 2, minor)* *(Done: step-11 last sub-bullet "Only then synthesize…" re-indented 5→6 spaces (line 182); now matches sibling sub-bullets "Resolve…" / "For remaining…" at 6 leading spaces. `customize-opencode` skill applied.)*
+- [x] **8.3** Correct the section count in `doc/spec/features/feature-document-templates.md`
   (≈ line 150) from "13 sections" to "14 sections" (the template has 14 top-level `##` body
   sections; the prior "12" and the bumped "13" are both off-by-one).
-  *(finding 3, minor)*
+  *(finding 3, minor)* *(Done: "13 sections" → "14 sections" (line 150); template verified to contain exactly 14 top-level `##` body sections via `grep '^## '`.)*
 
 **Acceptance Criteria**:
 
@@ -559,3 +559,4 @@ They are tracked here for completeness and idempotency.
 | 6 | Done | 2026-06-24 | 2026-06-24 | 9a2ad5a | Cross-source consistency: 4/4 sources agree (NFR-1 PASSED); 5/5 types (NFR-3); compliance+attestation consistent. No drift. |
 | 7 | Done | 2026-06-24 | 2026-06-24 | (this commit) | All 12 ACs + 4 NFRs PASSED; strictly additive; spec reconciled (feature-decision-records.md, feature-document-templates.md); version impact none. Ready for `/review GH-60`. |
 | Review i1 | Done | 2026-06-24 | 2026-06-24 | — | `/review GH-60` iteration 1 = PASS (0c/0M/3m/0n). Phase 8 appended for 3 optional minor polish items. Artifacts: `code-review/findings-iter-1.json`, `code-review/review-iter-1.md`. |
+| 8 | Done | 2026-06-24 | 2026-06-24 | (this commit) | Review-iter-1 remediation: 3 MINOR findings applied — architect.md body-structure list renumbered sequential (no duplicate digits); plan-decision.md step-11 sub-bullet re-indented 5→6 spaces; feature-document-templates.md section count 13→14. Pure cosmetic; no semantic edits. `customize-opencode` skill applied for `.opencode/` edits. |
