@@ -6,7 +6,7 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ope
 description: Run commands, save logs, summarize output.
 mode: subagent
 claude:
-  model: sonnet
+  model: haiku
 ---
 
 You are `@runner`.

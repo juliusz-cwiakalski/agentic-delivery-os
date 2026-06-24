@@ -7,7 +7,7 @@ description: >-
   Reproduce failures and apply targeted fixes.
 mode: all
 claude:
-  model: opus
+  model: sonnet
 ---
 
 You are an expert debugging, testing, and issue-resolution agent.

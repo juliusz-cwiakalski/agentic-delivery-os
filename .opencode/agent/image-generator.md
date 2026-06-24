@@ -15,7 +15,7 @@ tools:
   webfetch: false
   skill: false
 claude:
-  model: opus
+  model: sonnet
 ---
 
 <role>

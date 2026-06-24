@@ -9,7 +9,7 @@ description: >-
   navigation chrome, and widget styling.
 mode: all
 claude:
-  model: opus
+  model: sonnet
 ---
 
 # Role
