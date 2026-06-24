@@ -381,21 +381,26 @@ decision-record body structure. Catch any drift before merge (spec RSK-1, RSK-2)
 
 **Tasks**:
 
-- [ ] **6.1** **Extract the section order** from each of the four authoritative sources:
+- [x] **6.1** **Extract the section order** from each of the four authoritative sources:
   (a) `doc/templates/decision-record-template.md`, (b) §6 of
   `doc/guides/decision-records-management.md`, (c) the `<decision_structure>`/embedded
   template in `.opencode/command/write-decision.md`, (d) the body-structure list in
   `.opencode/agent/architect.md`.
-- [ ] **6.2** **Diff the four lists** and confirm **Constraints (Hard Requirements) appears
+  *(Extracted via grep across all four sources.)*
+- [x] **6.2** **Diff the four lists** and confirm **Constraints (Hard Requirements) appears
   in the identical ordinal position — immediately after *Problem Framing* and immediately
   before *Decision Drivers* — in 4 / 4 sources** (spec NFR-1).
-- [ ] **6.3** Verify **per-alternative compliance evaluation** and **Decision-section
+  *(PASSED 4/4. Ordinal positions — Template L63 (between PF L56, DD L95); Guide §6 item 4 (between PF item 3, DD item 5); write-decision `<decision_structure>` item 4 L94 (between PF L93, DD L95) AND embedded template L216 (between PF L212, DD L227); architect L181 (between PF L180, DD L182).)*
+- [x] **6.3** Verify **per-alternative compliance evaluation** and **Decision-section
   attestation / accepted-risk exception** are present consistently in the template, the
   guide, and `write-decision` (spec F-2, F-3).
-- [ ] **6.4** Verify the section and rules apply **uniformly across all five decision types**
+  *(PASSED. Compliance-evaluation hits: template 10, guide 2, write-decision 6. Attestation/accepted-risk/negotiable hits: template 13, guide 6, write-decision 5.)*
+- [x] **6.4** Verify the section and rules apply **uniformly across all five decision types**
   (ADR/PDR/TDR/BDR/ODR) — no type opts out (spec F-7, NFR-3).
-- [ ] **6.5** If any drift is found, route the fix to the responsible track (documentation
+  *(PASSED 5/5. All sources reference a single shared template/body structure; no per-type structural variant or opt-out exists.)*
+- [x] **6.5** If any drift is found, route the fix to the responsible track (documentation
   file → normal fix; `.opencode/` file → `@toolsmith`) and re-verify until 4 / 4 agree.
+  *(No drift found — no corrective edits required.)*
 
 **Acceptance Criteria**:
 
