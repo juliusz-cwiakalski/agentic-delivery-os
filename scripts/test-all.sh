@@ -66,28 +66,43 @@ log_info "scanning for tests under ${base_dir}"
 
 fail=0
 found_any=0
+files_run=0
+files_passed=0
+failed_files=()
 
 # Discover test files: must live under a .tests/ or tests/ folder, be named
 # test-*.sh, and be executable. Sorted for stable output. Piped via process
-# substitution so the while-loop runs in this shell (fail var persists).
+# substitution so the while-loop runs in this shell (counters persist).
 while IFS= read -r -d '' test_file; do
   found_any=1
+  files_run=$((files_run + 1))
   rel="${test_file#${base_dir}/}"
   log_info "running ${rel}"
-  if ! bash "${test_file}"; then
+  if bash "${test_file}"; then
+    files_passed=$((files_passed + 1))
+  else
     log_err "FAILED ${rel}"
     fail=1
+    failed_files+=("${rel}")
   fi
 done < <(find "${base_dir}" -type f \( -path '*/.tests/*' -o -path '*/tests/*' \) -name 'test-*.sh' -perm -u+x -print0 | sort -z)
 
+printf '\n'
 if [[ "${found_any}" -eq 0 ]]; then
   log_info "no tests found under ${base_dir}"
+  exit 0
 fi
 
+# Always print a consolidated result so failures (which may have scrolled off
+# the screen) are easy to find at the very end of the output.
 if [[ "${fail}" -ne 0 ]]; then
-  log_err "one or more test files failed"
+  printf '[ERROR] %s %d/%d test files passed; %d failed:\n' \
+    "${LOG_TAG}" "${files_passed}" "${files_run}" "${#failed_files[@]}" >&2
+  for ff in "${failed_files[@]}"; do
+    printf '[ERROR] %s   - %s\n' "${LOG_TAG}" "${ff}" >&2
+  done
   exit 1
 fi
 
-log_info "all tests passed"
+printf '[INFO]  %s all tests passed (%d/%d files)\n' "${LOG_TAG}" "${files_passed}" "${files_run}"
 exit 0

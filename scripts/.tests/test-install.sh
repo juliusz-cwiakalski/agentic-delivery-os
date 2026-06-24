@@ -732,18 +732,23 @@ test_local_dry_run() {
 }
 
 test_local_requires_git_dir() {
-  local project_dir="${_test_tmpdir}/no-git-project"
-  mkdir -p "${project_dir}"
+  # Deterministic: create a real git repo and run --local from a subdirectory
+  # (no .git in CWD). This reliably hits the "Not a project root" branch
+  # regardless of where TMPDIR lives. (Previously the result depended on
+  # whether TMPDIR itself sat inside a git repo.)
+  local repo="${_test_tmpdir}/repo"
+  mkdir -p "${repo}/subdir"
+  git -C "${repo}" init -q
 
   local stdout exit_code=0
   stdout="$(
-    cd "${project_dir}" && \
+    cd "${repo}/subdir" && \
     ADOS_SOURCE_DIR="${_test_tmpdir}" \
     "${SCRIPT_DIR}/install.sh" --local 2>&1
   )" || exit_code=$?
 
-  assert_exit_code 2 "${exit_code}" "Should fail without .git directory"
-  assert_contains "${stdout}" "Not a project root" "Should mention missing .git"
+  assert_exit_code 2 "${exit_code}" "Should fail when not at git root"
+  assert_contains "${stdout}" "Not a project root" "Should mention not a project root"
 }
 
 # ============================================================================

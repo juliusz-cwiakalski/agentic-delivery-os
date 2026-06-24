@@ -344,16 +344,6 @@ test_print_instructions_gitbash_contains_powershell() {
 }
 
 # ============================================================================
-# TESTS — ask_yes_no (no interactive tty in CI)
-# ============================================================================
-
-test_ask_yes_no_returns_false_without_tty() {
-  # In a non-interactive environment there is no /dev/tty, so ask_yes_no must
-  # decline (return 1) rather than hang.
-  ! ask_yes_no "should this be yes?" "Y"
-}
-
-# ============================================================================
 # TESTS — download_tool
 # ============================================================================
 
@@ -402,6 +392,9 @@ test_download_tool_returns_external_on_curl_failure() {
 # ============================================================================
 # TESTS — offer_path_setup
 # ============================================================================
+# NOTE: ask_yes_no reads from /dev/tty, which would block or prompt in a real
+# terminal. Tests must NEVER go interactive, so ask_yes_no is mocked to a fixed
+# answer and we verify offer_path_setup's logic for each branch.
 
 test_offer_path_setup_skips_when_dir_in_path() {
   local dir="${HOME}/.local/bin"
@@ -416,11 +409,37 @@ test_offer_path_setup_skips_when_dir_in_path() {
   }
 }
 
-test_offer_path_setup_declines_without_tty() {
+test_offer_path_setup_appends_when_accepted() {
   local dir="${_test_tmpdir}/not/in/path"
   SHELL="/usr/bin/bash"
   PATH="/usr/bin"
-  # No /dev/tty in CI -> ask_yes_no declines -> rc file not modified.
+  ask_yes_no() { return 0; }   # simulate user accepts
+  offer_path_setup "${dir}"
+  assert_file_exists "${HOME}/.bashrc" "rc should be created when user accepts"
+  local rc
+  rc="$(cat "${HOME}/.bashrc")"
+  assert_contains "${rc}" "export PATH=\"${dir}:" "rc should add the PATH export"
+  assert_contains "${rc}" "# Added by install-zclaude.sh (${dir})" "rc should use the idempotency marker"
+}
+
+test_offer_path_setup_idempotent_on_repeat_accept() {
+  local dir="${_test_tmpdir}/not/in/path"
+  SHELL="/usr/bin/bash"
+  PATH="/usr/bin"
+  ask_yes_no() { return 0; }
+  offer_path_setup "${dir}"
+  offer_path_setup "${dir}"
+  assert_file_exists "${HOME}/.bashrc"
+  local count
+  count="$(grep -c "Added by install-zclaude.sh" "${HOME}/.bashrc" || true)"
+  assert_eq "1" "${count}" "marker should appear exactly once (idempotent)"
+}
+
+test_offer_path_setup_no_append_when_declined() {
+  local dir="${_test_tmpdir}/not/in/path"
+  SHELL="/usr/bin/bash"
+  PATH="/usr/bin"
+  ask_yes_no() { return 1; }   # simulate user declines
   offer_path_setup "${dir}"
   [[ ! -f "${HOME}/.bashrc" ]] || {
     printf '  rc file should not be created when user declines\n' >&2
@@ -469,17 +488,16 @@ main() {
   run_test "instructions (unix) mention curl + url" test_print_instructions_unix_contains_curl_cmd
   run_test "instructions (gitbash) mention powershell + irm" test_print_instructions_gitbash_contains_powershell
 
-  # ask_yes_no
-  run_test "ask_yes_no declines without a tty" test_ask_yes_no_returns_false_without_tty
-
   # download_tool
   run_test "download_tool dry-run creates no dest" test_download_tool_dry_run_does_not_create_dest
   run_test "download_tool writes executable dest" test_download_tool_writes_executable_dest
   run_test "download_tool returns EXIT_EXTERNAL on curl failure" test_download_tool_returns_external_on_curl_failure
 
-  # offer_path_setup
+  # offer_path_setup (ask_yes_no is mocked — tests never go interactive)
   run_test "offer_path_setup skips when dir already in PATH" test_offer_path_setup_skips_when_dir_in_path
-  run_test "offer_path_setup declines without tty" test_offer_path_setup_declines_without_tty
+  run_test "offer_path_setup appends to rc when accepted" test_offer_path_setup_appends_when_accepted
+  run_test "offer_path_setup is idempotent on repeat accept" test_offer_path_setup_idempotent_on_repeat_accept
+  run_test "offer_path_setup no append when declined" test_offer_path_setup_no_append_when_declined
 
   print_summary
 }
