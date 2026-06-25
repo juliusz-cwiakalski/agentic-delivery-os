@@ -265,7 +265,6 @@ test_help_flag_exit0() {
   assert_exit_code 0 "${RC}" "--help should exit 0"
   assert_contains "${OUT}" "Usage" "should print usage"
 }
-
 test_version_flag_exit0() {
   _run --version
   assert_exit_code 0 "${RC}" "--version should exit 0"
@@ -321,6 +320,20 @@ test_coverage_zero_uncovered() {
   assert_contains "${OUT}" "UNCOVERED: 0" "should report 0 uncovered"
 }
 
+test_no_forbidden_dependencies() {
+  # TC-GH63-016 / DEC-4 / DEC-14 / red-team M3: tool sources must not import yaml /
+  # jsonschema or perform network calls (curl/wget/_check_version/raw.githubusercontent).
+  # Comments are excluded so documenting the constraint does not trip the gate.
+  local forbidden
+  forbidden="$(grep -nE 'import yaml|jsonschema|curl |wget |_check_version|raw\.githubusercontent|requests\.|urllib' \
+    "${_TOOLS_DIR}/validate-decision-record" \
+    "${_TOOLS_DIR}/.lib/frontmatter.sh" \
+    "${_TOOLS_DIR}/generate-decision-index" 2>/dev/null \
+    | grep -vE ':[0-9]+:[[:space:]]*#' \
+    | grep -vE 'NO jsonschema|NOT import yaml|no .*yaml|shellcheck source' || true)"
+  assert_eq "" "${forbidden}" "tool sources must contain no forbidden deps/network calls (comments excluded)"
+}
+
 # ============================================================================
 # RUN TESTS
 # ============================================================================
@@ -366,6 +379,7 @@ main() {
   run_test "directory mode aggregates valid+invalid" test_directory_mode_validates_all
   run_test "directory mode all-valid passes" test_directory_mode_all_valid_exit0
   run_test "AC-GH63-15 coverage reports 0 uncovered" test_coverage_zero_uncovered
+  run_test "TC-016 no forbidden deps / network calls" test_no_forbidden_dependencies
 
   print_summary
 }

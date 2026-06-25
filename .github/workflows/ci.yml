@@ -35,6 +35,64 @@ jobs:
             exit 1
           fi
 
+  verify-decision-records:
+    name: Verify decision records (validator + index drift)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Detect relevant path changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            decision:
+              - 'doc/decisions/**'
+              - 'schemas/**'
+              - 'doc/templates/decision-record-template.md'
+              - 'doc/spec/features/feature-decision-records.md'
+              - 'tools/validate-decision-record'
+              - 'tools/generate-decision-index'
+              - 'tools/.lib/frontmatter.sh'
+              - 'tools/.tests/**'
+              - '.github/workflows/ci.yml'
+
+      - name: Run decision-record gates
+        if: steps.filter.outputs.decision == 'true'
+        run: |
+          set -e
+          chmod +x tools/validate-decision-record tools/generate-decision-index
+
+          echo "== Schema self-validity (AC-GH63-13) =="
+          jq empty schemas/decision-record-frontmatter.schema.json
+          jq empty schemas/decision-planning-summary.schema.json
+
+          echo "== Validate all decision records (front matter + cross-field rules) =="
+          # Front-matter mode only; the planning-summary validator is NEVER run over live
+          # docs (SD-3/DEC-3 — summary fixtures live under tools/.tests/fixtures/).
+          tools/validate-decision-record doc/decisions/
+
+          echo "== Index drift check (AC-GH63-12) =="
+          # Regenerate the committed index to a temp buffer and diff against the committed
+          # copy. Time-DEPENDENT findings are advisory only and never in the committed
+          # artifact (DEC-15), so --dry-run output is deterministic and directly comparable.
+          tools/generate-decision-index --dry-run doc/decisions/ > /tmp/index-regenerated.md
+          if diff -u doc/decisions/00-index.md /tmp/index-regenerated.md; then
+            echo "✓ Index is in sync"
+          else
+            echo "::error::doc/decisions/00-index.md is stale. Run 'tools/generate-decision-index' and commit the regenerated index."
+            exit 1
+          fi
+
+          echo "== Validator test suite (AC-GH63-15 coverage + forbidden-dep gate) =="
+          bash tools/.tests/test-validate-decision-record.sh
+
+          echo "== Index generator test suite =="
+          bash tools/.tests/test-generate-decision-index.sh
+
+          echo "✓ All decision-record gates passed"
+
   # Future: Add additional quality gates here
   # - test
   # - lint
