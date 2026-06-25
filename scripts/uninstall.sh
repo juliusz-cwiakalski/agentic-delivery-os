@@ -62,11 +62,12 @@ readonly ADOS_AGENT_FILES=(
   spec-writer.md decision-advisor.md decision-critic.md pm.md image-reviewer.md image-generator.md
   toolsmith.md committer.md designer.md reviewer.md runner.md coder.md
   fixer.md pr-manager.md external-researcher.md editor.md
+  meeting-organizer.md review-feedback-applier.md
 )
 
 # Known ADOS command files (installed globally)
 readonly ADOS_COMMAND_FILES=(
-  bootstrap.md plan-decision.md write-decision.md plan-change.md review.md
+  bootstrap.md plan-decision.md write-decision.md review-decision.md plan-change.md review.md
   commit.md pr.md run-plan.md check.md design.md write-spec.md
   review-deep.md write-plan.md write-test-plan.md sync-docs.md check-fix.md
 )

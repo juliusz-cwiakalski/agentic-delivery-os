@@ -280,6 +280,7 @@ scripts/add-header-location.sh doc/guides
 | [doc/guides/opencode-agents-and-commands-guide.md](doc/guides/opencode-agents-and-commands-guide.md) | How to use agents and commands (manual + autopilot) |
 | [doc/guides/unified-change-convention-tracker-agnostic-specification.md](doc/guides/unified-change-convention-tracker-agnostic-specification.md) | Change naming convention (workItemRef, folders, branches) |
 | [.ai/agent/pm-instructions.md](.ai/agent/pm-instructions.md) | PM tracker configuration (GitHub/Jira setup) |
+| [.ai/agent/decision-instructions.md](.ai/agent/decision-instructions.md) | Project-local decision configuration (tracking conventions + strategic context) |
 | [.ai/agent/pr-instructions.md](.ai/agent/pr-instructions.md) | PR/MR platform configuration (GitHub/GitLab setup) |
 | [doc/guides/pr-platform-integration.md](doc/guides/pr-platform-integration.md) | PR/MR platform integration guide |
 | [.ai/rules/bash.md](.ai/rules/bash.md) | Bash coding rules |

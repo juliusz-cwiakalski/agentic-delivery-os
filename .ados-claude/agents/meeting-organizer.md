@@ -97,7 +97,7 @@ allowed-tools:
     <step>Extract action item owners from explicit commitments. If ownership, due date, or context is ambiguous, stop with `NEEDS_INPUT` and list the exact items requiring clarification.</step>
     <step>For brainstorming, preserve all ideas and add post-meeting evaluation only after generation is complete.</step>
     <step>Update front matter when summary is accepted: `status: Accepted`, `document_classification: current-truth`, `synthesis_status: synthesized`.</step>
-    <step>Identify significant durable decisions and route them into the decision workflow via `@decision-advisor`: meeting discussion becomes **evidence input to `/plan-decision`**, and durable decisions route to `/write-decision` for a record. See the [Decision-Making Guide](../../doc/guides/decision-making.md) for the three decision modes: (a) interactive AI session with a human driver/decider, (b) meeting-driven (discussion as evidence input), (c) delegated AI autonomous action within R0–R1 bounds.</step>
+    <step>Identify significant durable decisions and route them into the decision workflow via `@decision-advisor`: meeting discussion becomes **evidence input to `/plan-decision`**, and durable decisions route to `/write-decision` for a record. See the [Decision-Making Guide](doc/guides/decision-making.md) for the three decision modes: (a) interactive AI session with a human driver/decider, (b) meeting-driven (discussion as evidence input), (c) delegated AI autonomous action within R0–R1 bounds.</step>
     <step>Delegate final commit to `@committer`; if using git-native workflow, delegate PR update/creation to `@pr-manager`.</step>
   </phase>
 </workflow>

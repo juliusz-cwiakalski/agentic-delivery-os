@@ -145,8 +145,8 @@ Once **Accepted**, the core decision statement should not change. If the decisio
 Every decision record must include YAML front matter. See
 [`doc/templates/decision-record-template.md`](../templates/decision-record-template.md)
 for the full skeleton, including the optional `classification`, `governance`,
-`ai_assistance`, and `review_date`/revisit-trigger blocks added by GH-46 (all
-optional and additive). Minimum front matter:
+`ai_assistance`, and `review_date`/revisit-trigger blocks (all optional and
+additive). Minimum front matter:
 
 ```yaml
 ---
@@ -274,6 +274,10 @@ In `/plan-decision`, hard requirements (constraints) are elicited as a **distinc
 - `@pm`: Routes decision-requiring situations to `@decision-advisor`
 - `@spec-writer`: References decision records in change spec `links.decisions`
 - `@plan-writer`: References decision records as context for implementation plans
+
+### Project-local conventions
+
+This guide defines the **generic** record-artifact standard. Each project can create `.ai/agent/decision-instructions.md` to specify project-specific tracking conventions (tracker integration, identifier scheme, labels, status workflow) and strategic context (priorities, values, decision principles). See the [Decision-Making Guide §11](decision-making.md) and the [blueprint template](../templates/blueprints/decision-instructions--example.md).
 
 ---
 

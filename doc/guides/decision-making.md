@@ -136,13 +136,13 @@ ADOS uses AI as a decision **aid**, not an unaccountable decider.
 
 **Recommendation ≠ decision.** The analyst/AI recommendation is always rendered separately from the authorized (often human) decision. R2/R3 records stay at `status: Proposed` with `decision_date: null` until an authorized human decides; AI never auto-Accepts them. Provenance is recorded in the optional `ai_assistance:` block (roles used, whether external data was shared, whether citations were verified, the human decider, reviewers).
 
-> **Honesty about independence (RD-16).** Multiple AI agents using the **same model + prompt lineage do not constitute independent evidence.** For a single-model setup, `@decision-critic` is a **first-pass check, NOT independent assurance**. **R3 ALWAYS requires a human reviewer** regardless of the critic's verdict. Where a different model family is configured, assigning it to the critic is **recommended, not mandated**, to provide genuine independence.
+> **Honesty about independence.** Multiple AI agents using the **same model + prompt lineage do not constitute independent evidence.** For a single-model setup, `@decision-critic` is a **first-pass check, NOT independent assurance**. **R3 ALWAYS requires a human reviewer** regardless of the critic's verdict. Where a different model family is configured, assigning it to the critic is **recommended, not mandated**, to provide genuine independence.
 
 ---
 
 ## 7. Per-type nuance matrix (condensed)
 
-Context anchors, typical approver, and fitting framework per type. This is a single condensed matrix — **not** 18 catalog files (deferred per RD-13).
+Context anchors, typical approver, and fitting framework per type. This is a single condensed matrix — **not** separate catalog files per type.
 
 | Type | Context anchors | Typical approver | Fitting frameworks |
 |------|-----------------|------------------|--------------------|
@@ -198,9 +198,21 @@ The process lives in this guide; the **record artifact** (naming, front matter, 
 
 ---
 
+## 11. Project-local decision instructions
+
+Each project can create `.ai/agent/decision-instructions.md` to supplement this generic guide with project-specific details:
+
+- **Strategic context**: mission, ranked priorities, values, decision principles — a decision-relevant extract so the `@decision-advisor` calibrates recommendations to what THIS project cares about (not a duplication of full strategy docs).
+- **Operational conventions**: tracker integration (GitHub Issues / Jira / Linear), decision identifier scheme (sequential per type / project-prefixed / tracker-assigned), labels, status workflow, file location.
+
+`@decision-advisor` and `@decision-critic` read this file when present to ground their work. See [`doc/templates/blueprints/decision-instructions--example.md`](../templates/blueprints/decision-instructions--example.md) for a starting template. The `/bootstrap` command scaffolds this file for new projects.
+
+---
+
 ## References
 
 - [Decision Records Management (artifact reference)](decision-records-management.md) — naming, front matter, lifecycle
 - [Decision Record Template](../templates/decision-record-template.md) — single source of truth for record body structure
+- [Project-local Decision Instructions (blueprint)](../templates/blueprints/decision-instructions--example.md) — starting template for your project's `.ai/agent/decision-instructions.md`
 - [Meeting Preparation and Summarization Guide](meeting-preparation-and-summarization.md) — meeting-driven decisions
 - `@decision-advisor` · `@decision-critic` · `/plan-decision` · `/write-decision` · `/review-decision`

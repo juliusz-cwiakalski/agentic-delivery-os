@@ -18,7 +18,7 @@ reversibility: null                       # optional: easy | moderate | hard
 review_date: null                         # optional: YYYY-MM-DD
 business_impact: null                     # optional short impact statement
 customer_impact: null                     # optional short impact statement
-# --- GH-46 optional additive blocks (all optional; omit for any record) ---
+# --- optional additive blocks (all optional; omit for any record) ---
 classification:                           # optional (DM-1): drives routing & rendering
   domains: []                             # e.g., [architecture, security]
   archetype: null                         # selection | design | policy | go_no_go | ...
@@ -69,11 +69,11 @@ links:
 PROPORTIONAL RENDERING (render by rigor; one template, scaled depth):
 - R0 (routine/delegated): NO record — optional note/commit/ticket comment only.
 - R1 (lightweight): compact brief — render ONLY: Context, Problem Framing,
-  Constraints (Hard Requirements), Decision Drivers, Alternatives Considered
-  (baseline + >=1 option), Decision, owner, revisit trigger. Omit the R3-only
-  sections (Mental Models, full Implementation Plan, Verification Criteria,
-  Confidence Rating, Lessons Learned, Examples). R1 resolves within 1 business
-  day; it is a STRICT PROPER SUBSET of the R3 record.
+  Constraints (Hard Requirements), Decision Drivers, Mental Models & Techniques,
+  Alternatives Considered (baseline + >=1 option), Decision, owner, revisit
+  trigger. Omit the R3-only sections (full Implementation Plan, Verification
+  Criteria, Confidence Rating, Lessons Learned, Examples). R1 resolves within
+  1 business day; it is a STRICT PROPER SUBSET of the R3 record.
 - R2 (standard): the full canonical record below.
 - R3 (high assurance): the full canonical record PLUS independent challenge
   (@decision-critic via /review-decision), a human final decision, and a

@@ -54,7 +54,7 @@ $ARGUMENTS
 </process>
 
 <independence_note>
-State at the top of the review which independence level applies (per `@decision-critic`'s RD-16 honesty framing):
+State at the top of the review which independence level applies (per `@decision-critic`'s honesty framing):
 - **Single-model configuration:** the critic is a first-pass check, NOT independent assurance (same-model/same-prompt lineage is not independent evidence).
 - **Multi-model configuration:** the critic runs on a different model family, providing genuine independence (recommended for R3, not mandated).
 

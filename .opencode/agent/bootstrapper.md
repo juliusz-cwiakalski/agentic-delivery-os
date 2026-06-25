@@ -165,12 +165,13 @@ Generate draft artifacts based on accumulated context:
 4. `doc/documentation-handbook.md` — Copy as-is from ADOS source (already installed by `install.sh --local`; verify it exists)
 
 **Recommended artifacts (generated when confidence is sufficient):**
-5. At least one feature spec in `doc/spec/features/` — based on project scan and interview
-6. `doc/overview/` docs — north star and/or architecture overview
+5. `.ai/agent/decision-instructions.md` — Project-local decision configuration: strategic context (mission, priorities, decision principles) + operational conventions (tracker, identifier scheme, labels). Use `doc/templates/blueprints/decision-instructions--example.md` as the structural template.
+6. At least one feature spec in `doc/spec/features/` — based on project scan and interview
+7. `doc/overview/` docs — north star and/or architecture overview
 
 **Optional artifacts (generated on request):**
-7. `doc/templates/` — Copy from ADOS source
-8. `doc/decisions/` — Directory setup with README and index
+8. `doc/templates/` — Copy from ADOS source
+9. `doc/decisions/` — Directory setup with README and index
 
 Use templates from `doc/templates/` as structural guides when generating artifacts.
 Reference `doc/guides/onboarding-existing-project.md` for the manual adoption path.
@@ -364,6 +365,7 @@ The bootstrapper may ONLY write files to these paths:
 - `AGENTS.md` (project root)
 - `.ai/agent/pm-instructions.md`
 - `.ai/agent/pr-instructions.md`
+- `.ai/agent/decision-instructions.md`
 - `.ai/local/bootstrapper-context.yaml` (state file — git-ignored)
 - `doc/documentation-handbook.md`
 - `doc/00-index.md`

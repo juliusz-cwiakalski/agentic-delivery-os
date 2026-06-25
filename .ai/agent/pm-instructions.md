@@ -107,4 +107,4 @@ Product decisions should be documented as PDRs (Product Decision Records) in:
 doc/decisions/PDR-<zeroPad4>-<slug>.md
 ```
 
-Delegate to `@decision-advisor` for creating decision records, or create directly following `doc/guides/decision-making.md` (process) and `doc/guides/decision-records-management.md` (record artifact). Include: Context, Decision, Options, Drivers, Reasoning, Consequences.
+Delegate to `@decision-advisor` for creating decision records, or create directly following `doc/guides/decision-making.md` (process) and `doc/guides/decision-records-management.md` (record artifact). Project-local decision conventions and strategic context are in `.ai/agent/decision-instructions.md`. Include: Context, Decision, Options, Drivers, Reasoning, Consequences.

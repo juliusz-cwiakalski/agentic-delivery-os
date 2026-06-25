@@ -136,7 +136,7 @@ Overall planning session flow (per decision number):
    - For R2/R3, note that a **human final decision** is required (recommendation ≠ decision). Capture the expected human decider for the `ai_assistance.human_decider` field.
 
 6. **Clarify context and problem framing**
-   - Elicit: current state, pain points, gaps, and constraints (technical, organizational, regulatory).
+   - Elicit: current state, pain points, gaps, and situational facts (technical, organizational, regulatory context).
    - Reframe the problem in objective technical terms, distinguishing symptoms from root causes.
    - Apply techniques such as 5 Whys or Ishikawa (textually) to probe underlying causes where appropriate.
    - Keep separate lists of **facts**, **assumptions**, and **to confirm** items.
@@ -247,7 +247,7 @@ related_changes: ["PDEV-123"]
 decision_scope: "service"             # service | cross-service | organization-wide
 audience: internal
 
-# --- GH-46: classification, rigor, governance, AI-assistance (all captured by the triage->rights front-end) ---
+# --- classification, rigor, governance, AI-assistance (captured by the triage->rights front-end) ---
 classification:
   domains: ["architecture", "storage"]
   archetype: "selection"
