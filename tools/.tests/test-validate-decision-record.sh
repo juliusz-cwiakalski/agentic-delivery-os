@@ -32,7 +32,7 @@ _test_setup() {
 }
 
 _test_teardown() {
-  [[ -n "${_test_tmpdir:-}" && -d "${_test_tmpdir:-}" ]] && rm -rf "${_test_tmpdir}"
+  [[ -n "${_test_tmpdir:-}" && -d "${_test_tmpdir:-}" ]] && rm -rf "${_test_tmpdir}" || true
 }
 
 trap '_test_teardown' EXIT
