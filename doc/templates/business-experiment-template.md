@@ -2,6 +2,7 @@
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # MIT License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/templates/business-experiment-template.md
+ados_distribution: redistributable
 id: EXP-<slug>
 status: planned # planned | running | completed | stopped | pivoted
 created: <YYYY-MM-DD>

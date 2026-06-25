@@ -2,6 +2,7 @@
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # MIT License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/templates/decision-record-template.md
+ados_distribution: redistributable
 id: <TYPE>-<zeroPad4>                    # e.g., ADR-0001, PDR-0001
 decision_type: <type>                    # adr | pdr | tdr | bdr | odr
 status: Proposed                         # Proposed | Under Review | Accepted | Deprecated | Superseded
