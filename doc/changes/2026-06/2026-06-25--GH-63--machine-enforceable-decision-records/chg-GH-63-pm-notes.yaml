@@ -14,7 +14,7 @@ phases:
   review_fix: { started: 2026-06-25, completed: 2026-06-25 }
   quality_gates: { started: 2026-06-25, completed: 2026-06-25 }
   dod_check: { started: 2026-06-25, completed: 2026-06-25 }
-  pr_creation: { started: 2026-06-25, completed: null, url: null }
+  pr_creation: { started: 2026-06-25, completed: 2026-06-25, url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/76" }
 
 # Two red-team coordinator reviews requested by user:
 #   RT1 = on spec/plan/test-plan artifacts BEFORE delivery
