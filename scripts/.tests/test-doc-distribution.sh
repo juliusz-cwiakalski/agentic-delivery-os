@@ -2,9 +2,10 @@
 # test-doc-distribution.sh — GH-67 doc-distribution drift guard.
 #
 # Forces the `ados_distribution` marker + install-set invariants on the closed
-# DM-2 doc set. Pure POSIX (bash/awk/sort/find); no YAML library, no network
-# (NFR-2/NFR-4). Exits 0 on the green baseline; non-zero (with named-condition
-# `::error::` annotations) on any of the FIVE failure modes (spec §8.3, plan 3.2):
+# DM-2 doc set. Requires bash>=4 (uses `shopt globstar`); otherwise POSIX
+# (awk/sort/find), no YAML library, no network (NFR-2/NFR-4). Exits 0 on the
+# green baseline; non-zero (with named-condition `::error::` annotations) on any
+# of the FIVE failure modes (spec §8.3, plan 3.2):
 #   1. missing-marker            — an in-scope doc with no marker
 #   2. invalid-enum-value        — value not in {redistributable,internal,project-generated}
 #   3. redistributable-not-installed — a redistributable doc absent from the install set
@@ -25,9 +26,43 @@ readonly REPO_ROOT
 readonly GUARD_TAG="(guard-doc-distribution)"
 readonly VALID_ENUM_RE="^(redistributable|internal|project-generated)$"
 
-# Standalone non-guide install targets — mirrors install.sh's ADOS_UPDATABLE_FILES
+# --- bash>=4 capability check (Fix: silent under-scan on macOS bash 3.2) ---
+# `shopt globstar` (used by enumerate_dm2 / derive_*_install_set) is bash>=4. On
+# macOS system bash 3.2 the option does not exist; under `set -e` the failed
+# `shopt -s globstar` would otherwise abort, and without `set -e` it would
+# silently under-scan. Fail loudly instead. install.sh also requires bash>=4.
+if ! (shopt -s globstar) >/dev/null 2>&1; then
+  printf '::error::%s requires bash>=4 (globstar unsupported by this shell: %s). On macOS install bash 4+ (e.g. "brew install bash") or run via the CI container.\n' \
+    "${0##*/}" "${BASH_VERSION:-unknown}" >&2
+  printf '%s[FAIL] requires bash>=4 (globstar unsupported) — aborting\n' "${GUARD_TAG}" >&2
+  exit 1
+fi
+
+# Root under test. Defaults to this repo; the negative-mode harness
+# (test-doc-distribution-modes.sh) overrides via ADOS_GUARD_ROOT to scan a
+# synthetic doc tree, so each of the 5 failure modes can be exercised in CI.
+_GUARD_ROOT="${ADOS_GUARD_ROOT:-${REPO_ROOT}}"
+
+# --- temp-artifact cleanup on early termination (Fix: leaked temp dirs on Ctrl-C) ---
+# The guard creates dm2_list/expected/actual files and (when deriving the real
+# install set) a sandbox + log. Register every temp path; rm -rf is idempotent on
+# the normal-exit path, so an EXIT/INT/TERM trap never leaks even on Ctrl-C.
+_guard_tmp_paths=()
+_guard_register_tmp() { _guard_tmp_paths+=("$@"); }
+_guard_cleanup() {
+  # ${#arr[@]} (no `:-` default; that is invalid syntax). The array is always
+  # declared above, so under `set -u` an empty array reads as 0 here.
+  if [[ ${#_guard_tmp_paths[@]} -gt 0 ]]; then
+    rm -rf "${_guard_tmp_paths[@]}" 2>/dev/null || true
+  fi
+}
+trap _guard_cleanup EXIT INT TERM
+
+# Standalone non-guide install targets — MIRRORS install.sh's ADOS_UPDATABLE_FILES
 # non-guide entries (the install rule for docs that live outside the globbed
-# guide/template classes). Independent copy => the oracle is not tautological.
+# guide/template classes). This is an INDEPENDENT COPY so the oracle is not
+# tautological: if the two lists drift, mode 5 (derived-set drift) fires. The two
+# lists MUST be kept in sync by hand (or derived the same way) — see DEC-2 / ODR-0001.
 readonly STANDALONE_INSTALL_TARGETS=(
   "doc/documentation-handbook.md"
   "doc/00-index.md"
@@ -54,6 +89,9 @@ get_marker() {
     md)
       awk '
         BEGIN { in_fm = 0; val = "missing" }
+        # CRLF tolerance (Fix): strip a trailing CR per record so the ^---$ /
+        # ^ados_distribution: regexes still match on a Windows working tree.
+        { sub(/\r$/, "") }
         NR == 1 && /^---[ \t]*$/ { in_fm = 1; next }
         in_fm && /^---[ \t]*$/ { in_fm = 0 }
         in_fm && /^[#]/ { next }
@@ -61,6 +99,10 @@ get_marker() {
           s = $0
           sub(/^ados_distribution:[ \t]*/, "", s)
           sub(/[ \t]+$/, "", s)
+          # Quote stripping (Fix): valid YAML allows `ados_distribution: "x"`
+          # / '"x"' — return the bare enum value so the enum check matches.
+          sub(/^['"'"'"]/, "", s)
+          sub(/['"'"'"]$/, "", s)
           val = s
           in_fm = 0
         }
@@ -70,10 +112,14 @@ get_marker() {
     yaml|yml)
       awk '
         BEGIN { val = "missing" }
+        # CRLF tolerance (Fix) + quote stripping (Fix) — see the .md path above.
+        { sub(/\r$/, "") }
         /^ados_distribution:[ \t]*.+$/ {
           s = $0
           sub(/^ados_distribution:[ \t]*/, "", s)
           sub(/[ \t]+$/, "", s)
+          sub(/^['"'"'"]/, "", s)
+          sub(/['"'"'"]$/, "", s)
           val = s
         }
         END { print val }
@@ -97,7 +143,8 @@ emit_error() {
 }
 
 # ----------------------------------------------------------------------------
-# get_marker() self-tests (RSK-1 / OQ-1): 4 .md + 3 .yaml cases.
+# get_marker() self-tests (RSK-1 / OQ-1): 7 .md + 4 .yaml cases (incl. CRLF +
+# quoted-value coverage added per the post-delivery review findings).
 # ----------------------------------------------------------------------------
 run_self_tests() {
   local d failed=0 got
@@ -137,6 +184,27 @@ run_self_tests() {
   printf 'parent:\n  ados_distribution: redistributable\n' > "${d}/indented.yaml"
   got="$(get_marker "${d}/indented.yaml")"
   [[ "${got}" == "missing" ]] || { printf 'self-test 5c FAIL (yaml indented): expected missing, got %s\n' "${got}" >&2; failed=1; }
+
+  # 6. .md with CRLF (\\r\\n) line endings + valid marker -> still parses (Fix).
+  printf -- '---\r\nados_distribution: redistributable\r\n---\r\nbody\r\n' > "${d}/crlf.md"
+  got="$(get_marker "${d}/crlf.md")"
+  [[ "${got}" == "redistributable" ]] || { printf 'self-test 6 FAIL (CRLF): expected redistributable, got %s\n' "${got}" >&2; failed=1; }
+
+  # 7. .md with a DOUBLE-quoted marker value -> bare enum returned (Fix).
+  printf -- '---\nados_distribution: "redistributable"\n---\nbody\n' > "${d}/quoted-dq.md"
+  got="$(get_marker "${d}/quoted-dq.md")"
+  [[ "${got}" == "redistributable" ]] || { printf 'self-test 7 FAIL (double-quoted value): expected redistributable, got %s\n' "${got}" >&2; failed=1; }
+
+  # 8. .md with a SINGLE-quoted marker value -> bare enum returned (Fix).
+  #    (printf %s avoids embedding a literal ' in the format string.)
+  printf -- '---\nados_distribution: %sredistributable%s\n---\nbody\n' "'" "'" > "${d}/quoted-sq.md"
+  got="$(get_marker "${d}/quoted-sq.md")"
+  [[ "${got}" == "redistributable" ]] || { printf 'self-test 8 FAIL (single-quoted value): expected redistributable, got %s\n' "${got}" >&2; failed=1; }
+
+  # 9. .yaml with CRLF + quoted value -> bare enum returned (Fix).
+  printf -- 'ados_distribution: "internal"\r\ncalendar_id: X\r\n' > "${d}/crlf-quoted.yaml"
+  got="$(get_marker "${d}/crlf-quoted.yaml")"
+  [[ "${got}" == "internal" ]] || { printf 'self-test 9 FAIL (yaml CRLF+quoted): expected internal, got %s\n' "${got}" >&2; failed=1; }
 
   rm -rf "${d}"
   return "${failed}"
@@ -186,14 +254,25 @@ derive_expected_install_set() {
 # ----------------------------------------------------------------------------
 derive_actual_install_set() {
   local sandbox log f rc
-  sandbox="$(mktemp -d)"
+
+  # TEST SEAM (Fix: committed negative-mode self-tests). When the harness sets
+  # ADOS_GUARD_ACTUAL_SET_FILE, emit that file (sorted) instead of running
+  # install.sh, so modes 3/4/5 can be exercised deterministically regardless of
+  # install.sh's behavior. Unset => the real independent-oracle install run below
+  # (unchanged CI behavior).
+  if [[ -n "${ADOS_GUARD_ACTUAL_SET_FILE:-}" ]]; then
+    sort -u "${ADOS_GUARD_ACTUAL_SET_FILE}"
+    return 0
+  fi
+
+  sandbox="$(mktemp -d)"; _guard_register_tmp "${sandbox}"
   mkdir -p "${sandbox}/.git"
-  log="$(mktemp)"
+  log="$(mktemp)"; _guard_register_tmp "${log}"
 
   set +e
   (
     cd "${sandbox}"
-    ADOS_SOURCE_DIR="${REPO_ROOT}" NO_FETCH=true \
+    ADOS_SOURCE_DIR="${_GUARD_ROOT}" NO_FETCH=true \
       bash "${REPO_ROOT}/scripts/install.sh" --local --no-fetch >"${log}" 2>&1
   )
   rc=$?
@@ -220,7 +299,7 @@ derive_actual_install_set() {
 }
 
 main() {
-  cd "${REPO_ROOT}"
+  cd "${_GUARD_ROOT}"
 
   # --- Parser self-tests (gate everything else on a correct parser). ---
   if ! run_self_tests; then
@@ -228,18 +307,19 @@ main() {
     printf '%s[FAIL] aborting: parser self-tests failed\n' "${GUARD_TAG}" >&2
     exit 1
   fi
-  printf '%s[OK]   get_marker() self-tests passed (4 .md + 3 .yaml cases)\n' "${GUARD_TAG}"
+  printf '%s[OK]   get_marker() self-tests passed (7 .md + 4 .yaml cases)\n' "${GUARD_TAG}"
 
   local dm2_list expected actual marker f total
   dm2_list="$(mktemp)"; expected="$(mktemp)"; actual="$(mktemp)"
+  _guard_register_tmp "${dm2_list}" "${expected}" "${actual}"
 
-  # DM-2 enumeration -> repo-relative, sorted, unique.
-  enumerate_dm2 "${REPO_ROOT}" | while read -r p; do printf '%s\n' "${p#${REPO_ROOT}/}"; done | sort -u > "${dm2_list}"
+  # DM-2 enumeration -> root-relative, sorted, unique.
+  enumerate_dm2 "${_GUARD_ROOT}" | while read -r p; do printf '%s\n' "${p#${_GUARD_ROOT}/}"; done | sort -u > "${dm2_list}"
   total="$(wc -l < "${dm2_list}" | tr -d ' ')"
 
   # --- Modes 1 & 2: marker presence + closed-enum validity (per doc). ---
   while read -r f; do
-    marker="$(get_marker "${REPO_ROOT}/${f}")"
+    marker="$(get_marker "${_GUARD_ROOT}/${f}")"
     if [[ "${marker}" == "missing" ]]; then
       emit_error "missing-marker: ${f} has no ados_distribution marker"
     elif ! valid_marker "${marker}"; then
@@ -257,14 +337,14 @@ main() {
 
   # --- Mode 3: redistributable-not-installed. ---
   while read -r f; do
-    if [[ "$(get_marker "${REPO_ROOT}/${f}")" == "redistributable" ]] && ! grep -qxF "${f}" "${actual}"; then
+    if [[ "$(get_marker "${_GUARD_ROOT}/${f}")" == "redistributable" ]] && ! grep -qxF "${f}" "${actual}"; then
       emit_error "redistributable-not-installed: ${f} is redistributable but absent from the install set"
     fi
   done < "${dm2_list}"
 
   # --- Mode 4: internal-installed. ---
   while read -r f; do
-    if [[ "$(get_marker "${REPO_ROOT}/${f}")" == "internal" ]] && grep -qxF "${f}" "${actual}"; then
+    if [[ "$(get_marker "${_GUARD_ROOT}/${f}")" == "internal" ]] && grep -qxF "${f}" "${actual}"; then
       emit_error "internal-installed: ${f} is internal but IS in the install set"
     fi
   done < "${dm2_list}"

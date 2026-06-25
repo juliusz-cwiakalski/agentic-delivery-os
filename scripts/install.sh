@@ -13,8 +13,10 @@
 #                  Re-running --global updates to the latest version (idempotent).
 #   --local  (-l)  Copy ADOS artifacts into the CURRENT project directory.
 #                  This is the default mode when neither flag is specified.
-#                  Re-running --local updates templates, guides, and handbook while
-#                  preserving project-specific files (pm-instructions.md).
+#                  Re-running --local content-syncs (overwrites) redistributable
+#                  guides/templates/handbook to the latest upstream version while
+#                  preserving project-specific files (pm-instructions.md). Copy a
+#                  template to a working file rather than editing it in place.
 #
 # Interactive mode:
 #   --interactive (-i)  When a file differs from upstream, show a colored unified
@@ -646,8 +648,11 @@ require_project_root() {
 #   .yaml/.yml -> a TOP-LEVEL `^ados_distribution:` key anywhere (these register
 #                 templates have no frontmatter; a `---` block would break
 #                 yaml.safe_load() consumers).
+# CRLF-tolerant (a trailing \r is stripped per record so the regexes still match
+# on a Windows working tree) and strips surrounding single/double quotes from the
+# value (valid YAML `ados_distribution: "x"` / '"x"' returns the bare enum).
 # Returns the trimmed marker value, or "missing" if absent / no frontmatter.
-# (Pure POSIX awk — NFR-4: no YAML library.)
+# (Pure POSIX awk — NFR-4: no YAML library.) Mirrors the guard's parser EXACTLY.
 get_marker() {
   local -r file="$1"
   local ext
@@ -656,6 +661,7 @@ get_marker() {
     md)
       awk '
         BEGIN { in_fm = 0; val = "missing" }
+        { sub(/\r$/, "") }
         NR == 1 && /^---[ \t]*$/ { in_fm = 1; next }
         in_fm && /^---[ \t]*$/ { in_fm = 0 }
         in_fm && /^[#]/ { next }
@@ -663,6 +669,8 @@ get_marker() {
           s = $0
           sub(/^ados_distribution:[ \t]*/, "", s)
           sub(/[ \t]+$/, "", s)
+          sub(/^['"'"'"]/, "", s)
+          sub(/['"'"'"]$/, "", s)
           val = s
           in_fm = 0
         }
@@ -672,10 +680,13 @@ get_marker() {
     yaml|yml)
       awk '
         BEGIN { val = "missing" }
+        { sub(/\r$/, "") }
         /^ados_distribution:[ \t]*.+$/ {
           s = $0
           sub(/^ados_distribution:[ \t]*/, "", s)
           sub(/[ \t]+$/, "", s)
+          sub(/^['"'"'"]/, "", s)
+          sub(/['"'"'"]$/, "", s)
           val = s
         }
         END { print val }
@@ -880,8 +891,12 @@ Modes:
                      definitions to ~/.config/opencode/ (available everywhere).
                      Re-running pulls latest changes and updates all definitions.
   -l, --local        Copy ADOS artifacts into the current project (default).
-                     Re-running updates templates, guides, and handbook to latest
-                     ADOS while preserving project-specific files (pm-instructions.md).
+                     Re-running content-syncs (overwrites) redistributable guides,
+                     templates, and handbook to the latest ADOS version while
+                     preserving project-specific files (pm-instructions.md).
+                     NOTE: copy a template to a working file rather than editing
+                     it in place — re-running will overwrite in-place edits to
+                     redistributable docs.
 
 Tool Selection:
       --tool <name>  Which AI coding tool to install for (default: opencode)
@@ -901,7 +916,10 @@ Options:
       --allow-non-root   Allow local install in a subdirectory (for monorepo subprojects)
 
 File handling (--local mode):
-  Updatable files (guides, templates, handbook) are auto-updated to match upstream.
+  Redistributable files (guides, templates, handbook) are CONTENT-SYNCED to
+  upstream on every re-run — overwritten when content differs to match the latest
+  ADOS version. To customize, copy a template to a working file rather than
+  editing it in place (re-running will overwrite in-place edits).
   Project-specific files (pm-instructions.md) are preserved if they exist locally.
   Use --interactive to review each diff, or --force to overwrite everything.
 
