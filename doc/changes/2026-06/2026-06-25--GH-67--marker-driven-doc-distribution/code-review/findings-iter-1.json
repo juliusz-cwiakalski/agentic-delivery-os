@@ -1,0 +1,57 @@
+[
+  {
+    "id": 1,
+    "severity": "major",
+    "confidence": "high",
+    "file": "scripts/uninstall.sh",
+    "line": 75,
+    "title": "uninstall.sh retains hand-listed guide manifest — drift hole for the uninstall path",
+    "description": "install.sh now derives the guide install set from the ados_distribution marker (no manifest edit needed), but uninstall.sh still hand-lists every guide in ADOS_LOCAL_UPDATABLE_FILES (L75-99). The 1-line drive-by edit in this change (renaming system-dependencies.md → ados-tools-system-dependencies.md) is itself evidence of the disease: uninstall.sh already carried a stale guide name. Going forward, adding a new redistributable guide to doc/guides/ will install automatically (install.sh marker-driven) but will NOT be removed by uninstall.sh, orphaning files on uninstall. The drift guard does not check uninstall coverage, so the forcing-function goal (G-2/G-4) is incomplete for the uninstall direction. The spec scopes the change to the install path (NFR-3 covers global-install), but uninstall.sh was touched in this change so the gap was reachable.",
+    "suggestedFix": "Either (a) make uninstall.sh marker-driven (mirror install.sh's get_marker() + doc/guides glob), closing the drift class symmetrically; or (b) explicitly document the limitation in the spec / open a follow-up change (e.g. GH-67-followup) and add a one-line comment in uninstall.sh pointing at the marker-driven install.sh so the asymmetry is not lost.",
+    "suppressed": false
+  },
+  {
+    "id": 2,
+    "severity": "minor",
+    "confidence": "high",
+    "file": "scripts/.tests/test-doc-distribution.sh",
+    "line": 222,
+    "title": "Negative-mode coverage for the 5 drift modes is ephemeral, not committed",
+    "description": "Plan task 3.2 claims 'all 5 negative modes verified to fire via temporary injection', but those injections are manual/ephemeral — only the get_marker() self-tests (run_self_tests) are committed. The main guard run only proves the green baseline is clean; a future refactor that breaks mode-3 (redistributable-not-installed) or mode-5 (derived-set drift) logic would still pass on the green repo because no synthetic broken-doc fixture exists in the committed suite. Modes 1 & 2 are guarded by the per-doc loop on real files, but modes 3/4/5 are only exercised against the (currently clean) repo state.",
+    "suggestedFix": "Add a committed negative-mode self-test block mirroring run_self_tests(): build a temp synthetic repo skeleton with one broken doc per mode (a no-marker guide, an invalid-enum guide, a redistributable-not-installed guide, an internal-installed guide, and a set-mismatch) and assert the guard's emit_error fires for each. Keeps the drift detector itself regression-protected.",
+    "suppressed": false
+  },
+  {
+    "id": 3,
+    "severity": "minor",
+    "confidence": "medium",
+    "file": "scripts/.tests/test-doc-distribution.sh",
+    "line": 151,
+    "title": "Guard relies on bash 4+ globstar with no declared dependency",
+    "description": "The guard uses `shopt -s globstar nullglob` (enumerate_dm2 L151, derive_expected L167, derive_actual L209) and bash-only arrays/regex. install.sh documents `Dependencies: bash>=4` in its header; the guard has no such note. On macOS default bash 3.2, globstar is unsupported and the glob silently fails to recurse, making the guard under-count DM-2 docs (blueprints would be missed). CI runs on ubuntu-latest (bash 5+), so the merge gate is fine, but local maintainer runs on macOS would silently produce a wrong (passing) verdict.",
+    "suggestedFix": "Add a `# Dependencies: bash>=4, awk, sort` header comment (match install.sh style), and/or add an early guard: `if ! shopt -oq globstar 2>/dev/null && ! shopt -q globstar; then emit_error ...; exit 1; fi` to fail loudly instead of silently mis-scanning.",
+    "suppressed": false
+  },
+  {
+    "id": 4,
+    "severity": "nit",
+    "confidence": "high",
+    "file": ".github/workflows/ci.yml",
+    "line": 48,
+    "title": "ci.yml has no trailing newline",
+    "description": "The diff ends with `\\ No newline at end of file`. POSIX convention and many linters/editors expect a final newline; some YAML tooling warns. Trivial hygiene on the merge-gate config.",
+    "suggestedFix": "Add a trailing newline at end of .github/workflows/ci.yml.",
+    "suppressed": false
+  },
+  {
+    "id": 5,
+    "severity": "nit",
+    "confidence": "medium",
+    "file": "scripts/.tests/test-doc-distribution.sh",
+    "line": 31,
+    "title": "Guard's STANDALONE_INSTALL_TARGETS is an unsynchronized mirror of install.sh manifest",
+    "description": "STANDALONE_INSTALL_TARGETS (L31-37) hardcodes the 5 standalone non-guide targets, mirroring install.sh's ADOS_UPDATABLE_FILES non-guide entries. A new standalone redistributable doc added to install.sh's manifest but not to the guard's array would drift silently: mode 3 (redistributable-not-installed) would not catch it because the doc is outside the doc/guides|templates globs and therefore outside dm2_list. The comment notes 'Independent copy => the oracle is not tautological', but does not warn that the two arrays must be updated together.",
+    "suggestedFix": "Add a comment cross-referencing install.sh ADOS_UPDATABLE_FILES and the AGENTS.md checklist so a future maintainer adding a standalone doc updates both arrays (or derive the standalone set from a marker glob over a dedicated location).",
+    "suppressed": false
+  }
+]

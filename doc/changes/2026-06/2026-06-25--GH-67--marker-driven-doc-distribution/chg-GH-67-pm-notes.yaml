@@ -13,7 +13,7 @@ phases:
   review_fix: { started: "2026-06-25T00:00:00Z", completed: "2026-06-25T00:00:00Z" }
   quality_gates: { started: "2026-06-25T00:00:00Z", completed: "2026-06-25T00:00:00Z" }
   dod_check: { started: "2026-06-25T00:00:00Z", completed: "2026-06-25T00:00:00Z" }
-  pr_creation: { started: "2026-06-25T00:00:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-06-25T00:00:00Z", completed: "2026-06-25T00:00:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/74" }
 decisions:
   - text: "ODR-0001: the 4 doc/templates/*.yaml register templates are 'redistributable' (marker + installed + guarded), not internal. Resolved by @decision-advisor (R1, delegated authority). Grounded in ticket's drift-elimination north-star + repo precedent (profile governs usage, not distribution). Consequence: install.sh globs *.yaml too; guard scans *.yaml. DR at doc/decisions/ODR-0001-classify-yaml-register-templates-redistributable.md (committed c850d36, rides with GH-67 PR)."
     date: "2026-06-25"
