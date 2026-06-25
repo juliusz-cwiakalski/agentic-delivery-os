@@ -6,12 +6,12 @@ phases:
   specification: { started: 2026-06-24, completed: 2026-06-24 }
   test_planning: { started: 2026-06-24, completed: 2026-06-24 }
   delivery_planning: { started: 2026-06-24, completed: 2026-06-24 }
-  delivery: { started: null, completed: null }
-  system_spec_update: { started: null, completed: null }
-  review_fix: { started: null, completed: null }
-  quality_gates: { started: null, completed: null }
-  dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null, url: null }
+  delivery: { started: 2026-06-24, completed: 2026-06-24 }
+  system_spec_update: { started: 2026-06-24, completed: 2026-06-24 }
+  review_fix: { started: 2026-06-24, completed: 2026-06-24 }
+  quality_gates: { started: 2026-06-24, completed: 2026-06-24 }
+  dod_check: { started: 2026-06-24, completed: 2026-06-24 }
+  pr_creation: { started: 2026-06-24, completed: 2026-06-24, url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/62" }
 decisions:
   - { text: "RD-1 One generalized orchestrator agent (not a split by domain). Domain expertise comes from humans + repo docs, not the agent.", date: 2026-06-24 }
   - { text: "RD-2 Rename @architect (broadening-only leaves the discovery failure unfixed).", date: 2026-06-24 }
