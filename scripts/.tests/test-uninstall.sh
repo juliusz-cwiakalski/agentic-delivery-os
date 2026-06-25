@@ -206,7 +206,7 @@ create_mock_ados_project() {
   printf '# Model Config\n' > "${base}/doc/guides/opencode-model-configuration.md"
   printf '# Tools Convention\n' > "${base}/doc/guides/tools-convention.md"
   printf '# Copywriting\n' > "${base}/doc/guides/copywriting.md"
-  printf '# System Deps\n' > "${base}/doc/guides/system-dependencies.md"
+  printf '# System Deps\n' > "${base}/doc/guides/ados-tools-system-dependencies.md"
   printf '# Onboarding\n' > "${base}/doc/guides/onboarding-existing-project.md"
 
   # Decision stubs
@@ -494,7 +494,7 @@ test_local_uninstall_removes_guides() {
   assert_file_not_exists "${project_dir}/doc/guides/opencode-model-configuration.md"
   assert_file_not_exists "${project_dir}/doc/guides/tools-convention.md"
   assert_file_not_exists "${project_dir}/doc/guides/copywriting.md"
-  assert_file_not_exists "${project_dir}/doc/guides/system-dependencies.md"
+  assert_file_not_exists "${project_dir}/doc/guides/ados-tools-system-dependencies.md"
   assert_file_not_exists "${project_dir}/doc/guides/onboarding-existing-project.md"
   assert_file_not_exists "${project_dir}/doc/guides/unified-change-convention-tracker-agnostic-specification.md"
 }

@@ -90,7 +90,7 @@ readonly ADOS_LOCAL_UPDATABLE_FILES=(
   "doc/guides/opencode-model-configuration.md"
   "doc/guides/tools-convention.md"
   "doc/guides/copywriting.md"
-  "doc/guides/system-dependencies.md"
+  "doc/guides/ados-tools-system-dependencies.md"
   "doc/guides/onboarding-existing-project.md"
   # Decision records stubs
   "doc/decisions/README.md"
