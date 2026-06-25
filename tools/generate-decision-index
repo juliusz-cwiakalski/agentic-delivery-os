@@ -77,10 +77,14 @@ _jq() { jq "$@"; }
 
 # Extract the leading license-header / front-matter preamble (everything up to
 # and including the closing '---' of the initial block) from an existing index.
-# Returns empty if the file is absent or has no leading '---' block.
+# Returns empty if the file is absent or does not start with a '---' block.
 _extract_preamble() {
   local -r file="$1"
   [[ -f "$file" ]] || return 0
+  # Only treat as preamble if the file begins with a front-matter fence.
+  local first
+  first="$(head -n 1 "$file" 2>/dev/null || true)"
+  [[ "$first" =~ ^---[[:space:]]*$ ]] || return 0
   awk '
     BEGIN { n = 0; printing = 1 }
     printing && /^---[[:space:]]*$/ { print; n++; if (n == 2) { printing = 0 }; next }
