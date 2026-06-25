@@ -339,20 +339,20 @@ systematic §28.3 fixture suite lands in Phase 3.
 - [ ] **2.5** Implement **lifecycle validity** (in-scope §28.3 #2, #3): only permitted
   status transitions; `links.supersedes` / `links.superseded_by` mutual consistency
   (no orphaned references; no cycles).
-- [ ] **2.6** Implement the remaining **in-scope §28.3 negative cases** against front
+- [ ] **2.6** Implement the remaining **in-scope §28.3 HARD-FAIL negative cases** against front
   matter + planning summary (AC-GH63-5, Appendix A): invalid `decision_type` (#1);
   missing `owners` (#4); planning-summary `hard_requirements ∩ decision_drivers ≠ ∅`
-  (#8); best-effort **non-negotiable-constraint violation in the chosen option** (#9)
-  using available compliance data (a `negotiable: no` constraint the chosen option
-  fails); R3 without `governance.reviewers` (#10) — acceptance-gated: only an **Accepted**
-  R3 with empty reviewers is rejected (DEC-12). Every failure emits an
+  (#8); R3 without `governance.reviewers` (#10) — acceptance-gated: only an **Accepted**
+  R3 with empty reviewers is rejected (DEC-12). Every hard failure emits an
   **actionable** message naming the record, the offending field, and the violated rule,
   and returns a non-zero exit code (NFR-8).
-- [ ] **2.7** Implement the **verification-criteria heuristic** (AC-GH63-6, DEC-10/DEC-13):
-  for Accepted records, check the body contains a non-empty `## Verification Criteria`
-  section; emit a **non-blocking warning (exit 0)** — never fail the build — and **label it
-  explicitly as a heuristic, not a structural guarantee** (a failing check would contradict
-  DEC-10; future `--strict` mode is D-5, deferred).
+- [ ] **2.7** Implement the **best-effort heuristic WARNINGS** (AC-GH63-6, DEC-10/DEC-13):
+  (a) for Accepted records, check the body contains a non-empty `## Verification Criteria`
+  section; (b) **non-negotiable-constraint violation in the chosen option** (#9, best-effort
+  using available planning-summary compliance data). Both emit **non-blocking warnings
+  (exit 0)** — never fail the build — labeled `[WARN]`/`[HEURISTIC]` explicitly as heuristics,
+  not structural guarantees (a failing check would contradict DEC-10; future `--strict` is
+  D-5, deferred). NOTE: #9 is a WARNING (AC-GH63-6), NOT a hard failure (red-team C1).
 - [ ] **2.8** Implement the **backward-compatible migration linter mode** (F-7,
   AC-GH63-14): un-classified records default to R2 and remain valid; legacy shapes emit
   **warnings, never rewrites** (research §30.4). Expose via a mode/flag (e.g., `--lint`
@@ -437,11 +437,15 @@ alias), and prove the declarative schema and the imperative validator are couple
   un-classified record defaults to R2 and stays valid (AC-GH63-14); assert the
   verification-criteria heuristic fires for an Accepted record missing a non-empty
   `## Verification Criteria` (AC-GH63-6).
-- [ ] **3.5** **Schema-vs-validator coverage check** (AC-GH63-15, NFR-7): enumerate
-  every rule in both `schemas/*.schema.json` files and assert each is exercised by ≥1
-  validator test; produce a coverage artifact (a fixture-mapping table, or an emitted
-  `--coverage` summary from the validator) reporting **0 uncovered rules**. If any rule
-  is uncovered, add a fixture or explicitly mark the gap.
+- [ ] **3.5** **Schema-driven coverage check** (AC-GH63-15, NFR-7, red-team M5): the
+  coverage map is **generated from the schema, not hand-maintained**. The check parses
+  `schemas/*.schema.json`, extracts the rule set (required keys, enums, patterns, minItems,
+  nested `properties`), and asserts each extracted rule is exercised by ≥1 named fixture/TC.
+  Emit a `--coverage` summary reporting **0 uncovered rules**. Because the rule list is
+  derived from the schema at test time, adding a schema rule without a matching fixture
+  fails the check automatically (no silent map drift). If any rule is genuinely N/A, mark
+  it explicitly with rationale. (Avoid a tautological self-report — the rule set must come
+  from the schema file, not from the validator's own internal list.)
 - [ ] **3.6** Run `bash tools/.tests/test-validate-decision-record.sh` → all pass
   (AC-GH63-17).
 
@@ -490,18 +494,21 @@ user guide. Smoke-tests determinism against the real corpus; formal proof in Pha
   Owners; sorted deterministically (by type, then numeric id; fixed column widths /
   stable formatting; fixed trailing-newline convention) so output is **byte-stable** for
   the same input set (NFR-5, AC-GH63-9).
-- [ ] **4.4** Emit the **Health subsection** (DM-3, AC-GH63-10): **overdue reviews**
-  (`review_date` in the past, or past `last_updated` + a configured, **named and
-  documented** horizon constant); **missing deciders** (Accepted R2/R3 without
-  `governance.decider`); **missing metrics** (records lacking `links.metrics` /
-  verification criteria where expected); a **future-field-aware waiver dimension**
-  (reports open/expired temporary waivers **only where** a waiver/expiry field exists —
-  none today, so defined but currently empty — DEC-11).
-- [ ] **4.5** Implement `--dry-run` (print the generated index to stdout without
-  writing `00-index.md`) and a write mode that regenerates `doc/decisions/00-index.md`
-  in place — the only record-adjacent file the tool mutates; it **never mutates decision
-  records** (F-4, DEC-9). Preserve the existing license-header block at the top of
-  `00-index.md`.
+- [ ] **4.4** Emit the Health view, **split committed-vs-advisory per DEC-15** (red-team M1):
+  - **Committed `00-index.md` Health (byte-stable, time-INDEPENDENT — written to the file):**
+    missing deciders (Accepted R2/R3 without `governance.decider`); missing metrics (records
+    lacking `links.metrics` / verification criteria where expected); future-field-aware waiver
+    dimension (empty today — DEC-11).
+  - **Advisory stdout/`--dry-run` Health (time-DEPENDENT — NEVER written to `00-index.md`):**
+    overdue reviews (`review_date` in the past, or past `last_updated` + a named/documented
+    horizon constant). Surfaced via `--summary`/default stdout, but excluded from the
+    drift-checked committed artifact so calendar time cannot trip the CI gate (AC-GH63-12).
+- [ ] **4.5** Implement `--dry-run` (print the generated committed index to stdout without
+  writing `00-index.md`), `--summary` (emit the full health report incl. overdue to stdout),
+  and a write mode that regenerates `doc/decisions/00-index.md` in place (table +
+  time-independent health only) — the only record-adjacent file the tool mutates; it
+  **never mutates decision records** (F-4, DEC-9). Preserve the existing license-header
+  block at the top of `00-index.md`.
 - [ ] **4.6** Create `doc/tools/generate-decision-index.md` per tools-convention.md.
   Note that `00-index.md` becomes a **generated** artifact and document the drift check
   (regenerate, diff, fail on difference — used by Phase 5/7).
@@ -635,9 +642,13 @@ in role (DEC-6).
 - [ ] **7.1** Add a new job (e.g., `verify-decision-records`) to
   `.github/workflows/ci.yml` **ALONGSIDE** `verify-claude-build` (do NOT replace —
   DEC-6, NFR-6, AC-GH63-12). Trigger on the same `push` (`branches: [main, feat/**,
-  fix/**]`) / `pull_request` (`branches: [main]`) events, with a `paths` filter on
-  `doc/decisions/**`, `schemas/**`, `tools/validate-decision-record`,
-  `tools/generate-decision-index`, and `.github/workflows/ci.yml` (RSK-7).
+  fix/**]`) /   `pull_request` (`branches: [main]`) events, with a `paths` filter on
+  `doc/decisions/**`, `schemas/**`, `doc/templates/decision-record-template.md`,
+  `doc/spec/features/feature-decision-records.md`, `tools/validate-decision-record`,
+  `tools/generate-decision-index`, `tools/.tests/**`, and `.github/workflows/ci.yml`
+  (RSK-7; **red-team M4**: include the template + feature spec — they are the structural
+  source of truth the schema is derived from (SD-1), so a template edit must re-trigger
+  the gate).
 - [ ] **7.2** In the job: checkout; `chmod +x` the two tools; run
   `tools/validate-decision-record` over `doc/decisions/*.md` (front matter + cross-field
   rules — AC-GH63-13); fail non-zero on any validation error.
@@ -649,7 +660,10 @@ in role (DEC-6).
   over live docs (SD-3/DEC-3).
 - [ ] **7.5** Confirm `verify-claude-build` is **preserved unchanged** in role; confirm
   the new job uses **only** stock `python3` (no `pip install jsonschema`) and tolerates
-  `shellcheck` absence (NFR-9, AC-GH63-8).
+  `shellcheck` absence (NFR-9, AC-GH63-8). **Red-team M3:** confirm neither tool performs
+  a network call (no automatic version-check — DEC-14); extend the forbidden-dependency
+  grep in `tools/.tests/test-validate-decision-record.sh` (TC-GH63-016) to also reject
+  `curl`, `wget`, `_check_version`, and `raw.githubusercontent` in the tool sources.
 - [ ] **7.6** **Belt-and-suspenders:** run the test suites
   (`bash tools/.tests/test-validate-decision-record.sh`,
   `bash tools/.tests/test-generate-decision-index.sh`) in the job (NFR-4).

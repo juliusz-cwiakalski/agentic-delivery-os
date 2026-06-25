@@ -20,7 +20,7 @@ phases:
 #   RT1 = on spec/plan/test-plan artifacts BEFORE delivery
 #   RT2 = on the delivered change AFTER all phases
 red_team_reviews:
-  rt1_artifacts: { started: null, completed: null, verdict: null }
+  rt1_artifacts: { started: 2026-06-25, completed: 2026-06-25, verdict: "GO-WITH-CONDITIONS -> all conditions addressed (C1/M1/M3 blockers + M2/M4/M5 + minor m1-m9); PDR-0001 authored for SD-2 sign-off" }
   rt2_delivered: { started: null, completed: null, verdict: null }
 
 decisions:
@@ -35,6 +35,14 @@ decisions:
   - text: "DEC-12 (R3 reviewer rule is acceptance-gated, resolves OQ-GH63-1 surfaced by @test-plan-writer): governance.reviewers required non-empty only when status=Accepted AND classification.rigor=R3 (mirrors the decider rule). Rationale: ADR-0001 is Proposed R3 with empty reviewers: [] and must pass (AC-1/AC-4); review happens during Under Review->Accepted, so requiring reviewers at Proposed is wrong. §28.3 'R3 without review' = an Accepted R3 lacking reviewers. Applied to spec (F-3, scope list, DM-1 row, AC-GH63-5, Appendix A row 10, glossary) and plan (tasks 2.4, 2.6). Non-blocking; surfaced to red-team."
     date: 2026-06-25
   - text: "DEC-13 (heuristic exit semantics, resolves OQ-GH63-3): best-effort heuristics (verification-criteria presence; non-negotiable-violation) emit NON-BLOCKING WARNINGS (exit 0), never fail the build. A failing check would be a structural guarantee, contradicting DEC-10. Hard rules fail (non-zero); heuristics warn. Applied to spec AC-GH63-6 + decision log + plan task 2.7."
+    date: 2026-06-25
+  - text: "RT1 (red-team-coordinator on artifacts): verdict GO-WITH-CONDITIONS. 3 pre-delivery blockers + conditions, all now resolved in spec/plan/test-plan: C1 (AC-5 vs DEC-13 contradiction on non-negotiable-violation -> reclassified as WARNING under AC-6/DEC-13; removed from AC-5 hard-fail list; Appendix A row 9 re-mapped); M1 (time-dependent overdue-review in committed index breaks byte-stability + CI drift -> DEC-15: committed 00-index.md = time-independent only; overdue to stdout/--dry-run); M3 (tools-convention network version-check vs NFR-1 0-network -> DEC-14: tools omit version check; TC-016 grep extended to curl/wget/_check_version/raw.githubusercontent). Also: M2 (SD-2 deferral sign-off -> PDR-0001 authored via @decision-advisor, Proposed R3 awaiting human decider at PR review); M4 (CI path filter adds doc/templates/decision-record-template.md + feature-decision-records.md); M5 (coverage check schema-driven/generated, not hand-maintained); m1 (OQ-GH63-1 closed by DEC-12); m2 (lifecycle transition matrix DM-5; Accepted terminal); m4 (--summary/--lint/--coverage flags committed in F-3); m5 (default-R2 caveat for Accepted); m6 (archetype provenance note); m7 (default mode = front-matter only, DEC-16); m8 (TC-028 import yaml removed); m9 (decision_area technical note)."
+    date: 2026-06-25
+  - text: "DEC-14 (omit automatic network version-check on the two new tools): repo-internal delivery tools, not standalone-installable utilities (the convention's target = zclaude/text-to-image); the check fetches raw.githubusercontent on every invocation, violating NFR-1 and meaningless for a repo-resident tool. Documented exception; tool docs note it."
+    date: 2026-06-25
+  - text: "DEC-15 (index determinism split): committed 00-index.md = table + time-independent health (missing deciders/metrics/future-waivers); time-dependent overdue-review dimension = stdout/--dry-run only, never committed. Prevents CI drift time-bomb (red-team M1)."
+    date: 2026-06-25
+  - text: "DEC-16 (validate-decision-record default mode = front-matter only; --summary for planning-summary): makes AC-GH63-13 behaviorally unambiguous (no live planning-summary blocks persist anyway)."
     date: 2026-06-25
 
 open_questions: []   # none blocking; SD-2/SD-4 are PM-decided and flagged to red-team

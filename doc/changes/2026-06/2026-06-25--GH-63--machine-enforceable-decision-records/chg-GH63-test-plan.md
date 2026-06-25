@@ -79,7 +79,7 @@ Objectives: prove each of the 18 ACs with traceable, fixture-driven test cases; 
 | AC-GH63-2 | Front-matter schema documents GH-46 **nested** structure, not flat §17 sketch | TC-GH63-002 | Static inspection (schema JSON) | Covered |
 | AC-GH63-3 | Planning-summary schema accepts generic + legacy alias blocks | TC-GH63-003 | Unit (fixture-driven) | Covered |
 | AC-GH63-4 | ADR-0001 + template-instantiated + valid synthetic records validate clean (exit 0) | TC-GH63-004 | Unit (fixture-driven) | Covered |
-| AC-GH63-5 | One rejection per in-scope §28.3 case (invalid decision_type; invalid status; impossible lifecycle transition incl. supersedes/superseded_by inconsistency; missing owners; missing decider for Accepted R2/R3; missing decision_date for Accepted; R3 without governance.reviewers; same factor as both constraint and driver; non-negotiable-constraint violation in chosen option) | TC-GH63-005 (case 1), TC-GH63-006 (case 2), TC-GH63-007 (case 3), TC-GH63-008 (case 4), TC-GH63-009 (case 5), TC-GH63-010 (case 6), TC-GH63-011 (case 10), TC-GH63-012 (case 8), TC-GH63-013 (case 9) | Unit/Integration (negative fixtures) | Covered (one TC per Appendix A in-scope row) |
+| AC-GH63-5 | One HARD-FAIL rejection per in-scope §28.3 case (invalid decision_type; invalid status; impossible lifecycle transition incl. supersedes/superseded_by inconsistency; missing owners; missing decider for Accepted R2/R3; missing decision_date for Accepted; Accepted R3 without governance.reviewers; same factor as both constraint and driver) | TC-GH63-005 (case 1), TC-GH63-006 (case 2), TC-GH63-007 (case 3), TC-GH63-008 (case 4), TC-GH63-009 (case 5), TC-GH63-010 (case 6), TC-GH63-011 (case 10), TC-GH63-012 (case 8) | Unit/Integration (negative fixtures) | Covered (8 hard-fail TCs; case 9 non-negotiable-violation is a WARNING → AC-GH63-6/TC-013 per DEC-13/red-team C1) |
 | AC-GH63-6 | Accepted record without non-empty `## Verification Criteria` → documented best-effort heuristic (labeled) | TC-GH63-014 | Unit (heuristic fixture) | Covered |
 | AC-GH63-7 | Appendix A deferred cases each list rationale + owning sibling | TC-GH63-015 | Static inspection (spec Appendix A) | Covered |
 | AC-GH63-8 | Validator runs stdlib-only (no `jsonschema`, no `shellcheck` dependency) | TC-GH63-016 | Static inspection + Behavior | Covered |
@@ -162,7 +162,7 @@ Execution: from the repository root on branch `feat/GH-63/machine-enforceable-de
 | TC-GH63-010 | Rejects missing `decision_date` for Accepted (§28.3 case 6) | Unit / Negative | Critical | High | AC-5 |
 | TC-GH63-011 | Rejects Accepted R3 without non-empty `governance.reviewers` (§28.3 case 10) | Unit / Negative | Critical | High | AC-5 |
 | TC-GH63-012 | Rejects same factor as both constraint and driver (planning-summary ∩ ≠ ∅) (§28.3 case 8) | Unit / Negative | Critical | High | AC-5 |
-| TC-GH63-013 | Detects non-negotiable-constraint violation in chosen option (best-effort) (§28.3 case 9) | Unit / Negative | Important | High | AC-5 |
+| TC-GH63-013 | WARNS on non-negotiable-constraint violation in chosen option (heuristic, exit 0) (§28.3 case 9) | Unit / Heuristic | Important | High | AC-6 |
 | TC-GH63-014 | Accepted record without non-empty Verification Criteria → labeled heuristic (§28.3 case 12) | Unit / Edge | Important | Medium | AC-6 |
 | TC-GH63-015 | Appendix A deferred cases each list rationale + owning sibling | Static inspection | Important | Medium | AC-7 |
 | TC-GH63-016 | Validator runs stdlib-only (no `jsonschema`/`shellcheck` dependency) | Static inspection + Behavior | Critical | High | AC-8 |
@@ -575,7 +575,7 @@ Execution: from the repository root on branch `feat/GH-63/machine-enforceable-de
 
 **Expected Result**:
 
-- Violation detected and labeled best-effort. The exact exit-code semantics (hard error vs. warning) follow the implementation; this TC asserts the **detection + labeling + actionable content**, not a specific exit code (see OQ-GH63-3).
+- Violation detected, labeled best-effort/`[HEURISTIC]`/`[WARN]`, and the validator exits **0** (non-blocking warning per DEC-13 — case 9 is a WARNING, NOT a hard failure; red-team C1). This TC asserts the **detection + `[WARN]`/`[HEURISTIC]` labeling + actionable content (constraint id, chosen option) + exit code 0**, not a non-zero exit.
 
 ---
 
@@ -640,7 +640,7 @@ Execution: from the repository root on branch `feat/GH-63/machine-enforceable-de
 
 ---
 
-#### TC-GH63-016 - Validator runs stdlib-only (no `jsonschema`/`shellcheck` dependency)
+#### TC-GH63-016 - Validator runs stdlib-only (no `jsonschema`/`shellcheck`/network dependency)
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
@@ -662,7 +662,8 @@ Execution: from the repository root on branch `feat/GH-63/machine-enforceable-de
 
 1. `rg -n 'jsonschema|pip install|import jsonschema' tools/validate-decision-record tools/generate-decision-index` → **0** hard dependencies (any reference must be a comment/rationale, not an import/require).
 2. `rg -n 'shellcheck' tools/validate-decision-record tools/generate-decision-index` → not required at runtime (absence tolerated, NFR-9).
-3. Behavior: run the validator against a positive fixture in an environment without `jsonschema`/`shellcheck` (the test runtime) → exit 0.
+3. **No network calls (DEC-14, red-team M3):** `rg -n '\bcurl\b|\bwget\b|_check_version|raw\.githubusercontent\.com' tools/validate-decision-record tools/generate-decision-index` → **0** matches (the tools omit the automatic version-check; they are repo-internal delivery tools, not standalone-installable utilities).
+4. Behavior: run the validator against a positive fixture in an environment without `jsonschema`/`shellcheck` (the test runtime) → exit 0.
 
 **Expected Result**:
 
@@ -1052,7 +1053,7 @@ Execution: from the repository root on branch `feat/GH-63/machine-enforceable-de
 
 1. `git diff --check` → no whitespace/conflict-marker errors.
 2. `jq empty schemas/*.json` → all schema JSON parses.
-3. `python3 -c 'import yaml,sys; list(yaml.safe_load_all(open(".github/workflows/ci.yml")))'` (or `yamllint`) → CI YAML parses.
+3. Validate the CI YAML structurally without a `yaml` module (python3 3.14 ships none — SD-4/NFR-9): use `jq empty` is not YAML-validating either; instead run `python3 tools/.tests/_yaml_ok.py .github/workflows/ci.yml` where `_yaml_ok.py` is a tiny stdlib brace/indent sanity check, OR `actionlint` if present in CI, OR shell out to `python3 -c "import json,sys; ..."` after a deterministic yaml→json via the tool's own stdlib parser. **Do NOT use `import yaml`** (red-team m8).
 4. `test -x tools/validate-decision-record && test -x tools/generate-decision-index` → both executable.
 5. Front matter of ADR-0001 and the template still parses as YAML.
 
@@ -1138,11 +1139,11 @@ All TCs are implemented inside the two `tools/.tests/test-*.sh` suites using the
 
 | ID | Question | Status / Owner |
 |----|----------|----------------|
-| OQ-GH63-1 | DM-1 phrases `governance.reviewers` as "required non-empty when rigor = R3" without a status qualifier, yet ADR-0001 is `Proposed` R3 with `reviewers: []` and must pass (AC-1/AC-4). Is the reviewers rule acceptance-gated (like the `decider` rule), or must ADR-0001's reviewers be populated before GH-63 merges? | Open — non-blocking for the test plan (TC-004 asserts ADR-0001 passes; TC-011 uses Accepted R3). Needs `@decision-advisor`/spec confirmation. Aligns with spec OQ-1 lineage. |
-| OQ-GH63-2 | AC-1/AC-4 say "the decision-record template validates", but the raw template file contains `<...>` placeholders (invalid id/date values). Confirm the intended meaning is schema↔template structural consistency + a template-instantiated valid record (this plan's interpretation), not literal validation of the template file. | Open — non-blocking; resolved by TC-001/002/004 outcome. |
-| OQ-GH63-3 | For the best-effort heuristics (TC-013 non-negotiable violation; TC-014 verification-criteria), what is the exit-code semantics — hard error, warning-only, or `--strict`-promoted (D-5)? | Open — TCs assert detection + labeling, not a specific exit code. Finalize during delivery; default = warning/labeled. |
-| OQ-GH63-4 | Test-file naming: the spec (AC-17, F-3/F-4) uses `tools/.tests/test-<tool>.sh`; `doc/guides/tools-convention.md` suggests `test-<tool>-unit.sh`. Which wins? | Open — non-blocking; this plan follows the spec (`test-validate-decision-record.sh`, `test-generate-decision-index.sh`). Confirm in the implementation plan. |
-| OQ-GH63-5 | (Mirrors spec OQ-2) Should `/plan-decision` or `/write-decision` invoke the planning-summary validator inline, or keep it on-demand? Affects whether any live-doc gating is ever added. | Open — does not affect this plan (SD-3 keeps it fixture-only regardless). |
+| OQ-GH63-1 | DM-1 phrases `governance.reviewers` as "required non-empty when rigor = R3" without a status qualifier, yet ADR-0001 is `Proposed` R3 with `reviewers: []` and must pass (AC-1/AC-4). Is the reviewers rule acceptance-gated (like the `decider` rule), or must ADR-0001's reviewers be populated before GH-63 merges? | **RESOLVED by DEC-12** — acceptance-gated: `reviewers` required non-empty only when `status=Accepted` AND `rigor=R3`. TC-004 (ADR-0001 passes) + TC-011 (Accepted R3 fixture) align. |
+| OQ-GH63-2 | AC-1/AC-4 say "the decision-record template validates", but the raw template file contains `<...>` placeholders (invalid id/date values). Confirm the intended meaning is schema↔template structural consistency + a template-instantiated valid record (this plan's interpretation), not literal validation of the template file. | **RESOLVED** — schema↔template structural consistency + a template-instantiated fixture (TC-001/002/004); the raw placeholder template is not literal-validated. |
+| OQ-GH63-3 | For the best-effort heuristics (TC-013 non-negotiable violation; TC-014 verification-criteria), what is the exit-code semantics — hard error, warning-only, or `--strict`-promoted (D-5)? | **RESOLVED by DEC-13** — non-blocking warnings (exit 0, `[WARN]`/`[HEURISTIC]` labeled); never fail the build. TC-013/014 updated to assert exit 0 + labeling. |
+| OQ-GH63-4 | Test-file naming: the spec (AC-17, F-3/F-4) uses `tools/.tests/test-<tool>.sh`; `doc/guides/tools-convention.md` suggests `test-<tool>-unit.sh`. Which wins? | **RESOLVED** — the spec AC-17 is authoritative: `test-validate-decision-record.sh` and `test-generate-decision-index.sh` (no `-unit` suffix); `test-all.sh` matches `test-*.sh` either way. (A documented exception vs tools-convention §tests; non-blocking.) |
+| OQ-GH63-5 | (Mirrors spec OQ-2) Should `/plan-decision` or `/write-decision` invoke the planning-summary validator inline, or keep it on-demand? Affects whether any live-doc gating is ever added. | Open (does not affect this plan — SD-3/DEC-16 keep planning-summary validation fixture-only + explicit-`--summary` regardless). |
 
 ## 9. Plan Revision Log
 
