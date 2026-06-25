@@ -116,13 +116,14 @@ _gen() {
 }
 
 # _make_record <dir> <id> <status> <rigor> <decider|"null"> <vc:yes|no>
-#              <last_updated> <review_date|"null">
-# Writes a synthetic decision record into <dir>.
+#              <last_updated> <review_date|"null"> <metrics:yes|no>
+# Writes a synthetic decision record into <dir>. <metrics> controls links.metrics
+# (RT2 M1: the index "missing metrics" dimension flags Accepted + empty links.metrics).
 _make_record() {
   local -r dir="$1" id="$2" status="$3" rigor="$4" decider="$5" vc="$6"
-  local -r last_updated="$7" review_date="$8"
+  local -r last_updated="$7" review_date="$8" metrics="${9:-no}"
   local -r title="${id} Record"
-  local decider_line vc_block
+  local decider_line vc_block metrics_block
   if [[ "$decider" == "null" ]]; then
     decider_line="  decider: null"
   else
@@ -132,6 +133,11 @@ _make_record() {
     vc_block=$'\n\n## Verification Criteria\n\n- Metric: x — Target: y'
   else
     vc_block=""
+  fi
+  if [[ "$metrics" == "yes" ]]; then
+    metrics_block=$'  metrics:\n    - "metric-1"'
+  else
+    metrics_block=""
   fi
   cat > "${dir}/${id}-synthetic.md" <<EOF
 ---
@@ -167,6 +173,7 @@ links:
   supersedes: []
   superseded_by: []
   spec: []
+${metrics_block}
 ---
 
 # ${id}: ${title}${vc_block}
@@ -177,16 +184,16 @@ EOF
 _build_corpus() {
   local -r dir="${_test_tmpdir}/decisions"
   mkdir -p "$dir"
-  # 9200: clean Accepted R2 (decider set, VC present, recent).
-  _make_record "$dir" "ADR-9200" "Accepted" "R2" "Lead" "yes" "2026-06-01" "null"
+  # 9200: clean Accepted R2 (decider set, metrics present, recent).
+  _make_record "$dir" "ADR-9200" "Accepted" "R2" "Lead" "yes" "2026-06-01" "null" "yes"
   # 9201: Accepted R2, NO decider -> missing decider (time-independent).
-  _make_record "$dir" "ADR-9201" "Accepted" "R2" "null" "yes" "2026-06-01" "null"
-  # 9202: Accepted R2, NO VC -> missing verification criteria (time-independent).
-  _make_record "$dir" "ADR-9202" "Accepted" "R2" "Lead" "no" "2026-06-01" "null"
+  _make_record "$dir" "ADR-9201" "Accepted" "R2" "null" "yes" "2026-06-01" "null" "yes"
+  # 9202: Accepted R2, NO links.metrics -> missing metrics (time-independent, RT2 M1).
+  _make_record "$dir" "ADR-9202" "Accepted" "R2" "Lead" "no" "2026-06-01" "null" "no"
   # 9203: Accepted R2, stale last_updated, no review_date -> overdue (advisory).
-  _make_record "$dir" "ADR-9203" "Accepted" "R2" "Lead" "yes" "2024-01-01" "null"
-  # 9204: Proposed, clean.
-  _make_record "$dir" "ADR-9204" "Proposed" "R2" "null" "no" "2026-06-01" "null"
+  _make_record "$dir" "ADR-9203" "Accepted" "R2" "Lead" "yes" "2024-01-01" "null" "yes"
+  # 9204: Proposed, no links.metrics -> NOT flagged (Proposed is acceptance-gated).
+  _make_record "$dir" "ADR-9204" "Proposed" "R2" "null" "no" "2026-06-01" "null" "no"
   printf '%s' "$dir"
 }
 
@@ -204,6 +211,17 @@ test_dry_run_byte_identical() {
   assert_eq "$first" "$second" "two --dry-run runs must be byte-identical"
 }
 
+test_determinism_locale_independent() {
+  # RT2 m4: the LC_ALL=C pin makes output byte-stable regardless of the runner
+  # locale (a developer may be on pl_PL.UTF-8). Without the pin, `sort`
+  # collation could vary.
+  local dir a b
+  dir="$(_build_corpus)"
+  a="$(env -u LC_ALL -u LC_COLLATE LANG=pl_PL.UTF-8 bash "${GEN}" --dry-run "$dir" 2>/dev/null)"
+  b="$(LC_ALL=C bash "${GEN}" --dry-run "$dir" 2>/dev/null)"
+  assert_eq "$a" "$b" "output must be byte-identical across pl_PL.UTF-8 and C locales (LC_ALL=C pin)"
+}
+
 # ============================================================================
 # TESTS — health findings (AC-GH63-10)
 # ============================================================================
@@ -217,12 +235,20 @@ test_health_missing_decider_committed() {
   assert_contains "${OUT}" "ADR-9201: Accepted R2 record has no governance.decider" "should flag ADR-9201"
 }
 
-test_health_missing_vc_committed() {
+test_health_missing_metrics_committed() {
+  # RT2 M1 / AC-GH63-10: the committed index flags Accepted records lacking
+  # links.metrics (NOT "missing verification criteria", which is the validator's
+  # separate AC-GH63-6 heuristic). ADR-9202 is Accepted with empty links.metrics.
   local dir
   dir="$(_build_corpus)"
   _gen --dry-run "$dir"
-  assert_contains "${OUT}" "Missing verification criteria" "should have missing-VC section"
-  assert_contains "${OUT}" "ADR-9202: Accepted record has no Verification Criteria" "should flag ADR-9202"
+  assert_contains "${OUT}" "Missing metrics" "should have a missing-metrics section"
+  assert_contains "${OUT}" "links.metrics" "should reference links.metrics"
+  assert_contains "${OUT}" "ADR-9202: Accepted record has no links.metrics" "should flag ADR-9202"
+  # Proposed records must NOT be flagged for missing metrics (acceptance-gated).
+  assert_not_contains "${OUT}" "ADR-9204: Accepted record has no links.metrics" "Proposed record must not be flagged for missing metrics"
+  # The old "missing verification criteria" dimension must be gone from the index.
+  assert_not_contains "${OUT}" "Missing verification criteria" "index must no longer report missing VC (that is the validator AC-GH63-6 signal)"
 }
 
 test_health_overdue_advisory_only() {
@@ -298,9 +324,9 @@ test_table_sorted_by_type_then_id() {
   local dir
   dir="${_test_tmpdir}/decisions2"
   mkdir -p "$dir"
-  _make_record "$dir" "ADR-0010" "Proposed" "R2" "null" "no" "2026-06-01" "null"
-  _make_record "$dir" "ADR-0002" "Proposed" "R2" "null" "no" "2026-06-01" "null"
-  _make_record "$dir" "PDR-0001" "Proposed" "R2" "null" "no" "2026-06-01" "null"
+  _make_record "$dir" "ADR-0010" "Proposed" "R2" "null" "no" "2026-06-01" "null" "yes"
+  _make_record "$dir" "ADR-0002" "Proposed" "R2" "null" "no" "2026-06-01" "null" "yes"
+  _make_record "$dir" "PDR-0001" "Proposed" "R2" "null" "no" "2026-06-01" "null" "yes"
   _gen --dry-run "$dir"
   # ADRs must precede PDR; within ADR, 0002 before 0010.
   local -r trow_a2="| ADR-0002 |"
@@ -351,10 +377,11 @@ main() {
 
   printf '\n%s --- Determinism (AC-GH63-9) ---\n' "${TEST_TAG}"
   run_test "dry-run output byte-identical across runs" test_dry_run_byte_identical
+  run_test "output byte-identical across locales (LC_ALL=C pin)" test_determinism_locale_independent
 
   printf '\n%s --- Health findings (AC-GH63-10) ---\n' "${TEST_TAG}"
   run_test "missing decider flagged in committed index" test_health_missing_decider_committed
-  run_test "missing VC flagged in committed index" test_health_missing_vc_committed
+  run_test "missing metrics flagged in committed index" test_health_missing_metrics_committed
   run_test "overdue is advisory-only (DEC-15 split)" test_health_overdue_advisory_only
   run_test "clean records are not flagged" test_health_clean_records_unflagged
   run_test "waiver dimension empty (DEC-11)" test_health_waiver_dimension_empty

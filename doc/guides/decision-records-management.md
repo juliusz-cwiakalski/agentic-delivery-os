@@ -104,7 +104,7 @@ ODR-0001-deployment-pipeline-design.md
 
 ### Index File
 
-`doc/decisions/00-index.md` is a **generated** table of all decision records (plus a Health subsection flagging missing deciders / missing verification criteria). Do not hand-edit it — regenerate it with `tools/generate-decision-index` (or `/decision-index`) whenever a record is added or edited, then commit the regenerated index alongside the record change. The `verify-decision-records` CI job detects drift (regenerate + diff) and fails the build if the committed index is stale. See [doc/tools/generate-decision-index.md](../tools/generate-decision-index.md) for the DEC-15 health split.
+`doc/decisions/00-index.md` is a **generated** table of all decision records (plus a Health subsection flagging missing deciders / missing metrics via `links.metrics`). Do not hand-edit it — regenerate it with `tools/generate-decision-index` (or `/decision-index`) whenever a record is added or edited, then commit the regenerated index alongside the record change. The `verify-decision-records` CI job detects drift (regenerate + diff) and fails the build if the committed index is stale. See [doc/tools/generate-decision-index.md](../tools/generate-decision-index.md) for the DEC-15 health split.
 
 ### Machine-Enforceable Quality
 

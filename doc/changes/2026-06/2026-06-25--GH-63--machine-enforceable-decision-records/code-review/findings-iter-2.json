@@ -1,0 +1,48 @@
+{
+  "iteration": 2,
+  "status": "PASS",
+  "date": "2026-06-25",
+  "summary": "Re-review after Phase 10 remediation. All 4 iteration-1 findings resolved. No new findings.",
+  "iteration1_findings": [
+    {
+      "id": 1, "severity": "major", "confidence": "high", "blocking": true,
+      "title": "links: {} flow-map crash",
+      "status": "RESOLVED",
+      "files": ["tools/.lib/frontmatter.sh", "tools/validate-decision-record", "tools/.tests/test-validate-decision-record.sh"],
+      "evidence": "parse_value() handles flow maps; _safe_nested_len/_safe_nested_str type guards; links:{} exit 0; wrong-typed value does not crash; regression tests green"
+    },
+    {
+      "id": 2, "severity": "minor", "confidence": "high",
+      "title": "decision_date pattern unenforced + coverage tautology",
+      "status": "RESOLVED",
+      "files": ["tools/validate-decision-record", "tools/.tests/fixtures/coverage-map.json"],
+      "evidence": "_check_date decision_date called; ADR-9019 rejected; --coverage enforcement-strength pass proves rejection; drift-injection sanity confirmed ENFORCEMENT_FAILURE detection"
+    },
+    {
+      "id": 3, "severity": "nit", "confidence": "high",
+      "title": "dead _extract_title()",
+      "status": "RESOLVED",
+      "files": ["tools/generate-decision-index"],
+      "evidence": "function removed"
+    },
+    {
+      "id": 4, "severity": "nit", "confidence": "high",
+      "title": "_build_rows bare jq (mockability)",
+      "status": "RESOLVED",
+      "files": ["tools/generate-decision-index"],
+      "evidence": "jq -> _jq wrapper in _build_rows"
+    }
+  ],
+  "new_findings": [],
+  "no_regression": {
+    "validate_suite": "35/35",
+    "index_suite": "13/13",
+    "scripts_suite": "5/5",
+    "adr_0001": "exit 0",
+    "pdr_0001": "exit 0",
+    "index_sync": "byte-identical (--dry-run)",
+    "coverage": "UNCOVERED:0, ENFORCEMENT_PROVEN:17",
+    "ados_claude_regen": "no-op (no .opencode changes this iteration)",
+    "forbidden_deps": "clean"
+  }
+}

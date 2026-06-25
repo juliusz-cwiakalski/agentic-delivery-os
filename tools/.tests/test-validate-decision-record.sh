@@ -255,6 +255,60 @@ test_invalid_rigor_exit1() {
   assert_contains "${OUT}" "rigor" "should mention rigor"
 }
 
+test_unclosed_frontmatter_one_error_exit1() {
+  # RT2 m1: a record with an opening '---' but no closing fence must yield ONE
+  # actionable error (not ~9 misleading cascade "required field missing" errors).
+  # The malformed file is generated at runtime because the header-adding script
+  # cannot safely process an unclosed front-matter block.
+  local -r f="${_test_tmpdir}/ADR-9023-unclosed-frontmatter.md"
+  cat > "$f" <<'EOF'
+---
+id: ADR-9023
+decision_type: adr
+status: Proposed
+created: 2026-06-25
+decision_date: null
+last_updated: 2026-06-25
+summary: "Negative fixture (RT2 m1): opening fence, no closing fence."
+owners:
+  - "Test Author"
+service: delivery-os
+EOF
+  _run "$f"
+  assert_exit_code 1 "${RC}" "unclosed front matter must fail"
+  assert_contains "${OUT}" "no closing '---' fence found" "should emit the single actionable fence error"
+  # The misleading cascade (~9 "required field missing") must be gone.
+  local cascade
+  cascade="$(printf '%s\n' "${OUT}" | grep -c "required field .* is missing" || true)"
+  assert_eq "0" "${cascade}" "must not emit cascade missing-field errors (was ~9 before RT2 m1)"
+}
+
+test_filename_prefix_collision_rejected() {
+  # RT2 m2: 'id: ADR-0001' must NOT match filename 'ADR-00010-...' (boundary).
+  _run "${FIXTURES}/negative/ADR-00010-filename-prefix-collision.md"
+  assert_exit_code 1 "${RC}" "id/filename prefix collision must be rejected"
+  assert_contains "${OUT}" "filename does not match" "should mention the filename match rule"
+  assert_contains "${OUT}" "ADR-0001" "should reference the id"
+}
+
+test_invalid_calendar_date_exit1() {
+  # RT2 m3: '2026-13-45' passes the YYYY-MM-DD format regex but is not a real
+  # calendar date; fromisoformat must reject it.
+  _run "${FIXTURES}/negative/ADR-9026-invalid-calendar-date.md"
+  assert_exit_code 1 "${RC}" "invalid calendar date must fail"
+  assert_contains "${OUT}" "created" "should mention the created field"
+  assert_contains "${OUT}" "calendar date" "should mention calendar validity"
+}
+
+test_accepted_unclassified_missing_decider_dm4_note() {
+  # RT2 m5: an un-classified Accepted record missing its decider must fail AND
+  # explain the R2 default obligation at the point of failure (DM-4).
+  _run "${FIXTURES}/negative/ADR-9027-accepted-unclassified-missing-decider.md"
+  assert_exit_code 1 "${RC}" "un-classified Accepted missing decider must fail"
+  assert_contains "${OUT}" "decider" "should mention decider"
+  assert_contains "${OUT}" "defaulted to R2 because no 'classification'" "should explain the R2 default (DM-4)"
+}
+
 # ============================================================================
 # BEHAVIOR TESTS — non-blocking heuristics (exit 0 + WARN)
 # ============================================================================
@@ -415,6 +469,10 @@ main() {
   run_test "TC-it1 malformed created/last_updated/review_date fail" test_malformed_dates_exit1
   run_test "TC-it1 malformed id pattern fails" test_malformed_id_exit1
   run_test "TC-it1 invalid classification.rigor fails" test_invalid_rigor_exit1
+  run_test "RT2-m1 unclosed front matter -> one actionable error" test_unclosed_frontmatter_one_error_exit1
+  run_test "RT2-m2 id/filename prefix collision rejected" test_filename_prefix_collision_rejected
+  run_test "RT2-m3 invalid calendar date fails" test_invalid_calendar_date_exit1
+  run_test "RT2-m5 un-classified Accepted missing decider + DM-4 note" test_accepted_unclassified_missing_decider_dm4_note
 
   printf '\n%s --- Behavior: non-blocking heuristics (exit 0 + WARN) ---\n' "${TEST_TAG}"
   run_test "TC-014 missing VC heuristic warns + exit 0" test_accepted_missing_verification_criteria_warns_exit0

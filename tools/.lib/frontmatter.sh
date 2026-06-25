@@ -223,3 +223,16 @@ _has_frontmatter() {
   first="$(head -n 1 "$hf_file" 2>/dev/null || true)"
   [[ "$first" =~ ^---[[:space:]]*$ ]]
 }
+
+# _has_closing_fence <file> -> exit 0 if a SECOND '---' fence exists after the
+# opening one (i.e. the front matter is closed), else exit 1. RT2 m1: a record
+# with an opening '---' but no closing fence previously yielded ~9 misleading
+# cascade "required field missing" errors; validators call this to emit ONE
+# actionable error instead. Counts all '---' lines (>=2 => a closing fence).
+_has_closing_fence() {
+  local -r cf_file="$1"
+  awk '
+    /^---[[:space:]]*$/ { n++ }
+    END { exit (n >= 2 ? 0 : 1) }
+  ' "$cf_file"
+}

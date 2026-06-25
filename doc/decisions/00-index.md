@@ -21,5 +21,5 @@ Drift is detected in CI (regenerate and diff).
 Time-independent governance findings (generated; do not edit by hand).
 
 - **Missing deciders**: none.
-- **Missing verification criteria**: none.
+- **Missing metrics**: none.
 - **Future-field waivers (DEC-11)**: none.

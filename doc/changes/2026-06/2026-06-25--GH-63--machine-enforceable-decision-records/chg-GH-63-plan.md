@@ -884,6 +884,82 @@ re-verifies, targeting PASS on iteration 2.
 
 ---
 
+### Phase 11: Red-Team #2 Remediation (post-delivery)
+
+**Goal**: Apply the `@red-team-coordinator` RT2 (SHIP-WITH-CONDITIONS) findings before PR. RT2 found no
+Critical/blocking defects; one MAJOR spec↔code drift (an AC gap vs the ticket) + five minor hardening
+items. All are small and high-value; address in-phase.
+
+**Tasks**:
+
+- [x] **11.1 (RT2 M1, MAJOR — AC-GH63-10 fidelity):** the ticket AC requires the index to report
+  "**missing metrics**" (`links.metrics`), but the shipped `_health_independent` reports "missing
+  verification criteria" (a body-section check). Implement the **missing-metrics** dimension in
+  `tools/generate-decision-index`: flag **Accepted** records whose `links.metrics` is absent or empty
+  (consistent with the acceptance-gated decider/VC rules; Proposed records are not flagged). Keep the
+  validator's body-`## Verification Criteria` heuristic (AC-GH63-6) as-is — it is a separate signal.
+  Update the index test that asserted "missing VC flagged in committed index" to assert "missing
+  metrics flagged" (Accepted record with empty `links.metrics`); add a fixture if needed. Align
+  `doc/decisions/00-index.md` (regenerate), the generator header comment, `doc/tools/generate-decision-index.md`,
+  `doc/guides/decision-records-management.md`, `doc/decisions/README.md`, and the spec (AC-GH63-10, DM-3,
+  DM-1 `links.metrics` note) so spec/code/docs agree on "missing metrics." (Decision: implement, not
+  doc-reconcile, because the ticket AC explicitly requires "missing metrics.")
+  *(Implemented: `_build_rows` now extracts `links.metrics` → `metrics_len`; `_health_independent` flags
+  Accepted + `metrics_len==0` ("missing metrics"); `_render_health_committed` buckets "Missing metrics";
+  header/`--help` comments updated; dead `has_vc` index computation removed. Test renamed to
+  `test_health_missing_metrics_committed` (ADR-9202 Accepted + empty links.metrics flagged; Proposed
+  ADR-9204 NOT flagged; old "Missing verification criteria" asserted absent). Spec AC-GH63-10/DM-3/DM-1
+  now say "missing metrics (`links.metrics`)" + note the validator's AC-GH63-6 VC heuristic is distinct.
+  `00-index.md` regenerated → Health now reads "Missing metrics". Validator body-VC heuristic untouched.)*
+- [x] **11.2 (RT2 m1, minor — NFR-8):** a record with an opening `---` but no closing fence currently
+  yields ~9 misleading cascade "required field missing" errors. Detect "opening fence present, closing
+  fence absent" in `tools/.lib/frontmatter.sh` / `validate_record` and emit ONE actionable error:
+  `"<file>: '---' opened but no closing '---' fence found."` Add a regression fixture + test.
+  *(Added `_has_closing_fence` to `tools/.lib/frontmatter.sh`; `validate_record` calls it after the
+  opening-fence check and emits one actionable error + early-return. Regression test
+  `test_unclosed_frontmatter_one_error_exit1` generates the malformed file at runtime (the header script
+  cannot safely process an unclosed front-matter block) and asserts exit 1 + the fence message + 0
+  cascade "required field missing" errors. Was 9 cascade errors → now 1 actionable.)*
+- [x] **11.3 (RT2 m2, minor):** `id_filename_match` uses unbounded prefix (`ADR-0001` matches
+  `ADR-00010`). Tighten to require a boundary: `[[ "$fname" =~ ^${id}(-|\.md$) ]]`. Add a regression
+  fixture (`id: ADR-0001` in `ADR-00010-foo.md` → reject).
+  *(Tightened to `^${id}(-|\.md$)`; fixture `negative/ADR-00010-filename-prefix-collision.md`
+  (`id: ADR-0001`) now rejected; test `test_filename_prefix_collision_rejected` green.)*
+- [x] **11.4 (RT2 m3, minor — hardening):** `_check_date` validates format only (`2026-13-45` passes).
+  Add `datetime.date.fromisoformat(val)` and fail on `ValueError` (aligns validator with the
+  generator's date semantics). Add a rejecting fixture.
+  *(After the format regex, `_check_date` runs `datetime.date.fromisoformat`; fixture
+  `negative/ADR-9026-invalid-calendar-date.md` (`created: 2026-13-45`) now rejected; test
+  `test_invalid_calendar_date_exit1` green; added to coverage-map `top.pattern.created`
+  (ENFORCEMENT_PROVEN 17→18).)*
+- [x] **11.5 (RT2 m4, minor — determinism defense-in-depth):** pin `LC_ALL=C` in
+  `tools/generate-decision-index` `main()` (or prefix the `sort` calls) so byte-stability does not
+  depend on runner locale.
+  *(`export LC_ALL=C` pinned at the top of `main()`; test `test_determinism_locale_independent` proves
+  byte-identical output across pl_PL.UTF-8 and C; this dev env is pl_PL.UTF-8.)*
+- [x] **11.6 (RT2 m5, minor — NFR-8):** when an un-classified Accepted record is missing its decider,
+  append to the error: `"(rigor defaulted to R2 because no 'classification' block is present — DM-4)"`
+  so the R2 obligation is explained at the point of failure.
+  *(Decider-missing error appends the DM-4 note when `has_classification == false`; fixture
+  `negative/ADR-9027-accepted-unclassified-missing-decider.md` + test
+  `test_accepted_unclassified_missing_decider_dm4_note` green; added to coverage-map
+  `xrule.decider_when_accepted_r2r3`.)*
+- [x] **11.7:** Re-run both suites + `--coverage` + drift/determinism; confirm ADR-0001 + PDR-0001
+  still validate clean; confirm `00-index.md` regenerated and in sync; 0 new regressions.
+  *(ALL GREEN: validate 39/39 (was 35), index 14/14 (was 13), scripts/test-all 5/5; coverage
+  UNCOVERED:0 + ENFORCEMENT_PROVEN:18; ADR-0001 + PDR-0001 exit 0; index in sync (dry-run==committed)
+  + byte-identical across runs + locale-independent; `links: {}` still exit 0 (no Phase-10 regression);
+  0 forbidden deps; headers re-applied via `scripts/add-header-location.sh tools` (3 new fixtures).)*
+
+**Acceptance Criteria**:
+
+- Must: AC-GH63-10 now reports "missing metrics" (`links.metrics`) per the ticket AC; spec/code/docs agree. — **PASSED** (generator `_health_independent` flags Accepted + empty `links.metrics` as "missing metrics"; `00-index.md` Health reads "Missing metrics"; spec AC-GH63-10/DM-3/DM-1 + 3 user docs aligned; test `test_health_missing_metrics_committed` green.)
+- Should: m1–m5 hardening in; suites green; determinism locale-independent. — **PASSED** (11.2 fence→1 error, 11.3 id-boundary, 11.4 calendar validity, 11.5 `LC_ALL=C` byte-identical across pl_PL.UTF-8/C, 11.6 DM-4 note; validate 39/39, index 14/14, scripts/test-all 5/5; UNCOVERED:0, ENFORCEMENT_PROVEN:18.)
+
+**Completion signal**: `fix(GH-63): red-team-2 remediation (missing-metrics dimension, fence/id/date hardening, LC_ALL pin)`
+
+---
+
 ## Deviation handling
 
 - **If `@toolsmith` cannot be spawned** (precedent: GH-46/GH-60 delivery, where no
@@ -985,6 +1061,7 @@ re-verifies, targeting PASS on iteration 2.
 |---------|------|--------|---------|
 | 1.0 | 2026-06-25 | plan-writer | Initial plan authored from `chg-GH-63-spec.md`; 9 phases across three tracks (schemas/tools, `.opencode/` via `@toolsmith`, CI + docs). AC coverage 1–18; SD-1 nested model, SD-2 §28.3 in-scope/heuristic/deferred split (Appendix A), SD-3 planning-summary-via-fixtures-not-CI, SD-4 stdlib-only. Open questions OQ-1 (waiver field → lean wait for GH-65) and OQ-2 (on-demand planning-summary validation) recorded with leans; neither blocks delivery. Front-matter stdlib-parser implementation note flagged for Phases 2/4. |
 | 1.1 | 2026-06-25 | coder | Added Phase 10 (Code-Review Remediation iteration 1) per `@reviewer` findings (1 BLOCKING major + 3 non-blocking). No scope change to F-1..F-7; remediation-only (robustness + coverage-strength + dead-code/mockability nits). Coverage map: declarative-only enums moved to `na` with rationale (not validator-enforced per SD-2/NG-5) — honest reclassification, not a coverage reduction. |
+| 1.2 | 2026-06-25 | coder | Added Phase 11 (Red-Team #2 Remediation) per RT2 findings (1 MAJOR + 5 minor). Remediation-only; no scope change to F-1..F-7. 11.1 (M1) replaced the "missing verification criteria" index dimension with "missing metrics" (`links.metrics`) — the ticket AC-GH63-10 literal requirement; validator body-VC heuristic (AC-GH63-6) left as a distinct signal. 11.2–11.6 hardening (unclosed-fence single-error, id/filename boundary, calendar-valid date, `LC_ALL=C` determinism, DM-4 decider note). 4 new fixtures + tests; ENFORCEMENT_PROVEN 17→18. Residual (out of scope here): `.opencode/command/decision-index.md` + `.ados-claude/` mirror still say "missing verification criteria" (`.opencode/` track is `@toolsmith`-owned; would require plugin regen) — flagged for a future `@toolsmith` pass. |
 
 ## Execution Log
 
@@ -1000,3 +1077,4 @@ re-verifies, targeting PASS on iteration 2.
 | 8 | Complete | 2026-06-25 | 2026-06-25 | 1445287 | 00-index.md regenerated (ADR-0001 + PDR-0001, empty Health; drift check PASSES); feature-decision-records.md updated (last_updated→2026-06-25, GH-63 in related_changes, machine-enforcement capability + codebase map rows); decision-records-management.md updated (generated-index note + Machine-Enforceable Quality section + local pre-commit Flow 1); decisions/README.md updated (Index+Validation section + tool-guide refs); AGENTS.md cross-linked (/decision-index command + both tool guides in Key References). No records mutated. |
 | 9 | Complete | 2026-06-25 | 2026-06-25 | 0917957 | Verification sweep ALL GREEN: 9.1 suites (validate 29/29, index 13/13, scripts 5/5); 9.2 stdlib-only (0 jsonschema/yaml/shellcheck; 0 pip in ci.yml); 9.3 determinism (byte-identical cmp); 9.4 back-compat (ADR-0001 + unclassified-R2 valid, 0 rewrites); 9.5 headers via script on all 3 files; 9.6 plugin in sync (rebuild no-op); 9.7 coverage 0 uncovered; 9.8 deferred cases documented (9 GH-64/GH-65 refs); 9.9 spec reconciled, version_impact: none. AC-GH63-1/5/6/9/10/12/13/14/15/16/17/18 satisfied & traceable. Ready for /review GH-63. |
 | 10 | Complete | 2026-06-25 | 2026-06-25 | 8e7e717 | Review iteration-1 remediation ALL GREEN. 10.1 flow-map parsing: `parse_value()` handles `{}`/`{k:v}` (+`_split_flow` tracks `{}`); `.links`/`.governance`/`.classification.rigor` access routed through type-safe `_safe_nested_len`/`_safe_nested_str` (`if type=="object"` guard — `// {}` alone does NOT catch wrong-typed values, proven empirically). links:{} was exit 5 + `Cannot index string "superseded_by"` → now exit 0. 10.2 `_check_date decision_date` added; coverage check gained enforcement-strength pass (REQUIRES a `negative/` fixture per pattern/enum rule + PROVES rejection by running the validator binary); drift-injection test confirmed it flags a silently-accepted negative. New fixtures: ADR-9005 (links:{}), ADR-9019 (decision_date), ADR-9020 (created/last_updated/review_date), ADR-9021 (id pattern), ADR-9022 (rigor enum). 12 declarative-only enums moved to `na` (not in validator §28.3 scope, SD-2/NG-5). `--coverage`: UNCOVERED:0, ENFORCEMENT_PROVEN:17. 10.3 dead `_extract_title()` removed. 10.4 `_build_rows` `jq`→`_jq`. 10.5 suites: validate 35/35 (was 29), index 13/13, scripts/test-all all pass; ADR-0001+PDR-0001 exit 0; index in sync + byte-identical; 0 forbidden deps; headers re-applied via `scripts/add-header-location.sh tools` (also back-filled missing headers on existing fixtures + test-generate-decision-index.sh, consistent with ADR-0001's `source:` convention). |
+| 11 | Complete | 2026-06-25 | 2026-06-25 | (this commit) | Red-Team #2 remediation ALL GREEN. 11.1 (M1 MAJOR — AC-GH63-10 fidelity): index now reports "missing metrics" (`links.metrics`) not "missing verification criteria"; `_build_rows` extracts `metrics_len`; `_health_independent` flags Accepted + `metrics_len==0`; `_render_health_committed` "Missing metrics" buckets; header/`--help` updated; dead `has_vc` removed; spec AC-GH63-10/DM-3/DM-1 + 3 user docs + regenerated `00-index.md` aligned (Health reads "Missing metrics"); validator body-VC heuristic (AC-GH63-6) left as distinct signal. 11.2 `_has_closing_fence` (awk counts `---`≥2) in frontmatter.sh → unclosed fence now 1 actionable error (was ~9 cascade); test generates malformed file at runtime (header script cannot process unclosed fence). 11.3 `id_filename_match` tightened to `^${id}(-|\.md$)`. 11.4 `_check_date` adds `datetime.date.fromisoformat` (calendar validity). 11.5 `export LC_ALL=C` pinned in generator `main()` — byte-identical across pl_PL.UTF-8/C. 11.6 decider-missing error appends DM-4 note when un-classified. New fixtures: ADR-00010 (id/filename prefix collision), ADR-9026 (calendar date 2026-13-45), ADR-9027 (un-classified Accepted missing decider) — coverage-map updated (`top.pattern.created`, `xrule.decider_when_accepted_r2r3`); ENFORCEMENT_PROVEN 17→18. Suites: validate 39/39 (was 35), index 14/14 (was 13), scripts/test-all 5/5; UNCOVERED:0; ADR-0001+PDR-0001 exit 0; index in sync + byte-identical; `links:{}` still exit 0 (no Phase-10 regression); 0 forbidden deps; headers via script (3 new fixtures). |

@@ -7,7 +7,7 @@
 # Reads doc/decisions/*.md front matter and emits a byte-stable 00-index.md
 # (DM-3 table + Health subsection). Health is SPLIT per DEC-15:
 #   - Committed artifact (write / --dry-run): time-INDEPENDENT findings only
-#     (missing deciders, missing metrics/verification criteria, future waivers).
+#     (missing deciders, missing metrics via links.metrics, future waivers).
 #   - Advisory stdout (--summary): adds time-DEPENDENT overdue-review findings.
 # Calendar time can NEVER trip the committed-artifact drift check (AC-GH63-12).
 #
@@ -151,10 +151,12 @@ with open(jsonl_path, encoding="utf-8") as jf:
         rigor = (cls.get("rigor") if isinstance(cls, dict) else None) or "R2"
         gov = d.get("governance") or {}
         decider = gov.get("decider") if isinstance(gov, dict) else None
+        links = d.get("links") or {}
+        metrics = links.get("metrics") if isinstance(links, dict) else None
+        metrics_len = len(metrics) if isinstance(metrics, list) else 0
         m = re.search(r'(\d+)$', str(rid))
         num = int(m.group(1)) if m else 999999
         title = ""
-        has_vc = False
         fpath = os.path.join(decisions_dir, fname)
         try:
             with open(fpath, encoding="utf-8") as fh:
@@ -172,11 +174,6 @@ with open(jsonl_path, encoding="utf-8") as jf:
                     title = ln[2:].rstrip()
                     title = re.sub(r'^[A-Z]{3}-\d+:\s*', '', title)
                     break
-            mvc = re.search(r'^##\s+Verification\s+Criteria[^\n]*\n(.*?)(?=^##\s|\Z)',
-                            "\n".join(body), re.MULTILINE | re.DOTALL)
-            if mvc:
-                section = mvc.group(1)
-                has_vc = any(s.strip() and not s.strip().startswith("#") for s in section.splitlines())
         except Exception:
             pass
         rows.append({
@@ -184,7 +181,7 @@ with open(jsonl_path, encoding="utf-8") as jf:
             "num": num, "title": title, "status": status, "date": date,
             "owners": owners, "rigor": str(rigor), "decider": decider,
             "review_date": review_date, "last_updated": last_updated,
-            "has_vc": has_vc, "file": fname,
+            "metrics_len": metrics_len, "file": fname,
         })
 rows.sort(key=lambda r: (r["type_rank"], r["num"]))
 print(json.dumps(rows, ensure_ascii=False))
@@ -214,9 +211,11 @@ _health_independent() {
     # missing decider: Accepted R2/R3 without governance.decider
     ( select(.status == "Accepted" and (.rigor == "R2" or .rigor == "R3") and (.decider == null or .decider == ""))
       | "warn\t\(.id): Accepted \(.rigor) record has no governance.decider (DEC-12)." ),
-    # missing verification criteria / metrics: Accepted without VC
-    ( select(.status == "Accepted" and .has_vc == false)
-      | "warn\t\(.id): Accepted record has no Verification Criteria section (DEC-13)." )
+    # missing metrics (RT2 M1 / AC-GH63-10): Accepted records lacking links.metrics.
+    # Distinct from the validator body Verification-Criteria heuristic (AC-GH63-6),
+    # a separate signal kept in tools/validate-decision-record.
+    ( select(.status == "Accepted" and .metrics_len == 0)
+      | "warn\t\(.id): Accepted record has no links.metrics (missing metrics)." )
   ' <<<"$rows_json" | sort -t$'\t' -k2
 }
 
@@ -272,24 +271,24 @@ _render_health_committed() {
   printf 'Time-independent governance findings (generated; do not edit by hand).\n\n'
   if [[ -z "$findings" ]]; then
     printf -- '- **Missing deciders**: none.\n'
-    printf -- '- **Missing verification criteria**: none.\n'
+    printf -- '- **Missing metrics**: none.\n'
     printf -- '- **Future-field waivers (DEC-11)**: none.\n'
   else
     # Bucket by kind for stable presentation.
-    local missing_deciders missing_vc
+    local missing_deciders missing_metrics
     missing_deciders="$(printf '%s\n' "$findings" | grep 'no governance.decider' || true)"
-    missing_vc="$(printf '%s\n' "$findings" | grep 'no Verification Criteria' || true)"
+    missing_metrics="$(printf '%s\n' "$findings" | grep 'no links.metrics' || true)"
     if [[ -n "$missing_deciders" ]]; then
       printf -- '- **Missing deciders**:\n'
       printf '%s\n' "$missing_deciders" | sed 's/^warn\t/  - /'
     else
       printf -- '- **Missing deciders**: none.\n'
     fi
-    if [[ -n "$missing_vc" ]]; then
-      printf -- '- **Missing verification criteria**:\n'
-      printf '%s\n' "$missing_vc" | sed 's/^warn\t/  - /'
+    if [[ -n "$missing_metrics" ]]; then
+      printf -- '- **Missing metrics**:\n'
+      printf '%s\n' "$missing_metrics" | sed 's/^warn\t/  - /'
     else
-      printf -- '- **Missing verification criteria**: none.\n'
+      printf -- '- **Missing metrics**: none.\n'
     fi
     printf -- '- **Future-field waivers (DEC-11)**: none.\n'
   fi
@@ -367,7 +366,7 @@ Options:
 
 Health split (DEC-15 / AC-GH63-12):
   The committed 00-index.md is byte-stable and time-INDEPENDENT (missing deciders,
-  missing verification criteria, future-field waivers). Time-DEPENDENT overdue-review
+  missing metrics via links.metrics, future-field waivers). Time-DEPENDENT overdue-review
   findings use today's date and are advisory only (--summary / stdout), so calendar
   time can never trip the committed-artifact drift check.
 
@@ -406,6 +405,10 @@ parse_args() {
 }
 
 main() {
+  # Determinism defense-in-depth (RT2 m4): pin LC_ALL=C so `sort` and collation
+  # are byte-stable regardless of the runner's locale (CI runners vary; a
+  # developer may be on pl_PL.UTF-8). NFR-5 / AC-GH63-9.
+  export LC_ALL=C
   parse_args "$@"
 
   require_cmd python3

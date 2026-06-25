@@ -40,9 +40,15 @@ committed-artifact drift check (AC-GH63-12):
 | Finding | Kind | Where it appears |
 |---------|------|------------------|
 | Missing deciders (Accepted R2/R3 without `governance.decider`) | time-INDEPENDENT | Committed `00-index.md` **and** advisory stdout |
-| Missing Verification Criteria (Accepted without a VC section) | time-INDEPENDENT | Committed `00-index.md` **and** advisory stdout |
+| Missing metrics (Accepted records lacking `links.metrics`) | time-INDEPENDENT | Committed `00-index.md` **and** advisory stdout |
 | Future-field waivers (DEC-11) | time-INDEPENDENT | Committed `00-index.md` **and** advisory stdout |
 | **Overdue reviews** (`review_date` in the past, or `last_updated` older than the 180-day horizon) | time-DEPENDENT | **Advisory stdout only** — NEVER written to `00-index.md` |
+
+> **Note (RT2 M1):** the "missing metrics" dimension uses the front-matter
+> `links.metrics` field (Accepted records lacking it are flagged). This is
+> **distinct** from `tools/validate-decision-record`'s body `## Verification
+> Criteria` heuristic (AC-GH63-6), which remains a separate, non-blocking
+> validator signal.
 
 The committed `00-index.md` is byte-stable for a fixed input set: regenerate it
 today, next week, or next year and you get identical bytes (assuming the records
