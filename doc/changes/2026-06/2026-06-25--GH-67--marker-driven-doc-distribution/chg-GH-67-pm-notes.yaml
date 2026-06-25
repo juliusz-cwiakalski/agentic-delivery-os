@@ -1,0 +1,58 @@
+change_id: GH-67
+title: "Marker-driven doc distribution + install-manifest guard (prevent redistributable-doc omissions)"
+slug: "marker-driven-doc-distribution"
+branch: "feat/GH-67/marker-driven-doc-distribution"
+phases:
+  clarify_scope: { started: "2026-06-25T00:00:00Z", completed: "2026-06-25T00:00:00Z" }
+  specification: { started: "2026-06-25T00:00:00Z", completed: "2026-06-25T00:00:00Z" }
+  test_planning: { started: "2026-06-25T00:00:00Z", completed: "2026-06-25T00:00:00Z" }
+  delivery_planning: { started: "2026-06-25T00:00:00Z", completed: "2026-06-25T00:00:00Z" }
+  # RT1 (red-team round 1) ran on uncommitted artifacts; verdict REWORK. Revisions in progress; delivery_planning marks completed only after revisions land.
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions:
+  - text: "ODR-0001: the 4 doc/templates/*.yaml register templates are 'redistributable' (marker + installed + guarded), not internal. Resolved by @decision-advisor (R1, delegated authority). Grounded in ticket's drift-elimination north-star + repo precedent (profile governs usage, not distribution). Consequence: install.sh globs *.yaml too; guard scans *.yaml. DR at doc/decisions/ODR-0001-classify-yaml-register-templates-redistributable.md (committed c850d36, rides with GH-67 PR)."
+    date: "2026-06-25"
+open_questions: []
+blockers: []
+notes:
+  - text: "Scope audit completed. Ticket classification matches reality: 15 guides = 12 redistributable + 3 internal (adding-tool-support, ados-tools-system-dependencies, tools-convention). Frontmatter marker exists NOWHERE in repo. install.sh hand-list at L76-99; templates glob L677 non-recursive (*.md only) so blueprints/ + *.yaml never installed. No test-doc-distribution.sh; ci.yml has no doc-distribution gate."
+    type: info
+    date: "2026-06-25"
+  - text: "Ticket says '(13)' redistributable guides but enumerates 12. Enumeration is authoritative (12). Treating '(13)' as a typo; not blocking."
+    type: info
+    date: "2026-06-25"
+  - text: "Drive-by scope additions (related drift symptoms, minor): (1) test-install.sh mock+assertions omit decision-making.md (must update as part of mechanism change anyway); (2) test-uninstall.sh has stale fixture 'system-dependencies.md' (real file is ados-tools-system-dependencies.md) — include as 2-line fixture fix, same drift class."
+    type: decision
+    date: "2026-06-25"
+  - text: "User requested TWO red-team rounds: RT1 after artifacts (spec/plan/test-plan), RT2 after delivery. Findings addressed via artifact revision or followup phases/changes. Stop at PR for human review."
+    type: info
+    date: "2026-06-25"
+  - text: "RETRO: @decision-advisor committed ODR-0001 directly to local main (c850d36) rather than to the feature branch. Functionally fine (rides with GH-67 PR since origin/main is behind local main), but the norm is branch-per-change. For future clarify_scope decision delegations, instruct @decision-advisor to write the DR file WITHOUT committing (PM commits it on the feature branch). Minor; no rework."
+    type: retro
+    date: "2026-06-25"
+  - text: "SPEC DONE (18 ACs, 54-doc classification table = 51 redistributable + 3 internal). Two OQs surfaced by @spec-writer, both resolved without human: OQ-1 (POSIX parsing of mixed frontmatter) -> defer to coder/plan (robust bash parsing, no YAML lib per NFR-4); OQ-2 (guard reject invalid marker values?) -> PM-decided YES: guard validates enum {redistributable, internal, project-generated}; invalid value treated like missing (forcing-function consistency). Test-plan + plan instructed to include enum validation as first-class guard behavior."
+    type: decision
+    date: "2026-06-25"
+  - text: "RISK: @runner subagent fails to relay output in this session (3 consecutive empty task_results; @general works reliably). Fallback: use @general for command execution; monitor @committer. If @committer also fails, commit via @general with explicit Conventional Commit instructions."
+    type: risk
+    date: "2026-06-25"
+  - text: "TEST-PLAN + PLAN DONE. Test-plan: 31 TCs, 19/19 ACs traced (spec §17 has 19 not 18 — count nuance, all covered), independent-oracle drift detector design (parser shared, set-derivation not — avoids tautological guard). Plan: 5 phases A-E, 17/18 ACs covered + 1 partial (AC-F4-1) escalated to PM (F-1)."
+    type: info
+    date: "2026-06-25"
+  - text: "OQ-TP-1 (non-blocking): spec §13 says copy_updatable_file is 'create-if-absent' but live code content-syncs (overwrites when differing). Ticket AC #7 'non-destructive' means no user-data-loss, not never-overwrite-upstream-docs (docs are meant to track upstream). Test-plan TC-INST-005 correctly wrote to actual behavior. Spec wording to be reconciled if RT1 flags."
+    type: decision
+    date: "2026-06-25"
+  - text: "F-1 RESOLVED (PM decision): .ai/agent/pm-instructions.md has unrelated uncommitted change ('Reading Issue Comments' section from inception session). Decision: commit the unrelated fix as a SEPARATE commit with non-GH-67 message BEFORE Phase 4, then Phase 4 adds the GH-67 marker-requirement note. Preserves work, separates concerns. Coder instructed. Flag prominently in PR description."
+    type: decision
+    date: "2026-06-25"
+  - text: "RT1 VERDICT: REWORK. Design sound, §8.3 enumeration EXACTLY correct (54=51+3 verified by independent re-count). 1 Critical + 4 Major, all propagation/claims not architecture. CRIT-1: 4 YAML registers have NO frontmatter (start with data e.g. 'calendar_id:...' not '---') — spec falsely claimed all 54 have frontmatter; plan Phase 1.3 'insert in existing frontmatter' impossible for YAML. MAJ-1: spec stale on OQ-2 (still '4 modes/open'; downstream resolved 5). MAJ-2: plan stale on F-1 (says don't touch pm-instructions; pm-notes resolved). MAJ-3: spec §12 + ODR-0001 C-1 falsely claim 'create-if-absent'; live code content-syncs. MAJ-4: plan AC count 18 (actual 19)."
+    type: info
+    date: "2026-06-25"
+  - text: "REWORK DECISIONS (PM, no human escalation needed): CRIT-1 -> two-path parser keyed on extension: .md uses frontmatter --- block; .yaml uses top-level 'ados_distribution:' key (line 1). Rejected: YAML frontmatter block (would create multi-doc YAML breaking safe_load consumers). MAJ-3 -> keep content-sync for templates (correct: templates are pristine references; adopters copy-from not edit-in-place; matches existing .md template behavior); correct false 'create-if-absent' wording in spec §12 + ODR-0001 C-1; no behavior change/new TC beyond accurate doc + copy-from-template convention note. MAJ-1/2/4 -> propagate resolved decisions into spec + plan. Revising all 3 artifacts in parallel with precise edit locations from red-team."
+    type: decision
+    date: "2026-06-25"
