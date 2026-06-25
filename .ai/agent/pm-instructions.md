@@ -88,6 +88,10 @@ doc/changes/
   │       └── chg-GH-{number}-pm-notes.yaml
 ```
 
+## Doc Distribution Marker (`ados_distribution`)
+
+Any new or changed doc under `doc/` (guides, templates incl. `blueprints/` and `*.yaml`, the handbook, `doc/00-index.md`, decision stubs, `.ai/rules/README.md`) **MUST** declare an `ados_distribution` marker (`redistributable` | `internal` | `project-generated`). A change that ships a `redistributable` doc **MUST** pass the CI guard `bash scripts/.tests/test-doc-distribution.sh`. See `AGENTS.md` ("Doc distribution marker") for placement rules.
+
 ## Local Context (git-ignored)
 
 Persistent, local-only PM context is stored in:
