@@ -1,0 +1,67 @@
+change_id: GH-63
+title: "Machine-enforceable decision-record quality (JSON schemas, validator, index tool, CI gate)"
+branch: feat/GH-63/machine-enforceable-decision-records
+change_folder: doc/changes/2026-06/2026-06-25--GH-63--machine-enforceable-decision-records
+ticket_url: https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/63
+
+phases:
+  clarify_scope: { started: 2026-06-25, completed: 2026-06-25 }
+  specification: { started: 2026-06-25, completed: 2026-06-25 }
+  test_planning: { started: 2026-06-25, completed: 2026-06-25 }
+  delivery_planning: { started: 2026-06-25, completed: 2026-06-25 }
+  delivery: { started: 2026-06-25, completed: 2026-06-25 }
+  system_spec_update: { started: 2026-06-25, completed: 2026-06-25 }
+  review_fix: { started: 2026-06-25, completed: 2026-06-25 }
+  quality_gates: { started: 2026-06-25, completed: 2026-06-25 }
+  dod_check: { started: 2026-06-25, completed: 2026-06-25 }
+  pr_creation: { started: 2026-06-25, completed: 2026-06-25, url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/76" }
+
+# Two red-team coordinator reviews requested by user:
+#   RT1 = on spec/plan/test-plan artifacts BEFORE delivery
+#   RT2 = on the delivered change AFTER all phases
+red_team_reviews:
+  rt1_artifacts: { started: 2026-06-25, completed: 2026-06-25, verdict: "GO-WITH-CONDITIONS -> all conditions addressed (C1/M1/M3 blockers + M2/M4/M5 + minor m1-m9); PDR-0001 authored for SD-2 sign-off" }
+  rt2_delivered: { started: 2026-06-25, completed: 2026-06-25, verdict: "SHIP-WITH-CONDITIONS -> all conditions addressed in Phase 11 (M1 missing-metrics dimension implemented per ticket AC; m1-m5 hardening) + a CI-breaking exit-code bug found via independent verification and fixed (@fixer, 8c72277)" }
+
+decisions:
+  - text: "SD-1 (schema source of truth): the front-matter schema documents GH-46's LANDED nested structure (id, decision_type, status, created, decision_date, last_updated, summary, owners, service + optional decision_area/scope/reversibility/review_date/business_impact/customer_impact + optional nested classification{}, governance{}, ai_assistance{}, revisit_triggers[], links{}). It does NOT adopt research §17.1's flat sketch (driver/decider/required_reviewers/rigor_profile as top-level keys) — GH-46 made the nesting decision (DEC-8 DACI under governance; classification block). Anchor artifact = ADR-0001 (the dogfood record) + doc/templates/decision-record-template.md. Rationale: ticket explicitly says 'validates the GH-46 front matter' and 'validates the GH-46 records (incl. ADR-0001 dogfood)'."
+    date: 2026-06-25
+  - text: "SD-2 (§28.3 negative-case scoping): the validator implements the §28.3 cases expressible against FRONT MATTER + CROSS-FIELD rules + PLANNING-SUMMARY structure. Cases requiring not-yet-landed machinery or body-content analysis are DOCUMENTED as deferred to sibling tickets, grounded in the ticket's own non-goals + out-of-scope ('validator focuses on front matter + cross-field rules'). IN-SCOPE negative cases: invalid decision_type; invalid status; impossible lifecycle transition (e.g. Accepted->Proposed; status/supersedes/superseded_by consistency); missing owners; missing governance.decider for Accepted R2/R3; missing decision_date for Accepted; R3 without governance.reviewers; same factor as both constraint and driver (planning-summary hard_requirements ∩ decision_drivers); non-negotiable constraint violation in chosen option (planning-summary, best-effort). DEFERRED (sibling machinery): R3 without evidence verification (needs evidence ledger -> GH-65); expired waiver (no waiver/expiry field landed); recommendation copied into final decision without authority (needs body-content rec/decision separation -> GH-64); strict accepted-rationale immutability detection (needs snapshot/diff machinery). This is an AC-interpretation decision affecting 'fails each negative case from §28.3' — surfaced explicitly to red-team for challenge; if challenged, formalize via @decision-advisor PDR before delivery."
+    date: 2026-06-25
+  - text: "SD-3 (planning-summary validation domain): the decision-planning-summary schema validates <decision_planning_summary> (generic) + legacy <technical_decision_planning_summary>/adr.* alias blocks. These are transient /plan-decision outputs (consumed by /write-decision), NOT durable repo files — grep confirms zero live planning-summary blocks persist under doc/changes or doc/decisions. Therefore: CI gate runs ONLY the front-matter validator on doc/decisions/*.md + schema files; the planning-summary validator is a tool/command validated with SYNTHETIC fixtures, invoked on demand (not CI-gated). Fixtures are committed under tools/.tests/ fixtures."
+    date: 2026-06-25
+  - text: "SD-4 (runtime = stdlib-only, no jsonschema pip dep): validator is bash + python3 stdlib (or jq). JSON Schema files (*.schema.json, draft 2020-12) are the declarative source of truth for docs/tooling; the validator ENCODES the same rules imperatively to avoid a jsonschema package dependency in CI (ubuntu-latest python3 lacks it; ticket says 'avoid a heavy runtime'). Drift risk between declarative schema and imperative validator is mitigated by: (a) the validator's tests asserting every schema rule, (b) a schema-vs-validator coverage check. This is a technical decision — if red-team flags the two-sources-of-truth drift risk as material, formalize via @decision-advisor TDR before delivery."
+    date: 2026-06-25
+  - text: "DEC-12 (R3 reviewer rule is acceptance-gated, resolves OQ-GH63-1 surfaced by @test-plan-writer): governance.reviewers required non-empty only when status=Accepted AND classification.rigor=R3 (mirrors the decider rule). Rationale: ADR-0001 is Proposed R3 with empty reviewers: [] and must pass (AC-1/AC-4); review happens during Under Review->Accepted, so requiring reviewers at Proposed is wrong. §28.3 'R3 without review' = an Accepted R3 lacking reviewers. Applied to spec (F-3, scope list, DM-1 row, AC-GH63-5, Appendix A row 10, glossary) and plan (tasks 2.4, 2.6). Non-blocking; surfaced to red-team."
+    date: 2026-06-25
+  - text: "DEC-13 (heuristic exit semantics, resolves OQ-GH63-3): best-effort heuristics (verification-criteria presence; non-negotiable-violation) emit NON-BLOCKING WARNINGS (exit 0), never fail the build. A failing check would be a structural guarantee, contradicting DEC-10. Hard rules fail (non-zero); heuristics warn. Applied to spec AC-GH63-6 + decision log + plan task 2.7."
+    date: 2026-06-25
+  - text: "RT1 (red-team-coordinator on artifacts): verdict GO-WITH-CONDITIONS. 3 pre-delivery blockers + conditions, all now resolved in spec/plan/test-plan: C1 (AC-5 vs DEC-13 contradiction on non-negotiable-violation -> reclassified as WARNING under AC-6/DEC-13; removed from AC-5 hard-fail list; Appendix A row 9 re-mapped); M1 (time-dependent overdue-review in committed index breaks byte-stability + CI drift -> DEC-15: committed 00-index.md = time-independent only; overdue to stdout/--dry-run); M3 (tools-convention network version-check vs NFR-1 0-network -> DEC-14: tools omit version check; TC-016 grep extended to curl/wget/_check_version/raw.githubusercontent). Also: M2 (SD-2 deferral sign-off -> PDR-0001 authored via @decision-advisor, Proposed R3 awaiting human decider at PR review); M4 (CI path filter adds doc/templates/decision-record-template.md + feature-decision-records.md); M5 (coverage check schema-driven/generated, not hand-maintained); m1 (OQ-GH63-1 closed by DEC-12); m2 (lifecycle transition matrix DM-5; Accepted terminal); m4 (--summary/--lint/--coverage flags committed in F-3); m5 (default-R2 caveat for Accepted); m6 (archetype provenance note); m7 (default mode = front-matter only, DEC-16); m8 (TC-028 import yaml removed); m9 (decision_area technical note)."
+    date: 2026-06-25
+  - text: "DEC-14 (omit automatic network version-check on the two new tools): repo-internal delivery tools, not standalone-installable utilities (the convention's target = zclaude/text-to-image); the check fetches raw.githubusercontent on every invocation, violating NFR-1 and meaningless for a repo-resident tool. Documented exception; tool docs note it."
+    date: 2026-06-25
+  - text: "DEC-15 (index determinism split): committed 00-index.md = table + time-independent health (missing deciders/metrics/future-waivers); time-dependent overdue-review dimension = stdout/--dry-run only, never committed. Prevents CI drift time-bomb (red-team M1)."
+    date: 2026-06-25
+  - text: "DEC-16 (validate-decision-record default mode = front-matter only; --summary for planning-summary): makes AC-GH63-13 behaviorally unambiguous (no live planning-summary blocks persist anyway)."
+    date: 2026-06-25
+
+open_questions: []   # none blocking; SD-2/SD-4 are PM-decided and flagged to red-team
+
+blockers: []
+
+notes:
+  - text: "RETRO (high value): the @coder dismissed a CI-breaking bug — both GH-63 test suites returned shell exit code 1 even when all tests passed — as 'pre-existing baseline behavior.' Independent exit-code verification ($?, not just the 'Summary: N/N passed' line) caught it: the new CI gate (AC-GH63-12) runs these suites, so exit=1-on-success would have made the gate ALWAYS red. Root cause (@fixer): _test_teardown's cleanup returned 1 when _test_tmpdir was empty, and via the EXIT trap that overrode print_summary's 0. Fixed with '|| true' (8c72277). LESSONS: (1) @coder's self-report of 'green' must be independently exit-code-checked, not trusted from summary lines; (2) EXIT-trap teardowns must always return 0; (3) the embedded bash test framework in .ai/rules/bash.md §11 should harden _test_teardown to '|| true' to prevent this class of bug repo-wide — candidate follow-up."
+    type: retro
+    date: 2026-06-25
+  - text: "DoD PASS (phase 9): all 18 ACs satisfied (reviewer iter-2 PASS + RT2 SHIP-with-conditions-all-addressed + independent verification). Plan phases 1-11 complete with execution-log entries. Final quality gates GREEN w/ correct exit codes: validate 39/39, index 14/14, scripts 5/5, coverage 0-uncovered/18-enforcement-proven, ADR-0001+PDR-0001 validate clean, index drift=NONE, determinism=OK (locale-independent), .ados-claude build no-op, forbidden-deps clean. 16 commits on branch. Two red-team rounds + one reviewer iteration caught: a CRITICAL AC contradiction (C1), a CI drift time-bomb (M1-RT1), a network/version-check conflict (M3), a coverage tautology (M5), a links:{} parser crash, a decision_date pattern gap, a missing-metrics AC fidelity gap (M1-RT2), and the exit-code bug. Next: PR."
+    type: info
+    date: 2026-06-25
+  - text: "Phase 2-4 complete (earlier): spec (18 ACs), test plan (28 TCs, 18/18 ACs covered), plan (9 phases) authored and made coherent; DEC-12 (R3 reviewer rule acceptance-gated) + DEC-13 (heuristic exit semantics) resolved 2 OQs from @test-plan-writer. Remaining spec OQs (OQ-1 waiver field -> wait for GH-65; OQ-2 inline planning-summary validation -> on-demand) carry leans, non-blocking."
+    type: info
+    date: 2026-06-25
+  - text: "clarify_scope: ticket is detailed and self-consistent. Cross-checked against system spec doc/spec/features/feature-decision-records.md, guides decision-making.md + decision-records-management.md, template decision-record-template.md, ADR-0001 (dogfood), CI ci.yml, tools-convention.md, bash.md, and research basis §17/§28.3/§30. Env: python3 3.14.4 + jq 1.8.1 present; shellcheck NOT installed. schemas/ dir does not exist yet; only 1 decision record (ADR-0001, fully classified R3). No blocking questions — all scope nuances resolved via SD-1..SD-4 + DEC-12/13, grounded in ticket's own goals/non-goals."
+    type: info
+    date: 2026-06-25
+  - text: "User instruction: deliver GH-63; run @red-team-coordinator on artifacts (RT1) then on delivered change (RT2); address findings via followup phases/changes; stop at PR for review. Blocking questions -> stop; consider @decision-advisor to resolve open questions without user input. No blocking questions found."
+    type: info
+    date: 2026-06-25

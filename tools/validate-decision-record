@@ -1,0 +1,785 @@
+#!/usr/bin/env bash
+# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+# MIT License - see LICENSE file for full terms
+# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/validate-decision-record
+#
+# validate-decision-record — Validate decision-record front matter + planning summaries.
+#
+# Dependencies: bash>=4, python3 (stdlib), jq, grep. NO jsonschema, NO `import yaml`,
+# NO shellcheck, NO network (DEC-14 exception to tools-convention version-check).
+#
+# Environment:
+#   VERBOSE - Set to 'true' for debug output
+#
+# Exit codes:
+#   0 - Success (all records valid; heuristics may emit non-blocking [WARN]/[HEURISTIC])
+#   1 - Validation failure (one or more hard-rule violations)
+#   2 - Usage error
+#   7 - Filesystem error
+
+set -Eeuo pipefail
+set -o errtrace
+shopt -s inherit_errexit 2>/dev/null || true
+IFS=$'\n\t'
+
+# ============================================================================
+# SETTINGS
+# ============================================================================
+readonly APP_NAME="validate-decision-record"
+readonly APP_VERSION="1.0.0"
+readonly LOG_TAG="(${APP_NAME})"
+
+readonly EXIT_SUCCESS=0
+readonly EXIT_VALIDATION=1
+readonly EXIT_USAGE=2
+readonly EXIT_FS=7
+
+readonly DOC_URL="https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/tools/validate-decision-record.md"
+
+# Tool-internal lib dir (shared front-matter parser lives here)
+_TOOLS_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+readonly TOOLS_LIB_DIR="${_TOOLS_DIR}/.lib"
+
+VERBOSE="${VERBOSE:-false}"
+
+# Valid value sets (mirror schemas/*.schema.json / DM-1)
+readonly -a VALID_DECISION_TYPES=(adr pdr tdr bdr odr)
+readonly -a VALID_STATUSES=("Proposed" "Under Review" "Accepted" "Deprecated" "Superseded")
+readonly -a VALID_RIGORS=(R0 R1 R2 R3)
+
+# ============================================================================
+# TRAPS
+# ============================================================================
+_on_err() {
+  local -r line="$1" cmd="$2" code="$3"
+  log_err "line ${line}: '${cmd}' exited with ${code}"
+}
+_on_exit() { :; }
+_on_interrupt() { log_warn "Interrupted"; exit 130; }
+trap '_on_err $LINENO "$BASH_COMMAND" $?' ERR
+trap '_on_exit' EXIT
+trap '_on_interrupt' INT TERM
+
+# ============================================================================
+# UTILITIES
+# ============================================================================
+log_info()  { printf '[INFO]  %s %s\n' "${LOG_TAG}" "$*"; }
+log_warn()  { printf '[WARN]  %s %s\n' "${LOG_TAG}" "$*" >&2; }
+log_err()   { printf '[ERROR] %s %s\n' "${LOG_TAG}" "$*" >&2; }
+log_debug() { [[ "${VERBOSE}" == "true" ]] && printf '[DEBUG] %s %s\n' "${LOG_TAG}" "$*" || true; }
+
+die() { log_err "$@"; exit "${EXIT_USAGE}"; }
+
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || die "Required command not found: $1"
+}
+
+# jq wrapper (mockable)
+_jq() { "${JQ_CMD:-jq}" "$@"; }
+
+# Load shared front-matter parser
+# shellcheck source=/dev/null
+[[ -r "${TOOLS_LIB_DIR}/frontmatter.sh" ]] || die "Missing shared parser: ${TOOLS_LIB_DIR}/frontmatter.sh"
+source "${TOOLS_LIB_DIR}/frontmatter.sh"
+
+# ============================================================================
+# DOMAIN: per-record validation
+# ============================================================================
+
+# _record_id_from_json <json>
+_record_id_from_json() { _jq -r '.id // empty' <<<"$1"; }
+
+# join array into pipe-separated string
+_join_pipe() {
+  local -n _arr="$1"; local _out=""
+  local _first=1
+  for _v in "${_arr[@]}"; do
+    if [[ $_first -eq 1 ]]; then _out="${_v}"; _first=0; else _out="${_out}|${_v}"; fi
+  done
+  printf '%s' "${_out}"
+}
+
+# Null-safe + TYPE-safe nested accessors (reviewer iteration-1 #1 / NFR-8).
+# A missing OR wrong-typed field (e.g. `links` parsed as a string because of an
+# unsupported construct, or `governance` absent) must never crash the tool with a
+# raw jq trace. The `// {}` alternative only catches null/false; the explicit
+# `if type == "object"` guard is what makes a wrong-typed value non-fatal.
+
+# _safe_nested_len <json> <object_key> <array_key>
+#   Length of json.<object_key>.<array_key>; 0 if missing or wrong-typed.
+_safe_nested_len() {
+  local -r json="$1" obj="$2" key="$3"
+  _jq -r --arg o "$obj" --arg k "$key" \
+    '(.[$o] // {}) | if type == "object" then ((.[$k] // []) | length) else 0 end' <<<"$json"
+}
+
+# _safe_nested_str <json> <object_key> <string_key>
+#   Raw value of json.<object_key>.<string_key>; empty if missing or wrong-typed.
+_safe_nested_str() {
+  local -r json="$1" obj="$2" key="$3"
+  _jq -r --arg o "$obj" --arg k "$key" \
+    '(.[$o] // {}) | if type == "object" then (.[$k] // empty) else empty end' <<<"$json"
+}
+
+# validate_record <file> <lint_mode>  -> appends to global VALIDATION_ERRORS / VALIDATION_WARNS
+validate_record() {
+  local -r file="$1"
+  local -r lint_mode="${2:-false}"
+  local -r fname="$(basename -- "$file")"
+
+  if [[ ! -f "$file" ]]; then
+    VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname}: file not found.")
+    return
+  fi
+  if ! _has_frontmatter "$file"; then
+    VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname}: missing leading '---' front-matter fence.")
+    return
+  fi
+  # RT2 m1: opening fence present but no closing fence -> emit ONE actionable
+  # error instead of ~9 misleading cascade "required field missing" errors.
+  if ! _has_closing_fence "$file"; then
+    VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname}: '---' opened but no closing '---' fence found.")
+    return
+  fi
+
+  local json
+  if ! json="$(_frontmatter_to_json "$file" 2>/dev/null)"; then
+    VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname}: front matter failed to parse (unsupported YAML subset?).")
+    return
+  fi
+
+  local id status dtype decision_date rigor
+  id="$(_jq -r '.id // empty' <<<"$json")"
+  status="$(_jq -r '.status // empty' <<<"$json")"
+  dtype="$(_jq -r '.decision_type // empty' <<<"$json")"
+  decision_date="$(_jq -r '.decision_date // empty' <<<"$json")"
+
+  # --- required top-level fields ---
+  local -a required_fields=(id decision_type status created decision_date last_updated summary service)
+  local rf
+  for rf in "${required_fields[@]}"; do
+    if [[ "$(_jq -r --arg k "$rf" 'has($k)' <<<"$json")" == "false" ]]; then
+      VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname} (id ${id:-<missing>}): required field '${rf}' is missing. Add it to the front matter (see doc/templates/decision-record-template.md).")
+    fi
+  done
+  # owners: required + minItems 1
+  if [[ "$(_jq -r 'has("owners")' <<<"$json")" == "false" ]]; then
+    VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname} (id ${id:-<missing>}): required field 'owners' is missing (minItems: 1).")
+  elif [[ "$(_jq -r '.owners | length' <<<"$json")" -lt 1 ]]; then
+    VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname} (id ${id:-<missing>}): field 'owners' must have at least one entry (minItems: 1).")
+  fi
+
+  # --- decision_type enum ---
+  local dt_re; dt_re="$(_join_pipe VALID_DECISION_TYPES)"
+  if [[ -n "$dtype" ]] && [[ ! "$dtype" =~ ^($dt_re)$ ]]; then
+    VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname} (id ${id:-<missing>}): field 'decision_type'='${dtype}' is not valid. Allowed: adr|pdr|tdr|bdr|odr.")
+  fi
+
+  # --- status enum ---
+  local st_re; st_re="$(_join_pipe VALID_STATUSES)"
+  if [[ -n "$status" ]] && [[ ! "$status" =~ ^($st_re)$ ]]; then
+    VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname} (id ${id:-<missing>}): field 'status'='${status}' is not valid. Allowed: Proposed|Under Review|Accepted|Deprecated|Superseded.")
+  fi
+
+  # --- id pattern + filename match ---
+  if [[ -n "$id" ]] && [[ ! "$id" =~ ^(ADR|PDR|TDR|BDR|ODR)-[0-9]{4}$ ]]; then
+    VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname}: field 'id'='${id}' does not match <TYPE>-<zeroPad4> (e.g., ADR-0001).")
+  fi
+  if [[ -n "$id" ]]; then
+    # filename stem must match the id with a boundary after it (RT2 m2: an
+    # unbounded prefix let 'id: ADR-0001' match filename 'ADR-00010-foo.md').
+    if [[ ! "$fname" =~ ^${id}(-|\.md$) ]]; then
+      VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname} (id ${id}): filename does not match the id '${id}' (filename must be '${id}-<slug>.md' or '${id}.md'; id must match filename stem).")
+    fi
+  fi
+
+  # --- date formats (created, decision_date, last_updated, review_date) ---
+  _check_date "$json" "$fname" "$id" "created"
+  _check_date "$json" "$fname" "$id" "decision_date"
+  _check_date "$json" "$fname" "$id" "last_updated"
+  _check_date "$json" "$fname" "$id" "review_date"
+
+  # --- default rigor (DM-4): absent classification => R2 ---
+  local has_classification
+  has_classification="$(_jq -r 'has("classification")' <<<"$json")"
+  if [[ "$has_classification" == "true" ]]; then
+    rigor="$(_safe_nested_str "$json" "classification" "rigor")"
+    [[ -z "$rigor" ]] && rigor="R2"
+  else
+    rigor="R2"
+    if [[ "$lint_mode" == "true" ]]; then
+      VALIDATION_WARNS+=("[WARN] ${LOG_TAG} ${fname} (id ${id:-<missing>}): no 'classification' block; rigor defaulted to R2 (DM-4). Add a classification block when this record is next reviewed (non-destructive; not rewritten).")
+    fi
+  fi
+  # rigor enum
+  if [[ -n "$rigor" ]]; then
+    local rg_re; rg_re="$(_join_pipe VALID_RIGORS)"
+    if [[ ! "$rigor" =~ ^($rg_re)$ ]]; then
+      VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname} (id ${id:-<missing>}): field 'classification.rigor'='${rigor}' is not valid. Allowed: R0|R1|R2|R3.")
+    fi
+  fi
+
+  # --- rigor-aware / acceptance-gated required fields (DEC-12) ---
+  if [[ "$status" == "Accepted" ]]; then
+    # decision_date non-null
+    if [[ -z "$decision_date" || "$decision_date" == "null" ]]; then
+      VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname} (id ${id:-<missing>}): field 'decision_date' is required (non-null) when status=Accepted.")
+    fi
+    if [[ "$rigor" == "R2" || "$rigor" == "R3" ]]; then
+      local decider
+      decider="$(_safe_nested_str "$json" "governance" "decider")"
+      if [[ -z "$decider" || "$decider" == "null" ]]; then
+        # RT2 m5: when the record is un-classified, explain the R2 obligation at
+        # the point of failure (DM-4 default rigor).
+        local dm4_note=""
+        if [[ "$has_classification" == "false" ]]; then
+          dm4_note=" (rigor defaulted to R2 because no 'classification' block is present — DM-4)"
+        fi
+        VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname} (id ${id:-<missing>}): field 'governance.decider' is required (non-null) when status=Accepted and rigor=${rigor}.${dm4_note} Set the accountable authority.")
+      fi
+    fi
+    if [[ "$rigor" == "R3" ]]; then
+      local reviewers_len
+      reviewers_len="$(_safe_nested_len "$json" "governance" "reviewers")"
+      if [[ "${reviewers_len:-0}" -lt 1 ]]; then
+        VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname} (id ${id:-<missing>}): field 'governance.reviewers' must be non-empty when status=Accepted and rigor=R3 (acceptance-gated per DEC-12).")
+      fi
+    fi
+  fi
+
+  # --- lifecycle / consistency (DM-5, single-snapshot) ---
+  local superseded_by_len supersedes_len
+  superseded_by_len="$(_safe_nested_len "$json" "links" "superseded_by")"
+  supersedes_len="$(_safe_nested_len "$json" "links" "supersedes")"
+  if [[ "$status" == "Superseded" ]]; then
+    if [[ "${superseded_by_len:-0}" -lt 1 ]]; then
+      VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname} (id ${id:-<missing>}): status 'Superseded' requires a non-empty 'links.superseded_by' referencing the replacing record.")
+    fi
+  fi
+  if [[ "$status" == "Accepted" ]]; then
+    # Accepted is terminal: it cannot already carry superseded_by (that would imply a transition out)
+    if [[ "${superseded_by_len:-0}" -gt 0 ]]; then
+      VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname} (id ${id:-<missing>}): impossible lifecycle state — status 'Accepted' is terminal but 'links.superseded_by' is set (Accepted -> Superseded requires a new superseding record; update status to Superseded).")
+    fi
+  fi
+
+  # --- verification-criteria heuristic (AC-GH63-6, DEC-10/13) ---
+  if [[ "$status" == "Accepted" ]]; then
+    local body has_vc
+    body="$(_record_body "$file")"
+    # non-empty '## Verification Criteria' section: heading present AND some non-empty body line before next '## '
+    has_vc="$(awk '
+      BEGIN { in_vc = 0; found = 0 }
+      /^##[[:space:]]+Verification Criteria/ { in_vc = 1; next }
+      /^##[[:space:]]+/ { if (in_vc) in_vc = 0 }
+      in_vc && /[[:alnum:]]/ { found = 1 }
+      END { print (found ? "yes" : "no") }
+    ' <<<"$body")"
+    if [[ "$has_vc" != "yes" ]]; then
+      VALIDATION_WARNS+=("[HEURISTIC] ${LOG_TAG} ${fname} (id ${id:-<missing>}): Accepted record body lacks a non-empty '## Verification Criteria' section. [HEURISTIC] best-effort check — NOT a structural guarantee (body-content machinery owned by GH-64). Non-blocking warning (exit 0).")
+    fi
+  fi
+
+  # --- migration lint: warn on legacy shapes (non-destructive) ---
+  if [[ "$lint_mode" == "true" ]]; then
+    if [[ "$has_classification" == "false" ]]; then
+      : # already warned above
+    fi
+  fi
+}
+
+_check_date() {
+  local -r json="$1" fname="$2" id="$3" field="$4"
+  local val
+  val="$(_jq -r --arg k "$field" '.[$k] // empty' <<<"$json")"
+  [[ -z "$val" || "$val" == "null" ]] && return
+  # Format check (YYYY-MM-DD).
+  if [[ ! "$val" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+    VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname} (id ${id:-<missing>}): field '${field}'='${val}' is not a valid YYYY-MM-DD date.")
+    return
+  fi
+  # Semantic/calendar validity (RT2 m3): '2026-13-45' passes the format regex
+  # but is not a real date. fromisoformat rejects it (aligns the validator with
+  # the generator's date semantics in _health_overdue).
+  if ! python3 -c 'import datetime,sys; datetime.date.fromisoformat(sys.argv[1])' "$val" 2>/dev/null; then
+    VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname} (id ${id:-<missing>}): field '${field}'='${val}' is not a valid calendar date (month 1-12, valid day for the month).")
+  fi
+}
+
+# ============================================================================
+# DOMAIN: planning-summary validation
+# ============================================================================
+
+# validate_summary <file> -> appends to VALIDATION_ERRORS / VALIDATION_WARNS
+validate_summary() {
+  local -r file="$1"
+  local -r fname="$(basename -- "$file")"
+  if [[ ! -f "$file" ]]; then
+    VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname}: planning-summary file not found.")
+    return
+  fi
+  # Summary fixtures are JSON (validated with python stdlib json — NOT import yaml).
+  local json
+  if ! json="$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1],encoding="utf-8"))))' "$file" 2>/dev/null)"; then
+    VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname}: planning-summary is not valid JSON.")
+    return
+  fi
+
+  # Legacy alias normalization (adr.* -> canonical)
+  local norm
+  norm="$(python3 - "$file" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1], encoding='utf-8'))
+adr = d.get('adr') if isinstance(d, dict) else None
+if isinstance(adr, dict):
+    for k in ('id','type','title','slug'):
+        canon = {'id':'decision_id','type':'decision_type','title':'title','slug':'slug'}[k]
+        if adr.get(k) is not None and canon not in d:
+            d[canon] = adr[k]
+print(json.dumps(d, ensure_ascii=False))
+PY
+)"
+  json="$norm"
+
+  local did dtype title
+  did="$(_jq -r '.decision_id // empty' <<<"$json")"
+  dtype="$(_jq -r '.decision_type // empty' <<<"$json")"
+  title="$(_jq -r '.title // empty' <<<"$json")"
+
+  for rf in decision_id decision_type title hard_requirements decision_drivers alternatives; do
+    if [[ "$(_jq -r --arg k "$rf" 'has($k)' <<<"$json")" == "false" ]]; then
+      VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname}: planning-summary required field '${rf}' is missing.")
+    fi
+  done
+
+  local dt_re; dt_re="$(_join_pipe VALID_DECISION_TYPES)"
+  if [[ -n "$dtype" && ! "$dtype" =~ ^($dt_re)$ ]]; then
+    VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname} (decision ${did:-<missing>}): field 'decision_type'='${dtype}' is not valid. Allowed: adr|pdr|tdr|bdr|odr.")
+  fi
+
+  # hard_requirements ∩ decision_drivers == empty (HARD FAIL — AC-GH63-5)
+  local overlap
+  overlap="$(python3 - "$file" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1], encoding='utf-8'))
+adr = d.get('adr') if isinstance(d, dict) else None
+if isinstance(adr, dict):
+    for k in ('id','type','title','slug'):
+        canon = {'id':'decision_id','type':'decision_type','title':'title','slug':'slug'}[k]
+        if adr.get(k) is not None and canon not in d:
+            d[canon] = adr[k]
+reqs = d.get('hard_requirements') or []
+drivers = [str(x) for x in (d.get('decision_drivers') or [])]
+req_factors = []
+for r in reqs:
+    if isinstance(r, dict):
+        for key in ('statement','id','name'):
+            if r.get(key) is not None:
+                req_factors.append(str(r[key])); break
+    else:
+        req_factors.append(str(r))
+inter = sorted(set(req_factors) & set(drivers))
+print('\n'.join(inter))
+PY
+)"
+  if [[ -n "$overlap" ]]; then
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname}: factor '${line}' appears in BOTH hard_requirements and decision_drivers. A hard requirement is a binary pass/fail gate; a driver is a tradeable preference — they must be disjoint (hard_requirements ∩ decision_drivers = ∅).")
+    done <<<"$overlap"
+  fi
+
+  # non-negotiable-constraint violation in chosen option (HEURISTIC/WARN — AC-GH63-6, DEC-13)
+  local chosen_violations
+  chosen_violations="$(python3 - "$file" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1], encoding='utf-8'))
+reqs = d.get('hard_requirements') or []
+negotiable = {}
+for r in reqs:
+    if isinstance(r, dict) and r.get('id') is not None:
+        negotiable[str(r['id'])] = str(r.get('negotiable','yes'))
+alts = d.get('alternatives') or []
+out = []
+for a in alts:
+    if not isinstance(a, dict) or not a.get('chosen'):
+        continue
+    cc = a.get('constraint_compliance') or {}
+    name = a.get('name','<unnamed>')
+    for cid, verdict in cc.items():
+        v = str(verdict).lower()
+        if v in ('fail','violation','violated','no') and negotiable.get(str(cid),'yes') == 'no':
+            out.append("%s\t%s" % (name, cid))
+print('\n'.join(out))
+PY
+)"
+  if [[ -n "$chosen_violations" ]]; then
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      local oname oconstr
+      oname="${line%%$'\t'*}"
+      oconstr="${line#*$'\t'}"
+      VALIDATION_WARNS+=("[WARN] ${LOG_TAG} ${fname}: [HEURISTIC] chosen option '${oname}' violates non-negotiable constraint '${oconstr}' (negotiable=no). Best-effort detection from planning-summary compliance data — NOT a structural guarantee (body-content/snapshot machinery owned by GH-64). Non-blocking warning (exit 0).")
+    done <<<"$chosen_violations"
+  fi
+}
+
+# ============================================================================
+# DOMAIN: schema-vs-validator coverage (AC-GH63-15)
+# ============================================================================
+
+# coverage_check <repo_root> -> emits report; sets global COVERAGE_UNCOVERED count
+coverage_check() {
+  local -r repo_root="$1"
+  local -r fm_schema="${repo_root}/schemas/decision-record-frontmatter.schema.json"
+  local -r ps_schema="${repo_root}/schemas/decision-planning-summary.schema.json"
+  local -r cov_map="${repo_root}/tools/.tests/fixtures/coverage-map.json"
+  local -r validator_bin="${repo_root}/tools/validate-decision-record"
+
+  local report
+  report="$(python3 - "$fm_schema" "$ps_schema" "$cov_map" "$validator_bin" <<'PY'
+import json, sys, os, subprocess
+fm = json.load(open(sys.argv[1], encoding='utf-8'))
+ps = json.load(open(sys.argv[2], encoding='utf-8'))
+cov_path = sys.argv[3]
+validator_path = sys.argv[4]
+cov = {}
+if os.path.exists(cov_path):
+    cov = json.load(open(cov_path, encoding='utf-8'))
+fixtures_dir = os.path.dirname(os.path.abspath(cov_path))
+# fixture-mapping rules (rid -> [fixture relative paths]); na registry (rid -> reason)
+fixture_map = cov.get('fixture_map', cov)
+na_registry = cov.get('na', {})
+
+rules = []  # (rule_id, kind, description)
+
+def structural_rules(schema, prefix=''):
+    out = []
+    props = schema.get('properties', {})
+    req = schema.get('required', [])
+    for f in req:
+        out.append(("top.required.%s" % f, "required", "top-level required field '%s'" % f))
+    for name, sub in props.items():
+        if not isinstance(sub, dict):
+            continue
+        if 'enum' in sub:
+            out.append(("top.enum.%s" % name, "enum", "top-level enum for '%s'" % name))
+        if 'pattern' in sub:
+            out.append(("top.pattern.%s" % name, "pattern", "top-level pattern for '%s'" % name))
+        if sub.get('type') == 'array' and 'minItems' in sub:
+            out.append(("top.minItems.%s" % name, "minItems", "top-level minItems for '%s'" % name))
+        # nested object property enums (one level deep)
+        if 'properties' in sub and isinstance(sub['properties'], dict):
+            for sname, ssub in sub['properties'].items():
+                if isinstance(ssub, dict) and 'enum' in ssub:
+                    out.append(("nested.enum.%s.%s" % (name, sname), "enum", "nested enum '%s.%s'" % (name, sname)))
+    return out
+
+rules += structural_rules(fm)
+rules += structural_rules(ps)
+# x-coverage-rules
+for schema in (fm, ps):
+    x = schema.get('x-coverage-rules', {}).get('rules', [])
+    for r in x:
+        rid = r.get('id')
+        if rid:
+            rules.append((rid, 'xrule', r.get('description','')))
+
+# de-dup (keep order)
+seen = {}; uniq = []
+for rid, kind, desc in rules:
+    if rid not in seen:
+        seen[rid] = 1; uniq.append((rid, kind, desc))
+
+def _is_negative(rel):
+    return rel.startswith('negative/') or '/negative/' in rel
+
+# --- Pass 1: presence (a mapped fixture must exist on disk) ---
+covered = 0; uncovered = []; missing_fixture = []; na_count = 0
+for rid, kind, desc in uniq:
+    if rid in na_registry:
+        na_count += 1
+        continue
+    fixtures = fixture_map.get(rid)
+    if not fixtures:
+        uncovered.append((rid, kind, desc))
+        continue
+    if not isinstance(fixtures, list):
+        fixtures = [fixtures]
+    all_exist = True
+    for rel in fixtures:
+        if not os.path.exists(os.path.join(fixtures_dir, rel)):
+            missing_fixture.append((rid, rel))
+            all_exist = False
+    if all_exist:
+        covered += 1
+    else:
+        uncovered.append((rid, kind, desc))
+
+# --- Pass 2: enforcement-strength (reviewer iteration-1 #2 / M5) ---
+# For each pattern/enum rule the validator is claimed to enforce, REQUIRE a
+# rejecting (negative/) fixture and PROVE the validator actually rejects/accepts
+# by running the binary. This closes the tautology: presence != enforcement. A
+# rule whose claim is tautological (e.g. a pattern skipped in the validator but
+# mapped to a positive-only fixture) surfaces here as a hard failure.
+pe_rules = [(rid, kind, desc) for (rid, kind, desc) in uniq if kind in ('pattern', 'enum')]
+no_rejector = []
+enforcement_fail = []
+enforcement_proven = 0
+for rid, kind, desc in pe_rules:
+    if rid in na_registry:
+        continue
+    fixtures = fixture_map.get(rid) or []
+    if not isinstance(fixtures, list):
+        fixtures = [fixtures]
+    if not fixtures:
+        continue  # already counted as uncovered in pass 1
+    negs = [f for f in fixtures if _is_negative(f)]
+    if not negs:
+        no_rejector.append((rid, kind, desc))
+        continue
+    for rel in fixtures:
+        fpath = os.path.join(fixtures_dir, rel)
+        if not os.path.exists(fpath):
+            continue  # already flagged as missing_fixture in pass 1
+        is_neg = _is_negative(rel)
+        cmd = ['bash', validator_path]
+        if rel.endswith('.json'):
+            cmd.append('--summary')
+        cmd.append(fpath)
+        try:
+            rc = subprocess.call(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except OSError as exc:
+            enforcement_fail.append((rid, "could not run validator on '%s': %s" % (rel, exc)))
+            continue
+        if is_neg and rc == 0:
+            enforcement_fail.append((rid, "negative fixture '%s' was ACCEPTED (exit 0) - validator does not reject the malformed value (tautology)" % rel))
+        elif (not is_neg) and rc != 0:
+            enforcement_fail.append((rid, "positive fixture '%s' was REJECTED (exit %d) - validator wrongly rejects a valid value" % (rel, rc)))
+        else:
+            enforcement_proven += 1
+
+print("RULESET: %d rules extracted from schemas (front-matter + planning-summary)" % len(uniq))
+print("COVERED: %d rules mapped to >=1 existing fixture in coverage-map.json" % covered)
+print("N/A:     %d rules explicitly marked not-applicable (with rationale)" % na_count)
+print("UNCOVERED: %d" % len(uncovered))
+for rid, kind, desc in uncovered:
+    print("  - %s  [%s]  %s" % (rid, kind, desc))
+if missing_fixture:
+    print("MISSING_FIXTURE: %d mapped fixtures not found on disk" % len(missing_fixture))
+    for rid, rel in missing_fixture:
+        print("  - %s  -> %s" % (rid, rel))
+print("ENFORCEMENT_PROVEN: %d pattern/enum fixture behaviors verified by running the validator" % enforcement_proven)
+if no_rejector:
+    print("NO_REJECTOR: %d pattern/enum rules lack a rejecting (negative/) fixture" % len(no_rejector))
+    for rid, kind, desc in no_rejector:
+        print("  - %s  [%s]  %s" % (rid, kind, desc))
+if enforcement_fail:
+    print("ENFORCEMENT_FAILURE: %d fixture(s) did not behave as claimed (tautology/oversight)" % len(enforcement_fail))
+    for rid, msg in enforcement_fail:
+        print("  - %s  -> %s" % (rid, msg))
+problems = len(uncovered) + len(missing_fixture) + len(no_rejector) + len(enforcement_fail)
+print("UNCOVERED_COUNT:%d" % problems)
+PY
+)"
+  printf '%s\n' "${report}"
+  COVERAGE_UNCOVERED="$(printf '%s\n' "${report}" | sed -n 's/^UNCOVERED_COUNT://p')"
+  if [[ -z "${COVERAGE_UNCOVERED:-}" ]]; then COVERAGE_UNCOVERED="999"; fi
+}
+
+# ============================================================================
+# CLI
+# ============================================================================
+usage() {
+  cat <<EOF
+${APP_NAME} ${APP_VERSION} — Validate decision-record front matter and planning summaries.
+
+Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+MIT License - see LICENSE file for full terms
+Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/${APP_NAME}
+
+USAGE:
+  ${APP_NAME} [OPTIONS] [PATH...]
+  ${APP_NAME} --summary [OPTIONS] <summary.json>...
+  ${APP_NAME} --coverage [OPTIONS]
+
+Default mode validates decision-record FRONT MATTER only (DEC-16): structural rules,
+rigor-aware required fields, lifecycle/consistency, plus best-effort heuristics.
+Planning-summary validation is explicit via --summary (not CI-gated over live docs; SD-3).
+
+EXAMPLES:
+  ${APP_NAME} doc/decisions/ADR-0001-decision-making-framework.md
+  ${APP_NAME} doc/decisions/
+  ${APP_NAME} --summary tools/.tests/fixtures/planning-summary/generic-summary.json
+  ${APP_NAME} --lint doc/decisions/ADR-0001-decision-making-framework.md
+  ${APP_NAME} --coverage
+  ${APP_NAME} --dry-run doc/decisions/
+
+OPTIONS:
+  -h, --help       Show this help message and exit
+  -V, --version    Show version and exit
+  -n, --dry-run    Print a [DRY-RUN] marker and run validation read-only (no writes ever)
+  -v, --verbose    Enable debug logging
+      --summary    Validate planning-summary JSON artifact(s) instead of record front matter
+      --lint       Non-destructive migration-lint mode (warn on legacy/unclassified; NEVER rewrites)
+      --coverage   Emit the schema-vs-validator coverage summary (AC-GH63-15) and exit
+
+IN-SCOPE §28.3 HARD-FAIL CASES (non-zero exit; AC-GH63-5):
+  invalid decision_type; invalid status; impossible lifecycle transition / supersedes
+  inconsistency; missing owners; missing decider (Accepted R2/R3); missing decision_date
+  (Accepted); Accepted R3 without governance.reviewers (DEC-12); hard_requirements ∩
+  decision_drivers ≠ ∅ (planning summary).
+
+BEST-EFFORT HEURISTICS (non-blocking [WARN]/[HEURISTIC], exit 0; AC-GH63-6):
+  Accepted record lacking a non-empty ## Verification Criteria; non-negotiable-constraint
+  violation in the chosen planning-summary option. These are heuristics, NOT structural
+  guarantees — a failing check never fails the build (DEC-10/DEC-13).
+
+DEFERRED §28.3 CASES (documented, NOT enforced; AC-GH63-7):
+  #7  recommendation copied into final decision without authority   -> GH-64 (rec/decision body separation)
+  #11 R3 without evidence verification                              -> GH-65 (evidence ledger / source verification)
+  #13 expired waiver                                                -> future waiver/expiry field (likely GH-65)
+  #14 modification of immutable accepted rationale without supersession -> GH-64 (snapshot/diff machinery)
+
+DOCUMENTATION:
+  Full guide: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/tools/${APP_NAME}.md
+  Schema (declarative SoT): schemas/decision-record-frontmatter.schema.json
+  Generated index tool: tools/generate-decision-index (regenerates doc/decisions/00-index.md)
+
+EXIT CODES:
+  0 - Success (all valid; heuristics may warn)
+  1 - One or more hard validation failures
+  2 - Usage error
+  7 - Filesystem error
+EOF
+}
+
+show_version() {
+  cat <<EOF
+${APP_NAME} ${APP_VERSION}
+Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+MIT License - see LICENSE file for full terms
+Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/${APP_NAME}
+EOF
+}
+
+# Globals for accumulating findings
+VALIDATION_ERRORS=()
+VALIDATION_WARNS=()
+
+parse_args() {
+  SUMMARY_MODE=false
+  LINT_MODE=false
+  COVERAGE_MODE=false
+  DRY_RUN=false
+  ARGS=()
+  while (($#)); do
+    case "$1" in
+      -h|--help) usage; exit 0 ;;
+      -V|--version) show_version; exit 0 ;;
+      -n|--dry-run) DRY_RUN=true ;;
+      -v|--verbose) VERBOSE=true ;;
+      --summary) SUMMARY_MODE=true ;;
+      --lint) LINT_MODE=true ;;
+      --coverage) COVERAGE_MODE=true ;;
+      --) shift; while (($#)); do ARGS+=("$1"); shift; done ;;
+      -*) die "Unknown option: $1 (see --help)" ;;
+      *) ARGS+=("$1") ;;
+    esac
+    shift
+  done
+}
+
+# Expand a path arg into the list of *.md files (records only) to validate
+_expand_record_paths() {
+  local -r p="$1"
+  if [[ -f "$p" ]]; then
+    printf '%s\n' "$p"
+  elif [[ -d "$p" ]]; then
+    find "$p" -maxdepth 1 -type f -name '*.md' ! -name '00-index.md' ! -name 'README.md' | sort
+  fi
+}
+
+# ============================================================================
+# MAIN
+# ============================================================================
+main() {
+  parse_args "$@"
+
+  require_cmd python3
+  require_cmd jq
+  require_cmd grep
+  require_cmd awk
+
+  if [[ "${COVERAGE_MODE}" == "true" ]]; then
+    local repo_root
+    repo_root="$(cd -- "${_TOOLS_DIR}"/.. && pwd -P)"
+    coverage_check "${repo_root}"
+    if [[ "${COVERAGE_UNCOVERED}" -ne 0 ]]; then
+      log_err "coverage check reports ${COVERAGE_UNCOVERED} uncovered schema rule(s)."
+      exit "${EXIT_VALIDATION}"
+    fi
+    exit "${EXIT_SUCCESS}"
+  fi
+
+  if [[ ${#ARGS[@]} -eq 0 ]]; then
+    die "No path provided. See --help."
+  fi
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log_info "[DRY-RUN] Read-only validation (no files are ever written)."
+  fi
+
+  if [[ "${SUMMARY_MODE}" == "true" ]]; then
+    local a
+    for a in "${ARGS[@]}"; do
+      validate_summary "$a"
+    done
+  else
+    local a expanded
+    for a in "${ARGS[@]}"; do
+      if [[ -f "$a" ]]; then
+        validate_record "$a" "${LINT_MODE}"
+      elif [[ -d "$a" ]]; then
+        while IFS= read -r f; do
+          validate_record "$f" "${LINT_MODE}"
+        done < <(_expand_record_paths "$a")
+      else
+        VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${a}: path not found.")
+      fi
+    done
+  fi
+
+  # Emit warnings to stderr (non-blocking)
+  local w
+  if [[ ${#VALIDATION_WARNS[@]} -gt 0 ]]; then
+    for w in "${VALIDATION_WARNS[@]}"; do
+      [[ -n "$w" ]] && printf '%s\n' "$w" >&2
+    done
+  fi
+
+  # Emit errors to stderr (blocking)
+  if [[ ${#VALIDATION_ERRORS[@]} -gt 0 ]]; then
+    for w in "${VALIDATION_ERRORS[@]}"; do
+      [[ -n "$w" ]] && printf '%s\n' "$w" >&2
+    done
+  fi
+
+  if [[ ${#VALIDATION_ERRORS[@]} -gt 0 ]]; then
+    printf '[ERROR] %s %d hard validation error(s).\n' "${LOG_TAG}" "${#VALIDATION_ERRORS[@]}" >&2
+    exit "${EXIT_VALIDATION}"
+  fi
+
+  local nwarn=${#VALIDATION_WARNS[@]}
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    printf '[INFO]  %s [DRY-RUN] validation passed (0 errors, %d heuristic warning(s)).\n' "${LOG_TAG}" "${nwarn}"
+  else
+    printf '[INFO]  %s validation passed (0 errors, %d heuristic warning(s)).\n' "${LOG_TAG}" "${nwarn}"
+  fi
+  exit "${EXIT_SUCCESS}"
+}
+
+# Testable main guard
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi

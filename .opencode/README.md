@@ -65,6 +65,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - `/check`: run quality gates (no fixes)
 - `/check-fix`: run quality gates and fix failures
 - `/commit`: create one Conventional Commit
+- `/decision-index`: regenerate the decision-record index + Health report (`tools/generate-decision-index`; read-only w.r.t. records, mutates only `00-index.md`)
 - `/design`: generate/update visual design assets
 - `/plan-change`: plan a change (prep context)
 - `/plan-decision`: interactive decision session (any type: architecture, product, business, technical, operating)

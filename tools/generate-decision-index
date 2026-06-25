@@ -1,0 +1,465 @@
+#!/usr/bin/env bash
+# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+# MIT License - see LICENSE file for full terms
+# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/generate-decision-index
+# generate-decision-index — Deterministic decision-record index generator.
+#
+# Reads doc/decisions/*.md front matter and emits a byte-stable 00-index.md
+# (DM-3 table + Health subsection). Health is SPLIT per DEC-15:
+#   - Committed artifact (write / --dry-run): time-INDEPENDENT findings only
+#     (missing deciders, missing metrics via links.metrics, future waivers).
+#   - Advisory stdout (--summary): adds time-DEPENDENT overdue-review findings.
+# Calendar time can NEVER trip the committed-artifact drift check (AC-GH63-12).
+#
+# Dependencies: bash>=4, python3 (stdlib only — NO `import yaml`), jq, find.
+# This tool NEVER mutates decision records; it only (re)writes 00-index.md.
+set -Eeuo pipefail
+set -o errtrace
+shopt -s inherit_errexit 2>/dev/null || true
+IFS=$'\n\t'
+
+# ============================================================================
+# SETTINGS
+# ============================================================================
+readonly APP_NAME="generate-decision-index"
+readonly APP_VERSION="1.0.0"
+readonly LOG_TAG="(${APP_NAME})"
+
+# Time-dependent review horizon (advisory only — NEVER written to 00-index.md).
+# A record is "overdue for review" if review_date is in the past, OR if
+# last_updated is older than REVIEW_HORIZON_DAYS and no review_date is set.
+readonly REVIEW_HORIZON_DAYS=180
+
+# Decision-type sort rank (deterministic ordering: ADR < PDR < TDR < BDR < ODR).
+declare -A -r TYPE_RANK=(
+  [adr]=0 [pdr]=1 [tdr]=2 [bdr]=3 [odr]=4
+)
+
+# Exit codes
+readonly EXIT_SUCCESS=0
+readonly EXIT_USAGE=2
+readonly EXIT_VALIDATION=1
+
+# Tool/library dirs (resolved from this script's location).
+_TOOLS_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+readonly TOOLS_LIB_DIR="${_TOOLS_DIR}/.lib"
+
+# ============================================================================
+# TRAPS
+# ============================================================================
+_on_err() {
+  local -r line="$1" cmd="$2" code="$3"
+  printf '[ERROR] %s line %s: %s (exit %s)\n' "${LOG_TAG}" "${line}" "${cmd}" "${code}" >&2
+}
+trap '_on_err $LINENO "$BASH_COMMAND" $?' ERR
+
+# ============================================================================
+# UTILITIES
+# ============================================================================
+log_info()  { printf '[INFO]  %s %s\n' "${LOG_TAG}" "$*"; }
+log_warn()  { printf '[WARN]  %s %s\n' "${LOG_TAG}" "$*" >&2; }
+log_err()   { printf '[ERROR] %s %s\n' "${LOG_TAG}" "$*" >&2; }
+die()       { log_err "$*"; exit "${EXIT_USAGE}"; }
+
+require_cmd() {
+  local -r c="$1"
+  if ! command -v "$c" >/dev/null 2>&1; then
+    die "required command not found: ${c}"
+  fi
+}
+
+# Source the shared stdlib-only front-matter parser (same as the validator).
+# shellcheck source=/dev/null
+source "${TOOLS_LIB_DIR}/frontmatter.sh"
+
+# _jq <jq-args> <input-or-file> — thin mockable wrapper.
+_jq() { jq "$@"; }
+
+# Extract the leading license-header / front-matter preamble (everything up to
+# and including the closing '---' of the initial block) from an existing index.
+# Returns empty if the file is absent or does not start with a '---' block.
+_extract_preamble() {
+  local -r file="$1"
+  [[ -f "$file" ]] || return 0
+  # Only treat as preamble if the file begins with a front-matter fence.
+  local first
+  first="$(head -n 1 "$file" 2>/dev/null || true)"
+  [[ "$first" =~ ^---[[:space:]]*$ ]] || return 0
+  awk '
+    BEGIN { n = 0; printing = 1 }
+    printing && /^---[[:space:]]*$/ { print; n++; if (n == 2) { printing = 0 }; next }
+    printing { print }
+  ' "$file"
+}
+
+# ============================================================================
+# DOMAIN: record collection & rendering
+# ============================================================================
+
+# Collect decision-record files under a directory (excludes 00-index.md / README.md).
+# Emits absolute paths, sorted (stable).
+_collect_records() {
+  local -r dir="$1"
+  find "$dir" -maxdepth 1 -type f -name '*.md' ! -name '00-index.md' ! -name 'README.md' 2>/dev/null | sort
+}
+
+# Build a JSON array of record rows (one object per record) from the decisions dir.
+# Front matter is parsed by the SHARED stdlib parser (_frontmatter_to_json) so the
+# index and the validator parse identically. Title/VC/derived fields are added here.
+_build_rows() {
+  local -r dir="$1"
+  local records fm_json line
+  records="$(_collect_records "$dir")"
+
+  # Phase 1: build JSONL (one {file, fm} object per record) using the shared parser.
+  local jsonl_tmp
+  jsonl_tmp="$(mktemp)"
+  while IFS= read -r f; do
+    [[ -z "$f" ]] && continue
+    fm_json="$(_frontmatter_to_json "$f")"
+    _jq -nc --arg file "$(basename -- "$f")" --argjson fm "${fm_json}" '{file:$file, fm:$fm}' >> "$jsonl_tmp"
+  done <<<"$records"
+
+  # Phase 2: assemble rows (title/VC from body; derived/sort fields) in one pass.
+  python3 - "$dir" "$jsonl_tmp" <<'PY'
+import json, sys, os, re
+
+decisions_dir = sys.argv[1]
+jsonl_path = sys.argv[2]
+TYPE_RANK = {"adr":0, "pdr":1, "tdr":2, "bdr":3, "odr":4}
+rows = []
+with open(jsonl_path, encoding="utf-8") as jf:
+    for raw in jf:
+        raw = raw.strip()
+        if not raw:
+            continue
+        e = json.loads(raw)
+        fname = e["file"]
+        d = e["fm"] if isinstance(e.get("fm"), dict) else {}
+        rid = d.get("id", "")
+        dtype = str(d.get("decision_type", "")).lower()
+        status = str(d.get("status", ""))
+        created = d.get("created") or ""
+        ddate = d.get("decision_date") or ""
+        last_updated = d.get("last_updated") or ""
+        review_date = d.get("review_date") or ""
+        date = ddate if isinstance(ddate, str) and ddate else created
+        owners = d.get("owners") or []
+        if not isinstance(owners, list):
+            owners = [owners]
+        cls = d.get("classification") or {}
+        rigor = (cls.get("rigor") if isinstance(cls, dict) else None) or "R2"
+        gov = d.get("governance") or {}
+        decider = gov.get("decider") if isinstance(gov, dict) else None
+        links = d.get("links") or {}
+        metrics = links.get("metrics") if isinstance(links, dict) else None
+        metrics_len = len(metrics) if isinstance(metrics, list) else 0
+        m = re.search(r'(\d+)$', str(rid))
+        num = int(m.group(1)) if m else 999999
+        title = ""
+        fpath = os.path.join(decisions_dir, fname)
+        try:
+            with open(fpath, encoding="utf-8") as fh:
+                content = fh.read()
+            in_fm = 0
+            body = []
+            for ln in content.splitlines():
+                if ln.strip() == "---":
+                    in_fm += 1
+                    continue
+                if in_fm >= 2:
+                    body.append(ln)
+            for ln in body:
+                if ln.startswith("# "):
+                    title = ln[2:].rstrip()
+                    title = re.sub(r'^[A-Z]{3}-\d+:\s*', '', title)
+                    break
+        except Exception:
+            pass
+        rows.append({
+            "id": rid, "type": dtype, "type_rank": TYPE_RANK.get(dtype, 99),
+            "num": num, "title": title, "status": status, "date": date,
+            "owners": owners, "rigor": str(rigor), "decider": decider,
+            "review_date": review_date, "last_updated": last_updated,
+            "metrics_len": metrics_len, "file": fname,
+        })
+rows.sort(key=lambda r: (r["type_rank"], r["num"]))
+print(json.dumps(rows, ensure_ascii=False))
+PY
+  rm -f "$jsonl_tmp"
+}
+
+# Render the index table (DM-3) from a rows JSON array.
+_render_table() {
+  local -r rows_json="$1"
+  printf '| ID | Type | Title | Status | Date | Owners |\n'
+  printf '|----|------|-------|--------|------|--------|\n'
+  if [[ -n "$rows_json" && "$rows_json" != "[]" ]]; then
+    _jq -r '.[] | "| \(.id) | \(.type | ascii_upcase) | \(.title) | \(.status) | \(.date) | \((.owners // []) | join(", ")) |"' <<<"$rows_json"
+  fi
+}
+
+# Compute time-INDEPENDENT health findings (committed artifact).
+# Emits lines of the form "severity\tmessage". Deterministic order.
+_health_independent() {
+  local -r rows_json="$1"
+  if [[ -z "$rows_json" || "$rows_json" == "[]" ]]; then
+    return
+  fi
+  _jq -r '
+    .[] |
+    # missing decider: Accepted R2/R3 without governance.decider
+    ( select(.status == "Accepted" and (.rigor == "R2" or .rigor == "R3") and (.decider == null or .decider == ""))
+      | "warn\t\(.id): Accepted \(.rigor) record has no governance.decider (DEC-12)." ),
+    # missing metrics (RT2 M1 / AC-GH63-10): Accepted records lacking links.metrics.
+    # Distinct from the validator body Verification-Criteria heuristic (AC-GH63-6),
+    # a separate signal kept in tools/validate-decision-record.
+    ( select(.status == "Accepted" and .metrics_len == 0)
+      | "warn\t\(.id): Accepted record has no links.metrics (missing metrics)." )
+  ' <<<"$rows_json" | sort -t$'\t' -k2
+}
+
+# Compute time-DEPENDENT health findings (advisory only — NEVER committed).
+# Uses today's date; emits "overdue\tmessage" lines. Deterministic order.
+_health_overdue() {
+  local -r rows_json="$1"
+  if [[ -z "$rows_json" || "$rows_json" == "[]" ]]; then
+    return
+  fi
+  local -r horizon="${REVIEW_HORIZON_DAYS}"
+  python3 - "$rows_json" "$horizon" <<'PY'
+import json, sys, datetime
+rows = json.loads(sys.argv[1])
+horizon = int(sys.argv[2])
+today = datetime.date.today()
+out = []
+for r in rows:
+    rid = r.get("id","")
+    review_date = r.get("review_date") or ""
+    last_updated = r.get("last_updated") or ""
+    overdue = False
+    reason = ""
+    if isinstance(review_date, str) and review_date:
+        try:
+            rd = datetime.date.fromisoformat(review_date)
+            if rd < today:
+                overdue = True
+                reason = "review_date %s is in the past" % review_date
+        except ValueError:
+            pass
+    if not overdue and isinstance(last_updated, str) and last_updated:
+        try:
+            lu = datetime.date.fromisoformat(last_updated)
+            if (today - lu).days > horizon and not review_date:
+                overdue = True
+                reason = "last_updated %s exceeds %dd review horizon" % (last_updated, horizon)
+        except ValueError:
+            pass
+    if overdue:
+        out.append("overdue\t%s: %s" % (rid, reason))
+for line in sorted(out):
+    print(line)
+PY
+}
+
+# Render the committed Health subsection (time-independent only).
+_render_health_committed() {
+  local -r rows_json="$1"
+  local findings
+  findings="$(_health_independent "$rows_json")"
+  printf '\n## Health\n\n'
+  printf 'Time-independent governance findings (generated; do not edit by hand).\n\n'
+  if [[ -z "$findings" ]]; then
+    printf -- '- **Missing deciders**: none.\n'
+    printf -- '- **Missing metrics**: none.\n'
+    printf -- '- **Future-field waivers (DEC-11)**: none.\n'
+  else
+    # Bucket by kind for stable presentation.
+    local missing_deciders missing_metrics
+    missing_deciders="$(printf '%s\n' "$findings" | grep 'no governance.decider' || true)"
+    missing_metrics="$(printf '%s\n' "$findings" | grep 'no links.metrics' || true)"
+    if [[ -n "$missing_deciders" ]]; then
+      printf -- '- **Missing deciders**:\n'
+      printf '%s\n' "$missing_deciders" | sed 's/^warn\t/  - /'
+    else
+      printf -- '- **Missing deciders**: none.\n'
+    fi
+    if [[ -n "$missing_metrics" ]]; then
+      printf -- '- **Missing metrics**:\n'
+      printf '%s\n' "$missing_metrics" | sed 's/^warn\t/  - /'
+    else
+      printf -- '- **Missing metrics**: none.\n'
+    fi
+    printf -- '- **Future-field waivers (DEC-11)**: none.\n'
+  fi
+}
+
+# Render the advisory Health block (adds time-dependent overdue findings).
+_render_health_advisory() {
+  local -r rows_json="$1"
+  _render_health_committed "$rows_json"
+  local overdue
+  overdue="$(_health_overdue "$rows_json")"
+  if [[ -n "$overdue" ]]; then
+    printf '\n### Overdue reviews (advisory — time-dependent, not committed)\n\n'
+    printf '%s\n' "$overdue" | sed 's/^overdue\t/- /'
+  else
+    printf '\n### Overdue reviews (advisory — time-dependent, not committed)\n\n'
+    printf -- '- None (within the %dd horizon).\n' "${REVIEW_HORIZON_DAYS}"
+  fi
+}
+
+# Render the FULL committed index body (table + time-independent health).
+_render_committed() {
+  local -r preamble="$1" rows_json="$2"
+  printf '%s' "$preamble"
+  # Ensure exactly one blank line after preamble.
+  [[ -z "$preamble" ]] || printf '\n'
+  printf '# Decision Records Index\n\n'
+  printf 'All decision records for this repository, ordered by type and number.\n'
+  printf 'This file is **generated** by `tools/generate-decision-index` — do not edit by hand.\n'
+  printf 'Drift is detected in CI (regenerate and diff).\n'
+  printf '\n## Index\n\n'
+  _render_table "$rows_json"
+  _render_health_committed "$rows_json"
+}
+
+# Render the full advisory report (table + full health incl. overdue).
+_render_advisory() {
+  local -r preamble="$1" rows_json="$2"
+  printf '%s' "$preamble"
+  [[ -z "$preamble" ]] || printf '\n'
+  printf '# Decision Records Index\n\n'
+  printf 'All decision records for this repository, ordered by type and number.\n'
+  printf 'This file is **generated** by `tools/generate-decision-index` — do not edit by hand.\n'
+  printf '\n## Index\n\n'
+  _render_table "$rows_json"
+  _render_health_advisory "$rows_json"
+}
+
+# ============================================================================
+# CLI
+# ============================================================================
+usage() {
+  cat <<EOF
+Usage:
+  ${APP_NAME} [OPTIONS] [DECISIONS_DIR]
+
+Generate the deterministic decision-record index (doc/decisions/00-index.md).
+
+DECISIONS_DIR defaults to the repository's doc/decisions/ directory.
+
+Modes:
+  (default)   Regenerate <DECISIONS_DIR>/00-index.md in place (table +
+               time-INDEPENDENT health only; never mutates decision records).
+  --dry-run   Print the committed index (what default mode would write) to
+               stdout WITHOUT writing 00-index.md. Used by the CI drift check.
+  --summary   Print the full advisory health report (table + time-INDEPENDENT
+               + time-DEPENDENT overdue findings) to stdout. NEVER written.
+
+Options:
+  --help       Show this help and exit
+  --version    Show version and exit
+  --dry-run    Print committed index to stdout (no write)
+  --summary    Print full advisory health report to stdout (no write)
+  --verbose    Increase log verbosity
+
+Health split (DEC-15 / AC-GH63-12):
+  The committed 00-index.md is byte-stable and time-INDEPENDENT (missing deciders,
+  missing metrics via links.metrics, future-field waivers). Time-DEPENDENT overdue-review
+  findings use today's date and are advisory only (--summary / stdout), so calendar
+  time can never trip the committed-artifact drift check.
+
+Exit codes:
+  0  success
+  1  validation / generation error
+  2  usage error
+
+Examples:
+  ${APP_NAME} --dry-run doc/decisions/
+  ${APP_NAME} --summary
+  ${APP_NAME}            # regenerate doc/decisions/00-index.md in place
+EOF
+}
+
+# ============================================================================
+# MAIN
+# ============================================================================
+DRY_RUN=false
+SUMMARY_MODE=false
+VERBOSE=false
+ARGS=()
+
+parse_args() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --help|-h)    usage; exit "${EXIT_SUCCESS}";;
+      --version|-V) printf '%s %s\n' "${APP_NAME}" "${APP_VERSION}"; exit "${EXIT_SUCCESS}";;
+      --dry-run)    DRY_RUN=true; shift;;
+      --summary)    SUMMARY_MODE=true; shift;;
+      --verbose|-v) VERBOSE=true; shift;;
+      --*)          die "unknown option: $1";;
+      *)            ARGS+=("$1"); shift;;
+    esac
+  done
+}
+
+main() {
+  # Determinism defense-in-depth (RT2 m4): pin LC_ALL=C so `sort` and collation
+  # are byte-stable regardless of the runner's locale (CI runners vary; a
+  # developer may be on pl_PL.UTF-8). NFR-5 / AC-GH63-9.
+  export LC_ALL=C
+  parse_args "$@"
+
+  require_cmd python3
+  require_cmd jq
+  require_cmd find
+
+  local repo_root decisions_dir
+  repo_root="$(cd -- "${_TOOLS_DIR}"/.. && pwd -P)"
+
+  if [[ ${#ARGS[@]} -gt 0 ]]; then
+    decisions_dir="$(cd -- "${ARGS[0]}" 2>/dev/null && pwd -P)" || die "invalid DECISIONS_DIR: ${ARGS[0]}"
+  else
+    decisions_dir="${repo_root}/doc/decisions"
+  fi
+
+  if [[ ! -d "$decisions_dir" ]]; then
+    die "decisions directory not found: ${decisions_dir}"
+  fi
+
+  local index_file preamble rows_json
+  index_file="${decisions_dir}/00-index.md"
+  preamble="$(_extract_preamble "$index_file")"
+
+  export _GENIDX_TOOLS_DIR="${_TOOLS_DIR}"
+  export _GENIDX_DECISIONS_DIR="${decisions_dir}"
+  rows_json="$(_build_rows "$decisions_dir")"
+
+  local count
+  count="$(printf '%s' "$rows_json" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')"
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    _render_committed "$preamble" "$rows_json"
+    [[ "${VERBOSE}" == "true" ]] && log_info "[DRY-RUN] ${count} record(s); committed index printed to stdout (no write)." >&2
+    exit "${EXIT_SUCCESS}"
+  fi
+
+  if [[ "${SUMMARY_MODE}" == "true" ]]; then
+    _render_advisory "$preamble" "$rows_json"
+    [[ "${VERBOSE}" == "true" ]] && log_info "[SUMMARY] ${count} record(s); full advisory report printed to stdout." >&2
+    exit "${EXIT_SUCCESS}"
+  fi
+
+  # Default write mode: regenerate 00-index.md in place (committed, time-independent).
+  local tmp
+  tmp="$(mktemp)"
+  _render_committed "$preamble" "$rows_json" > "$tmp"
+  mv -- "$tmp" "$index_file"
+  log_info "regenerated ${index_file} (${count} record(s); time-independent health only)."
+  exit "${EXIT_SUCCESS}"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi

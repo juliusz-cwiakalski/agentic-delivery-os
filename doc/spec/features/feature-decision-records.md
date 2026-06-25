@@ -6,11 +6,11 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: SPEC-DECISION-RECORDS
 status: Current
 created: 2026-03-10
-last_updated: 2026-06-24
+last_updated: 2026-06-25
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
-  related_changes: ["GH-32", "GH-52", "GH-46"]
+  related_changes: ["GH-32", "GH-52", "GH-46", "GH-63"]
   guides:
     - "doc/guides/decision-making.md"
     - "doc/guides/decision-records-management.md"
@@ -57,7 +57,8 @@ ADOS provides a tracker-agnostic standard for recording and managing significant
 - **Immutability after acceptance (F-3):** Accepted decisions are not modified; changes create new superseding records.
 - **Cross-linking (F-4):** Decision records link to change specs via `links.related_changes` and vice versa via `links.decisions`.
 - **Agent integration (F-5):** `@decision-advisor` creates records via `/plan-decision` + `/write-decision`; records target `doc/decisions/`.
-- **Index maintenance (F-6):** `doc/decisions/00-index.md` provides a table of all records.
+- **Index maintenance (F-6):** `doc/decisions/00-index.md` provides a table of all records. **It is now a generated artifact** — produced by `tools/generate-decision-index` (do not hand-edit; drift is caught in CI).
+- **Machine-enforceable quality (GH-63):** JSON Schemas (`schemas/decision-record-frontmatter.schema.json`, `schemas/decision-planning-summary.schema.json`) declare the declarative contract; `tools/validate-decision-record` encodes the same rules imperatively (stdlib only) with rigor-aware acceptance-gated required fields (DEC-12), lifecycle/consistency checks, and non-blocking heuristics (DEC-13); `tools/generate-decision-index` regenerates the deterministic index + a generated Health subsection; `/decision-index` wraps the generator (read-only w.r.t. records); the `verify-decision-records` CI job runs the validator + an index-drift check on every PR touching `doc/decisions/**` or `schemas/**`.
 
 ### Naming Convention
 
@@ -107,7 +108,14 @@ Create a record when a decision is hard to reverse, has cross-component impact, 
 |------|-----------|----------------|
 | `doc/decisions/` | Decision records directory | Flat directory containing all decision records, co-located by type prefix |
 | `doc/decisions/README.md` | Directory overview | Purpose, naming convention, lifecycle summary, and references |
-| `doc/decisions/00-index.md` | Index | Table of all decision records with ID, type, title, status, date, owners |
+| `doc/decisions/00-index.md` | Index | **Generated** table of all decision records (ID, type, title, status, date, owners) plus a Health subsection; produced by `tools/generate-decision-index` — do not hand-edit |
+| `schemas/decision-record-frontmatter.schema.json` | Front-matter schema | Declarative contract (draft 2020-12) for record front matter; declares `x-coverage-rules` cross-field rules |
+| `schemas/decision-planning-summary.schema.json` | Planning-summary schema | Declarative contract for the planning-summary artifact (generic + legacy `adr.*` alias) |
+| `tools/validate-decision-record` | Validator CLI | Imperative encoder of the schema rules (stdlib only: bash + python3 + jq); `--coverage` keeps validator and schema coupled |
+| `tools/generate-decision-index` | Index generator CLI | Deterministic generator of `00-index.md` (table + Health); time-INDEPENDENT findings committed, time-DEPENDENT overdue findings advisory-only (DEC-15) |
+| `tools/.lib/frontmatter.sh` | Shared parser | Stdlib-only front-matter→JSON parser, sourced by both tools so they parse identically |
+| `.opencode/command/decision-index.md` | Decision Index command | Thin read-only-w.r.t.-records wrapper around `tools/generate-decision-index` |
+| `.github/workflows/ci.yml` (job `verify-decision-records`) | CI gate | Path-filtered job: schema self-validity, front-matter validation over `doc/decisions/`, index-drift check, and both tool test suites |
 | `doc/guides/decision-making.md` | Decision-making guide | Process-first guide: decision kernel (D0–D14), rigor levels (R0–R3 + emergency overlay), four-axis classification, DACI rights, AI-authority model, three decision modes |
 | `doc/guides/decision-records-management.md` | Record-artifact reference | Record standard: types, naming, lifecycle, front matter, governance (thin redirect to decision-making.md for process) |
 | `doc/templates/decision-record-template.md` | Authoring template | Reusable template with front-matter skeleton, proportional rendering guidance, and inline HTML-comment guidance |

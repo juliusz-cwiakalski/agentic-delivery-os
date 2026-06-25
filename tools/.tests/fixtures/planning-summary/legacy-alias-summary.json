@@ -1,0 +1,14 @@
+{
+  "adr": {
+    "id": "ADR-9003",
+    "type": "adr",
+    "title": "Adopt a queue"
+  },
+  "hard_requirements": [
+    {"id": "R1", "statement": "at-least-once delivery", "negotiable": "no"}
+  ],
+  "decision_drivers": ["operational simplicity"],
+  "alternatives": [
+    {"name": "Kafka", "chosen": true, "constraint_compliance": {"R1": "pass"}}
+  ]
+}

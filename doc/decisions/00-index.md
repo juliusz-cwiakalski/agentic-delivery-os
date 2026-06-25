@@ -6,7 +6,20 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 # Decision Records Index
 
 All decision records for this repository, ordered by type and number.
+This file is **generated** by `tools/generate-decision-index` — do not edit by hand.
+Drift is detected in CI (regenerate and diff).
+
+## Index
 
 | ID | Type | Title | Status | Date | Owners |
 |----|------|-------|--------|------|--------|
 | ADR-0001 | ADR | Decision-Making Framework Refactor | Proposed | 2026-06-24 | Juliusz Ćwiąkalski |
+| PDR-0001 | PDR | Decision-Record Validator Negative-Case Scope (GH-63 §28.3) | Proposed | 2026-06-25 | @cwiakalski |
+
+## Health
+
+Time-independent governance findings (generated; do not edit by hand).
+
+- **Missing deciders**: none.
+- **Missing metrics**: none.
+- **Future-field waivers (DEC-11)**: none.

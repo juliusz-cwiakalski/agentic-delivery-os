@@ -104,7 +104,18 @@ ODR-0001-deployment-pipeline-design.md
 
 ### Index File
 
-Maintain `doc/decisions/00-index.md` as a table of all decision records. This can be manually updated or auto-generated.
+`doc/decisions/00-index.md` is a **generated** table of all decision records (plus a Health subsection flagging missing deciders / missing metrics via `links.metrics`). Do not hand-edit it — regenerate it with `tools/generate-decision-index` (or `/decision-index`) whenever a record is added or edited, then commit the regenerated index alongside the record change. The `verify-decision-records` CI job detects drift (regenerate + diff) and fails the build if the committed index is stale. See [doc/tools/generate-decision-index.md](../tools/generate-decision-index.md) for the DEC-15 health split.
+
+### Machine-Enforceable Quality
+
+Record front matter is governed by a declarative contract and an imperative validator:
+
+- **Schemas:** `schemas/decision-record-frontmatter.schema.json` and `schemas/decision-planning-summary.schema.json` (draft 2020-12) declare the field model and cross-field rules.
+- **Validator:** `tools/validate-decision-record` (stdlib only: bash + python3 + jq) encodes the same rules imperatively — rigor-aware acceptance-gated required fields (DEC-12), lifecycle/consistency, non-blocking heuristics (DEC-13), and a schema-vs-validator coverage check (`--coverage`).
+- **Local pre-commit flow (Flow 1):** before committing a record, run `tools/validate-decision-record doc/decisions/<record>.md` (exit 0 = clean) and `tools/generate-decision-index doc/decisions/` (regenerate the index). Then commit the record + the regenerated `00-index.md` together.
+- **CI:** the `verify-decision-records` job runs the validator over `doc/decisions/*.md`, asserts schema self-validity, and checks index drift on every PR touching `doc/decisions/**` or `schemas/**`.
+
+See [doc/tools/validate-decision-record.md](../tools/validate-decision-record.md) for the disposition of each rule.
 
 ---
 

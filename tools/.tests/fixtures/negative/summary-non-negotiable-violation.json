@@ -1,0 +1,12 @@
+{
+  "decision_id": "ADR-9020",
+  "decision_type": "adr",
+  "title": "Non-negotiable violated",
+  "hard_requirements": [
+    {"id": "R1", "statement": "ACID transactions", "negotiable": "no"}
+  ],
+  "decision_drivers": ["speed"],
+  "alternatives": [
+    {"name": "DynamoDB", "chosen": true, "constraint_compliance": {"R1": "fail"}}
+  ]
+}

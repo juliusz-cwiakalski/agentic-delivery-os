@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+# MIT License - see LICENSE file for full terms
+# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/test-all.sh
 # test-all.sh — Run every test-*.sh under tools/.tests/ (and any other
 # .tests/ or tests/ folder beneath BASE_DIR).
 #

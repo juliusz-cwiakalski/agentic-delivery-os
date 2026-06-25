@@ -1,0 +1,14 @@
+{
+  "decision_id": "ADR-9002",
+  "decision_type": "adr",
+  "title": "Pick a database",
+  "hard_requirements": [
+    {"id": "R1", "statement": "ACID transactions", "negotiable": "no"},
+    {"id": "R2", "statement": "Open source", "negotiable": "yes"}
+  ],
+  "decision_drivers": ["low-latency reads", "managed hosting"],
+  "alternatives": [
+    {"name": "PostgreSQL", "chosen": true, "constraint_compliance": {"R1": "pass", "R2": "pass"}},
+    {"name": "MongoDB", "chosen": false, "constraint_compliance": {"R1": "fail", "R2": "pass"}}
+  ]
+}

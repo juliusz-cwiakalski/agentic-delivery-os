@@ -1,0 +1,12 @@
+{
+  "decision_id": "ADR-9019",
+  "decision_type": "adr",
+  "title": "Overlap case",
+  "hard_requirements": [
+    {"id": "R1", "statement": "low-latency reads", "negotiable": "no"}
+  ],
+  "decision_drivers": ["low-latency reads"],
+  "alternatives": [
+    {"name": "Redis", "chosen": true, "constraint_compliance": {"R1": "pass"}}
+  ]
+}
