@@ -35,7 +35,7 @@ where `[mode]` is optional and selects the generator behavior:
 - `dry run` — print the committed index to stdout without writing (used by the CI drift check).
 - `summary` — print the full advisory health report including time-DEPENDENT overdue-review findings to stdout (never writes).
 
-Typical use: invoke after `/write-decision` or `/review-decision`, or whenever a decision record is added/edited, to keep the index current and surface governance findings (missing deciders, missing verification criteria, overdue reviews).
+Typical use: invoke after `/write-decision` or `/review-decision`, or whenever a decision record is added/edited, to keep the index current and surface governance findings (missing deciders, missing metrics, overdue reviews).
 </purpose>
 
 <inputs>
@@ -71,7 +71,7 @@ Report to the caller:
 - **Status**: `REGENERATED` (write mode) | `PRINTED` (dry-run/summary) | `ERROR`
 - **Mode**: write | dry-run | summary
 - **Records indexed**: count from the generator's `[INFO]` line
-- **Health findings** (time-independent, present in all modes): missing deciders, missing verification criteria, future-field waivers
+- **Health findings** (time-independent, present in all modes): missing deciders, missing metrics, future-field waivers
 - **Overdue reviews** (advisory, `summary` mode only): count + record ids
 - **Exit code**: the generator's exit code
 - **Next step**: e.g., "commit the regenerated 00-index.md alongside your record change" / "address flagged findings, then re-run" / "index is up to date"
