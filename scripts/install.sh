@@ -73,24 +73,16 @@ readonly EXIT_EXTERNAL=5
 # ============================================================================
 
 # Files that ALWAYS track upstream ADOS (auto-updated on re-run)
+# NOTE: Generic ADOS guides (doc/guides/*.md) are NOT hand-listed here. Their
+# install set is DERIVED from the `ados_distribution` frontmatter marker (see
+# get_marker() + install_local_files) — only guides marked `redistributable`
+# install. The standalone non-guide docs below live outside the globbed guide
+# class and remain explicit (they are marker-checked by the drift guard).
 readonly ADOS_UPDATABLE_FILES=(
   # Documentation handbook
   "doc/documentation-handbook.md"
   # Documentation index
   "doc/00-index.md"
-  # Generic ADOS guides (framework docs, not project-specific)
-  "doc/guides/change-lifecycle.md"
-  "doc/guides/claude-code-setup.md"
-  "doc/guides/copywriting.md"
-  "doc/guides/decision-making.md"
-  "doc/guides/decision-records-management.md"
-  "doc/guides/external-researcher-setup.md"
-  "doc/guides/meeting-preparation-and-summarization.md"
-  "doc/guides/onboarding-existing-project.md"
-  "doc/guides/opencode-agents-and-commands-guide.md"
-  "doc/guides/opencode-model-configuration.md"
-  "doc/guides/pr-platform-integration.md"
-  "doc/guides/unified-change-convention-tracker-agnostic-specification.md"
   # Decision records stubs
   "doc/decisions/README.md"
   "doc/decisions/00-index.md"
@@ -646,6 +638,55 @@ require_project_root() {
   exit "${EXIT_USAGE}"
 }
 
+# Read the `ados_distribution` marker from a doc using a TWO-PATH parser (CRIT-1):
+#   .md        -> the FIRST `---`-delimited frontmatter block only (line 1 must be
+#                 `---`); within it, match `^ados_distribution:[ \t]*(.+)`, skipping
+#                 `^#` comment lines; occurrences in the body or a second block are
+#                 ignored.
+#   .yaml/.yml -> a TOP-LEVEL `^ados_distribution:` key anywhere (these register
+#                 templates have no frontmatter; a `---` block would break
+#                 yaml.safe_load() consumers).
+# Returns the trimmed marker value, or "missing" if absent / no frontmatter.
+# (Pure POSIX awk — NFR-4: no YAML library.)
+get_marker() {
+  local -r file="$1"
+  local ext
+  ext="${file##*.}"
+  case "${ext}" in
+    md)
+      awk '
+        BEGIN { in_fm = 0; val = "missing" }
+        NR == 1 && /^---[ \t]*$/ { in_fm = 1; next }
+        in_fm && /^---[ \t]*$/ { in_fm = 0 }
+        in_fm && /^[#]/ { next }
+        in_fm && /^ados_distribution:[ \t]*.+$/ {
+          s = $0
+          sub(/^ados_distribution:[ \t]*/, "", s)
+          sub(/[ \t]+$/, "", s)
+          val = s
+          in_fm = 0
+        }
+        END { print val }
+      ' "${file}"
+      ;;
+    yaml|yml)
+      awk '
+        BEGIN { val = "missing" }
+        /^ados_distribution:[ \t]*.+$/ {
+          s = $0
+          sub(/^ados_distribution:[ \t]*/, "", s)
+          sub(/[ \t]+$/, "", s)
+          val = s
+        }
+        END { print val }
+      ' "${file}"
+      ;;
+    *)
+      printf 'missing'
+      ;;
+  esac
+}
+
 install_local_files() {
   local -r source_dir="$1"
 
@@ -670,16 +711,44 @@ install_local_files() {
     fi
   done
 
-  # --- Templates (always track upstream) ---
+  # --- Guides: install set DERIVED from the ados_distribution marker ---
+  # Only guides marked `redistributable` are installed (the hand-list is gone).
+  # This is the marker-driven half of F-2: adding a redistributable guide needs
+  # no manifest edit; the guard (test-doc-distribution.sh) keeps the set correct.
+  if [[ -d "${source_dir}/doc/guides" ]]; then
+    local guide_file marker guide_name
+    for guide_file in "${source_dir}/doc/guides"/*.md; do
+      [[ -f "${guide_file}" ]] || continue
+      marker="$(get_marker "${guide_file}")"
+      if [[ "${marker}" != "redistributable" ]]; then
+        log_debug "skip   doc/guides/$(basename "${guide_file}") (ados_distribution=${marker})"
+        continue
+      fi
+      guide_name="$(basename "${guide_file}")"
+      copy_updatable_file "${guide_file}" "doc/guides/${guide_name}" "doc/guides/${guide_name}"
+    done
+  fi
+
+  # --- Templates: recursive install (*.md + *.yaml + blueprints/**) ---
+  # Per ODR-0001 / DEC-1 / DEC-2 — blueprints and the 4 YAML register templates
+  # now install (previously the flat `*.md` glob silently dropped them).
+  # Reuses copy_updatable_file (content-sync: overwrite only when content differs).
   if [[ -d "${source_dir}/${ADOS_TEMPLATE_DIR}" ]]; then
     ensure_dir "${ADOS_TEMPLATE_DIR}" "${ADOS_TEMPLATE_DIR}"
-    local tmpl_file
-    for tmpl_file in "${source_dir}/${ADOS_TEMPLATE_DIR}"/*.md; do
+    # globstar covers nested blueprints/**; nullglob keeps unmatched globs empty.
+    local _gs_was_on="off" _ng_was_on="off"
+    shopt -q globstar && _gs_was_on="on"
+    shopt -q nullglob && _ng_was_on="on"
+    shopt -s globstar nullglob
+    local tmpl_file tmpl_rel
+    for tmpl_file in "${source_dir}/${ADOS_TEMPLATE_DIR}"/**/*.md "${source_dir}/${ADOS_TEMPLATE_DIR}"/**/*.yaml; do
       [[ -f "${tmpl_file}" ]] || continue
-      local name
-      name="$(basename "${tmpl_file}")"
-      copy_updatable_file "${tmpl_file}" "${ADOS_TEMPLATE_DIR}/${name}" "${ADOS_TEMPLATE_DIR}/${name}"
+      # Preserve the relative path under doc/templates/ (e.g. blueprints/x.md).
+      tmpl_rel="${tmpl_file#"${source_dir}/"}"
+      copy_updatable_file "${tmpl_file}" "${tmpl_rel}" "${tmpl_rel}"
     done
+    [[ "${_gs_was_on}" == "off" ]] && shopt -u globstar
+    [[ "${_ng_was_on}" == "off" ]] && shopt -u nullglob
   else
     log_warn "Templates directory not found: ${source_dir}/${ADOS_TEMPLATE_DIR}"
   fi
