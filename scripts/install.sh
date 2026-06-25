@@ -82,6 +82,7 @@ readonly ADOS_UPDATABLE_FILES=(
   "doc/guides/change-lifecycle.md"
   "doc/guides/claude-code-setup.md"
   "doc/guides/copywriting.md"
+  "doc/guides/decision-making.md"
   "doc/guides/decision-records-management.md"
   "doc/guides/external-researcher-setup.md"
   "doc/guides/meeting-preparation-and-summarization.md"
