@@ -185,34 +185,35 @@ set and guard can both derive from a single source of truth.
 
 **Tasks**:
 
-- [ ] **1.1** Add `ados_distribution: redistributable` inside the existing frontmatter of the 12
+- [x] **1.1** Add `ados_distribution: redistributable` inside the existing frontmatter of the 12
   redistributable guides (§8.3 Table A: change-lifecycle, claude-code-setup, copywriting,
   decision-making, decision-records-management, external-researcher-setup,
   meeting-preparation-and-summarization, onboarding-existing-project,
   opencode-agents-and-commands-guide, opencode-model-configuration, pr-platform-integration,
-  unified-change-convention-tracker-agnostic-specification).
-- [ ] **1.2** Add `ados_distribution: internal` inside the existing frontmatter of the 3 internal
-  guides (Table A: adding-tool-support, ados-tools-system-dependencies, tools-convention).
-- [ ] **1.3** Apply markers to the template set — **TWO PATHS** (the 4 `.yaml` registers have NO
+  unified-change-convention-tracker-agnostic-specification). (commit 4ec7ce7)
+- [x] **1.2** Add `ados_distribution: internal` inside the existing frontmatter of the 3 internal
+  guides (Table A: adding-tool-support, ados-tools-system-dependencies, tools-convention). (commit 4ec7ce7)
+- [x] **1.3** Apply markers to the template set — **TWO PATHS** (the 4 `.yaml` registers have NO
   frontmatter, unlike the `.md` files — this is the CRIT-1 fix):
   - **1.3a (`.md`):** add `ados_distribution: redistributable` **inside the existing `---`-delimited
     frontmatter** of all 25 `doc/templates/*.md` (Table B) and all 5 `doc/templates/blueprints/**`
-    (Table D).
+    (Table D). (commit 4ec7ce7)
   - **1.3b (`.yaml`):** the 4 `doc/templates/*.yaml` registers (Table C, per ODR-0001:
     `content-calendar-template.yaml`, `experiment-register-template.yaml`,
     `metric-catalog-template.yaml`, `product-roadmap-register-template.yaml`) start with DATA (e.g.
     `calendar_id: CONTENT-CALENDAR-001`), NOT frontmatter. Prepend `ados_distribution: redistributable`
     as the **new line 1** (a plain top-level key). Do NOT wrap it in a `---` block — a `---` block
-    would create multi-doc YAML and break `yaml.safe_load()` consumers.
-- [ ] **1.4** Add `ados_distribution: redistributable` to the 5 standalone non-guide docs (Table E):
+    would create multi-doc YAML and break `yaml.safe_load()` consumers. (commit 4ec7ce7 — verified line 1)
+- [x] **1.4** Add `ados_distribution: redistributable` to the 5 standalone non-guide docs (Table E):
   `doc/documentation-handbook.md`, `doc/00-index.md`, `doc/decisions/README.md`,
-  `doc/decisions/00-index.md`, `.ai/rules/README.md`.
-- [ ] **1.5** Add the deferred **ODR-0001** row to `doc/decisions/00-index.md` (the decision was
-  committed at c850d36 without its index entry).
-- [ ] **1.6** Verify count: `git grep -l 'ados_distribution:'` on the in-scope set returns exactly
+  `doc/decisions/00-index.md`, `.ai/rules/README.md`. (commit 4ec7ce7)
+- [x] **1.5** Add the deferred **ODR-0001** row to `doc/decisions/00-index.md` (the decision was
+  committed at c850d36 without its index entry). (commit 4ec7ce7)
+- [x] **1.6** Verify count: `git grep -l 'ados_distribution:'` on the in-scope set returns exactly
   54 (51 redistributable + 3 internal). Confirm marker value distribution matches Tables A–E.
-- [ ] **1.7** Confirm **no** license/copyright header was hand-added. In Phase 1, `.ai/agent/pm-instructions.md`
-  is NOT staged (the unrelated change stays pending until Phase 4.1).
+  (verified: 54 files; distribution 51 redistributable / 3 internal)
+- [x] **1.7** Confirm **no** license/copyright header was hand-added. In Phase 1, `.ai/agent/pm-instructions.md`
+  is NOT staged (the unrelated change stays pending until Phase 4.1). (verified: only ados_distribution: lines + 1 ODR-0001 table row inserted; pm-instructions.md left unstaged)
 
 **Acceptance Criteria**:
 
@@ -255,27 +256,27 @@ marker, and templates are copied recursively so blueprints and the 4 YAML regist
 
 **Tasks**:
 
-- [ ] **2.1** Add a `get_marker()` POSIX helper that mirrors the guard's **two-path** parser
+- [x] **2.1** Add a `get_marker()` POSIX helper that mirrors the guard's **two-path** parser
   EXACTLY (see Phase 3.1) and returns the `ados_distribution` value for a doc: for `.md` parse the
   first `---...---` frontmatter block; for `.yaml`/`.yml` match `^ados_distribution:` as a
-  top-level key. Both return the raw value or "missing".
-- [ ] **2.2** In `install_local_files()` (currently L649–685), replace the guide entries from
+  top-level key. Both return the raw value or "missing". (commit 57fae30; verified on real repo files)
+- [x] **2.2** In `install_local_files()`, replace the guide entries from
   `ADOS_UPDATABLE_FILES` (manifest L82–93) with marker-driven globbing over `doc/guides/*.md`:
-  install a guide **only if** `get_marker` returns `redistributable`.
-- [ ] **2.3** Keep the standalone non-guide entries (handbook, `doc/00-index.md`, decision stubs,
+  install a guide **only if** `get_marker` returns `redistributable`. (commit 57fae30; smoke test: 12 install, 3 internal skipped)
+- [x] **2.3** Keep the standalone non-guide entries (handbook, `doc/00-index.md`, decision stubs,
   `.ai/rules/README.md`) explicit (they live outside the globbed classes) — they are already
-  `redistributable`-marked and are marker-checked by the Phase-3 guard.
-- [ ] **2.4** Make the template copy **recursive**: replace the single
+  `redistributable`-marked and are marker-checked by the Phase-3 guard. (commit 57fae30)
+- [x] **2.4** Make the template copy **recursive**: replace the single
   `for tmpl_file in "${source_dir}/${ADOS_TEMPLATE_DIR}"/*.md` loop (L677) with globs over
   `*.md`, `*.yaml`, and `blueprints/**` (use `shopt -s globstar nullglob` or an explicit find), so
-  blueprints and the 4 YAML registers install. Preserve relative paths under `doc/templates/`.
-- [ ] **2.5** Keep using the `copy_updatable_file` primitive for every copied file. It
+  blueprints and the 4 YAML registers install. Preserve relative paths under `doc/templates/`. (commit 57fae30; smoke: 4 yaml + 5 blueprints, paths preserved)
+- [x] **2.5** Keep using the `copy_updatable_file` primitive for every copied file. It
   **content-syncs** updatable files (overwrites a file when its content differs from the upstream
   ADOS reference, skips when identical) — templates are pristine references adopters copy from, so
   content-sync is the intended behavior (NO change to install behavior — MAJ-3). Satisfies NFR-5 /
-  AC-F6-1.
-- [ ] **2.6** In Phase 2, `.ai/agent/pm-instructions.md` is NOT staged (the unrelated change stays
-  pending until Phase 4.1).
+  AC-F6-1. (commit 57fae30; reused primitive unchanged)
+- [x] **2.6** In Phase 2, `.ai/agent/pm-instructions.md` is NOT staged (the unrelated change stays
+  pending until Phase 4.1). (verified: only scripts/install.sh staged)
 
 **Acceptance Criteria**:
 
@@ -316,9 +317,9 @@ conditions, plus the two same-class drive-by test fixes.
 
 **Tasks**:
 
-- [ ] **3.1** Create `scripts/.tests/test-doc-distribution.sh` implementing a single `get_marker()`
+- [x] **3.1** Create `scripts/.tests/test-doc-distribution.sh` implementing a single `get_marker()`
   POSIX parser (no YAML lib — NFR-4) shared conceptually with `install.sh`. **Parse rule is
-  EXTENSION-AWARE (two-path) — the CRIT-1 fix:**
+  EXTENSION-AWARE (two-path) — the CRIT-1 fix:** (commit 005472e; mirrors install.sh get_marker exactly)
   - **`.md` files:** frontmatter = the text between the `---` on line 1 (must be the very first
     line) and the next `---`. Within that FIRST block only, match a line of the form
     `^ados_distribution:[ \t]*(.+)$` and capture the trimmed value; **skip** `^#` comment lines and
@@ -327,7 +328,8 @@ conditions, plus the two same-class drive-by test fixes.
     (NO `---` delimiters — these registers have no frontmatter; a `---` block would create multi-doc
     YAML and break `yaml.safe_load()` consumers).
   - Both paths return the raw value, or "missing" if absent / no frontmatter block.
-- [ ] **3.2** Implement the **five failure modes** (4 ticket + enum validation, per OQ-2):
+- [x] **3.2** Implement the **five failure modes** (4 ticket + enum validation, per OQ-2):
+  (commit 005472e; all 5 negative modes verified to fire via temporary injection)
   1. **missing-marker** — any in-scope doc (DM-2 classes) with no marker ⇒ FAIL (AC-F1-4).
   2. **invalid-enum-value** — marker value not in `{redistributable, internal, project-generated}` ⇒
      FAIL (treat like missing; RSK-6/OQ-2).
@@ -335,31 +337,35 @@ conditions, plus the two same-class drive-by test fixes.
      FAIL (AC-F3-1).
   4. **internal-installed** — an `internal` doc present in the install set ⇒ FAIL (AC-F3-2).
   5. **derived-set drift** — install-derived set ≠ marker-derived set ⇒ FAIL (AC-F3-3).
-- [ ] **3.3** Scan **only** the DM-2 class set: `doc/guides/*.md`, `doc/templates/*.md`,
+- [x] **3.3** Scan **only** the DM-2 class set: `doc/guides/*.md`, `doc/templates/*.md`,
   `doc/templates/*.yaml`, `doc/templates/blueprints/**`, `doc/documentation-handbook.md`,
   `doc/00-index.md`, `doc/decisions/README.md`, `doc/decisions/00-index.md`, `.ai/rules/README.md`.
   Must NOT scan `doc/changes/**`, `doc/spec/**`, `doc/overview/**`, individual `doc/decisions/*`
-  records, or `AGENTS.md` (AC-F3-4, RSK-2).
-- [ ] **3.4** Derive the install set with the SAME glob roots/logic as `install.sh` (RSK-3).
-- [ ] **3.5** Include guard **self-tests** for the `get_marker()` edge cases (RSK-1 / OQ-1) — four
+  records, or `AGENTS.md` (AC-F3-4, RSK-2). (commit 005472e; closed set enumerated explicitly)
+- [x] **3.4** Derive the install set with the SAME glob roots/logic as `install.sh` (RSK-3).
+  (commit 005472e; expected set mirrors install.sh guide/template/standalone rule)
+- [x] **3.5** Include guard **self-tests** for the `get_marker()` edge cases (RSK-1 / OQ-1) — four
   `.md` cases plus one `.yaml` positive/negative pair (five total — the 5th is the CRIT-1 addition):
+  (commit 005472e; 7 sub-cases: 4 .md + yaml positive/negative/indented)
   - `.md` no-frontmatter doc → no marker (none);
   - `.md` body contains the literal `ados_distribution:` string (e.g. in a code fence) → not matched;
   - `.md` commented-out marker line (`# ados_distribution: redistributable`) → not matched;
   - `.md` marker present only in a second/`---` block → not matched (first block only);
   - `.yaml` top-level key present → matched (positive); `.yaml` with the key absent → "missing"
     (negative) — exercises the second parser path.
-- [ ] **3.6** Emit human- + machine-readable failure messages naming the file and the failed mode;
+- [x] **3.6** Emit human- + machine-readable failure messages naming the file and the failed mode;
   use `::error::` GitHub annotations where supported (spec §10). Ensure determinism (NFR-1) and
-  wall-clock < 5 s with no network (NFR-2).
-- [ ] **3.7** UPDATE `scripts/.tests/test-install.sh`: include `decision-making.md` in the mock ADOS
+  wall-clock < 5 s with no network (NFR-2). (commit 005472e; ::error:: annotations + named modes; offline sandbox)
+- [x] **3.7** UPDATE `scripts/.tests/test-install.sh`: include `decision-making.md` in the mock ADOS
   source AND in the guide assertions (AC-F7-1); add assertions that `blueprints/` and the
   `*.yaml` registers now install; assert idempotency via **content-sync** (re-running produces an
   identical, deterministic result — overwrites only when content differs, NOT create-if-absent).
-- [ ] **3.8** FIX `scripts/.tests/test-uninstall.sh`: replace stale fixture `system-dependencies.md`
-  with `ados-tools-system-dependencies.md` (AC-F7-2).
-- [ ] **3.9** In Phase 3, `.ai/agent/pm-instructions.md` is NOT staged (the unrelated change stays
-  pending until Phase 4.1).
+  (commit 005472e; mock guides carry markers; +2 tests, 49/49 pass)
+- [x] **3.8** FIX `scripts/.tests/test-uninstall.sh`: replace stale fixture `system-dependencies.md`
+  with `ados-tools-system-dependencies.md` (AC-F7-2). (commit 005472e; also renamed the matching
+  stale entry in scripts/uninstall.sh — necessary so the renamed fixture is actually removed; 29/29 pass)
+- [x] **3.9** In Phase 3, `.ai/agent/pm-instructions.md` is NOT staged (the unrelated change stays
+  pending until Phase 4.1). (verified: staged set is the 3 test files + uninstall.sh)
 
 **Acceptance Criteria**:
 
@@ -400,28 +406,31 @@ FIRST (clean base), then the GH-67 marker note is added — so BOTH halves of AC
 
 **Tasks**:
 
-- [ ] **4.1 (PREREQUISITE — do FIRST):** commit the **unrelated, already-uncommitted** change to
+- [x] **4.1 (PREREQUISITE — do FIRST):** commit the **unrelated, already-uncommitted** change to
   `.ai/agent/pm-instructions.md` (it adds a "Reading Issue Comments" section, ~11 lines, sitting in
   the working tree) as a **SEPARATE commit with a NON-GH-67 message**, e.g.
   `docs(pm): document gh CLI for reading issue comments`. Stage **ONLY**
   `.ai/agent/pm-instructions.md`. This is the ONE exception to the GH-67 staging discipline: a
   standalone commit, non-GH-67 message, that single file. It must land BEFORE 4.4 so the marker-note
-  edit applies to a clean file.
-- [ ] **4.2** `.github/workflows/ci.yml`: add a step that runs `bash scripts/.tests/test-doc-distribution.sh`
+  edit applies to a clean file. (commit a25e5ab — verified diff = Reading Issue Comments section only)
+- [x] **4.2** `.github/workflows/ci.yml`: add a step that runs `bash scripts/.tests/test-doc-distribution.sh`
   alongside the existing `.ados-claude/` idempotency check (replaces/uses the `# Future: Add
   additional quality gates here` placeholder). A non-zero guard exit blocks merge (AC-F3-5).
-- [ ] **4.3** `AGENTS.md`: document that any new/changed doc under `doc/` MUST declare
+  (commit 8f74e30 — new 'doc-distribution-guard' job; YAML parses)
+- [x] **4.3** `AGENTS.md`: document that any new/changed doc under `doc/` MUST declare
   `ados_distribution`, and that a change introducing a redistributable doc MUST pass
-  `test-doc-distribution.sh` (AC-F4-1 — the `AGENTS.md` half).
-- [ ] **4.4** `.ai/agent/pm-instructions.md`: add a SHORT note (same substance as 4.3) that any
+  `test-doc-distribution.sh` (AC-F4-1 — the `AGENTS.md` half). (commit 8f74e30 — 'Doc distribution marker' subsection)
+- [x] **4.4** `.ai/agent/pm-instructions.md`: add a SHORT note (same substance as 4.3) that any
   new/changed doc under `doc/` MUST declare `ados_distribution`, and that redistributable docs MUST
   pass `scripts/.tests/test-doc-distribution.sh`. This is the `pm-instructions.md` half of AC-F4-1
   (the ticket explicitly requires BOTH `AGENTS.md` AND `pm-instructions.md`). This is the MAJ-2 fix.
-- [ ] **4.5** `.ai/agent/code-review-instructions.md`: add a checklist item requiring verification of
+  (commit 8f74e30 — added on the clean base from 4.1)
+- [x] **4.5** `.ai/agent/code-review-instructions.md`: add a checklist item requiring verification of
   the `ados_distribution` marker (present + correct) for new/changed docs under
   `doc/guides|templates` or the handbook, and confirmation that the guard passes when the doc is
-  `redistributable` (AC-F4-2).
-- [ ] **4.6** Confirm ONLY the intended Phase-4 paths are staged; nothing under `.ai/local/`.
+  `redistributable` (AC-F4-2). (commit 8f74e30 — Documentation checklist item)
+- [x] **4.6** Confirm ONLY the intended Phase-4 paths are staged; nothing under `.ai/local/`.
+  (verified: 4 files staged; 0 under .ai/local/)
 
 **Acceptance Criteria**:
 
@@ -472,34 +481,36 @@ code commit** unless a regression is found (in which case a targeted `fix`/`test
 
 **Tasks**:
 
-- [ ] **5.1** Run all relevant test files and confirm PASS:
+- [x] **5.1** Run all relevant test files and confirm PASS:
   `bash scripts/.tests/test-doc-distribution.sh`,
   `bash scripts/.tests/test-install.sh`,
   `bash scripts/.tests/test-uninstall.sh`,
   `bash scripts/.tests/test-add-header-location.sh` (no regression),
   `bash scripts/.tests/test-build-claude-plugin.sh` (no regression).
-- [ ] **5.2** Verify the guard passes on the current repo as the green baseline (RSK-2).
-- [ ] **5.3** Idempotency check (AC-F6-1, content-sync): run `install.sh --local` twice into a
+  (PASS: guard exit 0 / 54 docs; test-install 49/49; test-uninstall 29/29; add-header 19/19; build-claude 15/15)
+- [x] **5.2** Verify the guard passes on the current repo as the green baseline (RSK-2).
+  (verified: guard exit 0, "no drift — 54 in-scope docs")
+- [x] **5.3** Idempotency check (AC-F6-1, content-sync): run `install.sh --local` twice into a
   scratch project; assert the second run produces an **identical, deterministic result** (content-sync:
   overwrites a file only when its content differs from upstream, skips when identical). This is
   content-sync (the live behavior), NOT create-if-absent — the test verifies determinism, not
-  "diff = additive only".
-- [ ] **5.4** Header hygiene (AC-F5-1): confirm no hand-added license/copyright headers were
+  "diff = additive only". (verified: scratch install twice → identical 51-file tree; covered by test_local_install_idempotent_content_sync)
+- [x] **5.4** Header hygiene (AC-F5-1): confirm no hand-added license/copyright headers were
   introduced; headers on configured paths remain the sole responsibility of
-  `scripts/add-header-location.sh`.
-- [ ] **5.5** `.ados-claude/` check: since NO `.opencode/` file was edited, do NOT regenerate the
+  `scripts/add-header-location.sh`. (verified: guard file has no Copyright header; no Copyright lines in committed diffs)
+- [x] **5.5** `.ados-claude/` check: since NO `.opencode/` file was edited, do NOT regenerate the
   plugin. Run `bash scripts/.tests/test-build-claude-plugin.sh` only to confirm the generated plugin
-  is still current (no drift).
-- [ ] **5.6** Staging final check: `git status --short` shows the working tree clean of GH-67 paths;
+  is still current (no drift). (verified: 0 .opencode/ + 0 .ados-claude/ changes; build-claude test 15/15; regeneration produced no diff)
+- [x] **5.6** Staging final check: `git status --short` shows the working tree clean of GH-67 paths;
   `.ai/agent/pm-instructions.md` is committed in the two Phase-4 commits (unrelated note 4.1 + GH-67
-  marker note 4.4) and nothing stray is staged.
-- [ ] **5.7** Hand off: signal completion for `system_spec_update` (lifecycle phase 6). For this
+  marker note 4.4) and nothing stray is staged. (verified: only chg-GH-67-plan.md + pm-notes.yaml unstaged — PM-owned)
+- [x] **5.7** Hand off: signal completion for `system_spec_update` (lifecycle phase 6). For this
   change, `doc/spec/**` does not need a new feature entry — the marker is process/install mechanics
-  and `AGENTS.md` (updated in Phase 4) is the de-facto process spec. `@doc-syncer` confirms.
-- [ ] **5.8 (PR note, MAJ-3):** when `@pr-manager` opens the PR, the description MUST flag the
+  and `AGENTS.md` (updated in Phase 4) is the de-facto process spec. `@doc-syncer` confirms. (noted — handoff to doc-syncer)
+- [x] **5.8 (PR note, MAJ-3):** when `@pr-manager` opens the PR, the description MUST flag the
   **copy-from-template convention** for adopters: templates are pristine references and `install.sh`
   content-syncs (overwrites when content differs) — adopters copy from templates into their own
-  project-specific files rather than editing the installed references in place.
+  project-specific files rather than editing the installed references in place. (noted for @pr-manager)
 
 **Acceptance Criteria**:
 
@@ -655,8 +666,8 @@ in Phase 4.4, so BOTH `AGENTS.md` and `pm-instructions.md` carry the requirement
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| 1 | Not started | — | — | — | Marker application (54 docs) |
-| 2 | Not started | — | — | — | install.sh marker derivation + recursive templates |
-| 3 | Not started | — | — | — | Guard + drive-by test fixes |
-| 4 | Not started | — | — | — | CI + process/reviewer hooks (unrelated pm-instructions.md committed first as non-GH-67; then GH-67 marker note added to pm-instructions.md) |
-| 5 | Not started | — | — | — | Verification (no commit) |
+| 1 | Done | 2026-06-25 | 2026-06-25 | 4ec7ce7 | Marker application (54 docs) — 51 redistributable + 3 internal; ODR-0001 row added |
+| 2 | Done | 2026-06-25 | 2026-06-25 | 57fae30 | install.sh marker derivation + recursive templates (12 guides, 4 yaml, 5 blueprints) |
+| 3 | Done | 2026-06-25 | 2026-06-25 | 005472e | Guard (5 modes, all verified) + drive-by install/uninstall test fixes (+uninstall.sh stale entry) |
+| 4 | Done | 2026-06-25 | 2026-06-25 | a25e5ab + 8f74e30 | CI + process/reviewer hooks (unrelated pm-instructions.md committed first as non-GH-67 a25e5ab; then GH-67 marker note 8f74e30) |
+| 5 | Done | 2026-06-25 | 2026-06-25 | (no commit) | Verification — all 5 test suites green; idempotency + header hygiene + .ados-claude currency confirmed |
