@@ -92,16 +92,6 @@ _extract_preamble() {
   ' "$file"
 }
 
-# Extract the title from the first H1 heading in the record body, stripping a
-# leading "<ID>:" prefix if present.
-_extract_title() {
-  local -r body="$1"
-  local h1
-  h1="$(printf '%s\n' "$body" | awk '/^# /{sub(/^# /,""); print; exit}')"
-  # Strip leading "ID: " if the heading starts with the record id.
-  printf '%s' "$h1" | sed -E 's/^[A-Z]{3}-[0-9]+:[[:space:]]*//'
-}
-
 # ============================================================================
 # DOMAIN: record collection & rendering
 # ============================================================================
@@ -127,7 +117,7 @@ _build_rows() {
   while IFS= read -r f; do
     [[ -z "$f" ]] && continue
     fm_json="$(_frontmatter_to_json "$f")"
-    jq -nc --arg file "$(basename -- "$f")" --argjson fm "${fm_json}" '{file:$file, fm:$fm}' >> "$jsonl_tmp"
+    _jq -nc --arg file "$(basename -- "$f")" --argjson fm "${fm_json}" '{file:$file, fm:$fm}' >> "$jsonl_tmp"
   done <<<"$records"
 
   # Phase 2: assemble rows (title/VC from body; derived/sort fields) in one pass.

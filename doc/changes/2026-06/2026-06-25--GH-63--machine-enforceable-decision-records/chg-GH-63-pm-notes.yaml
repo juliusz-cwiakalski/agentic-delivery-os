@@ -9,7 +9,7 @@ phases:
   specification: { started: 2026-06-25, completed: 2026-06-25 }
   test_planning: { started: 2026-06-25, completed: 2026-06-25 }
   delivery_planning: { started: 2026-06-25, completed: 2026-06-25 }
-  delivery: { started: null, completed: null }
+  delivery: { started: 2026-06-25, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }

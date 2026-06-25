@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+# MIT License - see LICENSE file for full terms
+# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/.tests/test-generate-decision-index.sh
 # test-generate-decision-index.sh — Tests for tools/generate-decision-index
 # Covers determinism (AC-GH63-9), health-report findings (AC-GH63-10),
 # the DEC-15 committed-vs-advisory split, idempotency, and flags.

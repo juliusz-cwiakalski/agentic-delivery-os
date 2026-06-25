@@ -14,9 +14,9 @@
 # Stdlib-only (DEC-4 / SD-4): python3 only — NO `import yaml` (python3 3.14 ships
 # none) and NO external deps. The parser targets the FOCUSED YAML subset the
 # decision-record front matter actually uses: nested maps (2-space indentation),
-# block sequences (`- item`), flow sequences (`[a, b]` / `[]`), scalars,
-# `null`/`true`/`false`, and single/double-quoted strings. Comment-only lines and
-# trailing `# ...` comments are stripped. Constructs outside this subset raise a
+# block sequences (`- item`), flow sequences (`[a, b]` / `[]`), flow maps
+# (`{}` / `{k: v, ...}`), scalars, `null`/`true`/`false`, and single/double-quoted
+# strings. Comment-only lines and trailing `# ...` comments are stripped. Constructs outside this subset raise a
 # python exception (caught) rather than silently mis-parsing — the calling tool
 # then reports an actionable parse error.
 #
@@ -44,6 +44,25 @@ def parse_value(s):
         if not inner:
             return []
         return [parse_value(x) for x in _split_flow(inner)]
+    if s.startswith('{') and s.endswith('}'):
+        # YAML flow map: '{}' -> empty object; '{k: v, ...}' -> parsed object.
+        # An entry without a ':' separator is malformed; raising (rather than
+        # silently treating the whole map as a string) keeps the parser's
+        # contract: never silently mis-parse.
+        inner = s[1:-1].strip()
+        if not inner:
+            return {}
+        obj = {}
+        for pair in _split_flow(inner):
+            key, sep, rest = pair.partition(':')
+            if not sep:
+                raise ValueError(
+                    "invalid flow map entry (expected 'key: value'): %r" % pair)
+            k = key.strip()
+            if len(k) >= 2 and ((k[0] == '"' and k[-1] == '"') or (k[0] == "'" and k[-1] == "'")):
+                k = k[1:-1]
+            obj[k] = parse_value(rest.strip())
+        return obj
     if re.fullmatch(r'-?\d+', s):
         return int(s)
     if re.fullmatch(r'-?\d+\.\d+', s):
@@ -51,6 +70,9 @@ def parse_value(s):
     return s
 
 def _split_flow(s):
+    # Splits a flow collection body on top-level commas, tracking nesting for
+    # both flow sequences [...] and flow maps {...} so a comma inside a nested
+    # collection is not mistaken for a separator.
     out = []; cur = ''; inq = None; depth = 0
     for ch in s:
         if inq:
@@ -59,9 +81,9 @@ def _split_flow(s):
                 inq = None
         elif ch in '"\'':
             inq = ch; cur += ch
-        elif ch == '[':
+        elif ch in '[{':
             depth += 1; cur += ch
-        elif ch == ']':
+        elif ch in ']}':
             depth -= 1; cur += ch
         elif ch == ',' and depth == 0:
             out.append(cur); cur = ''

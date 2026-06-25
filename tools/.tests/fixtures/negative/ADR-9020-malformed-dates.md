@@ -1,23 +1,21 @@
 ---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # MIT License - see LICENSE file for full terms
-source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/.tests/fixtures/positive/ADR-9004-unclassified-r2.md
-id: ADR-9004
+source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/.tests/fixtures/negative/ADR-9020-malformed-dates.md
+id: ADR-9020
 decision_type: adr
 status: Proposed
-created: 2026-06-25
+created: "2026/13/01"
 decision_date: null
-last_updated: 2026-06-25
-summary: "Proposed record with no classification block — defaults to R2 (xrule.default_rigor_r2)."
+last_updated: "not-a-date"
+review_date: "2026/02/02"
+summary: "Negative fixture: created/last_updated/review_date violate the YYYY-MM-DD pattern (coverage enforcement-strength, reviewer iteration-1 #2)."
 owners:
   - "Test Author"
 service: delivery-os
-decision_area: architecture
-decision_scope: org
-reversibility: moderate
-review_date: null
 classification:
   domains: []
+  rigor: R2
 governance:
   driver: "@decision-advisor"
   decider: null
@@ -38,9 +36,11 @@ links:
   spec: []
 ---
 
-# ADR-9004: Unclassified R2
+# ADR-9020: Malformed Dates
 
-No classification rigor field — must default to R2.
+`created`, `last_updated`, and `review_date` each violate
+`^[0-9]{4}-[0-9]{2}-[0-9]{2}$`. Proves `_check_date` rejects malformed values
+for every date field (coverage enforcement-strength).
 
 ## Verification Criteria
 

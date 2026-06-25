@@ -149,6 +149,22 @@ test_real_adr_0001_passes() {
   assert_exit_code 0 "${RC}" "Real ADR-0001 must validate clean"
 }
 
+test_valid_empty_links_flow_map_exit0() {
+  # Reviewer iteration-1 #1: `links: {}` (YAML flow map) must parse to an empty
+  # object and validate clean (was: exit 5 + raw jq stack trace).
+  _run "${FIXTURES}/positive/ADR-9005-empty-links-flow-map.md"
+  assert_exit_code 0 "${RC}" "links: {} flow-map record should validate clean"
+}
+
+test_flow_map_never_crashes() {
+  # Regression guard: a flow-map value must NEVER yield the undocumented exit 5
+  # or a raw `jq:` stack trace (NFR-8 actionable errors; AC-GH63-16).
+  _run "${FIXTURES}/positive/ADR-9005-empty-links-flow-map.md"
+  assert_exit_code 0 "${RC}" "flow-map parse must succeed"
+  assert_not_contains "${OUT}" "jq: error" "must not leak a raw jq stack trace"
+  assert_not_contains "${OUT}" "Cannot index string" "must not leak a jq indexing error"
+}
+
 # ============================================================================
 # BEHAVIOR TESTS — invalid records (exit 1, hard §28.3 fails)
 # ============================================================================
@@ -205,6 +221,38 @@ test_missing_owners_exit1() {
   _run "${FIXTURES}/negative/ADR-9014-missing-owners.md"
   assert_exit_code 1 "${RC}" "Empty owners must fail (minItems)"
   assert_contains "${OUT}" "owner" "should mention owners"
+}
+
+test_malformed_decision_date_exit1() {
+  # Reviewer iteration-1 #2: the decision_date PATTERN is now enforced (previously
+  # only the Accepted non-null check ran -> schema<->validator drift).
+  _run "${FIXTURES}/negative/ADR-9019-malformed-decision-date.md"
+  assert_exit_code 1 "${RC}" "Malformed decision_date must fail"
+  assert_contains "${OUT}" "decision_date" "should mention decision_date"
+  assert_contains "${OUT}" "YYYY-MM-DD" "should mention the date format"
+}
+
+test_malformed_dates_exit1() {
+  # Coverage enforcement-strength: created/last_updated/review_date patterns all
+  # enforced via the shared _check_date.
+  _run "${FIXTURES}/negative/ADR-9020-malformed-dates.md"
+  assert_exit_code 1 "${RC}" "Malformed created/last_updated/review_date must fail"
+  assert_contains "${OUT}" "created" "should mention created"
+  assert_contains "${OUT}" "review_date" "should mention review_date"
+}
+
+test_malformed_id_exit1() {
+  # Coverage enforcement-strength: id <TYPE>-<zeroPad4> pattern enforced.
+  _run "${FIXTURES}/negative/ADR-9021-malformed-id.md"
+  assert_exit_code 1 "${RC}" "Malformed id must fail"
+  assert_contains "${OUT}" "id" "should mention id"
+}
+
+test_invalid_rigor_exit1() {
+  # Coverage enforcement-strength: nested classification.rigor enum enforced.
+  _run "${FIXTURES}/negative/ADR-9022-invalid-rigor.md"
+  assert_exit_code 1 "${RC}" "Invalid classification.rigor must fail"
+  assert_contains "${OUT}" "rigor" "should mention rigor"
 }
 
 # ============================================================================
@@ -314,10 +362,15 @@ test_directory_mode_all_valid_exit0() {
 }
 
 test_coverage_zero_uncovered() {
-  # AC-GH63-15 / M5: schema-driven coverage must report 0 uncovered rules.
+  # AC-GH63-15 / M5 / reviewer iteration-1 #2: schema-driven coverage must report
+  # 0 uncovered rules AND prove enforcement-strength (the validator actually
+  # rejects a malformed value per pattern/enum rule, not just fixture presence).
   _run --coverage
   assert_exit_code 0 "${RC}" "--coverage with full map should exit 0"
   assert_contains "${OUT}" "UNCOVERED: 0" "should report 0 uncovered"
+  assert_contains "${OUT}" "ENFORCEMENT_PROVEN:" "should prove enforcement-strength"
+  assert_not_contains "${OUT}" "ENFORCEMENT_FAILURE" "must have no enforcement failures (no tautology)"
+  assert_not_contains "${OUT}" "NO_REJECTOR:" "every pattern/enum rule must have a rejecting fixture"
 }
 
 test_no_forbidden_dependencies() {
@@ -346,6 +399,8 @@ main() {
   run_test "valid Accepted R3 with reviewers passes" test_valid_accepted_r3_with_reviewers_exit0
   run_test "TC-012 unclassified defaults to R2 passes" test_valid_unclassified_defaults_r2_exit0
   run_test "real ADR-0001 validates clean" test_real_adr_0001_passes
+  run_test "TC-it1 links: {} flow-map record passes" test_valid_empty_links_flow_map_exit0
+  run_test "TC-it1 flow-map never crashes (no exit 5 / jq trace)" test_flow_map_never_crashes
 
   printf '\n%s --- Behavior: invalid records (exit 1) ---\n' "${TEST_TAG}"
   run_test "TC-005 invalid decision_type fails" test_invalid_decision_type_exit1
@@ -356,6 +411,10 @@ main() {
   run_test "TC-010 impossible transition fails" test_impossible_transition_exit1
   run_test "TC-011 supersedes mismatch fails" test_supersedes_mismatch_exit1
   run_test "missing owners (minItems) fails" test_missing_owners_exit1
+  run_test "TC-it1 malformed decision_date pattern fails" test_malformed_decision_date_exit1
+  run_test "TC-it1 malformed created/last_updated/review_date fail" test_malformed_dates_exit1
+  run_test "TC-it1 malformed id pattern fails" test_malformed_id_exit1
+  run_test "TC-it1 invalid classification.rigor fails" test_invalid_rigor_exit1
 
   printf '\n%s --- Behavior: non-blocking heuristics (exit 0 + WARN) ---\n' "${TEST_TAG}"
   run_test "TC-014 missing VC heuristic warns + exit 0" test_accepted_missing_verification_criteria_warns_exit0

@@ -800,6 +800,90 @@ no hand-added headers, plugin in sync, declarative↔imperative coverage — con
 
 ---
 
+### Phase 10: Code-Review Remediation (iteration 1)
+
+**Goal**: Apply the `@reviewer` (phase 7, iteration 1) findings. The reviewer returned FAIL on
+one MAJOR robustness bug + 3 non-blocking improvements. This phase remediates all four and
+re-verifies, targeting PASS on iteration 2.
+
+**Tasks**:
+
+- [x] **10.1 (BLOCKING — reviewer #1, major):** Fix `tools/.lib/frontmatter.sh`
+  `parse_value()` to handle YAML **flow maps** (`{}` empty → `{}`; `{k: v, ...}` → object),
+  OR raise a caught, actionable parse error per the parser's documented contract (no silent
+  mis-parse, no undocumented exit code). Make the `.links.*` and `.governance.*` `jq` access
+  in `tools/validate-decision-record` `validate_record()` **null-safe**
+  (`(.links // {}) | (.superseded_by // []) | length`) so a missing/wrong-typed field can
+  never crash the tool. Add a positive fixture (`links: {}` empty-map record → exit 0) and a
+  regression test asserting `links: {}` parses cleanly and never yields undocumented exit 5
+  or a raw `jq` stack trace.
+  *(Flow-map parsing added to `parse_value()` + `_split_flow()` now tracks `{}` nesting;
+  parser's documented subset updated. `.links`/`.governance`/`.classification.rigor` access
+  routed through new type-safe `_safe_nested_len`/`_safe_nested_str` helpers (`if type=="object"`
+  guard — `// {}` alone does NOT protect against wrong-typed values, verified empirically).
+  Positive fixture `ADR-9005-empty-links-flow-map.md` added; regression tests
+  `test_valid_empty_links_flow_map_exit0` + `test_flow_map_never_crashes` assert exit 0 and
+  no `jq:` trace. links:{} was exit 5 + `Cannot index string with string "superseded_by"`
+  → now exit 0.)*
+- [x] **10.2 (reviewer #2, minor):** Add `_check_date "$json" "$fname" "$id" "decision_date"`
+  to `validate_record` (currently `created`/`last_updated`/`review_date` are date-checked but
+  `decision_date` is only non-null-checked). Strengthen the **schema-driven coverage check
+  (task 3.5)** to require a **rejecting** fixture per `pattern`/`enum` rule (assert the
+  validator actually rejects a malformed value), not just fixture presence — closes the
+  `decision_date` pattern tautology the red-team M5 / reviewer #2 flagged.
+  *(`_check_date decision_date` added; format-violating value now rejected (ADR-9019 exits 1).
+  Coverage check gained an enforcement-strength pass: for every pattern/enum rule it REQUIRES
+  a `negative/` fixture and PROVES rejection by running the validator binary (positive→exit 0,
+  negative→exit≠0) — drift-injection test confirmed it reports ENFORCEMENT_FAILURE. Added
+  rejecting fixtures ADR-9019 (decision_date), ADR-9020 (created/last_updated/review_date),
+  ADR-9021 (id pattern), ADR-9022 (classification.rigor). Declarative-only enums not in the
+  validator's §28.3 scope moved to `na` with rationale (12 N/A). `--coverage` reports
+  UNCOVERED:0, ENFORCEMENT_PROVEN:17.)*
+- [x] **10.3 (reviewer #3, nit):** Remove the dead `_extract_title()` function from
+  `tools/generate-decision-index` (title extraction is done inside the python `_build_rows`).
+  *(Removed; confirmed title extraction lives in `_build_rows` python.)*
+- [x] **10.4 (reviewer #4, nit):** Route the direct `jq` call in
+  `tools/generate-decision-index` `_build_rows` through the `_jq` wrapper (mockability parity
+  with the validator).
+  *(`jq -nc ...` → `_jq -nc ...` in `_build_rows`; mockability parity with validator + `_render_table`.)*
+- [x] **10.5:** Re-run `bash tools/.tests/test-validate-decision-record.sh`,
+  `bash tools/.tests/test-generate-decision-index.sh`, `bash scripts/test-all.sh`, the
+  `--coverage` summary (still 0 uncovered, now with enforcement-strength checks), and the
+  index drift/determinism checks. Confirm ADR-0001 + PDR-0001 still validate clean and
+  `00-index.md` is in sync. Confirm 0 new regressions.
+  *(ALL GREEN: validate 35/35 (was 29), index 13/13, scripts/test-all all pass; coverage
+  UNCOVERED:0 + ENFORCEMENT_PROVEN:17; ADR-0001 + PDR-0001 exit 0; index in sync + byte-identical
+  across runs; 0 forbidden deps; headers re-applied via `scripts/add-header-location.sh tools`.)*
+
+**Acceptance Criteria**:
+
+- Must: `links: {}` (and nested flow maps) parse cleanly — never exit 5, never a raw `jq`
+  stack trace (NFR-8 actionable errors; AC-GH63-4/AC-GH63-16).
+  — **PASSED** (flow-map parser + type-safe nested accessors; `links: {}` now exit 0; tests
+  `test_valid_empty_links_flow_map_exit0`, `test_flow_map_never_crashes` green; populated/nested
+  flow maps `{k: v, {a: {b: 1}}}` verified to parse to objects.)
+- Must: `decision_date` pattern enforced; coverage check asserts rejection, not just presence
+  (AC-GH63-15, NFR-7).
+  — **PASSED** (`_check_date decision_date` rejects format-violating values; coverage
+  enforcement-strength pass PROVES rejection by running the validator; drift-injection test
+  confirmed it catches a silently-accepted negative fixture; UNCOVERED:0 + ENFORCEMENT_PROVEN:17.)
+- Should: dead code removed; `_jq` used consistently (AC-GH63-16, `.ai/rules/bash.md`).
+  — **PASSED** (`_extract_title()` removed; `_build_rows` `jq` → `_jq`.)
+
+**Files and modules**:
+
+- `tools/.lib/frontmatter.sh`, `tools/validate-decision-record`, `tools/generate-decision-index`
+- `tools/.tests/fixtures/` (new `links: {}` fixture; malformed `decision_date` fixture if not present)
+- `tools/.tests/test-validate-decision-record.sh` (regression test + strengthened coverage assertion)
+
+**Tests**:
+
+- All suites re-green; new regression test for flow-map parsing; coverage check strengthened.
+
+**Completion signal**: `fix(GH-63): review iteration-1 remediation (flow-map parsing, decision_date pattern, coverage strength)`
+
+---
+
 ## Deviation handling
 
 - **If `@toolsmith` cannot be spawned** (precedent: GH-46/GH-60 delivery, where no
@@ -900,6 +984,7 @@ no hand-added headers, plugin in sync, declarative↔imperative coverage — con
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-06-25 | plan-writer | Initial plan authored from `chg-GH-63-spec.md`; 9 phases across three tracks (schemas/tools, `.opencode/` via `@toolsmith`, CI + docs). AC coverage 1–18; SD-1 nested model, SD-2 §28.3 in-scope/heuristic/deferred split (Appendix A), SD-3 planning-summary-via-fixtures-not-CI, SD-4 stdlib-only. Open questions OQ-1 (waiver field → lean wait for GH-65) and OQ-2 (on-demand planning-summary validation) recorded with leans; neither blocks delivery. Front-matter stdlib-parser implementation note flagged for Phases 2/4. |
+| 1.1 | 2026-06-25 | coder | Added Phase 10 (Code-Review Remediation iteration 1) per `@reviewer` findings (1 BLOCKING major + 3 non-blocking). No scope change to F-1..F-7; remediation-only (robustness + coverage-strength + dead-code/mockability nits). Coverage map: declarative-only enums moved to `na` with rationale (not validator-enforced per SD-2/NG-5) — honest reclassification, not a coverage reduction. |
 
 ## Execution Log
 
@@ -914,3 +999,4 @@ no hand-added headers, plugin in sync, declarative↔imperative coverage — con
 | 7 | Complete | 2026-06-25 | 2026-06-25 | 4a69193 | verify-decision-records job added alongside verify-claude-build (preserved unchanged); path-filtered (dorny/paths-filter on decisions/schemas/template/feature-spec/tools/.lib/.tests/ci.yml); runs schema self-validity (jq empty), front-matter validator over doc/decisions/, index drift check (--dry-run vs committed 00-index.md), + both test suites. Stock python3 only (no pip); drift check verified (detects staleness, passes post-regen). TC-GH63-016 forbidden-dep test added (rejects curl/wget/_check_version/raw.githubusercontent/import yaml/jsonschema; comment-excluded; negative-control verified). YAML structurally valid. NOTE: committed 00-index.md not yet regenerated → drift check fails until Phase 8 regenerates it (by design). |
 | 8 | Complete | 2026-06-25 | 2026-06-25 | 1445287 | 00-index.md regenerated (ADR-0001 + PDR-0001, empty Health; drift check PASSES); feature-decision-records.md updated (last_updated→2026-06-25, GH-63 in related_changes, machine-enforcement capability + codebase map rows); decision-records-management.md updated (generated-index note + Machine-Enforceable Quality section + local pre-commit Flow 1); decisions/README.md updated (Index+Validation section + tool-guide refs); AGENTS.md cross-linked (/decision-index command + both tool guides in Key References). No records mutated. |
 | 9 | Complete | 2026-06-25 | 2026-06-25 | 0917957 | Verification sweep ALL GREEN: 9.1 suites (validate 29/29, index 13/13, scripts 5/5); 9.2 stdlib-only (0 jsonschema/yaml/shellcheck; 0 pip in ci.yml); 9.3 determinism (byte-identical cmp); 9.4 back-compat (ADR-0001 + unclassified-R2 valid, 0 rewrites); 9.5 headers via script on all 3 files; 9.6 plugin in sync (rebuild no-op); 9.7 coverage 0 uncovered; 9.8 deferred cases documented (9 GH-64/GH-65 refs); 9.9 spec reconciled, version_impact: none. AC-GH63-1/5/6/9/10/12/13/14/15/16/17/18 satisfied & traceable. Ready for /review GH-63. |
+| 10 | Complete | 2026-06-25 | 2026-06-25 | (this commit) | Review iteration-1 remediation ALL GREEN. 10.1 flow-map parsing: `parse_value()` handles `{}`/`{k:v}` (+`_split_flow` tracks `{}`); `.links`/`.governance`/`.classification.rigor` access routed through type-safe `_safe_nested_len`/`_safe_nested_str` (`if type=="object"` guard — `// {}` alone does NOT catch wrong-typed values, proven empirically). links:{} was exit 5 + `Cannot index string "superseded_by"` → now exit 0. 10.2 `_check_date decision_date` added; coverage check gained enforcement-strength pass (REQUIRES a `negative/` fixture per pattern/enum rule + PROVES rejection by running the validator binary); drift-injection test confirmed it flags a silently-accepted negative. New fixtures: ADR-9005 (links:{}), ADR-9019 (decision_date), ADR-9020 (created/last_updated/review_date), ADR-9021 (id pattern), ADR-9022 (rigor enum). 12 declarative-only enums moved to `na` (not in validator §28.3 scope, SD-2/NG-5). `--coverage`: UNCOVERED:0, ENFORCEMENT_PROVEN:17. 10.3 dead `_extract_title()` removed. 10.4 `_build_rows` `jq`→`_jq`. 10.5 suites: validate 35/35 (was 29), index 13/13, scripts/test-all all pass; ADR-0001+PDR-0001 exit 0; index in sync + byte-identical; 0 forbidden deps; headers re-applied via `scripts/add-header-location.sh tools` (also back-filled missing headers on existing fixtures + test-generate-decision-index.sh, consistent with ADR-0001's `source:` convention). |

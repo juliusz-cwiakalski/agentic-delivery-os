@@ -1,14 +1,14 @@
 ---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # MIT License - see LICENSE file for full terms
-source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/.tests/fixtures/negative/ADR-9018-accepted-missing-verification-criteria.md
-id: ADR-9018
+source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/.tests/fixtures/negative/ADR-9019-malformed-decision-date.md
+id: ADR-9019
 decision_type: adr
 status: Accepted
 created: 2026-06-25
-decision_date: 2026-06-25
+decision_date: "2026/06/25"
 last_updated: 2026-06-25
-summary: "Negative fixture: Accepted record with no Verification Criteria section (heuristic warning, exit 0)."
+summary: "Negative fixture: decision_date violates the YYYY-MM-DD pattern (schema drift fix, reviewer iteration-1 #2)."
 owners:
   - "Test Author"
 service: delivery-os
@@ -35,6 +35,12 @@ links:
   spec: []
 ---
 
-# ADR-9018: Accepted Missing Verification Criteria
+# ADR-9019: Malformed Decision Date
 
-Deliberately omits a Verification Criteria body section to trigger the non-blocking heuristic.
+`decision_date` is non-null but does not match `^[0-9]{4}-[0-9]{2}-[0-9]{2}$`.
+Previously only the Accepted non-null check ran; the pattern was not enforced
+(schema <-> validator drift). Now `_check_date` rejects it.
+
+## Verification Criteria
+
+- Metric: n/a — Target: n/a

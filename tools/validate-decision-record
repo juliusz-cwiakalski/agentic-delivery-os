@@ -99,6 +99,28 @@ _join_pipe() {
   printf '%s' "${_out}"
 }
 
+# Null-safe + TYPE-safe nested accessors (reviewer iteration-1 #1 / NFR-8).
+# A missing OR wrong-typed field (e.g. `links` parsed as a string because of an
+# unsupported construct, or `governance` absent) must never crash the tool with a
+# raw jq trace. The `// {}` alternative only catches null/false; the explicit
+# `if type == "object"` guard is what makes a wrong-typed value non-fatal.
+
+# _safe_nested_len <json> <object_key> <array_key>
+#   Length of json.<object_key>.<array_key>; 0 if missing or wrong-typed.
+_safe_nested_len() {
+  local -r json="$1" obj="$2" key="$3"
+  _jq -r --arg o "$obj" --arg k "$key" \
+    '(.[$o] // {}) | if type == "object" then ((.[$k] // []) | length) else 0 end' <<<"$json"
+}
+
+# _safe_nested_str <json> <object_key> <string_key>
+#   Raw value of json.<object_key>.<string_key>; empty if missing or wrong-typed.
+_safe_nested_str() {
+  local -r json="$1" obj="$2" key="$3"
+  _jq -r --arg o "$obj" --arg k "$key" \
+    '(.[$o] // {}) | if type == "object" then (.[$k] // empty) else empty end' <<<"$json"
+}
+
 # validate_record <file> <lint_mode>  -> appends to global VALIDATION_ERRORS / VALIDATION_WARNS
 validate_record() {
   local -r file="$1"
@@ -166,6 +188,7 @@ validate_record() {
 
   # --- date formats (created, decision_date, last_updated, review_date) ---
   _check_date "$json" "$fname" "$id" "created"
+  _check_date "$json" "$fname" "$id" "decision_date"
   _check_date "$json" "$fname" "$id" "last_updated"
   _check_date "$json" "$fname" "$id" "review_date"
 
@@ -173,7 +196,7 @@ validate_record() {
   local has_classification
   has_classification="$(_jq -r 'has("classification")' <<<"$json")"
   if [[ "$has_classification" == "true" ]]; then
-    rigor="$(_jq -r '.classification.rigor // empty' <<<"$json")"
+    rigor="$(_safe_nested_str "$json" "classification" "rigor")"
     [[ -z "$rigor" ]] && rigor="R2"
   else
     rigor="R2"
@@ -197,14 +220,14 @@ validate_record() {
     fi
     if [[ "$rigor" == "R2" || "$rigor" == "R3" ]]; then
       local decider
-      decider="$(_jq -r '.governance.decider // empty' <<<"$json")"
+      decider="$(_safe_nested_str "$json" "governance" "decider")"
       if [[ -z "$decider" || "$decider" == "null" ]]; then
         VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname} (id ${id:-<missing>}): field 'governance.decider' is required (non-null) when status=Accepted and rigor=${rigor}. Set the accountable authority.")
       fi
     fi
     if [[ "$rigor" == "R3" ]]; then
       local reviewers_len
-      reviewers_len="$(_jq -r '.governance.reviewers | length' <<<"$json")"
+      reviewers_len="$(_safe_nested_len "$json" "governance" "reviewers")"
       if [[ "${reviewers_len:-0}" -lt 1 ]]; then
         VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname} (id ${id:-<missing>}): field 'governance.reviewers' must be non-empty when status=Accepted and rigor=R3 (acceptance-gated per DEC-12).")
       fi
@@ -213,8 +236,8 @@ validate_record() {
 
   # --- lifecycle / consistency (DM-5, single-snapshot) ---
   local superseded_by_len supersedes_len
-  superseded_by_len="$(_jq -r '.links.superseded_by | length' <<<"$json")"
-  supersedes_len="$(_jq -r '.links.supersedes | length' <<<"$json")"
+  superseded_by_len="$(_safe_nested_len "$json" "links" "superseded_by")"
+  supersedes_len="$(_safe_nested_len "$json" "links" "supersedes")"
   if [[ "$status" == "Superseded" ]]; then
     if [[ "${superseded_by_len:-0}" -lt 1 ]]; then
       VALIDATION_ERRORS+=("[ERROR] ${LOG_TAG} ${fname} (id ${id:-<missing>}): status 'Superseded' requires a non-empty 'links.superseded_by' referencing the replacing record.")
@@ -389,13 +412,15 @@ coverage_check() {
   local -r fm_schema="${repo_root}/schemas/decision-record-frontmatter.schema.json"
   local -r ps_schema="${repo_root}/schemas/decision-planning-summary.schema.json"
   local -r cov_map="${repo_root}/tools/.tests/fixtures/coverage-map.json"
+  local -r validator_bin="${repo_root}/tools/validate-decision-record"
 
   local report
-  report="$(python3 - "$fm_schema" "$ps_schema" "$cov_map" <<'PY'
-import json, sys, os
+  report="$(python3 - "$fm_schema" "$ps_schema" "$cov_map" "$validator_bin" <<'PY'
+import json, sys, os, subprocess
 fm = json.load(open(sys.argv[1], encoding='utf-8'))
 ps = json.load(open(sys.argv[2], encoding='utf-8'))
 cov_path = sys.argv[3]
+validator_path = sys.argv[4]
 cov = {}
 if os.path.exists(cov_path):
     cov = json.load(open(cov_path, encoding='utf-8'))
@@ -444,6 +469,10 @@ for rid, kind, desc in rules:
     if rid not in seen:
         seen[rid] = 1; uniq.append((rid, kind, desc))
 
+def _is_negative(rel):
+    return rel.startswith('negative/') or '/negative/' in rel
+
+# --- Pass 1: presence (a mapped fixture must exist on disk) ---
 covered = 0; uncovered = []; missing_fixture = []; na_count = 0
 for rid, kind, desc in uniq:
     if rid in na_registry:
@@ -465,6 +494,49 @@ for rid, kind, desc in uniq:
     else:
         uncovered.append((rid, kind, desc))
 
+# --- Pass 2: enforcement-strength (reviewer iteration-1 #2 / M5) ---
+# For each pattern/enum rule the validator is claimed to enforce, REQUIRE a
+# rejecting (negative/) fixture and PROVE the validator actually rejects/accepts
+# by running the binary. This closes the tautology: presence != enforcement. A
+# rule whose claim is tautological (e.g. a pattern skipped in the validator but
+# mapped to a positive-only fixture) surfaces here as a hard failure.
+pe_rules = [(rid, kind, desc) for (rid, kind, desc) in uniq if kind in ('pattern', 'enum')]
+no_rejector = []
+enforcement_fail = []
+enforcement_proven = 0
+for rid, kind, desc in pe_rules:
+    if rid in na_registry:
+        continue
+    fixtures = fixture_map.get(rid) or []
+    if not isinstance(fixtures, list):
+        fixtures = [fixtures]
+    if not fixtures:
+        continue  # already counted as uncovered in pass 1
+    negs = [f for f in fixtures if _is_negative(f)]
+    if not negs:
+        no_rejector.append((rid, kind, desc))
+        continue
+    for rel in fixtures:
+        fpath = os.path.join(fixtures_dir, rel)
+        if not os.path.exists(fpath):
+            continue  # already flagged as missing_fixture in pass 1
+        is_neg = _is_negative(rel)
+        cmd = ['bash', validator_path]
+        if rel.endswith('.json'):
+            cmd.append('--summary')
+        cmd.append(fpath)
+        try:
+            rc = subprocess.call(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except OSError as exc:
+            enforcement_fail.append((rid, "could not run validator on '%s': %s" % (rel, exc)))
+            continue
+        if is_neg and rc == 0:
+            enforcement_fail.append((rid, "negative fixture '%s' was ACCEPTED (exit 0) - validator does not reject the malformed value (tautology)" % rel))
+        elif (not is_neg) and rc != 0:
+            enforcement_fail.append((rid, "positive fixture '%s' was REJECTED (exit %d) - validator wrongly rejects a valid value" % (rel, rc)))
+        else:
+            enforcement_proven += 1
+
 print("RULESET: %d rules extracted from schemas (front-matter + planning-summary)" % len(uniq))
 print("COVERED: %d rules mapped to >=1 existing fixture in coverage-map.json" % covered)
 print("N/A:     %d rules explicitly marked not-applicable (with rationale)" % na_count)
@@ -475,7 +547,16 @@ if missing_fixture:
     print("MISSING_FIXTURE: %d mapped fixtures not found on disk" % len(missing_fixture))
     for rid, rel in missing_fixture:
         print("  - %s  -> %s" % (rid, rel))
-problems = len(uncovered) + len(missing_fixture)
+print("ENFORCEMENT_PROVEN: %d pattern/enum fixture behaviors verified by running the validator" % enforcement_proven)
+if no_rejector:
+    print("NO_REJECTOR: %d pattern/enum rules lack a rejecting (negative/) fixture" % len(no_rejector))
+    for rid, kind, desc in no_rejector:
+        print("  - %s  [%s]  %s" % (rid, kind, desc))
+if enforcement_fail:
+    print("ENFORCEMENT_FAILURE: %d fixture(s) did not behave as claimed (tautology/oversight)" % len(enforcement_fail))
+    for rid, msg in enforcement_fail:
+        print("  - %s  -> %s" % (rid, msg))
+problems = len(uncovered) + len(missing_fixture) + len(no_rejector) + len(enforcement_fail)
 print("UNCOVERED_COUNT:%d" % problems)
 PY
 )"
