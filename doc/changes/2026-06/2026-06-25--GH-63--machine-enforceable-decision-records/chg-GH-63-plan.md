@@ -905,8 +905,8 @@ no hand-added headers, plugin in sync, declarative↔imperative coverage — con
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| 1 | Complete | 2026-06-25 | 2026-06-25 | (committed below) | Schemas (front-matter nested DM-1 + planning-summary generic/legacy alias), draft 2020-12. jq+python parse OK; ADR-0001+template conform (only `source` header attr unknown, allowed via additionalProperties); 0 flat §17 keys. |
-| 2 | Not started | — | — | — | validate-decision-record CLI (stdlib-only); in-scope §28.3 rules + heuristic + migration linter; smoke vs ADR-0001. |
+| 1 | Complete | 2026-06-25 | 2026-06-25 | 5f35c44 | Schemas (front-matter nested DM-1 + planning-summary generic/legacy alias), draft 2020-12. jq+python parse OK; ADR-0001+template conform (only `source` header attr unknown, allowed via additionalProperties); 0 flat §17 keys. |
+| 2 | Complete | 2026-06-25 | 2026-06-25 | (below) | validate-decision-record CLI (stdlib-only); shared parser tools/.lib/frontmatter.sh; rigor-aware (acceptance-gated DEC-12), lifecycle, planning-summary overlap (hard-fail), heuristics (WARN/exit 0), migration lint, --coverage; ADR-0001 exit 0; 0 forbidden deps; headers via script. |
 | 3 | Not started | — | — | — | Validator fixtures (positive/negative/planning-summary) + test suite + schema-vs-validator coverage check. |
 | 4 | Not started | — | — | — | generate-decision-index CLI (deterministic); index table + Health subsection; smoke determinism. |
 | 5 | Not started | — | — | — | Index generator tests (determinism + health fixtures + idempotency). |
