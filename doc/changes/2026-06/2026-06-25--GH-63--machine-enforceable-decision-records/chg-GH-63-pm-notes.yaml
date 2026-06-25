@@ -13,15 +13,15 @@ phases:
   system_spec_update: { started: 2026-06-25, completed: 2026-06-25 }
   review_fix: { started: 2026-06-25, completed: 2026-06-25 }
   quality_gates: { started: 2026-06-25, completed: 2026-06-25 }
-  dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null, url: null }
+  dod_check: { started: 2026-06-25, completed: 2026-06-25 }
+  pr_creation: { started: 2026-06-25, completed: null, url: null }
 
 # Two red-team coordinator reviews requested by user:
 #   RT1 = on spec/plan/test-plan artifacts BEFORE delivery
 #   RT2 = on the delivered change AFTER all phases
 red_team_reviews:
   rt1_artifacts: { started: 2026-06-25, completed: 2026-06-25, verdict: "GO-WITH-CONDITIONS -> all conditions addressed (C1/M1/M3 blockers + M2/M4/M5 + minor m1-m9); PDR-0001 authored for SD-2 sign-off" }
-  rt2_delivered: { started: null, completed: null, verdict: null }
+  rt2_delivered: { started: 2026-06-25, completed: 2026-06-25, verdict: "SHIP-WITH-CONDITIONS -> all conditions addressed in Phase 11 (M1 missing-metrics dimension implemented per ticket AC; m1-m5 hardening) + a CI-breaking exit-code bug found via independent verification and fixed (@fixer, 8c72277)" }
 
 decisions:
   - text: "SD-1 (schema source of truth): the front-matter schema documents GH-46's LANDED nested structure (id, decision_type, status, created, decision_date, last_updated, summary, owners, service + optional decision_area/scope/reversibility/review_date/business_impact/customer_impact + optional nested classification{}, governance{}, ai_assistance{}, revisit_triggers[], links{}). It does NOT adopt research §17.1's flat sketch (driver/decider/required_reviewers/rigor_profile as top-level keys) — GH-46 made the nesting decision (DEC-8 DACI under governance; classification block). Anchor artifact = ADR-0001 (the dogfood record) + doc/templates/decision-record-template.md. Rationale: ticket explicitly says 'validates the GH-46 front matter' and 'validates the GH-46 records (incl. ADR-0001 dogfood)'."
@@ -50,7 +50,13 @@ open_questions: []   # none blocking; SD-2/SD-4 are PM-decided and flagged to re
 blockers: []
 
 notes:
-  - text: "Phase 2-4 complete. Spec (18 ACs), test plan (28 TCs, 18/18 ACs covered), plan (9 phases) authored and made coherent. Resolved 2 open questions raised by @test-plan-writer as DEC-12 (R3 reviewer rule acceptance-gated) and DEC-13 (heuristic exit semantics = non-blocking warnings). Remaining spec OQs (OQ-1 waiver field -> wait for GH-65; OQ-2 inline planning-summary validation -> on-demand) carry leans and are non-blocking. Next: commit the three artifacts via @committer, then RED TEAM #1 (@red-team-coordinator) on the artifacts."
+  - text: "RETRO (high value): the @coder dismissed a CI-breaking bug — both GH-63 test suites returned shell exit code 1 even when all tests passed — as 'pre-existing baseline behavior.' Independent exit-code verification ($?, not just the 'Summary: N/N passed' line) caught it: the new CI gate (AC-GH63-12) runs these suites, so exit=1-on-success would have made the gate ALWAYS red. Root cause (@fixer): _test_teardown's cleanup returned 1 when _test_tmpdir was empty, and via the EXIT trap that overrode print_summary's 0. Fixed with '|| true' (8c72277). LESSONS: (1) @coder's self-report of 'green' must be independently exit-code-checked, not trusted from summary lines; (2) EXIT-trap teardowns must always return 0; (3) the embedded bash test framework in .ai/rules/bash.md §11 should harden _test_teardown to '|| true' to prevent this class of bug repo-wide — candidate follow-up."
+    type: retro
+    date: 2026-06-25
+  - text: "DoD PASS (phase 9): all 18 ACs satisfied (reviewer iter-2 PASS + RT2 SHIP-with-conditions-all-addressed + independent verification). Plan phases 1-11 complete with execution-log entries. Final quality gates GREEN w/ correct exit codes: validate 39/39, index 14/14, scripts 5/5, coverage 0-uncovered/18-enforcement-proven, ADR-0001+PDR-0001 validate clean, index drift=NONE, determinism=OK (locale-independent), .ados-claude build no-op, forbidden-deps clean. 16 commits on branch. Two red-team rounds + one reviewer iteration caught: a CRITICAL AC contradiction (C1), a CI drift time-bomb (M1-RT1), a network/version-check conflict (M3), a coverage tautology (M5), a links:{} parser crash, a decision_date pattern gap, a missing-metrics AC fidelity gap (M1-RT2), and the exit-code bug. Next: PR."
+    type: info
+    date: 2026-06-25
+  - text: "Phase 2-4 complete (earlier): spec (18 ACs), test plan (28 TCs, 18/18 ACs covered), plan (9 phases) authored and made coherent; DEC-12 (R3 reviewer rule acceptance-gated) + DEC-13 (heuristic exit semantics) resolved 2 OQs from @test-plan-writer. Remaining spec OQs (OQ-1 waiver field -> wait for GH-65; OQ-2 inline planning-summary validation -> on-demand) carry leans, non-blocking."
     type: info
     date: 2026-06-25
   - text: "clarify_scope: ticket is detailed and self-consistent. Cross-checked against system spec doc/spec/features/feature-decision-records.md, guides decision-making.md + decision-records-management.md, template decision-record-template.md, ADR-0001 (dogfood), CI ci.yml, tools-convention.md, bash.md, and research basis §17/§28.3/§30. Env: python3 3.14.4 + jq 1.8.1 present; shellcheck NOT installed. schemas/ dir does not exist yet; only 1 decision record (ADR-0001, fully classified R3). No blocking questions — all scope nuances resolved via SD-1..SD-4 + DEC-12/13, grounded in ticket's own goals/non-goals."
