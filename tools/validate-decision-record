@@ -399,6 +399,10 @@ cov_path = sys.argv[3]
 cov = {}
 if os.path.exists(cov_path):
     cov = json.load(open(cov_path, encoding='utf-8'))
+fixtures_dir = os.path.dirname(os.path.abspath(cov_path))
+# fixture-mapping rules (rid -> [fixture relative paths]); na registry (rid -> reason)
+fixture_map = cov.get('fixture_map', cov)
+na_registry = cov.get('na', {})
 
 rules = []  # (rule_id, kind, description)
 
@@ -440,25 +444,44 @@ for rid, kind, desc in rules:
     if rid not in seen:
         seen[rid] = 1; uniq.append((rid, kind, desc))
 
-covered = 0; uncovered = []
+covered = 0; uncovered = []; missing_fixture = []; na_count = 0
 for rid, kind, desc in uniq:
-    fixtures = cov.get(rid)
-    if fixtures:
+    if rid in na_registry:
+        na_count += 1
+        continue
+    fixtures = fixture_map.get(rid)
+    if not fixtures:
+        uncovered.append((rid, kind, desc))
+        continue
+    if not isinstance(fixtures, list):
+        fixtures = [fixtures]
+    all_exist = True
+    for rel in fixtures:
+        if not os.path.exists(os.path.join(fixtures_dir, rel)):
+            missing_fixture.append((rid, rel))
+            all_exist = False
+    if all_exist:
         covered += 1
     else:
         uncovered.append((rid, kind, desc))
 
 print("RULESET: %d rules extracted from schemas (front-matter + planning-summary)" % len(uniq))
-print("COVERED: %d rules mapped to >=1 fixture in coverage-map.json" % covered)
+print("COVERED: %d rules mapped to >=1 existing fixture in coverage-map.json" % covered)
+print("N/A:     %d rules explicitly marked not-applicable (with rationale)" % na_count)
 print("UNCOVERED: %d" % len(uncovered))
 for rid, kind, desc in uncovered:
     print("  - %s  [%s]  %s" % (rid, kind, desc))
-print("UNCOVERED_COUNT:%d" % len(uncovered))
+if missing_fixture:
+    print("MISSING_FIXTURE: %d mapped fixtures not found on disk" % len(missing_fixture))
+    for rid, rel in missing_fixture:
+        print("  - %s  -> %s" % (rid, rel))
+problems = len(uncovered) + len(missing_fixture)
+print("UNCOVERED_COUNT:%d" % problems)
 PY
 )"
   printf '%s\n' "${report}"
   COVERAGE_UNCOVERED="$(printf '%s\n' "${report}" | sed -n 's/^UNCOVERED_COUNT://p')"
-  [[ -z "${COVERAGE_UNCOVERED:-}" ]] && COVERAGE_UNCOVERED="999"
+  if [[ -z "${COVERAGE_UNCOVERED:-}" ]]; then COVERAGE_UNCOVERED="999"; fi
 }
 
 # ============================================================================
@@ -587,7 +610,7 @@ main() {
 
   if [[ "${COVERAGE_MODE}" == "true" ]]; then
     local repo_root
-    repo_root="$(cd -- "${TOOLS_DIR}"/.. && pwd -P)"
+    repo_root="$(cd -- "${_TOOLS_DIR}"/.. && pwd -P)"
     coverage_check "${repo_root}"
     if [[ "${COVERAGE_UNCOVERED}" -ne 0 ]]; then
       log_err "coverage check reports ${COVERAGE_UNCOVERED} uncovered schema rule(s)."
