@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/schemas/decision-planning-summary.schema.json",
+  "title": "Decision Planning Summary (generic <decision_planning_summary> + legacy <technical_decision_planning_summary>/adr.* alias)",
+  "description": "Declarative source of truth for the transient /plan-decision -> /write-decision handoff block. Validates the generic <decision_planning_summary> and the legacy <technical_decision_planning_summary> tag + adr.* field alias (GH-46 back-compat, DM-2). Carries the GH-60 hard_requirements list DISTINCT from decision_drivers; hard_requirements items carry a negotiable (yes|no) field to support the best-effort non-negotiable-violation check. Zero live instances persist under doc/ (SD-3); correctness is proven by synthetic fixtures under tools/.tests/fixtures/planning-summary/. The validator is invoked on demand via --summary (DEC-16); it is NOT CI-gated over live docs.",
+  "type": "object",
+  "additionalProperties": true,
+  "$comment": "This schema models a single canonical JSON shape. Legacy adr.* aliases are accepted by normalizing them onto the canonical keys (decision_id<-adr.id, decision_type<-adr.type, title<-adr.title, slug<-adr.slug) in tools/validate-decision-record --summary before validation; the generic and legacy-alias fixtures are both accepted via this mapping (AC-GH63-3).",
+  "required": ["decision_id", "decision_type", "title", "hard_requirements", "decision_drivers", "alternatives"],
+  "properties": {
+    "decision_id": {
+      "type": "string",
+      "pattern": "^(ADR|PDR|TDR|BDR|ODR)-[0-9]{4}$",
+      "description": "Canonical field; legacy alias adr.id."
+    },
+    "decision_type": {
+      "type": "string",
+      "enum": ["adr", "pdr", "tdr", "bdr", "odr"],
+      "description": "Canonical field; legacy alias adr.type."
+    },
+    "title": {
+      "type": "string",
+      "description": "Canonical field; legacy alias adr.title."
+    },
+    "slug": {
+      "type": "string",
+      "description": "Canonical field; legacy alias adr.slug. Optional."
+    },
+    "classification": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Optional classification inputs (reuse the front-matter classification shape)."
+    },
+    "governance": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Optional governance inputs (DACI)."
+    },
+    "ai_assistance": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "hard_requirements": {
+      "type": "array",
+      "description": "Binary pass/fail gates (constraints), DISTINCT from decision_drivers (GH-60). hard_requirements ∩ decision_drivers must be empty (AC-GH63-5).",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement", "negotiable"],
+        "properties": {
+          "id": {"type": "string"},
+          "statement": {"type": "string"},
+          "source": {"type": "string"},
+          "verification": {"type": "string"},
+          "negotiable": {"type": "string", "enum": ["yes", "no"]}
+        }
+      }
+    },
+    "decision_drivers": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Continuous preferences the decision optimizes for; tradeable. Must be disjoint from hard_requirements factors."
+    },
+    "alternatives": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Candidate options including the chosen one. Each carries constraint_compliance to support the best-effort non-negotiable-violation check (AC-GH63-6).",
+      "items": {
+        "type": "object",
+        "required": ["name", "chosen"],
+        "properties": {
+          "name": {"type": "string"},
+          "chosen": {"type": "boolean"},
+          "constraint_compliance": {
+            "type": "object",
+            "additionalProperties": {"type": "string"},
+            "description": "Map of hard_requirement id -> pass|fail|waived."
+          }
+        }
+      }
+    },
+    "adr": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "LEGACY alias block (GH-46 back-compat). When present, adr.id/adr.type/adr.title/adr.slug normalize onto decision_id/decision_type/title/slug. Accepted alongside the canonical fields (NFR-2)."
+    }
+  },
+  "x-coverage-rules": {
+    "$comment": "Planning-summary cross-field rules read by the coverage check (AC-GH63-15).",
+    "rules": [
+      {"id": "xrule.summary_hard_requirements_disjoint", "description": "hard_requirements factors and decision_drivers must be disjoint (intersection empty)", "severity": "hard-fail", "owner": "AC-GH63-5"},
+      {"id": "xrule.summary_legacy_alias_accepted", "description": "Legacy adr.* alias block is accepted via normalization (no behavior change)", "severity": "info", "owner": "AC-GH63-3"},
+      {"id": "xrule.summary_non_negotiable_violation", "description": "Best-effort: chosen option violating a negotiable:no constraint emits a non-blocking [HEURISTIC]/[WARN] warning, exit 0", "severity": "heuristic", "owner": "AC-GH63-6"}
+    ]
+  }
+}

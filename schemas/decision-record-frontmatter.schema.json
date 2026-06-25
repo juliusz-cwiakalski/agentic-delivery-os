@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/schemas/decision-record-frontmatter.schema.json",
+  "title": "Decision Record Front Matter (GH-46 nested model)",
+  "description": "Declarative source of truth for the landed GH-46 decision-record front matter. Per SD-1 / DM-1, this documents the NESTED structure actually present in doc/decisions/ADR-0001-decision-making-framework.md and doc/templates/decision-record-template.md (classification{}, governance{}, ai_assistance{}, revisit_triggers[], links{}) — NOT the flat research §17 sketch (top-level driver/decider/decision_domains/rigor_profile/specs). The validator (tools/validate-decision-record) encodes these same rules imperatively (stdlib-only, DEC-4); the schema-vs-validator coverage check keeps the two coupled (NFR-7/AC-GH63-15). Cross-field (rigor-aware / lifecycle) rules that pure JSON Schema cannot express are enumerated in x-coverage-rules and documented inline so the declarative SoT is self-describing.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["id", "decision_type", "status", "created", "decision_date", "last_updated", "summary", "owners", "service"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^(ADR|PDR|TDR|BDR|ODR)-[0-9]{4}$",
+      "description": "Record id; <TYPE>-<zeroPad4>; must match filename."
+    },
+    "decision_type": {
+      "type": "string",
+      "enum": ["adr", "pdr", "tdr", "bdr", "odr"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Proposed", "Under Review", "Accepted", "Deprecated", "Superseded"]
+    },
+    "created": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "decision_date": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "description": "Field required (may be null pre-acceptance); must be non-null when status=Accepted (see x-coverage-rules.xrule.decision_date_when_accepted)."
+    },
+    "last_updated": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "owners": {
+      "type": "array",
+      "items": {"type": "string"},
+      "minItems": 1
+    },
+    "service": {
+      "type": "string"
+    },
+    "decision_area": {
+      "type": ["string", "null"],
+      "enum": ["architecture", "product", "business", "operations", "mixed", null]
+    },
+    "decision_scope": {
+      "type": ["string", "null"],
+      "enum": ["repo", "product-line", "org", null]
+    },
+    "reversibility": {
+      "type": ["string", "null"],
+      "enum": ["easy", "moderate", "hard", null]
+    },
+    "review_date": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "business_impact": {
+      "type": ["string", "null"]
+    },
+    "customer_impact": {
+      "type": ["string", "null"]
+    },
+    "classification": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "If absent, rigor is treated as default R2 (DM-4).",
+      "properties": {
+        "domains": {"type": "array", "items": {"type": "string"}},
+        "archetype": {
+          "type": ["string", "null"],
+          "enum": ["selection", "design", "prioritization", "allocation", "policy", "standard", "threshold", "forecast_commitment", "experiment", "go_no_go", "exception_waiver", "incident_response", "negotiated_choice", "sunset_reversal", null]
+        },
+        "environment": {
+          "type": ["string", "null"],
+          "enum": ["clear", "complicated", "complex", "chaotic", null]
+        },
+        "rigor": {
+          "type": ["string", "null"],
+          "enum": ["R0", "R1", "R2", "R3", null]
+        },
+        "reversibility": {
+          "type": ["string", "null"],
+          "enum": ["easy", "moderate", "hard", null]
+        },
+        "stakes": {
+          "type": ["string", "null"],
+          "enum": ["low", "medium", "high", null]
+        },
+        "urgency": {
+          "type": ["string", "null"],
+          "enum": ["low", "medium", "high", null]
+        },
+        "uncertainty": {
+          "type": ["string", "null"],
+          "enum": ["low", "medium", "high", null]
+        },
+        "blast_radius": {
+          "type": ["string", "null"],
+          "enum": ["local", "team", "org", "customers", "market", null]
+        },
+        "recurrence": {
+          "type": ["string", "null"],
+          "enum": ["one-off", "recurring", null]
+        }
+      }
+    },
+    "governance": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "DACI decision rights. governance.decider required when status=Accepted AND rigor in {R2,R3}; governance.reviewers required non-empty when status=Accepted AND rigor=R3 (acceptance-gated, DEC-12).",
+      "properties": {
+        "driver": {"type": ["string", "null"]},
+        "decider": {"type": ["string", "null"]},
+        "contributors": {"type": "array", "items": {"type": "string"}},
+        "reviewers": {"type": "array", "items": {"type": "string"}},
+        "performers": {"type": "array", "items": {"type": "string"}},
+        "informed": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "ai_assistance": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Provenance; recommendation != decision.",
+      "properties": {
+        "used": {"type": "boolean"},
+        "roles": {"type": "array", "items": {"type": "string"}},
+        "external_data_shared": {"type": "boolean"},
+        "citations_verified": {"type": "boolean"},
+        "human_decider": {"type": ["string", "null"]},
+        "reviewers": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "revisit_triggers": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "links": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "All members are arrays; all optional.",
+      "properties": {
+        "related_changes": {"type": "array", "items": {"type": "string"}},
+        "supersedes": {"type": "array", "items": {"type": "string"}},
+        "superseded_by": {"type": "array", "items": {"type": "string"}},
+        "spec": {"type": "array", "items": {"type": "string"}},
+        "contracts": {"type": "array", "items": {"type": "string"}},
+        "diagrams": {"type": "array", "items": {"type": "string"}},
+        "decisions": {"type": "array", "items": {"type": "string"}},
+        "experiments": {"type": "array", "items": {"type": "string"}},
+        "metrics": {"type": "array", "items": {"type": "string"}},
+        "roadmap_items": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  },
+  "x-coverage-rules": {
+    "$comment": "Cross-field / lifecycle / heuristic rules that pure JSON Schema cannot express. The schema-vs-validator coverage check (AC-GH63-15) reads BOTH the standard schema keywords above AND this list; every entry must be exercised by >=1 fixture (see tools/.tests/fixtures/coverage-map.json). Adding a rule here without a fixture mapping fails the coverage check automatically.",
+    "rules": [
+      {"id": "xrule.decision_date_when_accepted", "description": "decision_date must be non-null when status=Accepted", "severity": "hard-fail", "owner": "AC-GH63-5"},
+      {"id": "xrule.decider_when_accepted_r2r3", "description": "governance.decider required (non-null) when status=Accepted AND classification.rigor in {R2,R3}", "severity": "hard-fail", "owner": "AC-GH63-5"},
+      {"id": "xrule.reviewers_when_accepted_r3", "description": "governance.reviewers required non-empty when status=Accepted AND classification.rigor=R3 (acceptance-gated, DEC-12)", "severity": "hard-fail", "owner": "AC-GH63-5"},
+      {"id": "xrule.default_rigor_r2", "description": "When classification is absent, rigor is treated as default R2 (DM-4); record stays valid", "severity": "info", "owner": "AC-GH63-14"},
+      {"id": "xrule.lifecycle_transitions", "description": "status must be internally consistent with DM-5 transitions (e.g. Superseded requires non-empty superseded_by; Accepted is terminal so Accepted+superseded_by set is invalid)", "severity": "hard-fail", "owner": "AC-GH63-5"},
+      {"id": "xrule.supersedes_consistency", "description": "links.supersedes/superseded_by mutual consistency (no orphaned references; no cycles)", "severity": "hard-fail", "owner": "AC-GH63-5"},
+      {"id": "xrule.id_filename_match", "description": "id must match the record filename stem (<TYPE>-<zeroPad4>)", "severity": "hard-fail", "owner": "AC-GH63-5"},
+      {"id": "xrule.verification_criteria_heuristic", "description": "Best-effort: an Accepted record's body should contain a non-empty ## Verification Criteria section (heuristic, non-blocking [HEURISTIC] warning, exit 0)", "severity": "heuristic", "owner": "AC-GH63-6"}
+    ]
+  }
+}
