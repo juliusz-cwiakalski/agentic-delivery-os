@@ -30,8 +30,15 @@ Examples:
 
 Proposed → Under Review → Accepted → (Deprecated | Superseded)
 
+## Index and Validation
+
+- **[`00-index.md`](00-index.md)** is a **generated** table of all records plus a Health subsection. Do not hand-edit it — regenerate with `tools/generate-decision-index` (or `/decision-index`) after adding or editing a record, and commit the regenerated file. CI detects drift.
+- **`tools/validate-decision-record`** checks record front matter against the declarative schema (`schemas/decision-record-frontmatter.schema.json`) — run it locally before committing a record (exit 0 = clean).
+
 ## References
 
 - [Decision Records Management Guide](../guides/decision-records-management.md) — full standard including governance, types, and lifecycle
 - [Decision Record Template](../templates/decision-record-template.md) — template for authoring new records
+- [validate-decision-record](../tools/validate-decision-record.md) — validator user guide
+- [generate-decision-index](../tools/generate-decision-index.md) — index generator user guide
 - [Documentation Handbook](../documentation-handbook.md) — repository documentation standard

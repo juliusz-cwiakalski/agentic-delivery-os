@@ -97,6 +97,7 @@ Full definitions: `.opencode/agent/*.md` | Inventory: [.opencode/README.md](.ope
 | `/pr` | Create/update PR/MR |
 | `/plan-decision` | Interactive decision session (any type: architecture, product, business, technical, operating) |
 | `/write-decision` | Generate Decision Record (ADR/PDR/TDR/BDR/ODR) |
+| `/decision-index` | Regenerate the decision-record index + Health report (read-only w.r.t. records) |
 | `/review-decision` | Independent decision challenge (delegates to `@decision-critic`) |
 | `/design` | Generate/update visual design assets |
 
@@ -286,4 +287,6 @@ scripts/add-header-location.sh doc/guides
 | [.ai/rules/bash.md](.ai/rules/bash.md) | Bash coding rules |
 | [doc/documentation-handbook.md](doc/documentation-handbook.md) | Documentation layout standard |
 | [doc/tools/text-to-image.md](doc/tools/text-to-image.md) | text-to-image CLI tool user guide and provider setup |
+| [doc/tools/validate-decision-record.md](doc/tools/validate-decision-record.md) | Decision-record validator (machine-enforceable quality) |
+| [doc/tools/generate-decision-index.md](doc/tools/generate-decision-index.md) | Deterministic decision-record index generator |
 | [doc/guides/tools-convention.md](doc/guides/tools-convention.md) | Standard for building CLI tools in tools/ |
