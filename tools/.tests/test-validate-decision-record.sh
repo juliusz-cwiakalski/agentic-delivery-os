@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+# MIT License - see LICENSE file for full terms
+# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/.tests/test-validate-decision-record.sh
 # test-validate-decision-record.sh — Tests for tools/validate-decision-record
 # Covers TC-GH63-004..014,022 plus flags, directory mode, and schema-driven coverage.
 set -Eeuo pipefail
