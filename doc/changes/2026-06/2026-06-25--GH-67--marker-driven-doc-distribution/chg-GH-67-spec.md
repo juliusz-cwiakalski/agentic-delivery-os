@@ -199,7 +199,7 @@ Everything outside DM-2 is **not** scanned (no marker required, not install-chec
 
 ### Authoritative Classification Table
 
-The coder and red-team treat this as the source of truth. **Total: 54 docs marked (51 `redistributable`, 3 `internal`).**
+The coder and red-team treat this as the source of truth. **Total: 54 docs marked (50 `redistributable`, 1 `project-generated`, 3 `internal`).**
 
 #### A. Guides (`doc/guides/*.md`) — 15 files
 
@@ -235,15 +235,17 @@ The coder and red-team treat this as the source of truth. **Total: 54 docs marke
 
 `code-review-instructions--example.md`, `decision-instructions--example.md`, `pr-instructions--github-cli.md`, `pr-instructions--github-mcp.md`, `pr-instructions--gitlab-cli.md`.
 
-#### E. Standalone non-guide docs (5, all redistributable)
+#### E. Standalone non-guide docs (5: 4 `redistributable`, 1 `project-generated`)
 
 | # | File | Marker |
 |---|------|--------|
 | 1 | `doc/documentation-handbook.md` | redistributable |
 | 2 | `doc/00-index.md` | redistributable |
 | 3 | `doc/decisions/README.md` | redistributable |
-| 4 | `doc/decisions/00-index.md` | redistributable |
+| 4 | `doc/decisions/00-index.md` | **project-generated** |
 | 5 | `.ai/rules/README.md` | redistributable |
+
+> **PR #74 review C3 (owner directive):** `doc/decisions/00-index.md` is reclassified `redistributable` → `project-generated`. It is regenerated per-repo (by the script tracked under GH-63), so it is NOT copied by `install.sh` and is excluded from the derived install set. It is still marker-scanned by the drift guard (DM-2).
 
 > Frontmatter note (verified): the 50 `.md` files in A–E already carry a frontmatter block; the 4 `.yaml` register templates (Class C) do **not**. The marker uses the two-path parser (§5.1 F-1.1): inserted into the existing frontmatter block for `.md` files; added as a top-level key at line 1 for the 4 `.yaml` files. **No new frontmatter blocks are created on `.md` files, and no new license/copyright headers are added** (headers stay managed solely by `scripts/add-header-location.sh` on its configured paths).
 
@@ -341,7 +343,7 @@ N/A — runs on the standard GitHub Actions `ubuntu-latest` runner with no third
 |----|-----------|--------|
 | AC-F1-1 | **Given** the 15 files in `doc/guides/`, **when** the guard scans `doc/guides/*.md`, **then** every file carries an `ados_distribution` marker whose value matches §8.3 Table A (exactly 12 `redistributable`, 3 `internal`). | F-1, F-5, DM-2 |
 | AC-F1-2 | **Given** the template set, **when** scanned, **then** all 25 `doc/templates/*.md`, all 4 `doc/templates/*.yaml`, and all 5 `doc/templates/blueprints/**` files carry `ados_distribution: redistributable` (Tables B–D). | F-1, F-5, DM-2 |
-| AC-F1-3 | **Given** the 5 standalone non-guide docs (`doc/documentation-handbook.md`, `doc/00-index.md`, `doc/decisions/README.md`, `doc/decisions/00-index.md`, `.ai/rules/README.md`), **when** scanned, **then** each carries `ados_distribution: redistributable` (Table E). | F-1, F-5, DM-2 |
+| AC-F1-3 | **Given** the 5 standalone non-guide docs (`doc/documentation-handbook.md`, `doc/00-index.md`, `doc/decisions/README.md`, `doc/decisions/00-index.md`, `.ai/rules/README.md`), **when** scanned, **then** each carries a valid `ados_distribution` marker — 4 `redistributable` and `doc/decisions/00-index.md` `project-generated` (Table E; PR #74 review C3). | F-1, F-5, DM-2 |
 | AC-F1-4 | **Given** any in-scope doc (DM-2 classes), **when** it lacks the `ados_distribution` marker, **then** `test-doc-distribution.sh` exits non-zero with a message naming the file. | F-1, F-3, DM-1 |
 
 ### B. Marker-derived local install (F-2, F-5, DM-1)
@@ -424,7 +426,7 @@ N/A — no personal data is processed. ODR-0001 confirms the 4 YAML registers co
 
 ## 24. APPENDICES
 
-- **Appendix A — Counts.** Docs marked: 54 total = 51 `redistributable` + 3 `internal`. Derived install set: 51 files. Classes: 15 guides, 25 md-templates, 4 yaml-templates, 5 blueprints, 5 standalone docs.
+- **Appendix A — Counts.** Docs marked: 54 total = 50 `redistributable` + 1 `project-generated` + 3 `internal`. Derived install set: 50 files (`project-generated` is not installed). Classes: 15 guides, 25 md-templates, 4 yaml-templates, 5 blueprints, 5 standalone docs.
 - **Appendix B — Source inputs.** GitHub issue GH-67; ODR-0001 (Accepted); verified repo audit (install.sh manifest L76–99 & template glob L677; ci.yml; absence of test-doc-distribution.sh; test-install.sh mock/assertions omitting `decision-making.md`; test-uninstall.sh stale `system-dependencies.md`; the 50 `.md` in-scope docs confirmed to have frontmatter, and the 4 `.yaml` register templates confirmed to have **no** frontmatter block).
 
 ## 25. DOCUMENT HISTORY

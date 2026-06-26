@@ -210,9 +210,12 @@ create_mock_ados_source() {
   # An internal guide must NOT be installed (AC-F2-3).
   _mock_guide adding-tool-support.md                       internal "# Adding Tool Support"
 
-  # Decision stubs
+  # Decision stubs. README.md is redistributable (installed); 00-index.md is
+  # `project-generated` (regenerated per-repo per GH-63) and is NOT installed
+  # (PR #74 review C3) — it carries the marker for realism but install.sh no
+  # longer lists it in ADOS_UPDATABLE_FILES.
   printf '# Decisions README\n' > "${base}/doc/decisions/README.md"
-  printf '# Decisions Index\n' > "${base}/doc/decisions/00-index.md"
+  printf -- '---\nados_distribution: project-generated\n---\n# Decisions Index\n' > "${base}/doc/decisions/00-index.md"
 
   # AI rules index
   printf '# AI Rules Index\n' > "${base}/.ai/rules/README.md"
@@ -505,7 +508,12 @@ test_local_install_creates_structure() {
   # Check new updatable files were created
   assert_file_exists "${project_dir}/doc/guides/change-lifecycle.md" "change-lifecycle guide"
   assert_file_exists "${project_dir}/doc/decisions/README.md" "decisions README"
-  assert_file_exists "${project_dir}/doc/decisions/00-index.md" "decisions index"
+  # decisions/00-index.md is `project-generated` (regenerated per-repo per GH-63)
+  # and is NOT installed (PR #74 review C3).
+  [[ ! -f "${project_dir}/doc/decisions/00-index.md" ]] || {
+    printf '  decisions/00-index.md must NOT be installed (project-generated)\n' >&2
+    return 1
+  }
   assert_file_exists "${project_dir}/.ai/rules/README.md" "rules index"
 
   # Check directories were created
@@ -813,7 +821,12 @@ test_local_install_creates_decision_stubs() {
   )
 
   assert_file_exists "${project_dir}/doc/decisions/README.md"
-  assert_file_exists "${project_dir}/doc/decisions/00-index.md"
+  # decisions/00-index.md is `project-generated` (regenerated per-repo per GH-63)
+  # and is NOT installed (PR #74 review C3).
+  [[ ! -f "${project_dir}/doc/decisions/00-index.md" ]] || {
+    printf '  decisions/00-index.md must NOT be installed (project-generated)\n' >&2
+    return 1
+  }
 }
 
 test_local_install_creates_rules_index() {

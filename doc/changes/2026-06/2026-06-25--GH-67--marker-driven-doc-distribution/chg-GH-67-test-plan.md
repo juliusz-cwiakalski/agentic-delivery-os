@@ -27,7 +27,7 @@ This change was motivated by a silent-omission regression: `decision-making.md` 
 ### 1.1 In Scope
 
 - **The guard** — `scripts/.tests/test-doc-distribution.sh` (NEW), with 5 failure modes: (1) missing marker, (2) redistributable-not-installed, (3) internal-installed, (4) derived-set drift, (5) invalid marker value (PM-decided OQ-2). Includes POSIX **two-path** parser unit self-tests (`.md` frontmatter path + `.yaml` top-level-key path).
-- **Marker presence on every in-scope doc** — positive assertion that all 54 docs (15 guides, 25 md-templates, 4 yaml-templates, 5 blueprints, 5 standalone) carry a valid marker (spec §8.3 classification table, verified: 51 redistributable + 3 internal).
+- **Marker presence on every in-scope doc** — positive assertion that all 54 docs (15 guides, 25 md-templates, 4 yaml-templates, 5 blueprints, 5 standalone) carry a valid marker (spec §8.3 classification table, verified: 50 redistributable + 1 project-generated + 3 internal; PR #74 review C3 reclassified `doc/decisions/00-index.md`).
 - **`scripts/install.sh` behaviors** — marker-derived guide set; recursive template install (`*.md` + `*.yaml` + `blueprints/**`); internal guides excluded; idempotent re-run.
 - **`scripts/.tests/test-install.sh`** (UPDATE) — include `decision-making.md` in mock + assertions; add blueprints/`*.yaml` install assertions.
 - **`scripts/.tests/test-uninstall.sh`** (UPDATE) — stale fixture `system-dependencies.md` → `ados-tools-system-dependencies.md`.
@@ -66,7 +66,7 @@ Every spec §17 acceptance criterion is traced below. Spec §17 enumerates **19 
 |-------|------------------------------------------|----------|--------|
 | AC-F1-1 | All 15 guides carry a marker matching Table A (12 redistributable, 3 internal) | TC-DIST-001, TC-DIST-004 | Covered |
 | AC-F1-2 | All 25 `*.md` + 4 `*.yaml` + 5 blueprints carry `redistributable` | TC-DIST-002, TC-DIST-004, TC-DIST-018 | Covered |
-| AC-F1-3 | All 5 standalone docs carry `redistributable` | TC-DIST-003, TC-DIST-004 | Covered |
+| AC-F1-3 | All 5 standalone docs carry a valid marker (4 `redistributable`; `doc/decisions/00-index.md` `project-generated` per PR #74 review C3) | TC-DIST-003, TC-DIST-004 | Covered |
 | AC-F1-4 | In-scope doc lacking marker ⇒ guard exits non-zero naming the file | TC-DIST-005 | Covered |
 | AC-F2-1 | Installed guide set = 12 redistributable-marked guides (derived, not hand-listed) | TC-INST-001, TC-DIST-010 | Covered |
 | AC-F2-2 | Templates installed recursively: `*.md` AND `*.yaml` AND `blueprints/**` | TC-INST-002, TC-DIST-013 | Covered |
@@ -127,7 +127,7 @@ Per `.ai/rules/testing-strategy.md` (and `.ai/rules/bash.md` for shell). This re
 |-------|-------|------|----------|-------------|
 | TC-DIST-001 | All 15 guides carry correct marker (Table A) | Regression | High | AC-F1-1, DM-1, DM-2 |
 | TC-DIST-002 | All templates (md+yaml+blueprints) carry redistributable | Regression | High | AC-F1-2, DM-1, DM-2 |
-| TC-DIST-003 | All 5 standalone docs carry redistributable | Regression | High | AC-F1-3, DM-1, DM-2 |
+| TC-DIST-003 | All 5 standalone docs carry a valid marker (4 redistributable + 1 project-generated) | Regression | High | AC-F1-3, DM-1, DM-2 |
 | TC-DIST-004 | 54/54 in-scope docs carry a valid marker (aggregate) | Happy Path | High | AC-F1-1/2/3 |
 | TC-DIST-005 | Failure mode 1 — missing marker ⇒ guard fails naming file | Negative | High | AC-F1-4, DM-1 |
 | TC-DIST-006 | Failure mode 5 — invalid marker value ⇒ guard fails | Negative | High | OQ-2 / RSK-6, DM-1 |
@@ -206,7 +206,7 @@ Per `.ai/rules/testing-strategy.md` (and `.ai/rules/bash.md` for shell). This re
 **Expected Outcome**:
 - All 34 template files are `redistributable`; counts match (25/4/5); both read paths (`.md` frontmatter and `.yaml` top-level key) produce the value.
 
-#### TC-DIST-003 - All 5 standalone docs carry redistributable
+#### TC-DIST-003 - All 5 standalone docs carry a valid marker
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
@@ -221,11 +221,11 @@ Per `.ai/rules/testing-strategy.md` (and `.ai/rules/bash.md` for shell). This re
 - Markers applied to `doc/documentation-handbook.md`, `doc/00-index.md`, `doc/decisions/README.md`, `doc/decisions/00-index.md`, `.ai/rules/README.md`.
 
 **Steps**:
-1. Guard parses the explicit standalone-doc list (these live outside the globbed classes).
-2. Assert each parses to `redistributable` (5/5).
+1. Guard parses the explicit standalone-doc scan list (these live outside the globbed classes).
+2. Assert each parses to a valid marker: 4 `redistributable` + `doc/decisions/00-index.md` `project-generated` (PR #74 review C3).
 
 **Expected Outcome**:
-- All 5 standalone docs are `redistributable`.
+- All 5 standalone docs carry a valid marker (4 redistributable, 1 project-generated).
 
 #### TC-DIST-004 - 54/54 in-scope docs carry a valid marker (aggregate)
 
@@ -244,10 +244,10 @@ Per `.ai/rules/testing-strategy.md` (and `.ai/rules/bash.md` for shell). This re
 **Steps**:
 1. Guard enumerates the union of all DM-2 classes (guides + templates md/yaml/blueprints + 5 standalone).
 2. Assert the enumerated total == 54 and every file has a marker in the closed enum.
-3. Assert split == 51 `redistributable` + 3 `internal` (spec Appendix A).
+3. Assert split == 50 `redistributable` + 1 `project-generated` + 3 `internal` (spec Appendix A; PR #74 review C3).
 
 **Expected Outcome**:
-- 54/54 in-scope docs carry a valid marker; 51 redistributable / 3 internal. This is the explicit "marker on every doc" positive assertion (overlaps failure mode 1, but stated as a positive gate).
+- 54/54 in-scope docs carry a valid marker; 50 redistributable / 1 project-generated / 3 internal. This is the explicit "marker on every doc" positive assertion (overlaps failure mode 1, but stated as a positive gate).
 
 #### TC-DIST-005 - Failure mode 1 — missing marker ⇒ guard fails naming file
 
@@ -430,7 +430,7 @@ Per `.ai/rules/testing-strategy.md` (and `.ai/rules/bash.md` for shell). This re
 4. On the green repo, assert (a) == (b).
 
 **Expected Outcome**:
-- Any inequality ⇒ non-zero exit with the "derived-set drift" condition and the symmetric diff of the two sets. On the real repo, (a) == (b) (51 files). This is the drift detector — it must be an **independent oracle**, not the same computation install.sh uses, or a glob bug in `install.sh` would be masked.
+- Any inequality ⇒ non-zero exit with the "derived-set drift" condition and the symmetric diff of the two sets. On the real repo, (a) == (b) (50 files — `doc/decisions/00-index.md` is `project-generated` and excluded from the install set per PR #74 review C3; was 51 before). This is the drift detector — it must be an **independent oracle**, not the same computation install.sh uses, or a glob bug in `install.sh` would be masked.
 
 #### TC-DIST-013 - Guard scans md AND yaml AND blueprints templates
 

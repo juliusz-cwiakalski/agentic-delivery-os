@@ -92,6 +92,9 @@ readonly EXIT_EXTERNAL=5
 # get_marker() + install_local_files) — only guides marked `redistributable`
 # install. The standalone non-guide docs below live outside the globbed guide
 # class and remain explicit (they are marker-checked by the drift guard).
+# NOTE: doc/decisions/00-index.md is `project-generated` — it is regenerated
+# per-repo (by the script tracked under GH-63), so it is NOT installed here
+# (PR #74 review C3). It is still marker-scanned by the drift guard.
 readonly ADOS_UPDATABLE_FILES=(
   # Documentation handbook
   "doc/documentation-handbook.md"
@@ -99,7 +102,6 @@ readonly ADOS_UPDATABLE_FILES=(
   "doc/00-index.md"
   # Decision records stubs
   "doc/decisions/README.md"
-  "doc/decisions/00-index.md"
   # AI rules index
   ".ai/rules/README.md"
 )

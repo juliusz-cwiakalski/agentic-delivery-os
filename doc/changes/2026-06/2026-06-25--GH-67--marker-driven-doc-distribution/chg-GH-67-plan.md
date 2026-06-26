@@ -68,7 +68,7 @@ allowlist, and add a CI guard that fails on any drift — eliminating the entire
 It is a **single cohesive change**: markers (Phase 1), derived install (Phase 2), the guard
 (Phase 3), and the process/CI hooks (Phase 4) all land together so the guard is green at merge.
 The spec is the source of truth for all requirements, counts, and classifications — see
-`./chg-GH-67-spec.md` (§8.3 classification table of 54 docs = 51 `redistributable` + 3 `internal`).
+`./chg-GH-67-spec.md` (§8.3 classification table of 54 docs = 50 `redistributable` + 1 `project-generated` + 3 `internal`; PR #74 review C3 reclassified `doc/decisions/00-index.md` redistributable → project-generated).
 
 **Resolved open questions (from spec §14 + pm-notes):**
 
@@ -164,8 +164,9 @@ The spec is the source of truth for all requirements, counts, and classification
 | Metric | Target |
 |--------|--------|
 | In-scope docs carrying `ados_distribution` | 54 / 54 (100%) |
-| Redistributable docs actually installed | 51 / 51 (derived == marker set) |
+| Redistributable docs actually installed | 50 / 50 (derived == marker set) |
 | Internal docs installed | 0 / 3 |
+| `project-generated` docs installed | 0 / 1 (`doc/decisions/00-index.md`, PR #74 review C3) |
 | Guard failure modes | 5 (missing-marker, redistributable-not-installed, internal-installed, derived-set drift, invalid-enum-value) |
 | New external runtime deps introduced | 0 |
 | Re-run of `install.sh --local` on existing project | deterministic content-sync (no uncontrolled destructive overwrites) |
@@ -210,8 +211,10 @@ set and guard can both derive from a single source of truth.
 - [x] **1.5** Add the deferred **ODR-0001** row to `doc/decisions/00-index.md` (the decision was
   committed at c850d36 without its index entry). (commit 4ec7ce7)
 - [x] **1.6** Verify count: `git grep -l 'ados_distribution:'` on the in-scope set returns exactly
-  54 (51 redistributable + 3 internal). Confirm marker value distribution matches Tables A–E.
-  (verified: 54 files; distribution 51 redistributable / 3 internal)
+  54. Confirm marker value distribution matches Tables A–E.
+  (verified: 54 files; distribution 50 redistributable / 1 project-generated / 3 internal —
+  PR #74 review C3 reclassified `doc/decisions/00-index.md` redistributable → project-generated;
+  originally 51 redistributable + 3 internal at this commit)
 - [x] **1.7** Confirm **no** license/copyright header was hand-added. In Phase 1, `.ai/agent/pm-instructions.md`
   is NOT staged (the unrelated change stays pending until Phase 4.1). (verified: only ados_distribution: lines + 1 ODR-0001 table row inserted; pm-instructions.md left unstaged)
 
@@ -494,7 +497,7 @@ code commit** unless a regression is found (in which case a targeted `fix`/`test
   scratch project; assert the second run produces an **identical, deterministic result** (content-sync:
   overwrites a file only when its content differs from upstream, skips when identical). This is
   content-sync (the live behavior), NOT create-if-absent — the test verifies determinism, not
-  "diff = additive only". (verified: scratch install twice → identical 51-file tree; covered by test_local_install_idempotent_content_sync)
+  "diff = additive only". (verified: scratch install twice → identical 50-file tree; `doc/decisions/00-index.md` no longer installed per PR #74 review C3 — was 51-file before; covered by test_local_install_idempotent_content_sync)
 - [x] **5.4** Header hygiene (AC-F5-1): confirm no hand-added license/copyright headers were
   introduced; headers on configured paths remain the sole responsibility of
   `scripts/add-header-location.sh`. (verified: guard file has no Copyright header; no Copyright lines in committed diffs)
@@ -666,7 +669,7 @@ in Phase 4.4, so BOTH `AGENTS.md` and `pm-instructions.md` carry the requirement
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| 1 | Done | 2026-06-25 | 2026-06-25 | 4ec7ce7 | Marker application (54 docs) — 51 redistributable + 3 internal; ODR-0001 row added |
+| 1 | Done | 2026-06-25 | 2026-06-25 | 4ec7ce7 | Marker application (54 docs) — originally 51 redistributable + 3 internal; PR #74 review C3 later reclassified `doc/decisions/00-index.md` → project-generated (now 50 redist + 1 project-gen + 3 internal); ODR-0001 row added |
 | 2 | Done | 2026-06-25 | 2026-06-25 | 57fae30 | install.sh marker derivation + recursive templates (12 guides, 4 yaml, 5 blueprints) |
 | 3 | Done | 2026-06-25 | 2026-06-25 | 005472e | Guard (5 modes, all verified) + drive-by install/uninstall test fixes (+uninstall.sh stale entry) |
 | 4 | Done | 2026-06-25 | 2026-06-25 | a25e5ab + 8f74e30 | CI + process/reviewer hooks (unrelated pm-instructions.md committed first as non-GH-67 a25e5ab; then GH-67 marker note 8f74e30) |

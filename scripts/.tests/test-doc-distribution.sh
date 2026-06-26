@@ -58,12 +58,17 @@ _guard_cleanup() {
 }
 trap _guard_cleanup EXIT INT TERM
 
-# Standalone non-guide install targets — MIRRORS install.sh's ADOS_UPDATABLE_FILES
-# non-guide entries (the install rule for docs that live outside the globbed
-# guide/template classes). This is an INDEPENDENT COPY so the oracle is not
-# tautological: if the two lists drift, mode 5 (derived-set drift) fires. The two
-# lists MUST be kept in sync by hand (or derived the same way) — see DEC-2 / ODR-0001.
-readonly STANDALONE_INSTALL_TARGETS=(
+# Standalone non-guide DOC paths to SCAN (marker presence/validity) — MIRRORS
+# install.sh's ADOS_UPDATABLE_FILES non-guide entries, PLUS doc/decisions/00-index.md
+# which is `project-generated` (scanned for a valid marker but NOT installed — PR
+# #74 review C3). This is the SCAN set (every path is marker-checked by modes 1
+# & 2). The EXPECTED install set is derived marker-aware (only `redistributable`
+# standalone docs install) in derive_expected_install_set. The ACTUAL set is
+# observed from the sandbox (see derive_actual_install_set). This is an
+# INDEPENDENT COPY so the oracle is not tautological: if the two lists drift,
+# mode 5 (derived-set drift) fires. The two lists MUST be kept in sync by hand
+# (or derived the same way) — see DEC-2 / ODR-0001.
+readonly STANDALONE_DOCS=(
   "doc/documentation-handbook.md"
   "doc/00-index.md"
   "doc/decisions/README.md"
@@ -221,7 +226,7 @@ enumerate_dm2() {
   for f in "${root}/doc/templates"/**/*.md; do [[ -f "$f" ]] && printf '%s\n' "$f"; done
   for f in "${root}/doc/templates"/**/*.yaml; do [[ -f "$f" ]] && printf '%s\n' "$f"; done
   shopt -u globstar nullglob
-  for f in "${STANDALONE_INSTALL_TARGETS[@]}"; do
+  for f in "${STANDALONE_DOCS[@]}"; do
     [[ -f "${root}/${f}" ]] && printf '%s\n' "${root}/${f}"
   done
 }
@@ -243,8 +248,13 @@ derive_expected_install_set() {
   for f in doc/templates/**/*.md; do [[ -f "$f" ]] && printf '%s\n' "$f"; done
   for f in doc/templates/**/*.yaml; do [[ -f "$f" ]] && printf '%s\n' "$f"; done
   shopt -u globstar nullglob
-  # Standalone explicit targets (mirror install.sh manifest).
-  for f in "${STANDALONE_INSTALL_TARGETS[@]}"; do printf '%s\n' "$f"; done
+  # Standalone explicit targets — marker-aware: only `redistributable`-marked
+  # standalone docs install. decisions/00-index.md is `project-generated` and is
+  # therefore excluded from the EXPECTED install set (PR #74 review C3). Mirrors
+  # install.sh's ADOS_UPDATABLE_FILES non-guide entries.
+  for f in "${STANDALONE_DOCS[@]}"; do
+    [[ "$(get_marker "$f")" == "redistributable" ]] && printf '%s\n' "$f"
+  done
 }
 
 # ----------------------------------------------------------------------------
@@ -290,7 +300,7 @@ derive_actual_install_set() {
   for f in "${sandbox}/doc/templates"/**/*.md; do [[ -f "$f" ]] && printf '%s\n' "${f#${sandbox}/}"; done
   for f in "${sandbox}/doc/templates"/**/*.yaml; do [[ -f "$f" ]] && printf '%s\n' "${f#${sandbox}/}"; done
   shopt -u globstar nullglob
-  for f in "${STANDALONE_INSTALL_TARGETS[@]}"; do
+  for f in "${STANDALONE_DOCS[@]}"; do
     [[ -f "${sandbox}/${f}" ]] && printf '%s\n' "$f"
   done
 
