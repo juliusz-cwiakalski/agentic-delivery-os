@@ -178,7 +178,7 @@ N/A.
 
 | ID | Element | Description |
 |----|---------|-------------|
-| DM-1 | `inception-state.yaml` schema | Documented in the guide and shipped as `doc/templates/inception-state-template.yaml`. Top-level keys: `schema_version`, `project` (name/flow/profile/characteristics), `phases[]` (id/name/status/timestamps), `artifacts{}` (status/path/confidence), `decisions[]`, `assumptions[]`, `sessions[]`, `last_updated`. Template instance only; no live file in this change. |
+| DM-1 | `inception-state.yaml` schema | Documented in the guide and shipped as `doc/templates/inception-state-template.yaml`. Top-level keys: `schema_version`, `project` (name/flow/profile/characteristics), `phases[]` (id/name/status/started/completed), `artifacts{}` (status/path/confidence), `decisions[]`, `assumptions[]`, `sessions[]`, `last_updated`. Template instance only; no live file in this change. |
 | DM-2 | Conditional-artifact matrix | Five project-type columns (CLI/API only, Library, Web app new, Web app legacy, Business repo) × artifact rows, encoded in the guide and mirrored in the handbook. Drives Phase 0 artifact activation. |
 
 ### 8.4 External Integrations
@@ -216,6 +216,7 @@ N/A — documentation/templates only. The doc-distribution guard (§9) is the on
 | RSK-4 | Doc-distribution guard failure from a missing or misplaced marker (especially the `.yaml` top-level rule) | M | M | Follow ODR-0001 placement rules; run the guard per NFR-1 before merge | L |
 | RSK-5 | Overlap/confusion between the new `persona-jtbd-template.md` (inception) and existing `persona-template.md` + `jobs-to-be-done-template.md` (business) | L | M | New template explicitly states the relationship (DEC-2); templates README clarifies both categories | L |
 | RSK-6 | Scope creep into GH-71/GH-72 (agent automation, legacy deepening) | M | L | Explicit non-goals (NG-1/NG-2); this change ships the template for `inception-state.yaml`, not its agent wiring | L |
+| RSK-7 | Overlap of the new `assumption-register-template.md` / `risk-register-template.md` (inception four-risk) with the existing business `strategic-assumptions-template.md` | L | M | The new templates are explicitly scoped as inception four-risk (Value/Usability/Feasibility/Viability) registers; the relationship is stated in-template and in the templates README (DEC-9); mirrors the RSK-5/DEC-2 persona-jtbd pattern | L |
 
 ## 12. ASSUMPTIONS
 
@@ -251,6 +252,7 @@ None at authoring time. All scoping decisions were resolved during planning (see
 | DEC-6 | License headers added via `scripts/add-header-location.sh`; agents never hand-add headers | AGENTS.md rule; guarantees consistent headers across the redistributable set | 2026-06-26 |
 | DEC-7 | The guide is standalone and self-contained — sourced from the research notes but embedding all needed content; it never references `.ai/local/*` paths | The guide is redistributable and must be readable without gitignored context (NFR-4) | 2026-06-26 |
 | DEC-8 | `inception-state.yaml` ships only as `doc/templates/inception-state-template.yaml`; no live instance in `doc/inception/` in this change | State is per-project; agent wiring of resume behavior is GH-71 | 2026-06-26 |
+| DEC-9 | The new `assumption-register-template.md` and `risk-register-template.md` are inception four-risk (Value/Usability/Feasibility/Viability) registers; the business-profile strategic deep-dive stays in `strategic-assumptions-template.md`; the relationship is stated in-template (mirrors DEC-2/RSK-5) | Symmetric to the persona-jtbd disambiguation (DEC-2); prevents duplication/confusion between inception and business assumption artifacts | 2026-06-26 |
 
 ## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
 
@@ -298,7 +300,7 @@ None at authoring time. All scoping decisions were resolved during planning (see
 | AC-F5-3 | **Given** UX templates, **when** checked, **then** all 3 exist: user-journey, screen-inventory, ux-guidance. | F-5 |
 | AC-F5-4 | **Given** risk/assumption templates, **when** checked, **then** both exist: assumption-register, risk-register. | F-5 |
 | AC-F6-1 | **Given** `north-star-template.md`, **when** reviewed, **then** it includes strategic-pyramid context, outcome-vs-output distinction, JTBD for the primary persona, and a four-risk awareness section (existing structure preserved). | F-6 |
-| AC-F5-5 | **Given** `roadmap-engineering-template.md`, **when** reviewed, **then** it has success metrics per milestone and a validation approach. | F-5, DEC-3 |
+| AC-F5-5 | **Given** `roadmap-engineering-template.md`, **when** reviewed, **then** it has success metrics per milestone, a validation approach, AND OST/discovery linkage. | F-5, DEC-3 |
 | AC-F8-1 | **Given** `doc/templates/README.md`, **when** reviewed, **then** it includes an "Inception templates" category listing all 17 new templates. | F-8 |
 
 ### Consistency & compliance (links NFR-1, NFR-3, NFR-5)

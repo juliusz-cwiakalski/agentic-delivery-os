@@ -59,11 +59,13 @@ Content Sourcing Map below.
 
 **Authoring contract for every NEW `.md` template/guide:** write the frontmatter starting
 with `ados_distribution: redistributable` followed by `id`/`status`/`owners`/`summary`
-(mirror `north-star-template.md` / `persona-template.md`). Do **NOT** hand-write the
-copyright/MIT/source lines — then run `scripts/add-header-location.sh <dir>`, which prepends
-those three lines into the existing frontmatter block. The guard skips `^#` lines, so the
-marker is still detected after the header is inserted. (Per AGENTS.md + DEC-6: agents never
-hand-add headers.)
+(mirror `north-star-template.md` / `persona-template.md`). This "starts with
+`ados_distribution`" describes the **authoring order** — before `add-header-location.sh`
+prepends the copyright/MIT/source lines; after the header script runs, frontmatter begins with
+`# Copyright…`. Do **NOT** hand-write the copyright/MIT/source lines — then run
+`scripts/add-header-location.sh <dir>`, which prepends those three lines into the existing
+frontmatter block. The guard skips `^#` lines, so the marker is still detected after the header
+is inserted. (Per AGENTS.md + DEC-6: agents never hand-add headers.)
 
 **Authoring contract for the NEW `.yaml` template (`inception-state-template.yaml`):**
 `ados_distribution: redistributable` must be **line 1, top-level, no `---` block**
@@ -186,7 +188,9 @@ revision-log entry here.
 > **Recurring per-phase mechanics (do not repeat full text in each phase):**
 > 1. Author files **without** hand-written copyright/MIT/source headers.
 > 2. For NEW `.md` in `doc/templates/**` or `doc/guides/`, frontmatter starts with
->    `ados_distribution: redistributable` then `id`/`status`/`owners`/`summary`.
+>    `ados_distribution: redistributable` then `id`/`status`/`owners`/`summary` (authoring
+>    order — before `add-header-location.sh` prepends the copyright/MIT/source lines; after
+>    the header script runs, frontmatter begins with `# Copyright…`).
 > 3. Run `scripts/add-header-location.sh <dir>` to insert the 3-line header (`.md` only).
 > 4. Self-verify (marker present + header present + no `.ai/local/*` refs + no ghost refs).
 > 5. Commit that phase with its completion-signal message.
@@ -268,9 +272,11 @@ the rich `roadmap-engineering-template.md` (DEC-3, AC-F5-5) and the
 - [ ] **2.4** `roadmap-engineering-template.md` — id `ROADMAP-ENGINEERING`. **NEW, distinct
   from the business `product-roadmap-template.md` (DEC-3).** Sections: Completed Milestones,
   **Current Milestone** (first-class; detailed scope: deliverables, IN/OUT, **success metrics
-  per milestone = outcomes not outputs**, dependencies, **validation approach**), Future
-  Milestones (rough), Links to changes/ADRs. *(source: §3 Phase 2, §8 GH-69 enrichment note.
-  AC-F5-5 requires success metrics per milestone + a validation approach.)*
+  per milestone = outcomes not outputs**, dependencies, **validation approach**, **OST /
+  discovery linkage** — a row/section linking each milestone's outcomes to the Opportunity
+  Solution Tree when discovery has been done), Future Milestones (rough), Links to
+  changes/ADRs. *(source: §3 Phase 2, §8 GH-69 enrichment note. AC-F5-5 requires success metrics
+  per milestone + a validation approach + OST/discovery linkage.)*
 - [ ] **2.5** `ubiquitous-language-template.md` — id `UBIQUITOUS-LANGUAGE`. Sections: Bounded
   context scope, Terms table (term | meaning | type [aggregate/entity/value object/domain
   event] | relationships), Context map (links to other bounded contexts), Binding rules.
@@ -428,12 +434,17 @@ capture.
 - [ ] **5.1** `assumption-register-template.md` — id `ASSUMPTION-REGISTER`. Sections:
   Assumptions table (id | assumption | **risk_type** [value/usability/feasibility/viability] |
   **validation_status** [unvalidated/testing/validated/invalidated] | validation_method |
-  owner | due | evidence), Summary by risk type, Priorities. *(source: §2.2 "Assumption
+  owner | due | evidence), Summary by risk type, Priorities. **Include an explicit relationship
+  note (mirrors the DEC-2/RSK-5 persona-jtbd pattern): "This is the inception four-risk
+  (Value/Usability/Feasibility/Viability) register for project inception. For business-profile
+  strategic assumptions use `strategic-assumptions-template.md`."** *(source: §2.2 "Assumption
   register", §3 Phase 2 step 5, §7 state `assumptions[]` shape.)*
 - [ ] **5.2** `risk-register-template.md` — id `RISK-REGISTER`. Sections: Risks table
   (id | risk | **type** [value/usability/feasibility/viability] | likelihood | impact |
   mitigation | owner | residual), Heat-map summary, Cross-links to the assumption register.
-  *(source: §2.2 "Risk register", §3 Phase 2 step 6, §6 four-risk check.)*
+  **Include the same relationship note as 5.1: this is the inception four-risk register; for
+  business-profile strategic assumptions use `strategic-assumptions-template.md`.** *(source:
+  §2.2 "Risk register", §3 Phase 2 step 6, §6 four-risk check.)*
 - [ ] **5.3** Run `scripts/add-header-location.sh doc/templates`.
 
 **Acceptance Criteria**:
@@ -511,8 +522,11 @@ classification (F-4, AC-F4-1, DEC-4). README-level only — no content files cre
   "Conditional — UI-bearing project").
 - [ ] **7.3** Keep the existing copyright/MIT/source header (this file is outside the DM-2
   scan set → no `ados_distribution` needed; running the header script is a no-op/idempotent).
-  Add a forward-pointer to `doc/guides/project-inception.md` (created Phase 8) and to
-  `doc/documentation-handbook.md` §4.2.
+  Add a forward-pointer to `doc/guides/project-inception.md` (created Phase 8) and to the NEW
+  **"Inception Artifact Catalog"** section created in `doc/documentation-handbook.md` by
+  Phase 9.1 (point there, not to the generic §4.2). As a secondary pointer, also enrich §4.2
+  in Phase 9.1 to reference the new "Inception Artifact Catalog" section so both pointers
+  resolve (no ghost).
 
 **Acceptance Criteria**:
 
@@ -552,20 +566,33 @@ embedded verbatim (NFR-7).
   files, documentation profile/handbook, inception summary; conditional: OST, personas/JTBD,
   assumption register, risk register, user journeys, screen inventory, UX guidance,
   ubiquitous language, NFRs, repo analysis, tribal knowledge, project PRD, initial feature
-  specs/decision records). *(source: §2.1, §2.2.)*
-- [ ] **8.4** **(c) 8-phase process (0–7)** — for each phase document **Activities**,
-  **Anti-sycophancy technique**, **Human gate**, and **Outputs** (naming the template to
-  use). *(source: §3 Phases 0–7; cross-link every output to the Phase 2–5 template that
-  produces it.)*
+  specs/decision records). **The catalog table carries columns `Artifact | Location | Template |
+  Produced by`.** Annotate each row: which artifacts are **templated HERE (GH-69)** (the 17 new
+  templates + `north-star-template.md` enrichment); which **reuse existing templates**
+  (`feature-spec-template.md`, `decision-record-template.md`); and which are **produced by
+  `@bootstrapper`/CI in GH-71** (testing-strategy, CI baseline, dev-environment guide) or
+  **GH-33** (tribal-knowledge). This prevents the impression of missing deliverables (RT1-06).
+  *(source: §2.1, §2.2.)*
+- [ ] **8.4** **(c) 8-phase process (0–7)** — for EACH of the 8 phases (0–7) render its four
+  sub-parts as Markdown headings: `### Activities`, `### Anti-sycophancy technique`,
+  `### Human gate`, `### Outputs` (naming the template to use; cross-link every output to the
+  Phase 2–5 template that produces it). For phases with no anti-sycophancy technique, the
+  `### Anti-sycophancy technique` heading MUST still appear with body text `None (intake phase)`
+  (Phase 0), `None (framework-integration phase)` (Phase 5), `None (readiness-check phase)`
+  (Phase 6), and `None (handoff phase)` (Phase 7) respectively. (This reaches the runbook's
+  ≥32 sub-part count — 8 phases × 4 headings — and resolves test-plan OQ-2; the decision-dense
+  phases 1–4 carry their real techniques per 8.8.) *(source: §3 Phases 0–7, §6.)*
 - [ ] **8.5** **(c-diagrams) Embed all 4 Mermaid diagrams VERBATIM** from
   `inception-process-diagrams.md`: Diagram 1 master flow, Diagram 2 Phase 0 decision,
   Diagram 3 new-vs-legacy, Diagram 4 two-track convergence. Copy the fenced ```mermaid blocks
   exactly. *(NFR-7: exactly 4 diagrams.)*
 - [ ] **8.6** **(d) Legacy-vs-new differences** — a table covering Phases 0–4 (new vs legacy
   behavior). *(source: §4 table.)*
-- [ ] **8.7** **(e) Conditional-artifacts matrix** — all 5 project-type columns
-  (CLI/API only | Library | Web app new | Web app legacy | Business repo). *(source: §5;
-  spec DM-2.)*
+- [ ] **8.7** **(e) Conditional-artifacts matrix** — all 5 project-type columns. The column
+  headers MUST be exactly these literals (no parentheses, matching spec DM-2 and the test
+  runbook step 7): `CLI/API only` | `Library` | `Web app new` | `Web app legacy` |
+  `Business repo`. (Note: the research source uses `Web app (new)`/`Web app (legacy)`; normalize
+  to the no-paren form here so the runbook's `grep -F` matches.) *(source: §5; spec DM-2.)*
 - [ ] **8.8** **(f) Anti-sycophancy per phase** — each decision-dense phase lists its
   technique with the **concrete prompt text** (devil's advocate, pre-mortem, four-risk check,
   alternative comparison, unknown-unknowns). *(source: §6.)*
@@ -608,7 +635,7 @@ embedded verbatim (NFR-7).
 
 **Tests**:
 
-- `grep -c '^```mermaid' doc/guides/project-inception.md` == 4 (NFR-7).
+- `grep -cE '^[[:space:]]*```mermaid[[:space:]]*$' doc/guides/project-inception.md` == 4 (NFR-7; matches test-plan Runbook step 5).
 - `grep -Rn "\.ai/local" doc/guides/project-inception.md` returns nothing (NFR-4).
 - Every template name referenced in phase Outputs resolves to a file created in Phases 2–5
   (no ghost references).
@@ -627,14 +654,21 @@ the canonical docs entry points (F-7, F-8, AC-F2-1, AC-F8-1).
 **Tasks**:
 
 - [ ] **9.1** `doc/documentation-handbook.md` — add (additive) an **"Inception Artifact
-  Catalog"** subsection (always-produced + conditional, mirrored from the guide), the
+  Catalog"** subsection (use that exact heading so the Phase 7.3 overview-README pointer
+  resolves with no ghost), covering always-produced + conditional (mirrored from the guide), the
   **conditional-artifacts matrix** (5 columns), a **"`doc/inception/` Workspace"** subsection
   (purpose/structure/lifecycle), and a **forward-pointer** to `doc/guides/project-inception.md`.
-  Update `last_updated`. (Header + `ados_distribution: redistributable` already present —
-  idempotent header run.)
+  Also enrich §4.2 to reference the new "Inception Artifact Catalog" section (secondary pointer
+  for the overview README). Note: the handbook §17 "Template Index" is deliberately **NOT**
+  extended — the canonical discovery surface for the 17 inception templates is
+  `doc/templates/README.md` (AC-F8-1); §17 remains a curated subset. Update `last_updated`.
+  (Header + `ados_distribution: redistributable` already present — idempotent header run.)
 - [ ] **9.2** `doc/templates/README.md` — add an **"Inception templates"** category listing
   all 17 new templates (grouped Engineering/Product discovery/UX/Risk & assumption, each row:
-  template → purpose + the phase that produces it). Keep the existing
+  template → purpose + the phase that produces it). The category blurb notes the relationship
+  between the inception four-risk `assumption-register`/`risk-register` templates and the
+  business `strategic-assumptions-template.md` (DEC-9), and between `persona-jtbd` and the
+  business `persona`/`jobs-to-be-done` templates (DEC-2). Keep the existing
   `ados_distribution: redistributable` marker (already present).
 
 **Acceptance Criteria**:
@@ -677,11 +711,21 @@ doc-distribution merge gate and the no-ghost-references / self-containment invar
 - [ ] **10.3** Run the merge gate: `bash scripts/.tests/test-doc-distribution.sh` — **must
   exit 0** (AC-NFR-1a). If it fails, fix the named condition (missing/invalid marker,
   redistributable-not-installed, derived-set drift) and re-run.
-- [ ] **10.4** Ghost-reference cross-check (AC-NFR-5a): every template/section/path referenced
-  in `doc/guides/project-inception.md`, `doc/documentation-handbook.md`,
-  `doc/overview/README.md`, and `doc/templates/README.md` resolves to an existing file. In
-  particular: all 17 template names referenced from the guide/handbook/overview exist; the
-  `persona-jtbd` relationship pointers resolve.
+- [ ] **10.4** Ghost-reference cross-check (AC-NFR-5a): a "ghost" is a reference to an artifact
+  **GH-69 ships** (the 17 templates + `doc/guides/project-inception.md` + the standalone
+  deliverables) that does not resolve; references to **per-project destination paths described as
+  guidance** are EXEMPT (documented destinations, not shipped artifacts). Two-part check across
+  `doc/guides/project-inception.md`, `doc/documentation-handbook.md`, `doc/overview/README.md`,
+  and `doc/templates/README.md`: (a) every `doc/templates/<name>` reference `test -f`s to a file;
+  (b) any other `doc/<path>` reference is skipped if it matches an exempt per-project prefix
+  (`doc/overview/01-`, `doc/overview/02-`, `doc/overview/architecture`, `doc/overview/tech-stack`,
+  `doc/overview/glossary`, `doc/overview/opportunity`, `doc/overview/user-journeys`,
+  `doc/overview/screen`, `doc/overview/ux-guidance`, `doc/overview/ubiquitous`,
+  `doc/inception/inception-state`, `doc/inception/inception-summary`, `doc/inception/analysis/`,
+  `doc/inception/inputs/`, `doc/inception/meetings/`, `.ai/rules/`, `.ai/agent/`, `AGENTS.md`,
+  `.github/`), otherwise it must resolve. In particular: all 17 template names referenced from
+  the guide/handbook/overview exist; the `persona-jtbd` relationship pointers resolve. (Mirrors
+  the test-plan Runbook §7.1 step 15 so plan and test-plan agree.)
 - [ ] **10.5** Self-containment check (NFR-4):
   `grep -Rn "\.ai/local" doc/guides/project-inception.md doc/documentation-handbook.md
   doc/overview/README.md doc/templates/README.md doc/templates doc/inception` returns nothing.

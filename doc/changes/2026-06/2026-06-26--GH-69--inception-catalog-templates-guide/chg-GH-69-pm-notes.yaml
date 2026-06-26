@@ -17,17 +17,35 @@ phases:
   pr_creation: { started: null, completed: null, url: null }
 
 decisions:
-  - text: "Templates live in doc/templates/ (single convention). doc/inception/ is a per-project workspace containing READMEs (skeleton) + pointers to templates; live instances (inception-state.yaml, inception-summary.md) are produced when a project actually runs inception (GH-70 self-host / GH-71 wiring). For the ADOS source repo we commit the workspace skeleton with READMEs only."
+  - id: "DEC-1"
+    text: "Templates live in doc/templates/ (single convention). doc/inception/ is a per-project workspace containing READMEs (skeleton) + pointers to templates; live instances (inception-state.yaml, inception-summary.md) are produced when a project actually runs inception (GH-70 self-host / GH-71 wiring). For the ADOS source repo we commit the workspace skeleton with READMEs only."
     date: "2026-06-26"
-  - text: "persona-jtbd-template.md is created as the inception-flavored COMBINED persona+JTBD template (used in overview/north-star context). It has a distinct purpose from the existing canonical business-profile templates persona-template.md and jobs-to-be-done-template.md, which remain the deep-dive templates. The new template states this relationship to avoid duplication confusion. Satisfies AC '3 product discovery templates' literally."
+  - id: "DEC-2"
+    text: "persona-jtbd-template.md is created as the inception-flavored COMBINED persona+JTBD template (used in overview/north-star context). It has a distinct purpose from the existing canonical business-profile templates persona-template.md and jobs-to-be-done-template.md, which remain the deep-dive templates. The new template states this relationship to avoid duplication confusion. Satisfies AC '3 product discovery templates' literally."
     date: "2026-06-26"
-  - text: "roadmap-engineering-template.md is a NEW engineering-roadmap template, distinct from the existing business-profile product-roadmap-template.md. It is created rich (success metrics per milestone, validation approach, OST linkage) rather than 'enriched from existing'."
+  - id: "DEC-3"
+    text: "roadmap-engineering-template.md is a NEW engineering-roadmap template, distinct from the existing business-profile product-roadmap-template.md. It is created rich (success metrics per milestone, validation approach, OST linkage) rather than 'enriched from existing'."
     date: "2026-06-26"
-  - text: "doc/overview/ is RESTRUCTURED at the README level only (defines operational file set + conditional classification). Actual overview content files (01-north-star.md, architecture-overview.md, etc.) are NOT created here — those are produced when ADOS self-hosts (GH-70) or any project runs inception."
+  - id: "DEC-4"
+    text: "doc/overview/ is RESTRUCTURED at the README level only (defines operational file set + conditional classification). Actual overview content files (01-north-star.md, architecture-overview.md, etc.) are NOT created here — those are produced when ADOS self-hosts (GH-70) or any project runs inception."
     date: "2026-06-26"
-  - text: "Every new doc/templates/** and doc/guides/project-inception.md MUST declare ados_distribution: redistributable (enforced by scripts/.tests/test-doc-distribution.sh, mode 1 missing-marker). doc/inception/** READMEs are outside the guard scan set; they get license headers via add-header-location.sh for consistency but need no distribution marker."
+  - id: "DEC-5"
+    text: "Every new doc/templates/** and doc/guides/project-inception.md MUST declare ados_distribution: redistributable (enforced by scripts/.tests/test-doc-distribution.sh, mode 1 missing-marker). doc/inception/** READMEs are outside the guard scan set; they get license headers via add-header-location.sh for consistency but need no distribution marker."
     date: "2026-06-26"
-  - text: "License headers added by running scripts/add-header-location.sh over new dirs (agents must not hand-add headers per AGENTS.md). YAML templates: marker is top-level key (per test yaml parser + ODR-0001); coder mirrors existing yaml template header/marker style (e.g. content-calendar-template.yaml)."
+  - id: "DEC-6"
+    text: "License headers added by running scripts/add-header-location.sh over new dirs (agents must not hand-add headers per AGENTS.md). YAML templates: marker is top-level key (per test yaml parser + ODR-0001); coder mirrors existing yaml template header/marker style (e.g. content-calendar-template.yaml)."
+    date: "2026-06-26"
+  - id: "DEC-7"
+    text: "The guide (doc/guides/project-inception.md) is standalone and self-contained — sourced from the research notes but embedding all needed content; it never references .ai/local/* paths. The guide is redistributable and must be readable without gitignored context (NFR-4)."
+    date: "2026-06-26"
+  - id: "DEC-8"
+    text: "inception-state.yaml ships only as doc/templates/inception-state-template.yaml; no live instance is created in doc/inception/ in this change. State is per-project; agent wiring of resume behavior is GH-71."
+    date: "2026-06-26"
+  - id: "DEC-9"
+    text: "The new assumption-register-template.md and risk-register-template.md are the inception four-risk (Value/Usability/Feasibility/Viability) registers for project inception. The business-profile strategic deep-dive stays in strategic-assumptions-template.md. The relationship is stated in-template (mirrors the DEC-2/RSK-5 persona-jtbd pattern) and in the templates README 'Inception templates' category."
+    date: "2026-06-26"
+  - id: "DEC-10"
+    text: "roadmap-engineering-template.md includes an OST / discovery linkage (a row/section linking each milestone's outcomes to the Opportunity Solution Tree when discovery has been done) — faithful to research section 8; low cost, improves coherence."
     date: "2026-06-26"
 
 open_questions: []
@@ -42,4 +60,10 @@ notes:
     date: "2026-06-26"
   - text: "Change is large (1 centerpiece guide + 17 new templates + 2 enrichments + doc/inception workspace skeleton + handbook section + overview README restructure + templates README update). Plan MUST be phased so @coder commits per phase. Guide is the hardest artifact (must be standalone-readable, embed 4 Mermaid diagrams, sourced from the two research files)."
     type: risk
+    date: "2026-06-26"
+  - text: "USER DIRECTIVE: two-round red-team pattern (mirrors GH-46 retro — high-value for large changes). Round 1 PRE-delivery on spec/plan/test-plan artifacts via @red-team-coordinator; Round 2 POST-delivery on the delivered change. Findings addressed via followup phases/changes before PR. Blocking questions routed via @decision-advisor first; only escalate to human what truly needs human input."
+    type: decision
+    date: "2026-06-26"
+  - text: "Change artifacts (spec/plan/test-plan/pm-notes) committed cc5ccc7 on docs/GH-69/inception-catalog-templates-guide. Awaiting Round 1 red-team review before @coder delivery."
+    type: info
     date: "2026-06-26"

@@ -18,9 +18,9 @@ links:
 ---
 
 > **PLAN STATUS NOTE**
-> - `implementation_plan` is **pending** at authoring time (no `chg-GH-69-plan.md` exists yet). It is referenced for traceability only; this plan derives solely from `chg-GH-69-spec.md`.
+> - `implementation_plan` (`chg-GH-69-plan.md`) now **EXISTS**. All 10 phases are ≤ 9 files (Phase 2 is the largest at 9), so NFR-8 (no review phase exceeds ~12 files) is **satisfied** (TC-INCEPT-026 confirmed; OQ-1 resolved).
 > - This is a **documentation / templates / guide change**: there are **no unit / integration / E2E code tests**. Per `.ai/rules/testing-strategy.md`, "tests" here are **verification checks** — file existence, content assertions, marker/header presence, diagram counting, cross-reference integrity, and the repo's doc-distribution guard (`scripts/.tests/test-doc-distribution.sh`, which is the CI merge gate).
-> - The doc-distribution guard's scan set is: `doc/guides/*.md`, `doc/templates/**/*.{md,yaml}`, and the standalone docs (`doc/documentation-handbook.md`, `doc/00-index.md`, `doc/decisions/README.md`, `doc/decisions/00-index.md`, `.ai/rules/README.md`). **`doc/inception/**` is NOT scanned** (pm-notes DEC-5) — workspace READMEs get license headers for consistency but need **no** `ados_distribution` marker.
+> - The doc-distribution guard's scan set is: `doc/guides/*.md`, `doc/templates/**/*.{md,yaml}`, and the standalone docs (`doc/documentation-handbook.md`, `doc/00-index.md`, `doc/decisions/README.md`, `doc/decisions/00-index.md`, `.ai/rules/README.md`). **`doc/inception/**` is NOT scanned** (per spec §12 assumption + pm-notes DEC-5 marker rule; scan-set confirmed independently by reading the guard source) — workspace READMEs get license headers for consistency but need **no** `ados_distribution` marker.
 
 # Test Plan - Inception artifact catalog, templates, and complete process guide
 
@@ -54,7 +54,7 @@ Because the deliverables are consumed verbatim by both humans and agents, a misp
 | Item | Path |
 |------|------|
 | Change specification | `./chg-GH-69-spec.md` (authoritative for AC IDs, NFRs, DM-1/DM-2, template manifest Appendix A) |
-| Implementation plan | `./chg-GH-69-plan.md` — **pending** (not authored at test-plan time) |
+| Implementation plan | `./chg-GH-69-plan.md` |
 | Testing strategy | `.ai/rules/testing-strategy.md` (docs/templates → static/diff + content checks; guard as the automated check) |
 | PM notes / decisions | `./chg-GH-69-pm-notes.yaml` (DEC set mirrors spec §15; confirms `doc/inception/**` is outside the guard scan set) |
 | Doc-distribution guard | `scripts/.tests/test-doc-distribution.sh` (GH-67; 5 failure modes; `.yaml` marker is top-level line per ODR-0001) |
@@ -382,6 +382,10 @@ Per `.ai/rules/testing-strategy.md`, this is a `doc/**` / `doc/templates/**` cha
 **Expected Outcome**:
 
 - Conditional-artifacts matrix present with all 5 project-type columns (mirrors DM-2).
+
+**Notes / Clarifications**:
+
+- The research source (§5) uses `Web app (new)`/`Web app (legacy)` with parentheses; the guide MUST use the no-paren form (`Web app new`/`Web app legacy`) so the runbook's `grep -F` matches (plan Phase 8.7 pins these literals).
 
 ---
 
@@ -765,16 +769,17 @@ Per `.ai/rules/testing-strategy.md`, this is a `doc/**` / `doc/templates/**` cha
 
 **Steps**:
 
-1. Extract every referenced `doc/templates/<name>` and `doc/<path>` token from the four docs.
-2. For each referenced template/path, assert it resolves to an existing file under `doc/templates/` or the stated path.
+1. A "ghost" is a reference to an artifact **GH-69 ships** (the 17 templates + `doc/guides/project-inception.md` + the standalone deliverables) that does not resolve. References to **per-project destination paths described as guidance** are EXEMPT — they are documented destinations, not shipped artifacts.
+2. (a) Extract every `doc/templates/<name>` reference from the four docs and `test -f` each (shipped templates must resolve).
+3. (b) For any other `doc/<path>` reference, skip it if it matches an exempt per-project destination prefix (`doc/overview/01-`, `doc/overview/02-`, `doc/overview/architecture`, `doc/overview/tech-stack`, `doc/overview/glossary`, `doc/overview/opportunity`, `doc/overview/user-journeys`, `doc/overview/screen`, `doc/overview/ux-guidance`, `doc/overview/ubiquitous`, `doc/inception/inception-state`, `doc/inception/inception-summary`, `doc/inception/analysis/`, `doc/inception/inputs/`, `doc/inception/meetings/`, `.ai/rules/`, `.ai/agent/`, `AGENTS.md`, `.github/`); otherwise assert it resolves to an existing file.
 
 **Expected Outcome**:
 
-- 0 unresolved references.
+- 0 ghost references (shipped-artifact references all resolve; per-project destinations are exempt).
 
 **Notes / Clarifications**:
 
-- Concrete scripted approach is given in the Verification Runbook (§7.1): extract candidate paths with `grep -ohE`, normalize, then `test -f` each against the repo.
+- Concrete two-part scripted approach is given in the Verification Runbook (§7.1 step 15): (a) `test -f` each `doc/templates/<name>` reference; (b) skip exempt per-project prefixes, `test -f` the rest. The guide is required to document per-project destinations (`doc/inception/inception-state.yaml`, `doc/inception/analysis/*.md`, `doc/overview/*.md`) that are never committed to this repo — these are not ghosts.
 
 ---
 
@@ -812,7 +817,7 @@ Per `.ai/rules/testing-strategy.md`, this is a `doc/**` / `doc/templates/**` cha
 **Target Layer / Location**: `doc/changes/2026-06/2026-06-26--GH-69--inception-catalog-templates-guide/chg-GH-69-plan.md`
 **Tags**: @docs, @process
 
-**Preconditions**: implementation plan authored (pending).
+**Preconditions**: implementation plan authored.
 
 **Steps**:
 
@@ -824,7 +829,7 @@ Per `.ai/rules/testing-strategy.md`, this is a `doc/**` / `doc/templates/**` cha
 
 **Notes / Clarifications**:
 
-- TODO until `chg-GH-69-plan.md` exists. Tracked in §8.3.
+- Confirmed — all 10 phases are ≤ 9 files (Phase 2 is the largest at 9); NFR-8 (no review phase exceeds ~12 files) is satisfied. (Previously TODO until the plan existed; OQ-1 resolved.)
 
 ---
 
@@ -909,7 +914,7 @@ Per `.ai/rules/testing-strategy.md`, this is a `doc/**` / `doc/templates/**` cha
 | TC-INCEPT-023 | To Implement | `grep` + per-template presence loop | None |
 | TC-INCEPT-024 | To Implement | ghost-ref script (Runbook §7.1) | None |
 | TC-INCEPT-025 | To Implement | frontmatter `grep` loop | None |
-| TC-INCEPT-026 | Manual Only (TODO) | review `chg-GH-69-plan.md` phases | N/A |
+| TC-INCEPT-026 | Manual Only (confirmed) | review `chg-GH-69-plan.md` phases | N/A |
 | TC-INCEPT-027 | Existing – No Change | `git diff --check` | None |
 | TC-INCEPT-028 | To Implement | `python3 -c "yaml.safe_load(...)"` | None |
 
@@ -1050,11 +1055,33 @@ grep -F 'project-inception.md' doc/documentation-handbook.md >/dev/null
 echo "   OK"
 
 echo "== 15. ghost-reference check across the 4 cross-referencing docs =="
-ghost=0
+# A "ghost" = a reference to an artifact GH-69 SHIPS (the 17 templates +
+# doc/guides/project-inception.md + standalone deliverables) that does NOT resolve.
+# Per-project destination paths described as guidance are EXEMPT (documented
+# destinations, not shipped artifacts).
+declare -a EXEMPT_PREFIXES=(
+  doc/overview/01- doc/overview/02- doc/overview/architecture doc/overview/tech-stack
+  doc/overview/glossary doc/overview/opportunity doc/overview/user-journeys
+  doc/overview/screen doc/overview/ux-guidance doc/overview/ubiquitous
+  doc/inception/inception-state doc/inception/inception-summary
+  doc/inception/analysis/ doc/inception/inputs/ doc/inception/meetings/
+  .ai/rules/ .ai/agent/ AGENTS.md .github/
+)
 for d in "${XREF_DOCS[@]}"; do
-  # extract doc/templates/<name> and doc/<path> style references
-  grep -ohE '(doc/templates/[A-Za-z0-9._-]+|doc/(overview|guides|inception)/[A-Za-z0-9._/-]+)' "$d" | sort -u | while read -r ref; do
-    [ -e "$ref" ] || [ -e "${ref}.md" ] || { echo "   GHOST in $d -> $ref"; exit 1; }
+  # (a) shipped templates: every doc/templates/<name> reference must resolve to a file
+  grep -ohE 'doc/templates/[A-Za-z0-9._-]+' "$d" | sort -u | while read -r ref; do
+    test -f "$ref" || { echo "   GHOST (shipped template) in $d -> $ref"; exit 1; }
+  done || exit 1
+  # (b) other doc/<path> references: skip those matching an exempt per-project prefix
+  grep -ohE 'doc/[A-Za-z0-9._/-]+' "$d" | sort -u | while read -r ref; do
+    case "$ref" in doc/templates/*) continue;; esac
+    exempt=0
+    for p in "${EXEMPT_PREFIXES[@]}"; do
+      case "$ref" in "$p"*) exempt=1; break;; esac
+    done
+    if [ "$exempt" -eq 0 ]; then
+      [ -e "$ref" ] || [ -e "${ref}.md" ] || { echo "   GHOST in $d -> $ref"; exit 1; }
+    fi
   done || exit 1
 done
 echo "   OK (0 ghost references)"
@@ -1099,8 +1126,8 @@ echo "ALL VERIFICATION CHECKS PASSED"
 
 | # | Question | Blocking? | Owner |
 |---|----------|-----------|-------|
-| OQ-1 | Implementation plan (`chg-GH-69-plan.md`) not yet authored → TC-INCEPT-026 (NFR-8 phase sizing) is **TODO** until it exists. | No (finalizable once plan lands) | `@plan-writer` |
-| OQ-2 | Exact list of "decision-dense" phases for AC-F1-6 (TC-INCEPT-009) — confirm against the guide once authored; the anti-sycophancy map in the research notes is the source. | No | Reviewer |
+| OQ-1 | ~~Implementation plan (`chg-GH-69-plan.md`) not yet authored~~ — **RESOLVED**: the plan now exists; all 10 phases are ≤ 9 files (Phase 2 largest at 9), so NFR-8 is satisfied and TC-INCEPT-026 is confirmed. | No | — |
+| OQ-2 | ~~Exact list of "decision-dense" phases for AC-F1-6 (TC-INCEPT-009)~~ — **RESOLVED**: the decision-dense phases are 1, 2, 3, 4 (per research §6); phases 0/5/6/7 carry `Anti-sycophancy: None (intake/framework-integration/readiness-check/handoff phase)` (plan Phase 8.4 mandates the heading + N/A body for all 8 phases). | No | — |
 
 ## 9. Plan Revision Log
 
