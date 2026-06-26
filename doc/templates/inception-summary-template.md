@@ -21,11 +21,11 @@ summary: "Inception summary — decisions, deferred items, artifact confidence, 
 _Produced at the end of inception (Phase 7). Instantiated from this template into `doc/inception/inception-summary.md` when a project runs inception._
 
 ## Inception metadata
-- Project: 
+- Project:
 - Flow: <new | legacy>
 - Profile: <engineering-repo | business-strategy-repo | mixed>
-- Started: 
-- Completed: 
+- Started:
+- Completed:
 
 ## Decisions made (with rationale)
 | Decision | Rationale | Decision record |
@@ -44,8 +44,8 @@ _Which artifacts are high-confidence and which need refinement._
 _What worked, what didn't, what to change for the next inception._
 
 ## Sign-off
-- Approved by: 
-- Date: 
+- Approved by:
+- Date:
 
 ## Links
 - Inception state: `doc/inception/inception-state.yaml`

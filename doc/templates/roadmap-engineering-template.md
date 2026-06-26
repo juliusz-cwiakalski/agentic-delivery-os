@@ -35,15 +35,15 @@ _<The milestone the team is delivering now. For a new project this is the MVP; f
 
 **Deliverables:**
 
-- 
+- <deliverable>
 
 **In scope:**
 
-- 
+- <in-scope-item>
 
 **Out of scope (for this milestone):**
 
-- 
+- <out-of-scope-item>
 
 ### Success metrics (outcomes, not outputs)
 
@@ -56,14 +56,14 @@ _Outcome metrics that prove the milestone delivered user value. Avoid output van
 
 _Upstream milestones, teams, vendors, or decisions this milestone depends on._
 
-- 
+- <dependency>
 
 ### Validation approach
 
 _How will we know this milestone succeeded? State the validation method (instrumented metric, cohort comparison, qualitative check) and the decision it drives (proceed, pivot, kill)._
 
-- Method: 
-- Decision it drives: 
+- Method:
+- Decision it drives:
 
 ### OST / discovery linkage
 
@@ -81,5 +81,5 @@ _Rough, outcome-oriented placeholders. Refine as the current milestone approache
 
 ## Links
 
-- Changes: 
-- Decision records: 
+- Changes:
+- Decision records:
