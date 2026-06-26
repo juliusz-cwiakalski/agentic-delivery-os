@@ -53,3 +53,18 @@ jobs:
       # silently disables a mode from going green.
       - name: Run doc-distribution negative-mode self-tests
         run: bash scripts/.tests/test-doc-distribution-modes.sh
+
+  inception-doc-consistency:
+    name: Inception doc-set consistency guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # GH-69: catches cross-surface drift the distribution guard cannot —
+      # four-risk terminology (Value/Usability/Feasibility/Viability; never
+      # "desirability"), conditional-matrix header parity between the guide and
+      # the handbook mirror, the 17-template index, self-containment, and the
+      # guide's structural integrity (4 diagrams / 8 phases / >=32 sub-parts).
+      - name: Run inception doc-set consistency guard
+        run: bash scripts/.tests/test-inception-doc-consistency.sh
