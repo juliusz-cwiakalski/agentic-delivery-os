@@ -1,0 +1,65 @@
+ados_distribution: redistributable
+# inception-state-template.yaml
+#
+# Inception process state tracker. Instantiated into
+# doc/inception/inception-state.yaml when a project runs inception.
+#
+# Resume behavior: a fresh invocation reads this file, determines the current
+# (last incomplete) phase, and resumes inception with the state + prior
+# artifacts as context. See doc/guides/project-inception.md.
+#
+# The distribution marker is the top-level line 1 above (no --- block) per
+# ODR-0001 so that yaml.safe_load() consumers keep working.
+schema_version: 1
+
+project:
+  name: <project-name>
+  flow: <new | legacy>          # new project vs legacy onboarding
+  profile: <engineering-repo | business-strategy-repo | mixed>   # per GH-52 documentation-profile.md
+  characteristics:
+    ui_bearing: <true | false>   # activates UX artifacts (journeys, screens, UX guidance)
+    multi_user: <true | false>   # activates personas/JTBD
+    complex_domain: <true | false> # activates ubiquitous language
+    code_project: <true | false> # activates testing strategy, CI baseline, dev env docs
+
+phases:
+  # status: pending | in_progress | completed
+  - { id: 0, name: "Intake & material scan", status: pending, started: null, completed: null }
+  - { id: 1, name: "North star & vision", status: pending, started: null, completed: null }
+  - { id: 2, name: "Scope & roadmap", status: pending, started: null, completed: null }
+  - { id: 3, name: "Tech stack & architecture", status: pending, started: null, completed: null }
+  - { id: 4, name: "Domain, conventions & quality baseline", status: pending, started: null, completed: null }
+  - { id: 5, name: "ADOS framework integration", status: pending, started: null, completed: null }
+  - { id: 6, name: "Inception readiness check", status: pending, started: null, completed: null }
+  - { id: 7, name: "Inception summary & handoff", status: pending, started: null, completed: null }
+
+artifacts:
+  # status: pending | draft | approved | written ; confidence: 0.0-1.0
+  north_star:        { status: pending, path: "doc/overview/01-north-star.md", confidence: 0.0 }
+  roadmap:           { status: pending, path: "doc/overview/02-roadmap.md", confidence: 0.0 }
+  tech_stack:        { status: pending, path: "doc/overview/tech-stack.md", confidence: 0.0 }
+  architecture:      { status: pending, path: "doc/overview/architecture-overview.md", confidence: 0.0 }
+  glossary:          { status: pending, path: "doc/overview/glossary.md", confidence: 0.0 }
+  ost:               { status: pending, path: "doc/overview/opportunity-solution-tree.md", confidence: 0.0 }
+  personas_jtbd:     { status: pending, path: "doc/overview/01-north-star.md", confidence: 0.0 }
+  user_journeys:     { status: pending, path: "doc/overview/user-journeys.md", confidence: 0.0 }
+  screen_inventory:  { status: pending, path: "doc/overview/screen-inventory.md", confidence: 0.0 }
+  ux_guidance:       { status: pending, path: "doc/overview/ux-guidance.md", confidence: 0.0 }
+  ubiquitous_language: { status: pending, path: "doc/overview/ubiquitous-language.md", confidence: 0.0 }
+  assumptions:       { status: pending, path: "doc/inception/analysis/assumptions.md", confidence: 0.0 }
+  risks:             { status: pending, path: "doc/inception/analysis/risks.md", confidence: 0.0 }
+  material_inventory: { status: pending, path: "doc/inception/analysis/material-inventory.md", confidence: 0.0 }
+  inception_summary: { status: pending, path: "doc/inception/inception-summary.md", confidence: 0.0 }
+
+decisions:
+  # - { phase: <n>, text: <decision>, rationale: <why>, date: <ISO> }
+
+assumptions:
+  # risk_type: value | usability | feasibility | viability
+  # validation_status: unvalidated | testing | validated | invalidated
+  # - { text: <assumption>, risk_type: <value|usability|feasibility|viability>, validation_status: <unvalidated|testing|validated|invalidated>, date: <ISO> }
+
+sessions:
+  # - { started: <ts>, phase: <n>, notes: <summary> }
+
+last_updated: <ISO-timestamp>
