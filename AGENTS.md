@@ -187,6 +187,7 @@ Canonical values: see `doc/decisions/ODR-0001-classify-yaml-register-templates-r
     ├── changes/              # change artifacts (spec, plan, test-plan per workItemRef)
     ├── decisions/            # decision records (ADR/PDR/TDR/BDR/ODR)
     ├── guides/               # how-to guides
+    ├── inception/            # project inception workspace (see guides/project-inception.md)
     ├── overview/             # north star, architecture, glossary
     ├── planning/             # internal planning notes
     ├── spec/                 # current system spec (reconciled after each change)

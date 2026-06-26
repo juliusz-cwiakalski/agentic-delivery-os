@@ -178,6 +178,7 @@ last_updated: <ISO-timestamp>
 ## Related Documentation
 
 - **Onboarding guide:** [doc/guides/onboarding-existing-project.md](../../guides/onboarding-existing-project.md) — manual adoption path
+- **Project inception guide:** [doc/guides/project-inception.md](../../guides/project-inception.md) — manual 8-phase inception process and artifact catalog
 - **Agent prompt:** `.opencode/agent/bootstrapper.md` — full workflow definition
 - **Command prompt:** `.opencode/command/bootstrap.md` — entry point
 - **Agent inventory:** [.opencode/README.md](../../../.opencode/README.md)
