@@ -94,3 +94,12 @@ notes:
   - text: "DOD CHECK: PASS. All 10 lifecycle phases complete; all 23 spec ACs satisfied (independently confirmed by red-team round 2 + final gate); all 56 plan tasks checked; test-plan runbook 17/17; 0 blockers; 0 open questions. Deferred round-2 polish tracked in follow-up #80. Ready for PR."
     type: resolved
     date: "2026-06-26"
+  - text: "USER DIRECTIVE (post-PR): consolidate follow-up #80 INTO GH-69 (closed #80) rather than parking it. Implemented on the GH-69 branch: RT2-04 (stripped ALL GH-XX ticket refs from the redistributable guide incl. inside the 4 Mermaid diagrams — commit 55d5b94), RT2-08 (minimal placeholder scaffolds added to 14 sparse template sections — commit 55d5b94), RT2-09 (new scripts/.tests/test-inception-doc-consistency.sh + CI job 'inception-doc-consistency' — commit e55b306)."
+    type: decision
+    date: "2026-06-26"
+  - text: "RED-TEAM ROUND 3 (post-followup) COMPLETE. Verdict SHIP-WITH-FIXES (0 Critical / 1 Major / 2 Minor / 2 Nit). RT2-04/08/09 confirmed correctly implemented; all gates re-confirmed green. Addressed: RT3-01 (Major — the new guard claimed RT2-02 matrix-drift coverage it didn't deliver; strengthened to real handbook⊆guide row-subset + landmark-rows-in-both, proven non-vacuous by mutation), RT3-02 (narrowed the 'desirability' ban to inception four-risk surfaces to avoid false positives), RT3-04 (closed a stray '<' placeholder in roadmap-engineering). Commit 3000216. Accepted: RT3-03 (hardcoded 17-template list — dynamic derivation deferred as a documented Minor limitation; the list still catches removal/rename). RT3-05 informational (handbook matrix is a deliberate condensed subset; shared rows cell-identical). No remaining Major/Critical."
+    type: resolved
+    date: "2026-06-26"
+  - text: "Retro: the new consistency guard went through 3 iterations during round-3 fixing — (1) full row-set equality was too strict (the handbook is an intentional condensed subset, not a full mirror — a real fact my own test taught me), (2) comm had a locale sort-order mismatch (switched to locale-independent grep -qxF). Lesson: when a guard's invariant proves too strict, the 'false positive' often reveals a genuine structural fact (here: full-vs-condensed matrix design) worth encoding precisely rather than relaxing blindly. Also: the round-3 red team caught that my first guard overclaimed its contract (header said it caught RT2-02; the check didn't) — value of reading the TEST, not just running it green."
+    type: retro
+    date: "2026-06-26"
