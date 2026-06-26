@@ -9,9 +9,9 @@ phases:
   specification: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
   test_planning: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
   delivery_planning: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
-  delivery: { started: "2026-06-26T00:00:00Z", completed: null }
+  delivery: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
   system_spec_update: { started: null, completed: null }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-06-26T00:00:00Z", completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -69,4 +69,19 @@ notes:
     date: "2026-06-26"
   - text: "RED-TEAM ROUND 1 (PRE-delivery) COMPLETE. Verdict GO-WITH-FIXES (0 Critical / 2 Major / 8 Minor / 3 Nit). AC coverage confirmed complete (22 ticket AC → 23 spec AC → 10 plan phases → 28 test scenarios; no silent AC-passes-around-gaps). Marker/header/distribution contract empirically verified sound. Applied ALL 13 findings (RT1-01..RT1-13) in commit f96abf8 + DEC-10 spec sync. Must-fixes: RT1-01 (narrow ghost-check to shipped artifacts + exempt prefixes), RT1-02 (pin matrix column strings no-paren), RT1-03 (mandate 4 sub-part headings per phase + N/A anti-sycophancy for 0/5/6/7). Cleared to deliver."
     type: resolved
+    date: "2026-06-26"
+  - text: "Delivery via @coder COMPLETE (10 phases, commits f277e3f..85fe8e0; 30 files). Independently verified (not just self-report): 17 templates, 4 workspace READMEs, exactly 4 Mermaid diagrams, 8 phases × 4 sub-parts (33), self-containment (0 .ai/local/inception refs in deliverables), yaml line-1 marker, and doc-distribution guard GREEN (72 in-scope docs, exit 0)."
+    type: info
+    date: "2026-06-26"
+  - text: "RED-TEAM ROUND 2 (POST-delivery) COMPLETE. Verdict SHIP-WITH-FIXES (0 Critical / 2 Major / 4 Minor / 4 Nit). Guard + runbook independently re-confirmed PASS; all 4 diagrams byte-identical to source; .opencode/scripts/tools untouched; north-star diff additive. Must-fix Majors: RT2-01 (templates/README four-risk term 'desirability…' → Value/Usability/Feasibility/Viability), RT2-02 (handbook matrix drifted — invented Ubiquitous-language row + dropped Tribal-knowledge row). Cheap Minors: RT2-03 (guide inline anti-sycophancy prompts match summary table), RT2-05 (handbook catalog completeness callout), RT2-06 (inception-state-template.yaml artifacts block missing 6 catalog artifacts), RT2-07 (Phase 3 inline + Phase 4 enrichment note)."
+    type: resolved
+    date: "2026-06-26"
+  - text: "REMEDIATION APPLIED: RT2-01/02 (via @coder, uncommitted) + RT2-03/05/06/07 (PM direct edits) + RT2-10 (this pm-notes reconciliation). All round-2 must-fix and recommended-cheap findings addressed; guard re-confirmed green. NOTE: @coder remediation subagent call returned partial work + empty stdout (recurring subagent-output quirk) — PM completed the remaining edits directly and verified."
+    type: info
+    date: "2026-06-26"
+  - text: "DEFERRED to follow-up ticket (GH-69 polish): RT2-04 (gloss/drop ~20 opaque internal GH-XX ticket refs in the redistributable guide — deserves a focused editorial pass for AC-F1-10 standalone polish), RT2-08 (add minimal placeholder scaffolds to sparsest template sections, e.g. architecture-overview), RT2-09 (future hardening: cross-doc consistency check — assert handbook matrix row-set ≡ guide matrix row-set; canonical four-risk term set — so RT2-01/02-style drift is auto-caught). Non-blocking; tracked for a follow-up change."
+    type: risk
+    date: "2026-06-26"
+  - text: "Retro: the two-round red-team pattern again paid off — Round 1 caught 3 verification-design defects that would have made the runbook fail on a correct guide; Round 2 caught 2 Majors in redistributable index surfaces (terminology + matrix drift) that the automated ghost-check structurally cannot detect (it checks file existence, not semantic/cell consistency). Worth a cross-doc consistency test (RT2-09). Also: @coder/@committer/@runner subagents intermittently returned empty stdout this session — the reliable workaround was asking them to write results to a .ai/local file and report only path+size; PM then read the file directly. Consider a note in the runner/coder agent guidance about writing structured output to a file when stdout capture is unreliable."
+    type: retro
     date: "2026-06-26"

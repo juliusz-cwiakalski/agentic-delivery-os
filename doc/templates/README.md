@@ -98,8 +98,8 @@ Profile Contract section.)
 | `risk-register-template.md` | Risks with likelihood, impact, mitigation, owner, and review cadence |
 
 > At inception, `assumption-register-template.md` and `risk-register-template.md`
-> capture the **inception four-risk relationship** (desirability, viability,
-> feasibility, usability) as lean per-project registers. They are distinct from
+> capture the **inception four-risk relationship** (**Value / Usability /
+> Feasibility / Viability**) as lean per-project registers. They are distinct from
 > the business-strategy `strategic-assumptions-template.md`, which holds
 > portfolio-level strategic assumptions across products.
 

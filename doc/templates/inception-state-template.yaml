@@ -50,6 +50,12 @@ artifacts:
   risks:             { status: pending, path: "doc/inception/analysis/risks.md", confidence: 0.0 }
   material_inventory: { status: pending, path: "doc/inception/analysis/material-inventory.md", confidence: 0.0 }
   inception_summary: { status: pending, path: "doc/inception/inception-summary.md", confidence: 0.0 }
+  repo_analysis:     { status: pending, path: "doc/inception/analysis/repo-analysis.md", confidence: 0.0 }
+  tribal_knowledge:  { status: pending, path: "doc/inception/analysis/tribal-knowledge.md", confidence: 0.0 }
+  project_prd:       { status: pending, path: "doc/overview/prd.md", confidence: 0.0 }
+  nonfunctional:     { status: pending, path: "doc/spec/nonfunctional.md", confidence: 0.0 }
+  feature_specs:     { status: pending, path: "doc/spec/features/", confidence: 0.0 }
+  decision_records:  { status: pending, path: "doc/decisions/", confidence: 0.0 }
 
 decisions:
   # - { phase: <n>, text: <decision>, rationale: <why>, date: <ISO> }

@@ -762,6 +762,8 @@ see the [Project Inception guide](guides/project-inception.md).
 
 ### Always-produced (all projects)
 
+> This is a condensed quick-reference. The [Project Inception guide](guides/project-inception.md) holds the complete artifact catalog, including testing strategy, CI baseline, dev-environment guide, NFRs, repo analysis, and tribal knowledge.
+
 | Artifact | Template |
 |---|---|
 | Inception state | `inception-state-template.yaml` |
@@ -790,8 +792,8 @@ conditional artifacts. Use the five project-type columns to decide which apply.
 | User journeys | ❌ | ❌ | ✅ | ✅ | ❌ |
 | Screen inventory | ❌ | ❌ | ✅ | ✅ | ❌ |
 | UX guidance | ❌ | ❌ | ✅ | ✅ | ❌ |
-| Ubiquitous language | Optional | Optional | Optional | Optional | ❌ |
 | Repo analysis | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Tribal knowledge | ❌ | ❌ | ❌ | ✅ | ❌ |
 | Project PRD | ❌ | ❌ | Optional | Optional | Optional |
 | Assumption register | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Risk register | Optional | Optional | ✅ | ✅ | Optional |

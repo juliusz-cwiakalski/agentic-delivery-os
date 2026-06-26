@@ -453,8 +453,7 @@ Author the compass document (and, conditionally, the discovery artifacts).
 **Devil's advocate.** Run this before the gate:
 
 > Act as a skeptical product leader. Find all weaknesses, hidden costs, and
-> risks in this vision. Where is it most likely to fail? What are we assuming
-> that is probably wrong?
+> risks in this vision.
 
 #### Human gate
 
@@ -487,9 +486,9 @@ Define the current milestone and capture the risks and assumptions behind it.
 > It's 6 months from now. This milestone shipped and flopped. Write the
 > post-mortem: what went wrong?
 
-> For this scope, assess the four risks: Value (will users want it?), Usability
-> (can they use it?), Feasibility (can we build it?), Viability (does it make
-> business sense?).
+> For this scope, assess: Value risk (will users want it?), Usability risk
+> (can they use it?), Feasibility risk (can we build it?), Viability risk
+> (does it make business sense?).
 
 #### Human gate
 
@@ -523,7 +522,7 @@ Decide how the product will be built and stress-test those decisions.
 **Alternative comparison + pre-mortem.** Run both before the gate:
 
 > Present 3 alternative tech-stack approaches with a comparison table: costs,
-> scalability, trade-offs, and when to choose each.
+> scalability, trade-offs, when to choose each.
 
 > This architecture failed at scale. What broke first?
 
@@ -761,6 +760,9 @@ framework-integration, readiness-check, and handoff phases respectively).
 | 3 (Tech stack) | Alternative comparison | "Present 3 alternative tech-stack approaches with a comparison table: costs, scalability, trade-offs, when to choose each." |
 | 3 (Architecture) | Pre-mortem | "This architecture failed at scale. What broke first?" |
 | 4 (Domain) | Unknown-unknowns | "What inception artifacts does this project need that we haven't produced? What are we missing?" |
+
+> The Phase 4 prompt intentionally appends "What are we missing?" to the baseline
+> unknown-unknowns question — a deliberate enrichment, not drift from the source.
 
 ## Inception state schema and resume behavior
 
