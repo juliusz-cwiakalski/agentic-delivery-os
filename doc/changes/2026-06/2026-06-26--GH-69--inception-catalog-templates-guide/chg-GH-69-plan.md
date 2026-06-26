@@ -895,4 +895,4 @@ Read-only research inputs (gitignored, never referenced from deliverables):
 | 7 | done | 2026-06-26 | 2026-06-26 | 81ea2d3 | Overview README restructured into Recommended/Conditional/Optional tables. |
 | 8 | done | 2026-06-26 | 2026-06-26 | 2ed6fe7 | Centerpiece guide: 4 Mermaid diagrams, 8 phases × 4 sub-parts (33), 5-col matrix, schema+resume, anti-sycophancy. |
 | 9 | done | 2026-06-26 | 2026-06-26 | d1d126c | Handbook §18 Inception Artifact Catalog + §4.2 pointer; templates README lists all 17 with DEC-2/DEC-9 notes. |
-| 10 | done | 2026-06-26 | 2026-06-26 | (this commit) | Header pass clean; ghost-check refined; Runbook §7.1 = ALL VERIFICATION CHECKS PASSED (17/17); `test-doc-distribution.sh` exits 0 (72 in-scope docs, no drift). |
+| 10 | done | 2026-06-26 | 2026-06-26 | 238d2af | Header pass clean; ghost-check refined; Runbook §7.1 = ALL VERIFICATION CHECKS PASSED (17/17); `test-doc-distribution.sh` exits 0 (72 in-scope docs, no drift). |
