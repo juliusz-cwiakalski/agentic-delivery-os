@@ -69,6 +69,7 @@ The `reviewer` agent evaluates each applicable item against the diff.
 - [ ] `AGENTS.md` updated when agent team or commands change
 - [ ] New features documented in relevant guide files
 - [ ] Decision records created for significant architectural decisions
+- [ ] New/changed docs under `doc/guides|templates` (incl. `blueprints/` + `*.yaml`) or the handbook/indices carry a valid `ados_distribution` marker (`redistributable` | `internal` | `project-generated`); when `redistributable`, `bash scripts/.tests/test-doc-distribution.sh` passes (no install-set drift)
 
 ### Testing
 

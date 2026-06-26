@@ -2,6 +2,7 @@
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # MIT License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/templates/feature-spec-template.md
+ados_distribution: redistributable
 id: SPEC-<feature-slug>                  # e.g., SPEC-TENANTS, SPEC-BILLING
 status: Current                          # Current | Deprecated
 created: <YYYY-MM-DD>

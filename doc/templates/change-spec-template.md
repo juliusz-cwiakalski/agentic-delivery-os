@@ -2,6 +2,7 @@
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # MIT License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/templates/change-spec-template.md
+ados_distribution: redistributable
 change:
   ref: <workItemRef>                     # e.g., PDEV-123, GH-456
   type: <conventional-type>              # feat | fix | refactor | docs | test | chore | perf | build | ci | revert | style

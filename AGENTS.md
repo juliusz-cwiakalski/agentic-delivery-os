@@ -155,6 +155,17 @@ Before creating new documentation areas, agents should inspect `doc/documentatio
 
 Detail: [doc/guides/unified-change-convention-tracker-agnostic-specification.md](doc/guides/unified-change-convention-tracker-agnostic-specification.md)
 
+### Doc distribution marker (`ados_distribution`)
+
+Every distributable document declares its distribution class via an `ados_distribution` frontmatter marker, so the local install set (`scripts/install.sh`) and the CI drift guard (`scripts/.tests/test-doc-distribution.sh`) derive it automatically — instead of a hand-maintained allowlist.
+
+- Any **new or changed doc** under `doc/guides/`, `doc/templates/` (incl. `blueprints/` and `*.yaml`), or the standalone docs (`doc/documentation-handbook.md`, `doc/00-index.md`, `doc/decisions/README.md`, `doc/decisions/00-index.md`, `.ai/rules/README.md`) **MUST** declare `ados_distribution` with one of: `redistributable` | `internal` | `project-generated`.
+  - `.md` files: the key goes inside the **existing** frontmatter block (never add a new `---` block or a license header for it).
+  - `.yaml` register templates: the key is a **top-level line 1** (no `---` block — it would create multi-doc YAML and break `yaml.safe_load()` consumers).
+- A change that ships a `redistributable` doc **MUST** pass `bash scripts/.tests/test-doc-distribution.sh` (wired into CI; blocks merge on drift).
+
+Canonical values: see `doc/decisions/ODR-0001-classify-yaml-register-templates-redistributable.md`.
+
 ## Repo structure
 
 ```

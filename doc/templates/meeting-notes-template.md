@@ -2,6 +2,7 @@
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # MIT License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/templates/meeting-notes-template.md
+ados_distribution: redistributable
 id: MEETING-<YYYY-MM-DD>-<slug>
 status: Draft # Draft | Accepted
 meeting_date: <YYYY-MM-DD>

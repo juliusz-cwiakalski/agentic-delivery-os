@@ -13,8 +13,10 @@
 #                  Re-running --global updates to the latest version (idempotent).
 #   --local  (-l)  Copy ADOS artifacts into the CURRENT project directory.
 #                  This is the default mode when neither flag is specified.
-#                  Re-running --local updates templates, guides, and handbook while
-#                  preserving project-specific files (pm-instructions.md).
+#                  Re-running --local content-syncs (overwrites) redistributable
+#                  guides/templates/handbook to the latest upstream version while
+#                  preserving project-specific files (pm-instructions.md). Copy a
+#                  template to a working file rather than editing it in place.
 #
 # Interactive mode:
 #   --interactive (-i)  When a file differs from upstream, show a colored unified
@@ -53,6 +55,18 @@ set -o errtrace
 shopt -s inherit_errexit 2>/dev/null || true
 IFS=$'\n\t'
 
+# --- bash>=4 capability check (PR #74 review C2). ---
+# install.sh uses `shopt -s globstar` for recursive template copying
+# (doc/templates/**; see install_local_files). globstar is bash>=4 — on macOS
+# system bash 3.2 the option does not exist and, under `set -e`, the failing
+# `shopt -s globstar` would abort with an opaque error. Fail loudly instead.
+# Mirrors scripts/.tests/test-doc-distribution.sh's capability check.
+if ! (shopt -s globstar) >/dev/null 2>&1; then
+  printf '[ERROR] %s requires bash>=4 (globstar unsupported by this shell: %s). On macOS install bash 4+ (e.g. "brew install bash") or run via the CI container.\n' \
+    "${0##*/}" "${BASH_VERSION:-unknown}" >&2
+  exit 1
+fi
+
 # ============================================================================
 # SETTINGS
 # ============================================================================
@@ -73,27 +87,21 @@ readonly EXIT_EXTERNAL=5
 # ============================================================================
 
 # Files that ALWAYS track upstream ADOS (auto-updated on re-run)
+# NOTE: Generic ADOS guides (doc/guides/*.md) are NOT hand-listed here. Their
+# install set is DERIVED from the `ados_distribution` frontmatter marker (see
+# get_marker() + install_local_files) — only guides marked `redistributable`
+# install. The standalone non-guide docs below live outside the globbed guide
+# class and remain explicit (they are marker-checked by the drift guard).
+# NOTE: doc/decisions/00-index.md is `project-generated` — it is regenerated
+# per-repo (by the script tracked under GH-63), so it is NOT installed here
+# (PR #74 review C3). It is still marker-scanned by the drift guard.
 readonly ADOS_UPDATABLE_FILES=(
   # Documentation handbook
   "doc/documentation-handbook.md"
   # Documentation index
   "doc/00-index.md"
-  # Generic ADOS guides (framework docs, not project-specific)
-  "doc/guides/change-lifecycle.md"
-  "doc/guides/claude-code-setup.md"
-  "doc/guides/copywriting.md"
-  "doc/guides/decision-making.md"
-  "doc/guides/decision-records-management.md"
-  "doc/guides/external-researcher-setup.md"
-  "doc/guides/meeting-preparation-and-summarization.md"
-  "doc/guides/onboarding-existing-project.md"
-  "doc/guides/opencode-agents-and-commands-guide.md"
-  "doc/guides/opencode-model-configuration.md"
-  "doc/guides/pr-platform-integration.md"
-  "doc/guides/unified-change-convention-tracker-agnostic-specification.md"
   # Decision records stubs
   "doc/decisions/README.md"
-  "doc/decisions/00-index.md"
   # AI rules index
   ".ai/rules/README.md"
 )
@@ -646,6 +654,64 @@ require_project_root() {
   exit "${EXIT_USAGE}"
 }
 
+# Read the `ados_distribution` marker from a doc using a TWO-PATH parser (CRIT-1):
+#   .md        -> the FIRST `---`-delimited frontmatter block only (line 1 must be
+#                 `---`); within it, match `^ados_distribution:[ \t]*(.+)`, skipping
+#                 `^#` comment lines; occurrences in the body or a second block are
+#                 ignored.
+#   .yaml/.yml -> a TOP-LEVEL `^ados_distribution:` key anywhere (these register
+#                 templates have no frontmatter; a `---` block would break
+#                 yaml.safe_load() consumers).
+# CRLF-tolerant (a trailing \r is stripped per record so the regexes still match
+# on a Windows working tree) and strips surrounding single/double quotes from the
+# value (valid YAML `ados_distribution: "x"` / '"x"' returns the bare enum).
+# Returns the trimmed marker value, or "missing" if absent / no frontmatter.
+# (Pure POSIX awk — NFR-4: no YAML library.) Mirrors the guard's parser EXACTLY.
+get_marker() {
+  local -r file="$1"
+  local ext
+  ext="${file##*.}"
+  case "${ext}" in
+    md)
+      awk '
+        BEGIN { in_fm = 0; val = "missing" }
+        { sub(/\r$/, "") }
+        NR == 1 && /^---[ \t]*$/ { in_fm = 1; next }
+        in_fm && /^---[ \t]*$/ { in_fm = 0 }
+        in_fm && /^[#]/ { next }
+        in_fm && /^ados_distribution:[ \t]*.+$/ {
+          s = $0
+          sub(/^ados_distribution:[ \t]*/, "", s)
+          sub(/[ \t]+$/, "", s)
+          sub(/^['"'"'"]/, "", s)
+          sub(/['"'"'"]$/, "", s)
+          val = s
+          in_fm = 0
+        }
+        END { print val }
+      ' "${file}"
+      ;;
+    yaml|yml)
+      awk '
+        BEGIN { val = "missing" }
+        { sub(/\r$/, "") }
+        /^ados_distribution:[ \t]*.+$/ {
+          s = $0
+          sub(/^ados_distribution:[ \t]*/, "", s)
+          sub(/[ \t]+$/, "", s)
+          sub(/^['"'"'"]/, "", s)
+          sub(/['"'"'"]$/, "", s)
+          val = s
+        }
+        END { print val }
+      ' "${file}"
+      ;;
+    *)
+      printf 'missing'
+      ;;
+  esac
+}
+
 install_local_files() {
   local -r source_dir="$1"
 
@@ -670,16 +736,44 @@ install_local_files() {
     fi
   done
 
-  # --- Templates (always track upstream) ---
+  # --- Guides: install set DERIVED from the ados_distribution marker ---
+  # Only guides marked `redistributable` are installed (the hand-list is gone).
+  # This is the marker-driven half of F-2: adding a redistributable guide needs
+  # no manifest edit; the guard (test-doc-distribution.sh) keeps the set correct.
+  if [[ -d "${source_dir}/doc/guides" ]]; then
+    local guide_file marker guide_name
+    for guide_file in "${source_dir}/doc/guides"/*.md; do
+      [[ -f "${guide_file}" ]] || continue
+      marker="$(get_marker "${guide_file}")"
+      if [[ "${marker}" != "redistributable" ]]; then
+        log_debug "skip   doc/guides/$(basename "${guide_file}") (ados_distribution=${marker})"
+        continue
+      fi
+      guide_name="$(basename "${guide_file}")"
+      copy_updatable_file "${guide_file}" "doc/guides/${guide_name}" "doc/guides/${guide_name}"
+    done
+  fi
+
+  # --- Templates: recursive install (*.md + *.yaml + blueprints/**) ---
+  # Per ODR-0001 / DEC-1 / DEC-2 — blueprints and the 4 YAML register templates
+  # now install (previously the flat `*.md` glob silently dropped them).
+  # Reuses copy_updatable_file (content-sync: overwrite only when content differs).
   if [[ -d "${source_dir}/${ADOS_TEMPLATE_DIR}" ]]; then
     ensure_dir "${ADOS_TEMPLATE_DIR}" "${ADOS_TEMPLATE_DIR}"
-    local tmpl_file
-    for tmpl_file in "${source_dir}/${ADOS_TEMPLATE_DIR}"/*.md; do
+    # globstar covers nested blueprints/**; nullglob keeps unmatched globs empty.
+    local _gs_was_on="off" _ng_was_on="off"
+    shopt -q globstar && _gs_was_on="on"
+    shopt -q nullglob && _ng_was_on="on"
+    shopt -s globstar nullglob
+    local tmpl_file tmpl_rel
+    for tmpl_file in "${source_dir}/${ADOS_TEMPLATE_DIR}"/**/*.md "${source_dir}/${ADOS_TEMPLATE_DIR}"/**/*.yaml; do
       [[ -f "${tmpl_file}" ]] || continue
-      local name
-      name="$(basename "${tmpl_file}")"
-      copy_updatable_file "${tmpl_file}" "${ADOS_TEMPLATE_DIR}/${name}" "${ADOS_TEMPLATE_DIR}/${name}"
+      # Preserve the relative path under doc/templates/ (e.g. blueprints/x.md).
+      tmpl_rel="${tmpl_file#"${source_dir}/"}"
+      copy_updatable_file "${tmpl_file}" "${tmpl_rel}" "${tmpl_rel}"
     done
+    [[ "${_gs_was_on}" == "off" ]] && shopt -u globstar
+    [[ "${_ng_was_on}" == "off" ]] && shopt -u nullglob
   else
     log_warn "Templates directory not found: ${source_dir}/${ADOS_TEMPLATE_DIR}"
   fi
@@ -811,8 +905,12 @@ Modes:
                      definitions to ~/.config/opencode/ (available everywhere).
                      Re-running pulls latest changes and updates all definitions.
   -l, --local        Copy ADOS artifacts into the current project (default).
-                     Re-running updates templates, guides, and handbook to latest
-                     ADOS while preserving project-specific files (pm-instructions.md).
+                     Re-running content-syncs (overwrites) redistributable guides,
+                     templates, and handbook to the latest ADOS version while
+                     preserving project-specific files (pm-instructions.md).
+                     NOTE: copy a template to a working file rather than editing
+                     it in place — re-running will overwrite in-place edits to
+                     redistributable docs.
 
 Tool Selection:
       --tool <name>  Which AI coding tool to install for (default: opencode)
@@ -832,7 +930,10 @@ Options:
       --allow-non-root   Allow local install in a subdirectory (for monorepo subprojects)
 
 File handling (--local mode):
-  Updatable files (guides, templates, handbook) are auto-updated to match upstream.
+  Redistributable files (guides, templates, handbook) are CONTENT-SYNCED to
+  upstream on every re-run — overwritten when content differs to match the latest
+  ADOS version. To customize, copy a template to a working file rather than
+  editing it in place (re-running will overwrite in-place edits).
   Project-specific files (pm-instructions.md) are preserved if they exist locally.
   Use --interactive to review each diff, or --force to overwrite everything.
 

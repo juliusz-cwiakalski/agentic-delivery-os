@@ -30,6 +30,18 @@ set -o errtrace
 shopt -s inherit_errexit 2>/dev/null || true
 IFS=$'\n\t'
 
+# --- bash>=4 capability check (PR #74 review C2). ---
+# uninstall.sh uses `shopt -s globstar` for marker-driven recursive template
+# removal (doc/templates/**; see remove_local_files). globstar is bash>=4 — on
+# macOS system bash 3.2 the option does not exist and, under `set -e`, the
+# failing `shopt -s globstar` would abort with an opaque error. Fail loudly
+# instead. Mirrors scripts/.tests/test-doc-distribution.sh's capability check.
+if ! (shopt -s globstar) >/dev/null 2>&1; then
+  printf '[ERROR] %s requires bash>=4 (globstar unsupported by this shell: %s). On macOS install bash 4+ (e.g. "brew install bash") or run via the CI container.\n' \
+    "${0##*/}" "${BASH_VERSION:-unknown}" >&2
+  exit 1
+fi
+
 # ============================================================================
 # SETTINGS
 # ============================================================================
@@ -73,42 +85,27 @@ readonly ADOS_COMMAND_FILES=(
 )
 
 # Known ADOS local files — project-specific (customized per project)
-# Note: pm-instructions.md is NOT removed — it's user-created (by /bootstrap or manually),
-# not installed by install.sh. Removing it would lose project-specific configuration.
+# Note: pm-instructions.md (.ai/agent/pm-instructions.md) is NOT removed — it's
+# user-created (by /bootstrap or manually), never installed by install.sh, and
+# lives outside the doc/guides|doc/templates|standalone paths walked below.
 readonly ADOS_LOCAL_PROJECT_FILES=(
 )
 
-# Known ADOS local files — updatable (track upstream, auto-updated by install)
-readonly ADOS_LOCAL_UPDATABLE_FILES=(
+# Standalone non-guide DOC paths to CHECK for marker-driven removal (PR #74
+# review C1). These live outside the globbed doc/guides|doc/templates classes,
+# so the removal loop walks this explicit list and removes each ONLY when its
+# `ados_distribution` marker is `redistributable` (e.g. decisions/00-index.md is
+# `project-generated` and is therefore preserved). Mirrors install.sh's
+# ADOS_UPDATABLE_FILES non-guide entries. Guides and templates are NOT listed
+# here — their removal is glob+marker-driven (see remove_local_files). This list
+# MUST stay in sync with install.sh's standalone manifest (independent copies,
+# like the guard's STANDALONE set, so a drift is observable).
+readonly ADOS_LOCAL_STANDALONE_DOCS=(
   "doc/documentation-handbook.md"
   "doc/00-index.md"
-  # Guides
-  "doc/guides/change-lifecycle.md"
-  "doc/guides/unified-change-convention-tracker-agnostic-specification.md"
-  "doc/guides/decision-records-management.md"
-  "doc/guides/opencode-agents-and-commands-guide.md"
-  "doc/guides/opencode-model-configuration.md"
-  "doc/guides/tools-convention.md"
-  "doc/guides/copywriting.md"
-  "doc/guides/system-dependencies.md"
-  "doc/guides/onboarding-existing-project.md"
-  # Decision records stubs
   "doc/decisions/README.md"
   "doc/decisions/00-index.md"
-  # AI rules index
   ".ai/rules/README.md"
-)
-
-# Known ADOS local template files
-readonly ADOS_LOCAL_TEMPLATE_FILES=(
-  "doc/templates/north-star-template.md"
-  "doc/templates/README.md"
-  "doc/templates/implementation-plan-template.md"
-  "doc/templates/test-plan-template.md"
-  "doc/templates/test-spec-template.md"
-  "doc/templates/feature-spec-template.md"
-  "doc/templates/decision-record-template.md"
-  "doc/templates/change-spec-template.md"
 )
 
 # ============================================================================
@@ -155,6 +152,66 @@ run_cmd() {
 # MOCKABLE WRAPPERS (for testing)
 # ============================================================================
 _rm() { command rm "$@"; }
+
+# ----------------------------------------------------------------------------
+# get_marker() — TWO-PATH parser, mirrors install.sh's parser EXACTLY (PR #74
+# review C1). This is a deliberate byte-for-byte copy so marker-driven removal
+# agrees with marker-driven install; consolidating the two into a shared lib is
+# a separate future refactor (tracked independently).
+#   .md        -> the FIRST `---`-delimited frontmatter block only (line 1 must
+#                 be `---`); within it, match `^ados_distribution:[ \t]*(.+)`,
+#                 skipping `^#` comment lines; body / second-block occurrences
+#                 are ignored.
+#   .yaml/.yml -> a TOP-LEVEL `^ados_distribution:` key anywhere (register
+#                 templates have no frontmatter; a `---` block would break
+#                 yaml.safe_load() consumers).
+# CRLF-tolerant and strips surrounding single/double quotes from the value.
+# Returns the trimmed marker value, or "missing" if absent / no frontmatter.
+# ----------------------------------------------------------------------------
+get_marker() {
+  local -r file="$1"
+  local ext
+  ext="${file##*.}"
+  case "${ext}" in
+    md)
+      awk '
+        BEGIN { in_fm = 0; val = "missing" }
+        { sub(/\r$/, "") }
+        NR == 1 && /^---[ \t]*$/ { in_fm = 1; next }
+        in_fm && /^---[ \t]*$/ { in_fm = 0 }
+        in_fm && /^[#]/ { next }
+        in_fm && /^ados_distribution:[ \t]*.+$/ {
+          s = $0
+          sub(/^ados_distribution:[ \t]*/, "", s)
+          sub(/[ \t]+$/, "", s)
+          sub(/^['"'"'"]/, "", s)
+          sub(/['"'"'"]$/, "", s)
+          val = s
+          in_fm = 0
+        }
+        END { print val }
+      ' "${file}"
+      ;;
+    yaml|yml)
+      awk '
+        BEGIN { val = "missing" }
+        { sub(/\r$/, "") }
+        /^ados_distribution:[ \t]*.+$/ {
+          s = $0
+          sub(/^ados_distribution:[ \t]*/, "", s)
+          sub(/[ \t]+$/, "", s)
+          sub(/^['"'"'"]/, "", s)
+          sub(/['"'"'"]$/, "", s)
+          val = s
+        }
+        END { print val }
+      ' "${file}"
+      ;;
+    *)
+      printf 'missing'
+      ;;
+  esac
+}
 
 # ============================================================================
 # DOMAIN FUNCTIONS — Shared
@@ -304,23 +361,67 @@ require_project_root() {
 }
 
 remove_local_files() {
-  # Remove project-specific files
-  local file
+  # Marker-driven removal (PR #74 review C1) — symmetric to install.sh's
+  # marker-driven install. The removal set is DERIVED from each installed
+  # project file's `ados_distribution` marker: only `redistributable` files are
+  # removed; `internal` / `project-generated` / unmarked files are preserved.
+  # This eliminates the stale hand-list that orphaned newly-added redistributable
+  # guides/templates on uninstall.
+  #
+  # Note: pm-instructions.md (.ai/agent/pm-instructions.md) is NOT removed — it
+  # is user-created (by /bootstrap or manually), never installed by install.sh,
+  # and lives outside the paths walked below.
+  local file marker
+
+  # --- Project-specific files ---
   for file in "${ADOS_LOCAL_PROJECT_FILES[@]}"; do
     remove_file "${file}" "${file}"
   done
 
-  # Remove updatable files
-  for file in "${ADOS_LOCAL_UPDATABLE_FILES[@]}"; do
-    remove_file "${file}" "${file}"
+  # --- Guides: marker-driven (remove only redistributable-marked) ---
+  if [[ -d "doc/guides" ]]; then
+    for file in doc/guides/*.md; do
+      [[ -f "${file}" ]] || continue
+      marker="$(get_marker "${file}")"
+      if [[ "${marker}" == "redistributable" ]]; then
+        remove_file "${file}" "${file}"
+      else
+        log_debug "keep   ${file} (ados_distribution=${marker})"
+      fi
+    done
+  fi
+
+  # --- Templates: marker-driven recursive (md + yaml incl. blueprints/**) ---
+  if [[ -d "doc/templates" ]]; then
+    local _gs_was_on="off" _ng_was_on="off"
+    shopt -q globstar && _gs_was_on="on"
+    shopt -q nullglob && _ng_was_on="on"
+    shopt -s globstar nullglob
+    for file in doc/templates/**/*.md doc/templates/**/*.yaml; do
+      [[ -f "${file}" ]] || continue
+      marker="$(get_marker "${file}")"
+      if [[ "${marker}" == "redistributable" ]]; then
+        remove_file "${file}" "${file}"
+      else
+        log_debug "keep   ${file} (ados_distribution=${marker})"
+      fi
+    done
+    [[ "${_gs_was_on}" == "off" ]] && shopt -u globstar
+    [[ "${_ng_was_on}" == "off" ]] && shopt -u nullglob
+  fi
+
+  # --- Standalone non-guide docs: marker-driven (explicit check list) ---
+  for file in "${ADOS_LOCAL_STANDALONE_DOCS[@]}"; do
+    [[ -f "${file}" ]] || continue
+    marker="$(get_marker "${file}")"
+    if [[ "${marker}" == "redistributable" ]]; then
+      remove_file "${file}" "${file}"
+    else
+      log_debug "keep   ${file} (ados_distribution=${marker})"
+    fi
   done
 
-  # Remove template files
-  for file in "${ADOS_LOCAL_TEMPLATE_FILES[@]}"; do
-    remove_file "${file}" "${file}"
-  done
-
-  # Remove empty directories (only if empty)
+  # --- Remove empty directories (only if empty) ---
   local dir
   for dir in "doc/templates" "doc/overview" "doc/spec/features" "doc/spec" "doc/decisions" "doc/changes" "doc/guides" ".ai/agent" ".ai/rules" ".ai/local" ".ai"; do
     if [[ -d "${dir}" ]]; then

@@ -1,0 +1,73 @@
+change_id: GH-67
+title: "Marker-driven doc distribution + install-manifest guard (prevent redistributable-doc omissions)"
+slug: "marker-driven-doc-distribution"
+branch: "feat/GH-67/marker-driven-doc-distribution"
+phases:
+  clarify_scope: { started: "2026-06-25T00:00:00Z", completed: "2026-06-25T00:00:00Z" }
+  specification: { started: "2026-06-25T00:00:00Z", completed: "2026-06-25T00:00:00Z" }
+  test_planning: { started: "2026-06-25T00:00:00Z", completed: "2026-06-25T00:00:00Z" }
+  delivery_planning: { started: "2026-06-25T00:00:00Z", completed: "2026-06-25T00:00:00Z" }
+  # RT1 (red-team round 1) ran on uncommitted artifacts; verdict REWORK. Revisions in progress; delivery_planning marks completed only after revisions land.
+  delivery: { started: "2026-06-25T00:00:00Z", completed: "2026-06-25T00:00:00Z" }
+  system_spec_update: { started: "2026-06-25T00:00:00Z", completed: "2026-06-25T00:00:00Z" }
+  review_fix: { started: "2026-06-25T00:00:00Z", completed: "2026-06-25T00:00:00Z", note: "reopened + completed for PR #74 review-feedback iteration (commits cd9644c, f3a677a)" }
+  quality_gates: { started: "2026-06-25T00:00:00Z", completed: "2026-06-25T00:00:00Z" }
+  dod_check: { started: "2026-06-25T00:00:00Z", completed: "2026-06-25T00:00:00Z" }
+  pr_creation: { started: "2026-06-25T00:00:00Z", completed: "2026-06-25T00:00:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/74" }
+decisions:
+  - text: "ODR-0001: the 4 doc/templates/*.yaml register templates are 'redistributable' (marker + installed + guarded), not internal. Resolved by @decision-advisor (R1, delegated authority). Grounded in ticket's drift-elimination north-star + repo precedent (profile governs usage, not distribution). Consequence: install.sh globs *.yaml too; guard scans *.yaml. DR at doc/decisions/ODR-0001-classify-yaml-register-templates-redistributable.md (committed c850d36, rides with GH-67 PR)."
+    date: "2026-06-25"
+open_questions: []
+blockers: []
+notes:
+  - text: "Scope audit completed. Ticket classification matches reality: 15 guides = 12 redistributable + 3 internal (adding-tool-support, ados-tools-system-dependencies, tools-convention). Frontmatter marker exists NOWHERE in repo. install.sh hand-list at L76-99; templates glob L677 non-recursive (*.md only) so blueprints/ + *.yaml never installed. No test-doc-distribution.sh; ci.yml has no doc-distribution gate."
+    type: info
+    date: "2026-06-25"
+  - text: "Ticket says '(13)' redistributable guides but enumerates 12. Enumeration is authoritative (12). Treating '(13)' as a typo; not blocking."
+    type: info
+    date: "2026-06-25"
+  - text: "Drive-by scope additions (related drift symptoms, minor): (1) test-install.sh mock+assertions omit decision-making.md (must update as part of mechanism change anyway); (2) test-uninstall.sh has stale fixture 'system-dependencies.md' (real file is ados-tools-system-dependencies.md) — include as 2-line fixture fix, same drift class."
+    type: decision
+    date: "2026-06-25"
+  - text: "User requested TWO red-team rounds: RT1 after artifacts (spec/plan/test-plan), RT2 after delivery. Findings addressed via artifact revision or followup phases/changes. Stop at PR for human review."
+    type: info
+    date: "2026-06-25"
+  - text: "RETRO: @decision-advisor committed ODR-0001 directly to local main (c850d36) rather than to the feature branch. Functionally fine (rides with GH-67 PR since origin/main is behind local main), but the norm is branch-per-change. For future clarify_scope decision delegations, instruct @decision-advisor to write the DR file WITHOUT committing (PM commits it on the feature branch). Minor; no rework."
+    type: retro
+    date: "2026-06-25"
+  - text: "SPEC DONE (18 ACs, 54-doc classification table = 51 redistributable + 3 internal). Two OQs surfaced by @spec-writer, both resolved without human: OQ-1 (POSIX parsing of mixed frontmatter) -> defer to coder/plan (robust bash parsing, no YAML lib per NFR-4); OQ-2 (guard reject invalid marker values?) -> PM-decided YES: guard validates enum {redistributable, internal, project-generated}; invalid value treated like missing (forcing-function consistency). Test-plan + plan instructed to include enum validation as first-class guard behavior."
+    type: decision
+    date: "2026-06-25"
+  - text: "RISK: @runner subagent fails to relay output in this session (3 consecutive empty task_results; @general works reliably). Fallback: use @general for command execution; monitor @committer. If @committer also fails, commit via @general with explicit Conventional Commit instructions."
+    type: risk
+    date: "2026-06-25"
+  - text: "TEST-PLAN + PLAN DONE. Test-plan: 31 TCs, 19/19 ACs traced (spec §17 has 19 not 18 — count nuance, all covered), independent-oracle drift detector design (parser shared, set-derivation not — avoids tautological guard). Plan: 5 phases A-E, 17/18 ACs covered + 1 partial (AC-F4-1) escalated to PM (F-1)."
+    type: info
+    date: "2026-06-25"
+  - text: "OQ-TP-1 (non-blocking): spec §13 says copy_updatable_file is 'create-if-absent' but live code content-syncs (overwrites when differing). Ticket AC #7 'non-destructive' means no user-data-loss, not never-overwrite-upstream-docs (docs are meant to track upstream). Test-plan TC-INST-005 correctly wrote to actual behavior. Spec wording to be reconciled if RT1 flags."
+    type: decision
+    date: "2026-06-25"
+  - text: "F-1 RESOLVED (PM decision): .ai/agent/pm-instructions.md has unrelated uncommitted change ('Reading Issue Comments' section from inception session). Decision: commit the unrelated fix as a SEPARATE commit with non-GH-67 message BEFORE Phase 4, then Phase 4 adds the GH-67 marker-requirement note. Preserves work, separates concerns. Coder instructed. Flag prominently in PR description."
+    type: decision
+    date: "2026-06-25"
+  - text: "DELIVERY DONE (5 commits: 4ec7ce7 markers, 57fae30 install refactor, 005472e guard+tests, a25e5ab pm-instructions unrelated fix [Phase 4.1], 8f74e30 CI+AGENTS+reviewer checklist). Coder ran all commands directly (sidestepped runner/committer relay issue). Justified deviation: scripts/uninstall.sh also got 1-line edit (stale fixture rename required matching uninstall entry). Independent verification (via @general) PASS 0 defects: 54 markers correct (50 .md + 4 yaml), 3 internal guides correct, hand-list GONE from install.sh, recursive globstar templates, CI wired, all 3 process-hook docs updated, no .ados-claude drift, no license header on guard. All 5 test files exit 0. Doc-syncer: no changes needed (self-contained). Phases 5/6/8 satisfied."
+    type: info
+    date: "2026-06-25"
+  - text: "RT1 VERDICT: REWORK. Design sound, §8.3 enumeration EXACTLY correct (54=51+3 verified by independent re-count). 1 Critical + 4 Major, all propagation/claims not architecture. CRIT-1: 4 YAML registers have NO frontmatter (start with data e.g. 'calendar_id:...' not '---') — spec falsely claimed all 54 have frontmatter; plan Phase 1.3 'insert in existing frontmatter' impossible for YAML. MAJ-1: spec stale on OQ-2 (still '4 modes/open'; downstream resolved 5). MAJ-2: plan stale on F-1 (says don't touch pm-instructions; pm-notes resolved). MAJ-3: spec §12 + ODR-0001 C-1 falsely claim 'create-if-absent'; live code content-syncs. MAJ-4: plan AC count 18 (actual 19)."
+    type: info
+    date: "2026-06-25"
+  - text: "REWORK DECISIONS (PM, no human escalation needed): CRIT-1 -> two-path parser keyed on extension: .md uses frontmatter --- block; .yaml uses top-level 'ados_distribution:' key (line 1). Rejected: YAML frontmatter block (would create multi-doc YAML breaking safe_load consumers). MAJ-3 -> keep content-sync for templates (correct: templates are pristine references; adopters copy-from not edit-in-place; matches existing .md template behavior); correct false 'create-if-absent' wording in spec §12 + ODR-0001 C-1; no behavior change/new TC beyond accurate doc + copy-from-template convention note. MAJ-1/2/4 -> propagate resolved decisions into spec + plan. Revising all 3 artifacts in parallel with precise edit locations from red-team."
+    type: decision
+    date: "2026-06-25"
+  - text: "REVIEWS (post-delivery): @reviewer PASS (19/19 ACs, 0 blockers, 5 non-blocking findings). RT2 (@red-team-coordinator) PASS_WITH_RISKS (no blockers; mutation-tested guard = proven non-tautological; 2 residual risks + QA gap). Both: merge-safe."
+    type: info
+    date: "2026-06-25"
+  - text: "FINDINGS DISPOSITION (PM): FIX-NOW as followup phase (in-scope guard hardening, one commit): committed negative-mode tests for 5 guard modes (reviewer#2/RT2#2, highest value), CRLF \\r stripping in get_marker both copies + self-test (RT2#4), quoted-value stripping (RT2#5), bash>=4 declaration/early-check on guard (reviewer#3/RT2#6), ci.yml trailing newline (reviewer#4), STANDALONE mirror cross-ref comment (reviewer#5), EXIT trap temp cleanup (RT2#7), install.sh --help content-sync warning (RT2#3 code part). PROPOSE FOLLOW-UP TICKETS (out-of-scope expansions, await human approval per ticket-creation policy): (T1) uninstall.sh marker-driven symmetry (reviewer#1) — uninstall keeps hand-list so it drifts same class; (T2) new-doc-class doc/** catch-all blind spot (RT2#1) — guard only covers enumerated DM-2 classes, a new top-level doc dir is invisible. SPEC Flow-3 rewording (RT2#8) + a25e5ab-is-own-ticket (RT2#9) noted, no action."
+    type: decision
+    date: "2026-06-25"
+  - text: "REMEDIATION DONE (commit 2152e35): committed negative-mode tests for 5 guard modes (test-doc-distribution-modes.sh, with neutered-mode sensitivity proof — each independently sensitive), CRLF+quoted-value parsing in get_marker both copies, bash>=4 early check, EXIT/INT/TERM trap, install.sh --help content-sync warning, ci.yml newline, STANDALONE mirror cross-ref. Test seam ADOS_GUARD_ACTUAL_SET_FILE defaults to real install (CI unchanged) — independently verified guard stays a true independent oracle. All 6 test files green. DoD PASS: 19/19 ACs, all phases complete, all plan tasks done."
+  - text: "PR #74 REVIEW-FEEDBACK ITERATION: 3 inline comments, all accepted. C1 (Copilot, VALID): uninstall.sh hand-list incomplete — missing 5 redistributable guides + ~26 templates → orphans on uninstall. Confirms @reviewer#1. FIX: marker-driven uninstall (symmetric to install; eliminates follow-up T1). C2 (Copilot, VALID): install.sh uses globstar with no bash>=4 guard → opaque fail on macOS bash 3.2. Confirms RT2/reviewer#3. FIX: early globstar-capability check in install.sh (+uninstall.sh). C3 (OWNER juliusz-cwiakalski, DIRECTIVE): doc/decisions/00-index.md should be project-generated (regenerated per-repo by script in GH-63), NOT redistributable. FIX: reclassify marker, stop installing, make guard expected-set marker-aware, update tests + spec/plan/test-plan tables (50 redistributable + 1 project-generated + 3 internal = 54)."
+  - text: "PR #74 REVIEW-FEEDBACK ADDRESSED (commits cd9644c + f3a677a, pushed): C1 marker-driven uninstall (uninstall.sh get_marker + remove_local_files scans installed docs, removes only redistributable; preserves internal/project-generated; eliminates follow-up T1), C2 bash>=4 globstar guard in install.sh + uninstall.sh, C3 decisions/00-index.md -> project-generated (not installed; guard scans it for marker but excludes from expected set; install set now 50). All 6 test files green (uninstall 30/30 +1 preservation test). Independent verification PASS. Follow-up T1 (uninstall marker-driven) now DONE — removed from follow-up proposals; only T2 (doc/** catch-all) remains."
+  - text: "RETRO (system_spec_update miss): the phase WAS performed (@doc-syncer reported 'no installer spec exists') but concluded 'no change needed' via narrow framing — change-scoped reconciliation ('does this change invalidate an EXISTING spec?'), not a spec-coverage audit. Root causes: (1) no gate for 'modifying a feature that has no spec'; (2) doc-syncer rationalized AGENTS.md as the de-facto installer spec; (3) PM accepted 'no change needed' unchallenged; (4) both red-team rounds reviewed artifact quality, not spec coverage across doc/spec/. Lesson: system_spec_update + clarify_scope need an explicit 'does the changed feature area have a feature spec?' check. Follow-ups created: GH-77 (author doc/spec/features/feature-installer.md) + GH-78 (spec-coverage gate process fix, Proposals A+B). Retro note also recorded on the GH-67 issue."
+    type: retro
+    date: "2026-06-26"

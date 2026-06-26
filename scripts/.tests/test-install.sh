@@ -185,29 +185,48 @@ create_mock_ados_source() {
   printf '# Documentation Handbook\n' > "${base}/doc/documentation-handbook.md"
   printf '# Doc Index\n' > "${base}/doc/00-index.md"
 
-  # Guide files — MUST match the ADOS_UPDATABLE_FILES manifest in install.sh.
-  printf '# Change Lifecycle\n' > "${base}/doc/guides/change-lifecycle.md"
-  printf '# Claude Code Setup\n' > "${base}/doc/guides/claude-code-setup.md"
-  printf '# Copywriting\n' > "${base}/doc/guides/copywriting.md"
-  printf '# Decision Records Management\n' > "${base}/doc/guides/decision-records-management.md"
-  printf '# External Researcher Setup\n' > "${base}/doc/guides/external-researcher-setup.md"
-  printf '# Meeting Preparation And Summarization\n' > "${base}/doc/guides/meeting-preparation-and-summarization.md"
-  printf '# Onboarding Existing Project\n' > "${base}/doc/guides/onboarding-existing-project.md"
-  printf '# Opencode Agents And Commands Guide\n' > "${base}/doc/guides/opencode-agents-and-commands-guide.md"
-  printf '# Opencode Model Configuration\n' > "${base}/doc/guides/opencode-model-configuration.md"
-  printf '# PR Platform Integration\n' > "${base}/doc/guides/pr-platform-integration.md"
-  printf '# Unified Change Convention\n' > "${base}/doc/guides/unified-change-convention-tracker-agnostic-specification.md"
+  # Guide files — the install set is now DERIVED from the ados_distribution
+  # marker (install.sh installs only guides marked `redistributable`). Each
+  # mock guide therefore carries frontmatter with the marker. This mirrors the
+  # real repo (Phase 1) so the marker-driven install path is exercised.
+  _mock_guide() {
+    # $1=filename  $2=marker  $3=heading
+    printf -- '---\nados_distribution: %s\n---\n%s\n' "$2" "$3" > "${base}/doc/guides/$1"
+  }
+  _mock_guide change-lifecycle.md                          redistributable "# Change Lifecycle"
+  _mock_guide claude-code-setup.md                         redistributable "# Claude Code Setup"
+  _mock_guide copywriting.md                               redistributable "# Copywriting"
+  # decision-making.md was previously OMITTED from both mock and assertions
+  # despite being in the manifest — the #62 drift. It is now included (AC-F7-1).
+  _mock_guide decision-making.md                           redistributable "# Decision Making"
+  _mock_guide decision-records-management.md               redistributable "# Decision Records Management"
+  _mock_guide external-researcher-setup.md                 redistributable "# External Researcher Setup"
+  _mock_guide meeting-preparation-and-summarization.md     redistributable "# Meeting Preparation And Summarization"
+  _mock_guide onboarding-existing-project.md               redistributable "# Onboarding Existing Project"
+  _mock_guide opencode-agents-and-commands-guide.md        redistributable "# Opencode Agents And Commands Guide"
+  _mock_guide opencode-model-configuration.md              redistributable "# Opencode Model Configuration"
+  _mock_guide pr-platform-integration.md                   redistributable "# PR Platform Integration"
+  _mock_guide unified-change-convention-tracker-agnostic-specification.md redistributable "# Unified Change Convention"
+  # An internal guide must NOT be installed (AC-F2-3).
+  _mock_guide adding-tool-support.md                       internal "# Adding Tool Support"
 
-  # Decision stubs
+  # Decision stubs. README.md is redistributable (installed); 00-index.md is
+  # `project-generated` (regenerated per-repo per GH-63) and is NOT installed
+  # (PR #74 review C3) — it carries the marker for realism but install.sh no
+  # longer lists it in ADOS_UPDATABLE_FILES.
   printf '# Decisions README\n' > "${base}/doc/decisions/README.md"
-  printf '# Decisions Index\n' > "${base}/doc/decisions/00-index.md"
+  printf -- '---\nados_distribution: project-generated\n---\n# Decisions Index\n' > "${base}/doc/decisions/00-index.md"
 
   # AI rules index
   printf '# AI Rules Index\n' > "${base}/.ai/rules/README.md"
 
-  # Template files
+  # Template files (install.sh copies doc/templates/**/*.md + *.yaml recursively).
   printf '# Change Spec Template\n' > "${base}/doc/templates/change-spec-template.md"
   printf '# Feature Spec Template\n' > "${base}/doc/templates/feature-spec-template.md"
+  # A nested blueprint and a YAML register — both must install (AC-F2-2).
+  mkdir -p "${base}/doc/templates/blueprints"
+  printf '# Code Review Blueprint\n' > "${base}/doc/templates/blueprints/code-review-instructions--example.md"
+  printf 'register_id: MOCK-REGISTER-001\nstatus: draft\n' > "${base}/doc/templates/register-template.yaml"
 
   printf '%s' "${base}"
 }
@@ -489,7 +508,12 @@ test_local_install_creates_structure() {
   # Check new updatable files were created
   assert_file_exists "${project_dir}/doc/guides/change-lifecycle.md" "change-lifecycle guide"
   assert_file_exists "${project_dir}/doc/decisions/README.md" "decisions README"
-  assert_file_exists "${project_dir}/doc/decisions/00-index.md" "decisions index"
+  # decisions/00-index.md is `project-generated` (regenerated per-repo per GH-63)
+  # and is NOT installed (PR #74 review C3).
+  [[ ! -f "${project_dir}/doc/decisions/00-index.md" ]] || {
+    printf '  decisions/00-index.md must NOT be installed (project-generated)\n' >&2
+    return 1
+  }
   assert_file_exists "${project_dir}/.ai/rules/README.md" "rules index"
 
   # Check directories were created
@@ -768,10 +792,11 @@ test_local_install_creates_guides() {
     install_local_files "${source_dir}"
   )
 
-  # Check all manifest guide files were created
+  # Check all marker-derived guide files were created
   assert_file_exists "${project_dir}/doc/guides/change-lifecycle.md"
   assert_file_exists "${project_dir}/doc/guides/claude-code-setup.md"
   assert_file_exists "${project_dir}/doc/guides/copywriting.md"
+  assert_file_exists "${project_dir}/doc/guides/decision-making.md"
   assert_file_exists "${project_dir}/doc/guides/decision-records-management.md"
   assert_file_exists "${project_dir}/doc/guides/external-researcher-setup.md"
   assert_file_exists "${project_dir}/doc/guides/meeting-preparation-and-summarization.md"
@@ -796,7 +821,12 @@ test_local_install_creates_decision_stubs() {
   )
 
   assert_file_exists "${project_dir}/doc/decisions/README.md"
-  assert_file_exists "${project_dir}/doc/decisions/00-index.md"
+  # decisions/00-index.md is `project-generated` (regenerated per-repo per GH-63)
+  # and is NOT installed (PR #74 review C3).
+  [[ ! -f "${project_dir}/doc/decisions/00-index.md" ]] || {
+    printf '  decisions/00-index.md must NOT be installed (project-generated)\n' >&2
+    return 1
+  }
 }
 
 test_local_install_creates_rules_index() {
@@ -834,13 +864,80 @@ test_local_install_updates_guides() {
     install_local_files "${source_dir}"
   )
 
-  # Guides are updatable — should be updated to upstream content
+  # Guides are updatable — should be content-synced to upstream (now frontmatter + heading)
   local content
   content="$(cat "${project_dir}/doc/guides/change-lifecycle.md")"
-  assert_eq "# Change Lifecycle" "${content}" "Guide should be updated to upstream"
+  assert_contains "${content}" "ados_distribution: redistributable" "Guide should be synced to upstream (marker present)"
+  assert_contains "${content}" "# Change Lifecycle" "Guide should be synced to upstream (heading present)"
 
   content="$(cat "${project_dir}/doc/guides/copywriting.md")"
-  assert_eq "# Copywriting" "${content}" "Guide should be updated to upstream"
+  assert_contains "${content}" "ados_distribution: redistributable" "Guide should be synced to upstream (marker present)"
+  assert_contains "${content}" "# Copywriting" "Guide should be synced to upstream (heading present)"
+}
+
+# ============================================================================
+# INTEGRATION TESTS — Recursive templates + marker-driven skip (GH-67)
+# ============================================================================
+
+test_local_install_decision_making_blueprint_yaml_internal() {
+  local source_dir project_dir
+  source_dir="$(create_mock_ados_source "${_test_tmpdir}/ados-source")"
+  project_dir="$(create_mock_project "${_test_tmpdir}/project")"
+
+  (
+    cd "${project_dir}"
+    INSTALL_MODE="local" FORCE=false DRY_RUN=false VERBOSE=false
+    reset_counters
+    install_local_files "${source_dir}"
+  )
+
+  # decision-making.md installs — closes the #62 omission (AC-F2-4 / AC-F7-1).
+  assert_file_exists "${project_dir}/doc/guides/decision-making.md" "decision-making.md should install"
+  # Recursive templates: a nested blueprint + a YAML register install (AC-F2-2).
+  assert_file_exists "${project_dir}/doc/templates/blueprints/code-review-instructions--example.md" "blueprint should install recursively"
+  assert_file_exists "${project_dir}/doc/templates/register-template.yaml" "yaml register should install"
+  # An internal-marked guide must NOT install (AC-F2-3).
+  [[ ! -f "${project_dir}/doc/guides/adding-tool-support.md" ]] || {
+    printf '  internal guide adding-tool-support.md should NOT be installed\n' >&2
+    return 1
+  }
+}
+
+test_local_install_idempotent_content_sync() {
+  local source_dir project_dir snapshot
+  source_dir="$(create_mock_ados_source "${_test_tmpdir}/ados-source")"
+  project_dir="$(create_mock_project "${_test_tmpdir}/project")"
+
+  # Run 1: install.
+  (
+    cd "${project_dir}"
+    INSTALL_MODE="local" FORCE=false DRY_RUN=false VERBOSE=false
+    reset_counters
+    install_local_files "${source_dir}"
+  )
+
+  # Snapshot the installed tree (content-sync baseline).
+  snapshot="${_test_tmpdir}/snapshot"
+  mkdir -p "${snapshot}"
+  cp -r "${project_dir}/doc" "${snapshot}/doc"
+  cp -r "${project_dir}/.ai/rules" "${snapshot}/rules"
+  cp "${project_dir}/.gitignore" "${snapshot}/.gitignore" 2>/dev/null || printf '' > "${snapshot}/.gitignore"
+
+  # Run 2: re-install. Content-sync must leave identical files untouched (NFR-5 / AC-F6-1).
+  (
+    cd "${project_dir}"
+    INSTALL_MODE="local" FORCE=false DRY_RUN=false VERBOSE=false
+    reset_counters
+    install_local_files "${source_dir}"
+  )
+
+  # The second run must produce a byte-identical, deterministic tree.
+  diff -r "${snapshot}/doc" "${project_dir}/doc" >/dev/null
+  assert_exit_code 0 "$?" "doc/ tree must be identical after re-run (content-sync)"
+  diff -r "${snapshot}/rules" "${project_dir}/.ai/rules" >/dev/null
+  assert_exit_code 0 "$?" ".ai/rules/ tree must be identical after re-run"
+  diff -q "${snapshot}/.gitignore" "${project_dir}/.gitignore" >/dev/null
+  assert_exit_code 0 "$?" ".gitignore must be identical after re-run"
 }
 
 # ============================================================================
@@ -1049,6 +1146,8 @@ main() {
   run_test "local install creates decision stubs" test_local_install_creates_decision_stubs
   run_test "local install creates rules index" test_local_install_creates_rules_index
   run_test "local install updates guides (updatable)" test_local_install_updates_guides
+  run_test "local install installs decision-making/blueprint/yaml; skips internal" test_local_install_decision_making_blueprint_yaml_internal
+  run_test "local install is idempotent (content-sync re-run)" test_local_install_idempotent_content_sync
 
   # Global install integration
   run_test "global install copies agent files" test_global_install_copies_agents

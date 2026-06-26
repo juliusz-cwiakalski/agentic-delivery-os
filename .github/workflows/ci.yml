@@ -35,7 +35,21 @@ jobs:
             exit 1
           fi
 
-  # Future: Add additional quality gates here
-  # - test
-  # - lint
-  # - check
+  doc-distribution-guard:
+    name: Doc distribution drift guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # GH-67: forces the ados_distribution marker + install-set invariants.
+      # Fails (non-zero) on missing/invalid markers or install-set drift, blocking merge.
+      - name: Run doc-distribution drift guard
+        run: bash scripts/.tests/test-doc-distribution.sh
+
+      # GH-67: committed negative-mode self-tests — re-proves each of the guard's
+      # 5 failure modes actually fires (missing/invalid marker, redistributable-not-
+      # installed, internal-installed, derived-set drift). Keeps a refactor that
+      # silently disables a mode from going green.
+      - name: Run doc-distribution negative-mode self-tests
+        run: bash scripts/.tests/test-doc-distribution-modes.sh
