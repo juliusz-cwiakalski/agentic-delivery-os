@@ -78,6 +78,21 @@ require_file() {
   [[ -f "$1" ]] || emit_error "missing file: $1"
 }
 
+# Extract the sorted, unique row-label set of the CONDITIONAL matrix — the table
+# whose header is "Artifact | CLI/API only | Library | ...". The header match
+# uniquely targets the conditional matrix (the always-produced catalog tables
+# have different columns), so this does not pick up unrelated tables.
+matrix_labels() {
+  awk -F'|' '
+    /^\|[[:space:]]*Artifact[[:space:]]*\|[[:space:]]*CLI\/API only/ { m=1; next }
+    m && /^\|/ {
+      c=$2; sub(/^[[:space:]]+/, "", c); sub(/[[:space:]]+$/, "", c)
+      if (c != "" && c !~ /^[-]+$/) print c
+    }
+    m && !/^\|/ { m=0 }
+  ' "$1" | sort -u
+}
+
 # --- Preconditions -----------------------------------------------------------
 for f in "${GUIDE}" "${HANDBOOK}" "${TEMPLATES_README}" \
          "${REPO_ROOT}/doc/templates/assumption-register-template.md" \
@@ -93,17 +108,22 @@ for f in "${FOUR_RISK_FILES[@]}"; do
       || emit_error "four-risk term '${term}' missing in $(basename "$f")"
   done
 done
-# The wrong term "desirability" must NEVER appear anywhere in the redistributable
-# inception doc set (this is the RT2-01 drift guard — broad by design).
-while IFS= read -r f; do
+# The wrong term "desirability" must NEVER appear in the inception four-risk
+# surfaces (RT2-01 drift guard). Scoped to the inception index/definition
+# surfaces to avoid false positives in unrelated business templates.
+DESIRABILITY_FILES=(
+  "${GUIDE}"
+  "${HANDBOOK}"
+  "${TEMPLATES_README}"
+  "${REPO_ROOT}/doc/overview/README.md"
+  "${REPO_ROOT}/doc/templates/assumption-register-template.md"
+  "${REPO_ROOT}/doc/templates/risk-register-template.md"
+)
+for f in "${DESIRABILITY_FILES[@]}"; do
   if grep -qiE "${WRONG_RISK_TERM}" "$f"; then
     emit_error "wrong four-risk term '${WRONG_RISK_TERM}' present in ${f#${REPO_ROOT}/} — use Value/Usability/Feasibility/Viability"
   fi
-done < <(grep -Ilr '' \
-  "${REPO_ROOT}/doc/guides/project-inception.md" \
-  "${REPO_ROOT}/doc/templates" \
-  "${REPO_ROOT}/doc/documentation-handbook.md" \
-  "${REPO_ROOT}/doc/overview/README.md" 2>/dev/null)
+done
 
 # --- Check 2: conditional-matrix header row present in guide AND handbook ----
 for f in "${GUIDE}" "${HANDBOOK}"; do
@@ -111,10 +131,33 @@ for f in "${GUIDE}" "${HANDBOOK}"; do
     || emit_error "conditional-matrix header row missing in $(basename "$f") (expected the 5 project-type columns)"
 done
 
-# --- Check 3: landmark 'Tribal knowledge' row present in both matrices -------
-for f in "${GUIDE}" "${HANDBOOK}"; do
-  grep -qiE "tribal knowledge" "$f" \
-    || emit_error "'Tribal knowledge' row missing in $(basename "$f") — the matrices must mirror each other"
+# --- Check 3: conditional-matrix consistency (handbook ⊆ guide + landmarks) --
+# The handbook conditional matrix is a CONDENSED subset of the guide's full
+# matrix (the guide lists every artifact; the handbook omits the always-produced
+# rows). Two invariants guard the RT2-02 drift class (invented OR dropped rows),
+# which a bare term grep cannot catch (the term also appears in prose):
+#  (a) handbook rows must be a SUBSET of guide rows — catches an invented row in
+#      the handbook (e.g. a spurious "Ubiquitous language" matrix row).
+#  (b) unambiguously-conditional landmark rows must appear in BOTH — catches a
+#      dropped row (e.g. "Tribal knowledge" removed from either surface).
+_guide_labels="$(matrix_labels "${GUIDE}")"
+_hb_labels="$(matrix_labels "${HANDBOOK}")"
+if [[ -z "${_guide_labels}" ]]; then
+  emit_error "could not extract the guide conditional-matrix row labels (header not found?)"
+fi
+# (a) subset: every handbook row must appear in the guide (no invented rows).
+#     grep -qxF (exact-line, locale-independent) — avoids comm's sort-order issues.
+while IFS= read -r _label; do
+  [[ -n "${_label}" ]] || continue
+  grep -qxF "${_label}" <(printf '%s\n' "${_guide_labels}") \
+    || emit_error "handbook conditional matrix has a row absent from the guide (invented/drifted): '${_label}'"
+done < <(printf '%s\n' "${_hb_labels}")
+# (b) landmark conditional rows must appear in BOTH surfaces.
+for _lm in "Tribal knowledge" "OST" "Repo analysis"; do
+  grep -qxF "${_lm}" <(printf '%s\n' "${_guide_labels}") \
+    || emit_error "guide conditional matrix missing landmark row '${_lm}'"
+  grep -qxF "${_lm}" <(printf '%s\n' "${_hb_labels}") \
+    || emit_error "handbook conditional matrix missing landmark row '${_lm}' (dropped-row drift)"
 done
 
 # --- Check 4: every inception template is indexed in templates/README --------

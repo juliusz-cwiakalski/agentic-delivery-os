@@ -29,7 +29,7 @@ _(Empty at inception; filled as milestones ship.)_
 
 ## Current Milestone
 
-_<The milestone the team is delivering now. For a new project this is the MVP; for a legacy project this is the next ADOS-managed deliverable. NOT "MVP" for legacy — the product already exists._
+_The milestone the team is delivering now. For a new project this is the MVP; for a legacy project this is the next ADOS-managed deliverable. NOT "MVP" for legacy — the product already exists._
 
 ### Scope
 
