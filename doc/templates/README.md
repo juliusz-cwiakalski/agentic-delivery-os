@@ -44,6 +44,65 @@ Use this template when a repository needs to make its documentation profile expl
 |----------|---------|
 | `documentation-profile-template.md` | Repository documentation profile contract (`doc/documentation-profile.md`) |
 
+## Inception Templates
+
+Templates for running ADOS project inception (see the
+[Project Inception guide](../guides/project-inception.md) and the handbook
+**Inception Artifact Catalog**). Templates define structure only; instances are
+written into a project's `doc/inception/` workspace when inception runs.
+
+### Engineering (always-produced)
+
+| Template | Purpose |
+|----------|---------|
+| `inception-state-template.yaml` | Resumable inception state machine (project meta, phases, artifacts, decisions, assumptions, sessions) |
+| `material-inventory-template.md` | Inventory of user-provided input materials and existing repo content |
+| `roadmap-engineering-template.md` | Engineering roadmap with per-milestone success metrics, validation approach, and OST/discovery linkage |
+| `tech-stack-template.md` | Technology stack: languages, frameworks, infrastructure, external services, rationale |
+| `architecture-overview-template.md` | High-level architecture (C4 context/container, component map, key flows) |
+| `glossary-template.md` | Concise repo-relevant terminology reference |
+| `ubiquitous-language-template.md` | DDD ubiquitous language: bounded contexts, aggregates, domain events, commands |
+| `repo-analysis-template.md` | Legacy/existing-code reconnaissance: layout, conventions, debt, migration constraints |
+| `inception-summary-template.md` | Synthesized inception outcome (decisions, assumptions, risks, next steps) for the knowledge base |
+
+(`north-star-template.md` and `documentation-profile-template.md`, also
+always-produced, are listed above in Core ADOS Templates and the Documentation
+Profile Contract section.)
+
+### Product discovery (conditional)
+
+| Template | Purpose |
+|----------|---------|
+| `opportunity-solution-tree-template.md` | Opportunity-solution tree linking product outcomes to solutions and experiments |
+| `project-prd-template.md` | Product requirements for the current project/initiative |
+| `persona-jtbd-template.md` | Persona × jobs-to-be-done cross-reference (who + what they are trying to accomplish + forces of progress) |
+
+> `persona-jtbd-template.md` is a **cross-reference template**: it relates the
+> business-strategy `persona-template.md` and `jobs-to-be-done-template.md`
+> (see Business/Product Strategy Templates above) into a single inception
+> artifact, rather than duplicating either.
+
+### UX (conditional, web products)
+
+| Template | Purpose |
+|----------|---------|
+| `user-journey-template.md` | End-to-end user journeys mapping steps, touchpoints, pain points, JTBD |
+| `screen-inventory-template.md` | Catalog of screens/views with purpose, owner, and entry conditions |
+| `ux-guidance-template.md` | UX constraints and heuristics (links the project to `.ai/rules/ux-conventions.md` when present) |
+
+### Risk & assumption (conditional)
+
+| Template | Purpose |
+|----------|---------|
+| `assumption-register-template.md` | Assumptions with validation method, status, owner, and due date |
+| `risk-register-template.md` | Risks with likelihood, impact, mitigation, owner, and review cadence |
+
+> At inception, `assumption-register-template.md` and `risk-register-template.md`
+> capture the **inception four-risk relationship** (**Value / Usability /
+> Feasibility / Viability**) as lean per-project registers. They are distinct from
+> the business-strategy `strategic-assumptions-template.md`, which holds
+> portfolio-level strategic assumptions across products.
+
 ## Business/Product Strategy Templates (Optional Profile)
 
 Use these only when repository profile enables business docs.

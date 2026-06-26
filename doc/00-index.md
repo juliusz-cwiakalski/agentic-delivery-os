@@ -30,6 +30,7 @@ ados_distribution: redistributable
 |----------|-------------|
 | [Agents & Commands Guide](guides/opencode-agents-and-commands-guide.md) | How to use AI agents and commands |
 | [Onboarding Existing Project](guides/onboarding-existing-project.md) | Adopt ADOS in an existing project |
+| [Project Inception](guides/project-inception.md) | Manual 8-phase process for running project inception |
 | [Claude Code Setup](guides/claude-code-setup.md) | Claude Code CLI provider setup (Anthropic, Z.AI) |
 | [Decision Records Management](guides/decision-records-management.md) | Decision record types, lifecycle, governance |
 | [Meeting Preparation and Summarization](guides/meeting-preparation-and-summarization.md) | How to prepare, run, document, and follow up on meetings |

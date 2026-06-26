@@ -6,7 +6,7 @@ ados_distribution: redistributable
 id: DOC-HANDBOOK
 status: Accepted
 created: 2025-09-22
-last_updated: 2026-04-26
+last_updated: 2026-06-26
 owners: ["engineering"]
 summary: "Repository documentation structure, conventions, and workflow."
 ---
@@ -267,6 +267,10 @@ Meeting agendas, minutes/summaries, and transcripts use a single combined `meeti
     elsewhere, link to it).
   - `architecture-overview.md`: High-level C4/mermaid; link to `/doc/diagrams` for sources.
   - `glossary.md` vs `ubiquitous-language.md`: **See §9** for the difference and usage.
+  - For the full set of overview files with Recommended / Conditional / Optional
+    classification (including product-discovery and UX artifacts), see the
+    **Inception Artifact Catalog** section below and the
+    [Project Inception guide](guides/project-inception.md).
 
 - **`/spec/`**:
   The coherent, up-to-date description of the system **after** applying accepted changes. Split into `features/`,
@@ -746,6 +750,81 @@ If only validation wording is incorrect, update/revert the validation subsection
 - `doc/templates/content-calendar-template.yaml`
 
 (Keep these **shared** and versioned; use only templates allowed by repository profile.)
+
+---
+
+## 18) Inception Artifact Catalog
+
+Project inception produces the knowledge base that AI delivery agents operate
+against. This section is the discoverability surface for the inception artifact
+catalog and the conditional matrix. For the complete, human-executable process,
+see the [Project Inception guide](guides/project-inception.md).
+
+### Always-produced (all projects)
+
+> This is a condensed quick-reference. The [Project Inception guide](guides/project-inception.md) holds the complete artifact catalog, including testing strategy, CI baseline, dev-environment guide, NFRs, repo analysis, and tribal knowledge.
+
+| Artifact | Template |
+|---|---|
+| Inception state | `inception-state-template.yaml` |
+| Material inventory | `material-inventory-template.md` |
+| North star | `north-star-template.md` |
+| Roadmap | `roadmap-engineering-template.md` |
+| Tech stack | `tech-stack-template.md` |
+| Architecture overview | `architecture-overview-template.md` |
+| Glossary | `glossary-template.md` |
+| Documentation profile | `documentation-profile-template.md` |
+| Inception summary | `inception-summary-template.md` |
+
+(ADOS framework files — `AGENTS.md`, `.ai/agent/*-instructions.md`, the
+documentation handbook, and the templates set — are generated/installed by
+`@bootstrapper`, not hand-authored at inception.)
+
+### Conditional artifacts matrix
+
+Phase 0 detects project characteristics and activates the appropriate subset of
+conditional artifacts. Use the five project-type columns to decide which apply.
+
+| Artifact | CLI/API only | Library | Web app new | Web app legacy | Business repo |
+|---|---|---|---|---|---|
+| OST | ❌ | ❌ | If discovery done | If discovery done | ✅ |
+| Personas / JTBD | ❌ | ❌ | ✅ | ✅ | ✅ |
+| User journeys | ❌ | ❌ | ✅ | ✅ | ❌ |
+| Screen inventory | ❌ | ❌ | ✅ | ✅ | ❌ |
+| UX guidance | ❌ | ❌ | ✅ | ✅ | ❌ |
+| Repo analysis | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Tribal knowledge | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Project PRD | ❌ | ❌ | Optional | Optional | Optional |
+| Assumption register | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Risk register | Optional | Optional | ✅ | ✅ | Optional |
+
+Conditional templates: `opportunity-solution-tree-template.md`,
+`persona-jtbd-template.md`, `user-journey-template.md`,
+`screen-inventory-template.md`, `ux-guidance-template.md`,
+`ubiquitous-language-template.md`, `repo-analysis-template.md`,
+`project-prd-template.md`, `assumption-register-template.md`,
+`risk-register-template.md`.
+
+### `doc/inception/` Workspace
+
+Inception work is staged under `doc/inception/`:
+
+```text
+doc/inception/
+├── README.md          # workspace purpose + structure + lifecycle
+├── inputs/            # user-provided materials (NOT agent-produced)
+├── meetings/          # inception meeting notes
+└── analysis/          # agent intermediate analysis (inventory, assumptions, risks, repo analysis, tribal knowledge)
+```
+
+**Lifecycle:** staged at Phase 0, populated through Phase 7, retained as the
+project's inception record. Templates live under `doc/templates/`; instances
+(`inception-state.yaml`, `inception-summary.md`, and the analysis files) are
+written into this workspace only when a project runs inception.
+
+### Forward pointer
+
+Run inception end to end with the [Project Inception guide](guides/project-inception.md).
 
 ---
 

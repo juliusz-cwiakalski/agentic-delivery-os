@@ -1,0 +1,105 @@
+change_id: GH-69
+title: "[inception:1] Inception artifact catalog, templates, and complete process guide"
+branch: docs/GH-69/inception-catalog-templates-guide
+base_branch: main
+ticket_url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/69"
+
+phases:
+  clarify_scope: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  specification: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  test_planning: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  delivery_planning: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  delivery: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  system_spec_update: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  review_fix: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  quality_gates: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  dod_check: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  pr_creation: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/81" }
+
+decisions:
+  - id: "DEC-1"
+    text: "Templates live in doc/templates/ (single convention). doc/inception/ is a per-project workspace containing READMEs (skeleton) + pointers to templates; live instances (inception-state.yaml, inception-summary.md) are produced when a project actually runs inception (GH-70 self-host / GH-71 wiring). For the ADOS source repo we commit the workspace skeleton with READMEs only."
+    date: "2026-06-26"
+  - id: "DEC-2"
+    text: "persona-jtbd-template.md is created as the inception-flavored COMBINED persona+JTBD template (used in overview/north-star context). It has a distinct purpose from the existing canonical business-profile templates persona-template.md and jobs-to-be-done-template.md, which remain the deep-dive templates. The new template states this relationship to avoid duplication confusion. Satisfies AC '3 product discovery templates' literally."
+    date: "2026-06-26"
+  - id: "DEC-3"
+    text: "roadmap-engineering-template.md is a NEW engineering-roadmap template, distinct from the existing business-profile product-roadmap-template.md. It is created rich (success metrics per milestone, validation approach, OST linkage) rather than 'enriched from existing'."
+    date: "2026-06-26"
+  - id: "DEC-4"
+    text: "doc/overview/ is RESTRUCTURED at the README level only (defines operational file set + conditional classification). Actual overview content files (01-north-star.md, architecture-overview.md, etc.) are NOT created here — those are produced when ADOS self-hosts (GH-70) or any project runs inception."
+    date: "2026-06-26"
+  - id: "DEC-5"
+    text: "Every new doc/templates/** and doc/guides/project-inception.md MUST declare ados_distribution: redistributable (enforced by scripts/.tests/test-doc-distribution.sh, mode 1 missing-marker). doc/inception/** READMEs are outside the guard scan set; they get license headers via add-header-location.sh for consistency but need no distribution marker."
+    date: "2026-06-26"
+  - id: "DEC-6"
+    text: "License headers added by running scripts/add-header-location.sh over new dirs (agents must not hand-add headers per AGENTS.md). YAML templates: marker is top-level key (per test yaml parser + ODR-0001); coder mirrors existing yaml template header/marker style (e.g. content-calendar-template.yaml)."
+    date: "2026-06-26"
+  - id: "DEC-7"
+    text: "The guide (doc/guides/project-inception.md) is standalone and self-contained — sourced from the research notes but embedding all needed content; it never references .ai/local/* paths. The guide is redistributable and must be readable without gitignored context (NFR-4)."
+    date: "2026-06-26"
+  - id: "DEC-8"
+    text: "inception-state.yaml ships only as doc/templates/inception-state-template.yaml; no live instance is created in doc/inception/ in this change. State is per-project; agent wiring of resume behavior is GH-71."
+    date: "2026-06-26"
+  - id: "DEC-9"
+    text: "The new assumption-register-template.md and risk-register-template.md are the inception four-risk (Value/Usability/Feasibility/Viability) registers for project inception. The business-profile strategic deep-dive stays in strategic-assumptions-template.md. The relationship is stated in-template (mirrors the DEC-2/RSK-5 persona-jtbd pattern) and in the templates README 'Inception templates' category."
+    date: "2026-06-26"
+  - id: "DEC-10"
+    text: "roadmap-engineering-template.md includes an OST / discovery linkage (a row/section linking each milestone's outcomes to the Opportunity Solution Tree when discovery has been done) — faithful to research section 8; low cost, improves coherence."
+    date: "2026-06-26"
+
+open_questions: []
+blockers: []
+
+notes:
+  - text: "Sync findings: working tree CLEAN on main (synced with origin). The pm-instructions.md 'Reading Issue Comments' section is ALREADY committed on main — nothing uncommitted to carry. GH-63 parked on its own branch (feat/GH-63/...); GH-69 branches off clean main. No conflict."
+    type: info
+    date: "2026-06-26"
+  - text: "Scope cross-checked vs system spec + research notes (.ai/local/inception/{README,full-inception-bootstrap-process,inception-process-diagrams}.md). No contradictions. This is net-new docs/templates/guide; no agent prompt changes; no code. Quality gates are light: add-header-location.sh idempotency + test-doc-distribution.sh + repo markdown lint."
+    type: info
+    date: "2026-06-26"
+  - text: "Change is large (1 centerpiece guide + 17 new templates + 2 enrichments + doc/inception workspace skeleton + handbook section + overview README restructure + templates README update). Plan MUST be phased so @coder commits per phase. Guide is the hardest artifact (must be standalone-readable, embed 4 Mermaid diagrams, sourced from the two research files)."
+    type: risk
+    date: "2026-06-26"
+  - text: "USER DIRECTIVE: two-round red-team pattern (mirrors GH-46 retro — high-value for large changes). Round 1 PRE-delivery on spec/plan/test-plan artifacts via @red-team-coordinator; Round 2 POST-delivery on the delivered change. Findings addressed via followup phases/changes before PR. Blocking questions routed via @decision-advisor first; only escalate to human what truly needs human input."
+    type: decision
+    date: "2026-06-26"
+  - text: "Change artifacts (spec/plan/test-plan/pm-notes) committed cc5ccc7 on docs/GH-69/inception-catalog-templates-guide. Awaiting Round 1 red-team review before @coder delivery."
+    type: info
+    date: "2026-06-26"
+  - text: "RED-TEAM ROUND 1 (PRE-delivery) COMPLETE. Verdict GO-WITH-FIXES (0 Critical / 2 Major / 8 Minor / 3 Nit). AC coverage confirmed complete (22 ticket AC → 23 spec AC → 10 plan phases → 28 test scenarios; no silent AC-passes-around-gaps). Marker/header/distribution contract empirically verified sound. Applied ALL 13 findings (RT1-01..RT1-13) in commit f96abf8 + DEC-10 spec sync. Must-fixes: RT1-01 (narrow ghost-check to shipped artifacts + exempt prefixes), RT1-02 (pin matrix column strings no-paren), RT1-03 (mandate 4 sub-part headings per phase + N/A anti-sycophancy for 0/5/6/7). Cleared to deliver."
+    type: resolved
+    date: "2026-06-26"
+  - text: "Delivery via @coder COMPLETE (10 phases, commits f277e3f..85fe8e0; 30 files). Independently verified (not just self-report): 17 templates, 4 workspace READMEs, exactly 4 Mermaid diagrams, 8 phases × 4 sub-parts (33), self-containment (0 .ai/local/inception refs in deliverables), yaml line-1 marker, and doc-distribution guard GREEN (72 in-scope docs, exit 0)."
+    type: info
+    date: "2026-06-26"
+  - text: "RED-TEAM ROUND 2 (POST-delivery) COMPLETE. Verdict SHIP-WITH-FIXES (0 Critical / 2 Major / 4 Minor / 4 Nit). Guard + runbook independently re-confirmed PASS; all 4 diagrams byte-identical to source; .opencode/scripts/tools untouched; north-star diff additive. Must-fix Majors: RT2-01 (templates/README four-risk term 'desirability…' → Value/Usability/Feasibility/Viability), RT2-02 (handbook matrix drifted — invented Ubiquitous-language row + dropped Tribal-knowledge row). Cheap Minors: RT2-03 (guide inline anti-sycophancy prompts match summary table), RT2-05 (handbook catalog completeness callout), RT2-06 (inception-state-template.yaml artifacts block missing 6 catalog artifacts), RT2-07 (Phase 3 inline + Phase 4 enrichment note)."
+    type: resolved
+    date: "2026-06-26"
+  - text: "REMEDIATION APPLIED: RT2-01/02 (via @coder, uncommitted) + RT2-03/05/06/07 (PM direct edits) + RT2-10 (this pm-notes reconciliation). All round-2 must-fix and recommended-cheap findings addressed; guard re-confirmed green. NOTE: @coder remediation subagent call returned partial work + empty stdout (recurring subagent-output quirk) — PM completed the remaining edits directly and verified."
+    type: info
+    date: "2026-06-26"
+  - text: "DEFERRED to follow-up ticket (GH-69 polish): RT2-04 (gloss/drop ~20 opaque internal GH-XX ticket refs in the redistributable guide — deserves a focused editorial pass for AC-F1-10 standalone polish), RT2-08 (add minimal placeholder scaffolds to sparsest template sections, e.g. architecture-overview), RT2-09 (future hardening: cross-doc consistency check — assert handbook matrix row-set ≡ guide matrix row-set; canonical four-risk term set — so RT2-01/02-style drift is auto-caught). Non-blocking; tracked for a follow-up change."
+    type: risk
+    date: "2026-06-26"
+  - text: "Retro: the two-round red-team pattern again paid off — Round 1 caught 3 verification-design defects that would have made the runbook fail on a correct guide; Round 2 caught 2 Majors in redistributable index surfaces (terminology + matrix drift) that the automated ghost-check structurally cannot detect (it checks file existence, not semantic/cell consistency). Worth a cross-doc consistency test (RT2-09). Also: @coder/@committer/@runner subagents intermittently returned empty stdout this session — the reliable workaround was asking them to write results to a .ai/local file and report only path+size; PM then read the file directly. Consider a note in the runner/coder agent guidance about writing structured output to a file when stdout capture is unreliable."
+    type: retro
+    date: "2026-06-26"
+  - text: "DOC-SYNC (system_spec_update): @doc-syncer made the new guide discoverable — added a Guides row to doc/00-index.md, an inception/ line to the AGENTS.md repo-structure tree (genuine gap — the new dir was absent), and a forward-pointer bullet in doc/spec/features/feature-bootstrapper.md (navigational only; no behavior change — GH-71 owns bootstrapper phases). Commit 5a39a1f. Guard still green."
+    type: info
+    date: "2026-06-26"
+  - text: "QUALITY GATES (final, post-all-commits): clean tree; git diff --check CLEAN (after @fixer stripped trailing whitespace in inception-summary + roadmap-engineering templates, commit 678f8c0); 17 templates + 4 workspace READMEs + guide all present; guide = 4 diagrams / 8 phases / 33 sub-parts; 0 .ai/local refs; 18 marker-valid distributable docs + 17 md-headers; yaml safe_load OK; templates README lists all 17; ZERO files touched under .opencode/scripts/tools/.ai/.ados-claude (NG-5/NG-6 clean); doc-distribution guard GREEN (72 in-scope docs). The standard @reviewer step was SUPERSEDED by the two red-team rounds (stricter, multi-perspective, independent re-runs) — documented as a PM decision."
+    type: resolved
+    date: "2026-06-26"
+  - text: "DOD CHECK: PASS. All 10 lifecycle phases complete; all 23 spec ACs satisfied (independently confirmed by red-team round 2 + final gate); all 56 plan tasks checked; test-plan runbook 17/17; 0 blockers; 0 open questions. Deferred round-2 polish tracked in follow-up #80. Ready for PR."
+    type: resolved
+    date: "2026-06-26"
+  - text: "USER DIRECTIVE (post-PR): consolidate follow-up #80 INTO GH-69 (closed #80) rather than parking it. Implemented on the GH-69 branch: RT2-04 (stripped ALL GH-XX ticket refs from the redistributable guide incl. inside the 4 Mermaid diagrams — commit 55d5b94), RT2-08 (minimal placeholder scaffolds added to 14 sparse template sections — commit 55d5b94), RT2-09 (new scripts/.tests/test-inception-doc-consistency.sh + CI job 'inception-doc-consistency' — commit e55b306)."
+    type: decision
+    date: "2026-06-26"
+  - text: "RED-TEAM ROUND 3 (post-followup) COMPLETE. Verdict SHIP-WITH-FIXES (0 Critical / 1 Major / 2 Minor / 2 Nit). RT2-04/08/09 confirmed correctly implemented; all gates re-confirmed green. Addressed: RT3-01 (Major — the new guard claimed RT2-02 matrix-drift coverage it didn't deliver; strengthened to real handbook⊆guide row-subset + landmark-rows-in-both, proven non-vacuous by mutation), RT3-02 (narrowed the 'desirability' ban to inception four-risk surfaces to avoid false positives), RT3-04 (closed a stray '<' placeholder in roadmap-engineering). Commit 3000216. Accepted: RT3-03 (hardcoded 17-template list — dynamic derivation deferred as a documented Minor limitation; the list still catches removal/rename). RT3-05 informational (handbook matrix is a deliberate condensed subset; shared rows cell-identical). No remaining Major/Critical."
+    type: resolved
+    date: "2026-06-26"
+  - text: "Retro: the new consistency guard went through 3 iterations during round-3 fixing — (1) full row-set equality was too strict (the handbook is an intentional condensed subset, not a full mirror — a real fact my own test taught me), (2) comm had a locale sort-order mismatch (switched to locale-independent grep -qxF). Lesson: when a guard's invariant proves too strict, the 'false positive' often reveals a genuine structural fact (here: full-vs-condensed matrix design) worth encoding precisely rather than relaxing blindly. Also: the round-3 red team caught that my first guard overclaimed its contract (header said it caught RT2-02; the check didn't) — value of reading the TEST, not just running it green."
+    type: retro
+    date: "2026-06-26"
