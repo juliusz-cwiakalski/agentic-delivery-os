@@ -1,0 +1,45 @@
+change_id: GH-69
+title: "[inception:1] Inception artifact catalog, templates, and complete process guide"
+branch: docs/GH-69/inception-catalog-templates-guide
+base_branch: main
+ticket_url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/69"
+
+phases:
+  clarify_scope: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  specification: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  test_planning: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  delivery_planning: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  delivery: { started: "2026-06-26T00:00:00Z", completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+
+decisions:
+  - text: "Templates live in doc/templates/ (single convention). doc/inception/ is a per-project workspace containing READMEs (skeleton) + pointers to templates; live instances (inception-state.yaml, inception-summary.md) are produced when a project actually runs inception (GH-70 self-host / GH-71 wiring). For the ADOS source repo we commit the workspace skeleton with READMEs only."
+    date: "2026-06-26"
+  - text: "persona-jtbd-template.md is created as the inception-flavored COMBINED persona+JTBD template (used in overview/north-star context). It has a distinct purpose from the existing canonical business-profile templates persona-template.md and jobs-to-be-done-template.md, which remain the deep-dive templates. The new template states this relationship to avoid duplication confusion. Satisfies AC '3 product discovery templates' literally."
+    date: "2026-06-26"
+  - text: "roadmap-engineering-template.md is a NEW engineering-roadmap template, distinct from the existing business-profile product-roadmap-template.md. It is created rich (success metrics per milestone, validation approach, OST linkage) rather than 'enriched from existing'."
+    date: "2026-06-26"
+  - text: "doc/overview/ is RESTRUCTURED at the README level only (defines operational file set + conditional classification). Actual overview content files (01-north-star.md, architecture-overview.md, etc.) are NOT created here — those are produced when ADOS self-hosts (GH-70) or any project runs inception."
+    date: "2026-06-26"
+  - text: "Every new doc/templates/** and doc/guides/project-inception.md MUST declare ados_distribution: redistributable (enforced by scripts/.tests/test-doc-distribution.sh, mode 1 missing-marker). doc/inception/** READMEs are outside the guard scan set; they get license headers via add-header-location.sh for consistency but need no distribution marker."
+    date: "2026-06-26"
+  - text: "License headers added by running scripts/add-header-location.sh over new dirs (agents must not hand-add headers per AGENTS.md). YAML templates: marker is top-level key (per test yaml parser + ODR-0001); coder mirrors existing yaml template header/marker style (e.g. content-calendar-template.yaml)."
+    date: "2026-06-26"
+
+open_questions: []
+blockers: []
+
+notes:
+  - text: "Sync findings: working tree CLEAN on main (synced with origin). The pm-instructions.md 'Reading Issue Comments' section is ALREADY committed on main — nothing uncommitted to carry. GH-63 parked on its own branch (feat/GH-63/...); GH-69 branches off clean main. No conflict."
+    type: info
+    date: "2026-06-26"
+  - text: "Scope cross-checked vs system spec + research notes (.ai/local/inception/{README,full-inception-bootstrap-process,inception-process-diagrams}.md). No contradictions. This is net-new docs/templates/guide; no agent prompt changes; no code. Quality gates are light: add-header-location.sh idempotency + test-doc-distribution.sh + repo markdown lint."
+    type: info
+    date: "2026-06-26"
+  - text: "Change is large (1 centerpiece guide + 17 new templates + 2 enrichments + doc/inception workspace skeleton + handbook section + overview README restructure + templates README update). Plan MUST be phased so @coder commits per phase. Guide is the hardest artifact (must be standalone-readable, embed 4 Mermaid diagrams, sourced from the two research files)."
+    type: risk
+    date: "2026-06-26"
