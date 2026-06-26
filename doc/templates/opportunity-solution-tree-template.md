@@ -23,6 +23,9 @@ _Conditional — produced when product discovery has been done. Maps a desired o
 ## Desired outcome
 _The single outcome this tree serves (link to the NSM in `doc/overview/01-north-star.md`). State it as a measurable outcome, not a feature._
 
+- Outcome: <measurable outcome>
+- Links to NSM: <north-star metric reference>
+
 ## Tree
 
 ```mermaid

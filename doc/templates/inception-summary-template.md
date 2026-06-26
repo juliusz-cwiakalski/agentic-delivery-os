@@ -43,6 +43,9 @@ _Which artifacts are high-confidence and which need refinement._
 ## Process improvement notes
 _What worked, what didn't, what to change for the next inception._
 
+- Worked: <what to keep>
+- Didn't: <what to change>
+
 ## Sign-off
 - Approved by:
 - Date:

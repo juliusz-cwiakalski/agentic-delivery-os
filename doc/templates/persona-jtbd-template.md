@@ -29,20 +29,35 @@ _Conditional — for UI-bearing or multi-user projects. A lightweight combined p
 
 ### Role and context
 _Responsibilities, environment, and constraints._
+- <role, e.g. "Engineering manager">
+- <environment and constraints>
 ### Goals and motivations
 _What success looks like for this persona and why it matters._
+- <goal> — <why it matters>
+- <goal> — <why it matters>
 ### Frictions and blockers
 _Recurring barriers in their current workflow or adoption journey._
+- <friction> — <impact>
+- <blocker> — <impact>
 ### Decision criteria
 _Criteria this persona uses to evaluate options and make decisions._
+- <criterion>
+- <criterion>
 
 ## Job To Be Done
 
 ### Job statement
 _Write the core job in plain language: "When…, I want to…, so I can…."_
+- <"When …, I want to …, so I can …">
 ### Functional, emotional, social outcomes
 _Outcomes the persona seeks across practical, emotional, and social dimensions._
+- Functional: <practical outcome>
+- Emotional / social: <feeling or social outcome>
 ### Current alternatives
 _What the persona does today, including workarounds and competitors._
+- <alternative or workaround> — <limitation>
+- <competitor> — <limitation>
 ### Success criteria
 _Observable criteria that indicate the job is solved well enough._
+- <observable criterion>
+- <observable criterion>

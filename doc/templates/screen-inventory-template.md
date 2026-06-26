@@ -27,5 +27,13 @@ _Conditional — for UI-bearing projects. Catalogues the screens/pages for the c
 ## Mapping to user journeys
 _Which journey(s) each screen belongs to (see `user-journey-template.md`)._
 
+| Screen ID | Journey |
+|---|---|
+| <screen ID> | <journey> |
+| <screen ID> | <journey> |
+
 ## Notes
 _Design system pointers, reuse opportunities, and open questions._
+
+- <design system pointer>
+- <reuse opportunity / open question>

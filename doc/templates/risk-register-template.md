@@ -34,6 +34,9 @@ _Produced in Phase 2 for non-trivial projects; lives at `doc/inception/analysis/
 ## Heat-map summary
 _Likelihood × impact grid; highlight the top risks to reduce first._
 
+- <Risk ID> — <high likelihood × high impact>
+- <Risk ID> — <high likelihood × high impact>
+
 ## Cross-links to the assumption register
 _Each risk often corresponds to an assumption being validated — link IDs here (see `assumption-register-template.md`)._
 | Risk ID | Assumption ID | Note |

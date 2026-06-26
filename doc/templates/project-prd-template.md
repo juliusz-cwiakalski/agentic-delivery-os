@@ -23,20 +23,41 @@ _Conditional — for non-trivial new products. Richer than the north star (`doc/
 ## Problem statement
 _The user/business problem, framed around pain and consequence._
 
+- <pain> — <consequence if unsolved>
+- <pain> — <consequence if unsolved>
+
 ## Vision narrative (Working Backwards)
 _Write the vision from the user's future perspective (press-release format), not from an engineer's build list._
+
+- <headline: the future user benefit>
+- <who benefits and how>
 
 ## Target users
 _Primary persona and the job they hire the product for (see `doc/templates/persona-jtbd-template.md`)._
 
+- Primary persona: <persona> — <job they hire it for>
+- Secondary (optional): <persona> — <job>
+
 ## Success metrics
 _Outcome metrics that prove the product worked, with guardrails._
+
+- Primary outcome metric: <metric> — <target>
+- Guardrails: <constraints that must not be violated>
 
 ## Out of scope
 _What is deliberately not being built and why._
 
+- <excluded capability> — <why>
+- <excluded capability> — <why>
+
 ## Assumptions
 _Key assumptions, tagged by risk type (value/usability/feasibility/viability). Link to the assumption register (`doc/templates/assumption-register-template.md`)._
 
+- <assumption> — <risk type> (see assumption register)
+- <assumption> — <risk type> (see assumption register)
+
 ## Validation plan
 _How the product will be validated before and after launch (cohorts, qualitative checks, experiments) and the decisions validation drives._
+
+- Method: <cohort / qualitative check / experiment>
+- Decision it drives: <proceed / pivot / kill>

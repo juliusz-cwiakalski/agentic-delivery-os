@@ -22,18 +22,38 @@ _Produced in Phase 0 for legacy onboarding (whole-repo ingestion). Mark areas of
 
 ## Repository structure
 _Tree of the top-level layout (directories and their roles)._
+- `<dir>/` — <role>
+- `<dir>/` — <role>
 ## Detected tech stack
 _Languages, frameworks, datastores, build/test tooling detected from the code._
+- <language / framework / datastore / tool> — <version and how detected>
+- <language / framework / datastore / tool> — <version and how detected>
 ## Entry points
 _Where execution begins (main, handlers, routes, jobs) and how they are invoked._
+| Entry point | Type | Invoked by |
+|---|---|---|
+| <path> | <main / handler / route / job> | <trigger> |
+| <path> | <type> | <trigger> |
 ## Module / component map
 _Grouping of modules/components by responsibility._
+| Module | Responsibility |
+|---|---|
+| <module path> | <what it owns> |
+| <module path> | <what it owns> |
 ## Data flow
 _Primary data paths through the system._
+- <flow name> — <entry → transformation → persistence>
+- <flow name> — <entry → transformation → persistence>
 ## External dependencies
 _Libraries, services, and integrations the repo depends on._
+| Dependency | Type | Purpose |
+|---|---|---|
+| <name> | <library / service / integration> | <what it provides> |
+| <name> | <type> | <what it provides> |
 ## Tech debt and known issues
 _Detected debt, smells, TODO/FIXME clusters, and known bugs._
+- <area, e.g. module X> — <debt type and severity>
+- <area> — <debt type and severity>
 ## Confidence flags
 _Areas the agent is uncertain about and recommends human confirmation (architecture assumptions, ambiguous ownership, guessed data flows). Rate each low/medium/high confidence._
 | Area | Observation | Confidence | Human-confirm question |

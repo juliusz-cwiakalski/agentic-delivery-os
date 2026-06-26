@@ -25,5 +25,11 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 |---|---|---|---|
 ## Acronyms
 _Expand every acronym at first use; keep the expanded list here._
+| Acronym | Expansion | First-use location |
+|---|---|---|
+| <acronym> | <expansion> | <file / section> |
+| <acronym> | <expansion> | <file / section> |
 ## See also
 _Link to `ubiquitous-language.md` and any global glossary._
+- `ubiquitous-language.md`
+- <global glossary link>

@@ -23,6 +23,9 @@ _The authoritative, binding vocabulary for one bounded context. Names core domai
 ## Bounded context scope
 _Name the context this vocabulary governs and its boundaries._
 
+- Context: <bounded context name>
+- Boundaries: <what is in / out of this context>
+
 ## Terms
 | Term | Meaning | Type (aggregate / entity / value object / domain event) | Relationships |
 |---|---|---|---|
@@ -30,5 +33,13 @@ _Name the context this vocabulary governs and its boundaries._
 ## Context map
 _How this context relates to neighbouring bounded contexts (customer/supplier, conformist, ACL, etc.)._
 
+| Neighbouring context | Relationship | Notes |
+|---|---|---|
+| <context> | <customer/supplier / conformist / ACL> | <translation rules> |
+| <context> | <relationship> | <translation rules> |
+
 ## Binding rules
 _The rules that keep code and conversation using these terms consistently (renaming, translation at context boundaries)._
+
+- <rule, e.g. renaming policy> — <how it is enforced>
+- <rule, e.g. translation at context boundary> — <how it is enforced>

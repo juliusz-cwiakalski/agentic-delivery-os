@@ -23,8 +23,14 @@ _Conditional — for UI-bearing projects. Captures cross-feature user flows (dis
 ## Persona & context
 _Link to the persona/JTBD (`persona-jtbd-template.md`) and state the goal of this journey._
 
+- Persona: <persona>
+- Goal of this journey: <goal>
+
 ## Journey stages
 _The high-level stages the user moves through._
+
+1. <stage>
+2. <stage>
 
 ## Steps
 | Action | Thought / feeling | Pain | Opportunity | Touchpoint / screen |
@@ -39,3 +45,6 @@ flowchart LR
 
 ## Opportunities surfaced
 _Insights from pains that should feed the OST or roadmap._
+
+- <insight> — feeds <OST / roadmap>
+- <insight> — feeds <OST / roadmap>

@@ -22,18 +22,42 @@ _Answer not only "what" but "why". Agents use the rationale to stay consistent w
 
 ## Languages and runtimes
 _Versions, target runtimes, and any required toolchains._
+| Language / runtime | Version | Toolchain | Role |
+|---|---|---|---|
+| <language> | <version> | <compiler / SDK> | <what it builds> |
+| <runtime> | <version> | <toolchain> | <what it runs> |
 ## Frameworks and libraries
 _Major frameworks/libraries with versions and the role each plays._
+| Library / framework | Version | Role |
+|---|---|---|
+| <library> | <version> | <role, e.g. web framework> |
+| <library> | <version> | <role> |
 ## Datastores
 _Databases, caches, queues, object storage — with the data they own._
+| Store | Type | Data owned |
+|---|---|---|
+| <store name> | <db / cache / queue / object storage> | <primary data> |
+| <store name> | <type> | <primary data> |
 ## Infrastructure and DevOps tooling
 _Hosting, IaC, CI/CD, container/edge, and deployment tooling._
+| Tool | Category | Role |
+|---|---|---|
+| <tool> | <hosting / IaC / CI-CD / container> | <what it does> |
+| <tool> | <category> | <what it does> |
 ## Observability stack
 _Metrics, logs, traces, dashboards, and alerting._
+| Pillar | Tool | Notes |
+|---|---|---|
+| <metrics> | <tool> | <key dashboards / alerts> |
+| <logs / traces> | <tool> | <notes> |
 ## Rationale (why each)
 _For each significant choice, record the one-line reason it was chosen._
+- <choice> — <one-line reason it was chosen>
+- <choice> — <one-line reason it was chosen>
 ## Alternatives considered (trade-off table)
 | Choice | Alternative | Why this one | When to switch |
 |---|---|---|---|
 ## Upgrade and compatibility notes
 _Pinned versions, known breaking-change windows, and migration notes._
+- <pinned version> — <known breaking-change window>
+- <migration note> — <what to do when upgrading>

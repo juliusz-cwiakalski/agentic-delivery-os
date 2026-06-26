@@ -44,3 +44,6 @@ _Validate assumptions; do not hide them._
 
 ## Priorities
 _Assumptions to validate first — those with highest impact if wrong and lowest current confidence._
+
+- <assumption ID> — <why it is first>
+- <assumption ID> — <why it is first>
