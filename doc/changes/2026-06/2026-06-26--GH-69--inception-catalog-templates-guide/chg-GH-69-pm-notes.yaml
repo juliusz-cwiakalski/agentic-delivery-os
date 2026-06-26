@@ -10,11 +10,11 @@ phases:
   test_planning: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
   delivery_planning: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
   delivery: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
-  system_spec_update: { started: null, completed: null }
-  review_fix: { started: "2026-06-26T00:00:00Z", completed: null }
-  quality_gates: { started: null, completed: null }
-  dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null, url: null }
+  system_spec_update: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  review_fix: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  quality_gates: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  dod_check: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  pr_creation: { started: "2026-06-26T00:00:00Z", completed: null, url: null }
 
 decisions:
   - id: "DEC-1"
@@ -84,4 +84,13 @@ notes:
     date: "2026-06-26"
   - text: "Retro: the two-round red-team pattern again paid off — Round 1 caught 3 verification-design defects that would have made the runbook fail on a correct guide; Round 2 caught 2 Majors in redistributable index surfaces (terminology + matrix drift) that the automated ghost-check structurally cannot detect (it checks file existence, not semantic/cell consistency). Worth a cross-doc consistency test (RT2-09). Also: @coder/@committer/@runner subagents intermittently returned empty stdout this session — the reliable workaround was asking them to write results to a .ai/local file and report only path+size; PM then read the file directly. Consider a note in the runner/coder agent guidance about writing structured output to a file when stdout capture is unreliable."
     type: retro
+    date: "2026-06-26"
+  - text: "DOC-SYNC (system_spec_update): @doc-syncer made the new guide discoverable — added a Guides row to doc/00-index.md, an inception/ line to the AGENTS.md repo-structure tree (genuine gap — the new dir was absent), and a forward-pointer bullet in doc/spec/features/feature-bootstrapper.md (navigational only; no behavior change — GH-71 owns bootstrapper phases). Commit 5a39a1f. Guard still green."
+    type: info
+    date: "2026-06-26"
+  - text: "QUALITY GATES (final, post-all-commits): clean tree; git diff --check CLEAN (after @fixer stripped trailing whitespace in inception-summary + roadmap-engineering templates, commit 678f8c0); 17 templates + 4 workspace READMEs + guide all present; guide = 4 diagrams / 8 phases / 33 sub-parts; 0 .ai/local refs; 18 marker-valid distributable docs + 17 md-headers; yaml safe_load OK; templates README lists all 17; ZERO files touched under .opencode/scripts/tools/.ai/.ados-claude (NG-5/NG-6 clean); doc-distribution guard GREEN (72 in-scope docs). The standard @reviewer step was SUPERSEDED by the two red-team rounds (stricter, multi-perspective, independent re-runs) — documented as a PM decision."
+    type: resolved
+    date: "2026-06-26"
+  - text: "DOD CHECK: PASS. All 10 lifecycle phases complete; all 23 spec ACs satisfied (independently confirmed by red-team round 2 + final gate); all 56 plan tasks checked; test-plan runbook 17/17; 0 blockers; 0 open questions. Deferred round-2 polish tracked in follow-up #80. Ready for PR."
+    type: resolved
     date: "2026-06-26"
