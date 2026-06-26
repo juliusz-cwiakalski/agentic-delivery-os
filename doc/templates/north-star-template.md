@@ -22,6 +22,12 @@ summary: "North Star for <Product Name> — <one-line description of what the pr
 
 # <Product Name>: North Star
 
+<!-- Strategic pyramid context: this north star sits atop a strategic pyramid —
+     mission → vision → strategy → outcome. Mission is what we do today; vision
+     is the world if we succeed; strategy is how we get there; the outcome
+     (North Star Metric below) is how we measure success. Keep each layer
+     consistent; when they conflict, fix the higher layer first. -->
+
 ## Vision
 
 <!-- One or two sentences describing the long-term aspirational state.
@@ -41,8 +47,12 @@ summary: "North Star for <Product Name> — <one-line description of what the pr
 ## Target Users
 
 <!-- Who is this product for? Be specific — a sharp user definition prevents scope creep.
-     Include primary persona and, optionally, one secondary persona.
-     Name the role, context, and core need. -->
+      Include primary persona and, optionally, one secondary persona.
+      Name the role, context, and core need.
+      JTBD framing: for the primary persona, state the "job" they hire the product
+      for ("When…, I want to…, so I can…") — this is Jobs To Be Done. Use
+      persona-jtbd-template.md for the full inception persona+JTBD; use
+      persona-template.md / jobs-to-be-done-template.md for business-profile deep dives. -->
 
 - **Primary:** <Role/persona who gets the most value — e.g., "Solo founder who needs to stay focused and energized">
 - **Secondary:** <Optional second persona — e.g., "Small product team lead managing releases">
@@ -60,8 +70,11 @@ summary: "North Star for <Product Name> — <one-line description of what the pr
 ## North Star Metric
 
 <!-- The ONE metric that best captures whether users are getting value from the product.
-     It should be measurable, leading (not lagging), and tied to the core user action.
-     Optionally add 1-2 guardrail metrics to prevent gaming or tunnel vision. -->
+      It should be measurable, leading (not lagging), and tied to the core user action.
+      Optionally add 1-2 guardrail metrics to prevent gaming or tunnel vision.
+      Outcome, not output: the NSM is the one OUTCOME metric that captures user value
+      (a measurable change in user behaviour), not an OUTPUT (features shipped, story
+      points). Optimise the outcome; guardrails prevent gaming it. -->
 
 **<Metric name>** — <definition and how it is measured>
 
@@ -90,6 +103,21 @@ When choosing between options, prefer the one that:
 1. <Higher-priority criterion> over <lower-priority alternative>
 2. <Higher-priority criterion> over <lower-priority alternative>
 3. <Higher-priority criterion> over <lower-priority alternative>
+
+## Four-Risk Awareness
+
+<!-- Every major north-star decision is assessed across four risk lenses.
+      Capture the top risks so they are not lost; detail them in the registers. -->
+
+Apply the four-risk lenses to the north-star decisions above:
+
+- **Value risk** — will users want this? (does the north star solve a real, felt problem?)
+- **Usability risk** — can users use it? (can they reach the outcome the NSM measures?)
+- **Feasibility risk** — can we build it? (within our stack, skills, and constraints)
+- **Viability risk** — does it make business sense? (sustainable, compliant, affordable)
+
+Track the assumptions and risks behind these in
+`assumption-register-template.md` and `risk-register-template.md`.
 
 ## Scope
 
