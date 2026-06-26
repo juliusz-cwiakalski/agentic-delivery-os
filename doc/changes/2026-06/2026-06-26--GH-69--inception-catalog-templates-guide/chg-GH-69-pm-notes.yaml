@@ -67,3 +67,6 @@ notes:
   - text: "Change artifacts (spec/plan/test-plan/pm-notes) committed cc5ccc7 on docs/GH-69/inception-catalog-templates-guide. Awaiting Round 1 red-team review before @coder delivery."
     type: info
     date: "2026-06-26"
+  - text: "RED-TEAM ROUND 1 (PRE-delivery) COMPLETE. Verdict GO-WITH-FIXES (0 Critical / 2 Major / 8 Minor / 3 Nit). AC coverage confirmed complete (22 ticket AC → 23 spec AC → 10 plan phases → 28 test scenarios; no silent AC-passes-around-gaps). Marker/header/distribution contract empirically verified sound. Applied ALL 13 findings (RT1-01..RT1-13) in commit f96abf8 + DEC-10 spec sync. Must-fixes: RT1-01 (narrow ghost-check to shipped artifacts + exempt prefixes), RT1-02 (pin matrix column strings no-paren), RT1-03 (mandate 4 sub-part headings per phase + N/A anti-sycophancy for 0/5/6/7). Cleared to deliver."
+    type: resolved
+    date: "2026-06-26"

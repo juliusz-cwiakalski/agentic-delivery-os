@@ -253,6 +253,7 @@ None at authoring time. All scoping decisions were resolved during planning (see
 | DEC-7 | The guide is standalone and self-contained — sourced from the research notes but embedding all needed content; it never references `.ai/local/*` paths | The guide is redistributable and must be readable without gitignored context (NFR-4) | 2026-06-26 |
 | DEC-8 | `inception-state.yaml` ships only as `doc/templates/inception-state-template.yaml`; no live instance in `doc/inception/` in this change | State is per-project; agent wiring of resume behavior is GH-71 | 2026-06-26 |
 | DEC-9 | The new `assumption-register-template.md` and `risk-register-template.md` are inception four-risk (Value/Usability/Feasibility/Viability) registers; the business-profile strategic deep-dive stays in `strategic-assumptions-template.md`; the relationship is stated in-template (mirrors DEC-2/RSK-5) | Symmetric to the persona-jtbd disambiguation (DEC-2); prevents duplication/confusion between inception and business assumption artifacts | 2026-06-26 |
+| DEC-10 | `roadmap-engineering-template.md` includes OST/discovery linkage (each milestone's outcomes link to the Opportunity Solution Tree when discovery has been done) | Faithful to research §8 ("success metrics per milestone, validation approach, OST linkage"); low cost, improves product↔engineering coherence | 2026-06-26 |
 
 ## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
 
