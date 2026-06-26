@@ -184,42 +184,56 @@ create_mock_ados_project() {
   mkdir -p "${base}/.ai/agent"
   mkdir -p "${base}/.ai/local"
   mkdir -p "${base}/.ai/rules"
-  mkdir -p "${base}/doc/templates"
+  mkdir -p "${base}/doc/templates/blueprints"
   mkdir -p "${base}/doc/overview"
   mkdir -p "${base}/doc/spec/features"
   mkdir -p "${base}/doc/decisions"
   mkdir -p "${base}/doc/changes"
   mkdir -p "${base}/doc/guides"
 
-  # Project-specific files
+  # Helper: write an .md file carrying a frontmatter `ados_distribution` marker.
+  # The marker-driven uninstall (PR #74 review C1) reads this to decide removal;
+  # fixtures must therefore mirror the real repo's marker convention.
+  _mock_md() {
+    # $1=path  $2=marker  $3=heading
+    printf -- '---\nados_distribution: %s\n---\n%s\n' "$2" "$3" > "${base}/$1"
+  }
+
+  # Project-specific files (NEVER removed)
   printf '# PM Instructions\n' > "${base}/.ai/agent/pm-instructions.md"
 
-  # Updatable files
-  printf '# Handbook\n' > "${base}/doc/documentation-handbook.md"
-  printf '# Index\n' > "${base}/doc/00-index.md"
+  # Updatable standalone docs (redistributable -> removed)
+  _mock_md "doc/documentation-handbook.md"  redistributable "# Handbook"
+  _mock_md "doc/00-index.md"                redistributable "# Index"
 
-  # Guides
-  printf '# Change Lifecycle\n' > "${base}/doc/guides/change-lifecycle.md"
-  printf '# Change Convention\n' > "${base}/doc/guides/unified-change-convention-tracker-agnostic-specification.md"
-  printf '# Decision Records\n' > "${base}/doc/guides/decision-records-management.md"
-  printf '# Agents Guide\n' > "${base}/doc/guides/opencode-agents-and-commands-guide.md"
-  printf '# Model Config\n' > "${base}/doc/guides/opencode-model-configuration.md"
-  printf '# Tools Convention\n' > "${base}/doc/guides/tools-convention.md"
-  printf '# Copywriting\n' > "${base}/doc/guides/copywriting.md"
-  printf '# System Deps\n' > "${base}/doc/guides/ados-tools-system-dependencies.md"
-  printf '# Onboarding\n' > "${base}/doc/guides/onboarding-existing-project.md"
+  # Guides — redistributable ones are removed by the marker-driven uninstall.
+  _mock_md "doc/guides/change-lifecycle.md"                                              redistributable "# Change Lifecycle"
+  _mock_md "doc/guides/unified-change-convention-tracker-agnostic-specification.md"      redistributable "# Change Convention"
+  _mock_md "doc/guides/decision-records-management.md"                                   redistributable "# Decision Records"
+  _mock_md "doc/guides/opencode-agents-and-commands-guide.md"                            redistributable "# Agents Guide"
+  _mock_md "doc/guides/opencode-model-configuration.md"                                  redistributable "# Model Config"
+  _mock_md "doc/guides/tools-convention.md"                                              redistributable "# Tools Convention"
+  _mock_md "doc/guides/copywriting.md"                                                   redistributable "# Copywriting"
+  _mock_md "doc/guides/ados-tools-system-dependencies.md"                                redistributable "# System Deps"
+  _mock_md "doc/guides/onboarding-existing-project.md"                                   redistributable "# Onboarding"
+  # An `internal` guide MUST be preserved (not installed, so not removed).
+  _mock_md "doc/guides/adding-tool-support.md"                                           internal        "# Adding Tool Support"
 
-  # Decision stubs
-  printf '# Decisions README\n' > "${base}/doc/decisions/README.md"
-  printf '# Decisions Index\n' > "${base}/doc/decisions/00-index.md"
+  # Decision stubs — README is redistributable (removed); 00-index.md is
+  # `project-generated` (regenerated per-repo per GH-63) and MUST be preserved.
+  _mock_md "doc/decisions/README.md"    redistributable    "# Decisions README"
+  _mock_md "doc/decisions/00-index.md"  project-generated  "# Decisions Index"
 
-  # Rules index
-  printf '# AI Rules\n' > "${base}/.ai/rules/README.md"
+  # Rules index (redistributable -> removed)
+  _mock_md ".ai/rules/README.md" redistributable "# AI Rules"
 
-  # Templates
-  printf '# Template\n' > "${base}/doc/templates/change-spec-template.md"
-  printf '# Template\n' > "${base}/doc/templates/feature-spec-template.md"
-  printf '# Template\n' > "${base}/doc/templates/README.md"
+  # Templates — flat md, a nested blueprint, and a yaml register (all
+  # redistributable -> removed by the recursive marker-driven path).
+  _mock_md "doc/templates/change-spec-template.md"  redistributable "# Template"
+  _mock_md "doc/templates/feature-spec-template.md" redistributable "# Template"
+  _mock_md "doc/templates/README.md"                redistributable "# Template"
+  _mock_md "doc/templates/blueprints/code-review-instructions--example.md" redistributable "# Blueprint"
+  printf 'ados_distribution: redistributable\nregister_id: MOCK-REGISTER-001\n' > "${base}/doc/templates/register-template.yaml"
 
   printf '%s' "${base}"
 }
@@ -510,8 +524,40 @@ test_local_uninstall_removes_decision_stubs() {
     remove_local_files
   )
 
+  # README is redistributable -> removed; 00-index.md is `project-generated`
+  # (regenerated per-repo per GH-63) -> PRESERVED by marker-driven uninstall.
   assert_file_not_exists "${project_dir}/doc/decisions/README.md"
-  assert_file_not_exists "${project_dir}/doc/decisions/00-index.md"
+  assert_file_exists "${project_dir}/doc/decisions/00-index.md" "project-generated decisions/00-index.md must be preserved"
+}
+
+test_local_uninstall_marker_driven_preservation() {
+  # PR #74 review C1: marker-driven removal removes ONLY redistributable-marked
+  # files; internal / project-generated / unmarked files are left in place.
+  local project_dir
+  project_dir="$(create_mock_ados_project "${_test_tmpdir}/project")"
+
+  (
+    cd "${project_dir}"
+    FORCE=true
+    reset_counters
+    remove_local_files
+  )
+
+  # Redistributable files ARE removed (guides, flat templates, recursive
+  # blueprint + yaml, standalone docs).
+  assert_file_not_exists "${project_dir}/doc/guides/copywriting.md"        "redistributable guide removed"
+  assert_file_not_exists "${project_dir}/doc/templates/change-spec-template.md" "redistributable template removed"
+  assert_file_not_exists "${project_dir}/doc/templates/blueprints/code-review-instructions--example.md" "recursive blueprint removed"
+  assert_file_not_exists "${project_dir}/doc/templates/register-template.yaml" "yaml register removed"
+  assert_file_not_exists "${project_dir}/doc/documentation-handbook.md"    "redistributable standalone removed"
+  assert_file_not_exists "${project_dir}/.ai/rules/README.md"             "redistributable standalone removed"
+
+  # Non-redistributable files are PRESERVED.
+  assert_file_exists "${project_dir}/doc/guides/adding-tool-support.md"    "internal guide must be preserved"
+  assert_file_exists "${project_dir}/doc/decisions/00-index.md"           "project-generated doc must be preserved"
+
+  # User-created project files are untouched.
+  assert_file_exists "${project_dir}/.ai/agent/pm-instructions.md"        "pm-instructions must be preserved"
 }
 
 test_local_uninstall_removes_rules_index() {
@@ -532,7 +578,9 @@ test_local_uninstall_removes_empty_rules_dir() {
   local project_dir="${_test_tmpdir}/project"
   mkdir -p "${project_dir}/.git"
   mkdir -p "${project_dir}/.ai/rules"
-  printf '# AI Rules\n' > "${project_dir}/.ai/rules/README.md"
+  # Marker-driven removal only takes redistributable-marked files, so the fixture
+  # must carry the marker for the dir to end up empty.
+  printf -- '---\nados_distribution: redistributable\n---\n# AI Rules\n' > "${project_dir}/.ai/rules/README.md"
 
   (
     cd "${project_dir}"
@@ -630,6 +678,7 @@ main() {
   run_test "local uninstall respects dry-run" test_local_uninstall_dry_run
   run_test "local uninstall removes guide files" test_local_uninstall_removes_guides
   run_test "local uninstall removes decision stubs" test_local_uninstall_removes_decision_stubs
+  run_test "local uninstall marker-driven preservation" test_local_uninstall_marker_driven_preservation
   run_test "local uninstall removes rules index" test_local_uninstall_removes_rules_index
   run_test "local uninstall removes empty rules dir" test_local_uninstall_removes_empty_rules_dir
 

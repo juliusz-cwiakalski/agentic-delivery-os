@@ -55,6 +55,18 @@ set -o errtrace
 shopt -s inherit_errexit 2>/dev/null || true
 IFS=$'\n\t'
 
+# --- bash>=4 capability check (PR #74 review C2). ---
+# install.sh uses `shopt -s globstar` for recursive template copying
+# (doc/templates/**; see install_local_files). globstar is bash>=4 — on macOS
+# system bash 3.2 the option does not exist and, under `set -e`, the failing
+# `shopt -s globstar` would abort with an opaque error. Fail loudly instead.
+# Mirrors scripts/.tests/test-doc-distribution.sh's capability check.
+if ! (shopt -s globstar) >/dev/null 2>&1; then
+  printf '[ERROR] %s requires bash>=4 (globstar unsupported by this shell: %s). On macOS install bash 4+ (e.g. "brew install bash") or run via the CI container.\n' \
+    "${0##*/}" "${BASH_VERSION:-unknown}" >&2
+  exit 1
+fi
+
 # ============================================================================
 # SETTINGS
 # ============================================================================
