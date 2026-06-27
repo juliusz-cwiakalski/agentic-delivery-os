@@ -1,0 +1,54 @@
+ados_distribution: project-generated
+# chg-GH-72-pm-notes.yaml — PM durable memory for change GH-72.
+# Lives under doc/changes/ (committed, git-tracked). Two purposes:
+#   1. Live coordination: phases, decisions, open questions, blockers.
+#   2. Retrospective record: delivery inefficiencies, process observations.
+change_id: GH-72
+title: "[inception:3] Tribal-knowledge extraction from repo docs + git history"
+slug: tribal-knowledge-extraction
+branch: feat/GH-72/tribal-knowledge-extraction
+change_folder: doc/changes/2026-06/2026-06-27--GH-72--tribal-knowledge-extraction
+
+phases:
+  clarify_scope: { started: "2026-06-27T00:00:00Z", completed: null }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+
+decisions:
+  - text: "Scope confirmed from ticket rescope (owner comment, trusted): GH-72 = the PRODUCE path only — tribal-knowledge EXTRACTION from repo docs + git history → doc/inception/analysis/tribal-knowledge.md. The CONSUME path (Phase 0 consumes tribal-knowledge.md if present) and GRADUATE path (Phase 2 graduates to permanent homes) are already wired by GH-71 (#82) and are OUT OF SCOPE — do not duplicate. PR-thread extraction (GH-33) is PARKED (blocked on CLI tooling) — out of scope."
+    date: "2026-06-27"
+  - text: "DEC-5 applied to GH-72 — THREE concrete+blocking guide (doc/guides/project-inception.md) amendments identified, all in-scope: (a) Factual staleness: artifact-catalog row for tribal-knowledge currently shows no template (em-dash) — after GH-72 ships doc/templates/tribal-knowledge-template.md the row must reference it (ghost-ref/factual-error per DEC-5). (b) Contradiction: guide line ~663 says 'Tribal-knowledge graduation (Phase 0→1)'; shipped authority (bootstrapper.md agent prompt + feature-bootstrapper.md spec + Diagram 3) says graduation is Phase 2. Canonicalize to Phase 2 (produce @ Phase 0, graduate @ Phase 2). (c) Trust/safety articulation: guide has zero treatment of untrusted-input/prompt-injection for the ingestion side; the agent prompt already has <trust_boundary>/<safety_rules>, but GH-72 expands the surface (git history mining). Add a brief trust/safety note to the legacy section so human authority matches agent authority — directly supports the trust/safety AC."
+    date: "2026-06-27"
+  - text: "Phase ownership canonicalized: PRODUCE in Phase 0 legacy (extraction from repo docs + git history → doc/inception/analysis/tribal-knowledge.md); CONSUME in Phase 0 legacy (already wired — read tribal-knowledge.md if present); GRADUATE in Phase 2 legacy (already wired — graduate to permanent homes, human-gated). This matches Diagram 3 (inception-process-diagrams.md), the shipped bootstrapper.md prompt, feature-bootstrapper.md spec, and trigger-gh-72.md. Resolves the design-notes internal inconsistency (full-inception-bootstrap-process.md §4 'Phase 0→1' vs §8 'Phase 1' vs Diagram 3 'Phase 2')."
+    date: "2026-06-27"
+
+open_questions: []
+
+blockers: []
+
+notes:
+  - text: "Context sources read: .ai/local/inception/README.md (reading guide), full-inception-bootstrap-process.md §4 (legacy differences), inception-process-diagrams.md Diagram 3 (new-vs-legacy), .opencode/agent/bootstrapper.md (shipped agent — has <trust_boundary>, <safety_rules>, <write_allowlist> already; Phase 0 legacy 'consume tribal-knowledge if present'; Phase 2 legacy 'graduate consumed tribal knowledge to permanent homes'), doc/guides/project-inception.md (human authority — Phase 0/Phase 2 text, 10 tribal-knowledge mentions, NO template, NO trust/safety articulation), doc/spec/features/feature-bootstrapper.md (system spec — documents consume+graduate, silent on produce), doc/templates/repo-analysis-template.md (structural sibling reference), doc/templates/inception-state-template.yaml (already has tribal_knowledge artifact entry → path fixed)."
+    type: info
+    date: "2026-06-27"
+  - text: "Two-source split confirmed: GH-72 = repo docs + git history (file reads + git log — deliverable now, no special tooling); GH-33 = PR/MR comments + review threads (PARKED, blocked on CLI tooling — out of scope here). Do NOT build the PR-piece."
+    type: info
+    date: "2026-06-27"
+  - text: "HARD RULE (AGENTS.md): ALL .opencode/agent/bootstrapper.md edits MUST be delegated to @toolsmith. Source .opencode/ + regenerated .ados-claude/ must be committed together (CI verifies staleness via scripts/build-claude-plugin.sh). The @coder delegates agent-prompt editing to @toolsmith; PM never hand-edits agent definition files."
+    type: info
+    date: "2026-06-27"
+  - text: "Testing reality (carried from GH-71): most AC are behavioral agent-capability claims that cannot be unit-tested in CI. Test plan must be honest — static/structural checks (template exists + redistributable marker, write-allowlist covers tribal-knowledge.md, agent prompt has the produce-step section, plugin byte-fresh) + CI gates (build-claude-plugin staleness, doc-distribution marker on new template) + a manual verification matrix mapping each AC to a human-checkable agent-behavior step."
+    type: risk
+    date: "2026-06-27"
+  - text: "User requested two @red-team-coordinator reviews: (1) pre-delivery on spec/plan/test-plan artifacts, (2) post-delivery on the delivered change. Address findings via follow-up phases/changes. Stop at PR. Categorization/graduation scheme design delegated to @decision-advisor (PDR) per user hint."
+    type: info
+    date: "2026-06-27"
+  - text: "Dependencies verified present: GH-71 (#82, merged 2026-06-27) shipped the unified 8-phase bootstrapper with consume/graduate wired; GH-69 (#81, merged 2026-06-26) shipped doc/inception/ workspace + repo-analysis-template.md (structural sibling) + inception-state-template.yaml (tribal_knowledge artifact entry already present)."
+    type: info
+    date: "2026-06-27"
