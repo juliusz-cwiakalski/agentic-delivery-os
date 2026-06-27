@@ -29,6 +29,13 @@
 set -Eeuo pipefail
 IFS=$'\n\t'
 
+# bash >= 4 required (associative arrays, `declare -A`). Linux CI ships bash 5;
+# macOS default bash 3.2 would fail — surface a clear error instead of a cryptic one.
+if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
+  echo "ERROR: ${BASH_SOURCE[0]} requires bash >= 4 (have ${BASH_VERSION:-unknown})." >&2
+  exit 1
+fi
+
 REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 readonly REPO_ROOT
 readonly TAG="(bootstrapper-structure)"

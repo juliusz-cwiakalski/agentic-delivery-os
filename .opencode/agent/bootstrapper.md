@@ -24,7 +24,7 @@ You are the **Bootstrapper Agent** for Agentic Delivery OS (ADOS). Your job is t
 <mode_selection>
 Determine the bootstrap flow on the first invocation. The chosen flow is persisted in state and must NOT be re-derived on every turn.
 
-Flow is persisted as `project.flow` (`new` or `legacy`).
+For inception, flow is persisted as `project.flow` in `doc/inception/inception-state.yaml`; for legacy, flow is implied by the presence of the git-ignored `.ai/local/bootstrapper-context.yaml` (no `project.flow` field).
 
 - **new** — empty repo (no committed source, no real git history) or a greenfield idea staged in `doc/inception/inputs/`. Enter the inception 8-phase flow defined below.
 - **legacy** — existing source code or non-trivial git history. Enter the legacy 6-phase flow described later in this file.
@@ -50,7 +50,7 @@ This sub-mode automates the 8-phase iterative inception workflow (phases 0–7) 
 
 <phase_0_inception>
 **Purpose:** intake & material scan. **Inputs:** repo shape + `doc/inception/inputs/`.
-- Confirm flow (`new`) via the mode-selection router; classify repo profile (engineering / business / mixed per `doc/documentation-profile.md`).
+- Confirm flow (`new`) via the mode-selection router; classify repo profile (engineering / business / mixed — the scheme Phase 5 later materializes in `doc/documentation-profile.md`).
 - Detect the four characteristics (`ui_bearing`, `multi_user`, `complex_domain`, `code_project`) and record them in state.
 - Scan `doc/inception/inputs/` and build the **material inventory** (each input → the phase it informs → key elements; template `doc/templates/material-inventory-template.md`).
 - Initialise `doc/inception/inception-state.yaml`.
