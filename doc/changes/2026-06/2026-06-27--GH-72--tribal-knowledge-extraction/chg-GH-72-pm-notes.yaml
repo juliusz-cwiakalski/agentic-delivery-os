@@ -12,9 +12,9 @@ change_folder: doc/changes/2026-06/2026-06-27--GH-72--tribal-knowledge-extractio
 phases:
   clarify_scope: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   specification: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
-  test_planning: { started: "2026-06-27T00:00:00Z", completed: null }
-  delivery_planning: { started: null, completed: null }
-  delivery: { started: null, completed: null }
+  test_planning: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  delivery_planning: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  delivery: { started: "2026-06-27T00:00:00Z", completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -31,6 +31,9 @@ decisions:
   - text: "DEC-5 applied to GH-72 — THREE concrete+blocking guide (doc/guides/project-inception.md) amendments identified, all in-scope: (a) Factual staleness: artifact-catalog row for tribal-knowledge currently shows no template (em-dash) — after GH-72 ships doc/templates/tribal-knowledge-template.md the row must reference it (ghost-ref/factual-error per DEC-5). (b) Contradiction: guide line ~663 says 'Tribal-knowledge graduation (Phase 0→1)'; shipped authority (bootstrapper.md agent prompt + feature-bootstrapper.md spec + Diagram 3) says graduation is Phase 2. Canonicalize to Phase 2 (produce @ Phase 0, graduate @ Phase 2). (c) Trust/safety articulation: guide has zero treatment of untrusted-input/prompt-injection for the ingestion side; the agent prompt already has <trust_boundary>/<safety_rules>, but GH-72 expands the surface (git history mining). Add a brief trust/safety note to the legacy section so human authority matches agent authority — directly supports the trust/safety AC."
     date: "2026-06-27"
   - text: "Phase ownership canonicalized: PRODUCE in Phase 0 legacy (extraction from repo docs + git history → doc/inception/analysis/tribal-knowledge.md); CONSUME in Phase 0 legacy (already wired — read tribal-knowledge.md if present); GRADUATE in Phase 2 legacy (already wired — graduate to permanent homes, human-gated). This matches Diagram 3 (inception-process-diagrams.md), the shipped bootstrapper.md prompt, feature-bootstrapper.md spec, and trigger-gh-72.md. Resolves the design-notes internal inconsistency (full-inception-bootstrap-process.md §4 'Phase 0→1' vs §8 'Phase 1' vs Diagram 3 'Phase 2')."
+    date: "2026-06-27"
+  - text: "RED-TEAM ROUND 1 (pre-delivery, @red-team-coordinator): verdict SHIP-WITH-FINDINGS — 0 Critical, 4 Major, 8 Minor, 3 Nit. ALL 4 Majors + 5 Minors + 2 Nits addressed in spec/plan/test-plan before delivery: M1 (PRODUCE→CONSUME ordering invariant added to plan Phase B — PRODUCE writes BEFORE consume clause so a fresh legacy run populates the consumed set); M2 (4th guide amendment added — line 654 'PR/MR history' misattributes extraction source to GH-33's parked surface, corrected to 'repo docs + git history'); M3 (TC-MANUAL-009 added — commit/merge-message prompt-injection INSTRUCTION vector, the git-log surface's primary attack, was untested); M4 (plan Phase B now requires @toolsmith to EXPLICITLY name commit/merge messages + git log output as untrusted input, not rely on 'verbatim inheritance' — shipped <trust_boundary> does not name them). Plus m1 (AC1 OQ-2 qualifier), m2 (.ados-claude/agents/ plural path fix in plan), m4 (stale 'pending phase 4' comments dropped), m5 (CI gate #5 install/uninstall marked REQUIRED — install.sh globs doc/templates), m6 (TC-MANUAL-001 'exactly one file' NFR-2 observation), n1 (TC-STRUCT-002 label), n2 (Phase A license-header authoring clarification). Accepted/deferred: m7 (PDR Proposed — documented as PR-gate criterion; separate @decision-critic challenge optional since RT1 already validated PDR consistency), m8 (3→4 guide amendments beyond literal ticket AC — DEC-5-justified, consciously owned), m3 (TC-ID divergence — plan IDs provisional, test-plan authoritative, acceptable), n3 (cosmetic 'Templated here' cell — folded into C.1)."
+    type: info
     date: "2026-06-27"
 
 open_questions: []

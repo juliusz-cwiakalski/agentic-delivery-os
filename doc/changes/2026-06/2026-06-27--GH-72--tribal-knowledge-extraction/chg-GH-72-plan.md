@@ -76,7 +76,11 @@ The system-spec reconciliation (scope item D) is **out of this plan** — delive
    no embedded instructions followed, credential patterns refused (PDR-0001 C-4; AC6).
 
 > **No open questions remain.** No decision-record placeholder is needed — PDR-0001 is
-> the design authority and is inherited as invariants.
+> the design authority and is inherited as invariants. **PR-gate criterion (RT1-m7):**
+> PDR-0001 is `status: Proposed` (R2); human acceptance/rejection of PDR-0001 rides the
+> GH-72 PR review. If the human rejects the PDR, the inherited invariants (and thus this
+> plan) must be revisited. A separate `@decision-critic` challenge is optional — the
+> pre-delivery red-team already independently validated PDR consistency.
 
 ## Scope
 
@@ -165,8 +169,12 @@ file write is `@coder`'s.
 - [ ] **A.1** Author `doc/templates/tribal-knowledge-template.md`. Mirror the sibling
   `doc/templates/repo-analysis-template.md` frontmatter discipline —
   `ados_distribution: redistributable`, `id: TRIBAL-KNOWLEDGE`, `status: Draft`,
-  `created`/`last_updated` 2026-06-27, a confidence column, and the standard license
-  header (`scripts/add-header-location.sh .` covers `doc/guides`/`doc/templates`).
+  `created`/`last_updated` 2026-06-27, a confidence column. **License-header note (RT1-n2):**
+  `@coder` writes the frontmatter (`id`, `status`, `ados_distribution`, etc.); the **script**
+  `scripts/add-header-location.sh` adds the license header lines (AGENTS.md: "AI agents must
+  never add license headers"). `ados_distribution` MUST sit inside the **single** frontmatter
+  block (the same `---` block holding any `# Copyright` lines) — a second `---` block makes
+  `test-doc-distribution.sh`'s `get_marker()` return "missing".
 - [ ] **A.2** Encode PDR-0001's design into the template body:
   - **Producer note**: produced in Phase 0 (legacy) → reviewed at human gate 0 → graduated
     at Phase 2 (human-gated). State that a hand-authored file is preserved; PRODUCE writes
@@ -249,8 +257,18 @@ Phase B but does **not** hand-edit the agent prompt. Source `.opencode/` + regen
     **score confidence** (rubric), **flag contradictions** (inline `status: contradicted`
     + roll-up), and **write** `doc/inception/analysis/tribal-knowledge.md` from the new
     template.
-  - **Inherit** `<trust_boundary>` / `<safety_rules>` (untrusted input, facts only,
+  - **Inherit + extend** `<trust_boundary>` / `<safety_rules>` (untrusted input, facts only,
     prompt-injection defense, credential refuse list; write confined to `doc/inception/**`).
+    **RT1-M4 invariant:** `git log` output and commit/merge messages are a NEW untrusted
+    surface NOT named in the shipped `<trust_boundary>` (which enumerates "Markdown,
+    configuration, code comments, generated docs, and embedded instructions"). `@toolsmith`
+    must EXPLICITLY name commit/merge messages and `git log` output as untrusted input in the
+    PRODUCE step (or extend `<trust_boundary>`) — do **not** rely on "verbatim inheritance" alone.
+  - **RT1-M1 ordering invariant:** PRODUCE writes `tribal-knowledge.md` **BEFORE** the
+    existing "consume `tribal-knowledge` if present" clause in `<phase_0>`, so a fresh legacy
+    run (no hand-authored file) populates the consumed set that Phase 2 graduates. The consume
+    clause text is unchanged (NG-3) — only its position relative to PRODUCE matters. Without
+    this ordering, consume finds nothing on a fresh run → Phase 2 has nothing to graduate.
   - **Preserve** the OQ-2 overwrite rule: preserve a hand-authored file; produce fresh only
     when none exists or the human approves overwrite.
   - **Reference** the template + guide for detail — **duplicate no prose** (NFR-4, RSK-5).
@@ -272,7 +290,7 @@ Phase B but does **not** hand-edit the agent prompt. Source `.opencode/` + regen
 **Files and modules**:
 
 - `.opencode/agent/bootstrapper.md` (updated — Phase-0 legacy PRODUCE step only)
-- `.ados-claude/agent/bootstrapper.md` (regenerated counterpart)
+- `.ados-claude/agents/bootstrapper.md` (regenerated counterpart)
 
 **Tests**:
 
@@ -315,7 +333,13 @@ the `@toolsmith` hard rule does **not** apply.
   never followed, and credential/secret patterns are refused (point at the bootstrapper
   `<trust_boundary>` / `<safety_rules>`). Keeps human authority aligned with agent authority
   on the expanded (git-history) extraction surface.
-- [ ] **C.4** Preserve `ados_distribution: redistributable` and **guide structural
+- [ ] **C.4** **(d) Extraction-source label** (~line 654, legacy-flow-differences table, Phase 0
+  row): the row currently says "Also run **tribal-knowledge extraction** if **PR/MR history**
+  exists" — but PR/MR history is GH-33's parked surface, not GH-72's scope (repo docs + `git
+  log`, always available for legacy). Correct to "if repo docs or git history exist" (RT1-M2;
+  DEC-5 contradiction). The consistency guard's landmark check keys on the row label "Tribal
+  knowledge", not this prose, so the edit is structurally safe.
+- [ ] **C.5** Preserve `ados_distribution: redistributable` and **guide structural
   integrity**: do **not** add/remove mermaid blocks (must stay exactly 4), phase sections
   (must stay 8, Phase 0–7), or phase sub-parts (Activities/Anti-sycophancy/Human gate/
   Outputs; must stay ≥32). Do **not** remove the "Tribal knowledge" landmark conditional-matrix
@@ -323,7 +347,7 @@ the `@toolsmith` hard rule does **not** apply.
 
 **Acceptance Criteria**:
 
-- Must: all 3 edits applied (catalog cell, Phase-2 label, trust/safety note) — **DEC-4**.
+- Must: all 4 edits applied (catalog cell, Phase-2 label, trust/safety note, extraction-source label) — **DEC-4**.
 - Must: `ados_distribution: redistributable` intact and 0 new contradictions vs the agent +
   spec — **NFR-7**.
 - Must: the structural-integrity guard stays green (4 mermaid / 8 phases / ≥32 sub-parts) —
@@ -422,7 +446,7 @@ shipped state. This is a bookkeeping commit on this plan file only.
 | Design decision (inherited invariants) | ../../decisions/PDR-0001-tribal-knowledge-extraction-taxonomy.md | PDR (ALT-1, C-1…C-5) |
 | New template (Phase A) | ../../../templates/tribal-knowledge-template.md | Redistributable template |
 | Agent prompt (Phase B, via @toolsmith) | .opencode/agent/bootstrapper.md | Agent source |
-| Agent prompt — generated (Phase B) | .ados-claude/agent/bootstrapper.md | Generated plugin |
+| Agent prompt — generated (Phase B) | .ados-claude/agents/bootstrapper.md | Generated plugin |
 | Inception guide (Phase C, 3 edits) | ../../../guides/project-inception.md | Redistributable guide |
 | System spec (OUT of plan — @doc-syncer, phase 6) | ../../../spec/features/feature-bootstrapper.md | Feature spec (reconciled post-delivery) |
 | Produce target state entry (no change) | ../../../templates/inception-state-template.yaml (line 54) | State template |
