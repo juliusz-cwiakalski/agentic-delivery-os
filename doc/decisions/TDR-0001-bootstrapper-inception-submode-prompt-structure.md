@@ -292,6 +292,25 @@ state update, artifacts per Appendix C) and references `doc/guides/project-incep
 content detail. A `<mode_selection>` block routes `new` vs `legacy`; `<resume_behavior>` and
 `<write_allowlist>` are extended additively. The legacy flow is left untouched.
 
+### Inline-vs-referenced boundary (clarification added during GH-71 red-team remediation, REM-3/RT1-06)
+
+To keep the "control flow inline / content referenced" split operationally crisp (and prevent
+`@toolsmith` from duplicating guide prose — NFR-3/NFR-5/RSK-5), the boundary is:
+
+- **INLINE in each `<phase_N_inception>`:** phase name; the human-gate presence; the
+  anti-sycophancy technique **NAME** carried via an `<anti_sycophancy>technique-name</anti_sycophancy>`
+  sub-tag anchor; the artifact **KEYS** produced (by name/key only, e.g. `north_star`, `roadmap`,
+  `assumptions`); the state-update point; a one-line guide reference.
+- **REFERENCED (NOT duplicated):** the substantive content of each artifact; the full
+  anti-sycophancy prompt text; the conditional-artifact details; the four-risk definitions.
+
+Consequence for `<resume_behavior>` / `<write_allowlist>`: these shared blocks are *extended*
+(additive inception entries), so legacy parity is asserted via **legacy-line-presence** (every
+baseline legacy entry still present verbatim; additions permitted), NOT whole-block
+byte-identity — see NFR-4 / the test plan's TC-STRUCT-003 two-tier method. The truly-frozen
+legacy blocks (`<workflow_phases>`, `<persistent_state>`, `<phase_1..6_*>`) remain
+byte-for-behavior identical.
+
 Rationale, tied to drivers: the irreducible requirement is that the prompt hold its own
 **control flow** (self-contained-agent principle; driver 3) while the guide owns **content**
 (DEC-2; driver 5). Terse per-phase sections satisfy both — they keep the file navigable and
@@ -381,6 +400,9 @@ Rollout is via the standard ADOS delivery process for GH-71. No migration is req
   modified, 0 created — Window: post-merge
 - **Metric:** `.ados-claude/` plugin counterpart freshness — Target: CI-fresh — Window:
   ongoing
+- **Metric:** `bootstrapper.md` line count — Target: warn > ~650, fail > ~800 (tunable via
+  the prompt-structure test TC-INFRA-001; env `BOOTSTRAPPER_WARN_LINES`/`BOOTSTRAPPER_FAIL_LINES`)
+  — Window: post-merge — turns RSK-1 from a post-hoc revisit-trigger into a measured guardrail.
 
 ## Confidence Rating
 

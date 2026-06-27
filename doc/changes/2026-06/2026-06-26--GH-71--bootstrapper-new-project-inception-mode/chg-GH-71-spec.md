@@ -74,7 +74,7 @@ Because `@bootstrapper` only onboards existing projects through a single-pass, s
 |--------|--------|
 | Phases with an explicit human gate | 8 of 8 (phases 0–7) |
 | Instruction files generated in Phase 5 | 4 of 4 (pm, pr, decision, code-review) |
-| Legacy-mode behavioral parity | 100% — legacy section and its state schema unchanged |
+| Legacy-mode behavioral parity | 100% — frozen legacy blocks unchanged; shared `<resume_behavior>`/`<write_allowlist>` blocks keep legacy entries verbatim with inception entries additive (NFR-4) |
 | Anti-sycophancy techniques placed in correct phases | 5 of 5 mappings (devil's advocate→1; pre-mortem→2&3; alt→3; unknown-unknowns→4; four-risk→1/2/3) |
 | Conditional-artifact triggers defined for detected characteristics | 4 of 4 (UI, multi-user, complex domain, code project) |
 | Resume round-trips across a fresh invocation | 100% — last incomplete phase is determinable from state alone |
@@ -126,8 +126,26 @@ Because `@bootstrapper` only onboards existing projects through a single-pass, s
 - **F-12 (Gates):** Every phase ends in a human gate; the agent updates state only after approval. Phase 6 (readiness check) may FAIL and reopen an earlier phase (1–4) where a gap lives.
 - **F-13 (State & resume):** Inception state is a committed file instantiated from `inception-state-template.yaml`. On a fresh invocation the agent reads it, determines the last incomplete phase, and resumes with state + prior artifacts as context.
 - **F-14 (Anti-sycophancy):** The decision-dense phases run adversarial prompts before their gates: devil's advocate (1), pre-mortem (2 & 3), alternative comparison (3), unknown-unknowns (4), and the four-risk check (1, 2, 3). Phases 0, 5, 6, 7 carry none.
-- **F-15 (Phase 5 outputs):** Phase 5 generates `AGENTS.md` plus all four `.ai/agent/*-instructions.md` (pm, pr, decision, code-review), sets the documentation profile, and installs handbook/templates/decisions. `code-review-instructions.md` is generated from the GH-69 blueprint and is a net-new addition vs. legacy.
-- **F-16 (Legacy parity):** The legacy 6-phase section, its state schema, and its resume behavior remain functionally identical. The inception additions are organized as a parallel sub-mode so the legacy content is untouched.
+- **F-15 (Phase 5 outputs):** Phase 5 generates `AGENTS.md` plus all four `.ai/agent/*-instructions.md` (pm, pr, decision, code-review); sets `doc/documentation-profile.md` (the GH-52 classification, which currently sits outside every allowlist glob — see §7.1 / REM-5); installs `doc/documentation-handbook.md`, `doc/templates/`, and `doc/decisions/`; and verifies `doc/00-index.md` is consistent with the new artifact set (so none of these Phase-5 outputs are orphaned scope). `code-review-instructions.md` is generated from the GH-69 blueprint and is a **net-new inception Phase-5 artifact ONLY** — legacy Phase 4 continues to produce exactly the three files (pm, pr, decision) it produces today; the legacy `<phase_4_draft>` recommended-artifacts are **not** modified (REM-1, DEC-3).
+- **F-16 (Legacy parity):** The legacy 6-phase section, its state schema, and its frozen blocks (`<workflow_phases>`, `<persistent_state>`, `<phase_1_repo_scan>`…`<phase_6_write>`) remain byte-for-behavior identical; the two shared blocks inception extends (`<resume_behavior>`, `<write_allowlist>`) keep every existing legacy entry/bullet verbatim with inception entries appended only — behavior equivalent, **not** byte-identical for these shared blocks (NFR-4). Inception additions are a parallel sub-mode, so legacy content is untouched.
+
+### 5.2 Inline-vs-referenced boundary (inception phase sections)
+
+To keep the inception sub-mode terse and single-source (DEC-2, DEC-7, NFR-3), each `<phase_N_inception>` section is **inline** for its operational skeleton and **references** the guide for substantive detail. This gives the plan and `@toolsmith` an unambiguous authoring rule:
+
+**INLINE in each `<phase_N_inception>` (operational skeleton only):**
+- phase name / ordinal;
+- whether a human gate is present for that phase;
+- the anti-sycophancy technique **NAME** for that phase (anchored via an `<anti_sycophancy>` sub-tag) — **not** the prompt text;
+- the **artifact KEYS** the phase produces, listed by name/key only;
+- the state-update point (when `doc/inception/inception-state.yaml` advances);
+- a one-line reference to the relevant guide section.
+
+**REFERENCED, not duplicated (from `doc/guides/project-inception.md` / templates):**
+- substantive artifact content and field-level detail;
+- the full anti-sycophancy prompt text;
+- conditional-artifact activation details (the 4-signal matrix from F-2);
+- the four-risk definitions (Value / Usability / Feasibility / Viability).
 
 ## 6. USER & SYSTEM FLOWS
 
@@ -167,7 +185,7 @@ Flow 3 — Legacy (unchanged)
 - Per-phase human gates with Phase-6 reopen.
 - Embedded anti-sycophancy (5 technique→phase mappings).
 - Phase-5 generation of all four instruction files, including `code-review-instructions.md`.
-- Write-allowlist additions for `doc/inception/**` (incl. `doc/inception/abandoned-<ISO>.yaml` for archived abandoned runs per DEC-6) and `.ai/agent/code-review-instructions.md`.
+- Write-allowlist additions (additive to the shared `<write_allowlist>` block; every existing legacy entry preserved verbatim — NFR-4) for `doc/inception/**` (incl. `doc/inception/abandoned-<ISO>.yaml` for archived abandoned runs per DEC-6), `.ai/agent/code-review-instructions.md` (written **only** by inception Phase 5 — legacy Phase 4 does not produce it; REM-1), and `doc/documentation-profile.md` (set by Phase 5 and not matched by any existing allowlist glob; REM-5).
 - Additive update to the `bootstrapper` one-line description in `AGENTS.md`.
 - Regeneration of the Claude Code plugin counterpart (committed alongside the source, per the multi-tool rule).
 
@@ -180,6 +198,7 @@ Flow 3 — Legacy (unchanged)
 - [OUT] Authoring `doc/guides/project-inception.md` from scratch (reference only; amend solely on concrete gaps).
 - [OUT] New inception templates (all shipped in GH-69).
 - [OUT] Any change to legacy flow behavior or its state schema.
+- [OUT] Generating `code-review-instructions.md` in legacy mode — it is a net-new inception Phase-5 artifact only (DEC-3, F-15). Legacy Phase 4 continues to produce exactly the three files (pm, pr, decision) it produces today; the legacy `<phase_4_draft>` recommended-artifacts list is **not** modified.
 
 ### 7.3 Deferred / Maybe-Later
 
@@ -212,7 +231,7 @@ N/A — no new external APIs or services. The agent may use existing MCP/CLI acc
 
 ### 8.5 Backward Compatibility
 
-- The legacy 6-phase flow, its state schema, and its resume behavior are **unchanged** (F-16). Existing projects bootstrapped via GH-32 are unaffected.
+- The legacy 6-phase flow and its state schema are **unchanged** (F-16, NFR-4): frozen legacy blocks (`<workflow_phases>`, `<persistent_state>`, `<phase_1_repo_scan>`…`<phase_6_write>`) are byte-for-behavior identical; the two shared blocks inception extends (`<resume_behavior>`, `<write_allowlist>`) keep every legacy entry verbatim with inception entries appended. Existing projects bootstrapped via GH-32 are unaffected.
 - The new inception mode is **additive**: it adds a parallel sub-mode, new committed-state file, and new allowlist entries; it does not alter legacy outputs.
 - The `AGENTS.md` one-line description edit is additive (capabilities grow; nothing is removed).
 
@@ -222,8 +241,8 @@ N/A — no new external APIs or services. The agent may use existing MCP/CLI acc
 |----|-------------|-----------|
 | NFR-1 | Mode-selection determinism | Empty repo / greenfield idea → `new`; existing code or git history → `legacy`; ambiguous cases must surface a question, never silently guess (0 silent guesses). |
 | NFR-2 | Resume correctness | On a fresh invocation, the last incomplete phase is determinable from `doc/inception/inception-state.yaml` alone (single-file read, no reliance on in-memory conversation state). |
-| NFR-3 | Prompt maintainability | The inception sub-mode references the guide for human-readable detail and does not duplicate its prose; the agent file remains structured as frontmatter + well-formed sections (no malformed tags). |
-| NFR-4 | Legacy behavioral parity | 100% — the legacy section text, phase tags, state schema, and resume behavior are byte-for-behavior equivalent to pre-change; legacy state path and git-ignore status unchanged. |
+| NFR-3 | Prompt maintainability | The inception sub-mode references the guide for human-readable detail and does not duplicate its prose. Per the inline-vs-referenced boundary (§5.2), each `<phase_N_inception>` section is inline only for its operational skeleton (name, gate presence, anti-sycophancy technique **name**, artifact keys, state-update point, one-line guide reference) and references the guide for substantive detail. The agent file remains structured as frontmatter + well-formed sections (no malformed tags). |
+| NFR-4 | Legacy behavioral parity | 100%, scoped as: (a) the truly-frozen legacy blocks — `<workflow_phases>`, `<persistent_state>`, and `<phase_1_repo_scan>` through `<phase_6_write>` — are byte-for-behavior identical (no text/tag/logic change); (b) the two shared blocks inception extends — `<resume_behavior>` and `<write_allowlist>` — preserve every existing legacy entry/bullet verbatim while permitting additive inception-only entries (behavior equivalent, **not** byte-identical for these shared blocks). Legacy state path and git-ignore status unchanged. |
 | NFR-5 | Guide/prompt consistency | The agent prompt and the guide must not contradict; the prompt names the guide as the human-readable authority. 0 known contradictions at delivery. |
 | NFR-6 | State-file safety | The committed inception state must never contain secrets, tokens, or credentials (same security constraint as the legacy context file). |
 | NFR-7 | Write-safety | Inception writes are confined to the allowlist; any write outside it requires explicit human confirmation with a warning. |
@@ -241,7 +260,7 @@ N/A — agents are prompt definitions without runtime telemetry. Observability i
 | RSK-3 | Mode-selection ambiguity causes wrong-flow routing | M | M | Explicit decision tree mirroring the guide's Phase 0 diagram; ambiguous cases ask the human (NFR-1) | L |
 | RSK-4 | Two state files (git-ignored legacy vs committed inception) confuse the agent | M | M | Explicit per-mode state-file rule in the prompt; legacy uses its existing path unchanged; inception uses only the committed path | L |
 | RSK-5 | Drift between the guide (human authority) and the prompt (agent authority) | M | M | Prompt references the guide; both updated together if a concrete gap is found; NFR-5 forbids contradictions | L |
-| RSK-6 | Editing the agent regresses the legacy flow | H | L | Preserve the legacy section unchanged; add a legacy-parity structural check (NFR-4) | L |
+| RSK-6 | Editing the agent regresses the legacy flow | H | L | Keep the truly-frozen legacy blocks (`<workflow_phases>`, `<persistent_state>`, `<phase_1_repo_scan>`…`<phase_6_write>`) byte-for-behavior identical; on the two shared blocks (`<resume_behavior>`, `<write_allowlist>`) keep every legacy entry verbatim and append inception entries only; add a legacy-parity structural check (NFR-4) | L |
 | RSK-7 | Generated Claude-plugin counterpart goes stale (multi-tool rule) | M | M | Regenerate via `scripts/build-claude-plugin.sh` and commit source + generated together; CI verifies freshness | L |
 
 ## 12. ASSUMPTIONS
@@ -362,6 +381,7 @@ N/A. Inception captures project/product metadata only. The state file must not s
 ## 24. APPENDICES
 
 - **Appendix A — Authoritative AC source:** GitHub issue GH-71 (8-phase table and AC checklist), amended by two trusted repo-owner comments: (1) Phase 5 must generate all four `.ai/agent/*-instructions.md` including the currently-missing `code-review-instructions.md`; (2) the guide was delivered in GH-69 and must be referenced, not recreated.
+  - **AC traceability note (RT1-11):** The ticket's *"guide exists and documents the full workflow"* acceptance criterion was **delivered in GH-69** (the guide shipped there). GH-71 does **not** re-deliver the guide; instead GH-71's **AC17** enforces the reference-not-recreate invariant. This AC↔change mapping is intentional, **not** a coverage gap.
 - **Appendix B — Phase → anti-sycophancy map (authoritative):** P1 devil's advocate + four-risk awareness; P2 pre-mortem + four-risk check; P3 alternative comparison + pre-mortem; P4 unknown-unknowns; P0/P5/P6/P7 none.
 - **Appendix C — Phase → primary artifacts (summary):** P0 state + material inventory; P1 north star (+OST/PRD); P2 roadmap (+journeys/screens) + registers; P3 tech/architecture/FSE audit + ADRs (+NFRs); P4 glossary (+ubiquitous language/UX guidance) + testing/CI/dev-env; P5 AGENTS.md + 4 instruction files + profile + handbook/templates/decisions; P6 readiness report; P7 inception summary + feature specs.
 
@@ -370,6 +390,7 @@ N/A. Inception captures project/product metadata only. The state file must not s
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-06-26 | Juliusz Ćwiąkalski | Initial specification |
+| 1.1 | 2026-06-27 | Juliusz Ćwiąkalski | Red-team pre-delivery remediation: REM-1 (code-review scoped to inception Phase 5; legacy `<phase_4_draft>` untouched), REM-2 (NFR-4/RSK-6 parity method nuance — frozen vs shared blocks), REM-3 (added §5.2 inline-vs-referenced boundary), REM-5 (added `doc/documentation-profile.md` to write-allowlist), RT1-11 (Appendix A ticket→spec AC traceability note), RT1-16 (Phase-5 sub-artifacts folded into F-15). AC1–AC17 numbering and Given/When/Then semantics unchanged. |
 
 ---
 

@@ -1,8 +1,11 @@
 ---
 id: chg-GH-71-bootstrapper-new-project-inception-mode
-status: Proposed
+status: Updated
 created: 2026-06-27T00:00:00Z
 last_updated: 2026-06-27T00:00:00Z
+# Parity baseline (RT1-10): single source of truth for the legacy-region diff.
+# Override only on a deliberate rebase; referenced by A.1, A.3, E.3, and Phase C.
+BOOTSTRAPPER_BASELINE_SHA: 0a1a28802b0e893eba30b636f2fae7b72aa31965
 owners: ["Juliusz Ćwiąkalski"]
 service: bootstrapper-agent
 labels: ["inception", "bootstrapper", "agent"]
@@ -59,9 +62,11 @@ content detail (no prose duplication).
 2. **Source + generated committed together**: editing the agent source requires
    regenerating the Claude Code plugin via `scripts/build-claude-plugin.sh` and
    committing `.ados-claude/**` in the same commit (CI verifies freshness; RSK-7).
-3. **Legacy parity**: the legacy `<workflow_phases>` + `<phase_1..6_*>` +
-   `<persistent_state>` + legacy `<resume_behavior>` + `<write_allowlist>` legacy
-   entries are byte-for-behavior unchanged (NFR-4/AC16).
+3. **Legacy parity (two-tier; REM-2)**: the truly-frozen legacy blocks
+   (`<workflow_phases>`, `<phase_1..6_*>` incl. `<phase_4_draft>`, `<persistent_state>`)
+   are byte-for-behavior unchanged vs `${BOOTSTRAPPER_BASELINE_SHA}`; the two shared
+   blocks (`<resume_behavior>`, `<write_allowlist>`) keep every baseline legacy entry
+   verbatim (additions permitted) (NFR-4/AC16). No legacy block is edited (REM-1).
 4. **No license headers** on new prompt sections (headers are managed only by
    `scripts/add-header-location.sh` on configured paths; the agent file already has
    its header).
@@ -80,9 +85,9 @@ phase boundary a clean, CI-green, independently valid commit.
 - Extend `.opencode/agent/bootstrapper.md` with the inception sub-mode per TDR-0001
   (F-1…F-16): `<mode_selection>` router, `<mode_new_project_inception>` umbrella +
   eight `<phase_N_inception>` sections, additive `<resume_behavior>` inception branch
-  (DEC-6), additive `<write_allowlist>` entries. Legacy sections unchanged (AC16).
-- Close the legacy Phase-4 gap by adding `code-review-instructions.md` to the legacy
-  recommended-artifacts list (additive; mirrors `decision-instructions`).
+  (DEC-6), additive `<write_allowlist>` entries. **Legacy is fully untouched (AC16) —
+  no legacy block is edited, `<phase_4_draft>` included** (REM-1: `code-review-instructions.md`
+  is a net-new inception Phase-5 artifact only; closing the legacy Phase-4 gap is deferred).
 - Regenerate the `.ados-claude/agents/bootstrapper.md` plugin counterpart (D2, RSK-7).
 - Additive `AGENTS.md` bootstrapper one-line description update (D3).
 - New `scripts/.tests/test-bootstrapper-prompt-structure.sh` test-infra bundling the
@@ -99,6 +104,8 @@ phase boundary a clean, CI-green, independently valid commit.
 - Authoring or editing inception templates (all shipped in GH-69).
 - Running user research / experiments / prototyping (inception captures outputs).
 - Any change to legacy flow behavior or its git-ignored state schema.
+- Closing the legacy Phase-4 recommended-artifacts gap (adding `code-review-instructions.md`
+  to the legacy `<phase_4_draft>` list) — deferred; legacy remains fully untouched (REM-1).
 - Change artifacts themselves are NOT deliverables of the plan.
 
 ### Constraints
@@ -106,10 +113,13 @@ phase boundary a clean, CI-green, independently valid commit.
 - **Delegate agent edits to `@toolsmith`** (AGENTS.md hard rule; DEC-4).
 - **Source + generated committed together**; CI verifies `.ados-claude/` freshness
   (`scripts/.tests/test-build-claude-plugin.sh`).
-- **Legacy parity is non-negotiable** (NFR-4/AC16; TDR-0001 C-1): the legacy
-  `<workflow_phases>`, `<phase_1_repo_scan>`…`<phase_6_write>`, `<persistent_state>`,
-  legacy `<resume_behavior>`, and `<write_allowlist>` legacy entries must be
-  byte-for-behavior identical to the baseline commit `0a1a288`.
+- **Legacy parity is non-negotiable** (NFR-4/AC16; TDR-0001 C-1), enforced by the
+  **two-tier parity method** (see Phase A.3): truly-frozen legacy blocks
+  (`<workflow_phases>`, `<persistent_state>`, `<phase_1_repo_scan>`…`<phase_6_write>`
+  including `<phase_4_draft>`) are whole-block byte-identical vs
+  `${BOOTSTRAPPER_BASELINE_SHA}`; the two shared blocks inception extends
+  (`<resume_behavior>`, `<write_allowlist>`) preserve every baseline legacy entry
+  verbatim (additions permitted). No legacy block is edited — `<phase_4_draft>` is frozen (REM-1).
 - **The prompt references — and does not recreate — the guide** (DEC-2, NFR-3/NFR-5,
   AC17); only operational control flow is inline.
 - **No license headers** on new agent sections (managed only by
@@ -128,13 +138,14 @@ phase boundary a clean, CI-green, independently valid commit.
   (TC-INCEP-*) and Layer-3 regression (TC-LEGACY-*, TC-RESUME-*) are the authoritative
   behavioral evidence, executed at the GH-71 PR review.
 - **RSK-6** (editing the agent regresses the legacy flow): mitigated by the Phase A
-  legacy-parity region diff (TC-STRUCT-003) and Phase C's bundled guard.
+  two-tier legacy-parity check (TC-STRUCT-003) and Phase C's bundled guard.
 - **RSK-7** (generated plugin goes stale): mitigated by regenerating in Phase A's
   commit and the `test-build-claude-plugin.sh` gate.
 
 ### Success Metrics
 
-- Legacy section diff vs baseline `0a1a288` → empty (NFR-4).
+- Legacy parity vs `${BOOTSTRAPPER_BASELINE_SHA}` → frozen blocks byte-identical;
+  shared blocks (`<resume_behavior>`, `<write_allowlist>`) legacy-line-presence intact (two-tier method; NFR-4).
 - Inception phase sections present → 8 of 8 (phases 0-7) (TDR-0001 verification).
 - Anti-sycophancy→phase mappings correct → 5 of 5 (Appendix B).
 - All four `.ai/agent/*-instructions.md` referenced in Phase 5 → 4 of 4 (AC15).
@@ -153,10 +164,13 @@ work and satisfies AC1–AC17 at the structural level (D1 + D2).
 
 **Tasks**:
 
-- [ ] **A.1 — Capture the legacy baseline.** Record the pre-change baseline of
-  `.opencode/agent/bootstrapper.md` at SHA `0a1a288` (the branch's merge-base / the
-  last commit on the source before this change). This is the parity reference for
-  TC-STRUCT-003 region diffs in A.3 and Phase C. *(Prepares AC16/NFR-4/RSK-6.)*
+- [ ] **A.1 — Capture the legacy baseline (single source of truth).** Define
+  `BOOTSTRAPPER_BASELINE_SHA` once (default `0a1a28802b0e893eba30b636f2fae7b72aa31965`,
+  the branch's merge-base / last commit on the source before this change; also recorded
+  in this plan's front matter) and reference it — never hardcode the SHA again. Record
+  the pre-change baseline of `.opencode/agent/bootstrapper.md` at that SHA. This is the
+  parity reference for the two-tier parity check in A.3 and Phase C (RT1-10).
+  *(Prepares AC16/NFR-4/RSK-6.)*
 - [ ] **A.2 — Delegate authoring to `@toolsmith`.** The `@coder` invokes `@toolsmith`
   to extend `.opencode/agent/bootstrapper.md` with the following, all per TDR-0001,
   spec §5/§8/§9, and Appendices B & C. **Do NOT hand-edit the agent prompt.**
@@ -168,52 +182,78 @@ work and satisfies AC1–AC17 at the structural level (D1 + D2).
     question, never silently guess** (NFR-1, 0 silent guesses). `new` → 8-phase
     inception flow; `legacy` → unchanged 6-phase flow.
   - **`<mode_new_project_inception>` umbrella + eight terse `<phase_N_inception>`
-    sections** (TDR-0001 Decision). Each phase section carries **control flow only**:
+    sections** (TDR-0001 Decision). Each phase section carries **control flow only** —
     purpose, inputs, the anti-sycophancy step (per Appendix B), the human gate, the
     state update, the artifacts produced (per Appendix C), and a one-line reference to
     `doc/guides/project-inception.md` for content detail. **No guide prose is copied**
     (NFR-3/NFR-5/AC17). Placement of `<mode_selection>` (inside vs outside the
-    umbrella) is an `@toolsmith` detail (TDR-0001 unresolved item). The eight sections:
+    umbrella) is an `@toolsmith` detail (TDR-0001 unresolved item).
+
+    **Authoring boundary for `@toolsmith` (REM-3 — enforces NFR-3/NFR-5/RSK-5):**
+    - **INLINE in each `<phase_N_inception>`** (the operational skeleton): the phase
+      name; the human-gate presence; the **anti-sycophancy technique NAME**, carried via
+      an `<anti_sycophancy>technique-name</anti_sycophancy>` sub-tag anchor (REM-8); the
+      **artifact KEYS** produced (by name/key only, not their content); the state-update
+      point; and a one-line guide reference.
+    - **REFERENCED, NOT duplicated** (defer to `doc/guides/project-inception.md`):
+      substantive artifact content (e.g., the north-star's full field set, the roadmap
+      milestone schema, the FSE-audit's 10 attributes, the UX-guidance dimensions); the
+      **full anti-sycophancy prompt text**; conditional-artifact selection details; and
+      the four-risk definitions (Value/Usability/Feasibility/Viability).
+    - `@toolsmith` must therefore strip any parenthetical content enumeration from the
+      per-phase bullets below, leaving the artifact KEY + a pointer to the guide.
+
+    **Anti-sycophancy placement rule (REM-8 — makes TC-STRUCT-008/TC-INFRA-001 robust):**
+    each decision-dense `<phase_N_inception>` embeds exactly one
+    `<anti_sycophancy>technique-name</anti_sycophancy>` sub-tag naming its technique
+    (`devil's-advocate` / `pre-mortem` / `alternative-comparison` / `unknown-unknowns` /
+    `four-risk-check`). Phases **0, 5, 6, 7 carry no `<anti_sycophancy>` sub-tag**.
+
+    The eight sections:
     - **`<phase_0_inception>`** (AC1/AC2/AC3, F-2/F-3, DM-2): confirm mode; classify
       repo profile; detect the four characteristics (`ui_bearing`, `multi_user`,
       `complex_domain`, `code_project`) and record them in state; scan
-      `doc/inception/inputs/`; build the material inventory (input → phase mapping →
-      key elements). **No anti-sycophancy** (Appendix B). Human gate 0.
+      `doc/inception/inputs/`; produce the `material-inventory` artifact (KEY only; its
+      input→phase→key-element structure is defined in the guide). **No
+      `<anti_sycophancy>` sub-tag** (Appendix B). Human gate 0.
     - **`<phase_1_inception>`** (AC4/AC5, F-4/F-5): Socratic session over the
-      inventory; draft the enriched north star (strategic-pyramid context, measurable
-      outcome, NSM + guardrails, target users with JTBD, problem statement, guiding
-      principles); conditional OST / project PRD when discovery materials exist.
-      **Anti-sycophancy: devil's advocate + four-risk awareness** (Appendix B).
-    - **`<phase_2_inception>`** (AC6/AC7/AC8, F-6/F-7/F-8): draft the roadmap (each
-      milestone: deliverables, outcome-based success metrics, validation approach, OST
-      linkage); conditional user journeys + screen inventory (UI-bearing); draft the
-      assumption register (each entry tagged `risk_type ∈ {value, usability,
-      feasibility, viability}` + `validation_status`, DM-3) and the risk register
-      (four-risk assessment for the current milestone). **Anti-sycophancy: pre-mortem
-      + four-risk check** (Appendix B).
-    - **`<phase_3_inception>`** (AC9, F-9): draft tech-stack + architecture; run the
-      10-attribute Full-Stack Environment audit; seed initial ADRs; conditional NFRs
-      for non-trivial projects; apply a four-risk check on architecture decisions.
-      **Anti-sycophancy: alternative comparison + pre-mortem** (Appendix B).
-    - **`<phase_4_inception>`** (AC10/AC11, F-10/F-11): draft the glossary;
-      conditional ubiquitous language (complex domain); conditional UX design guidance
-      (design system, WCAG level, interaction patterns, responsive breakpoints —
-      UI-bearing); for code projects: testing strategy, CI baseline (lint + typecheck
-      + test), and dev-environment docs (setup guide + `.env.example`). **Anti-sycophancy:
-      unknown-unknowns** (Appendix B).
+      inventory; draft the `north-star` artifact (KEY only; its strategic-pyramid /
+      outcome / NSM / JTBD content is defined in the guide); conditional `OST` /
+      `project-PRD` when discovery materials exist (selection rule per the guide).
+      **Anti-sycophancy: `<anti_sycophancy>devil's-advocate + four-risk</anti_sycophancy>`**
+      (Appendix B; full prompt text referenced, not inlined).
+    - **`<phase_2_inception>`** (AC6/AC7/AC8, F-6/F-7/F-8): draft the `roadmap`
+      artifact (KEY only; milestone schema per the guide); conditional `user-journeys`
+      + `screen-inventory` (UI-bearing); draft the `assumption-register` and
+      `risk-register` artifacts (KEYs only; four-risk tags + `validation_status` per
+      DM-3 and the guide — the Value/Usability/Feasibility/Viability definitions are
+      referenced, not inlined). **Anti-sycophancy:
+      `<anti_sycophancy>pre-mortem + four-risk-check</anti_sycophancy>`** (Appendix B).
+    - **`<phase_3_inception>`** (AC9, F-9): draft `tech-stack` + `architecture`;
+      run the `fse-audit` (KEY only; the 10 attributes are defined in the guide); seed
+      initial `ADRs`; conditional `NFRs` for non-trivial projects; apply a four-risk
+      check on architecture decisions. **Anti-sycophancy:
+      `<anti_sycophancy>alternative-comparison + pre-mortem</anti_sycophancy>`** (Appendix B).
+    - **`<phase_4_inception>`** (AC10/AC11, F-10/F-11): draft the `glossary`;
+      conditional `ubiquitous-language` (complex domain); conditional `ux-guidance`
+      artifact (KEY only; UI-bearing — its design-system / WCAG / interaction /
+      responsive dimensions are defined in the guide, not inlined); for code projects:
+      `testing-strategy`, `ci-baseline`, and `dev-environment` docs (KEYs only; CI and
+      dev-env content per the guide). **Anti-sycophancy:
+      `<anti_sycophancy>unknown-unknowns</anti_sycophancy>`** (Appendix B).
     - **`<phase_5_inception>`** (AC15, F-15, DEC-3): generate `AGENTS.md` **and all
       four** `.ai/agent/*-instructions.md` — `pm-instructions.md`,
       `pr-instructions.md`, `decision-instructions.md`, **and**
       `code-review-instructions.md` (generated from the GH-69 blueprint
       `doc/templates/blueprints/code-review-instructions--example.md`, the GH-32 gap
       closure); set `doc/documentation-profile.md`; install handbook/templates/decisions.
-      **No anti-sycophancy** (Appendix B).
+      **No `<anti_sycophancy>` sub-tag** (Appendix B).
     - **`<phase_6_inception>`** (AC12, F-12): readiness check (artifact catalog
       completeness, cross-document consistency, FSE verification, four-risk coverage,
       assumption review, ghost reference check). **FAIL → reopen the earlier phase
-      (1–4) where the gap lives**; no auto-advance. **No anti-sycophancy.**
+      (1–4) where the gap lives**; no auto-advance. **No `<anti_sycophancy>` sub-tag.**
     - **`<phase_7_inception>`** (AC12): inception summary + initial feature specs;
-      final sign-off. **No anti-sycophancy.**
+      final sign-off. **No `<anti_sycophancy>` sub-tag.**
   - **State + safety** (DM-1, AC13, NFR-6, RSK-4): reference the committed
     `doc/inception/inception-state.yaml` (instantiated from
     `doc/templates/inception-state-template.yaml`); state an explicit **per-mode
@@ -231,32 +271,40 @@ work and satisfies AC1–AC17 at the structural level (D1 + D2).
     Abandoned-run state is **archived to `doc/inception/abandoned-<ISO>.yaml`, never
     silently overwritten**. Legacy is unaffected (separate git-ignored state file).
     *(Resolves the TC-RESUME-002 BLOCKED-on-OQ-3 criterion.)*
-  - **Additive `<write_allowlist>` entries** (AC13-path/AC15-path, NFR-7):
+  - **Additive `<write_allowlist>` entries** (AC13-path/AC15-path, NFR-7; REM-5):
     `doc/inception/**` (including `doc/inception/abandoned-<ISO>.yaml` — a glob covering
-    it is acceptable) and `.ai/agent/code-review-instructions.md`. The legacy allowlist
-    entries are preserved.
-  - **Legacy gap closure (additive, in the legacy Phase-4 recommended list)**: add
-    `.ai/agent/code-review-instructions.md` to the legacy `<phase_4_draft>`
-    recommended-artifacts list, mirroring the existing `decision-instructions.md` entry
-    (per the PM decision in this change). This is additive to the legacy block but
-    does NOT alter legacy behavior (the file is already net-new in inception; here we
-    only make the legacy recommended list complete). *Confirm with `@toolsmith` this
-    stays within "byte-for-behavior" parity — it adds a recommendation, not a
-    behavioral rule; if `@toolsmith` judges it parity-disruptive, defer it to the
-    inception sub-mode only and record the deferral.*
-  - **Preserve legacy**: `<workflow_phases>`, `<phase_1_repo_scan>`,
-    `<phase_2_confidence>`, `<phase_3_interview>`, `<phase_4_draft>`,
-    `<phase_5_review>`, `<phase_6_write>`, `<persistent_state>`, the legacy
-    `<resume_behavior>` content, and the `<write_allowlist>` legacy entries are left
-    **byte-for-behavior unchanged** (TDR-0001 C-1). The inception additions are
+    it is acceptable), `.ai/agent/code-review-instructions.md`, **and**
+    `doc/documentation-profile.md` (Phase 5 sets it; it currently sits outside all legacy
+    allowlist globs). The legacy allowlist entries are preserved (shared-block
+    legacy-line-presence per A.3).
+  - **Legacy is NOT modified (REM-1).** `code-review-instructions.md` generation is
+    scoped to inception Phase 5 ONLY (per AC15). The legacy `<phase_4_draft>`
+    recommended-artifacts list is left byte-for-behavior unchanged — `@toolsmith` does
+    not add `code-review-instructions.md` there. **Legacy `<phase_4_draft>` is
+    unchanged — `code-review-instructions.md` is a net-new inception Phase 5 artifact
+    only; closing the legacy gap is deferred.**
+  - **Preserve legacy (two tiers — see A.3)**: the truly-frozen blocks
+    (`<workflow_phases>`, `<phase_1_repo_scan>`, `<phase_2_confidence>`,
+    `<phase_3_interview>`, `<phase_4_draft>`, `<phase_5_review>`, `<phase_6_write>`,
+    `<persistent_state>`) are left **byte-for-byte unchanged**; the two shared blocks
+    (`<resume_behavior>`, `<write_allowlist>`) keep every baseline legacy entry verbatim
+    and gain inception-only additions (TDR-0001 C-1, REM-2). The inception additions are
     additive and isolated.
   - **No license headers** on any new section.
 
-- [ ] **A.3 — Verify legacy parity structurally (gate).** Before regenerating, the
-  `@coder` confirms every legacy anchor tag opens and closes, and that each legacy
-  block's region diff vs baseline `0a1a288` is empty (additions outside legacy blocks
-  are allowed — this change is additive). This is TC-STRUCT-003 (manual run here;
-  bundled in Phase C thereafter). **Do not proceed if any legacy block drifted.**
+- [ ] **A.3 — Verify legacy parity structurally (gate; two-tier method, REM-2/RT1-10).**
+  Before regenerating, the `@coder` confirms every legacy anchor tag opens and closes,
+  then applies the **two-tier parity check vs `${BOOTSTRAPPER_BASELINE_SHA}`** (this is
+  TC-STRUCT-003 — manual run here; bundled in Phase C thereafter):
+  1. **Truly-frozen legacy blocks** — `<workflow_phases>`, `<persistent_state>`,
+     `<phase_1_repo_scan>`, `<phase_2_confidence>`, `<phase_3_interview>`,
+     `<phase_4_draft>`, `<phase_5_review>`, `<phase_6_write>`: the whole-block
+     region-diff vs baseline must be **byte-identical** (empty diff).
+  2. **Shared blocks inception extends** — `<resume_behavior>`, `<write_allowlist>`:
+     **legacy-line-presence** — every baseline legacy entry/bullet is still present
+     verbatim (additions are permitted, since inception appends its own entries here).
+  A spec-compliant implementation passes both tiers. **Do not proceed if any frozen
+  block drifted or any baseline shared-block legacy line was altered/removed.**
   *(Satisfies AC16/NFR-4/RSK-6.)*
 - [ ] **A.4 — Regenerate the Claude Code plugin (delegate execution to `@runner`).**
   Run `scripts/build-claude-plugin.sh`; confirm `.ados-claude/agents/bootstrapper.md`
@@ -272,19 +320,22 @@ work and satisfies AC1–AC17 at the structural level (D1 + D2).
 - Must: the eight `<phase_N_inception>` sections + `<mode_selection>` router +
   `<mode_new_project_inception>` umbrella are present (AC1, TDR-0001); Phase 5
   references all four instruction files including `code-review-instructions.md`
-  (AC15/F-15); the anti-sycophancy techniques are placed in the correct phases per
-  Appendix B and absent from 0/5/6/7 (AC14/F-14); the four characteristics and the
-  committed state path + four canonical risk tags are present (AC2/AC7/AC13, DM-1/DM-3);
-  the `<resume_behavior>` inception branch implements DEC-6 partial/abandoned handling
-  and the `<write_allowlist>` includes `doc/inception/**` (incl. `abandoned-<ISO>.yaml`)
-  and `.ai/agent/code-review-instructions.md` (AC13/AC15-path, NFR-7); the guide is
-  referenced, not recreated (AC17/NFR-3); legacy blocks are byte-for-behavior unchanged
-  vs `0a1a288` (AC16/NFR-4).
+  (AC15/F-15); each decision-dense phase carries an `<anti_sycophancy>` sub-tag naming
+  the correct technique per Appendix B, and phases 0/5/6/7 carry none (AC14/F-14, REM-8);
+  the committed state path + four canonical risk tags are present (AC7/AC13, DM-1/DM-3).
+  **Static evidence for AC2 is limited to the four characteristic keys/section being
+  present** — the *behavioral* detection+activation is manual TC-INCEP-002 (RT1-13,
+  matching the E.5 split); the `<resume_behavior>` inception branch implements DEC-6
+  partial/abandoned handling and the `<write_allowlist>` includes `doc/inception/**`
+  (incl. `abandoned-<ISO>.yaml`), `.ai/agent/code-review-instructions.md`, **and**
+  `doc/documentation-profile.md` (AC13/AC15-path, NFR-7, REM-5); the guide is
+  referenced, not recreated, per the INLINE/REFERENCED boundary (AC17/NFR-3/NFR-5, REM-3);
+  legacy parity passes the two-tier check vs `${BOOTSTRAPPER_BASELINE_SHA}` (AC16/NFR-4,
+  REM-2/RT1-10).
 - Must: the regenerated `.ados-claude/agents/bootstrapper.md` is committed in the SAME
   commit as the source and is CI-fresh (RSK-7).
-- Should: AGENTS.md-style additive `code-review-instructions.md` appears in the legacy
-  Phase-4 recommended list (defer to inception-only if `@toolsmith` judges it
-  parity-disruptive; record the deferral).
+- Must: the legacy `<phase_4_draft>` is NOT modified — `code-review-instructions.md` is
+  a net-new inception Phase-5 artifact only (REM-1).
 
 **Files and modules**:
 
@@ -295,7 +346,7 @@ work and satisfies AC1–AC17 at the structural level (D1 + D2).
 
 **Tests**:
 
-- TC-STRUCT-003 (legacy anchor parity vs `0a1a288`) — run manually in A.3.
+- TC-STRUCT-003 (legacy two-tier parity vs `${BOOTSTRAPPER_BASELINE_SHA}`) — run manually in A.3.
 - TC-STRUCT-001/002/008/009/010/011/012 — run as one-shot greps after A.2 (bundled in
   Phase C).
 - `git diff --exit-code -- .ados-claude/` post-regen (freshness).
@@ -363,28 +414,32 @@ RSK-6 regression class (structural drift in the prompt).
   mutation). *(D5.)*
 
   *Assertions to bundle:*
-  - **Allowlist** (TC-STRUCT-001): `<write_allowlist>` contains `doc/inception/**`
-    and `.ai/agent/code-review-instructions.md`.
+  - **Allowlist** (TC-STRUCT-001): `<write_allowlist>` contains `doc/inception/**`,
+    `.ai/agent/code-review-instructions.md`, **and** `doc/documentation-profile.md` (REM-5).
   - **Four instruction files** (TC-STRUCT-002): in the inception Phase 5 region, all
     of `pm`/`pr`/`decision`/`code-review` `-instructions.md` are referenced.
-  - **Legacy anchor parity** (TC-STRUCT-003): every legacy tag
-    (`workflow_phases`, `persistent_state`, `phase_1_repo_scan`, `phase_2_confidence`,
-    `phase_3_interview`, `phase_4_draft`, `phase_5_review`, `phase_6_write`,
-    `resume_behavior`, `write_allowlist`) opens and closes; `.ai/local/bootstrapper-context.yaml`
-    and `schema_version: 1` appear inside `<persistent_state>`; **region diff of each
-    legacy block vs baseline is empty** (use a refined `awk` extractor that **skips
-    fenced code blocks**). Baseline SHA `0a1a288`, overridable via an env var
-    (e.g., `BOOTSTRAPPER_BASELINE_SHA`) so CI is not hard-coupled.
+  - **Legacy two-tier parity** (TC-STRUCT-003, REM-2/RT1-10): every legacy tag opens
+    and closes; `.ai/local/bootstrapper-context.yaml` and `schema_version: 1` appear
+    inside `<persistent_state>`. Then the **two-tier** check vs
+    `${BOOTSTRAPPER_BASELINE_SHA}` (centralized; overridable via the
+    `BOOTSTRAPPER_BASELINE_SHA` env var so CI is not hard-coupled): (1) **frozen
+    blocks** — `<workflow_phases>`, `<persistent_state>`, `<phase_1_repo_scan>`…
+    `<phase_6_write>` incl. `<phase_4_draft>` — whole-block region-diff is
+    **byte-identical** (use a refined `awk` extractor that **skips fenced code blocks**);
+    (2) **shared blocks** — `<resume_behavior>`, `<write_allowlist>` — every baseline
+    legacy entry/bullet is still present verbatim (additions permitted).
   - **Guide referenced, not recreated** (TC-STRUCT-004): `doc/guides/project-inception.md`
     is referenced; the guide's `### Phase N —` headings are not duplicated verbatim
     more than once in the prompt.
   - **Well-formed section tags** (TC-STRUCT-005): opening/closing tag multiset balanced,
     **code-span-aware** (skip fenced code blocks and inline backticks).
-  - **Anti-sycophancy placement** (TC-STRUCT-008): the five technique keywords
-    (`devil's advocate`, `pre-mortem`, `alternative comparison`, `unknown-unknowns`,
-    `four-risk`) appear **inside the correct `<phase_N_inception>` block** and are
-    **absent from the forbidden phases** (0/5/6/7). This is the authoritative AC14
-    structural check.
+  - **Anti-sycophancy placement** (TC-STRUCT-008, REM-8): assert by `<anti_sycophancy>`
+    sub-tag — each decision-dense `<phase_N_inception>` contains exactly one
+    `<anti_sycophancy>technique-name</anti_sycophancy>` anchor naming the correct
+    technique (devil's advocate / pre-mortem / alternative comparison / unknown-unknowns /
+    four-risk check), and **no** `<anti_sycophancy>` sub-tag appears in phases 0/5/6/7.
+    (The five keyword spellings remain a coarse fallback.) This is the authoritative
+    AC14 structural check.
   - **Characteristics detection** (TC-STRUCT-009): the four signal names appear; both
     `new` and `legacy` modes are referenced.
   - **Material inventory** (TC-STRUCT-010): Phase 0 references `doc/inception/inputs/`
@@ -411,8 +466,9 @@ RSK-6 regression class (structural drift in the prompt).
   annotations on any of the bundled drift classes.
 - Must: the script is read-only / CI-safe (no network, no mutation) and matches the
   existing `scripts/.tests/test-*.sh` conventions.
-- Should: the anti-sycophancy check is strictly per-phase scoped (keyword in the right
-  `<phase_N_inception>` block, absent from 0/5/6/7), not just file-global.
+- Should: the anti-sycophancy check is anchored on the `<anti_sycophancy>` sub-tag
+  (present in the right decision-dense `<phase_N_inception>` block, absent from
+  0/5/6/7), not just a file-global keyword grep (REM-8).
 
 **Files and modules**:
 
@@ -433,6 +489,12 @@ RSK-6 regression class (structural drift in the prompt).
 **Goal**: Apply DEC-5 — amend `doc/guides/project-inception.md` ONLY if
 implementation surfaces a concrete AND blocking gap; otherwise record a deferred
 no-op. This phase is **conditional** and may produce no commit.
+
+**Provisional-prompt note (RT1-14):** the prompt committed in Phase A is **provisional
+until Phase D completes**. If D.2 (guide amendment) runs, it may re-edit the prompt to
+stay consistent with the guide and **re-commit the prompt + regenerated plugin** — this
+is expected, not exceptional (it is the same source+generated-together rule re-applied,
+not a defect).
 
 **Tasks**:
 
@@ -499,9 +561,10 @@ review (RSK-2 — they are not CI-testable).
   - `bash scripts/.tests/test-install.sh` / `test-uninstall.sh` ONLY if the install
     manifest changed (this change does NOT add `code-review-instructions.md` to
     `install.sh` — it is generated at runtime by the agent — so normally N/A).
-- [ ] **E.3 — Confirm legacy parity** (the primary RSK-6/NFR-4 guard): TC-STRUCT-003
-  region diff of every legacy block vs baseline `0a1a288` is empty. The Phase C test
-  asserts this; re-run it explicitly here.
+- [ ] **E.3 — Confirm legacy parity** (the primary RSK-6/NFR-4 guard; REM-2/RT1-10):
+  re-run the Phase C TC-STRUCT-003 two-tier check vs `${BOOTSTRAPPER_BASELINE_SHA}`
+  explicitly here — frozen blocks byte-identical, shared blocks
+  (`<resume_behavior>`, `<write_allowlist>`) legacy-line-presence intact.
 - [ ] **E.4 — Confirm deliverables D1–D5 are present**:
   - D1: `.opencode/agent/bootstrapper.md` extended per TDR-0001 (legacy unchanged).
   - D2: `.ados-claude/agents/bootstrapper.md` regenerated + committed with the source.
@@ -576,9 +639,9 @@ triggered, ready for the review/PR lifecycle phases.
 
 | ID | Scenario | Phases | AC / NFR |
 |----|----------|--------|----------|
-| TC-STRUCT-001 | Write-allowlist has inception + code-review paths | A, C | AC13-path, AC15-path, NFR-7 |
+| TC-STRUCT-001 | Write-allowlist has inception + code-review + documentation-profile paths | A, C | AC13-path, AC15-path, NFR-7 |
 | TC-STRUCT-002 | Phase 5 references all four instruction files | A, C | AC15, F-15 |
-| TC-STRUCT-003 | Legacy anchors intact + region parity vs `0a1a288` | A.3, C, E.3 | AC16, NFR-4, RSK-6 |
+| TC-STRUCT-003 | Legacy two-tier parity vs `${BOOTSTRAPPER_BASELINE_SHA}` | A.3, C, E.3 | AC16, NFR-4, RSK-6 |
 | TC-STRUCT-004 | Guide referenced, not recreated | A, C | AC17, NFR-3, NFR-5 |
 | TC-STRUCT-005 | Prompt XML-ish tags well-formed (code-span-aware) | A, C | AC1, NFR-3 |
 | TC-STRUCT-006 | Plugin regeneration staleness gate | A, E | RSK-7 |
@@ -613,13 +676,14 @@ evidence, performed at the GH-71 PR review. No behavioral AC is claimed as CI-te
 | Inception state template (referenced) | `doc/templates/inception-state-template.yaml` | Schema (DM-1) |
 | Code-review blueprint (referenced) | `doc/templates/blueprints/code-review-instructions--example.md` | Phase-5 input |
 | Regeneration script | `scripts/build-claude-plugin.sh` | Tool |
-| Parity baseline | `.opencode/agent/bootstrapper.md` @ `0a1a288` | Reference |
+| Parity baseline | `.opencode/agent/bootstrapper.md` @ `${BOOTSTRAPPER_BASELINE_SHA}` (`0a1a28802b0e893eba30b636f2fae7b72aa31965`) | Reference |
 
 ## Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-06-27 | plan-writer | Initial plan. Phases A–F; delegates all agent edits to `@toolsmith` (AGENTS.md hard rule); folds plugin regeneration (D2) into Phase A's commit so source+generated ship together (RSK-7, CI-green per phase); actions TC-INFRA-001 as Phase C; encodes DEC-5 (conditional guide amendment) as Phase D; full AC1–AC17 + NFR1–7 coverage. |
+| 1.1 | 2026-06-27 | plan-writer | Red-team pre-delivery remediation (aligned with spec/test-plan slices). REM-1: dropped the legacy `<phase_4_draft>` code-review edit — legacy now fully untouched (AC16 coverage note updated). REM-2: A.3/E.3/Phase-C parity check rewritten to the two-tier method (frozen blocks byte-identical; shared blocks legacy-line-presence). REM-3: added INLINE/REFERENCED authoring boundary for `@toolsmith`; stripped parenthetical artifact content from per-phase bullets (artifact KEYs + guide pointers). REM-5: added `doc/documentation-profile.md` to the additive `<write_allowlist>`. REM-8: `<anti_sycophancy>` sub-tag anchor required in decision-dense phases (none in 0/5/6/7). RT1-10: centralized `BOOTSTRAPPER_BASELINE_SHA` across A.1/A.3/E.3/Phase C. RT1-13: softened the AC2 static claim (behavioral detection = manual TC-INCEP-002). RT1-14: Phase D notes Phase A's prompt is provisional until D completes. Phase structure A–F and per-phase commit boundaries preserved. |
 
 ## Execution Log
 

@@ -21,7 +21,7 @@ decisions:
     date: "2026-06-26"
   - text: "Inception mode state lives at doc/inception/inception-state.yaml (committed, git-tracked) — DISTINCT from legacy mode's .ai/local/bootstrapper-context.yaml (git-ignored). The two modes use two different state files. Legacy state file/location is untouched."
     date: "2026-06-26"
-  - text: "PM-decided (autonomous, reversible): close the code-review-instructions gap in BOTH modes. Inception Phase 5 generates all four .ai/agent/*-instructions.md (pm, pr, decision, code-review) as MANDATORY. Legacy mode's recommended-artifacts list ALSO gains code-review-instructions.md (mirroring decision-instructions — additive, non-breaking, blueprint already exists at doc/templates/blueprints/code-review-instructions--example.md). Honors 'legacy must continue to work' (functional behavior preserved; only gains an opt-in recommended artifact) AND closes the stated 'only generates 3 of 4' gap. Surface to human; trivial revert if disputed."
+  - text: "PM-decided then REVERSED (see REM-1): originally planned to close the code-review-instructions gap in BOTH modes (inception Phase 5 mandatory + legacy recommended-list additive). REVERSED after red-team RT1-01: scoped to inception Phase 5 only. Legacy <phase_4_draft> stays pristine (AC16/NFR-4). No AC required the legacy addition."
     date: "2026-06-26"
   - text: "Structure the bootstrapper prompt with sub-mode sections: keep the existing 6-phase LEGACY mode section intact; add a parallel NEW-PROJECT INCEPTION mode section implementing phases 0-7. Mode is selected in Phase 0 (flow detection). Use <mode_new_project_inception> top-level section to keep the large prompt organized per ticket hint."
     date: "2026-06-26"
@@ -33,12 +33,31 @@ decisions:
     date: "2026-06-26"
   - text: "DEC-6 (OQ-3 resolved): project.flow in inception-state.yaml is the resume source of truth. Valid in-progress -> resume; completed -> 'already incepted'; malformed/schema mismatch -> warn + repair-or-archive. Abandoned-run state archived to doc/inception/abandoned-<ISO>.yaml (added to write allowlist), never silently destroyed. Legacy unaffected (separate git-ignored state)."
     date: "2026-06-26"
+  - text: "REM-1 (REVERSES earlier PM decision #3, per red-team RT1-01): code-review-instructions.md generation is scoped to INCEPTION Phase 5 ONLY (per AC15). The legacy <phase_4_draft> is NOT modified — no code-review addition to the legacy recommended-artifacts list. Rationale: no AC requires legacy code-review; AC16/NFR-4 demand legacy unchanged; the legacy addition created the parity-guard contradiction. 'Close the gap in both modes' is DEFERRED to a potential follow-up ticket (surface to human). The user's amendment ('Phase 5 must generate ALL FOUR') is satisfied by inception Phase 5 alone."
+    date: "2026-06-27"
+  - text: "REM-2 (RT1-01 parity method): TC-STRUCT-003 changes method. Truly-frozen legacy blocks (<workflow_phases>, <persistent_state>, <phase_1_repo_scan>..<phase_6_write>) use whole-block region-diff (byte-identical vs baseline 0a1a288). Shared blocks inception EXTENDS (<resume_behavior>, <write_allowlist>) use legacy-line-presence assertions (every baseline entry/bullet still present verbatim; additions permitted). Honors NFR-4 (behavior equivalent) without freezing shared blocks."
+    date: "2026-06-27"
+  - text: "REM-3 (RT1-06 inline-vs-referenced boundary): INLINE in each <phase_N_inception> = phase name, human-gate presence, anti-sycophancy technique NAME (via an <anti_sycophancy> sub-tag anchor), artifact KEYS produced (by name), state-update point, one-line guide reference. REFERENCED (NOT duplicated) = substantive artifact content, full anti-sycophancy prompt text, conditional-artifact details, four-risk definitions. Strip parenthetical content details (WCAG level, breakpoints, etc.) from inline authoring spec."
+    date: "2026-06-27"
+  - text: "REM-4 (RT1-07 size guardrail): TC-INFRA-001 adds a prompt-size guardrail — warn if bootstrapper.md > ~650 lines, hard-fail > ~800 lines (tunable). Makes RSK-1 measured, not just post-hoc triggered."
+    date: "2026-06-27"
+  - text: "REM-5 (RT1-04): add doc/documentation-profile.md to inception write-allowlist additions (plan + spec + TC-STRUCT-001). It was missing — Phase 5 sets it but it sat outside all allowlist globs."
+    date: "2026-06-27"
+  - text: "REM-6 (RT1-03): add TC-INCEP-016 — behavioral test for AC15 (run inception Phase 5 in a scratch repo, assert all four .ai/agent/*-instructions.md actually written incl. code-review). Closes the silent-AC-pass-around-gap."
+    date: "2026-06-27"
+  - text: "REM-7 (RT1-05): unblock TC-RESUME-002 — rewrite pass criterion against DEC-6 (partial -> project.flow resume; abandoned -> archived; malformed/schema mismatch -> warn + repair-or-archive)."
+    date: "2026-06-27"
+  - text: "REM-8 (RT1-09): anti-sycophancy placement asserts an <anti_sycophancy> sub-tag (anchor) inside each decision-dense phase with correct technique name, ABSENT in phases 0/5/6/7. More robust than free-text keyword scoping."
+    date: "2026-06-27"
 
 open_questions: []
 
 blockers: []
 
 notes:
+  - text: "Retro: PM decision #3 (add code-review to legacy mode too) overreached — charitable reading of 'must be added' that no AC backed. Red-team RT1-01 caught it as the sole cause of the parity-guard contradiction + an AC16 violation. Lesson: when an amendment says 'Phase 5 must do X', scope the change to that phase; do not gratuitously extend to other modes without an AC. The pre-delivery red-team earned its keep on this one."
+    type: retro
+    date: "2026-06-27"
   - text: "Ticket amendments (from GH-71 comments, author juliusz-cwiakalski = trusted repo owner): (1) Phase 5 must generate ALL FOUR .ai/agent/*-instructions.md incl. code-review-instructions.md; (2) process guide moved to GH-69 — GH-71 references it, does not create it."
     type: info
     date: "2026-06-26"

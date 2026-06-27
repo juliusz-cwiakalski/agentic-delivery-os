@@ -1,6 +1,6 @@
 ---
 id: chg-GH-71-test-plan
-status: Proposed
+status: Updated
 created: 2026-06-27
 last_updated: 2026-06-27
 owners: ["Juliusz Ćwiąkalski"]
@@ -55,7 +55,8 @@ verification + `git diff --check`). Therefore this plan uses **three explicit la
   placement).
 - CI gate list: `git diff --check`, Claude-plugin staleness, doc-distribution guard,
   inception doc-consistency regression.
-- Manual behavioral matrix for AC1–AC14 + AC17.
+- Manual behavioral matrix for AC1–AC15 + AC17 (AC15 gains behavioral coverage via
+  TC-INCEP-016).
 - Legacy end-to-end regression (AC16, NFR-4) and 2-session resume regression (AC13, NFR-2).
 - Proposed (flagged, not implemented here) test-infra: a bundled
   `scripts/.tests/test-bootstrapper-prompt-structure.sh`.
@@ -109,7 +110,7 @@ verification + `git diff --check`). Therefore this plan uses **three explicit la
 | AC12 | No phase 0–7 advances without human approval; Phase 6 may reopen 1–4 | TC-INCEP-012 | Covered |
 | AC13 | Fresh session reads `doc/inception/inception-state.yaml`, resumes at last incomplete phase | TC-STRUCT-001, TC-INCEP-013, TC-RESUME-001, TC-RESUME-002 | Covered |
 | AC14 | Anti-sycophancy techniques in correct phases; none in 0/5/6/7 | TC-STRUCT-008, TC-INCEP-014 | Covered |
-| AC15 | Phase 5 generates all four `.ai/agent/*-instructions.md` (pm, pr, decision, code-review) | TC-STRUCT-001, TC-STRUCT-002 | Covered |
+| AC15 | Phase 5 generates all four `.ai/agent/*-instructions.md` (pm, pr, decision, code-review) | TC-STRUCT-001, TC-STRUCT-002, TC-INCEP-016 | Covered |
 | AC16 | Legacy 6-phase flow + git-ignored state behave exactly as before | TC-STRUCT-003, TC-LEGACY-001, TC-LEGACY-002 | Covered |
 | AC17 | Inception sub-mode references the guide, does not recreate it | TC-STRUCT-004, TC-INCEP-015 | Covered |
 
@@ -129,7 +130,7 @@ verification + `git diff --check`). Therefore this plan uses **three explicit la
 | F-12 | Per-phase human gates | TC-INCEP-012 |
 | F-13 | Repo-persistent state & resume | TC-INCEP-013, TC-RESUME-001, TC-RESUME-002 |
 | F-14 | Embedded anti-sycophancy | TC-STRUCT-008, TC-INCEP-014 |
-| F-15 | All-four instruction-file generation | TC-STRUCT-001, TC-STRUCT-002 |
+| F-15 | All-four instruction-file generation | TC-STRUCT-001, TC-STRUCT-002, TC-INCEP-016 |
 | F-16 | Legacy-mode preservation | TC-STRUCT-003, TC-LEGACY-001, TC-LEGACY-002 |
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
@@ -160,7 +161,7 @@ Risk coverage (informational — risks are mitigated by the tests above):
 
 | RSK ID | Risk | Covered by |
 |--------|------|------------|
-| RSK-1 | Prompt bloat degrades instruction-following | TC-STRUCT-004 (reference-not-duplicate) |
+| RSK-1 | Prompt bloat degrades instruction-following | TC-STRUCT-004 (reference-not-duplicate), TC-INFRA-001 (prompt-size guardrail) |
 | RSK-2 | Most AC behavioral, untestable in CI | Layered strategy itself (§4, §8.1) |
 | RSK-3 | Mode-selection ambiguity → wrong routing | TC-INCEP-001 (ambiguous → asks) |
 | RSK-4 | Two state files confuse the agent | TC-STRUCT-011, TC-INCEP-013 |
@@ -178,7 +179,7 @@ automated shell tests apply only where a `scripts/.tests/test-*.sh` exists or is
   `.opencode/agent/bootstrapper.md` and CI guard scripts. Target: CI. Most are one-shot
   `bash` snippets; TC-INFRA-001 proposes bundling them into a committed test.
 - **Layer 2 — Manual verification matrix** (human-executed): one row per behavioral AC
-  (AC1–AC14, AC17). Target: a human running `@bootstrapper` / `/bootstrap` in scratch
+  (AC1–AC15, AC17). Target: a human running `@bootstrapper` / `/bootstrap` in scratch
   repos. Framework: none (LLM agent); evidence = captured session transcript + observed
   artifacts + filled pass/fail.
 - **Layer 3 — Regression / integration** (human-executed, end-to-end): legacy-flow
@@ -220,11 +221,12 @@ No unit/integration/E2E framework applies (no runnable application code).
 | TC-INCEP-013 | Resume smoke (re-invoke → resumes at last phase) | Manual | 2 | High | AC13, F-13, DM-1, NFR-2, NFR-6 |
 | TC-INCEP-014 | Anti-sycophancy behavioral run (per phase) | Manual | 2 | High | AC14, F-14 |
 | TC-INCEP-015 | Guide referenced at runtime, not duplicated | Manual | 2 | Medium | AC17, F-1, NFR-5 |
+| TC-INCEP-016 | Phase 5 writes all four instruction files (incl. code-review) | Manual | 2 | High | AC15, F-15, DM-4 |
 | TC-LEGACY-001 | Legacy flow end-to-end in existing-repo scratch | Regression | 3 | High | AC16, F-16, NFR-4, RSK-6 |
 | TC-LEGACY-002 | Legacy write-allowlist unchanged (no inception leak) | Regression | 3 | High | AC16, NFR-4, NFR-7 |
 | TC-RESUME-001 | 2-session inception resume simulation | Regression | 3 | High | AC13, F-13, DM-1, NFR-2, RSK-4 |
-| TC-RESUME-002 | Resume edge: partial/abandoned state + compaction | Corner Case | 3 | Medium | AC13, NFR-2, OQ-3 |
-| TC-INFRA-001 | (PROPOSED) Bundled prompt-structure test script | Test-infra | — | Medium | TC-STRUCT-001…005, 008, 009, 010, 011, 012 (bundling) |
+| TC-RESUME-002 | Resume edge: partial/abandoned/malformed state (DEC-6) | Corner Case | 3 | Medium | AC13, NFR-2, DEC-6 |
+| TC-INFRA-001 | (PROPOSED) Bundled prompt-structure test + prompt-size guardrail | Test-infra | — | Medium | TC-STRUCT-001…005, 008, 009, 010, 011, 012, RSK-1 (bundling + size guardrail) |
 
 ### 5.2 Scenario Details
 
@@ -247,17 +249,24 @@ No unit/integration/E2E framework applies (no runnable application code).
 **Steps**:
 1. Assert the `<write_allowlist>` block contains an entry matching `doc/inception/**`.
 2. Assert it contains an entry for `.ai/agent/code-review-instructions.md`.
+3. Assert it contains an entry covering `doc/inception/abandoned-*.yaml` (DEC-6 archive
+   target — either via the `doc/inception/**` glob or an explicit entry).
+4. Assert it contains an entry for `doc/documentation-profile.md` (set by Phase 5 —
+   spec F-15 / DEC-3).
 
 **HOW (automation)**:
 ```bash
 f=.opencode/agent/bootstrapper.md
-grep -Eq 'doc/inception/\*\*' "$f"      # inception workspace
-grep -Eq '\.ai/agent/code-review-instructions\.md' "$f"   # AC15 net-new file
+grep -Eq 'doc/inception/\*\*' "$f"                              # inception workspace
+grep -Eq '\.ai/agent/code-review-instructions\.md' "$f"          # AC15 net-new file
+grep -Eq 'doc/inception/abandoned-[A-Za-z0-9_*-]*\.ya?ml' "$f"   # DEC-6 archive target
+grep -Eq 'doc/documentation-profile\.md' "$f"                    # Phase-5 profile write
 ```
 
 **Expected Outcome**:
-- Both patterns match; exit 0. The legacy allowlist entries are also still present
-  (cross-checked by TC-STRUCT-003).
+- All four patterns match; exit 0. The legacy allowlist entries are also still present
+  (cross-checked by TC-STRUCT-003, which asserts each legacy `<write_allowlist>` entry is
+  preserved verbatim).
 
 ---
 
@@ -311,67 +320,94 @@ is known — see TC-INFRA-001.)
 **Tags**: @agent, @prompt, @ci, @regression
 
 **Preconditions**:
-- The pre-change baseline of `.opencode/agent/bootstrapper.md` is reachable (commit
-  before this branch, or a saved baseline copy).
+- The pre-change baseline of `.opencode/agent/bootstrapper.md` is reachable at commit
+  `0a1a288` (the branch merge-base / last commit before this change; overridable via an
+  env var in TC-INFRA-001).
 
-**Parity method (concrete anchors):** the following legacy structural anchors MUST still
-be present, with content unchanged from baseline (near-verbatim allowed only for
-whitespace). Define "intact" = the anchor tag exists AND its inner content diff vs
-baseline is empty (context-only).
+**Parity method — two tiers (corrected by REM-2 / RT1-01):** inception legitimately
+EXTENDS two shared blocks (`<resume_behavior>`, `<write_allowlist>`) with additive
+inception branches/entries. A naive whole-block region-diff on those two would
+false-fail a correct implementation. Therefore parity is split into two tiers:
 
-Required legacy anchors:
-- `<workflow_phases>` … `</workflow_phases>` (6-phase list: Repo Scan, Confidence
-  Assessment, Human Interview, Draft Generation, Human Review, Write)
-- `<persistent_state>` containing the literal string `.ai/local/bootstrapper-context.yaml`
-  and `schema_version: 1`
-- `<phase_1_repo_scan>` … `</phase_1_repo_scan>`
-- `<phase_2_confidence>` … `</phase_2_confidence>`
-- `<phase_3_interview>` … `</phase_3_interview>`
-- `<phase_4_draft>` … `</phase_4_draft>`
-- `<phase_5_review>` … `</phase_5_review>`
-- `<phase_6_write>` … `</phase_6_write>`
-- `<resume_behavior>` … `</resume_behavior>`
-- `<write_allowlist>` … `</write_allowlist>` with its pre-change entries intact
+- **Tier A — truly-frozen legacy blocks** (whole-block region-diff MUST be byte-identical
+  vs baseline `0a1a288`): `<workflow_phases>`, `<persistent_state>`,
+  `<phase_1_repo_scan>`, `<phase_2_confidence>`, `<phase_3_interview>`,
+  `<phase_4_draft>`, `<phase_5_review>`, `<phase_6_write>`.
+  - NOTE: `<phase_4_draft>` is truly-frozen because REM-1 dropped the legacy
+    code-review-addition edit; the legacy Phase-4 recommended list is NOT modified.
+- **Tier B — shared blocks inception extends** (`<resume_behavior>`,
+  `<write_allowlist>`): additions are permitted, but EVERY baseline legacy entry/line
+  MUST still be present verbatim. Method: extract the baseline block, tokenize its
+  non-empty lines, and assert each baseline line is present in the new block (substring
+  match). A missing/dropped baseline line is a parity violation.
+
+All anchors must open and close. The literal `.ai/local/bootstrapper-context.yaml` and
+`schema_version: 1` must appear inside `<persistent_state>`.
 
 **Steps**:
-1. Confirm every anchor tag above opens and closes in the file.
+1. Confirm every anchor tag (both tiers) opens and closes in the file.
 2. Confirm the literal `.ai/local/bootstrapper-context.yaml` and `schema_version: 1`
    appear inside `<persistent_state>`.
-3. Region-diff: extract each anchor block on this branch vs the baseline commit; assert
-   no removals/modifications inside legacy blocks (additions outside legacy blocks are
-   allowed — this change is additive).
+3. **Tier A:** region-diff each frozen block on this branch vs baseline `0a1a288`; assert
+   the diff is empty (byte-identical).
+4. **Tier B:** for `<resume_behavior>` and `<write_allowlist>`, extract the baseline
+   block's non-empty lines and assert each is still present in the new block
+   (additions permitted, removals/modifications fail).
 
 **HOW (automation)**:
 ```bash
 f=.opencode/agent/bootstrapper.md
-for tag in workflow_phases persistent_state phase_1_repo_scan phase_2_confidence \
-           phase_3_interview phase_4_draft phase_5_review phase_6_write \
-           resume_behavior write_allowlist; do
+baseline=0a1a288        # overridable via BOOTSTRAPPER_BASELINE_SHA in TC-INFRA-001
+baseline_file=$(mktemp); git show "${baseline}:.opencode/agent/bootstrapper.md" > "$baseline_file"
+
+# 1) All legacy anchors open AND close (both tiers).
+frozen="workflow_phases persistent_state phase_1_repo_scan phase_2_confidence \
+        phase_3_interview phase_4_draft phase_5_review phase_6_write"
+shared="resume_behavior write_allowlist"
+for tag in $frozen $shared; do
   grep -Eq "<${tag}>" "$f" && grep -Eq "</${tag}>" "$f" \
     || { echo "legacy anchor ${tag} missing/unbalanced"; exit 1; }
 done
+
+# 2) Legacy state path + schema version inside <persistent_state>.
 grep -Eq '\.ai/local/bootstrapper-context\.yaml' "$f"
 grep -Eq 'schema_version: 1' "$f"
-# Region parity vs baseline (run from repo root):
-baseline=<SHA-before-branch>
-for tag in workflow_phases persistent_state phase_1_repo_scan phase_2_confidence \
-           phase_3_interview phase_4_draft phase_5_review phase_6_write \
-           resume_behavior write_allowlist; do
-  # naive awk region extractor; refine in TC-INFRA-001
-  diff <(awk "/<${tag}>/{f=1} f{print} /<\/${tag}>/{f=0}" "$f") \
-       <(git show "$baseline:.opencode/agent/bootstrapper.md" \
-         | awk "/<${tag}>/{f=1} f{print} /<\/${tag}>/{f=0}") \
-    || { echo "legacy block ${tag} drifted"; exit 1; }
+
+# Helper: extract a <tag>...</tag> block from a file (skips fenced code blocks).
+extract_block() { awk '/^```/{c=!c;next} !c && /<'"$1"'>/{f=1} f{print} /<\/'"$1"'>/{f=0}' "$2"; }
+
+# 3) Tier A — frozen blocks must be byte-identical vs baseline.
+for tag in $frozen; do
+  diff <(extract_block "$tag" "$f") <(extract_block "$tag" "$baseline_file") >/dev/null \
+    || { echo "Tier A frozen block <${tag}> drifted vs ${baseline}"; exit 1; }
 done
+
+# 4) Tier B — shared blocks: every baseline non-empty line still present verbatim.
+for tag in $shared; do
+  new_block=$(extract_block "$tag" "$f")
+  while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    printf '%s\n' "$new_block" | grep -qF -- "$line" \
+      || { echo "Tier B shared block <${tag}> dropped baseline line: $line"; exit 1; }
+  done < <(extract_block "$tag" "$baseline_file")
+done
+rm -f "$baseline_file"
+echo "legacy parity OK (Tier A frozen + Tier B shared-line-preserved)"
 ```
 
 **Expected Outcome**:
-- All anchors present and balanced; legacy blocks byte-identical to baseline; legacy
-  state path + schema version unchanged.
+- All anchors present and balanced.
+- Tier A frozen blocks byte-identical to baseline `0a1a288`.
+- Tier B shared blocks (`<resume_behavior>`, `<write_allowlist>`) preserve every baseline
+  line verbatim (inception additions allowed); no baseline entry dropped.
+- Legacy state path + schema version unchanged.
 
 **Notes**:
 - This is the primary automated guard for NFR-4 / RSK-6. The behavioral complement is
   TC-LEGACY-001.
+- The two-tier split is the REM-2/RT1-01 correction: whole-block parity on the eight
+  frozen blocks + line-preservation on the two inception-extended blocks, so an additive
+  (correct) implementation is not false-failed.
 
 ---
 
@@ -399,18 +435,46 @@ done
 **HOW (automation)**:
 ```bash
 f=.opencode/agent/bootstrapper.md
-grep -Eq 'doc/guides/project-inception\.md' "$f"
-# Heuristic for non-duplication: the agent must not contain the guide's exact
-# phase heading line repeated verbatim more than once.
 guide=doc/guides/project-inception.md
-for h in $(grep -oE '^### Phase [0-7] —.*$' "$guide"); do
-  cnt=$(grep -Fcx "$h" "$f" 2>/dev/null || true)
-  [ "$cnt" -le 1 ] || { echo "guide heading duplicated in prompt: $h"; exit 1; }
+grep -Eq 'doc/guides/project-inception\.md' "$f"   # guide referenced
+
+# Non-duplication heuristic (RT1-08, option a): line-overlap between each guide
+# "### Phase N" block and the prompt's <phase_N_inception> block. The full-line
+# heading-match in v1 was near-vacuous (the prompt must not repeat the guide's
+# heading line). Instead, measure how many guide-block lines recur verbatim in the
+# matching prompt section and fail if the overlap exceeds a threshold — a signal of
+# guide prose being inlined rather than referenced.
+max_overlap=0.30      # tunable: fraction of guide-block lines allowed to recur; default 30%
+extract_phase() { awk -v n="$1" '$0 ~ "^### Phase "n" "(off=1) off{print} /^### Phase [0-7]/ && $0 !~ "^### Phase "n" "{off=0}' "$2"; }
+extract_tag()   { awk '/^```/{c=!c;next} !c && /<'"$1"'>/{f=1} f{print} /<\/'"$1"'>/{f=0}' "$2"; }
+for n in 1 2 3 4 5 6 7; do
+  guide_block=$(extract_phase "$n" "$guide")
+  [ -z "$guide_block" ] && continue
+  prompt_block=$(extract_tag "phase_${n}_inception" "$f")
+  total=$(printf '%s\n' "$guide_block" | grep -c .)
+  hits=0
+  while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    printf '%s\n' "$prompt_block" | grep -qF -- "$line" && hits=$((hits+1))
+  done <<< "$guide_block"
+  [ "$total" -gt 0 ] || continue
+  ratio=$(awk -v h="$hits" -v t="$total" 'BEGIN{printf "%.3f", h/t}')
+  awk -v r="$ratio" -v m="$max_overlap" -v n="$n" 'BEGIN{exit !(r>m)}' \
+    && { echo "guide↔prompt overlap for Phase ${n} too high: ${ratio} > ${max_overlap} (duplication suspected)"; exit 1; }
 done
 ```
 
 **Expected Outcome**:
-- Reference present; no verbatim duplication of guide phase headings.
+- Guide reference present; per-phase guide↔prompt line-overlap stays under the tunable
+  threshold (default 30%), i.e., the prompt does not inline guide prose block-for-block.
+- The threshold is a heuristic, not a hard guarantee; the authoritative "0 contradictions"
+  judgment is the manual TC-INCEP-015.
+
+**Notes**:
+- v1's full-line heading-match (`grep -Fcx "$h"`) only caught an exact duplicated heading
+  line — near-vacuous confidence. This overlap check (RT1-08 option a) is stronger and
+  still CI-safe; if real-wording variance makes it noisy, fall back to manual TC-INCEP-015
+  (RT1-08 option b) rather than silently weakening the claim.
 
 ---
 
@@ -541,26 +605,50 @@ fi
 - Phase 0 / 5 / 6 / 7 → none
 
 **Steps**:
-1. For each technique, assert a recognizable prompt anchor (keyword) appears inside
-   the correct inception-phase section and does NOT appear in the forbidden phases.
+1. For each decision-dense phase (1–4), assert its `<phase_N_inception>` block contains
+   an `<anti_sycophancy>` sub-tag naming the correct technique(s) per Appendix B.
+2. Assert phases 0 / 5 / 6 / 7 contain NO `<anti_sycophancy>` sub-tag.
 
-**HOW (automation)** — assert presence in correct phases (exact section scoping refined
-in TC-INFRA-001; keyword presence is the coarse check):
+**DEPENDENCY (REM-3 / REM-8):** this check is **anchor-based**, not free-text keyword
+scoping. It requires the prompt (authored by `@toolsmith`) to emit a well-defined
+`<anti_sycophancy>` sub-tag (or a clearly-documented equivalent anchor) inside each
+decision-dense `<phase_N_inception>` section. REM-3 / the implementation plan instructs
+`@toolsmith` accordingly. If `@toolsmith` instead uses a different anchor, the snippet's
+anchor name must be aligned to it — that wiring is TC-INFRA-001's job.
+
+**HOW (automation)** — anchor-scoped, not global keyword search:
 ```bash
 f=.opencode/agent/bootstrapper.md
-grep -Eqi "devil'?s advocate" "$f"     # must be in P1 region
-grep -Eqi "pre-mortem" "$f"           # must be in P2 & P3 regions
-grep -Eqi "alternative comparison" "$f"  # must be in P3 region
-grep -Eqi "unknown.?unknowns" "$f"    # must be in P4 region
-grep -Eqi "four.?risk" "$f"           # must be in P1/P2/P3 regions
+extract_tag() { awk '/^```/{c=!c;next} !c && /<'"$1"'>/{f=1} f{print} /<\/'"$1"'>/{f=0}' "$2"; }
+ANCHOR=anti_sycophancy   # align to @toolsmith's anchor name in TC-INFRA-001
+
+# Decision-dense phases: <anti_sycophancy> present AND names the right technique(s).
+declare -A want=( [1]='devil.?s advocate|four.?risk' [2]='pre.?mortem|four.?risk' \
+                  [3]='alternative comparison|pre.?mortem' [4]='unknown.?unknowns' )
+for n in 1 2 3 4; do
+  block=$(extract_tag "phase_${n}_inception" "$f")
+  [ -n "$block" ] || { echo "missing <phase_${n}_inception>"; exit 1; }
+  printf '%s\n' "$block" | grep -Eq "<${ANCHOR}>" || { echo "P${n} missing <${ANCHOR}> tag"; exit 1; }
+  printf '%s\n' "$block" | grep -Eqi "${want[$n]}" || { echo "P${n} <${ANCHOR}> missing technique (${want[$n]})"; exit 1; }
+done
+
+# Forbidden phases: NO <anti_sycophancy> tag.
+for n in 0 5 6 7; do
+  block=$(extract_tag "phase_${n}_inception" "$f")
+  [ -z "$block" ] && continue
+  printf '%s\n' "$block" | grep -Eq "<${ANCHOR}>" && { echo "P${n} must NOT contain <${ANCHOR}>"; exit 1; }
+done
+echo "anti-sycophancy placement OK (anchor-scoped)"
 ```
 
 **Expected Outcome**:
-- All five technique keywords present. A stricter per-phase scoping assertion (keyword
-  in the right `<phase_*>` block only, absent from P0/P5/P6/P7) is part of TC-INFRA-001
-  and is the authoritative AC14 structural check.
+- Phases 1–4 each carry an `<anti_sycophancy>` sub-tag naming the correct technique(s);
+  phases 0/5/6/7 carry none. This is the authoritative AC14 structural check.
 
 **Notes**:
+- v1's free-text global keyword grep was brittle and false-positive-prone (a technique
+  keyword could appear in a pointer/comment). The anchor-based method (REM-8/RT1-09) is
+  robust once the prompt uses the `<anti_sycophancy>` anchor (REM-3 dependency above).
 - The behavioral confirmation that the agent actually RUNS each technique at the right
   time is TC-INCEP-014.
 
@@ -650,12 +738,21 @@ grep -Eq 'doc/inception/inception-state\.yaml' "$f"
 for t in Value Usability Feasibility Viability; do
   grep -Eq "\\b${t}\\b" "$f" || { echo "missing four-risk tag ${t}"; exit 1; }
 done
-! grep -Eqi 'desirability' "$f"   # the drift term caught by test-inception-doc-consistency
+# desirability-absent: SNIPPET-ONLY for bootstrapper.md (RT1-12). No existing script
+# covers the bootstrapper four-risk vocabulary — test-inception-doc-consistency.sh
+# covers templates/guide, NOT bootstrapper.md. Enforced in CI once TC-INFRA-001 ships.
+! grep -Eqi 'desirability' "$f"
 grep -Eq '\.ai/local/bootstrapper-context\.yaml' "$f"   # legacy path still named
 ```
 
 **Expected Outcome**:
 - Committed path present; all four canonical tags; no `desirability`; legacy path named.
+
+**Notes (RT1-12)**:
+- The `desirability`-absent assertion is a **runnable snippet only** until TC-INFRA-001
+  ships — `scripts/.tests/test-inception-doc-consistency.sh` covers inception
+  templates/`project-inception.md`, **not** `.opencode/agent/bootstrapper.md`. Do not
+  credit the bootstrapper four-risk check to that script (see §7 correction).
 
 ---
 
@@ -1063,6 +1160,56 @@ grep -Eqi 'NEVER (store|contain) secrets|must NEVER contain secrets' "$f"
 
 ---
 
+#### TC-INCEP-016 - Phase 5 writes all four instruction files (incl. code-review)
+
+**Scenario Type**: Happy Path / Regression
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: AC15, F-15, DM-4
+**Test Type(s)**: Manual
+**Automation Level**: Manual
+**Target Layer / Location**: scratch repo `.ai/agent/*-instructions.md`
+**Tags**: @agent, @manual
+
+**Given/When/Then (AC15):** *Given* an inception run has reached Phase 5, *when* Phase 5
+completes and its human gate is approved, *then* all four `.ai/agent/*-instructions.md`
+files exist — pm, pr, decision, AND code-review-instructions.md.
+
+**Preconditions**:
+- A scratch inception repo with `mode: new`; phases 0–4 completed and gated.
+- The GH-69 blueprint `doc/templates/blueprints/code-review-instructions--example.md`
+  present (the source for the code-review file).
+- (Static prerequisites already asserted by TC-STRUCT-001 allowlist +
+  TC-STRUCT-002 Phase-5 references; this TC is the behavioral confirmation.)
+
+**Steps**:
+1. Run inception Phase 5 to completion and pass Gate 5.
+2. Inspect `.ai/agent/` and assert all FOUR files are written:
+   - `pm-instructions.md`
+   - `pr-instructions.md`
+   - `decision-instructions.md`
+   - `code-review-instructions.md` (the GH-32 gap closure)
+3. Confirm `code-review-instructions.md` is non-empty, project-local, and consistent
+   with the GH-69 blueprint (generated from it, not a verbatim untouched copy that
+   ignores the project).
+4. Confirm the other three files are also non-empty and project-tailored (not stale
+   legacy templates).
+
+**Expected Outcome**:
+- Exactly four instruction files present, including `code-review-instructions.md`.
+- The code-review file is derived from the blueprint and reflects the project.
+
+**Pass/Fail**:
+- Pass only if all four files exist post-Phase-5 (incl. `code-review-instructions.md`)
+  and are project-consistent. Fail if any of the four is missing or if
+  `code-review-instructions.md` is absent (the historical GH-32 gap).
+
+**Notes**:
+- AC15 had only static coverage (TC-STRUCT-001/002) before this; TC-INCEP-016 (REM-6 /
+  RT1-03) adds the Layer-2 behavioral evidence that the files are ACTUALLY written.
+
+---
+
 #### TC-LEGACY-001 - Legacy flow end-to-end in existing-repo scratch
 
 **Scenario Type**: Regression
@@ -1150,49 +1297,68 @@ grep -Eqi 'NEVER (store|contain) secrets|must NEVER contain secrets' "$f"
 
 ---
 
-#### TC-RESUME-002 - Resume edge: partial/abandoned state + compaction
+#### TC-RESUME-002 - Resume edge: partial/abandoned/malformed state (DEC-6)
 
 **Scenario Type**: Corner Case
 **Impact Level**: Important
 **Priority**: Medium
-**Related IDs**: AC13, NFR-2, OQ-3
+**Related IDs**: AC13, NFR-2, DEC-6 (resolves OQ-3)
 **Test Type(s)**: Manual
 **Automation Level**: Manual
 **Target Layer / Location**: `doc/inception/inception-state.yaml`
 **Tags**: @agent, @manual, @edge
 
 **Preconditions**:
-- A repo with a partial `doc/inception/inception-state.yaml` left by an abandoned prior
-  run (the OQ-3 edge case).
+- Three scratch repos with edge-case inception state, per DEC-6:
+  - (A) a **partial but valid** `doc/inception/inception-state.yaml` left by an
+    interrupted run (mid-phase, `project.flow: new`, schema valid).
+  - (B) a state file representing an **abandoned** run the human decides to discard.
+  - (C) a **malformed / `schema_version`-mismatched** state file.
 
-**Steps**:
-1. Re-invoke `/bootstrap` against the partial state.
-2. Observe how mode is selected/persisted and whether the agent resumes, restarts, or
-  asks (per whatever OQ-3 resolution the plan/decision adopts).
+**Steps (per sub-case; pass/fail recorded for each):**
+1. **(A) Partial valid state:** re-invoke `/bootstrap`. Observe the agent reads
+   `project.flow` as the resume source of truth and resumes at the flow's last
+   incomplete phase — **no repo-shape re-derivation**, no re-running Phase 0 mode
+   detection.
+2. **(B) Abandoned run:** re-invoke `/bootstrap`; choose the archive-and-restart path.
+   Observe the prior state is **archived to `doc/inception/abandoned-<ISO>.yaml`** and
+   NOT silently overwritten or deleted; a fresh inception run then begins.
+3. **(C) Malformed / `schema_version` mismatch:** re-invoke `/bootstrap` against the
+   malformed file. Observe the agent **warns** and **offers repair or
+   archive-and-restart** (mirrors the legacy version-mismatch handling), rather than
+   crashing or silently guessing.
 
-**Expected Outcome**:
-- Behavior is deterministic and matches the OQ-3 resolution; no crash, no silent
-  overwrite of prior decisions.
+**Expected Outcome (DEC-6):**
+- (A) `project.flow`-driven resume; no mode re-derivation; resumes at the correct phase.
+- (B) prior state archived to `doc/inception/abandoned-<ISO>.yaml`; never silently
+  overwritten.
+- (C) explicit warn + offer to repair or archive-and-restart; no crash, no silent guess.
+- All three deterministic; 0 silent overwrites (NFR-2, NFR-1).
+
+**Pass/Fail**:
+- Pass only if all three sub-cases behave per DEC-6. Fail if any sub-case silently
+  overwrites prior state, crashes, re-derives mode from repo shape, or guesses without
+  warning.
 
 **Notes**:
-- **BLOCKED on OQ-3 resolution.** Until the decision-advisor answers OQ-3, the exact
-  pass criterion is undefined; record the observed behavior and flag in §8.3.
+- **Unblocked (REM-7 / RT1-05).** Previously BLOCKED on OQ-3; OQ-3 is now **Resolved →
+  DEC-6**, so the pass criteria above are concrete. See §8.3.
 
 ---
 
-#### TC-INFRA-001 - (PROPOSED) Bundled prompt-structure test script
+#### TC-INFRA-001 - (PROPOSED) Bundled prompt-structure test + prompt-size guardrail
 
 **Scenario Type**: Test infrastructure
 **Impact Level**: Important
 **Priority**: Medium
-**Related IDs**: TC-STRUCT-001…005, 008, 009, 010, 011, 012 (bundling)
+**Related IDs**: TC-STRUCT-001…005, 008, 009, 010, 011, 012 (bundling), RSK-1 (prompt-size guardrail)
 **Test Type(s)**: Static
 **Automation Level**: Automated
 **Target Layer / Location**: `scripts/.tests/test-bootstrapper-prompt-structure.sh` (NEW)
 **Tags**: @ci, @test-infra
 
 **Status**: **PROPOSED — not implemented in this test plan.** Flagged for the
-implementation plan (`chg-GH-71-plan.md`) to action.
+implementation plan (`chg-GH-71-plan.md`, Phase C) to action.
 
 **Purpose**:
 - Bundle the Layer-1 `grep`/diff assertions (TC-STRUCT-001…012) into a single
@@ -1202,19 +1368,52 @@ implementation plan (`chg-GH-71-plan.md`) to action.
   `::error::` annotations, exit non-zero on drift).
 
 **What it would assert (scope):**
-- TC-STRUCT-001 allowlist entries.
+- TC-STRUCT-001 allowlist entries (incl. `doc/documentation-profile.md` and
+  `doc/inception/abandoned-*.yaml`).
 - TC-STRUCT-002 four instruction files referenced.
-- TC-STRUCT-003 legacy anchor presence + region parity vs baseline (refined awk
-  extractor that skips fenced code blocks).
-- TC-STRUCT-004 guide reference + non-duplication heuristic.
+- TC-STRUCT-003 legacy anchor presence + **two-tier parity** vs baseline (`0a1a288`,
+  env-overridable): Tier A frozen blocks byte-identical; Tier B shared blocks
+  (`<resume_behavior>`, `<write_allowlist>`) preserve every baseline line verbatim
+  (additions allowed). Code-fence-aware awk extractor.
+- TC-STRUCT-004 guide reference + **line-overlap** non-duplication heuristic (per phase).
 - TC-STRUCT-005 balanced section tags (code-span-aware).
-- TC-STRUCT-008 anti-sycophancy keywords scoped to the correct `<phase_*>` block.
-- TC-STRUCT-009 / 010 / 011 / 012 structural anchors.
+- TC-STRUCT-008 **anchor-based** anti-sycophancy: each decision-dense
+  `<phase_N_inception>` carries an `<anti_sycophancy>` sub-tag naming the correct
+  technique; phases 0/5/6/7 have none. **(Depends on REM-3 `@toolsmith` anchor; align the
+  anchor name to the shipped prompt.)**
+- TC-STRUCT-009 / 010 / 011 / 012 structural anchors (note: the TC-STRUCT-011
+  `desirability`-absent check is bundled here — no existing script covers the
+  bootstrapper four-risk vocabulary, RT1-12).
+- **Prompt-size guardrail (NEW — REM-4 / RT1-07, traces RSK-1):** measure
+  `.opencode/agent/bootstrapper.md` line count; **warn** (emit a `::warning::` annotation
+  and treat as a soft failure, i.e., non-zero exit OR a printed WARN) if it exceeds
+  **~650 lines**, and **hard-fail** (`::error::` + non-zero exit) if it exceeds
+  **~800 lines**. Both thresholds are **tunable** via env vars (e.g.,
+  `BOOTSTRAPPER_WARN_LINES` / `BOOTSTRAPPER_FAIL_LINES`). This makes RSK-1 a *measured*
+  guardrail rather than a post-hoc trigger.
+
+**Prompt-size snippet (REM-4):**
+```bash
+f=.opencode/agent/bootstrapper.md
+warn=${BOOTSTRAPPER_WARN_LINES:-650}    # tunable
+fail=${BOOTSTRAPPER_FAIL_LINES:-800}    # tunable
+lines=$(wc -l < "$f")
+if [ "$lines" -gt "$fail" ]; then
+  echo "::error:: bootstrapper.md is ${lines} lines (>${fail}); RSK-1 prompt-bloat hard limit exceeded"
+  exit 1
+elif [ "$lines" -gt "$warn" ]; then
+  echo "::warning:: bootstrapper.md is ${lines} lines (>${warn}); approaching RSK-1 bloat limit — consider trimming"
+  # soft signal: escalate to hard fail by treating WARN as non-zero if desired
+fi
+```
 
 **Notes / Clarifications**:
 - This is a **test-infra** task, not a change-implementation task. It is proposed
   coverage; the plan decides whether to ship it in GH-71 or defer. If deferred, the
   Layer-1 checks remain runnable as one-shot snippets (each TC-STRUCT lists its `bash`).
+- The size guardrail is deliberately a two-stage warn/fail so day-to-day growth is visible
+  without blocking, while runaway bloat is blocked — consistent with RSK-1's "M/H"
+  residual risk.
 
 ## 6. Environments and Test Data
 
@@ -1247,15 +1446,15 @@ implementation plan (`chg-GH-71-plan.md`) to action.
 | TC-STRUCT-008 | To Implement (part of TC-INFRA-001) | `bash` grep snippet | None |
 | TC-STRUCT-009 | To Implement (part of TC-INFRA-001) | `bash` grep snippet | None |
 | TC-STRUCT-010 | To Implement (part of TC-INFRA-001) | `bash` grep snippet | None |
-| TC-STRUCT-011 | To Implement (part of TC-INFRA-001) | `bash` grep snippet | None |
+| TC-STRUCT-011 | To Implement (part of TC-INFRA-001) | `bash` grep snippet | None — **RT1-12:** the `desirability`-absent + four-risk check on `bootstrapper.md` is snippet-only until TC-INFRA-001 ships; `test-inception-doc-consistency.sh` covers templates/`project-inception.md`, NOT `bootstrapper.md` |
 | TC-STRUCT-012 | To Implement (part of TC-INFRA-001) | `bash` grep snippet | None |
-| TC-STRUCT-* (regression) | Existing – No Change | `bash scripts/.tests/test-inception-doc-consistency.sh` (run as regression; catches four-risk term drift) | None |
-| TC-INCEP-001…015 | Manual Only | human-run `/bootstrap` in scratch repos | None (live agent) |
+| TC-STRUCT-* (regression) | Existing – No Change | `bash scripts/.tests/test-inception-doc-consistency.sh` (run as regression) | None — **RT1-12:** this script covers inception **templates/`project-inception.md`** four-risk-term consistency, NOT `.opencode/agent/bootstrapper.md`; the bootstrapper four-risk/`desirability` check is TC-STRUCT-011 (snippet-only until TC-INFRA-001) |
+| TC-INCEP-001…016 | Manual Only | human-run `/bootstrap` in scratch repos | None (live agent) |
 | TC-LEGACY-001 | Manual Only | human-run legacy `/bootstrap` in existing-repo scratch | None |
 | TC-LEGACY-002 | Semi-automated | grep on allowlist + manual legacy run | None |
 | TC-RESUME-001 | Manual Only | 2-session `/bootstrap` simulation | Simulated compaction |
-| TC-RESUME-002 | Manual Only (BLOCKED on OQ-3) | partial-state re-invoke | None |
-| TC-INFRA-001 | To Implement (PROPOSED — plan decides) | `bash scripts/.tests/test-bootstrapper-prompt-structure.sh` | None |
+| TC-RESUME-002 | Manual Only (Unblocked — DEC-6) | partial / abandoned / malformed-state re-invoke | None |
+| TC-INFRA-001 | To Implement (PROPOSED — plan decides; Phase C) | `bash scripts/.tests/test-bootstrapper-prompt-structure.sh` (+ prompt-size guardrail: warn >~650, fail >~800 lines; RSK-1) | None |
 
 ### CI gate list (run before merge)
 
@@ -1282,10 +1481,10 @@ implementation plan (`chg-GH-71-plan.md`) to action.
 |---------------------|------------|
 | Behavioral AC cannot be asserted in CI (RSK-2) | Layered strategy: Layer-1 static guards for structure; Layer-2 manual matrix is the authoritative behavioral evidence; Layer-3 regression for parity/resume. This plan never claims a behavioral AC is CI-testable. |
 | Static checks assert structure, not behavior — a well-structured prompt could still misbehave | Layer-2 manual matrix compensates; structural drift is the higher-probability regression (RSK-6), which Layer-1 catches well. |
-| Region-parity diff (TC-STRUCT-003) is brittle if section tags are renamed | Parity is defined on the explicit anchor list (§5.2 TC-STRUCT-003); renaming a legacy anchor is itself a parity violation and fails the test by design. |
-| Anti-sycophancy keyword check (TC-STRUCT-008) is coarse | Strict per-phase scoping deferred to TC-INFRA-001; behavioral confirmation in TC-INCEP-014. |
-| Prompt bloat (RSK-1) | TC-STRUCT-004 enforces reference-not-duplicate; deeper prompt-size budgeting is a `@toolsmith` authoring concern, not a test assertion. |
-| Resume edge (OQ-3) undefined | TC-RESUME-002 is BLOCKED until OQ-3 is resolved (§8.3). |
+| Region-parity diff (TC-STRUCT-003) — corrected by REM-2/RT1-01 | v1 region-diffed ALL ten legacy blocks whole-block and required empty diffs, which false-fails the two inception-EXTENDED shared blocks (`<resume_behavior>`, `<write_allowlist>`). Now **two-tier**: Tier A frozen blocks byte-identical; Tier B shared blocks preserve every baseline line (additions allowed). Renaming a legacy anchor is still itself a parity violation. |
+| Anti-sycophancy placement (TC-STRUCT-008) — corrected by REM-8/RT1-09 | v1's free-text keyword grep was coarse and false-positive-prone. Now **anchor-based**: each decision-dense `<phase_N_inception>` must carry an `<anti_sycophancy>` sub-tag naming the correct technique; 0/5/6/7 none. Depends on REM-3 `@toolsmith` anchor. Behavioral confirmation in TC-INCEP-014. |
+| Prompt bloat (RSK-1) — measured by REM-4/RT1-07 | TC-STRUCT-004 enforces reference-not-duplicate; TC-INFRA-001 adds a **prompt-size guardrail** (warn >~650, hard-fail >~800 lines, tunable) so RSK-1 is measured, not post-hoc. |
+| Resume edge (OQ-3) — resolved | OQ-3 **Resolved → DEC-6**; TC-RESUME-002 is **unblocked** with concrete pass criteria (partial→`project.flow`-driven resume; abandoned→archived to `doc/inception/abandoned-<ISO>.yaml`; malformed→warn + offer repair/archive-and-restart). |
 
 ### 8.2 Assumptions
 
@@ -1307,13 +1506,14 @@ implementation plan (`chg-GH-71-plan.md`) to action.
 |----|----------|-----------|-------|
 | OQ-1 | Discrete `<phase_*>` sections vs a separate referenced structure for the inception sub-mode? | Non-blocking for tests (tests target anchors, not the structure choice) but affects TC-INFRA-001 section scoping. | `@decision-advisor` |
 | OQ-2 | Bar for amending `doc/guides/project-inception.md` vs recording a deferred item? | Non-blocking; governs whether TC-STRUCT-007 runs. | `@decision-advisor` |
-| OQ-3 | Mode selection/resume when a partial `doc/inception/inception-state.yaml` exists from an abandoned run? | **BLOCKING for TC-RESUME-002** pass criteria. | `@decision-advisor` |
+| OQ-3 | Mode selection/resume when a partial `doc/inception/inception-state.yaml` exists from an abandoned run? | **Resolved → DEC-6.** No longer blocking. TC-RESUME-002 has concrete pass criteria (§5.2): partial→`project.flow`-driven resume; abandoned→archived to `doc/inception/abandoned-<ISO>.yaml`; malformed→warn + offer repair/archive-and-restart. | `@decision-advisor` |
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-06-27 | Juliusz Ćwiąkalski | Initial test plan. Layered strategy (static CI checks + manual behavioral matrix + regression); full AC1–AC17 + NFR1–7 + F1–16 + DM1–4 + RSK1–7 traceability; TC-INFRA-001 proposed. |
+| 1.1 | 2026-06-27 | Juliusz Ćwiąkalski | Red-team pre-delivery remediation. REM-2/RT1-01: TC-STRUCT-003 → two-tier parity (Tier A frozen blocks byte-identical; Tier B `<resume_behavior>`/`<write_allowlist>` line-presence). REM-5/RT1-04: TC-STRUCT-001 adds `doc/documentation-profile.md` + `abandoned-*.yaml`. REM-6/RT1-03: +TC-INCEP-016 (behavioral AC15). REM-7/RT1-05: TC-RESUME-002 unblocked vs DEC-6; OQ-3 resolved. REM-4/RT1-07: TC-INFRA-001 prompt-size guardrail (warn ~650 / fail ~800). REM-8/RT1-09: TC-STRUCT-008 anchor-based anti-sycophancy (REM-3 dep). RT1-08: TC-STRUCT-004 line-overlap heuristic. RT1-12: TC-STRUCT-011/§7 desirability snippet-only correction. Traceability (AC15→016, RSK-1→INFRA-001, §4 manual matrix→AC15) and §8 risks updated. |
 
 ## 10. Test Execution Log
 
