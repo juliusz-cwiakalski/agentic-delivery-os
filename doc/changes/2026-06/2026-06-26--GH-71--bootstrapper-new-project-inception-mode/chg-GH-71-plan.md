@@ -14,17 +14,32 @@ links:
   test_plan: ./chg-GH-71-test-plan.md
   decision: ../../decisions/TDR-0001-bootstrapper-inception-submode-prompt-structure.md
 summary: >
-  Extend @bootstrapper with a new-project inception sub-mode (mode: new) that
-  automates the 8-phase iterative inception workflow (phases 0-7) from
-  doc/guides/project-inception.md — with repo-persistent committed state,
-  per-phase human gates, project-characteristics detection that activates
-  conditional artifacts, embedded anti-sycophancy, and Phase-5 generation of all
-  four .ai/agent/*-instructions.md files. The legacy existing-project 6-phase
-  flow is preserved byte-for-behavior unchanged.
-version_impact: minor
+  Unify @bootstrapper onto ONE 8-phase inception workflow (phases 0–7) where
+  project.flow: new|legacy selects only the front-half (phases 0–4) differences —
+  eradicating the legacy GH-32 6-phase flow and its git-ignored state, folding the
+  pre-ADOS ("legacy") inception path into the same process, with repo-persistent
+  committed state, per-phase human gates, characteristics-driven conditional
+  artifacts, embedded anti-sycophancy, and Phase-5 generation of all four
+  .ai/agent/*-instructions.md. Phase G records the unification amendment
+  (REM-9/REM-10; DEC-8/DEC-9) that superseded the original "parallel sub-mode"
+  plan (Phases A–F, kept as the historical execution record).
+version_impact: major  # redesign (DEC-8): breaking, no backward-compat → major (was: minor)
 ---
 
 # IMPLEMENTATION PLAN — GH-71: Iterative phased inception workflow for @bootstrapper — new-project mode
+
+> **PLAN AMENDMENT — Unification (REM-9/REM-10 → DEC-8/DEC-9; 2026-06-27).**
+> This plan was originally authored for an *additive, parallel* design — an inception
+> sub-mode alongside a byte-for-byte-preserved legacy 6-phase flow (Phases A–F, all
+> executed and historically logged below). A user-directed redesign **superseded that
+> approach**: `@bootstrapper` is now ONE unified 8-phase inception workflow where
+> `project.flow: new|legacy` selects only the front-half (phases 0–4) differences; the
+> legacy 6-phase flow and `.ai/local/bootstrapper-context.yaml` are **eradicated**, the
+> legacy front-half (F-17…F-21 / AC18…AC22) is **folded in**, and the prompt-structure
+> test is **deleted**. The redesign is recorded in **Phase G**. Per the "honest execution
+> log" rule, Phases A–F are kept verbatim; Phase A ("parallel sub-mode") and Phase C
+> ("structure test") are marked **SUPERSEDED** with pointers to Phase G. The revised
+> `chg-GH-71-spec.md` (v1.2) is the source of truth; `version_impact` is now `major`.
 
 ## Context and Goals
 
@@ -90,8 +105,10 @@ phase boundary a clean, CI-green, independently valid commit.
   is a net-new inception Phase-5 artifact only; closing the legacy Phase-4 gap is deferred).
 - Regenerate the `.ados-claude/agents/bootstrapper.md` plugin counterpart (D2, RSK-7).
 - Additive `AGENTS.md` bootstrapper one-line description update (D3).
-- New `scripts/.tests/test-bootstrapper-prompt-structure.sh` test-infra bundling the
-  Layer-1 static checks (D5, actioning TC-INFRA-001).
+- ~~New `scripts/.tests/test-bootstrapper-prompt-structure.sh` test-infra bundling the
+  Layer-1 static checks (D5, actioning TC-INFRA-001).~~ **SUPERSEDED by DEC-9 / Phase G.3**
+  — the structure test is deleted (REM-10); TDR-0001 is the structure authority. Historical:
+  shipped as Phase C (commit `fcb5a34`), now removed.
 - Conditional, surgical amendment to `doc/guides/project-inception.md` ONLY if a
   concrete+blocking gap is found (D4, DEC-5).
 
@@ -156,6 +173,17 @@ phase boundary a clean, CI-green, independently valid commit.
 ## Phases
 
 ### Phase A: Prompt structure (source) + plugin regeneration
+
+> **SUPERSEDED by Phase G (REM-9 / DEC-8).** This phase delivered the *additive
+> "parallel sub-mode"* approach: an inception sub-mode authored alongside a
+> byte-for-byte-preserved legacy 6-phase flow, guarded by a two-tier legacy-parity
+> check vs `${BOOTSTRAPPER_BASELINE_SHA}`. The redesign rewrote the agent onto ONE
+> unified 8-phase workflow and **eradicated** the legacy flow + its git-ignored state
+> (`.ai/local/bootstrapper-context.yaml`), dissolving the parity guard (no frozen legacy
+> blocks remain). The historical execution (commits incl. `804c481`) and the parity
+> verification remain a truthful record of what shipped at the time. Phase G reuses the
+> TDR-0001 structure authority and the same source+generated-together commit discipline;
+> it does not re-add a parallel mode.
 
 **Goal**: Author the inception sub-mode in `.opencode/agent/bootstrapper.md` via
 `@toolsmith` per TDR-0001 + the spec, preserving the legacy flow, then regenerate and
@@ -426,6 +454,16 @@ human-facing `AGENTS.md` one-liner, additively (capabilities grow; nothing remov
 ---
 
 ### Phase C: Test-infra — bundled prompt-structure test (D5)
+
+> **SUPERSEDED by Phase G.3 (REM-10 / DEC-9).** This phase shipped
+> `scripts/.tests/test-bootstrapper-prompt-structure.sh` (TC-INFRA-001). The redesign
+> **deletes** that test: it hardcoded prompt wording (grep-as-a-test), gave false
+> confidence, and would fossilize TDR-0001's chosen wording against future evolution;
+> its only defensible piece (the two-tier legacy-parity guard) dissolves under DEC-8 (no
+> frozen legacy blocks remain). **TDR-0001 is the structure authority; behavioral
+> correctness is the manual `TC-INCEP-*` matrix + PR review, not CI.** The historical
+> commit `fcb5a34` remains a truthful record; Phase G.3 records the deletion. **Do not
+> re-introduce this test.**
 
 **Goal**: Ship the proposed Layer-1 static/structural test from TC-INFRA-001 as a
 committed, CI-safe script `scripts/.tests/test-bootstrapper-prompt-structure.sh`,
@@ -705,13 +743,135 @@ triggered, ready for the review/PR lifecycle phases.
 **Completion signal**: `chore(release): finalize GH-71 — minor version impact, spec sync hand-off`
 — OR no commit if the execution log + downstream hand-off suffice per PM discretion.
 
+---
+
+### Phase G: Unification amendment (REM-9/REM-10; DEC-8/DEC-9)
+
+**Goal**: Record and complete the user-directed redesign that supersedes the original
+"parallel sub-mode" approach. `@bootstrapper` is rewritten onto ONE unified 8-phase
+inception workflow (`project.flow: new|legacy` selects only the front-half phases 0–4
+differences); the GH-32 6-phase flow and its git-ignored state are **eradicated**; the
+legacy ("pre-ADOS project") front-half is **folded in** (F-17…F-21 / AC18…AC22); and the
+prompt-structure test is **deleted** (TDR-0001 remains the structure authority). This
+phase makes the shipped artifacts match the revised `chg-GH-71-spec.md` (v1.2) — the
+current source of truth (`version_impact: major`, breaking, no backward-compat).
+
+> **Relationship to Phases A–F:** Phase G is a **rewrite, not an additive extension**.
+> Phase A's "parallel sub-mode" (inception sub-mode alongside a preserved legacy flow) is
+> superseded by G.1; Phase C's structure test is superseded/deleted by G.3. Those phases
+> are retained above as the historical execution record. Nothing in G re-introduces a
+> parallel mode or a structure test.
+
+**Tasks**:
+
+- [x] **G.1 — Rewrite `@bootstrapper` to the unified single-process model (via
+  `@toolsmith`).** — DONE (working tree; uncommitted at plan-authoring time). The agent
+  source was rewritten — not extended — by `@toolsmith`:
+  - Eradicated the GH-32 6-phase legacy flow and every reference to the git-ignored
+    `.ai/local/bootstrapper-context.yaml`; the prompt now has ONE `<inception_workflow>`
+    of 8 phase sections, reached via `<mode_selection>` (`project.flow ∈ {new, legacy}`).
+  - Rehomed the discovery/guidance material into the single workflow; `project.flow`
+    selects **only front-half (phases 0–4) differences** (`new` = author; `legacy` =
+    extract/reconstruct); phases 5–7 are shared.
+  - Folded in the legacy front-half behaviors (F-17 repo ingestion → `repo-analysis`;
+    F-18 north-star reconcile + behavioral-spec extraction from tests; F-19 next-milestone
+    scope + tribal-knowledge graduation; F-20 architecture reconstruction + uncertainty
+    flagging; F-21 conventions audit) — mapping to AC18–AC22.
+  - Preserved the TDR-0001 structure authority and the §5.2 inline-vs-referenced boundary
+    (operational skeleton inline; content referenced from the guide); Phase 5 still
+    generates all four `.ai/agent/*-instructions.md` (AC15); anti-sycophancy placements
+    intact (AC14); guide referenced not recreated (AC17).
+  - The file is 278 lines (the formal CI size guard is gone with the structure test — DEC-9).
+  - Updated `.opencode/command/bootstrap.md` and `.opencode/README.md` to match;
+    regenerated `.ados-claude/agents/bootstrapper.md` and `.ados-claude/skills/bootstrap/SKILL.md`.
+  - *(Satisfies AC1/AC17/AC18–AC23, NFR-1/NFR-4(new)/DM-1/DM-2/DM-4; supersedes Phase A.)*
+- [x] **G.2 — Rewrite the feature spec; revise the change spec to v1.2.** — DONE.
+  - `doc/spec/features/feature-bootstrapper.md` rewritten — it is now the current truth
+    (single unified workflow; legacy flow absent).
+  - `chg-GH-71-spec.md` revised to v1.2: AC16 marked SUPERSEDED; AC18–AC22 (legacy
+    front-half) and AC23 (unified-process invariant) added; F-16 dropped; NFR-4 reframed
+    to the unified-process invariant; DEC-8 (unify/eradicate) and DEC-9 (delete test)
+    recorded; DEC-1/DEC-3/DEC-7 marked superseded-in-framing; `version_impact → major`.
+  - `doc/decisions/TDR-0001-…md` amended with the DEC-8/DEC-9 reframing (TDR-0001 remains
+    the structure authority). *(No AC invented; aligns the WHAT/WHY with the redesign.)*
+- [ ] **G.3 — Delete the prompt-structure test (REM-10 / DEC-9).** — TODO.
+  - `git rm scripts/.tests/test-bootstrapper-prompt-structure.sh` and commit the removal.
+  - Remove it from the deliverables set: this plan edit already marks D5 / Phase C /
+    TC-INFRA-001 SUPERSEDED (see above); the test-plan revision (G.4) drops TC-INFRA-001
+    and the legacy-parity TC-STRUCT-003.
+  - **Do NOT re-introduce any structure test** — TDR-0001 is the structure authority;
+    behavioral correctness is the manual `TC-INCEP-*` matrix + PR review, not CI.
+- [ ] **G.4 — Revise the test-plan (delegated to `@test-plan-writer`).** — TODO.
+  - `chg-GH-71-test-plan.md` must be reconciled with the redesign: drop the
+    prompt-structure test (TC-INFRA-001) and the legacy two-tier parity scenarios
+    (TC-STRUCT-003 etc.), reframe the remaining TC-STRUCT checks as manual greps or remove
+    them, and align the `TC-INCEP-*` matrix with the unified workflow + AC18–AC23.
+  - **The plan-writer only references this file**; a separate delegation to
+    `@test-plan-writer` authors it.
+- [ ] **G.5 — Regenerate `.ados-claude/` and run the gates (NO structure test).** — TODO.
+  - `bash scripts/build-claude-plugin.sh && git diff --exit-code -- .ados-claude/`
+    (must be clean — RSK-7; source + generated committed together).
+  - `bash scripts/.tests/test-doc-distribution.sh` → exit 0.
+  - `bash scripts/.tests/test-inception-doc-consistency.sh` → exit 0 (regression).
+  - `git diff --check` clean.
+  - **There is no structure test to run** — do not invoke the deleted
+    `test-bootstrapper-prompt-structure.sh` (DEC-9).
+- [ ] **G.6 — Update PR #82 and notify GH-72 (scope absorption).** — TODO.
+  - Refresh the PR #82 body to reflect the unified redesign: single 8-phase workflow;
+    legacy flow + `.ai/local/bootstrapper-context.yaml` eradicated; legacy front-half
+    folded in; structure test deleted; `version_impact: major`; no backward-compat.
+  - Comment on GH-72 that its legacy-front-half scope (F-17…F-21 / AC18–AC22) was
+    **absorbed into GH-71** per the spec's `Supersedes (partial) GH-72` dependency;
+    GH-72's remaining scope shrinks accordingly (and GH-33 tribal-knowledge EXTRACTION is
+    still a separate follow-up).
+
+**Acceptance Criteria**:
+
+- Must: `@bootstrapper` is ONE unified 8-phase workflow; the legacy 6-phase flow and
+  `.ai/local/bootstrapper-context.yaml` are absent from the prompt (AC23/NFR-4(new)/DM-4);
+  Phase 5 generates all four instruction files (AC15); anti-sycophancy placements intact
+  (AC14); the guide is referenced not recreated (AC17); front-half `new|legacy`
+  differences are present (AC1/AC18–AC22).
+- Must: `scripts/.tests/test-bootstrapper-prompt-structure.sh` is **deleted** and **no
+  structure test is re-introduced** (DEC-9); Phase C / D5 / TC-INFRA-001 are marked
+  SUPERSEDED (this plan edit).
+- Must: the regenerated `.ados-claude/` is CI-fresh (`git diff --exit-code` clean after
+  rebuild) and `test-doc-distribution.sh` exits 0 (RSK-7).
+- Must: the feature spec and `chg-GH-71-spec.md` (v1.2) reflect current truth; the
+  test-plan revision is handed to `@test-plan-writer` (G.4).
+- Should: PR #82 body and the GH-72 scope comment are updated (G.6).
+
+**Files and modules**:
+
+- `.opencode/agent/bootstrapper.md` — **rewritten** (unified 8-phase workflow); via `@toolsmith`.
+- `.opencode/command/bootstrap.md` — updated.
+- `.opencode/README.md` — updated.
+- `.ados-claude/agents/bootstrapper.md`, `.ados-claude/skills/bootstrap/SKILL.md` — regenerated.
+- `doc/spec/features/feature-bootstrapper.md` — rewritten (current truth).
+- `chg-GH-71-spec.md` — revised to v1.2 (AC16 superseded; AC18–AC23; DEC-8/DEC-9).
+- `doc/decisions/TDR-0001-…md` — DEC-8/DEC-9 reframing (still the structure authority).
+- `scripts/.tests/test-bootstrapper-prompt-structure.sh` — **DELETED** (DEC-9).
+- `chg-GH-71-test-plan.md` — revised (G.4; delegated to `@test-plan-writer`).
+- `chg-GH-71-plan.md` — this file (amendment Phase G + SUPERSEDED markers).
+
+**Tests**:
+
+- `bash scripts/build-claude-plugin.sh && git diff --exit-code -- .ados-claude/` (freshness; RSK-7).
+- `bash scripts/.tests/test-doc-distribution.sh` → exit 0.
+- `bash scripts/.tests/test-inception-doc-consistency.sh` → exit 0 (regression).
+- (No structure test — DEC-9. Behavioral correctness = manual `TC-INCEP-*` matrix + PR review.)
+
+**Completion signal**: `docs(plan): record unification amendment for GH-71 (REM-9/REM-10)`
+— the Phase G delivery commits land via the coder/doc-syncer (not in this plan-write step);
+this plan edit is not committed per the amendment instructions.
+
 ## Test Scenarios
 
 | ID | Scenario | Phases | AC / NFR |
 |----|----------|--------|----------|
 | TC-STRUCT-001 | Write-allowlist has inception + code-review + documentation-profile paths | A, C | AC13-path, AC15-path, NFR-7 |
 | TC-STRUCT-002 | Phase 5 references all four instruction files | A, C | AC15, F-15 |
-| TC-STRUCT-003 | Legacy two-tier parity vs `${BOOTSTRAPPER_BASELINE_SHA}` | A.3, C, E.3 | AC16, NFR-4, RSK-6 |
+| TC-STRUCT-003 | ~~Legacy two-tier parity vs `${BOOTSTRAPPER_BASELINE_SHA}`~~ **SUPERSEDED (DEC-8 / Phase G)** — no frozen legacy blocks remain | A.3, C, E.3 | ~~AC16, NFR-4(old), RSK-6~~ → see AC23 / NFR-4(new) |
 | TC-STRUCT-004 | Guide referenced, not recreated | A, C | AC17, NFR-3, NFR-5 |
 | TC-STRUCT-005 | Prompt XML-ish tags well-formed (code-span-aware) | A, C | AC1, NFR-3 |
 | TC-STRUCT-006 | Plugin regeneration staleness gate | A, E | RSK-7 |
@@ -721,7 +881,7 @@ triggered, ready for the review/PR lifecycle phases.
 | TC-STRUCT-010 | Phase 0 material-inventory step | A, C | AC3, F-3 |
 | TC-STRUCT-011 | Committed state + four-risk tags + per-mode rule | A, C | AC7, AC13, DM-1, DM-3, NFR-2 |
 | TC-STRUCT-012 | Secrets-prohibition for inception state | A, C | NFR-6 |
-| TC-INFRA-001 | Bundled prompt-structure test (the Phase C script) | C | bundles TC-STRUCT-001…005, 008…012 |
+| TC-INFRA-001 | ~~Bundled prompt-structure test (the Phase C script)~~ **SUPERSEDED (DEC-9 / Phase G.3) — script deleted** | C | bundles TC-STRUCT-001…005, 008…012 |
 | TC-INCEP-001…015 | Behavioral matrix (manual, GH-71 PR review) | sign-off | AC1–AC14, AC17 |
 | TC-LEGACY-001/002 | Legacy regression (manual) | sign-off | AC16, NFR-4, NFR-7 |
 | TC-RESUME-001/002 | 2-session + partial/abandoned resume (manual) | sign-off | AC13, NFR-2, OQ-3/DEC-6 |
@@ -738,15 +898,15 @@ evidence, performed at the GH-71 PR review. No behavioral AC is claimed as CI-te
 | Change specification | `./chg-GH-71-spec.md` | Spec |
 | Test plan | `./chg-GH-71-test-plan.md` | Test plan |
 | Prompt-structure decision | `../../decisions/TDR-0001-bootstrapper-inception-submode-prompt-structure.md` | TDR |
-| Agent source (extended) | `.opencode/agent/bootstrapper.md` | D1 — via `@toolsmith` |
+| Agent source | `.opencode/agent/bootstrapper.md` | D1 — via `@toolsmith`; **REWRITTEN to the unified model by Phase G.1** (was "extended" in v1) |
 | Generated plugin counterpart | `.ados-claude/agents/bootstrapper.md` | D2 — regenerated |
 | AGENTS.md one-liner | `AGENTS.md` | D3 |
 | Guide (conditional amendment) | `doc/guides/project-inception.md` | D4 — conditional (DEC-5) |
-| Prompt-structure test | `scripts/.tests/test-bootstrapper-prompt-structure.sh` | D5 — TC-INFRA-001 |
+| ~~Prompt-structure test~~ | ~~`scripts/.tests/test-bootstrapper-prompt-structure.sh`~~ | D5 — TC-INFRA-001 **SUPERSEDED by DEC-9 / Phase G.3 (file deleted; no longer a deliverable)** |
 | Inception state template (referenced) | `doc/templates/inception-state-template.yaml` | Schema (DM-1) |
 | Code-review blueprint (referenced) | `doc/templates/blueprints/code-review-instructions--example.md` | Phase-5 input |
 | Regeneration script | `scripts/build-claude-plugin.sh` | Tool |
-| Parity baseline | `.opencode/agent/bootstrapper.md` @ `${BOOTSTRAPPER_BASELINE_SHA}` (`0a1a28802b0e893eba30b636f2fae7b72aa31965`) | Reference |
+| ~~Parity baseline~~ | ~~`.opencode/agent/bootstrapper.md` @ `${BOOTSTRAPPER_BASELINE_SHA}` (`0a1a28802b0e893eba30b636f2fae7b72aa31965`)~~ | Reference **SUPERSEDED by DEC-8 / Phase G** — no frozen legacy blocks remain; the two-tier parity guard is dissolved (historical only) |
 
 ## Plan Revision Log
 
@@ -754,6 +914,7 @@ evidence, performed at the GH-71 PR review. No behavioral AC is claimed as CI-te
 |---------|------|--------|---------|
 | 1.0 | 2026-06-27 | plan-writer | Initial plan. Phases A–F; delegates all agent edits to `@toolsmith` (AGENTS.md hard rule); folds plugin regeneration (D2) into Phase A's commit so source+generated ship together (RSK-7, CI-green per phase); actions TC-INFRA-001 as Phase C; encodes DEC-5 (conditional guide amendment) as Phase D; full AC1–AC17 + NFR1–7 coverage. |
 | 1.1 | 2026-06-27 | plan-writer | Red-team pre-delivery remediation (aligned with spec/test-plan slices). REM-1: dropped the legacy `<phase_4_draft>` code-review edit — legacy now fully untouched (AC16 coverage note updated). REM-2: A.3/E.3/Phase-C parity check rewritten to the two-tier method (frozen blocks byte-identical; shared blocks legacy-line-presence). REM-3: added INLINE/REFERENCED authoring boundary for `@toolsmith`; stripped parenthetical artifact content from per-phase bullets (artifact KEYs + guide pointers). REM-5: added `doc/documentation-profile.md` to the additive `<write_allowlist>`. REM-8: `<anti_sycophancy>` sub-tag anchor required in decision-dense phases (none in 0/5/6/7). RT1-10: centralized `BOOTSTRAPPER_BASELINE_SHA` across A.1/A.3/E.3/Phase C. RT1-13: softened the AC2 static claim (behavioral detection = manual TC-INCEP-002). RT1-14: Phase D notes Phase A's prompt is provisional until D completes. Phase structure A–F and per-phase commit boundaries preserved. |
+| 1.2 | 2026-06-27 | plan-writer | **Unification amendment (REM-9/REM-10; DEC-8/DEC-9).** Appended **Phase G** recording the user-directed redesign: `@bootstrapper` rewritten (@toolsmith, G.1 DONE) onto ONE unified 8-phase inception workflow (`project.flow: new|legacy` selects front-half phases 0–4 only); the GH-32 6-phase flow + `.ai/local/bootstrapper-context.yaml` eradicated; legacy front-half (F-17…F-21 / AC18…AC22) folded in; feature spec rewritten + spec revised to v1.2 (AC16 superseded, AC23 added; DEC-8/DEC-9) (G.2 DONE). Outstanding: delete the structure test (G.3), revise the test-plan (G.4 delegated to `@test-plan-writer`), regenerate `.ados-claude/` + run gates with NO structure test (G.5), update PR #82 body + comment on GH-72 re absorbed scope (G.6). Marked SUPERSEDED with pointers to Phase G: original Phase A "parallel sub-mode" (→ G.1), Phase C / D5 / TC-INFRA-001 structure test (→ G.3 / DEC-9), TC-STRUCT-003 legacy-parity guard (→ DEC-8), and the deliverables-table parity baseline. Historical Phases A–F and the execution log preserved verbatim as an honest record; no structure test re-introduced; `version_impact → major`. |
 
 ## Execution Log
 
@@ -765,3 +926,4 @@ evidence, performed at the GH-71 PR review. No behavioral AC is claimed as CI-te
 | D | NO-OP | 2026-06-27 | 2026-06-27 | (none) | No concrete+blocking guide gap found (DEC-5). Two "ghost" paths are runtime/per-project (spec §19); anti-sycophancy/Phase-5/four-risk all match the guide. Deferred clarity notes routed to spec §7.3. |
 | E | DONE | 2026-06-27 | 2026-06-27 | (none) | All gates green: prompt-structure test 0; test-build-claude-plugin 15/15; .ados-claude CI-fresh; inception-doc-consistency 0; doc-distribution 0; git diff --check clean; legacy parity re-confirmed (8/8 frozen blocks byte-identical). D1–D5 present. Behavioral AC (TC-INCEP/LEGACY/RESUME) = manual PR-review (RSK-2). |
 | F | DONE | 2026-06-27 | 2026-06-27 | (this bookkeeping commit) | version_impact: minor confirmed; spec-sync handed to @doc-syncer; ready for lifecycle phases 7–10 (PM-driven). |
+| G | IN PROGRESS | 2026-06-27 | — | (pending) | Unification amendment (REM-9/REM-10). G.1 DONE (working tree, uncommitted at plan-authoring time): `@toolsmith` rewrote `bootstrapper.md` → unified `<inception_workflow>` (278 lines; 6-phase flow + `.ai/local/bootstrapper-context.yaml` gone; legacy front-half folded); updated `bootstrap.md` + README; regenerated `.ados-claude/`. G.2 DONE: feature spec rewritten; spec→v1.2 (AC16 superseded; AC18–23; DEC-8/DEC-9); TDR-0001 reframed. G.3 TODO: `git rm scripts/.tests/test-bootstrapper-prompt-structure.sh` (DEC-9). G.4 TODO: test-plan revision (delegated to `@test-plan-writer`). G.5 TODO: rebuild `.ados-claude/` (clean diff) + `test-doc-distribution.sh` exit 0; NO structure test. G.6 TODO: PR #82 body + GH-72 scope comment. |

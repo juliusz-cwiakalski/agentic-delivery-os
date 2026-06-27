@@ -7,7 +7,7 @@
 # MIT License - see LICENSE file for full terms
 # source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/command/bootstrap.md
 name: bootstrap
-description: Scaffold ADOS artifacts for an existing project
+description: Run ADOS project inception
 model: sonnet
 allowed-tools:
   - Read
@@ -21,17 +21,17 @@ allowed-tools:
 ---
 
 <purpose>
-Entry point for the ADOS bootstrap workflow. Delegates to `@bootstrapper` agent for multi-session project onboarding.
+Entry point for ADOS project inception. Delegates to `@bootstrapper` for the multi-session 8-phase workflow.
 
 User invocation:
   /bootstrap [<project-name>]
 
 Examples:
   /bootstrap
-    → Start or resume bootstrap workflow; auto-detect project name from repo.
+    → Start or resume inception; determine project.flow in Phase 0.
 
   /bootstrap my-billing-service
-    → Start or resume bootstrap with "my-billing-service" as the project name hint.
+    → Start or resume inception with "my-billing-service" as the project name hint.
 </purpose>
 
 <inputs>
@@ -41,14 +41,14 @@ Examples:
 
 <process>
 1. Pass project-name hint (if provided) to `@bootstrapper` agent.
-2. `@bootstrapper` checks for existing state at `.ai/local/bootstrapper-context.yaml`.
-3. If state exists: resume from last phase.
-4. If no state: start fresh with repo scan.
-5. Follow the multi-session workflow: scan → assess → interview → draft → review → write.
+2. `@bootstrapper` checks `doc/inception/inception-state.yaml`.
+3. If valid state exists: resume from the last incomplete inception phase.
+4. If no state exists: start Phase 0 and select `project.flow: new|legacy`.
+5. Follow the 8-phase inception workflow with a human gate at every phase.
 </process>
 
 <notes>
-- This command uses `subtask: false` because the bootstrap workflow is multi-session and needs the main conversation context.
-- The `@bootstrapper` agent manages its own persistent state across sessions.
-- For the manual (non-automated) adoption path, see `doc/guides/onboarding-existing-project.md`.
+- This command uses `subtask: false` because inception is multi-session and needs main conversation context.
+- The `@bootstrapper` agent manages committed state at `doc/inception/inception-state.yaml`.
+- For the manual inception path, see `doc/guides/project-inception.md`.
 </notes>

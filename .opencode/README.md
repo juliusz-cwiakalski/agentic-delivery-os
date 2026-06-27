@@ -37,7 +37,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 
 - `decision-advisor`: decisions of all types (architecture, product, business, technical, operating); decision record authoring (ADR/PDR/TDR/BDR/ODR) _(formerly `architect`)_
 - `decision-critic`: independent, read-only decision challenger; tri-state verdict (PASS / PASS_WITH_RISKS / REWORK)
-- `bootstrapper`: automate ADOS adoption for existing projects
+- `bootstrapper`: run ADOS inception for new or legacy projects
 - `coder`: implement plan phases by writing code for a change
 - `committer`: create one Conventional Commit
 - `designer`: visual design and UI implementation
@@ -61,7 +61,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 ## Commands
 
 - `/apply-review-feedback`: classify and apply accepted PR/MR review feedback locally (via `@review-feedback-applier`)
-- `/bootstrap`: scaffold ADOS artifacts for an existing project
+- `/bootstrap`: run ADOS project inception
 - `/check`: run quality gates (no fixes)
 - `/check-fix`: run quality gates and fix failures
 - `/commit`: create one Conventional Commit

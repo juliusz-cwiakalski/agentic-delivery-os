@@ -284,6 +284,17 @@ Legend: ✅ passes · ❌ fails · ⚠️ passes only via an accepted-risk excep
 
 ## Decision
 
+> **ADDENDUM (2026-06-27, supersedes the "parallel to legacy" framing):** After GH-71
+> delivery, the human directed that the GH-32 6-phase legacy flow and its git-ignored state
+> file (`.ai/local/bootstrapper-context.yaml`) be **eradicated** — the bootstrapper now has
+> ONE process: the 8-phase inception workflow, with `project.flow: new | legacy` selecting
+> front-half differences (legacy = a pre-ADOS long-lived project → extract/reconstruct; new =
+> greenfield → author). Single committed state: `doc/inception/inception-state.yaml`. No
+> backward-compat. Consequently the "parallel to `<workflow_phases>`" / two-tier legacy-parity
+> machinery below is **historical** (it described the since-removed preservation approach).
+> The inline-vs-referenced boundary and the self-contained-agent principle below **remain
+> authoritative**. See change GH-71 pm-notes REM-9/REM-10.
+
 **Adopt Alternative 1.** The inception sub-mode is organized as eight terse
 `<phase_N_inception>` sections nested under one `<mode_new_project_inception>` umbrella,
 **parallel to** the legacy `<workflow_phases>` block. Each phase section carries only
