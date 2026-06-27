@@ -12,3 +12,4 @@ All decision records for this repository, ordered by type and number.
 |----|------|-------|--------|------|--------|
 | ADR-0001 | ADR | Decision-Making Framework Refactor | Proposed | 2026-06-24 | Juliusz Ćwiąkalski |
 | ODR-0001 | ODR | Classify doc/templates/*.yaml register templates as redistributable | Accepted | 2026-06-25 | Juliusz Ćwiąkalski |
+| TDR-0001 | TDR | @bootstrapper Inception Sub-Mode Prompt Structure | Proposed | 2026-06-27 | Juliusz Ćwiąkalski |

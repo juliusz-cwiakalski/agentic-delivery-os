@@ -1,0 +1,56 @@
+change_id: GH-71
+title: "[inception:2] Iterative phased inception workflow for @bootstrapper — new-project mode"
+slug: bootstrapper-new-project-inception-mode
+branch: feat/GH-71/bootstrapper-new-project-inception-mode
+change_folder: doc/changes/2026-06/2026-06-26--GH-71--bootstrapper-new-project-inception-mode
+
+phases:
+  clarify_scope: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  specification: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  test_planning: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  delivery_planning: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+
+decisions:
+  - text: "Extend @bootstrapper (not a new agent). Keep the name. Confirmed during inception scoping (pre-existing decision)."
+    date: "2026-06-26"
+  - text: "Inception mode state lives at doc/inception/inception-state.yaml (committed, git-tracked) — DISTINCT from legacy mode's .ai/local/bootstrapper-context.yaml (git-ignored). The two modes use two different state files. Legacy state file/location is untouched."
+    date: "2026-06-26"
+  - text: "PM-decided (autonomous, reversible): close the code-review-instructions gap in BOTH modes. Inception Phase 5 generates all four .ai/agent/*-instructions.md (pm, pr, decision, code-review) as MANDATORY. Legacy mode's recommended-artifacts list ALSO gains code-review-instructions.md (mirroring decision-instructions — additive, non-breaking, blueprint already exists at doc/templates/blueprints/code-review-instructions--example.md). Honors 'legacy must continue to work' (functional behavior preserved; only gains an opt-in recommended artifact) AND closes the stated 'only generates 3 of 4' gap. Surface to human; trivial revert if disputed."
+    date: "2026-06-26"
+  - text: "Structure the bootstrapper prompt with sub-mode sections: keep the existing 6-phase LEGACY mode section intact; add a parallel NEW-PROJECT INCEPTION mode section implementing phases 0-7. Mode is selected in Phase 0 (flow detection). Use <mode_new_project_inception> top-level section to keep the large prompt organized per ticket hint."
+    date: "2026-06-26"
+  - text: "REFERENCE doc/guides/project-inception.md (created in GH-69), do NOT recreate it. Amend the guide only if implementation experience reveals concrete gaps. The guide is the human-executable process authority; the agent prompt is the agent-executable authority — they must stay consistent."
+    date: "2026-06-26"
+  - text: "DEC-7 (OQ-1 resolved via TDR-0001, R2, acceptance at GH-71 PR): inception sub-mode = eight terse <phase_N_inception> sections nested under one <mode_new_project_inception> umbrella, PARALLEL to legacy <workflow_phases>; <mode_selection> router; additive <resume_behavior>/<write_allowlist> extensions. Control flow inline (self-contained-agent principle); content detail referenced from guide. Recorded standalone at doc/decisions/TDR-0001-bootstrapper-inception-submode-prompt-structure.md."
+    date: "2026-06-26"
+  - text: "DEC-5 (OQ-2 resolved): amend the guide in-repo ONLY when a gap is concrete AND blocking (contradiction / failing AC-NFR / factual error / ghost ref); else record as deferred. Surgical, preserve ados_distribution, co-update prompt+guide."
+    date: "2026-06-26"
+  - text: "DEC-6 (OQ-3 resolved): project.flow in inception-state.yaml is the resume source of truth. Valid in-progress -> resume; completed -> 'already incepted'; malformed/schema mismatch -> warn + repair-or-archive. Abandoned-run state archived to doc/inception/abandoned-<ISO>.yaml (added to write allowlist), never silently destroyed. Legacy unaffected (separate git-ignored state)."
+    date: "2026-06-26"
+
+open_questions: []
+
+blockers: []
+
+notes:
+  - text: "Ticket amendments (from GH-71 comments, author juliusz-cwiakalski = trusted repo owner): (1) Phase 5 must generate ALL FOUR .ai/agent/*-instructions.md incl. code-review-instructions.md; (2) process guide moved to GH-69 — GH-71 references it, does not create it."
+    type: info
+    date: "2026-06-26"
+  - text: "Dependencies verified present (GH-69 delivered via PR #81, merged 2026-06-26): doc/inception/ workspace (inputs/analysis/meetings/README), doc/guides/project-inception.md, doc/templates/inception-state-template.yaml + all 8 inception templates (OST, persona-jtbd, user-journey, screen-inventory, ux-guidance, assumption-register, risk-register, project-prd), doc/templates/blueprints/code-review-instructions--example.md, material-inventory-template.md."
+    type: info
+    date: "2026-06-26"
+  - text: "HARD RULE (AGENTS.md): ALL .opencode/agent/*.md edits MUST be delegated to @toolsmith. The @coder delegates agent-prompt editing to @toolsmith; never hand-edit bootstrapper.md. Must run scripts/build-claude-plugin.sh and commit .opencode/ source + regenerated .ados-claude/ output together (CI verifies staleness)."
+    type: info
+    date: "2026-06-26"
+  - text: "Testing reality: most AC are behavioral agent-capability claims that cannot be unit-tested in CI. Test plan must be honest: static/structural checks (write-allowlist entries, four-instruction-files reference, legacy section intact, prompt well-formed XML) + CI gates (build-claude-plugin staleness, doc-distribution marker) + a manual verification matrix mapping each AC to a human-checkable agent-behavior step."
+    type: risk
+    date: "2026-06-26"
+  - text: "User requested two @red-team-coordinator reviews: (1) pre-delivery on spec/plan/test-plan, (2) post-delivery on the delivered change. Address findings via follow-up phases/changes. Stop at PR."
+    type: info
+    date: "2026-06-26"
