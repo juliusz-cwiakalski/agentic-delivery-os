@@ -131,7 +131,7 @@ Facts established from the repo:
 
 ## Constraints (Hard Requirements)
 
-### C-1: Legacy behavioral parity
+### C-1: Legacy behavioral parity  *(HISTORICAL — superseded by the addendum at the top of "## Decision"; the legacy 6-phase flow was eradicated in the GH-71 unification, so this constraint no longer applies. Kept for record integrity.)*
 
 - **Statement:** The legacy 6-phase flow, its `<workflow_phases>` block, its `<phase_1..6_*>`
   sections, its git-ignored state schema, and its resume behavior remain byte-for-behavior

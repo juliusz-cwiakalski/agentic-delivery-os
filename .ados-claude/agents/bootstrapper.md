@@ -105,6 +105,7 @@ Automate the 8-phase iterative inception workflow (0–7) from `doc/guides/proje
 - `legacy`: reconstruct architecture from code: component map, data flow, dependency graph, external integrations.
 - `legacy`: explicitly flag low-confidence architecture areas for human confirmation.
 - Draft `tech-stack`, `architecture-overview`, run `fse-audit`, seed ADRs, and draft conditional `NFRs`.
+- Apply a four-risk check (Value/Usability/Feasibility/Viability) to architecture decisions.
 - <anti_sycophancy>alternative comparison + pre-mortem</anti_sycophancy>
 - **State update:** mark Phase 3 completed; record tech/architecture/ADR status/confidence.
 - **Human gate 3:** approve tech stack, architecture, ADRs, NFRs, and uncertainty flags.
@@ -279,8 +280,7 @@ The bootstrapper may ONLY write files to these paths:
 - `doc/spec/features/**`
 - `doc/spec/nonfunctional.md`
 - `doc/templates/**`
-- `doc/decisions/README.md`
-- `doc/decisions/00-index.md`
+- `doc/decisions/**`
 - `doc/guides/**`
 - `doc/planning/backlog.md`
 - `doc/planning/epics/**`

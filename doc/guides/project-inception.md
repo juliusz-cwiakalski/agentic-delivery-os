@@ -513,9 +513,10 @@ Decide how the product will be built and stress-test those decisions.
 3. **Architecture planning session** — design the system architecture.
 4. Draft the architecture overview using `doc/templates/architecture-overview-template.md` (C4 context + container diagrams, components, data flow, external dependencies, deployment topology, key decisions, and uncertainty flags).
 5. **Full-Stack Environment audit** — verify the project meets the 10 attributes of AI-friendly projects: explicit typing; SRP modules; conventions over configuration; semantic naming; automated tests; linters & formatters; readable Git history; contextual comments; popular tech stack; AI instructions/rules files.
-6. New project: design from scratch. Legacy: reconstruct from code.
-7. Seed initial decision records (ADRs) using `doc/templates/decision-record-template.md` for precedent-setting choices.
-8. If non-trivial: draft the NFRs (performance, security, accessibility, compliance) at `doc/spec/nonfunctional.md`.
+6. **Four-risk check on architecture decisions** — assess the architecture across Value (will users want it?), Usability (can they use it?), Feasibility (can we build it?), and Viability (does it make business sense?).
+7. New project: design from scratch. Legacy: reconstruct from code.
+8. Seed initial decision records (ADRs) using `doc/templates/decision-record-template.md` for precedent-setting choices.
+9. If non-trivial: draft the NFRs (performance, security, accessibility, compliance) at `doc/spec/nonfunctional.md`.
 
 #### Anti-sycophancy technique
 

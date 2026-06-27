@@ -44,7 +44,7 @@ Detail: [doc/guides/change-lifecycle.md](doc/guides/change-lifecycle.md)
 - `decision-critic` — independent, read-only decision challenger; tri-state verdict (PASS / PASS_WITH_RISKS / REWORK)
 
 ### Onboarding
-- `bootstrapper` — automate ADOS adoption for existing projects and run new-project inception
+- `bootstrapper` — run ADOS project inception for new or legacy projects
 
 ### Artifact creation
 - `spec-writer` — author change specifications
