@@ -9,9 +9,9 @@ phases:
   specification: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
   test_planning: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
   delivery_planning: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
-  delivery: { started: null, completed: null }
-  system_spec_update: { started: null, completed: null }
-  review_fix: { started: null, completed: null }
+  delivery: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  system_spec_update: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  review_fix: { started: "2026-06-27T00:00:00Z", completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -55,6 +55,9 @@ open_questions: []
 blockers: []
 
 notes:
+  - text: "Delivery COMPLETED. @coder executed phases A-F (agent-prompt editing delegated to @toolsmith per hard rule). Commits on branch: 804c481 (Phase A: feat(agent) inception sub-mode + regenerated .ados-claude together), a2fce00 (Phase B: AGENTS.md one-liner), fcb5a34 (Phase C: test(scripts) prompt-structure guard), 5bbe9d2 (Phase F: execution log), 7f98365 (task-checkbox reconcile). Phase D (guide amendment) = NO-OP per DEC-5 (no concrete+blocking gap found). PM independently verified: 8 inception phase sections present; anti-sycophancy anchors correct (P1 devil's-advocate+four-risk, P2 pre-mortem+four-risk-check, P3 alt-comparison+pre-mortem, P4 unknown-unknowns, P0/5/6/7 none); Phase 5 generates all four instruction files (code-review marked net-new/inception-only); legacy <phase_4_draft> unchanged (REM-1 honored — no legacy code-review); resume_behavior extended with DEC-6 logic; write_allowlist has all 3 inception additions (doc/inception/**, .ai/agent/code-review-instructions.md, doc/documentation-profile.md); file 512 lines (within warn>650/fail>800 guardrail)."
+    type: info
+    date: "2026-06-27"
   - text: "Retro: PM decision #3 (add code-review to legacy mode too) overreached — charitable reading of 'must be added' that no AC backed. Red-team RT1-01 caught it as the sole cause of the parity-guard contradiction + an AC16 violation. Lesson: when an amendment says 'Phase 5 must do X', scope the change to that phase; do not gratuitously extend to other modes without an AC. The pre-delivery red-team earned its keep on this one."
     type: retro
     date: "2026-06-27"

@@ -6,11 +6,11 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: SPEC-BOOTSTRAPPER
 status: Current
 created: 2026-03-10
-last_updated: 2026-03-16
+last_updated: 2026-06-27
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
-  related_changes: ["GH-32", "GH-36"]
+  related_changes: ["GH-32", "GH-36", "GH-71"]
   guides:
     - "doc/guides/onboarding-existing-project.md"
 summary: "Multi-session bootstrapper agent and /bootstrap command that automate ADOS adoption for existing projects via repo scan, confidence assessment, human interview, and artifact generation."
@@ -23,6 +23,8 @@ summary: "Multi-session bootstrapper agent and /bootstrap command that automate 
 The bootstrapper provides an automated adoption path for Agentic Delivery OS (ADOS) in existing projects. It consists of a stateful `@bootstrapper` agent (`.opencode/agent/bootstrapper.md`) and a thin `/bootstrap` command (`.opencode/command/bootstrap.md`) that together guide users through a multi-session workflow: scanning the target repo, assessing confidence, interviewing the human, drafting artifacts, and writing them upon approval.
 
 The bootstrapper complements the manual onboarding guide (`doc/guides/onboarding-existing-project.md`) by automating the artifact generation steps.
+
+> **Scope of this spec.** This spec covers the **existing-project (legacy) adoption flow** — the 6-phase workflow documented below. As of GH-71, `@bootstrapper` additionally supports a **new-project inception mode** that automates the 8-phase iterative inception workflow defined in [doc/guides/project-inception.md](../../guides/project-inception.md). That sub-mode is additive and parallel to the legacy flow; it does not alter any behavior described in this spec. See GH-71 for the inception-mode contract.
 
 ## Business Context
 
@@ -77,7 +79,7 @@ User runs /bootstrap [<project-name>]
 
 | Path | Component | Responsibility |
 |------|-----------|----------------|
-| `.opencode/agent/bootstrapper.md` | Agent prompt | Defines the 6-phase workflow, state schema, interview logic, and safety rules |
+| `.opencode/agent/bootstrapper.md` | Agent prompt | Defines the legacy 6-phase workflow (existing-project onboarding), state schema, interview logic, and safety rules; also defines the additive new-project inception sub-mode (GH-71) |
 | `.opencode/command/bootstrap.md` | Command entry point | Thin wrapper that delegates to `@bootstrapper` with optional project-name argument |
 | `.ai/local/bootstrapper-context.yaml` | Persistent state | Git-ignored YAML file storing project metadata, interview history, confidence scores, artifact status, and session timestamps |
 
@@ -178,7 +180,7 @@ last_updated: <ISO-timestamp>
 ## Related Documentation
 
 - **Onboarding guide:** [doc/guides/onboarding-existing-project.md](../../guides/onboarding-existing-project.md) — manual adoption path
-- **Project inception guide:** [doc/guides/project-inception.md](../../guides/project-inception.md) — manual 8-phase inception process and artifact catalog
+- **Project inception guide:** [doc/guides/project-inception.md](../../guides/project-inception.md) — 8-phase inception process and artifact catalog; the human-executable authority that `@bootstrapper`'s new-project inception mode (GH-71) automates
 - **Agent prompt:** `.opencode/agent/bootstrapper.md` — full workflow definition
 - **Command prompt:** `.opencode/command/bootstrap.md` — entry point
 - **Agent inventory:** [.opencode/README.md](../../../.opencode/README.md)
