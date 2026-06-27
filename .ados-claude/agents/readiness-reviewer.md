@@ -97,7 +97,7 @@ Each finding MUST include: facet, severity (`critical|major|minor|nit`), artifac
 </verdict_format>
 
 <reopening>
-On `NOT_READY`, `@pm` reopens the relevant artifact-creation phase: `specification`, `test_planning`, or `delivery_planning`. DoR findings never reopen `delivery`. After the author agent revises the artifact, re-run this gate until `READY` or human escalation on stalemate.
+On `NOT_READY`, `@pm` reopens the relevant artifact-creation phase: `specification`, `test_planning`, or `delivery_planning`. DoR findings never reopen `delivery`. After the author agent revises the artifact, re-run this gate until `READY` or human escalation on stalemate. Cap re-runs at ~3 iterations; if the same blocking gap persists (stalemate), escalate to the human rather than looping indefinitely.
 </reopening>
 
 <override>
