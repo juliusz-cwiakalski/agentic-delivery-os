@@ -10,9 +10,9 @@ branch: feat/GH-72/tribal-knowledge-extraction
 change_folder: doc/changes/2026-06/2026-06-27--GH-72--tribal-knowledge-extraction
 
 phases:
-  clarify_scope: { started: "2026-06-27T00:00:00Z", completed: null }
-  specification: { started: null, completed: null }
-  test_planning: { started: null, completed: null }
+  clarify_scope: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  specification: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  test_planning: { started: "2026-06-27T00:00:00Z", completed: null }
   delivery_planning: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -22,6 +22,10 @@ phases:
   pr_creation: { started: null, completed: null, url: null }
 
 decisions:
+  - text: "PDR-0001 (categorization/graduation taxonomy, @decision-advisor, commit d509175) RESOLVES the genuinely-new design the ticket leaves open. Centrepiece = category→graduation-target mapping, all to EXISTING ADOS homes (no invented registers): decision→typed DR (doc/decisions/); convention→.ai/rules/<topic>-conventions.md (rule-file family, NOT a single conventions.md); rejected-approach→parent DR's Alternatives Considered section; workaround→feature spec doc/spec/features/<feature>.md known-limitations (+ DR only if load-bearing); domain-term→doc/overview/glossary.md (or ubiquitous-language.md for bounded-context vocabulary). Plus: contradictions = inline status:contradicted flag + consolidated ## Open Contradictions roll-up (excluded from graduation until human clears); confidence = high/medium/low rubric (explicit+corroborated=high ... inferred+single=low); source pointers = path:line (docs) + short SHA (git, expand on ambiguity); dedup = one item with multiple pointers (corroboration raises confidence); Phase 0 EXTRACTS/CATEGORIZES/FLAGS only (graduation-ready doc), Phase 2 GRADUATES (existing human gate); trust/safety inherited verbatim from bootstrapper <trust_boundary>/<safety_rules>. PDR status=Proposed (R2 — human acceptance rides the GH-72 PR). Frontmatter fixed: moved ados_distribution:internal inside the --- block (was a bare leading line)."
+    date: "2026-06-27"
+  - text: "Spec OQ-1 + OQ-2 RESOLVED (PM, no human input needed — both are mechanical clarifications, not design forks). OQ-1 (medium-confidence graduation): medium graduates DIRECTLY (same as high) — the Phase 2 human gate is the universal safety net for every item regardless of confidence; confidence levels differ only in extraction-trust signaling, not gate access. low is the sole level explicitly re-flagged for confirmation (inferred+single-source = most likely wrong). Clarification appended to PDR-0001 §3. OQ-2 (overwrite vs preserve): PRODUCE preserves a hand-authored tribal-knowledge.md; produces fresh only when none exists or human approves overwrite — this is the existing bootstrapper <safety_rules> 'NEVER overwrite existing files without explicit human approval' rule; no new rule needed. Both OQs marked RESOLVED in spec §14."
+    date: "2026-06-27"
   - text: "Scope confirmed from ticket rescope (owner comment, trusted): GH-72 = the PRODUCE path only — tribal-knowledge EXTRACTION from repo docs + git history → doc/inception/analysis/tribal-knowledge.md. The CONSUME path (Phase 0 consumes tribal-knowledge.md if present) and GRADUATE path (Phase 2 graduates to permanent homes) are already wired by GH-71 (#82) and are OUT OF SCOPE — do not duplicate. PR-thread extraction (GH-33) is PARKED (blocked on CLI tooling) — out of scope."
     date: "2026-06-27"
   - text: "DEC-5 applied to GH-72 — THREE concrete+blocking guide (doc/guides/project-inception.md) amendments identified, all in-scope: (a) Factual staleness: artifact-catalog row for tribal-knowledge currently shows no template (em-dash) — after GH-72 ships doc/templates/tribal-knowledge-template.md the row must reference it (ghost-ref/factual-error per DEC-5). (b) Contradiction: guide line ~663 says 'Tribal-knowledge graduation (Phase 0→1)'; shipped authority (bootstrapper.md agent prompt + feature-bootstrapper.md spec + Diagram 3) says graduation is Phase 2. Canonicalize to Phase 2 (produce @ Phase 0, graduate @ Phase 2). (c) Trust/safety articulation: guide has zero treatment of untrusted-input/prompt-injection for the ingestion side; the agent prompt already has <trust_boundary>/<safety_rules>, but GH-72 expands the surface (git history mining). Add a brief trust/safety note to the legacy section so human authority matches agent authority — directly supports the trust/safety AC."

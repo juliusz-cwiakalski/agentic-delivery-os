@@ -1,5 +1,5 @@
-ados_distribution: internal
 ---
+ados_distribution: internal
 id: PDR-0001
 decision_type: pdr
 status: Proposed
@@ -187,6 +187,8 @@ Each item carries `confidence: high | medium | low`:
 | **low** | Inferred + single source, OR stale/orphaned (no current code/doc reference). |
 
 Confidence sets **graduation priority** at Phase 2: `high` graduates directly; `low` is re-flagged for human confirmation before graduation (mirrors the repo-analysis "Human-confirm question" column).
+
+> **Clarification (GH-72 OQ-1, resolved 2026-06-27):** `medium` **graduates directly** (same as `high`). The Phase-2 human gate is the universal safety net for every item regardless of confidence — confidence levels differ only in extraction-trust signaling, not in whether the item reaches the gate. `low` is the sole level explicitly re-flagged for confirmation because inferred+single-source items are the most likely to be wrong.
 
 ### 4. Source-pointer format & multi-source dedup
 - **Docs:** `path:line` (repo-relative path + line number where the fact appears).

@@ -236,8 +236,8 @@ N/A — agents and templates are prompt/definition artifacts without runtime tel
 
 | ID | Question | Context | Status |
 |----|----------|---------|--------|
-| OQ-1 | Graduation behavior for `medium`-confidence items — does `medium` graduate directly (like `high`) or is it re-flagged (like `low`)? | PDR-0001 §3 states `high` graduates directly and `low` is re-flagged, but leaves `medium` implicit. This affects Phase-2 graduation gating (AC5). | Decision needed: consult `@decision-advisor` (or confirm `medium` graduates directly by default). |
-| OQ-2 | On a fresh legacy run where a hand-authored `tribal-knowledge.md` already exists, does PRODUCE regenerate it or preserve it? | Affects the no-overwrite-without-approval rule and consume-vs-produce ordering in Phase 0. | Default to the existing bootstrapper no-overwrite-without-human-approval rule; confirm at delivery. |
+| OQ-1 | Graduation behavior for `medium`-confidence items — does `medium` graduate directly (like `high`) or is it re-flagged (like `low`)? | PDR-0001 §3 states `high` graduates directly and `low` is re-flagged, but leaves `medium` implicit. This affects Phase-2 graduation gating (AC5). | **RESOLVED (PM, 2026-06-27):** `medium` graduates directly. The Phase-2 human gate is the universal safety net for every item regardless of confidence; confidence levels differ only in extraction-trust signaling, not in whether they reach the gate. `low` is the sole level explicitly re-flagged for confirmation because inferred+single-source items are the most likely to be wrong. Clarification appended to PDR-0001 §3. |
+| OQ-2 | On a fresh legacy run where a hand-authored `tribal-knowledge.md` already exists, does PRODUCE regenerate it or preserve it? | Affects the no-overwrite-without-approval rule and consume-vs-produce ordering in Phase 0. | **RESOLVED (PM, 2026-06-27):** PRODUCE preserves a hand-authored `tribal-knowledge.md`; it produces fresh only when none exists, or when the human explicitly approves overwrite. This is the existing bootstrapper `<safety_rules>` rule ("NEVER overwrite existing files without explicit human approval") — no new rule needed. |
 
 ## 15. DECISION LOG
 
