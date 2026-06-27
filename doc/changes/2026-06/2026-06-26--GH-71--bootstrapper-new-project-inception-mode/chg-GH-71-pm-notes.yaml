@@ -14,7 +14,7 @@ phases:
   review_fix: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   quality_gates: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   dod_check: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
-  pr_creation: { started: "2026-06-27T00:00:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/77" }
 
 decisions:
   - text: "Extend @bootstrapper (not a new agent). Keep the name. Confirmed during inception scoping (pre-existing decision)."
