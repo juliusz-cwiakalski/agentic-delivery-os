@@ -17,8 +17,8 @@ phases:
   dor_check: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }  # AC10 surrogate: the pre-delivery red-team (RT1) served as GH-57's own DoR gate (@readiness-reviewer did not exist until delivery); first TRUE dogfood = next change post-merge.
   delivery: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   system_spec_update: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
-  review_fix: { started: "2026-06-27T00:00:00Z", completed: null }
-  quality_gates: { started: null, completed: null }
+  review_fix: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  quality_gates: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 
@@ -50,6 +50,15 @@ notes:
   - text: "RED-TEAM ROUND 1 (pre-delivery, @red-team-coordinator): verdict SHIP-WITH-FINDINGS — 0 Critical, 3 Major, 5 Minor, 4 Nit. Report at red-team/pre-delivery-round-1-report.md. ACCEPTED for fix: MAJOR-01 (NFR-1 renumbering sweep scoped to 4 files but stale '10-phase'/'phase 5=delivery' refs exist in ~8 other docs incl. redistributable guides + README + decision-instructions.md → expand to REPO-WIDE grep excluding doc/changes/** and .ados-claude/**); MAJOR-02 (AC10 dogfood structurally impossible at true phase-5 position since @readiness-reviewer does not exist until delivery → THIS red-team is the honest surrogate; first TRUE dogfood = next change post-merge; split TC-MANUAL-007 into 7a surrogate + 7b deferred); MAJOR-03 (OQ-1 'no author-agent edits' does not satisfy the LITERAL AC8 'affected artifact-creator agents reflect the new phase' → REVERSE OQ-1: add a one-line cross-ref note to @spec-writer/@test-plan-writer/@plan-writer via @toolsmith so AC8 is literally true); MINOR-01 (TC-CI-004 header-path model wrong — pm.md + change-lifecycle.md ARE header-required); MINOR-02 (TC-MANUAL-008 typo DoD→DoR); MINOR-03 (DEC-3 'config vs frontmatter' — clarify OpenCode model via opencode config, Claude Code via claude.model:opus frontmatter); MINOR-05 ('genuinely trivial' undefined → add definition); NIT-02 (00-index.md missing PDR-0001 row → add). ACCEPT-light: MINOR-04, NIT-03 (wording). DEFER/accept-risk: NIT-01 (ADR-0001 Proposed precedent — noted). Remediation applied to spec/test-plan/plan/ADR/index before delivery."
     type: info
     date: "2026-06-27"
+  - text: "REVIEW iter-1 (phase 8, @reviewer): FAIL — 1c/3m/2n/1nit. CRITICAL: committed .ados-claude/ was stale (readiness-reviewer.md + skills/check-readiness/ untracked; pm.md 10-phase). Root cause: plugin regen not committed alongside sources. MAJOR #2: test-build-claude-plugin.sh didn't diff committed-vs-generated (the freshness claim was unenforced). Remediation (Phase H, commit 3ce7f328): regenerated+committed fresh .ados-claude/; added test_committed_plugin_matches_fresh_build drift assertion (16/16); plan checkboxes/exec-log filled; pm-notes dor_check phase map; OQ-1 narrative reconciled. RETRO: the @toolsmith→commit handoff lost the generated artifacts — the committed-plugin freshness MUST be verified by an independent diff (now enforced by the new test), not assumed. The freshness NFR-5 was a stated invariant that was never actually CI-enforced; GH-57 both exposed and fixed that gap."
+    type: retro
+    date: "2026-06-28"
+  - text: "REVIEW iter-2 (phase 8, @reviewer): PASS — all 7 iter-1 findings resolved (6 fixed + #7 confirmed intentional). Gates: committed .ados-claude/ ships DoR gate (pm.md:275 '5. **dor_check**'; readiness-reviewer.md + skills/check-readiness/ tracked); test-build-claude-plugin.sh 16/16 (incl. new drift test); test-doc-distribution.sh PASS (74 docs); renumbering sweep 0 stale hits; plan 39/39 checkboxes; pm-notes dor_check present; working tree clean."
+    type: info
+    date: "2026-06-28"
+  - text: "QUALITY GATES (phase 9, @runner): 10/13 suites PASS for all GH-57-relevant surfaces — test-add-header-location (19/19), test-build-claude-plugin (16/16), test-doc-distribution-modes (5/5), test-doc-distribution (74 docs), test-inception-doc-consistency, test-install (49/49), test-install-zclaude (27/27), test-uninstall (30/30), test-text-to-image-integration (21/21), test-text-to-image-unit (105/105). 3 FAILS are test-text-to-image-{e2e-providers,e2e-suite,performance} — all require external API credentials/network (HuggingFace/BFL/OpenAI/Stability/Google/Replicate/SiliconFlow); environmental, UNRELATED to GH-57 (which touches agents/commands/guides/lifecycle/plugin, not the text-to-image tool), and would fail on main too. Log: tmp/quality-gates-gh57.log."
+    type: info
+    date: "2026-06-28"
   - text: "User requested TWO @red-team-coordinator reviews: (1) pre-delivery on spec/plan/test-plan artifacts, (2) post-delivery on the delivered change. Address findings via follow-up phases before proceeding. Stop at PR (ping user). Red-team invoked via task tool, subagent red-team-coordinator."
     type: info
     date: "2026-06-27"
