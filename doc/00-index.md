@@ -22,6 +22,7 @@ ados_distribution: redistributable
 |----------|-------------|
 | [Changes](changes/) | Proposed and accepted changes (evolution log) |
 | [Change Lifecycle Guide](guides/change-lifecycle.md) | 11-phase delivery workflow |
+| [Definition of Ready](guides/definition-of-ready.md) | DoR gate (`dor_check`, phase 5) — pre-delivery review of artifacts vs ticket |
 | [Change Convention](guides/unified-change-convention-tracker-agnostic-specification.md) | Naming, folders, branches |
 
 ## Guides

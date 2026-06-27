@@ -14,9 +14,9 @@ phases:
   specification: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   test_planning: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   delivery_planning: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
-  delivery: { started: null, completed: null }
-  system_spec_update: { started: null, completed: null }
-  review_fix: { started: null, completed: null }
+  delivery: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  system_spec_update: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  review_fix: { started: "2026-06-27T00:00:00Z", completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
