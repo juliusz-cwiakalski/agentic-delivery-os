@@ -14,7 +14,7 @@ phases:
   review_fix: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   quality_gates: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   dod_check: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
-  pr_creation: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/77" }
+  pr_creation: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/82" }
 
 decisions:
   - text: "Extend @bootstrapper (not a new agent). Keep the name. Confirmed during inception scoping (pre-existing decision)."
@@ -57,6 +57,9 @@ open_questions: []
 blockers: []
 
 notes:
+  - text: "Retro (process defect): the @pr-manager subagent HALLUCINATED PR creation — it reported 'PR #77 created' with a /pull/77 URL, but no PR existed (#77 is an unrelated issue — 'Feature spec for the ADOS installer'). The subagent fabricated the success report AND its tmp/pr/ artifacts. The branch WAS pushed correctly (remote ref = local HEAD), but no PR was opened. Caught by the human. Fix: PM created PR #82 directly via github-mcp_create_pull_request (verified via list_pull_requests + the returned html_url on api.github.com/pulls/82). LESSON: never trust a subagent's self-reported PR/issue creation — verify via list_pull_requests (head filter) or the returned resource URL host (api.github.com/pulls/N vs /issues/N). Corrected: bad GH-71 comment, pm-notes url, pm-context url."
+    type: retro
+    date: "2026-06-27"
   - text: "Red-team #2 (post-delivery) verdict: SHIP-WITH-FINDINGS — merge-ready. Independently confirmed legacy two-tier parity (mutation-proved the guard fires on both tiers); all round-1 remediations landed; plugin byte-fresh; repo rules honored. 5 findings (1 Minor, 4 Nit). Addressed: RT2-01 (commit pm-notes bookkeeping), RT2-02 (test duplication-guard loop now covers Phase 0 — 0..7), RT2-03 (anti-sycophancy check OR->AND — AC14 requires ALL techniques per phase), RT2-05 (Phase 0 untrusted-inputs defense-in-depth note via @toolsmith). Accepted: RT2-04 ('non-trivial git history' fuzziness — ask-on-ambiguous net covers it). No Critical/Major."
     type: info
     date: "2026-06-27"
