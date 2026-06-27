@@ -210,7 +210,7 @@ The sub-decisions (the ticket's open decisions plus the PM-level structural deci
 
 1. **DEC-1 — One `@readiness-reviewer` with a structured multi-facet DoR checklist (not multiple specialized critics).** Cross-artifact consistency needs one holistic view; matches the unified-`@reviewer` precedent (GH-36). Specialization happens via checklist sections; a facet can split out later (reversible).
 2. **DEC-2 — A new agent, not a `@reviewer` "readiness mode".** `@reviewer` is code-vs-spec (post-impl, diffs); readiness is artifacts-vs-ticket (pre-impl, no code). Different inputs/timing/mental model. (Satisfies C-2.)
-3. **DEC-3 — Stronger reasoning model via config (`claude.model: opus` frontmatter), not the prompt body.** Mirrors `@reviewer`; model assignment lives in config, not behavior. (Satisfies C-4.)
+3. **DEC-3 — Stronger reasoning model: OpenCode model via the `opencode*.jsonc` config; Claude Code model via `claude.model: opus` agent frontmatter (mirrors `@reviewer`). Model assignment is NOT encoded in the prompt body.** (Satisfies C-4.)
 4. **DEC-4 — Hard gate by default + explicit, recorded override for genuinely trivial changes (no silent skip).** A silent skip reintroduces sycophancy; the override forces a conscious, recorded decision. (Satisfies C-3.)
 5. **DEC-5 — DoR location = prompt-as-source-of-truth (refined by ticket comment #1).** Core DoR authoritative in the `@readiness-reviewer` prompt; `doc/guides/definition-of-ready.md` is a human-readable mirror stating the prompt is authoritative; repo-local `.ai/agent/readiness-instructions.md` deferred (YAGNI). Supersedes the ticket's original "dedicated guide" recommendation. (Satisfies C-5.)
 6. **DEC-6 — The deterministic mechanical pre-check `ados check-readiness` (issue #49) is out of scope.** A future complement to the adversarial semantic gate, not a dependency.
@@ -246,6 +246,8 @@ No accepted-risk exceptions are required — the chosen alternative violates no 
 - **Lifecycle renumbering blast radius:** inserting phase 5 and renumbering 5–10 → 6–11 touches many surfaces. Mitigated by the NFR-1 structural sweep (0 stale phase references).
 - **One extra gate adds latency to delivery.** Accepted: a trivial cost vs the cost of implementing a flawed plan.
 - **Prompt + mirror co-maintenance.** Mitigated by the mirror stating the prompt is authoritative and CI covering the redistributable guide.
+
+> **Precedent-status note (RT1-NIT-01, accepted-risk):** ADR-0001 (the cited precedent for recording delivery-workflow structural changes as ADRs) is itself still `Proposed`; the structural-pattern precedent holds regardless of its acceptance status — the *practice* of recording delivery-workflow structural changes as ADRs is what is being followed, independent of ADR-0001's own acceptance.
 
 ### Unresolved Questions
 

@@ -11,9 +11,9 @@ change_folder: doc/changes/2026-06/2026-06-27--GH-57--readiness-gate
 
 phases:
   clarify_scope: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
-  specification: { started: null, completed: null }
-  test_planning: { started: null, completed: null }
-  delivery_planning: { started: null, completed: null }
+  specification: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  test_planning: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  delivery_planning: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -46,6 +46,9 @@ open_questions: []  # none blocking — all 5 open decisions resolved via owner-
 blockers: []
 
 notes:
+  - text: "RED-TEAM ROUND 1 (pre-delivery, @red-team-coordinator): verdict SHIP-WITH-FINDINGS — 0 Critical, 3 Major, 5 Minor, 4 Nit. Report at red-team/pre-delivery-round-1-report.md. ACCEPTED for fix: MAJOR-01 (NFR-1 renumbering sweep scoped to 4 files but stale '10-phase'/'phase 5=delivery' refs exist in ~8 other docs incl. redistributable guides + README + decision-instructions.md → expand to REPO-WIDE grep excluding doc/changes/** and .ados-claude/**); MAJOR-02 (AC10 dogfood structurally impossible at true phase-5 position since @readiness-reviewer does not exist until delivery → THIS red-team is the honest surrogate; first TRUE dogfood = next change post-merge; split TC-MANUAL-007 into 7a surrogate + 7b deferred); MAJOR-03 (OQ-1 'no author-agent edits' does not satisfy the LITERAL AC8 'affected artifact-creator agents reflect the new phase' → REVERSE OQ-1: add a one-line cross-ref note to @spec-writer/@test-plan-writer/@plan-writer via @toolsmith so AC8 is literally true); MINOR-01 (TC-CI-004 header-path model wrong — pm.md + change-lifecycle.md ARE header-required); MINOR-02 (TC-MANUAL-008 typo DoD→DoR); MINOR-03 (DEC-3 'config vs frontmatter' — clarify OpenCode model via opencode config, Claude Code via claude.model:opus frontmatter); MINOR-05 ('genuinely trivial' undefined → add definition); NIT-02 (00-index.md missing PDR-0001 row → add). ACCEPT-light: MINOR-04, NIT-03 (wording). DEFER/accept-risk: NIT-01 (ADR-0001 Proposed precedent — noted). Remediation applied to spec/test-plan/plan/ADR/index before delivery."
+    type: info
+    date: "2026-06-27"
   - text: "User requested TWO @red-team-coordinator reviews: (1) pre-delivery on spec/plan/test-plan artifacts, (2) post-delivery on the delivered change. Address findings via follow-up phases before proceeding. Stop at PR (ping user). Red-team invoked via task tool, subagent red-team-coordinator."
     type: info
     date: "2026-06-27"

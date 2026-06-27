@@ -324,9 +324,16 @@ together (NFR-5).
   - Add the **decision-capture routing + human pause** — system-wide → `@decision-advisor` →
     decision record; needs-human-input → STOP and wait (F-5, AC5, AC7).
   - Add **`phases.dor_check`** to the PM-notes phase map structure (DM-1).
-- [ ] **B.4** Regenerate the Claude Code plugin: `scripts/build-claude-plugin.sh`, then stage
-  the `.ados-claude/**` counterparts (new agent + command; modified pm) together with the
-  `.opencode/` sources in one commit (NFR-5).
+- [ ] **B.4** `@toolsmith` adds a one-line DoR cross-reference note to `@spec-writer`,
+  `@test-plan-writer`, and `@plan-writer`
+  (`.opencode/agent/{spec-writer,test-plan-writer,plan-writer}.md`) stating their output may be
+  returned for revision by the DoR gate (`dor_check`, phase 5). Authored via `@toolsmith` (PM
+  delegates directly; `@coder` does **not** touch `.opencode/agent/**`). Regenerate
+  `.ados-claude/` and commit source + generated together (RT1-MAJOR-03 — makes AC8 literally
+  true; supersedes the earlier OQ-1 "no edits" stance).
+- [ ] **B.5** Regenerate the Claude Code plugin: `scripts/build-claude-plugin.sh`, then stage
+  the `.ados-claude/**` counterparts (new agent + command; modified pm + the three author-agent
+  notes) together with the `.opencode/` sources in one commit (NFR-5).
 
 **Acceptance Criteria**:
 
@@ -351,9 +358,12 @@ together (NFR-5).
 - `.opencode/command/check-readiness.md` (new — `@toolsmith`)
 - `.opencode/agent/pm.md` (updated — `dor_check` step + reopening + override + decision routing
   + PM-notes `phases.dor_check`; `@toolsmith`)
+- `.opencode/agent/{spec-writer,test-plan-writer,plan-writer}.md` (updated — one-line DoR
+  cross-reference note each; `@toolsmith`; RT1-MAJOR-03)
 - `.ados-claude/agents/readiness-reviewer.md` (regenerated counterpart)
 - `.ados-claude/commands/check-readiness.md` (regenerated counterpart)
 - `.ados-claude/agents/pm.md` (regenerated counterpart)
+- `.ados-claude/agents/{spec-writer,test-plan-writer,plan-writer}.md` (regenerated counterparts)
 
 **Tests**:
 
@@ -559,14 +569,24 @@ gates). Note: if a stale reference is found inside an `.opencode/agent|command` 
 
 **Tasks**:
 
-- [ ] **F.1** Run the **grep sweep** for stale 10-phase / old-phase-5 references across
-  `doc/guides/change-lifecycle.md`, `AGENTS.md`, `.opencode/README.md`, and
-  `.opencode/agent/pm.md` — target **0 stale** references (e.g., no "phase 5 = delivery", no
-  stray "10-phase", no `dod_check` still labeled phase 9 / `pr_creation` phase 10). Total
-  phases == 11 everywhere (NFR-1).
-- [ ] **F.2** Fix every stale reference found. **Governance check:** if any stale reference is
-  inside `.opencode/agent/pm.md`, re-delegate that fix to `@toolsmith` and re-run
-  `scripts/build-claude-plugin.sh`; do not hand-edit. Doc/guide/inventory fixes are `@coder`.
+- [ ] **F.1** Run the **repo-wide grep sweep** for stale 10-phase / old-phase-5 references
+  (excluding `doc/changes/**`, `.ados-claude/**`, `.git/**`) — target **0 stale** references
+  (e.g., no "phase 5 = delivery", no stray "10-phase", no `dod_check` still labeled phase 9 /
+  `pr_creation` phase 10). Total phases == 11 everywhere (NFR-1). The sweep is **repo-wide, NOT
+  limited to the 4 core surfaces** (RT1-MAJOR-01): in addition to `doc/guides/change-lifecycle.md`,
+  `AGENTS.md`, `.opencode/README.md`, and `.opencode/agent/pm.md`, also check and fix
+  `README.md`, `doc/00-index.md`, `doc/guides/onboarding-existing-project.md`,
+  `doc/guides/opencode-agents-and-commands-guide.md`,
+  `doc/guides/unified-change-convention-tracker-agnostic-specification.md`,
+  `doc/spec/features/feature-bootstrapper.md`, `doc/spec/features/feature-onboarding-guide.md`,
+  and `.ai/agent/decision-instructions.md`. Also hunt "step 10"/"steps 1-10" phrasing in
+  `.opencode/agent/pm.md`.
+- [ ] **F.2** Fix every stale reference found. **Governance check:** any fix INSIDE
+  `.opencode/agent/pm.md` (e.g., "step 10"/"steps 1-10") is **re-delegated to `@toolsmith`**
+  and `scripts/build-claude-plugin.sh` is re-run; `@coder` does **not** hand-edit
+  `.opencode/agent/**`. All other fixes (`README.md`, `doc/00-index.md`, `doc/guides/**`,
+  `doc/spec/features/**`, `.ai/agent/decision-instructions.md`, `AGENTS.md`,
+  `.opencode/README.md`) are `@coder` (RT1-MAJOR-01).
 - [ ] **F.3** Confirm the DoR guide + the renumbered lifecycle guide pass the doc-distribution
   guard: `bash scripts/.tests/test-doc-distribution.sh` (NFR-6).
 - [ ] **F.4** Confirm plugin freshness: `bash scripts/.tests/test-build-claude-plugin.sh`
@@ -584,8 +604,8 @@ gates). Note: if a stale reference is found inside an `.opencode/agent|command` 
 
 **Files and modules**:
 
-- (sweep across `doc/guides/change-lifecycle.md`, `AGENTS.md`, `.opencode/README.md`,
-  `.opencode/agent/pm.md` — fixes only)
+- (repo-wide sweep excluding `doc/changes/**`, `.ados-claude/**`, `.git/**` — fixes only; any
+  fix inside `.opencode/agent/pm.md` is re-delegated to `@toolsmith`)
 
 **Tests**:
 

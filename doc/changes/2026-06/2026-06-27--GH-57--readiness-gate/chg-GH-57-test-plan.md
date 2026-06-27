@@ -167,14 +167,14 @@ behavior **cannot** be executed deterministically in CI (RSK-4; GH-71 DEC-9 / GH
 | AC7 | Given a decision surfaced: change-scoped → change docs; system-wide/precedent-setting → proposed decision record under `doc/decisions/**`. | TC-STRUCT-008 (PR-review), TC-STRUCT-013 (PR-review), TC-MANUAL-006 (manual) | Covered |
 | AC8 | Given GH-57 ships, then `dor_check` (phase 5), `@readiness-reviewer`, and `/check-readiness` are reflected in lifecycle + pm.md + AGENTS.md + README, subsequent phases renumbered to 6–11, and the mermaid + agent-responsibility + phase-reopening tables are updated. | TC-CI-001 (CI), TC-STRUCT-001 (PR-review), TC-STRUCT-002 (PR-review), TC-STRUCT-003 (PR-review) | Covered |
 | AC9 | Given GH-57 ships, then `@reviewer` (now phase 8) role is unchanged (DoD, code-vs-spec, post-impl) and distinct from `@readiness-reviewer` (DoR). | TC-STRUCT-010 (PR-review), TC-MANUAL-008 (manual) | Covered |
-| AC10 | Given a change delivered through the 11-phase workflow, then `dor_check` executes end-to-end (READY → delivery, or NOT_READY → artifact phase); GH-57 dogfoods the gate. | TC-MANUAL-007 (manual) | Covered (manual only) |
+| AC10 | Given a change delivered through the 11-phase workflow, then `dor_check` executes end-to-end (READY → delivery, or NOT_READY → artifact phase); GH-57 dogfoods the gate. | TC-MANUAL-007a (surrogate), TC-MANUAL-007b (deferred) | Covered (surrogate + deferred) |
 
 | F ID | Capability | TC ID(s) |
 |------|-----------|----------|
 | F-1 | Definition of Ready (authoritative prompt + redistributable mirror) | TC-CI-002, TC-STRUCT-009, TC-STRUCT-011 |
-| F-2 | Readiness gate `dor_check` (holistic cross-artifact review vs ticket) | TC-CI-001, TC-STRUCT-002, TC-STRUCT-005, TC-MANUAL-002, TC-MANUAL-007 |
+| F-2 | Readiness gate `dor_check` (holistic cross-artifact review vs ticket) | TC-CI-001, TC-STRUCT-002, TC-STRUCT-005, TC-MANUAL-002, TC-MANUAL-007a/007b |
 | F-3 | Adversarial/critical independent review stance | TC-STRUCT-006, TC-MANUAL-001 |
-| F-4 | Gap-driven reopening of artifact-creation phases (never delivery) | TC-STRUCT-004, TC-MANUAL-003, TC-MANUAL-007 |
+| F-4 | Gap-driven reopening of artifact-creation phases (never delivery) | TC-STRUCT-004, TC-MANUAL-003, TC-MANUAL-007a/007b |
 | F-5 | Decision capture & human-in-the-loop pause | TC-STRUCT-008, TC-STRUCT-013, TC-MANUAL-004, TC-MANUAL-006 |
 | F-6 | Hard-gate-by-default + explicit recorded override | TC-STRUCT-007, TC-MANUAL-005 |
 | F-7 | Workflow integration & DoR/DoD role separation | TC-CI-001, TC-STRUCT-001, TC-STRUCT-002, TC-STRUCT-003, TC-STRUCT-010, TC-MANUAL-008 |
@@ -287,7 +287,8 @@ Three coverage layers:
 | TC-MANUAL-004 | Decision needing human input pauses the workflow | Corner Case | C (manual) | High | AC5, DM-5, F-5 |
 | TC-MANUAL-005 | Override is explicit + recorded; no silent skip | Corner Case | C (manual) | High | AC6, DM-4, F-6, NFR-7 |
 | TC-MANUAL-006 | Decision routing: change-scoped → docs; system → decision record | Happy Path | C (manual) | Medium | AC7, DM-5, F-5 |
-| TC-MANUAL-007 | End-to-end gate run dogfooded by GH-57 itself (AC10) | Happy Path | C (manual) | High | AC10, F-2, F-4, F-7 |
+| TC-MANUAL-007a | AC10 surrogate: GH-57's pre-delivery red-team review (RT1-MAJOR-02) | Happy Path (surrogate) | C (manual) | High | AC10, F-2, F-4, F-7 |
+| TC-MANUAL-007b | AC10 deferred: first true end-to-end dogfood (post-merge) (RT1-MAJOR-02) | Deferred | C (manual) | High | AC10, F-2, F-4, F-7 |
 | TC-MANUAL-008 | DoR/DoD role separation observed at runtime | Regression | C (manual) | Medium | AC9, NFR-9, F-7 |
 
 ### 5.2 Scenario Details
@@ -406,13 +407,16 @@ Three coverage layers:
 **Steps**:
 1. Run `bash scripts/.tests/test-add-header-location.sh` — assert pass.
 2. Confirm the new `readiness-reviewer.md`, `check-readiness.md`, and `definition-of-ready.md`
-   carry the license header (they are header-required paths per AGENTS.md); `pm.md`,
-   `AGENTS.md`, `.opencode/README.md`, `change-lifecycle.md`, and the decision records are
-   **not** header-required paths.
+   carry the license header (they are header-required paths). **Also confirm `pm.md` and
+   `change-lifecycle.md` ARE header-required paths** — `pm.md` is under `.opencode/agent/` and
+   `change-lifecycle.md` is under `doc/guides/`, both header-required roots per AGENTS.md
+   (RT1-MINOR-01). `AGENTS.md`, `.opencode/README.md`, and the decision records are **not**
+   header-required paths.
 
 **Expected Outcome**:
-- License headers present on the three new header-required files; no header churn on
-  non-required paths.
+- License headers present on the three new header-required files **and** on `pm.md` +
+  `change-lifecycle.md`; no header churn on the genuinely non-required paths (`AGENTS.md`,
+  `.opencode/README.md`, decision records).
 
 **Notes**:
 - `scripts/add-header-location.sh` is the only tool that manages headers; AI agents must never
@@ -428,16 +432,19 @@ Three coverage layers:
 **Related IDs**: AC8, NFR-1, F-7, RSK-1
 **Test Type(s)**: Manual (content check / PR review — greppable)
 **Automation Level**: Semi-automated (greppable at PR review)
-**Target Layer / Location**: `doc/guides/change-lifecycle.md`, `AGENTS.md`, `.opencode/README.md`, `.opencode/agent/pm.md`
+**Target Layer / Location**: repo-wide (excluding `doc/changes/**`, `.ados-claude/**`, `.git/**`)
 **Tags**: @structural, @lifecycle, @regression
 
 **Preconditions**:
 - The renumbering sweep (delivery order step 7) has run.
 
 **Steps**:
-1. Grep the four surfaces for stale old-numbering tokens and assert **0** hits:
-   - `rg -n '10-phase|10 phase|all 10 phases|phases 1-10|1\. clarify_scope.*10\. pr_creation' doc/guides/change-lifecycle.md AGENTS.md .opencode/README.md .opencode/agent/pm.md`
-   - `rg -n 'phase 5: delivery|step id="5">Handoff for implementation|5\. \*\*delivery\*\*' .opencode/agent/pm.md`
+1. Grep for stale "10-phase" / "phase 5 = delivery" references across the **WHOLE repo**
+   (excluding `doc/changes/**`, `.ados-claude/**`, `.git/**`) and assert **0** hits. Covers
+   `change-lifecycle.md`, `AGENTS.md`, `README.md`, `doc/00-index.md`, `.opencode/README.md`,
+   `.opencode/agent/pm.md` (incl. "step 10"/"steps 1-10"), all `doc/guides/**`,
+   `doc/spec/features/**`, and `.ai/agent/decision-instructions.md` (RT1-MAJOR-01). Example:
+   - `rg -n '10-phase|10 phase|all 10 phases|phases 1-10|phase 5: delivery|phase 5 = delivery' --glob '!doc/changes/**' --glob '!.ados-claude/**' --glob '!.git/**'`
 2. Confirm each surface now states the **11-phase** flow (e.g., `AGENTS.md` intro + phase table
    header + key-references table row read "11-phase"; lifecycle mermaid + tables + phase
    sections show 11; `pm.md` workflow lists 11 steps).
@@ -1038,43 +1045,80 @@ record under `doc/decisions/**`.
 
 ---
 
-#### TC-MANUAL-007 - End-to-end gate run dogfooded by GH-57 itself (AC10)
+#### TC-MANUAL-007a - AC10 surrogate: GH-57's pre-delivery red-team review (RT1-MAJOR-02)
 
-**Scenario Type**: Happy Path
+**Scenario Type**: Happy Path (surrogate)
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: AC10, F-2, F-4, F-7
-**Test Type(s)**: Manual
-**Automation Level**: Manual
-**Target Layer / Location**: GH-57's own delivery (the 11-phase flow)
-**Tags**: @agent, @manual, @dogfood, @e2e
+**Test Type(s)**: Manual (existence check)
+**Automation Level**: Semi-automated (file existence)
+**Target Layer / Location**: `red-team/pre-delivery-round-1-report.md` (GH-57 change folder)
+**Tags**: @agent, @manual, @dogfood, @e2e, @surrogate
 
-**Given/When/Then (AC10):** *Given* a change delivered through the updated 11-phase workflow,
-*when* it reaches `dor_check`, *then* the gate executes end-to-end — either `READY` (proceed to
-delivery) or `NOT_READY` with gaps routed to the correct artifact phase. GH-57's own delivery
-dogfoods the gate.
+**Given/When/Then (AC10 — surrogate):** *Given* `@readiness-reviewer` does not exist until
+GH-57's own `delivery` phase (so a true phase-5 self-run is structurally impossible for GH-57),
+*when* the GH-57 pre-delivery red-team review is adopted as the DoR surrogate, *then* AC10 is
+deemed satisfied for GH-57 via that surrogate (RT1-MAJOR-02).
 
 **Preconditions**:
-- GH-57 ships the gate (so it can be run). GH-57's own spec/test-plan/plan exist.
+- The GH-57 pre-delivery red-team review has been run.
 
 **Steps**:
-1. During GH-57's own delivery, reach `dor_check` (phase 5) in the updated flow.
-2. Confirm `@readiness-reviewer` runs against GH-57's own artifact set + the source ticket.
-3. Confirm the gate executes end-to-end: either returns `READY` (→ delivery, phase 6) or
-   `NOT_READY` with gaps routed to the correct artifact phase (per AC4/TC-MANUAL-003).
+1. Confirm `red-team/pre-delivery-round-1-report.md` exists (the pre-delivery red-team review
+   that ran as the DoR surrogate for GH-57's own delivery).
+
+**Expected Outcome**:
+- The report exists; the surrogate AC10 evidence is present.
+
+**Pass/Fail**:
+- **PASS** when the report exists. This TC is the GH-57-local surrogate; the first true
+  end-to-end dogfood is TC-MANUAL-007b.
+
+**Notes**:
+- Because the gate cannot run on itself before it exists, GH-57's own AC10 is satisfied by the
+  pre-delivery red-team surrogate. The first *true* end-to-end dogfood is the next change
+  delivered after merge (TC-MANUAL-007b).
+
+---
+
+#### TC-MANUAL-007b - AC10 deferred: first true end-to-end dogfood (post-merge) (RT1-MAJOR-02)
+
+**Scenario Type**: Deferred
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: AC10, F-2, F-4, F-7
+**Test Type(s)**: Manual (deferred)
+**Automation Level**: Manual
+**Target Layer / Location**: the first change delivered after GH-57 merges (the 11-phase flow)
+**Tags**: @agent, @manual, @dogfood, @e2e, @deferred
+
+**Given/When/Then (AC10 — true dogfood):** *Given* the first change delivered after GH-57
+merges, *when* it reaches `dor_check`, *then* the gate executes end-to-end — either `READY`
+(proceed to delivery) or `NOT_READY` with gaps routed to the correct artifact phase —
+exercising the full flow for the first time.
+
+**Preconditions**:
+- GH-57 has merged (the gate exists). The next change is delivered through the 11-phase flow.
+
+**Steps**:
+1. On the next change delivered after GH-57 merges, reach `dor_check` (phase 5).
+2. Confirm `@readiness-reviewer` runs against that change's artifact set + the source ticket.
+3. Confirm the gate executes end-to-end: `READY` (→ delivery) or `NOT_READY` with gaps routed to
+   the correct artifact phase (per AC4/TC-MANUAL-003).
 4. Capture the persisted readiness-review record (DM-2) as evidence.
 
 **Expected Outcome**:
-- The full flow runs through `dor_check`; GH-57 dogfoods its own gate (AC10).
+- The full flow runs through `dor_check` for the first time on a change other than GH-57.
 
 **Pass/Fail**:
-- Pass only if `dor_check` executes end-to-end during GH-57's delivery with a persisted verdict.
-  Fail if the phase is skipped, the gate does not run, or the verdict is not produced/routed.
+- **DEFERRED** — the first true end-to-end dogfood = the next change delivered after GH-57
+  merges; tracked as a post-merge follow-up, not a GH-57 gate.
 
 **Notes**:
-- This is the headline behavioral proof. If GH-57 ships the gate but does **not** run it on
-  itself, AC10 fails. (Any `NOT_READY` gaps found here must be fixed before this TC passes —
-  that is the gate working as intended.)
+- This is the headline behavioral proof, but it cannot be satisfied by GH-57 itself (the gate
+  does not exist until GH-57's own delivery). GH-57 satisfies AC10 via the surrogate
+  (TC-MANUAL-007a); TC-MANUAL-007b is the first genuine dogfood.
 
 ---
 
@@ -1091,7 +1135,7 @@ dogfoods the gate.
 
 **Given/When/Then (AC9):** *Given* GH-57 ships, *when* a change runs the full flow, *then*
 `@reviewer` (phase 8) still audits code-vs-spec post-implementation (DoD) and
-`@readiness-reviewer` (phase 5) audits artifacts-vs-ticket pre-implementation (DoD); the two
+`@readiness-reviewer` (phase 5) audits artifacts-vs-ticket pre-implementation (DoR); the two
 are never conflated.
 
 **Preconditions**:
@@ -1118,7 +1162,7 @@ are never conflated.
   `TC-CI-*` gates run here (plugin freshness, doc-distribution, install/uninstall, headers).
 - **PR-review structural checks (Layer B):** a reviewer reads the diff against the spec /
   ADR-0002; no environment beyond the checked-out branch. TC-STRUCT-001's grep sweep runs
-  against the four renumbering surfaces.
+  repo-wide (RT1-MAJOR-01).
 - **Manual matrix (Layer C, local-dev only):** scratch changes (disposable) authored with
   planted gaps:
   - a **plausible-but-gapped** artifact set (TC-MANUAL-001, TC-MANUAL-002, TC-MANUAL-003) —
@@ -1127,12 +1171,13 @@ are never conflated.
   - a **genuinely-trivial** scratch change for the override path (TC-MANUAL-005);
   - two **decision-scope** scratch changes (change-scoped + system-wide) (TC-MANUAL-006);
   - a **full-flow** scratch change (TC-MANUAL-008).
-- **Dogfood evidence (AC10):** GH-57's own delivery is the TC-MANUAL-007 environment — the
-  gate runs on this change's own artifacts.
+- **Dogfood evidence (AC10):** GH-57's own delivery cannot self-run the gate at the true phase-5
+  position (RT1-MAJOR-02); TC-MANUAL-007a is the surrogate (the pre-delivery red-team report),
+  and TC-MANUAL-007b is the deferred first true dogfood on the next change.
 - **Test data generation/cleanup:** scratch changes are disposable; persisted readiness-review
   records (DM-2) / override records (DM-4) are produced per scratch run. No fixtures committed.
 - **Isolation:** manual runs use throwaway changes; never run against a real in-flight
-  delivery except GH-57's own (TC-MANUAL-007, by design).
+  delivery except the GH-57 surrogate evidence (TC-MANUAL-007a, by design).
 - **No secrets / no new access:** the gate reads local change artifacts + the source ticket via
   existing tracker access; no new platform integration (spec §8.4, §21).
 
@@ -1150,7 +1195,7 @@ are never conflated.
 | TC-CI-002 | Automated (CI) | `bash scripts/.tests/test-doc-distribution.sh`; `bash scripts/.tests/test-doc-distribution-modes.sh` (+ confirm file + marker) | None |
 | TC-CI-003 | Automated (CI) | `bash scripts/.tests/test-install.sh`; `bash scripts/.tests/test-uninstall.sh` | None |
 | TC-CI-004 | Automated (CI) | `bash scripts/.tests/test-add-header-location.sh` | None |
-| TC-STRUCT-001 | Semi-automated (PR-review grep) | `rg -n '10-phase\|all 10 phases\|phase 5: delivery' doc/guides/change-lifecycle.md AGENTS.md .opencode/README.md .opencode/agent/pm.md` (assert 0) | None |
+| TC-STRUCT-001 | Semi-automated (PR-review grep) | repo-wide grep for `10-phase\|phase 5: delivery\|phase 5 = delivery` (excluding `doc/changes/**`, `.ados-claude/**`, `.git/**`) (assert 0) | None |
 | TC-STRUCT-002 | PR-review (content check) | reviewer reads lifecycle mermaid + tables + phase sections + PM-notes map | None |
 | TC-STRUCT-003 | PR-review (content check) | reviewer reads AGENTS.md agent/command tables + manual sequence + `.opencode/README.md` | None |
 | TC-STRUCT-004 | PR-review (content check) | reviewer reads `pm.md` workflow + `phases` map + reopening logic | None |
@@ -1170,7 +1215,8 @@ are never conflated.
 | TC-MANUAL-004 | Manual Only | human-run dor_check on needs-human-input decision | Planted decision |
 | TC-MANUAL-005 | Manual Only | human-run dor_check override path on trivial change | Planted trivial change |
 | TC-MANUAL-006 | Manual Only | human-run dor_check on change-scoped + system-wide decisions | Planted decisions |
-| TC-MANUAL-007 | Manual Only | GH-57's own delivery reaches + runs dor_check (dogfood) | None (live dogfood) |
+| TC-MANUAL-007a | Semi-automated (file existence) | confirm `red-team/pre-delivery-round-1-report.md` exists (surrogate) | None |
+| TC-MANUAL-007b | Manual Only (deferred) | next change post-merge runs `dor_check` end-to-end (dogfood) | None |
 | TC-MANUAL-008 | Manual Only | human-run scratch change through both gates | None |
 
 ### CI gate list (run before merge)
@@ -1192,8 +1238,9 @@ are never conflated.
    consistent. No new template ships, so the templates glob adds nothing.
 5. `bash scripts/.tests/test-add-header-location.sh` — regression: the new agent, command, and
    guide are all header-required paths (`.opencode/agent/`, `.opencode/command/`, `doc/guides/`);
-   `pm.md`, `AGENTS.md`, `.opencode/README.md`, `change-lifecycle.md`, and the decision records
-   are not.
+   `pm.md` (`.opencode/agent/`) and `change-lifecycle.md` (`doc/guides/`) are **also**
+   header-required (RT1-MINOR-01). Only `AGENTS.md`, `.opencode/README.md`, and the decision
+   records are not.
 
 > `tools/.tests/*` (text-to-image, zclaude) — **N/A**: no `tools/` change in this PR.
 
@@ -1204,10 +1251,10 @@ are never conflated.
 | Risk (testing-side) | Mitigation |
 |---------------------|------------|
 | Behavioral AC cannot be asserted in CI (RSK-4 / NFR-8) | **Stated honestly:** the ONLY behavioral coverage is the `TC-MANUAL-*` matrix + PR review. This plan never claims a behavioral AC is CI-testable; §7's CI gates are purely mechanical. |
-| NFR-1 renumbering drift — a stale "phase 5 = delivery" / "10-phase" reference survives (RSK-1) | TC-STRUCT-001 is a greppable sweep over the four surfaces; TC-STRUCT-002 cross-checks the diagram/tables. The sweep is the durable proof there is exactly one description of the flow. |
+| NFR-1 renumbering drift — a stale "phase 5 = delivery" / "10-phase" reference survives (RSK-1) | TC-STRUCT-001 is a greppable repo-wide sweep (excluding `doc/changes/**`, `.ados-claude/**`, `.git/**`); TC-STRUCT-002 cross-checks the diagram/tables. The sweep is the durable proof there is exactly one description of the flow. |
 | A `TC-STRUCT-*` prompt-content check re-earns DEC-9's brittle-grep critique | The prompt-content members are **PR-review intent checks** (diff reads vs spec/ADR-0002), never frozen-wording greps. The one greppable member (TC-STRUCT-001) targets **phase numbers**, a structural contract — distinct from prompt prose. Stated in §1. |
-| Manual-only coverage is skipped at merge | The §10 Test Execution Log must be filled (at least the critical TCs: CI-001/002, STRUCT-001/002/004/007, MANUAL-001/003/005/007) before sign-off; PR-review checklist includes the Layer-B items. |
-| GH-57 ships the gate but does not run it on itself (AC10 gap) | TC-MANUAL-007 is **explicitly** the dogfood gate; it fails if `dor_check` is not run during GH-57's delivery. Capturing the persisted readiness-review record (DM-2) is the evidence. |
+| Manual-only coverage is skipped at merge | The §10 Test Execution Log must be filled (at least the critical TCs: CI-001/002, STRUCT-001/002/004/007, MANUAL-001/003/005/007a) before sign-off; PR-review checklist includes the Layer-B items. |
+| GH-57 ships the gate but does not run it on itself (AC10 gap) | Resolved by RT1-MAJOR-02: TC-MANUAL-007a is the **surrogate** (the pre-delivery red-team report — PASS when it exists); a true self-run is structurally impossible for GH-57, so the first true dogfood is deferred to TC-MANUAL-007b (next change post-merge). |
 | ADR-0002 lags (authored via the decision workflow, not at spec time) | TC-STRUCT-013 verifies presence + indexing; the ADR's acceptance rides the GH-57 PR (DEC-7). |
 
 ### 8.2 Assumptions
@@ -1221,8 +1268,9 @@ are never conflated.
   safety rules).
 - `@toolsmith` is the required delegate for editing `.opencode/agent/**` and
   `.opencode/command/**` (DEC-9; AGENTS.md "Extending the system" hard rule).
-- The artifact-creator agents (`@spec-writer`/`@test-plan-writer`/`@plan-writer`) need **no**
-  edits (OQ-1 resolved) — reopening is a PM/lifecycle concern; their behavior is unchanged.
+- The artifact-creator agents (`@spec-writer`/`@test-plan-writer`/`@plan-writer`) each get a
+  one-line DoR cross-reference note via `@toolsmith` (RT1-MAJOR-03) — their behavior is
+  otherwise unchanged.
 - A human is available to approve overrides (DM-4) and to resolve needs-human-input decisions
   (DM-5); the agent does not auto-advance past a pause.
 - The deterministic mechanical pre-check (#49) is out of scope (NG-3/DEC-6) and not a dependency.
@@ -1231,7 +1279,7 @@ are never conflated.
 
 | OQ | Question | Blocking? | Owner |
 |----|----------|-----------|-------|
-| OQ-1 (spec) | Do the author agents need a re-invocation note? | **Resolved (PM, R1):** NO — reopening is a PM/lifecycle concern; author behavior unchanged. (Inherited; not re-tested.) | PM |
+| OQ-1 (spec) | Do the author agents need a re-invocation note? | **Resolved (revised after red-team RT1-MAJOR-03):** YES — each gets a one-line DoR cross-reference note via `@toolsmith`. (Inherited; not re-tested.) | PM |
 | T-OQ-1 | Should the NFR-1 phase-number sweep be promoted to a dedicated CI script (rather than PR-review grep)? | No — phase-number renumbering is a one-time structural change; a CI grep would fossilize numbering. The PR-review grep (TC-STRUCT-001) suffices. (Mirrors GH-72's stance on not freezing prompt wording.) | PM |
 
 ## 9. Plan Revision Log
