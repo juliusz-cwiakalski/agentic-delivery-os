@@ -183,7 +183,7 @@ fi
 grep -qE 'doc/guides/project-inception\.md' "$AGENT" \
   || emit_error "TC-STRUCT-004: agent does not reference doc/guides/project-inception.md"
 
-for n in 1 2 3 4 5 6 7; do
+for n in 0 1 2 3 4 5 6 7; do
   guide_block="$(extract_guide_phase "$n" "$GUIDE")"
   [[ -z "${guide_block}" ]] && continue
   prompt_block="$(extract_block "phase_${n}_inception" "$AGENT")"
@@ -210,10 +210,13 @@ if ! diff <(printf '%s\n' "${opens}") <(printf '%s\n' "${closes}") >/dev/null; t
 fi
 
 # --- TC-STRUCT-008: anti-sycophancy placement (anchor-based) ----------------
+# AC14 requires ALL listed techniques per phase (AND). RT2-03: entries were OR
+# (|) which passed if only one technique survived; now each value is a
+# comma-separated list of required regex tokens (each token may contain spaces).
 declare -A want_tech=(
-  [1]='devil.?s advocate|four.?risk'
-  [2]='pre.?mortem|four.?risk'
-  [3]='alternative comparison|pre.?mortem'
+  [1]='devil.?s advocate,four.?risk'
+  [2]='pre.?mortem,four.?risk'
+  [3]='alternative comparison,pre.?mortem'
   [4]='unknown.?unknowns'
 )
 for n in 1 2 3 4; do
@@ -224,8 +227,11 @@ for n in 1 2 3 4; do
   fi
   printf '%s\n' "${block}" | grep -qE '<anti_sycophancy>' \
     || emit_error "TC-STRUCT-008: Phase ${n} missing <anti_sycophancy> anchor"
-  printf '%s\n' "${block}" | grep -qEi "${want_tech[$n]}" \
-    || emit_error "TC-STRUCT-008: Phase ${n} <anti_sycophancy> missing technique (${want_tech[$n]})"
+  IFS=',' read -ra techs <<<"${want_tech[$n]}"
+  for tech in "${techs[@]}"; do
+    printf '%s\n' "${block}" | grep -qEi -- "${tech}" \
+      || emit_error "TC-STRUCT-008: Phase ${n} <anti_sycophancy> missing required technique '${tech}' (AC14 requires ALL)"
+  done
 done
 for n in 0 5 6 7; do
   block="$(extract_block "phase_${n}_inception" "$AGENT")"

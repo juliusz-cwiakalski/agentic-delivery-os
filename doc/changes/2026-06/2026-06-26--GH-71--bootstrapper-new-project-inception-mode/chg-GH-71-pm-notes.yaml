@@ -11,9 +11,9 @@ phases:
   delivery_planning: { started: "2026-06-26T00:00:00Z", completed: "2026-06-26T00:00:00Z" }
   delivery: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   system_spec_update: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
-  review_fix: { started: "2026-06-27T00:00:00Z", completed: null }
-  quality_gates: { started: null, completed: null }
-  dod_check: { started: null, completed: null }
+  review_fix: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  quality_gates: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  dod_check: { started: "2026-06-27T00:00:00Z", completed: null }
   pr_creation: { started: null, completed: null, url: null }
 
 decisions:
@@ -49,12 +49,20 @@ decisions:
     date: "2026-06-27"
   - text: "REM-8 (RT1-09): anti-sycophancy placement asserts an <anti_sycophancy> sub-tag (anchor) inside each decision-dense phase with correct technique name, ABSENT in phases 0/5/6/7. More robust than free-text keyword scoping."
     date: "2026-06-27"
+  - text: "RT2-04 ACCEPTED (not fixing): red-team #2 flagged 'non-trivial git history' as undefined in mode selection. Accepted as-is — the NFR-1 ask-on-ambiguous safety net (0 silent guesses) handles the fuzzy boundary; an arbitrary commit-count gloss would itself be brittle. No fix."
+    date: "2026-06-27"
 
 open_questions: []
 
 blockers: []
 
 notes:
+  - text: "Red-team #2 (post-delivery) verdict: SHIP-WITH-FINDINGS — merge-ready. Independently confirmed legacy two-tier parity (mutation-proved the guard fires on both tiers); all round-1 remediations landed; plugin byte-fresh; repo rules honored. 5 findings (1 Minor, 4 Nit). Addressed: RT2-01 (commit pm-notes bookkeeping), RT2-02 (test duplication-guard loop now covers Phase 0 — 0..7), RT2-03 (anti-sycophancy check OR->AND — AC14 requires ALL techniques per phase), RT2-05 (Phase 0 untrusted-inputs defense-in-depth note via @toolsmith). Accepted: RT2-04 ('non-trivial git history' fuzziness — ask-on-ambiguous net covers it). No Critical/Major."
+    type: info
+    date: "2026-06-27"
+  - text: "Review_fix PASSED (iteration 1). @reviewer: Status=PASS with 3 optional Nits (NIT-1 mode_selection legacy-persistence clarity, NIT-2 phase_0 profile-file reference, NIT-3 bash>=4 guard). All gates green: test-bootstrapper-prompt-structure.sh exit 0; legacy two-tier parity confirmed (Tier A 8 frozen blocks byte-identical vs 0a1a288; Tier B resume_behavior/write_allowlist purely additive); build-claude-plugin + .ados-claude diff clean; test-doc-distribution exit 0; anti-sycophancy anchors correct; 30/30 plan tasks done. Applied all 3 nits for precision (prompt IS the product): NIT-1/NIT-2 via @toolsmith (bootstrapper.md + regen .ados-claude), NIT-3 directly (test-script bash>=4 guard). Commit c6510c9."
+    type: info
+    date: "2026-06-27"
   - text: "Delivery COMPLETED. @coder executed phases A-F (agent-prompt editing delegated to @toolsmith per hard rule). Commits on branch: 804c481 (Phase A: feat(agent) inception sub-mode + regenerated .ados-claude together), a2fce00 (Phase B: AGENTS.md one-liner), fcb5a34 (Phase C: test(scripts) prompt-structure guard), 5bbe9d2 (Phase F: execution log), 7f98365 (task-checkbox reconcile). Phase D (guide amendment) = NO-OP per DEC-5 (no concrete+blocking gap found). PM independently verified: 8 inception phase sections present; anti-sycophancy anchors correct (P1 devil's-advocate+four-risk, P2 pre-mortem+four-risk-check, P3 alt-comparison+pre-mortem, P4 unknown-unknowns, P0/5/6/7 none); Phase 5 generates all four instruction files (code-review marked net-new/inception-only); legacy <phase_4_draft> unchanged (REM-1 honored — no legacy code-review); resume_behavior extended with DEC-6 logic; write_allowlist has all 3 inception additions (doc/inception/**, .ai/agent/code-review-instructions.md, doc/documentation-profile.md); file 512 lines (within warn>650/fail>800 guardrail)."
     type: info
     date: "2026-06-27"
