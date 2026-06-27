@@ -13,8 +13,8 @@ phases:
   system_spec_update: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   review_fix: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   quality_gates: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
-  dod_check: { started: "2026-06-27T00:00:00Z", completed: null }
-  pr_creation: { started: null, completed: null, url: null }
+  dod_check: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  pr_creation: { started: "2026-06-27T00:00:00Z", completed: null, url: null }
 
 decisions:
   - text: "Extend @bootstrapper (not a new agent). Keep the name. Confirmed during inception scoping (pre-existing decision)."
