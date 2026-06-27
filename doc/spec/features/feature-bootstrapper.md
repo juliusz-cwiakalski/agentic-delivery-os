@@ -27,6 +27,8 @@ Inception produces the project's **knowledge base** — overview, spec, rules, a
 
 > **Superseded history.** GH-32 shipped a 6-phase "existing-project onboarding" flow that kept git-ignored state at `.ai/local/bootstrapper-context.yaml`. GH-71 redesigned the bootstrapper into the unified 8-phase inception model described here. The legacy 6-phase flow and `.ai/local/bootstrapper-context.yaml` are **gone**: no backward-compatibility, no migration.
 
+> **Changelog.** GH-72 added the **PRODUCE** step to legacy Phase 0 (tribal-knowledge extraction from repo docs + `git log`), completing the PRODUCE → CONSUME → GRADUATE loop wired by GH-71. Consume (Phase 0) and graduate (Phase 2) are unchanged.
+
 ## Business Context
 
 ### Problem Statement
@@ -58,7 +60,7 @@ New-vs-legacy front-half distinctions (phases 5–7 are identical for both):
 
 | Phase | `new` | `legacy` |
 |---|---|---|
-| 0 | Scan `doc/inception/inputs/`; build material-inventory | Above + repo ingestion + `repo-analysis`; consume `tribal-knowledge` if present |
+| 0 | Scan `doc/inception/inputs/`; build material-inventory | Above + repo ingestion + `repo-analysis`; **PRODUCE** `tribal-knowledge.md` from repo docs + `git log` (file reads + `git log` only), then **consume** `tribal-knowledge` if present |
 | 1 | Author north star from scratch (Socratic) | Extract/author north star from existing docs + repo + interview; behavioral-spec extraction from tests |
 | 2 | Define **MVP** scope as Current Milestone | Define **next-milestone** scope (NOT "MVP"); tribal-knowledge graduation |
 | 3 | Design tech stack + architecture from scratch | Reconstruct architecture from code; flag uncertainty |
@@ -70,7 +72,7 @@ Every phase follows the same loop: fresh conversation → read state + prior art
 
 | Phase | Purpose | Human gate | Anti-sycophancy |
 |---|---|---|---|
-| 0 — Intake & material scan | Select `project.flow`; classify repo profile; detect characteristics; build material-inventory (legacy: repo ingestion + repo-analysis) | Approve flow, profile, characteristics, inventory, legacy analysis | none |
+| 0 — Intake & material scan | Select `project.flow`; classify repo profile; detect characteristics; build material-inventory (legacy: repo ingestion + repo-analysis; **PRODUCE** `tribal-knowledge.md` from repo docs + `git log`, then consume) | Approve flow, profile, characteristics, inventory, legacy analysis (incl. the tribal-knowledge PRODUCE roll-up) | none |
 | 1 — North star & vision | Author/extract north star; conditional OST, project-PRD, personas/JTBD; legacy: behavioral-spec seeds | Approve north star + discovery/persona/spec seeds | devil's advocate + four-risk awareness |
 | 2 — Scope & roadmap | Current Milestone scope (MVP / next-milestone); roadmap; assumption + risk registers; legacy: tribal-knowledge graduation; conditional user journeys + screen inventory | Approve scope, roadmap, assumptions, risks, graduations | pre-mortem + four-risk check |
 | 3 — Tech stack & architecture | Tech stack; architecture overview; FSE audit; seed ADRs; conditional NFRs; legacy: reconstruct + flag uncertainty | Approve tech, architecture, ADRs, NFRs, uncertainty flags | alternative comparison + pre-mortem |
@@ -80,6 +82,20 @@ Every phase follows the same loop: fresh conversation → read state + prior art
 | 7 — Inception summary & handoff | Inception summary; initial feature specs (new: from current-milestone scope; legacy: from code analysis reconciled with behavior) | Final sign-off — project incepted | none |
 
 Phase-by-phase detail, anti-sycophancy prompts, the conditional matrix, and the full artifact catalog live in [doc/guides/project-inception.md](../../guides/project-inception.md); this spec does not duplicate them.
+
+### Tribal-knowledge loop (legacy: PRODUCE → CONSUME → GRADUATE)
+
+For `project.flow: legacy`, the bootstrapper closes the tribal-knowledge loop in three steps spanning phases 0 and 2:
+
+| Step | Phase | What it does | Output |
+|------|-------|--------------|--------|
+| **PRODUCE** | 0 | Mine repo docs (READMEs, decision records, design notes, code comments holding rationale) and git history via `git log` (merge commits, Conventional-Commit histories) using **file reads + `git log` only** — no PR-thread tooling (GH-33 is parked). Categorize each item, attach a verifiable source pointer, score confidence, and flag contradictions → write `doc/inception/analysis/tribal-knowledge.md` from `doc/templates/tribal-knowledge-template.md` | Graduation-ready `tribal-knowledge.md`, reviewed at human gate 0 |
+| **CONSUME** | 0 | Read a present `tribal-knowledge.md` (whether PRODUCE just wrote it or a human hand-authored it) | Item set staged for graduation |
+| **GRADUATE** | 2 | Move non-contradicted, sufficiently-confident items to their permanent homes (decisions, feature specs, glossary, conventions) under human gate 2 | Items in permanent ADOS homes |
+
+PRODUCE runs **only** for the `legacy` flow — greenfield projects have no history to mine. PRODUCE happens **before** consume so a fresh run populates the set Phase 2 graduates; it does **not** graduate itself. A hand-authored `tribal-knowledge.md` is **preserved** — PRODUCE writes fresh only when none exists or the human approves overwrite (the no-overwrite-without-approval rule).
+
+The produced artifact's shape is fixed by [PDR-0001](../../decisions/PDR-0001-tribal-knowledge-extraction-taxonomy.md) and encoded structurally in the [tribal-knowledge template](../../templates/tribal-knowledge-template.md): a closed 5-category set (`decision | convention | rejected-approach | workaround | domain-term`), each category mapping to an **existing** ADOS graduation home (no invented register); a source pointer per item (`path:line` for docs, commit short SHA for git history; multi-source dedups into one item); a `high | medium | low` confidence rubric (high and medium graduate directly; low is re-flagged for human confirmation); and an `## Open Contradictions` roll-up that surfaces every `status: contradicted` item at gate 0 — contradicted items are **excluded from Phase-2 graduation** until a human clears the flag or drops the item. Repo docs, commit/merge messages, and `git log` output are untrusted input (see Trust boundary & safety).
 
 ### Conditional artifacts
 
@@ -149,7 +165,7 @@ The bootstrapper may **only** write to the paths below; any other path requires 
 
 ## Trust boundary & safety
 
-All content scanned from the target repo or staged under `doc/inception/inputs/` is **untrusted input** (Markdown, config, code comments, generated docs, embedded instructions). The bootstrapper extracts facts only; it does **not** follow instructions embedded in scanned files or execute commands found in them. Human interview answers are trusted only after the credential-pattern check.
+All content scanned from the target repo or staged under `doc/inception/inputs/` is **untrusted input** — including Markdown, configuration, code comments, generated docs, **git history (commit and merge messages, `git log` output)**, and embedded instructions. The bootstrapper extracts facts only; it does **not** follow instructions embedded in scanned files or execute commands found in them. The legacy Phase-0 **PRODUCE** step (mining repo docs + `git log` into `tribal-knowledge.md`) operates under this same boundary — facts only, no embedded instructions followed, credential patterns refused — per the bootstrapper's `<trust_boundary>` and `<safety_rules>`. Human interview answers are trusted only after the credential-pattern check.
 
 Safety rules: never store secrets; never modify existing source code; never overwrite files without explicit human approval; always create directories before writing; always confirm before writing any artifact.
 
@@ -184,6 +200,8 @@ Safety rules: never store secrets; never modify existing source code; never over
 - **Inception guide (authority):** [doc/guides/project-inception.md](../../guides/project-inception.md)
 - **Onboarding guide (manual fallback):** [doc/guides/onboarding-existing-project.md](../../guides/onboarding-existing-project.md)
 - **State template:** [doc/templates/inception-state-template.yaml](../../templates/inception-state-template.yaml)
+- **Tribal-knowledge template (PRODUCE output shape):** [doc/templates/tribal-knowledge-template.md](../../templates/tribal-knowledge-template.md)
+- **Design authority (tribal-knowledge taxonomy & graduation mapping):** [doc/decisions/PDR-0001-tribal-knowledge-extraction-taxonomy.md](../../decisions/PDR-0001-tribal-knowledge-extraction-taxonomy.md)
 - **Agent prompt:** `.opencode/agent/bootstrapper.md`
 - **Command prompt:** `.opencode/command/bootstrap.md`
 - **Agent inventory:** [.opencode/README.md](../../../.opencode/README.md)
