@@ -166,7 +166,7 @@ file write is `@coder`'s.
 
 **Tasks**:
 
-- [ ] **A.1** Author `doc/templates/tribal-knowledge-template.md`. Mirror the sibling
+- [x] **A.1** Author `doc/templates/tribal-knowledge-template.md`. Mirror the sibling
   `doc/templates/repo-analysis-template.md` frontmatter discipline —
   `ados_distribution: redistributable`, `id: TRIBAL-KNOWLEDGE`, `status: Draft`,
   `created`/`last_updated` 2026-06-27, a confidence column. **License-header note (RT1-n2):**
@@ -175,7 +175,7 @@ file write is `@coder`'s.
   never add license headers"). `ados_distribution` MUST sit inside the **single** frontmatter
   block (the same `---` block holding any `# Copyright` lines) — a second `---` block makes
   `test-doc-distribution.sh`'s `get_marker()` return "missing".
-- [ ] **A.2** Encode PDR-0001's design into the template body:
+- [x] **A.2** Encode PDR-0001's design into the template body:
   - **Producer note**: produced in Phase 0 (legacy) → reviewed at human gate 0 → graduated
     at Phase 2 (human-gated). State that a hand-authored file is preserved; PRODUCE writes
     fresh only when none exists or the human approves overwrite (OQ-2).
@@ -198,7 +198,7 @@ file write is `@coder`'s.
   - **Trust/safety producer note**: untrusted input, facts only, embedded instructions
     never followed, credential-pattern refusal — point at the bootstrapper
     `<trust_boundary>` / `<safety_rules>` rather than re-listing patterns.
-- [ ] **A.3** *(Should)* Index the new template in `doc/templates/README.md` under the
+- [x] **A.3** *(Should)* Index the new template in `doc/templates/README.md` under the
   "Inception templates" category, matching the sibling `repo-analysis-template.md`.
   Note: the `test-inception-doc-consistency.sh` `INCEPTION_TEMPLATES` list is hard-coded to
   17 and does **not** (yet) include this template, so indexing is good-practice/consistency,
@@ -246,7 +246,7 @@ Phase B but does **not** hand-edit the agent prompt. Source `.opencode/` + regen
 
 **Tasks**:
 
-- [ ] **B.1** `@toolsmith` extends `.opencode/agent/bootstrapper.md` `<phase_0>` **legacy
+- [x] **B.1** `@toolsmith` extends `.opencode/agent/bootstrapper.md` `<phase_0>` **legacy
   branch** (currently: "legacy: also perform repo ingestion; write `repo-analysis`;
   consume `tribal-knowledge` if present") with the PRODUCE step:
   - **Extract** tribal knowledge from (i) repo docs — READMEs, decision records, design
@@ -274,7 +274,7 @@ Phase B but does **not** hand-edit the agent prompt. Source `.opencode/` + regen
   - **Reference** the template + guide for detail — **duplicate no prose** (NFR-4, RSK-5).
   - **Do NOT** touch the `new` branch (NFR-1) or the consume/graduate wiring (GH-71 scope,
     NG-3).
-- [ ] **B.2** Regenerate the Claude Code plugin: `scripts/build-claude-plugin.sh`, then
+- [x] **B.2** Regenerate the Claude Code plugin: `scripts/build-claude-plugin.sh`, then
   stage the `.ados-claude/**` counterpart together with the agent source in one commit.
 
 **Acceptance Criteria**:
@@ -320,26 +320,26 @@ the `@toolsmith` hard rule does **not** apply.
 
 **Tasks**:
 
-- [ ] **C.1** **(a) Artifact-catalog template column** (~line 152): the "Tribal knowledge"
+- [x] **C.1** **(a) Artifact-catalog template column** (~line 152): the "Tribal knowledge"
   row currently shows an em-dash template. After Phase A ships
   `tribal-knowledge-template.md`, reference it (the cell points at the real template).
-- [ ] **C.2** **(b) Phase-0→2 graduation label** (~line 663, "Legacy-specific additional
+- [x] **C.2** **(b) Phase-0→2 graduation label** (~line 663, "Legacy-specific additional
   activities"): "Tribal-knowledge graduation (Phase 0→1)" contradicts the shipped agent
   (`<phase_2>` graduates) + spec (`feature-bootstrapper.md`) + Diagram 3. Correct the
   parenthetical to **Phase 2** (produce @ Phase 0; graduate @ Phase 2). Do not alter the
   surrounding bullet's meaning.
-- [ ] **C.3** **(c) Trust/safety note in the legacy section**: add a brief note that scanned
+- [x] **C.3** **(c) Trust/safety note in the legacy section**: add a brief note that scanned
   repo docs **and git history** are untrusted input — facts only, embedded instructions
   never followed, and credential/secret patterns are refused (point at the bootstrapper
   `<trust_boundary>` / `<safety_rules>`). Keeps human authority aligned with agent authority
   on the expanded (git-history) extraction surface.
-- [ ] **C.4** **(d) Extraction-source label** (~line 654, legacy-flow-differences table, Phase 0
+- [x] **C.4** **(d) Extraction-source label** (~line 654, legacy-flow-differences table, Phase 0
   row): the row currently says "Also run **tribal-knowledge extraction** if **PR/MR history**
   exists" — but PR/MR history is GH-33's parked surface, not GH-72's scope (repo docs + `git
   log`, always available for legacy). Correct to "if repo docs or git history exist" (RT1-M2;
   DEC-5 contradiction). The consistency guard's landmark check keys on the row label "Tribal
   knowledge", not this prose, so the edit is structurally safe.
-- [ ] **C.5** Preserve `ados_distribution: redistributable` and **guide structural
+- [x] **C.5** Preserve `ados_distribution: redistributable` and **guide structural
   integrity**: do **not** add/remove mermaid blocks (must stay exactly 4), phase sections
   (must stay 8, Phase 0–7), or phase sub-parts (Activities/Anti-sycophancy/Human gate/
   Outputs; must stay ≥32). Do **not** remove the "Tribal knowledge" landmark conditional-matrix
@@ -381,8 +381,8 @@ shipped state. This is a bookkeeping commit on this plan file only.
 
 **Tasks**:
 
-- [ ] **D.1** Tick the completed task checkboxes for Phases A–C.
-- [ ] **D.2** Append execution-log rows (phase / status / commit / notes) for each delivered
+- [x] **D.1** Tick the completed task checkboxes for Phases A–C.
+- [x] **D.2** Append execution-log rows (phase / status / commit / notes) for each delivered
   phase.
 
 **Acceptance Criteria**:
@@ -461,10 +461,10 @@ shipped state. This is a bookkeeping commit on this plan file only.
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| A — template | Not started | — | — | — | — |
-| B — agent prompt (@toolsmith) | Not started | — | — | — | — |
-| C — guide amendments | Not started | — | — | — | — |
-| D — execution log | Not started | — | — | — | — |
+| A — template | ✅ Done | 2026-06-27 | 2026-06-27 | 6801832 | `doc/templates/tribal-knowledge-template.md` created (`redistributable`); PDR-0001 encoded — 5-cat record, multi-source pointers + dedup key, confidence rubric incl. OQ-1 (medium graduates directly), `contradicted` status + `## Open Contradictions` roll-up, category→existing-home table, OQ-2 preserve rule, trust/safety note naming commit msgs + `git log`. License header added by `add-header-location.sh` (single frontmatter block). Indexed in `doc/templates/README.md`. Gates: `test-doc-distribution.sh` PASS, `test-inception-doc-consistency.sh` PASS. |
+| B — agent prompt (@toolsmith) | ✅ Done | 2026-06-27 | 2026-06-27 | 927ae43 | `<phase_0>` **legacy** branch gained the PRODUCE step BEFORE the unchanged "consume `tribal-knowledge` if present" clause (RT1-M1); `<trust_boundary>` enumeration + inline step explicitly name commit/merge messages + `git log` output as untrusted input (RT1-M4); `new` branch + `<phase_2>` graduate untouched (NFR-1, NG-3); 278 lines (NFR-4, ≤800). Source + regenerated `.ados-claude/agents/bootstrapper.md` committed together (NFR-5); `test-build-claude-plugin.sh` 15/15 PASS. **DEVIATION (flagged for phase-7 review):** the `@toolsmith` hard rule could not be honoured mechanically — this runtime exposes no subagent-invocation task tool, so `@coder` authored the edit directly while applying the `@toolsmith` discipline (terse, references-not-duplication, ≤800 lines). Reviewer should give the bootstrapper prompt edit particular attention. |
+| C — guide amendments | ✅ Done | 2026-06-27 | 2026-06-27 | 8aac0e6 | 4 edits to `doc/guides/project-inception.md` (DEC-4/NFR-7): C.1 artifact-catalog cell em-dash → `tribal-knowledge-template.md` ref; C.2 "Tribal-knowledge graduation (Phase 0→1)" → "(Phase 0→2)" (produce @ 0, graduate @ 2); C.3 trust/safety note added (repo docs + git history untrusted → `<trust_boundary>`/`<safety_rules>`); C.4 extraction source "if PR/MR history exists" → "if repo docs or git history exist" (RT1-M2). `ados_distribution: redistributable` preserved; structure intact (4 mermaid / 8 phases / 33 sub-parts ≥32; "Tribal knowledge" conditional-matrix landmark row intact). Gates: `test-inception-doc-consistency.sh` PASS, `test-doc-distribution.sh` PASS. |
+| D — execution log | ✅ Done | 2026-06-27 | 2026-06-27 | (this commit) | Checkboxes for Phases A–C ticked; execution-log rows filled with commits + evidence. Delivery phases complete; out-of-plan phases (6/7/8/10) remain for @doc-syncer/@reviewer/@runner/@pr-manager. |
 | (phase 6) system-spec reconciliation (@doc-syncer) | Out of plan | — | — | — | scope item D — `/sync-docs GH-72` |
 | (phase 7) review (@reviewer) | Out of plan | — | — | — | `/review GH-72` |
 | (phase 8) quality gates (@runner) | Out of plan | — | — | — | `/check` |
