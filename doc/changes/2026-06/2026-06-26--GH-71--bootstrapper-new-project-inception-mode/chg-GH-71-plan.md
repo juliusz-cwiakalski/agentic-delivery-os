@@ -316,8 +316,9 @@ work and satisfies AC1–AC17 at the structural level (D1 + D2).
     additive and isolated.
   - **No license headers** on any new section.
 
-- [ ] **A.3 — Verify legacy parity structurally (gate; two-tier method, REM-2/RT1-10).**
-  Before regenerating, the `@coder` confirms every legacy anchor tag opens and closes,
+- [x] **A.3 — Verify legacy parity structurally (gate; two-tier method, REM-2/RT1-10).**
+  — DONE: Tier A 8/8 frozen blocks byte-identical vs 0a1a288; Tier B shared blocks preserve
+  every baseline legacy line verbatim. See brief checklist evidence above. Before regenerating, the `@coder` confirms every legacy anchor tag opens and closes,
   then applies the **two-tier parity check vs `${BOOTSTRAPPER_BASELINE_SHA}`** (this is
   TC-STRUCT-003 — manual run here; bundled in Phase C thereafter):
   1. **Truly-frozen legacy blocks** — `<workflow_phases>`, `<persistent_state>`,
@@ -330,14 +331,16 @@ work and satisfies AC1–AC17 at the structural level (D1 + D2).
   A spec-compliant implementation passes both tiers. **Do not proceed if any frozen
   block drifted or any baseline shared-block legacy line was altered/removed.**
   *(Satisfies AC16/NFR-4/RSK-6.)*
-- [ ] **A.4 — Regenerate the Claude Code plugin (delegate execution to `@runner`).**
-  Run `scripts/build-claude-plugin.sh`; confirm `.ados-claude/agents/bootstrapper.md`
+- [x] **A.4 — Regenerate the Claude Code plugin (delegate execution to `@runner`).**
+  — DONE: `scripts/build-claude-plugin.sh` regenerated `.ados-claude/agents/bootstrapper.md`;
+  rebuild idempotent; CI-fresh confirmed in Phase E. Run `scripts/build-claude-plugin.sh`; confirm `.ados-claude/agents/bootstrapper.md`
   (and any other changed generated files) is regenerated. Verify freshness with
   `git diff --exit-code -- .ados-claude/` immediately after regeneration (it must be
   clean until staged). *(D2; RSK-7.)*
-- [ ] **A.5 — Commit source + generated together (delegate to `@committer`).** Stage
+- [x] **A.5 — Commit source + generated together (delegate to `@committer`).** Stage
   exactly `.opencode/agent/bootstrapper.md` and the regenerated `.ados-claude/**`
   files; create ONE Conventional Commit. Do not stage change artifacts or other files.
+  — DONE: commit `804c481`.
 
 **Acceptance Criteria**:
 
@@ -494,16 +497,18 @@ RSK-6 regression class (structural drift in the prompt).
     `desirability` absent; the git-ignored legacy path still named.
   - **Secrets prohibition** (TC-STRUCT-012): inception state section carries a
     secrets-prohibition constraint.
-- [ ] **C.2 — Run it against the new prompt and ensure it passes.** Execute
+- [x] **C.2 — Run it against the new prompt and ensure it passes.** Execute
   `bash scripts/.tests/test-bootstrapper-prompt-structure.sh`; fix any false positives
   (e.g., a scoping heuristic that mismatches `@toolsmith`'s final wording) until it
   exits 0. The fixes go to the test script, NOT back to alter the spec's WHAT.
-  *(Delegate execution to `@runner`.)*
-- [ ] **C.3 — Confirm CI pickup.** The script follows the `scripts/.tests/test-*.sh`
+  *(Delegate execution to `@runner`.)* — DONE: exits 0 ("0 warnings; 512 lines"); drift
+  self-test fails correctly (four-risk drop → fail; deleted closing tag → fail).
+- [x] **C.3 — Confirm CI pickup.** The script follows the `scripts/.tests/test-*.sh`
   convention and is auto-discovered alongside the other `test-*.sh` scripts; no
-  separate harness wiring is required.
-- [ ] **C.4 — Commit (delegate to `@committer`).** Stage exactly
-  `scripts/.tests/test-bootstrapper-prompt-structure.sh`.
+  separate harness wiring is required. — DONE: follows `test-*.sh` convention;
+  `test-build-claude-plugin.sh` runner discovers and would fail the suite if it errored.
+- [x] **C.4 — Commit (delegate to `@committer`).** Stage exactly
+  `scripts/.tests/test-bootstrapper-prompt-structure.sh`. — DONE: commit `fcb5a34`.
 
 **Acceptance Criteria**:
 
@@ -554,8 +559,9 @@ not a defect).
   source ships no live instance), not ghosts. Anti-sycophancy map, Phase 5 four-file
   set, and four-risk values all match the guide. No contradiction, no factual error,
   no ghost reference found.
-- [ ] **D.2 — If a concrete+blocking gap is found: amend surgically.** *(N/A — no gap
-  met the DEC-5 bar; D.3 applies.)*
+- [x] **D.2 — If a concrete+blocking gap is found: amend surgically.** *(N/A — no gap
+  met the DEC-5 bar; D.3 applies.)* — DONE: no amendment needed; correctly resolved as
+  no-op per D.1 probe.
 - [x] **D.3 — If NO concrete+blocking gap is found: record a deferred no-op.** No
   amendment; no commit. Record in the Execution Log: "No concrete+blocking guide gap
   found during implementation; per DEC-5 no amendment was made." Any clarity/
