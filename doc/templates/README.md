@@ -63,6 +63,7 @@ written into a project's `doc/inception/` workspace when inception runs.
 | `glossary-template.md` | Concise repo-relevant terminology reference |
 | `ubiquitous-language-template.md` | DDD ubiquitous language: bounded contexts, aggregates, domain events, commands |
 | `repo-analysis-template.md` | Legacy/existing-code reconnaissance: layout, conventions, debt, migration constraints |
+| `tribal-knowledge-template.md` | Legacy tribal-knowledge record: 5-category items (decision/convention/rejected-approach/workaround/domain-term) mined from repo docs + git history, graduation-ready for Phase 2 |
 | `inception-summary-template.md` | Synthesized inception outcome (decisions, assumptions, risks, next steps) for the knowledge base |
 
 (`north-star-template.md` and `documentation-profile-template.md`, also
