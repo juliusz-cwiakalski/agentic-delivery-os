@@ -152,7 +152,7 @@ This project exists to evolve and validate an AI-native delivery operating model
 
 - AI agent & contributor quick-reference: [AGENTS.md](AGENTS.md)
 - How to use the agents/commands: [doc/guides/opencode-agents-and-commands-guide.md](doc/guides/opencode-agents-and-commands-guide.md)
-- Change delivery lifecycle (10-phase workflow): [doc/guides/change-lifecycle.md](doc/guides/change-lifecycle.md)
+- Change delivery lifecycle (11-phase workflow): [doc/guides/change-lifecycle.md](doc/guides/change-lifecycle.md)
 - Change folder + naming convention (workItemRef, branches, files): [doc/guides/unified-change-convention-tracker-agnostic-specification.md](doc/guides/unified-change-convention-tracker-agnostic-specification.md)
 - Broader docs layout standard (some details may differ per repo): [doc/documentation-handbook.md](doc/documentation-handbook.md)
 - Tooling definitions (agents/commands): [.opencode/README.md](.opencode/README.md)

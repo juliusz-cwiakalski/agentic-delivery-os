@@ -9,7 +9,7 @@ Quick-reference for AI coding agents and human contributors working in this repo
 
 ## What this repo is
 
-Agentic Delivery OS is a spec-driven software delivery system: a team of AI agents and commands that turn a ticket into a reviewed, tested PR through a deterministic 10-phase workflow.
+Agentic Delivery OS is a spec-driven software delivery system: a team of AI agents and commands that turn a ticket into a reviewed, tested PR through a deterministic 11-phase workflow.
 
 The agents and their prompt definitions (`.opencode/agent/*.md`, `.opencode/command/*.md`) **are the product**. A degraded prompt degrades everything downstream — treat them with the same rigor as production code. The delivery process is used to deliver improvements to itself.
 
@@ -17,7 +17,7 @@ The agents and their prompt definitions (`.opencode/agent/*.md`, `.opencode/comm
 
 ## Delivery process
 
-Every change flows through 10 phases. `@pm` orchestrates; phases are gated but can be reopened when gaps are discovered.
+Every change flows through 11 phases. `@pm` orchestrates; phases are gated but can be reopened when gaps are discovered.
 
 | Phase | Agent | What happens |
 |-------|-------|--------------|
@@ -25,12 +25,13 @@ Every change flows through 10 phases. `@pm` orchestrates; phases are gated but c
 | 2. specification | `@spec-writer` | Create `chg-<ref>-spec.md` (problem, goals, AC) |
 | 3. test_planning | `@test-plan-writer` | Create `chg-<ref>-test-plan.md` (traceable to AC) |
 | 4. delivery_planning | `@plan-writer` | Create `chg-<ref>-plan.md` (phased tasks) |
-| 5. delivery | `@coder` | Execute plan phases, commit per phase |
-| 6. system_spec_update | `@doc-syncer` | Reconcile `doc/spec/**` with implementation |
-| 7. review_fix | `@reviewer` | Audit vs spec/plan; if FAIL → `@coder` remediates → re-review |
-| 8. quality_gates | `@runner` | Build/test/lint; if failures → `@fixer` → re-run |
-| 9. dod_check | `@pm` | Verify all AC met, all plan tasks done |
-| 10. pr_creation | `@pr-manager` | Create PR, assign to human, STOP |
+| 5. dor_check | `@readiness-reviewer` | Adversarially critique spec+test-plan+plan vs ticket before delivery (DoR gate) |
+| 6. delivery | `@coder` | Execute plan phases, commit per phase |
+| 7. system_spec_update | `@doc-syncer` | Reconcile `doc/spec/**` with implementation |
+| 8. review_fix | `@reviewer` | Audit vs spec/plan; if FAIL → `@coder` remediates → re-review |
+| 9. quality_gates | `@runner` | Build/test/lint; if failures → `@fixer` → re-run |
+| 10. dod_check | `@pm` | Verify all AC met, all plan tasks done |
+| 11. pr_creation | `@pr-manager` | Create PR, assign to human, STOP |
 
 Detail: [doc/guides/change-lifecycle.md](doc/guides/change-lifecycle.md)
 
@@ -57,6 +58,7 @@ Detail: [doc/guides/change-lifecycle.md](doc/guides/change-lifecycle.md)
 - `editor` — content rewrites and translations
 
 ### Verification
+- `readiness-reviewer` — adversarial Definition of Ready gate; critiques change artifacts before delivery
 - `review-feedback-applier` — classify and apply accepted review feedback from PR/MR
 - `reviewer` — review changes against spec, plan, code quality heuristics, and repo rules (local + remote modes)
 - `fixer` — reproduce failures and apply targeted fixes
@@ -86,6 +88,7 @@ Full definitions: `.opencode/agent/*.md` | Inventory: [.opencode/README.md](.ope
 | `/write-spec <ref>` | Generate change specification |
 | `/write-test-plan <ref>` | Generate test plan |
 | `/write-plan <ref>` | Generate implementation plan |
+| `/check-readiness` | Run the Definition of Ready gate for a change |
 | `/run-plan <ref>` | Execute plan phases |
 | `/review <ref>` | Review change vs spec/plan |
 | `/review-deep <ref>` | Deep review with stronger reasoning model |
@@ -104,7 +107,7 @@ Full definitions: `.opencode/command/*.md`
 
 ## Using the system
 
-**Autopilot** (recommended) — `@pm` orchestrates all 10 phases:
+**Autopilot** (recommended) — `@pm` orchestrates all 11 phases:
 
 ```
 @pm deliver change GH-456
@@ -114,7 +117,7 @@ Full definitions: `.opencode/command/*.md`
 
 ```
 /plan-change → /write-spec <ref> → /write-test-plan <ref> → /write-plan <ref>
-→ /run-plan <ref> → /sync-docs <ref> → /review <ref> → /check → /pr
+→ /check-readiness <ref> → /run-plan <ref> → /sync-docs <ref> → /review <ref> → /check → /pr
 ```
 
 Guide: [doc/guides/opencode-agents-and-commands-guide.md](doc/guides/opencode-agents-and-commands-guide.md)
@@ -288,7 +291,8 @@ scripts/add-header-location.sh doc/guides
 | Document | Description |
 |----------|-------------|
 | [.opencode/README.md](.opencode/README.md) | Agent and command inventory, naming conventions |
-| [doc/guides/change-lifecycle.md](doc/guides/change-lifecycle.md) | Change delivery lifecycle (10-phase workflow, detailed) |
+| [doc/guides/change-lifecycle.md](doc/guides/change-lifecycle.md) | Change delivery lifecycle (11-phase workflow, detailed) |
+| [doc/guides/definition-of-ready.md](doc/guides/definition-of-ready.md) | Definition of Ready gate (dor_check) — human-readable mirror |
 | [doc/guides/opencode-agents-and-commands-guide.md](doc/guides/opencode-agents-and-commands-guide.md) | How to use agents and commands (manual + autopilot) |
 | [doc/guides/unified-change-convention-tracker-agnostic-specification.md](doc/guides/unified-change-convention-tracker-agnostic-specification.md) | Change naming convention (workItemRef, folders, branches) |
 | [.ai/agent/pm-instructions.md](.ai/agent/pm-instructions.md) | PM tracker configuration (GitHub/Jira setup) |

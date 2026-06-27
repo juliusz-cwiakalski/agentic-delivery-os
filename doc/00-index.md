@@ -21,7 +21,7 @@ ados_distribution: redistributable
 | Document | Description |
 |----------|-------------|
 | [Changes](changes/) | Proposed and accepted changes (evolution log) |
-| [Change Lifecycle Guide](guides/change-lifecycle.md) | 10-phase delivery workflow |
+| [Change Lifecycle Guide](guides/change-lifecycle.md) | 11-phase delivery workflow |
 | [Change Convention](guides/unified-change-convention-tracker-agnostic-specification.md) | Naming, folders, branches |
 
 ## Guides

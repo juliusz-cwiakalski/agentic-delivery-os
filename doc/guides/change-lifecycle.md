@@ -53,31 +53,33 @@ flowchart TD
         A[1. clarify_scope<br/>@pm] --> B[2. specification<br/>@spec-writer]
         B --> C[3. test_planning<br/>@test-plan-writer]
         C --> D[4. delivery_planning<br/>@plan-writer]
+        D --> E[5. dor_check<br/>@readiness-reviewer]
     end
     
     subgraph "Implementation"
-        D --> E[5. delivery<br/>@coder]
-        E --> F[6. system_spec_update<br/>@doc-syncer]
+        E -->|READY| F[6. delivery<br/>@coder]
+        F --> G[7. system_spec_update<br/>@doc-syncer]
     end
     
     subgraph "Verification"
-        F --> G[7. review_fix<br/>@reviewer]
-        G --> H[8. quality_gates<br/>@runner]
-        H --> I[9. dod_check<br/>@pm]
+        G --> H[8. review_fix<br/>@reviewer]
+        H --> I[9. quality_gates<br/>@runner]
+        I --> J[10. dod_check<br/>@pm]
     end
     
     subgraph "Finalization"
-        I --> J[10. pr_creation<br/>@pr-manager]
-        J --> K((STOP<br/>Human Review))
+        J --> K[11. pr_creation<br/>@pr-manager]
+        K --> L((STOP<br/>Human Review))
     end
     
     %% Feedback loops - gaps discovered
     A -.->|gaps/questions| W((Wait for Human))
     W -.->|feedback received| A
-    G -.->|remediation needed| E
-    H -.->|fixes needed| E
-    I -.->|gaps found| E
-    I -.->|spec issues| B
+    E -.->|NOT_READY: reopen artifact phase| B
+    H -.->|remediation needed| F
+    I -.->|fixes needed| F
+    J -.->|gaps found| F
+    J -.->|spec issues| B
 ```
 
 **Legend**:
@@ -172,7 +174,30 @@ flowchart TD
 - `chg-<workItemRef>-plan.md` exists and is committed.
 - Plan is phased, check-listable, and aligns with the spec and test plan.
 
-### 5) delivery
+### 5) dor_check
+
+**Owner**: `@pm` delegates to `@readiness-reviewer`
+
+**Goal**: Adversarially critique the change's spec + test-plan + plan together against the source ticket **before** any code is written — the Definition of Ready gate. Catch gaps, contradictions, and unstated assumptions when they are cheap to fix. See [Definition of Ready](definition-of-ready.md).
+
+**Actions**:
+
+- Mark `delivery_planning` as completed and `dor_check` as started in `chg-<workItemRef>-pm-notes.yaml`.
+- `@pm` delegates to `@readiness-reviewer` with `workItemRef`.
+- `@readiness-reviewer` critiques spec + test-plan + plan vs the ticket under an adversarial stance and emits `READY` or `NOT_READY` (with per-facet findings and a suggested remediation target phase).
+- **On `NOT_READY`**: reopen the relevant artifact-creation phase (`specification`, `test_planning`, or `delivery_planning`) — **never `delivery`** — and re-delegate to the matching author agent; re-run `dor_check` until `READY` (max 3 iterations; escalate to human on stalemate).
+- **On a surfaced decision needing human input**: STOP and wait.
+- Hard gate by default; only an **explicit, recorded override** for a genuinely trivial change may bypass it (no silent skip). The override (`workItemRef`, triviality rationale, human approver, date) is recorded in `chg-<workItemRef>-pm-notes.yaml`.
+- Change-scoped decisions go to change docs; system-wide or precedent-setting decisions go to decision records via `@decision-advisor`.
+
+**Outcome**: A `READY` verdict (or a valid trivial override) recorded; the artifacts are validated as a consistent set against the ticket before delivery begins.
+
+**Exit criteria**:
+
+- `@readiness-reviewer` returns `READY` (or a valid trivial-change override is recorded).
+- `dor_check` marked completed in `chg-<workItemRef>-pm-notes.yaml`.
+
+### 6) delivery
 
 **Owner**: `@pm` delegates to `@coder`
 
@@ -194,7 +219,7 @@ flowchart TD
 - Plan tasks for implementation phases are complete with evidence (commits, tests, logs).
 - All implementation-related checkboxes in the plan are checked.
 
-### 6) system_spec_update
+### 7) system_spec_update
 
 **Owner**: `@pm` delegates to `@doc-syncer`
 
@@ -212,7 +237,7 @@ flowchart TD
 - System docs updated and committed.
 - No discrepancies between implementation and documented system state.
 
-### 7) review_fix
+### 8) review_fix
 
 **Owner**: `@pm` delegates to `@reviewer`, then `@coder` for fixes
 
@@ -234,7 +259,7 @@ flowchart TD
 - `@reviewer` returns `Status=PASS`.
 - No open remediation tasks in the plan.
 
-### 8) quality_gates
+### 9) quality_gates
 
 **Owner**: `@pm` delegates to `@runner`, then `@fixer` if needed
 
@@ -256,7 +281,7 @@ flowchart TD
 - Lint/format checks pass.
 - Any other repo-specific quality gates pass.
 
-### 9) dod_check
+### 10) dod_check
 
 **Owner**: `@pm`
 
@@ -279,7 +304,7 @@ flowchart TD
 - DoD satisfied.
 - `chg-<workItemRef>-pm-notes.yaml` updated with all phases completed.
 
-### 10) pr_creation
+### 11) pr_creation
 
 **Owner**: `@pm` delegates to `@pr-manager`
 
@@ -307,6 +332,7 @@ Phases are not strictly linear. If PM discovers incomplete work in a later phase
 
 | Discovery in... | Gap found | Action |
 |-----------------|-----------|--------|
+| `dor_check` | Artifacts not ready (`NOT_READY`) | Reopen `specification`, `test_planning`, or `delivery_planning` (never `delivery`); re-run gate until `READY` |
 | `dod_check` | Delivery plan task incomplete | Reopen `delivery`, delegate to `@coder` |
 | `dod_check` | AC not satisfied | Reopen `delivery` or `specification` as needed |
 | `quality_gates` | Test failure reveals missing implementation | Reopen `delivery`, delegate to `@fixer` or `@coder` |
@@ -331,6 +357,7 @@ phases:
   specification: { started: "2026-02-02T10:30:00Z", completed: "2026-02-02T11:00:00Z" }
   test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -353,12 +380,13 @@ notes: [] # { text, type, date }
 | 2. specification | `@spec-writer` | — |
 | 3. test_planning | `@test-plan-writer` | — |
 | 4. delivery_planning | `@plan-writer` | — |
-| 5. delivery | `@coder` | `@designer`, `@decision-advisor`, `@committer`, `@runner` |
-| 6. system_spec_update | `@doc-syncer` | — |
-| 7. review_fix | `@reviewer` | `@coder` |
-| 8. quality_gates | `@runner` | `@fixer` |
-| 9. dod_check | `@pm` | — |
-| 10. pr_creation | `@pr-manager` | — |
+| 5. dor_check | `@readiness-reviewer` | — |
+| 6. delivery | `@coder` | `@designer`, `@decision-advisor`, `@committer`, `@runner` |
+| 7. system_spec_update | `@doc-syncer` | — |
+| 8. review_fix | `@reviewer` | `@coder` |
+| 9. quality_gates | `@runner` | `@fixer` |
+| 10. dod_check | `@pm` | — |
+| 11. pr_creation | `@pr-manager` | — |
 
 ---
 

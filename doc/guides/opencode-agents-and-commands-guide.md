@@ -32,7 +32,7 @@ control) and **Autopilot** (for high-level delegation).
     * [Step 7: Finalize](#step-7-finalize)
   * [4. Workflow 2: Autopilot (Product Manager Orchestration)](#4-workflow-2-autopilot-product-manager-orchestration)
     * [Step 1: High-Level Handoff](#step-1-high-level-handoff)
-    * [Step 2: PM Orchestration (10 Phases)](#step-2-pm-orchestration-10-phases)
+    * [Step 2: PM Orchestration (11 Phases)](#step-2-pm-orchestration-11-phases)
     * [Step 3: User Acceptance](#step-3-user-acceptance)
   * [5. Best Practices](#5-best-practices)
   * [6. Related Documentation](#6-related-documentation)
@@ -143,6 +143,8 @@ _Output_: `chg-<ref>-test-plan.md` and `chg-<ref>-plan.md`
 
 > **Note**: The order is spec → test plan → implementation plan. This ensures the test plan informs implementation priorities.
 
+> **Readiness gate**: Before implementing, run `/check-readiness <ref>` (`@readiness-reviewer`) to adversarially critique the spec + test-plan + plan against the ticket. See [Definition of Ready](definition-of-ready.md).
+
 ### Step 4: Implement (Phased Loop)
 
 Execute the plan one phase at a time.
@@ -219,14 +221,14 @@ Or with a Jira ticket:
 @pm deliver change PDEV-456
 ```
 
-> **Note:** Requires MCP integration with your issue tracker (GitHub or Jira) configured in `.ai/agent/pm-instructions.md`. The PM agent will fetch ticket details, orchestrate all 10 phases, and create a PR.
+> **Note:** Requires MCP integration with your issue tracker (GitHub or Jira) configured in `.ai/agent/pm-instructions.md`. The PM agent will fetch ticket details, orchestrate all 11 phases, and create a PR.
 
 **Free-form request (alternative):**
 
 > **User**: "Agent, please act as @pm. I want to add a new 'Dark Mode' feature to the settings page. It
 > should persist in the user profile."
 
-### Step 2: PM Orchestration (10 Phases)
+### Step 2: PM Orchestration (11 Phases)
 
 The `@pm` orchestrates these phases (see `doc/guides/change-lifecycle.md` for details):
 
@@ -234,12 +236,13 @@ The `@pm` orchestrates these phases (see `doc/guides/change-lifecycle.md` for de
 2. **specification** — Delegate to `@spec-writer` to create `chg-<ref>-spec.md`
 3. **test_planning** — Delegate to `@test-plan-writer` to create `chg-<ref>-test-plan.md`
 4. **delivery_planning** — Delegate to `@plan-writer` to create `chg-<ref>-plan.md`
-5. **delivery** — Invoke `@coder` for implementation (via `/run-plan`)
-6. **system_spec_update** — Delegate to `@doc-syncer` to reconcile system docs
-7. **review_fix** — Run `@reviewer`; if FAIL, fix and repeat until PASS
-8. **quality_gates** — Run builds/tests via `@runner`; fix via `@fixer` if needed
-9. **dod_check** — PM verifies all phases complete and all AC satisfied
-10. **pr_creation** — Create PR/MR via `@pr-manager`, assign to human, STOP
+5. **dor_check** — Delegate to `@readiness-reviewer`; hard DoR gate before delivery; reopen artifact phases on `NOT_READY`
+6. **delivery** — Invoke `@coder` for implementation (via `/run-plan`)
+7. **system_spec_update** — Delegate to `@doc-syncer` to reconcile system docs
+8. **review_fix** — Run `@reviewer`; if FAIL, fix and repeat until PASS
+9. **quality_gates** — Run builds/tests via `@runner`; fix via `@fixer` if needed
+10. **dod_check** — PM verifies all phases complete and all AC satisfied
+11. **pr_creation** — Create PR/MR via `@pr-manager`, assign to human, STOP
 
 > **Note**: Phases can be reopened. If PM discovers incomplete work in a later phase, PM reopens the relevant phase.
 
