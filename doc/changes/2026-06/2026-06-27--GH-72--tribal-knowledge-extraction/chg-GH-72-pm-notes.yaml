@@ -14,9 +14,9 @@ phases:
   specification: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   test_planning: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   delivery_planning: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
-  delivery: { started: "2026-06-27T00:00:00Z", completed: null }
-  system_spec_update: { started: null, completed: null }
-  review_fix: { started: null, completed: null }
+  delivery: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  system_spec_update: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  review_fix: { started: "2026-06-27T00:00:00Z", completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -41,6 +41,12 @@ open_questions: []
 blockers: []
 
 notes:
+  - text: "DELIVERY COMPLETED (phases A-D, @coder + @toolsmith). Commits: 6801832 (Phase A template), 927ae43 (Phase B agent prompt), 8aac0e6 (Phase C guide amendments), b1178bc (Phase D execution log), 2d9b541 (@toolsmith refinement of Phase B). All CI gates green: test-doc-distribution (73 docs, EXIT=0), build-claude-plugin (PLUGIN_FRESH), test-build-claude-plugin (15/15), test-inception-doc-consistency (EXIT=0), test-install (49/49), test-uninstall (30/30). bootstrapper.md 282 lines (≤800). Consume/graduate wiring + new branch confirmed untouched. PRODUCE in legacy branch only, before consume (RT1-M1). <trust_boundary> names git history/commit messages (RT1-M4). doc/spec/ untouched (phase 6 @doc-syncer next)."
+    type: info
+    date: "2026-06-27"
+  - text: "Retro (governance deviation, self-corrected): @coder hand-edited .opencode/agent/bootstrapper.md directly in Phase B (commit 927ae43) instead of delegating to @toolsmith — it lacked the task tool to spawn @toolsmith as a subagent. The edit quality was actually high (RT1 invariants honored, terse), but the HARD RULE (AGENTS.md + user instruction) was violated. PM corrected by delegating to @toolsmith to REVIEW+REFINE+take-ownership: @toolsmith refined (commit 2d9b541 — split the dense legacy bullet into scannable nested sub-bullets, made PRODUCE-before-consume explicit), regen plugin, all gates green. LESSON: the @coder subagent cannot spawn @toolsmith (no task tool in subagent runtime). For future agent-prompt changes, PM should delegate the agent-prompt edit to @toolsmith DIRECTLY (not via @coder), OR explicitly instruct @coder to return control to PM for the @toolsmith handoff. The 'via @coder → @toolsmith' plan phrasing implies a subagent chain that the runtime does not support."
+    type: retro
+    date: "2026-06-27"
   - text: "Context sources read: .ai/local/inception/README.md (reading guide), full-inception-bootstrap-process.md §4 (legacy differences), inception-process-diagrams.md Diagram 3 (new-vs-legacy), .opencode/agent/bootstrapper.md (shipped agent — has <trust_boundary>, <safety_rules>, <write_allowlist> already; Phase 0 legacy 'consume tribal-knowledge if present'; Phase 2 legacy 'graduate consumed tribal knowledge to permanent homes'), doc/guides/project-inception.md (human authority — Phase 0/Phase 2 text, 10 tribal-knowledge mentions, NO template, NO trust/safety articulation), doc/spec/features/feature-bootstrapper.md (system spec — documents consume+graduate, silent on produce), doc/templates/repo-analysis-template.md (structural sibling reference), doc/templates/inception-state-template.yaml (already has tribal_knowledge artifact entry → path fixed)."
     type: info
     date: "2026-06-27"
