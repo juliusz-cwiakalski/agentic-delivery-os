@@ -20,7 +20,7 @@ phases:
   review_fix: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   quality_gates: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   dod_check: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
-  pr_creation: { started: "2026-06-27T00:00:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/84" }
 
 decisions:
   - text: "DEC-1 (single critic): one @readiness-reviewer agent with a structured multi-facet DoR checklist, NOT multiple specialized critics (@spec-critic/@plan-critic/@test-plan-critic). Driver: the highest-value check is cross-artifact consistency (do plan/test-plan cover every AC?), which needs one holistic view; siloed critics are worst at detecting cross-artifact gaps. Matches the unified-@reviewer precedent (GH-36 merged code-reviewer into @reviewer for the same reason). Reversible — a facet can split out later."
