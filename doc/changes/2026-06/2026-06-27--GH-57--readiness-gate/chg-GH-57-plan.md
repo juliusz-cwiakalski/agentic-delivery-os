@@ -3,7 +3,7 @@ ados_distribution: project-generated
 id: chg-GH-57-readiness-gate
 status: Proposed
 created: 2026-06-27T00:00:00Z
-last_updated: 2026-06-27T00:00:00Z
+last_updated: 2026-06-28T00:00:00Z
 owners: ["Juliusz Ćwiąkalski"]
 service: delivery-lifecycle
 labels: ["readiness-gate", "definition-of-ready", "dor", "agent", "lifecycle", "meta"]
@@ -62,11 +62,14 @@ is **out of this plan** — delivered by `@doc-syncer` at phase 7 (DEC, §7.2 OU
 
 **Resolved open questions (no blockers — see spec §14):**
 
-- **OQ-1** (do the artifact-creator agents need a re-invocation note?) → RESOLVED (PM, R1):
-  **NO** edits to `@spec-writer`/`@test-plan-writer`/`@plan-writer`. The DoR reopening is
-  a **PM orchestration** concern expressed in `@pm`'s workflow + the lifecycle
-  phase-reopening table; author agents simply respond to whatever `@pm` delegates. Their
-  own behavior is unchanged.
+- **OQ-1** (do the artifact-creator agents need a re-invocation note?) → RESOLVED (red-team
+  **RT1-MAJOR-03**, spec §14 OQ-1): **YES** — a **one-line DoR cross-reference note** was
+  added to `@spec-writer`/`@test-plan-writer`/`@plan-writer` via `@toolsmith` (Phase B.4),
+  stating their output may be returned for revision by the DoR gate (`dor_check`, phase 5).
+  This **reverses** the earlier "no edits" stance (authoritative: spec §14 OQ-1 /
+  RT1-MAJOR-03). The DoR reopening itself remains a **PM orchestration** concern in `@pm`'s
+  workflow + the lifecycle phase-reopening table; the author-agent note only signals that
+  revision may occur — no deeper behavioral change to those agents.
 
 **Hard governance rules encoded into the phases (from AGENTS.md + the GH-72 retro):**
 
@@ -136,8 +139,11 @@ is **out of this plan** — delivered by `@doc-syncer` at phase 7 (DEC, §7.2 OU
 - Repo-local `.ai/agent/readiness-instructions.md` DoR extensions → deferred (YAGNI).
 - Authoring ADR-0002 content at "plan time" → produced via the decision workflow
   (`@decision-advisor`) in Phase A; not hand-authored by `@coder`.
-- Editing the three artifact-creator agents (`@spec-writer`/`@test-plan-writer`/
-  `@plan-writer`) → OQ-1 resolved: **no** edits (reopening is a PM/lifecycle concern).
+- Substantive behavioral edits to the three artifact-creator agents
+  (`@spec-writer`/`@test-plan-writer`/`@plan-writer`) → out of scope. **Note:** OQ-1 was
+  **reversed** by red-team RT1-MAJOR-03 (spec §14) — a one-line DoR cross-reference note WAS
+  added to each author agent via `@toolsmith` (Phase B.4); only deeper behavioral changes
+  remain out of scope. Reopening itself stays a PM/lifecycle concern.
 
 ### Constraints
 
@@ -222,7 +228,7 @@ present + `status: Proposed`**.
 
 **Tasks**:
 
-- [ ] **A.1** `@decision-advisor` authors
+- [x] **A.1** `@decision-advisor` authors
   `doc/decisions/ADR-0002-readiness-gate-definition-of-ready.md` capturing: the precedent-
   setting workflow-structure change (new phase + agent + command); DEC-1…DEC-8 (single
   critic; new agent not a `@reviewer` mode; `claude.model: opus` via config; hard-gate +
@@ -230,11 +236,11 @@ present + `status: Proposed`**.
   phase 5; the `@toolsmith` delegation rule). Follow the ADR-0001 precedent for delivery-
   workflow structural changes. **Front matter MUST set `status: Proposed`, `decision_date: null`,
   and `links.related_changes: ["GH-57"]`** (spec Appendix D).
-- [ ] **A.2** `@coder` adds the `ADR-0002` row to `doc/decisions/00-index.md` (table columns:
+- [x] **A.2** `@coder` adds the `ADR-0002` row to `doc/decisions/00-index.md` (table columns:
   `ID | Type | Title | Status | Date | Owners`), matching the ADR-0001 row style; **Status =
   Proposed**, **Date = 2026-06-27** (creation date, not acceptance). Preserve the existing
   `ados_distribution: project-generated` marker.
-- [ ] **A.3** *(Should)* Confirm the spec front matter already declares
+- [x] **A.3** *(Should)* Confirm the spec front matter already declares
   `links.decisions: ["ADR-0002"]` (it does) and ADR-0002's front matter declares
   `links.related_changes: ["GH-57"]` — bidirectional linkage per `decision-records-management.md`.
 
@@ -283,7 +289,7 @@ together (NFR-5).
 
 **Tasks**:
 
-- [ ] **B.1** `@toolsmith` authors `.opencode/agent/readiness-reviewer.md`, mirroring the
+- [x] **B.1** `@toolsmith` authors `.opencode/agent/readiness-reviewer.md`, mirroring the
   `@reviewer` house style (Appendix C): frontmatter keys incl. **`claude: model: opus`**
   (NFR-3; model in config, **not** the body), `mode: all`, a `<role>` with mission + `<non_goals>`
   (NFR-4). The prompt body carries:
@@ -307,11 +313,11 @@ together (NFR-5).
   - **Read-only safety rules** — critiques artifacts + emits verdict/record; does not modify
     source code and does not auto-merge/approve (mirrors `@reviewer`, §21).
   - **Reference the DoR guide** for human-readable detail — duplicate no prose (NFR-10).
-- [ ] **B.2** `@toolsmith` authors `.opencode/command/check-readiness.md` — the `/check-readiness`
+- [x] **B.2** `@toolsmith` authors `.opencode/command/check-readiness.md` — the `/check-readiness`
   command, the DoR pair of `/review` (Appendix B). It invokes the `dor_check` gate on a
   `workItemRef`, loading spec + test-plan + plan + the source ticket, and surfaces the verdict
   + findings. Mirrors `/review`'s structure/flags.
-- [ ] **B.3** `@toolsmith` edits `.opencode/agent/pm.md`:
+- [x] **B.3** `@toolsmith` edits `.opencode/agent/pm.md`:
   - Add the **`dor_check` step** between `delivery_planning` and `delivery` — `@pm` delegates
     to `@readiness-reviewer`, consumes the verdict, and proceeds to `delivery` on `READY`
     (F-2, AC2).
@@ -324,14 +330,14 @@ together (NFR-5).
   - Add the **decision-capture routing + human pause** — system-wide → `@decision-advisor` →
     decision record; needs-human-input → STOP and wait (F-5, AC5, AC7).
   - Add **`phases.dor_check`** to the PM-notes phase map structure (DM-1).
-- [ ] **B.4** `@toolsmith` adds a one-line DoR cross-reference note to `@spec-writer`,
+- [x] **B.4** `@toolsmith` adds a one-line DoR cross-reference note to `@spec-writer`,
   `@test-plan-writer`, and `@plan-writer`
   (`.opencode/agent/{spec-writer,test-plan-writer,plan-writer}.md`) stating their output may be
   returned for revision by the DoR gate (`dor_check`, phase 5). Authored via `@toolsmith` (PM
   delegates directly; `@coder` does **not** touch `.opencode/agent/**`). Regenerate
   `.ados-claude/` and commit source + generated together (RT1-MAJOR-03 — makes AC8 literally
   true; supersedes the earlier OQ-1 "no edits" stance).
-- [ ] **B.5** Regenerate the Claude Code plugin: `scripts/build-claude-plugin.sh`, then stage
+- [x] **B.5** Regenerate the Claude Code plugin: `scripts/build-claude-plugin.sh`, then stage
   the `.ados-claude/**` counterparts (new agent + command; modified pm + the three author-agent
   notes) together with the `.opencode/` sources in one commit (NFR-5).
 
@@ -400,19 +406,19 @@ apply.
 
 **Tasks**:
 
-- [ ] **C.1** Author `doc/guides/definition-of-ready.md` mirroring the shipped prompt's facet
+- [x] **C.1** Author `doc/guides/definition-of-ready.md` mirroring the shipped prompt's facet
   set (DM-3): spec completeness vs ticket; AC clarity/testability/non-overlap; plan coverage of
   all requirements + all AC; test-plan traceability to every AC; cross-artifact consistency;
   decision capture in the right place.
-- [ ] **C.2** **State the prompt is authoritative** at the top: the `@readiness-reviewer` prompt
+- [x] **C.2** **State the prompt is authoritative** at the top: the `@readiness-reviewer` prompt
   (`.opencode/agent/readiness-reviewer.md`) is the single source of truth; this guide is a
   human-readable mirror; 0 contradictions between prompt and mirror (NFR-2).
-- [ ] **C.3** Declare `ados_distribution: redistributable` inside the **single** frontmatter
+- [x] **C.3** Declare `ados_distribution: redistributable` inside the **single** frontmatter
   block (AGENTS.md `ados_distribution` rules — never a second `---` block; a second block makes
   `test-doc-distribution.sh`'s `get_marker()` return "missing"). **License-header note:** `@coder`
   writes the frontmatter; the **script** `scripts/add-header-location.sh` adds the license
   header lines (AGENTS.md: "AI agents must never add license headers").
-- [ ] **C.4** Document the DoR/DoD pairing (Appendix B): `dor_check` ↔ `@readiness-reviewer` ↔
+- [x] **C.4** Document the DoR/DoD pairing (Appendix B): `dor_check` ↔ `@readiness-reviewer` ↔
   `/check-readiness` ↔ `definition-of-ready.md` (DoR, before delivery) is the structural pair of
   `dod_check` ↔ `@reviewer` ↔ `/review` ↔ inline-in-change-lifecycle (DoD, before PR). Note #49
   as a future mechanical complement (not a dependency; DEC-6).
@@ -455,21 +461,21 @@ phase map) + reference the DoR guide. The guide is a doc; the `@toolsmith` hard 
 
 **Tasks**:
 
-- [ ] **D.1** Update the **mermaid diagram** to insert `dor_check (5, @readiness-reviewer)`
+- [x] **D.1** Update the **mermaid diagram** to insert `dor_check (5, @readiness-reviewer)`
   between `delivery_planning (4)` and `delivery (6, @coder)`, with `READY → delivery` and
   `NOT_READY → reopen an artifact phase` branches; renumber delivery…pr_creation to 6…11.
-- [ ] **D.2** Update the **agent-responsibility table**: add the `dor_check` row (phase 5,
+- [x] **D.2** Update the **agent-responsibility table**: add the `dor_check` row (phase 5,
   `@readiness-reviewer`, "Review all artifacts together against the source ticket; emit a
   READY/NOT_READY verdict with per-facet findings"). Renumber subsequent rows to 6–11. **Keep
   `@reviewer` at the DoD row (now phase 8) unchanged in role.**
-- [ ] **D.3** Update the **phase-reopening table** to add: a `dor_check` gap reopens
+- [x] **D.3** Update the **phase-reopening table** to add: a `dor_check` gap reopens
   `specification` / `test_planning` / `delivery_planning` — **never** `delivery` (F-4, AC4,
   RSK-8).
-- [ ] **D.4** Update the **PM-notes phase map** description (DM-1): `dor_check` sits between
+- [x] **D.4** Update the **PM-notes phase map** description (DM-1): `dor_check` sits between
   `delivery_planning` and `delivery`.
-- [ ] **D.5** **Reference the DoR guide** — link `doc/guides/definition-of-ready.md` from the
+- [x] **D.5** **Reference the DoR guide** — link `doc/guides/definition-of-ready.md` from the
   `dor_check` phase description (and note the prompt is authoritative).
-- [ ] **D.6** Preserve `ados_distribution: redistributable` and verify the renumbering is
+- [x] **D.6** Preserve `ados_distribution: redistributable` and verify the renumbering is
   complete inside this file (the cross-file sweep is Phase F).
 
 **Acceptance Criteria**:
@@ -513,20 +519,20 @@ docs/config, not agent/command definitions; the `@toolsmith` hard rule does **no
 
 **Tasks**:
 
-- [ ] **E.1** `AGENTS.md` — **phase table**: renumber to 11 phases and add the `dor_check`
+- [x] **E.1** `AGENTS.md` — **phase table**: renumber to 11 phases and add the `dor_check`
   row (phase 5, `@readiness-reviewer`, "Review all artifacts against the source ticket; emit a
   READY/NOT_READY verdict; reopen an artifact phase on NOT_READY"). Renumber delivery…pr_creation
   to 6…11.
-- [ ] **E.2** `AGENTS.md` — **agent table** (under "Agent team"): add `readiness-reviewer` —
+- [x] **E.2** `AGENTS.md` — **agent table** (under "Agent team"): add `readiness-reviewer` —
   "Definition of Ready gate — adversarial review of artifacts vs ticket before delivery".
-- [ ] **E.3** `AGENTS.md` — **command table**: add `/check-readiness` — "Run the Definition of
+- [x] **E.3** `AGENTS.md` — **command table**: add `/check-readiness` — "Run the Definition of
   Ready gate (review artifacts vs ticket before delivery)".
-- [ ] **E.4** `AGENTS.md` — **"Using the system" manual sequence**: insert `→ /check-readiness
+- [x] **E.4** `AGENTS.md` — **"Using the system" manual sequence**: insert `→ /check-readiness
   <ref>` between `/write-plan <ref>` and `/run-plan <ref>` (mirrors the DoR/DoD pairing in
   Appendix B).
-- [ ] **E.5** `.opencode/README.md` — add `readiness-reviewer` to the agent inventory and
+- [x] **E.5** `.opencode/README.md` — add `readiness-reviewer` to the agent inventory and
   `/check-readiness` to the command inventory, matching the sibling entries' style.
-- [ ] **E.6** Review `.ai/agent/pm-instructions.md`: **add a `dor_check`/planning transition
+- [x] **E.6** Review `.ai/agent/pm-instructions.md`: **add a `dor_check`/planning transition
   only if it enumerates phase transitions.** If it does not enumerate transitions (config-only
   for tracker access), make no edit and note that in the execution log (spec §7.1(F), §16).
 
@@ -569,7 +575,7 @@ gates). Note: if a stale reference is found inside an `.opencode/agent|command` 
 
 **Tasks**:
 
-- [ ] **F.1** Run the **repo-wide grep sweep** for stale 10-phase / old-phase-5 references
+- [x] **F.1** Run the **repo-wide grep sweep** for stale 10-phase / old-phase-5 references
   (excluding `doc/changes/**`, `.ados-claude/**`, `.git/**`) — target **0 stale** references
   (e.g., no "phase 5 = delivery", no stray "10-phase", no `dod_check` still labeled phase 9 /
   `pr_creation` phase 10). Total phases == 11 everywhere (NFR-1). The sweep is **repo-wide, NOT
@@ -581,18 +587,22 @@ gates). Note: if a stale reference is found inside an `.opencode/agent|command` 
   `doc/spec/features/feature-bootstrapper.md`, `doc/spec/features/feature-onboarding-guide.md`,
   and `.ai/agent/decision-instructions.md`. Also hunt "step 10"/"steps 1-10" phrasing in
   `.opencode/agent/pm.md`.
-- [ ] **F.2** Fix every stale reference found. **Governance check:** any fix INSIDE
+- [x] **F.2** Fix every stale reference found. **Governance check:** any fix INSIDE
   `.opencode/agent/pm.md` (e.g., "step 10"/"steps 1-10") is **re-delegated to `@toolsmith`**
   and `scripts/build-claude-plugin.sh` is re-run; `@coder` does **not** hand-edit
   `.opencode/agent/**`. All other fixes (`README.md`, `doc/00-index.md`, `doc/guides/**`,
   `doc/spec/features/**`, `.ai/agent/decision-instructions.md`, `AGENTS.md`,
   `.opencode/README.md`) are `@coder` (RT1-MAJOR-01).
-- [ ] **F.3** Confirm the DoR guide + the renumbered lifecycle guide pass the doc-distribution
+- [x] **F.3** Confirm the DoR guide + the renumbered lifecycle guide pass the doc-distribution
   guard: `bash scripts/.tests/test-doc-distribution.sh` (NFR-6).
-- [ ] **F.4** Confirm plugin freshness: `bash scripts/.tests/test-build-claude-plugin.sh`
+- [x] **F.4** Confirm plugin freshness: `bash scripts/.tests/test-build-claude-plugin.sh`
   (source + generated committed together; NFR-5) and verify the freshness marker
   (`PLUGIN_FRESH` / no stale `.ados-claude`).
-- [ ] **F.5** Confirm `@reviewer` is unchanged in role and now sits at phase 8; confirm
+  — **DONE in Phase H remediation**: regenerated `.ados-claude/` (readiness-reviewer.md +
+  skills/check-readiness/ + refreshed pm/spec-writer/test-plan-writer/plan-writer) committed
+  fresh; added `test_committed_plugin_matches_fresh_build` drift assertion (16/16 pass),
+  so committed-vs-generated staleness now fails CI (review findings #1 + #2, NFR-5).
+- [x] **F.5** Confirm `@reviewer` is unchanged in role and now sits at phase 8; confirm
   `@readiness-reviewer` is a distinct agent/invocation (NFR-9).
 
 **Acceptance Criteria**:
@@ -630,10 +640,10 @@ pm-notes phase map.
 
 **Tasks**:
 
-- [ ] **G.1** Tick the completed task checkboxes for Phases A–F.
-- [ ] **G.2** Append execution-log rows (phase / status / commit / notes) for each delivered
+- [x] **G.1** Tick the completed task checkboxes for Phases A–F.
+- [x] **G.2** Append execution-log rows (phase / status / commit / notes) for each delivered
   phase.
-- [ ] **G.3** Update `chg-GH-57-pm-notes.yaml` `phases` map: mark `delivery_planning`/`delivery`
+- [x] **G.3** Update `chg-GH-57-pm-notes.yaml` `phases` map: mark `delivery_planning`/`delivery`
   (and intermediate phases) per actual delivery progress; the new `phases.dor_check` entry
   introduced in Phase B is now part of the map (DM-1).
 
@@ -653,6 +663,89 @@ pm-notes phase map.
 **No-op escape**: if the log is already current, skip.
 
 **Completion signal**: `docs(change): GH-57 execution log + pm-notes phases`
+
+---
+
+### Phase H: Code Review Remediation (Iteration 1)
+
+**Goal**: Resolve the 7 findings from the phase-8 review (iteration 1) recorded in
+`code-review/findings-iter-1.json` + `code-review/review-iter-1.md`. The blocker is finding #1:
+the committed `.ados-claude/` plugin is stale/missing the DoR gate, so the change ships broken on
+the Claude Code surface. This phase is appended per the review protocol; it does not merge into a
+prior phase. Source `.opencode/` + regenerated `.ados-claude/` committed together.
+
+**Delegate**: `@toolsmith` for any `.opencode/agent|command` edits; `@coder` for the bookkeeping
+(plan/pm-notes) and any test-suite addition; `@runner`/`@fixer` for gate verification.
+
+**Tasks**:
+
+- [x] **H.1** (Finding #1 — CRITICAL) Regenerate and commit the generated plugin so it is
+  byte-fresh with the committed `.opencode/` sources: run `bash scripts/build-claude-plugin.sh`,
+  then `git add .ados-claude/ .opencode/` and commit in ONE commit (NFR-5). Verify, after commit,
+  that the committed `agents/pm.md` shows `5. **dor_check**` and `<step id="5">Definition of Ready
+  gate (phase 5: dor_check)`; that `agents/readiness-reviewer.md` and `skills/check-readiness/`
+  are tracked; and that a fresh build `diff -r` against the committed `.ados-claude/` is empty.
+- [x] **H.2** (Finding #3) Execute Phase G retroactively: tick the Phase A–G task checkboxes that
+  were delivered (A.1–G.3), fill the Execution Log rows with status `Done` + the commit SHA per
+  phase (f7678bb, 5257098, bd8f7ac2, 7291199e, edf87fc), and update the plan frontmatter
+  `last_updated`. If Phase G had genuinely not run, tick only what is true and leave the rest open
+  with a note.
+- [x] **H.3** (Finding #4) Add `dor_check: { started, completed }` to the `phases:` map in
+  `chg-GH-57-pm-notes.yaml` between `delivery_planning` and `delivery` (DM-1). Reconcile the
+  remaining phase timestamps with the actual delivered state (today `delivery`/`system_spec_update`
+  are marked completed while `review_fix` is started-not-completed — reflect reality).
+- [x] **H.4** (Finding #5) Reconcile the stale OQ-1 narrative in this plan: update the "Resolved
+  open questions" text (lines ~65–69) and the Out-of-Scope bullet (~139–140) to match the
+  RT1-MAJOR-03 reversal (one-line DoR cross-reference note added to the three author agents via
+  `@toolsmith`), pointing at spec §14 / Phase B.4 as authoritative. Remove the "NO edits" claim.
+- [x] **H.5** (Finding #2) Add a CI test case to `scripts/.tests/test-build-claude-plugin.sh` that
+  builds into a temp dir and `diff -r`s the fresh build against the committed `.ados-claude/`,
+  failing on any difference (so committed source-vs-generated drift is caught — the control that
+  would have prevented finding #1). Coordinate with `@toolsmith` if the test lives under a
+  `@toolsmith`-owned path; otherwise `@coder` adds the case.
+- [x] **H.6** (Finding #6) Resolved implicitly by H.1 — once the regenerated plugin is committed
+  with its source batch, the working tree is clean. Verify `git status --porcelain` is empty
+  after H.1.
+- [x] **H.7** (Finding #7 — NIT) Confirm the `check-readiness.md` command `claude.model: sonnet`
+  vs `readiness-reviewer.md` `claude.model: opus` split is intentional by checking the `/review`
+  sibling command's pattern; add a one-line clarifying comment if the wrapper-on-cheaper /
+  agent-on-opus pattern is confirmed, or align if it is not.
+  — **CONFIRMED intentional & consistent**: `/review` command is `claude.model: sonnet` while
+  `@reviewer` agent is `opus` — the identical wrapper-on-sonnet / agent-on-opus split. No change
+  needed; the cheaper command delegates heavy reasoning to the opus agent.
+
+**Acceptance Criteria**:
+
+- Must: committed `.ados-claude/` is byte-fresh vs a fresh `build-claude-plugin.sh` run; the DoR
+  gate exists in the committed plugin (`readiness-reviewer.md`, `skills/check-readiness/`, 11-phase
+  `pm.md`) (**NFR-5**, **AC2/AC8**).
+- Must: plan Execution Log + checkboxes + pm-notes `phases` map reflect the actually-delivered
+  state incl. `dor_check` (**DM-1**).
+- Must: no internal contradiction between this plan's OQ-1 text and spec §14 / Phase B.4.
+- Must: `test-build-claude-plugin.sh` now FAILS when committed `.ados-claude/` drifts from a fresh
+  build (finding #2 control).
+- Must: working tree clean after the remediation commit.
+- Should: `test-doc-distribution.sh` and the renumbering sweep remain green (no regression).
+
+**Files and modules**:
+
+- `.ados-claude/**` (regenerated + committed — finding #1, #6)
+- `doc/changes/2026-06/2026-06-27--GH-57--readiness-gate/chg-GH-57-plan.md` (execution log +
+  checkboxes + OQ-1 text — findings #3, #5)
+- `doc/changes/2026-06/2026-06-27--GH-57--readiness-gate/chg-GH-57-pm-notes.yaml` (phases map —
+  finding #4)
+- `scripts/.tests/test-build-claude-plugin.sh` (committed-drift test case — finding #2)
+- `.opencode/command/check-readiness.md` (optional comment — finding #7, via `@toolsmith`)
+
+**Tests**:
+
+- `bash scripts/.tests/test-build-claude-plugin.sh` — PASS (and the new drift case must catch
+  committed staleness).
+- `bash scripts/.tests/test-doc-distribution.sh` — PASS (no regression).
+- Fresh-build vs committed `.ados-claude/` `diff -r` — empty.
+- `git status --porcelain` — empty after the remediation commit.
+
+**Completion signal**: `fix(gh-57): regenerate .ados-claude DoR counterparts + close out plan/pm-notes (review iter 1)`
 
 ---
 
@@ -724,7 +817,7 @@ pm-notes phase map.
 
 | Phase | Version | Date | Changes |
 |-------|---------|------|---------|
-| _(empty — no phase-level revisions yet; this is the initial plan v1.0)_ | | | |
+| H | 1.0 | 2026-06-28 | Appended "Phase H: Code Review Remediation (Iteration 1)" by @reviewer after phase-8 review iteration 1 returned FAIL (1 critical / 3 major / 2 minor / 1 nit). Blocker: committed `.ados-claude/` stale/missing DoR gate (NFR-5). See `code-review/findings-iter-1.json`. |
 
 ## Plan Revision Log
 
@@ -736,13 +829,14 @@ pm-notes phase map.
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| A — decision record (@decision-advisor + @coder) | Pending | — | — | — | ADR-0002 (Proposed) + 00-index.md row. |
-| B — agent/command/PM tooling (PM→@toolsmith) | Pending | — | — | — | readiness-reviewer.md + check-readiness.md + pm.md; regenerate `.ados-claude/`. |
-| C — DoR mirror guide (@coder) | Pending | — | — | — | `doc/guides/definition-of-ready.md` (redistributable). |
-| D — lifecycle renumber (@coder) | Pending | — | — | — | `doc/guides/change-lifecycle.md` (phase 5 + renumber 6–11). |
-| E — inventory + manifest (@coder) | Pending | — | — | — | `AGENTS.md` + `.opencode/README.md` + review `pm-instructions.md`. |
-| F — renumbering sweep + freshness (@coder/@runner) | Pending | — | — | — | 0 stale refs (NFR-1); plugin-fresh + doc-distribution green. |
-| G — execution log + pm-notes (@coder) | Pending | — | — | — | This file + `chg-GH-57-pm-notes.yaml` phases. |
+| A — decision record (@decision-advisor + @coder) | Done | 2026-06-27 | 2026-06-27 | f7678bb (created); 5257098 (RT1 remediation) | ADR-0002 (Proposed) + 00-index.md row; RT1 round-1 remediation applied to ADR/index. |
+| B — agent/command/PM tooling (PM→@toolsmith) | Done | 2026-06-28 | 2026-06-28 | bd8f7ac | readiness-reviewer.md + check-readiness.md + pm.md (dor_check) + 3 author-agent DoR cross-ref notes (RT1-MAJOR-03); `.ados-claude/` regenerated. |
+| C — DoR mirror guide (@coder) | Done | 2026-06-28 | 2026-06-28 | 7291199 | `doc/guides/definition-of-ready.md` (redistributable). |
+| D — lifecycle renumber (@coder) | Done | 2026-06-28 | 2026-06-28 | 7291199 | `doc/guides/change-lifecycle.md` (phase 5 + renumber 6–11). |
+| E — inventory + manifest (@coder) | Done | 2026-06-28 | 2026-06-28 | 7291199 (AGENTS.md + pm-instructions.md); bd8f7ac (.opencode/README.md) | `AGENTS.md` + `.opencode/README.md` + `pm-instructions.md` dor_check row. |
+| F — renumbering sweep + freshness (@coder/@runner) | Done | 2026-06-28 | 2026-06-28 | 7291199 (sweep); Phase H remediation commit (freshness) | Sweep: 0 stale phase refs across 4 guides + 2 feature specs + decision-instructions.md (NFR-1). **F.4 plugin-freshness DONE** in Phase H — fresh `.ados-claude/` committed + drift-detection test added (16/16 pass; findings #1/#2). |
+| G — execution log + pm-notes (@coder) | Done | 2026-06-28 | 2026-06-28 | this commit (G.1/G.2); edf87fc (G.3 pm-notes phases) | This file (checkboxes + execution log). G.3 pm-notes phases first landed in edf87fc; reconciled under Phase H.3. |
+| H — code review remediation iter 1 (@coder/@fixer/PM) | Done | 2026-06-28 | 2026-06-28 | this commit | All 7 findings resolved: #1 fresh `.ados-claude/` committed; #2 drift-detection test added (16/16); #3 checkboxes+exec log; #4 pm-notes dor_check; #5 OQ-1 narrative; #6 clean tree; #7 command/agent model split confirmed (matches /review). See `code-review/findings-iter-1.json`. |
 | (phase 7) system-spec reconciliation (@doc-syncer) | Out of plan | — | — | — | `/sync-docs GH-57` (only if a feature spec drifts). |
 | (phase 8) review (@reviewer) | Out of plan | — | — | — | `/review GH-57`. |
 | (phase 9) quality gates (@runner) | Out of plan | — | — | — | `/check`. |

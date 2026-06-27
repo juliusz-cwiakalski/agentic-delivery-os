@@ -253,5 +253,6 @@ Before generating the test plan, attempt to read the structural template:
 - Ensures traceable coverage from spec to tests
 - Aligns with repo testing strategy
 - Guides coding agents on test implementation
+- Your output may be returned for revision by the Definition of Ready gate (`dor_check`, phase 5, `@readiness-reviewer`) before delivery; respond to `@pm`'s re-delegation.
 - NEVER silently ignore gaps; use open questions and TODO markers
 </notes>

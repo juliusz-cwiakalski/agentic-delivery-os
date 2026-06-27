@@ -229,5 +229,6 @@ Before generating the spec, attempt to read the structural template:
 <notes>
 - Tech neutral; rely on planning context & repo conventions
 - Deterministic output for downstream `@plan-writer`
+- Your output may be returned for revision by the Definition of Ready gate (`dor_check`, phase 5, `@readiness-reviewer`) before delivery; respond to `@pm`'s re-delegation.
 - After commit: await human approval before `/write-plan`
 </notes>

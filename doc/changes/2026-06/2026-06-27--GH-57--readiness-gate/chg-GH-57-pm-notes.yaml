@@ -14,6 +14,7 @@ phases:
   specification: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   test_planning: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   delivery_planning: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  dor_check: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }  # AC10 surrogate: the pre-delivery red-team (RT1) served as GH-57's own DoR gate (@readiness-reviewer did not exist until delivery); first TRUE dogfood = next change post-merge.
   delivery: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   system_spec_update: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
   review_fix: { started: "2026-06-27T00:00:00Z", completed: null }
