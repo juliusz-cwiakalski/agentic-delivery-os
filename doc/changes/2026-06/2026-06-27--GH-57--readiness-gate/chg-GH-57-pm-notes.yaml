@@ -1,0 +1,57 @@
+ados_distribution: project-generated
+# chg-GH-57-pm-notes.yaml — PM durable memory for change GH-57.
+# Lives under doc/changes/ (committed, git-tracked). Two purposes:
+#   1. Live coordination: phases, decisions, open questions, blockers.
+#   2. Retrospective record: delivery inefficiencies, process observations.
+change_id: GH-57
+title: "Add Definition of Ready gate (@readiness-reviewer) to validate change artifacts before delivery"
+slug: readiness-gate
+branch: feat/GH-57/readiness-gate
+change_folder: doc/changes/2026-06/2026-06-27--GH-57--readiness-gate
+
+phases:
+  clarify_scope: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+
+decisions:
+  - text: "DEC-1 (single critic): one @readiness-reviewer agent with a structured multi-facet DoR checklist, NOT multiple specialized critics (@spec-critic/@plan-critic/@test-plan-critic). Driver: the highest-value check is cross-artifact consistency (do plan/test-plan cover every AC?), which needs one holistic view; siloed critics are worst at detecting cross-artifact gaps. Matches the unified-@reviewer precedent (GH-36 merged code-reviewer into @reviewer for the same reason). Reversible — a facet can split out later."
+    date: "2026-06-27"
+  - text: "DEC-2 (new agent, not @reviewer extension): new @readiness-reviewer + /check-readiness + dor_check phase, NOT a 'readiness mode' on @reviewer. Driver: @reviewer is fundamentally code-vs-spec (post-implementation, reads diffs); the readiness gate is artifacts-vs-ticket (pre-implementation, no code exists yet). Different inputs, timing, and mental model — merging risks an overloaded, confused agent."
+    date: "2026-06-27"
+  - text: "DEC-3 (stronger reasoning model): @readiness-reviewer runs on the stronger reasoning model. Driver: the DoR gate is the single highest-leverage checkpoint — catching a spec gap here saves the entire downstream implementation cost. One stronger-model pass pre-delivery is trivial cost vs. implementing a flawed plan. Model assigned in opencode config + claude.model:opus frontmatter (mirrors @reviewer), NOT in the prompt body."
+    date: "2026-06-27"
+  - text: "DEC-4 (hard gate + explicit recorded override): the gate is a hard block by default with an explicit, recorded override path for genuinely trivial changes (no silent skip). Driver: a silent skip reintroduces the sycophancy this gate exists to prevent (agents will always judge their own work 'trivial'); the override forces a conscious, recorded decision — the anti-sycophancy mechanism working as intended. Override recorded in pm-notes (and/or change docs) with rationale."
+    date: "2026-06-27"
+  - text: "DEC-5 (DoR location — prompt-as-source-of-truth, refined from ticket by owner comment #1): layered. (1) Core DoR encoded in the @readiness-reviewer PROMPT (.opencode/agent/readiness-reviewer.md) — universal, authoritative, enforced; ships with every ADOS install. (2) doc/guides/definition-of-ready.md as a human-readable MIRROR that states the prompt is authoritative; used for onboarding + retrospective (GH-43) discussion. (3) .ai/agent/readiness-instructions.md DEFERRED (YAGNI — repo-local extension only if a project needs project-specific DoR additions). Rationale: AGENTS.md treats agent prompts as the product; DoR is enforced behavior so it belongs in the prompt, not a runtime-read guide (avoids drift over which is authoritative). Mirrors how @reviewer keeps core heuristics in-prompt and reads repo-local instructions only for additions. Supersedes the ticket's original 'dedicated guide' recommendation."
+    date: "2026-06-27"
+  - text: "DEC-6 (scope boundary — #49 is out of scope): the deterministic mechanical pre-check command `ados check-readiness <ref>` (issue #49, owner comment #2) is a COMPLEMENT, not part of GH-57. GH-57 delivers the AI-driven adversarial/semantic readiness gate only. #49 would later handle mechanical checks (required spec sections present, AC→test-plan traceability, plan tasks reference spec items) deterministically, leaving adversarial analysis to @readiness-reviewer. #49 referenced as a dependency/follow-up; GH-57's guide may note it as a future enhancement but must not implement it."
+    date: "2026-06-27"
+  - text: "DEC-7 (decision record): this is a precedent-setting, system-wide delivery-workflow structural change (new lifecycle phase + agent + command). Per AC, system-wide decisions are recorded as decision records. Type = ADR-0002 (follows the ADR-0001 precedent — 'Decision-Making Framework Refactor' — that delivery-workflow structural changes are ADRs). Status Proposed (R2); human acceptance rides the GH-57 PR (set decision_date + Accepted at merge). Produced during the specification phase via @decision-advisor."
+    date: "2026-06-27"
+  - text: "GOVERNANCE RULE (carried from GH-72 retro, applies to GH-57): ALL .opencode/agent/*.md and .opencode/command/*.md edits MUST be delegated to @toolsmith — the @coder subagent has no task tool and cannot spawn @toolsmith. PM delegates the readiness-reviewer.md + check-readiness.md + pm.md (workflow) edits to @toolsmith DIRECTLY. Source .opencode/ + regenerated .ados-claude/ committed together; run scripts/build-claude-plugin.sh after tooling changes (CI verifies staleness)."
+    type: info
+    date: "2026-06-27"
+
+open_questions: []  # none blocking — all 5 open decisions resolved via owner-endorsed, reversible recommendations (comments #1, #2); user requested delivery with red-team critique as the adversarial layer.
+# OQ-1 (do author agents need a re-invocation note?) RESOLVED by PM, R1: NO — reopening is a PM/lifecycle concern; author behavior unchanged.
+
+blockers: []
+
+notes:
+  - text: "User requested TWO @red-team-coordinator reviews: (1) pre-delivery on spec/plan/test-plan artifacts, (2) post-delivery on the delivered change. Address findings via follow-up phases before proceeding. Stop at PR (ping user). Red-team invoked via task tool, subagent red-team-coordinator."
+    type: info
+    date: "2026-06-27"
+  - text: "System spec cross-check (clarify_scope): no doc/spec/features/ entry exists for the change lifecycle or @reviewer — the lifecycle lives in doc/guides/change-lifecycle.md + the agent/command definitions. No contradiction with existing system spec; this is a framework change to ADOS itself (dogfooding). Change surfaces: doc/guides/change-lifecycle.md (+ mermaid + agent-responsibility table), .opencode/agent/readiness-reviewer.md (new), .opencode/command/check-readiness.md (new), .opencode/agent/pm.md (new dor_check phase in workflow), doc/guides/definition-of-ready.md (new, mirror), .opencode/README.md inventory, AGENTS.md (phase table + agent table + command table), doc/decisions/ADR-0002 (new), doc/decisions/00-index.md (new row)."
+    type: info
+    date: "2026-06-27"
+  - text: "Issue comments (both from owner juliusz-cwiakalski — TRUSTED): #1 refines Open Decision #5 to prompt-as-source-of-truth (captured as DEC-5); #2 cross-links #49 deterministic mechanical pre-check as a complement (captured as DEC-6 out-of-scope)."
+    type: info
+    date: "2026-06-27"
