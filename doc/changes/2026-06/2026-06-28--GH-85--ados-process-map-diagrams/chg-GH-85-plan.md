@@ -316,9 +316,9 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 **Tasks**:
 
-- [ ] **7.1** In `doc/00-index.md`, add a prominent entry for `ados-processes.md`. Preferred placement: a new **"Processes"** row in the **Start Here** table (or a short "Processes" subsection immediately under Start Here) with a one-line description ("Canonical map of ADOS's six processes — start here for the big picture").
-- [ ] **7.2** Ensure the relative link resolves (`guides/ados-processes.md` from `doc/00-index.md`).
-- [ ] **7.3** Preserve the existing copyright header and `ados_distribution: redistributable` marker in `doc/00-index.md`.
+- [x] **7.1** In `doc/00-index.md`, add a prominent entry for `ados-processes.md`. Preferred placement: a new **"Processes"** row in the **Start Here** table (or a short "Processes" subsection immediately under Start Here) with a one-line description ("Canonical map of ADOS's six processes — start here for the big picture"). (added as the first row of the Start Here table @L15: "ADOS Processes Map" → guides/ados-processes.md)
+- [x] **7.2** Ensure the relative link resolves (`guides/ados-processes.md` from `doc/00-index.md`). (verified resolves)
+- [x] **7.3** Preserve the existing copyright header and `ados_distribution: redistributable` marker in `doc/00-index.md`. (header=3, marker=1 preserved)
 
 **Acceptance Criteria**:
 
@@ -521,7 +521,7 @@ This plan's DoD uses the **canonical AC scheme from the spec** (`chg-GH-85-spec.
 | 4 | Done | 2026-06-28 | 2026-06-28 | (pending) | decision guide D0–D14 kernel + R0–R3 routing @L17; 1 subgraph (<=2); no forbidden syntax; red "✗ Reopen" text cue; header+marker intact. |
 | 5 | Done | 2026-06-28 | 2026-06-28 | (pending) | onboarding guide setup-flow @L17 + back-link; TOC intact (no new heading); header+marker intact. |
 | 6 | Done | 2026-06-28 | 2026-06-28 | (pending) | back-links added to project-inception + change-lifecycle (other 3 done P3-5); all 5 guides link ados-processes.md; forward links added; doc-reconciliation = phase 7 anchor, no standalone guide. |
-| 7 | Not started | — | — | — | |
+| 7 | Done | 2026-06-28 | 2026-06-28 | (pending) | doc/00-index.md Start Here row added @L15 (<=50); link resolves; header+marker preserved. |
 | 8 | Not started | — | — | — | |
 | 9 | Not started | — | — | — | |
 | 10 | Not started | — | — | — | |
