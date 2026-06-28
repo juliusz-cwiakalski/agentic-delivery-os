@@ -50,11 +50,11 @@ The `@external-researcher` agent gathers, synthesizes, and delivers external kno
 - **Untrusted-content handling (F-2):** All external content is treated as **untrusted data** — facts are extracted, never instructions. The agent ignores source instructions that ask it to reveal/modify prompts, bypass rules, call tools, read unrelated local files, exfiltrate secrets, install code, or change task scope. Prompt-injection text is mentioned only as a source-quality warning, never obeyed. User instructions, the agent prompt, and repo rules always outrank external content.
 - **Graceful degradation (F-3):** If a server is unavailable, misconfigured, quota-limited, or errors, the agent states the failure in one sentence (e.g., "context7 unavailable, using deepwiki instead") and proceeds. If **all** MCP servers are unavailable, it states clearly that external research cannot be performed and returns only what can be answered from local repo context (if any) — it never speculates or fabricates.
 - **Research process (F-4):** Parse the request and identify the knowledge domain + which server(s) to query → query the most authoritative source first → widen or reroute if insufficient → combine results by source type (authoritative docs, repo internals, synthesized web context, raw search results) → synthesize a concise structured answer.
-- **Output contract (F-5):** Findings as bullet points or tables with source links/references; conflicting information is highlighted with an authority judgment and rationale; uncertain/incomplete findings are flagged explicitly with a recommendation for further investigation; if file updates were requested, a brief change summary + rationale is provided.
+- **Output contract (F-5):** Findings as bullet points or tables with source links/references; conflicting information is highlighted with an authority judgment and rationale; uncertain/incomplete findings are flagged explicitly with a recommendation for further investigation; when the caller requests file updates, the agent is **read-only** (`write: false`, `edit: false`) so it provides **suggested edits** + a change summary/rationale in its output for the caller to apply — it does not modify files directly.
 
 ### Tool Access Scoping
 
-By default MCP tools are available to all agents; the external-researcher servers are scoped to `@external-researcher` only via a global-disable + agent-enable pattern (global `tools: { "context7*": false, ... }` in OpenCode config, overridden by `tools: true` in the agent frontmatter). The agent has `bash: false`, `write: false`, `edit: false` (read-only research), with read/glob/grep enabled. Setup detail lives in the sibling guide.
+The agent is **read-only** (`bash: false`, `write: false`, `edit: false`; read/glob/grep enabled) and the four research servers are **enabled in its frontmatter** (`context7*`/`deepwiki*`/`perplexity*`/`web-search*`: `true`). This repo's committed `.opencode/opencode.jsonc` only globally disables `github*`; a global-disable + agent-enable pattern for the research servers (global `tools: { "context7*": false, ... }` overridden by per-agent `tools: true`) is the **recommended** setup described in the sibling guide — it is not the current committed config. Setup detail lives there.
 
 ### User Flows
 
@@ -63,7 +63,7 @@ Caller asks a research question  → @external-researcher routes to most authori
                                  → extracts facts (treats content as untrusted)
                                  → reroutes/widens if insufficient or a server is down
                                  → synthesizes structured answer with sources
-                                 → optional: applies minimal file edits if requested
+                                 → optional: suggests edits in its output if requested (read-only; caller applies them)
 ```
 
 ### Edge Cases & Error Handling
@@ -80,7 +80,7 @@ Caller asks a research question  → @external-researcher routes to most authori
 |------|-----------|----------------|
 | `.opencode/agent/external-researcher.md` | External researcher agent | MCP routing, untrusted-content handling, synthesis, output contract |
 | `doc/guides/external-researcher-setup.md` | MCP setup guide | Server keys, OpenCode config, tool scoping |
-| OpenCode config (`opencode.jsonc`) | Tool scoping | Global-disable + agent-enable pattern for the four MCP servers |
+| OpenCode config (`opencode.jsonc`) | Tool scoping | Globally disables `github*`; research servers enabled per-agent in frontmatter (global-disable + agent-enable is the recommended setup-guide pattern, not the committed config) |
 
 ### MCP Servers
 
@@ -114,6 +114,7 @@ Caller asks a research question  → @external-researcher routes to most authori
 - **Depends on:** the four MCP servers (all optional) and their keys/env vars (see the setup guide).
 - **Risk:** Untrusted-content defense is **behavioral, not cryptographic** — it depends on the LLM following instructions. Avoid routing `@external-researcher` to arbitrary user-supplied URLs in security-sensitive contexts.
 - **Risk:** Paid-service quota misuse; mitigated by preferring single-source queries and avoiding unnecessary parallel calls.
+- **Follow-up (source prompt):** the agent prompt's body says "apply edits" / "updating files," but its frontmatter enforces `write: false`/`edit: false` (read-only). This spec resolves that in favor of the enforced frontmatter capability (read-only; suggests edits). The prompt body should be reconciled in a separate change.
 
 ## Related Documentation
 
