@@ -10,6 +10,31 @@ ados_distribution: redistributable
 >
 > **Goal:** Step-by-step guide to set up the minimum viable ADOS configuration, with clear distinction between mandatory and optional artifacts.
 
+> Part of the [ADOS process map](ados-processes.md) — Project Onboarding is the brownfield counterpart of Project Inception.
+
+Onboarding at a glance — install ADOS, meet the prerequisites, pick an automated or manual path, land the mandatory artifacts, then ship your first change through the [11-phase lifecycle](change-lifecycle.md):
+
+```mermaid
+flowchart TD
+    G(["Getting ADOS<br/>install: global / local / plugin"]) --> P
+    P["Prerequisites<br/>git repo, OpenCode, AI key, tracker access"] --> CH
+    CH{"Choose path"} -->|Automated| AB["/bootstrap<br/>AI-guided setup"]
+    CH -->|Manual| MS["Manual step-by-step<br/>setup"]
+    AB --> M
+    MS --> M
+    M["Mandatory artifacts<br/>AGENTS.md, pm-instructions.md,<br/>documentation-handbook.md"]
+    M --> FC(["First change shipped<br/>via 11-phase lifecycle"])
+    style G fill:#4CAF50,color:#fff
+    style CH fill:#FF9800,color:#fff
+    style P fill:#2196F3,color:#fff
+    style AB fill:#2196F3,color:#fff
+    style MS fill:#2196F3,color:#fff
+    style M fill:#2196F3,color:#fff
+    style FC fill:#4CAF50,color:#fff
+```
+
+**Legend**: green = start and success ("Getting ADOS", "First change shipped"); orange = path-choice gate; blue = ordinary setup steps. Solid arrows = forward flow.
+
 ---
 
 <!-- TOC -->

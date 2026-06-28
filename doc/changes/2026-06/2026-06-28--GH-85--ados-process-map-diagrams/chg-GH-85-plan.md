@@ -259,11 +259,11 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 **Tasks**:
 
-- [ ] **5.1** In `doc/guides/onboarding-existing-project.md`, insert a Mermaid diagram near the top (after the frontmatter and the `> Audience/Goal` blockquote, before the TOC or `## Getting ADOS`). **"Near the top" threshold (matches spec + test-plan): the first ```mermaid fence MUST be within the first 80 lines** (`awk '/^```mermaid/{print NR;exit}' doc/guides/onboarding-existing-project.md` ≤ 80).
-- [ ] **5.2** Diagram content: a `flowchart TD` setup flow: **Getting ADOS** (install: global curl / local / plugin) → **Prerequisites** (git repo, OpenCode, AI provider key, tracker access) → **Choose path** (diamond: automated `/bootstrap` vs. manual setup) → **Mandatory artifacts** (AGENTS.md, pm-instructions.md, documentation-handbook.md) → **First change** (the 11-phase lifecycle, linked). Use green for the start, blue for steps, orange for the path-choice diamond, green again for the "first change shipped" end.
-- [ ] **5.3** Add a one-line caption or `**Legend**:` beneath the diagram.
-- [ ] **5.4** Do not restructure the guide body; preserve the existing copyright header and `ados_distribution: redistributable` marker.
-- [ ] **5.5** **TOC interaction (m4):** `onboarding-existing-project.md` contains a hand-maintained `<!-- TOC -->` block. The diagram insertion MUST NOT introduce a new `##` heading that would stale the TOC — keep the diagram inline under the existing intro flow (no new `## ` line). If a new `##` heading is unavoidable, regenerate/update the `<!-- TOC -->` block to include it before committing the phase.
+- [x] **5.1** In `doc/guides/onboarding-existing-project.md`, insert a Mermaid diagram near the top (after the frontmatter and the `> Audience/Goal` blockquote, before the TOC or `## Getting ADOS`). **"Near the top" threshold (matches spec + test-plan): the first ```mermaid fence MUST be within the first 80 lines** (`awk '/^```mermaid/{print NR;exit}' doc/guides/onboarding-existing-project.md` ≤ 80). (verified: mermaid @L17; inserted before the TOC)
+- [x] **5.2** Diagram content: a `flowchart TD` setup flow: **Getting ADOS** (install: global curl / local / plugin) → **Prerequisites** (git repo, OpenCode, AI provider key, tracker access) → **Choose path** (diamond: automated `/bootstrap` vs. manual setup) → **Mandatory artifacts** (AGENTS.md, pm-instructions.md, documentation-handbook.md) → **First change** (the 11-phase lifecycle, linked). Use green for the start, blue for steps, orange for the path-choice diamond, green again for the "first change shipped" end. (all elements present; green start+success, orange choose-path diamond, blue steps)
+- [x] **5.3** Add a one-line caption or `**Legend**:` beneath the diagram. (Legend block added)
+- [x] **5.4** Do not restructure the guide body; preserve the existing copyright header and `ados_distribution: redistributable` marker. (header=3, marker=1; body untouched)
+- [x] **5.5** **TOC interaction (m4):** `onboarding-existing-project.md` contains a hand-maintained `<!-- TOC -->` block. The diagram insertion MUST NOT introduce a new `##` heading that would stale the TOC — keep the diagram inline under the existing intro flow (no new `## ` line). If a new `##` heading is unavoidable, regenerate/update the `<!-- TOC -->` block to include it before committing the phase. (no new `##` heading; diagram inline before TOC @L40/78; TOC intact)
 
 **Acceptance Criteria**:
 
@@ -519,7 +519,7 @@ This plan's DoD uses the **canonical AC scheme from the spec** (`chg-GH-85-spec.
 | 2 | Done | 2026-06-28 | 2026-06-28 | 1cc4fcb | README compact map @L23; link table with 5 guides; hero+header preserved; no marker added; TOC intact. |
 | 3 | Done | 2026-06-28 | 2026-06-28 | (pending) | meeting guide before/during/after flowchart @L17 + back-link; header+marker intact. |
 | 4 | Done | 2026-06-28 | 2026-06-28 | (pending) | decision guide D0–D14 kernel + R0–R3 routing @L17; 1 subgraph (<=2); no forbidden syntax; red "✗ Reopen" text cue; header+marker intact. |
-| 5 | Not started | — | — | — | |
+| 5 | Done | 2026-06-28 | 2026-06-28 | (pending) | onboarding guide setup-flow @L17 + back-link; TOC intact (no new heading); header+marker intact. |
 | 6 | Not started | — | — | — | |
 | 7 | Not started | — | — | — | |
 | 8 | Not started | — | — | — | |
