@@ -52,7 +52,7 @@ Core behavior to protect: every AC in the ticket must be objectively verifiable,
 ## 2. References
 
 - Change spec: `./chg-GH-85-spec.md` (landed; canonical source of truth for AC/NFR IDs — see §3.1 cross-walk).
-- Implementation plan: `./chg-GH-85-plan.md` (landed; note the plan still uses a flat `AC-1..AC-12` scheme — see §3.1 cross-walk for the 1:1 remap; plan-side reconciliation is tracked separately).
+- Implementation plan: `./chg-GH-85-plan.md` (landed; uses the same canonical `AC-F*`/`AC-NFR*` scheme as this plan and the spec — see §3.1 cross-walk).
 - PM notes / ticket context: `./chg-GH-85-pm-notes.yaml` (issue #85 summary, decisions, existing-diagram style inventory).
 - Testing strategy: `.ai/rules/testing-strategy.md`.
 - Automated guard: `scripts/.tests/test-doc-distribution.sh` (GH-67 drift guard — 5 failure modes over DM-2 doc set).
@@ -66,7 +66,7 @@ Core behavior to protect: every AC in the ticket must be objectively verifiable,
 
 ### 3.1 Functional Coverage (F-#, AC-#)
 
-> **AC scheme cross-walk (canonical).** This plan adopts the spec's prefixed AC scheme (`AC-F1-1`…`AC-F5-1`, `AC-NFR4-1`, `AC-NFR5-1`) as the single source of truth — see `chg-GH-85-spec.md` §17. The earlier flat `AC-1`…`AC-12` IDs are retired here. 1:1 remap to the sibling artifacts: this is the same scheme the spec uses; the implementation plan still carries a flat `AC-1`…`AC-12` scheme that disagrees in places (e.g., its `AC-6` = "link table" vs. this plan's former `AC-6` = "meeting diagram"), so when referencing the plan, map by **intent**, not by number. The canonical IDs below win on any conflict.
+> **AC scheme cross-walk (canonical).** This plan adopts the spec's prefixed AC scheme (`AC-F1-1`…`AC-F5-1`, `AC-NFR4-1`, `AC-NFR5-1`) as the single source of truth — see `chg-GH-85-spec.md` §17. The earlier flat `AC-1`…`AC-12` IDs are retired here. All three sibling artifacts (spec, plan, test-plan) now use this same canonical scheme 1:1, so cross-references resolve by ID directly. (The earlier flat scheme is retained only as a historical note in each artifact's Revision Log.)
 >
 > Note on README: AC-F2-1 is a **single** criterion — the compact README map **and** its adjacent link legend are verified together in one AC (not split). Documentation reconciliation has **no standalone guide**, so it contributes a canonical-map card (AC-F1-3) but no per-guide diagram or back-link target (the 5 standalone guides carry the back-links under AC-F4-1).
 
@@ -517,7 +517,7 @@ Evidence convention: every executed check records the exact command run + pass/f
 **Notes / Clarifications**:
 
 - The header tool has no fail-on-missing "verify mode", so step 1 (grep) is the authoritative pass/fail probe; step 2 (dry-run idempotency) is corroborating. (This gap is noted in §1.2.)
-- **Authoritative enumerated header list (m7 cross-walk):** this plan treats AC-NFR4-1 as covering **all** modified files whose header must be present/preserved — the new `doc/guides/ados-processes.md`; the **5** modified guides (`meeting-preparation-and-summarization.md`, `decision-making.md`, `onboarding-existing-project.md`, `change-lifecycle.md`, `project-inception.md`); `doc/00-index.md`; **and `README.md`** (README's pre-existing header is modified-adjacent and must be preserved verbatim). `README.md` is included here even though it is not in the doc-distribution scan set, because it is a touched file and its header is a DoD-relevant invariant. The spec's AC-NFR4-1 prose currently enumerates only `ados-processes.md; modified guides; doc/00-index.md` — for cross-artifact agreement the spec/plan should add `README.md` to that enumerated list (this plan cannot edit them; tracked in §8.3).
+- **Authoritative enumerated header list (m7 cross-walk):** this plan treats AC-NFR4-1 as covering **all** modified files whose header must be present/preserved — the new `doc/guides/ados-processes.md`; the **5** modified guides (`meeting-preparation-and-summarization.md`, `decision-making.md`, `onboarding-existing-project.md`, `change-lifecycle.md`, `project-inception.md`); `doc/00-index.md`; **and `README.md`** (README's pre-existing header is modified-adjacent and must be preserved verbatim). `README.md` is included here even though it is not in the doc-distribution scan set, because it is a touched file and its header is a DoD-relevant invariant. The spec's AC-NFR4-1 prose now also enumerates `README.md` ("…and `README.md` whose pre-existing header is preserved"), so all three artifacts agree (OQ-5 closed).
 
 ---
 
@@ -718,7 +718,7 @@ Evidence convention: every executed check records the exact command run + pass/f
 | OQ-2 | Confirm the GitHub-native interpretation of "clickable links to guides" (AC-F2-1) = adjacent markdown link block, not clickable diagram nodes (per PM decision in pm-notes, GitHub sandbox blocks node callbacks). | No (PM decision already recorded) — surface for DoR confirmation. | @pm | Open (DoR confirmation only). |
 | OQ-3 | Should a pinned Mermaid CLI lint be added to CI as a follow-up, or is GitHub render review sufficient for this and future diagram changes? | No (best-effort `mmdc` noted in TC-PROC-013). | @decision-advisor (follow-up) | Open. |
 | OQ-4 | Reconcile explicit `NFR-#` IDs into §3.3. | No. | @test-plan-writer | **Closed (R1).** §3.3 now traces every TC to `NFR-1..NFR-6`; status → Updated; Revision Log 0.2. |
-| OQ-5 | AC-NFR4-1 enumerated header list (m7): the spec's prose lists `ados-processes.md; modified guides; doc/00-index.md` and omits `README.md`; this plan includes README. For full cross-artifact agreement the spec/plan should add `README.md` to their enumerated lists. | No (test-plan covers README authoritatively via TC-PROC-012). | @spec-writer / @plan-writer | Open — sibling-artifact alignment. |
+| OQ-5 | AC-NFR4-1 enumerated header list (m7): the spec previously omitted `README.md`; this plan included it. **Resolved** — spec §17 AC-NFR4-1 now enumerates `README.md` ("…and `README.md` whose pre-existing header is preserved"); all three artifacts agree. | — | — | Closed — resolved in spec R1 remediation. |
 
 ## 9. Plan Revision Log
 
@@ -726,6 +726,7 @@ Evidence convention: every executed check records the exact command run + pass/f
 |---------|------|--------|---------|
 | 0.1 | 2026-06-28 | @test-plan-writer | Initial draft. Derived from issue #85 ticket summary + `chg-GH-85-pm-notes.yaml` (spec `chg-GH-85-spec.md` authored in parallel). 16 test cases (TC-PROC-001..016) covering all 12 ACs + cross-cutting consistency/scope/correctness guards. NFR IDs and process→guide mapping flagged for reconciliation on spec landing (OQ-1, OQ-4). |
 | 0.2 | 2026-06-28 | @test-plan-writer | Red-team R1 reconciliation (status → Updated). (1) **M1/m1:** retired flat `AC-1..AC-12`; §3.1 + §5.1 + all TC `Related IDs` remapped to the spec's canonical 13-ID scheme (`AC-F1-1`…`AC-F5-1`, `AC-NFR4-1`, `AC-NFR5-1`); README map+legend collapsed to the single AC-F2-1; consistency review promoted to its own AC row (AC-F5-1, TC-PROC-014). (2) **M3/OQ-4:** §3.3 reconciled to spec `NFR-1..NFR-6`, each TC traced to its NFR ID. (3) **M3/OQ-1:** confirmed documentation reconciliation has no standalone guide (embedded in `change-lifecycle.md` phase 7); removed `<6th-per-spec>` placeholders from TC-PROC-005/009; updated probes to the 5 standalone guides. (4) **m3:** stated the single canonical "near the top" threshold (README ≤60 lines, guides ≤80 lines). (5) **m7:** TC-PROC-012 enumerated header list made authoritative incl. `README.md`; OQ-5 raised for spec/plan alignment. (6) **a11y:** TC-PROC-014 gains a WCAG 1.4.1 non-color-cue + Legend step. No scope/non-goal/decision/TC-structure changes. |
+| 0.3 | 2026-06-28 | @pm (Copilot PR-review) | Addressed GitHub Copilot PR-review comments on PR #87: (1) §2 References — removed stale claim that the plan "still uses a flat AC-1..AC-12 scheme" (the plan was reconciled); (2) §3.1 cross-walk — retired the "map by intent, not by number" hedge (all three artifacts now share the canonical scheme 1:1); (3) OQ-5 marked Closed (spec AC-NFR4-1 now enumerates README.md) and the TC-PROC-012 note updated to match. Copilot comment on the header URL (`www.x.com`) was a false positive — the header already uses the correct `https://x.com/cwiakalski`. |
 
 ## 10. Test Execution Log
 

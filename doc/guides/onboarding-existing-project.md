@@ -22,7 +22,7 @@ flowchart TD
     CH -->|Manual| MS["Manual step-by-step<br/>setup"]
     AB --> M
     MS --> M
-    M["Mandatory artifacts<br/>AGENTS.md, pm-instructions.md,<br/>documentation-handbook.md"]
+    M["Mandatory artifacts<br/>AGENTS.md, .ai/agent/pm-instructions.md,<br/>doc/documentation-handbook.md"]
     M --> FC(["First change shipped<br/>via 11-phase lifecycle"])
     style G fill:#4CAF50,color:#fff
     style CH fill:#FF9800,color:#fff
