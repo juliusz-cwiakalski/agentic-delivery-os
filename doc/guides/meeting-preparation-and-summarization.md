@@ -42,6 +42,8 @@ flowchart TD
     style SKIP fill:#9C27B0,color:#fff
     style B0 fill:#FF9800,color:#fff
     style A2 fill:#FF9800,color:#fff
+    classDef step fill:#2196F3,color:#fff
+    class B1,B2,B3,D0,D1,D2,D3,A0,A1,A3 step
 ```
 
 **Legend**: green = start; purple = optional/escape (use async instead of a meeting); orange = decision/gate (the "is a meeting needed?" triage and the "file durable decisions" gate); blue = ordinary steps. Solid arrows = forward flow.

@@ -58,7 +58,7 @@ flowchart TD
         D --> E[5. dor_check<br/>@readiness-reviewer]
         W((Wait for Human))
         %% Decision consulting (optional, on demand during artifact creation)
-        DA((@decision-advisor<br/>optional))
+        DA(("@decision-advisor<br/>optional"))
         DR[(doc/decisions/**)]
         B -.->|decision?| DA
         D -.->|decision?| DA

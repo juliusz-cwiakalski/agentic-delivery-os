@@ -55,6 +55,8 @@ flowchart TD
     style RIGOR fill:#FF9800,color:#fff
     style R3 fill:#FF9800,color:#fff
     style RV fill:#F44336,color:#fff
+    classDef kernel fill:#2196F3,color:#fff
+    class K0,K1,K2,K3,K4,K5,K6,K7,K8,K9,K10,K11,K12,K13,K14 kernel
 ```
 
 **Legend**: green = start ("Decision trigger"); purple = optional/escape (R0 — no record); orange = gates/attention (record-worthiness triage, rigor routing, R3 high-assurance); blue = ordinary kernel stages; red = reopen/remediation ("✗ Reopen"). Dashed arrows = feedback/revisit loops. See §2 for the full D0–D14 table and §3 for the R0–R3 detail.

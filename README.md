@@ -45,6 +45,8 @@ flowchart LR
 | Meeting Management | [meeting-preparation-and-summarization.md](doc/guides/meeting-preparation-and-summarization.md) |
 | Decision Making | [decision-making.md](doc/guides/decision-making.md) |
 
+> Documentation Reconciliation is phase 7 of Change Delivery — see the [process map](doc/guides/ados-processes.md) or [change-lifecycle.md](doc/guides/change-lifecycle.md).
+
 This repo is a practical reference implementation of a spec-driven workflow using OpenCode (and supporting Claude Code):
 
 - Artifacts are first-class (versioned in Git), not trapped in chats.
