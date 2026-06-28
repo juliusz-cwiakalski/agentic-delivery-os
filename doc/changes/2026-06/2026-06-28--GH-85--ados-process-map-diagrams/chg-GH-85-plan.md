@@ -230,11 +230,11 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 **Tasks**:
 
-- [ ] **4.1** In `doc/guides/decision-making.md`, insert a Mermaid diagram near the top (after the frontmatter and the `> Audience/Purpose` blockquote, before `## 1.`). **"Near the top" threshold (matches spec + test-plan): the first ```mermaid fence MUST be within the first 80 lines** (`awk '/^```mermaid/{print NR;exit}' doc/guides/decision-making.md` ≤ 80).
-- [ ] **4.2** Diagram content: a `flowchart TD` showing the **universal decision kernel** as a pipeline (Trigger/Triage D0 → Charter D1 → Context D2 → ... → Decision D11 → Execution D12 → Verification D13 → Retrospective D14) with an **R0–R3 rigor routing** branching at the top (R0 escape hatch → no record; R1 → lightweight brief; R2 → standard record; R3 → full record + independent reviewer + human decision). Use diamonds for the routing decision and the rigor branches; orange for gates, purple for the R0 escape hatch, red where remediation/reopen is possible (with a text cue — a11y).
-- [ ] **4.2a** **Render-risk constraint (m6): this is the HIGHEST render-risk diagram in the change** (most nodes + subgraphs + special-character labels). Constrain it to **≤2 subgraphs** and conservative syntax only (no `click`, no `<a>`, no `%%{init}%%`). Quote every label containing `–`, `/`, or spaces per **n1** — e.g. `K["D0–D14"]`, `R["R0–R3"]`, `T["Trigger/Triage D0"]`. This diagram MUST be the FIRST one visually verified on the GitHub render (see Phase 8 / TC-PROC-013); if it fails to render, simplify it before authoring the other guide diagrams.
-- [ ] **4.3** Add a one-line caption or `**Legend**:` beneath the diagram.
-- [ ] **4.4** Do not restructure the guide body; preserve the existing copyright header and `ados_distribution: redistributable` marker.
+- [x] **4.1** In `doc/guides/decision-making.md`, insert a Mermaid diagram near the top (after the frontmatter and the `> Audience/Purpose` blockquote, before `## 1.`). **"Near the top" threshold (matches spec + test-plan): the first ```mermaid fence MUST be within the first 80 lines** (`awk '/^```mermaid/{print NR;exit}' doc/guides/decision-making.md` ≤ 80). (verified: mermaid @L17)
+- [x] **4.2** Diagram content: a `flowchart TD` showing the **universal decision kernel** as a pipeline (Trigger/Triage D0 → Charter D1 → Context D2 → ... → Decision D11 → Execution D12 → Verification D13 → Retrospective D14) with an **R0–R3 rigor routing** branching at the top (R0 escape hatch → no record; R1 → lightweight brief; R2 → standard record; R3 → full record + independent reviewer + human decision). Use diamonds for the routing decision and the rigor branches; orange for gates, purple for the R0 escape hatch, red where remediation/reopen is possible (with a text cue — a11y). (kernel D0–D14 pipeline + R0–R3 routing; diamonds for triage/rigor; R0 purple, gates orange, R3 orange, red "✗ Reopen" node with text cue)
+- [x] **4.2a** **Render-risk constraint (m6): this is the HIGHEST render-risk diagram in the change** (most nodes + subgraphs + special-character labels). Constrain it to **≤2 subgraphs** and conservative syntax only (no `click`, no `<a>`, no `%%{init}%%`). Quote every label containing `–`, `/`, or spaces per **n1** — e.g. `K["D0–D14"]`, `R["R0–R3"]`, `T["Trigger/Triage D0"]`. (1 subgraph; 0 forbidden directives; all special-char labels quoted: "D0–D14", "D0 Trigger/Triage", "R0 escape", etc.)
+- [x] **4.3** Add a one-line caption or `**Legend**:` beneath the diagram. (Legend block added, names all color semantics + the red "✗ Reopen" text cue)
+- [x] **4.4** Do not restructure the guide body; preserve the existing copyright header and `ados_distribution: redistributable` marker. (header=3, marker=1; body untouched)
 
 **Acceptance Criteria**:
 
@@ -518,7 +518,7 @@ This plan's DoD uses the **canonical AC scheme from the spec** (`chg-GH-85-spec.
 | 1 | Done | 2026-06-28 | 2026-06-28 | 7f4a5cd | ados-processes.md created; master diagram @L18; all 6 labels present; links resolve; headerless frontmatter (header added P9). |
 | 2 | Done | 2026-06-28 | 2026-06-28 | 1cc4fcb | README compact map @L23; link table with 5 guides; hero+header preserved; no marker added; TOC intact. |
 | 3 | Done | 2026-06-28 | 2026-06-28 | (pending) | meeting guide before/during/after flowchart @L17 + back-link; header+marker intact. |
-| 4 | Not started | — | — | — | |
+| 4 | Done | 2026-06-28 | 2026-06-28 | (pending) | decision guide D0–D14 kernel + R0–R3 routing @L17; 1 subgraph (<=2); no forbidden syntax; red "✗ Reopen" text cue; header+marker intact. |
 | 5 | Not started | — | — | — | |
 | 6 | Not started | — | — | — | |
 | 7 | Not started | — | — | — | |

@@ -10,6 +10,55 @@ ados_distribution: redistributable
 >
 > **Purpose:** A condensed, process-first guide that calibrates the *amount* of process to the *nature and risk* of a decision — not its record prefix. This guide supersedes the artifact-centric narrative previously found in `decision-records-management.md` (now a thin record-artifact reference).
 
+> Part of the [ADOS process map](ados-processes.md) — see how Decision Making supports Change Delivery and the rest.
+
+Decisions at a glance — first triage **record-worthiness** (the R0 escape hatch), then route to a **rigor profile** (R1–R3), then run the **universal kernel** (D0–D14) at the depth that profile demands:
+
+```mermaid
+flowchart TD
+    TRIG(["Decision trigger"]) --> TRIAGE{"Record-worthy?"}
+    TRIAGE -->|No| R0["R0 escape<br/>no record"]
+    TRIAGE -->|Yes| RIGOR{"Pick rigor"}
+
+    RIGOR -->|R1| R1["R1 lightweight brief"]
+    RIGOR -->|R2| R2["R2 standard record"]
+    RIGOR -->|R3| R3["R3 high assurance<br/>full record + human"]
+
+    R1 --> K0
+    R2 --> K0
+    R3 --> K0
+
+    subgraph Kernel["Universal kernel D0–D14"]
+        K0["D0 Trigger/Triage"] --> K1["D1 Charter"]
+        K1 --> K2["D2 Context"]
+        K2 --> K3["D3 Framing"]
+        K3 --> K4["D4 Constraints"]
+        K4 --> K5["D5 Drivers"]
+        K5 --> K6["D6 Unknowns"]
+        K6 --> K7["D7 Alternatives"]
+        K7 --> K8["D8 Feasibility"]
+        K8 --> K9["D9 Analysis"]
+        K9 --> K10["D10 Adversarial"]
+        K10 --> K11["D11 Decision"]
+        K11 --> K12["D12 Execution"]
+        K12 --> K13["D13 Verification"]
+        K13 --> K14["D14 Retrospective"]
+    end
+
+    K11 -.-> RV["✗ Reopen: revisit"]
+    RV -.-> K3
+    K13 -.-> RV
+
+    style TRIG fill:#4CAF50,color:#fff
+    style R0 fill:#9C27B0,color:#fff
+    style TRIAGE fill:#FF9800,color:#fff
+    style RIGOR fill:#FF9800,color:#fff
+    style R3 fill:#FF9800,color:#fff
+    style RV fill:#F44336,color:#fff
+```
+
+**Legend**: green = start ("Decision trigger"); purple = optional/escape (R0 — no record); orange = gates/attention (record-worthiness triage, rigor routing, R3 high-assurance); blue = ordinary kernel stages; red = reopen/remediation ("✗ Reopen"). Dashed arrows = feedback/revisit loops. See §2 for the full D0–D14 table and §3 for the R0–R3 detail.
+
 ---
 
 ## 1. When to decide — record-worthiness and the R0 escape hatch
