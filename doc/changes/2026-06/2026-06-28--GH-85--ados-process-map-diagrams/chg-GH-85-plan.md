@@ -372,11 +372,11 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 **Tasks**:
 
-- [ ] **9.1** Run `scripts/add-header-location.sh doc/guides` to add/normalize the copyright header on every guide under `doc/guides/` (this is the only sanctioned way to manage headers — never hand-write them per `AGENTS.md`). The new `doc/guides/ados-processes.md` must receive its 5-line copyright header here.
-- [ ] **9.2** Verify every **new/modified guide** has `ados_distribution: redistributable` inside its existing `---` frontmatter block (not a new block): `ados-processes.md` (new), `meeting-preparation-and-summarization.md`, `decision-making.md`, `onboarding-existing-project.md`, `change-lifecycle.md`, `project-inception.md`.
-- [ ] **9.3** Verify `doc/00-index.md` still has `ados_distribution: redistributable`.
-- [ ] **9.4** Verify `README.md` retains its existing copyright header and is **not** given an `ados_distribution` marker (it is not a `doc/` doc; adding one would be incorrect).
-- [ ] **9.5** Confirm no guide body content was accidentally altered by the header script (diff should show only header-line additions/normalization).
+- [x] **9.1** Run `scripts/add-header-location.sh doc/guides` to add/normalize the copyright header on every guide under `doc/guides/` (this is the only sanctioned way to manage headers — never hand-write them per `AGENTS.md`). The new `doc/guides/ados-processes.md` must receive its 5-line copyright header here. (ran; "Processed 19 files, updated 1, skipped 18"; ados-processes.md received the Copyright/MIT/source header; exit 0)
+- [x] **9.2** Verify every **new/modified guide** has `ados_distribution: redistributable` inside its existing `---` frontmatter block (not a new block): `ados-processes.md` (new), `meeting-preparation-and-summarization.md`, `decision-making.md`, `onboarding-existing-project.md`, `change-lifecycle.md`, `project-inception.md`. (verified: all 6 guides hdr=3 marker=1)
+- [x] **9.3** Verify `doc/00-index.md` still has `ados_distribution: redistributable`. (verified: marker=1, header=3)
+- [x] **9.4** Verify `README.md` retains its existing copyright header and is **not** given an `ados_distribution` marker (it is not a `doc/` doc; adding one would be incorrect). (verified: header=3, marker count=0)
+- [x] **9.5** Confirm no guide body content was accidentally altered by the header script (diff should show only header-line additions/normalization). (verified: only ados-processes.md modified in doc/guides; the 3 header lines were inserted at the top of frontmatter, body untouched)
 
 **Acceptance Criteria**:
 
@@ -523,7 +523,7 @@ This plan's DoD uses the **canonical AC scheme from the spec** (`chg-GH-85-spec.
 | 6 | Done | 2026-06-28 | 2026-06-28 | (pending) | back-links added to project-inception + change-lifecycle (other 3 done P3-5); all 5 guides link ados-processes.md; forward links added; doc-reconciliation = phase 7 anchor, no standalone guide. |
 | 7 | Done | 2026-06-28 | 2026-06-28 | (pending) | doc/00-index.md Start Here row added @L15 (<=50); link resolves; header+marker preserved. |
 | 8 | Done | 2026-06-28 | 2026-06-28 | (pending) | audited all 5 existing + new diagrams; palette already identical (#4CAF50/#2196F3/#FF9800/#F44336/#9C27B0); added concise Legend captions after the 4 project-inception fences (minor, no redesign); 0 forbidden syntax in-mermaid; canonical names consistent. |
-| 9 | Not started | — | — | — | |
+| 9 | Done | 2026-06-28 | 2026-06-28 | (pending) | add-header-location.sh added the copyright header to ados-processes.md (1 updated/18 skipped); all 6 guides hdr=3 marker=1; doc/00-index marker=1; README header=3 no marker; only ados-processes.md body-untouched change. |
 | 10 | Not started | — | — | — | |
 
 > **Lifecycle note:** Per `chg-GH-85-pm-notes.yaml`, two red-team challenge rounds are planned — R1 on the spec/plan/test-plan artifacts pre-delivery (feeds the `dor_check` gate) and R2 on the delivered change pre-PR (feeds `review_fix`). These are orchestrated by `@pm` outside this delivery plan; any R1 findings that affect this plan are folded in as a plan revision log entry before delivery, and any R2 findings are remediated by reopening the relevant phase above.
