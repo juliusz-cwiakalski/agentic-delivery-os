@@ -3,9 +3,9 @@
 # MIT License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/changes/2026-06/2026-06-28--GH-85--ados-process-map-diagrams/chg-GH-85-test-plan.md
 id: chg-GH-85-test-plan
-status: Proposed
+status: Updated
 created: 2026-06-28T10:35:00Z
-last_updated: 2026-06-28T10:35:00Z
+last_updated: 2026-06-28T14:30:00Z
 owners: [Juliusz Ćwiąkalski]
 service: docs
 labels: [docs, guides, diagrams, mermaid, dx]
@@ -46,13 +46,13 @@ Core behavior to protect: every AC in the ticket must be objectively verifiable,
 - **No `doc/spec/**` feature additions** — explicit non-goal; verified as a regression guard.
 - **Mermaid CLI lint is best-effort** — the repo does not ship a pinned `mmdc` (Mermaid CLI) dependency, so syntax validation relies primarily on GitHub visual render review; if `mmdc` is locally available it may be used as a secondary check (see TC-PROC-013).
 - **License-header "verify mode":** `scripts/add-header-location.sh` has no fail-on-missing verify mode; it only mutates (with `--dry-run`). AC12 is therefore verified by grep + dry-run idempotency, not by a failing CI gate.
-- **NFR IDs and owners** are sourced from the change spec, which is being authored in parallel. NFR coverage (§3.3) is populated from the ticket's stated quality attributes and will be reconciled to explicit `NFR-#` IDs when the spec lands (Revision Log entry / status → Updated).
-- **Exact process→guide mapping for the "documentation reconciliation" process** is pending the spec's per-process card definitions; the known 5 guides are confirmed, the 6th guide target is to be confirmed against the spec (Open Question OQ-1).
+- **NFR coverage is reconciled to the spec's `NFR-1..NFR-6`** (§9 of `chg-GH-85-spec.md`). Each TC traces to its NFR ID in §3.3 (OQ-4 closed).
+- **"Documentation reconciliation" has no standalone guide.** Per the landed spec, it is a *supporting process embedded in the change lifecycle* (phase 7 `system_spec_update`, run by `@doc-syncer` / `/sync-docs` inside `doc/guides/change-lifecycle.md`). There is therefore no 6th standalone guide to back-link or link-table; its representation is the canonical-map card + the change-lifecycle phase-7 section (OQ-1 closed).
 
 ## 2. References
 
-- Change spec: `./chg-GH-85-spec.md` (authored in parallel — reconcile on update).
-- Implementation plan: `./chg-GH-85-plan.md` (to be authored; referenced if/when present).
+- Change spec: `./chg-GH-85-spec.md` (landed; canonical source of truth for AC/NFR IDs — see §3.1 cross-walk).
+- Implementation plan: `./chg-GH-85-plan.md` (landed; note the plan still uses a flat `AC-1..AC-12` scheme — see §3.1 cross-walk for the 1:1 remap; plan-side reconciliation is tracked separately).
 - PM notes / ticket context: `./chg-GH-85-pm-notes.yaml` (issue #85 summary, decisions, existing-diagram style inventory).
 - Testing strategy: `.ai/rules/testing-strategy.md`.
 - Automated guard: `scripts/.tests/test-doc-distribution.sh` (GH-67 drift guard — 5 failure modes over DM-2 doc set).
@@ -64,33 +64,36 @@ Core behavior to protect: every AC in the ticket must be objectively verifiable,
 
 ## 3. Coverage Overview
 
-### 3.1 Functional Coverage (AC-#)
+### 3.1 Functional Coverage (F-#, AC-#)
 
-Traceability matrix — every AC maps to one or more test cases and a verification method. Verification method legend: **AUTO** = automated script gate; **STRUCT** = repeatable structural check (grep/awk); **MANUAL** = human review.
+> **AC scheme cross-walk (canonical).** This plan adopts the spec's prefixed AC scheme (`AC-F1-1`…`AC-F5-1`, `AC-NFR4-1`, `AC-NFR5-1`) as the single source of truth — see `chg-GH-85-spec.md` §17. The earlier flat `AC-1`…`AC-12` IDs are retired here. 1:1 remap to the sibling artifacts: this is the same scheme the spec uses; the implementation plan still carries a flat `AC-1`…`AC-12` scheme that disagrees in places (e.g., its `AC-6` = "link table" vs. this plan's former `AC-6` = "meeting diagram"), so when referencing the plan, map by **intent**, not by number. The canonical IDs below win on any conflict.
+>
+> Note on README: AC-F2-1 is a **single** criterion — the compact README map **and** its adjacent link legend are verified together in one AC (not split). Documentation reconciliation has **no standalone guide**, so it contributes a canonical-map card (AC-F1-3) but no per-guide diagram or back-link target (the 5 standalone guides carry the back-links under AC-F4-1).
 
-| AC ID | Description (from ticket #85) | TC ID(s) | Method | Pass criterion | Status |
-|-------|-------------------------------|----------|--------|----------------|--------|
-| AC-1 | `doc/guides/ados-processes.md` exists with `ados_distribution: redistributable` | TC-PROC-001, TC-PROC-011 | STRUCT + AUTO | File exists; frontmatter marker parses to `redistributable`; doc-distribution guard exits 0 | Covered |
-| AC-2 | Master Mermaid diagram shows all 6 processes (5 primary + 1 supporting) with relationships | TC-PROC-002, TC-PROC-016 | STRUCT + MANUAL | Master Mermaid block contains all 6 canonical process labels + ≥1 relationship edge each; renders on GitHub | Covered |
-| AC-3 | Per-process overview card (problem/audience/output/link) for each process | TC-PROC-003 | STRUCT + MANUAL | Exactly 6 cards; each card exposes all 4 fields; each card's link resolves to the correct guide | Covered |
-| AC-4 | Easy-to-read structure (clear sections, scannable) | TC-PROC-004 | MANUAL | Reviewer confirms logical section order, ≤2 nesting depth for cards, no wall-of-text; documented in execution log | Covered |
-| AC-5 | README.md has compact Mermaid process map near top with clickable links to guides | TC-PROC-005 | STRUCT + MANUAL | First ```mermaid block within first 60 lines; adjacent link table contains a link to every process guide | Covered (via adjacent link block — see OQ-2 / PM decision: GitHub sandbox blocks node `click`/`<a>`, so "clickable" satisfied by an adjacent markdown link block) |
-| AC-6 | `meeting-preparation-and-summarization.md` has Mermaid diagram near top | TC-PROC-006 | STRUCT + MANUAL | First ```mermaid block within first 80 lines; renders on GitHub | Covered |
-| AC-7 | `decision-making.md` has Mermaid diagram near top | TC-PROC-007 | STRUCT + MANUAL | First ```mermaid block within first 80 lines; renders on GitHub | Covered |
-| AC-8 | `onboarding-existing-project.md` has Mermaid diagram near top | TC-PROC-008 | STRUCT + MANUAL | First ```mermaid block within first 80 lines; renders on GitHub | Covered |
-| AC-9 | Every process guide has a back-link to `ados-processes.md` | TC-PROC-009 | STRUCT | Each designated process guide contains a markdown link to `ados-processes.md` | Covered (guide set finalized per spec — OQ-1) |
-| AC-10 | `doc/00-index.md` links to `ados-processes.md` prominently | TC-PROC-010 | STRUCT + MANUAL | Link present within first 50 lines (top index tables) | Covered |
-| AC-11 | Doc-distribution test passes | TC-PROC-011 | AUTO | `bash scripts/.tests/test-doc-distribution.sh` exits 0 | Covered |
-| AC-12 | All new/modified redistributable docs have license headers | TC-PROC-012 | STRUCT (+ AUTO idempotency) | Every touched `doc/guides/*.md` + README has Copyright/MIT/source lines; dry-run of header tool reports no pending changes | Covered |
+Traceability matrix — every canonical AC maps to one or more test cases and a verification method. Verification method legend: **AUTO** = automated script gate; **STRUCT** = repeatable structural check (grep/awk); **MANUAL** = human review.
+
+| AC ID | Description (canonical, from spec §17) | TC ID(s) | Method | Pass criterion | Status |
+|-------|----------------------------------------|----------|--------|----------------|--------|
+| AC-F1-1 | `doc/guides/ados-processes.md` exists with `ados_distribution: redistributable` | TC-PROC-001, TC-PROC-011 | STRUCT + AUTO | File exists; frontmatter marker parses to `redistributable`; doc-distribution guard exits 0 | Covered |
+| AC-F1-2 | Master Mermaid diagram shows all 6 processes (5 primary + documentation reconciliation as supporting) with their cross-process relationships | TC-PROC-002, TC-PROC-016 | STRUCT + MANUAL | Master Mermaid block contains all 6 canonical process labels + ≥1 relationship edge each; renders on GitHub | Covered |
+| AC-F1-3 | Per-process overview card (problem/audience/output/link) for each of the 6 processes | TC-PROC-003, TC-PROC-016 | STRUCT + MANUAL | Exactly 6 cards; each card exposes all 4 fields; each card's link resolves to the correct guide (documentation reconciliation → change-lifecycle.md phase 7) | Covered |
+| AC-F1-4 | Easy-to-read, scannable structure (clear sections, cards/tables, short prose — not a wall of text) | TC-PROC-004 | MANUAL | Reviewer confirms logical section order, ≤2 nesting depth for cards, no wall-of-text; documented in execution log | Covered |
+| AC-F2-1 | README compact Mermaid process map near top **and** adjacent markdown link legend for one-click access (clickability via the legend — DEC-1; nodes not clickable) | TC-PROC-005 | STRUCT + MANUAL | First ```mermaid block within first 60 lines; adjacent link legend contains a link to every (standalone) process guide | Covered |
+| AC-F3-1 | `meeting-preparation-and-summarization.md` Mermaid diagram (before/during/after) near top | TC-PROC-006 | STRUCT + MANUAL | First ```mermaid block within first 80 lines; renders on GitHub | Covered |
+| AC-F3-2 | `decision-making.md` Mermaid diagram (D0–D14 kernel + R0–R3 routing) near top | TC-PROC-007 | STRUCT + MANUAL | First ```mermaid block within first 80 lines; renders on GitHub | Covered |
+| AC-F3-3 | `onboarding-existing-project.md` Mermaid setup-flow diagram near top | TC-PROC-008 | STRUCT + MANUAL | First ```mermaid block within first 80 lines; renders on GitHub | Covered |
+| AC-F4-1 | Every process guide has a back-link to `ados-processes.md` | TC-PROC-009 | STRUCT | Each of the 5 standalone process guides contains a navigational markdown link to `ados-processes.md` | Covered |
+| AC-F4-2 | `doc/00-index.md` links to `ados-processes.md` prominently | TC-PROC-010 | STRUCT + MANUAL | Link present within first 50 lines (top index tables) | Covered |
+| AC-F5-1 | Consistency review — all process diagrams (2 existing + new) share consistent node-naming, color, subgraph, multiline-label, and feedback-loop conventions | TC-PROC-014 | MANUAL (+ STRUCT spot-checks) | New diagrams share the established conventions; every color-coded diagram carries a Legend + non-color cue (see TC-PROC-014) | Covered |
+| AC-NFR4-1 | All new/modified redistributable docs carry license headers | TC-PROC-012 | STRUCT (+ AUTO idempotency) | Every touched file — new `ados-processes.md`; 5 modified guides; `doc/00-index.md`; **and `README.md`** (pre-existing header preserved) — has Copyright/MIT/source lines; header-tool dry-run is a no-op | Covered |
+| AC-NFR5-1 | Doc-distribution test exits 0 | TC-PROC-011 | AUTO | `bash scripts/.tests/test-doc-distribution.sh` exits 0 | Covered |
 
 **Cross-cutting coverage (not a single AC, but ticket verification strategies):**
 
 | Concern | TC ID(s) | Method | Pass criterion |
 |---------|----------|--------|----------------|
 | Mermaid syntax validity (conservative, GitHub-renderable) | TC-PROC-013 | MANUAL (+ best-effort `mmdc`) | Every new/modified Mermaid block renders on GitHub; uses only conservative directives |
-| Diagram consistency review (vs `change-lifecycle.md` / `project-inception.md`) | TC-PROC-014 | MANUAL (+ STRUCT spot-checks) | New diagrams share the established conventions (see §8.2) |
 | Scope/regression guard (docs-only, no spec features) | TC-PROC-015 | STRUCT | Diff touches only `doc/**` + `README.md` + this change folder; no `.opencode/`, `.ai/`, `tools/`, `scripts/` logic; no `doc/spec/**` feature files |
-| Content correctness (6-process inventory + relationships match ticket) | TC-PROC-016 | MANUAL (+ STRUCT) | Inventory == {inception, onboarding, change delivery, meeting management, decision making, documentation reconciliation}; relationships narrated match ticket |
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
 
@@ -98,14 +101,17 @@ N/A. This is a documentation-only change with no APIs, events, or data-model int
 
 ### 3.3 Non-Functional Coverage (NFR-#)
 
-Explicit `NFR-#` IDs are defined in the change spec, which is being authored in parallel. To avoid inventing requirements, the table below maps the **quality attributes implied by the ticket's verification strategies** to test cases. When the spec lands with concrete NFR IDs, this section will be reconciled and `status` flipped to `Updated` (see Revision Log).
+Reconciled to the landed spec's `NFR-1..NFR-6` (spec §9). Each NFR traces to its TC(s). (OQ-4 closed.)
 
-| Quality attribute (implied) | TC ID(s) | Verification |
-|------------------------------|----------|--------------|
-| Diagrams render reliably on GitHub (no bleeding-edge Mermaid) | TC-PROC-013 | Manual GitHub render review + optional `mmdc` |
-| Redistributable docs remain installable + marker-correct | TC-PROC-011 | Automated doc-distribution guard |
-| Docs carry correct license provenance | TC-PROC-012 | Structural header check + header-tool dry-run idempotency |
-| No scope creep / non-functional regression | TC-PROC-015 | Structural diff guard |
+| NFR ID | Requirement (spec §9) | TC ID(s) | Verification |
+|--------|-----------------------|----------|--------------|
+| NFR-1 | Mermaid syntax renders on GitHub (conservative, widely-supported; no directives outside GitHub's pinned version) | TC-PROC-013 | Manual GitHub render review + optional best-effort `mmdc` |
+| NFR-2 | README compact map fits one screen-width (~1280px, no horizontal scrollbar) | TC-PROC-005, TC-PROC-004 | Structural compact-map probe + GitHub render review (compact LR diagram) |
+| NFR-3 | Mobile rendering does not break layout (renders, no destructive horizontal overflow; vertical scroll OK) | TC-PROC-013, TC-PROC-004 | Manual GitHub mobile render review (desktop+mobile) |
+| NFR-4 | License headers on all new/modified redistributable docs | TC-PROC-012 | Structural header check + header-tool dry-run idempotency (→ AC-NFR4-1) |
+| NFR-5 | doc-distribution guard passes (marker present/valid, no install-set drift) | TC-PROC-011 | Automated doc-distribution guard (→ AC-NFR5-1) |
+| NFR-6 | Diagram consistency (all process diagrams share consistent node-naming, color, subgraph, multiline-label, feedback-loop conventions) | TC-PROC-014 | Manual consistency review + structural spot-checks (→ AC-F5-1) |
+| (scope guard) | No scope creep / non-functional regression (docs-only, no spec features) | TC-PROC-015 | Structural diff guard (non-goal guard, not a spec NFR) |
 
 ## 4. Test Types and Layers
 
@@ -124,22 +130,22 @@ Evidence convention: every executed check records the exact command run + pass/f
 
 | TC ID | Title | Type | Impact | Priority | AC Coverage |
 |-------|-------|------|--------|----------|-------------|
-| TC-PROC-001 | `ados-processes.md` exists with correct distribution marker | Happy Path | Critical | High | AC-1 |
-| TC-PROC-002 | Master Mermaid diagram enumerates all 6 processes + relationships | Happy Path | Critical | High | AC-2 |
-| TC-PROC-003 | Six per-process overview cards each expose problem/audience/output/link | Happy Path | Critical | High | AC-3 |
-| TC-PROC-004 | Process-map guide is readable and scannable | Manual Review | Important | Medium | AC-4 |
-| TC-PROC-005 | README compact Mermaid map + clickable link block near top | Happy Path | Critical | High | AC-5 |
-| TC-PROC-006 | Meeting-prep guide has Mermaid diagram near top | Happy Path | Important | Medium | AC-6 |
-| TC-PROC-007 | Decision-making guide has Mermaid diagram near top | Happy Path | Important | Medium | AC-7 |
-| TC-PROC-008 | Onboarding guide has Mermaid diagram near top | Happy Path | Important | Medium | AC-8 |
-| TC-PROC-009 | Every process guide back-links to `ados-processes.md` | Happy Path | Important | High | AC-9 |
-| TC-PROC-010 | `doc/00-index.md` prominently links `ados-processes.md` | Happy Path | Important | Medium | AC-10 |
-| TC-PROC-011 | Doc-distribution drift guard exits 0 | Regression | Critical | High | AC-1, AC-11 |
-| TC-PROC-012 | License headers present on all touched redistributable docs | Regression | Critical | High | AC-12 |
-| TC-PROC-013 | All new/modified Mermaid blocks use conservative, GitHub-renderable syntax | Corner Case | Important | High | AC-2, AC-5, AC-6, AC-7, AC-8 |
-| TC-PROC-014 | New diagrams are stylistically consistent with existing diagram conventions | Manual Review | Important | Medium | (consistency-review ticket item) |
+| TC-PROC-001 | `ados-processes.md` exists with correct distribution marker | Happy Path | Critical | High | AC-F1-1 |
+| TC-PROC-002 | Master Mermaid diagram enumerates all 6 processes + relationships | Happy Path | Critical | High | AC-F1-2 |
+| TC-PROC-003 | Six per-process overview cards each expose problem/audience/output/link | Happy Path | Critical | High | AC-F1-3 |
+| TC-PROC-004 | Process-map guide is readable and scannable | Manual Review | Important | Medium | AC-F1-4 |
+| TC-PROC-005 | README compact Mermaid map + clickable link block near top | Happy Path | Critical | High | AC-F2-1 |
+| TC-PROC-006 | Meeting-prep guide has Mermaid diagram near top | Happy Path | Important | Medium | AC-F3-1 |
+| TC-PROC-007 | Decision-making guide has Mermaid diagram near top | Happy Path | Important | Medium | AC-F3-2 |
+| TC-PROC-008 | Onboarding guide has Mermaid diagram near top | Happy Path | Important | Medium | AC-F3-3 |
+| TC-PROC-009 | Every process guide back-links to `ados-processes.md` | Happy Path | Important | High | AC-F4-1 |
+| TC-PROC-010 | `doc/00-index.md` prominently links `ados-processes.md` | Happy Path | Important | Medium | AC-F4-2 |
+| TC-PROC-011 | Doc-distribution drift guard exits 0 | Regression | Critical | High | AC-F1-1, AC-NFR5-1 |
+| TC-PROC-012 | License headers present on all touched redistributable docs | Regression | Critical | High | AC-NFR4-1 |
+| TC-PROC-013 | All new/modified Mermaid blocks use conservative, GitHub-renderable syntax | Corner Case | Important | High | AC-F1-2, AC-F2-1, AC-F3-1, AC-F3-2, AC-F3-3 |
+| TC-PROC-014 | New diagrams are stylistically consistent with existing diagram conventions | Manual Review | Important | Medium | AC-F5-1 |
 | TC-PROC-015 | Diff is scope-bounded: docs-only, no spec features, no agent/command logic | Negative / Regression | Critical | High | (non-goal guards) |
-| TC-PROC-016 | 6-process inventory + cross-process relationships match the ticket | Corner Case | Critical | High | AC-2, AC-3 |
+| TC-PROC-016 | 6-process inventory + cross-process relationships match the ticket | Corner Case | Critical | High | AC-F1-2, AC-F1-3 |
 
 ### 5.2 Scenario Details
 
@@ -148,7 +154,7 @@ Evidence convention: every executed check records the exact command run + pass/f
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-1, TC-PROC-011
+**Related IDs**: AC-F1-1, TC-PROC-011, NFR-5
 **Test Type(s)**: Manual (structural)
 **Automation Level**: Semi-automated
 **Target Layer / Location**: `doc/guides/ados-processes.md`
@@ -180,7 +186,7 @@ Evidence convention: every executed check records the exact command run + pass/f
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-2, AC-3, TC-PROC-013, TC-PROC-016
+**Related IDs**: AC-F1-2, AC-F1-3, TC-PROC-013, TC-PROC-016, NFR-1
 **Test Type(s)**: Manual (structural)
 **Automation Level**: Semi-automated
 **Target Layer / Location**: `doc/guides/ados-processes.md` (first/largest Mermaid block = "master diagram")
@@ -198,7 +204,7 @@ Evidence convention: every executed check records the exact command run + pass/f
      grep -c "$p" doc/guides/ados-processes.md
    done
    ```
-   (Exact label wording is finalized in the spec; the probe is adjusted to the spec's canonical labels — see OQ-1.)
+   (The six canonical labels — Inception, Onboarding, Change Delivery, Meeting Management, Decision Making, Documentation Reconciliation — are final in the spec §5.1; the probe matches those labels.)
 2. Confirm each of the 6 processes is connected to at least one other process via a relationship (arrow), i.e., no isolated node in the master diagram.
 3. Visually confirm on GitHub render that the diagram shows the 5 primary processes + 1 supporting process and the relationships between them.
 
@@ -213,7 +219,7 @@ Evidence convention: every executed check records the exact command run + pass/f
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-3, TC-PROC-016
+**Related IDs**: AC-F1-3, TC-PROC-016
 **Test Type(s)**: Manual (structural)
 **Automation Level**: Semi-automated
 **Target Layer / Location**: `doc/guides/ados-processes.md` (card section)
@@ -245,7 +251,7 @@ Evidence convention: every executed check records the exact command run + pass/f
 **Scenario Type**: Manual Review
 **Impact Level**: Important
 **Priority**: Medium
-**Related IDs**: AC-4
+**Related IDs**: AC-F1-4, NFR-2, NFR-3
 **Test Type(s)**: Manual
 **Automation Level**: Manual
 **Target Layer / Location**: `doc/guides/ados-processes.md`
@@ -271,7 +277,7 @@ Evidence convention: every executed check records the exact command run + pass/f
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-5, TC-PROC-013
+**Related IDs**: AC-F2-1, TC-PROC-013, NFR-2
 **Test Type(s)**: Manual (structural)
 **Automation Level**: Semi-automated
 **Target Layer / Location**: `README.md`
@@ -285,8 +291,8 @@ Evidence convention: every executed check records the exact command run + pass/f
 
 1. Confirm a ```mermaid block exists within the first 60 lines:
    `awk '/^```mermaid/{print NR; exit}' README.md` → expect a line number ≤ 60.
-2. Confirm an adjacent link block (a markdown table or list) immediately follows the diagram and contains a link to **each** process guide. Probe:
-   `for g in project-inception onboarding-existing-project change-lifecycle meeting-preparation-and-summarization decision-making; do grep -c "$g.md" README.md; done` (5 known guides; 6th per spec).
+2. Confirm an adjacent link block (a markdown table or list) immediately follows the diagram and contains a link to **each** standalone process guide (the 5 guides; documentation reconciliation has no standalone guide and is reachable via `change-lifecycle.md`). Probe:
+   `for g in project-inception onboarding-existing-project change-lifecycle meeting-preparation-and-summarization decision-making; do grep -c "$g.md" README.md; done` (5 standalone guides).
 3. Confirm README's existing 3-line license header (Copyright/MIT/source) is retained (covered authoritatively by TC-PROC-012).
 4. Visually confirm the compact map renders on GitHub and the link block gives one-click access to each guide.
 
@@ -305,7 +311,7 @@ Evidence convention: every executed check records the exact command run + pass/f
 **Scenario Type**: Happy Path
 **Impact Level**: Important
 **Priority**: Medium
-**Related IDs**: AC-6, TC-PROC-013, TC-PROC-009
+**Related IDs**: AC-F3-1, TC-PROC-013, TC-PROC-009, NFR-1
 **Test Type(s)**: Manual (structural)
 **Automation Level**: Semi-automated
 **Target Layer / Location**: `doc/guides/meeting-preparation-and-summarization.md`
@@ -331,7 +337,7 @@ Evidence convention: every executed check records the exact command run + pass/f
 **Scenario Type**: Happy Path
 **Impact Level**: Important
 **Priority**: Medium
-**Related IDs**: AC-7, TC-PROC-013, TC-PROC-009
+**Related IDs**: AC-F3-2, TC-PROC-013, TC-PROC-009, NFR-1
 **Test Type(s)**: Manual (structural)
 **Automation Level**: Semi-automated
 **Target Layer / Location**: `doc/guides/decision-making.md`
@@ -357,7 +363,7 @@ Evidence convention: every executed check records the exact command run + pass/f
 **Scenario Type**: Happy Path
 **Impact Level**: Important
 **Priority**: Medium
-**Related IDs**: AC-8, TC-PROC-013, TC-PROC-009
+**Related IDs**: AC-F3-3, TC-PROC-013, TC-PROC-009, NFR-1
 **Test Type(s)**: Manual (structural)
 **Automation Level**: Semi-automated
 **Target Layer / Location**: `doc/guides/onboarding-existing-project.md`
@@ -383,7 +389,7 @@ Evidence convention: every executed check records the exact command run + pass/f
 **Scenario Type**: Happy Path
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: AC-9, OQ-1
+**Related IDs**: AC-F4-1
 **Test Type(s)**: Manual (structural)
 **Automation Level**: Semi-automated
 **Target Layer / Location**: `doc/guides/*.md` (process-guide set)
@@ -391,23 +397,23 @@ Evidence convention: every executed check records the exact command run + pass/f
 
 **Preconditions**:
 
-- Designated process-guide set confirmed per spec (OQ-1). Known confirmed guides: `project-inception.md`, `onboarding-existing-project.md`, `change-lifecycle.md`, `meeting-preparation-and-summarization.md`, `decision-making.md`. The 6th ("documentation reconciliation" process) guide target is confirmed against the spec.
+- Designated process-guide set (the 5 standalone process guides): `project-inception.md`, `onboarding-existing-project.md`, `change-lifecycle.md`, `meeting-preparation-and-summarization.md`, `decision-making.md`. The 6th process — **documentation reconciliation** — has **no standalone guide**; it is a supporting process embedded in the change lifecycle (phase 7 `system_spec_update`, `@doc-syncer` / `/sync-docs`), so it is represented via the canonical-map card (→ AC-F1-3) and the change-lifecycle phase-7 section, not via a back-link target. (OQ-1 closed.)
 
 **Steps**:
 
-1. For each designated process guide, confirm a markdown link to `ados-processes.md` exists:
+1. For each of the 5 standalone process guides, confirm a navigational markdown link to `ados-processes.md` exists:
    ```
    for g in project-inception onboarding-existing-project change-lifecycle \
-            meeting-preparation-and-summarization decision-making <6th-per-spec>; do
+            meeting-preparation-and-summarization decision-making; do
      printf "%s: " "$g"; grep -c "ados-processes.md" "doc/guides/$g.md"
    done
    ```
-   → expect count ≥ 1 for every guide.
+   → expect count ≥ 1 for every guide. (Documentation reconciliation is intentionally absent — no standalone guide.)
 2. Confirm the back-link is phrased as navigation (e.g., "Part of the [ADOS process map](ados-processes.md)") rather than an incidental mention.
 
 **Expected Outcome**:
 
-- Every process guide links to `ados-processes.md`; links are navigational.
+- Every standalone process guide links to `ados-processes.md`; links are navigational.
 
 ---
 
@@ -416,7 +422,7 @@ Evidence convention: every executed check records the exact command run + pass/f
 **Scenario Type**: Happy Path
 **Impact Level**: Important
 **Priority**: Medium
-**Related IDs**: AC-10
+**Related IDs**: AC-F4-2
 **Test Type(s)**: Manual (structural)
 **Automation Level**: Semi-automated
 **Target Layer / Location**: `doc/00-index.md`
@@ -443,7 +449,7 @@ Evidence convention: every executed check records the exact command run + pass/f
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-1, AC-11, TC-PROC-001
+**Related IDs**: AC-F1-1, AC-NFR5-1, TC-PROC-001, NFR-5
 **Test Type(s)**: Manual (automated script)
 **Automation Level**: Automated
 **Target Layer / Location**: `scripts/.tests/test-doc-distribution.sh`
@@ -465,7 +471,7 @@ Evidence convention: every executed check records the exact command run + pass/f
 
 **Notes / Clarifications**:
 
-- This single gate authoritatively covers AC-1 (marker present+valid on `ados-processes.md`) and AC-11. It also regressively protects the wider DM-2 doc set from drift introduced by the new file.
+- This single gate authoritatively covers AC-F1-1 (marker present+valid on `ados-processes.md`) and AC-NFR5-1. It also regressively protects the wider DM-2 doc set from drift introduced by the new file.
 
 ---
 
@@ -474,7 +480,7 @@ Evidence convention: every executed check records the exact command run + pass/f
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-12
+**Related IDs**: AC-NFR4-1, NFR-4
 **Test Type(s)**: Manual (structural + tool idempotency)
 **Automation Level**: Semi-automated
 **Target Layer / Location**: `doc/guides/*.md`, `README.md`
@@ -511,6 +517,7 @@ Evidence convention: every executed check records the exact command run + pass/f
 **Notes / Clarifications**:
 
 - The header tool has no fail-on-missing "verify mode", so step 1 (grep) is the authoritative pass/fail probe; step 2 (dry-run idempotency) is corroborating. (This gap is noted in §1.2.)
+- **Authoritative enumerated header list (m7 cross-walk):** this plan treats AC-NFR4-1 as covering **all** modified files whose header must be present/preserved — the new `doc/guides/ados-processes.md`; the **5** modified guides (`meeting-preparation-and-summarization.md`, `decision-making.md`, `onboarding-existing-project.md`, `change-lifecycle.md`, `project-inception.md`); `doc/00-index.md`; **and `README.md`** (README's pre-existing header is modified-adjacent and must be preserved verbatim). `README.md` is included here even though it is not in the doc-distribution scan set, because it is a touched file and its header is a DoD-relevant invariant. The spec's AC-NFR4-1 prose currently enumerates only `ados-processes.md; modified guides; doc/00-index.md` — for cross-artifact agreement the spec/plan should add `README.md` to that enumerated list (this plan cannot edit them; tracked in §8.3).
 
 ---
 
@@ -519,7 +526,7 @@ Evidence convention: every executed check records the exact command run + pass/f
 **Scenario Type**: Corner Case
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: AC-2, AC-5, AC-6, AC-7, AC-8
+**Related IDs**: AC-F1-2, AC-F2-1, AC-F3-1, AC-F3-2, AC-F3-3, NFR-1, NFR-3
 **Test Type(s)**: Manual (+ best-effort automated)
 **Automation Level**: Semi-automated
 **Target Layer / Location**: every new/modified ```mermaid block
@@ -552,15 +559,15 @@ Evidence convention: every executed check records the exact command run + pass/f
 **Scenario Type**: Manual Review
 **Impact Level**: Important
 **Priority**: Medium
-**Related IDs**: (ticket "consistency review of existing diagrams")
+**Related IDs**: AC-F5-1, NFR-6
 **Test Type(s)**: Manual (+ structural spot-checks)
 **Automation Level**: Manual
 **Target Layer / Location**: new diagrams vs `doc/guides/change-lifecycle.md`, `doc/guides/project-inception.md`
-**Tags**: @docs, @mermaid, @consistency
+**Tags**: @docs, @mermaid, @consistency, @a11y
 
 **Preconditions**:
 
-- Existing conventions documented (pm-notes): `change-lifecycle.md` → `flowchart TD` + `subgraph "..."` + `<br/>` multiline + dashed feedback loops + Legend; `project-inception.md` → `flowchart TB/TD/LR` + `subgraph X["..."]` quoted labels + `style X fill:#...` color fills + convergence diamonds.
+- Existing conventions documented (pm-notes): `change-lifecycle.md` → `flowchart TD` + `subgraph "..."` + `<br/>` multiline + dashed feedback loops + Legend; `project-inception.md` → `flowchart TB/TD/LR` + `subgraph X["..."]` quoted labels + `style X fill:#...` color fills + convergence diamonds. The implementation plan defines a shared palette where **green `#4CAF50` = entry/success and red `#F44336` = remediation/fail**.
 
 **Steps**:
 
@@ -570,12 +577,13 @@ Evidence convention: every executed check records the exact command run + pass/f
    - Uses `subgraph` with quoted labels for grouping (matches both references).
    - Uses `style <node> fill:#...` for color (matches `project-inception.md`); no jarring palette shift.
    - Uses `<br/>` (not literal newlines) for multiline labels (matches `change-lifecycle.md`).
-   - Where a legend aids comprehension, follows the `change-lifecycle.md` legend pattern.
+   - Every diagram carries a `**Legend**:` block or one-line caption (a11y + comprehension — matches the `change-lifecycle.md` legend pattern).
 3. Confirm existing diagrams (`change-lifecycle.md`, `project-inception.md`) are **not** regressed/restyled in a way that breaks their own consistency (the change is additive; if the consistency review touched them, the diff is stylistic-only and justified).
+4. **Accessibility — non-color cue (WCAG 1.4.1).** For every diagram that uses red/green (or any color) to encode pass/fail or success/remediation, confirm the meaning is **also** conveyed without color: the diagram has a **Legend** naming the color semantics **and** each such node carries a **non-color text cue** (e.g., a label word like "✅/PASS/success" vs "❌/FAIL/remediation", or distinct node shapes). A reader who cannot distinguish red from green must still derive the outcome from the diagram. Structural spot-check: for each red/green-styled node, verify its label text states the outcome independently of color.
 
 **Expected Outcome**:
 
-- New diagrams share the established visual language; no inconsistency defects filed; existing diagrams unbroken.
+- New diagrams share the established visual language; every color-coded diagram has a Legend + a non-color text cue on red/green nodes; no inconsistency or a11y defects filed; existing diagrams unbroken.
 
 ---
 
@@ -627,7 +635,7 @@ Evidence convention: every executed check records the exact command run + pass/f
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-2, AC-3
+**Related IDs**: AC-F1-2, AC-F1-3
 **Test Type(s)**: Manual (+ structural)
 **Automation Level**: Semi-automated
 **Target Layer / Location**: `doc/guides/ados-processes.md`
@@ -697,25 +705,27 @@ Evidence convention: every executed check records the exact command run + pass/f
 
 ### 8.2 Assumptions
 
-- The change spec (`chg-GH-85-spec.md`) will codify: canonical process labels, the per-process card field names, the "supporting" process designation, the exact process→guide mapping (incl. the documentation-reconciliation guide), and explicit `NFR-#` IDs. This plan is derived from the ticket + pm-notes and will be reconciled to the spec on update.
-- "Near the top" is acceptably proxied by "first ```mermaid fence within first 80 lines (guides) / 60 lines (README)". Frontmatter + title + audience blockquote legitimately occupy the first ~9–20 lines.
+- The change spec (`chg-GH-85-spec.md`) has landed and codifies: canonical process labels, the per-process card field names, the "supporting" process designation (documentation reconciliation), the process→guide mapping (5 standalone guides + documentation-reconciliation embedded in `change-lifecycle.md` phase 7), and explicit `NFR-1..NFR-6` IDs. This plan is reconciled to it (AC/NFR cross-walk in §3.1, §3.3).
+- **"Near the top" threshold (m3 — single canonical value, stated once, referenced identically across spec/plan/test-plan):** the compact README diagram's first ```mermaid fence must appear **within the first 60 lines**; each process-guide diagram's first ```mermaid fence must appear **within the first 80 lines**. These are this plan's structural proxies for the spec/plan's qualitative "near the top" (which gives no line number); frontmatter + title + audience blockquote legitimately occupy the first ~9–20 lines. Same thresholds are used in TC-PROC-005 (≤60) and TC-PROC-006/007/008 (≤80) and the §3.1 pass criteria.
 - GitHub's native Mermaid renderer is the authoritative renderer for this repo (no pinned local Mermaid version).
 - The repo's `doc/spec/**` is out of scope as a feature target (non-goal); the change does not add spec features.
 
 ### 8.3 Open Questions
 
-| ID | Question | Blocking? | Owner |
-|----|----------|-----------|-------|
-| OQ-1 | Which guide(s) represent the **"documentation reconciliation"** process for the purposes of the per-process card link (AC-3), the back-link requirement (AC-9), and the README link table (AC-5)? The 5 other guides are confirmed; the 6th is to be confirmed in the spec. | No (plan parametrized; probes note "6th per spec") — but blocks final TC-PROC-009/016 sign-off until resolved. | @spec-writer |
-| OQ-2 | Confirm the GitHub-native interpretation of "clickable links to guides" (AC-5) = adjacent markdown link block, not clickable diagram nodes (per PM decision in pm-notes, GitHub sandbox blocks node callbacks). | No (PM decision already recorded) — surface for DoR confirmation. | @pm |
-| OQ-3 | Should a pinned Mermaid CLI lint be added to CI as a follow-up, or is GitHub render review sufficient for this and future diagram changes? | No (best-effort `mmdc` noted in TC-PROC-013). | @decision-advisor (follow-up) |
-| OQ-4 | Reconcile explicit `NFR-#` IDs (and `owners`) into §3.3 once `chg-GH-85-spec.md` lands; flip plan `status` → `Updated` with a Revision Log entry. | No. | @test-plan-writer |
+| ID | Question | Blocking? | Owner | Status |
+|----|----------|-----------|-------|--------|
+| OQ-1 | Which guide(s) represent the **"documentation reconciliation"** process? | No | @spec-writer | **Closed (R1).** Documentation reconciliation has **no standalone guide** — it is a supporting process embedded in `doc/guides/change-lifecycle.md` phase 7 (`system_spec_update`, `@doc-syncer` / `/sync-docs`). It is represented by the canonical-map card (AC-F1-3) and the change-lifecycle phase-7 section. The 5 standalone guides carry the back-links (AC-F4-1). Probes updated accordingly. |
+| OQ-2 | Confirm the GitHub-native interpretation of "clickable links to guides" (AC-F2-1) = adjacent markdown link block, not clickable diagram nodes (per PM decision in pm-notes, GitHub sandbox blocks node callbacks). | No (PM decision already recorded) — surface for DoR confirmation. | @pm | Open (DoR confirmation only). |
+| OQ-3 | Should a pinned Mermaid CLI lint be added to CI as a follow-up, or is GitHub render review sufficient for this and future diagram changes? | No (best-effort `mmdc` noted in TC-PROC-013). | @decision-advisor (follow-up) | Open. |
+| OQ-4 | Reconcile explicit `NFR-#` IDs into §3.3. | No. | @test-plan-writer | **Closed (R1).** §3.3 now traces every TC to `NFR-1..NFR-6`; status → Updated; Revision Log 0.2. |
+| OQ-5 | AC-NFR4-1 enumerated header list (m7): the spec's prose lists `ados-processes.md; modified guides; doc/00-index.md` and omits `README.md`; this plan includes README. For full cross-artifact agreement the spec/plan should add `README.md` to their enumerated lists. | No (test-plan covers README authoritatively via TC-PROC-012). | @spec-writer / @plan-writer | Open — sibling-artifact alignment. |
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 0.1 | 2026-06-28 | @test-plan-writer | Initial draft. Derived from issue #85 ticket summary + `chg-GH-85-pm-notes.yaml` (spec `chg-GH-85-spec.md` authored in parallel). 16 test cases (TC-PROC-001..016) covering all 12 ACs + cross-cutting consistency/scope/correctness guards. NFR IDs and process→guide mapping flagged for reconciliation on spec landing (OQ-1, OQ-4). |
+| 0.2 | 2026-06-28 | @test-plan-writer | Red-team R1 reconciliation (status → Updated). (1) **M1/m1:** retired flat `AC-1..AC-12`; §3.1 + §5.1 + all TC `Related IDs` remapped to the spec's canonical 13-ID scheme (`AC-F1-1`…`AC-F5-1`, `AC-NFR4-1`, `AC-NFR5-1`); README map+legend collapsed to the single AC-F2-1; consistency review promoted to its own AC row (AC-F5-1, TC-PROC-014). (2) **M3/OQ-4:** §3.3 reconciled to spec `NFR-1..NFR-6`, each TC traced to its NFR ID. (3) **M3/OQ-1:** confirmed documentation reconciliation has no standalone guide (embedded in `change-lifecycle.md` phase 7); removed `<6th-per-spec>` placeholders from TC-PROC-005/009; updated probes to the 5 standalone guides. (4) **m3:** stated the single canonical "near the top" threshold (README ≤60 lines, guides ≤80 lines). (5) **m7:** TC-PROC-012 enumerated header list made authoritative incl. `README.md`; OQ-5 raised for spec/plan alignment. (6) **a11y:** TC-PROC-014 gains a WCAG 1.4.1 non-color-cue + Legend step. No scope/non-goal/decision/TC-structure changes. |
 
 ## 10. Test Execution Log
 

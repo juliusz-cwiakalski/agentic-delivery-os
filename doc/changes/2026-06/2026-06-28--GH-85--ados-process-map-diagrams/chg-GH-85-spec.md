@@ -50,7 +50,7 @@ ADOS is delivered and understood primarily through prose. The repository today o
 - **No single artifact** that shows all processes together and how they relate.
 - `doc/00-index.md` lists guides in a table but has no "processes at a glance" entry point.
 
-The existing two diagram styles are mature and serve as the de-facto conventions for this change.
+These are **two guides with diagrams (5 Mermaid fences total)** — `change-lifecycle.md` has 1 fence, `project-inception.md` has 4 fences — exhibiting two mature style families that serve as the de-facto conventions for this change.
 
 ### 2.2 Pain Points / Gaps
 
@@ -101,7 +101,7 @@ Because ADOS has no single visual map of its processes and three of five process
 | F-2 | Compact README process map | The README is the first thing newcomers see; it currently visualizes only change delivery and must orient the reader to all processes with one-click access. |
 | F-3 | Per-guide Mermaid process diagrams | Three of five process guides (meeting-prep, decision-making, onboarding) have no diagram; a near-the-top visual makes each process scannable. |
 | F-4 | Cross-navigation mesh | Readers in one process guide have no path to related processes or back to an overview; back-links, forward links, and index placement create a navigable whole. |
-| F-5 | Diagram consistency review | New diagrams must be stylistically consistent with the two existing mature diagrams so the whole set reads as one coherent system. |
+| F-5 | Diagram consistency review | New diagrams must be stylistically consistent with the two existing mature diagrams so the whole set reads as one coherent system. The review covers the two guides with diagrams (5 Mermaid fences total) plus the new diagrams added by F-1/F-2/F-3 — not just "the two diagrams". |
 
 ### 5.1 Capability Details
 
@@ -136,7 +136,7 @@ Every process guide carries a back-link to `doc/guides/ados-processes.md`, and t
 
 **F-5 — Diagram consistency review**
 
-A consistency pass over the whole set (the two existing diagrams plus the new ones) so that node naming, color usage, subgraph conventions, multiline-label style, and feedback-loop notation read as one coherent family. This is a review/normalization activity, not a redesign of the existing diagrams beyond minor consistency tweaks if needed.
+A consistency pass over the whole set — the **two guides with diagrams (5 Mermaid fences total)** plus the new ones added by F-1/F-2/F-3 — so that node naming, color usage, subgraph conventions, multiline-label style, and feedback-loop notation read as one coherent family. The F-5 review covers **all 5 existing fences**: (1) `change-lifecycle.md` lifecycle diagram; (2) `project-inception.md` Track A/B convergence diagram; (3) `project-inception.md` bootstrap master-flow diagram; (4) `project-inception.md` Phase 0 intake/material-scan flow; (5) `project-inception.md` Phases 5–7 shared back-half flow. This is a review/normalization activity, not a redesign of the existing fences beyond minor consistency tweaks if needed.
 
 ## 6. USER & SYSTEM FLOWS
 
@@ -171,7 +171,7 @@ Flow 4 — Cross-process traversal:
 2. **Add** a compact Mermaid process map near the top of `README.md`, with an adjacent markdown link legend providing one-click access to each guide (DEC-1).
 3. **Add** a near-the-top Mermaid diagram to `doc/guides/meeting-preparation-and-summarization.md`, `doc/guides/decision-making.md`, and `doc/guides/onboarding-existing-project.md`.
 4. **Cross-navigation**: add a back-link to `doc/guides/ados-processes.md` from every process guide (all five), forward links from the processes map to each guide, and a prominent link to the processes map in `doc/00-index.md`.
-5. **Consistency review** of all process diagrams (the two existing plus the new ones) for stylistic coherence.
+5. **Consistency review** of all process diagrams — the two guides with diagrams (5 Mermaid fences total) plus the new ones — for stylistic coherence.
 
 ### 7.2 Out of Scope
 
@@ -244,7 +244,7 @@ N/A — documentation-only change. No metrics, logs, traces, or alerts.
 | RSK-1 | GitHub Mermaid sandbox blocks node click-callbacks and in-label links, breaking the "clickable links to guides" AC if attempted via clickable nodes | M | H | Use an adjacent markdown link legend/table under the diagram for one-click access (DEC-1); do not rely on `<click>`/`<a>` in nodes | L |
 | RSK-2 | Master process-map diagram overflows on mobile, harming the newcomer experience | M | M | Keep the diagram structured for readability; split into per-process subgraphs; verify mobile render (NFR-3) | L |
 | RSK-3 | New `ados-processes.md` is missing/invalid `ados_distribution` marker, failing the doc-distribution test and causing install-set drift | M | M | Mark it `redistributable` on creation; run `bash scripts/.tests/test-doc-distribution.sh` before merge (NFR-5, AC-NFR5-1) | L |
-| RSK-4 | Bleeding-edge Mermaid directives do not render on GitHub's pinned version, producing blank boxes | M | M | Use conservative syntax only; visually verify each diagram on github.com; match the syntax style of the two existing rendering diagrams (NFR-1) | L |
+| RSK-4 | Bleeding-edge Mermaid directives do not render on GitHub's pinned version, producing blank boxes | M | M | Use conservative syntax only; visually verify each diagram on github.com; match the syntax style of the two existing rendering diagrams (across the 5 existing fences — NFR-1) | L |
 | RSK-5 | Modifying shared files (README.md, doc/00-index.md, three guides) introduces link rot or breaks existing anchors | L | M | Only add diagrams and links; do not rename/move existing sections; preserve existing license headers and markers; verify all links resolve | L |
 | RSK-6 | Scope creep into README adoption-funnel work (badges, hero rework) | L | M | Scope is bounded to the 12 AC; broader improvements explicitly deferred (NG-5, §7.3) | L |
 
@@ -252,7 +252,7 @@ N/A — documentation-only change. No metrics, logs, traces, or alerts.
 
 - The six-process inventory (inception, onboarding, change delivery, meetings, decisions, documentation reconciliation-as-supporting) is the correct and complete process surface of ADOS today.
 - Documentation reconciliation is best represented as a **supporting process embedded in change delivery** (via `@doc-syncer` / `/sync-docs`), not as a standalone primary process.
-- The two existing diagrams (change-lifecycle, project-inception) render correctly today and define the de-facto style conventions to match.
+- The two guides with diagrams (5 Mermaid fences total — `change-lifecycle.md` ×1, `project-inception.md` ×4) render correctly today and define the de-facto style conventions to match.
 - GitHub's Mermaid sandbox behavior (no reliable node-click) is stable for the foreseeable future.
 - `README.md` is **not** in the doc-distribution scan set (only `doc/guides`, `doc/templates`, and a fixed standalone list including `doc/00-index.md`), so README changes carry no distribution-marker constraint — but README must keep its existing license header.
 - `doc/00-index.md` **is** in the scan set and is currently `redistributable`; it must stay so.
@@ -309,9 +309,11 @@ N/A — documentation-only change. No metrics, logs, traces, or alerts.
 | AC-F3-3 | **Given** `doc/guides/onboarding-existing-project.md`, **when** a reader opens it, **then** a Mermaid setup-flow diagram appears near the top. | F-3 |
 | AC-F4-1 | **Given** any process guide (inception, onboarding, change-lifecycle, meeting-prep, decision-making), **when** a reader looks for an overview, **then** a back-link to `doc/guides/ados-processes.md` is present. | F-4 |
 | AC-F4-2 | **Given** `doc/00-index.md`, **when** a reader browses the documentation landing page, **then** a link to `doc/guides/ados-processes.md` appears in a prominent position (near the "Start Here" surface). | F-4 |
-| AC-F5-1 | **Given** all process diagrams (two existing + new), **when** the consistency review (F-5) is complete, **then** they share consistent node-naming, color, subgraph, multiline-label, and feedback-loop conventions. | F-5, NFR-6 |
-| AC-NFR4-1 | **Given** all new/modified redistributable docs, **when** the license-header convention is checked, **then** every one (new `ados-processes.md`; modified guides; `doc/00-index.md`) carries a license header. | NFR-4 |
+| AC-F5-1 | **Given** all process diagrams — the two guides with diagrams (5 existing Mermaid fences: change-lifecycle ×1, project-inception ×4) plus the new diagrams added by F-1/F-2/F-3 — **when** the consistency review (F-5) is complete, **then** they share consistent node-naming, color, subgraph, multiline-label, and feedback-loop conventions. | F-5, NFR-6 |
+| AC-NFR4-1 | **Given** all new/modified redistributable docs, **when** the license-header convention is checked, **then** every one (new `ados-processes.md`; modified guides; `doc/00-index.md`; and `README.md` whose pre-existing header is preserved) carries a license header. | NFR-4 |
 | AC-NFR5-1 | **Given** the doc-distribution guard, **when** `bash scripts/.tests/test-doc-distribution.sh` runs, **then** it exits 0 (new guide marked redistributable, no install-set drift). | NFR-5 |
+
+> **Canonical AC scheme.** This AC table is the canonical source of truth (13 IDs mapping to the 12 ticket items — the README map + one-click links are folded into AC-F2-1, and diagram consistency is its own AC-F5-1). The implementation plan and test plan remap to these IDs 1:1.
 
 > **Definition of Done**: all AC-F* and AC-NFR* criteria above are satisfied, all plan tasks are complete, and the change passes `/review` and `/check` (quality gates).
 
@@ -357,12 +359,17 @@ N/A — documentation-only change. No code, secrets, credentials, or attack surf
 
 ### Appendix A — Existing diagram style conventions (F-5 reference)
 
-| Guide | Direction | Conventions |
-|-------|-----------|-------------|
-| `change-lifecycle.md` | `flowchart TD` | Subgraphs per stage; `<br/>` for multiline node labels; dashed `-.->` arrows for feedback loops; a "Legend" block after the diagram. |
-| `project-inception.md` | `flowchart TB` (and `LR` for sub-flows) | Quoted node labels; `style ... fill:#...` color fills; convergence diamonds `{" "}`. |
+ADOS ships **two guides with diagrams (5 Mermaid fences total)**, not "two diagrams". The F-5 consistency-review scope covers **all 5 existing fences** plus the new diagrams added by F-1/F-2/F-3:
 
-New diagrams should be stylistically consistent with these (node naming, color usage, subgraph conventions, multiline-label style, feedback-loop notation).
+| # | Guide (file) | Fence / diagram | Direction | Conventions |
+|---|--------------|-----------------|-----------|-------------|
+| 1 | `change-lifecycle.md` | Lifecycle diagram | `flowchart TD` | Subgraphs per stage; `<br/>` for multiline node labels; dashed `-.->` arrows for feedback loops; a "Legend" block after the diagram. |
+| 2 | `project-inception.md` | Track A/B convergence diagram | `flowchart TB` | Quoted node labels; `style ... fill:#...` color fills; convergence diamonds `{" "}`. |
+| 3 | `project-inception.md` | Bootstrap master-flow diagram (all phases + gates + readiness-check loop) | `flowchart TD` | Subgraphs per phase; multiline labels; feedback loops. |
+| 4 | `project-inception.md` | Phase 0 intake/material-scan flow | `flowchart LR` | Sub-flow style; quoted labels. |
+| 5 | `project-inception.md` | Phases 5–7 shared back-half flow | `flowchart LR` | `subgraph` grouping shared phases. |
+
+New diagrams should be stylistically consistent with these (node naming, color usage, subgraph conventions, multiline-label style, feedback-loop notation). The F-5 review normalizes all 5 existing fences (minor tweaks only) plus the new fences into one coherent family — it does not redesign them.
 
 ### Appendix B — Diagram design principles (research-grounded, informs HOW diagrams look — not new scope)
 
@@ -372,12 +379,15 @@ New diagrams should be stylistically consistent with these (node naming, color u
 - **decision-making**: a D0–D14 decision-kernel overview + R0–R3 rigor-routing diagram (the guide already documents these in tables — visualize them).
 - **onboarding-existing-project**: a setup flow (getting ADOS → prerequisites → choose path [automated bootstrap vs manual] → mandatory artifacts → first change).
 - **Syntax**: keep Mermaid conservative/widely-supported; avoid bleeding-edge directives GitHub's pinned version may not render.
+- **Decision-diagram render-risk (highest risk)**: the decision-making diagram (D0–D14 kernel + R0–R3 routing) is the **highest render-risk** diagram on GitHub's pinned Mermaid, because it packs the most nodes/edges and uses punctuation-heavy labels. Constrain it to **≤2 subgraphs** and use **conservative syntax**: quote every label containing an en-dash or slash (e.g., `"D0–D14"`, `"R0–R3"`, `"Trigger/Triage"`) so the parser does not choke on the dash/slash. Verify its render on github.com before merge.
+- **Accessibility (WCAG 1.4.1 — use of color)**: diagrams must **not rely on color alone** to convey meaning. Every diagram carries a **Legend**, and red/green nodes (fail/remediation vs success) must also carry a **text cue** (e.g., the node label itself, such as `"FAIL"`/`"OK"`) so color-blind readers are not lost.
 
 ## 25. DOCUMENT HISTORY
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-06-28 | `@spec-writer` | Initial specification — authored from GH-85 ticket + `chg-GH-85-pm-notes.yaml` (clarify_scope decisions) + existing guide/research context. |
+| 1.1 | 2026-06-28 | `@spec-writer` | Red-team Round 1 surgical remediation (SHIP-WITH-FINDINGS): n3 — corrected "two existing diagrams" to "two guides with diagrams (5 Mermaid fences total)" and enumerated all 5 fences in F-5/Appendix A (m2); added canonical-AC-scheme note under §17 table; m6 — added decision-diagram render-risk principle (≤2 subgraphs, quote en-dash/slash labels) in Appendix B; added WCAG 1.4.1 accessibility principle (no color alone, Legend + text cues) in Appendix B. No scope/non-goal/DEC changes; AC scheme unchanged. |
 
 ---
 

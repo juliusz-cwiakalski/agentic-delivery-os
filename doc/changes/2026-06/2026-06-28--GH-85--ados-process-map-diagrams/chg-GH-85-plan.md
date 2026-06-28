@@ -1,8 +1,8 @@
 ---
 id: chg-GH-85-ados-process-map-diagrams
-status: Proposed
+status: Updated
 created: 2026-06-28T10:31:00Z
-last_updated: 2026-06-28T10:31:00Z
+last_updated: 2026-06-28T11:15:00Z
 owners: ["engineering"]
 service: docs
 labels: [docs, developer-experience, mermaid, navigation, documentation]
@@ -43,7 +43,7 @@ This plan delivers:
 5. A prominent entry to the canonical map from `doc/00-index.md`.
 6. A consistency review so the new and existing diagrams share one convention set, plus the mandatory doc-distribution quality gate green.
 
-The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml`. The change spec (`chg-GH-85-spec.md`) and test plan (`chg-GH-85-test-plan.md`) are being authored in parallel; the 12 acceptance criteria below are extracted from the issue scope and governance constraints and are the authoritative DoD for this plan.
+The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml`, and reconciled to the change spec (`chg-GH-85-spec.md`) and test plan (`chg-GH-85-test-plan.md`). The Definition of Done uses the **canonical AC scheme from the spec** — 13 IDs: `AC-F1-1`…`AC-F5-1`, `AC-NFR4-1`, `AC-NFR5-1` (see § Definition of Done). This plan's earlier flat `AC-1`…`AC-12` scheme has been **retired in favor of the spec's canonical IDs** (1:1 remap; see the cross-walk table in § Definition of Done).
 
 **Resolved decisions (from `chg-GH-85-pm-notes.yaml`):**
 
@@ -63,7 +63,7 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 | 5 | Decision-Making | `doc/guides/decision-making.md` | Cross-cutting: D0–D14 kernel, R0–R3 rigor routing |
 | 6 | Meeting Preparation & Summarization | `doc/guides/meeting-preparation-and-summarization.md` | Cross-cutting: evidence capture that feeds decisions |
 
-**Open questions:** None blocking. (If the parallel spec assigns slightly different AC numbering, treat the AC intents below as authoritative and remap identifiers 1:1.)
+**Open questions:** None blocking. (AC numbering reconciliation with the spec is complete — this plan now uses the spec's canonical `AC-F*` / `AC-NFR*` IDs 1:1; see the cross-walk table in § Definition of Done.)
 
 ## Scope
 
@@ -110,7 +110,7 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 - A first-time visitor can identify all 6 ADOS processes and their relationships from the master map alone.
 - All diagrams share one visible convention set (direction, color meaning, arrow meaning).
 - `bash scripts/.tests/test-doc-distribution.sh` exits 0; all other repo test scripts remain green.
-- All 12 acceptance criteria satisfied (see Definition of Done).
+- All 13 canonical acceptance criteria (`AC-F1-1`…`AC-F5-1`, `AC-NFR4-1`, `AC-NFR5-1`) satisfied (see Definition of Done).
 
 ## Mermaid convention set (shared across all phases)
 
@@ -119,13 +119,17 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 | Aspect | Convention |
 |--------|-----------|
 | Direction | `flowchart TD` (or `TB`) for vertical lifecycles; `flowchart LR` for pipelines / horizontal flows. |
-| Labels | Quote any label with spaces, punctuation, or multiple lines: `N["label text"]`. Use `<br/>` for line breaks inside a label. |
+| Labels | Quote any label with spaces, punctuation, or multiple lines: `N["label text"]`. Use `<br/>` for line breaks inside a label. **Labels containing en-dashes (`–`), slashes (`/`), or spaces MUST be double-quoted** (see the **n1** callout below) or Mermaid silently fails to render. |
 | Subgraphs | `subgraph "Quoted Title" ... end` to group phases/tracks; one concept per subgraph. |
 | Arrows | Solid `-->` = normal forward flow. Dashed `-.->` = feedback / reopening / optional / evidence-feed loops only. |
 | Color palette (consistent meaning) | Green `#4CAF50` = entry / success / start. Blue `#2196F3` = default process / steady-state. Orange `#FF9800` = gate / decision / attention. Red `#F44336` = remediation / fail / reopen. Purple `#9C27B0` = conditional / optional / cross-cutting. Always pair `fill:#hex,color:#fff`. |
 | Decision nodes | Diamond `{ "Quoted question?" }` for gates/routing. |
-| Legend / caption | Every diagram followed by a short `**Legend**:` bullet list or a one-line caption explaining color/arrow meaning. |
+| Legend / caption | **Mandatory:** every diagram is followed by a `**Legend**:` block explaining color/arrow meaning. Red (fail/remediation) and green (entry/success) nodes MUST also carry a **text cue** (e.g., "✗ Fail", "✓ Success") — never color alone (WCAG 1.4.1). |
 | Forbidden | No `click` callbacks, no `<a>` inside node labels, no `%%{init}%%` theme overrides, no exotic node shapes, no HTML beyond `<br/>`. |
+
+> **n1 — Quote labels with special characters (render-critical).** Mermaid's parser silently drops a node or fails to render when an unquoted label contains an en-dash (`–`), a slash (`/`), or any space. Every such label in this plan **MUST** be double-quoted — e.g. `K["D0–D14"]`, `R["R0–R3"]`, `T["Trigger/Triage D0"]`, `A["R0 / escape"]`. This is the single most common cause of a blank diagram box on GitHub; quote defensively.
+
+> **a11y — Legend mandatory + non-color cue (WCAG 1.4.1).** Every diagram MUST carry a `**Legend**:` block. Where color encodes meaning — specifically red = fail/remediation/reopen and green = entry/success — the node label MUST also carry a text cue (e.g., `F["✗ Remediation"]`, `S["✓ Shipped"]`). Do not rely on color alone, so the diagram stays legible to color-blind readers and in high-contrast/accessibility modes.
 
 ## Phases
 
@@ -135,7 +139,7 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 **Tasks**:
 
-- [ ] **1.1** Create `doc/guides/ados-processes.md` with a YAML frontmatter block matching sibling guides: `# Copyright ...` header lines, `source:` line, `ados_distribution: redistributable`, plus `id: GUIDE-ADOS-PROCESSES`, `status: Draft`, `created: 2026-06-28`, `owners: ["engineering"]`, and a one-line `summary`. (Do NOT hand-write the copyright header — run the script in Phase 9; here just reserve the frontmatter block so the script can populate the header lines. If authoring before Phase 9, write the header block exactly as siblings do and let Phase 9 verify/idempotently normalize.)
+- [ ] **1.1** Create `doc/guides/ados-processes.md` with a YAML frontmatter block containing **only** `ados_distribution: redistributable` plus `id: GUIDE-ADOS-PROCESSES`, `status: Draft`, `created: 2026-06-28`, `owners: ["engineering"]`, and a one-line `summary`. **Do NOT hand-write the copyright/MIT/`source:` lines.** Per `AGENTS.md`, "AI agents must never add license headers; headers are managed exclusively by `scripts/add-header-location.sh`." Phase 9 runs `scripts/add-header-location.sh doc/guides`, which is the **sole source** of the copyright header. (The Phase 1 commit will transiently contain a headerless guide; this is corrected by the Phase 9 commit and is fine — the doc-distribution guard checks the working tree at gate time, not commit history.)
 - [ ] **1.2** Write a 2–3 sentence intro stating the page is the canonical map of ADOS's six processes and that each process links to its detailed guide.
 - [ ] **1.3** Author the **master Mermaid diagram**: a `flowchart LR` pipeline showing all 6 processes as nodes + their relationships (inception & onboarding as alternative setup entry points → change lifecycle as steady-state loop → documentation reconciliation embedded in the lifecycle → decision-making and meetings as cross-cutting supporters). Keep it to one screen-width. Apply the shared convention set. Add a `**Legend**:` block beneath explaining color/arrow meaning.
 - [ ] **1.4** Add the **per-process card table** with one row per process (all 6, including documentation reconciliation which has no standalone guide): columns = Process | Problem it solves | Audience | Primary output | Guide link. Card text must be derived from each guide's actual purpose statement (do not invent).
@@ -145,8 +149,8 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 **Acceptance Criteria**:
 
-- Must: AC-1 (file + frontmatter/header/marker), AC-2 (master diagram of 6 processes + relationships), AC-3 (per-process cards for all 6), AC-4 (relationships narrative + how-to-use note).
-- Should: master diagram renders within one screen-width and uses only the conservative Mermaid subset.
+- Must: AC-F1-1 (file exists with `ados_distribution: redistributable`), AC-F1-2 (master diagram of 6 processes + relationships), AC-F1-3 (per-process cards for all 6), AC-F1-4 (scannable structure — not a wall of text).
+- Should: master diagram renders within one screen-width and uses only the conservative Mermaid subset; cross-process relationships narrative + "how to use this map" note present (support the master diagram and scannability).
 
 **Files and modules**:
 
@@ -168,14 +172,14 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 **Tasks**:
 
-- [ ] **2.1** In `README.md`, just below the hero image block and the `# Agentic Delivery OS (ADOS)` heading, insert a compact `flowchart LR` Mermaid process map mirroring the master map (same 6-process pipeline, possibly more compact labels). Do **not** remove or alter the hero image, the `<picture>` block, or the `source:` copyright header.
+- [ ] **2.1** In `README.md`, insert a compact `flowchart LR` Mermaid process map mirroring the master map (same 6-process pipeline, possibly more compact labels). **"Near the top" threshold (matches spec + test-plan): the first ```mermaid fence MUST be within the first 60 lines** (`awk '/^```mermaid/{print NR;exit}' README.md` ≤ 60) — place it just below the `# Agentic Delivery OS (ADOS)` heading / hero, trimming preceding prose if needed to stay under the line budget. Do **not** remove or alter the hero image, the `<picture>` block, or the `source:` copyright header.
 - [ ] **2.2** Replace or supplement the existing plain-text pipeline line (`ticket -> spec -> plan -> ... -> release`) with the diagram; if the text line is kept, place it as the diagram caption or remove the redundancy (prefer the diagram + link table).
 - [ ] **2.3** Immediately under the diagram, add an **adjacent markdown link table** giving one-click access to each process guide (Process | Guide link). This satisfies the "clickable links" requirement the GitHub-native way (Mermaid click-callbacks are unreliable on GitHub — see decision in Context).
-- [ ] **2.4** Ensure the README TOC (`<!-- TOC -->` block) still regenerates correctly / is not broken by the insertion (the TOC is a known block; insert the diagram outside or around it without corrupting it).
+- [ ] **2.4** **TOC interaction (m4):** `README.md` contains a hand-maintained `<!-- TOC -->` block. The diagram + link-table insertion MUST NOT introduce a new `##` heading that would stale the TOC — keep the diagram inline under the existing flow (e.g., under the existing intro/heading, with no new `## ` line). If a new `##` heading is unavoidable, regenerate/update the `<!-- TOC -->` block to include it before committing the phase.
 
 **Acceptance Criteria**:
 
-- Must: AC-5 (compact Mermaid process map near the top of README; hero/header preserved), AC-6 (adjacent markdown link table for one-click guide access).
+- Must: AC-F2-1 (compact Mermaid process map within the first 60 lines of README **AND** an adjacent markdown link legend for one-click guide access — both required by this single AC; hero/header preserved).
 - Should: README still reads cleanly on a narrow/mobile viewport (compact labels).
 
 **Files and modules**:
@@ -198,14 +202,14 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 **Tasks**:
 
-- [ ] **3.1** In `doc/guides/meeting-preparation-and-summarization.md`, insert a Mermaid diagram near the top (immediately after the frontmatter and the `> Audience/Purpose` blockquote, before `## 1.`).
+- [ ] **3.1** In `doc/guides/meeting-preparation-and-summarization.md`, insert a Mermaid diagram near the top (immediately after the frontmatter and the `> Audience/Purpose` blockquote, before `## 1.`). **"Near the top" threshold (matches spec + test-plan): the first ```mermaid fence MUST be within the first 80 lines** (`awk '/^```mermaid/{print NR;exit}' doc/guides/meeting-preparation-and-summarization.md` ≤ 80).
 - [ ] **3.2** Diagram content: a `flowchart TD` (or `LR`) showing the three phases — **Before** (decide-if-needed → goal → agenda → roles → share), **During** (start → parking lot → real-time capture → inclusive participation), **After** (finalize summary ≤24h → send actions ≤60min → file durable decisions → review next time). Group with subgraphs; use the shared color palette (green entry, blue steps, orange for the decision-filing gate).
 - [ ] **3.3** Add a one-line caption or `**Legend**:` beneath the diagram.
 - [ ] **3.4** Do not restructure the guide body beyond this insertion; preserve the existing copyright header and `ados_distribution: redistributable` marker.
 
 **Acceptance Criteria**:
 
-- Must: AC-7 (Mermaid diagram near the top of the meeting guide showing before/during/after).
+- Must: AC-F3-1 (Mermaid diagram within the first 80 lines of the meeting guide showing before/during/after).
 
 **Files and modules**:
 
@@ -226,14 +230,15 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 **Tasks**:
 
-- [ ] **4.1** In `doc/guides/decision-making.md`, insert a Mermaid diagram near the top (after the frontmatter and the `> Audience/Purpose` blockquote, before `## 1.`).
-- [ ] **4.2** Diagram content: a `flowchart TD` showing the **universal decision kernel** as a pipeline (Trigger/Triage D0 → Charter D1 → Context D2 → ... → Decision D11 → Execution D12 → Verification D13 → Retrospective D14) with an **R0–R3 rigor routing** branching at the top (R0 escape hatch → no record; R1 → lightweight brief; R2 → standard record; R3 → full record + independent reviewer + human decision). Use diamonds for the routing decision and the rigor branches; orange for gates, purple for the R0 escape hatch, red where remediation/reopen is possible.
+- [ ] **4.1** In `doc/guides/decision-making.md`, insert a Mermaid diagram near the top (after the frontmatter and the `> Audience/Purpose` blockquote, before `## 1.`). **"Near the top" threshold (matches spec + test-plan): the first ```mermaid fence MUST be within the first 80 lines** (`awk '/^```mermaid/{print NR;exit}' doc/guides/decision-making.md` ≤ 80).
+- [ ] **4.2** Diagram content: a `flowchart TD` showing the **universal decision kernel** as a pipeline (Trigger/Triage D0 → Charter D1 → Context D2 → ... → Decision D11 → Execution D12 → Verification D13 → Retrospective D14) with an **R0–R3 rigor routing** branching at the top (R0 escape hatch → no record; R1 → lightweight brief; R2 → standard record; R3 → full record + independent reviewer + human decision). Use diamonds for the routing decision and the rigor branches; orange for gates, purple for the R0 escape hatch, red where remediation/reopen is possible (with a text cue — a11y).
+- [ ] **4.2a** **Render-risk constraint (m6): this is the HIGHEST render-risk diagram in the change** (most nodes + subgraphs + special-character labels). Constrain it to **≤2 subgraphs** and conservative syntax only (no `click`, no `<a>`, no `%%{init}%%`). Quote every label containing `–`, `/`, or spaces per **n1** — e.g. `K["D0–D14"]`, `R["R0–R3"]`, `T["Trigger/Triage D0"]`. This diagram MUST be the FIRST one visually verified on the GitHub render (see Phase 8 / TC-PROC-013); if it fails to render, simplify it before authoring the other guide diagrams.
 - [ ] **4.3** Add a one-line caption or `**Legend**:` beneath the diagram.
 - [ ] **4.4** Do not restructure the guide body; preserve the existing copyright header and `ados_distribution: redistributable` marker.
 
 **Acceptance Criteria**:
 
-- Must: AC-8 (Mermaid diagram near the top of the decision guide showing D0–D14 kernel + R0–R3 routing).
+- Must: AC-F3-2 (Mermaid diagram within the first 80 lines of the decision guide showing D0–D14 kernel + R0–R3 routing; constrained per task 4.2a and GitHub-render-verified first).
 
 **Files and modules**:
 
@@ -254,14 +259,15 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 **Tasks**:
 
-- [ ] **5.1** In `doc/guides/onboarding-existing-project.md`, insert a Mermaid diagram near the top (after the frontmatter and the `> Audience/Goal` blockquote, before the TOC or `## Getting ADOS`).
+- [ ] **5.1** In `doc/guides/onboarding-existing-project.md`, insert a Mermaid diagram near the top (after the frontmatter and the `> Audience/Goal` blockquote, before the TOC or `## Getting ADOS`). **"Near the top" threshold (matches spec + test-plan): the first ```mermaid fence MUST be within the first 80 lines** (`awk '/^```mermaid/{print NR;exit}' doc/guides/onboarding-existing-project.md` ≤ 80).
 - [ ] **5.2** Diagram content: a `flowchart TD` setup flow: **Getting ADOS** (install: global curl / local / plugin) → **Prerequisites** (git repo, OpenCode, AI provider key, tracker access) → **Choose path** (diamond: automated `/bootstrap` vs. manual setup) → **Mandatory artifacts** (AGENTS.md, pm-instructions.md, documentation-handbook.md) → **First change** (the 11-phase lifecycle, linked). Use green for the start, blue for steps, orange for the path-choice diamond, green again for the "first change shipped" end.
 - [ ] **5.3** Add a one-line caption or `**Legend**:` beneath the diagram.
 - [ ] **5.4** Do not restructure the guide body; preserve the existing copyright header and `ados_distribution: redistributable` marker.
+- [ ] **5.5** **TOC interaction (m4):** `onboarding-existing-project.md` contains a hand-maintained `<!-- TOC -->` block. The diagram insertion MUST NOT introduce a new `##` heading that would stale the TOC — keep the diagram inline under the existing intro flow (no new `## ` line). If a new `##` heading is unavoidable, regenerate/update the `<!-- TOC -->` block to include it before committing the phase.
 
 **Acceptance Criteria**:
 
-- Must: AC-9 (Mermaid diagram near the top of the onboarding guide showing the setup flow).
+- Must: AC-F3-3 (Mermaid setup-flow diagram within the first 80 lines of the onboarding guide).
 
 **Files and modules**:
 
@@ -289,7 +295,7 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 **Acceptance Criteria**:
 
-- Must: AC-10 (back-link to the canonical map from each process guide; forward links where non-obvious; documentation reconciliation handled correctly since it has no standalone guide).
+- Must: AC-F4-1 (back-link to `ados-processes.md` from every process guide; forward links where non-obvious; documentation reconciliation handled correctly since it has no standalone guide).
 
 **Files and modules**:
 
@@ -316,7 +322,7 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 **Acceptance Criteria**:
 
-- Must: AC-11 (prominent link to `ados-processes.md` in `doc/00-index.md` near the top).
+- Must: AC-F4-2 (prominent link to `ados-processes.md` in `doc/00-index.md` near the top).
 
 **Files and modules**:
 
@@ -337,7 +343,7 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 **Tasks**:
 
-- [ ] **8.1** Audit the two existing diagrams (`change-lifecycle.md` lifecycle diagram; `project-inception.md` convergence + 8-phase diagrams) against the shared convention set in this plan. Note any divergence in direction, color meaning, arrow meaning, or label style.
+- [ ] **8.1** Audit **all 5 existing Mermaid fences** (not ~3) against the shared convention set: `doc/guides/change-lifecycle.md` (**1 fence**, ~line 50) + `doc/guides/project-inception.md` (**4 fences**, ~lines 54, 164, 330, 667). Enumerate each fence explicitly when reviewing. Note any divergence in direction, color meaning, arrow meaning, label style, or a missing Legend / non-color cue (a11y).
 - [ ] **8.2** Audit all newly added diagrams (Phases 1–5) for the same.
 - [ ] **8.3** Reconcile divergences with minimal edits: align colors to the shared palette meaning (green=entry/success, blue=process, orange=gate, red=remediation, purple=cross-cutting/optional); ensure dashed arrows mean feedback/optional only; ensure every diagram has a Legend or caption. Prefer adjusting the new diagrams to match where the existing ones already encode a clear convention; adjust existing ones only if a clear inconsistency exists.
 - [ ] **8.4** Confirm no diagram uses forbidden syntax (click callbacks, `<a>` in labels, `%%{init}%%`, exotic shapes).
@@ -345,7 +351,7 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 **Acceptance Criteria**:
 
-- Must: AC-12 (partial — consistent node naming / color / subgraph conventions across all diagrams).
+- Must: AC-F5-1 (consistency review complete — all process diagrams, new and the 5 existing, share consistent node-naming / color / subgraph / multiline-label / feedback-loop conventions; every diagram carries a Legend + non-color cue where color encodes meaning).
 
 **Files and modules**:
 
@@ -374,7 +380,7 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 **Acceptance Criteria**:
 
-- Must: AC-12 (partial — headers added via script, markers correct on all new/modified docs, README/doc-00-index headers retained).
+- Must: AC-NFR4-1 (all new/modified redistributable docs carry a license header — added via `scripts/add-header-location.sh`, never hand-written; markers correct on all new/modified docs; README/doc-00-index headers retained).
 
 **Files and modules**:
 
@@ -399,12 +405,12 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 - [ ] **10.2** Run the other repo test scripts to confirm no regressions: `bash scripts/.tests/test-add-header-location.sh`, `bash scripts/.tests/test-inception-doc-consistency.sh`, and any other `scripts/.tests/test-*.sh` / `tools/.tests/test-*.sh` that are quick and relevant (the text-to-image/zclaude suites are out of scope for a docs change but should remain green if run). Note results in the Execution Log.
 - [ ] **10.3** Spec reconciliation: confirm there is no `doc/spec/features/**` feature spec to update — process maps are guide-level documentation, not behavior specs, so `doc/spec/**` is unaffected. If the `@doc-syncer` (lifecycle phase 7) flags any coverage gap, record it as advisory (coverage does not block a docs change). State explicitly: "no `doc/spec/**` reconciliation required for this change."
 - [ ] **10.4** Version bump: none (docs-only; no versioned artifact per repo conventions). State explicitly: "no version bump — documentation-only change."
-- [ ] **10.5** Final DoD self-check: walk all 12 acceptance criteria (Definition of Done below); confirm every checkbox in Phases 1–9 is checked; confirm the branch is `docs/GH-85/ados-process-map-diagrams`.
+- [ ] **10.5** Final DoD self-check: walk all 13 canonical acceptance criteria (`AC-F1-1`…`AC-F5-1`, `AC-NFR4-1`, `AC-NFR5-1` — Definition of Done below); confirm every checkbox in Phases 1–9 is checked; confirm the branch is `docs/GH-85/ados-process-map-diagrams`.
 - [ ] **10.6** Stage only the documentation files touched by this change (the new guide + the modified guides + README + doc/00-index.md). Do not stage unrelated files.
 
 **Acceptance Criteria**:
 
-- Must: AC-12 (partial — `test-doc-distribution.sh` green; no regressions; no version bump; spec reconciliation handled).
+- Must: AC-NFR5-1 (`bash scripts/.tests/test-doc-distribution.sh` exits 0); no regressions; no version bump; spec reconciliation handled.
 
 **Files and modules**:
 
@@ -424,18 +430,18 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 | ID | Scenario | Phases | AC |
 |----|----------|--------|----|
-| TS-1 | `doc/guides/ados-processes.md` exists with header + `ados_distribution: redistributable` + id/status/owners/summary | 1, 9, 10 | AC-1 |
-| TS-2 | Master diagram shows all 6 processes + their relationships in one screen-width | 1, 8 | AC-2 |
-| TS-3 | Card table has a row for each of the 6 processes (problem/audience/output/link); every link resolves | 1 | AC-3 |
-| TS-4 | Relationships narrative + "how to use this map" note present | 1 | AC-4 |
-| TS-5 | README renders a compact Mermaid process map near the top; hero image + header preserved | 2 | AC-5 |
-| TS-6 | README has an adjacent markdown link table giving one-click access to each guide | 2 | AC-6 |
-| TS-7 | Meeting guide opens with a before/during/after diagram | 3 | AC-7 |
-| TS-8 | Decision guide opens with a D0–D14 + R0–R3 routing diagram | 4 | AC-8 |
-| TS-9 | Onboarding guide opens with a setup-flow diagram | 5 | AC-9 |
-| TS-10 | Every process guide has a back-link to `ados-processes.md`; non-obvious forward links present; documentation reconciliation handled (no standalone guide created) | 6 | AC-10 |
-| TS-11 | `doc/00-index.md` links to `ados-processes.md` prominently near the top | 7 | AC-11 |
-| TS-12 | All diagrams share one convention set; `bash scripts/.tests/test-doc-distribution.sh` exits 0; headers via script; markers correct | 8, 9, 10 | AC-12 |
+| TS-1 | `doc/guides/ados-processes.md` exists with header + `ados_distribution: redistributable` + id/status/owners/summary | 1, 9, 10 | AC-F1-1, AC-NFR4-1 |
+| TS-2 | Master diagram shows all 6 processes + their relationships in one screen-width | 1, 8 | AC-F1-2 |
+| TS-3 | Card table has a row for each of the 6 processes (problem/audience/output/link); every link resolves | 1 | AC-F1-3 |
+| TS-4 | Relationships narrative + "how to use this map" note present (scannable structure) | 1 | AC-F1-4 |
+| TS-5 | README renders a compact Mermaid process map (within first 60 lines) + adjacent link legend; hero image + header preserved | 2 | AC-F2-1 |
+| TS-6 | README adjacent markdown link legend gives one-click access to each guide (half of AC-F2-1; verified together with TS-5) | 2 | AC-F2-1 |
+| TS-7 | Meeting guide opens with a before/during/after diagram (within first 80 lines) | 3 | AC-F3-1 |
+| TS-8 | Decision guide opens with a D0–D14 + R0–R3 routing diagram (within first 80 lines; ≤2 subgraphs, render-verified first) | 4 | AC-F3-2 |
+| TS-9 | Onboarding guide opens with a setup-flow diagram (within first 80 lines) | 5 | AC-F3-3 |
+| TS-10 | Every process guide has a back-link to `ados-processes.md`; non-obvious forward links present; documentation reconciliation handled (no standalone guide created) | 6 | AC-F4-1 |
+| TS-11 | `doc/00-index.md` links to `ados-processes.md` prominently near the top | 7 | AC-F4-2 |
+| TS-12 | All diagrams (new + 5 existing) share one convention set; `bash scripts/.tests/test-doc-distribution.sh` exits 0; headers via script; markers correct | 8, 9, 10 | AC-F5-1, AC-NFR4-1, AC-NFR5-1 |
 
 ## Artifacts and Links
 
@@ -456,30 +462,54 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 ## Definition of Done
 
-All 12 acceptance criteria satisfied, each mapped to the phase(s) that deliver it:
+This plan's DoD uses the **canonical AC scheme from the spec** (`chg-GH-85-spec.md` §17) — 13 IDs. The earlier flat `AC-1`…`AC-12` scheme is **retired**; every ID below maps 1:1 to a spec AC and to the ticket item that delivered it.
 
-| AC | Criterion | Delivered in |
-|----|-----------|--------------|
-| AC-1 | `doc/guides/ados-processes.md` created with copyright header (via script) + `ados_distribution: redistributable` + `id`/`status`/`owners`/`summary` matching sibling guides | Phase 1, verified 9 |
-| AC-2 | Master Mermaid diagram of all 6 ADOS processes + their relationships in the canonical guide | Phase 1 |
-| AC-3 | Per-process cards (problem/audience/output/link) for all 6 processes | Phase 1 |
-| AC-4 | Cross-process relationships narrative + "how to use this map" note | Phase 1 |
-| AC-5 | Compact Mermaid process map added near the top of README; hero image + header preserved | Phase 2 |
-| AC-6 | Adjacent markdown link table under the README diagram for one-click guide access (GitHub-native) | Phase 2 |
-| AC-7 | Mermaid diagram near the top of the meeting guide (before/during/after lifecycle) | Phase 3 |
-| AC-8 | Mermaid diagram near the top of the decision guide (D0–D14 kernel + R0–R3 routing) | Phase 4 |
-| AC-9 | Mermaid diagram near the top of the onboarding guide (setup flow) | Phase 5 |
-| AC-10 | Cross-navigation: back-link to canonical map from every process guide + forward links where non-obvious; documentation reconciliation handled (embedded, no standalone guide) | Phase 6 |
-| AC-11 | Prominent link to `ados-processes.md` in `doc/00-index.md` near the top | Phase 7 |
-| AC-12 | All diagrams consistent (naming/color/subgraph); `bash scripts/.tests/test-doc-distribution.sh` green; headers via script; markers correct; no regressions; spec reconciliation handled; no version bump | Phases 8, 9, 10 |
+### DoD — canonical acceptance criteria
 
-**Definition of Done = every checkbox above checked AND every AC-1..AC-12 satisfied AND `test-doc-distribution.sh` exit 0 AND all touched files committed on `docs/GH-85/ados-process-map-diagrams`.**
+| Canonical AC | Criterion | Delivered in |
+|--------------|-----------|--------------|
+| AC-F1-1 | `doc/guides/ados-processes.md` exists with `ados_distribution: redistributable` | Phase 1, verified 9/10 |
+| AC-F1-2 | Master Mermaid diagram shows all 6 processes (5 primary + 1 supporting) with relationships | Phase 1 |
+| AC-F1-3 | Per-process overview card (problem/audience/output/link) for each of the 6 processes | Phase 1 |
+| AC-F1-4 | Easy-to-read, scannable structure (not a wall of text) | Phase 1 |
+| AC-F2-1 | README compact Mermaid process map near top **AND** adjacent markdown link legend (clickable via the legend — GitHub node-click infeasible, DEC-1) | Phase 2 |
+| AC-F3-1 | `meeting-preparation-and-summarization.md` has a Mermaid diagram near the top | Phase 3 |
+| AC-F3-2 | `decision-making.md` has a Mermaid diagram (D0–D14 + R0–R3) near the top | Phase 4 |
+| AC-F3-3 | `onboarding-existing-project.md` has a Mermaid setup-flow diagram near the top | Phase 5 |
+| AC-F4-1 | Every process guide has a back-link to `ados-processes.md` | Phase 6 |
+| AC-F4-2 | `doc/00-index.md` links to `ados-processes.md` prominently | Phase 7 |
+| AC-F5-1 | Consistency review — all process diagrams share consistent conventions | Phase 8 |
+| AC-NFR4-1 | All new/modified redistributable docs have license headers (via script, never hand-written) | Phase 9 |
+| AC-NFR5-1 | `bash scripts/.tests/test-doc-distribution.sh` exits 0 | Phase 10 |
+
+### Cross-walk — canonical AC ↔ ticket item ↔ delivering phase
+
+| Canonical AC | Ticket item (issue #85 / spec F-capability) | Delivering phase |
+|--------------|---------------------------------------------|------------------|
+| AC-F1-1 | #1 / F-1 — canonical processes-map guide exists + redistributable marker | Phase 1 (verified 9, 10) |
+| AC-F1-2 | #1 / F-1 — master diagram of all 6 processes + relationships | Phase 1 |
+| AC-F1-3 | #1 / F-1 — one overview card per process (problem/audience/output/link) | Phase 1 |
+| AC-F1-4 | #1 / F-1 — scannable structure, not a wall of text | Phase 1 |
+| AC-F2-1 | #2 / F-2, DEC-1 — README compact map **and** adjacent link legend (one AC, not two) | Phase 2 |
+| AC-F3-1 | #3 / F-3 — meeting-prep near-the-top diagram | Phase 3 |
+| AC-F3-2 | #3 / F-3 — decision-making near-the-top diagram (D0–D14 + R0–R3) | Phase 4 |
+| AC-F3-3 | #3 / F-3 — onboarding near-the-top setup-flow diagram | Phase 5 |
+| AC-F4-1 | #4 / F-4 — back-link from every process guide to `ados-processes.md` | Phase 6 |
+| AC-F4-2 | #4 / F-4 — prominent `doc/00-index.md` link to `ados-processes.md` | Phase 7 |
+| AC-F5-1 | #5 / F-5, NFR-6 — consistency review of all process diagrams | Phase 8 |
+| AC-NFR4-1 | governance / NFR-4 — license headers on all new/modified redistributable docs | Phase 9 |
+| AC-NFR5-1 | governance / NFR-5 — doc-distribution drift guard exits 0 | Phase 10 |
+
+> **Threshold reconciliation (spec ↔ test-plan ↔ plan):** "near the top" = first ```mermaid fence within the first **60 lines (README)** / **80 lines (per guide)**; the `doc/00-index.md` link within the first **50 lines**. All three artifacts now state the identical threshold.
+
+**Definition of Done = every checkbox in Phases 1–9 checked AND every one of the 13 canonical ACs above satisfied AND `bash scripts/.tests/test-doc-distribution.sh` exit 0 AND all touched files committed on `docs/GH-85/ados-process-map-diagrams`.**
 
 ## Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-06-28 | plan-writer | Initial plan. Derived from GitHub issue #85 + `chg-GH-85-pm-notes.yaml`; spec and test plan authored in parallel — AC extracted from issue scope + governance constraints. 10 phased delivery tasks; 12 AC mapped to Definition of Done. |
+| 1.1 | 2026-06-28 | plan-writer | Red-team R1 remediation (verdict SHIP-WITH-FINDINGS). **M1**: retired the flat `AC-1`…`AC-12` DoD scheme; remapped to the spec's canonical 13-AC scheme (`AC-F1-1`…`AC-F5-1`, `AC-NFR4-1`, `AC-NFR5-1`) 1:1, with a cross-walk table (canonical-AC ↔ ticket-item ↔ phase); the README map + adjacent legend now both sit under the single `AC-F2-1`; the consistency review is its own `AC-F5-1`; every canonical AC maps to a delivering phase. **M2 (critical)**: removed the header-rule violation hedge from task 1.1 — the guide frontmatter is authored WITHOUT copyright/MIT/`source:` lines; Phase 9 runs `scripts/add-header-location.sh doc/guides` as the sole header source; noted the transient headerless commit is corrected in Phase 9 and the doc-distribution guard checks the working tree at gate time, not commit history. **m2**: Phase 8 now audits all 5 existing Mermaid fences (change-lifecycle ×1 ~L50; project-inception ×4 ~L54/164/330/667), not ~3. **m3**: stated the "near the top" threshold identically to spec/test-plan (README ≤60 lines, guides ≤80 lines) in Phases 2–5. **m4**: TOC-interaction rule (no new staling `##` heading, else regenerate the `<!-- TOC -->` block) added to Phases 2 and 5. **m6**: Phase 4 decision diagram constrained to ≤2 subgraphs + conservative syntax + label-quoting (n1), and required to be the first diagram visually verified on GitHub render (highest render risk). **n1**: added a render-critical callout in the shared convention section — labels with en-dash/slash/space MUST be double-quoted. **a11y**: made the Legend mandatory and required a non-color text cue on red/green nodes (WCAG 1.4.1) in the shared convention section. No scope, non-goals, PM-decision, phase-structure (10 phases), or branch changes. |
 
 ## Execution Log
 

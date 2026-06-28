@@ -4,9 +4,9 @@ branch: docs/GH-85/ados-process-map-diagrams
 slug: ados-process-map-diagrams
 phases:
   clarify_scope: { started: "2026-06-28T10:00:00Z", completed: "2026-06-28T10:30:00Z" }
-  specification: { started: "2026-06-28T10:31:00Z", completed: "2026-06-28T10:40:00Z" }
-  test_planning: { started: "2026-06-28T10:31:00Z", completed: "2026-06-28T10:40:00Z" }
-  delivery_planning: { started: "2026-06-28T10:31:00Z", completed: "2026-06-28T10:40:00Z" }
+  specification: { started: "2026-06-28T10:31:00Z", completed: "2026-06-28T11:20:00Z", reopened: "2026-06-28T11:00:00Z", reopened_reason: "red-team R1 (n3/m2/AC-canonical/m6/a11y/OQ-5)" }
+  test_planning: { started: "2026-06-28T10:31:00Z", completed: "2026-06-28T11:20:00Z", reopened: "2026-06-28T11:00:00Z", reopened_reason: "red-team R1 (M1/M3/m1/m3/m7/a11y)" }
+  delivery_planning: { started: "2026-06-28T10:31:00Z", completed: "2026-06-28T11:20:00Z", reopened: "2026-06-28T11:00:00Z", reopened_reason: "red-team R1 (M1/M2/m2/m3/m4/m6/n1/a11y)" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -26,6 +26,9 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "RETRO (red-team R1 reopened artifacts): @red-team-coordinator R1 verdict SHIP-WITH-FINDINGS. Substance sound; 3 must-fix traceability/hygiene defects found (M1: spec/plan/test-plan disagree on AC numbering — plan AC-6='link table' vs test AC-6='meeting diagram' collision; M2: plan task 1.1 hedge lets AI hand-write headers, violating AGENTS.md; M3: test-plan stale vs landed spec — OQ-1/OQ-4 resolved-but-still-open, NFR-1..6 not reconciled). Root cause: parallel authoring never reconciled. Why not caught earlier: AC numbering was left to each author independently without a post-authoring reconciliation pass. Process improvement: for parallel-authored artifact sets, run an explicit cross-artifact AC/NFR reconciliation step (or single canonical scheme upfront) before DoR. Reopened spec/test-plan/plan to fold in fixes + cheap nice-to-haves (m2: 5 existing fences not 3; m3: pick one 'near top' threshold; m4: TOC interaction; m6: decision diagram render-risk; n1/n3; a11y legend). PM decisions A1-A4 acknowledged sound, not defects."
+    type: retro
+    date: 2026-06-28
   - text: "clarify_scope complete. Cross-checked issue vs system spec + existing guides. No blocking gaps. Issue is detailed and self-consistent; all 5 referenced process guides exist. 3 of 5 currently lack Mermaid diagrams (meeting-prep, decision-making, onboarding-existing-project). README has hero image already but no process-map Mermaid. Existing diagram styles documented for consistency: change-lifecycle uses flowchart TD + subgraphs + <br/> multiline + dashed feedback loops + Legend; project-inception uses flowchart TB + quoted labels + style color fills + convergence diamonds."
     type: info
     date: 2026-06-28
