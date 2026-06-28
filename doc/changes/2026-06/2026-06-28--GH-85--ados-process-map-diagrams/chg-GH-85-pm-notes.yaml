@@ -1,0 +1,40 @@
+change_id: GH-85
+title: "ADOS processes map + per-guide diagrams (DX: reduce time to AHA moment)"
+branch: docs/GH-85/ados-process-map-diagrams
+slug: ados-process-map-diagrams
+phases:
+  clarify_scope: { started: "2026-06-28T10:00:00Z", completed: "2026-06-28T10:30:00Z" }
+  specification: { started: "2026-06-28T10:31:00Z", completed: "2026-06-28T10:40:00Z" }
+  test_planning: { started: "2026-06-28T10:31:00Z", completed: "2026-06-28T10:40:00Z" }
+  delivery_planning: { started: "2026-06-28T10:31:00Z", completed: "2026-06-28T10:40:00Z" }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions:
+  - text: "README Mermaid 'clickable links to guides' AC satisfied via adjacent markdown link table/legend immediately under the diagram. GitHub's Mermaid iframe sandbox blocks node click-callbacks (<click> + <a> in node labels do not render reliably), so node-clickability is not achievable; an adjacent link block is the GitHub-native way to give one-click access to each guide."
+    date: 2026-06-28
+  - text: "Research recommended a rendered PNG/SVG hero in README for max rendering reliability, but issue Non-goals explicitly forbid rendered image assets (Mermaid only). Human constraint wins — no PNG/SVG. Diagrams are Mermaid throughout."
+    date: 2026-06-28
+  - text: "Scope kept tightly to issue AC (process map + per-guide diagrams + navigation + consistency). Research surfaced broader README improvements (badges, 'who is this for', hero rework) that would further the adoption goal, but those are out of scope here — no AC for them, and expanding risks scope creep. Surfaced as a follow-up suggestion to the human, not invented scope."
+    date: 2026-06-28
+  - text: "New canonical guide named doc/guides/ados-processes.md per issue scope #1 (research informally suggested 'process-map.md'; the issue's explicit name is authoritative)."
+    date: 2026-06-28
+open_questions: []
+blockers: []
+notes:
+  - text: "clarify_scope complete. Cross-checked issue vs system spec + existing guides. No blocking gaps. Issue is detailed and self-consistent; all 5 referenced process guides exist. 3 of 5 currently lack Mermaid diagrams (meeting-prep, decision-making, onboarding-existing-project). README has hero image already but no process-map Mermaid. Existing diagram styles documented for consistency: change-lifecycle uses flowchart TD + subgraphs + <br/> multiline + dashed feedback loops + Legend; project-inception uses flowchart TB + quoted labels + style color fills + convergence diamonds."
+    type: info
+    date: 2026-06-28
+  - text: "@external-researcher delivered a comprehensive report on README/adoption/AHA best practices (Bun, Astro, Aider exemplars; GitHub Mermaid rendering mechanics; adoption funnel; anti-patterns). Key applied insights: left-to-right pipeline with agent ownership visible per node, gates as diamonds, color-code by stage, keep diagram to one screen-width. Report saved in research task output (not committed; summarized in spec brief)."
+    type: info
+    date: 2026-06-28
+  - text: "Two @red-team-coordinator rounds planned per user: R1 on spec/plan/test-plan artifacts pre-delivery, R2 on the delivered change pre-PR. Findings folded into artifacts (R1) / remediated before PR (R2)."
+    type: info
+    date: 2026-06-28
+  - text: "Branch setup hiccup: stale .git/index.lock briefly blocked checkout; resolved (lock cleared, HEAD now on docs/GH-85/ados-process-map-diagrams based on origin/main 1e2e7ff). @runner subagent returned empty outputs twice during diagnosis; PM inspected .git state directly via read tool as fallback."
+    type: retro
+    date: 2026-06-28
