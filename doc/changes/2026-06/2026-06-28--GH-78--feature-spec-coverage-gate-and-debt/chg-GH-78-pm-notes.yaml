@@ -12,8 +12,8 @@ phases:
   system_spec_update: { started: "2026-06-28", completed: "2026-06-28" }
   review_fix: { started: "2026-06-28", completed: "2026-06-28" }
   quality_gates: { started: "2026-06-28", completed: "2026-06-28" }
-  dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null, url: null }
+  dod_check: { started: "2026-06-28", completed: "2026-06-28" }
+  pr_creation: { started: "2026-06-28", completed: null, url: null }
 
 decisions:
   - text: "COMBINED DELIVERY: single branch/PR closing both GH-78 (spec-coverage gate, process fix) and GH-79 (full spec-coverage debt: 8 missing feature specs P0+P1+P2). User explicit decision (2026-06-28), overriding red-team R1 two-PR recommendation. Deviation from repo's 'one ticket = one change' model (change-lifecycle.md:19) recorded here; PR description references both workItemRefs; GH-78 is the primary ref for branch/folder/artifact naming."
