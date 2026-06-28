@@ -1,8 +1,8 @@
 ---
 id: chg-GH-78-feature-spec-coverage-gate-and-debt
-status: Proposed
+status: Updated
 created: 2026-06-28T00:00:00Z
-last_updated: 2026-06-28T06:51:04Z
+last_updated: 2026-06-28T07:23:58Z
 owners: ["Juliusz Ćwiąkalski"]
 service: delivery-os
 labels: ["docs", "process", "spec-coverage", "feature-specs", "gh-79"]
@@ -164,6 +164,15 @@ commit (the source+generated invariant).
 
 **Tasks**:
 
+- [ ] **1.0** PRECONDITION — plugin-baseline freshness (run BEFORE any
+  `.opencode/` edit): execute
+  `scripts/build-claude-plugin.sh && git diff --stat -- .ados-claude/` and
+  require **EMPTY** output. This proves the committed `.ados-claude/` baseline is
+  current (the build is deterministic — hardcoded "2025-2026" range, static
+  `1.0.0` manifest — so an empty pre-diff is the correct baseline). This converts
+  the post-edit "diff = exactly 2 files" expectation (AC-F1-7 / NFR-7 / TS-1) from
+  an assumption into a proven precondition: if the pre-diff is non-empty, STOP —
+  the committed plugin is already stale and must be reconciled before proceeding.
 - [ ] **1.1** READ `.opencode/agent/doc-syncer.md` (current step 2 "Identify
   Impact" + `<reporting>` + `<rules>`), `chg-GH-78-spec.md` §5.1 F-1/F-2, and
   `doc/guides/change-lifecycle.md` §7.
@@ -308,6 +317,23 @@ authoritative sources, cross-linking canonical content rather than restating it.
 > lines (Phase 6 applies headers via the script — DEC-8); where a `status: Draft`
 > guide disagrees with a prompt, follow the prompt and record the discrepancy as
 > a "Follow-ups / discrepancies" note in the spec (F-4).
+>
+> **Sibling cross-links (GH-79 sub-AC — "each new spec cross-references related
+> specs"):** beyond cross-links to EXISTING specs, each NEW spec must cross-link
+> ≥1 SIBLING new spec where genuinely adjacent. Expected sibling links:
+> - **F-3.1 (delivery-lifecycle) ↔ F-3.5 (quality-gates-and-pr)** — phases 8–11
+>   (review_fix, quality_gates, dod_check, pr_creation) are F-3.5's scope.
+> - **F-3.2 (agents-and-commands) ↔ F-3.4 (claude-plugin-generation)** — plugin
+>   generation is the multi-tool mechanism for the agents system, and the
+>   model-config nuance straddles both.
+> - **F-3.7 (local-code-review) ↔ F-3.5 (quality-gates-and-pr)** — both cover the
+>   review/commit/PR neighborhood.
+>
+> **Orientation vs duplication (makes the TC-HYGIENE-001 step-4 judgment
+> reviewable):** cross-links must ORIENT the reader, not restate content.
+> - **OK:** *"The lifecycle is 11 phases ending in `pr_creation`; see `AGENTS.md`
+>   for the full table."*
+> - **NOT OK:** re-listing all 11 phases with owners/agents.
 
 **Tasks**:
 
@@ -329,16 +355,26 @@ authoritative sources, cross-linking canonical content rather than restating it.
   ("Multi-tool support" + "Repo structure"), sample
   `.opencode/agent/*.md` frontmatter (the `claude:` block),
   `scripts/build-claude-plugin.sh` (lines ~254–291 `transform_agent_frontmatter`,
-  and `transform_command_to_skill`), and the `opencode*.jsonc` config files.
+  and `transform_command_to_skill`), `.opencode/opencode.jsonc` (the per-repo
+  config — NOT a bare `opencode*.jsonc` glob, which matches nothing at repo
+  root; its line 25 delegates per-agent model assignment to user-global config),
+  and `doc/guides/opencode-model-configuration.md` (the accurate model-config
+  mechanism reference).
 - [ ] **3.4** CREATE `doc/spec/features/feature-agents-and-commands.md`
   (F-3.2 / AC-F3-3): cover the `.opencode/` system as "the product" (single
   source of truth), the agent/command inventory, the **model-configuration
   nuance** stated precisely — `claude.model` in an agent's frontmatter is a
   **Claude-Code-targeted hint** consumed by `scripts/build-claude-plugin.sh`
   (it reads `claude.model`, defaults to `sonnet`, and writes `model:` into the
-  generated `.ados-claude/agents/<name>.md`); the **OpenCode-effective** model
-  assignment lives in `opencode*.jsonc`; OpenCode ignores the `claude:` key; the
-  two are independent concerns (do not conflate). Reference `@toolsmith` (by
+  generated `.ados-claude/agents/<name>.md`); OpenCode ignores the `claude:`
+  key; the **OpenCode-effective** model assignment is a **MECHANISM** — the
+  per-repo `.opencode/opencode.jsonc` delegates per-agent model selection to the
+  user's global OpenCode config (see `.opencode/opencode.jsonc` line 25 and
+  `doc/guides/opencode-model-configuration.md`); the two concerns (Claude hint
+  vs OpenCode-effective model) are independent — do not conflate. **Authoring
+  note**: the spec must document this model-config MECHANISM (per the guide +
+  AGENTS.md "Multi-tool support") and must NOT imply `.opencode/opencode.jsonc`
+  contains a literal per-agent model table. Reference `@toolsmith` (by
   reference) for authoring/tuning tools, and state the no-hand-edit-`.ados-claude`
   discipline.
 
@@ -377,8 +413,9 @@ authoritative sources, cross-linking canonical content rather than restating it.
 
 **Tasks**:
 
-- [ ] **4.1** READ (F-3.3 sources): `doc/guides/decision-making.md`
-  (`status: Draft`), `.opencode/agent/{decision-advisor,decision-critic}.md`,
+- [ ] **4.1** READ (F-3.3 sources): `doc/guides/decision-making.md` (no
+  `status:` key — verified NOT Draft; `ados_distribution: redistributable`),
+  `.opencode/agent/{decision-advisor,decision-critic}.md`,
   `.opencode/command/{plan-decision,write-decision,review-decision}.md`,
   `.ai/agent/decision-instructions.md`; and the existing
   `doc/spec/features/feature-decision-records.md` (cross-link target, read-only).
@@ -387,9 +424,12 @@ authoritative sources, cross-linking canonical content rather than restating it.
   decision kernel, classification (ADR/PDR/TDR/BDR/ODR), AI-authority model,
   decision modes, and the `@decision-advisor` + `@decision-critic` two-stage
   (author + independent challenge) flow. **Cross-link** (do not duplicate)
-  `feature-decision-records.md` for the record-artifact concerns. If
-  `decision-making.md` (Draft) and the prompts disagree, follow the prompt and
-  record the discrepancy as a follow-up note (F-4).
+  `feature-decision-records.md` for the record-artifact concerns. If any
+  guide/prompt divergence arises, follow the **prompt** and record the
+  discrepancy as a follow-up note (F-4). (NOTE: `decision-making.md` is NOT
+  Draft — do not emit a spurious "decision-making.md is Draft" note; the
+  prompt-wins rule applies to any guide/prompt divergence regardless of the
+  guide's status.)
 - [ ] **4.3** READ (F-3.4 sources): `scripts/build-claude-plugin.sh` (the whole
   transform + idempotent `rm -rf` rebuild + manifest generation),
   `AGENTS.md` ("Multi-tool support"), `scripts/.tests/test-build-claude-plugin.sh`
@@ -539,7 +579,10 @@ header exactly once.
 - [ ] **6.2** VERIFY each of the 8 now has, in frontmatter, the 3 header lines
   (`# Copyright …`, `# MIT License …`, `source: …`) exactly once, AND
   `ados_distribution: internal`. (The script's `ensure_basic_header` injects
-  copyright/MIT/source into the frontmatter and preserves existing keys.)
+  copyright/MIT/source into the frontmatter and preserves existing keys.) NOTE:
+  the script REORDERS the frontmatter so the 3 header lines (copyright/MIT/source)
+  come FIRST; `ados_distribution: internal` will therefore appear AFTER them. This
+  reordering is expected and correct — do not "fix" it back.
 - [ ] **6.3** VERIFY idempotency: re-running the script on any of the 8 produces
   NO diff (confirms no duplicate header, NFR-4).
 - [ ] **6.4** VERIFY the 8 existing specs were NOT touched
@@ -739,6 +782,7 @@ edits in Phases 2–7 → no further regen; Phase 1's generation is still curren
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-06-28 | plan-writer | Initial plan: 8 phases — Part A (agent prompts + regen; lifecycle/DoR guides), Part B P0/P1/P2 specs (8), headers+markers, verification, finalize. |
+| 1.1 | 2026-06-28 | plan-writer | Red-team R2 corrections (2 must-fix + 4 ride-along). [M1] Phase 3.3/3.4 model-config source map fixed — bare `opencode*.jsonc` glob → precise `.opencode/opencode.jsonc` + `doc/guides/opencode-model-configuration.md`; authoring note: document the model-config MECHANISM, do NOT imply `.opencode/opencode.jsonc` holds a literal per-agent model table. [M2] Phase 4.1/4.2 — `decision-making.md` is NOT Draft (no `status:` key, verified); un-hooked the false Draft premise while keeping the prompt-wins rule. [#3] Phase 1.0 added: pre-edit plugin-baseline-freshness check (empty pre-diff required). [#4] Phase 3 authoring rules: NEW-spec sibling cross-links required (F-3.1↔F-3.5, F-3.2↔F-3.4, F-3.7↔F-3.5). [#5] Orientation-vs-duplication example added (reviewable TC-HYGIENE-001 step 4). [#6] Phase 6.2 note: header script reorders frontmatter (headers first, `ados_distribution` after). |
 
 ## Execution Log
 
