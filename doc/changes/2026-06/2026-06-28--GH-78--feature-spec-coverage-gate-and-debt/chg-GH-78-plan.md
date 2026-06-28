@@ -164,7 +164,7 @@ commit (the source+generated invariant).
 
 **Tasks**:
 
-- [ ] **1.0** PRECONDITION — plugin-baseline freshness (run BEFORE any
+- [x] **1.0** PRECONDITION — plugin-baseline freshness (run BEFORE any
   `.opencode/` edit): execute
   `scripts/build-claude-plugin.sh && git diff --stat -- .ados-claude/` and
   require **EMPTY** output. This proves the committed `.ados-claude/` baseline is
@@ -173,10 +173,11 @@ commit (the source+generated invariant).
   the post-edit "diff = exactly 2 files" expectation (AC-F1-7 / NFR-7 / TS-1) from
   an assumption into a proven precondition: if the pre-diff is non-empty, STOP —
   the committed plugin is already stale and must be reconciled before proceeding.
-- [ ] **1.1** READ `.opencode/agent/doc-syncer.md` (current step 2 "Identify
+  *(PASS — pre-diff EMPTY, baseline fresh at 51317e7)*
+- [x] **1.1** READ `.opencode/agent/doc-syncer.md` (current step 2 "Identify
   Impact" + `<reporting>` + `<rules>`), `chg-GH-78-spec.md` §5.1 F-1/F-2, and
-  `doc/guides/change-lifecycle.md` §7.
-- [ ] **1.2** EDIT `.opencode/agent/doc-syncer.md`:
+  `doc/guides/change-lifecycle.md` §7. *(DONE)*
+- [x] **1.2** EDIT `.opencode/agent/doc-syncer.md`:
   - Add a **"Feature spec coverage"** sub-check to step 2 "Identify Impact": for
     each feature area the change modifies, look for
     `doc/spec/features/feature-<slug>.md`. This is the missing **positive**
@@ -194,16 +195,18 @@ commit (the source+generated invariant).
     approves ticket creation.
   - Add a `spec_coverage_gaps` field (DM-2) to the `<reporting>` structured
     report: a list of modified feature areas lacking a spec (empty when covered).
-- [ ] **1.3** READ `.opencode/agent/pm.md` step "3 Clarify scope" (3b) and the
-  phase-definition block.
-- [ ] **1.4** EDIT `.opencode/agent/pm.md` clarify_scope (step 3b): add
+  *(DONE — all 4 sub-edits applied; grep confirms 10 coverage-phrase matches in source)*
+- [x] **1.3** READ `.opencode/agent/pm.md` step "3 Clarify scope" (3b) and the
+  phase-definition block. *(DONE)*
+- [x] **1.4** EDIT `.opencode/agent/pm.md` clarify_scope (step 3b): add
   **coverage awareness** — when scoping, note whether the touched feature areas
   have a spec in `doc/spec/features/`, and record a known coverage gap in
   `chg-<workItemRef>-pm-notes.yaml`. State explicitly that coverage is **not a
   delivery blocker** (advisory; surfaced again at `system_spec_update`).
-- [ ] **1.5** REGEN: run `scripts/build-claude-plugin.sh`. (Do NOT hand-edit
-  `.ados-claude/**`.)
-- [ ] **1.6** VERIFY the regen diff is exact. The build script regenerates ALL
+  *(DONE — "Feature spec coverage awareness" bullet added; advisory-only stated)*
+- [x] **1.5** REGEN: run `scripts/build-claude-plugin.sh`. (Do NOT hand-edit
+  `.ados-claude/**`.) *(DONE — build OK: 23 agents, 20 skills)*
+- [x] **1.6** VERIFY the regen diff is exact. The build script regenerates ALL
   outputs but content changes follow sources. Assert:
   `git diff --stat .ados-claude/` shows ONLY:
   - `.ados-claude/agents/doc-syncer.md`
@@ -215,9 +218,19 @@ commit (the source+generated invariant).
   `.ados-claude/.claude-plugin/plugin.json` is static `1.0.0` → no diff.)
   If anything else changed, STOP and reconcile (a non-source diff means an
   undeterministic/stale prior generation).
-- [ ] **1.7** Hand off to `@committer`: stage `.opencode/agent/doc-syncer.md`,
+  *(PASS — diff = exactly doc-syncer.md + pm.md; no skills/manifest drift)*
+- [x] **1.7** Hand off to `@committer`: stage `.opencode/agent/doc-syncer.md`,
   `.opencode/agent/pm.md`, `.ados-claude/agents/doc-syncer.md`,
   `.ados-claude/agents/pm.md` and commit as ONE unit (the invariant).
+  *(DONE — commit 90ee1fb; source+generated in one commit)*
+
+**Phase 1 Acceptance Criteria** — PASSED:
+- AC-F1-1 (doc-syncer Identify Impact has the coverage check + `spec_coverage_gaps`) — PASSED
+- AC-F1-2 (doc-syncer reports, never tickets) — PASSED
+- AC-F1-3 (de-noising rule stated) — PASSED
+- AC-F1-4 (pm.md clarify_scope coverage awareness) — PASSED
+- AC-F1-6 (operational feature-area definition present) — PASSED
+- AC-F1-7 / NFR-7 (`.ados-claude/` regenerated, exact 2-file diff) — PASSED
 
 **Acceptance Criteria**:
 
@@ -258,24 +271,30 @@ deferred alternative. (No `.opencode/` edits here → no regen.)
 
 **Tasks**:
 
-- [ ] **2.1** READ `doc/guides/change-lifecycle.md` (§7 `system_spec_update`,
-  lines ~233–249) and `chg-GH-78-spec.md` F-1.
-- [ ] **2.2** EDIT `doc/guides/change-lifecycle.md` §7 (`system_spec_update`):
+- [x] **2.1** READ `doc/guides/change-lifecycle.md` (§7 `system_spec_update`,
+  lines ~233–249) and `chg-GH-78-spec.md` F-1. *(DONE)*
+- [x] **2.2** EDIT `doc/guides/change-lifecycle.md` §7 (`system_spec_update`):
   document the feature-spec-coverage check — `@doc-syncer` identifies modified
   feature areas, looks for `doc/spec/features/feature-<slug>.md`, and reports
   gaps in `spec_coverage_gaps`; `@pm` proposes a de-noised follow-up; only the
   human approves ticket creation (DEC-6). Reference the operational "feature area"
-  definition (F-2) defined authoritatively in the doc-syncer prompt.
-- [ ] **2.3** EDIT `doc/guides/change-lifecycle.md` §7: add a one-line
+  definition (F-2) defined authoritatively in the doc-syncer prompt. *(DONE)*
+- [x] **2.3** EDIT `doc/guides/change-lifecycle.md` §7: add a one-line
   **"Deferred alternative"** note that a periodic standalone coverage audit
   (Proposal C) was considered and is deferred in favor of the inline checks; link
-  to change spec GH-78 §7.3. (This records Proposal C as DEFERRED.)
-- [ ] **2.4** (Optional, lightweight) READ
+  to change spec GH-78 §7.3. (This records Proposal C as DEFERRED.) *(DONE — blockquote note added)*
+- [x] **2.4** (Optional, lightweight) READ
   `doc/guides/definition-of-ready.md` (current facets + the "prompt wins"
   statement on line 15). EDIT it to add a **coverage-awareness note** clarifying
   that spec coverage is tracked at intake (advisory) and reported at
   `system_spec_update`, and is **NOT** a hard DoR facet (the hard-facet option is
   deferred — OQ-1). Do NOT add a `spec_coverage` facet to the DoR facet list.
+  *(DONE — advisory note added; no new facet added)*
+
+**Phase 2 Acceptance Criteria** — PASSED:
+- AC-F1-5 (lifecycle §7 documents the coverage check) — PASSED
+- NFR-6 (no stale phase numbering; doc-syncer stays phase 7) — PASSED (grep-verified)
+- Should: DoR advisory note present; Proposal C recorded as deferred — PASSED
 
 **Acceptance Criteria**:
 
@@ -679,16 +698,17 @@ edits in Phases 2–7 → no further regen; Phase 1's generation is still curren
 
 **Tasks**:
 
-- [ ] **8.1** SPEC RECONCILIATION: confirm `doc/spec/` now reflects the new truth
+- [x] **8.1** SPEC RECONCILIATION: confirm `doc/spec/` now reflects the new truth
   — the 8 specs (GH-79) are the authoritative mirror `@doc-syncer` reconciles
   against, and the doc-syncer/pm coverage behavior (GH-78) is captured in the
   prompts + lifecycle guide. The 8 new specs ARE this change's system-spec
   reconciliation (no separate doc-syncer run is owed for GH-79's own deliverables
-  because they are the specs themselves).
-- [ ] **8.2** PLUGIN FRESHNESS (NFR-7): re-confirm
+  because they are the specs themselves). *(DONE — 8 specs created in doc/spec/features/; doc-syncer + pm coverage behavior captured in Phase 1 prompts + Phase 2 lifecycle guide.)*
+- [x] **8.2** PLUGIN FRESHNESS (NFR-7): re-confirm
   `bash scripts/.tests/test-build-claude-plugin.sh` passes — `.ados-claude/` is
   current with the Phase 1 source edits and no later phase touched `.opencode/`.
-- [ ] **8.3** VERSION IMPACT (per repo conventions): this repo has no application
+  *(DONE — 16/16 PASS; .opencode/ touched files == exactly doc-syncer.md + pm.md.)*
+- [x] **8.3** VERSION IMPACT (per repo conventions): this repo has no application
   semver; the plugin manifest version (`.ados-claude/.claude-plugin/plugin.json`,
   static `1.0.0` hard-set in `scripts/build-claude-plugin.sh`) is intentionally
   **NOT** bumped for a docs/process change (the manifest version is a plugin
@@ -696,20 +716,49 @@ edits in Phases 2–7 → no further regen; Phase 1's generation is still curren
   static-version design governs it). Record the no-bump decision; confirm there
   is no CHANGELOG/version file to update. (If maintainer convention later
   requires a release note, surface it — do not invent a mechanical bump.)
-- [ ] **8.4** DOD CHECK: all plan tasks checked; all spec ACs (§17 groups A–D)
+  *(DONE — no CHANGELOG/VERSION/package.json at repo root; manifest stays 1.0.0; no-bump recorded.)*
+- [x] **8.4** DOD CHECK: all plan tasks checked; all spec ACs (§17 groups A–D)
   satisfied; both tickets GH-78 + GH-79 close on this PR (DEC-1); the two open
   questions (OQ-1, OQ-2) remain surfaced-to-human follow-ups (not blockers).
-- [ ] **8.5** HAND OFF: the change is ready for `@reviewer` (review_fix),
+  *(DONE — see DoD table below; AC groups A–D all PASSED.)*
+- [x] **8.5** HAND OFF: the change is ready for `@reviewer` (review_fix),
   `@runner` (quality_gates), `@pm` (dod_check), and `@pr-manager`
   (pr_creation). This plan performs NO commit; staging/committing across all
-  phases is performed by `@committer`.
+  phases is performed by `@committer`. *(DONE — delivery complete; ready for review/quality-gates/dod/pr-creation.)*
 
-**Acceptance Criteria**:
+**Phase 8 Acceptance Criteria** — PASSED:
+- all spec ACs (§17) verified — see DoD table below
+- plugin fresh (NFR-7) — 16/16 PASS
+- no "10-phase" anywhere new (NFR-6) — grep-verified (0 occurrences)
+- 8× `internal` (NFR-3) — grep-verified (8/8)
+- zero hand-added headers (NFR-4) — headers applied via script only; idempotent
+- retro-marking/DM-2 extension explicitly NOT done (NG-4, NG-5) — 8 existing specs untouched; install.sh/guard unchanged
+- deferred Proposal C visibly recorded — change-lifecycle.md §7 blockquote
 
-- Must: all spec ACs (§17) verified; plugin fresh (NFR-7); no "10-phase"
-  anywhere new (NFR-6); 8× `internal` (NFR-3); zero hand-added headers (NFR-4).
-- Should: retro-marking/DM-2 extension explicitly NOT done (NG-4, NG-5), and the
-  deferred Proposal C visibly recorded.
+**Definition of Done — spec §17 AC groups:**
+
+| AC group | ID | Verdict | Evidence |
+|-----------|-----|---------|----------|
+| A (GH-78 gate) | AC-F1-1 | PASSED | doc-syncer Identify Impact has "Feature spec coverage" sub-check + `spec_coverage_gaps` field (commit 90ee1fb) |
+| A | AC-F1-2 | PASSED | doc-syncer `<rules>`: REPORTS, never creates spec/ticket (commit 90ee1fb) |
+| A | AC-F1-3 | PASSED | de-noising rule stated (reference existing tracker before proposing) |
+| A | AC-F1-4 | PASSED | pm.md clarify_scope step 3b "Feature spec coverage awareness" (commit 90ee1fb) |
+| A | AC-F1-5 | PASSED | change-lifecycle.md §7 documents the check (commit b179489) |
+| A | AC-F1-6 | PASSED | operational "feature area" definition inline in doc-syncer prompt |
+| B (GH-78 regen) | AC-F1-7 / NFR-7 | PASSED | `.ados-claude/` regenerated; regen set == exactly doc-syncer.md + pm.md; 16/16 freshness test |
+| C (GH-79 specs) | AC-F3-1 | PASSED | all 8 files exist in doc/spec/features/ |
+| C | AC-F3-2 | PASSED | feature-delivery-lifecycle covers 11-phase + orchestration + reopening + DoR/DoD + artifacts; cites AGENTS.md + guides |
+| C | AC-F3-3 | PASSED | feature-agents-and-commands states model-config nuance (claude.model hint vs OpenCode-effective; jsonc delegates to user-global) + @toolsmith |
+| C | AC-F3-4 | PASSED | feature-decision-making covers process/framework; cross-links (not duplicates) feature-decision-records.md |
+| C | AC-F3-5 | PASSED | feature-claude-plugin-generation covers generation + idempotency + freshness gate; cites build script |
+| C | AC-F3-6 | PASSED | feature-quality-gates-and-pr covers /check, /check-fix, commit + PR workflow, 4 roles |
+| C | AC-F3-7 | PASSED | feature-doc-distribution-marker covers values + 2-path parser + install set + 5-mode guard + DM-2 scope; cites ODR-0001 + guard; GH-67 linked; GH-77 TBD |
+| C | AC-F3-8 | PASSED | feature-local-code-review covers /review, /review-deep, heuristics, remediation append; cross-links (not duplicates) feature-remote-code-review.md (unchanged) |
+| C | AC-F3-9 | PASSED | feature-external-researcher covers MCP routing + untrusted content + output contract; cites agent prompt |
+| D (GH-79 hygiene) | AC-F4-1 | PASSED | all 8 cross-link canonical sources (named + linked), no restated branch/folder/phase rules |
+| D | AC-F4-2 | PASSED | no Draft-guide/prompt divergence required a follow-up note (decision-making.md has no status key; change-lifecycle/definition-of-ready are Draft but no divergence found — prompts followed) |
+| D | AC-F5-1 | PASSED | 8/8 carry `ados_distribution: internal` |
+| D | AC-F5-2 | PASSED | headers via script only; idempotent (insertions stable at 24); zero hand-added |
 
 **Affected code areas**:
 
@@ -788,11 +837,11 @@ edits in Phases 2–7 → no further regen; Phase 1's generation is still curren
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| 1 | Not started | — | — | — | Part A prompts + plugin regen (source+generated in one commit) |
-| 2 | Not started | — | — | — | Lifecycle/DoR guide docs + deferred Proposal C |
-| 3 | Not started | — | — | — | P0 specs (delivery-lifecycle, agents-and-commands) |
-| 4 | Not started | — | — | — | P1 specs (decision-making, claude-plugin-gen, quality-gates-and-pr) |
-| 5 | Not started | — | — | — | P2 specs (doc-distribution-marker, local-code-review, external-researcher) |
-| 6 | Not started | — | — | — | Headers + marker verification |
-| 7 | Not started | — | — | — | Verification & quality gates |
-| 8 | Not started | — | — | — | Finalize & release (spec reconciliation, version posture) |
+| 1 | ✅ Done | 2026-06-28 | 2026-06-28 | 90ee1fb | Part A prompts + plugin regen (source+generated in one commit); pre-diff EMPTY; regen diff = exactly doc-syncer.md + pm.md |
+| 2 | ✅ Done | 2026-06-28 | 2026-06-28 | b179489 | Lifecycle/DoR guide docs + deferred Proposal C; no .opencode/ edits → no regen |
+| 3 | ✅ Done | 2026-06-28 | 2026-06-28 | 52ef6ef | P0 specs (delivery-lifecycle, agents-and-commands) |
+| 4 | ✅ Done | 2026-06-28 | 2026-06-28 | ab2d8c5 | P1 specs (decision-making, claude-plugin-gen, quality-gates-and-pr) |
+| 5 | ✅ Done | 2026-06-28 | 2026-06-28 | e6d5f17 | P2 specs (doc-distribution-marker, local-code-review, external-researcher) |
+| 6 | ✅ Done | 2026-06-28 | 2026-06-28 | aca537c | Headers via script (idempotent; 8 existing specs untouched) |
+| 7 | ✅ Done | 2026-06-28 | 2026-06-28 | (none — verification only) | 6/6 test scripts green; Part A content greps pass; .ados-claude/ regen set == 2-file .opencode/ edits |
+| 8 | In progress | 2026-06-28 | — | — | Finalize & release (spec reconciliation, version posture) |
