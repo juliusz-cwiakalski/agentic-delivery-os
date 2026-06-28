@@ -56,7 +56,7 @@ ADOS reviews a delivered change **locally** against its specification, plan, cod
 
 ### Findings Format
 
-Findings use the form `[severity: major|minor|nit] <file>[:line] — <description>; fix: <action>`.
+Findings use the form `[severity: critical|major|minor|nit] <file>[:line] — <description>; fix: <action>`.
 
 ### User Flows
 

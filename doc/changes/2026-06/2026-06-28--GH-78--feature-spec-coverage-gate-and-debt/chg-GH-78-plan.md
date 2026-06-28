@@ -356,12 +356,12 @@ authoritative sources, cross-linking canonical content rather than restating it.
 
 **Tasks**:
 
-- [ ] **3.1** READ (F-3.1 sources): `AGENTS.md` (11-phase table), the lifecycle
+- [x] **3.1** READ (F-3.1 sources): `AGENTS.md` (11-phase table), the lifecycle
   prompts `.opencode/agent/{pm,spec-writer,test-plan-writer,plan-writer,readiness-reviewer,coder,doc-syncer,reviewer,committer,pr-manager}.md`,
   `.opencode/command/*.md`, `doc/guides/change-lifecycle.md`,
   `doc/guides/definition-of-ready.md`,
   `doc/guides/unified-change-convention-tracker-agnostic-specification.md`.
-- [ ] **3.2** CREATE `doc/spec/features/feature-delivery-lifecycle.md`
+- [x] **3.2** CREATE `doc/spec/features/feature-delivery-lifecycle.md`
   (F-3.1 / AC-F3-2): cover the **11**-phase spec→plan→deliver→review→PR gated
   workflow, `@pm` orchestration, **phase reopening** (gaps reopen earlier
   phases; DoR `NOT_READY` reopens artifact phases, never `delivery`), **DoR/DoD
@@ -370,7 +370,7 @@ authoritative sources, cross-linking canonical content rather than restating it.
   `doc/guides/change-lifecycle.md` and `doc/guides/unified-change-convention-tracker-agnostic-specification.md`
   for branch/folder/phase mechanics. Record any Draft-guide vs prompt
   discrepancy as a follow-up note.
-- [ ] **3.3** READ (F-3.2 sources): `.opencode/README.md`, `AGENTS.md`
+- [x] **3.3** READ (F-3.2 sources): `.opencode/README.md`, `AGENTS.md`
   ("Multi-tool support" + "Repo structure"), sample
   `.opencode/agent/*.md` frontmatter (the `claude:` block),
   `scripts/build-claude-plugin.sh` (lines ~254–291 `transform_agent_frontmatter`,
@@ -379,7 +379,7 @@ authoritative sources, cross-linking canonical content rather than restating it.
   root; its line 25 delegates per-agent model assignment to user-global config),
   and `doc/guides/opencode-model-configuration.md` (the accurate model-config
   mechanism reference).
-- [ ] **3.4** CREATE `doc/spec/features/feature-agents-and-commands.md`
+- [x] **3.4** CREATE `doc/spec/features/feature-agents-and-commands.md`
   (F-3.2 / AC-F3-3): cover the `.opencode/` system as "the product" (single
   source of truth), the agent/command inventory, the **model-configuration
   nuance** stated precisely — `claude.model` in an agent's frontmatter is a
@@ -432,13 +432,13 @@ authoritative sources, cross-linking canonical content rather than restating it.
 
 **Tasks**:
 
-- [ ] **4.1** READ (F-3.3 sources): `doc/guides/decision-making.md` (no
+- [x] **4.1** READ (F-3.3 sources): `doc/guides/decision-making.md` (no
   `status:` key — verified NOT Draft; `ados_distribution: redistributable`),
   `.opencode/agent/{decision-advisor,decision-critic}.md`,
   `.opencode/command/{plan-decision,write-decision,review-decision}.md`,
   `.ai/agent/decision-instructions.md`; and the existing
   `doc/spec/features/feature-decision-records.md` (cross-link target, read-only).
-- [ ] **4.2** CREATE `doc/spec/features/feature-decision-making.md`
+- [x] **4.2** CREATE `doc/spec/features/feature-decision-making.md`
   (F-3.3 / AC-F3-4): cover the decision **process/framework** — rigor levels,
   decision kernel, classification (ADR/PDR/TDR/BDR/ODR), AI-authority model,
   decision modes, and the `@decision-advisor` + `@decision-critic` two-stage
@@ -449,23 +449,23 @@ authoritative sources, cross-linking canonical content rather than restating it.
   Draft — do not emit a spurious "decision-making.md is Draft" note; the
   prompt-wins rule applies to any guide/prompt divergence regardless of the
   guide's status.)
-- [ ] **4.3** READ (F-3.4 sources): `scripts/build-claude-plugin.sh` (the whole
+- [x] **4.3** READ (F-3.4 sources): `scripts/build-claude-plugin.sh` (the whole
   transform + idempotent `rm -rf` rebuild + manifest generation),
   `AGENTS.md` ("Multi-tool support"), `scripts/.tests/test-build-claude-plugin.sh`
   (freshness gate), and the existing `.ados-claude/**` tree.
-- [ ] **4.4** CREATE `doc/spec/features/feature-claude-plugin-generation.md`
+- [x] **4.4** CREATE `doc/spec/features/feature-claude-plugin-generation.md`
   (F-3.4 / AC-F3-5): cover `.opencode/` → `.ados-claude/` generation, single
   source of truth, **idempotency** (rebuild removes then regenerates),
   model-assignment plumbing (frontmatter `claude.model` → generated `model:`),
   multi-tool extensibility (the `TOOL`/`build_<tool>_plugin` pattern), and the
   **CI freshness gate** (`test-build-claude-plugin.sh` fails on stale output).
   Cite `scripts/build-claude-plugin.sh`.
-- [ ] **4.5** READ (F-3.5 sources):
+- [x] **4.5** READ (F-3.5 sources):
   `.opencode/command/{check,check-fix,commit,pr}.md`,
   `.opencode/agent/{runner,fixer,committer,pr-manager}.md`,
   `.ai/agent/{pr-instructions,code-review-instructions}.md`,
   `doc/guides/pr-platform-integration.md`.
-- [ ] **4.6** CREATE `doc/spec/features/feature-quality-gates-and-pr.md`
+- [x] **4.6** CREATE `doc/spec/features/feature-quality-gates-and-pr.md`
   (F-3.5 / AC-F3-6): cover `/check` and `/check-fix` (run vs run+fix), the commit
   workflow (`@committer` → one Conventional Commit), the PR/MR workflow
   (`@pr-manager`), the runner/fixer/committer/pr-manager roles, and the
@@ -507,14 +507,14 @@ authoritative sources, cross-linking canonical content rather than restating it.
 
 **Tasks**:
 
-- [ ] **5.1** READ (F-3.6 sources): `AGENTS.md` ("Doc distribution marker"),
+- [x] **5.1** READ (F-3.6 sources): `AGENTS.md` ("Doc distribution marker"),
   `doc/decisions/ODR-0001-classify-yaml-register-templates-redistributable.md`,
   `scripts/.tests/test-doc-distribution.sh` (the 5-mode guard + `get_marker`
   two-path parser + DM-2 enumeration), `scripts/install.sh`
   (`ADOS_LOCAL_DIRS` line ~121 — `doc/spec/features` is an empty stub only; the
   install set is marker-derived). Reference the delivering change GH-67 and
   GH-77 (installer spec) as TBD/out-of-scope.
-- [ ] **5.2** CREATE `doc/spec/features/feature-doc-distribution-marker.md`
+- [x] **5.2** CREATE `doc/spec/features/feature-doc-distribution-marker.md`
   (F-3.6 / AC-F3-7): cover the `ados_distribution` values
   (`redistributable|internal|project-generated`), the **two-path parser** (`.md`
   first-frontmatter-block vs `.yaml` top-level key), the **derived install set**
@@ -524,11 +524,11 @@ authoritative sources, cross-linking canonical content rather than restating it.
   **DM-2 scope** (`doc/guides`, `doc/templates/**`, 5 standalone docs —
   explicitly **excludes** `doc/spec/**`). Cite ODR-0001 and the guard. Cross-link
   GH-67 (delivering change) and mark **GH-77 (installer spec) TBD/out-of-scope**.
-- [ ] **5.3** READ (F-3.7 sources): `.opencode/command/{review,review-deep}.md`,
+- [x] **5.3** READ (F-3.7 sources): `.opencode/command/{review,review-deep}.md`,
   `.opencode/agent/reviewer.md`, and the existing
   `doc/spec/features/feature-remote-code-review.md` (cross-link target,
   read-only — DEC-7 companion, not broadening).
-- [ ] **5.4** CREATE `doc/spec/features/feature-local-code-review.md`
+- [x] **5.4** CREATE `doc/spec/features/feature-local-code-review.md`
   (F-3.7 / AC-F3-8): cover `/review` and `/review-deep` (standard vs
   stronger-reasoning-model), spec/plan compliance + code-quality heuristics
   (security/performance/correctness), the **remediation-phase append** behavior
@@ -536,9 +536,9 @@ authoritative sources, cross-linking canonical content rather than restating it.
   and the relationship to the unified `@reviewer`. **Cross-link** (do not
   duplicate) `feature-remote-code-review.md` as the distinct remote workflow
   (DEC-7). Do NOT modify the remote spec.
-- [ ] **5.5** READ (F-3.8 sources): `.opencode/agent/external-researcher.md`,
+- [x] **5.5** READ (F-3.8 sources): `.opencode/agent/external-researcher.md`,
   `doc/guides/external-researcher-setup.md`.
-- [ ] **5.6** CREATE `doc/spec/features/feature-external-researcher.md`
+- [x] **5.6** CREATE `doc/spec/features/feature-external-researcher.md`
   (F-3.8 / AC-F3-9): cover MCP tool routing (context7 / deepwiki / perplexity /
   web-search per the prompt), **untrusted-content handling** (external output is
   treated as untrusted; cited/verified before use), the research process, and the
@@ -583,7 +583,7 @@ header exactly once.
 
 **Tasks**:
 
-- [ ] **6.1** RUN (explicit path per file — idempotent; `doc/spec/**` is NOT in
+- [x] **6.1** RUN (explicit path per file — idempotent; `doc/spec/**` is NOT in
   the script's `DEFAULT_PATHS`, so the explicit path is required):
   ```
   scripts/add-header-location.sh doc/spec/features/feature-delivery-lifecycle.md
@@ -595,16 +595,16 @@ header exactly once.
   scripts/add-header-location.sh doc/spec/features/feature-local-code-review.md
   scripts/add-header-location.sh doc/spec/features/feature-external-researcher.md
   ```
-- [ ] **6.2** VERIFY each of the 8 now has, in frontmatter, the 3 header lines
+- [x] **6.2** VERIFY each of the 8 now has, in frontmatter, the 3 header lines
   (`# Copyright …`, `# MIT License …`, `source: …`) exactly once, AND
   `ados_distribution: internal`. (The script's `ensure_basic_header` injects
   copyright/MIT/source into the frontmatter and preserves existing keys.) NOTE:
   the script REORDERS the frontmatter so the 3 header lines (copyright/MIT/source)
   come FIRST; `ados_distribution: internal` will therefore appear AFTER them. This
   reordering is expected and correct — do not "fix" it back.
-- [ ] **6.3** VERIFY idempotency: re-running the script on any of the 8 produces
+- [x] **6.3** VERIFY idempotency: re-running the script on any of the 8 produces
   NO diff (confirms no duplicate header, NFR-4).
-- [ ] **6.4** VERIFY the 8 existing specs were NOT touched
+- [x] **6.4** VERIFY the 8 existing specs were NOT touched
   (`git diff --stat -- doc/spec/features/feature-{bootstrapper,decision-records,documentation-profiles,document-templates,license-header-script,onboarding-guide,remote-code-review,text-to-image-tool}.md`
   empty — NG-5).
 
@@ -640,31 +640,31 @@ tests pass, and the honesty/lifecycle-accuracy invariants hold.
 
 **Tasks**:
 
-- [ ] **7.1** RUN `bash scripts/.tests/test-doc-distribution.sh` — MUST stay
+- [x] **7.1** RUN `bash scripts/.tests/test-doc-distribution.sh` — MUST stay
   green. (It does not scan `doc/spec/**`, so the 8 new `internal` specs cannot
   affect it; this confirms no collateral drift in the DM-2 set from Part A guide
   edits or Phase 6.)
-- [ ] **7.2** RUN the repo's other script tests:
+- [x] **7.2** RUN the repo's other script tests:
   `bash scripts/.tests/test-build-claude-plugin.sh` (plugin freshness — NFR-7),
   `bash scripts/.tests/test-add-header-location.sh`,
   `bash scripts/.tests/test-doc-distribution-modes.sh`,
   `bash scripts/.tests/test-install.sh`,
   `bash scripts/.tests/test-inception-doc-consistency.sh`.
-- [ ] **7.3** GREP-verify Part A content landed:
+- [x] **7.3** GREP-verify Part A content landed:
   - `.opencode/agent/doc-syncer.md` contains a feature-spec-coverage check phrase
     and `spec_coverage_gaps`.
   - `.opencode/agent/doc-syncer.md` and `.ados-claude/agents/doc-syncer.md`
     contain the SAME coverage text (generated == source body).
   - `.opencode/agent/pm.md` clarify_scope mentions coverage awareness.
   - `doc/guides/change-lifecycle.md` §7 documents the coverage check.
-- [ ] **7.4** GREP-verify honesty + accuracy invariants:
+- [x] **7.4** GREP-verify honesty + accuracy invariants:
   - No new file under `doc/spec/features/feature-*.md` (the 8 new ones) contains
     "10-phase".
   - All 8 new specs contain `ados_distribution: internal`.
   - `.ados-claude/` regen set == Part A source edits: confirm
     `git diff --stat .ados-claude/` (vs the merge base) touches ONLY
     `.ados-claude/agents/doc-syncer.md` and `.ados-claude/agents/pm.md`.
-- [ ] **7.5** VERIFY no tickets were created and no `.opencode/**` file was
+- [x] **7.5** VERIFY no tickets were created and no `.opencode/**` file was
   edited outside Phase 1 (so no second regen is owed).
 
 **Acceptance Criteria**:
@@ -776,6 +776,59 @@ edits in Phases 2–7 → no further regen; Phase 1's generation is still curren
 
 ---
 
+### Phase 9: Code Review Remediation (Iteration 1)
+
+> **Origin:** review_fix (phase 8), iteration 1. Appended by `@reviewer`.
+> **Findings record:** `./code-review/findings-iter-1.json` · summary `./code-review/review-iter-1.md`.
+> **Scope:** 2 minor findings only — the change is otherwise high quality (all spec §17 AC groups
+> A/B/C/D PASS, all quality gates green). Both fixes are documentation/tracking corrections.
+
+**Goal**: Close the two minor review findings (one authoritative-accuracy enum slip in a spec, one
+plan-task tracking inconsistency) so the change re-reviews to PASS.
+
+**Tasks**:
+
+- [x] **9.1** FIX `doc/spec/features/feature-local-code-review.md` line 59 (finding 1, AC-F4-2):
+  the "Findings Format" line currently reads `[severity: major|minor|nit]`, omitting `critical`.
+  The authoritative source — `.opencode/agent/reviewer.md` `<finding_format>` (severity field, line
+  ~397) — defines `critical | major | minor | nit`. Change line 59 to:
+  `Findings use the form \`[severity: critical|major|minor|nit] <file>[:line] — <description>; fix: <action>\`.`
+  *(DONE — line 59 now reads `[severity: critical|major|minor|nit]`, matching reviewer.md:397. No `.opencode/` edit → no `.ados-claude/` regen owed.)*
+- [x] **9.2** FIX the plan-task tracking inconsistency (finding 2, DONE_BUT_UNCHECKED + false DoD):
+  tick the task checkboxes for Phases 3–7 (3.1–3.4, 4.1–4.6, 5.1–5.6, 6.1–6.4, 7.1–7.5) to reflect
+  the delivered state already recorded in the Execution Log (commits 52ef6ef, ab2d8c5, e6d5f17,
+  aca537c + verification phase). This makes Phase 8.4's "all plan tasks checked" DoD claim true.
+  (Phase 8.4's verdict/evidence otherwise stands.) *(DONE — 25 Phase 3–7 boxes ticked via task-id sed; Phase 8/9 boxes untouched.)*
+- [ ] **9.3** RE-REVIEW (iteration 2): re-run `@reviewer` (local mode) to confirm the two findings
+  are resolved and no new issues were introduced. Expected: `Status=PASS`, no further remediation.
+
+**Acceptance Criteria**:
+
+- Must: finding 1 resolved — `feature-local-code-review.md` line 59 includes `critical` in the
+  severity enum, matching `.opencode/agent/reviewer.md`.
+- Must: finding 2 resolved — Phases 3–7 task boxes are ticked; Phase 8.4 DoD no longer over-claims.
+- Should: no `.opencode/` file edited in this phase (so no `.ados-claude/` regen owed);
+  `bash scripts/.tests/test-build-claude-plugin.sh` stays 16/16 green.
+
+**Affected code areas**:
+
+- `doc/spec/features/feature-local-code-review.md` (1-line enum correction — finding 1)
+- `doc/changes/2026-06/2026-06-28--GH-78--feature-spec-coverage-gate-and-debt/chg-GH-78-plan.md`
+  (checkbox state — finding 2)
+
+**System docs to update**:
+
+- `doc/spec/features/feature-local-code-review.md` (the corrected severity enum)
+
+**Tests**:
+
+- Grep: `feature-local-code-review.md` line 59 contains `critical|major|minor|nit`.
+- Manual: confirm no `.opencode/**` file was edited in Phase 9 (no regen owed).
+
+**Completion signal**: `docs(GH-78): apply review iteration-1 remediation (severity enum, plan checkboxes)`
+
+---
+
 ## Test Scenarios
 
 | ID | Scenario | Phases | AC |
@@ -832,6 +885,7 @@ edits in Phases 2–7 → no further regen; Phase 1's generation is still curren
 |---------|------|--------|---------|
 | 1.0 | 2026-06-28 | plan-writer | Initial plan: 8 phases — Part A (agent prompts + regen; lifecycle/DoR guides), Part B P0/P1/P2 specs (8), headers+markers, verification, finalize. |
 | 1.1 | 2026-06-28 | plan-writer | Red-team R2 corrections (2 must-fix + 4 ride-along). [M1] Phase 3.3/3.4 model-config source map fixed — bare `opencode*.jsonc` glob → precise `.opencode/opencode.jsonc` + `doc/guides/opencode-model-configuration.md`; authoring note: document the model-config MECHANISM, do NOT imply `.opencode/opencode.jsonc` holds a literal per-agent model table. [M2] Phase 4.1/4.2 — `decision-making.md` is NOT Draft (no `status:` key, verified); un-hooked the false Draft premise while keeping the prompt-wins rule. [#3] Phase 1.0 added: pre-edit plugin-baseline-freshness check (empty pre-diff required). [#4] Phase 3 authoring rules: NEW-spec sibling cross-links required (F-3.1↔F-3.5, F-3.2↔F-3.4, F-3.7↔F-3.5). [#5] Orientation-vs-duplication example added (reviewable TC-HYGIENE-001 step 4). [#6] Phase 6.2 note: header script reorders frontmatter (headers first, `ados_distribution` after). |
+| 1.2 | 2026-06-28 | reviewer (review_fix iter-1) | Appended Phase 9 (Code Review Remediation, iteration 1) for 2 minor findings: (1) `feature-local-code-review.md` line 59 severity enum omits `critical` vs authoritative `.opencode/agent/reviewer.md` (AC-F4-2); (2) plan-task tracking inconsistency — Phases 3–7 task boxes unchecked though delivered (DONE_BUT_UNCHECKED), making the Phase 8.4 "all plan tasks checked" DoD claim false. See `./code-review/{findings-iter-1.json,review-iter-1.md}`. |
 
 ## Execution Log
 
@@ -845,3 +899,4 @@ edits in Phases 2–7 → no further regen; Phase 1's generation is still curren
 | 6 | ✅ Done | 2026-06-28 | 2026-06-28 | aca537c | Headers via script (idempotent; 8 existing specs untouched) |
 | 7 | ✅ Done | 2026-06-28 | 2026-06-28 | (none — verification only) | 6/6 test scripts green; Part A content greps pass; .ados-claude/ regen set == 2-file .opencode/ edits |
 | 8 | In progress | 2026-06-28 | — | — | Finalize & release (spec reconciliation, version posture) |
+| 9 | Remediation applied (awaiting re-review iter-2) | 2026-06-28 | — | — | Finding 1 fixed (severity enum now `critical\|major\|minor\|nit` in feature-local-code-review.md); finding 2 fixed (25 Phase 3–7 task boxes ticked). 9.1/9.2 done; 9.3 (re-review iter-2) pending @reviewer. |

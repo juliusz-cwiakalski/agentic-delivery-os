@@ -1,0 +1,24 @@
+[
+  {
+    "id": 1,
+    "severity": "minor",
+    "confidence": "high",
+    "file": "doc/spec/features/feature-local-code-review.md",
+    "line": 59,
+    "title": "Severity enum omits `critical` vs authoritative reviewer prompt",
+    "description": "The 'Findings Format' line states `[severity: major|minor|nit]`, but the authoritative source it mirrors (`.opencode/agent/reviewer.md`, finding_format, severity field) defines the enum as `critical | major | minor | nit`. Omitting `critical` is an authoritative-accuracy slip against AC-F4-2 / RSK-1 (the change's headline goal is authoring specs from actual behavior). The reviewer can emit critical findings, so the spec under-states the contract.",
+    "suggestedFix": "Change line 59 to read `[severity: critical|major|minor|nit] <file>[:line] — <description>; fix: <action>` to match `.opencode/agent/reviewer.md` line 397.",
+    "suppressed": false
+  },
+  {
+    "id": 2,
+    "severity": "minor",
+    "confidence": "high",
+    "file": "doc/changes/2026-06/2026-06-28--GH-78--feature-spec-coverage-gate-and-debt/chg-GH-78-plan.md",
+    "line": 359,
+    "title": "Plan tasks for Phases 3–7 are unchecked though the work is delivered (DONE_BUT_UNCHECKED) and the DoD over-claims",
+    "description": "Every task checkbox in Phases 3, 4, 5, 6, 7 is `- [ ]`, yet the Execution Log marks Phases 3–7 as ✅ Done (commits 52ef6ef, ab2d8c5, e6d5f17, aca537c, verification) and Phase 8.4 DoD asserts 'all plan tasks checked'. The deliverables exist and are independently verified (tests green, 8 specs present, markers/headers correct), so this is a tracking inconsistency, not a missing-work gap. The false 'all plan tasks checked' DoD claim is the actionable defect.",
+    "suggestedFix": "Tick the checkboxes for tasks 3.1–3.4, 4.1–4.6, 5.1–5.6, 6.1–6.4, 7.1–7.5 to reflect delivered state (matching the Execution Log), OR amend Phase 8.4 to scope 'all plan tasks checked' to Phases 1–2 + 8. Preferred: tick Phase 3–7 boxes.",
+    "suppressed": false
+  }
+]
