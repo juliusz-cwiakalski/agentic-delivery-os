@@ -14,6 +14,8 @@ summary: "End-to-end change delivery workflow (planning to PR) with PM-led gates
 
 This guide defines the canonical change workflow for this repository. The PM agent (`@pm`) orchestrates the entire lifecycle, delegating to specialized agents at each phase.
 
+> Part of the [ADOS process map](ados-processes.md) — Change Delivery is the steady-state loop; [Decision Making](decision-making.md) is consulted on demand during artifact creation, and [Documentation Reconciliation](#7-system_spec_update) runs as phase 7.
+
 ## Principles
 
 - One ticket = one change.

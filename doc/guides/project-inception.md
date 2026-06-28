@@ -23,6 +23,8 @@ After reading this guide a person who has never seen any internal research notes
 can incept a project: stage inputs, pick the right artifacts for the project
 type, run the 8 phases, hit every human gate, and hand off an incepted project.
 
+> Part of the [ADOS process map](ados-processes.md) — Project Inception is the greenfield setup path; its outputs feed the [Change Lifecycle](change-lifecycle.md).
+
 > **Templates referenced here** live under `doc/templates/`. **Instances** are
 > written into a project's `doc/overview/`, `doc/inception/`, `doc/spec/`, and
 > `doc/decisions/` only when that project runs inception.

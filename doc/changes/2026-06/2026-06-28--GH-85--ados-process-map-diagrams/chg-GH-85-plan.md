@@ -288,10 +288,10 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 **Tasks**:
 
-- [ ] **6.1** Add a **back-link to `ados-processes.md`** near the top of each process guide (a single-line `> Part of the [ADOS process map](ados-processes.md).` style blockquote, placed right after the frontmatter + audience/purpose block, before any diagram or `## ` section): `project-inception.md`, `onboarding-existing-project.md`, `change-lifecycle.md`, `meeting-preparation-and-summarization.md`, `decision-making.md`.
-- [ ] **6.2** For documentation reconciliation (no standalone guide — it is embedded as phase 7 `system_spec_update` of the change lifecycle): ensure the change-lifecycle guide's phase-7 section and/or the canonical map card link clearly to that section. Do **not** create a standalone guide for it.
-- [ ] **6.3** Add **forward links where the relationship is non-obvious**: e.g., decision-making guide ↔ meeting guide (meetings produce decision evidence; durable decisions route to records — already cross-linked in places, verify and keep consistent); change-lifecycle guide ↔ decision-making (decision consultation during spec/delivery); onboarding guide ↔ change-lifecycle (first change walkthrough); inception guide ↔ change-lifecycle (inception hands off to delivery). Keep these as one-line inline links, not new sections.
-- [ ] **6.4** Verify no broken relative links (`ados-processes.md` resolves from each guide's directory; all are in `doc/guides/`).
+- [x] **6.1** Add a **back-link to `ados-processes.md`** near the top of each process guide (a single-line `> Part of the [ADOS process map](ados-processes.md).` style blockquote, placed right after the frontmatter + audience/purpose block, before any diagram or `## ` section): `project-inception.md`, `onboarding-existing-project.md`, `change-lifecycle.md`, `meeting-preparation-and-summarization.md`, `decision-making.md`. (verified: all 5 guides now have ≥1 link to ados-processes.md — meeting/decision/onboarding added in phases 3-5; project-inception + change-lifecycle added here)
+- [x] **6.2** For documentation reconciliation (no standalone guide — it is embedded as phase 7 `system_spec_update` of the change lifecycle): ensure the change-lifecycle guide's phase-7 section and/or the canonical map card link clearly to that section. Do **not** create a standalone guide for it. (change-lifecycle back-link cites Documentation Reconciliation as phase 7 with in-page anchor `#7-system_spec_update`; canonical-map card links to change-lifecycle phase 7; no standalone guide created — verified 0)
+- [x] **6.3** Add **forward links where the relationship is non-obvious**: e.g., decision-making guide ↔ meeting guide (meetings produce decision evidence; durable decisions route to records — already cross-linked in places, verify and keep consistent); change-lifecycle guide ↔ decision-making (decision consultation during spec/delivery); onboarding guide ↔ change-lifecycle (first change walkthrough); inception guide ↔ change-lifecycle (inception hands off to delivery). Keep these as one-line inline links, not new sections. (inception→change-lifecycle; change-lifecycle→decision-making; onboarding→change-lifecycle [phase 5]; meeting↔decision already cross-linked in bodies [2/1] — verified consistent)
+- [x] **6.4** Verify no broken relative links (`ados-processes.md` resolves from each guide's directory; all are in `doc/guides/`). (all forward/back links resolve; all guides share `doc/guides/` directory)
 
 **Acceptance Criteria**:
 
@@ -520,7 +520,7 @@ This plan's DoD uses the **canonical AC scheme from the spec** (`chg-GH-85-spec.
 | 3 | Done | 2026-06-28 | 2026-06-28 | (pending) | meeting guide before/during/after flowchart @L17 + back-link; header+marker intact. |
 | 4 | Done | 2026-06-28 | 2026-06-28 | (pending) | decision guide D0–D14 kernel + R0–R3 routing @L17; 1 subgraph (<=2); no forbidden syntax; red "✗ Reopen" text cue; header+marker intact. |
 | 5 | Done | 2026-06-28 | 2026-06-28 | (pending) | onboarding guide setup-flow @L17 + back-link; TOC intact (no new heading); header+marker intact. |
-| 6 | Not started | — | — | — | |
+| 6 | Done | 2026-06-28 | 2026-06-28 | (pending) | back-links added to project-inception + change-lifecycle (other 3 done P3-5); all 5 guides link ados-processes.md; forward links added; doc-reconciliation = phase 7 anchor, no standalone guide. |
 | 7 | Not started | — | — | — | |
 | 8 | Not started | — | — | — | |
 | 9 | Not started | — | — | — | |
