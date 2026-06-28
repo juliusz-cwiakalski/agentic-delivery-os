@@ -50,6 +50,24 @@ claude:
     - Ops: `doc/ops/` (runbooks, observability, troubleshooting)
     - Guides: `doc/guides/`
     - NFRs: `doc/spec/nonfunctional.md`
+
+    **Feature spec coverage (positive coverage check):** In addition to reconciling
+    specs the change touches, run a *positive* coverage check — "is there a spec for
+    what we changed?" For each **feature area** the change modifies, look for a
+    corresponding `doc/spec/features/feature-<slug>.md`. Collect any feature area
+    that lacks a matching spec into `spec_coverage_gaps` (reported in
+    `<reporting>`; empty when all modified feature areas are covered). This is
+    distinct from reconciliation ("does the existing spec still match?") — it
+    catches modified capabilities that have *no* spec at all.
+
+    **"Feature area" (operational definition):** A capability is a *feature area*
+    iff it warrants a `doc/spec/features/feature-<slug>.md` — a coherent, nameable
+    capability a contributor or reviewer would expect to find a spec for (e.g.,
+    "the delivery lifecycle", "the agents & commands system", "code review",
+    "decision-making"). Routine edits, one-off scripts, and bug fixes to
+    already-specced areas are **not** new feature areas. This makes the check
+    falsifiable: a reviewer can name the feature area and confirm whether a spec
+    exists.
   </step>
 
   <step name="3. Search Templates">
@@ -110,6 +128,7 @@ Return structured report:
     <field>Status: `SUCCESS` | `SKIPPED` | `FAILED`</field>
     <field>Updates: list of files created or modified</field>
     <field>Commit SHA: (if committed)</field>
+    <field>spec_coverage_gaps: list of modified feature areas lacking a `doc/spec/features/feature-<slug>.md` (empty when all modified feature areas are covered). Report-only — this field carries no automated side effect; it never creates a spec or a ticket (see the handoff rule in `<rules>`).</field>
     <field>Validation: confirm all spec links point to workItemRef</field>
     <field>Next Step: "Ready for Finalization"</field>
   </fields>
@@ -120,6 +139,7 @@ Return structured report:
   <rule>Traceability: Every updated file must link to workItemRef in front matter (`links.related_changes`).</rule>
   <rule>Templates: Use templates from `doc/templates/` as structural guide.</rule>
   <rule>Safety: Only modify docs in `doc/spec/`, `doc/contracts/`, `doc/domain/`, `doc/quality/`, `doc/ops/`, `doc/guides/`. Never touch source code.</rule>
+  <rule>Spec-coverage handoff (report, never ticket): `@doc-syncer` only **REPORTS** `spec_coverage_gaps` in its structured report. It must **never** create a spec or a tracker ticket itself, and it must **never** auto-create a follow-up. The de-noised, human-gated handoff is: `@doc-syncer` reports the gap → `@pm` checks open issues for an existing tracker (e.g., a prior GH-79/GH-77-style ticket) and **references** it rather than proposing a duplicate (de-noising) → `@pm` **proposes** a follow-up to the human → **only the human** approves ticket creation. `@doc-syncer`'s scope ends at reporting; `@pm`'s scope ends at proposing; ticket creation is a human decision.</rule>
   <rule>Test Specs: Enduring documentation of how a feature is tested, derived from change test plan.</rule>
   <rule>Freshness: If implementation changes after a sync (new commits / refactor), run doc-sync again before PR.</rule>
 </rules>

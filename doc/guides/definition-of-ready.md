@@ -43,6 +43,8 @@ The Definition of Ready is a **pre-delivery gate** (`dor_check`, phase 5 of the 
 
 > A change cannot enter delivery without a clear, testable Definition of Done defined in its spec (`dod_defined`). The DoR gate verifies the DoD exists; see [Definition of Done](definition-of-done.md).
 
+> **Feature spec coverage is advisory, not a DoR facet.** Spec coverage is tracked at intake (`@pm` clarify_scope records whether touched feature areas have a `doc/spec/features/feature-<slug>.md`) and **reported** post-delivery by `@doc-syncer` (`spec_coverage_gaps` in phase 7, `system_spec_update`). It is **deliberately not** a hard DoR facet here — making it a hard pre-delivery gate (`spec_coverage`) is a deferred option (see change spec GH-78 §7.3, OQ-1) that would require a `@decision-advisor` decision.
+
 ## Gate verdict
 
 The verdict is `READY` only when **all facets pass and no pause flag exists**; otherwise `NOT_READY`. Each `NOT_READY` carries a facet summary (PASS/FAIL per facet) plus findings. Each finding records: severity (`critical|major|minor|nit`), the artifact + section/location, the gap, the **suggested remediation target phase** (one of `specification | test_planning | delivery_planning` — never `delivery`), and a concise fix. The full verdict-record schema lives in the `@readiness-reviewer` prompt.

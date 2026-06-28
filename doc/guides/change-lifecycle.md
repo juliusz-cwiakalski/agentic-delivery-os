@@ -240,13 +240,18 @@ flowchart TD
 
 - `@pm` invokes `@doc-syncer` with `workItemRef`.
 - `@doc-syncer` reconciles `doc/spec/**`, `doc/contracts/**`, and other system documentation.
+- **Feature spec coverage check:** `@doc-syncer` runs a *positive* coverage check in addition to reconciliation. For each **feature area** the change modifies (a coherent, nameable capability a contributor/reviewer would expect a spec for — i.e., something that warrants a `doc/spec/features/feature-<slug>.md`; the operational definition lives authoritatively in `.opencode/agent/doc-syncer.md`), it looks for the corresponding `doc/spec/features/feature-<slug>.md` and collects any missing feature area into `spec_coverage_gaps` in its structured report. This catches modified capabilities that have *no* spec at all — distinct from reconciliation ("does the existing spec still match?").
+- **De-noised, human-gated handoff:** `@doc-syncer` only **reports** `spec_coverage_gaps`; it never creates a spec or a tracker ticket. `@pm` then checks open issues for an existing tracker and **references** it (rather than proposing a duplicate — de-noising), **proposes** a follow-up to the human, and **only the human** approves ticket creation. Coverage is advisory at this phase; it does not block the change from proceeding to `review_fix`.
 
-**Outcome**: System specification is updated and consistent with the implementation.
+> **Deferred alternative.** A periodic standalone coverage audit (Proposal C) was considered and is deferred in favor of these inline checks (intake awareness + post-delivery reporting). See change spec GH-78 §7.3.
+
+**Outcome**: System specification is updated and consistent with the implementation; any feature-spec coverage gap is reported (not silently dropped).
 
 **Exit criteria**:
 
 - System docs updated and committed.
 - No discrepancies between implementation and documented system state.
+- `spec_coverage_gaps` reported (empty when all modified feature areas are covered).
 
 ### 8) review_fix
 

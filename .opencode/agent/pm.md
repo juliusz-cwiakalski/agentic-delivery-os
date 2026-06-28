@@ -215,6 +215,7 @@ Planning sessions structure (for multi-change planning):
   - Identify contradictions between requested changes and existing system behavior
   - Identify dependencies on existing features or contracts
   - Identify edge cases that may not be addressed in the ticket
+- **Feature spec coverage awareness:** For each **feature area** the change modifies (a coherent, nameable capability a contributor/reviewer would expect a spec for — i.e., something that warrants a `doc/spec/features/feature-<slug>.md`), note whether a corresponding spec exists in `doc/spec/features/`. Record any known coverage gap in `chg-<workItemRef>-pm-notes.yaml` so it is visible before delivery. This is **advisory only — not a delivery blocker**: coverage is surfaced at intake for awareness and reported again at `system_spec_update` (phase 7) by `@doc-syncer`'s `spec_coverage_gaps` field; the human alone decides whether a follow-up ticket is created.
 - Analyze requirements for completeness: acceptance criteria, constraints, dependencies, edge cases
 - If gaps, contradictions, or missing info found:
   1. Add a comment to the ticket with specific questions (reference system spec where relevant)
