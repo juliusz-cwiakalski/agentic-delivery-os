@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "severity": "minor",
+    "confidence": "high",
+    "file": "doc/spec/features/feature-local-code-review.md",
+    "line": 59,
+    "title": "[RESOLVED] Severity enum omits `critical` vs authoritative reviewer prompt",
+    "description": "Iter-1 finding 1. Line 59 now reads `[severity: critical|major|minor|nit]`, matching the authoritative `.opencode/agent/reviewer.md` line 397 (`critical | major | minor | nit`). The 4-value set is exact; the no-space pipe formatting is cosmetic and consistent with the rest of the spec's inline-enum style. AC-F4-2 / RSK-1 (authoritative accuracy) restored.",
+    "suggestedFix": "None — resolved in commit 8de3353.",
+    "status": "RESOLVED",
+    "suppressed": false
+  },
+  {
+    "id": 2,
+    "severity": "minor",
+    "confidence": "high",
+    "file": "doc/changes/2026-06/2026-06-28--GH-78--feature-spec-coverage-gate-and-debt/chg-GH-78-plan.md",
+    "line": 720,
+    "title": "[RESOLVED] Plan tasks for Phases 3–7 unchecked though delivered (DONE_BUT_UNCHECKED) + DoD over-claim",
+    "description": "Iter-1 finding 2. All 25 Phase 3–7 task checkboxes (3.1–3.4, 4.1–4.6, 5.1–5.6, 6.1–6.4, 7.1–7.5) are now `- [x]`, matching the Execution Log's ✅ state for those phases. Phase 8.4 DoD claim 'all plan tasks checked' (line 720) is now factually true. The only remaining `- [ ]` is task 9.3 (this re-review itself), which is correctly in-progress — not a tracking gap. Revision log entry 1.2 records the change.",
+    "suggestedFix": "None — resolved in commit 8de3353.",
+    "status": "RESOLVED",
+    "suppressed": false
+  }
+]

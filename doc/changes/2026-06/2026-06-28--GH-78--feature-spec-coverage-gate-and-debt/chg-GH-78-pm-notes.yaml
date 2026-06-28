@@ -10,8 +10,8 @@ phases:
   dor_check: { started: "2026-06-28", completed: "2026-06-28" }
   delivery: { started: "2026-06-28", completed: "2026-06-28" }
   system_spec_update: { started: "2026-06-28", completed: "2026-06-28" }
-  review_fix: { started: "2026-06-28", completed: null }
-  quality_gates: { started: null, completed: null }
+  review_fix: { started: "2026-06-28", completed: "2026-06-28" }
+  quality_gates: { started: "2026-06-28", completed: "2026-06-28" }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 
@@ -44,7 +44,10 @@ proposed_followups:  # NOT auto-created — surfaced for human approval
     date: "2026-06-28"
 
 notes:
-  - text: "Red-team R1 (scope & approach review, @red-team-coordinator) = SHIP-WITH-FINDINGS. 6 perspectives (cto, pm, technical-writer, qa, devops, business-analyst). Verdict: intent sound; recommended two-PR (Option A') but user overrode to single-PR full-scope. 10 must-fix-before-spec items all folded into the decisions above and will be passed to spec-writer. Key risks flagged: spec!=behavior (write from agent prompts + AGENTS.md + scripts, not idealized); GH-79 ticket text defects (stale phase numbering, fold-in contradiction, GitHub-auto-linked #N ACs); doc/spec not covered by ados_distribution/license-header automation."
+  - text: "retro: @committer and @runner subagents return empty task_result in this runtime (output-capture bug) but DO execute — commits/tests land correctly. Verified each commit via .git reflog/ref files instead of trusting empty output. Process improvement: PM should verify git state via reflog when committer/runner return empty, not assume failure."
+    type: retro
+    date: "2026-06-28"
+  - text: "Red-team R1 (scope & approach review, @red-team-coordinator) = SHIP-WITH-FINDINGS. 6 perspectives (cto, pm, technical-writer, qa, devops, business-analyst). Verdict: intent sound; recommended two-PR (Option A') but user overrode to single-PR full-scope. 10 must-fix-before-spec items all folded into the decisions above and passed to spec-writer. Key risks flagged: spec!=behavior (write from agent prompts + AGENTS.md + scripts, not idealized); GH-79 ticket text defects (stale phase numbering, fold-in contradiction, GitHub-auto-linked #N ACs); doc/spec not covered by ados_distribution/license-header automation."
     type: info
     date: "2026-06-28"
   - text: "retro: combined two-ticket single-PR delivery is non-canonical for this repo (violates 'one ticket = one change' on 3 axes: artifact model, branch naming, DoR traceability). User explicitly chose it for delivery efficiency. Tradeoff accepted: harder review + revert-granularity loss vs. one-shot closure. If this pattern recurs, consider a documented 'multi-ticket PR' convention."
