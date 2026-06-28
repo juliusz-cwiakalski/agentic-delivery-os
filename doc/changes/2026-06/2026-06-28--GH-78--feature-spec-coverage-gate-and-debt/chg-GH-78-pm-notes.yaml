@@ -1,0 +1,52 @@
+change_id: GH-78
+title: "Feature spec-coverage gate + pay down spec-coverage debt (GH-78 + GH-79, single PR)"
+co_delivered: [GH-79]  # user explicit decision: both tickets closed by this one PR
+branch: feat/GH-78/feature-spec-coverage-gate-and-debt
+phases:
+  clarify_scope: { started: "2026-06-28", completed: "2026-06-28" }
+  specification: { started: "2026-06-28", completed: "2026-06-28" }
+  test_planning: { started: "2026-06-28", completed: "2026-06-28" }
+  delivery_planning: { started: "2026-06-28", completed: "2026-06-28" }
+  dor_check: { started: "2026-06-28", completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+
+decisions:
+  - text: "COMBINED DELIVERY: single branch/PR closing both GH-78 (spec-coverage gate, process fix) and GH-79 (full spec-coverage debt: 8 missing feature specs P0+P1+P2). User explicit decision (2026-06-28), overriding red-team R1 two-PR recommendation. Deviation from repo's 'one ticket = one change' model (change-lifecycle.md:19) recorded here; PR description references both workItemRefs; GH-78 is the primary ref for branch/folder/artifact naming."
+    date: "2026-06-28"
+  - text: "ados_distribution marker value for the 8 NEW feature specs = 'internal'. Rationale (red-team R1 devops): doc/spec/features/* is NOT in scripts/install.sh install set (which installs guides/templates/standalone docs); the distribution test test-doc-distribution.sh only scans doc/guides, doc/templates, 5 STANDALONE_DOCS — doc/spec is out of scope. 'redistributable' would be a false claim. 'internal' matches the de-facto status of the 8 existing (unmarked) specs. Extending install.sh + test to cover doc/spec is a separate, larger scope — deferred."
+    date: "2026-06-28"
+  - text: "Cross-link (NOT duplicate) interpretation for change-convention + lifecycle content inside specs. GH-79 P0#1 says 'fold in to stop duplication' but ACs say 'no duplication / cross-reference'. Resolved: specs NAME and LINK canonical sub-capabilities (unified-change-convention-...md, change-lifecycle.md) rather than restating branch/folder/phase rules. Recorded so spec-writer doesn't propagate the ticket's contradictory wording."
+    date: "2026-06-28"
+  - text: "Canonical lifecycle model = 11 PHASES. GH-79 ticket text has stale references ('10-phase', '@doc-syncer phase 6', 'phases 8 + 9-10'). Correct: doc-syncer/system_spec_update = phase 7; review_fix=8, quality_gates=9, dod_check=10, pr_creation=11. Spec-writer MUST use canonical 11-phase numbering and ignore the ticket's stale phrasing."
+    date: "2026-06-28"
+  - text: "'Feature area' defined operationally for the GH-78 gate: 'any capability that warrants a doc/spec/features/feature-<slug>.md'. Meta-repo mapping examples: lifecycle->feature-delivery-lifecycle, agents/commands->feature-agents-and-commands, decision framework->feature-decision-making, etc. Makes the spec-coverage check falsifiable."
+    date: "2026-06-28"
+  - text: "Doc-syncer handoff for Proposal B: @doc-syncer REPORTS feature areas lacking a spec in its structured output; PM PROPOSES the follow-up to the human; ONLY the human approves ticket creation. doc-syncer must NOT call gh_create_issue (per pm-instructions.md ticket-creation policy). Edit .opencode/agent/doc-syncer.md to state this handoff explicitly."
+    date: "2026-06-28"
+  - text: "De-noising rule added to GH-78's spec-coverage check: before proposing a NEW follow-up ticket, check open issues (gh_list_issues) for an existing tracker (e.g., GH-79, GH-77) and REFERENCE it instead of proposing a duplicate. Prevents constant noise in a self-hosting repo that edits its own agents/guides against known mass debt."
+    date: "2026-06-28"
+  - text: "License headers for new specs: AI must NOT hand-add headers (AGENTS.md rule). add-header-location.sh DEFAULT_PATHS does NOT include doc/spec (drift vs the 8 existing specs which carry headers). Mechanism: author spec -> run 'scripts/add-header-location.sh doc/spec/features/feature-<slug>.md' (script accepts explicit path, idempotent). Script/AGENTS.md drift on doc/spec flagged as separate follow-up (not in this change's scope)."
+    date: "2026-06-28"
+
+open_questions: []
+
+blockers: []
+
+proposed_followups:  # NOT auto-created — surfaced for human approval
+  - text: "Add a 'spec_coverage' facet to @readiness-reviewer (.opencode/agent/readiness-reviewer.md) so the GH-78 gate has enforcement TEETH at the hard DoR gate, not just soft points (PM clarify_scope + doc-syncer). Red-team R1 cto Major. Cheap (readiness-reviewer already reads doc/spec/**). PM proposes; human decides whether to create a ticket."
+    date: "2026-06-28"
+  - text: "Reconcile add-header-location.sh DEFAULT_PATHS / AGENTS.md 'where headers required' list to include doc/spec (8 existing specs carry headers outside the automated path). Red-team R1 devops. Separate cleanup change."
+    date: "2026-06-28"
+
+notes:
+  - text: "Red-team R1 (scope & approach review, @red-team-coordinator) = SHIP-WITH-FINDINGS. 6 perspectives (cto, pm, technical-writer, qa, devops, business-analyst). Verdict: intent sound; recommended two-PR (Option A') but user overrode to single-PR full-scope. 10 must-fix-before-spec items all folded into the decisions above and will be passed to spec-writer. Key risks flagged: spec!=behavior (write from agent prompts + AGENTS.md + scripts, not idealized); GH-79 ticket text defects (stale phase numbering, fold-in contradiction, GitHub-auto-linked #N ACs); doc/spec not covered by ados_distribution/license-header automation."
+    type: info
+    date: "2026-06-28"
+  - text: "retro: combined two-ticket single-PR delivery is non-canonical for this repo (violates 'one ticket = one change' on 3 axes: artifact model, branch naming, DoR traceability). User explicitly chose it for delivery efficiency. Tradeoff accepted: harder review + revert-granularity loss vs. one-shot closure. If this pattern recurs, consider a documented 'multi-ticket PR' convention."
+    type: retro
+    date: "2026-06-28"

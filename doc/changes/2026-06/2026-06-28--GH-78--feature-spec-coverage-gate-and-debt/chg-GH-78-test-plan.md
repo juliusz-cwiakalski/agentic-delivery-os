@@ -49,7 +49,7 @@ Core behaviors to protect:
 - Implementation plan: [./chg-GH-78-plan.md](./chg-GH-78-plan.md) (if present).
 - Testing strategy: [.ai/rules/testing-strategy.md](../../../.ai/rules/testing-strategy.md).
 - Authoritative sources referenced by checks: `AGENTS.md`, `.opencode/agent/{doc-syncer,pm,external-researcher}.md`, `.opencode/command/{review,review-deep,check,check-fix,commit,pr}.md`, `scripts/build-claude-plugin.sh`, `scripts/add-header-location.sh`, `doc/guides/change-lifecycle.md`, `doc/decisions/ODR-0001-classify-yaml-register-templates-redistributable.md`, `scripts/.tests/test-doc-distribution.sh`.
-- Header format reference: [doc/spec/features/feature-license-header-script.md](../../../doc/spec/features/feature-license-script.md) (3-line copyright/MIT/`source:` block embedded in YAML frontmatter).
+- Header format reference: [doc/spec/features/feature-license-header-script.md](../../../doc/spec/features/feature-license-header-script.md) (3-line copyright/MIT/`source:` block embedded in YAML frontmatter).
 
 ## 3. Coverage Overview
 
@@ -293,8 +293,8 @@ No unit/integration/E2E framework applies (no application code). All automated c
    `rg -n -i -e "spec coverage" -e "feature spec coverage" -e "spec_coverage_gaps" doc/guides/change-lifecycle.md` → ≥1 match.
 2. Assert the matching section is system_spec_update (phase 7):
    `rg -n -i -e "system_spec_update" -e "phase 7" doc/guides/change-lifecycle.md` → ≥1 match, and the coverage-check match from step 1 falls at/after the phase-7 heading (manual confirmation).
-3. Assert the guide states the **11**-phase model (NFR-6, cross-cuts with TC-HYGIENE-006):
-   `rg -n -i "11-phase\|11 phase\|eleven-phase\|11\b.*phase" doc/guides/change-lifecycle.md` → ≥1 match; and `rg -n "10-phase" doc/guides/change-lifecycle.md` → 0 matches.
+3. Assert the guide introduces no stale phrasing (NFR-6, cross-cuts with TC-HYGIENE-006):
+   `rg -n "10-phase" doc/guides/change-lifecycle.md` → 0 matches. (The guide already enumerates 11 phases via its mermaid diagram + section numbering, proven at phase 7 by step 2; a positive literal "11-phase" grep is NOT required on the pre-existing guide. 11-phase enforcement on the author-controllable new specs is covered by TC-FSPEC-002 / TC-HYGIENE-006.)
 
 **Expected Outcome**:
 
