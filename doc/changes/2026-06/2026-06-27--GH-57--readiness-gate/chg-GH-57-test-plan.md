@@ -189,7 +189,7 @@ N/A). The integration contract is the PM→agent delegation (`@pm` delegates `do
 |-------|---------|----------|
 | DM-1 | `dor_check` phase entry (PM-notes `phases.dor_check` between `delivery_planning` and `delivery`; lifecycle tables) | TC-STRUCT-002, TC-STRUCT-004 |
 | DM-2 | Gate verdict + per-facet findings (`READY \| NOT_READY` + facet/finding/severity/artifact-loc/remediation-phase; persisted readiness-review record) | TC-STRUCT-012, TC-MANUAL-002 |
-| DM-3 | DoR facets (the checklist): spec completeness vs ticket; AC clarity/testability/non-overlap; plan coverage of all reqs+AC; test-plan traceability to every AC; cross-artifact consistency; decision capture | TC-STRUCT-011, TC-MANUAL-002 |
+| DM-3 | DoR facets (the checklist): `spec_completeness`; `ac_quality`; `plan_coverage`; `test_traceability`; `cross_artifact_consistency` (highest-value); `decision_capture`; `system_spec_consistency`; `plan_doc_update_coverage`; `plan_code_area_coverage`; `dod_defined` | TC-STRUCT-011, TC-MANUAL-002 |
 | DM-4 | Override record (workItemRef + rationale + approver + date); absence of a record = no override | TC-STRUCT-007, TC-MANUAL-005 |
 | DM-5 | Decision-capture routing (`scope: change \| system`; `system` → `doc/decisions/**`; needs-human-input → pause flag) | TC-STRUCT-008, TC-MANUAL-004, TC-MANUAL-006 |
 
@@ -748,14 +748,19 @@ Three coverage layers:
 
 **Steps**:
 1. Confirm the prompt's DoR checklist evaluates **all** facets (DM-3):
-   (a) spec completeness vs ticket; (b) AC clarity/testability/non-overlap; (c) plan coverage
-   of all requirements + all AC, check-listable; (d) test-plan traceability to every AC;
-   (e) cross-artifact consistency (ticket → spec → test-plan → plan); (f) decision capture in
-   the right place.
+   (1) `spec_completeness` — spec addresses every ticket requirement; (2) `ac_quality` — AC
+   clear, testable, non-overlapping; (3) `plan_coverage` — plan covers all requirements + all AC
+   with check-listable tasks; (4) `test_traceability` — test plan traces to every AC;
+   (5) `cross_artifact_consistency` — ticket → spec → test-plan → plan align (highest-value);
+   (6) `decision_capture` — decisions captured in the right place; (7) `system_spec_consistency`
+   — consistent with existing `doc/spec/**` + system/quality docs; (8) `plan_doc_update_coverage`
+   — plan lists system docs to update during delivery; (9) `plan_code_area_coverage` — plan lists
+   affected code areas (files/modules/classes) per phase; (10) `dod_defined` — spec defines a
+   clear, testable DoD for this change.
 2. Confirm the facets are a closed, authoritative set (no invented facet; none silently dropped).
 
 **Expected Outcome**:
-- All six facets present and authoritative (AC1; DM-3; F-1).
+- All ten facets present and authoritative (AC1; DM-3; F-1).
 
 ---
 

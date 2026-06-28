@@ -23,7 +23,7 @@ The Definition of Ready is a **pre-delivery gate** (`dor_check`, phase 5 of the 
 | Phase | 5. `dor_check` |
 | Owner | `@pm` delegates to `@readiness-reviewer` |
 | Command | `/check-readiness <ref>` |
-| Inputs | source ticket + `chg-<ref>-spec.md` + `chg-<ref>-test-plan.md` + `chg-<ref>-plan.md` + `chg-<ref>-pm-notes.yaml` |
+| Inputs | source ticket + `chg-<ref>-spec.md` + `chg-<ref>-test-plan.md` + `chg-<ref>-plan.md` + `chg-<ref>-pm-notes.yaml` + **existing system spec (`doc/spec/**`) and system/quality docs** (source code may be read to verify code-area coverage) |
 | Output | `READY` or `NOT_READY` + a persisted readiness-review record under `<change_folder>/readiness-review/` |
 
 ## DoR facets
@@ -36,6 +36,12 @@ The Definition of Ready is a **pre-delivery gate** (`dor_check`, phase 5 of the 
 - **test_traceability** — Test plan traces to every acceptance criterion via a full traceability matrix.
 - **cross_artifact_consistency** — Ticket → spec → test-plan → plan align. This is the highest-value facet.
 - **decision_capture** — Decisions are captured in the right place: change-scoped in change docs; system-wide or precedent-setting in `doc/decisions/**`.
+- **system_spec_consistency** *(NEW)* — Spec is consistent with the **existing** system spec (`doc/spec/**`) and system/quality docs; no contradictions with current behavior or contracts.
+- **plan_doc_update_coverage** *(NEW)* — Plan lists the system docs to update during delivery (e.g. `doc/spec/**`, guides).
+- **plan_code_area_coverage** *(NEW)* — Plan lists the affected code areas (files/modules/classes) per phase.
+- **dod_defined** *(NEW)* — Spec defines a clear, testable Definition of Done for this change; no delivery without a DoD.
+
+> A change cannot enter delivery without a clear, testable Definition of Done defined in its spec (`dod_defined`). The DoR gate verifies the DoD exists; see [Definition of Done](definition-of-done.md).
 
 ## Gate verdict
 
@@ -70,12 +76,13 @@ The lifecycle has two gated acceptance checks that mirror each other, bracketing
 | Gate | Phase | Agent | Command | Authority |
 |------|-------|-------|---------|-----------|
 | **Definition of Ready** (before code) | `dor_check` | `@readiness-reviewer` | `/check-readiness` | this guide (mirror); `.opencode/agent/readiness-reviewer.md` is authoritative |
-| **Definition of Done** (after code) | `dod_check` | `@reviewer` (review) → `@pm` (final check) | `/review` | inline in [change-lifecycle.md](change-lifecycle.md) |
+| **Definition of Done** (after code) | `dod_check` | `@reviewer` (review) → `@pm` (final check) | `/review` | [definition-of-done.md](definition-of-done.md) (mirror); `.ai/agent/code-review-instructions.md` extends it project-locally |
 
 DoR critiques **artifacts vs the ticket** before implementation; DoD verifies **implementation vs the spec/plan** after implementation. Together they make the workflow deterministic: gaps are caught at the cheapest moment.
 
 ## Related
 
 - [Change Lifecycle](change-lifecycle.md) — full 11-phase workflow; `dor_check` is phase 5.
+- [Definition of Done](definition-of-done.md) — the mirror gate that runs after implementation; `dod_defined` is one of the DoR facets.
 - [Agents & Commands Guide](opencode-agents-and-commands-guide.md) — manual `/check-readiness` placement.
 - `.opencode/agent/readiness-reviewer.md` — **authoritative** DoR prompt (facet rubrics, verdict schema, override rules, decision routing).

@@ -38,29 +38,34 @@ The Definition of Ready in this prompt is authoritative. `doc/guides/definition-
 </authority>
 
 <inputs>
-  <required>`workItemRef` for a change with spec, test-plan, plan, PM notes, and source ticket context.</required>
-  <optional>Prior readiness-review records under the change folder.</optional>
+  <required>`workItemRef` for a change with spec, test-plan, plan, PM notes, source ticket context, current system spec (`doc/spec/**`), and system/quality docs.</required>
+  <optional>Prior readiness-review records under the change folder. Source code may be read as needed to verify `plan_code_area_coverage`.</optional>
 </inputs>
 
 <discovery_rules>
 <rule>Locate change folder: search `doc/changes/**/*--<workItemRef>--*/`.</rule>
 <rule>Read: `chg-<workItemRef>-spec.md`, `chg-<workItemRef>-test-plan.md`, `chg-<workItemRef>-plan.md`, and `chg-<workItemRef>-pm-notes.yaml` when present.</rule>
+<rule>Read relevant `doc/spec/**` and system/quality docs; read source code only as needed to verify plan code-area coverage.</rule>
 <rule>Load source ticket using the existing tracker access described in `.ai/agent/pm-instructions.md`; if unavailable, report the missing context as a finding instead of guessing.</rule>
 <rule>Persist readiness records under `<change_folder>/readiness-review/`.</rule>
 </discovery_rules>
 
 <dor_facets>
 Evaluate all facets holistically:
-<facet id="spec_completeness">Spec completeness vs source ticket: every ticket requirement is addressed; no gaps.</facet>
-<facet id="ac_quality">Acceptance criteria are clear, testable, and non-overlapping.</facet>
-<facet id="plan_coverage">Plan covers all requirements and all acceptance criteria with check-listable tasks.</facet>
-<facet id="test_traceability">Test plan traces to every acceptance criterion with a full traceability matrix.</facet>
-<facet id="cross_artifact_consistency">Ticket → spec → test-plan → plan align; this is the highest-value facet.</facet>
-<facet id="decision_capture">Decisions are captured in the right place: change-scoped in change docs; system-wide or precedent-setting in `doc/decisions/**` per `<decision_routing>`.</facet>
+<facet id="spec_completeness">Spec addresses every ticket requirement; no gaps.</facet>
+<facet id="ac_quality">AC clear, testable, non-overlapping.</facet>
+<facet id="plan_coverage">Plan covers all requirements + all AC with check-listable tasks.</facet>
+<facet id="test_traceability">Test plan traces to every AC.</facet>
+<facet id="cross_artifact_consistency">Ticket → spec → test-plan → plan align. Highest-value facet.</facet>
+<facet id="decision_capture">Decisions captured in the right place: change docs vs decision records.</facet>
+<facet id="system_spec_consistency">Artifacts are consistent with existing `doc/spec/**` and system/quality docs; no contradiction or silent drift from current behavior/contracts.</facet>
+<facet id="plan_doc_update_coverage">Plan explicitly lists system documentation to update during delivery (`doc/spec/**`, quality/system docs).</facet>
+<facet id="plan_code_area_coverage">Plan lists affected code areas (files/modules/classes/components) per phase so blast radius is explicit.</facet>
+<facet id="dod_defined">Spec defines a clear, testable Definition of Done for this change; delivery cannot start without a DoD.</facet>
 </dor_facets>
 
 <process>
-  <step id="1" name="Load Artifact Set">Resolve `workItemRef`, read the change artifacts, PM notes, prior readiness records, and source ticket context.</step>
+  <step id="1" name="Load Artifact Set">Resolve `workItemRef`, read the change artifacts, PM notes, prior readiness records, source ticket context, and relevant system/quality docs.</step>
   <step id="2" name="Apply DoR Facets">Evaluate every `<dor_facets>` item together; prioritize cross-artifact contradictions and missing AC coverage over style nits.</step>
   <step id="3" name="Route Decisions">Classify surfaced decisions using `<decision_routing>`; if human input is needed, emit `NOT_READY` with pause flag.</step>
   <step id="4" name="Deduplicate Findings">Compare against prior readiness records; do not repeat identical findings unless the gap persists, then mark it as persistent.</step>
@@ -85,6 +90,10 @@ Pause Required: yes | no
 - test_traceability: PASS | FAIL
 - cross_artifact_consistency: PASS | FAIL
 - decision_capture: PASS | FAIL
+- system_spec_consistency: PASS | FAIL
+- plan_doc_update_coverage: PASS | FAIL
+- plan_code_area_coverage: PASS | FAIL
+- dod_defined: PASS | FAIL
 
 ## Findings
 1. [severity] <facet> — <artifact>#<section/location>

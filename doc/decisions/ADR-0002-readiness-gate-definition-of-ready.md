@@ -249,6 +249,10 @@ No accepted-risk exceptions are required — the chosen alternative violates no 
 
 > **Precedent-status note (RT1-NIT-01, accepted-risk):** ADR-0001 (the cited precedent for recording delivery-workflow structural changes as ADRs) is itself still `Proposed`; the structural-pattern precedent holds regardless of its acceptance status — the *practice* of recording delivery-workflow structural changes as ADRs is what is being followed, independent of ADR-0001's own acceptance.
 
+### Post-PR-Review Refinement (PR #84)
+
+PR #84 review expanded the DoR facet set from 6 to 10 — adding `system_spec_consistency` (check vs existing `doc/spec/**`), `plan_doc_update_coverage`, `plan_code_area_coverage` (plan must list affected code areas + docs-to-update per phase), and `dod_defined` (no delivery without a change-specific DoD). The DoR guide now has a DoD pairing (`definition-of-done.md`). These additions strengthen the gate's completeness without changing the core decision (single adversarial agent, prompt-as-source, hard gate).
+
 ### Unresolved Questions
 
 - [ ] Will a DoR facet later prove to need a split-out specialized critic? (owner: revisit on evidence; reversible) — deferred by design.

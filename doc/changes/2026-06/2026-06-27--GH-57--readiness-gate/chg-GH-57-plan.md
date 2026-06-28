@@ -293,10 +293,16 @@ together (NFR-5).
   `@reviewer` house style (Appendix C): frontmatter keys incl. **`claude: model: opus`**
   (NFR-3; model in config, **not** the body), `mode: all`, a `<role>` with mission + `<non_goals>`
   (NFR-4). The prompt body carries:
-  - **Authoritative Definition of Ready** — the closed facet set (DM-3): (a) spec completeness
-    vs ticket; (b) AC clarity/testability/non-overlap; (c) plan coverage of all requirements +
-    all AC, check-listable; (d) test-plan traceability to every AC; (e) cross-artifact
-    consistency (ticket → spec → test-plan → plan); (f) decision capture in the right place.
+  - **Authoritative Definition of Ready** — the closed facet set (DM-3): (1) `spec_completeness`
+    — spec addresses every ticket requirement; (2) `ac_quality` — AC clear, testable, non-overlapping;
+    (3) `plan_coverage` — plan covers all requirements + all AC with check-listable tasks;
+    (4) `test_traceability` — test plan traces to every AC; (5) `cross_artifact_consistency`
+    (ticket → spec → test-plan → plan; highest-value); (6) `decision_capture` — decisions captured
+    in the right place; (7) `system_spec_consistency` — consistent with existing `doc/spec/**` +
+    system/quality docs; (8) `plan_doc_update_coverage` — plan lists system docs to update during
+    delivery; (9) `plan_code_area_coverage` — plan lists affected code areas (files/modules/classes)
+    per phase; (10) `dod_defined` — spec defines a clear, testable DoD for this change. Facets 7–10
+    were added per PR #84 review (C1/H1–H5 feedback) to strengthen the gate's completeness.
   - **Adversarial/critical stance** — actively seek gaps, contradictions, unstated
     assumptions; do not rubber-stamp; treat plausibility as a reason to probe; independent of
     `@spec-writer`/`@test-plan-writer`/`@plan-writer` (F-3, NFR-8).
@@ -407,9 +413,11 @@ apply.
 **Tasks**:
 
 - [x] **C.1** Author `doc/guides/definition-of-ready.md` mirroring the shipped prompt's facet
-  set (DM-3): spec completeness vs ticket; AC clarity/testability/non-overlap; plan coverage of
-  all requirements + all AC; test-plan traceability to every AC; cross-artifact consistency;
-  decision capture in the right place.
+  set (DM-3): `spec_completeness`; `ac_quality`; `plan_coverage`; `test_traceability`;
+  `cross_artifact_consistency` (ticket → spec → test-plan → plan; highest-value);
+  `decision_capture`; `system_spec_consistency`; `plan_doc_update_coverage`;
+  `plan_code_area_coverage`; `dod_defined`. Facets 7–10 were added per PR #84 review
+  (C1/H1–H5 feedback).
 - [x] **C.2** **State the prompt is authoritative** at the top: the `@readiness-reviewer` prompt
   (`.opencode/agent/readiness-reviewer.md`) is the single source of truth; this guide is a
   human-readable mirror; 0 contradictions between prompt and mirror (NFR-2).

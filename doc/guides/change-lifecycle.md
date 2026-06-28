@@ -55,7 +55,10 @@ flowchart TD
         C --> D[4. delivery_planning<br/>@plan-writer]
         D --> E[5. dor_check<br/>@readiness-reviewer]
     end
-    
+
+    DA((@decision-advisor<br/>optional))
+    DR[(doc/decisions/**)]
+
     subgraph "Implementation"
         E -->|READY| F[6. delivery<br/>@coder]
         F --> G[7. system_spec_update<br/>@doc-syncer]
@@ -72,10 +75,17 @@ flowchart TD
         K --> L((STOP<br/>Human Review))
     end
     
+    %% Decision consulting (optional, on demand during artifact creation)
+    B -.->|decision?| DA
+    D -.->|decision?| DA
+    DA -.->|decision record| DR
+
     %% Feedback loops - gaps discovered
     A -.->|gaps/questions| W((Wait for Human))
     W -.->|feedback received| A
-    E -.->|NOT_READY: reopen artifact phase| B
+    E -.->|NOT_READY: reopen spec| B
+    E -.->|NOT_READY: reopen test-plan| C
+    E -.->|NOT_READY: reopen plan| D
     H -.->|remediation needed| F
     I -.->|fixes needed| F
     J -.->|gaps found| F
@@ -83,8 +93,10 @@ flowchart TD
 ```
 
 **Legend**:
-- Solid arrows: normal forward flow
-- Dashed arrows: feedback loops (phase reopening when gaps are discovered)
+- Solid arrows: normal forward flow.
+- Dashed arrows: feedback loops (phase reopening when gaps are discovered).
+- Dashed `decision?` edges: `@decision-advisor` is consulted on demand during artifact creation (0+ decisions per change); precedent-setting decisions become records under `doc/decisions/**`.
+- Every phase-reopening (dashed feedback loop) triggers a PM `retro` note in `chg-<ref>-pm-notes.yaml` so each reopened gap becomes process learning.
 
 ### 1) clarify_scope
 
@@ -178,7 +190,7 @@ flowchart TD
 
 **Owner**: `@pm` delegates to `@readiness-reviewer`
 
-**Goal**: Adversarially critique the change's spec + test-plan + plan together against the source ticket **before** any code is written — the Definition of Ready gate. Catch gaps, contradictions, and unstated assumptions when they are cheap to fix. See [Definition of Ready](definition-of-ready.md).
+**Goal**: Adversarially critique the change's spec + test-plan + plan together against the source ticket **and the existing system spec** (`doc/spec/**`) **before** any code is written — the Definition of Ready gate. Catch gaps, contradictions, and unstated assumptions when they are cheap to fix. The gate also verifies the plan lists the system docs to update (`plan_doc_update_coverage`) and the affected code areas — files/modules/classes — per phase (`plan_code_area_coverage`), that the change is consistent with the existing system spec and quality docs (`system_spec_consistency`), and that a clear, testable Definition of Done is defined for this change (`dod_defined`). See [Definition of Ready](definition-of-ready.md).
 
 **Actions**:
 
@@ -329,6 +341,8 @@ flowchart TD
 ## Phase Reopening
 
 Phases are not strictly linear. If PM discovers incomplete work in a later phase, PM can reopen an earlier phase:
+
+Whenever a phase is reopened, `@pm` records a `retro` note in the change's pm-notes (`chg-<ref>-pm-notes.yaml`) — what gap, where discovered, why it was missed earlier, and how to improve. This applies to every feedback loop in the diagram: DoR `NOT_READY`, review remediation, quality-gate fixes, and DoD gaps. Each reopened gap becomes process learning.
 
 | Discovery in... | Gap found | Action |
 |-----------------|-----------|--------|

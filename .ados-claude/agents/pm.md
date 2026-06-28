@@ -302,6 +302,7 @@ Before delegating ANY work to ANY agent, verify `chg-<workItemRef>-pm-notes.yaml
 - Delegate to `@readiness-reviewer` with workItemRef
 - `@readiness-reviewer` critiques spec + test-plan + plan vs ticket under an adversarial stance and emits `READY` or `NOT_READY`
 - On `NOT_READY`: reopen the relevant artifact-creation phase (`specification`, `test_planning`, or `delivery_planning`), NEVER `delivery`; re-delegate to the matching author agent; re-run dor_check until `READY` (max 3 iterations; escalate to human on stalemate)
+- On any phase reopening (DoR `NOT_READY`, review remediation, DoD gap, etc.), add a `retro` note to `chg-<workItemRef>-pm-notes.yaml`: gap found, where discovered, why it was not caught earlier, and process improvement.
 - On a surfaced decision needing human input: STOP and wait
 - Hard gate by default; only an explicit recorded override for a genuinely trivial change may bypass it (no silent skip)
 - Change-scoped decisions go to change docs; system-wide or precedent-setting decisions go to decision records via `@decision-advisor`

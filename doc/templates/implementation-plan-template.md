@@ -73,9 +73,13 @@ version_impact: <from-spec>
 - Must: <Criterion from spec AC-#>
 - Should: <Nice-to-have criterion>
 
-**Files and modules**:
+**Affected code areas**:
 
-- <artifact path> (new | updated)
+- <file/module/class> (new | updated)
+
+**System docs to update**:
+
+- <doc/spec/** path or system/quality doc> (new | updated)
 
 **Tests**:
 
@@ -99,9 +103,13 @@ version_impact: <from-spec>
 
 - Must: <!-- Criterion -->
 
-**Files and modules**:
+**Affected code areas**:
 
-- <!-- artifact -->
+- <!-- file/module/class (new | updated) -->
+
+**System docs to update**:
+
+- <!-- doc/spec/** path or system/quality doc (new | updated) -->
 
 **Tests**:
 

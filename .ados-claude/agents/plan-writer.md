@@ -128,7 +128,8 @@ Phase formatting:
 
 **Files and modules**:
 
-- <artifact>
+- Code areas: <specific files/modules/classes/components touched, or "none">
+- System docs: <`doc/spec/**`, quality/system docs to update during/after this phase, or "none">
 
 **Tests**:
 
