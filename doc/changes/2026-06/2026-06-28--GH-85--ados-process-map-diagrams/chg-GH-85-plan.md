@@ -202,10 +202,10 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 **Tasks**:
 
-- [ ] **3.1** In `doc/guides/meeting-preparation-and-summarization.md`, insert a Mermaid diagram near the top (immediately after the frontmatter and the `> Audience/Purpose` blockquote, before `## 1.`). **"Near the top" threshold (matches spec + test-plan): the first ```mermaid fence MUST be within the first 80 lines** (`awk '/^```mermaid/{print NR;exit}' doc/guides/meeting-preparation-and-summarization.md` ≤ 80).
-- [ ] **3.2** Diagram content: a `flowchart TD` (or `LR`) showing the three phases — **Before** (decide-if-needed → goal → agenda → roles → share), **During** (start → parking lot → real-time capture → inclusive participation), **After** (finalize summary ≤24h → send actions ≤60min → file durable decisions → review next time). Group with subgraphs; use the shared color palette (green entry, blue steps, orange for the decision-filing gate).
-- [ ] **3.3** Add a one-line caption or `**Legend**:` beneath the diagram.
-- [ ] **3.4** Do not restructure the guide body beyond this insertion; preserve the existing copyright header and `ados_distribution: redistributable` marker.
+- [x] **3.1** In `doc/guides/meeting-preparation-and-summarization.md`, insert a Mermaid diagram near the top (immediately after the frontmatter and the `> Audience/Purpose` blockquote, before `## 1.`). **"Near the top" threshold (matches spec + test-plan): the first ```mermaid fence MUST be within the first 80 lines** (`awk '/^```mermaid/{print NR;exit}' doc/guides/meeting-preparation-and-summarization.md` ≤ 80). (verified: mermaid @L17)
+- [x] **3.2** Diagram content: a `flowchart TD` (or `LR`) showing the three phases — **Before** (decide-if-needed → goal → agenda → roles → share), **During** (start → parking lot → real-time capture → inclusive participation), **After** (finalize summary ≤24h → send actions ≤60min → file durable decisions → review next time). Group with subgraphs; use the shared color palette (green entry, blue steps, orange for the decision-filing gate). (flowchart TD; Before/During/After subgraphs; green start, orange triage + decision-filing gate, purple async escape)
+- [x] **3.3** Add a one-line caption or `**Legend**:` beneath the diagram. (Legend block added)
+- [x] **3.4** Do not restructure the guide body beyond this insertion; preserve the existing copyright header and `ados_distribution: redistributable` marker. (header=3, marker=1 preserved; body untouched)
 
 **Acceptance Criteria**:
 
@@ -516,8 +516,8 @@ This plan's DoD uses the **canonical AC scheme from the spec** (`chg-GH-85-spec.
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
 | 1 | Done | 2026-06-28 | 2026-06-28 | 7f4a5cd | ados-processes.md created; master diagram @L18; all 6 labels present; links resolve; headerless frontmatter (header added P9). |
-| 2 | Done | 2026-06-28 | 2026-06-28 | (pending) | README compact map @L23; link table with 5 guides; hero+header preserved; no marker added; TOC intact. |
-| 3 | Not started | — | — | — | |
+| 2 | Done | 2026-06-28 | 2026-06-28 | 1cc4fcb | README compact map @L23; link table with 5 guides; hero+header preserved; no marker added; TOC intact. |
+| 3 | Done | 2026-06-28 | 2026-06-28 | (pending) | meeting guide before/during/after flowchart @L17 + back-link; header+marker intact. |
 | 4 | Not started | — | — | — | |
 | 5 | Not started | — | — | — | |
 | 6 | Not started | — | — | — | |

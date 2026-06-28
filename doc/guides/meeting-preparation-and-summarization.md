@@ -10,6 +10,42 @@ ados_distribution: redistributable
 >
 > **Purpose:** A practical, end-to-end guide for preparing, running, and summarizing meetings — covering what to store where, how to write a great agenda, how to capture decisions and action items, and how to choose between copy/paste and git-native workflows.
 
+> Part of the [ADOS process map](ados-processes.md) — see how Meeting Management relates to Decision Making and the rest.
+
+The meeting lifecycle at a glance — **before** (prepare), **during** (run and capture), **after** (summarize and follow up):
+
+```mermaid
+flowchart TD
+    START([Meeting proposed]) --> B0
+    subgraph Before["Before — prepare"]
+        B0{"Needed? Three Yes Test"}
+        B0 -->|No| SKIP([Use async instead])
+        B0 -->|Yes| B1["Goal: For-Which-By"]
+        B1 --> B2["Agenda, roles, pre-reads"]
+        B2 --> B3["Share 24-48h ahead"]
+    end
+    B3 --> D0
+    subgraph During["During — run and capture"]
+        D0["Start: restate goal"]
+        D0 --> D1["Capture decisions and actions live"]
+        D1 --> D2["Parking lot for off-topic items"]
+        D2 --> D3["Inclusive participation, time-boxed"]
+    end
+    D3 --> A0
+    subgraph After["After — summarize and follow up"]
+        A0["Finalize summary within 24h"]
+        A0 --> A1["Send action items within 60 min"]
+        A1 --> A2["File durable decisions as records"]
+        A2 --> A3["Review actions next meeting"]
+    end
+    style START fill:#4CAF50,color:#fff
+    style SKIP fill:#9C27B0,color:#fff
+    style B0 fill:#FF9800,color:#fff
+    style A2 fill:#FF9800,color:#fff
+```
+
+**Legend**: green = start; purple = optional/escape (use async instead of a meeting); orange = decision/gate (the "is a meeting needed?" triage and the "file durable decisions" gate); blue = ordinary steps. Solid arrows = forward flow.
+
 ---
 
 ## 1. Why meeting documentation matters
