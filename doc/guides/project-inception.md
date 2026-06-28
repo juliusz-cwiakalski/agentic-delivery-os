@@ -99,6 +99,8 @@ flowchart TB
     style Convergence fill:#2196F3,color:#fff
 ```
 
+**Legend**: blue = convergence point (Phase 2 scope & roadmap, where the two tracks meet); the subgraph backgrounds distinguish Track A (product context) from Track B (engineering setup).
+
 ## Inception artifact catalog
 
 The catalog below is the authoritative list of what makes a project "incepted".
@@ -325,6 +327,8 @@ flowchart TD
     style P6Remediate fill:#F44336,color:#fff
 ```
 
+**Legend**: green = start/success; blue = phase; orange = gate (Phase 6 readiness check); red = reopen/remediation (the "Reopen the phase" node). `Reject` arrows loop a phase back to itself; the readiness gate can reopen an earlier phase on `FAIL`.
+
 ### Phase 0 — Intake & material scan
 
 Determine the project shape and inventory the materials you have to work with.
@@ -415,6 +419,8 @@ flowchart LR
     style ActivateCode fill:#9C27B0,color:#fff
     style RepoIngest fill:#FF9800,color:#fff
 ```
+
+**Legend**: green = new-project flow; orange = legacy flow / repo ingestion; purple = conditional artifacts activated by detected project characteristics; dashed = legacy-only path.
 
 #### Activities
 
@@ -720,6 +726,8 @@ flowchart LR
     style Legacy fill:#FFF3E0
     style Shared fill:#E3F2FD
 ```
+
+**Legend**: green-tinted = new-project front-half; orange-tinted = legacy front-half; blue-tinted = shared back-half (Phases 5–7) where both flows converge.
 
 ## Conditional artifacts matrix
 
