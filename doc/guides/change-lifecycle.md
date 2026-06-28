@@ -54,34 +54,33 @@ flowchart TD
         B --> C[3. test_planning<br/>@test-plan-writer]
         C --> D[4. delivery_planning<br/>@plan-writer]
         D --> E[5. dor_check<br/>@readiness-reviewer]
+        W((Wait for Human))
+        %% Decision consulting (optional, on demand during artifact creation)
+        DA((@decision-advisor<br/>optional))
+        DR[(doc/decisions/**)]
+        B -.->|decision?| DA
+        D -.->|decision?| DA
+        DA -.->|decision record| DR
     end
-
-    DA((@decision-advisor<br/>optional))
-    DR[(doc/decisions/**)]
 
     subgraph "Implementation"
         E -->|READY| F[6. delivery<br/>@coder]
         F --> G[7. system_spec_update<br/>@doc-syncer]
     end
-    
+
     subgraph "Verification"
         G --> H[8. review_fix<br/>@reviewer]
         H --> I[9. quality_gates<br/>@runner]
         I --> J[10. dod_check<br/>@pm]
     end
-    
+
     subgraph "Finalization"
         J --> K[11. pr_creation<br/>@pr-manager]
         K --> L((STOP<br/>Human Review))
     end
-    
-    %% Decision consulting (optional, on demand during artifact creation)
-    B -.->|decision?| DA
-    D -.->|decision?| DA
-    DA -.->|decision record| DR
 
     %% Feedback loops - gaps discovered
-    A -.->|gaps/questions| W((Wait for Human))
+    A -.->|gaps/questions| W
     W -.->|feedback received| A
     E -.->|NOT_READY: reopen spec| B
     E -.->|NOT_READY: reopen test-plan| C
