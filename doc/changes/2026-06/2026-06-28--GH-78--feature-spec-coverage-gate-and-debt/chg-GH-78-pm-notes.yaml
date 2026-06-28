@@ -13,7 +13,7 @@ phases:
   review_fix: { started: "2026-06-28", completed: "2026-06-28" }
   quality_gates: { started: "2026-06-28", completed: "2026-06-28" }
   dod_check: { started: "2026-06-28", completed: "2026-06-28" }
-  pr_creation: { started: "2026-06-28", completed: null, url: null }
+  pr_creation: { started: "2026-06-28", completed: "2026-06-28", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/86" }
 
 decisions:
   - text: "COMBINED DELIVERY: single branch/PR closing both GH-78 (spec-coverage gate, process fix) and GH-79 (full spec-coverage debt: 8 missing feature specs P0+P1+P2). User explicit decision (2026-06-28), overriding red-team R1 two-PR recommendation. Deviation from repo's 'one ticket = one change' model (change-lifecycle.md:19) recorded here; PR description references both workItemRefs; GH-78 is the primary ref for branch/folder/artifact naming."
