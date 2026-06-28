@@ -18,9 +18,32 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/READ
 
 # Agentic Delivery OS (ADOS)
 
-Turn AI from "chat assistance" into a repeatable, auditable delivery system:
+Turn AI from "chat assistance" into a repeatable, auditable delivery system. ADOS has **six processes** — open the [canonical process map](doc/guides/ados-processes.md) for the big picture:
 
-ticket -> spec -> plan -> test plan -> code -> [/review](.opencode/command/review.md) -> [/sync-docs](.opencode/command/sync-docs.md) -> [/check](.opencode/command/check.md) -> [/pr](.opencode/command/pr.md) -> release
+```mermaid
+flowchart LR
+    INC["Project Inception"] --> DEL["Change Delivery<br/>ticket to PR"]
+    ONB["Project Onboarding"] --> DEL
+    DEL --> DOCS["Documentation Reconciliation<br/>phase 7"]
+    DEL -.-> DEC["Decision Making"]
+    MTG["Meeting Management"] -.-> DEC
+    style INC fill:#4CAF50,color:#fff
+    style ONB fill:#4CAF50,color:#fff
+    style DEL fill:#2196F3,color:#fff
+    style DOCS fill:#2196F3,color:#fff
+    style DEC fill:#9C27B0,color:#fff
+    style MTG fill:#9C27B0,color:#fff
+```
+
+**Legend**: green = entry points · blue = steady-state / embedded · purple = cross-cutting supporters · dashed = on-demand / evidence-feed. One-click to each guide:
+
+| Process | Guide |
+|---------|-------|
+| Project Inception | [project-inception.md](doc/guides/project-inception.md) |
+| Project Onboarding | [onboarding-existing-project.md](doc/guides/onboarding-existing-project.md) |
+| Change Delivery | [change-lifecycle.md](doc/guides/change-lifecycle.md) |
+| Meeting Management | [meeting-preparation-and-summarization.md](doc/guides/meeting-preparation-and-summarization.md) |
+| Decision Making | [decision-making.md](doc/guides/decision-making.md) |
 
 This repo is a practical reference implementation of a spec-driven workflow using OpenCode (and supporting Claude Code):
 

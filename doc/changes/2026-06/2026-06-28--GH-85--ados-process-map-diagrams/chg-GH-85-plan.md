@@ -172,10 +172,10 @@ The plan is derived from the GitHub issue #85 scope and `chg-GH-85-pm-notes.yaml
 
 **Tasks**:
 
-- [ ] **2.1** In `README.md`, insert a compact `flowchart LR` Mermaid process map mirroring the master map (same 6-process pipeline, possibly more compact labels). **"Near the top" threshold (matches spec + test-plan): the first ```mermaid fence MUST be within the first 60 lines** (`awk '/^```mermaid/{print NR;exit}' README.md` ≤ 60) — place it just below the `# Agentic Delivery OS (ADOS)` heading / hero, trimming preceding prose if needed to stay under the line budget. Do **not** remove or alter the hero image, the `<picture>` block, or the `source:` copyright header.
-- [ ] **2.2** Replace or supplement the existing plain-text pipeline line (`ticket -> spec -> plan -> ... -> release`) with the diagram; if the text line is kept, place it as the diagram caption or remove the redundancy (prefer the diagram + link table).
-- [ ] **2.3** Immediately under the diagram, add an **adjacent markdown link table** giving one-click access to each process guide (Process | Guide link). This satisfies the "clickable links" requirement the GitHub-native way (Mermaid click-callbacks are unreliable on GitHub — see decision in Context).
-- [ ] **2.4** **TOC interaction (m4):** `README.md` contains a hand-maintained `<!-- TOC -->` block. The diagram + link-table insertion MUST NOT introduce a new `##` heading that would stale the TOC — keep the diagram inline under the existing flow (e.g., under the existing intro/heading, with no new `## ` line). If a new `##` heading is unavoidable, regenerate/update the `<!-- TOC -->` block to include it before committing the phase.
+- [x] **2.1** In `README.md`, insert a compact `flowchart LR` Mermaid process map mirroring the master map (same 6-process pipeline, possibly more compact labels). **"Near the top" threshold (matches spec + test-plan): the first ```mermaid fence MUST be within the first 60 lines** (`awk '/^```mermaid/{print NR;exit}' README.md` ≤ 60) — place it just below the `# Agentic Delivery OS (ADOS)` heading / hero, trimming preceding prose if needed to stay under the line budget. Do **not** remove or alter the hero image, the `<picture>` block, or the `source:` copyright header. (verified: mermaid @L23; hero + header preserved)
+- [x] **2.2** Replace or supplement the existing plain-text pipeline line (`ticket -> spec -> plan -> ... -> release`) with the diagram; if the text line is kept, place it as the diagram caption or remove the redundancy (prefer the diagram + link table). (text pipeline replaced by compact 6-process diagram; the ticket→PR command detail is already covered in the "Typical workflow (manual)" section)
+- [x] **2.3** Immediately under the diagram, add an **adjacent markdown link table** giving one-click access to each process guide (Process | Guide link). This satisfies the "clickable links" requirement the GitHub-native way (Mermaid click-callbacks are unreliable on GitHub — see decision in Context). (link table with all 5 standalone guides; verified each guide link count ≥1)
+- [x] **2.4** **TOC interaction (m4):** `README.md` contains a hand-maintained `<!-- TOC -->` block. The diagram + link-table insertion MUST NOT introduce a new `##` heading that would stale the TOC — keep the diagram inline under the existing flow (e.g., under the existing intro/heading, with no new `## ` line). If a new `##` heading is unavoidable, regenerate/update the `<!-- TOC -->` block to include it before committing the phase. (no new `##` heading introduced; diagram inline under `# ADOS` heading; TOC intact @L57/77)
 
 **Acceptance Criteria**:
 
@@ -515,8 +515,8 @@ This plan's DoD uses the **canonical AC scheme from the spec** (`chg-GH-85-spec.
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| 1 | Not started | — | — | — | |
-| 2 | Not started | — | — | — | |
+| 1 | Done | 2026-06-28 | 2026-06-28 | 7f4a5cd | ados-processes.md created; master diagram @L18; all 6 labels present; links resolve; headerless frontmatter (header added P9). |
+| 2 | Done | 2026-06-28 | 2026-06-28 | (pending) | README compact map @L23; link table with 5 guides; hero+header preserved; no marker added; TOC intact. |
 | 3 | Not started | — | — | — | |
 | 4 | Not started | — | — | — | |
 | 5 | Not started | — | — | — | |
