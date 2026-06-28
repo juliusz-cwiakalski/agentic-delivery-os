@@ -1,0 +1,72 @@
+[
+  {
+    "id": 1,
+    "severity": "critical",
+    "confidence": "high",
+    "file": ".ados-claude/",
+    "line": 0,
+    "title": "Committed generated plugin is stale and missing the DoR gate entirely (NFR-5 / AC8)",
+    "description": "The committed HEAD `.ados-claude/` does not reflect the change. `agents/readiness-reviewer.md` and `skills/check-readiness/` are UNTRACKED (never committed). `agents/pm.md` is committed in the OLD 10-phase state (line 273 `5. **delivery**`; line 296 `<step id=\"5\">...phase 5: delivery`), with no `dor_check`. `agents/{spec-writer,test-plan-writer,plan-writer}.md` are committed WITHOUT the one-line DoR cross-reference note. Root cause: commit bd8f7ac2 never committed the generated counterparts, and commit 7291199e (renumbering sweep) modified `.opencode/agent/pm.md` + the three author agents but did NOT re-run `scripts/build-claude-plugin.sh` + recommit. The working tree currently holds the correct regenerated versions (uncommitted). For Claude Code users the shipping plugin has no DoR gate and a 10-phase PM, functionally defeating the entire change on that surface and contradicting the change's own governance note (pm-notes line 39: 'Source .opencode/ + regenerated .ados-claude/ committed together').",
+    "suggestedFix": "Re-run `bash scripts/build-claude-plugin.sh`, then `git add .ados-claude/ .opencode/` and commit source + generated together in one commit (e.g. `fix(gh-57): regenerate & commit .ados-claude DoR counterparts`). Verify the committed `agents/pm.md` shows `5. **dor_check**` / `<step id=\"5\">Definition of Ready gate (phase 5: dor_check)` and that `agents/readiness-reviewer.md` + `skills/check-readiness/` are tracked. Confirm NFR-5 by diffing a fresh build against the committed tree."
+  },
+  {
+    "id": 2,
+    "severity": "major",
+    "confidence": "high",
+    "file": "scripts/.tests/test-build-claude-plugin.sh",
+    "line": 0,
+    "title": "CI freshness gate does not compare fresh build vs committed plugin (enables NFR-5 drift)",
+    "description": "`test-build-claude-plugin.sh` builds into a temp dir and tests build idempotency, manifest structure, marketplace shape, and stale-file removal inside the temp output. It NEVER diffs a fresh build against the committed `.ados-claude/`. As a result it reports '15/15 passed' (green CI) while the committed plugin badly drifts from the committed `.opencode/` sources (see finding #1). The spec/plan's repeated claim 'CI verifies freshness via test-build-claude-plugin.sh (NFR-5)' is therefore not actually enforced for source-vs-generated drift, which is exactly the drift mode that occurred.",
+    "suggestedFix": "Add a test case that runs `build-claude-plugin.sh` into a temp dir and `diff -r` against the committed `.ados-claude/` (fail on any difference), so committed staleness is caught by CI. Scope this as a follow-up (it is a test-suite gap, not a prompt defect) but treat it as the control that would have prevented finding #1."
+  },
+  {
+    "id": 3,
+    "severity": "major",
+    "confidence": "high",
+    "file": "doc/changes/2026-06/2026-06-27--GH-57--readiness-gate/chg-GH-57-plan.md",
+    "line": 225,
+    "title": "Plan execution log + all Phase A-G checkboxes never updated (DONE_BUT_UNCHECKED)",
+    "description": "Every task checkbox across Phases A-G remains `- [ ]` and the Execution Log table lists every phase as 'Pending' with null timestamps, despite five commits having delivered the work (f7678bb, 5257098, bd8f7ac2, 7291199e, edf87fc). The plan's own Phase G ('Execution log + PM-notes phases update') was never executed. This makes the plan a misleading record of state and would itself fail the DoD check the change introduces (phase 10 verifies 'all plan tasks done').",
+    "suggestedFix": "Execute Phase G: tick A.1-G.3 checkboxes, fill the Execution Log rows (phase / status=Done / commit SHA per phase), and update `last_updated` in the plan frontmatter."
+  },
+  {
+    "id": 4,
+    "severity": "major",
+    "confidence": "high",
+    "file": "doc/changes/2026-06/2026-06-27--GH-57--readiness-gate/chg-GH-57-pm-notes.yaml",
+    "line": 12,
+    "title": "Change's own pm-notes phase map omits dor_check (DM-1 / AC8)",
+    "description": "The `phases:` map in chg-GH-57-pm-notes.yaml lists the OLD 10 phases (clarify_scope ... pr_creation) with no `dor_check` entry, even though DM-1 and the plan's Phase B.3/G.3 require it and `.opencode/agent/pm.md`'s own template now carries it. A change whose entire purpose is to enforce DoR discipline ships its own coordination artifact missing the phase it introduced. This is a cross-artifact inconsistency the DoR gate exists to catch.",
+    "suggestedFix": "Insert `dor_check: { started: ..., completed: ... }` between `delivery_planning` and `delivery` in the phases map. Also reconcile the phase timestamps (currently `delivery`/`system_spec_update` are marked completed while `review_fix` started-not-completed and quality_gates/dod_check/pr_creation are null — reflect actual state)."
+  },
+  {
+    "id": 5,
+    "severity": "minor",
+    "confidence": "high",
+    "file": "doc/changes/2026-06/2026-06-27--GH-57--readiness-gate/chg-GH-57-plan.md",
+    "line": 65,
+    "title": "Stale OQ-1 narrative contradicts its own later reversal (cross-artifact inconsistency)",
+    "description": "The plan body's 'Resolved open questions' (lines 65-69) states OQ-1 = 'NO edits to @spec-writer/@test-plan-writer/@plan-writer', and the Out of Scope section (lines 139-140) repeats 'no edits'. But spec section 14 OQ-1 (line 268) and scope item (H) + RT1-MAJOR-03 REVERSE this to 'add a one-line DoR cross-reference note' (which Phase B.4 correctly implements). The plan's narrative text was never reconciled with the post-red-team reversal, leaving an internal contradiction within the change's own artifact set.",
+    "suggestedFix": "Update the plan's OQ-1 resolution text and Out-of-Scope bullet to match the RT1-MAJOR-03 reversal (one-line note added via @toolsmith), referencing spec section 14 / Phase B.4 as the authoritative resolution."
+  },
+  {
+    "id": 6,
+    "severity": "minor",
+    "confidence": "medium",
+    "file": ".ados-claude/ + .opencode/",
+    "line": 0,
+    "title": "Working tree left dirty (uncommitted regenerated plugin) at review time",
+    "description": "The working tree currently holds uncommitted modifications to `.ados-claude/agents/{pm,spec-writer,test-plan-writer,plan-writer}.md` plus untracked `readiness-reviewer.md` and `skills/check-readiness/` — the regenerated plugin. A dirty working tree obscures the true committed state and risks an accidental/partial commit of the regeneration without its `.opencode/` source batch.",
+    "suggestedFix": "Commit the regenerated `.ados-claude/` together with the corresponding `.opencode/` sources (see finding #1). The review is read-only for source, so this is a remediation item, not a reviewer action."
+  },
+  {
+    "id": 7,
+    "severity": "nit",
+    "confidence": "low",
+    "file": ".opencode/command/check-readiness.md",
+    "line": 10,
+    "title": "Command frontmatter model (sonnet) differs from agent model (opus) — confirm intentional",
+    "description": "`check-readiness.md` sets `claude.model: sonnet` while delegating to `@readiness-reviewer` (frontmatter `claude.model: opus`, NFR-3 'stronger reasoning model'). This can be intentional (lightweight command wrapper delegates the heavy reasoning to the agent), but the spec's NFR-3 emphasis on the stronger tier for the gate suggests verifying parity with the `/review` sibling command's pattern to avoid an accidental downgrade of the gate's reasoning.",
+    "suggestedFix": "Confirm `/review`'s command-vs-agent model split for parity; if the command wrapper is meant to run on the cheaper tier while the agent runs on opus, add a one-line comment or leave as-is once confirmed."
+  }
+]

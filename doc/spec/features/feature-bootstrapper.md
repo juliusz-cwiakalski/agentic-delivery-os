@@ -193,7 +193,7 @@ Safety rules: never store secrets; never modify existing source code; never over
 
 - **Human authority:** [doc/guides/project-inception.md](../../guides/project-inception.md) is the standalone, human-executable 8-phase process. The bootstrapper automates exactly this workflow; the guide is the source of truth for phase detail.
 - **Manual fallback:** [doc/guides/onboarding-existing-project.md](../../guides/onboarding-existing-project.md) remains the manual adoption reference.
-- **Downstream:** a completed inception (Phase 7 sign-off) hands off to autonomous per-change delivery via the 10-phase lifecycle ([doc/guides/change-lifecycle.md](../../guides/change-lifecycle.md)). A deeper knowledge base yields more agent autonomy.
+- **Downstream:** a completed inception (Phase 7 sign-off) hands off to autonomous per-change delivery via the 11-phase lifecycle ([doc/guides/change-lifecycle.md](../../guides/change-lifecycle.md)). A deeper knowledge base yields more agent autonomy.
 
 ## Related Documentation
 

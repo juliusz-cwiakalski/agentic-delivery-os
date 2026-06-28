@@ -112,6 +112,7 @@ Delegate to these agents:
 | Change review (vs spec/plan)       | `@reviewer`         |
 | System docs reconciliation         | `@doc-syncer`       |
 | Plan execution + remediation fixes | `@coder`            |
+| Definition of Ready gate           | `@readiness-reviewer` |
 | Change specification               | `@spec-writer`      |
 | Implementation plan                | `@plan-writer`      |
 | Test plan                          | `@test-plan-writer` |
@@ -244,6 +245,7 @@ phases:
   specification: { started: null, completed: null }
   test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -261,7 +263,7 @@ notes: []           # { text, type, date } — type: info|decision|blocker|risk|
 - When something goes wrong, is inefficient, or requires rework: add a `retro` note immediately — capture what happened, why, and what could improve it
 - `retro` notes are the primary input for delivery retrospectives; be specific and honest
 - Examples of good retro notes:
-  - "Spec missed edge case X; discovered during delivery; caused rework in phase 5"
+  - "Spec missed edge case X; discovered during delivery; caused rework in phase 6"
   - "Quality gates failed 3 times due to flaky test Y; wasted ~20 min"
   - "Streamlined spec+plan+deliver delegation worked well; no rework needed"
 
@@ -270,12 +272,13 @@ Phase definitions (see `doc/guides/change-lifecycle.md` for details):
 2. **specification** — Delegate to `@spec-writer` to create spec
 3. **test_planning** — Delegate to `@test-plan-writer` to create test plan
 4. **delivery_planning** — Delegate to `@plan-writer` to create implementation plan
-5. **delivery** — Invoke `@coder` for implementation (via `/run-plan <workItemRef> execute all remaining phases no review`)
-6. **system_spec_update** — Delegate to `@doc-syncer` to reconcile system docs
-7. **review_fix** — Run `@reviewer`; if FAIL, fix via `@coder` and repeat until PASS
-8. **quality_gates** — Run builds/tests via `@runner`; fix via `@fixer` if needed
-9. **dod_check** — Verify all phases complete, all AC satisfied, all plan tasks done; reopen phases if gaps found
-10. **pr_creation** — Create PR/MR via `@pr-manager`, assign ticket to human, STOP
+5. **dor_check** — Delegate to `@readiness-reviewer`; hard gate before delivery; reopen artifact-creation phases on `NOT_READY`
+6. **delivery** — Invoke `@coder` for implementation (via `/run-plan <workItemRef> execute all remaining phases no review`)
+7. **system_spec_update** — Delegate to `@doc-syncer` to reconcile system docs
+8. **review_fix** — Run `@reviewer`; if FAIL, fix via `@coder` and repeat until PASS
+9. **quality_gates** — Run builds/tests via `@runner`; fix via `@fixer` if needed
+10. **dod_check** — Verify all phases complete, all AC satisfied, all plan tasks done; reopen phases if gaps found
+11. **pr_creation** — Create PR/MR via `@pr-manager`, assign ticket to human, STOP
 </step>
 
 <step id="4">Delegate artifact generation (phases 2-4)
@@ -293,16 +296,29 @@ Before delegating ANY work to ANY agent, verify `chg-<workItemRef>-pm-notes.yaml
 - Update `.ai/local/pm-context.yaml` active_change reference
 </step>
 
-<step id="5">Handoff for implementation (phase 5: delivery)
+<step id="5">Definition of Ready gate (phase 5: dor_check)
+
+- Mark delivery_planning as completed and dor_check as started in `chg-<workItemRef>-pm-notes.yaml`
+- Delegate to `@readiness-reviewer` with workItemRef
+- `@readiness-reviewer` critiques spec + test-plan + plan vs ticket under an adversarial stance and emits `READY` or `NOT_READY`
+- On `NOT_READY`: reopen the relevant artifact-creation phase (`specification`, `test_planning`, or `delivery_planning`), NEVER `delivery`; re-delegate to the matching author agent; re-run dor_check until `READY` (max 3 iterations; escalate to human on stalemate)
+- On any phase reopening (DoR `NOT_READY`, review remediation, DoD gap, etc.), add a `retro` note to `chg-<workItemRef>-pm-notes.yaml`: gap found, where discovered, why it was not caught earlier, and process improvement.
+- On a surfaced decision needing human input: STOP and wait
+- Hard gate by default; only an explicit recorded override for a genuinely trivial change may bypass it (no silent skip)
+- Change-scoped decisions go to change docs; system-wide or precedent-setting decisions go to decision records via `@decision-advisor`
+- Mark dor_check as completed only when verdict is `READY` or a valid override is recorded
+</step>
+
+<step id="6">Handoff for implementation (phase 6: delivery)
 
 - Confirm artifacts exist and are committed
-- Mark delivery_planning as completed, delivery as started
+- Mark delivery as started
 - Invoke `@coder` (via `/run-plan <workItemRef> execute all remaining phases no review`)
 - `@coder` runs all plan phases, commits each, returns completion report
 - On completion, mark delivery as completed
 </step>
 
-<step id="6">System docs and review (phases 6-7)
+<step id="7">System docs and review (phases 7-8)
 
 - Run `@doc-syncer` to reconcile system docs (system_spec_update phase)
 - Invoke `@reviewer` for local review (review_fix phase), providing rich context:
@@ -320,7 +336,7 @@ Before delegating ANY work to ANY agent, verify `chg-<workItemRef>-pm-notes.yaml
 - If any code changes happen after doc-syncer, re-run `@doc-syncer`
 </step>
 
-<step id="7">Quality gates (phase 8)
+<step id="8">Quality gates (phase 9)
 
 - Delegate to `@runner` to run builds/tests/lint per repo conventions
 - If failures occur, delegate to `@fixer` to fix
@@ -328,7 +344,7 @@ Before delegating ANY work to ANY agent, verify `chg-<workItemRef>-pm-notes.yaml
 - Mark quality_gates as completed
 </step>
 
-<step id="8">DoD check (phase 9)
+<step id="9">DoD check (phase 10)
 
 - Verify `chg-<workItemRef>-pm-notes.yaml` exists and all phases are recorded with completion timestamps
 - Verify ALL previous phases are completed in `chg-<workItemRef>-pm-notes.yaml`
@@ -338,7 +354,7 @@ Before delegating ANY work to ANY agent, verify `chg-<workItemRef>-pm-notes.yaml
 - Mark dod_check as completed only when all checks pass
 </step>
 
-<step id="9">PR/MR creation (phase 10)
+<step id="10">PR/MR creation (phase 11)
 
 - Create/update the PR/MR via `@pr-manager`
 - **Record PR/MR URL** in `chg-<workItemRef>-pm-notes.yaml` under `phases.pr_creation.url`
@@ -347,7 +363,7 @@ Before delegating ANY work to ANY agent, verify `chg-<workItemRef>-pm-notes.yaml
 - STOP for user approval and manual merge
 </step>
 
-<step id="10">Stop condition
+<step id="11">Stop condition
 
 - When an up-to-date PR/MR exists for the current change: STOP
 - Do not start another ticket automatically
@@ -359,7 +375,7 @@ Before delegating ANY work to ANY agent, verify `chg-<workItemRef>-pm-notes.yaml
 </workflow>
 
 <housekeeping_rules>
-Run housekeeping at: session start (step 0), after delivery (step 10).
+Run housekeeping at: session start (step 0), after completed change (step 11).
 
 **recently_delivered pruning:**
 - Keep max 10 entries; prune oldest when adding new
@@ -417,7 +433,7 @@ planning_sessions:
 
 **Rules:**
 - Only ONE planning session can be `in_progress` at a time
-- Single-ticket delivery (steps 1-10) is paused during active planning session
+- Single-ticket delivery (steps 1-11) is paused during active planning session
 - User must explicitly end session to resume delivery workflow
   - Recognized end phrases: "end planning session", "done planning", "let's start delivering", "finish planning", "close session"
   - When user ends session: set status to `completed`, summarize outcomes, then resume single-ticket delivery workflow

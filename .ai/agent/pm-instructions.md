@@ -27,6 +27,7 @@ Map change lifecycle to GitHub issue states and labels:
 |-------------------------|--------------------|-----------------------------|-------------------------------------|
 | Planning started        | `open`             | `change`, `planning`        | Comment only if value-added         |
 | Spec/Plan/Tests created | `open`             | `change`, `spec-ready`      | Comment with links to artifacts     |
+| Readiness gate passed (dor_check) | `open`   | `change`, `readiness-passed` | New optional label; DoR gate cleared |
 | Delivery started        | `open`             | `change`, `in-progress`     | Update assignee if needed           |
 | Ready for review        | `open`             | `change`, `review`          | Comment with PR/MR link             |
 | Done (implemented)      | `closed`           | `change`, `delivered`       | Closure comment with summary        |

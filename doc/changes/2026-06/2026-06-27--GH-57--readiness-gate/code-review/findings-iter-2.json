@@ -1,0 +1,79 @@
+[
+  {
+    "id": 1,
+    "previous_id": 1,
+    "severity": "critical",
+    "confidence": "high",
+    "status": "RESOLVED",
+    "file": ".ados-claude/",
+    "line": 0,
+    "title": "Committed generated plugin is stale and missing the DoR gate entirely (NFR-5 / AC8)",
+    "verification": "git ls-files confirms .ados-claude/agents/readiness-reviewer.md, .ados-claude/skills/check-readiness/SKILL.md, and .ados-claude/agents/pm.md are now tracked. Committed .ados-claude/agents/pm.md line 275 reads '5. **dor_check** — Delegate to @readiness-reviewer; hard gate before delivery'. Remediation commit 3ce7f32 regenerated and committed the plugin alongside its .opencode/ sources."
+  },
+  {
+    "id": 2,
+    "previous_id": 2,
+    "severity": "major",
+    "confidence": "high",
+    "status": "RESOLVED",
+    "file": "scripts/.tests/test-build-claude-plugin.sh",
+    "line": 0,
+    "title": "CI freshness gate does not compare fresh build vs committed plugin (enables NFR-5 drift)",
+    "verification": "New test case 'committed plugin matches fresh build' builds into a temp dir and diffs against committed .ados-claude/. Full suite now reports 16/16 passed, proving committed==fresh (NFR-5 enforced for source-vs-generated drift)."
+  },
+  {
+    "id": 3,
+    "previous_id": 3,
+    "severity": "major",
+    "confidence": "high",
+    "status": "RESOLVED",
+    "file": "doc/changes/2026-06/2026-06-27--GH-57--readiness-gate/chg-GH-57-plan.md",
+    "line": 225,
+    "title": "Plan execution log + all Phase A-G checkboxes never updated (DONE_BUT_UNCHECKED)",
+    "verification": "rg '\\- \\[ \\]' returns 0 unchecked boxes (UNCHECKED_EXIT=1). All 39 task checkboxes are '- [x]'. Execution log rows for Phases A-H filled with status=Done, dates, and commit SHAs (f7678bb, 5257098, bd8f7ac, 7291199, edf87fc, 3ce7f32)."
+  },
+  {
+    "id": 4,
+    "previous_id": 4,
+    "severity": "major",
+    "confidence": "high",
+    "status": "RESOLVED",
+    "file": "doc/changes/2026-06/2026-06-27--GH-57--readiness-gate/chg-GH-57-pm-notes.yaml",
+    "line": 12,
+    "title": "Change's own pm-notes phase map omits dor_check (DM-1 / AC8)",
+    "verification": "pm-notes.yaml line 17 now contains 'dor_check: { started: ..., completed: ... }' between delivery_planning and delivery, with an annotation explaining the RT1 red-team served as GH-57's own DoR surrogate."
+  },
+  {
+    "id": 5,
+    "previous_id": 5,
+    "severity": "minor",
+    "confidence": "high",
+    "status": "RESOLVED",
+    "file": "doc/changes/2026-06/2026-06-27--GH-57--readiness-gate/chg-GH-57-plan.md",
+    "line": 65,
+    "title": "Stale OQ-1 narrative contradicts its own later reversal (cross-artifact inconsistency)",
+    "verification": "Plan lines 65-69 now state OQ-1 RESOLVED via RT1-MAJOR-03 as 'YES — one-line DoR cross-reference note', explicitly noting it 'reverses the earlier no-edits stance'. Out-of-scope bullet (lines 143-144) carries matching reversal note. Consistent with spec §14 / Phase B.4."
+  },
+  {
+    "id": 6,
+    "previous_id": 6,
+    "severity": "minor",
+    "confidence": "medium",
+    "status": "RESOLVED",
+    "file": ".ados-claude/ + .opencode/",
+    "line": 0,
+    "title": "Working tree left dirty (uncommitted regenerated plugin) at review time",
+    "verification": "git status --porcelain is empty at review time. The regeneration was committed in 3ce7f32."
+  },
+  {
+    "id": 7,
+    "previous_id": 7,
+    "severity": "nit",
+    "confidence": "low",
+    "status": "ACCEPTED_NO_CHANGE",
+    "file": ".opencode/command/check-readiness.md",
+    "line": 10,
+    "title": "Command frontmatter model (sonnet) differs from agent model (opus) — confirm intentional",
+    "verification": "Confirmed intentional — matches the established /review (sonnet) + @reviewer (opus) pattern: lightweight command wrapper delegates heavy reasoning to the opus-tier agent. No change required."
+  }
+]

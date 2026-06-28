@@ -51,6 +51,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - `plan-writer`: author change implementation plans
 - `pm`: orchestrate changes; manage tickets via MCP (reads `.ai/agent/pm-instructions.md`)
 - `pr-manager`: create/update PR/MR for branch; enriches description with ticket context via MCP
+- `readiness-reviewer`: adversarially critique change artifacts (spec/test-plan/plan) against the source ticket before delivery (Definition of Ready gate)
 - `review-feedback-applier`: classify and apply accepted review feedback from PR/MR
 - `reviewer`: review changes against spec, plan, code quality heuristics, and repo rules (local + remote modes)
 - `runner`: run commands and capture logs
@@ -64,6 +65,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - `/bootstrap`: run ADOS project inception
 - `/check`: run quality gates (no fixes)
 - `/check-fix`: run quality gates and fix failures
+- `/check-readiness`: run the Definition of Ready gate for a change (via `@readiness-reviewer`)
 - `/commit`: create one Conventional Commit
 - `/design`: generate/update visual design assets
 - `/plan-change`: plan a change (prep context)

@@ -129,6 +129,7 @@ phases:
   specification: { started: null, completed: null }
   test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -240,12 +241,13 @@ The PM agent (`@pm`) orchestrates these phases:
 2. **specification** — Create `chg-<workItemRef>-spec.md` via `@spec-writer`
 3. **test_planning** — Create `chg-<workItemRef>-test-plan.md` via `@test-plan-writer`
 4. **delivery_planning** — Create `chg-<workItemRef>-plan.md` via `@plan-writer`
-5. **delivery** — Invoke `@coder` for implementation (via `/run-plan`)
-6. **system_spec_update** — Reconcile system docs via `@doc-syncer`
-7. **review_fix** — Review and fix cycle via `@reviewer`
-8. **quality_gates** — Run builds/tests via `@runner`
-9. **dod_check** — Final acceptance gate (PM verifies all phases complete)
-10. **pr_creation** — Create PR/MR via `@pr-manager`, assign to human, STOP
+5. **dor_check** — Definition of Ready gate via `@readiness-reviewer` (critique spec+test-plan+plan vs ticket before delivery)
+6. **delivery** — Invoke `@coder` for implementation (via `/run-plan`)
+7. **system_spec_update** — Reconcile system docs via `@doc-syncer`
+8. **review_fix** — Review and fix cycle via `@reviewer`
+9. **quality_gates** — Run builds/tests via `@runner`
+10. **dod_check** — Final acceptance gate (PM verifies all phases complete)
+11. **pr_creation** — Create PR/MR via `@pr-manager`, assign to human, STOP
 
 Phases can be reopened if gaps are discovered in later phases.
 

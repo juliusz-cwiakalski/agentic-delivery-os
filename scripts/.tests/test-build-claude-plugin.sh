@@ -422,22 +422,47 @@ test_idempotency() {
 test_build_removes_existing_output() {
   local source_dir="${_test_tmpdir}/source"
   local output_dir="${_test_tmpdir}/.ados-claude"
-  
+
   create_minimal_opencode_source "${source_dir}"
-  
+
   # Create a stale file in output directory
   mkdir -p "${output_dir}/agents"
   echo "stale content" > "${output_dir}/agents/stale-agent.md"
-  
+
   # Build should remove stale files
   build_plugin "claude" "${source_dir}/.opencode" "${output_dir}"
-  
+
   # Stale file should be gone
   if [[ -f "${output_dir}/agents/stale-agent.md" ]]; then
     printf '  Stale file should have been removed\n' >&2
     return 1
   fi
-  
+
+  return 0
+}
+
+test_committed_plugin_matches_fresh_build() {
+  # Determine repo root
+  local repo_root
+  repo_root="$(cd "${TEST_DIR}/../.." && pwd)"
+
+  # Build plugin into a fresh temp output dir
+  local tmp_output="${_test_tmpdir}/fresh-plugin"
+  build_plugin "claude" "${repo_root}/.opencode" "${tmp_output}"
+
+  # Diff the temp output against the committed plugin
+  # Note: plugin.json is deterministic (no timestamps), so we include it in the diff
+  local committed_plugin="${repo_root}/.ados-claude"
+  local diff_output
+  diff_output="$(diff -r "${tmp_output}" "${committed_plugin}" 2>&1)" || true
+
+  # If there is ANY difference, fail
+  if [[ -n "${diff_output}" ]]; then
+    printf '  Committed plugin differs from fresh build:\n' >&2
+    printf '%s\n' "${diff_output}" >&2
+    return 1
+  fi
+
   return 0
 }
 
@@ -460,6 +485,7 @@ main() {
   run_test "build creates skill files" test_build_creates_skill_files
   run_test "idempotency - running twice produces same output" test_idempotency
   run_test "build removes existing output" test_build_removes_existing_output
+  run_test "committed plugin matches fresh build" test_committed_plugin_matches_fresh_build
   
   # Run behavior tests separately (not sourced)
   printf '%s Running behavior tests...\n' "${TEST_TAG}"

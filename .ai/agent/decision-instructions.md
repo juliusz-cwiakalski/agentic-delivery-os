@@ -13,13 +13,13 @@ Read this section to calibrate decision drivers to what THIS project cares about
 
 ### Mission
 
-Agentic Delivery OS (ADOS) is a spec-driven software delivery system: AI agents and commands that turn a ticket into a reviewed, tested PR through a deterministic 10-phase workflow. The agents and their prompt definitions (`.opencode/agent/*.md`, `.opencode/command/*.md`) **are the product**.
+Agentic Delivery OS (ADOS) is a spec-driven software delivery system: AI agents and commands that turn a ticket into a reviewed, tested PR through a deterministic 11-phase workflow. The agents and their prompt definitions (`.opencode/agent/*.md`, `.opencode/command/*.md`) **are the product**.
 
 ### Core priorities (ranked)
 
 1. **Prompt quality** — A degraded prompt degrades everything downstream. Agent/command definitions are treated with the same rigor as production code.
 2. **Lean process** — Ceremony scales with stakes (R0–R3). Routine choices get no record; precedent-setting choices get full rigor. Never reach for ceremony a reversible choice doesn't need.
-3. **Determinism** — The 10-phase workflow is gated and reproducible. Changes to the workflow must preserve or improve determinism.
+3. **Determinism** — The 11-phase workflow is gated and reproducible. Changes to the workflow must preserve or improve determinism.
 4. **Efficiency** — ADOS is used to deliver ADOS. Process overhead that doesn't pay for itself is a bug. The system must be efficient for a solo developer + AI team.
 5. **Single source of truth** — `.opencode/` is canonical; `.ados-claude/` is generated. Never hand-edit generated artifacts. One definition, multiple tool runtimes.
 

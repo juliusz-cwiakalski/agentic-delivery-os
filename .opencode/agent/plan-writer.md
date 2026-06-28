@@ -117,7 +117,8 @@ Phase formatting:
 
 **Files and modules**:
 
-- <artifact>
+- Code areas: <specific files/modules/classes/components touched, or "none">
+- System docs: <`doc/spec/**`, quality/system docs to update during/after this phase, or "none">
 
 **Tests**:
 
@@ -207,5 +208,6 @@ Before generating the plan, attempt to read the structural template:
 <notes>
 - Centralizes creation and update logic
 - Canonical template ensures consistent format
+- Your output may be returned for revision by the Definition of Ready gate (`dor_check`, phase 5, `@readiness-reviewer`) before delivery; respond to `@pm`'s re-delegation.
 - After commit: ready for `/write-test-plan` or `/run-plan`
 </notes>

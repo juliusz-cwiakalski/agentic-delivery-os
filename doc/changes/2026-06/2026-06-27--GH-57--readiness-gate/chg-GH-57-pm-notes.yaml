@@ -1,0 +1,82 @@
+ados_distribution: project-generated
+# chg-GH-57-pm-notes.yaml — PM durable memory for change GH-57.
+# Lives under doc/changes/ (committed, git-tracked). Two purposes:
+#   1. Live coordination: phases, decisions, open questions, blockers.
+#   2. Retrospective record: delivery inefficiencies, process observations.
+change_id: GH-57
+title: "Add Definition of Ready gate (@readiness-reviewer) to validate change artifacts before delivery"
+slug: readiness-gate
+branch: feat/GH-57/readiness-gate
+change_folder: doc/changes/2026-06/2026-06-27--GH-57--readiness-gate
+
+phases:
+  clarify_scope: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  specification: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  test_planning: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  delivery_planning: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  dor_check: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }  # AC10 surrogate: the pre-delivery red-team (RT1) served as GH-57's own DoR gate (@readiness-reviewer did not exist until delivery); first TRUE dogfood = next change post-merge.
+  delivery: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  system_spec_update: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  review_fix: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  quality_gates: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  dod_check: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z" }
+  pr_creation: { started: "2026-06-27T00:00:00Z", completed: "2026-06-27T00:00:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/84" }
+
+decisions:
+  - text: "DEC-1 (single critic): one @readiness-reviewer agent with a structured multi-facet DoR checklist, NOT multiple specialized critics (@spec-critic/@plan-critic/@test-plan-critic). Driver: the highest-value check is cross-artifact consistency (do plan/test-plan cover every AC?), which needs one holistic view; siloed critics are worst at detecting cross-artifact gaps. Matches the unified-@reviewer precedent (GH-36 merged code-reviewer into @reviewer for the same reason). Reversible — a facet can split out later."
+    date: "2026-06-27"
+  - text: "DEC-2 (new agent, not @reviewer extension): new @readiness-reviewer + /check-readiness + dor_check phase, NOT a 'readiness mode' on @reviewer. Driver: @reviewer is fundamentally code-vs-spec (post-implementation, reads diffs); the readiness gate is artifacts-vs-ticket (pre-implementation, no code exists yet). Different inputs, timing, and mental model — merging risks an overloaded, confused agent."
+    date: "2026-06-27"
+  - text: "DEC-3 (stronger reasoning model): @readiness-reviewer runs on the stronger reasoning model. Driver: the DoR gate is the single highest-leverage checkpoint — catching a spec gap here saves the entire downstream implementation cost. One stronger-model pass pre-delivery is trivial cost vs. implementing a flawed plan. Model assigned in opencode config + claude.model:opus frontmatter (mirrors @reviewer), NOT in the prompt body."
+    date: "2026-06-27"
+  - text: "DEC-4 (hard gate + explicit recorded override): the gate is a hard block by default with an explicit, recorded override path for genuinely trivial changes (no silent skip). Driver: a silent skip reintroduces the sycophancy this gate exists to prevent (agents will always judge their own work 'trivial'); the override forces a conscious, recorded decision — the anti-sycophancy mechanism working as intended. Override recorded in pm-notes (and/or change docs) with rationale."
+    date: "2026-06-27"
+  - text: "DEC-5 (DoR location — prompt-as-source-of-truth, refined from ticket by owner comment #1): layered. (1) Core DoR encoded in the @readiness-reviewer PROMPT (.opencode/agent/readiness-reviewer.md) — universal, authoritative, enforced; ships with every ADOS install. (2) doc/guides/definition-of-ready.md as a human-readable MIRROR that states the prompt is authoritative; used for onboarding + retrospective (GH-43) discussion. (3) .ai/agent/readiness-instructions.md DEFERRED (YAGNI — repo-local extension only if a project needs project-specific DoR additions). Rationale: AGENTS.md treats agent prompts as the product; DoR is enforced behavior so it belongs in the prompt, not a runtime-read guide (avoids drift over which is authoritative). Mirrors how @reviewer keeps core heuristics in-prompt and reads repo-local instructions only for additions. Supersedes the ticket's original 'dedicated guide' recommendation."
+    date: "2026-06-27"
+  - text: "DEC-6 (scope boundary — #49 is out of scope): the deterministic mechanical pre-check command `ados check-readiness <ref>` (issue #49, owner comment #2) is a COMPLEMENT, not part of GH-57. GH-57 delivers the AI-driven adversarial/semantic readiness gate only. #49 would later handle mechanical checks (required spec sections present, AC→test-plan traceability, plan tasks reference spec items) deterministically, leaving adversarial analysis to @readiness-reviewer. #49 referenced as a dependency/follow-up; GH-57's guide may note it as a future enhancement but must not implement it."
+    date: "2026-06-27"
+  - text: "DEC-7 (decision record): this is a precedent-setting, system-wide delivery-workflow structural change (new lifecycle phase + agent + command). Per AC, system-wide decisions are recorded as decision records. Type = ADR-0002 (follows the ADR-0001 precedent — 'Decision-Making Framework Refactor' — that delivery-workflow structural changes are ADRs). Status Proposed (R2); human acceptance rides the GH-57 PR (set decision_date + Accepted at merge). Produced during the specification phase via @decision-advisor."
+    date: "2026-06-27"
+  - text: "GOVERNANCE RULE (carried from GH-72 retro, applies to GH-57): ALL .opencode/agent/*.md and .opencode/command/*.md edits MUST be delegated to @toolsmith — the @coder subagent has no task tool and cannot spawn @toolsmith. PM delegates the readiness-reviewer.md + check-readiness.md + pm.md (workflow) edits to @toolsmith DIRECTLY. Source .opencode/ + regenerated .ados-claude/ committed together; run scripts/build-claude-plugin.sh after tooling changes (CI verifies staleness)."
+    type: info
+    date: "2026-06-27"
+
+open_questions: []  # none blocking — all 5 open decisions resolved via owner-endorsed, reversible recommendations (comments #1, #2); user requested delivery with red-team critique as the adversarial layer.
+# OQ-1 (do author agents need a re-invocation note?) RESOLVED by PM, R1: NO — reopening is a PM/lifecycle concern; author behavior unchanged.
+
+blockers: []
+
+notes:
+  - text: "RED-TEAM ROUND 1 (pre-delivery, @red-team-coordinator): verdict SHIP-WITH-FINDINGS — 0 Critical, 3 Major, 5 Minor, 4 Nit. Report at red-team/pre-delivery-round-1-report.md. ACCEPTED for fix: MAJOR-01 (NFR-1 renumbering sweep scoped to 4 files but stale '10-phase'/'phase 5=delivery' refs exist in ~8 other docs incl. redistributable guides + README + decision-instructions.md → expand to REPO-WIDE grep excluding doc/changes/** and .ados-claude/**); MAJOR-02 (AC10 dogfood structurally impossible at true phase-5 position since @readiness-reviewer does not exist until delivery → THIS red-team is the honest surrogate; first TRUE dogfood = next change post-merge; split TC-MANUAL-007 into 7a surrogate + 7b deferred); MAJOR-03 (OQ-1 'no author-agent edits' does not satisfy the LITERAL AC8 'affected artifact-creator agents reflect the new phase' → REVERSE OQ-1: add a one-line cross-ref note to @spec-writer/@test-plan-writer/@plan-writer via @toolsmith so AC8 is literally true); MINOR-01 (TC-CI-004 header-path model wrong — pm.md + change-lifecycle.md ARE header-required); MINOR-02 (TC-MANUAL-008 typo DoD→DoR); MINOR-03 (DEC-3 'config vs frontmatter' — clarify OpenCode model via opencode config, Claude Code via claude.model:opus frontmatter); MINOR-05 ('genuinely trivial' undefined → add definition); NIT-02 (00-index.md missing PDR-0001 row → add). ACCEPT-light: MINOR-04, NIT-03 (wording). DEFER/accept-risk: NIT-01 (ADR-0001 Proposed precedent — noted). Remediation applied to spec/test-plan/plan/ADR/index before delivery."
+    type: info
+    date: "2026-06-27"
+  - text: "REVIEW iter-1 (phase 8, @reviewer): FAIL — 1c/3m/2n/1nit. CRITICAL: committed .ados-claude/ was stale (readiness-reviewer.md + skills/check-readiness/ untracked; pm.md 10-phase). Root cause: plugin regen not committed alongside sources. MAJOR #2: test-build-claude-plugin.sh didn't diff committed-vs-generated (the freshness claim was unenforced). Remediation (Phase H, commit 3ce7f328): regenerated+committed fresh .ados-claude/; added test_committed_plugin_matches_fresh_build drift assertion (16/16); plan checkboxes/exec-log filled; pm-notes dor_check phase map; OQ-1 narrative reconciled. RETRO: the @toolsmith→commit handoff lost the generated artifacts — the committed-plugin freshness MUST be verified by an independent diff (now enforced by the new test), not assumed. The freshness NFR-5 was a stated invariant that was never actually CI-enforced; GH-57 both exposed and fixed that gap."
+    type: retro
+    date: "2026-06-28"
+  - text: "REVIEW iter-2 (phase 8, @reviewer): PASS — all 7 iter-1 findings resolved (6 fixed + #7 confirmed intentional). Gates: committed .ados-claude/ ships DoR gate (pm.md:275 '5. **dor_check**'; readiness-reviewer.md + skills/check-readiness/ tracked); test-build-claude-plugin.sh 16/16 (incl. new drift test); test-doc-distribution.sh PASS (74 docs); renumbering sweep 0 stale hits; plan 39/39 checkboxes; pm-notes dor_check present; working tree clean."
+    type: info
+    date: "2026-06-28"
+  - text: "QUALITY GATES (phase 9, @runner): 10/13 suites PASS for all GH-57-relevant surfaces — test-add-header-location (19/19), test-build-claude-plugin (16/16), test-doc-distribution-modes (5/5), test-doc-distribution (74 docs), test-inception-doc-consistency, test-install (49/49), test-install-zclaude (27/27), test-uninstall (30/30), test-text-to-image-integration (21/21), test-text-to-image-unit (105/105). 3 FAILS are test-text-to-image-{e2e-providers,e2e-suite,performance} — all require external API credentials/network (HuggingFace/BFL/OpenAI/Stability/Google/Replicate/SiliconFlow); environmental, UNRELATED to GH-57 (which touches agents/commands/guides/lifecycle/plugin, not the text-to-image tool), and would fail on main too. Log: tmp/quality-gates-gh57.log."
+    type: info
+    date: "2026-06-28"
+  - text: "RED-TEAM ROUND 2 (post-delivery, @red-team-coordinator): verdict SHIP-WITH-FINDINGS — @reviewer iter-2 PASS independently confirmed. All 10 AC PASS, all 10 NFR PASS, 0 Critical, 0 Major. Only 1 Minor + 3 Nits. RT1 + reviewer iter-1 findings all genuinely resolved (re-verified). Report at red-team/post-delivery-round-2-report.md. RT2-MINOR-01 (the DoR iteration cap 'max 3 / stalemate→human' was in @pm + lifecycle guide but NOT in the @readiness-reviewer prompt <reopening> block — a cross-surface gap on-theme for this change): FIXED via @toolsmith (one sentence added to readiness-reviewer.md <reopening> + plugin regenerated). 3 Nits (RT2-NIT-01/02/03 — cosmetic/optional) ACCEPTED-AS-IS (see report). Cross-check note: this environment exposes no Task/subagent tool to the coordinator, so the multi-perspective review was a coordinator-level synthesis (every claim grounded in a re-runnable cited check); flagged honestly in the report rather than disguised."
+    type: info
+    date: "2026-06-28"
+  - text: "PR REVIEW-FEEDBACK ROUND 1 (PR #84): 6 comments (1 Copilot + 5 human). ALL ACCEPTED as valid:\n  - C1 (Copilot, VALID): mermaid NOT_READY loop only points to specification (B); should show reopen of any artifact phase (B/C/D).\n  - H1: show @decision-advisor in artifact-creation (non-linear, 0+ decisions — optional dashed edge).\n  - H2: DoR must also check vs EXISTING system spec (doc/spec/**); plan must list docs to update.\n  - H3: EVERY phase-reopen loop → PM 'retro' note in pm-notes; capture in @pm via @toolsmith.\n  - H4: create a DoD guide; DoD-EXISTENCE must be a DoR criterion (no delivery without DoD); note reviewer reads .ai/agent/code-review-instructions.md.\n  - H5: DoR inputs include system spec/quality docs; plan must list affected CODE AREAS per phase; cross-check @plan-writer (done — it has a generic 'Files and modules' section; enhance to require code areas + docs-to-update).\n  Clustered remediation: (a) @toolsmith — readiness-reviewer.md (inputs + 4 new facets: system_spec_consistency, plan_doc_update_coverage, plan_code_area_coverage, dod_defined), plan-writer.md (enhance per-phase Files-and-modules: affected code areas + docs-to-update), pm.md (retro-on-reopen rule); regen plugin. (b) @coder — change-lifecycle.md (mermaid fixes + dor_check goal + reopening/retro note), definition-of-ready.md (new facets + DoD-defined + DoD cross-ref), NEW definition-of-done.md, implementation-plan-template.md. (c) PM — spec DM-3 + note, ADR-0002 note, test-plan note."
+    type: info
+    date: "2026-06-28"
+  - text: "DoD CHECK (phase 10, @pm): PASS. All phases complete (clarify_scope→quality_gates). All 39 plan tasks checked (incl. Phase H). All 10 AC satisfied (RT2 independently confirmed all PASS). All NFR PASS. ADR-0002 Proposed (R2 — acceptance rides this PR; flip to Accepted + decision_date at merge). No pending TODOs. @reviewer iter-2 PASS; @red-team #1 SHIP-WITH-FINDINGS (3 Majors remediated pre-delivery); @red-team #2 SHIP-WITH-FINDINGS (0 Critical/0 Major; 1 Minor fixed, 3 Nits accepted). Quality gates: 10/13 GH-57-relevant suites green (3 text-to-image e2e fails are environmental/external-API, unrelated). AC10 surrogate honestly framed (pre-delivery red-team = GH-57's own DoR run; first TRUE dogfood = next change post-merge). READY FOR PR."
+    type: info
+    date: "2026-06-28"
+  - text: "POST-MERGE ACTIONS (do not forget): (1) flip ADR-0002 status Proposed→Accepted + set decision_date (human PR approval = acceptance signal per R2); (2) first TRUE end-to-end DoR dogfood = the NEXT change delivered after merge (AC10)."
+    type: info
+    date: "2026-06-28"
+  - text: "User requested TWO @red-team-coordinator reviews: (1) pre-delivery on spec/plan/test-plan artifacts, (2) post-delivery on the delivered change. Address findings via follow-up phases before proceeding. Stop at PR (ping user). Red-team invoked via task tool, subagent red-team-coordinator."
+    type: info
+    date: "2026-06-27"
+  - text: "System spec cross-check (clarify_scope): no doc/spec/features/ entry exists for the change lifecycle or @reviewer — the lifecycle lives in doc/guides/change-lifecycle.md + the agent/command definitions. No contradiction with existing system spec; this is a framework change to ADOS itself (dogfooding). Change surfaces: doc/guides/change-lifecycle.md (+ mermaid + agent-responsibility table), .opencode/agent/readiness-reviewer.md (new), .opencode/command/check-readiness.md (new), .opencode/agent/pm.md (new dor_check phase in workflow), doc/guides/definition-of-ready.md (new, mirror), .opencode/README.md inventory, AGENTS.md (phase table + agent table + command table), doc/decisions/ADR-0002 (new), doc/decisions/00-index.md (new row)."
+    type: info
+    date: "2026-06-27"
+  - text: "Issue comments (both from owner juliusz-cwiakalski — TRUSTED): #1 refines Open Decision #5 to prompt-as-source-of-truth (captured as DEC-5); #2 cross-links #49 deterministic mechanical pre-check as a complement (captured as DEC-6 out-of-scope)."
+    type: info
+    date: "2026-06-27"

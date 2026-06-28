@@ -44,7 +44,7 @@ The guide serves as the manual adoption path, complementing the automated `/boot
 - **Mandatory vs. optional distinction (F-1):** Clearly labels three mandatory artifacts (`AGENTS.md`, `.ai/agent/pm-instructions.md`, `doc/documentation-handbook.md`) and six optional artifact categories.
 - **Tracker configuration walkthrough (F-2):** Includes complete YAML configuration examples for both GitHub Issues and Jira trackers.
 - **Decision records setup (F-3):** Dedicated section with steps to create `doc/decisions/` infrastructure, linked to the Decision Records Management Guide.
-- **First change walkthrough (F-4):** Demonstrates both autopilot (`@pm deliver change GH-1`) and manual command sequence for running the full 10-phase workflow.
+- **First change walkthrough (F-4):** Demonstrates both autopilot (`@pm deliver change GH-1`) and manual command sequence for running the full 11-phase workflow.
 - **Bootstrap alternative (F-5):** References the automated `/bootstrap` command as an alternative to manual setup.
 - **Troubleshooting (F-6):** Covers common issues (tracker not found, templates not used, decision records workflow, wrong artifact location, missing directories).
 - **Related guides table (F-7):** Links to all relevant ADOS guides (change lifecycle, change convention, agents & commands, tools convention, documentation handbook, decision records).
@@ -102,4 +102,4 @@ The guide references and links to:
 
 - **Guide:** [doc/guides/onboarding-existing-project.md](../../guides/onboarding-existing-project.md)
 - **Bootstrap command:** `/bootstrap` — automated alternative
-- **Change lifecycle:** [doc/guides/change-lifecycle.md](../../guides/change-lifecycle.md) — detailed 10-phase workflow referenced by the walkthrough section
+- **Change lifecycle:** [doc/guides/change-lifecycle.md](../../guides/change-lifecycle.md) — detailed 11-phase workflow referenced by the walkthrough section

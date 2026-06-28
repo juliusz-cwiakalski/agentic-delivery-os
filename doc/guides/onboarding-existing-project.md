@@ -117,7 +117,7 @@ Before starting, ensure you have:
 > **What to expect:**
 > - **Automated bootstrap:** ~15 minutes (scan + interview + review)
 > - **Manual setup:** ~30 minutes (copy files, configure tracker, create stubs)
-> - **First change (full 10-phase workflow):** ~1 hour
+> - **First change (full 11-phase workflow):** ~1 hour
 > - **Ongoing changes:** 15-30 minutes each (agents handle most phases automatically)
 
 ---
@@ -240,7 +240,7 @@ The bootstrap file that AI agents read first. It tells agents what your project 
 **Key content:**
 
 - Project description and purpose
-- Delivery process overview (10-phase workflow)
+- Delivery process overview (11-phase workflow)
 - Agent team inventory
 - Commands table
 - Repo structure tree
@@ -549,7 +549,7 @@ If your project makes architectural, product, or technical decisions, set up dec
 
 ## Step 4: First Change Walkthrough
 
-Once your mandatory artifacts are in place, try running the full 10-phase workflow on a real change:
+Once your mandatory artifacts are in place, try running the full 11-phase workflow on a real change:
 
 ### Using Autopilot (Recommended)
 
@@ -557,18 +557,19 @@ Once your mandatory artifacts are in place, try running the full 10-phase workfl
 @pm deliver change GH-1
 ```
 
-The `@pm` agent will orchestrate all 10 phases:
+The `@pm` agent will orchestrate all 11 phases:
 
 1. **Clarify scope** — PM reads the ticket and cross-checks against system spec
 2. **Specification** — `@spec-writer` creates the change spec
 3. **Test planning** — `@test-plan-writer` creates the test plan
 4. **Delivery planning** — `@plan-writer` creates the implementation plan
-5. **Delivery** — `@coder` executes the plan phases
-6. **System spec update** — `@doc-syncer` reconciles docs
-7. **Review** — `@reviewer` audits against spec/plan
-8. **Quality gates** — `@runner` runs builds/tests/lint
-9. **DoD check** — PM verifies all criteria met
-10. **PR creation** — `@pr-manager` creates the PR
+5. **DoR check** — `@readiness-reviewer` gates delivery on readiness (spec+test-plan+plan vs ticket)
+6. **Delivery** — `@coder` executes the plan phases
+7. **System spec update** — `@doc-syncer` reconciles docs
+8. **Review** — `@reviewer` audits against spec/plan
+9. **Quality gates** — `@runner` runs builds/tests/lint
+10. **DoD check** — PM verifies all criteria met
+11. **PR creation** — `@pr-manager` creates the PR
 
 ### Using Manual Commands
 
@@ -577,6 +578,7 @@ The `@pm` agent will orchestrate all 10 phases:
 /write-spec GH-1
 /write-test-plan GH-1
 /write-plan GH-1
+/check-readiness GH-1
 /run-plan GH-1
 /review GH-1
 /sync-docs GH-1
@@ -698,7 +700,7 @@ This follows the principle of least privilege — only agents that need tracker 
 
 | Guide | Description |
 |-------|-------------|
-| [Change Lifecycle](change-lifecycle.md) | Detailed 10-phase delivery workflow |
+| [Change Lifecycle](change-lifecycle.md) | Detailed 11-phase delivery workflow |
 | [Change Convention](unified-change-convention-tracker-agnostic-specification.md) | Naming, folders, branches |
 | [Agents & Commands Guide](opencode-agents-and-commands-guide.md) | How to use agents and commands |
 | [Tools Convention](tools-convention.md) | Standard for building CLI tools |
