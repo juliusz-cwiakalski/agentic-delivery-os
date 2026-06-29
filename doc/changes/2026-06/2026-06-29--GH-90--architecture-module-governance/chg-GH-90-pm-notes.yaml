@@ -12,9 +12,9 @@ phases:
   delivery: { started: 2026-06-29, completed: 2026-06-29 }
   system_spec_update: { started: 2026-06-29, completed: 2026-06-29 }
   review_fix: { started: 2026-06-29, completed: 2026-06-29 }
-  quality_gates: { started: 2026-06-29, completed: null }
-  dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null, url: null }
+  quality_gates: { started: 2026-06-29, completed: 2026-06-29 }
+  dod_check: { started: 2026-06-29, completed: 2026-06-29 }
+  pr_creation: { started: 2026-06-29, completed: null, url: null }
 
 decisions:
   - { text: "DEC (PM): NOT invoking @decision-advisor for a formal ADR/PDR — layering matrix is example scaffolding for project fills, not precedent-setting ADOS decision. Design rationale captured in-spec (spec Appendix B).", date: 2026-06-29 }
@@ -61,7 +61,10 @@ notes:
   - text: "Red-team R2 (post-delivery): verdict SHIP-WITH-FINDINGS — merge-ready as-is. No Critical/Major/must-fix. All 4 ticket ACs pass, gate exit 0, diff purely additive. All 3 R1 Majors (F-1/F-2/F-3) independently CONFIRMED LANDED in shipped content. AI-actionability role-play 3/3 PASS (place capability / decide-dependency / stub-boundary) against actual template text. Findings (all optional): R2-1 [Minor] 'API layer' alias disambiguation; R2-2 [Minor] doc/overview/README.md L23 purpose one-liner sync (already deferred by doc-syncer); R2-3 [Minor] residence↔component join is prose not structural table (F-2 residual, future change needs spec amendment); R2-4..7 [Nit] matrix header backslash, repo-analysis replace-me comment, spacing, replace-me wording; R2-8 [Obs] DIP/hexagonal note."
     type: info
     date: 2026-06-29
-  - text: "PM disposition of R2 findings: APPLY R2-1 (API-layer disambiguation — append clarifying clause AFTER the spec-quoted example so AC-F2-1 verbatim quote is preserved, no spec divergence) + R2-4 (matrix header 'From \\ To' → 'From → To' rendering fix). DEFER the rest as PR-time suggestions for the human: R2-2 (overview README — cosmetic, separate file); R2-3 (structural residence column — needs spec amendment → future change, not this PR); R2-5..8 (nits/observation). Rationale: change is merge-ready; only the genuine shipped-content wrinkles get inline fixes; the human decides the rest at PR review."
+  - text: "Quality gates (phase 9): ALL 3 CI jobs GREEN locally. (A) doc-distribution test + modes test: exit 0 (76 in-scope docs, 5/5 negative self-tests). (B) inception-doc-consistency: exit 0 (four-risk, matrix, index, self-containment, structure). (C) build-claude-plugin: build OK (23 agents, 20 skills), .ados-claude/ drift = 0 (no agent/command files changed → plugin byte-identical). CI will pass on the PR."
+    type: info
+    date: 2026-06-29
+  - text: "PM disposition of R2 findings: APPLIED R2-1 (API-layer disambiguation — appended clarifying clause AFTER the spec-quoted example so AC-F2-1 verbatim quote is preserved, no spec divergence; commit 11466f8) + R2-4 (matrix header 'From \\ To' → 'From → To' rendering fix; same commit). DEFERRED the rest as PR-time suggestions for the human: R2-2 (doc/overview/README.md L23 — cosmetic, separate file); R2-3 (structural residence Component column — needs spec amendment → future change, not this PR); R2-5..8 (nits/observation). Rationale: change is merge-ready; only the genuine shipped-content wrinkles got inline fixes; the human decides the rest at PR review."
     type: decision
     date: 2026-06-29
   - text: "Intake: deliver GH-90 ([inception:6] architecture module governance). Part of inception-focus-2026-06-29 planning session (Wave 1 candidate, parallel-safe with GH-33). User explicitly kicked off single-ticket delivery of GH-90. TEMPLATE+GUIDE change — no .opencode/agent/ edits, so @toolsmith rule does NOT apply; @coder can edit templates/guide directly. Two @red-team-coordinator rounds requested (R1 pre-delivery on artifacts, R2 post-delivery). Branch docs/GH-90/architecture-module-governance off main 816c27e."
