@@ -74,7 +74,7 @@ Because the architecture and repo-analysis templates capture *which* modules exi
 |--------|--------|
 | Governance sections present in `architecture-overview-template.md` | 5/5 (residence, layering, contracts, ownership-map, heuristics) |
 | Governance sections with ≥1 concrete AI-actionable placeholder example | 5/5 |
-| `repo-analysis-template.md` module-map columns shared with architecture-overview governance fields | All new governance dimensions mirrored |
+| `repo-analysis-template.md` module-map columns aligned with architecture-overview governance fields | All new governance dimensions mapped concept-for-concept (with an explicit cross-reference) |
 | `project-inception.md` Phase 3 references to governance facets | ≥1 (residence/layering/contracts/ownership/heuristics) |
 | `bash scripts/.tests/test-doc-distribution.sh` | exit 0 |
 | Pre-existing template sections/columns removed or renamed | 0 (purely additive) |
@@ -101,9 +101,11 @@ Because the architecture and repo-analysis templates capture *which* modules exi
 
 ### 5.1 Capability Details
 
-**F-1 — Module-residence rules (M1).** A capability-type → owning-module/path-pattern table plus a one-line rule. The placeholder example must demonstrate actionability: *"new API endpoint → `src/api/` module"*, *"new domain rule → `src/domain/<context>/`"*, *"new CLI command → `src/cli/commands/`"*. The rule: place new code by capability type, not by guess; when a capability type is unlisted, add a row before placing the code.
+> **Content-design rule (applies to every governance example table in `architecture-overview-template.md`):** each table ships an HTML comment `<!-- Example rows — replace with your project's modules/components. Keep one <...> placeholder row as a model. -->` and keeps ≥1 `<...>` placeholder row alongside the concrete example rows, signalling the rows are illustrative, not authoritative. (See Appendix A sketches.)
 
-**F-2 — Dependency-direction / layering matrix (M2).** Named layers in tier order (default example: presentation → application → domain → infrastructure) with an explicit allowed/forbidden matrix between them and a stated dependency-direction invariant: *dependencies point DOWN the tier list; no upward or sideways cycles*. The canonical example: *"API layer may import domain layer; domain layer may NOT import API layer."* The template notes the tier names are an example to adapt to the project's architecture while preserving the invariant.
+**F-1 — Module-residence rules (M1).** A capability-type → owning-module/path-pattern table, **scoped per component named in the Components table above**, plus a one-line rule. Residence rules resolve capability-type → owning module path using the path pattern `src/<component>/api/` (single-component repos omit the `<component>/` segment → `src/api/`). The placeholder example must demonstrate actionability: *"new API endpoint → `src/<component>/api/`"*, *"new domain rule → `src/<component>/domain/<context>/`"*, *"new CLI command → `src/<component>/cli/commands/`"*. The rule: place new code by capability type, not by guess; when a capability type is unlisted, add a row before placing the code.
+
+**F-2 — Dependency-direction / layering matrix (M2).** Named layers in tier order (default example: presentation → application → domain → infrastructure) with an explicit allowed/forbidden matrix between them and a stated dependency-direction invariant: *no dependency may point upward or sideways across tiers; the matrix specifies which downward dependencies are permitted* (the matrix is authoritative). The canonical example: *"API layer may import domain layer; domain layer may NOT import API layer."* The template notes the tier names are an example to adapt to the project's architecture while preserving the invariant.
 
 **F-3 — Internal interface contracts, lightweight (M3).** A table of named boundaries, each with an operation, a signature, a return shape, and an error shape — lightweight, not a versioned registry. The canonical example: *"interface between cart and inventory modules: `checkAvailability(sku, qty) → AvailabilityResult`"* (return `{ available: bool, onHand: int }`; error `ItemNotFound`). Scope: signature + return/error shape only.
 
@@ -111,7 +113,7 @@ Because the architecture and repo-analysis templates capture *which* modules exi
 
 **F-5 — Module-boundary heuristics (M5).** Cohesion/coupling guidance with concrete split/merge triggers: *"a module with > N responsibilities / > 1 reason to change → split by responsibility"*; *"two modules that always change together → consider merging"*; *"high cohesion within a module, low coupling across modules"*; *"a dependency mocked in >1 unrelated test → consider an interface boundary."*
 
-**F-6 — repo-analysis-template alignment.** The existing `Module | Responsibility` map gains governance columns mirroring the architecture overview (a residence hint, a layering tier, and an interface-contract pointer), populated during legacy reconstruction at the same confidence discipline the template already enforces. Existing columns are preserved (additive).
+**F-6 — repo-analysis-template alignment.** The existing `Module | Responsibility` map gains governance columns mapped **concept-for-concept** to the architecture-overview governance section (a residence hint, a layering tier, and an interface-contract pointer), joined by an explicit cross-reference note linking the two templates. They are populated during legacy reconstruction at the same confidence discipline the template already enforces. Existing columns are preserved (additive). The alignment is conceptual, not lexical — the two templates need not use identical wording.
 
 **F-7 — Phase 3 reference.** Phase 3's architecture activity/output gains a short reference to the governance sections (residence/layering/contracts/ownership/heuristics). Minimal amendment — no rewrite of Phase 3.
 
@@ -182,7 +184,7 @@ The "data model" here is the **structured content** (tables/columns) the templat
 | DM-3 | Interface-contract row | Boundary (A→B) + operation + signature + return shape + error shape |
 | DM-4 | Ownership-map row | Feature → owning component(s) — OPTIONAL |
 | DM-5 | Boundary-heuristic rule | A split/merge/cohesion/coupling trigger statement |
-| DM-6 | repo-analysis module-map governance columns | `Residence hint`, `Layering tier`, `Interface-contract pointer` (appended to existing `Module | Responsibility`) |
+| DM-6 | repo-analysis module-map governance columns | `Residence hint`, `Layering tier`, `Interface-contract pointer` (appended to existing `Module | Responsibility`); mapped **concept-for-concept** to the architecture-overview governance section via an explicit cross-reference — not a word-for-word mirror |
 | DM-7 | Existing Components table | Referenced, unchanged (additive governance sits alongside, not replacing it) |
 
 ### 8.4 External Integrations
@@ -191,7 +193,7 @@ N/A — no external APIs or services affected.
 
 ### 8.5 Backward Compatibility
 
-Purely additive. No pre-existing section header in either template is removed or renamed; the repo-analysis module-map keeps its `Module | Responsibility` columns and appends new ones. Existing project instances of `architecture-overview.md` / `repo-analysis.md` are unaffected — the new sections follow the template's existing "omit if trivial" tone, so unfilled sections impose no obligation on already-authored docs.
+Purely additive — column-level additions only. No pre-existing section header or column in either template is removed or renamed (line-level in-place replacement of a header/row line that gains columns is permitted and does not count as removal/renaming); the repo-analysis module-map keeps its `Module | Responsibility` columns and appends new governance ones in place. Existing project instances of `architecture-overview.md` / `repo-analysis.md` are unaffected — the new sections follow the template's existing "omit if trivial" tone, so unfilled sections impose no obligation on already-authored docs.
 
 ## 9. NON-FUNCTIONAL REQUIREMENTS (NFRs)
 
@@ -200,7 +202,7 @@ Purely additive. No pre-existing section header in either template is removed or
 | NFR-1 | AI-actionability — each governance section ships ≥1 concrete placeholder example usable as a placement/mock decision | 5/5 sections (residence, layering, contracts, ownership, heuristics) each have ≥1 concrete example |
 | NFR-2 | Weight control — keep the template lean and skimmable; mark optional sections clearly | Each governance section ≈ table + 1–2-line rule + concrete example; ownership-map flagged OPTIONAL/conditional |
 | NFR-3 | Doc-distribution gate — both templates retain `ados_distribution: redistributable` + license header block | `bash scripts/.tests/test-doc-distribution.sh` exits 0 |
-| NFR-4 | Backward compatibility — purely additive | 0 pre-existing section headers/columns removed or renamed |
+| NFR-4 | Backward compatibility — column-level additions only | No pre-existing section header or column is removed or renamed; column-level additions only (line-level in-place replacement of a header/row line that gains columns is permitted) |
 
 ## 10. TELEMETRY & OBSERVABILITY REQUIREMENTS
 
@@ -212,7 +214,7 @@ N/A for runtime (documentation change). The sole observable gate is `bash script
 |----|------|--------|-------------|------------|---------------|
 | RSK-1 | Template bloat — the architecture-overview template is lean (~62 lines); five new sections could over-weight it for small repos | M | M | Keep each section tight (table + 1–2-line rule + concrete example); mark ownership-map OPTIONAL; preserve the "omit if trivial" tone | L |
 | RSK-2 | Vague governance fails the AI-actionability bar — easy to write prose that reads well but isn't actionable | M | M | Mandate ≥1 concrete placeholder example per section (NFR-1); ship the three canonical examples the human specified verbatim; red-team R1 specifically probes actionability | L-M |
-| RSK-3 | Drift between architecture-overview and repo-analysis governance fields if one is edited without the other | M | L | Define shared field names (DM-6 mirrors DM-1/2/3); call out the consistency contract in §22 | L |
+| RSK-3 | Drift between architecture-overview and repo-analysis governance concepts if one is edited without the other | M | L | Define a concept-for-concept mapping with an explicit cross-reference (DM-6 ↔ DM-1/2/3); call out the consistency contract in §22 | L |
 | RSK-4 | Consistency touch-points (README one-liner, handbook §17) missed during delivery | L | M | Plan-writer includes a consistency-sweep task; verify-only, update if needed | L |
 | RSK-5 | Reviewer reads the layering tier example as a mandated ADOS architecture | L | L | Template carries an explicit "adapt to your architecture" note; DEC-1 records it as example scaffolding | L |
 
@@ -239,10 +241,10 @@ N/A for runtime (documentation change). The sole observable gate is `bash script
 
 | ID | Question | Context | Status |
 |----|----------|---------|--------|
-| OQ-1 | Should the split-heuristic placeholder name a concrete `N` (e.g. "3 responsibilities") or stay `<N>` for the project to fill? | M5 heuristic "module > N responsibilities → split" | Proposed: ship `<N>` placeholder with an example value in parentheses; non-blocking. Red-team R1 may confirm. |
-| OQ-2 | Should the governance block be one consolidated `## Module governance` section (with five subsections) or five top-level sections interleaved after the Components table? | Placement/organization of the new content | Proposed: one consolidated block placed after the Components table, before Data flow; non-blocking. Plan-writer/refinement decides final heading shape. |
+| OQ-1 | Should the split-heuristic placeholder name a concrete `N` (e.g. "3 responsibilities") or stay `<N>` for the project to fill? | M5 heuristic "module > N responsibilities → split" | **Resolved** — confirmed by red-team R1; locked in pm-notes. Ship `<N>` placeholder with an example value in parentheses. |
+| OQ-2 | Should the governance block be one consolidated `## Module governance` section (with five subsections) or five top-level sections interleaved after the Components table? | Placement/organization of the new content | **Resolved** — confirmed by red-team R1; locked in pm-notes. One consolidated block placed after the Components table, before Data flow. |
 
-> Note: per PM decision, none of these require escalation to `@decision-advisor`; both have a proposed resolution and are flagged for red-team R1 / plan refinement only.
+> Note: per PM decision, none of these required escalation to `@decision-advisor`; both are now resolved (confirmed by red-team R1) and locked in pm-notes.
 
 ## 15. DECISION LOG
 
@@ -252,7 +254,7 @@ N/A for runtime (documentation change). The sole observable gate is `bash script
 | DEC-2 | Lightweight contracts = boundary + signature + return/error shape | Sufficient for mock/stub decisions at inception; a versioned registry is deferred (NG-1) | 2026-06-29 |
 | DEC-3 | Feature→component ownership map is OPTIONAL/conditional in the template | Small repos where the Components table suffices should not be forced to fill it | 2026-06-29 |
 | DEC-4 | Tiered layering (presentation/application/domain/infrastructure) is the DEFAULT EXAMPLE, with an "adapt to your architecture" note | Gives agents a concrete mental model while staying project-agnostic | 2026-06-29 |
-| DEC-5 | Governance block sits after the Components table; repo-analysis mirrors the same governance field names | Co-location with the inventory it governs; shared field names prevent drift (RSK-3) | 2026-06-29 |
+| DEC-5 | Governance block sits after the Components table; repo-analysis maps concept-for-concept to the governance section | Co-location with the inventory it governs; the explicit concept-for-concept cross-reference prevents conceptual drift (RSK-3) | 2026-06-29 |
 | DEC-6 | AI-actionability is the core success criterion — every governance section ships ≥1 concrete placeholder example | The change's value is actionability, not prose; without concrete examples the entropy problem persists | 2026-06-29 |
 
 ## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
@@ -262,14 +264,14 @@ N/A for runtime (documentation change). The sole observable gate is `bash script
 | `doc/templates/architecture-overview-template.md` | Updated — five governance sections added (F-1–F-5) |
 | `doc/templates/repo-analysis-template.md` | Updated — module-map governance columns aligned (F-6) |
 | `doc/guides/project-inception.md` | Updated — Phase 3 minimal governance reference (F-7) |
-| `doc/templates/README.md` (line 62) | Consistency touch-point — one-liner may mention "module governance"; verify/update only if needed (plan sweep, not an AC) |
+| `doc/templates/README.md` (line 62) | Consistency touch-point — update the one-liner if it currently omits module governance (it does → update); plan sweep, not an AC |
 | `doc/documentation-handbook.md` §17 (Template Index) | Consistency touch-point — architecture-overview row purpose; verify/update only if needed (plan sweep, not an AC) |
 
 ## 17. ACCEPTANCE CRITERIA
 
 | ID | Criterion | Linked |
 |----|-----------|--------|
-| AC-F1-1 | **Given** the architecture-overview template, **when** a reader looks for module-residence rules, **then** a capability-type → owning-module/path-pattern table + one-line rule + concrete example exists (e.g. "new API endpoint → `src/api/`"). | F-1, NFR-1 |
+| AC-F1-1 | **Given** the architecture-overview template, **when** a reader looks for module-residence rules, **then** a capability-type → owning-module/path-pattern table + one-line rule + concrete example exists, scoped per component named in the Components table (e.g. "new API endpoint → `src/<component>/api/`", with the single-component simplification `src/api/` noted). | F-1, NFR-1 |
 | AC-F2-1 | **Given** the architecture-overview template, **when** checked for a dependency-direction/layering section, **then** an allowed/forbidden matrix between named layers exists with a stated downward-only, no-cycles invariant and a concrete example ("API layer may import domain; domain may NOT import API"). | F-2, NFR-1 |
 | AC-F3-1 | **Given** the architecture-overview template, **when** checked for internal interface contracts, **then** lightweight named-boundary contracts exist (boundary + signature + return/error shape) with a concrete example (e.g. cart↔inventory `checkAvailability(sku, qty) → AvailabilityResult`). | F-3, NFR-1 |
 | AC-F4-1 | **Given** the architecture-overview template, **when** checked for a feature→component ownership map, **then** an OPTIONAL/conditional map (feature → owning component(s)) exists and is clearly marked optional for small repos. | F-4 |
@@ -278,11 +280,11 @@ N/A for runtime (documentation change). The sole observable gate is `bash script
 | AC-F7-1 | **Given** `project-inception.md` Phase 3, **when** checked, **then** it references the new governance sections (residence/layering/contracts/ownership/heuristics) in the architecture activity or output, without rewriting the phase. | F-7 |
 | AC-NFR1-1 | **Given** the five governance sections, **when** an AI agent applies them, **then** each section contains ≥1 concrete placeholder example usable as a placement or mock/stub decision (5/5). | NFR-1, F-1–F-5 |
 | AC-NFR3-1 | **Given** both modified templates, **when** `bash scripts/.tests/test-doc-distribution.sh` runs, **then** it exits 0 and both templates retain `ados_distribution: redistributable` + the license header block. | NFR-3 |
-| AC-NFR4-1 | **Given** the modified templates compared to their pre-change versions, **when** diffed, **then** all pre-existing section headers and the module-map's `Module | Responsibility` columns remain (additions only; nothing removed or renamed). | NFR-4 |
+| AC-NFR4-1 | **Given** the modified templates compared to their pre-change versions, **when** diffed, **then** no pre-existing section header or column is removed or renamed — column-level additions only (line-level in-place replacement of a header/row line that gains columns is permitted); the module-map's `Module | Responsibility` columns are preserved. | NFR-4 |
 
 ## 18. ROLLOUT & CHANGE MANAGEMENT (HIGH-LEVEL)
 
-- **Delivery order**: (1) architecture-overview governance sections → (2) repo-analysis alignment → (3) Phase 3 reference → (4) consistency sweep (README line 62 + handbook §17, verify/update only if needed) → (5) doc-distribution gate.
+- **Delivery order**: (1) architecture-overview governance sections → (2) repo-analysis alignment → (3) Phase 3 reference → (4) consistency sweep (README line 62 — update the one-liner, it currently omits module governance; handbook §17 verify/update if needed) → (5) doc-distribution gate.
 - **Validation**: red-team **R1 (pre-delivery)** critiques the spec/test-plan/plan and specifically probes the AI-actionability bar; **R2 (post-delivery)** verifies the shipped templates. Both rounds were explicitly requested.
 - **Merge**: single PR; the doc-distribution gate must pass before merge.
 - **Adoption**: no migration — existing project instances are unaffected (additive, "omit if trivial"). New inception runs and `@coder`/`@spec-writer` consumers adopt the governance via existing template usage; no agent-prompt change is required.
@@ -301,7 +303,7 @@ N/A. No code, secrets, auth, or network surface. No `.opencode/agent/**` edits, 
 
 ## 22. MAINTENANCE & OPERATIONS IMPACT
 
-- **Consistency contract**: `architecture-overview-template` and `repo-analysis-template` now share governance field names (DM-1/2/3 ↔ DM-6). Editing one without the other is a drift risk (RSK-3); future changes to governance dimensions must update both templates together.
+- **Consistency contract**: `architecture-overview-template` and `repo-analysis-template` are bound by a **concept-for-concept mapping** (DM-1/2/3 ↔ DM-6), not a word-for-word mirror: the repo-analysis governance columns (`Residence hint | Layering tier | Interface-contract pointer`) carry the same governance *concepts* as the architecture-overview Module governance section, joined by an explicit cross-reference note. Editing the concepts in one without the other is a drift risk (RSK-3); future changes to governance concepts must update both templates together and refresh the cross-reference.
 - **Evolving governance**: when ADOS or a project adds/renames modules, the residence rules and ownership map are the natural update surface; the heuristics guide future module splits/merges.
 - **No operational burden**: no CI/runtime cost; the only recurring check is the doc-distribution gate already in CI.
 
@@ -311,7 +313,7 @@ N/A. No code, secrets, auth, or network surface. No `.opencode/agent/**` edits, 
 |------|------------|
 | Governance vs inventory | Inventory records *what* modules exist; governance records the *rules* that govern them (placement, dependencies, boundaries) |
 | Residence rule | A capability-type → owning-module/path-pattern mapping that resolves where new code lands |
-| Layering / dependency-direction | A tiered ordering of modules with an allowed/forbidden dependency matrix; invariant: dependencies point down the tiers, no cycles |
+| Layering / dependency-direction | A tiered ordering of modules with an allowed/forbidden dependency matrix; invariant: no dependency may point upward or sideways across tiers, and the matrix specifies which downward dependencies are permitted |
 | Internal interface contract | A lightweight description of what crosses a module boundary: named boundary + operation + signature + return/error shape |
 | Ownership map | A feature → owning component(s) lookup (optional) |
 | Boundary heuristics | Cohesion/coupling rules with split/merge triggers for module evolution |
@@ -324,40 +326,50 @@ N/A. No code, secrets, auth, or network surface. No `.opencode/agent/**` edits, 
 These sketches define *what each section must contain* so the plan-writer and coder have concrete, AI-actionable targets. They are content design, not step-by-step tasks.
 
 **A.1 Module-residence rules (F-1)**
+<!-- Example rows — replace with your project's modules/components. Keep one <...> placeholder row as a model. -->
 | Capability type | Owning module / path pattern | Notes |
 |---|---|---|
-| new API endpoint | `src/api/` | HTTP entrypoints |
-| new domain rule | `src/domain/<context>/` | business logic |
-| new CLI command | `src/cli/commands/` | user-invoked |
-Rule: *place new code by capability type, not by guess; if a type is unlisted, add a row before placing.*
+| new API endpoint | `src/<component>/api/` | HTTP entrypoints |
+| new domain rule | `src/<component>/domain/<context>/` | business logic |
+| new CLI command | `src/<component>/cli/commands/` | user-invoked |
+| `<capability type>` | `src/<component>/<...>/` | `<notes>` |
+Rule: *place new code by capability type, not by guess; if a type is unlisted, add a row before placing.* Path pattern uses `src/<component>/…` — in a single-component repo the `<component>/` segment is omitted (→ `src/api/`). Residence rules are scoped per component named in the Components table above.
 
 **A.2 Dependency-direction / layering matrix (F-2)**
+<!-- Example rows — replace with your project's modules/components. Keep one <...> placeholder row as a model. The tier axis is the placeholder to adapt to your architecture. -->
 Tiers (example — adapt to your architecture): presentation → application → domain → infrastructure.
 | From \ To | presentation | application | domain | infrastructure |
 |---|---|---|---|---|
 | presentation | — | ✓ | ✗ | ✗ |
-| application | ✗ | — | ✓ | ✓ (via ports) |
-| domain | ✗ | ✗ | — | ✗ (abstractions only) |
+| application | ✗ | — | ✓ | ✓ |
+| domain | ✗ | ✗ | — | ✗ |
 | infrastructure | ✗ | ✗ | ✗ | — |
-Invariant: *dependencies point DOWN the tier list; no upward or sideways cycles.* Example: *"API layer may import domain layer; domain layer may NOT import API layer."*
+| `<tier>` | `<...>` | `<...>` | `<...>` | `<...>` |
+Invariant: *no dependency may point upward or sideways across tiers; the matrix above specifies which downward dependencies are permitted (the matrix is authoritative).* Example: *"API layer may import domain layer; domain layer may NOT import API layer."* The tier names are an example to adapt; preserve the invariant.
 
 **A.3 Internal interface contracts, lightweight (F-3)**
+<!-- Example rows — replace with your project's modules/components. Keep one <...> placeholder row as a model. -->
 | Boundary (A → B) | Operation | Signature | Returns | Errors |
 |---|---|---|---|---|
 | cart → inventory | checkAvailability | `checkAvailability(sku, qty)` | `AvailabilityResult{ available: bool, onHand: int }` | `ItemNotFound` |
+| `<A → B>` | `<operation>` | `<signature>` | `<return shape>` | `<error>` |
 Scope: signature + return/error shape only — not a versioned registry.
 
 **A.4 Feature→component ownership map (OPTIONAL) (F-4)**
+<!-- Example rows — replace with your project's modules/components. Keep one <...> placeholder row as a model. -->
 | Feature | Owning component(s) |
 |---|---|
 | Checkout | cart, inventory, pricing |
+| `<feature>` | `<owning component(s)>` |
 *Omit for small repos where the Components table suffices.*
 
 **A.5 Module-boundary heuristics (F-5)**
+<!-- Example rules — replace with your project's heuristics. Keep one <...> placeholder rule as a model. -->
 - A module with **> N responsibilities / > 1 reason to change → split** by responsibility.
 - Two modules that **always change together → consider merging**.
 - High cohesion within a module; low coupling across modules.
 - A dependency mocked in **> 1 unrelated test → consider an interface boundary**.
+- `<your cohesion/coupling trigger here>`
 
 ### Appendix B — Design rationale / alternatives (DEC-1)
 
@@ -376,13 +388,14 @@ The legacy module/component map extends from:
 `| Module | Responsibility |` →
 `| Module | Responsibility | Residence hint | Layering tier | Interface-contract pointer |`
 
-The three new columns mirror DM-1/2/3 so legacy reconstruction fills the **same** governance fields as the greenfield architecture overview, at the template's existing confidence discipline.
+The three new columns map **concept-for-concept** to DM-1/2/3 so legacy reconstruction fills the **same governance concepts** as the greenfield architecture overview (not a word-for-word mirror), at the template's existing confidence discipline. An explicit cross-reference note links the repo-analysis map to the architecture-overview Module governance section.
 
 ## 25. DOCUMENT HISTORY
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-06-29 | `@spec-writer` | Initial specification |
+| 1.1 | 2026-06-29 | `@spec-writer` | Red-team R1 remediation (F-1,F-2,F-3,F-4,F-5,F-7,F-8) |
 
 ---
 

@@ -1,14 +1,15 @@
 ---
 id: chg-GH-90-architecture-module-governance
-status: Proposed
+status: Updated
 created: 2026-06-29T21:22:53Z
-last_updated: 2026-06-29T21:22:53Z
+last_updated: 2026-06-29T21:41:14Z
 owners: ["Juliusz Ćwiąkalski"]
 service: inception-templates
 labels: ["inception", "templates", "architecture", "module-governance"]
 links:
   change_spec: ./chg-GH-90-spec.md
   change_pm_notes: ./chg-GH-90-pm-notes.yaml
+  change_test_plan: ./chg-GH-90-test-plan.md
 summary: >
   Convert `doc/templates/architecture-overview-template.md` from an inventory (what
   modules exist) into governance (the rules that govern them) by adding one
@@ -80,7 +81,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 - **Redistributable markers + headers are invariant (NFR-3).** `ados_distribution: redistributable` and the license header block on both templates must remain byte-for-byte intact (marker present, value unchanged). The gate (`scripts/.tests/test-doc-distribution.sh`) scans `doc/templates/**/*.md` for marker presence + validity and must exit 0.
 - **Branch is fixed.** All work lands on `docs/GH-90/architecture-module-governance`. Do not branch or switch.
 - **Appendix A is the content design; Appendix C is the repo-analysis column spec.** The plan embeds those sketches verbatim as the target content so `@coder` has concrete, unambiguous targets.
-- **Test plan is not yet authored** (`chg-GH-90-test-plan.md` does not exist at plan-write time). This plan traces to spec ACs directly; once the test plan exists, its TC IDs map onto these ACs 1:1.
+- **Test plan is authored** (`chg-GH-90-test-plan.md` exists — 12 TCs, all 10 ACs traced). Its TC IDs map 1:1 onto the spec ACs; the traceability is reflected in the Definition of Done table and the Test Scenarios table.
 
 ### Risks
 
@@ -113,53 +114,62 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 
 - [ ] **1.1** In `doc/templates/architecture-overview-template.md`, insert one new `## Module governance` H2 section **between the end of the `## Components` table (currently the second `| <component name> | <container> | <what it does> |` row) and the `## Data flow` heading** (i.e., between current lines 36 and 37). Do **not** alter the `## Components` heading, its `_…_` intro line, its table header (`| Component | Container | Responsibility |`), or its rows; do **not** alter `## Data flow`. The block is a pure insertion.
 - [ ] **1.2** Under `## Module governance`, write the section intro line (italic, matching the template's existing `_…_` convention): a one-liner stating these are the rules that govern the modules above (placement, dependencies, boundaries) so an AI delivery team can decide where new code belongs and what to mock, and that any subsection may be omitted if trivial for a small repo (RSK-1 mitigation).
-- [ ] **1.3** **F-1 — `### Module-residence rules`:** an italic one-line purpose, then the capability-type → owning-module/path-pattern table, then the one-line rule. Target content (spec Appendix A.1, verbatim example rows):
+- [ ] **1.3** **F-1 — `### Module-residence rules`:** an italic one-line purpose, then the **component-scoped** capability-type → owning-module/path-pattern table, then the one-line rule linking residence to the Components table. Target content (spec Appendix A.1, example rows — component-scoped per R1/F-2):
 
   ```markdown
   ### Module-residence rules
   _Where each capability type of code should live (resolve capability-type → owning module/path, instead of guessing)._
+  <!-- Example rows — replace with your project's modules/components. Keep one <...> placeholder row as a model. -->
   | Capability type | Owning module / path pattern | Notes |
   |---|---|---|
-  | new API endpoint | `src/api/` | HTTP entrypoints |
-  | new domain rule | `src/domain/<context>/` | business logic |
-  | new CLI command | `src/cli/commands/` | user-invoked |
-  Rule: place new code by capability type, not by guess; if a capability type is unlisted, add a row before placing the code.
+  | new API endpoint | `src/<component>/api/` | HTTP entrypoints |
+  | new domain rule | `src/<component>/domain/<context>/` | business logic |
+  | new CLI command | `src/<component>/cli/commands/` | user-invoked |
+  | <capability type> | `src/<component>/<…>` | <notes> |
+  Rule: place new code by capability type, not by guess; if a capability type is unlisted, add a row before placing the code. Residence rules are scoped per component named in the Components table above. (Single-component repo: omit the `<component>/` segment — e.g. `src/api/`.)
   ```
 
-- [ ] **1.4** **F-2 — `### Dependency-direction / layering matrix`:** an italic one-line purpose, the "example — adapt to your architecture" note (DEC-4 / RSK-5), the tier list, the allowed/forbidden matrix, the invariant, and the concrete example. Target content (spec Appendix A.2, verbatim):
+- [ ] **1.4** **F-2 — `### Dependency-direction / layering matrix`:** an italic one-line purpose, the "example — adapt to your architecture" note (DEC-4 / RSK-5), the tier list, the **matrix-authoritative invariant**, the allowed/forbidden matrix, and the concrete example. Target content (spec Appendix A.2, R1/F-4 invariant phrasing + clean cells):
 
   ```markdown
   ### Dependency-direction / layering matrix
   _Which modules may depend on which. Example tiers — adapt to your architecture._
   Tiers (example): presentation → application → domain → infrastructure.
+  Invariant: no dependency may point upward or sideways across tiers; the matrix below specifies which downward dependencies are permitted.
+  <!-- Example rows — replace with your project's modules/components. Keep one <...> placeholder row as a model. -->
   | From \ To | presentation | application | domain | infrastructure |
   |---|---|---|---|---|
   | presentation | — | ✓ | ✗ | ✗ |
-  | application | ✗ | — | ✓ | ✓ (via ports) |
-  | domain | ✗ | ✗ | — | ✗ (abstractions only) |
+  | application | ✗ | — | ✓ | ✓ |
+  | domain | ✗ | ✗ | — | ✗ |
   | infrastructure | ✗ | ✗ | ✗ | — |
-  Invariant: dependencies point DOWN the tier list; no upward or sideways cycles. Example: "API layer may import domain layer; domain layer may NOT import API layer."
+  | <your tier> | <…> | <…> | <…> | <…> |
+  Example: "API layer may import domain layer; domain layer may NOT import API layer."
   ```
 
-- [ ] **1.5** **F-3 — `### Internal interface contracts`:** an italic one-line purpose, the named-boundary contract table, and the scope note. Target content (spec Appendix A.3, verbatim):
+- [ ] **1.5** **F-3 — `### Internal interface contracts`:** an italic one-line purpose, the named-boundary contract table, and the scope note. Target content (spec Appendix A.3, with replace-me marking per R1/F-3):
 
   ```markdown
   ### Internal interface contracts
   _Lightweight contracts for what crosses each module boundary (signature + return/error shape — not a versioned registry)._
+  <!-- Example rows — replace with your project's modules/components. Keep one <...> placeholder row as a model. -->
   | Boundary (A → B) | Operation | Signature | Returns | Errors |
   |---|---|---|---|---|
   | cart → inventory | checkAvailability | `checkAvailability(sku, qty)` | `AvailabilityResult{ available: bool, onHand: int }` | `ItemNotFound` |
+  | <A → B> | <operation> | `<signature>` | <returns> | <errors> |
   Scope: signature + return/error shape only.
   ```
 
-- [ ] **1.6** **F-4 — `### Feature → component ownership map (OPTIONAL)`:** an italic one-line purpose that clearly marks it OPTIONAL/conditional (DEC-3) and instructs omission for small repos where the Components table suffices, then the feature → owning-component(s) table. Target content (spec Appendix A.4, verbatim):
+- [ ] **1.6** **F-4 — `### Feature → component ownership map (OPTIONAL)`:** an italic one-line purpose that clearly marks it OPTIONAL/conditional (DEC-3) and instructs omission for small repos where the Components table suffices, then the feature → owning-component(s) table. Target content (spec Appendix A.4, with replace-me marking per R1/F-3):
 
   ```markdown
   ### Feature → component ownership map (OPTIONAL)
   _One-hop lookup from a feature to its owning component(s). Omit for small repos where the Components table above suffices._
+  <!-- Example rows — replace with your project's modules/components. Keep one <...> placeholder row as a model. -->
   | Feature | Owning component(s) |
   |---|---|
   | Checkout | cart, inventory, pricing |
+  | <feature> | <component(s)> |
   ```
 
 - [ ] **1.7** **F-5 — `### Module-boundary heuristics`:** an italic one-line purpose, then the cohesion/coupling trigger bullets. The `> N responsibilities` trigger MUST use the `<N>` placeholder with an example value in parentheses (OQ-1 resolution). Target content (spec Appendix A.5, verbatim):
@@ -208,9 +218,10 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
   |---|---|---|---|---|
   | <module path> | <what it owns> | <residence rule / path pattern> | <presentation / application / domain / infrastructure / n-a> | <boundary→boundary operation, or n-a> |
   | <module path> | <what it owns> | <residence hint> | <layering tier> | <contract pointer> |
+  These columns correspond to the Module governance section of the architecture overview (residence rules / layering matrix / interface contracts); populate the same concepts during legacy reconstruction.
   ```
 
-  The new column labels MUST match the architecture-overview governance dimensions word-for-word (RSK-3 drift mitigation): `Residence hint` ↔ F-1 residence; `Layering tier` ↔ F-2 tiers; `Interface-contract pointer` ↔ F-3 contracts.
+  The new column labels map concept-for-concept to the architecture-overview Module governance section (RSK-3 drift mitigation): `Residence hint` ↔ F-1 residence; `Layering tier` ↔ F-2 tiers; `Interface-contract pointer` ↔ F-3 contracts.
 
 - [ ] **2.2** (Optional consistency) If the `## Module / component map` italic intro line exists, leave it as-is; do not add prose. If helpful, append a short clause to the existing intro noting the three new columns mirror the architecture-overview governance fields and are populated at the template's existing confidence discipline. Keep it to one clause; do not restructure the section.
 - [ ] **2.3** Update the template frontmatter `last_updated:` from `2026-06-26` to `2026-06-29` (the only frontmatter change). Do **not** touch the license header lines (1–4), the `ados_distribution: redistributable` line, `id: REPO-ANALYSIS`, or any other frontmatter key.
@@ -218,7 +229,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 **Acceptance Criteria**:
 
 - Must: AC-F6-1 (the module/component map columns align with the architecture-overview governance dimensions — adds a residence hint, a layering tier, and an interface-contract pointer — while preserving the existing `Module | Responsibility` columns); AC-NFR4-1 (the existing columns are not removed or renamed).
-- Should: the three new column headers are byte-identical in meaning/wording to the architecture-overview governance labels so the two templates share one field vocabulary.
+- Should: the three new column headers map concept-for-concept to the architecture-overview Module governance dimensions (residence rules / layering matrix / interface contracts) — same concepts, not a word-for-word header mirror; the cross-reference note records the correspondence so the two templates share one governance vocabulary.
 
 **Files and modules**:
 
@@ -279,7 +290,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 
 **Tasks**:
 
-- [ ] **4.1** In `doc/templates/README.md` (line 62), the architecture-overview one-liner currently omits governance. Update it to mention module governance. Replace exactly:
+- [ ] **4.1** In `doc/templates/README.md` (line 62), update the architecture-overview one-liner **if** it currently omits module governance (it does — confirmed at plan time → update), so the catalog entry mirrors the template's enriched scope and readers discover the governance content. Replace exactly:
 
   ```text
   | `architecture-overview-template.md` | High-level architecture (C4 context/container, component map, key flows) |
@@ -359,7 +370,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
   ```
 
   Assert: no `-`-prefixed line removes or renames a pre-existing section header or column. In particular confirm **intact**: `## System context (C4 L1)`, `## Container diagram (C4 L2)`, `## Components`, `## Data flow`, `## External dependencies and integrations`, `## Deployment topology`, `## Key architectural decisions`, `## Known constraints and uncertainty flags` (architecture-overview); `## Module / component map` and the `| Module | Responsibility |` columns (repo-analysis); the Phase 3 heading and its 9 activities (inception guide). The only permitted `-` lines are the single replaced one-liners in Phase 1 (`last_updated` value), Phase 2 (`last_updated` value + the table-header/row line that gains columns), Phase 3 (activity 4 line), and Phase 4 (README line 62) — each of which is an in-place replacement that preserves the prior content's intent.
-- [ ] **6.2** Run the **Definition of Done — AC cross-check** (table below) and mark all 10 ACs satisfied. Once `chg-GH-90-test-plan.md` exists, map its TC IDs onto these ACs 1:1; until then, this table is the traceability record.
+- [ ] **6.2** Run the **Definition of Done — AC cross-check** (table below) and mark all 10 ACs satisfied. The test plan (`chg-GH-90-test-plan.md`) already exists; its TC IDs map 1:1 onto these ACs and are recorded in the table's "Test plan TCs" column (traceability is live, not pending).
 - [ ] **6.3** Red-team **R1 (pre-delivery)** is the user-chosen validation gate for the AI-actionability quality bar (per spec §18 / pm-notes). If R1 is run before delivery, incorporate its findings here or in a remediation phase; if it surfaces a genuine architecture decision, escalate to `@decision-advisor` (DEC-1 escape hatch). Red-team **R2 (post-delivery)** verifies the shipped templates.
 - [ ] **6.4** Version bump per repo conventions: docs-only — no package/semver bump. The template `last_updated` dates were bumped in Phases 1 and 2 (the version signal for templates). No further version action.
 - [ ] **6.5** Spec reconciliation hand-off: the template feature spec (`doc/spec/features/feature-document-templates.md`) Core Components table is a pre-existing inventory gap, explicitly **out of scope** for this change. `@doc-syncer` (system_spec_update phase) decides whether to enumerate architecture-overview/repo-analysis governance there — likely no change, since this change is template *content*, not template identity/purpose/agent-consumer. Record this hand-off; do not edit the feature spec here.
@@ -383,7 +394,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 
 ## Test Scenarios
 
-> The test plan (`chg-GH-90-test-plan.md`) is not yet authored at plan-write time. Scenarios below trace to spec ACs directly; once TCs exist they map 1:1 onto these ACs. Structural probes are runnable with `grep`/`git diff`; the AI-actionability and OPTIONAL/conditional judgments are manual (human + red-team R1/R2).
+> The test plan (`chg-GH-90-test-plan.md`) is authored — 12 TCs tracing all 10 spec ACs. The scenarios below map 1:1 onto those ACs (and TCs); the authoritative AC↔TC matrix lives in the Definition of Done table below. Structural probes are runnable with `grep`/`git diff`; the AI-actionability and OPTIONAL/conditional judgments are manual (human + red-team R1/R2).
 
 | ID | Scenario | Phases | AC | Method |
 |----|----------|--------|----|--------|
@@ -400,18 +411,18 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 
 ## Definition of Done — AC cross-check
 
-| AC ID | Description (canonical, from spec §17) | Delivered in | Status |
-|-------|----------------------------------------|--------------|--------|
-| AC-F1-1 | Module-residence rules: capability-type → owning-module/path table + one-line rule + concrete example | Phase 1 (1.3) | ☐ |
-| AC-F2-1 | Dependency-direction/layering: allowed/forbidden matrix + downward-only no-cycles invariant + concrete example | Phase 1 (1.4) | ☐ |
-| AC-F3-1 | Internal interface contracts: boundary + signature + return/error shape + concrete example | Phase 1 (1.5) | ☐ |
-| AC-F4-1 | OPTIONAL/conditional feature→component ownership map, clearly marked | Phase 1 (1.6) | ☐ |
-| AC-F5-1 | Module-boundary heuristics: concrete split/merge triggers | Phase 1 (1.7) | ☐ |
-| AC-F6-1 | repo-analysis module map aligns governance dimensions; preserves `Module \| Responsibility` | Phase 2 (2.1) | ☐ |
-| AC-F7-1 | project-inception Phase 3 references governance sections; no phase rewrite | Phase 3 (3.1) | ☐ |
-| AC-NFR1-1 | 5/5 governance subsections each carry ≥1 concrete AI-actionable example | Phase 1 (1.3–1.7) | ☐ |
-| AC-NFR3-1 | `bash scripts/.tests/test-doc-distribution.sh` exits 0; both templates keep marker + header | Phase 5 (5.1) | ☐ |
-| AC-NFR4-1 | Purely additive — no pre-existing header/column removed or renamed | Phase 2 + Phase 6 (6.1) | ☐ |
+| AC ID | Description (canonical, from spec §17) | Delivered in | Test plan TCs | Status |
+|-------|----------------------------------------|--------------|---------------|--------|
+| AC-F1-1 | Module-residence rules: capability-type → owning-module/path table + one-line rule + concrete example | Phase 1 (1.3) | TC-GOV-001, TC-GOV-006, TC-AIACT-001 | ☐ |
+| AC-F2-1 | Dependency-direction/layering: allowed/forbidden matrix + downward-only no-cycles invariant + concrete example | Phase 1 (1.4) | TC-GOV-002, TC-GOV-006, TC-AIACT-001 | ☐ |
+| AC-F3-1 | Internal interface contracts: boundary + signature + return/error shape + concrete example | Phase 1 (1.5) | TC-GOV-003, TC-GOV-006, TC-AIACT-001 | ☐ |
+| AC-F4-1 | OPTIONAL/conditional feature→component ownership map, clearly marked | Phase 1 (1.6) | TC-GOV-004, TC-GOV-006, TC-AIACT-001 | ☐ |
+| AC-F5-1 | Module-boundary heuristics: concrete split/merge triggers | Phase 1 (1.7) | TC-GOV-005, TC-GOV-006, TC-AIACT-001 | ☐ |
+| AC-F6-1 | repo-analysis module map aligns governance dimensions; preserves `Module \| Responsibility` | Phase 2 (2.1) | TC-ALGN-001, TC-COMPAT-001 | ☐ |
+| AC-F7-1 | project-inception Phase 3 references governance sections; no phase rewrite | Phase 3 (3.1) | TC-INC-001 | ☐ |
+| AC-NFR1-1 | 5/5 governance subsections each carry ≥1 concrete AI-actionable example | Phase 1 (1.3–1.7) | TC-AIACT-001 (+ TC-GOV-001..005) | ☐ |
+| AC-NFR3-1 | `bash scripts/.tests/test-doc-distribution.sh` exits 0; both templates keep marker + header | Phase 5 (5.1) | TC-DIST-001 | ☐ |
+| AC-NFR4-1 | Purely additive — no pre-existing header/column removed or renamed | Phase 2 + Phase 6 (6.1) | TC-COMPAT-001 (+ TC-ALGN-001) | ☐ |
 
 **Coverage: 10 / 10 ACs fully traced.** No orphan AC, no orphan phase.
 
@@ -422,7 +433,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 | Change specification | `./chg-GH-90-spec.md` | Spec (authoritative) |
 | Implementation plan | `./chg-GH-90-plan.md` | Plan (this file) |
 | PM notes | `./chg-GH-90-pm-notes.yaml` | Orchestration notes |
-| Test plan | `./chg-GH-90-test-plan.md` | Test plan (pending — to be authored) |
+| Test plan | `./chg-GH-90-test-plan.md` | Test plan (authored — 12 TCs, all 10 ACs traced) |
 | Parent epic | GitHub `#73` (ADOS project inception effectiveness) | Epic |
 | Sibling / dependency | GH-69 (inception catalog/templates — delivered, created both templates) | Dependency |
 | Sibling / dependency | GH-71 (bootstrapper unified workflow — delivered, Phase 3 consumers in place) | Dependency |
@@ -438,6 +449,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-06-29 | `@plan-writer` | Initial plan. Six phases; 10/10 ACs traced. PM-locked decisions baked in: consolidated `## Module governance` block after `## Components` / before `## Data flow` (OQ-2); `<N>` split-threshold placeholder with example value (OQ-1); ownership map OPTIONAL; tiered layering is the default example with an adapt note; no formal ADR (DEC-1). Appendix A/C content embedded verbatim as target content. |
+| 1.1 | 2026-06-29 | `@plan-writer` | R1 remediation (PM-decided, surgical). F-1 (Major): Phase 2 alignment wording "word-for-word" → concept-for-concept; cross-reference note added to the repo-analysis fenced target. F-2 (Major): Phase 1 residence rows → component-scoped (`src/<component>/…`) + one-line rule linking residence to the Components table + single-component simplification note (omit `<component>/` → `src/api/`). F-3 (Major): replace-me HTML comment + ≥1 `<...>` placeholder row added to all four governance tables (residence, layering matrix, contracts, ownership map). F-4 (Minor): layering invariant rephrased (matrix authoritative; no upward/sideways deps), moved above the matrix; DIP cells cleaned (no bare "via ports"/"abstractions only"). F-6 (Minor): removed every stale "test plan pending / does-not-exist" annotation; DoD table gains a "Test plan TCs" column (TC-GOV-001..006, TC-ALGN-001, TC-INC-001, TC-AIACT-001, TC-DIST-001, TC-COMPAT-001) mapping 1:1 to the 10 ACs; frontmatter `change_test_plan` link added. F-7 (Minor): Phase 4 README one-liner reconciled to the spec's conditional framing with a one-line rationale. All six phases, completion signals, the gate command (`bash scripts/.tests/test-doc-distribution.sh`, exit 0), and the additive-diff self-check (Phase 6) preserved; AC coverage still 10/10. OQ-1/OQ-2 remain LOCKED. |
 
 ## Execution Log
 

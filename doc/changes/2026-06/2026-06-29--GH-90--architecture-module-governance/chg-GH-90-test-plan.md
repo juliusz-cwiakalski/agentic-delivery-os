@@ -1,7 +1,7 @@
 ---
 ados_distribution: project-generated
 id: chg-GH-90-test-plan
-status: Proposed
+status: Updated
 created: 2026-06-29
 last_updated: 2026-06-29
 owners: ["Juliusz Ćwiąkalski"]
@@ -11,7 +11,7 @@ version_impact: minor
 summary: "Template + guide change: turn the architecture overview from inventory into module governance (residence, layering, contracts, ownership, heuristics) and align the repo-analysis module map — verified by structural/content inspection + the doc-distribution gate."
 links:
   change_spec: ./chg-GH-90-spec.md
-  implementation_plan: ./chg-GH-90-plan.md   # pending — not yet authored at test-plan creation
+  implementation_plan: ./chg-GH-90-plan.md
   testing_strategy: .ai/rules/testing-strategy.md
 ---
 
@@ -41,7 +41,7 @@ The verification approach is dictated by the repo testing strategy (`.ai/rules/t
 ## 2. References
 
 - Change spec: `./chg-GH-90-spec.md` (authoritative AC source: AC-F1-1 … AC-F7-1, AC-NFR1-1, AC-NFR3-1, AC-NFR4-1).
-- Implementation plan: `./chg-GH-90-plan.md` (pending).
+- Implementation plan: `./chg-GH-90-plan.md`.
 - Testing strategy: `.ai/rules/testing-strategy.md` (docs/templates → static/diff + content checks + manual verification).
 - Templates under change: `doc/templates/architecture-overview-template.md`, `doc/templates/repo-analysis-template.md`.
 - Guide under change: `doc/guides/project-inception.md` (Phase 3, "Tech stack & architecture").
@@ -56,7 +56,7 @@ The verification approach is dictated by the repo testing strategy (`.ai/rules/t
 
 | AC ID | Description (short) | TC ID(s) | Status |
 |-------|---------------------|----------|--------|
-| AC-F1-1 | Module-residence rules table + rule + concrete example | TC-GOV-001, TC-GOV-006, TC-AIACT-001 | Covered |
+| AC-F1-1 | Module-residence rules table + rule + concrete example (component-scoped, linked to Components table) | TC-GOV-001, TC-GOV-006, TC-AIACT-001 | Covered |
 | AC-F2-1 | Dependency-direction/layering matrix + downward-no-cycles invariant + example | TC-GOV-002, TC-GOV-006, TC-AIACT-001 | Covered |
 | AC-F3-1 | Lightweight internal interface contracts (boundary+signature+return/error) + example | TC-GOV-003, TC-GOV-006, TC-AIACT-001 | Covered |
 | AC-F4-1 | OPTIONAL feature→component ownership map, marked optional | TC-GOV-004, TC-GOV-006, TC-AIACT-001 | Covered |
@@ -148,11 +148,12 @@ Per `.ai/rules/testing-strategy.md`, `doc/**` and `doc/templates/**` changes are
 2. Locate the module-residence rules subsection within the consolidated Module governance block.
 3. Confirm a table with columns `Capability type` | `Owning module / path pattern` (and optional `Notes`) exists.
 4. Confirm a one-line placement rule is present.
-5. Confirm ≥1 concrete example row resolves a capability type to a path (e.g. "new API endpoint → `src/api/`").
+5. Confirm ≥1 concrete example row resolves a capability type to a path (e.g. "new API endpoint → `src/<component>/api/`").
+6. Confirm the residence section is **component-scoped**: the example path pattern includes a `<component>` segment (e.g. `src/<component>/api/`) OR explicitly notes the single-component simplification (omits the segment → `src/api/`), AND the residence rows are **linked to the `## Components` table above** (each residence resolves to a named component in that table).
 
 **Expected Outcome**:
 
-- **Given** the architecture-overview template, **when** a reader looks for module-residence rules, **then** a capability-type → owning-module/path-pattern table + one-line rule + concrete example all exist and are machine-readable.
+- **Given** the architecture-overview template, **when** a reader looks for module-residence rules, **then** a component-scoped capability-type → owning-module/path-pattern table + one-line rule + concrete example all exist and are machine-readable, with residence tied back to the Components table.
 - The example is concrete enough to drive a placement decision (not vague prose).
 
 **Notes / Clarifications**:
@@ -323,7 +324,7 @@ Per `.ai/rules/testing-strategy.md`, `doc/**` and `doc/templates/**` changes are
 1. Open `repo-analysis-template.md`; locate the `## Module / component map` section.
 2. Confirm the original `Module` and `Responsibility` columns are still present and first.
 3. Confirm three governance columns are appended: a **Residence hint**, a **Layering tier**, and an **Interface-contract pointer**.
-4. Confirm the new column names mirror the architecture-overview governance field names (DM-1/2/3 ↔ DM-6 — prevents drift, RSK-3).
+4. Confirm the new columns map **concept-for-concept** to the architecture-overview Module governance section (residence / layering / contracts) — NOT word-for-word column-name mirroring — AND a cross-reference note links the two templates (DM-1/2/3 ↔ DM-6 — prevents drift, RSK-3).
 5. Confirm the existing confidence discipline of the template still applies (low-confidence governance inferences flagged for human confirmation).
 
 **Expected Outcome**:
@@ -378,6 +379,7 @@ Per `.ai/rules/testing-strategy.md`, `doc/**` and `doc/templates/**` changes are
 2. For each subsection, confirm ≥1 concrete placeholder example usable as a placement or mock/stub decision is present (not vague prose).
 3. Tally the count; assert 5/5.
 4. (Red-team R1) have a reviewer role-play `@coder`/`@spec-writer`: can each example alone drive a placement or mock decision?
+5. For **each governance example table**, confirm it carries the replace-me HTML comment `<!-- Example rows — replace with your project's modules/components. Keep one <...> placeholder row as a model. -->` AND retains ≥1 `<...>` placeholder row as a model — so example content is clearly marked as scaffolding to replace, not shipped-literal (replace-me marking).
 
 **Expected Outcome**:
 
@@ -413,7 +415,7 @@ Per `.ai/rules/testing-strategy.md`, `doc/**` and `doc/templates/**` changes are
 **Expected Outcome**:
 
 - Exit code **0**.
-- Stdout/stderr includes `(guard-doc-distribution)[OK]   no drift … install set matches ados_distribution markers`.
+- Stdout/stderr includes the success line: `(guard-doc-distribution)[OK] no drift — <N> in-scope docs; install set matches ados_distribution markers` (note the em-dash and the in-scope doc count `<N>`, e.g. `76` at baseline).
 - The gate's modes 1 & 2 confirm both templates carry a valid `ados_distribution: redistributable` marker (and the license-header block remains per the redistributable contract).
 
 **Notes / Clarifications**:
@@ -444,6 +446,7 @@ Per `.ai/rules/testing-strategy.md`, `doc/**` and `doc/templates/**` changes are
 3. In the architecture-overview diff, confirm every pre-existing `## ` section header (System context, Container diagram, Components, Data flow, External dependencies, Deployment topology, Key architectural decisions, Known constraints) is still present — only **new** headers (`## Module governance` + its subsections) are additions.
 4. In the repo-analysis diff, confirm the module-map header row still contains the `Module` and `Responsibility` columns (new columns appended to the right; none removed or renamed).
 5. Confirm no pre-existing row/cell was deleted or had its column renamed.
+6. In the `project-inception.md` diff, confirm the Phase 3 heading (`### Phase 3 — Tech stack & architecture`) is intact and the change is a **minimal reference amendment** (governance pointers added inline), not a rewrite — the Phase 3 activities / anti-sycophancy technique / human gate / outputs structure is preserved (additive-only).
 
 **Expected Outcome**:
 
@@ -536,6 +539,7 @@ Per `.ai/rules/testing-strategy.md`, `doc/**` and `doc/templates/**` changes are
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-06-29 | `@test-plan-writer` | Initial test plan — 12 scenarios tracing all 10 spec ACs (AC-F1-1…AC-F7-1, AC-NFR1-1, AC-NFR3-1, AC-NFR4-1); 9 manual-inspection + 1 automated-script + 1 backward-compat-diff + 1 advisory. |
+| 1.1 | 2026-06-29 | `@test-plan-writer` | Targeted R1 remediation (PM-decided). F-1: TC-ALGN-001 step 4 → concept-for-concept mapping + cross-reference note. F-2: TC-GOV-001 + AC-F1-1 → component-scoped residence + Components-table linkage. F-3: TC-AIACT-001 → replace-me HTML comment + `<...>` placeholder row per governance table. F-6: removed stale "plan pending" annotations (plan now exists). F-10: TC-DIST-001 → exact gate stdout format. F-11: TC-COMPAT-001 → Phase 3 structural-preservation step. All 12 TC IDs and the traceability matrix preserved; no new tests. |
 
 ## 10. Test Execution Log
 
