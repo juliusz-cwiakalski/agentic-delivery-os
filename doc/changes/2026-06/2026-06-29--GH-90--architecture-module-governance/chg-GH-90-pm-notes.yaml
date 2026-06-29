@@ -14,7 +14,7 @@ phases:
   review_fix: { started: 2026-06-29, completed: 2026-06-29 }
   quality_gates: { started: 2026-06-29, completed: 2026-06-29 }
   dod_check: { started: 2026-06-29, completed: 2026-06-29 }
-  pr_creation: { started: 2026-06-29, completed: null, url: null }
+  pr_creation: { started: 2026-06-29, completed: 2026-06-29, url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/94" }
 
 decisions:
   - { text: "DEC (PM): NOT invoking @decision-advisor for a formal ADR/PDR — layering matrix is example scaffolding for project fills, not precedent-setting ADOS decision. Design rationale captured in-spec (spec Appendix B).", date: 2026-06-29 }
@@ -66,6 +66,9 @@ notes:
     date: 2026-06-29
   - text: "PM disposition of R2 findings: APPLIED R2-1 (API-layer disambiguation — appended clarifying clause AFTER the spec-quoted example so AC-F2-1 verbatim quote is preserved, no spec divergence; commit 11466f8) + R2-4 (matrix header 'From \\ To' → 'From → To' rendering fix; same commit). DEFERRED the rest as PR-time suggestions for the human: R2-2 (doc/overview/README.md L23 — cosmetic, separate file); R2-3 (structural residence Component column — needs spec amendment → future change, not this PR); R2-5..8 (nits/observation). Rationale: change is merge-ready; only the genuine shipped-content wrinkles got inline fixes; the human decides the rest at PR review."
     type: decision
+    date: 2026-06-29
+  - text: "DoD check (phase 10): PASS. All phases 1-9 completed; 23/23 plan tasks checked; 10/10 ACs satisfied (reviewer PASS + R2 ship-with-findings); gate green; diff purely additive confined to doc/{changes,guides,templates}; no forbidden paths (.opencode/.ados-claude/scripts/tools/.ai-local). pr_creation (phase 11): PR #94 created, issue #90 labeled review + assigned to human + comment with PR link and 3 optional follow-ups. STOP for human review/merge."
+    type: info
     date: 2026-06-29
   - text: "Intake: deliver GH-90 ([inception:6] architecture module governance). Part of inception-focus-2026-06-29 planning session (Wave 1 candidate, parallel-safe with GH-33). User explicitly kicked off single-ticket delivery of GH-90. TEMPLATE+GUIDE change — no .opencode/agent/ edits, so @toolsmith rule does NOT apply; @coder can edit templates/guide directly. Two @red-team-coordinator rounds requested (R1 pre-delivery on artifacts, R2 post-delivery). Branch docs/GH-90/architecture-module-governance off main 816c27e."
     type: info
