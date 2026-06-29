@@ -35,17 +35,15 @@ flowchart LR
     style MTG fill:#9C27B0,color:#fff
 ```
 
-**Legend**: green = entry points · blue = steady-state / embedded · purple = cross-cutting supporters · dashed = on-demand / evidence-feed. One-click to each guide:
+**Legend**: green = entry points · blue = steady-state / embedded · purple = cross-cutting supporters · dashed = on-demand. (GitHub renders Mermaid without clickable nodes — click a process name below to open its guide.)
 
-| Process | Guide |
-|---------|-------|
-| Project Inception | [project-inception.md](doc/guides/project-inception.md) |
-| Project Onboarding | [onboarding-existing-project.md](doc/guides/onboarding-existing-project.md) |
-| Change Delivery | [change-lifecycle.md](doc/guides/change-lifecycle.md) |
-| Meeting Management | [meeting-preparation-and-summarization.md](doc/guides/meeting-preparation-and-summarization.md) |
-| Decision Making | [decision-making.md](doc/guides/decision-making.md) |
+- **[Project Inception](doc/guides/project-inception.md)** — build the full knowledge base (vision, architecture, domain) for a **new** project so agents can operate autonomously.
+- **[Project Onboarding](doc/guides/onboarding-existing-project.md)** — adopt ADOS into an **existing** repo with the minimum viable setup.
+- **[Change Delivery](doc/guides/change-lifecycle.md)** — the day-to-day 11-phase loop turning a ticket into a reviewed, tested PR.
+- **[Decision Making](doc/guides/decision-making.md)** — calibrate decision rigor to risk (R0–R3); capture durable records.
+- **[Meeting Management](doc/guides/meeting-preparation-and-summarization.md)** — prepare, run, and document meetings with durable decisions and action items.
 
-> Documentation Reconciliation is phase 7 of Change Delivery — see the [process map](doc/guides/ados-processes.md) or [change-lifecycle.md](doc/guides/change-lifecycle.md).
+> Documentation Reconciliation (phase 7 of Change Delivery) keeps `doc/spec/**` the living current truth after every change — no separate guide.
 
 This repo is a practical reference implementation of a spec-driven workflow using OpenCode (and supporting Claude Code):
 
@@ -65,8 +63,6 @@ This repo is a practical reference implementation of a spec-driven workflow usin
       * [For Claude Code users](#for-claude-code-users)
     * [Installation Modes](#installation-modes)
     * [Tool Selection (OpenCode only)](#tool-selection-opencode-only)
-  * [Benefits](#benefits)
-  * [Intention](#intention)
   * [Docs at a glance](#docs-at-a-glance)
   * [What is implemented here](#what-is-implemented-here)
   * [Multi-tool support](#multi-tool-support)
@@ -87,14 +83,16 @@ AI can generate code quickly, but most teams struggle to use it reliably at scal
 - Delivery still needs specs, acceptance criteria, test strategy, reviews, docs, release discipline
 - Tooling glue work persists between Jira/Git/CI/docs
 
-Agentic Delivery OS codifies a predictable pipeline where quality and traceability are non-negotiable.
+Agentic Delivery OS codifies a predictable pipeline where quality and traceability are non-negotiable — an AI-native delivery operating model that keeps humans accountable and ships faster without lowering quality.
 
 ## What this gives you
 
-- A team of 19 repo-local agents aligned to SDLC roles (PM, spec writer, planner, coder, reviewer, bootstrapper, and more).
-- A standard artifact set (spec, implementation plan, test plan) stored under `doc/changes/` using stable, tracker-linked names.
-- A versioned, human-readable system spec under `doc/spec/**` that acts as the baseline input for planning the next change (kept up to date via [`/sync-docs`](.opencode/command/sync-docs.md)).
+- A team of role-specialized agents aligned to SDLC roles (PM, spec writer, planner, coder, reviewer, bootstrapper, …).
+- A standard artifact set (spec, plan, test plan) stored under `doc/changes/` using stable, tracker-linked names.
+- A versioned, human-readable system spec under `doc/spec/**` — the baseline for planning the next change, kept current via [`/sync-docs`](.opencode/command/sync-docs.md).
 - Commands that compose those agents into repeatable workflows (manual or autopilot).
+- Gated quality: [/review](.opencode/command/review.md) iterates to PASS and [/check](.opencode/command/check.md) is green before a [/pr](.opencode/command/pr.md) reaches you.
+- Less noise: in autopilot, the tracker is the interface — [@pm](.opencode/agent/pm.md) pings you only for decisions, clarifications, and reviews.
 
 ## Installation
 
@@ -159,20 +157,6 @@ This loads ADOS directly from the local repo — useful for contributors testing
 
 > Full guide: [doc/guides/onboarding-existing-project.md](doc/guides/onboarding-existing-project.md)
 
-## Benefits
-
-- Less ambiguity: specs and test plans are explicit before code is written.
-- Predictable planning: next changes can start from the current system spec (`doc/spec/**`) instead of rebuilding context from chat history.
-- Higher trust: [/review](.opencode/command/review.md) and [/check](.opencode/command/check.md) run against artifacts, not vibes.
-- Quality is non-negotiable: [/review](.opencode/command/review.md) iterates until PASS and [/check](.opencode/command/check.md) is green before you get a PR/MR (via [/pr](.opencode/command/pr.md)) to look at.
-- Faster iteration: agents can find the right context deterministically (stable paths, no global indexes).
-- Better auditability: tickets link to change folders, branches, PR descriptions, and logs.
-- Less noise: in autopilot mode, the tracker is the interface; the [@pm](.opencode/agent/pm.md) agent pings you only when decisions/clarifications/reviews are needed.
-
-## Intention
-
-This project exists to evolve and validate an AI-native delivery operating model on real work: reduce "prompt roulette", keep humans accountable, and make shipping faster without lowering quality.
-
 ## Docs at a glance
 
 - AI agent & contributor quick-reference: [AGENTS.md](AGENTS.md)
@@ -186,12 +170,7 @@ This project exists to evolve and validate an AI-native delivery operating model
 
 ## What is implemented here
 
-OpenCode tooling (see [.opencode/README.md](.opencode/README.md) for the authoritative list):
-
-- **20 agents** for SDLC roles:
-  - [@pm](.opencode/agent/pm.md), [@coder](.opencode/agent/coder.md), [@spec-writer](.opencode/agent/spec-writer.md), [@plan-writer](.opencode/agent/plan-writer.md), [@test-plan-writer](.opencode/agent/test-plan-writer.md), [@reviewer](.opencode/agent/reviewer.md), [@doc-syncer](.opencode/agent/doc-syncer.md), [@pr-manager](.opencode/agent/pr-manager.md), [@runner](.opencode/agent/runner.md), [@fixer](.opencode/agent/fixer.md), [@committer](.opencode/agent/committer.md), [@decision-advisor](.opencode/agent/decision-advisor.md), [@decision-critic](.opencode/agent/decision-critic.md), [@editor](.opencode/agent/editor.md), [@designer](.opencode/agent/designer.md), [@image-generator](.opencode/agent/image-generator.md), [@image-reviewer](.opencode/agent/image-reviewer.md), [@bootstrapper](.opencode/agent/bootstrapper.md), [@external-researcher](.opencode/agent/external-researcher.md), [@toolsmith](.opencode/agent/toolsmith.md).
-- **17 commands** that compose them into a repeatable workflow:
-  - [/plan-change](.opencode/command/plan-change.md), [/write-spec](.opencode/command/write-spec.md), [/write-plan](.opencode/command/write-plan.md), [/write-test-plan](.opencode/command/write-test-plan.md), [/run-plan](.opencode/command/run-plan.md), [/review](.opencode/command/review.md), [/review-deep](.opencode/command/review-deep.md), [/sync-docs](.opencode/command/sync-docs.md), [/check](.opencode/command/check.md), [/check-fix](.opencode/command/check-fix.md), [/pr](.opencode/command/pr.md), [/commit](.opencode/command/commit.md), [/plan-decision](.opencode/command/plan-decision.md), [/write-decision](.opencode/command/write-decision.md), [/review-decision](.opencode/command/review-decision.md), [/bootstrap](.opencode/command/bootstrap.md), [/design](.opencode/command/design.md).
+A team of **role-specialized agents** (PM, spec-writer, plan-writer, test-plan-writer, coder, reviewer, readiness gate, doc-syncer, pr-manager, decision-advisor, bootstrapper, …) and the **commands** that compose them into the delivery workflow — autopilot or manual. See the authoritative inventory in [.opencode/README.md](.opencode/README.md) and the quick-reference in [AGENTS.md](AGENTS.md).
 
 ## Multi-tool support
 
@@ -289,8 +268,8 @@ Branches follow conventional-commit-aligned types:
 .
 ├── AGENTS.md             # delivery system bootstrap (start here)
 ├── .opencode/            # agent and command definitions (THE product)
-│   ├── agent/            # 19 agents (one .md each)
-│   └── command/          # 16 commands (one .md each)
+│   ├── agent/            # agents (one .md each)
+│   └── command/          # commands (one .md each)
 ├── .ai/
 │   ├── agent/            # PM tracker config (pm-instructions.md)
 │   ├── local/            # git-ignored ephemeral state

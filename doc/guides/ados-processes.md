@@ -54,6 +54,7 @@ flowchart LR
 - **Purple** nodes = cross-cutting supporters (invoked on demand from anywhere).
 - Solid arrows = primary flow (setup feeds delivery; delivery embeds reconciliation).
 - Dashed arrows = on-demand / evidence-feed relationships (consult decisions; meetings feed decisions).
+- Mermaid nodes aren't clickable on GitHub (sandboxed render) — each process's **card below** links to its detailed guide.
 
 ## Per-process cards
 
