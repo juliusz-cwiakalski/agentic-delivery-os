@@ -1,0 +1,48 @@
+change_id: GH-90
+title: "[inception:6] Architecture overview: module governance (residence, layering, contracts)"
+branch: docs/GH-90/architecture-module-governance
+change_folder: doc/changes/2026-06/2026-06-29--GH-90--architecture-module-governance
+
+phases:
+  clarify_scope: { started: 2026-06-29, completed: 2026-06-29 }
+  specification: { started: 2026-06-29, completed: 2026-06-29 }
+  test_planning: { started: 2026-06-29, completed: 2026-06-29 }
+  delivery_planning: { started: 2026-06-29, completed: 2026-06-29 }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+
+decisions:
+  - { text: "DEC (PM): NOT invoking @decision-advisor for a formal ADR/PDR — layering matrix is example scaffolding for project fills, not precedent-setting ADOS decision. Design rationale captured in-spec (spec Appendix B).", date: 2026-06-29 }
+  - { text: "DEC (PM): OQ-1 resolved — split-heuristic ships `<N>` placeholder with an example value in parentheses (project fills its own threshold).", date: 2026-06-29 }
+  - text: "DEC (PM): OQ-2 resolved — ONE consolidated `## Module governance` block placed after the Components table, with subsections for residence / layering / contracts / ownership-map(optional) / heuristics. Groups related governance; keeps template navigable; co-locates governance with the inventory it governs."
+    date: 2026-06-29
+open_questions: []
+blockers: []
+
+notes:
+  - text: "Spec authored (chg-GH-90-spec.md, 408 lines). 10 ACs map 1:1 to ticket's 4 ACs (AC1 split into F1-F5 + NFR1; AC2=F6; AC3=F7; AC4=NFR3+NFR4). 6 design decisions (DEC-1..6) recorded in-spec. Appendix B carries the layering-matrix design rationale the human asked for (structured reasoning without a separate ADR). Three canonical AI-actionable examples embedded verbatim (residence 'new API endpoint → src/api/', layering 'API may import domain; domain may NOT import API', contract 'cart→inventory checkAvailability(sku,qty)→AvailabilityResult'). Quality: high. Proceeding to test-plan + plan."
+    type: info
+    date: 2026-06-29
+  - text: "Test plan authored (chg-GH-90-test-plan.md, 545 lines). 12 TCs (9 manual-inspection, 1 automated gate TC-DIST-001, 1 backward-compat diff TC-COMPAT-001, 1 advisory TC-ADV-001 non-gating). All 10 ACs fully traced. Followed .ai/rules/testing-strategy.md (static/diff + content checks for doc/templates changes; no invented unit tests). TC-ADV-001 flagged as OQ-T1 (advisory only, traces to RSK-4 not an AC) for DoR confirmation."
+    type: info
+    date: 2026-06-29
+  - text: "Plan authored (chg-GH-90-plan.md, 453 lines). 6 phases: (1) consolidated Module governance block in architecture-overview-template, (2) repo-analysis column alignment, (3) Phase 3 minimal reference, (4) consistency sweep README L62 + handbook §17 (verify-only — handbook has no purpose-text column, confirmed no-op), (5) doc-distribution gate, (6) finalize/additive-diff self-check + DoD. 10/10 ACs traced. Appendix A/C content embedded verbatim as fenced targets. Plan-writer confirmed handbook §17/§18 is verify-only no-op (no purpose-text column to update)."
+    type: info
+    date: 2026-06-29
+  - text: "Intake: deliver GH-90 ([inception:6] architecture module governance). Part of inception-focus-2026-06-29 planning session (Wave 1 candidate, parallel-safe with GH-33). User explicitly kicked off single-ticket delivery of GH-90. TEMPLATE+GUIDE change — no .opencode/agent/ edits, so @toolsmith rule does NOT apply; @coder can edit templates/guide directly. Two @red-team-coordinator rounds requested (R1 pre-delivery on artifacts, R2 post-delivery). Branch docs/GH-90/architecture-module-governance off main 816c27e."
+    type: info
+    date: 2026-06-29
+  - text: "clarify_scope cross-check: ticket scope is complete and consistent with system spec. feature-document-templates.md (SPEC-DOCUMENT-TEMPLATES) treats templates generically (structure + graceful fallback); adding governance sections to architecture-overview-template does not conflict. The feature spec's Core Components table predates GH-69 inception templates (does not enumerate architecture-overview/repo-analysis) — that is a PRE-EXISTING inventory gap, not created by this change; doc-syncer will decide whether to touch the spec (likely no: change is template CONTENT, not template identity/purpose/agent-consumer). No blocking questions for human."
+    type: info
+    date: 2026-06-29
+  - text: "Decision: NOT invoking @decision-advisor for a formal ADR/PDR. The layering/dependency-direction matrix in the template is EXAMPLE SCAFFOLDING for project-specific inception fills, not a precedent-setting ADOS-wide architectural decision. Design rationale will be captured WITHIN the spec (governance section design + AI-actionability drivers). Red-team R1 (pre-delivery) is the user-chosen validation gate; if it surfaces a genuine architecture decision, escalate to @decision-advisor then."
+    type: decision
+    date: 2026-06-29
+  - text: "Consistency touch-points for the plan (NOT blockers, just completeness): (1) doc/templates/README.md line 62 one-liner for architecture-overview-template could mention 'module governance' to match enriched content; (2) doc/documentation-handbook.md §17 template index — may need one-line purpose update if it describes the template. Plan-writer should include a consistency-sweep task. Redistributable marker + license headers must remain; test-doc-distribution.sh must pass (templates installed wholesale but markers enforced)."
+    type: info
+    date: 2026-06-29
