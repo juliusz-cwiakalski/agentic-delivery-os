@@ -51,14 +51,14 @@ _Which modules may depend on which. Example tiers — adapt to your architecture
 Tiers (example): presentation → application → domain → infrastructure.
 Invariant: no dependency may point upward or sideways across tiers; the matrix below specifies which downward dependencies are permitted.
 <!-- Example rows — replace with your project's modules/components. Keep one <...> placeholder row as a model. -->
-| From \ To | presentation | application | domain | infrastructure |
+| From → To | presentation | application | domain | infrastructure |
 |---|---|---|---|---|
 | presentation | — | ✓ | ✗ | ✗ |
 | application | ✗ | — | ✓ | ✓ |
 | domain | ✗ | ✗ | — | ✗ |
 | infrastructure | ✗ | ✗ | ✗ | — |
 | <your tier> | <…> | <…> | <…> | <…> |
-Example: "API layer may import domain layer; domain layer may NOT import API layer."
+Example: "API layer may import domain layer; domain layer may NOT import API layer." (Here "API layer" maps to the application/edge tier; map your project's real layer names to the tiers above.)
 ### Internal interface contracts
 _Lightweight contracts for what crosses each module boundary (signature + return/error shape — not a versioned registry)._
 <!-- Example rows — replace with your project's modules/components. Keep one <...> placeholder row as a model. -->
