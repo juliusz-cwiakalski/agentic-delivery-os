@@ -112,9 +112,9 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 
 **Tasks**:
 
-- [ ] **1.1** In `doc/templates/architecture-overview-template.md`, insert one new `## Module governance` H2 section **between the end of the `## Components` table (currently the second `| <component name> | <container> | <what it does> |` row) and the `## Data flow` heading** (i.e., between current lines 36 and 37). Do **not** alter the `## Components` heading, its `_…_` intro line, its table header (`| Component | Container | Responsibility |`), or its rows; do **not** alter `## Data flow`. The block is a pure insertion.
-- [ ] **1.2** Under `## Module governance`, write the section intro line (italic, matching the template's existing `_…_` convention): a one-liner stating these are the rules that govern the modules above (placement, dependencies, boundaries) so an AI delivery team can decide where new code belongs and what to mock, and that any subsection may be omitted if trivial for a small repo (RSK-1 mitigation).
-- [ ] **1.3** **F-1 — `### Module-residence rules`:** an italic one-line purpose, then the **component-scoped** capability-type → owning-module/path-pattern table, then the one-line rule linking residence to the Components table. Target content (spec Appendix A.1, example rows — component-scoped per R1/F-2):
+- [x] **1.1** In `doc/templates/architecture-overview-template.md`, insert one new `## Module governance` H2 section **between the end of the `## Components` table (currently the second `| <component name> | <container> | <what it does> |` row) and the `## Data flow` heading** (i.e., between current lines 36 and 37). Do **not** alter the `## Components` heading, its `_…_` intro line, its table header (`| Component | Container | Responsibility |`), or its rows; do **not** alter `## Data flow`. The block is a pure insertion.
+- [x] **1.2** Under `## Module governance`, write the section intro line (italic, matching the template's existing `_…_` convention): a one-liner stating these are the rules that govern the modules above (placement, dependencies, boundaries) so an AI delivery team can decide where new code belongs and what to mock, and that any subsection may be omitted if trivial for a small repo (RSK-1 mitigation).
+- [x] **1.3** **F-1 — `### Module-residence rules`:** an italic one-line purpose, then the **component-scoped** capability-type → owning-module/path-pattern table, then the one-line rule linking residence to the Components table. Target content (spec Appendix A.1, example rows — component-scoped per R1/F-2):
 
   ```markdown
   ### Module-residence rules
@@ -129,7 +129,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
   Rule: place new code by capability type, not by guess; if a capability type is unlisted, add a row before placing the code. Residence rules are scoped per component named in the Components table above. (Single-component repo: omit the `<component>/` segment — e.g. `src/api/`.)
   ```
 
-- [ ] **1.4** **F-2 — `### Dependency-direction / layering matrix`:** an italic one-line purpose, the "example — adapt to your architecture" note (DEC-4 / RSK-5), the tier list, the **matrix-authoritative invariant**, the allowed/forbidden matrix, and the concrete example. Target content (spec Appendix A.2, R1/F-4 invariant phrasing + clean cells):
+- [x] **1.4** **F-2 — `### Dependency-direction / layering matrix`:** an italic one-line purpose, the "example — adapt to your architecture" note (DEC-4 / RSK-5), the tier list, the **matrix-authoritative invariant**, the allowed/forbidden matrix, and the concrete example. Target content (spec Appendix A.2, R1/F-4 invariant phrasing + clean cells):
 
   ```markdown
   ### Dependency-direction / layering matrix
@@ -147,7 +147,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
   Example: "API layer may import domain layer; domain layer may NOT import API layer."
   ```
 
-- [ ] **1.5** **F-3 — `### Internal interface contracts`:** an italic one-line purpose, the named-boundary contract table, and the scope note. Target content (spec Appendix A.3, with replace-me marking per R1/F-3):
+- [x] **1.5** **F-3 — `### Internal interface contracts`:** an italic one-line purpose, the named-boundary contract table, and the scope note. Target content (spec Appendix A.3, with replace-me marking per R1/F-3):
 
   ```markdown
   ### Internal interface contracts
@@ -160,7 +160,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
   Scope: signature + return/error shape only.
   ```
 
-- [ ] **1.6** **F-4 — `### Feature → component ownership map (OPTIONAL)`:** an italic one-line purpose that clearly marks it OPTIONAL/conditional (DEC-3) and instructs omission for small repos where the Components table suffices, then the feature → owning-component(s) table. Target content (spec Appendix A.4, with replace-me marking per R1/F-3):
+- [x] **1.6** **F-4 — `### Feature → component ownership map (OPTIONAL)`:** an italic one-line purpose that clearly marks it OPTIONAL/conditional (DEC-3) and instructs omission for small repos where the Components table suffices, then the feature → owning-component(s) table. Target content (spec Appendix A.4, with replace-me marking per R1/F-3):
 
   ```markdown
   ### Feature → component ownership map (OPTIONAL)
@@ -172,7 +172,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
   | <feature> | <component(s)> |
   ```
 
-- [ ] **1.7** **F-5 — `### Module-boundary heuristics`:** an italic one-line purpose, then the cohesion/coupling trigger bullets. The `> N responsibilities` trigger MUST use the `<N>` placeholder with an example value in parentheses (OQ-1 resolution). Target content (spec Appendix A.5, verbatim):
+- [x] **1.7** **F-5 — `### Module-boundary heuristics`:** an italic one-line purpose, then the cohesion/coupling trigger bullets. The `> N responsibilities` trigger MUST use the `<N>` placeholder with an example value in parentheses (OQ-1 resolution). Target content (spec Appendix A.5, verbatim):
 
   ```markdown
   ### Module-boundary heuristics
@@ -183,7 +183,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
   - A dependency mocked in **> 1 unrelated test → consider an interface boundary**.
   ```
 
-- [ ] **1.8** Update the template frontmatter `last_updated:` from `2026-06-26` to `2026-06-29` (the only frontmatter change). Do **not** touch the license header lines (1–4), the `ados_distribution: redistributable` line, or any other frontmatter key (`id`, `status`, `created`, `owners`, `area`, `document_classification`, `links`, `summary`).
+- [x] **1.8** Update the template frontmatter `last_updated:` from `2026-06-26` to `2026-06-29` (the only frontmatter change). Do **not** touch the license header lines (1–4), the `ados_distribution: redistributable` line, or any other frontmatter key (`id`, `status`, `created`, `owners`, `area`, `document_classification`, `links`, `summary`).
 
 **Acceptance Criteria**:
 
@@ -211,7 +211,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 
 **Tasks**:
 
-- [ ] **2.1** In `doc/templates/repo-analysis-template.md`, locate the `## Module / component map` section (heading at current line 37; table header `| Module | Responsibility |` at current line 39). Extend the table **in place** to the five-column form from spec Appendix C. Preserve the existing `Module` and `Responsibility` columns and the two existing `<module path>` placeholder rows; append `Residence hint`, `Layering tier`, and `Interface-contract pointer`. Target content (spec Appendix C, additive — the three new columns mirror DM-1/2/3):
+- [x] **2.1** In `doc/templates/repo-analysis-template.md`, locate the `## Module / component map` section (heading at current line 37; table header `| Module | Responsibility |` at current line 39). Extend the table **in place** to the five-column form from spec Appendix C. Preserve the existing `Module` and `Responsibility` columns and the two existing `<module path>` placeholder rows; append `Residence hint`, `Layering tier`, and `Interface-contract pointer`. Target content (spec Appendix C, additive — the three new columns mirror DM-1/2/3):
 
   ```markdown
   | Module | Responsibility | Residence hint | Layering tier | Interface-contract pointer |
@@ -223,8 +223,8 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 
   The new column labels map concept-for-concept to the architecture-overview Module governance section (RSK-3 drift mitigation): `Residence hint` ↔ F-1 residence; `Layering tier` ↔ F-2 tiers; `Interface-contract pointer` ↔ F-3 contracts.
 
-- [ ] **2.2** (Optional consistency) If the `## Module / component map` italic intro line exists, leave it as-is; do not add prose. If helpful, append a short clause to the existing intro noting the three new columns mirror the architecture-overview governance fields and are populated at the template's existing confidence discipline. Keep it to one clause; do not restructure the section.
-- [ ] **2.3** Update the template frontmatter `last_updated:` from `2026-06-26` to `2026-06-29` (the only frontmatter change). Do **not** touch the license header lines (1–4), the `ados_distribution: redistributable` line, `id: REPO-ANALYSIS`, or any other frontmatter key.
+- [x] **2.2** (Optional consistency) If the `## Module / component map` italic intro line exists, leave it as-is; do not add prose. If helpful, append a short clause to the existing intro noting the three new columns mirror the architecture-overview governance fields and are populated at the template's existing confidence discipline. Keep it to one clause; do not restructure the section.
+- [x] **2.3** Update the template frontmatter `last_updated:` from `2026-06-26` to `2026-06-29` (the only frontmatter change). Do **not** touch the license header lines (1–4), the `ados_distribution: redistributable` line, `id: REPO-ANALYSIS`, or any other frontmatter key.
 
 **Acceptance Criteria**:
 
@@ -252,7 +252,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 
 **Tasks**:
 
-- [ ] **3.1** In `doc/guides/project-inception.md`, Phase 3 ("Tech stack & architecture"), activity 4 (current line 522), make a **minimal, surgical amendment** to the existing parenthetical so it names the governance facets alongside the existing inventory facets. Do **not** rewrite the activity, the phase, or any other activity. Replace exactly:
+- [x] **3.1** In `doc/guides/project-inception.md`, Phase 3 ("Tech stack & architecture"), activity 4 (current line 522), make a **minimal, surgical amendment** to the existing parenthetical so it names the governance facets alongside the existing inventory facets. Do **not** rewrite the activity, the phase, or any other activity. Replace exactly:
 
   ```text
   4. Draft the architecture overview using `doc/templates/architecture-overview-template.md` (C4 context + container diagrams, components, data flow, external dependencies, deployment topology, key decisions, and uncertainty flags).
@@ -264,7 +264,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
   4. Draft the architecture overview using `doc/templates/architecture-overview-template.md` (C4 context + container diagrams, components, module governance — residence rules, dependency-direction/layering, internal interface contracts, optional feature→component ownership, boundary heuristics — data flow, external dependencies, deployment topology, key decisions, and uncertainty flags).
   ```
 
-- [ ] **3.2** Do **not** alter the Phase 3 output line (current line 545) unless step 3.1 alone is judged insufficient — it is sufficient for AC-F7-1. If touched at all, keep the change to appending nothing more than a pointer to the governance sections; no new output artifact is introduced. Preserve the guide's license header and `ados_distribution: redistributable` marker (guide has both).
+- [x] **3.2** Do **not** alter the Phase 3 output line (current line 545) unless step 3.1 alone is judged insufficient — it is sufficient for AC-F7-1. If touched at all, keep the change to appending nothing more than a pointer to the governance sections; no new output artifact is introduced. Preserve the guide's license header and `ados_distribution: redistributable` marker (guide has both).
 
 **Acceptance Criteria**:
 
@@ -290,7 +290,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 
 **Tasks**:
 
-- [ ] **4.1** In `doc/templates/README.md` (line 62), update the architecture-overview one-liner **if** it currently omits module governance (it does — confirmed at plan time → update), so the catalog entry mirrors the template's enriched scope and readers discover the governance content. Replace exactly:
+- [x] **4.1** In `doc/templates/README.md` (line 62), update the architecture-overview one-liner **if** it currently omits module governance (it does — confirmed at plan time → update), so the catalog entry mirrors the template's enriched scope and readers discover the governance content. Replace exactly:
 
   ```text
   | `architecture-overview-template.md` | High-level architecture (C4 context/container, component map, key flows) |
@@ -303,7 +303,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
   ```
 
   Preserve the README's license header and frontmatter; the README carries no `ados_distribution` marker (it is not a `doc/` doc) — do **not** add one.
-- [ ] **4.2** **Handbook — verify only (no change expected).** Inspect `doc/documentation-handbook.md`: §17 "Appendix: Template Index" (current line 711) is a bare path bullet list (no purpose text); the §18 "Inception Artifact Catalog" row for Architecture overview (current line 774) is `| Architecture overview | `architecture-overview-template.md` |` with **no purpose-text column**. Because neither location carries a one-line purpose that describes the template, **no edit is required** — record this as an explicit finding and make no change. If, contrary to expectation, a descriptive purpose string is found, update it to mention module governance; otherwise leave the handbook untouched. Do not invent new rows or columns.
+- [x] **4.2** **Handbook — verify only (no change expected).** Inspect `doc/documentation-handbook.md`: §17 "Appendix: Template Index" (current line 711) is a bare path bullet list (no purpose text); the §18 "Inception Artifact Catalog" row for Architecture overview (current line 774) is `| Architecture overview | `architecture-overview-template.md` |` with **no purpose-text column**. Because neither location carries a one-line purpose that describes the template, **no edit is required** — record this as an explicit finding and make no change. If, contrary to expectation, a descriptive purpose string is found, update it to mention module governance; otherwise leave the handbook untouched. Do not invent new rows or columns.
 
 **Acceptance Criteria**:
 
@@ -330,15 +330,15 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 
 **Tasks**:
 
-- [ ] **5.1** Run the gate (exact command):
+- [x] **5.1** Run the gate (exact command):
 
   ```bash
   bash scripts/.tests/test-doc-distribution.sh
   ```
 
   **Expected: exit 0** (prints `(guard-doc-distribution)[OK] no drift …`). The gate scans `doc/templates/**/*.md` for marker presence + valid enum value (modes 1 & 2) and reconciles the marker-derived install set against a sandbox install (modes 3–5). Because both templates retain `ados_distribution: redistributable` and templates are installed wholesale, the expected result is green.
-- [ ] **5.2** If the gate exits non-zero, **remediate before proceeding** (do not skip): read the `::error::` annotation, confirm which mode fired, and restore any marker/header drift introduced in Phases 1–4 (most likely an accidentally edited `ados_distribution:` line or frontmatter `---` block). Re-run until exit 0. Do **not** disable or modify the gate script.
-- [ ] **5.3** (Optional, non-blocking) Confirm no other repo test script regressed as a side effect of the doc edits — this is a docs-only change, so no script should be affected.
+- [x] **5.2** If the gate exits non-zero, **remediate before proceeding** (do not skip): read the `::error::` annotation, confirm which mode fired, and restore any marker/header drift introduced in Phases 1–4 (most likely an accidentally edited `ados_distribution:` line or frontmatter `---` block). Re-run until exit 0. Do **not** disable or modify the gate script.
+- [x] **5.3** (Optional, non-blocking) Confirm no other repo test script regressed as a side effect of the doc edits — this is a docs-only change, so no script should be affected.
 
 **Acceptance Criteria**:
 
@@ -363,17 +363,17 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 
 **Tasks**:
 
-- [ ] **6.1** Additive-diff self-check. Diff every changed file against `origin/main` and assert additions-only:
+- [x] **6.1** Additive-diff self-check. Diff every changed file against `origin/main` and assert additions-only:
 
   ```bash
   git diff --stat origin/main -- doc/templates/architecture-overview-template.md doc/templates/repo-analysis-template.md doc/guides/project-inception.md doc/templates/README.md doc/documentation-handbook.md
   ```
 
   Assert: no `-`-prefixed line removes or renames a pre-existing section header or column. In particular confirm **intact**: `## System context (C4 L1)`, `## Container diagram (C4 L2)`, `## Components`, `## Data flow`, `## External dependencies and integrations`, `## Deployment topology`, `## Key architectural decisions`, `## Known constraints and uncertainty flags` (architecture-overview); `## Module / component map` and the `| Module | Responsibility |` columns (repo-analysis); the Phase 3 heading and its 9 activities (inception guide). The only permitted `-` lines are the single replaced one-liners in Phase 1 (`last_updated` value), Phase 2 (`last_updated` value + the table-header/row line that gains columns), Phase 3 (activity 4 line), and Phase 4 (README line 62) — each of which is an in-place replacement that preserves the prior content's intent.
-- [ ] **6.2** Run the **Definition of Done — AC cross-check** (table below) and mark all 10 ACs satisfied. The test plan (`chg-GH-90-test-plan.md`) already exists; its TC IDs map 1:1 onto these ACs and are recorded in the table's "Test plan TCs" column (traceability is live, not pending).
-- [ ] **6.3** Red-team **R1 (pre-delivery)** is the user-chosen validation gate for the AI-actionability quality bar (per spec §18 / pm-notes). If R1 is run before delivery, incorporate its findings here or in a remediation phase; if it surfaces a genuine architecture decision, escalate to `@decision-advisor` (DEC-1 escape hatch). Red-team **R2 (post-delivery)** verifies the shipped templates.
-- [ ] **6.4** Version bump per repo conventions: docs-only — no package/semver bump. The template `last_updated` dates were bumped in Phases 1 and 2 (the version signal for templates). No further version action.
-- [ ] **6.5** Spec reconciliation hand-off: the template feature spec (`doc/spec/features/feature-document-templates.md`) Core Components table is a pre-existing inventory gap, explicitly **out of scope** for this change. `@doc-syncer` (system_spec_update phase) decides whether to enumerate architecture-overview/repo-analysis governance there — likely no change, since this change is template *content*, not template identity/purpose/agent-consumer. Record this hand-off; do not edit the feature spec here.
+- [x] **6.2** Run the **Definition of Done — AC cross-check** (table below) and mark all 10 ACs satisfied. The test plan (`chg-GH-90-test-plan.md`) already exists; its TC IDs map 1:1 onto these ACs and are recorded in the table's "Test plan TCs" column (traceability is live, not pending).
+- [x] **6.3** Red-team **R1 (pre-delivery)** is the user-chosen validation gate for the AI-actionability quality bar (per spec §18 / pm-notes). If R1 is run before delivery, incorporate its findings here or in a remediation phase; if it surfaces a genuine architecture decision, escalate to `@decision-advisor` (DEC-1 escape hatch). Red-team **R2 (post-delivery)** verifies the shipped templates.
+- [x] **6.4** Version bump per repo conventions: docs-only — no package/semver bump. The template `last_updated` dates were bumped in Phases 1 and 2 (the version signal for templates). No further version action.
+- [x] **6.5** Spec reconciliation hand-off: the template feature spec (`doc/spec/features/feature-document-templates.md`) Core Components table is a pre-existing inventory gap, explicitly **out of scope** for this change. `@doc-syncer` (system_spec_update phase) decides whether to enumerate architecture-overview/repo-analysis governance there — likely no change, since this change is template *content*, not template identity/purpose/agent-consumer. Record this hand-off; do not edit the feature spec here.
 
 **Acceptance Criteria**:
 
@@ -463,3 +463,5 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 | 4 — consistency sweep | ☐ | | | | |
 | 5 — doc-distribution gate | ☐ | | | | exit 0 required |
 | 6 — finalize / DoD | ☐ | | | | |
+
+2026-06-29 — all 6 phases executed by @coder (commits 8dd53cb, 4d7c562, e2950eb, ede739a). Phase 5 gate exit 0; Phase 6 additive-diff PASS.

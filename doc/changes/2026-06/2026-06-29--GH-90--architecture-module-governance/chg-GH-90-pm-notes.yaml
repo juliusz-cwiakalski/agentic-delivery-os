@@ -8,10 +8,10 @@ phases:
   specification: { started: 2026-06-29, completed: 2026-06-29 }
   test_planning: { started: 2026-06-29, completed: 2026-06-29 }
   delivery_planning: { started: 2026-06-29, completed: 2026-06-29 }
-  dor_check: { started: null, completed: null }
-  delivery: { started: null, completed: null }
-  system_spec_update: { started: null, completed: null }
-  review_fix: { started: null, completed: null }
+  dor_check: { started: 2026-06-29, completed: 2026-06-29 }
+  delivery: { started: 2026-06-29, completed: 2026-06-29 }
+  system_spec_update: { started: 2026-06-29, completed: null }
+  review_fix: { started: 2026-06-29, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -44,6 +44,12 @@ notes:
     type: retro
     date: 2026-06-29
   - text: "R1 remediation applied in parallel across spec/test-plan/plan (3 author agents, canonical terminology locked to prevent drift). All 3 Majors (F-1/F-2/F-3) + relevant Minors (F-4/F-5/F-6/F-7/F-8) + Nits (F-10/F-11) resolved. Cross-file verification confirmed consistency (concept-for-concept in all 3; word-for-word only in negated form; component-scoped residence + replace-me comments + invariant phrasing consistent; structure intact: 10 ACs, 12 TCs, 6 phases, gate present). Note for R2: A.2 layering matrix + A.5 heuristics use adapted placeholder forms (matrix has <tier> model row; heuristics are bullets with <N>), so the literal replace-me HTML comment applies to the 4 standard tables — actionability/replace-me intent satisfied across all 5 sections."
+    type: info
+    date: 2026-06-29
+  - text: "DoR gate (readiness-iter-1): verdict READY. All 10 facets PASS, no blockers. 2 cosmetic nits (non-blocking): (1) plan prose uses 'mirror(s)' affirmatively in 3 spots while spec insists 'concept-for-concept NOT word-for-word mirror' — fenced target content is authoritative so @coder unambiguous; (2) per-component scoping is a prose rule/claim not a structural per-component table — defensible, R1-endorsed, PM-locked, flagged for R2 re-probe on shipped content. Gate baseline re-run: exit 0 (76 docs). Record persisted at readiness-review/readiness-iter-1.md. Proceeding to delivery."
+    type: info
+    date: 2026-06-29
+  - text: "Delivery COMPLETE: @coder executed all 6 plan phases, 4 content commits (8dd53cb arch-overview +47L Module governance block; 4d7c562 repo-analysis 5-col module map + cross-ref; e2950eb inception Phase 3 ref; ede739a README one-liner). Phases 5+6 verification only (gate exit 0, additive-diff PASS, no fix needed — no separate commit). Verified delivered content: architecture-overview-template has ## Module governance after Components/before Data flow, 5 subsections each with concrete example + replace-me marker + placeholder row; component-scoped residence; matrix-authoritative invariant; cart→inventory contract; OPTIONAL ownership; <N> heuristics. License headers byte-identical; ados_distribution: redistributable retained; last_updated 2026-06-29. 10/10 ACs self-assessed. Total diff vs main: 4 files +1553/-8 (8 deletions all permitted in-place replacements)."
     type: info
     date: 2026-06-29
   - text: "Intake: deliver GH-90 ([inception:6] architecture module governance). Part of inception-focus-2026-06-29 planning session (Wave 1 candidate, parallel-safe with GH-33). User explicitly kicked off single-ticket delivery of GH-90. TEMPLATE+GUIDE change — no .opencode/agent/ edits, so @toolsmith rule does NOT apply; @coder can edit templates/guide directly. Two @red-team-coordinator rounds requested (R1 pre-delivery on artifacts, R2 post-delivery). Branch docs/GH-90/architecture-module-governance off main 816c27e."
