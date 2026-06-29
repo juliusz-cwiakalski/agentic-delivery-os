@@ -87,7 +87,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 
 - **RSK-1: Template bloat.** The architecture-overview template is lean (~62 lines); five new subsections could over-weight it for small repos. *Mitigated by:* each subsection is a table + 1–2-line rule + one concrete example; the ownership map is explicitly OPTIONAL; the section intro preserves the existing "omit if trivial" tone.
 - **RSK-2: Vague governance fails the AI-actionability bar.** Easy to write prose that reads well but is not actionable. *Mitigated by:* NFR-1 mandates ≥1 concrete example per subsection; the three canonical examples ship verbatim (residence "new API endpoint → `src/api/`"; layering "API layer may import domain; domain may NOT import API"; contract "cart → inventory `checkAvailability(sku, qty) → AvailabilityResult`"); Phase 6 cross-checks all 5/5.
-- **RSK-3: Drift between architecture-overview and repo-analysis governance fields** if one template is edited without the other. *Mitigated by:* shared field names (DM-6 mirrors DM-1/2/3); Phase 2 uses the exact same dimension labels; the consistency contract is recorded in spec §22.
+- **RSK-3: Drift between architecture-overview and repo-analysis governance fields** if one template is edited without the other. *Mitigated by:* shared field names (DM-6 maps concept-for-concept to DM-1/2/3); Phase 2 uses the exact same dimension labels; the consistency contract is recorded in spec §22.
 - **RSK-4: Consistency touch-points (README one-liner, handbook row) missed.** *Mitigated by:* Phase 4 is a dedicated verify/update sweep; the handbook row is confirmed to carry no purpose text (verify-only, no change).
 - **RSK-5: Reviewer reads the layering tier example as a mandated ADOS architecture.** *Mitigated by:* the matrix subsection carries an explicit "example — adapt to your architecture" note (DEC-4).
 
@@ -97,7 +97,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 |--------|--------|
 | Governance subsections present in `architecture-overview-template.md` | 5/5 (residence, layering, contracts, ownership-map, heuristics) |
 | Governance subsections with ≥1 concrete AI-actionable placeholder example | 5/5 |
-| `repo-analysis-template.md` module-map columns shared with architecture-overview governance fields | All three new dimensions mirrored (residence hint, layering tier, interface-contract pointer) |
+| `repo-analysis-template.md` module-map columns shared with architecture-overview governance fields | All three new dimensions mapped concept-for-concept (residence hint, layering tier, interface-contract pointer) |
 | `project-inception.md` Phase 3 references to governance facets | ≥1 (in activity 4) |
 | `bash scripts/.tests/test-doc-distribution.sh` | exit 0 |
 | Pre-existing template sections/columns removed or renamed | 0 (purely additive) |
@@ -211,7 +211,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 
 **Tasks**:
 
-- [x] **2.1** In `doc/templates/repo-analysis-template.md`, locate the `## Module / component map` section (heading at current line 37; table header `| Module | Responsibility |` at current line 39). Extend the table **in place** to the five-column form from spec Appendix C. Preserve the existing `Module` and `Responsibility` columns and the two existing `<module path>` placeholder rows; append `Residence hint`, `Layering tier`, and `Interface-contract pointer`. Target content (spec Appendix C, additive — the three new columns mirror DM-1/2/3):
+- [x] **2.1** In `doc/templates/repo-analysis-template.md`, locate the `## Module / component map` section (heading at current line 37; table header `| Module | Responsibility |` at current line 39). Extend the table **in place** to the five-column form from spec Appendix C. Preserve the existing `Module` and `Responsibility` columns and the two existing `<module path>` placeholder rows; append `Residence hint`, `Layering tier`, and `Interface-contract pointer`. Target content (spec Appendix C, additive — the three new columns map concept-for-concept to DM-1/2/3):
 
   ```markdown
   | Module | Responsibility | Residence hint | Layering tier | Interface-contract pointer |
@@ -223,7 +223,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 
   The new column labels map concept-for-concept to the architecture-overview Module governance section (RSK-3 drift mitigation): `Residence hint` ↔ F-1 residence; `Layering tier` ↔ F-2 tiers; `Interface-contract pointer` ↔ F-3 contracts.
 
-- [x] **2.2** (Optional consistency) If the `## Module / component map` italic intro line exists, leave it as-is; do not add prose. If helpful, append a short clause to the existing intro noting the three new columns mirror the architecture-overview governance fields and are populated at the template's existing confidence discipline. Keep it to one clause; do not restructure the section.
+- [x] **2.2** (Optional consistency) If the `## Module / component map` italic intro line exists, leave it as-is; do not add prose. If helpful, append a short clause to the existing intro noting the three new columns map concept-for-concept to the architecture-overview governance fields and are populated at the template's existing confidence discipline. Keep it to one clause; do not restructure the section.
 - [x] **2.3** Update the template frontmatter `last_updated:` from `2026-06-26` to `2026-06-29` (the only frontmatter change). Do **not** touch the license header lines (1–4), the `ados_distribution: redistributable` line, `id: REPO-ANALYSIS`, or any other frontmatter key.
 
 **Acceptance Criteria**:
@@ -413,16 +413,16 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 
 | AC ID | Description (canonical, from spec §17) | Delivered in | Test plan TCs | Status |
 |-------|----------------------------------------|--------------|---------------|--------|
-| AC-F1-1 | Module-residence rules: capability-type → owning-module/path table + one-line rule + concrete example | Phase 1 (1.3) | TC-GOV-001, TC-GOV-006, TC-AIACT-001 | ☐ |
-| AC-F2-1 | Dependency-direction/layering: allowed/forbidden matrix + downward-only no-cycles invariant + concrete example | Phase 1 (1.4) | TC-GOV-002, TC-GOV-006, TC-AIACT-001 | ☐ |
-| AC-F3-1 | Internal interface contracts: boundary + signature + return/error shape + concrete example | Phase 1 (1.5) | TC-GOV-003, TC-GOV-006, TC-AIACT-001 | ☐ |
-| AC-F4-1 | OPTIONAL/conditional feature→component ownership map, clearly marked | Phase 1 (1.6) | TC-GOV-004, TC-GOV-006, TC-AIACT-001 | ☐ |
-| AC-F5-1 | Module-boundary heuristics: concrete split/merge triggers | Phase 1 (1.7) | TC-GOV-005, TC-GOV-006, TC-AIACT-001 | ☐ |
-| AC-F6-1 | repo-analysis module map aligns governance dimensions; preserves `Module \| Responsibility` | Phase 2 (2.1) | TC-ALGN-001, TC-COMPAT-001 | ☐ |
-| AC-F7-1 | project-inception Phase 3 references governance sections; no phase rewrite | Phase 3 (3.1) | TC-INC-001 | ☐ |
-| AC-NFR1-1 | 5/5 governance subsections each carry ≥1 concrete AI-actionable example | Phase 1 (1.3–1.7) | TC-AIACT-001 (+ TC-GOV-001..005) | ☐ |
-| AC-NFR3-1 | `bash scripts/.tests/test-doc-distribution.sh` exits 0; both templates keep marker + header | Phase 5 (5.1) | TC-DIST-001 | ☐ |
-| AC-NFR4-1 | Purely additive — no pre-existing header/column removed or renamed | Phase 2 + Phase 6 (6.1) | TC-COMPAT-001 (+ TC-ALGN-001) | ☐ |
+| AC-F1-1 | Module-residence rules: capability-type → owning-module/path table + one-line rule + concrete example | Phase 1 (1.3) | TC-GOV-001, TC-GOV-006, TC-AIACT-001 | ☑ |
+| AC-F2-1 | Dependency-direction/layering: allowed/forbidden matrix + downward-only no-cycles invariant + concrete example | Phase 1 (1.4) | TC-GOV-002, TC-GOV-006, TC-AIACT-001 | ☑ |
+| AC-F3-1 | Internal interface contracts: boundary + signature + return/error shape + concrete example | Phase 1 (1.5) | TC-GOV-003, TC-GOV-006, TC-AIACT-001 | ☑ |
+| AC-F4-1 | OPTIONAL/conditional feature→component ownership map, clearly marked | Phase 1 (1.6) | TC-GOV-004, TC-GOV-006, TC-AIACT-001 | ☑ |
+| AC-F5-1 | Module-boundary heuristics: concrete split/merge triggers | Phase 1 (1.7) | TC-GOV-005, TC-GOV-006, TC-AIACT-001 | ☑ |
+| AC-F6-1 | repo-analysis module map aligns governance dimensions; preserves `Module \| Responsibility` | Phase 2 (2.1) | TC-ALGN-001, TC-COMPAT-001 | ☑ |
+| AC-F7-1 | project-inception Phase 3 references governance sections; no phase rewrite | Phase 3 (3.1) | TC-INC-001 | ☑ |
+| AC-NFR1-1 | 5/5 governance subsections each carry ≥1 concrete AI-actionable example | Phase 1 (1.3–1.7) | TC-AIACT-001 (+ TC-GOV-001..005) | ☑ |
+| AC-NFR3-1 | `bash scripts/.tests/test-doc-distribution.sh` exits 0; both templates keep marker + header | Phase 5 (5.1) | TC-DIST-001 | ☑ |
+| AC-NFR4-1 | Purely additive — no pre-existing header/column removed or renamed | Phase 2 + Phase 6 (6.1) | TC-COMPAT-001 (+ TC-ALGN-001) | ☑ |
 
 **Coverage: 10 / 10 ACs fully traced.** No orphan AC, no orphan phase.
 
@@ -457,11 +457,11 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| 1 — Module governance section | ☐ | | | | |
-| 2 — repo-analysis alignment | ☐ | | | | |
-| 3 — inception Phase 3 reference | ☐ | | | | |
-| 4 — consistency sweep | ☐ | | | | |
-| 5 — doc-distribution gate | ☐ | | | | exit 0 required |
-| 6 — finalize / DoD | ☐ | | | | |
+| 1 — Module governance section | ☑ | 2026-06-29 | 2026-06-29 | 8dd53cb | |
+| 2 — repo-analysis alignment | ☑ | 2026-06-29 | 2026-06-29 | 4d7c562 | |
+| 3 — inception Phase 3 reference | ☑ | 2026-06-29 | 2026-06-29 | e2950eb | |
+| 4 — consistency sweep | ☑ | 2026-06-29 | 2026-06-29 | ede739a | |
+| 5 — doc-distribution gate | ☑ | 2026-06-29 | 2026-06-29 | — | verification only — gate exit 0 / additive-diff PASS |
+| 6 — finalize / DoD | ☑ | 2026-06-29 | 2026-06-29 | — | verification only — gate exit 0 / additive-diff PASS |
 
 2026-06-29 — all 6 phases executed by @coder (commits 8dd53cb, 4d7c562, e2950eb, ede739a). Phase 5 gate exit 0; Phase 6 additive-diff PASS.

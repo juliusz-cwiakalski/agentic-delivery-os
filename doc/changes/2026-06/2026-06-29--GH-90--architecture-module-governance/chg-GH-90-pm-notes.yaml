@@ -10,8 +10,8 @@ phases:
   delivery_planning: { started: 2026-06-29, completed: 2026-06-29 }
   dor_check: { started: 2026-06-29, completed: 2026-06-29 }
   delivery: { started: 2026-06-29, completed: 2026-06-29 }
-  system_spec_update: { started: 2026-06-29, completed: null }
-  review_fix: { started: 2026-06-29, completed: null }
+  system_spec_update: { started: 2026-06-29, completed: 2026-06-29 }
+  review_fix: { started: 2026-06-29, completed: 2026-06-29 }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -50,6 +50,12 @@ notes:
     type: info
     date: 2026-06-29
   - text: "Delivery COMPLETE: @coder executed all 6 plan phases, 4 content commits (8dd53cb arch-overview +47L Module governance block; 4d7c562 repo-analysis 5-col module map + cross-ref; e2950eb inception Phase 3 ref; ede739a README one-liner). Phases 5+6 verification only (gate exit 0, additive-diff PASS, no fix needed — no separate commit). Verified delivered content: architecture-overview-template has ## Module governance after Components/before Data flow, 5 subsections each with concrete example + replace-me marker + placeholder row; component-scoped residence; matrix-authoritative invariant; cart→inventory contract; OPTIONAL ownership; <N> heuristics. License headers byte-identical; ados_distribution: redistributable retained; last_updated 2026-06-29. 10/10 ACs self-assessed. Total diff vs main: 4 files +1553/-8 (8 deletions all permitted in-place replacements)."
+    type: info
+    date: 2026-06-29
+  - text: "Doc-syncer: NO-OP (correct for content-enrichment change). feature-document-templates.md gap (no inception-template enumeration) is pre-existing GH-69-era debt, explicitly scoped OUT of GH-90. Doc-syncer SUGGESTS (not created) two follow-ups: (1) reconcile inception-template inventory in feature-document-templates.md (debt ticket); (2) optional 'module governance' in doc/overview/README.md purpose column (cosmetic). PM will propose these to human at PR time."
+    type: info
+    date: 2026-06-29
+  - text: "Reviewer (review_fix iter 1): verdict PASS. 10/10 ACs satisfied by shipped content, gate exit 0, no Critical/Major/must-fix. 4 optional findings: F1 [Minor] DONE_BUT_UNCHECKED DoD/Execution-Log tables (APPLIED — ticked); F2 [Minor] carry-over 'mirror(s)' prose nit (APPLIED — 4 occurrences → 'map concept-for-concept'); F3 [Nit] layering example 'API layer' alias not in tier axis (LEFT — spec-mandated verbatim, the human's own canonical example); F4 [Nit] nested bold+code in heuristics bullet (LEFT — renders fine on GitHub). No remediation cycle required."
     type: info
     date: 2026-06-29
   - text: "Intake: deliver GH-90 ([inception:6] architecture module governance). Part of inception-focus-2026-06-29 planning session (Wave 1 candidate, parallel-safe with GH-33). User explicitly kicked off single-ticket delivery of GH-90. TEMPLATE+GUIDE change — no .opencode/agent/ edits, so @toolsmith rule does NOT apply; @coder can edit templates/guide directly. Two @red-team-coordinator rounds requested (R1 pre-delivery on artifacts, R2 post-delivery). Branch docs/GH-90/architecture-module-governance off main 816c27e."
