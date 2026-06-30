@@ -1,0 +1,87 @@
+change_id: GH-90
+title: "[inception:6] Architecture overview: module governance (residence, layering, contracts)"
+branch: docs/GH-90/architecture-module-governance
+change_folder: doc/changes/2026-06/2026-06-29--GH-90--architecture-module-governance
+
+phases:
+  clarify_scope: { started: 2026-06-29, completed: 2026-06-29 }
+  specification: { started: 2026-06-29, completed: 2026-06-29 }
+  test_planning: { started: 2026-06-29, completed: 2026-06-29 }
+  delivery_planning: { started: 2026-06-29, completed: 2026-06-29 }
+  dor_check: { started: 2026-06-29, completed: 2026-06-29 }
+  delivery: { started: 2026-06-29, completed: 2026-06-29 }
+  system_spec_update: { started: 2026-06-29, completed: 2026-06-29 }
+  review_fix: { started: 2026-06-29, completed: 2026-06-29 }
+  quality_gates: { started: 2026-06-29, completed: 2026-06-29 }
+  dod_check: { started: 2026-06-29, completed: 2026-06-29 }
+  pr_creation: { started: 2026-06-29, completed: 2026-06-29, url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/94" }
+
+decisions:
+  - { text: "DEC (PM): NOT invoking @decision-advisor for a formal ADR/PDR — layering matrix is example scaffolding for project fills, not precedent-setting ADOS decision. Design rationale captured in-spec (spec Appendix B).", date: 2026-06-29 }
+  - { text: "DEC (PM): OQ-1 resolved — split-heuristic ships `<N>` placeholder with an example value in parentheses (project fills its own threshold).", date: 2026-06-29 }
+  - text: "DEC (PM): OQ-2 resolved — ONE consolidated `## Module governance` block placed after the Components table, with subsections for residence / layering / contracts / ownership-map(optional) / heuristics. Groups related governance; keeps template navigable; co-locates governance with the inventory it governs."
+    date: 2026-06-29
+open_questions: []
+blockers: []
+
+notes:
+  - text: "Spec authored (chg-GH-90-spec.md, 408 lines). 10 ACs map 1:1 to ticket's 4 ACs (AC1 split into F1-F5 + NFR1; AC2=F6; AC3=F7; AC4=NFR3+NFR4). 6 design decisions (DEC-1..6) recorded in-spec. Appendix B carries the layering-matrix design rationale the human asked for (structured reasoning without a separate ADR). Three canonical AI-actionable examples embedded verbatim (residence 'new API endpoint → src/api/', layering 'API may import domain; domain may NOT import API', contract 'cart→inventory checkAvailability(sku,qty)→AvailabilityResult'). Quality: high. Proceeding to test-plan + plan."
+    type: info
+    date: 2026-06-29
+  - text: "Test plan authored (chg-GH-90-test-plan.md, 545 lines). 12 TCs (9 manual-inspection, 1 automated gate TC-DIST-001, 1 backward-compat diff TC-COMPAT-001, 1 advisory TC-ADV-001 non-gating). All 10 ACs fully traced. Followed .ai/rules/testing-strategy.md (static/diff + content checks for doc/templates changes; no invented unit tests). TC-ADV-001 flagged as OQ-T1 (advisory only, traces to RSK-4 not an AC) for DoR confirmation."
+    type: info
+    date: 2026-06-29
+  - text: "Plan authored (chg-GH-90-plan.md, 453 lines). 6 phases: (1) consolidated Module governance block in architecture-overview-template, (2) repo-analysis column alignment, (3) Phase 3 minimal reference, (4) consistency sweep README L62 + handbook §17 (verify-only — handbook has no purpose-text column, confirmed no-op), (5) doc-distribution gate, (6) finalize/additive-diff self-check + DoD. 10/10 ACs traced. Appendix A/C content embedded verbatim as fenced targets. Plan-writer confirmed handbook §17/§18 is verify-only no-op (no purpose-text column to update)."
+    type: info
+    date: 2026-06-29
+  - text: "Red-team R1 (pre-delivery) verdict: SHIP-WITH-FINDINGS. No Critical defects; 3 Majors (F-1 word-for-word mirror contradiction, F-2 residence↔component join unspecified, F-3 example rows missing replace-me marking) + Minors (F-4 layering invariant phrasing, F-5 OQ status drift, F-6 stale cross-refs, F-7 README wording, F-8 AC-NFR4-1 wording) + Nits (F-10/F-11). AI-actionability probe: PASS-WITH-CAVEATS (4/5 strong; residence is weakest AND most important → F-2). Gate verified green at baseline (exit 0, 76 docs). Placement claims verified correct against live template."
+    type: info
+    date: 2026-06-29
+  - text: "PM decisions on R1 open questions (all resolved without human input): OQ-PM-4 LOCK OQ-1/OQ-2 (R1 endorses); OQ-PM-3 (F-3) MUST-FIX example rows get replace-me HTML comment + <...> placeholder row; OQ-PM-1 (F-2) IN-SCOPE — residence made component-scoped (path pattern src/<component>/api/, single-component omits segment) + link to Components table; OQ-PM-2 (F-1) relax to concept-for-concept mapping + explicit cross-reference (NOT word-for-word). Canonical terminology locked (see below) so all three remediation agents stay consistent."
+    type: decision
+    date: 2026-06-29
+  - text: "Retro: red-team R1 caught 3 Majors that would have caused @coder rework — F-1 (self-contradictory 'word-for-word mirror' invariant baked into the plan: section headings vs column names can't lexically match) is the kind of defect that escapes spec/plan authoring because each author worked their own file without cross-checking label consistency across the two templates. Process improvement: for changes touching PAIRED templates (architecture-overview + repo-analysis), the spec should include an explicit label-alignment table showing the exact strings in BOTH files, so the contradiction is visible at spec time. F-2 (residence join under-specified) is a scope-fidelity gap — the ticket said 'per owning module' but the design resolved only to generic path. Process improvement: clarify_scope should cross-check each AC verb phrase ('per owning module') against the proposed capability detail to catch under-delivery."
+    type: retro
+    date: 2026-06-29
+  - text: "R1 remediation applied in parallel across spec/test-plan/plan (3 author agents, canonical terminology locked to prevent drift). All 3 Majors (F-1/F-2/F-3) + relevant Minors (F-4/F-5/F-6/F-7/F-8) + Nits (F-10/F-11) resolved. Cross-file verification confirmed consistency (concept-for-concept in all 3; word-for-word only in negated form; component-scoped residence + replace-me comments + invariant phrasing consistent; structure intact: 10 ACs, 12 TCs, 6 phases, gate present). Note for R2: A.2 layering matrix + A.5 heuristics use adapted placeholder forms (matrix has <tier> model row; heuristics are bullets with <N>), so the literal replace-me HTML comment applies to the 4 standard tables — actionability/replace-me intent satisfied across all 5 sections."
+    type: info
+    date: 2026-06-29
+  - text: "DoR gate (readiness-iter-1): verdict READY. All 10 facets PASS, no blockers. 2 cosmetic nits (non-blocking): (1) plan prose uses 'mirror(s)' affirmatively in 3 spots while spec insists 'concept-for-concept NOT word-for-word mirror' — fenced target content is authoritative so @coder unambiguous; (2) per-component scoping is a prose rule/claim not a structural per-component table — defensible, R1-endorsed, PM-locked, flagged for R2 re-probe on shipped content. Gate baseline re-run: exit 0 (76 docs). Record persisted at readiness-review/readiness-iter-1.md. Proceeding to delivery."
+    type: info
+    date: 2026-06-29
+  - text: "Delivery COMPLETE: @coder executed all 6 plan phases, 4 content commits (8dd53cb arch-overview +47L Module governance block; 4d7c562 repo-analysis 5-col module map + cross-ref; e2950eb inception Phase 3 ref; ede739a README one-liner). Phases 5+6 verification only (gate exit 0, additive-diff PASS, no fix needed — no separate commit). Verified delivered content: architecture-overview-template has ## Module governance after Components/before Data flow, 5 subsections each with concrete example + replace-me marker + placeholder row; component-scoped residence; matrix-authoritative invariant; cart→inventory contract; OPTIONAL ownership; <N> heuristics. License headers byte-identical; ados_distribution: redistributable retained; last_updated 2026-06-29. 10/10 ACs self-assessed. Total diff vs main: 4 files +1553/-8 (8 deletions all permitted in-place replacements)."
+    type: info
+    date: 2026-06-29
+  - text: "Doc-syncer: NO-OP (correct for content-enrichment change). feature-document-templates.md gap (no inception-template enumeration) is pre-existing GH-69-era debt, explicitly scoped OUT of GH-90. Doc-syncer SUGGESTS (not created) two follow-ups: (1) reconcile inception-template inventory in feature-document-templates.md (debt ticket); (2) optional 'module governance' in doc/overview/README.md purpose column (cosmetic). PM will propose these to human at PR time."
+    type: info
+    date: 2026-06-29
+  - text: "Reviewer (review_fix iter 1): verdict PASS. 10/10 ACs satisfied by shipped content, gate exit 0, no Critical/Major/must-fix. 4 optional findings: F1 [Minor] DONE_BUT_UNCHECKED DoD/Execution-Log tables (APPLIED — ticked); F2 [Minor] carry-over 'mirror(s)' prose nit (APPLIED — 4 occurrences → 'map concept-for-concept'); F3 [Nit] layering example 'API layer' alias not in tier axis (LEFT — spec-mandated verbatim, the human's own canonical example); F4 [Nit] nested bold+code in heuristics bullet (LEFT — renders fine on GitHub). No remediation cycle required."
+    type: info
+    date: 2026-06-29
+  - text: "Red-team R2 (post-delivery): verdict SHIP-WITH-FINDINGS — merge-ready as-is. No Critical/Major/must-fix. All 4 ticket ACs pass, gate exit 0, diff purely additive. All 3 R1 Majors (F-1/F-2/F-3) independently CONFIRMED LANDED in shipped content. AI-actionability role-play 3/3 PASS (place capability / decide-dependency / stub-boundary) against actual template text. Findings (all optional): R2-1 [Minor] 'API layer' alias disambiguation; R2-2 [Minor] doc/overview/README.md L23 purpose one-liner sync (already deferred by doc-syncer); R2-3 [Minor] residence↔component join is prose not structural table (F-2 residual, future change needs spec amendment); R2-4..7 [Nit] matrix header backslash, repo-analysis replace-me comment, spacing, replace-me wording; R2-8 [Obs] DIP/hexagonal note."
+    type: info
+    date: 2026-06-29
+  - text: "Quality gates (phase 9): ALL 3 CI jobs GREEN locally. (A) doc-distribution test + modes test: exit 0 (76 in-scope docs, 5/5 negative self-tests). (B) inception-doc-consistency: exit 0 (four-risk, matrix, index, self-containment, structure). (C) build-claude-plugin: build OK (23 agents, 20 skills), .ados-claude/ drift = 0 (no agent/command files changed → plugin byte-identical). CI will pass on the PR."
+    type: info
+    date: 2026-06-29
+  - text: "PM disposition of R2 findings: APPLIED R2-1 (API-layer disambiguation — appended clarifying clause AFTER the spec-quoted example so AC-F2-1 verbatim quote is preserved, no spec divergence; commit 11466f8) + R2-4 (matrix header 'From \\ To' → 'From → To' rendering fix; same commit). DEFERRED the rest as PR-time suggestions for the human: R2-2 (doc/overview/README.md L23 — cosmetic, separate file); R2-3 (structural residence Component column — needs spec amendment → future change, not this PR); R2-5..8 (nits/observation). Rationale: change is merge-ready; only the genuine shipped-content wrinkles got inline fixes; the human decides the rest at PR review."
+    type: decision
+    date: 2026-06-29
+  - text: "DoD check (phase 10): PASS. All phases 1-9 completed; 23/23 plan tasks checked; 10/10 ACs satisfied (reviewer PASS + R2 ship-with-findings); gate green; diff purely additive confined to doc/{changes,guides,templates}; no forbidden paths (.opencode/.ados-claude/scripts/tools/.ai-local). pr_creation (phase 11): PR #94 created, issue #90 labeled review + assigned to human + comment with PR link and 3 optional follow-ups. STOP for human review/merge."
+    type: info
+    date: 2026-06-29
+  - text: "Copilot PR review on #94: 2 inline comments, both same root cause — Unicode ellipsis U+2026 inside angle-bracket placeholders (architecture-overview-template.md L47 residence + L60 layering matrix) vs repo convention ASCII angle-bracket-ellipsis. ACCEPT both: valid consistency defect (my own adjacent replace-me HTML comment uses the ASCII form, contradicting the rows; repo-wide placeholder convention is ASCII; the U+2026 form is harder to search/replace). Pre-existing prose ellipses in other templates (e.g. decision-record 'C-1, C-2, …') are NOT placeholders, different usage, out of scope. Fix: U+2026 placeholders → ASCII in shipped template + plan fenced targets. CLOSED: fix in commit c0752bb (also updated plan fenced targets + this note); gate exit 0; both Copilot threads auto-resolved (isResolved: true) when the fix push modified those lines. No other reviewer feedback on the PR."
+    type: info
+    date: 2026-06-29
+  - text: "Intake: deliver GH-90 ([inception:6] architecture module governance). Part of inception-focus-2026-06-29 planning session (Wave 1 candidate, parallel-safe with GH-33). User explicitly kicked off single-ticket delivery of GH-90. TEMPLATE+GUIDE change — no .opencode/agent/ edits, so @toolsmith rule does NOT apply; @coder can edit templates/guide directly. Two @red-team-coordinator rounds requested (R1 pre-delivery on artifacts, R2 post-delivery). Branch docs/GH-90/architecture-module-governance off main 816c27e."
+    type: info
+    date: 2026-06-29
+  - text: "clarify_scope cross-check: ticket scope is complete and consistent with system spec. feature-document-templates.md (SPEC-DOCUMENT-TEMPLATES) treats templates generically (structure + graceful fallback); adding governance sections to architecture-overview-template does not conflict. The feature spec's Core Components table predates GH-69 inception templates (does not enumerate architecture-overview/repo-analysis) — that is a PRE-EXISTING inventory gap, not created by this change; doc-syncer will decide whether to touch the spec (likely no: change is template CONTENT, not template identity/purpose/agent-consumer). No blocking questions for human."
+    type: info
+    date: 2026-06-29
+  - text: "Decision: NOT invoking @decision-advisor for a formal ADR/PDR. The layering/dependency-direction matrix in the template is EXAMPLE SCAFFOLDING for project-specific inception fills, not a precedent-setting ADOS-wide architectural decision. Design rationale will be captured WITHIN the spec (governance section design + AI-actionability drivers). Red-team R1 (pre-delivery) is the user-chosen validation gate; if it surfaces a genuine architecture decision, escalate to @decision-advisor then."
+    type: decision
+    date: 2026-06-29
+  - text: "Consistency touch-points for the plan (NOT blockers, just completeness): (1) doc/templates/README.md line 62 one-liner for architecture-overview-template could mention 'module governance' to match enriched content; (2) doc/documentation-handbook.md §17 template index — may need one-line purpose update if it describes the template. Plan-writer should include a consistency-sweep task. Redistributable marker + license headers must remain; test-doc-distribution.sh must pass (templates installed wholesale but markers enforced)."
+    type: info
+    date: 2026-06-29

@@ -6,7 +6,7 @@ ados_distribution: redistributable
 id: ARCHITECTURE-OVERVIEW
 status: Draft
 created: 2026-06-26
-last_updated: 2026-06-26
+last_updated: 2026-06-29
 owners: [<owner-or-team>]
 area: engineering
 document_classification: current-truth
@@ -34,6 +34,52 @@ _Within each container, name the key components/modules and their responsibiliti
 |---|---|---|
 | <component name> | <container> | <what it does> |
 | <component name> | <container> | <what it does> |
+## Module governance
+_The rules that govern the modules above — where new code belongs, which dependencies are permitted, and what crosses each boundary — so an AI delivery team can place code deterministically and mock the right seams. Omit any subsection if it is trivial for a small repo._
+### Module-residence rules
+_Where each capability type of code should live (resolve capability-type → owning module/path, instead of guessing)._
+<!-- Example rows — replace with your project's modules/components. Keep one <...> placeholder row as a model. -->
+| Capability type | Owning module / path pattern | Notes |
+|---|---|---|
+| new API endpoint | `src/<component>/api/` | HTTP entrypoints |
+| new domain rule | `src/<component>/domain/<context>/` | business logic |
+| new CLI command | `src/<component>/cli/commands/` | user-invoked |
+| <capability type> | `src/<component>/<...>` | <notes> |
+Rule: place new code by capability type, not by guess; if a capability type is unlisted, add a row before placing the code. Residence rules are scoped per component named in the Components table above. (Single-component repo: omit the `<component>/` segment — e.g. `src/api/`.)
+### Dependency-direction / layering matrix
+_Which modules may depend on which. Example tiers — adapt to your architecture._
+Tiers (example): presentation → application → domain → infrastructure.
+Invariant: no dependency may point upward or sideways across tiers; the matrix below specifies which downward dependencies are permitted.
+<!-- Example rows — replace with your project's modules/components. Keep one <...> placeholder row as a model. -->
+| From → To | presentation | application | domain | infrastructure |
+|---|---|---|---|---|
+| presentation | — | ✓ | ✗ | ✗ |
+| application | ✗ | — | ✓ | ✓ |
+| domain | ✗ | ✗ | — | ✗ |
+| infrastructure | ✗ | ✗ | ✗ | — |
+| <your tier> | <...> | <...> | <...> | <...> |
+Example: "API layer may import domain layer; domain layer may NOT import API layer." (Here "API layer" maps to the application/edge tier; map your project's real layer names to the tiers above.)
+### Internal interface contracts
+_Lightweight contracts for what crosses each module boundary (signature + return/error shape — not a versioned registry)._
+<!-- Example rows — replace with your project's modules/components. Keep one <...> placeholder row as a model. -->
+| Boundary (A → B) | Operation | Signature | Returns | Errors |
+|---|---|---|---|---|
+| cart → inventory | checkAvailability | `checkAvailability(sku, qty)` | `AvailabilityResult{ available: bool, onHand: int }` | `ItemNotFound` |
+| <A → B> | <operation> | `<signature>` | <returns> | <errors> |
+Scope: signature + return/error shape only.
+### Feature → component ownership map (OPTIONAL)
+_One-hop lookup from a feature to its owning component(s). Omit for small repos where the Components table above suffices._
+<!-- Example rows — replace with your project's modules/components. Keep one <...> placeholder row as a model. -->
+| Feature | Owning component(s) |
+|---|---|
+| Checkout | cart, inventory, pricing |
+| <feature> | <component(s)> |
+### Module-boundary heuristics
+_Cohesion/coupling triggers for when to split or merge modules._
+- A module with **> `<N>` responsibilities** (example threshold: 3) **/ > 1 reason to change → split** by responsibility.
+- Two modules that **always change together → consider merging**.
+- High cohesion within a module; low coupling across modules.
+- A dependency mocked in **> 1 unrelated test → consider an interface boundary**.
 ## Data flow
 _Trace the primary flows (request, event, batch) end to end._
 - <Flow name, e.g. "User request"> — <source → steps → sink>

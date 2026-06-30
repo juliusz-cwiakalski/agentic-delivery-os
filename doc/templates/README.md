@@ -59,7 +59,7 @@ written into a project's `doc/inception/` workspace when inception runs.
 | `material-inventory-template.md` | Inventory of user-provided input materials and existing repo content |
 | `roadmap-engineering-template.md` | Engineering roadmap with per-milestone success metrics, validation approach, and OST/discovery linkage |
 | `tech-stack-template.md` | Technology stack: languages, frameworks, infrastructure, external services, rationale |
-| `architecture-overview-template.md` | High-level architecture (C4 context/container, component map, key flows) |
+| `architecture-overview-template.md` | High-level architecture (C4 context/container, component map, key flows, module governance) |
 | `glossary-template.md` | Concise repo-relevant terminology reference |
 | `ubiquitous-language-template.md` | DDD ubiquitous language: bounded contexts, aggregates, domain events, commands |
 | `repo-analysis-template.md` | Legacy/existing-code reconnaissance: layout, conventions, debt, migration constraints |

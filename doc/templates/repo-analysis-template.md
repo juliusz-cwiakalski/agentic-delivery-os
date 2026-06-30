@@ -6,7 +6,7 @@ ados_distribution: redistributable
 id: REPO-ANALYSIS
 status: Draft
 created: 2026-06-26
-last_updated: 2026-06-26
+last_updated: 2026-06-29
 owners: [<owner-or-team>]
 area: engineering
 document_classification: current-truth
@@ -36,10 +36,11 @@ _Where execution begins (main, handlers, routes, jobs) and how they are invoked.
 | <path> | <type> | <trigger> |
 ## Module / component map
 _Grouping of modules/components by responsibility._
-| Module | Responsibility |
-|---|---|
-| <module path> | <what it owns> |
-| <module path> | <what it owns> |
+| Module | Responsibility | Residence hint | Layering tier | Interface-contract pointer |
+|---|---|---|---|---|
+| <module path> | <what it owns> | <residence rule / path pattern> | <presentation / application / domain / infrastructure / n-a> | <boundary→boundary operation, or n-a> |
+| <module path> | <what it owns> | <residence hint> | <layering tier> | <contract pointer> |
+These columns correspond to the Module governance section of the architecture overview (residence rules / layering matrix / interface contracts); populate the same concepts during legacy reconstruction.
 ## Data flow
 _Primary data paths through the system._
 - <flow name> — <entry → transformation → persistence>

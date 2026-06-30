@@ -519,7 +519,7 @@ Decide how the product will be built and stress-test those decisions.
 1. **Tech-stack planning session** — select technologies with rationale.
 2. Draft the tech-stack doc using `doc/templates/tech-stack-template.md`.
 3. **Architecture planning session** — design the system architecture.
-4. Draft the architecture overview using `doc/templates/architecture-overview-template.md` (C4 context + container diagrams, components, data flow, external dependencies, deployment topology, key decisions, and uncertainty flags).
+4. Draft the architecture overview using `doc/templates/architecture-overview-template.md` (C4 context + container diagrams, components, module governance — residence rules, dependency-direction/layering, internal interface contracts, optional feature→component ownership, boundary heuristics — data flow, external dependencies, deployment topology, key decisions, and uncertainty flags).
 5. **Full-Stack Environment audit** — verify the project meets the 10 attributes of AI-friendly projects: explicit typing; SRP modules; conventions over configuration; semantic naming; automated tests; linters & formatters; readable Git history; contextual comments; popular tech stack; AI instructions/rules files.
 6. **Four-risk check on architecture decisions** — assess the architecture across Value (will users want it?), Usability (can they use it?), Feasibility (can we build it?), and Viability (does it make business sense?).
 7. New project: design from scratch. Legacy: reconstruct from code.
