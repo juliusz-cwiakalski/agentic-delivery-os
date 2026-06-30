@@ -44,7 +44,7 @@ _Where each capability type of code should live (resolve capability-type → own
 | new API endpoint | `src/<component>/api/` | HTTP entrypoints |
 | new domain rule | `src/<component>/domain/<context>/` | business logic |
 | new CLI command | `src/<component>/cli/commands/` | user-invoked |
-| <capability type> | `src/<component>/<…>` | <notes> |
+| <capability type> | `src/<component>/<...>` | <notes> |
 Rule: place new code by capability type, not by guess; if a capability type is unlisted, add a row before placing the code. Residence rules are scoped per component named in the Components table above. (Single-component repo: omit the `<component>/` segment — e.g. `src/api/`.)
 ### Dependency-direction / layering matrix
 _Which modules may depend on which. Example tiers — adapt to your architecture._
@@ -57,7 +57,7 @@ Invariant: no dependency may point upward or sideways across tiers; the matrix b
 | application | ✗ | — | ✓ | ✓ |
 | domain | ✗ | ✗ | — | ✗ |
 | infrastructure | ✗ | ✗ | ✗ | — |
-| <your tier> | <…> | <…> | <…> | <…> |
+| <your tier> | <...> | <...> | <...> | <...> |
 Example: "API layer may import domain layer; domain layer may NOT import API layer." (Here "API layer" maps to the application/edge tier; map your project's real layer names to the tiers above.)
 ### Internal interface contracts
 _Lightweight contracts for what crosses each module boundary (signature + return/error shape — not a versioned registry)._

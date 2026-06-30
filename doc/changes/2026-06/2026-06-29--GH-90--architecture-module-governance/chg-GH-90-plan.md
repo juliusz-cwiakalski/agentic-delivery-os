@@ -125,7 +125,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
   | new API endpoint | `src/<component>/api/` | HTTP entrypoints |
   | new domain rule | `src/<component>/domain/<context>/` | business logic |
   | new CLI command | `src/<component>/cli/commands/` | user-invoked |
-  | <capability type> | `src/<component>/<…>` | <notes> |
+  | <capability type> | `src/<component>/<...>` | <notes> |
   Rule: place new code by capability type, not by guess; if a capability type is unlisted, add a row before placing the code. Residence rules are scoped per component named in the Components table above. (Single-component repo: omit the `<component>/` segment — e.g. `src/api/`.)
   ```
 
@@ -143,7 +143,7 @@ The plan is fully additive and backward-compatible (NFR-4): no pre-existing sect
   | application | ✗ | — | ✓ | ✓ |
   | domain | ✗ | ✗ | — | ✗ |
   | infrastructure | ✗ | ✗ | ✗ | — |
-  | <your tier> | <…> | <…> | <…> | <…> |
+  | <your tier> | <...> | <...> | <...> | <...> |
   Example: "API layer may import domain layer; domain layer may NOT import API layer."
   ```
 
