@@ -562,7 +562,7 @@ review (PD-2).**
 
 **Tasks**:
 
-- [ ] **4.1** CREATE `scripts/spec-coverage-snapshot.sh` (stdlib bash only; no
+- [x] **4.1** CREATE `scripts/spec-coverage-snapshot.sh` (stdlib bash only; no
   network; `set -Eeuo pipefail`):
   - Count feature specs present: list `doc/spec/features/feature-*.md`
     (`find … -name 'feature-*.md'`), emit the count.
@@ -574,7 +574,7 @@ review (PD-2).**
   - Emit a simple, parseable output: feature-specs-present count,
     change-folders count, and a ratio (present / touching) where meaningful.
     Exit 0 on success. Keep the output honest about its derivation.
-- [ ] **4.2** CREATE `scripts/.tests/test-spec-coverage-snapshot.sh` (per the
+- [x] **4.2** CREATE `scripts/.tests/test-spec-coverage-snapshot.sh` (per the
   `scripts/` convention — `.sh` extension, `test-*.sh` in `.tests/`; follow the
   embedded test-framework style used by the other `scripts/.tests/test-*.sh`
   files):
@@ -585,7 +585,7 @@ review (PD-2).**
   - Assert no network dependency (stdlib only).
   - Optional: a temp-fixture case asserting the count is computable from a
     minimal synthetic tree (keeps the test self-contained and non-flaky).
-- [ ] **4.3** RUN `bash scripts/spec-coverage-snapshot.sh` and
+- [x] **4.3** RUN `bash scripts/spec-coverage-snapshot.sh` and
   `bash scripts/.tests/test-spec-coverage-snapshot.sh` — both must pass and
   produce a non-zero, computable signal.
 
