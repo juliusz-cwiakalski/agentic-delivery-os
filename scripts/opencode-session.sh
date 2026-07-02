@@ -159,8 +159,7 @@ mapping_file_for() {
 
 lookup_session() {
   local -r ticket_ref="$1"
-  local -r mapping_file
-  mapping_file="$(mapping_file_for "${ticket_ref}")"
+  local -r mapping_file="$(mapping_file_for "${ticket_ref}")"
   [[ -f "${mapping_file}" ]] || return 0
   jq_cli -r '.session_id // empty' "${mapping_file}" 2>/dev/null || true
 }
@@ -187,10 +186,8 @@ latest_session_id() {
 
 save_mapping() {
   local -r ticket_ref="$1" session_id="$2" action="$3"
-  local -r mapping_file
-  mapping_file="$(mapping_file_for "${ticket_ref}")"
-  local -r timestamp
-  timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  local -r mapping_file="$(mapping_file_for "${ticket_ref}")"
+  local -r timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   local tmp_file
   tmp_file="$(mktemp)"
 
@@ -208,8 +205,7 @@ save_mapping() {
 
 touch_mapping() {
   local -r ticket_ref="$1" action="$2"
-  local -r mapping_file
-  mapping_file="$(mapping_file_for "${ticket_ref}")"
+  local -r mapping_file="$(mapping_file_for "${ticket_ref}")"
   [[ -f "${mapping_file}" ]] || return 0
   local tmp_file timestamp
   tmp_file="$(mktemp)"
@@ -313,8 +309,7 @@ cmd_list() {
 cmd_show() {
   local -r ticket_ref="$1"
   validate_ticket_ref "${ticket_ref}"
-  local -r file
-  file="$(mapping_file_for "${ticket_ref}")"
+  local -r file="$(mapping_file_for "${ticket_ref}")"
   [[ -f "${file}" ]] || { log_info "No mapping for ${ticket_ref}"; return 0; }
   jq_cli '.' "${file}"
 }
