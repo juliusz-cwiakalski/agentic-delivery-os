@@ -728,22 +728,25 @@ lifecycle phase 7 (`system_spec_update`), coordinated by `@pm`.
 
 **Tasks**:
 
-- [ ] **7.1** (@pm, lifecycle phase 7) Delegate to `@doc-syncer` with `GH-108`.
+- [x] **7.1** (@pm, lifecycle phase 7) Delegate to `@doc-syncer` with `GH-108`.
   `@doc-syncer` reconciles `doc/spec/features/feature-delivery-lifecycle.md` to
   describe the **mode-aware spec-coverage resolution** introduced by this change
   (delivery_mode signal; autonomous ⇒ in-change authoring; interactive ⇒
   advisory/human-gated; first-spec-only; no tracker ticket). This demonstrates
   the DM-2 contract (existing spec ⇒ reconciled, not authored — this change
   modifies an already-specced area, so authoring does NOT fire here).
-- [ ] **7.2** (@doc-syncer) Because `delivery_mode` for THIS change is whatever
+  — **DONE (lifecycle phase 7): @doc-syncer reconciled the spec (commit 15f3fc6, capability F-7 added, GH-108 in links).**
+- [x] **7.2** (@doc-syncer) Because `delivery_mode` for THIS change is whatever
   `@pm` set at intake: if `autonomous`, and IF a modified feature area lacked a
   spec, the mode-aware rule would author it — but this change's feature area
   already has a spec, so the outcome is **reconcile** (first-spec-only guard;
   AC-DM2-1). Record the reconciliation in the `spec_coverage_gaps`/`Updates`
   report fields.
-- [ ] **7.3** (@coder) STOP. Do NOT perform the reconciliation yourself; it is
+  — **DONE: @doc-syncer reported spec_coverage_gaps = [] (area covered); Updates = feature-delivery-lifecycle.md.**
+- [x] **7.3** (@coder) STOP. Do NOT perform the reconciliation yourself; it is
   `@doc-syncer`'s phase-7 responsibility. This phase exists in the plan only to
   make the DM-2/AC-DM2-1 handoff explicit and traceable.
+  — **DONE: @coder stopped before phase 7; doc/spec/** untouched by @coder (verified).**
 
 **Acceptance Criteria**:
 
@@ -835,7 +838,7 @@ lifecycle phase 7 (`system_spec_update`), coordinated by `@pm`.
 | 4 visibility aid | COMPLETED | 2026-07-03 | `14b6ce0` | scripts/spec-coverage-snapshot.sh + test (9/9). Fixed locale bug (LC_ALL=C ratio) + test-framework masking bug (failure-flag run_test; negative-control verified). |
 | 5 plugin freshness verify | COMPLETED | 2026-07-03 | (verification-only; folded into Phase 6 commit) | Oracle 16/16 (incl. committed==fresh-build); regen set across change = exactly pm.md + doc-syncer.md; no skills/manifest diff; source body == generated body for both. |
 | 6 headers on new scripts | COMPLETED | 2026-07-03 | (this commit) | add-header-location.sh on the two new files (explicit path); exactly-once headers; idempotent; no ados_distribution marker; no collateral Phase 1–3 header churn. |
-| 7 system-spec reconciliation | NOT STARTED (@coder stops before) | — | — | @doc-syncer reconciles feature-delivery-lifecycle.md at lifecycle phase 7 (PM-coordinated). NOT a @coder task. |
+| 7 system-spec reconciliation | DONE (lifecycle phase 7 — @doc-syncer, PM-coordinated; commit 15f3fc6) | 15f3fc6 | AC-DM2-1 | @doc-syncer reconciled feature-delivery-lifecycle.md (capability F-7: mode-aware resolution; GH-108 in links). spec_coverage_gaps = []. |
 
 ### Acceptance-criteria evidence (Phases 0–6)
 
@@ -851,4 +854,4 @@ lifecycle phase 7 (`system_spec_update`), coordinated by `@pm`.
 - **AC-NFR4-1** — PASSED: first-spec-only + reconcile-existing + feature-area over-fire guard stated in doc-syncer step 2 / `<rules>`. [Phase 2, a4b55a6]
 - **AC-NFR6-1** — PASSED: root cause (resolution-path mode-blindness) documented in spec §3/§2.2/App. A. [Phase 0, read-only]
 - **AC-NFR7-1** — PASSED: `.ados-claude/` regenerated via `build-claude-plugin.sh` and current (oracle 16/16; regen set == pm.md + doc-syncer.md exactly). [Phases 1, 2, 5]
-- **AC-DM2-1** — NOT VERIFIED by @coder: `feature-delivery-lifecycle.md` reconciliation is a lifecycle-phase-7 @doc-syncer task (Phase 7, NOT STARTED — @coder stopped before it).
+- **AC-DM2-1** — VERIFIED at lifecycle phase 7 (`@doc-syncer`, commit 15f3fc6): `feature-delivery-lifecycle.md` reconciled to describe the mode-aware resolution (capability F-7 added; existing spec ⇒ reconciled, not authored).

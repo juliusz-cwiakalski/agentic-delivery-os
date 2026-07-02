@@ -13,9 +13,9 @@ phases:
   delivery: { started: "2026-07-02T23:30:00Z", completed: "2026-07-03T00:10:00Z" }
   system_spec_update: { started: "2026-07-03T00:10:00Z", completed: "2026-07-03T00:30:00Z" }
   review_fix: { started: "2026-07-03T00:30:00Z", completed: "2026-07-03T00:50:00Z" }
-  quality_gates: { started: null, completed: null }
-  dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null, url: null }
+  quality_gates: { started: "2026-07-03T00:50:00Z", completed: "2026-07-03T01:05:00Z" }
+  dod_check: { started: "2026-07-03T01:05:00Z", completed: "2026-07-03T01:15:00Z" }
+  pr_creation: { started: "2026-07-03T01:15:00Z", completed: null, url: null }
 decisions:
   - text: >
       PDR-0002 (Proposed, R2) — Mode-Aware Spec-Coverage Resolution for
@@ -81,6 +81,28 @@ notes:
       post-hoc (git state capture) and confirmed no .ai/local/ leakage and
       doc/spec/ untouched. Verify the direct-commit quality at @reviewer.
     type: retro
+    date: "2026-07-03"
+  - text: >
+      DoD (phase 10) PASS: all phases 1-9 completed with timestamps; all plan
+      tasks checked (phases 0-6 by @coder, phase 7 by @doc-syncer — checkboxes
+      updated by PM); all 13 ACs satisfied (@reviewer PASS + phase-7
+      AC-DM2-1 verified); no unchecked tasks; no pending TODOs. Plan Phase 7
+      checkboxes/log updated to reflect @doc-syncer reconciliation (commit
+      15f3fc6). Proceeding to pr_creation.
+    type: info
+    date: "2026-07-03"
+  - text: >
+      Quality gates (phase 9): ALL GH-108-relevant gates GREEN —
+      test-spec-coverage-snapshot 9/9, test-build-claude-plugin 16/16
+      (plugin freshness), test-doc-distribution no drift (76 in-scope docs),
+      test-opencode-session 13/13, test-all 8/8, test-add-header-location 19/19,
+      test-doc-distribution-modes 5/5, bash -n syntax OK. 3 FAILURES in
+      text-to-image tool (test-text-to-image-performance: cache-perf timeouts
+      ~39-46s vs <100ms; test-text-to-image-e2e-suite & -e2e-providers:
+      external provider API timeouts) are UNRELATED to GH-108 — pre-existing
+      external-API/tool issues (same pattern noted for GH-85). Out of scope;
+      not routed to @fixer. Fixing text-to-image perf is a separate concern.
+    type: info
     date: "2026-07-03"
   - text: >
       clarify_scope: no human-blocking questions — ticket is complete and
