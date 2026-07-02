@@ -1,4 +1,5 @@
 change_id: GH-108
+delivery_mode: autonomous  # this change was delivered autonomously (dogfoods the field GH-108 introduces)
 title: "doc-syncer reliability — specs/guides must actually fire post-merge"
 branch: fix/GH-108/doc-syncer-reliable-spec-coverage
 change_folder: doc/changes/2026-07/2026-07-02--GH-108--doc-syncer-reliable-spec-coverage
@@ -10,8 +11,8 @@ phases:
   delivery_planning: { started: "2026-07-02T22:45:00Z", completed: "2026-07-02T23:00:00Z" }
   dor_check: { started: "2026-07-02T23:05:00Z", completed: "2026-07-02T23:25:00Z" }
   delivery: { started: "2026-07-02T23:30:00Z", completed: "2026-07-03T00:10:00Z" }
-  system_spec_update: { started: "2026-07-03T00:10:00Z", completed: null }
-  review_fix: { started: null, completed: null }
+  system_spec_update: { started: "2026-07-03T00:10:00Z", completed: "2026-07-03T00:30:00Z" }
+  review_fix: { started: "2026-07-03T00:30:00Z", completed: "2026-07-03T00:50:00Z" }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }

@@ -1,0 +1,13 @@
+[
+  {
+    "id": 1,
+    "severity": "minor",
+    "confidence": "high",
+    "file": "doc/changes/2026-07/2026-07-02--GH-108--doc-syncer-reliable-spec-coverage/chg-GH-108-pm-notes.yaml",
+    "line": 3,
+    "title": "Change's own pm-notes lacks the delivery_mode field it introduces (dogfooding gap)",
+    "description": "This change was delivered autonomously and mandates that @pm record `delivery_mode` at intake in pm-notes (AC-F1-1, DoD). However, chg-GH-108-pm-notes.yaml has no top-level `delivery_mode` field — the only mention is inside a retro/decision note string. So the mode-aware rule would read `interactive` (default) for GH-108 itself. This does not break anything here (GH-108's feature area already has a spec, so phase 7 reconciles regardless of mode), but it is a cross-artifact consistency gap: the change does not demonstrate the very intake signal it ships.",
+    "suggestedFix": "Add a top-level `delivery_mode: autonomous` line next to `change_id`/`title` in chg-GH-108-pm-notes.yaml to match the pm-notes structure documented in .opencode/agent/pm.md. Advisory only — does not affect any shipped prompt/script/spec.",
+    "suppressed": false
+  }
+]
