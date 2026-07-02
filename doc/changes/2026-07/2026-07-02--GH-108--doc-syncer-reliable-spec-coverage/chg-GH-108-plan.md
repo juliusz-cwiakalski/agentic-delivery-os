@@ -404,7 +404,7 @@ doc-syncer authors directly); an existing spec ⇒ reconcile; `interactive`/abse
 
 **Tasks**:
 
-- [ ] **2.1** EDIT `.opencode/agent/doc-syncer.md` step 2 ("Feature spec coverage
+- [x] **2.1** EDIT `.opencode/agent/doc-syncer.md` step 2 ("Feature spec coverage
   (positive coverage check)"): make the check's *resolution* mode-aware. After
   the existing detection (collect missing feature areas into
   `spec_coverage_gaps`), branch on `delivery_mode` read from
@@ -425,7 +425,7 @@ doc-syncer authors directly); an existing spec ⇒ reconcile; `interactive`/abse
   - **No tracker ticket in any mode** (C-1/NFR-3): the resolution produces a
     **doc artifact** scoped to the change and reviewed at the open-PR human gate —
     never a tracker ticket.
-- [ ] **2.2** EDIT `.opencode/agent/doc-syncer.md` `<rules>` — reword the
+- [x] **2.2** EDIT `.opencode/agent/doc-syncer.md` `<rules>` — reword the
   "Spec-coverage handoff (report, never ticket)" rule to be **mode-aware** while
   preserving its core invariants:
   - Keep verbatim: doc-syncer never creates a tracker ticket; the ticket-creation
@@ -437,25 +437,25 @@ doc-syncer authors directly); an existing spec ⇒ reconcile; `interactive`/abse
   - Make explicit that "**advisory**" means "non-blocking at phase 7 / human
     decides ticket creation" in interactive mode, and must **not** be read as "can
     be silently skipped" in autonomous mode (F-4 / AC-F4-2).
-- [ ] **2.3** EDIT `.opencode/agent/doc-syncer.md` `<reporting>` — update the
+- [x] **2.3** EDIT `.opencode/agent/doc-syncer.md` `<reporting>` — update the
   `spec_coverage_gaps` field description so it is mode-aware: in `autonomous`
   mode a resolved gap is reflected (the authored spec listed among `Updates`;
   residual gaps still listed); the field no longer implies "carries no automated
   side effect" unconditionally — in autonomous mode the side effect is the
   in-change authoring. Keep "never creates a spec or a ticket" accurate by
   scoping it to interactive mode.
-- [ ] **2.4** REAFFIRM the operational "feature area" definition (already present
+- [x] **2.4** REAFFIRM the operational "feature area" definition (already present
   in step 2) — no rewording needed unless required for the mode-aware branch; the
   definition governs *when* authoring fires (over-fire guard, NFR-4). Ensure the
   mode-aware branch explicitly references it so autonomous authoring does not
   over-fire on routine edits.
-- [ ] **2.5** REGEN: run `scripts/build-claude-plugin.sh`. (Do NOT hand-edit
+- [x] **2.5** REGEN: run `scripts/build-claude-plugin.sh`. (Do NOT hand-edit
   `.ados-claude/**`.)
-- [ ] **2.6** VERIFY the regen diff is exact: `git diff --stat -- .ados-claude/`
+- [x] **2.6** VERIFY the regen diff is exact: `git diff --stat -- .ados-claude/`
   shows ONLY `.ados-claude/agents/doc-syncer.md` (this phase edited only
   `doc-syncer.md`; the Phase 1 regen for `pm.md` is already committed). If
   anything else changed, STOP and reconcile.
-- [ ] **2.7** Hand off to `@committer`: stage `.opencode/agent/doc-syncer.md` and
+- [x] **2.7** Hand off to `@committer`: stage `.opencode/agent/doc-syncer.md` and
   `.ados-claude/agents/doc-syncer.md` and commit as ONE unit (the invariant).
 
 **Acceptance Criteria**:
