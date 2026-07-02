@@ -15,7 +15,7 @@ phases:
   review_fix: { started: "2026-07-03T00:30:00Z", completed: "2026-07-03T00:50:00Z" }
   quality_gates: { started: "2026-07-03T00:50:00Z", completed: "2026-07-03T01:05:00Z" }
   dod_check: { started: "2026-07-03T01:05:00Z", completed: "2026-07-03T01:15:00Z" }
-  pr_creation: { started: "2026-07-03T01:15:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-07-03T01:15:00Z", completed: "2026-07-03T01:30:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/122" }
 decisions:
   - text: >
       PDR-0002 (Proposed, R2) — Mode-Aware Spec-Coverage Resolution for
