@@ -1,0 +1,95 @@
+change_id: GH-108
+title: "doc-syncer reliability — specs/guides must actually fire post-merge"
+branch: fix/GH-108/doc-syncer-reliable-spec-coverage
+change_folder: doc/changes/2026-07/2026-07-02--GH-108--doc-syncer-reliable-spec-coverage
+epic: GH-107
+phases:
+  clarify_scope: { started: "2026-07-02T21:30:00Z", completed: "2026-07-02T21:55:00Z" }
+  specification: { started: "2026-07-02T22:00:00Z", completed: "2026-07-02T22:30:00Z" }
+  test_planning: { started: "2026-07-02T22:30:00Z", completed: "2026-07-02T22:45:00Z" }
+  delivery_planning: { started: "2026-07-02T22:45:00Z", completed: "2026-07-02T23:00:00Z" }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions:
+  - text: >
+      PDR-0002 (Proposed, R2) — Mode-Aware Spec-Coverage Resolution for
+      Autonomous Delivery. D1: introduce per-change `delivery_mode:
+      interactive|autonomous` field in chg-<ref>-pm-notes.yaml (default/absent
+      => interactive, backward-compatible); autonomous session prompt directs
+      @pm to set `autonomous`. D2: in autonomous mode, a detected
+      spec_coverage_gap for a modified feature area is resolved IN-CHANGE
+      (missing feature spec authored); interactive mode unchanged; the
+      "PM must NEVER create new tickets autonomously" rule preserved verbatim.
+      Plan-level open item: whether @doc-syncer authors the spec directly or
+      delegates to @coder (model-capacity). Record:
+      doc/decisions/PDR-0002-mode-aware-spec-coverage-resolution.md
+    date: "2026-07-02"
+open_questions:
+  - text: >
+      Mode detection mechanism: the ticket prescribes a "mode-aware rule" but
+      "autonomous mode" is NOT a formal/detectable concept in ADOS today (no
+      mode flag; opencode-session.sh runs @pm end-to-end but sets no structured
+      signal agents can read). Spec must define the mode concept (or adopt a
+      mode-independent rule). Routed to @decision-advisor during specification.
+    date: "2026-07-02"
+  - text: >
+      AC-2 option (ii) "PM auto-creates follow-up ticket" conflicts with the
+      governance rule in .ai/agent/pm-instructions.md: "PM must NEVER create
+      new tickets autonomously." Decision needed: default to option (i)
+      (@doc-syncer authors the feature spec in-change) and keep ticket-creation
+      human-gated, OR introduce a bounded autonomous-mode exception. Routed to
+      @decision-advisor during specification.
+    date: "2026-07-02"
+blockers: []
+notes:
+  - text: >
+      clarify_scope: no human-blocking questions — ticket is complete and
+      consistent with system spec; root cause already documented in experiment
+      notes (.ai/local/planning/marksync-top-10-ADOS-improvements.md and
+      parallel-stream-plan-2026-07-02.md). Two design decisions routed to
+      @decision-advisor (see open_questions). Proceeding to specification per
+      autonomous-delivery intent (user: "deliver end-to-end").
+    type: info
+    date: "2026-07-02"
+  - text: >
+      Root cause (AC-1) findings: (a) @doc-syncer only REPORTS
+      spec_coverage_gaps (report-only, never ticket) per doc-syncer.md <rules>;
+      (b) PM handoff is human-gated (propose -> human approves ticket creation);
+      (c) in autonomous delivery there is no human mid-flight to read the
+      advisory report or approve the follow-up, so "advisory + human-gated"
+      reduces to "never happens"; (d) @pm step-3 coverage-awareness is
+      explicitly "advisory only — not a delivery blocker"; change-lifecycle
+      phase 7 says coverage "does not block the change." Net effect: zero
+      feature specs produced across many merged changes; system spec silently
+      rots. The de-noise design is correct for human-in-loop; the bug is the
+      absence of mode-awareness, not the de-noise principle itself.
+    type: info
+    date: "2026-07-02"
+  - text: >
+      Feature spec coverage awareness (advisory — not a blocker): the feature
+      area this change modifies is the delivery lifecycle, incl. Phase 7
+      doc-syncer / spec-coverage capability. doc/spec/features/feature-delivery-lifecycle.md
+      exists (status: Current). The doc-syncer / Phase-7 / spec-coverage
+      sub-capability has NO dedicated feature spec (folded into the lifecycle
+      spec). Change will UPDATE feature-delivery-lifecycle.md; whether a
+      dedicated feature-doc-syncer.md is warranted is a follow-up consideration
+      (advisory, human decides).
+    type: info
+    date: "2026-07-02"
+  - text: >
+      Scope touchpoints identified for the plan: .opencode/agent/doc-syncer.md
+      (mode-aware rule + spec-coverage promotion), doc/guides/change-lifecycle.md
+      (Phase 7 wording — "advisory" must not mean "silently skipped" in
+      autonomous mode), .ai/agent/pm-instructions.md + .opencode/agent/pm.md
+      (spec_coverage_gaps facet / ticket-creation governance tension),
+      doc/spec/features/feature-delivery-lifecycle.md (reconcile), plus a
+      visibility aid (AC-4: feature-specs-present vs changes-touching-feature-areas
+      count). Parallel-stream plan originally assigned branch
+      fix/GH-108/doc-syncer-reliability; using fix/GH-108/doc-syncer-reliable-spec-coverage.
+    type: info
+    date: "2026-07-02"
