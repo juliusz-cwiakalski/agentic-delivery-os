@@ -238,14 +238,14 @@ plugin baseline is fresh before any `.opencode/` edit (converts the post-edit
 
 **Tasks**:
 
-- [ ] **0.1** Confirm the working branch is
+- [x] **0.1** Confirm the working branch is
   `fix/GH-108/doc-syncer-reliable-spec-coverage` (`git branch --show-current`).
   STOP if not.
-- [ ] **0.2** READ the spec (`./chg-GH-108-spec.md` — §5 capabilities F-1…F-5,
+- [x] **0.2** READ the spec (`./chg-GH-108-spec.md` — §5 capabilities F-1…F-5,
   §7.1 scope, §17 ACs, DM-1/DM-2, NFRs) and the settled decision
   (`doc/decisions/PDR-0002-mode-aware-spec-coverage-resolution.md` — Decision
   D1/D2, constraints C-1…C-4). These are chosen input; do not re-litigate.
-- [ ] **0.3** READ the authoritative current files (verify the spec's "current
+- [x] **0.3** READ the authoritative current files (verify the spec's "current
   state" claims against shipped sources):
   - `.opencode/agent/doc-syncer.md` — `<rules>` "Spec-coverage handoff (report,
     never ticket)" + `<reporting>` `spec_coverage_gaps` + step-2 positive
@@ -263,7 +263,7 @@ plugin baseline is fresh before any `.opencode/` edit (converts the post-edit
   - `doc/spec/features/feature-delivery-lifecycle.md` — the spec for THIS
     change's feature area (`status: Current` ⇒ will be **reconciled**, not
     authored).
-- [ ] **0.4** PRECONDITION — plugin-baseline freshness: run
+- [x] **0.4** PRECONDITION — plugin-baseline freshness: run
   `scripts/build-claude-plugin.sh` then `git diff --stat -- .ados-claude/` and
   require **EMPTY** output. This proves the committed `.ados-claude/` baseline is
   current (the build is deterministic). If the pre-diff is non-empty, STOP — the
@@ -271,7 +271,7 @@ plugin baseline is fresh before any `.opencode/` edit (converts the post-edit
   *(Pre-verified during planning: pre-diff EMPTY; `delivery_mode` currently
   appears in 0 of the 3 target files — confirms the spec's "not detectable today"
   claim.)*
-- [ ] **0.5** Confirm AC-NFR6-1 is satisfied by the spec artifact itself (the
+- [x] **0.5** Confirm AC-NFR6-1 is satisfied by the spec artifact itself (the
   spec's Problem/Context documents the mode-blindness root cause, distinguishing
   it from "missing check" and "de-noise design flaw"). No edit needed — read-only
   verification.
@@ -307,7 +307,7 @@ entry point to instruct `@pm` to set `autonomous`. This phase edits ONE
 
 **Tasks**:
 
-- [ ] **1.1** EDIT `.opencode/agent/pm.md` step 3 (clarify_scope) and the pm-notes
+- [x] **1.1** EDIT `.opencode/agent/pm.md` step 3 (clarify_scope) and the pm-notes
   YAML structure block:
   - Add `delivery_mode` to the pm-notes structure as a top-level per-change field
     with the enum `interactive | autonomous`, default `interactive`, and the rule
@@ -321,7 +321,7 @@ entry point to instruct `@pm` to set `autonomous`. This phase edits ONE
     not a delivery blocker** in interactive mode; add a one-line pointer that
     coverage *resolution* at phase 7 is mode-aware (the detail lives in
     `doc-syncer.md`, authored in Phase 2 — cross-reference, do not duplicate).
-- [ ] **1.2** EDIT `.ai/agent/pm-instructions.md` (SURGICAL — coverage/mode area
+- [x] **1.2** EDIT `.ai/agent/pm-instructions.md` (SURGICAL — coverage/mode area
   only): add a short note near the relevant section stating that `@pm` records
   `delivery_mode` in pm-notes at intake, and that the phase-7 spec-coverage
   resolution is mode-aware (autonomous ⇒ resolved in-change as a doc artifact;
@@ -329,19 +329,19 @@ entry point to instruct `@pm` to set `autonomous`. This phase edits ONE
   "PM must NEVER create new tickets autonomously"** — the rule is preserved
   verbatim (C-1/NFR-3); the note must make clear the resolution produces a *doc
   artifact*, never a tracker ticket.
-- [ ] **1.3** EDIT `scripts/opencode-session.sh` `default_prompt_for()`: add a
+- [x] **1.3** EDIT `scripts/opencode-session.sh` `default_prompt_for()`: add a
   **one-line** instruction directing `@pm` to set `delivery_mode: autonomous` in
   pm-notes. No new tooling surface, flags, or env vars (the signal is the
   committed pm-notes field; a manual `@pm` invocation reads it identically —
   C-4/NFR-2).
-- [ ] **1.4** REGEN: run `scripts/build-claude-plugin.sh`. (Do NOT hand-edit
+- [x] **1.4** REGEN: run `scripts/build-claude-plugin.sh`. (Do NOT hand-edit
   `.ados-claude/**`.)
-- [ ] **1.5** VERIFY the regen diff is exact: `git diff --stat -- .ados-claude/`
+- [x] **1.5** VERIFY the regen diff is exact: `git diff --stat -- .ados-claude/`
   shows ONLY `.ados-claude/agents/pm.md` (this phase edited only `pm.md`; no
   command was edited → no `skills/**` diff; the manifest
   `.ados-claude/.claude-plugin/plugin.json` is static `1.0.0` → no diff). If
   anything else changed, STOP and reconcile.
-- [ ] **1.6** Hand off to `@committer`: stage `.opencode/agent/pm.md`,
+- [x] **1.6** Hand off to `@committer`: stage `.opencode/agent/pm.md`,
   `.ai/agent/pm-instructions.md`, `scripts/opencode-session.sh`, and
   `.ados-claude/agents/pm.md` and commit as ONE unit (the source+generated
   invariant for the `.opencode/` edit; the other two files ride along as related

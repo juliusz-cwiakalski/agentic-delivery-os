@@ -215,7 +215,8 @@ Planning sessions structure (for multi-change planning):
   - Identify contradictions between requested changes and existing system behavior
   - Identify dependencies on existing features or contracts
   - Identify edge cases that may not be addressed in the ticket
-- **Feature spec coverage awareness:** For each **feature area** the change modifies (a coherent, nameable capability a contributor/reviewer would expect a spec for — i.e., something that warrants a `doc/spec/features/feature-<slug>.md`), note whether a corresponding spec exists in `doc/spec/features/`. Record any known coverage gap in `chg-<workItemRef>-pm-notes.yaml` so it is visible before delivery. This is **advisory only — not a delivery blocker**: coverage is surfaced at intake for awareness and reported again at `system_spec_update` (phase 7) by `@doc-syncer`'s `spec_coverage_gaps` field; the human alone decides whether a follow-up ticket is created.
+- **Delivery mode (`delivery_mode`):** At intake (clarify_scope, step 3), record `delivery_mode` in `chg-<workItemRef>-pm-notes.yaml`: `interactive | autonomous`. An **absent** field is treated as `interactive` (the default — backward-compatible, no migration). Manual `@pm` invocations set it explicitly (or leave it absent ⇒ `interactive`); the autonomous session entry point (`scripts/opencode-session.sh`) instructs `@pm` to set `autonomous`. The field gates the phase-7 spec-coverage resolution path (see next bullet + `.opencode/agent/doc-syncer.md`).
+- **Feature spec coverage awareness:** For each **feature area** the change modifies (a coherent, nameable capability a contributor/reviewer would expect a spec for — i.e., something that warrants a `doc/spec/features/feature-<slug>.md`), note whether a corresponding spec exists in `doc/spec/features/`. Record any known coverage gap in `chg-<workItemRef>-pm-notes.yaml` so it is visible before delivery. This is **advisory only — not a delivery blocker** in `interactive` mode: coverage is surfaced at intake for awareness and reported again at `system_spec_update` (phase 7) by `@doc-syncer`'s `spec_coverage_gaps` field; the human alone decides whether a follow-up ticket is created. **Coverage *resolution* at phase 7 is mode-aware** (authoritative detail in `.opencode/agent/doc-syncer.md`): in `autonomous` mode a detected gap for a modified feature area with no spec is resolved in-change (the missing `feature-<slug>.md` is authored, first-spec-only; an existing spec is reconciled); in `interactive`/absent mode the gap is reported for a human-gated follow-up. No tracker ticket is created in any mode.
 - Analyze requirements for completeness: acceptance criteria, constraints, dependencies, edge cases
 - If gaps, contradictions, or missing info found:
   1. Add a comment to the ticket with specific questions (reference system spec where relevant)
@@ -230,6 +231,7 @@ PM notes YAML structure:
 ```yaml
 change_id: GH-5
 title: "..."
+delivery_mode: interactive  # interactive | autonomous; absent ⇒ interactive (default; backward-compatible). Set by @pm at intake (step 3).
 phases:
   clarify_scope: { started: null, completed: null }
   specification: { started: null, completed: null }

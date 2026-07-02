@@ -46,6 +46,14 @@ Map change lifecycle to GitHub issue states and labels:
 
 This rule applies to all ticket creation — scope splits, follow-up work, discovered issues, etc. The PM proposes; the human decides.
 
+### Delivery Mode & Phase-7 Spec-Coverage Resolution (mode-aware)
+
+`@pm` records `delivery_mode` (`interactive | autonomous`; an **absent** field ⇒ `interactive`, the default) in `chg-<workItemRef>-pm-notes.yaml` at intake. Manual `@pm` sets it explicitly (or leaves it absent ⇒ `interactive`); the autonomous session entry point (`scripts/opencode-session.sh`) instructs `@pm` to set `autonomous`.
+
+The phase-7 (`system_spec_update`) spec-coverage **resolution** is **mode-aware** (authoritative detail in `.opencode/agent/doc-syncer.md`): in `autonomous` mode, a detected spec-coverage gap for a modified feature area that has no spec is **resolved in-change** — `@doc-syncer` authors the missing `doc/spec/features/feature-<slug>.md` (first-spec-only; an existing spec is reconciled, not re-authored). In `interactive`/absent mode, the gap is advisory and human-gated (report → `@pm` proposes a follow-up → only the human approves ticket creation).
+
+This resolution produces a **doc artifact** scoped to the change and reviewed at the open-PR human gate — **never a tracker ticket**, in any mode. The "PM must NEVER create new tickets autonomously" rule above is unchanged.
+
 ### Creating New Changes (when human-approved)
 
 1. Before creating, check for existing issues using `gh_list_issues` with `state:open`, `labels:change`. Present the user a draft of the new issue for review before creating it.
