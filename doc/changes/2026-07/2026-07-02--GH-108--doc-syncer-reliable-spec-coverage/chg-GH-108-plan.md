@@ -625,16 +625,16 @@ this phase produces no regen of its own; it asserts freshness.
 
 **Tasks**:
 
-- [ ] **5.1** RUN `bash scripts/.tests/test-build-claude-plugin.sh` — the
+- [x] **5.1** RUN `bash scripts/.tests/test-build-claude-plugin.sh` — the
   freshness oracle must pass (generated tree matches a fresh build).
-- [ ] **5.2** VERIFY the regen set is exact: across the change (vs the merge
+- [x] **5.2** VERIFY the regen set is exact: across the change (vs the merge
   base), `git diff --stat -- .ados-claude/` touches ONLY:
   - `.ados-claude/agents/pm.md` (from Phase 1)
   - `.ados-claude/agents/doc-syncer.md` (from Phase 2)
   No `skills/**` diff (no command was edited); no manifest diff (static `1.0.0`).
   If anything else changed, STOP and reconcile (a non-source diff means a
   stale/undeterministic prior generation).
-- [ ] **5.3** VERIFY source == generated body: `.opencode/agent/pm.md` body ==
+- [x] **5.3** VERIFY source == generated body: `.opencode/agent/pm.md` body ==
   `.ados-claude/agents/pm.md` body (minus the generated header/regen comment),
   and likewise for `doc-syncer.md`.
 
@@ -670,23 +670,23 @@ script (AI never hand-adds headers), consistent with every existing file under
 
 **Tasks**:
 
-- [ ] **6.1** RUN (explicit path — `scripts/` is not in the script's
+- [x] **6.1** RUN (explicit path — `scripts/` is not in the script's
   `DEFAULT_PATHS`, but the script accepts it as an argument and advertises it in
   its usage; every existing `scripts/` file carries this header):
   ```
   scripts/add-header-location.sh scripts/spec-coverage-snapshot.sh
   scripts/add-header-location.sh scripts/.tests/test-spec-coverage-snapshot.sh
   ```
-- [ ] **6.2** VERIFY each new file now has the 3-line bash comment header
+- [x] **6.2** VERIFY each new file now has the 3-line bash comment header
   (copyright / MIT / "Latest version:") after the shebang, exactly once.
-- [ ] **6.3** VERIFY idempotency: re-running the script on either file produces
+- [x] **6.3** VERIFY idempotency: re-running the script on either file produces
   NO diff (no duplicate header).
-- [ ] **6.4** CONFIRM no `ados_distribution` marker is required: `scripts/` is
+- [x] **6.4** CONFIRM no `ados_distribution` marker is required: `scripts/` is
   outside the marker scope (per `pm-instructions.md` "Doc Distribution Marker"
   and AGENTS.md — markers are for `doc/guides`, `doc/templates/**`, and the
   standalone docs; decision records excluded). Do NOT add a marker to the new
   files.
-- [ ] **6.5** CONFIRM no header action is needed for the files edited in Phases
+- [x] **6.5** CONFIRM no header action is needed for the files edited in Phases
   1–3 (`pm.md`, `doc-syncer.md`, `pm-instructions.md`, `change-lifecycle.md`,
   `opencode-session.sh`) — they already carry headers and were edited surgically
   (the script is idempotent; running it on configured paths is a no-op for them).
@@ -825,3 +825,30 @@ lifecycle phase 7 (`system_spec_update`), coordinated by `@pm`.
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
 -->
+
+| Phase | Status | Completed | Commit | Notes |
+|-------|--------|-----------|--------|-------|
+| 0 pre-flight | COMPLETED | 2026-07-03 | (read-only) | Branch confirmed; plugin baseline FRESH (empty pre-diff); AC-NFR6-1 satisfied by spec §3/§2.2/App. A. |
+| 1 mode signal + autonomous wiring | COMPLETED | 2026-07-03 | `f32e0f0` | pm.md delivery_mode + intake + mode-aware coverage pointer; pm-instructions.md surgical note (governance rule verbatim, no exception); opencode-session.sh one-line prompt instruction; .ados-claude/agents/pm.md regen (exact 1-file). |
+| 2 mode-aware doc-syncer | COMPLETED | 2026-07-03 | `a4b55a6` | doc-syncer.md step-2 mode-aware resolution branch + <rules> mode-aware handoff (invariants preserved) + <reporting> mode-aware field; feature-area definition reaffirmed as over-fire guard; .ados-claude/agents/doc-syncer.md regen (exact 1-file; source body == generated body). |
+| 3 lifecycle Phase-7 wording | COMPLETED | 2026-07-03 | `55baff7` | change-lifecycle.md Phase-7 handoff bullet rewritten (mode-aware, never-ticket; "advisory" disambiguated). Exactly 1 line changed; mermaid/numbering/other phases untouched. |
+| 4 visibility aid | COMPLETED | 2026-07-03 | `14b6ce0` | scripts/spec-coverage-snapshot.sh + test (9/9). Fixed locale bug (LC_ALL=C ratio) + test-framework masking bug (failure-flag run_test; negative-control verified). |
+| 5 plugin freshness verify | COMPLETED | 2026-07-03 | (verification-only; folded into Phase 6 commit) | Oracle 16/16 (incl. committed==fresh-build); regen set across change = exactly pm.md + doc-syncer.md; no skills/manifest diff; source body == generated body for both. |
+| 6 headers on new scripts | COMPLETED | 2026-07-03 | (this commit) | add-header-location.sh on the two new files (explicit path); exactly-once headers; idempotent; no ados_distribution marker; no collateral Phase 1–3 header churn. |
+| 7 system-spec reconciliation | NOT STARTED (@coder stops before) | — | — | @doc-syncer reconciles feature-delivery-lifecycle.md at lifecycle phase 7 (PM-coordinated). NOT a @coder task. |
+
+### Acceptance-criteria evidence (Phases 0–6)
+
+- **AC-F1-1** — PASSED: `delivery_mode: interactive | autonomous` (absent ⇒ interactive) declared in `.opencode/agent/pm.md` step 3 + pm-notes YAML structure (grep: 2 hits). [Phase 1, f32e0f0]
+- **AC-F1-2** — PASSED: the signal is the committed pm-notes field; the session prompt (`default_prompt_for()`) and manual `@pm` both read it — no env-var-only mechanism. [Phase 1, f32e0f0]
+- **AC-F2-1** — PASSED: doc-syncer handoff is mode-aware — reads `delivery_mode`; autonomous × no-spec ⇒ authored in-change; existing spec ⇒ reconciled (first-spec-only). [Phase 2, a4b55a6]
+- **AC-F2-2** — PASSED: no tracker ticket in any mode; "PM must NEVER create new tickets autonomously" retained verbatim at `.ai/agent/pm-instructions.md:40` with no autonomous exception (grep verified across Phases 1–2). [Phases 1–2]
+- **AC-F2-3** — PASSED: absent/interactive ⇒ byte-for-byte unchanged report-only handoff (no new blocking prompt). [Phase 2, a4b55a6]
+- **AC-F3-1** — PASSED: `default_prompt_for()` carries the one-line `delivery_mode: autonomous` instruction; no new flags/env vars introduced. [Phase 1, f32e0f0]
+- **AC-F4-1** — PASSED: lifecycle Phase 7 disambiguates "advisory" and describes the mode-aware resolution; no phase-count drift (11 phases; phase 7). [Phase 3, 55baff7]
+- **AC-F4-2** — PASSED: doc-syncer `<rules>`/`<reporting>` wording no longer ⇒ silently-skipped in autonomous mode. [Phase 2, a4b55a6]
+- **AC-F5-1 / NFR-5** — PASSED: `scripts/spec-coverage-snapshot.sh` produces a non-zero, computable count (16 feature specs / 19 change-folders, ratio 0.84); `test-spec-coverage-snapshot.sh` 9/9 green. [Phase 4, 14b6ce0]
+- **AC-NFR4-1** — PASSED: first-spec-only + reconcile-existing + feature-area over-fire guard stated in doc-syncer step 2 / `<rules>`. [Phase 2, a4b55a6]
+- **AC-NFR6-1** — PASSED: root cause (resolution-path mode-blindness) documented in spec §3/§2.2/App. A. [Phase 0, read-only]
+- **AC-NFR7-1** — PASSED: `.ados-claude/` regenerated via `build-claude-plugin.sh` and current (oracle 16/16; regen set == pm.md + doc-syncer.md exactly). [Phases 1, 2, 5]
+- **AC-DM2-1** — NOT VERIFIED by @coder: `feature-delivery-lifecycle.md` reconciliation is a lifecycle-phase-7 @doc-syncer task (Phase 7, NOT STARTED — @coder stopped before it).
