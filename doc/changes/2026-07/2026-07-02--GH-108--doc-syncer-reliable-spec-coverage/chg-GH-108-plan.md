@@ -506,10 +506,10 @@ edit here → no regen.
 
 **Tasks**:
 
-- [ ] **3.1** READ `doc/guides/change-lifecycle.md` Phase 7 (the
+- [x] **3.1** READ `doc/guides/change-lifecycle.md` Phase 7 (the
   "Feature spec coverage check" + "De-noised, human-gated handoff" bullets and the
   "Deferred alternative" note).
-- [ ] **3.2** EDIT Phase 7 surgically (the coverage/Phase-7 area only — do NOT
+- [x] **3.2** EDIT Phase 7 surgically (the coverage/Phase-7 area only — do NOT
   restructure the section, the mermaid diagram, the phase numbering, or any other
   phase):
   - Disambiguate "advisory": it continues to mean "non-blocking at phase 7 /
@@ -524,7 +524,7 @@ edit here → no regen.
   - Reference the operational "feature area" definition authoritatively in
     `.opencode/agent/doc-syncer.md` (do not restate it).
   - Keep the existing "Deferred alternative" (Proposal C) note intact.
-- [ ] **3.3** VERIFY no phase-count drift: the lifecycle still reads **11 phases**;
+- [x] **3.3** VERIFY no phase-count drift: the lifecycle still reads **11 phases**;
   `system_spec_update` stays **phase 7**; the mermaid diagram is unchanged.
 
 **Acceptance Criteria**:
