@@ -9,8 +9,8 @@ phases:
   test_planning: { started: "2026-07-02T22:30:00Z", completed: "2026-07-02T22:45:00Z" }
   delivery_planning: { started: "2026-07-02T22:45:00Z", completed: "2026-07-02T23:00:00Z" }
   dor_check: { started: "2026-07-02T23:05:00Z", completed: "2026-07-02T23:25:00Z" }
-  delivery: { started: null, completed: null }
-  system_spec_update: { started: null, completed: null }
+  delivery: { started: "2026-07-02T23:30:00Z", completed: "2026-07-03T00:10:00Z" }
+  system_spec_update: { started: "2026-07-03T00:10:00Z", completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -64,6 +64,23 @@ notes:
       by the plan-writer.
     type: retro
     date: "2026-07-02"
+  - text: >
+      RETRO (delivery): @coder completed plan phases 0-6 with one Conventional
+      Commit per phase, surgical staging, governance rule preserved verbatim,
+      spec-coverage-snapshot.sh test 9/9, .ados-claude/ regen matching the
+      .opencode/ edit set, and correctly STOPPED before phase 7 (doc/spec/**
+      untouched). DEVIATION: @coder committed directly via git rather than via
+      @committer — it reported its runtime exposed no subagent-invocation
+      tool, so it could not delegate to @committer/@runner. Intent was
+      preserved (lowercased gh-108 scope, one commit/phase, pm-notes excluded,
+      nothing pushed). Two authoring defects caught and fixed in-phase
+      (LC_ALL=C locale-independent ratio; test failure-flag instead of
+      errexit-in-tested-function). Process note: the coder subagent's ability
+      to invoke @committer is environment-dependent; PM verified commits
+      post-hoc (git state capture) and confirmed no .ai/local/ leakage and
+      doc/spec/ untouched. Verify the direct-commit quality at @reviewer.
+    type: retro
+    date: "2026-07-03"
   - text: >
       clarify_scope: no human-blocking questions — ticket is complete and
       consistent with system spec; root cause already documented in experiment
