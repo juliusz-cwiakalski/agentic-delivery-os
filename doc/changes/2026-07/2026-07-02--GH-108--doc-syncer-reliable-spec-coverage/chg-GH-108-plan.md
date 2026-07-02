@@ -1,8 +1,8 @@
 ---
 id: chg-GH-108-doc-syncer-reliable-spec-coverage
-status: Proposed
+status: Updated
 created: 2026-07-02T00:00:00Z
-last_updated: 2026-07-02T21:42:52Z
+last_updated: 2026-07-02T21:57:11Z
 owners: ["Juliusz Ćwiąkalski"]
 service: delivery-os
 labels: ["fix", "process", "doc-syncer", "spec-coverage", "autonomous-delivery", "epic-107"]
@@ -121,7 +121,9 @@ in-change; no ticket). The two spec Open Questions (**OQ-1 authoring ownership**
   report-only handoff. (AC-F2-1, AC-NFR4-1)
 - **F-2 / NFR-3 — governance preserved:** no agent creates a tracker ticket in
   any mode; "PM must NEVER create new tickets autonomously" retained verbatim in
-  `pm.md` + `pm-instructions.md` with no autonomous-mode exception. (AC-F2-2)
+  its canonical home `.ai/agent/pm-instructions.md` (the phrase lives there;
+  `pm.md` is not required to carry it), with no autonomous-mode exception carved
+  in. (AC-F2-2)
 - **NFR-1 — backward compatibility:** absent/`interactive` behaves identically to
   pre-change. (AC-F2-3)
 - **F-4 — "advisory ≠ silently skipped" wording:** normalize in
@@ -170,8 +172,13 @@ in-change; no ticket). The two spec Open Questions (**OQ-1 authoring ownership**
   sessions. Do NOT reword the governance rule; do NOT restructure sections.
 - **Governance verbatim (C-1 / NFR-3):** "PM must NEVER create new tickets
   autonomously" stays byte-identical; no autonomous-mode exception is carved into
-  it. The resolution path produces a **doc artifact** scoped to the change,
-  reviewed at the open-PR human gate — never a tracker ticket.
+  it. *Canonical home (single source of truth for this rule):*
+  `.ai/agent/pm-instructions.md:40` — `pm.md` is NOT required to carry the phrase,
+  so @coder/@reviewer verify it in `pm-instructions.md`; the Phase-1 edit to
+  `pm.md` adds only the `delivery_mode` declaration + mode-aware coverage note,
+  never the ticket-creation rule. The resolution path produces a **doc artifact**
+  scoped to the change, reviewed at the open-PR human gate — never a tracker
+  ticket.
 - **First-spec-only (DEC-4 / NFR-4):** authoring fires only for the FIRST spec
   of an unspecced modified feature area; an existing spec is reconciled, never
   re-authored; routine edits are excluded.
@@ -347,8 +354,10 @@ entry point to instruct `@pm` to set `autonomous`. This phase edits ONE
   `delivery_mode: autonomous`, one-line, no new tooling surface); AC-F1-2 (the
   signal is the pm-notes field, readable identically from session + manual `@pm`;
   no env-var-only mechanism); AC-F2-2 (the governance rule is untouched — verify
-  `pm.md` + `pm-instructions.md` still contain "PM must NEVER create new tickets
-  autonomously" verbatim with no autonomous-mode exception); AC-NFR7-1
+  `.ai/agent/pm-instructions.md` still contains "PM must NEVER create new tickets
+  autonomously" verbatim with no autonomous-mode exception; the phrase's canonical
+  home is `pm-instructions.md`, and `pm.md` is not required to carry it);
+  AC-NFR7-1
   (`.ados-claude/` regenerated, exact 1-file diff).
 - Should: the pm-instructions.md note is grep-distinguishable and surgical
   (governance-rule wording unchanged).
@@ -371,7 +380,9 @@ entry point to instruct `@pm` to set `autonomous`. This phase edits ONE
 - Grep: `delivery_mode` now appears in `pm.md`, `opencode-session.sh`, and
   `pm-instructions.md`; absent/`interactive` default stated.
 - Grep: "PM must NEVER create new tickets autonomously" still present and verbatim
-  in both `pm.md` and `pm-instructions.md`; no "autonomous" exception clause.
+  in its canonical home `.ai/agent/pm-instructions.md` (the phrase lives there;
+  `pm.md` is not required to carry it); no "autonomous" exception clause carved
+  in anywhere.
 - Grep: `default_prompt_for()` carries the one-line `delivery_mode: autonomous`
   instruction; no new flags/env vars introduced in the script.
 - Manual: confirm the regen diff is exactly `.ados-claude/agents/pm.md`.
@@ -452,8 +463,10 @@ doc-syncer authors directly); an existing spec ⇒ reconcile; `interactive`/abse
 - Must: AC-F2-1 (doc-syncer handoff is mode-aware: reads `delivery_mode`;
   autonomous × no-spec ⇒ authored in-change; existing spec ⇒ reconciled);
   AC-NFR4-1 (existing spec reconciled not re-authored; routine edits excluded);
-  AC-F2-2 (no tracker ticket in any mode; governance rule untouched — `pm.md` +
-  `pm-instructions.md` still verbatim, no exception); AC-F2-3 (absent/interactive
+  AC-F2-2 (no tracker ticket in any mode; governance rule untouched —
+  `.ai/agent/pm-instructions.md` still verbatim, no exception; the phrase's
+  canonical home is `pm-instructions.md`, and `pm.md` is not required to carry
+  it); AC-F2-3 (absent/interactive
   ⇒ identical to pre-change; no new blocking prompt); AC-F4-2 (doc-syncer
   `<rules>`/`<reporting>` wording no longer ⇒ silently-skipped in autonomous
   mode); AC-NFR7-1 (`.ados-claude/` regenerated, exact 1-file diff).
@@ -766,7 +779,7 @@ lifecycle phase 7 (`system_spec_update`), coordinated by `@pm`.
 | TS-1 | `pm.md` step 3 + pm-notes structure declare `delivery_mode` (interactive default; absent ⇒ interactive) | 1 | AC-F1-1 |
 | TS-2 | `default_prompt_for()` instructs `delivery_mode: autonomous` (one line; no new flags/env vars) | 1 | AC-F3-1 |
 | TS-3 | The signal is the pm-notes field — readable identically from session + manual `@pm` (no env-var-only mechanism) | 1 | AC-F1-2, NFR-2 |
-| TS-4 | "PM must NEVER create new tickets autonomously" retained verbatim in `pm.md` + `pm-instructions.md`; no autonomous exception | 1, 2 | AC-F2-2, NFR-3 |
+| TS-4 | "PM must NEVER create new tickets autonomously" retained verbatim in its canonical home `.ai/agent/pm-instructions.md` (pm.md not required to carry it); no autonomous exception carved in | 1, 2 | AC-F2-2, NFR-3 |
 | TS-5 | doc-syncer handoff is mode-aware: reads `delivery_mode`; autonomous × no-spec ⇒ authored in-change; existing spec ⇒ reconciled | 2 | AC-F2-1, DM-2 |
 | TS-6 | Existing spec reconciled, not re-authored; routine edits excluded (over-fire guard) | 2 | AC-NFR4-1 |
 | TS-7 | Absent/`interactive` ⇒ byte-for-byte unchanged (report-only; no new blocking prompt) | 1, 2 | AC-F2-3, NFR-1 |
@@ -804,6 +817,7 @@ lifecycle phase 7 (`system_spec_update`), coordinated by `@pm`.
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-07-02 | plan-writer | Initial plan: 8 phases (0 pre-flight incl. plugin-baseline freshness; 1 mode signal + autonomous wiring [F-1/F-3]; 2 mode-aware doc-syncer resolution [F-2/F-4]; 3 lifecycle Phase-7 wording [F-4]; 4 visibility aid [F-5/AC-4]; 5 plugin freshness verify [NFR-7]; 6 headers on new scripts [PD-3]; 7 system-spec reconciliation as PM-coordinated @doc-syncer step, @coder stops before it [DM-2/AC-DM2-1]). Resolves spec OQ-1 (PD-1: doc-syncer authors directly — opus tier) and OQ-2 (PD-2: `scripts/spec-coverage-snapshot.sh` + test, CEO-gated ⇒ PR-review flag). Regen is in-commit per `.opencode/`-editing phase (1, 2) per the 1:1 invariant; Phase 5 is the final freshness verification. No commit performed (PM routes through @committer). |
+| 1.1 | 2026-07-02 | plan-writer | DoR remediation (readiness-iter-1). Fixed ONE blocking cross-artifact drift: the plan asserted "PM must NEVER create new tickets autonomously" must be retained verbatim in BOTH `pm.md` AND `pm-instructions.md`, but the phrase exists ONLY in `.ai/agent/pm-instructions.md:40` (absent from `pm.md`, no task adds it there) — making the grep checks unachievable and contradicting TC-GOV-001. Corrected all affected locations (Scope F-2/NFR-3; Constraints governance-verbatim; Phase 1 AC + Tests; Phase 2 AC; TS-4) to verify the phrase in its canonical home `pm-instructions.md` only (pm.md not required to carry it) with no autonomous-mode exception carved in. Added the canonical-home note (single source of truth = `pm-instructions.md:40`) and confirmed the Phase-1 `pm.md` edit adds only `delivery_mode` + mode-aware coverage note — never the ticket-creation rule (surgical-edit constraint intact). Plan now agrees with TC-GOV-001. No source file, spec, or test-plan touched; no commit (PM routes through @committer). |
 
 ## Execution Log
 
