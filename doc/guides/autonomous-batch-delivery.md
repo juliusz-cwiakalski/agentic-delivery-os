@@ -16,18 +16,22 @@ Autonomous batch delivery lets you deliver multiple tickets **unattended** — o
 
 ## Installation
 
-These scripts ship with ADOS. Running `install.sh --local` in a project installs them into `./scripts/` and `./tools/`:
+These scripts ship with ADOS. There are two install paths:
 
-```bash
-# After installing ADOS artifacts into your project
-scripts/install.sh --local
+- **`install.sh --local`** (recommended for your projects) — copies the delivery scripts into `./scripts/` and `./tools/` **in the current project**, alongside the other ADOS artifacts:
 
-# The delivery scripts are now available:
-#   scripts/opencode-session.sh   — ticket-scoped session manager
-#   scripts/deliver-ticket.sh     — single-ticket liveness-monitored delivery
-#   scripts/batch-deliver.sh      — sequential batch delivery
-#   tools/clean-merged-branches   — squash-merge-safe branch cleanup
-```
+  ```bash
+  # After installing ADOS artifacts into your project
+  scripts/install.sh --local
+
+  # The delivery scripts are now available in THIS project:
+  #   scripts/opencode-session.sh   — ticket-scoped session manager
+  #   scripts/deliver-ticket.sh     — single-ticket liveness-monitored delivery
+  #   scripts/batch-deliver.sh      — sequential batch delivery
+  #   tools/clean-merged-branches   — squash-merge-safe branch cleanup
+  ```
+
+- **`install.sh --global`** — clones the ADOS repo to `~/.ados/repo/`. The delivery scripts are already present there (it's the full repo), so you can run them directly (e.g. `~/.ados/repo/scripts/deliver-ticket.sh GH-112`). The `--global` mode does **not** copy the scripts into any project — use `--local` for that.
 
 If you only want the branch cleanup tool (without the full ADOS delivery scripts), use the standalone installer:
 
@@ -177,7 +181,7 @@ flowchart LR
     subgraph Signals["Approval signals — ANY ONE is sufficient"]
         S1["GitHub APPROVED review<br/>(team mode — different human)"]
         S2["'approved' label on issue<br/>gh issue edit GH-XXX --add-label approved"]
-        S3["'LGTM' comment on PR<br/>(case-insensitive)"]
+        S3["'LGTM' comment by PR author<br/>(opt-in — see below)"]
     end
     Signals --> MERGE["PM squash-merges<br/>gh pr merge --squash --delete-branch"]
     MERGE --> CLOSE(["Ticket auto-closes"])
@@ -186,13 +190,25 @@ flowchart LR
     style CLOSE fill:#4CAF50,color:#fff
 ```
 
-| Signal | How to send it | Mode |
-|---|---|---|
-| GitHub `Approve` review | GitHub UI → Review changes → Approve | Team (different human than PR author) |
-| `approved` label on issue | `gh issue edit GH-XXX --add-label approved` | Solo (PR author can label the issue) |
-| LGTM comment on PR | Comment "LGTM" or "lgtm" on the PR | Solo (PR author can comment) |
+| Signal | How to send it | Mode | Default? |
+|---|---|---|---|
+| GitHub `Approve` review | GitHub UI → Review changes → Approve | Team (different human than PR author) | ✅ Always on |
+| `approved` label on issue | `gh issue edit GH-XXX --add-label approved` | Solo (PR author can label the issue) | ✅ Always on |
+| LGTM comment by PR author | Comment `lgtm` (exact match) on the PR — **only the PR author's comment counts** | Solo | ⚠️ Opt-in only |
 
-The PM checks all three on every run. If any is present, it squash-merges and closes the ticket.
+The PM checks the always-on signals on every run. If any is present, it squash-merges and closes the ticket.
+
+### LGTM comment (opt-in, author-restricted)
+
+By default, LGTM comments are **not** checked — a drive-by `lgtm` from an arbitrary commenter on a public repo must never trigger an unauthorized merge. To enable LGTM as a third approval signal:
+
+```bash
+DELIVER_ALLOW_LGTM_COMMENT=true scripts/deliver-ticket.sh GH-112
+# or
+DELIVER_ALLOW_LGTM_COMMENT=true scripts/batch-deliver.sh GH-108 GH-110
+```
+
+When enabled, the PM only accepts an **exact** `lgtm` comment (`^lgtm$` — no substring match) written by the **PR author** (the user whose credentials created the PR), not arbitrary commenters.
 
 ## Blocked workflow
 
@@ -309,6 +325,7 @@ All settings are environment variables (with CLI flag overrides where noted):
 | `DELIVER_KILL_GRACE_SECONDS` | `20` | Seconds between SIGTERM and SIGKILL |
 | `DELIVER_MAX_RESTARTS` | `10` | Maximum restart iterations before giving up |
 | `DELIVER_LOOP_SLEEP_SECONDS` | `5` | Seconds between restart iterations |
+| `DELIVER_ALLOW_LGTM_COMMENT` | `false` | Opt-in: accept an exact `lgtm` comment by the PR author as a merge signal (C-1) |
 
 ### batch-deliver.sh
 
@@ -342,6 +359,8 @@ See the [Change Delivery guide](change-lifecycle.md) for the 11-phase lifecycle 
 | Label | Who adds it | Meaning | Color |
 |---|---|---|---|
 | `human-input-needed` | PM (when blocked) | Ticket has a blocking question for the human. Remove after answering to resume. | `FBCA04` (yellow) |
-| `approved` | Human (after review) | PR is approved for squash-merge. Solo-developer-friendly — works even when GitHub self-approval is blocked. | `0E8A16` (green) |
+| `approved` | Human (after review) | PR is approved for squash-merge. Solo-developer-friendly — works even when GitHub self-approval is blocked. This is the **default** solo-mode approval signal. | `0E8A16` (green) |
+
+> **LGTM is not a label** — it is an opt-in comment-based signal (`DELIVER_ALLOW_LGTM_COMMENT=true`), restricted to the PR author with an exact `^lgtm$` match. See [Approval workflow](#approval-workflow-multi-signal).
 
 > **See also:** [Change Lifecycle](change-lifecycle.md) · [ADOS Processes Map](ados-processes.md) · [clean-merged-branches tool docs](../tools/clean-merged-branches.md) · [OpenCode Agents Guide](opencode-agents-and-commands-guide.md)

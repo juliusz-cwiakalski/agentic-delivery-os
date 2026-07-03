@@ -421,6 +421,19 @@ remove_local_files() {
     fi
   done
 
+  # --- Delivery scripts and tools ---
+  # M-4: These are installed unconditionally by install.sh's
+  # ADOS_DELIVERY_SCRIPTS / ADOS_DELIVERY_TOOLS arrays (not marker-driven),
+  # so remove them unconditionally if present.
+  local delivery_file
+  for delivery_file in \
+    "scripts/opencode-session.sh" \
+    "scripts/deliver-ticket.sh" \
+    "scripts/batch-deliver.sh" \
+    "tools/clean-merged-branches"; do
+    remove_file "${delivery_file}" "${delivery_file}"
+  done
+
   # --- Remove empty directories (only if empty) ---
   local dir
   for dir in "doc/templates" "doc/overview" "doc/spec/features" "doc/spec" "doc/decisions" "doc/changes" "doc/guides" ".ai/agent" ".ai/rules" ".ai/local" ".ai"; do

@@ -321,6 +321,27 @@ test_classify_failed() {
   assert_eq "failed" "${result}" "Should classify as failed"
 }
 
+# TC-DT-07e: gh/network failure → unknown (m-7)
+test_classify_unknown() {
+  _gh() {
+    # Simulate gh failure (rate limit, network error)
+    return 1
+  }
+
+  local result
+  result="$(classify_result "GH-112" "feat/test")"
+
+  assert_eq "unknown" "${result}" "Should classify as unknown on gh failure"
+}
+
+# TC-DT-06d: unknown classification → continue (no restart burn)
+test_unknown_continues() {
+  local result
+  result="$(decide_after_iteration "finished" "unknown" 1 10)"
+
+  assert_eq "continue" "${result}" "Should continue (not burn restart) on unknown"
+}
+
 # ============================================================================
 # TESTS: Prompt Generation (TC-DT-08)
 # ============================================================================
@@ -371,8 +392,11 @@ test_prompt_has_lifecycle() {
   assert_contains "${prompt}" "11-phase lifecycle" "Prompt should reference ADOS lifecycle"
 }
 
-# TC-DT-08f: prompt has multi-signal approval detection (team + solo mode)
-test_prompt_has_approval_signals() {
+# TC-DT-08f: prompt approval signals — LGTM is opt-in (C-1 security fix)
+# Default: LGTM is NOT in the prompt. With DELIVER_ALLOW_LGTM_COMMENT=true:
+# LGTM IS present, restricted to PR author, anchored ^lgtm$ match.
+test_prompt_lgtm_opt_in() {
+  # Default — LGTM must NOT be in the prompt
   local prompt
   prompt="$(build_delivery_prompt "GH-112" "")"
 
@@ -381,14 +405,27 @@ test_prompt_has_approval_signals() {
   assert_contains "${prompt}" "APPROVED" "Prompt should reference APPROVED review"
 
   # b. "approved" label on the ticket issue (solo mode)
-  assert_contains "${prompt}" "add-label approved" "Prompt should support 'approved' label on ticket"
+  assert_contains "${prompt}" "approved" "Prompt should reference approved label"
   assert_contains "${prompt}" "grep -qi approved" "Prompt should grep ticket labels for approved"
 
-  # c. LGTM comment on the PR (solo mode)
-  assert_contains "${prompt}" "lgtm" "Prompt should check for LGTM comment on PR"
+  # c. LGTM must NOT appear by default (C-1)
+  assert_not_contains "${prompt}" "lgtm" "LGTM must NOT be in default prompt (C-1)"
 
   # Any-one-is-sufficient language
   assert_contains "${prompt}" "ANY ONE" "Prompt should state any one signal is sufficient"
+}
+
+# TC-DT-08f-opt: with DELIVER_ALLOW_LGTM_COMMENT=true, LGTM appears with author restriction
+test_prompt_lgtm_enabled() {
+  DELIVER_ALLOW_LGTM_COMMENT=true
+  local prompt
+  prompt="$(build_delivery_prompt "GH-112" "")"
+  unset DELIVER_ALLOW_LGTM_COMMENT
+
+  assert_contains "${prompt}" "lgtm" "LGTM should be in prompt when DELIVER_ALLOW_LGTM_COMMENT=true"
+  assert_contains "${prompt}" "PR author" "LGTM line should be restricted to PR author"
+  assert_contains "${prompt}" "PR_AUTHOR" "LGTM line should filter by PR author login"
+  assert_contains "${prompt}" "^lgtm" "LGTM match should be anchored (^lgtm\$)"
 }
 
 # TC-DT-08g: prompt auto-creates the 'approved' label for solo-developer mode
@@ -425,12 +462,15 @@ main() {
   run_test "TC-DT-07b: classify merged (closed issue)" test_classify_merged_closed
   run_test "TC-DT-07c: classify pr-open" test_classify_pr_open
   run_test "TC-DT-07d: classify failed" test_classify_failed
+  run_test "TC-DT-07e: classify unknown (gh failure)" test_classify_unknown
+  run_test "TC-DT-06d: unknown classification continues without restart burn" test_unknown_continues
   run_test "TC-DT-08: prompt contains ticket and branch" test_prompt_contains_ticket
   run_test "TC-DT-08b: prompt has PR check instructions" test_prompt_has_pr_check
   run_test "TC-DT-08c: prompt has blocked workflow" test_prompt_has_blocked_workflow
   run_test "TC-DT-08d: prompt enforces single ticket" test_prompt_single_ticket
   run_test "TC-DT-08e: prompt references 11-phase lifecycle" test_prompt_has_lifecycle
-  run_test "TC-DT-08f: prompt has multi-signal approval detection" test_prompt_has_approval_signals
+  run_test "TC-DT-08f: LGTM opt-in (not in default prompt)" test_prompt_lgtm_opt_in
+  run_test "TC-DT-08f-opt: LGTM enabled (author-restricted)" test_prompt_lgtm_enabled
   run_test "TC-DT-08g: prompt auto-creates approved label" test_prompt_creates_approved_label
 
   printf '\n%s Summary: %d/%d passed' "${TEST_TAG}" "${_test_passed}" "${_test_count}"
