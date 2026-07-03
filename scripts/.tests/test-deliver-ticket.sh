@@ -371,6 +371,36 @@ test_prompt_has_lifecycle() {
   assert_contains "${prompt}" "11-phase lifecycle" "Prompt should reference ADOS lifecycle"
 }
 
+# TC-DT-08f: prompt has multi-signal approval detection (team + solo mode)
+test_prompt_has_approval_signals() {
+  local prompt
+  prompt="$(build_delivery_prompt "GH-112" "")"
+
+  # a. GitHub-native APPROVED review (team mode)
+  assert_contains "${prompt}" "reviewDecision" "Prompt should check PR reviewDecision"
+  assert_contains "${prompt}" "APPROVED" "Prompt should reference APPROVED review"
+
+  # b. "approved" label on the ticket issue (solo mode)
+  assert_contains "${prompt}" "add-label approved" "Prompt should support 'approved' label on ticket"
+  assert_contains "${prompt}" "grep -qi approved" "Prompt should grep ticket labels for approved"
+
+  # c. LGTM comment on the PR (solo mode)
+  assert_contains "${prompt}" "lgtm" "Prompt should check for LGTM comment on PR"
+
+  # Any-one-is-sufficient language
+  assert_contains "${prompt}" "ANY ONE" "Prompt should state any one signal is sufficient"
+}
+
+# TC-DT-08g: prompt auto-creates the 'approved' label for solo-developer mode
+test_prompt_creates_approved_label() {
+  local prompt
+  prompt="$(build_delivery_prompt "GH-112" "")"
+
+  assert_contains "${prompt}" 'gh label create "approved"' "Prompt should auto-create 'approved' label"
+  assert_contains "${prompt}" "0E8A16" "Prompt should set approved label color"
+  assert_contains "${prompt}" "solo-developer-friendly" "Prompt should describe label purpose"
+}
+
 # ============================================================================
 # RUN TESTS
 # ============================================================================
@@ -400,6 +430,8 @@ main() {
   run_test "TC-DT-08c: prompt has blocked workflow" test_prompt_has_blocked_workflow
   run_test "TC-DT-08d: prompt enforces single ticket" test_prompt_single_ticket
   run_test "TC-DT-08e: prompt references 11-phase lifecycle" test_prompt_has_lifecycle
+  run_test "TC-DT-08f: prompt has multi-signal approval detection" test_prompt_has_approval_signals
+  run_test "TC-DT-08g: prompt auto-creates approved label" test_prompt_creates_approved_label
 
   printf '\n%s Summary: %d/%d passed' "${TEST_TAG}" "${_test_passed}" "${_test_count}"
   if [[ "${_test_failed}" -gt 0 ]]; then

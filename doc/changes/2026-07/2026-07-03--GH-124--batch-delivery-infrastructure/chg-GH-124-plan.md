@@ -201,6 +201,7 @@
 - AC-5.1: Prompt checks for open PR, addresses comments, merges on APPROVED review, continues delivery, flags blocked — PASSED
 - AC-5.2: Prompt is identical on every start/resume (state detection at top) — PASSED
 - AC-5.3: `human-input-needed` label workflow — PASSED
+- AC-5.4: Multi-signal approval detection for solo-developer mode — any ONE of (a) GitHub-native APPROVED review, (b) `approved` label on the ticket, (c) LGTM comment on the PR authorizes squash-merge; prompt auto-creates the `approved` label — PASSED (TC-DT-08f, TC-DT-08g; deliver-ticket tests 25/25)
 
 ### AC-6: Tests pass — PASSED
 - AC-6.1: All test scripts pass (11 + 21 + 23 + 15 = 70 tests) — PASSED
@@ -213,3 +214,4 @@
 - **Phase 3** (commit 3b02eb9): `scripts/deliver-ticket.sh` + tests (23/23)
 - **Phase 4** (commit dd7c019): `scripts/batch-deliver.sh` + tests (15/15)
 - **Phase 5** (this commit): `doc/tools/clean-merged-branches.md` + full test suite verification (70/70 pass, 0 regressions)
+- **Post-completion fix** (this commit): `scripts/deliver-ticket.sh` prompt — multi-signal approval detection (APPROVED review / `approved` label / LGTM comment) for solo-developer mode; auto-creates `approved` label; added TC-DT-08f/08g (deliver-ticket 25/25, opencode-session 21/21 regression-clean)

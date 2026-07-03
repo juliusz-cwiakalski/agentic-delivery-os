@@ -139,16 +139,27 @@ Deliver ${ticket_ref} end-to-end using ADOS. Detect state at the top, then act.
 Nothing to do. Report "merged/closed" and STOP.
 
 ### If there is an open PR for ${ticket_ref}${branch_hint}
-1. Read all review comments. Address each CHANGES_REQUESTED by fixing code and pushing.
-2. Check if a GitHub-native APPROVED review exists with no pending CHANGES_REQUESTED.
-3. If APPROVED with no pending changes: you are authorized to squash-merge via gh pr merge --squash --delete-branch.
-4. After merge: clean up, verify ticket closure, report "merged" and STOP.
+Check for approval signals (ANY ONE is sufficient to merge):
+  a. GitHub-native APPROVED review with no pending CHANGES_REQUESTED (team mode): gh pr view <PR> --json reviewDecision -q '.reviewDecision' equals "APPROVED"
+  b. "approved" label on the ticket issue (solo mode: user runs gh issue edit ${ticket_ref} --add-label approved): gh issue view ${ticket_ref} --json labels -q '.labels[].name' | grep -qi approved
+  c. LGTM comment on the PR (solo mode: user comments "LGTM" or "lgtm"): gh pr view <PR> --json comments -q '.comments[].body' | grep -qi 'lgtm\|looks good to me'
+- If approved (any signal):
+  - Squash-merge: gh pr merge <PR> --squash --delete-branch
+  - Report "merged" and STOP.
+- If CHANGES_REQUESTED or unresolved review comments:
+  - Read each comment via gh pr view <PR> --json comments,reviews
+  - Address each one (fix code, respond)
+  - Push fixes to the branch
+  - Report changes made and STOP (await re-review)
+- If no approval signal and no changes requested:
+  - Report "PR open, awaiting review" and STOP.
 
 ### If there is NO open PR (new or in-progress delivery)
 1. Resume or start the full ADOS 11-phase lifecycle for ${ticket_ref}.
 2. clarify scope, specification, test planning, delivery planning, DoR, implementation, docs sync, review/fix, quality gates, DoD, PR creation.
 3. Delegate to specialized subagents. Do not implement source code directly as PM.
 4. Create the PR and leave it open for review.
+5. Ensure the "approved" label exists for solo-developer approval: gh label create "approved" --color "0E8A16" --description "Approved for merge (solo-developer-friendly)" 2>/dev/null || true
 
 ### If technically blocked (missing credentials/access/tooling)
 1. Add label: gh issue edit ${ticket_ref} --add-label human-input-needed
@@ -158,7 +169,7 @@ Nothing to do. Report "merged/closed" and STOP.
 ## Rules
 - Deliver exactly this one workItemRef (${ticket_ref}). No other ticket in this session.
 - Every product change goes ticket to PR to squash merge to main.
-- You are authorized to squash-merge ONLY when a GitHub-native APPROVED review exists with no pending CHANGES_REQUESTED.
+- You are authorized to squash-merge when ANY ONE approval signal is present (GitHub-native APPROVED review, "approved" label on the ticket, or LGTM comment on the PR).
 EOF
 }
 
