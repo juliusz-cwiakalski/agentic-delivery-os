@@ -1,8 +1,8 @@
 ---
 id: chg-GH-112-post-bulk-edit-verify-rule
-status: Updated
+status: Delivered
 created: 2026-07-03T03:15:00Z
-last_updated: 2026-07-03T04:45:00Z
+last_updated: 2026-07-03T04:20:00Z
 owners: ["Juliusz Ćwiąkalski"]
 service: ai-rules
 labels: ["rules", "agents", "doc-distribution", "guard"]
@@ -220,20 +220,39 @@ The change is **additive**: one new rule file, one README index row, two agent l
 
 **Tasks**:
 
-- [ ] **4.1** Re-run the full drift guard: `bash scripts/.tests/test-doc-distribution.sh` → exit 0. *(AC-F6-5, NFR-2)*
-- [ ] **4.2** Run the generated-plugin freshness check: `bash scripts/.tests/test-build-claude-plugin.sh` → exit 0; `git status --porcelain .ados-claude/` clean. *(AC-F5-4, NFR-5)*
-- [ ] **4.3** Clean-tree sanity: `git diff --check` (no whitespace errors) across the touched files; confirm only intended files changed (rule file, README index, coder.md, pm.md, install.sh, uninstall.sh, drift-test, regenerated `.ados-claude/agents/*`).
-- [ ] **4.4** **Acceptance pass** — walk all 15 ACs (AC-F1-1, AC-F2-1, AC-F3-1, AC-F4-1, AC-F1-2, AC-F5-1, AC-F5-2, AC-F5-3, AC-F6-1, AC-F6-2, AC-F6-3, AC-F6-4, AC-F6-5, AC-F6-6, AC-F5-4) and record PASSED with concrete evidence (file/line or command output). Block on any FAILED.
-- [ ] **4.5** **Spec reconciliation** — confirm `doc/spec/**` needs no edit for this change. The `.ai/rules/` system has no feature spec (advisory gap, OQ-2); this change extends the distribution surface by one standalone doc only. Record that the gap is advisory and will be re-surfaced by `@doc-syncer` at system_spec_update (no `doc/spec/**` write required here). *(Appendix B)*
-- [ ] **4.6** **Version bump per repo conventions.** This repo ships prompts/agents/docs, not a versioned runtime — confirm there is no `CHANGELOG*`/`VERSION`/package manifest to bump (verified: none at root). The change's `version_impact: patch` is recorded in the change metadata only; no runtime version bump applies.
-- [ ] **4.7** Update this plan's checkboxes/evidence and the Execution Log; ensure the spec's validation checklist still holds.
+- [x] **4.1** Re-run the full drift guard: `bash scripts/.tests/test-doc-distribution.sh` → exit 0. *(AC-F6-5, NFR-2)* — DONE: exit 0; `[OK] no drift — 77 in-scope docs; install set matches ados_distribution markers`.
+- [x] **4.2** Run the generated-plugin freshness check: `bash scripts/.tests/test-build-claude-plugin.sh` → exit 0; `git status --porcelain .ados-claude/` clean. *(AC-F5-4, NFR-5)* — DONE: 16/16 PASS (incl. `committed plugin matches fresh build`); `.ados-claude/` clean post-commit.
+- [x] **4.3** Clean-tree sanity: `git diff --check` (no whitespace errors) across the touched files; confirm only intended files changed (rule file, README index, coder.md, pm.md, install.sh, uninstall.sh, drift-test, regenerated `.ados-claude/agents/*`). — DONE: `git diff --check` exit 0; `git diff --name-only cf79692 HEAD` = exactly 10 intended files (rule, README index, coder/pm source, coder/pm generated mirrors, install/uninstall/guard, plan); reviewer.md NOT touched.
+- [x] **4.4** **Acceptance pass** — walk all 15 ACs (AC-F1-1, AC-F2-1, AC-F3-1, AC-F4-1, AC-F1-2, AC-F5-1, AC-F5-2, AC-F5-3, AC-F6-1, AC-F6-2, AC-F6-3, AC-F6-4, AC-F6-5, AC-F6-6, AC-F5-4) and record PASSED with concrete evidence (file/line or command output). Block on any FAILED. — DONE: all 15 PASSED (see Acceptance Criteria evidence table below).
+- [x] **4.5** **Spec reconciliation** — confirm `doc/spec/**` needs no edit for this change. The `.ai/rules/` system has no feature spec (advisory gap, OQ-2); this change extends the distribution surface by one standalone doc only. Record that the gap is advisory and will be re-surfaced by `@doc-syncer` at system_spec_update (no `doc/spec/**` write required here). *(Appendix B)* — DONE: no `doc/spec/features/feature-ai-rules.md` exists; no `doc/spec/**` edit required. Advisory OQ-2 gap re-surfaced to `@doc-syncer` (system_spec_update).
+- [x] **4.6** **Version bump per repo conventions.** This repo ships prompts/agents/docs, not a versioned runtime — confirm there is no `CHANGELOG*`/`VERSION`/package manifest to bump (verified: none at root). The change's `version_impact: patch` is recorded in the change metadata only; no runtime version bump applies. — DONE: no CHANGELOG*/VERSION/package.json/Cargo.toml/pyproject.toml at root; metadata-only `patch`, no runtime bump.
+- [x] **4.7** Update this plan's checkboxes/evidence and the Execution Log; ensure the spec's validation checklist still holds. — DONE: checkboxes updated per-phase; Execution Log populated; spec validation checklist unchanged (still all [x]).
 
 **Acceptance Criteria**:
 
 - Must: All 15 spec ACs PASSED with evidence (AC-F1-1 … AC-F6-6, AC-F5-4).
-- Must: Drift guard green (AC-F6-5) and generated-plugin freshness green (AC-F5-4/NFR-5). For AC-F6-6 (uninstall list, not guard-observed) the evidence is the 3-way byte-identity diff, not the guard exit code.
-- Must: Spec reconciliation decision recorded (no `doc/spec/**` edit required — advisory OQ-2 gap deferred to `@doc-syncer`).
-- Should: Version-bump decision recorded (metadata-only `patch`; no runtime artifact to bump).
+
+  | AC | Result | Evidence |
+  |----|--------|----------|
+  | AC-F1-1 | PASSED | `.ai/rules/bulk-edit-verify.md` §1 L13–18: trigger names all 3 dims (multi-file L15, sed/replaceAll/regex substitution L16, find-and-replace over a path glob L17). |
+  | AC-F2-1 | PASSED | §2 L25–31: (a) `git diff --stat` L27, (b) targeted grep L28, (c) typecheck/compile L29; "MUST executed *before* commit" L31; MUST×6 in file. |
+  | AC-F3-1 | PASSED | §3 L33–40: grep identifiers **containing** A L35/37; word-boundary/anchored/scoped remedy L40; Pre-substitution (planning) L37 + Post-substitution (verify) L38. |
+  | AC-F4-1 | PASSED | §4 L44–49: revert `git checkout -- <affected paths>` L46; re-apply L47; `MUST NOT` in-place counter-edit L49. |
+  | AC-F1-2 | PASSED | §1 L21: "Related (#115)" one-way cross-link. |
+  | AC-F5-1 | PASSED | `.opencode/agent/coder.md` L139 `<rule_loading>` direct named ref to `bulk-edit-verify.md`. |
+  | AC-F5-2 | PASSED | `.opencode/agent/pm.md` L117 `<rule_loading>` conditional ref ("on the rare occasion PM implements directly"). |
+  | AC-F5-3 | PASSED | `.ai/rules/README.md` L33 index row: "Bulk edits / substitutions \| `bulk-edit-verify.md` \| …". |
+  | AC-F6-1 | PASSED | `.ai/rules/bulk-edit-verify.md` L2–4: 3-line MIT header (copyright/MIT/source), applied via `add-header-location.sh` (idempotent). |
+  | AC-F6-2 | PASSED | `.ai/rules/bulk-edit-verify.md` L5: `ados_distribution: redistributable` (survived script run). |
+  | AC-F6-3 | PASSED | `scripts/install.sh` `ADOS_UPDATABLE_FILES` count==1 for `".ai/rules/bulk-edit-verify.md"`. |
+  | AC-F6-4 | PASSED | `scripts/.tests/test-doc-distribution.sh` `STANDALONE_DOCS` count==1; install==guard byte-identical. |
+  | AC-F6-5 | PASSED | `bash scripts/.tests/test-doc-distribution.sh` exit 0; `[OK] no drift — 77 in-scope docs`. |
+  | AC-F6-6 | PASSED | `scripts/uninstall.sh` `ADOS_LOCAL_STANDALONE_DOCS` count==1; 3-way byte-identity diff install==guard==uninstall; total 3 matches (1 per file). |
+  | AC-F5-4 | PASSED | `.ados-claude/agents/coder.md` + `pm.md` regenerated carrying `<rule_loading>`; `test-build-claude-plugin.sh` 16/16 PASS incl. `committed plugin matches fresh build`. |
+
+- Must: Drift guard green (AC-F6-5) and generated-plugin freshness green (AC-F5-4/NFR-5). For AC-F6-6 (uninstall list, not guard-observed) the evidence is the 3-way byte-identity diff, not the guard exit code. — PASSED (drift guard exit 0; freshness 16/16; 3-way byte-identity diff all pairs match).
+- Must: Spec reconciliation decision recorded (no `doc/spec/**` edit required — advisory OQ-2 gap deferred to `@doc-syncer`). — PASSED (no `feature-ai-rules.md`; gap is advisory, re-surfaced to `@doc-syncer`).
+- Should: Version-bump decision recorded (metadata-only `patch`; no runtime artifact to bump). — PASSED (no CHANGELOG/VERSION/manifest at root; metadata-only).
 
 **Files and modules**:
 
@@ -299,5 +318,5 @@ The change is **additive**: one new rule file, one README index row, two agent l
 |-------|--------|---------|-----------|--------|-------|
 | 1 | done | 2026-07-03 | 2026-07-03 | 8edf750 | `.ai/rules/bulk-edit-verify.md` authored (46 lines); TC-RULE-001..005 all grep-OK; marker-only frontmatter; header deferred to Phase 2 script. |
 | 2 | done | 2026-07-03 | 2026-07-03 | 09f32e2 | header applied via script (marker survived); install+uninstall+guard lists each +1 byte-identical entry; drift guard exit 0 (`77 in-scope docs`). |
-| 3 | done | 2026-07-03 | 2026-07-03 | (pending) | README +1 index row; coder.md + pm.md +1 `<rule_loading>` block each; plugin regenerated (coder+pm mirrors); freshness test 16/16 PASS. |
-| 4 | pending | — | — | — | — |
+| 3 | done | 2026-07-03 | 2026-07-03 | bd09808 | README +1 index row; coder.md + pm.md +1 `<rule_loading>` block each; plugin regenerated (coder+pm mirrors); freshness test 16/16 PASS. |
+| 4 | done | 2026-07-03 | 2026-07-03 | (pending) | drift guard exit 0; freshness 16/16; `git diff --check` exit 0; 15/15 ACs PASSED with evidence; spec reconciled (no doc/spec edit, OQ-2 advisory); no runtime version bump. |
