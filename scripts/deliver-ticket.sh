@@ -496,6 +496,14 @@ classify_result() {
 decide_after_iteration() {
   local -r monitor_result="$1" classification="$2" iteration="$3" max_restarts="$4"
 
+  # When the PM session finished normally (opencode exited on its own), accept
+  # it as completion. A GitHub API failure during post-session classification is
+  # a monitoring gap, not a delivery failure — retrying won't change the outcome.
+  if [[ "${monitor_result}" == "finished" && "${classification}" == "unknown" ]]; then
+    printf 'stop:0:finished'
+    return 0
+  fi
+
   if [[ "${monitor_result}" == "stuck" ]]; then
     if (( iteration >= max_restarts )); then
       printf 'stop:1:max-restarts'
@@ -676,7 +684,7 @@ deliver_loop() {
       # m-7: "unknown" (gh/network failure) doesn't burn a restart slot —
       # decrement the iteration counter so MAX_RESTARTS isn't consumed by
       # transient outages, and retry after a longer sleep.
-      if [[ "${classification}" == "unknown" ]]; then
+      if [[ "${classification}" == "unknown" && "${monitor_result}" == "stuck" ]]; then
         ((iteration--)) || true
         log_warn "Transient failure for ${ticket_ref} (${monitor_result}/${classification}) — retrying after extended sleep"
         sleep "$((LOOP_SLEEP_SECONDS * 6))"
@@ -698,6 +706,7 @@ deliver_loop() {
       merged)   log_done "${ticket_ref} — merged/closed" ;;
       blocked)  log_done "${ticket_ref} — blocked (human-input-needed)" ;;
       pr-open)  log_done "${ticket_ref} — PR open" ;;
+      finished) log_done "${ticket_ref} — PM completed (state unverified — GitHub API unavailable)" ;;
       max-restarts) log_failed "${ticket_ref} — max restarts exceeded" ;;
       *)        log_warn "${ticket_ref} — ${message}" ;;
     esac
