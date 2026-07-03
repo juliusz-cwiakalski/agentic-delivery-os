@@ -179,7 +179,12 @@ _render() {
   # .mmd extension matters for real mmdc format inference (TC-BASE-001).
   d="$(mktemp -d "${_WORKDIR}/rXXXXXX")"
   mmd="${d}/block.mmd"
-  out="${d}/block.out"
+  # Output MUST carry a mmdc-recognized extension (.svg/.png/.pdf/.md) or mmdc
+  # rejects it with "Output file must end with ...". Use .svg (cheap vector;
+  # no PNG rasterizer needed). Caught by the CI gate (real mmdc) — local tests
+  # mock MMDC_CMD and TC-BASE-001 self-skips without mmdc, so only CI exercises
+  # the real mmdc CLI contract here.
+  out="${d}/block.svg"
   err="${d}/block.err"
   printf '%s' "${content}" >"${mmd}"
   _LAST_RENDER_ERR=""
