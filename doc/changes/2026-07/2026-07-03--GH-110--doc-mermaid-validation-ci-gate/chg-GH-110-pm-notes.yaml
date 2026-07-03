@@ -21,7 +21,7 @@ phases:
   review_fix: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z" }
   quality_gates: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z" }
   dod_check: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z" }
-  pr_creation: { started: "2026-07-03T00:00:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/123" }
 
 decisions:
   - text: "delivery_mode=autonomous set at intake (GH-108 mode-aware spec-coverage resolution dogfooded); phase-7 will author/reconcile feature specs in-change."
@@ -58,6 +58,12 @@ notes:
     type: retro
     date: "2026-07-03"
   - text: "DoD CHECK (phase 10) — PASS. (1) All 11 phases recorded with completion timestamps. (2) All plan tasks ticked [x] (Phase 0-6). (3) All 10 runtime ACs satisfied — @reviewer confirmed AC-F1-1..F4-1 satisfied + AC#5 (CEO-gate flag) as review flag. (4) DEC-7 dual-check AND-semantics verified CORRECT by @reviewer (TC-MMD-012 quadrant 2 = motivating-incident regression guard). (5) Spec-coverage gap resolved IN-CHANGE (autonomous): feature-doc-mermaid-validation.md authored. (6) Quality gates all green: test-all 10/10, plugin freshness no-drift, doc-distribution 76 docs no drift, negative-modes 5/5, ci.yml unchanged, inception consistency OK. (7) Review advisory fixes applied (-- handler bug, mmdc major pin, denylist unset-vs-empty). Ready for PR."
+    type: info
+    date: "2026-07-03"
+  - text: "RETRO (CI caught 2 validator defects local tests could NOT): the new docs-mermaid-validate CI gate FAILED on first run — and that was the GATE WORKING AS DESIGNED. (1) mmdc output extension bug: validator rendered to block.out, but mmdc requires output ending in .svg/.png/.pdf/.md → 'Output file must end with...'. Fixed: block.svg (commit 10fff96). (2) puppeteer/Chromium sandbox: 'Failed to launch the browser process: Code: null' on the GH runner (runs as root; Chromium refuses sandbox). Fixed: MMDC_PUPPETEER_CONFIG env seam + workflow writes a puppeteer-config.json with --no-sandbox (commit 31a1143). After both fixes, CI green — the repo's real mermaid blocks all rendered (green baseline confirmed). KEY LESSON: the local test suite mocks MMDC_CMD, so it CANNOT catch mmdc-CLI-invocation bugs (wrong flags/extensions), and TC-BASE-001 (real mmdc) self-skips locally. Only CI's real mmdc exercises the real render contract. This is a real coverage gap in the local strategy — acceptable (CI is the verifier) but worth noting: 'local green' ≠ 'mmdc-invocation green'. The gate dogfooded itself and earned its keep before merge."
+    type: retro
+    date: "2026-07-03"
+  - text: "PR #123 OPEN, CI GREEN (all checks success on 31a1143), issue #110 labeled review + assigned to human. STOP per user instruction (no merge — human performs final review + squash-merge). delivery_mode=autonomous dogfooded: feature spec authored in-change (no follow-up ticket)."
     type: info
     date: "2026-07-03"
   - text: "Intake: GH-110 fresh delivery from origin/main e8a66a12. No prior branch/PR/change-folder. Open PRs #122 (GH-108) and #76 (GH-63) are unrelated tickets — left untouched. Part of epic #107."
