@@ -15,9 +15,9 @@ phases:
   delivery: { started: "2026-07-03T04:31Z", completed: "2026-07-03T04:55Z" }
   system_spec_update: { started: "2026-07-03T04:56Z", completed: "2026-07-03T05:05Z" }
   review_fix: { started: "2026-07-03T05:06Z", completed: "2026-07-03T05:20Z" }
-  quality_gates: { started: "2026-07-03T05:21Z", completed: null }
-  dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null, url: null }
+  quality_gates: { started: "2026-07-03T05:21Z", completed: "2026-07-04T00:00Z" }
+  dod_check: { started: "2026-07-04T00:01Z", completed: "2026-07-04T00:05Z" }
+  pr_creation: { started: "2026-07-04T00:06Z", completed: "2026-07-04T00:10Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/128" }
 
 decisions:
   - text: "PM DECISION (DoR iter-1 remediation): The 'mirror README end-to-end' decision (DEC-1) logically covers a THIRD hand-synced distribution list that the initial artifacts missed — scripts/uninstall.sh ADOS_LOCAL_STANDALONE_DOCS (lines 103-109, used at 414-422 to remove redistributable docs). .ai/rules/README.md is in all three lists (install ADOS_UPDATABLE_FILES + guard STANDALONE_DOCS + uninstall ADOS_LOCAL_STANDALONE_DOCS); uninstall.sh's own comment states it MUST stay in sync with install.sh's standalone manifest. The new rule must land in all three, else uninstall.sh leaves it orphaned on adopting projects (contradicts G-5 distribution truthfulness). Confirmed by PM via direct read of uninstall.sh. Canonical remediation naming: new data-model element DM-4 (uninstall list); new AC AC-F6-6 (uninstall entry identical to install+guard); NFR-4 broadened from list-PAIR to list-TRIPLE sync across all three. Specification + test_planning + delivery_planning REOPENED (iter-1 DoR NOT_READY)."
