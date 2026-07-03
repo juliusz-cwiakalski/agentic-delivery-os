@@ -34,8 +34,10 @@ readonly APP_NAME="generate-e2e-report"
 readonly APP_VERSION="1.0.0"
 readonly LOG_TAG="(${APP_NAME})"
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd -P)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+readonly SCRIPT_DIR
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd -P)"
+readonly REPO_ROOT
 
 # Configurable via environment
 INPUT_DIR="${SUITE_DIR:-${REPO_ROOT}/tmp/e2e-suite}"
@@ -50,7 +52,6 @@ EMBED_IMAGES=true
 # Exit codes
 readonly EXIT_SUCCESS=0
 readonly EXIT_USAGE=2
-readonly EXIT_RUNTIME=4
 
 # Scoring categories in display order
 readonly SCORE_CATEGORIES=(

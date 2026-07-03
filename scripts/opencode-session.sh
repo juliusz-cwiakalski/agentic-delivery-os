@@ -31,10 +31,11 @@ readonly APP_VERSION="1.0.0"
 readonly LOG_TAG="(${APP_NAME})"
 
 readonly EXIT_USAGE=2
-readonly EXIT_RUNTIME=4
 
-readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
-readonly ROOT_DIR="$(cd -- "${SCRIPT_DIR}/.." >/dev/null 2>&1 && pwd -P)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
+readonly SCRIPT_DIR
+ROOT_DIR="$(cd -- "${SCRIPT_DIR}/.." >/dev/null 2>&1 && pwd -P)"
+readonly ROOT_DIR
 
 readonly OPENCODE_KEYS_ENV="${OPENCODE_KEYS_ENV:-${HOME}/.ai/opencode-keys-env.sh}"
 readonly SESSION_DIR="${OPENCODE_SESSION_DIR:-${ROOT_DIR}/.ai/local/opencode-sessions}"

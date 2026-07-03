@@ -392,6 +392,7 @@ test_title_based_resume_path() {
   prepare_main_for_new_session() { :; }
   source_opencode_env() { :; }
   validate_repo() { :; }
+  # shellcheck disable=SC2034  # read by the sourced run_ticket_session function
   DRY_RUN=false
 
   git -C "${_test_tmpdir}" init -q 2>/dev/null || true

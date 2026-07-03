@@ -417,6 +417,7 @@ test_prompt_lgtm_opt_in() {
 
 # TC-DT-08f-opt: with DELIVER_ALLOW_LGTM_COMMENT=true, LGTM appears with author restriction
 test_prompt_lgtm_enabled() {
+  # shellcheck disable=SC2034  # read by the sourced build_delivery_prompt function
   DELIVER_ALLOW_LGTM_COMMENT=true
   local prompt
   prompt="$(build_delivery_prompt "GH-112" "")"

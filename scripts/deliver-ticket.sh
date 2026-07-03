@@ -25,12 +25,13 @@ readonly APP_NAME="deliver-ticket"
 readonly APP_VERSION="1.0.0"
 readonly LOG_TAG="(${APP_NAME})"
 
-readonly EXIT_SUCCESS=0
 readonly EXIT_FAILURE=1
 readonly EXIT_USAGE=2
 
-readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
-readonly ROOT_DIR="$(cd -- "${SCRIPT_DIR}/.." >/dev/null 2>&1 && pwd -P)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
+readonly SCRIPT_DIR
+ROOT_DIR="$(cd -- "${SCRIPT_DIR}/.." >/dev/null 2>&1 && pwd -P)"
+readonly ROOT_DIR
 
 # Configurable via environment and CLI flags
 MAX_RESTARTS="${DELIVER_MAX_RESTARTS:-10}"

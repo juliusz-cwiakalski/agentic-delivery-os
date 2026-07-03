@@ -27,14 +27,10 @@ IFS=$'\n\t'
 # SETTINGS
 # ============================================================================
 readonly APP_NAME="install-text-to-image"
-readonly APP_VERSION="1.0.0"
 readonly LOG_TAG="(${APP_NAME})"
 
-readonly EXIT_SUCCESS=0
 readonly EXIT_USAGE=2
-readonly EXIT_CONFIG=3
 readonly EXIT_RUNTIME=4
-readonly EXIT_EXTERNAL=5
 
 readonly TOOL_RAW_URL="https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/tools/text-to-image"
 

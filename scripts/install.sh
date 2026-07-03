@@ -75,11 +75,9 @@ readonly APP_VERSION="2.0.0"
 readonly LOG_TAG="(${APP_NAME})"
 
 # Exit codes
-readonly EXIT_SUCCESS=0
 readonly EXIT_USAGE=2
 readonly EXIT_CONFIG=3
 readonly EXIT_RUNTIME=4
-readonly EXIT_EXTERNAL=5
 
 # ============================================================================
 # FILE MANIFEST — What gets installed locally
@@ -439,7 +437,9 @@ install_global_files() {
     local -r agent_dest="${OPENCODE_GLOBAL_DIR}/agent"
     local -r command_dest="${OPENCODE_GLOBAL_DIR}/command"
 
+    # shellcheck disable=SC2088  # 2nd arg is a cosmetic log label; tilde is intentional
     ensure_dir "${agent_dest}" "~/.config/opencode/agent"
+    # shellcheck disable=SC2088
     ensure_dir "${command_dest}" "~/.config/opencode/command"
 
     # Copy agent definitions
@@ -488,7 +488,9 @@ install_global_files() {
     local -r claude_agent_dest="${CLAUDE_GLOBAL_DIR}/agents"
     local -r claude_skill_dest="${CLAUDE_GLOBAL_DIR}/skills"
 
+    # shellcheck disable=SC2088  # 2nd arg is a cosmetic log label; tilde is intentional
     ensure_dir "${claude_agent_dest}" "~/.claude/agents"
+    # shellcheck disable=SC2088
     ensure_dir "${claude_skill_dest}" "~/.claude/skills"
 
     # Copy agent definitions

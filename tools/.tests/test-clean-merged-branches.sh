@@ -143,6 +143,7 @@ test_allow_dirty_overrides() {
   printf 'dirty\n' > untracked.txt
 
   # Set ALLOW_DIRTY=true
+  # shellcheck disable=SC2034  # read by the sourced clean_branches function
   ALLOW_DIRTY=true
 
   local exit_code=0
@@ -244,6 +245,7 @@ test_custom_protected_branch() {
   git branch feature
 
   # Add release to protected list
+  # shellcheck disable=SC2034  # read by the sourced clean_branches function
   PROTECTED_EXTRA="release"
 
   clean_branches 2>/dev/null
@@ -270,6 +272,7 @@ test_dry_run_no_delete() {
   git merge -q --no-ff feature -m "merge feature"
 
   # Enable dry-run
+  # shellcheck disable=SC2034  # read by the sourced clean_branches function
   DRY_RUN=true
 
   clean_branches 2>/dev/null

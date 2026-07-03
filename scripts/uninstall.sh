@@ -50,11 +50,8 @@ readonly APP_VERSION="2.0.0"
 readonly LOG_TAG="(${APP_NAME})"
 
 # Exit codes
-readonly EXIT_SUCCESS=0
 readonly EXIT_USAGE=2
-readonly EXIT_CONFIG=3
 readonly EXIT_RUNTIME=4
-readonly EXIT_EXTERNAL=5
 
 # Configurable via environment
 readonly ADOS_HOME="${ADOS_HOME:-${HOME}/.ados}"
@@ -342,6 +339,7 @@ do_global_uninstall() {
   remove_global_commands
 
   # Remove ADOS home directory
+  # shellcheck disable=SC2088  # 2nd arg is a cosmetic log label; tilde is intentional
   safe_rmdir "${ADOS_HOME}" "~/.ados"
 
   printf '\n'

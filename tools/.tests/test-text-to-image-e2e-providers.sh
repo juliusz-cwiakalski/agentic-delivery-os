@@ -40,9 +40,11 @@ IFS=$'\n\t'
 readonly APP_NAME="test-text-to-image-e2e-providers"
 readonly LOG_TAG="(${APP_NAME})"
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+readonly SCRIPT_DIR
 readonly TOOL_PATH="${SCRIPT_DIR}/../text-to-image"
-readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd -P)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd -P)"
+readonly REPO_ROOT
 
 PROMPT="${PROMPT:-Photorealistic aerial view of a modern residential garden design by a landscape architect, featuring a curved stone pathway through lush green lawn, raised wooden deck with outdoor dining furniture, ornamental grasses and lavender borders, a small water feature with natural stones, mature olive tree providing shade, warm golden hour sunlight, professional architectural visualization}"
 OUTPUT_PREFIX="${OUTPUT_PREFIX:-e2e}"

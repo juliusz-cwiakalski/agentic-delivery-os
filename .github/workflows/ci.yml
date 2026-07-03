@@ -110,11 +110,12 @@ jobs:
         uses: actions/checkout@v4
 
       # GH-124: gates on `error` severity (syntax errors, undefined commands, etc.).
-      # The repo currently carries warning-level debt (SC2034 unused constants,
-      # SC2155 readonly-assign style, SC2088 tilde-in-quotes, SC1090 dynamic
-      # source) — 0 errors, ~126 warnings. Once that debt is cleared in a
-      # follow-up, tighten this to `severity: warning`. `error` keeps the gate
-      # green on day one while still catching high-signal breakage.
+      # The delivery scripts (batch-deliver, deliver-ticket, opencode-session,
+      # install*, uninstall, build-claude-plugin, add-header-location,
+      # clean-merged-branches) and their test suites are now warning-clean.
+      # Remaining warning debt is confined to tools/text-to-image and tools/zclaude
+      # — clear those, then tighten this to `severity: warning`. Until then `error`
+      # keeps the gate green while still catching high-signal breakage.
       - name: Run shellcheck on scripts and tools
         uses: ludeeus/action-shellcheck@master
         with:
