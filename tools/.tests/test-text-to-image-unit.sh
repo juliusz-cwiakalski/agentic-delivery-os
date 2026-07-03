@@ -269,10 +269,8 @@ test_parse_yaml_fallback() {
 }
 
 test_merge_config() {
-  # Set some vars
-  PROMPT="test prompt"
-  OUTPUT="test.png"
-  QUALITY="medium"
+  # Set some vars (read by the sourced merge_config function)
+  export PROMPT="test prompt" OUTPUT="test.png" QUALITY="medium"
 
   local config
   config="$(merge_config)"
@@ -415,6 +413,7 @@ test_on_exit_function_exists() {
 test_json_logging() {
   # Capture JSON log
   local log_file="${_test_tmpdir}/test.log"
+  # shellcheck disable=SC2034  # read by the sourced log_info function
   MAIN_LOG_FILE="$log_file"
   log_info "test message"
   local log_content
