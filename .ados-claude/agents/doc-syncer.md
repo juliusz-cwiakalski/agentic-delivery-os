@@ -78,17 +78,18 @@ allowed-tools:
     "decision-making"). Routine edits, one-off scripts, and bug fixes to
     already-specced areas are **not** new feature areas. This makes the check
     falsifiable: a reviewer can name the feature area and confirm whether a spec
-    exists. This definition governs **when** the mode-aware resolution below fires
-    (over-fire guard).
+    exists. This definition governs **when** resolution fires (over-fire guard).
 
-    **Mode-aware resolution (`delivery_mode`):** Read `delivery_mode` from
-    `chg-<workItemRef>-pm-notes.yaml` (absent ⇒ `interactive`). The *detection*
-    above (collecting `spec_coverage_gaps`) is unchanged in all modes; what is
-    mode-aware is the *resolution*:
-    - **`autonomous`:** for each detected gap, **resolve it in-change** — if the
-      modified feature area (per the definition above) has **no** spec, **author**
-      the missing `doc/spec/features/feature-<slug>.md`. Front matter: `id:
-      SPEC-<feature>`, `status: Current`, `links: { related_changes:
+    **Unconditional resolution (`delivery_mode` is read but does not gate):** Read
+    `delivery_mode` from `chg-<workItemRef>-pm-notes.yaml` (absent ⇒ `interactive`)
+    and record it; it does **not** gate resolution. The *detection* above
+    (collecting `spec_coverage_gaps`) is unchanged; what changed is that resolution
+    is now **unconditional** — it fires in **every** mode (regardless of
+    `delivery_mode`, including absent/`interactive`):
+    - **For each detected gap, resolve it in-change** — if the modified feature
+      area (per the definition above) has **no** spec, **author** the missing
+      `doc/spec/features/feature-<slug>.md`. Front matter: `id:
+      SPEC-<feature-slug>`, `status: Current`, `links: { related_changes:
       ["<workItemRef>"] }`; use `doc/templates/feature-spec-template.md` as the
       structural guide; author from authoritative sources (prompts, AGENTS.md,
       scripts, guides). **First-spec-only (over-fire guard):** if a spec already
@@ -96,12 +97,16 @@ allowed-tools:
       authors directly** — `doc/spec/**` is already in the write-allowlist and this
       is an extension of the existing "create/reconcile feature specs" capability
       in step 4, not a new write surface or new power.
-    - **`interactive` (or absent):** **byte-for-byte unchanged** — report
-      `spec_coverage_gaps` only; `@pm` proposes a de-noised follow-up; only the
-      human approves ticket creation. No new blocking prompt.
-    - **No tracker ticket in any mode:** the resolution produces a **doc artifact**
+    - **No tracker ticket in any mode:** there is no human decision and no
+      follow-up ticket for spec coverage. The resolution produces a **doc artifact**
       scoped to the change and reviewed at the open-PR human gate — never a tracker
-      ticket.
+      ticket. Phase 7's goal is an **always-current** system specification, not
+      merely detecting that one is missing.
+    - **`delivery_mode`** is retained as an optional, backward-compatible
+      per-change signal (it stays in the pm-notes structure and the autonomous
+      session prompt's one-line instruction). It is read and recorded at phase 7
+      but does **not** gate spec-coverage resolution; it is a general signal for
+      future mode-aware features (e.g., GH-111), not a gate for this behavior.
   </step>
 
   <step name="3. Search Templates">
@@ -116,7 +121,7 @@ allowed-tools:
     <area name="Features">
       - Path: `doc/spec/features/feature-<slug>.md`
       - Describe current system behavior (present tense).
-      - Front Matter: `id: SPEC-<feature>`, `status: Current`, `links: { related_changes: ["<workItemRef>"] }`
+      - Front Matter: `id: SPEC-<feature-slug>`, `status: Current`, `links: { related_changes: ["<workItemRef>"] }`
     </area>
 
     <area name="Test Specs">
@@ -162,7 +167,7 @@ Return structured report:
     <field>Status: `SUCCESS` | `SKIPPED` | `FAILED`</field>
     <field>Updates: list of files created or modified</field>
     <field>Commit SHA: (if committed)</field>
-    <field>spec_coverage_gaps: list of modified feature areas lacking a `doc/spec/features/feature-<slug>.md` (empty when all modified feature areas are covered). In `interactive`/absent mode this field is report-only and carries no automated side effect (it never creates a spec or a ticket — see the handoff rule in `<rules>`). In `autonomous` mode a detected gap is resolved in-change: the authored `feature-<slug>.md` is listed among `Updates` (first-spec-only; an existing spec is reconciled), and any residual gaps remain listed here. Never a tracker ticket in any mode.</field>
+    <field>spec_coverage_gaps: list of modified feature areas lacking a `doc/spec/features/feature-<slug>.md` (empty when all modified feature areas are covered). A detected gap is **always resolved in-change** — `@doc-syncer` authors the missing `feature-<slug>.md` (listed among `Updates`; first-spec-only; an existing spec is reconciled), in **every** mode. Any residual gaps (areas that genuinely warrant no spec or could not be authored) remain listed here. Never a tracker ticket in any mode.</field>
     <field>Validation: confirm all spec links point to workItemRef</field>
     <field>Next Step: "Ready for Finalization"</field>
   </fields>
@@ -173,7 +178,7 @@ Return structured report:
   <rule>Traceability: Every updated file must link to workItemRef in front matter (`links.related_changes`).</rule>
   <rule>Templates: Use templates from `doc/templates/` as structural guide.</rule>
   <rule>Safety: Only modify docs in `doc/spec/`, `doc/contracts/`, `doc/domain/`, `doc/quality/`, `doc/ops/`, `doc/guides/`. Never touch source code.</rule>
-  <rule>Spec-coverage handoff (mode-aware resolution, never ticket): Read `delivery_mode` from `chg-<workItemRef>-pm-notes.yaml` (absent ⇒ `interactive`). Detection — collecting modified feature areas that lack a spec into `spec_coverage_gaps` — is unchanged in all modes. **`autonomous`:** a detected gap for a modified feature area with **no** spec is **resolved in-change** — `@doc-syncer` authors the missing `doc/spec/features/feature-<slug>.md` (first-spec-only; an existing spec is reconciled, never re-authored). "Advisory" is promoted to required **only for the first spec of an area that has none**, and must **not** be read as "can be silently skipped" (that silent drop is the defect this rule fixes). **`interactive` (or absent):** `@doc-syncer` only **reports** `spec_coverage_gaps`; "advisory" means non-blocking at phase 7 / the human decides ticket creation. **In both modes:** `@doc-syncer` never creates a tracker ticket, never auto-creates a follow-up, and no agent creates a tracker ticket in any mode. The de-noised, human-gated handoff for the interactive report is: `@doc-syncer` reports the gap → `@pm` checks open issues for an existing tracker (e.g., a prior GH-79/GH-77-style ticket) and **references** it rather than proposing a duplicate (de-noising) → `@pm` **proposes** a follow-up to the human → **only the human** approves ticket creation. The autonomous resolution produces a **doc artifact** scoped to the change and reviewed at the open-PR human gate — the human gate is relocated to PR review, not removed.</rule>
+  <rule>Spec-coverage handoff (unconditional resolution, never ticket): Detection — collecting modified feature areas that lack a spec into `spec_coverage_gaps` — is unchanged. Resolution **always** happens: for each detected gap where the modified feature area has **no** spec, `@doc-syncer` authors the missing `doc/spec/features/feature-<slug>.md` in-change (**first-spec-only**; an existing spec is reconciled, never re-authored), in **every** mode (regardless of `delivery_mode`, including absent/`interactive`). There is no "advisory" or "skip" path for spec coverage — the phase-7 goal is an **always-current** system specification, not detecting that one is missing. `@doc-syncer` never creates a tracker ticket, never auto-creates a follow-up, and no agent creates a tracker ticket in any mode; the resolution produces a **doc artifact** scoped to the change and reviewed at the open-PR human gate. `delivery_mode` is read and recorded but does not gate resolution (it is a general per-change signal for future mode-aware features). The "PM must NEVER create new tickets autonomously" rule is preserved — phase 7 makes a **doc**, never a ticket.</rule>
   <rule>Test Specs: Enduring documentation of how a feature is tested, derived from change test plan.</rule>
   <rule>Freshness: If implementation changes after a sync (new commits / refactor), run doc-sync again before PR.</rule>
 </rules>

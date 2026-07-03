@@ -4,8 +4,8 @@ decision_type: pdr
 status: Proposed
 created: 2026-07-02
 decision_date: null
-last_updated: 2026-07-02
-summary: "Make doc-syncer spec-coverage resolution mode-aware: introduce an explicit `delivery_mode` signal so that, in autonomous delivery, a spec-coverage gap is resolved IN-CHANGE (feature spec authored) instead of silently dropped — while preserving the interactive-mode advisory/human-gated de-noise behavior and the 'PM never creates tickets autonomously' governance rule (GH-108, epic #107)."
+last_updated: 2026-07-03
+summary: "Make doc-syncer spec-coverage resolution UNCONDITIONAL (always-resolve): a detected spec-coverage gap is resolved IN-CHANGE (feature spec authored) in every mode — no human decision, no follow-up ticket — so the system spec is always current. `delivery_mode` is retained as an optional non-gating signal; the 'PM never creates tickets autonomously' governance rule is preserved (GH-108, epic #107). Amended per PR #122 owner review directive."
 owners:
   - "Juliusz Ćwiąkalski"
 service: delivery-os
@@ -58,6 +58,42 @@ links:
 ---
 
 # PDR-0002: Mode-Aware Spec-Coverage Resolution for Autonomous Delivery
+
+## Amendment — Owner Review Override (2026-07-03, PR #122)
+
+> Per the owner's PR #122 review directive, the chosen design is amended from
+> **mode-aware** (Alternative 1) to **always-resolve / mode-independent**. The
+> owner's directive: *"documentation update to happen ALWAYS… trigger creation of
+> the specs autonomously on the 7. system_spec_update step… there should be no
+> human decision if we want to update (or create missing step) and there should
+> be no follow-up ticket for the documentation. the step 7 goal is to make sure
+> WE HAVE a always up to date system specification (not to detect we miss
+> it)."*
+
+**Effect of the override:**
+
+- Spec-coverage resolution is now **UNCONDITIONAL in all modes** (author the
+  missing first-spec in-change, any mode; first-spec-only; an existing spec is
+  reconciled). There is no human decision and no follow-up ticket for spec
+  coverage.
+- `delivery_mode` is **retained** as an optional, backward-compatible per-change
+  signal (it stays in the pm-notes structure + the autonomous session one-line
+  instruction), but it **no longer gates** spec-coverage resolution. It is a
+  general signal for future mode-aware features (e.g., GH-111).
+- **Constraint C-2 now applies to all modes** (a gap is always resolved in-change,
+  not only in autonomous mode).
+- **Constraint C-3 ("interactive-mode de-noise preserved") is OVERRIDDEN by the
+  owner for spec coverage** — the interactive-mode report-only/human-gated path
+  is replaced by always-resolve. This override is explicit and scoped to
+  spec-coverage resolution; the "PM must NEVER create new tickets autonomously"
+  rule is preserved verbatim (phase 7 produces a **doc artifact** reviewed at the
+  PR gate, never a tracker ticket).
+- Status remains `Proposed`; the owner accepts at the PR.
+
+The remainder of this record is the original mode-aware analysis; where the
+Decision section and Constraint Compliance below describe mode-gating or
+interactive advisory behavior, they are **superseded by this amendment** for
+spec-coverage resolution.
 
 ## Context
 
@@ -198,6 +234,13 @@ Legend: ✅ passes · ❌ fails (disqualifying for `negotiable: no`) · ⚠️ p
 
 ## Decision
 
+> **Amended (2026-07-03, PR #122 owner review override):** see the "Amendment"
+> section near the top. The chosen design is now **always-resolve /
+> mode-independent**, not mode-aware. The detailed mode-aware Decision below
+> (Alternative 1) is retained as the original analysis but is **superseded** —
+> resolution is unconditional in all modes; `delivery_mode` is retained as a
+> non-gating signal.
+
 Adopt **Alternative 1**. The two coupled decisions resolve as follows.
 
 ### D1 — Mode representation: explicit, auditable `delivery_mode`
@@ -214,6 +257,14 @@ Adopt **Alternative 1**. The two coupled decisions resolve as follows.
 - **Ownership of authoring:** `@doc-syncer` owns the gap-detection and the resolution requirement (it already runs the coverage check and owns `doc/spec/**` writes). Whether doc-syncer authors the spec directly or delegates the authoring to a stronger model / `@coder` (its current tier is haiku/scoped) is an **implementation detail for the plan** — the *decision* is that the gap is closed in-change in autonomous mode.
 
 ### Constraint Compliance Attestation
+
+> **Amended (2026-07-03, PR #122 owner review override):** C-2 now applies to
+> **all modes** (resolution is unconditional). C-3 ("interactive de-noise
+> preserved") is **OVERRIDDEN by the owner for spec coverage** — interactive
+> mode no longer has a report-only/human-gated path for spec coverage. The
+> attestation below reflects the original mode-aware design and is superseded
+> for C-2/C-3 by this amendment; C-1 (no auto-ticket) and C-4 (all entry
+> points) remain fully in force.
 
 The chosen alternative (ALT-1) satisfies **all** constraints C-1 through C-4:
 - **C-1** — no agent creates a tracker ticket in any mode; the rule is preserved verbatim. ✅
