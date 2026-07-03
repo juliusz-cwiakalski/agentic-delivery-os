@@ -69,9 +69,9 @@
 ## Phase 3: `scripts/deliver-ticket.sh` (new)
 
 ### Tasks
-- [ ] Read CEO loop reference: `/home/juliusz/git/hackathon/julek-experiment/scripts/ceo-loop.sh` (liveness pattern)
-- [ ] Read current `scripts/opencode-session.sh` (API to call)
-- [ ] Create `scripts/deliver-ticket.sh`:
+- [x] Read CEO loop reference: `/home/juliusz/git/hackathon/julek-experiment/scripts/ceo-loop.sh` (liveness pattern)
+- [x] Read current `scripts/opencode-session.sh` (API to call)
+- [x] Create `scripts/deliver-ticket.sh`:
   - **Input parsing**: `GH-112`, `GH-112:feat/branch`, or `GH-112 feat/branch`
     - Split on `:` for colon syntax; validate ticket ref format
   - **Branch resolution**:
@@ -101,7 +101,7 @@
   - **Logging**: `[HH:MM:SS] ▶ START / ℹ info / ⚠ warn / ✓ done / ✗ failed`
   - **Flags**: `-h/--help`, `--version`, `--dry-run`, `-v/--verbose`, `--stuck-minutes <n>`, `--max-restarts <n>`
   - Strict mode, ERR trap, testable main guard
-- [ ] Create `scripts/.tests/test-deliver-ticket.sh`:
+- [x] Create `scripts/.tests/test-deliver-ticket.sh`:
   - TC-DT-01: input parsing — `GH-112` → ticket=GH-112, branch=""
   - TC-DT-02: input parsing — `GH-112:feat/branch` → ticket=GH-112, branch="feat/branch"
   - TC-DT-03: branch mismatch warning — mapping has branch A, arg has branch B → warns, uses A
@@ -110,8 +110,8 @@
   - TC-DT-06: max-restarts — mock 10 failed iterations → exits with "max-restarts"
   - TC-DT-07: exit classification mock — ticket has human-input-needed → exits "blocked"
   - TC-DT-08: prompt generation — contains ticket ref, branch, push-to-completion language
-- [ ] Run `bash scripts/.tests/test-deliver-ticket.sh` — fix until all pass
-- [ ] Commit: `feat(scripts): add deliver-ticket.sh — liveness-monitored single-ticket orchestrator`
+- [x] Run `bash scripts/.tests/test-deliver-ticket.sh` — fix until all pass (23/23 PASS)
+- [x] Commit: `feat(scripts): add deliver-ticket.sh — liveness-monitored single-ticket orchestrator`
 
 ## Phase 4: `scripts/batch-deliver.sh` (new)
 
