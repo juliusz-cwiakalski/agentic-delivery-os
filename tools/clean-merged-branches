@@ -165,10 +165,10 @@ get_ancestry_merged_branches() {
 # Returns 0 (true/identical) or 1 (false/different).
 is_content_identical() {
   local -r base="$1" branch="$2"
-  local diff_output exit_code=0
-  diff_output="$(_git diff "${base}..${branch}" 2>/dev/null)" || exit_code=$?
-  [[ "${exit_code}" -eq 0 ]] || return 1
-  [[ -z "${diff_output}" ]]
+  # git diff --quiet: exit 0 = no differences (identical), 1 = differences, 2 = error.
+  # Returns 0 (true/identical) or non-zero (false/different). Faster and lighter
+  # than capturing the full diff output into a variable.
+  _git diff --quiet "${base}..${branch}" 2>/dev/null
 }
 
 # Delete a single branch.

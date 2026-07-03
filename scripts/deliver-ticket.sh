@@ -687,10 +687,12 @@ deliver_loop() {
       continue
     fi
 
-    # Parse stop:exit_code:message
-    local exit_code="${decision%%:*}"
-    local rest="${decision#*:}"
-    local message="${rest#*:}"
+    # Parse stop:exit_code:message (e.g. "stop:0:merged" → exit=0, msg=merged).
+    # Strip the leading "stop:" first, then split the remainder on the first colon
+    # so exit_code is the numeric code (not the literal "stop" prefix).
+    local rest="${decision#*:}"           # "0:merged"
+    local exit_code="${rest%%:*}"          # "0"
+    local message="${rest#*:}"            # "merged"
 
     case "${message}" in
       merged)   log_done "${ticket_ref} — merged/closed" ;;
@@ -776,6 +778,9 @@ main() {
   require_cmd git
   require_cmd gh
   require_cmd jq
+  # setsid is needed even for dry-run display; opencode only for real runs.
+  require_cmd setsid
+  [[ "${DRY_RUN}" == "true" ]] || require_cmd opencode
 
   # Parse input: ARGS[0] is ticket or ticket:branch
   [[ ${#ARGS[@]} -ge 1 ]] || die "Missing ticket reference. See --help."

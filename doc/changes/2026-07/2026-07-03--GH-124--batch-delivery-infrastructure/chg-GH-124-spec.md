@@ -41,7 +41,7 @@ The current batch delivery approach (`tmp/batch-delivery.sh` calling `scripts/op
 - **License headers**: `tools/clean-merged-branches` needs header via `scripts/add-header-location.sh`. `scripts/*.sh` are repo-internal (no header).
 - **`scripts/` + `tools/` changes are CEO-gated** per repo convention.
 - **Feature branch from latest main**: Always `git fetch --prune origin && git checkout main && git pull --ff-only origin main` before creating a feature branch.
-- **Squash-merge authorization**: PM is authorized to merge ONLY when a GitHub-native APPROVED review exists with no pending CHANGES_REQUESTED.
+- **Squash-merge authorization**: PM is authorized to merge when ANY ONE approval signal is present: GitHub-native APPROVED review, `approved` label on the ticket issue, or LGTM comment by the PR author (when `DELIVER_ALLOW_LGTM_COMMENT=true`). See the autonomous batch delivery guide for the full trust boundary.
 
 ## Acceptance criteria
 
