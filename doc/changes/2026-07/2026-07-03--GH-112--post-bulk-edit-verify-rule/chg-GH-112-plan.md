@@ -319,4 +319,4 @@ The change is **additive**: one new rule file, one README index row, two agent l
 | 1 | done | 2026-07-03 | 2026-07-03 | 8edf750 | `.ai/rules/bulk-edit-verify.md` authored (46 lines); TC-RULE-001..005 all grep-OK; marker-only frontmatter; header deferred to Phase 2 script. |
 | 2 | done | 2026-07-03 | 2026-07-03 | 09f32e2 | header applied via script (marker survived); install+uninstall+guard lists each +1 byte-identical entry; drift guard exit 0 (`77 in-scope docs`). |
 | 3 | done | 2026-07-03 | 2026-07-03 | bd09808 | README +1 index row; coder.md + pm.md +1 `<rule_loading>` block each; plugin regenerated (coder+pm mirrors); freshness test 16/16 PASS. |
-| 4 | done | 2026-07-03 | 2026-07-03 | (pending) | drift guard exit 0; freshness 16/16; `git diff --check` exit 0; 15/15 ACs PASSED with evidence; spec reconciled (no doc/spec edit, OQ-2 advisory); no runtime version bump. |
+| 4 | done | 2026-07-03 | 2026-07-03 | 58fae89 | drift guard exit 0; freshness 16/16; `git diff --check` exit 0; 15/15 ACs PASSED with evidence; spec reconciled (no doc/spec edit, OQ-2 advisory); no runtime version bump. |
