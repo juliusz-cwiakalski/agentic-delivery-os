@@ -38,6 +38,7 @@ _test_setup() {
   # Reset installer env vars that individual tests may mutate.
   ZCLAUDE_INSTALL_DIR=""
   DRY_RUN="false"
+  # shellcheck disable=SC2034  # reset; read by sourced install-zclaude functions
   VERBOSE="false"
 }
 
@@ -287,6 +288,7 @@ test_choose_install_dir_explicit_override() {
   local result
   result="$(choose_install_dir)"
   assert_eq "/custom/install/path" "${result}" "ZCLAUDE_INSTALL_DIR wins"
+  # shellcheck disable=SC2034  # reset; read by sourced choose_install_dir function
   ZCLAUDE_INSTALL_DIR=""
 }
 
@@ -294,6 +296,7 @@ test_choose_install_dir_prefers_local_bin_in_path() {
   PATH="${HOME}/.local/bin:/usr/bin"
   local result
   result="$(choose_install_dir)"
+  # shellcheck disable=SC2088  # assert message uses intentional literal tilde
   assert_eq "${HOME}/.local/bin" "${result}" "~/.local/bin in PATH is chosen"
 }
 
@@ -301,6 +304,7 @@ test_choose_install_dir_uses_home_bin_if_in_path() {
   PATH="${HOME}/bin:/usr/bin"
   local result
   result="$(choose_install_dir)"
+  # shellcheck disable=SC2088  # assert message uses intentional literal tilde
   assert_eq "${HOME}/bin" "${result}" "~/.bin in PATH is chosen"
 }
 
@@ -377,6 +381,7 @@ test_download_tool_writes_executable_dest() {
 test_download_tool_returns_external_on_curl_failure() {
   local dest="${_test_tmpdir}/bin/zclaude"
   mkdir -p "$(dirname "${dest}")"
+  # shellcheck disable=SC2034  # read by the sourced download_tool function
   DRY_RUN="false"
   _curl() { _curl_mock_fail "$@"; }
   local rc=0

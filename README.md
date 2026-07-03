@@ -67,6 +67,7 @@ This repo is a practical reference implementation of a spec-driven workflow usin
   * [What is implemented here](#what-is-implemented-here)
   * [Multi-tool support](#multi-tool-support)
   * [Autopilot (PM-driven)](#autopilot-pm-driven)
+  * [Autonomous batch delivery](#autonomous-batch-delivery)
   * [Typical workflow (manual)](#typical-workflow-manual)
   * [Change artifacts (tracker-agnostic)](#change-artifacts-tracker-agnostic)
   * [Repo structure](#repo-structure)
@@ -223,6 +224,27 @@ Example prompt:
 ```
 
 (You can also use a GitHub issue URL or a `workItemRef` like `GH-456`.)
+
+## Autonomous batch delivery
+
+For overnight or multi-ticket delivery, three scripts wrap the 11-phase lifecycle with liveness monitoring, session resilience, and PR feedback:
+
+```bash
+# Single ticket — liveness-monitored, auto-restart on staleness
+scripts/deliver-ticket.sh GH-112
+
+# Batch — sequential, skips already-done tickets, idempotent restart
+scripts/batch-deliver.sh GH-108 GH-110 GH-37
+
+# Branch cleanup (squash-merge-safe)
+tools/clean-merged-branches
+```
+
+The PM agent runs the full lifecycle inside each session. The scripts monitor for staleness (30 min no activity → kill → restart), track branches per ticket, and use a **push-to-completion** prompt that checks for open PR comments, addresses them, and squash-merges on approval.
+
+**Approval (solo-developer-friendly):** GitHub blocks self-approval, so the PM accepts any of: GitHub `Approve` review · `approved` label on the issue · `LGTM` comment on the PR.
+
+**Guide:** [doc/guides/autonomous-batch-delivery.md](doc/guides/autonomous-batch-delivery.md)
 
 ## Typical workflow (manual)
 

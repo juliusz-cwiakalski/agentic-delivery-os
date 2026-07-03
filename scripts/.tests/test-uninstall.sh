@@ -410,6 +410,7 @@ test_global_uninstall_removes_ados_home() {
   mkdir -p "${ados_home}/repo/.git"
   printf 'state\n' > "${ados_home}/state.txt"
 
+  # shellcheck disable=SC2088  # 2nd arg is a cosmetic label; tilde is intentional
   safe_rmdir "${ados_home}" "~/.ados"
 
   assert_dir_not_exists "${ados_home}" "ADOS home should be removed"
@@ -480,6 +481,7 @@ test_local_uninstall_dry_run() {
 
   (
     cd "${project_dir}"
+    # shellcheck disable=SC2034  # read by the sourced remove_local_files
     DRY_RUN=true
     FORCE=true
     reset_counters
@@ -584,6 +586,7 @@ test_local_uninstall_removes_empty_rules_dir() {
 
   (
     cd "${project_dir}"
+    # shellcheck disable=SC2034  # read by the sourced remove_local_files
     FORCE=true
     reset_counters
     remove_local_files

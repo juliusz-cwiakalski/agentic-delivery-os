@@ -663,8 +663,7 @@ test_global_install_copies_agents() {
   INSTALL_MODE="global"
   reset_counters
 
-  # Override repo dir to point to our mock
-  local saved_repo_dir="${ADOS_REPO_DIR}"
+  reset_counters
 
   # Directly test install_global_files logic by copying agent files
   local agent_file
@@ -926,6 +925,7 @@ test_local_install_idempotent_content_sync() {
   # Run 2: re-install. Content-sync must leave identical files untouched (NFR-5 / AC-F6-1).
   (
     cd "${project_dir}"
+    # shellcheck disable=SC2034  # config env read by the sourced install_local_files
     INSTALL_MODE="local" FORCE=false DRY_RUN=false VERBOSE=false
     reset_counters
     install_local_files "${source_dir}"
@@ -1009,7 +1009,9 @@ test_interactive_mode_with_reject() {
   printf '# New content\n' > "${src}"
   printf '# Old content\n' > "${dest}"
 
+  # shellcheck disable=SC2034  # config env read by the sourced copy_file_with_diff
   INSTALL_MODE="local"
+  # shellcheck disable=SC2034
   FORCE=false
   INTERACTIVE=true
   reset_counters
@@ -1021,6 +1023,7 @@ test_interactive_mode_with_reject() {
   local content
   content="$(cat "${dest}")"
   assert_eq "# Old content" "${content}" "Content should NOT be updated"
+  # shellcheck disable=SC2034  # reset; read by sourced install functions
   INTERACTIVE=false
 }
 
@@ -1036,6 +1039,7 @@ test_auto_fetch_skips_with_no_fetch() {
   VERBOSE=true
   local output
   output="$(auto_fetch_source "${source_dir}" 2>&1)"
+  # shellcheck disable=SC2034  # reset; read by sourced auto_fetch_source
   NO_FETCH=false
   VERBOSE=false
 
@@ -1051,6 +1055,7 @@ test_auto_fetch_skips_explicit_source() {
   VERBOSE=true
   local output
   output="$(auto_fetch_source "${source_dir}" 2>&1)"
+  # shellcheck disable=SC2034  # reset; read by sourced install functions
   VERBOSE=false
   if [[ -n "${saved}" ]]; then
     ADOS_SOURCE_DIR="${saved}"

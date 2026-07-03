@@ -347,14 +347,12 @@ test_models_multiple() {
    export OUTPUT_FORMAT=text
 
    # Simulate the multiple models logic
-   local prompt="test prompt"
    local output="${_test_tmpdir}/test.png"
    local models="dall-e-3,stable-diffusion-xl-1024-v1-0"
    local model_list
    IFS=',' read -ra model_list <<< "$models"
    local results=()
    local success_count=0
-   local failure_count=0
 
    for model_item in "${model_list[@]}"; do
      model_item="$(echo "$model_item" | xargs)"

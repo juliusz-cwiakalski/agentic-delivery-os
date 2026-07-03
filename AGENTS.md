@@ -132,6 +132,7 @@ When adding or modifying agents, commands, or skills:
 - **Update [.opencode/README.md](.opencode/README.md)** when adding, removing, or renaming tools.
 - **Keep prompts tight** — verbose prompts waste tokens and reduce quality; prefer XML structure for Claude models.
 - **Model configuration is separate** — models are assigned in `opencode*.jsonc` config files, not in agent definitions. Agent files describe behavior; config files define which model runs them.
+- **Register delivery infrastructure** — when adding scripts to `scripts/` or tools to `tools/` that are part of the delivery infrastructure, add them to the `ADOS_DELIVERY_SCRIPTS` or `ADOS_DELIVERY_TOOLS` arrays in [scripts/install.sh](scripts/install.sh) so they install into user projects.
 
 ## Change artifacts
 
