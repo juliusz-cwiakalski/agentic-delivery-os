@@ -218,6 +218,191 @@ test_usage_contains_commands() {
 }
 
 # ============================================================================
+# NEW TESTS: TC-OS-14 through TC-OS-18 (GH-124 enhancements)
+# ============================================================================
+
+# TC-OS-14: find_session_by_title returns matching session ID
+test_find_session_by_title_match() {
+  # Mock opencode_cli to return sessions JSON with matching title
+  opencode_cli() {
+    printf '%s' '[{"id":"ses_abc","title":"ticket-GH-99","time":"2024-01-01T00:00:00Z"},{"id":"ses_def","title":"other","time":"2024-01-01T00:00:00Z"}]'
+  }
+
+  local result
+  result="$(find_session_by_title "ticket-GH-99")"
+  assert_eq "ses_abc" "${result}" "Should return session ID matching the title"
+}
+
+# TC-OS-15: find_session_by_title returns empty on no match
+test_find_session_by_title_no_match() {
+  opencode_cli() {
+    printf '%s' '[{"id":"ses_abc","title":"ticket-GH-99","time":"2024-01-01T00:00:00Z"},{"id":"ses_def","title":"other","time":"2024-01-01T00:00:00Z"}]'
+  }
+
+  local result
+  result="$(find_session_by_title "ticket-GH-MISSING")"
+  assert_eq "" "${result}" "Should return empty when no title matches"
+}
+
+# TC-OS-15b: find_session_by_title degrades gracefully on opencode error
+test_find_session_by_title_error_degrades() {
+  opencode_cli() {
+    printf 'opencode: error\n' >&2
+    return 1
+  }
+
+  local result
+  result="$(find_session_by_title "ticket-GH-99")"
+  assert_eq "" "${result}" "Should return empty on opencode error"
+}
+
+# TC-OS-16: mapping JSON includes branch field
+test_mapping_includes_branch_field() {
+  local test_dir="${_test_tmpdir}/sessions"
+  mkdir -p "${test_dir}"
+
+  # Override mapping_file_for to use test directory
+  mapping_file_for() {
+    printf '%s/%s.json' "${test_dir}" "$1"
+  }
+
+  save_mapping "GH-100" "ses_test_branch" "create" "feat/GH-100/test-branch" "in_progress"
+
+  local mapping_file="${test_dir}/GH-100.json"
+  assert_file_exists "${mapping_file}"
+
+  local branch title status
+  branch="$(jq -r '.branch' "${mapping_file}")"
+  title="$(jq -r '.title' "${mapping_file}")"
+  status="$(jq -r '.status' "${mapping_file}")"
+
+  assert_eq "feat/GH-100/test-branch" "${branch}" "branch field should match"
+  assert_eq "ticket-GH-100" "${title}" "title field should match"
+  assert_eq "in_progress" "${status}" "status field should match"
+}
+
+# TC-OS-16b: mapping JSON has null branch when not provided
+test_mapping_null_branch() {
+  local test_dir="${_test_tmpdir}/sessions"
+  mkdir -p "${test_dir}"
+
+  mapping_file_for() {
+    printf '%s/%s.json' "${test_dir}" "$1"
+  }
+
+  save_mapping "GH-101" "ses_test_null" "create"
+
+  local mapping_file="${test_dir}/GH-101.json"
+  local branch_type
+  branch_type="$(jq -r '.branch | type' "${mapping_file}")"
+  assert_eq "null" "${branch_type}" "branch should be JSON null when not provided"
+}
+
+# TC-OS-16c: restart_count preserved and defaults to 0
+test_mapping_restart_count_default() {
+  local test_dir="${_test_tmpdir}/sessions"
+  mkdir -p "${test_dir}"
+
+  mapping_file_for() {
+    printf '%s/%s.json' "${test_dir}" "$1"
+  }
+
+  save_mapping "GH-102" "ses_test_rc" "create"
+
+  local mapping_file="${test_dir}/GH-102.json"
+  local rc
+  rc="$(jq -r '.restart_count' "${mapping_file}")"
+  assert_eq 0 "${rc}" "restart_count should default to 0"
+}
+
+# TC-OS-17: pending mapping written before run
+# When a new session is being created, a pending mapping is written before
+# opencode run starts. We verify by writing the status to a temp file from
+# inside the mock (command substitution runs in a subshell, so variable
+# assignment would not propagate).
+test_pending_mapping_before_run() {
+  local test_dir="${_test_tmpdir}/sessions"
+  mkdir -p "${test_dir}"
+  local status_file="${_test_tmpdir}/status_at_start.txt"
+
+  mapping_file_for() {
+    printf '%s/%s.json' "${test_dir}" "$1"
+  }
+
+  # Mock opencode_cli: when called for `run`, capture mapping status to file
+  opencode_cli() {
+    if [[ "$1" == "run" ]]; then
+      local mapping="${test_dir}/GH-103.json"
+      if [[ -f "${mapping}" ]]; then
+        jq -r '.status // empty' "${mapping}" 2>/dev/null > "${status_file}" || true
+      fi
+      printf '{"sessionID":"ses_pending_103","output":"done"}\n'
+    fi
+  }
+
+  prepare_main_for_new_session() { :; }
+  source_opencode_env() { :; }
+  validate_repo() { :; }
+  DRY_RUN=false
+
+  git -C "${_test_tmpdir}" init -q 2>/dev/null || true
+
+  run_ticket_session "GH-103" "test message" 2>/dev/null || true
+
+  local status_at_start=""
+  [[ -f "${status_file}" ]] && status_at_start="$(cat "${status_file}")"
+
+  assert_eq "pending" "${status_at_start}" \
+    "Mapping should have status 'pending' when opencode run starts"
+}
+
+# TC-OS-18: title-based resume path (mapping stale → title lookup finds session)
+test_title_based_resume_path() {
+  local test_dir="${_test_tmpdir}/sessions"
+  mkdir -p "${test_dir}"
+
+  mapping_file_for() {
+    printf '%s/%s.json' "${test_dir}" "$1"
+  }
+
+  # Create a stale mapping with a session_id that won't verify
+  jq -n \
+    --arg ticket "GH-104" \
+    --arg session_id "ses_stale" \
+    --arg agent "pm" \
+    '{ticket:$ticket,session_id:$session_id,agent:$agent,status:"in_progress"}' \
+    > "${test_dir}/GH-104.json"
+
+  local resumed_session=""
+
+  # Mock: session list returns a session with the right title
+  opencode_cli() {
+    if [[ "$1" == "session" ]]; then
+      printf '%s' '[{"id":"ses_found_by_title","title":"ticket-GH-104","time":"2024-01-01T00:00:00Z"}]'
+    elif [[ "$1" == "run" && "$2" == "--session" ]]; then
+      resumed_session="$3"
+    fi
+  }
+
+  # verify_session_exists: stale session doesn't exist, title-found one does
+  verify_session_exists() {
+    [[ "$1" != "ses_stale" ]]
+  }
+
+  prepare_main_for_new_session() { :; }
+  source_opencode_env() { :; }
+  validate_repo() { :; }
+  DRY_RUN=false
+
+  git -C "${_test_tmpdir}" init -q 2>/dev/null || true
+
+  run_ticket_session "GH-104" "test message" 2>/dev/null || true
+
+  assert_eq "ses_found_by_title" "${resumed_session}" \
+    "Should resume session found by title lookup"
+}
+
+# ============================================================================
 # RUN TESTS
 # ============================================================================
 main() {
@@ -236,6 +421,15 @@ main() {
   run_test "extract_session_id parses valid JSON" test_extract_session_id_valid
   run_test "extract_session_id handles missing field" test_extract_session_id_empty
   run_test "usage shows all commands" test_usage_contains_commands
+  # GH-124 new tests
+  run_test "TC-OS-14: find_session_by_title returns matching ID" test_find_session_by_title_match
+  run_test "TC-OS-15: find_session_by_title returns empty on no match" test_find_session_by_title_no_match
+  run_test "TC-OS-15b: find_session_by_title degrades on error" test_find_session_by_title_error_degrades
+  run_test "TC-OS-16: mapping JSON includes branch field" test_mapping_includes_branch_field
+  run_test "TC-OS-16b: mapping JSON has null branch when not provided" test_mapping_null_branch
+  run_test "TC-OS-16c: restart_count defaults to 0" test_mapping_restart_count_default
+  run_test "TC-OS-17: pending mapping written before run" test_pending_mapping_before_run
+  run_test "TC-OS-18: title-based resume path" test_title_based_resume_path
 
   printf '\n%s Summary: %d/%d passed' "${TEST_TAG}" "${_test_passed}" "${_test_count}"
   if [[ "${_test_failed}" -gt 0 ]]; then

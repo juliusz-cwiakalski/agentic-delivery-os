@@ -171,6 +171,13 @@ verify_session_exists() {
   jq_cli -e --arg id "${session_id}" '.[] | select(.id == $id)' <<<"${sessions_json}" >/dev/null 2>&1
 }
 
+find_session_by_title() {
+  local -r title="$1"
+  local sessions_json
+  sessions_json="$(cd "${ROOT_DIR}" && opencode_cli session list --format json 2>/dev/null)" || return 0
+  jq_cli -r --arg title "${title}" '[.[] | select(.title == $title)] | .[0].id // empty' <<<"${sessions_json}" 2>/dev/null || true
+}
+
 extract_session_id() {
   local -r raw_output="$1"
   local first=""
@@ -186,11 +193,29 @@ latest_session_id() {
 
 save_mapping() {
   local -r ticket_ref="$1" session_id="$2" action="$3"
+  local branch="${4:-}"
+  local status="${5:-}"
   local -r mapping_file="$(mapping_file_for "${ticket_ref}")"
   local -r timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  local tmp_file
-  tmp_file="$(mktemp)"
+  local -r title="ticket-${ticket_ref}"
+  local tmp_file="" created="" restart_count="0"
 
+  # Preserve fields from existing mapping (backward-compatible)
+  if [[ -f "${mapping_file}" ]]; then
+    created="$(jq_cli -r '.created // empty' "${mapping_file}" 2>/dev/null || true)"
+    restart_count="$(jq_cli -r '.restart_count // 0' "${mapping_file}" 2>/dev/null || true)"
+    [[ -z "${branch}" ]] && branch="$(jq_cli -r '.branch // empty' "${mapping_file}" 2>/dev/null || true)"
+    [[ -z "${status}" ]] && status="$(jq_cli -r '.status // empty' "${mapping_file}" 2>/dev/null || true)"
+  fi
+  [[ -n "${created}" ]] || created="${timestamp}"
+  restart_count="${restart_count:-0}"
+
+  # Build nullable JSON values for branch/status
+  local branch_json="null" status_json="null"
+  [[ -n "${branch}" ]] && branch_json="\"${branch}\""
+  [[ -n "${status}" ]] && status_json="\"${status}\""
+
+  tmp_file="$(mktemp)"
   jq_cli -n \
     --arg ticket "${ticket_ref}" \
     --arg session_id "${session_id}" \
@@ -198,7 +223,12 @@ save_mapping() {
     --arg repo_path "${ROOT_DIR}" \
     --arg action "${action}" \
     --arg timestamp "${timestamp}" \
-    '{ticket:$ticket,session_id:$session_id,agent:$agent,repo_path:$repo_path,last_action:$action,updated:$timestamp,created:$timestamp}' \
+    --arg created "${created}" \
+    --arg title "${title}" \
+    --argjson branch "${branch_json}" \
+    --argjson status "${status_json}" \
+    --argjson restart_count "${restart_count}" \
+    '{ticket:$ticket,session_id:$session_id,agent:$agent,repo_path:$repo_path,last_action:$action,updated:$timestamp,created:$created,title:$title,branch:$branch,status:$status,restart_count:$restart_count}' \
     >"${tmp_file}"
   mv "${tmp_file}" "${mapping_file}"
 }
@@ -247,14 +277,28 @@ run_ticket_session() {
 
   cd "${ROOT_DIR}"
 
-  local session_id action raw_output exit_code captured_id title
+  local session_id action raw_output exit_code captured_id title branch
+  title="ticket-${ticket_ref}"
+  branch="$(git -C "${ROOT_DIR}" symbolic-ref --short HEAD 2>/dev/null || true)"
+
+  # Session resolution: mapping → title-based lookup → create new
   session_id="$(lookup_session "${ticket_ref}")"
   action="create"
   if [[ -n "${session_id}" ]] && verify_session_exists "${session_id}"; then
     action="resume"
+    log_debug "Session found in mapping and alive: ${session_id}"
+  else
+    log_debug "Mapping session stale or missing; trying title-based lookup"
+    local title_session
+    title_session="$(find_session_by_title "${title}")"
+    if [[ -n "${title_session}" ]]; then
+      session_id="${title_session}"
+      action="resume"
+      log_info "Found existing session by title '${title}': ${session_id}"
+    else
+      session_id=""
+    fi
   fi
-
-  title="ticket-${ticket_ref}"
 
   if [[ "${DRY_RUN}" == "true" ]]; then
     if [[ "${action}" == "resume" ]]; then
@@ -262,19 +306,23 @@ run_ticket_session() {
     else
       prepare_main_for_new_session
       log_info "[DRY-RUN] opencode run --agent ${TICKET_AGENT} --title ${title} <message>"
-      save_mapping "${ticket_ref}" "ses_dry_run_${ticket_ref}" "dry-run-create"
+      save_mapping "${ticket_ref}" "ses_dry_run_${ticket_ref}" "dry-run-create" "${branch}" "pending"
     fi
     return 0
   fi
 
   if [[ "${action}" == "resume" ]]; then
     log_info "Resuming ${ticket_ref} session ${session_id}"
-    touch_mapping "${ticket_ref}" "resume"
+    save_mapping "${ticket_ref}" "${session_id}" "resume" "${branch}" "in_progress"
     opencode_cli run --session "${session_id}" "${message}" || return $?
     return 0
   fi
 
   prepare_main_for_new_session
+
+  # Write pending mapping before starting session
+  save_mapping "${ticket_ref}" "" "pending-create" "${branch}" "pending"
+  log_info "Wrote pending mapping for ${ticket_ref}"
 
   log_info "Creating ${ticket_ref} session with agent=${TICKET_AGENT}"
   raw_output=""
@@ -286,7 +334,7 @@ run_ticket_session() {
   [[ -n "${captured_id}" ]] || captured_id="$(latest_session_id)"
 
   if [[ -n "${captured_id}" ]]; then
-    save_mapping "${ticket_ref}" "${captured_id}" "create"
+    save_mapping "${ticket_ref}" "${captured_id}" "create" "${branch}" "in_progress"
     log_info "Saved mapping ${ticket_ref} -> ${captured_id}"
   else
     log_warn "Could not capture session id for ${ticket_ref}"
