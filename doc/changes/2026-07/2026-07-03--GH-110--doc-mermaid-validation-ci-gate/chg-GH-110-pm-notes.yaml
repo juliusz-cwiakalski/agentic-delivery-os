@@ -16,9 +16,9 @@ phases:
   test_planning: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z" }
   delivery_planning: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z" }
   dor_check: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z" }
-  delivery: { started: "2026-07-03T00:00:00Z", completed: null }
-  system_spec_update: { started: null, completed: null }
-  review_fix: { started: null, completed: null }
+  delivery: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z" }
+  system_spec_update: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z" }
+  review_fix: { started: "2026-07-03T00:00:00Z", completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -43,8 +43,9 @@ blockers: []
 
 spec_coverage:
   feature_area: "docs/mermaid validation (automated doc-quality gate)"
-  existing_spec: null  # no doc/spec/features/* matches this capability
-  gap: "NEW feature area — no spec exists. delivery_mode=autonomous → resolved in-change at phase 7 (author doc/spec/features/feature-doc-mermaid-validation.md, first-spec-only). Adjacent specs to reference: feature-quality-gates-and-pr.md, feature-doc-distribution-marker.md."
+  existing_spec: null  # was none
+  gap: "RESOLVED IN-CHANGE (autonomous). @doc-syncer authored doc/spec/features/feature-doc-mermaid-validation.md (SPEC-DOC-MERMAID-VALIDATION, ados_distribution: internal). Committed a3a2016. doc-distribution guard stays green (doc/spec/** outside DM-2). No tracker ticket created (rule preserved)."
+  feature_spec_path: "doc/spec/features/feature-doc-mermaid-validation.md"
 
 notes:
   - text: "RETRO: plan-writer's staging constraint wrongly said 'Never stage doc/changes/**/*pm-notes.yaml (PM-owned)' — it conflated the git-ignored .ai/local/pm-context.yaml with the change-local chg-*-pm-notes.yaml (which IS a committed durable record). PM corrected the plan + added Phase 0 (commit change artifacts). Process improvement: the plan template/rule should distinguish .ai/local/ (never committed) from doc/changes/*-pm-notes.yaml (committed)."
