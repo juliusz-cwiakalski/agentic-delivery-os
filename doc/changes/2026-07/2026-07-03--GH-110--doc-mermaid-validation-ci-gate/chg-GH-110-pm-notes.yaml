@@ -1,0 +1,70 @@
+change_id: GH-110
+title: "Doc & mermaid validation CI gate"
+branch: feat/GH-110/doc-mermaid-validation-ci-gate
+base: origin/main (e8a66a12)
+epic: "#107 (Drift detection & gate enforcement)"
+# Autonomous batch delivery (see .ai/local/pm-context.yaml planning_sessions).
+# GH-108 (mode-aware spec-coverage resolution, PR #122) design: in autonomous
+# mode, a detected spec_coverage_gap with no existing spec is resolved IN-CHANGE
+# (author the missing doc/spec/features/feature-<slug>.md) rather than reported
+# for a human-gated follow-up. Set here at intake per PM instructions.
+delivery_mode: autonomous
+
+phases:
+  clarify_scope: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z" }
+  specification: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z" }
+  test_planning: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z" }
+  delivery_planning: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z" }
+  dor_check: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z" }
+  delivery: { started: "2026-07-03T00:00:00Z", completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+
+decisions:
+  - text: "delivery_mode=autonomous set at intake (GH-108 mode-aware spec-coverage resolution dogfooded); phase-7 will author/reconcile feature specs in-change."
+    date: "2026-07-03"
+  - text: "markdownlint config+job = NON-GOAL for this change (ticket lists it optional with no AC). Keeps scope to the 4 hard ACs (mermaid validate + CI + diagrams.md rule + doc-authoring self-check). Defer markdownlint to a follow-up if desired."
+    date: "2026-07-03"
+  - text: "CI job isolation: a dedicated workflow file (.github/workflows/docs-mermaid-validate.yml) triggered on doc paths, rather than a paths-filtered job inside ci.yml. Cleanest isolation + matches ticket's 'triggered on paths' wording. Existing ci.yml has no paths filter and stays unchanged."
+    date: "2026-07-03"
+  - text: "AC#5 'CEO-gated PR' = a review flag surfaced in the PR description for the human reviewer (change touches scripts/ + .github/). Not an automated gate; PM does not perform it. Human handles final review + squash-merge."
+    date: "2026-07-03"
+  - text: "Branch type feat (adds new tool scripts/validate-mermaid.sh + new capability)."
+    date: "2026-07-03"
+  - text: "DEC-7 (resolved OQ-1): validator enforces BOTH mmdc renderability AND a non-render-safe C4 keyword guard (denylist owned by .ai/rules/diagrams.md). Rationale: mmdc renders C4 that GitHub does not, so render-only would miss the exact motivating bug class. Reversible, low-risk, clearly correct; PM-decided (not escalated to decision record — change-scoped design decision, not system-wide precedent). Keyword guard runs even under --if-present (needs no mmdc); denylist configurable via RENDER_SAFE_DENYLIST env."
+    date: "2026-07-03"
+
+open_questions: []
+
+blockers: []
+
+spec_coverage:
+  feature_area: "docs/mermaid validation (automated doc-quality gate)"
+  existing_spec: null  # no doc/spec/features/* matches this capability
+  gap: "NEW feature area — no spec exists. delivery_mode=autonomous → resolved in-change at phase 7 (author doc/spec/features/feature-doc-mermaid-validation.md, first-spec-only). Adjacent specs to reference: feature-quality-gates-and-pr.md, feature-doc-distribution-marker.md."
+
+notes:
+  - text: "RETRO: plan-writer's staging constraint wrongly said 'Never stage doc/changes/**/*pm-notes.yaml (PM-owned)' — it conflated the git-ignored .ai/local/pm-context.yaml with the change-local chg-*-pm-notes.yaml (which IS a committed durable record). PM corrected the plan + added Phase 0 (commit change artifacts). Process improvement: the plan template/rule should distinguish .ai/local/ (never committed) from doc/changes/*-pm-notes.yaml (committed)."
+    type: retro
+    date: "2026-07-03"
+  - text: "DoR iter-1 = NOT_READY (1 Major). The readiness-reviewer correctly caught the canonical silent-AC-pass gap: AC#2 (CI gate firing on a broken block) was verified by manual YAML inspection only, so a malformed workflow (bad paths glob, stray continue-on-error) could pass and never fire. Fixed by adding an EXECUTABLE structural test (TC-CI-003, scripts/.tests/test-docs-mermaid-workflow.sh: grep + actionlint + YAML-parse). High-value catch — the DoR gate earned its keep. Also fixed Minors: DM-2 excludes git-ignored .ai/local/ (local scratch would have tripped runs), DEC-7 'single source of truth' overstated (added drift-guard test TC-RULE-004), NFR-2 reframed as CI-only observation, trigger hedge aligned. PM applied the reviewer-specified fixes directly (not re-delegated) to conserve the 3-iteration DoR budget."
+    type: retro
+    date: "2026-07-03"
+  - text: "RETRO (env): in this runtime the @runner subagent executes commands but does NOT return stdout in its result (must read output via absolute-path files), and NESTED subagent chains are unsupported (a subagent I invoke cannot itself invoke another subagent — confirmed by GH-72 retro). Consequence: @coder authored files only (no shell); PM ran all verification via @runner (file-handoff); and commits could NOT go through @committer (no shell / nested) — PM used @runner with explicit-path staging + PM-crafted Conventional Commit messages to honor the @committer policy's INTENT (format + safe staging). Process improvement: the delivery workflow assumes a runtime that supports nested subagents + stdout capture; this runtime doesn't, so PM became the shell/commit executor. Also: 2 delivery bugs found by running the tests (TMPDIR teardown bug in the test harness following bash.md's latent skeleton; workflow-header comment tripped the forbidden-token grep) — caught at verification, fixed via @coder, re-verified green. Lesson: bash.md's §11 framework skeleton exports TMPDIR without restoring it in teardown (latent cross-test breakage) — worth a rule fix."
+    type: retro
+    date: "2026-07-03"
+  - text: "Intake: GH-110 fresh delivery from origin/main e8a66a12. No prior branch/PR/change-folder. Open PRs #122 (GH-108) and #76 (GH-63) are unrelated tickets — left untouched. Part of epic #107."
+    type: info
+    date: "2026-07-03"
+  - text: "Ticket ACs are complete and consistent with system spec. 4 hard ACs: (1) scripts/validate-mermaid.sh + test, (2) CI job on doc paths, (3) .ai/rules/diagrams.md (render-safe + C4 avoidance), (4) doc-authoring prompts reference rule + self-check. AC#5 = CEO-gated PR flag."
+    type: info
+    date: "2026-07-03"
+  - text: "Doc-authoring agents that emit mermaid (candidates for AC#4 self-check reference): doc-syncer, spec-writer, decision-advisor, meeting-organizer, editor, bootstrapper. Spec-writer to enumerate the precise surgical set; keep edits concise (1-line reference + self-check) to minimize .ados-claude regen surface."
+    type: info
+    date: "2026-07-03"
+  - text: "Existing CI (.github/workflows/ci.yml) has NO paths filter — triggers on all push/PR. bash.md rule defines the full embedded test framework + test-all.sh aggregator; new script + test must follow it. .ai/rules/README.md index must get a diagrams.md row."
+    type: info
+    date: "2026-07-03"
