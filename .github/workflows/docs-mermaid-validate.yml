@@ -47,5 +47,15 @@ jobs:
       - name: Make validator executable
         run: chmod +x scripts/validate-mermaid.sh
 
+      - name: Write puppeteer config (--no-sandbox for CI root)
+        # GitHub Actions runners execute as root; Chromium refuses its sandbox
+        # there ("Failed to launch the browser process"). mmdc -p passes these
+        # launch args. Acceptable on an ephemeral runner over trusted repo content.
+        run: |
+          printf '%s\n' '{"args":["--no-sandbox","--disable-setuid-sandbox","--disable-dev-shm-usage"]}' > puppeteer-config.json
+          cat puppeteer-config.json
+
       - name: Run mermaid validator
+        env:
+          MMDC_PUPPETEER_CONFIG: puppeteer-config.json
         run: bash scripts/validate-mermaid.sh

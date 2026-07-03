@@ -23,6 +23,8 @@
 # Environment:
 #   MMDC_CMD              - mermaid CLI to invoke for the render check
 #                           (default: mmdc). Set to a shim to mock the render.
+#   MMDC_PUPPETEER_CONFIG - optional path to a puppeteer config JSON passed to
+#                           mmdc via -p (e.g. for CI --no-sandbox). Unset ⇒ no -p.
 #   RENDER_SAFE_DENYLIST  - non-render-safe keyword denylist. Space- or comma-
 #                           separated. Semantics: REPLACE the default (OQ-TP-1).
 #                           Default mirrors .ai/rules/diagrams.md exactly:
@@ -58,6 +60,12 @@ readonly EXIT_KEYWORD=5
 
 # Injectable render command (bash.md §10.1) — the SOLE render seam. Mock via env.
 readonly MMDC_CMD="${MMDC_CMD:-mmdc}"
+
+# Optional path to a puppeteer config JSON (mmdc -p). When set, mmdc is invoked
+# with `-p "$MMDC_PUPPETEER_CONFIG"`. Used in CI to pass launch args such as
+# --no-sandbox (GitHub Actions runners run as root and Chromium refuses the
+# sandbox there). Empty/unset ⇒ no -p (local default). See .github/workflows/.
+readonly MMDC_PUPPETEER_CONFIG="${MMDC_PUPPETEER_CONFIG:-}"
 
 # Configurable behavior
 IF_PRESENT="${IF_PRESENT:-false}"
@@ -188,7 +196,11 @@ _render() {
   err="${d}/block.err"
   printf '%s' "${content}" >"${mmd}"
   _LAST_RENDER_ERR=""
-  "${MMDC_CMD}" -i "${mmd}" -o "${out}" 2>"${err}" || rc=$?
+  if [[ -n "${MMDC_PUPPETEER_CONFIG}" ]]; then
+    "${MMDC_CMD}" -i "${mmd}" -o "${out}" -p "${MMDC_PUPPETEER_CONFIG}" 2>"${err}" || rc=$?
+  else
+    "${MMDC_CMD}" -i "${mmd}" -o "${out}" 2>"${err}" || rc=$?
+  fi
   _LAST_RENDER_ERR="$(<"${err}")"
   return "${rc}"
 }
@@ -379,6 +391,8 @@ Options:
 
 Environment:
   MMDC_CMD              Render command (default: mmdc). Mock via a shim.
+  MMDC_PUPPETEER_CONFIG Optional path to a puppeteer config JSON (mmdc -p), e.g.
+                        for CI --no-sandbox. Unset ⇒ no -p.
   RENDER_SAFE_DENYLIST  Keyword denylist, space- or comma-separated. REPLACEs
                         the default: ${DEFAULT_DENYLIST}
   VERBOSE               Set to 'true' for debug output.
