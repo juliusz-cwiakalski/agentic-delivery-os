@@ -30,6 +30,7 @@ Agents (especially `@plan-writer` and `@coder`) should consult this index to det
 | Bash scripting | `bash.md` | Bash coding standards, safety rules, testing framework |
 | Installer scripts | `installer.md` | Cross-platform installer UX, PATH handling, dependency installation rules |
 | Testing strategy | `testing-strategy.md` | Test types, coverage requirements, framework conventions |
+| Bulk edits / substitutions | `bulk-edit-verify.md` | Verify-before-commit gate (diff-stat + substring-overlap grep + typecheck/compile) and clean-revert recovery for multi-file edits |
 
 ## How agents use rules
 

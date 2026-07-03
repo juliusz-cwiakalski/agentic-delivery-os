@@ -113,6 +113,10 @@ Delegate to these agents:
 
 </delegation_inventory>
 
+<rule_loading>
+On the rare occasion PM implements an edit directly (normally delegated to `@coder`), before any multi-file edit, bulk substitution (`sed`/`replaceAll`/regex), or find-and-replace over a path glob, consult `.ai/rules/README.md` and load `.ai/rules/bulk-edit-verify.md` (verify-before-commit gate incl. substring-overlap check; clean-revert recovery).
+</rule_loading>
+
 <workflow>
 <step id="0">Sync product state
 

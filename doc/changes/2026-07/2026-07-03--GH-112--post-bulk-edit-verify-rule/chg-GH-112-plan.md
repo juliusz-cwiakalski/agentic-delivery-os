@@ -186,19 +186,19 @@ The change is **additive**: one new rule file, one README index row, two agent l
 
 **Tasks**:
 
-- [ ] **3.1** Add a row to the `.ai/rules/README.md` index table: Task/Context `Bulk edits / substitutions`, Rule File `bulk-edit-verify.md`, and a concise description (verify-before-commit gate incl. substring-overlap check + clean-revert recovery). No structural change to the table schema. *(AC-F5-3, DM-1)*
-- [ ] **3.2** Add a load-reference to the new rule in `.opencode/agent/coder.md`. `@coder` has no dedicated rule-loading section today — add a concise rule-loading note at the natural insertion point (e.g., in workflow Phase A initialization and/or a short `<rule_loading>`/safeguard rule) instructing `@coder` to consult `.ai/rules/README.md` and load `bulk-edit-verify.md` before any multi-file/bulk edit (F-1 trigger). Keep the edit tight (per AGENTS.md "keep prompts tight"). *(AC-F5-1)*
-- [ ] **3.3** Add a load-reference to the new rule in `.opencode/agent/pm.md` for when PM implements directly (DEC-3). Add a concise note at the natural insertion point (e.g., near its workflow/rules) that `@pm` loads `bulk-edit-verify.md` when it performs edits directly. *(AC-F5-2)*
-- [ ] **3.4** Regenerate the generated plugin from the edited sources: `scripts/build-claude-plugin.sh`. Commit the regenerated `.ados-claude/agents/coder.md` and `.ados-claude/agents/pm.md` (and any other regenerated files) **together** with the `.opencode/agent/` source edits. *(AC-F5-4, NFR-5)*
-- [ ] **3.5** Verify plugin freshness: run `bash scripts/.tests/test-build-claude-plugin.sh` (exit 0) and confirm `git status --porcelain .ados-claude/` shows no stale/uncommitted mirrors after regeneration (i.e., re-running the build produces no further diff). *(NFR-5 — also closes RSK-4)*
+- [x] **3.1** Add a row to the `.ai/rules/README.md` index table: Task/Context `Bulk edits / substitutions`, Rule File `bulk-edit-verify.md`, and a concise description (verify-before-commit gate incl. substring-overlap check + clean-revert recovery). No structural change to the table schema. *(AC-F5-3, DM-1)* — DONE: row appended; TC-DISC-003 (count 1, real table row).
+- [x] **3.2** Add a load-reference to the new rule in `.opencode/agent/coder.md`. `@coder` has no dedicated rule-loading section today — add a concise rule-loading note at the natural insertion point (e.g., in workflow Phase A initialization and/or a short `<rule_loading>`/safeguard rule) instructing `@coder` to consult `.ai/rules/README.md` and load `bulk-edit-verify.md` before any multi-file/bulk edit (F-1 trigger). Keep the edit tight (per AGENTS.md "keep prompts tight"). *(AC-F5-1)* — DONE: `<rule_loading>` block added after `</delegation>`; direct named reference; TC-DISC-001 count 1.
+- [x] **3.3** Add a load-reference to the new rule in `.opencode/agent/pm.md` for when PM implements directly (DEC-3). Add a concise note at the natural insertion point (e.g., near its workflow/rules) that `@pm` loads `bulk-edit-verify.md` when it performs edits directly. *(AC-F5-2)* — DONE: `<rule_loading>` block added after `</delegation_inventory>`; conditional ("on the rare occasion PM implements directly"); TC-DISC-002 count 1.
+- [x] **3.4** Regenerate the generated plugin from the edited sources: `scripts/build-claude-plugin.sh`. Commit the regenerated `.ados-claude/agents/coder.md` and `.ados-claude/agents/pm.md` (and any other regenerated files) **together** with the `.opencode/agent/` source edits. *(AC-F5-4, NFR-5)* — DONE: build exit 0 (23 agents, 20 skills); both mirrors regenerated carrying `<rule_loading>` blocks; TC-DISC-004 step 4 grep-OK.
+- [x] **3.5** Verify plugin freshness: run `bash scripts/.tests/test-build-claude-plugin.sh` (exit 0) and confirm `git status --porcelain .ados-claude/` shows no stale/uncommitted mirrors after regeneration (i.e., re-running the build produces no further diff). *(NFR-5 — also closes RSK-4)* — DONE: freshness test 16/16 PASS (incl. `committed plugin matches fresh build`); content idempotency confirmed (re-run produces no content change to coder.md/pm.md).
 
 **Acceptance Criteria**:
 
-- Must: AC-F5-3 — `.ai/rules/README.md` index has a row for `bulk-edit-verify.md` with task/context + description.
-- Must: AC-F5-1 — `@coder` definition references the bulk-edit-verify rule.
-- Must: AC-F5-2 — `@pm` definition references the bulk-edit-verify rule (for direct implementation).
-- Must: AC-F5-4 — `.ados-claude/agents/*.md` mirrors are current (regenerated + committed with the source edits).
-- Should: NFR-5 — `test-build-claude-plugin.sh` green; no stale generated files.
+- Must: AC-F5-3 — `.ai/rules/README.md` index has a row for `bulk-edit-verify.md` with task/context + description. — PASSED (table row "Bulk edits / substitutions | `bulk-edit-verify.md` | …"; TC-DISC-003 OK).
+- Must: AC-F5-1 — `@coder` definition references the bulk-edit-verify rule. — PASSED (`.opencode/agent/coder.md` `<rule_loading>` direct named reference; TC-DISC-001 count 1).
+- Must: AC-F5-2 — `@pm` definition references the bulk-edit-verify rule (for direct implementation). — PASSED (`.opencode/agent/pm.md` `<rule_loading>` conditional ref; TC-DISC-002 count 1).
+- Must: AC-F5-4 — `.ados-claude/agents/*.md` mirrors are current (regenerated + committed with the source edits). — PASSED (build exit 0; coder.md + pm.md regenerated carrying `<rule_loading>`; mirrors carry `bulk-edit-verify`).
+- Should: NFR-5 — `test-build-claude-plugin.sh` green; no stale generated files. — PASSED (16/16 PASS incl. `committed plugin matches fresh build`; content idempotent on re-run).
 
 **Files and modules**:
 
@@ -298,6 +298,6 @@ The change is **additive**: one new rule file, one README index row, two agent l
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
 | 1 | done | 2026-07-03 | 2026-07-03 | 8edf750 | `.ai/rules/bulk-edit-verify.md` authored (46 lines); TC-RULE-001..005 all grep-OK; marker-only frontmatter; header deferred to Phase 2 script. |
-| 2 | done | 2026-07-03 | 2026-07-03 | (pending) | header applied via script (marker survived); install+uninstall+guard lists each +1 byte-identical entry; drift guard exit 0 (`77 in-scope docs`). |
-| 3 | pending | — | — | — | — |
+| 2 | done | 2026-07-03 | 2026-07-03 | 09f32e2 | header applied via script (marker survived); install+uninstall+guard lists each +1 byte-identical entry; drift guard exit 0 (`77 in-scope docs`). |
+| 3 | done | 2026-07-03 | 2026-07-03 | (pending) | README +1 index row; coder.md + pm.md +1 `<rule_loading>` block each; plugin regenerated (coder+pm mirrors); freshness test 16/16 PASS. |
 | 4 | pending | — | — | — | — |
