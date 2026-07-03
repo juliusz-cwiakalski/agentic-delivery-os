@@ -37,10 +37,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/puppeteer
-          key: puppeteer-chromium-${{ runner.os }}
+          key: puppeteer-chromium-${{ runner.os }}-mmdc11
 
       - name: Install mermaid CLI
-        run: npm install -g @mermaid-js/mermaid-cli
+        # Pin mmdc to major 11 (spec RSK-2 / §22 maintenance): latest 11.x for
+        # render reproducibility. The human may tighten this to an exact tag.
+        run: npm install -g @mermaid-js/mermaid-cli@11
 
       - name: Make validator executable
         run: chmod +x scripts/validate-mermaid.sh

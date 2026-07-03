@@ -125,7 +125,7 @@ die() {
 # separated input. NOTE: a LOCAL IFS is required because the script's global
 # IFS=$'\n\t' would otherwise prevent splitting on spaces.
 build_denylist() {
-  local raw="${RENDER_SAFE_DENYLIST:-${DEFAULT_DENYLIST}}"
+  local raw="${RENDER_SAFE_DENYLIST-${DEFAULT_DENYLIST}}"
   local IFS=' '
   raw="${raw//,/ }"
   read -ra DENYLIST <<<"${raw}"
@@ -394,7 +394,7 @@ parse_args() {
       --if-present) IF_PRESENT=true ;;
       -h | --help) usage; exit "${EXIT_SUCCESS}" ;;
       -V | --version) printf '%s %s\n' "${APP_NAME}" "${APP_VERSION}"; exit "${EXIT_SUCCESS}" ;;
-      --) shift; while (("$#")); do ARGS+=("$1"); shift; done ;;
+      --) shift; while (("$#")); do ARGS+=("$1"); shift; done; break ;;
       -*) die "Unknown option: $1" ;;
       *) ARGS+=("$1") ;;
     esac

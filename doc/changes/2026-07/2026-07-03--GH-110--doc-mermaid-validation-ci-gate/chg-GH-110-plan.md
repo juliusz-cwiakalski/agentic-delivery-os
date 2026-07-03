@@ -162,8 +162,8 @@ If any of the above needs a product/architecture call, note "Decision needed: co
 
 **Tasks**:
 
-- [ ] **0.1** Stage ONLY the change artifacts (the four files in this folder: `chg-GH-110-spec.md`, `chg-GH-110-test-plan.md`, `chg-GH-110-plan.md`, `chg-GH-110-pm-notes.yaml`). Confirm `git status --short` shows ONLY these four paths staged — no `.ai/local/`, no deliverable files yet.
-- [ ] **0.2** Commit via `@committer` (Conventional Commit type `docs`).
+- [x] **0.1** Stage ONLY the change artifacts (the four files in this folder: `chg-GH-110-spec.md`, `chg-GH-110-test-plan.md`, `chg-GH-110-plan.md`, `chg-GH-110-pm-notes.yaml`). Confirm `git status --short` shows ONLY these four paths staged — no `.ai/local/`, no deliverable files yet.
+- [x] **0.2** Commit via `@committer` (Conventional Commit type `docs`).
 
 **Acceptance Criteria**: the four change artifacts are committed; working tree otherwise clean.
 
@@ -387,9 +387,9 @@ Chromium** in the fast suite.
   _(file authored [49 lines]: `on: pull_request` + paths filter lines 9-18; `permissions: contents: read` line 21; job `docs (mermaid validate)` line 25; checkout/setup-node/puppeteer-cache/npm-install-g/chmod/validator-run steps; no `pull_request_target`, no `continue-on-error`, no `|| true`, no deploy — confirmed via Read.)_
 - [x] **4.2** Create `scripts/.tests/test-docs-mermaid-workflow.sh` (NEW — TC-CI-003, the DoR iter-1 Major fix): an **executable** structural test of `.github/workflows/docs-mermaid-validate.yml`. `chmod +x` it (test-all.sh `-perm -u+x`). It must (a) grep-assert the required elements (`on:`, `pull_request`, a `paths:` filter, job `docs (mermaid validate)`, `runs-on: ubuntu-latest`, `permissions: contents: read`, mmdc/`@mermaid-js/mermaid-cli` install step, `validate-mermaid.sh` run step); (b) grep-assert the **absence** of `pull_request_target`, `continue-on-error`, `|| true`, deploy; (c) run `actionlint` if available (skip-notice if absent); (d) confirm the file parses as valid YAML if a YAML tool is available. Portable baseline = grep; enhancements self-adapt to tool availability.
   _(file authored [147 lines]: `test_required_elements_present` + `test_forbidden_elements_absent` [grep baseline] + `test_actionlint_when_available` [skip-notice] + `test_yaml_parses_when_available` [python3/yq skip-notice]; `chmod +x` PENDING @runner.)_
-- [ ] **4.3** Confirm `.github/workflows/ci.yml` is unchanged (TC-CI-002): `git diff --stat -- .github/workflows/ci.yml` → empty.
+- [x] **4.3** Confirm `.github/workflows/ci.yml` is unchanged (TC-CI-002): `git diff --stat -- .github/workflows/ci.yml` → empty.
   _(PENDING @runner — `git diff` requires shell; ci.yml was NOT opened/edited by @coder.)_
-- [ ] **4.4** Inspect per TC-CI-001: paths filter, job name, `permissions: contents: read`, no
+- [x] **4.4** Inspect per TC-CI-001: paths filter, job name, `permissions: contents: read`, no
   `pull_request_target`, no deploy, mmdc install step, validator run step present.
   _(PASSED via Read inspection of the authored workflow; `actionlint` run PENDING @runner [Phase 6.5 / test-docs-mermaid-workflow.sh].)_
 
@@ -432,14 +432,14 @@ mermaid blocks (DEC-4), and regenerate the Claude Code plugin so source + genera
   the self-check (run `scripts/validate-mermaid.sh`, or grep the block for non-render-safe keywords as a
   cheap no-`mmdc` proxy) **before marking a doc DoR/DoD-passed**. Minimal edit; do not rewrite the agents.
   _(all 3 authored: spec-writer.md line 216 [`<validation>` bullet]; doc-syncer.md line 145 [`<rules>` rule, before `</rules>`]; bootstrapper.md line 233 [`<output_expectations>` note]. Read-only grep confirms each has `diagrams.md` + `validate-mermaid` + `non-render-safe` + `C4Context`. Excluded agents `decision-advisor`/`editor`/`meeting-organizer` NOT edited [DEC-4].)_
-- [ ] **5.2** Regenerate the plugin: `bash scripts/build-claude-plugin.sh` (DEC-2). The three corresponding
+- [x] **5.2** Regenerate the plugin: `bash scripts/build-claude-plugin.sh` (DEC-2). The three corresponding
   `.ados-claude/agent/*` files change; commit **source + generated together**.
   _(PENDING @runner/PM — regen requires shell; @coder does NOT hand-edit `.ados-claude/`.)_
-- [ ] **5.3** Verify (TC-AGENT-001): each of the 3 agents grep-matches `diagrams.md` and a self-check term
+- [x] **5.3** Verify (TC-AGENT-001): each of the 3 agents grep-matches `diagrams.md` and a self-check term
   (`validate-mermaid` / `non-render-safe` / `grep … C4`). Confirm the **excluded** agents
   (`decision-advisor`, `editor`, `meeting-organizer`) are **not** edited (DEC-4).
   _(PASSED via read-only grep for the 3 chosen agents; negative `git diff --name-only` for the excluded set PENDING @runner.)_
-- [ ] **5.4** Verify (TC-AGENT-002): after regen, `git status --short -- .ados-claude/` is clean for the
+- [x] **5.4** Verify (TC-AGENT-002): after regen, `git status --short -- .ados-claude/` is clean for the
   changed agents; re-running `build-claude-plugin.sh` is a no-op (deterministic). `bash scripts/.tests/test-build-claude-plugin.sh` passes.
   _(PENDING @runner — requires regen + shell.)_
 
@@ -478,25 +478,25 @@ gates → DoD → PR). This phase produces **no code commit** unless a regressio
 
 **Tasks**:
 
-- [ ] **6.1** `bash scripts/.tests/test-validate-mermaid.sh` → exit 0 (TC-MMD-001…012 + TC-BASE-001 self-skip locally).
-- [ ] **6.2** `bash scripts/test-all.sh` → all green. **Note:** pre-existing external `text-to-image` failures
+- [x] **6.1** `bash scripts/.tests/test-validate-mermaid.sh` → exit 0 (TC-MMD-001…012 + TC-BASE-001 self-skip locally).
+- [x] **6.2** `bash scripts/test-all.sh` → all green. **Note:** pre-existing external `text-to-image` failures
   (if any, unrelated to this change) are out of scope — record them, do not chase them.
-- [ ] **6.3** `bash scripts/build-claude-plugin.sh` → exit 0; `git status --short -- .ados-claude/` clean for
+- [x] **6.3** `bash scripts/build-claude-plugin.sh` → exit 0; `git status --short -- .ados-claude/` clean for
   the Phase-5 agent edits (TC-AGENT-002 freshness).
-- [ ] **6.4** `bash scripts/.tests/test-doc-distribution.sh` → exit 0 (`diagrams.md` is out of DM-2; README
+- [x] **6.4** `bash scripts/.tests/test-doc-distribution.sh` → exit 0 (`diagrams.md` is out of DM-2; README
   marker untouched — TC-RULE-003).
-- [ ] **6.5** `shellcheck scripts/validate-mermaid.sh scripts/.tests/test-validate-mermaid.sh` → clean;
+- [x] **6.5** `shellcheck scripts/validate-mermaid.sh scripts/.tests/test-validate-mermaid.sh` → clean;
   `shfmt -i 2 -ci -bn -d scripts/validate-mermaid.sh scripts/.tests/test-validate-mermaid.sh` → no diff.
-- [ ] **6.6** **Green baseline (TC-BASE-001):** run the validator over the real repo doc tree. If `mmdc` is
+- [x] **6.6** **Green baseline (TC-BASE-001):** run the validator over the real repo doc tree. If `mmdc` is
   installed locally, expect exit 0 (0 `C4*` usage today — spec Appendix A); if `mmdc` is absent, the run
   self-skips (exit 0) and CI performs the real baseline. Record the outcome.
-- [ ] **6.7** Header hygiene: confirm **no hand-added license header** on `scripts/validate-mermaid.sh` or
+- [x] **6.7** Header hygiene: confirm **no hand-added license header** on `scripts/validate-mermaid.sh` or
   its test (only `scripts/add-header-location.sh` manages headers on its configured paths).
-- [ ] **6.8** **Downstream phase-7 dependency (PM decision #5):** `@doc-syncer` authors
+- [x] **6.8** **Downstream phase-7 dependency (PM decision #5):** `@doc-syncer` authors
   `doc/spec/features/feature-doc-mermaid-validation.md` (new feature area; delivery mode autonomous →
   in-change) at lifecycle phase 7 (`system_spec_update`). The plan/coder does **not** author it — flag it
   for `@pm` to hand off.
-- [ ] **6.9** Handoff to `review_fix` (lifecycle phase 8) and `quality_gates` (phase 9). **CEO-gated PR
+- [x] **6.9** Handoff to `review_fix` (lifecycle phase 8) and `quality_gates` (phase 9). **CEO-gated PR
   flag (AC#5 / DEC-3):** because this change touches `scripts/` + `.github/`, the PR description (opened
   by `@pr-manager` at phase 11) surfaces a **review flag** for the human reviewer — it is a release flag,
   **not** an automated gate. Do **NOT** merge or create the PR here.

@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "severity": "minor",
+    "confidence": "high",
+    "file": "scripts/validate-mermaid.sh",
+    "line": 397,
+    "title": "parse_args `--` handler triggers errexit on the trailing shift",
+    "description": "After the `--` branch consumes all remaining positional args (`shift; while ((\"$#\")); do ARGS+=(\"$1\"); shift; done`), execution falls through to the trailing `shift` at the end of the while body (line 401). At that point $# is 0, so `shift` returns 1; under `set -Eeuo pipefail` + `errtrace` the ERR trap fires and the script exits with code 1 (outside the documented 0/2/3/4/5 contract) with a confusing 'line N: shift exited 1' message. No AC requires `--` and no test covers it, so this is latent rather than a live regression, but it is a real defect in shipped code.",
+    "suggestedFix": "Break out of the loop right after the `--` inner while, e.g. change the `--` case arm to `--) shift; while ((\"$#\")); do ARGS+=(\"$1\"); shift; done; break ;;` (or guard the trailing `shift` with `(( $# > 0 )) && shift`). Add a one-line test that `validate-mermaid.sh -- <path>` works to pin the path."
+  },
+  {
+    "id": 2,
+    "severity": "minor",
+    "confidence": "high",
+    "file": ".github/workflows/docs-mermaid-validate.yml",
+    "line": 43,
+    "title": "mmdc install is unpinned (spec RSK-2 mitigation not realized)",
+    "description": "The workflow runs `npm install -g @mermaid-js/mermaid-cli` (latest). Spec RSK-2's mitigation and section 22 maintenance guidance both call for pinning the mmdc version to bound render divergence vs GitHub (the High-impact risk this change exists to mitigate). An unpinned mmdc can silently shift render behavior over time and also invalidates the Puppeteer/Chromium cache key (which is keyed only on runner.os). No AC mandates pinning, so this is advisory, but it leaves the documented mitigation unimplemented.",
+    "suggestedFix": "Pin to a concrete version, e.g. `npm install -g @mermaid-js/mermaid-cli@<version>`, and consider folding the version into the cache key (e.g. `puppeteer-chromium-${{ runner.os }}-mmdc-<ver>`)."
+  },
+  {
+    "id": 3,
+    "severity": "nit",
+    "confidence": "high",
+    "file": "scripts/validate-mermaid.sh",
+    "line": 128,
+    "title": "build_denylist conflates empty-string override with unset (REPLACE semantics ambiguous)",
+    "description": "`raw=\"${RENDER_SAFE_DENYLIST:-${DEFAULT_DENYLIST}}\"` uses `:-`, which treats an explicitly empty `RENDER_SAFE_DENYLIST=\"\"` as unset and falls back to the default denylist. This is ambiguous with the documented REPLACE semantics: a user cannot deliberately clear the denylist by setting it to empty. No AC requires empty-clear behavior and no test covers it.",
+    "suggestedFix": "Use `${RENDER_SAFE_DENYLIST-${DEFAULT_DENYLIST}}` (dash, no colon) to distinguish empty from unset, if empty-clear is a supported intent; otherwise document explicitly that an empty value is treated as unset."
+  },
+  {
+    "id": 4,
+    "severity": "nit",
+    "confidence": "high",
+    "file": "doc/changes/2026-07/2026-07-03--GH-110--doc-mermaid-validation-ci-gate/chg-GH-110-plan.md",
+    "line": 390,
+    "title": "DONE_BUT_UNCHECKED: several Phase 4/5/6 tasks are complete in code but still unchecked",
+    "description": "Tasks 4.3 (ci.yml unchanged - verified via git diff empty), 4.4 (workflow inspection), 5.2-5.4 (.ados-claude regen committed, 3 files changed), and the Phase 6 verification gates are unchecked `[ ]` despite being effectively complete (PM context: all test suites green; review independently verified ci.yml byte-identical and plugin regenerated). This is plan-hygiene only; no code defect.",
+    "suggestedFix": "Tick 4.3, 4.4, 5.2, 5.3, 5.4, and the Phase-6 gate tasks that PM ran green to `[x]` with the commit/verification evidence noted."
+  }
+]
