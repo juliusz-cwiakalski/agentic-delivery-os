@@ -37,7 +37,7 @@ When substituting token A → B, an unanchored match silently rewrites every ide
 - **Pre-substitution (planning):** grep for identifiers **containing** A — not just exact matches of A. For every longer-identifier hit, confirm it is an intended target.
 - **Post-substitution (verify):** grep for B to confirm it landed where intended and did not corrupt any longer identifier.
 
-On **any** unintended longer-identifier hit, you **MUST** use word-boundary (`\b`), anchored (`^…$`), or scoped (narrow file/path) patterns rather than an unanchored global substitution.
+On **any** unintended longer-identifier hit, you **MUST** use word-boundary (`\b`), anchored (`^A$`), or scoped (narrow file/path) patterns rather than an unanchored global substitution.
 
 ## 4. Clean-revert recovery contract
 
