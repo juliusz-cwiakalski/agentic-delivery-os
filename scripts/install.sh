@@ -104,6 +104,8 @@ readonly ADOS_UPDATABLE_FILES=(
   "doc/decisions/README.md"
   # AI rules index
   ".ai/rules/README.md"
+  # Post-bulk-edit verify rule
+  ".ai/rules/bulk-edit-verify.md"
 )
 
 # Template files (also always track upstream) — glob-copied from doc/templates/

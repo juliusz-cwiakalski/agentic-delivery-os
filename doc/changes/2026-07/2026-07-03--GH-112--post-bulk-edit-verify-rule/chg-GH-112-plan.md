@@ -145,23 +145,24 @@ The change is **additive**: one new rule file, one README index row, two agent l
 
 **Tasks**:
 
-- [ ] **2.1** Apply the canonical license header via the sanctioned script on the single file (never by hand): `scripts/add-header-location.sh .ai/rules/bulk-edit-verify.md`. *(AC-F6-1)*
-- [ ] **2.2** Verify the 3-line MIT header is present (copyright + MIT + `source:` URL) **and** that `ados_distribution: redistributable` survived the script run (the script's `ensure_basic_header` preserves non-header frontmatter lines — confirm, do not assume). Re-run if missing. *(AC-F6-1, AC-F6-2 — also closes RSK-1)*
-- [ ] **2.3** Append `.ai/rules/bulk-edit-verify.md` to the `ADOS_UPDATABLE_FILES` array in `scripts/install.sh` (place it adjacent to the existing `.ai/rules/README.md` entry). *(AC-F6-3, DM-2)*
-- [ ] **2.4** Append the **identical** string `.ai/rules/bulk-edit-verify.md` to the `ADOS_LOCAL_STANDALONE_DOCS` array in `scripts/uninstall.sh` (adjacent to the existing `.ai/rules/README.md` entry, array at lines 103–109, used at 414–422 to remove redistributable docs on `uninstall.sh --local`). *(AC-F6-6, DM-4, NFR-4)*
-- [ ] **2.5** Append the **identical** string `.ai/rules/bulk-edit-verify.md` to the `STANDALONE_DOCS` array in `scripts/.tests/test-doc-distribution.sh` (adjacent to the existing `.ai/rules/README.md` entry). *(AC-F6-4, DM-3, NFR-4)*
+- [x] **2.1** Apply the canonical license header via the sanctioned script on the single file (never by hand): `scripts/add-header-location.sh .ai/rules/bulk-edit-verify.md`. *(AC-F6-1)* — DONE: script exit 0, "updated 1".
+- [x] **2.2** Verify the 3-line MIT header is present (copyright + MIT + `source:` URL) **and** that `ados_distribution: redistributable` survived the script run (the script's `ensure_basic_header` preserves non-header frontmatter lines — confirm, do not assume). Re-run if missing. *(AC-F6-1, AC-F6-2 — also closes RSK-1)* — DONE: header lines 2-4 present (copyright/MIT/source each count==1, byte-match TC-DIST-001); marker survived at line 5 (TC-DIST-002 OK); idempotent re-run (no diff).
+- [x] **2.3** Append `.ai/rules/bulk-edit-verify.md` to the `ADOS_UPDATABLE_FILES` array in `scripts/install.sh` (place it adjacent to the existing `.ai/rules/README.md` entry). *(AC-F6-3, DM-2)* — DONE: appended after `.ai/rules/README.md` (count==1, pre-existing entries survive).
+- [x] **2.4** Append the **identical** string `.ai/rules/bulk-edit-verify.md` to the `ADOS_LOCAL_STANDALONE_DOCS` array in `scripts/uninstall.sh` (adjacent to the existing `.ai/rules/README.md` entry, array at lines 103–109, used at 414–422 to remove redistributable docs on `uninstall.sh --local`). *(AC-F6-6, DM-4, NFR-4)* — DONE: appended after `.ai/rules/README.md` (count==1, pre-existing entries survive).
   - *Atomicity note (tasks 2.3–2.5):* these three appends are one atomic block — all use the **byte-identical** string `.ai/rules/bulk-edit-verify.md` (NFR-4 list-triple sync). The uninstall list is NOT covered by the drift guard, so AC-F6-6 is verified by grep + the 3-way byte-identity diff in the Phase-2 Tests step (not by CI); the uninstall list's own `# MUST stay in sync` comment is the documented invariant.
-- [ ] **2.6** Run `bash scripts/.tests/test-doc-distribution.sh`. It **MUST exit 0**. Rationale for why it stays green: the file is `redistributable` (Mode 1/2 pass), it is in `ADOS_UPDATABLE_FILES` so the sandbox `install.sh --local` run copies it into the actual set (Mode 3 passes; Mode 5 expected==actual passes because the install + guard lists both carry the entry). Note: the guard does not observe `ADOS_LOCAL_STANDALONE_DOCS`, so it cannot verify the uninstall entry — that is the 3-way diff's job, not the guard's. Capture the `[OK]` line as evidence. *(AC-F6-5, NFR-2 — also closes RSK-2)*
+- [x] **2.5** Append the **identical** string `.ai/rules/bulk-edit-verify.md` to the `STANDALONE_DOCS` array in `scripts/.tests/test-doc-distribution.sh` (adjacent to the existing `.ai/rules/README.md` entry). *(AC-F6-4, DM-3, NFR-4)* — DONE: appended after `.ai/rules/README.md` (count==1, pre-existing entries survive).
+  - *Atomicity note (tasks 2.3–2.5):* these three appends are one atomic block — all use the **byte-identical** string `.ai/rules/bulk-edit-verify.md` (NFR-4 list-triple sync). The uninstall list is NOT covered by the drift guard, so AC-F6-6 is verified by grep + the 3-way byte-identity diff in the Phase-2 Tests step (not by CI); the uninstall list's own `# MUST stay in sync` comment is the documented invariant. 3-way byte-identity diff: install==guard==uninstall all OK; total 3 matches (1 per file).
+- [x] **2.6** Run `bash scripts/.tests/test-doc-distribution.sh`. It **MUST exit 0**. Rationale for why it stays green: the file is `redistributable` (Mode 1/2 pass), it is in `ADOS_UPDATABLE_FILES` so the sandbox `install.sh --local` run copies it into the actual set (Mode 3 passes; Mode 5 expected==actual passes because the install + guard lists both carry the entry). Note: the guard does not observe `ADOS_LOCAL_STANDALONE_DOCS`, so it cannot verify the uninstall entry — that is the 3-way diff's job, not the guard's. Capture the `[OK]` line as evidence. *(AC-F6-5, NFR-2 — also closes RSK-2)* — DONE: exit 0; `[OK] no drift — 77 in-scope docs; install set matches ados_distribution markers`.
 
 **Acceptance Criteria**:
 
-- Must: AC-F6-1 — standard 3-line MIT header present, applied via the script.
-- Must: AC-F6-2 — frontmatter declares `ados_distribution: redistributable`.
-- Must: AC-F6-3 — `ADOS_UPDATABLE_FILES` contains one entry for the new path.
-- Must: AC-F6-4 — `STANDALONE_DOCS` contains one entry, identical string to the installer entry.
-- Must: AC-F6-5 — `bash scripts/.tests/test-doc-distribution.sh` exits 0.
-- Must: AC-F6-6 — `ADOS_LOCAL_STANDALONE_DOCS` (uninstall) contains one entry for the new path, identical string to the install + guard entries (DM-4). Verified by grep + 3-way byte-identity diff (uninstall list is not guard-observed).
-- Should: NFR-4 — the three list strings (install + uninstall + guard) are byte-identical (list-triple sync).
+- Must: AC-F6-1 — standard 3-line MIT header present, applied via the script. — PASSED (script applied header; copyright/MIT/source each count==1, byte-match TC-DIST-001; idempotent).
+- Must: AC-F6-2 — frontmatter declares `ados_distribution: redistributable`. — PASSED (line 5; TC-DIST-002 grep-OK; survived script run).
+- Must: AC-F6-3 — `ADOS_UPDATABLE_FILES` contains one entry for the new path. — PASSED (install.sh count==1; TC-DIST-003).
+- Must: AC-F6-4 — `STANDALONE_DOCS` contains one entry, identical string to the installer entry. — PASSED (guard count==1; install==guard byte-identical; TC-DIST-004).
+- Must: AC-F6-5 — `bash scripts/.tests/test-doc-distribution.sh` exits 0. — PASSED (exit 0; `[OK] no drift — 77 in-scope docs`).
+- Must: AC-F6-6 — `ADOS_LOCAL_STANDALONE_DOCS` (uninstall) contains one entry for the new path, identical string to the install + guard entries (DM-4). Verified by grep + 3-way byte-identity diff (uninstall list is not guard-observed). — PASSED (uninstall.sh count==1; 3-way diff install==guard==uninstall all OK; total 3 matches; TC-DIST-007).
+- Should: NFR-4 — the three list strings (install + uninstall + guard) are byte-identical (list-triple sync). — PASSED (3-way byte-identity: all pairs match; 3 total matches, 1 per file).
 
 **Files and modules**:
 
@@ -296,7 +297,7 @@ The change is **additive**: one new rule file, one README index row, two agent l
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| 1 | pending | — | — | — | — |
-| 2 | pending | — | — | — | — |
+| 1 | done | 2026-07-03 | 2026-07-03 | 8edf750 | `.ai/rules/bulk-edit-verify.md` authored (46 lines); TC-RULE-001..005 all grep-OK; marker-only frontmatter; header deferred to Phase 2 script. |
+| 2 | done | 2026-07-03 | 2026-07-03 | (pending) | header applied via script (marker survived); install+uninstall+guard lists each +1 byte-identical entry; drift guard exit 0 (`77 in-scope docs`). |
 | 3 | pending | — | — | — | — |
 | 4 | pending | — | — | — | — |
