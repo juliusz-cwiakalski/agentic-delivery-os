@@ -25,7 +25,6 @@
 # Exit codes:
 #   0 - success
 #   2 - usage error
-#   4 - runtime error
 
 set -Eeuo pipefail
 set -o errtrace
@@ -37,7 +36,6 @@ readonly APP_VERSION="1.0.0"
 
 readonly EXIT_SUCCESS=0
 readonly EXIT_USAGE=2
-readonly EXIT_RUNTIME=4
 
 readonly FEATURE_SPECS_GLOB='feature-*.md'
 
@@ -104,7 +102,7 @@ count_change_folders() {
         n=$((n + 1))
       fi
     fi
-  done < <(find "${base}" -mindepth 1 -type d 2>/dev/null)
+  done < <(find "${base}" -mindepth 1 -maxdepth 2 -type d 2>/dev/null)
   printf '%d' "${n}"
 }
 
