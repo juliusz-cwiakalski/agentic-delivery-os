@@ -64,7 +64,7 @@
   - TC-OS-17: pending mapping written before run
   - TC-OS-18: title-based resume path (mapping stale → title lookup finds session)
 - [x] Run `bash scripts/.tests/test-opencode-session.sh` — fix until all 21 tests pass (13 original + 8 new)
-- [ ] Commit: `feat(scripts): opencode-session.sh — title-based session lookup, branch tracking, pending mapping`
+- [x] Commit: `feat(scripts): opencode-session.sh — title-based session lookup, branch tracking, pending mapping` (commit dbd9f6f)
 
 ## Phase 3: `scripts/deliver-ticket.sh` (new)
 
@@ -153,13 +153,63 @@
 ## Phase 5: Docs + integration
 
 ### Tasks
-- [ ] Create `doc/tools/clean-merged-branches.md` — usage, flags, examples
-- [ ] Verify all test scripts pass together:
-  - `bash tools/.tests/test-clean-merged-branches.sh`
-  - `bash scripts/.tests/test-opencode-session.sh`
-  - `bash scripts/.tests/test-deliver-ticket.sh`
-  - `bash scripts/.tests/test-batch-deliver.sh`
-  - `bash scripts/.tests/test-doc-distribution.sh` (no regression)
-- [ ] Add `ados_distribution: redistributable` to `doc/tools/clean-merged-branches.md` frontmatter
-- [ ] Commit: `docs(GH-124): add clean-merged-branches tool documentation`
-- [ ] Final commit if needed for any integration fixes
+- [x] Create `doc/tools/clean-merged-branches.md` — usage, flags, examples
+- [x] Verify all test scripts pass together:
+  - `bash tools/.tests/test-clean-merged-branches.sh` — 11/11 PASS
+  - `bash scripts/.tests/test-opencode-session.sh` — 21/21 PASS
+  - `bash scripts/.tests/test-deliver-ticket.sh` — 23/23 PASS
+  - `bash scripts/.tests/test-batch-deliver.sh` — 15/15 PASS
+  - `bash scripts/.tests/test-doc-distribution.sh` — OK (no drift, 76 in-scope docs)
+- [x] Add `ados_distribution: redistributable` to `doc/tools/clean-merged-branches.md` frontmatter
+- [x] Commit: `docs(GH-124): add clean-merged-branches tool documentation`
+- [x] Final commit if needed for any integration fixes (none needed)
+
+## Acceptance criteria validation
+
+### AC-1: clean-merged-branches tool — PASSED
+- AC-1.1: `tools/clean-merged-branches` exists, PATH-able, no `.sh`, English, with `--base`, `--dry-run`, `--protected`, `--allow-dirty` flags — PASSED
+- AC-1.2: Deletes ancestry-merged AND content-identical branches; protected branches never deleted; restores original branch — PASSED (commit d60aed2)
+- AC-1.3: `tools/.tests/test-clean-merged-branches.sh` passes (11/11) — PASSED
+- AC-1.4: License header applied via `scripts/add-header-location.sh` — PASSED
+
+### AC-2: opencode-session.sh enhancements — PASSED
+- AC-2.1: `find_session_by_title()` queries `opencode session list` and filters by title — PASSED (commit dbd9f6f)
+- AC-2.2: Session resolution order: mapping → title lookup → create new — PASSED
+- AC-2.3: Mapping JSON includes `title`, `branch`, `status`, `restart_count` — PASSED
+- AC-2.4: Pending mapping written before `opencode run` starts — PASSED
+- AC-2.5: No regression in `run`, `list`, `show`, `forget`, `list-sessions` — PASSED
+- AC-2.6: `scripts/.tests/test-opencode-session.sh` updated and passing (21/21) — PASSED
+
+### AC-3: deliver-ticket.sh — PASSED
+- AC-3.1: Accepts `GH-112`, `GH-112:feat/branch` formats — PASSED (commit 3b02eb9)
+- AC-3.2: Branch mismatch detection with warning — PASSED
+- AC-3.3: Liveness loop with staleness kill and restart — PASSED
+- AC-3.4: Session resume by title on restart — PASSED
+- AC-3.5: Max 10 restarts with failure exit — PASSED
+- AC-3.6: Exit classification (blocked/merged/pr-open/failed/max-restarts) — PASSED
+- AC-3.7: `scripts/.tests/test-deliver-ticket.sh` passes (23/23) — PASSED
+
+### AC-4: batch-deliver.sh — PASSED
+- AC-4.1: Accepts positional tickets, `ticket:branch` pairs, `--tickets-file` — PASSED (commit dd7c019)
+- AC-4.2: Pre-flight skip: closed, blocked, merged tickets — PASSED
+- AC-4.3: Calls deliver-ticket.sh sequentially; calls clean-merged-branches between tickets — PASSED
+- AC-4.4: Summary log with timestamps, durations, per-ticket results — PASSED
+- AC-4.5: Idempotent restart — PASSED
+- AC-4.6: `scripts/.tests/test-batch-deliver.sh` passes (15/15) — PASSED
+
+### AC-5: PM delivery prompt — PASSED
+- AC-5.1: Prompt checks for open PR, addresses comments, merges on APPROVED review, continues delivery, flags blocked — PASSED
+- AC-5.2: Prompt is identical on every start/resume (state detection at top) — PASSED
+- AC-5.3: `human-input-needed` label workflow — PASSED
+
+### AC-6: Tests pass — PASSED
+- AC-6.1: All test scripts pass (11 + 21 + 23 + 15 = 70 tests) — PASSED
+- AC-6.2: No regressions — `test-doc-distribution.sh` OK (76 in-scope docs, no drift) — PASSED
+
+## Execution log
+
+- **Phase 1** (commit d60aed2): `tools/clean-merged-branches` + tests (11/11)
+- **Phase 2** (commit dbd9f6f): `scripts/opencode-session.sh` enhancements + tests (21/21)
+- **Phase 3** (commit 3b02eb9): `scripts/deliver-ticket.sh` + tests (23/23)
+- **Phase 4** (commit dd7c019): `scripts/batch-deliver.sh` + tests (15/15)
+- **Phase 5** (this commit): `doc/tools/clean-merged-branches.md` + full test suite verification (70/70 pass, 0 regressions)
