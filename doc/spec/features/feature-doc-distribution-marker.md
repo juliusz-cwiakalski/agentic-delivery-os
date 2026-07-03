@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-DOC-DISTRIBUTION-MARKER
 status: Current
 created: 2026-06-28
-last_updated: 2026-06-28
+last_updated: 2026-07-03
 owners: ["engineering"]
 service: delivery-os
 summary: "The ados_distribution marker system: three values, a two-path parser, a marker-derived install set, a five-mode CI drift guard, and the closed DM-2 scan scope (which excludes doc/spec/**)."
 links:
-  related_changes: ["GH-79", "GH-67"]
+  related_changes: ["GH-79", "GH-67", "GH-112"]
 ---
 
 # Feature: Doc Distribution Marker
@@ -56,7 +56,7 @@ ADOS is a template/framework repo: `scripts/install.sh` redistributes selected d
   3. **redistributable-not-installed** — a redistributable doc absent from the install set.
   4. **internal-installed** — an internal doc present in the install set.
   5. **derived-set drift** — marker-derived install set ≠ sandbox install set.
-- **Closed DM-2 scan scope (F-5):** The guard scans a **closed set**: `doc/guides/*.md`, `doc/templates/**` (`.md` + `.yaml`), and five standalone docs (`doc/documentation-handbook.md`, `doc/00-index.md`, `doc/decisions/README.md`, `doc/decisions/00-index.md`, `.ai/rules/README.md`). It **explicitly excludes `doc/spec/**`** — feature specs are outside the marker/guard automation surface.
+- **Closed DM-2 scan scope (F-5):** The guard scans a **closed set**: `doc/guides/*.md`, `doc/templates/**` (`.md` + `.yaml`), and six standalone docs (`doc/documentation-handbook.md`, `doc/00-index.md`, `doc/decisions/README.md`, `doc/decisions/00-index.md`, `.ai/rules/README.md`, `.ai/rules/bulk-edit-verify.md`). It **explicitly excludes `doc/spec/**`** — feature specs are outside the marker/guard automation surface.
 
 ### Honesty consequence for feature specs
 

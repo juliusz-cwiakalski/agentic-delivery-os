@@ -12,8 +12,8 @@ phases:
   test_planning: { started: "2026-07-03T03:11Z", completed: "2026-07-03T04:20Z" }
   delivery_planning: { started: "2026-07-03T03:11Z", completed: "2026-07-03T04:20Z" }
   dor_check: { started: "2026-07-03T03:21Z", completed: "2026-07-03T04:30Z" }
-  delivery: { started: "2026-07-03T04:31Z", completed: null }
-  system_spec_update: { started: null, completed: null }
+  delivery: { started: "2026-07-03T04:31Z", completed: "2026-07-03T04:55Z" }
+  system_spec_update: { started: "2026-07-03T04:56Z", completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
