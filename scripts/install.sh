@@ -106,6 +106,21 @@ readonly ADOS_UPDATABLE_FILES=(
   ".ai/rules/README.md"
 )
 
+# Delivery infrastructure scripts — always track upstream, must be executable.
+# These wrap the ADOS 11-phase lifecycle with liveness monitoring and batch
+# delivery. Installed to ./scripts/ in the target project.
+readonly ADOS_DELIVERY_SCRIPTS=(
+  "scripts/opencode-session.sh"
+  "scripts/deliver-ticket.sh"
+  "scripts/batch-deliver.sh"
+)
+
+# Delivery infrastructure tools — always track upstream, must be executable.
+# Standalone utilities consumed by the delivery scripts. Installed to ./tools/.
+readonly ADOS_DELIVERY_TOOLS=(
+  "tools/clean-merged-branches"
+)
+
 # Template files (also always track upstream) — glob-copied from doc/templates/
 readonly ADOS_TEMPLATE_DIR="doc/templates"
 
@@ -122,6 +137,8 @@ readonly ADOS_LOCAL_DIRS=(
   "doc/decisions"
   "doc/changes"
   "doc/guides"
+  "scripts"
+  "tools"
   ".ai/agent"
   ".ai/local"
   ".ai/rules"
@@ -776,6 +793,38 @@ install_local_files() {
     [[ "${_ng_was_on}" == "off" ]] && shopt -u nullglob
   else
     log_warn "Templates directory not found: ${source_dir}/${ADOS_TEMPLATE_DIR}"
+  fi
+
+  # --- Delivery scripts (always track upstream, must be executable) ---
+  if [[ -d "${source_dir}/scripts" ]]; then
+    ensure_dir "scripts" "scripts"
+    local script_file
+    for script_file in "${ADOS_DELIVERY_SCRIPTS[@]}"; do
+      if [[ -f "${source_dir}/${script_file}" ]]; then
+        copy_updatable_file "${source_dir}/${script_file}" "${script_file}" "${script_file}"
+        chmod +x "${script_file}" 2>/dev/null || true
+      else
+        log_warn "Skipping (not in source): ${script_file}"
+      fi
+    done
+  else
+    log_warn "Scripts directory not found in source"
+  fi
+
+  # --- Delivery tools (always track upstream, must be executable) ---
+  if [[ -d "${source_dir}/tools" ]]; then
+    ensure_dir "tools" "tools"
+    local tool_file
+    for tool_file in "${ADOS_DELIVERY_TOOLS[@]}"; do
+      if [[ -f "${source_dir}/${tool_file}" ]]; then
+        copy_updatable_file "${source_dir}/${tool_file}" "${tool_file}" "${tool_file}"
+        chmod +x "${tool_file}" 2>/dev/null || true
+      else
+        log_warn "Skipping (not in source): ${tool_file}"
+      fi
+    done
+  else
+    log_warn "Tools directory not found in source"
   fi
 
   # --- Directory stubs ---
