@@ -1,0 +1,49 @@
+# Docs (mermaid validate) — GH-110
+# Dedicated, doc-path-scoped CI gate: installs @mermaid-js/mermaid-cli and runs
+# scripts/validate-mermaid.sh over the doc tree. A broken or non-render-safe
+# (C4) mermaid block fails the PR. Isolated from ci.yml (DEC-1); pull_request
+# only (no pull_request_target / no secret-surface widening); no deploy.
+
+name: Docs (mermaid validate)
+
+on:
+  pull_request:
+    paths:
+      - doc/**
+      - decisions/**
+      - changes/**
+      - inception/**
+      - .ai/rules/**
+      - scripts/validate-mermaid.sh
+      - .github/workflows/**
+
+permissions:
+  contents: read
+
+jobs:
+  docs-mermaid-validate:
+    name: docs (mermaid validate)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache Puppeteer Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-chromium-${{ runner.os }}
+
+      - name: Install mermaid CLI
+        run: npm install -g @mermaid-js/mermaid-cli
+
+      - name: Make validator executable
+        run: chmod +x scripts/validate-mermaid.sh
+
+      - name: Run mermaid validator
+        run: bash scripts/validate-mermaid.sh
