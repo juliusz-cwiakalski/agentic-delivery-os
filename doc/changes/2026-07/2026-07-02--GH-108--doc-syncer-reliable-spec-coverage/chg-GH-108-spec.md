@@ -26,11 +26,13 @@ links:
 
 # CHANGE SPECIFICATION
 
-> **PURPOSE**: Close a reliability defect in the phase-7 spec-coverage *resolution* path — across a sustained autonomous delivery run, detected `spec_coverage_gaps` are reported but never resolved (no human is reachable mid-flight to approve a follow-up), so modified feature areas silently acquire no spec and the system spec rots — by making the resolution path **mode-aware** (`delivery_mode`) so a gap is resolved in-change in autonomous mode while the interactive de-noise behavior is preserved unchanged and the "PM never creates tickets autonomously" governance rule stays intact.
+> **PURPOSE**: Close a reliability defect in the phase-7 spec-coverage *resolution* path — across a sustained autonomous delivery run, detected `spec_coverage_gaps` are reported but never resolved (no human is reachable mid-flight to approve a follow-up), so modified feature areas silently acquire no spec and the system spec rots — by making the resolution path **unconditional (always-resolve)** so a gap is resolved in-change in **every** mode (no human decision, no follow-up ticket) while the "PM never creates tickets autonomously" governance rule stays intact. `delivery_mode` is retained as an optional non-gating signal.
+
+> **Review remediation (PR #122 owner directive, 2026-07-03).** The original design was **mode-aware** (PDR-0002 Alternative 1: autonomous ⇒ resolve; interactive ⇒ advisory/human-gated). Per the owner's PR review directive, spec-coverage resolution is amended to **unconditional (always-resolve)**: a detected gap is resolved in-change (missing first-spec authored) in **every** mode — no human decision, no follow-up ticket. Phase 7's goal is an **always-current** system specification, not detecting that one is missing. `delivery_mode` is retained as an optional, backward-compatible non-gating signal. The "PM must NEVER create new tickets autonomously" rule is preserved verbatim. This note amends the mode-aware wording that follows; F-2, DM-2, AC-2 (AC-F2-1/AC-F2-3), DEC-1/DEC-3, and NFR-1 are updated below to reflect always-resolve.
 
 ## 1. SUMMARY
 
-This change fixes the doc-syncer spec-coverage resolution path so it stops silently dropping in autonomous delivery. It introduces a per-change `delivery_mode: interactive | autonomous` signal (in `chg-<workItemRef>-pm-notes.yaml`), and a **mode-aware resolution rule**: in `autonomous` mode, a detected `spec_coverage_gap` for a modified feature area that has no spec is **resolved within the change** (the missing `doc/spec/features/feature-<slug>.md` is authored), while `interactive` mode is byte-for-byte unchanged (advisory + human-gated follow-up). No agent creates a tracker ticket in any mode; the "PM must NEVER create new tickets autonomously" rule is preserved verbatim. A small visibility aid makes the coverage gap observable.
+This change fixes the doc-syncer spec-coverage resolution path so it stops silently dropping. It retains the per-change `delivery_mode: interactive | autonomous` signal (in `chg-<workItemRef>-pm-notes.yaml`) as an optional non-gating signal, and adopts an **unconditional (always-resolve) resolution rule**: a detected `spec_coverage_gap` for a modified feature area that has no spec is **resolved within the change** (the missing `doc/spec/features/feature-<slug>.md` is authored) in **every** mode — no human decision, no follow-up ticket. No agent creates a tracker ticket in any mode; the "PM must NEVER create new tickets autonomously" rule is preserved verbatim. A small visibility aid makes the coverage gap observable. (Amended to always-resolve per the PR #122 owner review directive; originally mode-aware.)
 
 This is a process/framework `fix` (P1 bug, epic #107). The design is settled by **PDR-0002** (Alternative 1) and is incorporated here as the chosen design — it is not re-opened.
 
@@ -95,7 +97,7 @@ Because the spec-coverage *resolution* path assumes a human is reachable mid-fli
 | ID | Capability | Rationale |
 |----|------------|-----------|
 | F-1 | **Per-change delivery-mode signal** — a `delivery_mode: interactive \| autonomous` field in `chg-<workItemRef>-pm-notes.yaml`, set by `@pm` at intake; default/absent ⇒ `interactive`. | The mode is not detectable today; a durable, auditable, backward-compatible signal is the prerequisite for any mode-aware rule (PDR-0002 D1). |
-| F-2 | **Mode-aware spec-coverage resolution** — in `autonomous` mode, a detected `spec_coverage_gap` for a modified feature area with no spec is resolved in-change (missing feature spec authored); an existing spec is merely reconciled; `interactive` mode is byte-for-byte unchanged; no tracker ticket in any mode. | Closes the root-cause defect (resolution-path mode blindness) without reverting de-noise or weakening governance (PDR-0002 D2). |
+| F-2 | **Unconditional (always-resolve) spec-coverage resolution** — in **every** mode (regardless of `delivery_mode`, including absent/`interactive`), a detected `spec_coverage_gap` for a modified feature area with no spec is resolved in-change (missing feature spec authored); an existing spec is merely reconciled; no tracker ticket in any mode. | Closes the root-cause defect (resolution-path mode blindness) and the owner's PR #122 directive — phase 7 ALWAYS resolves; no human decision, no follow-up ticket (PDR-0002 amended). |
 | F-3 | **Autonomous entry-point mode wiring** — the autonomous session prompt instructs `@pm` to set `delivery_mode: autonomous`; the signal is readable from all entry points (session + manual `@pm`). | Makes the signal correct and portable; avoids env-var-only detection that manual invocations cannot reproduce (PDR-0002 C-4). |
 | F-4 | **"Advisory ≠ silently skipped" wording normalization** — phase-7 / doc-syncer wording so "advisory" no longer reads as "silently skipped" in autonomous mode. | Removes the overloaded-wording defect that lets the resolution no-op in autonomous delivery. |
 | F-5 | **Spec-coverage observability** — a visibility aid that produces a count of feature specs present vs changes touching feature areas. | Makes a silent drop detectable (AC-4); enables the rollout guardrail (inspect the first autonomous run). |
@@ -104,11 +106,11 @@ Because the spec-coverage *resolution* path assumes a human is reachable mid-fli
 
 **F-1 — Delivery-mode signal.** A per-change field `delivery_mode: interactive | autonomous` added to the `chg-<workItemRef>-pm-notes.yaml` structure, set by `@pm` at intake (clarify_scope, step 3). Semantics: `interactive` is the **default**; an **absent** field is treated as `interactive` (identical to today), so existing change folders and manual runs need no migration. The signal is durable (a committed artifact), auditable (inspectable post-hoc per change), and general enough for sibling GH-111 to mirror.
 
-**F-2 — Mode-aware resolution rule.** The spec-coverage handoff becomes conditional on `delivery_mode`:
+**F-2 — Unconditional (always-resolve) resolution rule.** The spec-coverage handoff is **unconditional** — resolution fires in **every** mode (regardless of `delivery_mode`, including absent/`interactive`):
 
-- **`autonomous` mode:** a detected `spec_coverage_gap` for a modified **feature area** is **resolved within the change** — the missing `doc/spec/features/feature-<slug>.md` is **authored**. This promotes advisory → **required**, but **only for the FIRST spec of a feature area that has none**; an **existing** spec continues to be merely **reconciled** (it is not re-authored).
-- **`interactive` mode (or absent):** byte-for-byte unchanged — report → `@pm` proposes a follow-up → **only the human** approves ticket creation.
-- **No tracker ticket in any mode.** Authoring a feature spec is a natural promotion of an existing `@doc-syncer` capability over a write surface (`doc/spec/**`) it already owns — it is a doc artifact scoped to the change and reviewed at the **open-PR human gate** that autonomous delivery already mandates. The human gate is **relocated** to PR review, not removed.
+- **Always resolved in-change:** a detected `spec_coverage_gap` for a modified **feature area** is **resolved within the change** — the missing `doc/spec/features/feature-<slug>.md` is **authored**. This is **first-spec-only** — only a missing spec for an area that has none is authored; an **existing** spec continues to be merely **reconciled** (it is not re-authored). There is no human decision and no follow-up ticket for spec coverage.
+- **No tracker ticket in any mode.** Authoring a feature spec is a natural promotion of an existing `@doc-syncer` capability over a write surface (`doc/spec/**`) it already owns — it is a doc artifact scoped to the change and reviewed at the **open-PR human gate**. The human gate is **relocated** to PR review, not removed.
+- **`delivery_mode` is read but does not gate resolution.** It is retained as an optional, backward-compatible per-change signal for future mode-aware features (e.g., GH-111); it no longer gates spec-coverage resolution.
 
 **Ownership of authoring (rule vs implementation).** The *rule* is that the gap is closed in-change in autonomous mode. **Whether the resolving agent authors the spec directly or delegates authoring to a stronger model / `@coder` while retaining gap-detection and the resolution requirement is an implementation decision for the plan** — it is captured as OQ-1 and is **not** hard-coded into any acceptance criterion.
 
@@ -123,19 +125,19 @@ Because the spec-coverage *resolution* path assumes a human is reachable mid-fli
 ## 6. USER & SYSTEM FLOWS
 
 ```
-Flow 1 — Interactive (delivery_mode: interactive OR absent): UNCHANGED
+Flow 1 — Any mode (delivery_mode: interactive, autonomous, OR absent): ALWAYS-RESOLVE
   Change ships → system_spec_update → @doc-syncer detects gap (or none)
-  → reports spec_coverage_gaps → @pm checks open issues (de-noise), proposes follow-up
-  → ONLY the human approves ticket creation → no spec authored by the rule, no auto-ticket.
+  → RESOLVES in-change: missing feature-<slug>.md is authored (first-spec-only)
+  → authored spec is part of the change, reviewed at the open-PR human gate
+  → NO tracker ticket created by any agent; no human decision; no follow-up ticket.
 
-Flow 2 — Autonomous, modified feature area WITH a spec: reconciled (existing behavior)
+Flow 2 — Modified feature area WITH a spec: reconciled (existing behavior)
   Change ships → system_spec_update → @doc-syncer finds feature-<slug>.md → reconciles it
   → no coverage gap → done.
 
-Flow 3 — Autonomous, modified feature area WITHOUT a spec: THE FIX
-  Change ships → system_spec_update → @doc-syncer reads delivery_mode: autonomous
-  → detects spec_coverage_gap for a feature area with no spec
-  → RESOLVES in-change: missing feature-<slug>.md is authored (advisory → required, first-spec-only)
+Flow 3 — Modified feature area WITHOUT a spec (any mode): THE FIX
+  Change ships → system_spec_update → @doc-syncer detects spec_coverage_gap for a feature area with no spec
+  → RESOLVES in-change: missing feature-<slug>.md is authored (first-spec-only)
   → authored spec is part of the change, reviewed at the open-PR human gate
   → NO tracker ticket created by any agent.
 
@@ -193,7 +195,7 @@ N/A — no event/message surface.
 | ID | Element | Description |
 |----|---------|-------------|
 | DM-1 | `delivery_mode` (new pm-notes field) | Per-change field `delivery_mode: interactive \| autonomous` in `chg-<workItemRef>-pm-notes.yaml`; type enum; default/absent ⇒ `interactive`; set by `@pm` at intake; durable committed artifact. |
-| DM-2 | Mode-aware resolution contract | The behavioral matrix over (`delivery_mode`) × (spec exists for modified feature area?): `autonomous` × (no spec) ⇒ **author in-change**; otherwise ⇒ **reconcile / report-only**; no tracker ticket in any cell. Encodes the root-cause fix (the prior contract had no `delivery_mode` dimension — resolution assumed a reachable human). |
+| DM-2 | Unconditional (always-resolve) resolution contract | The behavioral matrix over (spec exists for modified feature area?): **no spec ⇒ author in-change** (in **every** mode, regardless of `delivery_mode`); **existing spec ⇒ reconcile**; no tracker ticket in any cell. `delivery_mode` is read but does not gate resolution. Encodes the root-cause fix + the PR #122 owner directive (the prior contract had no `delivery_mode` dimension — resolution assumed a reachable human; the amended contract is mode-independent / always-resolve). |
 
 ### 8.4 External Integrations
 
@@ -210,10 +212,10 @@ N/A — the change is internal to the ADOS repo (agent prompts, guides, the sess
 
 | ID | Requirement | Threshold |
 |----|-------------|-----------|
-| NFR-1 | Backward compatibility — interactive / absent `delivery_mode` behaves identically to pre-change | 0 new blocking prompts in interactive mode |
+| NFR-1 | Backward compatibility — `delivery_mode` retained as an optional, non-gating signal; resolution is always-resolve in all modes | `delivery_mode` absent ⇒ interactive default still holds; no migration required |
 | NFR-2 | Entry-point portability — `delivery_mode` readable from every supported entry point | 100% (session-driven + manual `@pm`); no env-var-only signal |
 | NFR-3 | Governance invariance — "PM must NEVER create new tickets autonomously" retained verbatim; no agent creates a tracker ticket in any mode | 0 auto-tickets; 0 autonomous-mode exceptions carved into the rule |
-| NFR-4 | Over-fire guard — authoring fires only for the FIRST spec of an unspecced modified feature area; existing specs reconciled; routine edits excluded | A reviewer can name the feature area and confirm spec (non-)existence for any authoring invocation |
+| NFR-4 | Over-fire guard — authoring fires only for the FIRST spec of an unspecced modified feature area (in every mode); existing specs reconciled; routine edits excluded | A reviewer can name the feature area and confirm spec (non-)existence for any authoring invocation |
 | NFR-5 | Observability — the visibility aid yields a computable, non-zero coverage signal for autonomous runs | feature-specs-present / changes-touching-feature-areas is computable & non-zero for autonomous runs |
 | NFR-6 | Root-cause accuracy — the spec names the actual root cause (resolution-path mode blindness) and distinguishes it from "missing check" and from "de-noise design flaw" | 0 mischaracterizations |
 | NFR-7 | Plugin freshness — `.ados-claude/` regenerated iff `.opencode/` edited | Regeneration matches the set of `.opencode/` edits exactly |
@@ -266,13 +268,14 @@ N/A — the change is internal to the ADOS repo (agent prompts, guides, the sess
 
 | ID | Decision | Rationale | Date |
 |----|----------|-----------|------|
-| DEC-1 | Adopt **PDR-0002 Alternative 1**: explicit `delivery_mode` signal + author-the-spec-in-change (autonomous). | The only position that passes all constraints C-1…C-4 cleanly while honoring the ticket's "mode-aware" framing and setting up a reusable precedent for GH-111. | 2026-07-02 |
+| DEC-1 | Adopt **PDR-0002 Alternative 1** (amended): spec-coverage resolution is **unconditional (always-resolve)** — a detected gap is resolved in-change (missing first-spec authored) in **every** mode. | Originally mode-aware (autonomous ⇒ resolve; interactive ⇒ advisory). Amended per the PR #122 owner review directive to always-resolve / mode-independent. | 2026-07-02 (amended 2026-07-03) |
 | DEC-2 | **Preserve "PM must NEVER create new tickets autonomously" verbatim** (C-1). The resolution produces a **doc artifact** scoped to the change, reviewed at the open-PR gate — not a tracker ticket. | Resolves the AC-2 governance tension in favor of governance; authoring is a natural promotion of an existing doc-syncer write capability, not a new ticket-creation power. | 2026-07-02 |
-| DEC-3 | **Interactive mode is byte-for-byte unchanged** (C-3); mode-awareness is additive, not a de-noise revert. | The de-noise design is correct for human-in-loop; the defect is the absence of mode-awareness. | 2026-07-02 |
-| DEC-4 | **First-spec-only authoring.** An existing feature spec is merely reconciled; only a missing spec for a modified feature area is authored in autonomous mode. | Over-fire guard (NFR-4); prevents re-authoring stable specs on routine edits. | 2026-07-02 |
+| DEC-3 | **`delivery_mode` is retained as an optional, non-gating signal.** Originally interactive mode was byte-for-byte unchanged (advisory + human-gated follow-up); per the PR #122 owner override, interactive mode now ALSO resolves in-change (always-resolve), and `delivery_mode` no longer gates resolution. | The owner's directive: phase 7 ALWAYS resolves; no human decision, no follow-up ticket for spec coverage. `delivery_mode` stays for future mode-aware features. | 2026-07-02 (amended 2026-07-03) |
+| DEC-4 | **First-spec-only authoring.** An existing feature spec is merely reconciled; only a missing spec for a modified feature area is authored. | Over-fire guard (NFR-4); prevents re-authoring stable specs on routine edits. | 2026-07-02 |
 | DEC-5 | `delivery_mode` representation = **pm-notes field** (default/absent ⇒ `interactive`). | Backward-compatible (no migration), auditable (committed artifact), entry-point-portable (C-4), and reusable by GH-111. | 2026-07-02 |
 | DEC-6 | Autonomous-authored content is reviewed at the **open-PR human gate** that autonomous delivery already mandates. | The human gate is relocated to PR review, not removed — preserving human oversight of autonomously-produced specs. | 2026-07-02 |
-| DEC-7 | **Authoring ownership/model-tier is a plan decision (OQ-1), not a spec rule.** The spec states the rule (gap resolved in-change in autonomous mode) and does not hard-code which agent writes the spec. | Keeps the spec at the rule level; avoids over-constraining delivery on an unsettled implementation concern. | 2026-07-02 |
+| DEC-7 | **Authoring ownership/model-tier is a plan decision (OQ-1), not a spec rule.** The spec states the rule (gap resolved in-change) and does not hard-code which agent writes the spec. | Keeps the spec at the rule level; avoids over-constraining delivery on an unsettled implementation concern. | 2026-07-02 |
+| DEC-8 | **Owner review override (PR #122): always-resolve / mode-independent.** Per the owner's PR review directive, spec-coverage resolution is UNCONDITIONAL in all modes (no human decision, no follow-up ticket); `delivery_mode` is retained as a non-gating signal; PDR-0002 C-3 (interactive de-noise) is overridden for spec coverage. | Phase 7's goal is an always-current system spec. | 2026-07-03 |
 
 ## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
 
@@ -297,15 +300,15 @@ N/A — the change is internal to the ADOS repo (agent prompts, guides, the sess
 |----|-----------|--------|
 | AC-NFR6-1 | **Given** this specification, **when** its Problem/Context is read, **then** it documents **why** no feature specs were produced across many merged changes — i.e., the resolution path is **mode-blind**: `@doc-syncer` only *reports* `spec_coverage_gaps` and the follow-up is human-gated, so in autonomous delivery (no human mid-flight) "advisory + human-gated" reduces to "never" — explicitly distinguishing this from a *missing check* and from a *de-noise design flaw*. | NFR-6, DM-2 |
 
-### B. AC-2 — Mode-aware rule lands (F-1, F-2, F-3, NFR-1, NFR-2, NFR-3)
+### B. AC-2 — Unconditional (always-resolve) rule lands (F-1, F-2, F-3, NFR-1, NFR-2, NFR-3)
 
 | ID | Criterion | Linked |
 |----|-----------|--------|
 | AC-F1-1 | **Given** `.opencode/agent/pm.md` step 3 (clarify_scope) and the pm-notes structure, **when** read, **then** intake declares/sets a `delivery_mode: interactive \| autonomous` field in `chg-<workItemRef>-pm-notes.yaml`. | F-1 |
 | AC-F1-2 | **Given** a manual `@pm` invocation and a session-driven run, **when** both run, **then** both read the same `delivery_mode` signal (no env-var-only or session-only mechanism). | F-1, NFR-2 |
-| AC-F2-1 | **Given** `.opencode/agent/doc-syncer.md`, **when** read, **then** its spec-coverage handoff is **mode-aware**: it reads `delivery_mode` from pm-notes; in `autonomous` mode a detected gap for a modified feature area lacking a spec is **resolved in-change** (missing feature spec authored, or authoring owned/delegated); an **existing** spec is reconciled, not re-authored. | F-2, F-1, DM-2 |
+| AC-F2-1 | **Given** `.opencode/agent/doc-syncer.md`, **when** read, **then** its spec-coverage handoff is **unconditional (always-resolve)**: a detected gap for a modified feature area lacking a spec is **resolved in-change** in **every** mode (missing feature spec authored, or authoring owned/delegated; first-spec-only); an **existing** spec is reconciled, not re-authored; `delivery_mode` is read but does not gate resolution. | F-2, F-1, DM-2 |
 | AC-F2-2 | **Given** the resolution path, **when** exercised in any mode, **then** **no agent creates a tracker ticket**; and `.ai/agent/pm-instructions.md` / `.opencode/agent/pm.md` retain "PM must NEVER create new tickets autonomously" **verbatim** with no autonomous-mode exception. | F-2, NFR-3 |
-| AC-F2-3 | **Given** `delivery_mode` is absent or `interactive`, **when** the lifecycle runs, **then** behavior is identical to pre-change (advisory + human-gated follow-up; report → PM proposes → human approves ticket creation only; no new blocking prompt). | F-2, NFR-1 |
+| AC-F2-3 | **Given** `delivery_mode` is absent or `interactive`, **when** the lifecycle runs, **then** a detected gap is **still resolved in-change** (always-resolve — the interactive path no longer has an advisory/report-only branch for spec coverage); there is no human decision and no follow-up ticket. | F-2, NFR-1 |
 | AC-F3-1 | **Given** `scripts/opencode-session.sh` `default_prompt_for()`, **when** read, **then** it instructs `@pm` to set `delivery_mode: autonomous` (one-line addition; no new tooling surface/flags). | F-3 |
 | AC-NFR4-1 | **Given** the mode-aware rule, **when** a modified feature area already has a spec, **then** it is **reconciled** (not re-authored); and **when** an edit is routine / not a feature area, **then** no spec is authored (over-fire guard). | F-2, NFR-4 |
 
@@ -371,7 +374,7 @@ N/A — no personal data is processed. The change references only public repo ar
 | Term | Definition |
 |------|------------|
 | `delivery_mode` | New per-change field (`interactive \| autonomous`) in `chg-<ref>-pm-notes.yaml`; default/absent ⇒ `interactive` (DM-1). |
-| Mode-aware spec-coverage resolution | In `autonomous` mode, a detected gap for a modified feature area with no spec is resolved in-change (spec authored); interactive mode unchanged (F-2, DM-2). |
+| Mode-aware / always-resolve spec-coverage resolution | (Amended to always-resolve per PR #122.) A detected gap for a modified feature area with no spec is resolved in-change (spec authored) in **every** mode — no human decision, no follow-up ticket (F-2, DM-2). `delivery_mode` is retained as an optional non-gating signal. |
 | Feature area | A coherent, nameable capability warranting a `doc/spec/features/feature-<slug>.md`; routine edits are excluded (over-fire guard, NFR-4). |
 | Mode blindness (root cause) | The resolution path assumed a reachable human; in autonomous delivery "advisory + human-gated" reduces to "never" (NFR-6). |
 | First-spec-only authoring | Only a *missing* spec for a modified feature area is authored; an existing spec is merely reconciled (DEC-4). |

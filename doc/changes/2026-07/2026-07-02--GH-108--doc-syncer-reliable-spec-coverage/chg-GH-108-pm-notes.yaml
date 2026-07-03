@@ -30,6 +30,16 @@ decisions:
       delegates to @coder (model-capacity). Record:
       doc/decisions/PDR-0002-mode-aware-spec-coverage-resolution.md
     date: "2026-07-02"
+  - text: >
+      OWNER REVIEW OVERRIDE (PR #122, 2026-07-03): per the owner's PR review
+      directive, spec-coverage resolution is amended from mode-aware to
+      UNCONDITIONAL (always-resolve). A detected gap is resolved in-change
+      (missing first-spec authored) in EVERY mode — no human decision, no
+      follow-up ticket. `delivery_mode` is retained as an optional non-gating
+      signal. "PM must NEVER create new tickets autonomously" preserved
+      verbatim. PDR-0002 amended (Amendment section added; C-2 now all modes;
+      C-3 overridden for spec coverage). DEC-8 added to the spec decision log.
+    date: "2026-07-03"
 open_questions:
   - text: >
       Mode detection mechanism: the ticket prescribes a "mode-aware rule" but
@@ -150,3 +160,33 @@ notes:
       fix/GH-108/doc-syncer-reliability; using fix/GH-108/doc-syncer-reliable-spec-coverage.
     type: info
     date: "2026-07-02"
+  - text: >
+      review_fix REOPENED (PR #122): the owner's PR review directive amended the
+      design from mode-aware to UNCONDITIONAL (always-resolve) spec-coverage
+      resolution. @coder executed the remediation (Phase 8): always-resolve
+      rework across doc-syncer.md, pm.md, pm-instructions.md, change-lifecycle.md,
+      feature-delivery-lifecycle.md, PDR-0002; 3 Copilot fixes (maxdepth-2 count
+      fix, remove unused EXIT_RUNTIME=4, SPEC-<feature-slug> id); plugin regen
+      (doc-syncer + pm). Quality gates: test-spec-coverage-snapshot 9/9,
+      test-build-claude-plugin 16/16, test-doc-distribution no drift (77 docs).
+      Change artifacts (spec, test-plan, plan, pm-notes) updated. Not pushed
+      (PM pushes).
+    type: info
+    date: "2026-07-03"
+  - text: >
+      RETRO (review_fix remediation — design flip): the original mode-aware
+      design (PDR-0002 Alternative 1) carefully preserved interactive-mode
+      de-noise (C-3) and treated it as non-negotiable. The owner's PR review
+      directive overrode C-3 for spec coverage — the goal is an ALWAYS-current
+      system spec, not detecting that one is missing. Lesson: the de-noise
+      principle is valuable for noisy ticket creation, but for documentation
+      completeness the owner prefers unconditional resolution (the PR gate is
+      the human review point). The mode-aware framing (delivery_mode) was still
+      the right vehicle to introduce the concept, but gating resolution on it
+      was the wrong call — `delivery_mode` is retained as a non-gating signal
+      for future features (GH-111). Process note: a design that splits behavior
+      by mode adds correctness surface; the owner's preference here favors
+      simplicity (one rule, all modes) over mode-conditioned behavior for
+      documentation guarantees.
+    type: retro
+    date: "2026-07-03"

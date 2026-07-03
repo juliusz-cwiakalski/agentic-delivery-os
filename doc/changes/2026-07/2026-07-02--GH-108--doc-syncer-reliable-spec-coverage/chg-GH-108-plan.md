@@ -2,7 +2,7 @@
 id: chg-GH-108-doc-syncer-reliable-spec-coverage
 status: Updated
 created: 2026-07-02T00:00:00Z
-last_updated: 2026-07-02T21:57:11Z
+last_updated: 2026-07-03T00:00:00Z
 owners: ["Juliusz Ćwiąkalski"]
 service: delivery-os
 labels: ["fix", "process", "doc-syncer", "spec-coverage", "autonomous-delivery", "epic-107"]
@@ -775,6 +775,76 @@ lifecycle phase 7 (`system_spec_update`), coordinated by `@pm`.
 
 ---
 
+### Phase 8: Review remediation (PR #122 owner directive + Copilot fixes)
+
+**Goal**: Apply the PR #122 owner review directive (spec-coverage resolution becomes
+**unconditional / always-resolve** in all modes — no human decision, no follow-up
+ticket; `delivery_mode` retained as an optional non-gating signal) and address the 3
+Copilot review comments on `scripts/spec-coverage-snapshot.sh`. This phase reworks the
+behavioral framing across all surfaces touched by phases 1–7 and the system spec.
+
+**Tasks**:
+
+- [x] **8.1** **Always-resolve rework — `.opencode/agent/doc-syncer.md`:** replace the
+  mode-aware resolution block (step 2) with an unconditional resolution block
+  (author missing first-spec in-change in **every** mode; first-spec-only; existing ⇒
+  reconcile; no tracker ticket; `delivery_mode` read but non-gating); fix the "feature
+  area" definition line ("governs **when** resolution fires"); change front-matter id
+  guidance `SPEC-<feature>` → `SPEC-<feature-slug>` (Copilot #3, step 4); reword the
+  `<reporting>` `spec_coverage_gaps` field (always resolved in-change); reword the
+  `<rules>` "Spec-coverage handoff" rule to unconditional (never ticket).
+- [x] **8.2** **Always-resolve rework — `.opencode/agent/pm.md` step 3:** "Delivery
+  mode" bullet → note `delivery_mode` is optional and does NOT gate resolution;
+  "Feature spec coverage awareness" bullet → "Phase 7 ALWAYS resolves any detected
+  spec-coverage gap in-change (any mode); no human decision, no follow-up ticket."
+- [x] **8.3** **Always-resolve rework — `.ai/agent/pm-instructions.md`:** reword the
+  "Delivery Mode & Phase-7 Spec-Coverage Resolution" section to unconditional
+  always-resolve; PRESERVE "PM must NEVER create new tickets autonomously" verbatim.
+- [x] **8.4** **Always-resolve rework — `doc/guides/change-lifecycle.md` Phase 7
+  (surgical):** replace the "Mode-aware, never-ticket handoff" bullet with an
+  "Always-resolve, never-ticket handoff" bullet.
+- [x] **8.5** **Always-resolve rework — `doc/spec/features/feature-delivery-lifecycle.md`:**
+  update capability F-7 (always-resolve), the summary, the Core Components doc-syncer
+  row, Key Agent Boundaries, NFR-5, and the Testing Approach grep row. Bump
+  `last_updated` (already 2026-07-03).
+- [x] **8.6** **PDR-0002 amendment:** add an "Amendment — Owner Review Override
+  (2026-07-03, PR #122)" section near the top; amend the Decision section + Constraint
+  Compliance (C-2 now all modes; C-3 overridden for spec coverage); update `last_updated`
+  + summary; keep status `Proposed`.
+- [x] **8.7** **Copilot #1 — `scripts/spec-coverage-snapshot.sh` count depth fix:**
+  change `find "${base}" -mindepth 1 -type d` → `find "${base}" -mindepth 1 -maxdepth 2 -type d`
+  (doc/changes/YYYY-MM/<folder> = depth 2; excludes readiness-review/code-review subdirs
+  at depth 3). Verified the count is unchanged (20 — no depth-3 subdir matches the REF
+  basename pattern).
+- [x] **8.8** **Copilot #2 — `scripts/spec-coverage-snapshot.sh` dead exit code:**
+  remove the unused `EXIT_RUNTIME=4` constant and the `4 - runtime error` doc-comment
+  line (no code path exits 4; `die()` exits 2). No test asserts exit code 4 for this
+  script.
+- [x] **8.9** **Copilot #3 — front-matter id consistency:** `id: SPEC-<feature>` →
+  `id: SPEC-<feature-slug>` in doc-syncer.md step 4 (template-consistent). Applied in 8.1.
+- [x] **8.10** **Plugin regen:** run `scripts/build-claude-plugin.sh`; verify the regen
+  set = exactly `.ados-claude/agents/{doc-syncer,pm}.md` (the two `.opencode/agent/`
+  files edited; `.ai/agent/` edits do NOT regen).
+- [x] **8.11** **Change artifacts:** update spec (AC-2, F-2, DM-2, DEC log, NFR-1,
+  remediation note, user flows, glossary), test-plan (TC-DOCSYNC/TC-GOV/TC-BACKCOMPAT
+  + traceability), pm-notes (review_fix re-open + decision + retro).
+- [x] **8.12** **Quality gates:** `test-spec-coverage-snapshot` 9/9,
+  `test-build-claude-plugin` 16/16, `test-doc-distribution` no drift — all PASS.
+
+**Acceptance Criteria**:
+
+- Must: spec-coverage resolution is UNCONDITIONAL (always-resolve) in every mode across
+  doc-syncer.md, pm.md, pm-instructions.md, change-lifecycle.md, feature-delivery-lifecycle.md;
+  `delivery_mode` retained but non-gating; "PM must NEVER create new tickets autonomously"
+  verbatim; PDR-0002 amended; 3 Copilot comments addressed; plugin regen set = doc-syncer +
+  pm; all 3 quality gates PASS.
+- Should: change artifacts reflect the amendment; no stale "interactive ⇒ report-only"
+  assertions remain in the authoritative prompts/spec/guide.
+
+**Completion signal**: `fix(GH-108): PR #122 review remediation — always-resolve spec-coverage (unconditional) + Copilot fixes`
+
+---
+
 ## Test Scenarios
 
 | ID | Scenario | Phases | AC |
@@ -821,6 +891,7 @@ lifecycle phase 7 (`system_spec_update`), coordinated by `@pm`.
 |---------|------|--------|---------|
 | 1.0 | 2026-07-02 | plan-writer | Initial plan: 8 phases (0 pre-flight incl. plugin-baseline freshness; 1 mode signal + autonomous wiring [F-1/F-3]; 2 mode-aware doc-syncer resolution [F-2/F-4]; 3 lifecycle Phase-7 wording [F-4]; 4 visibility aid [F-5/AC-4]; 5 plugin freshness verify [NFR-7]; 6 headers on new scripts [PD-3]; 7 system-spec reconciliation as PM-coordinated @doc-syncer step, @coder stops before it [DM-2/AC-DM2-1]). Resolves spec OQ-1 (PD-1: doc-syncer authors directly — opus tier) and OQ-2 (PD-2: `scripts/spec-coverage-snapshot.sh` + test, CEO-gated ⇒ PR-review flag). Regen is in-commit per `.opencode/`-editing phase (1, 2) per the 1:1 invariant; Phase 5 is the final freshness verification. No commit performed (PM routes through @committer). |
 | 1.1 | 2026-07-02 | plan-writer | DoR remediation (readiness-iter-1). Fixed ONE blocking cross-artifact drift: the plan asserted "PM must NEVER create new tickets autonomously" must be retained verbatim in BOTH `pm.md` AND `pm-instructions.md`, but the phrase exists ONLY in `.ai/agent/pm-instructions.md:40` (absent from `pm.md`, no task adds it there) — making the grep checks unachievable and contradicting TC-GOV-001. Corrected all affected locations (Scope F-2/NFR-3; Constraints governance-verbatim; Phase 1 AC + Tests; Phase 2 AC; TS-4) to verify the phrase in its canonical home `pm-instructions.md` only (pm.md not required to carry it) with no autonomous-mode exception carved in. Added the canonical-home note (single source of truth = `pm-instructions.md:40`) and confirmed the Phase-1 `pm.md` edit adds only `delivery_mode` + mode-aware coverage note — never the ticket-creation rule (surgical-edit constraint intact). Plan now agrees with TC-GOV-001. No source file, spec, or test-plan touched; no commit (PM routes through @committer). |
+| 1.2 | 2026-07-03 | @coder (PR #122 remediation) | Added Phase 8 (Review remediation): per the owner's PR #122 review directive, spec-coverage resolution changed from mode-aware to **unconditional (always-resolve)** in all modes (no human decision, no follow-up ticket; `delivery_mode` retained as non-gating signal). Also addresses 3 Copilot comments on `scripts/spec-coverage-snapshot.sh` (maxdepth-2 count fix; remove unused EXIT_RUNTIME=4; front-matter id `SPEC-<feature-slug>`). Plugin regen set = doc-syncer.md + pm.md. |
 
 ## Execution Log
 
@@ -839,6 +910,7 @@ lifecycle phase 7 (`system_spec_update`), coordinated by `@pm`.
 | 5 plugin freshness verify | COMPLETED | 2026-07-03 | (verification-only; folded into Phase 6 commit) | Oracle 16/16 (incl. committed==fresh-build); regen set across change = exactly pm.md + doc-syncer.md; no skills/manifest diff; source body == generated body for both. |
 | 6 headers on new scripts | COMPLETED | 2026-07-03 | (this commit) | add-header-location.sh on the two new files (explicit path); exactly-once headers; idempotent; no ados_distribution marker; no collateral Phase 1–3 header churn. |
 | 7 system-spec reconciliation | DONE (lifecycle phase 7 — @doc-syncer, PM-coordinated; commit 15f3fc6) | 15f3fc6 | AC-DM2-1 | @doc-syncer reconciled feature-delivery-lifecycle.md (capability F-7: mode-aware resolution; GH-108 in links). spec_coverage_gaps = []. |
+| 8 review remediation | COMPLETED | 2026-07-03 | (this commit) | PR #122 owner directive: always-resolve rework across doc-syncer.md, pm.md, pm-instructions.md, change-lifecycle.md, feature-delivery-lifecycle.md, PDR-0002; 3 Copilot fixes (maxdepth-2, EXIT_RUNTIME removal, SPEC-<feature-slug>); plugin regen (doc-syncer + pm); change artifacts updated; gates 9/9 + 16/16 + no drift. |
 
 ### Acceptance-criteria evidence (Phases 0–6)
 

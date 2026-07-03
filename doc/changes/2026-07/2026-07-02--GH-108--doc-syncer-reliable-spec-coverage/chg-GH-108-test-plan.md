@@ -7,7 +7,7 @@ owners: ["Juliusz Ćwiąkalski"]
 service: delivery-os
 labels: ["fix", "process", "doc-syncer", "spec-coverage", "autonomous-delivery", "epic-107"]
 version_impact: minor
-summary: "doc-syncer reliability — make the phase-7 spec-coverage *resolution* path mode-aware (delivery_mode) so a detected gap is resolved in-change in autonomous mode, interactive de-noise is preserved unchanged, and the 'PM never creates tickets autonomously' governance rule stays intact; plus a spec-coverage observability aid."
+summary: "doc-syncer reliability — make the phase-7 spec-coverage *resolution* path UNCONDITIONAL (always-resolve): a detected gap is resolved in-change (missing feature spec authored) in EVERY mode — no human decision, no follow-up ticket — while the 'PM never creates tickets autonomously' governance rule stays intact; `delivery_mode` is retained as an optional non-gating signal; plus a spec-coverage observability aid. (Amended to always-resolve per PR #122 owner directive.)"
 links:
   change_spec: ./chg-GH-108-spec.md
   implementation_plan: ./chg-GH-108-plan.md
@@ -23,7 +23,7 @@ This is a **process / prompt / docs fix** (no application code). There is no run
 Core behaviors to protect:
 
 - **AC-1 — Root cause accuracy:** the change spec itself names the *resolution-path mode blindness* and distinguishes it from a "missing check" and from a "de-noise design flaw" (NFR-6). This is asserted over the spec doc, not the implementation.
-- **AC-2 — Mode-aware rule lands:** a per-change `delivery_mode` signal is declared at intake (pm-notes + `@pm` step 3) and read identically from every entry point; `@doc-syncer`'s spec-coverage handoff becomes mode-aware (autonomous ⇒ resolve in-change; existing spec ⇒ reconcile); the "PM must NEVER create new tickets autonomously" rule is retained **verbatim with no autonomous-mode exception**; absent/`interactive` ⇒ byte-for-byte unchanged; the autonomous session prompt instructs `@pm` to set `autonomous`; authoring fires only for the *first* spec of an unspecced modified feature area (over-fire guard).
+- **AC-2 — Unconditional (always-resolve) rule lands:** a per-change `delivery_mode` signal is declared at intake (pm-notes + `@pm` step 3) and read identically from every entry point; `@doc-syncer`'s spec-coverage handoff is **unconditional (always-resolve)** — a detected gap for a modified feature area with no spec is resolved in-change in **every** mode (missing feature spec authored; existing spec ⇒ reconcile); the "PM must NEVER create new tickets autonomously" rule is retained **verbatim with no autonomous-mode exception**; `delivery_mode` is read but does not gate resolution; authoring fires only for the *first* spec of an unspecced modified feature area (over-fire guard).
 - **AC-3 — "Advisory" no longer means "silently skipped":** phase-7 (`change-lifecycle.md`) and `doc-syncer.md` (`<rules>`/`<reporting>`) wording disambiguates "advisory" so it cannot read as "silently skipped" in autonomous mode.
 - **AC-4 — Coverage gap is observable:** a repo-internal `scripts/` tool produces a computable, non-zero feature-specs-present vs changes-touching-feature-areas count, with its own `scripts/.tests/test-*.sh` per the repo convention.
 - **Cross-cutting:** `.ados-claude/` is regenerated **iff** a `.opencode/` source was edited (NFR-7); `doc/spec/features/feature-delivery-lifecycle.md` is **reconciled** at phase 7 to describe the mode-aware resolution (DM-2 / this change's own feature area, which already has a spec).
@@ -68,9 +68,9 @@ Core behaviors to protect:
 | **AC-NFR6-1** (AC-1) | Spec names the root cause (resolution-path mode blindness) and distinguishes it from "missing check" + "de-noise flaw" | TC-ROOTCAUSE-001 | grep audit over the spec doc | Audit / Content | Pending |
 | **AC-F1-1** (AC-2) | pm.md step 3 + pm-notes YAML structure declare `delivery_mode` | TC-MODE-001 | grep on `.opencode/agent/pm.md` + YAML structure | Audit / Content | Pending |
 | **AC-F1-2** (AC-2) | Both entry points read the same `delivery_mode` (no env-var-only mechanism) | TC-MODE-002 | grep + negative grep on session script; portability review | Audit + Review | Pending |
-| **AC-F2-1** (AC-2) | doc-syncer handoff is mode-aware: reads `delivery_mode`; autonomous ⇒ resolve in-change; existing ⇒ reconcile | TC-DOCSYNC-001, TC-DOCSYNC-002 | grep on `.opencode/agent/doc-syncer.md` | Audit / Content | Pending |
+| **AC-F2-1** (AC-2) | doc-syncer handoff is unconditional (always-resolve): reads `delivery_mode` (non-gating); gap ⇒ resolve in-change in every mode; existing ⇒ reconcile | TC-DOCSYNC-001, TC-DOCSYNC-002 | grep on `.opencode/agent/doc-syncer.md` | Audit / Content | Pending |
 | **AC-F2-2** (AC-2) | No tracker ticket; "PM must NEVER create new tickets autonomously" verbatim, no autonomous exception | TC-GOV-001 | verbatim grep + negative carve-out grep | Audit / Negative | Pending |
-| **AC-F2-3** (AC-2) | Absent/`interactive` ⇒ identical to pre-change; no new blocking prompt | TC-BACKCOMPAT-001 | grep interactive-unchanged wording + negative blocking-prompt grep | Audit / Negative | Pending |
+| **AC-F2-3** (AC-2) | Interactive/absent ALSO resolves in-change (always-resolve); `delivery_mode` non-gating | TC-BACKCOMPAT-001 | always-resolve grep + negative report-only grep | Audit / Negative | Pending |
 | **AC-F3-1** (AC-2) | `default_prompt_for()` instructs `@pm` to set `delivery_mode: autonomous` | TC-SESSION-001 | automated assert in `scripts/.tests/test-opencode-session.sh` | Automated (shell) | Pending |
 | **AC-NFR4-1** (AC-2) | Over-fire guard: existing spec reconciled (not re-authored); routine edits excluded | TC-DOCSYNC-002, TC-OVERFIRE-001 | grep + manual falsifiability probe | Audit + Review | Pending |
 | **AC-F4-1** (AC-3) | change-lifecycle Phase 7 disambiguates advisory ≠ silently-skipped; describes mode-aware resolution | TC-WORDING-001 | grep on Phase 7 of guide | Audit / Content | Pending |
@@ -88,13 +88,13 @@ No HTTP (§8.1 N/A) or event (§8.2 N/A) surfaces. Data-model items are conceptu
 | DM ID | Element | TC ID(s) | How verified |
 |-------|---------|----------|--------------|
 | DM-1 | `delivery_mode` (new pm-notes field: `interactive \| autonomous`; default/absent ⇒ `interactive`) | TC-MODE-001, TC-MODE-002 | grep declaration + default-semantics grep |
-| DM-2 | Mode-aware resolution contract matrix over (mode) × (spec exists?) | TC-DOCSYNC-001, TC-DOCSYNC-002, TC-DOCSYNC-003, TC-SYSSPEC-001 | grep the matrix clauses + demonstration |
+| DM-2 | Unconditional (always-resolve) resolution contract: no spec ⇒ author in-change (every mode); existing ⇒ reconcile | TC-DOCSYNC-001, TC-DOCSYNC-002, TC-DOCSYNC-003, TC-SYSSPEC-001 | grep the always-resolve clauses + demonstration |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
 
 | NFR ID | Requirement | TC ID(s) | How verified |
 |--------|-------------|----------|--------------|
-| NFR-1 | Backward compatibility — interactive / absent `delivery_mode` behaves identically to pre-change | TC-BACKCOMPAT-001 | interactive-unchanged grep + negative blocking-prompt grep |
+| NFR-1 | Backward compatibility — `delivery_mode` retained as optional non-gating signal; resolution is always-resolve in all modes | TC-BACKCOMPAT-001 | always-resolve grep + negative report-only grep |
 | NFR-2 | Entry-point portability — `delivery_mode` readable from every entry point; no env-var-only signal | TC-MODE-002, TC-SESSION-001 | portability review + session-script negative grep |
 | NFR-3 | Governance invariance — verbatim rule; no auto-ticket; no autonomous exception | TC-GOV-001 | verbatim + negative carve-out grep |
 | NFR-4 | Over-fire guard — first-spec-only; existing reconciled; routine edits excluded | TC-DOCSYNC-002, TC-OVERFIRE-001 | grep + manual falsifiability probe |
@@ -126,12 +126,12 @@ No unit/integration/E2E framework applies (no application code). All automated c
 | TC-ROOTCAUSE-001 | Spec names mode blindness + distinguishes missing-check & de-noise | Regression | Critical | High | AC-NFR6-1, NFR-6 |
 | TC-MODE-001 | pm.md step 3 + pm-notes structure declare `delivery_mode` | Happy Path | Critical | High | AC-F1-1, DM-1 |
 | TC-MODE-002 | Single pm-notes signal, portable; no env-var-only detection | Corner Case | Critical | High | AC-F1-2, NFR-2 |
-| TC-DOCSYNC-001 | doc-syncer reads `delivery_mode`; autonomous ⇒ resolve in-change | Happy Path | Critical | High | AC-F2-1, DM-2 |
+| TC-DOCSYNC-001 | doc-syncer reads `delivery_mode` (non-gating); ALWAYS resolves in-change | Happy Path | Critical | High | AC-F2-1, DM-2 |
 | TC-DOCSYNC-002 | Existing spec reconciled, not re-authored | Corner Case | Critical | High | AC-F2-1, AC-NFR4-1, DM-2 |
 | TC-DOCSYNC-003 | Autonomous run over unspecced area yields authored spec (demonstration) | Manual | Critical | High | AC-DM2-1, DM-2 (C-2 target) |
 | TC-OVERFIRE-001 | Over-fire guard: routine edits excluded; feature-area definition present | Corner Case | Important | Medium | AC-NFR4-1, NFR-4 |
 | TC-GOV-001 | No tracker ticket; verbatim rule retained; no autonomous exception | Negative | Critical | High | AC-F2-2, NFR-3 |
-| TC-BACKCOMPAT-001 | Absent/interactive ⇒ unchanged; no new blocking prompt | Negative | Critical | High | AC-F2-3, NFR-1 |
+| TC-BACKCOMPAT-001 | Interactive/absent ALSO resolves (always-resolve); `delivery_mode` non-gating | Negative | Critical | High | AC-F2-3, NFR-1 |
 | TC-SESSION-001 | `default_prompt_for()` instructs @pm to set `autonomous` | Happy Path | Critical | High | AC-F3-1, NFR-2 |
 | TC-WORDING-001 | change-lifecycle Phase 7 disambiguates advisory ≠ silently-skipped | Happy Path | Important | High | AC-F4-1 |
 | TC-WORDING-002 | doc-syncer `<rules>`/`<reporting>` wording normalized | Happy Path | Important | Medium | AC-F4-2 |
@@ -242,7 +242,7 @@ No unit/integration/E2E framework applies (no application code). All automated c
 
 ---
 
-#### TC-DOCSYNC-001 - doc-syncer reads `delivery_mode`; autonomous mode resolves a gap in-change
+#### TC-DOCSYNC-001 - doc-syncer reads `delivery_mode`; ALWAYS resolves a gap in-change (any mode)
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
@@ -251,7 +251,7 @@ No unit/integration/E2E framework applies (no application code). All automated c
 **Test Type(s)**: Manual (content)
 **Automation Level**: Semi-automated
 **Target Layer / Location**: `.opencode/agent/doc-syncer.md` (`<rules>` / step 2 / `<reporting>`)
-**Tags**: @process, @doc-syncer, @mode, @resolution
+**Tags**: @process, @doc-syncer, @resolution
 
 **Preconditions**:
 
@@ -259,17 +259,17 @@ No unit/integration/E2E framework applies (no application code). All automated c
 
 **Steps**:
 
-1. Assert doc-syncer reads the mode from pm-notes:
+1. Assert doc-syncer reads the mode from pm-notes (read but non-gating):
    `rg -n -i -e "delivery_mode" .opencode/agent/doc-syncer.md` → ≥1 match referencing the pm-notes field.
-2. Assert the autonomous ⇒ resolve-in-change rule is present:
-   `rg -n -i -e "autonomous" -e "resolve.*in-change" -e "resolved within the change" -e "author" .opencode/agent/doc-syncer.md` → ≥1 match describing that in `autonomous` mode a detected gap for a modified feature area lacking a spec is resolved in-change (the missing `feature-<slug>.md` is authored, or authoring is owned/delegated).
+2. Assert the **always-resolve** rule is present (resolution is unconditional in every mode):
+   `rg -n -i -e "every mode" -e "unconditional" -e "always" -e "resolve.*in-change" -e "resolved within the change" -e "author" .opencode/agent/doc-syncer.md` → ≥1 match describing that a detected gap for a modified feature area lacking a spec is resolved in-change in **every** mode (regardless of `delivery_mode`).
 3. Assert the promotion is scoped to **first-spec-only** (advisory → required for the *first* spec of an area that has none):
    `rg -n -i -e "first spec" -e "first-spec" -e "has no spec" -e "lacking a spec" -e "no spec" .opencode/agent/doc-syncer.md` → ≥1 match.
-4. Manual: confirm the rule is coherently worded — detection (positive coverage check, unchanged) and resolution (new, mode-gated) are distinguishable.
+4. Manual: confirm the rule is coherently worded — detection (positive coverage check, unchanged) and resolution (new, unconditional) are distinguishable; `delivery_mode` is read but does not gate.
 
 **Expected Outcome**:
 
-- doc-syncer's spec-coverage handoff is mode-aware: it reads `delivery_mode` from pm-notes; in `autonomous` mode a detected gap for a modified feature area with no spec is resolved in-change (first-spec-only). DM-2 autonomous-cell holds.
+- doc-syncer's spec-coverage handoff is unconditional (always-resolve): it reads `delivery_mode` from pm-notes (non-gating); a detected gap for a modified feature area with no spec is resolved in-change (first-spec-only) in **every** mode. DM-2 always-resolve cell holds.
 
 ---
 
@@ -382,12 +382,12 @@ No unit/integration/E2E framework applies (no application code). All automated c
    `rg -n "PM must NEVER create new tickets autonomously" .ai/agent/pm-instructions.md` → ≥1 match (exact phrase).
 2. Assert **no** autonomous-mode exception is carved into the rule across the PM + doc-syncer surfaces. Negative grep:
    `rg -n -i -e "except in autonomous" -e "autonomous.{0,40}exception" -e "exception.{0,40}autonomous" -e "in autonomous mode.*create.{0,30}ticket" .ai/agent/pm-instructions.md .opencode/agent/pm.md .opencode/agent/doc-syncer.md` → 0 matches.
-3. Assert the resolution path produces a **doc artifact** (not a tracker ticket) in autonomous mode:
-   `rg -n -i -e "doc artifact" -e "never create.{0,20}ticket" -e "does not create.{0,20}ticket" -e "no tracker ticket" .opencode/agent/doc-syncer.md` → ≥1 match affirming the autonomous resolution authors a spec scoped to the change (reviewed at the open-PR gate), not a tracker ticket.
+3. Assert the resolution path produces a **doc artifact** (not a tracker ticket) in every mode:
+   `rg -n -i -e "doc artifact" -e "never create.{0,20}ticket" -e "does not create.{0,20}ticket" -e "no tracker ticket" .opencode/agent/doc-syncer.md` → ≥1 match affirming the resolution authors a spec scoped to the change (reviewed at the open-PR gate), not a tracker ticket.
 
 **Expected Outcome**:
 
-- The verbatim rule is intact; no autonomous exception is carved in; the mode-aware resolution closes the coverage gap by authoring a doc artifact, never by creating a tracker ticket. NFR-3 holds.
+- The verbatim rule is intact; no autonomous exception is carved in; the always-resolve resolution closes the coverage gap by authoring a doc artifact, never by creating a tracker ticket. NFR-3 holds.
 
 **Notes / Clarifications**:
 
@@ -395,16 +395,16 @@ No unit/integration/E2E framework applies (no application code). All automated c
 
 ---
 
-#### TC-BACKCOMPAT-001 - Absent / `interactive` mode is identical to pre-change; no new blocking prompt
+#### TC-BACKCOMPAT-001 - Interactive / absent mode ALSO resolves in-change (always-resolve); `delivery_mode` non-gating
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-2, AC-F2-3, NFR-1, DEC-3
-**Test Type(s)**: Manual (negative content)
+**Related IDs**: F-2, AC-F2-3, NFR-1, DEC-3, DEC-8
+**Test Type(s)**: Manual (content)
 **Automation Level**: Semi-automated
 **Target Layer / Location**: `.opencode/agent/doc-syncer.md`, `doc/guides/change-lifecycle.md` (Phase 7)
-**Tags**: @process, @back-compat, @negative
+**Tags**: @process, @always-resolve, @negative
 
 **Preconditions**:
 
@@ -412,15 +412,20 @@ No unit/integration/E2E framework applies (no application code). All automated c
 
 **Steps**:
 
-1. Assert the interactive/absent path is described as unchanged — advisory + human-gated:
-   `rg -n -i -e "interactive" -e "absent" -e "unchanged" -e "byte-for-byte" -e "report.*pm.*propos" -e "human.*approv" .opencode/agent/doc-syncer.md` → ≥1 match capturing the report → PM proposes → human approves flow for `interactive`/absent.
-2. Assert **no new blocking prompt** is introduced for interactive runs. Negative grep for a forced author-or-defer interaction in interactive mode:
-   `rg -n -i -e "interactive.*(must|force|require).{0,40}(author|defer|resolve)" -e "block.{0,30}interactive" .opencode/agent/doc-syncer.md doc/guides/change-lifecycle.md` → 0 matches (interactive mode must not gain a new blocking interaction).
-3. Manual: confirm the default/absent ⇒ `interactive` ⇒ today's behavior is stated (overlaps TC-MODE-001 step 3) so existing change folders need no migration.
+1. Assert the resolution is **unconditional** — it fires in **every** mode, including interactive/absent (NOT report-only in interactive):
+   `rg -n -i -e "every mode" -e "unconditional" -e "always" -e "regardless of" .opencode/agent/doc-syncer.md doc/guides/change-lifecycle.md` → ≥1 match asserting resolution fires regardless of `delivery_mode`.
+2. Assert there is NO remaining "interactive ⇒ report-only / advisory / human-gated follow-up" path for spec coverage. Negative grep:
+   `rg -n -i -e "interactive.*report-only" -e "interactive.*advisory" -e "interactive.*human-gated" .opencode/agent/doc-syncer.md doc/guides/change-lifecycle.md` → 0 matches (interactive mode must NOT have a report-only/advisory branch for spec coverage).
+3. Assert `delivery_mode` is read but does **not** gate resolution (non-gating signal):
+   `rg -n -i -e "does not gate" -e "non-gating" -e "read.*but" .opencode/agent/doc-syncer.md` → ≥1 match.
 
 **Expected Outcome**:
 
-- `interactive` (and absent `delivery_mode`) behavior is byte-for-byte unchanged: advisory, non-blocking, human-gated follow-up. NFR-1 holds.
+- Interactive (and absent `delivery_mode`) mode **also resolves** detected gaps in-change (always-resolve); there is no report-only/advisory branch for spec coverage in any mode. `delivery_mode` is non-gating. NFR-1 (amended) holds.
+
+**Notes / Clarifications**:
+
+- This case was **rewritten** by the PR #122 owner review directive. The original asserted interactive was byte-for-byte unchanged (advisory + human-gated follow-up); the owner directive makes resolution unconditional, so interactive now ALSO resolves. The negative grep in step 2 is the gate.
 
 ---
 
