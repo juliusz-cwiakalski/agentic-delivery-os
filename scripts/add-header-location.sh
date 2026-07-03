@@ -31,11 +31,9 @@ readonly APP_VERSION="1.0.0"
 readonly LOG_TAG="(${APP_NAME})"
 
 # Exit codes
-readonly EXIT_SUCCESS=0
 readonly EXIT_USAGE=2
 readonly EXIT_CONFIG=3
 readonly EXIT_RUNTIME=4
-readonly EXIT_EXTERNAL=5
 
 # Configurable via environment
 DRY_RUN="${DRY_RUN:-false}"

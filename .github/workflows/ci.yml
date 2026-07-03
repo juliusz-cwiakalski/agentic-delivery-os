@@ -68,3 +68,56 @@ jobs:
       # guide's structural integrity (4 diagrams / 8 phases / >=32 sub-parts).
       - name: Run inception doc-set consistency guard
         run: bash scripts/.tests/test-inception-doc-consistency.sh
+
+  bash-tests:
+    name: Bash test suites
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # GH-124: runs every CI-safe test-*.sh suite under tools/.tests/ and
+      # scripts/.tests/. `find -print -exec` lists each suite then executes it;
+      # `set -e` fails the job on the first failing suite. jq is required by
+      # several suites.
+      #
+      # Exclusions — tests that require paid/external APIs and are documented as
+      # NOT for CI/CD (see their own headers). They are invoked manually or via
+      # an opt-in env locally:
+      #   - test-text-to-image-e2e-providers.sh (explores real paid APIs; hangs)
+      #   - test-text-to-image-e2e-suite.sh     (explicitly "NOT meant for CI/CD")
+      #   - test-text-to-image-performance.sh   (fails without real API keys)
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Run all bash test suites
+        run: |
+          set -e
+          echo "=== Running all test suites ==="
+          find . -path '*/.tests/test-*.sh' \
+            -not -path './tmp/*' \
+            -not -name '*e2e-providers*' \
+            -not -name '*e2e-suite*' \
+            -not -name '*performance*' \
+            -print -exec bash {} \;
+          echo "=== All test suites passed ==="
+
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # GH-124: gates on `error` severity (syntax errors, undefined commands, etc.).
+      # The delivery scripts (batch-deliver, deliver-ticket, opencode-session,
+      # install*, uninstall, build-claude-plugin, add-header-location,
+      # clean-merged-branches) and their test suites are now warning-clean.
+      # Remaining warning debt is confined to tools/text-to-image and tools/zclaude
+      # — clear those, then tighten this to `severity: warning`. Until then `error`
+      # keeps the gate green while still catching high-signal breakage.
+      - name: Run shellcheck on scripts and tools
+        uses: ludeeus/action-shellcheck@master
+        with:
+          severity: error
+          ignore_paths: node_modules .git .ados-claude tmp

@@ -38,9 +38,11 @@ IFS=$'\n\t'
 readonly APP_NAME="test-text-to-image-e2e-suite"
 readonly LOG_TAG="(${APP_NAME})"
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+readonly SCRIPT_DIR
 readonly E2E_PROVIDERS_SCRIPT="${SCRIPT_DIR}/test-text-to-image-e2e-providers.sh"
-readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd -P)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd -P)"
+readonly REPO_ROOT
 
 SUITE_OUTPUT_DIR="${SUITE_OUTPUT_DIR:-${REPO_ROOT}/tmp/e2e-suite}"
 TIMEOUT="${TIMEOUT:-180}"
@@ -63,13 +65,11 @@ readonly EXIT_USAGE=2
 # ============================================================================
 
 # Default: tool defaults (1024x1024, high quality)
-readonly SETTINGS_DEFAULT_LABEL="default"
 readonly SETTINGS_DEFAULT_WIDTH=""
 readonly SETTINGS_DEFAULT_HEIGHT=""
 readonly SETTINGS_DEFAULT_QUALITY=""
 
 # Max: push to tool limits (2048x2048, high quality)
-readonly SETTINGS_MAX_LABEL="max"
 readonly SETTINGS_MAX_WIDTH="2048"
 readonly SETTINGS_MAX_HEIGHT="2048"
 readonly SETTINGS_MAX_QUALITY="high"

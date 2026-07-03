@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# install-text-to-image.sh — Install text-to-image to ~/.local/bin/ for system-wide use
+# install-clean-merged-branches.sh — Install clean-merged-branches to ~/.local/bin/
 #
-# Dependencies: bash>=3.2, curl or wget
+# Dependencies: bash>=4, curl or wget
 # Usage: curl -fsSL <url> | bash
 #        wget -qO- <url> | bash
-#        ./install-text-to-image.sh
+#        ./install-clean-merged-branches.sh
 #
 # Environment:
-#   TEXT_TO_IMAGE_INSTALL_DIR  - Override install directory (default: ~/.local/bin)
-#   DRY_RUN                    - Set to 'true' to preview changes
-#   VERBOSE                    - Set to 'true' for debug output
+#   CLEAN_MERGED_BRANCHES_INSTALL_DIR  - Override install directory (default: ~/.local/bin)
+#   DRY_RUN                            - Set to 'true' to preview changes
+#   VERBOSE                            - Set to 'true' for debug output
 #
 # Exit codes:
 #   0 - Success
@@ -26,17 +26,20 @@ IFS=$'\n\t'
 # ============================================================================
 # SETTINGS
 # ============================================================================
-readonly APP_NAME="install-text-to-image"
+readonly APP_NAME="install-clean-merged-branches"
+readonly APP_VERSION="1.0.0"
 readonly LOG_TAG="(${APP_NAME})"
 
 readonly EXIT_USAGE=2
 readonly EXIT_RUNTIME=4
+readonly EXIT_EXTERNAL=5
 
-readonly TOOL_RAW_URL="https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/tools/text-to-image"
+readonly TOOL_RAW_URL="https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/tools/clean-merged-branches"
+readonly TOOL_NAME="clean-merged-branches"
 
 DRY_RUN="${DRY_RUN:-false}"
 VERBOSE="${VERBOSE:-false}"
-INSTALL_DIR="${TEXT_TO_IMAGE_INSTALL_DIR:-${HOME}/.local/bin}"
+INSTALL_DIR="${CLEAN_MERGED_BRANCHES_INSTALL_DIR:-${HOME}/.local/bin}"
 
 # ============================================================================
 # TRAPS
@@ -70,9 +73,19 @@ log_fatal() { log_err "$@"; exit "${EXIT_RUNTIME}"; }
 
 die() { log_err "$@"; exit "${EXIT_USAGE}"; }
 
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || die "Required command not found: $1"
+}
+
+command_exists() {
+  command -v "$1" >/dev/null 2>&1
+}
+
 run_cmd() {
   if [[ "${DRY_RUN}" == "true" ]]; then
-    log_info "[DRY-RUN] Would execute: $*"
+    printf '[INFO]  %s [DRY-RUN] Would execute:' "${LOG_TAG}"
+    printf ' %q' "$@"
+    printf '\n'
     return 0
   fi
   "$@"
@@ -82,25 +95,44 @@ run_cmd() {
 # MOCKABLE WRAPPERS
 # ============================================================================
 _curl() { command curl "$@"; }
+_wget() { command wget "$@"; }
 _mkdir() { command mkdir "$@"; }
 _chmod() { command chmod "$@"; }
+_mv() { command mv "$@"; }
+_rm() { command rm "$@"; }
+_mktemp() { command mktemp "$@"; }
 
 # ============================================================================
 # DOWNLOAD
 # ============================================================================
 download_tool() {
   local -r dest="$1"
-  local -r url="${TOOL_RAW_URL}"
+  local tmp=""
 
-  if command -v curl >/dev/null 2>&1; then
+  if [[ "${DRY_RUN}" != "true" ]]; then
+    tmp="$(_mktemp "${dest}.tmp.XXXXXX")"
+  else
+    tmp="${dest}.tmp.DRY_RUN"
+  fi
+
+  if command_exists curl; then
     log_debug "Using curl to download"
-    run_cmd _curl -fsSL "${url}" -o "${dest}"
-  elif command -v wget >/dev/null 2>&1; then
+    if ! run_cmd _curl -fsSL "${TOOL_RAW_URL}" -o "${tmp}"; then
+      [[ "${DRY_RUN}" == "true" ]] || _rm -f "${tmp}"
+      return "${EXIT_EXTERNAL}"
+    fi
+  elif command_exists wget; then
     log_debug "Using wget to download"
-    run_cmd command wget -qO "${dest}" "${url}"
+    if ! run_cmd _wget -qO "${tmp}" "${TOOL_RAW_URL}"; then
+      [[ "${DRY_RUN}" == "true" ]] || _rm -f "${tmp}"
+      return "${EXIT_EXTERNAL}"
+    fi
   else
     die "Neither curl nor wget found. Install one to proceed."
   fi
+
+  run_cmd _chmod +x "${tmp}"
+  run_cmd _mv "${tmp}" "${dest}"
 }
 
 # ============================================================================
@@ -114,6 +146,7 @@ detect_shell_rc() {
   case "${shell_name}" in
     zsh)  printf '%s' "${HOME}/.zshrc" ;;
     bash)
+      # Prefer .bashrc on Linux/Git Bash, .bash_profile on macOS
       if [[ "$(uname -s)" == "Darwin" ]]; then
         printf '%s' "${HOME}/.bash_profile"
       else
@@ -124,16 +157,17 @@ detect_shell_rc() {
   esac
 }
 
-# Check if INSTALL_DIR is already in PATH
+# Check if a directory is already in PATH
 is_in_path() {
   local -r dir="$1"
+  # Normalize trailing slashes for comparison
   local norm_dir norm_path
   norm_dir="${dir%/}"
-  norm_path=":${PATH}:"
+  norm_path=":${PATH:-}:"
   [[ "${norm_path}" == *":${norm_dir}:"* ]]
 }
 
-# Offer to add INSTALL_DIR to PATH in shell rc
+# Show PATH setup instructions if the install dir is not in PATH
 offer_path_setup() {
   local -r dir="$1"
 
@@ -143,27 +177,70 @@ offer_path_setup() {
   fi
 
   local -r rc_file="$(detect_shell_rc)"
-
   printf '\n'
   log_warn "${dir} is not in your PATH."
   log_info "Add this line to ${rc_file}:"
-  printf '  export PATH="%s:\$PATH"\n' "${dir}"
+  printf '  export PATH="%s:$PATH"\n' "${dir}"
   printf '\n'
   log_info "Then reload: source ${rc_file}"
+}
+
+# ============================================================================
+# CLI
+# ============================================================================
+usage() {
+  cat <<EOF
+Usage: ${APP_NAME} [options]
+
+Install ${TOOL_NAME} to ${INSTALL_DIR} for system-wide use.
+
+Options:
+  -h, --help          Show this help message and exit
+  -V, --version       Show version and exit
+  -n, --dry-run       Show what would be done without doing it
+  -v, --verbose       Enable debug output
+  -d, --install-dir   Override install directory (default: ~/.local/bin)
+
+Environment:
+  CLEAN_MERGED_BRANCHES_INSTALL_DIR  Override install directory (default: ~/.local/bin)
+  DRY_RUN                            Set to 'true' to preview changes
+  VERBOSE                            Set to 'true' for debug output
+
+One-liner:
+  curl -fsSL ${TOOL_RAW_URL%/*/*}/scripts/install-clean-merged-branches.sh | bash
+EOF
+}
+
+parse_args() {
+  while (($#)); do
+    case "$1" in
+      -h|--help) usage; exit 0 ;;
+      -V|--version) printf '%s %s\n' "${APP_NAME}" "${APP_VERSION}"; exit 0 ;;
+      -n|--dry-run) DRY_RUN=true ;;
+      -v|--verbose) VERBOSE=true ;;
+      -d|--install-dir) shift; INSTALL_DIR="${1:?--install-dir requires a directory}" ;;
+      --) shift; break ;;
+      -*) die "Unknown option: $1" ;;
+      *) break ;;
+    esac
+    shift
+  done
 }
 
 # ============================================================================
 # MAIN
 # ============================================================================
 main() {
+  parse_args "$@"
+
   # Need curl or wget
-  if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
+  if ! command_exists curl && ! command_exists wget; then
     die "Neither curl nor wget found. Install one to proceed."
   fi
 
-  local -r dest="${INSTALL_DIR}/text-to-image"
+  local -r dest="${INSTALL_DIR}/${TOOL_NAME}"
 
-  log_info "Installing text-to-image to ${dest}"
+  log_info "Installing ${TOOL_NAME} to ${dest}"
 
   # Create install dir if needed
   if [[ ! -d "${INSTALL_DIR}" ]]; then
@@ -174,18 +251,17 @@ main() {
   # Download
   download_tool "${dest}"
 
-  # Make executable
-  run_cmd _chmod +x "${dest}"
-
   # Verify
   if [[ "${DRY_RUN}" != "true" ]]; then
     if [[ -x "${dest}" ]]; then
       local version
-      version="$("${dest}" --version 2>/dev/null | head -1 || echo "unknown")"
+      version="$("${dest}" --version 2>/dev/null | head -1 || printf 'installed')"
       log_info "Installed: ${version}"
     else
       log_fatal "Failed to make ${dest} executable"
     fi
+  else
+    log_info "[DRY-RUN] Would run: ${dest} --version"
   fi
 
   # PATH check
@@ -193,9 +269,9 @@ main() {
 
   printf '\n'
   if is_in_path "${INSTALL_DIR}"; then
-    log_info "Done. Run 'text-to-image --help' to get started."
+    log_info "Done. Run '${TOOL_NAME} --help' to get started."
   else
-    log_info "Done. After adding ${INSTALL_DIR} to PATH, run 'text-to-image --help' to get started."
+    log_info "Done. After adding ${INSTALL_DIR} to PATH, run '${TOOL_NAME} --help' to get started."
   fi
 }
 

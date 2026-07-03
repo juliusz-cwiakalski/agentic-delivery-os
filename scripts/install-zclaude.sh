@@ -28,12 +28,11 @@ IFS=$'\n\t'
 # SETTINGS
 # ============================================================================
 readonly APP_NAME="install-zclaude"
+# shellcheck disable=SC2034  # referenced by test-install-zclaude.sh via source
 readonly APP_VERSION="1.0.0"
 readonly LOG_TAG="(${APP_NAME})"
 
-readonly EXIT_SUCCESS=0
 readonly EXIT_USAGE=2
-readonly EXIT_CONFIG=3
 readonly EXIT_RUNTIME=4
 readonly EXIT_EXTERNAL=5
 

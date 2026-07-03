@@ -1,0 +1,378 @@
+#!/usr/bin/env bash
+# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+# MIT License - see LICENSE file for full terms
+# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/clean-merged-branches
+#
+# clean-merged-branches — squash-merge-safe branch cleanup
+#
+# Deletes local branches that have been merged into the base branch either
+# through ancestry (regular merge) or content-identical trees (squash merge).
+# Protected branches (main, master, develop + custom list) are never deleted.
+# Restores the original branch after cleanup when possible.
+#
+# Dependencies: bash>=4, git
+# Usage: clean-merged-branches [options]
+#
+# Environment:
+#   CLEAN_MERGED_BASE  - Default base branch (default: main)
+#   DRY_RUN            - Set to 'true' to preview without deleting
+#   VERBOSE            - Set to 'true' for debug output
+#
+# Exit codes:
+#   0 - Success
+#   2 - Usage error
+#   4 - Runtime error
+
+set -Eeuo pipefail
+set -o errtrace
+shopt -s inherit_errexit 2>/dev/null || true
+IFS=$'\n\t'
+
+# ============================================================================
+# SETTINGS
+# ============================================================================
+readonly APP_NAME="clean-merged-branches"
+readonly APP_VERSION="1.0.0"
+readonly LOG_TAG="(${APP_NAME})"
+
+readonly EXIT_USAGE=2
+
+readonly DEFAULT_PROTECTED="main master develop"
+
+BASE_BRANCH="${CLEAN_MERGED_BASE:-main}"
+DRY_RUN="${DRY_RUN:-false}"
+VERBOSE="${VERBOSE:-false}"
+ALLOW_DIRTY=false
+USE_COLOR=false
+PROTECTED_EXTRA=""
+
+# Color variables (populated by _setup_colors)
+_C_RED="" _C_GREEN="" _C_YELLOW="" _C_BLUE="" _C_RESET=""
+
+# ============================================================================
+# TRAPS
+# ============================================================================
+_on_err() {
+  local -r line="$1" cmd="$2" code="$3"
+  log_err "line ${line}: '${cmd}' exited with ${code}"
+}
+
+trap '_on_err $LINENO "$BASH_COMMAND" $?' ERR
+trap 'log_warn "Interrupted"; exit 130' INT TERM
+
+# ============================================================================
+# UTILITIES
+# ============================================================================
+_setup_colors() {
+  if [[ "${USE_COLOR}" == "true" ]]; then
+    _C_RED=$'\033[0;31m'
+    _C_GREEN=$'\033[0;32m'
+    _C_YELLOW=$'\033[0;33m'
+    _C_BLUE=$'\033[0;34m'
+    _C_RESET=$'\033[0m'
+  fi
+}
+
+log_info()  { printf '%s[INFO]%s  %s %s\n' "${_C_BLUE}" "${_C_RESET}" "${LOG_TAG}" "$*"; }
+log_warn()  { printf '%s[WARN]%s  %s %s\n' "${_C_YELLOW}" "${_C_RESET}" "${LOG_TAG}" "$*" >&2; }
+log_err()   { printf '%s[ERROR]%s %s %s\n' "${_C_RED}" "${_C_RESET}" "${LOG_TAG}" "$*" >&2; }
+log_debug() { [[ "${VERBOSE}" == "true" ]] && printf '%s[DEBUG]%s %s %s\n' "${_C_YELLOW}" "${_C_RESET}" "${LOG_TAG}" "$*"; }
+log_ok()    { printf '%s[OK]%s    %s %s\n' "${_C_GREEN}" "${_C_RESET}" "${LOG_TAG}" "$*"; }
+
+die() { log_err "$@"; exit "${EXIT_USAGE}"; }
+
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || die "Required command not found: $1"
+}
+
+# ============================================================================
+# MOCKABLE WRAPPERS
+# ============================================================================
+_git() { command git "$@"; }
+
+# ============================================================================
+# DOMAIN FUNCTIONS
+# ============================================================================
+
+# Return the full protected branch list (defaults + user extras), space-separated
+get_protected_list() {
+  if [[ -n "${PROTECTED_EXTRA}" ]]; then
+    printf '%s %s' "${DEFAULT_PROTECTED}" "${PROTECTED_EXTRA}"
+  else
+    printf '%s' "${DEFAULT_PROTECTED}"
+  fi
+}
+
+# PURE: check if a branch name is in the protected list.
+# Args: branch_name  space-separated-protected-list
+is_protected_branch() {
+  local -r branch="$1"
+  local -r protected_list="$2"
+  local p
+  # Global IFS is $'\n\t' (no space); override locally to split on spaces.
+  local IFS=' '
+  for p in ${protected_list}; do
+    [[ "${branch}" == "${p}" ]] && return 0
+  done
+  return 1
+}
+
+# Check if working tree has uncommitted changes
+working_tree_dirty() {
+  [[ -n "$(_git status --porcelain 2>/dev/null)" ]]
+}
+
+# Get current branch name (empty string if detached HEAD)
+get_current_branch() {
+  _git symbolic-ref --short HEAD 2>/dev/null || printf ''
+}
+
+# Check if origin remote exists
+has_remote_origin() {
+  _git remote get-url origin >/dev/null 2>&1
+}
+
+# Check if a local branch exists
+branch_exists() {
+  local -r branch="$1"
+  _git show-ref --verify --quiet "refs/heads/${branch}" 2>/dev/null
+}
+
+# Update base branch: checkout, pull (if remote), fetch+prune (if remote)
+update_base() {
+  local -r base="$1"
+  log_info "Checking out base branch: ${base}"
+  _git checkout "${base}"
+
+  if has_remote_origin; then
+    log_info "Pulling latest ${base} from origin"
+    _git pull origin "${base}" || log_warn "Pull failed; continuing with local ${base}"
+    log_info "Fetching and pruning remotes"
+    _git fetch --prune origin || log_warn "Fetch/prune failed; continuing"
+  else
+    log_debug "No 'origin' remote; skipping pull/fetch"
+  fi
+}
+
+# List ancestry-merged branches (branches fully contained in base).
+# Prints branch names, one per line.
+get_ancestry_merged_branches() {
+  local -r base="$1"
+  _git branch --merged "${base}" --format='%(refname:short)' 2>/dev/null || true
+}
+
+# Check if branch has content identical to base (squash-merge detection).
+# Returns 0 (true/identical) or 1 (false/different).
+is_content_identical() {
+  local -r base="$1" branch="$2"
+  # git diff --quiet: exit 0 = no differences (identical), 1 = differences, 2 = error.
+  # Returns 0 (true/identical) or non-zero (false/different). Faster and lighter
+  # than capturing the full diff output into a variable.
+  _git diff --quiet "${base}..${branch}" 2>/dev/null
+}
+
+# Delete a single branch.
+# Args: branch_name  force(true|false)
+delete_branch() {
+  local -r branch="$1"
+  local -r force="${2:-false}"
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log_info "[DRY-RUN] Would delete: ${branch}"
+    return 0
+  fi
+  if [[ "${force}" == "true" ]]; then
+    _git branch -D "${branch}"
+  else
+    _git branch -d "${branch}"
+  fi
+}
+
+# Main cleanup orchestrator
+clean_branches() {
+  local -r base="${BASE_BRANCH}"
+
+  # Validate base branch exists
+  branch_exists "${base}" || die "Base branch '${base}' does not exist."
+
+  # Check working tree
+  if working_tree_dirty; then
+    if [[ "${ALLOW_DIRTY}" == "true" ]]; then
+      log_warn "Working tree has uncommitted changes (--allow-dirty in effect)."
+    else
+      die "Working tree has uncommitted changes. Commit, stash, or use --allow-dirty."
+    fi
+  fi
+
+  # Save current branch
+  local current_branch
+  current_branch="$(get_current_branch)"
+  log_info "Current branch: ${current_branch:-detached HEAD}"
+
+  # Switch to base and update
+  update_base "${base}"
+
+  local protected_list
+  protected_list="$(get_protected_list)"
+
+  local deleted_count=0
+  declare -A handled=()
+
+  # Phase 1: ancestry-merged branches (safe delete with -d)
+  log_info "Finding ancestry-merged branches (relative to ${base})"
+  local branch
+  while IFS= read -r branch; do
+    [[ -n "${branch}" ]] || continue
+    [[ "${branch}" == "${base}" ]] && continue
+    if is_protected_branch "${branch}" "${protected_list}"; then
+      log_debug "Skipping protected (ancestry-merged): ${branch}"
+      continue
+    fi
+    log_info "Deleting ancestry-merged: ${branch}"
+    if delete_branch "${branch}" false; then
+      deleted_count=$((deleted_count + 1))
+      handled["${branch}"]=1
+    else
+      log_warn "Could not delete ${branch} (not fully merged or error)."
+    fi
+  done < <(get_ancestry_merged_branches "${base}")
+
+  # Phase 2: content-identical branches (squash-merge safe, force delete with -D)
+  log_info "Finding content-identical branches (squash-merge detection)"
+  while IFS= read -r branch; do
+    [[ -n "${branch}" ]] || continue
+    [[ "${branch}" == "${base}" ]] && continue
+    # Skip branches already handled in phase 1 (covers dry-run where they still exist)
+    [[ -n "${handled["${branch}"]:-}" ]] && continue
+    # Skip branches already deleted in phase 1
+    branch_exists "${branch}" || continue
+    if is_protected_branch "${branch}" "${protected_list}"; then
+      log_debug "Skipping protected (content check): ${branch}"
+      continue
+    fi
+    if is_content_identical "${base}" "${branch}"; then
+      log_info "Deleting content-identical: ${branch}"
+      if delete_branch "${branch}" true; then
+        deleted_count=$((deleted_count + 1))
+      else
+        log_warn "Could not delete ${branch}."
+      fi
+    fi
+  done < <(_git for-each-ref --format='%(refname:short)' refs/heads/ 2>/dev/null)
+
+  # Summary
+  if [[ "${deleted_count}" -eq 0 ]]; then
+    log_ok "No branches to clean."
+  else
+    log_ok "Deleted ${deleted_count} branch(es)."
+  fi
+
+  # Restore original branch
+  if [[ -n "${current_branch}" && "${current_branch}" != "${base}" ]]; then
+    if branch_exists "${current_branch}"; then
+      log_info "Restoring original branch: ${current_branch}"
+      _git checkout "${current_branch}"
+    else
+      log_warn "Original branch '${current_branch}' was deleted; staying on ${base}."
+    fi
+  fi
+}
+
+# ============================================================================
+# CLI
+# ============================================================================
+usage() {
+  cat <<EOF
+${APP_NAME} ${APP_VERSION} — squash-merge-safe branch cleanup
+
+Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+MIT License - see LICENSE file for full terms
+Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/${APP_NAME}
+
+USAGE:
+  ${APP_NAME} [OPTIONS]
+
+Deletes local branches merged into the base branch via ancestry (regular merge)
+or identical content (squash-merge safe). Protected branches (main, master,
+develop + custom) are never deleted.
+
+EXAMPLES:
+  ${APP_NAME}                              Clean with defaults (base=main)
+  ${APP_NAME} --base develop               Use develop as the base branch
+  ${APP_NAME} --dry-run                    Show what would be deleted
+  ${APP_NAME} --protected release,v1.0     Add extra protected branches
+  ${APP_NAME} --allow-dirty                Allow cleanup with dirty tree
+  ${APP_NAME} --color                      Enable colored output
+
+OPTIONS:
+  -h, --help              Show this help message
+  -V, --version           Show version
+  -n, --dry-run           List branches without deleting
+  -v, --verbose           Enable debug output
+  --base <branch>         Base branch to compare against (default: main)
+  --protected <list>      Comma-separated extra protected branches
+  --allow-dirty           Allow cleanup with uncommitted changes
+  --color                 Enable colored output
+
+DOCUMENTATION:
+  Full guide: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/tools/${APP_NAME}.md
+
+EXIT CODES:
+  0 - Success
+  2 - Usage error
+  4 - Runtime error
+
+ENVIRONMENT:
+  CLEAN_MERGED_BASE       Default base branch (default: main)
+  DRY_RUN                 Set to 'true' to preview without deleting
+  VERBOSE                 Set to 'true' for debug output
+EOF
+}
+
+show_version() {
+  cat <<EOF
+${APP_NAME} ${APP_VERSION}
+Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+MIT License - see LICENSE file for full terms
+Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/${APP_NAME}
+EOF
+}
+
+parse_args() {
+  while (($#)); do
+    case "$1" in
+      -h|--help) usage; exit 0 ;;
+      -V|--version) show_version; exit 0 ;;
+      -n|--dry-run) DRY_RUN=true ;;
+      -v|--verbose) VERBOSE=true ;;
+      --base)
+        [[ $# -ge 2 ]] || die "--base requires a value"
+        BASE_BRANCH="$2"; shift ;;
+      --protected)
+        [[ $# -ge 2 ]] || die "--protected requires a value"
+        PROTECTED_EXTRA="${2//,/ }"; shift ;;
+      --allow-dirty) ALLOW_DIRTY=true ;;
+      --color) USE_COLOR=true ;;
+      --) shift; break ;;
+      -*) die "Unknown option: $1" ;;
+      *) die "Unexpected argument: $1" ;;
+    esac
+    shift
+  done
+}
+
+# ============================================================================
+# MAIN
+# ============================================================================
+main() {
+  parse_args "$@"
+  _setup_colors
+
+  require_cmd git
+
+  clean_branches
+}
+
+# Testable main guard
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi
