@@ -116,7 +116,7 @@
 ## Phase 4: `scripts/batch-deliver.sh` (new)
 
 ### Tasks
-- [ ] Create `scripts/batch-deliver.sh`:
+- [x] Create `scripts/batch-deliver.sh`:
   - **Input parsing**:
     - Positional args: `GH-108 GH-110 GH-37` (tickets without branches)
     - Colon syntax: `GH-108:fix/branch GH-110:feat/branch` (ticket:branch pairs)
@@ -138,7 +138,7 @@
   - **Idempotent restart**: safe to re-run; skips already-done tickets
   - **Flags**: `-h/--help`, `--version`, `--dry-run`, `-v/--verbose`, `--tickets-file <path>`
   - Strict mode, ERR trap, testable main guard
-- [ ] Create `scripts/.tests/test-batch-deliver.sh`:
+- [x] Create `scripts/.tests/test-batch-deliver.sh`:
   - TC-BD-01: ticket parsing — positional args → array of {ticket, branch?}
   - TC-BD-02: ticket parsing — colon syntax → ticket + branch extracted
   - TC-BD-03: ticket parsing — mixed positional + colon
@@ -147,8 +147,8 @@
   - TC-BD-06: skip-closed — mock gh to return CLOSED state → SKIP
   - TC-BD-07: duration formatting — seconds → "45m 23s" or "1h 2m"
   - TC-BD-08: summary output format — contains counts and per-ticket lines
-- [ ] Run `bash scripts/.tests/test-batch-deliver.sh` — fix until all pass
-- [ ] Commit: `feat(scripts): add batch-deliver.sh — sequential batch delivery with pre-flight skip`
+- [x] Run `bash scripts/.tests/test-batch-deliver.sh` — fix until all pass (15/15 PASS)
+- [x] Commit: `feat(scripts): add batch-deliver.sh — sequential batch delivery with pre-flight skip`
 
 ## Phase 5: Docs + integration
 
