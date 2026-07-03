@@ -50,11 +50,8 @@ readonly APP_VERSION="2.0.0"
 readonly LOG_TAG="(${APP_NAME})"
 
 # Exit codes
-readonly EXIT_SUCCESS=0
 readonly EXIT_USAGE=2
-readonly EXIT_CONFIG=3
 readonly EXIT_RUNTIME=4
-readonly EXIT_EXTERNAL=5
 
 # Configurable via environment
 readonly ADOS_HOME="${ADOS_HOME:-${HOME}/.ados}"
@@ -343,6 +340,7 @@ do_global_uninstall() {
   remove_global_commands
 
   # Remove ADOS home directory
+  # shellcheck disable=SC2088  # 2nd arg is a cosmetic log label; tilde is intentional
   safe_rmdir "${ADOS_HOME}" "~/.ados"
 
   printf '\n'
@@ -420,6 +418,19 @@ remove_local_files() {
     else
       log_debug "keep   ${file} (ados_distribution=${marker})"
     fi
+  done
+
+  # --- Delivery scripts and tools ---
+  # M-4: These are installed unconditionally by install.sh's
+  # ADOS_DELIVERY_SCRIPTS / ADOS_DELIVERY_TOOLS arrays (not marker-driven),
+  # so remove them unconditionally if present.
+  local delivery_file
+  for delivery_file in \
+    "scripts/opencode-session.sh" \
+    "scripts/deliver-ticket.sh" \
+    "scripts/batch-deliver.sh" \
+    "tools/clean-merged-branches"; do
+    remove_file "${delivery_file}" "${delivery_file}"
   done
 
   # --- Remove empty directories (only if empty) ---

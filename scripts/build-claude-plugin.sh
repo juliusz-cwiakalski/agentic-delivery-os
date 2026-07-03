@@ -53,12 +53,42 @@ set -euo pipefail
 # Configuration
 # ==============================================================================
 
-readonly SCRIPT_NAME="$(basename "$0")"
-readonly SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+readonly SCRIPT_DIR
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+readonly REPO_ROOT
 
 # Tool configuration (extensible pattern)
 readonly TOOL="${TOOL:-claude}"
+
+# Verbosity flags (needed by log() below)
+VERBOSE="${VERBOSE:-false}"
+DRY_RUN="${DRY_RUN:-false}"
+
+# ==============================================================================
+# Utility Functions (defined before first use — shellcheck SC2218)
+# ==============================================================================
+
+log() {
+    if [[ "${VERBOSE}" == "true" ]]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+    fi
+}
+
+error() {
+    echo "ERROR: $*" >&2
+    exit 1
+}
+
+warn() {
+    echo "WARN: $*" >&2
+}
+
+# ==============================================================================
+# Validation
+# ==============================================================================
 
 # Safety: TOOL flows into OUTPUT_DIR and is later rm -rf'd. Validate it is a
 # simple identifier (letters, digits, hyphen, underscore) to prevent path
@@ -88,29 +118,6 @@ EOF
 
 # Default model for files without claude.model
 readonly DEFAULT_MODEL="sonnet"
-
-# Verbosity flags
-VERBOSE="${VERBOSE:-false}"
-DRY_RUN="${DRY_RUN:-false}"
-
-# ==============================================================================
-# Utility Functions
-# ==============================================================================
-
-log() {
-    if [[ "${VERBOSE}" == "true" ]]; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
-    fi
-}
-
-error() {
-    echo "ERROR: $*" >&2
-    exit 1
-}
-
-warn() {
-    echo "WARN: $*" >&2
-}
 
 # ==============================================================================
 # YAML Frontmatter Parsing
@@ -171,8 +178,6 @@ get_yaml_value() {
     local yaml="$1"
     local key="$2"
     local value=""
-    local in_array=false
-    local array_values=()
 
     # Handle nested keys like "claude.model"
     local parent_key=""
@@ -216,7 +221,6 @@ get_yaml_value() {
 
                 # Handle multiline strings (description with >-)
                 if [[ "$value" == ">-" || "$value" == ">" || "$value" == "|-" || "$value" == "|" ]]; then
-                    in_array=true
                     local multiline_value=""
                     while IFS= read -r ml_line; do
                         # Stop at next key
