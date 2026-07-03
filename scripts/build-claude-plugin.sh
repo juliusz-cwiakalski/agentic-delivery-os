@@ -63,6 +63,33 @@ readonly REPO_ROOT
 # Tool configuration (extensible pattern)
 readonly TOOL="${TOOL:-claude}"
 
+# Verbosity flags (needed by log() below)
+VERBOSE="${VERBOSE:-false}"
+DRY_RUN="${DRY_RUN:-false}"
+
+# ==============================================================================
+# Utility Functions (defined before first use — shellcheck SC2218)
+# ==============================================================================
+
+log() {
+    if [[ "${VERBOSE}" == "true" ]]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+    fi
+}
+
+error() {
+    echo "ERROR: $*" >&2
+    exit 1
+}
+
+warn() {
+    echo "WARN: $*" >&2
+}
+
+# ==============================================================================
+# Validation
+# ==============================================================================
+
 # Safety: TOOL flows into OUTPUT_DIR and is later rm -rf'd. Validate it is a
 # simple identifier (letters, digits, hyphen, underscore) to prevent path
 # traversal via values like "../../evil".
@@ -91,29 +118,6 @@ EOF
 
 # Default model for files without claude.model
 readonly DEFAULT_MODEL="sonnet"
-
-# Verbosity flags
-VERBOSE="${VERBOSE:-false}"
-DRY_RUN="${DRY_RUN:-false}"
-
-# ==============================================================================
-# Utility Functions
-# ==============================================================================
-
-log() {
-    if [[ "${VERBOSE}" == "true" ]]; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
-    fi
-}
-
-error() {
-    echo "ERROR: $*" >&2
-    exit 1
-}
-
-warn() {
-    echo "WARN: $*" >&2
-}
 
 # ==============================================================================
 # YAML Frontmatter Parsing

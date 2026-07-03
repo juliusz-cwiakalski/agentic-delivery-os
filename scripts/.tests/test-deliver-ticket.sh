@@ -334,12 +334,40 @@ test_classify_unknown() {
   assert_eq "unknown" "${result}" "Should classify as unknown on gh failure"
 }
 
-# TC-DT-06d: unknown classification → continue (no restart burn)
+# TC-DT-06d: stuck + unknown classification → continue (no restart burn)
+# m-7: "unknown" (gh/network failure) doesn't burn a restart slot — but only
+# when the session was killed for staleness (stuck). A finished session that
+# can't be classified should STOP instead (see TC-DT-06e).
 test_unknown_continues() {
   local result
-  result="$(decide_after_iteration "finished" "unknown" 1 10)"
+  result="$(decide_after_iteration "stuck" "unknown" 1 10)"
 
-  assert_eq "continue" "${result}" "Should continue (not burn restart) on unknown"
+  assert_eq "continue" "${result}" "Should continue (not burn restart) on stuck+unknown"
+}
+
+# TC-DT-06e: decide_after_iteration: finished + unknown → stop:0:finished
+# GH-126: When the PM session finished normally (opencode exited on its own)
+# but post-session GitHub classification is unknown (rate limit / network), the
+# delivery should STOP — the PM completed its work; retrying won't change the
+# outcome. Previously this returned "continue", causing an infinite retry loop.
+test_decide_finished_unknown_stops() {
+  local result
+  result="$(decide_after_iteration "finished" "unknown" 1 10)"
+  assert_eq "stop:0:finished" "${result}" "finished+unknown should stop with exit 0"
+}
+
+# TC-DT-06f: decide_after_iteration: stuck + unknown → continue (still retries)
+test_decide_stuck_unknown_continues() {
+  local result
+  result="$(decide_after_iteration "stuck" "unknown" 1 10)"
+  assert_eq "continue" "${result}" "stuck+unknown should continue"
+}
+
+# TC-DT-06g: decide_after_iteration: finished + failed → continue (retries up to max)
+test_decide_finished_failed_continues() {
+  local result
+  result="$(decide_after_iteration "finished" "failed" 1 10)"
+  assert_eq "continue" "${result}" "finished+failed should continue"
 }
 
 # ============================================================================
@@ -650,7 +678,10 @@ main() {
   run_test "TC-DT-07c: classify pr-open" test_classify_pr_open
   run_test "TC-DT-07d: classify failed" test_classify_failed
   run_test "TC-DT-07e: classify unknown (gh failure)" test_classify_unknown
-  run_test "TC-DT-06d: unknown classification continues without restart burn" test_unknown_continues
+  run_test "TC-DT-06d: stuck+unknown continues without restart burn" test_unknown_continues
+  run_test "TC-DT-06e: finished+unknown stops (GH-126 retry-loop fix)" test_decide_finished_unknown_stops
+  run_test "TC-DT-06f: stuck+unknown continues" test_decide_stuck_unknown_continues
+  run_test "TC-DT-06g: finished+failed continues" test_decide_finished_failed_continues
   run_test "TC-DT-08: prompt contains ticket and branch" test_prompt_contains_ticket
   run_test "TC-DT-08b: prompt has PR check instructions" test_prompt_has_pr_check
   run_test "TC-DT-08c: prompt has blocked workflow" test_prompt_has_blocked_workflow
