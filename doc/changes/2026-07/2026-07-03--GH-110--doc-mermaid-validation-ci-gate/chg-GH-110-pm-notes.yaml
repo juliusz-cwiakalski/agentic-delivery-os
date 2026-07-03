@@ -66,6 +66,9 @@ notes:
   - text: "PR #123 OPEN, CI GREEN (all checks success on 31a1143), issue #110 labeled review + assigned to human. STOP per user instruction (no merge — human performs final review + squash-merge). delivery_mode=autonomous dogfooded: feature spec authored in-change (no follow-up ticket)."
     type: info
     date: "2026-07-03"
+  - text: "REVIEW RESPONSE (PR #123 re-review): 2 inline comments addressed. (1) Owner (juliusz-cwiakalski) on .ai/rules/diagrams.md:24 — 'GitHub now renders C4; allow C4 without restrictions.' Authoritative; reverses DEC-7's premise. Removed the C4 keyword guard ENTIRELY → validator is now RENDER-ONLY (the ticket's original intent: render via mmdc, fail on parse/render error); exit codes 0/2/3/4. Removed C4 avoidance from .ai/rules/diagrams.md (C4 now allowed); removed C4 grep from the 3 agent self-checks; dropped C4 TCs (005/006/008/012/RULE-004) from the test suite (now 9 TCs); updated spec (DEC-8 supersedes DEC-7), test-plan, feature spec. (2) Copilot on validate-mermaid.sh:352 — applied `find -- \"${root}\"` for leading-dash PATH robustness. Regen .ados-claude. Re-verified GREEN: test-validate 9/9, test-all 12/12, shellcheck clean, doc-distribution 77 docs no drift. LESSON: DEC-7 was built on a premise ('mmdc renders C4 but GitHub does not') that the human verified is now FALSE — GitHub renders C4. The keyword guard would have BLOCKED valid C4 diagrams. Good that the human caught it at review; the DoR/review gates did NOT catch the stale premise because none of them independently verified GitHub's C4 rendering. Retro: a design premise depending on a third-party renderer's behavior should be flagged as 'verify before enforcing'."
+    type: retro
+    date: "2026-07-03"
   - text: "Intake: GH-110 fresh delivery from origin/main e8a66a12. No prior branch/PR/change-folder. Open PRs #122 (GH-108) and #76 (GH-63) are unrelated tickets — left untouched. Part of epic #107."
     type: info
     date: "2026-07-03"
