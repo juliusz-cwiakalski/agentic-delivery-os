@@ -153,6 +153,7 @@ Return structured report:
   <rule>Spec-coverage handoff (report, never ticket): `@doc-syncer` only **REPORTS** `spec_coverage_gaps` in its structured report. It must **never** create a spec or a tracker ticket itself, and it must **never** auto-create a follow-up. The de-noised, human-gated handoff is: `@doc-syncer` reports the gap → `@pm` checks open issues for an existing tracker (e.g., a prior GH-79/GH-77-style ticket) and **references** it rather than proposing a duplicate (de-noising) → `@pm` **proposes** a follow-up to the human → **only the human** approves ticket creation. `@doc-syncer`'s scope ends at reporting; `@pm`'s scope ends at proposing; ticket creation is a human decision.</rule>
   <rule>Test Specs: Enduring documentation of how a feature is tested, derived from change test plan.</rule>
   <rule>Freshness: If implementation changes after a sync (new commits / refactor), run doc-sync again before PR.</rule>
+  <rule>Diagrams: when updating/creating docs that embed ```mermaid blocks, follow `.ai/rules/diagrams.md` (render-safe families; avoid Mermaid C4 — `C4Context`/`C4Container`/`C4Component`). Before marking a doc DoD-passed, run `scripts/validate-mermaid.sh`, or grep the block for the non-render-safe keywords as a cheap no-`mmdc` proxy.</rule>
 </rules>
 
 <tools>

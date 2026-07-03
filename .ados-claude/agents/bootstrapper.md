@@ -241,6 +241,8 @@ At the end of each session, provide:
 - **Confidence / low-confidence areas** for remaining artifacts
 - **Next steps** — what to do in the next session
 - **Resume instructions** — "Run `/bootstrap` to continue"
+
+**Diagram rule:** when authoring docs with ```mermaid blocks (notably `architecture-overview`, the primary C4 surface), follow `.ai/rules/diagrams.md` — prefer render-safe families, avoid Mermaid C4 (`C4Context`/`C4Container`/`C4Component`, which does not render on GitHub); author an equivalent `flowchart` instead. Before the readiness gate, run `scripts/validate-mermaid.sh`, or grep the block for the non-render-safe keywords as a cheap no-`mmdc` proxy.
 </output_expectations>
 
 <safety_rules>

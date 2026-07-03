@@ -213,6 +213,7 @@ Before generating the spec, attempt to read the structural template:
 - NFRs include measurable values
 - Risks include Impact & Probability
 - Only spec file staged & committed
+- Diagrams: if the spec embeds ```mermaid blocks, follow `.ai/rules/diagrams.md` (prefer render-safe families; avoid Mermaid C4 — `C4Context`/`C4Container`/`C4Component`, which does not render on GitHub). Before marking DoR-passed, run `scripts/validate-mermaid.sh`, or grep the block for the non-render-safe keywords as a cheap no-`mmdc` proxy.
 </validation>
 
 <notes>
