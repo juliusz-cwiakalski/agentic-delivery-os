@@ -1,16 +1,12 @@
 #!/usr/bin/env bash
-# validate-mermaid.sh — mermaid render + render-safe keyword validator (GH-110, DEC-7).
+# validate-mermaid.sh — mermaid render validator (GH-110).
 #
 # Purpose
-#   Extract every ```mermaid fenced block from in-scope .md files and apply the
-#   DEC-7 dual check: a block PASSES iff (a) its mmdc headless render exits 0 AND
-#   (b) it contains NO non-render-safe keyword from the denylist. Either failure
-#   makes the run exit non-zero with a precise message (file + block index + reason).
-#   The keyword guard is a pure grep needing NO mmdc, so it runs even under
-#   --if-present when the render is skipped — a non-render-safe block cannot slip a
-#   tool-less local run.
+#   Extract every ```mermaid fenced block from in-scope .md files and render each
+#   headless via mmdc. Exit non-zero on any parse/render failure with a precise
+#   message (file + block index + first error).
 #
-# Dependencies: bash>=4, mmdc (optional; skippable via --if-present), grep, find, sort
+# Dependencies: bash>=4, mmdc (optional; skippable via --if-present), find, sort
 # Usage: validate-mermaid.sh [--if-present] [--help] [--version] [PATH...]
 #
 # Scan roots (DM-2): when no PATH is given, scans {doc, decisions, changes,
@@ -25,19 +21,14 @@
 #                           (default: mmdc). Set to a shim to mock the render.
 #   MMDC_PUPPETEER_CONFIG - optional path to a puppeteer config JSON passed to
 #                           mmdc via -p (e.g. for CI --no-sandbox). Unset ⇒ no -p.
-#   RENDER_SAFE_DENYLIST  - non-render-safe keyword denylist. Space- or comma-
-#                           separated. Semantics: REPLACE the default (OQ-TP-1).
-#                           Default mirrors .ai/rules/diagrams.md exactly:
-#                           "C4Context C4Container C4Component" (DM-3 single source).
 #   VERBOSE               - set to 'true' for debug output.
 #
 # Exit codes:
-#   0 - success (every block passed the dual render+keyword check; or no blocks)
+#   0 - success (every block rendered; or no blocks)
 #   2 - usage error (bad flag/arg)
 #   3 - missing-mmdc-when-required (mmdc absent, --if-present NOT given, and >=1
-#       block needed rendering). Distinct from 4/5 so "tool missing" is separable.
+#       block needed rendering). Distinct from 4 so "tool missing" is separable.
 #   4 - render failure (>=1 block failed the headless render)
-#   5 - non-render-safe-keyword failure (>=1 block contains a denylist keyword)
 
 set -Eeuo pipefail
 set -o errtrace
@@ -56,7 +47,6 @@ readonly EXIT_SUCCESS=0
 readonly EXIT_USAGE=2
 readonly EXIT_MISSING_MMDC=3
 readonly EXIT_RENDER=4
-readonly EXIT_KEYWORD=5
 
 # Injectable render command (bash.md §10.1) — the SOLE render seam. Mock via env.
 readonly MMDC_CMD="${MMDC_CMD:-mmdc}"
@@ -76,13 +66,10 @@ VERBOSE="${VERBOSE:-false}"
 readonly DEFAULT_SCAN_ROOTS=("doc" "decisions" "changes" "inception" ".ai")
 
 # Mutable globals (populated at runtime)
-DENYLIST=()
 REPO_ROOT="."
-readonly DEFAULT_DENYLIST="C4Context C4Container C4Component"
 
 # Failure aggregation (NFR-1 deterministic; aggregate exit precedence:
-# keyword > render > missing-mmdc > success)
-_keyword_failures=0
+# render > missing-mmdc > success)
 _render_failures=0
 _missing_mmdc_required=0
 _render_skipped=0
@@ -128,17 +115,6 @@ die() {
   exit "${EXIT_USAGE}"
 }
 
-# Build the keyword denylist from RENDER_SAFE_DENYLIST (REPLACE semantics) or the
-# default that mirrors .ai/rules/diagrams.md (DM-3). Accepts space- or comma-
-# separated input. NOTE: a LOCAL IFS is required because the script's global
-# IFS=$'\n\t' would otherwise prevent splitting on spaces.
-build_denylist() {
-  local raw="${RENDER_SAFE_DENYLIST-${DEFAULT_DENYLIST}}"
-  local IFS=' '
-  raw="${raw//,/ }"
-  read -ra DENYLIST <<<"${raw}"
-}
-
 # Determine the repo root (location of .git) for relative path display + default
 # roots. Falls back to the script's parent-of-parent if not in a git worktree.
 resolve_repo_root() {
@@ -154,26 +130,6 @@ resolve_repo_root() {
 # Is the render command available? Works for PATH names and executable file paths.
 _mmdc_available() {
   command -v "${MMDC_CMD}" >/dev/null 2>&1
-}
-
-# ----------------------------------------------------------------------------
-# _keyword_guard <content> — pure grep, no mmdc. Prints the first matching
-# denylist keyword on stdout and returns 0 if found; returns 1 if none match.
-# ----------------------------------------------------------------------------
-_keyword_guard() {
-  local -r content="$1"
-  if [[ ${#DENYLIST[@]} -eq 0 ]]; then
-    return 1
-  fi
-  local kw
-  for kw in "${DENYLIST[@]}"; do
-    [[ -n "${kw}" ]] || continue
-    if grep -qF -- "${kw}" <<<"${content}"; then
-      printf '%s' "${kw}"
-      return 0
-    fi
-  done
-  return 1
 }
 
 # ----------------------------------------------------------------------------
@@ -215,18 +171,8 @@ _display_path() {
   printf '%s' "${rel}"
 }
 
-# Record a failure (keyword or render): logs a human line + a GitHub ::error::
-# annotation, both carrying file + block index + reason (NFR-4, 3/3).
-_record_keyword_failure() {
-  local -r file="$1" idx="$2" kw="$3"
-  local rel
-  rel="$(_display_path "${file}")"
-  _keyword_failures=$((_keyword_failures + 1))
-  log_err "${rel}: mermaid block #${idx} non-render-safe keyword \"${kw}\" — does not render on GitHub (see .ai/rules/diagrams.md)"
-  printf '::error::%s: mermaid block #%d non-render-safe keyword "%s" — does not render on GitHub\n' \
-    "${rel}" "${idx}" "${kw}"
-}
-
+# Record a render failure: logs a human line + a GitHub ::error:: annotation,
+# both carrying file + block index + reason (NFR-4, 3/3).
 _record_render_failure() {
   local -r file="$1" idx="$2" reason="$3"
   local rel
@@ -238,20 +184,14 @@ _record_render_failure() {
 }
 
 # ----------------------------------------------------------------------------
-# validate_block <file> <idx> <content> — DEC-7 dual check on one block.
-# Keyword guard runs unconditionally (cheap grep, no mmdc). Render check runs
-# only when mmdc is available; under --if-present it is skipped (but the keyword
-# guard still ran). Both kinds of failure may be recorded for one block.
+# validate_block <file> <idx> <content> — render check on one block. When mmdc
+# is available, render; non-zero render ⇒ failure. Under --if-present with mmdc
+# absent, skip the render. Without --if-present + mmdc absent + >=1 block, the
+# run is flagged missing-mmdc-when-required.
 # ----------------------------------------------------------------------------
 validate_block() {
   local -r file="$1" idx="$2" content="$3"
   _blocks_checked=$((_blocks_checked + 1))
-
-  local kw
-  kw="$(_keyword_guard "${content}")" || true
-  if [[ -n "${kw}" ]]; then
-    _record_keyword_failure "${file}" "${idx}" "${kw}"
-  fi
 
   if _mmdc_available; then
     local rc=0 first_err
@@ -280,6 +220,7 @@ readonly _RE_FENCE_CLOSE='^[[:space:]]*([`]+)[[:space:]]*$'
 # length so non-mermaid code spans (e.g. an example wrapped in 4-backticks) do
 # not fool the extractor. Block index is 1-based, per-file.
 # ----------------------------------------------------------------------------
+# shellcheck disable=SC2094 # validate_block renders via _WORKDIR temp files; it never writes to ${file}.
 validate_file() {
   local -r file="$1"
   local line in_fence=0 fence_len=0 capturing=0 block_index=0 content=""
@@ -349,7 +290,7 @@ enumerate_md_files() {
         */.ai/local/*) continue ;;
       esac
       all+=("${f}")
-    done < <(find "${root}" -type f -name '*.md' -print0)
+    done < <(find -- "${root}" -type f -name '*.md' -print0)
   done
   if ((${#all[@]} > 0)); then
     printf '%s\n' "${all[@]}" | sort -u
@@ -379,13 +320,14 @@ Usage: ${APP_NAME} [options] [PATH...]
 
 Validate every \`mermaid\` fenced block under the given PATH(s) (default scan
 roots: doc, decisions, changes, inception, .ai — relative to the repo root).
-A block PASSES iff its mmdc headless render exits 0 AND it contains no
-non-render-safe keyword (DEC-7).
+A block PASSES iff its mmdc headless render exits 0; a parse/render failure
+makes the run exit non-zero with a precise message (file + block index + first
+error).
 
 Options:
-  --if-present    Skip the render when mmdc is absent (the keyword guard still
-                  runs — it needs no mmdc). Without this flag, an absent mmdc
-                  with >=1 block exits ${EXIT_MISSING_MMDC} (missing-mmdc).
+  --if-present    Skip the render when mmdc is absent. Without this flag, an
+                  absent mmdc with >=1 block exits ${EXIT_MISSING_MMDC}
+                  (missing-mmdc).
   -h, --help      Show this help message
   -V, --version   Show version
 
@@ -393,8 +335,6 @@ Environment:
   MMDC_CMD              Render command (default: mmdc). Mock via a shim.
   MMDC_PUPPETEER_CONFIG Optional path to a puppeteer config JSON (mmdc -p), e.g.
                         for CI --no-sandbox. Unset ⇒ no -p.
-  RENDER_SAFE_DENYLIST  Keyword denylist, space- or comma-separated. REPLACEs
-                        the default: ${DEFAULT_DENYLIST}
   VERBOSE               Set to 'true' for debug output.
 
 Exit codes:
@@ -402,7 +342,6 @@ Exit codes:
   2  usage error
   3  missing-mmdc-when-required
   4  render failure
-  5  non-render-safe-keyword failure
 EOF
 }
 
@@ -429,7 +368,6 @@ main() {
 
   # bash>=4 capability (uses mapfile-style read -ra, associative-free; still guard).
   resolve_repo_root
-  build_denylist
   _WORKDIR="$(mktemp -d)"
 
   local -a roots
@@ -443,7 +381,7 @@ main() {
     roots=("${ARGS[@]}")
   fi
 
-  log_debug "MMDC_CMD=${MMDC_CMD}; denylist=${DENYLIST[*]:-<empty>}; if_present=${IF_PRESENT}"
+  log_debug "MMDC_CMD=${MMDC_CMD}; if_present=${IF_PRESENT}"
 
   validate_roots "${roots[@]}"
 
@@ -451,14 +389,10 @@ main() {
     log_warn "mmdc ('${MMDC_CMD}') not found and --if-present not given; ${_blocks_checked} block(s) could not be rendered. Install @mermaid-js/mermaid-cli or pass --if-present."
   fi
   if (( _render_skipped == 1 )); then
-    log_info "mmdc not found (--if-present): render skipped; keyword guard still applied to ${_blocks_checked} block(s)."
+    log_info "mmdc not found (--if-present): render skipped for ${_blocks_checked} block(s)."
   fi
 
-  # Aggregate exit precedence: keyword (5) > render (4) > missing-mmdc (3) > 0.
-  if ((_keyword_failures > 0)); then
-    log_err "${_keyword_failures} non-render-safe-keyword failure(s)."
-    exit "${EXIT_KEYWORD}"
-  fi
+  # Aggregate exit precedence: render (4) > missing-mmdc (3) > 0.
   if ((_render_failures > 0)); then
     log_err "${_render_failures} render failure(s)."
     exit "${EXIT_RENDER}"
@@ -467,7 +401,7 @@ main() {
     exit "${EXIT_MISSING_MMDC}"
   fi
 
-  log_info "OK — ${_blocks_checked} mermaid block(s) passed the dual render+keyword check."
+  log_info "OK — ${_blocks_checked} mermaid block(s) rendered."
   exit "${EXIT_SUCCESS}"
 }
 

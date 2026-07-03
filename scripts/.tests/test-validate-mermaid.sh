@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 # test-validate-mermaid.sh — Chromium-free test suite for validate-mermaid.sh (GH-110).
 #
-# Covers TC-MMD-001..012, TC-RULE-004 (drift guard), and TC-BASE-001 (mmdc-gated
+# Covers TC-MMD-001..004, TC-MMD-007, TC-MMD-009..011, and TC-BASE-001 (mmdc-gated
 # green baseline, self-skipping). Every render-dependent case injects a
 # deterministic fake mmdc via the MMDC_CMD env seam — NO real Chromium is ever
-# required by this suite. The keyword guard (a pure grep) is exercised with a
-# guaranteed-absent mmdc so the "guard needs no mmdc" property is proven.
+# required by this suite.
 #
 # Usage: bash scripts/.tests/test-validate-mermaid.sh
 set -Eeuo pipefail
@@ -140,7 +139,6 @@ readonly SCRIPT_DIR
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd -P)"
 readonly REPO_ROOT
 readonly VALIDATOR="${SCRIPT_DIR}/validate-mermaid.sh"
-readonly DIAGRAMS_RULE="${REPO_ROOT}/.ai/rules/diagrams.md"
 
 # Captured run output
 _OUT=""
@@ -149,8 +147,8 @@ _RC=0
 
 # ----------------------------------------------------------------------------
 # run_validator — invoke the validator as a subprocess, inheriting the current
-# env (so exported MMDC_CMD / RENDER_SAFE_DENYLIST propagate). Captures stdout,
-# stderr, and exit code into _OUT / _ERR / _RC.
+# env (so exported MMDC_CMD propagates). Captures stdout, stderr, and exit code
+# into _OUT / _ERR / _RC.
 # ----------------------------------------------------------------------------
 run_validator() {
   local out err
@@ -217,7 +215,7 @@ MMD
   assert_contains "${comb}" "Parse error: unmatched bracket at line 1" "must surface first error"
 }
 
-# TC-MMD-002 — valid render-safe block + success shim ⇒ exit 0.
+# TC-MMD-002 — valid block + success shim ⇒ exit 0.
 test_mmd_002_valid_block_passes() {
   local dir shim hit
   dir="${_test_tmpdir}/fix"
@@ -235,7 +233,7 @@ MMD
   make_success_shim "${shim}" "${hit}"
   export MMDC_CMD="${shim}"
   run_validator "${dir}"
-  assert_exit_code 0 "${_RC}" "valid render-safe block must pass"
+  assert_exit_code 0 "${_RC}" "valid block must pass"
 }
 
 # TC-MMD-003 (behavioral part) — --help / --version exit 0 with expected text.
@@ -268,44 +266,7 @@ MMD
   assert_file_exists "${hit}" "the shim (not a real mmdc) must be invoked"
 }
 
-# TC-MMD-005 — C4 keyword block fails naming the keyword; guard needs no mmdc.
-test_mmd_005_c4_keyword_fails() {
-  local dir
-  dir="${_test_tmpdir}/fix"
-  mkdir -p "${dir}"
-  cat >"${dir}/doc.md" <<'MMD'
-```mermaid
-C4Context
-    title System Context
-    Person(user, "User")
-```
-MMD
-  # Deterministically force mmdc-absent: proves the keyword guard needs no mmdc
-  # AND makes the verdict independent of whether real mmdc is installed.
-  export MMDC_CMD="${_test_tmpdir}/no-such-mmdc"
-  run_validator "${dir}"
-  assert_exit_code 5 "${_RC}" "C4 keyword must fail (non-render-safe exit)"
-  assert_contains "$(combined)" "C4Context" "must name the offending keyword"
-}
-
-# TC-MMD-006 — C4 keyword fails under --if-present even when mmdc is absent.
-test_mmd_006_c4_fails_if_present() {
-  local dir
-  dir="${_test_tmpdir}/fix"
-  mkdir -p "${dir}"
-  cat >"${dir}/doc.md" <<'MMD'
-```mermaid
-C4Container
-    Container(sys, "System")
-```
-MMD
-  export MMDC_CMD="${_test_tmpdir}/no-such-mmdc"
-  run_validator --if-present "${dir}"
-  assert_ne 0 "${_RC}" "C4 block must fail under --if-present (keyword guard runs)"
-  assert_exit_code 5 "${_RC}" "keyword failure exit under --if-present"
-}
-
-# TC-MMD-007 — valid render-safe block passes under --if-present when mmdc absent.
+# TC-MMD-007 — valid block passes under --if-present when mmdc absent.
 test_mmd_007_valid_passes_if_present() {
   local dir
   dir="${_test_tmpdir}/fix"
@@ -320,53 +281,6 @@ MMD
   run_validator --if-present "${dir}"
   assert_exit_code 0 "${_RC}" "valid block must pass under --if-present with mmdc absent"
   assert_contains "$(combined)" "skip" "must emit a skip notice"
-}
-
-# TC-MMD-008 — RENDER_SAFE_DENYLIST override drives the guard (REPLACE semantics).
-test_mmd_008_denylist_override_replace() {
-  local dir shim hit
-  dir="${_test_tmpdir}/fix"
-  mkdir -p "${dir}"
-  shim="${_test_tmpdir}/mmdc-ok"
-  hit="${_test_tmpdir}/hit"
-  make_success_shim "${shim}" "${hit}"
-  export MMDC_CMD="${shim}"
-
-  # Step 1 — override flags a custom keyword.
-  cat >"${dir}/a.md" <<'MMD'
-```mermaid
-graph TD
-    A --> B
-```
-MMD
-  RENDER_SAFE_DENYLIST="graph,sequenceDiagram" run_validator "${dir}"
-  assert_exit_code 5 "${_RC}" "override keyword 'graph' must be flagged"
-  assert_contains "$(combined)" "graph" "must name overridden keyword"
-
-  # Step 2 — default denylist flags a C4 keyword.
-  rm -f "${dir}/a.md"
-  cat >"${dir}/b.md" <<'MMD'
-```mermaid
-C4Component
-    Component(db, "DB")
-```
-MMD
-  unset RENDER_SAFE_DENYLIST
-  run_validator "${dir}"
-  assert_exit_code 5 "${_RC}" "default denylist must flag C4Component"
-  assert_contains "$(combined)" "C4Component" "must name default keyword"
-
-  # Step 3 — override REPLACES default: a C4 keyword is NOT flagged.
-  rm -f "${dir}/b.md"
-  cat >"${dir}/c.md" <<'MMD'
-```mermaid
-C4Context
-    Person(u, "User")
-```
-MMD
-  RENDER_SAFE_DENYLIST="NonExistentThing" run_validator "${dir}"
-  assert_exit_code 0 "${_RC}" "override replaces default; C4Context must NOT be flagged"
-  assert_not_contains "$(combined)" "non-render-safe" "no keyword failure recorded"
 }
 
 # TC-MMD-009 — failure-message completeness 3/3 + multi-block indexing.
@@ -393,26 +307,10 @@ MMD
   assert_contains "${comb}" "block #1"
   assert_contains "${comb}" "Parse error: unmatched bracket at line 1"
 
-  # Keyword-fail message: file + index + keyword.
+  # Multi-block indexing: two blocks, both fail; both indices reported.
   rm -f "${dir}/render.md"
-  cat >"${dir}/kw.md" <<'MMD'
-```mermaid
-C4Container
-    Container(c, "C")
-```
-MMD
-  export MMDC_CMD="${_test_tmpdir}/no-such-mmdc"
-  run_validator "${dir}/kw.md"
-  assert_exit_code 5 "${_RC}"
-  comb="$(combined)"
-  assert_contains "${comb}" "kw.md"
-  assert_contains "${comb}" "block #1"
-  assert_contains "${comb}" "C4Container"
-
-  # Multi-block indexing: only the SECOND block fails (must report #2).
-  rm -f "${dir}/kw.md"
-  shim="${_test_tmpdir}/mmdc-ok2"
-  make_success_shim "${shim}" "${_test_tmpdir}/hit2"
+  shim="${_test_tmpdir}/mmdc-fail2"
+  make_fail_shim "${shim}"
   export MMDC_CMD="${shim}"
   cat >"${dir}/multi.md" <<'MMD'
 # Multi
@@ -425,36 +323,38 @@ flowchart TD
 text
 
 ```mermaid
-C4Context
-    Person(u, "U")
+sequenceDiagram
+    Alice->>Bob: Hi
 ```
 MMD
   run_validator "${dir}/multi.md"
-  assert_exit_code 5 "${_RC}"
+  assert_exit_code 4 "${_RC}"
   comb="$(combined)"
   assert_contains "${comb}" "multi.md"
-  assert_contains "${comb}" "block #2" "second (failing) block must be indexed #2"
-  assert_contains "${comb}" "C4Context"
+  assert_contains "${comb}" "block #1" "first failing block indexed #1"
+  assert_contains "${comb}" "block #2" "second failing block indexed #2"
 }
 
 # TC-MMD-010 — determinism: identical verdict across runs; sorted file order.
 test_mmd_010_determinism() {
-  local dir
+  local dir shim
   dir="${_test_tmpdir}/fix"
   mkdir -p "${dir}"
   cat >"${dir}/z-file.md" <<'MMD'
 ```mermaid
-C4Context
-    Person(u, "U")
+flowchart TD
+    A --> B
 ```
 MMD
   cat >"${dir}/a-file.md" <<'MMD'
 ```mermaid
-C4Container
-    Container(c, "C")
+sequenceDiagram
+    Alice->>Bob: Hi
 ```
 MMD
-  export MMDC_CMD="${_test_tmpdir}/no-such-mmdc"
+  shim="${_test_tmpdir}/mmdc-fail"
+  make_fail_shim "${shim}"
+  export MMDC_CMD="${shim}"
   local r1 r2 r3 c1 c2 c3
   run_validator "${dir}"
   r1="${_RC}"
@@ -469,7 +369,7 @@ MMD
   assert_eq "${r2}" "${r3}" "run 2 == run 3 exit"
   assert_eq "${c1}" "${c2}" "run 1 == run 2 output"
   assert_eq "${c2}" "${c3}" "run 2 == run 3 output"
-  assert_exit_code 5 "${r1}" "both C4 blocks fail"
+  assert_exit_code 4 "${r1}" "render failure deterministic"
   # Sorted enumeration: a-file must appear before z-file in the findings.
   local prefix="${c1%%z-file.md*}"
   assert_contains "${prefix}" "a-file.md" "sorted enumeration: a-file before z-file"
@@ -510,18 +410,6 @@ MMD
   run_validator "${dir}"
   assert_exit_code 4 "${_RC}" "render failure exit"
 
-  # keyword failure -> 5
-  rm -f "${dir}/v.md"
-  cat >"${dir}/v.md" <<'MMD'
-```mermaid
-C4Component
-    Component(x, "X")
-```
-MMD
-  export MMDC_CMD="${_test_tmpdir}/no-such-mmdc"
-  run_validator "${dir}"
-  assert_exit_code 5 "${_RC}" "keyword failure exit"
-
   # success -> 0
   rm -f "${dir}/v.md"
   cat >"${dir}/v.md" <<'MMD'
@@ -536,87 +424,6 @@ MMD
   export MMDC_CMD="${shim}"
   run_validator "${dir}"
   assert_exit_code 0 "${_RC}" "success exit"
-}
-
-# TC-MMD-012 — DEC-7 AND-semantics 2x2 truth table.
-test_mmd_012_and_semantics_truth_table() {
-  local dir ok_shim fail_shim hit
-  dir="${_test_tmpdir}/fix"
-  mkdir -p "${dir}"
-  ok_shim="${_test_tmpdir}/mmdc-ok"
-  fail_shim="${_test_tmpdir}/mmdc-fail"
-  hit="${_test_tmpdir}/hit"
-  make_success_shim "${ok_shim}" "${hit}"
-  make_fail_shim "${fail_shim}"
-
-  local valid_block c4_block
-  valid_block=$'```mermaid\nflowchart TD\n    A --> B\n```'
-  c4_block=$'```mermaid\nC4Context\n    Person(u, "U")\n```'
-
-  # Q1: mmdc-OK + no keyword -> PASS
-  printf '%s\n' "${valid_block}" >"${dir}/q1.md"
-  export MMDC_CMD="${ok_shim}"
-  run_validator "${dir}/q1.md"
-  assert_exit_code 0 "${_RC}" "Q1 mmdc-OK+no-kw must PASS"
-
-  # Q2: mmdc-OK + C4 -> FAIL (the motivating DEC-7 guard)
-  printf '%s\n' "${c4_block}" >"${dir}/q2.md"
-  export MMDC_CMD="${ok_shim}"
-  run_validator "${dir}/q2.md"
-  assert_ne 0 "${_RC}" "Q2 mmdc-OK+C4 must FAIL (mmdc renders it, GitHub does not)"
-  assert_exit_code 5 "${_RC}" "Q2 keyword failure"
-
-  # Q3: mmdc-FAIL + no keyword -> FAIL (render)
-  printf '%s\n' "${valid_block}" >"${dir}/q3.md"
-  export MMDC_CMD="${fail_shim}"
-  run_validator "${dir}/q3.md"
-  assert_exit_code 4 "${_RC}" "Q3 render failure"
-
-  # Q4: mmdc-FAIL + C4 -> FAIL (both reasons; at least one surfaced)
-  printf '%s\n' "${c4_block}" >"${dir}/q4.md"
-  export MMDC_CMD="${fail_shim}"
-  run_validator "${dir}/q4.md"
-  assert_ne 0 "${_RC}" "Q4 both-fail must FAIL"
-  assert_contains "$(combined)" "C4Context" "Q4 surfaces at least one reason (keyword)"
-}
-
-# ============================================================================
-# TESTS — TC-RULE-004 (drift guard: script default denylist == diagrams.md)
-# ============================================================================
-
-# TC-RULE-004 — the script's default denylist mirrors .ai/rules/diagrams.md.
-test_rule_004_default_denylist_drift_guard() {
-  local src rule
-  src="$(<"${VALIDATOR}")"
-  rule="$(<"${DIAGRAMS_RULE}")"
-
-  # Source-level parity: each C4 keyword present in BOTH the script default and
-  # the rule file (single source of truth, DM-3 / DEC-7).
-  local kw
-  for kw in C4Context C4Container C4Component; do
-    assert_contains "${src}" "${kw}" "script default must name ${kw}"
-    assert_contains "${rule}" "${kw}" "diagrams.md must name ${kw}"
-  done
-
-  # Behavioral parity: each default keyword is flagged with no override and a
-  # guaranteed-absent mmdc (keyword guard path).
-  local dir
-  dir="${_test_tmpdir}/fix"
-  mkdir -p "${dir}"
-  export MMDC_CMD="${_test_tmpdir}/no-such-mmdc"
-  unset RENDER_SAFE_DENYLIST
-  for kw in C4Context C4Container C4Component; do
-    rm -f "${dir}/k.md"
-    {
-      printf '```mermaid\n'
-      printf '%s\n' "${kw}"
-      printf '    Person(u, "U")\n'
-      printf '```\n'
-    } >"${dir}/k.md"
-    run_validator "${dir}/k.md"
-    assert_exit_code 5 "${_RC}" "${kw} must be flagged by the default denylist"
-    assert_contains "$(combined)" "${kw}" "must name ${kw}"
-  done
 }
 
 # ============================================================================
@@ -640,18 +447,13 @@ test_base_001_green_baseline() {
 main() {
   printf '%s Running tests...\n' "${TEST_TAG}"
   run_test "TC-MMD-001 broken block fails (file+index+error)" test_mmd_001_broken_block_fails
-  run_test "TC-MMD-002 valid render-safe block passes" test_mmd_002_valid_block_passes
+  run_test "TC-MMD-002 valid block passes" test_mmd_002_valid_block_passes
   run_test "TC-MMD-003 --help/--version behavior" test_mmd_003_help_version
   run_test "TC-MMD-004 MMDC_CMD injection (no Chromium)" test_mmd_004_mmdc_injection
-  run_test "TC-MMD-005 C4 keyword fails naming keyword" test_mmd_005_c4_keyword_fails
-  run_test "TC-MMD-006 C4 fails under --if-present (mmdc absent)" test_mmd_006_c4_fails_if_present
   run_test "TC-MMD-007 valid passes under --if-present (mmdc absent)" test_mmd_007_valid_passes_if_present
-  run_test "TC-MMD-008 RENDER_SAFE_DENYLIST override (replace)" test_mmd_008_denylist_override_replace
   run_test "TC-MMD-009 message completeness + multi-block indexing" test_mmd_009_message_completeness_multiblock
   run_test "TC-MMD-010 determinism (sorted, identical verdict)" test_mmd_010_determinism
   run_test "TC-MMD-011 exit codes reachable & distinct" test_mmd_011_exit_codes_distinct
-  run_test "TC-MMD-012 DEC-7 AND-semantics 2x2 truth table" test_mmd_012_and_semantics_truth_table
-  run_test "TC-RULE-004 default denylist mirrors diagrams.md" test_rule_004_default_denylist_drift_guard
   run_test "TC-BASE-001 green baseline (mmdc-gated)" test_base_001_green_baseline
   print_summary
 }
