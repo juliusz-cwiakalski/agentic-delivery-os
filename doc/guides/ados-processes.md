@@ -102,6 +102,20 @@ Each card captures what the process solves, who it is for, its primary output, a
 - **Primary output:** An updated, reconciled current system spec under `doc/spec/**`.
 - **Guide:** embedded as **phase 7 (`system_spec_update`)** of [change-lifecycle.md](change-lifecycle.md). There is intentionally no standalone guide — it is a supporting phase, not a separate process.
 
+## Delivery modes
+
+Change Delivery can run in three modes, from fully interactive to fully unattended:
+
+| Mode | How to start | Human involvement | Best for |
+|---|---|---|---|
+| **Manual** | Run each command (`/write-spec`, `/run-plan`, `/review`, ...) | Every step | Learning, debugging, tight control |
+| **Autopilot** | `@pm deliver change GH-456` | Decisions and review only | Interactive single-ticket delivery |
+| **Autonomous batch** | `scripts/batch-deliver.sh GH-108 GH-110 GH-37` | Review PRs, approve, answer blocking questions | Overnight, multi-ticket, unattended |
+
+Autonomous batch delivery wraps the 11-phase lifecycle with liveness monitoring (kill-and-restart on staleness), session resilience (resume by title), branch hygiene, and a push-to-completion PM prompt that can address review comments and merge on approval.
+
+**Guide:** [autonomous-batch-delivery.md](autonomous-batch-delivery.md)
+
 ## Cross-process relationships
 
 - **Two entry points, one steady state.** Project Inception (greenfield) and Project Onboarding (brownfield) are **alternative setup paths** — you pick one based on whether the project is new or existing. Both feed into the same **Change Delivery** loop, which is the day-to-day steady state. Inception produces a richer knowledge base; onboarding installs a lighter minimum-viable set.
