@@ -18,10 +18,10 @@ phases:
   dor_check: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z" }
   delivery: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z" }
   system_spec_update: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z" }
-  review_fix: { started: "2026-07-03T00:00:00Z", completed: null }
-  quality_gates: { started: null, completed: null }
-  dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null, url: null }
+  review_fix: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z" }
+  quality_gates: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z" }
+  dod_check: { started: "2026-07-03T00:00:00Z", completed: "2026-07-03T00:00:00Z" }
+  pr_creation: { started: "2026-07-03T00:00:00Z", completed: null, url: null }
 
 decisions:
   - text: "delivery_mode=autonomous set at intake (GH-108 mode-aware spec-coverage resolution dogfooded); phase-7 will author/reconcile feature specs in-change."
@@ -56,6 +56,9 @@ notes:
     date: "2026-07-03"
   - text: "RETRO (env): in this runtime the @runner subagent executes commands but does NOT return stdout in its result (must read output via absolute-path files), and NESTED subagent chains are unsupported (a subagent I invoke cannot itself invoke another subagent — confirmed by GH-72 retro). Consequence: @coder authored files only (no shell); PM ran all verification via @runner (file-handoff); and commits could NOT go through @committer (no shell / nested) — PM used @runner with explicit-path staging + PM-crafted Conventional Commit messages to honor the @committer policy's INTENT (format + safe staging). Process improvement: the delivery workflow assumes a runtime that supports nested subagents + stdout capture; this runtime doesn't, so PM became the shell/commit executor. Also: 2 delivery bugs found by running the tests (TMPDIR teardown bug in the test harness following bash.md's latent skeleton; workflow-header comment tripped the forbidden-token grep) — caught at verification, fixed via @coder, re-verified green. Lesson: bash.md's §11 framework skeleton exports TMPDIR without restoring it in teardown (latent cross-test breakage) — worth a rule fix."
     type: retro
+    date: "2026-07-03"
+  - text: "DoD CHECK (phase 10) — PASS. (1) All 11 phases recorded with completion timestamps. (2) All plan tasks ticked [x] (Phase 0-6). (3) All 10 runtime ACs satisfied — @reviewer confirmed AC-F1-1..F4-1 satisfied + AC#5 (CEO-gate flag) as review flag. (4) DEC-7 dual-check AND-semantics verified CORRECT by @reviewer (TC-MMD-012 quadrant 2 = motivating-incident regression guard). (5) Spec-coverage gap resolved IN-CHANGE (autonomous): feature-doc-mermaid-validation.md authored. (6) Quality gates all green: test-all 10/10, plugin freshness no-drift, doc-distribution 76 docs no drift, negative-modes 5/5, ci.yml unchanged, inception consistency OK. (7) Review advisory fixes applied (-- handler bug, mmdc major pin, denylist unset-vs-empty). Ready for PR."
+    type: info
     date: "2026-07-03"
   - text: "Intake: GH-110 fresh delivery from origin/main e8a66a12. No prior branch/PR/change-folder. Open PRs #122 (GH-108) and #76 (GH-63) are unrelated tickets — left untouched. Part of epic #107."
     type: info
