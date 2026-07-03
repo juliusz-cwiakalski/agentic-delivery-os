@@ -55,8 +55,10 @@ build_baseline() {
   mkmd "${root}/doc/decisions/README.md"       redistributable
   mkmd "${root}/doc/decisions/00-index.md"     redistributable
   mkmd "${root}/.ai/rules/README.md"           redistributable
+  mkmd "${root}/.ai/rules/bulk-edit-verify.md" redistributable
   cat <<'EOF'
 .ai/rules/README.md
+.ai/rules/bulk-edit-verify.md
 doc/00-index.md
 doc/decisions/00-index.md
 doc/decisions/README.md
