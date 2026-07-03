@@ -438,6 +438,192 @@ test_prompt_creates_approved_label() {
   assert_contains "${prompt}" "solo-developer-friendly" "Prompt should describe label purpose"
 }
 
+# TC-DT-08h: prompt merges main into the feature branch before resuming work
+test_prompt_merge_main_on_resume() {
+  local prompt
+  prompt="$(build_delivery_prompt "GH-112" "feat/test-branch")"
+
+  assert_contains "${prompt}" "git fetch origin main" "Prompt should fetch main before resuming"
+  assert_contains "${prompt}" "git merge origin/main" "Prompt should merge main into the feature branch"
+}
+
+# TC-DT-08i: prompt has a Resume Sync section
+test_prompt_has_resume_sync_section() {
+  local prompt
+  prompt="$(build_delivery_prompt "GH-112" "")"
+
+  assert_contains "${prompt}" "Resume Sync" "Prompt should have a Resume Sync section"
+  assert_contains "${prompt}" "breaking changes" "Resume Sync should reference catching breaking changes"
+  assert_contains "${prompt}" "merge conflicts" "Resume Sync should mention merge conflict handling"
+}
+
+# TC-DT-08j: prompt fetches review comments every resume in the open PR section
+test_prompt_fetches_review_comments() {
+  local prompt
+  prompt="$(build_delivery_prompt "GH-112" "feat/test-branch")"
+
+  assert_contains "${prompt}" "Fetch all review comments" "Open PR section should fetch all review comments"
+  assert_contains "${prompt}" "regardless of reviewDecision" "Should address comments regardless of reviewDecision"
+}
+
+# ============================================================================
+# TESTS: Liveness mechanism components (m-6)
+# ============================================================================
+
+# TC-DT-CMP-01: kill_process_tree terminates a backgrounded process group.
+# Verifies the kill mechanism the liveness loop relies on to stop a stale PM.
+test_kill_process_tree_kills_process() {
+  _setsid sleep 999 >/dev/null 2>&1 &
+  local pid=$!
+  kill -0 "${pid}" 2>/dev/null || { wait "${pid}" 2>/dev/null || true; return 1; }
+
+  kill_process_tree "${pid}"
+
+  sleep 1
+  if kill -0 "${pid}" 2>/dev/null; then
+    kill -KILL "${pid}" 2>/dev/null || true
+    wait "${pid}" 2>/dev/null || true
+    return 1
+  fi
+  wait "${pid}" 2>/dev/null || true
+  return 0
+}
+
+# TC-DT-CMP-02: resolve_session finds an existing session by title (no mapping).
+# Verifies the title-based resume lookup used after a kill-and-restart.
+test_resolve_session_title_lookup() {
+  local test_dir="${_test_tmpdir}/sessions"
+  mkdir -p "${test_dir}"
+  SESSION_DIR="${test_dir}"
+
+  # No mapping file present → falls through to title-based lookup.
+  _opencode() {
+    printf '%s' '[{"id":"ses_abc","title":"ticket-TEST-001","time":"2026-01-01T00:00:00Z"},{"id":"ses_other","title":"ticket-OTHER","time":"2026-01-01T00:00:00Z"}]'
+  }
+
+  local result
+  result="$(resolve_session "TEST-001")"
+
+  assert_eq "ses_abc" "${result}" "Should resolve session by title"
+}
+
+# TC-DT-CMP-03: _cleanup_child (EXIT trap) kills a tracked opencode PID.
+# Verifies orphan cleanup when the parent deliver-ticket process is killed.
+test_cleanup_child_kills_tracked_pid() {
+  _setsid sleep 999 >/dev/null 2>&1 &
+  local pid=$!
+  kill -0 "${pid}" 2>/dev/null || { wait "${pid}" 2>/dev/null || true; return 1; }
+
+  CURRENT_OPENCODE_PID="${pid}"
+  _cleanup_child
+
+  sleep 1
+  if kill -0 "${pid}" 2>/dev/null; then
+    kill -KILL "${pid}" 2>/dev/null || true
+    wait "${pid}" 2>/dev/null || true
+    CURRENT_OPENCODE_PID=""
+    return 1
+  fi
+  wait "${pid}" 2>/dev/null || true
+  assert_eq "" "${CURRENT_OPENCODE_PID}" "_cleanup_child should clear CURRENT_OPENCODE_PID"
+  return 0
+}
+
+# ============================================================================
+# TESTS: Integration — full kill/restart liveness cycle (m-6)
+# ============================================================================
+# TC-DT-INT-01: end-to-end kill-and-restart using fake opencode/gh stubs.
+# Takes ~65-75s (1 stuck minute + poll + restart). Skipped unless
+# RUN_SLOW_TESTS=true so the default suite and CI stay fast.
+test_integration_kill_restart_cycle() {
+  if [[ "${RUN_SLOW_TESTS:-}" != "true" ]]; then
+    printf '  [SKIP] TC-DT-INT-01 (set RUN_SLOW_TESTS=true to run)\n'
+    return 0
+  fi
+
+  local bin_dir="${_test_tmpdir}/bin"
+  local marker_dir="${_test_tmpdir}/markers"
+  mkdir -p "${bin_dir}" "${marker_dir}"
+  local run_count_file="${marker_dir}/run_count"
+  local session_json='[{"id":"ses_fake_int_001","title":"ticket-TEST-001","time":"2026-01-01T00:00:00Z"}]'
+
+  # Fake opencode: distinguish `session list` from `run`; `run` writes a marker
+  # and sleeps long enough to be killed by the stuck detector.
+  cat >"${bin_dir}/opencode" <<OPENCODE
+#!/usr/bin/env bash
+if [[ "\$1" == "session" && "\$2" == "list" ]]; then
+  printf '%s' '${session_json}'
+  exit 0
+fi
+# opencode run ... — record an invocation, then block to be killed.
+n=0
+[[ -f "${run_count_file}" ]] && n=\$(<"${run_count_file}")
+n=\$((n+1))
+printf '%s' "\$n" >"${run_count_file}"
+: >"${marker_dir}/ran.\${n}"
+sleep "\${FAKE_OPENCODE_SLEEP_SECONDS:-300}"
+exit 0
+OPENCODE
+  chmod +x "${bin_dir}/opencode"
+
+  # Fake gh: open issue, no PR → classify as "failed" so the loop restarts.
+  cat >"${bin_dir}/gh" <<GH
+#!/usr/bin/env bash
+case "\$1" in
+  issue) printf '%s' '{"state":"OPEN","labelNames":[]}' ;;
+  pr)
+    if printf '%s ' "\$@" | grep -q -- '--state open'; then
+      printf '%s' '[]'
+    else
+      printf '%s' '[]'
+    fi
+    ;;
+  *) printf '%s' '[]' ;;
+esac
+GH
+  chmod +x "${bin_dir}/gh"
+
+  local saved_path="${PATH}"
+  local deliver_pid=""
+  local mapping_file="${SESSION_DIR}/TEST-001.json"
+  _cleanup_integration() {
+    [[ -n "${deliver_pid:-}" ]] && kill -TERM "${deliver_pid}" 2>/dev/null || true
+    # Reap any lingering fake-opencode sleeps created in new sessions.
+    pkill -KILL -f "sleep \${FAKE_OPENCODE_SLEEP_SECONDS:-300}" 2>/dev/null || true
+    rm -f "${mapping_file}"
+    PATH="${saved_path}"
+  }
+
+  PATH="${bin_dir}:${PATH}"
+  export PATH
+  export DELIVER_STUCK_MINUTES=1 DELIVER_POLL_SECONDS=2 DELIVER_MAX_RESTARTS=2 FAKE_OPENCODE_SLEEP_SECONDS=300
+
+  # Launch deliver-ticket.sh in the background.
+  bash "${SCRIPT_DIR}/deliver-ticket.sh" "TEST-001:feat/test-int" >/dev/null 2>&1 &
+  deliver_pid=$!
+
+  local deadline=$(( $(date +%s) + 150 ))
+  local restarted=0
+  while (( $(date +%s) < deadline )); do
+    if [[ -f "${run_count_file}" && "$(<"${run_count_file}")" -ge 2 ]]; then
+      restarted=1
+      break
+    fi
+    if ! kill -0 "${deliver_pid}" 2>/dev/null; then
+      break
+    fi
+    sleep 2
+  done
+
+  _cleanup_integration
+
+  # At least one fake opencode invocation must have occurred.
+  assert_eq "1" "$( compgen -G "${marker_dir}/ran.*" >/dev/null 2>&1 && echo 1 || echo 0 )" "fake opencode should have run (marker exists)"
+  # A restart is evidenced by run_count >= 2.
+  assert_eq "1" "${restarted}" "deliver-ticket should have killed + restarted (run_count >= 2)"
+  return 0
+}
+
 # ============================================================================
 # RUN TESTS
 # ============================================================================
@@ -472,6 +658,13 @@ main() {
   run_test "TC-DT-08f: LGTM opt-in (not in default prompt)" test_prompt_lgtm_opt_in
   run_test "TC-DT-08f-opt: LGTM enabled (author-restricted)" test_prompt_lgtm_enabled
   run_test "TC-DT-08g: prompt auto-creates approved label" test_prompt_creates_approved_label
+  run_test "TC-DT-08h: prompt merges main on resume" test_prompt_merge_main_on_resume
+  run_test "TC-DT-08i: prompt has Resume Sync section" test_prompt_has_resume_sync_section
+  run_test "TC-DT-08j: prompt fetches review comments on resume" test_prompt_fetches_review_comments
+  run_test "TC-DT-CMP-01: kill_process_tree terminates process" test_kill_process_tree_kills_process
+  run_test "TC-DT-CMP-02: resolve_session title lookup" test_resolve_session_title_lookup
+  run_test "TC-DT-CMP-03: _cleanup_child kills tracked PID" test_cleanup_child_kills_tracked_pid
+  run_test "TC-DT-INT-01: integration kill/restart cycle (slow)" test_integration_kill_restart_cycle
 
   printf '\n%s Summary: %d/%d passed' "${TEST_TAG}" "${_test_passed}" "${_test_count}"
   if [[ "${_test_failed}" -gt 0 ]]; then

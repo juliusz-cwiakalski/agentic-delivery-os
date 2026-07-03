@@ -132,6 +132,8 @@ Every 60 seconds, the script computes an **activity epoch** — the most recent 
 
 If the activity epoch increases, the 30-minute stuck timer resets. If it doesn't increase for 30 minutes, the session is killed and restarted.
 
+> **Activity detection assumption**: A healthy PM iteration advances a git commit or writes a `doc/changes/` artifact within 30 minutes. Files under `.ai/local/` (PM context, session mappings) are deliberately excluded to avoid false positives from trivial state updates. If a PM "thinking" phase only journals to `.ai/local/` for >30 min without committing or writing artifacts, the session will be killed and restarted. Tune `DELIVER_STUCK_MINUTES` if your workflow has longer legitimate thinking phases.
+
 ### Session resume by title
 
 When the liveness loop kills a stale session and restarts, it does **not** create a new opencode session. Instead:
