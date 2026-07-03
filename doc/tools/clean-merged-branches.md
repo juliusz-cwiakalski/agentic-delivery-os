@@ -27,6 +27,27 @@ ados_distribution: redistributable
 
 ## Installation
 
+### Standalone installer (recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/scripts/install-clean-merged-branches.sh | bash
+```
+
+Or with wget:
+
+```bash
+wget -qO- https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/scripts/install-clean-merged-branches.sh | bash
+```
+
+This installs to `~/.local/bin/clean-merged-branches`, makes it executable, verifies it with `--version`, and shows PATH setup instructions if `~/.local/bin` is not in your PATH.
+
+Override the install directory with `CLEAN_MERGED_BRANCHES_INSTALL_DIR`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/scripts/install-clean-merged-branches.sh \
+  | CLEAN_MERGED_BRANCHES_INSTALL_DIR=/usr/local/bin bash
+```
+
 ### From the ADOS repo
 
 ```bash
@@ -34,7 +55,7 @@ ados_distribution: redistributable
 chmod +x tools/clean-merged-branches
 ```
 
-### As a standalone tool
+### Manual standalone install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/tools/clean-merged-branches \

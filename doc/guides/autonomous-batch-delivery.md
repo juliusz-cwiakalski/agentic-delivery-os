@@ -14,6 +14,29 @@ summary: "Deliver multiple tickets unattended with liveness monitoring, session 
 
 Autonomous batch delivery lets you deliver multiple tickets **unattended** — overnight, over the weekend, or while you focus on other work. Three scripts work together to wrap the standard ADOS 11-phase lifecycle with a liveness watchdog, session resilience, and a push-to-completion PM prompt.
 
+## Installation
+
+These scripts ship with ADOS. Running `install.sh --local` in a project installs them into `./scripts/` and `./tools/`:
+
+```bash
+# After installing ADOS artifacts into your project
+scripts/install.sh --local
+
+# The delivery scripts are now available:
+#   scripts/opencode-session.sh   — ticket-scoped session manager
+#   scripts/deliver-ticket.sh     — single-ticket liveness-monitored delivery
+#   scripts/batch-deliver.sh      — sequential batch delivery
+#   tools/clean-merged-branches   — squash-merge-safe branch cleanup
+```
+
+If you only want the branch cleanup tool (without the full ADOS delivery scripts), use the standalone installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main/scripts/install-clean-merged-branches.sh | bash
+```
+
+See the [clean-merged-branches docs](../tools/clean-merged-branches.md) for details.
+
 ## When to use this
 
 | Scenario | Use |
