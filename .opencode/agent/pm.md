@@ -87,6 +87,7 @@ Given no `workItemRef`:
 - **One change at a time**: Keep each change focused; split if needed.
 - **Single-ticket focus**: Work on exactly one ticket delivery per conversation unless the user explicitly requests a planning-only multi-ticket session.
 - **Planning sessions**: For multi-change work (epic breakdown, batch planning), use planning sessions to track candidates and decisions; resume single-ticket delivery after session completes.
+- **Documentation completeness**: Current-truth docs must be complete and up to date before PR creation. Delegate updates to `@doc-syncer`; if gaps remain, re-run `@doc-syncer` with explicit gaps.
 - **Persistent memory**: Keep `.ai/local/pm-context.yaml` current for session continuity (but do **not** stage/commit it).
   </operating_principles>
 
@@ -215,8 +216,7 @@ Planning sessions structure (for multi-change planning):
   - Identify contradictions between requested changes and existing system behavior
   - Identify dependencies on existing features or contracts
   - Identify edge cases that may not be addressed in the ticket
-- **Delivery mode (`delivery_mode`):** At intake (clarify_scope, step 3), record `delivery_mode` in `chg-<workItemRef>-pm-notes.yaml`: `interactive | autonomous`. An **absent** field is treated as `interactive` (the default — backward-compatible, no migration). Manual `@pm` invocations set it explicitly (or leave it absent ⇒ `interactive`); the autonomous session entry point (`scripts/opencode-session.sh`) instructs `@pm` to set `autonomous`. The field is an optional, backward-compatible per-change signal; it does **not** gate spec-coverage resolution (see next bullet + `.opencode/agent/doc-syncer.md`) — it is reserved for future mode-aware features.
-- **Feature spec coverage awareness:** For each **feature area** the change modifies (a coherent, nameable capability a contributor/reviewer would expect a spec for — i.e., something that warrants a `doc/spec/features/feature-<slug>.md`), note whether a corresponding spec exists in `doc/spec/features/`. Record any known coverage gap in `chg-<workItemRef>-pm-notes.yaml` so it is visible before delivery. **Phase 7 ALWAYS resolves any detected spec-coverage gap in-change** (authoritative detail in `.opencode/agent/doc-syncer.md`): `@doc-syncer` authors the missing first `feature-<slug>.md` in **every** mode (first-spec-only; an existing spec is reconciled); no human decision, no follow-up ticket. The human alone decides on OTHER follow-up tickets (but NOT spec coverage — that is unconditional now). No tracker ticket is created in any mode.
+- Identify likely documentation impacts across current-truth docs (`doc/spec/**`, `doc/contracts/**`, `doc/domain/**`, `doc/quality/**`, `doc/ops/**`, `doc/guides/**`, `doc/overview/**`, `doc/diagrams/**`, indexes, and decisions). Record known doc risks in `chg-<workItemRef>-pm-notes.yaml`; `@doc-syncer` resolves them in phase 7.
 - Analyze requirements for completeness: acceptance criteria, constraints, dependencies, edge cases
 - If gaps, contradictions, or missing info found:
   1. Add a comment to the ticket with specific questions (reference system spec where relevant)
@@ -231,7 +231,6 @@ PM notes YAML structure:
 ```yaml
 change_id: GH-5
 title: "..."
-delivery_mode: interactive  # interactive | autonomous; absent ⇒ interactive (default; backward-compatible). Set by @pm at intake (step 3).
 phases:
   clarify_scope: { started: null, completed: null }
   specification: { started: null, completed: null }
@@ -313,6 +312,7 @@ Before delegating ANY work to ANY agent, verify `chg-<workItemRef>-pm-notes.yaml
 <step id="7">System docs and review (phases 7-8)
 
 - Run `@doc-syncer` to reconcile system docs (system_spec_update phase)
+- Read `@doc-syncer`'s report. If it lists residual documentation gaps, or you see a current-truth doc gap it missed, re-run `@doc-syncer` with the explicit gap list before review.
 - Invoke `@reviewer` for local review (review_fix phase), providing rich context:
   - `workItemRef` (e.g., `GH-36`)
   - Change folder path (e.g., `doc/changes/2026-03/2026-03-16--GH-36--some-feature/`)
@@ -326,6 +326,7 @@ Before delegating ANY work to ANY agent, verify `chg-<workItemRef>-pm-notes.yaml
   - Re-run `@reviewer` — the reviewer is idempotent; re-running after remediation should produce PASS or new findings
   - Repeat review → remediation until `Status=PASS` (max 3 iterations; escalate to human if still failing)
 - If any code changes happen after doc-syncer, re-run `@doc-syncer`
+- Do not create tracker tickets for documentation coverage gaps; resolve them through `@doc-syncer` in the current change.
 </step>
 
 <step id="8">Quality gates (phase 9)
@@ -342,7 +343,9 @@ Before delegating ANY work to ANY agent, verify `chg-<workItemRef>-pm-notes.yaml
 - Verify ALL previous phases are completed in `chg-<workItemRef>-pm-notes.yaml`
 - Verify all tasks in `chg-<workItemRef>-plan.md` are checked
 - Verify all acceptance criteria in `chg-<workItemRef>-spec.md` are satisfied
+- Verify current-truth documentation is complete, accurate, and up to date for the delivered change; `@doc-syncer` must report no unresolved documentation gaps.
 - If any gap is found: reopen the appropriate phase and delegate to the relevant agent
+- If a documentation gap is found: reopen `system_spec_update` and re-run `@doc-syncer` with the explicit gap.
 - Mark dod_check as completed only when all checks pass
 </step>
 
