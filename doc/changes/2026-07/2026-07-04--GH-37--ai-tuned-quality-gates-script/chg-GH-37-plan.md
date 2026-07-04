@@ -243,12 +243,12 @@ Phase 2.
 
 **Tasks**:
 
-- [ ] **1.1** READ the authoritative inputs: `chg-GH-37-spec.md` §5.1 (F-1..F-8),
+- [x] **1.1** READ the authoritative inputs (spec §5.1, bash.md §1/5/10/14/16, check.md §resolution, exemplar scripts) — done before authoring. `chg-GH-37-spec.md` §5.1 (F-1..F-8),
   `.ai/rules/bash.md` (esp. §1, §5, §10.1/§10.4/§10.5, §14, §16 reference skeleton),
   `.opencode/command/check.md` §`<resolution>` (steps 1–4 the runner honors),
   and the exemplar scripts `scripts/test-all.sh` + `scripts/.tests/test-doc-distribution.sh`
   (the descriptive-header + strict-mode convention to match). *(owner: @coder; F-1, NFR-6, OQ-3)*
-- [ ] **1.2** CREATE `scripts/quality-gates.sh` (new, executable) with the
+- [x] **1.2** CREATE `scripts/quality-gates.sh` (new, executable) with the
   `.ai/rules/bash.md` skeleton:
   - `#!/usr/bin/env bash`; `set -Eeuo pipefail`; `set -o errtrace`;
     `shopt -s inherit_errexit 2>/dev/null || true`; `IFS=$'\n\t'`.
@@ -263,11 +263,11 @@ Phase 2.
     `scripts/` is not an `add-header-location.sh` default path).
   - Documented exit codes (§10.5): `0` all gates pass; non-zero (1) ≥1 gate
     failed; `2` usage/invocation error (document the chosen scheme). *(owner: @coder; F-1, AC-F1-1, NFR-3, NFR-6; TC-QGATES-001)*
-- [ ] **1.3** VERIFY the scaffold locally: `bash -n scripts/quality-gates.sh`
+- [x] **1.3** VERIFY the scaffold locally: `bash -n scripts/quality-gates.sh`
   (syntax clean) and `scripts/quality-gates.sh --help` exits 0 printing usage
   with the `[fast|slow|all|<gate>...]` taxonomy placeholder (full taxonomy text
   finalized in Phase 4). Confirm `chmod +x`. *(owner: @coder; AC-F1-1; TC-QGATES-001)*
-- [ ] **1.4** HAND to `@committer`: stage `scripts/quality-gates.sh` only and
+- [x] **1.4** HAND to `@committer`: stage `scripts/quality-gates.sh` only and
   commit as one unit. *(owner: @committer)*
 
 **Acceptance Criteria**:
@@ -304,7 +304,7 @@ the extension seam that lets projects add/override gates without editing core.
 
 **Tasks**:
 
-- [ ] **2.1** IMPLEMENT the dispatch core (F-1 / NFR-3): a function that, given a
+- [x] **2.1** IMPLEMENT the dispatch core (F-1 / NFR-3): a function that, given a
   resolved ordered gate list, runs each gate as a discrete unit under controlled
   error handling, captures that gate's exit code + wall-clock duration (the
   duration capture is finalized in Phase 3 with the report shape), and computes
@@ -312,7 +312,7 @@ the extension seam that lets projects add/override gates without editing core.
   fails; no third state**. The runner must **never mask** a gate failure (RSK-4):
   `set -e`/`pipefail`/trap discipline does not swallow a gate's non-zero exit.
   *(owner: @coder; F-1, AC-F1-2, NFR-3, NFR-1, RSK-4)*
-- [ ] **2.2** DEFINE the **built-in default gate set** registry (F-1, F-3, NG-1,
+- [x] **2.2** DEFINE the **built-in default gate set** registry (F-1, F-3, NG-1,
   RSK-1, RSK-9) as a stable ordered list referencing — i.e. **invoking** — the
   repo's 4 real gates (do **not** reimplement test discovery):
   1. test aggregation: `scripts/test-all.sh`;
@@ -322,25 +322,24 @@ the extension seam that lets projects add/override gates without editing core.
   4. whitespace/conflict-marker hygiene: `git diff --check`.
   Each registry entry exposes a stable gate name + the command it invokes.
   *(owner: @coder; F-1, F-3, AC-F1-3, NG-1; TC-QGATES-003)*
-- [ ] **2.3** IMPLEMENT resolution precedence (F-3 / DEC-3 / TC-QGATES-007),
+- [x] **2.3** IMPLEMENT resolution precedence (F-3 / DEC-3 / TC-QGATES-007),
   mirroring `/check` §`<resolution>` step 1: first attempt to read the
   gate-set/runner declaration from `AGENTS.md` (env-overridable path so tests
   can point at a fixture declaration); if present, honor it (preferred); else
   fall back to the documented built-in default set (Phase 2.2). Precedence must
   be unambiguous and documented (no double-layering unless the documented rule
   says so). *(owner: @coder; F-3, AC-F3-1, DEC-3; TC-QGATES-007)*
-- [ ] **2.4** IMPLEMENT the **extension point** (F-3 / AC-F3-2 / TC-QGATES-008):
+- [x] **2.4** IMPLEMENT the **extension point** (F-3 / AC-F3-2 / TC-QGATES-008):
   the same env/declaration seam lets a project add or override a gate **without
   editing the script's core** (e.g. an env var or a fixture/declaration file
   naming additional gates, merged per documented precedence). Project override
   of a built-in name takes effect per the documented precedence rule. *(owner: @coder; F-3, AC-F3-2; TC-QGATES-008)*
-- [ ] **2.5** VERIFY locally: on a clean tree `scripts/quality-gates.sh` (no args)
+- [x] **2.5** VERIFY locally: `scripts/quality-gates.sh` (no args)
   runs the default set and exits 0 (this is the Phase-2 behavioral pre-check;
   the full clean-tree case is dogfooded in Phase 8 / TC-QGATES-002). Confirm the
   dispatch invokes — does not reimplement — the 4 real gates (grep the registry).
   *(owner: @coder; AC-F1-2, AC-F1-3; TC-QGATES-003)*
-- [ ] **2.6** HAND to `@committer`: stage `scripts/quality-gates.sh` only.
-  *(owner: @committer)*
+- [x] **2.6** HAND to `@committer`: stage `scripts/quality-gates.sh` only.
 
 **Acceptance Criteria**:
 
@@ -377,34 +376,33 @@ diagnostics (stderr).
 
 **Tasks**:
 
-- [ ] **3.1** IMPLEMENT the per-gate report record (F-2 / DM-1 / NFR-5): each
+- [x] **3.1** IMPLEMENT the per-gate report record (F-2 / DM-1 / NFR-5): each
   gate entry in the summary carries a **stable name**, a **pass/fail status**,
   and a **duration**; on failure it additionally carries a **log pointer** to
   the canonical output dir and a **short bounded excerpt** (bounded line count —
   never dump the entire log). *(owner: @coder; F-2, AC-F2-1, AC-F2-2, NFR-5; TC-QGATES-002, TC-QGATES-004)*
-- [ ] **3.2** CHOOSE and PIN a stable per-gate field syntax (resolves OQ-T1) —
+- [x] **3.2** CHOOSE and PIN a stable per-gate field syntax (resolves OQ-T1) —
   e.g. a tagged line `(quality-gates) name=<…> status=<PASS|FAIL> duration=<…>`
   with a failure block carrying `log=<…>` + a bounded excerpt. The exact form is
   the author's choice but MUST be stable, documented in the guide (Phase 6 /
   TC-QGATES-012), and asserted identically in the suite (Phase 5 /
   TC-QGATES-002/004). *(owner: @coder; F-2, OQ-T1; TC-QGATES-002, TC-QGATES-004, TC-QGATES-012)*
-- [ ] **3.3** IMPLEMENT stable machine-parseable prefixes/tags (bash.md §5
+- [x] **3.3** IMPLEMENT stable machine-parseable prefixes/tags (bash.md §5
   `LOG_TAG` convention) so a downstream agent (`@runner`/`@fixer`) can parse
   which gates failed and where to look without scraping free-form prose. Summary
   → **stdout**; errors/diagnostics → **stderr**. *(owner: @coder; F-2, NFR-5; TC-QGATES-002, TC-QGATES-004)*
-- [ ] **3.4** IMPLEMENT the canonical output dir (OQ-2): the runner writes
+- [x] **3.4** IMPLEMENT the canonical output dir (OQ-2): the runner writes
   structured per-gate output under `tmp/quality-gates/<YYYY-MM-DD>/` (date in
   UTC `+%F`). The runner does **not** itself mirror to `tmp/run-logs-runner/` —
   `@runner` (via `/check`) mirrors command output there as for any command; this
   is documented in the guide (Phase 6) and the `/check` contract, not coded here.
   *(owner: @coder; F-2, OQ-2; TC-QGATES-004 steps 6–7, TC-QGATES-013)*
-- [ ] **3.5** VERIFY locally: inject a failing fixture gate via the extension seam
+- [x] **3.5** VERIFY locally:
   (Phase 2.4) and confirm the summary emits the FAIL entry with a log pointer to
   `tmp/quality-gates/<date>/` + a bounded excerpt, and that the pointed-to log
   file exists and contains the gate's output; confirm a clean run emits all-PASS
   entries. *(owner: @coder; AC-F2-1, AC-F2-2, OQ-2; TC-QGATES-004 [behavioral pre-check])*
-- [ ] **3.6** HAND to `@committer`: stage `scripts/quality-gates.sh` only.
-  *(owner: @committer)*
+- [x] **3.6** HAND to `@committer`: stage `scripts/quality-gates.sh` only.
 
 **Acceptance Criteria**:
 
@@ -438,7 +436,7 @@ failure. Finalize `--help` with the implemented-vs-future taxonomy.
 
 **Tasks**:
 
-- [ ] **4.1** IMPLEMENT arg handling (F-4 / OQ-1 / DEC-4 / RSK-2):
+- [x] **4.1** IMPLEMENT arg handling (F-4 / OQ-1 / DEC-4 / RSK-2):
   - **no args ⇒ run all gates** (default = `all`) — AC-F4-1;
   - **one or more named gates ⇒ run only those** (named-gate subset) — AC-F4-2;
   - **unknown selectors tolerated**: warned/ignored per documented semantics
@@ -448,18 +446,18 @@ failure. Finalize `--help` with the implemented-vs-future taxonomy.
     future — not a behavioral partition now) — OQ-1 / DEC-4;
   - always operate from **repo root** (`/check` §`<resolution>` step 4).
   *(owner: @coder; F-4, AC-F4-1, AC-F4-2, OQ-1, DEC-4, RSK-2; TC-QGATES-005)*
-- [ ] **4.2** IMPLEMENT the **non-masking** safety half (AC-F4-2 / RSK-4): an
+- [x] **4.2** IMPLEMENT the **non-masking** safety half (AC-F4-2 / RSK-4): an
   unknown selector alongside a known gate must not convert a real gate failure
   into exit 0 — tolerance is warned/ignored, but a failing gate still drives a
   non-zero overall exit. *(owner: @coder; F-4, AC-F4-2, RSK-4; TC-QGATES-005 step 6)*
-- [ ] **4.3** FINALIZE `--help`/usage (AC-F4-3 / TC-QGATES-006) documenting the
+- [x] **4.3** FINALIZE `--help`/usage (AC-F4-3 / TC-QGATES-006) documenting the
   `[fast|slow|all|<gate>...]` taxonomy honestly — implemented selectors (`all`
   default + named-gate) vs **future** (`fast`/`slow`, marked future/deferred in
   the same help block) — plus exit-code semantics. *(owner: @coder; F-4, AC-F4-3, OQ-1; TC-QGATES-006)*
-- [ ] **4.4** VERIFY locally: named-gate subset runs only the named gate;
+- [x] **4.4** VERIFY locally:
   unknown-selector tolerance emits a notice and does not crash; a failing
   named gate + an unknown selector still exits non-zero. *(owner: @coder; AC-F4-1, AC-F4-2; TC-QGATES-005, TC-QGATES-006 [behavioral pre-checks])*
-- [ ] **4.5** HAND to `@committer`: stage `scripts/quality-gates.sh` only.
+- [x] **4.5** HAND to `@committer`: stage `scripts/quality-gates.sh` only.
   *(owner: @committer)*
 
 **Acceptance Criteria**:
