@@ -60,10 +60,10 @@ trap 'log_warn "Interrupted"; exit 130' INT TERM
 # ============================================================================
 _ts() { date '+%H:%M:%S'; }
 
-log_info()   { printf '[%s] ℹ %s %s\n' "$(_ts)" "${LOG_TAG}" "$*"; }
+log_info()   { printf '[%s] ℹ %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" >&2; }
 log_warn()   { printf '[%s] ⚠ %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" >&2; }
 log_err()    { printf '[%s] ✗ %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" >&2; }
-log_debug()  { [[ "${VERBOSE}" == "true" ]] && printf '[%s] ℹ DEBUG %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" || true; }
+log_debug()  { [[ "${VERBOSE}" == "true" ]] && printf '[%s] ℹ DEBUG %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" >&2 || true; }
 
 die() { log_err "$@"; exit "${EXIT_USAGE}"; }
 
@@ -97,6 +97,12 @@ extract_branch() {
   fi
 }
 
+# PURE: Convert workItemRef (GH-37) to bare issue number (37) for gh CLI
+to_issue_number() {
+  local -r ticket_ref="$1"
+  printf '%s' "${ticket_ref#*-}"
+}
+
 # Add a ticket spec to the parsed arrays
 add_ticket() {
   local -r spec="$1"
@@ -128,7 +134,7 @@ should_skip_ticket() {
   local -r ticket_ref="$1"
 
   local issue_json
-  issue_json="$(_gh issue view "${ticket_ref}" --json state,labelNames 2>/dev/null)" || {
+  issue_json="$(_gh issue view "$(to_issue_number "${ticket_ref}")" --json state,labels 2>/dev/null)" || {
     return 1  # Can't determine state → don't skip
   }
 
@@ -142,7 +148,7 @@ should_skip_ticket() {
   fi
 
   # human-input-needed → skip
-  if printf '%s' "${issue_json}" | _jq -r '.labelNames[]?' 2>/dev/null | grep -q 'human-input-needed'; then
+  if printf '%s' "${issue_json}" | _jq -r '.labels[].name' 2>/dev/null | grep -q 'human-input-needed'; then
     printf 'blocked'
     return 0
   fi
@@ -187,27 +193,27 @@ format_duration() {
 
 log_batch_start() {
   local -r index="$1" total="$2" ticket="$3"
-  printf '[%s] [%s/%s] ▶ START %s\n' "$(_ts)" "${index}" "${total}" "${ticket}"
+  printf '[%s] [%s/%s] ▶ START %s\n' "$(_ts)" "${index}" "${total}" "${ticket}" >&2
 }
 
 log_batch_skip() {
   local -r index="$1" total="$2" ticket="$3" reason="$4"
-  printf '[%s] [%s/%s] ⊘ SKIP %s — %s\n' "$(_ts)" "${index}" "${total}" "${ticket}" "${reason}"
+  printf '[%s] [%s/%s] ⊘ SKIP %s — %s\n' "$(_ts)" "${index}" "${total}" "${ticket}" "${reason}" >&2
 }
 
 log_batch_done() {
   local -r index="$1" total="$2" ticket="$3" detail="$4" duration="$5"
-  printf '[%s] [%s/%s] ✓ DONE %s — %s (%s)\n' "$(_ts)" "${index}" "${total}" "${ticket}" "${detail}" "${duration}"
+  printf '[%s] [%s/%s] ✓ DONE %s — %s (%s)\n' "$(_ts)" "${index}" "${total}" "${ticket}" "${detail}" "${duration}" >&2
 }
 
 log_batch_blocked() {
   local -r index="$1" total="$2" ticket="$3" detail="$4" duration="$5"
-  printf '[%s] [%s/%s] ⏸ BLOCKED %s — %s (%s)\n' "$(_ts)" "${index}" "${total}" "${ticket}" "${detail}" "${duration}"
+  printf '[%s] [%s/%s] ⏸ BLOCKED %s — %s (%s)\n' "$(_ts)" "${index}" "${total}" "${ticket}" "${detail}" "${duration}" >&2
 }
 
 log_batch_failed() {
   local -r index="$1" total="$2" ticket="$3" detail="$4" duration="$5"
-  printf '[%s] [%s/%s] ✗ FAILED %s — %s (%s)\n' "$(_ts)" "${index}" "${total}" "${ticket}" "${detail}" "${duration}"
+  printf '[%s] [%s/%s] ✗ FAILED %s — %s (%s)\n' "$(_ts)" "${index}" "${total}" "${ticket}" "${detail}" "${duration}" >&2
 }
 
 # PURE: Format the final batch summary line block
@@ -383,6 +389,15 @@ main() {
   [[ ${total} -gt 0 ]] || die "No tickets provided. See --help."
 
   log_info "Starting batch delivery of ${total} ticket(s)"
+  local _i
+  for ((_i = 0; _i < total; _i++)); do
+    local _t="${PARSED_TICKETS[$_i]}" _b="${PARSED_BRANCHES[$_i]}"
+    if [[ -n "${_b}" ]]; then
+      log_info "  $((_i + 1))/${total}: ${_t}:${_b}"
+    else
+      log_info "  $((_i + 1))/${total}: ${_t}"
+    fi
+  done
 
   run_batch
 }
