@@ -197,7 +197,7 @@ N/A — no event/message surface. The runner's "message" is its structured stdou
 |----|---------|-------------|
 | DM-1 | Per-gate report record | The stable shape emitted per gate: `{gate name, status (pass/fail), duration, [on failure] log pointer + short excerpt}`. Consumed by `@runner`/`@fixer`. |
 | DM-2 | AGENTS.md gate declaration | The minimal, machine-resolvable declaration in `AGENTS.md` naming the runner and/or gate set that the `/check` resolution contract step 1 reads (F-7). |
-| DM-3 | Exit-code contract | Scalar: `0` ⇔ all gates pass; non-zero ⇔ ≥1 gate fails. No third state (NFR-3). |
+| DM-3 | Exit-code contract | Scalar gate verdict: `0` ⇔ all gates pass; non-zero ⇔ ≥1 gate fails. No third **verdict** state (NFR-3). Orthogonal usage errors (exit `2`, bash.md §10.5) are a pre-gate error class, not a verdict. |
 
 ### 8.4 External Integrations
 
@@ -218,7 +218,7 @@ N/A — runs on the standard GitHub Actions `ubuntu-latest` runner with stdlib b
 |----|-------------|-----------|
 | NFR-1 | Determinism — same repo state yields the same pass/fail verdict and gate ordering across repeated runs | 100% reproducible (no time/randomness/ordering dependence); stable gate order |
 | NFR-2 | Performance — orchestrator overhead (gate dispatch + reporting) is negligible vs the gates themselves | Orchestrator overhead < 2s wall-clock; full run completes within the sum of underlying gate durations (no gratuitous re-runs) |
-| NFR-3 | Exit-code contract — exactly two outcomes | 0 iff all gates pass; non-zero iff ≥1 gate fails; no third state |
+| NFR-3 | Exit-code contract — exactly two gate-verdict outcomes | 0 iff all gates pass; non-zero iff ≥1 gate fails; no third **verdict** state. Orthogonal usage/invocation errors (e.g. exit `2` per `.ai/rules/bash.md` §10.5) are a separate pre-gate error class, not a third verdict. |
 | NFR-4 | Dependencies — orchestrator is stdlib only | Bash 4.0+ stdlib; no new runtime deps beyond what the orchestrated gates already require; test suite needs no network |
 | NFR-5 | AI-actionability — every gate failure is structured | 4/4 fields per gate (name, status, duration, [on fail] log pointer + excerpt); stable machine-parseable prefixes/tags |
 | NFR-6 | Bash conventions + lint cleanliness | Conforms to `.ai/rules/bash.md`; shellcheck clean at `error` severity (the CI gate stays green) |
