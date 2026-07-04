@@ -88,13 +88,13 @@ trap '_on_interrupt' INT TERM
 # ============================================================================
 _ts() { date '+%H:%M:%S'; }
 
-log_info()   { printf '[%s] ℹ %s %s\n' "$(_ts)" "${LOG_TAG}" "$*"; }
+log_info()   { printf '[%s] ℹ %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" >&2; }
 log_warn()   { printf '[%s] ⚠ %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" >&2; }
 log_err()    { printf '[%s] ✗ %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" >&2; }
-log_start()  { printf '[%s] ▶ START %s\n' "$(_ts)" "$*"; }
-log_done()   { printf '[%s] ✓ DONE %s\n' "$(_ts)" "$*"; }
+log_start()  { printf '[%s] ▶ START %s\n' "$(_ts)" "$*" >&2; }
+log_done()   { printf '[%s] ✓ DONE %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" >&2; }
 log_failed() { printf '[%s] ✗ FAILED %s\n' "$(_ts)" "$*" >&2; }
-log_debug()  { [[ "${VERBOSE}" == "true" ]] && printf '[%s] ℹ DEBUG %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" || true; }
+log_debug()  { [[ "${VERBOSE}" == "true" ]] && printf '[%s] ℹ DEBUG %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" >&2 || true; }
 
 die() { log_err "$@"; exit "${EXIT_USAGE}"; }
 
@@ -138,6 +138,12 @@ validate_ticket_ref() {
   [[ "${ticket_ref}" =~ ^[A-Z]+-[0-9]+$ ]]
 }
 
+# PURE: Convert workItemRef (GH-37) to bare issue number (37) for gh CLI
+to_issue_number() {
+  local -r ticket_ref="$1"
+  printf '%s' "${ticket_ref#*-}"
+}
+
 # ============================================================================
 # PROMPT BUILDING
 # ============================================================================
@@ -147,6 +153,10 @@ build_delivery_prompt() {
   local -r branch="$2"
   local branch_hint=""
   [[ -n "${branch}" ]] && branch_hint=" (branch: ${branch})"
+
+  # gh issue view needs a bare issue number (37), not the workItemRef (GH-37).
+  local issue_num
+  issue_num="$(to_issue_number "${ticket_ref}")"
 
   # C-1: LGTM comment detection is opt-in (DELIVER_ALLOW_LGTM_COMMENT=true,
   # default false) and, when enabled, restricted to the PR author's comments
@@ -163,7 +173,7 @@ build_delivery_prompt() {
 Deliver ${ticket_ref} end-to-end using ADOS. Detect state at the top, then act.
 
 ## State Detection (run first, every time)
-1. Check GitHub: gh issue view ${ticket_ref} --json state,labelNames
+1. Check GitHub: gh issue view ${issue_num} --json state,labels
 2. Check for open PR: gh pr list --head ${branch:-<ticket-branch>} --state open --json number,title
 3. Check for merged PR: gh pr list --search "${ticket_ref}" --state closed --json mergedAt
 
@@ -448,7 +458,7 @@ classify_result() {
   local -r branch="$2"
 
   local issue_json issue_state
-  issue_json="$(_gh issue view "${ticket_ref}" --json state,labelNames 2>/dev/null)" || {
+  issue_json="$(_gh issue view "$(to_issue_number "${ticket_ref}")" --json state,labels 2>/dev/null)" || {
     # m-7: gh/network failure (rate limit, connectivity) — return "unknown" so
     # the loop retries without burning a restart slot.
     log_warn "Could not fetch issue state for ${ticket_ref} (network/rate-limit?)"
@@ -464,7 +474,7 @@ classify_result() {
   fi
 
   # Check for human-input-needed label
-  if printf '%s' "${issue_json}" | _jq -r '.labelNames[]?' 2>/dev/null | grep -q 'human-input-needed'; then
+  if printf '%s' "${issue_json}" | _jq -r '.labels[].name' 2>/dev/null | grep -q 'human-input-needed'; then
     printf 'blocked'
     return 0
   fi
