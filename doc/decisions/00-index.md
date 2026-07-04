@@ -14,4 +14,5 @@ All decision records for this repository, ordered by type and number.
 | ADR-0002 | ADR | Readiness Gate (Definition of Ready) for Pre-Delivery Artifact Critique | Accepted | 2026-06-28 | Juliusz Ćwiąkalski |
 | ODR-0001 | ODR | Classify doc/templates/*.yaml register templates as redistributable | Accepted | 2026-06-25 | Juliusz Ćwiąkalski |
 | PDR-0001 | PDR | Tribal Knowledge Extraction Taxonomy | Accepted | 2026-06-27 | Juliusz Ćwiąkalski |
+| PDR-0002 | PDR | Mode-Aware Spec-Coverage Resolution for Autonomous Delivery | Proposed | 2026-07-02 | Juliusz Ćwiąkalski |
 | TDR-0001 | TDR | @bootstrapper Inception Sub-Mode Prompt Structure | Proposed | 2026-06-27 | Juliusz Ćwiąkalski |

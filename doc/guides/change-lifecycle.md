@@ -241,19 +241,18 @@ flowchart TD
 **Actions**:
 
 - `@pm` invokes `@doc-syncer` with `workItemRef`.
-- `@doc-syncer` reconciles `doc/spec/**`, `doc/contracts/**`, and other system documentation.
-- **Feature spec coverage check:** `@doc-syncer` runs a *positive* coverage check in addition to reconciliation. For each **feature area** the change modifies (a coherent, nameable capability a contributor/reviewer would expect a spec for — i.e., something that warrants a `doc/spec/features/feature-<slug>.md`; the operational definition lives authoritatively in `.opencode/agent/doc-syncer.md`), it looks for the corresponding `doc/spec/features/feature-<slug>.md` and collects any missing feature area into `spec_coverage_gaps` in its structured report. This catches modified capabilities that have *no* spec at all — distinct from reconciliation ("does the existing spec still match?").
-- **De-noised, human-gated handoff:** `@doc-syncer` only **reports** `spec_coverage_gaps`; it never creates a spec or a tracker ticket. `@pm` then checks open issues for an existing tracker and **references** it (rather than proposing a duplicate — de-noising), **proposes** a follow-up to the human, and **only the human** approves ticket creation. Coverage is advisory at this phase; it does not block the change from proceeding to `review_fix`.
+- `@doc-syncer` reconciles all affected current-truth documentation in scope: `doc/00-index.md`, `doc/guides/**`, `doc/overview/**`, `doc/spec/**`, `doc/contracts/**`, `doc/domain/**`, `doc/quality/**`, `doc/ops/**`, `doc/diagrams/**`, and `doc/decisions/**`.
+- Missing/stale/incomplete docs are resolved in-change (reconcile existing docs or create missing docs when the change introduces/exposes an enduring concept).
+- Feature-spec coverage remains part of phase 7: when a modified feature area warrants `doc/spec/features/feature-<slug>.md` and none exists, `@doc-syncer` authors the missing first spec in-change; existing specs are reconciled, not re-authored.
+- Documentation gaps are resolved as doc artifacts in the same change; no tracker ticket is created for documentation coverage handoff.
 
-> **Deferred alternative.** A periodic standalone coverage audit (Proposal C) was considered and is deferred in favor of these inline checks (intake awareness + post-delivery reporting). See change spec GH-78 §7.3.
-
-**Outcome**: System specification is updated and consistent with the implementation; any feature-spec coverage gap is reported (not silently dropped).
+**Outcome**: Current-truth docs are complete, accurate, and consistent with the implementation.
 
 **Exit criteria**:
 
-- System docs updated and committed.
-- No discrepancies between implementation and documented system state.
-- `spec_coverage_gaps` reported (empty when all modified feature areas are covered).
+- Updated/created docs are committed.
+- No discrepancies between implementation and current-truth docs.
+- No unresolved documentation gaps remain from phase 7 output.
 
 ### 8) review_fix
 
@@ -311,9 +310,11 @@ flowchart TD
   - All phases above completed (check `chg-<workItemRef>-pm-notes.yaml`).
   - All delivery plan tasks complete (all checkboxes checked in `chg-<workItemRef>-plan.md`).
   - All acceptance criteria satisfied (verify against `chg-<workItemRef>-spec.md`).
+  - Current-truth documentation is complete and up to date for the delivered change (phase 7 has no unresolved documentation gaps).
   - No pending TODOs without an explicit follow-up ticket.
 - **If any gap is found**: reopen the appropriate phase and delegate to the relevant agent.
   - Example: if a delivery plan task is incomplete, reopen `delivery` and delegate to `@coder`.
+  - Example: if docs are incomplete or stale, reopen `system_spec_update` and re-run `@doc-syncer` with explicit gaps.
 
 **Outcome**: Full verification that the change meets the Definition of Done.
 

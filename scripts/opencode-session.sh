@@ -260,6 +260,8 @@ Follow ticket -> PR -> squash merge to main discipline. Before new implementatio
 
 Run the full ADOS 11-phase lifecycle as @pm: clarify scope, specification, test planning, delivery planning, DoR, implementation, docs sync, review/fix, quality gates, DoD, PR/finalization. Delegate to the specialized subagents; do not implement source code directly as PM.
 
+At intake, set `delivery_mode: autonomous` in chg-<workItemRef>-pm-notes.yaml so the phase-7 spec-coverage resolution resolves detected gaps in-change.
+
 CREATE THE PR AND LEAVE IT OPEN. Do NOT merge it. Do NOT run \`gh pr merge\`, \`gh pr merge --squash\`, \`gh pr ready\`, or any other merge/approve/ready-for-review action. The human performs the final review and squash-merge as a separate gate, outside this PM session. When the PR is open, CI (if any) is green, and you have recorded the PR URL in .ai/local/pm-context.yaml, report the PR URL and STOP.
 
 Do not select, plan, or start a next ticket in this PM session. If ${ticket_ref} becomes technically blocked (missing credentials/access/tooling that cannot be worked around), record the blocker in pm-context.yaml and STOP.

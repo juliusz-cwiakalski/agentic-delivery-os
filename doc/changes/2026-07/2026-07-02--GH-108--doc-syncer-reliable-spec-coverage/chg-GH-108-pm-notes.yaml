@@ -1,0 +1,192 @@
+change_id: GH-108
+delivery_mode: autonomous  # this change was delivered autonomously (dogfoods the field GH-108 introduces)
+title: "doc-syncer reliability — specs/guides must actually fire post-merge"
+branch: fix/GH-108/doc-syncer-reliable-spec-coverage
+change_folder: doc/changes/2026-07/2026-07-02--GH-108--doc-syncer-reliable-spec-coverage
+epic: GH-107
+phases:
+  clarify_scope: { started: "2026-07-02T21:30:00Z", completed: "2026-07-02T21:55:00Z" }
+  specification: { started: "2026-07-02T22:00:00Z", completed: "2026-07-02T22:30:00Z" }
+  test_planning: { started: "2026-07-02T22:30:00Z", completed: "2026-07-02T22:45:00Z" }
+  delivery_planning: { started: "2026-07-02T22:45:00Z", completed: "2026-07-02T23:00:00Z" }
+  dor_check: { started: "2026-07-02T23:05:00Z", completed: "2026-07-02T23:25:00Z" }
+  delivery: { started: "2026-07-02T23:30:00Z", completed: "2026-07-03T00:10:00Z" }
+  system_spec_update: { started: "2026-07-03T00:10:00Z", completed: "2026-07-03T00:30:00Z" }
+  review_fix: { started: "2026-07-03T00:30:00Z", completed: "2026-07-03T00:50:00Z" }
+  quality_gates: { started: "2026-07-03T00:50:00Z", completed: "2026-07-03T01:05:00Z" }
+  dod_check: { started: "2026-07-03T01:05:00Z", completed: "2026-07-03T01:15:00Z" }
+  pr_creation: { started: "2026-07-03T01:15:00Z", completed: "2026-07-03T01:30:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/122" }
+decisions:
+  - text: >
+      PDR-0002 (Proposed, R2) — Mode-Aware Spec-Coverage Resolution for
+      Autonomous Delivery. D1: introduce per-change `delivery_mode:
+      interactive|autonomous` field in chg-<ref>-pm-notes.yaml (default/absent
+      => interactive, backward-compatible); autonomous session prompt directs
+      @pm to set `autonomous`. D2: in autonomous mode, a detected
+      spec_coverage_gap for a modified feature area is resolved IN-CHANGE
+      (missing feature spec authored); interactive mode unchanged; the
+      "PM must NEVER create new tickets autonomously" rule preserved verbatim.
+      Plan-level open item: whether @doc-syncer authors the spec directly or
+      delegates to @coder (model-capacity). Record:
+      doc/decisions/PDR-0002-mode-aware-spec-coverage-resolution.md
+    date: "2026-07-02"
+  - text: >
+      OWNER REVIEW OVERRIDE (PR #122, 2026-07-03): per the owner's PR review
+      directive, spec-coverage resolution is amended from mode-aware to
+      UNCONDITIONAL (always-resolve). A detected gap is resolved in-change
+      (missing first-spec authored) in EVERY mode — no human decision, no
+      follow-up ticket. `delivery_mode` is retained as an optional non-gating
+      signal. "PM must NEVER create new tickets autonomously" preserved
+      verbatim. PDR-0002 amended (Amendment section added; C-2 now all modes;
+      C-3 overridden for spec coverage). DEC-8 added to the spec decision log.
+    date: "2026-07-03"
+open_questions:
+  - text: >
+      Mode detection mechanism: the ticket prescribes a "mode-aware rule" but
+      "autonomous mode" is NOT a formal/detectable concept in ADOS today (no
+      mode flag; opencode-session.sh runs @pm end-to-end but sets no structured
+      signal agents can read). Spec must define the mode concept (or adopt a
+      mode-independent rule). Routed to @decision-advisor during specification.
+    date: "2026-07-02"
+  - text: >
+      AC-2 option (ii) "PM auto-creates follow-up ticket" conflicts with the
+      governance rule in .ai/agent/pm-instructions.md: "PM must NEVER create
+      new tickets autonomously." Decision needed: default to option (i)
+      (@doc-syncer authors the feature spec in-change) and keep ticket-creation
+      human-gated, OR introduce a bounded autonomous-mode exception. Routed to
+      @decision-advisor during specification.
+    date: "2026-07-02"
+blockers: []
+notes:
+  - text: >
+      RETRO (DoR iter-1 NOT_READY): @readiness-reviewer caught cross-artifact
+      drift — the plan asserted the governance phrase "PM must NEVER create new
+      tickets autonomously" is retained in BOTH pm.md AND pm-instructions.md,
+      but it only exists in pm-instructions.md and no plan task adds it to
+      pm.md, so the plan's own grep checks were unachievable. The test-plan
+      already correctly treated pm-instructions.md as canonical. Gap discovered
+      at DoR (the gate's purpose). Why not caught earlier: plan-writer ran in
+      parallel with test-plan-writer and over-constrained the governance check
+      location without re-verifying against source. Fix: reopen delivery_planning;
+      align plan governance checks to pm-instructions.md-canonical (do NOT add
+      the rule to pm.md — surgical-edit constraint). Process improvement: when
+      plan + test-plan are authored in parallel, the canonical-location of any
+      grep/asserted phrase must be pinned in the spec or verified against source
+      by the plan-writer.
+    type: retro
+    date: "2026-07-02"
+  - text: >
+      RETRO (delivery): @coder completed plan phases 0-6 with one Conventional
+      Commit per phase, surgical staging, governance rule preserved verbatim,
+      spec-coverage-snapshot.sh test 9/9, .ados-claude/ regen matching the
+      .opencode/ edit set, and correctly STOPPED before phase 7 (doc/spec/**
+      untouched). DEVIATION: @coder committed directly via git rather than via
+      @committer — it reported its runtime exposed no subagent-invocation
+      tool, so it could not delegate to @committer/@runner. Intent was
+      preserved (lowercased gh-108 scope, one commit/phase, pm-notes excluded,
+      nothing pushed). Two authoring defects caught and fixed in-phase
+      (LC_ALL=C locale-independent ratio; test failure-flag instead of
+      errexit-in-tested-function). Process note: the coder subagent's ability
+      to invoke @committer is environment-dependent; PM verified commits
+      post-hoc (git state capture) and confirmed no .ai/local/ leakage and
+      doc/spec/ untouched. Verify the direct-commit quality at @reviewer.
+    type: retro
+    date: "2026-07-03"
+  - text: >
+      DoD (phase 10) PASS: all phases 1-9 completed with timestamps; all plan
+      tasks checked (phases 0-6 by @coder, phase 7 by @doc-syncer — checkboxes
+      updated by PM); all 13 ACs satisfied (@reviewer PASS + phase-7
+      AC-DM2-1 verified); no unchecked tasks; no pending TODOs. Plan Phase 7
+      checkboxes/log updated to reflect @doc-syncer reconciliation (commit
+      15f3fc6). Proceeding to pr_creation.
+    type: info
+    date: "2026-07-03"
+  - text: >
+      Quality gates (phase 9): ALL GH-108-relevant gates GREEN —
+      test-spec-coverage-snapshot 9/9, test-build-claude-plugin 16/16
+      (plugin freshness), test-doc-distribution no drift (76 in-scope docs),
+      test-opencode-session 13/13, test-all 8/8, test-add-header-location 19/19,
+      test-doc-distribution-modes 5/5, bash -n syntax OK. 3 FAILURES in
+      text-to-image tool (test-text-to-image-performance: cache-perf timeouts
+      ~39-46s vs <100ms; test-text-to-image-e2e-suite & -e2e-providers:
+      external provider API timeouts) are UNRELATED to GH-108 — pre-existing
+      external-API/tool issues (same pattern noted for GH-85). Out of scope;
+      not routed to @fixer. Fixing text-to-image perf is a separate concern.
+    type: info
+    date: "2026-07-03"
+  - text: >
+      clarify_scope: no human-blocking questions — ticket is complete and
+      consistent with system spec; root cause already documented in experiment
+      notes (.ai/local/planning/marksync-top-10-ADOS-improvements.md and
+      parallel-stream-plan-2026-07-02.md). Two design decisions routed to
+      @decision-advisor (see open_questions). Proceeding to specification per
+      autonomous-delivery intent (user: "deliver end-to-end").
+    type: info
+    date: "2026-07-02"
+  - text: >
+      Root cause (AC-1) findings: (a) @doc-syncer only REPORTS
+      spec_coverage_gaps (report-only, never ticket) per doc-syncer.md <rules>;
+      (b) PM handoff is human-gated (propose -> human approves ticket creation);
+      (c) in autonomous delivery there is no human mid-flight to read the
+      advisory report or approve the follow-up, so "advisory + human-gated"
+      reduces to "never happens"; (d) @pm step-3 coverage-awareness is
+      explicitly "advisory only — not a delivery blocker"; change-lifecycle
+      phase 7 says coverage "does not block the change." Net effect: zero
+      feature specs produced across many merged changes; system spec silently
+      rots. The de-noise design is correct for human-in-loop; the bug is the
+      absence of mode-awareness, not the de-noise principle itself.
+    type: info
+    date: "2026-07-02"
+  - text: >
+      Feature spec coverage awareness (advisory — not a blocker): the feature
+      area this change modifies is the delivery lifecycle, incl. Phase 7
+      doc-syncer / spec-coverage capability. doc/spec/features/feature-delivery-lifecycle.md
+      exists (status: Current). The doc-syncer / Phase-7 / spec-coverage
+      sub-capability has NO dedicated feature spec (folded into the lifecycle
+      spec). Change will UPDATE feature-delivery-lifecycle.md; whether a
+      dedicated feature-doc-syncer.md is warranted is a follow-up consideration
+      (advisory, human decides).
+    type: info
+    date: "2026-07-02"
+  - text: >
+      Scope touchpoints identified for the plan: .opencode/agent/doc-syncer.md
+      (mode-aware rule + spec-coverage promotion), doc/guides/change-lifecycle.md
+      (Phase 7 wording — "advisory" must not mean "silently skipped" in
+      autonomous mode), .ai/agent/pm-instructions.md + .opencode/agent/pm.md
+      (spec_coverage_gaps facet / ticket-creation governance tension),
+      doc/spec/features/feature-delivery-lifecycle.md (reconcile), plus a
+      visibility aid (AC-4: feature-specs-present vs changes-touching-feature-areas
+      count). Parallel-stream plan originally assigned branch
+      fix/GH-108/doc-syncer-reliability; using fix/GH-108/doc-syncer-reliable-spec-coverage.
+    type: info
+    date: "2026-07-02"
+  - text: >
+      review_fix REOPENED (PR #122): the owner's PR review directive amended the
+      design from mode-aware to UNCONDITIONAL (always-resolve) spec-coverage
+      resolution. @coder executed the remediation (Phase 8): always-resolve
+      rework across doc-syncer.md, pm.md, pm-instructions.md, change-lifecycle.md,
+      feature-delivery-lifecycle.md, PDR-0002; 3 Copilot fixes (maxdepth-2 count
+      fix, remove unused EXIT_RUNTIME=4, SPEC-<feature-slug> id); plugin regen
+      (doc-syncer + pm). Quality gates: test-spec-coverage-snapshot 9/9,
+      test-build-claude-plugin 16/16, test-doc-distribution no drift (77 docs).
+      Change artifacts (spec, test-plan, plan, pm-notes) updated. Not pushed
+      (PM pushes).
+    type: info
+    date: "2026-07-03"
+  - text: >
+      RETRO (review_fix remediation — design flip): the original mode-aware
+      design (PDR-0002 Alternative 1) carefully preserved interactive-mode
+      de-noise (C-3) and treated it as non-negotiable. The owner's PR review
+      directive overrode C-3 for spec coverage — the goal is an ALWAYS-current
+      system spec, not detecting that one is missing. Lesson: the de-noise
+      principle is valuable for noisy ticket creation, but for documentation
+      completeness the owner prefers unconditional resolution (the PR gate is
+      the human review point). The mode-aware framing (delivery_mode) was still
+      the right vehicle to introduce the concept, but gating resolution on it
+      was the wrong call — `delivery_mode` is retained as a non-gating signal
+      for future features (GH-111). Process note: a design that splits behavior
+      by mode adds correctness surface; the owner's preference here favors
+      simplicity (one rule, all modes) over mode-conditioned behavior for
+      documentation guarantees.
+    type: retro
+    date: "2026-07-03"
