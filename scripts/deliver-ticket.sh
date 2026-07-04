@@ -201,7 +201,7 @@ Nothing to do. Report "merged/closed" and STOP.
 1. Fetch all review comments: gh pr view <PR> --json comments,reviews,reviewDecision
 2. Check for approval signals (ANY ONE is sufficient to merge):
   a. GitHub-native APPROVED review: gh pr view <PR> --json reviewDecision -q '.reviewDecision' equals "APPROVED"
-  b. "approved" label on the ticket issue: gh issue view ${ticket_ref} --json labels -q '.labels[].name' | grep -qi approved
+  b. "approved" label on the ticket issue: gh issue view ${issue_num} --json labels -q '.labels[].name' | grep -qi approved
 ${lgtm_signal}
 3. If approved (any signal):
    - Squash-merge: gh pr merge <PR> --squash --delete-branch
@@ -224,7 +224,7 @@ ${lgtm_signal}
 5. Ensure the "approved" label exists for solo-developer approval: gh label create "approved" --color "0E8A16" --description "Approved for merge (solo-developer-friendly)" 2>/dev/null || true
 
 ### If technically blocked (missing credentials/access/tooling)
-1. Add label: gh issue edit ${ticket_ref} --add-label human-input-needed
+1. Add label: gh issue edit ${issue_num} --add-label human-input-needed
 2. Add comment explaining the blocker.
 3. Report "blocked" and STOP.
 
