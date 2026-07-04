@@ -139,6 +139,13 @@ test_parse_pdev_ticket() {
   assert_eq "fix/bug" "${branch}"
 }
 
+# TC-DT-02c: to_issue_number converts workItemRef to bare number for gh CLI
+test_to_issue_number() {
+  assert_eq "37" "$(to_issue_number "GH-37")" "GH-37 → 37"
+  assert_eq "123" "$(to_issue_number "PDEV-123")" "PDEV-123 → 123"
+  assert_eq "37" "$(to_issue_number "37")" "bare number stays"
+}
+
 # ============================================================================
 # TESTS: Branch Resolution
 # ============================================================================
@@ -262,7 +269,7 @@ test_stuck_at_max_restarts() {
 # TC-DT-07: exit classification — human-input-needed → blocked
 test_classify_blocked() {
   _gh() {
-    printf '%s' '{"state":"OPEN","labelNames":["human-input-needed"]}'
+    printf '%s' '{"state":"OPEN","labels":[{"name":"human-input-needed"}]}'
   }
 
   local result
@@ -274,7 +281,7 @@ test_classify_blocked() {
 # TC-DT-07b: closed issue → merged
 test_classify_merged_closed() {
   _gh() {
-    printf '%s' '{"state":"CLOSED","labelNames":[]}'
+    printf '%s' '{"state":"CLOSED","labels":[]}'
   }
 
   local result
@@ -288,7 +295,7 @@ test_classify_pr_open() {
   _gh() {
     case "$1" in
       issue)
-        printf '%s' '{"state":"OPEN","labelNames":[]}'
+        printf '%s' '{"state":"OPEN","labels":[]}'
         ;;
       pr)
         printf '%s' '[{"number":42}]'
@@ -307,7 +314,7 @@ test_classify_failed() {
   _gh() {
     case "$1" in
       issue)
-        printf '%s' '{"state":"OPEN","labelNames":[]}'
+        printf '%s' '{"state":"OPEN","labels":[]}'
         ;;
       pr)
         printf '%s' '[]'
@@ -599,7 +606,7 @@ OPENCODE
   cat >"${bin_dir}/gh" <<GH
 #!/usr/bin/env bash
 case "\$1" in
-  issue) printf '%s' '{"state":"OPEN","labelNames":[]}' ;;
+  issue) printf '%s' '{"state":"OPEN","labels":[]}' ;;
   pr)
     if printf '%s ' "\$@" | grep -q -- '--state open'; then
       printf '%s' '[]'
@@ -664,6 +671,7 @@ main() {
   run_test "TC-DT-01c: reject invalid ticket ref" test_validate_ticket_ref_invalid
   run_test "TC-DT-02: parse ticket:branch" test_parse_ticket_with_branch
   run_test "TC-DT-02b: parse PDEV ticket:branch" test_parse_pdev_ticket
+  run_test "TC-DT-02c: to_issue_number strips prefix" test_to_issue_number
   run_test "TC-DT-03: branch mismatch warning" test_branch_mismatch_warning
   run_test "TC-DT-04: branch resolution from mapping" test_branch_from_mapping
   run_test "TC-DT-04b: branch from arg (no mapping)" test_branch_from_arg_no_mapping
