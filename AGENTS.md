@@ -212,6 +212,16 @@ Canonical values: see `doc/decisions/ODR-0001-classify-yaml-register-templates-r
 
 Test files follow the pattern `test-*.sh` inside `.tests/` subdirectories. Run with `bash <dir>/.tests/test-*.sh`.
 
+## Quality gates
+
+Run all quality gates in one deterministic pass:
+
+```bash
+./scripts/quality-gates.sh
+```
+
+The runner orchestrates the repo's real gates — `bash-tests` (`scripts/test-all.sh`), `doc-distribution` (`scripts/.tests/test-doc-distribution.sh`), `plugin-freshness` (`scripts/build-claude-plugin.sh` + `.ados-claude/` cleanliness), and `whitespace` (`git diff --check`) — and exits non-zero if any gate fails. Per-gate summaries land on stdout with the `(quality-gates)` tag; per-gate logs under `tmp/quality-gates/<YYYY-MM-DD>/`. See [doc/guides/quality-gates.md](doc/guides/quality-gates.md) for selectors, the output contract, and how to add a project-specific gate.
+
 ## License headers
 
 **AI agents must never add license headers.** Headers are managed exclusively by `scripts/add-header-location.sh` for specific paths.

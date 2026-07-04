@@ -583,11 +583,11 @@ header via the script (no hand-added headers).
 
 **Tasks**:
 
-- [ ] **6.1** CREATE `doc/guides/quality-gates.md` (new) with frontmatter
+- [x] **6.1** CREATE `doc/guides/quality-gates.md` (new) with frontmatter
   declaring `ados_distribution: redistributable` (NFR-8 / DEC-5 — the guide is
   generic/reusable, so `redistributable` is honest). Author it **without** the
   copyright/MIT/source header lines (Phase 6.3 applies them via the script).
-  *(owner: @coder; F-6, AC-F6-1, NFR-8, RSK-5; TC-QGATES-011)*
+  *(owner: @coder; F-6, AC-F6-1, NFR-8, RSK-5; TC-QGATES-011)* — done; frontmatter has ados_distribution at line 5.
 - [ ] **6.2** AUTHOR the guide content (F-6 / AC-F6-2 / TC-QGATES-012) covering:
   - **how to run gates** — directly (`scripts/quality-gates.sh`) and via `/check`
     (the resolution contract);
@@ -603,25 +603,25 @@ header via the script (no hand-added headers).
     `@runner` mirror under `tmp/run-logs-runner/<YYYY-MM-DD>/`;
   - **cross-links (not duplicates)** to `doc/spec/features/feature-quality-gates-and-pr.md`,
     `.ai/rules/bash.md`, and `doc/guides/change-lifecycle.md` (phase 9).
-  *(owner: @coder; F-6, AC-F6-2, OQ-2; TC-QGATES-012)*
+  *(owner: @coder; F-6, AC-F6-2, OQ-2; TC-QGATES-012)* — done; all sections authored (running/declaring/extending/output/exit-codes/logs/cross-links).
 - [ ] **6.3** RUN `scripts/add-header-location.sh doc/guides` (a default header
   path) so the script injects the canonical copyright/MIT/source header into the
   new guide's frontmatter (AGENTS.md: the AI must **not** hand-add headers).
-  Verify idempotency: re-running produces no diff. *(owner: @coder; NG-7, RSK-8; TC-QGATES-011)*
+  Verify idempotency: re-running produces no diff. *(owner: @coder; NG-7, RSK-8; TC-QGATES-011)* — done; updated 1, then 0 on re-run (idempotent).
 - [ ] **6.4** EDIT `AGENTS.md` (F-7 / DEC-3 / AC-F7-2 / TC-QGATES-014): add the
   **minimal honest declaration** naming the runner (`scripts/quality-gates.sh`)
   and (if enumerated) only **real** gates — no invented gates. Place it under a
   sensible existing section (e.g., a short note near "## Running tests" or
   "## Running the system") so `/check` §`<resolution>` step 1 succeeds
   deterministically rather than relying on the missing-file fallback. Keep it
-  truthful and minimal (DEC-3). *(owner: @coder; F-7, AC-F7-2, DM-2, DEC-3; TC-QGATES-014)*
+  truthful and minimal (DEC-3). *(owner: @coder; F-7, AC-F7-2, DM-2, DEC-3; TC-QGATES-014)* — done; "## Quality gates" section added after "## Running tests" with `./scripts/quality-gates.sh` declaration.
 - [ ] **6.5** VERIFY: `rg -n '^ados_distribution: redistributable' doc/guides/quality-gates.md`
   → exactly 1 match in the opening frontmatter block; `rg -n 'scripts/quality-gates\.sh' AGENTS.md`
   → ≥1 match naming the real script; the guide's header is present exactly once
-  and re-running `add-header-location.sh` is a no-op. *(owner: @coder; AC-F6-1, AC-F7-2; TC-QGATES-011, TC-QGATES-014)*
-- [ ] **6.6** HAND to `@committer`: stage `doc/guides/quality-gates.md` and
+  and re-running `add-header-location.sh` is a no-op. *(owner: @coder; AC-F6-1, AC-F7-2; TC-QGATES-011, TC-QGATES-014)* — PASS: marker at line 5, AGENTS.md match at line 220, header idempotent.
+- [x] **6.6** HAND to `@committer`: stage `doc/guides/quality-gates.md` and
   `AGENTS.md` (and only those — AGENTS.md is edited here, not `.opencode/`).
-  *(owner: @committer)*
+  *(owner: @committer)* — staged + commit pending.
 
 **Acceptance Criteria**:
 
