@@ -1,0 +1,54 @@
+change_id: GH-37
+title: "Create scaffolding for AI agent tuned quality gates script + document how to use"
+slug: ai-tuned-quality-gates-script
+branch: feat/GH-37/ai-tuned-quality-gates-script
+base_branch: main
+ticket_url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/37"
+
+phases:
+  clarify_scope: { started: "2026-07-04T00:00:00Z", completed: "2026-07-04T00:30:00Z" }
+  specification: { started: "2026-07-04T00:30:00Z", completed: "2026-07-04T00:50:00Z" }
+  test_planning: { started: "2026-07-04T00:50:00Z", completed: "2026-07-04T01:10:00Z" }
+  delivery_planning: { started: "2026-07-04T01:10:00Z", completed: "2026-07-04T01:30:00Z" }
+  dor_check: { started: "2026-07-04T01:30:00Z", completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+
+decisions:
+  - text: "SCOPE = Option A (scaffolding + docs only). The repo has a documented, dangling dependency: /check (F-1), /check-fix (F-2), feature-quality-gates-and-pr.md (NFR-1 + line 109 dependency), and onboarding-existing-project.md ALL reference ./scripts/quality-gates.sh as the quality-gates runner — but that file does NOT exist. Creating it IS the 'scaffolding' the ticket asks for. The 'AI-tuned' aspect = AI-actionable structured output (exit codes, per-gate pass/fail, log pointers per @runner conventions). The script orchestrates this repo's real gates (test-all, doc-distribution, plugin freshness, git diff --check) and is designed as extensible scaffolding (AGENTS.md discovery) usable by other ADOS-managed projects."
+    date: "2026-07-04"
+  - text: "DEFERRED (proposed follow-up, human-gated): the two policies from owner comment #2 (hard-NFR enforcement + config-vs-code early gate) are NOT folded into GH-37. Rationale: each is genuinely substantial (hard-NFR touches DoR semantics + NFR modeling; config-vs-code touches lifecycle phase ordering); the owner comment explicitly offered 'fold OR companion ticket'; 'one change at a time' principle favors focused scope. PM will PROPOSE a companion ticket at PR time per governance (PM never auto-creates tickets)."
+    date: "2026-07-04"
+  - text: "'Extract from my private projects' is NOT a blocker: the owner's own comments reframe the deliverable around THIS repo's existing contracts (the dangling quality-gates.sh), and the 'best practices' are codifiable from ADOS's own conventions (test-all.sh, CI gates, @runner log format, /check resolution contract). No private-project access required."
+    date: "2026-07-04"
+
+open_questions: []
+
+blockers: []
+
+notes:
+  - text: "State detection: FRESH START — no GH-37 branch/folder/PR existed (local or remote). Issue #37 was OPEN, unlabeled. Proceeded with full 11-phase lifecycle."
+    type: info
+    date: "2026-07-04"
+  - text: "Planning session in pm-context.yaml mislabeled GH-37 as 'Hard-NFR enforcement rule (comment on #37)'. The ACTUAL ticket #37 is about AI-tuned quality-gates SCRIPT SCAFFOLDING. The actual ticket title/body governs. (The hard-NFR content is the owner's comment #2, treated as deferred proposed policy above.)"
+    type: info
+    date: "2026-07-04"
+  - text: "Feature spec coverage: feature-quality-gates-and-pr.md EXISTS and will be RECONCILED (not created) — it already references scripts/quality-gates.sh as a dependency; GH-37 makes that dependency real. No coverage gap."
+    type: info
+    date: "2026-07-04"
+  - text: "RETRO/TOOLING (carried from GH-112): @runner subagent returns EMPTY task_result in this environment. Using @general subagent for all command execution (git, gh, test runs). Affects quality_gates phase — will run tests via @general, not @runner."
+    type: retro
+    date: "2026-07-04"
+  - text: "SPEC COMPLETE (24 ACs: 21 functional AC-F* + 3 AC-NFR*). @spec-writer independently verified the dangling dependency (scripts/quality-gates.sh absent; AGENTS.md declares no runner). Resolved 3 OQs as PM decisions (reversible, low-impact impl details — no decision record needed): OQ-1=all+named-gate now, fast/slow=future; OQ-2=runner writes tmp/quality-gates/<date>/, @runner mirrors under tmp/run-logs-runner/; OQ-3=descriptive comment header only (match test-all.sh)."
+    type: info
+    date: "2026-07-04"
+  - text: "TEST PLAN COMPLETE (21 TCs TC-QGATES-001..021, 24/24 = 100% AC coverage). Hermetic regression-guard AC-F1-4 (injected failing gate fixture). PM OQ resolutions baked in."
+    type: info
+    date: "2026-07-04"
+  - text: "PLAN COMPLETE (8 phases, ~60 tasks). All 24 ACs + 21 TCs covered by >=1 task each (AC Coverage Map 24/24, TC Traceability Map 21/21). Ends handing to @reviewer/@runner; no review phase in plan body."
+    type: info
+    date: "2026-07-04"
