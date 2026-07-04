@@ -6,10 +6,10 @@ ados_distribution: internal
 id: SPEC-DELIVERY-LIFECYCLE
 status: Current
 created: 2026-06-28
-last_updated: 2026-07-03
+last_updated: 2026-07-04
 owners: ["engineering"]
 service: delivery-os
-summary: "The deterministic 11-phase spec→plan→deliver→review→PR change delivery workflow with PM-led orchestration, Definition of Ready / Definition of Done gating, phase reopening, the per-change artifact set, and unconditional (always-resolve) feature-spec coverage resolution at phase 7."
+summary: "The deterministic 11-phase spec→plan→deliver→review→PR change delivery workflow with PM-led orchestration, Definition of Ready / Definition of Done gating, phase reopening, the per-change artifact set, and phase-7 documentation reconciliation that closes documentation gaps in-change across current-truth docs (including feature-spec first-authoring when needed)."
 links:
   related_changes: ["GH-79", "GH-108"]
   guides:
@@ -49,12 +49,12 @@ ADOS turns a single tracker ticket (`workItemRef`) into a reviewed, tested PR/MR
 - **Definition of Done check (F-4):** `dod_check` (phase 10) verifies all phases complete, all plan tasks checked, and all acceptance criteria satisfied before PR creation. See [definition-of-done.md](../../guides/definition-of-done.md).
 - **Phase reopening (F-5):** Phases are **not strictly linear**. When a gap is discovered in a later phase, `@pm` reopens the relevant earlier phase and re-delegates. Critically, a DoR `NOT_READY` reopens an **artifact-creation phase** (`specification`, `test_planning`, or `delivery_planning`) — **never `delivery`**. Review remediation, quality-gate fixes, and DoD gaps reopen `delivery` (or the relevant phase). Every reopening triggers a `retro` note in `chg-<ref>-pm-notes.yaml`.
 - **Artifact set (F-6):** Each change lives under `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/` and carries four mandatory artifacts plus optional ones. The folder/branch/naming convention is defined authoritatively in [doc/guides/unified-change-convention-tracker-agnostic-specification.md](../../guides/unified-change-convention-tracker-agnostic-specification.md); this spec does not restate it.
-- **Unconditional (always-resolve) feature-spec coverage resolution at phase 7 (F-7):** At `system_spec_update` (phase 7), `@doc-syncer` runs a **positive** feature-spec coverage check — for each **feature area** the change modifies (a coherent, nameable capability that warrants a `doc/spec/features/feature-<slug>.md`; routine edits, one-off scripts, and bug fixes to already-specced areas are **not** new feature areas), it looks for the matching spec and collects any missing area into `spec_coverage_gaps`. **Resolution is unconditional** — `delivery_mode` (`interactive | autonomous`, declared by `@pm` at intake in `chg-<ref>-pm-notes.yaml`; **absent ⇒ `interactive`** — the default, backward-compatible with no migration) is read and recorded but does **not** gate resolution:
-  - **Always resolved in-change:** in **every** mode (regardless of `delivery_mode`, including absent/`interactive`), a detected gap for a modified feature area with **no** spec is **resolved in-change** — `@doc-syncer` authors the missing `doc/spec/features/feature-<slug>.md`. This is **first-spec-only**: an **existing** spec is merely **reconciled** (never re-authored), and routine edits / one-off scripts are excluded (over-fire guard). The authored spec is part of the change and reviewed at the open-PR human gate.
-  - **No tracker ticket in any mode.** There is no human decision and no follow-up ticket for spec coverage — phase 7's goal is an **always-current** system specification, not detecting that one is missing. The resolution produces a **doc artifact** scoped to the change (reviewed at the open-PR human gate); the governance rule **"PM must NEVER create new tickets autonomously"** is preserved verbatim. Coverage does not block the change from proceeding to `review_fix`.
-  - **`delivery_mode`** is retained as an optional, backward-compatible per-change signal (read and recorded but non-gating); it is reserved for future mode-aware features (e.g., GH-111).
-  - A repo-internal visibility aid (`scripts/spec-coverage-snapshot.sh`) makes the feature-specs-present vs changes-touching-feature-areas ratio computable, so a silent coverage drop is detectable without a manual audit.
-  (Authoritative behavior: `.opencode/agent/doc-syncer.md`; mirrored in [doc/guides/change-lifecycle.md](../../guides/change-lifecycle.md) Phase 7. Introduced by GH-108 / [PDR-0002](../../decisions/PDR-0002-mode-aware-spec-coverage-resolution.md); changed to always-resolve per the PR #122 owner review directive.)
+- **Phase-7 documentation reconciliation and gap closure (F-7):** At `system_spec_update` (phase 7), `@doc-syncer` reconciles all affected current-truth docs, including `doc/00-index.md`, `doc/guides/**`, `doc/overview/**`, `doc/spec/**`, `doc/contracts/**`, `doc/domain/**`, `doc/quality/**`, `doc/ops/**`, `doc/diagrams/**`, and `doc/decisions/**`.
+  - Missing/stale/incomplete documentation is resolved in-change (reconcile existing docs or create missing docs when the change introduces/exposes enduring behavior or concepts).
+  - Feature specs are one gap type: if a modified feature area warrants `doc/spec/features/feature-<slug>.md` and none exists, `@doc-syncer` authors the missing first spec in-change; existing specs are reconciled, not re-authored.
+  - Documentation gap closure is implemented as doc artifacts in the same change and reviewed at the PR gate; no tracker ticket is created for documentation coverage handoff.
+  - A repo-internal visibility aid (`scripts/spec-coverage-snapshot.sh`) makes the feature-specs-present vs changes-touching-feature-areas ratio computable to detect silent coverage erosion without manual audits.
+  (Authoritative behavior: `.opencode/agent/doc-syncer.md`; mirrored in [doc/guides/change-lifecycle.md](../../guides/change-lifecycle.md) phase 7.)
 
 ### The Mandatory Per-Change Artifact Set
 
@@ -63,7 +63,7 @@ ADOS turns a single tracker ticket (`workItemRef`) into a reviewed, tested PR/MR
 | `chg-<ref>-spec.md` | Canonical specification (problem, goals, AC, DoD) | Yes |
 | `chg-<ref>-test-plan.md` | Test strategy + traceability to AC | Yes |
 | `chg-<ref>-plan.md` | Phased, check-listable implementation plan | Yes |
-| `chg-<ref>-pm-notes.yaml` | PM phase tracking, `delivery_mode`, decisions, open questions, retro notes (git-committed) | Yes |
+| `chg-<ref>-pm-notes.yaml` | PM phase tracking, decisions, open questions, blockers, and retro notes (git-committed) | Yes |
 | `doc/decisions/<TYPE>-<zeroPad4>-<slug>.md` | Decision record for a major/precedent-setting decision | Optional |
 
 ### Two Gated Acceptance Checks (DoR / DoD)
@@ -99,7 +99,7 @@ Manual:      /plan-change → /write-spec → /write-test-plan → /write-plan
 | `.opencode/agent/{spec-writer,test-plan-writer,plan-writer}.md` | Artifact authors | Phases 2–4 (specification, test_planning, delivery_planning) |
 | `.opencode/agent/readiness-reviewer.md` | Readiness reviewer | Phase 5 (dor_check) — authoritative DoR gate |
 | `.opencode/agent/coder.md` | Coder agent | Phase 6 (delivery) — executes plan phases |
-| `.opencode/agent/doc-syncer.md` | Doc-syncer agent | Phase 7 (system_spec_update) — reconciles system docs; runs the positive feature-spec coverage check and resolves gaps **unconditionally** (`delivery_mode` is read but non-gating: a missing first spec is authored in-change in **every** mode; an existing spec is reconciled) |
+| `.opencode/agent/doc-syncer.md` | Doc-syncer agent | Phase 7 (system_spec_update) — reconciles affected current-truth docs and closes documentation gaps in-change; includes first-authoring missing feature specs when warranted |
 | `.opencode/agent/{reviewer,runner,fixer,committer,pr-manager}.md` | Verification & finalization agents | Phases 8–11 |
 | `doc/guides/change-lifecycle.md` | Lifecycle guide | Human-readable mirror of the 11 phases (status: Draft; prompts authoritative) |
 | `doc/guides/definition-of-ready.md` | DoR guide | Human-readable mirror of the DoR gate (status: Draft; `@readiness-reviewer` prompt authoritative) |
@@ -107,7 +107,7 @@ Manual:      /plan-change → /write-spec → /write-test-plan → /write-plan
 ### Key Agent Boundaries
 
 - `@pm` orchestrates but does **not** implement, debug, run gates, or commit directly — it delegates to `@coder`, `@fixer`, `@runner`, `@committer`.
-- `@doc-syncer` reconciles system docs, reports feature-spec coverage gaps, and — in **every** mode (resolution is unconditional) — authors the **missing first** feature spec for a modified feature area (within `doc/spec/**`, an extension of its existing write surface; first-spec-only). It never modifies source code or change artifacts, and never creates a tracker ticket in any mode.
+- `@doc-syncer` reconciles affected current-truth docs and closes documentation gaps in-change, including first-authoring a missing feature spec when a modified feature area warrants one. It never modifies source code or change artifacts, and never creates a tracker ticket for documentation coverage handoff.
 - Phase definitions in `.opencode/agent/pm.md` are the operational source of truth for the phase list; the guide mirrors them.
 
 ## Non-Functional Requirements
@@ -118,7 +118,7 @@ Manual:      /plan-change → /write-spec → /write-test-plan → /write-plan
 | NFR-2 | Gating | DoR (phase 5) and DoD (phase 10) are hard gates | No silent DoR bypass; only a recorded trivial override |
 | NFR-3 | Traceability | Every change carries the 4 mandatory artifacts under the convention folder | 4/4 per change |
 | NFR-4 | Reopening discipline | DoR `NOT_READY` reopens an artifact phase, never `delivery` | Zero `delivery` reopenings from DoR |
-| NFR-5 | Spec-coverage over-fire & governance | Authoring fires only for the **first** spec of an unspecced modified feature area (in every mode — resolution is unconditional); an existing spec is reconciled, not re-authored; no tracker ticket is created in any mode | Zero re-authored specs; zero auto-tickets |
+| NFR-5 | Documentation completeness & governance | Phase 7 must leave no unresolved documentation gaps across affected current-truth docs; for feature specs, author only the first spec of an unspecced modified feature area and reconcile existing specs; no tracker ticket for documentation coverage handoff | Zero unresolved doc gaps; zero re-authored feature specs; zero auto-tickets |
 
 ## Quality Assurance Strategy
 
@@ -129,7 +129,7 @@ Manual:      /plan-change → /write-spec → /write-test-plan → /write-plan
 | Manual | Lifecycle walk-through | Deliver a change via autopilot and via manual commands; verify all phases run and gate |
 | Structural | Artifact presence | Each change folder contains the 4 mandatory artifacts |
 | Grep | Phase count | The lifecycle is described as **eleven** phases; `system_spec_update` = phase 7 (no stale shorter-phase phrasing) |
-| Grep | Unconditional resolution | Phase 7 / spec-coverage wording carries `delivery_mode` (read but non-gating) and the always-resolve clause; no language that lets a detected gap be dropped |
+| Grep | Documentation gap closure | Phase 7 wording states reconciliation + in-change gap closure across current-truth docs; no language that allows unresolved documentation gaps to pass silently |
 
 ## Dependencies & Risks
 
