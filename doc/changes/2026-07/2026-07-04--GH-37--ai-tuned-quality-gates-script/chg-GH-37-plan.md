@@ -669,11 +669,11 @@ header via the script (no hand-added headers).
   - **Testing Approach** (Quality Assurance Strategy): move off "Manual"-only —
     reference the automated suite (`scripts/.tests/test-quality-gates.sh`) +
     the runner as a gate.
-  *(owner: @coder; F-8, AC-F8-1, DEC-6; TC-QGATES-015)*
+  *(owner: @coder; F-8, AC-F8-1, DEC-6; TC-QGATES-015)* — done: Core Components table (+2 rows: runner + suite), NFR-1 reconciled (explicit AGENTS.md declaration, no missing-file fallback), Testing Approach (added 2 Automated rows), frontmatter last_updated, Related Docs link to guide. 7 insertions, 2 deletions.
 - [ ] **7.2** VERIFY the reconciliation is surgical: `git diff --stat -- doc/spec/features/feature-quality-gates-and-pr.md`
   is small/scoped; manual review confirms only component-table/NFR-1/Testing-
   Approach changes (no capability-semantics change, no unrelated churn).
-  *(owner: @coder; AC-F8-1, DEC-6; TC-QGATES-015 step 4)*
+  *(owner: @coder; AC-F8-1, DEC-6; TC-QGATES-015 step 4)* — PASS: 7 insertions, 2 deletions, scoped to component-table/NFR-1/Testing-Approach/frontmatter/link.
 - [ ] **7.3** PLUGIN-FRESHNESS INVARIANT (AC-F8-3 / RSK-7 / TC-QGATES-017):
   determine the `.opencode/` edit surface for this change
   (`git diff --name-only <merge-base> HEAD -- .opencode/` — **expected: empty**
@@ -682,9 +682,9 @@ header via the script (no hand-added headers).
   is **EMPTY** (the "no `.opencode/` edit ⇒ `.ados-claude/` untouched" branch —
   needless regeneration is a violation). If a `.opencode/` source *did* change,
   `.ados-claude/` MUST instead list exactly the generated counterparts of the
-  edited sources. *(owner: @coder; F-8, AC-F8-3, RSK-7; TC-QGATES-017)*
-- [ ] **7.4** HAND to `@committer`: stage `doc/spec/features/feature-quality-gates-and-pr.md`
-  only (do **not** stage `.ados-claude/` — it must be untouched). *(owner: @committer)*
+  edited sources. *(owner: @coder; F-8, AC-F8-3, RSK-7; TC-QGATES-017)* — PASS: no .opencode/ changes (merge-base abb381f); build-claude-plugin.sh ran clean; `git diff --stat -- .ados-claude/` is empty (invariant holds).
+- [x] **7.4** HAND to `@committer`: stage `doc/spec/features/feature-quality-gates-and-pr.md`
+  only (do **not** stage `.ados-claude/` — it must be untouched). *(owner: @committer)* — staged + commit pending.
 
 **Acceptance Criteria**:
 

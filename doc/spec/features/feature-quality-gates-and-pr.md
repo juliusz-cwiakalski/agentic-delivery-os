@@ -6,7 +6,7 @@ ados_distribution: internal
 id: SPEC-QUALITY-GATES-AND-PR
 status: Current
 created: 2026-06-28
-last_updated: 2026-06-28
+last_updated: 2026-07-04
 owners: ["engineering"]
 service: delivery-os
 summary: "The verification-and-release neighborhood of the lifecycle: quality gates (/check, /check-fix), the one-Conventional-Commit workflow (@committer), and the PR/MR workflow (@pr-manager), with a platform/project configuration layer."
@@ -81,6 +81,8 @@ Open/update PR:    /pr (→ @pr-manager)    → update existing open PR/MR, or c
 | `.opencode/agent/fixer.md` | Fixer agent | Reproduce failures, apply targeted fixes |
 | `.opencode/agent/committer.md` | Committer agent | Exactly one Conventional Commit; never push/rewrite |
 | `.opencode/agent/pr-manager.md` | PR manager agent | Create/update open PR/MR; never merge |
+| `scripts/quality-gates.sh` | Quality-gates runner | AI-tuned orchestrator: resolves + invokes the real gate set, structured per-gate summary, deterministic exit code |
+| `scripts/.tests/test-quality-gates.sh` | Contract suite | Proves the runner contract (resolution, dispatch, output, regression guard); auto-discovered by `scripts/test-all.sh` |
 | `.ai/agent/pr-instructions.md` | Platform config | PR/MR platform type + Operations Reference (CLI command table) |
 | `.ai/agent/code-review-instructions.md` | Review config | Repository-local review guidance |
 
@@ -88,7 +90,7 @@ Open/update PR:    /pr (→ @pr-manager)    → update existing open PR/MR, or c
 
 | ID | Category | Requirement | Threshold |
 |----|----------|-------------|-----------|
-| NFR-1 | Gate parity | `/check` resolves the gates command from `AGENTS.md` (default `./scripts/quality-gates.sh`) | Deterministic resolution |
+| NFR-1 | Gate parity | `/check` resolves `./scripts/quality-gates.sh` from the explicit `AGENTS.md` declaration; the runner resolves + invokes the real gate set | Deterministic resolution |
 | NFR-2 | Commit discipline | `@committer` produces exactly one Conventional Commit; never pushes or rewrites history | One commit per invocation |
 | NFR-3 | PR idempotency | `@pr-manager` updates an existing open PR/MR rather than duplicating | One open PR/MR per branch |
 | NFR-4 | Safety | `@committer` never commits `tmp/`/`.ai/local/`; `@pr-manager` never merges | Enforced by prompts |
@@ -99,6 +101,8 @@ Open/update PR:    /pr (→ @pr-manager)    → update existing open PR/MR, or c
 
 | Level | Scope | Notes |
 |-------|-------|-------|
+| Automated | `scripts/.tests/test-quality-gates.sh` | Contract suite: resolution, dispatch, per-gate output, exit codes, arg handling, determinism, performance, stdlib-only, regression guard (injected failing gate). Auto-discovered by `scripts/test-all.sh` + CI `bash-tests`. |
+| Automated | `scripts/quality-gates.sh` (dogfood) | Runner runs itself end-to-end on a clean tree; exit 0, all-PASS summary, logs at `tmp/quality-gates/<date>/` |
 | Manual | `/check` | Run on a clean tree; verify summary + log pointers, no fixes |
 | Manual | `/check-fix` | Introduce a failing gate; verify fix + single commit |
 | Manual | `/commit` | Verify one Conventional Commit; verify no push |
@@ -117,6 +121,7 @@ Open/update PR:    /pr (→ @pr-manager)    → update existing open PR/MR, or c
 - **Agents:** `.opencode/agent/{runner,fixer,committer,pr-manager}.md`.
 - **Platform config:** `.ai/agent/pr-instructions.md`; review config: `.ai/agent/code-review-instructions.md`.
 - **PR/MR integration guide:** [doc/guides/pr-platform-integration.md](../../guides/pr-platform-integration.md).
+- **Quality-gates operator guide:** [doc/guides/quality-gates.md](../../guides/quality-gates.md) — running, declaring, extending, and reading the runner output.
 - **System bootstrap:** [AGENTS.md](../../../AGENTS.md) — runner/fixer/committer/pr-manager roles, command table.
 - **Sibling spec (lifecycle context):** [feature-delivery-lifecycle.md](feature-delivery-lifecycle.md) — phases 8–11 (review_fix, quality_gates, dod_check, pr_creation).
 - **Sibling spec (local review):** [feature-local-code-review.md](feature-local-code-review.md) — `/review`/`/review-deep` and the remediation loop, adjacent to this verification neighborhood.
