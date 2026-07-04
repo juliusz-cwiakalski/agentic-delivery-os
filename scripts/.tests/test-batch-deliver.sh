@@ -161,6 +161,13 @@ EOF
   assert_eq "feat/another" "${PARSED_BRANCHES[2]}"
 }
 
+# TC-BD-03c: to_issue_number converts workItemRef to bare number for gh CLI
+test_to_issue_number() {
+  assert_eq "37" "$(to_issue_number "GH-37")" "GH-37 → 37"
+  assert_eq "123" "$(to_issue_number "PDEV-123")" "PDEV-123 → 123"
+  assert_eq "37" "$(to_issue_number "37")" "bare number stays"
+}
+
 # ============================================================================
 # TESTS: Pre-flight Skip (TC-BD-04 through TC-BD-06)
 # ============================================================================
@@ -170,7 +177,7 @@ test_skip_merged() {
   _gh() {
     case "$1" in
       issue)
-        printf '%s' '{"state":"OPEN","labelNames":[]}'
+        printf '%s' '{"state":"OPEN","labels":[]}'
         ;;
       pr)
         printf '%s' '[{"mergedAt":"2025-01-15T10:30:00Z"}]'
@@ -189,7 +196,7 @@ test_skip_blocked() {
   _gh() {
     case "$1" in
       issue)
-        printf '%s' '{"state":"OPEN","labelNames":["human-input-needed"]}'
+        printf '%s' '{"state":"OPEN","labels":[{"name":"human-input-needed"}]}'
         ;;
       pr)
         printf '%s' '[]'
@@ -206,7 +213,7 @@ test_skip_blocked() {
 # TC-BD-06: skip-closed — mock gh to return CLOSED state → SKIP
 test_skip_closed() {
   _gh() {
-    printf '%s' '{"state":"CLOSED","labelNames":[]}'
+    printf '%s' '{"state":"CLOSED","labels":[]}'
   }
 
   local skip_reason
@@ -220,7 +227,7 @@ test_no_skip_active() {
   _gh() {
     case "$1" in
       issue)
-        printf '%s' '{"state":"OPEN","labelNames":[]}'
+        printf '%s' '{"state":"OPEN","labels":[]}'
         ;;
       pr)
         printf '%s' '[]'
@@ -295,6 +302,7 @@ main() {
   run_test "TC-BD-02: parse colon syntax" test_parse_colon_syntax
   run_test "TC-BD-03: parse mixed positional + colon" test_parse_mixed
   run_test "TC-BD-03b: load from file" test_parse_from_file
+  run_test "TC-BD-03c: to_issue_number strips prefix" test_to_issue_number
   run_test "TC-BD-04: skip merged" test_skip_merged
   run_test "TC-BD-05: skip blocked" test_skip_blocked
   run_test "TC-BD-06: skip closed" test_skip_closed
