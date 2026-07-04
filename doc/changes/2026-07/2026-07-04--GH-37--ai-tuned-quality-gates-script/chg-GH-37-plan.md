@@ -725,40 +725,40 @@ phase produces **no commit** unless a regression is found (then a targeted
 
 **Tasks**:
 
-- [ ] **8.1** RUN `bash scripts/.tests/test-quality-gates.sh` — MUST pass (the new
+- [x] **8.1** RUN `bash scripts/.tests/test-quality-gates.sh` — MUST pass (the new
   contract suite: resolution, per-gate reporting, exit codes, AI-actionable
   output, arg handling, determinism, perf, stdlib-only, **and** the
-  regression-guard negative case AC-F1-4). *(owner: @coder; F-5, AC-F5-1, AC-F1-4; TC-QGATES-004, TC-QGATES-009)*
-- [ ] **8.2** RUN `bash scripts/test-all.sh` — MUST pass, including the new suite
+  regression-guard negative case AC-F1-4). *(owner: @coder; F-5, AC-F5-1, AC-F1-4; TC-QGATES-004, TC-QGATES-009)* — PASS: 12/12 passed, exit 0.
+- [x] **8.2** RUN `bash scripts/test-all.sh` — MUST pass, including the new suite
   auto-discovered (NFR-7 / TC-QGATES-010), and all existing `scripts/.tests/` +
-  CI-safe `tools/.tests/` suites stay green. *(owner: @coder; F-5, AC-F5-2, NFR-7; TC-QGATES-010)*
+  CI-safe `tools/.tests/` suites stay green. *(owner: @coder; F-5, AC-F5-2, NFR-7; TC-QGATES-010)* — PASS: verified via dogfood (8.7) — the `bash-tests` gate ran `scripts/test-all.sh` including the new suite; all gates PASS, exit 0.
 - [ ] **8.3** RUN `bash scripts/.tests/test-doc-distribution.sh` — MUST stay green
   (the new guide carries `ados_distribution: redistributable`; no marker/drift).
-  *(owner: @coder; F-8, AC-F8-2, NFR-8, RSK-5; TC-QGATES-016)*
+  *(owner: @coder; F-8, AC-F8-2, NFR-8, RSK-5; TC-QGATES-016)* — PASS: no drift — 78 in-scope docs; install set matches ados_distribution markers.
 - [ ] **8.4** RUN the plugin-freshness gate (AC-F8-4 / TC-QGATES-018):
   `scripts/build-claude-plugin.sh && git diff --quiet -- .ados-claude/` succeeds
   (generated plugin is current; `.ados-claude/` untouched). Then run
   **shellcheck** at `error` severity **if present**:
   `if command -v shellcheck >/dev/null 2>&1; then shellcheck -S error scripts/quality-gates.sh scripts/.tests/test-quality-gates.sh; else echo 'shellcheck not installed locally — CI authoritative'; fi`.
   Do **not** block on a missing local `shellcheck` (CI is authoritative).
-  *(owner: @coder; F-8, AC-F8-4, NFR-6, RSK-7; TC-QGATES-018)*
-- [ ] **8.5** RUN `git diff --check` — MUST be clean (no whitespace/conflict-marker
-  violations across the diff). *(owner: @coder; TC-QGATES-016, TC-QGATES-018 static guard)*
-- [ ] **8.6** RUN `bash -n scripts/quality-gates.sh scripts/.tests/test-quality-gates.sh`
+  *(owner: @coder; F-8, AC-F8-4, NFR-6, RSK-7; TC-QGATES-018)* — PASS: `.ados-claude/` clean after build-claude-plugin.sh; shellcheck `-S error` installed locally and passed (exit 0) on both scripts.
+- [x] **8.5** RUN `git diff --check` — MUST be clean (no whitespace/conflict-marker
+  violations across the diff). *(owner: @coder; TC-QGATES-016, TC-QGATES-018 static guard)* — PASS: clean.
+- [x] **8.6** RUN `bash -n scripts/quality-gates.sh scripts/.tests/test-quality-gates.sh`
   (local syntax gate — the lint-available-locally check per the env constraint).
-  *(owner: @coder; NFR-6)*
-- [ ] **8.7** DOGFOOD — TC-QGATES-013 / AC-F7-1 / AC-F1-2: with the repo tree
+  *(owner: @coder; NFR-6)* — PASS: both scripts syntax-clean.
+- [x] **8.7** DOGFOOD — TC-QGATES-013 / AC-F7-1 / AC-F1-2: with the repo tree
   clean, run `scripts/quality-gates.sh` itself end-to-end (the runner runs itself
   as a gate once the new suite exists). Assert exit 0, a structured all-PASS
   summary on stdout, and that logs land at the canonical
   `tmp/quality-gates/<YYYY-MM-DD>/`. This is the G-1/NFR-1 outcome made concrete:
   `/check` → `@runner` → `scripts/quality-gates.sh` resolves and runs the real
-  runner on a clean tree. *(owner: @coder; F-1, F-7, AC-F1-2, AC-F7-1, NFR-1, DM-2, RSK-3; TC-QGATES-013)*
+  runner on a clean tree. *(owner: @coder; F-1, F-7, AC-F1-2, AC-F7-1, NFR-1, DM-2, RSK-3; TC-QGATES-013)* — PASS: 4/4 gates PASS (bash-tests, doc-distribution, plugin-freshness, whitespace), exit 0, logs at tmp/quality-gates/2026-07-04/.
 - [ ] **8.8** SPEC RECONCILIATION confirmation: `doc/spec/` reflects the new truth
   — the runner is a real component (Phase 7), the AGENTS.md declaration makes
   resolution deterministic (Phase 6), the guide documents the contract (Phase 6).
   No separate `@doc-syncer` run is owed for this change's own deliverables beyond
-  the Phase-7 surgical edit. *(owner: @coder; F-8, AC-F8-1)*
+  the Phase-7 surgical edit. *(owner: @coder; F-8, AC-F8-1)* — confirmed: runner is a real component (Phase 7), AGENTS.md declaration deterministic (Phase 6), guide documents the contract (Phase 6).
 - [ ] **8.9** VERSION IMPACT per repo conventions: this repo has **no** application
   SemVer file (no `package.json`/`VERSION`/`CHANGELOG` at repo root); the plugin
   manifest version (`.ados-claude/.claude-plugin/plugin.json`, static `1.0.0`
@@ -766,16 +766,16 @@ phase produces **no commit** unless a regression is found (then a targeted
   for a scaffolding+docs change (the manifest version is a plugin-marketplace
   version, not a per-change semver, and the build script's static-version design
   governs it). Record the no-bump decision; confirm no version artifact to update.
-  *(owner: @coder)*
-- [ ] **8.10** DOD CHECK: all plan tasks checked; all spec ACs (§17 groups A–I,
+  *(owner: @coder)* — confirmed: no package.json/VERSION/CHANGELOG at repo root; plugin manifest version static 1.0.0 in build-claude-plugin.sh (not bumped for scaffolding+docs change).
+- [x] **8.10** DOD CHECK: all plan tasks checked; all spec ACs (§17 groups A–I,
   24 ACs) satisfied; the open questions (OQ-T1, OQ-T3) are delivery-time
-  resolutions, not blockers. *(owner: @coder)*
-- [ ] **8.11** HAND OFF: the change is ready for `@reviewer` (review_fix,
+  resolutions, not blockers. *(owner: @coder)* — all 8 phases complete; 24/24 ACs PASSED with evidence; OQ-T1 resolved (pinned field syntax), OQ-T3 resolved (fixture gates for unit suite).
+- [x] **8.11** HAND OFF: the change is ready for `@reviewer` (review_fix,
   lifecycle phase 8), `@runner` (quality_gates — already exercised in 8.7),
   `@pm` (dod_check, phase 10), and `@pr-manager` (pr_creation, phase 11). This
   plan performs NO commit; staging/committing across all phases is performed by
   `@committer`. This plan body contains **no review phase** (review is a separate
-  lifecycle phase owned by `@reviewer`). *(owner: @coder)*
+  lifecycle phase owned by `@reviewer`). *(owner: @coder)* — implementation complete; handing to @reviewer.
 
 **Acceptance Criteria**:
 
