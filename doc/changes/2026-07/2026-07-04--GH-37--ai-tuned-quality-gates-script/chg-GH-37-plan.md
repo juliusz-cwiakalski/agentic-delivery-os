@@ -493,59 +493,59 @@ auto-discovered by `scripts/test-all.sh` + CI `bash-tests`.
 
 **Tasks**:
 
-- [ ] **5.1** CREATE `scripts/.tests/test-quality-gates.sh` (new, executable)
+- [x] **5.1** CREATE `scripts/.tests/test-quality-gates.sh` (new, executable)
   following the `test-*.sh` convention + the embedded framework (bash.md §11):
   strict mode + traps; a pass/fail summary; `mktemp -d` working area removed in
-  an EXIT trap (no state leakage). *(owner: @coder; F-5, AC-F5-1, NFR-6; TC-QGATES-009)*
-- [ ] **5.2** TC-QGATES-001 (static): assert `scripts/quality-gates.sh` exists +
+  an EXIT trap (no state leakage). *(owner: @coder; F-5, AC-F5-1, NFR-6; TC-QGATES-009)* — done: suite created, executable, embedded framework, EXIT trap teardown.
+- [x] **5.2** TC-QGATES-001 (static): assert `scripts/quality-gates.sh` exists +
   executable; shebang + strict mode + testable main guard + stable `LOG_TAG`;
   descriptive comment header present; **no** hand-added license/copyright block
-  (OQ-3 / RSK-8). *(owner: @coder; F-1, AC-F1-1, NFR-6, RSK-8; TC-QGATES-001)*
-- [ ] **5.3** TC-QGATES-002 (behavior): on a clean tree (or a fixture PASS-gate
+  (OQ-3 / RSK-8). *(owner: @coder; F-1, AC-F1-1, NFR-6, RSK-8; TC-QGATES-001)* — PASS.
+- [x] **5.3** TC-QGATES-002 (behavior): on a clean tree (or a fixture PASS-gate
   set per OQ-T3), no args ⇒ exit 0, every default gate reported PASS with stable
-  name/status/duration; no FAIL entries; default = `all`. *(owner: @coder; F-1, F-2, F-4, AC-F1-2, AC-F2-1, AC-F4-1, DM-1, DM-3, NFR-3, NFR-5; TC-QGATES-002)*
-- [ ] **5.4** TC-QGATES-003 (static + behavior): the default-set registry
+  name/status/duration; no FAIL entries; default = `all`. *(owner: @coder; F-1, F-2, F-4, AC-F1-2, AC-F2-1, AC-F4-1, DM-1, DM-3, NFR-3, NFR-5; TC-QGATES-002)* — PASS (fixture gates per OQ-T3).
+- [x] **5.4** TC-QGATES-003 (static + behavior): the default-set registry
   **invokes** (not reimplements) the 4 real gates — grep the 4 identifiers
   (`test-all.sh`, `test-doc-distribution.sh`, `build-claude-plugin.sh`,
   `git diff --check`); assert no rediscovery logic in the orchestrator; spot-run
-  one named real gate and assert it appears in the summary. *(owner: @coder; F-1, F-3, AC-F1-3, NG-1, RSK-1, RSK-9; TC-QGATES-003)*
-- [ ] **5.5** TC-QGATES-004 — **REGRESSION GUARD (AC-F1-4 / RSK-4 — most important)**:
+  one named real gate and assert it appears in the summary. *(owner: @coder; F-1, F-3, AC-F1-3, NG-1, RSK-1, RSK-9; TC-QGATES-003)* — PASS.
+- [x] **5.5** TC-QGATES-004 — **REGRESSION GUARD (AC-F1-4 / RSK-4 — most important)**:
   inject a deliberately failing fixture gate (a temp script printing a
   recognizable failure marker + `exit 7`) via the extension seam; assert the
   runner exits **non-zero**, reports that gate as **FAIL** with a stable
   prefix/tag, emits a log pointer to `tmp/quality-gates/<YYYY-MM-DD>/` whose
   pointed-to file exists and contains the gate's output, includes a **bounded**
   excerpt, and leaves the real repo tree untouched (`git status --porcelain`
-  unchanged). *(owner: @coder; F-1, F-2, AC-F1-4, AC-F2-2, DM-1, DM-3, NFR-3, NFR-5, RSK-4, OQ-2; TC-QGATES-004)*
-- [ ] **5.6** TC-QGATES-005 (behavior — arg handling + non-masking): named-gate
+  unchanged). *(owner: @coder; F-1, F-2, AC-F1-4, AC-F2-2, DM-1, DM-3, NFR-3, NFR-5, RSK-4, OQ-2; TC-QGATES-004)* — PASS (FAIL reported, exit≠0, log+excerpt+marker, git status unchanged).
+- [x] **5.6** TC-QGATES-005 (behavior — arg handling + non-masking): named-gate
   subset runs only the named gate; unknown selectors tolerated (notice emitted,
   no crash); tolerance is **non-masking** (a failing named gate + an unknown
-  selector still exits non-zero). *(owner: @coder; F-4, AC-F4-2, DM-3, NFR-3, OQ-1, RSK-2; TC-QGATES-005)*
-- [ ] **5.7** TC-QGATES-006 (behavior): `--help` exits 0 and documents the
+  selector still exits non-zero). *(owner: @coder; F-4, AC-F4-2, DM-3, NFR-3, OQ-1, RSK-2; TC-QGATES-005)* — PASS.
+- [x] **5.7** TC-QGATES-006 (behavior): `--help` exits 0 and documents the
   taxonomy (`all` + named-gate implemented; `fast`/`slow` future) + exit-code
-  semantics. *(owner: @coder; F-4, AC-F4-3, OQ-1, DEC-4; TC-QGATES-006)*
-- [ ] **5.8** TC-QGATES-007 (behavior — resolution): a fixture AGENTS.md-style
+  semantics. *(owner: @coder; F-4, AC-F4-3, OQ-1, DEC-4; TC-QGATES-006)* — PASS.
+- [x] **5.8** TC-QGATES-007 (behavior — resolution): a fixture AGENTS.md-style
   declaration is honored (preferred); with no declaration, the documented
-  built-in default set is used; precedence is unambiguous. *(owner: @coder; F-3, AC-F3-1, DM-2, DEC-3; TC-QGATES-007)*
-- [ ] **5.9** TC-QGATES-008 (behavior — extension): a project gate added via the
+  built-in default set is used; precedence is unambiguous. *(owner: @coder; F-3, AC-F3-1, DM-2, DEC-3; TC-QGATES-007)* — PASS (unit via source + behavior via env seam).
+- [x] **5.9** TC-QGATES-008 (behavior — extension): a project gate added via the
   extension seam runs per documented precedence **without editing** the script's
   core (`git diff --stat -- scripts/quality-gates.sh` empty for the addition);
-  override precedence confirmed. *(owner: @coder; F-3, AC-F3-2; TC-QGATES-008)*
-- [ ] **5.10** TC-QGATES-019 (behavior — determinism): two runs of the same state
+  override precedence confirmed. *(owner: @coder; F-3, AC-F3-2; TC-QGATES-008)* — PASS (override verified via QGATES_OUTPUT_ROOT log file since PASS gates emit no excerpt).
+- [x] **5.10** TC-QGATES-019 (behavior — determinism): two runs of the same state
   yield the identical pass/fail verdict + identical gate ordering (durations may
-  vary — compare verdict + status + ordered gate-name list). *(owner: @coder; F-1, AC-NFR1-1, NFR-1, RSK-9; TC-QGATES-019)*
-- [ ] **5.11** TC-QGATES-020 (performance): time a run over a fixture set of
+  vary — compare verdict + status + ordered gate-name list). *(owner: @coder; F-1, AC-NFR1-1, NFR-1, RSK-9; TC-QGATES-019)* — PASS.
+- [x] **5.11** TC-QGATES-020 (performance): time a run over a fixture set of
   trivial PASS gates; assert orchestrator overhead (dispatch + reporting) < 2s
   wall-clock and each gate appears exactly once (no gratuitous re-runs).
-  *(owner: @coder; F-1, AC-NFR2-1, NFR-2; TC-QGATES-020)*
-- [ ] **5.12** TC-QGATES-021 (static + offline): the orchestrator's own code path
+  *(owner: @coder; F-1, AC-NFR2-1, NFR-2; TC-QGATES-020)* — PASS (10 trivial gates, no re-runs).
+- [x] **5.12** TC-QGATES-021 (static + offline): the orchestrator's own code path
   introduces no non-stdlib runtime dependency (no `curl`/`wget`/`python`/`node`/
   `ruby` in its own logic; delegation to gates is allowed); the suite runs to
-  green with no network access. *(owner: @coder; F-1, AC-NFR4-1, NFR-4; TC-QGATES-021)*
-- [ ] **5.13** VERIFY the suite passes: `bash scripts/.tests/test-quality-gates.sh`
-  → exit 0 with a PASS summary. *(owner: @coder; F-5, AC-F5-1; TC-QGATES-009)*
-- [ ] **5.14** HAND to `@committer`: stage `scripts/.tests/test-quality-gates.sh`
-  only. *(owner: @committer)*
+  green with no network access. *(owner: @coder; F-1, AC-NFR4-1, NFR-4; TC-QGATES-021)* — PASS.
+- [x] **5.13** VERIFY the suite passes: `bash scripts/.tests/test-quality-gates.sh`
+  → exit 0 with a PASS summary. *(owner: @coder; F-5, AC-F5-1; TC-QGATES-009)* — PASS: 12/12 passed, exit 0.
+- [x] **5.14** HAND to `@committer`: stage `scripts/.tests/test-quality-gates.sh`
+  only. *(owner: @committer)* — staged test suite + plan update; commit pending.
 
 **Acceptance Criteria**:
 
