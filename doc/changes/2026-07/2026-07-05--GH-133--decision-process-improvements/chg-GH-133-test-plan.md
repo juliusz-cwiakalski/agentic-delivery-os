@@ -960,7 +960,7 @@ Per `.ai/rules/testing-strategy.md`, this change maps to **static/diff checks** 
 
 ### 8.2 Assumptions
 
-- **A-1**: The 23 ACs enumerated from the ticket are the complete, authoritative acceptance set; the (pending) change spec will mirror them, not add new ones.
+- **A-1**: The 23 ACs enumerated from the ticket are the complete, authoritative acceptance set; the committed change spec mirrors them, not adds new ones.
 - **A-2**: The phased-commit plan (1 taxonomy, 2 template, 3 evidence-pack + researcher, 4 advisor delegation + plugin regen) is followed, so each scenario's "preconditions" (phase landed) are well-defined.
 - **A-3**: The two repo guards (`test-doc-distribution.sh`, `test-build-claude-plugin.sh`) are not modified by this change — they are executed as regression checks.
 - **A-4**: The baseline R1 section set is the one currently documented in the template's PROPORTIONAL RENDERING note (captured in TC-TPL-004).
