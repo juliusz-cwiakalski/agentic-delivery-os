@@ -62,13 +62,10 @@ directive (pm-notes).
 
 **Open questions:**
 
-- **OQ-1 (process deviation):** No `chg-GH-133-spec.md` exists in this change
-  folder at plan-authoring time — the operator supplied the requirements inline
-  (ticket + pm-notes). The spec path `links.change_spec` above points to the
-  canonical expected location. The DoR gate (`@readiness-reviewer`, phase 5) must
-  decide whether the inline context satisfies Definition of Ready or whether a
-  formal `chg-GH-133-spec.md` must be authored first. This plan does NOT author the
-  spec (operator directive: "Do NOT write the spec").
+- **OQ-1 (resolved):** The spec `chg-GH-133-spec.md` was authored in parallel and
+  is now committed at `04b2a46`. AC mapping reconciled: spec uses `AC-F#-#` IDs,
+  test-plan uses `AC-01..AC-23`, this plan uses `AC-1..AC-11` (grouped). See the
+  Cross-Artifact AC Traceability Matrix below.
 - **OQ-2 (red-team independence):** pm-notes record that the R1 review was
   coordinator-synthesized (no true agent independence in this subagent runtime) and
   recommends independent re-review at DoR for CTO + domain-expert lenses. Scheduled
@@ -158,8 +155,9 @@ directive (pm-notes).
   R1 protection (strict subset).*
 - **RSK-4: Ambiguous ADR vs TDR classification.** Selection decisions blur
   architecture vs technology. *Mitigated by the explicit tie-breaker rule (S-8).*
-- **RSK-5: Reviewer flags missing formal spec.** OQ-1 may force a spec-authoring
-  round-trip at DoR. *Mitigated by transparent flagging + rich inline context.*
+- **RSK-5: Reviewer flags missing formal spec.** ~~OQ-1 may force a spec-authoring
+  round-trip at DoR.~~ **Resolved:** spec authored and committed (`04b2a46`);
+  traceability matrix added.
 - **RSK-6: License-as-human-step misread as license-blocking.** The rule is that AI
   must not *autonomously accept* a dependency's license, not that licenses block
   selection. *Mitigated by precise wording in Phase 4.*
@@ -192,6 +190,19 @@ grandfathering of the 6 legacy records.
   (R1/R2/R3) is the **primary axis** driving the section set; type/archetype toggle
   only small **enumerated add-ons** (a compact table, not a full matrix). State
   explicitly that a full 2D matrix is intentionally avoided (LLM rendering cost).
+- [ ] **1.1b** Add **domains-first extension guidance** to `decision-making.md` §4
+  (Four-axis classification): specialized concerns (security, privacy, compliance,
+  data, finance, legal, AI, vendor, procurement, ML, UX) route to
+  `classification.domains` + the primary owning type — NOT new top-level prefixes.
+  Include explicit overlap examples: ML model selection → `domains: [ai/ml]` +
+  `archetype: selection`; vendor/procurement → `domains: [vendor]`; UX pattern
+  library → `domains: [ux]`. [AC-F2-1]
+- [ ] **1.1c** Add **common-overlap guidance** to `decision-making.md` §7 (or a new
+  subsection): pricing (PDR if packaging/value; BDR if revenue/contracts/commercial
+  policy), infrastructure (ADR if system-shaping; ODR if operating existing system),
+  data retention (BDR/ODR/ADR depending on primary driver), security/privacy (domain
+  tag + primary owning type). Mirror the overlap table in
+  `decision-records-management.md` §2. [AC-F1-2]
 - [ ] **1.2** Add the **ADR/TDR tie-breaker rule** to `decision-making.md` (§4 or
   §7) and mirror it in `decision-records-management.md` §2: selecting a specific
   technology/library/tool/build tooling → **TDR**; system structure, boundaries,
@@ -238,6 +249,10 @@ ship worked R1/R2/R3 examples.
 
 **Tasks**:
 
+- [ ] **2.0** **Type-selection helper**: add a compact type-selection decision
+  table/tree near the top of `decision-record-template.md` (before the first body
+  section): rule-of-thumb + tie-breaker → ADR/PDR/TDR/BDR/ODR. Cross-link to the
+  Phase-1 guidance in `decision-making.md`. [AC-F3-1]
 - [ ] **2.1** **Front-matter cleanup**: remove top-level `decision_area` and
   `reversibility` keys (keep `reversibility` only inside the optional
   `classification` block). Add a short comment: legacy records are grandfathered
@@ -374,8 +389,9 @@ delegation, license-as-human-step), then run the final plugin regen.
     model, R0/R1 reversible choices may be acted on locally (audit + escalation),
     no record for R0.
   - Document **license-as-human-step**: when a selection introduces a dependency,
-    its license acceptance is a **human step** — the advisor flags the license for
-    human review; it never autonomously "accepts" a license.
+    the advisor records the license string as a FACT (with source URL) and flags it
+    for **human compatibility-determination AND human acceptance** — the advisor
+    never autonomously concludes license compatibility or accepts a license.
 - [ ] **4.2** **Final regeneration**: `scripts/build-claude-plugin.sh`. Verify
   `.ados-claude/agents/decision-advisor.md` carries the delegation + security
   controls + generated-file header.
@@ -499,8 +515,10 @@ verbal/ephemeral — log verdict in Execution Log).
 
 - [ ] **7.1** For each must-fix item: edit the relevant guide/template/agent source
   only; never edit `.ados-claude/**` or the 6 grandfathered records by hand.
-- [ ] **7.2** If any `.opencode/agent/*.md` was touched → re-run
-  `scripts/build-claude-plugin.sh` and commit source + generated together.
+- [ ] **7.2** If any `.opencode/agent/*.md` or `.opencode/command/*.md` was touched →
+  re-run `scripts/build-claude-plugin.sh` and commit source + generated together.
+  Guide/template/doc fixes need NO regen (only `.opencode/` source feeds the plugin
+  build).
 - [ ] **7.3** Re-run doc-distribution guard; re-verify affected ACs.
 - [ ] **7.4** Re-review the remediated items only (delta review).
 
@@ -584,12 +602,42 @@ verbal/ephemeral — log verdict in Execution Log).
 
 ---
 
-## Artifacts and Links
+## Cross-Artifact AC Traceability Matrix
+
+Maps ticket ACs → spec IDs (`AC-F#-#`) → test-plan TCs → plan phases/tasks.
+
+| Ticket AC (topic) | Spec ID | Test-Plan TC | Plan Task |
+|---|---|---|---|
+| ADR/TDR boundary + tie-breaker | AC-F1-1 | TC-DEC-001 | 1.2 |
+| Domains-first + ML/vendor/UX examples | AC-F2-1 | TC-DEC-002 | 1.1b |
+| Overlap guidance (pricing/infra/data-retention/security) | AC-F1-2 | TC-DEC-003 | 1.1c |
+| Type-selection helper in template | AC-F3-1 | TC-TPL-001 | 2.0 |
+| Front-matter dedup (`decision_area`/`reversibility` removed) | AC-F4-1 | TC-TPL-002 | 2.1 |
+| Tiered-default (no 2D matrix) | AC-F3-2 | TC-TPL-003 | 1.1, 2.8 |
+| R1 required-section set unchanged/smaller | AC-F3-3 | TC-TPL-004 | 2.8 |
+| Recommendation vs Authorized Decision split | AC-F5-1 | TC-TPL-005 | 2.4 |
+| Decision rights/evidence/eligibility/rollback/retro | AC-F8-1 | TC-TPL-006 | 2.2–2.7 |
+| Worked R1/R2/R3 examples | AC-F9-1 | TC-TPL-007 | 2.9 |
+| Bounded evidence pack (top-N × ~10 signals) | AC-F10-1 | TC-EVI-001 | 3.1–3.2 |
+| Security controls + `external_data_shared` wired | AC-F11-1 | TC-EVI-002 | 3.1 |
+| Scorecard warning + license-as-human-step | AC-F10-2 | TC-EVI-003 | 4.1 |
+| Advisor delegates to researcher (recorded run) | AC-F12-1 | TC-ADV-001/004 | 4.1 |
+| FACT/ASSUMPTION/TO-CONFIRM + no invented metrics | AC-F12-2 | TC-ADV-002 | 4.1 |
+| R1 default-local | AC-F13-1 | TC-ADV-003 | 4.1 |
+| Researcher evidence-pack capability | AC-F12-3 | TC-RES-001 | 3.3 |
+| Grandfathered records + policy documented | AC-F14-1 | TC-COMPAT-001 | 1.4 |
+| GH-63 relationship documented | AC-F14-2 | TC-COMPAT-002 | 1.4 (narrative) |
+| R1 omits R3-only (golden-output diff) | AC-F9-2 | TC-TPL-008 | 2.8/2.9 |
+| `.ados-claude/` regenerated | AC-DM6-1 | TC-GATES-001 | 3.4, 4.2 |
+| `ados_distribution` valid | AC-NFR6-1 | TC-GATES-002 | all phases |
+| Quality gates pass | AC-NFR6-2 | TC-GATES-001/2/3 | 8.1 |
+
+---
 
 | Artifact | Location | Type |
 |----------|----------|------|
 | PM notes (context source) | `./chg-GH-133-pm-notes.yaml` | Context |
-| Change spec (expected, see OQ-1) | `./chg-GH-133-spec.md` | Spec |
+| Change spec | `./chg-GH-133-spec.md` | Spec (committed `04b2a46`) |
 | This plan | `./chg-GH-133-plan.md` | Plan |
 | Decision-Making guide | `doc/guides/decision-making.md` | Updated (P1, P3, P5) |
 | Decision Records Management guide | `doc/guides/decision-records-management.md` | Updated (P1) |
@@ -611,6 +659,7 @@ verbal/ephemeral — log verdict in Execution Log).
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-07-05 | plan-writer | Initial plan. 4 content phases (taxonomy, template, evidence-pack + researcher, advisor delegation) + spec-sync + review + fixes + release. Requirements derived from ticket + pm-notes + red-team R1 (inline; formal spec pending — see OQ-1). |
+| 1.1 | 2026-07-05 | @pm (R2 remediation) | R2 red-team fixes: added tasks 1.1b (domains-first), 1.1c (overlap guidance), 2.0 (type-selection helper); resolved OQ-1 (spec committed); added cross-artifact AC traceability matrix; sharpened license-as-human-step wording (compatibility-determination + acceptance); added Phase 7 regen-rule clarification. |
 
 ---
 

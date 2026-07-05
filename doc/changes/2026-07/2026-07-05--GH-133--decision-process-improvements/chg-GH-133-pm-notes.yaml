@@ -5,9 +5,9 @@ branch: feat/GH-133/decision-process-improvements
 delivery_mode: interactive
 phases:
   clarify_scope: { started: "2026-07-05", completed: "2026-07-05" }
-  specification: { started: null, completed: null }
-  test_planning: { started: null, completed: null }
-  delivery_planning: { started: null, completed: null }
+  specification: { started: "2026-07-05", completed: "2026-07-05" }
+  test_planning: { started: "2026-07-05", completed: "2026-07-05" }
+  delivery_planning: { started: "2026-07-05", completed: "2026-07-05" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
