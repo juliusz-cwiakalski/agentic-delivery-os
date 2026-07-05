@@ -121,7 +121,10 @@ and activates the right subset.
 | Artifact | Location | Template | Produced by |
 |---|---|---|---|
 | Inception state | `doc/inception/inception-state.yaml` | `doc/templates/inception-state-template.yaml` | Templated here |
+| Phase open questions | `doc/inception/open-questions/phase-<N>-open-questions.md` | — | Produced by @bootstrapper |
+| Retrospective notes | `doc/inception/retrospective/` | — | Produced by @bootstrapper when needed |
 | Material inventory | `doc/inception/analysis/material-inventory.md` | `doc/templates/material-inventory-template.md` | Templated here |
+| ID-prefix catalog | `doc/inception/analysis/id-prefix-catalog.md` | — | Produced by @bootstrapper from Phase 2 |
 | North star | `doc/overview/01-north-star.md` | `doc/templates/north-star-template.md` | Templated here (enriched) |
 | Roadmap | `doc/overview/02-roadmap.md` | `doc/templates/roadmap-engineering-template.md` | Templated here |
 | Tech stack | `doc/overview/tech-stack.md` | `doc/templates/tech-stack-template.md` | Templated here |
@@ -164,6 +167,46 @@ Each phase follows the same loop: **fresh conversation → read inception state
 and prior artifacts → produce a draft → run the anti-sycophancy check → human
 review gate → update state → next phase.** The master flow diagram below shows
 all phases, gates, and the readiness-check loop back into earlier phases.
+
+### Cross-phase meta-practices
+
+`@bootstrapper` encodes the behavior; this guide is the human-readable contract.
+Apply these practices without replacing the phase-specific outputs below:
+
+- **Per-phase retrospectives:** capture useful process lessons during each phase
+  and before the gate in `doc/inception/retrospective/YYYYMMDD-HHMMSS-<slug>.md`.
+  Use frontmatter `status`, `created`, `phase_scope`, `topic`, and `outcome`
+  (`repeat`, `improve`, or `propose-ados-framework-improvement`). Include What
+  happened, What went well, and Improvement / pattern to repeat; add Caution,
+  Why it matters, or Anti-pattern when helpful. A phase is not gate-ready until
+  notes are written, or the PR/body states why none were needed.
+- **Durable open questions:** keep one file per phase at
+  `doc/inception/open-questions/phase-<N>-open-questions.md`. Use stable,
+  monotonic `OPEN-Q<N>` IDs within the phase; statuses are `OPEN`, `ANSWERED`,
+  or `DEFERRED`. Human answers go under `### Answer`; fold answered questions
+  into artifacts and avoid stale `OPEN` items.
+- **Conditional metric discipline:** when an artifact introduces a metric, North
+  Star Metric, or guardrail, confirm it is measurable without telemetry, has a
+  denominator, covers defining failure modes, and is labeled as target,
+  guardrail, or diagnostic. Words like trust, quality, coverage, and adoption
+  are not actionable until converted into observable events or thresholds.
+- **Project-derived cross-cutting coverage:** in Phase 2 and Phase 7, derive the
+  concern set from the project's domain and risk register, scaled to complexity.
+  Each concern needs a dedicated ticket or explicit acceptance criteria;
+  “included in each story” is not representation.
+- **Spike evidence hygiene:** keep raw spike work in gitignored `doc/**/tmp/`,
+  then extract durable evidence into committed scenario, findings, or decision
+  docs. Route implications into roadmap, assumptions, risks, or decisions; do
+  not leave critical assumptions validated only by scratch files.
+- **Optional PR-per-phase mode:** by default inception may proceed in one branch.
+  If the human chooses stricter delivery, use one phase = one branch from latest
+  `main` = one PR = one human gate. Produce only that phase's artifacts, state
+  gate decisions in the PR body, and mark the phase completed only after merge.
+- **Project-local ID-prefix catalog:** from Phase 2 onward, maintain
+  `doc/inception/analysis/id-prefix-catalog.md`. Before creating a new item type,
+  decide whether an existing prefix/subtype fits, whether it is easy to `rg`, and
+  whether its scope is company-global, project-global, repo-local, change-local,
+  or document-local.
 
 ```mermaid
 flowchart TD
@@ -452,6 +495,7 @@ Author the compass document (and, conditionally, the discovery artifacts).
 
 1. **Socratic planning session** — use the material inventory as input; ask structured questions about vision, users, problem, and metrics.
 2. Draft the north star using `doc/templates/north-star-template.md`, enriched with: strategic-pyramid context (mission → vision → strategy → outcome); an outcome definition (a measurable business goal, not a feature list); the North Star Metric (the ONE metric capturing user value, with guardrails); target users with JTBD; a problem statement (pain → consequence); guiding principles (product-specific, tension-creating); and a decision filter (ordered prioritisation rules).
+   Apply metric discipline if an NSM, metric, or guardrail is introduced.
 3. If product discovery has been done: draft the Opportunity Solution Tree mapping Outcome → Opportunities → Solutions → Experiments using `doc/templates/opportunity-solution-tree-template.md`.
 4. If non-trivial product: optionally draft the Project PRD (Working Backwards / press-release format) using `doc/templates/project-prd-template.md`.
 5. If UI-bearing or multi-user: capture the persona + JTBD using `doc/templates/persona-jtbd-template.md` (a section of the north star or a companion doc).
@@ -483,9 +527,12 @@ Define the current milestone and capture the risks and assumptions behind it.
 1. Define current-milestone scope. New project: MVP scope (first viable release) — what is IN, what is explicitly OUT, and success criteria. Legacy project: next-milestone scope (the next ADOS-managed deliverable) — same structure. Do not call legacy scope "MVP"; the product already exists.
 2. Draft the engineering roadmap using `doc/templates/roadmap-engineering-template.md`: Completed Milestones (empty at inception), Current Milestone (detailed scope), Future Milestones (rough).
 3. For each milestone: deliverables; success metrics (outcomes, not outputs); dependencies; a validation approach (how you will know it succeeded); and OST/discovery linkage (link each outcome to the Opportunity Solution Tree when discovery has been done).
+   Apply metric discipline to success metrics and guardrails.
 4. If UI-bearing: draft the screen inventory using `doc/templates/screen-inventory-template.md` and user journey maps using `doc/templates/user-journey-template.md` for key flows.
 5. Draft the assumption register using `doc/templates/assumption-register-template.md` — key assumptions tagged by risk type (Value/Usability/Feasibility/Viability) and validation status.
 6. Draft the risk register using `doc/templates/risk-register-template.md` — a four-risk assessment for the current milestone.
+7. Derive cross-cutting concerns from the domain and risk register; give each concern a dedicated ticket or explicit acceptance criteria, scaled to project complexity.
+8. Start or refine `doc/inception/analysis/id-prefix-catalog.md` before adding durable item prefixes.
 
 #### Anti-sycophancy technique
 
@@ -558,6 +605,7 @@ Capture the domain language and establish the engineering quality baseline.
 4. **Dev environment documentation:** a setup guide and a `.env.example` listing all required env vars (no values).
 5. **Security baseline:** a secret-management approach (no secrets in the repo) and a dependency-audit baseline.
 6. If UI-bearing: draft the UX design guidance using `doc/templates/ux-guidance-template.md`.
+7. Apply metric discipline if quality baselines introduce metrics or guardrails.
 
 #### Anti-sycophancy technique
 
@@ -636,7 +684,8 @@ Record what was decided, what was deferred, and how confident you are.
 
 1. Generate the inception summary using `doc/templates/inception-summary-template.md`: decisions made (with rationale); deferred items (with reasons); confidence-scored artifacts (which are high-confidence, which need refinement); and process-improvement notes (what worked, what didn't).
 2. Produce initial feature specs using `doc/templates/feature-spec-template.md`: for a new project from the current-milestone scope; for a legacy project from code analysis reconciled with existing behavior.
-3. Final human sign-off.
+3. Verify initial backlog coverage for project-derived cross-cutting concerns; refine the ID-prefix catalog.
+4. Final human sign-off.
 
 #### Anti-sycophancy technique
 
@@ -786,6 +835,7 @@ git-tracked state file holds:
 - `project` — `name`, `flow` (new/legacy), `profile`, and `characteristics` (`ui_bearing`, `multi_user`, `complex_domain`, `code_project`).
 - `phases[]` — each phase's `id`, `name`, `status` (pending/in_progress/completed), `started`, and `completed` timestamps.
 - `artifacts{}` — each artifact's `status` (pending/draft/approved/written), `path`, and `confidence` (0.0–1.0).
+- `artifacts.retrospective_notes` and `artifacts.open_questions` — phase-exit meta-practice tracking.
 - `decisions[]` — decisions with phase, text, rationale, and date.
 - `assumptions[]` — assumptions with `risk_type` (value/usability/feasibility/viability) and `validation_status` (unvalidated/testing/validated/invalidated).
 - `sessions[]` — session log (started, phase, notes).
@@ -808,6 +858,8 @@ doc/inception/
 ├── README.md          # workspace purpose + structure + lifecycle
 ├── inputs/            # user-provided materials (NOT agent-produced)
 ├── meetings/          # inception meeting notes (kickoff, interviews, gate reviews)
+├── open-questions/    # per-phase durable OPEN-Q items and answers
+├── retrospective/     # process lessons captured during/after phases
 └── analysis/          # agent intermediate analysis (material inventory, assumptions, risks, repo analysis, tribal knowledge)
 ```
 

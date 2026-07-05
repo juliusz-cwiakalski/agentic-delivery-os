@@ -49,6 +49,8 @@ artifacts:
   assumptions:       { status: pending, path: "doc/inception/analysis/assumptions.md", confidence: 0.0 }
   risks:             { status: pending, path: "doc/inception/analysis/risks.md", confidence: 0.0 }
   material_inventory: { status: pending, path: "doc/inception/analysis/material-inventory.md", confidence: 0.0 }
+  retrospective_notes: { status: pending, path: "doc/inception/retrospective/", confidence: 0.0 }
+  open_questions:    { status: pending, path: "doc/inception/open-questions/", confidence: 0.0 }
   inception_summary: { status: pending, path: "doc/inception/inception-summary.md", confidence: 0.0 }
   repo_analysis:     { status: pending, path: "doc/inception/analysis/repo-analysis.md", confidence: 0.0 }
   tribal_knowledge:  { status: pending, path: "doc/inception/analysis/tribal-knowledge.md", confidence: 0.0 }
