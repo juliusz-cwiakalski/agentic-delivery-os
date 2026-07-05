@@ -5,27 +5,29 @@ ticket_url: https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/137
 change_folder: doc/changes/2026-07/2026-07-05--GH-137--bootstrapper-inception-meta-practices
 branch: feat/GH-137/bootstrapper-inception-meta-practices
 source: MarkSync-for-Confluence inception retrospective notes (14 notes; not available at delivery — full context embedded in the ticket body)
+head_commit: 77d94273cf4aaad2c3d1d26de7f02bfbccf7f0ca
 
 phases:
   clarify_scope: { started: 2026-07-05, completed: 2026-07-05 }
   specification: { started: 2026-07-05, completed: 2026-07-05, note: "ticket body serves as spec (full per-practice context + ACs)" }
-  test_planning: { started: 2026-07-05, completed: 2026-07-05, note: "N/A — agent-prompt + doc change; verification = guards (plugin freshness, doc-distribution, test-all)" }
+  test_planning: { started: 2026-07-05, completed: 2026-07-05, note: "N/A — agent-prompt + doc change; verification = guards" }
   delivery_planning: { started: 2026-07-05, completed: 2026-07-05, note: "ticket body = plan; @toolsmith executes" }
-  dor_check: { started: 2026-07-05, completed: 2026-07-05, note: "RECORDED OVERRIDE: genuinely low-risk (agent prompt + docs, no executable code/API); detailed ticket body satisfies DoR intent; @reviewer in phase 8 is the safety net." }
-  delivery: { started: 2026-07-05, completed: null }
-  system_spec_update: { started: null, completed: null }
-  review_fix: { started: null, completed: null }
-  quality_gates: { started: null, completed: null }
-  dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null, url: null }
+  dor_check: { started: 2026-07-05, completed: 2026-07-05, note: "RECORDED OVERRIDE: genuinely low-risk (agent prompt + docs, no executable code/API); detailed ticket body satisfies DoR intent; @reviewer (PASS) was the safety net." }
+  delivery: { started: 2026-07-05, completed: 2026-07-05, note: "@toolsmith implemented + amended to 77d9427 (5 files: bootstrapper.md, .ados-claude plugin, project-inception.md, inception-state-template.yaml, this pm-notes)." }
+  system_spec_update: { started: 2026-07-05, completed: 2026-07-05, note: "No-op: the system doc for inception IS doc/guides/project-inception.md, which was updated as part of the change (single source of truth). No separate feature spec to reconcile; no executable feature." }
+  review_fix: { started: 2026-07-05, completed: 2026-07-05, note: "@reviewer PASS (8/8 AC, exclusions verified absent). 3 advisory findings addressed: (1) scope ratification comment on ticket; (2) phase-<N> placeholder consistency; (3) open-questions skip-escape clause." }
+  quality_gates: { started: 2026-07-05, completed: 2026-07-05, note: "Independently re-verified via @general: test-all 10/10, test-doc-distribution no drift (77 docs), test-build-claude-plugin 16/16 incl. 'committed plugin matches fresh build'." }
+  dod_check: { started: 2026-07-05, completed: 2026-07-05, note: "All 8 ACs met; 3 excluded practices absent; agent+guide+template consistent; plugin in sync; gates green." }
+  pr_creation: { started: 2026-07-05, completed: null, url: null }
 
 decisions:
-  - { text: "Streamlined delivery: GH-137 ticket body (full per-practice context + ACs + scope/non-goals) serves as spec+plan+test-plan basis.", date: 2026-07-05 }
-  - { text: "Agent-prompt edits routed through @toolsmith (user directive + AGENTS.md 'Extending the system').", date: 2026-07-05 }
-  - { text: "User authorized adjusting doc/guides/project-inception.md + doc/templates/inception-state-template.yaml for consistency — reverses GH-137's earlier 'deferred guide sync' non-goal; single-source-of-truth, no guide/agent divergence.", date: 2026-07-05 }
-  - { text: "Critical genericness trim: 9→7 practices. DROPPED 'ADOS retro/issue backport' (MarkSync-specific; owner=ADOS maintainer) and 'branch topology guardrail' (generic git hygiene, wrong layer, presupposes optional PR-per-phase mode). DE-SPECIFICIZED cross-cutting coverage (project-derived, no fixed list). CONDITIONALIZED measurable-proxy (triggers only when metrics authored).", date: 2026-07-05 }
+  - { text: "Streamlined delivery: GH-137 ticket body serves as spec+plan+test-plan basis.", date: 2026-07-05 }
+  - { text: "Agent-prompt edits routed through @toolsmith (user directive + AGENTS.md).", date: 2026-07-05 }
+  - { text: "User authorized adjusting doc/guides/project-inception.md + inception-state-template.yaml for consistency (ratified in ticket comment) — single source of truth, no divergence.", date: 2026-07-05 }
+  - { text: "Critical genericness trim: 9→7 practices. DROPPED ADOS-retro-backport (MarkSync-specific) and branch-topology (wrong-layer); de-specificized cross-cutting; conditionalized measurable-proxy.", date: 2026-07-05 }
 
 open_questions: []
 blockers: []
 notes:
-  - { text: "Delivery delegated to @toolsmith: edit .opencode/agent/bootstrapper.md (7 practices, concise encoding, prompt-economy), mirror meta-practices in doc/guides/project-inception.md, add retrospective_notes + open_questions artifact keys to doc/templates/inception-state-template.yaml, regenerate .ados-claude/ via scripts/build-claude-plugin.sh. Do NOT embed the 3 excluded practices.", type: info, date: 2026-07-05 }
+  - { text: "Encoding is concise (prompt-economy honored): one <inception_meta_practices> cross-phase section (~9 bullets) + 'Before gate: run phase-exit meta' hook in all 8 phases + targeted callouts for metric(Ph1/2/4)/cross-cutting(Ph2/7)/ID-prefix(Ph2/7).", type: info, date: 2026-07-05 }
+  - { text: "RETRO: @committer and @runner subagents return EMPTY task_result in this env; @toolsmith and @general return full verbatim output. Used @general for all independent verification (git state, gate re-runs, content audits). @toolsmith reliably did the edits+commits.", type: retro, date: 2026-07-05 }
