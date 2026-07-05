@@ -124,7 +124,6 @@ and activates the right subset.
 | Phase open questions | `doc/inception/open-questions/phase-<N>-open-questions.md` | — | Produced by @bootstrapper |
 | Retrospective notes | `doc/inception/retrospective/` | — | Produced by @bootstrapper when needed |
 | Material inventory | `doc/inception/analysis/material-inventory.md` | `doc/templates/material-inventory-template.md` | Templated here |
-| ID-prefix catalog | `doc/inception/analysis/id-prefix-catalog.md` | — | Produced by @bootstrapper from Phase 2 |
 | North star | `doc/overview/01-north-star.md` | `doc/templates/north-star-template.md` | Templated here (enriched) |
 | Roadmap | `doc/overview/02-roadmap.md` | `doc/templates/roadmap-engineering-template.md` | Templated here |
 | Tech stack | `doc/overview/tech-stack.md` | `doc/templates/tech-stack-template.md` | Templated here |
@@ -139,7 +138,7 @@ and activates the right subset.
 | Documentation handbook | `doc/documentation-handbook.md` | — | Auto-installed standard |
 | Inception summary | `doc/inception/inception-summary.md` | `doc/templates/inception-summary-template.md` | Templated here |
 
-### Conditionally-produced (based on project characteristics)
+### Conditionally-produced (based on project characteristics or need)
 
 | Artifact | Location | Template | Produced by |
 |---|---|---|---|
@@ -157,16 +156,18 @@ and activates the right subset.
 | NFRs | `doc/spec/nonfunctional.md` | — | Authored at inception (no template) |
 | Repo analysis | `doc/inception/analysis/repo-analysis.md` | `doc/templates/repo-analysis-template.md` | Templated here |
 | Tribal knowledge | `doc/inception/analysis/tribal-knowledge.md` | `doc/templates/tribal-knowledge-template.md` | Produced by tribal-knowledge extraction |
+| ID-prefix catalog | `doc/inception/analysis/id-prefix-catalog.md` | — | Produced by @bootstrapper from Phase 2 if durable item IDs accumulate |
 | Initial feature specs | `doc/spec/features/` | `doc/templates/feature-spec-template.md` | Reuse existing template |
 | Initial decision records | `doc/decisions/` | `doc/templates/decision-record-template.md` | Reuse existing template |
 | Project PRD | `doc/overview/prd.md` | `doc/templates/project-prd-template.md` | Templated here |
 
 ## The 8-phase process (0–7)
 
-Each phase follows the same loop: **fresh conversation → read inception state
-and prior artifacts → produce a draft → run the anti-sycophancy check → human
-review gate → update state → next phase.** The master flow diagram below shows
-all phases, gates, and the readiness-check loop back into earlier phases.
+Each phase follows the same loop: **branch from latest `main` → fresh
+conversation → read committed inception state and prior artifacts → produce a
+draft → run the anti-sycophancy check → open a phase PR → human review gate →
+merge → update state on `main` → next phase.** The master flow diagram below
+shows all phases, gates, and the readiness-check loop back into earlier phases.
 
 ### Cross-phase meta-practices
 
@@ -198,15 +199,17 @@ Apply these practices without replacing the phase-specific outputs below:
   then extract durable evidence into committed scenario, findings, or decision
   docs. Route implications into roadmap, assumptions, risks, or decisions; do
   not leave critical assumptions validated only by scratch files.
-- **Optional PR-per-phase mode:** by default inception may proceed in one branch.
-  If the human chooses stricter delivery, use one phase = one branch from latest
-  `main` = one PR = one human gate. Produce only that phase's artifacts, state
-  gate decisions in the PR body, and mark the phase completed only after merge.
-- **Project-local ID-prefix catalog:** from Phase 2 onward, maintain
-  `doc/inception/analysis/id-prefix-catalog.md`. Before creating a new item type,
-  decide whether an existing prefix/subtype fits, whether it is easy to `rg`, and
-  whether its scope is company-global, project-global, repo-local, change-local,
-  or document-local.
+- **PR-per-phase (default delivery mode):** use one phase = one branch from
+  latest `main` = one PR = one human gate. Produce only that phase's artifacts,
+  state gate decisions in the PR body, and mark the phase completed only after
+  merge. This is the default for traceability, auditability, and stronger
+  per-phase human gating/review before proceeding. Only if the user explicitly
+  insists, inception may run as one branch/PR for the whole inception.
+- **Project-local ID-prefix catalog:** from Phase 2 onward, if durable item IDs
+  are accumulating, maintain `doc/inception/analysis/id-prefix-catalog.md`.
+  Before creating a new item type, decide whether an existing prefix/subtype
+  fits, whether it is easy to `rg`, and whether its scope is company-global,
+  project-global, repo-local, change-local, or document-local.
 
 ```mermaid
 flowchart TD
@@ -486,6 +489,7 @@ Confirm the flow type, repo profile, project characteristics, and the material i
 
 - `doc/inception/inception-state.yaml` — initialised from `doc/templates/inception-state-template.yaml`.
 - `doc/inception/analysis/material-inventory.md` — from `doc/templates/material-inventory-template.md`.
+- Phase-exit: write retrospectives + update open-questions (see Cross-phase meta-practices).
 
 ### Phase 1 — North star & vision
 
@@ -517,6 +521,7 @@ Review and approve the north star (and the OST/PRD/personas if produced).
 - Conditional: `doc/overview/opportunity-solution-tree.md` — from `doc/templates/opportunity-solution-tree-template.md`.
 - Conditional: `doc/overview/prd.md` — from `doc/templates/project-prd-template.md`.
 - Conditional: personas/JTBD — from `doc/templates/persona-jtbd-template.md`.
+- Phase-exit: write retrospectives + update open-questions (see Cross-phase meta-practices).
 
 ### Phase 2 — Scope & roadmap
 
@@ -532,7 +537,7 @@ Define the current milestone and capture the risks and assumptions behind it.
 5. Draft the assumption register using `doc/templates/assumption-register-template.md` — key assumptions tagged by risk type (Value/Usability/Feasibility/Viability) and validation status.
 6. Draft the risk register using `doc/templates/risk-register-template.md` — a four-risk assessment for the current milestone.
 7. Derive cross-cutting concerns from the domain and risk register; give each concern a dedicated ticket or explicit acceptance criteria, scaled to project complexity.
-8. Start or refine `doc/inception/analysis/id-prefix-catalog.md` before adding durable item prefixes.
+8. Start or refine `doc/inception/analysis/id-prefix-catalog.md` if durable item IDs are accumulating.
 
 #### Anti-sycophancy technique
 
@@ -556,6 +561,7 @@ Review and approve the roadmap, screen inventory, user journeys, assumptions, an
 - Conditional: `doc/overview/user-journeys.md` — from `doc/templates/user-journey-template.md`.
 - `doc/inception/analysis/assumptions.md` — from `doc/templates/assumption-register-template.md`.
 - `doc/inception/analysis/risks.md` — from `doc/templates/risk-register-template.md`.
+- Phase-exit: write retrospectives + update open-questions (see Cross-phase meta-practices).
 
 ### Phase 3 — Tech stack & architecture
 
@@ -592,6 +598,7 @@ Review and approve the tech stack, architecture, ADRs, and NFRs.
 - `doc/overview/architecture-overview.md` — from `doc/templates/architecture-overview-template.md`.
 - Initial decision records — from `doc/templates/decision-record-template.md`.
 - Conditional: NFRs at `doc/spec/nonfunctional.md` (no template).
+- Phase-exit: write retrospectives + update open-questions (see Cross-phase meta-practices).
 
 ### Phase 4 — Domain, conventions & quality baseline
 
@@ -624,6 +631,7 @@ Review and approve the glossary, rules files, CI, dev-environment docs, and UX g
 - Conditional: `doc/overview/ubiquitous-language.md` — from `doc/templates/ubiquitous-language-template.md`.
 - Conditional: `doc/overview/ux-guidance.md` — from `doc/templates/ux-guidance-template.md`.
 - Rules files, CI workflow, dev-setup guide, and `.env.example` — produced by @bootstrapper / CI; no hand-authored template today.
+- Phase-exit: write retrospectives + update open-questions (see Cross-phase meta-practices).
 
 ### Phase 5 — ADOS framework integration
 
@@ -649,6 +657,7 @@ Review and approve all ADOS framework files.
 #### Outputs
 
 - `AGENTS.md`, `.ai/agent/*-instructions.md`, `doc/documentation-profile.md`, `doc/documentation-handbook.md`, `doc/templates/`, and `doc/decisions/` — produced by @bootstrapper. The documentation profile may be authored from `doc/templates/documentation-profile-template.md`.
+- Phase-exit: write retrospectives + update open-questions (see Cross-phase meta-practices).
 
 ### Phase 6 — Inception readiness check
 
@@ -675,6 +684,7 @@ Review the readiness report; approve, or send back for remediation.
 #### Outputs
 
 - A readiness report (pass/fail per artifact, with identified gaps).
+- Phase-exit: write retrospectives + update open-questions (see Cross-phase meta-practices).
 
 ### Phase 7 — Inception summary & handoff
 
@@ -684,7 +694,7 @@ Record what was decided, what was deferred, and how confident you are.
 
 1. Generate the inception summary using `doc/templates/inception-summary-template.md`: decisions made (with rationale); deferred items (with reasons); confidence-scored artifacts (which are high-confidence, which need refinement); and process-improvement notes (what worked, what didn't).
 2. Produce initial feature specs using `doc/templates/feature-spec-template.md`: for a new project from the current-milestone scope; for a legacy project from code analysis reconciled with existing behavior.
-3. Verify initial backlog coverage for project-derived cross-cutting concerns; refine the ID-prefix catalog.
+3. Verify initial backlog coverage for project-derived cross-cutting concerns; refine the ID-prefix catalog if durable item IDs are accumulating.
 4. Final human sign-off.
 
 #### Anti-sycophancy technique
@@ -699,6 +709,7 @@ Final approval — the project is now "incepted" and ready for autonomous ADOS d
 
 - `doc/inception/inception-summary.md` — from `doc/templates/inception-summary-template.md`.
 - Initial feature specs — from `doc/templates/feature-spec-template.md`.
+- Phase-exit: write retrospectives + update open-questions (see Cross-phase meta-practices).
 
 ## Legacy flow differences
 
@@ -845,6 +856,10 @@ git-tracked state file holds:
 current (last incomplete) phase, and resumes inception with the state and prior
 artifacts as context. This lets inception proceed across multiple sessions
 without losing progress.
+
+Under the default PR-per-phase model, `main` holds the state of the last merged
+phase. Resume reads committed state from `main`, and each new phase branches from
+latest `main`.
 
 ## The `doc/inception/` workspace
 
