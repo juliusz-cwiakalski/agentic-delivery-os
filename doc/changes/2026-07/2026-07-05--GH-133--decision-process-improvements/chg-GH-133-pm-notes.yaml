@@ -14,7 +14,7 @@ phases:
   review_fix: { started: "2026-07-05", completed: "2026-07-05" }
   quality_gates: { started: "2026-07-05", completed: "2026-07-05" }
   dod_check: { started: "2026-07-05", completed: "2026-07-05" }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: "2026-07-05", completed: "2026-07-05", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/135" }
 decisions:
   - text: "Red-team R1 verdict: PASS_WITH_RISKS. Three must-fix items resolved: GH-63 coupling documented, backward-compat grandfathering policy, ACs sharpened."
     date: "2026-07-05"
