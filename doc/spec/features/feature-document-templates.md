@@ -6,11 +6,11 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: SPEC-DOCUMENT-TEMPLATES
 status: Current
 created: 2026-03-10
-last_updated: 2026-04-26
+last_updated: 2026-07-05
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
-  related_changes: ["GH-32", "GH-52"]
+  related_changes: ["GH-32", "GH-52", "GH-133"]
   guides:
     - "doc/documentation-handbook.md"
     - "doc/guides/onboarding-existing-project.md"
@@ -46,7 +46,7 @@ ADOS maintains templates in `doc/templates/` that serve as the structural source
 | `implementation-plan-template.md` | Implementation plan structure | `@plan-writer` |
 | `test-plan-template.md` | Test plan structure | `@test-plan-writer` |
 | `feature-spec-template.md` | Feature specification for `doc/spec/features/` | `@doc-syncer` |
-| `decision-record-template.md` | Decision record (all types) | `@decision-advisor` |
+| `decision-record-template.md` | Decision record (all types: ADR/PDR/TDR/BDR/ODR) — type-selection helper, clean front matter, tiered-default section applicability, recommendation/decision split, evidence pack, worked R1/R2/R3 examples | `@decision-advisor` |
 | `test-spec-template.md` | Test specification for `doc/quality/test-specs/` | `@doc-syncer` |
 | `north-star-template.md` | Product north star document for `doc/overview/01-north-star.md` | `@bootstrapper` |
 
@@ -147,7 +147,7 @@ Business Markdown templates intentionally stay concise (front matter + headings 
 | `doc/templates/implementation-plan-template.md` | Plan template | Phased implementation plan structure |
 | `doc/templates/test-plan-template.md` | Test plan template | Test plan structure with scope, strategy, and traceability matrix |
 | `doc/templates/feature-spec-template.md` | Feature spec template | 9-section feature specification structure |
-| `doc/templates/decision-record-template.md` | Decision record template | Front matter + 14 sections for all decision types |
+| `doc/templates/decision-record-template.md` | Decision record template | Single source of truth for the record body: type-selection helper, clean front matter (no top-level `decision_area`/`reversibility` for new records), tiered-default applicability tags per section, 18 body sections (Context → References, incl. Decision Rights, Evidence/Assumptions/Unknowns + Technical-Selection Evidence Pack, recommendation-vs-authorized-decision split, eligibility-first alternatives, Rollback, Communication Plan, Structured Retrospective), and worked R1/R2/R3 examples in an authoring appendix |
 | `doc/templates/test-spec-template.md` | Test spec template | Enduring test specification structure |
 
 ### Agent Integration
