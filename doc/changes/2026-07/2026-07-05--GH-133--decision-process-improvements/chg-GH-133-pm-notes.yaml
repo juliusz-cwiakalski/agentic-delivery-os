@@ -31,6 +31,12 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Toolsmith reviewed @coder's agent-prompt edits (decision-advisor.md + external-researcher.md). Found 6 issues (4 medium, 2 low): evidence cap ambiguity (top-3/~10 → maximum 3/≤10), signal name mismatch (canonical source → canonical-source), implicit prompt-injection handling, R1-default-local over-authorization, label inconsistency (TO CONFIRM → TO-CONFIRM), trigger precision. All fixed and committed (2d7898e). Plugin regenerated, idempotent."
+    type: retro
+    date: "2026-07-05"
+  - text: "RETRO: @coder hand-edited agent prompts directly instead of delegating to @toolsmith per AGENTS.md convention. This is a process gap — the plan didn't explicitly route agent-prompt edits through @toolsmith. For future changes touching .opencode/agent/*.md, the plan should specify @toolsmith as the executor for those phases, or @coder should delegate internally."
+    type: retro
+    date: "2026-07-05"
   - text: "Red-team R2 (artifacts review) completed. Verdict: PASS_WITH_RISKS. Three must-fix items: (1) plan omitted 3 ACs (domains-first, overlap guidance, type-selection helper) → added tasks 1.1b/1.1c/2.0; (2) no cross-artifact AC traceability matrix → added to plan; (3) stale 'spec pending' claims → OQ-1 resolved. Ship-with-findings also addressed: license wording sharpened, Phase 7 regen-rule clarified. Committed as 0671d2a."
     type: info
     date: "2026-07-05"
