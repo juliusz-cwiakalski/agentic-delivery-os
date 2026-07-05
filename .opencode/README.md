@@ -35,7 +35,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 
 ## Agents
 
-- `decision-advisor`: decisions of all types (architecture, product, business, technical, operating); decision record authoring (ADR/PDR/TDR/BDR/ODR) _(formerly `architect`)_
+- `decision-advisor`: decisions of all types (architecture, product, business, technical, operating); decision record authoring (ADR/PDR/TDR/BDR/ODR); delegates bounded evidence gathering to `@external-researcher` for selection decisions _(formerly `architect`)_
 - `decision-critic`: independent, read-only decision challenger; tri-state verdict (PASS / PASS_WITH_RISKS / REWORK)
 - `bootstrapper`: run ADOS inception for new or legacy projects
 - `coder`: implement plan phases by writing code for a change
@@ -43,7 +43,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - `designer`: visual design and UI implementation
 - `doc-syncer`: reconcile system docs with change
 - `editor`: rewrite/translate content per repo guidelines
-- `external-researcher`: research external sources via MCP
+- `external-researcher`: research external sources via MCP; bounded decision-evidence pack for selection decisions (canonical-source, as-of date, data-minimization)
 - `fixer`: reproduce and fix failures
 - `image-generator`: generate AI images via text-to-image CLI
 - `image-reviewer`: analyze images, screenshots, and visual artifacts

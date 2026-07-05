@@ -432,21 +432,21 @@ spec ↔ implementation stays consistent before review (mitigates RSK-1). This i
 
 **Tasks**:
 
-- [ ] **5.1** Update `doc/spec/features/feature-decision-making.md`: reflect the
+- [x] **5.1** Update `doc/spec/features/feature-decision-making.md`: reflect the
   tiered-default applicability model and the bounded evidence pack + security
   controls.
-- [ ] **5.2** Update `doc/spec/features/feature-decision-records.md`: reflect the
+- [x] **5.2** Update `doc/spec/features/feature-decision-records.md`: reflect the
   front-matter cleanup (no top-level `decision_area`/`reversibility` for new
   records), the grandfathering policy, and the template's new sections.
-- [ ] **5.3** Update `doc/spec/features/feature-external-researcher.md`: document
+- [x] **5.3** Update `doc/spec/features/feature-external-researcher.md`: document
   the decision-evidence gathering mode + security controls.
-- [ ] **5.4** Update `doc/spec/features/feature-document-templates.md`: refresh the
+- [x] **5.4** Update `doc/spec/features/feature-document-templates.md`: refresh the
   `decision-record-template.md` description (front matter + sections + worked
   examples; the current spec says "14 sections" — reconcile to the actual count
   after Phase 2).
-- [ ] **5.5** Verify `feature-claude-plugin-generation.md` still describes the regen
+- [x] **5.5** Verify `feature-claude-plugin-generation.md` still describes the regen
   contract accurately (no change expected; confirm only).
-- [ ] **5.6** Run doc-distribution guard over the full DM-2 set.
+- [x] **5.6** Run doc-distribution guard over the full DM-2 set.
 
 **Acceptance Criteria**:
 
@@ -671,7 +671,7 @@ Maps ticket ACs → spec IDs (`AC-F#-#`) → test-plan TCs → plan phases/tasks
 | 2 | Completed | 2026-07-05 | 2026-07-05 | 5eb8c5c | Template rewrite: type-selection helper, front-matter cleanup (no top-level `decision_area`/`reversibility`), Decision Rights, Evidence/Assumptions/Unknowns, Recommendation vs Authorized Decision, eligibility-first alternatives, Rollback, Communication Plan, Structured Retrospective, tiered-default rendering + R1 strict-subset, worked R1/R2/R3 examples. Each section rigor-tagged. |
 | 3 | Completed | 2026-07-05 | 2026-07-05 | d6f3411 | Evidence-pack guidance in decision-making.md D2 + template authoring block; `@external-researcher` Decision-evidence gathering mode (top-3/~10, canonical-source, as-of date, data-minimization); plugin regenerated (idempotent); source+generated committed together. Stale "proportional-rendering guidance" pointer refreshed to tiered-default. |
 | 4 | Completed | 2026-07-05 | 2026-07-05 | 76c41cc | `@decision-advisor` evidence delegation to `@external-researcher` (bounded pack + 3 security controls), ADR/TDR tie-breaker reference, R1 protection reaffirmed, R1-default-local delegation, license-as-human-step; final plugin regen (idempotent); source header intact (no drift). |
-| 5 | Not started | — | — | — | `@doc-syncer`. |
+| 5 | Done | 2026-07-05 | 2026-07-05 | 2c298b9 | `@doc-syncer`. Reconciled feature-decision-making.md (tiered-default applicability, bounded evidence pack + security controls, evidence delegation), feature-decision-records.md (front-matter cleanup, grandfathering, 18-section list w/ rigor tags), feature-external-researcher.md (decision-evidence gathering mode), feature-document-templates.md (18 sections; was "14"); verified feature-claude-plugin-generation.md unchanged. Guard green. |
 | 6 | Not started | — | — | — | `@reviewer`; includes R2 artifacts review. |
 | 7 | Not started | — | — | — | Conditional on Phase 6. |
 | 8 | Not started | — | — | — | Quality gates → DoD → PR; R3 post-delivery review scheduled post-merge. |

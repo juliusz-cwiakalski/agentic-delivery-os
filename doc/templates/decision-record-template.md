@@ -518,6 +518,7 @@ Decision (Recommendation + Authorized Decision):
   - Recommendation: Alt 1 (pino) — best overhead + structured output.
   - Authorized Decision: Adopt pino. Decider: tech lead. Constraint attestation: satisfies C-1.
 Owner: @platform; Revisit trigger: logging overhead regresses beyond budget.
+References: pino repo (https://github.com/pinojs/pino).
 ```
 *(R1 omits Decision Rights, Evidence/Assumptions/Unknowns, Trade-offs, Implementation
 Plan, Rollback, Communication Plan, Verification Criteria, Confidence Rating,
