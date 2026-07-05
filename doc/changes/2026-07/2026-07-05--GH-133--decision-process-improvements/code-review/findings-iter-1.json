@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "severity": "minor",
+    "confidence": "high",
+    "file": "doc/changes/2026-07/2026-07-05--GH-133--decision-process-improvements/chg-GH-133-plan.md",
+    "line": 435,
+    "title": "Phase 5 tasks unchecked but the spec-sync work IS done (DONE_BUT_UNCHECKED plan gap)",
+    "description": "Plan tasks 5.1–5.6 are all still marked `- [ ]` and the Execution Log (line 674) records Phase 5 as 'Not started'. However `git diff main...HEAD` shows all four target feature specs were reconciled (feature-decision-making.md, feature-decision-records.md, feature-external-researcher.md, feature-document-templates.md all changed, plus related_changes/GH-133 wired in, NFRs added, last_updated bumped). The user confirms the change is doc-synced. This is stale plan bookkeeping, not a missing deliverable.",
+    "suggestedFix": "Check tasks 5.1–5.6 in the plan, update the Phase 5 Execution Log row to Completed with the doc-syncer's commit SHA, and (if a separate spec-sync commit exists) note it. AC-11 is otherwise unverifiable from the plan state alone."
+  },
+  {
+    "id": 2,
+    "severity": "nit",
+    "confidence": "high",
+    "file": "doc/templates/decision-record-template.md",
+    "line": 0,
+    "title": "R1 worked example omits References while References is tagged R1/R2/R3",
+    "description": "The template's 'References' section is annotated `<!-- rigor: R1/R2/R3 -->` and the R1 comment-block enumerates the R1 section set. The worked R1 example appendix renders Context, Problem Framing, Constraints, Decision Drivers, Mental Models, Alternatives, Decision, Owner, Revisit trigger — but omits References. The example is therefore slightly narrower than the stated R1 set (subset-of-subset), which a reviewer or agent could misread as 'References is R3-only'.",
+    "suggestedFix": "Either add a one-line `References:` entry to the R1 worked example (a single related link) or add a parenthetical noting the example is intentionally minimal and References remains R1-allowed. Keeps the example self-consistent with TC-TPL-008."
+  },
+  {
+    "id": 3,
+    "severity": "nit",
+    "confidence": "medium",
+    "file": ".opencode/README.md",
+    "line": 38,
+    "title": "Agent inventory summaries not refreshed despite materially new agent behavior",
+    "description": "The test-plan §1.1 lists `.opencode/README.md (if agent behavior summary changes)` as in-scope, and both edited agents gained substantive new behavior: `@decision-advisor` now delegates bounded evidence gathering and applies R1-default-local + license-as-human-step; `@external-researcher` now exposes a Decision-evidence gathering mode. The README summaries ('decisions of all types ... decision record authoring' / 'research external sources via MCP') remain technically accurate at the high level but no longer surface the new capabilities. Non-blocking; the AGENTS.md inventory already covers it.",
+    "suggestedFix": "Optionally append a short clause to each summary (e.g., decision-advisor: '...; delegates bounded selection-evidence to @external-researcher'). Skip if the inventory deliberately stays at the one-line level."
+  },
+  {
+    "id": 4,
+    "severity": "nit",
+    "confidence": "high",
+    "file": "doc/changes/2026-07/2026-07-05--GH-133--decision-process-improvements/chg-GH-133-test-plan.md",
+    "line": 71,
+    "title": "Three divergent AC numbering schemes across artifacts (reconciled, but a maintenance smell)",
+    "description": "The spec uses AC-F#-#, the test-plan uses AC-01..AC-23, and the plan uses AC-1..AC-11 (grouped). The plan's Cross-Artifact AC Traceability Matrix reconciles them, so this is not a defect — but it forces every reviewer to consult the matrix to confirm coverage of any given AC. Acceptable given the artifacts were authored in parallel.",
+    "suggestedFix": "No action required for this change. Consider standardizing one AC-notation in the template for future multi-artifact changes."
+  }
+]

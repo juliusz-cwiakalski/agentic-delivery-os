@@ -672,9 +672,9 @@ Maps ticket ACs → spec IDs (`AC-F#-#`) → test-plan TCs → plan phases/tasks
 | 3 | Completed | 2026-07-05 | 2026-07-05 | d6f3411 | Evidence-pack guidance in decision-making.md D2 + template authoring block; `@external-researcher` Decision-evidence gathering mode (top-3/~10, canonical-source, as-of date, data-minimization); plugin regenerated (idempotent); source+generated committed together. Stale "proportional-rendering guidance" pointer refreshed to tiered-default. |
 | 4 | Completed | 2026-07-05 | 2026-07-05 | 76c41cc | `@decision-advisor` evidence delegation to `@external-researcher` (bounded pack + 3 security controls), ADR/TDR tie-breaker reference, R1 protection reaffirmed, R1-default-local delegation, license-as-human-step; final plugin regen (idempotent); source header intact (no drift). |
 | 5 | Done | 2026-07-05 | 2026-07-05 | 2c298b9 | `@doc-syncer`. Reconciled feature-decision-making.md (tiered-default applicability, bounded evidence pack + security controls, evidence delegation), feature-decision-records.md (front-matter cleanup, grandfathering, 18-section list w/ rigor tags), feature-external-researcher.md (decision-evidence gathering mode), feature-document-templates.md (18 sections; was "14"); verified feature-claude-plugin-generation.md unchanged. Guard green. |
-| 6 | Not started | — | — | — | `@reviewer`; includes R2 artifacts review. |
-| 7 | Not started | — | — | — | Conditional on Phase 6. |
-| 8 | Not started | — | — | — | Quality gates → DoD → PR; R3 post-delivery review scheduled post-merge. |
+| 6 | Done | 2026-07-05 | 2026-07-05 | 4332f66 | Reviewer PASS (iter-1); findings addressed in 4332f66 |
+| 7 | Skipped | — | — | — | No FAIL items; Phase 6 PASS |
+| 8 | Partial | 2026-07-05 | — | — | Quality gates green; DoD PASS; PR pending |
 
 ### Delivery-phase notes
 
