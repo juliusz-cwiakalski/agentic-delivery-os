@@ -185,38 +185,38 @@ grandfathering of the 6 legacy records.
 
 **Tasks**:
 
-- [ ] **1.1** Add a **"Tiered-default section applicability"** subsection to
+- [x] **1.1** Add a **"Tiered-default section applicability"** subsection to
   `doc/guides/decision-making.md` (within/adjacent to §3 Rigor profiles): rigor
   (R1/R2/R3) is the **primary axis** driving the section set; type/archetype toggle
   only small **enumerated add-ons** (a compact table, not a full matrix). State
   explicitly that a full 2D matrix is intentionally avoided (LLM rendering cost).
-- [ ] **1.1b** Add **domains-first extension guidance** to `decision-making.md` §4
+- [x] **1.1b** Add **domains-first extension guidance** to `decision-making.md` §4
   (Four-axis classification): specialized concerns (security, privacy, compliance,
   data, finance, legal, AI, vendor, procurement, ML, UX) route to
   `classification.domains` + the primary owning type — NOT new top-level prefixes.
   Include explicit overlap examples: ML model selection → `domains: [ai/ml]` +
   `archetype: selection`; vendor/procurement → `domains: [vendor]`; UX pattern
   library → `domains: [ux]`. [AC-F2-1]
-- [ ] **1.1c** Add **common-overlap guidance** to `decision-making.md` §7 (or a new
+- [x] **1.1c** Add **common-overlap guidance** to `decision-making.md` §7 (or a new
   subsection): pricing (PDR if packaging/value; BDR if revenue/contracts/commercial
   policy), infrastructure (ADR if system-shaping; ODR if operating existing system),
   data retention (BDR/ODR/ADR depending on primary driver), security/privacy (domain
   tag + primary owning type). Mirror the overlap table in
   `decision-records-management.md` §2. [AC-F1-2]
-- [ ] **1.2** Add the **ADR/TDR tie-breaker rule** to `decision-making.md` (§4 or
+- [x] **1.2** Add the **ADR/TDR tie-breaker rule** to `decision-making.md` (§4 or
   §7) and mirror it in `decision-records-management.md` §2: selecting a specific
   technology/library/tool/build tooling → **TDR**; system structure, boundaries,
   patterns, API/event contracts → **ADR**. Provide a one-line "when both fit"
   resolution.
-- [ ] **1.3** Update `decision-records-management.md` §6 (Required Sections) and §5
+- [x] **1.3** Update `decision-records-management.md` §6 (Required Sections) and §5
   (Front Matter) to **point to the tiered-default model** instead of the vague
   "proportional rendering" phrase; keep the template as the section-order authority.
-- [ ] **1.4** Add a **"Backward compatibility / grandfathering"** note
+- [x] **1.4** Add a **"Backward compatibility / grandfathering"** note
   (`decision-records-management.md`, near §5): the 6 existing records
   (`ADR-0001`, `ADR-0002`, `PDR-0001`, `PDR-0002`, `ODR-0001`, `TDR-0001`) retain
   legacy top-level `decision_area` + `reversibility`; **no migration**; new records
   follow the Phase-2 front-matter contract.
-- [ ] **1.5** Verify `ados_distribution: redistributable` is intact on both guides;
+- [x] **1.5** Verify `ados_distribution: redistributable` is intact on both guides;
   run `bash scripts/.tests/test-doc-distribution.sh`.
 
 **Acceptance Criteria**:
@@ -249,40 +249,40 @@ ship worked R1/R2/R3 examples.
 
 **Tasks**:
 
-- [ ] **2.0** **Type-selection helper**: add a compact type-selection decision
+- [x] **2.0** **Type-selection helper**: add a compact type-selection decision
   table/tree near the top of `decision-record-template.md` (before the first body
   section): rule-of-thumb + tie-breaker → ADR/PDR/TDR/BDR/ODR. Cross-link to the
   Phase-1 guidance in `decision-making.md`. [AC-F3-1]
-- [ ] **2.1** **Front-matter cleanup**: remove top-level `decision_area` and
+- [x] **2.1** **Front-matter cleanup**: remove top-level `decision_area` and
   `reversibility` keys (keep `reversibility` only inside the optional
   `classification` block). Add a short comment: legacy records are grandfathered
   (see Phase 1 note); new records use `classification` only.
-- [ ] **2.2** **Decision rights prominence**: surface the `governance` (DACI) block
+- [x] **2.2** **Decision rights prominence**: surface the `governance` (DACI) block
   earlier in the body with inline guidance (Driver / Decider / Contributors /
   Required reviewers / Performers / Informed), cross-linked to decision-making.md §5.
-- [ ] **2.3** **Evidence / Assumptions / Unknowns**: add a structured block under
+- [x] **2.3** **Evidence / Assumptions / Unknowns**: add a structured block under
   Context (or a dedicated subsection) with `FACT / ASSUMPTION / TO-CONFIRM` labels
   and source references, consistent with the Phase-3 evidence-pack cap.
-- [ ] **2.4** **Recommendation vs Authorized Decision**: split the Decision section
+- [x] **2.4** **Recommendation vs Authorized Decision**: split the Decision section
   so the analyst/AI *recommendation* and the *authorized decision* are rendered
   separately; keep the constraint-compliance attestation.
-- [ ] **2.5** **Rollback + Communication Plan**: add a Rollback subsection (D12:
+- [x] **2.5** **Rollback + Communication Plan**: add a Rollback subsection (D12:
   revert steps, stop-conditions) and a Communication Plan subsection (D12:
   audiences, message, channel) — both gated by rigor (R3 expects both).
-- [ ] **2.6** **Structured Retrospective**: replace the free-form Lessons Learned
+- [x] **2.6** **Structured Retrospective**: replace the free-form Lessons Learned
   with a D14 structure separating process quality / evidence quality / execution
   quality / realized outcome / luck & variance (anti-outcome-bias).
-- [ ] **2.7** **Eligibility-first alternatives**: make the Alternatives Considered
+- [x] **2.7** **Eligibility-first alternatives**: make the Alternatives Considered
   guidance explicit — screen every alternative against constraints **first**
   (eliminate failures), **then** rank survivors on drivers. Keep the existing
   per-alternative compliance matrix.
-- [ ] **2.8** **R1 protection**: update the PROPORTIONAL RENDERING comment block to
+- [x] **2.8** **R1 protection**: update the PROPORTIONAL RENDERING comment block to
   state R1 is a **strict proper subset** of R3 (no R3-only sections) and list the
   R1-allowed vs R1-omitted sections crisply.
-- [ ] **2.9** **Worked examples**: append worked **R1 / R2 / R3** examples (compact
+- [x] **2.9** **Worked examples**: append worked **R1 / R2 / R3** examples (compact
   brief / standard record / high-assurance) that demonstrate the tiered-default
   rendering.
-- [ ] **2.10** Verify `ados_distribution: redistributable` intact; run doc-distribution guard.
+- [x] **2.10** Verify `ados_distribution: redistributable` intact; run doc-distribution guard.
 
 **Acceptance Criteria**:
 
@@ -323,26 +323,26 @@ decision-evidence gathering mode that emits it.
 
 **Tasks**:
 
-- [ ] **3.1** Add **"Evidence pack"** guidance to `doc/guides/decision-making.md`
+- [x] **3.1** Add **"Evidence pack"** guidance to `doc/guides/decision-making.md`
   D2 (Context & Evidence): bounded to **top-3 candidate options** and **~10
   signals**; each signal tagged `FACT/ASSUMPTION/TO-CONFIRM`; mandatory security
   controls — **canonical-source** (primary/canonical URL, not an aggregator),
   **as-of date** (when the signal was true/observed), **data-minimization** (send
   only what is needed; no secrets/PII to external services).
-- [ ] **3.2** Add a matching **evidence-pack authoring block** to
+- [x] **3.2** Add a matching **evidence-pack authoring block** to
   `decision-record-template.md` (consistent with the cap; cross-link to the
   researcher mode).
-- [ ] **3.3** Update `.opencode/agent/external-researcher.md`: add a
+- [x] **3.3** Update `.opencode/agent/external-researcher.md`: add a
   **"Decision-evidence gathering mode"** — when invoked for a selection decision,
   return a bounded evidence pack (top-3 candidates, ~10 signals) with each signal
   carrying canonical-source + as-of date; enforce data-minimization (no secrets,
   PII, or unnecessary context leaves the repo); treat all external content as
   untrusted data (already a constraint — reaffirm for evidence).
-- [ ] **3.4** **Regenerate plugin**: `scripts/build-claude-plugin.sh`. Verify
+- [x] **3.4** **Regenerate plugin**: `scripts/build-claude-plugin.sh`. Verify
   `.ados-claude/agents/external-researcher.md` carries the new mode and the
   generated-file header/regeneration comment. Commit `.opencode/agent/external-researcher.md`
   **and** the regenerated `.ados-claude/` together.
-- [ ] **3.5** Verify markers on the two docs; run doc-distribution guard.
+- [x] **3.5** Verify markers on the two docs; run doc-distribution guard.
 
 **Acceptance Criteria**:
 
@@ -376,7 +376,7 @@ delegation, license-as-human-step), then run the final plugin regen.
 
 **Tasks**:
 
-- [ ] **4.1** Update `.opencode/agent/decision-advisor.md`:
+- [x] **4.1** Update `.opencode/agent/decision-advisor.md`:
   - Add **evidence delegation** guidance: for D2 (Context & Evidence) on selection
     decisions, delegate bounded evidence gathering to `@external-researcher`
     (top-3 candidates, ~10 signals; canonical-source + as-of date +
@@ -392,12 +392,12 @@ delegation, license-as-human-step), then run the final plugin regen.
     the advisor records the license string as a FACT (with source URL) and flags it
     for **human compatibility-determination AND human acceptance** — the advisor
     never autonomously concludes license compatibility or accepts a license.
-- [ ] **4.2** **Final regeneration**: `scripts/build-claude-plugin.sh`. Verify
+- [x] **4.2** **Final regeneration**: `scripts/build-claude-plugin.sh`. Verify
   `.ados-claude/agents/decision-advisor.md` carries the delegation + security
   controls + generated-file header.
-- [ ] **4.3** (If header drift detected) run `scripts/add-header-location.sh .opencode/agent`
+- [x] **4.3** (If header drift detected) run `scripts/add-header-location.sh .opencode/agent`
   — never hand-edit headers. Otherwise skip.
-- [ ] **4.4** Commit `.opencode/agent/decision-advisor.md` **and** the regenerated
+- [x] **4.4** Commit `.opencode/agent/decision-advisor.md` **and** the regenerated
   `.ados-claude/` together.
 
 **Acceptance Criteria**:
@@ -667,11 +667,27 @@ Maps ticket ACs → spec IDs (`AC-F#-#`) → test-plan TCs → plan phases/tasks
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| 1 | Not started | — | — | — | |
-| 2 | Not started | — | — | — | |
-| 3 | Not started | — | — | — | Must regen `.ados-claude/` (C-1). |
-| 4 | Not started | — | — | — | Final regen. |
+| 1 | Completed | 2026-07-05 | 2026-07-05 | fdf9cd5 | Tiered-default applicability (§3), domains-first (§4), ADR/TDR tie-breaker + overlap (§7) in decision-making.md; mirrored tie-breaker/overlap + tiered-default pointer + grandfathering note in decision-records-management.md. Guard green. |
+| 2 | Completed | 2026-07-05 | 2026-07-05 | 5eb8c5c | Template rewrite: type-selection helper, front-matter cleanup (no top-level `decision_area`/`reversibility`), Decision Rights, Evidence/Assumptions/Unknowns, Recommendation vs Authorized Decision, eligibility-first alternatives, Rollback, Communication Plan, Structured Retrospective, tiered-default rendering + R1 strict-subset, worked R1/R2/R3 examples. Each section rigor-tagged. |
+| 3 | Completed | 2026-07-05 | 2026-07-05 | d6f3411 | Evidence-pack guidance in decision-making.md D2 + template authoring block; `@external-researcher` Decision-evidence gathering mode (top-3/~10, canonical-source, as-of date, data-minimization); plugin regenerated (idempotent); source+generated committed together. Stale "proportional-rendering guidance" pointer refreshed to tiered-default. |
+| 4 | Completed | 2026-07-05 | 2026-07-05 | 76c41cc | `@decision-advisor` evidence delegation to `@external-researcher` (bounded pack + 3 security controls), ADR/TDR tie-breaker reference, R1 protection reaffirmed, R1-default-local delegation, license-as-human-step; final plugin regen (idempotent); source header intact (no drift). |
 | 5 | Not started | — | — | — | `@doc-syncer`. |
 | 6 | Not started | — | — | — | `@reviewer`; includes R2 artifacts review. |
 | 7 | Not started | — | — | — | Conditional on Phase 6. |
 | 8 | Not started | — | — | — | Quality gates → DoD → PR; R3 post-delivery review scheduled post-merge. |
+
+### Delivery-phase notes
+
+- **DoR closure (pre-delivery):** committed `1aeb8bf` — marked `dor_check` in
+  pm-notes, added readiness-review artifacts (iter-1/iter-2), and fixed the
+  non-blocking DoR iter-2 nit (removed stale "(pending)" from test-plan A-1).
+- **AC mapping note:** this plan uses `AC-1..AC-11` (grouped); the spec uses
+  `AC-F#-#` and the test-plan uses `AC-01..AC-23`. See the Cross-Artifact AC
+  Traceability Matrix. All Phase 1–4 acceptance criteria verified with evidence
+  above; full DoD AC sign-off is the PM's job (Phase 8).
+- **Invariant checks (C-1..C-6):** C-1 plugin regen done in Phases 3 & 4
+  (idempotent, source+generated together); C-2 markers valid + guard green after
+  every phase; C-3 no hand-added headers (source headers intact); C-4 single
+  source of truth (`.ados-claude/**` generated only); C-5 recommendation ≠
+  decision preserved (template split + advisor keeps R2/R3 Proposed); C-6 the 6
+  grandfathered records untouched (`git diff -- doc/decisions/` clean for them).

@@ -9,7 +9,7 @@ phases:
   test_planning: { started: "2026-07-05", completed: "2026-07-05" }
   delivery_planning: { started: "2026-07-05", completed: "2026-07-05" }
   dor_check: { started: "2026-07-05", completed: "2026-07-05" }
-  delivery: { started: null, completed: null }
+  delivery: { started: "2026-07-05", completed: "2026-07-05" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -45,4 +45,7 @@ notes:
     date: "2026-07-05"
   - text: "RETRO: The red-team discovered GH-63 was never merged to main — the task prompt incorrectly assumed a validator existed. This is a backlog hygiene issue: parked changes (GH-63 in pm-context.yaml) should have their merge status verified. The pm-context.yaml marks GH-63 as 'parked, PR #76 open in review' but doesn't track that the branch may be stale/diverged significantly from current main."
     type: retro
+    date: "2026-07-05"
+  - text: "Delivery (content phases 1-4) completed. Phase 1 taxonomy (fdf9cd5); Phase 2 template overhaul (5eb8c5c); Phase 3 evidence-pack + external-researcher + plugin regen (d6f3411); Phase 4 decision-advisor delegation + final plugin regen (76c41cc). DoR closure committed separately (1aeb8bf). All invariants C-1..C-6 hold; doc-distribution guard green; plugin build idempotent; 6 grandfathered records untouched. Phases 5-8 (spec sync, review, gates, DoD, PR) are PM-orchestrated and remain Not started."
+    type: info
     date: "2026-07-05"
