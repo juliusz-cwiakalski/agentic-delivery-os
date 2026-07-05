@@ -103,32 +103,38 @@ If a `<decision_planning_summary>` (or legacy alias) for this number is NOT avai
 <decision_structure>
 **`doc/templates/decision-record-template.md` is the single source of truth for the decision record body structure.** The heading order below is a mirror of the template's section order and MUST stay in sync with zero mismatches (NFR-4). Render proportionally by rigor (see the template's proportional-rendering guidance): R0 produces no record; R1 renders the compact subset; R2 the standard record; R3 the full record. Do NOT enumerate a second body structure elsewhere — this is the ONE structural definition in this command.
 
-The decision record markdown body (after front matter) MUST follow this structure and order (mirror of `doc/templates/decision-record-template.md`):
+The decision record markdown body (after front matter) MUST follow this structure and order (mirror of `doc/templates/decision-record-template.md`; 19 entries including the title):
 
 1. `# <TYPE>-<number>: <Title>`
 2. `## Context`
 3. `## Problem Framing (Clarified)`
 4. `## Constraints (Hard Requirements)`
 5. `## Decision Drivers`
-6. `## Mental Models & Techniques Used`
-7. `## Alternatives Considered`
-8. `## Decision`
-9. `## Trade-offs & Consequences` (with `### Positive Outcomes`, `### Negative Outcomes`, `### Unresolved Questions`)
-10. `## Implementation Plan`
-11. `## Verification Criteria`
-12. `## Confidence Rating`
-13. `## Lessons Learned (Retrospective)`
-14. `## Examples & Usage (Optional)`
-15. `## References`
+6. `## Decision Rights (DACI)`
+7. `## Evidence, Assumptions & Unknowns` (include `### Technical-Selection Evidence Pack (archetype: selection)` only when applicable)
+8. `## Mental Models & Techniques Used`
+9. `## Alternatives Considered`
+10. `## Decision` (with `### Recommendation`, `### Authorized Decision`, `### Constraint Compliance Attestation`)
+11. `## Trade-offs & Consequences` (with `### Positive Outcomes`, `### Negative Outcomes`, `### Unresolved Questions`)
+12. `## Implementation Plan`
+13. `## Rollback / Reversal`
+14. `## Communication Plan`
+15. `## Verification Criteria`
+16. `## Confidence Rating`
+17. `## Structured Retrospective`
+18. `## Examples & Usage (Optional)`
+19. `## References`
 
 No extra top-level sections may be introduced before or between these headings. Additional subsections may be added **within** these sections if they are clearly nested and consistent with the template.
+
+Before `## Context`, the template includes a deletable **Type-selection helper**. Use it only as authoring guidance (see `doc/guides/decision-making.md` §7); remove it from finalized records.
 
 ### Proportional rendering by rigor (R1 ⊂ R3)
 
 - **R0:** no record (optional note/commit/ticket comment only).
-- **R1 (lightweight):** compact brief — render ONLY: Context, Problem Framing, Constraints (Hard Requirements), Decision Drivers, Alternatives Considered (baseline + ≥1 option), Decision, owner, revisit trigger. Omit the R3-only sections (Mental Models, full Implementation Plan, Verification Criteria, Confidence Rating, Lessons Learned, Examples). Resolves within 1 business day. R1 output is a STRICT PROPER SUBSET of R3.
-- **R2 (standard):** the full canonical record above.
-- **R3 (high assurance):** the full canonical record PLUS independent challenge (`@decision-critic` via `/review-decision`), a human final decision, and a review_date. `status` stays `Proposed` until an authorized human decides.
+- **R1 (lightweight):** compact brief — render ONLY: Context, Problem Framing, Constraints (Hard Requirements), Decision Drivers, Mental Models & Techniques, Alternatives Considered (baseline + ≥1 option), and Decision (Recommendation + Authorized Decision + constraint attestation), plus owner + revisit trigger. Omit Decision Rights, Evidence/Assumptions/Unknowns, Trade-offs, Implementation Plan, Rollback/Reversal, Communication Plan, Verification Criteria, Confidence Rating, Structured Retrospective, and Examples. Resolves within 1 business day. R1 output is a STRICT PROPER SUBSET of R3.
+- **R2 (standard):** the full canonical record above EXCEPT the R3-expanded sections per the template (Rollback/Reversal, Communication Plan, Structured Retrospective). Include Decision Rights, Evidence/Assumptions/Unknowns, eligibility-first Alternatives, Recommendation/Authorized Decision split, Trade-offs, Implementation Plan, Verification Criteria, Confidence Rating, and References.
+- **R3 (high assurance):** the full canonical record PLUS independent challenge (`@decision-critic` via `/review-decision`), Rollback/Reversal, Communication Plan, Structured Retrospective, a human final decision, and a review_date. `status` stays `Proposed` until an authorized human decides.
 </decision_structure>
 
 <authoring_rules>
@@ -138,15 +144,18 @@ No extra top-level sections may be introduced before or between these headings. 
 - "Problem Framing (Clarified)" MUST reframe the user problem in objective technical terms, highlighting underlying causes.
 - "Constraints (Hard Requirements)" MUST be rendered from the planning summary's `hard_requirements:` field (distinct from `decision_drivers:`). Each constraint is rendered with the fields **ID** (`C-1`, `C-2`, …), **Statement**, **Source** (∈ regulatory | contractual | prior decision | AC | internal standard), **Verification** (∈ test | audit | code review | architect sign-off | demonstration), and **Negotiable** (yes | no). If `hard_requirements:` is empty or absent, render the section as a CONSCIOUS empty choice with an explicit statement (e.g., "No constraints identified.") — emptiness is never an omission. Constraints and drivers MUST be kept in their separate sections; never merge them.
 - "Decision Drivers" MUST list explicit, prioritized drivers (business, technical, operational, organizational) that the decision optimizes for. Drivers are continuous preferences used to rank alternatives; they are NOT binary gates (those live in Constraints).
+- "Decision Rights (DACI)" MUST mirror the optional `governance:` front-matter block for R2/R3: driver, decider/approver, contributors, required reviewers, performers, informed.
+- "Evidence, Assumptions & Unknowns" MUST separate FACT / ASSUMPTION / TO-CONFIRM items with source, impact-if-false, and confidence. For selection decisions (`classification.archetype: selection`), include the bounded Technical-Selection Evidence Pack from the template: top-3 candidates, ~10 highest-signal fields, canonical-source + as-of date, and data-minimization note.
 - "Mental Models & Techniques Used" should summarize which reasoning tools were applied (e.g., First Principles, Inversion, Second-Order Thinking, 5 Whys) as captured in planning.
 - "Alternatives Considered" MUST:
   - Include at least two substantive alternatives plus a "do nothing / keep current approach" baseline when applicable.
   - For each alternative, include summary, pros, cons, and why it was rejected or chosen.
+  - Apply eligibility-first evaluation: screen on Constraints (Hard Requirements) FIRST, then rank survivors on Decision Drivers. Label each alternative `Eligible`, `Not eligible`, or `Eligible-with-accepted-risk-exception`; a high driver score cannot rescue an option that fails a non-negotiable constraint.
   - For each alternative, include an EXPLICIT constraint-compliance evaluation against each documented constraint (C-1, C-2, …), not only pros/cons against drivers. Choose format via a readability heuristic: PROSE (1–2 sentences/alternative) when all comply or few violations need explanation; a MATRIX (constraints × alternatives) when ≥3 constraints have mixed compliance or prose would exceed ~3 sentences/alternative. DEFAULT TO MATRIX when unsure. Table-stakes constraints (all alternatives satisfy) get a brief one-line acknowledgment rather than per-alternative listing.
 - "Decision" MUST:
-  - State the final decision clearly.
-  - Tie rationale explicitly back to decision drivers.
-  - List key assumptions.
+  - Keep `Recommendation` separate from `Authorized Decision`; for R2/R3, use "Pending human authorization" until `ai_assistance.human_decider` is present.
+  - Tie recommendation rationale explicitly back to decision drivers.
+  - List key assumptions and risks.
   - Explicitly ATTEST that the chosen alternative satisfies every constraint, OR document an accepted-risk exception for any constraint it violates. An accepted-risk exception is permitted ONLY for constraints marked `negotiable: yes`; a constraint marked `negotiable: no` that the chosen alternative violates is DISQUALIFYING and must not be waved through.
 - "Trade-offs & Consequences" MUST:
   - Separate positive outcomes, negative outcomes, and unresolved questions.
@@ -154,9 +163,11 @@ No extra top-level sections may be introduced before or between these headings. 
 - "Implementation Plan" MUST remain high-level:
   - Requirements, refactors, migrations, rollout concepts, and risk mitigations.
   - NO low-level tasks, file names, or code instructions.
+- "Rollback / Reversal" MUST describe high-level reversal steps, stop-conditions / blast-radius limits, and irrecoverable state/data where rendered.
+- "Communication Plan" MUST map informed stakeholders to message, channel, and timing where rendered.
 - "Verification Criteria" MUST list concrete KPIs or signals, with targets and timeframes, for evaluating the impact of the decision.
 - "Confidence Rating" MUST state Low / Medium / High and be justified by reference to data, precedent, or gaps.
-- "Lessons Learned (Retrospective)" MAY initially contain a brief TODO-style note if the decision has not yet been implemented; this section is expected to evolve over time.
+- "Structured Retrospective" MAY initially contain a brief TODO-style note if the decision has not yet been implemented; split later updates into process quality, evidence quality, execution quality, realized outcome, and luck/variance.
 - "Examples & Usage (Optional)" MAY be omitted for early decision records, but when present should reference representative scenarios, not code internals.
 - "References" MUST link to relevant changes, specs, contracts, decision records, and external sources.
 - Where planning context contains explicit labels like FACT, ASSUMPTION, TO CONFIRM, these MAY be retained as bold labels in the record where useful.
@@ -172,8 +183,8 @@ No extra top-level sections may be introduced before or between these headings. 
 <placeholder_rules>
 
 - Template placeholders such as `<...>` MUST NOT appear in final decision record content.
-- If required information is genuinely unavailable (e.g., decision not yet fully implemented so Lessons Learned are unknown):
-  - Use explicit TODO-style sentences (e.g., "TODO: Populate lessons learned after first production rollout.").
+- If required information is genuinely unavailable (e.g., decision not yet fully implemented so Structured Retrospective entries are unknown):
+  - Use explicit TODO-style sentences (e.g., "TODO: Populate structured retrospective after first production rollout.").
   - Add any significant unknowns to "### Unresolved Questions" with owners where possible.
 - Under no circumstances may the decision record omit a required section; minimal but honest content is preferred over silence.
   </placeholder_rules>
@@ -199,7 +210,7 @@ No extra top-level sections may be introduced before or between these headings. 
 8. Generate or update decision record body using <decision_structure> (the single structural definition mirroring the template), <authoring_rules>, and planning context:
    - Render proportionally by rigor (R1 compact subset / R2 standard / R3 full) per <decision_structure>.
    - For NEW records: synthesize complete sections from planning summary and referenced docs.
-   - For UPDATES: merge new planning information without rewriting historical sections; append to "Unresolved Questions", "Lessons Learned", and "References" instead of erasing prior content.
+   - For UPDATES: merge new planning information without rewriting historical sections; append to "Unresolved Questions", "Structured Retrospective", and "References" instead of erasing prior content.
 9. Write decision record markdown to fullPath.
 10. Stage ONLY this decision record file.
 11. Commit with message:

@@ -218,6 +218,8 @@ boundaries, easy reversal, limited blast radius, audit trail, escalation path);
 R0 produces no record.
 </r1_default_local>
 
+If `@external-researcher` is unavailable or returns empty, proceed with local evidence and explicit `ASSUMPTION` / `TO-CONFIRM` labels.
+
 <license_as_human_step>
 **License compatibility is a human step.** When a selection introduces a
 dependency, record the license string as a `FACT` (with its source URL) and flag

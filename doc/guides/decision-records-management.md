@@ -243,16 +243,20 @@ tiered-default model** (rigor primary; type/archetype add-ons) — see the
 3. **Problem Framing**: Objective reframing of the problem
 4. **Constraints (Hard Requirements)**: Binary pass/fail gates that eliminate alternatives, recorded as structured entries (see §6.1)
 5. **Decision Drivers**: Prioritized factors (business, technical, operational)
-6. **Mental Models & Techniques Used**
-7. **Alternatives Considered**: At least 2 options + do-nothing baseline; each alternative includes an explicit constraint-compliance evaluation
-8. **Decision**: Final choice with rationale tied to drivers, plus a constraint-compliance attestation
-9. **Trade-offs & Consequences**: Positive outcomes, negative outcomes, unresolved questions
-10. **Implementation Plan**
-11. **Verification Criteria**: How to measure the decision's success
-12. **Confidence Rating**
-13. **Lessons Learned (Retrospective)**
-14. **Examples & Usage (Optional)**
-15. **References**: Links to related artifacts
+6. **Decision Rights (DACI)**: Driver, decider/approver, contributors, required reviewers, performers, informed
+7. **Evidence, Assumptions & Unknowns**: FACT / ASSUMPTION / TO-CONFIRM items, with technical-selection evidence packs when applicable
+8. **Mental Models & Techniques Used**
+9. **Alternatives Considered**: At least 2 options + do-nothing baseline; each alternative includes eligibility and constraint-compliance evaluation
+10. **Decision**: Recommendation, Authorized Decision, and Constraint Compliance Attestation as separate surfaces
+11. **Trade-offs & Consequences**: Positive outcomes, negative outcomes, unresolved questions
+12. **Implementation Plan**
+13. **Rollback / Reversal**
+14. **Communication Plan**
+15. **Verification Criteria**: How to measure the decision's success
+16. **Confidence Rating**
+17. **Structured Retrospective**
+18. **Examples & Usage (Optional)**
+19. **References**: Links to related artifacts
 
 ### 6.1 Constraints (Hard Requirements) — authoring discipline
 
