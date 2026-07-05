@@ -112,6 +112,25 @@ Scale ceremony to stakes. Each profile defines **required output** and a **targe
 
 **R1 is a strict proper subset of R3.** The R1 brief contains only a subset of the R3 sections; it never invents R3-only sections. R0 produces **zero** mandatory records.
 
+### Tiered-default section applicability
+
+Rigor (R1/R2/R3) is the **primary axis** that drives the section set rendered in a
+record; a record's **type** and **archetype** toggle only a small, **enumerated**
+set of optional add-ons. This **tiered-default model** deliberately replaces a
+full 2D applicability matrix (rigor × type): such a matrix defeats LLM rendering,
+pushing agents to over-emit sections and bloat R1 briefs.
+
+| Axis | Effect on the section set |
+|------|---------------------------|
+| **Rigor (primary axis)** | Determines the *depth*. R0 → no record. R1 → strict proper subset. R2 → canonical record. R3 → canonical + adversarial challenge + human decision. |
+| **Type (add-on)** | Routes ownership, reviewers, and context. Adds **no** mandatory sections; only toggles optional lenses (e.g., a Rollback is expected for hard-to-reverse ADR/ODR). |
+| **Archetype (add-on)** | Toggles a small enumerated set of optional blocks — e.g., a Technical-Selection Evidence pack when `archetype: selection`; a Communication Plan when `governance.informed` is non-empty. |
+
+Because rigor is the single primary axis, the R1 section set stays small and
+predictable. The template
+([`doc/templates/decision-record-template.md`](../templates/decision-record-template.md))
+is the section-order authority and tags each section by rigor applicability.
+
 ### Emergency overlay
 
 Immediate action to contain an incident, prevent harm, restore service, or meet a hard deadline. It changes **sequencing, not accountability**:
@@ -138,6 +157,22 @@ A decision is classified on four axes. These axes drive rigor, method, and autho
 | **Conditions** | Cynefin environment (clear/complicated/complex/chaotic) · reversibility · stakes · urgency · uncertainty · blast radius · recurrence · evidence maturity · stakeholder diversity · external obligations |
 
 Routing: classify → pick a rigor profile (§3) → pick a method (D9) → assign authority (§5, §6). The classification is captured in the record's optional `classification:` front-matter block.
+
+### Domains-first extension (no new top-level types)
+
+Specialized concerns — security, privacy, compliance, data, finance, legal, AI,
+vendor, procurement, ML, UX — are **not** new top-level prefixes. Route them to
+`classification.domains` plus the **primary owning type**. The five top-level
+types (ADR/PDR/TDR/BDR/ODR) stay stable; `domains` is the extension axis.
+
+| Concern | Routing |
+|---------|---------|
+| ML model selection | `classification.domains: [ai/ml]` + `archetype: selection`, owning type TDR or ADR |
+| Vendor / procurement | `classification.domains: [vendor]` + the owning type (BDR for commercial policy; TDR for a library/tool) |
+| UX pattern library | `classification.domains: [ux]` + owning type PDR (or ADR if it shapes system boundaries) |
+
+Type controls **ownership, reviewers, and context routing**; `domains` tags the
+specialist lens. Adding a new concern never requires inventing a new prefix.
 
 ---
 
@@ -203,6 +238,39 @@ Context anchors, typical approver, and fitting framework per type. This is a sin
 | **TDR** | Codebase, libraries, build/CI config, benchmarks | Tech lead | Trade-off matrix, build/buy/partner, spike/experiment |
 | **BDR** | Strategy docs, ICP, pricing model, market data | Business lead / product owner | Cost-benefit, EV, scenario planning, reference-class forecasting |
 | **ODR** | Runbooks, infra config, on-call, SLOs/SLAs | SRE/platform lead | Threat model, chaos/postmortem, sensitivity analysis |
+
+### ADR vs TDR — rule of thumb and tie-breaker
+
+Both ADR and TDR can involve technology, so they blur. Use this routing:
+
+- **TDR** — selecting a specific technology, library, framework, tool, build/test
+  tooling, or implementation pattern *within an already-decided architecture*.
+- **ADR** — system structure, service/module boundaries, integration patterns,
+  API/event contracts, architecture-defining topology, cross-system quality
+  attributes, durable cross-component constraints.
+
+**Rule of thumb:** *Will this constrain future system design across components or
+teams?* → **ADR**. *Is this mainly how we implement within an already-decided
+design?* → **TDR**.
+
+**Tie-breaker (when both fit):** prefer **ADR** when `reversibility: hard` **or**
+`blast_radius ≥ team`; otherwise prefer **TDR**. The tie is recorded via
+`classification.conditions`, not by the prefix alone. Type drives ownership and
+reviewers; rigor is driven by risk/stakes, not by the prefix.
+
+### Common overlap guidance
+
+Borderline cases route to the type whose concern is the **primary driver**:
+
+| Case | Routing |
+|------|---------|
+| **Pricing** | **PDR** if it is packaging/value/tier design; **BDR** if it is revenue recognition, contracts, or commercial policy |
+| **Infrastructure** | **ADR** if the choice shapes the system (new platform, topology, contract); **ODR** if it is operating an existing system (runbooks, alerting, on-call) |
+| **Data retention** | **BDR** if the primary driver is a business/legal rule; **ODR** if operational enforcement; **ADR** if it shapes storage architecture/contracts |
+| **Security / privacy** | Add the relevant `domains` tag (e.g., `[security]`, `[privacy]`) **plus** the primary owning type — there is no standalone "Security Record" type |
+
+These heuristics are mirrored in
+[`decision-records-management.md`](decision-records-management.md) §2.
 
 ---
 

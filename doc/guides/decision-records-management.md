@@ -44,6 +44,37 @@ This guide defines the decision **record artifact** standard for ADOS-managed re
 | **Business Decision Record** | `BDR` | Business rules, compliance, process policies | Subscription tier structure, data retention policy, SLA definitions |
 | **Operational Decision Record** | `ODR` | Infrastructure, deployment, monitoring, incident response | Deployment pipeline design, alerting thresholds, on-call rotation |
 
+### ADR vs TDR — rule of thumb and tie-breaker
+
+Both ADR and TDR can involve technology, so they blur:
+
+- **TDR** — selecting a specific technology, library, framework, tool, build/test
+  tooling, or implementation pattern *within an already-decided architecture*.
+- **ADR** — system structure, service/module boundaries, integration patterns,
+  API/event contracts, architecture-defining topology, durable cross-component
+  constraints.
+
+**Tie-breaker (when both fit):** prefer **ADR** when `reversibility: hard` **or**
+`blast_radius ≥ team`; otherwise prefer **TDR**. The tie is recorded via
+`classification.conditions`. The full rule of thumb and reasoning live in the
+[Decision-Making Guide §7](decision-making.md).
+
+### Common overlap guidance
+
+Borderline cases route to the type whose concern is the **primary driver**:
+
+| Case | Routing |
+|------|---------|
+| **Pricing** | **PDR** if packaging/value/tier design; **BDR** if revenue, contracts, or commercial policy |
+| **Infrastructure** | **ADR** if it shapes the system (platform, topology, contract); **ODR** if it operates an existing system (runbooks, alerting, on-call) |
+| **Data retention** | **BDR** (business/legal rule) · **ODR** (operational enforcement) · **ADR** (storage architecture/contracts) |
+| **Security / privacy** | A `domains` tag (e.g., `[security]`, `[privacy]`) **plus** the primary owning type — there is no standalone "Security Record" type |
+
+Specialized concerns (security, privacy, ML, vendor, UX, …) are routed to
+`classification.domains` plus the owning type — **never** to a new top-level
+prefix. See the [Decision-Making Guide §4](decision-making.md) for the
+domains-first extension.
+
 ### When to Create a Decision Record
 
 Create a record when:
@@ -171,11 +202,41 @@ links:
 ---
 ```
 
+### Front-matter contract for new records
+
+**New records use only the `classification` block for routing metadata.** The
+top-level `decision_area` and top-level `reversibility` keys are **removed** from
+the template for new records — `decision_area` was redundant with
+`decision_type` + `classification.domains`, and `reversibility` is canonical only
+inside `classification`. `classification.reversibility` is the single source of
+truth for reversibility. See the
+[template front matter](../templates/decision-record-template.md) for the exact
+key set; no duplicate fields are left without a one-line justification.
+
+**Section depth follows the tiered-default model** (rigor is the primary axis;
+type/archetype toggle only small enumerated add-ons) documented in the
+[Decision-Making Guide §3](decision-making.md). The template remains the
+section-order authority.
+
+### Backward compatibility / grandfathering
+
+The six existing records — `ADR-0001`, `ADR-0002`, `PDR-0001`, `PDR-0002`,
+`ODR-0001`, `TDR-0001` — retain their legacy top-level `decision_area` and
+`reversibility` keys. There is **no migration pass**: those records are durable
+artifacts and remain valid as-is. Only **new** records follow the simplified
+front-matter contract above. (If GH-63 — machine-enforceable decision records —
+is revived, it must rebase onto this simplified front matter; GH-133 defines the
+new contract.)
+
 ---
 
 ## 6. Required Sections
 
-Every decision record must include these sections in order (the template is the single source of truth for this order — see [`doc/templates/decision-record-template.md`](../templates/decision-record-template.md)):
+Every decision record must include these sections in order. The template
+([`doc/templates/decision-record-template.md`](../templates/decision-record-template.md))
+is the single source of truth for this order; **section depth is driven by the
+tiered-default model** (rigor primary; type/archetype add-ons) — see the
+[Decision-Making Guide §3](decision-making.md):
 
 1. **Title**: `# <TYPE>-<zeroPad4>: <Title>`
 2. **Context**: Background, triggers, and situational facts (the situation that prompted the decision — not pass/fail gates)
