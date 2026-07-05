@@ -51,8 +51,8 @@ The core behaviors to protect:
 
 ## 2. References
 
-- **Ticket** — [GH-133](https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/133) (canonical source of the 23 acceptance criteria; the change spec is not yet authored — see Open Question OQ-1).
-- **Change spec** — `./chg-GH-133-spec.md` (pending; this plan derives ACs directly from the ticket. The spec, when authored, must reconcile against this plan's AC mapping.)
+- **Ticket** — [GH-133](https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/133) (canonical source of the 23 acceptance criteria).
+- **Change spec** — `./chg-GH-133-spec.md` (committed `04b2a46`; AC mapping reconciled via the plan's cross-artifact traceability matrix).
 - **Implementation plan** — `./chg-GH-133-plan.md` (pending).
 - **PM notes** — `./chg-GH-133-pm-notes.yaml` (phased-commit plan, grandfathering decision, GH-63 disregard directive, tiered-model collapse decision).
 - **Testing strategy** — `.ai/rules/testing-strategy.md` (canonical; docs/templates → static/diff + content checks; scripts → `scripts/.tests/test-*.sh`).
@@ -812,7 +812,7 @@ Per `.ai/rules/testing-strategy.md`, this change maps to **static/diff checks** 
 
 - The GH-63 relationship (never-merged + GH-133-is-authority + rebase-if-revived) is documented in the change artifacts.
 
-**Acceptance threshold**: literal presence of the three-part statement. Note: this is a content obligation on the change spec/plan; if the spec is not yet authored, the statement must appear there (see OQ-1).
+**Acceptance threshold**: literal presence of the three-part statement. Note: this is a content obligation on the change spec and plan (both committed).
 
 ---
 
@@ -967,7 +967,7 @@ Per `.ai/rules/testing-strategy.md`, this change maps to **static/diff checks** 
 
 ### 8.3 Open Questions
 
-- **OQ-1 (Blocking for DoR) — Change spec not yet authored.** This test plan was derived directly from ticket GH-133 because `chg-GH-133-spec.md` does not yet exist (the `test_planning` phase started before `specification` per the pm-notes). *Owner*: `@spec-writer`. *Resolution required*: author the spec and reconcile its AC list against this plan's AC-01…AC-23 mapping; confirm no divergence before the DoR gate.
+- **OQ-1 (RESOLVED) — Change spec authored.** The spec `chg-GH-133-spec.md` was committed at `04b2a46`. AC mapping reconciled via the plan's cross-artifact traceability matrix (ticket AC ↔ spec `AC-F#-#` ↔ test-plan `AC-0#` ↔ plan task). No divergence found.
 - **OQ-2 (Non-blocking) — Behavioral delegation run environment.** TC-ADV-004 requires configured `@external-researcher` MCP servers. If the run environment lacks them, the behavioral run is deferred and the structural prompt-contract checks stand as the gate. *Owner*: `@coder` / runner. *Resolution*: confirm MCP availability at execution time; if absent, record the deferral in the execution log and schedule a follow-up run.
 - **OQ-3 (Non-blocking) — Worked-example / golden-output fixture location.** AC-20 allows "a golden-output diff or worked example." Confirm whether the worked R1 example lives inside the template (preferred, simplest) or as a separate committed fixture under the change folder. *Owner*: `@coder`.
 
@@ -975,7 +975,8 @@ Per `.ai/rules/testing-strategy.md`, this change maps to **static/diff checks** 
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | 2026-07-05 | @test-plan-writer | Initial test plan. Derived AC-01…AC-23 directly from ticket GH-133 (spec not yet authored — see OQ-1). 24 scenarios across DEC/TPL/EVI/ADV/RES/COMPAT/GATES; all 23 ACs covered. |
+| 1.0 | 2026-07-05 | @test-plan-writer | Initial test plan. Derived AC-01…AC-23 directly from ticket GH-133. 24 scenarios across DEC/TPL/EVI/ADV/RES/COMPAT/GATES; all 23 ACs covered. |
+| 1.1 | 2026-07-05 | @pm (R2 remediation) | Resolved OQ-1 (spec committed `04b2a46`); updated References §2; removed stale "spec pending" claims; reconciled with plan's cross-artifact AC traceability matrix. |
 
 ## 10. Test Execution Log
 

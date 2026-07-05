@@ -31,6 +31,12 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Red-team R2 (artifacts review) completed. Verdict: PASS_WITH_RISKS. Three must-fix items: (1) plan omitted 3 ACs (domains-first, overlap guidance, type-selection helper) → added tasks 1.1b/1.1c/2.0; (2) no cross-artifact AC traceability matrix → added to plan; (3) stale 'spec pending' claims → OQ-1 resolved. Ship-with-findings also addressed: license wording sharpened, Phase 7 regen-rule clarified. Committed as 0671d2a."
+    type: info
+    date: "2026-07-05"
+  - text: "RETRO: Three artifacts (spec, test-plan, plan) were authored in parallel by separate agents, resulting in 3 incompatible AC-ID schemes and plan-spec coverage gaps (plan was authored first, spec last). Parallel authoring saved wall-clock time but created traceability debt that R2 had to catch. For future parallel artifact creation, include a shared AC-ID convention in the delegation prompt, or add a reconciliation step before DoR."
+    type: retro
+    date: "2026-07-05"
   - text: "Red-team R1 (scope/concept) completed pre-delivery. Verdict: PASS_WITH_RISKS. Findings addressed in ticket update. Ship-with-findings folded into scope: tiered applicability, security controls (canonical-source, as-of date, data-minimization), evidence-pack cap (top-3 candidates, ~10 signals), ADR/TDR tie-breaker rule, worked R1/R2/R3 examples, R1 protection, R1-default-local delegation, license-as-human-step."
     type: info
     date: "2026-07-05"
