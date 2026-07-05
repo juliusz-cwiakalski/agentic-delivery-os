@@ -16,7 +16,7 @@ Guide the user through a structured, interactive **decision** conversation that 
 - Discovers or confirms the decision record number (e.g. 0007) by scanning existing records in doc/decisions/ for the relevant type (ADR, PDR, TDR, BDR, ODR; defaults to ADR only when type is genuinely unspecified).
 - Orients itself in the current repository and high-level documentation under doc/spec/, doc/overview/, doc/changes/, and doc/contracts/.
 - Systematically elicits and refines all information needed by /write-decision (context, problem framing, **hard requirements (constraints)**, decision drivers, alternatives, trade-offs, assumptions, verification criteria, etc.), without generating the decision record file itself.
-- Applies decision-making discipline (clarify problem → classify → rigor → rights → confirm drivers → explore options → recommend) without exposing internal mechanics unless asked.
+- Applies decision-making discipline (clarify problem → classify → rigor → rights → confirm drivers → explore options → decide) without exposing internal mechanics unless asked.
 - Concludes with a compact, machine- and human-friendly planning summary block plus a clear recommendation to invoke `/write-decision <number>` and, where relevant, to link back to related changes (workItemRef).
 
 This command never writes files or modifies Git state; it operates purely via conversational planning and read-only repository inspection. See `doc/guides/decision-making.md` for the full decision process.
@@ -133,7 +133,7 @@ Overall planning session flow (per decision number):
 
 5. **Assign decision rights (DACI)**
    - Assign DACI roles: **Driver** (coordinates), **Decider/Approver** (one accountable authority), **Contributors** (expertise/evidence), **Required reviewers**, **Performers** (execute), **Informed**.
-   - For R2/R3, note that a **human final decision** is required (recommendation ≠ decision). Capture the expected human decider for the `ai_assistance.human_decider` field.
+   - For R2/R3, note that human PR review/approval is required before the record is Accepted. Capture the expected human decider for the `ai_assistance.human_decider` field.
 
 6. **Clarify context and problem framing**
    - Elicit: current state, pain points, gaps, and situational facts (technical, organizational, regulatory context).
@@ -177,12 +177,12 @@ Overall planning session flow (per decision number):
       - Situations where the alternative would be preferable (if any).
     - Avoid premature convergence: ensure options are meaningfully distinct.
 
-11. **Evaluate options and converge on a recommendation**
+11. **Evaluate options and converge on a decision**
     - Compare alternatives explicitly against decision drivers (tables or structured bullets are encouraged).
-    - Screen on constraints FIRST, then rank on drivers: an alternative violating a disqualifying (`negotiable: no`) constraint is ineligible and must not be recommended. Note any negotiable (`negotiable: yes`) constraint the recommended alternative violates as a candidate accepted-risk exception.
+    - Screen on constraints FIRST, then rank on drivers: an alternative violating a disqualifying (`negotiable: no`) constraint is ineligible. Note any negotiable (`negotiable: yes`) constraint the chosen/proposed alternative violates as a candidate accepted-risk exception.
     - Call out trade-offs, second-order effects, and interactions with existing decision records.
-    - Propose a recommended option, but clearly separate recommendation from final decision.
-    - Explicitly list assumptions underpinning the recommendation.
+    - Propose the decision-ready option for PR review.
+    - Explicitly list assumptions underpinning the proposed decision.
 
 12. **Trade-offs, consequences, and scope boundaries**
     - Catalogue positive outcomes, negative outcomes, and unknowns.
@@ -243,7 +243,8 @@ decision_type: "adr"                  # adr | pdr | tdr | bdr | odr (defaults to
 record_number: "0007"                 # zeroPad4 number for the chosen type
 slug_hint: data-sharding-strategy
 title: Choose data sharding strategy for multi-tenant billing
-status_hint: Proposed                 # Proposed | Under Review | Accepted
+status_hint: Proposed                 # Proposed | Accepted | Deprecated | Superseded
+# status lifecycle: Proposed → Accepted → (Deprecated | Superseded)
 owners: ["team-platform", "@cto"]
 service: "billing-service"
 labels: ["architecture", "storage", "scalability"]
@@ -346,7 +347,7 @@ alternatives:
   cons: ["Still shared blast radius if misconfigured"]
   constraint_compliance: "C-1: pass; C-2: pass"
 
-recommended_decision:
+decision:
   choice: "Shared database with schema-based sharding"
   rationale: |
     Summary of why this option best satisfies the validated drivers, including explicit trade-offs against alternatives.
@@ -355,12 +356,11 @@ recommended_decision:
     - "Team has capacity to build sharding middleware and observability."
   non_goals:
     - "[OUT] Optimize for multi-region active/active in this decision."
-
-authorized_decision:
-  decision: "Pending human authorization." # Or the authorized final choice when human_decider is present
+  acceptance_state: "Proposed on branch; Accepted after human PR review/approval and merge."
   decider: "@cto"
   constraint_attestation: "Satisfies all constraints C-1 and C-2."   # OR accepted-risk exception for negotiable: yes only
   revisit_trigger: "Revisit if tenant-growth or latency assumptions are invalidated."
+  review_date: "TODO: Set on Acceptance for the first post-implementation retrospective."
 
 tradeoffs_and_consequences:
   positive:
@@ -441,7 +441,7 @@ Notes:
   - If BOTH legacy and generic fields are present, the generic fields take precedence.
 - The `rigor` field drives `/write-decision`'s proportional rendering (R1 compact subset / R2 standard / R3 full). R0 produces no record.
 - The `governance` and `ai_assistance` blocks flow into the record's optional front matter; `ai_assistance.human_decider` is required before any R2/R3 record advances to Accepted.
-- `evidence_assumptions_unknowns`, `authorized_decision`, `rollback_reversal`, `communication_plan`, and `structured_retrospective` map directly to the current decision-record template sections. Leave R3-expanded fields empty only when omitted by rigor/applicability.
+- `evidence_assumptions_unknowns`, `decision`, `rollback_reversal`, `communication_plan`, and `structured_retrospective` map directly to the current decision-record template sections. Leave R3-expanded fields empty only when omitted by rigor/applicability.
   </planning_summary_structure>
 
 <handoff_to_write_decision>
@@ -455,7 +455,7 @@ After emitting the `<decision_planning_summary>` block:
 
 3. If the decision is clearly linked to one or more changes (workItemRef), also recommend ensuring that the corresponding change spec front-matter links back to this decision record once created.
 
-4. For R2/R3 decisions, remind the user that a **human final decision** is required before the record advances to Accepted (recommendation ≠ decision). Suggest running `/review-decision <ID>` for independent challenge if appropriate.
+4. For R2/R3 decisions, remind the user that human PR review/approval is required before the record advances to Accepted. Suggest running `/review-decision <ID>` for independent challenge if appropriate.
 
 5. Do NOT call `/write-decision` automatically. The user must trigger this command when ready.
 

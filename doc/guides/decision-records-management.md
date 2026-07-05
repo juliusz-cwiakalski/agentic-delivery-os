@@ -143,23 +143,35 @@ Maintain `doc/decisions/00-index.md` as a table of all decision records. This ca
 ## 4. Lifecycle
 
 ```
-Proposed → Under Review → Accepted → (Deprecated | Superseded)
+Proposed → Accepted → (Deprecated | Superseded)
 ```
 
 | Status | Meaning |
 |--------|---------|
-| **Proposed** | Initial draft; open for discussion |
-| **Under Review** | Actively being reviewed by stakeholders |
-| **Accepted** | Decision is finalized; teams should follow it |
+| **Proposed** | Pre-merge working state on a feature/inception branch; open for discussion and revision. Records merged to `main` should be `Accepted` — `Proposed` is not a permanent state on `main`. |
+| **Accepted** | Decision is finalized and merged to `main`; teams should follow it. `decision_date` and `review_date` are set. |
 | **Deprecated** | No longer applicable but preserved for historical reference |
 | **Superseded** | Replaced by a newer decision record (link via `superseded_by`) |
 
 ### Status Transitions
 
-- `Proposed` → `Under Review`: Author requests formal review
-- `Under Review` → `Accepted`: Reviewers approve; `decision_date` is set
+- `Proposed` → `Accepted`: PR is reviewed and merged; `decision_date` and `review_date` are set
 - `Accepted` → `Deprecated`: Context has changed; decision no longer applies
 - `Accepted` → `Superseded`: A new decision record explicitly replaces this one
+
+### Iterative review
+
+Every `Accepted` record carries a `review_date` (front matter). The retrospective
+process is iterative:
+
+1. **First retro** — shortly after implementation (days–weeks). Captures
+   process/evidence/execution quality. Set `review_date` to a case-by-case
+   horizon for a longer-perspective review.
+2. **Subsequent retros** — at each `review_date`, assess the realized outcome
+   with hindsight. Set a new `review_date` if further observation is warranted,
+   or transition to `Deprecated`/`Superseded`.
+
+Records with a `review_date` in the past are candidates for the next retro cycle.
 
 ### Immutability
 
@@ -202,31 +214,23 @@ links:
 ---
 ```
 
-### Front-matter contract for new records
+### Front-matter
 
-**New records use only the `classification` block for routing metadata.** The
-top-level `decision_area` and top-level `reversibility` keys are **removed** from
-the template for new records — `decision_area` was redundant with
-`decision_type` + `classification.domains`, and `reversibility` is canonical only
-inside `classification`. `classification.reversibility` is the single source of
-truth for reversibility. See the
+The template front matter uses `classification` as the canonical home for
+routing metadata (`reversibility`, `domains`, `archetype`, `rigor`, etc.).
+`decision_type` (adr/pdr/tdr/bdr/odr) and `classification.domains` together
+provide type + domain routing without redundancy. See the
 [template front matter](../templates/decision-record-template.md) for the exact
-key set; no duplicate fields are left without a one-line justification.
+key set.
+
+`review_date` (YYYY-MM-DD) drives the iterative review cycle: records with a
+`review_date` in the past are candidates for the next retrospective. Set it on
+Acceptance and update after each retro.
 
 **Section depth follows the tiered-default model** (rigor is the primary axis;
 type/archetype toggle only small enumerated add-ons) documented in the
 [Decision-Making Guide §3](decision-making.md). The template remains the
 section-order authority.
-
-### Backward compatibility / grandfathering
-
-The six existing records — `ADR-0001`, `ADR-0002`, `PDR-0001`, `PDR-0002`,
-`ODR-0001`, `TDR-0001` — retain their legacy top-level `decision_area` and
-`reversibility` keys. There is **no migration pass**: those records are durable
-artifacts and remain valid as-is. Only **new** records follow the simplified
-front-matter contract above. (If GH-63 — machine-enforceable decision records —
-is revived, it must rebase onto this simplified front matter; GH-133 defines the
-new contract.)
 
 ---
 

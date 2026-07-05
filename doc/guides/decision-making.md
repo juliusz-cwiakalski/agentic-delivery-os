@@ -8,7 +8,7 @@ ados_distribution: redistributable
 
 > **Audience:** Engineers, product owners, founders, operators, and AI agents.
 >
-> **Purpose:** A condensed, process-first guide that calibrates the *amount* of process to the *nature and risk* of a decision — not its record prefix. This guide supersedes the artifact-centric narrative previously found in `decision-records-management.md` (now a thin record-artifact reference).
+> **Purpose:** A condensed, process-first guide that calibrates the *amount* of process to the *nature and risk* of a decision — not its record prefix. The record-artifact reference (naming, front matter, lifecycle) lives in [`decision-records-management.md`](decision-records-management.md).
 
 > Part of the [ADOS process map](ados-processes.md) — see how Decision Making supports Change Delivery and the rest.
 
@@ -258,7 +258,7 @@ ADOS uses AI as a decision **aid**, not an unaccountable decider.
 
 **AI must NOT be sole final authority for:** R3 decisions, legal/regulatory interpretation, material financial commitments, employment/individuals, safety-critical choices, privacy rights, irreversible architecture/strategy, active security-risk acceptance, or ethical trade-offs affecting people.
 
-**Recommendation ≠ decision.** The analyst/AI recommendation is always rendered separately from the authorized (often human) decision. R2/R3 records stay at `status: Proposed` with `decision_date: null` until an authorized human decides; AI never auto-Accepts them. Provenance is recorded in the optional `ai_assistance:` block (roles used, whether external data was shared, whether citations were verified, the human decider, reviewers).
+**Recommendation happens on the PR; the record captures the decision.** The PR review is where recommendation, discussion, and dissent occur. The decision record merged to `main` captures the final authorized decision at `status: Accepted`. AI never auto-Accepts R2/R3 records — a human reviews and approves the PR before merge. Provenance is recorded in the optional `ai_assistance:` block (roles used, whether external data was shared, whether citations were verified, the human decider, reviewers). `Proposed` status is a pre-merge working state for feature/inception branches; records on `main` should be `Accepted`.
 
 > **Honesty about independence.** Multiple AI agents using the **same model + prompt lineage do not constitute independent evidence.** For a single-model setup, `@decision-critic` is a **first-pass check, NOT independent assurance**. **R3 ALWAYS requires a human reviewer** regardless of the critic's verdict. Where a different model family is configured, assigning it to the critic is **recommended, not mandated**, to provide genuine independence.
 

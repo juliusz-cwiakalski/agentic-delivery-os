@@ -23,7 +23,7 @@ allowed-tools:
 <purpose>
 Generate a COMPLETE, rationale-focused Decision Record for a given decision number, strictly from planning-session context and existing documentation. Supports all five decision types: ADR (Architecture), PDR (Product), TDR (Technical), BDR (Business), and ODR (Operational).
 
-Renders the record **proportionally by rigor** (R1 compact subset / R2 standard / R3 full), records AI-assistance provenance, keeps the **recommendation separate from the authorized decision**, and refuses to mark R2/R3 records `Accepted` without an authorized human decision.
+Renders the record **proportionally by rigor** (R1 compact subset / R2 standard / R3 full), records AI-assistance provenance, and keeps R2/R3 records in a PR-reviewed flow: Proposed on the branch, Accepted when merged to main.
 
 User invocation:
 /write-decision <number>
@@ -55,9 +55,10 @@ A YAML front matter block MUST precede the decision record body and include at l
 id: <TYPE>-<number>                 # e.g., ADR-0001, PDR-0001, TDR-0001
 decision_type: <adr|pdr|tdr|bdr|odr>
 created: <YYYY-MM-DD>              # UTC date when file is first created
-decision_date: null | <YYYY-MM-DD> # Date when status changed to Accepted; may be null for Proposed
+decision_date: null | <YYYY-MM-DD> # Date when status changed to Accepted
+review_date: null | <YYYY-MM-DD>   # Next retrospective/review date; set on Acceptance
 last_updated: <YYYY-MM-DD>         # UTC date of last modification
-status: <Proposed|Under Review|Accepted|Deprecated|Superseded>
+status: <Proposed|Accepted|Deprecated|Superseded>
 summary: <Short one-line summary of the decision>
 owners: [<at least one owner>]
 service: <primary impacted service, system, or domain>
@@ -72,12 +73,14 @@ decisions: ["<TYPE>-####", ...]    # other relevant decision records
 
 Validation:
 
+- Status lifecycle is `Proposed → Accepted → (Deprecated | Superseded)`.
 - id MUST be exactly `<TYPE>-<number>` where TYPE is ADR/PDR/TDR/BDR/ODR and <number> is the zero-padded string form.
 - decision_type MUST be one of: adr, pdr, tdr, bdr, odr (lowercase).
 - created and last_updated MUST be valid dates in ISO format YYYY-MM-DD (UTC calendar date).
 - On first creation:
-  - status MUST be "Proposed".
-  - decision_date SHOULD be null (or omitted) until status becomes Accepted.
+  - status MUST be "Proposed" because branch records are pre-merge drafts.
+  - records merged to main SHOULD be "Accepted".
+  - when status becomes Accepted, set decision_date and review_date.
 - owners MUST contain at least one entry (e.g., a team or person handle).
 - related_changes MAY be empty; when present, values MUST be valid workItemRef identifiers (e.g., `PDEV-123`, `GH-456`).
 - Additional front-matter fields allowed by doc/documentation-handbook.md (e.g., tags, security) MAY be added but MUST NOT replace the keys above.
@@ -114,7 +117,7 @@ The decision record markdown body (after front matter) MUST follow this structur
 7. `## Evidence, Assumptions & Unknowns` (include `### Technical-Selection Evidence Pack (archetype: selection)` only when applicable)
 8. `## Mental Models & Techniques Used`
 9. `## Alternatives Considered`
-10. `## Decision` (with `### Recommendation`, `### Authorized Decision`, `### Constraint Compliance Attestation`)
+10. `## Decision` (with decision rationale and `### Constraint Compliance Attestation`)
 11. `## Trade-offs & Consequences` (with `### Positive Outcomes`, `### Negative Outcomes`, `### Unresolved Questions`)
 12. `## Implementation Plan`
 13. `## Rollback / Reversal`
@@ -132,9 +135,9 @@ Before `## Context`, the template includes a deletable **Type-selection helper**
 ### Proportional rendering by rigor (R1 ⊂ R3)
 
 - **R0:** no record (optional note/commit/ticket comment only).
-- **R1 (lightweight):** compact brief — render ONLY: Context, Problem Framing, Constraints (Hard Requirements), Decision Drivers, Mental Models & Techniques, Alternatives Considered (baseline + ≥1 option), and Decision (Recommendation + Authorized Decision + constraint attestation), plus owner + revisit trigger. Omit Decision Rights, Evidence/Assumptions/Unknowns, Trade-offs, Implementation Plan, Rollback/Reversal, Communication Plan, Verification Criteria, Confidence Rating, Structured Retrospective, and Examples. Resolves within 1 business day. R1 output is a STRICT PROPER SUBSET of R3.
-- **R2 (standard):** the full canonical record above EXCEPT the R3-expanded sections per the template (Rollback/Reversal, Communication Plan, Structured Retrospective). Include Decision Rights, Evidence/Assumptions/Unknowns, eligibility-first Alternatives, Recommendation/Authorized Decision split, Trade-offs, Implementation Plan, Verification Criteria, Confidence Rating, and References.
-- **R3 (high assurance):** the full canonical record PLUS independent challenge (`@decision-critic` via `/review-decision`), Rollback/Reversal, Communication Plan, Structured Retrospective, a human final decision, and a review_date. `status` stays `Proposed` until an authorized human decides.
+- **R1 (lightweight):** compact brief — render ONLY: Context, Problem Framing, Constraints (Hard Requirements), Decision Drivers, Mental Models & Techniques, Alternatives Considered (baseline + ≥1 option), and Decision (including constraint attestation), plus owner + revisit trigger. Omit Decision Rights, Evidence/Assumptions/Unknowns, Trade-offs, Implementation Plan, Rollback/Reversal, Communication Plan, Verification Criteria, Confidence Rating, Structured Retrospective, and Examples. Resolves within 1 business day. R1 output is a STRICT PROPER SUBSET of R3.
+- **R2 (standard):** the full canonical record above EXCEPT the R3-expanded sections per the template (Rollback/Reversal, Communication Plan, Structured Retrospective). Include Decision Rights, Evidence/Assumptions/Unknowns, eligibility-first Alternatives, Decision, Trade-offs, Implementation Plan, Verification Criteria, Confidence Rating, and References.
+- **R3 (high assurance):** the full canonical record PLUS independent challenge (`@decision-critic` via `/review-decision`), Rollback/Reversal, Communication Plan, Structured Retrospective, a human final decision, and a review_date. Records are Proposed on the branch and should be Accepted when merged to main.
 </decision_structure>
 
 <authoring_rules>
@@ -153,8 +156,8 @@ Before `## Context`, the template includes a deletable **Type-selection helper**
   - Apply eligibility-first evaluation: screen on Constraints (Hard Requirements) FIRST, then rank survivors on Decision Drivers. Label each alternative `Eligible`, `Not eligible`, or `Eligible-with-accepted-risk-exception`; a high driver score cannot rescue an option that fails a non-negotiable constraint.
   - For each alternative, include an EXPLICIT constraint-compliance evaluation against each documented constraint (C-1, C-2, …), not only pros/cons against drivers. Choose format via a readability heuristic: PROSE (1–2 sentences/alternative) when all comply or few violations need explanation; a MATRIX (constraints × alternatives) when ≥3 constraints have mixed compliance or prose would exceed ~3 sentences/alternative. DEFAULT TO MATRIX when unsure. Table-stakes constraints (all alternatives satisfy) get a brief one-line acknowledgment rather than per-alternative listing.
 - "Decision" MUST:
-  - Keep `Recommendation` separate from `Authorized Decision`; for R2/R3, use "Pending human authorization" until `ai_assistance.human_decider` is present.
-  - Tie recommendation rationale explicitly back to decision drivers.
+  - State the chosen/proposed option, rationale, assumptions, risks, decider, and acceptance state in one section.
+  - Tie rationale explicitly back to decision drivers.
   - List key assumptions and risks.
   - Explicitly ATTEST that the chosen alternative satisfies every constraint, OR document an accepted-risk exception for any constraint it violates. An accepted-risk exception is permitted ONLY for constraints marked `negotiable: yes`; a constraint marked `negotiable: no` that the chosen alternative violates is DISQUALIFYING and must not be waved through.
 - "Trade-offs & Consequences" MUST:
@@ -172,11 +175,11 @@ Before `## Context`, the template includes a deletable **Type-selection helper**
 - "References" MUST link to relevant changes, specs, contracts, decision records, and external sources.
 - Where planning context contains explicit labels like FACT, ASSUMPTION, TO CONFIRM, these MAY be retained as bold labels in the record where useful.
 
-### AI-assistance provenance, recommendation vs decision, and the no-auto-Accept rule (F-5, F-10, RSK-7)
+### AI-assistance provenance, PR review, and the no-auto-Accept rule (F-5, F-10, RSK-7)
 
 - **Record `ai_assistance` provenance** in the front matter whenever AI was used: `used`, `roles`, `external_data_shared`, `citations_verified`, `human_decider`, `reviewers`. This records roles/provenance only — never store raw model chain-of-thought or logs (NFR-6).
-- **Recommendation ≠ decision.** The analyst/AI recommendation is always rendered SEPARATELY from the authorized decision (e.g., the "Decision" section states the recommendation as a recommendation, and the authorized decision — if any — is attributed to the human decider). Do not present an AI recommendation as an authorized decision.
-- **Never auto-Accept R2/R3.** For R2/R3 records, create the record at `status: Proposed` with `decision_date: null`. Do NOT transition to `Accepted` or set `decision_date` unless `ai_assistance.human_decider` (an authorized human decision) is present. R3 ALWAYS requires a human reviewer regardless of any AI critique.
+- **PR-based decision model.** Recommendation and discussion happen on the PR. The decision record captures the final authorized decision at `status: Accepted`.
+- **Never auto-Accept R2/R3.** Records are Proposed on the branch; they should be Accepted when merged to main. AI never auto-Accepts R2/R3 records — a human reviews and approves the PR before merge. On Acceptance, set `decision_date`, `review_date`, and `ai_assistance.human_decider`. R3 ALWAYS requires a human reviewer regardless of any AI critique.
 - **Optional `classification` and `governance` front matter.** When the planning summary carries them, write the `classification:` (domains/archetype/environment/rigor/reversibility/stakes/urgency/uncertainty/blast_radius/recurrence) and `governance:` (driver/decider/contributors/reviewers/performers/informed) blocks into the record's front matter. All such blocks are optional and additive.
   </authoring_rules>
 
@@ -184,7 +187,7 @@ Before `## Context`, the template includes a deletable **Type-selection helper**
 
 - Template placeholders such as `<...>` MUST NOT appear in final decision record content.
 - If required information is genuinely unavailable (e.g., decision not yet fully implemented so Structured Retrospective entries are unknown):
-  - Use explicit TODO-style sentences (e.g., "TODO: Populate structured retrospective after first production rollout.").
+  - Use explicit TODO-style sentences (e.g., "TODO: Populate structured retrospective after first production rollout; then confirm or move `review_date`.").
   - Add any significant unknowns to "### Unresolved Questions" with owners where possible.
 - Under no circumstances may the decision record omit a required section; minimal but honest content is preferred over silence.
   </placeholder_rules>
@@ -203,10 +206,11 @@ Before `## Context`, the template includes a deletable **Type-selection helper**
    - If it exists: load existing front matter and body; treat this as an UPDATE, preserving historical narrative and only appending/adjusting content where appropriate.
    - If it does not exist: treat this as a NEW decision record.
 7. Construct front matter per <front_matter_rules>:
-   - On creation: set created = today (UTC); last_updated = today; status = Proposed; decision_date = null; decision_type from step 3.
+   - On creation: set created = today (UTC); last_updated = today; status = Proposed; decision_type from step 3.
    - Include the optional `classification`, `governance`, `ai_assistance`, and revisit-trigger blocks from the planning summary when present.
-   - **R2/R3:** status MUST remain Proposed with decision_date null UNLESS `ai_assistance.human_decider` is present (no auto-Accept).
-   - On update: preserve created; set last_updated = today; retain existing status and decision_date unless explicitly overridden by an authorized human decision.
+   - **R2/R3:** records are Proposed on the branch and should be Accepted when merged to main; never auto-Accept without human PR review/approval.
+   - On update: preserve created; set last_updated = today; retain existing status, decision_date, and review_date unless explicitly overridden by an authorized human decision.
+   - On Acceptance: set status = Accepted, decision_date = today (UTC), review_date = first scheduled post-implementation retrospective date, and ai_assistance.human_decider.
 8. Generate or update decision record body using <decision_structure> (the single structural definition mirroring the template), <authoring_rules>, and planning context:
    - Render proportionally by rigor (R1 compact subset / R2 standard / R3 full) per <decision_structure>.
    - For NEW records: synthesize complete sections from planning summary and referenced docs.

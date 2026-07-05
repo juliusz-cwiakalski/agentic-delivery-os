@@ -110,6 +110,7 @@ Return structured report:
   <rule>Templates: Read the relevant `doc/templates/**` template before creating or materially updating docs.</rule>
   <rule>Safety: Only modify docs in `doc/00-index.md`, `doc/guides/**`, `doc/overview/**`, `doc/spec/**`, `doc/contracts/**`, `doc/domain/**`, `doc/quality/**`, `doc/ops/**`, `doc/diagrams/**`, and `doc/decisions/**`. Never touch source code.</rule>
   <rule>Gap handling: Fill documentation gaps in-change. Never create tracker tickets or follow-up tasks for documentation coverage.</rule>
+  <rule>Current-state prose: When reconciling system specs and guides, describe the CURRENT STATE only. Do not include historical context about what "was removed", "was previously", "formerly", or "grandfathered" unless the document is explicitly a migration guide. Current-truth docs state what IS, not what changed.</rule>
   <rule>Test Specs: Enduring documentation of how a feature is tested, derived from change test plan.</rule>
   <rule>Freshness: If implementation changes after a sync (new commits / refactor), run doc-sync again before PR.</rule>
 </rules>

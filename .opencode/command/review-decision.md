@@ -35,7 +35,7 @@ $ARGUMENTS
 
 <process>
 1. Resolve and read the target decision record read-only (`read`/`grep`/`glob` only).
-2. Hand the record's **problem, evidence, constraints, and options** to `@decision-critic`. Where practical, withhold the record's recommendation/decision initially so the critic forms its own view, then compare against the record's stated conclusion.
+2. Hand the record's **problem, evidence, constraints, and options** to `@decision-critic`. Where practical, withhold the record's conclusion initially so the critic forms its own view, then compare against the record's stated conclusion.
 3. `@decision-critic` performs the independent challenge (see its prompt): framing, option space, constraint compliance, assumption/sensitivity check, premortem, stakeholder harm, confidence assessment, automation-bias check.
 4. Capture the critic's verdict — exactly one of **PASS** / **PASS_WITH_RISKS** / **REWORK** — and its structured findings.
 5. **Modify nothing.** Do not write/edit/stage/commit. Output the review verdict and findings only.

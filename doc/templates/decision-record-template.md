@@ -14,15 +14,11 @@ owners:
   - <owner-or-team>                      # At least one entry required
 service: <primary-impacted-service>      # e.g., "delivery-os", "billing-service"
 decision_scope: null                      # optional: repo | product-line | org
-review_date: null                         # optional: YYYY-MM-DD
+review_date: null                         # YYYY-MM-DD — next scheduled review; set on Acceptance, updated after each retro
 business_impact: null                     # optional short impact statement
 customer_impact: null                     # optional short impact statement
 # --- optional additive blocks (all optional; omit for any record) ---
-# Front-matter contract (GH-133): new records carry NO top-level `decision_area`
-# or `reversibility` — both live only inside `classification:` below. The six
-# legacy records (ADR-0001/0002, PDR-0001/0002, ODR-0001, TDR-0001) are
-# grandfathered with their older top-level keys; new records use this skeleton.
-classification:                           # optional (DM-1): drives routing & rendering; CANONICAL home for reversibility/domains
+classification:                           # optional: drives routing & rendering; canonical home for reversibility/domains
   domains: []                             # e.g., [architecture, security, ai/ml, vendor, ux]
   archetype: null                         # selection | design | policy | go_no_go | ...
   environment: null                       # Cynefin: clear | complicated | complex | chaotic
@@ -40,7 +36,7 @@ governance:                               # optional (DM-2): DACI decision right
   reviewers: []                           # required reviewers/agreers
   performers: []                          # who executes the decision
   informed: []                            # who is notified
-ai_assistance:                            # optional (DM-3): provenance; recommendation != decision
+ai_assistance:                            # optional: provenance
   used: false                             # was AI assistance used in this record?
   roles: []                               # e.g., [researcher, analyst, critic, record-writer]
   external_data_shared: false             # was any data sent to an external AI?
@@ -339,36 +335,22 @@ non-empty). There is NO full 2D type x rigor matrix — it defeats LLM rendering
 
 ## Decision
 
-<!-- rigor: R1/R2/R3 — the Decision section is rendered at every rigor level.
-      It is split into TWO distinct surfaces so the analyst/AI recommendation is
-      never conflated with the authorized (often human) decision.
-      Cross-reference: doc/guides/decision-making.md §6 (Recommendation != decision).
+<!-- rigor: R1/R2/R3 — rendered at every rigor level.
+      The decision record captures the FINAL authorized decision. Recommendation,
+      discussion, and dissent happen on the PR (or planning branch) before the
+      record is merged to main with status: Accepted.
+
+      Cross-reference: doc/guides/decision-making.md §6 (AI authority).
 -->
 
-### Recommendation
-
-<!-- The analyst/AI recommendation (assumptions + risks). This is advice, NOT the
-      authorized decision. AI-generated confidence is NOT evidence. For R2/R3 the
-      record stays at status: Proposed with decision_date: null until an
-      authorized human decides. -->
-
-- **Recommended option:** <!-- Alt-<n> -->
+- **Decision:** <!-- final choice -->
 - **Rationale (tied to drivers):** <!-- why this option, referencing surviving drivers -->
-- **Key assumptions & risks:** <!-- carried from Evidence/Assumptions/Unknowns -->
-
-### Authorized Decision
-
-<!-- The authorized decision. For R2/R3 this requires an authorized human
-      (record `ai_assistance.human_decider`). Until then this surface reads
-      "Pending human authorization." State the final decision clearly. -->
-
-- **Decision:** <!-- final choice, or "Pending human authorization." -->
 - **Decider:** <!-- authorized human / role -->
-- **Conditions for revisit:** <!-- when to reopen -->
+- **Conditions for revisit:** <!-- when to reopen; cross-reference review_date front matter -->
 
 ### Constraint Compliance Attestation
 
-<!-- The Authorized Decision MUST explicitly attest that the chosen alternative satisfies EVERY
+<!-- The Decision MUST explicitly attest that the chosen alternative satisfies EVERY
      documented constraint (C-1, C-2, …). Two cases:
 
      1. FULL COMPLIANCE — attest it explicitly, e.g., "The chosen alternative satisfies all
@@ -451,9 +433,22 @@ non-empty). There is NO full 2D type x rigor matrix — it defeats LLM rendering
 
 ## Structured Retrospective
 
-<!-- rigor: R3 — populate after the decision is implemented and observed.
-     Initially: "TODO: Populate after implementation and observation."
+<!-- rigor: R2/R3 — populate iteratively after implementation and observation.
      Separates quality dimensions to fight outcome bias.
+
+     ITERATIVE REVIEW PROCESS:
+     - First retro: shortly after implementation (days–weeks). Captures immediate
+       process/evidence/execution quality. After this retro, set `review_date` in
+       the front matter to a case-by-case horizon (weeks–months) for a longer-
+       perspective review.
+     - Second retro: at the `review_date`. Assesses whether the decision was right
+       with the benefit of hindsight — realized outcomes, lessons learned, luck vs
+       skill. After this retro, set a new `review_date` if further observation is
+       warranted, or mark the decision Deprecated/Superseded if it no longer applies.
+     - The `review_date` front-matter field is the driver: records with a
+       `review_date` in the past are candidates for the next retro cycle.
+
+     Initially: "TODO: First retro after implementation."
 -->
 
 ### Process quality
