@@ -8,7 +8,7 @@ ados_distribution: redistributable
 
 > **Audience:** Engineers, product owners, founders, operators, and AI agents.
 >
-> **Purpose:** A condensed, process-first guide that calibrates the *amount* of process to the *nature and risk* of a decision — not its record prefix. This guide supersedes the artifact-centric narrative previously found in `decision-records-management.md` (now a thin record-artifact reference).
+> **Purpose:** A condensed, process-first guide that calibrates the *amount* of process to the *nature and risk* of a decision — not its record prefix. The record-artifact reference (naming, front matter, lifecycle) lives in [`decision-records-management.md`](decision-records-management.md).
 
 > Part of the [ADOS process map](ados-processes.md) — see how Decision Making supports Change Delivery and the rest.
 
@@ -97,6 +97,43 @@ Every R1–R3 decision runs this lifecycle. **Depth varies by rigor profile** (�
 | **D13** | Verification & Revisit | Leading/lagging/guardrail metrics, targets, window, review date, invalidation triggers |
 | **D14** | Retrospective & Calibration | Separate process quality, evidence quality, execution quality, realized outcome, and luck/variance; avoid outcome bias |
 
+### Technical-selection evidence pack (D2)
+
+For framework/library/tool/vendor selections (`archetype: selection`) at R2/R3,
+gather a **bounded evidence pack** — not an unbounded research dump. Default to
+**top-3 candidate options** and **~10 highest-signal fields** per candidate
+(license, maturity/age, latest release + cadence, active contributors/commit
+activity, issue/PR responsiveness + bus factor, security advisories +
+vulnerability handling, adoption signals, migration/SemVer discipline,
+integration fit, lock-in/migration cost). Expand beyond 3 when the decision
+warrants it (e.g., a crowded ecosystem with several credible contenders, or a
+high-stakes R3 where excluding a viable option is riskier than the extra
+analysis cost). Select the ~10 most relevant per candidate.
+
+Every signal carries:
+
+- a **label** — `FACT` / `ASSUMPTION` / `TO-CONFIRM` (consistent with D2);
+- a **canonical source** — the primary/canonical URL (official registry/repo),
+  not an aggregator; flag when canonicality cannot be verified;
+- an **as-of date** — when the signal was true/observed (this drives a
+  `revisit_triggers` entry such as "dependency security advisory published").
+
+**Security controls (mandatory):**
+
+- **canonical-source** — cite the official registry/repo URL; never an
+  aggregator as the sole source.
+- **as-of date** — record when each signal was observed; treat stale signals as
+  `TO-CONFIRM`.
+- **data-minimization** — when delegating evidence gathering externally, send
+  only the research question and public identifiers (package name, version).
+  Send **no** internal architecture details, secrets, PII, or proprietary
+  context. Wire `ai_assistance.external_data_shared` to this rule.
+
+These signals are **evidence, not a blind numeric scorecard**. Convert them to a
+numeric scorecard only when D9 deliberately selects MCDA. License compatibility is
+recorded as a `FACT` string (with source) and is a **human/R3 determination** —
+the advisor never autonomously concludes compatibility or accepts a license.
+
 ---
 
 ## 3. Rigor profiles (R0–R3) + emergency overlay
@@ -111,6 +148,25 @@ Scale ceremony to stakes. Each profile defines **required output** and a **targe
 | **R3 — High Assurance** | Hard-to-reverse, critical/financial/security/privacy/legal/safety/ethical, org-wide, or deep-uncertainty + large downside | Full record + independent reviewer/critic + domain sign-off + source verification + premortem + scenario/sensitivity + explicit dissent + guardrails + rollback + **human final decision** + deadline + escalation + formal review date | Days–weeks |
 
 **R1 is a strict proper subset of R3.** The R1 brief contains only a subset of the R3 sections; it never invents R3-only sections. R0 produces **zero** mandatory records.
+
+### Tiered-default section applicability
+
+Rigor (R1/R2/R3) is the **primary axis** that drives the section set rendered in a
+record; a record's **type** and **archetype** toggle only a small, **enumerated**
+set of optional add-ons. This **tiered-default model** deliberately replaces a
+full 2D applicability matrix (rigor × type): such a matrix defeats LLM rendering,
+pushing agents to over-emit sections and bloat R1 briefs.
+
+| Axis | Effect on the section set |
+|------|---------------------------|
+| **Rigor (primary axis)** | Determines the *depth*. R0 → no record. R1 → strict proper subset. R2 → canonical record. R3 → canonical + adversarial challenge + human decision. |
+| **Type (add-on)** | Routes ownership, reviewers, and context. Adds **no** mandatory sections; only toggles optional lenses (e.g., a Rollback is expected for hard-to-reverse ADR/ODR). |
+| **Archetype (add-on)** | Toggles a small enumerated set of optional blocks — e.g., a Technical-Selection Evidence pack when `archetype: selection`; a Communication Plan when `governance.informed` is non-empty. |
+
+Because rigor is the single primary axis, the R1 section set stays small and
+predictable. The template
+([`doc/templates/decision-record-template.md`](../templates/decision-record-template.md))
+is the section-order authority and tags each section by rigor applicability.
 
 ### Emergency overlay
 
@@ -138,6 +194,22 @@ A decision is classified on four axes. These axes drive rigor, method, and autho
 | **Conditions** | Cynefin environment (clear/complicated/complex/chaotic) · reversibility · stakes · urgency · uncertainty · blast radius · recurrence · evidence maturity · stakeholder diversity · external obligations |
 
 Routing: classify → pick a rigor profile (§3) → pick a method (D9) → assign authority (§5, §6). The classification is captured in the record's optional `classification:` front-matter block.
+
+### Domains-first extension (no new top-level types)
+
+Specialized concerns — security, privacy, compliance, data, finance, legal, AI,
+vendor, procurement, ML, UX — are **not** new top-level prefixes. Route them to
+`classification.domains` plus the **primary owning type**. The five top-level
+types (ADR/PDR/TDR/BDR/ODR) stay stable; `domains` is the extension axis.
+
+| Concern | Routing |
+|---------|---------|
+| ML model selection | `classification.domains: [ai/ml]` + `archetype: selection`, owning type TDR or ADR |
+| Vendor / procurement | `classification.domains: [vendor]` + the owning type (BDR for commercial policy; TDR for a library/tool) |
+| UX pattern library | `classification.domains: [ux]` + owning type PDR (or ADR if it shapes system boundaries) |
+
+Type controls **ownership, reviewers, and context routing**; `domains` tags the
+specialist lens. Adding a new concern never requires inventing a new prefix.
 
 ---
 
@@ -186,7 +258,7 @@ ADOS uses AI as a decision **aid**, not an unaccountable decider.
 
 **AI must NOT be sole final authority for:** R3 decisions, legal/regulatory interpretation, material financial commitments, employment/individuals, safety-critical choices, privacy rights, irreversible architecture/strategy, active security-risk acceptance, or ethical trade-offs affecting people.
 
-**Recommendation ≠ decision.** The analyst/AI recommendation is always rendered separately from the authorized (often human) decision. R2/R3 records stay at `status: Proposed` with `decision_date: null` until an authorized human decides; AI never auto-Accepts them. Provenance is recorded in the optional `ai_assistance:` block (roles used, whether external data was shared, whether citations were verified, the human decider, reviewers).
+**Recommendation happens on the PR; the record captures the decision.** The PR review is where recommendation, discussion, and dissent occur. The decision record merged to `main` captures the final authorized decision at `status: Accepted`. AI never auto-Accepts R2/R3 records — a human reviews and approves the PR before merge. Provenance is recorded in the optional `ai_assistance:` block (roles used, whether external data was shared, whether citations were verified, the human decider, reviewers). `Proposed` status is a pre-merge working state for feature/inception branches; records on `main` should be `Accepted`.
 
 > **Honesty about independence.** Multiple AI agents using the **same model + prompt lineage do not constitute independent evidence.** For a single-model setup, `@decision-critic` is a **first-pass check, NOT independent assurance**. **R3 ALWAYS requires a human reviewer** regardless of the critic's verdict. Where a different model family is configured, assigning it to the critic is **recommended, not mandated**, to provide genuine independence.
 
@@ -203,6 +275,39 @@ Context anchors, typical approver, and fitting framework per type. This is a sin
 | **TDR** | Codebase, libraries, build/CI config, benchmarks | Tech lead | Trade-off matrix, build/buy/partner, spike/experiment |
 | **BDR** | Strategy docs, ICP, pricing model, market data | Business lead / product owner | Cost-benefit, EV, scenario planning, reference-class forecasting |
 | **ODR** | Runbooks, infra config, on-call, SLOs/SLAs | SRE/platform lead | Threat model, chaos/postmortem, sensitivity analysis |
+
+### ADR vs TDR — rule of thumb and tie-breaker
+
+Both ADR and TDR can involve technology, so they blur. Use this routing:
+
+- **TDR** — selecting a specific technology, library, framework, tool, build/test
+  tooling, or implementation pattern *within an already-decided architecture*.
+- **ADR** — system structure, service/module boundaries, integration patterns,
+  API/event contracts, architecture-defining topology, cross-system quality
+  attributes, durable cross-component constraints.
+
+**Rule of thumb:** *Will this constrain future system design across components or
+teams?* → **ADR**. *Is this mainly how we implement within an already-decided
+design?* → **TDR**.
+
+**Tie-breaker (when both fit):** prefer **ADR** when `reversibility: hard` **or**
+`blast_radius ≥ team`; otherwise prefer **TDR**. The tie is recorded via
+`classification.conditions`, not by the prefix alone. Type drives ownership and
+reviewers; rigor is driven by risk/stakes, not by the prefix.
+
+### Common overlap guidance
+
+Borderline cases route to the type whose concern is the **primary driver**:
+
+| Case | Routing |
+|------|---------|
+| **Pricing** | **PDR** if it is packaging/value/tier design; **BDR** if it is revenue recognition, contracts, or commercial policy |
+| **Infrastructure** | **ADR** if the choice shapes the system (new platform, topology, contract); **ODR** if it is operating an existing system (runbooks, alerting, on-call) |
+| **Data retention** | **BDR** if the primary driver is a business/legal rule; **ODR** if operational enforcement; **ADR** if it shapes storage architecture/contracts |
+| **Security / privacy** | Add the relevant `domains` tag (e.g., `[security]`, `[privacy]`) **plus** the primary owning type — there is no standalone "Security Record" type |
+
+These heuristics are mirrored in
+[`decision-records-management.md`](decision-records-management.md) §2.
 
 ---
 
@@ -226,7 +331,7 @@ The process lives in this guide; the **record artifact** (naming, front matter, 
 - **Location/naming:** `doc/decisions/<TYPE>-<zeroPad4>-<slug>.md` (flat directory; each type has its own sequence).
 - **Template:** [`doc/templates/decision-record-template.md`](../templates/decision-record-template.md) — the **single source of truth** for the record body structure and the optional `classification`/`governance`/`ai_assistance`/`review_date` front matter.
 - **Lifecycle:** `Proposed → Under Review → Accepted → (Deprecated | Superseded)`. `decision_date` is set only when status becomes Accepted.
-- **R0 produces no record.** R1 renders a compact subset; R2 a standard record; R3 a full record (see the template's proportional-rendering guidance).
+- **R0 produces no record.** R1 renders a compact subset; R2 a standard record; R3 a full record (see the template's tiered-default rendering guidance).
 
 ---
 

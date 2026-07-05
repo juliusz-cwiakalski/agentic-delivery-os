@@ -1,0 +1,57 @@
+change_id: GH-133
+title: "Improve decision taxonomy, template usability, and technical-selection evidence"
+slug: decision-process-improvements
+branch: feat/GH-133/decision-process-improvements
+delivery_mode: interactive
+phases:
+  clarify_scope: { started: "2026-07-05", completed: "2026-07-05" }
+  specification: { started: "2026-07-05", completed: "2026-07-05" }
+  test_planning: { started: "2026-07-05", completed: "2026-07-05" }
+  delivery_planning: { started: "2026-07-05", completed: "2026-07-05" }
+  dor_check: { started: "2026-07-05", completed: "2026-07-05" }
+  delivery: { started: "2026-07-05", completed: "2026-07-05" }
+  system_spec_update: { started: "2026-07-05", completed: "2026-07-05" }
+  review_fix: { started: "2026-07-05", completed: "2026-07-05" }
+  quality_gates: { started: "2026-07-05", completed: "2026-07-05" }
+  dod_check: { started: "2026-07-05", completed: "2026-07-05" }
+  pr_creation: { started: "2026-07-05", completed: "2026-07-05", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/135" }
+decisions:
+  - text: "Red-team R1 verdict: PASS_WITH_RISKS. Three must-fix items resolved: GH-63 coupling documented, backward-compat grandfathering policy, ACs sharpened."
+    date: "2026-07-05"
+  - text: "GH-63 DISREGARDED per owner directive. GH-63 will NOT be merged in its current form — owner will refactor it later with a TypeScript CLI stack, reflecting GH-133's new front-matter contract. GH-133 is the sole authority for the new front-matter schema. No coordination with GH-63 needed."
+    date: "2026-07-05"
+  - text: "Backward compatibility: grandfather 6 existing decision records (ADR-0001, ADR-0002, PDR-0001, PDR-0002, ODR-0001, TDR-0001). No migration pass."
+    date: "2026-07-05"
+  - text: "2D applicability model collapsed to tiered-default: rigor (R1/R2/R3) drives section set (primary axis); type/archetype toggles small enumerated add-ons. LLM agents struggle with full matrix rendering."
+    date: "2026-07-05"
+  - text: "Deliver as ONE ticket with phased commits: (1) taxonomy, (2) template, (3) evidence-pack + researcher, (4) advisor delegation + plugin regen."
+    date: "2026-07-05"
+  - text: "Red-team R2 (artifacts review) and R3 (post-delivery review) scheduled per user request."
+    date: "2026-07-05"
+open_questions: []
+blockers: []
+notes:
+  - text: "Toolsmith reviewed @coder's agent-prompt edits (decision-advisor.md + external-researcher.md). Found 6 issues (4 medium, 2 low): evidence cap ambiguity (top-3/~10 → maximum 3/≤10), signal name mismatch (canonical source → canonical-source), implicit prompt-injection handling, R1-default-local over-authorization, label inconsistency (TO CONFIRM → TO-CONFIRM), trigger precision. All fixed and committed (2d7898e). Plugin regenerated, idempotent."
+    type: retro
+    date: "2026-07-05"
+  - text: "RETRO: @coder hand-edited agent prompts directly instead of delegating to @toolsmith per AGENTS.md convention. This is a process gap — the plan didn't explicitly route agent-prompt edits through @toolsmith. For future changes touching .opencode/agent/*.md, the plan should specify @toolsmith as the executor for those phases, or @coder should delegate internally."
+    type: retro
+    date: "2026-07-05"
+  - text: "Red-team R2 (artifacts review) completed. Verdict: PASS_WITH_RISKS. Three must-fix items: (1) plan omitted 3 ACs (domains-first, overlap guidance, type-selection helper) → added tasks 1.1b/1.1c/2.0; (2) no cross-artifact AC traceability matrix → added to plan; (3) stale 'spec pending' claims → OQ-1 resolved. Ship-with-findings also addressed: license wording sharpened, Phase 7 regen-rule clarified. Committed as 0671d2a."
+    type: info
+    date: "2026-07-05"
+  - text: "RETRO: Three artifacts (spec, test-plan, plan) were authored in parallel by separate agents, resulting in 3 incompatible AC-ID schemes and plan-spec coverage gaps (plan was authored first, spec last). Parallel authoring saved wall-clock time but created traceability debt that R2 had to catch. For future parallel artifact creation, include a shared AC-ID convention in the delegation prompt, or add a reconciliation step before DoR."
+    type: retro
+    date: "2026-07-05"
+  - text: "Red-team R1 (scope/concept) completed pre-delivery. Verdict: PASS_WITH_RISKS. Findings addressed in ticket update. Ship-with-findings folded into scope: tiered applicability, security controls (canonical-source, as-of date, data-minimization), evidence-pack cap (top-3 candidates, ~10 signals), ADR/TDR tie-breaker rule, worked R1/R2/R3 examples, R1 protection, R1-default-local delegation, license-as-human-step."
+    type: info
+    date: "2026-07-05"
+  - text: "Red-team methodology note: coordinator-synthesized perspectives (no agent-spawning in subagent runtime). Recommended independent re-review at DoR for CTO and domain-expert lenses."
+    type: retro
+    date: "2026-07-05"
+  - text: "RETRO: The red-team discovered GH-63 was never merged to main — the task prompt incorrectly assumed a validator existed. This is a backlog hygiene issue: parked changes (GH-63 in pm-context.yaml) should have their merge status verified. The pm-context.yaml marks GH-63 as 'parked, PR #76 open in review' but doesn't track that the branch may be stale/diverged significantly from current main."
+    type: retro
+    date: "2026-07-05"
+  - text: "Delivery (content phases 1-4) completed. Phase 1 taxonomy (fdf9cd5); Phase 2 template overhaul (5eb8c5c); Phase 3 evidence-pack + external-researcher + plugin regen (d6f3411); Phase 4 decision-advisor delegation + final plugin regen (76c41cc). DoR closure committed separately (1aeb8bf). All invariants C-1..C-6 hold; doc-distribution guard green; plugin build idempotent; 6 grandfathered records untouched. Phases 5-8 (spec sync, review, gates, DoD, PR) are PM-orchestrated and remain Not started."
+    type: info
+    date: "2026-07-05"

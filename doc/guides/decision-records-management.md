@@ -44,6 +44,37 @@ This guide defines the decision **record artifact** standard for ADOS-managed re
 | **Business Decision Record** | `BDR` | Business rules, compliance, process policies | Subscription tier structure, data retention policy, SLA definitions |
 | **Operational Decision Record** | `ODR` | Infrastructure, deployment, monitoring, incident response | Deployment pipeline design, alerting thresholds, on-call rotation |
 
+### ADR vs TDR — rule of thumb and tie-breaker
+
+Both ADR and TDR can involve technology, so they blur:
+
+- **TDR** — selecting a specific technology, library, framework, tool, build/test
+  tooling, or implementation pattern *within an already-decided architecture*.
+- **ADR** — system structure, service/module boundaries, integration patterns,
+  API/event contracts, architecture-defining topology, durable cross-component
+  constraints.
+
+**Tie-breaker (when both fit):** prefer **ADR** when `reversibility: hard` **or**
+`blast_radius ≥ team`; otherwise prefer **TDR**. The tie is recorded via
+`classification.conditions`. The full rule of thumb and reasoning live in the
+[Decision-Making Guide §7](decision-making.md).
+
+### Common overlap guidance
+
+Borderline cases route to the type whose concern is the **primary driver**:
+
+| Case | Routing |
+|------|---------|
+| **Pricing** | **PDR** if packaging/value/tier design; **BDR** if revenue, contracts, or commercial policy |
+| **Infrastructure** | **ADR** if it shapes the system (platform, topology, contract); **ODR** if it operates an existing system (runbooks, alerting, on-call) |
+| **Data retention** | **BDR** (business/legal rule) · **ODR** (operational enforcement) · **ADR** (storage architecture/contracts) |
+| **Security / privacy** | A `domains` tag (e.g., `[security]`, `[privacy]`) **plus** the primary owning type — there is no standalone "Security Record" type |
+
+Specialized concerns (security, privacy, ML, vendor, UX, …) are routed to
+`classification.domains` plus the owning type — **never** to a new top-level
+prefix. See the [Decision-Making Guide §4](decision-making.md) for the
+domains-first extension.
+
 ### When to Create a Decision Record
 
 Create a record when:
@@ -112,23 +143,35 @@ Maintain `doc/decisions/00-index.md` as a table of all decision records. This ca
 ## 4. Lifecycle
 
 ```
-Proposed → Under Review → Accepted → (Deprecated | Superseded)
+Proposed → Accepted → (Deprecated | Superseded)
 ```
 
 | Status | Meaning |
 |--------|---------|
-| **Proposed** | Initial draft; open for discussion |
-| **Under Review** | Actively being reviewed by stakeholders |
-| **Accepted** | Decision is finalized; teams should follow it |
+| **Proposed** | Pre-merge working state on a feature/inception branch; open for discussion and revision. Records merged to `main` should be `Accepted` — `Proposed` is not a permanent state on `main`. |
+| **Accepted** | Decision is finalized and merged to `main`; teams should follow it. `decision_date` and `review_date` are set. |
 | **Deprecated** | No longer applicable but preserved for historical reference |
 | **Superseded** | Replaced by a newer decision record (link via `superseded_by`) |
 
 ### Status Transitions
 
-- `Proposed` → `Under Review`: Author requests formal review
-- `Under Review` → `Accepted`: Reviewers approve; `decision_date` is set
+- `Proposed` → `Accepted`: PR is reviewed and merged; `decision_date` and `review_date` are set
 - `Accepted` → `Deprecated`: Context has changed; decision no longer applies
 - `Accepted` → `Superseded`: A new decision record explicitly replaces this one
+
+### Iterative review
+
+Every `Accepted` record carries a `review_date` (front matter). The retrospective
+process is iterative:
+
+1. **First retro** — shortly after implementation (days–weeks). Captures
+   process/evidence/execution quality. Set `review_date` to a case-by-case
+   horizon for a longer-perspective review.
+2. **Subsequent retros** — at each `review_date`, assess the realized outcome
+   with hindsight. Set a new `review_date` if further observation is warranted,
+   or transition to `Deprecated`/`Superseded`.
+
+Records with a `review_date` in the past are candidates for the next retro cycle.
 
 ### Immutability
 
@@ -171,27 +214,53 @@ links:
 ---
 ```
 
+### Front-matter
+
+The template front matter uses `classification` as the canonical home for
+routing metadata (`reversibility`, `domains`, `archetype`, `rigor`, etc.).
+`decision_type` (adr/pdr/tdr/bdr/odr) and `classification.domains` together
+provide type + domain routing without redundancy. See the
+[template front matter](../templates/decision-record-template.md) for the exact
+key set.
+
+`review_date` (YYYY-MM-DD) drives the iterative review cycle: records with a
+`review_date` in the past are candidates for the next retrospective. Set it on
+Acceptance and update after each retro.
+
+**Section depth follows the tiered-default model** (rigor is the primary axis;
+type/archetype toggle only small enumerated add-ons) documented in the
+[Decision-Making Guide §3](decision-making.md). The template remains the
+section-order authority.
+
 ---
 
 ## 6. Required Sections
 
-Every decision record must include these sections in order (the template is the single source of truth for this order — see [`doc/templates/decision-record-template.md`](../templates/decision-record-template.md)):
+Every decision record must include these sections in order. The template
+([`doc/templates/decision-record-template.md`](../templates/decision-record-template.md))
+is the single source of truth for this order; **section depth is driven by the
+tiered-default model** (rigor primary; type/archetype add-ons) — see the
+[Decision-Making Guide §3](decision-making.md):
 
 1. **Title**: `# <TYPE>-<zeroPad4>: <Title>`
 2. **Context**: Background, triggers, and situational facts (the situation that prompted the decision — not pass/fail gates)
 3. **Problem Framing**: Objective reframing of the problem
 4. **Constraints (Hard Requirements)**: Binary pass/fail gates that eliminate alternatives, recorded as structured entries (see §6.1)
 5. **Decision Drivers**: Prioritized factors (business, technical, operational)
-6. **Mental Models & Techniques Used**
-7. **Alternatives Considered**: At least 2 options + do-nothing baseline; each alternative includes an explicit constraint-compliance evaluation
-8. **Decision**: Final choice with rationale tied to drivers, plus a constraint-compliance attestation
-9. **Trade-offs & Consequences**: Positive outcomes, negative outcomes, unresolved questions
-10. **Implementation Plan**
-11. **Verification Criteria**: How to measure the decision's success
-12. **Confidence Rating**
-13. **Lessons Learned (Retrospective)**
-14. **Examples & Usage (Optional)**
-15. **References**: Links to related artifacts
+6. **Decision Rights (DACI)**: Driver, decider/approver, contributors, required reviewers, performers, informed
+7. **Evidence, Assumptions & Unknowns**: FACT / ASSUMPTION / TO-CONFIRM items, with technical-selection evidence packs when applicable
+8. **Mental Models & Techniques Used**
+9. **Alternatives Considered**: At least 2 options + do-nothing baseline; each alternative includes eligibility and constraint-compliance evaluation
+10. **Decision**: Recommendation, Authorized Decision, and Constraint Compliance Attestation as separate surfaces
+11. **Trade-offs & Consequences**: Positive outcomes, negative outcomes, unresolved questions
+12. **Implementation Plan**
+13. **Rollback / Reversal**
+14. **Communication Plan**
+15. **Verification Criteria**: How to measure the decision's success
+16. **Confidence Rating**
+17. **Structured Retrospective**
+18. **Examples & Usage (Optional)**
+19. **References**: Links to related artifacts
 
 ### 6.1 Constraints (Hard Requirements) — authoring discipline
 

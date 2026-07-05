@@ -16,7 +16,7 @@ Guide the user through a structured, interactive **decision** conversation that 
 - Discovers or confirms the decision record number (e.g. 0007) by scanning existing records in doc/decisions/ for the relevant type (ADR, PDR, TDR, BDR, ODR; defaults to ADR only when type is genuinely unspecified).
 - Orients itself in the current repository and high-level documentation under doc/spec/, doc/overview/, doc/changes/, and doc/contracts/.
 - Systematically elicits and refines all information needed by /write-decision (context, problem framing, **hard requirements (constraints)**, decision drivers, alternatives, trade-offs, assumptions, verification criteria, etc.), without generating the decision record file itself.
-- Applies decision-making discipline (clarify problem → classify → rigor → rights → confirm drivers → explore options → recommend) without exposing internal mechanics unless asked.
+- Applies decision-making discipline (clarify problem → classify → rigor → rights → confirm drivers → explore options → decide) without exposing internal mechanics unless asked.
 - Concludes with a compact, machine- and human-friendly planning summary block plus a clear recommendation to invoke `/write-decision <number>` and, where relevant, to link back to related changes (workItemRef).
 
 This command never writes files or modifies Git state; it operates purely via conversational planning and read-only repository inspection. See `doc/guides/decision-making.md` for the full decision process.
@@ -133,13 +133,14 @@ Overall planning session flow (per decision number):
 
 5. **Assign decision rights (DACI)**
    - Assign DACI roles: **Driver** (coordinates), **Decider/Approver** (one accountable authority), **Contributors** (expertise/evidence), **Required reviewers**, **Performers** (execute), **Informed**.
-   - For R2/R3, note that a **human final decision** is required (recommendation ≠ decision). Capture the expected human decider for the `ai_assistance.human_decider` field.
+   - For R2/R3, note that human PR review/approval is required before the record is Accepted. Capture the expected human decider for the `ai_assistance.human_decider` field.
 
 6. **Clarify context and problem framing**
    - Elicit: current state, pain points, gaps, and situational facts (technical, organizational, regulatory context).
    - Reframe the problem in objective technical terms, distinguishing symptoms from root causes.
    - Apply techniques such as 5 Whys or Ishikawa (textually) to probe underlying causes where appropriate.
    - Keep separate lists of **facts**, **assumptions**, and **to confirm** items.
+    - For selection decisions where external facts matter, capture a bounded evidence pack: default top-3 candidates (expand when warranted), highest-signal facts, canonical-source, as-of date, and any TO-CONFIRM gaps.
 
 7. **Elicit hard requirements (constraints)**
    - Elicit **hard requirements as a distinct factor class, separate from decision drivers.** Constraints are binary, pass/fail gates that ELIMINATE alternatives rather than rank them; drivers are continuous preferences used to rank survivors. Never fold the two together.
@@ -168,6 +169,7 @@ Overall planning session flow (per decision number):
 10. **Shape the option space (alternatives)**
     - Identify at least two substantive alternatives plus an explicit "do nothing / keep current approach" baseline.
     - For each alternative, capture:
+      - Eligibility status: Eligible | Not eligible | Eligible-with-accepted-risk-exception.
       - Summary (one or two sentences).
       - Pros (aligned with drivers).
       - Cons (risks, costs, constraints violated).
@@ -175,12 +177,12 @@ Overall planning session flow (per decision number):
       - Situations where the alternative would be preferable (if any).
     - Avoid premature convergence: ensure options are meaningfully distinct.
 
-11. **Evaluate options and converge on a recommendation**
+11. **Evaluate options and converge on a decision**
     - Compare alternatives explicitly against decision drivers (tables or structured bullets are encouraged).
-    - Screen on constraints FIRST, then rank on drivers: an alternative violating a disqualifying (`negotiable: no`) constraint is ineligible and must not be recommended. Note any negotiable (`negotiable: yes`) constraint the recommended alternative violates as a candidate accepted-risk exception.
+    - Screen on constraints FIRST, then rank on drivers: an alternative violating a disqualifying (`negotiable: no`) constraint is ineligible. Note any negotiable (`negotiable: yes`) constraint the chosen/proposed alternative violates as a candidate accepted-risk exception.
     - Call out trade-offs, second-order effects, and interactions with existing decision records.
-    - Propose a recommended option, but clearly separate recommendation from final decision.
-    - Explicitly list assumptions underpinning the recommendation.
+    - Propose the decision-ready option for PR review.
+    - Explicitly list assumptions underpinning the proposed decision.
 
 12. **Trade-offs, consequences, and scope boundaries**
     - Catalogue positive outcomes, negative outcomes, and unknowns.
@@ -192,12 +194,14 @@ Overall planning session flow (per decision number):
       - Requirements / refactors / migrations implied by the decision.
       - Rollout strategy and guardrails.
       - Risk mitigation strategies during implementation.
+      - Rollback/reversal concept and communication needs when rigor/stakeholder impact require them.
     - Do not generate low-level tasks; those belong in change specs and implementation plans.
 
 14. **Verification criteria and confidence**
     - Elicit KPIs or metrics that will be used to evaluate the decision post-implementation.
     - Define measurement windows and data sources where possible.
     - Ask the user for a confidence rating (Low / Medium / High) and factors influencing it.
+    - For R3, capture Structured Retrospective placeholders across process, evidence, execution, realized outcome, and luck/variance.
 
 15. **Consolidation and readiness check**
     - Maintain throughout the session an explicit list of **Open Questions**, each tagged as BLOCKING or NON-BLOCKING and with an owner.
@@ -239,7 +243,8 @@ decision_type: "adr"                  # adr | pdr | tdr | bdr | odr (defaults to
 record_number: "0007"                 # zeroPad4 number for the chosen type
 slug_hint: data-sharding-strategy
 title: Choose data sharding strategy for multi-tenant billing
-status_hint: Proposed                 # Proposed | Under Review | Accepted
+status_hint: Proposed                 # Proposed | Accepted | Deprecated | Superseded
+# status lifecycle: Proposed → Accepted → (Deprecated | Superseded)
 owners: ["team-platform", "@cto"]
 service: "billing-service"
 labels: ["architecture", "storage", "scalability"]
@@ -283,6 +288,16 @@ Concise description of current state, triggering events, and any relevant prior 
 problem_framing: |
 Reframed problem in objective terms, focusing on underlying causes rather than symptoms.
 
+evidence_assumptions_unknowns:
+
+- item: "Current storage implementation has no tenant-level isolation."
+  label: "FACT"                    # FACT | ASSUMPTION | TO-CONFIRM
+  source: "doc/spec/features/billing/tenants.md"
+  impact_if_false: "Isolation alternatives may be over-weighted."
+  confidence: "high"               # low | medium | high
+
+technical_selection_evidence_pack: [] # Only for archetype: selection; default top-3 candidates (expand when warranted), canonical-source + as-of date, data-minimized inputs only
+
 hard_requirements:
 
 - id: "C-1"
@@ -312,33 +327,40 @@ alternatives:
 
 - id: "ALT-0"
   name: "Do nothing / keep current shared-table approach"
+  eligibility: "Eligible"           # Eligible | Not eligible | Eligible-with-accepted-risk-exception
   summary: "Retain existing shared tables without explicit sharding strategy."
   pros: ["No migration effort", "Zero immediate risk"]
   cons: ["Unbounded tenant growth risk", "Operational complexity under load"]
   constraint_compliance: "C-1: pass; C-2: pass (no migration)"
 - id: "ALT-1"
   name: "Single-tenant database per large tenant"
+  eligibility: "Eligible-with-accepted-risk-exception"
   summary: "Move high-value tenants to their own database instances."
   pros: ["Strong isolation", "Per-tenant performance tuning"]
   cons: ["Operational overhead", "Complex routing and management"]
   constraint_compliance: "C-1: pass; C-2: fail (migration exceeds 4h window)"
 - id: "ALT-2"
   name: "Shared database with schema-based sharding"
+  eligibility: "Eligible"
   summary: "Use a shared database with tenant_id-based sharding and guardrails."
   pros: ["Balanced isolation vs. operability", "Simpler migrations"]
   cons: ["Still shared blast radius if misconfigured"]
   constraint_compliance: "C-1: pass; C-2: pass"
 
-recommended_decision:
+decision:
   choice: "Shared database with schema-based sharding"
   rationale: |
     Summary of why this option best satisfies the validated drivers, including explicit trade-offs against alternatives.
-  constraint_attestation: "Satisfies all constraints C-1 and C-2."   # OR, for a violated negotiable constraint: document an accepted-risk exception (only for negotiable: yes)
   assumptions:
     - "Peak tenant count remains within <X> over next 18 months."
     - "Team has capacity to build sharding middleware and observability."
   non_goals:
     - "[OUT] Optimize for multi-region active/active in this decision."
+  acceptance_state: "Proposed on branch; Accepted after human PR review/approval and merge."
+  decider: "@cto"
+  constraint_attestation: "Satisfies all constraints C-1 and C-2."   # OR accepted-risk exception for negotiable: yes only
+  revisit_trigger: "Revisit if tenant-growth or latency assumptions are invalidated."
+  review_date: "TODO: Set on Acceptance for the first post-implementation retrospective."
 
 tradeoffs_and_consequences:
   positive:
@@ -357,6 +379,18 @@ implementation_plan_high_level:
 - "Plan and execute phased migration of tenants to sharded layout."
 - "Update observability and runbooks for sharded topology."
 
+rollback_reversal:
+  steps: ["Pause tenant migration", "Route new tenants to the previous allocation strategy"]
+  stop_conditions: ["P95 latency exceeds target for 2 consecutive days"]
+  irrecoverable_state: "None expected; confirm during implementation planning."
+
+communication_plan:
+
+- audience: "@billing-team"
+  message: "Sharding strategy selected; implementation planning will follow."
+  channel: "team update"
+  timing: "pre-rollout"
+
 verification_criteria:
 
 - metric: "P95 read latency for sharded tables"
@@ -369,6 +403,13 @@ verification_criteria:
 confidence_rating: "medium" # low | medium | high
 confidence_rationale: |
 Short explanation of why confidence is low/medium/high, referencing data, precedent, or gaps.
+
+structured_retrospective:
+  process_quality: "TODO: Populate after implementation and observation."
+  evidence_quality: "TODO: Populate after implementation and observation."
+  execution_quality: "TODO: Populate after implementation and observation."
+  realized_outcome: "TODO: Populate after implementation and observation."
+  luck_and_variance: "TODO: Populate after implementation and observation."
 
 open_questions:
 
@@ -400,6 +441,7 @@ Notes:
   - If BOTH legacy and generic fields are present, the generic fields take precedence.
 - The `rigor` field drives `/write-decision`'s proportional rendering (R1 compact subset / R2 standard / R3 full). R0 produces no record.
 - The `governance` and `ai_assistance` blocks flow into the record's optional front matter; `ai_assistance.human_decider` is required before any R2/R3 record advances to Accepted.
+- `evidence_assumptions_unknowns`, `decision`, `rollback_reversal`, `communication_plan`, and `structured_retrospective` map directly to the current decision-record template sections. Leave R3-expanded fields empty only when omitted by rigor/applicability.
   </planning_summary_structure>
 
 <handoff_to_write_decision>
@@ -413,7 +455,7 @@ After emitting the `<decision_planning_summary>` block:
 
 3. If the decision is clearly linked to one or more changes (workItemRef), also recommend ensuring that the corresponding change spec front-matter links back to this decision record once created.
 
-4. For R2/R3 decisions, remind the user that a **human final decision** is required before the record advances to Accepted (recommendation ≠ decision). Suggest running `/review-decision <ID>` for independent challenge if appropriate.
+4. For R2/R3 decisions, remind the user that human PR review/approval is required before the record advances to Accepted. Suggest running `/review-decision <ID>` for independent challenge if appropriate.
 
 5. Do NOT call `/write-decision` automatically. The user must trigger this command when ready.
 
