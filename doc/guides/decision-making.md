@@ -97,6 +97,41 @@ Every R1–R3 decision runs this lifecycle. **Depth varies by rigor profile** (�
 | **D13** | Verification & Revisit | Leading/lagging/guardrail metrics, targets, window, review date, invalidation triggers |
 | **D14** | Retrospective & Calibration | Separate process quality, evidence quality, execution quality, realized outcome, and luck/variance; avoid outcome bias |
 
+### Technical-selection evidence pack (D2)
+
+For framework/library/tool/vendor selections (`archetype: selection`) at R2/R3,
+gather a **bounded evidence pack** — not an unbounded research dump. Cap it at
+**top-3 candidate options** and **~10 highest-signal fields** per candidate
+(license, maturity/age, latest release + cadence, active contributors/commit
+activity, issue/PR responsiveness + bus factor, security advisories +
+vulnerability handling, adoption signals, migration/SemVer discipline,
+integration fit, lock-in/migration cost). Select the ~10 most relevant per
+candidate; do not exceed the bound.
+
+Every signal carries:
+
+- a **label** — `FACT` / `ASSUMPTION` / `TO-CONFIRM` (consistent with D2);
+- a **canonical source** — the primary/canonical URL (official registry/repo),
+  not an aggregator; flag when canonicality cannot be verified;
+- an **as-of date** — when the signal was true/observed (this drives a
+  `revisit_triggers` entry such as "dependency security advisory published").
+
+**Security controls (mandatory):**
+
+- **canonical-source** — cite the official registry/repo URL; never an
+  aggregator as the sole source.
+- **as-of date** — record when each signal was observed; treat stale signals as
+  `TO-CONFIRM`.
+- **data-minimization** — when delegating evidence gathering externally, send
+  only the research question and public identifiers (package name, version).
+  Send **no** internal architecture details, secrets, PII, or proprietary
+  context. Wire `ai_assistance.external_data_shared` to this rule.
+
+These signals are **evidence, not a blind numeric scorecard**. Convert them to a
+numeric scorecard only when D9 deliberately selects MCDA. License compatibility is
+recorded as a `FACT` string (with source) and is a **human/R3 determination** —
+the advisor never autonomously concludes compatibility or accepts a license.
+
 ---
 
 ## 3. Rigor profiles (R0–R3) + emergency overlay
@@ -294,7 +329,7 @@ The process lives in this guide; the **record artifact** (naming, front matter, 
 - **Location/naming:** `doc/decisions/<TYPE>-<zeroPad4>-<slug>.md` (flat directory; each type has its own sequence).
 - **Template:** [`doc/templates/decision-record-template.md`](../templates/decision-record-template.md) — the **single source of truth** for the record body structure and the optional `classification`/`governance`/`ai_assistance`/`review_date` front matter.
 - **Lifecycle:** `Proposed → Under Review → Accepted → (Deprecated | Superseded)`. `decision_date` is set only when status becomes Accepted.
-- **R0 produces no record.** R1 renders a compact subset; R2 a standard record; R3 a full record (see the template's proportional-rendering guidance).
+- **R0 produces no record.** R1 renders a compact subset; R2 a standard record; R3 a full record (see the template's tiered-default rendering guidance).
 
 ---
 

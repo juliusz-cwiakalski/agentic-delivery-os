@@ -222,6 +222,39 @@ non-empty). There is NO full 2D type x rigor matrix — it defeats LLM rendering
 |------|-------|--------|-----------------|------------|
 | <!-- e.g., Lib X is actively maintained --> | FACT / ASSUMPTION / TO-CONFIRM | <!-- canonical URL --> | <!-- consequence --> | <!-- Low/Med/High --> |
 
+### Technical-Selection Evidence Pack (archetype: selection)
+
+<!-- Render ONLY for archetype: selection (a type/archetype add-on per the
+     tiered-default model). Bounded: top-3 candidate options x ~10 highest-signal
+     fields. Matches doc/guides/decision-making.md D2 and the
+     @external-researcher "Decision-evidence gathering mode". -->
+<!-- Security controls (mandatory on every signal):
+     - canonical-source  : official registry/repo URL, NOT an aggregator
+     - as-of date        : when the signal was true/observed
+     - data-minimization : only public identifiers were sent externally
+                           (set ai_assistance.external_data_shared accordingly)
+     Signals are EVIDENCE, not a blind numeric scorecard. Scorecard only if D9
+     selects MCDA. License is recorded as a FACT string; compatibility is a
+     human/R3 determination.
+-->
+
+**Candidate: <name>** — *researched via `@external-researcher`? yes/no*
+
+| Signal | Label | Canonical source | As-of | Confidence |
+|--------|-------|------------------|-------|------------|
+| License string | FACT | <!-- registry/repo URL --> | <!-- YYYY-MM-DD --> | <!-- High --> |
+| Project age / maturity | FACT/ASSUMPTION/TO-CONFIRM | | | |
+| Latest release + cadence | | | | |
+| Active contributors / commit activity (12mo) | | | | |
+| Issue/PR responsiveness + bus factor | | | | |
+| Security advisories + vulnerability handling | | | | |
+| Adoption signals (stars/downloads — weak) | | | | |
+| Migration/SemVer discipline | | | | |
+| Integration fit | | | | |
+| Lock-in / migration cost | | | | |
+
+<!-- Duplicate the candidate block for candidates 2 and 3 (do not exceed top-3). -->
+
 ## Mental Models & Techniques Used
 
 <!-- rigor: R1/R2/R3 -->
