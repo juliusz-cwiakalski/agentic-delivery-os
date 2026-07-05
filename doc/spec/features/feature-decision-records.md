@@ -202,7 +202,7 @@ The template is the single source of truth for this order; **section depth is dr
 18. Examples & Usage (Optional) (R3-expanded)
 19. References (R1/R2/R3)
 
-The template also ships worked R1/R2/R3 rendering examples in an authoring appendix. For `archetype: selection`, a bounded **Technical-Selection Evidence Pack** (top-3 candidates × ~10 fields, with canonical-source + as-of date + data-minimization) renders under Evidence, Assumptions & Unknowns.
+The template also ships worked R1/R2/R3 rendering examples in an authoring appendix. For `archetype: selection`, a bounded **Technical-Selection Evidence Pack** (default top-3 candidates × ~10 fields, expand when warranted; canonical-source + as-of date + data-minimization) renders under Evidence, Assumptions & Unknowns.
 
 ## Non-Functional Requirements
 

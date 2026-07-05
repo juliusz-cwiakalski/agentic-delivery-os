@@ -100,13 +100,15 @@ Every R1–R3 decision runs this lifecycle. **Depth varies by rigor profile** (�
 ### Technical-selection evidence pack (D2)
 
 For framework/library/tool/vendor selections (`archetype: selection`) at R2/R3,
-gather a **bounded evidence pack** — not an unbounded research dump. Cap it at
+gather a **bounded evidence pack** — not an unbounded research dump. Default to
 **top-3 candidate options** and **~10 highest-signal fields** per candidate
 (license, maturity/age, latest release + cadence, active contributors/commit
 activity, issue/PR responsiveness + bus factor, security advisories +
 vulnerability handling, adoption signals, migration/SemVer discipline,
-integration fit, lock-in/migration cost). Select the ~10 most relevant per
-candidate; do not exceed the bound.
+integration fit, lock-in/migration cost). Expand beyond 3 when the decision
+warrants it (e.g., a crowded ecosystem with several credible contenders, or a
+high-stakes R3 where excluding a viable option is riskier than the extra
+analysis cost). Select the ~10 most relevant per candidate.
 
 Every signal carries:
 

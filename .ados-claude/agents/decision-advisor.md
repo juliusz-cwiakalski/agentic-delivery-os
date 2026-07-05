@@ -193,8 +193,9 @@ recommendation, delegate **bounded** evidence gathering to `@external-researcher
 and remain the **synthesizer** of the returned pack.
 
 <delegation_contract>
-<item>Request a bounded evidence pack: **top-3 candidate options** (maximum 3), **≤10
-highest-signal fields** per candidate (license, maturity/age, release cadence,
+<item>Request a bounded evidence pack: **default top-3 candidate options** (expand
+when the decision warrants more — e.g., crowded ecosystem or high-stakes R3),
+**≤10 highest-signal fields** per candidate (license, maturity/age, release cadence,
 contributors/activity, issue responsiveness + bus factor, security advisories,
 adoption, migration/SemVer discipline, integration fit, lock-in/migration cost).</item>
 <item>Each returned signal carries a `FACT` / `ASSUMPTION` / `TO-CONFIRM` label, a

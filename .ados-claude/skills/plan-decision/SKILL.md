@@ -151,7 +151,7 @@ Overall planning session flow (per decision number):
    - Reframe the problem in objective technical terms, distinguishing symptoms from root causes.
    - Apply techniques such as 5 Whys or Ishikawa (textually) to probe underlying causes where appropriate.
    - Keep separate lists of **facts**, **assumptions**, and **to confirm** items.
-   - For selection decisions where external facts matter, capture a bounded evidence pack: top-3 candidates, highest-signal facts, canonical-source, as-of date, and any TO-CONFIRM gaps.
+    - For selection decisions where external facts matter, capture a bounded evidence pack: default top-3 candidates (expand when warranted), highest-signal facts, canonical-source, as-of date, and any TO-CONFIRM gaps.
 
 7. **Elicit hard requirements (constraints)**
    - Elicit **hard requirements as a distinct factor class, separate from decision drivers.** Constraints are binary, pass/fail gates that ELIMINATE alternatives rather than rank them; drivers are continuous preferences used to rank survivors. Never fold the two together.
@@ -306,7 +306,7 @@ evidence_assumptions_unknowns:
   impact_if_false: "Isolation alternatives may be over-weighted."
   confidence: "high"               # low | medium | high
 
-technical_selection_evidence_pack: [] # Only for archetype: selection; top-3 candidates, canonical-source + as-of date, data-minimized inputs only
+technical_selection_evidence_pack: [] # Only for archetype: selection; default top-3 candidates (expand when warranted), canonical-source + as-of date, data-minimized inputs only
 
 hard_requirements:
 

@@ -67,12 +67,13 @@ When invoked for a technical selection decision (`archetype: selection`, e.g.,
 framework/library/tool/vendor selection), return a **bounded evidence pack** —
 not an unbounded research dump.
 
-- **Scope:** top-3 candidate options (maximum 3); ≤10 highest-signal fields per candidate
+- **Scope:** default top-3 candidate options (expand when the caller requests more
+  or the ecosystem is crowded); ≤10 highest-signal fields per candidate
   (license, maturity/age, latest release + cadence, active contributors/commit
   activity, issue/PR responsiveness + bus factor, security advisories +
   vulnerability handling, adoption signals, migration/SemVer discipline,
   integration fit, lock-in/migration cost). Select the ≤10 most relevant per
-  candidate; do not exceed the bound.
+  candidate.
 - **Per signal:** a `FACT` / `ASSUMPTION` / `TO-CONFIRM` label, a **canonical-source**
   (official registry/repo URL, not an aggregator), and an **as-of date**
   (when the signal was true/observed). Flag any signal whose canonicality you

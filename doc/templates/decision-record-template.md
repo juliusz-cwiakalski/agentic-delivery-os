@@ -213,8 +213,9 @@ non-empty). There is NO full 2D type x rigor matrix — it defeats LLM rendering
 
       For technical/selection decisions (archetype: selection), gather a bounded
       evidence pack here — see the "Technical-Selection Evidence Pack" guidance
-      later in this template and doc/guides/decision-making.md D2. Cap: top-3
-      candidate options, ~10 highest-signal fields per candidate; every signal
+      later in this template and doc/guides/decision-making.md D2. Default:
+      top-3 candidate options, ~10 highest-signal fields per candidate (expand
+      when the decision warrants more alternatives); every signal
       tagged FACT / ASSUMPTION / TO-CONFIRM with canonical-source + as-of date.
 -->
 
@@ -225,8 +226,8 @@ non-empty). There is NO full 2D type x rigor matrix — it defeats LLM rendering
 ### Technical-Selection Evidence Pack (archetype: selection)
 
 <!-- Render ONLY for archetype: selection (a type/archetype add-on per the
-     tiered-default model). Bounded: top-3 candidate options x ~10 highest-signal
-     fields. Matches doc/guides/decision-making.md D2 and the
+     tiered-default model). Default: top-3 candidate options x ~10 highest-signal
+     fields (expand when warranted). Matches doc/guides/decision-making.md D2 and the
      @external-researcher "Decision-evidence gathering mode". -->
 <!-- Security controls (mandatory on every signal):
      - canonical-source  : official registry/repo URL, NOT an aggregator
@@ -253,7 +254,7 @@ non-empty). There is NO full 2D type x rigor matrix — it defeats LLM rendering
 | Integration fit | | | | |
 | Lock-in / migration cost | | | | |
 
-<!-- Duplicate the candidate block for candidates 2 and 3 (do not exceed top-3). -->
+<!-- Duplicate the candidate block for each candidate (default 3; add more when warranted). -->
 
 ## Mental Models & Techniques Used
 
