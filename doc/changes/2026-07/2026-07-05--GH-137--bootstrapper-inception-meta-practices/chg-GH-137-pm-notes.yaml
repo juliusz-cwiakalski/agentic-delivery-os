@@ -18,7 +18,7 @@ phases:
   review_fix: { started: 2026-07-05, completed: 2026-07-05, note: "@reviewer PASS (8/8 AC, exclusions verified absent). 3 advisory findings addressed: (1) scope ratification comment on ticket; (2) phase-<N> placeholder consistency; (3) open-questions skip-escape clause." }
   quality_gates: { started: 2026-07-05, completed: 2026-07-05, note: "Independently re-verified via @general: test-all 10/10, test-doc-distribution no drift (77 docs), test-build-claude-plugin 16/16 incl. 'committed plugin matches fresh build'." }
   dod_check: { started: 2026-07-05, completed: 2026-07-05, note: "All 8 ACs met; 3 excluded practices absent; agent+guide+template consistent; plugin in sync; gates green." }
-  pr_creation: { started: 2026-07-05, completed: null, url: null }
+  pr_creation: { started: 2026-07-05, completed: 2026-07-05, url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/141" }
 
 decisions:
   - { text: "Streamlined delivery: GH-137 ticket body serves as spec+plan+test-plan basis.", date: 2026-07-05 }
