@@ -64,11 +64,8 @@ Apply these across phases. The agent carries the operational spec; `doc/guides/p
 - **Phase exit meta:** For each phase N before the human gate, update `doc/inception/open-questions/phase-<N>-open-questions.md` (or note in the PR body when no open questions arose) and write needed retrospectives under `doc/inception/retrospective/YYYYMMDD-HHMMSS-<slug>.md`, or state in the phase PR/body why none were needed.
 - **Retrospectives:** Capture ideas/gaps mid-phase and at exit. Frontmatter: `status`, `created`, `phase_scope`, `topic`, `outcome` (`repeat|improve|propose-ados-framework-improvement`). Body: What happened / What went well / Improvement-pattern-to-repeat; optional Caution / Why-it-matters / Anti-pattern.
 - **Open questions:** Use stable monotonic `OPEN-Q<N>` IDs per phase; status `OPEN|ANSWERED|DEFERRED`; human answers go under `### Answer`; fold answers into artifacts and avoid stale `OPEN` items.
-- **Metric discipline:** Only when authoring a metric/NSM/guardrail, require observability without telemetry, denominator, defining failure modes, and type (`target|guardrail|diagnostic`). Treat trust/quality/coverage/adoption as non-actionable until converted to events/thresholds/guardrails.
 - **Cross-cutting coverage:** In Phases 2 and 7, derive concerns from domain+risk register; require a dedicated ticket or explicit AC per concern, scaled to complexity. “Included in each story” is not representation.
-- **Spike evidence:** Keep raw spikes in gitignored `doc/**/tmp/`; extract durable evidence into committed scenario/findings/decision docs and route implications into roadmap/assumptions/risks/decisions.
 - **PR-per-phase (default delivery mode):** One phase = one branch from latest `main` = one PR = one human gate. Produce only that phase's artifacts; PR body states gate decisions; flip the phase to `completed` only after the PR merges. This is the default for traceability, auditability, and stronger per-phase human gating/review before proceeding. Only if the user explicitly insists, inception may run as one branch/PR for the whole inception.
-- **ID-prefix catalog:** From Phase 2 onward, if durable item IDs are accumulating, maintain `doc/inception/analysis/id-prefix-catalog.md`; before new item types, decide prefix vs subtype, grepability, and scope (`company-global|project-global|repo-local|change-local|document-local`).
 - **State keys:** Track `retrospective_notes` and `open_questions` in `inception-state.yaml` artifacts.
 </inception_meta_practices>
 
@@ -97,7 +94,6 @@ Apply these across phases. The agent carries the operational spec; `doc/guides/p
 - `legacy`: extract or author north star from existing docs + repo analysis + interview; reconcile documented vision/mission rather than rewriting.
 - `legacy`: extract behavioral specs from existing tests to seed initial feature specs.
 - Conditional: `OST` and/or `project-PRD` when discovery materials exist; `personas/JTBD` when UI-bearing or multi-user.
-- Apply metric discipline if authoring metrics/NSMs/guardrails.
 - <anti_sycophancy>devil's advocate + four-risk awareness</anti_sycophancy>
 - Before gate: write retrospectives + update open-questions (phase-exit meta).
 - **State update:** mark Phase 1 completed; record artifact status/confidence.
@@ -112,8 +108,7 @@ Apply these across phases. The agent carries the operational spec; `doc/guides/p
 - `legacy`: define next-milestone scope as Current Milestone; do NOT call it MVP.
 - `legacy`: graduate consumed tribal knowledge to permanent homes: decisions, feature specs, glossary, conventions.
 - Draft `roadmap`, `assumption-register`, and `risk-register`.
-- Apply metric discipline if authoring metrics/NSMs/guardrails; enforce project-derived cross-cutting coverage for roadmap/registers.
-- Start/refine the ID-prefix catalog if IDs are accumulating.
+- Enforce project-derived cross-cutting coverage for roadmap/registers.
 - Conditional UI-bearing: `user-journeys` + `screen-inventory`.
 - <anti_sycophancy>pre-mortem + four-risk-check</anti_sycophancy>
 - Before gate: write retrospectives + update open-questions (phase-exit meta).
@@ -144,7 +139,6 @@ Apply these across phases. The agent carries the operational spec; `doc/guides/p
 - `legacy`: audit existing conventions against the Full-Stack Environment checklist; document ACTUAL, not ideal, conventions; flag gaps.
 - Draft `glossary`; conditional `ubiquitous-language`; conditional `ux-guidance`.
 - For code projects: generate `testing-strategy`, convention rules, `ci-baseline`, dev setup, `.env.example`, and security baseline.
-- Apply metric discipline if authoring metrics/NSMs/guardrails.
 - <anti_sycophancy>unknown-unknowns</anti_sycophancy>
 - Before gate: write retrospectives + update open-questions (phase-exit meta).
 - **State update:** mark Phase 4 completed; record domain/quality artifact status/confidence.
@@ -183,7 +177,7 @@ Apply these across phases. The agent carries the operational spec; `doc/guides/p
 **Purpose:** inception summary & handoff. **Inputs:** readiness report + decisions.
 - Generate `inception-summary`.
 - Produce initial feature specs: for `new`, from current-milestone scope; for `legacy`, from code analysis reconciled with existing behavior.
-- Enforce project-derived cross-cutting coverage for initial backlog; refine the ID-prefix catalog if IDs are accumulating.
+- Enforce project-derived cross-cutting coverage for initial backlog.
 - <anti_sycophancy>none</anti_sycophancy>
 - Before gate: write retrospectives + update open-questions (phase-exit meta).
 - **State update:** mark Phase 7 completed; mark inception complete.
