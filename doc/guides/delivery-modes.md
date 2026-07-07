@@ -194,8 +194,9 @@ assistant/tool messages flowing in the session. A hung LLM stream keeps the
 process alive (blocked on I/O) while making zero progress; the ps-only
 heuristic must not call that "healthy."
 
-A session with **no new message traffic for > `CEO_LOOP_STALL_MINUTES`**
-(default **15**) is **stalled**, not slow, and is killed-and-resumed.
+A session with **no new message traffic for ≥ `CEO_LOOP_STALL_MINUTES`**
+(default **15**; at-threshold == stalled, matching the `>=` comparison in
+`pm-liveness.sh`/`ceo-loop.sh`) is **stalled**, not slow, and is killed-and-resumed.
 
 Observed stuck root cases this guards against:
 
@@ -405,7 +406,7 @@ The design is robust to the messy realities of long-running AI sessions:
 |---|---|---|
 | CEO session crashes mid-delivery | PM child keeps running (reparented to init). `ceo-loop.sh` sees the delivery is still in progress (`--is-delivering`) and does **not** spawn a racing CEO; it waits, then spawns a fresh/resumed CEO once the delivery finishes. | No duplicate agent; delivery finishes; loop resumes. |
 | CEO bash-tool timeout cuts a blocking `deliver-ticket.sh` call | PM child keeps running. Next CEO decision point calls `deliver-ticket.sh REF`, which **joins** (INV-DM-2). | No duplicate PM; same result returned. |
-| PM LLM stream hangs (opencode bug) | Liveness watchdog (INV-DM-5) sees no session traffic for >threshold → kill-and-resume the PM via the session manager. | No infinite wait; session resumes from committed artifacts + pm-notes. |
+| PM LLM stream hangs (opencode bug) | Liveness watchdog (INV-DM-5) sees no session traffic for ≥threshold → kill-and-resume the PM via the session manager. | No infinite wait; session resumes from committed artifacts + pm-notes. |
 | Agent hits a forbidden-folder permission prompt | Same as above — no session traffic → detected as stuck → kill+restart. | Autonomous mode is not blocked on an unseen prompt. |
 | `deliver-ticket.sh` killed (SIGTERM/SIGKILL) | Trap forwards the signal to the PM child; PID file is cleared. | No orphaned opencode instance. |
 | opencode internally detaches its own grandchildren | The trap kills the opencode child's process group; grandchildren that opencode itself `setsid`-detached (LLM transport, bash-tool subprocesses) can escape the group kill. | Known limitation (see Troubleshooting). A defense-in-depth sweep by session id (`pgrep -f "opencode.*<session>"`) can be added if orphans are observed; for now the limitation is accepted and documented. |
@@ -460,6 +461,7 @@ All settings are environment variables (CLI flag overrides where noted).
 | Two PMs spawned for the same ticket | JOIN probe failed (PID file race or stale PID reused by the OS) | `deliver-ticket.sh` must validate the PID is still `deliver-ticket.sh` for this repo before treating it as live |
 | Merge used a poor commit message | PR description not merge-ready | `@pr-manager` must always emit descriptions fit to be the squash commit message |
 | `clean-merged-branches` deleted a branch I needed | Misconfigured `--base` / `--protected`, or a branch that looked merged | It must never delete unmerged or protected branches; if it did, that is a bug |
+| On macOS, an owner/CEO is rejected as stale right after it starts | macOS `ps` lacks the Linux `-o etimes=` (elapsed **seconds**) column. The scripts fall back to parsing `-o etime=` (elapsed `[[dd-]hh:]mm:ss`) when `etimes=` is absent; this needs `ps` from a modern macOS build. If the fallback also fails the start-epoch guard degrades gracefully (treats the owner as live rather than wrongly killing it). | Ensure `ceo-loop.sh`/`deliver-ticket.sh` are current (they carry the `etime=` fallback); no action needed otherwise. |
 
 ## See also
 

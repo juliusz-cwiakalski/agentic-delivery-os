@@ -17,6 +17,11 @@
 # Dependencies: bash>=4, opencode, setsid, jq, scripts/pm-liveness.sh,
 #               scripts/deliver-ticket.sh
 #
+# Platform note (F-7): the single-flight CEO-PID start-epoch guard prefers
+# Linux /proc + `ps -o etimes=`. On BSD/macOS there is no `etimes=` field;
+# `_pid_start_epoch` falls back to parsing `ps -o etime=`. Linux is the primary
+# target — see doc/guides/delivery-modes.md Troubleshooting.
+#
 # Exit codes:
 #   0 - stopped cleanly (stop signal / max restarts not exceeded on graceful exit)
 #   1 - max restarts exceeded
@@ -173,12 +178,52 @@ _pid_cwd_is() {
   fi
 }
 
+# Estimate the epoch at which the PID started (now - elapsed_seconds).
+# Prints an integer epoch or empty on failure (caller degrades gracefully).
+# F-7: BSD/macOS fallback for `ps -o etime=` (see deliver-ticket.sh for the
+# full rationale). Linux is the primary target.
+_parse_elapsed_to_seconds() {
+  local -r s="$1"
+  [[ -n "${s}" ]] || return 0
+  local days=0 hours=0 mins=0 secs=0
+  if [[ "${s}" == *-* ]]; then
+    days="${s%%-*}"
+    local rest="${s#*-}"
+    IFS=':' read -r hours mins secs <<<"${rest}"
+  elif [[ "${s}" == *:* ]]; then
+    local parts=()
+    IFS=':' read -ra parts <<<"${s}"
+    case "${#parts[@]}" in
+      3) hours="${parts[0]}"; mins="${parts[1]}"; secs="${parts[2]}" ;;
+      2) mins="${parts[0]}"; secs="${parts[1]}" ;;
+      *) return 0 ;;
+    esac
+  else
+    return 0
+  fi
+  [[ "${days:-0}" =~ ^[0-9]+$ && "${hours:-0}" =~ ^[0-9]+$ \
+     && "${mins:-0}" =~ ^[0-9]+$ && "${secs:-0}" =~ ^[0-9]+$ ]] || return 0
+  # 10# forces base-10 so zero-padded fields like "08" aren't read as octal.
+  printf '%s' "$(( 10#${days} * 86400 + 10#${hours} * 3600 + 10#${mins} * 60 + 10#${secs} ))"
+}
+
 _pid_start_epoch() {
   local -r pid="$1"
-  local etimes
-  etimes="$(ps -o etimes= -p "${pid}" 2>/dev/null | tr -d '[:space:]')" || { printf ''; return 0; }
-  [[ "${etimes}" =~ ^[0-9]+$ ]] || { printf ''; return 0; }
-  printf '%s' "$(( $(date +%s) - etimes ))"
+  local raw
+  raw="$(ps -o etimes= -p "${pid}" 2>/dev/null | tr -d '[:space:]')" || raw=""
+  if [[ "${raw}" =~ ^[0-9]+$ ]]; then
+    printf '%s' "$(( $(date +%s) - raw ))"
+    return 0
+  fi
+  raw="$(ps -o etime= -p "${pid}" 2>/dev/null | tr -d '[:space:]')" || raw=""
+  local secs
+  secs="$(_parse_elapsed_to_seconds "${raw}")"
+  if [[ "${secs}" =~ ^[0-9]+$ ]]; then
+    printf '%s' "$(( $(date +%s) - secs ))"
+    return 0
+  fi
+  printf ''
+  return 0
 }
 
 # ============================================================================
@@ -279,6 +324,11 @@ delivery_in_progress() {
 #   - pm-liveness says the CEO session is stalled (no message traffic), AND
 #   - NO healthy delivery is in progress.
 # A CEO blocked on a healthy, progressing delivery is NOT stuck.
+# F-6 defense-in-depth: if the session-id is unavailable (capture failed →
+# empty), _pm_liveness returns degraded and a genuinely hung CEO would never be
+# caught by the rc==1 path. When the session-id is empty AND no delivery is in
+# progress, fall back to "stuck-candidate" so the caller's threshold timer can
+# still kill a hung CEO whose session-id we couldn't read.
 # Args: ceo_session_id
 # Returns: 0 if stuck, 1 if not stuck.
 ceo_is_stuck() {
@@ -286,14 +336,28 @@ ceo_is_stuck() {
   local liv_rc
   _pm_liveness "${session_id}" || liv_rc=$?
   liv_rc="${liv_rc:-0}"
-  # Healthy traffic or degraded probe ⇒ not stuck.
-  [[ "${liv_rc}" -eq 1 ]] || return 1
-  # Session traffic is stalled — but a healthy delivery keeps the CEO healthy.
+  # Healthy traffic ⇒ not stuck.
+  if [[ "${liv_rc}" -eq 0 ]]; then
+    return 1
+  fi
+  # A healthy delivery keeps the CEO healthy regardless of session traffic.
   if delivery_in_progress; then
     log_debug "CEO session stalled but a healthy delivery is in progress — not stuck"
     return 1
   fi
-  return 0
+  # Stalled session traffic with no delivery ⇒ stuck.
+  if [[ "${liv_rc}" -eq 1 ]]; then
+    return 0
+  fi
+  # rc==2 (degraded). If the session-id is unavailable, fall back to
+  # defense-in-depth (F-6): a CEO whose session-id we can't read, with no
+  # healthy delivery, is a stuck-candidate once the threshold elapses.
+  if [[ -z "${session_id}" ]]; then
+    log_warn "F-6: CEO session-id unavailable and liveness degraded; falling back to no-delivery stuck detection"
+    return 0
+  fi
+  # Degraded probe with a known session-id ⇒ we don't know; don't kill.
+  return 1
 }
 
 # ============================================================================
@@ -417,6 +481,9 @@ spawn_or_resume_ceo() {
       sid="$(capture_session_id_by_title "${title}")"
       [[ -n "${sid}" ]] && break
     done
+    # F-6: surface a capture failure so it's observable (a missing session-id
+    # degrades the liveness watchdog until it's known).
+    [[ -n "${sid}" ]] || log_warn "F-6: could not capture CEO session id (title=${title}); liveness watchdog degraded"
   else
     sid="${prev_sid}"
   fi

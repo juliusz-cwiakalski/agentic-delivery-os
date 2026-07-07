@@ -248,7 +248,29 @@ rebase_before_merge() {
   return 0
 }
 
-# Wait for PR checks to be green. Returns 0 if green, 1 if red, 2 if timeout.
+# Positively confirm a PR has NO status checks configured (legitimately green),
+# distinguishing that from a gh error. Uses `gh pr view --json statusCheckRollup`.
+# Returns 0 if positively confirmed no-checks, 1 otherwise (checks exist OR the
+# gh query itself errored — caller must NOT treat that as green).
+_pr_has_no_checks_configured() {
+  local -r pr_number="$1"
+  local rollup rc=0
+  rollup="$(_gh pr view "${pr_number}" --json statusCheckRollup 2>/dev/null)" || rc=$?
+  (( rc == 0 )) || return 1  # gh error → cannot positively confirm no-checks
+  local count
+  count="$(printf '%s' "${rollup}" | _jq -r '.statusCheckRollup | length' 2>/dev/null)" || count=""
+  [[ "${count}" == "0" ]]
+}
+
+# Wait for PR checks to be green. Returns:
+#   0 — green (all checks passed, or positively confirmed no checks configured)
+#   1 — red (a check failed)
+#   2 — timeout
+#   3 — unknown (gh error: auth/rate-limit/network/PR-not-found) → caller parks
+# F-2: a non-zero `gh pr checks` is NOT treated as green. "No checks configured"
+# (legit green) is positively confirmed via _pr_has_no_checks_configured; any
+# other gh error returns 3 (unknown) so the caller PARKS instead of merging a
+# red/unknown PR.
 wait_for_pr_green() {
   local -r pr_number="$1"
   local max_wait="${BATCH_GREEN_GATE_TIMEOUT:-300}"
@@ -256,15 +278,26 @@ wait_for_pr_green() {
   local waited=0
 
   while (( waited < max_wait )); do
-    local checks_output
-    checks_output="$(_gh pr checks "${pr_number}" 2>/dev/null)" || return 0  # No checks → green
+    local checks_output checks_rc=0
+    checks_output="$(_gh pr checks "${pr_number}" 2>/dev/null)" || checks_rc=$?
 
-    if printf '%s' "${checks_output}" | grep -qi 'fail'; then
-      return 1  # Red
-    fi
-
-    if ! printf '%s' "${checks_output}" | grep -qiE 'pending|in_progress|queued'; then
-      return 0  # All complete, none failed → green
+    if (( checks_rc == 0 )); then
+      # gh succeeded → the output is the checks table. Parse it.
+      if printf '%s' "${checks_output}" | grep -qi 'fail'; then
+        return 1  # Red
+      fi
+      if ! printf '%s' "${checks_output}" | grep -qiE 'pending|in_progress|queued'; then
+        return 0  # All complete, none failed → green
+      fi
+      # else: still pending → keep polling
+    else
+      # gh exited non-zero: could be "no checks configured" OR a gh error
+      # (auth/rate-limit/network/PR-not-found). F-2: never assume green here.
+      if _pr_has_no_checks_configured "${pr_number}"; then
+        return 0  # Positively confirmed: legitimately no checks → green
+      fi
+      log_warn "gh pr checks errored for PR #${pr_number} (rc=${checks_rc}); cannot confirm green — parking (not merging)"
+      return 3  # Unknown — caller must park
     fi
 
     sleep "${poll_interval}"
@@ -303,6 +336,10 @@ approved_pr_flow() {
     return 1
   elif (( green_rc == 2 )); then
     log_warn "PR checks timed out for ${ticket_ref}; parking"
+    return 1
+  elif (( green_rc == 3 )); then
+    # F-2: gh error (auth/rate-limit/network/PR-not-found) → unknown, do NOT merge.
+    log_warn "PR checks unknown for ${ticket_ref} (gh error); parking (not merging)"
     return 1
   fi
 

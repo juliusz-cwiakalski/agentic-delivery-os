@@ -588,6 +588,62 @@ test_summary_with_parked() {
   return 0
 }
 
+# TC-BD-12c: wait_for_pr_green returns 3 on gh error (F-2). gh pr checks fails
+# AND _pr_has_no_checks_configured cannot positively confirm no-checks (gh pr
+# view also errors). The caller must PARK, never assume green.
+test_wait_for_pr_green_gh_error_returns_3() {
+  _gh() { return 1; }
+  wait_for_pr_green "42" 2>/dev/null
+  local rc=$?
+  assert_eq "3" "${rc}" "expected rc=3 (unknown/park) on gh error (F-2)" || return 1
+  return 0
+}
+
+# TC-BD-12d: wait_for_pr_green returns 0 when no checks configured (F-2). gh pr
+# checks fails (non-zero) BUT _pr_has_no_checks_configured positively confirms
+# zero checks via gh pr view → legit green.
+test_wait_for_pr_green_no_checks_is_green() {
+  _gh() {
+    case "$1 $2" in
+      "pr checks") return 1 ;;
+      "pr view")   printf '{"statusCheckRollup":[]}' ;;
+    esac
+  }
+  wait_for_pr_green "42" 2>/dev/null
+  local rc=$?
+  assert_eq "0" "${rc}" "expected rc=0 (green: no checks configured) (F-2)" || return 1
+  return 0
+}
+
+# TC-BD-17b: approved_pr_flow parks (not merges) on gh error (F-2). wait_for_pr_green
+# returns 3 → approved_pr_flow returns 1 and gh pr merge is NEVER called.
+test_approved_pr_flow_gh_error_parks_not_merges() {
+  local merge_called=0
+  _gh() {
+    case "$1 $2" in
+      "pr list")   printf '[{"number":42}]' ;;
+      "pr checks") return 1 ;;
+      "pr view")   return 1 ;;
+      "pr merge")  merge_called=1; printf 'merged' ;;
+    esac
+  }
+  _git() {
+    case "$1" in
+      fetch) return 0 ;;
+      checkout) return 0 ;;
+      merge-base) printf "abc123" ;;
+      rev-parse) printf "abc123" ;;
+      rebase) return 0 ;;
+      push) return 0 ;;
+    esac
+  }
+  approved_pr_flow "GH-200" "feat/GH-200/x" 2>/dev/null
+  local rc=$?
+  [[ ${rc} -ne 0 ]] || { echo "  expected non-zero (parked), got ${rc}" >&2; return 1; }
+  [[ ${merge_called} -eq 0 ]] || { echo "  merge must NOT be called on gh error (F-2)" >&2; return 1; }
+  return 0
+}
+
 # ============================================================================
 # RUN TESTS
 # ============================================================================
@@ -618,11 +674,14 @@ main() {
   run_test "TC-BD-11: get_pr_title_and_body" test_get_pr_title_and_body
   run_test "TC-BD-12: wait_for_pr_green green" test_wait_for_pr_green_green
   run_test "TC-BD-12b: wait_for_pr_green red" test_wait_for_pr_green_red
+  run_test "TC-BD-12c: wait_for_pr_green gh error→3 (F-2)" test_wait_for_pr_green_gh_error_returns_3
+  run_test "TC-BD-12d: wait_for_pr_green no-checks→0 (F-2)" test_wait_for_pr_green_no_checks_is_green
   run_test "TC-BD-13: approved+green→squash-merge" test_approved_green_squash_merge
   run_test "TC-BD-14: approved+conflict→resolve→merge" test_approved_rebase_conflict_ai_resolve_then_merge
   run_test "TC-BD-15: not approved→park+continue" test_not_approved_park_and_continue
   run_test "TC-BD-16: already-on-main→direct merge" test_already_on_latest_main_direct_merge
   run_test "TC-BD-17: green-gate red→no merge" test_green_gate_red_routes_to_deliver
+  run_test "TC-BD-17b: gh-error→park not merge (F-2)" test_approved_pr_flow_gh_error_parks_not_merges
   run_test "TC-BD-18: commit-msg from PR title+body" test_commit_msg_from_pr_title_body
   run_test "TC-BD-19: batch never adds approved" test_batch_never_adds_approved
   run_test "TC-BD-20: summary with parked" test_summary_with_parked

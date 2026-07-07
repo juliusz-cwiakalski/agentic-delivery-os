@@ -15,6 +15,12 @@
 #        deliver-ticket.sh --is-delivering [REF]
 #        deliver-ticket.sh --last-message REF
 #
+# Platform note (F-7): the single-flight PID start-epoch reuse guard
+# (PID_START_TOLERANCE_SECONDS) prefers Linux /proc + `ps -o etimes=`. On
+# BSD/macOS there is no `etimes=` field; `_pid_start_epoch` falls back to
+# parsing `ps -o etime=` ("MM:SS"/"HH:MM:SS"/"D-HH:MM:SS"). Linux remains the
+# primary target — see doc/guides/delivery-modes.md Troubleshooting.
+#
 # Exit codes:
 #   0 - Success (merged, blocked, pr-open, or PM finished)
 #   1 - Failed (max restarts exceeded or unrecoverable error)
@@ -77,6 +83,14 @@ CURRENT_OPENCODE_PID=""
 # the PM's final message. Populated on the OWN path.
 CURRENT_REF=""
 CURRENT_LAST_MESSAGE=""
+
+# F-1: the wrapper's TRUE start epoch, captured ONCE at OWN time in
+# run_delivery and reused by every write_pid_file inside run_single_iteration.
+# This keeps the recorded `start` stable across restart iterations so the F-4
+# start-epoch reuse guard keeps accepting the legitimate owner (a fresh
+# $(date +%s) on each iteration refresh would make owner_pid_if_live reject the
+# owner once an iteration outlives PID_START_TOLERANCE_SECONDS).
+WRAPPER_START_EPOCH=""
 
 # INV-DM-5/4: set by run_single_iteration to the PM's final stdout line, then
 # surfaced by the delivery summary / written to <REF>.last-message.
@@ -230,12 +244,58 @@ _pid_cwd_is() {
 # Estimate the epoch at which the PID started (now - elapsed_seconds). Used by
 # F-4 to detect that a reused PID started later than the recorded owner.
 # Prints an integer epoch or empty on failure (caller degrades gracefully).
+#
+# F-7: Linux `ps -o etimes=` returns elapsed SECONDS directly. On BSD/macOS
+# there is no `etimes=` field; `ps -o etime=` returns a formatted string
+# ("MM:SS", "HH:MM:SS", or "D-HH:MM:SS"). We parse that so the start-epoch
+# reuse guard is NOT silently disabled on macOS (it would be if we only tried
+# `etimes=` and let the regex fail). Linux remains the primary target; the BSD
+# parse is a best-effort improvement, documented in delivery-modes.md.
+_parse_elapsed_to_seconds() {
+  local -r s="$1"
+  [[ -n "${s}" ]] || return 0
+  local days=0 hours=0 mins=0 secs=0
+  if [[ "${s}" == *-* ]]; then
+    # D-HH:MM:SS
+    days="${s%%-*}"
+    local rest="${s#*-}"
+    IFS=':' read -r hours mins secs <<<"${rest}"
+  elif [[ "${s}" == *:* ]]; then
+    local parts=()
+    IFS=':' read -ra parts <<<"${s}"
+    case "${#parts[@]}" in
+      3) hours="${parts[0]}"; mins="${parts[1]}"; secs="${parts[2]}" ;;
+      2) mins="${parts[0]}"; secs="${parts[1]}" ;;
+      *) return 0 ;;
+    esac
+  else
+    return 0  # a bare number is handled by the etimes path above
+  fi
+  [[ "${days:-0}" =~ ^[0-9]+$ && "${hours:-0}" =~ ^[0-9]+$ \
+     && "${mins:-0}" =~ ^[0-9]+$ && "${secs:-0}" =~ ^[0-9]+$ ]] || return 0
+  # 10# forces base-10 so zero-padded fields like "08" aren't read as octal.
+  printf '%s' "$(( 10#${days} * 86400 + 10#${hours} * 3600 + 10#${mins} * 60 + 10#${secs} ))"
+}
+
 _pid_start_epoch() {
   local -r pid="$1"
-  local etimes
-  etimes="$(ps -o etimes= -p "${pid}" 2>/dev/null | tr -d '[:space:]')" || { printf ''; return 0; }
-  [[ "${etimes}" =~ ^[0-9]+$ ]] || { printf ''; return 0; }
-  printf '%s' "$(( $(date +%s) - etimes ))"
+  local raw
+  # Linux: `ps -o etimes=` gives elapsed seconds directly.
+  raw="$(ps -o etimes= -p "${pid}" 2>/dev/null | tr -d '[:space:]')" || raw=""
+  if [[ "${raw}" =~ ^[0-9]+$ ]]; then
+    printf '%s' "$(( $(date +%s) - raw ))"
+    return 0
+  fi
+  # F-7 BSD/macOS fallback: `ps -o etime=` → "[[dd-]hh:]mm:ss".
+  raw="$(ps -o etime= -p "${pid}" 2>/dev/null | tr -d '[:space:]')" || raw=""
+  local secs
+  secs="$(_parse_elapsed_to_seconds "${raw}")"
+  if [[ "${secs}" =~ ^[0-9]+$ ]]; then
+    printf '%s' "$(( $(date +%s) - secs ))"
+    return 0
+  fi
+  printf ''
+  return 0
 }
 
 # Write the PID file for the current OWN run. Records the wrapper PID, start
@@ -786,7 +846,10 @@ prepare_main_for_delivery() {
 # Prints: "stuck" or "finished". Sets module-level CAPTURED_PM_MESSAGE.
 run_single_iteration() {
   local -r ticket_ref="$1" session_id="$2" prompt="$3" resolved_branch="$4"
-  local -r stuck_seconds=$((STUCK_MINUTES * 60))
+  # F-3 testability: DELIVER_STUCK_SECONDS overrides the minutes→seconds product
+  # (mirrors ceo-loop.sh's STUCK_SECONDS) so the liveness handoff can be
+  # exercised fast without a real multi-minute wait. Defaults to STUCK_MINUTES*60.
+  local -r stuck_seconds="${DELIVER_STUCK_SECONDS:-$((STUCK_MINUTES * 60))}"
 
   local log_file pm_out_file
   mkdir -p "${LOG_DIR}"
@@ -819,11 +882,14 @@ run_single_iteration() {
   log_info "opencode_pid=${opencode_pid} log=${log_file}"
 
   # INV-DM-2: keep the PID file's opencode child + session fields fresh so a
-  # JOIN probe / CEO can inspect them.
+  # JOIN probe / CEO can inspect them. F-1: reuse the wrapper's TRUE start epoch
+  # (captured once at OWN time) — never a fresh $(date +%s), or an iteration
+  # lasting > PID_START_TOLERANCE_SECONDS would make owner_pid_if_live reject
+  # the legitimate owner mid-delivery (INV-DM-2/3 violation).
   if [[ -n "${CURRENT_REF:-}" ]]; then
     local known_sid="${session_id}"
     [[ -z "${known_sid}" ]] && known_sid="$(_pid_file_field "${CURRENT_REF}" "session_id")"
-    write_pid_file "${CURRENT_REF}" "$$" "$(date +%s)" "${opencode_pid}" "${known_sid}"
+    write_pid_file "${CURRENT_REF}" "$$" "${WRAPPER_START_EPOCH:-$(date +%s)}" "${opencode_pid}" "${known_sid}"
   fi
 
   # Capture session ID for new sessions
@@ -841,7 +907,8 @@ run_single_iteration() {
       log_info "Captured session ID: ${captured_id}"
       captured_session_id="${captured_id}"
       save_session_mapping "${ticket_ref}" "${captured_id}" "${resolved_branch}" "in_progress"
-      [[ -n "${CURRENT_REF:-}" ]] && write_pid_file "${CURRENT_REF}" "$$" "$(date +%s)" "${opencode_pid}" "${captured_id}"
+      # F-1: preserve the wrapper start epoch (see comment above).
+      [[ -n "${CURRENT_REF:-}" ]] && write_pid_file "${CURRENT_REF}" "$$" "${WRAPPER_START_EPOCH:-$(date +%s)}" "${opencode_pid}" "${captured_id}"
     fi
   fi
 
@@ -1235,18 +1302,41 @@ run_delivery() {
 
   ensure_delivery_dir
 
-  # JOIN path: a live owner exists for this ticket.
+  # F-4: atomic JOIN-or-OWN. Hold an exclusive lock (flock on the per-ref lock
+  # file) across the decision so two concurrent callers cannot both pass the
+  # "no live owner" probe and both OWN (spawning two PMs for one ticket). The
+  # lock is released immediately after the OWN PID-file write, so joiners can
+  # proceed while the owner runs. flock auto-releases on FD close (incl. a
+  # crash). If flock is unavailable the decision degrades to check-then-act —
+  # an acceptable bound here because the CEO calls deliver-ticket once per
+  # decision point and batch-deliver.sh is sequential (see delivery-modes.md
+  # INV-DM-2); the atomic lock is the preferred defense.
+  local lock_file="${DELIVERY_DIR}/${ticket_ref}.lock"
+  exec 9>"${lock_file}"
+  if command -v flock >/dev/null 2>&1; then
+    flock -x 9
+  fi
+
+  # JOIN path: a live owner exists for this ticket (re-probed under the lock).
   local join_out
   join_out="$(join_delivery "${ticket_ref}" "${branch}")"
   if [[ "${join_out}" == joined:* ]]; then
+    exec 9>&-
     print_delivery_summary
     return "${DELIVERY_EXIT_CODE}"
   fi
 
-  # OWN path. Write the PID file; the EXIT trap clears it on exit.
+  # OWN path. Capture the wrapper start epoch ONCE (F-1) and reuse it for every
+  # write_pid_file inside run_single_iteration so the start-epoch reuse guard
+  # keeps accepting this owner across restart iterations. The EXIT trap clears
+  # the PID file on exit.
   CURRENT_REF="${ticket_ref}"
-  write_pid_file "${ticket_ref}" "$$" "$(date +%s)"
+  WRAPPER_START_EPOCH="$(date +%s)"
+  write_pid_file "${ticket_ref}" "$$" "${WRAPPER_START_EPOCH}"
   log_info "OWN: no live delivery for ${ticket_ref}; starting (pid=$$)"
+
+  # Release the decision lock; the owner now runs unlocked so joiners can probe.
+  exec 9>&-
 
   deliver_loop "${ticket_ref}" "${branch}" "${resume_prompt}"
   local rc=$?

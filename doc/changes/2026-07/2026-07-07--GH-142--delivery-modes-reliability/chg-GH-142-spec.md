@@ -129,7 +129,7 @@ Mapped from ticket #142 AC, refined by the 15 review comments.
 ### AC-5 — `pm-liveness.sh` + session-traffic watchdog (INV-DM-5, #96)
 - [ ] `scripts/pm-liveness.sh <session_id>` prints seconds-since-last-message,
       last step, gap trend; non-zero exit when stalled.
-- [ ] Stalled = no session message for > `CEO_LOOP_STALL_MINUTES` (default 15).
+- [ ] Stalled = no session message for ≥ `CEO_LOOP_STALL_MINUTES` (default 15; at-threshold == stalled, matching the `>=` comparison in `pm-liveness.sh`/`ceo-loop.sh`).
 - [ ] `deliver-ticket.sh` and `ceo-loop.sh` consume it; ps-only / file-mtime
       heuristics retired as the primary signal.
 - [ ] `scripts/.tests/test-pm-liveness.sh`: healthy, stale, growing-gap

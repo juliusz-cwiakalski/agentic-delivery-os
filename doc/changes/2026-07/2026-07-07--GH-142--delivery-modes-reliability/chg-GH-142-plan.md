@@ -304,6 +304,86 @@ as the commit message. (AC-6; Mode B rules.)
 
 ---
 
+## Phase 7 — Code review remediation (iteration 1)
+
+**Goal:** address all findings from the R1 code review (3 Major + 4 Minor). Each
+finding gets a targeted fix + test where applicable. No scope creep.
+
+**Files**
+- `scripts/deliver-ticket.sh` (F-1, F-4, F-7)
+- `scripts/batch-deliver.sh` (F-2)
+- `scripts/ceo-loop.sh` (F-6, F-7)
+- `scripts/.tests/test-deliver-ticket.sh` (F-1, F-3, F-7 tests)
+- `scripts/.tests/test-batch-deliver.sh` (F-2 tests)
+- `doc/guides/delivery-modes.md` (F-5 prose)
+- `doc/changes/2026-07/2026-07-07--GH-142--delivery-modes-reliability/chg-GH-142-spec.md` (F-5 prose)
+
+**Tasks**
+
+- [x] **F-1 (Major):** `WRAPPER_START_EPOCH` was captured at iteration-start, not
+  OWN-start → PID file start-epoch drifted → JOIN probe epoch mismatch →
+  spurious double-PM on long iterations. Fix: capture `WRAPPER_START_EPOCH`
+  once as a global at OWN time; `run_single_iteration` uses
+  `${WRAPPER_START_EPOCH:-$(date +%s)}` in `write_pid_file`. Test:
+  `test_wrapper_start_epoch_captured_once` (TC-DT-F1) uses a global bridge var
+  `_F1_MOCK_PID_START_EPOCH` (not local — the stub runs in a `$(...)` subshell)
+  + restore helper via `declare -f` capture. (commit pending)
+- [x] **F-2 (Major):** `wait_for_pr_green` treated any non-zero `gh pr checks`
+  as "no checks configured → green" → could merge a red/unknown PR on gh
+  error (auth/rate-limit/network). Fix: `_pr_has_no_checks_configured`
+  positively confirms zero checks via `gh pr view --json statusCheckRollup`;
+  `wait_for_pr_green` returns **3** (unknown) when gh errors and no-checks
+  cannot be confirmed; `approved_pr_flow` parks on rc=3 (never merges). Tests:
+  TC-BD-12c (gh error → rc=3), TC-BD-12d (no-checks → rc=0 green),
+  TC-BD-17b (approved_pr_flow parks on gh error, merge never called). (commit pending)
+- [x] **F-3 (Major):** Signal-propagation and single-flight convergence lacked
+  integration tests exercising the real trap chain. Fix: added 3 slow tests
+  (RUN_SLOW_TESTS=true): TC-DT-INT-02 (concurrent converge → exactly one PM),
+  TC-DT-INT-03 (SIGTERM → EXIT trap → tracked child reaped, INV-DM-2),
+  TC-DT-SF-14 (session-traffic liveness handoff, INV-DM-5). All 3 pass
+  individually. Debugging INT-03 uncovered and fixed a **backtick-in-heredoc**
+  bug: unescaped `` `find` `` in a comment inside `<<HARNESS` executed `find`
+  as command substitution, corrupting the harness script. (commit pending)
+- [x] **F-4 (Minor):** JOIN-or-OWN race — no lock around the PID-file write/read.
+  Fix: `run_delivery` acquires `flock` on a per-ref lock file (FD 9) around the
+  JOIN-or-OWN critical section, released after OWN write. (commit pending)
+- [x] **F-5 (Minor):** Spec/guide used `>` (strictly greater) instead of `≥`
+  for the stuck threshold. Fix: `>`→`≥` in `chg-GH-142-spec.md` AC-5,
+  `delivery-modes.md` INV-DM-5 + troubleshooting table row; added macOS etime
+  troubleshooting row. (commit pending)
+- [x] **F-6 (Minor):** `ceo_is_stuck` lacked a defense-in-depth fallback when
+  epoch capture fails. Fix: fallback to `date +%s` + WARN log on capture
+  failure. (commit pending)
+- [x] **F-7 (Minor):** BSD/macOS `etime` zero-padded fields (e.g. `08`) parsed
+  as octal → arithmetic error. Fix: `_parse_elapsed_to_seconds` with `10#`
+  base-10 prefix in both `deliver-ticket.sh` and `ceo-loop.sh`. Test:
+  `test_parse_elapsed_to_seconds_bsd` (TC-DT-F7). (commit pending)
+
+**Acceptance criteria (Phase 7)**
+
+- Criterion: F-1 fix prevents spurious double-PM — **PASSED** (TC-DT-F1 green;
+  WRAPPER_START_EPOCH captured once at OWN, not per-iteration).
+- Criterion: F-2 fix never merges on gh error — **PASSED** (TC-BD-12c/12d/17b
+  green; merge_called=0 on gh error; no-checks positively confirmed before green).
+- Criterion: F-3 integration tests pass — **PASSED** (INT-02/INT-03/SF-14 all
+  green individually with RUN_SLOW_TESTS=true; backtick bug fixed).
+- Criterion: F-4 flock prevents JOIN-or-OWN race — **PASSED** (flock on per-ref
+  lock file around critical section; existing 55/55 tests green).
+- Criterion: F-5 prose uses `≥` — **PASSED** (spec AC-5 + guide INV-DM-5 +
+  troubleshooting table updated).
+- Criterion: F-6 defense-in-depth — **PASSED** (ceo_is_stuck fallback + WARN;
+  ceo-loop 39/39 green).
+- Criterion: F-7 BSD etime parser — **PASSED** (TC-DT-F7 green; `10#` prefix
+  in both scripts; ceo-loop 39/39 green).
+- Criterion: No regressions — **PASSED** (deliver-ticket 55/55; batch-deliver
+  33/33; ceo-loop 39/39; pm-liveness GREEN; ShellCheck info-only).
+
+**Definition of Done (Phase 7)**
+- All 7 findings addressed with fixes + tests/evidence; no regressions; ready
+  for re-review.
+
+---
+
 ## Notes for the coder
 
 - **Extend, don't rewrite** deliver-ticket.sh (842 lines) and batch-deliver.sh (408 lines). Preserve exit codes, env vars, stdout classification, and the mockable wrappers so existing tests stay green.
@@ -327,3 +407,4 @@ as the commit message. (AC-6; Mode B rules.)
 - **Phase 4** (commit `ccd05ed`): `scripts/batch-deliver.sh` extended with `approved_pr_flow` (fetch→on-main-detect→rebase→conflict-AI-resolve→push→wait-green→squash-merge with PR title+body). `_git()` mockable wrapper. `run_batch` routes approved→merge, not-approved→park. `print_batch_summary` parked counter. `test-batch-deliver.sh` 30/30 (16 existing + 14 new AC-6). `DELIVER_SCRIPT`/`CLEAN_TOOL` non-readonly. ShellCheck clean.
 - **Phase 5** (commit `6ab3154`): `doc/guides/autonomous-batch-delivery.md` consistency pass. Liveness → session-traffic/15-min (INV-DM-5). PM stops at `pr-open` ("PM does not merge" callout, F-2). Approval workflow → `batch-deliver.sh` rebase→green-gate→squash-merge. `clean-merged-branches` never-deletes-unmerged guarantee. `delivery-modes.md` cross-linked as canonical. `test-doc-distribution.sh` GREEN.
 - **Phase 6**: Final quality gates. `test-all.sh` 12/12; `test-doc-distribution.sh` GREEN (78 docs); `test-build-claude-plugin.sh` 16/16. ShellCheck 0 warnings/0 errors (info-only). Headers verified. Decontextualization sweep clean. shfmt not installed (documented). AC-7 PASSED.
+- **Phase 7** (code review remediation, iteration 1): 7 findings addressed (3 Major + 4 Minor). F-1 PID epoch fix + test; F-2 green-gate gh-error guard + 3 tests; F-3 signal-prop/converge/liveness tests (backtick-in-heredoc bug found and fixed); F-4 flock around JOIN-or-OWN; F-5 `>`→`≥` prose in spec+guide; F-6 `ceo_is_stuck` defense-in-depth; F-7 BSD etime parser with `10#` base-10 in both scripts. Deliver-ticket 55/55; batch-deliver 33/33; ceo-loop 39/39; pm-liveness GREEN; ShellCheck clean (info-only). See Phase 7 section above for details.

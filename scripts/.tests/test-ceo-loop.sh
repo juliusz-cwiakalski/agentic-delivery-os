@@ -242,11 +242,25 @@ test_ceo_is_stuck_degraded_probe() {
   return 0
 }
 
-# test_ceo_is_stuck_empty_session — empty session id → NOT stuck (degraded).
+# test_ceo_is_stuck_empty_session — F-6 defense-in-depth: an empty/uncapturable
+# session-id with no healthy delivery is a stuck-candidate (the rc==1 path can
+# never fire when the session-id is unknown, so a hung CEO would otherwise never
+# be killed). The caller's threshold timer gates the actual kill.
 test_ceo_is_stuck_empty_session() {
   _setup_ceo_state
   MOCK_LIVENESS_RC="2"   # _pm_liveness returns 2 for empty session
-  if ceo_is_stuck ""; then return 1; fi
+  MOCK_DELIVERY_RC="1"   # no delivery in progress
+  ceo_is_stuck "" || { echo "  empty session + no delivery should be stuck-candidate (F-6)" >&2; return 1; }
+  return 0
+}
+
+# test_ceo_is_stuck_empty_session_with_delivery — F-6: even with an unknown
+# session-id, a healthy delivery in progress keeps the CEO healthy (not stuck).
+test_ceo_is_stuck_empty_session_with_delivery() {
+  _setup_ceo_state
+  MOCK_LIVENESS_RC="2"   # degraded (empty session)
+  MOCK_DELIVERY_RC="0"   # delivery in progress
+  if ceo_is_stuck ""; then { echo "  empty session + delivery should NOT be stuck" >&2; return 1; }; fi
   return 0
 }
 
@@ -778,6 +792,7 @@ main() {
   run_test "ceo_is_stuck: healthy traffic"           test_ceo_is_stuck_healthy_traffic
   run_test "ceo_is_stuck: degraded probe"            test_ceo_is_stuck_degraded_probe
   run_test "ceo_is_stuck: empty session"             test_ceo_is_stuck_empty_session
+  run_test "ceo_is_stuck: empty session + delivery"  test_ceo_is_stuck_empty_session_with_delivery
 
   # --- PID File Lifecycle (F-3) ---
   run_test "PID file lifecycle (write/clear)"        test_pid_file_lifecycle

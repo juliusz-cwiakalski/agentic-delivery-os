@@ -8,9 +8,9 @@ phases:
   test_planning: { started: 2026-07-07T16:56:00Z, completed: 2026-07-07T17:05:00Z }
   delivery_planning: { started: 2026-07-07T16:56:00Z, completed: 2026-07-07T17:30:00Z }
   dor_check: { started: 2026-07-07T17:31:00Z, completed: 2026-07-07T18:10:00Z }
-  delivery: { started: 2026-07-07T18:11:00Z, completed: null }
-  system_spec_update: { started: null, completed: null }
-  review_fix: { started: null, completed: null }
+  delivery: { started: 2026-07-07T18:11:00Z, completed: 2026-07-07T21:55:00Z }
+  system_spec_update: { started: 2026-07-07T22:00:00Z, completed: 2026-07-07T22:40:00Z }
+  review_fix: { started: 2026-07-07T22:45:00Z, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/143" }
@@ -46,6 +46,12 @@ decisions:
   - text: "F-3 DECISION (red-team R1, at-most-one-CEO across restarts): ceo-loop.sh writes its @ceo child PID to `.ai/local/ceo/ceo.pid` and probes+validates it (cmdline = opencode ... ceo, cwd = ROOT_DIR) on startup; if a live CEO child exists, JOIN/wait rather than spawn a second. Mirrors deliver-ticket's single-flight. Prevents double-spawn (and double-merge races) when the loop is killed and restarted while a CEO is alive."
     date: 2026-07-07
   - text: "F-4 DECISION (red-team R1, JOIN PID-reuse): the JOIN poll re-validates the owner PID identity (cmdline AND start-timestamp from the PID file) on EVERY poll iteration, not just at probe time; on mismatch (owner exited + OS reused the PID) the joiner abandons the join and OWNs. Guards the TOCTOU window."
+    date: 2026-07-07
+  - text: "DELIVERY COMPLETE (phases 0-6 via @coder, commits ac8b952..88ee1dc): pm-liveness.sh (16/16), deliver-ticket.sh single-flight+join+subcommands+no-merge+session-traffic (49/49), ceo-loop.sh rewrite stuck-detect+resume+durable-stop (38/38), ceo.md + plugin + README + change-lifecycle note, batch-deliver.sh rebase-before-merge+green-gate (30/30), autonomous-batch-delivery.md consistency. test-all 12/12, doc-dist clean, plugin 16/16, ShellCheck clean. THEN @toolsmith prompt-quality pass (commit 4059749) because @coder hand-edited agent prompts against the AGENTS.md rule: restored missing license header + tightened memory_schema, generalized pr-manager F-6 to both modes, fixed README inner/outer wording, regen plugin. All gates re-green. Toolsmith flagged a follow-up (no CI gate enforces license headers on .opencode/agent/*.md) — surface to human, do NOT auto-create ticket."
+    type: info
+    date: 2026-07-07
+  - text: "RETRO: @coder hand-edited .opencode/agent/ceo.md + pr-manager.md in Phase 3 despite the plan noting 'delegate the prose tuning to @toolsmith if helpful' (soft hint, not a hard gate). The AGENTS.md rule ('Delegate to @toolsmith — Do not hand-edit agent/command files directly') is a hard rule that the plan should have stated as a HARD requirement, and @coder should refuse hand-editing agent prompts. Improvement: future plans that touch .opencode/agent/** or .opencode/command/** must have an explicit phase task 'delegate agent-prompt edits to @toolsmith' marked non-delegable to @coder. Caught here by the human + a toolsmith R1 pass; no merge impact."
+    type: retro
     date: 2026-07-07
 open_questions: []  # all four OQ-DM resolved via PR #143 review comments
 blockers: []

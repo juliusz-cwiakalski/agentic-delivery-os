@@ -96,6 +96,19 @@ source "${SCRIPT_DIR}/deliver-ticket.sh"
 # Reset ERR trap — the sourced script sets its own.
 trap - ERR
 
+# Capture the real _pid_start_epoch so F-1 tests can stub it and restore it.
+# Stored as a function-body string; restored via eval.
+_REAL_PID_START_EPOCH_FN="$(declare -f _pid_start_epoch)"
+
+# F-1 test bridge: when non-empty, the stubbed _pid_start_epoch echoes this value.
+_F1_MOCK_PID_START_EPOCH=""
+
+# Restore the real _pid_start_epoch captured above (after an F-1 test stubs it).
+_restore_pid_start_epoch() {
+  eval "${_REAL_PID_START_EPOCH_FN}"
+  _F1_MOCK_PID_START_EPOCH=""
+}
+
 # ============================================================================
 # TESTS: Input Parsing
 # ============================================================================
@@ -905,6 +918,335 @@ test_stdout_returns_pm_last_message_and_result() {
 }
 
 # ============================================================================
+# TESTS: F-1 — owner start-epoch preserved across restart iterations
+# ============================================================================
+# F-1 (Major): run_single_iteration used to rewrite the PID file with a fresh
+# $(date +%s) on each iteration, so once an iteration outlived
+# PID_START_TOLERANCE_SECONDS the start-epoch reuse guard rejected the
+# legitimate owner → --is-delivering false mid-delivery → ceo-loop killed a
+# healthy CEO AND a concurrent caller OWNed instead of JOINing. The fix
+# captures the wrapper start ONCE and reuses it. This test characterizes the
+# contract: preserving the true start keeps the owner live; a fresh start
+# after >tolerance is rejected.
+
+# TC-DT-SF-13: owner stays live when start is PRESERVED across an iteration
+# refresh; a fresh start after >tolerance is rejected (F-1 regression guard).
+test_owner_live_across_iteration_refresh() {
+  local fake_delivery="${_test_tmpdir}/delivery_f1"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+
+  local pid
+  pid="$(_spawn_fake_owner)"
+  kill -0 "${pid}" 2>/dev/null || { kill "${pid}" 2>/dev/null; return 1; }
+
+  # Simulate a long-lived owner: pin the "actual" start epoch the kernel would
+  # report (now - 120s) so an iteration lasting >tolerance is realistic without
+  # a real 2-min sleep. Use a GLOBAL bridge var because the stub runs inside a
+  # $(...) subshell where a `local` from this function is not on the call stack.
+  _F1_MOCK_PID_START_EPOCH=$(( $(date +%s) - 120 ))
+  _pid_start_epoch() { printf '%s' "${_F1_MOCK_PID_START_EPOCH}"; }
+
+  # PRESERVED start (the fix): record the owner's TRUE start.
+  write_pid_file "GH-142" "${pid}" "${_F1_MOCK_PID_START_EPOCH}"
+  local live
+  live="$(owner_pid_if_live "GH-142" 2>/dev/null)" || live=""
+  assert_eq "${pid}" "${live}" "owner must stay LIVE when start is preserved across iterations (F-1)" \
+    || { _restore_pid_start_epoch; kill_process_tree "${pid}" 2>/dev/null; wait "${pid}" 2>/dev/null || true; return 1; }
+
+  # BUGGY start (the pre-fix behavior): a fresh $(date +%s) recorded now, while
+  # the owner actually started 120s ago → diff > tolerance → rejected. This is
+  # the regression the F-1 fix prevents.
+  write_pid_file "GH-142" "${pid}" "$(date +%s)"
+  live="$(owner_pid_if_live "GH-142" 2>/dev/null)" || live=""
+  assert_eq "" "${live}" "regression guard: a fresh start after >tolerance must be REJECTED" \
+    || { _restore_pid_start_epoch; kill_process_tree "${pid}" 2>/dev/null; wait "${pid}" 2>/dev/null || true; return 1; }
+
+  _restore_pid_start_epoch
+  kill_process_tree "${pid}" 2>/dev/null || true
+  wait "${pid}" 2>/dev/null || true
+  return 0
+}
+
+# TC-DT-SF-13b: --is-delivering stays true across an iteration refresh (the
+# post-iteration case) when start is preserved (F-1).
+test_is_delivering_live_pid_across_iteration_refresh() {
+  local fake_delivery="${_test_tmpdir}/delivery_f1b"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+  local pid
+  pid="$(_spawn_fake_owner)"
+  kill -0 "${pid}" 2>/dev/null || { kill "${pid}" 2>/dev/null; return 1; }
+
+  # GLOBAL bridge (see SF-13 note above): locals aren't visible in the $()
+  # subshell that owner_pid_if_live runs in.
+  _F1_MOCK_PID_START_EPOCH=$(( $(date +%s) - 120 ))
+  _pid_start_epoch() { printf '%s' "${_F1_MOCK_PID_START_EPOCH}"; }
+
+  # Initial OWN write with the true start.
+  write_pid_file "GH-142" "${pid}" "${_F1_MOCK_PID_START_EPOCH}"
+  cmd_is_delivering "GH-142" || { _restore_pid_start_epoch; kill_process_tree "${pid}" 2>/dev/null; return 1; }
+
+  # Iteration refresh re-writes the PID file with the SAME start (F-1 fix).
+  write_pid_file "GH-142" "${pid}" "${_F1_MOCK_PID_START_EPOCH}"
+  cmd_is_delivering "GH-142" || { _restore_pid_start_epoch; kill_process_tree "${pid}" 2>/dev/null; return 1; }
+
+  _restore_pid_start_epoch
+  kill_process_tree "${pid}" 2>/dev/null || true
+  wait "${pid}" 2>/dev/null || true
+  return 0
+}
+
+# TC-DT-SF-13c: _parse_elapsed_to_seconds handles BSD/macOS `ps -o etime=` shapes
+# (F-7) so the start-epoch guard is not silently disabled on Darwin.
+test_parse_elapsed_to_seconds_bsd() {
+  assert_eq "" "$(_parse_elapsed_to_seconds "")" "empty → empty (degrade)" || return 1
+  assert_eq "83" "$(_parse_elapsed_to_seconds "1:23")" "MM:SS → 83s" || return 1
+  assert_eq "3723" "$(_parse_elapsed_to_seconds "1:02:03")" "H:MM:SS → 3723s" || return 1
+  assert_eq "93723" "$(_parse_elapsed_to_seconds "1-02:02:03")" "D-HH:MM:SS → 93723s" || return 1
+  # Zero-padded fields (08/09) must NOT be read as octal (regression guard).
+  assert_eq "68" "$(_parse_elapsed_to_seconds "1:08")" "MM:SS with 08 secs → 68s (not octal)" || return 1
+  assert_eq "3665" "$(_parse_elapsed_to_seconds "1:01:05")" "H:MM:SS → 3665s" || return 1
+  assert_eq "" "$(_parse_elapsed_to_seconds "garbage")" "garbage → empty (degrade)" || return 1
+  return 0
+}
+
+# ============================================================================
+# F-3: the three integration behaviors deferred in Phase 1 (concurrency
+# convergence, signal propagation, session-traffic liveness handoff). These
+# exercise REAL deliver-ticket.sh subprocesses / the real monitor loop, so they
+# are gated behind RUN_SLOW_TESTS=true (same as INT-01) to keep the default
+# suite fast.
+# ============================================================================
+
+# TC-DT-INT-02: two concurrent deliver-ticket.sh for the SAME ticket converge on
+# exactly ONE PM (INV-DM-2). The first OWNs + spawns opencode; the second probes
+# the live owner and JOINs (waits) — it must NOT spawn a second opencode.
+test_concurrent_converge_one_pm() {
+  if [[ "${RUN_SLOW_TESTS:-}" != "true" ]]; then
+    printf '  [SKIP] TC-DT-INT-02 (set RUN_SLOW_TESTS=true to run)\n'
+    return 0
+  fi
+
+  local bin_dir="${_test_tmpdir}/bin_conv"
+  local marker_dir="${_test_tmpdir}/markers_conv"
+  mkdir -p "${bin_dir}" "${marker_dir}"
+  local run_count_file="${marker_dir}/run_count"
+  local session_json='[{"id":"ses_conv_001","title":"ticket-CONV-001","time":"2026-01-01T00:00:00Z"}]'
+
+  # Fake opencode: `session list` returns one session; `run` records an
+  # invocation then sleeps long enough to still be "delivering" when the JOINer
+  # probes. `db` returns an empty result so pm-liveness degrades instantly
+  # (otherwise the `db` call would hit the `sleep 120` run-branch and stall the
+  # owner's monitor loop for 15s per iteration).
+  cat >"${bin_dir}/opencode" <<OPENCODE
+#!/usr/bin/env bash
+if [[ "\$1" == "session" && "\$2" == "list" ]]; then
+  printf '%s' '${session_json}'
+  exit 0
+fi
+if [[ "\$1" == "db" ]]; then
+  printf '[]'
+  exit 0
+fi
+n=0
+[[ -f "${run_count_file}" ]] && n=\$(<"${run_count_file}")
+n=\$((n+1))
+printf '%s' "\$n" >"${run_count_file}"
+: >"${marker_dir}/ran.\${n}"
+sleep 120
+exit 0
+OPENCODE
+  chmod +x "${bin_dir}/opencode"
+
+  cat >"${bin_dir}/gh" <<'GH'
+#!/usr/bin/env bash
+case "$1" in
+  issue) printf '%s' '{"state":"OPEN","labels":[]}' ;;
+  *) printf '%s' '[]' ;;
+esac
+GH
+  chmod +x "${bin_dir}/gh"
+
+  local saved_path="${PATH}"
+  local pid_file="${ROOT_DIR}/.ai/local/delivery/CONV-001.pid"
+  _cleanup_converge() {
+    pkill -TERM -f "deliver-ticket.sh CONV-001" 2>/dev/null || true
+    sleep 1
+    pkill -KILL -f "sleep 120" 2>/dev/null || true
+    rm -f "${pid_file}" "${SESSION_DIR}/CONV-001.json"
+    PATH="${saved_path}"
+  }
+
+  PATH="${bin_dir}:${PATH}"
+  export PATH
+  # Keep the owner "delivering" (not stuck) long enough for the JOINer to probe.
+  # Fast pm-liveness stub (healthy ⇒ rc 0) so the owner's monitor loop isn't
+  # blocked by the slow worktree-mtime fallback (which `find`s the whole repo).
+  export DELIVER_POLL_SECONDS=2 DELIVER_MAX_RESTARTS=1 DELIVER_STUCK_MINUTES=10 \
+         PM_LIVENESS_SCRIPT="${bin_dir}/pm-liveness-stub"
+  printf '#!/usr/bin/env bash\nexit 0\n' >"${bin_dir}/pm-liveness-stub"
+  chmod +x "${bin_dir}/pm-liveness-stub"
+
+  # Launch the OWNER.
+  bash "${SCRIPT_DIR}/deliver-ticket.sh" "CONV-001:feat/conv" >/dev/null 2>&1 &
+  local owner_pid=$!
+
+  # Wait until the owner has spawned its PM (run_count == 1).
+  local deadline=$(( $(date +%s) + 30 ))
+  while (( $(date +%s) < deadline )); do
+    [[ -f "${run_count_file}" && "$(<"${run_count_file}")" -ge 1 ]] && break
+    kill -0 "${owner_pid}" 2>/dev/null || break
+    sleep 1
+  done
+
+  local count_before
+  # NOTE: `$(<file 2>/dev/null)` is NOT the bash `$(<file)` idiom (the extra
+  # redirect defeats it → empty output). Use `cat` for the error-tolerant read.
+  count_before="$(cat "${run_count_file}" 2>/dev/null || printf '0')"
+  assert_eq "1" "${count_before}" "owner should have spawned exactly one PM" \
+    || { _cleanup_converge; return 1; }
+
+  # Launch the JOINER (same ticket) and let it probe + settle into the JOIN wait.
+  bash "${SCRIPT_DIR}/deliver-ticket.sh" "CONV-001:feat/conv" >/dev/null 2>&1 &
+  local joiner_pid=$!
+  local settle_deadline=$(( $(date +%s) + 8 ))
+  while (( $(date +%s) < settle_deadline )); do
+    kill -0 "${joiner_pid}" 2>/dev/null || break
+    sleep 1
+  done
+
+  local count_after
+  count_after="$(cat "${run_count_file}" 2>/dev/null || printf '0')"
+  _cleanup_converge
+
+  # The JOINer must NOT have spawned a second PM.
+  assert_eq "1" "${count_after}" "concurrent caller JOINs → exactly one PM (INV-DM-2)" || return 1
+  return 0
+}
+
+# TC-DT-INT-03: SIGTERM to the owner wrapper is propagated to its tracked
+# opencode child (INV-DM-2). Exercises the REAL production trap chain —
+# TERM → _on_interrupt → exit → EXIT trap → _cleanup_child → kill_process_tree —
+# by sourcing deliver-ticket.sh in a harness, spawning a trackable child, and
+# self-SIGTERMing. activity_epoch is stubbed because the real worktree scan is
+# pathologically slow on large repos (it `find`s every file), which would defer
+# the signal past any practical test window; the trap/kill chain is unaffected.
+test_signal_propagation_sigterm_to_child() {
+  if [[ "${RUN_SLOW_TESTS:-}" != "true" ]]; then
+    printf '  [SKIP] TC-DT-INT-03 (set RUN_SLOW_TESTS=true to run)\n'
+    return 0
+  fi
+
+  local work="${_test_tmpdir}/sig"
+  local harness="${work}/harness.sh"
+  local child_pid_file="${work}/child_pid"
+  mkdir -p "${work}"
+  local script_under_test="${SCRIPT_DIR}/deliver-ticket.sh"
+
+  cat >"${harness}" <<HARNESS
+#!/usr/bin/env bash
+set -e
+source "${script_under_test}"
+trap - ERR
+# activity_epoch is stubbed (see test header): the real worktree scan (find)
+# is pathologically slow on every repo file, deferring the signal.
+activity_epoch() { printf '0\n'; }
+# Spawn a trackable fake opencode child the EXIT trap will reap.
+sleep 120 &
+CURRENT_OPENCODE_PID="\$!"
+printf '%s' "\$!" >"${child_pid_file}"
+# Let the harness settle, then self-terminate to fire the TERM → EXIT trap chain.
+sleep 2
+kill -TERM "\$\$"
+HARNESS
+
+  bash "${harness}" >/dev/null 2>&1 &
+  local harness_pid=$!
+
+  # Wait for the child PID marker.
+  local deadline=$(( $(date +%s) + 10 ))
+  local child_pid=""
+  while (( $(date +%s) < deadline )); do
+    if [[ -f "${child_pid_file}" ]]; then
+      child_pid="$(cat "${child_pid_file}" 2>/dev/null || printf '')"
+      break
+    fi
+    kill -0 "${harness_pid}" 2>/dev/null || break
+    sleep 1
+  done
+  [[ "${child_pid}" =~ ^[0-9]+$ ]] || { pkill -KILL -f "sleep 120" 2>/dev/null || true; echo "  no child PID captured" >&2; return 1; }
+
+  # Wait for the harness to self-terminate (internal sleep 2 + self-SIGTERM) and
+  # the EXIT trap to reap the tracked child.
+  local reap=$(( $(date +%s) + 12 ))
+  local harness_dead=0 child_dead=0
+  while (( $(date +%s) < reap )); do
+    kill -0 "${harness_pid}" 2>/dev/null || harness_dead=1
+    kill -0 "${child_pid}" 2>/dev/null || child_dead=1
+    [[ ${harness_dead} -eq 1 && ${child_dead} -eq 1 ]] && break
+    sleep 1
+  done
+
+  pkill -KILL -f "sleep 120" 2>/dev/null || true
+
+  assert_eq "1" "${harness_dead}" "SIGTERM ⇒ owner exits (TERM trap fired)" || return 1
+  assert_eq "1" "${child_dead}" "SIGTERM ⇒ tracked opencode child reaped (INV-DM-2)" || return 1
+  return 0
+}
+
+# TC-DT-SF-14: session-traffic liveness handoff (F-3, INV-DM-5). Drives the REAL
+# run_single_iteration monitor loop with a fake opencode child + mocked
+# pm-liveness, proving: healthy session traffic resets the stuck timer (child is
+# NOT killed, finishes); stalled traffic lets the timer fire (child killed,
+# "stuck"). POLL_SECONDS is readonly at source-time, so we re-source
+# deliver-ticket.sh in a subprocess with a tuned env.
+test_session_traffic_liveness_handoff() {
+  if [[ "${RUN_SLOW_TESTS:-}" != "true" ]]; then
+    printf '  [SKIP] TC-DT-SF-14 (set RUN_SLOW_TESTS=true to run)\n'
+    return 0
+  fi
+
+  local fake_log="${_test_tmpdir}/logs_f3_liveness"
+  local harness="${_test_tmpdir}/handoff_harness.sh"
+  mkdir -p "${fake_log}"
+  local script_under_test="${SCRIPT_DIR}/deliver-ticket.sh"
+
+  cat >"${harness}" <<HARNESS
+#!/usr/bin/env bash
+set -e
+source "${script_under_test}"
+trap - ERR
+# Fake opencode child: a killable sleep whose PID == \$!.
+_setsid() { exec sleep "\${CHILD_SLEEP:-10}"; }
+# No worktree activity → only session-traffic health resets the stuck timer.
+activity_epoch() { printf '0\n'; }
+if [[ "\${LIVENESS:-healthy}" == "stalled" ]]; then
+  _pm_liveness() { return 1; }
+else
+  _pm_liveness() { return 0; }
+fi
+run_single_iteration "GH-142" "ses_f3" "prompt" "feat/x"
+HARNESS
+
+  local healthy stalled
+  # NOTE: deliver-ticket.sh hardcodes `readonly LOG_DIR` (ignores env), so we do
+  # NOT pass LOG_DIR here — and it is readonly in THIS shell, so a `LOG_DIR=…`
+  # prefix would error. The default LOG_DIR (ROOT_DIR/tmp/deliver-ticket) is fine.
+  # Healthy: child sleeps 5s (> stuck_seconds 2). Traffic resets the timer each
+  # poll, so the child survives past the threshold and exits naturally.
+  healthy="$(LIVENESS=healthy CHILD_SLEEP=5 DELIVER_POLL_SECONDS=1 \
+    DELIVER_STUCK_SECONDS=2 bash "${harness}" 2>/dev/null)" || true
+  # Stalled: child sleeps 20s but stuck_seconds 2 fires → child killed.
+  stalled="$(LIVENESS=stalled CHILD_SLEEP=20 DELIVER_POLL_SECONDS=1 \
+    DELIVER_STUCK_SECONDS=2 bash "${harness}" 2>/dev/null)" || true
+
+  assert_eq "finished" "${healthy}" "healthy session-traffic ⇒ child NOT killed (finishes) (INV-DM-5)" || return 1
+  assert_eq "stuck" "${stalled}" "stalled session-traffic ⇒ child killed (stuck) (INV-DM-5)" || return 1
+  return 0
+}
+
+# ============================================================================
 # RUN TESTS
 # ============================================================================
 main() {
@@ -961,6 +1303,16 @@ main() {
   run_test "TC-DT-SF-10: join abandons on PID reuse (F-4)" test_join_aborts_when_pid_reused
   run_test "TC-DT-SF-11: deliver-ticket does not auto-merge (F-2)" test_deliver_ticket_does_not_auto_merge
   run_test "TC-DT-SF-12: stdout delivery summary (result+last_message)" test_stdout_returns_pm_last_message_and_result
+
+  # F-1: owner start-epoch preserved across restart iterations
+  run_test "TC-DT-SF-13: owner live across iteration refresh (F-1)" test_owner_live_across_iteration_refresh
+  run_test "TC-DT-SF-13b: --is-delivering live across refresh (F-1)" test_is_delivering_live_pid_across_iteration_refresh
+  run_test "TC-DT-SF-13c: BSD etime parse (F-7)" test_parse_elapsed_to_seconds_bsd
+
+  # F-3: the three deferred integration behaviors (RUN_SLOW_TESTS)
+  run_test "TC-DT-INT-02: concurrent converge → one PM (F-3, slow)" test_concurrent_converge_one_pm
+  run_test "TC-DT-INT-03: SIGTERM propagates to child (F-3, slow)" test_signal_propagation_sigterm_to_child
+  run_test "TC-DT-SF-14: session-traffic liveness handoff (F-3, slow)" test_session_traffic_liveness_handoff
 
   printf '\n%s Summary: %d/%d passed' "${TEST_TAG}" "${_test_passed}" "${_test_count}"
   if [[ "${_test_failed}" -gt 0 ]]; then
