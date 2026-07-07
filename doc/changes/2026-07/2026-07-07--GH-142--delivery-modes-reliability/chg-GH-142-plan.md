@@ -1,0 +1,305 @@
+---
+workItemRef: GH-142
+title: "Implementation plan — Delivery Modes guide + autonomous-loop reliability"
+status: Accepted
+created: 2026-07-07
+spec: doc/changes/2026-07/2026-07-07--GH-142--delivery-modes-reliability/chg-GH-142-spec.md
+test_plan: doc/changes/2026-07/2026-07-07--GH-142--delivery-modes-reliability/chg-GH-142-test-plan.md
+guide: doc/guides/delivery-modes.md
+---
+
+# Implementation Plan — GH-142
+
+> **Authoritative design:** `doc/guides/delivery-modes.md`. **AC/scope:**
+> `chg-GH-142-spec.md` (AC-1..7). **Tests:** `chg-GH-142-test-plan.md`.
+> **Bash standard:** `.ai/rules/bash.md` (read in full before touching any
+> script). **Coder rule:** for `deliver-ticket.sh` and `batch-deliver.sh`,
+> **extend, do not rewrite** — preserve their public contracts (exit codes,
+> env vars, stdout classification, mockable wrappers `_git/_gh/_opencode/_jq`).
+
+## Cross-phase ordering constraints
+
+```
+Phase 0 (pm-liveness.sh) ──┐
+                           ├─► Phase 1 (deliver-ticket.sh) ──► Phase 2 (ceo-loop.sh)
+                           │            │
+                           │            └─► Phase 4 (batch-deliver.sh)
+                           └─► Phase 4 uses pm-liveness for nothing directly (batch delegates to deliver-ticket)
+Phase 3 (ceo.md + plugin + README + lifecycle note) depends on Phase 1's subcommand contract (names) but not on code
+Phase 5 (autonomous-batch-delivery.md) — docs only, after Phase 1/4 so the wording matches shipped behavior
+Phase 6 (gates + headers + final test-all) — last
+```
+
+- Phase 1's **subcommand names** (`--is-delivering`, `--last-message`,
+  `--resume-prompt`) are the contract Phase 2 and Phase 3 reference. Lock them
+  in Phase 1.
+- Phase 2 consumes `deliver-ticket.sh --is-delivering` and `pm-liveness.sh` ⇒
+  must follow Phase 0 and Phase 1.
+- Phase 3's `.ados-claude/` regen must happen **after** the `ceo.md` rewrite in
+  the same commit (CI enforces freshness).
+
+---
+
+## Phase 0 — `scripts/pm-liveness.sh` (NEW foundation)
+
+**Goal:** the session-traffic liveness probe that deliver-ticket.sh and
+ceo-loop.sh consume. Standalone, fully tested first. (AC-5 core; INV-DM-5.)
+
+**Files**
+- `scripts/pm-liveness.sh` (new)
+- `scripts/.tests/test-pm-liveness.sh` (new)
+
+**Contract**
+```
+pm-liveness.sh <session_id>
+  → prints to stdout a single parseable line: <seconds_since_last_msg>\t<last_step>\t<gap_trend>
+  → exit 0 if healthy (seconds_since_last_msg <= threshold)
+  → exit non-zero if stalled (seconds_since_last_msg > threshold)
+  → graceful degradation: if the opencode DB query fails, warn on stderr, fall
+    back to a worktree-mtime signal, and exit 0 (never block delivery on a
+    missing DB)
+```
+
+**Env**
+- `CEO_LOOP_STALL_MINUTES` (default 15) — stall threshold, also used by Phase 1/2.
+- Override-friendly: `OPENCODE_DB_CMD`, `OPENCODE_SESSION_LIST_CMD` for tests.
+
+**Data sources (documented stable CLI — confirmed by research)**
+- Last message timestamp: `opencode db "SELECT MAX(time_created) AS last FROM message WHERE session_id = '<id>'" --format json` (table/column names verified at runtime; if the query errors, degrade).
+- Fallback worktree signal: `max(git log -1 --format=%ct, newest mtime under doc/changes/, worktree mtime excluding .git/tmp/.ai/local)` — reuse the existing activity-epoch idea from deliver-ticket.sh but as a fallback only.
+
+> **F-7 — pin the token column list (used by Phase 2's resume decision too).**
+> The context-size proxy must be `tokens_input + tokens_cache_read + tokens_output + tokens_reasoning` (the cache-read tokens are a large fraction of what's actually in the window; excluding them mis-counts). Verify the columns against one real large session during Phase 0, then **hard-code the verified column list as a comment** in `pm-liveness.sh` and `ceo-loop.sh`. The test fixtures (`MOCK_DB_TOKENS`) must match this verified schema.
+
+**Tasks**
+- [ ] Skeleton per `.ai/rules/bash.md` §16 (strict mode, traps, logging `(pm-liveness)`, `--help`/`--version`, testable main guard).
+- [ ] `compute_seconds_since_last_msg()` — query opencode DB; parse JSON with `_jq`; degrade gracefully.
+- [ ] `worktree_fallback_epoch()` — the fallback signal.
+- [ ] `decide_stalled()` — pure: `(now - last_msg) > threshold*60`.
+- [ ] `main()` — parse `<session_id>`; print the TSV line; set exit code.
+- [ ] Make `chmod +x`.
+- [ ] `test-pm-liveness.sh` per the test plan: healthy, stale, at-threshold, growing-gap, shrinking-gap, db-failure-degradation, threshold-env-override, output-parseable. Mock `_opencode` (db + session list) via fake-bin PATH stubs in `_test_tmpdir`.
+
+**Definition of Done (Phase 0)**
+- `bash scripts/.tests/test-pm-liveness.sh` green (8 cases).
+- `bash scripts/test-all.sh` green (no regressions).
+- AC-5 helper portion satisfied.
+
+---
+
+## Phase 1 — `deliver-ticket.sh` single-flight + join + subcommands + signal-prop + session-traffic liveness
+
+**Goal:** make the per-ticket engine join-safe, repo-local, scriptable, and
+session-traffic-aware — without breaking its existing classification/exit-code
+contract. (AC-2, AC-5; INV-DM-1, 2, 5, 6.)
+
+**Files**
+- `scripts/deliver-ticket.sh` (EXTEND)
+- `scripts/.tests/test-deliver-ticket.sh` (EXTEND)
+
+**Public contract to PRESERVE (do not break)**
+- Exit codes: `0` merged/blocked/pr-open; `1` failed; `2` usage.
+- Env: `DELIVER_*`; ADD `DELIVER_STUCK_MINUTES` default **15** (was 30) and document the change.
+- Mockable wrappers `_git/_gh/_opencode/_jq/_setsid`; the existing `kill_process_tree` and `_cleanup_child` (M-2) orphan-kill.
+- Existing `test_*` functions and their `run_test` registrations stay green.
+
+**New behavior**
+1. **Repo-local PID file** under `.ai/local/delivery/<REF>.pid` (dir created with `mkdir -p`; gitignored via the existing `.ai/local` rule). File holds the wrapper PID + the opencode child PID + a start timestamp.
+2. **Single-flight + JOIN (INV-DM-2):**
+   - On startup, `probe_live_delivery REF`: read `<REF>.pid`; if present, validate the PID is still `deliver-ticket.sh` for this repo (guard against OS PID reuse: check `/proc/<pid>/cmdline` contains `deliver-ticket.sh` AND the cwd matches `ROOT_DIR`; on macOS/darwin without `/proc`, fall back to `ps -o command=` matching). Live ⇒ `join_delivery`: poll the PID until it exits, then classify the result from GitHub state and exit through the SAME code path as OWN (same exit code + same stdout summary). Never spawn a duplicate PM; never kill a healthy one.
+   - No live ⇒ OWN: write own PID file, run the existing lifecycle, clear the PID file in the EXIT trap.
+3. **Signal propagation (INV-DM-2):** extend `_cleanup_child` so the EXIT/INT/TERM traps forward SIGTERM → `KILL_GRACE_SECONDS` grace → SIGKILL to the opencode child (extend the existing M-2 trap; also clear the PID file). Confirm `kill_process_tree` reaches grandchildren.
+4. **Subcommands (lock names here — Phase 2/3 depend on them):**
+   - `deliver-ticket.sh --is-delivering [REF]` → exit `0` if a delivery is in progress for `REF` (or any ticket if no `REF`), else non-zero. No stdout. Pure read of the PID dir + live-probe.
+   - `deliver-ticket.sh --last-message REF` → print the PM's last message for `REF` from the most recent delivery (captured to `.ai/local/delivery/<REF>.last-message` during OWN), without running a new delivery.
+   - `deliver-ticket.sh REF --resume-prompt "<text>"` → run the lifecycle but resume the PM session with the given prompt instead of the default (pass through to `opencode run "<text>" --session <id>` / or the existing PM-prompt injection point).
+   - **Default** `deliver-ticket.sh REF` → run the lifecycle; on completion print a **delivery summary** to stdout: a single JSON or TSV line with `result` (merged/blocked/pr-open/failed) + `pr_url` (if any) + `last_message` (the PM's final message, captured during the run). Keep the existing stderr logging; the stdout summary is NEW and additive.
+5. **Session-traffic liveness (INV-DM-5):** replace the 30-min file-mtime stuck detector with a call to `pm-liveness.sh <session_id>` once a PM session id is known. Keep the worktree activity as a secondary "delivery is progressing" signal (so a CEO blocked on a healthy delivery isn't wrongly killed — but that's Phase 2's concern; here it's the PM watchdog). `DELIVER_STUCK_MINUTES` default 15.
+6. Adopt `.ai/rules/bash.md` §2 **command pattern** since deliver-ticket.sh now has subcommands: `main()` dispatches on the first arg (`--is-delivering` | `--last-message` | `<REF> [--resume-prompt ...]`).
+
+**Tasks**
+- [ ] Add `DELIVERY_DIR="${ROOT_DIR}/.ai/local/delivery"`; `mkdir -p` in a guarded helper.
+- [ ] `pid_file_for REF`, `write_pid_file`, `clear_pid_file`, `probe_live_delivery REF`, `join_delivery REF`, `is_delivering [REF]` (pure-ish, reads PID dir). **`join_delivery` re-validates owner PID identity (cmdline AND start-timestamp from the PID file) on EVERY poll** (F-4); on mismatch (owner exited + OS reused the PID) abandon join → OWN.
+- [ ] Wire PID-file write/clear into the existing start/EXIT-trap path.
+- [ ] Extend `_cleanup_child`/traps for SIGTERM→grace→SIGKILL + clear PID file.
+- [ ] **Retire the auto-merge path (F-2):** remove the legacy "auto-merge on `approved`-label / APPROVED" behavior from the PM prompt + classify path; the script returns `pr-open` (+ PR URL + PM last-message) and does NOT merge. Merge authority is the CEO (Mode A) or `batch-deliver.sh` (Mode B). Update/remove the existing auto-merge tests accordingly.
+- [ ] `last_message_for REF` (reads `<REF>.last-message`); capture the PM's final message during OWN (extend the opencode-output capture).
+- [ ] `resume_prompt` flag parsing + pass-through to the opencode resume call.
+- [ ] `print_delivery_summary result pr_url last_message` to stdout (additive; existing stderr logging unchanged).
+- [ ] Replace the stuck-detector internals with a `pm-liveness.sh` call; keep `DELIVER_STUCK_MINUTES` env name, default 15.
+- [ ] Refactor `main()` to the command pattern; keep backward-compatible positional form.
+- [ ] Update the script header comment + `--help` to document subcommands + the new default stdout summary + the 15-min default + the no-merge contract.
+- [ ] Extend `test-deliver-ticket.sh` with the AC-2 cases from the test plan (live⇒join, dead⇒own, concurrent⇒converge [RUN_SLOW_TESTS], signal-propagation, `--is-delivering`, `--last-message`, `--resume-prompt`, stdout summary, session-traffic handoff, `test_stuck_minutes_default_15`, **`test_join_aborts_when_pid_reused` (F-4)**, **`test_deliver_ticket_does_not_auto_merge_mode_a` (F-2)**). Keep all existing tests green (minus the retired auto-merge ones).
+
+**Definition of Done (Phase 1)**
+- `bash scripts/.tests/test-deliver-ticket.sh` green (existing + new).
+- `bash scripts/test-all.sh` green.
+- AC-2 fully satisfied; AC-5 deliver-side satisfied.
+
+---
+
+## Phase 2 — `scripts/ceo-loop.sh` rewrite (Mode A outer process)
+
+**Goal:** the canonical loop runner — spawn ≤1 `@ceo`, detect a genuinely stuck
+CEO and kill+restart it, resume the previous session when context is small,
+honor a durable stop. (AC-3; INV-DM-3, 5.)
+
+**Files**
+- `scripts/ceo-loop.sh` (REWRITE — replaces the 313-line experimental seed)
+- `scripts/.tests/test-ceo-loop.sh` (NEW)
+
+**Behavior**
+1. **At most one `@ceo` (across restarts too — F-3):** ceo-loop writes its `@ceo` child PID to `.ai/local/ceo/ceo.pid`. Before spawning, probe+validate it (cmdline contains `opencode … ceo`, cwd = ROOT_DIR — guard against OS PID reuse, same technique as deliver-ticket's join). If a live CEO child exists, JOIN/wait rather than spawn a second. This survives a loop crash+restart while a CEO is alive (prevents double-spawn + double-merge race).
+2. **Stuck detection (INV-DM-3/5):** a CEO is *stuck* (kill+restart) iff, for longer than `CEO_LOOP_STALL_MINUTES`:
+   - `pm-liveness.sh <ceo_session_id>` says the CEO session is stalled (no message traffic), **AND**
+   - `deliver-ticket.sh --is-delivering` is false **OR** the in-flight delivery's own watchdog has declared it stalled.
+   - A CEO blocked on a healthy, progressing delivery is **not** stuck ⇒ do not kill.
+3. **Session resume (INV-DM-3):** remember the last CEO session id (`.ai/local/ceo/last-session`). Before spawning, read its context total via `opencode db "SELECT (tokens_input+tokens_output+tokens_reasoning) AS total FROM session WHERE id='<id>'" --format json`; if `< CEO_RESUME_TOKEN_LIMIT` (default 100000) resume with `opencode run "<continue prompt>" --session <id>`, else spawn fresh `opencode run --agent ceo`. Degrade gracefully if the DB query fails (spawn fresh).
+4. **Durable stop (#97):** a stop file (`.ai/local/ceo/stop`) is **not** wiped at startup; `ceo-loop.sh --stop` writes it; a non-expired stop is honored. `ceo-loop.sh --reset` clears it and resumes.
+5. **Signal propagation:** traps forward SIGTERM/SIGINT → grace → SIGKILL to the CEO opencode child.
+6. **Max restarts:** `CEO_LOOP_MAX_RESTARTS` (default 10); exhaust → exit non-zero with a clear log.
+
+**Env**
+- `CEO_LOOP_POLL_SECONDS` (30), `CEO_LOOP_STALL_MINUTES` (15), `CEO_RESUME_TOKEN_LIMIT` (100000), `CEO_LOOP_MAX_RESTARTS` (10), plus override hooks `OPENCODE_DB_CMD`/`OPENCODE_RUN_CMD`/`OPENCODE_SESSION_LIST_CMD` for tests.
+
+**Tasks**
+- [ ] Rewrite per `.ai/rules/bash.md` (strict mode, traps, logging `(ceo-loop)`, command pattern: `--stop` | `--reset` | default run).
+- [ ] `spawn_or_resume_ceo()`, `is_ceo_alive()` (probes+validates `.ai/local/ceo/ceo.pid`, cmdline+cwd), `ceo_is_stuck()` (uses pm-liveness + `deliver-ticket.sh --is-delivering`), `remember_session_id()`, `context_total_for()`.
+- [ ] Write/probe/clear `.ai/local/ceo/ceo.pid` (F-3) on spawn and EXIT/INT/TERM traps.
+- [ ] Durable stop file handling; `--stop`, `--reset`.
+- [ ] Signal traps + child kill.
+- [ ] `test-ceo-loop.sh`: stuck⇒kill+restart, healthy-delivery⇒no-kill, healthy-session-traffic⇒no-kill, durable-stop-survives-restart, stop-not-wiped-at-startup, `--reset` clears, resume-under-threshold, fresh-over-threshold, at-most-one-ceo, signal-propagation, max-restarts-exhausts, resume-remembers-session-id, `validate_uint` rejects garbage, **`test_loop_restart_does_not_double_spawn_when_ceo_alive` (F-3)**. Mock `_opencode` (run/db/session-list) and shell out to a stubbed `deliver-ticket.sh --is-delivering` via PATH.
+- [ ] Static prompt assertions for `.opencode/agent/ceo.md` (AC-4) live here too (see Phase 3) — OR a separate static test; coordinate so they aren't duplicated.
+
+**Definition of Done (Phase 2)**
+- `bash scripts/.tests/test-ceo-loop.sh` green.
+- `bash scripts/test-all.sh` green.
+- AC-3 satisfied.
+
+---
+
+## Phase 3 — `@ceo` prompt rewrite + plugin regen + inventory + lifecycle note
+
+**Goal:** the canonical `@ceo` behavioral rules + downstream consistency.
+(AC-4; INV-DM-4.)
+
+**Files**
+- `.opencode/agent/ceo.md` (REWRITE — replaces the 294-line seed)
+- `.ados-claude/agents/ceo.md` (REGENERATE)
+- `.opencode/README.md` (register `ceo` if missing)
+- `doc/guides/change-lifecycle.md` (small note: merge-not-yield at the final-check)
+- static assertions in `scripts/.tests/test-ceo-loop.sh` (AC-4) — coordinate with Phase 2
+
+**`ceo.md` must contain (must/must-not phrasing)**
+- **Wait for delivery:** the CEO calls `deliver-ticket.sh REF` (foreground, blocking) and **waits**; it reads the returned delivery summary (result + PM last-message).
+- **Verify PM finalization before merge (INV-DM-4):** before merging, confirm the PM completed all 11 phases by inspecting `chg-<ref>-pm-notes.yaml` (AI-driven; record the check).
+- **Merge-not-yield / proceed-not-halt:** a finalized + approved PR with a dead PM ⇒ merge, don't defer.
+- **Never detach:** never `setsid … & disown` deliver-ticket.sh (INV-DM-1).
+- **Multi-ticket-per-session:** loop inside one session: pick → deliver (block) → read summary → pick → …
+- **Resolve blocker via `--resume-prompt`:** when the PM's last-message shows a blocker the CEO can resolve, resume with `deliver-ticket.sh REF --resume-prompt "<resolution>"`.
+- Keep the autonomous-authority model from the seed, but **defer opt-in gating / threat model / decision record to #118** (note this explicitly in the prompt's non-goals).
+
+**Tasks**
+- [ ] Rewrite `ceo.md` (delegate the prose tuning to `@toolsmith` if helpful; keep the `<role>/<mission>/<non_goals>/<authority_model>` structure that the seed uses, updated to the new behavioral rules). Decontextualize any remaining dogfooding-project specifics. **The CEO must NOT merge via `deliver-ticket.sh` — it runs `gh pr merge --squash` itself after verifying pm-notes (F-2). The CEO must write the durable stop to `.ai/local/ceo/stop` (NOT the seed's `tmp/ceo-loop/stopped.txt`) so it matches the loop's read path (F-5).**
+- [ ] **pr-manager description quality (F-6, comment #12):** add a must-rule to `.opencode/agent/pr-manager.md` (and mirror in `.ai/agent/pr-instructions.md` if relevant) — `@pr-manager` MUST produce PR descriptions usable **verbatim** as the squash-commit body (the Mode B rebase-before-merge flow sources the commit message from PR title + description). Add a static grep test.
+- [ ] Run `scripts/build-claude-plugin.sh` → regenerate `.ados-claude/agents/ceo.md`; commit source + generated together.
+- [ ] Add `ceo` to `.opencode/README.md` inventory (if not present).
+- [ ] Add a one-line merge-not-yield note to `change-lifecycle.md`'s final-check step.
+- [ ] Add/confirm static assertions (AC-4) in `test-ceo-loop.sh`: `test_ceo_prompt_wait_for_delivery`, `..._verify_pm_finalization`, `..._merge_not_yield`, `..._never_detach`, `..._multi_ticket_per_session`, `..._resume_prompt`, `..._must_must_not_phrasing` (grep the required phrases).
+
+**Definition of Done (Phase 3)**
+- Static prompt assertions green.
+- `bash scripts/.tests/test-build-claude-plugin.sh` green (plugin fresh).
+- `.opencode/README.md` lists `ceo`.
+- AC-4 satisfied.
+
+---
+
+## Phase 4 — `batch-deliver.sh` rebase-before-merge + green-gate wait + clean-merged-branches guard
+
+**Goal:** Mode B never auto-merges; for a human-approved PR it rebases, pushes,
+waits for green quality gates, then squash-merges using the PR title/description
+as the commit message. (AC-6; Mode B rules.)
+
+**Files**
+- `scripts/batch-deliver.sh` (EXTEND)
+- `scripts/.tests/test-batch-deliver.sh` (EXTEND)
+- `tools/clean-merged-branches` + `tools/.tests/test-clean-merged-branches.sh` (verify/extend the "never unmerged" guard)
+
+**Behavior**
+1. **Never approve:** batch-deliver never adds the `approved` label.
+2. **Approved PR flow** (when `approved` label present on the issue and a PR exists):
+   - `git fetch origin main`.
+   - If the PR head is **already on latest main** (no rebase effect) ⇒ skip the wait, go straight to squash-merge.
+   - Else `git rebase origin/main` on the PR branch; **push --force-with-lease**.
+     - **On conflict:** delegate conflict resolution to an AI agent (the plan specifies: invoke a small `opencode run`/`@fixer`-style step on the repo with a focused prompt to resolve the rebase conflicts, then `git rebase --continue`); then push. If unresolvable, exit to a clearly-marked `human-input-needed` state the batch can resume later.
+   - **Wait for green:** poll `gh pr checks <n>` until all checks are `success`/`neutral`-complete; if any is `failure`, route back to the deliver step (the PM addresses the failure).
+   - **Squash-merge** with the commit message = PR title + PR body (`gh pr merge --squash --subject "<PR title>" --body "<PR body>"`).
+3. **Pending review parks that ticket only:** a PR created and not yet approved ⇒ log "pending review", move to the next ticket (do not block the batch).
+4. **clean-merged-branches:** verify (and add a regression test) that it **never deletes unmerged branches** and never touches protected branches.
+
+**Public contract to PRESERVE**
+- Exit codes, `DRY_RUN`, summary log, pre-flight skip, idempotent re-run.
+
+**Tasks**
+- [ ] `approved_pr_flow REF BRANCH`: fetch, detect already-on-main, rebase, conflict→AI-resolve, push, wait-green (`wait_for_pr_green PR`), squash-merge with PR title+body.
+- [ ] `wait_for_pr_green PR` using `gh pr checks` (poll, timeout, route-red-to-deliver).
+- [ ] `get_pr_title_and_body PR` via `gh pr view --json title,body`.
+- [ ] Extend the per-ticket loop: pending-review ⇒ park + continue.
+- [ ] Verify/extend `tools/clean-merged-branches` "never unmerged" guard + test.
+- [ ] Extend `test-batch-deliver.sh`: approved+green⇒squash-merge, approved+conflict⇒AI-resolve⇒green⇒merge, not-approved⇒park-and-continue, already-on-main⇒direct-merge, green-gate-red⇒deliver, commit-msg-from-PR-title+body, pending-parks-only-this-ticket, batch-never-adds-approved, clean-merged-branches-invoked, batch-does-not-force-delete-unmerged. Mock `_git`/`_gh`.
+
+**Definition of Done (Phase 4)**
+- `bash scripts/.tests/test-batch-deliver.sh` + `bash tools/.tests/test-clean-merged-branches.sh` green.
+- `bash scripts/test-all.sh` green.
+- AC-6 satisfied.
+
+---
+
+## Phase 5 — `autonomous-batch-delivery.md` consistency pass (comment #15)
+
+**Goal:** the sibling guide does not contradict the revised delivery-modes guide.
+
+**Files**
+- `doc/guides/autonomous-batch-delivery.md` (EDIT)
+
+**Tasks**
+- [ ] Align the **liveness** description: session-traffic 15-min (`DELIVER_STUCK_MINUTES` default 15), not the old 30-min file-mtime wording. Update the "How activity is detected" section + the `DELIVER_STUCK_MINUTES` table row.
+- [ ] Add/align the **rebase-before-merge + green-gate wait** flow for approved PRs (cross-link delivery-modes.md Mode B). Note that **Mode B merge is now owned by `batch-deliver.sh`** (deliver-ticket.sh no longer auto-merges — F-2); update the "Approval workflow" + "What the PM does inside the session" sections to reflect that the PM stops at `pr-open` and the batch script merges after human `approved` + rebase + green.
+- [ ] State the **clean-merged-branches never-deletes-unmerged** guarantee.
+- [ ] Cross-link delivery-modes.md as the canonical modes guide; note the two are kept consistent.
+- [ ] Keep `ados_distribution: redistributable` (already set); ensure `bash scripts/.tests/test-doc-distribution.sh` stays green.
+
+**Definition of Done (Phase 5)**
+- Doc reads consistently with the revised guide; doc-distribution guard green.
+
+---
+
+## Phase 6 — Quality gates + headers + final test-all
+
+**Goal:** everything upstreamable and green. (AC-7.)
+
+**Tasks**
+- [ ] License headers: confirm `scripts/` is NOT in the auto-header set per `AGENTS.md` (it lists `.opencode/agent`, `.opencode/command`, `doc/guides`, `doc/documentation-handbook.md`, `tools/`). So **no** headers on `scripts/*.sh`. The rewritten `scripts/ceo-loop.sh` seed currently HAS a license header (F-12) — **keep it** (do not strip); do not add headers to the other scripts. Apply headers via `scripts/add-header-location.sh` ONLY to `tools/clean-merged-branches` if it's touched (it already has one). `doc/guides/*` already carry headers.
+- [ ] `bash scripts/test-all.sh` — green.
+- [ ] `bash scripts/.tests/test-doc-distribution.sh` — green (guide + batch guide are redistributable).
+- [ ] `bash scripts/.tests/test-build-claude-plugin.sh` — green (plugin fresh after ceo.md).
+- [ ] ShellCheck + shfmt clean on all changed `scripts/*.sh` (per bash.md §13).
+- [ ] Sweep: grep the changed scripts + ceo.md for any residual dogfooding-project names (marksync, GH-15, milestone MS-2, etc.) — must be zero/decontextualized.
+
+**Definition of Done (Phase 6 / change)**
+- All gates green; AC-7 satisfied; ready for reviewer + red-team R2 + DoD.
+
+---
+
+## Notes for the coder
+
+- **Extend, don't rewrite** deliver-ticket.sh (842 lines) and batch-deliver.sh (408 lines). Preserve exit codes, env vars, stdout classification, and the mockable wrappers so existing tests stay green.
+- **Lock the subcommand names** in Phase 1 before Phase 2/3 reference them: `--is-delivering`, `--last-message`, `--resume-prompt`.
+- **Reuse** the existing `kill_process_tree`, `_cleanup_child`, mockable wrappers, embedded test framework, and `scripts/test-all.sh` aggregator.
+- **Degrade gracefully** whenever an opencode DB query can fail (CI has no real opencode DB): warn + fall back, never block delivery.
+- **Commit per phase** (Conventional Commits, via `@committer`). Suggested messages: `feat(scripts): GH-142 add pm-liveness session-traffic probe`, `feat(scripts): GH-142 deliver-ticket single-flight+join+subcommands+session-traffic liveness`, `feat(scripts): GH-142 rewrite ceo-loop runner (stuck-detect+resume+durable-stop)`, `feat(ceo): GH-142 rewrite @ceo prompt + regen plugin (merge-not-yield, wait-for-delivery)`, `feat(scripts): GH-142 batch-deliver rebase-before-merge + green-gate wait`, `docs(guides): GH-142 align autonomous-batch-delivery with delivery-modes`.
+- **Do NOT stage** `AGENTS.md` (unrelated tweak) or anything under `.ai/local/`.
+- **No autonomous merge** — this is a closely-guided core-process change; stop at PR review.
+- **F-9 — expect the plugin-freshness gate RED until Phase 3.** The branch currently has `.opencode/agent/ceo.md` (seed) but **no** `.ados-claude/agents/ceo.md`, and `ceo` is absent from `.opencode/README.md`. So `test-build-claude-plugin.sh` / `test_committed_plugin_matches_fresh_build` will be red until Phase 3 lands — that is expected, not a regression you introduced.
+- **F-11 — resume-limit CLI flag (nit).** Comment #2 asked the resume limit be "configurable via cli param." The plan exposes it via env (`CEO_RESUME_TOKEN_LIMIT`) for consistency with the rest of the config. Optionally also add `--resume-token-limit <N>` to `ceo-loop.sh`; if you do, document both. Env-only is acceptable.
