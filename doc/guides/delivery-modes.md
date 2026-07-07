@@ -1,244 +1,325 @@
 ---
-# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://www.x.com/cwiakalski)
+# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in-juliusz-cwiakalski/ | https://www.x.com/cwiakalski)
 # MIT License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/guides/delivery-modes.md
 ados_distribution: redistributable
 id: GUIDE-DELIVERY-MODES
-status: Draft
+status: Active
 created: 2026-07-07
 owners: ["engineering"]
-summary: "The two unattended delivery modes (autonomous CEO loop vs manual batch), component responsibilities, the AI-vs-script split, and the behavioral invariants that prevent the CEO-token-burn failure mode. Implements the reliability baseline for #118 (CEO upstream); absorbs #97/#99/#96."
+summary: "How to run ADOS autonomous ticket delivery in the two unattended modes — the autonomous CEO loop (Mode A) and the manual batch (Mode B) — the component responsibilities, the AI-vs-script split, and the behavioral invariants that keep unattended delivery converging instead of burning tokens."
+references:
+  - "ADOS epic #95 — Autonomous-loop reliability"
+  - "ADOS epic #117 — Loop tooling productization & safe CEO upstream"
+  - "Absorbs #97 (loop concurrency), #99 (CEO merge-not-yield), #96 (log-progress liveness)"
+  - "Downstream consumer: #118 (upstream the @ceo agent + opt-in gating + threat model)"
+  - "Delivery vehicle: #142"
 ---
 
 # Delivery Modes
 
-> **Status: DRAFT for review.** This document is the design spec for the
-> autonomous-loop reliability baseline. It is reviewed and approved **before**
-> any code. Once approved, the implementation lands as tracked work
-> (ticket #142) and this note becomes canonical, cross-linked from
-> [autonomous-batch-delivery.md](autonomous-batch-delivery.md) and
-> [change-lifecycle.md](change-lifecycle.md).
-
-## Why this document exists
-
-Sustained autonomous dogfooding — a project running the **experimental,
-not-yet-upstreamed CEO loop** (#118) — spawned **~20 CEO agent sessions to
-deliver a single ticket**. Each session re-read a large block of CEO working
-memory, re-derived *"a delivery is already in flight, do nothing,"* wrote a
-large reconciliation note, and exited. Meanwhile a **detached**
-`deliver-ticket.sh` did all the real work in the background. The CEO burned
-tokens polling a healthy long-running script. Multiple retrospectives in the
-dogfooding project flagged the same hazard across several tickets without a
-fix landing.
-
-**Root cause: the architecture was inverted.** A short-lived, expensive AI
-reasoning step (the CEO opencode session) was put in charge of *babysitting*
-a long-running, cheap, deterministic script (`deliver-ticket.sh`) that had
-been launched **detached** (`setsid … & disown`). Every CEO exit triggered a
-loop respawn; every respawn re-discovered the detached delivery and deferred.
-
-This document fixes that by: (a) defining two clear delivery modes with
-non-overlapping responsibilities, (b) stating the behavioral invariants that
-make the loop converge instead of churn, and (c) aligning the fix with the
-**upstream ADOS reliability plan that already designs for exactly this class
-of bug** (epic #95 — #97, #99, #96).
-
-## Origin of the tooling (so we design with the grain)
-
-| Component | Origin | Status |
-|---|---|---|
-| `scripts/opencode-session.sh` | ADOS — #120, delivered in #124 | Redistributable |
-| `scripts/deliver-ticket.sh` | ADOS — #124 (liveness loop generalized from the experimental CEO loop) | Redistributable |
-| `scripts/batch-deliver.sh` | ADOS — #124 | Redistributable |
-| `tools/clean-merged-branches` | ADOS — #121 | Redistributable |
-| The generic autonomous-loop runner (#119) + `@ceo` agent (#118) | **Experimental, project-local** in dogfooding projects; **not yet in ADOS** | #118 + #119 open — this guide + #142 are the reliability baseline they need |
-
-**Implication:** `deliver-ticket.sh` and friends are stable upstream tools;
-their contract should not be bent in project-specific ways. The **loop runner
-and the CEO are ours to land** (#118/#119), and the reliability fix should be
-structured so it is the foundation they run on. The open issues #97/#99/#96
-already design the fixes; this guide unifies them into one behavioral
-contract.
-
-## The two delivery modes
+ADOS can deliver tickets unattended in two modes. Both wrap the same per-ticket
+engine (`deliver-ticket.sh`) and the same 11-phase ADOS lifecycle
+([change-lifecycle.md](change-lifecycle.md)). They differ in **who picks the
+next ticket** and **who authorizes the merge**.
 
 | | Mode A — Autonomous CEO loop | Mode B — Manual batch |
 |---|---|---|
-| **Trigger** | The loop runner (long-running outer process) | Human: `scripts/batch-deliver.sh GH-A GH-B …` |
-| **Who picks tickets** | CEO agent (respects deps, priority, blockers) | Human (an explicit list) |
+| **Trigger** | `scripts/ceo-loop.sh` (long-running outer process) | Human: `scripts/batch-deliver.sh GH-A GH-B …` |
+| **Who picks tickets** | The `@ceo` agent (respects deps, priority, blockers) | The human (an explicit list) |
 | **Tickets per run** | One at a time, many per CEO session | The provided list, sequentially |
-| **Merge authority** | **Autonomous** — CEO merges on `approved` label / APPROVED review (user-delegated) | **Human gate** — PRs stop for review; human approves or comments |
-| **Concurrency** | Exactly one ticket in flight at any time | Exactly one ticket in flight at a time (sequential) |
+| **Merge authority** | **The `@ceo` agent** — it approves and squash-merges on its own judgement (autonomous mode; the user has delegated this to the CEO) | **The human** — the human approves (via the `approved` label); the batch script then rebases, waits for green quality gates, and squash-merges |
+| **Concurrency** | Exactly one ticket in flight **per repo working tree** | Exactly one ticket in flight at a time (sequential) |
 | **Best for** | Unattended delivery (overnight, weekend) | Curated batch with human review; addressing review feedback |
-| **Backstop if a delivery outlives a session** | Loop **parks** until the in-flight delivery finishes (#97) | Human re-runs the same command (idempotent skip) |
+| **Backstop if a delivery outlives a session** | `ceo-loop.sh` detects the stuck CEO and kill+restarts it; the in-flight delivery (if healthy) is joined, not raced | Human re-runs the same command (idempotent skip) |
 
-Both modes share the same per-ticket engine (`deliver-ticket.sh`) and the same
-11-phase ADOS lifecycle ([change-lifecycle.md](change-lifecycle.md)). They
-differ only in *who decides* and *who merges*.
+> **Batch autonomy is intentionally bounded.** In Mode B, `batch-deliver.sh`
+> never merges on its own — it only acts on a PR the human has explicitly
+> approved. If you want unattended merges, you are in Mode A, not Mode B.
 
-> **Batch autonomy is intentional and bounded.** In Mode B, `batch-deliver.sh`
-> does **not** auto-merge (it does not pre-apply the `approved` label). The
-> human merges by approving. If you want unattended merges, you are in Mode A,
-> not Mode B. See [§ Open question OQ-DM-2](#open-questions).
+## Background
+
+This guide exists because sustained autonomous dogfooding of an earlier
+experimental loop spawned **~20 CEO agent sessions to deliver a single ticket**
+— pure token burn. The architecture was *inverted*: a short-lived, expensive AI
+reasoning step (the CEO opencode session) was put in charge of *babysitting* a
+long-running, cheap, deterministic script (`deliver-ticket.sh`) that had been
+launched **detached** (`setsid … & disown`). Every CEO exit triggered a loop
+respawn; every respawn re-discovered the detached delivery, wrote a large
+reconciliation note, and exited.
+
+The fix is structural: the expensive AI never babysits the cheap script. The
+behavioral invariants below state the contract that makes the loop **converge**
+instead of churn, and align with the upstream ADOS reliability plan (epic #95 —
+#97, #99, #96).
 
 ## Component responsibilities
 
 ```
                 ┌─────────────────────────────────────────────────────────┐
-                │  MODE A                          MODE B                  │
+                │  MODE A                                  MODE B          │
                 │                                                           │
-   human ─────► loop runner            human ─────► batch-deliver.sh       │
-                │   │ (bash, outer)                 │ (bash, sequential)   │
-                │   │                               │                      │
-                │   ▼ per decision point           ▼ per ticket           │
-                │ @ceo (opencode, AI)              deliver-ticket.sh      │
-                │   │  pick ticket / merge PR         │ (bash, foreground)  │
-                │   │  handle blocker / learn         ▼                     │
-                │   ▼ per ticket                    PM opencode (AI, 11ph) │
-                │ deliver-ticket.sh                                        │
-                │   │ (bash, FOREGROUND, blocking)                          │
+   human ─────► ceo-loop.sh                human ─────► batch-deliver.sh   │
+                │   │ (bash, outer;                         │ (bash,        │
+                │   │  stuck-session watchdog)              │  sequential)  │
+                │   ▼ per CEO session                       ▼ per ticket   │
+                │ @ceo (opencode, AI)                      deliver-ticket.sh
+                │   │  pick ticket / merge approved PR        │ (foreground) │
+                │   │  handle blocker / learn                ▼              │
+                │   ▼ per ticket                           PM opencode      │
+                │ deliver-ticket.sh                        (AI, 11 phases)  │
+                │   │ (bash, FOREGROUND, blocking)                           │
                 │   ▼                                                      │
-                │ PM opencode (AI, 11-phase lifecycle)                     │
-                │   │  → spec → plan → coder → review → … → PR             │
+                │ PM opencode (AI, 11-phase lifecycle)                      │
+                │   │  → spec → plan → coder → review → … → PR              │
                 │   ▼                                                      │
-                │ squash-merge (gh pr merge --squash)                      │
+                │ squash-merge (gh pr merge --squash)                       │
                 └─────────────────────────────────────────────────────────┘
 ```
 
 | Component | Kind | Owns | Must NOT do |
 |---|---|---|---|
-| Loop runner (`ados-loop.sh` / `ceo-loop.sh`) | Script (outer) | Restart cadence; **park while delivery in flight**; stop signal | Spawn an agent while a delivery is alive; wipe the stop signal at startup |
-| `@ceo` | AI agent (decision points) | Pick next ticket; merge ready PRs; handle blockers; retrospectives; restart a stalled delivery | Babysit a healthy delivery; detach `deliver-ticket.sh`; yield forever on a ready PR; halt merely because a peer exists |
-| `batch-deliver.sh` | Script | Sequential per-ticket delivery; pre-flight skip; rebase-before-merge in batch mode; summary | Pick tickets; merge (Mode B) |
-| `deliver-ticket.sh` | Script (per-ticket) | Single-ticket lifecycle: spawn/resume PM, liveness watchdog, kill-and-restart on stall, state classification, squash-merge on approval signal | Run detached; spawn a duplicate PM for the same ticket; auto-merge in Mode B |
-| PM opencode | AI agent (per-ticket) | The ADOS 11-phase lifecycle; delegate to subagents; address review comments | Pick the next ticket; merge without an approval signal |
-| `tools/clean-merged-branches` | Script | Branch hygiene after merges | — |
+| `ceo-loop.sh` | Script (outer) | Spawn one `@ceo` session at a time; **detect a stuck CEO** (no session traffic, no healthy delivery in progress) and kill+restart it; resume the previous CEO session when its context is under the resume threshold; honor a durable stop signal | Spawn a second `@ceo` while one is alive; kill a CEO that is blocked on a healthy in-flight delivery; wipe the stop signal at startup |
+| `@ceo` | AI agent (decision points) | Pick next ticket; **wait for `deliver-ticket.sh` to return** and consume its last-message + result; verify the PM finalized all phases before merging; merge ready (approved) PRs; handle blockers (optionally resume the PM with a `--resume-prompt`); retrospectives | Babysit a healthy delivery; detach `deliver-ticket.sh`; merge a PR the PM has not finalized; yield forever on a ready PR; halt merely because a peer exists |
+| `batch-deliver.sh` | Script | Sequential per-ticket delivery; pre-flight skip; **rebase-before-merge with green-gate wait** for human-approved PRs; squash-merge using the PR title/description as the commit message; summary | Pick tickets; approve a PR (Mode B); merge a PR the human has not approved |
+| `deliver-ticket.sh` | Script (per-ticket) | Single-ticket lifecycle: **single-flight + join** per repo, spawn/resume PM, in-progress tracking (repo-local PID file), **log-progress liveness watchdog**, kill-and-restart on stall, **signal propagation to the PM child**, state classification, squash-merge on approval signal; expose subcommands (`--is-delivering`, last-message return) | Run detached; spawn a duplicate PM for the same ticket/repo; auto-merge in Mode B; leave an orphaned opencode child when killed |
+| PM opencode | AI agent (per-ticket) | The ADOS 11-phase lifecycle; delegate to subagents; address review comments; return a delivery summary (last message) to `deliver-ticket.sh` | Pick the next ticket; merge without an approval signal |
+| `tools/clean-merged-branches` | Script | Branch hygiene: delete branches already squash-merged into the base | **Remove unmerged branches**; touch protected branches (`main`, `master`, `develop`) |
 
 ## The AI-vs-script split
 
 The guiding principle: **the expensive, stateless, judgment-heavy work is AI;
 the cheap, long-running, deterministic work is script.** The loop must never
-put the expensive thing in charge of babysitting the cheap thing.
+put the expensive thing in charge of babysitting the cheap thing. Equally,
+anything that *can* be scripted should be — don't make the AI rediscover
+scriptable facts by burning tokens.
 
 | Step | AI? | Owner |
 |---|---|---|
 | Pick next ticket (deps, priority, blockers) | **Yes** | `@ceo` — once per decision point |
+| "Is a delivery in progress in this repo?" | No | `deliver-ticket.sh --is-delivering` (consumed by `ceo-loop.sh` and `@ceo`) |
 | Detect closed / blocked / merged → skip | No | `deliver-ticket.sh` / `batch-deliver.sh` |
 | Spawn & monitor PM opencode (liveness, restart) | No | `deliver-ticket.sh` |
 | Run the ADOS 11-phase lifecycle | **Yes** | PM opencode + subagents |
 | Review PR vs spec/plan | **Yes** | `@reviewer` (inside the PM lifecycle) |
-| Approve / merge PR (autonomous, Mode A) | **Yes** (authority) | `@ceo` decision → `deliver-ticket.sh` executes `gh pr merge` |
-| Rebase before merge (Mode B batch) | No | `deliver-ticket.sh` |
+| Approve + merge PR (Mode A) | **Yes** (authority + judgement) | `@ceo` decides → `deliver-ticket.sh` executes `gh pr merge --squash` |
+| Rebase before merge (Mode B batch) | No (happy path); **Yes** only on conflict | `deliver-ticket.sh` / `batch-deliver.sh`; AI resolves rebase conflicts, then gates re-run |
+| Wait for PR quality gates to go green after rebase | No | `deliver-ticket.sh` / `batch-deliver.sh` |
 | Branch hygiene (fetch / prune / delete merged) | No | `tools/clean-merged-branches` |
-| Handle a technical blocker | **Yes** | `@ceo` judgment |
+| Handle a technical blocker | **Yes** | `@ceo` judgement (may resume the PM with a `--resume-prompt`) |
 | Retrospective / process learning | **Yes** | `@ceo` |
 
-## Behavioral invariants (the rules that prevent the bug)
+## Behavioral invariants
 
-These are the non-negotiable rules. The tooling changes in
-[§ What needs to change](#what-needs-to-change) exist to enforce them.
+These are the non-negotiable rules. The tooling exists to enforce them.
 
 ### INV-DM-1: `deliver-ticket.sh` runs FOREGROUND, never detached
 
 A caller invoking `deliver-ticket.sh` **blocks until the ticket is merged,
-blocked, PR-open, or failed.** The CEO must never `setsid … & disown` it.
-This single rule removes the "CEO exits, delivery orphans, loop respawns"
-failure mode at its source.
+blocked, PR-open, or failed.** The CEO must never `setsid … & disown` it. This
+single rule removes the "CEO exits, delivery orphans, loop respawns" failure
+mode at its source.
 
-- The opencode bash-tool timeout does not violate this: if a CEO's blocking
-  call is cut short, the PM child keeps running and the *next* CEO call
-  **joins** it (INV-DM-2). The system converges; no work is lost.
+The opencode bash-tool timeout does not violate this: if a CEO's blocking call
+is cut short, the PM child keeps running and the *next* `deliver-ticket.sh REF`
+call **joins** it (INV-DM-2). The system converges; no work is lost.
 
-### INV-DM-2: `deliver-ticket.sh` is single-flight + join per ticket
+### INV-DM-2: `deliver-ticket.sh` is single-flight + join, per repo
 
-On startup, `deliver-ticket.sh` probes for a **live PM opencode session** for
-the ticket (via the session mapping → `session_id` → process alive).
+`deliver-ticket.sh` is **safe to call concurrently or repeatedly** — it
+converges to "exactly one PM session per ticket in this repo."
 
-- **Live PM ⇒ JOIN:** wait for it (poll), then classify the result from
-  GitHub state and exit with the same code path as if it had run. Never spawn
-  a duplicate PM; never kill a healthy one.
-- **No live PM ⇒ OWN:** start/resume the PM session (current behavior),
-  monitor liveness, kill-and-restart on stall.
+- It tracks its own PID (and the PM child's PID) in a **repo-local, git-ignored
+  file** under `.ai/local/delivery/<REF>.pid`.
+- On startup, it probes that file. **Live `deliver-ticket.sh` for the same
+  ticket ⇒ JOIN:** wait for it (poll the PID), then classify the result from
+  GitHub state and exit through the same code path as if it had run. Never
+  spawn a duplicate PM; never kill a healthy one.
+- **No live instance ⇒ OWN:** start/resume the PM session, monitor liveness,
+  kill-and-restart on stall.
+- **Signal propagation:** `deliver-ticket.sh` traps `SIGTERM`/`SIGINT` and
+  forwards the signal to its PM opencode child (grace period, then `SIGKILL`),
+  so killing the wrapper never leaves an orphaned opencode instance. The same
+  propagation rule applies to `ceo-loop.sh` and every other delivery script.
 
-This makes `deliver-ticket.sh` **safe to call concurrently or repeatedly** —
-it converges to "exactly one PM session per ticket." It is the caller's
-contract: *"if a background opencode session is active for this ticket it
-waits for the pid; otherwise it starts/restarts immediately."*
+### INV-DM-3: `ceo-loop.sh` detects a *stuck* CEO, not a healthy wait
 
-### INV-DM-3: The loop runner parks while a delivery is in flight
+The loop runner's **primary job is to detect a CEO session that is genuinely
+stuck** — and recover it via kill+restart. It is *not* primarily about "parking
+while a delivery is in progress"; that is handled by the CEO blocking on
+`deliver-ticket.sh` (INV-DM-1/2).
 
-Before spawning an agent, the loop runner checks for a live
-`deliver-ticket.sh` / PM opencode for **any** ticket. If one is alive, the
-loop **parks** (logs "delivery in progress, waiting," re-checks on the poll
-cadence) and does **not** spawn an agent. This is the #97 live-pair pre-spawn
-guard. It is belt-and-suspenders behind INV-DM-1: even if an agent crashed
-mid-delivery, the loop waits for the orphaned `deliver-ticket.sh` instead of
-spawning a parallel agent that would race.
+A CEO session is **stuck** (kill+restart) when, for longer than the stall
+threshold, **all** of these hold:
 
-The stop/park signal is **durable across loop restarts** (#97): the loop does
-not wipe `tmp/<loop>/stopped.txt` at startup, and a non-expired `park_until`
-is honored until the park condition clears.
+- no new **opencode session message traffic** (the stream of assistant/tool
+  messages has gone idle), **and**
+- **no healthy delivery in progress** in this repo
+  (`deliver-ticket.sh --is-delivering` is false, or the in-flight delivery's
+  own watchdog has declared it stalled).
 
-### INV-DM-4: CEO merges, does not yield (Mode A)
+A CEO that is **blocked on a healthy, progressing delivery** is *not* stuck and
+must not be killed — the delivery will return and the CEO will continue.
 
-When a PR is **open + approval-authorized** for the active work item and the
-PM process is **not alive**, the CEO **must** run the final-check gate and
-squash-merge — regardless of any dormant peer process. "Yield" applies
-**only** when a PM is demonstrably alive and mid-delivery (process exists,
-no open PR). A sleeping process is not "actively delivering." This is the
-#99 "merge-not-yield" + "proceed-not-halt" backstop.
+The stop/park signal is **durable across loop restarts** (#97): `ceo-loop.sh`
+does not wipe its stop file at startup, and a non-expired park condition is
+honored until it clears.
 
-### INV-DM-5: Liveness means progress, not process-alive
+### INV-DM-4: CEO merges approved, finalized PRs — does not yield (Mode A)
 
-"Liveness" is measured by **agent progress** — git commits, worktree file
-writes, `doc/changes/` artifact writes, and (#96) opencode log-step cadence.
-A hung LLM stream keeps the process alive (STAT `Sl`, blocked on I/O) while
-making zero progress; the ps-only heuristic must not call that "healthy." A
-PM with **no log step for >`CEO_LOOP_STALL_MINUTES`** (default 15) is
-**stalled**, not slow, and is killed-and-resumed.
+In Mode A the `@ceo` agent is the merge authority. Before merging it must:
 
-### INV-DM-6: One ticket in flight at a time
+1. confirm the PR is **approved** (the CEO's own authorization, recorded as
+   such), **and**
+2. confirm the **PM has finalized** the change — all 11 phases complete, per
+   `chg-<ref>-pm-notes.yaml`. (This check is AI-driven today, because pm-notes
+   are authored by the PM and not yet schema-strict enough to script reliably.)
 
-Both modes deliver **exactly one ticket at a time.** No parallel PM sessions
-on the same working tree. This preserves the ADOS discipline
-([change-lifecycle.md](change-lifecycle.md)) and makes branch hygiene safe.
+When both hold, the CEO runs the final-check gate and squash-merges. "Yield"
+applies **only** when a PM is demonstrably alive and mid-delivery (process
+exists, no finalized PR). A sleeping process is not "actively delivering."
+This is the #99 "merge-not-yield" + "proceed-not-halt" backstop.
 
-## Mode A — Autonomous CEO loop (corrected flow)
+### INV-DM-5: Liveness means session-message progress, not process-alive
+
+"Liveness" is measured by **opencode session message traffic** — new
+assistant/tool messages flowing in the session. A hung LLM stream keeps the
+process alive (blocked on I/O) while making zero progress; the ps-only
+heuristic must not call that "healthy."
+
+A session with **no new message traffic for > `CEO_LOOP_STALL_MINUTES`**
+(default **15**) is **stalled**, not slow, and is killed-and-resumed.
+
+Observed stuck root cases this guards against:
+
+- opencode hangs **indefinitely on an LLM provider response** (an opencode
+  internal bug) — the process is alive but the stream is silent.
+- the agent **tries to access a folder it should not** (e.g. the user's home
+  directory), which triggers a permission-acceptance prompt that **never gets
+  answered** in autonomous mode — the session waits forever.
+
+The earlier 30-minute, file-mtime-based detector is retired in favor of this
+session-traffic signal, which is both more precise and allows the tighter
+threshold. (Worktree activity — commits, `doc/changes/` writes — remains a
+secondary signal that a blocked-on-delivery CEO is healthy.)
+
+### INV-DM-6: One ticket in flight per repo working tree
+
+Each repo working tree runs **exactly one ticket delivery at a time.** This
+preserves ADOS discipline ([change-lifecycle.md](change-lifecycle.md)) and
+makes branch hygiene safe.
+
+This invariant is **repo-local**: running parallel deliveries in **different
+repos**, or in **independent clones** of the same repo, is explicitly allowed
+and must not interfere. The PID/in-progress tracking is keyed on the working
+tree (under `.ai/local/delivery/`), so two clones never see each other's
+deliveries.
+
+## How the pieces fit
+
+### Script subcommands (script what can be scripted)
+
+To keep the AI from burning tokens rediscovering scriptable facts,
+`deliver-ticket.sh` exposes encapsulated subcommands/flags:
+
+| Invocation | Returns | Used by |
+|---|---|---|
+| `deliver-ticket.sh REF` | Runs the full per-ticket lifecycle (foreground, blocking). On completion, prints a **delivery summary** on stdout: the result classification (`merged` / `blocked` / `pr-open` / `failed`) **plus the PM agent's last message** (so the caller sees open questions, blockers, and the PR link directly). | `@ceo` (Mode A), `batch-deliver.sh` (Mode B) |
+| `deliver-ticket.sh REF --resume-prompt "<text>"` | Same as above, but resumes the PM session with the given prompt **instead of the default** — lets the CEO resolve a PM-raised blocker by injecting a custom instruction. | `@ceo` (Mode A) |
+| `deliver-ticket.sh --is-delivering [REF]` | Exit `0` if a delivery is in progress in this repo (for `REF`, or any ticket if no `REF` given); non-zero otherwise. Prints nothing on stdout. | `ceo-loop.sh` (stuck-vs-healthy decision), `@ceo` |
+| `deliver-ticket.sh --last-message REF` | Prints the last PM message for `REF` from the most recent delivery (without running a new one). | `@ceo` |
+
+The in-progress tracking that backs `--is-delivering` lives entirely inside
+`deliver-ticket.sh` (the repo-local PID file from INV-DM-2). Callers never
+inspect the PID file directly.
+
+### Session resume optimization (`ceo-loop.sh`)
+
+Starting every CEO iteration from a blank slate wastes tokens re-deriving
+"where is this project, what's in flight." `ceo-loop.sh` **remembers the last
+CEO session id** and, before spawning a new one:
+
+1. reads the previous session's context size, and
+2. **resumes** it (`opencode run "<continue prompt>" --session <id>`) if the
+   context is **under** `CEO_RESUME_TOKEN_LIMIT` (default **100000** tokens),
+   otherwise starts a **fresh** session.
+
+This is feasible today via documented, stable opencode CLI:
+
+- list sessions + ids: `opencode session list --format json`
+- read a session's token totals: `opencode db "SELECT (tokens_input + tokens_output + tokens_reasoning) AS total FROM session WHERE id = '<id>'" --format json`
+- resume non-interactively: `opencode run "continue your interrupted work" --session <id>`
+
+The threshold is configurable via the `CEO_RESUME_TOKEN_LIMIT` env var (see
+[Configuration](#configuration)).
+
+## Mode A — Autonomous CEO loop
 
 ```mermaid
 flowchart TD
-    START([loop runner starts]) --> PARK{Live delivery<br/>in flight?}
-    PARK -->|Yes — INV-DM-3| WAIT["PARK: log + re-poll<br/>(no agent spawned)"]
-    WAIT --> PARK
-    PARK -->|No| SPAWN["Spawn ONE @ceo session<br/>(decision point)"]
-    SPAWN --> DECIDE{"@ceo decides"}
-    DECIDE -->|Pick next ticket| DELIVER["deliver-ticket.sh REF<br/>FOREGROUND, blocking (INV-DM-1)"]
-    DELIVER --> JOIN{"Live PM for REF?<br/>(INV-DM-2)"}
-    JOIN -->|Yes| WAITPM["JOIN: wait for PM"]
-    JOIN -->|No| OWNPM["OWN: start/resume PM<br/>liveness watchdog (INV-DM-5)"]
-    WAITPM --> CLASS["Classify: merged/blocked/pr-open/failed"]
-    OWNPM --> CLASS
-    CLASS --> LOOP["@ceo loops to next decision<br/>(many tickets per session)"]
+    START([ceo-loop.sh starts]) --> STUCKCHECK{"CEO session alive?"}
+    STUCKCHECK -->|Yes — monitor| LIVE{"Stuck?<br/>(no session traffic AND<br/>no healthy delivery)"}
+    LIVE -->|No — healthy| STUCKCHECK
+    LIVE -->|Yes — INV-DM-5| KILL["Kill CEO tree<br/>(propagate signals)"]
+    KILL --> RESUMEDECIDE
+    STUCKCHECK -->|No| RESUMEDECIDE{"Prev session under<br/>CEO_RESUME_TOKEN_LIMIT?"}
+    RESUMEDECIDE -->|Yes| RESUME["Resume prev session<br/>opencode run --session id"]
+    RESUMEDECIDE -->|No / none| FRESH["Spawn fresh @ceo session"]
+    RESUME --> CEO["@ceo iteration"]
+    FRESH --> CEO
+    CEO --> DECIDE{"@ceo decides"}
+    DECIDE -->|Pick next ticket| DELIVER["deliver-ticket.sh REF<br/>FOREGROUND, blocking (INV-DM-1)<br/>+ returns PM last-message"]
+    DELIVER --> JOIN{"Live delivery for REF?<br/>(INV-DM-2)"}
+    JOIN -->|Yes| WAITPM["JOIN: wait for it"]
+    JOIN -->|No| OWNPM["OWN: start/resume PM<br/>log-progress watchdog (INV-DM-5)"]
+    WAITPM --> SUMMARY["Read delivery summary<br/>(result + PM last-message)"]
+    OWNPM --> SUMMARY
+    SUMMARY --> LOOP["@ceo loops to next decision<br/>(many tickets per session)"]
     LOOP --> DECIDE
-    DECIDE -->|Open + approved PR, PM dead| MERGE["Merge-not-yield (INV-DM-4)<br/>gh pr merge --squash"]
+    DECIDE -->|PM raised a blocker| RESUMPT["deliver-ticket.sh REF<br/>--resume-prompt \"<resolution>\""]
+    RESUMPT --> SUMMARY
+    DECIDE -->|Approved + PM-finalized PR| MERGE["Merge-not-yield (INV-DM-4)<br/>verify pm-notes finalised<br/>gh pr merge --squash"]
     MERGE --> LOOP
-    DECIDE -->|Backlog exhausted / all blocked / technical blocker| EXIT(["@ceo exits<br/>loop parks or stops"])
-    EXIT --> PARK
+    DECIDE -->|Backlog exhausted / all blocked / technical blocker| EXIT(["@ceo exits<br/>ceo-loop.sh parks or stops"])
+    EXIT --> STUCKCHECK
 
-    style WAIT fill:#FF9800,color:#fff
+    style KILL fill:#f44336,color:#fff
     style MERGE fill:#4CAF50,color:#fff
     style DELIVER fill:#2196F3,color:#fff
+    style RESUME fill:#2196F3,color:#fff
 ```
 
 **Key properties of the corrected loop:**
 
-1. **No agent is spawned while a delivery runs** (INV-DM-3). The token burn is
-   gone: the loop waits in bash, not in AI.
+1. **No second CEO is spawned while one is alive.** The loop monitors the live
+   session and only kills it when it is genuinely stuck (INV-DM-3/5).
 2. **One CEO session delivers many tickets.** The CEO loops *inside* its
-   session: pick → deliver (block) → classify → pick → deliver → …
-3. **`deliver-ticket.sh` is always foreground** (INV-DM-1) and **join-safe**
+   session: pick → deliver (block) → read summary → pick → deliver → …
+3. **The CEO waits for delivery** and reads the PM's last message, so it sees
+   blockers, open questions, and PR links directly — and can resume the PM with
+   a `--resume-prompt` to resolve a blocker.
+4. **`deliver-ticket.sh` is always foreground** (INV-DM-1) and **join-safe**
    (INV-DM-2), so a crashed agent's orphaned delivery is adopted, not raced.
-4. **A ready PR gets merged, not deferred** (INV-DM-4).
+5. **A finalized, approved PR gets merged, not deferred** (INV-DM-4).
+6. **Sessions are resumed** when their context is small enough, saving tokens.
+
+### Running Mode A
+
+```bash
+# Start the autonomous CEO loop (foreground; run in tmux/nohup for unattended use)
+scripts/ceo-loop.sh
+
+# Stop it durably (the stop signal survives a restart until cleared)
+scripts/ceo-loop.sh --stop
+
+# Clear a stale stop signal and resume
+scripts/ceo-loop.sh --reset
+```
+
+`ceo-loop.sh` is the outer process. It is **not** the merge authority itself —
+it spawns the `@ceo` agent, which decides and merges. The loop's own job is
+session lifecycle (spawn / resume / detect-stuck / kill+restart) and honoring
+the stop signal.
 
 ## Mode B — Manual batch (human review gate)
 
@@ -247,41 +328,67 @@ flowchart TD
     HUMAN([Human runs<br/>batch-deliver.sh GH-A GH-B GH-C]) --> LOOP{More tickets?}
     LOOP -->|Yes| PREFLIGHT{"Pre-flight<br/>(closed/blocked/merged?)"}
     PREFLIGHT -->|Skip| NEXTT[Next ticket]
-    PREFLIGHT -->|Ready| DELIVER["deliver-ticket.sh REF<br/>foreground, blocking"]
-    DELIVER --> PR{"PR created?"}
-    PR -->|Yes| STOP["STOP — await human review"]
-    STOP --> HUMANRV{"Human reviews"}
-    HUMANRV -->|Approve| APPROVE["gh issue edit REF --add-label approved"]
-    HUMANRV -->|Comment| RERUN["Re-run batch-deliver.sh<br/>(idempotent)"]
-    APPROVE --> RERUN
-    RERUN --> MERGECHECK{"Approved PR?<br/>rebase-first (batch mode)"}
-    MERGECHECK -->|Rebase + merge| CLEAN[clean-merged-branches]
-    MERGECHECK -->|Address feedback| DELIVER
+    PREFLIGHT -->|Ready| APPROVED{"Already approved<br/>(`approved` label)?"}
+    APPROVED -->|No — deliver / address feedback| DELIVER["deliver-ticket.sh REF<br/>foreground, blocking"]
+    APPROVED -->|Yes| REBASE["Rebase onto latest main<br/>push (Mode B rebase-before-merge)"]
+    DELIVER --> PR{"PR created / updated?"}
+    PR -->|Yes, pending review| PENDING["Park THIS ticket<br/>batch continues"]
+    PENDING --> NEXTT
+    PR -->|Merged / blocked| NEXTT
+    REBASE --> CONFLICT{"Rebase conflicts?"}
+    CONFLICT -->|No| GATES["Wait for PR quality gates<br/>to go green"]
+    CONFLICT -->|Yes| AIFIX["AI resolves conflicts<br/>push"]
+    AIFIX --> GATES
+    GATES -->|Green| SQUASH["Squash-merge<br/>commit msg = PR title + description"]
+    GATES -->|Red — needs work| DELIVER
+    SQUASH --> CLEAN["clean-merged-branches"]
     CLEAN --> NEXTT
-    PR -->|Blocked| NEXTT
     NEXTT --> LOOP
     LOOP -->|No| DONE([Batch summary])
 
-    style STOP fill:#FF9800,color:#fff
+    style PENDING fill:#FF9800,color:#fff
     style HUMAN fill:#4CAF50,color:#fff
     style DONE fill:#4CAF50,color:#fff
+    style SQUASH fill:#4CAF50,color:#fff
 ```
 
 **Mode B rules:**
 
-- `batch-deliver.sh` does **not** pre-apply the `approved` label. PRs stop for
-  human review.
-- Re-running the same command is **idempotent**: merged/closed/blocked tickets
-  are skipped; an open PR with feedback is resumed and the feedback addressed.
-- **Rebase before merge** in batch mode: because multiple PRs are open against
-  `main`, each approved PR is rebased onto the latest `main` before
-  squash-merge to avoid conflicts from a sibling merge.
-- The human is the merge authority. To convert a batch to autonomous merges,
-  pre-apply `approved` (or switch to Mode A).
+- `batch-deliver.sh` **never approves a PR itself.** The human approves by
+  adding the `approved` label (`gh issue edit GH-XXX --add-label approved`).
+- A ticket **pending human review** parks *that ticket only* — the batch
+  continues to the next ticket. Re-running the command is idempotent.
+- **Rebase before merge:** because multiple PRs are open against `main`, an
+  approved PR is rebased onto the latest `main`, pushed, and the script **waits
+  for the PR quality gates to go green** before merging. If the PR is already on
+  the latest `main` (rebase is a no-op), the wait is skipped and it merges
+  immediately. **Rebase conflicts** are resolved by an AI agent, after which the
+  gates re-run.
+- **Always squash-merge**, using the **PR title and description as the squash
+  commit message** — so `@pr-manager` must always produce descriptions that are
+  fit to become the final commit message.
 
 See [autonomous-batch-delivery.md](autonomous-batch-delivery.md) for the
-operational details of Mode B (the existing guide remains canonical for
-`batch-deliver.sh` usage).
+operational details of Mode B (it remains canonical for `batch-deliver.sh`
+usage, the approval workflow, and labels). This guide and that one are kept
+consistent: where the two describe the same machinery (`deliver-ticket.sh`,
+rebase-before-merge, liveness), they agree.
+
+### Running Mode B
+
+```bash
+# Deliver a batch (PRs stop for human review)
+scripts/batch-deliver.sh GH-A GH-B GH-C
+
+# Explicit branches (colon syntax)
+scripts/batch-deliver.sh GH-A:feat/GH-A/slug GH-B
+
+# After reviewing each PR on GitHub, approve the ones you're happy with:
+gh issue edit GH-A --add-label approved
+
+# Re-run to address review feedback on the others AND merge the approved ones:
+scripts/batch-deliver.sh GH-A GH-B GH-C
+```
 
 ## Recovery semantics (why this converges)
 
@@ -289,70 +396,69 @@ The design is robust to the messy realities of long-running AI sessions:
 
 | Failure | What happens | Why it converges |
 |---|---|---|
-| Agent crashes mid-delivery | PM child keeps running (orphaned to init). Loop sees a live delivery (INV-DM-3) and **parks**. | No duplicate agent; delivery finishes; loop resumes. |
-| Agent bash-tool timeout cuts a blocking `deliver-ticket.sh` call | PM child keeps running. Next agent decision point calls `deliver-ticket.sh REF`, which **joins** (INV-DM-2). | No duplicate PM; same result returned. |
-| PM LLM stream hangs | Liveness watchdog (INV-DM-5) sees no log-step progress for >stall threshold → kill-and-resume the PM via the session manager. | No infinite wait; session resumes from committed artifacts + pm-notes. |
-| GitHub API rate-limit during classification | `classify_result` returns `unknown`; the iteration does not burn a restart slot (existing m-7 guard in `deliver-ticket.sh`). | Transient outage retried without losing progress. |
-| Two `deliver-ticket.sh REF` invoked concurrently | Second invocation joins the first (INV-DM-2); both return the same classified result. | No race on the working tree. |
+| CEO session crashes mid-delivery | PM child keeps running (reparented to init). `ceo-loop.sh` sees the delivery is still in progress (`--is-delivering`) and does **not** spawn a racing CEO; it waits, then spawns a fresh/resumed CEO once the delivery finishes. | No duplicate agent; delivery finishes; loop resumes. |
+| CEO bash-tool timeout cuts a blocking `deliver-ticket.sh` call | PM child keeps running. Next CEO decision point calls `deliver-ticket.sh REF`, which **joins** (INV-DM-2). | No duplicate PM; same result returned. |
+| PM LLM stream hangs (opencode bug) | Liveness watchdog (INV-DM-5) sees no session traffic for >threshold → kill-and-resume the PM via the session manager. | No infinite wait; session resumes from committed artifacts + pm-notes. |
+| Agent hits a forbidden-folder permission prompt | Same as above — no session traffic → detected as stuck → kill+restart. | Autonomous mode is not blocked on an unseen prompt. |
+| `deliver-ticket.sh` killed (SIGTERM/SIGKILL) | Trap forwards the signal to the PM child; PID file is cleared. | No orphaned opencode instance. |
+| Two `deliver-ticket.sh REF` invoked concurrently (same repo) | Second invocation joins the first (INV-DM-2); both return the same classified result. | No race on the working tree. |
+| Parallel deliveries in two clones of the same repo | Each clone's PID file is repo-local; neither sees the other. | INV-DM-6 is per-working-tree, not per-remote. |
+| GitHub API rate-limit during classification | `classify_result` returns `unknown`; the iteration does not burn a restart slot. | Transient outage retried without losing progress. |
 
-## What needs to change
+## Configuration
 
-> These are the tracked work items that follow from this design (ticket #142).
-> The guide is reviewed first; code follows only after guide approval. Each
-> item aligns with an open ADOS issue; the change is the reliability baseline
-> for #118.
+All settings are environment variables (CLI flag overrides where noted).
 
-| # | Change | Aligns with | Files |
-|---|---|---|---|
-| 1 | **`deliver-ticket.sh` single-flight + join** — probe live PM by `session_id`; live ⇒ wait + classify, else own. Callers never detach. | local; precondition for #97 | `scripts/deliver-ticket.sh`, tests |
-| 2 | **Loop runner delivery-gate + durable stop** — park (don't spawn an agent) while a delivery is alive; stop file survives restart; `park_until` honored. | #97 | generic loop runner (#119), tests |
-| 3 | **`@ceo` prompt: never-detach + merge-not-yield + multi-ticket-per-session** — explicit invariants; loop inside the session over tickets; never `setsid … &` deliver-ticket.sh. | #99 | `.opencode/agent/ceo.md` |
-| 4 | **Log-progress liveness** — `scripts/pm-liveness.sh` (opencode log-step cadence); wire into `deliver-ticket.sh` and the loop runner; retire ps-only heuristics. | #96 | new `scripts/pm-liveness.sh`, `scripts/deliver-ticket.sh`, loop runner |
-| 5 | **`batch-deliver.sh` rebase-before-merge in batch mode** — when ≥1 sibling PR is open against `main`, rebase an approved PR before squash-merge. | local (Mode B) | `scripts/batch-deliver.sh`, `scripts/deliver-ticket.sh` |
-| 6 | **Retire the detached-delivery pattern** from CEO working-memory conventions and retros in any project that ran the experimental loop. | local | project-local `.ai/local/**` (out of ADOS scope to edit) |
+### `ceo-loop.sh`
 
-Work items 1–3 are the **minimum viable fix** for the token-burn bug and
-should land together. 4 is the deeper liveness fix (#96). 5 is a Mode B
-enhancement. 6 is project-local cleanup (each dogfooding project scrubs its
-own working memory).
+| Variable | Default | Description |
+|---|---|---|
+| `CEO_LOOP_POLL_SECONDS` | `30` | Seconds between liveness/stuck checks of the live CEO session |
+| `CEO_LOOP_STALL_MINUTES` | `15` | Minutes with no session-message traffic AND no healthy delivery before a CEO is declared stuck and killed (INV-DM-5) |
+| `CEO_RESUME_TOKEN_LIMIT` | `100000` | Resume the previous CEO session if its context (input+output+reasoning tokens) is under this limit; otherwise start fresh |
+| `CEO_LOOP_MAX_RESTARTS` | `10` | Max CEO kill+restart iterations before giving up |
 
-## Open questions
+### `deliver-ticket.sh`
 
-**OQ-DM-1 — Who calls `deliver-ticket.sh` in Mode A: the CEO (foreground,
-multi-ticket-per-session) or the loop runner directly (CEO reduced to a "pick
-next ticket" decision step)?**
-The design above chooses the CEO-foreground model (keeps the CEO available for
-mid-delivery PM questions). The alternative (loop runner owns the blocking
-call; CEO only picks tickets) minimizes CEO token use further but removes the
-CEO from the mid-delivery loop. **Recommendation: CEO-foreground + join
-(INV-DM-2) for robustness; revisit if token cost is still too high.**
+| Variable | Default | Description |
+|---|---|---|
+| `DELIVER_STUCK_MINUTES` | `15` | Minutes with no PM session traffic before the PM is declared stalled and restarted (INV-DM-5; was 30/file-based, now 15/session-traffic) |
+| `DELIVER_POLL_SECONDS` | `60` | Seconds between liveness checks |
+| `DELIVER_KILL_GRACE_SECONDS` | `20` | Seconds between SIGTERM and SIGKILL when propagating to the PM child |
+| `DELIVER_MAX_RESTARTS` | `10` | Maximum PM restart iterations before giving up |
+| `DELIVER_ALLOW_LGTM_COMMENT` | `false` | Opt-in: accept an exact `lgtm` comment by the PR author as a merge signal |
 
-**OQ-DM-2 — Does `batch-deliver.sh` (Mode B) ever auto-merge?**
-Current design: no — the human merges by approving. Confirm this is desired,
-or whether a `--auto-merge` flag (pre-apply `approved`) is wanted for trusted
-batches.
+### `batch-deliver.sh`
 
-**OQ-DM-3 — Stall threshold tuning.**
-`CEO_LOOP_STALL_MINUTES` default 15 (#96) vs the current
-`DELIVER_STUCK_MINUTES=30`. Dogfooding observed that a pathologically large
-opencode session DB causes legitimately-slow operations; log-progress cadence
-(#96) is a better signal than wall-clock mtime and should allow tightening the
-threshold safely.
+| Variable | Default | Description |
+|---|---|---|
+| `DRY_RUN` | `false` | Skip actual delivery, just log what would happen |
 
-**OQ-DM-4 — Issue graph.**
-Confirm #142 absorbs #97/#99/#96 (close them when #142 delivers) and that the
-generic loop runner (#119) lands as part of #142 (or is already tracked
-elsewhere). #118 (upstream the CEO, opt-in gating, threat model, decision
-record) remains the downstream consumer.
+### `tools/clean-merged-branches`
+
+| Flag | Default | Description |
+|---|---|---|
+| `--base` | `main` | Base branch to compare against |
+| `--dry-run` | off | List branches that would be deleted |
+| `--protected` | `main,master,develop` | Comma-separated protected branches (never deleted) |
+
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| CEO keeps getting killed and restarted | Genuine stall (LLM hang) *or* `CEO_LOOP_STALL_MINUTES` too low for a legitimately long reasoning step | Check the session traffic in the log; raise the threshold if the step is legitimately long |
+| `ceo-loop.sh` kills a CEO that was waiting on a healthy delivery | `--is-delivering` not reflecting the in-flight delivery (PID file stale/cleared) | Ensure `deliver-ticket.sh` writes/clears the PID file correctly; do not delete `.ai/local/delivery/` manually |
+| Orphaned `opencode` process after killing a delivery | Signal trap missing or not forwarded | All delivery scripts must propagate SIGTERM/SIGINT → SIGKILL to children (INV-DM-2) |
+| Two PMs spawned for the same ticket | JOIN probe failed (PID file race or stale PID reused by the OS) | `deliver-ticket.sh` must validate the PID is still `deliver-ticket.sh` for this repo before treating it as live |
+| Merge used a poor commit message | PR description not merge-ready | `@pr-manager` must always emit descriptions fit to be the squash commit message |
+| `clean-merged-branches` deleted a branch I needed | Misconfigured `--base` / `--protected`, or a branch that looked merged | It must never delete unmerged or protected branches; if it did, that is a bug |
 
 ## See also
 
-- [autonomous-batch-delivery.md](autonomous-batch-delivery.md) — canonical
-  guide for `batch-deliver.sh` / `deliver-ticket.sh` / `clean-merged-branches`
-  (Mode B operations, liveness loop, approval workflow, labels).
-- [change-lifecycle.md](change-lifecycle.md) — the 11-phase ADOS lifecycle
-  both modes wrap.
+- [autonomous-batch-delivery.md](autonomous-batch-delivery.md) — canonical guide
+  for `batch-deliver.sh` / `deliver-ticket.sh` / `clean-merged-branches`
+  (Mode B operations, approval workflow, labels). Kept consistent with this
+  guide.
+- [change-lifecycle.md](change-lifecycle.md) — the 11-phase ADOS lifecycle both
+  modes wrap.
 - [ados-processes.md](ados-processes.md) — the ADOS process map.
-- Epic #95 (Autonomous-loop reliability): #97, #99, #96.
-- Epic #117 (Loop tooling productization & safe CEO upstream): #118, #119.
-- Delivery vehicle: #142.

@@ -1,0 +1,55 @@
+change_id: GH-142
+title: "Delivery Modes guide + autonomous-loop reliability (absorbs #97/#99/#96)"
+branch: feat/GH-142/delivery-modes-reliability
+delivery_mode: interactive
+phases:
+  clarify_scope: { started: 2026-07-07T06:50:00Z, completed: 2026-07-07T16:30:00Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/143" }
+decisions:
+  - text: "OQ-DM-1 DECIDED (per PR #143 comment #11): CEO-foreground model. CEO calls deliver-ticket.sh (foreground, blocking), waits for it, consumes the returned PM last-message + result, and decides next action. deliver-ticket.sh must return the PM agent's last message on stdout and accept an optional --resume-prompt that overrides the default PM prompt (so CEO can resolve a PM-raised blocker by resuming the session with a custom instruction). Loop-runner-owns-blocking alternative rejected."
+    date: 2026-07-07
+  - text: "OQ-DM-2 DECIDED (per PR #143 comments #1, #12): Mode B never auto-merges on its own. Human approves via `approved` label. batch-deliver then rebases the approved PR onto latest main, pushes, waits for PR quality gates to go green, then squash-merges using the PR title/description as the commit message. If the PR is already on latest main (no rebase effect), skip the wait and merge directly. Conflicts during rebase -> AI agent resolves them -> gates re-run. No --auto-merge flag."
+    date: 2026-07-07
+  - text: "OQ-DM-3 DECIDED (per PR #143 comments #7, #13): Stall detection shifts from file-change-30min to opencode-session-message-traffic-15min. CEO_LOOP_STALL_MINUTES default 15. A session is 'stuck' (not slow) when no new session messages have flowed for >threshold. Observed stuck root causes: (a) opencode hangs indefinitely on LLM provider response (opencode bug); (b) agent tries to access a forbidden folder -> triggers an unseen permission-acceptance prompt that never gets answered in autonomous mode."
+    date: 2026-07-07
+  - text: "OQ-DM-4 DECIDED (per PR #143 comment #14): #142 delivers the FULL scope of stable autonomous delivery in BOTH modes (CEO-triggered Mode A + human-triggered batch Mode B) on ONE PR as a final version. #142 absorbs #97/#99/#96 (close them on delivery). The guide is transformed from a design-spec/delivery-plan into a TRUE user-facing guide on how to run autonomous delivery in the different modes (ticket refs move to frontmatter references)."
+    date: 2026-07-07
+  - text: "Loop runner naming DECIDED (per PR #143 comment #2): the script is named `scripts/ceo-loop.sh` for consistency with the `@ceo` agent. `ados-loop.sh` name dropped."
+    date: 2026-07-07
+  - text: "Loop runner primary responsibility DECIDED (per PR #143 comment #2): ceo-loop.sh's main job is to detect a STUCK CEO session (hung LLM stream / unanswered permission prompt) and recover via kill+restart. It is NOT primarily about 'parking while a delivery is in progress' — that is handled by deliver-ticket.sh's repo-local in-progress tracking + the CEO blocking on it (INV-DM-1/2). ceo-loop.sh distinguishes 'CEO blocked on a healthy delivery' (don't kill) from 'CEO stuck with no delivery and no activity' (kill+restart)."
+    date: 2026-07-07
+  - text: "Session-resume optimization DECIDED (per PR #143 comment #2 + external-researcher report): ceo-loop.sh remembers the last CEO session id; before spawning a new CEO it checks the previous session's context size and RESUMES it if under a configurable threshold (CEO_RESUME_TOKEN_LIMIT, default 100000), else starts a fresh session. Feasibility CONFIRMED via documented stable CLI: `opencode session list --format json`, `opencode db \"SELECT (tokens_input+tokens_output+tokens_reasoning) AS total FROM session WHERE id=?\"`, and `opencode run \"<prompt>\" --session <id>`."
+    date: 2026-07-07
+  - text: "Script subcommands DECIDED (per PR #143 comment #8): deliver-ticket.sh exposes encapsulated subcommands/flags so the loop and CEO can query state without burning AI tokens. Notably `--is-delivering` (exit 0 if a delivery is in progress in the current repo) consumed by ceo-loop.sh, and the default invocation returns the PM last-message + result on stdout for the CEO to consume."
+    date: 2026-07-07
+  - text: "Repo-local concurrency DECIDED (per PR #143 comment #6): the 'one delivery per repo' invariant (INV-DM-6) is REPO-LOCAL — keyed on the working tree. Parallel deliveries in different repos, or in independent clones of the same repo, are allowed and must not interfere. PID/in-progress tracking lives under git-ignored `.ai/local/delivery/`."
+    date: 2026-07-07
+  - text: "Signal propagation DECIDED (per PR #143 comment #5): all delivery scripts must propagate kill signals (SIGTERM/SIGINT/SIGKILL) to their child opencode processes via traps, so killing deliver-ticket.sh never leaves an orphaned opencode instance."
+    date: 2026-07-07
+  - text: "CEO verifies PM finalization before merge DECIDED (per PR #143 comment #9): in Mode A, before merging, the CEO must verify the PM completed all 11 phases (inspect chg-<ref>-pm-notes.yaml). AI-driven for now (pm-notes schema is not yet formalized enough to script reliably)."
+    date: 2026-07-07
+  - text: "clean-merged-branches safety DECIDED (per PR #143 comment #3): must NEVER remove unmerged branches. Added to its 'Must NOT do' contract."
+    date: 2026-07-07
+  - text: "Mode B pending-review routing DECIDED (per PR #143 comment #10): a ticket pending human review stops THAT ticket's delivery only; the batch continues to the next ticket. The Mode B diagram routes 'pending review' -> 'Next ticket'."
+    date: 2026-07-07
+open_questions: []  # all four OQ-DM resolved via PR #143 review comments
+blockers: []
+notes:
+  - text: "INTAKE: user requested delivery of GH-142 with PR #143 already open as a guide-review checkpoint. The guide (doc/guides/delivery-modes.md) was incepted in another project (marksync-for-confluence) and moved into ADOS; PR #143 also carries seed .opencode/agent/ceo.md + scripts/ceo-loop.sh copied from the dogfooding project that need refactoring/tuning. User did a detailed guide review -> 15 inline comments on PR #143, AUTHORITATIVE (override the handoff note .ai/local/notes/2026-07-07-GH-142-delivery-modes-handoff.md in case of contradiction)."
+    type: info
+    date: 2026-07-07
+  - text: "clarify_scope: cross-checked ticket #142 AC against the 15 PR comments. All four OQ-DM resolved by the comments (recorded as decisions above). Requirements are complete and consistent. Proceeding to guide revision + full code delivery on one PR (per comment #14)."
+    type: info
+    date: 2026-07-07
+  - text: "RESEARCH (external-researcher): opencode session-resume + context-size feasibility = FULLY FEASIBLE via documented stable CLI (opencode run --session, opencode session list --format json, opencode db SELECT tokens_* FROM session). Unblocks the session-resume optimization design (comment #2)."
+    type: info
+    date: 2026-07-07
