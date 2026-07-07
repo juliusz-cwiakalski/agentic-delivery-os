@@ -111,6 +111,8 @@ readonly ADOS_DELIVERY_SCRIPTS=(
   "scripts/opencode-session.sh"
   "scripts/deliver-ticket.sh"
   "scripts/batch-deliver.sh"
+  "scripts/ceo-loop.sh"
+  "scripts/pm-liveness.sh"
 )
 
 # Delivery infrastructure tools — always track upstream, must be executable.
