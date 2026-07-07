@@ -89,7 +89,17 @@ CURRENT_LAST_MESSAGE=""
 # This keeps the recorded `start` stable across restart iterations so the F-4
 # start-epoch reuse guard keeps accepting the legitimate owner (a fresh
 # $(date +%s) on each iteration refresh would make owner_pid_if_live reject the
-# owner once an iteration outlives PID_START_TOLERANCE_SECONDS).
+# owner once an iteration outlived PID_START_TOLERANCE_SECONDS).
+# F-R2-1 (red-team R2): the captured value is $$'s TRUE process birth epoch
+# (via _pid_start_epoch), NOT capture-time $(date +%s). Setup before the OWN
+# decision (resolve_session's `opencode session list`; on a fresh delivery
+# prepare_main_for_delivery's `git fetch --prune` + `git pull --ff-only`) can
+# exceed the tolerance under GitHub rate-limit backoff / network jitter; a
+# capture-time value would then be later than $$'s real birth, so the F-4 guard
+# would reject the legitimate owner mid-delivery (--is-delivering false →
+# INV-DM-2 double-PM / INV-DM-3 CEO kill). _pid_start_epoch is the constant
+# true birth (now - etimes), so recorded matches recomputed exactly (diff == 0)
+# however long setup took.
 WRAPPER_START_EPOCH=""
 
 # INV-DM-5/4: set by run_single_iteration to the PM's final stdout line, then
@@ -1331,7 +1341,15 @@ run_delivery() {
   # keeps accepting this owner across restart iterations. The EXIT trap clears
   # the PID file on exit.
   CURRENT_REF="${ticket_ref}"
-  WRAPPER_START_EPOCH="$(date +%s)"
+  # F-R2-1 (red-team R2): capture $$'s TRUE process birth epoch via
+  # _pid_start_epoch (constant = now - etimes), NOT capture-time $(date +%s).
+  # Setup before this OWN decision (resolve_session / prepare_main_for_delivery)
+  # can exceed PID_START_TOLERANCE_SECONDS; a capture-time value would then be
+  # rejected by the F-4 guard in owner_pid_if_live mid-delivery. Fall back to
+  # $(date +%s) only if the OS probe returns nothing.
+  local _birth
+  _birth="$(_pid_start_epoch "$$")"
+  WRAPPER_START_EPOCH="${WRAPPER_START_EPOCH:-${_birth:-$(date +%s)}}"
   write_pid_file "${ticket_ref}" "$$" "${WRAPPER_START_EPOCH}"
   log_info "OWN: no live delivery for ${ticket_ref}; starting (pid=$$)"
 

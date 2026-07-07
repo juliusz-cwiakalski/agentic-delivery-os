@@ -1012,6 +1012,92 @@ test_parse_elapsed_to_seconds_bsd() {
 }
 
 # ============================================================================
+# TESTS: F-R2-1 — OWN captures the TRUE process birth epoch (red-team R2)
+# ============================================================================
+# F-R2-1 (red-team R2 must-fix): run_delivery used to capture
+# WRAPPER_START_EPOCH="$(date +%s)" at OWN time — AFTER resolve_session
+# (opencode session list) and, on a fresh delivery (no branch arg),
+# prepare_main_for_delivery (git fetch --prune + git pull --ff-only). When that
+# setup gap exceeds PID_START_TOLERANCE_SECONDS (realistic under GitHub
+# rate-limit backoff / network jitter), the F-4 start-epoch guard in
+# owner_pid_if_live compares the recorded capture-time value to $$'s TRUE birth
+# → rejects the legitimate owner mid-delivery → --is-delivering false →
+# INV-DM-2 double-PM / INV-DM-3 CEO kill. The fix records the TRUE process
+# birth (via _pid_start_epoch, constant = now - etimes), so recorded matches
+# recomputed exactly (diff == 0) however long setup took.
+
+# TC-DT-SF-13d: the OWN path records $$'s TRUE process birth epoch, not
+# capture-time $(date +%s) (F-R2-1). Directly guards the OWN capture line and
+# exercises the fresh-delivery OWN shape (branch=""). _pid_start_epoch is
+# constant, so the recorded value must match a fresh probe to within
+# second-resolution rounding; a capture-time value would differ by $$'s full
+# age (>> 1s).
+test_run_delivery_captures_true_birth_epoch() {
+  local fake_delivery="${_test_tmpdir}/delivery_rdel"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+  # Stub the heavy iteration loop so run_delivery's OWN path runs in
+  # isolation (the override is scoped to this run_test subshell).
+  deliver_loop() { DELIVERY_RESULT="pr-open"; DELIVERY_EXIT_CODE=0; return 0; }
+  run_delivery "GH-142" "" "" >/dev/null 2>&1 || true
+  local recorded current_birth diff
+  recorded="$(_pid_file_field "GH-142" "start")"
+  current_birth="$(_pid_start_epoch "$$")"   # constant: equals $$'s true birth
+  [[ "${recorded}" =~ ^[0-9]+$ ]] || { echo "  recorded start not numeric: '${recorded}'" >&2; return 1; }
+  [[ "${current_birth}" =~ ^[0-9]+$ ]] || { echo "  _pid_start_epoch(\$\$) returned non-numeric: '${current_birth}'" >&2; return 1; }
+  diff=$(( current_birth - recorded )); (( diff < 0 )) && diff=$(( -diff ))
+  (( diff <= 1 )) || { echo "  OWN capture should record true birth; recorded=${recorded} birth=${current_birth} diff=${diff}" >&2; return 1; }
+  return 0
+}
+
+# TC-DT-SF-13e (RUN_SLOW_TESTS): the definitive F-R2-1 regression. Simulates
+# the fresh-delivery slow-setup path: the owner process is born, then setup
+# (prepare_main_for_delivery's git fetch/pull under GitHub rate-limit backoff /
+# network jitter) runs for > PID_START_TOLERANCE_SECONDS before the OWN path
+# writes the PID file. Recording the TRUE birth (the fix) keeps the owner LIVE
+# (and --is-delivering true); recording capture-time $(date +%s) (the pre-fix
+# bug) is rejected — exactly the spurious "not live" the fix eliminates.
+test_owner_live_after_slow_setup() {
+  if [[ "${RUN_SLOW_TESTS:-}" != "true" ]]; then
+    printf '  [SKIP] TC-DT-SF-13e (set RUN_SLOW_TESTS=true to run)\n'
+    return 0
+  fi
+  local fake_delivery="${_test_tmpdir}/delivery_slow"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+  local pid
+  pid="$(_spawn_fake_owner)"
+  kill -0 "${pid}" 2>/dev/null || { kill "${pid}" 2>/dev/null; return 1; }
+
+  # Fresh-delivery slow-setup gap (> PID_START_TOLERANCE_SECONDS, with margin).
+  sleep 7
+
+  # F-R2-1 FIX: record the owner's TRUE process birth epoch. After the slow
+  # setup gap the owner must STILL be recognized as live (diff == 0: the
+  # recomputed birth is the same constant).
+  write_pid_file "GH-142" "${pid}" "$(_pid_start_epoch "${pid}")"
+  local live
+  live="$(owner_pid_if_live "GH-142" 2>/dev/null)" || live=""
+  assert_eq "${pid}" "${live}" "F-R2-1: owner must stay LIVE after slow setup when TRUE birth is recorded" \
+    || { kill_process_tree "${pid}" 2>/dev/null; wait "${pid}" 2>/dev/null || true; return 1; }
+  cmd_is_delivering "GH-142" \
+    || { kill_process_tree "${pid}" 2>/dev/null; wait "${pid}" 2>/dev/null || true; \
+         echo "  --is-delivering must be true for a live owner after slow setup (F-R2-1)" >&2; return 1; }
+
+  # Regression characterization: the pre-fix capture-time value ($(date +%s)
+  # recorded now, while the owner was actually born ~7s ago) is REJECTED by the
+  # F-4 guard — the spurious "not live" mid-delivery the fix eliminates.
+  write_pid_file "GH-142" "${pid}" "$(date +%s)"
+  live="$(owner_pid_if_live "GH-142" 2>/dev/null)" || live=""
+  assert_eq "" "${live}" "F-R2-1 regression guard: capture-time start after >tolerance setup gap must be REJECTED (pre-fix bug)" \
+    || { kill_process_tree "${pid}" 2>/dev/null; wait "${pid}" 2>/dev/null || true; return 1; }
+
+  kill_process_tree "${pid}" 2>/dev/null || true
+  wait "${pid}" 2>/dev/null || true
+  return 0
+}
+
+# ============================================================================
 # F-3: the three integration behaviors deferred in Phase 1 (concurrency
 # convergence, signal propagation, session-traffic liveness handoff). These
 # exercise REAL deliver-ticket.sh subprocesses / the real monitor loop, so they
@@ -1308,6 +1394,8 @@ main() {
   run_test "TC-DT-SF-13: owner live across iteration refresh (F-1)" test_owner_live_across_iteration_refresh
   run_test "TC-DT-SF-13b: --is-delivering live across refresh (F-1)" test_is_delivering_live_pid_across_iteration_refresh
   run_test "TC-DT-SF-13c: BSD etime parse (F-7)" test_parse_elapsed_to_seconds_bsd
+  run_test "TC-DT-SF-13d: OWN captures true birth epoch (F-R2-1)" test_run_delivery_captures_true_birth_epoch
+  run_test "TC-DT-SF-13e: owner live after slow setup (F-R2-1, slow)" test_owner_live_after_slow_setup
 
   # F-3: the three deferred integration behaviors (RUN_SLOW_TESTS)
   run_test "TC-DT-INT-02: concurrent converge → one PM (F-3, slow)" test_concurrent_converge_one_pm
