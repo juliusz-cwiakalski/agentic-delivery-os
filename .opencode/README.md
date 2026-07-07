@@ -38,6 +38,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - `decision-advisor`: decisions of all types (architecture, product, business, technical, operating); decision record authoring (ADR/PDR/TDR/BDR/ODR); delegates bounded evidence gathering to `@external-researcher` for selection decisions _(formerly `architect`)_
 - `decision-critic`: independent, read-only decision challenger; tri-state verdict (PASS / PASS_WITH_RISKS / REWORK)
 - `bootstrapper`: run ADOS inception for new or legacy projects
+- `ceo`: autonomous executive for ADOS delivery — manages the backlog, delivers tickets, merges approved PRs (Mode A outer agent)
 - `coder`: implement plan phases by writing code for a change
 - `committer`: create one Conventional Commit
 - `designer`: visual design and UI implementation

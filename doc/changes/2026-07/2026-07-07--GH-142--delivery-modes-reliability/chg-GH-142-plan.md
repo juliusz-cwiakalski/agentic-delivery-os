@@ -205,18 +205,18 @@ honor a durable stop. (AC-3; INV-DM-3, 5.)
 - Keep the autonomous-authority model from the seed, but **defer opt-in gating / threat model / decision record to #118** (note this explicitly in the prompt's non-goals).
 
 **Tasks**
-- [ ] Rewrite `ceo.md` (delegate the prose tuning to `@toolsmith` if helpful; keep the `<role>/<mission>/<non_goals>/<authority_model>` structure that the seed uses, updated to the new behavioral rules). Decontextualize any remaining dogfooding-project specifics. **The CEO must NOT merge via `deliver-ticket.sh` — it runs `gh pr merge --squash` itself after verifying pm-notes (F-2). The CEO must write the durable stop to `.ai/local/ceo/stop` (NOT the seed's `tmp/ceo-loop/stopped.txt`) so it matches the loop's read path (F-5).**
-- [ ] **pr-manager description quality (F-6, comment #12):** add a must-rule to `.opencode/agent/pr-manager.md` (and mirror in `.ai/agent/pr-instructions.md` if relevant) — `@pr-manager` MUST produce PR descriptions usable **verbatim** as the squash-commit body (the Mode B rebase-before-merge flow sources the commit message from PR title + description). Add a static grep test.
-- [ ] Run `scripts/build-claude-plugin.sh` → regenerate `.ados-claude/agents/ceo.md`; commit source + generated together.
-- [ ] Add `ceo` to `.opencode/README.md` inventory (if not present).
-- [ ] Add a one-line merge-not-yield note to `change-lifecycle.md`'s final-check step.
-- [ ] Add/confirm static assertions (AC-4) in `test-ceo-loop.sh`: `test_ceo_prompt_wait_for_delivery`, `..._verify_pm_finalization`, `..._merge_not_yield`, `..._never_detach`, `..._multi_ticket_per_session`, `..._resume_prompt`, `..._must_must_not_phrasing` (grep the required phrases).
+- [x] Rewrite `ceo.md` (delegate the prose tuning to `@toolsmith` if helpful; keep the `<role>/<mission>/<non_goals>/<authority_model>` structure that the seed uses, updated to the new behavioral rules). Decontextualize any remaining dogfooding-project specifics. **The CEO must NOT merge via `deliver-ticket.sh` — it runs `gh pr merge --squash` itself after verifying pm-notes (F-2). The CEO must write the durable stop to `.ai/local/ceo/stop` (NOT the seed's `tmp/ceo-loop/stopped.txt`) so it matches the loop's read path (F-5).** (294→290 lines; all seed dogfooding refs decontextualized; `<delivery_model>` + `<behavioral_rules>` sections with MUST/MUST NEVER phrasing; stop via `scripts/ceo-loop.sh --stop`; #118 deferral in non-goals.)
+- [x] **pr-manager description quality (F-6, comment #12):** add a must-rule to `.opencode/agent/pr-manager.md` (and mirror in `.ai/agent/pr-instructions.md` if relevant) — `@pr-manager` MUST produce PR descriptions usable **verbatim** as the squash-commit body (the Mode B rebase-before-merge flow sources the commit message from PR title + description). Add a static grep test. (Quality rule added to pr-manager.md; `test_pr_manager_description_quality` in test-ceo-loop.sh.)
+- [x] Run `scripts/build-claude-plugin.sh` → regenerate `.ados-claude/agents/ceo.md`; commit source + generated together. (Plugin regenerated: 24 agents, 20 skills. `test-build-claude-plugin.sh` 16/16 green.)
+- [x] Add `ceo` to `.opencode/README.md` inventory (if not present). (Added under Agents section.)
+- [x] Add a one-line merge-not-yield note to `change-lifecycle.md`'s final-check step. (Added Mode A note after pr_creation exit criteria.)
+- [x] Add/confirm static assertions (AC-4) in `test-ceo-loop.sh`: `test_ceo_prompt_wait_for_delivery`, `..._verify_pm_finalization`, `..._merge_not_yield`, `..._never_detach`, `..._multi_ticket_per_session`, `..._resume_prompt`, `..._must_must_not_phrasing` (grep the required phrases). (All 7 + F-6 pr-manager test = 8 static tests. 38/38 total in test-ceo-loop.sh.)
 
 **Definition of Done (Phase 3)**
-- Static prompt assertions green.
-- `bash scripts/.tests/test-build-claude-plugin.sh` green (plugin fresh).
-- `.opencode/README.md` lists `ceo`.
-- AC-4 satisfied.
+- Static prompt assertions green. — PASSED (8/8 static tests in test-ceo-loop.sh)
+- `bash scripts/.tests/test-build-claude-plugin.sh` green (plugin fresh). — PASSED (16/16)
+- `.opencode/README.md` lists `ceo`. — PASSED
+- AC-4 satisfied. — PASSED (all 7 AC-4 test cases + F-6 pr-manager quality test implemented and green)
 
 ---
 
@@ -316,3 +316,4 @@ as the commit message. (AC-6; Mode B rules.)
 - **Phase 0** (commit `ac8b952`): `scripts/pm-liveness.sh` + 16/16 tests. Session-traffic liveness probe, key=value output, graceful degradation.
 - **Phase 1** (commit `ef6acf6`): `scripts/deliver-ticket.sh` extended + 49/49 tests. Single-flight+JOIN (F-3/F-4), session-traffic liveness (INV-DM-5), `--is-delivering`/`--last-message`/`--resume-prompt` subcommands, PM last-message capture, no-auto-merge prompt (F-2).
 - **Phase 2**: `scripts/ceo-loop.sh` full rewrite (v2.0.0, 609 lines) + `scripts/.tests/test-ceo-loop.sh` (30/30 tests). F-3 single-flight (PID validation: cmdline+cwd+start-epoch), INV-DM-3/5 stuck detection (session-traffic stalled AND no delivery), INV-DM-3 session resume (context-total proxy, degrade gracefully), #97 durable stop (not wiped at startup), INV-DM-2 signal propagation, max-restarts exhaustion. State paths made non-readonly for testability. `STUCK_SECONDS` env override for fast tests.
+- **Phase 3**: `.opencode/agent/ceo.md` rewrite (290 lines, `<delivery_model>`+`<behavioral_rules>` with MUST/MUST NEVER phrasing, decontextualized, #118 deferral). `.opencode/agent/pr-manager.md` F-6 quality rule. `.ados-claude/` regenerated (24 agents, 20 skills). `.opencode/README.md` `ceo` registered. `change-lifecycle.md` Mode A merge-not-yield note. `test-ceo-loop.sh` 8 static prompt assertions (AC-4). Plugin freshness gate GREEN. 12/12 test-all.sh.

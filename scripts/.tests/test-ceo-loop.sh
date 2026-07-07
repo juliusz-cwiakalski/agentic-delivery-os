@@ -666,6 +666,102 @@ test_stop_file_honored_during_session() {
 }
 
 # ============================================================================
+# TESTS: Static Prompt Assertions for .opencode/agent/ceo.md (AC-4, INV-DM-4)
+# ============================================================================
+# Grep-based assertions on the canonical CEO prompt source. If the prompt is
+# restructured, update the needle phrases — but the contract each test asserts
+# must remain.
+
+_CEO_PROMPT_PATH="${SCRIPT_DIR}/../.opencode/agent/ceo.md"
+
+_read_ceo_prompt() {
+  local p="${_CEO_PROMPT_PATH}"
+  [[ -f "${p}" ]] || return 1
+  cat "${p}"
+}
+
+# test_ceo_prompt_wait_for_delivery — INV-DM-1/4.
+test_ceo_prompt_wait_for_delivery() {
+  local prompt
+  prompt="$(_read_ceo_prompt)" || { echo "  ceo.md not found" >&2; return 1; }
+  assert_contains "${prompt}" "deliver-ticket.sh" "must reference deliver-ticket.sh" || return 1
+  assert_contains "${prompt}" "wait" "must say wait" || return 1
+  assert_contains "${prompt}" "last-message" "must reference last-message" || return 1
+  return 0
+}
+
+# test_ceo_prompt_verify_pm_finalization — INV-DM-4.
+test_ceo_prompt_verify_pm_finalization() {
+  local prompt
+  prompt="$(_read_ceo_prompt)" || { echo "  ceo.md not found" >&2; return 1; }
+  assert_contains "${prompt}" "pm-notes" "must reference pm-notes" || return 1
+  assert_contains "${prompt}" "11 phase" "must reference 11 phases" || return 1
+  assert_contains "${prompt}" "before" "must say before merging" || return 1
+  assert_contains "${prompt}" "merg" "must mention merge" || return 1
+  return 0
+}
+
+# test_ceo_prompt_merge_not_yield — INV-DM-4 (#99).
+test_ceo_prompt_merge_not_yield() {
+  local prompt
+  prompt="$(_read_ceo_prompt)" || { echo "  ceo.md not found" >&2; return 1; }
+  assert_contains "${prompt}" "merge" "must mention merge" || return 1
+  assert_contains "${prompt}" "yield" "must reference yield (merge-not-yield)" || return 1
+  assert_contains "${prompt}" "proceed" "must say proceed" || return 1
+  return 0
+}
+
+# test_ceo_prompt_never_detach — INV-DM-1.
+test_ceo_prompt_never_detach() {
+  local prompt
+  prompt="$(_read_ceo_prompt)" || { echo "  ceo.md not found" >&2; return 1; }
+  assert_contains "${prompt}" "detach" "must reference detach" || return 1
+  assert_contains "${prompt}" "setsid" "must reference setsid" || return 1
+  assert_contains "${prompt}" "MUST NEVER" "must use MUST NEVER phrasing" || return 1
+  return 0
+}
+
+# test_ceo_prompt_multi_ticket_per_session — INV-DM-3.
+test_ceo_prompt_multi_ticket_per_session() {
+  local prompt
+  prompt="$(_read_ceo_prompt)" || { echo "  ceo.md not found" >&2; return 1; }
+  assert_contains "${prompt}" "many tickets" "must say many tickets" || return 1
+  assert_contains "${prompt}" "next ticket" "must reference next ticket" || return 1
+  return 0
+}
+
+# test_ceo_prompt_resume_prompt — INV-DM-4 (blocker resolution).
+test_ceo_prompt_resume_prompt() {
+  local prompt
+  prompt="$(_read_ceo_prompt)" || { echo "  ceo.md not found" >&2; return 1; }
+  assert_contains "${prompt}" "--resume-prompt" "must reference --resume-prompt" || return 1
+  return 0
+}
+
+# test_ceo_prompt_must_must_not_phrasing — AC-4 structural quality.
+test_ceo_prompt_must_must_not_phrasing() {
+  local prompt
+  prompt="$(_read_ceo_prompt)" || { echo "  ceo.md not found" >&2; return 1; }
+  local must_count mustnot_count
+  must_count="$(printf '%s' "${prompt}" | grep -ciE '\bMUST\b')" || must_count="0"
+  mustnot_count="$(printf '%s' "${prompt}" | grep -ciE 'MUST NOT|MUST NEVER')" || mustnot_count="0"
+  (( must_count >= 3 )) || { echo "  expected >=3 MUST phrases, got ${must_count}" >&2; return 1; }
+  (( mustnot_count >= 2 )) || { echo "  expected >=2 MUST NOT/MUST NEVER phrases, got ${mustnot_count}" >&2; return 1; }
+  return 0
+}
+
+# test_pr_manager_description_quality — F-6: PR descriptions usable as squash-commit body.
+test_pr_manager_description_quality() {
+  local pm_prompt
+  local pm_path="${SCRIPT_DIR}/../.opencode/agent/pr-manager.md"
+  [[ -f "${pm_path}" ]] || { echo "  pr-manager.md not found" >&2; return 1; }
+  pm_prompt="$(cat "${pm_path}")"
+  assert_contains "${pm_prompt}" "squash" "must reference squash-commit body" || return 1
+  assert_contains "${pm_prompt}" "verbatim" "must say usable verbatim" || return 1
+  return 0
+}
+
+# ============================================================================
 # RUN ALL TESTS
 # ============================================================================
 
@@ -717,6 +813,16 @@ main() {
   run_test "max restarts exhausts"                   test_max_restarts_exhausts
   run_test "at most one CEO spawned"                 test_at_most_one_ceo_spawned
   run_test "stop file honored during session"        test_stop_file_honored_during_session
+
+  # --- Static Prompt Assertions (AC-4, INV-DM-4) ---
+  run_test "ceo prompt: wait for delivery"           test_ceo_prompt_wait_for_delivery
+  run_test "ceo prompt: verify PM finalization"      test_ceo_prompt_verify_pm_finalization
+  run_test "ceo prompt: merge not yield"             test_ceo_prompt_merge_not_yield
+  run_test "ceo prompt: never detach"                test_ceo_prompt_never_detach
+  run_test "ceo prompt: multi ticket per session"    test_ceo_prompt_multi_ticket_per_session
+  run_test "ceo prompt: resume prompt"               test_ceo_prompt_resume_prompt
+  run_test "ceo prompt: must/must-not phrasing"      test_ceo_prompt_must_must_not_phrasing
+  run_test "pr-manager: description quality (F-6)"   test_pr_manager_description_quality
 
   printf '\n'
   printf 'Results: %d passed, %d failed, %d total\n' \

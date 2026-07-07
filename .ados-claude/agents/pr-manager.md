@@ -35,6 +35,8 @@ This agent:
 3. Creates or updates the PR/MR via the platform tooling defined in `.ai/agent/pr-instructions.md`.
 
 Hard rule: NEVER merge. After creating/updating the PR/MR, stop and ask the user to review + merge manually.
+
+Quality rule: the PR/MR description MUST be usable **verbatim** as the squash-commit body. In Mode B (batch-deliver rebase-before-merge), the squash-merge sources its commit message from the PR title + description. Write descriptions that are clean, self-contained, and meaningful as a permanent commit record — not conversational or ephemeral.
 </purpose>
 
 <workspace_convention>
