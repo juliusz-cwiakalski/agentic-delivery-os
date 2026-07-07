@@ -272,14 +272,16 @@ as the commit message. (AC-6; Mode B rules.)
 - `doc/guides/autonomous-batch-delivery.md` (EDIT)
 
 **Tasks**
-- [ ] Align the **liveness** description: session-traffic 15-min (`DELIVER_STUCK_MINUTES` default 15), not the old 30-min file-mtime wording. Update the "How activity is detected" section + the `DELIVER_STUCK_MINUTES` table row.
-- [ ] Add/align the **rebase-before-merge + green-gate wait** flow for approved PRs (cross-link delivery-modes.md Mode B). Note that **Mode B merge is now owned by `batch-deliver.sh`** (deliver-ticket.sh no longer auto-merges — F-2); update the "Approval workflow" + "What the PM does inside the session" sections to reflect that the PM stops at `pr-open` and the batch script merges after human `approved` + rebase + green.
-- [ ] State the **clean-merged-branches never-deletes-unmerged** guarantee.
-- [ ] Cross-link delivery-modes.md as the canonical modes guide; note the two are kept consistent.
-- [ ] Keep `ados_distribution: redistributable` (already set); ensure `bash scripts/.tests/test-doc-distribution.sh` stays green.
+- [x] Align the **liveness** description: session-traffic 15-min (`DELIVER_STUCK_MINUTES` default 15), not the old 30-min file-mtime wording. Update the "How activity is detected" section + the `DELIVER_STUCK_MINUTES` table row. (Rewrote "The liveness loop" + "How activity is detected" sections: session-traffic via `pm-liveness.sh`, default 15, graceful-degradation note. Added "Liveness signal changed" callout cross-linking INV-DM-5. Config table row updated to 15.)
+- [x] Add/align the **rebase-before-merge + green-gate wait** flow for approved PRs (cross-link delivery-modes.md Mode B). Note that **Mode B merge is now owned by `batch-deliver.sh`** (deliver-ticket.sh no longer auto-merges — F-2); update the "Approval workflow" + "What the PM does inside the session" sections to reflect that the PM stops at `pr-open` and the batch script merges after human `approved` + rebase + green. (Rewrote both sections: PM flowchart now stops at `pr-open`; "PM does not merge" callout; approval-workflow flowchart shows batch-deliver.sh doing rebase→green-gate→squash-merge; added "batch never adds approved" note; "When to use" table row fixed; overnight-workflow comment fixed.)
+- [x] State the **clean-merged-branches never-deletes-unmerged** guarantee. (Added paragraph under "Branch cleanup (standalone)": only ancestry-merged branches deleted, never unmerged, never protected.)
+- [x] Cross-link delivery-modes.md as the canonical modes guide; note the two are kept consistent. (Added canonical-modes callout at top of guide; updated "See also" + "Integration with ADOS processes" to link delivery-modes.md.)
+- [x] Keep `ados_distribution: redistributable` (already set); ensure `bash scripts/.tests/test-doc-distribution.sh` stays green. (Guard GREEN: 78 in-scope docs, no drift.)
 
 **Definition of Done (Phase 5)**
 - Doc reads consistently with the revised guide; doc-distribution guard green.
+
+**Phase 5 Acceptance — PASSED.** `autonomous-batch-delivery.md` now consistent with `delivery-modes.md`: liveness is session-traffic/15-min (INV-DM-5); PM stops at `pr-open` (F-2, "PM does not merge" callout); approval workflow shows `batch-deliver.sh` doing rebase→green-gate→squash-merge; `clean-merged-branches` never-deletes-unmerged guarantee stated; `delivery-modes.md` cross-linked as canonical (top callout + See also). `test-doc-distribution.sh` GREEN (78 docs, no drift). No residual "30-min", "PM merges", or "file-mtime (current behavior)" contradictions.
 
 ---
 

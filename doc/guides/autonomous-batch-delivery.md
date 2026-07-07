@@ -12,6 +12,14 @@ summary: "Deliver multiple tickets unattended with liveness monitoring, session 
 
 # Autonomous Batch Delivery
 
+> **Canonical modes guide:** [delivery-modes.md](delivery-modes.md) defines the
+> two unattended delivery modes (Mode A — autonomous CEO loop; Mode B — manual
+> batch) and the behavioral invariants. This guide is the canonical reference for
+> the **operational details of Mode B** (`batch-deliver.sh`, `deliver-ticket.sh`,
+> `clean-merged-branches`, approval workflow, labels). The two are kept
+> consistent: where they describe the same machinery (liveness, rebase-before-
+> merge, merge authority), they agree.
+
 Autonomous batch delivery lets you deliver multiple tickets **unattended** — overnight, over the weekend, or while you focus on other work. Three scripts work together to wrap the standard ADOS 11-phase lifecycle with a liveness watchdog, session resilience, and a push-to-completion PM prompt.
 
 ## Installation
@@ -47,7 +55,7 @@ See the [clean-merged-branches docs](../tools/clean-merged-branches.md) for deta
 |---|---|
 | You have 3–10 ready tickets and want to wake up to PRs | `batch-deliver.sh GH-108 GH-110 GH-37` |
 | A single ticket needs reliable delivery with auto-restart | `deliver-ticket.sh GH-112` |
-| You reviewed a PR and want the PM to address comments or merge | Re-run `deliver-ticket.sh GH-XXX` — PM detects the PR state |
+| You reviewed a PR and want the PM to address comments, or want the batch script to merge an approved PR | Re-run `batch-deliver.sh GH-XXX` — PM addresses feedback; batch script merges approved PRs (rebase + green-gate) |
 | Local branches piled up after squash-merges | `tools/clean-merged-branches` |
 
 ## Three delivery modes
@@ -88,7 +96,19 @@ flowchart TD
 
 ## The liveness loop (`deliver-ticket.sh`)
 
-The liveness loop is the heart of autonomous delivery. It starts a PM agent session, monitors it for progress, and kills-and-restarts if the session goes stale (no commits, no file changes, no doc updates for 30 minutes).
+The liveness loop is the heart of autonomous delivery. It starts a PM agent session, monitors it for progress, and kills-and-restarts if the session goes stale (no opencode session-message traffic for the stuck threshold — default **15 minutes**).
+
+> **Liveness signal changed.** An earlier version measured worktree file-mtimes
+> (commits, file changes, `doc/changes/` writes) over a 30-minute window. That
+> heuristic is **retired** in favor of **opencode session-message traffic** —
+> new assistant/tool messages flowing in the session. A hung LLM stream keeps
+> the process alive while making zero progress; the file-mtime heuristic could
+> not distinguish that from a healthy long reasoning step. Session-traffic is
+> both more precise and allows the tighter 15-minute threshold. See
+> [delivery-modes.md § INV-DM-5](delivery-modes.md#inv-dm-5-liveness-means-session-message-progress-not-process-alive)
+> for the full rationale. Worktree activity remains a **secondary** signal
+> (used by `ceo-loop.sh` to confirm a CEO blocked on a healthy delivery is not
+> stuck).
 
 ```mermaid
 flowchart TD
@@ -99,15 +119,15 @@ flowchart TD
     RESUME --> BG["Background via setsid<br/>Save pending mapping"]
     CREATE --> BG
     BG --> MON{Monitor}
-    MON -->|"Activity detected<br/>(commit, file change)"| RESET["Reset 30-min timer"]
+    MON -->|"Session-message traffic<br/>(assistant/tool messages)"| RESET["Reset stuck timer"]
     RESET --> MON
-    MON -->|"No activity 30 min"| STALE["⚠ Stale — kill"]
+    MON -->|"No traffic for<br/>DELIVER_STUCK_MINUTES"| STALE["⚠ Stalled — kill"]
     MON -->|"Process exited"| EXIT{Classify exit}
-    STALE --> KILL["SIGTERM → 20s grace → SIGKILL"]
+    STALE --> KILL["SIGTERM → 20s grace → SIGKILL<br/>(signal propagated to PM child)"]
     KILL --> RESTART{Iterations left?}
     EXIT -->|"Ticket closed"| DONE_M(["✓ Merged"])
     EXIT -->|"human-input-needed label"| DONE_B(["⏸ Blocked"])
-    EXIT -->|"Open PR, no approval"| DONE_P(["✓ PR open"])
+    EXIT -->|"Open PR, no approval"| DONE_P(["✓ PR open (pr-open)"])
     EXIT -->|"Other exit"| RESTART
     RESTART -->|Yes| START
     RESTART -->|"No — max 10"| FAIL(["✗ Max restarts"])
@@ -122,17 +142,13 @@ flowchart TD
 
 ### How activity is detected
 
-Every 60 seconds, the script computes an **activity epoch** — the most recent timestamp across:
+Every `DELIVER_POLL_SECONDS` (default 60s), the script probes **opencode session-message traffic** — the stream of assistant/tool messages in the PM's opencode session — via `scripts/pm-liveness.sh`. If new messages have flowed since the last probe, the stuck timer resets. If no new traffic arrives for `DELIVER_STUCK_MINUTES` (default **15**), the session is declared stalled and killed-and-restarted.
 
-| Signal | What it catches |
-|---|---|
-| `git log -1 --format=%ct` | New commits |
-| Worktree file mtimes (excluding `.git`, `tmp`, `.ai/local`) | Uncommitted file changes (specs, code, docs) |
-| `doc/changes/` directory mtime | Change artifacts being written |
+This is more precise than the old file-mtime heuristic: a hung LLM stream keeps the process alive (blocked on I/O) while making zero progress, and only session traffic can tell that apart from a healthy long reasoning step. Worktree activity (commits, `doc/changes/` writes) remains a **secondary** signal, primarily consumed by `ceo-loop.sh` to confirm a CEO that is blocked on a healthy delivery is *not* stuck.
 
-If the activity epoch increases, the 30-minute stuck timer resets. If it doesn't increase for 30 minutes, the session is killed and restarted.
+> **Graceful degradation:** if the opencode session DB is unavailable (e.g. in CI), `pm-liveness.sh` warns and falls back to a process-alive heuristic — it never blocks delivery on a missing DB.
 
-> **Activity detection assumption**: A healthy PM iteration advances a git commit or writes a `doc/changes/` artifact within 30 minutes. Files under `.ai/local/` (PM context, session mappings) are deliberately excluded to avoid false positives from trivial state updates. If a PM "thinking" phase only journals to `.ai/local/` for >30 min without committing or writing artifacts, the session will be killed and restarted. Tune `DELIVER_STUCK_MINUTES` if your workflow has longer legitimate thinking phases.
+> **Activity detection assumption**: A healthy PM iteration produces session-message traffic (reasoning, tool calls, file edits) within 15 minutes. If a PM "thinking" phase produces no session traffic for >15 min, the session will be killed and restarted. Tune `DELIVER_STUCK_MINUTES` if your workflow has longer legitimate thinking phases.
 
 ### Session resume by title
 
@@ -154,40 +170,49 @@ flowchart TD
     DETECT --> CLOSED{Ticket closed?}
     CLOSED -->|Yes| STOP_DONE(["Report done"])
     CLOSED -->|No| PR{Open PR exists?}
-    PR -->|Yes| APPROVAL{Approved?}
+    PR -->|Yes| REVIEW{"Changes requested<br/>on the PR?"}
     PR -->|No| DELIVER["Run ADOS 11-phase<br/>delivery lifecycle"]
-    APPROVAL -->|"Yes (any signal)"| MERGE["Squash merge<br/>gh pr merge --squash"]
-    APPROVAL -->|"Changes requested"| FIX["Read comments<br/>Fix code<br/>Push"]
-    APPROVAL -->|"No review yet"| AWAIT(["Stop — awaiting review"])
+    REVIEW -->|Yes| FIX["Read comments<br/>Fix code<br/>Push"]
+    REVIEW -->|"No — awaiting review"| AWAIT(["Stop — pr-open<br/>(awaiting human review)"])
     DELIVER --> PR_CREATED["PR created"]
     PR_CREATED --> AWAIT
     FIX --> AWAIT
-    MERGE --> STOP_DONE
     DELIVER -->|"Blocking question"| BLOCKED["Add 'human-input-needed' label<br/>Add comment with question"]
     BLOCKED --> STOP_BLK(["Stop — blocked"])
 
     style STOP_DONE fill:#4CAF50,color:#fff
     style AWAIT fill:#2196F3,color:#fff
     style STOP_BLK fill:#FF9800,color:#fff
-    style MERGE fill:#4CAF50,color:#fff
 ```
+
+> **The PM does not merge.** `deliver-ticket.sh` returns `pr-open` (+ PR URL +
+> PM last-message) and stops. The merge is owned by `batch-deliver.sh` (Mode B),
+> which acts **only** after the human approves and the rebase + green-gate checks
+> pass. The legacy auto-merge-on-`approved`-label path inside the PM is retired.
+> Keeping the merge out of the per-ticket engine is what lets `batch-deliver.sh`
+> verify the rebase + green CI before committing to the merge. See
+> [delivery-modes.md § INV-DM-4](delivery-modes.md#inv-dm-4-ceo-merges-approved-finalized-prs--does-not-yield-mode-a).
 
 The prompt is **identical on every start and resume** — the state detection at the top ensures the PM always does the right thing regardless of how many times the session was restarted.
 
-## Approval workflow (multi-signal)
+## Approval workflow (multi-signal, merge owned by the batch script)
 
-GitHub blocks PR authors from approving their own PRs. In solo-developer mode — where the AI creates the PR using your credentials — you need an alternative approval mechanism. The PM accepts **any one** of these signals:
+GitHub blocks PR authors from approving their own PRs. In solo-developer mode — where the AI creates the PR using your credentials — you need an alternative approval mechanism. The batch script accepts **any one** of these signals as approval, then performs the **rebase-before-merge + green-gate wait** and squash-merges:
 
 ```mermaid
 flowchart LR
-    subgraph Signals["Approval signals — ANY ONE is sufficient"]
+    subgraph Signals["Approval signals — ANY ONE is sufficient (checked by batch-deliver.sh)"]
         S1["GitHub APPROVED review<br/>(team mode — different human)"]
         S2["'approved' label on issue<br/>gh issue edit GH-XXX --add-label approved"]
         S3["'LGTM' comment by PR author<br/>(opt-in — see below)"]
     end
-    Signals --> MERGE["PM squash-merges<br/>gh pr merge --squash --delete-branch"]
+    Signals --> BATCH["batch-deliver.sh"]
+    BATCH --> REBASE["Rebase onto latest main<br/>push (rebase-before-merge)"]
+    REBASE --> GATES["Wait for PR quality gates<br/>to go green"]
+    GATES --> MERGE["Squash-merge<br/>commit msg = PR title + description"]
     MERGE --> CLOSE(["Ticket auto-closes"])
 
+    style BATCH fill:#2196F3,color:#fff
     style MERGE fill:#4CAF50,color:#fff
     style CLOSE fill:#4CAF50,color:#fff
 ```
@@ -198,7 +223,9 @@ flowchart LR
 | `approved` label on issue | `gh issue edit GH-XXX --add-label approved` | Solo (PR author can label the issue) | ✅ Always on |
 | LGTM comment by PR author | Comment `lgtm` (exact match) on the PR — **only the PR author's comment counts** | Solo | ⚠️ Opt-in only |
 
-The PM checks the always-on signals on every run. If any is present, it squash-merges and closes the ticket.
+When you re-run `batch-deliver.sh` after approving, the batch script detects the approval, rebases the PR onto the latest `main`, pushes, waits for the PR quality gates to go green, and squash-merges — using the **PR title and description as the commit message**. If a rebase conflict occurs, an AI agent resolves it, pushes, and the gates re-run. If the PR is already on the latest `main` (rebase is a no-op), the green-gate wait still runs but completes immediately.
+
+> **`batch-deliver.sh` never adds the `approved` label itself.** Approval is always a human action. The batch script only *reads* the approval signals and acts on them.
 
 ### LGTM comment (opt-in, author-restricted)
 
@@ -210,7 +237,7 @@ DELIVER_ALLOW_LGTM_COMMENT=true scripts/deliver-ticket.sh GH-112
 DELIVER_ALLOW_LGTM_COMMENT=true scripts/batch-deliver.sh GH-108 GH-110
 ```
 
-When enabled, the PM only accepts an **exact** `lgtm` comment (`^lgtm$` — no substring match) written by the **PR author** (the user whose credentials created the PR), not arbitrary commenters.
+When enabled, the script only accepts an **exact** `lgtm` comment (`^lgtm$` — no substring match) written by the **PR author** (the user whose credentials created the PR), not arbitrary commenters.
 
 ## Blocked workflow
 
@@ -298,7 +325,8 @@ gh issue edit GH-108 --add-label approved
 
 # 3. Re-run to let PM address comments + merge approved PRs:
 scripts/batch-deliver.sh GH-108 GH-110 GH-112 GH-37 GH-98
-# Already-merged tickets are skipped automatically
+# Already-merged tickets are skipped automatically; approved PRs are
+# rebased, green-gate-checked, and squash-merged by the batch script.
 ```
 
 ### Branch cleanup (standalone)
@@ -314,6 +342,8 @@ tools/clean-merged-branches --dry-run
 tools/clean-merged-branches --base develop
 ```
 
+`clean-merged-branches` only deletes branches that are **already squash-merged into the base branch** (verified via ancestry, not just name). It **never deletes unmerged branches**, and it **never touches protected branches** (`main`, `master`, `develop`, plus any you add via `--protected`). This guarantee is what makes the batch script safe to invoke it automatically after each merge.
+
 ## Configuration
 
 All settings are environment variables (with CLI flag overrides where noted):
@@ -322,7 +352,7 @@ All settings are environment variables (with CLI flag overrides where noted):
 
 | Variable | Default | Description |
 |---|---|---|
-| `DELIVER_STUCK_MINUTES` | `30` | Minutes without activity before kill-and-restart |
+| `DELIVER_STUCK_MINUTES` | `15` | Minutes with no PM session-message traffic before the PM is declared stalled and restarted (was 30/file-mtime, now 15/session-traffic) |
 | `DELIVER_POLL_SECONDS` | `60` | Seconds between activity checks |
 | `DELIVER_KILL_GRACE_SECONDS` | `20` | Seconds between SIGTERM and SIGKILL |
 | `DELIVER_MAX_RESTARTS` | `10` | Maximum restart iterations before giving up |
@@ -352,9 +382,9 @@ Autonomous batch delivery is an **operational mode** of the Change Delivery proc
 - **Liveness monitoring** — so a stuck subagent doesn't waste hours
 - **Session resilience** — so a killed process can resume without losing context
 - **Branch hygiene** — so merged branches don't pile up
-- **PR feedback** — so the PM can address review comments and merge on approval without a new interactive session
+- **PR feedback** — so the PM can address review comments, and the batch script can merge approved PRs (rebase + green-gate + squash-merge) without a new interactive session
 
-See the [Change Delivery guide](change-lifecycle.md) for the 11-phase lifecycle details and the [ADOS Processes Map](ados-processes.md) for how this fits into the bigger picture.
+See the [Delivery Modes guide](delivery-modes.md) for the canonical modes definition and behavioral invariants, the [Change Delivery guide](change-lifecycle.md) for the 11-phase lifecycle details, and the [ADOS Processes Map](ados-processes.md) for how this fits into the bigger picture.
 
 ## Labels reference
 
@@ -363,6 +393,6 @@ See the [Change Delivery guide](change-lifecycle.md) for the 11-phase lifecycle 
 | `human-input-needed` | PM (when blocked) | Ticket has a blocking question for the human. Remove after answering to resume. | `FBCA04` (yellow) |
 | `approved` | Human (after review) | PR is approved for squash-merge. Solo-developer-friendly — works even when GitHub self-approval is blocked. This is the **default** solo-mode approval signal. | `0E8A16` (green) |
 
-> **LGTM is not a label** — it is an opt-in comment-based signal (`DELIVER_ALLOW_LGTM_COMMENT=true`), restricted to the PR author with an exact `^lgtm$` match. See [Approval workflow](#approval-workflow-multi-signal).
+> **LGTM is not a label** — it is an opt-in comment-based signal (`DELIVER_ALLOW_LGTM_COMMENT=true`), restricted to the PR author with an exact `^lgtm$` match. See [Approval workflow](#approval-workflow-multi-signal-merge-owned-by-the-batch-script).
 
-> **See also:** [Change Lifecycle](change-lifecycle.md) · [ADOS Processes Map](ados-processes.md) · [clean-merged-branches tool docs](../tools/clean-merged-branches.md) · [OpenCode Agents Guide](opencode-agents-and-commands-guide.md)
+> **See also:** [Delivery Modes](delivery-modes.md) (canonical modes guide) · [Change Lifecycle](change-lifecycle.md) · [ADOS Processes Map](ados-processes.md) · [clean-merged-branches tool docs](../tools/clean-merged-branches.md) · [OpenCode Agents Guide](opencode-agents-and-commands-guide.md)
