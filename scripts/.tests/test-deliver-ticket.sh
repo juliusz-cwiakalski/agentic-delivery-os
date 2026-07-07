@@ -4,6 +4,10 @@
 # Tests pure functions (input parsing, prompt building, decision logic),
 # mockable functions (branch resolution, result classification), and
 # activity monitoring helpers.
+# shellcheck disable=SC2034
+# (Module-level vars set below — DELIVERY_DIR, MAX_RESTARTS, CAPTURED_PM_MESSAGE,
+# DELIVERY_RESULT/PR_URL/EXIT_CODE/LAST_MESSAGE, etc. — are consumed by the
+# sourced deliver-ticket.sh functions; ShellCheck cannot track across source.)
 set -Eeuo pipefail
 set -o errtrace
 shopt -s inherit_errexit 2>/dev/null || true
@@ -391,14 +395,23 @@ test_prompt_contains_ticket() {
   assert_contains "${prompt}" "Deliver" "Prompt should have delivery instruction"
 }
 
-# TC-DT-08b: prompt has PR check instructions
-test_prompt_has_pr_check() {
+# TC-DT-08b: prompt does NOT auto-merge (F-2 / INV-DM-4). The PM creates the
+# PR and STOPS at pr-open; merge authority is the CEO (Mode A) or
+# batch-deliver.sh (Mode B). The legacy APPROVED/squash-merge path is retired.
+test_prompt_does_not_auto_merge() {
   local prompt
   prompt="$(build_delivery_prompt "GH-112" "")"
 
-  assert_contains "${prompt}" "open PR" "Prompt should check for open PR"
-  assert_contains "${prompt}" "APPROVED" "Prompt should mention APPROVED review"
-  assert_contains "${prompt}" "squash-merge" "Prompt should mention squash-merge"
+  # The no-merge contract must be explicit.
+  assert_contains "${prompt}" "DO NOT MERGE" "Prompt must tell the PM not to merge"
+  assert_contains "${prompt}" "NOT authorized to merge" "Prompt must state the PM is not the merge authority"
+
+  # Legacy auto-merge signals are retired.
+  assert_not_contains "${prompt}" "APPROVED" "Prompt must not check APPROVED review (F-2)"
+  assert_not_contains "${prompt}" "squash-merge" "Prompt must not instruct squash-merge (F-2)"
+  assert_not_contains "${prompt}" "gh pr merge" "Prompt must not invoke gh pr merge (F-2)"
+  assert_not_contains "${prompt}" "approved" "Prompt must not reference the approved label (F-2)"
+  assert_not_contains "${prompt}" "lgtm" "Prompt must not reference LGTM (F-2)"
 }
 
 # TC-DT-08c: prompt has human-input-needed workflow
@@ -427,54 +440,7 @@ test_prompt_has_lifecycle() {
   assert_contains "${prompt}" "11-phase lifecycle" "Prompt should reference ADOS lifecycle"
 }
 
-# TC-DT-08f: prompt approval signals — LGTM is opt-in (C-1 security fix)
-# Default: LGTM is NOT in the prompt. With DELIVER_ALLOW_LGTM_COMMENT=true:
-# LGTM IS present, restricted to PR author, anchored ^lgtm$ match.
-test_prompt_lgtm_opt_in() {
-  # Default — LGTM must NOT be in the prompt
-  local prompt
-  prompt="$(build_delivery_prompt "GH-112" "")"
-
-  # a. GitHub-native APPROVED review (team mode)
-  assert_contains "${prompt}" "reviewDecision" "Prompt should check PR reviewDecision"
-  assert_contains "${prompt}" "APPROVED" "Prompt should reference APPROVED review"
-
-  # b. "approved" label on the ticket issue (solo mode)
-  assert_contains "${prompt}" "approved" "Prompt should reference approved label"
-  assert_contains "${prompt}" "grep -qi approved" "Prompt should grep ticket labels for approved"
-
-  # c. LGTM must NOT appear by default (C-1)
-  assert_not_contains "${prompt}" "lgtm" "LGTM must NOT be in default prompt (C-1)"
-
-  # Any-one-is-sufficient language
-  assert_contains "${prompt}" "ANY ONE" "Prompt should state any one signal is sufficient"
-}
-
-# TC-DT-08f-opt: with DELIVER_ALLOW_LGTM_COMMENT=true, LGTM appears with author restriction
-test_prompt_lgtm_enabled() {
-  # shellcheck disable=SC2034  # read by the sourced build_delivery_prompt function
-  DELIVER_ALLOW_LGTM_COMMENT=true
-  local prompt
-  prompt="$(build_delivery_prompt "GH-112" "")"
-  unset DELIVER_ALLOW_LGTM_COMMENT
-
-  assert_contains "${prompt}" "lgtm" "LGTM should be in prompt when DELIVER_ALLOW_LGTM_COMMENT=true"
-  assert_contains "${prompt}" "PR author" "LGTM line should be restricted to PR author"
-  assert_contains "${prompt}" "PR_AUTHOR" "LGTM line should filter by PR author login"
-  assert_contains "${prompt}" "^lgtm" "LGTM match should be anchored (^lgtm\$)"
-}
-
-# TC-DT-08g: prompt auto-creates the 'approved' label for solo-developer mode
-test_prompt_creates_approved_label() {
-  local prompt
-  prompt="$(build_delivery_prompt "GH-112" "")"
-
-  assert_contains "${prompt}" 'gh label create "approved"' "Prompt should auto-create 'approved' label"
-  assert_contains "${prompt}" "0E8A16" "Prompt should set approved label color"
-  assert_contains "${prompt}" "solo-developer-friendly" "Prompt should describe label purpose"
-}
-
-# TC-DT-08h: prompt merges main into the feature branch before resuming work
+# TC-DT-08g: prompt merges main into the feature branch before resuming work
 test_prompt_merge_main_on_resume() {
   local prompt
   prompt="$(build_delivery_prompt "GH-112" "feat/test-branch")"
@@ -483,7 +449,7 @@ test_prompt_merge_main_on_resume() {
   assert_contains "${prompt}" "git merge origin/main" "Prompt should merge main into the feature branch"
 }
 
-# TC-DT-08i: prompt has a Resume Sync section
+# TC-DT-08h: prompt has a Resume Sync section
 test_prompt_has_resume_sync_section() {
   local prompt
   prompt="$(build_delivery_prompt "GH-112" "")"
@@ -493,13 +459,12 @@ test_prompt_has_resume_sync_section() {
   assert_contains "${prompt}" "merge conflicts" "Resume Sync should mention merge conflict handling"
 }
 
-# TC-DT-08j: prompt fetches review comments every resume in the open PR section
+# TC-DT-08i: prompt fetches review comments on resume in the open PR section
 test_prompt_fetches_review_comments() {
   local prompt
   prompt="$(build_delivery_prompt "GH-112" "feat/test-branch")"
 
   assert_contains "${prompt}" "Fetch all review comments" "Open PR section should fetch all review comments"
-  assert_contains "${prompt}" "regardless of reviewDecision" "Should address comments regardless of reviewDecision"
 }
 
 # ============================================================================
@@ -661,6 +626,285 @@ GH
 }
 
 # ============================================================================
+# TESTS: Single-flight + join + subcommands (AC-2, INV-DM-1/2/5/6)
+# ============================================================================
+
+# TC-DT-CMP-04: _cleanup_child clears the repo-local PID file (INV-DM-2).
+test_cleanup_child_clears_pid_file() {
+  local fake_delivery="${_test_tmpdir}/delivery"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+
+  CURRENT_REF="GH-999"
+  printf '{"pid":1,"start":0,"ref":"GH-999"}' >"$(pid_file_for "GH-999")"
+  [[ -f "$(pid_file_for "GH-999")" ]] || { echo "  setup failed: pid file not written" >&2; return 1; }
+
+  _cleanup_child
+
+  [[ -f "$(pid_file_for "GH-999")" ]] && { echo "  PID file should be cleared" >&2; return 1; }
+  assert_eq "" "${CURRENT_REF}" "_cleanup_child should clear CURRENT_REF"
+  return 0
+}
+
+# TC-DT-SF-01: pid_file_for returns the repo-local git-ignored path.
+test_pid_file_path() {
+  local fake_delivery="${_test_tmpdir}/delivery"
+  DELIVERY_DIR="${fake_delivery}"
+  assert_eq "${fake_delivery}/GH-142.pid" "$(pid_file_for "GH-142")" "GH-142 pid path"
+  assert_eq "${fake_delivery}/PDEV-9.pid" "$(pid_file_for "PDEV-9")" "PDEV-9 pid path"
+}
+
+# TC-DT-SF-02: STUCK_MINUTES default is 15 (OQ-DM-3 regression guard).
+test_stuck_minutes_default_15() {
+  assert_eq "15" "${STUCK_MINUTES}" "default STUCK_MINUTES should be 15 (was 30)"
+}
+
+# Helper: spawn a stub process whose cmdline is exactly "deliver-ticket.sh"
+# and whose cwd is the real ROOT_DIR (so owner_pid_if_live accepts it). Echoes
+# the PID. Uses `exec -a` so $! IS the long-running process (not a transient
+# subshell wrapper). The stub blocks until killed (or 30s elapses).
+_spawn_fake_owner() {
+  # shellcheck disable=SC2089  # intentional word-splitting of the -c body
+  bash -c 'cd "'"${ROOT_DIR}"'"; exec -a deliver-ticket.sh sleep 30' >/dev/null 2>&1 &
+  local pid=$!
+  sleep 0.3
+  printf '%s' "${pid}"
+}
+
+# TC-DT-SF-03: --is-delivering with no PID file → non-zero, empty stdout.
+test_is_delivering_no_pid_file() {
+  local fake_delivery="${_test_tmpdir}/delivery3"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+
+  local out rc
+  out="$(cmd_is_delivering "GH-142" 2>/dev/null)" || rc=$?
+  rc="${rc:-0}"
+  assert_eq "" "${out}" "--is-delivering must print nothing with no PID file"
+  [[ "${rc}" -ne 0 ]] || { echo "  expected non-zero exit, got ${rc}" >&2; return 1; }
+  return 0
+}
+
+# TC-DT-SF-04: --is-delivering with a live deliver-ticket.sh PID → exit 0.
+test_is_delivering_live_pid() {
+  local fake_delivery="${_test_tmpdir}/delivery4"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+  local pid
+  pid="$(_spawn_fake_owner)"
+  kill -0 "${pid}" 2>/dev/null || { kill "${pid}" 2>/dev/null; return 1; }
+
+  write_pid_file "GH-142" "${pid}" "$(date +%s)"
+
+  cmd_is_delivering "GH-142"
+  local rc=$?
+  kill_process_tree "${pid}" 2>/dev/null || true
+  wait "${pid}" 2>/dev/null || true
+  [[ ${rc} -eq 0 ]] || { echo "  expected exit 0 for live PID, got ${rc}" >&2; return 1; }
+  return 0
+}
+
+# TC-DT-SF-05: --is-delivering with a dead PID → non-zero AND stale file removed.
+test_is_delivering_dead_pid_cleans_stale() {
+  local fake_delivery="${_test_tmpdir}/delivery5"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+  # A PID that is almost certainly not a live deliver-ticket.sh.
+  write_pid_file "GH-142" "999999" "$(date +%s)"
+
+  cmd_is_delivering "GH-142" 2>/dev/null
+  local rc=$?
+  [[ ${rc} -ne 0 ]] || { echo "  expected non-zero for dead PID" >&2; return 1; }
+  [[ ! -f "$(pid_file_for "GH-142")" ]] || { echo "  stale PID file should be removed" >&2; return 1; }
+  return 0
+}
+
+# TC-DT-SF-06: --is-delivering (no REF) exits 0 when ANY delivery is live.
+test_is_delivering_any_ref() {
+  local fake_delivery="${_test_tmpdir}/delivery6"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+  local pid
+  pid="$(_spawn_fake_owner)"
+  kill -0 "${pid}" 2>/dev/null || { kill "${pid}" 2>/dev/null; return 1; }
+
+  write_pid_file "GH-142" "${pid}" "$(date +%s)"
+
+  # Any-ref scan should find the live delivery.
+  cmd_is_delivering ""
+  local rc=$?
+  [[ ${rc} -eq 0 ]] || { echo "  any-ref scan should exit 0 when a delivery is live" >&2; kill_process_tree "${pid}" 2>/dev/null; return 1; }
+  kill_process_tree "${pid}" 2>/dev/null || true
+  wait "${pid}" 2>/dev/null || true
+
+  # With the owner gone, any-ref scan should exit non-zero.
+  cmd_is_delivering ""
+  rc=$?
+  [[ ${rc} -ne 0 ]] || { echo "  any-ref scan should exit non-zero when no delivery is live" >&2; return 1; }
+  return 0
+}
+
+# TC-DT-SF-07: --last-message prints the stored PM message without running.
+test_last_message_subcommand() {
+  local fake_delivery="${_test_tmpdir}/delivery7"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+  printf '%s' 'PR #143 open; blocker: needs design review' >"$(last_message_file_for "GH-142")"
+
+  local out rc
+  out="$(cmd_last_message "GH-142")" || rc=$?
+  rc="${rc:-0}"
+  assert_eq "PR #143 open; blocker: needs design review" "${out}" "should print stored last message"
+  [[ ${rc} -eq 0 ]] || { echo "  exit should be 0" >&2; return 1; }
+  return 0
+}
+
+# TC-DT-SF-08: --resume-prompt replaces the default delivery prompt.
+# Mocks run_single_iteration (same-shell override) to capture the prompt arg.
+test_resume_prompt_flag() {
+  local fake_delivery="${_test_tmpdir}/delivery8"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+
+  local run_log="${_test_tmpdir}/run8.log"
+  : >"${run_log}"
+  local resume_text="Fix the failing test in X by Y"
+
+  # resolve_session calls _opencode session list (mock returns no session).
+  _opencode() { printf '%s' '[]'; }
+  # Terminal classification (CLOSED → merged) so deliver_loop stops in 1 iter.
+  _gh() { printf '%s' '{"state":"CLOSED","labels":[]}'; }
+  # run_single_iteration: capture the prompt (arg 3) and finish immediately.
+  run_single_iteration() {
+    printf '%s\n' "PROMPT_ARG:$3" >>"${run_log}"
+    CAPTURED_PM_MESSAGE="PM completed via resume"
+    printf 'finished'
+  }
+
+  MAX_RESTARTS=1
+  CAPTURED_PM_MESSAGE="" DELIVERY_RESULT="" DELIVERY_PR_URL="" DELIVERY_EXIT_CODE=0 DELIVERY_LAST_MESSAGE=""
+
+  deliver_loop "GH-142" "feat/x" "${resume_text}" >/dev/null 2>&1 || true
+
+  local logged
+  logged="$(cat "${run_log}" 2>/dev/null)"
+  assert_contains "${logged}" "PROMPT_ARG:${resume_text}" "resume prompt should reach run_single_iteration"
+  return 0
+}
+
+# TC-DT-SF-09: --resume-prompt without a value is rejected (usage error, exit 2).
+test_resume_prompt_rejected() {
+  local rc=""
+  ( parse_args "--resume-prompt" ) 2>/dev/null || rc=$?
+  rc="${rc:-0}"
+  [[ ${rc} -eq "${EXIT_USAGE}" ]] || { echo "  --resume-prompt without value should exit ${EXIT_USAGE}, got ${rc}" >&2; return 1; }
+  return 0
+}
+
+# TC-DT-SF-10: join abandons when the owner PID is reused (F-4). A PID file
+# pointing at a process whose cmdline is NOT deliver-ticket.sh must NOT be joined.
+test_join_aborts_when_pid_reused() {
+  local fake_delivery="${_test_tmpdir}/delivery10"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+
+  # Spawn a plain sleep — $! IS the sleep (cmdline "sleep 30", NOT
+  # deliver-ticket.sh), so owner_pid_if_live must reject it (F-4 cmdline guard).
+  sleep 30 &
+  local sleep_pid=$!
+  sleep 0.2
+  write_pid_file "GH-142" "${sleep_pid}" "$(date +%s)"
+
+  # owner_pid_if_live must reject it (cmdline does not contain deliver-ticket.sh).
+  local live
+  live="$(owner_pid_if_live "GH-142" 2>/dev/null)" || true
+  assert_eq "" "${live}" "a sleep PID must not be treated as a live owner (cmdline mismatch)"
+
+  # join_delivery should therefore return "own" (proceed to OWN).
+  local out
+  out="$(join_delivery "GH-142" "feat/x")"
+  assert_eq "own" "${out}" "join should abandon on PID reuse/mismatch and return own"
+
+  kill_process_tree "${sleep_pid}" 2>/dev/null || true
+  wait "${sleep_pid}" 2>/dev/null || true
+  return 0
+}
+
+# TC-DT-SF-11: deliver-ticket.sh does not auto-merge (F-2). The script never
+# calls `gh pr merge` — classify_result/pr_url_for only inspect state.
+test_deliver_ticket_does_not_auto_merge() {
+  local fake_delivery="${_test_tmpdir}/delivery11"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+
+  local gh_log="${_test_tmpdir}/gh11.log"
+  : >"${gh_log}"
+  _gh() {
+    printf '%s\n' "gh:$*" >>"${gh_log}"
+    case "$1" in
+      # CLOSED → "merged" classification: even in a would-be-merged scenario,
+      # no gh pr merge may be called (F-2). Terminal state → 1 iteration.
+      issue) printf '%s' '{"state":"CLOSED","labels":[]}' ;;
+      pr)    printf '%s' '[]' ;;
+    esac
+  }
+  _opencode() { printf '%s' '[]'; }
+  run_single_iteration() { CAPTURED_PM_MESSAGE="done"; printf 'finished'; }
+
+  MAX_RESTARTS=1
+  CAPTURED_PM_MESSAGE="" DELIVERY_RESULT="" DELIVERY_PR_URL="" DELIVERY_EXIT_CODE=0 DELIVERY_LAST_MESSAGE=""
+  CURRENT_REF="GH-142"
+
+  deliver_loop "GH-142" "feat/x" >/dev/null 2>&1 || true
+
+  # No gh pr merge call should have occurred anywhere.
+  if grep -q "pr merge" "${gh_log}" 2>/dev/null; then
+    echo "  gh pr merge must NEVER be called (F-2); saw:" >&2
+    grep "pr merge" "${gh_log}" >&2 || true
+    return 1
+  fi
+  return 0
+}
+
+# TC-DT-SF-12: default invocation prints a delivery summary on stdout with both
+# the result classification and the PM last-message (INV-DM-1/4).
+test_stdout_returns_pm_last_message_and_result() {
+  local fake_delivery="${_test_tmpdir}/delivery12"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+
+  _gh() {
+    case "$1" in
+      issue) printf '%s' '{"state":"OPEN","labels":[]}' ;;
+      pr)
+        if printf '%s ' "$@" | grep -q -- '--state open'; then
+          printf '%s' '[{"number":143,"url":"https://github.com/x/y/pull/143"}]'
+        else
+          printf '%s' '[]'
+        fi
+        ;;
+    esac
+  }
+  _opencode() { printf '%s' '[]'; }
+  run_single_iteration() { CAPTURED_PM_MESSAGE="PR #143 open; blocker: needs design review"; printf 'finished'; }
+
+  MAX_RESTARTS=1
+  CAPTURED_PM_MESSAGE="" DELIVERY_RESULT="" DELIVERY_PR_URL="" DELIVERY_EXIT_CODE=0 DELIVERY_LAST_MESSAGE=""
+  CURRENT_REF="GH-142"
+
+  deliver_loop "GH-142" "feat/x" >/dev/null 2>&1 || true
+  local summary
+  summary="$(print_delivery_summary)"
+
+  assert_contains "${summary}" "result=" "summary must include result= key"
+  assert_contains "${summary}" "pr_url=" "summary must include pr_url= key"
+  assert_contains "${summary}" "last_message=" "summary must include last_message= key"
+  assert_contains "${summary}" "pr-open" "summary should classify pr-open"
+  assert_contains "${summary}" "PR #143 open" "summary should carry the PM last-message text"
+  return 0
+}
+
+# ============================================================================
 # RUN TESTS
 # ============================================================================
 main() {
@@ -691,20 +935,32 @@ main() {
   run_test "TC-DT-06f: stuck+unknown continues" test_decide_stuck_unknown_continues
   run_test "TC-DT-06g: finished+failed continues" test_decide_finished_failed_continues
   run_test "TC-DT-08: prompt contains ticket and branch" test_prompt_contains_ticket
-  run_test "TC-DT-08b: prompt has PR check instructions" test_prompt_has_pr_check
+  run_test "TC-DT-08b: prompt does NOT auto-merge (F-2)" test_prompt_does_not_auto_merge
   run_test "TC-DT-08c: prompt has blocked workflow" test_prompt_has_blocked_workflow
   run_test "TC-DT-08d: prompt enforces single ticket" test_prompt_single_ticket
   run_test "TC-DT-08e: prompt references 11-phase lifecycle" test_prompt_has_lifecycle
-  run_test "TC-DT-08f: LGTM opt-in (not in default prompt)" test_prompt_lgtm_opt_in
-  run_test "TC-DT-08f-opt: LGTM enabled (author-restricted)" test_prompt_lgtm_enabled
-  run_test "TC-DT-08g: prompt auto-creates approved label" test_prompt_creates_approved_label
-  run_test "TC-DT-08h: prompt merges main on resume" test_prompt_merge_main_on_resume
-  run_test "TC-DT-08i: prompt has Resume Sync section" test_prompt_has_resume_sync_section
-  run_test "TC-DT-08j: prompt fetches review comments on resume" test_prompt_fetches_review_comments
+  run_test "TC-DT-08g: prompt merges main on resume" test_prompt_merge_main_on_resume
+  run_test "TC-DT-08h: prompt has Resume Sync section" test_prompt_has_resume_sync_section
+  run_test "TC-DT-08i: prompt fetches review comments on resume" test_prompt_fetches_review_comments
   run_test "TC-DT-CMP-01: kill_process_tree terminates process" test_kill_process_tree_kills_process
   run_test "TC-DT-CMP-02: resolve_session title lookup" test_resolve_session_title_lookup
   run_test "TC-DT-CMP-03: _cleanup_child kills tracked PID" test_cleanup_child_kills_tracked_pid
+  run_test "TC-DT-CMP-04: _cleanup_child clears PID file" test_cleanup_child_clears_pid_file
   run_test "TC-DT-INT-01: integration kill/restart cycle (slow)" test_integration_kill_restart_cycle
+
+  # AC-2: single-flight + join + subcommands + signal-prop + session-traffic liveness
+  run_test "TC-DT-SF-01: pid_file_for repo-local path" test_pid_file_path
+  run_test "TC-DT-SF-02: stuck-minutes default is 15" test_stuck_minutes_default_15
+  run_test "TC-DT-SF-03: --is-delivering no PID file" test_is_delivering_no_pid_file
+  run_test "TC-DT-SF-04: --is-delivering live PID" test_is_delivering_live_pid
+  run_test "TC-DT-SF-05: --is-delivering dead PID cleans stale" test_is_delivering_dead_pid_cleans_stale
+  run_test "TC-DT-SF-06: --is-delivering any ref" test_is_delivering_any_ref
+  run_test "TC-DT-SF-07: --last-message subcommand" test_last_message_subcommand
+  run_test "TC-DT-SF-08: --resume-prompt flag passthrough" test_resume_prompt_flag
+  run_test "TC-DT-SF-09: --resume-prompt rejected empty/conflict" test_resume_prompt_rejected
+  run_test "TC-DT-SF-10: join abandons on PID reuse (F-4)" test_join_aborts_when_pid_reused
+  run_test "TC-DT-SF-11: deliver-ticket does not auto-merge (F-2)" test_deliver_ticket_does_not_auto_merge
+  run_test "TC-DT-SF-12: stdout delivery summary (result+last_message)" test_stdout_returns_pm_last_message_and_result
 
   printf '\n%s Summary: %d/%d passed' "${TEST_TAG}" "${_test_passed}" "${_test_count}"
   if [[ "${_test_failed}" -gt 0 ]]; then
