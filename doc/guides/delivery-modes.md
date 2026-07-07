@@ -297,6 +297,12 @@ flowchart TD
     style RESUME fill:#2196F3,color:#fff
 ```
 
+> **The JOIN/OWN decision is internal to `deliver-ticket.sh`.** The CEO simply
+> calls `deliver-ticket.sh REF` in the foreground (blocking); the script itself
+> probes for a live owner and decides JOIN (wait + classify) vs OWN
+> (start/resume the PM). Either way it returns the same delivery summary, so the
+> CEO never spawns or races a second PM (INV-DM-2).
+
 **Key properties of the corrected loop:**
 
 1. **No second CEO is spawned while one is alive.** The loop monitors the live
@@ -369,9 +375,10 @@ flowchart TD
 - **Rebase before merge:** because multiple PRs are open against `main`, an
   approved PR is rebased onto the latest `main`, pushed, and the script **waits
   for the PR quality gates to go green** before merging. If the PR is already on
-  the latest `main` (rebase is a no-op), the wait is skipped and it merges
-  immediately. **Rebase conflicts** are resolved by an AI agent, after which the
-  gates re-run.
+  the latest `main`, the rebase is a no-op; the green-gate still runs but
+  **returns immediately if the checks are already green** (the common case for
+  an approved PR) — no redundant waiting. **Rebase conflicts** are resolved by
+  an AI agent, after which the gates re-run.
 - **Always squash-merge**, using the **PR title and description as the squash
   commit message** — so `@pr-manager` must always produce descriptions that are
   fit to become the final commit message.
