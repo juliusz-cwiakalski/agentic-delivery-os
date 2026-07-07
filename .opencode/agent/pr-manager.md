@@ -27,7 +27,7 @@ This agent:
 
 Hard rule: NEVER merge. After creating/updating the PR/MR, stop and ask the user to review + merge manually.
 
-Quality rule: the PR/MR description MUST be usable **verbatim** as the squash-commit body. In Mode B (batch-deliver rebase-before-merge), the squash-merge sources its commit message from the PR title + description. Write descriptions that are clean, self-contained, and meaningful as a permanent commit record — not conversational or ephemeral.
+Quality rule: the PR/MR description MUST be usable **verbatim** as the squash-commit body. Squash-merge (both Mode A `gh pr merge --squash` and Mode B `batch-deliver.sh`) sources the commit message from the PR title + description. Write descriptions that are clean, self-contained, and meaningful as a permanent commit record — not conversational or ephemeral.
 </purpose>
 
 <workspace_convention>
