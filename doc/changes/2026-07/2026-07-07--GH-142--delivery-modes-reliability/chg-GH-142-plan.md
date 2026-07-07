@@ -72,18 +72,23 @@ pm-liveness.sh <session_id>
 > The context-size proxy must be `tokens_input + tokens_cache_read + tokens_output + tokens_reasoning` (the cache-read tokens are a large fraction of what's actually in the window; excluding them mis-counts). Verify the columns against one real large session during Phase 0, then **hard-code the verified column list as a comment** in `pm-liveness.sh` and `ceo-loop.sh`. The test fixtures (`MOCK_DB_TOKENS`) must match this verified schema.
 
 **Tasks**
-- [ ] Skeleton per `.ai/rules/bash.md` §16 (strict mode, traps, logging `(pm-liveness)`, `--help`/`--version`, testable main guard).
-- [ ] `compute_seconds_since_last_msg()` — query opencode DB; parse JSON with `_jq`; degrade gracefully.
-- [ ] `worktree_fallback_epoch()` — the fallback signal.
-- [ ] `decide_stalled()` — pure: `(now - last_msg) > threshold*60`.
-- [ ] `main()` — parse `<session_id>`; print the TSV line; set exit code.
-- [ ] Make `chmod +x`.
-- [ ] `test-pm-liveness.sh` per the test plan: healthy, stale, at-threshold, growing-gap, shrinking-gap, db-failure-degradation, threshold-env-override, output-parseable. Mock `_opencode` (db + session list) via fake-bin PATH stubs in `_test_tmpdir`.
+- [x] Skeleton per `.ai/rules/bash.md` §16 (strict mode, traps, logging `(pm-liveness)`, `--help`/`--version`, testable main guard). (commit pending)
+- [x] `compute_seconds_since_last_msg()` — query opencode DB; parse JSON with `_jq`; degrade gracefully. (via `fetch_recent_messages`)
+- [x] `worktree_fallback_epoch()` — the fallback signal.
+- [x] `decide_stalled()` — pure: `(now - last_msg) > threshold*60` (at-threshold == stalled per AC-5).
+- [x] `main()` — parse `<session_id>`; print the TSV line; set exit code.
+- [x] Make `chmod +x`.
+- [x] `test-pm-liveness.sh` per the test plan: healthy, stale, at-threshold, growing-gap, shrinking-gap, db-failure-degradation, threshold-env-override, output-parseable. Mock `_opencode` (db + session list) via fake-bin PATH stubs in `_test_tmpdir`. (16/16 pass; mocks via sourced-function override of `_opencode`)
 
 **Definition of Done (Phase 0)**
-- `bash scripts/.tests/test-pm-liveness.sh` green (8 cases).
-- `bash scripts/test-all.sh` green (no regressions).
-- AC-5 helper portion satisfied.
+- `bash scripts/.tests/test-pm-liveness.sh` green (16/16 cases). — PASSED
+- `bash scripts/test-all.sh` green (no regressions). — PASSED (10/11 files; the 1 failure is the expected F-9 plugin-freshness gate, not a regression)
+- AC-5 helper portion satisfied. — PASSED
+
+**Notes**
+- F-7 verified against a real opencode session DB: `session` columns are `tokens_input`, `tokens_output`, `tokens_reasoning`, `tokens_cache_read` (large: 83520 vs 96486 input), `tokens_cache_write`; `message.time_created` is in **milliseconds**. Hard-coded in `pm-liveness.sh` (ms→s division) and will be pinned in `ceo-loop.sh` (Phase 2).
+- Output format chosen: key=value lines (`seconds_since_last_message=`, `last_step=`, `gap_trend=`) — parseable, named keys per `test_output_format_parseable`.
+- Threshold (`CEO_LOOP_STALL_MINUTES`, default 15) read lazily inside `main()` so tests can override per-invocation without re-sourcing.
 
 ---
 
