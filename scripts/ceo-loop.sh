@@ -1,313 +1,611 @@
 #!/usr/bin/env bash
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # MIT License - see LICENSE file for full terms
-# ceo-loop.sh — run @ceo in a restartable OpenCode loop.
+# ceo-loop.sh — Mode A outer process: run @ceo in a restartable loop.
 #
-# Linux-oriented. The loop restarts the CEO OpenCode session when no progress is
-# observed for a configured stuck window. CEO state stays in
-# .ai/local/ceo-context.yaml and .ai/local/ceo/** so each restart can resume from
-# local working memory.
+# Spawns AT MOST ONE @ceo opencode session (INV-DM-3, F-3), detects a genuinely
+# stuck CEO (no session-message traffic AND no healthy delivery — INV-DM-3/5)
+# and kill+restarts it, resumes the previous session when context is small
+# (INV-DM-3), and honors a durable stop signal (#97). Liveness is session-
+# message progress (pm-liveness.sh), not process-alive.
 #
 # Usage:
-#   scripts/ceo-loop.sh                          # run forever (until stopped)
-#   CEO_LOOP_MAX_ITERATIONS=5 scripts/ceo-loop.sh  # max 5 CEO iterations
-#   CEO_LOOP_STUCK_MINUTES=20 scripts/ceo-loop.sh  # custom stuck threshold
+#   scripts/ceo-loop.sh                # run the loop (foreground, until stopped)
+#   scripts/ceo-loop.sh --stop         # write the durable stop signal
+#   scripts/ceo-loop.sh --reset        # clear the stop signal and resume
+#
+# Dependencies: bash>=4, opencode, setsid, jq, scripts/pm-liveness.sh,
+#               scripts/deliver-ticket.sh
+#
+# Exit codes:
+#   0 - stopped cleanly (stop signal / max restarts not exceeded on graceful exit)
+#   1 - max restarts exceeded
+#   2 - usage error
 
 set -Eeuo pipefail
+set -o errtrace
+shopt -s inherit_errexit 2>/dev/null || true
 IFS=$'\n\t'
 
-readonly TAG="(ceo-loop)"
-readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
-readonly ROOT_DIR="$(cd -- "${SCRIPT_DIR}/.." >/dev/null 2>&1 && pwd -P)"
+# ============================================================================
+# SETTINGS
+# ============================================================================
+readonly APP_NAME="ceo-loop"
+readonly APP_VERSION="2.0.0"
+readonly LOG_TAG="(${APP_NAME})"
 
-readonly STUCK_MINUTES="${CEO_LOOP_STUCK_MINUTES:-30}"
-readonly POLL_SECONDS="${CEO_LOOP_POLL_SECONDS:-60}"
-readonly LOOP_SLEEP_SECONDS="${CEO_LOOP_SLEEP_SECONDS:-2}"
+readonly EXIT_FAILURE=1
+readonly EXIT_USAGE=2
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
+readonly SCRIPT_DIR
+ROOT_DIR="$(cd -- "${SCRIPT_DIR}/.." >/dev/null 2>&1 && pwd -P)"
+readonly ROOT_DIR
+
+# Stall threshold (minutes). Read lazily so tests can override per-invocation.
+# F-7 context-size proxy columns: tokens_input + tokens_cache_read +
+# tokens_output + tokens_reasoning (cache-read is a large fraction of the live
+# window; excluding it mis-counts). Verified against a real opencode session DB.
+STUCK_MINUTES="${CEO_LOOP_STUCK_MINUTES:-15}"
+POLL_SECONDS="${CEO_LOOP_POLL_SECONDS:-30}"
+LOOP_SLEEP_SECONDS="${CEO_LOOP_SLEEP_SECONDS:-2}"
 readonly KILL_GRACE_SECONDS="${CEO_LOOP_KILL_GRACE_SECONDS:-20}"
-readonly MAX_ITERATIONS="${CEO_LOOP_MAX_ITERATIONS:-0}" # 0 = forever
-readonly MAX_RESTART_BACKOFF_SECONDS="${CEO_LOOP_MAX_RESTART_BACKOFF_SECONDS:-300}"
+MAX_RESTARTS="${CEO_LOOP_MAX_RESTARTS:-10}"
+MAX_ITERATIONS="${CEO_LOOP_MAX_ITERATIONS:-0}"   # 0 = forever
+readonly CEO_RESUME_TOKEN_LIMIT="${CEO_RESUME_TOKEN_LIMIT:-100000}"
 readonly OPENCODE_MODEL="${CEO_LOOP_MODEL:-}"
 readonly OPENCODE_KEYS_ENV="${OPENCODE_KEYS_ENV:-${HOME}/.ai/opencode-keys-env.sh}"
 
-readonly LOG_DIR_REL="tmp/ceo-loop"
-readonly LOG_DIR="${ROOT_DIR}/${LOG_DIR_REL}"
-readonly STOPPED_FILE="${LOG_DIR}/stopped.txt"
-readonly CEO_CONTEXT_REL=".ai/local/ceo-context.yaml"
-readonly CEO_CONTEXT_FILE="${ROOT_DIR}/${CEO_CONTEXT_REL}"
-readonly CEO_WORKSPACE_DIR="${ROOT_DIR}/.ai/local/ceo"
-readonly OPENCODE_SESSION_SCRIPT_REL="scripts/opencode-session.sh"
+# External command hooks (tests override these).
+PM_LIVENESS_SCRIPT="${PM_LIVENESS_SCRIPT:-${SCRIPT_DIR}/pm-liveness.sh}"
+readonly PM_LIVENESS_TIMEOUT_SECONDS="${PM_LIVENESS_TIMEOUT_SECONDS:-15}"
+DELIVER_TICKET_SCRIPT="${DELIVER_TICKET_SCRIPT:-${SCRIPT_DIR}/deliver-ticket.sh}"
 
-readonly PROMPT_DEFAULT="continue project delivery
+LOG_DIR="${ROOT_DIR}/tmp/ceo-loop"
+# State files (git-ignored via .ai/local). F-3 ceo.pid; #97 durable stop;
+# INV-DM-3 last-session for resume. Non-readonly so tests can redirect them.
+CEO_STATE_DIR="${ROOT_DIR}/.ai/local/ceo"
+CEO_PID_FILE="${CEO_STATE_DIR}/ceo.pid"
+STOP_FILE="${CEO_STATE_DIR}/stop"
+LAST_SESSION_FILE="${CEO_STATE_DIR}/last-session"
 
-Run in autonomous CEO mode using @.opencode/agent/ceo.md.
-
-Instructions:
-1. Read and update @.ai/local/ceo-context.yaml plus @.ai/local/ceo/** as working memory.
-2. Reconcile state with GitHub Issues, branches, PRs, and committed ADOS artifacts using @.ai/agent/pm-instructions.md and @.ai/agent/pr-instructions.md.
-3. If a ticket delivery is needed, always start/resume exactly one ticket-scoped delivery using @scripts/deliver-ticket.sh <workItemRef>; do not deliver multiple tickets in the CEO conversation. deliver-ticket.sh handles the complete lifecycle: state detection, PM session with liveness monitoring, review-comment handling, merge approval (approved label), and exit classification.
-4. The deliver-ticket.sh PM session must run the full ADOS 11-phase lifecycle for that one ticket, delegate to subagents, and stop without selecting another ticket.
-5. Prevent stale work before new tickets: list active GitHub issues/PRs, favor finishing pending branches/PRs, close superseded work, delete merged branches, fetch/prune, checkout main, and pull --ff-only before new ticket work.
-6. Keep delivery discipline: every product change goes ticket -> PR -> squash merge to main. Do not direct-push product work to main.
-7. For every process gap, inefficiency, failed experiment, or reusable win, create a new additive note in @.ai/local/ceo/retrospective/<YYYY-MM-DD>-<note-slug>.md; never edit/delete older retro notes.
-8. If all project work is complete, write ${LOG_DIR_REL}/stopped.txt with timestamp and reason, then stop.
-9. If technically blocked, record the blocker in CEO memory and ${LOG_DIR_REL}/stopped.txt.
-"
+readonly PROMPT_DEFAULT="continue project delivery in autonomous CEO mode (see .opencode/agent/ceo.md). Reconcile state with GitHub, pick the next ticket, and deliver it by calling scripts/deliver-ticket.sh <workItemRef> in the foreground (blocking). deliver-ticket.sh runs the full per-ticket lifecycle and returns a delivery summary; it does NOT merge — you are the merge authority in Mode A. Loop: pick, deliver (block), read the summary, decide (merge / resume-prompt / next). Write retrospectives to .ai/local/ceo/retrospective/. If all work is done or you are blocked, write the durable stop via: scripts/ceo-loop.sh --stop"
 readonly PROMPT="${CEO_LOOP_PROMPT:-${PROMPT_DEFAULT}}"
 
-current_log_file=""
-opencode_pid=""
-running=true
+VERBOSE="${VERBOSE:-false}"
 
-log_line() {
-  local line="$1"
-  printf '%s\n' "${line}"
-  [[ -z "${current_log_file}" ]] || printf '%s\n' "${line}" >>"${current_log_file}"
+# Current CEO opencode child PID (tracked for signal propagation + clear-on-exit).
+CURRENT_CEO_PID=""
+
+# ============================================================================
+# TRAPS
+# ============================================================================
+_on_err() {
+  local -r line="$1" cmd="$2" code="$3"
+  log_err "line ${line}: '${cmd}' exited with ${code}"
 }
 
-utc_now() { date -u '+%Y-%m-%dT%H:%M:%SZ'; }
-warsaw_session_timestamp() { TZ=Europe/Warsaw date '+%Y%m%d-%H%M%S%3N-%Z'; }
-log_info() { log_line "[INFO] ${TAG} $(utc_now) $*"; }
-log_warn() { log_line "[WARN] ${TAG} $(utc_now) $*"; }
-log_err() { printf '[ERROR] %s %s %s\n' "${TAG}" "$(utc_now)" "$*" >&2; }
+# INV-DM-2 propagation rule + F-3: on exit, kill the CEO child tree and clear
+# the ceo.pid so a crashed loop is not mistaken for a live CEO.
+_cleanup_child() {
+  if [[ -n "${CURRENT_CEO_PID:-}" ]]; then
+    kill_ceo_tree "${CURRENT_CEO_PID}" 2>/dev/null || true
+    CURRENT_CEO_PID=""
+  fi
+  [[ -f "${CEO_PID_FILE}" ]] && rm -f "${CEO_PID_FILE}" 2>/dev/null || true
+}
 
+_on_interrupt() {
+  log_warn "Interrupted"
+  exit 130
+}
+
+trap '_on_err $LINENO "$BASH_COMMAND" $?' ERR
+trap '_cleanup_child' EXIT
+trap '_on_interrupt' INT TERM
+
+# ============================================================================
+# LOGGING
+# ============================================================================
+_ts() { date -u '+%H:%M:%S'; }
+log_info()  { printf '[%s] ℹ %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" >&2; }
+log_warn()  { printf '[%s] ⚠ %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" >&2; }
+log_err()   { printf '[%s] ✗ %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" >&2; }
+log_debug() { [[ "${VERBOSE}" == "true" ]] && printf '[%s] ℹ DEBUG %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" >&2 || true; }
+die() { log_err "$@"; exit "${EXIT_USAGE}"; }
+
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || die "Required command not found: $1"
+}
+
+# ============================================================================
+# MOCKABLE WRAPPERS
+# ============================================================================
+_opencode() { command opencode "$@"; }
+_jq()       { command jq "$@"; }
+_git()      { command git "$@"; }
+_setsid()   { command setsid "$@"; }
+
+# ============================================================================
+# INPUT VALIDATION (pure)
+# ============================================================================
 validate_uint() {
   local -r name="$1" value="$2"
-  [[ "${value}" =~ ^(0|[1-9][0-9]*)$ ]] || { log_err "${name} must be a non-negative base-10 integer, got '${value}'"; exit 2; }
+  [[ "${value}" =~ ^(0|[1-9][0-9]*)$ ]] || die "${name} must be a non-negative base-10 integer, got '${value}'"
 }
 
 validate_positive_uint() {
   local -r name="$1" value="$2"
   validate_uint "${name}" "${value}"
-  (( value > 0 )) || { log_err "${name} must be greater than zero"; exit 2; }
+  (( value > 0 )) || die "${name} must be greater than zero"
 }
 
-require_cmd() {
-  command -v "$1" >/dev/null 2>&1 || { log_err "Required command not found: $1"; exit 127; }
+# ============================================================================
+# PID IDENTITY HELPERS (F-3 reuse the deliver-ticket technique)
+# ============================================================================
+_pid_alive() {
+  local -r pid="$1"
+  [[ "${pid}" =~ ^[0-9]+$ ]] || return 1
+  kill -0 "${pid}" 2>/dev/null
 }
 
-source_opencode_env() {
-  if [[ -f "${OPENCODE_KEYS_ENV}" ]]; then
-    # shellcheck source=/dev/null
-    source "${OPENCODE_KEYS_ENV}"
-    unset OPENCODE_SERVER_USERNAME 2>/dev/null || true
-    unset OPENCODE_SERVER_PASSWORD 2>/dev/null || true
+_pid_cmdline_contains() {
+  local -r pid="$1" needle="$2"
+  local cmdline=""
+  if [[ -r "/proc/${pid}/cmdline" ]]; then
+    cmdline="$(tr '\0' ' ' <"/proc/${pid}/cmdline" 2>/dev/null)" || cmdline=""
   else
-    log_warn "OpenCode keys env file not found: ${OPENCODE_KEYS_ENV}"
+    cmdline="$(ps -o command= -p "${pid}" 2>/dev/null)" || cmdline=""
+  fi
+  [[ "${cmdline}" == *"${needle}"* ]]
+}
+
+_pid_cwd_is() {
+  local -r pid="$1" dir="$2"
+  if [[ -L "/proc/${pid}/cwd" ]]; then
+    local link
+    link="$(readlink "/proc/${pid}/cwd" 2>/dev/null)" || link=""
+    [[ "${link}" == "${dir}" ]]
+  else
+    local cwd
+    cwd="$(lsof -a -p "${pid}" -d cwd -Fn 2>/dev/null | awk -F'n' '/^n/{print $2; exit}')" || cwd=""
+    [[ "${cwd}" == "${dir}" ]]
   fi
 }
 
-git_last_commit_epoch() {
-  git -C "${ROOT_DIR}" log -1 --format=%ct 2>/dev/null || printf '0\n'
+_pid_start_epoch() {
+  local -r pid="$1"
+  local etimes
+  etimes="$(ps -o etimes= -p "${pid}" 2>/dev/null | tr -d '[:space:]')" || { printf ''; return 0; }
+  [[ "${etimes}" =~ ^[0-9]+$ ]] || { printf ''; return 0; }
+  printf '%s' "$(( $(date +%s) - etimes ))"
 }
 
-file_mtime_epoch() {
-  local path="$1"
-  [[ -e "${path}" ]] || { printf '0\n'; return 0; }
-  if stat --version >/dev/null 2>&1; then
-    stat -c %Y "${path}" 2>/dev/null || printf '0\n'
-  else
-    stat -f %m "${path}" 2>/dev/null || printf '0\n'
+# ============================================================================
+# STATE FILES (F-3, #97, INV-DM-3)
+# ============================================================================
+ensure_state_dir() {
+  mkdir -p "${CEO_STATE_DIR}"
+}
+
+# F-3: write/probe/clear the CEO child PID. The PID file holds the child PID +
+# start epoch so a loop restart while a CEO is alive JOINs rather than spawns.
+write_ceo_pid() {
+  local -r pid="$1" start_epoch="${2:-$(date +%s)}"
+  ensure_state_dir
+  _jq -n --arg pid "${pid}" --argjson start "${start_epoch}" \
+    '{pid:$pid,start:$start}' >"${CEO_PID_FILE}"
+}
+
+clear_ceo_pid() {
+  [[ -f "${CEO_PID_FILE}" ]] && rm -f "${CEO_PID_FILE}" || true
+}
+
+# F-3: validate the recorded CEO child PID is still a live opencode-for-ceo
+# process for this repo. Prints the PID on stdout when live; returns 1 otherwise.
+ceo_pid_if_live() {
+  [[ -f "${CEO_PID_FILE}" ]] || return 1
+  local pid start_epoch
+  pid="$(_jq -r '.pid // empty' "${CEO_PID_FILE}" 2>/dev/null)" || return 1
+  start_epoch="$(_jq -r '.start // empty' "${CEO_PID_FILE}" 2>/dev/null)" || start_epoch=""
+  [[ "${pid}" =~ ^[0-9]+$ ]] || return 1
+  _pid_alive "${pid}" || return 1
+  # cmdline must be an opencode run (the CEO child); cwd must be this repo.
+  _pid_cmdline_contains "${pid}" "opencode" || return 1
+  _pid_cwd_is "${pid}" "${ROOT_DIR}" || return 1
+  # Start-epoch reuse guard (5s tolerance).
+  if [[ "${start_epoch}" =~ ^[0-9]+$ ]]; then
+    local actual_start
+    actual_start="$(_pid_start_epoch "${pid}")"
+    if [[ "${actual_start}" =~ ^[0-9]+$ ]]; then
+      local diff=$(( actual_start - start_epoch ))
+      (( diff < 0 )) && diff=$(( -diff ))
+      (( diff <= 5 )) || return 1
+    fi
   fi
+  printf '%s' "${pid}"
 }
 
-tree_mtime_epoch() {
-  local dir="$1"
-  [[ -d "${dir}" ]] || { printf '0\n'; return 0; }
-  local latest; latest="$(file_mtime_epoch "${dir}")"
-  local item item_epoch
-  while IFS= read -r -d '' item; do
-    item_epoch="$(file_mtime_epoch "${item}")"
-    (( item_epoch > latest )) && latest="${item_epoch}"
-  done < <(find "${dir}" -type f -print0 2>/dev/null)
-  printf '%s\n' "${latest}"
+is_ceo_alive() {
+  local pid
+  pid="$(ceo_pid_if_live)" || return 1
+  [[ -n "${pid}" ]]
 }
 
-worktree_mtime_epoch() {
-  local latest=0
-  local item item_epoch
-  while IFS= read -r -d '' item; do
-    item_epoch="$(file_mtime_epoch "${item}")"
-    (( item_epoch > latest )) && latest="${item_epoch}"
-  done < <(
-    find "${ROOT_DIR}" \
-      \( -path "${ROOT_DIR}/.git" \
-      -o -path "${ROOT_DIR}/tmp" \
-      -o -path "${ROOT_DIR}/.ai/local" \
-      -o -path "${ROOT_DIR}/.idea" \) -prune \
-      -o -type f -print0 2>/dev/null
-  )
-  printf '%s\n' "${latest}"
+# INV-DM-3: remember / read the last CEO session id for the resume decision.
+remember_session_id() {
+  local -r sid="$1"
+  ensure_state_dir
+  printf '%s' "${sid}" >"${LAST_SESSION_FILE}"
 }
 
-max_epoch() {
-  local max=0 value
-  for value in "$@"; do
-    [[ "${value}" =~ ^[0-9]+$ ]] || value=0
-    (( value > max )) && max="${value}"
-  done
-  printf '%s\n' "${max}"
+last_session_id() {
+  [[ -f "${LAST_SESSION_FILE}" ]] || { printf ''; return 0; }
+  local sid
+  sid="$(cat "${LAST_SESSION_FILE}" 2>/dev/null)" || sid=""
+  printf '%s' "${sid}"
 }
 
-activity_epoch() {
-  max_epoch \
-    "$(git_last_commit_epoch)" \
-    "$(worktree_mtime_epoch)" \
-    "$(file_mtime_epoch "${CEO_CONTEXT_FILE}")" \
-    "$(tree_mtime_epoch "${CEO_WORKSPACE_DIR}")" \
-    "$(tree_mtime_epoch "${ROOT_DIR}/doc/changes")" \
-    "$(tree_mtime_epoch "${ROOT_DIR}/doc/inception")" \
-    "$(tree_mtime_epoch "${ROOT_DIR}/doc/overview")" \
-    "$(tree_mtime_epoch "${ROOT_DIR}/doc/planning")" \
-    "$(tree_mtime_epoch "${ROOT_DIR}/doc/spec")"
+# ============================================================================
+# SESSION-TRAFFIC LIVENESS (INV-DM-5) + DELIVERY PROBE (INV-DM-3)
+# ============================================================================
+# Wraps pm-liveness.sh with a timeout + graceful degradation.
+# Returns: 0 healthy, 1 stalled, 2 degraded (caller treats as not-stuck).
+_pm_liveness() {
+  local -r session_id="$1"
+  [[ -n "${session_id}" ]] || return 2
+  [[ -x "${PM_LIVENESS_SCRIPT}" ]] || return 2
+  local rc
+  CEO_LOOP_STALL_MINUTES="${STUCK_MINUTES}" timeout "${PM_LIVENESS_TIMEOUT_SECONDS}" \
+    "${PM_LIVENESS_SCRIPT}" "${session_id}" >/dev/null 2>&1 || rc=$?
+  rc="${rc:-0}"
+  case "${rc}" in
+    0) return 0 ;;
+    1) return 1 ;;
+    *) return 2 ;;
+  esac
 }
 
-kill_opencode_tree() {
+# INV-DM-3: is a healthy delivery in progress in this repo? Delegates to
+# deliver-ticket.sh --is-delivering (the repo-local single-flight probe).
+# Returns: 0 if a delivery is in progress, 1 otherwise.
+delivery_in_progress() {
+  [[ -x "${DELIVER_TICKET_SCRIPT}" ]] || return 1
+  "${DELIVER_TICKET_SCRIPT}" --is-delivering >/dev/null 2>&1 || return 1
+  return 0
+}
+
+# INV-DM-3/5: a CEO is STUCK iff, for longer than the stall threshold:
+#   - pm-liveness says the CEO session is stalled (no message traffic), AND
+#   - NO healthy delivery is in progress.
+# A CEO blocked on a healthy, progressing delivery is NOT stuck.
+# Args: ceo_session_id
+# Returns: 0 if stuck, 1 if not stuck.
+ceo_is_stuck() {
+  local -r session_id="$1"
+  local liv_rc
+  _pm_liveness "${session_id}" || liv_rc=$?
+  liv_rc="${liv_rc:-0}"
+  # Healthy traffic or degraded probe ⇒ not stuck.
+  [[ "${liv_rc}" -eq 1 ]] || return 1
+  # Session traffic is stalled — but a healthy delivery keeps the CEO healthy.
+  if delivery_in_progress; then
+    log_debug "CEO session stalled but a healthy delivery is in progress — not stuck"
+    return 1
+  fi
+  return 0
+}
+
+# ============================================================================
+# SESSION RESUME (INV-DM-3)
+# ============================================================================
+# Read the previous CEO session's context total (F-7 proxy). Returns the integer
+# total, or empty on failure (caller spawns fresh).
+context_total_for() {
+  local -r session_id="$1"
+  [[ -n "${session_id}" ]] || { printf ''; return 0; }
+  # F-7: context-size proxy = tokens_input + tokens_cache_read + tokens_output
+  # + tokens_reasoning (cache-read is a large fraction of the live window).
+  local sql
+  sql="SELECT (tokens_input + tokens_cache_read + tokens_output + tokens_reasoning) AS total FROM session WHERE id = '${session_id}'"
+  local row
+  row="$(_opencode db "${sql}" --format json 2>/dev/null)" || { printf ''; return 0; }
+  [[ -n "${row}" ]] || { printf ''; return 0; }
+  _jq -r '.[0].total // empty' <<<"${row}" 2>/dev/null || printf ''
+}
+
+# Capture the CEO session id for a freshly-spawned session by title lookup.
+# Args: title
+capture_session_id_by_title() {
+  local -r title="$1"
+  local sid
+  sid="$(cd "${ROOT_DIR}" && _opencode session list --format json 2>/dev/null \
+    | _jq -r --arg t "${title}" '[.[] | select(.title == $t)] | sort_by(.time) | last | .id // empty' 2>/dev/null)" || sid=""
+  printf '%s' "${sid}"
+}
+
+# ============================================================================
+# KILL MECHANISM (signal propagation)
+# ============================================================================
+kill_ceo_tree() {
   local pid="$1"
   [[ -n "${pid}" ]] || return 0
-  kill -0 "${pid}" 2>/dev/null || return 0
+  _pid_alive "${pid}" || return 0
 
-  log_warn "sending SIGTERM to opencode pid=${pid}"
+  log_warn "Sending SIGTERM to CEO pid=${pid}"
   kill -TERM -- "-${pid}" 2>/dev/null || kill -TERM "${pid}" 2>/dev/null || true
 
   local deadline=$(( $(date +%s) + KILL_GRACE_SECONDS ))
-  while kill -0 "${pid}" 2>/dev/null && (( $(date +%s) < deadline )); do
+  while _pid_alive "${pid}" && (( $(date +%s) < deadline )); do
     sleep 1
   done
 
-  if kill -0 "${pid}" 2>/dev/null; then
+  if _pid_alive "${pid}"; then
     log_warn "SIGTERM grace expired; sending SIGKILL pid=${pid}"
     kill -KILL -- "-${pid}" 2>/dev/null || kill -KILL "${pid}" 2>/dev/null || true
   fi
 }
 
-on_stop() {
-  running=false
-  if [[ -n "${opencode_pid}" ]]; then
-    log_warn "stop requested; terminating opencode pid=${opencode_pid}"
-    kill_opencode_tree "${opencode_pid}"
-    wait "${opencode_pid}" 2>/dev/null || true
+# ============================================================================
+# SPAWN / RESUME (F-3, INV-DM-3)
+# ============================================================================
+source_opencode_env() {
+  if [[ -f "${OPENCODE_KEYS_ENV}" ]]; then
+    # shellcheck source=/dev/null
+    source "${OPENCODE_KEYS_ENV}" 2>/dev/null || true
+    unset OPENCODE_SERVER_USERNAME 2>/dev/null || true
+    unset OPENCODE_SERVER_PASSWORD 2>/dev/null || true
   fi
 }
 
-trap on_stop INT TERM
+# F-3 + INV-DM-3: spawn at most one CEO. If a live CEO child exists, JOIN/wait
+# for it (return its PID) rather than spawn a second. Otherwise resume the prev
+# session (if context is small) or spawn fresh. Prints the CEO child PID.
+spawn_or_resume_ceo() {
+  local log_file="$1"
 
-main() {
-  validate_positive_uint CEO_LOOP_STUCK_MINUTES "${STUCK_MINUTES}"
-  validate_positive_uint CEO_LOOP_POLL_SECONDS "${POLL_SECONDS}"
-  validate_positive_uint CEO_LOOP_SLEEP_SECONDS "${LOOP_SLEEP_SECONDS}"
-  validate_positive_uint CEO_LOOP_KILL_GRACE_SECONDS "${KILL_GRACE_SECONDS}"
-  validate_uint CEO_LOOP_MAX_ITERATIONS "${MAX_ITERATIONS}"
-  validate_uint CEO_LOOP_MAX_RESTART_BACKOFF_SECONDS "${MAX_RESTART_BACKOFF_SECONDS}"
+  # F-3: a live CEO child already exists (e.g. loop restarted while CEO alive).
+  local live_pid
+  live_pid="$(ceo_pid_if_live)" || live_pid=""
+  if [[ -n "${live_pid}" ]]; then
+    log_info "F-3: live CEO child exists (pid=${live_pid}); JOINing instead of spawning"
+    printf '%s' "${live_pid}"
+    return 0
+  fi
 
-  local -r stuck_seconds=$((STUCK_MINUTES * 60))
+  # INV-DM-3: session-resume decision.
+  local prev_sid resume="false"
+  prev_sid="$(last_session_id)"
+  if [[ -n "${prev_sid}" ]]; then
+    local total
+    total="$(context_total_for "${prev_sid}")"
+    if [[ "${total}" =~ ^[0-9]+$ ]] && (( total < CEO_RESUME_TOKEN_LIMIT )); then
+      resume="true"
+      log_info "INV-DM-3: resuming CEO session ${prev_sid} (context=${total} < ${CEO_RESUME_TOKEN_LIMIT})"
+    elif [[ "${total}" =~ ^[0-9]+$ ]]; then
+      log_info "INV-DM-3: spawning fresh CEO (prev context=${total} >= ${CEO_RESUME_TOKEN_LIMIT})"
+    else
+      log_info "INV-DM-3: spawning fresh CEO (prev context unavailable)"
+    fi
+  else
+    log_info "INV-DM-3: spawning fresh CEO (no previous session)"
+  fi
 
-  require_cmd opencode
-  require_cmd setsid
-  require_cmd find
+  local title
+  title="ceo-loop-$(date +%Y%m%d-%H%M%S)"
+  local opencode_cmd=()
+  if [[ "${resume}" == "true" ]]; then
+    opencode_cmd=(opencode run --session "${prev_sid}" "${PROMPT}")
+  else
+    opencode_cmd=(opencode run --agent ceo --title "${title}")
+    [[ -n "${OPENCODE_MODEL}" ]] && opencode_cmd+=(-m "${OPENCODE_MODEL}")
+    opencode_cmd+=("${PROMPT}")
+  fi
 
-  mkdir -p "${LOG_DIR}" "${CEO_WORKSPACE_DIR}" "${ROOT_DIR}/tmp/opencode"
+  _setsid "${opencode_cmd[@]}" >>"${log_file}" 2>&1 &
+  local pid=$!
+  CURRENT_CEO_PID="${pid}"
+  write_ceo_pid "${pid}" "$(date +%s)"
+  log_info "spawned CEO pid=${pid} resume=${resume}"
+
+  # Capture + remember the session id (for the next resume decision + liveness).
+  local sid=""
+  if [[ "${resume}" != "true" ]]; then
+    local i
+    for ((i = 0; i < 10; i++)); do
+      sleep 1
+      sid="$(capture_session_id_by_title "${title}")"
+      [[ -n "${sid}" ]] && break
+    done
+  else
+    sid="${prev_sid}"
+  fi
+  [[ -n "${sid}" ]] && remember_session_id "${sid}"
+  printf '%s' "${pid}"
+}
+
+# ============================================================================
+# MAIN LOOP
+# ============================================================================
+run_loop() {
+  # Stall threshold in seconds. Defaults to STUCK_MINUTES*60; tests override
+  # via CEO_LOOP_STUCK_SECONDS for speed (bypasses the minutes→seconds multiply).
+  local -r stuck_seconds="${STUCK_SECONDS:-$((STUCK_MINUTES * 60))}"
+  ensure_state_dir
+  mkdir -p "${LOG_DIR}"
   cd "${ROOT_DIR}"
-  rm -f "${STOPPED_FILE}"
   source_opencode_env
-
   export TMPDIR="${ROOT_DIR}/tmp/opencode"
-  export OPENCODE_DISABLE_CLAUDE_CODE="${OPENCODE_DISABLE_CLAUDE_CODE:-1}"
+  mkdir -p "${TMPDIR}"
 
-  log_info "stuck_window_minutes=${STUCK_MINUTES} poll_seconds=${POLL_SECONDS} max_iterations=${MAX_ITERATIONS}"
-  log_info "ticket_session_script=${OPENCODE_SESSION_SCRIPT_REL}"
+  log_info "stuck_minutes=${STUCK_MINUTES} poll_seconds=${POLL_SECONDS} max_restarts=${MAX_RESTARTS} max_iterations=${MAX_ITERATIONS} resume_limit=${CEO_RESUME_TOKEN_LIMIT}"
 
-  local iteration=0
-  local consecutive_fast_failures=0
-
-  while [[ "${running}" == true ]]; do
-    iteration=$((iteration + 1))
+  local iteration=0 restarts=0
+  while true; do
+    ((iteration++)) || true
     if (( MAX_ITERATIONS > 0 && iteration > MAX_ITERATIONS )); then
       log_info "max iterations reached; exiting"
-      break
+      return 0
     fi
 
-    local start_ts baseline_activity_epoch last_progress_wall_epoch session_reason session_exit_code session_start_epoch
-    start_ts="$(warsaw_session_timestamp)"
-    session_start_epoch="$(date +%s)"
-    current_log_file="${LOG_DIR}/${start_ts}.log"
-    opencode_pid=""
-    : >>"${current_log_file}"
+    # #97: honor a durable, non-expired stop. (Not wiped at startup.)
+    if [[ -f "${STOP_FILE}" ]]; then
+      log_info "durable stop signal present; honoring and exiting"
+      return 0
+    fi
 
-    log_info "starting CEO session iteration=${iteration} started_warsaw=${start_ts}"
-    log_info "cwd=${ROOT_DIR} log=${LOG_DIR_REL}/${start_ts}.log"
-    log_info "prompt=${PROMPT}"
+    local log_file
+    log_file="${LOG_DIR}/$(date +%Y%m%d-%H%M%S)-iter${iteration}.log"
+    : >>"${log_file}"
+    log_info "iteration=${iteration} restarts=${restarts} log=${log_file}"
 
-    baseline_activity_epoch="$(activity_epoch)"
+    # F-3 + INV-DM-3: spawn or resume the CEO (JOINs a live one).
+    local ceo_pid
+    ceo_pid="$(spawn_or_resume_ceo "${log_file}")"
+    local ceo_sid
+    ceo_sid="$(last_session_id)"
+
+    local last_progress_wall_epoch session_reason session_exit_code
     last_progress_wall_epoch="$(date +%s)"
-    log_info "progress_baseline activity_epoch=${baseline_activity_epoch} git_commit_epoch=$(git_last_commit_epoch) ceo_context_epoch=$(file_mtime_epoch "${CEO_CONTEXT_FILE}")"
-
-    local opencode_cmd=(opencode run --agent ceo --title "ceo-loop-${start_ts}")
-    if [[ -n "${OPENCODE_MODEL}" ]]; then
-      opencode_cmd+=(-m "${OPENCODE_MODEL}")
-    fi
-    opencode_cmd+=("${PROMPT}")
-
-    setsid "${opencode_cmd[@]}" >>"${current_log_file}" 2>&1 &
-    opencode_pid=$!
-    log_info "opencode_pid=${opencode_pid}"
-
     session_reason="finished"
     session_exit_code=0
 
-    while [[ "${running}" == true ]]; do
-      if ! kill -0 "${opencode_pid}" 2>/dev/null; then
-        wait "${opencode_pid}" || session_exit_code=$?
+    # Monitor the CEO until it exits or is declared stuck.
+    while true; do
+      if ! _pid_alive "${ceo_pid}"; then
+        wait "${ceo_pid}" 2>/dev/null || session_exit_code=$?
         break
       fi
 
-      local current_activity_epoch now_epoch idle_seconds
-      current_activity_epoch="$(activity_epoch)"
-      if (( current_activity_epoch > baseline_activity_epoch )); then
-        baseline_activity_epoch="${current_activity_epoch}"
+      # INV-DM-3/5: stuck detection (session traffic + delivery probe).
+      if ceo_is_stuck "${ceo_sid}"; then
+        local now_epoch idle
+        now_epoch="$(date +%s)"
+        idle=$(( now_epoch - last_progress_wall_epoch ))
+        if (( idle >= stuck_seconds )); then
+          session_reason="stuck"
+          session_exit_code=124
+          log_warn "CEO stuck for ${idle}s (no session traffic, no healthy delivery); killing + restarting"
+          kill_ceo_tree "${ceo_pid}"
+          wait "${ceo_pid}" 2>/dev/null || true
+          break
+        fi
+      else
+        # Not stuck ⇒ reset the progress timer (healthy session traffic or delivery).
         last_progress_wall_epoch="$(date +%s)"
-        log_info "activity_detected activity_epoch=${current_activity_epoch}"
-      fi
-
-      now_epoch="$(date +%s)"
-      idle_seconds=$((now_epoch - last_progress_wall_epoch))
-      if (( idle_seconds >= stuck_seconds )); then
-        session_reason="stuck"
-        session_exit_code=124
-        log_warn "no progress for ${idle_seconds}s; restarting CEO session"
-        kill_opencode_tree "${opencode_pid}"
-        wait "${opencode_pid}" 2>/dev/null || true
-        break
       fi
 
       sleep "${POLL_SECONDS}"
     done
 
-    opencode_pid=""
-    log_info "session finished reason=${session_reason} exit_code=${session_exit_code}"
+    CURRENT_CEO_PID=""
+    clear_ceo_pid
+    log_info "session ended reason=${session_reason} exit_code=${session_exit_code}"
 
-    local session_runtime_seconds=$(( $(date +%s) - session_start_epoch ))
-    if [[ "${session_reason}" == "finished" && "${session_exit_code}" -ne 0 && "${session_runtime_seconds}" -lt 120 ]]; then
-      consecutive_fast_failures=$((consecutive_fast_failures + 1))
-    else
-      consecutive_fast_failures=0
+    # Honor a stop written by the CEO itself during the session.
+    if [[ -f "${STOP_FILE}" ]]; then
+      log_info "stop signal written during session; exiting"
+      return 0
     fi
 
-    if [[ -f "${STOPPED_FILE}" ]]; then
-      log_info "stopped file detected; exiting"
-      sed -n '1,120p' "${STOPPED_FILE}" || true
-      exit 0
+    if [[ "${session_reason}" == "stuck" ]]; then
+      ((restarts++)) || true
+      if (( restarts > MAX_RESTARTS )); then
+        log_err "max restarts (${MAX_RESTARTS}) exceeded; exiting"
+        return "${EXIT_FAILURE}"
+      fi
     fi
 
-    [[ "${running}" == true ]] || { log_info "stopping loop"; break; }
-
-    local sleep_seconds="${LOOP_SLEEP_SECONDS}"
-    if (( consecutive_fast_failures > 0 )); then
-      sleep_seconds=$((LOOP_SLEEP_SECONDS * (2 ** consecutive_fast_failures)))
-      (( sleep_seconds > MAX_RESTART_BACKOFF_SECONDS )) && sleep_seconds="${MAX_RESTART_BACKOFF_SECONDS}"
-      log_warn "fast failure count=${consecutive_fast_failures}; backoff_seconds=${sleep_seconds}"
-    fi
-    sleep "${sleep_seconds}"
+    sleep "${LOOP_SLEEP_SECONDS}"
   done
 }
 
-main "$@"
+# ============================================================================
+# SUBCOMMANDS
+# ============================================================================
+cmd_stop() {
+  ensure_state_dir
+  printf 'stopped at %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >"${STOP_FILE}"
+  log_info "durable stop signal written to ${STOP_FILE}"
+}
+
+cmd_reset() {
+  ensure_state_dir
+  if [[ -f "${STOP_FILE}" ]]; then
+    rm -f "${STOP_FILE}"
+    log_info "stop signal cleared; loop will resume on next run"
+  else
+    log_info "no stop signal present; nothing to reset"
+  fi
+}
+
+# ============================================================================
+# CLI
+# ============================================================================
+usage() {
+  cat <<EOF
+${APP_NAME} ${APP_VERSION} — Mode A outer process: restartable @ceo loop
+
+Usage: ${APP_NAME} [--stop | --reset | run]
+
+Commands:
+  run (default)   Run the CEO loop (foreground). Spawns at most one @ceo,
+                  detects a stuck CEO (INV-DM-3/5) and kill+restarts, resumes
+                  the previous session when context is small (INV-DM-3).
+  --stop          Write the durable stop signal (.ai/local/ceo/stop). A running
+                  loop honors it at the next iteration; a fresh loop exits
+                  without spawning a CEO (#97 — survives restarts).
+  --reset         Clear the stop signal so the loop resumes.
+
+Options:
+  -h, --help      Show this help message
+  -V, --version   Show version
+  -v, --verbose   Enable debug output
+
+Environment:
+  CEO_LOOP_STALL_MINUTES    Stall threshold in minutes (default: 15)
+  CEO_LOOP_POLL_SECONDS     Liveness poll interval (default: 30)
+  CEO_LOOP_MAX_RESTARTS     Max stuck-kill+restarts before exit 1 (default: 10)
+  CEO_LOOP_MAX_ITERATIONS   Max CEO iterations, 0 = forever (default: 0)
+  CEO_RESUME_TOKEN_LIMIT    Resume prev session if context < this (default: 100000)
+  CEO_LOOP_KILL_GRACE_SECONDS  SIGTERM grace before SIGKILL (default: 20)
+  CEO_LOOP_PROMPT           Override the CEO run prompt
+
+Exit codes:
+  0 - stopped cleanly
+  1 - max restarts exceeded
+  2 - usage error
+EOF
+}
+
+main() {
+  local cmd="${1:-run}"
+  case "${cmd}" in
+    -h|--help) usage; exit 0 ;;
+    -V|--version) printf '%s %s\n' "${APP_NAME}" "${APP_VERSION}"; exit 0 ;;
+    -v|--verbose) VERBOSE=true; shift; cmd="${1:-run}" ;;
+    --stop) cmd_stop; exit 0 ;;
+    --reset) cmd_reset; exit 0 ;;
+    run) : ;;
+    *) die "Unknown command: ${cmd}. See --help." ;;
+  esac
+  shift 2>/dev/null || true
+
+  validate_positive_uint CEO_LOOP_STUCK_MINUTES "${STUCK_MINUTES}"
+  validate_positive_uint CEO_LOOP_POLL_SECONDS "${POLL_SECONDS}"
+  validate_positive_uint CEO_LOOP_SLEEP_SECONDS "${LOOP_SLEEP_SECONDS}"
+  validate_positive_uint CEO_LOOP_KILL_GRACE_SECONDS "${KILL_GRACE_SECONDS}"
+  validate_uint CEO_LOOP_MAX_RESTARTS "${MAX_RESTARTS}"
+  validate_uint CEO_LOOP_MAX_ITERATIONS "${MAX_ITERATIONS}"
+
+  require_cmd opencode
+  require_cmd setsid
+  require_cmd jq
+
+  run_loop
+}
+
+# Testable main guard.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi

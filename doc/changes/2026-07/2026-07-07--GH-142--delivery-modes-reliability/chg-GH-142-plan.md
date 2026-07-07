@@ -168,18 +168,18 @@ honor a durable stop. (AC-3; INV-DM-3, 5.)
 - `CEO_LOOP_POLL_SECONDS` (30), `CEO_LOOP_STALL_MINUTES` (15), `CEO_RESUME_TOKEN_LIMIT` (100000), `CEO_LOOP_MAX_RESTARTS` (10), plus override hooks `OPENCODE_DB_CMD`/`OPENCODE_RUN_CMD`/`OPENCODE_SESSION_LIST_CMD` for tests.
 
 **Tasks**
-- [ ] Rewrite per `.ai/rules/bash.md` (strict mode, traps, logging `(ceo-loop)`, command pattern: `--stop` | `--reset` | default run).
-- [ ] `spawn_or_resume_ceo()`, `is_ceo_alive()` (probes+validates `.ai/local/ceo/ceo.pid`, cmdline+cwd), `ceo_is_stuck()` (uses pm-liveness + `deliver-ticket.sh --is-delivering`), `remember_session_id()`, `context_total_for()`.
-- [ ] Write/probe/clear `.ai/local/ceo/ceo.pid` (F-3) on spawn and EXIT/INT/TERM traps.
-- [ ] Durable stop file handling; `--stop`, `--reset`.
-- [ ] Signal traps + child kill.
-- [ ] `test-ceo-loop.sh`: stuck⇒kill+restart, healthy-delivery⇒no-kill, healthy-session-traffic⇒no-kill, durable-stop-survives-restart, stop-not-wiped-at-startup, `--reset` clears, resume-under-threshold, fresh-over-threshold, at-most-one-ceo, signal-propagation, max-restarts-exhausts, resume-remembers-session-id, `validate_uint` rejects garbage, **`test_loop_restart_does_not_double_spawn_when_ceo_alive` (F-3)**. Mock `_opencode` (run/db/session-list) and shell out to a stubbed `deliver-ticket.sh --is-delivering` via PATH.
-- [ ] Static prompt assertions for `.opencode/agent/ceo.md` (AC-4) live here too (see Phase 3) — OR a separate static test; coordinate so they aren't duplicated.
+- [x] Rewrite per `.ai/rules/bash.md` (strict mode, traps, logging `(ceo-loop)`, command pattern: `--stop` | `--reset` | default run). (v2.0.0, 609 lines; ShellCheck clean — 0 warnings/errors.)
+- [x] `spawn_or_resume_ceo()`, `is_ceo_alive()` (probes+validates `.ai/local/ceo/ceo.pid`, cmdline+cwd), `ceo_is_stuck()` (uses pm-liveness + `deliver-ticket.sh --is-delivering`), `remember_session_id()`, `context_total_for()`. (F-7 token columns: input+cache_read+output+reasoning.)
+- [x] Write/probe/clear `.ai/local/ceo/ceo.pid` (F-3) on spawn and EXIT/INT/TERM traps. (PID file + start-epoch guard, cmdline+cwd validation.)
+- [x] Durable stop file handling; `--stop`, `--reset`. (#97 — stop file NOT wiped at startup.)
+- [x] Signal traps + child kill. (`_cleanup_child` EXIT trap, `kill_ceo_tree` SIGTERM→grace→SIGKILL.)
+- [x] `test-ceo-loop.sh`: stuck⇒kill+restart, healthy-delivery⇒no-kill, healthy-session-traffic⇒no-kill, durable-stop-survives-restart, stop-not-wiped-at-startup, `--reset` clears, resume-under-threshold, fresh-over-threshold, at-most-one-ceo, signal-propagation, max-restarts-exhausts, resume-remembers-session-id, `validate_uint` rejects garbage, **`test_loop_restart_does_not_double_spawn_when_ceo_alive` (F-3)**. (30/30 tests pass: 24 fast + 6 slow integration behind RUN_SLOW_TESTS=true. F-3 JOIN test covers double-spawn prevention.)
+- [x] Static prompt assertions for `.opencode/agent/ceo.md` (AC-4) live here too (see Phase 3) — OR a separate static test; coordinate so they aren't duplicated. (Deferred to Phase 3 — test-ceo-loop.sh has the AC-3 section ready; AC-4 static section added in Phase 3.)
 
 **Definition of Done (Phase 2)**
-- `bash scripts/.tests/test-ceo-loop.sh` green.
-- `bash scripts/test-all.sh` green.
-- AC-3 satisfied.
+- `bash scripts/.tests/test-ceo-loop.sh` green. — PASSED (30/30: 24 fast + 6 slow integration with RUN_SLOW_TESTS=true)
+- `bash scripts/test-all.sh` green. — PASSED (11/12 files; only expected test-build-claude-plugin.sh plugin-freshness gate red)
+- AC-3 satisfied. — PASSED (all 13 AC-3 test cases from test-plan implemented and green)
 
 ---
 
@@ -308,3 +308,11 @@ as the commit message. (AC-6; Mode B rules.)
 - **No autonomous merge** — this is a closely-guided core-process change; stop at PR review.
 - **F-9 — expect the plugin-freshness gate RED until Phase 3.** The branch currently has `.opencode/agent/ceo.md` (seed) but **no** `.ados-claude/agents/ceo.md`, and `ceo` is absent from `.opencode/README.md`. So `test-build-claude-plugin.sh` / `test_committed_plugin_matches_fresh_build` will be red until Phase 3 lands — that is expected, not a regression you introduced.
 - **F-11 — resume-limit CLI flag (nit).** Comment #2 asked the resume limit be "configurable via cli param." The plan exposes it via env (`CEO_RESUME_TOKEN_LIMIT`) for consistency with the rest of the config. Optionally also add `--resume-token-limit <N>` to `ceo-loop.sh`; if you do, document both. Env-only is acceptable.
+
+---
+
+## Execution log
+
+- **Phase 0** (commit `ac8b952`): `scripts/pm-liveness.sh` + 16/16 tests. Session-traffic liveness probe, key=value output, graceful degradation.
+- **Phase 1** (commit `ef6acf6`): `scripts/deliver-ticket.sh` extended + 49/49 tests. Single-flight+JOIN (F-3/F-4), session-traffic liveness (INV-DM-5), `--is-delivering`/`--last-message`/`--resume-prompt` subcommands, PM last-message capture, no-auto-merge prompt (F-2).
+- **Phase 2**: `scripts/ceo-loop.sh` full rewrite (v2.0.0, 609 lines) + `scripts/.tests/test-ceo-loop.sh` (30/30 tests). F-3 single-flight (PID validation: cmdline+cwd+start-epoch), INV-DM-3/5 stuck detection (session-traffic stalled AND no delivery), INV-DM-3 session resume (context-total proxy, degrade gracefully), #97 durable stop (not wiped at startup), INV-DM-2 signal propagation, max-restarts exhaustion. State paths made non-readonly for testability. `STUCK_SECONDS` env override for fast tests.
