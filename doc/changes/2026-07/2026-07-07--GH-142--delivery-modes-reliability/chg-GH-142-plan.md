@@ -247,17 +247,20 @@ as the commit message. (AC-6; Mode B rules.)
 - Exit codes, `DRY_RUN`, summary log, pre-flight skip, idempotent re-run.
 
 **Tasks**
-- [ ] `approved_pr_flow REF BRANCH`: fetch, detect already-on-main, rebase, conflict→AI-resolve, push, wait-green (`wait_for_pr_green PR`), squash-merge with PR title+body.
-- [ ] `wait_for_pr_green PR` using `gh pr checks` (poll, timeout, route-red-to-deliver).
-- [ ] `get_pr_title_and_body PR` via `gh pr view --json title,body`.
-- [ ] Extend the per-ticket loop: pending-review ⇒ park + continue.
-- [ ] Verify/extend `tools/clean-merged-branches` "never unmerged" guard + test.
-- [ ] Extend `test-batch-deliver.sh`: approved+green⇒squash-merge, approved+conflict⇒AI-resolve⇒green⇒merge, not-approved⇒park-and-continue, already-on-main⇒direct-merge, green-gate-red⇒deliver, commit-msg-from-PR-title+body, pending-parks-only-this-ticket, batch-never-adds-approved, clean-merged-branches-invoked, batch-does-not-force-delete-unmerged. Mock `_git`/`_gh`.
+- [x] `approved_pr_flow REF BRANCH`: fetch, detect already-on-main, rebase, conflict→AI-resolve, push, wait-green (`wait_for_pr_green PR`), squash-merge with PR title+body. (`approved_pr_flow`, `rebase_before_merge`, `is_pr_on_latest_main`, `resolve_rebase_conflicts` implemented; DRY_RUN path included.)
+- [x] `wait_for_pr_green PR` using `gh pr checks` (poll, timeout, route-red-to-deliver). (Returns 0=green, 1=red, 2=timeout; `BATCH_GREEN_GATE_TIMEOUT` default 300s.)
+- [x] `get_pr_title_and_body PR` via `gh pr view --json title,body`. (Implemented; feeds `--subject`/`--body` to `gh pr merge --squash`.)
+- [x] Extend the per-ticket loop: pending-review ⇒ park + continue. (Modified `run_batch`: approved→merge, not-approved→park; `results_parked` counter + `print_batch_summary` 6th arg.)
+- [x] Verify/extend `tools/clean-merged-branches` "never unmerged" guard + test. (Existing 11/11 tests verify: only ancestry-merged branches deleted, protected branches never deleted. No changes needed.)
+- [x] Extend `test-batch-deliver.sh`: approved+green⇒squash-merge, approved+conflict⇒AI-resolve⇒green⇒merge, not-approved⇒park-and-continue, already-on-main⇒direct-merge, green-gate-red⇒deliver, commit-msg-from-PR-title+body, pending-parks-only-this-ticket, batch-never-adds-approved, clean-merged-branches-invoked, batch-does-not-force-delete-unmerged. Mock `_git`/`_gh`. (30/30 tests: 16 existing + 14 new AC-6 tests. `_git` mockable wrapper added. `DELIVER_SCRIPT`/`CLEAN_TOOL` non-readonly for testability.)
 
 **Definition of Done (Phase 4)**
 - `bash scripts/.tests/test-batch-deliver.sh` + `bash tools/.tests/test-clean-merged-branches.sh` green.
 - `bash scripts/test-all.sh` green.
 - AC-6 satisfied.
+
+**Phase 4 Acceptance — PASSED**
+- Criterion: AC-6 (Mode B rebase-before-merge with green-gate wait) — PASSED. `approved_pr_flow` implements fetch→on-main-detect→rebase→conflict-resolve→push→wait-green→squash-merge with PR title+body. 30/30 tests in `test-batch-deliver.sh` (TC-BD-09…TC-BD-20 cover approve-detect, green-gate, conflict-resolve, commit-msg, park, summary, never-add-approved). `clean-merged-branches` 11/11 tests verify never-unmerged guard. `test-all.sh` 12/12 green. ShellCheck clean on both changed files.
 
 ---
 

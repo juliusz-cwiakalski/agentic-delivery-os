@@ -33,8 +33,8 @@ readonly SCRIPT_DIR
 ROOT_DIR="$(cd -- "${SCRIPT_DIR}/.." >/dev/null 2>&1 && pwd -P)"
 readonly ROOT_DIR
 
-readonly DELIVER_SCRIPT="${SCRIPT_DIR}/deliver-ticket.sh"
-readonly CLEAN_TOOL="${ROOT_DIR}/tools/clean-merged-branches"
+DELIVER_SCRIPT="${SCRIPT_DIR}/deliver-ticket.sh"
+CLEAN_TOOL="${ROOT_DIR}/tools/clean-merged-branches"
 readonly SUMMARY_LOG="${ROOT_DIR}/tmp/batch-deliver-summary.log"
 
 DRY_RUN="${DRY_RUN:-false}"
@@ -74,8 +74,9 @@ require_cmd() {
 # ============================================================================
 # MOCKABLE WRAPPERS
 # ============================================================================
-_gh() { command gh "$@"; }
-_jq() { command jq "$@"; }
+_gh()  { command gh "$@"; }
+_git() { command git "$@"; }
+_jq()  { command jq "$@"; }
 
 # ============================================================================
 # INPUT PARSING (pure functions)
@@ -165,6 +166,163 @@ should_skip_ticket() {
 }
 
 # ============================================================================
+# APPROVED-PR FLOW (Mode B: rebase-before-merge + green-gate wait)
+# ============================================================================
+
+# Check if a ticket has the `approved` label (human-approved for merge).
+# Returns 0 if approved, 1 otherwise.
+is_pr_approved() {
+  local -r ticket_ref="$1"
+  local issue_json
+  issue_json="$(_gh issue view "$(to_issue_number "${ticket_ref}")" --json labels 2>/dev/null)" || return 1
+  printf '%s' "${issue_json}" | _jq -r '.labels[].name' 2>/dev/null | grep -qx 'approved'
+}
+
+# Find the open PR number for a ticket. Prints the number, or empty.
+get_pr_number() {
+  local -r ticket_ref="$1"
+  local pr_json
+  pr_json="$(_gh pr list --search "${ticket_ref}" --state open --json number 2>/dev/null)" || pr_json='[]'
+  printf '%s' "${pr_json}" | _jq -r '.[0].number // empty' 2>/dev/null
+}
+
+# Get PR title and body via gh pr view. Prints "title\nbody".
+get_pr_title_and_body() {
+  local -r pr_number="$1"
+  local pr_json title body
+  pr_json="$(_gh pr view "${pr_number}" --json title,body 2>/dev/null)" || pr_json='{}'
+  title="$(printf '%s' "${pr_json}" | _jq -r '.title // empty' 2>/dev/null)" || title=""
+  body="$(printf '%s' "${pr_json}" | _jq -r '.body // empty' 2>/dev/null)" || body=""
+  printf '%s\n%s' "${title}" "${body}"
+}
+
+# Check if branch is already on latest origin/main (no rebase needed).
+# Returns 0 if up to date, 1 otherwise.
+is_pr_on_latest_main() {
+  local -r branch="$1"
+  _git fetch origin main 2>/dev/null || return 1
+  local merge_base main_head
+  merge_base="$(_git merge-base "origin/main" "${branch}" 2>/dev/null)" || return 1
+  main_head="$(_git rev-parse origin/main 2>/dev/null)" || return 1
+  [[ "${merge_base}" == "${main_head}" ]]
+}
+
+# Resolve rebase conflicts via AI (opencode). Returns 0 on success, 1 on failure.
+resolve_rebase_conflicts() {
+  local conflict_files
+  conflict_files="$(_git diff --name-only --diff-filter=U 2>/dev/null)" || conflict_files=""
+  [[ -n "${conflict_files}" ]] || return 1
+  log_warn "Rebase conflicts in: ${conflict_files}"
+  if command -v opencode >/dev/null 2>&1; then
+    opencode run "Resolve git rebase conflicts in these files: ${conflict_files}. Remove all conflict markers (<<<<<<, =======, >>>>>>). Keep both sides where compatible; prefer origin/main for shared infrastructure; prefer our branch for feature-specific code." 2>/dev/null || return 1
+    # Verify no conflict markers remain
+    _git diff --name-only --diff-filter=U 2>/dev/null | grep -q . && return 1
+    return 0
+  fi
+  return 1
+}
+
+# Rebase branch on latest main; push --force-with-lease. Returns 0 on success.
+rebase_before_merge() {
+  local -r branch="$1"
+  _git checkout "${branch}" 2>/dev/null || return 1
+
+  if is_pr_on_latest_main "${branch}"; then
+    log_info "PR head already on latest main; skipping rebase"
+    return 0
+  fi
+
+  log_info "Rebasing ${branch} on origin/main"
+  if ! _git rebase origin/main 2>/dev/null; then
+    log_warn "Rebase conflict on ${branch}; attempting AI resolution"
+    if resolve_rebase_conflicts; then
+      _git rebase --continue 2>/dev/null || { _git rebase --abort 2>/dev/null || true; return 1; }
+    else
+      _git rebase --abort 2>/dev/null || true
+      return 1
+    fi
+  fi
+
+  log_info "Pushing rebased ${branch} (--force-with-lease)"
+  _git push --force-with-lease origin "${branch}" 2>/dev/null || return 1
+  return 0
+}
+
+# Wait for PR checks to be green. Returns 0 if green, 1 if red, 2 if timeout.
+wait_for_pr_green() {
+  local -r pr_number="$1"
+  local max_wait="${BATCH_GREEN_GATE_TIMEOUT:-300}"
+  local poll_interval="${BATCH_GREEN_POLL_INTERVAL:-10}"
+  local waited=0
+
+  while (( waited < max_wait )); do
+    local checks_output
+    checks_output="$(_gh pr checks "${pr_number}" 2>/dev/null)" || return 0  # No checks → green
+
+    if printf '%s' "${checks_output}" | grep -qi 'fail'; then
+      return 1  # Red
+    fi
+
+    if ! printf '%s' "${checks_output}" | grep -qiE 'pending|in_progress|queued'; then
+      return 0  # All complete, none failed → green
+    fi
+
+    sleep "${poll_interval}"
+    waited=$((waited + poll_interval))
+  done
+
+  return 2  # Timeout
+}
+
+# Approved PR flow: rebase, wait green, squash-merge with PR title+body.
+# Returns 0 if merged, 1 if couldn't merge (parked).
+approved_pr_flow() {
+  local -r ticket_ref="$1" branch="$2"
+
+  local pr_number
+  pr_number="$(get_pr_number "${ticket_ref}")" || pr_number=""
+  [[ -n "${pr_number}" ]] || { log_warn "No open PR found for ${ticket_ref}"; return 1; }
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log_info "[DRY-RUN] Would rebase+merge PR #${pr_number} for ${ticket_ref}"
+    return 0
+  fi
+
+  # Rebase before merge
+  if ! rebase_before_merge "${branch}"; then
+    log_warn "Rebase failed for ${ticket_ref}; marking human-input-needed"
+    return 1
+  fi
+
+  # Wait for green
+  local green_rc=0
+  wait_for_pr_green "${pr_number}" || green_rc=$?
+
+  if (( green_rc == 1 )); then
+    log_warn "PR checks red for ${ticket_ref}; routing back to delivery"
+    return 1
+  elif (( green_rc == 2 )); then
+    log_warn "PR checks timed out for ${ticket_ref}; parking"
+    return 1
+  fi
+
+  # Squash merge with PR title + body as commit message
+  local pr_info title body
+  pr_info="$(get_pr_title_and_body "${pr_number}")" || pr_info=""
+  title="$(printf '%s' "${pr_info}" | head -1)"
+  body="$(printf '%s' "${pr_info}" | tail -n +2)"
+
+  log_info "Squash-merging PR #${pr_number} (${ticket_ref})"
+  _gh pr merge "${pr_number}" --squash --subject "${title}" --body "${body}" --delete-branch 2>/dev/null || {
+    log_warn "Merge failed for PR #${pr_number}"
+    return 1
+  }
+
+  log_info "Merged PR #${pr_number} (${ticket_ref})"
+  return 0
+}
+
+# ============================================================================
 # DURATION FORMATTING (pure function)
 # ============================================================================
 
@@ -219,8 +377,10 @@ log_batch_failed() {
 # PURE: Format the final batch summary line block
 print_batch_summary() {
   local -r total="$1" merged="$2" skipped="$3" failed="$4" duration="$5"
+  local -r parked="${6:-0}"
   printf '\n═══ Batch complete: %d tickets in %s ═══\n' "${total}" "${duration}"
   printf '  Merged/Done: %d\n' "${merged}"
+  printf '  Parked:      %d\n' "${parked}"
   printf '  Skipped:     %d\n' "${skipped}"
   printf '  Failed:      %d\n' "${failed}"
 }
@@ -236,7 +396,7 @@ run_batch() {
   local batch_start_epoch
   batch_start_epoch="$(date +%s)"
 
-  local results_merged=0 results_skipped=0 results_failed=0
+  local results_merged=0 results_skipped=0 results_failed=0 results_parked=0
 
   local i
   for ((i = 0; i < total; i++)); do
@@ -275,12 +435,31 @@ run_batch() {
     duration="$(format_duration $((ticket_end_epoch - ticket_start_epoch)))"
 
     # Classify result
-    if [[ ${exit_code} -eq 0 ]]; then
-      log_batch_done "${index}" "${total}" "${ticket}" "completed" "${duration}"
-      results_merged=$((results_merged + 1))
-    else
+    if [[ ${exit_code} -ne 0 ]]; then
       log_batch_failed "${index}" "${total}" "${ticket}" "exit=${exit_code}" "${duration}"
       results_failed=$((results_failed + 1))
+    elif is_pr_approved "${ticket}" 2>/dev/null; then
+      # Approved PR flow: rebase, wait green, squash-merge
+      local resolve_branch="${branch}"
+      # If no explicit branch, try to detect from the PR
+      if [[ -z "${resolve_branch}" ]]; then
+        local pr_num
+        pr_num="$(get_pr_number "${ticket}")" || pr_num=""
+        if [[ -n "${pr_num}" ]]; then
+          resolve_branch="$(_gh pr view "${pr_num}" --json headRefName -q .headRefName 2>/dev/null)" || resolve_branch=""
+        fi
+      fi
+      if [[ -n "${resolve_branch}" ]] && approved_pr_flow "${ticket}" "${resolve_branch}"; then
+        log_batch_done "${index}" "${total}" "${ticket}" "merged" "${duration}"
+        results_merged=$((results_merged + 1))
+      else
+        log_batch_blocked "${index}" "${total}" "${ticket}" "approved but merge failed" "${duration}"
+        results_parked=$((results_parked + 1))
+      fi
+    else
+      # PR open but not approved → pending review, park and continue
+      log_batch_blocked "${index}" "${total}" "${ticket}" "pending review" "${duration}"
+      results_parked=$((results_parked + 1))
     fi
 
     # Clean merged branches between tickets
@@ -295,14 +474,14 @@ run_batch() {
   batch_end_epoch="$(date +%s)"
   total_duration="$(format_duration $((batch_end_epoch - batch_start_epoch)))"
 
-  print_batch_summary "${total}" "${results_merged}" "${results_skipped}" "${results_failed}" "${total_duration}"
+  print_batch_summary "${total}" "${results_merged}" "${results_skipped}" "${results_failed}" "${total_duration}" "${results_parked}"
 
   # Write summary log
   mkdir -p "$(dirname "${SUMMARY_LOG}")"
   {
     printf 'Batch delivery — %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    printf 'Total: %d, Merged: %d, Skipped: %d, Failed: %d, Duration: %s\n' \
-      "${total}" "${results_merged}" "${results_skipped}" "${results_failed}" "${total_duration}"
+    printf 'Total: %d, Merged: %d, Parked: %d, Skipped: %d, Failed: %d, Duration: %s\n' \
+      "${total}" "${results_merged}" "${results_parked}" "${results_skipped}" "${results_failed}" "${total_duration}"
   } >>"${SUMMARY_LOG}"
 
   [[ ${results_failed} -eq 0 ]]
