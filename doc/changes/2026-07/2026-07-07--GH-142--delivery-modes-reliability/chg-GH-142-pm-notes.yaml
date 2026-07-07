@@ -10,9 +10,9 @@ phases:
   dor_check: { started: 2026-07-07T17:31:00Z, completed: 2026-07-07T18:10:00Z }
   delivery: { started: 2026-07-07T18:11:00Z, completed: 2026-07-07T21:55:00Z }
   system_spec_update: { started: 2026-07-07T22:00:00Z, completed: 2026-07-07T22:40:00Z }
-  review_fix: { started: 2026-07-07T22:45:00Z, completed: null }
-  quality_gates: { started: null, completed: null }
-  dod_check: { started: null, completed: null }
+  review_fix: { started: 2026-07-07T22:45:00Z, completed: 2026-07-08T00:10:00Z }
+  quality_gates: { started: 2026-07-07T23:30:00Z, completed: 2026-07-08T00:15:00Z }
+  dod_check: { started: 2026-07-08T00:20:00Z, completed: null }
   pr_creation: { started: null, completed: null, url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/143" }
 decisions:
   - text: "OQ-DM-1 DECIDED (per PR #143 comment #11): CEO-foreground model. CEO calls deliver-ticket.sh (foreground, blocking), waits for it, consumes the returned PM last-message + result, and decides next action. deliver-ticket.sh must return the PM agent's last message on stdout and accept an optional --resume-prompt that overrides the default PM prompt (so CEO can resolve a PM-raised blocker by resuming the session with a custom instruction). Loop-runner-owns-blocking alternative rejected."
@@ -53,6 +53,9 @@ decisions:
   - text: "RETRO: @coder hand-edited .opencode/agent/ceo.md + pr-manager.md in Phase 3 despite the plan noting 'delegate the prose tuning to @toolsmith if helpful' (soft hint, not a hard gate). The AGENTS.md rule ('Delegate to @toolsmith — Do not hand-edit agent/command files directly') is a hard rule that the plan should have stated as a HARD requirement, and @coder should refuse hand-editing agent prompts. Improvement: future plans that touch .opencode/agent/** or .opencode/command/** must have an explicit phase task 'delegate agent-prompt edits to @toolsmith' marked non-delegable to @coder. Caught here by the human + a toolsmith R1 pass; no merge impact."
     type: retro
     date: 2026-07-07
+  - text: "REVIEW iter-1 FAIL -> remediation (commit d7cd7b8) fixed all 7 findings: F-1 (deliver-ticket owner start-epoch preserved across restarts + TC-DT-SF-13), F-2 (batch-deliver green-gate treats gh errors as unknown/park, not green + TC-BD-12c/12d/17b), F-3 (3 deferred AC-2 tests implemented: INT-02 concurrent converge, INT-03 signal propagation, SF-14 liveness handoff), F-4 (flock atomic OWN), F-5 (>= prose reconcile), F-6 (ceo_is_stuck defense-in-depth + WARN), F-7 (BSD etime parse + 10# base-10). REVIEW iter-2 PASS (all 7 closed, code+test verified). Quality gates ALL 13 GREEN (test-all 12/12, doc-dist 78, plugin 16/16, deliver-ticket 55/55, batch-deliver 33/33, ceo-loop 39/39, pm-liveness 16/16, install 49/49, uninstall 30/30, slow tests ran, shellcheck info-only, decontextualization clean). Installer verified (real --local + --global into temp dirs): all GH-142 redistributable artifacts install correctly; internal feature spec correctly excluded."
+    type: info
+    date: 2026-07-08
 open_questions: []  # all four OQ-DM resolved via PR #143 review comments
 blockers: []
 red_team:

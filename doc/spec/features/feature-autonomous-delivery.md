@@ -87,7 +87,7 @@ Subcommands:           deliver-ticket.sh --is-delivering [REF]
 ### Edge Cases & Error Handling
 
 - **CEO bash-tool timeout cuts a blocking `deliver-ticket.sh` call:** the PM child keeps running; the next `deliver-ticket.sh REF` call **joins** it (INV-DM-2). No work is lost.
-- **PM LLM stream hangs:** the liveness watchdog (INV-DM-5) sees no session traffic for > threshold → kill-and-resume the PM; the session resumes from committed artifacts + pm-notes.
+- **PM LLM stream hangs:** the liveness watchdog (INV-DM-5) sees no session traffic for ≥ threshold → kill-and-resume the PM; the session resumes from committed artifacts + pm-notes.
 - **Agent hits a forbidden-folder permission prompt:** same detection — no session traffic → stuck → kill+restart (autonomous mode must not block on an unseen prompt).
 - **opencode internally detaches its own grandchildren:** the signal trap kills the child's process group; grandchildren opencode itself `setsid`-detached (LLM transport, bash-tool subprocesses) can escape the group kill. Accepted known limitation; a defense-in-depth sweep by session id can be added if orphans are observed.
 - **GitHub API rate-limit during classification:** `classify_result` returns `unknown`; the iteration does not burn a restart slot.
