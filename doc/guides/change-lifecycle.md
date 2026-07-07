@@ -347,8 +347,11 @@ flowchart TD
 > merge authority. After `pr_creation`, the CEO verifies PM finalization (all
 > 11 phases complete in `chg-<ref>-pm-notes.yaml`), then merges approved PRs
 > itself via `gh pr merge --squash`. The CEO **must merge, not yield** — a
-> ready, approved, PM-finalized PR is merged, not deferred indefinitely. See
-> `.opencode/agent/ceo.md` for the full autonomous delivery model.
+> ready, approved, PM-finalized PR is merged, not deferred indefinitely. Note
+> the per-ticket engine never merges: `deliver-ticket.sh` returns `pr-open`.
+> See `.opencode/agent/ceo.md` for the autonomous delivery model, and
+> [delivery-modes.md](delivery-modes.md) for the canonical modes guide and
+> behavioral invariants (INV-DM-1..6).
 
 ---
 
