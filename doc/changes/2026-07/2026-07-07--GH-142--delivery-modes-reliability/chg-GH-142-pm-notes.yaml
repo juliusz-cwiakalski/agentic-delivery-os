@@ -12,8 +12,8 @@ phases:
   system_spec_update: { started: 2026-07-07T22:00:00Z, completed: 2026-07-07T22:40:00Z }
   review_fix: { started: 2026-07-07T22:45:00Z, completed: 2026-07-08T00:10:00Z }
   quality_gates: { started: 2026-07-07T23:30:00Z, completed: 2026-07-08T00:15:00Z }
-  dod_check: { started: 2026-07-08T00:20:00Z, completed: null }
-  pr_creation: { started: null, completed: null, url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/143" }
+  dod_check: { started: 2026-07-08T00:20:00Z, completed: 2026-07-08T01:00:00Z }
+  pr_creation: { started: 2026-07-08T01:05:00Z, completed: null, url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/143" }
 decisions:
   - text: "OQ-DM-1 DECIDED (per PR #143 comment #11): CEO-foreground model. CEO calls deliver-ticket.sh (foreground, blocking), waits for it, consumes the returned PM last-message + result, and decides next action. deliver-ticket.sh must return the PM agent's last message on stdout and accept an optional --resume-prompt that overrides the default PM prompt (so CEO can resolve a PM-raised blocker by resuming the session with a custom instruction). Loop-runner-owns-blocking alternative rejected."
     date: 2026-07-07
@@ -56,6 +56,12 @@ decisions:
   - text: "REVIEW iter-1 FAIL -> remediation (commit d7cd7b8) fixed all 7 findings: F-1 (deliver-ticket owner start-epoch preserved across restarts + TC-DT-SF-13), F-2 (batch-deliver green-gate treats gh errors as unknown/park, not green + TC-BD-12c/12d/17b), F-3 (3 deferred AC-2 tests implemented: INT-02 concurrent converge, INT-03 signal propagation, SF-14 liveness handoff), F-4 (flock atomic OWN), F-5 (>= prose reconcile), F-6 (ceo_is_stuck defense-in-depth + WARN), F-7 (BSD etime parse + 10# base-10). REVIEW iter-2 PASS (all 7 closed, code+test verified). Quality gates ALL 13 GREEN (test-all 12/12, doc-dist 78, plugin 16/16, deliver-ticket 55/55, batch-deliver 33/33, ceo-loop 39/39, pm-liveness 16/16, install 49/49, uninstall 30/30, slow tests ran, shellcheck info-only, decontextualization clean). Installer verified (real --local + --global into temp dirs): all GH-142 redistributable artifacts install correctly; internal feature spec correctly excluded."
     type: info
     date: 2026-07-08
+  - text: "RED-TEAM R2 (pre-DoD) SHIP-WITH-FINDINGS: 1 Major (F-R2-1 — WRAPPER_START_EPOCH captured after slow git fetch/opencode-session-list setup, so under network latency a live fresh-delivery owner is mis-detected as dead -> breaks INV-DM-2/3 in the primary overnight use case; one-line fix + regression test, commit 280402e) + cheap fixes (F-R2-3 guide/code green-gate wording reconcile, F-R2-5 Mode A JOIN caption, F-R2-4 code-review/ cleanup — commit 0b18161). F-R2-2 skipped w/ justification (dangerous direction already safe). After fix: deliver-ticket 57/57, test-all 12/12, doc-dist green, plugin 16/16, shellcheck clean. All 6 invariants now enforced end-to-end (INV-DM-2/3 latent gap closed)."
+    type: info
+    date: 2026-07-08
+  - text: "DoD CHECK: all 11 phases complete; all AC-1..7 satisfied (AC-1 guide transformed+reviewed; AC-2 deliver-ticket 57 tests + F-1/F-4/F-R2-1 fixed; AC-3 ceo-loop 39 tests + F-3; AC-4 ceo.md toolsmith-finalized + 8 static tests; AC-5 pm-liveness 16 tests; AC-6 batch-deliver 33 tests + F-2; AC-7 install/uninstall/plugin/doc-dist/shellcheck all green); docs complete (feature spec + 4 guide consistency + index); installer verified. Two red-team rounds + two review iterations, all findings closed. READY FOR PR."
+    type: resolved
+    date: 2026-07-08
 open_questions: []  # all four OQ-DM resolved via PR #143 review comments
 blockers: []
 red_team:
@@ -68,6 +74,16 @@ red_team:
     nits: [F-10, F-11, F-12, F-13]
     comment_fidelity: "14/15 fully addressed (#12 partial -> F-6)"
     applied: "all 4 Majors + cheap Minors (F-5,F-6,F-7,F-8,F-10,F-12,F-13) before delivery"
+  r2_pre_dod:
+    date: 2026-07-08
+    verdict: SHIP-WITH-FINDINGS
+    findings_total: 5
+    majors: [F-R2-1]
+    minors: [F-R2-2, F-R2-3]
+    nits: [F-R2-4, F-R2-5]
+    comment_fidelity: "14.8/15 (comment #12 partial -> F-R2-3 guide/code drift)"
+    invariant_trace: "INV-DM-1 ✅, INV-DM-2 ⚠️ (F-R2-1 latent gap under slow setup), INV-DM-3 ⚠️ (inherits F-R2-1), INV-DM-4 ✅, INV-DM-5 ✅, INV-DM-6 ✅"
+    applied: "F-R2-1 must-fix (true birth epoch) + F-R2-3/F-R2-5/F-R2-4 cheap fixes before PR"
 notes:
   - text: "INTAKE: user requested delivery of GH-142 with PR #143 already open as a guide-review checkpoint. The guide (doc/guides/delivery-modes.md) was incepted in another project (marksync-for-confluence) and moved into ADOS; PR #143 also carries seed .opencode/agent/ceo.md + scripts/ceo-loop.sh copied from the dogfooding project that need refactoring/tuning. User did a detailed guide review -> 15 inline comments on PR #143, AUTHORITATIVE (override the handoff note .ai/local/notes/2026-07-07-GH-142-delivery-modes-handoff.md in case of contradiction)."
     type: info
