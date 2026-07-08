@@ -470,6 +470,42 @@ All settings are environment variables (CLI flag overrides where noted).
 | `clean-merged-branches` deleted a branch I needed | Misconfigured `--base` / `--protected`, or a branch that looked merged | It must never delete unmerged or protected branches; if it did, that is a bug |
 | On macOS, an owner/CEO is rejected as stale right after it starts | macOS `ps` lacks the Linux `-o etimes=` (elapsed **seconds**) column. The scripts fall back to parsing `-o etime=` (elapsed `[[dd-]hh:]mm:ss`) when `etimes=` is absent; this needs `ps` from a modern macOS build. If the fallback also fails the start-epoch guard degrades gracefully (treats the owner as live rather than wrongly killing it). | Ensure `ceo-loop.sh`/`deliver-ticket.sh` are current (they carry the `etime=` fallback); no action needed otherwise. |
 
+## Log locations
+
+When debugging delivery-loop or per-ticket issues, these are the deterministic
+locations to inspect. Log files are appended across iterations and each entry
+carries a full date+timestamp so multi-day runs (overnight, weekend) are
+unambiguous.
+
+### `deliver-ticket.sh` — per-ticket
+
+| Path | Content |
+|---|---|
+| `tmp/deliver-ticket/<ref>.log` | opencode stderr (verbose PM output) — appended across all iterations for this ticket |
+| `tmp/deliver-ticket/<ref>.pm.out` | opencode stdout (PM final messages) — appended; `tail -n 1` is the latest PM last-message |
+| `.ai/local/delivery/<ref>.pid` | single-flight PID file (live while a delivery runs; cleared on exit) |
+| `.ai/local/delivery/<ref>.last-message` | persisted PM last-message (consumed by `--last-message`) |
+| `.ai/local/delivery/<ref>.lock` | flock lock file for the atomic JOIN-or-OWN decision |
+
+The `<ref>` is lowercased (e.g., `gh-15.log` for `GH-15`).
+
+### `ceo-loop.sh` — CEO outer loop
+
+| Path | Content |
+|---|---|
+| `tmp/ceo-loop/ceo.log` | opencode stderr (verbose CEO output) — appended across all iterations |
+| `.ai/local/ceo/ceo.pid` | CEO child PID (live while CEO runs; cleared on exit) |
+| `.ai/local/ceo/stop` | durable stop signal (written by `--stop`, cleared by `--reset`) |
+| `.ai/local/ceo/last-session` | last CEO session ID (for the resume decision) |
+
+### Quick debugging workflow
+
+1. **CEO stuck / looping?** → `tail -50 tmp/ceo-loop/ceo.log`
+2. **Delivery looping / misclassified?** → `tail -50 tmp/deliver-ticket/<ref>.log`
+3. **What did the PM say last?** → `tail -5 tmp/deliver-ticket/<ref>.pm.out` or `scripts/deliver-ticket.sh --last-message <ref>`
+4. **Is a delivery in flight?** → `scripts/deliver-ticket.sh --is-delivering [ref]`
+5. **Need to force-restart the CEO loop?** → `scripts/ceo-loop.sh --reset && scripts/ceo-loop.sh`
+
 ## See also
 
 - [autonomous-batch-delivery.md](autonomous-batch-delivery.md) — canonical guide

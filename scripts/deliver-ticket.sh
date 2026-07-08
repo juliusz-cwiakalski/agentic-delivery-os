@@ -149,7 +149,9 @@ trap '_on_interrupt' INT TERM
 # ============================================================================
 # LOGGING
 # ============================================================================
-_ts() { date '+%H:%M:%S'; }
+# Full date+time in every log line so multi-day sessions (e.g. overnight runs
+# that span midnight, or restarts days apart) are unambiguous in the logs.
+_ts() { date '+%Y-%m-%d %H:%M:%S'; }
 
 log_info()   { printf '[%s] ℹ %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" >&2; }
 log_warn()   { printf '[%s] ⚠ %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" >&2; }
@@ -527,6 +529,18 @@ mapping_file_for() {
 # Resolve the effective branch for delivery.
 # Args: ticket_ref, arg_branch
 # Prints: resolved branch (may be empty)
+#
+# Resolution order:
+#   1. Recorded in session mapping (.ai/local/opencode-sessions/<ref>.json)
+#   2. CLI argument (--ticket:branch)
+#   3. Git scan: any local branch containing the ticket ref (case-insensitive)
+#
+# BUG FIX (GH-142 post-delivery): The mapping's branch was recorded at
+# session-creation time and never updated. When the PM later creates a branch
+# (feat/<ref>/<slug>), the mapping stays null. With an empty branch,
+# classify_result skips the open-PR check and returns "failed" — causing the
+# wrapper to restart a cleanly-exited PM indefinitely. The git scan discovers
+# the branch the PM created and persists it back to the mapping.
 resolve_branch() {
   local -r ticket_ref="$1"
   local -r arg_branch="$2"
@@ -538,16 +552,38 @@ resolve_branch() {
     recorded_branch="$(_jq -r '.branch // empty' "${mapping_file}" 2>/dev/null)" || true
   fi
 
-  if [[ -n "${recorded_branch}" ]]; then
+  if [[ -n "${recorded_branch}" && "${recorded_branch}" != "null" ]]; then
     if [[ -n "${arg_branch}" && "${arg_branch}" != "${recorded_branch}" ]]; then
       log_warn "Branch mismatch: mapping has '${recorded_branch}', arg has '${arg_branch}'. Using recorded branch."
     fi
     printf '%s' "${recorded_branch}"
-  elif [[ -n "${arg_branch}" ]]; then
-    printf '%s' "${arg_branch}"
-  else
-    printf ''
+    return 0
   fi
+
+  if [[ -n "${arg_branch}" ]]; then
+    printf '%s' "${arg_branch}"
+    return 0
+  fi
+
+  # Fallback: scan git for a branch containing the ticket ref (case-insensitive).
+  # Matches patterns like feat/GH-15/config-system, fix/gh-15-bug, etc.
+  # The ref-boundary regex (/|-|$) prevents GH-15 from matching GH-150.
+  local discovered_branch
+  discovered_branch="$(_git -C "${ROOT_DIR}" branch --format='%(refname:short)' 2>/dev/null \
+    | grep -iE "${ticket_ref}(/|-|\$)" | head -n 1)" || true
+  if [[ -n "${discovered_branch}" ]]; then
+    log_info "Discovered branch from git: ${discovered_branch}"
+    # Persist it so future runs don't need the scan.
+    if [[ -f "${mapping_file}" ]]; then
+      local tmp_file
+      tmp_file="$(mktemp)"
+      _jq --arg b "${discovered_branch}" '.branch = $b' "${mapping_file}" >"${tmp_file}" 2>/dev/null && mv "${tmp_file}" "${mapping_file}" || true
+    fi
+    printf '%s' "${discovered_branch}"
+    return 0
+  fi
+
+  printf ''
 }
 
 # ============================================================================
@@ -767,6 +803,16 @@ classify_result() {
       printf 'pr-open'
       return 0
     fi
+  else
+    # Branch-agnostic fallback: search open PRs by ticket ref in the title.
+    # Ensures classify_result sees the PR even when the branch wasn't resolved
+    # (defense-in-depth — resolve_branch's git scan should normally handle this).
+    local pr_search_json
+    pr_search_json="$(_gh pr list --state open --search "in:title ${ticket_ref}" --json number 2>/dev/null)" || pr_search_json='[]'
+    if printf '%s' "${pr_search_json}" | _jq -e '.[0]' >/dev/null 2>&1; then
+      printf 'pr-open'
+      return 0
+    fi
   fi
 
   # Check for merged PR
@@ -794,51 +840,43 @@ pr_url_for() {
 # PURE: Decide what to do after an iteration completes.
 # Args: monitor_result (stuck|finished), classification, iteration, max_restarts
 # Prints: continue | stop:exit_code:message
+#
+# BUG FIX (GH-142 post-delivery): A clean PM exit (monitor_result == "finished")
+# is ALWAYS terminal. The PM (opencode) decided to stop — trust it. Restarting
+# would re-prompt the PM with the same context, causing it to re-derive the
+# same conclusion (e.g. "PR open, awaiting review — STOP") and exit again,
+# burning tokens in an infinite loop. Only a watchdog-killed session (stuck) is
+# eligible for restart. If the PM exited prematurely, the human/CEO can
+# manually restart — the wrapper must not loop on a clean exit.
 decide_after_iteration() {
   local -r monitor_result="$1" classification="$2" iteration="$3" max_restarts="$4"
 
-  # When the PM session finished normally (opencode exited on its own), accept
-  # it as completion. A GitHub API failure during post-session classification is
-  # a monitoring gap, not a delivery failure — retrying won't change the outcome.
-  if [[ "${monitor_result}" == "finished" && "${classification}" == "unknown" ]]; then
-    printf 'stop:0:finished'
+  # A clean PM exit is ALWAYS terminal.
+  if [[ "${monitor_result}" == "finished" ]]; then
+    case "${classification}" in
+      merged)  printf 'stop:0:merged' ;;
+      blocked) printf 'stop:0:blocked' ;;
+      pr-open) printf 'stop:0:pr-open' ;;
+      *)       printf 'stop:0:finished' ;;
+    esac
     return 0
   fi
 
-  if [[ "${monitor_result}" == "stuck" ]]; then
-    if (( iteration >= max_restarts )); then
-      printf 'stop:1:max-restarts'
-    else
-      printf 'continue'
-    fi
-    return 0
-  fi
-
+  # monitor_result == "stuck" (watchdog-killed after stall threshold).
+  # If the delivery already reached a terminal GitHub state before the stall,
+  # accept it instead of restarting.
   case "${classification}" in
-    merged)
-      printf 'stop:0:merged'
-      ;;
-    blocked)
-      printf 'stop:0:blocked'
-      ;;
-    pr-open)
-      printf 'stop:0:pr-open'
-      ;;
-    failed)
-      if (( iteration >= max_restarts )); then
-        printf 'stop:1:max-restarts'
-      else
-        printf 'continue'
-      fi
-      ;;
-    unknown)
-      # m-7: gh/network failure — don't burn a restart slot, just retry.
-      printf 'continue'
-      ;;
-    *)
-      printf 'continue'
+    merged|blocked|pr-open)
+      printf 'stop:0:%s' "${classification}"
+      return 0
       ;;
   esac
+
+  if (( iteration >= max_restarts )); then
+    printf 'stop:1:max-restarts'
+  else
+    printf 'continue'
+  fi
 }
 
 # ============================================================================
@@ -861,12 +899,15 @@ run_single_iteration() {
   # exercised fast without a real multi-minute wait. Defaults to STUCK_MINUTES*60.
   local -r stuck_seconds="${DELIVER_STUCK_SECONDS:-$((STUCK_MINUTES * 60))}"
 
-  local log_file pm_out_file
+  local log_file pm_out_file ref_lower
   mkdir -p "${LOG_DIR}"
-  log_file="${LOG_DIR}/$(date +%Y%m%d-%H%M%S)-${ticket_ref}.log"
-  # INV-DM-4: capture opencode stdout separately so we can extract the PM's
-  # final message for the delivery summary / `--last-message` subcommand.
-  pm_out_file="${LOG_DIR}/$(date +%Y%m%d-%H%M%S)-${ticket_ref}.pm.out"
+  # Deterministic per-ticket log paths so debugging is predictable:
+  # tmp/deliver-ticket/<ref>.log (stderr) and <ref>.pm.out (stdout).
+  # Appended across iterations — each wrapper log line is timestamped so the
+  # timeline is recoverable from a single file.
+  ref_lower="$(printf '%s' "${ticket_ref}" | tr '[:upper:]' '[:lower:]')"
+  log_file="${LOG_DIR}/${ref_lower}.log"
+  pm_out_file="${LOG_DIR}/${ref_lower}.pm.out"
 
   # Build opencode command
   local opencode_cmd=()

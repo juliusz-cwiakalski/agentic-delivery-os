@@ -216,10 +216,38 @@ test_no_branch_when_nothing() {
   mkdir -p "${test_dir}"
   SESSION_DIR="${test_dir}"
 
+  # Hermetic git mock: the git-scan fallback must not hit the REAL repo. These
+  # branches intentionally do NOT match GH-115, so the scan misses → empty.
+  _git() { printf 'main\nother\n'; }
+
   local result
   result="$(resolve_branch "GH-115" "")"
 
-  assert_eq "" "${result}" "Should be empty when no mapping and no arg"
+  assert_eq "" "${result}" "Should be empty when no mapping, no arg, and git scan misses"
+}
+
+# TC-DT-04d: resolve_branch git-scan fallback discovers a branch AND persists
+# it to the mapping so future runs skip the scan (GH-142).
+test_resolve_branch_git_scan_discovers_and_persists() {
+  local test_dir="${_test_tmpdir}/sessions-scan"
+  mkdir -p "${test_dir}"
+  SESSION_DIR="${test_dir}"
+  _git() { printf 'main\nfeat/GH-999/scanning\n'; }
+  _jq -n '{branch:null}' >"${test_dir}/GH-999.json"
+  local result; result="$(resolve_branch "GH-999" "")"
+  assert_eq "feat/GH-999/scanning" "${result}" "git scan discovers branch"
+  local persisted; persisted="$(_jq -r '.branch // empty' "${test_dir}/GH-999.json")"
+  assert_eq "feat/GH-999/scanning" "${persisted}" "discovered branch persisted to mapping"
+}
+
+# TC-DT-04e: resolve_branch git-scan respects the ref-boundary regex — GH-99
+# must NOT match a branch named feat/GH-990/thing (GH-142).
+test_resolve_branch_scan_ref_boundary() {
+  local test_dir="${_test_tmpdir}/sessions-boundary"
+  mkdir -p "${test_dir}"; SESSION_DIR="${test_dir}"
+  _git() { printf 'feat/GH-990/thing\n'; }
+  local result; result="$(resolve_branch "GH-99" "")"
+  assert_eq "" "${result}" "GH-99 must NOT match GH-990 (ref-boundary regex)"
 }
 
 # ============================================================================
@@ -253,19 +281,22 @@ test_stale_detection_at_threshold() {
 # TESTS: Max Restarts (TC-DT-06)
 # ============================================================================
 
-# TC-DT-06: max restarts — failed iteration at max → stop with max-restarts
+# TC-DT-06: max restarts — failed iteration at max → stop with max-restarts.
+# GH-142: a clean PM exit ("finished") is ALWAYS terminal now (stop:0:finished),
+# so the only path that still produces max-restarts is stuck+failed+at-max.
 test_max_restarts_exceeded() {
   local result
-  result="$(decide_after_iteration "finished" "failed" 10 10)"
+  result="$(decide_after_iteration "stuck" "failed" 10 10)"
 
   assert_contains "${result}" "stop" "Should stop"
   assert_contains "${result}" "max-restarts" "Should report max-restarts"
 }
 
 # TC-DT-06b: under max restarts → continue
+# GH-142: "finished" is terminal, so use "stuck" to test the continue-under-max path.
 test_under_max_restarts_continue() {
   local result
-  result="$(decide_after_iteration "finished" "failed" 3 10)"
+  result="$(decide_after_iteration "stuck" "failed" 3 10)"
 
   assert_eq "continue" "${result}" "Should continue when under max restarts"
 }
@@ -358,6 +389,25 @@ test_classify_unknown() {
   assert_eq "unknown" "${result}" "Should classify as unknown on gh failure"
 }
 
+# TC-DT-07f: classify_result empty-branch fallback — when no branch is resolved,
+# classify_result searches open PRs by ticket ref in the title (GH-142).
+test_classify_pr_open_empty_branch_fallback() {
+  _gh() {
+    case "$1" in
+      issue) printf '%s' '{"state":"OPEN","labels":[]}' ;;
+      pr)
+        if printf '%s ' "$@" | grep -q -- '--search'; then
+          printf '%s' '[{"number":777}]'
+        else
+          printf '%s' '[]'
+        fi
+        ;;
+    esac
+  }
+  local result; result="$(classify_result "GH-999" "")"
+  assert_eq "pr-open" "${result}" "empty branch falls back to title-based open-PR search"
+}
+
 # TC-DT-06d: stuck + unknown classification → continue (no restart burn)
 # m-7: "unknown" (gh/network failure) doesn't burn a restart slot — but only
 # when the session was killed for staleness (stuck). A finished session that
@@ -387,11 +437,43 @@ test_decide_stuck_unknown_continues() {
   assert_eq "continue" "${result}" "stuck+unknown should continue"
 }
 
-# TC-DT-06g: decide_after_iteration: finished + failed → continue (retries up to max)
-test_decide_finished_failed_continues() {
+# TC-DT-06g: decide_after_iteration: finished + failed → stop (terminal).
+# GH-142: a clean PM exit is ALWAYS terminal now. finished+failed used to
+# "continue" (retry up to max); it now stops with stop:0:finished.
+test_decide_finished_failed_stops() {
   local result
   result="$(decide_after_iteration "finished" "failed" 1 10)"
-  assert_eq "continue" "${result}" "finished+failed should continue"
+  assert_eq "stop:0:finished" "${result}" "finished+failed is now TERMINAL"
+}
+
+# TC-DT-06h: finished + terminal classifications → stop (GH-142).
+test_decide_finished_merged_stops() {
+  local result; result="$(decide_after_iteration "finished" "merged" 1 10)"
+  assert_eq "stop:0:merged" "${result}" "finished+merged stops"
+}
+test_decide_finished_blocked_stops() {
+  local result; result="$(decide_after_iteration "finished" "blocked" 1 10)"
+  assert_eq "stop:0:blocked" "${result}" "finished+blocked stops"
+}
+test_decide_finished_pr_open_stops() {
+  local result; result="$(decide_after_iteration "finished" "pr-open" 1 10)"
+  assert_eq "stop:0:pr-open" "${result}" "finished+pr-open stops"
+}
+
+# TC-DT-06i: stuck + terminal classification → stop (not continue) (GH-142).
+# A watchdog-killed session that already reached a terminal GitHub state must
+# accept it instead of restarting.
+test_decide_stuck_merged_stops() {
+  local result; result="$(decide_after_iteration "stuck" "merged" 1 10)"
+  assert_eq "stop:0:merged" "${result}" "stuck+merged stops"
+}
+test_decide_stuck_blocked_stops() {
+  local result; result="$(decide_after_iteration "stuck" "blocked" 1 10)"
+  assert_eq "stop:0:blocked" "${result}" "stuck+blocked stops"
+}
+test_decide_stuck_pr_open_stops() {
+  local result; result="$(decide_after_iteration "stuck" "pr-open" 1 10)"
+  assert_eq "stop:0:pr-open" "${result}" "stuck+pr-open stops"
 }
 
 # ============================================================================
@@ -1348,6 +1430,8 @@ main() {
   run_test "TC-DT-04: branch resolution from mapping" test_branch_from_mapping
   run_test "TC-DT-04b: branch from arg (no mapping)" test_branch_from_arg_no_mapping
   run_test "TC-DT-04c: no branch when nothing provided" test_no_branch_when_nothing
+  run_test "TC-DT-04d: resolve_branch git-scan discovers+persists" test_resolve_branch_git_scan_discovers_and_persists
+  run_test "TC-DT-04e: resolve_branch git-scan ref-boundary" test_resolve_branch_scan_ref_boundary
   run_test "TC-DT-05: stale detection triggers kill" test_stale_detection_triggers
   run_test "TC-DT-05b: not stuck within threshold" test_stale_detection_no_trigger
   run_test "TC-DT-06: max restarts exceeded" test_max_restarts_exceeded
@@ -1358,10 +1442,17 @@ main() {
   run_test "TC-DT-07c: classify pr-open" test_classify_pr_open
   run_test "TC-DT-07d: classify failed" test_classify_failed
   run_test "TC-DT-07e: classify unknown (gh failure)" test_classify_unknown
+  run_test "TC-DT-07f: classify pr-open (empty-branch title search fallback)" test_classify_pr_open_empty_branch_fallback
   run_test "TC-DT-06d: stuck+unknown continues without restart burn" test_unknown_continues
   run_test "TC-DT-06e: finished+unknown stops (GH-126 retry-loop fix)" test_decide_finished_unknown_stops
   run_test "TC-DT-06f: stuck+unknown continues" test_decide_stuck_unknown_continues
-  run_test "TC-DT-06g: finished+failed continues" test_decide_finished_failed_continues
+  run_test "TC-DT-06g: finished+failed stops (terminal)" test_decide_finished_failed_stops
+  run_test "TC-DT-06h: finished+merged stops" test_decide_finished_merged_stops
+  run_test "TC-DT-06h: finished+blocked stops" test_decide_finished_blocked_stops
+  run_test "TC-DT-06h: finished+pr-open stops" test_decide_finished_pr_open_stops
+  run_test "TC-DT-06i: stuck+merged stops" test_decide_stuck_merged_stops
+  run_test "TC-DT-06i: stuck+blocked stops" test_decide_stuck_blocked_stops
+  run_test "TC-DT-06i: stuck+pr-open stops" test_decide_stuck_pr_open_stops
   run_test "TC-DT-08: prompt contains ticket and branch" test_prompt_contains_ticket
   run_test "TC-DT-08b: prompt does NOT auto-merge (F-2)" test_prompt_does_not_auto_merge
   run_test "TC-DT-08c: prompt has blocked workflow" test_prompt_has_blocked_workflow

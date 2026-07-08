@@ -112,7 +112,8 @@ trap '_on_interrupt' INT TERM
 # ============================================================================
 # LOGGING
 # ============================================================================
-_ts() { date -u '+%H:%M:%S'; }
+# Full date+time in every log line so multi-day sessions are unambiguous.
+_ts() { date -u '+%Y-%m-%dT%H:%M:%SZ'; }
 log_info()  { printf '[%s] ℹ %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" >&2; }
 log_warn()  { printf '[%s] ⚠ %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" >&2; }
 log_err()   { printf '[%s] ✗ %s %s\n' "$(_ts)" "${LOG_TAG}" "$*" >&2; }
@@ -518,11 +519,13 @@ run_loop() {
     # #97: honor a durable, non-expired stop. (Not wiped at startup.)
     if [[ -f "${STOP_FILE}" ]]; then
       log_info "durable stop signal present; honoring and exiting"
+      log_info "to restart the CEO loop: scripts/ceo-loop.sh --reset && scripts/ceo-loop.sh"
       return 0
     fi
 
     local log_file
-    log_file="${LOG_DIR}/$(date +%Y%m%d-%H%M%S)-iter${iteration}.log"
+    # Deterministic log path so debugging is predictable: tmp/ceo-loop/ceo.log
+    log_file="${LOG_DIR}/ceo.log"
     : >>"${log_file}"
     log_info "iteration=${iteration} restarts=${restarts} log=${log_file}"
 
