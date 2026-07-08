@@ -300,7 +300,7 @@ scripts/add-header-location.sh doc/guides
 | [.ai/agent/decision-instructions.md](.ai/agent/decision-instructions.md) | Project-local decision configuration (tracking conventions + strategic context) |
 | [.ai/agent/pr-instructions.md](.ai/agent/pr-instructions.md) | PR/MR platform configuration (GitHub/GitLab setup) |
 | [doc/guides/pr-platform-integration.md](doc/guides/pr-platform-integration.md) | PR/MR platform integration guide |
-| [.ai/rules/bash.md](.ai/rules/bash.md) | Bash coding rules |
+| [.ai/rules/bash.md](.ai/rules/bash.md) | Bash coding rules - always read before creating or editing bash scripts |
 | [doc/documentation-handbook.md](doc/documentation-handbook.md) | Documentation layout standard |
 | [doc/tools/text-to-image.md](doc/tools/text-to-image.md) | text-to-image CLI tool user guide and provider setup |
 | [doc/guides/tools-convention.md](doc/guides/tools-convention.md) | Standard for building CLI tools in tools/ |
