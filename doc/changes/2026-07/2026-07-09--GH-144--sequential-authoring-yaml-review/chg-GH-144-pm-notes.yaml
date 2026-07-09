@@ -7,9 +7,9 @@ phases:
   test_planning: { started: "2026-07-09T20:25:00Z", completed: "2026-07-09T20:35:00Z" }
   delivery_planning: { started: "2026-07-09T20:35:00Z", completed: "2026-07-09T20:45:00Z" }
   dor_check: { started: "2026-07-09T20:45:00Z", completed: "2026-07-09T20:55:00Z" }
-  delivery: { started: "2026-07-09T20:55:00Z", completed: null }
-  system_spec_update: { started: null, completed: null }
-  review_fix: { started: null, completed: null }
+  delivery: { started: "2026-07-09T20:55:00Z", completed: "2026-07-09T21:10:00Z" }
+  system_spec_update: { started: "2026-07-09T21:10:00Z", completed: "2026-07-09T21:25:00Z" }
+  review_fix: { started: "2026-07-09T21:25:00Z", completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }

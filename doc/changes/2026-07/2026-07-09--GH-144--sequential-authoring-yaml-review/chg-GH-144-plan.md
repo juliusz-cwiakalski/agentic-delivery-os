@@ -105,11 +105,11 @@ reading (F-1, G-1).
 
 **Tasks**:
 
-- [ ] **1.1** Delegate to `@toolsmith` to rewrite `.opencode/agent/pm.md` step 4 from three independent delegation bullets into an explicit ordered chain: delegate specification → **wait for completion**; only then delegate test_planning (consumes completed spec); only then delegate delivery_planning (consumes completed spec + test plan).
-- [ ] **1.2** Ensure explicit "STRICTLY SEQUENTIAL", "wait for completion before delegating the next", "each builds on the previous output", and "never parallel" phrasing is present (NFR-1).
-- [ ] **1.3** Ensure **0 parallel-delegation** phrasing — no "in parallel"/"simultaneously" instructions for the three phases (TC-SEQ-002).
-- [ ] **1.4** Document the **reopen-on-gap** rule in step 4: when a downstream author finds a gap in an upstream artifact, reopen the owning artifact-creation phase (specification | test_planning | delivery_planning), correct, then resume — target is **never** `delivery` or `dor_check` (DM-4).
-- [ ] **1.5** Keep the prompt lean (NFR-8); no prose duplication.
+- [x] **1.1** Delegate to `@toolsmith` to rewrite `.opencode/agent/pm.md` step 4 from three independent delegation bullets into an explicit ordered chain: delegate specification → **wait for completion**; only then delegate test_planning (consumes completed spec); only then delegate delivery_planning (consumes completed spec + test plan).
+- [x] **1.2** Ensure explicit "STRICTLY SEQUENTIAL", "wait for completion before delegating the next", "each builds on the previous output", and "never parallel" phrasing is present (NFR-1).
+- [x] **1.3** Ensure **0 parallel-delegation** phrasing — no "in parallel"/"simultaneously" instructions for the three phases (TC-SEQ-002).
+- [x] **1.4** Document the **reopen-on-gap** rule in step 4: when a downstream author finds a gap in an upstream artifact, reopen the owning artifact-creation phase (specification | test_planning | delivery_planning), correct, then resume — target is **never** `delivery` or `dor_check` (DM-4).
+- [x] **1.5** Keep the prompt lean (NFR-8); no prose duplication.
 
 **Acceptance Criteria**:
 
@@ -143,9 +143,9 @@ consumption half of the sequential chain.
 
 **Tasks**:
 
-- [ ] **2.1** Delegate to `@toolsmith` to add an explicit first action to `.opencode/agent/test-plan-writer.md`: READ the completed `chg-<ref>-spec.md` and derive all values (TC IDs, AC coverage, file names, canonical values) from it (NFR-2). Preserve the existing "spec must exist → FAIL" guard.
-- [ ] **2.2** Delegate to `@toolsmith` to add an explicit first action to `.opencode/agent/plan-writer.md`: READ the completed `chg-<ref>-spec.md` **and** the completed `chg-<ref>-test-plan.md` and derive all values (plan tasks, AC alignment, file lists) from them (NFR-2, RSK-4). The test plan becomes a **required input**; FAIL guard applies when absent (intended behavior — the sequential chain guarantees presence).
-- [ ] **2.3** Keep both prompts lean (NFR-8).
+- [x] **2.1** Delegate to `@toolsmith` to add an explicit first action to `.opencode/agent/test-plan-writer.md`: READ the completed `chg-<ref>-spec.md` and derive all values (TC IDs, AC coverage, file names, canonical values) from it (NFR-2). Preserve the existing "spec must exist → FAIL" guard.
+- [x] **2.2** Delegate to `@toolsmith` to add an explicit first action to `.opencode/agent/plan-writer.md`: READ the completed `chg-<ref>-spec.md` **and** the completed `chg-<ref>-test-plan.md` and derive all values (plan tasks, AC alignment, file lists) from them (NFR-2, RSK-4). The test plan becomes a **required input**; FAIL guard applies when absent (intended behavior — the sequential chain guarantees presence).
+- [x] **2.3** Keep both prompts lean (NFR-8).
 
 **Acceptance Criteria**:
 
@@ -179,12 +179,12 @@ YAML (F-2, G-2).
 
 **Tasks**:
 
-- [ ] **3.1** Delegate to `@toolsmith` to update `.opencode/agent/reviewer.md` local mode (step 9): write exactly one `<change_folder>/code-review/review-iter-<N>.yaml` per iteration (DM-2). Remove instructions to write `findings-iter-<N>.json` and `review-iter-<N>.md` for new iterations (NFR-5).
-- [ ] **3.2** Delegate to `@toolsmith` to update remote mode (step 10): write exactly one `tmp/code-review/<branch>/review-draft.yaml` (DM-3) using the **same DM-1 schema** as local (NFR-4). Leave `context.json`, `diff.patch`, `comments-snapshot.json`, `ticket-context.json`, `publish-report.json` **unchanged** (AC-05).
-- [ ] **3.3** Encode the DM-1 schema in the prompt: `version: 1`, `iteration`, `mode: local|remote`, `work_item_ref`, `branch`, `status: PASS|FAIL`, `summary`, `severity_breakdown: {critical, high, medium, low, info}`, `spec_compliance: PASS|FAIL|NA`, `plan_compliance: PASS|FAIL|NA`, `findings: [{id, severity, category, location, message, suggestion}]`, `reviewed_at` (ISO8601), `next_step` (OQ-1 → `version: 1`).
-- [ ] **3.4** Update the `state_files` table so the local-mode row lists only `review-iter-<N>.yaml` (no JSON/MD review rows) (NFR-5).
-- [ ] **3.5** Make the re-review / dedup step **self-load the YAML** `findings[]` (not the JSON) for dedup, in both modes (OQ-2 → `findings[]` is the dedup source; `next_step` informational).
-- [ ] **3.6** Keep the prompt lean (NFR-8); leave historical-file references only as legacy context, never as active write/read paths.
+- [x] **3.1** Delegate to `@toolsmith` to update `.opencode/agent/reviewer.md` local mode (step 9): write exactly one `<change_folder>/code-review/review-iter-<N>.yaml` per iteration (DM-2). Remove instructions to write `findings-iter-<N>.json` and `review-iter-<N>.md` for new iterations (NFR-5).
+- [x] **3.2** Delegate to `@toolsmith` to update remote mode (step 10): write exactly one `tmp/code-review/<branch>/review-draft.yaml` (DM-3) using the **same DM-1 schema** as local (NFR-4). Leave `context.json`, `diff.patch`, `comments-snapshot.json`, `ticket-context.json`, `publish-report.json` **unchanged** (AC-05).
+- [x] **3.3** Encode the DM-1 schema in the prompt: `version: 1`, `iteration`, `mode: local|remote`, `work_item_ref`, `branch`, `status: PASS|FAIL`, `summary`, `severity_breakdown: {critical, high, medium, low, info}`, `spec_compliance: PASS|FAIL|NA`, `plan_compliance: PASS|FAIL|NA`, `findings: [{id, severity, category, location, message, suggestion}]`, `reviewed_at` (ISO8601), `next_step` (OQ-1 → `version: 1`).
+- [x] **3.4** Update the `state_files` table so the local-mode row lists only `review-iter-<N>.yaml` (no JSON/MD review rows) (NFR-5).
+- [x] **3.5** Make the re-review / dedup step **self-load the YAML** `findings[]` (not the JSON) for dedup, in both modes (OQ-2 → `findings[]` is the dedup source; `next_step` informational).
+- [x] **3.6** Keep the prompt lean (NFR-8); leave historical-file references only as legacy context, never as active write/read paths.
 
 **Acceptance Criteria**:
 
@@ -223,9 +223,9 @@ single `review-draft.yaml` introduced in Phase 3 (AC-05, scope item F).
 
 **Tasks**:
 
-- [ ] **4.1** Delegate to `@toolsmith` to update `.opencode/command/review-remote.md`: change active review-output path references from `review-draft.md` + `findings.json` to the single `review-draft.yaml` (DM-3).
-- [ ] **4.2** Ensure no dangling references to the removed files as **active** paths; any remaining mentions must be legacy/contextual only (TC-YAML-008).
-- [ ] **4.3** Keep the command lean (NFR-8).
+- [x] **4.1** Delegate to `@toolsmith` to update `.opencode/command/review-remote.md`: change active review-output path references from `review-draft.md` + `findings.json` to the single `review-draft.yaml` (DM-3).
+- [x] **4.2** Ensure no dangling references to the removed files as **active** paths; any remaining mentions must be legacy/contextual only (TC-YAML-008).
+- [x] **4.3** Keep the command lean (NFR-8).
 
 **Acceptance Criteria**:
 
@@ -257,12 +257,12 @@ G-3). Preserve `ados_distribution: redistributable` (NFR-7).
 
 **Tasks**:
 
-- [ ] **5.1** Document the **strictly sequential dependency** between specification → test_planning → delivery_planning (each waits for the predecessor, consumes its output). Note it complements — does not replace — the existing phase numbering.
-- [ ] **5.2** Document the **reopen-on-gap loop**: test_planning finding a spec gap → reopens **specification**; delivery_planning finding a spec/test-plan gap → reopens **specification** or **test_planning**. Fence the reopen target to artifact-creation phases only — never `delivery`, `dor_check`, or later (DM-4; mirrors GH-57 F-4 earlier in the chain).
-- [ ] **5.3** Add **reopen-on-gap feedback edges** to the mermaid diagram (test_planning→specification; delivery_planning→(specification|test_planning)); preserve the existing A→B→C→D→E shape.
-- [ ] **5.4** Name the **"canonical DoR trap"** anti-pattern (exact phrase, §23): each author independently invents canonical values (TC IDs, file names, field names) during parallel authoring → they diverge and collide expensively at the gate; sequential authoring + the cross-check is the structural fix.
-- [ ] **5.5** Document the **pre-DoR cross-check** as a lightweight, AI-driven residual-drift safety net run after artifacts exist and before `dor_check`: (a) AC↔TC coverage bijective; (b) file inventory consistent across spec/plan; (c) shared/canonical values agree. Frame it explicitly as **complementary**, not a gate replacement — `dor_check` (phase 5) remains the authoritative adversarial gate (NFR-9).
-- [ ] **5.6** Preserve `ados_distribution: redistributable` in the frontmatter (NFR-7).
+- [x] **5.1** Document the **strictly sequential dependency** between specification → test_planning → delivery_planning (each waits for the predecessor, consumes its output). Note it complements — does not replace — the existing phase numbering.
+- [x] **5.2** Document the **reopen-on-gap loop**: test_planning finding a spec gap → reopens **specification**; delivery_planning finding a spec/test-plan gap → reopens **specification** or **test_planning**. Fence the reopen target to artifact-creation phases only — never `delivery`, `dor_check`, or later (DM-4; mirrors GH-57 F-4 earlier in the chain).
+- [x] **5.3** Add **reopen-on-gap feedback edges** to the mermaid diagram (test_planning→specification; delivery_planning→(specification|test_planning)); preserve the existing A→B→C→D→E shape.
+- [x] **5.4** Name the **"canonical DoR trap"** anti-pattern (exact phrase, §23): each author independently invents canonical values (TC IDs, file names, field names) during parallel authoring → they diverge and collide expensively at the gate; sequential authoring + the cross-check is the structural fix.
+- [x] **5.5** Document the **pre-DoR cross-check** as a lightweight, AI-driven residual-drift safety net run after artifacts exist and before `dor_check`: (a) AC↔TC coverage bijective; (b) file inventory consistent across spec/plan; (c) shared/canonical values agree. Frame it explicitly as **complementary**, not a gate replacement — `dor_check` (phase 5) remains the authoritative adversarial gate (NFR-9).
+- [x] **5.6** Preserve `ados_distribution: redistributable` in the frontmatter (NFR-7).
 
 **Acceptance Criteria**:
 
@@ -299,9 +299,9 @@ edits from Phases 1–4 (NFR-3, RSK-6). Source + generated committed together.
 
 **Tasks**:
 
-- [ ] **6.1** Run `bash scripts/build-claude-plugin.sh` to regenerate the `.ados-claude/` counterparts for `pm.md`, `test-plan-writer.md`, `plan-writer.md`, `reviewer.md`, `review-remote.md`.
-- [ ] **6.2** Verify no stale diff: `git diff --exit-code -- .ados-claude/` is clean *after* regeneration (i.e., the committed generated files match a fresh build) (TC-CI-001).
-- [ ] **6.3** Commit the `.opencode/` source edits (Phases 1–4) together with the regenerated `.ados-claude/` output. Do **not** hand-edit `.ados-claude/` files.
+- [x] **6.1** Run `bash scripts/build-claude-plugin.sh` to regenerate the `.ados-claude/` counterparts for `pm.md`, `test-plan-writer.md`, `plan-writer.md`, `reviewer.md`, `review-remote.md`.
+- [x] **6.2** Verify no stale diff: `git diff --exit-code -- .ados-claude/` is clean *after* regeneration (i.e., the committed generated files match a fresh build) (TC-CI-001).
+- [x] **6.3** Commit the `.opencode/` source edits (Phases 1–4) together with the regenerated `.ados-claude/` output. Do **not** hand-edit `.ados-claude/` files.
 
 **Acceptance Criteria**:
 
@@ -336,12 +336,12 @@ covers the `@doc-syncer` reconciliation referenced in spec §18 step 7.
 
 **Tasks**:
 
-- [ ] **7.1** Run the plugin-freshness gate: `bash scripts/build-claude-plugin.sh && git diff --exit-code -- .ados-claude/` (TC-CI-001).
-- [ ] **7.2** Run the doc-distribution guard: `bash scripts/.tests/test-doc-distribution.sh` (TC-CI-002) — covers `change-lifecycle.md` keeping `redistributable`.
-- [ ] **7.3** Run the static gate: `git diff --check` clean (TC-CI-003).
-- [ ] **7.4** Run the full structural TC suite (TC-SEQ-001..009, TC-YAML-001..009, TC-XCHECK-001..003) per the test plan's commands; record results in the test plan's Execution Log.
-- [ ] **7.5** Delegate to `@doc-syncer` (lifecycle phase 7) to reconcile `doc/spec/**` with the implementation if any system-spec surface references PM step 4 / reviewer output / lifecycle flow.
-- [ ] **7.6** Confirm all 8 ACs satisfied; if any structural TC fails, reopen the owning phase (per the reopen-on-gap discipline this very change introduces).
+- [x] **7.1** Run the plugin-freshness gate: `bash scripts/build-claude-plugin.sh && git diff --exit-code -- .ados-claude/` (TC-CI-001).
+- [x] **7.2** Run the doc-distribution guard: `bash scripts/.tests/test-doc-distribution.sh` (TC-CI-002) — covers `change-lifecycle.md` keeping `redistributable`.
+- [x] **7.3** Run the static gate: `git diff --check` clean (TC-CI-003).
+- [x] **7.4** Run the full structural TC suite (TC-SEQ-001..009, TC-YAML-001..009, TC-XCHECK-001..003) per the test plan's commands; record results in the test plan's Execution Log.
+- [x] **7.5** Delegate to `@doc-syncer` (lifecycle phase 7) to reconcile `doc/spec/**` with the implementation if any system-spec surface references PM step 4 / reviewer output / lifecycle flow.
+- [x] **7.6** Confirm all 8 ACs satisfied; if any structural TC fails, reopen the owning phase (per the reopen-on-gap discipline this very change introduces).
 
 **Acceptance Criteria**:
 
@@ -432,13 +432,13 @@ covers the `@doc-syncer` reconciliation referenced in spec §18 step 7.
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| 1 — @pm step 4 rewrite | Pending | | | | |
-| 2 — @test-plan-writer + @plan-writer consume | Pending | | | | |
-| 3 — @reviewer single YAML | Pending | | | | |
-| 4 — @review-remote paths | Pending | | | | |
-| 5 — change-lifecycle.md | Pending | | | | |
-| 6 — regenerate .ados-claude/ | Pending | | | | |
-| 7 — CI gates + DoD readiness | Pending | | | | |
+| 1 — @pm step 4 rewrite | Done | 2026-07-09 | 2026-07-09 | 611e34d | Strictly sequential + wait-for-completion + reopen-on-gap |
+| 2 — @test-plan-writer + @plan-writer consume | Done | 2026-07-09 | 2026-07-09 | 611e34d | Consume-preceding-artifact first actions |
+| 3 — @reviewer single YAML | Done | 2026-07-09 | 2026-07-09 | 611e34d | Consolidated to single review YAML (local + remote, DM-1) |
+| 4 — @review-remote paths | Done | 2026-07-09 | 2026-07-09 | 611e34d | Pointed at review-draft.yaml |
+| 5 — change-lifecycle.md | Done | 2026-07-09 | 2026-07-09 | 611e34d | Sequential dep + reopen-on-gap + canonical DoR trap + pre-DoR cross-check |
+| 6 — regenerate .ados-claude/ | Done | 2026-07-09 | 2026-07-09 | 611e34d | Plugin regenerated (source + generated committed together) |
+| 7 — CI gates + DoD readiness | Pending | | | | Pending quality_gates phase |
 
 ---
 

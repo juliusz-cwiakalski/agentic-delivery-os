@@ -56,7 +56,7 @@ ADOS reviews a delivered change **locally** against its specification, plan, cod
 
 ### Findings Format
 
-Findings use the form `[severity: critical|major|minor|nit] <file>[:line] — <description>; fix: <action>`.
+Findings use the form `[severity: critical|high|medium|low|info] <file>[:line] — <description>; fix: <action>`.
 
 The reviewer persists each review iteration as a single **`review-iter-<N>.yaml`** under `<change_folder>/code-review/` — consolidating structured findings + summary + severity breakdown + spec/plan compliance + status + next-step into one YAML file (same schema as remote mode).
 

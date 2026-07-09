@@ -47,7 +47,7 @@ Both workflows support GitHub (`gh`) and GitLab (`glab`) from v1. Platform acces
 
 ### Capabilities
 
-- **Remote code review (F-1):** The `reviewer` agent fetches a PR/MR diff and metadata, analyzes it against review criteria, and produces structured findings with severity (critical/major/minor/nit) and confidence (high/medium/low).
+- **Remote code review (F-1):** The `reviewer` agent fetches a PR/MR diff and metadata, analyzes it against review criteria, and produces structured findings with severity (critical/high/medium/low/info) and confidence (high/medium/low).
 - **Review feedback application (F-2):** The `review-feedback-applier` agent fetches review threads, classifies each comment, and applies accepted changes to local files.
 - **Platform access via pr-instructions (F-3):** All three PR/MR-facing agents (`reviewer`, `review-feedback-applier`, `pr-manager`) read `.ai/agent/pr-instructions.md` for platform type, access method, and an Operations Reference table mapping every PR/MR operation to a concrete CLI command. When `pr-instructions.md` is absent, agents fall back to auto-detecting the platform from `git remote get-url origin` (GitHub vs GitLab), then to CLI auth status checks, and finally to manual override via `--github`/`--gitlab` flags.
 - **Repository-local review configuration (F-4):** One optional file customizes review behavior:
