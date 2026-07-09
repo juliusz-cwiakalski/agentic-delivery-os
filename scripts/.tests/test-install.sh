@@ -219,6 +219,8 @@ create_mock_ados_source() {
 
   # AI rules index
   printf '# AI Rules Index\n' > "${base}/.ai/rules/README.md"
+  # Bash coding rules — an ADOS-owned updatable standard (no marker required).
+  printf '# Bash Rules\n' > "${base}/.ai/rules/bash.md"
 
   # Template files (install.sh copies doc/templates/**/*.md + *.yaml recursively).
   printf '# Change Spec Template\n' > "${base}/doc/templates/change-spec-template.md"
@@ -407,6 +409,28 @@ test_copy_updatable_file_updates_without_force() {
   assert_eq "# Updated content" "${content}" "Content should be updated without --force"
 }
 
+test_copy_user_modifiable_file_skips_when_differs() {
+  local src="${_test_tmpdir}/src.md"
+  local dest="${_test_tmpdir}/dest.md"
+  printf '# Upstream content\n' > "${src}"
+  printf '# Local content\n' > "${dest}"
+
+  INSTALL_MODE="local"
+  FORCE=false
+  reset_counters
+  copy_user_modifiable_file "${src}" "${dest}" "test.md"
+
+  # User-modifiable files are NOT auto-updated: copy_user_modifiable_file does
+  # not set _updatable=true, so copy_file_with_diff reaches its else branch
+  # (skip with a notice pointing to --force / --interactive).
+  assert_eq "0" "${_updated}" "Should NOT count as updated (user-modifiable)"
+  assert_eq "1" "${_unchanged}" "Should count as unchanged (preserved)"
+
+  local content
+  content="$(cat "${dest}")"
+  assert_eq "# Local content" "${content}" "Local content should be preserved"
+}
+
 # ============================================================================
 # INTEGRATION TESTS — ensure_dir
 # ============================================================================
@@ -515,6 +539,7 @@ test_local_install_creates_structure() {
     return 1
   }
   assert_file_exists "${project_dir}/.ai/rules/README.md" "rules index"
+  assert_file_exists "${project_dir}/.ai/rules/bash.md" "bash rules"
 
   # Check directories were created
   assert_dir_exists "${project_dir}/doc/overview" "doc/overview"
@@ -941,6 +966,116 @@ test_local_install_idempotent_content_sync() {
 }
 
 # ============================================================================
+# INTEGRATION TESTS — User-modifiable files (install once, preserve local edits)
+# ============================================================================
+
+test_local_install_user_modifiable_first_run() {
+  local source_dir project_dir
+  source_dir="$(create_mock_ados_source "${_test_tmpdir}/ados-source")"
+  project_dir="$(create_mock_project "${_test_tmpdir}/project")"
+
+  (
+    cd "${project_dir}"
+    INSTALL_MODE="local" FORCE=false DRY_RUN=false VERBOSE=false
+    reset_counters
+    install_local_files "${source_dir}"
+  )
+
+  # First run: user-modifiable files are installed (absent -> add path).
+  assert_file_exists "${project_dir}/doc/00-index.md" "00-index.md installed on first run"
+  local content
+  content="$(cat "${project_dir}/doc/00-index.md")"
+  assert_eq "# Doc Index" "${content}" "First-run content should match upstream"
+}
+
+test_local_install_user_modifiable_preserved_when_differs() {
+  local source_dir project_dir
+  source_dir="$(create_mock_ados_source "${_test_tmpdir}/ados-source")"
+  project_dir="$(create_mock_project "${_test_tmpdir}/project")"
+
+  # Pre-create with locally-customized content (differs from upstream).
+  mkdir -p "${project_dir}/doc"
+  printf '# My Custom Doc Index\n' > "${project_dir}/doc/00-index.md"
+
+  (
+    cd "${project_dir}"
+    INSTALL_MODE="local" FORCE=false DRY_RUN=false VERBOSE=false
+    reset_counters
+    install_local_files "${source_dir}"
+  )
+
+  # Non-interactive, non-force: local edits must be PRESERVED (skip branch).
+  local content
+  content="$(cat "${project_dir}/doc/00-index.md")"
+  assert_eq "# My Custom Doc Index" "${content}" "Locally modified user-modifiable file must be preserved"
+}
+
+test_local_install_user_modifiable_force_overwrites() {
+  local source_dir project_dir
+  source_dir="$(create_mock_ados_source "${_test_tmpdir}/ados-source")"
+  project_dir="$(create_mock_project "${_test_tmpdir}/project")"
+
+  mkdir -p "${project_dir}/doc"
+  printf '# My Custom Doc Index\n' > "${project_dir}/doc/00-index.md"
+
+  (
+    cd "${project_dir}"
+    # shellcheck disable=SC2034  # config env read by sourced install_local_files
+    INSTALL_MODE="local" FORCE=true DRY_RUN=false VERBOSE=false
+    reset_counters
+    install_local_files "${source_dir}"
+  )
+
+  # --force overwrites user-modifiable files unconditionally.
+  local content
+  content="$(cat "${project_dir}/doc/00-index.md")"
+  assert_eq "# Doc Index" "${content}" "User-modifiable file overwritten with --force"
+}
+
+test_local_install_user_modifiable_interactive_accept() {
+  local source_dir project_dir
+  source_dir="$(create_mock_ados_source "${_test_tmpdir}/ados-source")"
+  project_dir="$(create_mock_project "${_test_tmpdir}/project")"
+
+  # Only doc/00-index.md pre-exists and differs -> exactly one prompt is issued.
+  mkdir -p "${project_dir}/doc"
+  printf '# My Custom Doc Index\n' > "${project_dir}/doc/00-index.md"
+
+  printf 'y\n' | (
+    cd "${project_dir}"
+    # shellcheck disable=SC2034  # config env read by sourced install_local_files
+    INSTALL_MODE="local" FORCE=false INTERACTIVE=true DRY_RUN=false VERBOSE=false
+    reset_counters
+    install_local_files "${source_dir}"
+  )
+
+  local content
+  content="$(cat "${project_dir}/doc/00-index.md")"
+  assert_eq "# Doc Index" "${content}" "Interactive 'y' overwrites user-modifiable file"
+}
+
+test_local_install_user_modifiable_interactive_reject() {
+  local source_dir project_dir
+  source_dir="$(create_mock_ados_source "${_test_tmpdir}/ados-source")"
+  project_dir="$(create_mock_project "${_test_tmpdir}/project")"
+
+  mkdir -p "${project_dir}/doc"
+  printf '# My Custom Doc Index\n' > "${project_dir}/doc/00-index.md"
+
+  printf 'n\n' | (
+    cd "${project_dir}"
+    # shellcheck disable=SC2034  # config env read by sourced install_local_files
+    INSTALL_MODE="local" FORCE=false INTERACTIVE=true DRY_RUN=false VERBOSE=false
+    reset_counters
+    install_local_files "${source_dir}"
+  )
+
+  local content
+  content="$(cat "${project_dir}/doc/00-index.md")"
+  assert_eq "# My Custom Doc Index" "${content}" "Interactive 'n' preserves user-modifiable file"
+}
+
+# ============================================================================
 # INTEGRATION TESTS — Interactive mode
 # ============================================================================
 
@@ -1127,6 +1262,7 @@ main() {
   run_test "copy_file_with_diff replaces symlink" test_copy_file_symlink_replaced
   run_test "copy_file_with_diff handles missing source" test_copy_file_missing_source
   run_test "copy_updatable_file updates without --force" test_copy_updatable_file_updates_without_force
+  run_test "copy_user_modifiable_file skips when differs" test_copy_user_modifiable_file_skips_when_differs
 
   # ensure_dir tests
   run_test "ensure_dir creates new directory" test_ensure_dir_creates
@@ -1153,6 +1289,13 @@ main() {
   run_test "local install updates guides (updatable)" test_local_install_updates_guides
   run_test "local install installs decision-making/blueprint/yaml; skips internal" test_local_install_decision_making_blueprint_yaml_internal
   run_test "local install is idempotent (content-sync re-run)" test_local_install_idempotent_content_sync
+
+  # User-modifiable files (install once, preserve local edits on update)
+  run_test "user-modifiable file installed on first run" test_local_install_user_modifiable_first_run
+  run_test "user-modifiable file preserved when differs (non-interactive)" test_local_install_user_modifiable_preserved_when_differs
+  run_test "user-modifiable file overwritten with --force" test_local_install_user_modifiable_force_overwrites
+  run_test "user-modifiable file interactive accept (y)" test_local_install_user_modifiable_interactive_accept
+  run_test "user-modifiable file interactive reject (n)" test_local_install_user_modifiable_interactive_reject
 
   # Global install integration
   run_test "global install copies agent files" test_global_install_copies_agents

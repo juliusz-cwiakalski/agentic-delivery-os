@@ -94,13 +94,26 @@ readonly EXIT_RUNTIME=4
 # per-repo (by the script tracked under GH-63), so it is NOT installed here
 # (PR #74 review C3). It is still marker-scanned by the drift guard.
 readonly ADOS_UPDATABLE_FILES=(
-  # Documentation handbook
+  # Documentation handbook (ADOS standard)
   "doc/documentation-handbook.md"
-  # Documentation index
-  "doc/00-index.md"
-  # Decision records stubs
+  # Decision records stubs (ADOS standard)
   "doc/decisions/README.md"
-  # AI rules index
+  # Bash coding rules — an ADOS-owned standard, always tracks upstream.
+  # No ados_distribution marker (outside the marker scope; see AGENTS.md).
+  ".ai/rules/bash.md"
+)
+
+# Files installed on first run but PRESERVED on update if locally modified.
+# A project MAY customize these (documentation index, AI rules index). When the
+# file already exists and content differs, copy_user_modifiable_file() reaches
+# the skip branch of copy_file_with_diff unless overridden:
+#   - Interactive mode (--interactive): show a colored diff and prompt.
+#   - Non-interactive (default): SKIP (do not overwrite).
+#   - Force mode (--force): overwrite unconditionally.
+# These still carry an ados_distribution marker (marker-scanned by the drift
+# guard) and still install on a fresh sandbox, so the install set is unchanged.
+readonly ADOS_USER_MODIFIABLE_FILES=(
+  "doc/00-index.md"
   ".ai/rules/README.md"
 )
 
@@ -314,6 +327,18 @@ copy_file_with_diff() {
 # Copy a file that should always be updated to match upstream (templates, handbook)
 copy_updatable_file() {
   local _updatable=true
+  copy_file_with_diff "$@"
+}
+
+# Copy a user-modifiable file: installed on first run, preserved on update when
+# the local copy differs from upstream. Mirrors copy_updatable_file() but
+# deliberately does NOT set _updatable=true, so copy_file_with_diff reaches its
+# else branch (skip with a notice pointing to --force / --interactive) when
+# content differs in non-interactive / non-force mode. _user_modifiable is a
+# documentation marker only and is intentionally not read by copy_file_with_diff.
+copy_user_modifiable_file() {
+  # shellcheck disable=SC2034  # documentation marker; intentionally unread
+  local _user_modifiable=true
   copy_file_with_diff "$@"
 }
 
@@ -746,6 +771,15 @@ install_local_files() {
     fi
   done
 
+  # --- User-modifiable files (install if missing; preserve local edits on update) ---
+  for file in "${ADOS_USER_MODIFIABLE_FILES[@]}"; do
+    if [[ -f "${source_dir}/${file}" ]]; then
+      copy_user_modifiable_file "${source_dir}/${file}" "${file}" "${file}"
+    else
+      log_warn "Skipping (not in source): ${file}"
+    fi
+  done
+
   # --- Updatable files (always track upstream) ---
   # A stale manifest entry (file renamed/removed upstream) must not abort the
   # whole install: warn and skip so the remaining files still get installed.
@@ -983,12 +1017,12 @@ Options:
       --allow-non-root   Allow local install in a subdirectory (for monorepo subprojects)
 
 File handling (--local mode):
-  Redistributable files (guides, templates, handbook) are CONTENT-SYNCED to
-  upstream on every re-run — overwritten when content differs to match the latest
-  ADOS version. To customize, copy a template to a working file rather than
-  editing it in place (re-running will overwrite in-place edits).
-  Project-specific files (pm-instructions.md) are preserved if they exist locally.
-  Use --interactive to review each diff, or --force to overwrite everything.
+  Updatable files (guides, templates, handbook, bash.md) are CONTENT-SYNCED to
+  upstream — overwritten when content differs.
+  User-modifiable files (doc/00-index.md, .ai/rules/README.md) are installed on
+  first run but PRESERVED on update if locally modified. Use --interactive to
+  review diffs before overwriting, or --force to overwrite everything.
+  Project-specific files (pm-instructions.md) are never overwritten.
 
 Installation targets:
   OpenCode (default):
