@@ -432,7 +432,7 @@ phrases may be updated, but the *contract* each TC asserts must remain.
 - reviewer.md schema description delivered (DM-1).
 
 **Steps**:
-1. Construct a sample YAML per DM-1 with all top-level keys: `version: 1`, `iteration`, `mode: local`, `work_item_ref`, `branch`, `status: PASS|FAIL`, `summary`, `severity_breakdown: {critical, high, medium, low, info}`, `spec_compliance: PASS|FAIL|NA`, `plan_compliance: PASS|FAIL|NA`, `findings: [{id, severity, category, location, message, suggestion}]`, `reviewed_at` (ISO8601), `next_step`.
+1. Construct a sample YAML per DM-1 with all top-level keys: `version: 1`, `iteration`, `mode: local`, `work_item_ref`, `branch`, `status: PASS|FAIL`, `summary`, `severity_breakdown: {critical, high, medium, low, info}`, `spec_compliance: PASS|FAIL|NA`, `plan_compliance: PASS|FAIL|NA`, `findings: [{id, severity, confidence, category, location, message, suggestion, suppressed}]`, `reviewed_at` (ISO8601), `next_step`.
 2. Validate YAML syntax: `python3 -c "import yaml,sys; yaml.safe_load(open(sys.argv[1]))" sample.yaml` (no error).
 3. Cross-check each key against DM-1 in the spec.
 
@@ -771,9 +771,13 @@ None blocking. OQ-1 (`version: 1` in schema) and OQ-2 (`findings[]` is the dedup
 
 ## 10. Test Execution Log
 
-| TC ID | Run Date | Result | Notes |
-|-------|----------|--------|-------|
-| _(populated during `/run-plan` phase + `/review`)_ | | | |
+| Run ID | Date | Suite | Result | Notes |
+|--------|------|-------|--------|-------|
+| RUN-001 | 2026-07-09 | Structural TC suite (24 TCs) | PASS | All structural greps verified: TC-SEQ-001..008, TC-YAML-001..008, TC-XCHECK-001..002, TC-CI-001..003 — pm.md, reviewer.md, test-plan-writer.md, plan-writer.md, change-lifecycle.md all contain required language |
+| RUN-002 | 2026-07-09 | CI: plugin freshness | PASS | `bash scripts/build-claude-plugin.sh && git diff --exit-code -- .ados-claude/` — 24 agents, 20 skills, byte-fresh |
+| RUN-003 | 2026-07-09 | CI: doc-distribution guard | PASS | `bash scripts/.tests/test-doc-distribution.sh` — 78 docs, no drift |
+| RUN-004 | 2026-07-09 | Full test suite | PASS | 466 checks passed, 0 failed (15 suites + 2 tools suites) |
+| RUN-005 | 2026-07-09 | Git diff whitespace | PASS | `git diff --check` clean |
 
 ---
 

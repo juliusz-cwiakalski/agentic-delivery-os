@@ -438,7 +438,7 @@ covers the `@doc-syncer` reconciliation referenced in spec §18 step 7.
 | 4 — @review-remote paths | Done | 2026-07-09 | 2026-07-09 | 611e34d | Pointed at review-draft.yaml |
 | 5 — change-lifecycle.md | Done | 2026-07-09 | 2026-07-09 | 611e34d | Sequential dep + reopen-on-gap + canonical DoR trap + pre-DoR cross-check |
 | 6 — regenerate .ados-claude/ | Done | 2026-07-09 | 2026-07-09 | 611e34d | Plugin regenerated (source + generated committed together) |
-| 7 — CI gates + DoD readiness | Pending | | | | Pending quality_gates phase |
+| 7 — CI gates + DoD readiness | Done | 2026-07-09 | 2026-07-09 | 63b451f | All 466 tests pass; plugin freshness + doc-distribution green; git diff --check clean |
 
 ---
 

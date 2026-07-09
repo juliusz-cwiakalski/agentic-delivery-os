@@ -381,6 +381,8 @@ Whenever a phase is reopened, `@pm` records a `retro` note in the change's pm-no
 
 After addressing the gap, PM continues from the reopened phase through the remaining phases.
 
+**Escalation bound:** If the same gap reopens more than 3 times within the artifact-creation chain, escalate to the human (same max-3-iterations + human-escalation rule as the DoR gate).
+
 ### The Canonical DoR Trap
 
 **Anti-pattern**: When artifact authoring is parallelized (or sequential but each author doesn't consume the previous), each author independently invents canonical values — TC IDs, file names, enum values, endpoint paths. These diverge and collide at the DoR gate, requiring expensive rework.
