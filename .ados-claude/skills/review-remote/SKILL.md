@@ -23,7 +23,7 @@ allowed-tools:
 <purpose>
 Run the reviewer agent in remote mode on the current branch's open PR/MR.
 Analyzes the diff against repository-local checklists, instructions, and built-in heuristics.
-Generates a review draft locally; optionally publishes findings to the remote platform.
+Generates a consolidated review YAML (`review-draft.yaml`) locally; optionally publishes findings to the remote platform.
 </purpose>
 
 <command>
@@ -57,7 +57,7 @@ Examples:
 </instructions>
 
 <output_format>
-<what_to_return>Review findings summary (count, severity breakdown), artifact paths under `tmp/code-review/<branchPath>/`, and next action suggestion.</what_to_return>
+<what_to_return>Review findings summary (count, severity breakdown), the `review-draft.yaml` path under `tmp/code-review/<branchPath>/`, and next action suggestion.</what_to_return>
 </output_format>
 
 <user_input>$ARGUMENTS</user_input>

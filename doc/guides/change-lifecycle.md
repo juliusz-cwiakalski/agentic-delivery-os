@@ -24,6 +24,7 @@ This guide defines the canonical change workflow for this repository. The PM age
 - Local, ephemeral agent state lives under `.ai/local/` and is git-ignored.
 - `@pm` focuses on one ticket per conversation unless the user explicitly requests a planning-only session.
 - Phases can be reopened: if PM discovers incomplete work in a later phase, PM reopens the relevant phase and delegates to the appropriate agent.
+- Artifact-creation phases (`specification` → `test_planning` → `delivery_planning`) are **strictly sequential**: each phase must complete before the next begins, and each consumes the previous artifact(s). This prevents cross-artifact drift (TC IDs, file names, AC coverage, canonical values diverging). The PM delegates them one at a time, waiting for completion.
 
 ## Required Artifacts (per change)
 
@@ -87,6 +88,9 @@ flowchart TD
     E -.->|NOT_READY: reopen spec| B
     E -.->|NOT_READY: reopen test-plan| C
     E -.->|NOT_READY: reopen plan| D
+    C -.->|reopen spec gap| B
+    D -.->|reopen spec gap| B
+    D -.->|reopen test-plan gap| C
     H -.->|remediation needed| F
     I -.->|fixes needed| F
     J -.->|gaps found| F
@@ -160,6 +164,7 @@ flowchart TD
 **Actions**:
 
 - `@pm` delegates to `@test-plan-writer` with `workItemRef`.
+- `@test-plan-writer` reads the completed `chg-<workItemRef>-spec.md` first and derives all TC IDs, AC coverage, and values from it.
 - `@test-plan-writer` creates or updates `chg-<workItemRef>-test-plan.md`.
 
 **Outcome**: A test plan with test strategy, test cases, and traceability matrix linking tests to AC.
@@ -178,6 +183,7 @@ flowchart TD
 **Actions**:
 
 - `@pm` delegates to `@plan-writer` with `workItemRef`.
+- `@plan-writer` reads the completed `chg-<workItemRef>-spec.md` **and** `chg-<workItemRef>-test-plan.md` first and derives all TC IDs, file names, AC coverage, phase structure, and test scenarios from them.
 - `@plan-writer` creates or updates `chg-<workItemRef>-plan.md`.
 
 **Outcome**: A phased implementation plan with check-listable tasks aligned with the spec and test plan.
@@ -357,19 +363,39 @@ flowchart TD
 
 ## Phase Reopening
 
-Phases are not strictly linear. If PM discovers incomplete work in a later phase, PM can reopen an earlier phase:
+Phases are not strictly linear. If PM discovers incomplete work in a later phase, PM can reopen an earlier phase.
+
+**Reopen-on-gap (artifact-creation chain):** because authoring is strictly sequential, a downstream author may discover a gap in an upstream artifact mid-chain. When this happens, PM reopens the **owning artifact-creation phase** (`specification`, `test_planning`, or `delivery_planning`), re-delegates to its author to correct the artifact, then resumes the chain. The reopen target is **always** an artifact-creation phase — never `delivery`, `dor_check`, or later (mirrors the DoR reopen discipline, applied earlier in the chain).
 
 Whenever a phase is reopened, `@pm` records a `retro` note in the change's pm-notes (`chg-<ref>-pm-notes.yaml`) — what gap, where discovered, why it was missed earlier, and how to improve. This applies to every feedback loop in the diagram: DoR `NOT_READY`, review remediation, quality-gate fixes, and DoD gaps. Each reopened gap becomes process learning.
 
 | Discovery in... | Gap found | Action |
 |-----------------|-----------|--------|
 | `dor_check` | Artifacts not ready (`NOT_READY`) | Reopen `specification`, `test_planning`, or `delivery_planning` (never `delivery`); re-run gate until `READY` |
+| `test_planning` | Spec gap found (e.g., untestable AC) | Reopen `specification`, re-delegate to `@spec-writer`, then resume `test_planning` |
+| `delivery_planning` | Spec or test-plan gap found | Reopen `specification` or `test_planning` as needed, re-delegate, then resume `delivery_planning` |
 | `dod_check` | Delivery plan task incomplete | Reopen `delivery`, delegate to `@coder` |
 | `dod_check` | AC not satisfied | Reopen `delivery` or `specification` as needed |
 | `quality_gates` | Test failure reveals missing implementation | Reopen `delivery`, delegate to `@fixer` or `@coder` |
 | `review_fix` | Spec ambiguity discovered | Reopen `clarify_scope` or `specification` |
 
 After addressing the gap, PM continues from the reopened phase through the remaining phases.
+
+### The Canonical DoR Trap
+
+**Anti-pattern**: When artifact authoring is parallelized (or sequential but each author doesn't consume the previous), each author independently invents canonical values — TC IDs, file names, enum values, endpoint paths. These diverge and collide at the DoR gate, requiring expensive rework.
+
+**Structural fix**: Strictly sequential authoring (each artifact consumes the completed previous one) eliminates the independent invention. A lightweight pre-DoR cross-check catches any residual drift.
+
+### Pre-DoR Cross-Check
+
+After all three artifacts (spec, test-plan, plan) exist and before `dor_check`, run a lightweight cross-check:
+
+1. **AC↔TC coverage**: Every AC in the spec has at least one TC in the test plan; every TC maps to an AC.
+2. **File inventory**: Files listed in the plan match those referenced in the spec and test plan.
+3. **Shared values**: TC ID format, file names, field names, and canonical values agree across all three artifacts.
+
+This is a safety net, not a replacement for the adversarial `dor_check` gate. If drift is found, reopen the relevant artifact-creation phase.
 
 ---
 
