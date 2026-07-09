@@ -81,7 +81,16 @@ assert_not_contains() {
   local -r haystack="$1" needle="$2" msg="${3:-}"
   if [[ "${haystack}" == *"${needle}"* ]]; then
     printf '  Should not contain: %s\n  In: %s\n' "${needle}" "${haystack}" >&2
-    [[ -n "${msg}" ]] && printf '  Message:  %s\n' "${msg}" >&2
+    [[ -n "${msg}" ]] && printf '  Message: %s\n' "${msg}" >&2
+    return 1
+  fi
+}
+
+assert_file_exists() {
+  local -r path="$1" msg="${2:-}"
+  if [[ ! -f "${path}" ]]; then
+    printf '  File does not exist: %s\n' "${path}" >&2
+    [[ -n "${msg}" ]] && printf '  Message: %s\n' "${msg}" >&2
     return 1
   fi
 }
@@ -910,6 +919,7 @@ test_resume_prompt_flag() {
   run_single_iteration() {
     printf '%s\n' "PROMPT_ARG:$3" >>"${run_log}"
     CAPTURED_PM_MESSAGE="PM completed via resume"
+    write_last_message "GH-142" "PM completed via resume"
     printf 'finished'
   }
 
@@ -981,7 +991,7 @@ test_deliver_ticket_does_not_auto_merge() {
     esac
   }
   _opencode() { printf '%s' '[]'; }
-  run_single_iteration() { CAPTURED_PM_MESSAGE="done"; printf 'finished'; }
+  run_single_iteration() { CAPTURED_PM_MESSAGE="done"; write_last_message "GH-142" "done"; printf 'finished'; }
 
   MAX_RESTARTS=1
   CAPTURED_PM_MESSAGE="" DELIVERY_RESULT="" DELIVERY_PR_URL="" DELIVERY_EXIT_CODE=0 DELIVERY_LAST_MESSAGE=""
@@ -1018,7 +1028,7 @@ test_stdout_returns_pm_last_message_and_result() {
     esac
   }
   _opencode() { printf '%s' '[]'; }
-  run_single_iteration() { CAPTURED_PM_MESSAGE="PR #143 open; blocker: needs design review"; printf 'finished'; }
+  run_single_iteration() { CAPTURED_PM_MESSAGE="PR #143 open; blocker: needs design review"; write_last_message "GH-142" "PR #143 open; blocker: needs design review"; printf 'finished'; }
 
   MAX_RESTARTS=1
   CAPTURED_PM_MESSAGE="" DELIVERY_RESULT="" DELIVERY_PR_URL="" DELIVERY_EXIT_CODE=0 DELIVERY_LAST_MESSAGE=""
@@ -1452,6 +1462,75 @@ HARNESS
 }
 
 # ============================================================================
+# TESTS: Bug 1 fix — unbound variable in cmd_status
+# ============================================================================
+
+# cmd_status with no live delivery must not crash under set -u.
+test_cmd_status_no_delivery_no_unbound() {
+  local fake_delivery="${_test_tmpdir}/delivery_bug1"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+
+  local result
+  result="$(INSTALL_MODE="local" cmd_status "GH-999-nolive" 2>&1)" || true
+  # Must NOT contain "unbound variable"
+  assert_not_contains "${result}" "unbound" "session_id must not be unbound"
+}
+
+# ============================================================================
+# TESTS: Bug 2 fix — CAPTURED_PM_MESSAGE survives subshell boundary
+# ============================================================================
+
+# Regression: CAPTURED_PM_MESSAGE is lost across the $(...) subshell boundary.
+# run_single_iteration must write the last-message file; deliver_loop reads it.
+test_last_message_survives_subshell_boundary() {
+  local ref="TEST-SUBSHELL"
+  local lmf
+  lmf="$(last_message_file_for "${ref}")"
+
+  # Simulate what the REAL run_single_iteration does: write to the file
+  # INSIDE the subshell.
+  monitor_result="$(CAPTURED_PM_MESSAGE="PR open, needs review"; write_last_message "${ref}" "PR open, needs review"; printf 'finished')"
+
+  # CAPTURED_PM_MESSAGE is empty in the parent (subshell lost it)
+  assert_eq "" "${CAPTURED_PM_MESSAGE}" "global lost across subshell"
+
+  # But the file persists
+  assert_file_exists "${lmf}" "last-message file written inside subshell"
+  local stored
+  stored="$(cat "${lmf}")"
+  assert_eq "PR open, needs review" "${stored}" "file content matches"
+}
+
+test_deliver_loop_reads_last_message_from_file() {
+  local ref="TEST-LM-FILE"
+  # Mock: mirrors the real run_single_iteration (writes file + returns finished)
+  run_single_iteration() {
+    write_last_message "${ref}" "PR open, awaiting review"
+    printf 'finished'
+  }
+  # Mock classify_result to return pr-open
+  classify_result() { printf 'pr-open'; }
+
+  CAPTURED_PM_MESSAGE=""
+  DELIVERY_RESULT="" DELIVERY_PR_URL="" DELIVERY_EXIT_CODE=0 DELIVERY_LAST_MESSAGE=""
+  reset_counters
+
+  deliver_loop "${ref}" "feat/test" "" || true
+
+  assert_eq "PR open, awaiting review" "${DELIVERY_LAST_MESSAGE}" "DELIVERY_LAST_MESSAGE must be populated from file"
+
+  # Restore
+  unset -f classify_result 2>/dev/null || true
+}
+
+# Helper function to reset iteration counters
+reset_counters() {
+  # No-op stub for now; counters are tracked in the loop
+  :
+}
+
+# ============================================================================
 # RUN TESTS
 # ============================================================================
 main() {
@@ -1519,6 +1598,11 @@ main() {
   run_test "TC-DT-SF-10: join abandons on PID reuse (F-4)" test_join_aborts_when_pid_reused
   run_test "TC-DT-SF-11: deliver-ticket does not auto-merge (F-2)" test_deliver_ticket_does_not_auto_merge
   run_test "TC-DT-SF-12: stdout delivery summary (result+last_message)" test_stdout_returns_pm_last_message_and_result
+
+  # Bug fixes: unbound variable + subshell boundary
+  run_test "Bug 1: cmd_status no delivery no unbound" test_cmd_status_no_delivery_no_unbound
+  run_test "Bug 2: last_message survives subshell boundary" test_last_message_survives_subshell_boundary
+  run_test "Bug 2: deliver_loop reads last_message from file" test_deliver_loop_reads_last_message_from_file
 
   # F-1: owner start-epoch preserved across restart iterations
   run_test "TC-DT-SF-13: owner live across iteration refresh (F-1)" test_owner_live_across_iteration_refresh

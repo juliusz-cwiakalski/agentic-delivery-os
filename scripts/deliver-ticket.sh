@@ -1083,6 +1083,13 @@ run_single_iteration() {
     [[ -n "${CAPTURED_PM_MESSAGE}" ]] || CAPTURED_PM_MESSAGE=""
   fi
 
+  # SUBSHELL BOUNDARY: deliver_loop invokes this function via $(...), so the
+  # CAPTURED_PM_MESSAGE global is NOT visible to the caller. Write the
+  # last-message file here so deliver_loop can read it back.
+  if [[ -n "${CAPTURED_PM_MESSAGE}" && -n "${ticket_ref:-}" ]]; then
+    write_last_message "${ticket_ref}" "${CAPTURED_PM_MESSAGE}"
+  fi
+
   printf '%s' "${result}"
 }
 
@@ -1114,7 +1121,9 @@ deliver_loop() {
       DELIVERY_RESULT="failed"
       DELIVERY_PR_URL=""
       DELIVERY_EXIT_CODE="${EXIT_FAILURE}"
-      DELIVERY_LAST_MESSAGE="${CAPTURED_PM_MESSAGE}"
+      local _lmf_mr
+      _lmf_mr="$(last_message_file_for "${ticket_ref}")"
+      [[ -f "${_lmf_mr}" ]] && DELIVERY_LAST_MESSAGE="$(cat "${_lmf_mr}" 2>/dev/null || true)" || DELIVERY_LAST_MESSAGE=""
       return "${EXIT_FAILURE}"
     fi
 
@@ -1133,11 +1142,16 @@ deliver_loop() {
       classification="$(classify_result "${ticket_ref}" "${branch}")"
     fi
 
-    # Persist the captured PM last message for `--last-message` + the summary.
-    if [[ -n "${CAPTURED_PM_MESSAGE}" ]]; then
-      CURRENT_LAST_MESSAGE="${CAPTURED_PM_MESSAGE}"
-      write_last_message "${ticket_ref}" "${CAPTURED_PM_MESSAGE}"
+    # SUBSHELL BOUNDARY: run_single_iteration runs via $(...); the
+    # CAPTURED_PM_MESSAGE global set inside is NOT visible here. Read the
+    # persisted last-message from the file it wrote.
+    CAPTURED_PM_MESSAGE=""
+    local _lmf
+    _lmf="$(last_message_file_for "${ticket_ref}")"
+    if [[ -f "${_lmf}" ]]; then
+      CAPTURED_PM_MESSAGE="$(cat "${_lmf}" 2>/dev/null || true)"
     fi
+    CURRENT_LAST_MESSAGE="${CAPTURED_PM_MESSAGE}"
 
     # Handle stuck
     if [[ "${monitor_result}" == "stuck" ]]; then
@@ -1304,7 +1318,7 @@ cmd_status() {
 
   if [[ -n "${ref}" ]]; then
     validate_ticket_ref "${ref}" || die "Invalid ticket reference: '${ref}'"
-    local pid session_id stale="no"
+    local pid="" session_id="" stale="no"
     pid="$(owner_pid_if_live "${ref}")" || true
     if [[ -n "${pid}" ]]; then
       session_id="$(_pid_file_field "${ref}" "session_id")"
@@ -1326,7 +1340,7 @@ cmd_status() {
   local found=0
   shopt -s nullglob
   for f in "${DELIVERY_DIR}"/*.pid; do
-    local r pid session_id
+    local r pid="" session_id=""
     r="$(pid_file_for_ref_from_path "${f}")" || continue
     pid="$(owner_pid_if_live "${r}")" || { clear_pid_file "${r}"; continue; }
     if [[ -n "${pid}" ]]; then
