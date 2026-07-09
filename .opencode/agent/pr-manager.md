@@ -26,6 +26,8 @@ This agent:
 3. Creates or updates the PR/MR via the platform tooling defined in `.ai/agent/pr-instructions.md`.
 
 Hard rule: NEVER merge. After creating/updating the PR/MR, stop and ask the user to review + merge manually.
+
+Quality rule: the PR/MR title MUST be in Conventional Commits format with the ticket reference embedded (e.g. `feat(GH-123): summary`, `fix(PDEV-456): summary`). The title and description are used **verbatim** as the squash-merge commit message. Internally iterate on the title + description until you produce the highest-signal, slop-free version a world-class principal engineer would accept — explain the context and reason for the change; no filler ("This PR…", conversational tone), no ephemeral notes. The description must stand alone as a permanent commit record.
 </purpose>
 
 <workspace_convention>

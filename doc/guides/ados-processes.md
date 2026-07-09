@@ -104,17 +104,18 @@ Each card captures what the process solves, who it is for, its primary output, a
 
 ## Delivery modes
 
-Change Delivery can run in three modes, from fully interactive to fully unattended:
+Change Delivery can run from fully interactive to fully unattended. The two interactive modes (Manual, Autopilot) and the **two unattended modes** (Mode A — autonomous CEO loop, Mode B — manual batch) all wrap the same 11-phase lifecycle:
 
 | Mode | How to start | Human involvement | Best for |
 |---|---|---|---|
 | **Manual** | Run each command (`/write-spec`, `/run-plan`, `/review`, ...) | Every step | Learning, debugging, tight control |
 | **Autopilot** | `@pm deliver change GH-456` | Decisions and review only | Interactive single-ticket delivery |
-| **Autonomous batch** | `scripts/batch-deliver.sh GH-108 GH-110 GH-37` | Review PRs, approve, answer blocking questions | Overnight, multi-ticket, unattended |
+| **Mode A — Autonomous CEO loop** | `scripts/ceo-loop.sh` | None until they stop the loop; the `@ceo` agent is the merge authority | Overnight/weekend, unattended |
+| **Mode B — Manual batch** | `scripts/batch-deliver.sh GH-108 GH-110 GH-37` | Review PRs, approve, answer blocking questions | Curated batch with a human merge gate |
 
-Autonomous batch delivery wraps the 11-phase lifecycle with liveness monitoring (kill-and-restart on staleness), session resilience (resume by title), branch hygiene, and a push-to-completion PM prompt that can address review comments and merge on approval.
+The unattended modes wrap the 11-phase lifecycle with liveness monitoring (kill-and-restart on stalled **opencode session traffic**, not process-alive), single-flight + join per repo working tree, session resilience, and branch hygiene. The per-ticket engine (`deliver-ticket.sh`) **does not merge** — it returns `pr-open`; merge authority is the `@ceo` (Mode A, after PM-finalization verification) or `batch-deliver.sh` (Mode B, after the human approves + rebase + green quality gates).
 
-**Guide:** [autonomous-batch-delivery.md](autonomous-batch-delivery.md)
+**Canonical guide:** [delivery-modes.md](delivery-modes.md) (modes, component responsibilities, behavioral invariants INV-DM-1..6). **Mode B operations:** [autonomous-batch-delivery.md](autonomous-batch-delivery.md).
 
 ## Cross-process relationships
 

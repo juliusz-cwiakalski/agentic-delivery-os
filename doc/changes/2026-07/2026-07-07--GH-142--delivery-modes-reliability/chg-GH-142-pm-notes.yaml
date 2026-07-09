@@ -1,0 +1,99 @@
+change_id: GH-142
+title: "Delivery Modes guide + autonomous-loop reliability (absorbs #97/#99/#96)"
+branch: feat/GH-142/delivery-modes-reliability
+delivery_mode: interactive
+phases:
+  clarify_scope: { started: 2026-07-07T06:50:00Z, completed: 2026-07-07T16:30:00Z }
+  specification: { started: 2026-07-07T16:35:00Z, completed: 2026-07-07T16:55:00Z }
+  test_planning: { started: 2026-07-07T16:56:00Z, completed: 2026-07-07T17:05:00Z }
+  delivery_planning: { started: 2026-07-07T16:56:00Z, completed: 2026-07-07T17:30:00Z }
+  dor_check: { started: 2026-07-07T17:31:00Z, completed: 2026-07-07T18:10:00Z }
+  delivery: { started: 2026-07-07T18:11:00Z, completed: 2026-07-07T21:55:00Z }
+  system_spec_update: { started: 2026-07-07T22:00:00Z, completed: 2026-07-07T22:40:00Z }
+  review_fix: { started: 2026-07-07T22:45:00Z, completed: 2026-07-08T00:10:00Z }
+  quality_gates: { started: 2026-07-07T23:30:00Z, completed: 2026-07-08T00:15:00Z }
+  dod_check: { started: 2026-07-08T00:20:00Z, completed: 2026-07-08T01:00:00Z }
+  pr_creation: { started: 2026-07-08T01:05:00Z, completed: null, url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/143" }
+decisions:
+  - text: "OQ-DM-1 DECIDED (per PR #143 comment #11): CEO-foreground model. CEO calls deliver-ticket.sh (foreground, blocking), waits for it, consumes the returned PM last-message + result, and decides next action. deliver-ticket.sh must return the PM agent's last message on stdout and accept an optional --resume-prompt that overrides the default PM prompt (so CEO can resolve a PM-raised blocker by resuming the session with a custom instruction). Loop-runner-owns-blocking alternative rejected."
+    date: 2026-07-07
+  - text: "OQ-DM-2 DECIDED (per PR #143 comments #1, #12): Mode B never auto-merges on its own. Human approves via `approved` label. batch-deliver then rebases the approved PR onto latest main, pushes, waits for PR quality gates to go green, then squash-merges using the PR title/description as the commit message. If the PR is already on latest main (no rebase effect), skip the wait and merge directly. Conflicts during rebase -> AI agent resolves them -> gates re-run. No --auto-merge flag."
+    date: 2026-07-07
+  - text: "OQ-DM-3 DECIDED (per PR #143 comments #7, #13): Stall detection shifts from file-change-30min to opencode-session-message-traffic-15min. CEO_LOOP_STALL_MINUTES default 15. A session is 'stuck' (not slow) when no new session messages have flowed for >threshold. Observed stuck root causes: (a) opencode hangs indefinitely on LLM provider response (opencode bug); (b) agent tries to access a forbidden folder -> triggers an unseen permission-acceptance prompt that never gets answered in autonomous mode."
+    date: 2026-07-07
+  - text: "OQ-DM-4 DECIDED (per PR #143 comment #14): #142 delivers the FULL scope of stable autonomous delivery in BOTH modes (CEO-triggered Mode A + human-triggered batch Mode B) on ONE PR as a final version. #142 absorbs #97/#99/#96 (close them on delivery). The guide is transformed from a design-spec/delivery-plan into a TRUE user-facing guide on how to run autonomous delivery in the different modes (ticket refs move to frontmatter references)."
+    date: 2026-07-07
+  - text: "Loop runner naming DECIDED (per PR #143 comment #2): the script is named `scripts/ceo-loop.sh` for consistency with the `@ceo` agent. `ados-loop.sh` name dropped."
+    date: 2026-07-07
+  - text: "Loop runner primary responsibility DECIDED (per PR #143 comment #2): ceo-loop.sh's main job is to detect a STUCK CEO session (hung LLM stream / unanswered permission prompt) and recover via kill+restart. It is NOT primarily about 'parking while a delivery is in progress' — that is handled by deliver-ticket.sh's repo-local in-progress tracking + the CEO blocking on it (INV-DM-1/2). ceo-loop.sh distinguishes 'CEO blocked on a healthy delivery' (don't kill) from 'CEO stuck with no delivery and no activity' (kill+restart)."
+    date: 2026-07-07
+  - text: "Session-resume optimization DECIDED (per PR #143 comment #2 + external-researcher report): ceo-loop.sh remembers the last CEO session id; before spawning a new CEO it checks the previous session's context size and RESUMES it if under a configurable threshold (CEO_RESUME_TOKEN_LIMIT, default 100000), else starts a fresh session. Feasibility CONFIRMED via documented stable CLI: `opencode session list --format json`, `opencode db \"SELECT (tokens_input+tokens_output+tokens_reasoning) AS total FROM session WHERE id=?\"`, and `opencode run \"<prompt>\" --session <id>`."
+    date: 2026-07-07
+  - text: "Script subcommands DECIDED (per PR #143 comment #8): deliver-ticket.sh exposes encapsulated subcommands/flags so the loop and CEO can query state without burning AI tokens. Notably `--is-delivering` (exit 0 if a delivery is in progress in the current repo) consumed by ceo-loop.sh, and the default invocation returns the PM last-message + result on stdout for the CEO to consume."
+    date: 2026-07-07
+  - text: "Repo-local concurrency DECIDED (per PR #143 comment #6): the 'one delivery per repo' invariant (INV-DM-6) is REPO-LOCAL — keyed on the working tree. Parallel deliveries in different repos, or in independent clones of the same repo, are allowed and must not interfere. PID/in-progress tracking lives under git-ignored `.ai/local/delivery/`."
+    date: 2026-07-07
+  - text: "Signal propagation DECIDED (per PR #143 comment #5): all delivery scripts must propagate kill signals (SIGTERM/SIGINT/SIGKILL) to their child opencode processes via traps, so killing deliver-ticket.sh never leaves an orphaned opencode instance."
+    date: 2026-07-07
+  - text: "CEO verifies PM finalization before merge DECIDED (per PR #143 comment #9): in Mode A, before merging, the CEO must verify the PM completed all 11 phases (inspect chg-<ref>-pm-notes.yaml). AI-driven for now (pm-notes schema is not yet formalized enough to script reliably)."
+    date: 2026-07-07
+  - text: "clean-merged-branches safety DECIDED (per PR #143 comment #3): must NEVER remove unmerged branches. Added to its 'Must NOT do' contract."
+    date: 2026-07-07
+  - text: "Mode B pending-review routing DECIDED (per PR #143 comment #10): a ticket pending human review stops THAT ticket's delivery only; the batch continues to the next ticket. The Mode B diagram routes 'pending review' -> 'Next ticket'."
+    date: 2026-07-07
+  - text: "F-2 DECISION (red-team R1, Mode A merge execution model): deliver-ticket.sh does NOT merge. It returns `pr-open` + PR URL + PM last-message. The legacy auto-merge-on-`approved`-label path is RETIRED (the merge authority now lives in the CEO for Mode A and batch-deliver for Mode B). Mode A: the @ceo agent verifies chg-<ref>-pm-notes.yaml finalization (INV-DM-4) then executes `gh pr merge --squash` directly. Mode B: batch-deliver does rebase + green-gate + squash-merge after the human adds `approved`. This honors comment #9 (verify-before-merge) and comment #1 (CEO is the Mode A approver/merger). Existing deliver-ticket auto-merge tests are removed/updated (Phase 1); autonomous-batch-delivery.md is aligned (Phase 5)."
+    date: 2026-07-07
+  - text: "F-3 DECISION (red-team R1, at-most-one-CEO across restarts): ceo-loop.sh writes its @ceo child PID to `.ai/local/ceo/ceo.pid` and probes+validates it (cmdline = opencode ... ceo, cwd = ROOT_DIR) on startup; if a live CEO child exists, JOIN/wait rather than spawn a second. Mirrors deliver-ticket's single-flight. Prevents double-spawn (and double-merge races) when the loop is killed and restarted while a CEO is alive."
+    date: 2026-07-07
+  - text: "F-4 DECISION (red-team R1, JOIN PID-reuse): the JOIN poll re-validates the owner PID identity (cmdline AND start-timestamp from the PID file) on EVERY poll iteration, not just at probe time; on mismatch (owner exited + OS reused the PID) the joiner abandons the join and OWNs. Guards the TOCTOU window."
+    date: 2026-07-07
+  - text: "DELIVERY COMPLETE (phases 0-6 via @coder, commits ac8b952..88ee1dc): pm-liveness.sh (16/16), deliver-ticket.sh single-flight+join+subcommands+no-merge+session-traffic (49/49), ceo-loop.sh rewrite stuck-detect+resume+durable-stop (38/38), ceo.md + plugin + README + change-lifecycle note, batch-deliver.sh rebase-before-merge+green-gate (30/30), autonomous-batch-delivery.md consistency. test-all 12/12, doc-dist clean, plugin 16/16, ShellCheck clean. THEN @toolsmith prompt-quality pass (commit 4059749) because @coder hand-edited agent prompts against the AGENTS.md rule: restored missing license header + tightened memory_schema, generalized pr-manager F-6 to both modes, fixed README inner/outer wording, regen plugin. All gates re-green. Toolsmith flagged a follow-up (no CI gate enforces license headers on .opencode/agent/*.md) — surface to human, do NOT auto-create ticket."
+    type: info
+    date: 2026-07-07
+  - text: "RETRO: @coder hand-edited .opencode/agent/ceo.md + pr-manager.md in Phase 3 despite the plan noting 'delegate the prose tuning to @toolsmith if helpful' (soft hint, not a hard gate). The AGENTS.md rule ('Delegate to @toolsmith — Do not hand-edit agent/command files directly') is a hard rule that the plan should have stated as a HARD requirement, and @coder should refuse hand-editing agent prompts. Improvement: future plans that touch .opencode/agent/** or .opencode/command/** must have an explicit phase task 'delegate agent-prompt edits to @toolsmith' marked non-delegable to @coder. Caught here by the human + a toolsmith R1 pass; no merge impact."
+    type: retro
+    date: 2026-07-07
+  - text: "REVIEW iter-1 FAIL -> remediation (commit d7cd7b8) fixed all 7 findings: F-1 (deliver-ticket owner start-epoch preserved across restarts + TC-DT-SF-13), F-2 (batch-deliver green-gate treats gh errors as unknown/park, not green + TC-BD-12c/12d/17b), F-3 (3 deferred AC-2 tests implemented: INT-02 concurrent converge, INT-03 signal propagation, SF-14 liveness handoff), F-4 (flock atomic OWN), F-5 (>= prose reconcile), F-6 (ceo_is_stuck defense-in-depth + WARN), F-7 (BSD etime parse + 10# base-10). REVIEW iter-2 PASS (all 7 closed, code+test verified). Quality gates ALL 13 GREEN (test-all 12/12, doc-dist 78, plugin 16/16, deliver-ticket 55/55, batch-deliver 33/33, ceo-loop 39/39, pm-liveness 16/16, install 49/49, uninstall 30/30, slow tests ran, shellcheck info-only, decontextualization clean). Installer verified (real --local + --global into temp dirs): all GH-142 redistributable artifacts install correctly; internal feature spec correctly excluded."
+    type: info
+    date: 2026-07-08
+  - text: "RED-TEAM R2 (pre-DoD) SHIP-WITH-FINDINGS: 1 Major (F-R2-1 — WRAPPER_START_EPOCH captured after slow git fetch/opencode-session-list setup, so under network latency a live fresh-delivery owner is mis-detected as dead -> breaks INV-DM-2/3 in the primary overnight use case; one-line fix + regression test, commit 280402e) + cheap fixes (F-R2-3 guide/code green-gate wording reconcile, F-R2-5 Mode A JOIN caption, F-R2-4 code-review/ cleanup — commit 0b18161). F-R2-2 skipped w/ justification (dangerous direction already safe). After fix: deliver-ticket 57/57, test-all 12/12, doc-dist green, plugin 16/16, shellcheck clean. All 6 invariants now enforced end-to-end (INV-DM-2/3 latent gap closed)."
+    type: info
+    date: 2026-07-08
+  - text: "DoD CHECK: all 11 phases complete; all AC-1..7 satisfied (AC-1 guide transformed+reviewed; AC-2 deliver-ticket 57 tests + F-1/F-4/F-R2-1 fixed; AC-3 ceo-loop 39 tests + F-3; AC-4 ceo.md toolsmith-finalized + 8 static tests; AC-5 pm-liveness 16 tests; AC-6 batch-deliver 33 tests + F-2; AC-7 install/uninstall/plugin/doc-dist/shellcheck all green); docs complete (feature spec + 4 guide consistency + index); installer verified. Two red-team rounds + two review iterations, all findings closed. READY FOR PR."
+    type: resolved
+    date: 2026-07-08
+open_questions: []  # all four OQ-DM resolved via PR #143 review comments
+blockers: []
+red_team:
+  r1_pre_delivery:
+    date: 2026-07-07
+    verdict: SHIP-WITH-FINDINGS
+    findings_total: 13
+    majors: [F-1, F-2, F-3, F-4]
+    minors: [F-5, F-6, F-7, F-8, F-9]
+    nits: [F-10, F-11, F-12, F-13]
+    comment_fidelity: "14/15 fully addressed (#12 partial -> F-6)"
+    applied: "all 4 Majors + cheap Minors (F-5,F-6,F-7,F-8,F-10,F-12,F-13) before delivery"
+  r2_pre_dod:
+    date: 2026-07-08
+    verdict: SHIP-WITH-FINDINGS
+    findings_total: 5
+    majors: [F-R2-1]
+    minors: [F-R2-2, F-R2-3]
+    nits: [F-R2-4, F-R2-5]
+    comment_fidelity: "14.8/15 (comment #12 partial -> F-R2-3 guide/code drift)"
+    invariant_trace: "INV-DM-1 ✅, INV-DM-2 ⚠️ (F-R2-1 latent gap under slow setup), INV-DM-3 ⚠️ (inherits F-R2-1), INV-DM-4 ✅, INV-DM-5 ✅, INV-DM-6 ✅"
+    applied: "F-R2-1 must-fix (true birth epoch) + F-R2-3/F-R2-5/F-R2-4 cheap fixes before PR"
+notes:
+  - text: "INTAKE: user requested delivery of GH-142 with PR #143 already open as a guide-review checkpoint. The guide (doc/guides/delivery-modes.md) was incepted in another project (marksync-for-confluence) and moved into ADOS; PR #143 also carries seed .opencode/agent/ceo.md + scripts/ceo-loop.sh copied from the dogfooding project that need refactoring/tuning. User did a detailed guide review -> 15 inline comments on PR #143, AUTHORITATIVE (override the handoff note .ai/local/notes/2026-07-07-GH-142-delivery-modes-handoff.md in case of contradiction)."
+    type: info
+    date: 2026-07-07
+  - text: "clarify_scope: cross-checked ticket #142 AC against the 15 PR comments. All four OQ-DM resolved by the comments (recorded as decisions above). Requirements are complete and consistent. Proceeding to guide revision + full code delivery on one PR (per comment #14)."
+    type: info
+    date: 2026-07-07
+  - text: "RESEARCH (external-researcher): opencode session-resume + context-size feasibility = FULLY FEASIBLE via documented stable CLI (opencode run --session, opencode session list --format json, opencode db SELECT tokens_* FROM session). Unblocks the session-resume optimization design (comment #2)."
+    type: info
+    date: 2026-07-07
+  - text: "POST-DELIVERY BUG FIX (user-reported from real dogfooding in marksync-for-confluence): deliver-ticket.sh entered an infinite restart loop after a successful delivery. ROOT CAUSE: session mapping had branch:null (PM created feat/GH-15/config-system but mapping never updated) → resolve_branch returned empty → classify_result skipped the open-PR check (gated behind non-empty branch) → returned 'failed' → decide_after_iteration(finished, failed) said 'continue' (restart) → PM re-resumed, re-derived 'PR open, STOP', exited → classify → failed → restart → infinite token burn. FIX: (1) decide_after_iteration restructured: clean PM exit (finished) is ALWAYS terminal — only watchdog-killed (stuck) sessions restart; stuck + terminal classification (merged/blocked/pr-open) also stops. (2) resolve_branch: git-scan fallback discovers feat/<ref>/* branches when mapping+CLI arg are empty, and persists the discovered branch back to the mapping. (3) classify_result: branch-agnostic open-PR search (gh pr list --search 'in:title <ref>') when branch is empty. (4) Deterministic per-ticket log paths (tmp/deliver-ticket/<ref>.log, not timestamped). (5) Full date+time in every log line (multi-day session clarity). (6) ceo-loop.sh: --reset hint when stop signal present, deterministic ceo.log path, full-date timestamps. (7) Guide: log locations section added to delivery-modes.md. ALSO addressed 5 new PR #143 review comments: ceo.md (remove Mode A label + ticket refs from prompt), pr-manager.md (Conventional Commits quality rule, platform-agnostic), ceo-loop.sh --reset hint. Tests 57→66 (all green). Quality gates all green."
+    type: retro
+    date: 2026-07-08

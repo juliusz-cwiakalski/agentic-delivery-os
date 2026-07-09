@@ -59,15 +59,18 @@ _guard_cleanup() {
 trap _guard_cleanup EXIT INT TERM
 
 # Standalone non-guide DOC paths to SCAN (marker presence/validity) — MIRRORS
-# install.sh's ADOS_UPDATABLE_FILES non-guide entries, PLUS doc/decisions/00-index.md
-# which is `project-generated` (scanned for a valid marker but NOT installed — PR
-# #74 review C3). This is the SCAN set (every path is marker-checked by modes 1
-# & 2). The EXPECTED install set is derived marker-aware (only `redistributable`
-# standalone docs install) in derive_expected_install_set. The ACTUAL set is
-# observed from the sandbox (see derive_actual_install_set). This is an
-# INDEPENDENT COPY so the oracle is not tautological: if the two lists drift,
-# mode 5 (derived-set drift) fires. The two lists MUST be kept in sync by hand
-# (or derived the same way) — see DEC-2 / ODR-0001.
+# the union of install.sh's ADOS_UPDATABLE_FILES + ADOS_USER_MODIFIABLE_FILES
+# (the marker-bearing standalone docs), PLUS doc/decisions/00-index.md which is
+# `project-generated` (scanned for a valid marker but NOT installed — PR #74
+# review C3), and EXCLUDING .ai/rules/bash.md (an ADOS-owned coding standard
+# outside the marker scope — no ados_distribution marker required). This is the
+# SCAN set (every path is marker-checked by modes 1 & 2). The EXPECTED install
+# set is derived marker-aware (only `redistributable` standalone docs install)
+# in derive_expected_install_set. The ACTUAL set is observed from the sandbox
+# (see derive_actual_install_set). This is an INDEPENDENT COPY so the oracle is
+# not tautological: if the two lists drift, mode 5 (derived-set drift) fires.
+# The two lists MUST be kept in sync by hand (or derived the same way) — see
+# DEC-2 / ODR-0001.
 readonly STANDALONE_DOCS=(
   "doc/documentation-handbook.md"
   "doc/00-index.md"

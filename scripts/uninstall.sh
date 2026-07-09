@@ -428,6 +428,8 @@ remove_local_files() {
     "scripts/opencode-session.sh" \
     "scripts/deliver-ticket.sh" \
     "scripts/batch-deliver.sh" \
+    "scripts/ceo-loop.sh" \
+    "scripts/pm-liveness.sh" \
     "tools/clean-merged-branches"; do
     remove_file "${delivery_file}" "${delivery_file}"
   done

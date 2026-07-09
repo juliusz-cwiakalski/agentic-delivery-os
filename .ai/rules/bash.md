@@ -26,13 +26,13 @@ These rules define a rigorous standard for writing robust, maintainable, testabl
 
 - Keep functions small and single-purpose; name them with clear verbs (e.g., `ensure_dir`, `parse_args`, `validate_config`).
 - Organize scripts in clear sections:
-  1. Header and purpose
+  1. Header (brief: purpose, dependencies, pointer to `--help`)
   2. Strict mode and traps
   3. Settings/Configuration (single source of truth for flags, paths, toggles)
-  4. Utilities (logging, error handling, validation)
-  5. Domain functions (script-specific logic)
-  6. CLI parsing
-  7. Main entry point
+  4. `usage()` function (placed early — doubles as file-level documentation)
+  5. Utilities (logging, error handling, validation)
+  6. Domain functions (script-specific logic)
+  7. CLI parsing (`parse_args`, `main`)
 - Prefer composition over large monolithic functions.
 - Avoid hidden global state; pass parameters explicitly where feasible.
 - Default to single responsibility per script. If several related responsibilities must coexist, adopt a command/subcommand pattern: the first arg selects a command, each command is single-purpose and reuses shared helpers.
@@ -72,6 +72,8 @@ cmd_help() { printf 'Usage: %s <init|sync|clean>\n' "${APP_NAME}"; }
 ## 4) Arguments, Flags, and Usage
 
 - Support `-h|--help` and `--version`.
+- Place the `usage()` function near the top of the file (after Settings, before domain functions) so it doubles as file-level documentation. A reader (human or AI) scanning the file sees the full CLI surface early.
+- The file header should be BRIEF: one-line purpose + dependencies + a pointer to `--help`. Do NOT duplicate usage details, options, examples, or exit codes in the header if they are already in `usage()`. Use comments for internal design rationale (why, not what) — knowledge for the maintainer, not the user.
 - Parse flags with a clear loop using `case`:
   ```bash
   while (($#)); do
@@ -759,13 +761,11 @@ fi
 
 ## 14) Documentation
 
-- Each script should contain:
-  - A header describing purpose, dependencies, and examples.
-  - A well-documented Settings/Configuration section with all tunables in one place.
-  - Inline comments for non-obvious logic.
-- Prefer self-documenting names over excessive comments.
-- Document all environment variables that affect behavior.
-- Document exit codes.
+- The `usage()` function IS the user-facing documentation. Place it near the top so it serves as both `--help` output and file-level documentation.
+- The file header should be BRIEF: purpose (1 line), dependencies, and a pointer to `--help` for full usage. Do NOT replicate options, examples, or exit codes that `usage()` already covers.
+- Use inline comments for internal design rationale (why a function exists, what invariant it enforces, what trade-off was made) — knowledge for the maintainer, not the user. A reader who wants CLI usage runs `--help`; a reader who wants to understand the code reads the comments.
+- Document all environment variables that affect behavior (in `usage()` or the Settings section, not the header).
+- Document exit codes in `usage()`, not the header.
 
 ## 15) Reusable Patterns
 
@@ -965,6 +965,8 @@ Before committing a new script, verify:
 - [ ] Traps configured for ERR, EXIT, INT, TERM
 - [ ] All variables quoted
 - [ ] `-h/--help` and `--version` supported
+- [ ] `usage()` placed near the top (after Settings) — doubles as file documentation
+- [ ] File header is brief (purpose + deps); does NOT duplicate `usage()` content
 - [ ] Inputs validated early
 - [ ] Exit codes documented and consistent
 - [ ] Logging uses context tag
