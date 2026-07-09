@@ -470,6 +470,40 @@ All settings are environment variables (CLI flag overrides where noted).
 | `clean-merged-branches` deleted a branch I needed | Misconfigured `--base` / `--protected`, or a branch that looked merged | It must never delete unmerged or protected branches; if it did, that is a bug |
 | On macOS, an owner/CEO is rejected as stale right after it starts | macOS `ps` lacks the Linux `-o etimes=` (elapsed **seconds**) column. The scripts fall back to parsing `-o etime=` (elapsed `[[dd-]hh:]mm:ss`) when `etimes=` is absent; this needs `ps` from a modern macOS build. If the fallback also fails the start-epoch guard degrades gracefully (treats the owner as live rather than wrongly killing it). | Ensure `ceo-loop.sh`/`deliver-ticket.sh` are current (they carry the `etime=` fallback); no action needed otherwise. |
 
+## Process management via script API
+
+**Agents MUST use the script CLI subcommands to inspect and manage process
+state. They MUST NOT directly use `ps`, `kill`, `pkill`, or read PID/state
+files.** The scripts are the single source of truth for process lifecycle —
+they encapsulate PID validation, staleness detection, and signal propagation.
+
+### `deliver-ticket.sh`
+
+| Subcommand | What it does |
+|---|---|
+| `--status [REF]` | Print delivery state (delivering, pid, session_id, stale) |
+| `--is-delivering [REF]` | Exit 0 if a delivery is in progress (boolean check) |
+| `--last-message REF` | Print the PM's last message for REF |
+| `--log [REF]` | Print the last 50 lines of the delivery log for REF |
+| `--help` | Full usage + options |
+
+### `ceo-loop.sh`
+
+| Subcommand | What it does |
+|---|---|
+| `--status` | Print loop + CEO state (loop_running, ceo_alive, stop_signal) |
+| `--log [N]` | Print the last N lines of the CEO loop log (default 50) |
+| `--stop` | Write durable stop signal |
+| `--reset` | Clear stop signal |
+| `--help` | Full usage + options |
+
+### Principle
+
+Reading script bodies to understand internals is unnecessary — the `--help`
+output and subcommands are the API. Agents use these subcommands to check
+state, detect staleness, and decide actions without burning tokens on manual
+process inspection or risk misinterpreting PID files.
+
 ## Log locations
 
 When debugging delivery-loop or per-ticket issues, these are the deterministic
@@ -500,11 +534,10 @@ The `<ref>` is lowercased (e.g., `gh-15.log` for `GH-15`).
 
 ### Quick debugging workflow
 
-1. **CEO stuck / looping?** → `tail -50 tmp/ceo-loop/ceo.log`
-2. **Delivery looping / misclassified?** → `tail -50 tmp/deliver-ticket/<ref>.log`
-3. **What did the PM say last?** → `tail -5 tmp/deliver-ticket/<ref>.pm.out` or `scripts/deliver-ticket.sh --last-message <ref>`
-4. **Is a delivery in flight?** → `scripts/deliver-ticket.sh --is-delivering [ref]`
-5. **Need to force-restart the CEO loop?** → `scripts/ceo-loop.sh --reset && scripts/ceo-loop.sh`
+1. **CEO stuck / looping?** → `scripts/ceo-loop.sh --status` then `scripts/ceo-loop.sh --log`
+2. **Delivery looping / misclassified?** → `scripts/deliver-ticket.sh --status <ref>` then `scripts/deliver-ticket.sh --log <ref>`
+3. **What did the PM say last?** → `scripts/deliver-ticket.sh --last-message <ref>`
+4. **Need to force-restart the CEO loop?** → `scripts/ceo-loop.sh --stop && scripts/ceo-loop.sh --reset && scripts/ceo-loop.sh`
 
 ## See also
 

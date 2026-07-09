@@ -84,6 +84,12 @@ CURRENT_OPENCODE_PID=""
 CURRENT_REF=""
 CURRENT_LAST_MESSAGE=""
 
+# Defect fix: the opencode session id of the running iteration. The
+# captured $! (setsid/opencode-run parent) can die while the real opencode
+# runtime survives in its own session, orphaned → DB contention stalls later
+# iterations. Tracking the session id lets the kill path reap it by pattern.
+CURRENT_SESSION_ID=""
+
 # F-1: the wrapper's TRUE start epoch, captured ONCE at OWN time in
 # run_delivery and reused by every write_pid_file inside run_single_iteration.
 # This keeps the recorded `start` stable across restart iterations so the F-4
@@ -132,6 +138,10 @@ _cleanup_child() {
     kill_process_tree "${CURRENT_OPENCODE_PID}" 2>/dev/null || true
     CURRENT_OPENCODE_PID=""
   fi
+  # Defect fix: also reap any opencode runtime that escaped into its own
+  # session, so a wrapper exit (normal/signal) never leaves a DB-contention orphan.
+  _reap_opencode_orphan "${CURRENT_SESSION_ID:-}" "${CURRENT_REF:-}" 2>/dev/null || true
+  CURRENT_SESSION_ID=""
   if [[ -n "${CURRENT_REF:-}" ]]; then
     clear_pid_file "${CURRENT_REF}" 2>/dev/null || true
   fi
@@ -762,6 +772,35 @@ kill_process_tree() {
   fi
 }
 
+# Defect fix: reap an opencode runtime that setsid/fork moved into its
+# own session. The captured $! (setsid / `opencode run` parent) can die while the
+# real opencode worker survives orphaned in a new session, causing DB contention
+# that stalls later iterations. Match ONLY this delivery's session id / ticket
+# title so the CEO loop and other tickets are never touched. Idempotent, no-op if
+# nothing matches (pkill returns 1). Args: [session_id] [ticket_ref]
+_reap_opencode_orphan() {
+  local session_id="${1:-}"
+  local ticket_ref="${2:-}"
+  local saw_match=0
+
+  if [[ -n "${session_id}" ]]; then
+    pkill -TERM -f "opencode run --agent pm --session ${session_id}" 2>/dev/null && saw_match=1 || true
+  fi
+  if [[ -n "${ticket_ref}" ]]; then
+    pkill -TERM -f "opencode run --agent pm --title ticket-${ticket_ref}" 2>/dev/null && saw_match=1 || true
+  fi
+
+  if [[ "${saw_match}" -eq 1 ]]; then
+    sleep "${KILL_GRACE_SECONDS}"
+    if [[ -n "${session_id}" ]]; then
+      pkill -KILL -f "opencode run --agent pm --session ${session_id}" 2>/dev/null || true
+    fi
+    if [[ -n "${ticket_ref}" ]]; then
+      pkill -KILL -f "opencode run --agent pm --title ticket-${ticket_ref}" 2>/dev/null || true
+    fi
+  fi
+}
+
 # ============================================================================
 # RESULT CLASSIFICATION
 # ============================================================================
@@ -815,12 +854,21 @@ classify_result() {
     fi
   fi
 
-  # Check for merged PR
-  local merged_json
-  merged_json="$(_gh pr list --search "${ticket_ref}" --state closed --json mergedAt 2>/dev/null)" || merged_json='[]'
-  if printf '%s' "${merged_json}" | _jq -e '.[0].mergedAt' >/dev/null 2>&1; then
-    printf 'merged'
-    return 0
+  # Check for merged PR — BRANCH-SCOPED (defect fix).
+  # An unscoped `gh pr list --search "<ref>" --state closed` matches ANY closed
+  # PR whose title/body mentions the ref (e.g. a planning PR that lists multiple
+  # ticket refs in its body), yielding a false "merged" that prematurely exits
+  # the wrapper — even on a watchdog-KILLED (stuck) session, via
+  # decide_after_iteration's stop:0:merged branch. Only a PR whose HEAD is THIS
+  # delivery branch counts as a real merge; the issue-CLOSED check above already
+  # handles the canonical merged-and-closed case.
+  if [[ -n "${branch}" ]]; then
+    local merged_json
+    merged_json="$(_gh pr list --head "${branch}" --state closed --json mergedAt 2>/dev/null)" || merged_json='[]'
+    if printf '%s' "${merged_json}" | _jq -e '.[0].mergedAt' >/dev/null 2>&1; then
+      printf 'merged'
+      return 0
+    fi
   fi
 
   printf 'failed'
@@ -912,7 +960,7 @@ run_single_iteration() {
   # Build opencode command
   local opencode_cmd=()
   if [[ -n "${session_id}" ]]; then
-    opencode_cmd=(opencode run --session "${session_id}" "${prompt}")
+    opencode_cmd=(opencode run --agent pm --session "${session_id}" "${prompt}")
     log_info "Resuming session ${session_id}"
   else
     opencode_cmd=(opencode run --agent pm --title "ticket-${ticket_ref}" "${prompt}")
@@ -957,11 +1005,15 @@ run_single_iteration() {
     if [[ -n "${captured_id}" ]]; then
       log_info "Captured session ID: ${captured_id}"
       captured_session_id="${captured_id}"
+      CURRENT_SESSION_ID="${captured_id}"
       save_session_mapping "${ticket_ref}" "${captured_id}" "${resolved_branch}" "in_progress"
       # F-1: preserve the wrapper start epoch (see comment above).
       [[ -n "${CURRENT_REF:-}" ]] && write_pid_file "${CURRENT_REF}" "$$" "${WRAPPER_START_EPOCH:-$(date +%s)}" "${opencode_pid}" "${captured_id}"
     fi
   fi
+  # GH-47 Defect-B: publish the (new or resumed) session id to the global so the
+  # EXIT trap and the stall-kill path can reap a runtime orphan by pattern.
+  CURRENT_SESSION_ID="${captured_session_id}"
 
   # Monitor liveness.
   # INV-DM-5: primary signal is session-message traffic (pm-liveness.sh); the
@@ -1007,6 +1059,10 @@ run_single_iteration() {
     if is_session_stuck "${last_progress_wall_epoch}" "${now_epoch}" "${stuck_seconds}"; then
       log_warn "No progress for $((now_epoch - last_progress_wall_epoch))s; killing and restarting"
       kill_process_tree "${opencode_pid}"
+      # Defect fix: reap any opencode runtime that escaped the captured $!
+      # (setsid/opencode-run parent) into its own session — otherwise it survives
+      # as a DB-contention orphan that stalls later iterations.
+      _reap_opencode_orphan "${captured_session_id:-}" "${ticket_ref}" 2>/dev/null || true
       wait "${opencode_pid}" 2>/dev/null || true
       result="stuck"
       break
@@ -1238,6 +1294,83 @@ cmd_is_delivering() {
   (( any_live )) && return 0 || return 1
 }
 
+# `--status [REF]` — print delivery state as key=value pairs on stdout.
+# With REF: check that specific ticket. Without REF: scan all active deliveries.
+# Lets agents inspect process state without manual ps/kill/PID-file reading.
+# Exit 0 always (status query).
+cmd_status() {
+  local ref="${1:-}"
+  ensure_delivery_dir
+
+  if [[ -n "${ref}" ]]; then
+    validate_ticket_ref "${ref}" || die "Invalid ticket reference: '${ref}'"
+    local pid session_id stale="no"
+    pid="$(owner_pid_if_live "${ref}")" || true
+    if [[ -n "${pid}" ]]; then
+      session_id="$(_pid_file_field "${ref}" "session_id")"
+    else
+      # PID file exists but owner is dead → stale
+      local f; f="$(pid_file_for "${ref}")"
+      [[ -f "${f}" ]] && stale="yes"
+      clear_pid_file "${ref}" 2>/dev/null || true
+    fi
+    printf 'delivering=%s\n' "$([[ -n "${pid}" ]] && printf yes || printf no)"
+    printf 'ref=%s\n' "${ref}"
+    printf 'pid=%s\n' "${pid}"
+    printf 'session_id=%s\n' "${session_id}"
+    printf 'stale=%s\n' "${stale}"
+    return 0
+  fi
+
+  # No REF: scan all PID files for a live delivery.
+  local found=0
+  shopt -s nullglob
+  for f in "${DELIVERY_DIR}"/*.pid; do
+    local r pid session_id
+    r="$(pid_file_for_ref_from_path "${f}")" || continue
+    pid="$(owner_pid_if_live "${r}")" || { clear_pid_file "${r}"; continue; }
+    if [[ -n "${pid}" ]]; then
+      session_id="$(_pid_file_field "${r}" "session_id")"
+      printf 'delivering=yes\n'
+      printf 'ref=%s\n' "${r}"
+      printf 'pid=%s\n' "${pid}"
+      printf 'session_id=%s\n' "${session_id}"
+      printf 'stale=no\n'
+      found=1
+      break
+    fi
+  done
+  shopt -u nullglob
+  (( found )) || printf 'delivering=no\n'
+}
+
+# `--log [REF]` — print the last N lines of the delivery log for REF (default
+# 50). If REF omitted, uses the most recently modified log in LOG_DIR.
+# Lets agents read logs without knowing the internal path.
+cmd_log() {
+  local ref="${1:-}"
+  local n="${LOG_LINES:-50}"
+  [[ "${n}" =~ ^[0-9]+$ ]] || n=50
+  mkdir -p "${LOG_DIR}"
+
+  local log_file=""
+  if [[ -n "${ref}" ]]; then
+    local ref_lower
+    ref_lower="$(printf '%s' "${ref}" | tr '[:upper:]' '[:lower:]')"
+    log_file="${LOG_DIR}/${ref_lower}.log"
+  else
+    shopt -s nullglob
+    log_file="$(ls -t "${LOG_DIR}"/*.log 2>/dev/null | head -1)"
+    shopt -u nullglob
+  fi
+
+  if [[ -n "${log_file}" && -f "${log_file}" ]]; then
+    tail -n "${n}" "${log_file}"
+  else
+    log_warn "No log file found${ref:+ for ${ref}}"
+  fi
+}
+
 # Extract the ref from a PID file's "ref" field (for the any-ref scan).
 pid_file_for_ref_from_path() {
   local -r f="$1"
@@ -1266,6 +1399,7 @@ ${APP_NAME} ${APP_VERSION} — single-flight, join-safe, liveness-monitored deli
 Usage: ${APP_NAME} [options] <ticket[:branch]> [--resume-prompt "<text>"]
        ${APP_NAME} --is-delivering [REF]
        ${APP_NAME} --last-message REF
+       ${APP_NAME} --status [REF]
 
 Wraps opencode with single-flight + join (INV-DM-2), repo-local PID tracking,
 session-traffic liveness (INV-DM-5), kill-and-restart on stall, branch
@@ -1277,6 +1411,12 @@ Subcommands:
   --is-delivering [REF]   Exit 0 if a delivery is in progress in this repo
                           (for REF, or any ticket if no REF). Prints nothing.
   --last-message REF      Print the stored PM last message for REF (no run).
+  --status [REF]          Print delivery state as key=value pairs (delivering,
+                          pid, session_id, stale). Lets agents inspect state
+                          without manual ps/kill.
+  --log [REF]             Print the last 50 lines of the delivery log for REF
+                          (or the most recent if no REF). Lets agents read logs
+                          without knowing the internal path.
 
 Input formats:
   ${APP_NAME} GH-112                      Ticket only (PM creates branch)
@@ -1422,6 +1562,18 @@ main() {
       [[ ${#ARGS[@]} -eq 1 ]] || die "--last-message requires exactly one REF"
       cmd_last_message "${ARGS[0]}"
       exit $? ;;
+    --status)
+      shift
+      parse_args "$@"
+      [[ ${#ARGS[@]} -le 1 ]] || die "--status takes at most one REF"
+      cmd_status "${ARGS[0]:-}"
+      exit 0 ;;
+    --log)
+      shift
+      parse_args "$@"
+      [[ ${#ARGS[@]} -le 1 ]] || die "--log takes at most one REF"
+      cmd_log "${ARGS[0]:-}"
+      exit 0 ;;
   esac
 
   parse_args "$@"

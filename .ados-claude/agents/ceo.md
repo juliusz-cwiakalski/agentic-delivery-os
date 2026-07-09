@@ -155,6 +155,15 @@ scripts/deliver-ticket.sh <ref> --resume-prompt "<your resolution>"
 This re-enters the PM session with your guidance. Use this instead of
 abandoning the ticket or waiting for a human.
 </rule>
+
+<rule id="use-script-api" severity="must">
+**MUST use script CLI subcommands to inspect and manage process state.** Use
+`scripts/ceo-loop.sh --status` and `scripts/deliver-ticket.sh --status [ref]`
+to check whether processes are running, healthy, or stale. NEVER use `ps`,
+`kill`, `pkill`, or read `.ai/local/` PID/state files directly — the scripts
+encapsulate all process lifecycle management and staleness detection. Run
+`--help` on any script to discover its full API.
+</rule>
 </behavioral_rules>
 
 <context_sources>

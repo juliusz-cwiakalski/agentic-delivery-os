@@ -121,6 +121,10 @@ _setup_ceo_state() {
   CEO_PID_FILE="${CEO_STATE_DIR}/ceo.pid"
   STOP_FILE="${CEO_STATE_DIR}/stop"
   LAST_SESSION_FILE="${CEO_STATE_DIR}/last-session"
+  # Single-flight (1b): redirect LOOP_PID_FILE to the per-test temp dir so
+  # run_loop's single-flight check + own-PID write never touch the real
+  # .ai/local/ceo/ path (no side-effect leak; no false-positive JOIN).
+  LOOP_PID_FILE="${CEO_STATE_DIR}/loop.pid"
   LOG_DIR="${_test_tmpdir}/logs"
   MOCK_SETSID_CALLS="${_test_tmpdir}/setsid-calls"
   MOCK_SPAWN_CALLS="${_test_tmpdir}/spawn-calls"
@@ -371,25 +375,32 @@ test_spawn_fresh_when_no_ceo() {
 # TESTS: Session Resume Decision (INV-DM-3)
 # ============================================================================
 
-# test_resume_under_threshold — context < limit → resume with --session.
+# test_resume_under_threshold — context < limit → resume with --agent ceo --session.
+# 1a: context_total_for now reads the LAST assistant turn's tokens.total from
+#     the `message` table (field `context_total`), not the cumulative session
+#     total. The mock must return `{"context_total":...}`.
+# 1c: the resume command is now `opencode run --agent ceo --session` (the old
+#     form omitted `--agent ceo`); assert the correctly-spaced full form.
 test_resume_under_threshold() {
   _setup_ceo_state
   remember_session_id "ses_abc"
-  MOCK_DB_RESULT='[{"total":50000}]'
+  MOCK_DB_RESULT='[{"context_total":"50000"}]'
   : >"${MOCK_SETSID_CALLS}"
   spawn_or_resume_ceo "${LOG_DIR}/test.log" >/dev/null
   sleep 0.2
   local cmd
   cmd="$(cat "${MOCK_SETSID_CALLS}" 2>/dev/null)" || cmd=""
-  assert_contains "${cmd}" "--session ses_abc" "should resume with --session ses_abc" || return 1
+  assert_contains "${cmd}" "--agent ceo --session ses_abc" "should resume with --agent ceo --session ses_abc (1a/1c)" || return 1
   return 0
 }
 
 # test_fresh_over_threshold — context >= limit → fresh spawn with --agent ceo.
+# 1a: mock returns the new `context_total` field so the over-threshold branch
+#     (not the "unavailable" branch) is the one exercised.
 test_fresh_over_threshold() {
   _setup_ceo_state
   remember_session_id "ses_abc"
-  MOCK_DB_RESULT='[{"total":150000}]'
+  MOCK_DB_RESULT='[{"context_total":"150000"}]'
   capture_session_id_by_title() { printf 'ses_new'; }
   : >"${MOCK_SETSID_CALLS}"
   spawn_or_resume_ceo "${LOG_DIR}/test.log" >/dev/null
@@ -488,6 +499,60 @@ test_stopped_file_not_wiped_at_startup() {
     run_loop 2>/dev/null || true
   [[ -f "${STOP_FILE}" ]] || { echo "  stop file should still exist after startup" >&2; return 1; }
   [[ ! -s "${MOCK_SPAWN_CALLS}" ]] || { echo "  should not spawn CEO when stopped" >&2; return 1; }
+  return 0
+}
+
+# ============================================================================
+# TESTS: --status subcommand
+# ============================================================================
+
+# test_cmd_status_prints_key_value_pairs — cmd_status emits the loop/CEO/stop
+# state as key=value pairs on stdout. Clean-state (no PID files, no stop) →
+# loop_running=no, ceo_alive=no, stop_signal=no.
+test_cmd_status_prints_key_value_pairs() {
+  _setup_ceo_state
+  local out
+  out="$(cmd_status)"
+  assert_contains "${out}" "loop_running=" "must print loop_running= key" || return 1
+  assert_contains "${out}" "loop_running=no" "clean state → loop_running=no" || return 1
+  assert_contains "${out}" "ceo_alive=" "must print ceo_alive= key" || return 1
+  assert_contains "${out}" "ceo_alive=no" "clean state → ceo_alive=no" || return 1
+  assert_contains "${out}" "stop_signal=" "must print stop_signal= key" || return 1
+  assert_contains "${out}" "stop_signal=no" "clean state → stop_signal=no" || return 1
+  return 0
+}
+
+# test_cmd_status_with_stop_signal — when a stop file exists, stop_signal=yes.
+test_cmd_status_with_stop_signal() {
+  _setup_ceo_state
+  cmd_stop
+  local out
+  out="$(cmd_status)"
+  assert_contains "${out}" "stop_signal=yes" "stop file present → stop_signal=yes" || return 1
+  return 0
+}
+
+# ============================================================================
+# TESTS: Single-Flight (run_loop) — prevent concurrent ceo-loop instances
+# ============================================================================
+
+# test_run_loop_single_flight_exits_early — when LOOP_PID_FILE points at a live
+# ceo-loop.sh for this repo, run_loop exits 0 with the "already running" message
+# and does NOT spawn a CEO. Uses the test process ($$): its cmdline
+# (…/test-ceo-loop.sh) contains "ceo-loop.sh" and its cwd is ROOT_DIR, so the
+# single-flight guard accepts it as a live loop.
+test_run_loop_single_flight_exits_early() {
+  _setup_ceo_state
+  # Write a live loop PID file pointing at this test process.
+  _jq -n --arg pid "$$" --argjson start "$(date +%s)" \
+    '{pid:$pid,start:$start}' >"${LOOP_PID_FILE}"
+  : >"${MOCK_SPAWN_CALLS}"
+  local stderr rc=0
+  stderr="$(STUCK_SECONDS="3600" POLL_SECONDS="1" MAX_ITERATIONS="0" MAX_RESTARTS="0" \
+    run_loop 2>&1 >/dev/null)" || rc=$?
+  assert_eq "0" "${rc}" "single-flight should exit 0 (not an error)" || return 1
+  assert_contains "${stderr}" "already running" "should log the already-running message" || return 1
+  [[ ! -s "${MOCK_SPAWN_CALLS}" ]] || { echo "  should not spawn CEO when another loop is running" >&2; return 1; }
   return 0
 }
 
@@ -817,6 +882,13 @@ main() {
   run_test "cmd_reset clears file"                   test_cmd_reset_clears_file
   run_test "durable stop survives restart"           test_durable_stop_survives_restart
   run_test "stop file not wiped at startup"          test_stopped_file_not_wiped_at_startup
+
+  # --- --status subcommand ---
+  run_test "cmd_status prints key=value pairs"       test_cmd_status_prints_key_value_pairs
+  run_test "cmd_status reports stop_signal=yes"      test_cmd_status_with_stop_signal
+
+  # --- Single-Flight (run_loop) ---
+  run_test "run_loop single-flight exits early"      test_run_loop_single_flight_exits_early
 
   # --- Signal Propagation ---
   run_test "cleanup_child kills CEO"                 test_cleanup_child_kills_ceo

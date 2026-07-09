@@ -839,6 +839,43 @@ test_is_delivering_any_ref() {
   return 0
 }
 
+# TC-DT-SF-06b: --status with no active delivery prints delivering=no.
+test_cmd_status_no_delivery() {
+  local fake_delivery="${_test_tmpdir}/delivery6b"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+
+  local out rc=0
+  out="$(cmd_status "")" || rc=$?
+  assert_eq "0" "${rc}" "status query should always exit 0" || return 1
+  assert_contains "${out}" "delivering=no" "no PID files → delivering=no" || return 1
+  return 0
+}
+
+# TC-DT-SF-06c: --status with a live deliver-ticket.sh owner prints delivering=yes
+# (plus the ref). Exercises owner_pid_if_live via the any-ref scan path.
+test_cmd_status_live_delivery() {
+  local fake_delivery="${_test_tmpdir}/delivery6c"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+  local pid
+  pid="$(_spawn_fake_owner)"
+  kill -0 "${pid}" 2>/dev/null || { kill "${pid}" 2>/dev/null; return 1; }
+
+  # F-R2-1: record the owner's TRUE birth epoch so owner_pid_if_live accepts it.
+  write_pid_file "GH-142" "${pid}" "$(_pid_start_epoch "${pid}")"
+
+  local out rc=0
+  out="$(cmd_status "")" || rc=$?
+  kill_process_tree "${pid}" 2>/dev/null || true
+  wait "${pid}" 2>/dev/null || true
+
+  assert_eq "0" "${rc}" "status query should always exit 0" || return 1
+  assert_contains "${out}" "delivering=yes" "live owner → delivering=yes" || return 1
+  assert_contains "${out}" "ref=GH-142" "should report the live ref" || return 1
+  return 0
+}
+
 # TC-DT-SF-07: --last-message prints the stored PM message without running.
 test_last_message_subcommand() {
   local fake_delivery="${_test_tmpdir}/delivery7"
@@ -1474,6 +1511,8 @@ main() {
   run_test "TC-DT-SF-04: --is-delivering live PID" test_is_delivering_live_pid
   run_test "TC-DT-SF-05: --is-delivering dead PID cleans stale" test_is_delivering_dead_pid_cleans_stale
   run_test "TC-DT-SF-06: --is-delivering any ref" test_is_delivering_any_ref
+  run_test "TC-DT-SF-06b: --status no active delivery" test_cmd_status_no_delivery
+  run_test "TC-DT-SF-06c: --status live delivery" test_cmd_status_live_delivery
   run_test "TC-DT-SF-07: --last-message subcommand" test_last_message_subcommand
   run_test "TC-DT-SF-08: --resume-prompt flag passthrough" test_resume_prompt_flag
   run_test "TC-DT-SF-09: --resume-prompt rejected empty/conflict" test_resume_prompt_rejected

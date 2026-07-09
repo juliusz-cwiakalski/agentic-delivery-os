@@ -68,11 +68,13 @@ DELIVER_TICKET_SCRIPT="${DELIVER_TICKET_SCRIPT:-${SCRIPT_DIR}/deliver-ticket.sh}
 
 LOG_DIR="${ROOT_DIR}/tmp/ceo-loop"
 # State files (git-ignored via .ai/local). F-3 ceo.pid; #97 durable stop;
-# INV-DM-3 last-session for resume. Non-readonly so tests can redirect them.
+# INV-DM-3 last-session for resume; loop.pid for single-flight (prevent
+# concurrent ceo-loop instances). Non-readonly so tests can redirect them.
 CEO_STATE_DIR="${ROOT_DIR}/.ai/local/ceo"
 CEO_PID_FILE="${CEO_STATE_DIR}/ceo.pid"
 STOP_FILE="${CEO_STATE_DIR}/stop"
 LAST_SESSION_FILE="${CEO_STATE_DIR}/last-session"
+LOOP_PID_FILE="${CEO_STATE_DIR}/loop.pid"
 
 readonly PROMPT_DEFAULT="continue project delivery in autonomous CEO mode (see .opencode/agent/ceo.md). Reconcile state with GitHub, pick the next ticket, and deliver it by calling scripts/deliver-ticket.sh <workItemRef> in the foreground (blocking). deliver-ticket.sh runs the full per-ticket lifecycle and returns a delivery summary; it does NOT merge — you are the merge authority in Mode A. Loop: pick, deliver (block), read the summary, decide (merge / resume-prompt / next). Write retrospectives to .ai/local/ceo/retrospective/. If all work is done or you are blocked, write the durable stop via: scripts/ceo-loop.sh --stop"
 readonly PROMPT="${CEO_LOOP_PROMPT:-${PROMPT_DEFAULT}}"
@@ -98,6 +100,7 @@ _cleanup_child() {
     CURRENT_CEO_PID=""
   fi
   [[ -f "${CEO_PID_FILE}" ]] && rm -f "${CEO_PID_FILE}" 2>/dev/null || true
+  [[ -f "${LOOP_PID_FILE}" ]] && rm -f "${LOOP_PID_FILE}" 2>/dev/null || true
 }
 
 _on_interrupt() {
@@ -364,19 +367,25 @@ ceo_is_stuck() {
 # ============================================================================
 # SESSION RESUME (INV-DM-3)
 # ============================================================================
-# Read the previous CEO session's context total (F-7 proxy). Returns the integer
-# total, or empty on failure (caller spawns fresh).
+# Read the previous CEO session's CURRENT context pressure (last assistant
+# turn's tokens.total). Returns the integer total, or empty on failure (caller
+# spawns fresh).
+#
+# BUG FIX: the old query used session.tokens_* (CUMULATIVE across all turns),
+# which grows every turn and always exceeds the resume threshold after a few
+# turns — so the loop almost never resumed. The correct metric is the LAST
+# assistant message's tokens.total, which represents the current context window
+# pressure (how full the window is RIGHT NOW). See:
+# doc/tmp/opencode-notes/token-usage-and-compaction.md §3
 context_total_for() {
   local -r session_id="$1"
   [[ -n "${session_id}" ]] || { printf ''; return 0; }
-  # F-7: context-size proxy = tokens_input + tokens_cache_read + tokens_output
-  # + tokens_reasoning (cache-read is a large fraction of the live window).
   local sql
-  sql="SELECT (tokens_input + tokens_cache_read + tokens_output + tokens_reasoning) AS total FROM session WHERE id = '${session_id}'"
+  sql="SELECT json_extract(data, '\$.tokens.total') AS context_total FROM message WHERE session_id = '${session_id}' AND json_extract(data, '\$.role') = 'assistant' AND json_extract(data, '\$.tokens.input') > 0 ORDER BY time_created DESC LIMIT 1"
   local row
   row="$(_opencode db "${sql}" --format json 2>/dev/null)" || { printf ''; return 0; }
   [[ -n "${row}" ]] || { printf ''; return 0; }
-  _jq -r '.[0].total // empty' <<<"${row}" 2>/dev/null || printf ''
+  _jq -r '.[0].context_total // empty' <<<"${row}" 2>/dev/null || printf ''
 }
 
 # Capture the CEO session id for a freshly-spawned session by title lookup.
@@ -460,7 +469,7 @@ spawn_or_resume_ceo() {
   title="ceo-loop-$(date +%Y%m%d-%H%M%S)"
   local opencode_cmd=()
   if [[ "${resume}" == "true" ]]; then
-    opencode_cmd=(opencode run --session "${prev_sid}" "${PROMPT}")
+    opencode_cmd=(opencode run --agent ceo --session "${prev_sid}" "${PROMPT}")
   else
     opencode_cmd=(opencode run --agent ceo --title "${title}")
     [[ -n "${OPENCODE_MODEL}" ]] && opencode_cmd+=(-m "${OPENCODE_MODEL}")
@@ -500,6 +509,26 @@ run_loop() {
   # via CEO_LOOP_STUCK_SECONDS for speed (bypasses the minutes→seconds multiply).
   local -r stuck_seconds="${STUCK_SECONDS:-$((STUCK_MINUTES * 60))}"
   ensure_state_dir
+
+  # Single-flight: prevent two ceo-loop.sh instances in the same workspace.
+  # A second invocation could spawn a second CEO, confuse the PID probes, or
+  # have its CEO kill the first loop's parent process.
+  if [[ -f "${LOOP_PID_FILE}" ]]; then
+    local loop_pid
+    loop_pid="$(_jq -r '.pid // empty' "${LOOP_PID_FILE}" 2>/dev/null)" || loop_pid=""
+    if [[ "${loop_pid}" =~ ^[0-9]+$ ]] && _pid_alive "${loop_pid}" \
+       && _pid_cmdline_contains "${loop_pid}" "ceo-loop.sh" \
+       && _pid_cwd_is "${loop_pid}" "${ROOT_DIR}"; then
+      log_info "another ceo-loop is already running (pid=${loop_pid}); exiting"
+      log_info "to force restart: scripts/ceo-loop.sh --stop && scripts/ceo-loop.sh --reset && scripts/ceo-loop.sh"
+      return 0
+    fi
+  fi
+  # Write own PID so a second invocation detects us.
+  ensure_state_dir
+  _jq -n --arg pid "$$" --argjson start "$(date +%s)" \
+    '{pid:$pid,start:$start}' >"${LOOP_PID_FILE}"
+
   mkdir -p "${LOG_DIR}"
   cd "${ROOT_DIR}"
   source_opencode_env
@@ -609,6 +638,57 @@ cmd_reset() {
   fi
 }
 
+# `--status` — print the loop + CEO state as key=value pairs on stdout.
+# Lets agents inspect process state without manual ps/kill/PID-file reading.
+# Exit 0 always (status query).
+cmd_status() {
+  ensure_state_dir
+
+  # Loop process
+  local loop_running="no" loop_pid=""
+  if [[ -f "${LOOP_PID_FILE}" ]]; then
+    loop_pid="$(_jq -r '.pid // empty' "${LOOP_PID_FILE}" 2>/dev/null)" || loop_pid=""
+    if [[ "${loop_pid}" =~ ^[0-9]+$ ]] && _pid_alive "${loop_pid}" \
+       && _pid_cmdline_contains "${loop_pid}" "ceo-loop.sh"; then
+      loop_running="yes"
+    else
+      loop_pid=""  # stale
+    fi
+  fi
+
+  # CEO child
+  local ceo_alive="no" ceo_pid_val="" ceo_sid=""
+  ceo_pid_val="$(ceo_pid_if_live 2>/dev/null)" || true
+  if [[ -n "${ceo_pid_val}" ]]; then
+    ceo_alive="yes"
+    ceo_sid="$(last_session_id)"
+  fi
+
+  # Stop signal
+  local stop_signal="no"
+  [[ -f "${STOP_FILE}" ]] && stop_signal="yes"
+
+  printf 'loop_running=%s\n' "${loop_running}"
+  printf 'loop_pid=%s\n' "${loop_pid}"
+  printf 'ceo_alive=%s\n' "${ceo_alive}"
+  printf 'ceo_pid=%s\n' "${ceo_pid_val}"
+  printf 'ceo_session=%s\n' "${ceo_sid}"
+  printf 'stop_signal=%s\n' "${stop_signal}"
+}
+
+# `--log [N]` — print the last N lines of the CEO loop log (default 50).
+# Lets agents read logs without knowing the internal path.
+cmd_log() {
+  local n="${1:-${LOG_LINES:-50}}"
+  [[ "${n}" =~ ^[0-9]+$ ]] || n=50
+  local log="${LOG_DIR}/ceo.log"
+  if [[ -f "${log}" ]]; then
+    tail -n "${n}" "${log}"
+  else
+    log_warn "No log file at ${log}"
+  fi
+}
+
 # ============================================================================
 # CLI
 # ============================================================================
@@ -616,7 +696,7 @@ usage() {
   cat <<EOF
 ${APP_NAME} ${APP_VERSION} — Mode A outer process: restartable @ceo loop
 
-Usage: ${APP_NAME} [--stop | --reset | run]
+Usage: ${APP_NAME} [--stop | --reset | --status | run]
 
 Commands:
   run (default)   Run the CEO loop (foreground). Spawns at most one @ceo,
@@ -626,6 +706,11 @@ Commands:
                   loop honors it at the next iteration; a fresh loop exits
                   without spawning a CEO (#97 — survives restarts).
   --reset         Clear the stop signal so the loop resumes.
+  --status        Print loop + CEO state as key=value pairs (loop_running,
+                  ceo_alive, stop_signal, etc.). Lets agents inspect state
+                  without manual ps/kill.
+  --log [N]       Print the last N lines of the CEO loop log (default 50).
+                  Lets agents read logs without knowing the internal path.
 
 Options:
   -h, --help      Show this help message
@@ -656,6 +741,8 @@ main() {
     -v|--verbose) VERBOSE=true; shift; cmd="${1:-run}" ;;
     --stop) cmd_stop; exit 0 ;;
     --reset) cmd_reset; exit 0 ;;
+    --status) cmd_status; exit 0 ;;
+    --log) cmd_log "${2:-}"; exit 0 ;;
     run) : ;;
     *) die "Unknown command: ${cmd}. See --help." ;;
   esac
