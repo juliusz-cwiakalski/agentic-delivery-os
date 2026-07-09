@@ -750,6 +750,48 @@ test_cleanup_child_clears_pid_file() {
   return 0
 }
 
+# TC-DT-MARK-01: the OWN path writes the delivering marker (INV-DM-3) and the
+# marker carries the ref + pid. deliver_loop is stubbed so the OWN path runs in
+# isolation. The marker survives run_delivery's return (cleared only by the EXIT
+# trap — see TC-DT-MARK-02).
+test_delivering_marker_lifecycle() {
+  local fake_delivery="${_test_tmpdir}/delivery_marker"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+
+  deliver_loop() { DELIVERY_RESULT="pr-open"; DELIVERY_EXIT_CODE=0; return 0; }
+
+  # Marker must NOT exist before OWN.
+  [[ ! -f "$(delivering_marker_file)" ]] || { echo "  marker should not exist before OWN" >&2; return 1; }
+
+  run_delivery "GH-142" "" "" >/dev/null 2>&1 || true
+
+  # OWN path wrote the marker before entering deliver_loop.
+  assert_file_exists "$(delivering_marker_file)" "OWN path must write the delivering marker" || return 1
+  local mref mpid
+  mref="$(_jq -r '.ref // empty' "$(delivering_marker_file)" 2>/dev/null)" || mref=""
+  mpid="$(_jq -r '.pid // empty' "$(delivering_marker_file)" 2>/dev/null)" || mpid=""
+  assert_eq "GH-142" "${mref}" "marker must carry the ref" || return 1
+  [[ "${mpid}" =~ ^[0-9]+$ ]] || { echo "  marker pid should be numeric, got '${mpid}'" >&2; return 1; }
+  return 0
+}
+
+# TC-DT-MARK-02: the EXIT trap (_cleanup_child) clears the delivering marker so
+# ceo-loop no longer treats the CEO as blocked on a delivery once the owner exits.
+test_delivering_marker_cleared_on_cleanup() {
+  local fake_delivery="${_test_tmpdir}/delivery_marker_cleanup"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+
+  write_delivering_marker "GH-142" "$$"
+  assert_file_exists "$(delivering_marker_file)" "setup: marker written" || return 1
+
+  _cleanup_child
+
+  [[ ! -f "$(delivering_marker_file)" ]] || { echo "  marker should be cleared by _cleanup_child" >&2; return 1; }
+  return 0
+}
+
 # TC-DT-SF-01: pid_file_for returns the repo-local git-ignored path.
 test_pid_file_path() {
   local fake_delivery="${_test_tmpdir}/delivery"
@@ -758,9 +800,9 @@ test_pid_file_path() {
   assert_eq "${fake_delivery}/PDEV-9.pid" "$(pid_file_for "PDEV-9")" "PDEV-9 pid path"
 }
 
-# TC-DT-SF-02: STUCK_MINUTES default is 15 (OQ-DM-3 regression guard).
-test_stuck_minutes_default_15() {
-  assert_eq "15" "${STUCK_MINUTES}" "default STUCK_MINUTES should be 15 (was 30)"
+# TC-DT-SF-02: STUCK_MINUTES default is 10 (OQ-DM-3 regression guard; was 15).
+test_stuck_minutes_default_10() {
+  assert_eq "10" "${STUCK_MINUTES}" "default STUCK_MINUTES should be 10 (was 15)"
 }
 
 # Helper: spawn a stub process whose cmdline is exactly "deliver-ticket.sh"
@@ -1581,11 +1623,13 @@ main() {
   run_test "TC-DT-CMP-02: resolve_session title lookup" test_resolve_session_title_lookup
   run_test "TC-DT-CMP-03: _cleanup_child kills tracked PID" test_cleanup_child_kills_tracked_pid
   run_test "TC-DT-CMP-04: _cleanup_child clears PID file" test_cleanup_child_clears_pid_file
+  run_test "TC-DT-MARK-01: delivering marker lifecycle (OWN write)" test_delivering_marker_lifecycle
+  run_test "TC-DT-MARK-02: delivering marker cleared on cleanup" test_delivering_marker_cleared_on_cleanup
   run_test "TC-DT-INT-01: integration kill/restart cycle (slow)" test_integration_kill_restart_cycle
 
   # AC-2: single-flight + join + subcommands + signal-prop + session-traffic liveness
   run_test "TC-DT-SF-01: pid_file_for repo-local path" test_pid_file_path
-  run_test "TC-DT-SF-02: stuck-minutes default is 15" test_stuck_minutes_default_15
+  run_test "TC-DT-SF-02: stuck-minutes default is 10" test_stuck_minutes_default_10
   run_test "TC-DT-SF-03: --is-delivering no PID file" test_is_delivering_no_pid_file
   run_test "TC-DT-SF-04: --is-delivering live PID" test_is_delivering_live_pid
   run_test "TC-DT-SF-05: --is-delivering dead PID cleans stale" test_is_delivering_dead_pid_cleans_stale

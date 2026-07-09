@@ -1,30 +1,38 @@
 #!/usr/bin/env bash
-# pm-liveness.sh — session-traffic liveness probe for an opencode session
+# pm-liveness.sh — multi-signal liveness probe for an opencode session tree
 #
-# Prints a parseable (key=value) report of an opencode session's message
-# traffic and exits non-zero when the session has been stalled (no new
-# session-message traffic) for longer than the stall threshold. Consumed by
-# deliver-ticket.sh (INV-DM-5 PM watchdog) and ceo-loop.sh (INV-DM-3/5 CEO
-# stuck detection).
+# Prints a parseable (key=value) report and exits non-zero when a session has
+# been stalled (no activity from ANY signal) for longer than the stall
+# threshold. Consumed by deliver-ticket.sh (INV-DM-5 PM watchdog) and
+# ceo-loop.sh (INV-DM-3/5 CEO stuck detection).
+#
+# Two complementary signals (either healthy ⇒ session healthy):
+#   1. Session-message traffic from the recursive session tree — queries the
+#      current `session_message` table across the session AND its child
+#      sessions (parent_id traversal), so a parent that delegated to @coder /
+#      @spec-writer (and went quiet itself) is NOT a false stall.
+#   2. Git/worktree activity — the most recent of git-commit epoch and
+#      worktree file mtimes. Runs ALONGSIDE the DB signal (not only as a
+#      degraded fallback): if EITHER shows recent activity, the session is
+#      healthy.
 #
 # Graceful degradation: if the opencode DB query fails (CI has no real
-# opencode DB), it logs a [WARN] degraded-mode message, falls back to a
-# worktree-mtime activity signal, and decides on that fallback. It NEVER
-# crashes on a missing DB.
+# opencode DB), it logs a [WARN] degraded-mode message and decides on the
+# git/worktree signal alone. It NEVER crashes on a missing DB.
 #
 # Dependencies: bash>=4, opencode (optional; degrades without it), jq, git
 # Usage: pm-liveness.sh <session_id>
 #
 # Environment:
-#   CEO_LOOP_STALL_MINUTES     Stall threshold in minutes (default: 15)
+#   CEO_LOOP_STALL_MINUTES     Stall threshold in minutes (default: 10)
 #   OPENCODE_DB_CMD            Override the opencode DB command (tests)
 #   OPENCODE_SESSION_LIST_CMD  Override the opencode session-list command (tests)
-#   ROOT_DIR                   Repo root for the worktree fallback (default: auto)
+#   ROOT_DIR                   Repo root for the git/worktree signal (default: auto)
 #   VERBOSE                    Set to 'true' for debug output
 #
 # Exit codes:
-#   0 - Healthy (session traffic within threshold, or fallback says healthy)
-#   1 - Stalled (no session traffic for >= threshold minutes)
+#   0 - Healthy (recent activity from the session tree OR git/worktree)
+#   1 - Stalled (no activity from any signal for >= threshold minutes)
 #   2 - Usage error
 
 set -Eeuo pipefail
@@ -44,14 +52,18 @@ readonly EXIT_USAGE=2
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
 readonly SCRIPT_DIR
-ROOT_DIR="$(cd -- "${SCRIPT_DIR}/.." >/dev/null 2>&1 && pwd -P)"
-readonly ROOT_DIR
+# ROOT_DIR: repo root for the git/worktree fallback signal. Overridable via env
+# (documented above) and intentionally NON-readonly so tests can point it at a
+# temp repo per-invocation for deterministic git/worktree-signal coverage
+# (bash.md §10.1 dependency injection). In production it is set once at startup
+# and never reassigned.
+ROOT_DIR="${ROOT_DIR:-$(cd -- "${SCRIPT_DIR}/.." >/dev/null 2>&1 && pwd -P)}"
 
 # Stall threshold (minutes). Read lazily inside main() so tests can override
 # CEO_LOOP_STALL_MINUTES per-invocation without re-sourcing the script.
 # deliver-ticket.sh aligns this with DELIVER_STUCK_MINUTES by exporting
-# CEO_LOOP_STALL_MINUTES when it calls this probe; both default to 15 (OQ-DM-3).
-readonly DEFAULT_STALL_MINUTES=15
+# CEO_LOOP_STALL_MINUTES when it calls this probe; both default to 10 (OQ-DM-3).
+readonly DEFAULT_STALL_MINUTES=10
 
 # How many recent messages to read for the gap-trend heuristic.
 readonly TREND_WINDOW=8
@@ -165,10 +177,20 @@ compute_gap_trend() {
 # Returns non-zero (and prints nothing) when the query is unavailable / empty,
 # so the caller can degrade gracefully. The DB time_created column is in
 # MILLISECONDS (verified against a real opencode session DB).
+#
+# Recursive session-tree traversal: `session_message` is the CURRENT message
+# store (the legacy `message` table is no longer written to — see
+# doc/tmp/opencode-notes/opencode-database-schema.md). Walking session.parent_id
+# catches traffic from child sessions (when the PM delegates to @coder /
+# @spec-writer / …) so a quiet parent with active children is NOT a false
+# stall. The `data` JSON shape (role, etc.) is identical in both tables, so the
+# downstream jq parsing is unchanged. validate_session_id guards the
+# interpolation (the recursive CTE is safe against injection for the same
+# reason the legacy single-table query was).
 fetch_recent_messages() {
   local -r session_id="$1"
   local sql
-  sql="SELECT time_created, data FROM message WHERE session_id = '${session_id}' ORDER BY time_created DESC LIMIT ${TREND_WINDOW}"
+  sql="WITH RECURSIVE tree(id) AS (SELECT id FROM session WHERE id = '${session_id}' UNION ALL SELECT s.id FROM session s JOIN tree t ON s.parent_id = t.id) SELECT time_created, data FROM session_message WHERE session_id IN (SELECT id FROM tree) ORDER BY time_created DESC LIMIT ${TREND_WINDOW}"
 
   local rows
   rows="$(_opencode db "${sql}" --format json 2>/dev/null)" || return 1
@@ -277,21 +299,21 @@ ${APP_NAME} ${APP_VERSION} — opencode session-traffic liveness probe
 
 Usage: ${APP_NAME} <session_id>
 
-Prints a key=value report (stdout) of the session's message traffic:
-  seconds_since_last_message=<int>
-  last_step=<assistant|user|tool|unknown>
+Prints a key=value report (stdout):
+  seconds_since_last_message=<int>   (most recent of session-tree / git / worktree)
+  last_step=<assistant|user|tool|unknown|git-commit|worktree-activity>
   gap_trend=<growing|shrinking|stable>
 
 Exit codes:
-  0 - healthy (recent traffic within threshold, or fallback says healthy)
-  1 - stalled (no session traffic for >= threshold minutes)
+  0 - healthy (recent activity from the session tree OR git/worktree)
+  1 - stalled (no activity from any signal for >= threshold minutes)
   2 - usage error
 
 Environment:
-  CEO_LOOP_STALL_MINUTES     Stall threshold in minutes (default: 15)
+  CEO_LOOP_STALL_MINUTES     Stall threshold in minutes (default: 10)
   OPENCODE_DB_CMD            Override the opencode DB command (tests)
   OPENCODE_SESSION_LIST_CMD  Override the opencode session-list command (tests)
-  ROOT_DIR                   Repo root for the worktree fallback (default: auto)
+  ROOT_DIR                   Repo root for the git/worktree signal (default: auto)
 EOF
 }
 
@@ -317,34 +339,60 @@ main() {
   local now_epoch
   now_epoch="$(date +%s)"
 
-  local seconds_since last_step trend
+  # --- Primary signal: session-message traffic (recursive session tree) ---
+  # fetch_recent_messages traverses session.parent_id so traffic from child
+  # sessions (PM delegating to @coder / @spec-writer / …) is not a false stall.
+  # On any failure/empty/unparseable result, db_seconds_since stays empty and
+  # the decision falls through to the git/worktree signal below.
+  local db_seconds_since="" db_last_step="unknown" trend="stable"
   local fetched
   if fetched="$(fetch_recent_messages "${session_id}" 2>/dev/null)"; then
     local last_ms csv
-    IFS=$'\t' read -r last_ms last_step csv <<<"${fetched}"
+    IFS=$'\t' read -r last_ms db_last_step csv <<<"${fetched}"
     if [[ "${last_ms}" =~ ^[0-9]+$ ]]; then
       local last_epoch=$(( last_ms / 1000 ))
-      seconds_since=$(( now_epoch - last_epoch ))
-      (( seconds_since < 0 )) && seconds_since=0
+      db_seconds_since=$(( now_epoch - last_epoch ))
+      (( db_seconds_since < 0 )) && db_seconds_since=0
       local -a ivals=()
       mapfile -t ivals < <(intervals_from_timestamps "${csv}")
       trend="$(compute_gap_trend "${ivals[@]}")"
-    else
-      seconds_since="${stall_seconds}"
-      last_step="unknown"
-      trend="stable"
     fi
   else
-    # Degraded mode: opencode DB unavailable. Fall back to the worktree signal
-    # so a missing DB never blocks delivery, but still decide on the fallback.
-    log_warn "opencode DB unavailable; using worktree-mtime fallback"
-    local fb_epoch
-    fb_epoch="$(worktree_fallback_epoch)"
-    [[ "${fb_epoch}" =~ ^[0-9]+$ ]] || fb_epoch=0
-    seconds_since=$(( now_epoch - fb_epoch ))
-    (( seconds_since < 0 )) && seconds_since=0
-    last_step="fallback-worktree"
-    trend="stable"
+    # Degraded: opencode DB unavailable. The git/worktree signal (below) is the
+    # only signal; it is always computed, so degraded behavior is unchanged.
+    log_warn "opencode DB unavailable; using git/worktree fallback"
+  fi
+
+  # --- Secondary signal: git commits + worktree file activity (always run) ---
+  # INV-DM-5: if EITHER signal shows recent activity, the session is healthy.
+  # This runs ALONGSIDE the DB query (not only as a degraded fallback), so a
+  # healthy delivery that the DB can't see (e.g. an active child session whose
+  # parent went quiet) is not wrongly killed.
+  local wt_epoch wt_seconds_since wt_last_step git_epoch
+  wt_epoch="$(worktree_fallback_epoch)"
+  [[ "${wt_epoch}" =~ ^[0-9]+$ ]] || wt_epoch=0
+  wt_seconds_since=$(( now_epoch - wt_epoch ))
+  (( wt_seconds_since < 0 )) && wt_seconds_since=0
+  # Label the winning worktree source: a git commit vs. a file-mtime change.
+  git_epoch="$(git_last_commit_epoch)"
+  [[ "${git_epoch}" =~ ^[0-9]+$ ]] || git_epoch=0
+  if (( git_epoch > 0 && git_epoch == wt_epoch )); then
+    wt_last_step="git-commit"
+  else
+    wt_last_step="worktree-activity"
+  fi
+
+  # --- Combine: effective liveness = the MOST RECENT signal (min seconds_since) ---
+  # Either signal healthy ⇒ session healthy. last_step reflects which signal was
+  # the most recent (DB role for the session tree; git-commit/worktree-activity
+  # for the fallback signal).
+  local seconds_since last_step
+  if [[ -n "${db_seconds_since}" ]] && (( db_seconds_since <= wt_seconds_since )); then
+    seconds_since="${db_seconds_since}"
+    last_step="${db_last_step}"
+  else
+    seconds_since="${wt_seconds_since}"
+    last_step="${wt_last_step}"
   fi
 
   # Emit the key=value report on stdout.

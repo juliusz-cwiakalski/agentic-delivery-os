@@ -125,6 +125,33 @@ capture_main() {
   rm -f "${_tmp}"
 }
 
+# Override the always-on git/worktree signal to return a stale epoch (0) so the
+# DB (session-tree) path under test is isolated from the secondary signal
+# (Phase 1b). Scoped to the calling test's run_test subshell.
+_stub_worktree_stale() {
+  # shellcheck disable=SC2329  # indirect override of sourced functions (called via main())
+  worktree_fallback_epoch() { printf '0\n'; }
+  # shellcheck disable=SC2329
+  git_last_commit_epoch() { printf '0\n'; }
+}
+
+# Create a temp git repo with one fresh commit and echo its path. Used by the
+# git/worktree-signal tests to exercise the REAL git_last_commit_epoch /
+# worktree_fallback_epoch against controlled activity (a fresh commit ⇒ recent
+# epoch ⇒ healthy). `git init` makes the temp dir its own repo root so the
+# query does NOT traverse up to the host repo's .git.
+_fresh_git_repo() {
+  local d
+  d="$(mktemp -d)"
+  git -C "${d}" init -q
+  git -C "${d}" config user.email "test@example.com"
+  git -C "${d}" config user.name "test"
+  printf 'recent activity\n' >"${d}/change.txt"
+  git -C "${d}" add change.txt
+  git -C "${d}" commit -qm "recent activity"
+  printf '%s' "${d}"
+}
+
 # ============================================================================
 # TESTS: pure decision logic
 # ============================================================================
@@ -168,8 +195,9 @@ test_gap_trend_stable_pure() {
 # TESTS: integration with mocked _opencode db
 # ============================================================================
 
-# test_healthy_session: last message 30s ago, threshold 15 -> exit 0, ~30s.
+# test_healthy_session: last message 30s ago, threshold 10 -> exit 0, ~30s.
 test_healthy_session() {
+  _stub_worktree_stale
   local now_ms last_ms
   now_ms=$(( $(date +%s) * 1000 ))
   last_ms=$(( now_ms - 30 * 1000 ))
@@ -188,8 +216,9 @@ test_healthy_session() {
   assert_contains "${out}" "seconds_since_last_message=30" "should report ~30s since last message"
 }
 
-# test_stale_session: last message 20min ago (1200s), threshold 15 -> stalled.
+# test_stale_session: last message 20min ago (1200s), threshold 10 -> stalled.
 test_stale_session() {
+  _stub_worktree_stale
   local now_ms last_ms
   now_ms=$(( $(date +%s) * 1000 ))
   last_ms=$(( now_ms - 20 * 60 * 1000 ))
@@ -208,11 +237,12 @@ test_stale_session() {
   assert_contains "${out}" "seconds_since_last_message=1200" "should report ~1200s"
 }
 
-# test_at_threshold_stalled: exactly 900s (15min) -> stalled (>=), exit !=0.
+# test_at_threshold_stalled: exactly 600s (10min, the default) -> stalled (>=).
 test_at_threshold_stalled() {
+  _stub_worktree_stale
   local now_ms last_ms
   now_ms=$(( $(date +%s) * 1000 ))
-  last_ms=$(( now_ms - 900 * 1000 ))
+  last_ms=$(( now_ms - 600 * 1000 ))
   # shellcheck disable=SC2329  # indirect override of the sourced _opencode(), called via main()
   _opencode() {
     case "$1" in
@@ -225,11 +255,12 @@ test_at_threshold_stalled() {
   capture_main out rc main "ses_at_threshold001"
 
   [[ "${rc}" -ne 0 ]] || { printf '  expected non-zero exit at threshold (>=)\n' >&2; return 1; }
-  assert_contains "${out}" "seconds_since_last_message=900" "should report 900s"
+  assert_contains "${out}" "seconds_since_last_message=600" "should report 600s"
 }
 
 # test_growing_gap: intervals 10,30,90,200s -> gap_trend=growing.
 test_growing_gap() {
+  _stub_worktree_stale
   local now_ms t0 t1 t2 t3 t4
   now_ms=$(( $(date +%s) * 1000 ))
   # newest == now; walk back the intervals 200,90,30,10.
@@ -254,6 +285,7 @@ test_growing_gap() {
 
 # test_shrinking_gap: intervals 200,90,30,10s -> gap_trend=shrinking.
 test_shrinking_gap() {
+  _stub_worktree_stale
   local now_ms t0 t1 t2 t3 t4
   now_ms=$(( $(date +%s) * 1000 ))
   t4="${now_ms}"
@@ -276,10 +308,14 @@ test_shrinking_gap() {
 }
 
 # test_graceful_degradation_db_failure: opencode db fails -> warn + fallback,
-# controlled exit, no crash, last_step=fallback-worktree. Uses the real repo
-# ROOT_DIR (which is actively being written during the test run, so the
-# worktree-fallback says healthy -> exit 0). The point: NO crash + WARN.
+# controlled exit, no crash, last_step=git-commit (the renamed fallback label).
+# Uses a fresh temp git repo as ROOT_DIR so the git/worktree signal is reliably
+# recent (a fresh commit) → healthy fallback → exit 0. Deterministic (does not
+# depend on the host repo's worktree mtime). The point: NO crash + WARN + the
+# git/worktree signal keeps the session healthy.
 test_graceful_degradation_db_failure() {
+  # shellcheck disable=SC2034  # ROOT_DIR is consumed by the sourced pm-liveness.sh functions
+  ROOT_DIR="$(_fresh_git_repo)"
   # shellcheck disable=SC2329  # indirect override of the sourced _opencode(), called via main()
   _opencode() {
     # Simulate an unavailable opencode DB.
@@ -296,14 +332,15 @@ test_graceful_degradation_db_failure() {
 
   assert_contains "${err}" "[WARN]" "degraded mode must log a WARN"
   assert_contains "${err}" "fallback" "degraded mode must mention fallback"
-  assert_contains "${out}" "last_step=fallback-worktree" "must report fallback signal"
-  # Controlled exit (0 healthy fallback — repo worktree is active in-test).
-  assert_eq 0 "${rc}" "active worktree -> healthy fallback, exit 0"
+  assert_contains "${out}" "last_step=git-commit" "must report the git/worktree fallback signal"
+  # Controlled exit (0 healthy fallback — fresh git commit).
+  assert_eq 0 "${rc}" "fresh git activity -> healthy fallback, exit 0"
 }
 
 # test_threshold_env_override: CEO_LOOP_STALL_MINUTES=5; 6min ago -> stalled,
 # 3min ago -> healthy.
 test_threshold_env_override() {
+  _stub_worktree_stale
   local now_ms six_ago three_ago
   now_ms=$(( $(date +%s) * 1000 ))
   six_ago=$(( now_ms - 6 * 60 * 1000 ))
@@ -335,6 +372,7 @@ test_threshold_env_override() {
 
 # test_output_format_parseable: stdout has the three named keys.
 test_output_format_parseable() {
+  _stub_worktree_stale
   local now_ms last_ms
   now_ms=$(( $(date +%s) * 1000 ))
   last_ms=$(( now_ms - 5 * 1000 ))
@@ -354,34 +392,35 @@ test_output_format_parseable() {
   assert_contains "${out}" "gap_trend=" "key present"
 }
 
-# test_default_threshold_is_15: regression guard — default stall is 15 minutes.
-test_default_threshold_is_15() {
-  # 14 minutes ago -> healthy under default (15). 16 minutes ago -> stalled.
-  local now_ms fourteen_ago sixteen_ago
+# test_default_threshold_is_10: regression guard — default stall is 10 minutes.
+# 9 minutes ago -> healthy under default (10). 11 minutes ago -> stalled.
+test_default_threshold_is_10() {
+  _stub_worktree_stale
+  local now_ms nine_ago eleven_ago
   now_ms=$(( $(date +%s) * 1000 ))
-  fourteen_ago=$(( now_ms - 14 * 60 * 1000 ))
-  sixteen_ago=$(( now_ms - 16 * 60 * 1000 ))
+  nine_ago=$(( now_ms - 9 * 60 * 1000 ))
+  eleven_ago=$(( now_ms - 11 * 60 * 1000 ))
 
   # shellcheck disable=SC2329  # indirect override of the sourced _opencode(), called via main()
   _opencode() {
     case "$1" in
-      db) printf '%s' "$(mk_messages assistant "${fourteen_ago}")" ;;
+      db) printf '%s' "$(mk_messages assistant "${nine_ago}")" ;;
       *) return 1 ;;
     esac
   }
   local out rc
   capture_main out rc main "ses_default_thr1"
-  assert_eq 0 "${rc}" "14min ago @ default(15) -> healthy"
+  assert_eq 0 "${rc}" "9min ago @ default(10) -> healthy"
 
   # shellcheck disable=SC2329  # indirect override of the sourced _opencode(), called via main()
   _opencode() {
     case "$1" in
-      db) printf '%s' "$(mk_messages assistant "${sixteen_ago}")" ;;
+      db) printf '%s' "$(mk_messages assistant "${eleven_ago}")" ;;
       *) return 1 ;;
     esac
   }
   capture_main out rc main "ses_default_thr2"
-  [[ "${rc}" -ne 0 ]] || { printf '  16min ago @ default(15) -> should be stalled\n' >&2; return 1; }
+  [[ "${rc}" -ne 0 ]] || { printf '  11min ago @ default(10) -> should be stalled\n' >&2; return 1; }
 }
 
 # test_usage_missing_session: no session_id -> exit 2.
@@ -399,6 +438,53 @@ test_validate_session_id() {
   return 0
 }
 
+# test_child_session_keeps_parent_healthy: the recursive session-tree query +
+# multi-signal design must NOT declare a session stalled when the DB has no
+# messages for it but the worktree/git signal shows recent activity. Models the
+# real-world case where the PM parent goes quiet while delegating to a child
+# (@coder / @spec-writer) — the parent's own message traffic is empty, yet the
+# delivery is actively progressing (commits / doc writes). Mock _opencode to
+# return an EMPTY result for the session-tree query (no messages); the fresh
+# git commit keeps the session healthy.
+test_child_session_keeps_parent_healthy() {
+  # shellcheck disable=SC2034  # ROOT_DIR is consumed by the sourced pm-liveness.sh functions
+  ROOT_DIR="$(_fresh_git_repo)"
+  # Empty result set for the session-tree query ⇒ fetch_recent_messages returns
+  # non-zero (length == 0) ⇒ DB signal unavailable.
+  # shellcheck disable=SC2329  # indirect override of the sourced _opencode(), called via main()
+  _opencode() {
+    case "$1" in
+      db) printf '[]' ;;
+      *) return 1 ;;
+    esac
+  }
+
+  local out rc
+  capture_main out rc main "ses_parent_quiet"
+
+  assert_eq 0 "${rc}" "parent quiet + recent worktree activity -> healthy (no false stall)"
+  assert_contains "${out}" "last_step=git-commit" "the git/worktree signal should be the reported source"
+}
+
+# test_git_activity_signal: a recent git commit counts as activity and keeps the
+# session healthy even when the opencode DB is entirely unavailable. Uses a real
+# temp git repo so the REAL git_last_commit_epoch / worktree_fallback_epoch are
+# exercised against controlled activity (not a mock).
+test_git_activity_signal() {
+  # shellcheck disable=SC2034  # ROOT_DIR is consumed by the sourced pm-liveness.sh functions
+  ROOT_DIR="$(_fresh_git_repo)"
+  # DB entirely unavailable ⇒ only the git/worktree signal decides.
+  # shellcheck disable=SC2329  # indirect override of the sourced _opencode(), called via main()
+  _opencode() { return 1; }
+
+  local out rc
+  capture_main out rc main "ses_git_activity"
+
+  assert_eq 0 "${rc}" "recent git commit -> healthy (git signal counts as activity)"
+  assert_contains "${out}" "last_step=git-commit" "git commit is the reported activity source"
+  assert_contains "${out}" "seconds_since_last_message=" "key present"
+}
+
 # ============================================================================
 # RUN TESTS
 # ============================================================================
@@ -412,13 +498,15 @@ main_tests() {
   run_test "compute_gap_trend: stable" test_gap_trend_stable_pure
   run_test "healthy session (30s)" test_healthy_session
   run_test "stale session (20min)" test_stale_session
-  run_test "at threshold (900s) stalled" test_at_threshold_stalled
+  run_test "at threshold (600s) stalled" test_at_threshold_stalled
   run_test "growing gap trend" test_growing_gap
   run_test "shrinking gap trend" test_shrinking_gap
   run_test "graceful degradation on db failure" test_graceful_degradation_db_failure
   run_test "threshold env override" test_threshold_env_override
   run_test "output format parseable" test_output_format_parseable
-  run_test "default threshold is 15" test_default_threshold_is_15
+  run_test "default threshold is 10" test_default_threshold_is_10
+  run_test "child session keeps parent healthy" test_child_session_keeps_parent_healthy
+  run_test "git activity signal" test_git_activity_signal
   run_test "usage: missing session -> exit 2" test_usage_missing_session
   run_test "validate_session_id rejects garbage" test_validate_session_id
 

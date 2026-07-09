@@ -49,8 +49,9 @@ readonly ROOT_DIR
 # Configurable via environment and CLI flags
 MAX_RESTARTS="${DELIVER_MAX_RESTARTS:-10}"
 # OQ-DM-3 / INV-DM-5: session-traffic liveness replaces the old 30-min
-# file-mtimeout heuristic; default tightened 30 -> 15 minutes.
-STUCK_MINUTES="${DELIVER_STUCK_MINUTES:-15}"
+# file-mtimeout heuristic; default tightened 30 -> 15 -> 10 minutes (aligned
+# with pm-liveness.sh / ceo-loop.sh multi-signal detection).
+STUCK_MINUTES="${DELIVER_STUCK_MINUTES:-10}"
 readonly POLL_SECONDS="${DELIVER_POLL_SECONDS:-60}"
 readonly KILL_GRACE_SECONDS="${DELIVER_KILL_GRACE_SECONDS:-20}"
 readonly LOOP_SLEEP_SECONDS="${DELIVER_LOOP_SLEEP_SECONDS:-5}"
@@ -145,6 +146,9 @@ _cleanup_child() {
   if [[ -n "${CURRENT_REF:-}" ]]; then
     clear_pid_file "${CURRENT_REF}" 2>/dev/null || true
   fi
+  # INV-DM-3: clear the delivering marker so ceo-loop no longer treats the CEO
+  # as blocked on a delivery. Unconditional — there is a single marker per repo.
+  clear_delivering_marker 2>/dev/null || true
 }
 
 _on_interrupt() {
@@ -345,6 +349,32 @@ clear_pid_file() {
   f="$(pid_file_for "${ref}")"
   [[ -f "${f}" ]] && rm -f "${f}"
   true
+}
+
+# Delivering marker (INV-DM-3): a single repo-local file that tells ceo-loop.sh
+# "the CEO is blocked on a delivery right now." Race-free: written on the OWN
+# path BEFORE the delivery starts and cleared on exit. More reliable than the
+# `--is-delivering` PID probe for the brief OWN→deliver_loop window. Cleared by
+# the EXIT trap (_cleanup_child). Agents never inspect this directly — it is an
+# internal mechanism consumed by ceo-loop.sh's stuck detector.
+delivering_marker_file() {
+  printf '%s/delivering' "${DELIVERY_DIR}"
+}
+
+write_delivering_marker() {
+  local -r ref="$1" pid="$2" session_id="${3:-}"
+  ensure_delivery_dir
+  _jq -n \
+    --arg ref "${ref}" \
+    --arg pid "${pid}" \
+    --argjson start "$(date +%s)" \
+    --arg session_id "${session_id}" \
+    '{ref:$ref,pid:$pid,start:$start,session_id:$session_id}' \
+    >"$(delivering_marker_file)"
+}
+
+clear_delivering_marker() {
+  rm -f "$(delivering_marker_file)" 2>/dev/null || true
 }
 
 # Validate that the PID recorded for REF is still a live deliver-ticket.sh for
@@ -1333,6 +1363,10 @@ cmd_status() {
     printf 'pid=%s\n' "${pid}"
     printf 'session_id=%s\n' "${session_id}"
     printf 'stale=%s\n' "${stale}"
+    # INV-DM-3: the delivering marker file (written on the OWN path). yes/no.
+    local marker="no"
+    [[ -f "$(delivering_marker_file)" ]] && marker="yes"
+    printf 'delivering_marker=%s\n' "${marker}"
     return 0
   fi
 
@@ -1426,8 +1460,8 @@ Subcommands:
                           (for REF, or any ticket if no REF). Prints nothing.
   --last-message REF      Print the stored PM last message for REF (no run).
   --status [REF]          Print delivery state as key=value pairs (delivering,
-                          pid, session_id, stale). Lets agents inspect state
-                          without manual ps/kill.
+                          pid, session_id, stale, delivering_marker). Lets
+                          agents inspect state without manual ps/kill.
   --log [REF]             Print the last 50 lines of the delivery log for REF
                           (or the most recent if no REF). Lets agents read logs
                           without knowing the internal path.
@@ -1443,12 +1477,12 @@ Options:
   -V, --version               Show version
   -n, --dry-run               Show what would be done without running opencode
   -v, --verbose               Enable debug output
-  --stuck-minutes <n>         Minutes without progress before kill (default: 15)
+  --stuck-minutes <n>         Minutes without progress before kill (default: 10)
   --max-restarts <n>          Max restart attempts (default: 10)
 
 Environment:
   DELIVER_MAX_RESTARTS          Max restarts (default: 10)
-  DELIVER_STUCK_MINUTES         Stuck threshold in minutes (default: 15)
+  DELIVER_STUCK_MINUTES         Stuck threshold in minutes (default: 10)
   DELIVER_POLL_SECONDS          Activity poll interval (default: 60)
   DELIVER_KILL_GRACE_SECONDS    SIGTERM grace before SIGKILL (default: 20)
   PM_LIVENESS_TIMEOUT_SECONDS   Max seconds for the pm-liveness probe (default: 15)
@@ -1546,6 +1580,11 @@ run_delivery() {
   _birth="$(_pid_start_epoch "$$")"
   WRAPPER_START_EPOCH="${WRAPPER_START_EPOCH:-${_birth:-$(date +%s)}}"
   write_pid_file "${ticket_ref}" "$$" "${WRAPPER_START_EPOCH}"
+  # INV-DM-3: publish the delivering marker BEFORE the delivery starts so
+  # ceo-loop.sh sees the CEO as blocked on a delivery (race-free vs the PID
+  # probe, which has a brief window before the child is observable). Cleared by
+  # the EXIT trap (_cleanup_child).
+  write_delivering_marker "${ticket_ref}" "$$"
   log_info "OWN: no live delivery for ${ticket_ref}; starting (pid=$$)"
 
   # Release the decision lock; the owner now runs unlocked so joiners can probe.

@@ -82,7 +82,7 @@ instead of churn, and align with the upstream ADOS reliability plan (epic #95 �
 | `ceo-loop.sh` | Script (outer) | Spawn one `@ceo` session at a time; **detect a stuck CEO** (no session traffic, no healthy delivery in progress) and kill+restart it; resume the previous CEO session when its context is under the resume threshold; honor a durable stop signal | Spawn a second `@ceo` while one is alive; kill a CEO that is blocked on a healthy in-flight delivery; wipe the stop signal at startup |
 | `@ceo` | AI agent (decision points) | Pick next ticket; **wait for `deliver-ticket.sh` to return** and consume its last-message + result; verify the PM finalized all phases before merging; merge ready (approved) PRs; handle blockers (optionally resume the PM with a `--resume-prompt`); retrospectives | Babysit a healthy delivery; detach `deliver-ticket.sh`; merge a PR the PM has not finalized; yield forever on a ready PR; halt merely because a peer exists |
 | `batch-deliver.sh` | Script | Sequential per-ticket delivery; pre-flight skip; **rebase-before-merge with green-gate wait** for human-approved PRs; squash-merge using the PR title/description as the commit message; summary | Pick tickets; approve a PR (Mode B); merge a PR the human has not approved |
-| `deliver-ticket.sh` | Script (per-ticket) | Single-ticket lifecycle: **single-flight + join** per repo, spawn/resume PM, in-progress tracking (repo-local PID file), **log-progress liveness watchdog**, kill-and-restart on stall, **signal propagation to the PM child**, state classification; expose subcommands (`--is-delivering`, `--last-message`, `--resume-prompt`); return a delivery summary (result + PR URL + PM last-message) on stdout | Run detached; spawn a duplicate PM for the same ticket/repo; **merge** (merge authority is the CEO in Mode A or `batch-deliver.sh` in Mode B); leave an orphaned opencode child when killed |
+| `deliver-ticket.sh` | Script (per-ticket) | Single-ticket lifecycle: **single-flight + join** per repo, spawn/resume PM, in-progress tracking (repo-local PID file), **writes the delivering marker on its OWN path** (race-free "CEO blocked on delivery" signal for ceo-loop.sh), **log-progress liveness watchdog**, kill-and-restart on stall, **signal propagation to the PM child**, state classification; expose subcommands (`--is-delivering`, `--last-message`, `--resume-prompt`); return a delivery summary (result + PR URL + PM last-message) on stdout | Run detached; spawn a duplicate PM for the same ticket/repo; **merge** (merge authority is the CEO in Mode A or `batch-deliver.sh` in Mode B); leave an orphaned opencode child when killed |
 | PM opencode | AI agent (per-ticket) | The ADOS 11-phase lifecycle; delegate to subagents; address review comments; return a delivery summary (last message) to `deliver-ticket.sh` | Pick the next ticket; merge without an approval signal |
 | `tools/clean-merged-branches` | Script | Branch hygiene: delete branches already squash-merged into the base | **Remove unmerged branches**; touch protected branches (`main`, `master`, `develop`) |
 
@@ -154,12 +154,18 @@ threshold, **all** of these hold:
 
 - no new **opencode session message traffic** (the stream of assistant/tool
   messages has gone idle), **and**
-- **no healthy delivery in progress** in this repo
-  (`deliver-ticket.sh --is-delivering` is false, or the in-flight delivery's
-  own watchdog has declared it stalled).
+- **no healthy delivery in progress** in this repo. This is checked via two
+  complementary signals: the race-free **delivering marker file**
+  (`.ai/local/delivery/delivering`, written by `deliver-ticket.sh` on its OWN
+  path *before* the delivery starts, carrying a live pid), and — as
+  defense-in-depth — `deliver-ticket.sh --is-delivering` (the PID probe), plus
+  the in-flight delivery's own watchdog.
 
 A CEO that is **blocked on a healthy, progressing delivery** is *not* stuck and
-must not be killed — the delivery will return and the CEO will continue.
+must not be killed — the delivery will return and the CEO will continue. The
+delivering marker makes this race-free: it exists before the child PID is
+observable by the probe, closing the brief window where a just-started
+delivery could look "not in progress."
 
 The stop/park signal is **durable across loop restarts** (#97): `ceo-loop.sh`
 does not wipe its stop file at startup, and a non-expired park condition is
@@ -187,29 +193,38 @@ This is the #99 "merge-not-yield" + "proceed-not-halt" backstop.
 > checks pass. Keeping the merge out of the per-ticket engine is what lets the
 > CEO verify PM finalization *before* the merge (comment #9).
 
-### INV-DM-5: Liveness means session-message progress, not process-alive
+### INV-DM-5: Liveness means multi-signal progress, not process-alive
 
-"Liveness" is measured by **opencode session message traffic** — new
-assistant/tool messages flowing in the session. A hung LLM stream keeps the
-process alive (blocked on I/O) while making zero progress; the ps-only
-heuristic must not call that "healthy."
+"Liveness" is measured by **two complementary signals**; if EITHER shows recent
+activity, the session is healthy:
 
-A session with **no new message traffic for ≥ `CEO_LOOP_STALL_MINUTES`**
-(default **15**; at-threshold == stalled, matching the `>=` comparison in
+1. **Session-tree message traffic** — new assistant/tool messages flowing in the
+   session. The probe queries the current `session_message` table across the
+   **recursive session tree** (it traverses `session.parent_id`), so traffic
+   from child sessions counts too: when the PM delegates to `@coder` /
+   `@spec-writer` (and the parent goes quiet itself), that is NOT a false stall.
+2. **Git/worktree activity** — the most recent of git-commit epoch and worktree
+   file mtimes. This runs ALONGSIDE the DB signal (not only as a degraded
+   fallback), so a healthy delivery that the DB can't see is still recognized.
+
+A hung LLM stream keeps the process alive (blocked on I/O) while making zero
+progress on *both* signals; the ps-only heuristic must not call that "healthy."
+
+A session with **no activity from either signal for ≥ `CEO_LOOP_STALL_MINUTES`**
+(default **10**; at-threshold == stalled, matching the `>=` comparison in
 `pm-liveness.sh`/`ceo-loop.sh`) is **stalled**, not slow, and is killed-and-resumed.
 
 Observed stuck root cases this guards against:
 
 - opencode hangs **indefinitely on an LLM provider response** (an opencode
-  internal bug) — the process is alive but the stream is silent.
+  internal bug) — the process is alive but both signals are silent.
 - the agent **tries to access a folder it should not** (e.g. the user's home
   directory), which triggers a permission-acceptance prompt that **never gets
   answered** in autonomous mode — the session waits forever.
 
 The earlier 30-minute, file-mtime-based detector is retired in favor of this
-session-traffic signal, which is both more precise and allows the tighter
-threshold. (Worktree activity — commits, `doc/changes/` writes — remains a
-secondary signal that a blocked-on-delivery CEO is healthy.)
+multi-signal approach, which is both more precise (it catches child-session
+traffic the single-table query missed) and allows the tighter threshold.
 
 ### INV-DM-6: One ticket in flight per repo working tree
 
@@ -430,7 +445,7 @@ All settings are environment variables (CLI flag overrides where noted).
 | Variable | Default | Description |
 |---|---|---|
 | `CEO_LOOP_POLL_SECONDS` | `30` | Seconds between liveness/stuck checks of the live CEO session |
-| `CEO_LOOP_STALL_MINUTES` | `15` | Minutes with no session-message traffic AND no healthy delivery before a CEO is declared stuck and killed (INV-DM-5) |
+| `CEO_LOOP_STALL_MINUTES` | `10` | Minutes with no session-message traffic AND no healthy delivery (delivering marker + `--is-delivering`) before a CEO is declared stuck and killed (INV-DM-5) |
 | `CEO_RESUME_TOKEN_LIMIT` | `100000` | Resume the previous CEO session if its context (input+output+reasoning tokens) is under this limit; otherwise start fresh |
 | `CEO_LOOP_MAX_RESTARTS` | `10` | Max CEO kill+restart iterations before giving up |
 
@@ -438,7 +453,7 @@ All settings are environment variables (CLI flag overrides where noted).
 
 | Variable | Default | Description |
 |---|---|---|
-| `DELIVER_STUCK_MINUTES` | `15` | Minutes with no PM session traffic before the PM is declared stalled and restarted (INV-DM-5; was 30/file-based, now 15/session-traffic) |
+| `DELIVER_STUCK_MINUTES` | `10` | Minutes with no PM session traffic AND no git/worktree activity before the PM is declared stalled and restarted (INV-DM-5; was 30/file-based, then 15/session-traffic, now 10/multi-signal) |
 | `DELIVER_POLL_SECONDS` | `60` | Seconds between liveness checks |
 | `DELIVER_KILL_GRACE_SECONDS` | `20` | Seconds between SIGTERM and SIGKILL when propagating to the PM child |
 | `DELIVER_MAX_RESTARTS` | `10` | Maximum PM restart iterations before giving up |
@@ -477,11 +492,17 @@ state. They MUST NOT directly use `ps`, `kill`, `pkill`, or read PID/state
 files.** The scripts are the single source of truth for process lifecycle —
 they encapsulate PID validation, staleness detection, and signal propagation.
 
+> **The delivering marker is internal.** `.ai/local/delivery/delivering` is
+> written and read by the scripts themselves (`deliver-ticket.sh` writes it;
+> `ceo-loop.sh` consumes it). Agents never inspect or manipulate it directly —
+> it surfaces through `deliver-ticket.sh --status [REF]` as
+> `delivering_marker=yes|no`.
+
 ### `deliver-ticket.sh`
 
 | Subcommand | What it does |
 |---|---|
-| `--status [REF]` | Print delivery state (delivering, pid, session_id, stale) |
+| `--status [REF]` | Print delivery state (delivering, pid, session_id, stale, delivering_marker) |
 | `--is-delivering [REF]` | Exit 0 if a delivery is in progress (boolean check) |
 | `--last-message REF` | Print the PM's last message for REF |
 | `--log [REF]` | Print the last 50 lines of the delivery log for REF |
@@ -520,8 +541,10 @@ unambiguous.
 | `.ai/local/delivery/<ref>.pid` | single-flight PID file (live while a delivery runs; cleared on exit) |
 | `.ai/local/delivery/<ref>.last-message` | persisted PM last-message (consumed by `--last-message`) |
 | `.ai/local/delivery/<ref>.lock` | flock lock file for the atomic JOIN-or-OWN decision |
+| `.ai/local/delivery/delivering` | delivering marker (INV-DM-3) — written on the OWN path, read by ceo-loop.sh as a race-free "CEO blocked on a delivery" signal; cleared on exit |
 
-The `<ref>` is lowercased (e.g., `gh-15.log` for `GH-15`).
+The `<ref>` is lowercased (e.g., `gh-15.log` for `GH-15`). The `delivering`
+marker is repo-wide (one per working tree), not per-`<ref>`.
 
 ### `ceo-loop.sh` — CEO outer loop
 

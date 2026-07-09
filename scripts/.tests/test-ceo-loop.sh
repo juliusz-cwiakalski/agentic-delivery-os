@@ -268,6 +268,39 @@ test_ceo_is_stuck_empty_session_with_delivery() {
   return 0
 }
 
+# test_delivering_marker_prevents_stuck — INV-DM-3: a live delivering marker
+# file (written by deliver-ticket.sh on its OWN path) keeps the CEO healthy even
+# when session traffic is stalled AND the PID probe (--is-delivering) says no
+# delivery. The marker check runs BEFORE the PID probe and short-circuits.
+test_delivering_marker_prevents_stuck() {
+  _setup_ceo_state
+  DELIVERY_DIR="${_test_tmpdir}"
+  local marker="${DELIVERY_DIR}/delivering"
+  MOCK_LIVENESS_RC="1"   # stalled session traffic
+  MOCK_DELIVERY_RC="1"   # PID probe says NOT delivering
+  # Write a marker with a LIVE pid (this test process).
+  _jq -n --arg pid "$$" '{ref:"GH-142",pid:$pid}' >"${marker}"
+  if ceo_is_stuck "ses_test"; then
+    echo "  live delivering marker should prevent stuck (CEO blocked on a delivery)" >&2
+    return 1
+  fi
+  return 0
+}
+
+# test_delivering_marker_dead_pid_does_not_prevent_stuck — a stale marker (dead
+# pid) must NOT mask a genuine stall; the CEO should still be declared stuck.
+test_delivering_marker_dead_pid_does_not_prevent_stuck() {
+  _setup_ceo_state
+  DELIVERY_DIR="${_test_tmpdir}"
+  local marker="${DELIVERY_DIR}/delivering"
+  MOCK_LIVENESS_RC="1"   # stalled
+  MOCK_DELIVERY_RC="1"   # not delivering
+  # Marker points at a PID that is almost certainly dead.
+  _jq -n --arg pid "999999" '{ref:"GH-142",pid:$pid}' >"${marker}"
+  ceo_is_stuck "ses_test" || { echo "  dead-pid marker should NOT prevent stuck" >&2; return 1; }
+  return 0
+}
+
 # ============================================================================
 # TESTS: PID File Lifecycle (F-3)
 # ============================================================================
@@ -858,6 +891,8 @@ main() {
   run_test "ceo_is_stuck: degraded probe"            test_ceo_is_stuck_degraded_probe
   run_test "ceo_is_stuck: empty session"             test_ceo_is_stuck_empty_session
   run_test "ceo_is_stuck: empty session + delivery"  test_ceo_is_stuck_empty_session_with_delivery
+  run_test "delivering marker prevents stuck"        test_delivering_marker_prevents_stuck
+  run_test "dead-pid marker does not prevent stuck"  test_delivering_marker_dead_pid_does_not_prevent_stuck
 
   # --- PID File Lifecycle (F-3) ---
   run_test "PID file lifecycle (write/clear)"        test_pid_file_lifecycle

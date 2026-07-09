@@ -51,7 +51,8 @@ readonly ROOT_DIR
 # F-7 context-size proxy columns: tokens_input + tokens_cache_read +
 # tokens_output + tokens_reasoning (cache-read is a large fraction of the live
 # window; excluding it mis-counts). Verified against a real opencode session DB.
-STUCK_MINUTES="${CEO_LOOP_STUCK_MINUTES:-15}"
+# Default tightened 15 -> 10 (aligned with pm-liveness.sh / deliver-ticket.sh).
+STUCK_MINUTES="${CEO_LOOP_STUCK_MINUTES:-10}"
 POLL_SECONDS="${CEO_LOOP_POLL_SECONDS:-30}"
 LOOP_SLEEP_SECONDS="${CEO_LOOP_SLEEP_SECONDS:-2}"
 readonly KILL_GRACE_SECONDS="${CEO_LOOP_KILL_GRACE_SECONDS:-20}"
@@ -65,6 +66,12 @@ readonly OPENCODE_KEYS_ENV="${OPENCODE_KEYS_ENV:-${HOME}/.ai/opencode-keys-env.s
 PM_LIVENESS_SCRIPT="${PM_LIVENESS_SCRIPT:-${SCRIPT_DIR}/pm-liveness.sh}"
 readonly PM_LIVENESS_TIMEOUT_SECONDS="${PM_LIVENESS_TIMEOUT_SECONDS:-15}"
 DELIVER_TICKET_SCRIPT="${DELIVER_TICKET_SCRIPT:-${SCRIPT_DIR}/deliver-ticket.sh}"
+
+# INV-DM-3: the delivering marker written by deliver-ticket.sh on its OWN path
+# (${DELIVERY_DIR}/delivering). ceo-loop reads it as a race-free "CEO is blocked
+# on a delivery" signal (more reliable than the --is-delivering PID probe for
+# the brief OWN→deliver_loop window). Non-readonly so tests can redirect it.
+DELIVERY_DIR="${ROOT_DIR}/.ai/local/delivery"
 
 LOG_DIR="${ROOT_DIR}/tmp/ceo-loop"
 # State files (git-ignored via .ai/local). F-3 ceo.pid; #97 durable stop;
@@ -344,7 +351,21 @@ ceo_is_stuck() {
   if [[ "${liv_rc}" -eq 0 ]]; then
     return 1
   fi
+  # INV-DM-3: check the delivering marker file FIRST (more reliable than
+  # --is-delivering). deliver-ticket.sh writes it on its OWN path BEFORE the
+  # delivery starts, so a CEO blocked on a live delivery is never killed — even
+  # in the brief window before the child PID is observable by the PID probe.
+  local delivering_marker="${DELIVERY_DIR}/delivering"
+  if [[ -f "${delivering_marker}" ]]; then
+    local del_pid
+    del_pid="$(_jq -r '.pid // empty' "${delivering_marker}" 2>/dev/null)" || del_pid=""
+    if [[ "${del_pid}" =~ ^[0-9]+$ ]] && _pid_alive "${del_pid}"; then
+      log_debug "delivering marker live (pid=${del_pid}); CEO not stuck"
+      return 1
+    fi
+  fi
   # A healthy delivery keeps the CEO healthy regardless of session traffic.
+  # (Defense-in-depth: the PID probe is kept as a second signal.)
   if delivery_in_progress; then
     log_debug "CEO session stalled but a healthy delivery is in progress — not stuck"
     return 1
@@ -718,7 +739,7 @@ Options:
   -v, --verbose   Enable debug output
 
 Environment:
-  CEO_LOOP_STALL_MINUTES    Stall threshold in minutes (default: 15)
+  CEO_LOOP_STALL_MINUTES    Stall threshold in minutes (default: 10)
   CEO_LOOP_POLL_SECONDS     Liveness poll interval (default: 30)
   CEO_LOOP_MAX_RESTARTS     Max stuck-kill+restarts before exit 1 (default: 10)
   CEO_LOOP_MAX_ITERATIONS   Max CEO iterations, 0 = forever (default: 0)
