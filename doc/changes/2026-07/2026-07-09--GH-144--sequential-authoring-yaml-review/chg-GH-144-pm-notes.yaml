@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-07-09T21:25:00Z", completed: "2026-07-09T21:40:00Z" }
   quality_gates: { started: "2026-07-09T21:40:00Z", completed: "2026-07-09T21:50:00Z" }
   dod_check: { started: "2026-07-09T21:50:00Z", completed: "2026-07-09T21:55:00Z" }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: "2026-07-09T22:00:00Z", completed: "2026-07-09T22:05:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/145" }
 decisions:
   - { text: "Supersedes GH-109 — sequential authoring eliminates the parallel authoring that pinning tried to mitigate; pre-DoR cross-check folded in as safety net.", date: "2026-07-09" }
   - { text: "One ticket, one PR for both issues (sequential authoring + YAML review output) — shared files (change-lifecycle.md, pm.md) and coupled delivery.", date: "2026-07-09" }
