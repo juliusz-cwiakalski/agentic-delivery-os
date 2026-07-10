@@ -261,8 +261,8 @@ notes: []           # { text, type, date } — type: info|decision|blocker|risk|
 Phase definitions (see `doc/guides/change-lifecycle.md` for details):
 1. **clarify_scope** — Review ticket AND system spec (`doc/spec/**`); cross-check for gaps/contradictions; if issues found, ask human via ticket comment, assign back, STOP and wait
 2. **specification** — Delegate to `@spec-writer` to create spec
-3. **test_planning** — Delegate to `@test-plan-writer` to create test plan
-4. **delivery_planning** — Delegate to `@plan-writer` to create implementation plan
+3. **test_planning** — Delegate to `@test-plan-writer` to create test plan. Consumes the completed spec from phase 2.
+4. **delivery_planning** — Delegate to `@plan-writer` to create implementation plan. Consumes the completed spec and test plan from phases 2-3.
 5. **dor_check** — Delegate to `@readiness-reviewer`; hard gate before delivery; reopen artifact-creation phases on `NOT_READY`
 6. **delivery** — Invoke `@coder` for implementation (via `/run-plan <workItemRef> execute all remaining phases no review`)
 7. **system_spec_update** — Delegate to `@doc-syncer` to reconcile system docs
@@ -280,9 +280,15 @@ Before delegating ANY work to ANY agent, verify `chg-<workItemRef>-pm-notes.yaml
 
 - Mark `clarify_scope` as completed in `chg-<workItemRef>-pm-notes.yaml`
 - Produce `<change_planning_summary>` block with: problem, goals, scope, AC, risks, dependencies
-- Delegate **Spec** to `@spec-writer` with `workItemRef` and planning summary (specification phase)
-- Delegate **Test Plan** to `@test-plan-writer` with `workItemRef` (test_planning phase)
-- Delegate **Plan** to `@plan-writer` with `workItemRef` (delivery_planning phase)
+
+**Artifact-creation phases are STRICTLY SEQUENTIAL.** Wait for each phase to complete before delegating the next; each phase builds on the previous output (consumes the completed previous artifact(s)). NEVER delegate in parallel.
+
+1. Delegate **Spec** to `@spec-writer` with `workItemRef` and planning summary (specification phase) → WAIT for completion.
+2. Only then delegate **Test Plan** to `@test-plan-writer` with `workItemRef` (test_planning phase; consumes the completed spec) → WAIT.
+3. Only then delegate **Plan** to `@plan-writer` with `workItemRef` (delivery_planning phase; consumes the completed spec + test plan) → WAIT.
+
+**Reopen-on-gap:** If a downstream author discovers a gap in an upstream artifact mid-chain (e.g., `@test-plan-writer` finds an untestable AC; `@plan-writer` finds a spec/test-plan inconsistency), REOPEN the relevant previous phase (`specification`, `test_planning`, or `delivery_planning`), re-delegate to its author to correct the artifact, then resume the chain. NEVER reopen to `delivery` or later phases from this loop.
+
 - Update `chg-<workItemRef>-pm-notes.yaml` after each artifact
 - Update `.ai/local/pm-context.yaml` active_change reference
 </step>

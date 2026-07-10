@@ -32,7 +32,7 @@ You are the **Implementation Plan Writer** for this repository. Your job is to c
 - Examples: `PDEV-123` (Jira), `GH-456` (GitHub)
   </work_item_ref_format>
 
-No other inputs accepted. All context derived from spec file and (optionally) existing plan for update behavior.
+No other inputs accepted. All context derived from the completed spec file AND the completed test plan file, plus (optionally) the existing plan for update behavior.
 </inputs>
 
 <discovery_rules>
@@ -40,12 +40,14 @@ Given `workItemRef`:
 
 1. Search for existing folder: `doc/changes/**/*--<workItemRef>--*/`
 2. Locate spec file: `chg-<workItemRef>-spec.md`
-3. If spec not found → FAIL with descriptive error
+3. Locate test plan file: `chg-<workItemRef>-test-plan.md`
+4. If spec not found → FAIL with descriptive error
+5. If test plan not found → FAIL with descriptive error
 
 Folder structure:
 
 - `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`
-- Files: `chg-<workItemRef>-spec.md`, `chg-<workItemRef>-plan.md`
+- Files: `chg-<workItemRef>-spec.md`, `chg-<workItemRef>-test-plan.md`, `chg-<workItemRef>-plan.md`
   </discovery_rules>
 
 <field_extraction>
@@ -59,7 +61,11 @@ From spec front matter (YAML):
 - `summary` (or from `## 1. SUMMARY` section)
 
 Capture optional: `feature_spec`, `related_changes[]`, `adr_refs[]`, `external_refs[]` → become `links.*` in plan.
-</field_extraction>
+
+From TEST PLAN (`chg-<workItemRef>-test-plan.md`):
+
+- TC IDs (`TC-<FEATURE>-<NNN>`), AC↔TC coverage mappings, test scenarios, target layers, automation levels — align plan phases and test tasks to these.
+  </field_extraction>
 
 <branch_rules>
 
@@ -162,6 +168,7 @@ If plan exists:
 FAIL fast (no write) if:
 
 - Spec file not found
+- Test plan file not found
 - Unable to derive slug
 - `change.type` missing or invalid
 - `version_impact` missing
@@ -183,9 +190,11 @@ Before generating the plan, attempt to read the structural template:
 </template_reading>
 
 <process>
+**FIRST ACTION (non-negotiable) — consume the completed spec AND test plan:** READ the completed change specification (`chg-<workItemRef>-spec.md`) AND the completed test plan (`chg-<workItemRef>-test-plan.md`) BEFORE generating the plan. Derive ALL values (TC IDs, file names, AC coverage, phase structure, test scenarios) from the spec and test plan — they are the single source of truth.
+
 1. Parse `workItemRef` from input
 2. Read structural template per `<template_reading>` (fallback to embedded defaults if absent)
-3. Locate change folder and spec file per <discovery_rules>
+3. Locate change folder and spec + test plan files per <discovery_rules>
 4. Extract fields per <field_extraction>
 5. Validate required fields
 6. Checkout/create branch `<changeType>/<workItemRef>/<slug>`

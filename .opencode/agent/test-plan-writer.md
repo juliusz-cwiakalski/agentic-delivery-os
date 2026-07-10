@@ -206,6 +206,8 @@ Before generating the test plan, attempt to read the structural template:
 </template_reading>
 
 <process>
+**FIRST ACTION (non-negotiable) — consume the completed spec:** READ the completed change specification (`chg-<workItemRef>-spec.md`) BEFORE generating the test plan. Derive ALL values (TC IDs, AC coverage, file names, canonical values) from the spec — the spec is the single source of truth.
+
 1. Parse `workItemRef` from input
 2. Read structural template per `<template_reading>` (fallback to embedded defaults if absent)
 3. Locate change folder, spec, and plan per <discovery_rules>

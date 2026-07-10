@@ -6,7 +6,7 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: SPEC-REMOTE-CODE-REVIEW
 status: Current
 created: 2026-03-16
-last_updated: 2026-03-16T12:00:00Z
+last_updated: 2026-07-09T21:15:00Z
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
@@ -47,13 +47,13 @@ Both workflows support GitHub (`gh`) and GitLab (`glab`) from v1. Platform acces
 
 ### Capabilities
 
-- **Remote code review (F-1):** The `reviewer` agent fetches a PR/MR diff and metadata, analyzes it against review criteria, and produces structured findings with severity (critical/major/minor/nit) and confidence (high/medium/low).
+- **Remote code review (F-1):** The `reviewer` agent fetches a PR/MR diff and metadata, analyzes it against review criteria, and produces structured findings with severity (critical/high/medium/low/info) and confidence (high/medium/low).
 - **Review feedback application (F-2):** The `review-feedback-applier` agent fetches review threads, classifies each comment, and applies accepted changes to local files.
 - **Platform access via pr-instructions (F-3):** All three PR/MR-facing agents (`reviewer`, `review-feedback-applier`, `pr-manager`) read `.ai/agent/pr-instructions.md` for platform type, access method, and an Operations Reference table mapping every PR/MR operation to a concrete CLI command. When `pr-instructions.md` is absent, agents fall back to auto-detecting the platform from `git remote get-url origin` (GitHub vs GitLab), then to CLI auth status checks, and finally to manual override via `--github`/`--gitlab` flags.
 - **Repository-local review configuration (F-4):** One optional file customizes review behavior:
   - `.ai/agent/code-review-instructions.md` — repository-local review guidance including priorities, checklist items, conventions, and special patterns.
   - When absent, the agent falls back to built-in general-purpose heuristics with no errors.
-- **Review draft generation (F-5):** The `reviewer` generates a `review-draft.md` file locally before any publishing occurs. Publishing is a separate explicit action requiring user approval.
+- **Review draft generation (F-5):** The `reviewer` generates a `review-draft.yaml` file locally before any publishing occurs. The YAML consolidates structured findings + summary + severity breakdown + spec/plan compliance + status into a single file (same schema as local mode). Publishing is a separate explicit action requiring user approval.
 - **Finding deduplication (F-6):** Before publishing, the `reviewer` compares new findings against existing PR/MR comments by file path, line range, and semantic similarity. Duplicates are suppressed.
 - **Three-tier feedback classification (F-7):**
   - **Explicit acceptance:** Comment contains an `AI-APPLY` marker (case-insensitive, standalone token) — always applied.
@@ -72,7 +72,7 @@ Flow 1: Remote code review
   → Fetch diff + metadata + existing comments (via Operations Reference)
   → Load .ai/agent/code-review-instructions.md (if present)
   → Analyze diff → produce findings
-  → Generate review-draft.md
+  → Generate review-draft.yaml
   → Deduplicate against existing comments
   → Dry-run (default): display summary, STOP
   → --publish: ask user to confirm → publish inline + summary comments
@@ -122,8 +122,7 @@ Both agents persist ephemeral state under `tmp/` following `@pr-manager` `branch
 | `context.json` | PR/MR metadata (platform, number, branch, base, title, author) |
 | `diff.patch` | Full diff of the PR/MR |
 | `comments-snapshot.json` | Existing PR/MR comments (for deduplication) |
-| `review-draft.md` | Human-readable review draft for preview |
-| `findings.json` | Structured findings with severity, file, line, description, fix |
+| `review-draft.yaml` | Consolidated review output (findings + summary + severity breakdown + spec/plan compliance + status) — same schema as local mode |
 | `publish-report.json` | Results of publishing (comment URLs, errors) |
 
 **Review feedback applier** (`tmp/review-feedback/<branchPath>/`):

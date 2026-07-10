@@ -39,7 +39,7 @@ Two modes, one review process.
 - Diff from remote platform via `.ai/agent/pr-instructions.md`
 - Discovers change artifacts from branch name/PR title when available
 - Applies code quality heuristics + spec compliance (if spec found) + ticket AC verification
-- Outputs review draft and findings to `tmp/code-review/<branchPath>/`
+- Outputs each review as an iteration YAML (`review-iter-<N>.yaml`) to `tmp/code-review/<branchPath>/`
 - Optionally publishes to PR/MR platform (dry-run by default)
 
 **Auto-detection** (when invoked without explicit mode flags):
@@ -199,7 +199,7 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
     - Evaluate against: repo-local review guidance + built-in heuristics + ticket AC (if available).
     - For each issue found, create a structured finding (see finding_format).
     - Assign severity and confidence.
-    - Cap at 50 total findings (50 is the analysis cap; the publishing cap of 30 inline comments in step 11 is applied separately — overflow goes to the summary comment); prioritize by severity (critical > major > minor > nit).
+    - Cap at 50 total findings (50 is the analysis cap; the publishing cap of 30 inline comments in step 11 is applied separately — overflow goes to the summary comment); prioritize by severity (critical > high > medium > low > info).
   </step>
 
   <step id="7" modes="both" name="Spec and Plan Audit">
@@ -223,17 +223,15 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
   </step>
 
   <step id="8" modes="both" name="Deduplicate Findings">
-    - In remote mode: read `comments-snapshot.json`; for each finding check if an existing comment covers same file + approximate line range + semantically similar issue. Mark duplicates `"suppressed": true`.
-    - In local mode: check for existing remediation phases in the plan to avoid duplicate remediation tasks. Ensure idempotency.
+    - In remote mode: self-load all prior `review-iter-*.yaml` `findings[]` in `tmp/code-review/<branchPath>/` to dedup against earlier ADOS review iterations, including findings already published by ADOS (identified by per-finding `published_url`). Also read `comments-snapshot.json` for externally added PR/MR comments; do not copy ADOS-published comments from the snapshot into YAML state. Mark duplicates `"suppressed": true`; only add genuinely new findings for the current iteration.
+    - In local mode: on re-review, self-load prior `review-iter-*.yaml` `findings[]` to understand what was already found and what's new. Also check for existing remediation phases in the plan to avoid duplicate remediation tasks. Ensure idempotency.
   </step>
 
   <step id="9" modes="local" name="[Local] Generate Report and Remediation">
     **Findings report:** compile findings list.
 
-    **Persist review artifacts** to the change folder for durable record:
-    - Save findings to `<change_folder>/code-review/findings-iter-<N>.json` where N is the review iteration number (1, 2, 3...). Determine N by counting existing `findings-iter-*.json` files + 1.
-    - Save a brief review summary to `<change_folder>/code-review/review-iter-<N>.md` with: date, finding count, severity breakdown, key themes, and PASS/FAIL status.
-    - On subsequent review iterations, load previous findings from `<change_folder>/code-review/` to understand what was already found and what's new.
+    **Persist review artifact** to the change folder for durable record — a SINGLE YAML per iteration at `<change_folder>/code-review/review-iter-<N>.yaml`, where N is the review iteration number (1, 2, 3...). Determine N by counting existing `review-iter-*.yaml` files + 1. The YAML uses the consolidated schema (see `<review_yaml_schema>` below) capturing findings + summary + severity breakdown + spec/plan compliance + status + next-step. Do NOT write a separate JSON or MD for the review output.
+    - On subsequent review iterations, load the previous `review-iter-<N>.yaml` to understand what was already found and what's new.
 
     **Remediation (if findings exist):**
     - Determine next phase number (X = max existing phase + 1).
@@ -250,7 +248,7 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
     ```
     Status: PASS | FAIL
     Remediation Phase: ADDED | NONE
-    Findings Count: N issues (Xc / Xm / Xn / Xnit)
+    Findings Count: N issues (Xc / Xh / Xm / Xl / Xi)
     Summary: ...
     Plan Status: ALL_TASKS_DONE | INCOMPLETE | MISMATCH
     Plan Gaps: OPEN_TASKS, DONE_BUT_UNCHECKED, CHECKED_BUT_MISSING
@@ -260,39 +258,17 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
   </step>
 
   <step id="10" modes="remote" name="[Remote] Generate Review Draft">
-    Generate review draft at `tmp/code-review/<branchPath>/review-draft.md`:
+    Generate the review as a SINGLE YAML iteration at `tmp/code-review/<branchPath>/review-iter-<N>.yaml`, where N is the remote review iteration number (1, 2, 3...). Determine N by counting existing `review-iter-*.yaml` files in the branch workspace + 1. Use the consolidated schema (see `<review_yaml_schema>` below) — the SAME schema as local mode (DM-1; NFR-4). Do not rewrite earlier iterations except when publishing an existing draft iteration in step 11. Remote mode also writes `context.json`, `diff.patch`, `comments-snapshot.json`, and optional `ticket-context.json`.
 
-    ```markdown
-    # Code Review Draft
-
-    **PR/MR**: #<number> — <title>
-    **Branch**: <head> → <base>
-    **Date**: <ISO date>
-    **Findings**: <count> (<critical>C / <major>M / <minor>m / <nit>n)
-    **Spec Compliance**: <PASS|FAIL|N/A> (N/A when no spec found)
-
-    ## Summary
-    <2-3 sentence overview>
-
-    ## Findings
-    ### 1. [severity] [confidence] <file>:<line> — <title>
-    **Description**: ...
-    **Suggested fix**: ...
-    ```
-
-    Save structured findings to `tmp/code-review/<branchPath>/findings.json`:
-    ```json
-    [{ "id": 1, "severity": "major", "confidence": "high", "file": "...", "line": 42,
-       "title": "...", "description": "...", "suggestedFix": "...", "suppressed": false }]
-    ```
-
-    If spec/plan were found: include spec compliance findings and plan gap analysis in the review draft.
+    - On re-review, self-load all prior `review-iter-*.yaml` `findings[]` to dedup; add only new findings to the new iteration file.
+    - If spec/plan were found: populate `spec_compliance` / `plan_compliance` and add spec-compliance / plan-gap findings to `findings[]`.
+    - In dry-run mode, set `publication.state: draft` and leave finding `published_url` fields absent/null.
   </step>
 
   <step id="11" modes="remote" name="[Remote] Present and Optionally Publish">
     - Display review draft summary (finding count, severity breakdown, suppressed count).
-    - In dry-run mode (default): report findings and STOP. Remind user they can rerun with `--publish`.
-    - In publish mode (`--publish`): the flag itself is the user's explicit confirmation to publish.
+    - In dry-run mode (default): report findings and STOP. The current `review-iter-<N>.yaml` remains local with `publication.state: draft`. Remind user they can rerun with `--publish`.
+    - In publish mode (`--publish`): the flag itself is the user's explicit confirmation to publish. Prefer publishing the latest `review-iter-<N>.yaml` whose `publication.state: draft` and PR head SHA match the current PR/MR head; update that YAML in place. If no matching draft exists, generate a new iteration and publish it.
 
     **Publish (only when --publish is set):**
 
@@ -300,13 +276,14 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
     - Cap inline comments at 30. Overflow goes into summary.
     - If Operations Reference has "Inline Discussion" or "Fetch diff_refs" operation: fetch diff_refs first, use for exact line placement.
     - Post inline comments using "Publish inline review" / "Publish inline discussion" operation. Use exact commands from Operations Reference.
+    - After each successful inline publish, update that finding in `review-iter-<N>.yaml` with `published_url`, `published_at`, and (if available) `published_comment_id` / `published_thread_id`.
     - If inline positioning fails for a finding: include in summary comment with file:line reference.
 
     **11b. Post summary comment:**
     ```markdown
     ## Code Review Summary
 
-    **Findings**: <count> (<critical> critical · <major> major · <minor> minor · <nit> nit)
+    **Findings**: <count> (<critical> critical · <high> high · <medium> medium · <low> low · <info> info)
 
     <2-4 sentence overall assessment: what the change does well, main concerns,
     clear recommendation>
@@ -318,7 +295,7 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
     ```
 
     Only include individual finding details in summary if they could NOT be posted as inline comments.
-    Save publish results to `tmp/code-review/<branchPath>/publish-report.json`.
+    After posting the summary, update `publication` in `review-iter-<N>.yaml` with `state: published`, `published_at`, `summary_url` (if available), counts, and errors (if any). Do not write a separate publish report file.
 
     **Final report:** findings count/severity, duplicates suppressed, files written, comment URLs (if published).
   </step>
@@ -391,28 +368,79 @@ belong in repository-specific configuration: `.ai/agent/code-review-instructions
 The agent loads those files when present and applies language-specific guidance from there.
 </built_in_heuristics>
 
-<finding_format>
-Each finding has:
+<review_yaml_schema>
+Every review iteration is persisted as a SINGLE YAML. Local mode: `<change_folder>/code-review/review-iter-<N>.yaml`. Remote mode: `tmp/code-review/<branchPath>/review-iter-<N>.yaml`. BOTH modes use the IDENTICAL schema (DM-1; NFR-4) — only the root folder differs. Do NOT write a separate JSON or MD for the review output.
 
-- `severity`: critical | major | minor | nit
+```yaml
+version: 1
+iteration: <N>              # 1, 2, 3... (count existing review-iter-*.yaml + 1)
+mode: local                 # local | remote
+work_item_ref: <ref>        # e.g. GH-456 (NA if undiscovered in remote mode)
+branch: <branch>
+status: PASS                # PASS | FAIL
+summary: <human-readable paragraph; 2-4 sentences>
+severity_breakdown:         # counts per severity across findings[]
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 0
+spec_compliance: NA         # PASS | FAIL | NA (NA when no spec found)
+plan_compliance: NA         # PASS | FAIL | NA (NA when no plan found)
+publication:                # remote mode only; local mode should omit
+  state: draft              # draft | published
+  published_at: null        # ISO8601 when published
+  summary_url: null         # platform URL for summary comment, if available
+  published_count: 0
+  error_count: 0
+  errors: []
+findings:
+  - id: F-1                 # F-1, F-2, ... (stable within an iteration)
+    severity: high          # critical | high | medium | low | info
+    confidence: high        # high | medium | low
+    category: correctness   # e.g. security | performance | correctness | plan-compliance | spec-compliance
+    location: src/foo.ts:42 # file:line (relative path; line from diff hunk)
+    message: <what the issue is; 1-3 sentences>
+    suggestion: <how to fix it; 1-3 sentences>
+    suppressed: false       # true when deduplicated against an existing comment/finding
+    published_url: null     # absent/null means not published yet
+    published_at: null      # ISO8601 when published
+    published_comment_id: null # optional - if available
+    published_thread_id: null  # optional - if available
+reviewed_at: 2026-07-09T12:00:00Z   # ISO8601
+next_step: <PROCEED | CALL_CODER | EXECUTE_REMEDIATION_PHASE | re-review guidance>
+```
+
+The `findings[]` array is the dedup source for re-review. Preserve `confidence`, `suppressed`, and publication fields on every finding; they drive remote dedup decisions. In remote mode, absence of `published_url` means the finding has not been published by ADOS.
+</review_yaml_schema>
+
+<finding_format>
+Each finding is a YAML object under `findings[]` (per `<review_yaml_schema>`):
+
+- `id`: `F-1`, `F-2`, ... (stable within an iteration)
+- `severity`: critical | high | medium | low | info
 - `confidence`: high | medium | low
-- `file`: relative file path
-- `line`: line number (approximate; from diff hunk)
-- `title`: short title (1 line)
-- `description`: what the issue is (1-3 sentences)
-- `suggestedFix`: how to fix it (1-3 sentences)
+- `category`: e.g. security | performance | correctness | plan-compliance | spec-compliance
+- `location`: relative file path + line (e.g. `src/foo.ts:42`; line approximate, from diff hunk)
+- `message`: what the issue is (1-3 sentences)
+- `suggestion`: how to fix it (1-3 sentences)
+- `suppressed`: true when deduplicated against an existing comment/finding (default false)
+- `published_url`: optional remote comment URL; absent/null means unpublished
+- `published_at`, `published_comment_id`, `published_thread_id`: optional publish metadata when available
 
 Severity guide:
 - **critical**: Security vulnerability, data loss risk, or correctness bug.
-- **major**: Significant logic error, missing error handling, or design concern.
-- **minor**: Code quality issue, naming improvement, or missing documentation.
-- **nit**: Style preference, trivial improvement, or optional enhancement.
+- **high**: Significant logic error, missing error handling, or design concern.
+- **medium**: Code quality issue, naming improvement, or missing documentation.
+- **low**: Style preference, trivial improvement, or optional enhancement.
+- **info**: Informational note, no action required.
 
 When publishing inline comments (remote mode), format the body with a severity emoji prefix:
 - 🔴 **Critical** — `title`
-- 🟠 **Major** — `title`
-- 🟡 **Minor** — `title`
-- ⚪ **Nit** — `title`
+- 🟠 **High** — `title`
+- 🟡 **Medium** — `title`
+- 🟢 **Low** — `title`
+- ⚪ **Info** — `title`
 
 Followed by 1-3 sentences of description and a suggested fix.
 
@@ -434,16 +462,13 @@ If findings exceed 30: publish top 30 by severity as inline; bundle remaining in
 | `diff.patch` | Full diff of the PR/MR |
 | `comments-snapshot.json` | Existing PR/MR comments (for deduplication) |
 | `ticket-context.json` | Ticket details from issue tracker (optional) |
-| `review-draft.md` | Human-readable review draft for preview |
-| `findings.json` | Structured findings with severity, file, line, description, fix |
-| `publish-report.json` | Results of publishing (comment URLs, errors) |
+| `review-iter-<N>.yaml` | Consolidated review output for remote iteration N (DM-1 schema: findings, summary, severity breakdown, spec/plan compliance, status) — same schema as local |
 
 **Local mode** artifacts persisted under `<change_folder>/code-review/`:
 
 | File | Purpose |
 |------|---------|
-| `findings-iter-<N>.json` | Structured findings for review iteration N |
-| `review-iter-<N>.md` | Review summary for iteration N (date, counts, severity breakdown, themes, PASS/FAIL) |
+| `review-iter-<N>.yaml` | Consolidated review output for iteration N (DM-1 schema: findings, summary, severity breakdown, spec/plan compliance, status) — same schema as remote |
 </state_files>
 
 <safety_rules>
@@ -461,6 +486,7 @@ If findings exceed 30: publish top 30 by severity as inline; bundle remaining in
 **Remote mode:**
 - Write only to `tmp/code-review/<branchPath>/`. After review, `git status --porcelain` must show zero changes to tracked files.
 - Dry-run by default; publishing requires `--publish` flag (the flag is the user's confirmation).
+- Store ADOS publish state only in `review-iter-<N>.yaml`.
 - Cap inline comments at 30; bundle overflow into summary comment.
 - If working tree is dirty: STOP immediately.
 - If no open PR/MR found: STOP with clear message.
