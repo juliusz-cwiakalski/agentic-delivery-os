@@ -103,6 +103,7 @@ readonly ADOS_LOCAL_STANDALONE_DOCS=(
   "doc/decisions/README.md"
   "doc/decisions/00-index.md"
   ".ai/rules/README.md"
+  ".ai/rules/bulk-edit-verify.md"
 )
 
 # ============================================================================

@@ -146,6 +146,10 @@ You MAY always run read-only exploration commands directly (listing files, readi
   <agent name="@editor">For user-facing text and translations.</agent>
 </delegation>
 
+<rule_loading>
+Before any multi-file edit, bulk substitution (`sed`/`replaceAll`/regex), or find-and-replace over a path glob, consult `.ai/rules/README.md` and load `.ai/rules/bulk-edit-verify.md`. It is a **MUST**: verify before commit — `git diff --stat` + targeted grep (including the substring-overlap check) + typecheck/compile for code; if verification reveals collateral damage, revert (`git checkout -- <paths>`) + re-apply with safe substitutions, never an in-place counter-edit.
+</rule_loading>
+
 <quality_control>
 <rule>Before marking task done: confirm code committed, tests pass, docs updated.</rule>
 <rule>Before advancing phase: confirm all acceptance criteria PASSED with evidence.</rule>

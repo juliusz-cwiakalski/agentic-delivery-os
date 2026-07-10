@@ -1,0 +1,13 @@
+[
+  {
+    "id": 1,
+    "severity": "nit",
+    "confidence": "high",
+    "file": ".ai/rules/bulk-edit-verify.md",
+    "line": 40,
+    "title": "Minor wording drift between §3 and §4 for the same remedy family",
+    "description": "§3 names the safe-substitution remedy as \"word-boundary (`\\b`), anchored (`^…$`), or scoped (narrow file/path) patterns\" while §4 says \"word-boundary, anchored, or scoped patterns\". Both are correct and refer to the same set; the inconsistency is purely terminological and does not affect MUST compliance.",
+    "suggestedFix": "Optional: align §4's parenthetical with §3's (`word-boundary (\\b), anchored, or scoped (narrow file/path) patterns`) so the two MUST statements use identical vocabulary. Not required for PASS.",
+    "suppressed": false
+  }
+]

@@ -115,6 +115,8 @@ readonly ADOS_UPDATABLE_FILES=(
 readonly ADOS_USER_MODIFIABLE_FILES=(
   "doc/00-index.md"
   ".ai/rules/README.md"
+  # Post-bulk-edit verify rule
+  ".ai/rules/bulk-edit-verify.md"
 )
 
 # Delivery infrastructure scripts — always track upstream, must be executable.

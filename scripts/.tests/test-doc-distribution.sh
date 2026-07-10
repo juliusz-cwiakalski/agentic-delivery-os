@@ -77,6 +77,7 @@ readonly STANDALONE_DOCS=(
   "doc/decisions/README.md"
   "doc/decisions/00-index.md"
   ".ai/rules/README.md"
+  ".ai/rules/bulk-edit-verify.md"
 )
 
 _failures=0
@@ -256,6 +257,7 @@ derive_expected_install_set() {
   # therefore excluded from the EXPECTED install set (PR #74 review C3). Mirrors
   # install.sh's ADOS_UPDATABLE_FILES non-guide entries.
   for f in "${STANDALONE_DOCS[@]}"; do
+    [[ -f "$f" ]] || continue   # skip entries absent from the scanned root (mirrors enumerate_dm2; prevents a get_marker abort on partial/synthetic trees)
     [[ "$(get_marker "$f")" == "redistributable" ]] && printf '%s\n' "$f"
   done
 }
