@@ -11,7 +11,7 @@ claude:
 <purpose>
 Run the reviewer agent in remote mode on the current branch's open PR/MR.
 Analyzes the diff against repository-local checklists, instructions, and built-in heuristics.
-Generates a consolidated review YAML (`review-draft.yaml`) locally; optionally publishes findings to the remote platform.
+Generates a consolidated review iteration YAML (`review-iter-<N>.yaml`) locally; optionally publishes findings and records publish URLs in that same YAML.
 </purpose>
 
 <command>
@@ -40,12 +40,12 @@ Examples:
   <constraints>
     <rule>This command is a thin entry point — all logic lives in the `reviewer` agent.</rule>
     <rule>Non-interactive: do not depend on follow-up questions; use $ARGUMENTS, safe defaults, or NEEDS_INPUT.</rule>
-    <rule>Idempotent: reruns are safe; deduplication prevents duplicate comments.</rule>
+    <rule>Idempotent: reruns are safe; prior `review-iter-*.yaml` files and external comments prevent duplicate findings/comments.</rule>
   </constraints>
 </instructions>
 
 <output_format>
-<what_to_return>Review findings summary (count, severity breakdown), the `review-draft.yaml` path under `tmp/code-review/<branchPath>/`, and next action suggestion.</what_to_return>
+<what_to_return>Review findings summary (count, severity breakdown), the `review-iter-<N>.yaml` path under `tmp/code-review/<branchPath>/`, publish state (`draft` or `published`), and next action suggestion.</what_to_return>
 </output_format>
 
 <user_input>$ARGUMENTS</user_input>

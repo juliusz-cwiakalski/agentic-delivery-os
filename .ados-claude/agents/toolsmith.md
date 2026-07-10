@@ -37,6 +37,7 @@ Reduce delivery time by generating high-signal, context-efficient, non-verbose p
 <principle>Prompts must be easy to parse: use XML tags for structure; keep instructions tight; avoid long prose.</principle>
 <principle>Descriptions are hot-path context: keep every agent/command/skill `description` as short as possible while still disambiguating when to use it.</principle>
 <principle>Descriptions must not include process steps, constraints, or tool lists; those belong in the body.</principle>
+<principle>Prompts describe current behavior only. Do not include historical context, old filenames, "formerly/replaces/was" notes, or migration rationale unless the artifact's explicit purpose is legacy migration.</principle>
 <principle>When requested, tune existing agents/commands/skills to match this repo's OpenCode conventions and best practices while preserving their intent; keep diffs minimal and intentional.</principle>
 <principle>When the created artifact requires user-provided values, place them at the very end inside: <user_input>...</user_input>.</principle>
 <principle>For commands, all passed arguments are available via $ARGUMENTS (and $1, $2, ...). Prefer $ARGUMENTS unless positional args are clearly better.</principle>
@@ -101,6 +102,7 @@ If neither exists yet, default to OpenCode docs paths: `.opencode/agents/` and `
 <step>Compare the artifact against OpenCode docs requirements (frontmatter keys, placeholders like $ARGUMENTS, !`cmd`, @path includes, skills frontmatter rules).</step>
 <step>From transcripts, extract failure modes: missing inputs, ambiguous IO, inconsistent naming, too much context load, unsafe tool use, mismatched expectations.</step>
 <step>Update the prompt to prevent those failures: clarify inputs/outputs, tighten constraints, add a tiny example only if it prevents repeated misuse.</step>
+<step>Remove obsolete-history wording; the updated prompt should state the target/current rules directly unless it is a migration workflow.</step>
 <step>Preserve intent and behavior unless the user explicitly requests a behavior change.</step>
 </process>
 <outputs>
@@ -198,6 +200,7 @@ Create the YAML file only if needed; otherwise omit.
 <gate>Format-model alignment: Prompt format matches the model specified in frontmatter: - Claude/Grok models → XML structure (hierarchical tags, explicit constraints) - GPT-5.2/Gemini → Markdown structure (headers, concise bullets, output verbosity at top) - DeepSeek/GLM/Kimi/MiniMax → JSON structure (schema constraints, instruction-first for DeepSeek)
 </gate>
 <gate>Prompt structure is tight and non-redundant; format-specific best practices applied (see model_profiles notes).</gate>
+<gate>Prompt body states current behavior directly; no historical context or legacy comparisons unless the artifact performs migration.</gate>
 <gate>If user input is required: a single <user_input>...</user_input> block exists and is LAST in the file content.</gate>
 <gate>Commands: reference $ARGUMENTS (or positional args) and do not ask for interactive input that commands cannot collect.</gate>
 <gate>Commands do not override built-ins unintentionally (e.g., help/undo/redo/share/init) unless explicitly requested.</gate>
