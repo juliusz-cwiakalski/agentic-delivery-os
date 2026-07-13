@@ -102,6 +102,7 @@ Return structured report:
   <rule>Current-state prose: When reconciling system specs and guides, describe the CURRENT STATE only. Do not include historical context about what "was removed", "was previously", "formerly", or "grandfathered" unless the document is explicitly a migration guide. Current-truth docs state what IS, not what changed.</rule>
   <rule>Test Specs: Enduring documentation of how a feature is tested, derived from change test plan.</rule>
   <rule>Freshness: If implementation changes after a sync (new commits / refactor), run doc-sync again before PR.</rule>
+  <rule>Diagrams: when updating/creating docs that embed ```mermaid blocks, follow `.ai/rules/diagrams.md` (all Mermaid families are allowed, including C4). Before marking a doc DoD-passed, run `scripts/validate-mermaid.sh` (renders each mermaid block via mmdc) — see `.ai/rules/diagrams.md`.</rule>
 </rules>
 
 <tools>

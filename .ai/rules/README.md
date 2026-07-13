@@ -28,6 +28,7 @@ Agents (especially `@plan-writer` and `@coder`) should consult this index to det
 | Task/Context | Rule File | Description |
 |---|---|---|
 | Bash scripting | `bash.md` | Bash coding standards, safety rules, testing framework |
+| Diagram authoring | `diagrams.md` | Mermaid diagram authoring + render-validation self-check |
 | Installer scripts | `installer.md` | Cross-platform installer UX, PATH handling, dependency installation rules |
 | Testing strategy | `testing-strategy.md` | Test types, coverage requirements, framework conventions |
 

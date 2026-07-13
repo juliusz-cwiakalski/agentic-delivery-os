@@ -1,0 +1,61 @@
+# Docs (mermaid validate) — GH-110
+# Dedicated, doc-path-scoped CI gate: installs @mermaid-js/mermaid-cli and runs
+# scripts/validate-mermaid.sh over the doc tree. A broken or non-render-safe
+# (C4) mermaid block fails the PR. Isolated from ci.yml (DEC-1); pull_request
+# only (no pull_request_target / no secret-surface widening); no deploy.
+
+name: Docs (mermaid validate)
+
+on:
+  pull_request:
+    paths:
+      - doc/**
+      - decisions/**
+      - changes/**
+      - inception/**
+      - .ai/rules/**
+      - scripts/validate-mermaid.sh
+      - .github/workflows/**
+
+permissions:
+  contents: read
+
+jobs:
+  docs-mermaid-validate:
+    name: docs (mermaid validate)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache Puppeteer Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-chromium-${{ runner.os }}-mmdc11
+
+      - name: Install mermaid CLI
+        # Pin mmdc to major 11 (spec RSK-2 / §22 maintenance): latest 11.x for
+        # render reproducibility. The human may tighten this to an exact tag.
+        run: npm install -g @mermaid-js/mermaid-cli@11
+
+      - name: Make validator executable
+        run: chmod +x scripts/validate-mermaid.sh
+
+      - name: Write puppeteer config (--no-sandbox for CI root)
+        # GitHub Actions runners execute as root; Chromium refuses its sandbox
+        # there ("Failed to launch the browser process"). mmdc -p passes these
+        # launch args. Acceptable on an ephemeral runner over trusted repo content.
+        run: |
+          printf '%s\n' '{"args":["--no-sandbox","--disable-setuid-sandbox","--disable-dev-shm-usage"]}' > puppeteer-config.json
+          cat puppeteer-config.json
+
+      - name: Run mermaid validator
+        env:
+          MMDC_PUPPETEER_CONFIG: puppeteer-config.json
+        run: bash scripts/validate-mermaid.sh
