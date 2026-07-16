@@ -52,6 +52,14 @@ Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it
 - **Mode B merge gate — rebase-before-merge + green-gate wait (F-5):** for a human-approved PR, `batch-deliver.sh` rebases onto the latest `main`, pushes, waits for the PR quality gates to go green, and squash-merges using the **PR title and description as the commit message**. Rebase conflicts are resolved by an AI agent, after which the gates re-run.
 - **CEO stuck detection + session resume + durable stop (F-6, `ceo-loop.sh`):** the loop detects a *genuinely stuck* CEO (no session traffic **and** no healthy delivery in progress) and kills+restarts it; a **race-free delivering marker file** (written by `deliver-ticket.sh` on its OWN path, before the delivery starts) tells the loop the CEO is blocked on a delivery, so a blocked-but-healthy CEO is never killed; it resumes the previous CEO session when its context is under `CEO_RESUME_TOKEN_LIMIT` (default 100000 tokens); the stop/park signal is durable across loop restarts.
 - **Branch hygiene (F-7, `tools/clean-merged-branches`):** deletes only branches already squash-merged into the base (verified by ancestry); never deletes unmerged or protected branches.
+- **Optional pre-iteration hook (F-8):** both wrapper OWN paths can execute an
+  opt-in user hook immediately before each spawn/resume. Missing remains silent;
+  failures preserve existing result/consumer behavior. The hook return file is
+  strictly validated `ADOS_HOOK_ENV_V1` data, never shell code: authorized
+  literal set/unset records apply atomically only to the wrapper parent and its
+  later children. This does not promise any provider/model binding or selected
+  model. The canonical activation, lifecycle, security, and setting details are
+  in [delivery-modes.md](../../guides/delivery-modes.md#optional-pre-iteration-hooks).
 
 ### Behavioral invariants (INV-DM-1..6)
 

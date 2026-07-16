@@ -55,6 +55,49 @@ instead of churn, and align with the upstream ADOS reliability plan (epic #95 �
 
 ## Component responsibilities
 
+## Optional pre-iteration hooks
+
+Before an OWN-path OpenCode spawn or resume, `ceo-loop.sh` and
+`deliver-ticket.sh` optionally execute the user-owned executable at
+`${ADOS_PRE_ITERATION_HOOK:-$HOME/.ados/hooks/pre-opencode-iteration}`. A missing
+path is a silent no-op. JOIN, probes, control commands, and dry runs do not run
+the hook. A present but failing hook prevents the spawn: `deliver-ticket.sh`
+keeps its existing `failed`/exit-1 behavior; `ceo-loop.sh` retries failures with
+a separate capped counter and a total retry interval that polls its stop file at
+least once per second. Hooks have no execution timeout. On normal wrapper exit
+or direct HUP, INT, or TERM, their process group is terminated; SIGKILL, host
+failure, and processes that escape the group are outside this guarantee.
+
+| Setting | `ceo-loop.sh` | `deliver-ticket.sh` | Default |
+|---|---|---|---|
+| `ADOS_PRE_ITERATION_HOOK` | yes | yes | `~/.ados/hooks/pre-opencode-iteration` |
+| `ADOS_HOOK_SHUTDOWN_GRACE_SECONDS` | yes | yes | `2` |
+| `ADOS_HOOK_ENV_ALLOWLIST` | yes | yes | empty |
+| `ADOS_HOOK_RETRY_SECONDS` | CEO only | no | `60` total seconds |
+| `ADOS_HOOK_MAX_FAILURES` | CEO only | no | `5` |
+
+The wrapper supplies `ADOS_HOOK_AGENT`, `ADOS_HOOK_SCRIPT`, a fresh absolute
+`ADOS_HOOK_ENV_OUTPUT`, and `ADOS_HOOK_ENV_FORMAT=ADOS_HOOK_ENV_V1` for each
+invocation. These are context, not user settings. The output is data only: an
+empty file or LF-terminated header `ADOS_HOOK_ENV_V1` is a no-op; later records
+are `set NAME=literal value` or `unset NAME`. The wrapper rejects CR, NUL,
+missing final LF, unsafe or unauthorized files, duplicate names, and batches
+over 65,536 bytes, 256 operations, or 8,192 bytes per line (all bounds are
+inclusive and evaluated under `LC_ALL=C`). Valid batches apply atomically before
+the imminent child. Built-in authorization is only `OC_ADOS_AGENT_*_MODEL`; an
+exact additional name, including a credential, requires explicit operator-risk
+delegation through `ADOS_HOOK_ENV_ALLOWLIST`. Values are never logged and are
+never sourced or evaluated.
+
+The installed but inactive example is
+`scripts/hooks/pre-opencode-iteration-zai.sh`; copy it to the active path or set
+the override to opt in. It merely reads configured values. `OC_ADOS_MODEL_PROFILE`,
+tier defaults, `OC_ADOS_AGENT_*_MODEL` overrides, and `{env:...}` bindings are
+optional owner configuration examples; see [OpenCode model configuration](opencode-model-configuration.md).
+They do not guarantee a provider/model selection, selected model, `-m` behavior,
+or any downstream meaning. Returned variables affect only the applying wrapper
+and its later children.
+
 ```
                 ┌─────────────────────────────────────────────────────────┐
                 │  MODE A                                  MODE B          │
