@@ -884,6 +884,10 @@ test_hook_help_contract() {
   assert_contains "${help}" "ADOS_PRE_ITERATION_HOOK" || return 1
   assert_contains "${help}" "ADOS_HOOK_SHUTDOWN_GRACE_SECONDS" || return 1
   assert_contains "${help}" "ADOS_HOOK_ENV_ALLOWLIST" || return 1
+  assert_contains "${help}" "Default: empty. Built-in: OC_ADOS_AGENT_*_MODEL." || return 1
+  assert_contains "${help}" "Extra exact valid names require comma-separated explicit" || return 1
+  assert_contains "${help}" "allowlist; credentials at operator risk." || return 1
+  assert_contains "${help}" "data-only/literal and never logged." || return 1
   assert_contains "${help}" "ADOS_HOOK_RETRY_SECONDS" || return 1
   assert_contains "${help}" "ADOS_HOOK_MAX_FAILURES" || return 1
   assert_contains "${help}" "ADOS_HOOK_AGENT=ceo" || return 1

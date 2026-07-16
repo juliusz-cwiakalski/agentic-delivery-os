@@ -1565,7 +1565,10 @@ Environment:
   PM_LIVENESS_TIMEOUT_SECONDS   Max seconds for the pm-liveness probe (default: 15)
   ADOS_PRE_ITERATION_HOOK       Optional hook path (default: ~/.ados/hooks/pre-opencode-iteration)
   ADOS_HOOK_SHUTDOWN_GRACE_SECONDS  Hook cleanup grace (default: 2)
-  ADOS_HOOK_ENV_ALLOWLIST       Extra exact env names; credential delegation is operator risk
+  ADOS_HOOK_ENV_ALLOWLIST       Default: empty. Built-in: OC_ADOS_AGENT_*_MODEL.
+                                Extra exact valid names require comma-separated explicit
+                                allowlist; credentials at operator risk. Values are
+                                data-only/literal and never logged.
   DRY_RUN                       Dry-run mode
   VERBOSE                       Debug output
 
