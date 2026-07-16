@@ -430,13 +430,14 @@ remove_local_files() {
     "scripts/batch-deliver.sh" \
     "scripts/ceo-loop.sh" \
     "scripts/pm-liveness.sh" \
+    "scripts/hooks/pre-opencode-iteration-zai.sh" \
     "tools/clean-merged-branches"; do
     remove_file "${delivery_file}" "${delivery_file}"
   done
 
   # --- Remove empty directories (only if empty) ---
   local dir
-  for dir in "doc/templates" "doc/overview" "doc/spec/features" "doc/spec" "doc/decisions" "doc/changes" "doc/guides" ".ai/agent" ".ai/rules" ".ai/local" ".ai"; do
+  for dir in "scripts/hooks" "doc/templates" "doc/overview" "doc/spec/features" "doc/spec" "doc/decisions" "doc/changes" "doc/guides" ".ai/agent" ".ai/rules" ".ai/local" ".ai"; do
     if [[ -d "${dir}" ]]; then
       if [[ -z "$(ls -A "${dir}" 2>/dev/null)" ]]; then
         run_cmd rmdir "${dir}"

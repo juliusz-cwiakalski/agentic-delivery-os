@@ -168,6 +168,9 @@ create_mock_ados_source() {
   mkdir -p "${base}/.ai/agent" "${base}/.ai/rules"
   mkdir -p "${base}/doc/templates" "${base}/doc/guides"
   mkdir -p "${base}/doc/decisions"
+  mkdir -p "${base}/scripts/hooks"
+  printf '#!/usr/bin/env bash\nexit 0\n' > "${base}/scripts/hooks/pre-opencode-iteration-zai.sh"
+  chmod +x "${base}/scripts/hooks/pre-opencode-iteration-zai.sh"
 
   # Agent files
   printf '# pm agent\n' > "${base}/.opencode/agent/pm.md"
@@ -550,6 +553,8 @@ test_local_install_creates_structure() {
   assert_dir_exists "${project_dir}/.ai/agent" ".ai/agent"
   assert_dir_exists "${project_dir}/.ai/local" ".ai/local"
   assert_dir_exists "${project_dir}/.ai/rules" ".ai/rules"
+  assert_file_exists "${project_dir}/scripts/hooks/pre-opencode-iteration-zai.sh" "inactive hook example"
+  [[ -x "${project_dir}/scripts/hooks/pre-opencode-iteration-zai.sh" ]] || return 1
 }
 
 test_local_install_does_not_create_pm_instructions() {
