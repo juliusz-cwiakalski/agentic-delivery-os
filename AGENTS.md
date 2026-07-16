@@ -183,6 +183,7 @@ Canonical values: see `doc/decisions/ODR-0001-classify-yaml-register-templates-r
 │   ├── local/            # git-ignored ephemeral state
 │   └── rules/            # language/tool rules (bash.md)
 ├── scripts/              # repo-internal automation (.sh extension)
+│   ├── hooks/            # inactive, user-selectable pre-iteration hook examples
 │   └── .tests/           # test files for scripts (test-*.sh)
 ├── tools/                # PATH-able CLI utilities (no .sh extension)
 │   └── .tests/           # test files for tools (test-*.sh)

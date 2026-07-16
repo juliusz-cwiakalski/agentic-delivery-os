@@ -6,12 +6,13 @@ ados_distribution: internal
 id: SPEC-AUTONOMOUS-DELIVERY
 status: Current
 created: 2026-07-07
-last_updated: 2026-07-09
+last_updated: 2026-07-16
 owners: ["engineering"]
 service: delivery-os
 summary: "The unattended delivery neighborhood of the lifecycle: the two autonomous modes (Mode A — autonomous CEO loop; Mode B — manual batch), the bash delivery scripts (ceo-loop.sh, deliver-ticket.sh, batch-deliver.sh, pm-liveness.sh, opencode-session.sh), the AI-vs-script split, and the behavioral invariants (INV-DM-1..6) that keep unattended delivery converging instead of burning tokens. Liveness is multi-signal: recursive session-tree message traffic (parent_id traversal of the current session_message table) PLUS git/worktree activity; a race-free delivering marker tells ceo-loop.sh the CEO is blocked on a delivery. deliver-ticket.sh no longer merges."
 links:
-  related_changes: ["GH-142", "GH-108"]
+  related_changes: ["GH-142", "GH-108", "GH-146"]
+  decisions: ["TDR-0002"]
   guides:
     - "doc/guides/delivery-modes.md"
     - "doc/guides/autonomous-batch-delivery.md"
@@ -52,14 +53,19 @@ Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it
 - **Mode B merge gate — rebase-before-merge + green-gate wait (F-5):** for a human-approved PR, `batch-deliver.sh` rebases onto the latest `main`, pushes, waits for the PR quality gates to go green, and squash-merges using the **PR title and description as the commit message**. Rebase conflicts are resolved by an AI agent, after which the gates re-run.
 - **CEO stuck detection + session resume + durable stop (F-6, `ceo-loop.sh`):** the loop detects a *genuinely stuck* CEO (no session traffic **and** no healthy delivery in progress) and kills+restarts it; a **race-free delivering marker file** (written by `deliver-ticket.sh` on its OWN path, before the delivery starts) tells the loop the CEO is blocked on a delivery, so a blocked-but-healthy CEO is never killed; it resumes the previous CEO session when its context is under `CEO_RESUME_TOKEN_LIMIT` (default 100000 tokens); the stop/park signal is durable across loop restarts.
 - **Branch hygiene (F-7, `tools/clean-merged-branches`):** deletes only branches already squash-merged into the base (verified by ancestry); never deletes unmerged or protected branches.
-- **Optional pre-iteration hook (F-8):** both wrapper OWN paths can execute an
-  opt-in user hook immediately before each spawn/resume. Missing remains silent;
-  failures preserve existing result/consumer behavior. The hook return file is
+- **Optional pre-iteration hook (F-8):** both wrapper OWN paths execute an
+  opt-in, user-owned executable immediately before every actual OpenCode
+  spawn/resume, including watchdog retries. A missing resolved path is a silent
+  no-op; JOIN, probe, control-command, and dry-run paths never invoke it. A
+  present hook can wait, then exit `0`, to defer a spawn. Hook failures introduce
+  no result value: `deliver-ticket.sh` takes its existing `failed`/exit-1 path
+  without spawning a PM, while `ceo-loop.sh` uses a separate bounded failure
+  counter without spending the stuck-restart budget. The hook return file is
   strictly validated `ADOS_HOOK_ENV_V1` data, never shell code: authorized
-  literal set/unset records apply atomically only to the wrapper parent and its
-  later children. This does not promise any provider/model binding or selected
-  model. The canonical activation, lifecycle, security, and setting details are
-  in [delivery-modes.md](../../guides/delivery-modes.md#optional-pre-iteration-hooks).
+  literal set/unset records apply atomically only to the applying wrapper parent
+  and its later children. This does not promise any provider/model binding or
+  selected model. Canonical activation, lifecycle, protocol, security, and
+  setting details are in [delivery-modes.md](../../guides/delivery-modes.md#optional-pre-iteration-hooks).
 
 ### Behavioral invariants (INV-DM-1..6)
 
@@ -111,16 +117,23 @@ The guiding principle is the **AI-vs-script split**: the expensive, stateless, j
 
 | Path | Kind | Responsibility |
 |------|------|----------------|
-| `scripts/ceo-loop.sh` | Script (outer, Mode A) | Spawn one `@ceo` session at a time; detect stuck CEO; resume previous session under token limit; honor durable stop signal |
-| `scripts/deliver-ticket.sh` | Script (per-ticket engine) | Single-flight + join; spawn/resume PM; log-progress liveness watchdog; kill-and-restart on stall; signal propagation; result classification; writes the delivering marker on its OWN path; `--is-delivering` / `--last-message` / `--resume-prompt` subcommands; **does not merge** |
+| `scripts/ceo-loop.sh` | Script (outer, Mode A) | Spawn one `@ceo` session at a time; invoke the optional hook before every spawn/resume; detect stuck CEO; resume previous session under token limit; honor durable stop signal |
+| `scripts/deliver-ticket.sh` | Script (per-ticket engine) | Single-flight + join; invoke the optional hook before every PM iteration; spawn/resume PM; log-progress liveness watchdog; kill-and-restart on stall; signal propagation; result classification; writes the delivering marker on its OWN path; `--is-delivering` / `--last-message` / `--resume-prompt` subcommands; **does not merge** |
 | `scripts/batch-deliver.sh` | Script (Mode B) | Sequential per-ticket delivery; pre-flight skip; rebase-before-merge + green-gate wait for human-approved PRs; squash-merge with PR title/description as commit message |
 | `scripts/pm-liveness.sh` | Script | Probe opencode session-message traffic across the recursive session tree (current `session_message` table); combine with git/worktree activity; degrade gracefully to the git/worktree signal if the session DB is unavailable |
 | `scripts/opencode-session.sh` | Script | Ticket-scoped opencode session manager (entry point for autonomous sessions; sets `delivery_mode: autonomous`) |
+| `scripts/hooks/pre-opencode-iteration-zai.sh` | Installed inactive example | Wait for 10:00 UTC during the Z.AI Coding Plan peak window when the configured CEO/PM model value uses the `zai-coding-plan/` prefix |
 | `tools/clean-merged-branches` | Tool (script) | Branch hygiene — delete squash-merged branches only |
 | `.opencode/agent/ceo.md` | AI agent | Pick next ticket; merge approved + finalized PRs (INV-DM-4); handle blockers; retrospectives |
 | `.ai/local/delivery/<REF>.pid` | Repo-local state | Single-flight PID tracking (git-ignored; keyed on the working tree) |
 
-> **Install inventory.** Registered for install in `scripts/install.sh` (`ADOS_DELIVERY_SCRIPTS`): `opencode-session.sh`, `deliver-ticket.sh`, `batch-deliver.sh`; `ADOS_DELIVERY_TOOLS`: `clean-merged-branches`. (`ceo-loop.sh` and `pm-liveness.sh` are delivery scripts introduced by GH-142; see Gaps.)
+> **Install inventory.** `scripts/install.sh` registers `opencode-session.sh`,
+> `deliver-ticket.sh`, `batch-deliver.sh`, `ceo-loop.sh`, and `pm-liveness.sh`
+> in `ADOS_DELIVERY_SCRIPTS`; `clean-merged-branches` in
+> `ADOS_DELIVERY_TOOLS`; and the inactive Z.AI example in
+> `ADOS_HOOK_EXAMPLES`. A local install copies the example to
+> `scripts/hooks/pre-opencode-iteration-zai.sh` but does not activate it.
+> Local uninstall removes that file and its now-empty `scripts/hooks/` directory.
 
 ### Data Architecture
 
@@ -163,6 +176,11 @@ All settings are environment variables (CLI flag overrides where noted). Full ta
 | `CEO_LOOP_POLL_SECONDS` | `30` | Seconds between CEO stuck checks |
 | `CEO_RESUME_TOKEN_LIMIT` | `100000` | Resume the previous CEO session if its context is under this limit |
 | `CEO_LOOP_MAX_RESTARTS` | `10` | Max CEO kill+restart iterations |
+| `ADOS_PRE_ITERATION_HOOK` | `~/.ados/hooks/pre-opencode-iteration` | Optional executable hook path for both wrappers |
+| `ADOS_HOOK_SHUTDOWN_GRACE_SECONDS` | `2` | Hook-group SIGTERM-to-SIGKILL teardown grace for both wrappers |
+| `ADOS_HOOK_ENV_ALLOWLIST` | empty | Comma-separated additional exact variable names authorized for hook return data; credential delegation is operator risk |
+| `ADOS_HOOK_RETRY_SECONDS` | `60` | CEO-only total wait between failed-hook attempts; the stop file is checked in chunks no longer than one second |
+| `ADOS_HOOK_MAX_FAILURES` | `5` | CEO-only consecutive hook-failure cap, separate from stuck-restart limits |
 
 ## Dependencies & Risks
 
@@ -170,6 +188,11 @@ All settings are environment variables (CLI flag overrides where noted). Full ta
 - **Depends on:** `@pr-manager` producing PR descriptions fit to become the squash commit message (Mode B uses the PR title + description verbatim as the commit message).
 - **Risk:** Liveness threshold too low for a legitimately long reasoning step → a healthy session is killed and restarted. Mitigated by the configurable threshold and the secondary worktree-activity signal.
 - **Risk:** opencode-detached grandchildren escape the signal trap. Accepted and documented limitation.
+- **Risk:** a user-owned hook can block a new session indefinitely. Hooks have no
+  execution timeout by design; on normal exit or direct HUP/INT/TERM, the wrapper
+  terminates only the tracked hook process group, then escalates after the hook
+  shutdown grace. Wrapper-only SIGKILL, host failure, and escaped descendants are
+  outside that guarantee.
 
 ## Related Documentation
 
@@ -179,3 +202,5 @@ All settings are environment variables (CLI flag overrides where noted). Full ta
 - **System bootstrap:** [AGENTS.md](../../../AGENTS.md) — the delivery scripts are referenced under "Using the system".
 - **Sibling spec (lifecycle context):** [feature-delivery-lifecycle.md](feature-delivery-lifecycle.md) — the 11-phase lifecycle both modes wrap; phase 7 (`system_spec_update`) is where this spec was first-authored.
 - **Sibling spec (verification/release):** [feature-quality-gates-and-pr.md](feature-quality-gates-and-pr.md) — the quality gates and PR workflow that Mode B waits on before merging.
+- **Hook decision:** [TDR-0002](../../decisions/TDR-0002-pre-iteration-hook-contract-details.md) — lifecycle, failure, distribution, and environment-return contract.
+- **Enduring test specification:** [test-spec-autonomous-delivery.md](../../quality/test-specs/test-spec-autonomous-delivery.md) — automated coverage of loop and hook behavior.
