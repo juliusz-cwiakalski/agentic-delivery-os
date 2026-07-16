@@ -35,7 +35,7 @@ IFS=$'\n\t'
 # SETTINGS
 # ============================================================================
 readonly APP_NAME="deliver-ticket"
-readonly APP_VERSION="1.0.0"
+readonly APP_VERSION="1.1.0"
 readonly LOG_TAG="(${APP_NAME})"
 
 readonly EXIT_FAILURE=1
@@ -56,6 +56,9 @@ readonly POLL_SECONDS="${DELIVER_POLL_SECONDS:-60}"
 readonly KILL_GRACE_SECONDS="${DELIVER_KILL_GRACE_SECONDS:-20}"
 readonly LOOP_SLEEP_SECONDS="${DELIVER_LOOP_SLEEP_SECONDS:-5}"
 readonly SESSION_CAPTURE_RETRIES="${DELIVER_SESSION_CAPTURE_RETRIES:-10}"
+readonly PRE_ITERATION_HOOK="${ADOS_PRE_ITERATION_HOOK:-${HOME}/.ados/hooks/pre-opencode-iteration}"
+readonly HOOK_SHUTDOWN_GRACE_SECONDS="${ADOS_HOOK_SHUTDOWN_GRACE_SECONDS:-2}"
+readonly HOOK_ENV_ALLOWLIST="${ADOS_HOOK_ENV_ALLOWLIST:-}"
 
 # Session mapping directory (shared with opencode-session.sh)
 SESSION_DIR="${ROOT_DIR}/.ai/local/opencode-sessions"
@@ -78,6 +81,10 @@ VERBOSE="${VERBOSE:-false}"
 # the parent (this script) is killed. Set after backgrounding, cleared on
 # normal exit.
 CURRENT_OPENCODE_PID=""
+CURRENT_HOOK_PID=""
+CURRENT_HOOK_GROUP_PID=""
+CURRENT_HOOK_TMPDIR=""
+CURRENT_HOOK_ENV_OUTPUT=""
 
 # INV-DM-2: the ticket ref owning the current PID file + the captured PM last
 # message, so the EXIT trap can clear the PID file and the summary can report
@@ -135,6 +142,7 @@ _on_err() {
 # INV-DM-2: also clears the repo-local PID file so a crashed owner is not
 # mistaken for a live delivery by a later JOIN probe.
 _cleanup_child() {
+  _cleanup_hook || true
   if [[ -n "${CURRENT_OPENCODE_PID:-}" ]]; then
     kill_process_tree "${CURRENT_OPENCODE_PID}" 2>/dev/null || true
     CURRENT_OPENCODE_PID=""
@@ -153,12 +161,16 @@ _cleanup_child() {
 
 _on_interrupt() {
   log_warn "Interrupted"
+  [[ -n "${CURRENT_HOOK_GROUP_PID:-}" ]] && kill -TERM -- "-${CURRENT_HOOK_GROUP_PID}" 2>/dev/null || true
+  # Signal traps run while `wait` is interrupted; clean here while the hook
+  # group tracker is still live rather than relying solely on the EXIT trap.
+  _cleanup_hook 2>/dev/null || true
   exit 130
 }
 
 trap '_on_err $LINENO "$BASH_COMMAND" $?' ERR
 trap '_cleanup_child' EXIT
-trap '_on_interrupt' INT TERM
+trap '_on_interrupt' HUP INT TERM
 
 # ============================================================================
 # LOGGING
@@ -188,7 +200,61 @@ _git()      { command git "$@"; }
 _gh()       { command gh "$@"; }
 _opencode() { command opencode "$@"; }
 _jq()       { command jq "$@"; }
-_setsid()   { command setsid "$@"; }
+_setsid()   { exec setsid "$@"; }
+
+# The hook return is deliberately data, never shell syntax. These private
+# helpers are duplicated in ceo-loop.sh so each installed wrapper is standalone.
+validate_hook_allowlist() {
+  local item seen=","
+  [[ -z "${HOOK_ENV_ALLOWLIST}" ]] && return 0
+  IFS=',' read -r -a _hook_allowlist_items <<<"${HOOK_ENV_ALLOWLIST}"
+  for item in "${_hook_allowlist_items[@]}"; do
+    [[ "${item}" =~ ^[A-Z_][A-Z0-9_]*$ ]] || die "ADOS_HOOK_ENV_ALLOWLIST contains invalid identifier"
+    [[ "${seen}" != *",${item},"* ]] || die "ADOS_HOOK_ENV_ALLOWLIST contains duplicate identifier: ${item}"
+    seen="${seen}${item},"
+  done
+}
+_hook_name_authorized() { local name="$1" item; [[ "${name}" =~ ^OC_ADOS_AGENT_[A-Z0-9_]+_MODEL$ ]] && return 0; IFS=',' read -r -a _hook_allowlist_items <<<"${HOOK_ENV_ALLOWLIST}"; for item in "${_hook_allowlist_items[@]}"; do [[ "${name}" == "${item}" ]] && return 0; done; return 1; }
+_cleanup_hook() { local pid="${CURRENT_HOOK_GROUP_PID:-${CURRENT_HOOK_PID:-}}"; if [[ -n "${pid}" ]]; then kill -TERM -- "-${pid}" 2>/dev/null || true; pkill -TERM -g "${pid}" 2>/dev/null || true; if pgrep -g "${pid}" >/dev/null 2>&1; then sleep "${HOOK_SHUTDOWN_GRACE_SECONDS}" || true; kill -KILL -- "-${pid}" 2>/dev/null || true; pkill -KILL -g "${pid}" 2>/dev/null || true; fi; wait "${pid}" 2>/dev/null || true; fi; CURRENT_HOOK_PID=""; CURRENT_HOOK_GROUP_PID=""; [[ -n "${CURRENT_HOOK_TMPDIR:-}" && -d "${CURRENT_HOOK_TMPDIR}" ]] && rm -rf "${CURRENT_HOOK_TMPDIR}"; CURRENT_HOOK_TMPDIR=""; CURRENT_HOOK_ENV_OUTPUT=""; }
+_hook_apply_operation() { local -r verb="$1" name="$2" value="$3"; if [[ "${verb}" == "set" ]]; then export "${name}=${value}"; else unset "${name}"; fi; }
+_hook_validate_and_apply() {
+  local file="$1" size line line_bytes name value verb records=0 index prior mode uid expected_uid
+  local -a verbs=() names=() values=() prior_set=() prior_values=()
+  [[ -f "${file}" && ! -L "${file}" ]] || { log_err "hook output is not a safe regular file"; return 1; }
+  mode="$(stat -c '%a' "${file}" 2>/dev/null)" || { log_err "hook output cannot be inspected"; return 1; }
+  uid="$(stat -c '%u' "${file}" 2>/dev/null)"; expected_uid="$(id -u)"
+  [[ "${uid}" == "${expected_uid}" && $(( 8#${mode} & 022 )) -eq 0 ]] || { log_err "hook output has unsafe ownership or permissions"; return 1; }
+  [[ ! -s "${file}" ]] && return 0
+  size="$(LC_ALL=C wc -c <"${file}")"; (( size <= 65536 )) || { log_err "hook output exceeds byte limit"; return 1; }
+  LC_ALL=C od -An -t x1 "${file}" | tr -d ' \n' | grep -qE '0d|00' && { log_err "hook output contains CR or NUL"; return 1; }
+  [[ "$(tail -c 1 "${file}")" == "" ]] || { log_err "hook output lacks final LF"; return 1; }
+  while IFS= read -r line; do
+    line_bytes="$(LC_ALL=C printf '%s' "${line}" | wc -c)"; (( line_bytes <= 8192 )) || { log_err "hook output line exceeds byte limit"; return 1; }
+    if (( records == 0 )); then [[ "${line}" == ADOS_HOOK_ENV_V1 ]] || { log_err "hook output has invalid header"; return 1; }; records=1; continue; fi
+    if [[ "${line}" == set\ * && "${line#set }" == *=* ]]; then verb=set; name="${line#set }"; value="${name#*=}"; name="${name%%=*}"; elif [[ "${line}" == unset\ * && "${line#unset }" != *=* ]]; then verb=unset; name="${line#unset }"; value=""; else log_err "hook output has invalid record"; return 1; fi
+    [[ "${name}" =~ ^[A-Z_][A-Z0-9_]*$ ]] && _hook_name_authorized "${name}" || { log_err "hook output requests unauthorized name ${name}"; return 1; }
+    for prior in "${names[@]}"; do [[ "${prior}" != "${name}" ]] || { log_err "hook output duplicates name ${name}"; return 1; }; done
+    verbs+=("${verb}"); names+=("${name}"); values+=("${value}"); ((++records)); (( records <= 257 )) || { log_err "hook output exceeds record limit"; return 1; }
+  done <"${file}"
+  (( records >= 1 )) || return 0
+  for index in "${!names[@]}"; do
+    if [[ -v "${names[$index]}" ]]; then prior_set+=(1); prior_values+=("${!names[$index]}"); else prior_set+=(0); prior_values+=(""); fi
+  done
+  for index in "${!names[@]}"; do
+    _hook_apply_operation "${verbs[$index]}" "${names[$index]}" "${values[$index]}" || {
+      for ((index -= 1; index >= 0; index--)); do if [[ "${prior_set[$index]}" == 1 ]]; then export "${names[$index]}=${prior_values[$index]}"; else unset "${names[$index]}"; fi; done
+      log_err "hook output apply failed; rolled back"
+      return 1
+    }
+  done
+  log_info "applied ${#names[@]} hook environment operation(s)"
+}
+run_pre_iteration_hook() {
+  [[ -e "${PRE_ITERATION_HOOK}" ]] || return 0; [[ -x "${PRE_ITERATION_HOOK}" ]] || { log_err "hook failure: exists but is not executable: ${PRE_ITERATION_HOOK}"; return 1; }
+  CURRENT_HOOK_TMPDIR="$(mktemp -d)" || return 1; chmod 700 "${CURRENT_HOOK_TMPDIR}"; CURRENT_HOOK_ENV_OUTPUT="${CURRENT_HOOK_TMPDIR}/env"; : >"${CURRENT_HOOK_ENV_OUTPUT}"; chmod 600 "${CURRENT_HOOK_ENV_OUTPUT}"
+  ADOS_HOOK_AGENT=pm ADOS_HOOK_SCRIPT=deliver-ticket ADOS_HOOK_ENV_OUTPUT="${CURRENT_HOOK_ENV_OUTPUT}" ADOS_HOOK_ENV_FORMAT=ADOS_HOOK_ENV_V1 _setsid "${PRE_ITERATION_HOOK}" & CURRENT_HOOK_PID=$!; CURRENT_HOOK_GROUP_PID="${CURRENT_HOOK_PID}"
+  local rc=0; wait "${CURRENT_HOOK_PID}" || rc=$?; CURRENT_HOOK_PID=""; (( rc == 0 )) || { log_err "hook failure: ${PRE_ITERATION_HOOK} exited with ${rc}"; _cleanup_hook; return 1; }; _hook_validate_and_apply "${CURRENT_HOOK_ENV_OUTPUT}" || { _cleanup_hook; return 1; }; _cleanup_hook
+}
 
 # ============================================================================
 # SINGLE-FLIGHT + JOIN (INV-DM-2/6)
@@ -1161,6 +1227,17 @@ deliver_loop() {
     local session_id
     session_id="$(resolve_session "${ticket_ref}")"
 
+    # Parent-shell placement is intentional: this precedes the command
+    # substitution below, so committed exports reach the imminent PM.
+    if ! run_pre_iteration_hook; then
+      DELIVERY_RESULT="failed"
+      DELIVERY_PR_URL=""
+      DELIVERY_EXIT_CODE="${EXIT_FAILURE}"
+      DELIVERY_LAST_MESSAGE="pre-iteration hook failed"
+      write_last_message "${ticket_ref}" "${DELIVERY_LAST_MESSAGE}"
+      return "${EXIT_FAILURE}"
+    fi
+
     # Run iteration
     CAPTURED_PM_MESSAGE=""
     local monitor_result
@@ -1486,8 +1563,15 @@ Environment:
   DELIVER_POLL_SECONDS          Activity poll interval (default: 60)
   DELIVER_KILL_GRACE_SECONDS    SIGTERM grace before SIGKILL (default: 20)
   PM_LIVENESS_TIMEOUT_SECONDS   Max seconds for the pm-liveness probe (default: 15)
+  ADOS_PRE_ITERATION_HOOK       Optional hook path (default: ~/.ados/hooks/pre-opencode-iteration)
+  ADOS_HOOK_SHUTDOWN_GRACE_SECONDS  Hook cleanup grace (default: 2)
+  ADOS_HOOK_ENV_ALLOWLIST       Extra exact env names; credential delegation is operator risk
   DRY_RUN                       Dry-run mode
   VERBOSE                       Debug output
+
+Hook context (wrapper-provided, not operator settings):
+  ADOS_HOOK_AGENT=pm; ADOS_HOOK_SCRIPT=deliver-ticket;
+  ADOS_HOOK_ENV_OUTPUT=fresh private absolute path; ADOS_HOOK_ENV_FORMAT=ADOS_HOOK_ENV_V1.
 
 Default invocation prints a delivery summary on stdout (key=value):
   result=<merged|blocked|pr-open|failed|finished>
@@ -1600,6 +1684,8 @@ run_delivery() {
 }
 
 main() {
+  [[ "${HOOK_SHUTDOWN_GRACE_SECONDS}" =~ ^[1-9][0-9]*$ ]] || die "ADOS_HOOK_SHUTDOWN_GRACE_SECONDS must be a positive base-10 integer"
+  validate_hook_allowlist
   # Subcommand dispatch (before flag parsing) — locked names (Phase 2/3 depend).
   # --is-delivering's non-zero return is the expected "not delivering" answer,
   # so it runs in a condition context (no set -e / ERR-trap noise).

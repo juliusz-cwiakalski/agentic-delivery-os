@@ -377,8 +377,9 @@ test_spawn_joins_live_ceo_f3() {
   write_ceo_pid "${live_pid}" "$(date +%s)"
 
   : >"${MOCK_SETSID_CALLS}"  # ensure clean
-  local returned_pid
-  returned_pid="$(spawn_or_resume_ceo "${LOG_DIR}/test.log")"
+  # Direct-call contract: PID is published in the main shell, never stdout.
+  spawn_or_resume_ceo "${LOG_DIR}/test.log"
+  local returned_pid="${SPAWN_OR_RESUME_CEO_PID}"
 
   assert_eq "${live_pid}" "${returned_pid}" "should return the live CEO PID (JOIN)" || return 1
   # _setsid should NOT have been called.
@@ -877,6 +878,34 @@ test_pr_manager_description_quality() {
 # RUN ALL TESTS
 # ============================================================================
 
+test_hook_help_contract() {
+  local help
+  help="$(bash "${SCRIPT_DIR}/ceo-loop.sh" --help)"
+  assert_contains "${help}" "ADOS_PRE_ITERATION_HOOK" || return 1
+  assert_contains "${help}" "ADOS_HOOK_SHUTDOWN_GRACE_SECONDS" || return 1
+  assert_contains "${help}" "ADOS_HOOK_ENV_ALLOWLIST" || return 1
+  assert_contains "${help}" "ADOS_HOOK_RETRY_SECONDS" || return 1
+  assert_contains "${help}" "ADOS_HOOK_MAX_FAILURES" || return 1
+  assert_contains "${help}" "ADOS_HOOK_AGENT=ceo" || return 1
+  assert_contains "${help}" "ADOS_HOOK_SCRIPT=ceo-loop" || return 1
+  assert_contains "${help}" "ADOS_HOOK_ENV_OUTPUT" || return 1
+  assert_contains "${help}" "ADOS_HOOK_ENV_FORMAT=ADOS_HOOK_ENV_V1" || return 1
+  assert_contains "${help}" "chunks no longer than one second"
+}
+
+test_hook_retry_chunks_and_stop() {
+  local chunks="${_test_tmpdir}/chunks" state="${_test_tmpdir}/state"
+  mkdir -p "${state}"
+  ADOS_HOOK_RETRY_SECONDS=2.4 bash -c 'source "$1"; STOP_FILE="$2/stop"; chunks="$3"; sleep(){ printf "%s\n" "$1" >>"$chunks"; }; wait_after_hook_failure' _ "${SCRIPT_DIR}/ceo-loop.sh" "${state}" "${chunks}" || return 1
+  assert_eq $'1\n1\n0.4' "$(<"${chunks}")" "retry interval must be split into <=1s chunks" || return 1
+  : >"${state}/stop"
+  : >"${chunks}"
+  if ADOS_HOOK_RETRY_SECONDS=2.4 bash -c 'source "$1"; STOP_FILE="$2/stop"; chunks="$3"; sleep(){ printf "%s\n" "$1" >>"$chunks"; }; wait_after_hook_failure' _ "${SCRIPT_DIR}/ceo-loop.sh" "${state}" "${chunks}"; then
+    return 1
+  fi
+  assert_eq "" "$(<"${chunks}")" "stop before wait must prevent sleep and next spawn"
+}
+
 main() {
   printf '=== test-ceo-loop.sh ===\n'
 
@@ -945,6 +974,8 @@ main() {
   run_test "ceo prompt: resume prompt"               test_ceo_prompt_resume_prompt
   run_test "ceo prompt: must/must-not phrasing"      test_ceo_prompt_must_must_not_phrasing
   run_test "pr-manager: description quality (F-6)"   test_pr_manager_description_quality
+  run_test "TC-HOOK-020: CEO help settings/context contract" test_hook_help_contract
+  run_test "TC-HOOK-012: CEO retry chunks and stop" test_hook_retry_chunks_and_stop
 
   printf '\n'
   printf 'Results: %d passed, %d failed, %d total\n' \

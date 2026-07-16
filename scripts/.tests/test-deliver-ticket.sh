@@ -1575,6 +1575,19 @@ reset_counters() {
 # ============================================================================
 # RUN TESTS
 # ============================================================================
+test_hook_help_contract() {
+  local help
+  help="$(bash "${SCRIPT_DIR}/deliver-ticket.sh" --help)"
+  assert_contains "${help}" "ADOS_PRE_ITERATION_HOOK" || return 1
+  assert_contains "${help}" "ADOS_HOOK_SHUTDOWN_GRACE_SECONDS" || return 1
+  assert_contains "${help}" "ADOS_HOOK_ENV_ALLOWLIST" || return 1
+  assert_contains "${help}" "ADOS_HOOK_AGENT=pm" || return 1
+  assert_contains "${help}" "ADOS_HOOK_SCRIPT=deliver-ticket" || return 1
+  assert_contains "${help}" "ADOS_HOOK_ENV_OUTPUT" || return 1
+  assert_contains "${help}" "ADOS_HOOK_ENV_FORMAT=ADOS_HOOK_ENV_V1" || return 1
+  assert_not_contains "${help}" "ADOS_HOOK_RETRY_SECONDS" || return 1
+  assert_not_contains "${help}" "ADOS_HOOK_MAX_FAILURES"
+}
 main() {
   printf '%s Running tests...\n' "${TEST_TAG}"
 
@@ -1659,6 +1672,7 @@ main() {
   run_test "TC-DT-INT-02: concurrent converge → one PM (F-3, slow)" test_concurrent_converge_one_pm
   run_test "TC-DT-INT-03: SIGTERM propagates to child (F-3, slow)" test_signal_propagation_sigterm_to_child
   run_test "TC-DT-SF-14: session-traffic liveness handoff (F-3, slow)" test_session_traffic_liveness_handoff
+  run_test "TC-HOOK-020: PM help settings/context contract" test_hook_help_contract
 
   printf '\n%s Summary: %d/%d passed' "${TEST_TAG}" "${_test_passed}" "${_test_count}"
   if [[ "${_test_failed}" -gt 0 ]]; then
