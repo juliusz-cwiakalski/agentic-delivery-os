@@ -16,3 +16,4 @@ All decision records for this repository, ordered by type and number.
 | PDR-0001 | PDR | Tribal Knowledge Extraction Taxonomy | Accepted | 2026-06-27 | Juliusz Ćwiąkalski |
 | PDR-0002 | PDR | Mode-Aware Spec-Coverage Resolution for Autonomous Delivery | Proposed | 2026-07-02 | Juliusz Ćwiąkalski |
 | TDR-0001 | TDR | @bootstrapper Inception Sub-Mode Prompt Structure | Proposed | 2026-06-27 | Juliusz Ćwiąkalski |
+| TDR-0002 | TDR | Pre-Iteration Hook Contract — Lifecycle, Failure Semantics, Distribution, and Testability | Accepted | 2026-07-16 | Juliusz Ćwiąkalski |
