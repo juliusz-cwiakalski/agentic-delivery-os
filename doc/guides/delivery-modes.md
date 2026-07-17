@@ -150,9 +150,12 @@ unset NAME
 ```
 
 The first line is the exact header. A `set` value is literal data after the first
-`=` (an empty value differs from `unset`); it has no shell interpretation. Blank
-lines, comments, extra header text, malformed or duplicate records, CR, NUL, and
-missing final LF are invalid. Under `LC_ALL=C`, the inclusive limits are 65,536
+`=` (an empty value differs from `unset`); it has no shell interpretation. Valid
+UTF-8 bytes in a literal value are retained unchanged. Blank lines, comments,
+extra header text, malformed or duplicate records, CR, NUL, and missing final LF
+are invalid; CR/NUL rejection is byte-specific and does not reject a multi-byte
+UTF-8 sequence merely because one printed hex token contains `0d` or `00`.
+Under `LC_ALL=C`, the inclusive limits are 65,536
 raw whole-file bytes including header/LFs, 256 records excluding the header, and
 8,192 raw bytes per logical line excluding its LF. Exact limits pass; limit + 1
 does not.

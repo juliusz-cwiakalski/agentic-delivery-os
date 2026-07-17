@@ -87,7 +87,9 @@ imminent command and remain scoped to the applying wrapper. Given malformed,
 unsafe, unauthorized, duplicate, CR/NUL-containing, unterminated, or limit+1
 output, then no state from that batch applies and returned values do not appear
 in logs. Tests cover exact 65,536-byte files, 256 records, 8,192-byte lines, and
-both GNU and BSD/macOS metadata adapters.
+both GNU and BSD/macOS metadata adapters. They also prove a valid multi-byte
+UTF-8 literal value is inherited byte-for-byte, while actual CR and NUL bytes
+remain rejected.
 
 ## Automation Strategy
 
