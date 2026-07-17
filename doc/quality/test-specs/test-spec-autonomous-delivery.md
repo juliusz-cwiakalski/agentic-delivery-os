@@ -44,7 +44,9 @@ UTC boundaries are 04:29:59, 04:30:00, 09:59:59, and 10:00:00.
 mocked OpenCode commands to verify hook invocation before each spawn/resume and
 watchdog retry, excluded JOIN/probe/control/dry-run paths, wrapper context,
 parent-only environment inheritance, failure handling, and cleanup. The suites
-also verify 0700/0600 output artifacts are fresh and removed.
+also verify 0700/0600 output artifacts are fresh and removed. Dry-run coverage
+proves that no hook executes, artifact is created, or hook-return data is applied.
+The shared security fixture exercises GNU and BSD/macOS `stat` metadata formats.
 
 `test-install.sh`, `test-uninstall.sh`, and `test-hook-zai-example.sh` verify
 that the Z.AI example is executable but inactive after local install, removed
@@ -65,7 +67,8 @@ Given an OWN path and a present executable hook, when either wrapper spawns or
 resumes OpenCode, including a watchdog retry, then the hook receives its agent
 and script context immediately before that command. Given a missing hook, the
 normal spawn path continues with no hook subprocess, artifact, intentional wait,
-or hook log. JOIN, probes, controls, and dry runs do not invoke it.
+or hook log. JOIN, probes, controls, and dry runs do not invoke it; the PM
+dry-run path also does not create artifacts or apply returned environment data.
 
 ### Failure and lifecycle contract
 
@@ -83,7 +86,8 @@ when the hook exits zero, then literal records apply atomically before the
 imminent command and remain scoped to the applying wrapper. Given malformed,
 unsafe, unauthorized, duplicate, CR/NUL-containing, unterminated, or limit+1
 output, then no state from that batch applies and returned values do not appear
-in logs. Tests cover exact 65,536-byte files, 256 records, and 8,192-byte lines.
+in logs. Tests cover exact 65,536-byte files, 256 records, 8,192-byte lines, and
+both GNU and BSD/macOS metadata adapters.
 
 ## Automation Strategy
 

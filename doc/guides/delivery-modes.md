@@ -68,7 +68,9 @@ runs immediately before every actual spawn/resume, including watchdog retries.
 A missing path is a silent no-op: after the required path check, the wrapper
 creates no hook subprocess or return file, waits intentionally for nothing, and
 emits no hook-related log. JOIN, probes, control commands, and dry runs do not
-run the hook. A present but failing hook prevents the spawn; a scheduling
+run the hook. In particular, `deliver-ticket.sh --dry-run` renders its normal PM
+command without executing hook policy, creating hook artifacts, or applying
+hook-returned environment data. A present but failing hook prevents the spawn; a scheduling
 deferral waits and then exits `0`, rather than using a hook-specific result.
 `deliver-ticket.sh` keeps its existing `failed`/exit-1 behavior; `ceo-loop.sh`
 retries failures with a separate capped counter and a total retry interval that
@@ -164,6 +166,10 @@ removed on completion, failure, normal exit, and supported signal cleanup.
 Diagnostics identify validation categories and operation names/counts, never
 returned values.
 
+The ownership and mode check supports both GNU `stat -c` and BSD/macOS `stat -f`
+metadata formats. The validated protocol and its private-file requirements are
+therefore the same on supported Linux and macOS hosts.
+
 The default authorization is exactly `^OC_ADOS_AGENT_[A-Z0-9_]+_MODEL$`, not all
 `OC_ADOS_*` values. `ADOS_HOOK_ENV_ALLOWLIST` is a comma-separated list of
 additional exact valid identifiers, checked at wrapper startup; empty items,
@@ -184,7 +190,9 @@ The example reads `OC_ADOS_AGENT_CEO_MODEL` for CEO context and
 relevant configured value starts with `zai-coding-plan/`. For matching values it
 waits during `04:30 <= UTC < 10:00`, logs the reason and UTC wake time, sleeps
 until 10:00 UTC, then exits `0`. The UTC calculation is timezone/DST independent
-and is an editable example policy, not a provider integration.
+and uses pure Bash epoch formatting for the wake timestamp rather than GNU
+`date -d` or BSD `date -r`; it is an editable example policy, not a provider
+integration.
 
 `OC_ADOS_MODEL_PROFILE`, tier defaults, per-agent
 `OC_ADOS_AGENT_*_MODEL` overrides, and `{env:...}` configuration are optional

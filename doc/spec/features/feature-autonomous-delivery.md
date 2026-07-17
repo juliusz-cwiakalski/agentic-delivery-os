@@ -56,7 +56,8 @@ Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it
 - **Optional pre-iteration hook (F-8):** both wrapper OWN paths execute an
   opt-in, user-owned executable immediately before every actual OpenCode
   spawn/resume, including watchdog retries. A missing resolved path is a silent
-  no-op; JOIN, probe, control-command, and dry-run paths never invoke it. A
+  no-op; JOIN, probe, control-command, and dry-run paths never invoke it or
+  create/apply hook-return data. A
   present hook can wait, then exit `0`, to defer a spawn. Hook failures introduce
   no result value: `deliver-ticket.sh` takes its existing `failed`/exit-1 path
   without spawning a PM, while `ceo-loop.sh` uses a separate bounded failure
