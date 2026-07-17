@@ -967,8 +967,7 @@ HOOK
     _setsid(){ if [[ "$1" == opencode ]]; then printf "spawn\n" >>"$HOOK_MARKER"; sleep 30; else command setsid "$@"; fi; }
     run_loop
   ' _ "${SCRIPT_DIR}/ceo-loop.sh" "${_test_tmpdir}" || return 1
-  [[ "$(grep -c '^hook$' "${marker}")" == 2 ]] || return 1
-  [[ "$(grep -c '^spawn$' "${marker}")" == 2 ]] || return 1
+  assert_eq $'hook\nspawn\nhook\nspawn' "$(<"${marker}")" "each watchdog spawn must be preceded by its hook"
 }
 
 test_hook_ceo_absent_path_spawns_without_hook_work() {

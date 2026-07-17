@@ -1638,6 +1638,27 @@ STUB
   [[ ! -d "${project}/.ai/local" || ! -e "${project}/.ai/local/delivery/TEST-905.pid" ]]
 }
 
+# TC-HOOK-005: the public stored-message command must stay on its read-only
+# dispatch path even when a marker hook is configured.
+test_hook_last_message_cli_exclusion() {
+  local project="${_test_tmpdir}/project" bin="${_test_tmpdir}/bin" hook="${_test_tmpdir}/hook" marker="${_test_tmpdir}/marker" artifact="${_test_tmpdir}/hook-artifact" mktemp_cmd output
+  mktemp_cmd="$(command -v mktemp)"
+  mkdir -p "${project}/scripts" "${project}/.ai/local/delivery" "${bin}"
+  cp "${SCRIPT_DIR}/deliver-ticket.sh" "${project}/scripts/deliver-ticket.sh"
+  printf 'stored PM last-message' >"${project}/.ai/local/delivery/GH-146.last-message"
+  cat >"${hook}" <<'HOOK'
+#!/usr/bin/env bash
+printf invoked >"${HOOK_MARKER}"
+HOOK
+  chmod 700 "${hook}"
+  # shellcheck disable=SC2016 # Generated stub must expand this at hook runtime.
+  printf '#!/usr/bin/env bash\nprintf created >"${HOOK_ARTIFACT}"\nexec %q "$@"\n' "${mktemp_cmd}" >"${bin}/mktemp"
+  chmod 700 "${bin}/mktemp"
+  output="$(PATH="${bin}:${PATH}" HOOK_MARKER="${marker}" HOOK_ARTIFACT="${artifact}" ADOS_PRE_ITERATION_HOOK="${hook}" bash "${project}/scripts/deliver-ticket.sh" --last-message GH-146)" || return 1
+  assert_eq "stored PM last-message" "${output}" "--last-message must preserve stored-message output" || return 1
+  [[ ! -e "${marker}" && ! -e "${artifact}" ]] || { printf 'public --last-message invoked hook or created hook artifact\n' >&2; return 1; }
+}
+
 test_hook_failure_variants() {
   local hook="${_test_tmpdir}/hook"
   : >"${hook}"
@@ -1797,6 +1818,7 @@ main() {
   run_test "TC-HOOK-020: PM help settings/context contract" test_hook_help_contract
   run_test "TC-HOOK-005: PM dry-run excludes hook" test_hook_dry_run_exclusion
   run_test "TC-HOOK-005: PM public dry-run excludes hook" test_hook_dry_run_cli_exclusion
+   run_test "TC-HOOK-005: PM public last-message excludes hook" test_hook_last_message_cli_exclusion
    run_test "TC-HOOK-007/007B/008: PM hook failures block" test_hook_failure_variants
    run_test "TC-HOOK-001/002/003/006/009/024/025/027: PM loop hook, retry, context, and V1 inheritance" test_hook_pm_loop_success_retry_context_and_v1
    run_test "TC-HOOK-001/007/007B/008: PM absent and failure paths block spawn" test_hook_pm_loop_absent_and_failure_blocks_spawn
