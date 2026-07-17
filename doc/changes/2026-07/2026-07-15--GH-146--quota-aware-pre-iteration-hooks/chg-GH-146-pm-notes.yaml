@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-07-16T14:30:00Z", completed: "2026-07-17T12:35:00Z" }
   quality_gates: { started: "2026-07-17T06:15:00Z", completed: "2026-07-17T12:30:00Z" }
   dod_check: { started: "2026-07-17T12:35:00Z", completed: "2026-07-17T13:30:00Z" }
-  pr_creation: { started: "2026-07-17T13:30:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-07-17T13:30:00Z", completed: "2026-07-17T13:45:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/147" }
 decisions:
   - { text: "Use the user-approved default hook contract from GH-146: ~/.ados fallback with env override, per-spawn/resume execution, no timeout, subprocess isolation, and explicit CEO/PM context.", date: "2026-07-15" }
   - { text: "TDR-0002 (Accepted, R2) defines remaining contract details: installed inactive example under scripts/hooks; loud single-category failures with existing result enums; per-iteration delivery checks; bounded CEO hook-failure retries separate from stuck budgets; process-group cleanup; pure UTC test seams; and safe data-only environment return.", date: "2026-07-15" }
@@ -131,5 +131,8 @@ notes:
     type: retro
     date: "2026-07-17"
   - text: "DoD PASS at HEAD 8099cd90 plus implementation commit 8ce2795f: all spec ACs and 31 traced TC IDs satisfied; final focused counts CEO 54/54, PM 82/82, hook regression 31/31, Z.AI 4/4, install 55/55, uninstall 30/30, batch 34/34, aggregate 13/13; ShellCheck 0 new; docs/links/frontmatter/YAML/diff gates pass; deep review PASS with 0 findings; doc-sync has no residual gaps. Only plan task 8.7 remains intentionally pending PR creation."
+    type: resolved
+    date: "2026-07-17"
+  - text: "PR #147 created for human review: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/147. Plan task 8.7 complete; delivery stops pending manual approval and merge."
     type: resolved
     date: "2026-07-17"

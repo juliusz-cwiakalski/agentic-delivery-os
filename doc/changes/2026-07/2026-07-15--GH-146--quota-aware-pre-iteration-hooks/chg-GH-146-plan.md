@@ -786,7 +786,7 @@ evidence, and PR preparation.
    doc-sync reports no residual gaps and Phase 5 records optional examples,
    user-defined semantics, cross-links, both help outputs, protocol, and
    credential-boundary checks.)
-- [ ] **8.7** Use `@pr-manager` for the GH-146 PR only after all gates and DoD
+- [x] **8.7** Use `@pr-manager` for the GH-146 PR only after all gates and DoD
   checklist items pass.
 
 **Acceptance Criteria**:
