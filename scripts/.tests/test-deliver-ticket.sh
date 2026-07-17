@@ -1654,11 +1654,11 @@ test_hook_pm_loop_success_retry_context_and_v1() {
   local hook="${_test_tmpdir}/hook" marker="${_test_tmpdir}/marker" stderr="${_test_tmpdir}/stderr"
   cat >"${hook}" <<'HOOK'
 #!/usr/bin/env bash
-printf '%s:%s:%s\n' "$ADOS_HOOK_AGENT" "$ADOS_HOOK_SCRIPT" "$ADOS_HOOK_ENV_OUTPUT" >>"$HOOK_MARKER"
+printf '%s:%s:%s:%s:%s\n' "$ADOS_HOOK_AGENT" "$ADOS_HOOK_SCRIPT" "$ADOS_HOOK_ENV_OUTPUT" "$OC_ADOS_MODEL_PROFILE" "$OC_ADOS_AGENT_PM_MODEL" >>"$HOOK_MARKER"
 printf 'ADOS_HOOK_ENV_V1\nset OC_ADOS_AGENT_PM_MODEL=literal $() secret\n' >"$ADOS_HOOK_ENV_OUTPUT"
 HOOK
   chmod 700 "${hook}"
-  ADOS_PRE_ITERATION_HOOK="${hook}" HOOK_MARKER="${marker}" bash -c '
+  ADOS_PRE_ITERATION_HOOK="${hook}" HOOK_MARKER="${marker}" OC_ADOS_MODEL_PROFILE=owner-profile OC_ADOS_AGENT_PM_MODEL=owner-model bash -c '
     source "$1"; DELIVERY_DIR="$2/delivery"; mkdir -p "$DELIVERY_DIR"; MAX_RESTARTS=2
     resolve_session(){ :; }; classify_result(){ printf failed; }; pr_url_for(){ :; }; sleep(){ :; }
     run_single_iteration(){ printf "pm:%s\n" "$OC_ADOS_AGENT_PM_MODEL" >>"$HOOK_MARKER"; printf stuck; }
@@ -1667,6 +1667,7 @@ HOOK
   ' _ "${SCRIPT_DIR}/deliver-ticket.sh" "${_test_tmpdir}" 2>"${stderr}" || return 1
   [[ "$(grep -c '^pm:literal' "${marker}")" == 2 ]] || return 1
   [[ "$(grep -c '^pm:deliver-ticket:' "${marker}")" == 2 ]] || return 1
+  grep -q '^pm:deliver-ticket:.*:owner-profile:owner-model$' "${marker}" || return 1
   [[ "$(grep '^pm:deliver-ticket:' "${marker}" | cut -d: -f3 | sort -u | wc -l)" == 2 ]] || return 1
   while IFS= read -r path; do [[ ! -e "${path}" ]] || return 1; done < <(grep '^pm:deliver-ticket:' "${marker}" | cut -d: -f3)
   assert_not_contains "$(<"${stderr}")" "literal $() secret"

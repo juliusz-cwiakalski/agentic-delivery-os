@@ -50,15 +50,18 @@ test_atomic_rollback() {
   bash -c 'source "$1"; unset OC_ADOS_AGENT_CEO_MODEL; OC_ADOS_AGENT_PM_MODEL=old; export OC_ADOS_AGENT_PM_MODEL; _hook_apply_operation(){ [[ "$2" != OC_ADOS_AGENT_CEO_MODEL ]]; }; ! _hook_validate_and_apply "$2"; [[ "$OC_ADOS_AGENT_PM_MODEL" == old && ! -v OC_ADOS_AGENT_CEO_MODEL ]]' _ "${script}" "${file}"
 }
 test_metadata_adapter() {
-  local script="$1" style="$2" file uid
+  local script="$1" style="$2" file uid calls
   file="${tmp}/metadata-${style}"
+  calls="${tmp}/metadata-${style}.calls"
+  : >"${calls}"
   uid="$(id -u)"
   printf 'ADOS_HOOK_ENV_V1\n' >"${file}"
   chmod 600 "${file}"
-  HOOK_TEST_UID="${uid}" bash -c '
+  HOOK_TEST_UID="${uid}" HOOK_TEST_STYLE="${style}" HOOK_TEST_CALLS="${calls}" bash -c '
     source "$1"
     _hook_stat() {
-      if [[ "$2" == gnu ]]; then
+      printf "%s\n" "$1" >>"$HOOK_TEST_CALLS"
+      if [[ "$HOOK_TEST_STYLE" == gnu ]]; then
         [[ "$1" == -c ]] && { printf "600 %s\n" "$HOOK_TEST_UID"; return 0; }
         return 1
       fi
@@ -66,11 +69,18 @@ test_metadata_adapter() {
       [[ "$1" == -f ]] && { printf "600 %s\n" "$HOOK_TEST_UID"; return 0; }
       return 1
     }
-    _hook_validate_and_apply "$3"
-  ' _ "${script}" "${style}" "${file}"
+    _hook_validate_and_apply "$2"
+  ' _ "${script}" "${file}" || return 1
+  if [[ "${style}" == gnu ]]; then
+    [[ "$(<"${calls}")" == "-c" ]] || return 1
+  else
+    [[ "$(<"${calls}")" == $'-c\n-f' ]] || return 1
+  fi
 }
 
-# TC-HOOK-011/023: exercise each real wrapper's installed trap and hook helper.
+# TC-HOOK-011/023: exercise each real wrapper's OWN/spawn path and installed
+# trap.  The harness sources only to inject external boundaries; it calls
+# run_loop or run_delivery, never run_pre_iteration_hook directly.
 # SIGKILL and children that deliberately leave setsid's process group are excluded:
 # neither can be cleaned up by a trappable wrapper signal.
 is_gone_or_zombie() {
@@ -109,7 +119,17 @@ set -Eeuo pipefail
 export TMPDIR="$1/tmp"
 mkdir -p "${TMPDIR}"
 source "$2"
-run_pre_iteration_hook
+if [[ "$(basename -- "$2")" == ceo-loop.sh ]]; then
+  CEO_STATE_DIR="$1/state"; CEO_PID_FILE="$1/state/pid"; LOOP_PID_FILE="$1/state/loop"; STOP_FILE="$1/state/stop"; LOG_DIR="$1/log"
+  MAX_ITERATIONS=1; POLL_SECONDS=0; LOOP_SLEEP_SECONDS=0
+  source_opencode_env(){ :; }; _jq(){ printf '{}'; }; ceo_pid_if_live(){ return 1; }; last_session_id(){ :; }; capture_session_id_by_title(){ printf ses; }
+  _setsid(){ if [[ "$1" == opencode ]]; then sleep 0.01; else command setsid "$@"; fi; }
+  run_loop
+else
+  DELIVERY_DIR="$1/delivery"; mkdir -p "$DELIVERY_DIR"
+  resolve_session(){ :; }; run_single_iteration(){ printf finished; }; classify_result(){ printf failed; }; pr_url_for(){ :; }; decide_after_iteration(){ printf stop:0:finished; }
+  run_delivery GH-146 feat/test >/dev/null
+fi
 HARNESS
   chmod 700 "${harness}"
   if [[ "${signal}" == normal ]]; then
@@ -123,7 +143,7 @@ HARNESS
       local target_pid="${BASHPID}"
       printf '%s\n' "${target_pid}" >"${wrapper_pid_file}"
       ( wait_for_file "${marker}" && kill -"${signal}" "${target_pid}" ) &
-      exec env HOOK_MARKER="${marker}" HOOK_SLEEP=30 ADOS_PRE_ITERATION_HOOK="${hook}" \
+      exec env HOOK_MARKER="${marker}" HOOK_SLEEP=2 ADOS_PRE_ITERATION_HOOK="${hook}" \
         ADOS_HOOK_SHUTDOWN_GRACE_SECONDS=1 bash "${harness}" "${work}" "${ROOT}/scripts/${wrapper}"
     ) || true
     wrapper_pid="$(<"${wrapper_pid_file}")"
