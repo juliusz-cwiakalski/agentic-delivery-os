@@ -1,0 +1,49 @@
+version: 1
+iteration: 4
+mode: local
+work_item_ref: GH-146
+branch: feat/GH-146/quota-aware-pre-iteration-hooks
+status: FAIL
+summary: >
+  Commit 6761c11f closes most iteration-3 gaps: the CEO watchdog fixture now
+  drives run_loop, status and log controls are exercised, both wrapper tests
+  assert inherited model configuration, lifecycle cleanup uses OWN/spawn paths,
+  and GNU/BSD metadata branches are independently selected. Focused and aggregate
+  suites pass, and ShellCheck still reports only the main-branch informational
+  baseline. However, the evidence table remains overstated because TC-HOOK-005's
+  PM last-message path is not marker-tested and the watchdog fixture counts hook
+  and spawn events without asserting their required order.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 0
+  low: 0
+  info: 0
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: testing
+    location: scripts/.tests/test-deliver-ticket.sh:1693; scripts/.tests/test-ceo-loop.sh:956
+    message: >
+      The Phase 10 table marks TC-HOOK-005 and TC-HOOK-003 complete, but the PM
+      exclusion test invokes only join_delivery and cmd_is_delivering; it never
+      invokes the marker-configured --last-message path required by TC-HOOK-005.
+      The CEO watchdog test also asserts only two hook and two spawn counts, not
+      the required hook-before-spawn sequence. Both tests can pass while the
+      corresponding contract is regressed, so the all-scenarios completion claim
+      is not yet truthful.
+    suggestion: >
+      Add a marker-configured public --last-message assertion that proves no hook
+      invocation or artifact, and assert the exact watchdog event order
+      hook,spawn,hook,spawn. Keep the evidence table incomplete until both tests
+      pass.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-07-17T06:04:49Z
+next_step: EXECUTE_REMEDIATION_PHASE

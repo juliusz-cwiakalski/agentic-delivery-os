@@ -2,7 +2,7 @@
 id: chg-GH-146-quota-aware-pre-iteration-hooks
 status: Updated
 created: 2026-07-15T00:00:00Z
-last_updated: 2026-07-16T10:12:51Z
+last_updated: 2026-07-17T13:05:34Z
 owners: ["Juliusz Ćwiąkalski"]
 service: delivery-os
 labels: ["autonomous-delivery", "quota", "hooks"]
@@ -261,7 +261,7 @@ command-substituted PM iteration.
 
 **Tasks**:
 
-- [ ] **1.1** Add the deliver-ticket operator settings with defaults and startup
+- [x] **1.1** Add the deliver-ticket operator settings with defaults and startup
   validation: `ADOS_PRE_ITERATION_HOOK` (fallback
   `$HOME/.ados/hooks/pre-opencode-iteration`),
   `ADOS_HOOK_SHUTDOWN_GRACE_SECONDS` (default 2), and
@@ -270,7 +270,7 @@ command-substituted PM iteration.
   `CURRENT_HOOK_PID` and current temp directory/file state; extend EXIT/HUP/INT/
   TERM cleanup to TERM→grace→KILL/reap the group, remove artifacts, and clear
   trackers.
-- [ ] **1.2** Update `deliver-ticket.sh --help`/`usage()` settings text with those
+- [x] **1.2** Update `deliver-ticket.sh --help`/`usage()` settings text with those
   three operator settings, defaults/semantics, and the allowlist's explicit
   operator-risk credential delegation. Add a separate **per-invocation hook
   context (not operator settings)** subsection for wrapper-provided
@@ -278,11 +278,11 @@ command-substituted PM iteration.
   `ADOS_HOOK_ENV_OUTPUT`, and fixed
   `ADOS_HOOK_ENV_FORMAT=ADOS_HOOK_ENV_V1`; do not list CEO-only settings as PM
   settings.
-- [ ] **1.3** Add private hook invocation that silently returns when absent;
+- [x] **1.3** Add private hook invocation that silently returns when absent;
   rejects not-executable/exec-failing/non-zero hooks with path/reason diagnostics;
   creates fresh 0700/0600 output artifacts; exports PM context and V1 context;
   launches with `setsid`, tracks/waits for the group, and imposes no timeout.
-- [ ] **1.4** Add strict V1 validation/staging/apply helpers. Perform raw-byte
+- [x] **1.4** Add strict V1 validation/staging/apply helpers. Perform raw-byte
   preflight under `LC_ALL=C` before Bash string parsing; reject CR/NUL anywhere
   and every non-empty file lacking final LF. Accept exactly 65,536 whole-file
   bytes including header/LFs, 256 operations excluding the header, and 8,192
@@ -294,14 +294,14 @@ command-substituted PM iteration.
   batch, snapshot prior state, apply exported set/unset operations without
   source/eval, rollback unexpected apply failures, emit value-free diagnostics,
   and clean up. Invalid output enters the existing hook-failure path.
-- [ ] **1.5** Place invocation and parse/apply directly in the parent
+- [x] **1.5** Place invocation and parse/apply directly in the parent
   `deliver_loop`, after OWN and inside each retry iteration, immediately before
   `iteration_output="$(run_single_iteration ...)"`. Construct no PM command and
   consume/increment no PM restart budget before success. On failure set existing
   `DELIVERY_RESULT=failed`, exit code 1, and last-message/stderr diagnostic; do not
   spawn PM. Ensure exported updates reach that command substitution and later
   iterations of this wrapper.
-- [ ] **1.6** Extend `scripts/.tests/test-deliver-ticket.sh` with PM-side cases for
+- [x] **1.6** Extend `scripts/.tests/test-deliver-ticket.sh` with PM-side cases for
   TC-HOOK-001…011 and TC-HOOK-023…027, using the real wrapper for signal,
   placement, fresh-file, and inheritance evidence. Assert hook/temp state is
   created outside command substitution and each retry gets a new output path.
@@ -310,7 +310,7 @@ command-substituted PM iteration.
   final LF, built-in credential rejection, and exact allowlisted credential
   acceptance. Assert accepted boundary/delegation fixtures can proceed without
   logging values, while every rejection fixture causes no mutation or spawn.
-- [ ] **1.7** Add automated `deliver-ticket.sh --help` assertions for exact
+- [x] **1.7** Add automated `deliver-ticket.sh --help` assertions for exact
   operator-setting names, defaults/classification, all four per-invocation context
   names, and absence of CEO-only retry/cap settings; include a manual help-text
   consistency check in TC-HOOK-020.
@@ -347,32 +347,32 @@ and remediate the noninterruptible retry wait.
 
 **Tasks**:
 
-- [ ] **2.1** Implement CEO settings explicitly: shared operator settings
+- [x] **2.1** Implement CEO settings explicitly: shared operator settings
   `ADOS_PRE_ITERATION_HOOK` (documented fallback),
   `ADOS_HOOK_SHUTDOWN_GRACE_SECONDS` (default 2), and
   `ADOS_HOOK_ENV_ALLOWLIST`, plus CEO-only `ADOS_HOOK_RETRY_SECONDS` (default 60,
   total retry interval) and `ADOS_HOOK_MAX_FAILURES` (default 5). Mirror Phase
   1's contract-identical private lifecycle/parser helpers with CEO context,
   parent-visible hook/temp trackers, and EXIT/HUP/INT/TERM cleanup.
-- [ ] **2.2** Update `ceo-loop.sh --help`/`usage()` settings text with all five
+- [x] **2.2** Update `ceo-loop.sh --help`/`usage()` settings text with all five
   operator settings and defaults/semantics, including fixed ≤1-second stop polling
   as behavior rather than another setting and explicit allowlist credential risk.
   Separately label wrapper-provided `ADOS_HOOK_AGENT=ceo`,
   `ADOS_HOOK_SCRIPT=ceo-loop`, fresh absolute `ADOS_HOOK_ENV_OUTPUT`, and fixed
   `ADOS_HOOK_ENV_FORMAT=ADOS_HOOK_ENV_V1` as per-invocation hook context, not
   operator settings.
-- [ ] **2.3** Refactor `run_loop` from
+- [x] **2.3** Refactor `run_loop` from
   `ceo_pid="$(spawn_or_resume_ceo ...)"` to a direct function call. Initialize and
   consume `SPAWN_OR_RESUME_CEO_PID` plus an internal result/status variable; have
   JOIN and successful spawn/resume publish the PID there, and never print a PID
   for command substitution. Keep the live-CEO JOIN return before hook execution.
-- [ ] **2.4** On the actual spawn/resume branch, invoke hook and process V1 output
+- [x] **2.4** On the actual spawn/resume branch, invoke hook and process V1 output
   in the direct-called main shell before constructing the OpenCode command. A
   valid update must reach the imminent CEO and later CEO iterations. While the
   wrapper waits for the hook, its direct HUP/INT/TERM traps must see
   `CURRENT_HOOK_PID` and temp state. Hook failure publishes the internal failure
   status without incrementing stuck `restarts`.
-- [ ] **2.5** Implement the separate consecutive hook-failure policy
+- [x] **2.5** Implement the separate consecutive hook-failure policy
   (AC-F4-2, NFR-4, RSK-11, TC-HOOK-012). Add a
   stop-aware retry-wait helper that checks `STOP_FILE` before and after chunks no
   longer than one second, preserves configured fractional intervals, makes the
@@ -381,7 +381,7 @@ and remediate the noninterruptible retry wait.
   performs one uninterruptible 60-second sleep. Reset the hook-failure counter on
   hook success or after a CEO has run; at `ADOS_HOOK_MAX_FAILURES`, log the
   distinct cap message and exit 1 with `restarts==0`.
-- [ ] **2.6** Extend `scripts/.tests/test-ceo-loop.sh` for CEO sides of
+- [x] **2.6** Extend `scripts/.tests/test-ceo-loop.sh` for CEO sides of
   TC-HOOK-001…014 and TC-HOOK-023…027. Add static and real-wrapper assertions that
   `spawn_or_resume_ceo` is not command-substituted, traps can kill a hook and
   clean its temp output while it is running, and valid output persists to imminent
@@ -391,7 +391,7 @@ and remediate the noninterruptible retry wait.
   ≤1 second, and no subsequent hook/OpenCode spawn occurs. Run the same
   `LC_ALL=C` TC-HOOK-026 exact/limit+1, CR/NUL/final-LF, credential-authority,
   atomic-rejection, value-safe-log, and cleanup matrix as deliver-ticket.
-- [ ] **2.7** Add automated `ceo-loop.sh --help` assertions for all five operator
+- [x] **2.7** Add automated `ceo-loop.sh --help` assertions for all five operator
   settings and defaults, fixed polling behavior, all four separately labeled
   per-invocation context names, and their operator/context distinction; include a
   manual help-text consistency check in TC-HOOK-020.
@@ -425,12 +425,12 @@ process, delivery, result-domain, and consumer invariants.
 
 **Tasks**:
 
-- [ ] **3.1** Complete TC-HOOK-011 and TC-HOOK-023 reliability matrices against
+- [x] **3.1** Complete TC-HOOK-011 and TC-HOOK-023 reliability matrices against
   each real wrapper: normal completion and direct TERM/INT/HUP while a hook with
   an in-group child is active, 20 trials for each wrapper/path, zero surviving
   group members, zero output artifacts, and no unsupported SIGKILL/host/escaped-
-  group assertion.
-- [ ] **3.2** Table-drive the same V1 fixtures through both wrappers for
+  group assertion. (PASS: `test-hook-regression.sh` 25/25; CEO 46/46; deliver-ticket 74/74; `test-all.sh` 13/13; `git diff --check` clean.)
+- [x] **3.2** Table-drive the same V1 fixtures through both wrappers for
   TC-HOOK-024/026/027 under `LC_ALL=C`: literal metacharacters and empty-vs-unset;
   exact 65,536/65,537 whole-file bytes including header/LFs; 256/257 operations
   excluding header; 8,192/8,193 logical-line bytes excluding LF; final-LF
@@ -441,14 +441,14 @@ process, delivery, result-domain, and consumer invariants.
   credential identifier succeeds only when explicitly operator-allowlisted, with
   no ADOS supply/discovery/query and no logged value. Compare outcomes to prevent
   helper drift.
-- [ ] **3.3** Add/update `scripts/.tests/test-hook-regression.sh` for
+- [x] **3.3** Add/update `scripts/.tests/test-hook-regression.sh` for
   TC-HOOK-013 and TC-HOOK-022: forbid hook-specific result values without
   asserting a normalized pre-existing enum, and prove `.opencode/agent/ceo.md`
   retains its existing failed retry-or-park branch. Do not modify the prompt.
-- [ ] **3.4** Add TC-HOOK-021 to `scripts/.tests/test-batch-deliver.sh`: a mocked
+- [x] **3.4** Add TC-HOOK-021 to `scripts/.tests/test-batch-deliver.sh`: a mocked
   deliver-ticket exit 1 is classified by existing exit-code behavior as failed,
   and the next ticket is attempted. Do not modify `scripts/batch-deliver.sh`.
-- [ ] **3.5** Run TC-HOOK-REG-1 for INV-DM-1…6 and verify JOIN/OWN,
+- [x] **3.5** Run TC-HOOK-REG-1 for INV-DM-1…6 and verify JOIN/OWN,
   foreground/process-group, liveness, restart, merge-authority, and working-tree
   behavior remains intact.
 
@@ -488,7 +488,7 @@ install/uninstall inventories symmetric.
 
 **Tasks**:
 
-- [ ] **4.1** Create executable
+- [x] **4.1** Create executable
   `scripts/hooks/pre-opencode-iteration-zai.sh` with a testable main guard, pure
   configured-value/window/seconds-to-end functions, and mockable
   `_now_utc_epoch`/`_sleep`. Read the CEO or PM configured environment value by
@@ -496,14 +496,14 @@ install/uninstall inventories symmetric.
   04:30≤UTC<10:00, logs reason and exact wake time, sleeps until 10:00, and exits
   0. Other values/times return silently. This example makes no assertion about
   what provider/model OpenCode selects.
-- [ ] **4.2** Add discoverable
+- [x] **4.2** Add discoverable
   `scripts/.tests/test-hook-zai-example.sh` for TC-HOOK-015…018, including exact
   boundary and duration cases, with no real long sleep.
-- [ ] **4.3** Add `ADOS_HOOK_EXAMPLES` and a content-synced executable hook-
+- [x] **4.3** Add `ADOS_HOOK_EXAMPLES` and a content-synced executable hook-
   examples block to `scripts/install.sh`; assert a bare local install places the
   example at `./scripts/hooks/` but not at the resolved active hook path
   (TC-HOOK-019).
-- [ ] **4.4** Extend `scripts/uninstall.sh`'s independent explicit removal and
+- [x] **4.4** Extend `scripts/uninstall.sh`'s independent explicit removal and
   empty-directory lists; update `scripts/.tests/test-uninstall.sh` so local
   uninstall removes the example and then-empty `scripts/hooks/` directory
   (TC-HOOK-019B). Do not refactor uninstall to source install arrays.
@@ -541,7 +541,7 @@ documentation.
 
 **Tasks**:
 
-- [ ] **5.1** Update `doc/guides/delivery-modes.md` while preserving its
+- [x] **5.1** Update `doc/guides/delivery-modes.md` while preserving its
   `ados_distribution: redistributable` marker: opt-in path/override; per-spawn and
   excluded paths; no timeout; supported cleanup/exclusions; separate CEO failure
   retry with total interval and fixed ≤1-second stop response; installed example;
@@ -552,7 +552,7 @@ documentation.
   `ADOS_HOOK_AGENT`, `ADOS_HOOK_SCRIPT`, `ADOS_HOOK_ENV_OUTPUT`, and
   `ADOS_HOOK_ENV_FORMAT` as wrapper-provided per-invocation context, not operator
   settings, consistent with both `--help` outputs.
-- [ ] **5.2** Add the explicit AC-F8-1/DM-6 optional configuration guidance to
+- [x] **5.2** Add the explicit AC-F8-1/DM-6 optional configuration guidance to
   `doc/guides/delivery-modes.md`: explain `OC_ADOS_MODEL_PROFILE`, the existing
   tier defaults, per-agent `OC_ADOS_AGENT_*_MODEL` overrides, and `{env:...}`
   bindings only as optional owner-setup examples, never GH-146 prerequisites or
@@ -564,7 +564,7 @@ documentation.
   canonical configuration detail, and add a reciprocal link from that guide back
   to delivery modes' pre-iteration hook behavior. Preserve both guides'
   distribution front matter.
-- [ ] **5.3** Document `ADOS_HOOK_ENV_V1`: fresh private output capability;
+- [x] **5.3** Document `ADOS_HOOK_ENV_V1`: fresh private output capability;
   zero-byte/header-only compatibility; exact set/unset grammar and literal
   semantics; `LC_ALL=C` inclusive 65,536-byte file (header/LFs included),
   256-operation (header excluded), and 8,192-byte logical-line (LF excluded)
@@ -576,14 +576,14 @@ documentation.
   auto-adds no credential and never logs returned values. State that the built-in
   model-variable namespace is an authorization choice, not a binding contract;
   require no wrapper `-m` or `CEO_LOOP_MODEL` change.
-- [ ] **5.4** Reconcile
+- [x] **5.4** Reconcile
   `doc/spec/features/feature-autonomous-delivery.md` with implementation and
   Accepted TDR-0002, including the supported signal scope, distinct existing
   result domains, exact F-9 security/lifecycle/credential contract, and the
   previously flagged install-note drift. Have `@doc-syncer` assess the
   `autonomous-batch-delivery.md` 15-vs-10 drift and `AGENTS.md` repo-map mention
-  per spec §7.3/OQ-2 rather than guessing.
-- [ ] **5.5** Execute TC-HOOK-020 manually across
+  per spec §7.3/OQ-2 rather than guessing. (doc-syncer PASS: no residual gaps; diff-check, doc-distribution, frontmatter, and link validation passed.)
+- [x] **5.5** Execute TC-HOOK-020 manually across
   `doc/spec/features/feature-autonomous-delivery.md`,
   `doc/guides/delivery-modes.md`, and
   `doc/guides/opencode-model-configuration.md` after the planned documentation and
@@ -593,13 +593,20 @@ documentation.
   hook/settings contract, exact parser/credential boundary, and no-new-result
   behavior. Compare both wrapper `--help` outputs to the guide and assert operator
   settings/defaults and per-invocation context are complete and correctly
-  separated.
-- [ ] **5.6** Run and record the documentation quality gates required by
+  separated. (Runner PASS after help remediation; no residual gaps.)
+- [x] **5.6** Run and record the documentation quality gates required by
   `.ai/rules/testing-strategy.md`: `git diff --check`; manual Markdown rendering
   review of changed headings, lists, tables, and code fences; changed-link/path
   validation for every modified reference; and
   `bash scripts/.tests/test-doc-distribution.sh`. Record commands/results and the
-  manual rendering/link evidence in the change execution record.
+   manual rendering/link evidence in the change execution record.
+- [x] **5.7** Remediate the TC-HOOK-020 wrapper-help mismatch: both wrappers
+  state that `ADOS_HOOK_ENV_ALLOWLIST` defaults to empty, its built-in
+  `OC_ADOS_AGENT_*_MODEL` namespace, comma-separated explicit exact-name
+  delegation, operator-risk credentials, and literal data-only values that are
+  never logged. Preserve shared versus CEO-only settings and wrapper-context
+  classification. (2026-07-16: `test-ceo-loop.sh` 46/46 and
+  `test-deliver-ticket.sh` 74/74 PASS; both `--help` outputs compared.)
 
 **Acceptance Criteria**:
 
@@ -640,16 +647,21 @@ specification, plan, and 31-scenario test plan.
 
 **Tasks**:
 
-- [ ] **6.1** Run `/review-deep GH-146`; inspect both wrapper call graphs and
+- [x] **6.1** Run `/review-deep GH-146`; inspect both wrapper call graphs and
   verify CEO direct invocation/global PID publication, PM parent-shell placement,
   per-retry execution, parent-visible trap state, ≤1-second stop polling, and no
-  hook work under command substitution.
-- [ ] **6.2** Audit V1 file safety, exact grammar/bounds/authorization, literal
+   hook work under command substitution. (PASS: final deep review iteration 8,
+   `code-review/review-iter-8.yaml`, covers CEO direct-call/PM parent-shell,
+   per-retry, trap visibility, stop polling, and no hook work in substitutions.)
+- [x] **6.2** Audit V1 file safety, exact grammar/bounds/authorization, literal
   parsing, `LC_ALL=C` exact/limit+1 byte boundaries, pre-string CR/NUL/final-LF
   handling, explicit-only credential delegation, complete staging, rollback,
   cleanup, same-wrapper inheritance, and value-safe logs; compare duplicated
-  helpers for contract drift.
-- [ ] **6.3** Audit all AC↔TC mappings, real-wrapper lifecycle evidence, result
+   helpers for contract drift. (PASS: review iteration 8 verifies complete-token
+   CR/NUL checks and byte-for-byte valid `30 d0 90` UTF-8 retention in both
+   parsers, with lifecycle, authorization, atomicity, inheritance, cleanup, and
+   value-safe-log coverage retained.)
+- [x] **6.3** Audit all AC↔TC mappings, real-wrapper lifecycle evidence, result
   and consumer regressions, inactive install/symmetric uninstall, docs, and
   explicit exclusions. Verify both wrapper help outputs list the correct shared
   and CEO-only operator settings/defaults and separately classify all four
@@ -658,7 +670,10 @@ specification, plan, and 31-scenario test plan.
   evidence stops at safe atomic state and imminent/same-wrapper inheritance, with
   no binding, selected-model, wrapper `-m`, or `CEO_LOOP_MODEL` requirement.
   Confirm Phase 5 records `git diff --check`, Markdown rendering, changed-link/path,
-  and documentation-distribution evidence. Route every finding to Phase 7.
+   and documentation-distribution evidence. Route every finding to Phase 7.
+   (PASS: review iteration 8 has no findings and confirms consumer, installation,
+   help, and documentation facets; the named TC table maps all 31 IDs and keeps
+   environment-return evidence to atomic state and same-wrapper inheritance.)
 
 **Acceptance Criteria**:
 
@@ -666,6 +681,10 @@ specification, plan, and 31-scenario test plan.
   Phase 7.
 - Should: zero Critical or Major findings and explicit closure of readiness
   iteration 1 findings 2/6 and readiness iteration 2 finding 8.
+
+**Acceptance Criteria**: PASSED (`review-iter-8.yaml`: PASS, zero findings,
+spec/plan compliance PASS; prior accepted findings were remediated before the
+final deep review.)
 
 **Files and modules**:
 
@@ -686,14 +705,20 @@ specification, plan, and 31-scenario test plan.
 
 **Tasks**:
 
-- [ ] **7.1** Fix accepted findings in the smallest affected production, test,
-  or documentation scope; add regression evidence for every defect.
-- [ ] **7.2** Re-run affected suites and `/review-deep GH-146` until PASS.
+- [x] **7.1** Fix accepted findings in the smallest affected production, test,
+   or documentation scope; add regression evidence for every defect. (Accepted
+   remediations committed in `67fbed4`, `a30a993`, `6761c11`, `68e1345`,
+   `a1f0105`, and `8ce2795`; `8099cd90` documents the UTF-8 behavior.)
+- [x] **7.2** Re-run affected suites and `/review-deep GH-146` until PASS.
+   (PASS: final deep review iteration 8 at HEAD `8099cd90`, zero findings.)
 
 **Acceptance Criteria**:
 
 - Must: every accepted finding is closed and re-review passes.
 - Should: no scope expansion or unrelated refactoring.
+
+**Acceptance Criteria**: PASSED (accepted review findings closed by the listed
+remediation commits; `code-review/review-iter-8.yaml` PASS.)
 
 **Files and modules**:
 
@@ -715,28 +740,35 @@ evidence, and PR preparation.
 
 **Tasks**:
 
-- [ ] **8.1** Apply the minor version impact per repository conventions. Inspect
+- [x] **8.1** Apply the minor version impact per repository conventions. Inspect
   touched scripts' `APP_VERSION` values and bump only where the established
   convention requires it; do not create a centralized version or new scheme.
-- [ ] **8.2** Run TC-HOOK-REG-2 and all gates: focused wrapper, example, install,
+- [x] **8.2** Run TC-HOOK-REG-2 and all gates: focused wrapper, example, install,
   uninstall, batch, and regression suites; `bash scripts/test-all.sh`;
   shellcheck/format checks used by the repo; and a clean sandbox
   install→inactive check→uninstall round trip.
-- [ ] **8.3** Perform final spec reconciliation with `@doc-syncer`: compare
+- [x] **8.3** Perform final spec reconciliation with `@doc-syncer`: compare
   delivered behavior and test evidence to every AC, DM, NFR, risk mitigation,
   explicit DoD item, Accepted TDR-0002, spec v1.6, and test-plan v1.6. Confirm the
   settings/help/context, AC-F8-1 optional model-configuration examples and
   user-defined semantics, AC-F9-2/3 exact parser and credential semantics, and
   AC-F4-2/NFR-4/TC-HOOK-012 contracts are consistent; confirm no provider/model
   selection, `{env:...}` binding, selected-model, wrapper `-m`, or
-  `CEO_LOOP_MODEL` guarantee entered the implementation; and confirm the rejected
-  shared-library alternative introduced no artifact.
-- [ ] **8.4** Confirm all 31 current TC IDs pass, all plan tasks are complete,
+   `CEO_LOOP_MODEL` guarantee entered the implementation; and confirm the rejected
+   shared-library alternative introduced no artifact. (PASS: doc-sync reports no
+   residual gaps after final behavior; review iteration 8 reconfirms no binding,
+   selected-model, wrapper `-m`, `CEO_LOOP_MODEL`, or shared-library addition.)
+- [x] **8.4** Confirm all 31 current TC IDs pass, all plan tasks are complete,
   TC-HOOK-001 names both wrapper files, TC-HOOK-020/026 evidence is recorded,
   help/manual checks pass, supported lifecycle trials are recorded, no return
   values leaked, no hook-specific result/consumer changes exist, and no
-  temp/install artifacts remain.
-- [ ] **8.5** Re-run and record the final documentation/static quality checklist:
+   temp/install artifacts remain. (PASS: all 31 TC IDs have named evidence in
+   the Phase 10 table; lifecycle/regression evidence covers 31 TC IDs and the
+   final `test-hook-regression.sh` suite reports 31/31 assertions after the two
+   UTF-8 regressions. Review iteration 8
+   confirms lifecycle, consumer, installation, help, documentation, authorization,
+   atomicity, inheritance, and no-leak/result-change facets.)
+- [x] **8.5** Re-run and record the final documentation/static quality checklist:
   `git diff --check`; manual Markdown rendering review of changed headings, lists,
   tables, and code fences; changed-link/path validation for every modified
   reference; `bash scripts/.tests/test-doc-distribution.sh`; and YAML syntax
@@ -747,10 +779,13 @@ evidence, and PR preparation.
   `python3 -c "import yaml,sys; yaml.safe_load(open(sys.argv[1]))" "$file"`.
   Record the complete file list and a passing parse result for each. Treat all
   five checks as explicit DoD checklist items, not implied format checks.
-- [ ] **8.6** Record TC-HOOK-020 after the planned documentation/system-spec
+- [x] **8.6** Record TC-HOOK-020 after the planned documentation/system-spec
   updates and before DoD approval and PR creation; verify its optional-example,
   user-defined-semantics, cross-link, help, protocol, and credential-boundary
-  checklist is complete.
+   checklist is complete. (PASS: runner manual TC-HOOK-020 after help remediation;
+   doc-sync reports no residual gaps and Phase 5 records optional examples,
+   user-defined semantics, cross-links, both help outputs, protocol, and
+   credential-boundary checks.)
 - [ ] **8.7** Use `@pr-manager` for the GH-146 PR only after all gates and DoD
   checklist items pass.
 
@@ -864,16 +899,245 @@ scenario to its implementation phase and executable target.
 | 1.4 | 2026-07-16 | plan-writer | Synchronized Accepted TDR-0002, spec v1.5, test-plan v1.5, and readiness iteration 2 finding 8. Added explicit per-wrapper operator-setting and `--help` tasks/assertions; separated four wrapper-provided context variables; added AC-F8-1 profile/tier/per-agent guidance with reciprocal guide links; made both parser phases and TC-HOOK-026 exact under `LC_ALL=C` for inclusive/limit+1 bounds, CR/NUL/final-LF, credential authority, atomicity, logs, and cleanup; mapped TC-HOOK-001 to both files and TC-HOOK-020/026 to phases. Swept stale absolute credential exclusion, ambiguous bounds, and placement/status wording; all 31 TCs and DoD remain complete with aligned source artifacts. |
 | 1.5 | 2026-07-16 | plan-writer | Synchronized Accepted TDR-0002 D-6, spec v1.6, test-plan v1.6, and readiness iteration 3 findings 1–4. Narrowed the guarantee to safe atomic parent-environment state and imminent/same-wrapper inheritance; made profile/tier/per-agent/`{env:...}` material optional user-defined examples; excluded provider/model selection, selected-model, wrapper `-m`, and `CEO_LOOP_MODEL` requirements; replaced timing claims with deterministic TC-HOOK-001 path evidence; added explicit Phase 5/8 `git diff --check`, Markdown rendering, changed-link/path, and documentation-distribution DoD checks; and sequenced TC-HOOK-020 after documentation/system-spec updates and before DoD/PR creation. Preserved all 31 TC mappings and the execution log. |
 | 1.6 | 2026-07-16 | plan-writer | Closed the post-escalation Phase 8 quality-gate gap by requiring recorded `yaml.safe_load()` syntax validation for every changed `.yaml`/`.yml` file, explicitly including `chg-GH-146-pm-notes.yaml`; preserved all other plan content, 31 TC mappings, and the execution log. |
+| 1.7 | 2026-07-16 | coder | Added the TC-HOOK-020 wrapper-help remediation task after the help/default/parser-boundary mismatch was found; it is limited to both wrappers and their focused help assertions. |
+| 1.8 | 2026-07-16 | reviewer | Added Phase 9 remediation from code-review iteration 1: skip PM hook execution in dry-run mode; make V1 metadata validation and the Z.AI wake-time formatter portable; and implement the missing automated TC-HOOK-001…010/014/023…027 execution evidence claimed by Phases 1–3. |
+| 1.9 | 2026-07-17 | reviewer | Added Phase 10 remediation from code-review iteration 2: complete the missing real-wrapper scenario evidence and resolve new ShellCheck findings in the added hook helpers. |
+| 2.0 | 2026-07-17 | reviewer | Added Phase 11 remediation from code-review iteration 3: correct the still-overstated scenario mapping and make GNU/BSD adapter evidence genuinely branch-specific. |
+| 2.1 | 2026-07-17 | coder | Completed Phase 11 with named real-wrapper watchdog, controls, inheritance, OWN-path lifecycle, and GNU/BSD adapter evidence; narrowed the Phase 10 mapping to those tests. |
+| 2.2 | 2026-07-17 | reviewer | Added Phase 12 remediation from code-review iteration 4: complete the still-missing PM last-message exclusion evidence and assert watchdog ordering rather than event counts alone. |
+| 2.3 | 2026-07-17 | coder | Completed Phase 12 with exactly two added executable assertions: PM public `--last-message` marker/artifact exclusion with preserved output, and CEO watchdog `hook` → `spawn` → `hook` → `spawn` ordering. Corrected the evidence mapping to name both tests. |
+| 2.4 | 2026-07-17 | coder | Finalized evidence only at HEAD `8099cd90`: marked review, conditional remediation, final reconciliation, 31-TC traceability, and TC-HOOK-020 tasks complete from final PASS artifacts; left PR task 8.7 unchecked. |
 
 ## Execution Log
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| 1 | Not started | | | | |
-| 2 | Not started | | | | |
-| 3 | Not started | | | | |
-| 4 | Not started | | | | |
-| 5 | Not started | | | | |
-| 6 | Not started | | | | |
-| 7 | Conditional | | | | |
-| 8 | Not started | | | | |
+| 1 | Complete pending commit | 2026-07-16 | 2026-07-16 | | Tasks 1.6–1.7: PM help contract and protocol coverage added; `bash scripts/.tests/test-deliver-ticket.sh` and `bash scripts/test-all.sh` pass. |
+| 2 | Complete pending commit | 2026-07-16 | 2026-07-16 | | Tasks 2.6–2.7: CEO help/retry-chunk coverage and locale-safe retry fix added; `bash scripts/.tests/test-ceo-loop.sh` and `bash scripts/test-all.sh` pass. |
+| 3 | Complete pending commit | 2026-07-16 | 2026-07-16 | | Task 3.1 passed. Root cause fixed: the background `_setsid` wrapper did not `exec`, so the tracked PID was not a reliable hook process-group ID. The real-wrapper matrix now passes 20 trials × CEO/PM × normal/TERM/INT/HUP (25/25 `test-hook-regression.sh`); CEO 46/46; deliver-ticket 74/74; `test-all.sh` 13/13; `git diff --check` clean. |
+| 4 | Complete pending commit | 2026-07-16 | 2026-07-16 | | Example, inventory symmetry, and focused example/install/uninstall suites pass. |
+| 5 | Complete pending commit | 2026-07-16 | 2026-07-16 | | Doc-syncer PASS: no residual gaps after AGENTS, both delivery docs, feature spec, and enduring test spec updates; diff-check, doc-distribution, frontmatter, and link validation passed. Runner TC-HOOK-020 PASS after help remediation, no residual gaps. Task 5.7 remains covered by CEO 46/46 and PM 74/74 focused suites. |
+| 6 | Complete (evidence only) | 2026-07-17 | 2026-07-17 | | Final deep review iteration 8 PASS at `8099cd90`; zero findings and all specified audit facets covered. |
+| 7 | Complete (conditional; evidence only) | 2026-07-17 | 2026-07-17 | | Accepted remediation commits closed findings; final deep review iteration 8 PASS. |
+| 8 | In progress — PR pending | 2026-07-17 | | | Tasks 8.3, 8.4, and 8.6 finalized from final artifacts; 8.7 remains unchecked for @pr-manager. Final matrix: CEO 54/54; PM 82/82; lifecycle/regression 31/31; Z.AI 4/4; install 55/55; uninstall 30/30; batch 34/34; aggregate 13/13; ShellCheck 0 new; doc distribution 78/no drift; YAML/link/diff gates PASS; deep review PASS; doc gaps none. |
+| 9 | Complete pending commit | 2026-07-17 | 2026-07-17 | | Added PM public dry-run marker coverage and CEO control-command exclusion coverage; portable parser/UTC fixtures and full quality-gate evidence recorded. |
+| 10 | Complete (no commit per caller) | 2026-07-17 | 2026-07-17 | | CEO 53/53 and PM 81/81; regression 29/29; Z.AI 4/4; install 55/55; uninstall 30/30; batch 34/34; doc distribution 78/no drift; syntax, diff, YAML, and aggregate 13/13 passed. No review or commit was run per caller instruction. |
+| 11 | Complete (no commit per caller) | 2026-07-17 | 2026-07-17 | | CEO 54/54; PM 81/81; regression 29/29 including 20 trials × CEO/PM × normal/TERM/INT/HUP via real OWN paths; Z.AI 4/4; install 55/55; uninstall 30/30; batch 34/34; doc distribution 78/no drift; syntax/YAML/diff passed; targeted ShellCheck matched only pre-existing SC2016/SC2012 infos; aggregate 13/13 passed. |
+| 12 | Complete (no commit per caller) | 2026-07-17 | 2026-07-17 | | Added only the PM public last-message and CEO watchdog-order assertions. CEO 54/54; PM 82/82; hook regression 29/29; doc distribution 78/no drift; syntax, diff, and YAML parse passed; aggregate 13/13 passed. No review, staging, commit, push, reset, or `.ai/local/` modification was performed. |
+
+---
+
+### Phase 10 TC-to-test evidence
+
+| TC IDs | Named executable evidence | Status |
+|--------|---------------------------|--------|
+| 001 | `test_hook_ceo_absent_path_spawns_without_hook_work`; `test_hook_pm_loop_absent_and_failure_blocks_spawn`. | Passed. |
+| 002/006/009/024/025/027 | `test_hook_ceo_absent_and_success_paths` and `test_hook_pm_loop_success_retry_context_and_v1` prove hook context, fresh artifacts, literal V1 inheritance, and both owner model-profile inputs. | Passed. |
+| 003 | `test_hook_ceo_run_loop_watchdog_retry` drives two real CEO `run_loop` watchdog spawns and asserts the exact `hook` → `spawn` → `hook` → `spawn` marker sequence; `test_hook_pm_loop_success_retry_context_and_v1` covers PM retry invocation. | Passed. |
+| 004/005 | `test_hook_ceo_join_excludes_and_cap_overrides`; `test_hook_control_paths_excluded` exercises CEO `--stop`, `--reset`, `--status`, and `--log`; PM dry-run helper/public CLI, `test_hook_pm_join_and_probe_paths_exclude_hook`, and public marker-configured `test_hook_last_message_cli_exclusion` cover PM exclusions, including normal stored-message output. | Passed. |
+| 007/007B/008/010/014 | `test_hook_ceo_failure_and_no_timeout_policy`; `test_hook_ceo_join_excludes_and_cap_overrides`; `test_hook_ceo_shutdown_grace_override`; `test_hook_failure_variants`; PM absent/failure and `test_hook_pm_no_timeout_and_invalid_v1_block_spawn`. | Passed. |
+| 011/013/021/022/023/026 | `test-hook-regression.sh` 20-trial lifecycle/parser/consumer matrix drives CEO `run_loop` OWN/spawn and PM `run_delivery` OWN/deliver paths for normal/TERM/INT/HUP cleanup; `test-batch-deliver.sh`; invalid-V1 wrapper-path tests. | Passed. |
+| 015–020/REG-1/REG-2 | Z.AI, install, uninstall, wrapper help, and aggregate suites. | Passed. |
+
+### Phase 9: Code Review Remediation (Iteration 1)
+
+**Goal**: Correct the first implementation-review findings without broadening the
+hook contract, then supply executable evidence for every claimed hook scenario.
+
+**Tasks**:
+
+- [x] **9.1** Prevent `deliver-ticket.sh --dry-run` from invoking a present
+  pre-iteration hook, creating its temporary output, or applying returned
+  environment data. Preserve the existing dry-run result/summary behavior and
+  add an integration regression using a marker-writing hook to prove
+  TC-HOOK-005's dry-run exclusion. (2026-07-17: focused PM suite PASS; marker-hook delivery-loop regression proves no invocation or hook artifacts.)
+- [x] **9.2** Replace the GNU-only `stat -c` ownership/mode inspection in both
+  V1 parsers with a tested Linux/BSD-compatible adapter while retaining the
+  regular-file, owner, and group/world-write checks. Replace the Z.AI example's
+  GNU-only `date -d @…` wake-time formatting with UTC formatting that works on
+  supported BSD/macOS and GNU systems; add platform-command seams or fixtures so
+  the compatible paths are exercised without depending on the host platform. (2026-07-17: GNU/BSD `_hook_stat` adapter fixtures added to cross-wrapper matrix; Z.AI pure UTC formatter tests PASS.)
+- [x] **9.3** Fill the missing test-plan execution evidence in
+  `test-ceo-loop.sh` and `test-deliver-ticket.sh`, beginning with
+  TC-HOOK-001…010 and TC-HOOK-014: absent/success/failure/exec-failure/context,
+  retry placement, JOIN/probe/control/dry-run exclusion, and no-timeout behavior.
+  Complete the wrapper-level inheritance/fresh-artifact/value-safe-diagnostic
+  gaps in TC-HOOK-023…027 while retaining the existing cross-wrapper
+  parser/lifecycle matrix; static help assertions or parser-only calls are not
+  substitutes for the wrapper-level cases. (2026-07-17: added real public PM dry-run marker test, PM hook failure cases, and real CEO control-command exclusion test; retained both-wrapper parser/lifecycle matrices and existing wrapper integration coverage.)
+- [x] **9.4** Run the affected focused suites, `test-hook-regression.sh`, install
+  and uninstall suites, `test-batch-deliver.sh`, `scripts/test-all.sh`, and a
+  shell portability/static check; record all 31 TC results before re-review. (2026-07-17 PASS: hook regression 29/29 including 20-trial lifecycle matrix; CEO 47/47; PM 77/77; Z.AI 4/4; install 55/55; uninstall 30/30; batch 34/34; doc-distribution 78 docs/no drift; `bash scripts/test-all.sh` 13/13 files; `bash -n` and `git diff --check` clean.)
+
+**Acceptance Criteria**:
+
+- Must: `--dry-run` never runs the hook; valid V1 output and the installed Z.AI
+  example work on supported GNU and BSD/macOS command variants; every automated
+  TC mapped in the v1.6 test plan has executable wrapper-level evidence.
+
+**Completion signal**: `fix(GH-146): address pre-iteration hook review findings`
+
+---
+
+### Phase 10: Code Review Remediation (Iteration 2)
+
+**Goal**: Replace claimed coverage with concrete real-wrapper evidence for every
+mapped hook scenario and restore the repository Bash lint standard.
+
+**Tasks**:
+
+- [x] **10.1** In `scripts/.tests/test-ceo-loop.sh` and
+  `scripts/.tests/test-deliver-ticket.sh`, add public or loop-level
+  marker-hook/mock-OpenCode cases for the currently missing TC-HOOK-001…010 and
+  014 evidence: absent normal path, successful pre-spawn invocation and context,
+  per-retry invocation, JOIN/probe/control/dry-run exclusion as applicable,
+  not-executable/exec-failure/non-zero policy in both wrappers, no execution
+  timeout, and CEO retry/cap/grace overrides. Assert no OpenCode spawn where the
+   contract prohibits one. (2026-07-17: added explicit CEO absent-path, PM JOIN/probe, PM no-timeout, and CEO grace-override marker/mock wrapper cases.)
+- [x] **10.2** Add end-to-end wrapper-path evidence for TC-HOOK-023…027 that
+  proves valid V1 updates reach the imminent and later same-wrapper child,
+  invalid batches cause no spawn or parent mutation, each retry receives a fresh
+  private output artifact, and diagnostics do not expose values. Retain the
+  parser and lifecycle matrix as supplementary coverage, not a substitute for
+   these call-path assertions. (2026-07-17: added CEO and PM invalid-V1 wrapper-path cases proving retained parent value and no mocked OpenCode spawn; valid-path tests assert imminent/later inheritance, fresh paths, cleanup, and value-safe diagnostics.)
+- [x] **10.3** Refactor or narrowly document the newly introduced ShellCheck
+  findings in the hook parser helpers (`SC2209` and `SC2015`) in both wrappers;
+  do not suppress unrelated pre-existing diagnostics. Run ShellCheck on the
+  changed hook scripts and record that no new warnings remain. Ensure any
+  GNU/BSD metadata-adapter fixture explicitly selects and proves the intended
+   command variant rather than relying on function positional parameters. (2026-07-17: readable multi-line authorization/metadata helpers and narrowly scoped parser rationale suppressions remove new SC2209/SC2015. Targeted ShellCheck now reports only pre-existing SC2016/SC2012 infos.)
+- [x] **10.4** Re-run both focused wrapper suites, hook regression, example,
+  install, uninstall, batch, aggregate, syntax, diff, YAML, and targeted
+  ShellCheck gates. Reconcile the test-plan table so each of its 31 TC IDs maps
+   to executable evidence before requesting re-review. (2026-07-17: CEO 53/53; PM 81/81; hook regression 29/29; Z.AI 4/4; install 55/55; uninstall 30/30; batch 34/34; doc distribution 78/no drift; syntax, `git diff --check`, YAML parse, and `scripts/test-all.sh` 13/13 passed. ShellCheck adds no warning/error-class findings versus main; baseline SC2016/SC2012 infos recorded separately.)
+
+**Acceptance Criteria**:
+
+- Must: every automated TC in test-plan v1.6 has real-wrapper execution
+  evidence where its target layer requires it; the added hook code has no new
+  ShellCheck warnings; and review iteration 3 passes.
+- Should: parser/lifecycle tests remain table-driven and complement rather than
+  duplicate wrapper behavior tests.
+
+**Files and modules**:
+
+- Code areas: `scripts/.tests/test-ceo-loop.sh`,
+  `scripts/.tests/test-deliver-ticket.sh`,
+  `scripts/.tests/test-hook-regression.sh`, `scripts/ceo-loop.sh`, and
+  `scripts/deliver-ticket.sh` only as needed for lint remediation.
+- System docs: none.
+
+**Tests**:
+
+- `bash scripts/.tests/test-ceo-loop.sh`
+- `bash scripts/.tests/test-deliver-ticket.sh`
+- `bash scripts/.tests/test-hook-regression.sh`
+- `bash scripts/.tests/test-hook-zai-example.sh`
+- `bash scripts/.tests/test-install.sh`
+- `bash scripts/.tests/test-uninstall.sh`
+- `bash scripts/.tests/test-batch-deliver.sh`
+- `bash scripts/test-all.sh`
+- `shellcheck scripts/ceo-loop.sh scripts/deliver-ticket.sh scripts/hooks/pre-opencode-iteration-zai.sh`
+
+**Completion signal**: `test(GH-146): complete hook wrapper coverage`
+
+---
+
+### Phase 11: Code Review Remediation (Iteration 3)
+
+**Goal**: Make the hook-test mapping truthful by filling the remaining
+wrapper-path gaps and proving both metadata-adapter branches.
+
+**Tasks**:
+
+- [x] **11.1** Add a CEO `run_loop` watchdog-retry fixture with a marker hook and
+  mocked OpenCode boundary. Prove the hook runs before the initial and actual
+   watchdog-retry spawn, and preserves the required retry/budget behavior. (2026-07-17: `test_hook_ceo_run_loop_watchdog_retry` passes via two real `run_loop` stuck watchdog spawns.)
+- [x] **11.2** Extend marker-hook exclusion coverage to every documented public
+  control/probe path, including CEO `--status` and `--log` and the applicable PM
+  probe/message paths. In both wrapper success-path fixtures, set and assert the
+  inherited `OC_ADOS_MODEL_PROFILE` and relevant pre-existing
+  `OC_ADOS_AGENT_*_MODEL` value received by the hook. Exercise supported signal
+  cleanup through each wrapper's OWN/spawn path rather than only by sourcing and
+   calling the private hook helper. (2026-07-17: CEO public `--stop/--reset/--status/--log`, both wrapper input-environment assertions, and 20-trial OWN-path signal matrix pass.)
+- [x] **11.3** Repair `test_metadata_adapter` so its mocked `_hook_stat` receives
+  an unambiguous GNU/BSD selector independent of `_hook_stat` positional
+  arguments. Assert GNU accepts `-c` and never requires `-f`; assert BSD rejects
+   `-c` and succeeds only with `-f`. (2026-07-17: closure-safe selector/call log proves GNU `-c` only and BSD `-c` then `-f` for both wrappers.)
+- [x] **11.4** Update the Phase 10 TC-to-test table to cite only behavior actually
+  exercised by named tests, then rerun focused wrapper, hook-regression, and
+   aggregate suites plus targeted ShellCheck before re-review. (2026-07-17: focused suites, lifecycle matrix, Z.AI/install/uninstall/batch/doc-distribution, syntax/YAML/diff, ShellCheck baseline, and `scripts/test-all.sh` PASS.)
+
+**Acceptance Criteria**:
+
+- Must: each TC-HOOK-003, 005, 006, and 023 mapping is supported by a concrete
+  wrapper-path test; GNU and BSD metadata paths are independently proven; and
+  the evidence table makes no unsupported completion claim.
+- Should: keep helper-level parser and lifecycle tests as supplementary coverage.
+
+**Acceptance Criteria**: PASSED (2026-07-17: TC-HOOK-003/005/006/023 have named wrapper-path evidence; GNU/BSD metadata branches independently asserted; evidence table narrowed to exact test behavior.)
+
+**Files and modules**:
+
+- Code areas: `scripts/.tests/test-ceo-loop.sh`,
+  `scripts/.tests/test-deliver-ticket.sh`, and
+  `scripts/.tests/test-hook-regression.sh`.
+- System docs: none.
+
+**Tests**:
+
+- `bash scripts/.tests/test-ceo-loop.sh`
+- `bash scripts/.tests/test-deliver-ticket.sh`
+- `bash scripts/.tests/test-hook-regression.sh`
+- `bash scripts/test-all.sh`
+- `shellcheck scripts/ceo-loop.sh scripts/deliver-ticket.sh scripts/hooks/pre-opencode-iteration-zai.sh`
+
+**Completion signal**: `test(GH-146): prove remaining hook wrapper scenarios`
+
+---
+
+### Phase 12: Code Review Remediation (Iteration 4)
+
+**Goal**: Close the two remaining test-plan evidence gaps without broadening the
+hook implementation.
+
+**Tasks**:
+
+- [x] **12.1** Add a marker-configured public `deliver-ticket.sh --last-message`
+   test that creates the required stored-message fixture and proves the command
+   does not invoke the hook or create hook artifacts, completing TC-HOOK-005's PM
+   message-path coverage. (2026-07-17: `test_hook_last_message_cli_exclusion`
+   preserves stored output and proves no marker hook or `mktemp` artifact; PM
+   suite 82/82 PASS.)
+- [x] **12.2** Strengthen `test_hook_ceo_run_loop_watchdog_retry` to assert the
+   exact event sequence `hook`, `spawn`, `hook`, `spawn`, proving each actual
+   watchdog spawn is preceded by its hook rather than merely counting events.
+   (2026-07-17: exact sequence assertion added; CEO suite 54/54 PASS.)
+- [x] **12.3** Update the Phase 10 evidence table only after the assertions pass,
+   then rerun focused CEO/PM suites and the aggregate suite. (2026-07-17:
+   table names the exact CEO ordering test and PM public last-message test;
+   CEO 54/54, PM 82/82, hook regression 29/29, and aggregate 13/13 PASS.)
+
+**Acceptance Criteria**:
+
+- Must: TC-HOOK-003 proves ordering and TC-HOOK-005 covers every named PM public
+  exclusion path; the evidence table contains no unsupported completion claim.
+  — PASSED (2026-07-17: exact CEO `hook` → `spawn` → `hook` → `spawn`
+  assertion and PM marker-configured public `--last-message` fixture pass; mapping
+  cites both named tests.)
+- Should: no production hook behavior changes.
+  — PASSED (test-only changes plus plan evidence.)
+
+**Files and modules**:
+
+- Code areas: `scripts/.tests/test-ceo-loop.sh` and
+  `scripts/.tests/test-deliver-ticket.sh`.
+- System docs: none.
+
+**Tests**:
+
+- `bash scripts/.tests/test-ceo-loop.sh`
+- `bash scripts/.tests/test-deliver-ticket.sh`
+- `bash scripts/test-all.sh`
+
+**Completion signal**: `test(GH-146): complete hook exclusion and ordering proof`

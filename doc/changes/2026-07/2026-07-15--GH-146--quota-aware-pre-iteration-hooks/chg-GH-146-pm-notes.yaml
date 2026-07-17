@@ -7,15 +7,15 @@ phases:
   test_planning: { started: "2026-07-15T20:50:00Z", completed: "2026-07-16T10:05:00Z" }
   delivery_planning: { started: "2026-07-15T21:10:00Z", completed: "2026-07-16T10:05:00Z" }
   dor_check: { started: "2026-07-15T21:35:00Z", completed: "2026-07-16T10:10:00Z" }
-  delivery: { started: null, completed: null }
-  system_spec_update: { started: null, completed: null }
-  review_fix: { started: null, completed: null }
-  quality_gates: { started: null, completed: null }
-  dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null, url: null }
+  delivery: { started: "2026-07-16T10:30:00Z", completed: "2026-07-16T12:55:00Z" }
+  system_spec_update: { started: "2026-07-16T12:55:00Z", completed: "2026-07-16T14:30:00Z" }
+  review_fix: { started: "2026-07-16T14:30:00Z", completed: "2026-07-17T12:35:00Z" }
+  quality_gates: { started: "2026-07-17T06:15:00Z", completed: "2026-07-17T12:30:00Z" }
+  dod_check: { started: "2026-07-17T12:35:00Z", completed: "2026-07-17T13:30:00Z" }
+  pr_creation: { started: "2026-07-17T13:30:00Z", completed: null, url: null }
 decisions:
   - { text: "Use the user-approved default hook contract from GH-146: ~/.ados fallback with env override, per-spawn/resume execution, no timeout, subprocess isolation, and explicit CEO/PM context.", date: "2026-07-15" }
-  - { text: "TDR-0002 (Proposed, R2) defines remaining contract details: installed inactive example under scripts/hooks; loud single-category failures with existing result enums; per-iteration delivery checks; bounded CEO hook-failure retries separate from stuck budgets; process-group cleanup; pure UTC test seams.", date: "2026-07-15" }
+  - { text: "TDR-0002 (Accepted, R2) defines remaining contract details: installed inactive example under scripts/hooks; loud single-category failures with existing result enums; per-iteration delivery checks; bounded CEO hook-failure retries separate from stuck budgets; process-group cleanup; pure UTC test seams; and safe data-only environment return.", date: "2026-07-15" }
 open_questions: []
 blockers:
   - text: "DoR iteration 1 requires human selection of the supported termination guarantee: narrow no-orphan cleanup to normal exit and direct SIGTERM/SIGINT/SIGHUP (recommended), or add stronger wrapper-SIGKILL containment with higher complexity/portability cost."
@@ -26,6 +26,10 @@ blockers:
     resolved_date: "2026-07-16"
   - text: "Planning-artifact commit is blocked because GPG signing key 6AEF3AE876FAD0594BB21EE6E52B3E7E037AF852 timed out in pinentry. Human must unlock signing or explicitly authorize an unsigned commit before delivery can start."
     date: "2026-07-16"
+    resolved_date: "2026-07-16"
+  - text: "Local review reached the 3-iteration cap with two residual test-evidence gaps: missing actual wrapper-path coverage for CEO watchdog/control/model-env/signal cases, and a GNU/BSD metadata fixture that accidentally exercises only BSD fallback. Human must authorize one extra targeted remediation/re-review or accept the residual test risk."
+    date: "2026-07-17"
+    resolved_date: "2026-07-17"
 notes:
   - text: "Clarify-scope review started against GH-146, the autonomous-delivery feature spec, delivery scripts, tests, installation inventory, and delivery-mode guidance."
     type: info
@@ -87,3 +91,45 @@ notes:
   - text: "Commit attempt failed after correct staging because GPG pinentry timed out; no commit was created. This blocks the hard pre-delivery requirement that approved artifacts are committed."
     type: retro
     date: "2026-07-16"
+  - text: "GPG signing was restored; approved planning, decision, and readiness artifacts committed as 477c42c4. Delivery started."
+    type: resolved
+    date: "2026-07-16"
+  - text: "Coder subagent could not access @committer and twice returned with mandatory test matrices incomplete. PM resumed with a fresh coder for coverage, then fixer resolved a real process-group cleanup defect: background `_setsid` did not exec, so tracked PID was not the hook PGID. Final evidence: lifecycle matrix 25/25, CEO 46/46, PM 74/74, all 13 test suites green. Process inefficiency: committer availability should be validated before delegating a multi-phase run-plan, and incomplete mandatory plan tasks must not be reported as an implementation handoff."
+    type: retro
+    date: "2026-07-16"
+  - text: "Delivery implementation committed in 8d0cc3a8 (core loops/tests), dea159bd (inactive Z.AI example + install/uninstall), and 21fecb7b (user/system docs)."
+    type: info
+    date: "2026-07-16"
+  - text: "System docs reconciled with no residual gaps and committed as 89877fc7. Resolved stale install inventory and 15-vs-10-minute defaults; added enduring autonomous-delivery test specification and scripts/hooks repo map. TC-HOOK-020 initially exposed incomplete wrapper help, fixed in 6090db92; rerun passed and doc-sync confirmed no follow-up changes."
+    type: retro
+    date: "2026-07-16"
+  - text: "Review iteration 1 FAIL: dry-run incorrectly invoked hook; parsers used GNU-only stat -c; Z.AI example used GNU-only date -d; checked plan overstated wrapper-level test coverage and missed the dry-run defect. Reopened delivery remediation. Root cause: test matrices emphasized helper/parser cases but did not execute every excluded top-level wrapper path on supported BSD/macOS command variants."
+    type: retro
+    date: "2026-07-16"
+  - text: "Review iteration 2 FAIL: although prior defects were fixed, Phase 9.3 again overstated executable wrapper-level TC coverage (missing absent/success/context/spawn/retry/JOIN/failure-cap/no-timeout/env inheritance cases) and new parser helpers introduced ShellCheck SC2209/SC2015 warnings. This repeated gap indicates test-plan mapping was treated as evidence rather than requiring named executable cases in each wrapper suite."
+    type: retro
+    date: "2026-07-17"
+  - text: "Review iteration 3 FAIL at the configured cap. ShellCheck is closed, but reviewer found Phase 10 evidence still overclaims actual wrapper-path coverage for CEO watchdog retry, status/log controls, model-profile inheritance, and signal cleanup; GNU/BSD test style uses the wrong positional parameter and only exercises BSD fallback. Escalated rather than silently exceeding the review-loop limit."
+    type: retro
+    date: "2026-07-17"
+  - text: "Owner explicitly authorized one final targeted remediation and re-review beyond the configured review cap, with instruction to continue through passing quality gates and PR readiness."
+    type: decision
+    date: "2026-07-17"
+  - text: "Post-cap review iteration 4 still failed on two narrowly missing assertions: PM --last-message did not have a marker-hook exclusion test, and CEO watchdog test counted events without asserting hook→spawn→hook→spawn ordering. Most iteration-3 gaps were closed. Continuing under owner's explicit instruction to work until PR-ready."
+    type: retro
+    date: "2026-07-17"
+  - text: "Review iteration 5 PASS after owner-authorized remediation. Final coverage includes PM --last-message exclusion and exact CEO hook→spawn→hook→spawn watchdog ordering; all prior portability, lifecycle, parser, consumer, and ShellCheck findings closed."
+    type: resolved
+    date: "2026-07-17"
+  - text: "Final quality gates passed all functional, syntax, YAML, documentation, link, diff, and 13/13 aggregate suites, but ShellCheck comparison found 25 new diagnostics, primarily in new test scripts. Reopened quality remediation; earlier review's narrower production-only ShellCheck check did not catch test-file warnings."
+    type: retro
+    date: "2026-07-17"
+  - text: "Quality remediation commit a1f0105d eliminated all GH-146-added ShellCheck diagnostics. Final matrix PASS: CEO 54/54, PM 82/82, lifecycle 29/29, Z.AI 4/4, install 55/55, uninstall 30/30, batch 34/34, aggregate 13/13, doc distribution 78/no drift, shell syntax, YAML, links/frontmatter, and both diff checks. ShellCheck comparison: 0 new vs main. Final reviewer regression check PASS; doc-sync reports no residual gaps."
+    type: resolved
+    date: "2026-07-17"
+  - text: "Final deep audit found a new major UTF-8 parser defect: CR/NUL detection removed od separators, so adjacent valid bytes such as 30 d0 90 formed a false 0d match. Existing ASCII boundary tests missed valid multibyte literal values. Reopened targeted fix and UTF-8 regression coverage."
+    type: retro
+    date: "2026-07-17"
+  - text: "DoD PASS at HEAD 8099cd90 plus implementation commit 8ce2795f: all spec ACs and 31 traced TC IDs satisfied; final focused counts CEO 54/54, PM 82/82, hook regression 31/31, Z.AI 4/4, install 55/55, uninstall 30/30, batch 34/34, aggregate 13/13; ShellCheck 0 new; docs/links/frontmatter/YAML/diff gates pass; deep review PASS with 0 findings; doc-sync has no residual gaps. Only plan task 8.7 remains intentionally pending PR creation."
+    type: resolved
+    date: "2026-07-17"

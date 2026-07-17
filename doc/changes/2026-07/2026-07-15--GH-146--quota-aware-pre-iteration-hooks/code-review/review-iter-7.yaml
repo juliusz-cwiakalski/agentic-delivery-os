@@ -1,0 +1,46 @@
+version: 1
+iteration: 7
+mode: local
+work_item_ref: GH-146
+branch: feat/GH-146/quota-aware-pre-iteration-hooks
+status: FAIL
+summary: >
+  Deep audit of a1f0105d finds the reviewed call graphs, lifecycle behavior,
+  consumer contracts, installation lifecycle, help, and documentation aligned
+  with Accepted TDR-0002, and all nine accepted findings from review iterations
+  1 through 4 (with none in iterations 5 or 6) are closed. However, both
+  duplicated V1 parsers collapse the byte-token separators before detecting CR
+  and NUL, so valid UTF-8 literal values can be misidentified as forbidden bytes
+  and prevent spawning; this violates the V1 literal-value contract.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 0
+  low: 0
+  info: 0
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: correctness
+    location: scripts/ceo-loop.sh:191; scripts/deliver-ticket.sh:256
+    message: >
+      The CR/NUL preflight converts `od -t x1` output into one unseparated hex
+      string before matching `0d|00`, so either pattern can match across adjacent
+      byte tokens. For example, a valid LF-terminated V1 record whose literal
+      value is `0А` (ASCII 0 followed by U+0410, bytes 30 d0 90) is rejected by
+      both parsers as containing CR or NUL even though it contains neither.
+    suggestion: >
+      Detect whole byte tokens without removing their separators (or use a
+      byte-safe checker), then add the valid UTF-8 cross-token regression to the
+      shared both-wrapper matrix alongside the real CR and NUL rejection cases.
+      Preserve the LC_ALL=C bounds and pre-string validation ordering.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-07-17T10:46:09Z
+next_step: CALL_CODER

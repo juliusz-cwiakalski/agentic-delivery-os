@@ -1,0 +1,24 @@
+version: 1
+iteration: 8
+mode: local
+work_item_ref: GH-146
+branch: feat/GH-146/quota-aware-pre-iteration-hooks
+status: PASS
+summary: >
+  Commits 8ce2795f and 8099cd90 close iteration 7: both standalone parsers now
+  match CR and NUL as complete `od` byte tokens, not across concatenated tokens.
+  The shared matrix proves the valid 30 d0 90 UTF-8 literal is retained
+  byte-for-byte by both parsers while real CR and NUL remain rejected; prior
+  lifecycle, authorization, atomicity, inheritance, consumer, installation,
+  help, and documentation facets remain covered and passing.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 0
+spec_compliance: PASS
+plan_compliance: PASS
+findings: []
+reviewed_at: 2026-07-17T11:09:45Z
+next_step: PROCEED
