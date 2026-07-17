@@ -579,7 +579,7 @@ test_run_loop_single_flight_exits_early() {
   _setup_ceo_state
   # Write a live loop PID file pointing at this test process.
   _jq -n --arg pid "$$" --argjson start "$(date +%s)" \
-    '{pid:$pid,start:$start}' >"${LOOP_PID_FILE}"
+    "{pid:\$pid,start:\$start}" >"${LOOP_PID_FILE}"
   : >"${MOCK_SPAWN_CALLS}"
   local stderr rc=0
   stderr="$(STUCK_SECONDS="3600" POLL_SECONDS="1" MAX_ITERATIONS="0" MAX_RESTARTS="0" \
@@ -998,6 +998,8 @@ test_hook_ceo_failure_and_no_timeout_policy() {
 
 test_hook_ceo_join_excludes_and_cap_overrides() {
   local hook="${_test_tmpdir}/hook" marker="${_test_tmpdir}/marker"
+  # The generated hook expands HOOK_MARKER when it runs.
+  # shellcheck disable=SC2016
   printf '#!/usr/bin/env bash\ntouch "$HOOK_MARKER"\nexit 1\n' >"${hook}"; chmod 700 "${hook}"
   ADOS_PRE_ITERATION_HOOK="${hook}" HOOK_MARKER="${marker}" bash -c '
     source "$1"; ceo_pid_if_live(){ printf 123; }; spawn_or_resume_ceo "$2/log"; [[ "$SPAWN_OR_RESUME_CEO_PID" == 123 ]];

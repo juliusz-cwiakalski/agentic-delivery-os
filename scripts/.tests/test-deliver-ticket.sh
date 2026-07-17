@@ -1713,6 +1713,8 @@ test_hook_pm_loop_absent_and_failure_blocks_spawn() {
 
 test_hook_pm_join_and_probe_paths_exclude_hook() {
   local hook="${_test_tmpdir}/hook" marker="${_test_tmpdir}/marker"
+  # The generated hook expands HOOK_MARKER when it runs.
+  # shellcheck disable=SC2016
   printf '#!/usr/bin/env bash\ntouch "$HOOK_MARKER"\n' >"${hook}"; chmod 700 "${hook}"
   ADOS_PRE_ITERATION_HOOK="${hook}" HOOK_MARKER="${marker}" bash -c '
     source "$1"; DELIVERY_DIR="$2/delivery"; mkdir -p "$DELIVERY_DIR"; owner_pid_if_live(){ [[ -f "$DELIVERY_DIR/seen" ]] && return 1; : >"$DELIVERY_DIR/seen"; printf 123; }; classify_result(){ printf finished; }; pr_url_for(){ :; }; sleep(){ :; }; join_delivery GH-146 feat/test >/dev/null; cmd_is_delivering GH-146 || true; [[ ! -e "$HOOK_MARKER" ]]

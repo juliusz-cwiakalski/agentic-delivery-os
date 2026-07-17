@@ -5,8 +5,10 @@ set -o errtrace
 shopt -s inherit_errexit 2>/dev/null || true
 IFS=$'\n\t'
 
-readonly TEST_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-readonly ROOT="$(cd -- "${TEST_DIR}/../.." && pwd -P)"
+TEST_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+readonly TEST_DIR
+ROOT="$(cd -- "${TEST_DIR}/../.." && pwd -P)"
+readonly ROOT
 tmp="$(mktemp -d)"
 pass=0 fail=0
 trap 'rm -rf "${tmp}"' EXIT
@@ -16,6 +18,7 @@ run_parser() { local script="$1" file="$2"; bash -c 'source "$1"; _hook_validate
 rejects() { local script="$1" file="$2"; ! run_parser "${script}" "${file}"; }
 write_bytes() { local file="$1" count="$2"; dd if=/dev/zero bs=1 count="${count}" status=none | tr '\000' x >>"${file}"; }
 
+# shellcheck disable=SC2016 # The child shell must receive literal command-substitution syntax.
 test_literal_and_unset() {
   local script="$1" file="${tmp}/literal"
   printf 'ADOS_HOOK_ENV_V1\nset OC_ADOS_AGENT_PM_MODEL=literal $() `x` ; * = \\ "quoted"\nunset OC_ADOS_AGENT_CEO_MODEL\n' >"${file}"

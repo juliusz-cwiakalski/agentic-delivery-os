@@ -650,13 +650,17 @@ test_approved_pr_flow_gh_error_parks_not_merges() {
 test_hook_failure_is_failed_and_next_ticket_runs() {
   local marker="${_test_tmpdir}/deliveries"
   local deliver="${_test_tmpdir}/deliver"
+  # The generated helper expands its positional parameters when it runs.
+  # shellcheck disable=SC2016
   printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$1" >>"%s"\n[[ "$1" == GH-146 ]] && exit 1\n' "${marker}" >"${deliver}"
   chmod +x "${deliver}"
   DELIVER_SCRIPT="${deliver}"
   CLEAN_TOOL=""
   PARSED_TICKETS=("GH-146" "GH-147")
   PARSED_BRANCHES=("" "")
+  # shellcheck disable=SC2329 # Called indirectly by run_batch.
   should_skip_ticket() { printf ''; }
+  # shellcheck disable=SC2329 # Called indirectly by run_batch.
   is_pr_approved() { return 1; }
   run_batch >/dev/null 2>&1 || true
   assert_contains "$(<"${marker}")" "GH-146" "failed ticket must be attempted" || return 1

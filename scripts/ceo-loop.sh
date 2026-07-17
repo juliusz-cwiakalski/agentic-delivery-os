@@ -300,7 +300,7 @@ write_ceo_pid() {
   local -r pid="$1" start_epoch="${2:-$(date +%s)}"
   ensure_state_dir
   _jq -n --arg pid "${pid}" --argjson start "${start_epoch}" \
-    '{pid:$pid,start:$start}' >"${CEO_PID_FILE}"
+    "{pid:\$pid,start:\$start}" >"${CEO_PID_FILE}"
 }
 
 clear_ceo_pid() {
@@ -465,7 +465,7 @@ capture_session_id_by_title() {
   local -r title="$1"
   local sid
   sid="$(cd "${ROOT_DIR}" && _opencode session list --format json 2>/dev/null \
-    | _jq -r --arg t "${title}" '[.[] | select(.title == $t)] | sort_by(.time) | last | .id // empty' 2>/dev/null)" || sid=""
+    | _jq -r --arg t "${title}" "[.[] | select(.title == \$t)] | sort_by(.time) | last | .id // empty" 2>/dev/null)" || sid=""
   printf '%s' "${sid}"
 }
 
@@ -606,7 +606,7 @@ run_loop() {
   # Write own PID so a second invocation detects us.
   ensure_state_dir
   _jq -n --arg pid "$$" --argjson start "$(date +%s)" \
-    '{pid:$pid,start:$start}' >"${LOOP_PID_FILE}"
+    "{pid:\$pid,start:\$start}" >"${LOOP_PID_FILE}"
 
   mkdir -p "${LOG_DIR}"
   cd "${ROOT_DIR}"

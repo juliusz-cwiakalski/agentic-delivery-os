@@ -320,7 +320,7 @@ _pid_file_field() {
   f="$(pid_file_for "${ref}")"
   [[ -f "${f}" ]] || { printf ''; return 0; }
   local v
-  v="$(_jq -r --arg k "${key}" '.[$k] // empty' "${f}" 2>/dev/null)" || v=""
+  v="$(_jq -r --arg k "${key}" ".[\$k] // empty" "${f}" 2>/dev/null)" || v=""
   printf '%s' "${v}"
 }
 
@@ -432,7 +432,7 @@ write_pid_file() {
     --arg ref "${ref}" \
     --arg opencode_pid "${opencode_pid}" \
     --arg session_id "${session_id}" \
-    '{pid:$pid,start:$start,ref:$ref,opencode_pid:$opencode_pid,session_id:$session_id}' \
+    "{pid:\$pid,start:\$start,ref:\$ref,opencode_pid:\$opencode_pid,session_id:\$session_id}" \
     >"${f}"
 }
 
@@ -462,7 +462,7 @@ write_delivering_marker() {
     --arg pid "${pid}" \
     --argjson start "$(date +%s)" \
     --arg session_id "${session_id}" \
-    '{ref:$ref,pid:$pid,start:$start,session_id:$session_id}' \
+    "{ref:\$ref,pid:\$pid,start:\$start,session_id:\$session_id}" \
     >"$(delivering_marker_file)"
 }
 
@@ -710,7 +710,7 @@ resolve_branch() {
     if [[ -f "${mapping_file}" ]]; then
       local tmp_file
       tmp_file="$(mktemp)"
-      _jq --arg b "${discovered_branch}" '.branch = $b' "${mapping_file}" >"${tmp_file}" 2>/dev/null && mv "${tmp_file}" "${mapping_file}" || true
+      _jq --arg b "${discovered_branch}" ".branch = \$b" "${mapping_file}" >"${tmp_file}" 2>/dev/null && mv "${tmp_file}" "${mapping_file}" || true
     fi
     printf '%s' "${discovered_branch}"
     return 0
@@ -744,7 +744,7 @@ resolve_session() {
   # Try title-based lookup
   local title_session
   title_session="$(cd "${ROOT_DIR}" && _opencode session list --format json 2>/dev/null \
-    | _jq -r --arg title "ticket-${ticket_ref}" '[.[] | select(.title == $title)] | .[0].id // empty' 2>/dev/null)" || true
+    | _jq -r --arg title "ticket-${ticket_ref}" "[.[] | select(.title == \$title)] | .[0].id // empty" 2>/dev/null)" || true
   if [[ -n "${title_session}" ]]; then
     printf '%s' "${title_session}"
     return 0
@@ -786,7 +786,7 @@ save_session_mapping() {
     --argjson restart_count "${restart_count}" \
     --arg created "${created}" \
     --arg updated "${timestamp}" \
-    '{ticket:$ticket,session_id:$session_id,title:$title,branch:$branch,status:$status,restart_count:$restart_count,created:$created,updated:$updated}' \
+    "{ticket:\$ticket,session_id:\$session_id,title:\$title,branch:\$branch,status:\$status,restart_count:\$restart_count,created:\$created,updated:\$updated}" \
     >"${tmp_file}"
   mv "${tmp_file}" "${mapping_file}"
 }
@@ -802,7 +802,7 @@ increment_restart_count() {
   current_count="$(_jq -r '.restart_count // 0' "${mapping_file}" 2>/dev/null)" || current_count=0
   current_count=$((current_count + 1))
 
-  _jq --argjson rc "${current_count}" '.restart_count = $rc' "${mapping_file}" >"${tmp_file}"
+  _jq --argjson rc "${current_count}" ".restart_count = \$rc" "${mapping_file}" >"${tmp_file}"
   mv "${tmp_file}" "${mapping_file}"
 }
 
@@ -1122,7 +1122,7 @@ run_single_iteration() {
     for ((i = 0; i < SESSION_CAPTURE_RETRIES; i++)); do
       sleep 1
       captured_id="$(cd "${ROOT_DIR}" && _opencode session list --format json 2>/dev/null \
-        | _jq -r --arg title "ticket-${ticket_ref}" '[.[] | select(.title == $title)] | sort_by(.time) | last | .id // empty' 2>/dev/null)" || true
+        | _jq -r --arg title "ticket-${ticket_ref}" "[.[] | select(.title == \$title)] | sort_by(.time) | last | .id // empty" 2>/dev/null)" || true
       [[ -n "${captured_id}" ]] && break
     done
     if [[ -n "${captured_id}" ]]; then
@@ -1514,7 +1514,10 @@ cmd_log() {
     log_file="${LOG_DIR}/${ref_lower}.log"
   else
     shopt -s nullglob
-    log_file="$(ls -t "${LOG_DIR}"/*.log 2>/dev/null | head -1)"
+    local candidate
+    for candidate in "${LOG_DIR}"/*.log; do
+      [[ -z "${log_file}" || "${candidate}" -nt "${log_file}" ]] && log_file="${candidate}"
+    done
     shopt -u nullglob
   fi
 
