@@ -910,6 +910,22 @@ test_hook_retry_chunks_and_stop() {
   assert_eq "" "$(<"${chunks}")" "stop before wait must prevent sleep and next spawn"
 }
 
+# Black-box exclusion coverage keeps control commands outside hook execution.
+test_hook_control_paths_excluded() {
+  local project="${_test_tmpdir}/project" hook="${_test_tmpdir}/hook" marker="${_test_tmpdir}/marker"
+  mkdir -p "${project}/scripts"
+  cp "${SCRIPT_DIR}/ceo-loop.sh" "${project}/scripts/ceo-loop.sh"
+  cat >"${hook}" <<'HOOK'
+#!/usr/bin/env bash
+printf invoked >"${HOOK_MARKER}"
+HOOK
+  chmod 700 "${hook}"
+  HOOK_MARKER="${marker}" ADOS_PRE_ITERATION_HOOK="${hook}" bash "${project}/scripts/ceo-loop.sh" --stop || return 1
+  HOOK_MARKER="${marker}" ADOS_PRE_ITERATION_HOOK="${hook}" bash "${project}/scripts/ceo-loop.sh" --reset || return 1
+  [[ ! -e "${marker}" ]] || { printf 'CEO control command invoked hook\n' >&2; return 1; }
+}
+
+
 main() {
   printf '=== test-ceo-loop.sh ===\n'
 
@@ -980,6 +996,7 @@ main() {
   run_test "pr-manager: description quality (F-6)"   test_pr_manager_description_quality
   run_test "TC-HOOK-020: CEO help settings/context contract" test_hook_help_contract
   run_test "TC-HOOK-012: CEO retry chunks and stop" test_hook_retry_chunks_and_stop
+  run_test "TC-HOOK-005: CEO control paths exclude hook" test_hook_control_paths_excluded
 
   printf '\n'
   printf 'Results: %d passed, %d failed, %d total\n' \

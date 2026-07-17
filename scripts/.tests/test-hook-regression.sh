@@ -49,6 +49,26 @@ test_atomic_rollback() {
   chmod 600 "${file}"
   bash -c 'source "$1"; unset OC_ADOS_AGENT_CEO_MODEL; OC_ADOS_AGENT_PM_MODEL=old; export OC_ADOS_AGENT_PM_MODEL; _hook_apply_operation(){ [[ "$2" != OC_ADOS_AGENT_CEO_MODEL ]]; }; ! _hook_validate_and_apply "$2"; [[ "$OC_ADOS_AGENT_PM_MODEL" == old && ! -v OC_ADOS_AGENT_CEO_MODEL ]]' _ "${script}" "${file}"
 }
+test_metadata_adapter() {
+  local script="$1" style="$2" file uid
+  file="${tmp}/metadata-${style}"
+  uid="$(id -u)"
+  printf 'ADOS_HOOK_ENV_V1\n' >"${file}"
+  chmod 600 "${file}"
+  HOOK_TEST_UID="${uid}" bash -c '
+    source "$1"
+    _hook_stat() {
+      if [[ "$2" == gnu ]]; then
+        [[ "$1" == -c ]] && { printf "600 %s\n" "$HOOK_TEST_UID"; return 0; }
+        return 1
+      fi
+      [[ "$1" == -c ]] && return 1
+      [[ "$1" == -f ]] && { printf "600 %s\n" "$HOOK_TEST_UID"; return 0; }
+      return 1
+    }
+    _hook_validate_and_apply "$3"
+  ' _ "${script}" "${style}" "${file}"
+}
 
 # TC-HOOK-011/023: exercise each real wrapper's installed trap and hook helper.
 # SIGKILL and children that deliberately leave setsid's process group are excluded:
@@ -145,6 +165,8 @@ for wrapper in ceo-loop.sh deliver-ticket.sh; do
   ok "TC-HOOK-026 ${wrapper}: C-locale invalid corpus" test_invalid_corpus "${script}"
   ok "TC-HOOK-026 ${wrapper}: explicit credential delegation" test_credential_delegation "${script}"
   ok "TC-HOOK-026 ${wrapper}: apply rollback" test_atomic_rollback "${script}"
+  ok "TC-HOOK-026 ${wrapper}: GNU metadata adapter" test_metadata_adapter "${script}" gnu
+  ok "TC-HOOK-026 ${wrapper}: BSD metadata adapter" test_metadata_adapter "${script}" bsd
 done
 
 ok 'TC-HOOK-013 no hook-specific result values' bash -c "! grep -RE 'vetoed|hook-error' '${ROOT}/scripts/ceo-loop.sh' '${ROOT}/scripts/deliver-ticket.sh' '${ROOT}/scripts/batch-deliver.sh' '${ROOT}/.opencode/agent/ceo.md'"

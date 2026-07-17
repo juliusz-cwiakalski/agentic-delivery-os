@@ -201,6 +201,7 @@ _gh()       { command gh "$@"; }
 _opencode() { command opencode "$@"; }
 _jq()       { command jq "$@"; }
 _setsid()   { exec setsid "$@"; }
+_hook_stat() { command stat "$@"; }
 
 # The hook return is deliberately data, never shell syntax. These private
 # helpers are duplicated in ceo-loop.sh so each installed wrapper is standalone.
@@ -217,13 +218,25 @@ validate_hook_allowlist() {
 _hook_name_authorized() { local name="$1" item; [[ "${name}" =~ ^OC_ADOS_AGENT_[A-Z0-9_]+_MODEL$ ]] && return 0; IFS=',' read -r -a _hook_allowlist_items <<<"${HOOK_ENV_ALLOWLIST}"; for item in "${_hook_allowlist_items[@]}"; do [[ "${name}" == "${item}" ]] && return 0; done; return 1; }
 _cleanup_hook() { local pid="${CURRENT_HOOK_GROUP_PID:-${CURRENT_HOOK_PID:-}}"; if [[ -n "${pid}" ]]; then kill -TERM -- "-${pid}" 2>/dev/null || true; pkill -TERM -g "${pid}" 2>/dev/null || true; if pgrep -g "${pid}" >/dev/null 2>&1; then sleep "${HOOK_SHUTDOWN_GRACE_SECONDS}" || true; kill -KILL -- "-${pid}" 2>/dev/null || true; pkill -KILL -g "${pid}" 2>/dev/null || true; fi; wait "${pid}" 2>/dev/null || true; fi; CURRENT_HOOK_PID=""; CURRENT_HOOK_GROUP_PID=""; [[ -n "${CURRENT_HOOK_TMPDIR:-}" && -d "${CURRENT_HOOK_TMPDIR}" ]] && rm -rf "${CURRENT_HOOK_TMPDIR}"; CURRENT_HOOK_TMPDIR=""; CURRENT_HOOK_ENV_OUTPUT=""; }
 _hook_apply_operation() { local -r verb="$1" name="$2" value="$3"; if [[ "${verb}" == "set" ]]; then export "${name}=${value}"; else unset "${name}"; fi; }
+_hook_file_metadata() {
+  local -r file="$1"
+  local hook_stat_output
+  # GNU coreutils uses -c; BSD/macOS uses -f. Keep the command boundary
+  # injectable because enabled hooks must work on both supported platforms.
+  if hook_stat_output="$(_hook_stat -c '%a %u' "${file}" 2>/dev/null)"; then
+    printf '%s' "${hook_stat_output}"
+  else
+    _hook_stat -f '%Lp %u' "${file}" 2>/dev/null
+  fi
+}
 _hook_validate_and_apply() {
-  local file="$1" size line line_bytes name value verb records=0 index prior mode uid expected_uid
+  local file="$1" size line line_bytes name value verb records=0 index prior hook_mode hook_uid expected_uid
   local -a verbs=() names=() values=() prior_set=() prior_values=()
   [[ -f "${file}" && ! -L "${file}" ]] || { log_err "hook output is not a safe regular file"; return 1; }
-  mode="$(stat -c '%a' "${file}" 2>/dev/null)" || { log_err "hook output cannot be inspected"; return 1; }
-  uid="$(stat -c '%u' "${file}" 2>/dev/null)"; expected_uid="$(id -u)"
-  [[ "${uid}" == "${expected_uid}" && $(( 8#${mode} & 022 )) -eq 0 ]] || { log_err "hook output has unsafe ownership or permissions"; return 1; }
+  local hook_metadata_output
+  hook_metadata_output="$(_hook_file_metadata "${file}")" || { log_err "hook output cannot be inspected"; return 1; }
+  IFS=' ' read -r hook_mode hook_uid <<<"${hook_metadata_output}"; expected_uid="$(id -u)"
+  [[ "${hook_uid}" == "${expected_uid}" && $(( 8#${hook_mode} & 022 )) -eq 0 ]] || { log_err "hook output has unsafe ownership or permissions"; return 1; }
   [[ ! -s "${file}" ]] && return 0
   size="$(LC_ALL=C wc -c <"${file}")"; (( size <= 65536 )) || { log_err "hook output exceeds byte limit"; return 1; }
   LC_ALL=C od -An -t x1 "${file}" | tr -d ' \n' | grep -qE '0d|00' && { log_err "hook output contains CR or NUL"; return 1; }
@@ -1229,7 +1242,9 @@ deliver_loop() {
 
     # Parent-shell placement is intentional: this precedes the command
     # substitution below, so committed exports reach the imminent PM.
-    if ! run_pre_iteration_hook; then
+    # Dry-run renders the normal PM command only. It must not execute arbitrary
+    # hook policy, create hook artifacts, or apply hook-returned environment data.
+    if [[ "${DRY_RUN}" != "true" ]] && ! run_pre_iteration_hook; then
       DELIVERY_RESULT="failed"
       DELIVERY_PR_URL=""
       DELIVERY_EXIT_CODE="${EXIT_FAILURE}"
