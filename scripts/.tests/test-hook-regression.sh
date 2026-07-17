@@ -25,6 +25,12 @@ test_literal_and_unset() {
   chmod 600 "${file}"
   bash -c 'source "$1"; export OC_ADOS_AGENT_CEO_MODEL=old; _hook_validate_and_apply "$2"; [[ "$OC_ADOS_AGENT_PM_MODEL" == *'"'"'$()'"'"'* && "$OC_ADOS_AGENT_PM_MODEL" == *'"'"'`x`'"'"'* && ! -v OC_ADOS_AGENT_CEO_MODEL ]]' _ "${script}" "${file}"
 }
+test_valid_utf8_cross_token_literal() {
+  local script="$1" file="${tmp}/utf8-cross-token"
+  printf 'ADOS_HOOK_ENV_V1\nset OC_ADOS_AGENT_PM_MODEL=0А\n' >"${file}"
+  chmod 600 "${file}"
+  bash -c 'source "$1"; _hook_validate_and_apply "$2"; [[ "$(LC_ALL=C printf %s "$OC_ADOS_AGENT_PM_MODEL" | od -An -t x1 | tr -d "[:space:]")" == 30d090 ]]' _ "${script}" "${file}"
+}
 test_file_bound() { local script="$1" file="${tmp}/file-${2}" bytes="$2" i prefix current remaining; printf 'ADOS_HOOK_ENV_V1\n' >"${file}"; for ((i=0; i<7; i++)); do prefix="set OC_ADOS_AGENT_X${i}_MODEL="; printf '%s' "${prefix}" >>"${file}"; write_bytes "${file}" "$((8192 - ${#prefix}))"; printf '\n' >>"${file}"; done; current="$(wc -c <"${file}")"; remaining="$((bytes - current))"; prefix='set OC_ADOS_AGENT_LAST_MODEL='; printf '%s' "${prefix}" >>"${file}"; write_bytes "${file}" "$((remaining - ${#prefix} - 1))"; printf '\n' >>"${file}"; chmod 600 "${file}"; if (( bytes == 65536 )); then run_parser "${script}" "${file}"; else rejects "${script}" "${file}"; fi; }
 test_record_bound() { local script="$1" file="${tmp}/records-${2}" count="$2" i; : >"${file}"; printf 'ADOS_HOOK_ENV_V1\n' >"${file}"; for ((i=0; i<count; i++)); do printf 'set OC_ADOS_AGENT_X%s_MODEL=v\n' "${i}" >>"${file}"; done; chmod 600 "${file}"; if (( count == 256 )); then run_parser "${script}" "${file}"; else rejects "${script}" "${file}"; fi; }
 test_line_bound() { local script="$1" file="${tmp}/line-${2}" bytes="$2"; printf 'ADOS_HOOK_ENV_V1\nset OC_ADOS_AGENT_PM_MODEL=' >"${file}"; write_bytes "${file}" "$((bytes - 27))"; printf '\n' >>"${file}"; chmod 600 "${file}"; if (( bytes == 8192 )); then run_parser "${script}" "${file}"; else rejects "${script}" "${file}"; fi; }
@@ -179,6 +185,7 @@ test_real_wrapper_lifecycle_matrix() {
 for wrapper in ceo-loop.sh deliver-ticket.sh; do
   script="${ROOT}/scripts/${wrapper}"
   ok "TC-HOOK-024 ${wrapper}: literal set/unset" test_literal_and_unset "${script}"
+  ok "TC-HOOK-024 ${wrapper}: valid UTF-8 cross-token literal inherited exactly" test_valid_utf8_cross_token_literal "${script}"
   ok "TC-HOOK-026 ${wrapper}: exact 65536 bytes" test_file_bound "${script}" 65536
   ok "TC-HOOK-026 ${wrapper}: reject 65537 bytes" test_file_bound "${script}" 65537
   ok "TC-HOOK-026 ${wrapper}: exact 256 records" test_record_bound "${script}" 256

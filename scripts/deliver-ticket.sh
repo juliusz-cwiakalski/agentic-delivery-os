@@ -253,7 +253,7 @@ _hook_validate_and_apply() {
   [[ "${hook_uid}" == "${expected_uid}" && $(( 8#${hook_mode} & 022 )) -eq 0 ]] || { log_err "hook output has unsafe ownership or permissions"; return 1; }
   [[ ! -s "${file}" ]] && return 0
   size="$(LC_ALL=C wc -c <"${file}")"; (( size <= 65536 )) || { log_err "hook output exceeds byte limit"; return 1; }
-  LC_ALL=C od -An -t x1 "${file}" | tr -d ' \n' | grep -qE '0d|00' && { log_err "hook output contains CR or NUL"; return 1; }
+  LC_ALL=C od -An -t x1 "${file}" | grep -E '(^|[[:space:]])(0d|00)([[:space:]]|$)' >/dev/null && { log_err "hook output contains CR or NUL"; return 1; }
   [[ "$(tail -c 1 "${file}")" == "" ]] || { log_err "hook output lacks final LF"; return 1; }
   while IFS= read -r line; do
     line_bytes="$(LC_ALL=C printf '%s' "${line}" | wc -c)"; (( line_bytes <= 8192 )) || { log_err "hook output line exceeds byte limit"; return 1; }
