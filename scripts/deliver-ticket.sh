@@ -215,7 +215,18 @@ validate_hook_allowlist() {
     seen="${seen}${item},"
   done
 }
-_hook_name_authorized() { local name="$1" item; [[ "${name}" =~ ^OC_ADOS_AGENT_[A-Z0-9_]+_MODEL$ ]] && return 0; IFS=',' read -r -a _hook_allowlist_items <<<"${HOOK_ENV_ALLOWLIST}"; for item in "${_hook_allowlist_items[@]}"; do [[ "${name}" == "${item}" ]] && return 0; done; return 1; }
+_hook_name_authorized() {
+  local -r name="$1"
+  local item
+  if [[ "${name}" =~ ^OC_ADOS_AGENT_[A-Z0-9_]+_MODEL$ ]]; then
+    return 0
+  fi
+  IFS=',' read -r -a _hook_allowlist_items <<<"${HOOK_ENV_ALLOWLIST}"
+  for item in "${_hook_allowlist_items[@]}"; do
+    [[ "${name}" == "${item}" ]] && return 0
+  done
+  return 1
+}
 _cleanup_hook() { local pid="${CURRENT_HOOK_GROUP_PID:-${CURRENT_HOOK_PID:-}}"; if [[ -n "${pid}" ]]; then kill -TERM -- "-${pid}" 2>/dev/null || true; pkill -TERM -g "${pid}" 2>/dev/null || true; if pgrep -g "${pid}" >/dev/null 2>&1; then sleep "${HOOK_SHUTDOWN_GRACE_SECONDS}" || true; kill -KILL -- "-${pid}" 2>/dev/null || true; pkill -KILL -g "${pid}" 2>/dev/null || true; fi; wait "${pid}" 2>/dev/null || true; fi; CURRENT_HOOK_PID=""; CURRENT_HOOK_GROUP_PID=""; [[ -n "${CURRENT_HOOK_TMPDIR:-}" && -d "${CURRENT_HOOK_TMPDIR}" ]] && rm -rf "${CURRENT_HOOK_TMPDIR}"; CURRENT_HOOK_TMPDIR=""; CURRENT_HOOK_ENV_OUTPUT=""; }
 _hook_apply_operation() { local -r verb="$1" name="$2" value="$3"; if [[ "${verb}" == "set" ]]; then export "${name}=${value}"; else unset "${name}"; fi; }
 _hook_file_metadata() {
@@ -229,6 +240,9 @@ _hook_file_metadata() {
     _hook_stat -f '%Lp %u' "${file}" 2>/dev/null
   fi
 }
+# shellcheck disable=SC2209,SC2015
+# Parameter expansion deliberately extracts literal protocol fields; the guarded
+# fallback is intentionally coupled to the authorization predicate below.
 _hook_validate_and_apply() {
   local file="$1" size line line_bytes name value verb records=0 index prior hook_mode hook_uid expected_uid
   local -a verbs=() names=() values=() prior_set=() prior_values=()

@@ -925,6 +925,86 @@ HOOK
   [[ ! -e "${marker}" ]] || { printf 'CEO control command invoked hook\n' >&2; return 1; }
 }
 
+# These are loop-call-path tests: the hook is an executable marker and the
+# OpenCode boundary is mocked, rather than testing parser helpers in isolation.
+test_hook_ceo_absent_and_success_paths() {
+  local work="${_test_tmpdir}" hook="${_test_tmpdir}/hook" marker="${_test_tmpdir}/marker"
+  cat >"${hook}" <<'HOOK'
+#!/usr/bin/env bash
+printf 'hook:%s:%s:%s:%s\n' "$ADOS_HOOK_AGENT" "$ADOS_HOOK_SCRIPT" "$ADOS_HOOK_ENV_FORMAT" "$ADOS_HOOK_ENV_OUTPUT" >>"$HOOK_MARKER"
+printf 'ADOS_HOOK_ENV_V1\nset OC_ADOS_AGENT_CEO_MODEL=returned literal $()\n' >"$ADOS_HOOK_ENV_OUTPUT"
+HOOK
+  chmod 700 "${hook}"
+  ADOS_PRE_ITERATION_HOOK="${hook}" HOOK_MARKER="${marker}" bash -c '
+    source "$1"; CEO_PID_FILE="$2/pid"; LOG_DIR="$2/log"; mkdir -p "$LOG_DIR"; ceo_pid_if_live(){ return 1; }; last_session_id(){ :; }; capture_session_id_by_title(){ printf ses; }
+    _setsid(){ if [[ "$1" == opencode ]]; then printf "spawn:%s\n" "$OC_ADOS_AGENT_CEO_MODEL" >>"$HOOK_MARKER"; else "$@"; fi; }
+    spawn_or_resume_ceo "$LOG_DIR/log"; spawn_or_resume_ceo "$LOG_DIR/log"
+  ' _ "${SCRIPT_DIR}/ceo-loop.sh" "${work}" || return 1
+  assert_contains "$(<"${marker}")" "hook:ceo:ceo-loop:ADOS_HOOK_ENV_V1:" || return 1
+  [[ "$(grep -c '^hook:' "${marker}")" == 2 ]] || return 1
+  [[ "$(grep -c '^spawn:returned literal' "${marker}")" == 2 ]] || return 1
+  [[ "$(grep '^hook:' "${marker}" | cut -d: -f5 | sort -u | wc -l)" == 2 ]] || return 1
+  while IFS= read -r path; do [[ ! -e "${path}" ]] || return 1; done < <(grep '^hook:' "${marker}" | cut -d: -f5)
+}
+
+test_hook_ceo_absent_path_spawns_without_hook_work() {
+  local missing="${_test_tmpdir}/missing-hook" marker="${_test_tmpdir}/marker"
+  ADOS_PRE_ITERATION_HOOK="${missing}" HOOK_MARKER="${marker}" bash -c '
+    source "$1"; CEO_PID_FILE="$2/pid"; LOG_DIR="$2/log"; mkdir -p "$LOG_DIR"; ceo_pid_if_live(){ return 1; }; last_session_id(){ :; }; capture_session_id_by_title(){ printf ses; }; _setsid(){ [[ "$1" == opencode ]] && printf spawn >"$HOOK_MARKER" || return 99; }; spawn_or_resume_ceo "$LOG_DIR/log"; [[ -z "$CURRENT_HOOK_TMPDIR$CURRENT_HOOK_ENV_OUTPUT$CURRENT_HOOK_PID" ]]
+  ' _ "${SCRIPT_DIR}/ceo-loop.sh" "${_test_tmpdir}" || return 1
+  assert_eq "spawn" "$(<"${marker}")"
+}
+
+test_hook_ceo_failure_and_no_timeout_policy() {
+  local hook="${_test_tmpdir}/hook" marker="${_test_tmpdir}/marker" stderr="${_test_tmpdir}/stderr"
+  for kind in nonexec execfail nonzero; do
+    case "${kind}" in
+      nonexec) : >"${hook}"; chmod 600 "${hook}" ;;
+      execfail) printf '#!/missing/interpreter\n' >"${hook}"; chmod 700 "${hook}" ;;
+      nonzero) printf '#!/usr/bin/env bash\nexit 7\n' >"${hook}"; chmod 700 "${hook}" ;;
+    esac
+    ADOS_PRE_ITERATION_HOOK="${hook}" HOOK_MARKER="${marker}" bash -c '
+      source "$1"; CEO_PID_FILE="$2/pid"; LOG_DIR="$2/log"; mkdir -p "$LOG_DIR"; ceo_pid_if_live(){ return 1; }; _setsid(){ [[ "$1" == opencode ]] && touch "$HOOK_MARKER" || "$@"; }; ! spawn_or_resume_ceo "$LOG_DIR/log"; [[ "$SPAWN_OR_RESUME_CEO_STATUS" == hook-failure ]];
+    ' _ "${SCRIPT_DIR}/ceo-loop.sh" "${_test_tmpdir}" || return 1
+    [[ ! -e "${marker}" ]] || return 1
+  done
+  printf '#!/usr/bin/env bash\nsleep 0.05\n' >"${hook}"; chmod 700 "${hook}"
+  ADOS_PRE_ITERATION_HOOK="${hook}" bash -c 'source "$1"; run_pre_iteration_hook' _ "${SCRIPT_DIR}/ceo-loop.sh" 2>"${stderr}"
+  assert_not_contains "$(<"${stderr}")" "returned literal"
+}
+
+test_hook_ceo_join_excludes_and_cap_overrides() {
+  local hook="${_test_tmpdir}/hook" marker="${_test_tmpdir}/marker"
+  printf '#!/usr/bin/env bash\ntouch "$HOOK_MARKER"\nexit 1\n' >"${hook}"; chmod 700 "${hook}"
+  ADOS_PRE_ITERATION_HOOK="${hook}" HOOK_MARKER="${marker}" bash -c '
+    source "$1"; ceo_pid_if_live(){ printf 123; }; spawn_or_resume_ceo "$2/log"; [[ "$SPAWN_OR_RESUME_CEO_PID" == 123 ]];
+  ' _ "${SCRIPT_DIR}/ceo-loop.sh" "${_test_tmpdir}" || return 1
+  [[ ! -e "${marker}" ]] || return 1
+  ADOS_PRE_ITERATION_HOOK="${hook}" ADOS_HOOK_MAX_FAILURES=2 ADOS_HOOK_RETRY_SECONDS=0 bash -c '
+    source "$1"; CEO_STATE_DIR="$2/state"; CEO_PID_FILE="$2/state/pid"; LOOP_PID_FILE="$2/state/loop"; STOP_FILE="$2/state/stop"; LOG_DIR="$2/log"; mkdir -p "$CEO_STATE_DIR" "$LOG_DIR"; ceo_pid_if_live(){ return 1; }; source_opencode_env(){ :; }; _jq(){ printf "{}"; }; run_loop || [[ $? -eq 1 ]]
+  ' _ "${SCRIPT_DIR}/ceo-loop.sh" "${_test_tmpdir}" || return 1
+}
+
+test_hook_ceo_shutdown_grace_override() {
+  local sleeps="${_test_tmpdir}/sleeps"
+  ADOS_HOOK_SHUTDOWN_GRACE_SECONDS=0.3 HOOK_SLEEPS="${sleeps}" bash -c '
+    source "$1"; CURRENT_HOOK_GROUP_PID=999999; pgrep(){ return 0; }; sleep(){ printf "%s\n" "$1" >>"$HOOK_SLEEPS"; }; _cleanup_hook
+  ' _ "${SCRIPT_DIR}/ceo-loop.sh" || return 1
+  assert_eq "0.3" "$(<"${sleeps}")"
+}
+
+test_hook_ceo_invalid_v1_blocks_spawn_and_mutation() {
+  local hook="${_test_tmpdir}/hook" marker="${_test_tmpdir}/spawn"
+  cat >"${hook}" <<'HOOK'
+#!/usr/bin/env bash
+printf 'ADOS_HOOK_ENV_V1\nset OC_ADOS_AGENT_CEO_MODEL=new\nset UNAUTHORIZED=bad\n' >"$ADOS_HOOK_ENV_OUTPUT"
+HOOK
+  chmod 700 "${hook}"
+  ADOS_PRE_ITERATION_HOOK="${hook}" HOOK_MARKER="${marker}" bash -c '
+    source "$1"; CEO_PID_FILE="$2/pid"; LOG_DIR="$2/log"; mkdir -p "$LOG_DIR"; OC_ADOS_AGENT_CEO_MODEL=old; export OC_ADOS_AGENT_CEO_MODEL; ceo_pid_if_live(){ return 1; }; _setsid(){ [[ "$1" == opencode ]] && touch "$HOOK_MARKER" || "$@"; }; ! spawn_or_resume_ceo "$LOG_DIR/log"; [[ "$OC_ADOS_AGENT_CEO_MODEL" == old && ! -e "$HOOK_MARKER" ]]
+  ' _ "${SCRIPT_DIR}/ceo-loop.sh" "${_test_tmpdir}"
+}
+
 
 main() {
   printf '=== test-ceo-loop.sh ===\n'
@@ -996,7 +1076,13 @@ main() {
   run_test "pr-manager: description quality (F-6)"   test_pr_manager_description_quality
   run_test "TC-HOOK-020: CEO help settings/context contract" test_hook_help_contract
   run_test "TC-HOOK-012: CEO retry chunks and stop" test_hook_retry_chunks_and_stop
-  run_test "TC-HOOK-005: CEO control paths exclude hook" test_hook_control_paths_excluded
+   run_test "TC-HOOK-005: CEO control paths exclude hook" test_hook_control_paths_excluded
+   run_test "TC-HOOK-001: CEO absent hook normal spawn" test_hook_ceo_absent_path_spawns_without_hook_work
+   run_test "TC-HOOK-001/002/003/006/009/024/025/027: CEO loop hook and V1 inheritance" test_hook_ceo_absent_and_success_paths
+   run_test "TC-HOOK-007/007B/008/010: CEO loop hook failures and no timeout" test_hook_ceo_failure_and_no_timeout_policy
+   run_test "TC-HOOK-004/014: CEO JOIN exclusion and failure-cap override" test_hook_ceo_join_excludes_and_cap_overrides
+   run_test "TC-HOOK-014: CEO shutdown-grace override" test_hook_ceo_shutdown_grace_override
+   run_test "TC-HOOK-026: CEO invalid V1 blocks spawn and mutation" test_hook_ceo_invalid_v1_blocks_spawn_and_mutation
 
   printf '\n'
   printf 'Results: %d passed, %d failed, %d total\n' \
