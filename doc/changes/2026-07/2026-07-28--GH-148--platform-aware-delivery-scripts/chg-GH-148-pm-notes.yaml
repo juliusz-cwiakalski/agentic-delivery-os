@@ -8,10 +8,10 @@ phases:
   dor_check: { started: "2026-07-28T07:15:00Z", completed: "2026-07-28T07:40:00Z" }
   delivery: { started: "2026-07-28T07:45:00Z", completed: "2026-07-28T09:00:00Z" }
   system_spec_update: { started: "2026-07-28T09:05:00Z", completed: "2026-07-28T21:30:00Z" }
-  review_fix: { started: null, completed: null }
-  quality_gates: { started: null, completed: null }
-  dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null, url: null }
+  review_fix: { started: "2026-07-28T10:00:00Z", completed: "2026-07-28T11:30:00Z" }
+  quality_gates: { started: "2026-07-28T11:30:00Z", completed: "2026-07-28T12:00:00Z" }
+  dod_check: { started: "2026-07-28T12:05:00Z", completed: "2026-07-28T12:15:00Z" }
+  pr_creation: { started: "2026-07-28T12:20:00Z", completed: null, url: null }
 decisions:
   - text: "OQ-1 resolved (PM-decided): GitLab CI green-gate mirrors the existing GitHub _pr_has_no_checks_configured pattern — positively confirm 'no CI configured' via GitLab pipeline API (glab api projects/:id/pipelines or glab ci list). If no pipelines exist, that's legitimate green. If pipelines exist, poll until success/failed. This is safest and most consistent with the existing pattern."
     type: decision
@@ -54,5 +54,13 @@ notes:
     date: "2026-07-28"
   - text: "system_spec_update (phase 7) reconciled by @doc-syncer: feature-autonomous-delivery.md (added F-9 platform-aware verification capability, generalized INV-DM-4 from gh pr merge to platform-aware merge, added ADOS_PLATFORM/ADOS_BLOCKED_LABEL/ADOS_MERGE_STRATEGY to config table, platform-neutral edge-case wording, Core Components updated, last_updated→2026-07-28, GH-148 added to related_changes); delivery-modes.md (new Platform detection section, config variables in deliver-ticket.sh/batch-deliver.sh tables, component-responsibility + AI-vs-script + INV-DM-4 + Mode B rules + edge-case generalized from GitHub-only to platform-aware, mermaid merge node, GH-148 to related_changes); autonomous-batch-delivery.md (new Platform detection section, Mode B merge-strategy table + GitLab merge-status polling/stale-conflict guidance, ADOS_MERGE_STRATEGY/ADOS_PLATFORM/ADOS_BLOCKED_LABEL in config tables, labels reference notes configurability, PM-prompt mermaid node generalized, GH-148 to related_changes). feature-delivery-lifecycle.md and .opencode/README.md verified platform-agnostic — no change needed. ceo-loop.sh confirmed unmodified (OQ-3); ceo.md prompt out-of-scope (NG-3). doc-distribution guard passes."
     type: info
+    workItemRef: GH-148
+    date: "2026-07-28"
+  - text: "CritiqueGrid pre-PR review: BLOCK verdict (MEDIUM confidence). Found 2 CRITICAL + 5 HIGH findings: (1) CG-BASH-001 merge_flags passed as single arg under IFS=$'\\n\\t' → Mode B merge fails on BOTH platforms; (2) CG-QA-001 F-12 parser property test never written despite marked complete; (3) CG-API-001 mr_list_closed_merged missing --state closed/merged → dead merged detection; (4) CG-BASH-002 should_skip_ticket passes issue number to branch-scoped function; (5) CG-API-002 gitlab_await_mergeable reads .mergeStatus camelCase (non-existent) and compares to has_conflicts (field name, not value); (6) CG-QA-002 only ~16/51 TCs implemented; (7) CG-SRE-001 NFR-1 regression gate skipped. All 7 addressed by @coder + @fixer: merge_flags→array, property test implemented, state filter added, title-search merged detector, correct GitLab field names, 35 missing TCs added, full suite run. Final: 108/108 + 44/44 + 39/39 + 54/54 + ShellCheck clean."
+    type: retro
+    workItemRef: GH-148
+    date: "2026-07-28"
+  - text: "Retro: the initial @coder implementation had serious quality issues — 6 platform-dispatch bugs (unbound PLATFORM, wrong jq projection order, broken test quote idiom) caught by @fixer, then 7 more CRITICAL/HIGH findings caught by CritiqueGrid (merge flag quoting, missing state filter, wrong GitLab field names, missing 35 tests, missing parser property test). Root causes: (1) mock-blindness — existing mocks matched on $1/$2 subcommand and returned canned data regardless of subsequent args, hiding flag-construction bugs; (2) test suite never actually executed end-to-end (Phase 8.1/8.2 self-recorded as skipped); (3) task checkboxes marked complete without implementation evidence. Process improvements: always run test-all.sh before declaring phase complete; CritiqueGrid pre-PR review is high-value for multi-platform changes; mock recorders should assert on full argv, not just subcommand."
+    type: retro
     workItemRef: GH-148
     date: "2026-07-28"
