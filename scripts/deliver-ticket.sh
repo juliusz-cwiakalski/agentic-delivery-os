@@ -61,7 +61,7 @@ readonly HOOK_SHUTDOWN_GRACE_SECONDS="${ADOS_HOOK_SHUTDOWN_GRACE_SECONDS:-2}"
 readonly HOOK_ENV_ALLOWLIST="${ADOS_HOOK_ENV_ALLOWLIST:-}"
 
 # Platform configuration
-readonly ADOS_PLATFORM="${ADOS_PLATFORM:-}"  # github | gitlab (empty = auto-detect)
+ADOS_PLATFORM="${ADOS_PLATFORM:-}"  # github | gitlab (empty = auto-detect)
 readonly ADOS_BLOCKED_LABEL="${ADOS_BLOCKED_LABEL:-human-input-needed}"
 
 # Session mapping directory (shared with opencode-session.sh)
@@ -242,6 +242,141 @@ detect_platform() {
   # 4. Default to github (NFR-5)
   printf '%s' "github"
   return 0
+}
+
+# F-3: Tracker/MR dispatch seam — routes to correct CLI based on PLATFORM
+_tracker() {
+  if [[ "${PLATFORM}" == "gitlab" ]]; then
+    _glab "$@"
+  else
+    _gh "$@"
+  fi
+}
+
+_mr() {
+  if [[ "${PLATFORM}" == "gitlab" ]]; then
+    _glab "$@"
+  else
+    _gh "$@"
+  fi
+}
+
+# F-4: JSON normalization shim — presents common schema from divergent CLI outputs
+# Normalized schema (DM-1): {state: open|closed, labels: [name,...]} for issues
+#                          [{number, url, head_branch, merged_at}] for MR/PR lists
+
+# Normalize issue JSON from either GitHub or GitLab
+tracker_issue_view() {
+  local -r ticket_ref="$1"
+  local raw_json normalized
+
+  if [[ "${PLATFORM}" == "gitlab" ]]; then
+    # GitLab: state is "opened"/"closed", labels are in .labels[].name
+    if ! raw_json="$(_tracker issue view "${ticket_ref}" --output json 2>/dev/null)"; then
+      return 1
+    fi
+    # Normalize state and extract labels
+    normalized="$(echo "${raw_json}" | _jq '{
+      state: (if .state == "opened" then "open" else .state end),
+      labels: [.labels[].name]
+    }')"
+  else
+    # GitHub: state is "OPEN"/"CLOSED", labels are in .labels[].name
+    if ! raw_json="$(_tracker issue view "${ticket_ref}" --json state,labels 2>/dev/null)"; then
+      return 1
+    fi
+    # Normalize state and extract labels
+    normalized="$(echo "${raw_json}" | _jq '{
+      state: (if .state == "OPEN" then "open" else .state end),
+      labels: [.labels[].name]
+    }')"
+  fi
+
+  printf '%s' "${normalized}"
+}
+
+# Normalize open MR/PR list for a branch
+mr_list_for_branch() {
+  local -r head_branch="$1"
+  local raw_json normalized
+
+  if [[ "${PLATFORM}" == "gitlab" ]]; then
+    # GitLab: .iid, .web_url, .source_branch, .merged_at
+    if ! raw_json="$(_mr mr list --source-branch "${head_branch}" --output json 2>/dev/null)"; then
+      return 1
+    fi
+    normalized="$(echo "${raw_json}" | _jq '[.[] | {
+      number: .iid,
+      url: .web_url,
+      head_branch: .source_branch,
+      merged_at: .merged_at
+    } | select(.merged_at == null)]')"
+  else
+    # GitHub: .number, .url, .headRefName, .mergedAt
+    if ! raw_json="$(_mr pr list --head "${head_branch}" --json number,url,headRefName,mergedAt 2>/dev/null)"; then
+      return 1
+    fi
+    normalized="$(echo "${raw_json}" | _jq '[.[] | {
+      number: .number,
+      url: .url,
+      head_branch: .headRefName,
+      merged_at: .mergedAt
+    } | select(.merged_at == null)]')"
+  fi
+
+  printf '%s' "${normalized}"
+}
+
+# Normalize closed+merged MR/PR list for a branch
+mr_list_closed_merged() {
+  local -r head_branch="$1"
+  local raw_json normalized
+
+  if [[ "${PLATFORM}" == "gitlab" ]]; then
+    # GitLab: .iid, .web_url, .source_branch, .merged_at
+    if ! raw_json="$(_mr mr list --source-branch "${head_branch}" --output json 2>/dev/null)"; then
+      return 1
+    fi
+    normalized="$(echo "${raw_json}" | _jq '[.[] | {
+      merged_at: .merged_at
+    } | select(.merged_at != null)]')"
+  else
+    # GitHub: .number, .url, .headRefName, .mergedAt
+    if ! raw_json="$(_mr pr list --head "${head_branch}" --json number,url,headRefName,mergedAt 2>/dev/null)"; then
+      return 1
+    fi
+    normalized="$(echo "${raw_json}" | _jq '[.[] | {
+      merged_at: .mergedAt
+    } | select(.mergedAt != null)]')"
+  fi
+
+  printf '%s' "${normalized}"
+}
+
+# Normalize open MR/PR search by title
+mr_list_search() {
+  local -r search_term="$1"
+  local raw_json normalized
+
+  if [[ "${PLATFORM}" == "gitlab" ]]; then
+    # GitLab: .iid
+    if ! raw_json="$(_mr mr list --search "${search_term}" --output json 2>/dev/null)"; then
+      return 1
+    fi
+    normalized="$(echo "${raw_json}" | _jq '[.[] | {
+      number: .iid
+    } | select(.state == "opened")]' 2>/dev/null || echo '[]')"
+  else
+    # GitHub: .number
+    if ! raw_json="$(_mr pr list --search "${search_term}" --json number,state 2>/dev/null)"; then
+      return 1
+    fi
+    normalized="$(echo "${raw_json}" | _jq '[.[] | {
+      number: .number
+    } | select(.state == "OPEN")]' 2>/dev/null || echo '[]')"
+  fi
+
+  printf '%s' "${normalized}"
 }
 
 # The hook return is deliberately data, never shell syntax. These private

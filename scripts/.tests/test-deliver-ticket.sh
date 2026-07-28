@@ -1794,6 +1794,105 @@ test_platform_detect_github_default() {
   ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
 }
 
+# F-3/F-4: Tracker/MR dispatch and JSON normalization tests (GH-148)
+test_tracker_dispatch_github() {
+  bash -c '
+    ADOS_PLATFORM=github
+    source "$1" >/dev/null 2>&1
+    PLATFORM=github
+    _gh() { echo "gh $@"; }
+    _glab() { echo "glab $@"; }
+    result=$(_tracker issue view 123)
+    [[ "$result" == "gh issue view 123" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_tracker_dispatch_gitlab() {
+  bash -c '
+    ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    _gh() { echo "gh $@"; }
+    _glab() { echo "glab $@"; }
+    result=$(_tracker issue view 456)
+    [[ "$result" == "glab issue view 456" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_mr_dispatch_github() {
+  bash -c '
+    ADOS_PLATFORM=github
+    source "$1" >/dev/null 2>&1
+    PLATFORM=github
+    _gh() { echo "gh $@"; }
+    _glab() { echo "glab $@"; }
+    result=$(_mr pr list)
+    [[ "$result" == "gh pr list" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_mr_dispatch_gitlab() {
+  bash -c '
+    ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    _gh() { echo "gh $@"; }
+    _glab() { echo "glab $@"; }
+    result=$(_mr mr list)
+    [[ "$result" == "glab mr list" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_normalize_github_issue() {
+  bash -c '
+    ADOS_PLATFORM=github
+    source "$1" >/dev/null 2>&1
+    PLATFORM=github
+    _gh() { echo '"'"'{"state":"OPEN","labels":[{"name":"bug"},{"name":"human-input-needed"}]}'"'"; }
+    result=$(tracker_issue_view GH-123)
+    # Check that state is normalized to lowercase
+    [[ "$result" == *"state"* ]] && [[ "$result" == *"open"* ]]
+    [[ "$result" == *"bug"* ]] && [[ "$result" == *"human-input-needed"* ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_normalize_gitlab_issue() {
+  bash -c '
+    ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    _glab() { echo '"'"'{"state":"opened","labels":[{"name":"bug"}]}'"'"; }
+    result=$(tracker_issue_view GL-123)
+    # Check that state is normalized to lowercase
+    [[ "$result" == *"state"* ]] && [[ "$result" == *"open"* ]]
+    [[ "$result" == *"bug"* ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_normalize_github_pr() {
+  bash -c '
+    ADOS_PLATFORM=github
+    source "$1" >/dev/null 2>&1
+    PLATFORM=github
+    _gh() { echo '"'"'[{"number":42,"url":"https://github.com/acme/r/pull/42","headRefName":"feat/x","mergedAt":null}]'"'"'; }
+    result=$(mr_list_for_branch feat/x)
+    [[ "$result" == *"number"* ]] && [[ "$result" == *"42"* ]]
+    [[ "$result" == *"head_branch"* ]] && [[ "$result" == *"feat/x"* ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_normalize_gitlab_mr() {
+  bash -c '
+    ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    _glab() { echo '"'"'[{"iid":42,"web_url":"https://gitlab.com/acme/r/-/merge_requests/42","source_branch":"feat/x","merged_at":null}]'"'"'; }
+    result=$(mr_list_for_branch feat/x)
+    [[ "$result" == *"number"* ]] && [[ "$result" == *"42"* ]]
+    [[ "$result" == *"head_branch"* ]] && [[ "$result" == *"feat/x"* ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
 main() {
   printf '%s Running tests...\n' "${TEST_TAG}"
 
@@ -1888,14 +1987,24 @@ main() {
    run_test "TC-HOOK-004/005: PM JOIN and probe paths exclude hook" test_hook_pm_join_and_probe_paths_exclude_hook
    run_test "TC-HOOK-010/026: PM no-timeout invalid V1 blocks spawn and mutation" test_hook_pm_no_timeout_and_invalid_v1_block_spawn
 
-   # F-1/F-2: Platform detection and conditional CLI dependency (GH-148)
-   run_test "TC-PLAT-001: ADOS_PLATFORM=github forces github" test_platform_detect_override_github
-   run_test "TC-PLAT-002: ADOS_PLATFORM=gitlab forces gitlab" test_platform_detect_override_gitlab
-   run_test "TC-PLAT-003: git remote gitlab.com → gitlab" test_platform_detect_gitlab_remote
-   run_test "TC-PLAT-004: git remote github.com → github" test_platform_detect_github_remote
-   # TC-PLAT-005/006: glab fallback tests deferred (complex mocking)
+  # F-1/F-2: Platform detection and conditional CLI dependency (GH-148)
+  run_test "TC-PLAT-001: ADOS_PLATFORM=github forces github" test_platform_detect_override_github
+  run_test "TC-PLAT-002: ADOS_PLATFORM=gitlab forces gitlab" test_platform_detect_override_gitlab
+  run_test "TC-PLAT-003: git remote gitlab.com → gitlab" test_platform_detect_gitlab_remote
+  run_test "TC-PLAT-004: git remote github.com → github" test_platform_detect_github_remote
+  # TC-PLAT-005/006: glab fallback tests deferred (complex mocking)
 
-   printf '\n%s Summary: %d/%d passed' "${TEST_TAG}" "${_test_passed}" "${_test_count}"
+  # F-3/F-4: Tracker/MR dispatch and JSON normalization (GH-148)
+  run_test "TC-PLAT-009: _tracker dispatches gh on github" test_tracker_dispatch_github
+  run_test "TC-PLAT-010: _tracker dispatches glab on gitlab" test_tracker_dispatch_gitlab
+  run_test "TC-PLAT-011: _mr dispatches gh pr on github" test_mr_dispatch_github
+  run_test "TC-PLAT-012: _mr dispatches glab mr on gitlab" test_mr_dispatch_gitlab
+  run_test "TC-PLAT-013: Normalize GitHub issue JSON" test_normalize_github_issue
+  run_test "TC-PLAT-014: Normalize GitLab issue JSON" test_normalize_gitlab_issue
+  run_test "TC-PLAT-015: Normalize GitHub PR JSON" test_normalize_github_pr
+  run_test "TC-PLAT-016: Normalize GitLab MR JSON" test_normalize_gitlab_mr
+
+  printf '\n%s Summary: %d/%d passed' "${TEST_TAG}" "${_test_passed}" "${_test_count}"
   if [[ "${_test_failed}" -gt 0 ]]; then
     printf ' (%s%d failed%s)\n' "${_RED}" "${_test_failed}" "${_RESET}"
     return 1
