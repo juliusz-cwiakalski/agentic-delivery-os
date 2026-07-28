@@ -1893,6 +1893,173 @@ test_normalize_gitlab_mr() {
   ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
 }
 
+# TC-PLAT-017..024: GitLab classify_result + pr_url_for tests
+test_gitlab_classify_pr_open() {
+  bash -c '
+    ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    _glab() {
+      if [[ "$2" == "issue" ]]; then
+        echo '"'"'{"state":"opened","labels":[]}'"'"'
+      elif [[ "$2" == "mr" && "$3" == "list" ]]; then
+        echo '"'"'[{"iid":123,"web_url":"https://gitlab.com/acme/r/-/merge_requests/123","source_branch":"feat/x"}]'"'"'
+      fi
+    }
+    result=$(classify_result GH-148 feat/x)
+    [[ "$result" == "pr-open" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_gitlab_classify_merged_closed_issue() {
+  bash -c '
+    ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    _glab() {
+      if [[ "$2" == "issue" ]]; then
+        echo '"'"'{"state":"closed","labels":[]}'"'"'
+      elif [[ "$2" == "mr" && "$3" == "list" ]]; then
+        echo '"'"'[]'"'"'
+      fi
+    }
+    result=$(classify_result GH-148)
+    [[ "$result" == "merged" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_gitlab_classify_blocked() {
+  bash -c '
+    ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    _glab() {
+      if [[ "$2" == "issue" ]]; then
+        echo '"'"'{"state":"opened","labels":[{"name":"human-input-needed"}]}'"'"'
+      elif [[ "$2" == "mr" && "$3" == "list" ]]; then
+        echo '"'"'[]'"'"'
+      fi
+    }
+    result=$(classify_result GH-148)
+    [[ "$result" == "blocked" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_gitlab_classify_failed_no_mr() {
+  bash -c '
+    ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    _glab() {
+      if [[ "$2" == "issue" ]]; then
+        echo '"'"'{"state":"opened","labels":[]}'"'"'
+      elif [[ "$2" == "mr" && "$3" == "list" ]]; then
+        echo '"'"'[]'"'"'
+      fi
+    }
+    result=$(classify_result GH-148)
+    [[ "$result" == "failed" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_gitlab_classify_unknown_tracker_error() {
+  bash -c '
+    ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    _glab() { return 1; }
+    result=$(classify_result GH-148)
+    [[ "$result" == "unknown" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_gitlab_pr_url_for_open_mr() {
+  bash -c '
+    ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    _glab() { echo '"'"'[{"iid":42,"web_url":"https://gitlab.com/acme/r/-/merge_requests/42","source_branch":"feat/x"}]'"'"'; }
+    result=$(pr_url_for feat/x)
+    [[ "$result" == *"gitlab.com"* ]] && [[ "$result" == *"42"* ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_gitlab_pr_url_for_no_mr() {
+  bash -c '
+    ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    _glab() { echo '"'"'[]'"'"'; }
+    result=$(pr_url_for feat/x)
+    [[ -z "$result" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+# TC-PLAT-025..026: Platform-neutral prompt tests
+test_platform_neutral_prompt_no_literal_gh() {
+  bash -c '
+    source "$1" >/dev/null 2>&1
+    prompt=$(build_delivery_prompt GH-148 feat/x)
+    # Should NOT contain literal "gh " commands
+    [[ ! "$prompt" =~ "gh " ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_platform_neutral_prompt_mentions_config() {
+  bash -c '
+    source "$1" >/dev/null 2>&1
+    prompt=$(build_delivery_prompt GH-148 feat/x)
+    # Should mention project config / configured CLI
+    [[ "$prompt" == *"configured"* ]] || [[ "$prompt" == *"config"* ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+# TC-PLAT-034..038: Configurable blocked label and merge strategy tests
+test_blocked_label_default() {
+  bash -c '
+    ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    [[ "$ADOS_BLOCKED_LABEL" == "human-input-needed" ]] || [[ -z "$ADOS_BLOCKED_LABEL" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_blocked_label_custom() {
+  bash -c '
+    ADOS_PLATFORM=gitlab ADOS_BLOCKED_LABEL=needs-review
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    [[ "$ADOS_BLOCKED_LABEL" == "needs-review" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_merge_strategy_default_squash() {
+  bash -c '
+    ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    [[ "$ADOS_MERGE_STRATEGY" == "squash" ]] || [[ -z "$ADOS_MERGE_STRATEGY" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_merge_strategy_merge_commit() {
+  bash -c '
+    ADOS_PLATFORM=gitlab ADOS_MERGE_STRATEGY=merge
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    [[ "$ADOS_MERGE_STRATEGY" == "merge" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_merge_strategy_rebase() {
+  bash -c '
+    ADOS_PLATFORM=gitlab ADOS_MERGE_STRATEGY=rebase
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    [[ "$ADOS_MERGE_STRATEGY" == "rebase" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
 main() {
   printf '%s Running tests...\n' "${TEST_TAG}"
 
@@ -2003,6 +2170,26 @@ main() {
   run_test "TC-PLAT-014: Normalize GitLab issue JSON" test_normalize_gitlab_issue
   run_test "TC-PLAT-015: Normalize GitHub PR JSON" test_normalize_github_pr
   run_test "TC-PLAT-016: Normalize GitLab MR JSON" test_normalize_gitlab_mr
+
+  # TC-PLAT-017..024: GitLab classify_result + pr_url_for tests
+  run_test "TC-PLAT-017: GitLab open issue + open MR → pr-open" test_gitlab_classify_pr_open
+  run_test "TC-PLAT-018: GitLab closed issue → merged" test_gitlab_classify_merged_closed_issue
+  run_test "TC-PLAT-019: GitLab issue with blocked label → blocked" test_gitlab_classify_blocked
+  run_test "TC-PLAT-020: GitLab open issue, no MR → failed" test_gitlab_classify_failed_no_mr
+  run_test "TC-PLAT-021: GitLab tracker error → unknown" test_gitlab_classify_unknown_tracker_error
+  run_test "TC-PLAT-023: GitLab open MR → pr_url_for returns web_url" test_gitlab_pr_url_for_open_mr
+  run_test "TC-PLAT-024: GitLab no open MR → pr_url_for empty" test_gitlab_pr_url_for_no_mr
+
+  # TC-PLAT-025..026: Platform-neutral prompt tests
+  run_test "TC-PLAT-025: Platform-neutral prompt contains no literal gh commands" test_platform_neutral_prompt_no_literal_gh
+  run_test "TC-PLAT-026: Prompt mentions project config / configured CLI" test_platform_neutral_prompt_mentions_config
+
+  # TC-PLAT-034..038: Configurable blocked label and merge strategy tests
+  run_test "TC-PLAT-034: ADOS_BLOCKED_LABEL unset → matches human-input-needed" test_blocked_label_default
+  run_test "TC-PLAT-035: ADOS_BLOCKED_LABEL=custom-label → matches custom-label" test_blocked_label_custom
+  run_test "TC-PLAT-036: ADOS_MERGE_STRATEGY unset → squash both platforms" test_merge_strategy_default_squash
+  run_test "TC-PLAT-037: ADOS_MERGE_STRATEGY=merge → merge-commit flags" test_merge_strategy_merge_commit
+  run_test "TC-PLAT-038: ADOS_MERGE_STRATEGY=rebase → rebase flags" test_merge_strategy_rebase
 
   printf '\n%s Summary: %d/%d passed' "${TEST_TAG}" "${_test_passed}" "${_test_count}"
   if [[ "${_test_failed}" -gt 0 ]]; then

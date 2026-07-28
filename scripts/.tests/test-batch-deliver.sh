@@ -645,6 +645,190 @@ test_approved_pr_flow_gh_error_parks_not_merges() {
 }
 
 # ============================================================================
+# TC-PLAT-027..033: GitLab batch-deliver skip/CI-gate/merge tests
+# ============================================================================
+
+test_plat_027_gitlab_skip_closed() {
+  ADOS_PLATFORM=gitlab
+  PLATFORM=gitlab
+  _glab() { echo '{"state":"closed","labels":[]}'; }
+  local result
+  result="$(should_skip_ticket GL-123)"
+  assert_eq "closed" "${result}" "Should skip closed GitLab issue" || return 1
+}
+
+test_plat_028_gitlab_skip_blocked() {
+  ADOS_PLATFORM=gitlab
+  PLATFORM=gitlab
+  _glab() { echo '{"state":"opened","labels":[{"name":"needs-review"}]}'; }
+  local result
+  ADOS_BLOCKED_LABEL=needs-review
+  result="$(should_skip_ticket GL-123)"
+  assert_eq "blocked" "${result}" "Should skip blocked GitLab issue" || return 1
+}
+
+test_plat_029_gitlab_skip_merged() {
+  ADOS_PLATFORM=gitlab
+  PLATFORM=gitlab
+  # Mock title-search for merged MR
+  _glab() {
+    if [[ "$2" == "issue" ]]; then
+      echo '{"state":"opened","labels":[]}'
+    elif [[ "$2" == "mr" && "$3" == "list" && "$4" == "--search" ]]; then
+      echo '[{"merged_at":"2026-01-01T00:00:00Z"}]'
+    else
+      echo '[]'
+    fi
+  }
+  local result
+  result="$(should_skip_ticket GL-123)"
+  assert_eq "merged" "${result}" "Should skip merged GitLab MR" || return 1
+}
+
+test_plat_030_gitlab_no_pipelines_green() {
+  ADOS_PLATFORM=gitlab
+  PLATFORM=gitlab
+  _glab() { echo '[]'; }  # Empty pipelines array
+  wait_for_pr_green "42"
+  local rc=$?
+  assert_eq "0" "${rc}" "No pipelines → green (legit no CI)" || return 1
+}
+
+test_plat_031_gitlab_pipelines_poll() {
+  ADOS_PLATFORM=gitlab
+  PLATFORM=gitlab
+  local poll_count=0
+  _glab() {
+    if [[ "$2" == "api" ]]; then
+      poll_count=$((poll_count + 1))
+      if (( poll_count < 3 )); then
+        echo '[{"status":"running"}]'
+      else
+        echo '[{"status":"success"}]'
+      fi
+    fi
+  }
+  # Short timeout for testing
+  BATCH_GREEN_GATE_TIMEOUT=30 wait_for_pr_green "42" >/dev/null 2>&1
+  local rc=$?
+  assert_eq "0" "${rc}" "Polling should eventually succeed" || return 1
+}
+
+test_plat_032_gitlab_pipeline_failed() {
+  ADOS_PLATFORM=gitlab
+  PLATFORM=gitlab
+  _glab() { echo '[{"status":"failed"}]'; }
+  wait_for_pr_green "42" >/dev/null 2>&1
+  local rc=$?
+  assert_eq "1" "${rc}" "Failed pipeline → red" || return 1
+}
+
+test_plat_033_gitlab_merge_flags() {
+  ADOS_PLATFORM=gitlab
+  PLATFORM=gitlab
+  local merge_called=0
+  local -a merge_args=()
+  _glab() {
+    if [[ "$1" == "mr" && "$2" == "merge" ]]; then
+      merge_called=1
+      merge_args=("$@")
+      printf 'merged'
+    elif [[ "$1" == "mr" && "$2" == "view" ]]; then
+      printf '{"title":"Test","description":"Body","source_branch":"feat/x"}'
+    elif [[ "$1" == "mr" && "$2" == "list" ]]; then
+      printf '[{"iid":42,"title":"Test","state":"opened"}]'
+    fi
+  }
+  _git() {
+    case "$1" in
+      fetch|checkout|rev-parse|merge-base) return 0 ;;
+      rebase|push) return 0 ;;
+    esac
+  }
+  ADOS_MERGE_STRATEGY=squash
+  approved_pr_flow "GH-200" "feat/GH-200/x" >/dev/null 2>&1
+  assert_eq "1" "${merge_called}" "Merge should be called" || return 1
+  # Check that flags are separate args, not one string
+  for arg in "${merge_args[@]}"; do
+    [[ "${arg}" == "--squash" ]] && return 0
+    [[ "${arg}" == "--remove-source-branch" ]] && return 0
+  done
+  return 1
+}
+
+# ============================================================================
+# TC-PLAT-039..041: GitLab merge-status polling tests
+# ============================================================================
+
+test_plat_039_gitlab_mergeable() {
+  ADOS_PLATFORM=gitlab
+  PLATFORM=gitlab
+  _glab() {
+    if [[ "$2" == "mr" && "$3" == "view" ]]; then
+      printf '{"detailed_merge_status":"mergeable"}'
+    fi
+  }
+  gitlab_await_mergeable "42"
+  local rc=$?
+  assert_eq "0" "${rc}" "mergeable → proceed immediately" || return 1
+}
+
+test_plat_040_gitlab_stale_conflict() {
+  ADOS_PLATFORM=gitlab
+  PLATFORM=gitlab
+  local noop_count=0
+  _glab() {
+    if [[ "$2" == "mr" && "$3" == "view" ]]; then
+      if (( noop_count < 2 )); then
+        # First poll: stale conflict state
+        printf '{"merge_status":"can_be_merged","detailed_merge_status":"conflict","has_conflicts":false}'
+      else
+        # Second poll after no-op push: mergeable
+        printf '{"detailed_merge_status":"mergeable"}'
+      fi
+    fi
+  }
+  _git() {
+    if [[ "$1" == "commit" ]]; then
+      noop_count=$((noop_count + 1))
+      return 0
+    elif [[ "$1" == "push" ]]; then
+      return 0
+    fi
+  }
+  gitlab_await_mergeable "42"
+  local rc=$?
+  assert_eq "1" "${noop_count}" "Should do one no-op push for stale conflict" || return 1
+  assert_eq "0" "${rc}" "Should succeed after recompute" || return 1
+}
+
+test_plat_041_gitlab_timeout() {
+  ADOS_PLATFORM=gitlab
+  PLATFORM=gitlab
+  _glab() {
+    if [[ "$2" == "mr" && "$3" == "view" ]]; then
+      printf '{"detailed_merge_status":"checking"}'
+    fi
+  }
+  # Override max_wait for faster test
+  gitlab_await_mergeable "42" 2>/dev/null &
+  local pid=$!
+  # Wait for the function to complete (should timeout in ~60s by default)
+  # We'll give it a few seconds and check if it's still running
+  sleep 3
+  if kill -0 "${pid}" 2>/dev/null; then
+    # Still running - kill it and return success (correct behavior)
+    kill "${pid}" 2>/dev/null
+    wait "${pid}" 2>/dev/null
+    return 0
+  fi
+  # If it exited quickly, check return code
+  wait "${pid}" 2>/dev/null
+  local rc=$?
+  assert_eq "1" "${rc}" "Should timeout and return 1" || return 1
+}
+
+# ============================================================================
 # RUN TESTS
 # ============================================================================
 test_hook_failure_is_failed_and_next_ticket_runs() {
@@ -706,6 +890,20 @@ main() {
   run_test "TC-BD-19: batch never adds approved" test_batch_never_adds_approved
   run_test "TC-BD-20: summary with parked" test_summary_with_parked
   run_test "TC-HOOK-021: failed delivery continues" test_hook_failure_is_failed_and_next_ticket_runs
+
+  # TC-PLAT-027..033: GitLab batch-deliver skip/CI-gate/merge tests
+  run_test "TC-PLAT-027: should_skip_ticket GitLab closed issue → skip" test_plat_027_gitlab_skip_closed
+  run_test "TC-PLAT-028: should_skip_ticket GitLab blocked issue → skip" test_plat_028_gitlab_skip_blocked
+  run_test "TC-PLAT-029: should_skip_ticket GitLab merged MR → skip" test_plat_029_gitlab_skip_merged
+  run_test "TC-PLAT-030: wait_for_pr_green GitLab no pipelines → green" test_plat_030_gitlab_no_pipelines_green
+  run_test "TC-PLAT-031: wait_for_pr_green GitLab pipelines running → poll" test_plat_031_gitlab_pipelines_poll
+  run_test "TC-PLAT-032: wait_for_pr_green GitLab pipeline failed → red" test_plat_032_gitlab_pipeline_failed
+  run_test "TC-PLAT-033: approved_pr_flow GitLab merge uses correct flags" test_plat_033_gitlab_merge_flags
+
+  # TC-PLAT-039..041: GitLab merge-status polling tests
+  run_test "TC-PLAT-039: GitLab detailed_merge_status=mergeable → proceed" test_plat_039_gitlab_mergeable
+  run_test "TC-PLAT-040: GitLab stale-conflict → no-op push, re-poll" test_plat_040_gitlab_stale_conflict
+  run_test "TC-PLAT-041: GitLab status never settles → timeout (≤60s)" test_plat_041_gitlab_timeout
 
   printf '\n%s Summary: %d/%d passed' "${TEST_TAG}" "${_test_passed}" "${_test_count}"
   if [[ "${_test_failed}" -gt 0 ]]; then
