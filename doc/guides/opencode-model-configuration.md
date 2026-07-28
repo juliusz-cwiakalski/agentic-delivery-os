@@ -17,6 +17,11 @@ This separation enables:
 - **Team consistency** — Share model configs via git
 - **Flexibility** — Override models per-project or per-user
 
+For optional scheduling hooks and their safe wrapper-local environment-return
+boundary, see [Delivery Modes](delivery-modes.md#optional-pre-iteration-hooks).
+Model profile variables and `{env:...}` configuration remain owner choices, not
+a guarantee of OpenCode's selected model.
+
 **Official documentation:**
 - [OpenCode Models](https://opencode.ai/docs/en/models/) — Model configuration syntax
 - [OpenCode Config](https://opencode.ai/docs/config/) — Configuration locations and precedence

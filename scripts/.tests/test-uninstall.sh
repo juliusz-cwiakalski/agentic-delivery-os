@@ -190,6 +190,8 @@ create_mock_ados_project() {
   mkdir -p "${base}/doc/decisions"
   mkdir -p "${base}/doc/changes"
   mkdir -p "${base}/doc/guides"
+  mkdir -p "${base}/scripts/hooks"
+  printf '#!/usr/bin/env bash\n' > "${base}/scripts/hooks/pre-opencode-iteration-zai.sh"
 
   # Helper: write an .md file carrying a frontmatter `ados_distribution` marker.
   # The marker-driven uninstall (PR #74 review C1) reads this to decide removal;
@@ -436,6 +438,8 @@ test_local_uninstall_removes_files() {
   assert_file_not_exists "${project_dir}/doc/documentation-handbook.md" "handbook should be removed"
   assert_file_not_exists "${project_dir}/doc/00-index.md" "index should be removed"
   assert_file_not_exists "${project_dir}/doc/templates/change-spec-template.md" "template should be removed"
+  assert_file_not_exists "${project_dir}/scripts/hooks/pre-opencode-iteration-zai.sh" "hook example should be removed"
+  assert_dir_not_exists "${project_dir}/scripts/hooks" "empty hook directory should be removed"
 }
 
 test_local_uninstall_removes_empty_dirs() {

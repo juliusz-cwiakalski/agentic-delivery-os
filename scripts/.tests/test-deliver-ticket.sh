@@ -1575,6 +1575,164 @@ reset_counters() {
 # ============================================================================
 # RUN TESTS
 # ============================================================================
+test_hook_help_contract() {
+  local help
+  help="$(bash "${SCRIPT_DIR}/deliver-ticket.sh" --help)"
+  assert_contains "${help}" "ADOS_PRE_ITERATION_HOOK" || return 1
+  assert_contains "${help}" "ADOS_HOOK_SHUTDOWN_GRACE_SECONDS" || return 1
+  assert_contains "${help}" "ADOS_HOOK_ENV_ALLOWLIST" || return 1
+  assert_contains "${help}" "Default: empty. Built-in: OC_ADOS_AGENT_*_MODEL." || return 1
+  assert_contains "${help}" "Extra exact valid names require comma-separated explicit" || return 1
+  assert_contains "${help}" "allowlist; credentials at operator risk." || return 1
+  assert_contains "${help}" "data-only/literal and never logged." || return 1
+  assert_contains "${help}" "ADOS_HOOK_AGENT=pm" || return 1
+  assert_contains "${help}" "ADOS_HOOK_SCRIPT=deliver-ticket" || return 1
+  assert_contains "${help}" "ADOS_HOOK_ENV_OUTPUT" || return 1
+  assert_contains "${help}" "ADOS_HOOK_ENV_FORMAT=ADOS_HOOK_ENV_V1" || return 1
+  assert_not_contains "${help}" "ADOS_HOOK_RETRY_SECONDS" || return 1
+  assert_not_contains "${help}" "ADOS_HOOK_MAX_FAILURES"
+}
+
+# TC-HOOK-005: deliver_loop is the public PM execution path; a dry-run must
+# render its command without ever executing a configured hook.
+test_hook_dry_run_exclusion() {
+  local marker="${_test_tmpdir}/hook-ran" hook="${_test_tmpdir}/hook"
+  cat >"${hook}" <<'HOOK'
+#!/usr/bin/env bash
+printf invoked >"${HOOK_MARKER}"
+HOOK
+  chmod 700 "${hook}"
+  ADOS_PRE_ITERATION_HOOK="${hook}" HOOK_MARKER="${marker}" bash -c '
+    source "$1"
+    DELIVERY_DIR="$2/delivery"; mkdir -p "$DELIVERY_DIR"
+    DRY_RUN=true; MAX_RESTARTS=1
+    resolve_session() { printf ""; }
+    run_single_iteration() { printf finished; }
+    deliver_loop TEST-DRY-HOOK feat/test ""
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh" "${_test_tmpdir}" || return 1
+  [[ ! -e "${marker}" ]] || { printf 'dry-run executed hook\n' >&2; return 1; }
+  [[ -z "${CURRENT_HOOK_TMPDIR:-}" && -z "${CURRENT_HOOK_ENV_OUTPUT:-}" ]]
+}
+
+# Black-box TC-HOOK-005 coverage: execute the installed CLI from an isolated
+# project root so its OWN bookkeeping cannot touch this checkout's .ai/local.
+test_hook_dry_run_cli_exclusion() {
+  local project="${_test_tmpdir}/project" bin="${_test_tmpdir}/bin" hook="${_test_tmpdir}/hook" marker="${_test_tmpdir}/marker"
+  mkdir -p "${project}/scripts" "${bin}"
+  cp "${SCRIPT_DIR}/deliver-ticket.sh" "${project}/scripts/deliver-ticket.sh"
+  cat >"${hook}" <<'HOOK'
+#!/usr/bin/env bash
+printf invoked >"${HOOK_MARKER}"
+HOOK
+  chmod 700 "${hook}"
+  for command in git gh jq setsid; do
+    cat >"${bin}/${command}" <<'STUB'
+#!/usr/bin/env bash
+exit 0
+STUB
+    chmod 700 "${bin}/${command}"
+  done
+  PATH="${bin}:${PATH}" HOOK_MARKER="${marker}" ADOS_PRE_ITERATION_HOOK="${hook}" \
+    bash "${project}/scripts/deliver-ticket.sh" --dry-run TEST-905:feat/test >/dev/null || return 1
+  [[ ! -e "${marker}" ]] || { printf 'public --dry-run invoked hook\n' >&2; return 1; }
+  [[ ! -d "${project}/.ai/local" || ! -e "${project}/.ai/local/delivery/TEST-905.pid" ]]
+}
+
+# TC-HOOK-005: the public stored-message command must stay on its read-only
+# dispatch path even when a marker hook is configured.
+test_hook_last_message_cli_exclusion() {
+  local project="${_test_tmpdir}/project" bin="${_test_tmpdir}/bin" hook="${_test_tmpdir}/hook" marker="${_test_tmpdir}/marker" artifact="${_test_tmpdir}/hook-artifact" mktemp_cmd output
+  mktemp_cmd="$(command -v mktemp)"
+  mkdir -p "${project}/scripts" "${project}/.ai/local/delivery" "${bin}"
+  cp "${SCRIPT_DIR}/deliver-ticket.sh" "${project}/scripts/deliver-ticket.sh"
+  printf 'stored PM last-message' >"${project}/.ai/local/delivery/GH-146.last-message"
+  cat >"${hook}" <<'HOOK'
+#!/usr/bin/env bash
+printf invoked >"${HOOK_MARKER}"
+HOOK
+  chmod 700 "${hook}"
+  # shellcheck disable=SC2016 # Generated stub must expand this at hook runtime.
+  printf '#!/usr/bin/env bash\nprintf created >"${HOOK_ARTIFACT}"\nexec %q "$@"\n' "${mktemp_cmd}" >"${bin}/mktemp"
+  chmod 700 "${bin}/mktemp"
+  output="$(PATH="${bin}:${PATH}" HOOK_MARKER="${marker}" HOOK_ARTIFACT="${artifact}" ADOS_PRE_ITERATION_HOOK="${hook}" bash "${project}/scripts/deliver-ticket.sh" --last-message GH-146)" || return 1
+  assert_eq "stored PM last-message" "${output}" "--last-message must preserve stored-message output" || return 1
+  [[ ! -e "${marker}" && ! -e "${artifact}" ]] || { printf 'public --last-message invoked hook or created hook artifact\n' >&2; return 1; }
+}
+
+test_hook_failure_variants() {
+  local hook="${_test_tmpdir}/hook"
+  : >"${hook}"
+  chmod 600 "${hook}"
+  ! ADOS_PRE_ITERATION_HOOK="${hook}" bash -c 'source "$1"; run_pre_iteration_hook' _ "${SCRIPT_DIR}/deliver-ticket.sh" || return 1
+  printf '#!/missing/interpreter\n' >"${hook}"; chmod 700 "${hook}"
+  ! ADOS_PRE_ITERATION_HOOK="${hook}" bash -c 'source "$1"; run_pre_iteration_hook' _ "${SCRIPT_DIR}/deliver-ticket.sh" || return 1
+  printf '#!/usr/bin/env bash\nexit 7\n' >"${hook}"; chmod 700 "${hook}"
+  ! ADOS_PRE_ITERATION_HOOK="${hook}" bash -c 'source "$1"; run_pre_iteration_hook' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+# Real deliver_loop path with executable marker hook and a mocked PM boundary.
+test_hook_pm_loop_success_retry_context_and_v1() {
+  local hook="${_test_tmpdir}/hook" marker="${_test_tmpdir}/marker" stderr="${_test_tmpdir}/stderr"
+  cat >"${hook}" <<'HOOK'
+#!/usr/bin/env bash
+printf '%s:%s:%s:%s:%s\n' "$ADOS_HOOK_AGENT" "$ADOS_HOOK_SCRIPT" "$ADOS_HOOK_ENV_OUTPUT" "$OC_ADOS_MODEL_PROFILE" "$OC_ADOS_AGENT_PM_MODEL" >>"$HOOK_MARKER"
+printf 'ADOS_HOOK_ENV_V1\nset OC_ADOS_AGENT_PM_MODEL=literal $() secret\n' >"$ADOS_HOOK_ENV_OUTPUT"
+HOOK
+  chmod 700 "${hook}"
+  ADOS_PRE_ITERATION_HOOK="${hook}" HOOK_MARKER="${marker}" OC_ADOS_MODEL_PROFILE=owner-profile OC_ADOS_AGENT_PM_MODEL=owner-model bash -c '
+    source "$1"; DELIVERY_DIR="$2/delivery"; mkdir -p "$DELIVERY_DIR"; MAX_RESTARTS=2
+    resolve_session(){ :; }; classify_result(){ printf failed; }; pr_url_for(){ :; }; sleep(){ :; }
+    run_single_iteration(){ printf "pm:%s\n" "$OC_ADOS_AGENT_PM_MODEL" >>"$HOOK_MARKER"; printf stuck; }
+    decide_after_iteration(){ printf continue; }
+    deliver_loop GH-146 feat/test || [[ $? -eq 1 ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh" "${_test_tmpdir}" 2>"${stderr}" || return 1
+  [[ "$(grep -c '^pm:literal' "${marker}")" == 2 ]] || return 1
+  [[ "$(grep -c '^pm:deliver-ticket:' "${marker}")" == 2 ]] || return 1
+  grep -q '^pm:deliver-ticket:.*:owner-profile:owner-model$' "${marker}" || return 1
+  [[ "$(grep '^pm:deliver-ticket:' "${marker}" | cut -d: -f3 | sort -u | wc -l)" == 2 ]] || return 1
+  while IFS= read -r path; do [[ ! -e "${path}" ]] || return 1; done < <(grep '^pm:deliver-ticket:' "${marker}" | cut -d: -f3)
+  assert_not_contains "$(<"${stderr}")" "literal $() secret"
+}
+
+test_hook_pm_loop_absent_and_failure_blocks_spawn() {
+  local hook="${_test_tmpdir}/hook" marker="${_test_tmpdir}/spawn"
+  for kind in absent nonexec execfail nonzero; do
+    case "${kind}" in
+      absent) rm -f "${hook}" ;;
+      nonexec) : >"${hook}"; chmod 600 "${hook}" ;;
+      execfail) printf '#!/missing/interpreter\n' >"${hook}"; chmod 700 "${hook}" ;;
+      nonzero) printf '#!/usr/bin/env bash\nexit 9\n' >"${hook}"; chmod 700 "${hook}" ;;
+    esac
+    ADOS_PRE_ITERATION_HOOK="${hook}" HOOK_MARKER="${marker}" bash -c '
+      source "$1"; DELIVERY_DIR="$2/delivery"; mkdir -p "$DELIVERY_DIR"; MAX_RESTARTS=1; resolve_session(){ :; }; run_single_iteration(){ touch "$HOOK_MARKER"; printf finished; }; classify_result(){ printf failed; }; pr_url_for(){ :; }; decide_after_iteration(){ printf stop:0:finished; }; deliver_loop GH-146 feat/test
+    ' _ "${SCRIPT_DIR}/deliver-ticket.sh" "${_test_tmpdir}" >/dev/null 2>&1 || [[ "${kind}" != absent ]] || return 1
+    if [[ "${kind}" == absent ]]; then [[ -e "${marker}" ]] || return 1; else [[ ! -e "${marker}" ]] || return 1; fi
+    rm -f "${marker}"
+  done
+}
+
+test_hook_pm_join_and_probe_paths_exclude_hook() {
+  local hook="${_test_tmpdir}/hook" marker="${_test_tmpdir}/marker"
+  # The generated hook expands HOOK_MARKER when it runs.
+  # shellcheck disable=SC2016
+  printf '#!/usr/bin/env bash\ntouch "$HOOK_MARKER"\n' >"${hook}"; chmod 700 "${hook}"
+  ADOS_PRE_ITERATION_HOOK="${hook}" HOOK_MARKER="${marker}" bash -c '
+    source "$1"; DELIVERY_DIR="$2/delivery"; mkdir -p "$DELIVERY_DIR"; owner_pid_if_live(){ [[ -f "$DELIVERY_DIR/seen" ]] && return 1; : >"$DELIVERY_DIR/seen"; printf 123; }; classify_result(){ printf finished; }; pr_url_for(){ :; }; sleep(){ :; }; join_delivery GH-146 feat/test >/dev/null; cmd_is_delivering GH-146 || true; [[ ! -e "$HOOK_MARKER" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh" "${_test_tmpdir}"
+}
+
+test_hook_pm_no_timeout_and_invalid_v1_block_spawn() {
+  local hook="${_test_tmpdir}/hook" marker="${_test_tmpdir}/marker"
+  cat >"${hook}" <<'HOOK'
+#!/usr/bin/env bash
+sleep 0.05
+printf 'ADOS_HOOK_ENV_V1\nset OC_ADOS_AGENT_PM_MODEL=new\nset UNAUTHORIZED=bad\n' >"$ADOS_HOOK_ENV_OUTPUT"
+HOOK
+  chmod 700 "${hook}"
+  ADOS_PRE_ITERATION_HOOK="${hook}" HOOK_MARKER="${marker}" bash -c '
+    source "$1"; DELIVERY_DIR="$2/delivery"; mkdir -p "$DELIVERY_DIR"; MAX_RESTARTS=1; OC_ADOS_AGENT_PM_MODEL=old; export OC_ADOS_AGENT_PM_MODEL; resolve_session(){ :; }; run_single_iteration(){ touch "$HOOK_MARKER"; printf finished; }; deliver_loop GH-146 feat/test || [[ "$DELIVERY_RESULT" == failed ]]; [[ "$OC_ADOS_AGENT_PM_MODEL" == old && ! -e "$HOOK_MARKER" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh" "${_test_tmpdir}"
+}
 main() {
   printf '%s Running tests...\n' "${TEST_TAG}"
 
@@ -1659,6 +1817,15 @@ main() {
   run_test "TC-DT-INT-02: concurrent converge → one PM (F-3, slow)" test_concurrent_converge_one_pm
   run_test "TC-DT-INT-03: SIGTERM propagates to child (F-3, slow)" test_signal_propagation_sigterm_to_child
   run_test "TC-DT-SF-14: session-traffic liveness handoff (F-3, slow)" test_session_traffic_liveness_handoff
+  run_test "TC-HOOK-020: PM help settings/context contract" test_hook_help_contract
+  run_test "TC-HOOK-005: PM dry-run excludes hook" test_hook_dry_run_exclusion
+  run_test "TC-HOOK-005: PM public dry-run excludes hook" test_hook_dry_run_cli_exclusion
+   run_test "TC-HOOK-005: PM public last-message excludes hook" test_hook_last_message_cli_exclusion
+   run_test "TC-HOOK-007/007B/008: PM hook failures block" test_hook_failure_variants
+   run_test "TC-HOOK-001/002/003/006/009/024/025/027: PM loop hook, retry, context, and V1 inheritance" test_hook_pm_loop_success_retry_context_and_v1
+   run_test "TC-HOOK-001/007/007B/008: PM absent and failure paths block spawn" test_hook_pm_loop_absent_and_failure_blocks_spawn
+   run_test "TC-HOOK-004/005: PM JOIN and probe paths exclude hook" test_hook_pm_join_and_probe_paths_exclude_hook
+   run_test "TC-HOOK-010/026: PM no-timeout invalid V1 blocks spawn and mutation" test_hook_pm_no_timeout_and_invalid_v1_block_spawn
 
   printf '\n%s Summary: %d/%d passed' "${TEST_TAG}" "${_test_passed}" "${_test_count}"
   if [[ "${_test_failed}" -gt 0 ]]; then

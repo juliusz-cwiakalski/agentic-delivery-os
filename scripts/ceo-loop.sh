@@ -36,7 +36,7 @@ IFS=$'\n\t'
 # SETTINGS
 # ============================================================================
 readonly APP_NAME="ceo-loop"
-readonly APP_VERSION="2.0.0"
+readonly APP_VERSION="2.1.0"
 readonly LOG_TAG="(${APP_NAME})"
 
 readonly EXIT_FAILURE=1
@@ -61,6 +61,11 @@ MAX_ITERATIONS="${CEO_LOOP_MAX_ITERATIONS:-0}"   # 0 = forever
 readonly CEO_RESUME_TOKEN_LIMIT="${CEO_RESUME_TOKEN_LIMIT:-100000}"
 readonly OPENCODE_MODEL="${CEO_LOOP_MODEL:-}"
 readonly OPENCODE_KEYS_ENV="${OPENCODE_KEYS_ENV:-${HOME}/.ai/opencode-keys-env.sh}"
+readonly PRE_ITERATION_HOOK="${ADOS_PRE_ITERATION_HOOK:-${HOME}/.ados/hooks/pre-opencode-iteration}"
+readonly HOOK_SHUTDOWN_GRACE_SECONDS="${ADOS_HOOK_SHUTDOWN_GRACE_SECONDS:-2}"
+readonly HOOK_ENV_ALLOWLIST="${ADOS_HOOK_ENV_ALLOWLIST:-}"
+readonly HOOK_RETRY_SECONDS="${ADOS_HOOK_RETRY_SECONDS:-60}"
+readonly HOOK_MAX_FAILURES="${ADOS_HOOK_MAX_FAILURES:-5}"
 
 # External command hooks (tests override these).
 PM_LIVENESS_SCRIPT="${PM_LIVENESS_SCRIPT:-${SCRIPT_DIR}/pm-liveness.sh}"
@@ -90,6 +95,12 @@ VERBOSE="${VERBOSE:-false}"
 
 # Current CEO opencode child PID (tracked for signal propagation + clear-on-exit).
 CURRENT_CEO_PID=""
+CURRENT_HOOK_PID=""
+CURRENT_HOOK_GROUP_PID=""
+CURRENT_HOOK_TMPDIR=""
+CURRENT_HOOK_ENV_OUTPUT=""
+SPAWN_OR_RESUME_CEO_PID=""
+SPAWN_OR_RESUME_CEO_STATUS=""
 
 # ============================================================================
 # TRAPS
@@ -102,6 +113,7 @@ _on_err() {
 # INV-DM-2 propagation rule + F-3: on exit, kill the CEO child tree and clear
 # the ceo.pid so a crashed loop is not mistaken for a live CEO.
 _cleanup_child() {
+  _cleanup_hook || true
   if [[ -n "${CURRENT_CEO_PID:-}" ]]; then
     kill_ceo_tree "${CURRENT_CEO_PID}" 2>/dev/null || true
     CURRENT_CEO_PID=""
@@ -112,12 +124,17 @@ _cleanup_child() {
 
 _on_interrupt() {
   log_warn "Interrupted"
+  # `wait` can defer EXIT cleanup; terminate the tracked group immediately.
+  [[ -n "${CURRENT_HOOK_GROUP_PID:-}" ]] && kill -TERM -- "-${CURRENT_HOOK_GROUP_PID}" 2>/dev/null || true
+  # Signal traps run while `wait` is interrupted; clean here while the hook
+  # group tracker is still live rather than relying solely on the EXIT trap.
+  _cleanup_hook 2>/dev/null || true
   exit 130
 }
 
 trap '_on_err $LINENO "$BASH_COMMAND" $?' ERR
 trap '_cleanup_child' EXIT
-trap '_on_interrupt' INT TERM
+trap '_on_interrupt' HUP INT TERM
 
 # ============================================================================
 # LOGGING
@@ -140,7 +157,40 @@ require_cmd() {
 _opencode() { command opencode "$@"; }
 _jq()       { command jq "$@"; }
 _git()      { command git "$@"; }
-_setsid()   { command setsid "$@"; }
+_setsid()   { exec setsid "$@"; }
+_hook_stat() { command stat "$@"; }
+
+# Data-only hook return helpers. They intentionally do not source/eval data.
+validate_hook_allowlist() { local item seen=","; [[ -z "${HOOK_ENV_ALLOWLIST}" ]] && return 0; IFS=',' read -r -a _hook_allowlist_items <<<"${HOOK_ENV_ALLOWLIST}"; for item in "${_hook_allowlist_items[@]}"; do [[ "${item}" =~ ^[A-Z_][A-Z0-9_]*$ ]] || die "ADOS_HOOK_ENV_ALLOWLIST contains invalid identifier"; [[ "${seen}" != *",${item},"* ]] || die "ADOS_HOOK_ENV_ALLOWLIST contains duplicate identifier: ${item}"; seen="${seen}${item},"; done; }
+_hook_name_authorized() {
+  local -r name="$1"
+  local item
+  if [[ "${name}" =~ ^OC_ADOS_AGENT_[A-Z0-9_]+_MODEL$ ]]; then
+    return 0
+  fi
+  IFS=',' read -r -a _hook_allowlist_items <<<"${HOOK_ENV_ALLOWLIST}"
+  for item in "${_hook_allowlist_items[@]}"; do
+    [[ "${name}" == "${item}" ]] && return 0
+  done
+  return 1
+}
+_cleanup_hook() { local pid="${CURRENT_HOOK_GROUP_PID:-${CURRENT_HOOK_PID:-}}"; if [[ -n "${pid}" ]]; then kill -TERM -- "-${pid}" 2>/dev/null || true; pkill -TERM -g "${pid}" 2>/dev/null || true; if pgrep -g "${pid}" >/dev/null 2>&1; then sleep "${HOOK_SHUTDOWN_GRACE_SECONDS}" || true; kill -KILL -- "-${pid}" 2>/dev/null || true; pkill -KILL -g "${pid}" 2>/dev/null || true; fi; wait "${pid}" 2>/dev/null || true; fi; CURRENT_HOOK_PID=""; CURRENT_HOOK_GROUP_PID=""; [[ -n "${CURRENT_HOOK_TMPDIR:-}" && -d "${CURRENT_HOOK_TMPDIR}" ]] && rm -rf "${CURRENT_HOOK_TMPDIR}"; CURRENT_HOOK_TMPDIR=""; CURRENT_HOOK_ENV_OUTPUT=""; }
+_hook_apply_operation() { local -r verb="$1" name="$2" value="$3"; if [[ "${verb}" == "set" ]]; then export "${name}=${value}"; else unset "${name}"; fi; }
+_hook_file_metadata() {
+  local -r file="$1"
+  local hook_stat_output
+  if hook_stat_output="$(_hook_stat -c '%a %u' "${file}" 2>/dev/null)"; then
+    printf '%s' "${hook_stat_output}"
+  else
+    _hook_stat -f '%Lp %u' "${file}" 2>/dev/null
+  fi
+}
+# shellcheck disable=SC2209,SC2015
+# Parameter expansion deliberately extracts literal protocol fields; the guarded
+# fallback is intentionally coupled to the authorization predicate below.
+_hook_validate_and_apply() { local file="$1" size line line_bytes name value verb records=0 index prior hook_mode hook_uid expected_uid hook_metadata_output; local -a verbs=() names=() values=() prior_set=() prior_values=(); [[ -f "${file}" && ! -L "${file}" ]] || { log_err "hook output is not a safe regular file"; return 1; }; hook_metadata_output="$(_hook_file_metadata "${file}")" || { log_err "hook output cannot be inspected"; return 1; }; IFS=' ' read -r hook_mode hook_uid <<<"${hook_metadata_output}"; expected_uid="$(id -u)"; [[ "${hook_uid}" == "${expected_uid}" && $(( 8#${hook_mode} & 022 )) -eq 0 ]] || { log_err "hook output has unsafe ownership or permissions"; return 1; }; [[ ! -s "${file}" ]] && return 0; size="$(LC_ALL=C wc -c <"${file}")"; (( size <= 65536 )) || { log_err "hook output exceeds byte limit"; return 1; }; LC_ALL=C od -An -t x1 "${file}" | grep -E '(^|[[:space:]])(0d|00)([[:space:]]|$)' >/dev/null && { log_err "hook output contains CR or NUL"; return 1; }; [[ "$(tail -c 1 "${file}")" == "" ]] || { log_err "hook output lacks final LF"; return 1; }; while IFS= read -r line; do line_bytes="$(LC_ALL=C printf '%s' "${line}" | wc -c)"; (( line_bytes <= 8192 )) || { log_err "hook output line exceeds byte limit"; return 1; }; if (( records == 0 )); then [[ "${line}" == ADOS_HOOK_ENV_V1 ]] || { log_err "hook output has invalid header"; return 1; }; records=1; continue; fi; if [[ "${line}" == set\ * && "${line#set }" == *=* ]]; then verb=set; name="${line#set }"; value="${name#*=}"; name="${name%%=*}"; elif [[ "${line}" == unset\ * && "${line#unset }" != *=* ]]; then verb=unset; name="${line#unset }"; value=""; else log_err "hook output has invalid record"; return 1; fi; [[ "${name}" =~ ^[A-Z_][A-Z0-9_]*$ ]] && _hook_name_authorized "${name}" || { log_err "hook output requests unauthorized name ${name}"; return 1; }; for prior in "${names[@]}"; do [[ "${prior}" != "${name}" ]] || { log_err "hook output duplicates name ${name}"; return 1; }; done; verbs+=("${verb}"); names+=("${name}"); values+=("${value}"); ((++records)); (( records <= 257 )) || { log_err "hook output exceeds record limit"; return 1; }; done <"${file}"; (( records >= 1 )) || return 0; for index in "${!names[@]}"; do if [[ -v "${names[$index]}" ]]; then prior_set+=(1); prior_values+=("${!names[$index]}"); else prior_set+=(0); prior_values+=(""); fi; done; for index in "${!names[@]}"; do _hook_apply_operation "${verbs[$index]}" "${names[$index]}" "${values[$index]}" || { for ((index -= 1; index >= 0; index--)); do if [[ "${prior_set[$index]}" == 1 ]]; then export "${names[$index]}=${prior_values[$index]}"; else unset "${names[$index]}"; fi; done; log_err "hook output apply failed; rolled back"; return 1; }; done; log_info "applied ${#names[@]} hook environment operation(s)"; }
+run_pre_iteration_hook() { [[ -e "${PRE_ITERATION_HOOK}" ]] || return 0; [[ -x "${PRE_ITERATION_HOOK}" ]] || { log_err "hook failure: exists but is not executable: ${PRE_ITERATION_HOOK}"; return 1; }; CURRENT_HOOK_TMPDIR="$(mktemp -d)" || return 1; chmod 700 "${CURRENT_HOOK_TMPDIR}"; CURRENT_HOOK_ENV_OUTPUT="${CURRENT_HOOK_TMPDIR}/env"; : >"${CURRENT_HOOK_ENV_OUTPUT}"; chmod 600 "${CURRENT_HOOK_ENV_OUTPUT}"; ADOS_HOOK_AGENT=ceo ADOS_HOOK_SCRIPT=ceo-loop ADOS_HOOK_ENV_OUTPUT="${CURRENT_HOOK_ENV_OUTPUT}" ADOS_HOOK_ENV_FORMAT=ADOS_HOOK_ENV_V1 _setsid "${PRE_ITERATION_HOOK}" & CURRENT_HOOK_PID=$!; CURRENT_HOOK_GROUP_PID="${CURRENT_HOOK_PID}"; local rc=0; wait "${CURRENT_HOOK_PID}" || rc=$?; CURRENT_HOOK_PID=""; (( rc == 0 )) || { log_err "hook failure: ${PRE_ITERATION_HOOK} exited with ${rc}"; _cleanup_hook; return 1; }; _hook_validate_and_apply "${CURRENT_HOOK_ENV_OUTPUT}" || { _cleanup_hook; return 1; }; _cleanup_hook; }
+wait_after_hook_failure() { local remaining="${HOOK_RETRY_SECONDS}" chunk; while (( $(LC_ALL=C awk "BEGIN {print (${remaining} > 0)}") )); do [[ -f "${STOP_FILE}" ]] && return 1; chunk="$(LC_ALL=C awk "BEGIN {print (${remaining} > 1 ? 1 : ${remaining})}")"; sleep "${chunk}"; remaining="$(LC_ALL=C awk "BEGIN {print ${remaining} - ${chunk}}")"; [[ -f "${STOP_FILE}" ]] && return 1; done; return 0; }
 
 # ============================================================================
 # INPUT VALIDATION (pure)
@@ -250,7 +300,7 @@ write_ceo_pid() {
   local -r pid="$1" start_epoch="${2:-$(date +%s)}"
   ensure_state_dir
   _jq -n --arg pid "${pid}" --argjson start "${start_epoch}" \
-    '{pid:$pid,start:$start}' >"${CEO_PID_FILE}"
+    "{pid:\$pid,start:\$start}" >"${CEO_PID_FILE}"
 }
 
 clear_ceo_pid() {
@@ -415,7 +465,7 @@ capture_session_id_by_title() {
   local -r title="$1"
   local sid
   sid="$(cd "${ROOT_DIR}" && _opencode session list --format json 2>/dev/null \
-    | _jq -r --arg t "${title}" '[.[] | select(.title == $t)] | sort_by(.time) | last | .id // empty' 2>/dev/null)" || sid=""
+    | _jq -r --arg t "${title}" "[.[] | select(.title == \$t)] | sort_by(.time) | last | .id // empty" 2>/dev/null)" || sid=""
   printf '%s' "${sid}"
 }
 
@@ -455,17 +505,25 @@ source_opencode_env() {
 
 # F-3 + INV-DM-3: spawn at most one CEO. If a live CEO child exists, JOIN/wait
 # for it (return its PID) rather than spawn a second. Otherwise resume the prev
-# session (if context is small) or spawn fresh. Prints the CEO child PID.
+# session (if context is small) or spawn fresh. Publishes its result through
+# SPAWN_OR_RESUME_CEO_PID so run_loop never hides parent state in $(...).
 spawn_or_resume_ceo() {
   local log_file="$1"
+  SPAWN_OR_RESUME_CEO_PID=""
+  SPAWN_OR_RESUME_CEO_STATUS="ok"
 
   # F-3: a live CEO child already exists (e.g. loop restarted while CEO alive).
   local live_pid
   live_pid="$(ceo_pid_if_live)" || live_pid=""
   if [[ -n "${live_pid}" ]]; then
     log_info "F-3: live CEO child exists (pid=${live_pid}); JOINing instead of spawning"
-    printf '%s' "${live_pid}"
+    SPAWN_OR_RESUME_CEO_PID="${live_pid}"
     return 0
+  fi
+
+  if ! run_pre_iteration_hook; then
+    SPAWN_OR_RESUME_CEO_STATUS="hook-failure"
+    return 1
   fi
 
   # INV-DM-3: session-resume decision.
@@ -519,7 +577,7 @@ spawn_or_resume_ceo() {
     sid="${prev_sid}"
   fi
   [[ -n "${sid}" ]] && remember_session_id "${sid}"
-  printf '%s' "${pid}"
+  SPAWN_OR_RESUME_CEO_PID="${pid}"
 }
 
 # ============================================================================
@@ -548,7 +606,7 @@ run_loop() {
   # Write own PID so a second invocation detects us.
   ensure_state_dir
   _jq -n --arg pid "$$" --argjson start "$(date +%s)" \
-    '{pid:$pid,start:$start}' >"${LOOP_PID_FILE}"
+    "{pid:\$pid,start:\$start}" >"${LOOP_PID_FILE}"
 
   mkdir -p "${LOG_DIR}"
   cd "${ROOT_DIR}"
@@ -558,7 +616,7 @@ run_loop() {
 
   log_info "stuck_minutes=${STUCK_MINUTES} poll_seconds=${POLL_SECONDS} max_restarts=${MAX_RESTARTS} max_iterations=${MAX_ITERATIONS} resume_limit=${CEO_RESUME_TOKEN_LIMIT}"
 
-  local iteration=0 restarts=0
+  local iteration=0 restarts=0 hook_failures=0
   while true; do
     ((iteration++)) || true
     if (( MAX_ITERATIONS > 0 && iteration > MAX_ITERATIONS )); then
@@ -581,7 +639,20 @@ run_loop() {
 
     # F-3 + INV-DM-3: spawn or resume the CEO (JOINs a live one).
     local ceo_pid
-    ceo_pid="$(spawn_or_resume_ceo "${log_file}")"
+    # Direct call preserves hook PID/temp/export state for traps and retries.
+    spawn_or_resume_ceo "${log_file}" || true
+    if [[ "${SPAWN_OR_RESUME_CEO_STATUS}" == "hook-failure" ]]; then
+      ((hook_failures++)) || true
+      if (( hook_failures >= HOOK_MAX_FAILURES )); then
+        log_err "hook failed ${hook_failures} consecutive times; exiting"
+        return "${EXIT_FAILURE}"
+      fi
+      log_warn "hook failed; retrying in ${HOOK_RETRY_SECONDS}s (${hook_failures}/${HOOK_MAX_FAILURES})"
+      wait_after_hook_failure || { log_info "durable stop signal present; exiting"; return 0; }
+      continue
+    fi
+    hook_failures=0
+    ceo_pid="${SPAWN_OR_RESUME_CEO_PID}"
     local ceo_sid
     ceo_sid="$(last_session_id)"
 
@@ -746,6 +817,19 @@ Environment:
   CEO_RESUME_TOKEN_LIMIT    Resume prev session if context < this (default: 100000)
   CEO_LOOP_KILL_GRACE_SECONDS  SIGTERM grace before SIGKILL (default: 20)
   CEO_LOOP_PROMPT           Override the CEO run prompt
+  ADOS_PRE_ITERATION_HOOK   Optional hook path (default: ~/.ados/hooks/pre-opencode-iteration)
+  ADOS_HOOK_SHUTDOWN_GRACE_SECONDS  Hook cleanup grace (default: 2)
+  ADOS_HOOK_ENV_ALLOWLIST   Default: empty. Built-in: OC_ADOS_AGENT_*_MODEL.
+                            Extra exact valid names require comma-separated explicit
+                            allowlist; credentials at operator risk. Values are
+                            data-only/literal and never logged.
+  ADOS_HOOK_RETRY_SECONDS   CEO hook-failure total retry interval (default: 60)
+  ADOS_HOOK_MAX_FAILURES    CEO consecutive hook-failure cap (default: 5)
+
+Hook context (wrapper-provided, not operator settings):
+  ADOS_HOOK_AGENT=ceo; ADOS_HOOK_SCRIPT=ceo-loop;
+  ADOS_HOOK_ENV_OUTPUT=fresh private absolute path; ADOS_HOOK_ENV_FORMAT=ADOS_HOOK_ENV_V1.
+  CEO hook-failure waits poll the stop file in fixed chunks no longer than one second.
 
 Exit codes:
   0 - stopped cleanly
@@ -755,6 +839,10 @@ EOF
 }
 
 main() {
+  validate_positive_uint ADOS_HOOK_SHUTDOWN_GRACE_SECONDS "${HOOK_SHUTDOWN_GRACE_SECONDS}"
+  validate_positive_uint ADOS_HOOK_MAX_FAILURES "${HOOK_MAX_FAILURES}"
+  [[ "${HOOK_RETRY_SECONDS}" =~ ^[0-9]+([.][0-9]+)?$ ]] || die "ADOS_HOOK_RETRY_SECONDS must be a non-negative decimal"
+  validate_hook_allowlist
   local cmd="${1:-run}"
   case "${cmd}" in
     -h|--help) usage; exit 0 ;;

@@ -7,6 +7,8 @@ id: GUIDE-AUTONOMOUS-BATCH-DELIVERY
 status: Draft
 created: 2026-07-03
 owners: ["engineering"]
+links:
+  related_changes: ["GH-146"]
 summary: "Deliver multiple tickets unattended with liveness monitoring, session resilience, and push-to-completion PR feedback. Covers deliver-ticket.sh, batch-deliver.sh, and clean-merged-branches."
 ---
 
@@ -96,7 +98,10 @@ flowchart TD
 
 ## The liveness loop (`deliver-ticket.sh`)
 
-The liveness loop is the heart of autonomous delivery. It starts a PM agent session, monitors it for progress, and kills-and-restarts if the session goes stale (no opencode session-message traffic for the stuck threshold — default **15 minutes**).
+The liveness loop is the heart of autonomous delivery. It starts a PM agent
+session, monitors it for progress, and kills-and-restarts if the session is
+stale: no session-message traffic **and** no git/worktree activity for the stuck
+threshold (default **10 minutes**).
 
 > **Liveness signal changed.** An earlier version measured worktree file-mtimes
 > (commits, file changes, `doc/changes/` writes) over a 30-minute window. That
@@ -104,7 +109,7 @@ The liveness loop is the heart of autonomous delivery. It starts a PM agent sess
 > new assistant/tool messages flowing in the session. A hung LLM stream keeps
 > the process alive while making zero progress; the file-mtime heuristic could
 > not distinguish that from a healthy long reasoning step. Session-traffic is
-> both more precise and allows the tighter 15-minute threshold. See
+> both more precise and allows the tighter 10-minute threshold. See
 > [delivery-modes.md § INV-DM-5](delivery-modes.md#inv-dm-5-liveness-means-session-message-progress-not-process-alive)
 > for the full rationale. Worktree activity remains a **secondary** signal
 > (used by `ceo-loop.sh` to confirm a CEO blocked on a healthy delivery is not
@@ -142,13 +147,21 @@ flowchart TD
 
 ### How activity is detected
 
-Every `DELIVER_POLL_SECONDS` (default 60s), the script probes **opencode session-message traffic** — the stream of assistant/tool messages in the PM's opencode session — via `scripts/pm-liveness.sh`. If new messages have flowed since the last probe, the stuck timer resets. If no new traffic arrives for `DELIVER_STUCK_MINUTES` (default **15**), the session is declared stalled and killed-and-restarted.
+Every `DELIVER_POLL_SECONDS` (default 60s), the script probes **opencode
+session-message traffic** — the stream of assistant/tool messages in the PM's
+opencode session — via `scripts/pm-liveness.sh`, and considers recent
+git/worktree activity. If either signal shows progress, the session remains
+healthy. If neither does for `DELIVER_STUCK_MINUTES` (default **10**), the
+session is declared stalled and killed-and-restarted.
 
 This is more precise than the old file-mtime heuristic: a hung LLM stream keeps the process alive (blocked on I/O) while making zero progress, and only session traffic can tell that apart from a healthy long reasoning step. Worktree activity (commits, `doc/changes/` writes) remains a **secondary** signal, primarily consumed by `ceo-loop.sh` to confirm a CEO that is blocked on a healthy delivery is *not* stuck.
 
 > **Graceful degradation:** if the opencode session DB is unavailable (e.g. in CI), `pm-liveness.sh` warns and falls back to a process-alive heuristic — it never blocks delivery on a missing DB.
 
-> **Activity detection assumption**: A healthy PM iteration produces session-message traffic (reasoning, tool calls, file edits) within 15 minutes. If a PM "thinking" phase produces no session traffic for >15 min, the session will be killed and restarted. Tune `DELIVER_STUCK_MINUTES` if your workflow has longer legitimate thinking phases.
+> **Activity detection assumption**: A healthy PM iteration produces
+> session-message traffic or git/worktree activity within 10 minutes. If neither
+> signal appears for that interval, the session is killed and restarted. Tune
+> `DELIVER_STUCK_MINUTES` if your workflow has longer legitimate quiet phases.
 
 ### Session resume by title
 
@@ -352,7 +365,7 @@ All settings are environment variables (with CLI flag overrides where noted):
 
 | Variable | Default | Description |
 |---|---|---|
-| `DELIVER_STUCK_MINUTES` | `15` | Minutes with no PM session-message traffic before the PM is declared stalled and restarted (was 30/file-mtime, now 15/session-traffic) |
+| `DELIVER_STUCK_MINUTES` | `10` | Minutes with neither PM session-message traffic nor git/worktree activity before the PM is declared stalled and restarted |
 | `DELIVER_POLL_SECONDS` | `60` | Seconds between activity checks |
 | `DELIVER_KILL_GRACE_SECONDS` | `20` | Seconds between SIGTERM and SIGKILL |
 | `DELIVER_MAX_RESTARTS` | `10` | Maximum restart iterations before giving up |

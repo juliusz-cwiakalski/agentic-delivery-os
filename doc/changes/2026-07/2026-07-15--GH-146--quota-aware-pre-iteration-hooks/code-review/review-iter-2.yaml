@@ -1,0 +1,70 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-146
+branch: feat/GH-146/quota-aware-pre-iteration-hooks
+status: FAIL
+summary: >
+  The remediation closes the PM dry-run defect and introduces credible GNU/BSD
+  metadata and portable UTC-formatting implementations. Focused suites, the
+  cross-wrapper lifecycle matrix, aggregate suite, syntax check, YAML parsing,
+  and diff check pass. However, the plan still marks the required wrapper-level
+  execution evidence complete even though most TC-HOOK scenarios are not
+  implemented as tests, and the newly introduced hook helpers add ShellCheck
+  warnings without documented exceptions.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 1
+  low: 0
+  info: 0
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: testing
+    location: scripts/.tests/test-ceo-loop.sh:881; scripts/.tests/test-deliver-ticket.sh:1578
+    message: >
+      Phase 9.3 is checked complete, but the wrapper suites still lack the
+      promised executable scenarios for absent and successful hooks, context,
+      fresh-spawn/retry placement, JOIN exclusion, CEO failure/cap behavior,
+      no-timeout behavior, and end-to-end V1 inheritance/fresh-artifact/value-safe
+      diagnostics. The regression suite tests parser helpers and invokes the
+      lifecycle helper through a sourced harness; it does not replace the
+      real-wrapper tests required by TC-HOOK-001...010, 014, and 023...027.
+    suggestion: >
+      Add the missing marker-writing hook and mocked-OpenCode integration cases
+      to both wrapper suites, exercising public/loop call paths and asserting
+      the specified spawn, retry, exclusion, environment, artifact, and failure
+      outcomes. Mark Phase 10 complete only after every mapped TC has concrete
+      executable evidence.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: build
+    location: scripts/ceo-loop.sh:169; scripts/deliver-ticket.sh:247
+    message: >
+      ShellCheck now reports new SC2209 warnings in both newly added compact
+      parser helpers and new SC2015 notes in their authorization expressions;
+      the main branch emitted only pre-existing notes, not these warnings.
+      This violates the repository Bash rule to fix warnings or document a
+      targeted inline exception, and makes the hook implementation harder to
+      maintain safely.
+    suggestion: >
+      Refactor the added helpers into readable multi-line declarations and
+      conditionals so ShellCheck is clean for the new code, or add narrowly
+      justified suppressions where a warning is demonstrably intentional.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-07-17T04:47:31Z
+next_step: EXECUTE_REMEDIATION_PHASE

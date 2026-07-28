@@ -1,0 +1,72 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-146
+branch: feat/GH-146/quota-aware-pre-iteration-hooks
+status: FAIL
+summary: >
+  Commit a30a9939 closes the prior ShellCheck finding: targeted lint reports only
+  the documented pre-existing SC2016 and SC2012 informational baseline, and the
+  aggregate regression suite passes. It also adds useful executable hook tests,
+  but the Phase 10 mapping overstates their scope: several cited scenarios remain
+  unexercised at the required wrapper path, and the GNU/BSD metadata fixture still
+  does not select the advertised command variant. The documentation remains
+  consistent with the hook contract, but the test-plan and implementation-plan
+  completion claims are not yet truthful.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 1
+  low: 0
+  info: 0
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: testing
+    location: scripts/.tests/test-ceo-loop.sh:913; scripts/.tests/test-hook-regression.sh:93
+    message: >
+      The Phase 10 evidence table claims complete TC-HOOK-001...010 and
+      023...027 wrapper coverage, but the CEO success test invokes
+      spawn_or_resume_ceo twice directly rather than exercising a watchdog retry
+      through run_loop. Its marker control test covers only --stop and --reset,
+      not --status or --log; neither wrapper test proves inherited model-profile
+      input; and the signal lifecycle matrix still invokes the private
+      run_pre_iteration_hook helper from a sourced harness instead of a wrapper
+      OWN/spawn path. These omissions leave the mapped TC-HOOK-003, 005, 006, and
+      023 claims incomplete and make the all-scenarios-complete record untruthful.
+    suggestion: >
+      Add marker-hook/mock-OpenCode tests that drive CEO watchdog retry through
+      run_loop, all required public control paths, and model-profile inheritance
+      in both wrappers. Exercise supported signal cleanup through actual OWN/spawn
+      wrapper paths, then narrow the plan mapping to only scenarios proven by the
+      tests or mark it complete only after those tests exist.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: testing
+    location: scripts/.tests/test-hook-regression.sh:52
+    message: >
+      test_metadata_adapter still branches on $2 inside its _hook_stat mock. At
+      that point $2 is stat's format argument, not the outer gnu|bsd style passed
+      to bash -c, so both labelled cases reject -c and exercise only the BSD
+      fallback. This leaves Phase 10.3's explicit GNU/BSD command-variant proof
+      unchecked.
+    suggestion: >
+      Pass the intended style through an environment variable or closure-safe
+      local before defining _hook_stat, then assert GNU accepts -c without -f and
+      BSD rejects -c before accepting -f.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-07-17T05:18:22Z
+next_step: EXECUTE_REMEDIATION_PHASE

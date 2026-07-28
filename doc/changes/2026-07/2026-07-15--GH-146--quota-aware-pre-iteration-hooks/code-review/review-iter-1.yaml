@@ -1,0 +1,96 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-146
+branch: feat/GH-146/quota-aware-pre-iteration-hooks
+status: FAIL
+summary: >
+  The hook design correctly avoids source/eval, stages environment mutations before
+  application, preserves the CEO parent-shell boundary, and has symmetric example
+  installation and removal. However, PM dry-run currently runs a present hook, the
+  newly added platform-specific commands break enabled hooks or the Z.AI example on
+  BSD/macOS, and the claimed automated coverage for most hook scenarios is absent.
+severity_breakdown:
+  critical: 0
+  high: 3
+  medium: 1
+  low: 0
+  info: 0
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: correctness
+    location: scripts/deliver-ticket.sh:1232
+    message: >
+      A present hook is invoked in deliver_loop before run_single_iteration checks
+      DRY_RUN. Therefore deliver-ticket.sh --dry-run runs arbitrary hook policy and
+      can sleep, create artifacts, or fail, despite AC-F1-3 and TC-HOOK-005 requiring
+      dry-run paths never to invoke the hook.
+    suggestion: >
+      Bypass run_pre_iteration_hook entirely when DRY_RUN=true and add a
+      marker-writing hook integration test that proves no invocation or artifact on
+      the public dry-run path.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: high
+    confidence: high
+    category: portability
+    location: scripts/deliver-ticket.sh:224; scripts/ceo-loop.sh:167
+    message: >
+      Both V1 parsers use GNU stat -c for mode and owner checks. BSD/macOS stat does
+      not support -c, so even a valid header-only hook result is rejected as
+      uninspectable and every enabled hook blocks its OpenCode spawn on that platform.
+    suggestion: >
+      Introduce a tested GNU/BSD metadata adapter while retaining all ownership and
+      permission checks, and cover both command variants with injectable seams or
+      fixtures.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: high
+    confidence: high
+    category: testing
+    location: scripts/.tests/test-deliver-ticket.sh:1578
+    message: >
+      The plan marks wrapper-level coverage for all 31 TCs complete, but the focused
+      PM suite adds only a help-text test and the CEO suite adds help/retry chunks.
+      The required automated absent/success/failure/context/retry/JOIN/control/dry-run
+      cases are not implemented; this gap allowed F-1 to ship.
+    suggestion: >
+      Add the concrete marker and mocked-OpenCode integration tests specified by
+      TC-HOOK-001 through TC-HOOK-010 and the remaining mapped protocol/lifecycle
+      scenarios to both wrapper suites, then record their results before re-review.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: portability
+    location: scripts/hooks/pre-opencode-iteration-zai.sh:34
+    message: >
+      The installed Z.AI example formats its wake time with GNU date -d @<epoch>,
+      which BSD/macOS date does not implement. During the peak window this exits the
+      hook under strict mode instead of waiting successfully.
+    suggestion: >
+      Use a GNU/BSD-compatible UTC formatter (or a small tested formatter adapter)
+      and add a regression fixture for the non-GNU date form.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-07-16T12:30:00Z
+next_step: EXECUTE_REMEDIATION_PHASE

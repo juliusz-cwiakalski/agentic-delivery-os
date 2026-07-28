@@ -1,0 +1,138 @@
+change_id: GH-146
+title: "Add quota-aware pre-iteration hooks to autonomous delivery loops"
+delivery_mode: interactive
+phases:
+  clarify_scope: { started: "2026-07-15T20:20:00Z", completed: "2026-07-15T20:35:00Z" }
+  specification: { started: "2026-07-15T20:35:00Z", completed: "2026-07-16T10:05:00Z" }
+  test_planning: { started: "2026-07-15T20:50:00Z", completed: "2026-07-16T10:05:00Z" }
+  delivery_planning: { started: "2026-07-15T21:10:00Z", completed: "2026-07-16T10:05:00Z" }
+  dor_check: { started: "2026-07-15T21:35:00Z", completed: "2026-07-16T10:10:00Z" }
+  delivery: { started: "2026-07-16T10:30:00Z", completed: "2026-07-16T12:55:00Z" }
+  system_spec_update: { started: "2026-07-16T12:55:00Z", completed: "2026-07-16T14:30:00Z" }
+  review_fix: { started: "2026-07-16T14:30:00Z", completed: "2026-07-17T12:35:00Z" }
+  quality_gates: { started: "2026-07-17T06:15:00Z", completed: "2026-07-17T12:30:00Z" }
+  dod_check: { started: "2026-07-17T12:35:00Z", completed: "2026-07-17T13:30:00Z" }
+  pr_creation: { started: "2026-07-17T13:30:00Z", completed: "2026-07-17T13:45:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/147" }
+decisions:
+  - { text: "Use the user-approved default hook contract from GH-146: ~/.ados fallback with env override, per-spawn/resume execution, no timeout, subprocess isolation, and explicit CEO/PM context.", date: "2026-07-15" }
+  - { text: "TDR-0002 (Accepted, R2) defines remaining contract details: installed inactive example under scripts/hooks; loud single-category failures with existing result enums; per-iteration delivery checks; bounded CEO hook-failure retries separate from stuck budgets; process-group cleanup; pure UTC test seams; and safe data-only environment return.", date: "2026-07-15" }
+open_questions: []
+blockers:
+  - text: "DoR iteration 1 requires human selection of the supported termination guarantee: narrow no-orphan cleanup to normal exit and direct SIGTERM/SIGINT/SIGHUP (recommended), or add stronger wrapper-SIGKILL containment with higher complexity/portability cost."
+    date: "2026-07-16"
+    resolved_date: "2026-07-16"
+  - text: "DoR iteration 3 requires owner selection of the model-binding contract: treat OpenCode `{env:OC_ADOS_AGENT_*_MODEL}` agent configuration as a documented prerequisite (recommended, matching the owner's central config), or add wrapper-side `-m` selection semantics."
+    date: "2026-07-16"
+    resolved_date: "2026-07-16"
+  - text: "Planning-artifact commit is blocked because GPG signing key 6AEF3AE876FAD0594BB21EE6E52B3E7E037AF852 timed out in pinentry. Human must unlock signing or explicitly authorize an unsigned commit before delivery can start."
+    date: "2026-07-16"
+    resolved_date: "2026-07-16"
+  - text: "Local review reached the 3-iteration cap with two residual test-evidence gaps: missing actual wrapper-path coverage for CEO watchdog/control/model-env/signal cases, and a GNU/BSD metadata fixture that accidentally exercises only BSD fallback. Human must authorize one extra targeted remediation/re-review or accept the residual test risk."
+    date: "2026-07-17"
+    resolved_date: "2026-07-17"
+notes:
+  - text: "Clarify-scope review started against GH-146, the autonomous-delivery feature spec, delivery scripts, tests, installation inventory, and delivery-mode guidance."
+    type: info
+    date: "2026-07-15"
+  - text: "Documentation risks: reconcile feature-autonomous-delivery.md and delivery-modes.md; review autonomous-batch-delivery.md for duplicated configuration. Any new redistributable template/guide requires ados_distribution and install-manifest coverage."
+    type: risk
+    date: "2026-07-15"
+  - text: "Clarify scope completed: ticket is complete and consistent with the autonomous-delivery architecture. The hook extends NFR-4/no-orphan behavior and must preserve INV-DM-1..6. No human clarification is required."
+    type: info
+    date: "2026-07-15"
+  - text: "Decision review: TDR-0002 reworked after critic found new result enums would break batch-deliver's exit-code consumer. Revised record received PASS_WITH_RISKS. Implementation must invoke the PM hook inside each retry iteration, not once before the loop."
+    type: retro
+    date: "2026-07-15"
+  - text: "Pre-existing doc drift found during scope review: feature-autonomous-delivery.md still says ceo-loop.sh/pm-liveness.sh are not installed although install.sh registers them; autonomous-batch-delivery.md still documents a 15-minute default while scripts/spec/canonical delivery-modes.md use 10. Resolve during system_spec_update because these current-truth docs are already in the modified feature area."
+    type: risk
+    date: "2026-07-15"
+  - text: "Specification completed at chg-GH-146-spec.md. It consumes all 12 ticket ACs, preserves existing result consumers, and makes per-retry hook invocation explicit."
+    type: info
+    date: "2026-07-15"
+  - text: "Test plan completed at chg-GH-146-test-plan.md after two traceability corrections: removed a nonexistent AC reference and added explicit exec-failure coverage, including final bidirectional TC sweep."
+    type: retro
+    date: "2026-07-15"
+  - text: "Delivery planning found GAP-U1: TDR/spec incorrectly claimed no uninstall manifest exists, but scripts/uninstall.sh has an explicit delivery-script list and would orphan the installed hook example. Reopened specification and test planning to add uninstall behavior/tests, and reopened TDR-0002 for factual correction. Root cause: decision review inspected install and doc-distribution paths but did not inspect the existing uninstall script despite AC12's installation-lifecycle scope."
+    type: retro
+    date: "2026-07-15"
+  - text: "Reopened artifact chain completed: TDR-0002 corrected; spec v1.1 adds uninstall symmetry (AC-F6-2/NFR-8); test plan v1.2 adds TC-HOOK-019B; plan v1.1 consumes the corrected artifacts. No upstream gaps remain before DoR."
+    type: resolved
+    date: "2026-07-15"
+  - text: "DoR iteration 1 returned NOT_READY (2 critical, 6 major, 2 minor). Reopened specification, test planning, and delivery planning. Critical issues: impossible SIGKILL cleanup wording and ceo-loop command-substitution hiding hook PID from parent traps. Other gaps cover TDR per-retry wording, both-wrapper failure/no-timeout tests, exact existing result domains, interruptible stop wait, consumer regressions, explicit DoD, C-8 attestation, and stale test execution mappings. These were not caught earlier because artifact authors reasoned mainly from helper-level design rather than real wrapper/subshell and consumer boundaries."
+    type: retro
+    date: "2026-07-16"
+  - text: "Human decision: guarantee cleanup only on normal exit and direct SIGTERM/SIGINT/SIGHUP. Explicitly exclude wrapper-only SIGKILL, host failure, and descendants that leave the hook process group; do not add guardian/supervisor complexity. Product need is a simple sleep-until-off-peak gate."
+    type: decision
+    date: "2026-07-16"
+  - text: "Scope expanded during DoR remediation: the hook must be able to return model-selection environment updates to the parent wrapper before OpenCode starts, enabling provider switching during peak windows or after provider quota exhaustion. This requires a safe output protocol; sourcing the hook directly is under decision review."
+    type: retro
+    date: "2026-07-16"
+  - text: "Accepted TDR-0002 env-return decision: do not source/eval hook output. Parent provides a private ADOS_HOOK_ENV_V1 data file; validates the entire bounded update atomically; permits OC_ADOS_AGENT_*_MODEL by default plus explicit allowlist; then applies set/unset before OpenCode. This supports provider switching while preserving parent-shell isolation."
+    type: decision
+    date: "2026-07-16"
+  - text: "DoR iteration-1 remediation complete across decision/spec/test-plan/plan: trappable-signal scope; CEO command-substitution refactor; per-retry TDR wording; both-wrapper lifecycle/failure tests; explicit classifier-vs-summary baseline; <=1s interruptible stop wait; consumer regressions; spec DoD; install/uninstall attestation; corrected test mappings; and safe env-return scope with 31 mapped TCs. Ready for DoR iteration 2."
+    type: resolved
+    date: "2026-07-16"
+  - text: "DoR iteration 2 returned NOT_READY without a human pause (8 major, 1 minor). Gaps were mostly stale cross-artifact wording and edge specificity after the late env-return scope: missing explicit model-profile/tier docs, credential allowlist contradiction, stale TDR retry/result text, ambiguous byte limits, missing CR/NUL/exact-bound tests, wrapper help coverage, and one stale test mapping. Reopened and reconciled decision/spec/test-plan/plan; all 31 TCs remain bidirectionally mapped."
+    type: retro
+    date: "2026-07-16"
+  - text: "DoR iteration-2 remediation complete: TDR/spec now align on operator-delegated allowlist credentials, per-retry placement, <=1s stop polling, classifier-vs-summary domains, exact LC_ALL=C byte bounds, CR/NUL rules, model-profile/tier/per-agent docs, wrapper help/context distinctions, and exact parser boundary tests in both wrappers. Ready for final DoR iteration 3."
+    type: resolved
+    date: "2026-07-16"
+  - text: "DoR iteration 3 returned NOT_READY at the maximum iteration limit (1 critical, 2 major, 1 minor). Primary gap: artifacts prove environment inheritance but do not state whether model switching depends on OpenCode config interpolation or wrapper-side -m selection. Escalated to owner. Remaining non-decision fixes: replace impossible zero-overhead threshold, add explicit Markdown/link/diff checks, and correct TC-HOOK-020 lifecycle phase wording."
+    type: retro
+    date: "2026-07-16"
+  - text: "Owner narrowed the env-return contract: ADOS guarantees only safe parent-environment updates and inheritance by the imminent OpenCode process/same-wrapper iterations. Downstream meaning is user-defined. Per-agent `{env:OC_ADOS_AGENT_*_MODEL}` model binding is an example, not a prerequisite or guaranteed model-selection mechanism; other users may use other allowlisted variables/configuration."
+    type: decision
+    date: "2026-07-16"
+  - text: "Post-escalation DoR required two additional stale-artifact corrections (TDR absent-hook zero-overhead wording and plan YAML validation). Final targeted readiness verification returned READY with all 10 facets passing and all 31 TCs mapped. Repeated failures show that late scope expansion benefits from a fresh full artifact consistency sweep before each DoR invocation, especially decision-record consequences and repository quality-rule checklists."
+    type: retro
+    date: "2026-07-16"
+  - text: "Commit attempt failed after correct staging because GPG pinentry timed out; no commit was created. This blocks the hard pre-delivery requirement that approved artifacts are committed."
+    type: retro
+    date: "2026-07-16"
+  - text: "GPG signing was restored; approved planning, decision, and readiness artifacts committed as 477c42c4. Delivery started."
+    type: resolved
+    date: "2026-07-16"
+  - text: "Coder subagent could not access @committer and twice returned with mandatory test matrices incomplete. PM resumed with a fresh coder for coverage, then fixer resolved a real process-group cleanup defect: background `_setsid` did not exec, so tracked PID was not the hook PGID. Final evidence: lifecycle matrix 25/25, CEO 46/46, PM 74/74, all 13 test suites green. Process inefficiency: committer availability should be validated before delegating a multi-phase run-plan, and incomplete mandatory plan tasks must not be reported as an implementation handoff."
+    type: retro
+    date: "2026-07-16"
+  - text: "Delivery implementation committed in 8d0cc3a8 (core loops/tests), dea159bd (inactive Z.AI example + install/uninstall), and 21fecb7b (user/system docs)."
+    type: info
+    date: "2026-07-16"
+  - text: "System docs reconciled with no residual gaps and committed as 89877fc7. Resolved stale install inventory and 15-vs-10-minute defaults; added enduring autonomous-delivery test specification and scripts/hooks repo map. TC-HOOK-020 initially exposed incomplete wrapper help, fixed in 6090db92; rerun passed and doc-sync confirmed no follow-up changes."
+    type: retro
+    date: "2026-07-16"
+  - text: "Review iteration 1 FAIL: dry-run incorrectly invoked hook; parsers used GNU-only stat -c; Z.AI example used GNU-only date -d; checked plan overstated wrapper-level test coverage and missed the dry-run defect. Reopened delivery remediation. Root cause: test matrices emphasized helper/parser cases but did not execute every excluded top-level wrapper path on supported BSD/macOS command variants."
+    type: retro
+    date: "2026-07-16"
+  - text: "Review iteration 2 FAIL: although prior defects were fixed, Phase 9.3 again overstated executable wrapper-level TC coverage (missing absent/success/context/spawn/retry/JOIN/failure-cap/no-timeout/env inheritance cases) and new parser helpers introduced ShellCheck SC2209/SC2015 warnings. This repeated gap indicates test-plan mapping was treated as evidence rather than requiring named executable cases in each wrapper suite."
+    type: retro
+    date: "2026-07-17"
+  - text: "Review iteration 3 FAIL at the configured cap. ShellCheck is closed, but reviewer found Phase 10 evidence still overclaims actual wrapper-path coverage for CEO watchdog retry, status/log controls, model-profile inheritance, and signal cleanup; GNU/BSD test style uses the wrong positional parameter and only exercises BSD fallback. Escalated rather than silently exceeding the review-loop limit."
+    type: retro
+    date: "2026-07-17"
+  - text: "Owner explicitly authorized one final targeted remediation and re-review beyond the configured review cap, with instruction to continue through passing quality gates and PR readiness."
+    type: decision
+    date: "2026-07-17"
+  - text: "Post-cap review iteration 4 still failed on two narrowly missing assertions: PM --last-message did not have a marker-hook exclusion test, and CEO watchdog test counted events without asserting hook→spawn→hook→spawn ordering. Most iteration-3 gaps were closed. Continuing under owner's explicit instruction to work until PR-ready."
+    type: retro
+    date: "2026-07-17"
+  - text: "Review iteration 5 PASS after owner-authorized remediation. Final coverage includes PM --last-message exclusion and exact CEO hook→spawn→hook→spawn watchdog ordering; all prior portability, lifecycle, parser, consumer, and ShellCheck findings closed."
+    type: resolved
+    date: "2026-07-17"
+  - text: "Final quality gates passed all functional, syntax, YAML, documentation, link, diff, and 13/13 aggregate suites, but ShellCheck comparison found 25 new diagnostics, primarily in new test scripts. Reopened quality remediation; earlier review's narrower production-only ShellCheck check did not catch test-file warnings."
+    type: retro
+    date: "2026-07-17"
+  - text: "Quality remediation commit a1f0105d eliminated all GH-146-added ShellCheck diagnostics. Final matrix PASS: CEO 54/54, PM 82/82, lifecycle 29/29, Z.AI 4/4, install 55/55, uninstall 30/30, batch 34/34, aggregate 13/13, doc distribution 78/no drift, shell syntax, YAML, links/frontmatter, and both diff checks. ShellCheck comparison: 0 new vs main. Final reviewer regression check PASS; doc-sync reports no residual gaps."
+    type: resolved
+    date: "2026-07-17"
+  - text: "Final deep audit found a new major UTF-8 parser defect: CR/NUL detection removed od separators, so adjacent valid bytes such as 30 d0 90 formed a false 0d match. Existing ASCII boundary tests missed valid multibyte literal values. Reopened targeted fix and UTF-8 regression coverage."
+    type: retro
+    date: "2026-07-17"
+  - text: "DoD PASS at HEAD 8099cd90 plus implementation commit 8ce2795f: all spec ACs and 31 traced TC IDs satisfied; final focused counts CEO 54/54, PM 82/82, hook regression 31/31, Z.AI 4/4, install 55/55, uninstall 30/30, batch 34/34, aggregate 13/13; ShellCheck 0 new; docs/links/frontmatter/YAML/diff gates pass; deep review PASS with 0 findings; doc-sync has no residual gaps. Only plan task 8.7 remains intentionally pending PR creation."
+    type: resolved
+    date: "2026-07-17"
+  - text: "PR #147 created for human review: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/147. Plan task 8.7 complete; delivery stops pending manual approval and merge."
+    type: resolved
+    date: "2026-07-17"

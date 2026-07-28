@@ -1,0 +1,24 @@
+version: 1
+iteration: 6
+mode: local
+work_item_ref: GH-146
+branch: feat/GH-146/quota-aware-pre-iteration-hooks
+status: PASS
+summary: >
+  Commit a1f0105d preserves the GH-146 hook contract while eliminating the new
+  ShellCheck warning-class diagnostics. The escaped jq filters retain jq variable
+  binding rather than interpolating values, and the Bash nullglob plus -nt loop
+  selects the newest delivery log without parsing ls output. Focused and aggregate
+  quality matrices, Bash syntax, YAML parsing, and diff checks pass; remaining
+  ShellCheck output is informational baseline in existing test harnesses only.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 0
+spec_compliance: PASS
+plan_compliance: PASS
+findings: []
+reviewed_at: 2026-07-17T10:40:32Z
+next_step: PROCEED

@@ -14,6 +14,10 @@ references:
   - "Absorbs #97 (loop concurrency), #99 (CEO merge-not-yield), #96 (log-progress liveness)"
   - "Downstream consumer: #118 (upstream the @ceo agent + opt-in gating + threat model)"
   - "Delivery vehicle: #142"
+  - "Related change: GH-146"
+links:
+  related_changes: ["GH-146"]
+  decisions: ["TDR-0002"]
 ---
 
 # Delivery Modes
@@ -54,6 +58,152 @@ instead of churn, and align with the upstream ADOS reliability plan (epic #95 �
 #97, #99, #96).
 
 ## Component responsibilities
+
+## Optional pre-iteration hooks
+
+Before an OWN-path OpenCode spawn or resume, `ceo-loop.sh` and
+`deliver-ticket.sh` optionally execute the user-owned executable at
+`${ADOS_PRE_ITERATION_HOOK:-$HOME/.ados/hooks/pre-opencode-iteration}`. The hook
+runs immediately before every actual spawn/resume, including watchdog retries.
+A missing path is a silent no-op: after the required path check, the wrapper
+creates no hook subprocess or return file, waits intentionally for nothing, and
+emits no hook-related log. JOIN, probes, control commands, and dry runs do not
+run the hook. In particular, `deliver-ticket.sh --dry-run` renders its normal PM
+command without executing hook policy, creating hook artifacts, or applying
+hook-returned environment data. A present but failing hook prevents the spawn; a scheduling
+deferral waits and then exits `0`, rather than using a hook-specific result.
+`deliver-ticket.sh` keeps its existing `failed`/exit-1 behavior; `ceo-loop.sh`
+retries failures with a separate capped counter and a total retry interval that
+polls its stop file in chunks no longer than one second. Hooks have no execution
+timeout. On normal wrapper exit or direct HUP, INT, or TERM, their process group
+is terminated; wrapper-only SIGKILL, host failure, and processes that escape the
+group are outside this guarantee.
+
+| Setting | `ceo-loop.sh` | `deliver-ticket.sh` | Default |
+|---|---|---|---|
+| `ADOS_PRE_ITERATION_HOOK` | yes | yes | `~/.ados/hooks/pre-opencode-iteration` |
+| `ADOS_HOOK_SHUTDOWN_GRACE_SECONDS` | yes | yes | `2` |
+| `ADOS_HOOK_ENV_ALLOWLIST` | yes | yes | empty |
+| `ADOS_HOOK_RETRY_SECONDS` | CEO only | no | `60` total seconds |
+| `ADOS_HOOK_MAX_FAILURES` | CEO only | no | `5` |
+
+The wrapper supplies `ADOS_HOOK_AGENT`, `ADOS_HOOK_SCRIPT`, a fresh absolute
+`ADOS_HOOK_ENV_OUTPUT`, and `ADOS_HOOK_ENV_FORMAT=ADOS_HOOK_ENV_V1` for each
+invocation. These are context, not user settings. The output is data only: an
+empty file or LF-terminated header `ADOS_HOOK_ENV_V1` is a no-op; later records
+are `set NAME=literal value` or `unset NAME`. The wrapper rejects CR, NUL,
+missing final LF, unsafe or unauthorized files, duplicate names, and batches
+over 65,536 bytes, 256 operations, or 8,192 bytes per line (all bounds are
+inclusive and evaluated under `LC_ALL=C`). Valid batches apply atomically before
+the imminent child. Built-in authorization is only `OC_ADOS_AGENT_*_MODEL`; an
+exact additional name, including a credential, requires explicit operator-risk
+delegation through `ADOS_HOOK_ENV_ALLOWLIST`. Values are never sourced or
+evaluated and are never logged.
+
+### Activation, lifecycle, and retry semantics
+
+`install.sh --local` installs the inactive example at
+`scripts/hooks/pre-opencode-iteration-zai.sh`. It does not activate it. Copy it
+to the default path, or set the path override to use any executable hook:
+
+```bash
+mkdir -p ~/.ados/hooks
+cp scripts/hooks/pre-opencode-iteration-zai.sh ~/.ados/hooks/pre-opencode-iteration
+chmod +x ~/.ados/hooks/pre-opencode-iteration
+
+ADOS_PRE_ITERATION_HOOK="$PWD/scripts/hooks/pre-opencode-iteration-zai.sh" \
+  scripts/ceo-loop.sh
+```
+
+`uninstall.sh --local` removes the installed example and its empty
+`scripts/hooks/` directory, but never removes an operator's hook at the default
+or overridden path.
+
+`deliver-ticket.sh` invokes a present hook inside each OWN-path PM retry
+iteration. A hook failure prevents that PM spawn, returns existing `failed` with
+exit `1`, and consumes no PM stuck-restart slot. `batch-deliver.sh` continues
+using its existing non-zero-exit failure handling, and the CEO keeps its existing
+failed-ticket branch. `ceo-loop.sh` uses `ADOS_HOOK_RETRY_SECONDS` as the total
+non-busy wait between failed attempts, checks the durable stop file before and
+after each at-most-one-second chunk, and prevents a further hook/OpenCode spawn
+when stopped. It exits non-zero after `ADOS_HOOK_MAX_FAILURES` consecutive
+failures; this counter is separate from stuck-session restarts. No
+`vetoed`, `hook-error`, or other hook-specific result value exists.
+
+Hook cleanup sends SIGTERM to the tracked process group and escalates after
+`ADOS_HOOK_SHUTDOWN_GRACE_SECONDS` (default `2`). This is teardown only, not an
+execution deadline. It covers normal exit and direct HUP/INT/TERM; it excludes
+wrapper-only SIGKILL, host/power failure, and descendants outside the group.
+
+### `ADOS_HOOK_ENV_V1` protocol and scope
+
+Before every present hook, the wrapper creates a fresh mode-`0700` directory and
+mode-`0600` regular output file. The hook writes only to
+`ADOS_HOOK_ENV_OUTPUT`; stdout/stderr remain diagnostics. A zero-byte file is
+valid. Every non-empty file, including header-only, is LF-terminated and has the
+exact format:
+
+```text
+ADOS_HOOK_ENV_V1
+set NAME=literal value
+unset NAME
+```
+
+The first line is the exact header. A `set` value is literal data after the first
+`=` (an empty value differs from `unset`); it has no shell interpretation. Valid
+UTF-8 bytes in a literal value are retained unchanged. Blank lines, comments,
+extra header text, malformed or duplicate records, CR, NUL, and missing final LF
+are invalid; CR/NUL rejection is byte-specific and does not reject a multi-byte
+UTF-8 sequence merely because one printed hex token contains `0d` or `00`.
+Under `LC_ALL=C`, the inclusive limits are 65,536
+raw whole-file bytes including header/LFs, 256 records excluding the header, and
+8,192 raw bytes per logical line excluding its LF. Exact limits pass; limit + 1
+does not.
+
+The wrapper requires its owned non-symlink regular output file with safe
+permissions, validates and stages the entire batch before mutation, then applies
+all authorized operations atomically before constructing OpenCode. Any invalid,
+unsafe, or failed-apply batch changes nothing from that invocation and follows
+the normal hook-failure path. Every retry receives a new file; artifacts are
+removed on completion, failure, normal exit, and supported signal cleanup.
+Diagnostics identify validation categories and operation names/counts, never
+returned values.
+
+The ownership and mode check supports both GNU `stat -c` and BSD/macOS `stat -f`
+metadata formats. The validated protocol and its private-file requirements are
+therefore the same on supported Linux and macOS hosts.
+
+The default authorization is exactly `^OC_ADOS_AGENT_[A-Z0-9_]+_MODEL$`, not all
+`OC_ADOS_*` values. `ADOS_HOOK_ENV_ALLOWLIST` is a comma-separated list of
+additional exact valid identifiers, checked at wrapper startup; empty items,
+duplicates, and invalid identifiers are errors. Operators may allowlist a
+credential identifier at their own risk. ADOS supplies, discovers, queries, and
+logs no credential values.
+
+Valid updates affect only the applying wrapper, its imminent OpenCode child, and
+later iterations of that wrapper. A PM hook cannot mutate its already-running
+CEO parent. The contract guarantees safe environment state only, not a variable's
+meaning, provider/model selection, actual selected model, `{env:...}` binding,
+or wrapper `-m`/`CEO_LOOP_MODEL` behavior.
+
+### Z.AI example and optional model configuration
+
+The example reads `OC_ADOS_AGENT_CEO_MODEL` for CEO context and
+`OC_ADOS_AGENT_PM_MODEL` for PM context. It returns immediately unless the
+relevant configured value starts with `zai-coding-plan/`. For matching values it
+waits during `04:30 <= UTC < 10:00`, logs the reason and UTC wake time, sleeps
+until 10:00 UTC, then exits `0`. The UTC calculation is timezone/DST independent
+and uses pure Bash epoch formatting for the wake timestamp rather than GNU
+`date -d` or BSD `date -r`; it is an editable example policy, not a provider
+integration.
+
+`OC_ADOS_MODEL_PROFILE`, tier defaults, per-agent
+`OC_ADOS_AGENT_*_MODEL` overrides, and `{env:...}` configuration are optional
+owner choices. See [OpenCode model configuration](opencode-model-configuration.md)
+for canonical configuration details. For example, an owner configuration may
+contain `{ "agent": { "pm": { "model": "{env:OC_ADOS_AGENT_PM_MODEL}" } } }`.
+This is neither a hook prerequisite nor a guarantee that OpenCode consumes or
+selects that model.
 
 ```
                 ┌─────────────────────────────────────────────────────────┐

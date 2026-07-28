@@ -128,6 +128,11 @@ readonly ADOS_DELIVERY_SCRIPTS=(
   "scripts/pm-liveness.sh"
 )
 
+# Installed examples remain inactive until an adopter explicitly selects one.
+readonly ADOS_HOOK_EXAMPLES=(
+  "scripts/hooks/pre-opencode-iteration-zai.sh"
+)
+
 # Delivery infrastructure tools — always track upstream, must be executable.
 # Standalone utilities consumed by the delivery scripts. Installed to ./tools/.
 readonly ADOS_DELIVERY_TOOLS=(
@@ -848,6 +853,15 @@ install_local_files() {
   else
     log_warn "Scripts directory not found in source"
   fi
+
+  # --- Hook examples (installed but never activated) ---
+  local hook_example
+  for hook_example in "${ADOS_HOOK_EXAMPLES[@]}"; do
+    if [[ -f "${source_dir}/${hook_example}" ]]; then
+      copy_updatable_file "${source_dir}/${hook_example}" "${hook_example}" "${hook_example}"
+      chmod +x "${hook_example}" 2>/dev/null || true
+    fi
+  done
 
   # --- Delivery tools (always track upstream, must be executable) ---
   if [[ -d "${source_dir}/tools" ]]; then
