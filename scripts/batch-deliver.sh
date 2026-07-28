@@ -146,7 +146,10 @@ tracker_issue_view() {
   local -r ticket_ref="$1"
   local raw_json normalized
 
-  if [[ "${PLATFORM}" == "gitlab" ]]; then
+  # Default to github if PLATFORM not set
+  local platform="${PLATFORM:-github}"
+
+  if [[ "${platform}" == "gitlab" ]]; then
     # GitLab: state is "opened"/"closed", labels are in .labels[].name
     if ! raw_json="$(_tracker issue view "${ticket_ref}" --output json 2>/dev/null)"; then
       return 1
@@ -176,7 +179,10 @@ mr_list_for_branch() {
   local -r head_branch="$1"
   local raw_json normalized
 
-  if [[ "${PLATFORM}" == "gitlab" ]]; then
+  # Default to github if PLATFORM not set
+  local platform="${PLATFORM:-github}"
+
+  if [[ "${platform}" == "gitlab" ]]; then
     # GitLab: .iid, .web_url, .source_branch, .merged_at
     if ! raw_json="$(_mr mr list --source-branch "${head_branch}" --output json 2>/dev/null)"; then
       return 1
@@ -208,7 +214,10 @@ mr_list_closed_merged() {
   local -r head_branch="$1"
   local raw_json normalized
 
-  if [[ "${PLATFORM}" == "gitlab" ]]; then
+  # Default to github if PLATFORM not set
+  local platform="${PLATFORM:-github}"
+
+  if [[ "${platform}" == "gitlab" ]]; then
     # GitLab: .iid, .web_url, .source_branch, .merged_at
     if ! raw_json="$(_mr mr list --source-branch "${head_branch}" --output json 2>/dev/null)"; then
       return 1
@@ -234,7 +243,10 @@ mr_list_search() {
   local -r search_term="$1"
   local raw_json normalized
 
-  if [[ "${PLATFORM}" == "gitlab" ]]; then
+  # Default to github if PLATFORM not set
+  local platform="${PLATFORM:-github}"
+
+  if [[ "${platform}" == "gitlab" ]]; then
     # GitLab: .iid
     if ! raw_json="$(_mr mr list --search "${search_term}" --output json 2>/dev/null)"; then
       return 1
