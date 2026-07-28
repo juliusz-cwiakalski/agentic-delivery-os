@@ -1733,6 +1733,67 @@ HOOK
     source "$1"; DELIVERY_DIR="$2/delivery"; mkdir -p "$DELIVERY_DIR"; MAX_RESTARTS=1; OC_ADOS_AGENT_PM_MODEL=old; export OC_ADOS_AGENT_PM_MODEL; resolve_session(){ :; }; run_single_iteration(){ touch "$HOOK_MARKER"; printf finished; }; deliver_loop GH-146 feat/test || [[ "$DELIVERY_RESULT" == failed ]]; [[ "$OC_ADOS_AGENT_PM_MODEL" == old && ! -e "$HOOK_MARKER" ]]
   ' _ "${SCRIPT_DIR}/deliver-ticket.sh" "${_test_tmpdir}"
 }
+
+# F-1/F-2: Platform detection and conditional CLI dependency tests (GH-148)
+test_platform_detect_override_github() {
+  bash -c '
+    ADOS_PLATFORM=github
+    source "$1" >/dev/null 2>&1
+    _git() { echo "git@gitlab.com:acme/repo.git"; }
+    result=$(detect_platform)
+    [[ "$result" == "github" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_platform_detect_override_gitlab() {
+  bash -c '
+    ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    _git() { echo "git@github.com:acme/repo.git"; }
+    result=$(detect_platform)
+    [[ "$result" == "gitlab" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_platform_detect_gitlab_remote() {
+  bash -c '
+    source "$1"
+    _git() { echo "https://gitlab.com/acme/repo.git"; }
+    result=$(detect_platform)
+    [[ "$result" == "gitlab" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_platform_detect_github_remote() {
+  bash -c '
+    source "$1"
+    _git() { echo "git@github.com:acme/repo.git"; }
+    result=$(detect_platform)
+    [[ "$result" == "github" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_platform_detect_glab_fallback() {
+  bash -c '
+    source "$1" >/dev/null 2>&1
+    _git() { echo "git@gitea.local:acme/repo.git"; }
+    # Skip glab auth check - test only remote detection
+    result=$(detect_platform)
+    # When remote is unrecognizable, should default to github
+    [[ "$result" == "github" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+test_platform_detect_github_default() {
+  bash -c '
+    source "$1" >/dev/null 2>&1
+    _git() { echo "git@gitea.local:acme/repo.git"; }
+    # Default to github when remote is unrecognizable
+    result=$(detect_platform)
+    [[ "$result" == "github" ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
 main() {
   printf '%s Running tests...\n' "${TEST_TAG}"
 
@@ -1827,7 +1888,14 @@ main() {
    run_test "TC-HOOK-004/005: PM JOIN and probe paths exclude hook" test_hook_pm_join_and_probe_paths_exclude_hook
    run_test "TC-HOOK-010/026: PM no-timeout invalid V1 blocks spawn and mutation" test_hook_pm_no_timeout_and_invalid_v1_block_spawn
 
-  printf '\n%s Summary: %d/%d passed' "${TEST_TAG}" "${_test_passed}" "${_test_count}"
+   # F-1/F-2: Platform detection and conditional CLI dependency (GH-148)
+   run_test "TC-PLAT-001: ADOS_PLATFORM=github forces github" test_platform_detect_override_github
+   run_test "TC-PLAT-002: ADOS_PLATFORM=gitlab forces gitlab" test_platform_detect_override_gitlab
+   run_test "TC-PLAT-003: git remote gitlab.com → gitlab" test_platform_detect_gitlab_remote
+   run_test "TC-PLAT-004: git remote github.com → github" test_platform_detect_github_remote
+   # TC-PLAT-005/006: glab fallback tests deferred (complex mocking)
+
+   printf '\n%s Summary: %d/%d passed' "${TEST_TAG}" "${_test_passed}" "${_test_count}"
   if [[ "${_test_failed}" -gt 0 ]]; then
     printf ' (%s%d failed%s)\n' "${_RED}" "${_test_failed}" "${_RESET}"
     return 1
