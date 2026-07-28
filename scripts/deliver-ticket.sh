@@ -69,6 +69,10 @@ ADOS_PLATFORM="${ADOS_PLATFORM:-}"  # github | gitlab (empty = auto-detect)
 # source this file without invoking main() get the safe github default.
 PLATFORM="${PLATFORM:-github}"
 readonly ADOS_BLOCKED_LABEL="${ADOS_BLOCKED_LABEL:-human-input-needed}"
+# F-9: Merge-strategy config surface. deliver-ticket.sh itself never merges
+# (F-2); this is declared so sourcing the script under `set -u` exposes the
+# configured default that batch-deliver.sh (the Mode B merge authority) reads.
+readonly ADOS_MERGE_STRATEGY="${ADOS_MERGE_STRATEGY:-squash}"  # squash | merge | rebase
 
 # Session mapping directory (shared with opencode-session.sh)
 SESSION_DIR="${ROOT_DIR}/.ai/local/opencode-sessions"
@@ -778,14 +782,14 @@ build_delivery_prompt() {
   [[ -n "${branch}" ]] && branch_hint=" (branch: ${branch})"
 
   # F-6 / OQ-2: Platform-neutral prompt — detect platform from project config or
-  # git remote, then use the configured CLI (gh on GitHub, glab on GitLab).
-  # No literal `gh` or `glab` commands — delegates to already-correct project config.
+  # git remote, then use the configured CLI (GitHub or GitLab) for issue/PR-MR
+  # queries. No literal `gh`/`glab` command text — delegates to project config.
   cat <<EOF
 Deliver ${ticket_ref} end-to-end using ADOS. Detect state at the top, then act.
 
 ## State Detection (run first, every time)
 Detect the tracker platform from \`.ai/agent/pm-instructions.md\` or the git remote.
-Use the project's configured CLI (gh on GitHub, glab on GitLab) for all issue/PR-MR queries.
+Use the project's configured CLI for all issue/PR-MR queries (GitHub or GitLab).
 1. Check the issue state and labels.
 2. Check for open PR/MR on the relevant branch.
 3. Check for merged PR/MR for this ticket.
@@ -1126,7 +1130,9 @@ _reap_opencode_orphan() {
 # Prints: merged | blocked | pr-open | failed | unknown
 classify_result() {
   local -r ticket_ref="$1"
-  local -r branch="$2"
+  # branch is optional: callers without a resolved branch rely on the
+  # title-based open-PR fallback below. Default to empty under `set -u`.
+  local -r branch="${2:-}"
 
   local issue_json issue_state
   issue_json="$(tracker_issue_view "$(to_issue_number "${ticket_ref}")" 2>/dev/null)" || {
@@ -1194,8 +1200,8 @@ classify_result() {
 # summary so the CEO/human can reach the PR directly.
 # F-5: Use mr_list_for_branch for platform-aware URL lookup (normalized .url key)
 pr_url_for() {
-  local -r ticket_ref="$1"
-  local -r branch="$2"
+  local -r ticket_ref="${1:-}"
+  local -r branch="${2:-}"
   [[ -n "${branch}" ]] || { printf ''; return 0; }
   local pr_json
   pr_json="$(mr_list_for_branch "${branch}" 2>/dev/null)" || pr_json='[]'

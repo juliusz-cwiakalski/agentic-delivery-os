@@ -1900,9 +1900,9 @@ test_gitlab_classify_pr_open() {
     source "$1" >/dev/null 2>&1
     PLATFORM=gitlab
     _glab() {
-      if [[ "$2" == "issue" ]]; then
+      if [[ "$1" == "issue" ]]; then
         echo '"'"'{"state":"opened","labels":[]}'"'"'
-      elif [[ "$2" == "mr" && "$3" == "list" ]]; then
+      elif [[ "$1" == "mr" && "$2" == "list" ]]; then
         echo '"'"'[{"iid":123,"web_url":"https://gitlab.com/acme/r/-/merge_requests/123","source_branch":"feat/x"}]'"'"'
       fi
     }
@@ -1917,9 +1917,9 @@ test_gitlab_classify_merged_closed_issue() {
     source "$1" >/dev/null 2>&1
     PLATFORM=gitlab
     _glab() {
-      if [[ "$2" == "issue" ]]; then
+      if [[ "$1" == "issue" ]]; then
         echo '"'"'{"state":"closed","labels":[]}'"'"'
-      elif [[ "$2" == "mr" && "$3" == "list" ]]; then
+      elif [[ "$1" == "mr" && "$2" == "list" ]]; then
         echo '"'"'[]'"'"'
       fi
     }
@@ -1934,9 +1934,9 @@ test_gitlab_classify_blocked() {
     source "$1" >/dev/null 2>&1
     PLATFORM=gitlab
     _glab() {
-      if [[ "$2" == "issue" ]]; then
+      if [[ "$1" == "issue" ]]; then
         echo '"'"'{"state":"opened","labels":[{"name":"human-input-needed"}]}'"'"'
-      elif [[ "$2" == "mr" && "$3" == "list" ]]; then
+      elif [[ "$1" == "mr" && "$2" == "list" ]]; then
         echo '"'"'[]'"'"'
       fi
     }
@@ -1951,9 +1951,9 @@ test_gitlab_classify_failed_no_mr() {
     source "$1" >/dev/null 2>&1
     PLATFORM=gitlab
     _glab() {
-      if [[ "$2" == "issue" ]]; then
+      if [[ "$1" == "issue" ]]; then
         echo '"'"'{"state":"opened","labels":[]}'"'"'
-      elif [[ "$2" == "mr" && "$3" == "list" ]]; then
+      elif [[ "$1" == "mr" && "$2" == "list" ]]; then
         echo '"'"'[]'"'"'
       fi
     }
@@ -1979,7 +1979,7 @@ test_gitlab_pr_url_for_open_mr() {
     source "$1" >/dev/null 2>&1
     PLATFORM=gitlab
     _glab() { echo '"'"'[{"iid":42,"web_url":"https://gitlab.com/acme/r/-/merge_requests/42","source_branch":"feat/x"}]'"'"'; }
-    result=$(pr_url_for feat/x)
+    result=$(pr_url_for GH-148 feat/x)
     [[ "$result" == *"gitlab.com"* ]] && [[ "$result" == *"42"* ]]
   ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
 }
@@ -1990,7 +1990,7 @@ test_gitlab_pr_url_for_no_mr() {
     source "$1" >/dev/null 2>&1
     PLATFORM=gitlab
     _glab() { echo '"'"'[]'"'"'; }
-    result=$(pr_url_for feat/x)
+    result=$(pr_url_for GH-148 feat/x)
     [[ -z "$result" ]]
   ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
 }

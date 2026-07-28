@@ -649,77 +649,91 @@ test_approved_pr_flow_gh_error_parks_not_merges() {
 # ============================================================================
 
 test_plat_027_gitlab_skip_closed() {
-  ADOS_PLATFORM=gitlab
-  PLATFORM=gitlab
-  _glab() { echo '{"state":"closed","labels":[]}'; }
-  local result
-  result="$(should_skip_ticket GL-123)"
-  assert_eq "closed" "${result}" "Should skip closed GitLab issue" || return 1
+  bash -c '
+    ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    _glab() { printf "%s" "{\"state\":\"closed\",\"labels\":[]}"; }
+    result=$(should_skip_ticket GL-123)
+    [[ "$result" == "closed" ]]
+  ' _ "${SCRIPT_DIR}/batch-deliver.sh"
 }
 
 test_plat_028_gitlab_skip_blocked() {
-  ADOS_PLATFORM=gitlab
-  PLATFORM=gitlab
-  _glab() { echo '{"state":"opened","labels":[{"name":"needs-review"}]}'; }
-  local result
-  ADOS_BLOCKED_LABEL=needs-review
-  result="$(should_skip_ticket GL-123)"
-  assert_eq "blocked" "${result}" "Should skip blocked GitLab issue" || return 1
+  # Use `env` to pass the override into the subshell's environment without
+  # touching the outer shell's readonly ADOS_BLOCKED_LABEL.
+  env ADOS_BLOCKED_LABEL=needs-review bash -c '
+    ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    _glab() { printf "%s" "{\"state\":\"opened\",\"labels\":[{\"name\":\"needs-review\"}]}"; }
+    result=$(should_skip_ticket GL-123)
+    [[ "$result" == "blocked" ]]
+  ' _ "${SCRIPT_DIR}/batch-deliver.sh"
 }
 
 test_plat_029_gitlab_skip_merged() {
-  ADOS_PLATFORM=gitlab
-  PLATFORM=gitlab
-  # Mock title-search for merged MR
-  _glab() {
-    if [[ "$2" == "issue" ]]; then
-      echo '{"state":"opened","labels":[]}'
-    elif [[ "$2" == "mr" && "$3" == "list" && "$4" == "--search" ]]; then
-      echo '[{"merged_at":"2026-01-01T00:00:00Z"}]'
-    else
-      echo '[]'
-    fi
-  }
-  local result
-  result="$(should_skip_ticket GL-123)"
-  assert_eq "merged" "${result}" "Should skip merged GitLab MR" || return 1
+  bash -c '
+    ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    # Mock title-search for merged MR. glab dispatch: _glab <subcmd> <action> ...
+    _glab() {
+      if [[ "$1" == "issue" ]]; then
+        printf "%s" "{\"state\":\"opened\",\"labels\":[]}"
+      elif [[ "$1" == "mr" && "$2" == "list" && "$3" == "--search" ]]; then
+        printf "%s" "[{\"merged_at\":\"2026-01-01T00:00:00Z\"}]"
+      else
+        printf "%s" "[]"
+      fi
+    }
+    result=$(should_skip_ticket GL-123)
+    [[ "$result" == "merged" ]]
+  ' _ "${SCRIPT_DIR}/batch-deliver.sh"
 }
 
 test_plat_030_gitlab_no_pipelines_green() {
   ADOS_PLATFORM=gitlab
   PLATFORM=gitlab
-  _glab() { echo '[]'; }  # Empty pipelines array
-  wait_for_pr_green "42"
-  local rc=$?
+  _glab() { printf '[]'; }  # Empty pipelines array
+  rc=0; wait_for_pr_green "42" >/dev/null 2>&1 || rc=$?
   assert_eq "0" "${rc}" "No pipelines → green (legit no CI)" || return 1
 }
 
 test_plat_031_gitlab_pipelines_poll() {
   ADOS_PLATFORM=gitlab
   PLATFORM=gitlab
-  local poll_count=0
+  # wait_for_pr_green calls _glab inside $(…) — a subshell.  An in-memory
+  # counter would reset on every poll, so use a file to persist across
+  # command-substitution subshells.
+  local counter_file="${_test_tmpdir}/poll_count"
+  printf '0' >"${counter_file}"
   _glab() {
-    if [[ "$2" == "api" ]]; then
-      poll_count=$((poll_count + 1))
-      if (( poll_count < 3 )); then
-        echo '[{"status":"running"}]'
+    if [[ "$1" == "api" ]]; then
+      local c
+      c="$(cat "${counter_file}" 2>/dev/null || printf '0')"
+      c=$((c + 1))
+      printf '%s' "${c}" >"${counter_file}"
+      if (( c < 3 )); then
+        printf '[{"status":"running"}]'
       else
-        echo '[{"status":"success"}]'
+        printf '[{"status":"success"}]'
       fi
     fi
   }
-  # Short timeout for testing
-  BATCH_GREEN_GATE_TIMEOUT=30 wait_for_pr_green "42" >/dev/null 2>&1
-  local rc=$?
+  # poll_interval=1 keeps the test fast while avoiding an infinite loop
+  # (poll_interval=0 would make `waited` never increment).
+  BATCH_GREEN_POLL_INTERVAL=1
+  BATCH_GREEN_GATE_TIMEOUT=10
+  rc=0; wait_for_pr_green "42" >/dev/null 2>&1 || rc=$?
   assert_eq "0" "${rc}" "Polling should eventually succeed" || return 1
 }
 
 test_plat_032_gitlab_pipeline_failed() {
   ADOS_PLATFORM=gitlab
   PLATFORM=gitlab
-  _glab() { echo '[{"status":"failed"}]'; }
-  wait_for_pr_green "42" >/dev/null 2>&1
-  local rc=$?
+  _glab() { printf '[{"status":"failed"}]'; }
+  rc=0; wait_for_pr_green "42" >/dev/null 2>&1 || rc=$?
   assert_eq "1" "${rc}" "Failed pipeline → red" || return 1
 }
 
@@ -734,9 +748,13 @@ test_plat_033_gitlab_merge_flags() {
       merge_args=("$@")
       printf 'merged'
     elif [[ "$1" == "mr" && "$2" == "view" ]]; then
-      printf '{"title":"Test","description":"Body","source_branch":"feat/x"}'
+      # Include detailed_merge_status so gitlab_await_mergeable sees "mergeable"
+      printf '{"title":"Test","description":"Body","detailed_merge_status":"mergeable"}'
     elif [[ "$1" == "mr" && "$2" == "list" ]]; then
       printf '[{"iid":42,"title":"Test","state":"opened"}]'
+    elif [[ "$1" == "api" ]]; then
+      # Pipeline status for wait_for_pr_green (GitLab CI-gate)
+      printf '[{"status":"success"}]'
     fi
   }
   _git() {
@@ -745,7 +763,7 @@ test_plat_033_gitlab_merge_flags() {
       rebase|push) return 0 ;;
     esac
   }
-  ADOS_MERGE_STRATEGY=squash
+  # ADOS_MERGE_STRATEGY defaults to "squash" (readonly in sourced script).
   approved_pr_flow "GH-200" "feat/GH-200/x" >/dev/null 2>&1
   assert_eq "1" "${merge_called}" "Merge should be called" || return 1
   # Check that flags are separate args, not one string
@@ -764,7 +782,7 @@ test_plat_039_gitlab_mergeable() {
   ADOS_PLATFORM=gitlab
   PLATFORM=gitlab
   _glab() {
-    if [[ "$2" == "mr" && "$3" == "view" ]]; then
+    if [[ "$1" == "mr" && "$2" == "view" ]]; then
       printf '{"detailed_merge_status":"mergeable"}'
     fi
   }
@@ -778,8 +796,8 @@ test_plat_040_gitlab_stale_conflict() {
   PLATFORM=gitlab
   local noop_count=0
   _glab() {
-    if [[ "$2" == "mr" && "$3" == "view" ]]; then
-      if (( noop_count < 2 )); then
+    if [[ "$1" == "mr" && "$2" == "view" ]]; then
+      if (( noop_count < 1 )); then
         # First poll: stale conflict state
         printf '{"merge_status":"can_be_merged","detailed_merge_status":"conflict","has_conflicts":false}'
       else
@@ -806,7 +824,7 @@ test_plat_041_gitlab_timeout() {
   ADOS_PLATFORM=gitlab
   PLATFORM=gitlab
   _glab() {
-    if [[ "$2" == "mr" && "$3" == "view" ]]; then
+    if [[ "$1" == "mr" && "$2" == "view" ]]; then
       printf '{"detailed_merge_status":"checking"}'
     fi
   }
