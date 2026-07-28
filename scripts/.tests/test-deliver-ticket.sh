@@ -406,7 +406,7 @@ test_classify_pr_open_empty_branch_fallback() {
       issue) printf '%s' '{"state":"OPEN","labels":[]}' ;;
       pr)
         if printf '%s ' "$@" | grep -q -- '--search'; then
-          printf '%s' '[{"number":777}]'
+          printf '%s' '[{"number":777,"state":"OPEN"}]'
         else
           printf '%s' '[]'
         fi
@@ -1848,7 +1848,7 @@ test_normalize_github_issue() {
     ADOS_PLATFORM=github
     source "$1" >/dev/null 2>&1
     PLATFORM=github
-    _gh() { echo '"'"'{"state":"OPEN","labels":[{"name":"bug"},{"name":"human-input-needed"}]}'"'"; }
+    _gh() { echo '"'"'{"state":"OPEN","labels":[{"name":"bug"},{"name":"human-input-needed"}]}'"'"'; }
     result=$(tracker_issue_view GH-123)
     # Check that state is normalized to lowercase
     [[ "$result" == *"state"* ]] && [[ "$result" == *"open"* ]]
@@ -1861,7 +1861,7 @@ test_normalize_gitlab_issue() {
     ADOS_PLATFORM=gitlab
     source "$1" >/dev/null 2>&1
     PLATFORM=gitlab
-    _glab() { echo '"'"'{"state":"opened","labels":[{"name":"bug"}]}'"'"; }
+    _glab() { echo '"'"'{"state":"opened","labels":[{"name":"bug"}]}'"'"'; }
     result=$(tracker_issue_view GL-123)
     # Check that state is normalized to lowercase
     [[ "$result" == *"state"* ]] && [[ "$result" == *"open"* ]]

@@ -42,6 +42,12 @@ VERBOSE="${VERBOSE:-false}"
 
 # Platform configuration
 ADOS_PLATFORM="${ADOS_PLATFORM:-}"  # github | gitlab (empty = auto-detect)
+# Default the dispatch global so platform-aware helpers (_tracker/_mr and the
+# github|gitlab branch points) never hit an unbound-variable abort under
+# `set -u` before main() resolves the real platform via detect_platform().
+# main() still overrides this with detect_platform() at startup; tests that
+# source this file without invoking main() get the safe github default.
+PLATFORM="${PLATFORM:-github}"
 readonly ADOS_BLOCKED_LABEL="${ADOS_BLOCKED_LABEL:-human-input-needed}"
 readonly ADOS_MERGE_STRATEGY="${ADOS_MERGE_STRATEGY:-squash}"  # squash | merge | rebase
 
@@ -164,9 +170,10 @@ tracker_issue_view() {
     if ! raw_json="$(_tracker issue view "${ticket_ref}" --json state,labels 2>/dev/null)"; then
       return 1
     fi
-    # Normalize state and extract labels
+    # Normalize state and extract labels (ascii_downcase handles OPEN/CLOSED;
+    # // "" guards against missing/null state)
     normalized="$(echo "${raw_json}" | _jq '{
-      state: (if .state == "OPEN" then "open" else .state end),
+      state: ((.state // "") | ascii_downcase),
       labels: [.labels[].name]
     }')"
   fi
@@ -232,7 +239,7 @@ mr_list_closed_merged() {
     fi
     normalized="$(echo "${raw_json}" | _jq '[.[] | {
       merged_at: .mergedAt
-    } | select(.mergedAt != null)]')"
+    } | select(.merged_at != null)]')"
   fi
 
   printf '%s' "${normalized}"
@@ -251,17 +258,17 @@ mr_list_search() {
     if ! raw_json="$(_mr mr list --search "${search_term}" --output json 2>/dev/null)"; then
       return 1
     fi
-    normalized="$(echo "${raw_json}" | _jq '[.[] | {
+    normalized="$(echo "${raw_json}" | _jq '[.[] | select(.state == "opened") | {
       number: .iid
-    } | select(.state == "opened")]' 2>/dev/null || echo '[]')"
+    }]' 2>/dev/null || echo '[]')"
   else
     # GitHub: .number
     if ! raw_json="$(_mr pr list --search "${search_term}" --json number,state 2>/dev/null)"; then
       return 1
     fi
-    normalized="$(echo "${raw_json}" | _jq '[.[] | {
+    normalized="$(echo "${raw_json}" | _jq '[.[] | select(.state == "OPEN") | {
       number: .number
-    } | select(.state == "OPEN")]' 2>/dev/null || echo '[]')"
+    }]' 2>/dev/null || echo '[]')"
   fi
 
   printf '%s' "${normalized}"

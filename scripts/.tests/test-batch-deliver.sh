@@ -335,7 +335,7 @@ test_is_pr_approved_no() {
 test_get_pr_number() {
   _gh() {
     case "$1" in
-      pr) printf '[{"number":42}]' ;;
+      pr) printf '[{"number":42,"state":"OPEN"}]' ;;
     esac
   }
   local num
@@ -379,7 +379,7 @@ test_approved_green_squash_merge() {
   rm -f "${marker}"
   _gh() {
     case "$1 $2" in
-      "pr list")   printf '[{"number":42}]' ;;
+      "pr list")   printf '[{"number":42,"state":"OPEN"}]' ;;
       "pr checks") printf 'PASS  ci  title  detail\n' ;;
       "pr view")   printf '{"title":"GH-200 fix","body":"body text"}' ;;
       "pr merge")  printf 'merged'; printf 'squash' >>"${marker}" ;;
@@ -407,7 +407,7 @@ test_approved_rebase_conflict_ai_resolve_then_merge() {
   local rebase_attempted=0
   _gh() {
     case "$1 $2" in
-      "pr list")   printf '[{"number":42}]' ;;
+      "pr list")   printf '[{"number":42,"state":"OPEN"}]' ;;
       "pr checks") printf 'PASS  ci  title  detail\n' ;;
       "pr view")   printf '{"title":"GH-200","body":"body"}' ;;
       "pr merge")  printf 'merged' ;;
@@ -470,7 +470,7 @@ test_already_on_latest_main_direct_merge() {
   local git_rebase_called=0
   _gh() {
     case "$1 $2" in
-      "pr list")   printf '[{"number":42}]' ;;
+      "pr list")   printf '[{"number":42,"state":"OPEN"}]' ;;
       "pr checks") printf 'PASS  ci  title  detail\n' ;;
       "pr view")   printf '{"title":"GH-200","body":"body"}' ;;
       "pr merge")  printf 'merged' ;;
@@ -498,7 +498,7 @@ test_green_gate_red_routes_to_deliver() {
   local merge_called=0
   _gh() {
     case "$1 $2" in
-      "pr list")   printf '[{"number":42}]' ;;
+      "pr list")   printf '[{"number":42,"state":"OPEN"}]' ;;
       "pr checks") printf 'FAIL  ci  title  detail\n' ;;
       "pr merge")  merge_called=1; printf 'merged' ;;
     esac
@@ -526,7 +526,7 @@ test_commit_msg_from_pr_title_body() {
   rm -f "${marker}"
   _gh() {
     case "$1 $2" in
-      "pr list")   printf '[{"number":42}]' ;;
+      "pr list")   printf '[{"number":42,"state":"OPEN"}]' ;;
       "pr checks") printf 'PASS  ci  title  detail\n' ;;
       "pr view")   printf '{"title":"GH-200 Fix the thing","body":"Detailed description."}' ;;
       "pr merge")
@@ -621,7 +621,7 @@ test_approved_pr_flow_gh_error_parks_not_merges() {
   local merge_called=0
   _gh() {
     case "$1 $2" in
-      "pr list")   printf '[{"number":42}]' ;;
+      "pr list")   printf '[{"number":42,"state":"OPEN"}]' ;;
       "pr checks") return 1 ;;
       "pr view")   return 1 ;;
       "pr merge")  merge_called=1; printf 'merged' ;;

@@ -1,0 +1,54 @@
+change_id: GH-148
+title: "Make delivery scripts platform-aware (GitHub + GitLab) and harden GH-146 hook infrastructure"
+phases:
+  clarify_scope: { started: "2026-07-28T06:00:00Z", completed: "2026-07-28T06:10:00Z" }
+  specification: { started: "2026-07-28T06:15:00Z", completed: "2026-07-28T06:30:00Z" }
+  test_planning: { started: "2026-07-28T06:35:00Z", completed: "2026-07-28T06:50:00Z" }
+  delivery_planning: { started: "2026-07-28T06:55:00Z", completed: "2026-07-28T07:10:00Z" }
+  dor_check: { started: "2026-07-28T07:15:00Z", completed: "2026-07-28T07:40:00Z" }
+  delivery: { started: "2026-07-28T07:45:00Z", completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions:
+  - text: "OQ-1 resolved (PM-decided): GitLab CI green-gate mirrors the existing GitHub _pr_has_no_checks_configured pattern — positively confirm 'no CI configured' via GitLab pipeline API (glab api projects/:id/pipelines or glab ci list). If no pipelines exist, that's legitimate green. If pipelines exist, poll until success/failed. This is safest and most consistent with the existing pattern."
+    type: decision
+    workItemRef: GH-148
+    date: "2026-07-28"
+  - text: "OQ-2 resolved (PM-decided): Platform-neutral prompt. The PM already self-corrects to glab via project config files (pm-instructions.md, pr-instructions.md). Making the prompt platform-neutral ('Detect the tracker platform from .ai/agent/pm-instructions.md or git remote. Use the project's configured CLI.') is more robust than duplicating detection logic in the prompt. Defers to already-correct config."
+    type: decision
+    workItemRef: GH-148
+    date: "2026-07-28"
+  - text: "OQ-3 resolved (PM-decided): ceo-loop.sh does NOT need independent platform detection. It does not call the tracker today — it delegates to deliver-ticket.sh for delivery and to the CEO agent for merges. The CEO agent reads project config for its merge commands. Adding detection to ceo-loop.sh would be over-engineering with no consumer. Only deliver-ticket.sh and batch-deliver.sh need detect_platform()."
+    type: decision
+    workItemRef: GH-148
+    date: "2026-07-28"
+open_questions: []
+blockers: []
+notes:
+  - text: "Source evidence: CEO retrospective from family-finance-control-tower GitLab project (8 deliveries, GL-70..GL-77) documenting 12 concrete issues. Plus GH-146 CritiqueGrid review (CG-SEC-003, CG-SRE-002, spec OQ-1)."
+    type: info
+    workItemRef: GH-148
+    date: "2026-07-28"
+  - text: "Ticket is fully self-contained: 18 AC covering Part A (10 items: platform detection, CLI dispatch, JSON normalization, conditional require_cmd, platform-aware PM prompt, batch-deliver GitLab Mode B, configurable blocked label, configurable merge strategy, GitLab merge-status polling, find robustness fix) and Part B (3 items: V1 parser property/fuzz test, macOS lifecycle test portability, hook-failure tuning docs)."
+    type: info
+    workItemRef: GH-148
+    date: "2026-07-28"
+  - text: "Scope cross-checked against feature-autonomous-delivery.md spec. No contradictions — the change is additive (extends GitHub-only to GitHub+GitLab). Key spec touchpoints: INV-DM-4 references gh pr merge --squash (needs generalization), config table needs ADOS_PLATFORM/ADOS_BLOCKED_LABEL/ADOS_MERGE_STRATEGY, classify_result return values stay the same. Doc impacts: delivery-modes.md, autonomous-batch-delivery.md, feature-autonomous-delivery.md, delivery-modes.md hook section (B3)."
+    type: info
+    workItemRef: GH-148
+    date: "2026-07-28"
+  - text: "No blocking questions. Ticket has complete requirements, code locations, fix architecture, validation checklist, and JSON field mappings. Proceeding to spec."
+    type: resolved
+    workItemRef: GH-148
+    date: "2026-07-28"
+  - text: "Test plan verified by @test-plan-writer: PASS. 51 test cases (TC-PLAT-001..051), all 18 ACs covered, all 7 risks addressed, GitLab field names confirmed correct, mock strategies consistent with existing test conventions. Initially written by general agent due to provider API issues with test-plan-writer; verification confirmed quality."
+    type: info
+    workItemRef: GH-148
+    date: "2026-07-28"
+  - text: "DoR iter-1 NOT_READY: 3 blocking findings — (1) spec §16 listed ceo-loop.sh as Updated despite OQ-3 decision excluding it; (2) spec §14 OQ-1/2/3 still marked Decision needed despite PM resolving them; (3) plan Phase 8 missing autonomous-batch-delivery.md from doc targets. Root cause: PM decisions were recorded in pm-notes.yaml but not propagated back into spec/plan. Process improvement: when PM resolves open questions mid-chain, update the spec immediately, not just pm-notes. All 3 fixed in commit 695c6bf."
+    type: retro
+    workItemRef: GH-148
+    date: "2026-07-28"
