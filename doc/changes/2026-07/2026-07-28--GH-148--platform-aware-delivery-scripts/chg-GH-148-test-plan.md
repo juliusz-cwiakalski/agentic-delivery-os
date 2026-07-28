@@ -556,7 +556,7 @@ Test case IDs use the `TC-PLAT-NNN` prefix. `Type`: U = unit, I = integration, B
 | Changing `classify_result` breaks consumers (batch-deliver, CEO) | High | Low | Same result-domain; GitHub unchanged (TC-PLAT-043); only GitLab moves unknown→correct (RSK-3) |
 | Parser property test becomes a slow fuzzer | Medium | Medium | TC-PLAT-048/049 enforce determinism + <10s bound; seeded and capped (RSK-4) |
 | GitLab CI-status gating differs from `gh pr checks` | Medium | Medium | TC-PLAT-030..032 cover positive no-CI confirmation, running-pipeline poll, and failed pipeline (RSK-5, OQ-1) |
-| Configurable label/strategy changes GitHub default if misconfigured | Medium | Low | TC-PLAT-034/036 assert defaults preserved when unset (RSSK-7) |
+| Configurable label/strategy changes GitHub default if misconfigured | Medium | Low | TC-PLAT-034/036 assert defaults preserved when unset (RSK-7) |
 
 ### 8.2 Assumptions
 

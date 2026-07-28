@@ -255,9 +255,9 @@ N/A.
 
 | ID | Question | Context | Status |
 |----|----------|---------|--------|
-| OQ-1 | How should the GitLab green-gate determine CI status — `glab ci list` / pipelines, a "no CI configured" positive confirmation, or both? | GitLab projects may have no CI at all (mirroring `batch-deliver.sh`'s no-checks path). The CI surface differs from `gh pr checks`. | Decision needed: consult `@decision-advisor` |
-| OQ-2 | Should `build_delivery_prompt` be platform-correct (emit the detected CLI's commands) or platform-neutral (defer to the project's configured CLI)? | The CEO retrospective recommends the neutral form for robustness (defers to already-correct config). | Decision needed: consult `@decision-advisor` |
-| OQ-3 | Should `ceo-loop.sh` independently know the platform, or always rely on `deliver-ticket.sh`/the CEO agent? | `ceo-loop.sh` does not call the tracker today; its CEO prompt is merge-authority-focused. Determining whether detection should be shared at the loop level vs. per-script. | Decision needed: consult `@decision-advisor` |
+| OQ-1 | How should the GitLab green-gate determine CI status — `glab ci list` / pipelines, a "no CI configured" positive confirmation, or both? | GitLab projects may have no CI at all (mirroring `batch-deliver.sh`'s no-checks path). The CI surface differs from `gh pr checks`. | **RESOLVED** (PM-decided): GitLab CI green-gate mirrors the existing GitHub `_pr_has_no_checks_configured` pattern — positively confirm "no CI configured" via GitLab pipeline API. No pipelines = legitimate green. Pipelines exist = poll until success/failed. |
+| OQ-2 | Should `build_delivery_prompt` be platform-correct (emit the detected CLI's commands) or platform-neutral (defer to the project's configured CLI)? | The CEO retrospective recommends the neutral form for robustness (defers to already-correct config). | **RESOLVED** (PM-decided): Platform-neutral prompt. The PM prompt says "Detect the tracker platform from .ai/agent/pm-instructions.md or git remote. Use the project's configured CLI." Not literal platform-specific commands. Defers to already-correct config. |
+| OQ-3 | Should `ceo-loop.sh` independently know the platform, or always rely on `deliver-ticket.sh`/the CEO agent? | `ceo-loop.sh` does not call the tracker today; its CEO prompt is merge-authority-focused. | **RESOLVED** (PM-decided): ceo-loop.sh does NOT need independent platform detection. It delegates to deliver-ticket.sh for delivery and to the CEO agent for merges. Only deliver-ticket.sh and batch-deliver.sh need `detect_platform()`. |
 
 ## 15. DECISION LOG
 
@@ -275,9 +275,10 @@ N/A.
 |-----------|--------|
 | `deliver-ticket.sh` | Updated — platform detection, conditional CLI dependency, tracker/MR dispatch, JSON normalization, platform-aware classification/URL, platform-aware prompt, `find` robustness |
 | `batch-deliver.sh` | Updated — dispatch routing for list/CI-gate/merge, configurable strategy, GitLab merge-status polling |
-| `ceo-loop.sh` | Updated (minimal) — share platform detection where relevant; no tracker calls introduced |
+| `ceo-loop.sh` | **Not modified** — does not call the tracker today (verified); delegates to deliver-ticket.sh for delivery and to the CEO agent for merges. No platform detection needed (OQ-3 resolved). |
 | Delivery scripts tests | Updated/New — platform-detection, dispatch, normalization, GitLab classification/URL, merge-status polling, parser property test, macOS portability |
 | `doc/guides/delivery-modes.md` | Updated — hook-failure tuning guidance (F-14); new configuration variables |
+| `doc/guides/autonomous-batch-delivery.md` | Updated — `ADOS_MERGE_STRATEGY` documentation; GitLab Mode B merge guidance |
 | `doc/spec/features/feature-autonomous-delivery.md` | Updated (via doc-sync) — platform-aware verification; new config variables |
 
 ## 17. ACCEPTANCE CRITERIA

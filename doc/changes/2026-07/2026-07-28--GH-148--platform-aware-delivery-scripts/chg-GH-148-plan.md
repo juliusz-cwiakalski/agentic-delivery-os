@@ -451,7 +451,7 @@ for review/release.
 
 - [ ] **8.1 (NFR-1 regression gate)** Run the full delivery-script test suite with `ADOS_PLATFORM=github` (or unset + a github remote) and confirm every existing assertion still passes unchanged. Specifically: all existing `classify_result`, `pr_url_for`, and `build_delivery_prompt` tests (parameterized under `ADOS_PLATFORM=github`), all `batch-deliver.sh` tests, the ceo-loop suite, and the hook-regression suite. Fix any regressions introduced by Phases 1-7.
 - [ ] **8.2** Run the aggregate: `bash scripts/test-all.sh`. Confirm green.
-- [ ] **8.3 (Spec reconciliation)** Reconcile `doc/spec/features/feature-autonomous-delivery.md` with the implementation: record platform-aware verification (F-5), the dispatch/normalization seam (F-3/F-4), the new configuration variables (`ADOS_PLATFORM`, `ADOS_BLOCKED_LABEL`, `ADOS_MERGE_STRATEGY`), and GitLab merge-status polling (F-10). This is the standard system_spec_update step.
+- [ ] **8.3 (Spec reconciliation)** Reconcile `doc/spec/features/feature-autonomous-delivery.md` with the implementation: record platform-aware verification (F-5), the dispatch/normalization seam (F-3/F-4), the new configuration variables (`ADOS_PLATFORM`, `ADOS_BLOCKED_LABEL`, `ADOS_MERGE_STRATEGY`), and GitLab merge-status polling (F-10). Also update `doc/guides/autonomous-batch-delivery.md` with `ADOS_MERGE_STRATEGY` documentation and GitLab Mode B merge guidance. This is the standard system_spec_update step.
 - [ ] **8.4 (Version bump)** Per `version_impact: minor`, bump `APP_VERSION` in `deliver-ticket.sh` (currently `1.1.0`, line ~38) and `batch-deliver.sh` (its own `APP_VERSION`) by a minor increment, following repo conventions.
 - [ ] **8.5** Confirm ShellCheck + shfmt clean on all touched scripts (bash.md §13): `shellcheck scripts/deliver-ticket.sh scripts/batch-deliver.sh scripts/.tests/test-hook-regression.sh`; `shfmt -i 2 -ci -bn -d` on the same.
 
@@ -465,7 +465,7 @@ for review/release.
 **Files and modules**:
 
 - Code areas: `scripts/deliver-ticket.sh` (`APP_VERSION` line ~38), `scripts/batch-deliver.sh` (`APP_VERSION`) (updated); any regression fixes in Phases 1-7 files.
-- System docs: `doc/spec/features/feature-autonomous-delivery.md` (reconciled/updated).
+- System docs: `doc/spec/features/feature-autonomous-delivery.md` (reconciled/updated), `doc/guides/autonomous-batch-delivery.md` (updated with ADOS_MERGE_STRATEGY + GitLab Mode B).
 
 **Tests** (target: full regression suite, parameterized under github):
 
