@@ -8,7 +8,7 @@ status: Draft
 created: 2026-07-03
 owners: ["engineering"]
 links:
-  related_changes: ["GH-146"]
+  related_changes: ["GH-146", "GH-148"]
 summary: "Deliver multiple tickets unattended with liveness monitoring, session resilience, and push-to-completion PR feedback. Covers deliver-ticket.sh, batch-deliver.sh, and clean-merged-branches."
 ---
 
@@ -179,7 +179,7 @@ The PM prompt uses a **push-to-completion** strategy — it detects the ticket's
 
 ```mermaid
 flowchart TD
-    PROMPT([PM session starts]) --> DETECT["Detect state<br/>via gh CLI"]
+    PROMPT([PM session starts]) --> DETECT["Detect state<br/>via configured CLI (gh/glab)"]
     DETECT --> CLOSED{Ticket closed?}
     CLOSED -->|Yes| STOP_DONE(["Report done"])
     CLOSED -->|No| PR{Open PR exists?}
@@ -207,6 +207,30 @@ flowchart TD
 > [delivery-modes.md § INV-DM-4](delivery-modes.md#inv-dm-4-ceo-merges-approved-finalized-prs--does-not-yield-mode-a).
 
 The prompt is **identical on every start and resume** — the state detection at the top ensures the PM always does the right thing regardless of how many times the session was restarted.
+
+> **Platform-neutral PM prompt (GH-148).** The prompt no longer emits literal
+> `gh` commands. It instructs the PM to detect the tracker platform from
+> `.ai/agent/pm-instructions.md` or the git remote and use the project's
+> configured CLI (`gh` on GitHub, `glab` on GitLab), so it never contradicts a
+> GitLab project config.
+
+## Platform detection (GitHub + GitLab)
+
+`deliver-ticket.sh` and `batch-deliver.sh` auto-detect the platform at startup
+(GH-148). Resolution order: `ADOS_PLATFORM` env var → `origin` git remote URL
+→ `glab auth status` → default `github`. Set `ADOS_PLATFORM=gitlab` (or
+`=github`) to force a platform regardless of detection — useful for ambiguous
+remotes or self-hosted GitLab.
+
+- On **GitHub**, all operations use `gh`; behavior is unchanged from before
+  GH-148.
+- On **GitLab**, the dispatch seam routes to `glab`; issue/PR queries, result
+  classification, PR URL resolution, and Mode B merge all work natively. A
+  GitLab-only machine requires `glab` (not `gh`).
+- The detected platform is logged at startup (`Detected platform: <platform>`).
+
+See [delivery-modes.md § Platform detection](delivery-modes.md#platform-detection-github--gitlab)
+for the full resolution order and the dispatch/normalization seam.
 
 ## Approval workflow (multi-signal, merge owned by the batch script)
 
@@ -239,6 +263,26 @@ flowchart LR
 When you re-run `batch-deliver.sh` after approving, the batch script detects the approval, rebases the PR onto the latest `main`, pushes, waits for the PR quality gates to go green, and squash-merges — using the **PR title and description as the commit message**. If a rebase conflict occurs, an AI agent resolves it, pushes, and the gates re-run. If the PR is already on the latest `main` (rebase is a no-op), the green-gate wait still runs but completes immediately.
 
 > **`batch-deliver.sh` never adds the `approved` label itself.** Approval is always a human action. The batch script only *reads* the approval signals and acts on them.
+
+### Mode B merge strategy & GitLab merge-status (GH-148)
+
+The merge strategy defaults to **squash** and is configurable via
+`ADOS_MERGE_STRATEGY` (`squash` \| `merge` \| `rebase`). The batch script maps
+it to platform-appropriate flags:
+
+| Strategy | GitHub (`gh pr merge`) | GitLab (`glab mr merge`) |
+|---|---|---|
+| `squash` (default) | `--squash --delete-branch` | `--squash --remove-source-branch` |
+| `merge` | `--merge --delete-branch` | `--merge --remove-source-branch` |
+| `rebase` | `--rebase --delete-branch` | `--rebase --remove-source-branch` |
+
+On **GitLab**, the CI green-gate uses the pipeline API: no pipelines configured
+= legitimate green; pipelines exist = polled until success/failed. Before
+merging, the script polls the MR's `detailed_merge_status` until `mergeable`
+(bounded 60s, 5s interval). If GitLab reports a stale `conflict` while the MR
+is actually mergeable (`can_be_merged`), a no-op empty commit push forces a
+recompute, then polling resumes — this recovers the GitLab async-status lag
+that would otherwise block the merge with `405 Method Not Allowed`.
 
 ### LGTM comment (opt-in, author-restricted)
 
@@ -371,12 +415,17 @@ All settings are environment variables (with CLI flag overrides where noted):
 | `DELIVER_MAX_RESTARTS` | `10` | Maximum restart iterations before giving up |
 | `DELIVER_LOOP_SLEEP_SECONDS` | `5` | Seconds between restart iterations |
 | `DELIVER_ALLOW_LGTM_COMMENT` | `false` | Opt-in: accept an exact `lgtm` comment by the PR author as a merge signal (C-1) |
+| `ADOS_PLATFORM` | *(auto-detect)* | Platform override: `github` \| `gitlab`. Empty = auto-detect (env → git remote → `glab auth` → default `github`) |
+| `ADOS_BLOCKED_LABEL` | `human-input-needed` | Label `classify_result` treats as `blocked`, on either platform |
 
 ### batch-deliver.sh
 
 | Variable | Default | Description |
 |---|---|---|
 | `DRY_RUN` | `false` | Skip actual delivery, just log what would happen |
+| `ADOS_PLATFORM` | *(auto-detect)* | Platform override: `github` \| `gitlab`. Empty = auto-detect (env → git remote → `glab auth` → default `github`) |
+| `ADOS_BLOCKED_LABEL` | `human-input-needed` | Label treated as `blocked`, on either platform |
+| `ADOS_MERGE_STRATEGY` | `squash` | Mode B merge strategy: `squash` \| `merge` \| `rebase` — mapped to platform-appropriate flags |
 
 ### clean-merged-branches
 
@@ -403,7 +452,7 @@ See the [Delivery Modes guide](delivery-modes.md) for the canonical modes defini
 
 | Label | Who adds it | Meaning | Color |
 |---|---|---|---|
-| `human-input-needed` | PM (when blocked) | Ticket has a blocking question for the human. Remove after answering to resume. | `FBCA04` (yellow) |
+| `human-input-needed` | PM (when blocked) | Ticket has a blocking question for the human. Remove after answering to resume. Configurable via `ADOS_BLOCKED_LABEL` (GH-148). | `FBCA04` (yellow) |
 | `approved` | Human (after review) | PR is approved for squash-merge. Solo-developer-friendly — works even when GitHub self-approval is blocked. This is the **default** solo-mode approval signal. | `0E8A16` (green) |
 
 > **LGTM is not a label** — it is an opt-in comment-based signal (`DELIVER_ALLOW_LGTM_COMMENT=true`), restricted to the PR author with an exact `^lgtm$` match. See [Approval workflow](#approval-workflow-multi-signal-merge-owned-by-the-batch-script).

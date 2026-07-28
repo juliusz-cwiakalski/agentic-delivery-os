@@ -16,7 +16,7 @@ references:
   - "Delivery vehicle: #142"
   - "Related change: GH-146"
 links:
-  related_changes: ["GH-146"]
+  related_changes: ["GH-146", "GH-148"]
   decisions: ["TDR-0002"]
 ---
 
@@ -58,6 +58,34 @@ instead of churn, and align with the upstream ADOS reliability plan (epic #95 �
 #97, #99, #96).
 
 ## Component responsibilities
+
+## Platform detection (GitHub + GitLab)
+
+`deliver-ticket.sh` and `batch-deliver.sh` are **platform-aware** (GH-148): they
+auto-detect whether the project is hosted on GitHub or GitLab once at startup,
+then route all issue and PR/MR operations through a dispatch seam
+(`_tracker` / `_mr`) with a JSON normalization shim that presents a common
+schema regardless of the divergent `gh --json` vs `glab --output json` field
+shapes. This makes result classification, PR URL resolution, the PM prompt,
+and Mode B merge work identically on both forges — a GitLab delivery reports an
+accurate `result` and a populated MR web URL instead of degrading to an
+unverifiable `finished`.
+
+**Detection resolution order:**
+
+1. `ADOS_PLATFORM` env var (`github` \| `gitlab`) — explicit override/escape hatch.
+2. The `origin` git remote URL (`gitlab.com` → gitlab, `github.com` → github).
+3. `glab auth status` succeeds → gitlab.
+4. Default: `github` (preserves existing behavior for ambiguous/unconfigured remotes).
+
+After detection, only the matching CLI is required (`require_cmd gh` on GitHub,
+`require_cmd glab` on GitLab) — a GitLab-only machine is no longer hard-blocked
+on a missing `gh`. `ceo-loop.sh` is **not** platform-aware by design (OQ-3): it
+does not call the tracker; it delegates delivery to `deliver-ticket.sh` and
+merges to the `@ceo` agent, so it needs no platform detection.
+
+Platform is logged at startup (`Detected platform: <github|gitlab>`) so an
+operator can confirm the selection and whether an override took effect.
 
 ## Optional pre-iteration hooks
 
@@ -245,7 +273,7 @@ selects that model.
                 │ PM opencode (AI, 11-phase lifecycle)                      │
                 │   │  → spec → plan → coder → review → … → PR              │
                 │   ▼                                                      │
-                │ squash-merge (gh pr merge --squash)                       │
+                │ squash-merge (gh pr merge --squash / glab mr merge --squash)      │
                 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -253,8 +281,8 @@ selects that model.
 |---|---|---|---|
 | `ceo-loop.sh` | Script (outer) | Spawn one `@ceo` session at a time; **detect a stuck CEO** (no session traffic, no healthy delivery in progress) and kill+restart it; resume the previous CEO session when its context is under the resume threshold; honor a durable stop signal | Spawn a second `@ceo` while one is alive; kill a CEO that is blocked on a healthy in-flight delivery; wipe the stop signal at startup |
 | `@ceo` | AI agent (decision points) | Pick next ticket; **wait for `deliver-ticket.sh` to return** and consume its last-message + result; verify the PM finalized all phases before merging; merge ready (approved) PRs; handle blockers (optionally resume the PM with a `--resume-prompt`); retrospectives | Babysit a healthy delivery; detach `deliver-ticket.sh`; merge a PR the PM has not finalized; yield forever on a ready PR; halt merely because a peer exists |
-| `batch-deliver.sh` | Script | Sequential per-ticket delivery; pre-flight skip; **rebase-before-merge with green-gate wait** for human-approved PRs; squash-merge using the PR title/description as the commit message; summary | Pick tickets; approve a PR (Mode B); merge a PR the human has not approved |
-| `deliver-ticket.sh` | Script (per-ticket) | Single-ticket lifecycle: **single-flight + join** per repo, spawn/resume PM, in-progress tracking (repo-local PID file), **writes the delivering marker on its OWN path** (race-free "CEO blocked on delivery" signal for ceo-loop.sh), **log-progress liveness watchdog**, kill-and-restart on stall, **signal propagation to the PM child**, state classification; expose subcommands (`--is-delivering`, `--last-message`, `--resume-prompt`); return a delivery summary (result + PR URL + PM last-message) on stdout | Run detached; spawn a duplicate PM for the same ticket/repo; **merge** (merge authority is the CEO in Mode A or `batch-deliver.sh` in Mode B); leave an orphaned opencode child when killed |
+| `batch-deliver.sh` | Script | Sequential per-ticket delivery; pre-flight skip; **rebase-before-merge with green-gate wait** for human-approved PRs; **platform-aware** Mode B merge (GitHub/GitLab, configurable strategy) using the PR title/description as the commit message; summary | Pick tickets; approve a PR (Mode B); merge a PR the human has not approved |
+| `deliver-ticket.sh` | Script (per-ticket) | Single-ticket lifecycle: **single-flight + join** per repo, spawn/resume PM, in-progress tracking (repo-local PID file), **writes the delivering marker on its OWN path** (race-free "CEO blocked on delivery" signal for ceo-loop.sh), **log-progress liveness watchdog**, kill-and-restart on stall, **signal propagation to the PM child**, **platform-aware** state classification & PR URL (dispatch seam + JSON normalization); expose subcommands (`--is-delivering`, `--last-message`, `--resume-prompt`); return a delivery summary (result + PR URL + PM last-message) on stdout | Run detached; spawn a duplicate PM for the same ticket/repo; **merge** (merge authority is the CEO in Mode A or `batch-deliver.sh` in Mode B); leave an orphaned opencode child when killed |
 | PM opencode | AI agent (per-ticket) | The ADOS 11-phase lifecycle; delegate to subagents; address review comments; return a delivery summary (last message) to `deliver-ticket.sh` | Pick the next ticket; merge without an approval signal |
 | `tools/clean-merged-branches` | Script | Branch hygiene: delete branches already squash-merged into the base | **Remove unmerged branches**; touch protected branches (`main`, `master`, `develop`) |
 
@@ -274,7 +302,7 @@ scriptable facts by burning tokens.
 | Spawn & monitor PM opencode (liveness, restart) | No | `deliver-ticket.sh` |
 | Run the ADOS 11-phase lifecycle | **Yes** | PM opencode + subagents |
 | Review PR vs spec/plan | **Yes** | `@reviewer` (inside the PM lifecycle) |
-| Approve + merge PR (Mode A) | **Yes** (authority + judgement) | `@ceo` verifies PM finalization (pm-notes), then executes `gh pr merge --squash` **directly** (`deliver-ticket.sh` returns `pr-open`; it does **not** merge in Mode A) |
+| Approve + merge PR (Mode A) | **Yes** (authority + judgement) | `@ceo` verifies PM finalization (pm-notes), then executes the platform-appropriate squash-merge **directly** (`gh pr merge --squash` on GitHub, `glab mr merge --squash` on GitLab; the CEO reads `.ai/agent/pr-instructions.md` for the platform). `deliver-ticket.sh` returns `pr-open`; it does **not** merge in Mode A |
 | Rebase before merge (Mode B batch) | No (happy path); **Yes** only on conflict | `deliver-ticket.sh` / `batch-deliver.sh`; AI resolves rebase conflicts, then gates re-run |
 | Wait for PR quality gates to go green after rebase | No | `deliver-ticket.sh` / `batch-deliver.sh` |
 | Branch hygiene (fetch / prune / delete merged) | No | `tools/clean-merged-branches` |
@@ -353,7 +381,10 @@ In Mode A the `@ceo` agent is the merge authority. Before merging it must:
    `chg-<ref>-pm-notes.yaml`. (This check is AI-driven today, because pm-notes
    are authored by the PM and not yet schema-strict enough to script reliably.)
 
-When both hold, the CEO runs the final-check gate and squash-merges. "Yield"
+When both hold, the CEO runs the final-check gate and squash-merges via the
+platform-appropriate command (`gh pr merge --squash` on GitHub, `glab mr merge
+--squash` on GitLab — the CEO reads `.ai/agent/pr-instructions.md` for the
+platform). "Yield"
 applies **only** when a PM is demonstrably alive and mid-delivery (process
 exists, no finalized PR). A sleeping process is not "actively delivering."
 This is the #99 "merge-not-yield" + "proceed-not-halt" backstop.
@@ -473,7 +504,7 @@ flowchart TD
     LOOP --> DECIDE
     DECIDE -->|PM raised a blocker| RESUMPT["deliver-ticket.sh REF<br/>--resume-prompt \"<resolution>\""]
     RESUMPT --> SUMMARY
-    DECIDE -->|Approved + PM-finalized PR| MERGE["Merge-not-yield (INV-DM-4)<br/>verify pm-notes finalised<br/>gh pr merge --squash"]
+    DECIDE -->|Approved + PM-finalized PR| MERGE["Merge-not-yield (INV-DM-4)<br/>verify pm-notes finalised<br/>platform squash-merge"]
     MERGE --> LOOP
     DECIDE -->|Backlog exhausted / all blocked / technical blocker| EXIT(["@ceo exits<br/>ceo-loop.sh parks or stops"])
     EXIT --> STUCKCHECK
@@ -566,9 +597,12 @@ flowchart TD
   **returns immediately if the checks are already green** (the common case for
   an approved PR) — no redundant waiting. **Rebase conflicts** are resolved by
   an AI agent, after which the gates re-run.
-- **Always squash-merge**, using the **PR title and description as the squash
+- **Always squash-merge** (by default; configurable via `ADOS_MERGE_STRATEGY`),
+  using the **PR title and description as the squash
   commit message** — so `@pr-manager` must always produce descriptions that are
-  fit to become the final commit message.
+  fit to become the final commit message. On GitLab this maps to
+  `glab mr merge --squash --remove-source-branch`; the merge strategy
+  (`squash` \| `merge` \| `rebase`) is platform-correct on both forges.
 
 See [autonomous-batch-delivery.md](autonomous-batch-delivery.md) for the
 operational details of Mode B (it remains canonical for `batch-deliver.sh`
@@ -606,7 +640,7 @@ The design is robust to the messy realities of long-running AI sessions:
 | opencode internally detaches its own grandchildren | The trap kills the opencode child's process group; grandchildren that opencode itself `setsid`-detached (LLM transport, bash-tool subprocesses) can escape the group kill. | Known limitation (see Troubleshooting). A defense-in-depth sweep by session id (`pgrep -f "opencode.*<session>"`) can be added if orphans are observed; for now the limitation is accepted and documented. |
 | Two `deliver-ticket.sh REF` invoked concurrently (same repo) | Second invocation joins the first (INV-DM-2); both return the same classified result. | No race on the working tree. |
 | Parallel deliveries in two clones of the same repo | Each clone's PID file is repo-local; neither sees the other. | INV-DM-6 is per-working-tree, not per-remote. |
-| GitHub API rate-limit during classification | `classify_result` returns `unknown`; the iteration does not burn a restart slot. | Transient outage retried without losing progress. |
+| GitHub/GitLab API rate-limit during classification | `classify_result` returns `unknown`; the iteration does not burn a restart slot. Since GH-148 the platform-aware dispatch uses the correct CLI, so this no longer misfires on a healthy GitLab project. | Transient outage retried without losing progress. |
 
 ## Configuration
 
@@ -630,12 +664,17 @@ All settings are environment variables (CLI flag overrides where noted).
 | `DELIVER_KILL_GRACE_SECONDS` | `20` | Seconds between SIGTERM and SIGKILL when propagating to the PM child |
 | `DELIVER_MAX_RESTARTS` | `10` | Maximum PM restart iterations before giving up |
 | `DELIVER_ALLOW_LGTM_COMMENT` | `false` | Opt-in: accept an exact `lgtm` comment by the PR author as a merge signal |
+| `ADOS_PLATFORM` | *(auto-detect)* | Platform override: `github` \| `gitlab`. Empty = auto-detect (env → git remote → `glab auth` → default `github`) |
+| `ADOS_BLOCKED_LABEL` | `human-input-needed` | Label `classify_result` treats as `blocked`, on either platform |
 
 ### `batch-deliver.sh`
 
 | Variable | Default | Description |
 |---|---|---|
 | `DRY_RUN` | `false` | Skip actual delivery, just log what would happen |
+| `ADOS_PLATFORM` | *(auto-detect)* | Platform override: `github` \| `gitlab`. Empty = auto-detect (env → git remote → `glab auth` → default `github`) |
+| `ADOS_BLOCKED_LABEL` | `human-input-needed` | Label treated as `blocked`, on either platform |
+| `ADOS_MERGE_STRATEGY` | `squash` | Mode B merge strategy: `squash` \| `merge` \| `rebase` — mapped to platform-appropriate flags (`--squash --delete-branch` / `--squash --remove-source-branch`, etc.) |
 
 ### `tools/clean-merged-branches`
 

@@ -6,8 +6,8 @@ phases:
   test_planning: { started: "2026-07-28T06:35:00Z", completed: "2026-07-28T06:50:00Z" }
   delivery_planning: { started: "2026-07-28T06:55:00Z", completed: "2026-07-28T07:10:00Z" }
   dor_check: { started: "2026-07-28T07:15:00Z", completed: "2026-07-28T07:40:00Z" }
-  delivery: { started: "2026-07-28T07:45:00Z", completed: null }
-  system_spec_update: { started: null, completed: null }
+  delivery: { started: "2026-07-28T07:45:00Z", completed: "2026-07-28T09:00:00Z" }
+  system_spec_update: { started: "2026-07-28T09:05:00Z", completed: "2026-07-28T21:30:00Z" }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -50,5 +50,9 @@ notes:
     date: "2026-07-28"
   - text: "DoR iter-1 NOT_READY: 3 blocking findings — (1) spec §16 listed ceo-loop.sh as Updated despite OQ-3 decision excluding it; (2) spec §14 OQ-1/2/3 still marked Decision needed despite PM resolving them; (3) plan Phase 8 missing autonomous-batch-delivery.md from doc targets. Root cause: PM decisions were recorded in pm-notes.yaml but not propagated back into spec/plan. Process improvement: when PM resolves open questions mid-chain, update the spec immediately, not just pm-notes. All 3 fixed in commit 695c6bf."
     type: retro
+    workItemRef: GH-148
+    date: "2026-07-28"
+  - text: "system_spec_update (phase 7) reconciled by @doc-syncer: feature-autonomous-delivery.md (added F-9 platform-aware verification capability, generalized INV-DM-4 from gh pr merge to platform-aware merge, added ADOS_PLATFORM/ADOS_BLOCKED_LABEL/ADOS_MERGE_STRATEGY to config table, platform-neutral edge-case wording, Core Components updated, last_updated→2026-07-28, GH-148 added to related_changes); delivery-modes.md (new Platform detection section, config variables in deliver-ticket.sh/batch-deliver.sh tables, component-responsibility + AI-vs-script + INV-DM-4 + Mode B rules + edge-case generalized from GitHub-only to platform-aware, mermaid merge node, GH-148 to related_changes); autonomous-batch-delivery.md (new Platform detection section, Mode B merge-strategy table + GitLab merge-status polling/stale-conflict guidance, ADOS_MERGE_STRATEGY/ADOS_PLATFORM/ADOS_BLOCKED_LABEL in config tables, labels reference notes configurability, PM-prompt mermaid node generalized, GH-148 to related_changes). feature-delivery-lifecycle.md and .opencode/README.md verified platform-agnostic — no change needed. ceo-loop.sh confirmed unmodified (OQ-3); ceo.md prompt out-of-scope (NG-3). doc-distribution guard passes."
+    type: info
     workItemRef: GH-148
     date: "2026-07-28"
