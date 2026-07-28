@@ -35,7 +35,7 @@ IFS=$'\n\t'
 # SETTINGS
 # ============================================================================
 readonly APP_NAME="deliver-ticket"
-readonly APP_VERSION="1.1.0"
+readonly APP_VERSION="1.2.0"
 readonly LOG_TAG="(${APP_NAME})"
 
 readonly EXIT_FAILURE=1

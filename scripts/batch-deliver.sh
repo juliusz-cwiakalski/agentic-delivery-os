@@ -23,7 +23,7 @@ IFS=$'\n\t'
 # SETTINGS
 # ============================================================================
 readonly APP_NAME="batch-deliver"
-readonly APP_VERSION="1.0.0"
+readonly APP_VERSION="1.1.0"
 readonly LOG_TAG="(${APP_NAME})"
 
 readonly EXIT_USAGE=2
