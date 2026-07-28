@@ -87,6 +87,28 @@ group are outside this guarantee.
 | `ADOS_HOOK_RETRY_SECONDS` | CEO only | no | `60` total seconds |
 | `ADOS_HOOK_MAX_FAILURES` | CEO only | no | `5` |
 
+> **Hook-failure tuning guidance (GH-146 OQ-1).** The default values above are **initial
+> defaults**, not production absolutes. In production:
+> - A too-tight `ADOS_HOOK_MAX_FAILURES` can cause the CEO to exit the loop on a
+>   temporarily flaky hook (e.g., network blip, transient auth issue), when a
+>   retry would have succeeded.
+> - A too-loose `ADOS_HOOK_MAX_FAILURES` can delay failure surfacing: a genuinely
+>   broken hook will be retried many times before the CEO gives up, burning hook
+>   quota and delaying the ticket.
+> - `ADOS_HOOK_RETRY_SECONDS` is the **total** non-busy wait (accumulated across
+>   retries, not per-attempt), checked in at-most-one-second chunks with stop-file
+>   probes. A higher value trades responsiveness for resilience on intermittent
+>   failures.
+> - **Revisit these defaults against production telemetry.** If you observe
+>   frequent CEO exits on hook failures, increase `ADOS_HOOK_MAX_FAILURES`. If
+>   hook failures cause long delays, decrease it or reduce `ADOS_HOOK_RETRY_SECONDS`.
+>
+> **Platform notes:**
+> - Linux is the primary target; macOS/BSD support is best-effort. The
+>   `test_real_wrapper_lifecycle_matrix` test (GH-146) uses `/proc/${pid}/stat` for
+>   precise zombie detection on Linux and falls back to `kill -0` on BSD/macOS
+>   (less precise but functional). All other delivery modes work on both platforms.
+
 The wrapper supplies `ADOS_HOOK_AGENT`, `ADOS_HOOK_SCRIPT`, a fresh absolute
 `ADOS_HOOK_ENV_OUTPUT`, and `ADOS_HOOK_ENV_FORMAT=ADOS_HOOK_ENV_V1` for each
 invocation. These are context, not user settings. The output is data only: an

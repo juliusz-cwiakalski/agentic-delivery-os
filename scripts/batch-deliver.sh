@@ -320,33 +320,36 @@ load_tickets_file() {
 # Check if a ticket should be skipped.
 # Prints skip reason (closed|blocked|merged) and returns 0 if should skip.
 # Prints nothing and returns 1 if should proceed.
+# F-5/F-8: Use tracker_issue_view() for normalized state + ADOS_BLOCKED_LABEL
+# F-5: Use mr_list_closed_merged() for merged-PR check
 should_skip_ticket() {
   local -r ticket_ref="$1"
 
   local issue_json
-  issue_json="$(_gh issue view "$(to_issue_number "${ticket_ref}")" --json state,labels 2>/dev/null)" || {
+  issue_json="$(tracker_issue_view "$(to_issue_number "${ticket_ref}")" 2>/dev/null)" || {
     return 1  # Can't determine state → don't skip
   }
 
   local state
   state="$(printf '%s' "${issue_json}" | _jq -r '.state // empty' 2>/dev/null)" || state=""
 
-  # Closed → skip
-  if [[ "${state}" == "CLOSED" ]]; then
+  # Closed → skip (normalized "closed" token from DM-1)
+  if [[ "${state}" == "closed" ]]; then
     printf 'closed'
     return 0
   fi
 
-  # human-input-needed → skip
-  if printf '%s' "${issue_json}" | _jq -r '.labels[].name' 2>/dev/null | grep -q 'human-input-needed'; then
+  # Blocked label (F-8: configurable ADOS_BLOCKED_LABEL)
+  local blocked_label="${ADOS_BLOCKED_LABEL:-human-input-needed}"
+  if printf '%s' "${issue_json}" | _jq -r '.labels[]' 2>/dev/null | grep -q "${blocked_label}"; then
     printf 'blocked'
     return 0
   fi
 
-  # Merged PR → skip
+  # Merged PR → skip (branch-scoped via mr_list_closed_merged)
   local merged_json
-  merged_json="$(_gh pr list --search "${ticket_ref}" --state closed --json mergedAt 2>/dev/null)" || merged_json='[]'
-  if printf '%s' "${merged_json}" | _jq -e '.[0].mergedAt' >/dev/null 2>&1; then
+  merged_json="$(mr_list_closed_merged "$(to_issue_number "${ticket_ref}")" 2>/dev/null)" || merged_json='[]'
+  if printf '%s' "${merged_json}" | _jq -e '.[0].merged_at' >/dev/null 2>&1; then
     printf 'merged'
     return 0
   fi
@@ -360,28 +363,39 @@ should_skip_ticket() {
 
 # Check if a ticket has the `approved` label (human-approved for merge).
 # Returns 0 if approved, 1 otherwise.
+# F-5: Use _tracker dispatch for platform-aware label lookup
 is_pr_approved() {
   local -r ticket_ref="$1"
   local issue_json
-  issue_json="$(_gh issue view "$(to_issue_number "${ticket_ref}")" --json labels 2>/dev/null)" || return 1
-  printf '%s' "${issue_json}" | _jq -r '.labels[].name' 2>/dev/null | grep -qx 'approved'
+  issue_json="$(tracker_issue_view "$(to_issue_number "${ticket_ref}")" 2>/dev/null)" || return 1
+  printf '%s' "${issue_json}" | _jq -r '.labels[]' 2>/dev/null | grep -qx 'approved'
 }
 
 # Find the open PR number for a ticket. Prints the number, or empty.
+# F-5: Use mr_list_search for platform-aware PR lookup
 get_pr_number() {
   local -r ticket_ref="$1"
   local pr_json
-  pr_json="$(_gh pr list --search "${ticket_ref}" --state open --json number 2>/dev/null)" || pr_json='[]'
+  pr_json="$(mr_list_search "${ticket_ref}" 2>/dev/null)" || pr_json='[]'
   printf '%s' "${pr_json}" | _jq -r '.[0].number // empty' 2>/dev/null
 }
 
-# Get PR title and body via gh pr view. Prints "title\nbody".
+# Get PR title and body via platform-aware dispatch. Prints "title\nbody".
+# F-5: Use _mr dispatch for platform-aware PR view
 get_pr_title_and_body() {
   local -r pr_number="$1"
   local pr_json title body
-  pr_json="$(_gh pr view "${pr_number}" --json title,body 2>/dev/null)" || pr_json='{}'
-  title="$(printf '%s' "${pr_json}" | _jq -r '.title // empty' 2>/dev/null)" || title=""
-  body="$(printf '%s' "${pr_json}" | _jq -r '.body // empty' 2>/dev/null)" || body=""
+  if [[ "${PLATFORM}" == "gitlab" ]]; then
+    # GitLab: glab mr view
+    pr_json="$(_mr mr view "${pr_number}" --output json 2>/dev/null)" || pr_json='{}'
+    title="$(printf '%s' "${pr_json}" | _jq -r '.title // empty' 2>/dev/null)" || title=""
+    body="$(printf '%s' "${pr_json}" | _jq -r '.description // empty' 2>/dev/null)" || body=""
+  else
+    # GitHub: gh pr view
+    pr_json="$(_mr pr view "${pr_number}" --json title,body 2>/dev/null)" || pr_json='{}'
+    title="$(printf '%s' "${pr_json}" | _jq -r '.title // empty' 2>/dev/null)" || title=""
+    body="$(printf '%s' "${pr_json}" | _jq -r '.body // empty' 2>/dev/null)" || body=""
+  fi
   printf '%s\n%s' "${title}" "${body}"
 }
 
@@ -438,75 +452,213 @@ rebase_before_merge() {
 }
 
 # Positively confirm a PR has NO status checks configured (legitimately green),
-# distinguishing that from a gh error. Uses `gh pr view --json statusCheckRollup`.
+# Check if PR has no CI checks configured (positive confirmation).
+# GitHub: uses gh pr view --json statusCheckRollup.
+# GitLab (OQ-1): queries pipelines via API; empty = no CI (legit green).
 # Returns 0 if positively confirmed no-checks, 1 otherwise (checks exist OR the
-# gh query itself errored — caller must NOT treat that as green).
+# query itself errored — caller must NOT treat that as green).
 _pr_has_no_checks_configured() {
-  local -r pr_number="$1"
-  local rollup rc=0
-  rollup="$(_gh pr view "${pr_number}" --json statusCheckRollup 2>/dev/null)" || rc=$?
-  (( rc == 0 )) || return 1  # gh error → cannot positively confirm no-checks
-  local count
-  count="$(printf '%s' "${rollup}" | _jq -r '.statusCheckRollup | length' 2>/dev/null)" || count=""
-  [[ "${count}" == "0" ]]
+  if [[ "${PLATFORM}" == "gitlab" ]]; then
+    local -r pr_number="$1"
+    local pipelines rc=0
+
+    # GitLab: query pipelines for this MR. Empty result = no CI.
+    # glab mr view gives us project_id and iid; we use the API for pipelines.
+    pipelines="$(_glab api /projects/:id/merge_requests/${pr_number}/pipelines --output json 2>/dev/null)" || rc=$?
+    (( rc == 0 )) || return 1  # glab error → cannot positively confirm no-checks
+
+    local count
+    count="$(printf '%s' "${pipelines}" | _jq 'length' 2>/dev/null)" || count=""
+    [[ "${count}" == "0" ]]
+  else
+    local -r pr_number="$1"
+    local rollup rc=0
+    rollup="$(_gh pr view "${pr_number}" --json statusCheckRollup 2>/dev/null)" || rc=$?
+    (( rc == 0 )) || return 1  # gh error → cannot positively confirm no-checks
+    local count
+    count="$(printf '%s' "${rollup}" | _jq -r '.statusCheckRollup | length' 2>/dev/null)" || count=""
+    [[ "${count}" == "0" ]]
+  fi
 }
 
-# Wait for PR checks to be green. Returns:
-#   0 — green (all checks passed, or positively confirmed no checks configured)
-#   1 — red (a check failed)
-#   2 — timeout
-#   3 — unknown (gh error: auth/rate-limit/network/PR-not-found) → caller parks
-# F-2: a non-zero `gh pr checks` is NOT treated as green. "No checks configured"
-# (legit green) is positively confirmed via _pr_has_no_checks_configured; any
-# other gh error returns 3 (unknown) so the caller PARKS instead of merging a
-# red/unknown PR.
-wait_for_pr_green() {
+# F-9: Resolve merge flags based on strategy and platform
+# Args: strategy (squash|merge|rebase)
+# Prints: platform-specific merge flags
+merge_flags_for() {
+  local -r strategy="$1"
+  if [[ "${PLATFORM}" == "gitlab" ]]; then
+    # GitLab: glab mr merge
+    case "${strategy}" in
+      squash) printf '%s' "--squash --remove-source-branch" ;;
+      merge)  printf '%s' "--merge --remove-source-branch" ;;
+      rebase) printf '%s' "--rebase --remove-source-branch" ;;
+      *)      log_warn "Unknown merge strategy '${strategy}', defaulting to squash"; printf '%s' "--squash --remove-source-branch" ;;
+    esac
+  else
+    # GitHub: gh pr merge
+    case "${strategy}" in
+      squash) printf '%s' "--squash --delete-branch" ;;
+      merge)  printf '%s' "--merge --delete-branch" ;;
+      rebase) printf '%s' "--rebase --delete-branch" ;;
+      *)      log_warn "Unknown merge strategy '${strategy}', defaulting to squash"; printf '%s' "--squash --delete-branch" ;;
+    esac
+  fi
+}
+
+# F-10: GitLab merge-status polling with stale-conflict no-op-push recovery
+# Polls detailed_merge_status until mergeable or timeout. Returns 0 on mergeable, 1 on timeout/error.
+gitlab_await_mergeable() {
   local -r pr_number="$1"
-  local max_wait="${BATCH_GREEN_GATE_TIMEOUT:-300}"
-  local poll_interval="${BATCH_GREEN_POLL_INTERVAL:-10}"
-  local waited=0
+  local max_wait=60 poll_interval=5 waited=0
+
+  log_info "Waiting for MR !${pr_number} to become mergeable..."
 
   while (( waited < max_wait )); do
-    local checks_output checks_rc=0
-    checks_output="$(_gh pr checks "${pr_number}" 2>/dev/null)" || checks_rc=$?
+    local merge_status detailed_status
+    merge_status="$(_mr mr view "${pr_number}" --json mergeStatus --output json 2>/dev/null | _jq -r '.mergeStatus // empty' 2>/dev/null)" || merge_status=""
+    detailed_status="$(_mr mr view "${pr_number}" --json detailed_merge_status --output json 2>/dev/null | _jq -r '.detailed_merge_status // empty' 2>/dev/null)" || detailed_status=""
 
-    if (( checks_rc == 0 )); then
-      # gh succeeded → the output is the checks table. Parse it.
-      if printf '%s' "${checks_output}" | grep -qi 'fail'; then
-        return 1  # Red
+    if [[ "${detailed_status}" == "mergeable" ]]; then
+      log_info "MR !${pr_number} is mergeable"
+      return 0
+    fi
+
+    # F-10: Detect stale-conflict (detailed=conflict while merge_status=can_be_merged/has_conflicts=false)
+    if [[ "${detailed_status}" == "conflict" ]] && [[ "${merge_status}" == "can_be_merged" || "${merge_status}" == "has_conflicts" ]]; then
+      # No-op push to force recompute
+      log_info "MR !${pr_number} has stale conflict status; performing no-op push to recompute"
+      if ! _git commit --allow-empty -m "chore: force merge-status recompute" 2>/dev/null; then
+        log_warn "No-op push failed for MR !${pr_number}"
+        return 1
       fi
-      if ! printf '%s' "${checks_output}" | grep -qiE 'pending|in_progress|queued'; then
-        return 0  # All complete, none failed → green
+      if ! _git push 2>/dev/null; then
+        log_warn "Failed to push no-op commit for MR !${pr_number}"
+        return 1
       fi
-      # else: still pending → keep polling
-    else
-      # gh exited non-zero: could be "no checks configured" OR a gh error
-      # (auth/rate-limit/network/PR-not-found). F-2: never assume green here.
-      if _pr_has_no_checks_configured "${pr_number}"; then
-        return 0  # Positively confirmed: legitimately no checks → green
-      fi
-      log_warn "gh pr checks errored for PR #${pr_number} (rc=${checks_rc}); cannot confirm green — parking (not merging)"
-      return 3  # Unknown — caller must park
+      log_info "No-op push complete for MR !${pr_number}; re-polling merge status"
+      # Continue polling after recompute
     fi
 
     sleep "${poll_interval}"
     waited=$((waited + poll_interval))
   done
 
-  return 2  # Timeout
+  log_warn "MR !${pr_number} did not become mergeable within ${max_wait}s (status: ${detailed_status})"
+  return 1
 }
 
-# Approved PR flow: rebase, wait green, squash-merge with PR title+body.
+# Wait for PR checks to be green. Returns:
+#   0 — green (all checks passed, or positively confirmed no checks configured)
+#   1 — red (a check failed)
+#   2 — timeout
+#   3 — unknown (CLI error: auth/rate-limit/network/PR-not-found) → caller parks
+# F-2: a non-zero CLI check is NOT treated as green. "No checks configured"
+# (legit green) is positively confirmed via _pr_has_no_checks_configured; any
+# other error returns 3 (unknown) so the caller PARKS instead of merging a
+# red/unknown PR.
+# F-7/OQ-1: GitLab CI-gate uses pipeline API (empty = no CI → legit green).
+wait_for_pr_green() {
+  local -r pr_number="$1"
+  local max_wait="${BATCH_GREEN_GATE_TIMEOUT:-300}"
+  local poll_interval="${BATCH_GREEN_POLL_INTERVAL:-10}"
+  local waited=0
+
+  if [[ "${PLATFORM}" == "gitlab" ]]; then
+    # GitLab pipeline-based CI-gate (OQ-1)
+    log_debug "GitLab CI-gate: polling pipelines for MR !${pr_number}"
+    while (( waited < max_wait )); do
+      local pipelines rc=0
+      # Query pipelines for this MR. glab API returns array.
+      pipelines="$(_glab api /projects/:id/merge_requests/${pr_number}/pipelines --output json 2>/dev/null)" || rc=$?
+
+      if (( rc == 0 )); then
+        local count status
+        count="$(printf '%s' "${pipelines}" | _jq 'length' 2>/dev/null)" || count=""
+        status="$(printf '%s' "${pipelines}" | _jq -r '.[0].status // empty' 2>/dev/null)" || status=""
+
+        if [[ "${count}" == "0" ]]; then
+          # No pipelines = positively confirmed no CI configured → green (OQ-1)
+          log_debug "GitLab CI-gate: no pipelines → no CI configured → green"
+          return 0
+        fi
+
+        # Check the latest pipeline status
+        case "${status}" in
+          success)
+            log_debug "GitLab CI-gate: pipeline succeeded → green"
+            return 0
+            ;;
+          failed)
+            log_warn "GitLab CI-gate: pipeline failed → red"
+            return 1
+            ;;
+          pending|running|created|scheduled|manual)
+            # Still running → keep polling
+            log_debug "GitLab CI-gate: pipeline ${status} → still waiting"
+            ;;
+          *)
+            # Unknown status → unknown, park
+            log_warn "GitLab CI-gate: unknown pipeline status '${status}' → parking"
+            return 3
+            ;;
+        esac
+      else
+        # glab error → unknown, park
+        log_warn "GitLab CI-gate: glab API error (rc=${rc}) → parking (not merging)"
+        return 3
+      fi
+
+      sleep "${poll_interval}"
+      waited=$((waited + poll_interval))
+    done
+    return 2  # Timeout
+  else
+    # GitHub: use gh pr checks
+    while (( waited < max_wait )); do
+      local checks_output checks_rc=0
+      checks_output="$(_gh pr checks "${pr_number}" 2>/dev/null)" || checks_rc=$?
+
+      if (( checks_rc == 0 )); then
+        # gh succeeded → the output is the checks table. Parse it.
+        if printf '%s' "${checks_output}" | grep -qi 'fail'; then
+          return 1  # Red
+        fi
+        if ! printf '%s' "${checks_output}" | grep -qiE 'pending|in_progress|queued'; then
+          return 0  # All complete, none failed → green
+        fi
+        # else: still pending → keep polling
+      else
+        # gh exited non-zero: could be "no checks configured" OR a gh error
+        # (auth/rate-limit/network/PR-not-found). F-2: never assume green here.
+        if _pr_has_no_checks_configured "${pr_number}"; then
+          return 0  # Positively confirmed: legitimately no checks → green
+        fi
+        log_warn "gh pr checks errored for PR #${pr_number} (rc=${checks_rc}); cannot confirm green — parking (not merging)"
+        return 3  # Unknown — caller must park
+      fi
+
+      sleep "${poll_interval}"
+      waited=$((waited + poll_interval))
+    done
+
+    return 2  # Timeout
+  fi
+}
+
+# Approved PR flow: rebase, wait green, merge with configurable strategy.
 # Returns 0 if merged, 1 if couldn't merge (parked).
+# F-5/F-9: Uses platform-aware dispatch + ADOS_MERGE_STRATEGY.
+# F-10: On GitLab, polls merge status before merge with stale-conflict recovery.
 approved_pr_flow() {
   local -r ticket_ref="$1" branch="$2"
+  local merge_strategy="${ADOS_MERGE_STRATEGY:-squash}"
 
   local pr_number
   pr_number="$(get_pr_number "${ticket_ref}")" || pr_number=""
-  [[ -n "${pr_number}" ]] || { log_warn "No open PR found for ${ticket_ref}"; return 1; }
+  [[ -n "${pr_number}" ]] || { log_warn "No open PR/MR found for ${ticket_ref}"; return 1; }
 
   if [[ "${DRY_RUN}" == "true" ]]; then
-    log_info "[DRY-RUN] Would rebase+merge PR #${pr_number} for ${ticket_ref}"
+    log_info "[DRY-RUN] Would rebase+merge PR #${pr_number} (${merge_strategy}) for ${ticket_ref}"
     return 0
   fi
 
@@ -527,22 +679,42 @@ approved_pr_flow() {
     log_warn "PR checks timed out for ${ticket_ref}; parking"
     return 1
   elif (( green_rc == 3 )); then
-    # F-2: gh error (auth/rate-limit/network/PR-not-found) → unknown, do NOT merge.
-    log_warn "PR checks unknown for ${ticket_ref} (gh error); parking (not merging)"
+    # CLI error (auth/rate-limit/network/PR-not-found) → unknown, do NOT merge.
+    log_warn "PR checks unknown for ${ticket_ref} (CLI error); parking (not merging)"
     return 1
   fi
 
-  # Squash merge with PR title + body as commit message
+  # F-10: GitLab merge-status polling (stale-conflict recovery)
+  if [[ "${PLATFORM}" == "gitlab" ]]; then
+    if ! gitlab_await_mergeable "${pr_number}"; then
+      log_warn "MR !${pr_number} not mergeable for ${ticket_ref}; parking"
+      return 1
+    fi
+  fi
+
+  # Merge with PR title + body as commit message
   local pr_info title body
   pr_info="$(get_pr_title_and_body "${pr_number}")" || pr_info=""
   title="$(printf '%s' "${pr_info}" | head -1)"
   body="$(printf '%s' "${pr_info}" | tail -n +2)"
 
-  log_info "Squash-merging PR #${pr_number} (${ticket_ref})"
-  _gh pr merge "${pr_number}" --squash --subject "${title}" --body "${body}" --delete-branch 2>/dev/null || {
-    log_warn "Merge failed for PR #${pr_number}"
-    return 1
-  }
+  local merge_flags
+  merge_flags="$(merge_flags_for "${merge_strategy}")"
+
+  log_info "Merging PR #${pr_number} (${ticket_ref}) with strategy '${merge_strategy}'"
+  if [[ "${PLATFORM}" == "gitlab" ]]; then
+    # GitLab: glab mr merge
+    _mr mr merge "${pr_number}" ${merge_flags} --title "${title}" --message "${body}" 2>/dev/null || {
+      log_warn "Merge failed for MR !${pr_number}"
+      return 1
+    }
+  else
+    # GitHub: gh pr merge
+    _mr pr merge "${pr_number}" ${merge_flags} --subject "${title}" --body "${body}" 2>/dev/null || {
+      log_warn "Merge failed for PR #${pr_number}"
+      return 1
+    }
+  fi
 
   log_info "Merged PR #${pr_number} (${ticket_ref})"
   return 0
@@ -672,7 +844,14 @@ run_batch() {
         local pr_num
         pr_num="$(get_pr_number "${ticket}")" || pr_num=""
         if [[ -n "${pr_num}" ]]; then
-          resolve_branch="$(_gh pr view "${pr_num}" --json headRefName -q .headRefName 2>/dev/null)" || resolve_branch=""
+          # F-5: Use _mr dispatch + normalized head_branch (DM-1)
+          if [[ "${PLATFORM}" == "gitlab" ]]; then
+            # GitLab: glab mr view → .source_branch
+            resolve_branch="$(_mr mr view "${pr_num}" --output json 2>/dev/null | _jq -r '.source_branch // empty' 2>/dev/null)" || resolve_branch=""
+          else
+            # GitHub: gh pr view → .headRefName
+            resolve_branch="$(_mr pr view "${pr_num}" --json headRefName 2>/dev/null | _jq -r '.headRefName // empty' 2>/dev/null)" || resolve_branch=""
+          fi
         fi
       fi
       if [[ -n "${resolve_branch}" ]] && approved_pr_flow "${ticket}" "${resolve_branch}"; then

@@ -92,11 +92,19 @@ test_metadata_adapter() {
 # run_loop or run_delivery, never run_pre_iteration_hook directly.
 # SIGKILL and children that deliberately leave setsid's process group are excluded:
 # neither can be cleaned up by a trappable wrapper signal.
+# F-13/CG-SRE-002: is_gone_or_zombie uses /proc/${pid}/stat which is Linux-only.
+# On BSD/macOS, fall back to kill -0 only (less precise but functional).
 is_gone_or_zombie() {
   local pid="$1" state=""
   [[ "${pid}" =~ ^[0-9]+$ ]] || return 0
-  [[ -r "/proc/${pid}/stat" ]] && state="$(cut -d' ' -f3 "/proc/${pid}/stat" 2>/dev/null || true)"
-  [[ "${state}" == "Z" ]] && return 0
+
+  if [[ -r "/proc/${pid}/stat" ]]; then
+    # Linux: read process state from /proc for precise zombie detection
+    state="$(cut -d' ' -f3 "/proc/${pid}/stat" 2>/dev/null || true)"
+    [[ "${state}" == "Z" ]] && return 0
+  fi
+
+  # Fallback: BSD/macOS or Linux /proc unavailable — check via kill -0
   ! kill -0 "${pid}" 2>/dev/null
 }
 
