@@ -350,7 +350,8 @@ mr_list_closed_merged() {
 
   if [[ "${platform}" == "gitlab" ]]; then
     # GitLab: .iid, .web_url, .source_branch, .merged_at
-    if ! raw_json="$(_mr mr list --source-branch "${head_branch}" --output json 2>/dev/null)"; then
+    # CG-API-001: Must pass --state merged to get merged MRs (default is opened)
+    if ! raw_json="$(_mr mr list --source-branch "${head_branch}" --state merged --output json 2>/dev/null)"; then
       return 1
     fi
     normalized="$(echo "${raw_json}" | _jq '[.[] | {
@@ -358,7 +359,8 @@ mr_list_closed_merged() {
     } | select(.merged_at != null)]')"
   else
     # GitHub: .number, .url, .headRefName, .mergedAt
-    if ! raw_json="$(_mr pr list --head "${head_branch}" --json number,url,headRefName,mergedAt 2>/dev/null)"; then
+    # CG-API-001: Must pass --state closed to get merged PRs (default is open)
+    if ! raw_json="$(_mr pr list --head "${head_branch}" --state closed --json number,url,headRefName,mergedAt 2>/dev/null)"; then
       return 1
     fi
     normalized="$(echo "${raw_json}" | _jq '[.[] | {

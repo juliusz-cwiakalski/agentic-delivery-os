@@ -226,7 +226,8 @@ mr_list_closed_merged() {
 
   if [[ "${platform}" == "gitlab" ]]; then
     # GitLab: .iid, .web_url, .source_branch, .merged_at
-    if ! raw_json="$(_mr mr list --source-branch "${head_branch}" --output json 2>/dev/null)"; then
+    # CG-API-001: Must pass --state merged to get merged MRs (default is opened)
+    if ! raw_json="$(_mr mr list --source-branch "${head_branch}" --state merged --output json 2>/dev/null)"; then
       return 1
     fi
     normalized="$(echo "${raw_json}" | _jq '[.[] | {
@@ -234,7 +235,8 @@ mr_list_closed_merged() {
     } | select(.merged_at != null)]')"
   else
     # GitHub: .number, .url, .headRefName, .mergedAt
-    if ! raw_json="$(_mr pr list --head "${head_branch}" --json number,url,headRefName,mergedAt 2>/dev/null)"; then
+    # CG-API-001: Must pass --state closed to get merged PRs (default is open)
+    if ! raw_json="$(_mr pr list --head "${head_branch}" --state closed --json number,url,headRefName,mergedAt 2>/dev/null)"; then
       return 1
     fi
     normalized="$(echo "${raw_json}" | _jq '[.[] | {
@@ -268,6 +270,36 @@ mr_list_search() {
     fi
     normalized="$(echo "${raw_json}" | _jq '[.[] | select(.state == "OPEN") | {
       number: .number
+    }]' 2>/dev/null || echo '[]')"
+  fi
+
+  printf '%s' "${normalized}"
+}
+
+# CG-BASH-002: Search for merged MRs/PRs by ticket ref (title search)
+# This is for Mode B pre-flight checks where we don't yet have the branch name
+mr_search_merged_by_ref() {
+  local -r search_term="$1"
+  local raw_json normalized
+
+  # Default to github if PLATFORM not set
+  local platform="${PLATFORM:-github}"
+
+  if [[ "${platform}" == "gitlab" ]]; then
+    # GitLab: search all MRs (including merged) by title
+    if ! raw_json="$(_mr mr list --search "${search_term}" --output json 2>/dev/null)"; then
+      return 1
+    fi
+    normalized="$(echo "${raw_json}" | _jq '[.[] | select(.merged_at != null) | {
+      merged_at: .merged_at
+    }]' 2>/dev/null || echo '[]')"
+  else
+    # GitHub: search closed PRs by title
+    if ! raw_json="$(_mr pr list --search "${search_term}" --state closed --json mergedAt 2>/dev/null)"; then
+      return 1
+    fi
+    normalized="$(echo "${raw_json}" | _jq '[.[] | select(.mergedAt != null) | {
+      merged_at: .mergedAt
     }]' 2>/dev/null || echo '[]')"
   fi
 
@@ -353,9 +385,9 @@ should_skip_ticket() {
     return 0
   fi
 
-  # Merged PR → skip (branch-scoped via mr_list_closed_merged)
+  # Merged PR → skip (CG-BASH-002: use title-search for Mode B pre-flight, not branch-scoped)
   local merged_json
-  merged_json="$(mr_list_closed_merged "$(to_issue_number "${ticket_ref}")" 2>/dev/null)" || merged_json='[]'
+  merged_json="$(mr_search_merged_by_ref "${ticket_ref}" 2>/dev/null)" || merged_json='[]'
   if printf '%s' "${merged_json}" | _jq -e '.[0].merged_at' >/dev/null 2>&1; then
     printf 'merged'
     return 0
@@ -490,24 +522,26 @@ _pr_has_no_checks_configured() {
 
 # F-9: Resolve merge flags based on strategy and platform
 # Args: strategy (squash|merge|rebase)
-# Prints: platform-specific merge flags
+# Returns: flags via nameref array variable (second arg)
 merge_flags_for() {
   local -r strategy="$1"
+  local -n _flags_ref="$2"  # nameref for output array
+
   if [[ "${PLATFORM}" == "gitlab" ]]; then
     # GitLab: glab mr merge
     case "${strategy}" in
-      squash) printf '%s' "--squash --remove-source-branch" ;;
-      merge)  printf '%s' "--merge --remove-source-branch" ;;
-      rebase) printf '%s' "--rebase --remove-source-branch" ;;
-      *)      log_warn "Unknown merge strategy '${strategy}', defaulting to squash"; printf '%s' "--squash --remove-source-branch" ;;
+      squash) _flags_ref=("--squash" "--remove-source-branch") ;;
+      merge)  _flags_ref=("--merge" "--remove-source-branch") ;;
+      rebase) _flags_ref=("--rebase" "--remove-source-branch") ;;
+      *)      log_warn "Unknown merge strategy '${strategy}', defaulting to squash"; _flags_ref=("--squash" "--remove-source-branch") ;;
     esac
   else
     # GitHub: gh pr merge
     case "${strategy}" in
-      squash) printf '%s' "--squash --delete-branch" ;;
-      merge)  printf '%s' "--merge --delete-branch" ;;
-      rebase) printf '%s' "--rebase --delete-branch" ;;
-      *)      log_warn "Unknown merge strategy '${strategy}', defaulting to squash"; printf '%s' "--squash --delete-branch" ;;
+      squash) _flags_ref=("--squash" "--delete-branch") ;;
+      merge)  _flags_ref=("--merge" "--delete-branch") ;;
+      rebase) _flags_ref=("--rebase" "--delete-branch") ;;
+      *)      log_warn "Unknown merge strategy '${strategy}', defaulting to squash"; _flags_ref=("--squash" "--delete-branch") ;;
     esac
   fi
 }
@@ -521,17 +555,26 @@ gitlab_await_mergeable() {
   log_info "Waiting for MR !${pr_number} to become mergeable..."
 
   while (( waited < max_wait )); do
-    local merge_status detailed_status
-    merge_status="$(_mr mr view "${pr_number}" --json mergeStatus --output json 2>/dev/null | _jq -r '.mergeStatus // empty' 2>/dev/null)" || merge_status=""
-    detailed_status="$(_mr mr view "${pr_number}" --json detailed_merge_status --output json 2>/dev/null | _jq -r '.detailed_merge_status // empty' 2>/dev/null)" || detailed_status=""
+    local merge_status detailed_status has_conflicts full_json
+    # CG-API-002: Use full JSON output, not --json flag (glab doesn't support gh-style --json)
+    full_json="$(_mr mr view "${pr_number}" --output json 2>/dev/null)" || {
+      log_warn "Failed to query MR !${pr_number}"
+      return 1
+    }
+    merge_status="$(printf '%s' "${full_json}" | _jq -r '.merge_status // empty' 2>/dev/null)" || merge_status=""
+    detailed_status="$(printf '%s' "${full_json}" | _jq -r '.detailed_merge_status // empty' 2>/dev/null)" || detailed_status=""
+    has_conflicts="$(printf '%s' "${full_json}" | _jq -r '.has_conflicts // false' 2>/dev/null)" || has_conflicts="false"
 
     if [[ "${detailed_status}" == "mergeable" ]]; then
       log_info "MR !${pr_number} is mergeable"
       return 0
     fi
 
-    # F-10: Detect stale-conflict (detailed=conflict while merge_status=can_be_merged/has_conflicts=false)
-    if [[ "${detailed_status}" == "conflict" ]] && [[ "${merge_status}" == "can_be_merged" || "${merge_status}" == "has_conflicts" ]]; then
+    # CG-API-002: Detect stale-conflict (correct predicate using snake_case fields and boolean check)
+    # GitLab: detailed_merge_status="conflict", merge_status="can_be_merged", has_conflicts=false = stale
+    if [[ "${detailed_status}" == "conflict" ]] && \
+       [[ "${merge_status}" == "can_be_merged" ]] && \
+       [[ "${has_conflicts}" == "false" ]]; then
       # No-op push to force recompute
       log_info "MR !${pr_number} has stale conflict status; performing no-op push to recompute"
       if ! _git commit --allow-empty -m "chore: force merge-status recompute" 2>/dev/null; then
@@ -705,19 +748,19 @@ approved_pr_flow() {
   title="$(printf '%s' "${pr_info}" | head -1)"
   body="$(printf '%s' "${pr_info}" | tail -n +2)"
 
-  local merge_flags
-  merge_flags="$(merge_flags_for "${merge_strategy}")"
+  local -a merge_flags=()
+  merge_flags_for "${merge_strategy}" merge_flags
 
   log_info "Merging PR #${pr_number} (${ticket_ref}) with strategy '${merge_strategy}'"
   if [[ "${PLATFORM}" == "gitlab" ]]; then
     # GitLab: glab mr merge
-    _mr mr merge "${pr_number}" "${merge_flags}" --title "${title}" --message "${body}" 2>/dev/null || {
+    _mr mr merge "${pr_number}" "${merge_flags[@]}" --title "${title}" --message "${body}" 2>/dev/null || {
       log_warn "Merge failed for MR !${pr_number}"
       return 1
     }
   else
     # GitHub: gh pr merge
-    _mr pr merge "${pr_number}" "${merge_flags}" --subject "${title}" --body "${body}" 2>/dev/null || {
+    _mr pr merge "${pr_number}" "${merge_flags[@]}" --subject "${title}" --body "${body}" 2>/dev/null || {
       log_warn "Merge failed for PR #${pr_number}"
       return 1
     }
