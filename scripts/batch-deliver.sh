@@ -464,7 +464,7 @@ _pr_has_no_checks_configured() {
 
     # GitLab: query pipelines for this MR. Empty result = no CI.
     # glab mr view gives us project_id and iid; we use the API for pipelines.
-    pipelines="$(_glab api /projects/:id/merge_requests/${pr_number}/pipelines --output json 2>/dev/null)" || rc=$?
+    pipelines="$(_glab api /projects/:id/merge_requests/"${pr_number}"/pipelines --output json 2>/dev/null)" || rc=$?
     (( rc == 0 )) || return 1  # glab error → cannot positively confirm no-checks
 
     local count
@@ -566,10 +566,10 @@ wait_for_pr_green() {
   if [[ "${PLATFORM}" == "gitlab" ]]; then
     # GitLab pipeline-based CI-gate (OQ-1)
     log_debug "GitLab CI-gate: polling pipelines for MR !${pr_number}"
-    while (( waited < max_wait )); do
-      local pipelines rc=0
-      # Query pipelines for this MR. glab API returns array.
-      pipelines="$(_glab api /projects/:id/merge_requests/${pr_number}/pipelines --output json 2>/dev/null)" || rc=$?
+      while (( waited < max_wait )); do
+        local pipelines rc=0
+        # Query pipelines for this MR. glab API returns array.
+        pipelines="$(_glab api /projects/:id/merge_requests/"${pr_number}"/pipelines --output json 2>/dev/null)" || rc=$?
 
       if (( rc == 0 )); then
         local count status
@@ -704,13 +704,13 @@ approved_pr_flow() {
   log_info "Merging PR #${pr_number} (${ticket_ref}) with strategy '${merge_strategy}'"
   if [[ "${PLATFORM}" == "gitlab" ]]; then
     # GitLab: glab mr merge
-    _mr mr merge "${pr_number}" ${merge_flags} --title "${title}" --message "${body}" 2>/dev/null || {
+    _mr mr merge "${pr_number}" "${merge_flags}" --title "${title}" --message "${body}" 2>/dev/null || {
       log_warn "Merge failed for MR !${pr_number}"
       return 1
     }
   else
     # GitHub: gh pr merge
-    _mr pr merge "${pr_number}" ${merge_flags} --subject "${title}" --body "${body}" 2>/dev/null || {
+    _mr pr merge "${pr_number}" "${merge_flags}" --subject "${title}" --body "${body}" 2>/dev/null || {
       log_warn "Merge failed for PR #${pr_number}"
       return 1
     }
