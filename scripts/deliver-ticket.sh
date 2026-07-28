@@ -60,6 +60,10 @@ readonly PRE_ITERATION_HOOK="${ADOS_PRE_ITERATION_HOOK:-${HOME}/.ados/hooks/pre-
 readonly HOOK_SHUTDOWN_GRACE_SECONDS="${ADOS_HOOK_SHUTDOWN_GRACE_SECONDS:-2}"
 readonly HOOK_ENV_ALLOWLIST="${ADOS_HOOK_ENV_ALLOWLIST:-}"
 
+# Platform configuration
+readonly ADOS_PLATFORM="${ADOS_PLATFORM:-}"  # github | gitlab (empty = auto-detect)
+readonly ADOS_BLOCKED_LABEL="${ADOS_BLOCKED_LABEL:-human-input-needed}"
+
 # Session mapping directory (shared with opencode-session.sh)
 SESSION_DIR="${ROOT_DIR}/.ai/local/opencode-sessions"
 
@@ -198,10 +202,47 @@ require_cmd() {
 # ============================================================================
 _git()      { command git "$@"; }
 _gh()       { command gh "$@"; }
+_glab()     { command glab "$@"; }
 _opencode() { command opencode "$@"; }
 _jq()       { command jq "$@"; }
 _setsid()   { exec setsid "$@"; }
 _hook_stat() { command stat "$@"; }
+
+# Platform detection (F-1): Auto-detect gitlab vs github
+# Resolution order: ADOS_PLATFORM env var > git remote > glab auth > default github
+detect_platform() {
+  # 1. Environment override takes precedence
+  if [[ -n "${ADOS_PLATFORM}" ]]; then
+    if [[ "${ADOS_PLATFORM}" == "github" || "${ADOS_PLATFORM}" == "gitlab" ]]; then
+      printf '%s' "${ADOS_PLATFORM}"
+      return 0
+    fi
+    log_warn "Invalid ADOS_PLATFORM value: '${ADOS_PLATFORM}' (must be 'github' or 'gitlab')"
+  fi
+
+  # 2. Detect from git remote URL
+  local remote_url
+  remote_url="$(_git remote get-url origin 2>/dev/null || true)"
+  if [[ "${remote_url}" == *"gitlab.com"* ]]; then
+    printf '%s' "gitlab"
+    return 0
+  elif [[ "${remote_url}" == *"github.com"* ]]; then
+    printf '%s' "github"
+    return 0
+  fi
+
+  # 3. Fallback: check if glab is authenticated
+  if command -v glab >/dev/null 2>&1; then
+    if glab auth status >/dev/null 2>&1; then
+      printf '%s' "gitlab"
+      return 0
+    fi
+  fi
+
+  # 4. Default to github (NFR-5)
+  printf '%s' "github"
+  return 0
+}
 
 # The hook return is deliberately data, never shell syntax. These private
 # helpers are duplicated in ceo-loop.sh so each installed wrapper is standalone.
@@ -1589,24 +1630,26 @@ Options:
   --stuck-minutes <n>         Minutes without progress before kill (default: 10)
   --max-restarts <n>          Max restart attempts (default: 10)
 
-Environment:
-  DELIVER_MAX_RESTARTS          Max restarts (default: 10)
-  DELIVER_STUCK_MINUTES         Stuck threshold in minutes (default: 10)
-  DELIVER_POLL_SECONDS          Activity poll interval (default: 60)
-  DELIVER_KILL_GRACE_SECONDS    SIGTERM grace before SIGKILL (default: 20)
-  PM_LIVENESS_TIMEOUT_SECONDS   Max seconds for the pm-liveness probe (default: 15)
-  ADOS_PRE_ITERATION_HOOK       Optional hook path (default: ~/.ados/hooks/pre-opencode-iteration)
-  ADOS_HOOK_SHUTDOWN_GRACE_SECONDS  Hook cleanup grace (default: 2)
-  ADOS_HOOK_ENV_ALLOWLIST       Default: empty. Built-in: OC_ADOS_AGENT_*_MODEL.
-                                Extra exact valid names require comma-separated explicit
-                                allowlist; credentials at operator risk. Values are
-                                data-only/literal and never logged.
-  DRY_RUN                       Dry-run mode
-  VERBOSE                       Debug output
+ Environment:
+   DELIVER_MAX_RESTARTS          Max restarts (default: 10)
+   DELIVER_STUCK_MINUTES         Stuck threshold in minutes (default: 10)
+   DELIVER_POLL_SECONDS          Activity poll interval (default: 60)
+   DELIVER_KILL_GRACE_SECONDS    SIGTERM grace before SIGKILL (default: 20)
+   PM_LIVENESS_TIMEOUT_SECONDS   Max seconds for the pm-liveness probe (default: 15)
+   ADOS_PRE_ITERATION_HOOK       Optional hook path (default: ~/.ados/hooks/pre-opencode-iteration)
+   ADOS_HOOK_SHUTDOWN_GRACE_SECONDS  Hook cleanup grace (default: 2)
+   ADOS_HOOK_ENV_ALLOWLIST       Default: empty. Built-in: OC_ADOS_AGENT_*_MODEL.
+                                 Extra exact valid names require comma-separated explicit
+                                 allowlist; credentials at operator risk. Values are
+                                 data-only/literal and never logged.
+   ADOS_PLATFORM                 Platform override: github | gitlab (default: auto-detect)
+   ADOS_BLOCKED_LABEL            Label for blocked state (default: human-input-needed)
+   DRY_RUN                       Dry-run mode
+   VERBOSE                       Debug output
 
-Hook context (wrapper-provided, not operator settings):
-  ADOS_HOOK_AGENT=pm; ADOS_HOOK_SCRIPT=deliver-ticket;
-  ADOS_HOOK_ENV_OUTPUT=fresh private absolute path; ADOS_HOOK_ENV_FORMAT=ADOS_HOOK_ENV_V1.
+ Hook context (wrapper-provided, not operator settings):
+   ADOS_HOOK_AGENT=pm; ADOS_HOOK_SCRIPT=deliver-ticket;
+   ADOS_HOOK_ENV_OUTPUT=fresh private absolute path; ADOS_HOOK_ENV_FORMAT=ADOS_HOOK_ENV_V1.
 
 Default invocation prints a delivery summary on stdout (key=value):
   result=<merged|blocked|pr-open|failed|finished>
@@ -1752,8 +1795,18 @@ main() {
 
   parse_args "$@"
 
+  # F-1: Platform detection (must run before require_cmd)
+  PLATFORM=""
+  PLATFORM="$(detect_platform)"
+  log_info "Detected platform: ${PLATFORM}"
+
+  # F-2: Conditional CLI dependency
   require_cmd git
-  require_cmd gh
+  if [[ "${PLATFORM}" == "gitlab" ]]; then
+    require_cmd glab
+  else
+    require_cmd gh
+  fi
   require_cmd jq
   # setsid is needed even for dry-run display; opencode only for real runs.
   require_cmd setsid

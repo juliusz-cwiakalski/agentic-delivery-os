@@ -40,6 +40,11 @@ readonly SUMMARY_LOG="${ROOT_DIR}/tmp/batch-deliver-summary.log"
 DRY_RUN="${DRY_RUN:-false}"
 VERBOSE="${VERBOSE:-false}"
 
+# Platform configuration
+readonly ADOS_PLATFORM="${ADOS_PLATFORM:-}"  # github | gitlab (empty = auto-detect)
+readonly ADOS_BLOCKED_LABEL="${ADOS_BLOCKED_LABEL:-human-input-needed}"
+readonly ADOS_MERGE_STRATEGY="${ADOS_MERGE_STRATEGY:-squash}"  # squash | merge | rebase
+
 # Parsed ticket arrays
 PARSED_TICKETS=()
 PARSED_BRANCHES=()
@@ -75,8 +80,45 @@ require_cmd() {
 # MOCKABLE WRAPPERS
 # ============================================================================
 _gh()  { command gh "$@"; }
+_glab(){ command glab "$@"; }
 _git() { command git "$@"; }
 _jq()  { command jq "$@"; }
+
+# Platform detection (F-1): Auto-detect gitlab vs github
+# Resolution order: ADOS_PLATFORM env var > git remote > glab auth > default github
+detect_platform() {
+  # 1. Environment override takes precedence
+  if [[ -n "${ADOS_PLATFORM}" ]]; then
+    if [[ "${ADOS_PLATFORM}" == "github" || "${ADOS_PLATFORM}" == "gitlab" ]]; then
+      printf '%s' "${ADOS_PLATFORM}"
+      return 0
+    fi
+    log_warn "Invalid ADOS_PLATFORM value: '${ADOS_PLATFORM}' (must be 'github' or 'gitlab')"
+  fi
+
+  # 2. Detect from git remote URL
+  local remote_url
+  remote_url="$(_git remote get-url origin 2>/dev/null || true)"
+  if [[ "${remote_url}" == *"gitlab.com"* ]]; then
+    printf '%s' "gitlab"
+    return 0
+  elif [[ "${remote_url}" == *"github.com"* ]]; then
+    printf '%s' "github"
+    return 0
+  fi
+
+  # 3. Fallback: check if glab is authenticated
+  if command -v glab >/dev/null 2>&1; then
+    if glab auth status >/dev/null 2>&1; then
+      printf '%s' "gitlab"
+      return 0
+    fi
+  fi
+
+  # 4. Default to github (NFR-5)
+  printf '%s' "github"
+  return 0
+}
 
 # ============================================================================
 # INPUT PARSING (pure functions)
@@ -549,14 +591,17 @@ Options:
   -v, --verbose               Enable debug output
   --tickets-file <path>       Read tickets from file (one per line)
 
-Environment:
-  DRY_RUN                     Dry-run mode
-  VERBOSE                     Debug output
+ Environment:
+   DRY_RUN                     Dry-run mode
+   VERBOSE                     Debug output
+   ADOS_PLATFORM               Platform override: github | gitlab (default: auto-detect)
+   ADOS_BLOCKED_LABEL          Label for blocked state (default: human-input-needed)
+   ADOS_MERGE_STRATEGY         Merge strategy: squash | merge | rebase (default: squash)
 
-Exit codes:
-  0 - All tickets succeeded
-  1 - One or more tickets failed
-  2 - Usage error
+ Exit codes:
+   0 - All tickets succeeded
+   1 - One or more tickets failed
+   2 - Usage error
 EOF
 }
 
@@ -598,7 +643,17 @@ parse_args() {
 main() {
   parse_args "$@"
 
-  require_cmd gh
+  # F-1: Platform detection (must run before require_cmd)
+  PLATFORM=""
+  PLATFORM="$(detect_platform)"
+  log_info "Detected platform: ${PLATFORM}"
+
+  # F-2: Conditional CLI dependency
+  if [[ "${PLATFORM}" == "gitlab" ]]; then
+    require_cmd glab
+  else
+    require_cmd gh
+  fi
   require_cmd jq
 
   local total=${#PARSED_TICKETS[@]}
