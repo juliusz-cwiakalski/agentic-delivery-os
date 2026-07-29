@@ -13,7 +13,7 @@ invoke before every PM/CEO spawn.
 
 ## Z.AI peak hours and quota rates
 
-From [Z.AI documentation](https://docs.z.ai):
+From [Z.AI documentation]([https://docs.z.ai](https://docs.z.ai/devpack/overview#usage-instruction)):
 
 > Supported models and Visual Understanding MCP share the same usage quota.
 > GLM-5.2 and GLM-5-Turbo consume quota at **3x during peak hours** and 2x
@@ -35,12 +35,12 @@ until exactly 06:00 UTC to start pausing, a delivery that started at 05:55
 would run the bulk of its iterations inside the 3x peak window. The hook
 therefore begins pausing **before** peak start by a configurable buffer.
 
-With the default buffer of **1.5 hours**, the effective pause window is:
+With the default buffer of **2 hours**, the effective pause window is:
 
 | | |
 |---|---|
-| **Effective pause window** | 04:30–10:00 UTC (5.5 hours) |
-| **Effective delivery window** | 10:00–04:30 UTC (18.5 hours) |
+| **Effective pause window** | 04:00–10:00 UTC (6 hours) |
+| **Effective delivery window** | 10:00–04:00 UTC (18 hours) |
 
 ## What the hook does
 
@@ -68,11 +68,11 @@ All variables are optional. Override them in your shell environment or
 |---|---|---|
 | `ADOS_ZAI_PEAK_START_UTC` | `21600` (06:00 UTC) | Z.AI peak start in UTC seconds-of-day |
 | `ADOS_ZAI_PEAK_END_UTC` | `36000` (10:00 UTC) | Z.AI peak end in UTC seconds-of-day |
-| `ADOS_ZAI_BUFFER_SECONDS` | `5400` (1.5h) | Start pausing this many seconds before peak start |
+| `ADOS_ZAI_BUFFER_SECONDS` | `7200` (2h) | Start pausing this many seconds before peak start |
 
 **Effective pause window** = `[peak_start - buffer, peak_end)`
 
-Default: `[21600 - 5400, 36000)` = `[04:30 UTC, 10:00 UTC)`
+Default: `[21600 - 7200, 36000)` = `[04:00 UTC, 10:00 UTC)`
 
 Example — reduce buffer to 30 minutes:
 
@@ -85,7 +85,7 @@ Example — shift for a different peak schedule:
 ```bash
 export ADOS_ZAI_PEAK_START_UTC=32400   # 09:00 UTC
 export ADOS_ZAI_PEAK_END_UTC=46800     # 13:00 UTC
-export ADOS_ZAI_BUFFER_SECONDS=5400    # 1.5h buffer → pause 07:30–13:00 UTC
+export ADOS_ZAI_BUFFER_SECONDS=7200    # 2h buffer → pause 07:00–13:00 UTC
 ```
 
 ## Prerequisites

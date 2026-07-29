@@ -11,10 +11,10 @@
 # Configurable via environment variables (all optional):
 #   ADOS_ZAI_PEAK_START_UTC   — peak start in UTC seconds-of-day (default: 21600 = 06:00 UTC)
 #   ADOS_ZAI_PEAK_END_UTC     — peak end in UTC seconds-of-day   (default: 36000 = 10:00 UTC)
-#   ADOS_ZAI_BUFFER_SECONDS   — pause this many seconds before peak start (default: 5400 = 1.5h)
+#   ADOS_ZAI_BUFFER_SECONDS   — pause this many seconds before peak start (default: 7200 = 2h)
 #
 # Effective pause window: [peak_start - buffer, peak_end)
-# Default: [04:30 UTC, 10:00 UTC)
+# Default: [04:00 UTC, 10:00 UTC)
 set -Eeuo pipefail
 set -o errtrace
 shopt -s inherit_errexit 2>/dev/null || true
@@ -24,7 +24,7 @@ IFS=$'\n\t'
 readonly ADOS_ZAI_PEAK_START_UTC="${ADOS_ZAI_PEAK_START_UTC:-21600}"  # 06:00 UTC
 readonly ADOS_ZAI_PEAK_END_UTC="${ADOS_ZAI_PEAK_END_UTC:-36000}"      # 10:00 UTC
 # Buffer: start pausing earlier because delivery takes 1–2h
-readonly ADOS_ZAI_BUFFER_SECONDS="${ADOS_ZAI_BUFFER_SECONDS:-5400}"   # 1.5h
+readonly ADOS_ZAI_BUFFER_SECONDS="${ADOS_ZAI_BUFFER_SECONDS:-7200}"   # 2h
 
 _now_utc_epoch() { date -u +%s; }
 _sleep() { sleep "$1"; }
