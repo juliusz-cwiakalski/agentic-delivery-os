@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # MIT License - see LICENSE file for full terms
-source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/templates/blueprints/zai-peak-hours-hook--install.sh
-ados_distribution: redistributable
+# source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/templates/blueprints/zai-peak-hours-hook--install.sh
+# ados_distribution: redistributable
 #
 # Blueprint: Install the Z.AI peak-hours pre-iteration hook.
 #
 # Copies the inactive example from scripts/hooks/pre-opencode-iteration-zai.sh
 # to the default hook path (~/.ados/hooks/pre-opencode-iteration) so that
 # deliver-ticket.sh and ceo-loop.sh pause during the Z.AI Coding Plan peak
-# window (04:30–10:00 UTC) when the configured model uses zai-coding-plan/.
+# window (04:00–10:00 UTC) when the configured model uses zai-coding-plan/.
 #
 # Prerequisites:
 #   - ADOS installed (scripts/install.sh --local or --global)
@@ -45,6 +45,6 @@ cp "${SRC}" "${HOOK_DST}"
 chmod +x "${HOOK_DST}"
 
 printf '[INFO] Z.AI peak-hours hook installed: %s\n' "${HOOK_DST}"
-printf '[INFO] Peak window: 04:30–10:00 UTC (activates only with zai-coding-plan/ models)\n'
+printf '[INFO] Peak window: 04:00–10:00 UTC (activates only with zai-coding-plan/ models)\n'
 printf '[INFO] Verify: ls -la %s\n' "${HOOK_DST}"
 printf '[INFO] Uninstall: rm -f %s\n' "${HOOK_DST}"
