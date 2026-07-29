@@ -352,7 +352,9 @@ flowchart TD
 > **Mode A (autonomous CEO):** in autonomous mode, the `@ceo` agent is the
 > merge authority. After `pr_creation`, the CEO verifies PM finalization (all
 > 11 phases complete in `chg-<ref>-pm-notes.yaml`), then merges approved PRs
-> itself via `gh pr merge --squash`. The CEO **must merge, not yield** — a
+> itself via the platform-appropriate squash-merge (`gh pr merge --squash` on
+> GitHub, `glab mr merge --squash` on GitLab; the CEO reads
+> `.ai/agent/pr-instructions.md` for the platform). The CEO **must merge, not yield** — a
 > ready, approved, PM-finalized PR is merged, not deferred indefinitely. Note
 > the per-ticket engine never merges: `deliver-ticket.sh` returns `pr-open`.
 > See `.opencode/agent/ceo.md` for the autonomous delivery model, and

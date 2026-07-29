@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-AUTONOMOUS-DELIVERY
 status: Current
 created: 2026-07-07
-last_updated: 2026-07-16
+last_updated: 2026-07-28
 owners: ["engineering"]
 service: delivery-os
-summary: "The unattended delivery neighborhood of the lifecycle: the two autonomous modes (Mode A — autonomous CEO loop; Mode B — manual batch), the bash delivery scripts (ceo-loop.sh, deliver-ticket.sh, batch-deliver.sh, pm-liveness.sh, opencode-session.sh), the AI-vs-script split, and the behavioral invariants (INV-DM-1..6) that keep unattended delivery converging instead of burning tokens. Liveness is multi-signal: recursive session-tree message traffic (parent_id traversal of the current session_message table) PLUS git/worktree activity; a race-free delivering marker tells ceo-loop.sh the CEO is blocked on a delivery. deliver-ticket.sh no longer merges."
+summary: "The unattended delivery neighborhood of the lifecycle: the two autonomous modes (Mode A — autonomous CEO loop; Mode B — manual batch), the bash delivery scripts (ceo-loop.sh, deliver-ticket.sh, batch-deliver.sh, pm-liveness.sh, opencode-session.sh), the AI-vs-script split, and the behavioral invariants (INV-DM-1..6) that keep unattended delivery converging instead of burning tokens. Liveness is multi-signal: recursive session-tree message traffic (parent_id traversal of the current session_message table) PLUS git/worktree activity; a race-free delivering marker tells ceo-loop.sh the CEO is blocked on a delivery. deliver-ticket.sh no longer merges. Since GH-148, deliver-ticket.sh and batch-deliver.sh are platform-aware: they auto-detect GitHub vs GitLab (env override > git remote > glab auth > default github) and route tracker/MR operations through a dispatch seam with JSON normalization, so GitLab deliveries report accurate results and populated PR URLs; ceo-loop.sh is unchanged (it delegates delivery and merges, so needs no platform detection)."
 links:
-  related_changes: ["GH-142", "GH-108", "GH-146"]
+  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148"]
   decisions: ["TDR-0002"]
   guides:
     - "doc/guides/delivery-modes.md"
@@ -67,6 +67,30 @@ Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it
   and its later children. This does not promise any provider/model binding or
   selected model. Canonical activation, lifecycle, protocol, security, and
   setting details are in [delivery-modes.md](../../guides/delivery-modes.md#optional-pre-iteration-hooks).
+- **Platform-aware verification (F-9, GH-148):** `deliver-ticket.sh` and
+  `batch-deliver.sh` auto-detect the tracker platform (GitHub or GitLab) once at
+  startup — resolution order: `ADOS_PLATFORM` env var, then the `origin` git
+  remote URL, then `glab auth status`, defaulting to GitHub. After detection,
+  only the matching CLI (`gh` or `glab`) is required (F-2: a GitLab-only machine
+  is no longer hard-blocked on `gh`). Issue and PR/MR operations route through a
+  single dispatch seam (`_tracker` / `_mr`); a JSON normalization shim presents
+  a common schema regardless of the divergent `gh --json` vs `glab --output json`
+  field shapes, so `classify_result` and `pr_url_for` are platform-agnostic. On
+  GitLab this makes deliveries report accurate `pr-open`/`merged`/`blocked`
+  results with a populated MR web URL, and eliminates the false "Could not fetch
+  issue state" warnings that misdiagnosed "wrong platform CLI" as a
+  network/rate-limit problem. `build_delivery_prompt` is platform-neutral (no
+  literal `gh` commands) so the PM prompt no longer contradicts a GitLab project
+  config. `batch-deliver.sh` Mode B supports GitLab end-to-end (list / CI-gate
+  via pipelines / merge), including GitLab merge-status polling with
+  stale-conflict no-op-push recovery. The blocked label
+  (`ADOS_BLOCKED_LABEL`) and merge strategy (`ADOS_MERGE_STRATEGY`) are
+  configurable, preserving the GitHub defaults. `ceo-loop.sh` is **not modified**
+  (OQ-3): it does not call the tracker today; it delegates delivery to
+  `deliver-ticket.sh` and merges to the `@ceo` agent. All existing GitHub
+  behavior is unchanged when the platform is GitHub; the `result`-value domain,
+  liveness, single-flight + JOIN, branch resolution, resume, and hook machinery
+  are untouched.
 
 ### Behavioral invariants (INV-DM-1..6)
 
@@ -77,7 +101,7 @@ These are the non-negotiable contract the tooling enforces. Full rationale and e
 | **INV-DM-1** | `deliver-ticket.sh` runs **foreground, never detached** — a caller blocks until merged/blocked/pr-open/failed. The CEO must never `setsid … & disown` it. |
 | **INV-DM-2** | `deliver-ticket.sh` is **single-flight + join, per repo working tree** — a live instance for the same ticket is *joined* (wait + classify), never raced with a duplicate PM. SIGTERM/SIGINT is propagated to the PM child (grace period → SIGKILL). |
 | **INV-DM-3** | `ceo-loop.sh` detects a **stuck** CEO (no session traffic **and** no healthy delivery in progress — checked via both the `--is-delivering` PID probe **and** the race-free delivering marker file) — not a healthy wait. Its primary job is stuck-CEO recovery; "parking while a delivery is in progress" is the CEO blocking on `deliver-ticket.sh`, not the loop's job. |
-| **INV-DM-4** | In Mode A the **`@ceo` is the merge authority** — it verifies the PR is approved **and** the PM has finalized all 11 phases (`chg-<ref>-pm-notes.yaml`) before `gh pr merge --squash`. "Merge-not-yield": a ready, approved, finalized PR is merged, not deferred indefinitely. |
+| **INV-DM-4** | In Mode A the **`@ceo` is the merge authority** — it verifies the PR is approved **and** the PM has finalized all 11 phases (`chg-<ref>-pm-notes.yaml`) before performing the platform-appropriate squash-merge (`gh pr merge --squash` on GitHub, `glab mr merge --squash` on GitLab; the CEO reads `.ai/agent/pr-instructions.md` for the platform). "Merge-not-yield": a ready, approved, finalized PR is merged, not deferred indefinitely. |
 | **INV-DM-5** | **Liveness = multi-signal progress, not process-alive.** The session-tree signal (recursive `session_message` traffic across the parent + child sessions) is combined with a git/worktree-activity signal; if EITHER shows recent activity the session is healthy. A hung LLM stream (process alive, both signals silent) is *stalled*, not slow. |
 | **INV-DM-6** | **One ticket in flight per repo working tree.** Parallel deliveries in different repos / independent clones are allowed (tracking is keyed on the working tree). |
 
@@ -105,7 +129,7 @@ Subcommands:           deliver-ticket.sh --is-delivering [REF]
 - **PM LLM stream hangs:** the liveness watchdog (INV-DM-5) sees no session traffic for ≥ threshold → kill-and-resume the PM; the session resumes from committed artifacts + pm-notes.
 - **Agent hits a forbidden-folder permission prompt:** same detection — no session traffic → stuck → kill+restart (autonomous mode must not block on an unseen prompt).
 - **opencode internally detaches its own grandchildren:** the signal trap kills the child's process group; grandchildren opencode itself `setsid`-detached (LLM transport, bash-tool subprocesses) can escape the group kill. Accepted known limitation; a defense-in-depth sweep by session id can be added if orphans are observed.
-- **GitHub API rate-limit during classification:** `classify_result` returns `unknown`; the iteration does not burn a restart slot.
+- **Tracker API rate-limit / network error during classification:** `classify_result` returns `unknown`; the iteration does not burn a restart slot. (Platform-aware since GH-148: on a healthy GitLab project this no longer misfires as a rate-limit — the dispatch seam uses the correct CLI.)
 - **Rebase conflict during Mode B merge:** an AI agent resolves conflicts, pushes, and the quality gates re-run before the squash-merge.
 
 ## Technical Architecture & Codebase Map
@@ -118,9 +142,9 @@ The guiding principle is the **AI-vs-script split**: the expensive, stateless, j
 
 | Path | Kind | Responsibility |
 |------|------|----------------|
-| `scripts/ceo-loop.sh` | Script (outer, Mode A) | Spawn one `@ceo` session at a time; invoke the optional hook before every spawn/resume; detect stuck CEO; resume previous session under token limit; honor durable stop signal |
-| `scripts/deliver-ticket.sh` | Script (per-ticket engine) | Single-flight + join; invoke the optional hook before every PM iteration; spawn/resume PM; log-progress liveness watchdog; kill-and-restart on stall; signal propagation; result classification; writes the delivering marker on its OWN path; `--is-delivering` / `--last-message` / `--resume-prompt` subcommands; **does not merge** |
-| `scripts/batch-deliver.sh` | Script (Mode B) | Sequential per-ticket delivery; pre-flight skip; rebase-before-merge + green-gate wait for human-approved PRs; squash-merge with PR title/description as commit message |
+| `scripts/ceo-loop.sh` | Script (outer, Mode A) | Spawn one `@ceo` session at a time; invoke the optional hook before every spawn/resume; detect stuck CEO; resume previous session under token limit; honor durable stop signal. **Not platform-aware** (OQ-3): delegates delivery to `deliver-ticket.sh` and merges to the `@ceo` agent, so needs no tracker access itself |
+| `scripts/deliver-ticket.sh` | Script (per-ticket engine) | Single-flight + join; invoke the optional hook before every PM iteration; spawn/resume PM; log-progress liveness watchdog; kill-and-restart on stall; signal propagation; **platform-aware result classification & PR URL resolution** (F-9); writes the delivering marker on its OWN path; `--is-delivering` / `--last-message` / `--resume-prompt` subcommands; **does not merge** |
+| `scripts/batch-deliver.sh` | Script (Mode B) | Sequential per-ticket delivery; pre-flight skip; rebase-before-merge + green-gate wait for human-approved PRs; **platform-aware Mode B merge** (GitHub `gh pr merge` / GitLab `glab mr merge`, with merge-status polling) using the PR title/description as commit message |
 | `scripts/pm-liveness.sh` | Script | Probe opencode session-message traffic across the recursive session tree (current `session_message` table); combine with git/worktree activity; degrade gracefully to the git/worktree signal if the session DB is unavailable |
 | `scripts/opencode-session.sh` | Script | Ticket-scoped opencode session manager (entry point for autonomous sessions; sets `delivery_mode: autonomous`) |
 | `scripts/hooks/pre-opencode-iteration-zai.sh` | Installed inactive example | Wait for 10:00 UTC during the Z.AI Coding Plan peak window when the configured CEO/PM model value uses the `zai-coding-plan/` prefix |
@@ -182,6 +206,9 @@ All settings are environment variables (CLI flag overrides where noted). Full ta
 | `ADOS_HOOK_ENV_ALLOWLIST` | empty | Comma-separated additional exact variable names authorized for hook return data; credential delegation is operator risk |
 | `ADOS_HOOK_RETRY_SECONDS` | `60` | CEO-only total wait between failed-hook attempts; the stop file is checked in chunks no longer than one second |
 | `ADOS_HOOK_MAX_FAILURES` | `5` | CEO-only consecutive hook-failure cap, separate from stuck-restart limits |
+| `ADOS_PLATFORM` | *(auto-detect)* | Platform override for `deliver-ticket.sh` / `batch-deliver.sh`: `github` \| `gitlab`. Empty = auto-detect via `ADOS_PLATFORM` env → git remote → `glab auth` → default `github` (F-9, GH-148) |
+| `ADOS_BLOCKED_LABEL` | `human-input-needed` | Label that `classify_result` treats as `blocked`, on either platform (F-9) |
+| `ADOS_MERGE_STRATEGY` | `squash` | `batch-deliver.sh` Mode B merge strategy: `squash` \| `merge` \| `rebase` — mapped to platform-appropriate flags (F-9) |
 
 ## Dependencies & Risks
 
