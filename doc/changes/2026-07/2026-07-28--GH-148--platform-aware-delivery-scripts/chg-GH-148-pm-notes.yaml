@@ -11,7 +11,7 @@ phases:
   review_fix: { started: "2026-07-28T10:00:00Z", completed: "2026-07-28T11:30:00Z" }
   quality_gates: { started: "2026-07-28T11:30:00Z", completed: "2026-07-28T12:00:00Z" }
   dod_check: { started: "2026-07-28T12:05:00Z", completed: "2026-07-28T12:15:00Z" }
-  pr_creation: { started: "2026-07-28T12:20:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-07-28T12:20:00Z", completed: "2026-07-28T12:35:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/149" }
 decisions:
   - text: "OQ-1 resolved (PM-decided): GitLab CI green-gate mirrors the existing GitHub _pr_has_no_checks_configured pattern — positively confirm 'no CI configured' via GitLab pipeline API (glab api projects/:id/pipelines or glab ci list). If no pipelines exist, that's legitimate green. If pipelines exist, poll until success/failed. This is safest and most consistent with the existing pattern."
     type: decision
