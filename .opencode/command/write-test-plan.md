@@ -61,7 +61,8 @@ Files:
 4. Extract F-#, AC-#, API-#, NFR-# from spec
 5. Checkout/create branch
 6. Delegate to `@test-plan-writer` agent (it has full template and rules)
-7. Report: path to created test plan, next step: `/run-plan <workItemRef>`
+7. After @test-plan-writer returns: trigger `/commit` with intent hint "add test plan for <workItemRef>" (unless "no commit" directive is present in the original request)
+8. Report: path to created test plan, next step: `/write-plan <workItemRef>`
 </process>
 
 <output>

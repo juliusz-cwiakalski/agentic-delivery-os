@@ -147,19 +147,19 @@ This plan delivers the git-operations responsibility refactor defined in [chg-GH
 
 **Tasks**:
 
-- [ ] **2.1** Delegate to `@toolsmith`: edit `.opencode/agent/pm.md` — add a branch-ensure step before the first delegation (checkout if exists, else create `<type>/<workItemRef>/<slug>`); record the branch in `pm-context.yaml` (DM-2).
-- [ ] **2.2** Delegate to `@toolsmith`: edit `.opencode/agent/pm.md` — add a `@committer` trigger after each delegated lifecycle phase returns (specification, test-planning, delivery-planning, dor-check, system-spec-update, review-fix), each with a phase-appropriate intent hint (e.g., "add spec for `<ref>`", "add test plan for `<ref>`").
-- [ ] **2.3** Delegate to `@toolsmith`: edit `.opencode/agent/pm.md` — add the `no commit` directive check that suppresses the trigger. Per the resolved OQ-T1: check for the existing bare-string `"no commit"` directive (do **not** introduce a new `directives.no_commit` field); if present, skip the `@committer` trigger.
-- [ ] **2.4** Delegate to `@toolsmith`: edit `.opencode/agent/pm.md` — add an explicit `@committer` trigger to commit the `@readiness-reviewer` verdict file after dor_check returns (F-5, DEC-4).
-- [ ] **2.5** Delegate to `@toolsmith`: edit `.opencode/agent/readiness-reviewer.md` — make it write the verdict and return without committing; add a note that the PM commits the verdict.
+- [x] **2.1** Delegate to `@toolsmith`: edit `.opencode/agent/pm.md` — add a branch-ensure step before the first delegation (checkout if exists, else create `<type>/<workItemRef>/<slug>`); record the branch in `pm-context.yaml` (DM-2).
+- [x] **2.2** Delegate to `@toolsmith`: edit `.opencode/agent/pm.md` — add a `@committer` trigger after each delegated lifecycle phase returns (specification, test-planning, delivery-planning, dor-check, system-spec-update, review-fix), each with a phase-appropriate intent hint (e.g., "add spec for `<ref>`", "add test plan for `<ref>`").
+- [x] **2.3** Delegate to `@toolsmith`: edit `.opencode/agent/pm.md` — add the `no commit` directive check that suppresses the trigger. Per the resolved OQ-T1: check for the existing bare-string `"no commit"` directive (do **not** introduce a new `directives.no_commit` field); if present, skip the `@committer` trigger.
+- [x] **2.4** Delegate to `@toolsmith`: edit `.opencode/agent/pm.md` — add an explicit `@committer` trigger to commit the `@readiness-reviewer` verdict file after dor_check returns (F-5, DEC-4).
+- [x] **2.5** Delegate to `@toolsmith`: edit `.opencode/agent/readiness-reviewer.md` — make it write the verdict and return without committing; add a note that the PM commits the verdict.
 
 **Acceptance Criteria**:
 
-- Must: AC-F1-1 (PM ensures branch + records it before first delegation).
-- Must: AC-F2-1 (PM triggers `@committer` after each delegated phase, unless `no commit`).
-- Must: AC-F5-1 (PM triggers `@committer` to commit the verdict).
-- Must: NFR-5 (`no commit` directive honored).
-- Should: intent hints are phase-appropriate so `@committer` derives good Conventional Commit messages (RSK-2 mitigation).
+- Must: AC-F1-1 (PM ensures branch + records it before first delegation). — PASSED (step 4a added)
+- Must: AC-F2-1 (PM triggers `@committer` after each delegated phase, unless `no commit`). — PASSED (per-phase triggers added in steps 4, 5, 7)
+- Must: AC-F5-1 (PM triggers `@committer` to commit the verdict). — PASSED (step 5 updated)
+- Must: NFR-5 (`no commit` directive honored). — PASSED (directive check added)
+- Should: intent hints are phase-appropriate so `@committer` derives good Conventional Commit messages (RSK-2 mitigation). — PASSED (intent hints specified per phase)
 
 **Affected code areas**:
 
@@ -442,4 +442,4 @@ Mapped from [chg-GH-151-test-plan.md](./chg-GH-151-test-plan.md) §5.
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
 | 1 | COMPLETED | 2026-08-04T00:00:00Z | 2026-08-04T00:30:00Z | 77f2997 | All six agents converted to pure writers; AC validated |
-| — | — | — | — | — | Execution not yet started |
+| 2 | COMPLETED | 2026-08-04T00:30:00Z | 2026-08-04T01:00:00Z | 6d70d4e | PM owns branch ensure + per-phase @committer triggers; AC validated |
