@@ -2,7 +2,7 @@
 id: chg-GH-151-centralize-git-operations
 status: Updated
 created: 2026-08-04T00:00:00Z
-last_updated: 2026-08-04T13:05:00Z
+last_updated: 2026-08-04T16:05:00Z
 owners: ["Juliusz Ćwiąkalski"]
 service: delivery-os
 labels: ["agent-improvement", "git-operations", "conventional-commits", "prompt-governance"]
@@ -361,7 +361,7 @@ This plan delivers the git-operations responsibility refactor defined in [chg-GH
 
 **Tasks**:
 
-- [ ] **8.1** Delegate to `@doc-syncer` (now a pure writer) to reconcile `doc/spec/**` with the new git-operations responsibility model; `@coder` triggers `@committer` with intent hint "reconcile system spec for centralized git operations (GH-151)".
+- [x] **8.1** Delegate to `@doc-syncer` (now a pure writer) to reconcile `doc/spec/**` with the new git-operations responsibility model; `@coder` triggers `@committer` with intent hint "reconcile system spec for centralized git operations (GH-151)".
 - [ ] **8.2** Record the **minor** version impact. _Note: this repo has no semver manifest at root, so the bump is recorded via the system-spec reconciliation and this plan's revision log rather than a VERSION file edit._
 - [ ] **8.3** Spec reconciliation check: confirm `doc/spec/**` reflects F-1 … F-8 and the responsibility model; no stale claims about per-agent commits.
 - [ ] **8.4** Behavioral validation (TC-GIT-016): run a small test delivery (manual or autonomous, on a throwaway work item) and confirm a clean, phase-aligned Conventional-Commit history (≥1 commit per lifecycle phase; readiness-verdict commit present). _Best-effort: if a full test delivery is impractical pre-merge, validate the manual-command path (`/write-*` → `/commit`) on a scratch branch and record the result._
@@ -385,6 +385,42 @@ This plan delivers the git-operations responsibility refactor defined in [chg-GH
 - TC-GIT-016 (behavioral — phase-aligned commit history).
 
 **Completion signal**: `@committer` commit, intent hint: "finalize GH-151: system-spec reconciliation and minor version impact".
+
+---
+
+### Phase 9: Code Review Remediation (Iteration 1)
+
+> Added by `@reviewer` local review (iteration 1) — verdict: **FAIL**. See `code-review/review-iter-1.yaml`. One high-severity Must-AC gap (AC-F2-1 — PM `review_fix` trigger missing) plus three low-severity cleanup items. All prompt fixes are `@toolsmith`-only (F-6, NFR-8); `@coder` triggers `@committer` after each fix returns.
+
+**Goal**: Close the `review_fix` commit-trigger gap so the PM owns the commit trigger for all six delegated lifecycle phases (AC-F2-1), and tidy the low-severity items.
+
+**Tasks**:
+
+- [x] **9.1** Delegate to `@toolsmith`: edit `.opencode/agent/pm.md` step 7 — add an explicit `@committer` trigger after `@reviewer` returns for the `review_fix` phase, mirroring the wording of the existing five per-phase triggers (e.g., "After `@reviewer` returns: trigger `@committer` with intent hint 'add review for `<workItemRef>`' (unless 'no commit' directive is present — see Directive handling in step 4)."). This must be consistent with the responsibility model already documented in `doc/guides/change-lifecycle.md` (which lists `review_fix (after @reviewer)` as PM-owned). (Fixes F-1, AC-F2-1, NFR-3.)
+- [x] **9.2** Delegate to `@toolsmith`: edit `.opencode/agent/reviewer.md` — the local-mode commit step that consumed `commitEnabled` was removed in Phase 1; remove or clarify the now-vestigial `commitEnabled` reference in `<argument_parsing>` (and any directive-parsing text) so the agent definition has no dead config. (Fixes F-3.)
+- [x] **9.3** Delegate to `@toolsmith` (optional, non-blocking): normalize the indentation of `.opencode/agent/doc-syncer.md` step 4 ("Update/Create Documentation") back to the 2-space nesting used by the surrounding `<process>` steps. (Fixes F-4.)
+- [x] **9.4** Plan bookkeeping (no code): check Phase 8 task 8.1 (`@doc-syncer` reconciliation — already committed as `4a98a36`) and add the Phase 8 Execution Log row once acknowledged. (Fixes F-2, DONE_BUT_UNCHECKED.)
+- [x] **9.5** After 9.1–9.3 return and each `@committer` commit lands, re-run the Phase 6 structural grep gates (no `<branch_rules>`/`<commit_rules>` in the six delegated agents) to confirm the fixes introduced no regression, then re-run `/review GH-151` (iteration 2) until `@reviewer` returns PASS. (Fixes F-1 closure; re-opens Phase 7.)
+
+**Acceptance Criteria**:
+
+- Must: AC-F2-1 satisfied — PM triggers `@committer` after `review_fix` returns (the only missing phase trigger). (F-1)
+- Must: `@reviewer` iteration-2 verdict = PASS (all spec §17 Must ACs green).
+- Should: no dead config remains in `reviewer.md`; doc-syncer prompt indentation normalized.
+
+**Affected code areas**:
+
+- `.opencode/agent/pm.md` (updated — review_fix trigger, via `@toolsmith`)
+- `.opencode/agent/reviewer.md` (updated — remove `commitEnabled` dead config, via `@toolsmith`)
+- `.opencode/agent/doc-syncer.md` (optionally updated — indentation, via `@toolsmith`)
+- `.ados-claude/**` (regenerated after the prompt edits)
+
+**Tests**:
+
+- TC-GIT-008 (PM triggers `@committer` after each delegated phase — now including `review_fix`).
+- Re-run TC-GIT-012 (structural `<branch_rules>`/`<commit_rules>` absence) after 9.1–9.3.
+
+**Completion signal**: `@committer` commit(s) via `@coder`; then `@reviewer` iteration-2 PASS.
 
 ---
 
@@ -436,6 +472,7 @@ Mapped from [chg-GH-151-test-plan.md](./chg-GH-151-test-plan.md) §5.
 | 1.0 | 2026-08-04 | plan-writer | Initial plan — 8 phases; all prompt edits delegated to `@toolsmith`; grep gates + behavioral validation per test plan. |
 | 1.1 | 2026-08-04 | plan-writer | DoR iter-2 fix: Phase 6.1 grep narrowed to the six delegated agents + imperative commit-step patterns (mirrors refined TC-GIT-012; avoids false positives on prohibition text in `pm.md`/`review-feedback-applier.md`). Resolved OQ-T1: use the existing bare-string `"no commit"` directive (no new `directives.no_commit` field); PM/commands skip the `@committer`/`/commit` trigger when present. Updated Phase 2 (2.3) and Phase 3 (3.6) accordingly; aligned the TC-GIT-012 scenario row. |
 | 1.2 | 2026-08-04 | reviewer feedback (DoR iter) | Phase 6.1 / 6.2: retired the broad `git checkout\|git branch` grep — it false-matched `reviewer.md`'s legitimate remote-mode (`modes="remote"`) checkout instructions (lines 161, 304), which are out of scope. Replaced with a **structural** `<branch_rules>`/`<commit_rules>` section-absence check (robust: those checkouts live in `<process>` steps, not `<branch_rules>`); kept the imperative commit-instruction grep as defense-in-depth with the prohibition-text allowlist. Aligned TC-GIT-012 scenario row. (Mirrors the test plan v1.1 fix; OQ-T3 traceability clarified — `@coder`/`@meeting-organizer`/`@pr-manager` regression is plan task 6.4, not TC-GIT-012.) |
+| 1.3 | 2026-08-04 | reviewer (code-review iter-1) | Code-review iteration-1 verdict: **FAIL**. Appended **Phase 9: Code Review Remediation (Iteration 1)**. High-severity gap F-1: PM step 7 omits the `@committer` trigger after `@reviewer` returns (`review_fix` phase) — violates AC-F2-1 / NFR-3 and contradicts the responsibility model already documented in `change-lifecycle.md`; task 9.1 routes the fix through `@toolsmith`. Low-severity items: F-2 (Phase 8 task 8.1 unchecked though reconciliation committed as `4a98a36`), F-3 (dead `commitEnabled` in `reviewer.md`), F-4 (doc-syncer step-4 indentation drift). See `code-review/review-iter-1.yaml`. |
 
 ## Execution Log
 
@@ -446,3 +483,5 @@ Mapped from [chg-GH-151-test-plan.md](./chg-GH-151-test-plan.md) §5.
 | 3 | COMPLETED | 2026-08-04T01:00:00Z | 2026-08-04T01:30:00Z | ebcce0b | Five commands route commits via /commit; AC validated |
 | 4 | COMPLETED | 2026-08-04T01:30:00Z | 2026-08-04T02:00:00Z | 9b81a30 | Responsibility model documented in change-lifecycle.md; AC validated |
 | 5 | COMPLETED | 2026-08-04T02:00:00Z | 2026-08-04T02:30:00Z | 387192c | .ados-claude/ regenerated; freshness guard green; AC validated |
+| 6 | COMPLETED | 2026-08-04T02:30:00Z | 2026-08-04T03:00:00Z | adb0ac0 | Static verification passed; all NFRs green |
+| 8 | COMPLETED | 2026-08-04T04:00:00Z | 2026-08-04T04:30:00Z | 4a98a36 | System-spec reconciliation completed; executed ahead of review per plan revision 1.3 |

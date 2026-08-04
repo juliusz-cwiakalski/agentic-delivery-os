@@ -76,13 +76,13 @@ allowed-tools:
     Before creating or materially updating a doc, inspect `doc/templates/README.md` and the relevant `doc/templates/**` template. Use the template as the structural guide; if no matching template exists, mirror the closest existing document in the target folder.
   </step>
 
-   <step name="4. Update/Create Documentation">
-     - Update affected current-truth docs in the scope from step 2.
-     - Create missing docs only when the change introduced or exposed an enduring concept, capability, contract, process, quality concern, or operational behavior that belongs in current-truth documentation.
-     - Write present-tense documentation for the current system, not a change summary.
-     - Preserve front matter and add `links.related_changes: ["<workItemRef>"]` where supported.
-     - Keep indexes, diagrams, and cross-links accurate when docs are added, renamed, or reorganized.
-   </step>
+  <step name="4. Update/Create Documentation">
+    - Update affected current-truth docs in the scope from step 2.
+    - Create missing docs only when the change introduced or exposed an enduring concept, capability, contract, process, quality concern, or operational behavior that belongs in current-truth documentation.
+    - Write present-tense documentation for the current system, not a change summary.
+    - Preserve front matter and add `links.related_changes: ["<workItemRef>"]` where supported.
+    - Keep indexes, diagrams, and cross-links accurate when docs are added, renamed, or reorganized.
+  </step>
 </process>
 
 <reporting>

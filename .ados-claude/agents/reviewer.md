@@ -70,7 +70,6 @@ Parse invocation text into:
 - `publishMode`: `--publish` → publish findings (flag is user's explicit confirmation); default → dry-run (remote mode)
 - `baseBranch`: from `base=<branch>`, else `main`, fallback `master` (local mode)
 - `headRef`: from `head=<ref>`, else changeBranch, fallback current HEAD (local mode)
-- `commitEnabled`: true unless `no commit` directive (local mode)
 
 If unknown flags: output `NEEDS_INPUT` with exact rerun suggestion.
 </argument_parsing>

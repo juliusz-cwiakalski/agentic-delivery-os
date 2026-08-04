@@ -352,6 +352,7 @@ If present: skip the `@committer` trigger for that phase. The directive format i
   - Iteration hint: "first review" or "re-review after remediation iteration N"
   - Example invocation: `/review GH-36` — the reviewer discovers spec, plan, and ticket from the workItemRef
   - The reviewer applies BOTH spec/plan compliance checks AND code quality heuristics (security, performance, correctness, etc.)
+- **After @reviewer returns:** trigger `@committer` with intent hint: "add review for <workItemRef>" (unless "no commit" directive is present — see Directive handling in step 4).
 - If reviewer returns `Status=FAIL` or adds remediation:
   - Ensure remediation tasks exist in `chg-<workItemRef>-plan.md`
   - Invoke `@coder` (via `/run-plan <workItemRef> execute all remaining phases no review`) to implement remediation
