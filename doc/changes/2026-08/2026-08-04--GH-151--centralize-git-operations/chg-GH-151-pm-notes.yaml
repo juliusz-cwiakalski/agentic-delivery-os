@@ -10,9 +10,9 @@ phases:
   delivery: { started: "2026-08-04T12:35:00Z", completed: "2026-08-04T12:55:00Z" }
   system_spec_update: { started: "2026-08-04T12:55:00Z", completed: "2026-08-04T13:00:00Z" }
   review_fix: { started: "2026-08-04T13:00:00Z", completed: "2026-08-04T13:15:00Z" }
-  quality_gates: { started: "2026-08-04T13:15:00Z", completed: null }
-  dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null, url: null }
+  quality_gates: { started: "2026-08-04T13:15:00Z", completed: "2026-08-04T13:25:00Z" }
+  dod_check: { started: "2026-08-04T13:25:00Z", completed: "2026-08-04T13:25:00Z" }
+  pr_creation: { started: "2026-08-04T13:25:00Z", completed: null, url: null }
 decisions:
   - text: "Staging scope: accept git add -A (PM ensures clean worktree between phases; do NOT enhance @committer with path-scope mode)."
     date: "2026-08-04"
