@@ -61,7 +61,8 @@ Files:
 3. Extract slug, type, owners, etc. from spec front matter
 4. Checkout/create branch
 5. Delegate to `@plan-writer` agent (it has full template and rules)
-6. Report: path to created plan, next step: `/write-test-plan <workItemRef>` or `/run-plan <workItemRef>`
+6. After @plan-writer returns: trigger `/commit` with intent hint "add plan for <workItemRef>" (unless "no commit" directive is present in the original request)
+7. Report: path to created plan, next step: `/run-plan <workItemRef>`
 </process>
 
 <output>

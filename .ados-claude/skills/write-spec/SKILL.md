@@ -62,7 +62,8 @@ Files:
 5. Determine `change.type` from context (feat/fix/refactor/etc.)
 6. Checkout/create branch
 7. Delegate to `@spec-writer` agent (it has the full template and rules)
-8. Report: path to created spec, next step: `/write-plan <workItemRef>`
+8. After @spec-writer returns: trigger `/commit` with intent hint "add spec for <workItemRef>" (unless "no commit" directive is present in the original request)
+9. Report: path to created spec, next step: `/write-plan <workItemRef>`
 </process>
 
 <output>

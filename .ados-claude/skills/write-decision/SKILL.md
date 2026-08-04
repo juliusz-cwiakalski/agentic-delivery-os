@@ -208,19 +208,16 @@ Before `## Context`, the template includes a deletable **Type-selection helper**
 7. Construct front matter per <front_matter_rules>:
    - On creation: set created = today (UTC); last_updated = today; status = Proposed; decision_type from step 3.
    - Include the optional `classification`, `governance`, `ai_assistance`, and revisit-trigger blocks from the planning summary when present.
-   - **R2/R3:** records are Proposed on the branch and should be Accepted when merged to main; never auto-Accept without human PR review/approval.
-   - On update: preserve created; set last_updated = today; retain existing status, decision_date, and review_date unless explicitly overridden by an authorized human decision.
-   - On Acceptance: set status = Accepted, decision_date = today (UTC), review_date = first scheduled post-implementation retrospective date, and ai_assistance.human_decider.
-8. Generate or update decision record body using <decision_structure> (the single structural definition mirroring the template), <authoring_rules>, and planning context:
-   - Render proportionally by rigor (R1 compact subset / R2 standard / R3 full) per <decision_structure>.
-   - For NEW records: synthesize complete sections from planning summary and referenced docs.
-   - For UPDATES: merge new planning information without rewriting historical sections; append to "Unresolved Questions", "Structured Retrospective", and "References" instead of erasing prior content.
-9. Write decision record markdown to fullPath.
-10. Stage ONLY this decision record file.
-11. Commit with message:
-    - On creation: `docs(<type>): add <TYPE>-<number>-<slug>` (e.g., `docs(adr): add ADR-0001-event-bus`)
-    - On update: `docs(<type>): refine <TYPE>-<number>-<slug>`
-12. Stop. Do not modify change specs, implementation plans, or system specs in this command; those are updated via their dedicated commands.
+    - **R2/R3:** records are Proposed on the branch and should be Accepted when merged to main; never auto-Accept without human PR review/approval.
+    - On update: preserve created; set last_updated = today; retain existing status, decision_date, and review_date unless explicitly overridden by an authorized human decision.
+    - On Acceptance: set status = Accepted, decision_date = today (UTC), review_date = first scheduled post-implementation retrospective date, and ai_assistance.human_decider.
+  8. Generate or update decision record body using <decision_structure> (the single structural definition mirroring the template), <authoring_rules>, and planning context:
+    - Render proportionally by rigor (R1 compact subset / R2 standard / R3 full) per <decision_structure>.
+    - For NEW records: synthesize complete sections from planning summary and referenced docs.
+    - For UPDATES: merge new planning information without rewriting historical sections; append to "Unresolved Questions", "Structured Retrospective", and "References" instead of erasing prior content.
+  9. Write decision record markdown to fullPath.
+  10. After @decision-advisor returns: trigger `/commit` with intent hint "add decision record <TYPE>-<number>" (unless "no commit" directive is present in the original request).
+  11. Stop. Do not modify change specs, implementation plans, or system specs in this command; those are updated via their dedicated commands.
 </process>
 
 <record_template_reference>
@@ -244,7 +241,7 @@ Before `## Context`, the template includes a deletable **Type-selection helper**
 - Verification criteria include measurable targets and timeframes.
 - No low-level implementation tasks, file paths, or git commands appear in the body.
 - If confirmUpdate=true (optional future flag), show diff prior to write.
-- Only the target decision record file is staged & committed; abort if other staged changes exist.
+- Only the target decision record file is written; commit is handled by /commit command.
 </validation>
 
 <notes>

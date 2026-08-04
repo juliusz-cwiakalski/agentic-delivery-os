@@ -226,14 +226,14 @@ This plan delivers the git-operations responsibility refactor defined in [chg-GH
 
 **Tasks**:
 
-- [ ] **4.1** Delegate to `@toolsmith` (or `@editor`): add a "Branch and commit responsibility model" section to `doc/guides/change-lifecycle.md` mirroring spec Appendix A — branch owner per mode (PM autonomous / commands manual / agents never), commit-trigger owner per phase, and the universal "`@committer` is the only commit path" rule.
-- [ ] **4.2** Review `AGENTS.md` (delivery-process table + agent descriptions); delegate any alignment edit to `@toolsmith` only where the current text implies commit behavior that the new model changes.
-- [ ] **4.3** Verify `change-lifecycle.md` retains its `ados_distribution` marker (redistributable) so `scripts/.tests/test-doc-distribution.sh` stays green.
+- [x] **4.1** Delegate to `@toolsmith` (or `@editor`): add a "Branch and commit responsibility model" section to `doc/guides/change-lifecycle.md` mirroring spec Appendix A — branch owner per mode (PM autonomous / commands manual / agents never), commit-trigger owner per phase, and the universal "`@committer` is the only commit path" rule.
+- [x] **4.2** Review `AGENTS.md` (delivery-process table + agent descriptions); delegate any alignment edit to `@toolsmith` only where the current text implies commit behavior that the new model changes.
+- [x] **4.3** Verify `change-lifecycle.md` retains its `ados_distribution` marker (redistributable) so `scripts/.tests/test-doc-distribution.sh` stays green.
 
 **Acceptance Criteria**:
 
-- Must: AC-F7-1 (guide documents branch ownership per mode, commit-trigger ownership per phase, universal `@committer` routing).
-- Should: `AGENTS.md` has no stale commit-behavior claims that contradict the new model.
+- Must: AC-F7-1 (guide documents branch ownership per mode, commit-trigger ownership per phase, universal `@committer` routing). — PASSED (new \"Branch and Commit Responsibility Model\" section added)
+- Should: `AGENTS.md` has no stale commit-behavior claims that contradict the new model. — PASSED (reviewed; AGENTS.md already states \"Commits MUST go through @committer\" and delegates correctly; no alignment edits needed)
 
 **Affected code areas**:
 
