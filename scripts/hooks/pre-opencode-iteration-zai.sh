@@ -70,12 +70,19 @@ _sleep() { sleep "$1"; }
 _zai_quota_fetch() {
   local tmp http_code body
   tmp="$(mktemp)"
-  http_code="$(curl -sS --max-time 15 -o "${tmp}" -w '%{http_code}' \
-    -X GET "https://api.z.ai/api/monitor/usage/quota/limit" \
-    -H "Authorization: Bearer ${ZAI_API_KEY}" \
-    -H "Accept: application/json" 2>/dev/null || true)"
+  # Auth header is fed via curl --config stdin so $ZAI_API_KEY never appears in
+  # the curl argv / process table (ps, /proc/<pid>/cmdline). The RETURN trap +
+  # guarded rm guarantee the temp file is cleaned up even on interruption
+  # mid-fetch. Contract preserved: stdout is "<http_code>\n<body>"; transport
+  # failure -> code "000" + empty body.
+  trap 'rm -f "${tmp}" 2>/dev/null || true' RETURN
+  http_code="$(printf 'header = "Authorization: Bearer %s"\n' "${ZAI_API_KEY}" \
+    | curl -sS --max-time 15 --config - \
+      -o "${tmp}" -w '%{http_code}' \
+      -X GET "https://api.z.ai/api/monitor/usage/quota/limit" \
+      -H "Accept: application/json" 2>/dev/null || true)"
   body="$(cat "${tmp}" 2>/dev/null || true)"
-  rm -f "${tmp}"
+  rm -f "${tmp}" 2>/dev/null || true
   printf '%s\n%s' "${http_code}" "${body}"
 }
 

@@ -209,30 +209,30 @@ touching code, so implementation follows contracts rather than guessing.
 
 **Tasks**:
 
-- [ ] **0.1** Read the authoritative inputs: `chg-GH-150-spec.md` (§5 F-1..F-6,
+- [x] **0.1** Read the authoritative inputs: `chg-GH-150-spec.md` (§5 F-1..F-6,
   §8 DM-1/3/4/5/6 + API-1, §9 NFRs, §16 affected components, §17 ACs, Decision
   Log DEC-1..11, NG-1..NG-7) and `chg-GH-150-test-plan.md` (TC-ZAI-001..071 +
   TC-HOOK-015..018, the §5 fixture catalog, the §3.2 seam-mocking mechanism, the
   §10.3 flags).
-- [ ] **0.2** Read the existing hook `scripts/hooks/pre-opencode-iteration-zai.sh`
+- [x] **0.2** Read the existing hook `scripts/hooks/pre-opencode-iteration-zai.sh`
   (71 lines) and enumerate its current seams/helpers: `_now_utc_epoch()`,
   `_sleep()`, `format_utc_epoch`, `zai_configured_model`, `is_zai_peak_window`,
   `seconds_until_window_end`, `main`. Read the existing
   `scripts/.tests/test-hook-zai-example.sh` (24 lines): the sourcing pattern, the
   `check` harness, and the four TC-HOOK-015..018 assertions to preserve.
-- [ ] **0.3** **MANDATORY**: read `.ai/rules/bash.md` in full before editing any
+- [x] **0.3** **MANDATORY**: read `.ai/rules/bash.md` in full before editing any
   bash file (strict mode, mockable seams §10.3, pure functions §10.2, testable
   main guard §10.4, embedded test framework §11, ShellCheck/shfmt §13). Note
   `.ai/rules/testing-strategy.md` for the documentation quality gates.
-- [ ] **0.4** Read the validated POC `quota-check-poc.sh` (ground-truth endpoint
+- [x] **0.4** Read the validated POC `quota-check-poc.sh` (ground-truth endpoint
   /fields source for API-1) and `chg-GH-150-pm-notes.yaml` (DEC-1..11, required
   test matrix groups A–H). Read the guide + blueprint to update
   (`doc/guides/zai-peak-hours-hook.md`, `doc/templates/blueprints/zai-peak-hours-hook--install.sh`).
-- [ ] **0.5** Confirm environment: on branch `feat/GH-150/quota-aware-delivery-wait`;
+- [x] **0.5** Confirm environment: on branch `feat/GH-150/quota-aware-delivery-wait`;
   change folder `doc/changes/2026-08/2026-08-04--GH-150--quota-aware-delivery-wait/`
   exists; `set-evn.sh` is locally gitignored (`.git/info/exclude`) and must never
   be staged (C-8).
-- [ ] **0.6** Record the three resolved OQs (log wording unpinned — behavioral
+- [x] **0.6** Record the three resolved OQs (log wording unpinned — behavioral
   pinning only; `_zai_quota_fetch` encoding = @coder's choice; TC-ZAI-071 depends
   on the Phase 4 guide update) as constraints the implementation must honor.
 
@@ -263,19 +263,19 @@ behavior change. The four existing TC-HOOK-015..018 assertions stay green.
 
 **Tasks**:
 
-- [ ] **1.1** Preserve the strict-mode header unchanged: `set -Eeuo pipefail`,
+- [x] **1.1** Preserve the strict-mode header unchanged: `set -Eeuo pipefail`,
   `set -o errtrace`, `shopt -s inherit_errexit`, `IFS=$'\n\t'`, and the testable
   main guard `if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then main "$@"; fi` (C-1).
-- [ ] **1.2** Define the condition-function contract (DM-1) as a documented
+- [x] **1.2** Define the condition-function contract (DM-1) as a documented
   extension point: a condition is a function `howLongToSleepDueTo<Reason>()`
   that (a) echoes exactly one non-negative integer to stdout = seconds to sleep
   (`0`/empty/error = no wait from this condition); (b) obtains time/HTTP strictly
   through the seams (`_now_utc_epoch`, `_zai_quota_fetch`); (c) emits at most one
   diagnostic line to stderr. Add a condition registry the driver iterates (v1
   registers peak now; quota is added in Phase 2).
-- [ ] **1.3** Introduce `ADOS_ZAI_MAX_SLEEP_LOOPS` (default `24`, DM-4) as a
+- [x] **1.3** Introduce `ADOS_ZAI_MAX_SLEEP_LOOPS` (default `24`, DM-4) as a
   configurable env knob (read at runtime, not `readonly`-blocked).
-- [ ] **1.4** Rewrite `main()` into the generic driver (F-1, DM-5): gate on
+- [x] **1.4** Rewrite `main()` into the generic driver (F-1, DM-5): gate on
   `zai-coding-plan/*` via `zai_configured_model` — if the model does not match,
   return `0` immediately and evaluate **no** conditions (AC-F1-1); otherwise loop
   { `max_sleep` = MAX over registered conditions; if `max_sleep == 0` return `0`;
@@ -283,7 +283,7 @@ behavior change. The four existing TC-HOOK-015..018 assertions stay green.
   `format_utc_epoch`; `_sleep "${max_sleep}"`; re-evaluate all conditions } until
   `max_sleep == 0`. Enforce `ADOS_ZAI_MAX_SLEEP_LOOPS`: on exceed, return `0` and
   emit exactly one `[WARN]` (loop-cap category) (AC-F1-2, NFR-6).
-- [ ] **1.5** Move the existing effective-pause-window logic
+- [x] **1.5** Move the existing effective-pause-window logic
   (`[peak_start - buffer, peak_end)`, default 04:00–10:00 UTC) into
   `howLongToSleepDueToPeakHours()`. **Preserve** the helper functions
   `is_zai_peak_window`, `seconds_until_window_end`, `zai_configured_model`, and
@@ -293,7 +293,7 @@ behavior change. The four existing TC-HOOK-015..018 assertions stay green.
   pure-bash (no `jq`, no network — C-5) and reuses `format_utc_epoch`. The peak
   `[INFO]` line keeps naming the peak reason + exact UTC wake time (behavioral
   pin; exact wording per OQ-1 is @coder's).
-- [ ] **1.6** Register the peak condition in the driver (Phase 2 adds quota).
+- [x] **1.6** Register the peak condition in the driver (Phase 2 adds quota).
   Confirm the non-opt-in observable contract is unchanged: same gate, same sleep
   target, exit `0`, one `[INFO]` line on sleep (AC-F2-1, RSK-6).
 
@@ -336,29 +336,29 @@ hygiene — completing the v1 condition set (peak + quota).
 
 **Tasks**:
 
-- [ ] **2.1** Add the `_zai_quota_fetch()` seam (DM-6, F-4) wrapping `curl`
+- [x] **2.1** Add the `_zai_quota_fetch()` seam (DM-6, F-4) wrapping `curl`
   against `GET https://api.z.ai/api/monitor/usage/quota/limit` with
   `Authorization: Bearer $ZAI_API_KEY` and `Accept: application/json`. **Pin the
   exact `(http_code, body)` return encoding** (Flag-3 = @coder's choice); document
   it so tests can follow. Include a "transport-failed" indicator for curl/network
   failure. Production behavior is unchanged by the seam.
-- [ ] **2.2** Add the env knobs (DM-4): read `ZAI_API_KEY` (read-only, never
+- [x] **2.2** Add the env knobs (DM-4): read `ZAI_API_KEY` (read-only, never
   logged in full) and `ADOS_ZAI_QUOTA_DISABLED` (`1` = opt out even with key).
   (`ADOS_ZAI_MAX_SLEEP_LOOPS` was added in Phase 1.) Do **not** introduce any
   cache or `ADOS_ZAI_QUOTA_CACHE_SECONDS` (DEC-9 / NG-2).
-- [ ] **2.3** Implement the activation gate (DM-4): the quota condition is active
+- [x] **2.3** Implement the activation gate (DM-4): the quota condition is active
   only when the model is `zai-coding-plan/*` AND `ZAI_API_KEY` is non-empty AND
   `jq` is present AND `curl` is present AND `ADOS_ZAI_QUOTA_DISABLED != 1`.
   Otherwise return `0` **silently** (no WARN, no fetch — NFR-5); the peak
   condition still applies independently (AC-F3-1, AC-F3-4).
-- [ ] **2.4** Implement `howLongToSleepDueToQuotaExhaustion()` (F-3, DM-2/DM-3,
+- [x] **2.4** Implement `howLongToSleepDueToQuotaExhaustion()` (F-3, DM-2/DM-3,
   API-1): when active, fetch via `_zai_quota_fetch()`; require envelope
   `code==200` AND `success==true`; parse `data.limits[]`; **ignore** `TIME_LIMIT`
   (NG-4); if **any** `TOKENS_LIMIT` entry has `percentage >= 100` (covers `==100`
   and `>100`, DEC-4), return the seconds until the **soonest** valid
   `nextResetTime` among the exhausted entries (epoch-ms → seconds), clamped to
   `>= 0`. Pre-empt at `percentage >= 100`; never wait for a 429 (NG-5).
-- [ ] **2.5** Implement the fail-open catalog (DM-3, NFR-4): on any of —
+- [x] **2.5** Implement the fail-open catalog (DM-3, NFR-4): on any of —
   network/curl failure, HTTP 401/403, non-200 envelope (`code != 200` or
   `success != true`), malformed JSON, `data.limits` absent/non-array,
   non-numeric `percentage`, or an exhausted entry with absent/malformed/unparseable
@@ -366,11 +366,11 @@ hygiene — completing the v1 condition set (peak + quota).
   and emit **exactly one** `[WARN]` line carrying a reason **category** only
   (e.g. `HTTP 401`, `malformed JSON`, `nextResetTime`). The peak condition still
   applies; the hook exit status is never altered (AC-F3-3).
-- [ ] **2.6** Enforce secret hygiene (F-5, NFR-7, DEC-10, C-7): never write the
+- [x] **2.6** Enforce secret hygiene (F-5, NFR-7, DEC-10, C-7): never write the
   full `ZAI_API_KEY` to stdout/stderr (at most a short prefix/suffix in a
   diagnostic); the raw response body is NEVER logged (no debug/verbose toggle in
   v1). Ensure every diagnostic path redacts.
-- [ ] **2.7** Register the quota condition in the driver. Confirm the two
+- [x] **2.7** Register the quota condition in the driver. Confirm the two
   conditions now compose via MAX + re-eval across elapsed time (AC-F1-2); confirm
   the non-opt-in path still performs 0 `jq` and 0 network calls (AC-NFR3-1).
 
@@ -419,7 +419,7 @@ assertion now but do not block the hook tests on it.
 
 **Tasks**:
 
-- [ ] **3.1** Extend the test harness (§3.2/§3.3): reuse the existing
+- [x] **3.1** Extend the test harness (§3.2/§3.3): reuse the existing
   `source "${SCRIPT_DIR}/hooks/pre-opencode-iteration-zai.sh"` line, the `check`
   harness, and the pass/fail counters. Add the seam-override utilities: a
   recording `_sleep` (writes to a per-test sleep log reset before each test); a
@@ -428,29 +428,29 @@ assertion now but do not block the hook tests on it.
   fixture; `command -v` stubs to simulate missing `jq`/`curl`; a `jq` call
   counter; a `_zai_quota_fetch` call counter. Scope env mutations per test
   (subshell or explicit unset) so nothing leaks (§4).
-- [ ] **3.2** Encode the Fixture Catalog (§5) as JSON data: valid-shape
+- [x] **3.2** Encode the Fixture Catalog (§5) as JSON data: valid-shape
   (F-OFF, F-5H, F-WEEK, F-BOTH, F-TIME-ONLY, F-OVERAGE, F-PAST, F-5H-FAR,
   F-CROSS); fail-open/transport (F-NET-FAIL, F-401, F-403, F-ENV-500,
   F-ENV-SUCCESS-FALSE, F-MALFORMED, F-NO-LIMITS, F-LIMITS-NOT-ARRAY,
   F-PCT-NON-NUMERIC, F-RESET-ABSENT, F-RESET-MALFORMED, F-RESET-UNPARSEABLE);
   hygiene (F-SECRET fake key, F-CANARY body). Pin the `_zai_quota_fetch` return
   encoding to whatever Phase 2 emitted.
-- [ ] **3.3** **Group A — peak regression** (AC-F2-1): TC-ZAI-001 (non-zai → no
+- [x] **3.3** **Group A — peak regression** (AC-F2-1): TC-ZAI-001 (non-zai → no
   sleep, no condition seam invoked), TC-ZAI-002 (off-peak → 0), TC-ZAI-003
   (in-peak → `_sleep`=21600 + `[INFO]` wake `2026-01-01T10:00:00Z`), TC-ZAI-004
   (in buffer → `_sleep`=21000), TC-ZAI-005 (custom peak vars — re-source in a
   subshell per §3.4 because the peak vars are `readonly` at source time).
-- [ ] **3.4** **Group B — quota fail-open** (AC-F3-3, NFR-4): TC-ZAI-010..018
+- [x] **3.4** **Group B — quota fail-open** (AC-F3-3, NFR-4): TC-ZAI-010..018
   (one `[WARN]` each for F-NET-FAIL/F-401/F-403/F-ENV-500/F-ENV-SUCCESS-FALSE/
   F-MALFORMED/F-NO-LIMITS+F-LIMITS-NOT-ARRAY/F-PCT-NON-NUMERIC/F-RESET-*),
   TC-ZAI-019 (fail-open + in-peak → peak sleep still applies), TC-ZAI-020
   (exactly-one-`[WARN]` count cross-cut across all B fixtures).
-- [ ] **3.5** **Group B′ — silent opt-out** (AC-F3-1, NFR-3/5): TC-ZAI-021
+- [x] **3.5** **Group B′ — silent opt-out** (AC-F3-1, NFR-3/5): TC-ZAI-021
   (`ZAI_API_KEY` unset → 0 stderr, fetch counter 0, `jq` counter 0), TC-ZAI-022
   (`jq` missing), TC-ZAI-023 (`curl` missing), TC-ZAI-024
   (`ADOS_ZAI_QUOTA_DISABLED=1` + key), TC-ZAI-025 (opt-out + in-peak → peak only,
   zero quota stderr).
-- [ ] **3.6** **Group C — exhaustion detection** (AC-F3-2): TC-ZAI-029
+- [x] **3.6** **Group C — exhaustion detection** (AC-F3-2): TC-ZAI-029
   (F-NO-TOKENS: `data.limits` = TIME_LIMIT-only or `[]` → quota returns 0, **no
   WARN** — proceed, not fail-open), TC-ZAI-030 (all pct<100 → 0), TC-ZAI-031
   (5h>=100 → 7200), TC-ZAI-032 (weekly>=100 → 86400), TC-ZAI-033 (both → soonest
@@ -462,32 +462,32 @@ assertion now but do not block the hook tests on it.
   (F-NONEXH-EARLIER: an exhausted entry whose reset is LATER than a
   non-exhausted entry's earlier reset → uses the exhausted (later) reset → proves
   min is taken over EXHAUSTED entries only).
-- [ ] **3.7** **Group D — combined peak+quota MAX** (AC-F1-2): TC-ZAI-040
+- [x] **3.7** **Group D — combined peak+quota MAX** (AC-F1-2): TC-ZAI-040
   (in-peak + F-5H-FAR → first `_sleep`=30000=max(21000,30000), stepping clock),
   TC-ZAI-041 (in-peak + quota OK → peak only 21000), TC-ZAI-042 (off-peak +
   F-5H → quota only 7200).
-- [ ] **3.8** **Group E — toggles** (AC-F3-4, AC-NFR8-1): TC-ZAI-045
+- [x] **3.8** **Group E — toggles** (AC-F3-4, AC-NFR8-1): TC-ZAI-045
   (`ADOS_ZAI_QUOTA_DISABLED=1` + key → no fetch, 0), TC-ZAI-046 (no cache file
   written; no `ADOS_ZAI_QUOTA_CACHE_SECONDS`; exactly 1 fetch/iteration).
-- [ ] **3.9** **Group F — safety/hygiene** (AC-F5-1, NFR-7): TC-ZAI-050 (full
+- [x] **3.9** **Group F — safety/hygiene** (AC-F5-1, NFR-7): TC-ZAI-050 (full
   F-SECRET never in stdout/stderr across opted-in paths), TC-ZAI-051 (F-CANARY
   raw body NEVER logged — no debug/verbose toggle in v1), TC-ZAI-052 (fail-open
   keeps exit 0 off-peak).
-- [ ] **3.10** **Group G — portability** (AC-F2-1, NFR-2, DEC-6): TC-ZAI-055
+- [x] **3.10** **Group G — portability** (AC-F2-1, NFR-2, DEC-6): TC-ZAI-055
   (`format_utc_epoch` correct sans GNU `date -d` across peak + quota epochs,
   extending TC-HOOK-015), TC-ZAI-056 (`! grep -q 'date -.*-d'` scoped to the
   **peak** path; `jq` allowed in the quota path).
-- [ ] **3.11** **Group H — re-evaluation loop** (AC-F1-2, DM-5, NFR-6/8):
+- [x] **3.11** **Group H — re-evaluation loop** (AC-F1-2, DM-5, NFR-6/8):
   TC-ZAI-060 (cross-time: F-CROSS → sleep log `[12600, 21000]`), TC-ZAI-061
   (condition clears → one sleep `[7200]`), TC-ZAI-062 (past reset on re-eval →
   no infinite loop `[3600]`), TC-ZAI-063 (`ADOS_ZAI_MAX_SLEEP_LOOPS=1` + fixed
   in-peak clock → ≤1 sleep + one loop-cap `[WARN]`), TC-ZAI-064 (fresh fetch each
   iteration → fetch counter ≥2 across a 2-iteration loop).
-- [ ] **3.12** **Meta** (AC-F4-1, NFR-1): TC-ZAI-070 — constructional guarantee
+- [x] **3.12** **Meta** (AC-F4-1, NFR-1): TC-ZAI-070 — constructional guarantee
   that every `_sleep` is the recording mock and every `_zai_quota_fetch` is the
   canned mock (0 real sleeps, 0 live network) + a guard that mocks are installed
   before any `main` call.
-- [ ] **3.13** **Docs assertion** (AC-F6-1, Flag-1): TC-ZAI-071 — grep
+- [x] **3.13** **Docs assertion** (AC-F6-1, Flag-1): TC-ZAI-071 — grep
   `doc/guides/zai-peak-hours-hook.md` for the condition-function contract
   keywords. **Dependency**: this case can only pass after the Phase 4 guide
   update; author it now and expect it to fail until Phase 4 lands (or run it as
@@ -527,27 +527,27 @@ contract — satisfying AC-F6-1 and unblocking TC-ZAI-071.
 
 **Tasks**:
 
-- [ ] **4.1** Update `doc/guides/zai-peak-hours-hook.md` with a **Quota-aware
+- [x] **4.1** Update `doc/guides/zai-peak-hours-hook.md` with a **Quota-aware
   waiting** section: opt-in via `ZAI_API_KEY` (+ `jq`/`curl` present); what it
   does (detects `TOKENS_LIMIT` `percentage >= 100`, sleeps until soonest
   `nextResetTime`); the fail-open guarantee (one `[WARN]`, peak still applies);
   the env knobs `ZAI_API_KEY`, `ADOS_ZAI_QUOTA_DISABLED`, `ADOS_ZAI_MAX_SLEEP_LOOPS`;
   silent behavior for non-opt-in users. **Preserve** the existing
   `ados_distribution: redistributable` frontmatter marker (already present).
-- [ ] **4.2** Add an **Extensibility — adding conditions / other providers**
+- [x] **4.2** Add an **Extensibility — adding conditions / other providers**
   section documenting the condition-function contract (DM-1) as the extension
   point: name shape `howLongToSleepDueTo<Reason>()`; stdout = one non-negative
   integer seconds; `0`/empty/error = no-wait; must obtain time/HTTP strictly via
   the seams (`_now_utc_epoch`, `_zai_quota_fetch`); ≤1 stderr line. Include a
   short how-to for (a) adding a condition and (b) building a provider-specific
   hook reusing the driver pattern (AC-F6-1, TC-ZAI-071).
-- [ ] **4.3** Update `doc/templates/blueprints/zai-peak-hours-hook--install.sh`
+- [x] **4.3** Update `doc/templates/blueprints/zai-peak-hours-hook--install.sh`
   info messages **only if needed** for accuracy (e.g. note the quota opt-in). Do
   not change install behavior. Preserve the `ados_distribution: redistributable`
   marker.
-- [ ] **4.4** Run the documentation drift guard: `bash scripts/.tests/test-doc-distribution.sh`
+- [x] **4.4** Run the documentation drift guard: `bash scripts/.tests/test-doc-distribution.sh`
   must pass (the guide is `redistributable`; markers + install set must agree).
-- [ ] **4.5** **Phase-7 / `system_spec_update` flag for `@doc-syncer` (F-6):** add
+- [x] **4.5** **Phase-7 / `system_spec_update` flag for `@doc-syncer` (F-6):** add
   `doc/spec/features/feature-autonomous-delivery.md` to the system-spec review list.
   It currently describes the Z.AI hook as "wait for 10:00 UTC during peak window" and
   needs a **one-line addition** noting the opt-in quota condition
@@ -592,25 +592,25 @@ secret hygiene, and confirm no Claude plugin rebuild is needed.
 
 **Tasks**:
 
-- [ ] **5.1** Run the hook suite: `bash scripts/.tests/test-hook-zai-example.sh`
+- [x] **5.1** Run the hook suite: `bash scripts/.tests/test-hook-zai-example.sh`
   — every TC-ZAI-001..071 + TC-HOOK-015..018 green.
-- [ ] **5.2** Run the aggregate: `bash scripts/test-all.sh` (includes
+- [x] **5.2** Run the aggregate: `bash scripts/test-all.sh` (includes
   `test-hook-regression.sh`, `test-ceo-loop.sh`, `test-deliver-ticket.sh`,
   `test-batch-deliver.sh` — the regression backbone that must stay green).
-- [ ] **5.3** Run the doc-distribution gate: `bash scripts/.tests/test-doc-distribution.sh`.
-- [ ] **5.4** Run ShellCheck + shfmt on touched scripts (`.ai/rules/bash.md` §13):
+- [x] **5.3** Run the doc-distribution gate: `bash scripts/.tests/test-doc-distribution.sh`.
+- [x] **5.4** Run ShellCheck + shfmt on touched scripts (`.ai/rules/bash.md` §13):
   `shellcheck scripts/hooks/pre-opencode-iteration-zai.sh scripts/.tests/test-hook-zai-example.sh`;
   `shfmt -i 2 -ci -bn -d` on the same. Fix or document exceptions inline.
-- [ ] **5.5** Confirm **no agent/command files changed** → the Claude plugin
+- [x] **5.5** Confirm **no agent/command files changed** → the Claude plugin
   build/sync (`scripts/build-claude-plugin.sh`) is NOT needed; `.ados-claude/` is
   untouched (AGENTS.md: never hand-edit `.ados-claude/`).
-- [ ] **5.6** Confirm license headers: `scripts/hooks/` is **not** in the
+- [x] **5.6** Confirm license headers: `scripts/hooks/` is **not** in the
   `add-header-location.sh` scope (default paths = `.opencode/agent`,
   `.opencode/command`, `doc/guides`, `doc/documentation-handbook.md`, `tools`);
   the existing hook intentionally has no header and none is required. The guide
   already carries its header. Confirm no spurious header was added to the hook or
   test file.
-- [ ] **5.7** Security final check (C-8, DEC-10): confirm `set-evn.sh` is not
+- [x] **5.7** Security final check (C-8, DEC-10): confirm `set-evn.sh` is not
   staged (`git status`); grep the full diff for the fake/real key and raw body to
   assert absence; confirm only the intended files (hook, test, guide, blueprint)
   are touched.
@@ -735,9 +735,9 @@ Phase 0 (preflight) ──► Phase 1 (driver + contract + peak refactor) ──
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| Phase 0 | — | — | — | — | — |
-| Phase 1 | — | — | — | — | — |
-| Phase 2 | — | — | — | — | — |
-| Phase 3 | — | — | — | — | — |
-| Phase 4 | — | — | — | — | — |
-| Phase 5 | — | — | — | — | — |
+| Phase 0 | done | 2026-08-04 | 2026-08-04 | 4b4ea9b | Preflight reads (spec/test-plan/bash rules/POC/pm-notes). Delivered together with Phases 1+2 in the single feat commit. No standalone commit (preflight only). |
+| Phase 1 | done | 2026-08-04 | 2026-08-04 | 4b4ea9b | Generic sleep-driver + condition contract + behavior-preserving peak refactor. TC-HOOK-015..018 green. |
+| Phase 2 | done | 2026-08-04 | 2026-08-04 | 4b4ea9b | Opt-in fail-open Z.AI quota condition + `_zai_quota_fetch` seam; secret hygiene; quota registered. |
+| Phase 3 | done | 2026-08-04 | 2026-08-04 | 7564e83 | Deterministic matrix TC-ZAI-001..071 via seams (0 live network, 0 real sleeps). TC-HOOK-015..018 preserved. |
+| Phase 4 | done | 2026-08-04 | 2026-08-04 | 6a712a6 | Guide quota + extensibility/condition-function contract sections; TC-ZAI-071 enabled; doc-distribution green. |
+| Phase 5 | done | 2026-08-04 | 2026-08-04 | — (no commit) | Quality gates green (test-hook-zai-example 53/0, test-all 13/13, doc-distribution, ShellCheck clean on hook). Evidence recorded in chg-GH-150-pm-notes.yaml. PM checkpoints: 3006f81 (mark delivery complete; DoR iter-3 + retro), 4fe54bc (system-spec reconciliation). |

@@ -215,7 +215,7 @@ scripts/deliver-ticket.sh --dry-run GH-999
 During the pause window you'll see a log line like:
 
 ```
-[INFO] (pre-opencode-iteration-zai) zai-coding-plan peak window; waiting until 2026-07-29T10:00:00Z
+[INFO] (pre-opencode-iteration-zai) peak-hours; waiting until 2026-07-29T10:00:00Z
 ```
 
 ## Uninstall
