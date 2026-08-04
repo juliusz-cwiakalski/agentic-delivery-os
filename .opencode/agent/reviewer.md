@@ -57,7 +57,7 @@ Two modes, one review process.
   - `--github` or `--gitlab`: force platform (remote mode)
   - `--publish`: publish findings to PR/MR (remote mode; default: dry-run)
   - `--dry-run`: explicit dry-run (remote mode; this is also the default)
-  - Directives (local mode): `base=<branch>`, `head=<ref>`, `no commit`, `dry run`, `preview only`
+  - Directives (local mode): `base=<branch>`, `head=<ref>`, `dry run`, `preview only`
   </invocation>
 </inputs>
 

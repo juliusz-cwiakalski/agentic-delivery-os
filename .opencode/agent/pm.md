@@ -279,8 +279,10 @@ When clarify_scope is complete (no blocking questions, human feedback received i
 **4a. Branch ensure (MANDATORY — do this FIRST in autonomous mode):**
 - Derive the branch name from the change: `<type>/<workItemRef>/<slug>` (where `<type>` is from the spec or inferred from ticket context: feat|fix|refactor|docs|test|chore|perf|build|ci|revert|style).
 - Check if the branch exists: `git branch --list <branch-name>`
-  - If exists: checkout the branch (`git checkout <branch-name>`)
-  - If not exists: create and checkout the branch (`git checkout -b <branch-name>`)
+  - If exists:
+    - Check `git status --porcelain` — if non-empty (dirty worktree): STOP and surface to user: "Worktree is dirty on resume. Commit or stash changes before proceeding." (prevents sweeping dirty files into the next phase's commit on resume after an interrupted run)
+    - If clean: checkout the branch (`git checkout <branch-name>`)
+  - If not exists: create and checkout the branch (`git checkout -b <branch-name>`). If the worktree has uncommitted files, they carry over to the new branch — warn but proceed (standard git behavior).
 - Record the branch in `.ai/local/pm-context.yaml` under `active_change.branch`.
 - If any error occurs: surface to user and STOP
 
