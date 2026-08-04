@@ -144,7 +144,7 @@ This is a prompt/documentation refactor change with no application code. The tes
 | TC-GIT-009 | Manual commands trigger /commit after agent returns | Happy Path | Important | High | AC-F2-2, NFR-4 |
 | TC-GIT-010 | /write-decision triggers /commit after @decision-advisor returns | Happy Path | Important | High | AC-F2-3 |
 | TC-GIT-011 | PM commits readiness-reviewer verdict after DoR check | Happy Path | Important | High | AC-F5-1 |
-| TC-GIT-012 | Grep across agents finds zero direct `git commit` (excluding @committer) | Negative | Critical | High | AC-F4-1, NFR-1, NFR-2 |
+| TC-GIT-012 | Structural check: six delegated agents have no `<branch_rules>`/`<commit_rules>` sections and zero imperative commit instructions (prohibition text allowlisted; reviewer remote-mode checkouts excluded) | Negative | Critical | High | AC-F4-1, NFR-1, NFR-2 |
 | TC-GIT-013 | change-lifecycle.md documents responsibility model | Happy Path | Minor | Medium | AC-F7-1 |
 | TC-GIT-014 | Claude plugin regenerates and freshness guard passes | Happy Path | Important | High | AC-F8-1, NFR-7 |
 | TC-GIT-015 | All prompt edits performed via @toolsmith (no hand-edits) | Process | Important | High | AC-F6-1, NFR-8 |
@@ -439,7 +439,7 @@ This is a prompt/documentation refactor change with no application code. The tes
 - Readiness-reviewer is pure writer (no commit)
 - PM triggers @committer to commit verdict file
 
-#### TC-GIT-012 - Grep across agents finds zero direct `git commit` (excluding @committer)
+#### TC-GIT-012 - Structural check: six delegated agents own no branch/commit rules and have zero imperative commit instructions
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
@@ -454,16 +454,15 @@ This is a prompt/documentation refactor change with no application code. The tes
 - All agent and command prompt modifications are complete
 
 **Steps**:
-1. Run grep for imperative commit patterns across 6 delegated agents: `rg "Commit with:|git commit -F|create a single commit|Stage ONLY|\.add\(|\.commit\(|git add|git commit" .opencode/agent/spec-writer.md .opencode/agent/test-plan-writer.md .opencode/agent/plan-writer.md .opencode/agent/doc-syncer.md .opencode/agent/reviewer.md .opencode/agent/decision-advisor.md`
-2. Verify grep returns zero matches (no imperative commit instructions in delegated agents)
-3. Run grep for branch-checkout operations across delegated agents: `rg "git checkout|git branch" .opencode/agent/spec-writer.md .opencode/agent/test-plan-writer.md .opencode/agent/plan-writer.md .opencode/agent/doc-syncer.md .opencode/agent/reviewer.md .opencode/agent/decision-advisor.md`
-4. Verify branch-checkout grep returns zero matches
-5. Allowlist check: If any matches exist in step 1, verify they are prohibition text only (e.g., "never use git commit", "no git commit") and not actionable instructions
+1. **Structural branch-ownership check (NFR-2)**: `rg "<branch_rules>" .opencode/agent/spec-writer.md .opencode/agent/test-plan-writer.md .opencode/agent/plan-writer.md .opencode/agent/doc-syncer.md .opencode/agent/reviewer.md .opencode/agent/decision-advisor.md` → must return 0 matches. A delegated agent that defines a `<branch_rules>` section owns branch logic, violating the pure-writer model. This deliberately replaces the earlier broad `git checkout|git branch` grep, which false-matched `reviewer.md`'s legitimate remote-mode (`modes="remote"`) checkout instructions at line 161 (`git checkout --detach <head_sha>`) and line 304 (`git checkout <original_branch>`); those live inside `<process>` steps, not inside a `<branch_rules>` section, and are out of scope for this change.
+2. **Structural commit-ownership check (NFR-1, NFR-2)**: `rg "<commit_rules>" .opencode/agent/spec-writer.md .opencode/agent/test-plan-writer.md .opencode/agent/plan-writer.md .opencode/agent/doc-syncer.md .opencode/agent/reviewer.md .opencode/agent/decision-advisor.md` → must return 0 matches.
+3. **Imperative commit-instruction check (defense-in-depth)**: `rg "Commit with:|git commit -F|create a single commit|Stage ONLY|\.add\(|\.commit\(|git add|git commit" .opencode/agent/spec-writer.md .opencode/agent/test-plan-writer.md .opencode/agent/plan-writer.md .opencode/agent/doc-syncer.md .opencode/agent/reviewer.md .opencode/agent/decision-advisor.md` → must return 0 actionable matches.
+4. Allowlist check: if any match appears in step 3, verify it is prohibition/guidance text only (e.g., "never use git commit", "no git commit") and not an actionable commit instruction; any actionable instruction must be removed via `@toolsmith`.
 
 **Expected Outcome**:
-- Zero matches for imperative commit patterns across the 6 delegated agents
-- Zero matches for branch-checkout operations across delegated agents
-- Any existing matches are prohibition text only (e.g., "never use git commit", "no git commit")
+- Zero matches for `<branch_rules>` across the 6 delegated agents (no delegated agent owns branch logic)
+- Zero matches for `<commit_rules>` across the 6 delegated agents (no delegated agent owns commit logic)
+- Zero actionable matches for imperative commit instructions (prohibition text allowlisted)
 
 #### TC-GIT-013 - change-lifecycle.md documents responsibility model
 
@@ -615,7 +614,7 @@ This is a prompt/documentation refactor change. The testing strategy adapts the 
 | TC-GIT-009 | N/A (manual read) | Manual review of command prompts | None | To Implement |
 | TC-GIT-010 | N/A (manual read) | Manual review of .opencode/command/write-decision.md | None | To Implement |
 | TC-GIT-011 | N/A (manual read) | Manual review of .opencode/agent/pm.md and .opencode/agent/readiness-reviewer.md | None | To Implement |
-| TC-GIT-012 | N/A (grep) | `rg "Commit with:|git commit -F|create a single commit|Stage ONLY|\.add\(|\.commit\(|git add|git commit" .opencode/agent/spec-writer.md .opencode/agent/test-plan-writer.md .opencode/agent/plan-writer.md .opencode/agent/doc-syncer.md .opencode/agent/reviewer.md .opencode/agent/decision-advisor.md` and `rg "git checkout|git branch" .opencode/agent/spec-writer.md .opencode/agent/test-plan-writer.md .opencode/agent/plan-writer.md .opencode/agent/doc-syncer.md .opencode/agent/reviewer.md .opencode/agent/decision-advisor.md` | None | To Implement |
+| TC-GIT-012 | N/A (grep) | `rg "<branch_rules>\|<commit_rules>" .opencode/agent/{spec-writer,test-plan-writer,plan-writer,doc-syncer,reviewer,decision-advisor}.md` (expect 0) and `rg "Commit with:\|git commit -F\|create a single commit\|Stage ONLY\|\\.add(\\|\\.commit(\\|git add\|git commit" .opencode/agent/{spec-writer,test-plan-writer,plan-writer,doc-syncer,reviewer,decision-advisor}.md` (expect 0 actionable; prohibition text allowlisted) | None | To Implement |
 | TC-GIT-013 | N/A (manual read) | Manual review of doc/guides/change-lifecycle.md | None | To Implement |
 | TC-GIT-014 | scripts/build-claude-plugin.sh | `bash scripts/build-claude-plugin.sh` then `bash scripts/.tests/test-doc-distribution.sh` | None | To Implement |
 | TC-GIT-015 | N/A (manual review) | Manual review of delivery plan | None | To Implement |
@@ -646,21 +645,22 @@ This is a prompt/documentation refactor change. The testing strategy adapts the 
 - The plugin build script (`scripts/build-claude-plugin.sh`) is executable and completes successfully
 - Manual test delivery for TC-GIT-016 can be performed without disrupting ongoing work (using a test workItemRef)
 - The readiness-reviewer verdict file is written to a known location (from spec: implies file in change folder)
-- The `no commit` directive is passed as a frontmatter flag or environment variable (exact mechanism delegated to plan-writer)
+- The `no commit` directive is a bare-string `"no commit"` directive (resolved in plan §OQ-T1 and implemented by tasks 2.3 / 3.6) — `@pm` (autonomous mode) and the five manual commands check for the plain string and skip the `@committer`/`/commit` trigger when present. It is **not** a frontmatter flag or environment variable; no `pm-context.yaml` schema migration is involved.
 
 ### 8.3 Open Questions
 
 | ID | Question | Context | Status | Owner |
 |----|----------|---------|--------|-------|
-| OQ-T1 | What is the exact mechanism for the `no commit` directive (frontmatter flag, environment variable, or other)? | The spec mentions the directive but does not define its format; the plan-writer will define this. | Pending plan definition | plan-writer |
+| OQ-T1 | What is the exact mechanism for the `no commit` directive (frontmatter flag, environment variable, or other)? | The spec mentions the directive but does not define its format. | Resolved: bare-string `"no commit"` directive — `@pm` and the five manual commands check for the plain string and skip the `@committer`/`/commit` trigger when present. Not a frontmatter flag or env var. See plan §OQ-T1 and tasks 2.3 / 3.6. | N/A |
 | OQ-T2 | Should TC-GIT-016 include a phase reopen scenario to verify reopen behavior? | The spec notes reopen behavior ("more on phase reopen") but does not mandate testing it; section 7.3 defers phase reopen testing. | Deferred per spec 7.3 | N/A |
-| OQ-T3 | How should we verify that @coder, @meeting-organizer, and @pr-manager remain unchanged (per NG-3)? | These agents are already correct per the spec; we assume they are not touched, but we may want a verification step. | Resolved: TC-GIT-012 covers this via grep (these agents should have no direct commits before and after) | N/A |
+| OQ-T3 | How should we verify that @coder, @meeting-organizer, and @pr-manager remain unchanged (per NG-3)? | These agents are already correct per the spec; we assume they are not touched, but we may want a verification step. | Resolved: covered by **plan task 6.4** (confirm already-correct agents untouched: `@coder`, `@meeting-organizer`, `@pr-manager` still delegate correctly), **not** TC-GIT-012 — TC-GIT-012 is scoped to the six delegated writers only. | N/A |
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-08-04 | test-plan-writer (auto-generated) | Initial test plan |
+| 1.1 | 2026-08-04 | reviewer feedback (DoR iter) | TC-GIT-012: replaced the broad `git checkout\|git branch` grep (which false-matched `reviewer.md`'s legitimate remote-mode checkout instructions at lines 161 and 304) with a **structural** `<branch_rules>`/`<commit_rules>` section-absence check; kept the imperative commit-instruction grep as defense-in-depth with the prohibition-text allowlist. Resolved OQ-T1: `no commit` is a bare-string directive (not a frontmatter flag/env var). Fixed OQ-T3 traceability: `@coder`/`@meeting-organizer`/`@pr-manager` regression is covered by **plan task 6.4**, not TC-GIT-012. |
 
 ## 10. Test Execution Log
 
