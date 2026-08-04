@@ -109,8 +109,8 @@ The spec/test-plan open questions are resolved and govern this plan:
   (`percentage >= 100` on any `TOKENS_LIMIT`), sleep-until-soonest-reset, clamp.
 - **F-4** Injectable test seams: preserve `_now_utc_epoch()` / `_sleep()`; add
   `_zai_quota_fetch()`.
-- **F-5** Safe secret handling: never log full `ZAI_API_KEY`; never log raw body
-  in production.
+- **F-5** Safe secret handling: never log full `ZAI_API_KEY`; the raw response
+  body is NEVER logged (no debug/verbose toggle in v1).
 - **F-6** Documentation & extension guide: quota section + extensibility /
   condition-function contract section.
 - New env knobs: `ZAI_API_KEY`, `ADOS_ZAI_QUOTA_DISABLED`, `ADOS_ZAI_MAX_SLEEP_LOOPS`.
@@ -153,8 +153,8 @@ The spec/test-plan open questions are resolved and govern this plan:
   exactly one `[WARN]` (reason category only), returns 0, leaves the peak
   condition applicable, and never alters the hook exit status.
 - **C-7 Secret hygiene (NFR-7)**: stderr/stdout contain 0 occurrences of the full
-  `ZAI_API_KEY` (prefix/suffix only) and, in production, 0 occurrences of the raw
-  body.
+  `ZAI_API_KEY` (prefix/suffix only); the raw response body is NEVER logged (no
+  debug/verbose toggle in v1).
 - **C-8 Security hard rule (DEC-10)**: `set-evn.sh` (owner's real key) is
   gitignored locally via `.git/info/exclude`; it MUST NEVER be staged or
   committed. Every commit delegation excludes it.
@@ -188,7 +188,8 @@ The spec/test-plan open questions are resolved and govern this plan:
 - Live network calls / real sleeps in CI: 0 across groups A–H.
 - Fail-open discipline: exactly one `[WARN]` per active-but-failed quota path;
   exit status never changed; peak still applies.
-- Secret leakage in stderr/stdout (production): 0 full-key, 0 raw-body.
+- Secret leakage in stderr/stdout: 0 full-key, 0 raw-body (the raw response body
+  is NEVER logged; no debug/verbose toggle in v1).
 - Peak-path portability: `format_utc_epoch` correct without GNU `date -d`;
   `! grep -q 'date -.*-d'` preserved for the peak path.
 
@@ -367,8 +368,8 @@ hygiene — completing the v1 condition set (peak + quota).
   applies; the hook exit status is never altered (AC-F3-3).
 - [ ] **2.6** Enforce secret hygiene (F-5, NFR-7, DEC-10, C-7): never write the
   full `ZAI_API_KEY` to stdout/stderr (at most a short prefix/suffix in a
-  diagnostic); in production mode never log the raw response body. Ensure every
-  diagnostic path redacts.
+  diagnostic); the raw response body is NEVER logged (no debug/verbose toggle in
+  v1). Ensure every diagnostic path redacts.
 - [ ] **2.7** Register the quota condition in the driver. Confirm the two
   conditions now compose via MAX + re-eval across elapsed time (AC-F1-2); confirm
   the non-opt-in path still performs 0 `jq` and 0 network calls (AC-NFR3-1).
@@ -382,8 +383,8 @@ hygiene — completing the v1 condition set (peak + quota).
 - Must: AC-F3-3 — every fail-open case → `0` + exactly one `[WARN]`; peak applies;
   exit status unchanged.
 - Must: AC-F3-4 — `ADOS_ZAI_QUOTA_DISABLED=1` + key → `0`, no fetch.
-- Must: AC-F5-1 — stderr/stdout never contain the full key; never the raw body in
-  production.
+- Must: AC-F5-1 — stderr/stdout never contain the full key; the raw response body
+  is NEVER logged (no debug/verbose toggle in v1).
 - Must: AC-NFR3-1 — non-opt-in path spawns 0 `jq`, 0 network.
 - Must: AC-NFR8-1 — ≤1 fetch per re-eval loop iteration; no cross-invocation
   cache (fetch behind the seam).
@@ -449,11 +450,18 @@ assertion now but do not block the hook tests on it.
   (`jq` missing), TC-ZAI-023 (`curl` missing), TC-ZAI-024
   (`ADOS_ZAI_QUOTA_DISABLED=1` + key), TC-ZAI-025 (opt-out + in-peak → peak only,
   zero quota stderr).
-- [ ] **3.6** **Group C — exhaustion detection** (AC-F3-2): TC-ZAI-030 (all
-  pct<100 → 0), TC-ZAI-031 (5h>=100 → 7200), TC-ZAI-032 (weekly>=100 → 86400),
-  TC-ZAI-033 (both → soonest 7200), TC-ZAI-034 (TIME_LIMIT-only → ignored → 0),
-  TC-ZAI-035 (==100 boundary), TC-ZAI-036 (>100 overage), TC-ZAI-037 (past
-  nextResetTime → clamp 0).
+- [ ] **3.6** **Group C — exhaustion detection** (AC-F3-2): TC-ZAI-029
+  (F-NO-TOKENS: `data.limits` = TIME_LIMIT-only or `[]` → quota returns 0, **no
+  WARN** — proceed, not fail-open), TC-ZAI-030 (all pct<100 → 0), TC-ZAI-031
+  (5h>=100 → 7200), TC-ZAI-032 (weekly>=100 → 86400), TC-ZAI-033 (both → soonest
+  7200), TC-ZAI-034 (TIME_LIMIT-only → ignored → 0), TC-ZAI-035 (==100 boundary),
+  TC-ZAI-036 (>100 overage), TC-ZAI-037 (past nextResetTime → clamp 0),
+  TC-ZAI-038 (F-MIXED-RESET: one exhausted entry with a bad `nextResetTime` +
+  another exhausted entry with a good reset → uses the good reset, **0 WARN** —
+  not fail-open, since a valid exhausted reset exists), TC-ZAI-039
+  (F-NONEXH-EARLIER: an exhausted entry whose reset is LATER than a
+  non-exhausted entry's earlier reset → uses the exhausted (later) reset → proves
+  min is taken over EXHAUSTED entries only).
 - [ ] **3.7** **Group D — combined peak+quota MAX** (AC-F1-2): TC-ZAI-040
   (in-peak + F-5H-FAR → first `_sleep`=30000=max(21000,30000), stepping clock),
   TC-ZAI-041 (in-peak + quota OK → peak only 21000), TC-ZAI-042 (off-peak +
@@ -463,8 +471,8 @@ assertion now but do not block the hook tests on it.
   written; no `ADOS_ZAI_QUOTA_CACHE_SECONDS`; exactly 1 fetch/iteration).
 - [ ] **3.9** **Group F — safety/hygiene** (AC-F5-1, NFR-7): TC-ZAI-050 (full
   F-SECRET never in stdout/stderr across opted-in paths), TC-ZAI-051 (F-CANARY
-  raw body never logged in production), TC-ZAI-052 (fail-open keeps exit 0
-  off-peak).
+  raw body NEVER logged — no debug/verbose toggle in v1), TC-ZAI-052 (fail-open
+  keeps exit 0 off-peak).
 - [ ] **3.10** **Group G — portability** (AC-F2-1, NFR-2, DEC-6): TC-ZAI-055
   (`format_utc_epoch` correct sans GNU `date -d` across peak + quota epochs,
   extending TC-HOOK-015), TC-ZAI-056 (`! grep -q 'date -.*-d'` scoped to the
@@ -641,7 +649,7 @@ The table maps every case/group to its implementation phase(s) and ACs.
 | TC-ZAI-002..005 | zai off-peak / in-peak / in-buffer / custom window | 1, 3 | AC-F2-1 |
 | Group B (TC-ZAI-010..020) | Quota fail-open → 0 + one WARN; peak still applies | 2, 3 | AC-F3-3, NFR-4 |
 | Group B′ (TC-ZAI-021..025) | Silent opt-out (no key / no jq / no curl / disabled) | 2, 3 | AC-F3-1, AC-NFR3-1, NFR-3, NFR-5 |
-| Group C (TC-ZAI-030..037) | Exhaustion detection (pct<100/5h/weekly/both/TIME-only/==100/>100/past) | 2, 3 | AC-F3-2 |
+| Group C (TC-ZAI-029..039) | Exhaustion detection (no-tokens/pct<100/5h/weekly/both/TIME-only/==100/>100/past/mixed-reset/nonexh-earlier) | 2, 3 | AC-F3-2 |
 | Group D (TC-ZAI-040..042) | Combined peak+quota MAX composition | 1, 2, 3 | AC-F1-2, DM-5 |
 | Group E (TC-ZAI-045..046) | Toggles: disabled=1 no fetch; no cache in v1 | 2, 3 | AC-F3-4, AC-NFR8-1, NFR-8 |
 | Group F (TC-ZAI-050..052) | Safety: no full key; no raw body; fail-open exit 0 | 2, 3 | AC-F5-1, NFR-7, NFR-4 |
@@ -671,7 +679,7 @@ The table maps every case/group to its implementation phase(s) and ACs.
 | AC-F3-3 | Fetch fails → 0 + one WARN; peak applies; exit unchanged | 2, 3 | 2.5, 3.4 |
 | AC-F3-4 | `ADOS_ZAI_QUOTA_DISABLED=1` + key → 0, no fetch | 2, 3 | 2.3, 3.8 |
 | AC-F4-1 | Seams override clock/sleep/HTTP → deterministic suite, 0 live/0 sleep | 1, 2, 3 | 1.1 (seams), 2.1, 3.1, 3.12 |
-| AC-F5-1 | stderr/stdout never full key; never raw body in production | 2, 3 | 2.6, 3.9 |
+| AC-F5-1 | stderr/stdout never full key; raw response body NEVER logged (no debug/verbose toggle in v1) | 2, 3 | 2.6, 3.9 |
 | AC-F6-1 | Guide documents condition-function contract + how-to | 3, 4 | 3.13, 4.2 |
 | AC-NFR3-1 | Non-opt-in → peak path spawns 0 jq, 0 network | 2, 3 | 2.7, 3.5 (TC-ZAI-021) |
 | AC-NFR8-1 | v1: ≤1 fetch per re-eval iteration; no cross-invocation cache | 2, 3 | 2.2, 2.7, 3.8, 3.11 |
