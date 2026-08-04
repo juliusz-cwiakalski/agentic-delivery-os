@@ -115,6 +115,10 @@ Delegate to these agents:
 
 </delegation_inventory>
 
+<commit_context_policy>
+When invoking `@committer`, use the canonical fields `workItemRef`, `outcome`, `why`, and `verification`. Fill them with actual resolved values: the active work item, the specific staged-change outcome, supported rationale from the ticket/spec/decision or delegate result, and checks actually observed. Omit unknown fields; never pass template/placeholders, generic filler, or phase metadata.
+</commit_context_policy>
+
 <workflow>
 <step id="0">Sync product state
 
@@ -295,15 +299,15 @@ Before delegating ANY work to ANY agent, verify `chg-<workItemRef>-pm-notes.yaml
 **Artifact-creation phases are STRICTLY SEQUENTIAL.** Wait for each phase to complete before delegating the next; each phase builds on the previous output (consumes the completed previous artifact(s)). NEVER delegate in parallel.
 
 1. Delegate **Spec** to `@spec-writer` with `workItemRef` and planning summary (specification phase) → WAIT for completion.
-   - **After @spec-writer returns:** trigger `@committer` with intent hint: "add spec for <workItemRef>" (unless "no commit" directive is present — see Directive handling below).
+   - **After @spec-writer returns:** trigger `@committer` per `<commit_context_policy>`, using the spec's actual outcome and supported problem/why (unless "no commit" directive is present — see Directive handling below).
    - Mark `specification` as completed in `chg-<workItemRef>-pm-notes.yaml`.
 
 2. Only then delegate **Test Plan** to `@test-plan-writer` with `workItemRef` (test_planning phase; consumes the completed spec) → WAIT.
-   - **After @test-plan-writer returns:** trigger `@committer` with intent hint: "add test plan for <workItemRef>" (unless "no commit" directive is present).
+   - **After @test-plan-writer returns:** trigger `@committer` per `<commit_context_policy>`, using the coverage outcome and supported risk/why (unless "no commit" directive is present).
    - Mark `test_planning` as completed in `chg-<workItemRef>-pm-notes.yaml`.
 
 3. Only then delegate **Plan** to `@plan-writer` with `workItemRef` (delivery_planning phase; consumes the completed spec + test plan) → WAIT.
-   - **After @plan-writer returns:** trigger `@committer` with intent hint: "add plan for <workItemRef>" (unless "no commit" directive is present).
+   - **After @plan-writer returns:** trigger `@committer` per `<commit_context_policy>`, using the delivery outcome and supported planning reason (unless "no commit" directive is present).
    - Mark `delivery_planning` as completed in `chg-<workItemRef>-pm-notes.yaml`.
 
 **Directive handling — "no commit" check:**
@@ -320,7 +324,7 @@ Before triggering `@committer` after each delegated phase returns, check if the 
 - Mark delivery_planning as completed and dor_check as started in `chg-<workItemRef>-pm-notes.yaml`
 - Delegate to `@readiness-reviewer` with workItemRef
 - `@readiness-reviewer` critiques spec + test-plan + plan vs ticket under an adversarial stance and emits `READY` or `NOT_READY`
-- After `@readiness-reviewer` returns: trigger `@committer` with intent hint: "add readiness verdict for <workItemRef>" (unless "no commit" directive is present — see Directive handling in step 4).
+- After `@readiness-reviewer` returns: trigger `@committer` per `<commit_context_policy>`, including the verdict outcome and any supported gate reason (unless "no commit" directive is present — see Directive handling in step 4).
 - On `NOT_READY`: reopen the relevant artifact-creation phase (`specification`, `test_planning`, or `delivery_planning`), NEVER `delivery`; re-delegate to the matching author agent; re-run dor_check until `READY` (max 3 iterations; escalate to human on stalemate)
 - On any phase reopening (DoR `NOT_READY`, review remediation, DoD gap, etc.), add a `retro` note to `chg-<workItemRef>-pm-notes.yaml`: gap found, where discovered, why it was not caught earlier, and process improvement.
 - On a surfaced decision needing human input: STOP and wait
@@ -341,7 +345,7 @@ Before triggering `@committer` after each delegated phase returns, check if the 
 <step id="7">System docs and review (phases 7-8)
 
 - Run `@doc-syncer` to reconcile system docs (system_spec_update phase)
-- **After @doc-syncer returns:** trigger `@committer` with intent hint: "reconcile system spec for <workItemRef>" (unless "no commit" directive is present — see Directive handling in step 4).
+- **After @doc-syncer returns:** trigger `@committer` per `<commit_context_policy>`, using the reconciled system behavior and supported documentation reason (unless "no commit" directive is present — see Directive handling in step 4).
 - Mark `system_spec_update` as completed in `chg-<workItemRef>-pm-notes.yaml`.
 - Read `@doc-syncer`'s report. If it lists residual documentation gaps, or you see a current-truth doc gap it missed, re-run `@doc-syncer` with the explicit gap list before review.
 - Invoke `@reviewer` for local review (review_fix phase), providing rich context:
@@ -351,7 +355,7 @@ Before triggering `@committer` after each delegated phase returns, check if the 
   - Iteration hint: "first review" or "re-review after remediation iteration N"
   - Example invocation: `/review GH-36` — the reviewer discovers spec, plan, and ticket from the workItemRef
   - The reviewer applies BOTH spec/plan compliance checks AND code quality heuristics (security, performance, correctness, etc.)
-- **After @reviewer returns:** trigger `@committer` with intent hint: "add review for <workItemRef>" (unless "no commit" directive is present — see Directive handling in step 4).
+- **After @reviewer returns:** trigger `@committer` per `<commit_context_policy>`, using the review outcome and supported finding/remediation reason (unless "no commit" directive is present — see Directive handling in step 4).
 - If reviewer returns `Status=FAIL` or adds remediation:
   - Ensure remediation tasks exist in `chg-<workItemRef>-plan.md`
   - Invoke `@coder` (via `/run-plan <workItemRef> execute all remaining phases no review`) to implement remediation

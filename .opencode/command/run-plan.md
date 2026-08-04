@@ -89,12 +89,12 @@ For each selected phase:
    d. Add/adjust tests when functional behavior changes.
    e. Run quick validations (typecheck/build/test subset).
    f. Mark task completed with concise evidence note.
-   g. If commitMode=per-task: stage only task changes + plan update, then `/commit`.
+   g. If commitMode=per-task: stage only task changes + plan update, then `/commit` using actual values for `workItemRef`, the task's specific `outcome`, supported `why` from the spec/plan, and observed `verification`.
 3. After tasks complete:
    a. Run full quality gates; capture PASS/FAIL summaries.
    b. Append evidence to acceptance criteria lines (once only).
    c. Append Execution Log entry.
-   d. If commitMode=per-phase: `/commit`.
+   d. If commitMode=per-phase: `/commit` using actual values for `workItemRef`, the completed work's specific `outcome`, supported `why` from the spec/plan, and observed `verification`.
 4. Stop after phasesToRun. If askForReview=true, pause with summary.
    </phase_execution_rules>
 
@@ -103,6 +103,7 @@ For each selected phase:
 <rule>Per-phase default; per-task if directive present.</rule>
 <rule>Ensure no unrelated changes bleed across commits.</rule>
 <rule>Tasks with no code changes: mark completed; commit with other changes.</rule>
+<rule>Pass only actual single-line values; omit unsupported fields and never pass template/placeholders or phase metadata.</rule>
 </commit_rules>
 
 <partial_failure_policy>

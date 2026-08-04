@@ -119,8 +119,8 @@ System documentation areas potentially updated:
 
 <commit_behavior>
 
-- Default: after @doc-syncer returns, trigger `/commit` with intent hint "reconcile system spec for <workItemRef>" (unless "no commit" directive is present in the original request).
-- If `contracts only` directive: scope becomes `contracts` instead of `spec`.
+- Default: after @doc-syncer returns, trigger `/commit` using actual values: the resolved `workItemRef`, the specific reconciled-system `outcome`, supported documentation `why`, and `verification` only when observed. Omit unknown fields; never pass template/placeholders or phase metadata. Skip when "no commit" is present.
+- If `contracts only` is set, describe the contract outcome in context; the detected workItemRef remains the commit scope.
 - `no commit`: skip the `/commit` trigger, show summary only.
 - Single Conventional Commit only (no multi-commit split per DEC-2).
 

@@ -119,7 +119,7 @@ Rules:
 
 The reviewer is a pure writer: it writes the review artifact and any remediation phase and returns with zero git operations (no staging, no commit). The command owns the commit trigger; @committer (via `/commit`) handles staging + committing.
 
-- Default: after @reviewer returns, trigger `/commit` with intent hint "add review for <workItemRef>" (unless "no commit" directive is present in the original request).
+- Default: after @reviewer returns, trigger `/commit` using actual values: the resolved `workItemRef`, the specific verdict/remediation `outcome`, supported finding reason as `why`, and `verification` only when observed. Omit unknown fields; never pass template/placeholders or phase metadata.
 - `no commit`: skip the `/commit` trigger; show summary only.
 - Dry run: no file writes (neither review artifact nor plan changes); include preview in output. No commit trigger.
   </commit_behavior>

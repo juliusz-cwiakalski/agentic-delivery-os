@@ -61,7 +61,7 @@ Files:
 3. Extract slug, type, owners, etc. from spec front matter
 4. Checkout/create branch
 5. Delegate to `@plan-writer` agent (it has full template and rules)
-6. After @plan-writer returns: trigger `/commit` with intent hint "add plan for <workItemRef>" (unless "no commit" directive is present in the original request)
+6. After @plan-writer returns: trigger `/commit` using actual values: the resolved `workItemRef`, the specific delivery-planning `outcome`, and supported planning `why`. Omit unknown fields; never pass template/placeholders or merely restate a workflow phase. Skip when "no commit" is present.
 7. Report: path to created plan, next step: `/run-plan <workItemRef>`
 </process>
 

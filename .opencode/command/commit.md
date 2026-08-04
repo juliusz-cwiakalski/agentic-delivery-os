@@ -13,18 +13,18 @@ claude:
 <purpose>Trigger the @committer agent to create exactly one Conventional Commit.</purpose>
 
 <inputs>
-  <optional>
-    <intent>$ARGUMENTS</intent>
-  </optional>
+  <arguments>$ARGUMENTS</arguments>
+  <formats>
+    <free_text>Any existing free-text intent remains valid.</free_text>
+    <structured>Recognized labels are `workItemRef`, `outcome`, `why`, and `verification`. In `key=value; ...` form, each value must be single-line and cannot contain semicolons. Fields are optional and order-independent. Text after an unrecognized or malformed field remains intent.</structured>
+  </formats>
 </inputs>
 
 <instructions>
-  <rule>Invoke `@committer` now.</rule>
+  <rule>Pass all `$ARGUMENTS` to `@committer` without dropping free text or structured fields, then invoke it now.</rule>
   <rule>Do not restate its workflow; do not add extra commentary.</rule>
   <rule>If blocked, surface the agent's message without alteration.</rule>
   <rule>If successful, return exactly the agent's output.</rule>
 </instructions>
 
-<intent>
-$ARGUMENTS
-</intent>
+<user_input><intent>$ARGUMENTS</intent></user_input>
