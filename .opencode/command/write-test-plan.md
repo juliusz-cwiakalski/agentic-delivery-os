@@ -61,7 +61,8 @@ Files:
 4. Extract F-#, AC-#, API-#, NFR-# from spec
 5. Checkout/create branch
 6. Delegate to `@test-plan-writer` agent (it has full template and rules)
-7. Report: path to created test plan, next step: `/run-plan <workItemRef>`
+7. After @test-plan-writer returns: trigger `/commit` using actual values: the resolved `workItemRef`, the specific coverage `outcome`, supported risk/reason as `why`, and `verification` only when observed. Omit unknown fields; never pass template/placeholders. Skip when "no commit" is present.
+8. Report: path to created test plan, next step: `/write-plan <workItemRef>`
 </process>
 
 <output>

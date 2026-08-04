@@ -1,0 +1,40 @@
+change_id: GH-151
+title: "Centralize git operations: PM owns branch setup, all commits go through @committer"
+delivery_mode: interactive
+phases:
+  clarify_scope: { started: "2026-08-04T12:10:00Z", completed: "2026-08-04T12:10:00Z" }
+  specification: { started: "2026-08-04T12:12:00Z", completed: "2026-08-04T12:15:00Z" }
+  test_planning: { started: "2026-08-04T12:15:00Z", completed: "2026-08-04T12:18:00Z" }  # reopened: DoR iter-1 found grep gate unachievable
+  delivery_planning: { started: "2026-08-04T12:18:00Z", completed: "2026-08-04T12:22:00Z" }
+  dor_check: { started: "2026-08-04T12:22:00Z", completed: "2026-08-04T12:35:00Z" }
+  delivery: { started: "2026-08-04T12:35:00Z", completed: "2026-08-04T12:55:00Z" }
+  system_spec_update: { started: "2026-08-04T12:55:00Z", completed: "2026-08-04T13:00:00Z" }
+  review_fix: { started: "2026-08-04T13:00:00Z", completed: "2026-08-04T13:15:00Z" }
+  quality_gates: { started: "2026-08-04T13:15:00Z", completed: "2026-08-04T13:25:00Z" }
+  dod_check: { started: "2026-08-04T13:25:00Z", completed: "2026-08-04T13:25:00Z" }
+  pr_creation: { started: "2026-08-04T13:25:00Z", completed: "2026-08-04T13:30:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/152" }
+decisions:
+  - text: "Staging scope: accept git add -A (PM ensures clean worktree between phases; do NOT enhance @committer with path-scope mode)."
+    date: "2026-08-04"
+  - text: "doc-syncer multi-commit split simplified to one commit (PM/command triggers @committer once)."
+    date: "2026-08-04"
+  - text: "ALL delegated agents are pure writers (doc-syncer, reviewer, decision-advisor included) — orchestrator (PM/command/coder) always owns commit trigger."
+    date: "2026-08-04"
+  - text: "readiness-reviewer verdict committed by PM triggering @committer after dor_check returns."
+    date: "2026-08-04"
+  - text: "All prompt changes via @toolsmith (per AGENTS.md: do not hand-edit agent/command files)."
+    date: "2026-08-04"
+  - text: "REFINEMENT: ALL agents invoked within a lifecycle phase are pure writers — including doc-syncer, reviewer, decision-advisor. The orchestrator (PM/command/coder) ALWAYS owns the commit trigger. Original proposal had doc-syncer/reviewer/decision-advisor delegate to @committer themselves; this was an unnecessary split. Refined principle: fewer exceptions, cleaner model. Documented in ticket comment."
+    date: "2026-08-04"
+  - text: "RETRO: DoR iter-1 found TC-GIT-012 grep gate unachievable — literal 'git commit' string appears in legitimate prohibition text (review-feedback-applier.md:32, pm.md:33), and the --invert-match flag is syntactically wrong. Test plan grep gate must scope to the 6 delegated agents and match imperative commit steps, not all occurrences. Gap caught at DoR, not during test-plan authoring."
+    type: retro
+    date: "2026-08-04"
+open_questions: []
+blockers: []
+notes:
+  - text: "Ticket created after analysis conversation. 4 design decisions confirmed by repo owner and embedded in ticket body. Complete inventory of all 24 agents + 20 commands grepped and categorized. This is a self-contained prompt+doc refactor — no code dependencies."
+    type: info
+    date: "2026-08-04"
+  - text: "GH-150 parked (barely started — only branch + stray file). Switched to GH-151."
+    type: info
+    date: "2026-08-04"

@@ -25,6 +25,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - Repo rules: if a tool runs repo workflows (build/test/docs), follow `AGENTS.md`.
 - Consistency: if a new tool overlaps an existing workflow area (change lifecycle, quality gates, docs, UI), match the established patterns unless explicitly diverging.
 - Prompt tuning: when updating existing tools, preserve intent and keep diffs minimal.
+- Current-state prompts: describe only current required behavior, inputs, outputs, and constraints. Keep evolution/history, old names, change-specific ticket/PR references used to narrate prompt/tool evolution or rationale, and migration rationale outside prompts; runtime tracker/PR contracts and generic examples are allowed. Runtime migration, compatibility, historical-record, or prior/current-comparison tools may state only execution-essential source and target states; express accepted aliases as current input contracts where possible.
 - Tool suites: when a workflow spans multiple tools, tune them together (contracts, arguments, outputs, delegation).
 - Hygiene: update this file whenever you add/rename/remove a tool or materially change its intent.
 - PM tracker config: `@pm` reads `.ai/agent/pm-instructions.md` (repo-specific Jira/GitHub workflow).
@@ -35,7 +36,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 
 ## Agents
 
-- `decision-advisor`: decisions of all types (architecture, product, business, technical, operating); decision record authoring (ADR/PDR/TDR/BDR/ODR); delegates bounded evidence gathering to `@external-researcher` for selection decisions _(formerly `architect`)_
+- `decision-advisor`: decisions of all types (architecture, product, business, technical, operating); decision record authoring (ADR/PDR/TDR/BDR/ODR); delegates bounded evidence gathering to `@external-researcher` for selection decisions
 - `decision-critic`: independent, read-only decision challenger; tri-state verdict (PASS / PASS_WITH_RISKS / REWORK)
 - `bootstrapper`: run ADOS inception for new or legacy projects
 - `ceo`: autonomous executive for ADOS delivery (Mode A) — manages the backlog, delivers tickets, verifies PM finalization, and merges approved PRs as the inner decision agent of `scripts/ceo-loop.sh`

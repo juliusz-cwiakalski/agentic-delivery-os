@@ -24,6 +24,7 @@ claude:
 <role>
   <mission>Rigorously review code changes against specification, implementation plan, code quality heuristics, and repository rules. Operates in two modes: local (ADOS pipeline) and remote (PR/MR platform).</mission>
   <non_goals>Never merge, approve, or close a PR/MR. Never modify source code files.</non_goals>
+  <pure_writer_note>[Local mode only] You are a pure writer: you write the review artifact and return with zero git operations. The command (e.g., `/review`) triggers `/commit` after you return.</pure_writer_note>
 </role>
 
 <modes>
@@ -56,7 +57,7 @@ Two modes, one review process.
   - `--github` or `--gitlab`: force platform (remote mode)
   - `--publish`: publish findings to PR/MR (remote mode; default: dry-run)
   - `--dry-run`: explicit dry-run (remote mode; this is also the default)
-  - Directives (local mode): `base=<branch>`, `head=<ref>`, `no commit`, `dry run`, `preview only`
+  - Directives (local mode): `base=<branch>`, `head=<ref>`, `dry run`, `preview only`
   </invocation>
 </inputs>
 
@@ -70,7 +71,6 @@ Parse invocation text into:
 - `publishMode`: `--publish` → publish findings (flag is user's explicit confirmation); default → dry-run (remote mode)
 - `baseBranch`: from `base=<branch>`, else `main`, fallback `master` (local mode)
 - `headRef`: from `head=<ref>`, else changeBranch, fallback current HEAD (local mode)
-- `commitEnabled`: true unless `no commit` directive (local mode)
 
 If unknown flags: output `NEEDS_INPUT` with exact rerun suggestion.
 </argument_parsing>
@@ -241,8 +241,6 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
     - Append revision log entry.
 
     **If NO findings:** report "No plan changes required."
-
-    **Commit (if enabled):** stage plan file, create Conventional Commit.
 
     **Structured report:**
     ```

@@ -39,7 +39,7 @@ Detail: [doc/guides/change-lifecycle.md](doc/guides/change-lifecycle.md)
 
 ### Orchestration
 - `pm` — orchestrate changes; manage tickets via MCP; never implements code
-- `decision-advisor` — decisions of all types (architecture, product, business, technical, operating); decision record authoring (ADR/PDR/TDR/BDR/ODR) _(formerly `architect`)_
+- `decision-advisor` — decisions of all types (architecture, product, business, technical, operating); decision record authoring (ADR/PDR/TDR/BDR/ODR)
 
 ### Decision review
 - `decision-critic` — independent, read-only decision challenger; tri-state verdict (PASS / PASS_WITH_RISKS / REWORK)
@@ -131,6 +131,7 @@ When adding or modifying agents, commands, or skills:
 - **Test through the delivery process** — run modified agents on a real change to validate.
 - **Update [.opencode/README.md](.opencode/README.md)** when adding, removing, or renaming tools.
 - **Keep prompts tight** — verbose prompts waste tokens and reduce quality; prefer XML structure for Claude models.
+- **Write current-state prompts** — Agent, command, and skill prompts describe only current required behavior, inputs, outputs, and constraints. Do not include prompt/tool evolution history, old filenames, change-specific ticket/PR references used to narrate prompt/tool evolution or rationale, migration rationale, or wording such as "formerly", "now", "previously", "no longer", "preserve the existing exception", or "was replaced". Runtime tracker/PR contracts and generic examples are allowed. Put rationale and history in tickets, comments, change artifacts, commit/PR descriptions, or decision records. A tool whose runtime responsibility includes migration, compatibility input, historical record maintenance, or prior/current comparison may state only the source and target states needed to execute that responsibility; phrase accepted aliases and inputs as current contracts where possible.
 - **Model configuration is separate** — models are assigned in `opencode*.jsonc` config files, not in agent definitions. Agent files describe behavior; config files define which model runs them.
 - **Register delivery infrastructure** — when adding scripts to `scripts/` or tools to `tools/` that are part of the delivery infrastructure, add them to the `ADOS_DELIVERY_SCRIPTS` or `ADOS_DELIVERY_TOOLS` arrays in [scripts/install.sh](scripts/install.sh) so they install into user projects.
 

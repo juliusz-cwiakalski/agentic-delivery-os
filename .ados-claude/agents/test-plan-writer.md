@@ -92,14 +92,10 @@ From existing TEST PLAN (if present):
 - Preserve: `created` timestamp, existing TC-IDs, execution log
   </field_extraction>
 
-<branch_rules>
-
-- Branch name format: `<changeType>/<workItemRef>/<slug>`
-- Git behavior:
-  1. Checkout/switch if exists
-  2. Else create branch
-  3. Only write and commit the test plan file
-     </branch_rules>
+<pure_writer_note>
+You are a pure writer: you write the test plan file and return with zero git operations.
+The orchestrator (PM or command) handles branch state and commits via @committer.
+</pure_writer_note>
 
 <test_plan_structure>
 TEST PLAN sections (EXACT order):
@@ -201,11 +197,7 @@ If TEST PLAN exists:
 - Append revision log entry
   </update_behavior>
 
-<commit_rules>
-First creation: `docs(test-plan): add test plan for <workItemRef>`
-Updates: `docs(test-plan): refine test plan for <workItemRef>`
-Only stage the test plan file.
-</commit_rules>
+
 
 <template_reading>
 Before generating the test plan, attempt to read the structural template:
@@ -224,13 +216,10 @@ Before generating the test plan, attempt to read the structural template:
 3. Locate change folder, spec, and plan per <discovery_rules>
 4. Read `.ai/rules/testing-strategy.md`; FAIL if missing
 5. Extract fields per <field_extraction>
-6. Checkout/create branch
-7. If test plan exists → apply <update_behavior>
-8. Construct test plan using <test_plan_structure> and <authoring_rules>
-9. Write: `<changeFolder>/chg-<workItemRef>-test-plan.md`
-10. Stage ONLY this file
-11. Commit per <commit_rules>
-12. STOP
+6. If test plan exists → apply <update_behavior>
+7. Construct test plan using <test_plan_structure> and <authoring_rules>
+8. Write: `<changeFolder>/chg-<workItemRef>-test-plan.md`
+9. Return (no git operations - orchestrator handles branch and commit)
 </process>
 
 <output_contract>
@@ -240,6 +229,7 @@ Before generating the test plan, attempt to read the structural template:
 - Explicit mapping from requirements to TC-IDs
 - Each scenario has test type, automation level, target layer
 - No leftover `<...>` placeholders
+- No git operations (orchestrator handles branch and commit)
   </output_contract>
 
 <validation>
@@ -257,4 +247,5 @@ Before generating the test plan, attempt to read the structural template:
 - Guides coding agents on test implementation
 - Your output may be returned for revision by the Definition of Ready gate (`dor_check`, phase 5, `@readiness-reviewer`) before delivery; respond to `@pm`'s re-delegation.
 - NEVER silently ignore gaps; use open questions and TODO markers
+- Pure writer: no git operations; orchestrator commits your output via @committer
 </notes>

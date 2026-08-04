@@ -87,6 +87,7 @@ If schemaVersion is unknown or required keys are missing: ignore the state file 
   - `--base <branch>` (or `--target <branch>`) OR a single first token `main|master|develop|...`
   - optional platform override: `--github` or `--gitlab`
   - `--refresh-tickets`: force re-fetch of ticket context even if `tickets-context.md` exists
+  - optional explicit tracker reference via the `workItemRef=` label
   </invocation>
 </inputs>
 
@@ -95,37 +96,36 @@ Parse invocation text into:
 
 - `desiredBaseBranch`:
   - from `--base <branch>` OR `--target <branch>`
-  - else from the first non-flag token
+  - else from the first non-flag token that is not the `workItemRef=` field
 - `platform`:
   - forced by `--github` or `--gitlab`
   - else detected (platform_detection)
 - `refreshTickets`:
   - true if `--refresh-tickets` is present
   - else false (use cached `tickets-context.md` if it exists)
+- `explicitWorkItemRef`: scalar value of `workItemRef=` when present; it must exactly match `<PREFIX>-<digits>`
 
 If unknown flags are provided: output `NEEDS_INPUT` with an exact rerun suggestion.
 </argument_parsing>
 
 <work_item_ref_detection>
-Detect an optional `workItemRef` (ticket id) to prefix the PR/MR title subject.
+Detect an optional `workItemRef` (ticket id) to occupy the PR/MR title scope.
 
 Format:
 
-- `WORKITEM-123` (uppercase prefix + hyphen + digits)
+- `<PREFIX>-<digits>`; preserve source casing exactly
 
-Sources (highest priority first):
+Resolve with structural sources only:
 
-- Current branch name (most reliable)
-- Existing open PR/MR title (if updating)
-- Commit subjects in the full review range (`<merge-base>..HEAD`)
-- Invocation text
+1. Caller source: `explicitWorkItemRef`; never scan other invocation text for identifiers.
+2. Branch source: parse only a branch matching `<type>/<workItemRef>/<slug>`, where the entire middle segment matches `<PREFIX>-<digits>`.
+3. If caller and branch both resolve and differ, STOP with both sources. If they agree, select it. If either resolves, select it and skip fallback.
+4. Fallback, only when caller and branch are unresolved:
+   - Existing PR/MR title: parse only a matching Conventional Commit scope, `type(<workItemRef>)!: subject`.
+   - Commit subjects in `<merge-base>..HEAD`: parse only matching Conventional Commit scopes; never scan subjects beyond the scope or scan commit bodies.
+   - Deduplicate exact values. Multiple distinct fallback references: STOP; one selects it; none means no work item.
 
-Rules:
-
-- If multiple candidates exist, pick the first match from the highest-priority source.
-- Do not treat `ADR-<digits>` as a ticket id.
-- When a ticket id is detected, ensure the generated PR/MR title subject starts with: `<workItemRef> `.
-- Never duplicate: if the subject already starts with the same `<workItemRef> ` (or contains it immediately after the colon), keep it as-is.
+Preserve selected casing exactly. Use the workItemRef only as title scope and remove duplicate occurrences from the subject. Never scan PR descriptions, ticket text, diffs, arbitrary title/commit tokens, or requirement IDs for title scope.
   </work_item_ref_detection>
 
 <ticket_context_enrichment>
@@ -133,7 +133,7 @@ When `workItemRef` is detected, fetch ticket context from external trackers to e
 
 <when_to_fetch>
 
-- At least one `workItemRef` was detected (step 5.1)
+- A `workItemRef` was detected (step 5.1)
 - MCP tools are available for the tracker type (Jira or GitHub Issues)
 - The ticket context file does not already exist OR `--refresh-tickets` flag is provided
   </when_to_fetch>
@@ -180,7 +180,7 @@ Tickets: <comma-separated workItemRefs>
 
 Rules:
 
-- If multiple `workItemRef` values are detected, fetch and include all (up to 5 tickets max)
+- Fetch only the single workItemRef resolved by `<work_item_ref_detection>`
 - Truncate long content to avoid context overload
 - Preserve formatting (Markdown) from ticket descriptions
 - If fetch fails for a ticket, note the error but continue with others
@@ -219,13 +219,13 @@ Title rules (match `@committer` heuristics):
 
 - `type(scope)!: subject` (scope and `!` optional)
 - type ∈ `feat|fix|perf|refactor|docs|test|build|ci|style|chore|revert`
-- scope: lowercase dominant module/dir; omit if unclear
-- subject: imperative, present tense, no trailing period, aim ≤ 72 chars
+- scope: exact workItemRef when known; otherwise lowercase dominant module/dir or omit if unclear
+- subject: imperative, present tense, outcome-focused, no filename, generic `update`/`changes`, phase number, or trailing period; total header aim ≤72 chars
 
 Ticket-in-title rule:
 
-- If `workItemRef` is detected (see work_item_ref_detection), the subject MUST start with `<workItemRef> `.
-  Example: `feat(users): PDEV-4 add createdAt field to user profiles`
+- If `workItemRef` is detected, it MUST occupy scope and appear nowhere else in the title.
+  Example: `feat(PDEV-4): expose profile creation time`
 
 Body guidance (use only sections that apply; keep it tight):
 
@@ -256,7 +256,7 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
   <step id="2">
     Ensure there are no uncommitted changes before generating the PR/MR summary:
     - If `git status --porcelain` is non-empty: you MUST invoke `@committer` now (do not ask the user; do not stop).
-      - Provide commit intent hint: "checkpoint changes before PR/MR".
+      - Provide the explicit invocation workItemRef when present; otherwise provide the structurally resolved branch workItemRef. Include supported user-supplied outcome/why only as actual values; do not add generic checkpoint intent or placeholders.
     - If `@committer` fails: STOP and surface the error.
     - After commit: verify `git status --porcelain` is empty; otherwise STOP.
   </step>
@@ -310,14 +310,14 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
   </step>
   <step id="5.1">
     Detect and fetch ticket context (if available):
-    - Extract all `workItemRef` candidates from: branch name, existing PR/MR title (if updating), commit subjects in full range.
-    - Deduplicate and validate format (uppercase prefix + hyphen + digits; exclude `ADR-*`).
-    - If at least one valid `workItemRef` is found AND `tmp/pr/<branchPath>/tickets-context.md` does not exist (or `--refresh-tickets` flag):
+    - Resolve one optional workItemRef from caller, branch, and existing-title sources exactly per `<work_item_ref_detection>`; do not scan arbitrary tokens or bodies.
+    - If those sources are unresolved, defer commit-scope fallback until merge-base is available in step 6.1.
+    - If a workItemRef is found AND `tmp/pr/<branchPath>/tickets-context.md` does not exist (or `--refresh-tickets` flag):
       - Determine tracker type per `<tracker_detection>`.
       - Fetch ticket data via MCP per `<mcp_operations>`.
       - Write `tmp/pr/<branchPath>/tickets-context.md` per `<ticket_context_enrichment>`.
     - If MCP tools are unavailable or fetch fails: log a warning and continue (do not block PR/MR creation).
-    - Store the primary `workItemRef` (first from highest-priority source) for title prefixing.
+    - Store the resolved workItemRef for title scope.
   </step>
   <step id="6">
     Resolve desired base branch:
@@ -342,6 +342,10 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
     - Always inspect commit list + stats for the full range.
     - For code-level review, prefer incremental range when available.
     - If this is the first run (or state reset): review the full range.
+
+    If workItemRef detection was deferred in step 5.1:
+    - Parse only canonical Conventional Commit scopes from `<merge-base>..HEAD` per `<work_item_ref_detection>`.
+    - Resolve zero or one workItemRef, STOP on multiple distinct values, and fetch ticket context when resolved.
 
   </step>
   <step id="6.2">
@@ -389,7 +393,7 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
       - Synthesize the business rationale and requirements; do NOT copy-paste raw ticket content.
       - Reference ticket URLs where relevant.
     - Write `tmp/pr/<branchPath>/description.md` per output_contract.
-    - Apply work_item_ref_detection and enforce the ticket-in-title rule when a workItemRef is available.
+    - Apply work_item_ref_detection and enforce the ticket-as-scope rule when a workItemRef is available.
     - Body should be reviewer-oriented, structured, and avoid raw diffs / path dumps.
 
     Append a short run entry to `review-log.md` capturing:

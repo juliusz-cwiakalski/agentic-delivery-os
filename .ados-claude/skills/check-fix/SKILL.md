@@ -24,5 +24,4 @@ Run quality gates and make sure everything is fine.
 If you find any issues then systematically fix them.
 If project specifies fast quality gates check the first execute only those.
 Once fast quality gates are passed then proceed to run the full quality gates and fix any issues found.
-Finally, create a single high-quality Conventional Commit with a clear message summarizing all changes made to fix the
-issues by delegating entirely to the @committer agent.
+Finally, delegate one commit to `@committer` using actual values for the specific fix `outcome`, supported failure `why`, and quality-gate `verification` actually observed. Include `workItemRef` only when structurally resolved from the branch's type/reference/slug segments; omit unknown fields and never pass placeholders.
