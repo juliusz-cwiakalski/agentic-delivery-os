@@ -35,7 +35,7 @@ This repository enforces a single source of truth for git operations: the orches
 **Autonomous mode** (PM-driven delivery):
 - The PM ensures the change branch exists and is checked out before its first delegation (step 4a of phase 1).
 - Branch name format: `<type>/<workItemRef>/<slug>` (e.g., `feat/GH-123/some-feature`)
-- The PM records the branch in `chg-<workItemRef>-pm-notes.yaml` and `.ai/local/pm-context.yaml`.
+- The PM records the branch in `.ai/local/pm-context.yaml` under `active_change.branch`.
 - Delegated agents never touch branch state (no checkout, create, or switch operations).
 
 **Manual mode** (command-driven):
@@ -48,7 +48,7 @@ This repository enforces a single source of truth for git operations: the orches
 - The PM triggers `@committer` after each delegated lifecycle phase returns, with a phase-appropriate intent hint (e.g., "add spec for GH-123", "add test plan for GH-123").
 - Phases with commit triggers: `specification` (after @spec-writer), `test_planning` (after @test-plan-writer), `delivery_planning` (after @plan-writer), `dor_check` (after @readiness-reviewer verdict), `system_spec_update` (after @doc-syncer), and `review_fix` (after @reviewer).
 - The PM commits the `@readiness-reviewer` verdict file for traceability of each DoR iteration.
-- The `no commit` directive (bare string in `chg-<workItemRef>-pm-notes.yaml` directives array or in the original request) suppresses the trigger for a phase.
+- The `no commit` directive (a bare string in the original delegation request or command invocation) suppresses the trigger for a phase.
 
 **Manual mode** (command-driven):
 - Each manual command triggers `/commit` (which invokes `@committer`) after the delegated agent returns, with an appropriate intent hint.

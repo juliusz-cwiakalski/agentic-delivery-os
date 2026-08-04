@@ -16,7 +16,7 @@ Generate a COMPLETE, implementation-agnostic CHANGE SPECIFICATION from planning 
 User invocation: `/write-spec <workItemRef>`
 
 Inputs other than `workItemRef` MUST be sourced from the active planning context; NOTHING may be invented.
-Resulting spec becomes authoritative input for `/write-plan`.
+Resulting spec becomes authoritative input for `/write-test-plan` then `/write-plan`.
 </purpose>
 
 <inputs>
@@ -53,18 +53,18 @@ Files:
 6. Checkout/create branch
 7. Delegate to `@spec-writer` agent (it has the full template and rules)
 8. After @spec-writer returns: trigger `/commit` with intent hint "add spec for <workItemRef>" (unless "no commit" directive is present in the original request)
-9. Report: path to created spec, next step: `/write-plan <workItemRef>`
+9. Report: path to created spec, next step: `/write-test-plan <workItemRef>`
 </process>
 
 <output>
 After successful execution:
 - Created file path
 - Branch name
-- Recommendation: "Run `/write-plan <workItemRef>` to generate the implementation plan"
+- Recommendation: "Run `/write-test-plan <workItemRef>` to generate the test plan"
 </output>
 
 <constraints>
 - No implementation details in the spec
 - Only the spec file may be written
-- Await human approval before `/write-plan`
+- Await human approval before `/write-test-plan`
 </constraints>

@@ -236,12 +236,12 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
     - Determine next phase number (X = max existing phase + 1).
     - Construct: "Phase X: Code Review Remediation (Iteration N)".
     - List specific, actionable tasks per finding.
-     - Append to implementation plan (do not merge into previous remediation).
-     - Append revision log entry.
+    - Append to implementation plan (do not merge into previous remediation).
+    - Append revision log entry.
 
-     **If NO findings:** report "No plan changes required."
+    **If NO findings:** report "No plan changes required."
 
-     **Structured report:**
+    **Structured report:**
     ```
     Status: PASS | FAIL
     Remediation Phase: ADDED | NONE

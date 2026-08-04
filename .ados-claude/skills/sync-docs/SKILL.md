@@ -122,17 +122,17 @@ System documentation areas potentially updated:
 
 <diff_generation>
 
- - For each target file, compute semantic diff vs current content:
-   - If unchanged after transformation, skip write.
-   - If changed, write file (no staging — command will trigger `/commit`).
- - Provide summary: added files, updated files, skipped (unchanged), warnings (preconditions not met or forced).
- 
- <commit_behavior>
- 
- - Default: after @doc-syncer returns, trigger `/commit` with intent hint "reconcile system spec for <workItemRef>" (unless "no commit" directive is present in the original request).
- - If `contracts only` directive: scope becomes `contracts` instead of `spec`.
- - `no commit`: skip the `/commit` trigger, show summary only.
- - Single Conventional Commit only (no multi-commit split per DEC-2).
+- For each target file, compute semantic diff vs current content:
+  - If unchanged after transformation, skip write.
+  - If changed, write file (no staging — command will trigger `/commit`).
+- Provide summary: added files, updated files, skipped (unchanged), warnings (preconditions not met or forced).
+
+<commit_behavior>
+
+- Default: after @doc-syncer returns, trigger `/commit` with intent hint "reconcile system spec for <workItemRef>" (unless "no commit" directive is present in the original request).
+- If `contracts only` directive: scope becomes `contracts` instead of `spec`.
+- `no commit`: skip the `/commit` trigger, show summary only.
+- Single Conventional Commit only (no multi-commit split per DEC-2).
 
 <dry_run_behavior>
 
