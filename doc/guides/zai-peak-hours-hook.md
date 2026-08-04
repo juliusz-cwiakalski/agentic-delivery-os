@@ -4,12 +4,13 @@
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/guides/zai-peak-hours-hook.md
 ados_distribution: redistributable
 ---
-# Z.AI Peak-Hours Hook Guide
+# Z.AI Peak-Hours & Quota Hook Guide
 
-The Z.AI peak-hours hook pauses autonomous delivery during the Z.AI Coding
-Plan peak window so you don't burn quota when rates are highest. It is an
-opt-in, user-owned executable that `deliver-ticket.sh` and `ceo-loop.sh`
-invoke before every PM/CEO spawn.
+The Z.AI pre-iteration hook pauses autonomous delivery during the Z.AI Coding
+Plan peak window (so you don't burn quota at 3x rates) **and**, when you opt
+in, when the Z.AI token quota is exhausted (so delivery sleeps until the quota
+resets instead of restart-storming). It is an opt-in, user-owned executable
+that `deliver-ticket.sh` and `ceo-loop.sh` invoke before every PM/CEO spawn.
 
 ## Z.AI peak hours and quota rates
 
@@ -58,6 +59,75 @@ hook returns immediately (zero-cost no-op).
 | **Behavior during pause window** | Sleeps until peak end (10:00 UTC), then returns 0 |
 | **Behavior outside pause window** | Returns 0 immediately |
 | **Failure handling** | A hook crash/timeout follows the standard wrapper failure path (`deliver-ticket.sh`: `failed`/exit-1; `ceo-loop.sh`: bounded retry counter) |
+
+## Quota-aware waiting (opt-in)
+
+In addition to peak-hours waiting, the hook can pause delivery when the Z.AI
+Coding Plan token quota is exhausted, sleeping until the quota resets. This
+stops the "restart-storm": when quota is exhausted the session makes no forward
+progress, the wrapper misreads it as a generic liveness stall, and
+kill/restarts the same work repeatedly — even though no restart can replenish a
+quota. The correct action is to **wait**.
+
+**What it does.** The hook queries the Z.AI quota endpoint and inspects the
+`TOKENS_LIMIT` windows (the 5-hour and the weekly window). If **any** token
+window reports `percentage >= 100`, the hook sleeps until the soonest
+`nextResetTime` among the exhausted windows. It pre-empts at
+`percentage >= 100` and **never** waits for an HTTP 429. `TIME_LIMIT` windows
+(the MCP call budget) are ignored — they do not block model inference.
+
+**Opt-in.** Quota checking activates **only** when all of the following hold:
+
+- the configured model uses the `zai-coding-plan/` provider prefix, **and**
+- `ZAI_API_KEY` is set (the same key you use for inference), **and**
+- both `jq` and `curl` are present on `PATH`.
+
+Users who do not set `ZAI_API_KEY` get **byte-identical peak-only behavior** —
+no network call, no `jq`, no new runtime dependency. The quota code path is
+never entered.
+
+**Fail-open guarantee.** If the quota check cannot obtain a trustworthy result
+(network/auth failure, HTTP 401/403, non-200 envelope, malformed JSON, missing
+or non-numeric fields, or an unparseable reset time), the hook emits exactly
+one `[WARN]` line (reason category only) and proceeds with peak-only behavior.
+It never blocks delivery on a transient API error and never changes the hook
+exit status.
+
+**Security.** The full `ZAI_API_KEY` is **never** logged (at most a short
+prefix/suffix in a diagnostic). The raw response body is **never** logged —
+there is no debug/verbose toggle. A short reason category (e.g. `HTTP 401`,
+`malformed JSON`) is all that appears in a `[WARN]`.
+
+**Endpoint.** `GET https://api.z.ai/api/monitor/usage/quota/limit` with
+`Authorization: Bearer $ZAI_API_KEY`. Both the 5-hour and weekly token windows
+expose `nextResetTime`; the hook sleeps until the soonest reset among the
+exhausted windows. After a long quota sleep the driver re-evaluates **all**
+conditions, so a quota sleep that lands inside the peak window correctly sleeps
+on to peak end.
+
+### Getting the API key
+
+Use the same Z.AI API key you already use for inference:
+
+- Individual: <https://z.ai/manage-apikey/apikey-list>
+- Team plan: <https://z.ai/manage-apikey/coding-plan/team/my-plan>
+
+Export it before running the wrapper:
+
+```bash
+export ZAI_API_KEY=zai-...      # same key used for inference
+```
+
+### Quota env knobs
+
+| Variable | Default | Description |
+|---|---|---|
+| `ZAI_API_KEY` | *(unset)* | Required to opt into quota checking. Same key used for inference. Read-only to the hook; never logged in full. |
+| `ADOS_ZAI_QUOTA_DISABLED` | `0` | Set to `1` to opt out of quota checking even when `ZAI_API_KEY` is set (silent opt-out, no `[WARN]`). |
+| `ADOS_ZAI_MAX_SLEEP_LOOPS` | `24` | Defensive cap on the re-evaluation loop. On exceed, the hook returns `0` and emits one `[WARN]`. Rarely needs tuning. |
+
+The peak-hours knobs (`ADOS_ZAI_PEAK_START_UTC`, `ADOS_ZAI_PEAK_END_UTC`,
+`ADOS_ZAI_BUFFER_SECONDS`) are documented in [Configurable variables](#configurable-variables).
 
 ## Configurable variables
 
@@ -145,7 +215,7 @@ scripts/deliver-ticket.sh --dry-run GH-999
 During the pause window you'll see a log line like:
 
 ```
-[INFO] (pre-opencode-iteration-zai) zai-coding-plan peak window; waiting until 2026-07-29T10:00:00Z
+[INFO] (pre-opencode-iteration-zai) peak-hours; waiting until 2026-07-29T10:00:00Z
 ```
 
 ## Uninstall
@@ -185,6 +255,57 @@ The hook writes **no environment output** — it is a pure gate (wait or
 pass). See [TDR-0002](../decisions/TDR-0002-pre-iteration-hook-contract-details.md)
 for the full hook contract and [delivery-modes.md](delivery-modes.md#optional-pre-iteration-hooks)
 for the canonical lifecycle, security, and configuration reference.
+
+## Extensibility: condition functions
+
+The hook is a generic **sleep-driver** built on a small, documented extension
+point — the **condition function** (decision DM-1 / DEC-2). This is how you add
+a new wait reason, or build an entirely provider-specific hook.
+
+### Condition-function contract
+
+A condition is a bash function named `howLongToSleepDueTo<Reason>()` that:
+
+1. echoes **exactly one** non-negative integer to stdout = seconds to sleep
+   (`0`, empty, or any error = "no wait from this condition");
+2. obtains time and HTTP **strictly through the seams** (`_now_utc_epoch`,
+   `_zai_quota_fetch`) — never `date`/`curl` directly; and
+3. emits **at most one** diagnostic line to stderr (e.g. a `[WARN]` on failure).
+
+The driver gates on the configured model, then repeatedly: takes the **maximum**
+seconds across all registered conditions, sleeps that long (logging the UTC wake
+time and reason), and **re-evaluates all conditions** after waking — looping
+until no condition wants to sleep. Composed waits are therefore handled
+correctly: e.g. a quota sleep that lands inside the peak window then sleeps on
+to peak end. v1 ships two conditions: `howLongToSleepDueToPeakHours` and
+`howLongToSleepDueToQuotaExhaustion`.
+
+### Adding a condition
+
+Write a function following the contract above and register it in the condition
+list (append it to the `ADOS_ZAI_CONDITIONS` array in the hook). The driver
+picks it up automatically — no branching logic to edit. Illustrative stub:
+
+```bash
+howLongToSleepDueToMaintenanceWindow() {
+  # ... read a maintenance window via a seam ...
+  printf '%s' "${seconds_until_maintenance_end}"   # 0/empty/error = no wait
+}
+# then register: append howLongToSleepDueToMaintenanceWindow to ADOS_ZAI_CONDITIONS
+```
+
+### Building a provider-specific hook
+
+To target a different provider (whose quota / rate-limit API differs from
+Z.AI's), copy this hook file to a new example (e.g.
+`pre-opencode-iteration-<provider>.sh`), **keep the generic driver** and its
+seam/condition contract, and **replace the condition functions** with
+provider-specific ones. The driver and contract are reusable; the conditions
+are the provider-specific part.
+
+See the change spec (`doc/changes/2026-08/2026-08-04--GH-150--quota-aware-delivery-wait/chg-GH-150-spec.md`,
+DM-1) and [TDR-0002](../decisions/TDR-0002-pre-iteration-hook-contract-details.md)
+for the full contract.
 
 > **Affiliate disclosure:** Z.AI signup links in this guide use
 > `https://z.ai/subscribe?ic=MMUPBUJ7PN`. The author earns a commission and

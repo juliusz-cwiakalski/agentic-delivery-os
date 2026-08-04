@@ -6,16 +6,17 @@ ados_distribution: internal
 id: SPEC-AUTONOMOUS-DELIVERY
 status: Current
 created: 2026-07-07
-last_updated: 2026-07-28
+last_updated: 2026-08-04
 owners: ["engineering"]
 service: delivery-os
 summary: "The unattended delivery neighborhood of the lifecycle: the two autonomous modes (Mode A — autonomous CEO loop; Mode B — manual batch), the bash delivery scripts (ceo-loop.sh, deliver-ticket.sh, batch-deliver.sh, pm-liveness.sh, opencode-session.sh), the AI-vs-script split, and the behavioral invariants (INV-DM-1..6) that keep unattended delivery converging instead of burning tokens. Liveness is multi-signal: recursive session-tree message traffic (parent_id traversal of the current session_message table) PLUS git/worktree activity; a race-free delivering marker tells ceo-loop.sh the CEO is blocked on a delivery. deliver-ticket.sh no longer merges. Since GH-148, deliver-ticket.sh and batch-deliver.sh are platform-aware: they auto-detect GitHub vs GitLab (env override > git remote > glab auth > default github) and route tracker/MR operations through a dispatch seam with JSON normalization, so GitLab deliveries report accurate results and populated PR URLs; ceo-loop.sh is unchanged (it delegates delivery and merges, so needs no platform detection)."
 links:
-  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148"]
+  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148", "GH-150"]
   decisions: ["TDR-0002"]
   guides:
     - "doc/guides/delivery-modes.md"
     - "doc/guides/autonomous-batch-delivery.md"
+    - "doc/guides/zai-peak-hours-hook.md"
 ---
 
 # Feature: Autonomous Delivery
@@ -147,7 +148,7 @@ The guiding principle is the **AI-vs-script split**: the expensive, stateless, j
 | `scripts/batch-deliver.sh` | Script (Mode B) | Sequential per-ticket delivery; pre-flight skip; rebase-before-merge + green-gate wait for human-approved PRs; **platform-aware Mode B merge** (GitHub `gh pr merge` / GitLab `glab mr merge`, with merge-status polling) using the PR title/description as commit message |
 | `scripts/pm-liveness.sh` | Script | Probe opencode session-message traffic across the recursive session tree (current `session_message` table); combine with git/worktree activity; degrade gracefully to the git/worktree signal if the session DB is unavailable |
 | `scripts/opencode-session.sh` | Script | Ticket-scoped opencode session manager (entry point for autonomous sessions; sets `delivery_mode: autonomous`) |
-| `scripts/hooks/pre-opencode-iteration-zai.sh` | Installed inactive example | Wait for 10:00 UTC during the Z.AI Coding Plan peak window when the configured CEO/PM model value uses the `zai-coding-plan/` prefix |
+| `scripts/hooks/pre-opencode-iteration-zai.sh` | Installed inactive example | A generic sleep driver with pluggable condition functions, gated on a `zai-coding-plan/` CEO/PM model. v1 ships two conditions: `howLongToSleepDueToPeakHours` (pure-bash; waits out the 06:00–10:00 UTC peak + buffer) and `howLongToSleepDueToQuotaExhaustion` (opt-in via `ZAI_API_KEY` + `jq` + `curl`; pauses when a Z.AI Coding Plan `TOKENS_LIMIT` window reaches 100%, sleeping until the soonest `nextResetTime`; fails open with one WARN on any error). The driver takes the MAX across conditions and re-evaluates in a loop (capped by `ADOS_ZAI_MAX_SLEEP_LOOPS`, default 24); the condition-function pattern lets other providers build their own hook. Set `ADOS_ZAI_QUOTA_DISABLED=1` to opt out even with a key. Detail: [zai-peak-hours-hook.md](../../guides/zai-peak-hours-hook.md) |
 | `tools/clean-merged-branches` | Tool (script) | Branch hygiene — delete squash-merged branches only |
 | `.opencode/agent/ceo.md` | AI agent | Pick next ticket; merge approved + finalized PRs (INV-DM-4); handle blockers; retrospectives |
 | `.ai/local/delivery/<REF>.pid` | Repo-local state | Single-flight PID tracking (git-ignored; keyed on the working tree) |
@@ -231,4 +232,5 @@ All settings are environment variables (CLI flag overrides where noted). Full ta
 - **Sibling spec (lifecycle context):** [feature-delivery-lifecycle.md](feature-delivery-lifecycle.md) — the 11-phase lifecycle both modes wrap; phase 7 (`system_spec_update`) is where this spec was first-authored.
 - **Sibling spec (verification/release):** [feature-quality-gates-and-pr.md](feature-quality-gates-and-pr.md) — the quality gates and PR workflow that Mode B waits on before merging.
 - **Hook decision:** [TDR-0002](../../decisions/TDR-0002-pre-iteration-hook-contract-details.md) — lifecycle, failure, distribution, and environment-return contract.
+- **Z.AI hook guide:** [doc/guides/zai-peak-hours-hook.md](../../guides/zai-peak-hours-hook.md) — peak-hours + quota-aware behavior, condition-function extensibility, and configuration of the inactive example hook.
 - **Enduring test specification:** [test-spec-autonomous-delivery.md](../../quality/test-specs/test-spec-autonomous-delivery.md) — automated coverage of loop and hook behavior.
