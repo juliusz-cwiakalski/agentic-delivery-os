@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-DELIVERY-LIFECYCLE
 status: Current
 created: 2026-06-28
-last_updated: 2026-07-09
+last_updated: 2026-08-04
 owners: ["engineering"]
 service: delivery-os
 summary: "The deterministic 11-phase spec→plan→deliver→review→PR change delivery workflow with PM-led orchestration, Definition of Ready / Definition of Done gating, phase reopening, the per-change artifact set, and phase-7 documentation reconciliation that closes documentation gaps in-change across current-truth docs (including feature-spec first-authoring when needed)."
 links:
-  related_changes: ["GH-79", "GH-108"]
+  related_changes: ["GH-79", "GH-108", "GH-151"]
   guides:
     - "doc/guides/change-lifecycle.md"
     - "doc/guides/definition-of-ready.md"
@@ -56,6 +56,7 @@ ADOS turns a single tracker ticket (`workItemRef`) into a reviewed, tested PR/MR
   - Documentation gap closure is implemented as doc artifacts in the same change and reviewed at the PR gate; no tracker ticket is created for documentation coverage handoff.
   - A repo-internal visibility aid (`scripts/spec-coverage-snapshot.sh`) makes the feature-specs-present vs changes-touching-feature-areas ratio computable to detect silent coverage erosion without manual audits.
   (Authoritative behavior: `.opencode/agent/doc-syncer.md`; mirrored in [doc/guides/change-lifecycle.md](../../guides/change-lifecycle.md) phase 7.)
+- **Git-operations responsibility model (F-8):** A single source of truth governs git operations across the agent/command team: the **orchestrator of a phase owns the commit trigger** for that phase's output, and **all commits route through `@committer`** (or `/commit`, which invokes it). The PM ensures the change branch before its first delegation and triggers `@committer` after each delegated lifecycle phase returns (autonomous mode); manual commands keep their branch-ensure step and trigger `/commit` after the agent returns; `@coder` triggers `@committer` per delivery plan phase (the delivery exception). The delegated artifact agents (`@spec-writer`, `@test-plan-writer`, `@plan-writer`, `@doc-syncer`, `@reviewer` local mode, `@decision-advisor`, `@readiness-reviewer`) are **pure writers** — zero git operations. No agent prompt other than `@committer` performs a direct `git commit`. The full responsibility model (branch owner per mode, commit-trigger owner per phase, universal routing) is documented in [doc/guides/change-lifecycle.md](../../guides/change-lifecycle.md) ("Branch and Commit Responsibility Model").
 
 ### The Mandatory Per-Change Artifact Set
 
@@ -107,7 +108,9 @@ Manual:      /plan-change → /write-spec → /write-test-plan → /write-plan
 
 ### Key Agent Boundaries
 
-- `@pm` orchestrates but does **not** implement, debug, run gates, or commit directly — it delegates to `@coder`, `@fixer`, `@runner`, `@committer`.
+- `@pm` orchestrates but does **not** implement, debug, run gates, or commit directly — it delegates to `@coder`, `@fixer`, `@runner`, `@committer`. In autonomous mode the PM ensures the change branch before its first delegation and triggers `@committer` after each delegated lifecycle phase returns.
+- Delegated artifact agents (`@spec-writer`, `@test-plan-writer`, `@plan-writer`, `@doc-syncer`, `@reviewer` local mode, `@decision-advisor`, `@readiness-reviewer`) are **pure writers**: they produce their artifact and return with zero git operations (no branch, staging, or commit logic). The orchestrator (PM, command, or `@coder`) owns the commit trigger.
+- `@committer` is the **only** commit path. No agent prompt other than `@committer` performs a direct `git commit`; every commit passes its secret/credential scan, `tmp/`/`.ai/local/` exclusion, and diff-derived Conventional Commit derivation.
 - `@doc-syncer` reconciles affected current-truth docs and closes documentation gaps in-change, including first-authoring a missing feature spec when a modified feature area warrants one. It never modifies source code or change artifacts, and never creates a tracker ticket for documentation coverage handoff.
 - Phase definitions in `.opencode/agent/pm.md` are the operational source of truth for the phase list; the guide mirrors them.
 

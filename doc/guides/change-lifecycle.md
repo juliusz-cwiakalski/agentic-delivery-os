@@ -46,7 +46,7 @@ This repository enforces a single source of truth for git operations: the orches
 
 **Autonomous mode** (PM-driven delivery):
 - The PM triggers `@committer` after each delegated lifecycle phase returns, with a phase-appropriate intent hint (e.g., "add spec for GH-123", "add test plan for GH-123").
-- Phases with commit triggers: `specification` (after @spec-writer), `test_planning` (after @test-plan-writer), `delivery_planning` (after @plan-writer), `dor_check` (after @readiness-reviewer verdict), `system_spec_update` (after @doc-syncer), and `review_fix` (during @coder's sub-phases).
+- Phases with commit triggers: `specification` (after @spec-writer), `test_planning` (after @test-plan-writer), `delivery_planning` (after @plan-writer), `dor_check` (after @readiness-reviewer verdict), `system_spec_update` (after @doc-syncer), and `review_fix` (after @reviewer).
 - The PM commits the `@readiness-reviewer` verdict file for traceability of each DoR iteration.
 - The `no commit` directive (bare string in `chg-<workItemRef>-pm-notes.yaml` directives array or in the original request) suppresses the trigger for a phase.
 
