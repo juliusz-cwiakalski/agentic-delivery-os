@@ -485,3 +485,4 @@ Mapped from [chg-GH-151-test-plan.md](./chg-GH-151-test-plan.md) §5.
 | 5 | COMPLETED | 2026-08-04T02:00:00Z | 2026-08-04T02:30:00Z | 387192c | .ados-claude/ regenerated; freshness guard green; AC validated |
 | 6 | COMPLETED | 2026-08-04T02:30:00Z | 2026-08-04T03:00:00Z | adb0ac0 | Static verification passed; all NFRs green |
 | 8 | COMPLETED | 2026-08-04T04:00:00Z | 2026-08-04T04:30:00Z | 4a98a36 | System-spec reconciliation completed; executed ahead of review per plan revision 1.3 |
+| 9 | COMPLETED | 2026-08-04T16:30:00Z | 2026-08-04T16:45:00Z | f489e41 | Code-review remediation iteration-1: added PM @reviewer trigger, removed dead config, fixed indentation, checked task 8.1 |
