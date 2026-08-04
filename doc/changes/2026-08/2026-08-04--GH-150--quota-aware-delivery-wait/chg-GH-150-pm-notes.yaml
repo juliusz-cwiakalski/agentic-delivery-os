@@ -1,18 +1,18 @@
 change_id: GH-150
 title: "Make delivery quota-aware and wait for provider reset without false restarts"
 delivery_mode: interactive
-# SESSION 2026-08-04: USER REQUESTED A NARROW RESEARCH + POC PHASE ONLY.
-# Not running the full 11-phase lifecycle this session. Goal: determine whether
-# Z.AI Coding Plan quota usage can be queried via API; if feasible, ship a
-# standalone POC bash script in this folder for the user to validate before we
-# decide to wire it into scripts/hooks/pre-opencode-iteration-zai.sh + the guide.
+# SESSION 2026-08-04: pivoted from POC-only to full delivery after owner validated
+# the POC. DoR cleared (3 iters). Delivery (plan phases 0-5) complete: hook refactored
+# to generic driver + peak/quota conditions + _zai_quota_fetch seam; deterministic
+# test matrix TC-ZAI-001..071 green; guide + blueprint updated. Currently in
+# system_spec_update -> review -> quality_gates -> dod -> pr.
 phases:
   clarify_scope: { started: "2026-08-04", completed: "2026-08-04" }
   specification: { started: "2026-08-04", completed: "2026-08-04" }
   test_planning: { started: "2026-08-04", completed: "2026-08-04" }
   delivery_planning: { started: "2026-08-04", completed: "2026-08-04" }
-  dor_check: { started: "2026-08-04", completed: null }
-  delivery: { started: null, completed: null }
+  dor_check: { started: "2026-08-04", completed: "2026-08-04" }
+  delivery: { started: "2026-08-04", completed: "2026-08-04" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -103,5 +103,14 @@ notes:
     type: info
     date: "2026-08-04"
   - text: "RETRO (DoR iter-2): a per-artifact remediation that ADDS test cases MUST propagate the new TC IDs into the plan's per-group checklists — F-10 is exactly that drift (test-plan got the new cases, plan's group-C list didn't). Lesson: remediation passes that touch multiple artifacts must update spec+test-plan+plan TOGETHER, or the plan desyncs. Also: @committer can return empty like @runner — must verify commits via a second channel (@general git log)."
+    type: retro
+    date: "2026-08-04"
+  - text: "DOR ITER-3: READY. @readiness-reviewer PASS on all 10 facets after iter-2 plan reconciliation (F-10 group-C TC list now complete; F-11 'production mode' wording purged). dor_check completed. Proceeding to delivery."
+    type: info
+    date: "2026-08-04"
+  - text: "DELIVERY COMPLETE (plan phases 0-5). Commits: 4b4ea9b feat(GH-150) generic sleep-driver + peak/quota conditions + _zai_quota_fetch seam [phases 0+1+2]; 7564e83 test(GH-150) deterministic quota/peak matrix TC-ZAI-001..071 [phase 3, 52 passed/0 failed, TC-ZAI-071 deferred pending guide]; 6a712a6 docs(GH-150) quota + extensibility guide sections; enable TC-ZAI-071 [phase 4]. Phase 5 verify: test-hook-zai-example.sh 53 passed/0 failed (TC-ZAI-071 now counts), test-doc-distribution.sh OK (79 docs no drift), test-all.sh 13/13 files green, add-header-location.sh doc/guides idempotent (1 updated), no date -d/-r in hook code. No hook bugs found during implementation — the spec/test-plan/plan chain was solid after DoR."
+    type: info
+    date: "2026-08-04"
+  - text: "RETRO (delivery): @general was the reliable workhorse for ALL delivery chunks (hook implementation, test authoring, guide update, gate runs) after @test-plan-writer cancelled 3x. @general handled tricky test mechanics cleanly (command override for missing-deps cases, env+child-bash for readonly peak vars, stepping clock for re-eval-loop assertions). @committer consistently returns EMPTY output — every commit must be verified via @general git log. The 3-iteration DoR paid off: zero implementation bugs, clean first-pass delivery. Lesson: invest in DoR rigor even when it feels heavy; it front-loads the errors that would otherwise surface as review-fix cycles."
     type: retro
     date: "2026-08-04"
