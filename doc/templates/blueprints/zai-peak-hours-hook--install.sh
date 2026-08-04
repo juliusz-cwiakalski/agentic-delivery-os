@@ -46,5 +46,6 @@ chmod +x "${HOOK_DST}"
 
 printf '[INFO] Z.AI peak-hours hook installed: %s\n' "${HOOK_DST}"
 printf '[INFO] Peak window: 04:00–10:00 UTC (activates only with zai-coding-plan/ models)\n'
+printf '[INFO] Quota waiting is opt-in: set ZAI_API_KEY to also pause when the token quota is exhausted\n'
 printf '[INFO] Verify: ls -la %s\n' "${HOOK_DST}"
 printf '[INFO] Uninstall: rm -f %s\n' "${HOOK_DST}"

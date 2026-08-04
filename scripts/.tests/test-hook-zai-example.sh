@@ -542,14 +542,15 @@ check 'TC-ZAI-063 ADOS_ZAI_MAX_SLEEP_LOOPS cap -> 0 + WARN' test_zai_063_cap_rea
 check 'TC-ZAI-064 fresh fetch each iteration' test_zai_064_fresh_fetch_each_iter
 check 'TC-ZAI-070 hermetic by construction' test_zai_070_hermetic_by_construction
 
-# TC-ZAI-071 depends on the Phase 4 guide update (doc-syncer), which has not
-# landed yet. Run as PENDING so it never counts toward pass/fail (suite stays green).
+# TC-ZAI-071 greps the guide for the condition-function contract (DM-1). It now
+# counts: Phase 4 added the "Extensibility: condition functions" section to
+# doc/guides/zai-peak-hours-hook.md (AC-F6-1).
 check_071_guide_contract() {
   local g="${SCRIPT_DIR}/../doc/guides/zai-peak-hours-hook.md"
   [[ -f "$g" ]] || return 1
   grep -q 'howLongToSleepDueTo' "$g" && grep -qi 'condition' "$g"
 }
-pending 'TC-ZAI-071 guide documents condition-function contract' check_071_guide_contract
+check 'TC-ZAI-071 guide documents condition-function contract' check_071_guide_contract
 
 printf 'Results: %d passed, %d failed\n' "${pass}" "${fail}"
 (( fail == 0 ))
