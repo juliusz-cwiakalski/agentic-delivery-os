@@ -24,6 +24,7 @@ claude:
 <role>
   <mission>Rigorously review code changes against specification, implementation plan, code quality heuristics, and repository rules. Operates in two modes: local (ADOS pipeline) and remote (PR/MR platform).</mission>
   <non_goals>Never merge, approve, or close a PR/MR. Never modify source code files.</non_goals>
+  <pure_writer_note>[Local mode only] You are a pure writer: you write the review artifact and return with zero git operations. The command (e.g., `/review`) triggers `/commit` after you return.</pure_writer_note>
 </role>
 
 <modes>
@@ -237,14 +238,12 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
     - Determine next phase number (X = max existing phase + 1).
     - Construct: "Phase X: Code Review Remediation (Iteration N)".
     - List specific, actionable tasks per finding.
-    - Append to implementation plan (do not merge into previous remediation).
-    - Append revision log entry.
+     - Append to implementation plan (do not merge into previous remediation).
+     - Append revision log entry.
 
-    **If NO findings:** report "No plan changes required."
+     **If NO findings:** report "No plan changes required."
 
-    **Commit (if enabled):** stage plan file, create Conventional Commit.
-
-    **Structured report:**
+     **Structured report:**
     ```
     Status: PASS | FAIL
     Remediation Phase: ADDED | NONE

@@ -100,20 +100,20 @@ This plan delivers the git-operations responsibility refactor defined in [chg-GH
 
 **Tasks**:
 
-- [ ] **1.1** Delegate to `@toolsmith`: edit `.opencode/agent/spec-writer.md` — remove `<branch_rules>` / `<commit_rules>`, branch checkout/create, "stage ONLY this file", and the `git commit` step; add a pure-write note (orchestrator owns branch + commit).
-- [ ] **1.2** Delegate to `@toolsmith`: edit `.opencode/agent/test-plan-writer.md` — same removals + pure-write note.
-- [ ] **1.3** Delegate to `@toolsmith`: edit `.opencode/agent/plan-writer.md` — same removals + pure-write note.
-- [ ] **1.4** Delegate to `@toolsmith`: edit `.opencode/agent/doc-syncer.md` — remove the direct commit **and** the multi-commit split logic (DEC-2); add a pure-write note.
-- [ ] **1.5** Delegate to `@toolsmith`: edit `.opencode/agent/reviewer.md` — in local mode, remove the direct commit and "stage the plan file" logic; add a note that the command triggers `/commit` (aligning the agent with `/review` and `/review-deep` which already reference `/commit`).
-- [ ] **1.6** Delegate to `@toolsmith`: edit `.opencode/agent/decision-advisor.md` — remove the direct commit and "stage ONLY the decision record" logic (DEC-3); add a note that the orchestrator triggers `@committer`.
+- [x] **1.1** Delegate to `@toolsmith`: edit `.opencode/agent/spec-writer.md` — remove `<branch_rules>` / `<commit_rules>`, branch checkout/create, "stage ONLY this file", and the `git commit` step; add a pure-write note (orchestrator owns branch + commit).
+- [x] **1.2** Delegate to `@toolsmith`: edit `.opencode/agent/test-plan-writer.md` — same removals + pure-write note.
+- [x] **1.3** Delegate to `@toolsmith`: edit `.opencode/agent/plan-writer.md` — same removals + pure-write note.
+- [x] **1.4** Delegate to `@toolsmith`: edit `.opencode/agent/doc-syncer.md` — remove the direct commit **and** the multi-commit split logic (DEC-2); add a pure-write note.
+- [x] **1.5** Delegate to `@toolsmith`: edit `.opencode/agent/reviewer.md` — in local mode, remove the direct commit and "stage the plan file" logic; add a note that the command triggers `/commit` (aligning the agent with `/review` and `/review-deep` which already reference `/commit`).
+- [x] **1.6** Delegate to `@toolsmith`: edit `.opencode/agent/decision-advisor.md` — remove the direct commit and "stage ONLY the decision record" logic (DEC-3); add a note that the orchestrator triggers `@committer`.
 
 **Acceptance Criteria**:
 
-- Must: AC-F3-1 (spec/test-plan/plan-writer contain zero git operations + pure-write note).
-- Must: AC-F3-2 (doc-syncer: no direct commit, no multi-commit split).
-- Must: AC-F3-3 (reviewer local mode: no direct commit).
-- Must: AC-F3-4 (decision-advisor: no direct commit, per DEC-3).
-- Should: each prompt shrinks by the removed git plumbing (~15–20 lines each), reducing token cost.
+- Must: AC-F3-1 (spec/test-plan/plan-writer contain zero git operations + pure-write note). — PASSED (grep-verified: 0 branch/commit rules, 0 commit instructions; pure-write notes present)
+- Must: AC-F3-2 (doc-syncer: no direct commit, no multi-commit split). — PASSED (step 5 commit removed; no multi-commit logic)
+- Must: AC-F3-3 (reviewer local mode: no direct commit). — PASSED (step 9 commit logic removed; note added about `/commit` trigger)
+- Must: AC-F3-4 (decision-advisor: no direct commit, per DEC-3). — PASSED (commit step removed; staging removed; pure-writer note added)
+- Should: each prompt shrinks by the removed git plumbing (~15–20 lines each), reducing token cost. — PASSED (prompts reduced)
 
 **Affected code areas**:
 
