@@ -13,7 +13,7 @@ phases:
   delivery_planning: { started: "2026-08-04", completed: "2026-08-04" }
   dor_check: { started: "2026-08-04", completed: "2026-08-04" }
   delivery: { started: "2026-08-04", completed: "2026-08-04" }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: "2026-08-04", completed: "2026-08-04" }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -113,4 +113,7 @@ notes:
     date: "2026-08-04"
   - text: "RETRO (delivery): @general was the reliable workhorse for ALL delivery chunks (hook implementation, test authoring, guide update, gate runs) after @test-plan-writer cancelled 3x. @general handled tricky test mechanics cleanly (command override for missing-deps cases, env+child-bash for readonly peak vars, stepping clock for re-eval-loop assertions). @committer consistently returns EMPTY output — every commit must be verified via @general git log. The 3-iteration DoR paid off: zero implementation bugs, clean first-pass delivery. Lesson: invest in DoR rigor even when it feels heavy; it front-loads the errors that would otherwise surface as review-fix cycles."
     type: retro
+    date: "2026-08-04"
+  - text: "SYSTEM_SPEC_UPDATE COMPLETE. Reconciled doc/spec/features/feature-autonomous-delivery.md: Core Components hook row rewritten to current truth (generic driver + pluggable conditions; v1 peak + quota; opt-in via ZAI_API_KEY; fail-open; re-eval loop; ADOS_ZAI_MAX_SLEEP_LOOPS cap; extensibility for other providers; link to guide). Only spec file referencing the pause behavior (grep-confirmed). test-doc-distribution OK (79 docs), test-all 13/13 green."
+    type: info
     date: "2026-08-04"
