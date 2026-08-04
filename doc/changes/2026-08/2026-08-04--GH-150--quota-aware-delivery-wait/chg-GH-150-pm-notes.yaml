@@ -17,7 +17,7 @@ phases:
   review_fix: { started: "2026-08-04", completed: "2026-08-04" }
   quality_gates: { started: "2026-08-04", completed: "2026-08-04" }
   dod_check: { started: "2026-08-04", completed: "2026-08-04" }
-  pr_creation: { started: "2026-08-04", completed: null, url: null }
+  pr_creation: { started: "2026-08-04", completed: "2026-08-04", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/153" }
 decisions:
   - text: "FEASIBILITY VERDICT: FEASIBLE. Z.AI exposes GET https://api.z.ai/api/monitor/usage/quota/limit (Bearer auth, same key as inference) returning per-window limit/used/remaining/reset_time. Triangulated by @external-researcher + owner's Google-AI research + 3 independent community tools (melon-hub/zai-usage-tracker, guyinwonder168/opencode-glm-quota, robinebers/openusage). Endpoint is undocumented-but-stable (used by Z.AI's own subscription UI)."
     date: "2026-08-04"
@@ -127,5 +127,8 @@ notes:
     type: info
     date: "2026-08-04"
   - text: "DOD CHECK COMPLETE. All 9 pre-PR phases completed with timestamps. All 44 plan tasks ticked (F-1). All 12 spec ACs satisfied (reviewer PASS). Current-truth docs reconciled (spec + guide; doc-dist OK; doc-syncer no gaps). Gates green (53/0, 13/13, ShellCheck clean). Ready for PR."
+    type: info
+    date: "2026-08-04"
+  - text: "PR CREATED: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/153 (feat/GH-150/quota-aware-delivery-wait -> main). All 11 phases complete. STOP for human review + merge. On merge: GH-150 auto-closes (Closes #150 in PR body); move to recently_delivered; clear active_change."
     type: info
     date: "2026-08-04"
