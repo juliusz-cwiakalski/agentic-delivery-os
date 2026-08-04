@@ -186,18 +186,18 @@ This plan delivers the git-operations responsibility refactor defined in [chg-GH
 
 **Tasks**:
 
-- [ ] **3.1** Delegate to `@toolsmith`: edit `.opencode/command/write-spec.md` — keep branch-ensure; add `/commit` trigger after `@spec-writer` returns (intent hint: "add spec for `<ref>`").
-- [ ] **3.2** Delegate to `@toolsmith`: edit `.opencode/command/write-test-plan.md` — keep branch-ensure; add `/commit` trigger after `@test-plan-writer` returns.
-- [ ] **3.3** Delegate to `@toolsmith`: edit `.opencode/command/write-plan.md` — keep branch-ensure; add `/commit` trigger after `@plan-writer` returns.
-- [ ] **3.4** Delegate to `@toolsmith`: edit `.opencode/command/sync-docs.md` — keep branch-ensure; add `/commit` trigger after `@doc-syncer` returns; remove any multi-commit split (DEC-2).
-- [ ] **3.5** Delegate to `@toolsmith`: edit `.opencode/command/write-decision.md` — add `/commit` trigger after `@decision-advisor` returns (intent hint for the decision record).
-- [ ] **3.6** Delegate to `@toolsmith`: ensure the bare-string `"no commit"` directive check is present in each of the five commands (per the resolved OQ-T1, consistent with Phase 2 task 2.3): if `"no commit"` is present, skip the `/commit` trigger.
+- [x] **3.1** Delegate to `@toolsmith`: edit `.opencode/command/write-spec.md` — keep branch-ensure; add `/commit` trigger after `@spec-writer` returns (intent hint: "add spec for `<ref>`").
+- [x] **3.2** Delegate to `@toolsmith`: edit `.opencode/command/write-test-plan.md` — keep branch-ensure; add `/commit` trigger after `@test-plan-writer` returns.
+- [x] **3.3** Delegate to `@toolsmith`: edit `.opencode/command/write-plan.md` — keep branch-ensure; add `/commit` trigger after `@plan-writer` returns.
+- [x] **3.4** Delegate to `@toolsmith`: edit `.opencode/command/sync-docs.md` — keep branch-ensure; add `/commit` trigger after `@doc-syncer` returns; remove any multi-commit split (DEC-2).
+- [x] **3.5** Delegate to `@toolsmith`: edit `.opencode/command/write-decision.md` — add `/commit` trigger after `@decision-advisor` returns (intent hint for the decision record).
+- [x] **3.6** Delegate to `@toolsmith`: ensure the bare-string `"no commit"` directive check is present in each of the five commands (per the resolved OQ-T1, consistent with Phase 2 task 2.3): if `"no commit"` is present, skip the `/commit` trigger.
 
 **Acceptance Criteria**:
 
-- Must: AC-F2-2 (`/write-spec`, `/write-test-plan`, `/write-plan`, `/sync-docs` trigger `/commit` while keeping branch setup).
-- Must: AC-F2-3 (`/write-decision` triggers `/commit` after `@decision-advisor` returns).
-- Must: NFR-4 (exactly 1 `/commit` per manual invocation).
+- Must: AC-F2-2 (`/write-spec`, `/write-test-plan`, `/write-plan`, `/sync-docs` trigger `/commit` while keeping branch setup). — PASSED (all four commands updated with /commit triggers)
+- Must: AC-F2-3 (`/write-decision` triggers `/commit` after `@decision-advisor` returns). — PASSED (command updated with /commit trigger)
+- Must: NFR-4 (exactly 1 `/commit` per manual invocation). — PASSED (all commands trigger /commit once after agent returns)
 
 **Affected code areas**:
 
@@ -443,3 +443,4 @@ Mapped from [chg-GH-151-test-plan.md](./chg-GH-151-test-plan.md) §5.
 |-------|--------|---------|-----------|--------|-------|
 | 1 | COMPLETED | 2026-08-04T00:00:00Z | 2026-08-04T00:30:00Z | 77f2997 | All six agents converted to pure writers; AC validated |
 | 2 | COMPLETED | 2026-08-04T00:30:00Z | 2026-08-04T01:00:00Z | 6d70d4e | PM owns branch ensure + per-phase @committer triggers; AC validated |
+| 3 | COMPLETED | 2026-08-04T01:00:00Z | 2026-08-04T01:30:00Z | ebcce0b | Five commands route commits via /commit; AC validated |

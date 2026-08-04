@@ -26,6 +26,71 @@ This guide defines the canonical change workflow for this repository. The PM age
 - Phases can be reopened: if PM discovers incomplete work in a later phase, PM reopens the relevant phase and delegates to the appropriate agent.
 - Artifact-creation phases (`specification` → `test_planning` → `delivery_planning`) are **strictly sequential**: each phase must complete before the next begins, and each consumes the previous artifact(s). This prevents cross-artifact drift (TC IDs, file names, AC coverage, canonical values diverging). The PM delegates them one at a time, waiting for completion.
 
+## Branch and Commit Responsibility Model
+
+This repository enforces a single source of truth for git operations: the orchestrator of a phase owns the commit trigger for that phase's output, and all commits route through `@committer` (or the `/commit` command, which invokes `@committer`).
+
+### Branch Ownership
+
+**Autonomous mode** (PM-driven delivery):
+- The PM ensures the change branch exists and is checked out before its first delegation (step 4a of phase 1).
+- Branch name format: `<type>/<workItemRef>/<slug>` (e.g., `feat/GH-123/some-feature`)
+- The PM records the branch in `chg-<workItemRef>-pm-notes.yaml` and `.ai/local/pm-context.yaml`.
+- Delegated agents never touch branch state (no checkout, create, or switch operations).
+
+**Manual mode** (command-driven):
+- The manual artifact commands (`/write-spec`, `/write-test-plan`, `/write-plan`, `/sync-docs`, `/write-decision`) keep their existing branch-ensure step as a safety net.
+- Branch setup happens before agent delegation, consistent with autonomous mode.
+
+### Commit Trigger Ownership
+
+**Autonomous mode** (PM-driven delivery):
+- The PM triggers `@committer` after each delegated lifecycle phase returns, with a phase-appropriate intent hint (e.g., "add spec for GH-123", "add test plan for GH-123").
+- Phases with commit triggers: `specification` (after @spec-writer), `test_planning` (after @test-plan-writer), `delivery_planning` (after @plan-writer), `dor_check` (after @readiness-reviewer verdict), `system_spec_update` (after @doc-syncer), and `review_fix` (during @coder's sub-phases).
+- The PM commits the `@readiness-reviewer` verdict file for traceability of each DoR iteration.
+- The `no commit` directive (bare string in `chg-<workItemRef>-pm-notes.yaml` directives array or in the original request) suppresses the trigger for a phase.
+
+**Manual mode** (command-driven):
+- Each manual command triggers `/commit` (which invokes `@committer`) after the delegated agent returns, with an appropriate intent hint.
+- Phases with commit triggers: `/write-spec`, `/write-test-plan`, `/write-plan`, `/sync-docs`, `/write-decision`.
+- The `no commit` directive (bare string in the original request) suppresses the `/commit` trigger.
+- `/commit` is the only command that creates commits in manual mode; agents never commit directly.
+
+**Delivery mode** (@coder executing a plan):
+- `@coder` triggers `@committer` per delivery plan phase (the existing exception to the orchestrator rule, preserved for granularity).
+- Each phase completion produces one commit, preserving the per-phase commit history.
+
+### Universal `@committer` Routing
+
+All commits across all agents and commands route through `@committer`. This ensures:
+
+- Secret/credential scanning on every commit
+- `tmp/`/`.ai/local/` exclusion from staged files
+- `.gitignore` enforcement
+- Diff-derived Conventional Commit messages (informed by the caller's intent hint)
+- Breaking-change detection
+
+No agent prompt other than `@committer` performs a direct `git commit`.
+
+### Pure-Writer Agents
+
+The following delegated agents are pure writers: they produce their artifact and return with zero git operations. The orchestrator handles branch setup (if applicable) and commits:
+
+- `@spec-writer` (writes spec; PM triggers @committer)
+- `@test-plan-writer` (writes test plan; PM triggers @committer)
+- `@plan-writer` (writes plan; PM triggers @committer)
+- `@doc-syncer` (writes docs; PM or `/sync-docs` triggers @committer)
+- `@reviewer` (local mode: writes review artifact; `/review` or `/review-deep` triggers `/commit`)
+- `@decision-advisor` (writes decision record; PM or `/write-decision` triggers @committer)
+- `@readiness-reviewer` (writes verdict; PM triggers @committer)
+
+### Traceability and History
+
+- Commit history is phase-aligned: at least one commit per lifecycle phase in autonomous mode, one commit per manual command invocation.
+- Each commit carries an intent hint so `@committer` derives meaningful Conventional Commit messages.
+- The PM commits `@readiness-reviewer` verdicts for DoR traceability.
+- Decision records and doc-spec reconciliation each become a single `@committer` commit.
+
 ## Required Artifacts (per change)
 
 Inside the change folder `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`:
