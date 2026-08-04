@@ -1,8 +1,8 @@
 ---
 id: chg-GH-151-centralize-git-operations
-status: Proposed
+status: Updated
 created: 2026-08-04T00:00:00Z
-last_updated: 2026-08-04T00:00:00Z
+last_updated: 2026-08-04T12:40:57Z
 owners: ["Juliusz Ćwiąkalski"]
 service: delivery-os
 labels: ["agent-improvement", "git-operations", "conventional-commits", "prompt-governance"]
@@ -36,9 +36,7 @@ This plan delivers the git-operations responsibility refactor defined in [chg-GH
 
 **Resolved open questions carried forward:** OQ-1 (single source of truth = `change-lifecycle.md`; align `AGENTS.md` only where it already implies commit behavior), OQ-2 (orchestrators pass an explicit intent hint per phase). Both resolved in the spec (§14).
 
-**Open questions:**
-
-- **OQ-T1 (from test plan §8.3): Exact mechanism for the `no commit` directive.** Recommended default: a frontmatter field in `pm-context.yaml` (e.g., `directives.no_commit: true`) that the PM and commands read before triggering `@committer`/`/commit`. Decision needed: confirm the exact field name/placement with `@toolsmith` during Phase 2 so it is consistent across `pm.md` and the manual commands. This does not block Phases 1, 3, 4, 5.
+**OQ-T1 (from test plan §8.3) — RESOLVED: exact mechanism for the `no commit` directive.** Decision: do **not** introduce a new structured field (no `directives.no_commit`). The existing bare-string `"no commit"` directive already works — `@pm` (autonomous mode) and the five manual commands simply check for the string `"no commit"` and **skip** the `@committer`/`/commit` trigger when present. This keeps the directive format unchanged and avoids a schema migration of `pm-context.yaml`. Phase 2 (task 2.3) and Phase 3 (task 3.6) implement the bare-string check; `@toolsmith` is told the exact check, not asked to design it.
 
 ## Scope
 
@@ -151,7 +149,7 @@ This plan delivers the git-operations responsibility refactor defined in [chg-GH
 
 - [ ] **2.1** Delegate to `@toolsmith`: edit `.opencode/agent/pm.md` — add a branch-ensure step before the first delegation (checkout if exists, else create `<type>/<workItemRef>/<slug>`); record the branch in `pm-context.yaml` (DM-2).
 - [ ] **2.2** Delegate to `@toolsmith`: edit `.opencode/agent/pm.md` — add a `@committer` trigger after each delegated lifecycle phase returns (specification, test-planning, delivery-planning, dor-check, system-spec-update, review-fix), each with a phase-appropriate intent hint (e.g., "add spec for `<ref>`", "add test plan for `<ref>`").
-- [ ] **2.3** Delegate to `@toolsmith`: edit `.opencode/agent/pm.md` — add the `no commit` directive check that suppresses the trigger (per OQ-T1: confirm the exact mechanism — recommended `directives.no_commit` in `pm-context.yaml`).
+- [ ] **2.3** Delegate to `@toolsmith`: edit `.opencode/agent/pm.md` — add the `no commit` directive check that suppresses the trigger. Per the resolved OQ-T1: check for the existing bare-string `"no commit"` directive (do **not** introduce a new `directives.no_commit` field); if present, skip the `@committer` trigger.
 - [ ] **2.4** Delegate to `@toolsmith`: edit `.opencode/agent/pm.md` — add an explicit `@committer` trigger to commit the `@readiness-reviewer` verdict file after dor_check returns (F-5, DEC-4).
 - [ ] **2.5** Delegate to `@toolsmith`: edit `.opencode/agent/readiness-reviewer.md` — make it write the verdict and return without committing; add a note that the PM commits the verdict.
 
@@ -193,7 +191,7 @@ This plan delivers the git-operations responsibility refactor defined in [chg-GH
 - [ ] **3.3** Delegate to `@toolsmith`: edit `.opencode/command/write-plan.md` — keep branch-ensure; add `/commit` trigger after `@plan-writer` returns.
 - [ ] **3.4** Delegate to `@toolsmith`: edit `.opencode/command/sync-docs.md` — keep branch-ensure; add `/commit` trigger after `@doc-syncer` returns; remove any multi-commit split (DEC-2).
 - [ ] **3.5** Delegate to `@toolsmith`: edit `.opencode/command/write-decision.md` — add `/commit` trigger after `@decision-advisor` returns (intent hint for the decision record).
-- [ ] **3.6** Delegate to `@toolsmith`: ensure the `no commit` directive check is present in each of the five commands (consistent with the mechanism chosen in Phase 2 / OQ-T1).
+- [ ] **3.6** Delegate to `@toolsmith`: ensure the bare-string `"no commit"` directive check is present in each of the five commands (per the resolved OQ-T1, consistent with Phase 2 task 2.3): if `"no commit"` is present, skip the `/commit` trigger.
 
 **Acceptance Criteria**:
 
@@ -293,7 +291,10 @@ This plan delivers the git-operations responsibility refactor defined in [chg-GH
 
 **Tasks**:
 
-- [ ] **6.1** Run the universal direct-commit gate (TC-GIT-012): `rg "git commit" .opencode/agent/` excluding `committer.md` → 0 matches; `rg "git commit" .opencode/command/` → 0 matches.
+- [ ] **6.1** Run the scoped direct-commit gate (TC-GIT-012), scoped to the **six delegated agents only** (`spec-writer`, `test-plan-writer`, `plan-writer`, `doc-syncer`, `reviewer`, `decision-advisor`). Do **not** grep the whole `.opencode/agent/` or `.opencode/command/` trees for `git commit` — legitimate prohibition/guidance text in `pm.md` and `review-feedback-applier.md` (e.g., "Hard rule: No git commit…", "never use @runner for git commit operations") would make a broad grep unachievable.
+  - Imperative commit-step patterns (must be 0 matches): `rg "Commit with:|git commit -F|create a single commit|Stage ONLY|\.add\(|\.commit\(|git add|git commit" .opencode/agent/spec-writer.md .opencode/agent/test-plan-writer.md .opencode/agent/plan-writer.md .opencode/agent/doc-syncer.md .opencode/agent/reviewer.md .opencode/agent/decision-advisor.md`
+  - Branch-checkout patterns (must be 0 matches): `rg "git checkout|git branch" .opencode/agent/spec-writer.md .opencode/agent/test-plan-writer.md .opencode/agent/plan-writer.md .opencode/agent/doc-syncer.md .opencode/agent/reviewer.md .opencode/agent/decision-advisor.md`
+  - Allowlist check: if any match appears, verify it is prohibition/guidance text only (e.g., "never use git commit", "no git commit") and not an actionable commit instruction; any actionable instruction must be removed via `@toolsmith`.
 - [ ] **6.2** Run branch-checkout gate: `rg "git checkout|git branch" .opencode/agent/{spec-writer,test-plan-writer,plan-writer,doc-syncer,reviewer,decision-advisor}.md` → 0 matches.
 - [ ] **6.3** Re-run TC-GIT-001 through TC-GIT-006 (per-agent pure-writer greps + pure-write notes present).
 - [ ] **6.4** Confirm already-correct agents untouched: `@coder`, `@meeting-organizer`, `@pr-manager` still delegate correctly (no new direct commits introduced).
@@ -403,7 +404,7 @@ Mapped from [chg-GH-151-test-plan.md](./chg-GH-151-test-plan.md) §5.
 | TC-GIT-009 | Manual commands trigger `/commit` after the agent returns | 3 | AC-F2-2, NFR-4 |
 | TC-GIT-010 | `/write-decision` triggers `/commit` after `@decision-advisor` returns | 3 | AC-F2-3 |
 | TC-GIT-011 | PM commits the readiness-reviewer verdict after DoR check | 2 | AC-F5-1 |
-| TC-GIT-012 | Grep across agents finds zero direct `git commit` (excluding `@committer`) | 6 | AC-F4-1, NFR-1, NFR-2 |
+| TC-GIT-012 | Scoped grep across the six delegated agents finds zero imperative commit-step patterns (prohibition text allowlisted) | 6 | AC-F4-1, NFR-1, NFR-2 |
 | TC-GIT-013 | `change-lifecycle.md` documents the responsibility model | 4 | AC-F7-1 |
 | TC-GIT-014 | Claude plugin regenerates and freshness guard passes | 5 | AC-F8-1, NFR-7 |
 | TC-GIT-015 | All prompt edits performed via `@toolsmith` (no hand-edits) | 1–4, 6 | AC-F6-1, NFR-8 |
@@ -432,6 +433,7 @@ Mapped from [chg-GH-151-test-plan.md](./chg-GH-151-test-plan.md) §5.
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-08-04 | plan-writer | Initial plan — 8 phases; all prompt edits delegated to `@toolsmith`; grep gates + behavioral validation per test plan. |
+| 1.1 | 2026-08-04 | plan-writer | DoR iter-2 fix: Phase 6.1 grep narrowed to the six delegated agents + imperative commit-step patterns (mirrors refined TC-GIT-012; avoids false positives on prohibition text in `pm.md`/`review-feedback-applier.md`). Resolved OQ-T1: use the existing bare-string `"no commit"` directive (no new `directives.no_commit` field); PM/commands skip the `@committer`/`/commit` trigger when present. Updated Phase 2 (2.3) and Phase 3 (3.6) accordingly; aligned the TC-GIT-012 scenario row. |
 
 ## Execution Log
 
