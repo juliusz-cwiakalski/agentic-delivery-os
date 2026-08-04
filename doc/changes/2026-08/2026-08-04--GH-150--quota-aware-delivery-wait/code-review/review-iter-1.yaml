@@ -1,0 +1,196 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-150
+branch: feat/GH-150/quota-aware-delivery-wait
+status: PASS
+summary: >
+  The GH-150 delivery is functionally correct and spec-compliant. All 12 spec
+  acceptance criteria (AC-F1-1 .. AC-NFR8-1) are satisfied; the deterministic
+  suite (53 passed / 0 failed: TC-ZAI-001..071 + TC-HOOK-015..018) is green,
+  the regression backbone (test-all.sh 13/13) is intact, ShellCheck is clean on
+  the hook, and the doc-distribution guard passes. Every binding decision
+  (DEC-1..11) and data contract (DM-1..DM-6, API-1) is honored: the generic
+  sleep-driver + condition-function extension point is implemented as specced,
+  the quota condition correctly takes the min over EXHAUSTED TOKENS_LIMIT
+  entries (ignoring TIME_LIMIT and non-exhausted earlier resets), clamps past
+  resets to 0, fail-opens with exactly one WARN on the full DM-3 catalog, and
+  re-evaluates with the ADOS_ZAI_MAX_SLEEP_LOOPS cap. Secret hygiene is strong
+  (full key + raw body never logged; set-evn.sh is untracked/locally-gitignored).
+  I empirically stress-tested the production _zai_quota_fetch failure paths
+  (bad/read-only TMPDIR) and confirmed fail-open emits the WARN correctly -- no
+  silent-fail defect. The findings below are advisory hardening (security
+  defense-in-depth beyond the spec's log-only boundary, float-percentage
+  robustness vs undocumented-endpoint drift), one doc/log drift nit, and one
+  plan-artifact hygiene gap (task checkboxes/execution log not updated despite
+  delivery being complete). None breach an AC or introduce a defect; verdict is
+  PASS with optional cleanup.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 3
+  low: 3
+  info: 1
+spec_compliance: PASS
+plan_compliance: FAIL
+publication: {}
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-08/2026-08-04--GH-150--quota-aware-delivery-wait/chg-GH-150-plan.md (tasks 0.1-5.7; Execution Log)
+    message: >
+      All plan task checkboxes remain `- [ ]` and the Execution Log rows are all
+      `--` (Phase 0-5 Status/Started/Completed/Commit = em-dash), even though
+      delivery is complete -- commits 4b4ea9b/7564e83/6a712a6/3006f81/4fe54bc
+      exist and pm-notes records "DELIVERY COMPLETE". This is a
+      DONE_BUT_UNCHECKED plan-audit gap: the work was done but the plan tracking
+      artifact was never reconciled.
+    suggestion: >
+      Tick all completed task boxes (0.1-5.7) and fill the Execution Log rows
+      (phase, Status=done, commit SHAs from git log) so the plan reflects
+      reality. Pure artifact hygiene; no code change.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: security
+    location: scripts/hooks/pre-opencode-iteration-zai.sh:73-76
+    message: >
+      ZAI_API_KEY is passed as a curl CLI argument
+      (`-H "Authorization: Bearer ${ZAI_API_KEY}"`), which exposes the full key
+      in the process table (`ps aux` / /proc/<pid>/cmdline) to other local users
+      for the duration of the fetch (up to the 15s --max-time window). This is
+      beyond the spec's stated log-only security boundary (NFR-7 / F-5 / DEC-10
+      constrain stderr/stdout, which is fully honored) and the threat model is
+      single-operator autonomous delivery, but passing secrets as CLI args is a
+      known anti-pattern on shared/multi-user hosts.
+    suggestion: >
+      Defense-in-depth: pass the Authorization header via a mode-0600 temp file
+      with `curl --config` or `-H @file`, or document the single-operator threat
+      model explicitly. Acceptable as-is for a single-user box; flag for
+      hardening if multi-user hosts are in scope.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: medium
+    confidence: medium
+    category: correctness
+    location: scripts/hooks/pre-opencode-iteration-zai.sh:215
+    message: >
+      `percentage` is validated with a bash integer regex `^[0-9]+$`. A
+      floating-point value (e.g. 99.5 or 150.5) -- plausible because the
+      endpoint is undocumented and the spec itself flags shape drift (RSK-1) --
+      is rejected as "non-numeric percentage" and triggers fail-open (one WARN +
+      return 0). This spuriously treats a healthy sub-100 float as a failure,
+      and gives up on an overage float instead of sleeping. The spec says
+      percentage is integer (API-1), so this is spec-compliant, but it is brittle
+      to the very drift RSK-1 worries about; fail-open is the safe direction, so
+      impact is a spurious WARN, not a wrong sleep.
+    suggestion: >
+      Move the numeric comparison into jq (`(.percentage | tonumber) >= 100`),
+      which handles int/float uniformly and removes the second (bash-regex)
+      parser. This also simplifies the loop. Optional; only worth it if the
+      endpoint is observed to emit floats.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/guides/zai-peak-hours-hook.md:218
+    message: >
+      The sample log line shows
+      `[INFO] (pre-opencode-iteration-zai) zai-coding-plan peak window; waiting until ...`,
+      but the implementation emits `peak-hours` as the reason token (driver maps
+      the condition name via a case to `peak-hours` / `quota-exhaustion`). Log
+      wording is UNPINNED per OQ-1, so no AC is breached, but the illustrative
+      line is stale relative to the actual output.
+    suggestion: >
+      Update the guide example to the current format, e.g.
+      `[INFO] (pre-opencode-iteration-zai) peak-hours; waiting until 2026-07-29T10:00:00Z`.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: low
+    confidence: high
+    category: portability
+    location: scripts/hooks/pre-opencode-iteration-zai.sh:223
+    message: >
+      Quota arithmetic operates on nextResetTime in epoch-MILLISECONDS
+      (~1.78e12) inside bash `(( ))`. On a 32-bit bash this exceeds INT32 max
+      (2.1e9) and would wrap, producing wrong sleep math. 64-bit hosts (the
+      autonomous-delivery context) are unaffected; the existing format_utc_epoch
+      uses epoch-seconds which fit 32-bit until 2038.
+    suggestion: >
+      No action required for the stated 64-bit delivery context. Optionally note
+      the 64-bit-bash assumption in the hook header or guide.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: low
+    confidence: high
+    category: robustness
+    location: scripts/hooks/pre-opencode-iteration-zai.sh:78
+    message: >
+      In `_zai_quota_fetch`, every line is guarded with `|| true` /
+      `2>/dev/null` except `rm -f "${tmp}"`. The function is empirically robust
+      (verified across two fetch-infrastructure failure modes: bad TMPDIR and
+      read-only TMPDIR both correctly emit the transport-failure WARN), so this
+      is not a demonstrable bug. Additionally there is no EXIT trap, so a
+      SIGTERM/SIGKILL mid-fetch leaks the temp file in /tmp.
+    suggestion: >
+      For consistency add `rm -f "${tmp}" 2>/dev/null || true`; optionally a
+      local trap to remove the temp file on signal. Low-impact cleanup.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: info
+    confidence: high
+    category: testing
+    location: scripts/.tests/test-hook-zai-example.sh (whole suite)
+    message: >
+      The production `_zai_quota_fetch` (the real curl integration) is never
+      exercised by the suite -- only the canned mock is. This is mandated by
+      NFR-1 (0 live network in CI), so it is an intentional consequence of the
+      hermetic-seam design, not a defect. The fail-open behavior for real
+      curl/network errors is validated by the mock catalog plus the validated
+      POC (quota-check-poc.sh) as live-integration evidence; this reviewer also
+      manually reproduced two production fetch failure modes.
+    suggestion: >
+      No action required. If desired, document that the POC is the live-fetch
+      regression evidence so the gap is explicit rather than implicit.
+    suppressed: false
+    published_url: null
+    published_at: null
+ac_coverage:
+  AC-F1-1: SATISFIED   # non-zai -> no sleep, no conditions; TC-ZAI-001
+  AC-F1-2: SATISFIED   # MAX + re-eval + cap; TC-ZAI-040/041/042/060/061/062/063/064
+  AC-F2-1: SATISFIED   # peak behavior-preserving + portability; TC-ZAI-002..005/055/056 + TC-HOOK-015..018
+  AC-F3-1: SATISFIED   # silent opt-out; TC-ZAI-021/022/023/025
+  AC-F3-2: SATISFIED   # exhaustion detection incl. min-over-exhausted, mixed-reset, nonexh-earlier; TC-ZAI-029..039
+  AC-F3-3: SATISFIED   # fail-open catalog, one WARN, peak applies, exit 0; TC-ZAI-010..020/052
+  AC-F3-4: SATISFIED   # ADOS_ZAI_QUOTA_DISABLED=1 -> no fetch; TC-ZAI-024/045
+  AC-F4-1: SATISFIED   # hermetic seams, 0 live/0 sleep; TC-ZAI-070
+  AC-F5-1: SATISFIED   # no full key / no raw body; TC-ZAI-050/051
+  AC-F6-1: SATISFIED   # guide documents condition-function contract + how-tos; TC-ZAI-071
+  AC-NFR3-1: SATISFIED # non-opt-in -> 0 jq / 0 network; TC-ZAI-021
+  AC-NFR8-1: SATISFIED # <=1 fetch/iter, no cache; TC-ZAI-046/064
+plan_task_audit:
+  OPEN_TASKS: []
+  DONE_BUT_UNCHECKED: "tasks 0.1-5.7 (all phases delivered per commits + pm-notes, but checkboxes still `- [ ]`)"
+  CHECKED_BUT_MISSING: []
+test_coverage_gaps:
+  - "Production _zai_quota_fetch (real curl) untested by design (NFR-1); POC is the live evidence."
+  - "No test for non-numeric ADOS_ZAI_MAX_SLEEP_LOOPS or float percentage (both fail-safe)."
+  - "TC-ZAI-001 asserts FETCH==0 but not that _now_utc_epoch was uncalled (gate makes it so)."
+reviewed_at: 2026-08-04T21:25:00Z
+next_step: PROCEED
