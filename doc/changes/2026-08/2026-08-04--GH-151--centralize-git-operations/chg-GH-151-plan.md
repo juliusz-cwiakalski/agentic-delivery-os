@@ -441,4 +441,5 @@ Mapped from [chg-GH-151-test-plan.md](./chg-GH-151-test-plan.md) §5.
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
+| 1 | COMPLETED | 2026-08-04T00:00:00Z | 2026-08-04T00:30:00Z | 77f2997 | All six agents converted to pure writers; AC validated |
 | — | — | — | — | — | Execution not yet started |
