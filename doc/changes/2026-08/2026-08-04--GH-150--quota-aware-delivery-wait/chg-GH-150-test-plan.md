@@ -32,10 +32,10 @@ The motivating regression is the restart-storm: an exhausted quota misread as a 
 - MAX-composition across conditions and the re-evaluation loop, including the `ADOS_ZAI_MAX_SLEEP_LOOPS` cap (AC-F1-2).
 - Quota fail-open catalog (group B): curl/network failure, HTTP 401/403, non-200 envelope (`code != 200`, `success != true`), malformed JSON, `data.limits` absent/non-array, non-numeric `percentage`, exhausted entry with absent/malformed/unparseable `nextResetTime` and no other valid exhausted entry — each yielding return `0` + exactly one `[WARN]`, with peak still applying.
 - Silent opt-out (group B′): `ZAI_API_KEY` unset, `jq` missing, `curl` missing, `ADOS_ZAI_QUOTA_DISABLED=1` — return `0`, zero quota stderr, no fetch.
-- Exhaustion detection (group C): `pct<100` → 0; 5h `pct>=100`; weekly `pct>=100`; both → soonest (min); `TIME_LIMIT`-only ignored; `pct==100` boundary; `pct>100` overage; past `nextResetTime` clamped to 0.
+- Exhaustion detection (group C): `pct<100` → 0; no `TOKENS_LIMIT` entry (TIME_LIMIT-only or `[]`) → 0 (no WARN); 5h `pct>=100`; weekly `pct>=100`; both → soonest (min over EXHAUSTED entries; a non-exhausted entry's earlier reset is IGNORED); mixed valid/bad reset among exhausted → use the good one (no WARN); `TIME_LIMIT`-only ignored; `pct==100` boundary; `pct>100` overage; past `nextResetTime` clamped to 0.
 - Combined peak+quota (group D): MAX composition when both active; peak-only; quota-only.
 - Toggles (group E): `ADOS_ZAI_QUOTA_DISABLED=1` performs no fetch; no file cache in v1.
-- Safety/hygiene (group F): full `ZAI_API_KEY` never logged (prefix/suffix only); raw response body never logged in production; fail-open keeps exit 0 off-peak.
+- Safety/hygiene (group F): full `ZAI_API_KEY` never logged (prefix/suffix only); raw response body never logged (no debug/verbose toggle in v1); fail-open keeps exit 0 off-peak.
 - Portability (group G): `format_utc_epoch` correct without GNU `date -d`; the `! grep -q 'date -.*-d'` assertion preserved for the peak path (`jq` allowed in the quota path).
 - Re-evaluation loop (group H): cross-time composition (quota sleep lands in peak), condition-cleared return, past-reset → 0 (no infinite loop), `ADOS_ZAI_MAX_SLEEP_LOOPS` cap, fresh fetch each iteration.
 - NFR coverage NFR-1..NFR-8.
@@ -109,20 +109,25 @@ Tests assert the **observable contract**: the recorded `_sleep` argument sequenc
 
 ## 5. Fixture Catalog (canned Z.AI JSON variants)
 
-All fixtures are data (JSON literals), not code. Unless noted, the envelope is `{"code":200,"msg":"Operation successful","success":true,"data":{...}}` and the mock returns HTTP code `200` with the body. `nextResetTime` values are **epoch-milliseconds UTC** (API-1). Concrete numbers below assume a base "now" of `N0 = 1785000000` (UTC seconds-of-day `2400` = 00:40 UTC, off-peak) where quota math is needed; tests that need a different clock set `_now_utc_epoch` explicitly.
+All fixtures are data (JSON literals), not code. Unless noted, the envelope is `{"code":200,"msg":"Operation successful","success":true,"data":{...}}` and the mock returns HTTP code `200` with the body. `nextResetTime` values are **epoch-milliseconds UTC** (API-1). Concrete numbers below assume a base "now" of `N0 = 1784940000` (UTC seconds-of-day `2400` = 00:40 UTC, off-peak) where quota math is needed; tests that need a different clock set `_now_utc_epoch` explicitly.
+
+**Arithmetic anchor (F-1 remediation):** `N0 = 1784940000` → `1784940000 % 86400 = 2400` → seconds-of-day `2400` = 00:40 UTC, **off-peak** (`2400 ∉ [14400,36000)`). `N0 + 12600 = 1784952600` → seconds-of-day `15000` = inside peak `[14400,36000)`. `peak_wait = 36000 − 15000 = 21000` ⇒ TC-ZAI-060 cross-time sleep log = `[12600, 21000]` ✓. (Every synthetic `nextResetTime` below is anchored to this `N0`; only F-5H-FAR uses an independent `now = 1767240600`, and F-OFF keeps the live ground-truth numbers, which are not asserted.)
 
 ### 5.1 Valid-shape quota bodies
 
 - **F-OFF** — not exhausted (all `TOKENS_LIMIT` `percentage < 100`):
   `data.level=max`; `limits` = TIME_LIMIT(pct 1) + TOKENS_LIMIT(unit 3/number 5, pct 3, nextResetTime 1785841303288) + TOKENS_LIMIT(unit 6/number 1, pct 61, nextResetTime 1786258872998). Expected quota wait: `0`.
-- **F-5H** — 5h window exhausted, weekly ok: TOKENS_LIMIT(unit 3/number 5, **pct 100**, nextResetTime **1785007200000**) + TOKENS_LIMIT(unit 6/number 1, pct 61, …). With now `N0`, expected quota wait `7200`.
-- **F-WEEK** — weekly exhausted, 5h ok: TOKENS_LIMIT(unit 3/number 5, pct 3, …) + TOKENS_LIMIT(unit 6/number 1, **pct 100**, nextResetTime **1785086400000**). Expected quota wait `86400`.
-- **F-BOTH** — both exhausted: 5h pct 100 (nextResetTime 1785007200000) + weekly pct 100 (nextResetTime 1785086400000). Soonest = 5h; expected quota wait `7200`.
+- **F-5H** — 5h window exhausted, weekly ok: TOKENS_LIMIT(unit 3/number 5, **pct 100**, nextResetTime **1784947200000**) + TOKENS_LIMIT(unit 6/number 1, pct 61, …). With now `N0`, expected quota wait `7200`.
+- **F-WEEK** — weekly exhausted, 5h ok: TOKENS_LIMIT(unit 3/number 5, pct 3, …) + TOKENS_LIMIT(unit 6/number 1, **pct 100**, nextResetTime **1785026400000**). Expected quota wait `86400`.
+- **F-BOTH** — both exhausted: 5h pct 100 (nextResetTime 1784947200000) + weekly pct 100 (nextResetTime 1785026400000). Soonest = 5h; expected quota wait `7200`.
 - **F-TIME-ONLY** — TIME_LIMIT exhausted, tokens ok: TIME_LIMIT(**pct 100**, …) + TOKENS_LIMIT(pct 3) + TOKENS_LIMIT(pct 61). Expected quota wait `0` (TIME_LIMIT ignored).
-- **F-OVERAGE** — pct > 100: TOKENS_LIMIT(unit 3/number 5, **pct 105**, nextResetTime 1785007200000) + weekly pct 61. Expected quota wait `7200`.
-- **F-PAST** — exhausted with nextResetTime in the past: TOKENS_LIMIT(unit 3/number 5, pct 100, nextResetTime **1784999900000**) (= N0 − 100 s). Expected quota wait `0` (clamped).
-- **F-5H-FAR** — 5h exhausted with a far reset (for MAX-composition): TOKENS_LIMIT(unit 3/number 5, pct 100, nextResetTime **1767270600000**) used with now `1767240600` (in-peak); expected quota wait `30000`.
-- **F-CROSS** — 5h exhausted landing reset inside peak (for re-eval cross-time): TOKENS_LIMIT(unit 3/number 5, pct 100, nextResetTime **1785012600000**) used with now `N0`; expected quota wait `12600` (lands at seconds-of-day 15000, inside the default peak window).
+- **F-OVERAGE** — pct > 100: TOKENS_LIMIT(unit 3/number 5, **pct 105**, nextResetTime 1784947200000) + weekly pct 61. Expected quota wait `7200`.
+- **F-PAST** — exhausted with nextResetTime in the past: TOKENS_LIMIT(unit 3/number 5, pct 100, nextResetTime **1784939900000**) (= `(N0 − 100) × 1000`). Expected quota wait `0` (clamped).
+- **F-5H-FAR** — 5h exhausted with a far reset (for MAX-composition): TOKENS_LIMIT(unit 3/number 5, pct 100, nextResetTime **1767270600000**) used with now `1767240600` (in-peak); expected quota wait `30000`. (Independent of `N0`.)
+- **F-CROSS** — 5h exhausted landing reset inside peak (for re-eval cross-time): TOKENS_LIMIT(unit 3/number 5, pct 100, nextResetTime **1784952600000**) used with now `N0`; expected quota wait `12600` (lands at seconds-of-day `15000`, inside the default peak window `[14400,36000)`).
+- **F-NO-TOKENS** — no `TOKENS_LIMIT` entry: `data.limits` = a single `TIME_LIMIT` entry only (or `[]`). Valid shape, no token window to exhaust; expected quota wait `0` and **0** `[WARN]` (proceed, NOT fail-open). (F-8)
+- **F-MIXED-RESET** — mixed valid/bad reset among exhausted entries: 5h `pct=100` with a BAD `nextResetTime` (`"soon"`) + weekly `pct=100` with a GOOD `nextResetTime` (`1785026400000`, wait `86400`). Expected quota wait `86400` (uses the good weekly reset, ignoring the bad 5h one); **0** `[WARN]` (NOT fail-open — a valid exhausted reset exists). (F-2)
+- **F-NONEXH-EARLIER** — non-exhausted earlier reset ignored: EXHAUSTED 5h entry (`pct=100`, `nextResetTime 1784947200000`, wait `7200`) + NON-exhausted weekly entry (`pct=50`, `nextResetTime 1784942400000` = wait `2400`, EARLIER than the exhausted one). Expected quota wait `7200` (the exhausted entry's LATER reset is used; the non-exhausted entry's earlier reset is IGNORED — min is over EXHAUSTED entries only). (F-3)
 
 ### 5.2 Fail-open bodies / transports (group B)
 
@@ -142,7 +147,7 @@ All fixtures are data (JSON literals), not code. Unless noted, the envelope is `
 ### 5.3 Secret/hygiene fixtures (group F)
 
 - **F-SECRET** — the fake API key used by every opted-in test: `zai-fake-secret-AAAAAAAA-BBBB-CCCC-DDDD-1234567890ab` (set as `ZAI_API_KEY`). It is long and distinctive so an exact-match absence assertion is meaningful; only a short prefix/suffix may ever appear in diagnostics.
-- **F-CANARY** — a valid-shape body (e.g. F-5H) with a distinctive canary string embedded in an informational field (e.g. `data.level` = `"max-CANARY-ACCOUNT-ID-XYZ"`). Used to prove the raw body never reaches logs in production mode.
+- **F-CANARY** — a valid-shape body (e.g. F-5H) with a distinctive canary string embedded in an informational field (e.g. `data.level` = `"max-CANARY-ACCOUNT-ID-XYZ"`). Used to prove the raw body never reaches logs (there is no debug/verbose toggle in v1).
 
 ## 6. Test Cases
 
@@ -173,6 +178,7 @@ Test-case IDs use the `TC-ZAI-NNN` prefix for new cases. The four pre-existing p
 | TC-ZAI-023 | `curl` missing → silent, no fetch | B′ | U | High | AC-F3-1, NFR-5 |
 | TC-ZAI-024 | `ADOS_ZAI_QUOTA_DISABLED=1` + key → silent, no fetch | B′/E | U | High | AC-F3-1, AC-F3-4, NFR-5 |
 | TC-ZAI-025 | Opt-out + peak active → peak applies, zero quota stderr | B′ | I | High | AC-F3-1, NFR-5 |
+| TC-ZAI-029 | No `TOKENS_LIMIT` entry (TIME_LIMIT-only or `[]`) → 0, no WARN | C | U | High | AC-F3-2 |
 | TC-ZAI-030 | All `TOKENS_LIMIT` pct<100 → 0 | C | U | High | AC-F3-2 |
 | TC-ZAI-031 | 5h pct>=100 (weekly<100) → sleep to 5h reset | C | U | High | AC-F3-2, DM-2 |
 | TC-ZAI-032 | weekly pct>=100 (5h<100) → sleep to weekly reset | C | U | High | AC-F3-2, DM-2 |
@@ -181,16 +187,18 @@ Test-case IDs use the `TC-ZAI-NNN` prefix for new cases. The four pre-existing p
 | TC-ZAI-035 | pct == 100 boundary → exhausted | C | U | High | AC-F3-2 |
 | TC-ZAI-036 | pct > 100 (e.g. 105) → exhausted | C | U | High | AC-F3-2 |
 | TC-ZAI-037 | `nextResetTime` in past → clamp wait to 0 | C | U | High | AC-F3-2, RSK-2 |
+| TC-ZAI-038 | Mixed valid/bad reset among exhausted → uses good reset, 0 WARN | C | U | High | AC-F3-2 |
+| TC-ZAI-039 | Non-exhausted earlier reset ignored → min over EXHAUSTED entries only | C | U | High | AC-F3-2 |
 | TC-ZAI-040 | In-peak AND quota exhausted → `_sleep` = max(peak,quota) | D | I | High | AC-F1-2, DM-5 |
 | TC-ZAI-041 | In-peak AND quota OK → peak only | D | I | High | AC-F1-2 |
 | TC-ZAI-042 | Off-peak AND quota exhausted → quota only | D | I | High | AC-F1-2 |
 | TC-ZAI-045 | `ADOS_ZAI_QUOTA_DISABLED=1` + key → no fetch, return 0 | E | U | High | AC-F3-4, NFR-8 |
-| TC-ZAI-046 | No file cache: no cache file; no `ADOS_ZAI_QUOTA_CACHE_SECONDS`; one fetch/iteration | E | U | Medium | AC-NFR8-1, NFR-8 |
+| TC-ZAI-046 | No file cache: no cache file; grep-hook-source `ADOS_ZAI_QUOTA_CACHE_SECONDS` absent; 1 fetch/iteration (2-iteration loop) | E | U | Medium | AC-NFR8-1, NFR-8 |
 | TC-ZAI-050 | Full `ZAI_API_KEY` never in stdout/stderr (prefix/suffix only) | F | I | High | AC-F5-1, NFR-7 |
-| TC-ZAI-051 | Raw response body never logged in production (canary) | F | I | High | AC-F5-1, NFR-7 |
+| TC-ZAI-051 | Raw response body never logged (canary; no debug toggle in v1) | F | I | High | AC-F5-1, NFR-7 |
 | TC-ZAI-052 | Fail-open keeps exit 0 when off-peak | F | B | High | AC-F3-3, NFR-4 |
 | TC-ZAI-055 | `format_utc_epoch` correct without GNU `date -d` | G | U | High | AC-F2-1, NFR-2 |
-| TC-ZAI-056 | `! grep -q 'date -.*-d'` preserved for peak path (jq ok in quota) | G | U | High | AC-F2-1, NFR-2, DEC-6 |
+| TC-ZAI-056 | Whole-file `! grep -q 'date -.*-d'` preserved; quota reuses `format_utc_epoch`; @coder MUST NOT use `date -d` (POC trap) | G | U | High | AC-F2-1, NFR-2, DEC-6 |
 | TC-ZAI-060 | Cross-time: quota sleep lands in peak → re-eval sleeps to peak_end | H | I | High | AC-F1-2, DM-5, RSK-7 |
 | TC-ZAI-061 | Sleep a condition, re-eval clears → driver returns | H | I | High | AC-F1-2, DM-5 |
 | TC-ZAI-062 | Past `nextResetTime` after sleeping → quota 0 on re-eval (no infinite loop) | H | I | High | AC-F1-2, DM-5, NFR-6, RSK-2 |
@@ -321,6 +329,11 @@ For TC-ZAI-010..018 the clock is **off-peak** (`_now_utc_epoch` = N0, seconds-of
 
 Common: `_now_utc_epoch` = `N0` (off-peak); key set; `_zai_quota_fetch` returns the named fixture; the expected `_sleep` arg is the quota wait (peak contributes 0 off-peak). After the sleep, the re-eval fetch returns F-OFF so the loop terminates in one sleep (unless stated).
 
+**TC-ZAI-029** — No `TOKENS_LIMIT` entry (TIME_LIMIT-only or `[]`) → 0, no WARN
+- **Given** F-NO-TOKENS (`data.limits` = a single `TIME_LIMIT` entry only, or `[]`).
+- **When** `main` runs.
+- **Then** returns `0`; sleep log empty; **0** `[WARN]` lines (valid shape — no token window to exhaust ⇒ proceed, NOT fail-open). (AC-F3-2)
+
 **TC-ZAI-030** — All `TOKENS_LIMIT` pct<100 → 0
 - **Given** F-OFF.
 - **When** `main` runs.
@@ -329,7 +342,7 @@ Common: `_now_utc_epoch` = `N0` (off-peak); key set; `_zai_quota_fetch` returns 
 **TC-ZAI-031** — 5h pct>=100 (weekly<100) → sleep to 5h reset
 - **Given** F-5H.
 - **When** `main` runs.
-- **Then** returns `0`; sleep log entry `7200` (= floor((1785007200000/1000) − 1785000000)). (AC-F3-2, DM-2)
+- **Then** returns `0`; sleep log entry `7200` (= floor((1784947200000/1000) − 1784940000)). (AC-F3-2, DM-2)
 
 **TC-ZAI-032** — weekly pct>=100 (5h<100) → sleep to weekly reset
 - **Given** F-WEEK.
@@ -361,6 +374,16 @@ Common: `_now_utc_epoch` = `N0` (off-peak); key set; `_zai_quota_fetch` returns 
 - **When** `main` runs.
 - **Then** returns `0`; sleep log empty (wait clamped to `>= 0`). (AC-F3-2, RSK-2)
 
+**TC-ZAI-038** — Mixed valid/bad reset among exhausted → uses good reset, 0 WARN
+- **Given** F-MIXED-RESET (5h `pct=100` with a BAD `nextResetTime` (`"soon"`) + weekly `pct=100` with a GOOD `nextResetTime` (`1785026400000`, wait `86400`)).
+- **When** `main` runs.
+- **Then** returns `0`; sleep log = `86400` (uses the good weekly reset, ignoring the bad 5h one); **0** `[WARN]` lines (this is NOT fail-open — a valid exhausted reset exists). (AC-F3-2)
+
+**TC-ZAI-039** — Non-exhausted earlier reset ignored → min over EXHAUSTED entries only
+- **Given** F-NONEXH-EARLIER (an EXHAUSTED 5h entry (`pct=100`, `nextResetTime 1784947200000`, wait `7200`) + a NON-exhausted weekly entry (`pct=50`, `nextResetTime 1784942400000` = wait `2400`, EARLIER than the exhausted one)).
+- **When** `main` runs.
+- **Then** returns `0`; sleep log = `7200` (the exhausted entry's LATER reset is used; the non-exhausted entry's earlier reset is IGNORED — min is taken over EXHAUSTED entries only). (AC-F3-2)
+
 #### Group D — Combined peak+quota (MAX)
 
 **TC-ZAI-040** — In-peak AND quota exhausted → `_sleep` = max(peak, quota)
@@ -385,10 +408,10 @@ Common: `_now_utc_epoch` = `N0` (off-peak); key set; `_zai_quota_fetch` returns 
 - **When** `main` runs.
 - **Then** returns `0`; fetch counter `0`; sleep log empty; no quota `[WARN]`/`[INFO]`. (AC-F3-4, NFR-8)
 
-**TC-ZAI-046** — No file cache in v1
-- **Given** key set; a clean temp state dir; a single-iteration off-peak run with `_zai_quota_fetch` returning F-5H then F-OFF; the state dir scanned afterward.
+**TC-ZAI-046** — No file cache in v1 (2-iteration loop: one sleep, two fetches)
+- **Given** key set; a clean temp state dir; a **2-iteration loop** run — off-peak start (`_now_utc_epoch` = `N0`), `_zai_quota_fetch` returns F-5H (quota_wait `7200`) on the first call and F-OFF on the second, so the driver sleeps once and re-evaluates to clear (one sleep, two fetches); the state dir is scanned afterward; the hook source `scripts/hooks/pre-opencode-iteration-zai.sh` is in hand.
 - **When** `main` runs.
-- **Then** it returns `0`; **no cache file** is written under the state dir (or anywhere the hook writes); the env does not define `ADOS_ZAI_QUOTA_CACHE_SECONDS`; the fetch counter is exactly `1` per loop iteration. (AC-NFR8-1, NFR-8)
+- **Then** it returns `0` and all three hold: (a) **no cache file** is written under the state dir (or anywhere the hook writes); (b) a **grep over the hook source** confirms the token `ADOS_ZAI_QUOTA_CACHE_SECONDS` does **not** appear anywhere (proving the hook does not read it — this is a source grep, not a runtime/env assertion); (c) the `_zai_quota_fetch` counter is exactly **1 per loop iteration** (i.e. `2` across the 2-iteration loop — fresh fetch each iteration, no cross-iteration cache). (AC-NFR8-1, NFR-8)
 
 #### Group F — Safety / hygiene
 
@@ -397,10 +420,10 @@ Common: `_now_utc_epoch` = `N0` (off-peak); key set; `_zai_quota_fetch` returns 
 - **When** each path runs.
 - **Then** neither stream contains the full F-SECRET string; at most a short prefix/suffix appears in any diagnostic. (AC-F5-1, NFR-7)
 
-**TC-ZAI-051** — Raw response body never logged in production
-- **Given** `_zai_quota_fetch` returns F-CANARY (carrying `CANARY-ACCOUNT-ID-XYZ`) and the hook runs in production mode (no debug/verbose env); an exhaustion case and a fail-open case exercised; stderr/stdout captured.
+**TC-ZAI-051** — Raw response body never logged
+- **Given** `_zai_quota_fetch` returns F-CANARY (carrying `CANARY-ACCOUNT-ID-XYZ`); an exhaustion case and a fail-open case exercised; stderr/stdout captured.
 - **When** the paths run.
-- **Then** neither stream contains the canary string `CANARY-ACCOUNT-ID-XYZ` (the raw body is never logged in production); only a reason category may appear. (AC-F5-1, NFR-7)
+- **Then** neither stream contains the canary string `CANARY-ACCOUNT-ID-XYZ` — the raw body is **never** logged (there is no debug/verbose toggle in v1); only a short reason category may appear in a `[WARN]`. (AC-F5-1, NFR-7)
 
 **TC-ZAI-052** — Fail-open keeps exit 0 when off-peak
 - **Given** each active-failure fixture from group B, off-peak.
@@ -414,17 +437,17 @@ Common: `_now_utc_epoch` = `N0` (off-peak); key set; `_zai_quota_fetch` returns 
 - **When** called with `0`, `JAN_1_2026 + 36000`, `N0`, and `N0 + 7200`.
 - **Then** it returns `1970-01-01T00:00:00Z`, `2026-01-01T10:00:00Z`, and the correct ISO-UTC strings for the N0 epochs, all **without** invoking `date -d`. (Extends existing `TC-HOOK-015` with the quota-test epochs.) (AC-F2-1, NFR-2)
 
-**TC-ZAI-056** — Peak path stays free of GNU `date -d`; `jq` allowed in quota path
-- **Given** the hook source file.
-- **When** grepped for the pattern `date -.*-d`.
-- **Then** the assertion `! grep -q 'date -.*-d'` holds for the **peak code path** (the pure-Gregorian formatter is unchanged); `jq` usage is permitted only in the opt-in quota path. The test is scoped so that introducing `jq` in the quota path does not break the peak-path portability guarantee. (AC-F2-1, NFR-2, DEC-6)
+**TC-ZAI-056** — Whole-file `! grep -q 'date -.*-d'` preserved; quota path reuses `format_utc_epoch`; `jq` allowed in quota path
+- **Given** the hook source file `scripts/hooks/pre-opencode-iteration-zai.sh`.
+- **When** grepped **whole-file** (no path scoping) for the pattern `date -.*-d`.
+- **Then** the assertion `! grep -q 'date -.*-d'` over the whole hook source is **PRESERVED**. It holds because the quota path REUSES `format_utc_epoch` (pure Gregorian, no `date -d`) and uses `jq` — NOT because the grep is path-scoped (you cannot grep-scope a code path). **@coder MUST NOT use `date -d` (or `date -r`) anywhere in the hook** — the POC helper `iso_from_ms` in `quota-check-poc.sh` uses `date -u -d "@$sec"` and is a copy-paste trap; the production hook must use `format_utc_epoch` for ALL wake-time formatting. `jq` usage is permitted only in the opt-in quota path. (AC-F2-1, NFR-2, DEC-6)
 
 #### Group H — Re-evaluation loop
 
 These cases use a **stepping clock**: `_now_utc_epoch` advances by the sum of prior `_sleep` arguments, so the driver's re-evaluation observes elapsed time.
 
 **TC-ZAI-060** — Cross-time: quota sleep lands in peak → re-eval sleeps to peak_end
-- **Given** `_now_utc_epoch` starts at `N0` (seconds-of-day 2400, off-peak); `_zai_quota_fetch` returns F-CROSS (5h pct>=100, reset at `1785012600000`, quota_wait `12600`) on the first call and F-OFF thereafter; stepping clock enabled.
+- **Given** `_now_utc_epoch` starts at `N0` (seconds-of-day 2400, off-peak); `_zai_quota_fetch` returns F-CROSS (5h pct>=100, reset at `1784952600000`, quota_wait `12600`) on the first call and F-OFF thereafter; stepping clock enabled.
 - **When** `main` runs.
 - **Then** returns `0`; the sleep log is `[12600, 21000]` — iteration 1 sleeps the quota wait (lands at seconds-of-day 15000, inside peak), iteration 2 re-evaluates and sleeps the peak wait (`36000 − 15000 = 21000`); iteration 3 is off-peak with quota OK and the loop ends. Proves correct cross-time MAX composition. (AC-F1-2, DM-5, RSK-7)
 
@@ -434,7 +457,7 @@ These cases use a **stepping clock**: `_now_utc_epoch` advances by the sum of pr
 - **Then** returns `0`; the sleep log is `[7200]` (one sleep); no second sleep occurs because the re-eval clears. (AC-F1-2, DM-5)
 
 **TC-ZAI-062** — Past `nextResetTime` after sleeping → quota 0 on re-eval (no infinite loop)
-- **Given** off-peak, `_now_utc_epoch` = N0; `_zai_quota_fetch` **always** returns a body with 5h pct>=100 and nextResetTime `1785003600000` (= N0 + 3600, i.e. quota_wait `3600` on the first call but **in the past once the clock advances past it**); stepping clock.
+- **Given** off-peak, `_now_utc_epoch` = N0; `_zai_quota_fetch` **always** returns a body with 5h pct>=100 and nextResetTime `1784943600000` (= N0 + 3600, i.e. quota_wait `3600` on the first call but **in the past once the clock advances past it**); stepping clock.
 - **When** `main` runs.
 - **Then** returns `0`; the sleep log is `[3600]` (iteration 1 sleeps 3600; iteration 2 sees the same reset now in the past → clamps to 0 → quota 0 → loop ends). Proves termination even if the mock keeps reporting exhaustion. (AC-F1-2, DM-5, NFR-6, RSK-2)
 
@@ -470,11 +493,11 @@ These cases use a **stepping clock**: `_now_utc_epoch` advances by the sum of pr
 | AC-F1-2 | MAX across conditions + re-eval loop; `ADOS_ZAI_MAX_SLEEP_LOOPS` cap → 0 + one WARN | TC-ZAI-040, TC-ZAI-041, TC-ZAI-042, TC-ZAI-060, TC-ZAI-061, TC-ZAI-062, TC-ZAI-063, TC-ZAI-064 | D, H | Covered |
 | AC-F2-1 | Peak sleeps to peak_end; off-peak → 0; `format_utc_epoch` sans GNU `date -d`; `! grep -q 'date -.*-d'` preserved for peak path | TC-ZAI-002, TC-ZAI-003, TC-ZAI-004, TC-ZAI-005, TC-ZAI-055, TC-ZAI-056, TC-HOOK-015, TC-HOOK-016, TC-HOOK-017, TC-HOOK-018 | A, G | Covered |
 | AC-F3-1 | `ZAI_API_KEY` unset OR `jq` OR `curl` missing → silent opt-out; peak still applies | TC-ZAI-021, TC-ZAI-022, TC-ZAI-023, TC-ZAI-025 | B′ | Covered |
-| AC-F3-2 | Any `TOKENS_LIMIT` pct>=100 → soonest nextResetTime (clamped ≥0); TIME_LIMIT ignored; ==100 and >100 exhausted | TC-ZAI-030, TC-ZAI-031, TC-ZAI-032, TC-ZAI-033, TC-ZAI-034, TC-ZAI-035, TC-ZAI-036, TC-ZAI-037 | C | Covered |
+| AC-F3-2 | Any `TOKENS_LIMIT` pct>=100 → soonest nextResetTime among EXHAUSTED entries (clamped ≥0); TIME_LIMIT ignored; ==100 and >100 exhausted; no TOKENS_LIMIT → 0; mixed valid/bad reset → use good; non-exhausted earlier reset ignored | TC-ZAI-029, TC-ZAI-030, TC-ZAI-031, TC-ZAI-032, TC-ZAI-033, TC-ZAI-034, TC-ZAI-035, TC-ZAI-036, TC-ZAI-037, TC-ZAI-038, TC-ZAI-039 | C | Covered |
 | AC-F3-3 | Fetch fails (network/401/403/non-200/malformed/non-numeric pct/bad nextResetTime) → 0 + one WARN; peak applies; exit unchanged | TC-ZAI-010, TC-ZAI-011, TC-ZAI-012, TC-ZAI-013, TC-ZAI-014, TC-ZAI-015, TC-ZAI-016, TC-ZAI-017, TC-ZAI-018, TC-ZAI-019, TC-ZAI-020, TC-ZAI-052 | B, F | Covered |
 | AC-F3-4 | `ADOS_ZAI_QUOTA_DISABLED=1` + key → 0, no fetch | TC-ZAI-024, TC-ZAI-045 | B′, E | Covered |
 | AC-F4-1 | Seams override clock/sleep/HTTP → deterministic suite (A–H), 0 live network, 0 real sleeps | TC-ZAI-070 (and all cases by construction) | all | Covered |
-| AC-F5-1 | stderr/stdout never full `ZAI_API_KEY`; never raw body in production | TC-ZAI-050, TC-ZAI-051 | F | Covered |
+| AC-F5-1 | stderr/stdout never full `ZAI_API_KEY`; raw body never logged (no debug toggle in v1) | TC-ZAI-050, TC-ZAI-051 | F | Covered |
 | AC-F6-1 | Guide documents condition-function contract + how-to | TC-ZAI-071 | docs | Covered (post guide-update — see §10.3) |
 | AC-NFR3-1 | Non-opt-in (no key) → peak path spawns 0 `jq`, 0 network | TC-ZAI-021 (0 `jq` + 0 fetch counters) | portability | Covered |
 | AC-NFR8-1 | v1: ≤1 fetch per re-eval loop iteration; no cross-invocation file cache | TC-ZAI-046, TC-ZAI-064 | E, H | Covered |
@@ -485,7 +508,7 @@ These cases use a **stepping clock**: `_now_utc_epoch` advances by the sum of pr
 |------|------------|----------|
 | F-1 | Generic condition-function sleep-driver (gate + MAX + re-eval) | TC-ZAI-001, TC-ZAI-040, TC-ZAI-041, TC-ZAI-042, TC-ZAI-060, TC-ZAI-061, TC-ZAI-062, TC-ZAI-063, TC-ZAI-064 |
 | F-2 | Peak-hours condition (behavior-preserving) | TC-ZAI-002, TC-ZAI-003, TC-ZAI-004, TC-ZAI-005, TC-ZAI-055, TC-ZAI-056, TC-HOOK-015..018 |
-| F-3 | Z.AI quota-exhaustion condition (opt-in, fail-open) | TC-ZAI-010..018, TC-ZAI-021..025, TC-ZAI-030..037, TC-ZAI-045 |
+| F-3 | Z.AI quota-exhaustion condition (opt-in, fail-open) | TC-ZAI-010..018, TC-ZAI-021..025, TC-ZAI-029..039, TC-ZAI-045 |
 | F-4 | Injectable test seams | TC-ZAI-070 (and all cases) |
 | F-5 | Safe secret handling | TC-ZAI-050, TC-ZAI-051 |
 | F-6 | Documentation & extension guide | TC-ZAI-071 |
@@ -500,7 +523,7 @@ These cases use a **stepping clock**: `_now_utc_epoch` advances by the sum of pr
 | NFR-4 | Fail-open discipline: exactly 1 `[WARN]`, return 0, exit unchanged, peak still applies | TC-ZAI-010..020, TC-ZAI-052 |
 | NFR-5 | Opt-out silence: 0 stderr lines, return 0 | TC-ZAI-021, TC-ZAI-022, TC-ZAI-023, TC-ZAI-024, TC-ZAI-025 |
 | NFR-6 | Re-eval termination + cap: always terminates; cap default 24 → 0 + one WARN | TC-ZAI-062, TC-ZAI-063 |
-| NFR-7 | Secret redaction: 0 full-key, 0 raw body in production | TC-ZAI-050, TC-ZAI-051 |
+| NFR-7 | Secret redaction: 0 full-key, raw body never logged (no debug toggle in v1) | TC-ZAI-050, TC-ZAI-051 |
 | NFR-8 | Fetch cadence: exactly 1 fetch per loop iteration; no cross-invocation cache | TC-ZAI-046, TC-ZAI-064 |
 
 ## 8. NFR Coverage (NFR-1 .. NFR-8) — summary
@@ -511,7 +534,7 @@ These cases use a **stepping clock**: `_now_utc_epoch` advances by the sum of pr
 - **NFR-4 (fail-open discipline):** Every group B case asserts return `0` and exactly one `[WARN]`; TC-ZAI-019 proves peak still applies during a quota failure; TC-ZAI-052 cross-cuts the exit-status-unchanged assertion.
 - **NFR-5 (opt-out silence):** TC-ZAI-021..025 each assert zero quota stderr and return `0` across all four opt-out triggers.
 - **NFR-6 (re-eval termination + cap):** TC-ZAI-062 proves termination when the mock keeps reporting exhaustion (past-reset clamp → 0); TC-ZAI-063 proves the `ADOS_ZAI_MAX_SLEEP_LOOPS` cap returns `0` + one `[WARN]`.
-- **NFR-7 (secret redaction):** TC-ZAI-050 (full-key absence via F-SECRET) and TC-ZAI-051 (raw-body absence via F-CANARY in production mode).
+- **NFR-7 (secret redaction):** TC-ZAI-050 (full-key absence via F-SECRET) and TC-ZAI-051 (raw-body absence via F-CANARY — the raw body is never logged; there is no debug/verbose toggle in v1).
 - **NFR-8 (fetch cadence):** TC-ZAI-046 (one fetch per iteration, no cache file, no `ADOS_ZAI_QUOTA_CACHE_SECONDS`) and TC-ZAI-064 (≥2 fetches across a ≥2-iteration loop).
 
 ## 9. Automation Plan and Implementation Mapping
@@ -521,7 +544,7 @@ These cases use a **stepping clock**: `_now_utc_epoch` advances by the sum of pr
 | TC-ZAI-001..005 | `scripts/.tests/test-hook-zai-example.sh` | `bash scripts/.tests/test-hook-zai-example.sh` | `_now_utc_epoch` (fixed), `_sleep` (recorder); TC-ZAI-001 also recorders on `_zai_quota_fetch`/condition seams; TC-ZAI-005 re-sources in subshell with custom env | To Implement |
 | TC-ZAI-010..020 | same | same | `_zai_quota_fetch` canned fail-open fixtures (F-NET-FAIL, F-401, F-403, F-ENV-500, F-ENV-SUCCESS-FALSE, F-MALFORMED, F-NO-LIMITS, F-LIMITS-NOT-ARRAY, F-PCT-NON-NUMERIC, F-RESET-*); stderr `[WARN]`-count assertions | To Implement |
 | TC-ZAI-021..025 | same | same | `command -v` stubs (jq/curl absent); `jq` + `_zai_quota_fetch` call counters | To Implement |
-| TC-ZAI-030..037 | same | same | `_zai_quota_fetch` canned valid-shape fixtures (F-OFF, F-5H, F-WEEK, F-BOTH, F-TIME-ONLY, F-OVERAGE, F-PAST); `_sleep` recorder | To Implement |
+| TC-ZAI-029..039 | same | same | `_zai_quota_fetch` canned valid-shape fixtures (F-OFF, F-5H, F-WEEK, F-BOTH, F-TIME-ONLY, F-OVERAGE, F-PAST, F-NO-TOKENS, F-MIXED-RESET, F-NONEXH-EARLIER); `_sleep` recorder | To Implement |
 | TC-ZAI-040..042 | same | same | stepping-clock `_now_utc_epoch`; F-5H-FAR / F-OFF sequence | To Implement |
 | TC-ZAI-045, TC-ZAI-046 | same | same | `ADOS_ZAI_QUOTA_DISABLED=1`; temp state dir scan for cache file; fetch counter | To Implement |
 | TC-ZAI-050..052 | same | same | F-SECRET; F-CANARY; stdout/stdredaction capture; exit-status capture | To Implement |
@@ -573,6 +596,7 @@ These cases use a **stepping clock**: `_now_utc_epoch` advances by the sum of pr
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-08-04 | @test-plan-writer (fallback) | Initial test plan (Proposed). Authored from the GH-150 spec (§17 ACs, DM-1/3/4/5/6, API-1, §9 NFRs, Appendix C matrix), `chg-GH-150-pm-notes.yaml` (groups A–H), the existing `scripts/.tests/test-hook-zai-example.sh` sourcing pattern, `scripts/hooks/pre-opencode-iteration-zai.sh` seams, and the GH-146/GH-148 test plans (house style). 45 new cases (TC-ZAI-001..071) + 4 preserved (TC-HOOK-015..018) cover every AC (AC-F1-1 .. AC-NFR8-1) and every NFR (NFR-1 .. NFR-8); AC→case→group traced in §7. Implementation-free (no bash); fixtures are JSON data only. |
+| 1.1 | 2026-08-04 | DoR iter-1 remediation (@readiness-reviewer findings F-1..F-9) | F-1 (Blocker): base clock `N0` 1785000000→1784940000 (sod 2400 = 00:40 UTC, off-peak); shifted every N0-anchored `nextResetTime` by −60000000 ms (F-5H/F-WEEK/F-BOTH/F-OVERAGE/F-PAST/F-CROSS + the TC-ZAI-062 inline fixture) so asserted waits are unchanged; TC-ZAI-060 sleep log `[12600, 21000]` now achievable (added §5 arithmetic anchor). F-2/F-3/F-8: added F-MIXED-RESET/F-NONEXH-EARLIER/F-NO-TOKENS + TC-ZAI-038/039/029 (group C). F-5: restated TC-ZAI-056 (whole-file grep; @coder MUST NOT use `date -d` — POC `iso_from_ms` trap). F-7: restated TC-ZAI-046 (2-iteration loop + source grep for `ADOS_ZAI_QUOTA_CACHE_SECONDS`). F-4: dropped the "production mode" qualifier (raw body never logged; no debug/verbose toggle in v1) across TC-ZAI-051/F-CANARY + coverage matrices. |
 
 ## 12. Test Execution Log
 

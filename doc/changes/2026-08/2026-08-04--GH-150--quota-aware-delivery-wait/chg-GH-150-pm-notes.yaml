@@ -9,9 +9,9 @@ delivery_mode: interactive
 phases:
   clarify_scope: { started: "2026-08-04", completed: "2026-08-04" }
   specification: { started: "2026-08-04", completed: "2026-08-04" }
-  test_planning: { started: "2026-08-04", completed: null }
-  delivery_planning: { started: null, completed: null }
-  dor_check: { started: null, completed: null }
+  test_planning: { started: "2026-08-04", completed: "2026-08-04" }
+  delivery_planning: { started: "2026-08-04", completed: "2026-08-04" }
+  dor_check: { started: "2026-08-04", completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -86,4 +86,16 @@ notes:
     date: "2026-08-04"
   - text: "TEST GROUP H (re-evaluation loop, owner-added 2026-08-04): extends the required matrix — [sleep for quota (hours), wake now inside peak window => driver re-evaluates and sleeps until peak_end (cross-time composition); sleep for a condition, wake, condition now cleared => returns with no further sleep; nextResetTime in the past after sleeping => quota returns 0 (proves NO infinite loop even if API still reports exhausted); ADOS_ZAI_MAX_SLEEP_LOOPS cap exceeded => returns + one WARN; fresh quota fetch each loop iteration (mock records 2+ calls across a 2-iteration loop)]."
     type: info
+    date: "2026-08-04"
+  - text: "RESUME 2026-08-04: owner merged main into the branch (merge 23b7311) and improved agents (GH-151 centralize git ops). Main now carries GH-146 (hook framework, delivered), GH-148 (platform-aware + GH-146 hook hardening), GH-151. State sync confirms: working tree clean; diff vs main = ONLY the 3 change files (spec e504369, pm-notes, POC) — all intact. scripts/hooks/pre-opencode-iteration-zai.sh (71 lines, peak-only) and scripts/.tests/test-hook-zai-example.sh (24 lines, 4 tests) are UNCHANGED by the merge => spec + test-plan context fully accurate. set-evn.sh is locally gitignored via .git/info/exclude (NOT repo .gitignore) so it cannot be accidentally committed — security handled. Caveat: spec's illustrative line numbers for deliver-ticket.sh/ceo-loop.sh invocation may have shifted post-GH-148; @coder will locate the actual invocation sites. Not a blocker."
+    type: info
+    date: "2026-08-04"
+  - text: "RETRO: @test-plan-writer delegation was CANCELLED twice mid-run. Both cancellations coincided with concurrent owner repo work (main merge + agent improvements), suggesting environmental interruption rather than agent failure. Retrying now that the owner is hands-off. If a third cancellation occurs, fall back to @general (per the earlier @runner-empty-result retro pattern)."
+    type: retro
+    date: "2026-08-04"
+  - text: "DOR ITER-1: NOT_READY. @readiness-reviewer found 1 Blocker + 8 Minor/Nit. BLOCKER F-1: test-plan TC-ZAI-060 cross-time arithmetic broken — base clock N0=1785000000 is seconds-of-day 62400 (17:20 UTC), mislabelled 00:40; N0+12600 lands at seconds-of-day 75000 (off-peak), not 15000 (in-peak), so the asserted sleep log [12600,21000] cannot occur => AC-F1-2 cross-time coverage (RSK-7) unproven. Minors: F-2 (add F-MIXED-RESET: exhausted-bad-reset + exhausted-good-reset => use good, 0 WARN), F-3 (non-exhausted-earlier-reset fixture => prove min over EXHAUSTED entries only), F-4 (spec: define/drop 'production mode' — state body NEVER logged, no debug toggle v1), F-5 (TC-ZAI-056 restate as whole-file grep + warn @coder MUST NOT use date -d anywhere — POC iso_from_ms is a copy-paste trap), F-6 (plan: add doc/spec/features/feature-autonomous-delivery.md to phase-7 doc-update list), F-7 (TC-ZAI-046 wording: 2-iteration loop + grep-hook-source that ADOS_ZAI_QUOTA_CACHE_SECONDS absent), F-8 (add F-NO-TOKENS: data.limits=TIME_LIMIT-only or [] => 0, no WARN), F-9 (spec: clarify 'byte-identical'=same gate/sleep-target/exit-0/0-jq/0-network; log wording unpinned per OQ-1). Scope confirmed READY-grade (hook-slice coherent; superseded wrapper-side correctly excluded; DM-1/3/4/5/6/API-1 identical across spec+test+plan). REMEDIATION: reopened test_planning + specification + delivery_planning; one @general pass applying F-1..F-9; then re-run DoR iter-2. No human input needed."
+    type: info
+    date: "2026-08-04"
+  - text: "RETRO (DoR): the gate earned its keep — caught a real arithmetic Blocker in the @general-authored test plan (epoch seconds-of-day miscompute) that would have produced an impossible flagship test (TC-ZAI-060). @general is reliable for authoring but NOT immune to epoch-arithmetic errors; fixture epoch math must be double-checked against seconds-of-day. Validates keeping DoR mandatory even for fallback-authored artifacts."
+    type: retro
     date: "2026-08-04"
