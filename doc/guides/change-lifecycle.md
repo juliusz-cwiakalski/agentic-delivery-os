@@ -45,10 +45,11 @@ This repository enforces a single source of truth for git operations: the orches
 ### Commit Trigger Ownership
 
 **Autonomous mode** (PM-driven delivery):
-- The PM triggers `@committer` after each delegated lifecycle phase returns, with a phase-appropriate intent hint (e.g., "add spec for GH-123", "add test plan for GH-123").
-- Phases with commit triggers: `specification` (after @spec-writer), `test_planning` (after @test-plan-writer), `delivery_planning` (after @plan-writer), `dor_check` (after @readiness-reviewer verdict), `system_spec_update` (after @doc-syncer), and `review_fix` (after @reviewer).
+- After a delegate returns, the PM validates the outcome and updates `chg-<workItemRef>-pm-notes.yaml` **before** triggering `@committer`. Success records phase completion; incomplete outcomes record the applicable iteration, verdict, reopened phase, blocker, remediation, and retrospective state.
+- The PM then commits the phase output and matching PM-notes transition together. The next phase or remediation is not delegated until the commit succeeds.
+- PM-owned commit checkpoints cover `specification`, `test_planning`, `delivery_planning`, each `dor_check` verdict, post-`@coder` delivery outcomes, completed `system_spec_update`, each `review_fix` verdict, completed `quality_gates`, and `dod_check` outcomes.
 - The PM commits the `@readiness-reviewer` verdict file for traceability of each DoR iteration.
-- The `no commit` directive (a bare string in the original delegation request or command invocation) suppresses the trigger for a phase.
+- The `no commit` directive (a bare string in the original delegation request or command invocation) suppresses the trigger for a phase, but not the preceding PM-notes update; the checkpoint completes after that update and remote durability is intentionally waived.
 
 **Manual mode** (command-driven):
 - Each manual command triggers `/commit` (which invokes `@committer`) after the delegated agent returns, with an appropriate intent hint.
@@ -59,6 +60,7 @@ This repository enforces a single source of truth for git operations: the orches
 **Delivery mode** (@coder executing a plan):
 - `@coder` triggers `@committer` per delivery plan phase (the existing exception to the orchestrator rule, preserved for granularity).
 - Each phase completion produces one commit, preserving the per-phase commit history.
+- The PM's later delivery-transition checkpoint persists only the PM-owned phase state; it does not replace or reorder `@coder`'s commits.
 
 ### Universal `@committer` Routing
 
@@ -266,10 +268,11 @@ flowchart TD
 
 **Actions**:
 
-- Mark `delivery_planning` as completed and `dor_check` as started in `chg-<workItemRef>-pm-notes.yaml`.
+- Confirm `delivery_planning` is completed and mark `dor_check` started in `chg-<workItemRef>-pm-notes.yaml`.
 - `@pm` delegates to `@readiness-reviewer` with `workItemRef`.
 - `@readiness-reviewer` critiques spec + test-plan + plan vs the ticket under an adversarial stance and emits `READY` or `NOT_READY` (with per-facet findings and a suggested remediation target phase).
-- **On `NOT_READY`**: reopen the relevant artifact-creation phase (`specification`, `test_planning`, or `delivery_planning`) — **never `delivery`** — and re-delegate to the matching author agent; re-run `dor_check` until `READY` (max 3 iterations; escalate to human on stalemate).
+- **On `READY`**: record the verdict/iteration and complete `dor_check` in PM notes, then commit the verdict and notes transition before delivery.
+- **On `NOT_READY`**: record the verdict/iteration, findings, reopened artifact-creation phase (`specification`, `test_planning`, or `delivery_planning`) — **never `delivery`** — remediation state, and retrospective note; commit that durable state with the verdict before re-delegating to the matching author agent. Re-run `dor_check` until `READY` (max 3 iterations; escalate to human on stalemate).
 - **On a surfaced decision needing human input**: STOP and wait.
 - Hard gate by default; only an **explicit, recorded override** for a genuinely trivial change may bypass it (no silent skip). The override (`workItemRef`, triviality rationale, human approver, date) is recorded in `chg-<workItemRef>-pm-notes.yaml`.
 - Change-scoped decisions go to change docs; system-wide or precedent-setting decisions go to decision records via `@decision-advisor`.
@@ -313,6 +316,7 @@ flowchart TD
 
 - `@pm` invokes `@doc-syncer` with `workItemRef`.
 - `@doc-syncer` reconciles all affected current-truth documentation in scope: `doc/00-index.md`, `doc/guides/**`, `doc/overview/**`, `doc/spec/**`, `doc/contracts/**`, `doc/domain/**`, `doc/quality/**`, `doc/ops/**`, `doc/diagrams/**`, and `doc/decisions/**`.
+- `@pm` inspects the report and re-runs `@doc-syncer` with explicit residual gaps until none remain. Only then does PM mark `system_spec_update` complete and commit the docs with the matching PM-notes transition.
 - Missing/stale/incomplete docs are resolved in-change (reconcile existing docs or create missing docs when the change introduces/exposes an enduring concept).
 - Feature-spec coverage remains part of phase 7: when a modified feature area warrants `doc/spec/features/feature-<slug>.md` and none exists, `@doc-syncer` authors the missing first spec in-change; existing specs are reconciled, not re-authored.
 - Documentation gaps are resolved as doc artifacts in the same change; no tracker ticket is created for documentation coverage handoff.
@@ -335,9 +339,11 @@ flowchart TD
 
 - `@pm` invokes `@reviewer` with `workItemRef`.
 - `@reviewer` audits code vs. spec/plan, checks test coverage, identifies gaps.
+- After every result, `@pm` records the review iteration and verdict in PM notes before committing the review artifact and matching state.
+- On `Status=PASS`, PM marks `review_fix` complete before the commit.
 - If reviewer returns `Status=FAIL` or adds remediation tasks:
   - Remediation phase is appended to `chg-<workItemRef>-plan.md`.
-  - `@pm` invokes `@coder` (via `/run-plan <workItemRef> execute all remaining phases no review`) to address remediation.
+  - PM records findings, remediation/reopen state, and a retrospective note, then commits that durable state before invoking `@coder` (via `/run-plan <workItemRef> execute all remaining phases no review`).
   - Re-run `@reviewer` until `Status=PASS`.
 
 **Outcome**: All review findings addressed; implementation verified against spec.
