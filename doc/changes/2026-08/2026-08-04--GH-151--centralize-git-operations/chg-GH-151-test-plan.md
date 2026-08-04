@@ -1,7 +1,7 @@
 ---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # MIT License - see LICENSE file for full terms
-source: https://github.com/cjuliusz-cwiakalski/agentic-delivery-os/blob/main/doc/changes/2026-08/2026-08-04--GH-151--centralize-git-operations/chg-GH-151-test-plan.md
+source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/changes/2026-08/2026-08-04--GH-151--centralize-git-operations/chg-GH-151-test-plan.md
 id: chg-GH-151-test-plan
 status: Proposed
 created: 2026-08-04
@@ -454,16 +454,16 @@ This is a prompt/documentation refactor change with no application code. The tes
 - All agent and command prompt modifications are complete
 
 **Steps**:
-1. Run grep across all agents (excluding @committer): `rg "git commit" .opencode/agent/ --invert-match --glob="!committer.md"`
-2. Run grep across all commands: `rg "git commit" .opencode/command/`
-3. Verify that both greps return zero matches
-4. Run grep for branch-checkout operations across delegated agents: `rg "git checkout|git branch" .opencode/agent/spec-writer.md .opencode/agent/test-plan-writer.md .opencode/agent/plan-writer.md .opencode/agent/doc-syncer.md .opencode/agent/reviewer.md .opencode/agent/decision-advisor.md`
-5. Verify that branch-checkout grep returns zero matches
+1. Run grep for imperative commit patterns across 6 delegated agents: `rg "Commit with:|git commit -F|create a single commit|Stage ONLY|\.add\(|\.commit\(|git add|git commit" .opencode/agent/spec-writer.md .opencode/agent/test-plan-writer.md .opencode/agent/plan-writer.md .opencode/agent/doc-syncer.md .opencode/agent/reviewer.md .opencode/agent/decision-advisor.md`
+2. Verify grep returns zero matches (no imperative commit instructions in delegated agents)
+3. Run grep for branch-checkout operations across delegated agents: `rg "git checkout|git branch" .opencode/agent/spec-writer.md .opencode/agent/test-plan-writer.md .opencode/agent/plan-writer.md .opencode/agent/doc-syncer.md .opencode/agent/reviewer.md .opencode/agent/decision-advisor.md`
+4. Verify branch-checkout grep returns zero matches
+5. Allowlist check: If any matches exist in step 1, verify they are prohibition text only (e.g., "never use git commit", "no git commit") and not actionable instructions
 
 **Expected Outcome**:
-- Zero matches for direct `git commit` across all agents except @committer
-- Zero matches for direct `git commit` across all commands
+- Zero matches for imperative commit patterns across the 6 delegated agents
 - Zero matches for branch-checkout operations across delegated agents
+- Any existing matches are prohibition text only (e.g., "never use git commit", "no git commit")
 
 #### TC-GIT-013 - change-lifecycle.md documents responsibility model
 
@@ -615,7 +615,7 @@ This is a prompt/documentation refactor change. The testing strategy adapts the 
 | TC-GIT-009 | N/A (manual read) | Manual review of command prompts | None | To Implement |
 | TC-GIT-010 | N/A (manual read) | Manual review of .opencode/command/write-decision.md | None | To Implement |
 | TC-GIT-011 | N/A (manual read) | Manual review of .opencode/agent/pm.md and .opencode/agent/readiness-reviewer.md | None | To Implement |
-| TC-GIT-012 | N/A (grep) | `rg "git commit" .opencode/agent/ --invert-match --glob="!committer.md"` and `rg "git commit" .opencode/command/` | None | To Implement |
+| TC-GIT-012 | N/A (grep) | `rg "Commit with:|git commit -F|create a single commit|Stage ONLY|\.add\(|\.commit\(|git add|git commit" .opencode/agent/spec-writer.md .opencode/agent/test-plan-writer.md .opencode/agent/plan-writer.md .opencode/agent/doc-syncer.md .opencode/agent/reviewer.md .opencode/agent/decision-advisor.md` and `rg "git checkout|git branch" .opencode/agent/spec-writer.md .opencode/agent/test-plan-writer.md .opencode/agent/plan-writer.md .opencode/agent/doc-syncer.md .opencode/agent/reviewer.md .opencode/agent/decision-advisor.md` | None | To Implement |
 | TC-GIT-013 | N/A (manual read) | Manual review of doc/guides/change-lifecycle.md | None | To Implement |
 | TC-GIT-014 | scripts/build-claude-plugin.sh | `bash scripts/build-claude-plugin.sh` then `bash scripts/.tests/test-doc-distribution.sh` | None | To Implement |
 | TC-GIT-015 | N/A (manual review) | Manual review of delivery plan | None | To Implement |
