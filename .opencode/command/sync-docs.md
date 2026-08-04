@@ -105,7 +105,7 @@ System documentation areas potentially updated:
 <transformation_rules>
 
 - Strip planning-only sections: do NOT copy Goals, Risks, Open Questions, or phased tasks.
-- Normalize tense to present (system now does X).
+- Normalize tense to present (system does X).
 - Collapse multiple F-# capabilities into coherent feature narrative bullets referencing their original IDs for traceability.
 - Acceptance Criteria: Only include enduring user-observable and NFR criteria; omit transient implementation verification details.
 - Interfaces: Provide final schema snapshot; remove rate limits or constraints if unchanged vs existing spec.
@@ -168,7 +168,7 @@ User-visible summary MUST include:
 </safety>
 
 <notes>
-- Documentation Handbook older sections referencing `implementation-plan.md` are aligned: current commands use `chg-<workItemRef>-plan.md` — this command bridges historical naming by resolving the canonical plan path only.
+- Resolve the implementation plan only as `chg-<workItemRef>-plan.md` in the change folder.
 - If the Documentation Handbook (at `doc/documentation-handbook.md`) expects `/doc/spec/**` but that folder is absent, create the `/doc/spec/` tree lazily with `features/`, `api/` leveraging the current repo structure.
 - When the Documentation Handbook file is present, treat it as the authoritative description of how documentation should be structured and updated; follow it in addition to the rules in this command.
 - This command is self-sufficient when the handbook is missing: it embeds the required spec conventions and still keeps `/doc/spec/**` as the coherent "current truth".
@@ -871,6 +871,6 @@ Supported additional directives:
 
 - Preserve numbering (1–9).
 - Do not renumber or remove existing sections when updating; update only content within mapped sections.
-- Avoid adding file paths not previously referenced; maintain privacy/security by not surfacing secrets.
+- Add file paths only when they are present in source context; do not infer paths or surface secrets.
 - Keep line length <=120 chars.
   </full_template_generation_rules>

@@ -623,7 +623,7 @@ artifacts: []
 <performance>94/100</performance>
 <cost>$</cost>
 <speed>20% faster than 2.0</speed>
-<notes>One-sentence instructions often sufficient; strip 30-50% verbosity from older prompts</notes>
+<notes>One-sentence instructions are often sufficient; remove 30-50% of unnecessary prompt verbosity</notes>
 </model>
 <model id="kimi-k2">
 <primary_format>JSON</primary_format>

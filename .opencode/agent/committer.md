@@ -16,7 +16,7 @@ claude:
 
 <inputs>
   <optional>
-    <intent>Backward-compatible free-text commit intent.</intent>
+    <intent>Free-text commit intent.</intent>
     <workItemRef>Explicit tracker reference.</workItemRef>
     <outcome>Behavior or result the staged change is meant to produce.</outcome>
     <why>Supported reason for the change.</why>

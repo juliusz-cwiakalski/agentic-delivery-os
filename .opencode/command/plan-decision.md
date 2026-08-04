@@ -434,11 +434,8 @@ Notes:
 - `hard_requirements:` is a DISTINCT field from `decision_drivers:`. Constraints (binary gates) and drivers (continuous preferences) must never be merged. An empty `hard_requirements:` list is a conscious author choice, not an omission — confirm the emptiness explicitly with the user. `/write-decision` reads this field to render the Constraints section.
 - Open questions must retain their blocking flag; do not silently drop unresolved items.
 - This summary block must reflect what the user has actually agreed upon; if something remains uncertain, state it as an assumption, open question, or explicitly deferred item.
-- `decision_type` determines which TYPE prefix `/write-decision` will use. The canonical generic path uses **0** `adr.*` fields — the record number, slug, and title are generic fields (`record_number`, `slug_hint`, `title`).
-- **Backward-compatibility alias (NFR-2).** Consumers (`/write-decision`) MUST ALSO accept the legacy tag and fields with 0 behavior change:
-  - Legacy tag `<technical_decision_planning_summary>` is treated as an alias for `<decision_planning_summary>`.
-  - Legacy `adr.number` → `record_number`; `adr.slug_hint` → `slug_hint`; `adr.title` → `title`.
-  - If BOTH legacy and generic fields are present, the generic fields take precedence.
+- `decision_type` determines which TYPE prefix `/write-decision` will use. Emit `record_number`, `slug_hint`, and `title` in `<decision_planning_summary>`.
+- `/write-decision` accepts both `<decision_planning_summary>` and `<technical_decision_planning_summary>`, and accepts `record_number` or `adr.number`, `slug_hint` or `adr.slug_hint`, and `title` or `adr.title`. Generic fields take precedence when both forms are present.
 - The `rigor` field drives `/write-decision`'s proportional rendering (R1 compact subset / R2 standard / R3 full). R0 produces no record.
 - The `governance` and `ai_assistance` blocks flow into the record's optional front matter; `ai_assistance.human_decider` is required before any R2/R3 record advances to Accepted.
 - `evidence_assumptions_unknowns`, `decision`, `rollback_reversal`, `communication_plan`, and `structured_retrospective` map directly to the current decision-record template sections. Leave R3-expanded fields empty only when omitted by rigor/applicability.

@@ -39,7 +39,7 @@ This repository enforces a single source of truth for git operations: the orches
 - Delegated agents never touch branch state (no checkout, create, or switch operations).
 
 **Manual mode** (command-driven):
-- The manual artifact commands (`/write-spec`, `/write-test-plan`, `/write-plan`, `/sync-docs`, `/write-decision`) keep their existing branch-ensure step as a safety net.
+- The manual artifact commands (`/write-spec`, `/write-test-plan`, `/write-plan`, `/sync-docs`, `/write-decision`) perform a branch-ensure step as a safety net.
 - Branch setup happens before agent delegation, consistent with autonomous mode.
 
 ### Commit Trigger Ownership
@@ -49,18 +49,18 @@ This repository enforces a single source of truth for git operations: the orches
 - The PM then commits the phase output and matching PM-notes transition together. The next phase or remediation is not delegated until the commit succeeds.
 - PM-owned commit checkpoints cover `specification`, `test_planning`, `delivery_planning`, each `dor_check` verdict, post-`@coder` delivery outcomes, completed `system_spec_update`, each `review_fix` verdict, completed `quality_gates`, and `dod_check` outcomes.
 - The PM commits the `@readiness-reviewer` verdict file for traceability of each DoR iteration.
-- The `no commit` directive (a bare string in the original delegation request or command invocation) suppresses the trigger for a phase, but not the preceding PM-notes update; the checkpoint completes after that update and remote durability is intentionally waived.
+- The `no commit` directive (a bare string in the delegation request or command invocation) suppresses the trigger for a phase, but not the preceding PM-notes update; the checkpoint completes after that update and remote durability is intentionally waived.
 
 **Manual mode** (command-driven):
 - Each manual command triggers `/commit` (which invokes `@committer`) after the delegated agent returns, with an appropriate intent hint.
 - Phases with commit triggers: `/write-spec`, `/write-test-plan`, `/write-plan`, `/sync-docs`, `/write-decision`.
-- The `no commit` directive (bare string in the original request) suppresses the `/commit` trigger.
+- The `no commit` directive (bare string in the request) suppresses the `/commit` trigger.
 - `/commit` is the only command that creates commits in manual mode; agents never commit directly.
 
 **Delivery mode** (@coder executing a plan):
-- `@coder` triggers `@committer` per delivery plan phase (the existing exception to the orchestrator rule, preserved for granularity).
-- Each phase completion produces one commit, preserving the per-phase commit history.
-- The PM's later delivery-transition checkpoint persists only the PM-owned phase state; it does not replace or reorder `@coder`'s commits.
+- `@coder` owns `@committer` triggers per delivery plan phase for granular history.
+- Each phase completion produces one commit.
+- The PM delivery-transition checkpoint contains only PM-owned lifecycle state.
 
 ### Universal `@committer` Routing
 

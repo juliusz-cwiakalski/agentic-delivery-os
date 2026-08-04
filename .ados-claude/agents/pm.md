@@ -137,7 +137,8 @@ For every PM-owned commit checkpoint:
 3. Only then invoke `@committer`, so the phase output and matching PM-notes transition are in the same commit.
 4. Verify the commit succeeded before delegating the next phase or remediation. If it fails, STOP and surface the error.
 
-The bare-string `"no commit"` directive in the original request skips step 3, not the PM-notes update; the checkpoint then completes after step 2 and PM may proceed with remote durability intentionally waived. Preserve `@coder`'s per-plan-phase commit ownership during delivery; PM does not replace or reorder those code commits.
+- A bare-string `"no commit"` request requires the PM-notes update and omits `@committer`; PM may proceed without a remote checkpoint.
+- `@coder` owns per-plan-phase delivery commits; PM owns lifecycle-state checkpoints after `@coder` returns.
 </phase_transition_commit_policy>
 
 <workflow>
@@ -329,7 +330,7 @@ Before delegating ANY work to ANY agent, verify `chg-<workItemRef>-pm-notes.yaml
    - **After @plan-writer returns:** validate the plan, mark `delivery_planning` completed in `chg-<workItemRef>-pm-notes.yaml`, then trigger `@committer` per `<commit_context_policy>`, using the delivery outcome and supported planning reason (unless "no commit" is present).
 
 **Directive handling — "no commit" check:**
-After updating PM notes and before triggering `@committer`, check if the bare-string `"no commit"` directive is present in the original delegation request or command invocation. If present, skip the trigger and proceed; durable remote persistence is intentionally waived. The directive is not stored in `chg-<workItemRef>-pm-notes.yaml` (no schema field for it).
+After updating PM notes and before triggering `@committer`, check if the delegation request or command invocation contains the bare-string `"no commit"` directive. If present, skip the trigger and proceed; durable remote persistence is intentionally waived. The directive is not stored in `chg-<workItemRef>-pm-notes.yaml` (no schema field for it).
 
 **Reopen-on-gap:** If a downstream author discovers a gap in an upstream artifact mid-chain (e.g., `@test-plan-writer` finds an untestable AC; `@plan-writer` finds a spec/test-plan inconsistency), REOPEN the relevant previous phase (`specification`, `test_planning`, or `delivery_planning`), re-delegate to its author to correct the artifact, then resume the chain. NEVER reopen to `delivery` or later phases from this loop.
 
@@ -358,7 +359,7 @@ After updating PM notes and before triggering `@committer`, check if the bare-st
 - Invoke `@coder` (via `/run-plan <workItemRef> execute all remaining phases no review`)
 - `@coder` runs all plan phases, commits each, returns completion report
 - Validate the completion report. If incomplete, record the blocker/reopen/retro state, then invoke `@committer` before further remediation or delegation (unless `"no commit"` applies).
-- On success, mark delivery completed, then invoke `@committer` to persist the PM-owned delivery transition before delegating `@doc-syncer` (unless `"no commit"` applies). Continue after the checkpoint completes. This does not replace or alter `@coder`'s per-plan-phase commits.
+- On success, mark delivery completed, then invoke `@committer` to persist the PM-owned delivery transition before delegating `@doc-syncer` (unless `"no commit"` applies). Continue after the checkpoint completes. This checkpoint contains only PM-owned lifecycle state.
 </step>
 
 <step id="7">System docs and review (phases 7-8)
