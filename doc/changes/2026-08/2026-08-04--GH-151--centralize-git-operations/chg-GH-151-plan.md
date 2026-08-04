@@ -2,7 +2,7 @@
 id: chg-GH-151-centralize-git-operations
 status: Updated
 created: 2026-08-04T00:00:00Z
-last_updated: 2026-08-04T12:40:57Z
+last_updated: 2026-08-04T13:05:00Z
 owners: ["Juliusz Ćwiąkalski"]
 service: delivery-os
 labels: ["agent-improvement", "git-operations", "conventional-commits", "prompt-governance"]
@@ -291,11 +291,12 @@ This plan delivers the git-operations responsibility refactor defined in [chg-GH
 
 **Tasks**:
 
-- [ ] **6.1** Run the scoped direct-commit gate (TC-GIT-012), scoped to the **six delegated agents only** (`spec-writer`, `test-plan-writer`, `plan-writer`, `doc-syncer`, `reviewer`, `decision-advisor`). Do **not** grep the whole `.opencode/agent/` or `.opencode/command/` trees for `git commit` — legitimate prohibition/guidance text in `pm.md` and `review-feedback-applier.md` (e.g., "Hard rule: No git commit…", "never use @runner for git commit operations") would make a broad grep unachievable.
-  - Imperative commit-step patterns (must be 0 matches): `rg "Commit with:|git commit -F|create a single commit|Stage ONLY|\.add\(|\.commit\(|git add|git commit" .opencode/agent/spec-writer.md .opencode/agent/test-plan-writer.md .opencode/agent/plan-writer.md .opencode/agent/doc-syncer.md .opencode/agent/reviewer.md .opencode/agent/decision-advisor.md`
-  - Branch-checkout patterns (must be 0 matches): `rg "git checkout|git branch" .opencode/agent/spec-writer.md .opencode/agent/test-plan-writer.md .opencode/agent/plan-writer.md .opencode/agent/doc-syncer.md .opencode/agent/reviewer.md .opencode/agent/decision-advisor.md`
-  - Allowlist check: if any match appears, verify it is prohibition/guidance text only (e.g., "never use git commit", "no git commit") and not an actionable commit instruction; any actionable instruction must be removed via `@toolsmith`.
-- [ ] **6.2** Run branch-checkout gate: `rg "git checkout|git branch" .opencode/agent/{spec-writer,test-plan-writer,plan-writer,doc-syncer,reviewer,decision-advisor}.md` → 0 matches.
+- [ ] **6.1** Run the scoped ownership gate (TC-GIT-012), scoped to the **six delegated agents only** (`spec-writer`, `test-plan-writer`, `plan-writer`, `doc-syncer`, `reviewer`, `decision-advisor`). Use **structural checks first** (absence of `<branch_rules>`/`<commit_rules>` sections), supplemented by an imperative commit-instruction grep. Do **not** broad-grep `git checkout|git branch` across these agents — `reviewer.md` legitimately contains two remote-mode (`modes="remote"`) checkout instructions (line 161: `git checkout --detach <head_sha>`; line 304: `git checkout <original_branch>`) that must be retained and are out of scope for this change; those live inside `<process>` steps, not inside a `<branch_rules>` section, so the structural check correctly ignores them. Do **not** grep the whole `.opencode/agent/` or `.opencode/command/` trees for `git commit` — legitimate prohibition/guidance text in `pm.md` and `review-feedback-applier.md` (e.g., "Hard rule: No git commit…", "never use @runner for git commit operations") would make a broad grep unachievable.
+  - Structural branch-rules absence (must be 0 matches): `rg "<branch_rules>" .opencode/agent/spec-writer.md .opencode/agent/test-plan-writer.md .opencode/agent/plan-writer.md .opencode/agent/doc-syncer.md .opencode/agent/reviewer.md .opencode/agent/decision-advisor.md`
+  - Structural commit-rules absence (must be 0 matches): `rg "<commit_rules>" .opencode/agent/spec-writer.md .opencode/agent/test-plan-writer.md .opencode/agent/plan-writer.md .opencode/agent/doc-syncer.md .opencode/agent/reviewer.md .opencode/agent/decision-advisor.md`
+  - Imperative commit-instruction patterns (defense-in-depth; must be 0 actionable matches): `rg "Commit with:|git commit -F|create a single commit|Stage ONLY|\.add\(|\.commit\(|git add|git commit" .opencode/agent/spec-writer.md .opencode/agent/test-plan-writer.md .opencode/agent/plan-writer.md .opencode/agent/doc-syncer.md .opencode/agent/reviewer.md .opencode/agent/decision-advisor.md`
+  - Allowlist check: if any match appears in the imperative grep, verify it is prohibition/guidance text only (e.g., "never use git commit", "no git commit") and not an actionable commit instruction; any actionable instruction must be removed via `@toolsmith`.
+- [ ] **6.2** Run the structural branch-ownership gate (aligned with TC-GIT-012 step 1 and 6.1): `rg "<branch_rules>" .opencode/agent/{spec-writer,test-plan-writer,plan-writer,doc-syncer,reviewer,decision-advisor}.md` → 0 matches. The previous `git checkout|git branch` grep is retired — it false-matched `reviewer.md`'s legitimate remote-mode checkout instructions (out of scope); structural `<branch_rules>` absence is the robust equivalent.
 - [ ] **6.3** Re-run TC-GIT-001 through TC-GIT-006 (per-agent pure-writer greps + pure-write notes present).
 - [ ] **6.4** Confirm already-correct agents untouched: `@coder`, `@meeting-organizer`, `@pr-manager` still delegate correctly (no new direct commits introduced).
 - [ ] **6.5** Audit prompt-governance compliance (TC-GIT-015): every prompt edit in Phases 1–4 was a `@toolsmith` delegation — no `@coder` hand-edits (NFR-8).
@@ -404,7 +405,7 @@ Mapped from [chg-GH-151-test-plan.md](./chg-GH-151-test-plan.md) §5.
 | TC-GIT-009 | Manual commands trigger `/commit` after the agent returns | 3 | AC-F2-2, NFR-4 |
 | TC-GIT-010 | `/write-decision` triggers `/commit` after `@decision-advisor` returns | 3 | AC-F2-3 |
 | TC-GIT-011 | PM commits the readiness-reviewer verdict after DoR check | 2 | AC-F5-1 |
-| TC-GIT-012 | Scoped grep across the six delegated agents finds zero imperative commit-step patterns (prohibition text allowlisted) | 6 | AC-F4-1, NFR-1, NFR-2 |
+| TC-GIT-012 | Structural check across the six delegated agents: no `<branch_rules>`/`<commit_rules>` sections and zero imperative commit instructions (prohibition text allowlisted; reviewer remote-mode checkouts excluded) | 6 | AC-F4-1, NFR-1, NFR-2 |
 | TC-GIT-013 | `change-lifecycle.md` documents the responsibility model | 4 | AC-F7-1 |
 | TC-GIT-014 | Claude plugin regenerates and freshness guard passes | 5 | AC-F8-1, NFR-7 |
 | TC-GIT-015 | All prompt edits performed via `@toolsmith` (no hand-edits) | 1–4, 6 | AC-F6-1, NFR-8 |
@@ -434,6 +435,7 @@ Mapped from [chg-GH-151-test-plan.md](./chg-GH-151-test-plan.md) §5.
 |---------|------|--------|---------|
 | 1.0 | 2026-08-04 | plan-writer | Initial plan — 8 phases; all prompt edits delegated to `@toolsmith`; grep gates + behavioral validation per test plan. |
 | 1.1 | 2026-08-04 | plan-writer | DoR iter-2 fix: Phase 6.1 grep narrowed to the six delegated agents + imperative commit-step patterns (mirrors refined TC-GIT-012; avoids false positives on prohibition text in `pm.md`/`review-feedback-applier.md`). Resolved OQ-T1: use the existing bare-string `"no commit"` directive (no new `directives.no_commit` field); PM/commands skip the `@committer`/`/commit` trigger when present. Updated Phase 2 (2.3) and Phase 3 (3.6) accordingly; aligned the TC-GIT-012 scenario row. |
+| 1.2 | 2026-08-04 | reviewer feedback (DoR iter) | Phase 6.1 / 6.2: retired the broad `git checkout\|git branch` grep — it false-matched `reviewer.md`'s legitimate remote-mode (`modes="remote"`) checkout instructions (lines 161, 304), which are out of scope. Replaced with a **structural** `<branch_rules>`/`<commit_rules>` section-absence check (robust: those checkouts live in `<process>` steps, not `<branch_rules>`); kept the imperative commit-instruction grep as defense-in-depth with the prohibition-text allowlist. Aligned TC-GIT-012 scenario row. (Mirrors the test plan v1.1 fix; OQ-T3 traceability clarified — `@coder`/`@meeting-organizer`/`@pr-manager` regression is plan task 6.4, not TC-GIT-012.) |
 
 ## Execution Log
 
