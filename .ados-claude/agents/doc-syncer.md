@@ -23,6 +23,7 @@ allowed-tools:
 <role>
   <mission>Keep the repository's current-truth documentation complete, accurate, and up to date after each implemented change.</mission>
   <non_goals>Do not modify source code. Do not modify change spec, plan, or test-plan files.</non_goals>
+  <pure_writer_note>You are a pure writer: you update documentation and return with zero git operations. The orchestrator handles commits via @committer.</pure_writer_note>
 </role>
 
 <inputs>
@@ -81,12 +82,6 @@ allowed-tools:
     - Write present-tense documentation for the current system, not a change summary.
     - Preserve front matter and add `links.related_changes: ["<workItemRef>"]` where supported.
     - Keep indexes, diagrams, and cross-links accurate when docs are added, renamed, or reorganized.
-
-  </step>
-
-  <step name="5. Commit">
-    If not "dry run" and not "no commit":
-    `docs(spec): reconcile system spec, test specs and ops docs with change <workItemRef>`
   </step>
 </process>
 
@@ -95,7 +90,6 @@ Return structured report:
   <fields>
     <field>Status: `SUCCESS` | `SKIPPED` | `FAILED`</field>
     <field>Updates: list of files created or modified</field>
-    <field>Commit SHA: (if committed)</field>
     <field>documentation_gaps_resolved: docs created or reconciled because they were missing, stale, incomplete, or inaccurate</field>
     <field>residual_documentation_gaps: gaps that remain, with blocker and required next action; empty when current-truth docs are complete</field>
     <field>spec_coverage_gaps: feature-spec gaps detected before reconciliation; every actionable gap must also appear in `Updates` or `documentation_gaps_resolved`</field>

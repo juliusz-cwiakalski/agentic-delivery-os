@@ -28,7 +28,7 @@ Renders the record **proportionally by rigor** (R1 compact subset / R2 standard 
 User invocation:
 /write-decision <number>
 
-Inputs other than <number> MUST be sourced from the active decision planning context (especially the `<decision_planning_summary>` block; the legacy `<technical_decision_planning_summary>` tag and `adr.*` fields are accepted via alias) and relevant repository docs; NOTHING may be invented.
+Inputs other than <number> MUST be sourced from the active decision planning context (especially the accepted `<decision_planning_summary>` or `<technical_decision_planning_summary>` block and their accepted generic or `adr.*` fields) and relevant repository docs; NOTHING may be invented.
 
 The resulting decision record becomes the canonical record of the decision and its rationale, and should be linked from related changes and specs.
 </purpose>
@@ -36,7 +36,7 @@ The resulting decision record becomes the canonical record of the decision and i
 <inputs>
 - number='$1': string — REQUIRED (digits only; will be normalized and zero-padded to 4 digits)
 - allArguments='$ARGUMENTS': string — starts with number and may be followed by user hints (e.g., title refinements, decision type override)
-- previous conversation context from /plan-decision planning session, including `<decision_planning_summary>` (or the legacy `<technical_decision_planning_summary>` alias)
+- previous conversation context from /plan-decision planning session, including `<decision_planning_summary>` or `<technical_decision_planning_summary>`
 </inputs>
 
 <directory_rules>
@@ -89,13 +89,13 @@ Validation:
 <context_lookup>
 The decision record generator must base its content on:
 
-- The `<decision_planning_summary>` block produced by `/plan-decision <number>` in the current or recent conversation. The legacy `<technical_decision_planning_summary>` tag and `adr.*` fields (`adr.number`, `adr.slug_hint`, `adr.title`) are accepted via **back-compat alias** with 0 behavior change (legacy `adr.number` → `record_number`, etc.; generic fields take precedence when both are present).
+- Both `<decision_planning_summary>` and `<technical_decision_planning_summary>` are accepted. Both generic fields and `adr.*` aliases are accepted: `record_number` or `adr.number`, `slug_hint` or `adr.slug_hint`, and `title` or `adr.title`. Generic fields take precedence when both forms are present.
 - Relevant change specs under `doc/changes/**/*--*--*/chg-*-spec.md` when `related_changes` are present.
 - Existing decision records under `doc/decisions/**` referenced from planning context (for supersedes/related decisions).
 - Use `doc/templates/decision-record-template.md` as the **single source of truth** for the decision record body structure (section order) and proportional-rendering guidance.
 - System specs under `doc/spec/**` and contracts under `doc/contracts/**` where the decision materially affects them.
 
-If a `<decision_planning_summary>` (or legacy alias) for this number is NOT available in context, the command MUST:
+If neither accepted planning-summary tag for this number is available in context, the command MUST:
 
 - Ask the user to either:
   - Re-run `/plan-decision <number>` and complete the planning summary, OR
@@ -194,7 +194,7 @@ Before `## Context`, the template includes a deletable **Type-selection helper**
 
 <process>
 1. Read `$1` as rawNumber; normalize to digits-only and zero-pad to 4 digits.
-2. Obtain or reconstruct the `<decision_planning_summary>` (or legacy `<technical_decision_planning_summary>` alias) for this number from the planning session or explicit user-provided data. Apply the back-compat alias mapping for legacy `adr.*` fields if present.
+2. Obtain or reconstruct an accepted planning-summary tag for this number from the planning session or explicit user-provided data. Accept the generic and `adr.*` input fields defined in <context_lookup>, with generic fields taking precedence.
 3. Derive:
    - decisionType from planning summary `decision_type` field (defaults to ADR ONLY when the type is genuinely unspecified — not when a non-architecture decision was misrouted).
    - Title from planning summary title field.
@@ -216,11 +216,8 @@ Before `## Context`, the template includes a deletable **Type-selection helper**
    - For NEW records: synthesize complete sections from planning summary and referenced docs.
    - For UPDATES: merge new planning information without rewriting historical sections; append to "Unresolved Questions", "Structured Retrospective", and "References" instead of erasing prior content.
 9. Write decision record markdown to fullPath.
-10. Stage ONLY this decision record file.
-11. Commit with message:
-    - On creation: `docs(<type>): add <TYPE>-<number>-<slug>` (e.g., `docs(adr): add ADR-0001-event-bus`)
-    - On update: `docs(<type>): refine <TYPE>-<number>-<slug>`
-12. Stop. Do not modify change specs, implementation plans, or system specs in this command; those are updated via their dedicated commands.
+10. After @decision-advisor returns: trigger `/commit` with intent hint "add decision record <TYPE>-<number>" (unless the request contains the "no commit" directive).
+11. Stop. Do not modify change specs, implementation plans, or system specs in this command; those are updated via their dedicated commands.
 </process>
 
 <record_template_reference>
@@ -244,7 +241,7 @@ Before `## Context`, the template includes a deletable **Type-selection helper**
 - Verification criteria include measurable targets and timeframes.
 - No low-level implementation tasks, file paths, or git commands appear in the body.
 - If confirmUpdate=true (optional future flag), show diff prior to write.
-- Only the target decision record file is staged & committed; abort if other staged changes exist.
+- Only the target decision record file is written; commit is handled by /commit command.
 </validation>
 
 <notes>

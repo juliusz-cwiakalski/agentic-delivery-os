@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-LOCAL-CODE-REVIEW
 status: Current
 created: 2026-06-28
-last_updated: 2026-07-09
+last_updated: 2026-08-04
 owners: ["engineering"]
 service: delivery-os
 summary: "Local code review via /review and /review-deep: spec/plan compliance plus code-quality heuristics, with a remediation-phase append loop, handled by the unified @reviewer (distinct from the remote workflow)."
 links:
-  related_changes: ["GH-79"]
+  related_changes: ["GH-79", "GH-151"]
 ---
 
 # Feature: Local Code Review
@@ -64,7 +64,8 @@ The reviewer persists each review iteration as a single **`review-iter-<N>.yaml`
 
 ```
 /review GH-456           → @reviewer audits diff vs spec/plan + heuristics
-                         → if findings: append "Code Review Remediation" phase to plan, commit plan
+                         → if findings: append "Code Review Remediation" phase to plan
+                         → /review triggers /commit (@committer) for the review artifact
                          → next action: /run-plan GH-456 (remediation)
                          → re-run /review until PASS
 /review-deep GH-456      → same, stronger reasoning model
@@ -91,7 +92,7 @@ The reviewer persists each review iteration as a single **`review-iter-<N>.yaml`
 
 ### Plan Mutation Contract
 
-The reviewer only modifies the **plan file** (`chg-<workItemRef>-plan.md`) — never the spec or code. When committing (default `commit=true`), it stages the plan and creates a Conventional Commit via `/commit`. It never uses `doc/changes/current` in paths.
+The reviewer only modifies the **plan file** (`chg-<workItemRef>-plan.md`) — never the spec or code. It is a **pure writer**: it writes the `review-iter-<N>.yaml` artifact and (on findings) appends the remediation phase to the plan, then returns with zero git operations. The `/review` (or `/review-deep`) command triggers `/commit` (`@committer`) after the reviewer returns. It never uses `doc/changes/current` in paths.
 
 ## Non-Functional Requirements
 

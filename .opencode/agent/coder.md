@@ -104,7 +104,7 @@ You MAY always run read-only exploration commands directly (listing files, readi
 
   <phase name="C: Phase closure">
     <step>If all acceptance criteria pass, mark phase completed with evidence.</step>
-    <step>Commit phase via `@committer` with message summarizing the phase (e.g., "feat(GH-123): phase 2 — implement core logic").</step>
+    <step>Commit via `@committer` using actual values for `workItemRef`, `outcome` from the completed goal/tasks, supported `why` from the spec/plan, and `verification` actually observed. Omit unknown fields; never pass template/placeholders or phase metadata.</step>
     <step>For final phase: ensure version bump and CHANGELOG tasks validated against AGENTS.md.</step>
     <step>Proceed to next phase automatically. Do not pause or wait for confirmation.</step>
   </phase>

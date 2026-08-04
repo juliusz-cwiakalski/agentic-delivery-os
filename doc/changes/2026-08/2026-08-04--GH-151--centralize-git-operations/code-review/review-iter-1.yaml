@@ -1,0 +1,118 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-151
+branch: refactor/GH-151/centralize-git-operations
+status: FAIL
+summary: >
+  The centralization refactor is largely correct and well-executed: all six delegated agents are
+  cleanly converted to pure writers (structural <branch_rules>/<commit_rules> sections and all
+  imperative commit instructions are gone, verified by grep), the manual commands correctly trigger
+  /commit with a "no commit" check, the PM owns branch setup with per-phase @committer triggers for
+  five phases, the lifecycle guide documents the responsibility model, and the .ados-claude mirror is
+  fresh (regen produces zero diff) with the doc-distribution guard green. However, one Must
+  acceptance criterion (AC-F2-1) is not satisfied: the PM prompt has an explicit @committer trigger
+  for specification, test_planning, delivery_planning, dor_check, and system_spec_update, but it
+  OMITS the trigger for review_fix — even though the lifecycle guide committed in this very change
+  explicitly states the PM triggers @committer "after @reviewer". This leaves the review artifact
+  (review-iter-N.yaml) and any remediation-plan append uncommitted on a PASS verdict, breaking the
+  phase-aligned-commit-history goal (NFR-3) and contradicting the change's own documentation.
+  Verdict: FAIL on a single high-severity Must-AC gap plus three low-severity cleanup items.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 0
+  low: 3
+  info: 0
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: .opencode/agent/pm.md:342
+    message: >
+      PM step 7 ("System docs and review", phases 7-8) has an explicit @committer trigger after
+      @doc-syncer returns (line 345) but NO @committer trigger after @reviewer returns for the
+      review_fix phase. AC-F2-1, spec section 5.1 (F-2), and plan task 2.2 all enumerate review-fix
+      as a PM-owned commit-trigger phase. The lifecycle guide shipped in this change
+      (doc/guides/change-lifecycle.md) explicitly lists "review_fix (after @reviewer)" under PM
+      commit-trigger ownership — so the implementation contradicts the change's own documentation.
+      In autonomous mode, when @reviewer returns a PASS verdict (no remediation), the
+      review-iter-N.yaml artifact is left uncommitted, violating NFR-3 (>=1 commit per lifecycle
+      phase) and the phase-aligned-history goal (G-3).
+    suggestion: >
+      Delegate to @toolsmith to add to pm.md step 7, after the review->remediation loop (where the
+      PASS verdict is reached): "After @reviewer returns: trigger @committer with intent hint 'add
+      review for <workItemRef>' (unless 'no commit' directive is present)." Mirror the exact wording
+      of the other five per-phase triggers for consistency.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-08/2026-08-04--GH-151--centralize-git-operations/chg-GH-151-plan.md:364
+    message: >
+      DONE_BUT_UNCHECKED: plan Phase 8 task 8.1 (@doc-syncer system-spec reconciliation) is marked
+      unchecked, but the reconciliation is already committed as 4a98a36 ("docs(spec): reconcile
+      system spec, test specs and ops docs with change GH-151") and present in the diff
+      (feature-delivery-lifecycle.md, feature-local-code-review.md). The work also executed ahead of
+      the plan's Phase 7 (review). This is a plan-bookkeeping gap, not a code defect.
+    suggestion: >
+      Check task 8.1 in the plan and add a Phase 8 entry to the Execution Log once the doc-syncer
+      reconciliation is formally acknowledged; or note the early execution in the revision log.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: low
+    confidence: high
+    category: correctness
+    location: .opencode/agent/reviewer.md:9
+    message: >
+      reviewer.md argument_parsing still defines `commitEnabled: true unless 'no commit' directive
+      (local mode)`, but the local-mode process step that consumed it ("Commit (if enabled): stage
+      plan file, create Conventional Commit") was removed in the pure-writer conversion. The flag is
+      now dead/vestigial config — the reviewer no longer acts on it (the /review command or the PM
+      owns the commit trigger).
+    suggestion: >
+      Delegate to @toolsmith to either remove the now-unused `commitEnabled` references from
+      reviewer.md (argument_parsing and any directive-parsing text) or add a one-line note that the
+      flag is honored by the invoking command, not by the agent.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: low
+    confidence: medium
+    category: code-quality
+    location: .opencode/agent/doc-syncer.md:67
+    message: >
+      Minor prompt-edit consistency drift: doc-syncer.md step 4 ("Update/Create Documentation") was
+      re-indented from 2-space to 3-space nesting during the commit-step removal, leaving the
+      <process> block's indentation inconsistent with surrounding steps. (Trailing-whitespace lines
+      introduced in .opencode/command/sync-docs.md <commit_behavior> are CI-handled and ignored per
+      review guidance.)
+    suggestion: >
+      Optional: delegate to @toolsmith to normalize the doc-syncer step-4 indentation back to the
+      2-space nesting used by the rest of the <process> block. Non-blocking.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-08-04T16:05:00Z
+next_step: CALL_CODER
+notes:
+  - "AC-F6-1 (@toolsmith governance) is process-attested, not statically verifiable from the diff; the plan records 36 @toolsmith delegations and commits are Conventional Commits via @committer. No evidence of @coder hand-edits; cannot forensically prove the tool used from the diff alone."
+  - "Verified PASS: AC-F3-1..4, AC-F1-1, AC-F2-2, AC-F2-3, AC-F5-1, AC-F4-1, AC-F7-1, AC-F8-1. Structural grep gates (<branch_rules>/<commit_rules>/imperative commit instructions) return 0 across the six delegated agents. .ados-claude/ regen = no diff. doc-distribution guard green. Reviewer remote-mode checkouts correctly retained."
+  - "Not assessed here (deferred to Phase 8): AC-F2-4 behavioral test delivery."

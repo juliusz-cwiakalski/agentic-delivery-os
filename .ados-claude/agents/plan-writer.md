@@ -78,14 +78,10 @@ From TEST PLAN (`chg-<workItemRef>-test-plan.md`):
 - TC IDs (`TC-<FEATURE>-<NNN>`), AC↔TC coverage mappings, test scenarios, target layers, automation levels — align plan phases and test tasks to these.
   </field_extraction>
 
-<branch_rules>
-
-- Branch name format: `<changeType>/<workItemRef>/<slug>`
-- Git behavior:
-  1. Checkout/switch if exists
-  2. Else create branch
-  3. Only write and commit the plan file
-     </branch_rules>
+<pure_writer_note>
+You are a pure writer: you write the plan file and return with zero git operations.
+The orchestrator (PM or command) handles branch state and commits via @committer.
+</pure_writer_note>
 
 <plan_structure>
 IMPLEMENTATION PLAN sections (EXACT order):
@@ -185,11 +181,7 @@ FAIL fast (no write) if:
 - `version_impact` missing
   </error_handling>
 
-<commit_rules>
-First creation: `docs(plan): add plan for <workItemRef>`
-Updates: `docs(plan): refine plan for <workItemRef>`
-Only stage the plan file.
-</commit_rules>
+
 
 <template_reading>
 Before generating the plan, attempt to read the structural template:
@@ -208,13 +200,10 @@ Before generating the plan, attempt to read the structural template:
 3. Locate change folder and spec + test plan files per <discovery_rules>
 4. Extract fields per <field_extraction>
 5. Validate required fields
-6. Checkout/create branch `<changeType>/<workItemRef>/<slug>`
-7. If plan exists → load for update per <update_behavior>
-8. Construct plan using <plan_structure> and <authoring_rules>
-9. Write: `<changeFolder>/chg-<workItemRef>-plan.md`
-10. Stage ONLY this file
-11. Commit per <commit_rules>
-12. STOP
+6. If plan exists → load for update per <update_behavior>
+7. Construct plan using <plan_structure> and <authoring_rules>
+8. Write: `<changeFolder>/chg-<workItemRef>-plan.md`
+9. Return (no git operations - orchestrator handles branch and commit)
 </process>
 
 <output_contract>
@@ -223,11 +212,12 @@ Before generating the plan, attempt to read the structural template:
 - File placed next to spec in same change folder
 - Deterministic and fully structured
 - No leftover `<...>` placeholders
+- No git operations (orchestrator handles branch and commit)
   </output_contract>
 
 <notes>
 - Centralizes creation and update logic
 - Canonical template ensures consistent format
 - Your output may be returned for revision by the Definition of Ready gate (`dor_check`, phase 5, `@readiness-reviewer`) before delivery; respond to `@pm`'s re-delegation.
-- After commit: ready for `/write-test-plan` or `/run-plan`
+- Pure writer: no git operations; orchestrator commits your output via @committer
 </notes>

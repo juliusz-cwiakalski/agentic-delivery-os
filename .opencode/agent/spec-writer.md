@@ -49,15 +49,10 @@ Folder structure:
 - Spec file: `chg-<workItemRef>-spec.md`
   </discovery_rules>
 
-<branch_rules>
-
-- `change.type` ∈ {feat,fix,refactor,docs,test,chore,perf,build,ci,revert,style}
-- Branch name format: `<change.type>/<workItemRef>/<slug>`
-- Behavior:
-  1. Checkout/switch if exists
-  2. Else create branch
-  3. ONLY write & commit the spec file
-     </branch_rules>
+<pure_writer_note>
+You are a pure writer: you write the spec file and return with zero git operations.
+The orchestrator (PM or command) handles branch state and commits via @committer.
+</pure_writer_note>
 
 <front_matter_rules>
 YAML front matter MUST precede `# CHANGE SPECIFICATION`:
@@ -188,12 +183,9 @@ Before generating the spec, attempt to read the structural template:
 5. Determine change folder path per <discovery_rules>
 6. Determine `change.type` from context
 7. Assemble front matter per <front_matter_rules>
-8. Checkout/create branch `<change.type>/<workItemRef>/<slug>`
-9. Generate spec using <spec_structure> and <authoring_rules>
-10. Write file: `<changeFolder>/chg-<workItemRef>-spec.md`
-11. Stage ONLY this file
-12. Commit with: `docs(change-spec): add spec for <workItemRef>`
-13. STOP (no implementation actions)
+8. Generate spec using <spec_structure> and <authoring_rules>
+9. Write file: `<changeFolder>/chg-<workItemRef>-spec.md`
+10. Return (no git operations - orchestrator handles branch and commit)
 </process>
 
 <output_contract>
@@ -202,6 +194,7 @@ Before generating the spec, attempt to read the structural template:
 - File placed under: `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`
 - Content matches <spec_structure> ordering
 - No implementation details present
+- No git operations (orchestrator handles branch and commit)
   </output_contract>
 
 <validation>
@@ -212,12 +205,12 @@ Before generating the spec, attempt to read the structural template:
 - Acceptance Criteria reference at least one ID and use Given/When/Then
 - NFRs include measurable values
 - Risks include Impact & Probability
-- Only spec file staged & committed
+- Only spec file written (no git operations)
 </validation>
 
 <notes>
 - Tech neutral; rely on planning context & repo conventions
 - Deterministic output for downstream `@plan-writer`
 - Your output may be returned for revision by the Definition of Ready gate (`dor_check`, phase 5, `@readiness-reviewer`) before delivery; respond to `@pm`'s re-delegation.
-- After commit: await human approval before `/write-plan`
+- Pure writer: no git operations; orchestrator commits your output via @committer
 </notes>

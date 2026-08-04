@@ -28,7 +28,7 @@ Examples:
 <inputs>
   <item>workItemRef='$1' — Tracker reference (e.g., `PDEV-123`, `GH-456`). REQUIRED.</item>
   <item>directives: remainder free-text. OPTIONAL.</item>
-  <item>Derived flags: baseBranch, headRef, commit (default true), dryRun (default false).</item>
+  <item>Derived flags: baseBranch, headRef, dryRun (default false).</item>
 </inputs>
 
 <discovery_rules>
@@ -52,7 +52,7 @@ Directives (case-insensitive):
 
 - Base branch: `base=<branch>` | `base branch <branch>` | `compare vs <branch>`
 - Head ref: `head=<ref>` | `head ref <ref>` | `branch <ref>`
-- Disable commit: `commit=false` | `no commit`
+- Suppress commit trigger: `no commit` | `commit=false`
 - Dry run: `dry run` | `preview only`
   Unrecognized tokens ignored.
   </directive_parsing>
@@ -114,12 +114,14 @@ Rules:
 - Append revision log entry.
   </remediation_phase>
 
-<commit_rules>
+<commit_behavior>
 
-- If commit=true and not dryRun: stage plan file, create Conventional Commit via `/commit`.
-- If commit=false: write only.
-- Dry run: no write; include preview in output.
-  </commit_rules>
+The reviewer is a pure writer: it writes the review artifact and any remediation phase and returns with zero git operations (no staging, no commit). The command owns the commit trigger; @committer (via `/commit`) handles staging + committing.
+
+- Default: after @reviewer returns, trigger `/commit` using actual values: the resolved `workItemRef`, the specific verdict/remediation `outcome`, supported finding reason as `why`, and `verification` only when observed. Omit unknown fields; never pass template/placeholders or phase metadata.
+- `no commit`: skip the `/commit` trigger; show summary only.
+- Dry run: no file writes (neither review artifact nor plan changes); include preview in output. No commit trigger.
+  </commit_behavior>
 
 <output>
 1. Review Summary: pass/fail; changed files count; key themes.

@@ -127,7 +127,7 @@ Overall model rankings:
 
 <special_cases>
 - **Icons and geometric precision**: FLUX 1.1 Pro via Replicate is the ONLY non-Google model that wins a category (85.1% for icons). Use it for icons, UI elements, and anything requiring clean geometric shapes.
-- **Abstract backgrounds / textures**: Google Imagen 3.0 (older model) outperforms all Imagen 4.0 variants for abstract/decorative use cases. Prefer `imagen-3.0-generate-001` here.
+- **Abstract backgrounds / textures**: Google Imagen 3.0 outperforms all Imagen 4.0 variants for abstract/decorative use cases. Prefer `imagen-3.0-generate-001` here.
 - **Text rendering**: All AI models struggle with text. Prefer Imagen 4.0 Ultra or Fast for best text rendering, or FLUX 1.1 Pro. Always warn callers that text accuracy is unreliable — recommend HTML/CSS overlay instead when possible.
 - **AVOID DALL-E 3**: Scored only 61% avg across use cases. Do NOT recommend unless explicitly requested.
 - **AVOID SDXL variants**: All SDXL models (Stability, Replicate) scored 23–53% avg. Do NOT recommend unless explicitly requested.
@@ -356,7 +356,7 @@ text-to-image \
 <example id="abstract-background">
 Input: "Generate a subtle background for the pricing section"
 Step 1 — Discover: `text-to-image --list-models --output-format json`
-Step 2 — Classify: Abstract & decorative → routing table primary: `google / imagen-3.0-generate-001` (74.9% — older model wins for abstracts)
+Step 2 — Classify: Abstract & decorative → routing table primary: `google / imagen-3.0-generate-001` (74.9% — best for abstracts)
 Step 3 — Generate:
 ```bash
 text-to-image \
