@@ -347,6 +347,16 @@ After updating PM notes and before triggering `@committer`, check if the delegat
 - Mark delivery as started
 - Invoke `@coder` (via `/run-plan <workItemRef> execute all remaining phases no review`)
 - `@coder` runs all plan phases, commits each, returns completion report
+- **Per-phase coder sessions (cost control, T2-FULL default for multi-phase plans):**
+  when the plan has more than ~2 implementation phases (or a phase that is itself
+  large), invoke `@coder` once per phase instead — `/run-plan <workItemRef> execute phase <N> no review` —
+  spawning a FRESH coder session each time and seeding it with: plan path, phase number,
+  and a compact context line (key decisions, touched paths, open questions from the
+  previous phase's report). The plan file is the inter-session checkpoint. Rationale:
+  delivery token cost is dominated by context re-serving inside one long session
+  (Menuvivo w36–w37 measurement: cache-read ≈ 28× fresh input; coder sessions on large
+  changes re-served 150M+ tokens). Bounded sessions cap that term. Small/T2-LITE
+  changes keep the single `execute all remaining phases` invocation.
 - Validate the completion report. If incomplete, record the blocker/reopen/retro state, then invoke `@committer` before further remediation or delegation (unless `"no commit"` applies).
 - On success, mark delivery completed, then invoke `@committer` to persist the PM-owned delivery transition before delegating `@doc-syncer` (unless `"no commit"` applies). Continue after the checkpoint completes. This checkpoint contains only PM-owned lifecycle state.
 </step>
