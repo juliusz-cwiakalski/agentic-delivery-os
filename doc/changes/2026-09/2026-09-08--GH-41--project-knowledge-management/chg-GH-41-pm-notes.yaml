@@ -4,8 +4,8 @@ delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-09-08T18:35:00Z", completed: "2026-09-08T18:42:00Z" }
   specification: { started: "2026-09-08T18:46:00Z", completed: "2026-09-09T04:17:49Z" }
-  test_planning: { started: "2026-09-09T03:52:36Z", completed: null }
-  delivery_planning: { started: "2026-09-09T03:58:28Z", completed: "2026-09-09T04:01:07Z" }
+  test_planning: { started: "2026-09-09T03:52:36Z", completed: "2026-09-09T04:21:39Z" }
+  delivery_planning: { started: "2026-09-09T03:58:28Z", completed: null }
   dor_check: { started: "2026-09-09T04:01:07Z", completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
