@@ -26,6 +26,7 @@ open_questions: []
 blockers:
   - text: "Live generated Claude runtime checks blocked: installed claude CLI returns Not logged in; no approved Claude credentials available. OpenCode TC013 and review/orientation smoke invocations pass. Do not bypass auth or claim generated runtime coverage from static parity; continue all unblocked verification."
     date: "2026-09-09"
+    resolved_date: "2026-09-09"
   - text: "Resume environment exposes no task/subagent invocation tool or command execution tool. PM cannot invoke @committer for the user-authorized scoped recovery checkpoint or delegate subsequent delivery phases. No commit was attempted in this session; restore delegation capability to resume. Prior model blocker remains unverified until a successful checkpoint."
     date: "2026-09-09"
     resolved_date: "2026-09-09"
@@ -33,6 +34,9 @@ blockers:
     date: "2026-09-08"
     resolved_date: "2026-09-09"
 notes:
+  - text: "Owner restored Claude login; generated agent and both skills live tests pass. Phase4 semantic iteration1 FAIL pending real KG closure, TC024 complete terminal-mode matrix, TC026 executed repaired-setup closure, actual bounded owner handoff trace. Delivery remains open; no prompt defect found. Full scripts14/14 and zclaude19/19 pass; tools6/7 includes preexisting CI-excluded timing failure, not green unrestricted."
+    type: retro
+    date: "2026-09-09"
   - text: "Dogfood preflight exposed ancestor config leakage in disposable roots; runner initialized isolated Git roots and removed connector config only in fixtures. Production unchanged. OpenCode live queries now use Astra with real cited answers and no writes. Claude auth requires owner action before mandatory generated-runtime DoD can pass."
     type: retro
     date: "2026-09-09"
