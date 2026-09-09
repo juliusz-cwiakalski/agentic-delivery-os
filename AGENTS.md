@@ -215,7 +215,19 @@ Canonical values: see `doc/decisions/ODR-0001-classify-yaml-register-templates-r
 
 ## Running tests
 
-Test files follow the pattern `test-*.sh` inside `.tests/` subdirectories. Run with `bash <dir>/.tests/test-*.sh`.
+Run one focused test file with `bash <path-to-test-file>`.
+
+Run the executable `test-*.sh` suites under each repository area with its aggregator:
+
+```bash
+bash scripts/test-all.sh
+bash tools/test-all.sh
+```
+
+Each aggregator recursively selects executable files named `test-*.sh` beneath
+`.tests/` or `tests/` in its own default subtree. It does not select extensionless
+tests. Run the extensionless zclaude unit suite directly with
+`bash tools/.tests/test-zclaude-unit`.
 
 ## License headers
 
