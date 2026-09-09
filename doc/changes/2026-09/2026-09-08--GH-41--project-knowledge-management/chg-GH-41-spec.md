@@ -116,15 +116,15 @@ Because ADOS lacks a shared, authority-aware way to query and steward project kn
 
 **F-3 — Explicit uncertainty and retrieval outcomes.** Answers distinguish established facts from labeled inferences and unknowns. Retrieval outcomes include at least `answered`, `insufficient`, `conflicting`, `inaccessible`, `not_configured`, and `not_found`. Applicable conflicts are surfaced, not averaged. A source's age is a screening signal only.
 
-**F-4 — Configurable project source and stewardship policy.** Project configuration can define scope, non-obvious or external source existence, authority classes, access method, sensitivity or restrictions, ownership and escalation, and gap capture policy. Standard repository sources require no exhaustive registry. Capture supports `off`, `suggest`, and `write` semantics, with `suggest` as the safe default for ordinary queries and writes allowed only when an active workflow authorizes them.
+**F-4 — Configurable project source and stewardship policy.** Project configuration can define scope, non-obvious or external source existence, authority classes, access method, sensitivity or restrictions, permitted disclosure by consumer and destination, ownership and escalation, and gap capture policy. Standard repository sources require no exhaustive registry. Capture supports `off`, `suggest`, and `write` semantics, with `suggest` as the safe default for ordinary queries and writes allowed only when an active workflow authorizes them. Permission to retrieve a source does not imply permission to republish its substance or metadata into an answer, gap, registry, or evidence artifact; only provenance metadata permitted for both the consumer and destination may be disclosed.
 
 **F-5 — Durable Knowledge Gap model and lifecycle.** A gap records a material deficiency, representative sanitized context, diagnosis, evidence checked, impact, occurrence information, relationships, desired canonical resolution, status, and verification. Supported types are missing, completeness, discoverability, contradiction, drift, staleness-risk, ownership, vocabulary, accessibility, source-authority, and decision-needed. Persisted statuses are Open, Resolved, and Dismissed; tracker workflow states are not mirrored.
 
-**F-6 — Canonical-remediation deduplication.** Before persistence, open and retained resolved/dismissed gaps are searched by intent, area, concepts, sources, and diagnosis. Two observations match when the same canonical remediation would fix both. A matched gap aggregates independent occurrence/context evidence; retries within one interaction do not count as new occurrences.
+**F-6 — Canonical-remediation deduplication.** Before persistence, Open, Resolved, and Dismissed gaps are searched by intent, area, concepts, sources, and diagnosis. Two observations match when the same canonical remediation would fix both. For an Open match, a materially independent observation updates the existing gap's occurrence/context evidence; a retry or historical replay already represented by that record does not. For a Resolved match, replay of evidence already covered by the prior verification leaves the record unchanged, while independent evidence that the same deficiency has genuinely recurred reopens the same gap identity and preserves the prior resolution and verification in history. For a Dismissed match, replay consistent with the dismissal leaves the record unchanged, while independent evidence that overturns the dismissal and exposes the same underlying remediation reopens the same identity and preserves the prior disposition and rationale. A materially different canonical remediation receives a distinct gap even when wording is similar. In `off` mode these outcomes are reported only as query uncertainty when relevant; in `suggest` mode the existing match and proposed no-op, update, or reopening are returned without mutation; only an authorized `write` or stewardship workflow performs the transition.
 
 **F-7 — Evidence-based knowledge-health review.** Review is explicitly bounded by a supplied or confirmed scope. It reports healthy evidence, existing matches, candidates, contradictions, likely drift, staleness risk, discoverability and ownership issues, and recommended routing. The report is ephemeral by default; only accepted, deduplicated gaps become durable. Current-truth labels can be challenged by stronger current contracts, configuration, tests, implementation evidence, or superseding decisions.
 
-**F-8 — Canonical remediation, routing, and verified resolution.** Documentation and navigation defects are corrected in their owning documentation; rationale gaps use the decision process; work-heavy remediation is routed through PM to the tracker; ownership and access defects go to their configured owners; and behavior discrepancies are reconciled through normal change delivery. Resolution requires evidence that the representative knowledge task now succeeds and that misleading alternatives, navigation, access, and privacy concerns are addressed.
+**F-8 — Canonical remediation, routing, and verified resolution.** Documentation and navigation defects are corrected in their owning documentation; rationale gaps use the decision process; work-heavy remediation is routed through PM to the tracker; ownership and access defects go to their configured owners; and behavior discrepancies are reconciled through normal change delivery. Resolution requires evidence that the representative knowledge task now succeeds and that misleading alternatives, navigation, access, and privacy concerns are addressed. Each resolution appends meaningful verification to retained history; a later reopening does not erase or rewrite prior resolution or dismissal evidence.
 
 **F-9 — Bounded ADOS lifecycle integration.** PM may query project knowledge before escalating factual questions and routes work-heavy remediation to the tracker. Readiness considers only relevant material gaps. Review surfaces durable contradictions. Decision-needed gaps route to the decision process. Bootstrapper can establish minimal selected configuration and graduate suitable durable inception findings without automatic conversion. Documentation Reconciliation checks related gaps, verifies resolution, and surfaces residual drift. Delegations return bounded evidence and cannot call themselves or bounce indefinitely.
 
@@ -154,8 +154,9 @@ Consumer asks a project question
 ```text
 Knowledge signal appears
   → intent, affected area, evidence, impact, and diagnosis are distilled and sanitized
-  → retained gaps are searched
+  → Open, Resolved, and Dismissed gaps are searched
   → same-canonical-remediation test matches an existing gap or permits a new one
+  → historical replay is a no-op; genuine recurrence or overturned dismissal reopens the matched identity with prior history preserved
   → capture policy decides whether to do nothing, suggest a candidate, or persist an authorized record
 ```
 
@@ -249,11 +250,11 @@ N/A. GH-41 introduces no REST or HTTP endpoint contract.
 
 | ID | Element | Description |
 |----|---------|-------------|
-| DM-1 | Knowledge Source | A configured or conventionally known project source with purpose, authority classes, access method, and applicable restrictions; standard repository content need not be exhaustively registered. |
+| DM-1 | Knowledge Source | A configured or conventionally known project source with purpose, authority classes, access method, applicable restrictions, and permitted disclosure by consumer and destination; standard repository content need not be exhaustively registered. |
 | DM-2 | Knowledge Gap | A durable knowledge-health defect with stable ID, status, type, area, concise summary, owners, timestamps, sanitized evidence, representative context, occurrence data, relationships, and resolution data. |
 | DM-3 | Gap Type | Closed v1 set: missing, completeness, discoverability, contradiction, drift, staleness-risk, ownership, vocabulary, accessibility, source-authority, decision-needed. |
-| DM-4 | Gap Status | Closed set: Open, Resolved, Dismissed. It deliberately excludes tracker workflow states. |
-| DM-5 | Resolution | Canonical source or mechanism repaired, verification time, verification notes, and related change/decision/work references; it never stores the canonical answer as a substitute. |
+| DM-4 | Gap Status | Closed set: Open, Resolved, Dismissed. Open may transition to Resolved or Dismissed; Resolved may return to Open on independently evidenced recurrence of the same deficiency; Dismissed may return to Open when independent evidence overturns the disposition for that same deficiency. Historical replay causes no transition. Tracker workflow states are excluded. |
+| DM-5 | Resolution and disposition history | Current resolution state plus retained prior resolution or dismissal entries, including canonical source or mechanism, verification/disposition time and rationale, verification notes, and related change/decision/work references; reopening appends history rather than erasing it, and the record never stores the canonical answer as a substitute. |
 | DM-6 | Retrieval Outcome | Closed minimum set: answered, insufficient, conflicting, inaccessible, not_configured, not_found. |
 | DM-7 | Gap Capture Policy | Project policy with `off`, `suggest`, and `write` behavior; ordinary query default is `suggest`. |
 | DM-8 | Knowledge Gap Identity | Proposed repo-local `KG-<NNNN>` identity governed by ADR-0003 and subject to final human acceptance; repository context accompanies cross-repository references. |
@@ -285,14 +286,14 @@ N/A. GH-41 introduces no REST or HTTP endpoint contract.
 | NFR-3 | Query restraint | At most 1 follow-up question is asked before each initial dogfood answer or uncertainty result unless the consumer explicitly continues clarification. |
 | NFR-4 | Data minimization | 0 raw transcripts, secrets, credentials, customer personal data, private personnel data, or unrelated restricted content are persisted by default. |
 | NFR-5 | Identifier compatibility | 0 existing `UNK-*`, `OQ-*`, `OPEN-Q*`, or other live identifiers are renumbered, redefined, or silently aliased; 0 new durable prefixes beyond `KG` are introduced. |
-| NFR-6 | Deduplication correctness | 100% of same-remediation dogfood observations map to one gap; 100% of different-remediation observations remain distinct. |
-| NFR-7 | Resolution integrity | 100% of Resolved dogfood gaps include canonical-resolution reference and verification against the original gap statement. |
+| NFR-6 | Deduplication and recurrence correctness | 100% of same-remediation dogfood observations map to one gap identity; 100% of different-remediation observations remain distinct; 100% of historical replays are no-ops; 100% of genuinely recurring or overturned-dismissal cases reopen the matching identity with prior history preserved. |
+| NFR-7 | Resolution integrity | 100% of Resolved dogfood gaps include canonical-resolution reference and verification against the original gap statement; 100% of reopened gaps retain prior resolution or dismissal evidence. |
 | NFR-8 | Review boundedness | 100% of knowledge reviews declare a finite scope before evaluation; 0 full external-system scans occur implicitly. |
 | NFR-9 | Recursion safety | Maximum knowledge delegation depth is 1 per owning-role handoff; 0 self-delegations or repeated role-to-role bounce loops occur in dogfood scenarios. |
 | NFR-10 | Multi-tool consistency | 100% of canonical knowledge interfaces represented in supported generated tooling are current at quality-gate completion. |
 | NFR-11 | Distribution integrity | 100% of new or changed distributable documents carry a valid distribution class and pass current distribution/install checks. |
 | NFR-12 | Dogfood quality | 10 of 10 Appendix A scenarios pass after remediation, with 0 unresolved severity-high defects attributable to GH-41. |
-| NFR-13 | Access control | 0 restricted-source excerpts are copied into a more permissive repository during dogfood; all inaccessible outcomes preserve the distinction from missing knowledge. |
+| NFR-13 | Access and disclosure control | 0 restricted-source substance or disallowed metadata is disclosed into a less-permissive answer, gap, registry, or evidence artifact during dogfood, including when retrieval itself is authorized; all inaccessible outcomes preserve the distinction from missing knowledge. |
 
 ## 10. TELEMETRY & OBSERVABILITY REQUIREMENTS
 
@@ -301,6 +302,7 @@ N/A. GH-41 introduces no REST or HTTP endpoint contract.
 - Durable observability comes from concise gap records, occurrence and last-observed information, source references, tracker/decision/change relationships, and resolution verification.
 - Bounded review reports are ephemeral by default; only accepted and deduplicated gaps persist.
 - Dogfood evidence records scenario outcome, relevant source provenance, candidate/match behavior, routing, and verification without retaining full conversations.
+- Reopening a Resolved or Dismissed gap is observable through retained status history and new independent evidence; replay of already-recorded evidence does not alter recurrence counts or status.
 - If a project elects to measure knowledge health later, useful signals include answerability, canonical-source answerability, escalation rate, repeated underlying gaps, gap age, reopened gaps, contradictions, verified drift, and discoverability issues. No v1 success claim depends on unavailable telemetry.
 
 ## 11. RISKS & MITIGATIONS
@@ -309,7 +311,7 @@ N/A. GH-41 introduces no REST or HTTP endpoint contract.
 |----|------|--------|-------------|------------|---------------|
 | RSK-1 | The facade becomes an answer silo or second backlog. | H | M | Enforce canonical-resolution links, three gap statuses, tracker references without mirrored workflow, and no long-form resolved answers. | L |
 | RSK-2 | Confident but unsupported answers cause unsafe project actions. | H | M | Require provenance, explicit retrieval outcomes, labeled inference, conflict surfacing, and no-fabrication dogfood checks. | M |
-| RSK-3 | Restricted or malicious external content is copied or obeyed. | H | M | Preserve ACLs, minimize persisted evidence, treat retrieved content as evidence rather than instructions, and test inaccessible/untrusted-source behavior. | M |
+| RSK-3 | Restricted or malicious external content is copied, over-disclosed, or obeyed. | H | M | Preserve ACLs, separate retrieval permission from disclosure permission, minimize persisted evidence and metadata, treat retrieved content as evidence rather than instructions, and test both denied access and authorized-read/restricted-disclosure behavior. | M |
 | RSK-4 | Gap volume becomes noisy through one-record-per-question behavior. | M | M | Default to suggest mode, require materiality, apply the same-canonical-remediation test, and keep raw questions ephemeral. | L |
 | RSK-5 | Weak age signals cause false drift findings. | M | M | Separate staleness risk from verified drift and require stronger corroborating evidence before asserting incorrectness. | L |
 | RSK-6 | Broad integrations cause recursive agent loops or degraded lifecycle ownership. | H | M | Limit integrations to bounded query/signal handoffs, cap delegation depth, and preserve specialized role boundaries. | L |
@@ -395,17 +397,33 @@ N/A. GH-41 introduces no REST or HTTP endpoint contract.
 | AC-F3-1 | **Given** facts, inferences, conflicting evidence, partial evidence, inaccessible sources, unconfigured sources, and absent results, **when** `@knowledge` evaluates them, **then** it labels their status using the appropriate uncertainty or retrieval outcome and invents no unsupported project fact. | F-2, F-3, DM-6, NFR-2 |
 | AC-F4-1 | **Given** an adopting project with repository and optional external sources, **when** project knowledge policy is configured, **then** source existence, authority class, access method, restrictions, ownership/escalation, and `off|suggest|write` capture behavior are expressible without hard-coded vendor semantics or exhaustive registration of standard documentation. | F-4, DM-1, DM-7 |
 | AC-F5-1 | **Given** any supported durable deficiency, **when** a Knowledge Gap candidate or record is produced, **then** its minimal schema represents the required evidence, context, lifecycle, and one of the eleven v1 deficiency types. | F-5, DM-2, DM-3, DM-4 |
-| AC-F6-1 | **Given** repeated observations, retries, and similarly worded but materially different problems, **when** gap capture is evaluated, **then** the same-canonical-remediation test aggregates only independent observations of the same defect, stores no raw transcript, and a Resolved result is permitted only after verification against the original gap statement. | F-6, F-8, DM-5, NFR-4, NFR-6, NFR-7 |
+| AC-F6-1 | **Given** repeated observations, retries, historical replay, genuinely recurring resolved deficiencies, overturned dismissals, and similarly worded but materially different problems, **when** gap capture is evaluated under `off`, `suggest`, or authorized write behavior, **then** the same-canonical-remediation test aggregates only independent observations of the same defect, replay is a no-op, genuine recurrence or overturned dismissal reopens the existing identity with prior history preserved, different remediation remains distinct, no raw transcript is stored, and Resolved status requires verification against the original gap statement. | F-6, F-8, DM-4, DM-5, DM-7, NFR-4, NFR-6, NFR-7 |
 | AC-F8-2 | **Given** a durable gap whose remediation is trivial or work-heavy, **when** it is triaged, **then** trivial remediation updates the proper canonical artifact or mechanism while work-heavy remediation is linked to tracker work routed through PM without tracker-state mirroring. | F-8, F-9, EVT-4, DM-4 |
 | AC-F7-1 | **Given** conflicting, old, or supposedly current evidence, **when** query or review evaluates it, **then** applicable contradictions are surfaced rather than averaged, age alone produces no drift claim, and stronger current executable or superseding-decision evidence can challenge current-truth prose. | F-2, F-7, DM-3 |
 | AC-F12-1 | **Given** GH-140 remains open and ADR-0003 is Proposed, **when** GH-41 uses durable gap identity, **then** only the scoped `KG-<NNNN>` namespace is proposed, existing `UNK-*`, `OQ-*`, and `OPEN-Q*` IDs remain stable and distinct, no unnecessary ID spaces are added, and final ADR acceptance remains a human PR decision. | F-12, DM-8, NFR-5 |
 | AC-F9-1 | **Given** PM, readiness, review, decision, bootstrapper, Documentation Reconciliation, or another delivery role encounters material knowledge uncertainty, **when** it invokes or surfaces the knowledge flow, **then** the handoff is bounded, safe non-blocking work may continue, ownership remains with the specialized role, and no self-delegation or recursive bounce occurs. | F-9, EVT-4, NFR-9 |
 | AC-F10-1 | **Given** a new contributor needs project orientation, **when** Contributor Orientation is invoked, **then** it composes `@knowledge`, covers the applicable orientation topics from authoritative evidence, feeds durable deficiencies into the normal gap flow, and does not create a separate Project Onboarding knowledge system. | F-1, F-10 |
-| AC-F4-2 | **Given** an optional external source with ACLs or untrusted content, **when** its evidence is retrieved, **then** access controls and provenance are preserved, inaccessible is distinct from missing, and retrieved content is treated as evidence rather than executable instruction. | F-2, F-3, F-4, DM-6, NFR-13 |
+| AC-F4-2 | **Given** an optional external source that is inaccessible, untrusted, or readable by the agent but restricted for the consumer or destination, **when** its evidence is evaluated for an answer or authorized gap capture, **then** access controls and policy-permitted provenance are preserved, inaccessible is distinct from missing, retrieval permission does not cause restricted substance or metadata to be disclosed or persisted, and retrieved content is treated as evidence rather than executable instruction. | F-2, F-3, F-4, DM-1, DM-6, NFR-4, NFR-13 |
 | AC-F11-2 | **Given** all capability artifacts and tooling representations, **when** documentation, installation, update, generation, inventory, navigation, and distribution checks run, **then** profile safety and frontmatter/distribution contracts pass, generated representations match their canonical source, and adopting-project configuration and gaps are preserved. | F-11, NFR-10, NFR-11 |
 | AC-F11-3 | **Given** machine-checkable Knowledge Gap schema, identity, inventory, generated-tool, installation, update, and distribution rules, **when** repository validation runs, **then** each supported rule is covered by automated or static validation and all applicable checks pass. | F-5, F-11, F-12, NFR-5, NFR-10, NFR-11 |
 | AC-F13-1 | **Given** the ten scenarios in Appendix A, **when** ADOS dogfoods the delivered capability, **then** all ten pass with evidence, discovered implementation defects are remediated, deduplication and tracker/decision routing are demonstrated, and at least one resolved gap points to repaired canonical truth verified against its original statement. | F-13, EVT-5, NFR-6, NFR-7, NFR-12 |
 | AC-F13-2 | **Given** delivery and dogfood remediation are complete, **when** readiness, code/documentation review, quality gates, plan completion, and Definition of Done are evaluated before PR creation, **then** each gate passes and all 17 ticket acceptance criteria are evidenced as complete. | F-11, F-13, NFR-12 |
+
+### Change-Specific Definition of Done
+
+GH-41 is ready for PR creation only when every applicable item below has retained, reviewable evidence:
+
+- [ ] All 17 acceptance criteria in this section pass, with the one-to-one ticket mapping in Appendix B intact.
+- [ ] All applicable NFR-1 through NFR-13 thresholds pass; any non-applicable threshold has an explicit rationale accepted by readiness and review.
+- [ ] All ten live ADOS dogfood scenarios in Appendix A pass after remediation, together with supplemental safety cases for historical replay, genuine recurrence after resolution, overturned dismissal, authorized-read/restricted-disclosure, and the absence of an evidenced workaround for stale setup guidance.
+- [ ] At least one real ADOS Knowledge Gap is resolved by repairing actual canonical project truth or navigation and is verified against its original gap statement; synthetic fixtures alone do not satisfy this item.
+- [ ] Machine-checkable schema, identifier, inventory, generated-tool, installation, update-preservation, uninstallation, navigation, frontmatter, and distribution contracts pass all applicable structural and quality checks.
+- [ ] Project-owned knowledge instructions, configured sources, gap records, and derived registry state are preserved across installation/update/removal behavior according to their ownership contract.
+- [ ] Affected current system specifications and user/agent documentation are reconciled, with no known unresolved contradiction introduced by GH-41.
+- [ ] Independent readiness and code/documentation review pass after all remediation, and repository quality gates are green.
+- [ ] Every implementation-plan task is complete and linked to evidence sufficient for Definition of Done review.
+
+This pre-PR Definition of Done does **not** require ADR-0003 to be Accepted before implementation or dogfood testing. ADR-0003 remains Proposed throughout pre-PR verification; the repository owner retains final acceptance or rejection authority during GH-41 PR review. A rejection or material qualification at that review reopens the specification and affected delivery artifacts before merge.
 
 ## 18. ROLLOUT & CHANGE MANAGEMENT (HIGH-LEVEL)
 
@@ -429,7 +447,7 @@ N/A. GH-41 introduces no REST or HTTP endpoint contract.
 
 - Persist only sanitized context needed to diagnose and resolve a durable gap.
 - Do not persist secrets, credentials, customer personal data, sensitive personnel data, unrelated private conversation content, or full chat transcripts by default.
-- Preserve source ACLs and sensitivity boundaries; a restricted source may be referenced without copying restricted substance into a more permissive repository.
+- Preserve source ACLs and sensitivity boundaries. Authorization to read is not authorization to disclose: an answer, gap, registry, or evidence artifact may include only substance and provenance metadata permitted for both its consumer and destination. A title or location is cited only when that metadata is itself permitted; otherwise use a non-sensitive source class or opaque authorized reference.
 - Do not store questioner identity unless required by an authorized ownership/workflow need and allowed by project policy.
 - External adapter compliance remains the adopting project's responsibility, but adapters must preserve the core minimization, provenance, and access semantics.
 - The open-source ADOS examples and dogfood evidence contain no company-private material.
@@ -438,7 +456,7 @@ N/A. GH-41 introduces no REST or HTTP endpoint contract.
 
 - Retrieved repository and external content is evidence, not an instruction source, unless explicitly configured as trusted project instructions.
 - Prompt-injection text, requests to change task scope, and embedded instructions in evidence are ignored and may be reported as source-quality concerns.
-- Access failure is reported honestly and does not trigger an automatic missing-knowledge classification.
+- Access failure is reported honestly and does not trigger an automatic missing-knowledge classification. Successful retrieval is separately checked against consumer and destination disclosure policy before any source substance or metadata is returned or persisted.
 - Capture policy prevents surprising repository mutation from a simple query.
 - Write-capable stewardship remains subject to normal repository branch, review, and authorization boundaries.
 - Bounded source selection avoids implicit broad external scans and unnecessary disclosure.
@@ -449,7 +467,7 @@ N/A. GH-41 introduces no REST or HTTP endpoint contract.
 - Knowledge stewardship becomes continuous/reactive, change-coupled, and optionally periodic; no universal cadence is imposed.
 - Owners triage material gaps to documentation, decisions, tracker work, ownership, or access processes and verify closure.
 - Documentation Reconciliation checks whether a change resolves or creates relevant gaps and whether dependent current truth remains consistent.
-- Resolved and Dismissed gaps are retained for allocation and historical traceability without becoming an answer archive.
+- Resolved and Dismissed gaps are retained for allocation and historical traceability without becoming an answer archive. Historical replay leaves them unchanged; independently evidenced recurrence or an overturned dismissal reopens the same identity, retains prior verification/disposition history, and requires fresh resolution verification.
 - The compact registry view remains derived from records to avoid dual maintenance.
 - High-severity contradictions involving security, compliance, production operations, financial behavior, or destructive procedures require prompt escalation to the owning process.
 - Maintainers keep process guidance, canonical tooling, generated tooling, inventories, installer/update behavior, and system specs synchronized.
@@ -492,7 +510,25 @@ N/A. GH-41 introduces no REST or HTTP endpoint contract.
 | 7 | Drift versus age: current ADOS behavior or a canonical contract contradicts maintained prose, while another old guide still verifies correctly. | Evidence-backed mismatch becomes drift; old-but-correct guidance is not declared stale from age alone. | AC-F7-1, AC-F13-1 |
 | 8 | Work-heavy remediation and verified closure: a gap requires normal tracked delivery, after which canonical guidance and navigation are repaired. | PM owns tracker routing without status mirroring; representative query succeeds; gap becomes Resolved with canonical and change references. | AC-F8-1, AC-F8-2, AC-F13-1 |
 | 9 | AI-agent uncertainty and decision routing: a delivery agent cannot establish an ownership/behavior rule, and the missing answer is an unresolved decision. | Agent does not invent a convention, continues only safe non-blocking work, produces a bounded handoff to the decision process, and avoids recursion. | AC-F9-1, AC-F12-1 |
-| 10 | Contributor Orientation with configured but inaccessible source. | Orientation composes `@knowledge`, answers available topics, labels the inaccessible topic without copying restricted content, and feeds only a material durable deficiency into normal gap handling. | AC-F4-1, AC-F4-2, AC-F10-1, AC-F13-1 |
+| 10 | Contributor Orientation with access and stale-setup branches. | Orientation composes `@knowledge`. For a configured but inaccessible source, it labels the limitation without copying restricted content. For a readable source whose disclosure is restricted, it returns/persists only policy-permitted provenance and no restricted substance or metadata. When a contributor follows a documented setup command that no longer exists, it offers an immediate workaround only when authoritative evidence supports one, otherwise states that none is verified; it proposes or matches a drift gap, routes canonical guide remediation, and rejects a chat-only answer as resolution. Only material durable deficiencies enter normal gap handling. | AC-F3-1, AC-F4-1, AC-F4-2, AC-F7-1, AC-F10-1, AC-F13-1 |
+
+### Appendix A.1 — Delivery-Brief Scenario Consolidation
+
+| Brief scenario | Consolidated dogfood scenario |
+|----------------|-------------------------------|
+| A — Direct answer exists | 1 — Direct answer |
+| B — Discoverability gap | 2 — Discoverability |
+| C — Missing knowledge | 3 — Missing procedure |
+| D — Repeated wording, same gap | 4 — Deduplication |
+| E — Similar wording, different gap | 5 — Distinct diagnosis |
+| F — Accepted decision versus old chat | 6 — Authority conflict |
+| G — Current-truth document versus current executable evidence | 7 — Drift versus age |
+| H — Old but correct runbook | 7 — Drift versus age |
+| I — Two current-truth documents conflict | 6 — Authority conflict |
+| J — Known source inaccessible | 10 — Orientation access branch |
+| K — Gap resolved by a change | 8 — Work-heavy remediation and verified closure |
+| L — AI-agent uncertainty | 9 — AI-agent uncertainty and decision routing |
+| M — Onboarding question reveals stale setup documentation | 10 — Orientation stale-setup branch |
 
 ### Appendix B — GH-41 Ticket Acceptance Traceability
 
@@ -530,6 +566,7 @@ N/A. GH-41 introduces no REST or HTTP endpoint contract.
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 0.1 | 2026-09-09 | `@spec-writer` | Initial Proposed specification for GH-41. |
+| 0.2 | 2026-09-09 | `@spec-writer` | Remediated DoR iteration 1 specification findings: change-specific DoD, retained-gap recurrence semantics, restricted-disclosure contract, and complete scenario consolidation. |
 
 ---
 
@@ -537,7 +574,7 @@ N/A. GH-41 introduces no REST or HTTP endpoint contract.
 
 - Authored from the GH-41 ticket, the complete planning brief, PM notes, ADR-0003, and relevant current ADOS specifications and documentation conventions.
 - The ticket's 17 acceptance criteria are preserved one-to-one in Appendix B and expressed as testable Given/When/Then criteria.
-- The ten dogfood scenarios consolidate the planning brief's required behaviors into real ADOS contexts without adding product requirements beyond the ticket and brief.
+- The ten dogfood scenarios consolidate all delivery-brief scenarios A–M into real ADOS contexts; the explicit mapping prevents a consolidated branch from being silently omitted.
 - Missing general catalogue and namespace-exhaustion decisions remain non-blocking open questions owned by GH-140.
 - No implementation tasks, code-level instructions, or merge-request template content is included.
 
@@ -556,3 +593,7 @@ N/A. GH-41 introduces no REST or HTTP endpoint contract.
 - [x] All 17 ticket acceptance criteria have explicit traceability
 - [x] All ten dogfood scenarios have acceptance-criterion traceability
 - [x] `UNK-*`, `OQ-*`, and `OPEN-Q*` semantics are preserved
+- [x] Change-specific Definition of Done is explicit and separates pre-PR completion from human ADR acceptance
+- [x] Resolved and Dismissed recurrence, replay, reopening, capture-mode, and history-preservation semantics are defined
+- [x] Authorized retrieval is distinguished from permitted disclosure for restricted substance and metadata
+- [x] Delivery-brief scenarios A–M map explicitly to ten consolidated ADOS dogfood scenarios
