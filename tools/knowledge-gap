@@ -1,0 +1,193 @@
+#!/usr/bin/env bash
+# knowledge-gap — validate and inspect Git-native ADOS Knowledge Gap records.
+# Dependencies: bash>=4, Python 3, PyYAML, jsonschema; run --help for usage.
+set -Eeuo pipefail
+set -o errtrace
+shopt -s inherit_errexit 2>/dev/null || true
+IFS=$'\n\t'
+
+readonly APP_NAME="knowledge-gap"
+readonly APP_VERSION="1.0.0"
+readonly LOG_TAG="(${APP_NAME})"
+readonly EXIT_USAGE=2
+readonly EXIT_CONFIG=3
+
+usage() {
+  printf 'Usage: %s <validate|next-id|index> [--root ROOT] [--base-ref REF]\n' "${APP_NAME}"
+  printf '\nvalidate accepts optional --base-ref. next-id and index do not.\n'
+  printf 'ROOT defaults to the current Git repository (or current directory).\n'
+  printf 'Dependencies: Python 3, PyYAML, jsonschema. This command never fetches them.\n'
+}
+
+log_err() { printf '[ERROR] %s %s\n' "${LOG_TAG}" "$*" >&2; }
+log_warn() { printf '[WARN]  %s %s\n' "${LOG_TAG}" "$*" >&2; }
+log_info() { printf '[INFO]  %s %s\n' "${LOG_TAG}" "$*" >&2; }
+log_debug() { [[ "${VERBOSE:-false}" == "true" ]] && printf '[DEBUG] %s %s\n' "${LOG_TAG}" "$*" >&2; }
+die() { log_err "$1"; exit "${2:-${EXIT_USAGE}}"; }
+_on_err() { local -r line="$1" cmd="${2%%$'\n'*}" code="$3"; log_err "line ${line}: '${cmd}' exited with ${code}"; }
+_on_exit() { :; }
+_on_interrupt() { log_warn "Interrupted"; exit 130; }
+trap '_on_err $LINENO "$BASH_COMMAND" $?' ERR
+trap '_on_exit' EXIT
+trap '_on_interrupt' INT TERM
+
+resolve_root() {
+  local requested="$1" resolved
+  if [[ -z "${requested}" ]]; then
+    requested="$(git rev-parse --show-toplevel 2>/dev/null || pwd -P)"
+  fi
+  [[ -d "${requested}" ]] || die "Repository root does not exist: ${requested}" "${EXIT_CONFIG}"
+  resolved="$(cd -- "${requested}" && pwd -P)"
+  [[ "${resolved}" != "/" ]] || die "Refusing filesystem root as repository root" "${EXIT_CONFIG}"
+  printf '%s\n' "${resolved}"
+}
+
+run_python() {
+  local -r command_name="$1" root="$2" base_ref="$3"
+  command -v python3 >/dev/null 2>&1 || die "Missing dependency: python3. Install Python 3 before running ${APP_NAME}." "${EXIT_CONFIG}"
+  python3 - "${command_name}" "${root}" "${base_ref}" <<'PY'
+import copy, datetime, pathlib, re, subprocess, sys
+try:
+    import yaml
+except ImportError:
+    sys.exit("Missing dependency: PyYAML. Install it in the project/CI environment (for example, python3 -m pip install PyYAML).")
+try:
+    import jsonschema
+except ImportError:
+    sys.exit("Missing dependency: jsonschema. Install it in the project/CI environment (for example, python3 -m pip install jsonschema).")
+
+cmd, root_arg, base_ref = sys.argv[1:]
+root = pathlib.Path(root_arg).resolve()
+schema_path = root / "doc/templates/knowledge-gap-schema.yaml"
+gaps_dir = root / "doc/knowledge/gaps"
+if not schema_path.is_file():
+    sys.exit(f"{schema_path}: schema not found; install or restore the shipped knowledge gap schema")
+
+def within(path):
+    try: path.resolve().relative_to(root)
+    except ValueError: sys.exit(f"{path}: path escapes repository root {root}")
+
+class NoDatesSafeLoader(yaml.SafeLoader):
+    pass
+NoDatesSafeLoader.yaml_implicit_resolvers = copy.deepcopy(yaml.SafeLoader.yaml_implicit_resolvers)
+for first, resolvers in NoDatesSafeLoader.yaml_implicit_resolvers.items():
+    NoDatesSafeLoader.yaml_implicit_resolvers[first] = [
+        item for item in resolvers if item[0] != "tag:yaml.org,2002:timestamp"
+    ]
+
+def load_yaml(text, source):
+    try: value = yaml.load(text, Loader=NoDatesSafeLoader)
+    except yaml.YAMLError as exc: sys.exit(f"{source}: invalid YAML: {exc}")
+    if not isinstance(value, dict): sys.exit(f"{source}: expected a YAML mapping")
+    return value
+
+schema = load_yaml(schema_path.read_text(encoding="utf-8"), schema_path)
+schema.pop("ados_distribution", None)
+try: jsonschema.Draft202012Validator.check_schema(schema)
+except jsonschema.SchemaError as exc: sys.exit(f"{schema_path}: invalid JSON Schema: {exc.message}")
+validator = jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker())
+
+def parse_record_text(text, source):
+    lines = text.splitlines()
+    if not lines or lines[0] != "---": sys.exit(f"{source}: frontmatter must start on line 1 with ---")
+    try: end = lines.index("---", 1)
+    except ValueError: sys.exit(f"{source}: frontmatter closing --- is missing")
+    return load_yaml("\n".join(lines[1:end]), source)
+
+def record_files():
+    if not gaps_dir.exists(): return []
+    within(gaps_dir)
+    return sorted(p for p in gaps_dir.rglob("*.md") if p.is_file() and not p.is_symlink())
+
+def load_current():
+    records, ids = [], {}
+    for path in record_files():
+        within(path)
+        data = parse_record_text(path.read_text(encoding="utf-8"), path)
+        errors = sorted(validator.iter_errors(data), key=lambda e: list(e.absolute_path))
+        if errors:
+            err = errors[0]
+            field = ".".join(map(str, err.absolute_path)) or "<record>"
+            sys.exit(f"{path}: field {field}: {err.message}; correct the record using doc/templates/knowledge-gap-template.md")
+        expected = data["id"]
+        if not re.fullmatch(re.escape(expected) + r"--[a-z0-9]+(?:-[a-z0-9]+)*\.md", path.name):
+            sys.exit(f"{path}: filename must be {expected}--<kebab-case-slug>.md")
+        if expected in ids: sys.exit(f"{path}: duplicate identity {expected}; already used by {ids[expected]}")
+        ids[expected] = path
+        records.append((path, data))
+    return records
+
+def git_show(ref, rel):
+    result = subprocess.run(["git", "-C", str(root), "show", f"{ref}:{rel}"], text=True, capture_output=True)
+    return result.stdout if result.returncode == 0 else None
+
+def baseline_validate(records):
+    result = subprocess.run(["git", "-C", str(root), "ls-tree", "-r", "--name-only", base_ref, "--", "doc/knowledge/gaps"], text=True, capture_output=True)
+    if result.returncode != 0: sys.exit(f"base ref {base_ref!r} is unavailable: {result.stderr.strip()}")
+    current = {data["id"]: (path, data) for path, data in records}
+    for rel in [line for line in result.stdout.splitlines() if line.endswith(".md")]:
+        old_text = git_show(base_ref, rel)
+        old = parse_record_text(old_text, f"{base_ref}:{rel}")
+        old_id = old.get("id")
+        if old_id not in current: sys.exit(f"{rel}: durable identity {old_id} from {base_ref} was deleted or renumbered; restore it")
+        path, new = current[old_id]
+        if old.get("created") != new.get("created"):
+            sys.exit(f"{path}: field created reassigns durable identity {old_id}; restore the original value")
+        old_history, new_history = old.get("history", []), new.get("history", [])
+        if new_history[:len(old_history)] != old_history:
+            sys.exit(f"{path}: field history rewrites or removes prior lifecycle evidence; preserve it and append new entries")
+        if old.get("status") in ("Resolved", "Dismissed") and new.get("status") == "Open":
+            if len(new_history) <= len(old_history) or new_history[-1].get("kind") != "reopening" or not new.get("reopening_evidence"):
+                sys.exit(f"{path}: reopening {old_id} requires appended reopening history and reopening_evidence")
+        if old.get("status") == "Open" and new.get("status") == "Resolved" and not new.get("resolution"):
+            sys.exit(f"{path}: resolution requires fresh canonical reference and original-task verification")
+
+records = load_current()
+if cmd == "validate":
+    if base_ref: baseline_validate(records)
+    print(f"Validated {len(records)} knowledge gap record(s).")
+elif cmd == "next-id":
+    if base_ref: sys.exit("next-id does not accept --base-ref")
+    nums = [int(data["id"][3:]) for _, data in records]
+    if nums and max(nums) >= 9999: sys.exit("KG-9999 is allocated; allocation is exhausted. Do not widen or reuse IDs without an approved decision.")
+    result = subprocess.run(["git", "-C", str(root), "status", "--porcelain", "--", "doc/knowledge/gaps"], text=True, capture_output=True)
+    pending = [line for line in result.stdout.splitlines() if line[:2] == "??"] if result.returncode == 0 else []
+    if len(pending) > 1: sys.exit("multiple pending gap records exist; commit/revalidate the current allocation and resolve collisions before allocating another")
+    print(f"KG-{(max(nums) + 1 if nums else 1):04d}")
+elif cmd == "index":
+    if base_ref: sys.exit("index does not accept --base-ref")
+    print("---\nados_distribution: project-generated\n---\n\n# Knowledge Gaps\n\nDerived view; regenerate with `tools/knowledge-gap index --root .`. Records are authoritative.\n")
+    print("| ID | Status | Type | Area | Summary |\n|---|---|---|---|---|")
+    for _, data in sorted(records, key=lambda item: item[1]["id"]):
+        cells = [str(data[k]).replace("|", "\\|").replace("\n", " ") for k in ("id", "status", "type", "area", "summary")]
+        print("| " + " | ".join(cells) + " |")
+else:
+    sys.exit(f"unknown command: {cmd}")
+PY
+}
+
+main() {
+  local command_name="${1:-}" root="" base_ref=""
+  case "${command_name}" in
+    -h|--help|help|'') usage; [[ -n "${command_name}" ]] || return "${EXIT_USAGE}"; return 0 ;;
+    -V|--version) printf '%s %s\n' "${APP_NAME}" "${APP_VERSION}"; return 0 ;;
+    validate|next-id|index) shift ;;
+    *) die "Unknown subcommand: ${command_name}. See --help." ;;
+  esac
+  while (($#)); do
+    case "$1" in
+      --root) (($# >= 2)) || die "--root requires a value"; root="$2"; shift 2 ;;
+      --base-ref) (($# >= 2)) || die "--base-ref requires a value"; base_ref="$2"; shift 2 ;;
+      -h|--help) usage; return 0 ;;
+      -V|--version) printf '%s %s\n' "${APP_NAME}" "${APP_VERSION}"; return 0 ;;
+      *) die "Unknown option: $1. See --help." ;;
+    esac
+  done
+  [[ "${command_name}" == "validate" || -z "${base_ref}" ]] || die "--base-ref is valid only for validate"
+  root="$(resolve_root "${root}")"
+  run_python "${command_name}" "${root}" "${base_ref}"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi

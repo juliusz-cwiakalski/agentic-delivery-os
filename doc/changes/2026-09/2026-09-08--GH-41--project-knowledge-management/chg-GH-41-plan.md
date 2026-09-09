@@ -176,7 +176,7 @@ evaluation, or gate result is claimed by this planning artifact.
 
 **Tasks**:
 
-- [ ] **1.1** Define the v1 YAML-frontmatter record and shared schema in
+- [x] **1.1** Define the v1 YAML-frontmatter record and shared schema in (schema, record/config templates, and normative guide added; focused validator test PASS)
   `doc/templates/knowledge-gap-schema.yaml` (JSON Schema serialized as YAML) with its usable
   `doc/templates/knowledge-gap-template.md`. Define source/capture configuration
   guidance/template in `doc/templates/knowledge-instructions-template.md`; target
@@ -185,25 +185,25 @@ evaluation, or gate result is claimed by this planning artifact.
   or empty gap tree is required. Define separate source-read and consumer/destination
   disclosure permissions, including permitted provenance metadata. Establish the
   guide's normative field definitions.
-- [ ] **1.2** Implement `tools/knowledge-gap`: `validate --root .`,
+- [x] **1.2** Implement `tools/knowledge-gap`: `validate --root .`, (CLI syntax check and `bash tools/.tests/test-knowledge-gap.sh` PASS)
   `validate --root . --base-ref BASE_REF`, `next-id --root .`, and
   `index --root .` (index text to stdout). Root must be explicit or resolved to the
   current repository, paths must stay inside it, and no subcommand writes a gap or
   tracker item. Use a Bash CLI with safe Python YAML/JSON Schema parsing; document
   Python 3, PyYAML and jsonschema requirements, actionable missing-dependency errors,
   and arrange test/CI dependencies rather than fetching during invocation.
-- [ ] **1.3** Implement one allocator over authoritative committed records in
+- [x] **1.3** Implement one allocator over authoritative committed records in (max+1, holes, exhaustion, path/ID, pending-state and baseline guards implemented; focused test PASS)
   `doc/knowledge/gaps/` across all statuses. `next-id` uses max+1, starts KG-0001,
   never fills holes, and errors at KG-9999. Fail on duplicate/malformed records;
   inspect pending records for collisions and require commit/revalidation before
   allocating another record. Baseline validation detects deletion, reuse or
   reassignment of durable IDs; index content is never allocation authority.
-- [ ] **1.4** Add `tools/.tests/test-knowledge-gap.sh` and sanitized fixtures under
+- [x] **1.4** Add `tools/.tests/test-knowledge-gap.sh` and sanitized fixtures under (schema/type/status, allocation, invalid-status, identity, index and Git-baseline cases plus sanitized live inputs added; test PASS)
   `scripts/.tests/fixtures/knowledge/`, including source snapshots, scenario inputs,
   expected structural checks, and instructions to assemble isolated cases. Tests
   use temporary Git repositories for allocation/baseline/concurrent-branch cases.
   Keep fixture IDs scoped to fixtures, not minted into the real gap registry.
-- [ ] **1.5** Define the derived `doc/knowledge/00-index.md` view and explicit
+- [x] **1.5** Define the derived `doc/knowledge/00-index.md` view and explicit (derived stdout index and append-only baseline lifecycle validation implemented; unsupported reopening/deletion tests PASS)
   lifecycle validation: Resolved requires canonical reference, verification time,
   original-task verification notes and relevant resolution relationships;
   Dismissed retains diagnosis, disposition time and rationale. Add append-only
@@ -222,6 +222,10 @@ evaluation, or gate result is claimed by this planning artifact.
 - Must: UNK/OQ/OPEN-Q remain separate; a title/slug change is not a new identity;
   concurrent provisional IDs are rechecked without renumbering published records.
 - Should: Errors name the offending file and field and explain corrective action.
+
+Criterion: Phase 1 machine-checkable schema, identity, lifecycle and derived-index contracts — PASSED (`bash tools/.tests/test-knowledge-gap.sh`; schema matrix and negative baseline cases PASS).
+Criterion: Existing identifier spaces remain distinct and allocation does not fill holes or reuse exhausted IDs — PASSED (guide contract plus allocator hole/exhaustion tests PASS).
+Criterion: Validator diagnostics identify file/field and corrective action — PASSED (negative invalid-status and path/ID cases PASS).
 
 **Files and modules**:
 
@@ -918,8 +922,8 @@ links and downstream commits during delivery. Preserve failures and reruns.
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |---|---|---|---|---|---|
-| 1 | Not started | — | — | — | Gap contract, validators and fixtures |
-| 2 | Not started | — | — | — | Toolsmith-owned prompts and role integration |
+| 1 | Awaiting commit | 2026-09-09 | — | pending parent-brokered `@committer` | Tasks 1.1–1.5 and acceptance pass complete; `bash tools/.tests/test-knowledge-gap.sh`, Bash syntax, and scoped `git diff --check` PASS |
+| 2 | Blocked on specialist | — | — | — | Parent must broker the approved task 2.1–2.5 prompt packet to `@toolsmith`; do not hand-edit prompt sources or generated output |
 | 3 | Not started | — | — | — | Installer preservation and all-doc synchronization |
 | 4 | Not started | — | — | — | Real live outputs required; no substituted evidence |
 | 5 | Not started | — | — | — | Independent analysis |
