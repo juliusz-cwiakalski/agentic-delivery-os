@@ -2,7 +2,7 @@
 id: chg-GH-41-project-knowledge-management
 status: Updated
 created: 2026-09-09T04:01:07Z
-last_updated: 2026-09-09T05:29:41Z
+last_updated: 2026-09-09T06:07:53Z
 owners: ["Juliusz Ćwiąkalski"]
 service: project-knowledge-management
 labels: [change, planning, "priority:high"]
@@ -327,18 +327,18 @@ and role ownership and live-run entry points ready for installed-sandbox evaluat
 
 **Tasks**:
 
-- [ ] **3.1** Register `tools/knowledge-gap` in `ADOS_DELIVERY_TOOLS`; install its
+- [x] **3.1** Register `tools/knowledge-gap` in `ADOS_DELIVERY_TOOLS`; install its (installer/dependency docs complete; install 57/57, distribution guard and knowledge contracts PASS)
   YAML-serialized schema with templates under the existing marker contract and
   document dependencies. Knowledge instructions/source
   registry/gaps remain project-owned: installation distributes templates, not this
   repository's policy or records. Do not add mandatory empty knowledge directories.
-- [ ] **3.2** Extend `scripts/.tests/test-install.sh` with fresh install, no-config
+- [x] **3.2** Extend `scripts/.tests/test-install.sh` with fresh install, no-config (install/update/force shared refresh and byte-preserved project knowledge verified; 57/57 PASS)
   use, repeated update, and project-preservation cases. Seed customized instructions,
   source registry, Open/Resolved/Dismissed records and a derived index; assert bytes
   unchanged on update (including force where applicable to shared files), while
   changed shared tooling/templates refresh. Confirm real ADOS gap records are not
   installed into an adopting project.
-- [ ] **3.2a** Update `scripts/uninstall.sh` independent global lists with
+- [x] **3.2a** Update `scripts/uninstall.sh` independent global lists with (global agent/commands, local tool and exact deprecated Claude removals verified; uninstall rerun 32/32 PASS)
   `knowledge.md`, `knowledge-review.md` and `contributor-orientation.md`; add
   `tools/knowledge-gap` to its local delivery-tool removal list. Cover the new
   deprecated local Claude copies if installed by exact-path removals rather than
@@ -349,20 +349,20 @@ and role ownership and live-run entry points ready for installed-sandbox evaluat
   YAML schema/template removal uses existing redistributable marker
   traversal. Do not clean unrelated pre-existing manifest drift or remove
   `.ados-claude/` source/generated development trees as a local install artifact.
-- [ ] **3.2b** Extend `scripts/.tests/test-uninstall.sh` with the full supported
+- [x] **3.2b** Extend `scripts/.tests/test-uninstall.sh` with the full supported (initial 31/32 exposed IFS-array assertion; fixer corrected it and dry-run/removal/repeat-removal plus byte-preservation rerun 32/32 PASS)
   sandbox install→update→dry-run→uninstall sequence and exact assertions specified
   below (011/027). Test global interfaces and local tool/schema/templates/interfaces;
   preserve byte-for-byte project instructions, source registry, all-status gap records
   with retained history, derived index and unrelated user agent/command files.
   Exercise repeat removal and make failed assertions propagate nonzero. Uninstall
   tests are mandatory, not conditional on later path changes.
-- [ ] **3.3** Complete `doc/guides/project-knowledge-management.md` as executable
+- [x] **3.3** Complete `doc/guides/project-knowledge-management.md` as executable (normative and tool guidance complete; editor clarity pass complete; knowledge/distribution suites PASS)
   human and agent guidance independent of the delivery brief: taxonomy, lifecycle,
   authority table, provenance/outcomes, review boundaries, source policy, privacy,
   deduplication, routing, identity/concurrency, verification and orientation.
   Add `doc/tools/knowledge-gap.md`; document safe minimal configuration and optional
   registry in the template/guide, without turning configuration into an answer source.
-- [ ] **3.4** Synchronize all affected navigation/process surfaces:
+- [x] **3.4** Synchronize all affected navigation/process surfaces: (all named surfaces synchronized; editor updated five docs; knowledge, distribution and inception-consistency suites PASS)
   `README.md`, `doc/00-index.md`, `doc/documentation-handbook.md`,
   `doc/overview/glossary.md`, and guides `ados-processes.md`,
   `opencode-agents-and-commands-guide.md`, `change-lifecycle.md`,
@@ -371,7 +371,7 @@ and role ownership and live-run entry points ready for installed-sandbox evaluat
   `ados-tools-system-dependencies.md`. Keep Contributor Orientation distinct from
   Project Onboarding. Update existing relevant reconciliation/review guidance in
   its owning process, not a new competing workflow.
-- [ ] **3.5** Ask `@doc-syncer` to add
+- [x] **3.5** Ask `@doc-syncer` to add (new capability spec plus eight affected specs reconciled; doc-syncer reported no residual gaps)
   `doc/spec/features/feature-project-knowledge-management.md` and reconcile
   `feature-agents-and-commands.md`, `feature-delivery-lifecycle.md`,
   `feature-bootstrapper.md`, `feature-decision-making.md`,
@@ -379,7 +379,7 @@ and role ownership and live-run entry points ready for installed-sandbox evaluat
   `feature-onboarding-guide.md`, and `feature-quality-gates-and-pr.md` under
   `doc/spec/features/`. Inspect plugin-generation/distribution specs and update only
   if their contracts change; preserve static plugin version and profile safety.
-- [ ] **3.6** Add `scripts/.tests/test-knowledge-contracts.sh` for machine-checkable
+- [x] **3.6** Add `scripts/.tests/test-knowledge-contracts.sh` for machine-checkable (contract suite and CI PyYAML/jsonschema setup added; Bash syntax, ShellCheck and focused suite PASS)
   inventory/schema/template/navigation consistency. Wire needed Python dependencies
   and deterministic validator execution into `.github/workflows/ci.yml`; test suites
   fail nonzero for invalid fixtures. Preserve existing paid-API exclusions; no live
@@ -391,6 +391,10 @@ and role ownership and live-run entry points ready for installed-sandbox evaluat
   discoverable and required markers/install sets agree; project-owned bytes survive.
 - Must: AC-F8-1 canonical-source distinction and all bounded integration docs agree;
   no unrelated documentation-profile edits, generic identifier catalogue or FAQ silo.
+
+Criterion: Redistributable capability, current-truth specs, navigation, dependencies and generated representations are synchronized — PASSED (doc-syncer reconciled nine specs with no residual gaps; editor pass; knowledge contracts, distribution guards, inception consistency and plugin parity PASS).
+Criterion: Ordinary repository use requires no configuration and Contributor Orientation remains distinct from Project Onboarding — PASSED (guide/spec/navigation inspection and knowledge-contract suite PASS).
+Criterion: Install/update/force/dry-run/uninstall refresh or remove only shared artifacts while preserving project policy, sources, all-status/history records, derived index and unrelated user tooling — PASSED (`test-install` 57/57; remediated `test-uninstall` 32/32; retained failure/rerun logs under `tmp/run-logs-runner/2026-09-09/`).
 
 **Files and modules**:
 
@@ -926,8 +930,8 @@ links and downstream commits during delivery. Preserve failures and reruns.
 | Phase | Status | Started | Completed | Commit | Notes |
 |---|---|---|---|---|---|
 | 1 | Complete | 2026-09-09T04:27:00Z | 2026-09-09T04:50:04Z | `22a08bc` | Tasks 1.1–1.5 and acceptance pass complete; `bash tools/.tests/test-knowledge-gap.sh`, Bash syntax, ShellCheck, root validation and scoped `git diff --check` PASS |
-| 2 | Awaiting commit | 2026-09-09T04:50:04Z | — | pending parent-brokered `@committer` | Tasks 2.1–2.5 and contract acceptance pass complete; toolsmith source/generated batch, inventory/access audit, `bash scripts/.tests/test-build-claude-plugin.sh` 16/16 PASS and `git diff --check` PASS |
-| 3 | Not started | — | — | — | Installer preservation and all-doc synchronization |
+| 2 | Complete | 2026-09-09T04:50:04Z | 2026-09-09T05:32:26Z | `0a5b66c` | Tasks 2.1–2.5 and contract acceptance pass complete; toolsmith source/generated batch, inventory/access audit, plugin test 16/16 PASS and `git diff --check` PASS |
+| 3 | Awaiting commit | 2026-09-09T05:32:26Z | — | pending parent-brokered `@committer` | Tasks 3.1–3.6 and acceptance pass complete; runner 8 suites: 7 initial PASS, uninstall 31/32 then fixer correction and 32/32 rerun; doc-syncer nine-spec reconciliation no residual gaps; editor five-doc clarity pass; Bash syntax and `git diff --check` PASS |
 | 4 | Not started | — | — | — | Real live outputs required; no substituted evidence |
 | 5 | Not started | — | — | — | Independent analysis |
 | 6 | Conditional | — | — | — | N/A only after explicit review PASS without fixes |

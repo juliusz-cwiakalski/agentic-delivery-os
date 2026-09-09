@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-DELIVERY-LIFECYCLE
 status: Current
 created: 2026-06-28
-last_updated: 2026-08-04
+last_updated: 2026-09-09
 owners: ["engineering"]
 service: delivery-os
 summary: "The deterministic 11-phase spec→plan→deliver→review→PR change delivery workflow with PM-led orchestration, Definition of Ready / Definition of Done gating, phase reopening, the per-change artifact set, and phase-7 documentation reconciliation that closes documentation gaps in-change across current-truth docs (including feature-spec first-authoring when needed)."
 links:
-  related_changes: ["GH-79", "GH-108", "GH-151"]
+  related_changes: ["GH-79", "GH-108", "GH-151", "GH-41"]
   guides:
     - "doc/guides/change-lifecycle.md"
     - "doc/guides/definition-of-ready.md"
@@ -57,6 +57,7 @@ ADOS turns a single tracker ticket (`workItemRef`) into a reviewed, tested PR/MR
   - A repo-internal visibility aid (`scripts/spec-coverage-snapshot.sh`) makes the feature-specs-present vs changes-touching-feature-areas ratio computable to detect silent coverage erosion without manual audits.
   (Authoritative behavior: `.opencode/agent/doc-syncer.md`; mirrored in [doc/guides/change-lifecycle.md](../../guides/change-lifecycle.md) phase 7.)
 - **Git-operations responsibility model (F-8):** A single source of truth governs git operations across the agent/command team: the **orchestrator of a phase owns the commit trigger** for that phase's output, and **all commits route through `@committer`** (or `/commit`, which invokes it). The PM ensures the change branch before its first delegation and triggers `@committer` after each delegated lifecycle phase returns (autonomous mode); manual commands keep their branch-ensure step and trigger `/commit` after the agent returns; `@coder` triggers `@committer` per delivery plan phase (the delivery exception). The delegated artifact agents (`@spec-writer`, `@test-plan-writer`, `@plan-writer`, `@doc-syncer`, `@reviewer` local mode, `@decision-advisor`, `@readiness-reviewer`) are **pure writers** — zero git operations. No agent prompt other than `@committer` performs a direct `git commit`. The full responsibility model (branch owner per mode, commit-trigger owner per phase, universal routing) is documented in [doc/guides/change-lifecycle.md](../../guides/change-lifecycle.md) ("Branch and Commit Responsibility Model").
+- **Bounded project-knowledge integration (F-9):** Lifecycle roles use known canonical context first and may request one bounded `@knowledge` lookup when material project facts remain unresolved. The caller retains phase authority and continuation, passes consumer/destination disclosure context, and does not reset the one-depth handoff guard or bounce through another role. PM may query during scope clarification after PM notes exist and routes work-heavy remediation to tracker work; coder consumes bounded evidence without transferring delivery ownership; readiness considers only relevant material gaps; review surfaces evidenced contradictions, verified drift, or material missing knowledge; and Documentation Reconciliation checks related retained gaps and verifies closure against the original representative task. Safe independent work continues where uncertainty is non-blocking.
 
 ### The Mandatory Per-Change Artifact Set
 
@@ -90,6 +91,7 @@ Manual:      /plan-change → /write-spec → /write-test-plan → /write-plan
 - **DoR stalemate:** after 3 `NOT_READY` iterations, escalate to human.
 - **Trivial-change DoR bypass:** an explicit, recorded override (workItemRef, triviality rationale, human approver, date) in `pm-notes.yaml` is the **only** DoR bypass; no silent skip exists.
 - **Phase reopening after code:** if `quality_gates` reveals missing implementation, reopen `delivery` and delegate to `@fixer` / `@coder`.
+- **Knowledge Gap closure:** a repaired gap remains Open until the owning canonical source or access mechanism is repaired and the original representative task succeeds on a fresh rerun. Merge completion, an answer in chat, or a status-only edit is insufficient.
 
 ## Technical Architecture & Codebase Map
 
@@ -123,6 +125,8 @@ Manual:      /plan-change → /write-spec → /write-test-plan → /write-plan
 | NFR-3 | Traceability | Every change carries the 4 mandatory artifacts under the convention folder | 4/4 per change |
 | NFR-4 | Reopening discipline | DoR `NOT_READY` reopens an artifact phase, never `delivery` | Zero `delivery` reopenings from DoR |
 | NFR-5 | Documentation completeness & governance | Phase 7 must leave no unresolved documentation gaps across affected current-truth docs; for feature specs, author only the first spec of an unspecced modified feature area and reconcile existing specs; no tracker ticket for documentation coverage handoff | Zero unresolved doc gaps; zero re-authored feature specs; zero auto-tickets |
+| NFR-6 | Knowledge handoff safety | Material project uncertainty uses at most one bounded knowledge leaf invocation while the specialized role retains authority | No self-delegation or recursive bounce |
+| NFR-7 | Knowledge closure integrity | Related durable gaps close only after canonical remediation and original-task verification | Zero merge-only or status-only closures |
 
 ## Quality Assurance Strategy
 
@@ -134,6 +138,7 @@ Manual:      /plan-change → /write-spec → /write-test-plan → /write-plan
 | Structural | Artifact presence | Each change folder contains the 4 mandatory artifacts |
 | Grep | Phase count | The lifecycle is described as **eleven** phases; `system_spec_update` = phase 7 (no stale shorter-phase phrasing) |
 | Grep | Documentation gap closure | Phase 7 wording states reconciliation + in-change gap closure across current-truth docs; no language that allows unresolved documentation gaps to pass silently |
+| Contract/behavioral | Knowledge integration | Verify role-specific one-depth handoffs, relevant-gap filtering, contradiction surfacing, PM routing, and reconciliation closure evidence |
 
 ## Dependencies & Risks
 
@@ -150,3 +155,4 @@ Manual:      /plan-change → /write-spec → /write-test-plan → /write-plan
 - **Definition of Done:** [definition-of-done.md](../../guides/definition-of-done.md) — phase 10 gate.
 - **System bootstrap:** [AGENTS.md](../../../AGENTS.md) — the 11-phase owner/agent table ("Delivery process").
 - **Sibling spec:** [feature-quality-gates-and-pr.md](feature-quality-gates-and-pr.md) — phases 8–11 (review_fix, quality_gates, dod_check, pr_creation) are that spec's scope.
+- **Sibling spec:** [feature-project-knowledge-management.md](feature-project-knowledge-management.md) — shared query, handoff, routing, and durable-gap verification semantics.

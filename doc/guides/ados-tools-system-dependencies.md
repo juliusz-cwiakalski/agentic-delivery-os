@@ -8,7 +8,7 @@ ados_distribution: internal
 
 External system tools required by ADOS scripts and CLI utilities.
 
-This document covers the four shell programs that ship with the repository:
+This document covers the primary shell programs that ship with the repository:
 
 | Program | Path | Purpose |
 |---------|------|---------|
@@ -16,6 +16,7 @@ This document covers the four shell programs that ship with the repository:
 | `install.sh` | `scripts/install.sh` | Install/update ADOS globally or locally |
 | `uninstall.sh` | `scripts/uninstall.sh` | Remove ADOS from global or local install |
 | `add-header-location.sh` | `scripts/add-header-location.sh` | Add MIT license headers to files |
+| `knowledge-gap` | `tools/knowledge-gap` | Validate Knowledge Gap records, allocate IDs, and derive the index |
 
 ## Dependency Matrix
 
@@ -56,6 +57,7 @@ Each tool is marked **required** (hard failure if missing) or **optional** (grac
 |------|-------------|---------|-----|
 | `jq` | required | `text-to-image` | Build API request payloads, parse API responses, structured JSON logging, cache metadata, batch job processing, model listing |
 | `yq` | optional | `text-to-image` | Parse YAML config files for batch processing; falls back to simple `awk` key-value parsing when absent |
+| Python 3 + PyYAML + `jsonschema` | required | `knowledge-gap` | Safely parse the YAML-serialized JSON Schema and validate record structure/formats; dependencies are installed by the project/CI, never fetched during invocation |
 
 ### File Comparison & Text Processing
 

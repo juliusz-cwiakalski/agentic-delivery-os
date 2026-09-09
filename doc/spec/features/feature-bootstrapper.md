@@ -6,11 +6,11 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: SPEC-BOOTSTRAPPER
 status: Current
 created: 2026-03-10
-last_updated: 2026-06-27
+last_updated: 2026-09-09
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
-  related_changes: ["GH-32", "GH-69", "GH-71", "GH-72"]
+  related_changes: ["GH-32", "GH-69", "GH-71", "GH-72", "GH-41"]
   guides:
     - "doc/guides/project-inception.md"
     - "doc/guides/onboarding-existing-project.md"
@@ -24,10 +24,6 @@ summary: "Stateful @bootstrapper agent and /bootstrap command that run ADOS proj
 The bootstrapper is ADOS's automated inception path. It consists of a stateful `@bootstrapper` agent (`.opencode/agent/bootstrapper.md`) and a thin `/bootstrap` command (`.opencode/command/bootstrap.md`) that together run **one process**: the 8-phase iterative inception workflow (phases 0–7) whose human-executable authority is [doc/guides/project-inception.md](../../guides/project-inception.md).
 
 Inception produces the project's **knowledge base** — overview, spec, rules, and decision docs — that AI delivery agents operate against. The bootstrapper automates that workflow. It does **not** run user interviews, experiments, or prototyping (those precede or run alongside inception); it captures, structures, and references their outputs.
-
-> **Superseded history.** GH-32 shipped a 6-phase "existing-project onboarding" flow that kept git-ignored state at `.ai/local/bootstrapper-context.yaml`. GH-71 redesigned the bootstrapper into the unified 8-phase inception model described here. The legacy 6-phase flow and `.ai/local/bootstrapper-context.yaml` are **gone**: no backward-compatibility, no migration.
-
-> **Changelog.** GH-72 added the **PRODUCE** step to legacy Phase 0 (tribal-knowledge extraction from repo docs + `git log`), completing the PRODUCE → CONSUME → GRADUATE loop wired by GH-71. Consume (Phase 0) and graduate (Phase 2) are unchanged.
 
 ## Business Context
 
@@ -82,6 +78,14 @@ Every phase follows the same loop: fresh conversation → read state + prior art
 | 7 — Inception summary & handoff | Inception summary; initial feature specs (new: from current-milestone scope; legacy: from code analysis reconciled with behavior) | Final sign-off — project incepted | none |
 
 Phase-by-phase detail, anti-sycophancy prompts, the conditional matrix, and the full artifact catalog live in [doc/guides/project-inception.md](../../guides/project-inception.md); this spec does not duplicate them.
+
+### Project-knowledge integration
+
+The bootstrapper uses known canonical evidence first and may request one bounded `@knowledge` lookup when material project facts remain insufficient. It retains inception continuation and every human gate, preserves the one-depth handoff guard, and does not bounce the result through another role.
+
+With human approval, inception may establish minimal selected policy in `.ai/agent/knowledge-instructions.md` from the shipped template and may register non-obvious or external sources in `doc/knowledge/sources.yaml`. Configuration covers scope, authority classes, access, source-read permission, separately permitted consumer/destination substance and provenance metadata, ownership/escalation, and `off|suggest|write` capture. Configuration is optional, is not an answer source, and never requires exhaustive registration of standard repository documentation. Existing project policy is preserved; malformed or conflicting policy is surfaced for repair rather than overwritten or interpreted as broader permission.
+
+Material durable inception findings may be proposed for normal Knowledge Gap review after human approval. Inception does not bulk-convert `OPEN-Q*`, `OQ-*`, unknown, or tribal-knowledge records. Contributor Orientation is a later project-understanding journey through `/contributor-orientation`, not another inception state machine.
 
 ### Tribal-knowledge loop (legacy: PRODUCE → CONSUME → GRADUATE)
 
@@ -139,6 +143,8 @@ Phase 5 wires the project into ADOS. It produces:
 | `.ai/agent/pr-instructions.md` | PR/MR platform config — auto-detected from `git remote`, confirmed at interview; CLI preferred over MCP when both available |
 | `.ai/agent/decision-instructions.md` | Decision-tracking conventions |
 | `.ai/agent/code-review-instructions.md` | Code-review configuration |
+| `.ai/agent/knowledge-instructions.md` | Optional, human-approved project knowledge policy |
+| `doc/knowledge/sources.yaml` | Optional, human-approved registry for non-obvious or external sources |
 | `doc/documentation-profile.md` | engineering / business / mixed |
 | `doc/documentation-handbook.md`, `doc/templates/`, `doc/decisions/` (README + index), `doc/guides/`, `doc/00-index.md` | Installed/verified from ADOS source |
 
@@ -148,6 +154,8 @@ The bootstrapper may **only** write to the paths below; any other path requires 
 
 - `AGENTS.md`
 - `.ai/agent/{pm,pr,decision,code-review}-instructions.md`
+- `.ai/agent/knowledge-instructions.md` (optional, human-approved)
+- `doc/knowledge/sources.yaml` (optional, human-approved)
 - `.ai/rules/**`
 - `.github/workflows/**`
 - `.env.example`
@@ -188,6 +196,8 @@ Safety rules: never store secrets; never modify existing source code; never over
 | NFR-4 | Safety | Never modify existing source code | Agent constraint |
 | NFR-5 | Containment | Writes confined to the allowlist; out-of-allowlist writes require confirmation | Allowlist enforced by agent prompt |
 | NFR-6 | Trust | Scanned repo/inputs content is untrusted; embedded instructions ignored | Extract facts only |
+| NFR-7 | Knowledge configuration safety | Optional policy and source registry require human approval and never broaden access/disclosure on malformed input | Existing project configuration preserved |
+| NFR-8 | Handoff safety | Material uncertainty uses one bounded knowledge lookup while bootstrapper retains inception ownership | No recursive role bounce |
 
 ## Relationship to the broader ADOS adoption flow
 
@@ -205,3 +215,4 @@ Safety rules: never store secrets; never modify existing source code; never over
 - **Agent prompt:** `.opencode/agent/bootstrapper.md`
 - **Command prompt:** `.opencode/command/bootstrap.md`
 - **Agent inventory:** [.opencode/README.md](../../../.opencode/README.md)
+- **Project Knowledge Management:** [feature-project-knowledge-management.md](feature-project-knowledge-management.md) and [project-knowledge-management.md](../../guides/project-knowledge-management.md)

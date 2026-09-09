@@ -168,7 +168,7 @@ create_mock_ados_source() {
   mkdir -p "${base}/.ai/agent" "${base}/.ai/rules"
   mkdir -p "${base}/doc/templates" "${base}/doc/guides"
   mkdir -p "${base}/doc/decisions"
-  mkdir -p "${base}/scripts/hooks"
+  mkdir -p "${base}/scripts/hooks" "${base}/tools"
   printf '#!/usr/bin/env bash\nexit 0\n' > "${base}/scripts/hooks/pre-opencode-iteration-zai.sh"
   chmod +x "${base}/scripts/hooks/pre-opencode-iteration-zai.sh"
 
@@ -176,10 +176,13 @@ create_mock_ados_source() {
   printf '# pm agent\n' > "${base}/.opencode/agent/pm.md"
   printf '# coder agent\n' > "${base}/.opencode/agent/coder.md"
   printf '# reviewer agent\n' > "${base}/.opencode/agent/reviewer.md"
+  printf '# knowledge agent\n' > "${base}/.opencode/agent/knowledge.md"
 
   # Command files
   printf '# run-plan command\n' > "${base}/.opencode/command/run-plan.md"
   printf '# commit command\n' > "${base}/.opencode/command/commit.md"
+  printf '# knowledge review command\n' > "${base}/.opencode/command/knowledge-review.md"
+  printf '# contributor orientation command\n' > "${base}/.opencode/command/contributor-orientation.md"
 
   # Local install artifacts — project-specific
   printf '# PM Instructions\n' > "${base}/.ai/agent/pm-instructions.md"
@@ -208,6 +211,7 @@ create_mock_ados_source() {
   _mock_guide onboarding-existing-project.md               redistributable "# Onboarding Existing Project"
   _mock_guide opencode-agents-and-commands-guide.md        redistributable "# Opencode Agents And Commands Guide"
   _mock_guide opencode-model-configuration.md              redistributable "# Opencode Model Configuration"
+  _mock_guide project-knowledge-management.md              redistributable "# Project Knowledge Management"
   _mock_guide pr-platform-integration.md                   redistributable "# PR Platform Integration"
   _mock_guide unified-change-convention-tracker-agnostic-specification.md redistributable "# Unified Change Convention"
   # An internal guide must NOT be installed (AC-F2-3).
@@ -232,6 +236,11 @@ create_mock_ados_source() {
   mkdir -p "${base}/doc/templates/blueprints"
   printf '# Code Review Blueprint\n' > "${base}/doc/templates/blueprints/code-review-instructions--example.md"
   printf 'register_id: MOCK-REGISTER-001\nstatus: draft\n' > "${base}/doc/templates/register-template.yaml"
+  printf 'ados_distribution: redistributable\ntype: object\n' > "${base}/doc/templates/knowledge-gap-schema.yaml"
+  printf -- '---\nados_distribution: redistributable\n---\n# Knowledge Gap\n' > "${base}/doc/templates/knowledge-gap-template.md"
+  printf -- '---\nados_distribution: redistributable\n---\n# Knowledge Instructions\n' > "${base}/doc/templates/knowledge-instructions-template.md"
+  printf '#!/usr/bin/env bash\nprintf "knowledge-gap fixture\\n"\n' > "${base}/tools/knowledge-gap"
+  chmod +x "${base}/tools/knowledge-gap"
 
   printf '%s' "${base}"
 }
@@ -680,6 +689,41 @@ test_local_install_gitignore_entries() {
   assert_contains "${content}" ".ai/local" "Should add .ai/local entry"
 }
 
+test_local_install_knowledge_artifacts_and_preservation() {
+  local source_dir project_dir before after
+  source_dir="$(create_mock_ados_source "${_test_tmpdir}/ados-source")"
+  project_dir="$(create_mock_project "${_test_tmpdir}/project")"
+  mkdir -p "${project_dir}/.ai/agent" "${project_dir}/doc/knowledge/gaps" "${project_dir}/.opencode/agent"
+  printf 'project policy\n' > "${project_dir}/.ai/agent/knowledge-instructions.md"
+  printf 'sources: [project-owned]\n' > "${project_dir}/doc/knowledge/sources.yaml"
+  printf 'open gap\n' > "${project_dir}/doc/knowledge/gaps/KG-0001--open.md"
+  printf 'resolved gap with history\n' > "${project_dir}/doc/knowledge/gaps/KG-0002--resolved.md"
+  printf 'dismissed gap with history\n' > "${project_dir}/doc/knowledge/gaps/KG-0003--dismissed.md"
+  printf 'derived project index\n' > "${project_dir}/doc/knowledge/00-index.md"
+  printf 'project canonical sentinel\n' > "${project_dir}/.opencode/agent/custom.md"
+  before="$(cksum "${project_dir}/.ai/agent/knowledge-instructions.md" "${project_dir}/doc/knowledge/sources.yaml" "${project_dir}/doc/knowledge/gaps/"*.md "${project_dir}/doc/knowledge/00-index.md")"
+  (
+    cd "${project_dir}"
+    INSTALL_MODE="local"
+    FORCE=false
+    DRY_RUN=false
+    VERBOSE=false
+    reset_counters
+    install_local_files "${source_dir}"
+    install_local_files "${source_dir}"
+    FORCE=true install_local_files "${source_dir}"
+  )
+  after="$(cksum "${project_dir}/.ai/agent/knowledge-instructions.md" "${project_dir}/doc/knowledge/sources.yaml" "${project_dir}/doc/knowledge/gaps/"*.md "${project_dir}/doc/knowledge/00-index.md")"
+  assert_eq "${before}" "${after}" "Project knowledge bytes must survive install/update/force"
+  assert_file_exists "${project_dir}/tools/knowledge-gap"
+  assert_file_exists "${project_dir}/doc/templates/knowledge-gap-schema.yaml"
+  assert_file_exists "${project_dir}/doc/templates/knowledge-gap-template.md"
+  assert_file_exists "${project_dir}/doc/templates/knowledge-instructions-template.md"
+  assert_file_exists "${project_dir}/doc/guides/project-knowledge-management.md"
+  assert_file_exists "${project_dir}/.opencode/agent/custom.md"
+  [[ ! -f "${project_dir}/.opencode/agent/knowledge.md" ]] || return 1
+}
+
 # ============================================================================
 # INTEGRATION TESTS — Global install file copy
 # ============================================================================
@@ -707,7 +751,24 @@ test_global_install_copies_agents() {
   assert_file_exists "${global_dir}/agent/pm.md" "pm.md should be installed"
   assert_file_exists "${global_dir}/agent/coder.md" "coder.md should be installed"
   assert_file_exists "${global_dir}/agent/reviewer.md" "reviewer.md should be installed"
-  assert_eq "3" "${_added}" "Should have added 3 agent files"
+  assert_file_exists "${global_dir}/agent/knowledge.md" "knowledge.md should be installed"
+  assert_eq "4" "${_added}" "Should have added 4 agent files"
+}
+
+test_global_install_copies_knowledge_commands() {
+  local source_dir global_dir command_file name
+  source_dir="$(create_mock_ados_source "${_test_tmpdir}/ados-source")"
+  global_dir="${_test_tmpdir}/opencode"
+  mkdir -p "${global_dir}/command"
+  INSTALL_MODE="global"
+  reset_counters
+  for command_file in "${source_dir}/.opencode/command"/*.md; do
+    [[ -f "${command_file}" ]] || continue
+    name="$(basename "${command_file}")"
+    copy_file_with_diff "${command_file}" "${global_dir}/command/${name}" "command/${name}"
+  done
+  assert_file_exists "${global_dir}/command/knowledge-review.md"
+  assert_file_exists "${global_dir}/command/contributor-orientation.md"
 }
 
 test_global_install_updates_changed() {
@@ -1286,6 +1347,7 @@ main() {
   run_test "local install updates shared files" test_local_install_updates_shared_files
   run_test "local install with --force overwrites" test_local_install_force_overwrites
   run_test "local install adds .gitignore entries" test_local_install_gitignore_entries
+  run_test "local install/update preserves project knowledge and ships shared capability" test_local_install_knowledge_artifacts_and_preservation
 
   # New file installation tests
   run_test "local install creates guide files" test_local_install_creates_guides
@@ -1304,6 +1366,7 @@ main() {
 
   # Global install integration
   run_test "global install copies agent files" test_global_install_copies_agents
+  run_test "global install copies knowledge commands" test_global_install_copies_knowledge_commands
   run_test "global install updates changed files" test_global_install_updates_changed
 
   # Behavior tests

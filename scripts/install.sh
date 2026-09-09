@@ -137,6 +137,7 @@ readonly ADOS_HOOK_EXAMPLES=(
 # Standalone utilities consumed by the delivery scripts. Installed to ./tools/.
 readonly ADOS_DELIVERY_TOOLS=(
   "tools/clean-merged-branches"
+  "tools/knowledge-gap"
 )
 
 # Template files (also always track upstream) — glob-copied from doc/templates/

@@ -31,6 +31,9 @@ blockers:
     date: "2026-09-08"
     resolved_date: "2026-09-09"
 notes:
+  - text: "Delivery phase 3 verification: seven of eight suites pass; uninstall 31/32 fails knowledge global manifests assertion. Delegating targeted fixer; phase remains incomplete. Intermediate doc-syncer reports no residual gaps; editor completed clarity pass after resolving missing copyright-guide reference through existing AGENTS header rules."
+    type: retro
+    date: "2026-09-09"
   - text: "DoR iteration 2 READY: all five findings resolved through sequential artifact remediation, all ten facets pass; delivery authorized."
     type: info
     date: "2026-09-09"

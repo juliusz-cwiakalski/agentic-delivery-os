@@ -87,8 +87,10 @@ jobs:
       #   - test-text-to-image-e2e-providers.sh (explores real paid APIs; hangs)
       #   - test-text-to-image-e2e-suite.sh     (explicitly "NOT meant for CI/CD")
       #   - test-text-to-image-performance.sh   (fails without real API keys)
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Install test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq python3-yaml python3-jsonschema
 
       - name: Run all bash test suites
         run: |

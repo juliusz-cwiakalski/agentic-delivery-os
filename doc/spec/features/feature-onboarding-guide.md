@@ -6,14 +6,14 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: SPEC-ONBOARDING-GUIDE
 status: Current
 created: 2026-03-10
-last_updated: 2026-03-10
+last_updated: 2026-09-09
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
-  related_changes: ["GH-32"]
+  related_changes: ["GH-32", "GH-41"]
   guides:
     - "doc/guides/onboarding-existing-project.md"
-summary: "Step-by-step guide for adopting ADOS in an existing project, covering mandatory and optional artifacts, tracker configuration, decision records setup, and first change walkthrough."
+summary: "Step-by-step manual guide for adopting ADOS in an existing project, including tracker and decision setup, optional project-knowledge policy, multi-tool installation, and the first change walkthrough."
 ---
 
 # Feature: Onboarding Guide for Existing Projects
@@ -49,6 +49,8 @@ The guide serves as the manual adoption path, complementing the automated `/boot
 - **Troubleshooting (F-6):** Covers common issues (tracker not found, templates not used, decision records workflow, wrong artifact location, missing directories).
 - **Related guides table (F-7):** Links to all relevant ADOS guides (change lifecycle, change convention, agents & commands, tools convention, documentation handbook, decision records).
 - **Multi-tool support (F-8):** Documents installation for OpenCode and Claude Code.
+- **Optional project-knowledge setup (F-9):** Projects work from normal repository conventions with `suggest` capture by default. The guide explains when to copy `knowledge-instructions-template.md` to `.ai/agent/knowledge-instructions.md` and when to use `doc/knowledge/sources.yaml` for non-obvious or external sources. These project-owned files, durable gap records, and the derived gap index are preserved by ADOS update and uninstall behavior.
+- **Contributor journey distinction (F-10):** Contributor Orientation uses the project-knowledge facade to orient a person to an already configured project. It remains distinct from this Project Onboarding process, which adopts ADOS into the repository.
 
 ### Guide Structure
 
@@ -79,7 +81,10 @@ The guide references and links to:
 - `doc/00-index.md` — documentation landing page
 - `doc/overview/` — project overview documents
 - `doc/spec/features/` — feature specifications
-- `doc/templates/` — document templates (7 files)
+- `doc/templates/` — document templates and machine-readable template contracts
+- `.ai/agent/knowledge-instructions.md` — optional project-owned knowledge policy
+- `doc/knowledge/sources.yaml` — optional project-owned non-obvious/external source registry
+- `doc/knowledge/gaps/` and `doc/knowledge/00-index.md` — project-owned durable records and replaceable derived view when the capability is used
 - `doc/decisions/` — decision records directory
 - `doc/guides/decision-records-management.md` — decision records standard
 
@@ -92,6 +97,8 @@ The guide references and links to:
 | NFR-3 | Completeness | Includes decision records setup instructions | Linked to management guide |
 | NFR-4 | Completeness | Links to all relevant ADOS guides | All 6 guides linked |
 | NFR-5 | Completeness | Documents multi-tool installation options | OpenCode + Claude Code coverage |
+| NFR-6 | Knowledge configuration safety | Optional setup is vendor-neutral, disclosure-aware, and not required for ordinary repository queries | No mandatory empty knowledge configuration/tree |
+| NFR-7 | Preservation | Update and uninstall instructions preserve project-owned policy, source registry, records, and derived index | Byte-preservation scenarios pass |
 
 ## Dependencies & Risks
 
@@ -103,3 +110,4 @@ The guide references and links to:
 - **Guide:** [doc/guides/onboarding-existing-project.md](../../guides/onboarding-existing-project.md)
 - **Bootstrap command:** `/bootstrap` — automated alternative
 - **Change lifecycle:** [doc/guides/change-lifecycle.md](../../guides/change-lifecycle.md) — detailed 11-phase workflow referenced by the walkthrough section
+- **Project Knowledge Management:** [feature-project-knowledge-management.md](feature-project-knowledge-management.md) and [project-knowledge-management.md](../../guides/project-knowledge-management.md) — optional policy, query/gap semantics, and Contributor Orientation

@@ -71,7 +71,7 @@ readonly ADOS_AGENT_FILES=(
   spec-writer.md decision-advisor.md decision-critic.md pm.md image-reviewer.md image-generator.md
   toolsmith.md committer.md designer.md reviewer.md runner.md coder.md
   fixer.md pr-manager.md external-researcher.md editor.md
-  meeting-organizer.md review-feedback-applier.md
+  meeting-organizer.md review-feedback-applier.md knowledge.md
 )
 
 # Known ADOS command files (installed globally)
@@ -79,6 +79,7 @@ readonly ADOS_COMMAND_FILES=(
   bootstrap.md plan-decision.md write-decision.md review-decision.md plan-change.md review.md
   commit.md pr.md run-plan.md check.md design.md write-spec.md
   review-deep.md write-plan.md write-test-plan.md sync-docs.md check-fix.md
+  knowledge-review.md contributor-orientation.md
 )
 
 # Known ADOS local files — project-specific (customized per project)
@@ -431,7 +432,11 @@ remove_local_files() {
     "scripts/ceo-loop.sh" \
     "scripts/pm-liveness.sh" \
     "scripts/hooks/pre-opencode-iteration-zai.sh" \
-    "tools/clean-merged-branches"; do
+    "tools/clean-merged-branches" \
+    "tools/knowledge-gap" \
+    ".claude/agents/knowledge.md" \
+    ".claude/skills/knowledge-review/SKILL.md" \
+    ".claude/skills/contributor-orientation/SKILL.md"; do
     remove_file "${delivery_file}" "${delivery_file}"
   done
 

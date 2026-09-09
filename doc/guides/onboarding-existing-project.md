@@ -723,6 +723,13 @@ This follows the principle of least privilege — only agents that need tracker 
 
 ## Related Guides
 
+Knowledge-specific setup is optional. Projects use normal repository conventions with `suggest` capture by default:
+
+- Copy `doc/templates/knowledge-instructions-template.md` to `.ai/agent/knowledge-instructions.md` only when source authority, access, disclosure, ownership, or capture needs local configuration.
+- Optionally register non-obvious or external sources in `doc/knowledge/sources.yaml`.
+
+ADOS updates and uninstall preserve these files, all gap records, and the derived index. Contributor Orientation helps a person understand the configured project; it is distinct from this ADOS Project Onboarding process.
+
 | Guide | Description |
 |-------|-------------|
 | [Change Lifecycle](change-lifecycle.md) | Detailed 11-phase delivery workflow |
@@ -731,3 +738,4 @@ This follows the principle of least privilege — only agents that need tracker 
 | [Tools Convention](tools-convention.md) | Standard for building CLI tools |
 | [Documentation Handbook](../documentation-handbook.md) | Repository documentation standard |
 | [Decision Records Management](decision-records-management.md) | Decision record types, lifecycle, governance |
+| [Project Knowledge Management](project-knowledge-management.md) | Optional policy, evidence-backed query, gap lifecycle, and Contributor Orientation |

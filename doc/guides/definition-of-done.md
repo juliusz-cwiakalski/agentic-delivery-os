@@ -33,6 +33,8 @@ DoD is applied in two layers during verification:
 
 The final `dod_check` (phase 10, run by `@pm`) then confirms the whole checklist holds before `pr_creation`.
 
+When a change repairs a related Knowledge Gap, closure requires the repaired canonical source or access mechanism plus a fresh rerun of the original representative task. A merge, chat answer, or changed gap status alone is not completion evidence; failed verification leaves the gap Open.
+
 ## Each change defines its own DoD
 
 Every change **must define its own DoD** in its spec — concrete, testable, and traceable to its acceptance criteria. The change-specific DoD is what makes "done" unambiguous for that particular change (e.g. "feature ships behind flag X, behind-zero for empty input, with telemetry event Y emitted").
@@ -57,3 +59,4 @@ The lifecycle has two gated acceptance checks that bracket delivery:
 - [Change Lifecycle](change-lifecycle.md) — full 11-phase workflow; `dod_check` is phase 10, `review_fix` is phase 8.
 - [Definition of Ready](definition-of-ready.md) — the mirror gate that runs before code; `dod_defined` is one of its facets.
 - [Agents & Commands Guide](opencode-agents-and-commands-guide.md) — manual `/review` placement.
+- [Project Knowledge Management](project-knowledge-management.md) — durable-gap verification and canonical remediation.
