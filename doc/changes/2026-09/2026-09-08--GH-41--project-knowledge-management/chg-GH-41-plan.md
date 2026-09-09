@@ -2,7 +2,7 @@
 id: chg-GH-41-project-knowledge-management
 status: Updated
 created: 2026-09-09T04:01:07Z
-last_updated: 2026-09-09T04:23:33Z
+last_updated: 2026-09-09T05:29:41Z
 owners: ["Juliusz Ćwiąkalski"]
 service: project-knowledge-management
 labels: [change, planning, "priority:high"]
@@ -252,7 +252,7 @@ without modifying it, and semantic gaps are explicitly left for live evaluation.
 
 **Tasks**:
 
-- [ ] **2.1** Delegate to `@toolsmith` the new `.opencode/agent/knowledge.md`
+- [x] **2.1** Delegate to `@toolsmith` the new `.opencode/agent/knowledge.md` (toolsmith delivered canonical agent and two commands; generated parity test 16/16 PASS)
   (`mode: all`, so direct CLI selection is supported), and thin
   `.opencode/command/knowledge-review.md` and
   `.opencode/command/contributor-orientation.md`. Direct query needs no extra command.
@@ -262,7 +262,7 @@ without modifying it, and semantic gaps are explicitly left for live evaluation.
   (opaque reference/source class when title/location is restricted), safe defaults,
   and finite review scope. Neither readable evidence nor authorized capture permits
   restricted substance/metadata in an answer, gap, index or evidence artifact.
-- [ ] **2.2** Encode materiality, retained-record search, same-canonical-remediation
+- [x] **2.2** Encode materiality, retained-record search, same-canonical-remediation (toolsmith encoded all-status matching, mode-specific mutation, retained-history and validator contracts; source/generated inspection PASS)
   deduplication, independent occurrence counting, retry/historical-replay exclusion,
   and authorized persistence. Open matches aggregate only independent observations;
   terminal historical replays leave records/counts unchanged; genuine recurrence
@@ -272,14 +272,14 @@ without modifying it, and semantic gaps are explicitly left for live evaluation.
   no-op/update/reopening without mutation; only authorized write applies changes.
   Require validator use, canonical routing and failed-verification refusal.
   The agent must not maintain an answer store or use a derived index as allocator.
-- [ ] **2.3** Have toolsmith tune PM, readiness-reviewer, reviewer,
+- [x] **2.3** Have toolsmith tune PM, readiness-reviewer, reviewer, (toolsmith tuned six named roles plus coder after bounded consumer audit; source/generated inspection PASS)
   decision-advisor, bootstrapper and doc-syncer together. Specify each bounded
   input/output and ownership: PM factual lookup and tracked work; readiness only
   relevant material gaps; reviewer contradictions; decision-needed routing;
   bootstrapper optional minimal setup/selective graduation; doc-syncer related-gap
   checks and original-task closure verification. Audit coder/spec/test/plan consumers
   for material uncertainty; add only necessary bounded references, not universal calls.
-- [ ] **2.4** Require caller-owned continuation and a depth/visited-role guard.
+- [x] **2.4** Require caller-owned continuation and a depth/visited-role guard. (shared handoff contract and role-specific guards added; live role exercises remain explicitly scheduled for Phase 4)
   Knowledge returns evidence and recommended owner rather than calling itself or
   bouncing through PM/decision/reconciliation. Orientation composes that same flow
   for purpose, architecture, vocabulary, setup, delivery, environments,
@@ -288,7 +288,7 @@ without modifying it, and semantic gaps are explicitly left for live evaluation.
   receives an immediate workaround only with authoritative replacement evidence;
   otherwise report no verified workaround. Propose/match drift, route canonical
   guide repair and require an original-task rerun; a chat answer alone cannot close it.
-- [ ] **2.5** Update `.opencode/README.md` and `AGENTS.md` inventory entries; inspect
+- [x] **2.5** Update `.opencode/README.md` and `AGENTS.md` inventory entries; inspect (both inventories updated; access audit found inherited OpenCode defaults and generated Read/Write/Edit/Glob/Grep/Bash access sufficient, so no config/model change; plugin test 16/16 PASS)
   `.opencode/opencode.jsonc` for minimum required tool access, without introducing
   provider/model assignments into prompt bodies. Run `bash scripts/build-claude-plugin.sh`
   after the batch and review generated agent/skills before any downstream commit.
@@ -299,6 +299,9 @@ without modifying it, and semantic gaps are explicitly left for live evaluation.
   canonical and generated tooling; direct invocation never silently selects a default agent.
 - Must: No historical change narrative, recursive delegation, business-root
   enablement, automatic gap migration, or source-content execution is introduced.
+
+Criterion: Canonical and generated query/review/orientation contracts are discoverable and direct invocation names `knowledge` explicitly — PASSED (`mode: all`, command `agent: knowledge`, generated agent/skills present, plugin test 16/16 PASS).
+Criterion: Integrated roles retain ownership, disclosure boundaries and one-depth handoff guards without history narrative, business-root enablement, migration or executable source content — PASSED (toolsmith source/generated batch inspection and scoped `git diff --check`; behavioral role evidence remains assigned to Phase 4).
 
 **Files and modules**:
 
@@ -922,8 +925,8 @@ links and downstream commits during delivery. Preserve failures and reruns.
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |---|---|---|---|---|---|
-| 1 | Awaiting commit | 2026-09-09 | — | pending parent-brokered `@committer` | Tasks 1.1–1.5 and acceptance pass complete; `bash tools/.tests/test-knowledge-gap.sh`, Bash syntax, and scoped `git diff --check` PASS |
-| 2 | Blocked on specialist | — | — | — | Parent must broker the approved task 2.1–2.5 prompt packet to `@toolsmith`; do not hand-edit prompt sources or generated output |
+| 1 | Complete | 2026-09-09T04:27:00Z | 2026-09-09T04:50:04Z | `22a08bc` | Tasks 1.1–1.5 and acceptance pass complete; `bash tools/.tests/test-knowledge-gap.sh`, Bash syntax, ShellCheck, root validation and scoped `git diff --check` PASS |
+| 2 | Awaiting commit | 2026-09-09T04:50:04Z | — | pending parent-brokered `@committer` | Tasks 2.1–2.5 and contract acceptance pass complete; toolsmith source/generated batch, inventory/access audit, `bash scripts/.tests/test-build-claude-plugin.sh` 16/16 PASS and `git diff --check` PASS |
 | 3 | Not started | — | — | — | Installer preservation and all-doc synchronization |
 | 4 | Not started | — | — | — | Real live outputs required; no substituted evidence |
 | 5 | Not started | — | — | — | Independent analysis |
