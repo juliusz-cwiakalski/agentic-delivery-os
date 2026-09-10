@@ -166,10 +166,13 @@ create_mock_global_install() {
   printf '# pm\n' > "${agent_dir}/pm.md"
   printf '# coder\n' > "${agent_dir}/coder.md"
   printf '# reviewer\n' > "${agent_dir}/reviewer.md"
+  printf '# knowledge\n' > "${agent_dir}/knowledge.md"
 
   # Create command files
   printf '# run-plan\n' > "${command_dir}/run-plan.md"
   printf '# commit\n' > "${command_dir}/commit.md"
+  printf '# knowledge review\n' > "${command_dir}/knowledge-review.md"
+  printf '# contributor orientation\n' > "${command_dir}/contributor-orientation.md"
 
   # Create a non-ADOS file to ensure it's preserved
   printf '# custom agent\n' > "${agent_dir}/custom-agent.md"
@@ -218,6 +221,7 @@ create_mock_ados_project() {
   _mock_md "doc/guides/copywriting.md"                                                   redistributable "# Copywriting"
   _mock_md "doc/guides/ados-tools-system-dependencies.md"                                redistributable "# System Deps"
   _mock_md "doc/guides/onboarding-existing-project.md"                                   redistributable "# Onboarding"
+  _mock_md "doc/guides/project-knowledge-management.md"                                  redistributable "# Project Knowledge Management"
   # An `internal` guide MUST be preserved (not installed, so not removed).
   _mock_md "doc/guides/adding-tool-support.md"                                           internal        "# Adding Tool Support"
 
@@ -236,6 +240,9 @@ create_mock_ados_project() {
   _mock_md "doc/templates/README.md"                redistributable "# Template"
   _mock_md "doc/templates/blueprints/code-review-instructions--example.md" redistributable "# Blueprint"
   printf 'ados_distribution: redistributable\nregister_id: MOCK-REGISTER-001\n' > "${base}/doc/templates/register-template.yaml"
+  printf 'ados_distribution: redistributable\ntype: object\n' > "${base}/doc/templates/knowledge-gap-schema.yaml"
+  _mock_md "doc/templates/knowledge-gap-template.md" redistributable "# Knowledge Gap"
+  _mock_md "doc/templates/knowledge-instructions-template.md" redistributable "# Knowledge Instructions"
 
   printf '%s' "${base}"
 }
@@ -376,18 +383,19 @@ test_global_uninstall_removes_agents() {
 
   # Directly call remove logic for known files
   local name
-  for name in pm.md coder.md reviewer.md; do
+  for name in pm.md coder.md reviewer.md knowledge.md; do
     remove_file "${agent_dir}/${name}" "agent/${name}"
   done
 
   assert_file_not_exists "${agent_dir}/pm.md" "pm.md should be removed"
   assert_file_not_exists "${agent_dir}/coder.md" "coder.md should be removed"
   assert_file_not_exists "${agent_dir}/reviewer.md" "reviewer.md should be removed"
+  assert_file_not_exists "${agent_dir}/knowledge.md" "knowledge.md should be removed"
 
   # Non-ADOS file should still exist
   assert_file_exists "${agent_dir}/custom-agent.md" "Custom agent should be preserved"
 
-  assert_eq "3" "${_removed}" "Should have removed 3 files"
+  assert_eq "4" "${_removed}" "Should have removed 4 files"
 }
 
 test_global_uninstall_removes_commands() {
@@ -398,13 +406,23 @@ test_global_uninstall_removes_commands() {
   reset_counters
 
   local name
-  for name in run-plan.md commit.md; do
+  for name in run-plan.md commit.md knowledge-review.md contributor-orientation.md; do
     remove_file "${command_dir}/${name}" "command/${name}"
   done
 
   assert_file_not_exists "${command_dir}/run-plan.md" "run-plan.md should be removed"
   assert_file_not_exists "${command_dir}/commit.md" "commit.md should be removed"
-  assert_eq "2" "${_removed}" "Should have removed 2 files"
+  assert_file_not_exists "${command_dir}/knowledge-review.md" "knowledge-review.md should be removed"
+  assert_file_not_exists "${command_dir}/contributor-orientation.md" "contributor-orientation.md should be removed"
+  assert_eq "4" "${_removed}" "Should have removed 4 files"
+}
+
+test_knowledge_global_manifests_are_complete() {
+  local IFS=' '
+  local agents=" ${ADOS_AGENT_FILES[*]} " commands=" ${ADOS_COMMAND_FILES[*]} "
+  assert_contains "${agents}" " knowledge.md "
+  assert_contains "${commands}" " knowledge-review.md "
+  assert_contains "${commands}" " contributor-orientation.md "
 }
 
 test_global_uninstall_removes_ados_home() {
@@ -440,6 +458,53 @@ test_local_uninstall_removes_files() {
   assert_file_not_exists "${project_dir}/doc/templates/change-spec-template.md" "template should be removed"
   assert_file_not_exists "${project_dir}/scripts/hooks/pre-opencode-iteration-zai.sh" "hook example should be removed"
   assert_dir_not_exists "${project_dir}/scripts/hooks" "empty hook directory should be removed"
+}
+
+test_local_uninstall_removes_shared_knowledge_and_preserves_project_state() {
+  local project_dir before after
+  project_dir="$(create_mock_ados_project "${_test_tmpdir}/project")"
+  mkdir -p "${project_dir}/doc/knowledge/gaps" "${project_dir}/tools" \
+    "${project_dir}/.claude/agents" "${project_dir}/.claude/skills/knowledge-review" \
+    "${project_dir}/.claude/skills/contributor-orientation" "${project_dir}/.claude/skills/custom"
+  printf 'policy\n' > "${project_dir}/.ai/agent/knowledge-instructions.md"
+  printf 'sources\n' > "${project_dir}/doc/knowledge/sources.yaml"
+  printf 'open\n' > "${project_dir}/doc/knowledge/gaps/KG-0001--open.md"
+  printf 'resolved history\n' > "${project_dir}/doc/knowledge/gaps/KG-0002--resolved.md"
+  printf 'dismissed history\n' > "${project_dir}/doc/knowledge/gaps/KG-0003--dismissed.md"
+  printf 'index\n' > "${project_dir}/doc/knowledge/00-index.md"
+  printf '#!/usr/bin/env bash\n' > "${project_dir}/tools/knowledge-gap"
+  printf 'generated\n' > "${project_dir}/.claude/agents/knowledge.md"
+  printf 'generated\n' > "${project_dir}/.claude/skills/knowledge-review/SKILL.md"
+  printf 'generated\n' > "${project_dir}/.claude/skills/contributor-orientation/SKILL.md"
+  printf 'user\n' > "${project_dir}/.claude/skills/custom/SKILL.md"
+  before="$(cksum "${project_dir}/.ai/agent/knowledge-instructions.md" "${project_dir}/doc/knowledge/sources.yaml" "${project_dir}/doc/knowledge/gaps/"*.md "${project_dir}/doc/knowledge/00-index.md")"
+  (
+    cd "${project_dir}"
+    DRY_RUN=true
+    FORCE=true
+    reset_counters
+    remove_local_files
+  )
+  assert_file_exists "${project_dir}/tools/knowledge-gap" "dry-run preserves tool"
+  (
+    cd "${project_dir}"
+    DRY_RUN=false
+    FORCE=true
+    reset_counters
+    remove_local_files
+    remove_local_files
+  )
+  after="$(cksum "${project_dir}/.ai/agent/knowledge-instructions.md" "${project_dir}/doc/knowledge/sources.yaml" "${project_dir}/doc/knowledge/gaps/"*.md "${project_dir}/doc/knowledge/00-index.md")"
+  assert_eq "${before}" "${after}" "Project knowledge bytes must survive dry-run/removal/repeat removal"
+  assert_file_not_exists "${project_dir}/tools/knowledge-gap"
+  assert_file_not_exists "${project_dir}/doc/templates/knowledge-gap-schema.yaml"
+  assert_file_not_exists "${project_dir}/doc/templates/knowledge-gap-template.md"
+  assert_file_not_exists "${project_dir}/doc/templates/knowledge-instructions-template.md"
+  assert_file_not_exists "${project_dir}/doc/guides/project-knowledge-management.md"
+  assert_file_not_exists "${project_dir}/.claude/agents/knowledge.md"
+  assert_file_not_exists "${project_dir}/.claude/skills/knowledge-review/SKILL.md"
+  assert_file_not_exists "${project_dir}/.claude/skills/contributor-orientation/SKILL.md"
+  assert_file_exists "${project_dir}/.claude/skills/custom/SKILL.md"
 }
 
 test_local_uninstall_removes_empty_dirs() {
@@ -617,7 +682,7 @@ test_version_flag() {
   stdout="$("${SCRIPT_DIR}/uninstall.sh" --version 2>&1)" || exit_code=$?
   assert_exit_code 0 "${exit_code}" "Version should succeed"
   assert_contains "${stdout}" "ados-uninstall" "Should show app name"
-  assert_contains "${stdout}" "2.0.0" "Should show version"
+  assert_contains "${stdout}" "2.1.0" "Should show version"
 }
 
 test_unknown_option() {
@@ -676,10 +741,12 @@ main() {
   # Global uninstall tests
   run_test "global uninstall removes agent files" test_global_uninstall_removes_agents
   run_test "global uninstall removes command files" test_global_uninstall_removes_commands
+  run_test "knowledge global manifests include agent and commands" test_knowledge_global_manifests_are_complete
   run_test "global uninstall removes ADOS home" test_global_uninstall_removes_ados_home
 
   # Local uninstall tests
   run_test "local uninstall removes ADOS files" test_local_uninstall_removes_files
+  run_test "local uninstall removes shared knowledge and preserves project state" test_local_uninstall_removes_shared_knowledge_and_preserves_project_state
   run_test "local uninstall removes empty directories" test_local_uninstall_removes_empty_dirs
   run_test "local uninstall keeps non-empty directories" test_local_uninstall_keeps_nonempty_dirs
   run_test "local uninstall respects dry-run" test_local_uninstall_dry_run

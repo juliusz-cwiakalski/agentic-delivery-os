@@ -1,0 +1,105 @@
+change_id: GH-41
+title: "Project Knowledge Management capability and @knowledge agent"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-09-08T18:35:00Z", completed: "2026-09-08T18:42:00Z" }
+  specification: { started: "2026-09-08T18:46:00Z", completed: "2026-09-09T04:17:49Z" }
+  test_planning: { started: "2026-09-09T03:52:36Z", completed: "2026-09-09T04:21:39Z" }
+  delivery_planning: { started: "2026-09-09T03:58:28Z", completed: "2026-09-09T04:23:33Z" }
+  dor_check: { started: "2026-09-09T04:01:07Z", completed: "2026-09-09T04:33:01Z" }
+  delivery: { started: "2026-09-09T04:33:01Z", completed: "2026-09-10T03:35:02Z" }
+  system_spec_update: { started: "2026-09-10T03:46:12Z", completed: "2026-09-10T03:51:43Z" }
+  review_fix: { started: "2026-09-10T03:35:02Z", completed: "2026-09-10T03:44:55Z" }
+  quality_gates: { started: "2026-09-10T03:51:43Z", completed: "2026-09-10T03:59:59Z" }
+  dod_check: { started: "2026-09-10T03:59:59Z", completed: "2026-09-10T04:15:00Z" }
+  pr_creation: { started: "2026-09-10T04:15:00Z", completed: "2026-09-10T04:20:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/156" }
+decisions:
+  - text: "Use existing GH-41 rather than create a duplicate: its original knowledge-linking scope is the natural work item for the expanded first-class Project Knowledge Management capability."
+    date: "2026-09-08"
+  - text: "Keep the initiative as one change because the guide, agent, gap contract, lifecycle integration, distribution, and dogfooding must land coherently; external adapters, RAG, and telemetry remain future-independent work."
+    date: "2026-09-08"
+  - text: "Treat GH-140 as a governing dependency rather than a blocker: allocate only the knowledge-gap namespace through a scoped decision and catalog-compatible contract; do not deliver GH-140's unrelated prefix normalization in this change."
+    date: "2026-09-08"
+  - text: "ADR-0003 proposes repo-local KG-<NNNN> for broad durable Knowledge Gaps, allocated monotonically from committed gap records across all statuses; existing UNK-*, OQ-*, and OPEN-Q* semantics remain unchanged, and cross-repo references retain a stable repository locator until GH-140 standardizes serialization."
+    date: "2026-09-08"
+open_questions: []
+blockers:
+  - text: "Live generated Claude runtime checks blocked: installed claude CLI returns Not logged in; no approved Claude credentials available. OpenCode TC013 and review/orientation smoke invocations pass. Do not bypass auth or claim generated runtime coverage from static parity; continue all unblocked verification."
+    date: "2026-09-09"
+    resolved_date: "2026-09-09"
+  - text: "Resume environment exposes no task/subagent invocation tool or command execution tool. PM cannot invoke @committer for the user-authorized scoped recovery checkpoint or delegate subsequent delivery phases. No commit was attempted in this session; restore delegation capability to resume. Prior model blocker remains unverified until a successful checkpoint."
+    date: "2026-09-09"
+    resolved_date: "2026-09-09"
+  - text: "Mandatory @committer checkpoint cannot run: configured gpt-5.4 model is unsupported by Codex with the active ChatGPT account. Delivery must stop before specification delegation because commits may not be performed by another agent."
+    date: "2026-09-08"
+    resolved_date: "2026-09-09"
+notes:
+  - text: "Phase4 remediation completed: real KG-0001 Resolved against AGENTS#running-tests repair c9dbde1 with fresh original-query rerun plus actual execution evidence (scripts14/14, zclaude19/19, tools6/7 with preexisting CI-excluded performance failure explicitly retained). Full TC024 terminal matrix, TC026 positive executed setup closure, actual one-hop PM->knowledge handoff, and Claude generated parity all pass. Independent semantic rescore pending after closure commit."
+    type: info
+    date: "2026-09-10"
+  - text: "Independent semantic rescore iteration 2 PASS at 2026-09-10T03:33:19Z on HEAD da66671; all four iteration-1 gaps closed with tool-event evidence; one info-level snapshot-timing note only. Phase 4 complete."
+    type: resolved
+    date: "2026-09-10"
+  - text: "Final quality gates (19ab801): scripts 14/14, zclaude 19/19, shellcheck clean, plugin 16/16, distribution no-drift, base-ref cb20b58 validated, git diff check clean, branch 0 behind origin/main. Tools 6/7 only due to pre-existing CI-excluded text-to-image performance suite (host date %3N returns nanoseconds vs ms thresholds; untouched by GH-41). Documented honestly; no GH-41 fixer needed."
+    type: info
+    date: "2026-09-10"
+  - text: "DoD audit PASS: all nine spec change-specific DoD obligations satisfied; 17-row AC-to-evidence matrix appended to dogfood report; all 27 TCs have dispositions; no high/medium GH-41 defect open; ADR-0003 remains Proposed as human PR decision. Proceeding to PR creation."
+    type: resolved
+    date: "2026-09-10"
+  - text: "PR #156 created and pushed (7aeeeaf, 77 files +5001/-57, 21 commits). STOP: awaiting human review and manual merge. Human decision required: accept or reject ADR-0003 (Proposed); rejection reopens spec and dependent artifacts before merge."
+    type: info
+    date: "2026-09-10"
+  - text: "Independent rescore task hit provider usage limit before verdict; closure packet remained uncommitted. Recovery: parent verified closure record content directly, commits closure packet, then retries rescore in a fresh reviewer session."
+    type: retro
+    date: "2026-09-10"
+  - text: "Owner restored Claude login; generated agent and both skills live tests pass. Phase4 semantic iteration1 FAIL pending real KG closure, TC024 complete terminal-mode matrix, TC026 executed repaired-setup closure, actual bounded owner handoff trace. Delivery remains open; no prompt defect found. Full scripts14/14 and zclaude19/19 pass; tools6/7 includes preexisting CI-excluded timing failure, not green unrestricted."
+    type: retro
+    date: "2026-09-09"
+  - text: "Dogfood preflight exposed ancestor config leakage in disposable roots; runner initialized isolated Git roots and removed connector config only in fixtures. Production unchanged. OpenCode live queries now use Astra with real cited answers and no writes. Claude auth requires owner action before mandatory generated-runtime DoD can pass."
+    type: retro
+    date: "2026-09-09"
+  - text: "Delivery phase 3 verification: seven of eight suites pass; uninstall 31/32 fails knowledge global manifests assertion. Delegating targeted fixer; phase remains incomplete. Intermediate doc-syncer reports no residual gaps; editor completed clarity pass after resolving missing copyright-guide reference through existing AGENTS header rules."
+    type: retro
+    date: "2026-09-09"
+  - text: "DoR iteration 2 READY: all five findings resolved through sequential artifact remediation, all ten facets pass; delivery authorized."
+    type: info
+    date: "2026-09-09"
+  - text: "DoR iteration 1 NOT_READY: missing change-specific DoD, recurrence handling for resolved/dismissed gaps, uninstall coverage, stale-setup orientation, restricted disclosure tests. Reopened specification first, then test_planning and delivery_planning for sequential remediation. No human decision required."
+    type: retro
+    date: "2026-09-09"
+  - text: "Parent PM retains delegation capability; nested PM does not. Parent resumed orchestration and @committer created e70dd42 successfully; runner also operational. Both operational blockers resolved."
+    type: resolved
+    date: "2026-09-09"
+  - text: "Owner explicitly authorized committing interrupted GH-41 artifacts and autonomous delivery through a review-ready PR without routine approvals. Re-read repository instructions, local coordination, and PM notes; only PM notes exists in the change folder. Session blocked by missing delegation tools, not missing authorization. No phase advanced; no model profiles changed."
+    type: retro
+    date: "2026-09-09"
+  - text: "Primary concept input read in full: .ai/local/drafts/ados-project-knowledge-management-delivery-brief.md. The durable ticket now contains the delivery scope and acceptance criteria."
+    type: info
+    date: "2026-09-08"
+  - text: "Issue GH-140 is open and unimplemented; its owner comment points to the MarkSync catalog as input. Any Knowledge Gap prefix allocation needs an explicit decision compatible with catalog-before-create, scoped monotonic IDs, and preservation of existing UNK-* identifiers."
+    type: risk
+    date: "2026-09-08"
+  - text: "Documentation profile is absent, so engineering-repo safety applies and business docs remain disabled."
+    type: info
+    date: "2026-09-08"
+  - text: "Current-truth documentation impacts include agents/commands, Claude plugin generation, documentation profiles, distribution/install behavior, bootstrapper, delivery lifecycle, decision making, local review, onboarding, documentation handbook, indexes, and glossary/navigation."
+    type: risk
+    date: "2026-09-08"
+  - text: "Clarify-scope cross-check found no blocking contradiction. Required reconciliations: doc-syncer's current write scope omits doc/knowledge; bootstrapper currently creates four project instruction files; inventories and installer mechanics require coordinated updates; no existing @knowledge implementation or GH-140 change artifacts exist."
+    type: info
+    date: "2026-09-08"
+  - text: "Streamlined autonomous intake reused and expanded GH-41 after duplicate search instead of creating a second ticket; this preserved tracker history while adding complete scope and testable acceptance criteria."
+    type: retro
+    date: "2026-09-08"
+  - text: "Branch-ensure delegation to @runner failed before command execution because its configured gpt-5.4-mini model is unsupported by the active Codex account. Use the repository's documented @general fallback for this operational check; agent model routing needs separate maintenance."
+    type: retro
+    date: "2026-09-08"
+  - text: "Decision advisor completed ADR-0003 at Proposed/R2. Human acceptance is intentionally deferred to GH-41 PR review; the proposed contract is sufficient to unblock specification and test planning."
+    type: info
+    date: "2026-09-08"
+  - text: "Mandatory initial checkpoint failed before commit execution because @committer's configured gpt-5.4 model is unsupported. No fallback agent may create commits; configure @committer to a supported model, restart OpenCode, and resume GH-41."
+    type: retro
+    date: "2026-09-08"
+  - text: "Housekeeping reminder: parked GH-151 is older than 14 days and remains parked pending explicit resume/closure."
+    type: info
+    date: "2026-09-08"

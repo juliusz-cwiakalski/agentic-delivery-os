@@ -520,6 +520,8 @@ notes: [] # { text, type, date }
 | 10. dod_check | `@pm` | — |
 | 11. pr_creation | `@pr-manager` | — |
 
+Any role may request one bounded `@knowledge` lookup when material project facts are not settled by known canonical context. The caller retains phase ownership and continuation; the lookup returns evidence and a recommended route without recursive delegation. Readiness considers only relevant material gaps, review surfaces evidenced contradictions, PM owns tracker routing, and Documentation Reconciliation verifies closure against the original task.
+
 ---
 
 ## Issue Tracker Communication Policy

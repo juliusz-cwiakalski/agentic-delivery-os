@@ -28,6 +28,8 @@ The Definition of Ready is a **pre-delivery gate** (`dor_check`, phase 5 of the 
 
 ## DoR facets
 
+Retained Knowledge Gaps are considered only when materially relevant to the ticket, acceptance boundary, dependencies, or delivery safety. An unrelated Open gap never blocks readiness. If relevant canonical facts remain uncertain, the reviewer may make one bounded `@knowledge` handoff and retains gate ownership.
+
 `@readiness-reviewer` evaluates all facets together, prioritizing cross-artifact contradictions and missing AC coverage over style nits:
 
 - **spec_completeness** — Spec addresses every ticket requirement; no gaps.

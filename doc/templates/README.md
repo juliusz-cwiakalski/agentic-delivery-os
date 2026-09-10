@@ -30,6 +30,14 @@ Agent prompts define quality rules and domain-specific logic; templates define o
 | `north-star-template.md` | Product north star document (`doc/overview/01-north-star.md`) |
 | `pr-instructions-template.md` | PR/MR platform instructions (`.ai/agent/pr-instructions.md`) |
 
+## Project Knowledge Templates
+
+| Template | Purpose |
+|----------|---------|
+| `knowledge-gap-schema.yaml` | Shared YAML-serialized JSON Schema for durable Knowledge Gap frontmatter |
+| `knowledge-gap-template.md` | Sanitized Knowledge Gap record with lifecycle and verification fields |
+| `knowledge-instructions-template.md` | Optional project source, disclosure, ownership, and capture policy |
+
 ## Meeting Notes Template
 
 | Template | Purpose |

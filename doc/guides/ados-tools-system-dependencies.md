@@ -8,7 +8,7 @@ ados_distribution: internal
 
 External system tools required by ADOS scripts and CLI utilities.
 
-This document covers the four shell programs that ship with the repository:
+This document covers the primary shell programs that ship with the repository:
 
 | Program | Path | Purpose |
 |---------|------|---------|
@@ -16,6 +16,7 @@ This document covers the four shell programs that ship with the repository:
 | `install.sh` | `scripts/install.sh` | Install/update ADOS globally or locally |
 | `uninstall.sh` | `scripts/uninstall.sh` | Remove ADOS from global or local install |
 | `add-header-location.sh` | `scripts/add-header-location.sh` | Add MIT license headers to files |
+| `knowledge-gap` | `tools/knowledge-gap` | Validate Knowledge Gap records, allocate IDs, and derive the index |
 
 ## Dependency Matrix
 
@@ -25,10 +26,10 @@ Each tool is marked **required** (hard failure if missing) or **optional** (grac
 
 | Tool | Requirement | Used by | Why |
 |------|-------------|---------|-----|
-| `bash` (>=4) | required | all 4 | Shell interpreter; associative arrays, `shopt -s inherit_errexit`, `set -Eeuo pipefail` |
-| `printf` | required | all 4 | Structured log output (`log_info`, `log_warn`, `log_err`, `log_debug`) |
+| `bash` (>=4) | required | all shell programs | Shell interpreter; associative arrays, `shopt -s inherit_errexit`, `set -Eeuo pipefail` |
+| `printf` | required | all shell programs | Structured log output (`log_info`, `log_warn`, `log_err`, `log_debug`) |
 | `mktemp` | required | `text-to-image`, `add-header-location.sh` | Create temporary files for curl stderr capture, format conversion staging, awk processing |
-| `rm` | required | all 4 | Remove files and directories (cache cleanup, temp files, uninstall) |
+| `rm` | required | `text-to-image`, `install.sh`, `uninstall.sh`, `add-header-location.sh` | Remove files and directories (cache cleanup, temp files, uninstall) |
 | `mkdir` | required | `text-to-image`, `install.sh` | Create config/cache/log directories and project directory stubs |
 | `cp` | required | `install.sh`, `add-header-location.sh`, `text-to-image` | Copy files during install, replace processed files, store in cache |
 | `chmod` | required | `text-to-image` | Set restrictive `700` permissions on config/cache directories |
@@ -48,7 +49,7 @@ Each tool is marked **required** (hard failure if missing) or **optional** (grac
 
 | Tool | Requirement | Used by | Why |
 |------|-------------|---------|-----|
-| `git` | required | `install.sh`, `add-header-location.sh` | Clone/update ADOS repo (`git clone`, `git pull --ff-only`), resolve repo root (`git rev-parse --show-toplevel`), get commit SHAs |
+| `git` | required | `install.sh`, `add-header-location.sh`, `knowledge-gap` | Clone/update ADOS repo (`git clone`, `git pull --ff-only`), resolve repo root (`git rev-parse --show-toplevel`), get commit SHAs, read committed gap baselines (`git show`, `git ls-tree`, `git status`) |
 
 ### JSON / YAML Processing
 
@@ -56,13 +57,14 @@ Each tool is marked **required** (hard failure if missing) or **optional** (grac
 |------|-------------|---------|-----|
 | `jq` | required | `text-to-image` | Build API request payloads, parse API responses, structured JSON logging, cache metadata, batch job processing, model listing |
 | `yq` | optional | `text-to-image` | Parse YAML config files for batch processing; falls back to simple `awk` key-value parsing when absent |
+| Python 3 + PyYAML + `jsonschema` | required | `knowledge-gap` | Safely parse the YAML-serialized JSON Schema and validate record structure/formats; dependencies are installed by the project/CI, never fetched during invocation |
 
 ### File Comparison & Text Processing
 
 | Tool | Requirement | Used by | Why |
 |------|-------------|---------|-----|
 | `diff` | required | `install.sh`, `add-header-location.sh` | Compare source vs destination files to detect changes and skip unchanged files |
-| `grep` | required | all 4 | Check `.gitignore` entries, detect existing license headers, parse HTTP `Retry-After` headers, match version strings |
+| `grep` | required | `text-to-image`, `install.sh`, `uninstall.sh`, `add-header-location.sh` | Check `.gitignore` entries, detect existing license headers, parse HTTP `Retry-After` headers, match version strings |
 | `sed` | required | `add-header-location.sh`, `text-to-image` | Indent JSON for YAML literal blocks (`sed 's/^/    /'`), strip HTTP header values |
 | `awk` | required | `add-header-location.sh`, `text-to-image` | Frontmatter manipulation in markdown files, YAML fallback parsing, human-readable file-size formatting |
 | `head` | required | `add-header-location.sh` | Read first line to detect bash shebangs |
@@ -127,9 +129,9 @@ These tools enable automatic format conversion and metadata embedding. When abse
 
 ## Summary
 
-The four shell programs collectively use approximately 40 distinct system tools:
+The shell programs collectively use approximately 40 distinct system tools:
 
-- **Hard requirements** that cause immediate failure if missing: `bash` (>=4), `curl` (for `text-to-image`), `git` (for `install.sh` and `add-header-location.sh`), `jq` (for `text-to-image`), plus standard POSIX utilities (`grep`, `sed`, `awk`, `find`, `diff`, `stat`, `file`, `realpath`, `base64`, etc.).
+- **Hard requirements** that cause immediate failure if missing: `bash` (>=4), `curl` (for `text-to-image`), `git` (for `install.sh`, `add-header-location.sh`, and `knowledge-gap`), `jq` (for `text-to-image`), Python 3 with PyYAML and `jsonschema` (for `knowledge-gap`), plus standard POSIX utilities (`grep`, `sed`, `awk`, `find`, `diff`, `stat`, `file`, `realpath`, `base64`, etc.).
 - **Optional with graceful degradation**: `yq`, `openssl`, `gcloud`, `cwebp`, `avifenc`, ImageMagick (`magick`/`convert`/`identify`), `exiftool`, `nproc`, `readlink`.
 - **Standard POSIX/GNU utilities** expected on any Linux or macOS system: `printf`, `mktemp`, `rm`, `mkdir`, `cp`, `chmod`, `date`, `cat`, `head`, `tail`, `sort`, `tr`, `wc`, `cut`, `xargs`, `basename`, `dirname`, `ls`, `rmdir`, `pwd`, `du`, `sleep`, `kill`, `wait`.
 

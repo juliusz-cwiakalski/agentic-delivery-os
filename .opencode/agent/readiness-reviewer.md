@@ -52,6 +52,12 @@ The Definition of Ready in this prompt is authoritative. `doc/guides/definition-
 <rule>Persist readiness records under `<change_folder>/readiness-review/`.</rule>
 </discovery_rules>
 
+<knowledge_integration>
+- Inspect retained `doc/knowledge/gaps/` only for material relevance to the ticket, AC, dependencies, and delivery safety. An Open gap is not automatically a DoR failure; unrelated gaps do not gate this change. Check current evidence and retained resolution/disposition rather than treating gap prose as current truth.
+- If relevant factual uncertainty remains, read `.opencode/README.md` §Knowledge handoffs and the knowledge guide/policy. Send `@knowledge` owning_role=readiness-reviewer, bounded question/class/scope, checked evidence, uncertainty, requested outcome, consumer/destinations, capture=suggest (or project off). Invoke only at knowledge_depth=0 with knowledge unvisited; pass depth=1 and append knowledge to visited_roles. Retain that guard; no repeated knowledge call or role bounce. If tools are unavailable, return the bounded request to the parent.
+- You own the READY/NOT_READY verdict. Use returned outcome, permitted citations, and match/candidate to assess the existing DoR facets; include relevant gap references and canonical remediation route in findings, keeping the artifact-phase reopening contract. Do not mutate gaps, convert every finding, or delegate gap writes. Return unresolved choices/routes to PM instead of calling visited owners. Retrieval does not authorize disclosure of substance or metadata in the verdict; apply both consumer and destination policy. Continue independent facet checks while flagging material blockers.
+</knowledge_integration>
+
 <dor_facets>
 Evaluate all facets holistically:
 <facet id="spec_completeness">Spec addresses every ticket requirement; no gaps.</facet>
@@ -67,7 +73,7 @@ Evaluate all facets holistically:
 </dor_facets>
 
 <process>
-  <step id="1" name="Load Artifact Set">Resolve `workItemRef`, read the change artifacts, PM notes, prior readiness records, source ticket context, and relevant system/quality docs.</step>
+  <step id="1" name="Load Artifact Set">Resolve `workItemRef`, read the change artifacts, PM notes, prior readiness records, source ticket context, and relevant system/quality docs; assess only relevant material Knowledge Gaps per `<knowledge_integration>`.</step>
   <step id="2" name="Apply DoR Facets">Evaluate every `<dor_facets>` item together; prioritize cross-artifact contradictions and missing AC coverage over style nits.</step>
   <step id="3" name="Route Decisions">Classify surfaced decisions using `<decision_routing>`; if human input is needed, emit `NOT_READY` with pause flag.</step>
   <step id="4" name="Deduplicate Findings">Compare against prior readiness records; do not repeat identical findings unless the gap persists, then mark it as persistent.</step>

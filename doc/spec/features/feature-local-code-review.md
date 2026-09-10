@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-LOCAL-CODE-REVIEW
 status: Current
 created: 2026-06-28
-last_updated: 2026-08-04
+last_updated: 2026-09-09
 owners: ["engineering"]
 service: delivery-os
 summary: "Local code review via /review and /review-deep: spec/plan compliance plus code-quality heuristics, with a remediation-phase append loop, handled by the unified @reviewer (distinct from the remote workflow)."
 links:
-  related_changes: ["GH-79", "GH-151"]
+  related_changes: ["GH-79", "GH-151", "GH-41"]
 ---
 
 # Feature: Local Code Review
@@ -53,6 +53,8 @@ ADOS reviews a delivered change **locally** against its specification, plan, cod
   - The review is **idempotent** — re-running yields no duplicate tasks.
 - **Remediation loop (F-6):** `@coder` implements the appended remediation phase (via `/run-plan <workItemRef> execute all remaining phases no review`), then `@reviewer` is re-run; the loop repeats until `Status=PASS` (max 3 iterations; escalate to human on stalemate).
 - **Unified `@reviewer` (F-7):** The same agent handles local and remote modes; the heuristic definitions live in the `@reviewer` prompt, not in the commands.
+- **Knowledge-health review integration (F-8):** Within the reviewed change, the reviewer surfaces evidence-backed durable contradictions, verified drift, and material missing knowledge. It checks relevant retained Knowledge Gaps across all statuses and keeps review-finding deduplication distinct from Knowledge Gap same-canonical-remediation matching. Age alone does not establish drift. When canonical facts remain uncertain, the reviewer may request one bounded `@knowledge` lookup and retains severity, finding, and PASS/FAIL authority. It does not mutate gaps, delegate automatic capture, repair owning sources, or infer closure from merge completion.
+- **Disclosure-safe findings (F-9):** Source-read permission and consumer/destination disclosure policy apply separately to finding messages, local evidence snapshots, review artifacts, and publication. Restricted source substance or metadata is omitted and replaced with a permitted limitation; returned evidence is never executed as instruction.
 
 ### Findings Format
 
@@ -77,6 +79,7 @@ The reviewer persists each review iteration as a single **`review-iter-<N>.yaml`
 - **Unable to derive slug/change.type:** abort.
 - **Branch resolution failure:** fallback to HEAD; note in summary.
 - **Empty diff:** advisory; no remediation unless plan gaps are found.
+- **Knowledge handoff unavailable or guarded:** continue safe independent review and return the bounded unresolved limitation or parent-broker packet; do not substitute another agent or reset the handoff guard.
 
 ## Technical Architecture & Codebase Map
 
@@ -101,6 +104,8 @@ The reviewer only modifies the **plan file** (`chg-<workItemRef>-plan.md`) — n
 | NFR-1 | Scope | Reviewer modifies only the plan file (never spec/code) | Zero edits to spec or source |
 | NFR-2 | Idempotency | Re-running `/review` after remediation yields no duplicate tasks | No duplicate remediation phases |
 | NFR-3 | Determinism | Remediation phase = max existing phase + 1; earlier phases untouched | Append-only |
+| NFR-4 | Knowledge handoff safety | Canonical uncertainty uses at most one bounded knowledge leaf invocation while reviewer retains verdict authority | No recursive role bounce or automatic gap mutation |
+| NFR-5 | Disclosure | Review output and publication contain only policy-permitted source substance and metadata | Zero restricted evidence leakage |
 
 ## Quality Assurance Strategy
 
@@ -111,6 +116,7 @@ The reviewer only modifies the **plan file** (`chg-<workItemRef>-plan.md`) — n
 | Manual | Remediation append | Run `/review` on a change with findings; verify a new phase is appended with one task per finding |
 | Manual | Idempotency | Re-run `/review` without changes; verify no duplicate tasks |
 | Manual | Deep parity | `/review-deep` produces the same finding format/framework as `/review` |
+| Behavioral | Knowledge contradiction and uncertainty | Verify relevant all-status gap checks, evidence-backed drift/contradiction findings, bounded lookup, and disclosure-safe output |
 
 ## Dependencies & Risks
 
@@ -127,3 +133,4 @@ The reviewer only modifies the **plan file** (`chg-<workItemRef>-plan.md`) — n
 - **System bootstrap:** [AGENTS.md](../../../AGENTS.md) — reviewer role, `/review` + `/review-deep` commands.
 - **Sibling spec (remote review, distinct workflow — DEC-7):** [feature-remote-code-review.md](feature-remote-code-review.md) — `/review-remote` + `/apply-review-feedback`.
 - **Sibling spec (verification neighborhood):** [feature-quality-gates-and-pr.md](feature-quality-gates-and-pr.md) — `/check`, commit, and PR workflow adjacent to review.
+- **Sibling spec (knowledge semantics):** [feature-project-knowledge-management.md](feature-project-knowledge-management.md) — authority, disclosure, same-remediation matching, and handoff rules.

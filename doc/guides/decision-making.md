@@ -134,6 +134,8 @@ numeric scorecard only when D9 deliberately selects MCDA. License compatibility 
 recorded as a `FACT` string (with source) and is a **human/R3 determination** —
 the advisor never autonomously concludes compatibility or accepts a license.
 
+A `decision-needed` Knowledge Gap routes an unresolved choice into this process; it is not itself a decision or authority to accept one. `@decision-advisor` may use one bounded `@knowledge` lookup for missing project facts while retaining ownership of the decision process and preserving human decision rights. Accepted decisions repair rationale in the decision record; related gaps close only after verification that the original knowledge task succeeds against that record.
+
 ---
 
 ## 3. Rigor profiles (R0–R3) + emergency overlay
