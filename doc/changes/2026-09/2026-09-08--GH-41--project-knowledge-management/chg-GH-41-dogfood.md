@@ -224,3 +224,47 @@ cases, NFR-1–13, at least one real verified canonical resolution, and generate
 is satisfied. Phase 4 task 4.6 (independent semantic rescore + persisted scorecard) is
 fulfilled by this section; Phase 5 code review, Phase 7 release gates, and human ADR-0003
 acceptance remain the downstream pre-PR gates and are out of scope for this rescore.
+
+## Definition of Done completion audit (TC-KNOWLEDGE-023)
+
+Parent PM audit at 2026-09-10 (HEAD 19ab801 and later gate commit ef6cab5). Each spec
+§17 change-specific DoD obligation is satisfied by committed, reviewable evidence:
+
+| DoD obligation | Verdict | Evidence |
+|---|---|---|
+| All 17 ACs pass; Appendix B ticket mapping intact | PASS | 17-row matrix below; phase-5 review independently re-verified every AC |
+| NFR-1–13 pass | PASS | Dogfood rescore iteration 2: all NFRs PASS (NFR-6/7/12 promoted after remediation) |
+| Ten live cases + supplemental safety cases | PASS | TC-013–022 live PASS; TC-024 six-leg terminal matrix; TC-025 restricted-disclosure actions; TC-026 both stale-setup branches |
+| At least one real canonical verified resolution | PASS | KG-0001 Resolved (`da66671`): AGENTS.md#running-tests repair `c9dbde1`, fresh original-query rerun no-op match, actual execution scripts 14/14 + zclaude 19/19, occurrence unchanged |
+| Structural/quality contracts | PASS | knowledge-gap suite, contracts suite, install 57/57, uninstall 32/32, plugin 16/16, distribution 83 docs no drift, shellcheck clean, base-ref `cb20b58` validated |
+| Project knowledge preserved across install/update/removal | PASS | Byte-preservation assertions in test-install/test-uninstall |
+| Current truth reconciled | PASS | Doc-syncer final: residual gaps empty; four gaps fixed; ADR-0003 stays Proposed |
+| Independent readiness + review + quality gates | PASS | DoR iter-2 READY; phase-5 review PASS (no blocking/high/medium findings); gates green with pre-existing CI-excluded performance-suite failure honestly documented (untouched by GH-41) |
+| All plan tasks complete with evidence | PASS | Plan execution log: phases 1–6 complete; 7.1–7.3 complete; 7.4 fulfilled by this audit; 7.5 at PR creation |
+
+### 17-row AC → evidence matrix
+
+| AC | TC coverage | Evidence / verdict |
+|---|---|---|
+| AC-F11-1 Executable guidance | TC-001 | `doc/guides/project-knowledge-management.md` + phase-5 review PASS |
+| AC-F8-1 Canonical ownership, no answer store | TC-002, TC-020 | Real KG-0001 resolved to AGENTS.md; record holds diagnosis, not answers |
+| AC-F1-1 Discoverable + cited answer, both tools | TC-003, TC-013 | OpenCode live PASS; generated Claude `ados:knowledge` explicit selection, cited answers |
+| AC-F3-1 Outcomes, no fabrication | TC-004, TC-015/017/021/022 | All six outcomes observed live; no invented facts |
+| AC-F4-1 Vendor-neutral policy config | TC-005 | knowledge-instructions-template + sources.yaml + contracts suite |
+| AC-F5-1 Schema, eleven types | TC-002 | knowledge-gap-schema.yaml + validator positive/negative matrix |
+| AC-F6-1 Dedup/replay/recurrence/closure | TC-006/016/024 | Live dedup, retry no-op, six-leg terminal matrix, history preserved |
+| AC-F8-2 Trivial vs work-heavy routing | TC-007/015/020 | Real trivial repair in AGENTS.md routed through GH-41 (PM-owned) |
+| AC-F7-1 Contradictions, age restraint | TC-004/018/019 | Live conflict surfaced, drift vs age corroborated by executables |
+| AC-F12-1 Scoped KG namespace, IDs preserved | TC-008/021 | Only KG-* introduced; UNK/OQ/OPEN-Q untouched; ADR-0003 Proposed |
+| AC-F9-1 Bounded non-recursive handoffs | TC-009/018/021 | Actual one-hop PM→knowledge trace (depth 1, no mutation) |
+| AC-F10-1 Orientation composes knowledge | TC-010/022/026 | Live orientation delegated to @knowledge; no separate system |
+| AC-F4-2 ACL/disclosure boundary | TC-005/017/022/025 | Readable-but-restricted assessed; zero leakage; injection ignored |
+| AC-F11-2 Distribution/inventory/navigation integrity | TC-011/027 | Install/update/uninstall preservation, plugin parity, distribution no drift |
+| AC-F11-3 Machine-checkable rules covered | TC-012/027 | knowledge-gap + contracts suites wired into CI |
+| AC-F13-1 Ten scenarios + verified resolution | TC-013–022 | 10/10 live PASS; real KG-0001 closure verified against original statement |
+| AC-F13-2 Pre-PR gates | TC-023 | This audit; DoR, review, quality gates, plan completion all PASS |
+
+All 27 test cases have dispositions: TC-001–012 structural/documentation (phases 1–3 + review),
+TC-013–022 live dogfood, TC-023 this audit, TC-024–027 supplemental safety/removal cases.
+No GH-41 high or medium defect remains open. ADR-0003 remains Proposed for human PR review;
+its acceptance or rejection is the repository owner's PR decision, not a pre-PR DoD item.
