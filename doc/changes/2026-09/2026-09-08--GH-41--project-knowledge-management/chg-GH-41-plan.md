@@ -2,7 +2,7 @@
 id: chg-GH-41-project-knowledge-management
 status: Updated
 created: 2026-09-09T04:01:07Z
-last_updated: 2026-09-10T03:44:36Z
+last_updated: 2026-09-10T03:52:31Z
 owners: ["Juliusz Ćwiąkalski"]
 service: project-knowledge-management
 labels: [change, planning, "priority:high"]
@@ -595,13 +595,13 @@ Criterion: Every blocking finding is resolved and verified, with no GH-41 high d
 
 **Tasks**:
 
-- [ ] **7.1** Apply minor version impact using repository conventions: the changed
+- [x] **7.1** Apply minor version impact using repository conventions: the changed (bumped `APP_VERSION` 2.0.0→2.1.0 in `scripts/install.sh:74` and `scripts/uninstall.sh:49`; updated the matching `--version` assertions in `scripts/.tests/test-install.sh:816` and `scripts/.tests/test-uninstall.sh:685`; no global package version, changelog or plugin-manifest change)
   installer and uninstaller currently declare APP_VERSION 2.0.0, so advance both
   changed packaging utilities to 2.1.0 and update
   directly coupled tests/docs. New utility starts at 1.0.0. Do not invent a global
   package version/changelog; the generated plugin manifest stays at static 1.0.0
   per `feature-claude-plugin-generation.md`, not a per-change bump.
-- [ ] **7.2** Perform final spec reconciliation through doc-syncer after all fixes;
+- [x] **7.2** Perform final spec reconciliation through doc-syncer after all fixes; (doc-syncer final reconciliation SUCCESS 2026-09-10T03:51:43Z; four residual gaps fixed — `doc/decisions/00-index.md` missing ADR-0003 row, `doc/guides/ados-tools-system-dependencies.md` staleness, `doc/guides/opencode-model-configuration.md` agent counts, `doc/documentation-handbook.md` template index; residual gaps empty; guide/schema/runtime/policy/index/actual resolved record agree; ADR-0003 remains Proposed and flagged for human PR review)
   verify guide, schema, runtime, policy, index and actual resolved record agree.
   Confirm ADR-0003 remains Proposed and flag human acceptance for PR review; if
   rejected, reopen spec/test/plan and dependent implementation before merge.
@@ -943,4 +943,4 @@ links and downstream commits during delivery. Preserve failures and reruns.
 | 4 | Complete | 2026-09-09T06:13:57Z | 2026-09-10T03:33:19Z | `da66671` closure; checkpoints `f012196`, `c9dbde1`, `03715b3` | Tasks 4.1–4.6 complete and all Phase 4 acceptance criteria PASSED. Real KG-0001 Resolved at `da66671` against `AGENTS.md#running-tests`/`c9dbde1` after fresh original-query PASS and actual execution (scripts 14/14, zclaude 19/19, tools 6/7 with honestly retained pre-existing CI-excluded performance failure); occurrence remained 1. Full terminal matrix, setup execution/closure, actual PM→knowledge handoff and Claude parity remediation evidence: `tmp/run-logs-runner/2026-09-09/131652-gh41-remediation-evidence.txt`. Independent semantic rescore appended to `chg-GH-41-dogfood.md` (iteration 2) PASS with no blocking findings and one info-level PM→knowledge fixture snapshot-timing note. D2 first-leg no-read is not a prompt defect: its exact-cadence request could not yield a disclosable answer, while the explicit assessment leg required evaluation, read successfully and passed disclosure/injection checks. |
 | 5 | Complete | 2026-09-10T03:42:54Z | 2026-09-10T03:42:54Z | review artifact `code-review/review-iter-1.yaml` (uncommitted) | Independent `@reviewer` PASS against 17 ACs, TC-001–027, NFR-1–13 and repo contracts; 0 critical/high/medium, 2 low (F-1 trailing whitespace, F-2 pre-existing `--local` help mismatch) and 2 info (F-3 allocator-guard phrasing, F-4 ephemeral live-log provenance). Structural contracts re-executed rather than self-reported; KG-0001 closure independently corroborated; only `KG-` prefix introduced, `UNK-*`/`OQ-*`/`OPEN-Q*` preserved, ADR-0003 remains Proposed. AC-F13-2 PASSED. |
 | 6 | Complete (accepted low finding) | 2026-09-10T03:42:54Z | 2026-09-10T03:44:36Z | F-1 hygiene fix in working tree; no behavior/prompt commit | Executed for accepted F-1: stripped 193 trailing-whitespace (Markdown hard-break) instances across `chg-GH-41-dogfood.md` (4) and `chg-GH-41-test-plan.md` (189); wording/semantics preserved (rstrip-equivalent diff) and `git diff --check main` clean for both artifacts. F-2 pre-existing `--local` help-text mismatch deferred outside GH-41 (documented, not fixed). No prompt/product change, so no plugin regeneration or regression assertions; 6.3 satisfied without a fictional fix commit. Phase 6 acceptance PASSED. |
-| 7 | Not started | — | — | — | Final gates and human ADR acceptance handoff |
+| 7 | In progress | 2026-09-10T03:45:55Z | — | working tree (uncommitted) | Tasks 7.1–7.2 complete. 7.1: `APP_VERSION` 2.0.0→2.1.0 in `scripts/install.sh` and `scripts/uninstall.sh` with matching `--version` assertions in `test-install.sh`/`test-uninstall.sh`; no global package version, changelog or plugin-manifest change. 7.2: doc-syncer final reconciliation SUCCESS 2026-09-10T03:51:43Z fixed four gaps (`doc/decisions/00-index.md` missing ADR-0003 row, `doc/guides/ados-tools-system-dependencies.md` staleness, `doc/guides/opencode-model-configuration.md` agent counts, `doc/documentation-handbook.md` template index); residual gaps empty; guide/schema/runtime/policy/index/actual resolved record agree; ADR-0003 remains Proposed, flagged for human PR review. `git diff --check` clean. Tasks 7.3–7.5 pending: quality gates, DoD audit, release handoff. |

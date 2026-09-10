@@ -813,7 +813,7 @@ test_version_flag() {
   stdout="$("${SCRIPT_DIR}/install.sh" --version 2>&1)" || exit_code=$?
   assert_exit_code 0 "${exit_code}" "Version should succeed"
   assert_contains "${stdout}" "ados-install" "Should show app name"
-  assert_contains "${stdout}" "2.0.0" "Should show version"
+  assert_contains "${stdout}" "2.1.0" "Should show version"
 }
 
 test_unknown_option() {

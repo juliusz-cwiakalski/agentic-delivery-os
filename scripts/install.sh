@@ -71,7 +71,7 @@ fi
 # SETTINGS
 # ============================================================================
 readonly APP_NAME="ados-install"
-readonly APP_VERSION="2.0.0"
+readonly APP_VERSION="2.1.0"
 readonly LOG_TAG="(${APP_NAME})"
 
 # Exit codes

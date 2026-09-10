@@ -722,6 +722,12 @@ If only validation wording is incorrect, update/revert the validation subsection
 - `doc/templates/north-star-template.md`
 - `doc/templates/pr-instructions-template.md`
 
+### Project Knowledge Management templates
+
+- `doc/templates/knowledge-gap-schema.yaml`
+- `doc/templates/knowledge-gap-template.md`
+- `doc/templates/knowledge-instructions-template.md`
+
 ### Documentation profile contract template
 
 - `doc/templates/documentation-profile-template.md`
