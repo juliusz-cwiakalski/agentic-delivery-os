@@ -126,13 +126,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 ### 5.2 Scenario Details
 
 #### TC-KNOWLEDGE-001 - Guidance is executable and complete
-**Scenario Type**: Regression  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-1, F-5, F-7, F-8, F-10, F-11, AC-F11-1  
-**Test Type(s)**: Manual  
-**Automation Level**: Manual  
-**Target Layer / Location**: Redistributable knowledge guide, templates, navigation  
+**Scenario Type**: Regression
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-1, F-5, F-7, F-8, F-10, F-11, AC-F11-1
+**Test Type(s)**: Manual
+**Automation Level**: Manual
+**Target Layer / Location**: Redistributable knowledge guide, templates, navigation
 **Tags**: @docs @security
 
 **Preconditions**: Delivered guidance and templates are present.
@@ -143,13 +143,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - The guide is executable and states the required canonical-source, taxonomy/lifecycle, privacy, and Contributor Orientation semantics.
 
 #### TC-KNOWLEDGE-002 - Gap schema and canonical-source lifecycle
-**Scenario Type**: Integration  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-5, F-8, AC-F8-1, AC-F5-1, DM-2, DM-3, DM-4, DM-5  
-**Test Type(s)**: Contract, Manual  
-**Automation Level**: Semi-automated  
-**Target Layer / Location**: Knowledge Gap template, records, derived registry  
+**Scenario Type**: Integration
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-5, F-8, AC-F8-1, AC-F5-1, DM-2, DM-3, DM-4, DM-5
+**Test Type(s)**: Contract, Manual
+**Automation Level**: Semi-automated
+**Target Layer / Location**: Knowledge Gap template, records, derived registry
 **Tags**: @docs @security
 
 **Preconditions**: Sanitized Open, Resolved, and Dismissed fixtures exist.
@@ -160,13 +160,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - No gap stores a canonical answer or tracker workflow state; resolution references repaired canonical truth and original-gap verification.
 
 #### TC-KNOWLEDGE-003 - Agent inventory and cited direct answer
-**Scenario Type**: Integration  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-1, F-11, AC-F1-1, EVT-1, NFR-1, NFR-10  
-**Test Type(s)**: Contract, Manual  
-**Automation Level**: Semi-automated  
-**Target Layer / Location**: Canonical agent, generated Claude representation, inventories  
+**Scenario Type**: Integration
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-1, F-11, AC-F1-1, EVT-1, NFR-1, NFR-10
+**Test Type(s)**: Contract, Manual
+**Automation Level**: Semi-automated
+**Target Layer / Location**: Canonical agent, generated Claude representation, inventories
 **Tags**: @api @docs
 
 **Preconditions**: Canonical and generated tooling are built.
@@ -177,13 +177,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - Both interfaces are discoverable and return an equivalent direct answer with usable source provenance.
 
 #### TC-KNOWLEDGE-004 - Retrieval outcomes and authority semantics
-**Scenario Type**: Edge Case  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-2, F-3, F-7, AC-F3-1, AC-F7-1, DM-6, NFR-2  
-**Test Type(s)**: Contract, Manual  
-**Automation Level**: Semi-automated  
-**Target Layer / Location**: `@knowledge` answer and review behavior  
+**Scenario Type**: Edge Case
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-2, F-3, F-7, AC-F3-1, AC-F7-1, DM-6, NFR-2
+**Test Type(s)**: Contract, Manual
+**Automation Level**: Semi-automated
+**Target Layer / Location**: `@knowledge` answer and review behavior
 **Tags**: @security @api
 
 **Preconditions**: Fixtures represent answered, insufficient, conflicting, inaccessible, not_configured, and not_found evidence.
@@ -194,13 +194,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - The applicable outcome is explicit; facts, inference, and conflict are not blended into unsupported fact.
 
 #### TC-KNOWLEDGE-005 - Policy, ACL, and capture boundaries
-**Scenario Type**: Negative  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-2, F-3, F-4, AC-F4-1, AC-F4-2, DM-1, DM-7, NFR-4, NFR-13  
-**Test Type(s)**: Contract, Manual  
-**Automation Level**: Semi-automated  
-**Target Layer / Location**: Project configuration and source fixtures  
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-2, F-3, F-4, AC-F4-1, AC-F4-2, DM-1, DM-7, NFR-4, NFR-13
+**Test Type(s)**: Contract, Manual
+**Automation Level**: Semi-automated
+**Target Layer / Location**: Project configuration and source fixtures
 **Tags**: @security @api
 
 **Preconditions**: Sanitized local fixtures separately model denied retrieval, authorized retrieval with destination-disclosure restrictions, untrusted content, and each capture policy.
@@ -211,13 +211,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - Policy is vendor-neutral; ordinary queries default safely; retrieval authorization is not treated as answer/gap/index/evidence disclosure authorization; disallowed substance and metadata are not copied; and evidence is never executed as instruction.
 
 #### TC-KNOWLEDGE-006 - Deduplication and verified resolution rules
-**Scenario Type**: Corner Case  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-6, F-8, AC-F6-1, DM-5, NFR-4, NFR-6, NFR-7  
-**Test Type(s)**: Contract, Manual  
-**Automation Level**: Semi-automated  
-**Target Layer / Location**: Gap capture, retained records, registry view  
+**Scenario Type**: Corner Case
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-6, F-8, AC-F6-1, DM-5, NFR-4, NFR-6, NFR-7
+**Test Type(s)**: Contract, Manual
+**Automation Level**: Semi-automated
+**Target Layer / Location**: Gap capture, retained records, registry view
 **Tags**: @security
 
 **Preconditions**: Same-remediation, retry, historical-replay, genuine-recurrence, overturned-dismissal, and similar-wording/different-remediation fixtures exist.
@@ -228,13 +228,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - Only independent same-remediation observations aggregate; replay is a no-op; genuine recurrence or an overturned dismissal reopens the same identity with prior resolution/disposition history retained; no raw transcript persists; unresolved verification cannot produce Resolved status.
 
 #### TC-KNOWLEDGE-007 - Remediation routing preserves ownership
-**Scenario Type**: Regression  
-**Impact Level**: Important  
-**Priority**: High  
-**Related IDs**: F-8, F-9, AC-F8-2, EVT-4, DM-4  
-**Test Type(s)**: Manual  
-**Automation Level**: Manual  
-**Target Layer / Location**: Triage and PM handoff guidance  
+**Scenario Type**: Regression
+**Impact Level**: Important
+**Priority**: High
+**Related IDs**: F-8, F-9, AC-F8-2, EVT-4, DM-4
+**Test Type(s)**: Manual
+**Automation Level**: Manual
+**Target Layer / Location**: Triage and PM handoff guidance
 **Tags**: @docs
 
 **Preconditions**: One trivial documentation and one work-heavy fixture are available.
@@ -245,13 +245,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - Trivial repair targets its owning artifact; work-heavy remediation is bounded to PM/tracker and does not mirror tracker status.
 
 #### TC-KNOWLEDGE-008 - KG identity preserves existing spaces
-**Scenario Type**: Regression  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-12, AC-F12-1, DM-8, NFR-5  
-**Test Type(s)**: Contract, Manual  
-**Automation Level**: Semi-automated  
-**Target Layer / Location**: Gap identity validation and ADR-0003 examples  
+**Scenario Type**: Regression
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-12, AC-F12-1, DM-8, NFR-5
+**Test Type(s)**: Contract, Manual
+**Automation Level**: Semi-automated
+**Target Layer / Location**: Gap identity validation and ADR-0003 examples
 **Tags**: @docs
 
 **Preconditions**: Fixtures include all statuses and existing `UNK-*`, `OQ-*`, and `OPEN-Q*` values.
@@ -262,13 +262,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - Only proposed repo-local `KG-` is added; existing IDs remain distinct; external references carry a repository locator; ADR-0003 remains Proposed.
 
 #### TC-KNOWLEDGE-009 - Lifecycle handoff is bounded
-**Scenario Type**: Negative  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-9, AC-F9-1, EVT-4, NFR-9  
-**Test Type(s)**: Manual  
-**Automation Level**: Manual  
-**Target Layer / Location**: PM, readiness, review, decision, bootstrapper, and reconciliation contracts  
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-9, AC-F9-1, EVT-4, NFR-9
+**Test Type(s)**: Manual
+**Automation Level**: Manual
+**Target Layer / Location**: PM, readiness, review, decision, bootstrapper, and reconciliation contracts
 **Tags**: @api
 
 **Preconditions**: Role-specific uncertainty fixtures are available.
@@ -279,13 +279,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - Specialized ownership is retained, safe work continues where possible, and no self-call or role bounce exceeds one owning-role handoff.
 
 #### TC-KNOWLEDGE-010 - Orientation is common-flow composition
-**Scenario Type**: Happy Path  
-**Impact Level**: Important  
-**Priority**: High  
-**Related IDs**: F-1, F-10, AC-F10-1  
-**Test Type(s)**: Manual  
-**Automation Level**: Manual  
-**Target Layer / Location**: Contributor Orientation interface  
+**Scenario Type**: Happy Path
+**Impact Level**: Important
+**Priority**: High
+**Related IDs**: F-1, F-10, AC-F10-1
+**Test Type(s)**: Manual
+**Automation Level**: Manual
+**Target Layer / Location**: Contributor Orientation interface
 **Tags**: @docs
 
 **Preconditions**: Orientation interface is delivered.
@@ -296,13 +296,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - Available orientation topics use authoritative evidence and normal gap semantics; no separate Project Onboarding knowledge store is introduced.
 
 #### TC-KNOWLEDGE-011 - Distribution, installer, generated parity
-**Scenario Type**: Regression  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-11, AC-F11-2, NFR-10, NFR-11  
-**Test Type(s)**: Integration, Manual  
-**Automation Level**: Semi-automated  
-**Target Layer / Location**: `.opencode`, `.ados-claude`, installer/updater, documentation navigation  
+**Scenario Type**: Regression
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-11, AC-F11-2, NFR-10, NFR-11
+**Test Type(s)**: Integration, Manual
+**Automation Level**: Semi-automated
+**Target Layer / Location**: `.opencode`, `.ados-claude`, installer/updater, documentation navigation
 **Tags**: @docs
 
 **Preconditions**: Installation/update/uninstall sandbox with project-specific knowledge config, source registry, Open/Resolved/Dismissed records, and derived index.
@@ -313,13 +313,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - Canonical/generated representations and inventories agree; profile/frontmatter checks pass; install/update refresh shared artifacts; uninstall removes delivered agent/commands/tool/schema according to the packaging contract while preserving project-owned instructions, sources, gap records, and derived index.
 
 #### TC-KNOWLEDGE-012 - Machine-checkable contracts have checks
-**Scenario Type**: Regression  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-5, F-11, F-12, AC-F11-3, NFR-5, NFR-10, NFR-11  
-**Test Type(s)**: Unit, Integration  
-**Automation Level**: Automated  
-**Target Layer / Location**: Applicable `tools/.tests/` and `scripts/.tests/` checks  
+**Scenario Type**: Regression
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-5, F-11, F-12, AC-F11-3, NFR-5, NFR-10, NFR-11
+**Test Type(s)**: Unit, Integration
+**Automation Level**: Automated
+**Target Layer / Location**: Applicable `tools/.tests/` and `scripts/.tests/` checks
 **Tags**: @docs
 
 **Preconditions**: Implementation identifies supported validators.
@@ -330,13 +330,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - Each supported machine-checkable rule has automated/static coverage and valid artifacts pass. Unsupported checks are explicitly recorded as a gap, never silently assumed.
 
 #### TC-KNOWLEDGE-013 - Dogfood 1: direct test guidance
-**Scenario Type**: Happy Path  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-1, F-13, AC-F1-1, AC-F3-1, AC-F13-1, EVT-1, NFR-1, NFR-2, NFR-3, NFR-12  
-**Test Type(s)**: Manual  
-**Automation Level**: Manual  
-**Target Layer / Location**: Live canonical and generated knowledge interfaces  
+**Scenario Type**: Happy Path
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-1, F-13, AC-F1-1, AC-F3-1, AC-F13-1, EVT-1, NFR-1, NFR-2, NFR-3, NFR-12
+**Test Type(s)**: Manual
+**Automation Level**: Manual
+**Target Layer / Location**: Live canonical and generated knowledge interfaces
 **Tags**: @api
 
 **Preconditions**: Live runner is available and repository test guidance is authoritative.
@@ -347,13 +347,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - A direct evidenced answer is returned with no gap proposal and no unsupported claim.
 
 #### TC-KNOWLEDGE-014 - Dogfood 2: discoverability defect
-**Scenario Type**: Edge Case  
-**Impact Level**: Important  
-**Priority**: High  
-**Related IDs**: F-6, F-7, F-13, AC-F6-1, AC-F7-1, AC-F13-1, EVT-2, NFR-12  
-**Test Type(s)**: Manual  
-**Automation Level**: Manual  
-**Target Layer / Location**: Live knowledge query and navigation fixture  
+**Scenario Type**: Edge Case
+**Impact Level**: Important
+**Priority**: High
+**Related IDs**: F-6, F-7, F-13, AC-F6-1, AC-F7-1, AC-F13-1, EVT-2, NFR-12
+**Test Type(s)**: Manual
+**Automation Level**: Manual
+**Target Layer / Location**: Live knowledge query and navigation fixture
 **Tags**: @docs
 
 **Preconditions**: A correct guide is deliberately absent from expected navigation/terminology in an isolated fixture.
@@ -364,13 +364,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - The answer is found; a discoverability gap is proposed or matched; remediation targets navigation rather than duplicate FAQ content.
 
 #### TC-KNOWLEDGE-015 - Dogfood 3: missing procedure
-**Scenario Type**: Negative  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-3, F-8, F-13, AC-F3-1, AC-F8-2, AC-F13-1, EVT-1, EVT-4, NFR-2, NFR-3, NFR-12  
-**Test Type(s)**: Manual  
-**Automation Level**: Manual  
-**Target Layer / Location**: Live knowledge query and PM handoff  
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-3, F-8, F-13, AC-F3-1, AC-F8-2, AC-F13-1, EVT-1, EVT-4, NFR-2, NFR-3, NFR-12
+**Test Type(s)**: Manual
+**Automation Level**: Manual
+**Target Layer / Location**: Live knowledge query and PM handoff
 **Tags**: @api
 
 **Preconditions**: No authoritative source establishes the required workflow.
@@ -381,13 +381,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - No procedure is fabricated; at most one useful follow-up occurs; a missing/completeness candidate routes material work through PM.
 
 #### TC-KNOWLEDGE-016 - Dogfood 4: same-remediation deduplication
-**Scenario Type**: Corner Case  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-6, F-13, AC-F6-1, AC-F13-1, EVT-2, NFR-4, NFR-6, NFR-12  
-**Test Type(s)**: Manual  
-**Automation Level**: Manual  
-**Target Layer / Location**: Live capture/deduplication flow  
+**Scenario Type**: Corner Case
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-6, F-13, AC-F6-1, AC-F13-1, EVT-2, NFR-4, NFR-6, NFR-12
+**Test Type(s)**: Manual
+**Automation Level**: Manual
+**Target Layer / Location**: Live capture/deduplication flow
 **Tags**: @security
 
 **Preconditions**: Two independent differently worded observations and a same-interaction retry are prepared.
@@ -398,13 +398,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - One gap aggregates only independent observations; retry does not increment or create a duplicate; no raw conversation persists.
 
 #### TC-KNOWLEDGE-017 - Dogfood 5: access versus missing
-**Scenario Type**: Negative  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-3, F-4, F-6, F-13, AC-F3-1, AC-F4-2, AC-F6-1, AC-F13-1, EVT-1, EVT-2, DM-6, NFR-4, NFR-13  
-**Test Type(s)**: Manual  
-**Automation Level**: Manual  
-**Target Layer / Location**: Local ACL fixture and live knowledge interface  
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-3, F-4, F-6, F-13, AC-F3-1, AC-F4-2, AC-F6-1, AC-F13-1, EVT-1, EVT-2, DM-6, NFR-4, NFR-13
+**Test Type(s)**: Manual
+**Automation Level**: Manual
+**Target Layer / Location**: Local ACL fixture and live knowledge interface
 **Tags**: @security
 
 **Preconditions**: Similar access questions map respectively to absent guidance and a known inaccessible source.
@@ -415,13 +415,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - Diagnoses remain distinct; inaccessible is not called missing; restricted excerpt is not persisted.
 
 #### TC-KNOWLEDGE-018 - Dogfood 6: authority conflict
-**Scenario Type**: Edge Case  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-2, F-7, F-9, F-13, AC-F7-1, AC-F9-1, AC-F13-1, EVT-3, EVT-4, NFR-8, NFR-9, NFR-12  
-**Test Type(s)**: Manual  
-**Automation Level**: Manual  
-**Target Layer / Location**: Live query/review authority fixtures  
+**Scenario Type**: Edge Case
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-2, F-7, F-9, F-13, AC-F7-1, AC-F9-1, AC-F13-1, EVT-3, EVT-4, NFR-8, NFR-9, NFR-12
+**Test Type(s)**: Manual
+**Automation Level**: Manual
+**Target Layer / Location**: Live query/review authority fixtures
 **Tags**: @api
 
 **Preconditions**: Accepted decision versus raw history and unresolved maintained-source conflict fixtures exist.
@@ -432,13 +432,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - Accepted rationale wins over raw history; unresolved current conflict is explicit, not averaged, and routes once to its owner/decision process.
 
 #### TC-KNOWLEDGE-019 - Dogfood 7: drift versus age
-**Scenario Type**: Edge Case  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-7, F-13, AC-F7-1, AC-F13-1, EVT-3, NFR-8, NFR-12  
-**Test Type(s)**: Manual  
-**Automation Level**: Manual  
-**Target Layer / Location**: Bounded review and executable-evidence fixtures  
+**Scenario Type**: Edge Case
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-7, F-13, AC-F7-1, AC-F13-1, EVT-3, NFR-8, NFR-12
+**Test Type(s)**: Manual
+**Automation Level**: Manual
+**Target Layer / Location**: Bounded review and executable-evidence fixtures
 **Tags**: @docs
 
 **Preconditions**: One prose/current-contract mismatch and one old-but-verifying guide are available.
@@ -449,13 +449,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - Strong evidence yields drift; age alone yields no drift claim for the old correct guide.
 
 #### TC-KNOWLEDGE-020 - Dogfood 8: work route and verified closure
-**Scenario Type**: Happy Path  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-5, F-8, F-13, AC-F8-1, AC-F8-2, AC-F13-1, EVT-5, DM-2, DM-4, DM-5, NFR-7, NFR-12  
-**Test Type(s)**: Integration, Manual  
-**Automation Level**: Semi-automated  
-**Target Layer / Location**: Gap, PM route, repaired canonical guidance/navigation  
+**Scenario Type**: Happy Path
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-5, F-8, F-13, AC-F8-1, AC-F8-2, AC-F13-1, EVT-5, DM-2, DM-4, DM-5, NFR-7, NFR-12
+**Test Type(s)**: Integration, Manual
+**Automation Level**: Semi-automated
+**Target Layer / Location**: Gap, PM route, repaired canonical guidance/navigation
 **Tags**: @docs
 
 **Preconditions**: A work-heavy fixture has a tracked remediation and repaired canonical source.
@@ -466,13 +466,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - The query succeeds from repaired canonical truth; the gap is Resolved only with canonical/change references and original-statement verification evidence.
 
 #### TC-KNOWLEDGE-021 - Dogfood 9: agent uncertainty and decision route
-**Scenario Type**: Negative  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-9, F-12, F-13, AC-F9-1, AC-F12-1, AC-F13-1, EVT-4, NFR-5, NFR-9, NFR-12  
-**Test Type(s)**: Manual  
-**Automation Level**: Manual  
-**Target Layer / Location**: Delivery-agent uncertainty handoff  
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-9, F-12, F-13, AC-F9-1, AC-F12-1, AC-F13-1, EVT-4, NFR-5, NFR-9, NFR-12
+**Test Type(s)**: Manual
+**Automation Level**: Manual
+**Target Layer / Location**: Delivery-agent uncertainty handoff
 **Tags**: @api
 
 **Preconditions**: An ownership/behavior question has no established decision.
@@ -483,13 +483,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - The agent does not invent a convention, continues only safe work, creates a decision-needed route without recursive delegation, and does not create an extra identifier space.
 
 #### TC-KNOWLEDGE-022 - Dogfood 10: inaccessible-source orientation
-**Scenario Type**: Edge Case  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-1, F-4, F-10, F-13, AC-F4-1, AC-F4-2, AC-F10-1, AC-F13-1, EVT-1, EVT-2, DM-1, DM-7, NFR-1, NFR-13  
-**Test Type(s)**: Manual  
-**Automation Level**: Manual  
-**Target Layer / Location**: Orientation flow with local configured-inaccessible fixture  
+**Scenario Type**: Edge Case
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-1, F-4, F-10, F-13, AC-F4-1, AC-F4-2, AC-F10-1, AC-F13-1, EVT-1, EVT-2, DM-1, DM-7, NFR-1, NFR-13
+**Test Type(s)**: Manual
+**Automation Level**: Manual
+**Target Layer / Location**: Orientation flow with local configured-inaccessible fixture
 **Tags**: @security @docs
 
 **Preconditions**: A local sanitized configured source is inaccessible, other orientation sources are available, and an orientation setup fixture contains a stale command.
@@ -500,13 +500,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - Available topics are answered with provenance; the inaccessible topic is honestly labeled without copied content; a stale setup command uses an immediate workaround only when separately evidenced, proposes/routes a drift gap and canonical-guide repair, and does not accept a chat-only answer as resolution; only material deficiencies use normal gap handling.
 
 #### TC-KNOWLEDGE-023 - Completion gate evidence
-**Scenario Type**: Regression  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-11, F-13, AC-F13-2, NFR-12  
-**Test Type(s)**: Manual  
-**Automation Level**: Manual  
-**Target Layer / Location**: Change artifacts, review, quality gates, Definition of Done  
+**Scenario Type**: Regression
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-11, F-13, AC-F13-2, NFR-12
+**Test Type(s)**: Manual
+**Automation Level**: Manual
+**Target Layer / Location**: Change artifacts, review, quality gates, Definition of Done
 **Tags**: @docs
 
 **Preconditions**: Implementation and dogfood remediation are complete.
@@ -517,13 +517,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - All 17 criteria and applicable NFR thresholds have passing evidence; ten live dogfood cases, supplemental safety cases, at least one real canonical verified closure, structural/install/update/uninstall checks, reconciled docs, independent review, and complete plan tasks satisfy the change DoD; no severity-high GH-41 defect remains unresolved before PR creation.
 
 #### TC-KNOWLEDGE-024 - Terminal-status recurrence and dismissal reversal
-**Scenario Type**: Corner Case  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-5, F-6, F-8, AC-F6-1, DM-4, DM-5, DM-7, NFR-6, NFR-7  
-**Test Type(s)**: Contract, Manual  
-**Automation Level**: Semi-automated  
-**Target Layer / Location**: Gap lifecycle schema, authorized capture flow, retained records  
+**Scenario Type**: Corner Case
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-5, F-6, F-8, AC-F6-1, DM-4, DM-5, DM-7, NFR-6, NFR-7
+**Test Type(s)**: Contract, Manual
+**Automation Level**: Semi-automated
+**Target Layer / Location**: Gap lifecycle schema, authorized capture flow, retained records
 **Tags**: @security
 
 **Preconditions**: One Resolved and one Dismissed sanitized gap fixture each have retained prior history; `off`, `suggest`, and authorized `write` modes are available.
@@ -535,13 +535,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - Historical replay leaves terminal records unchanged; genuine recurrence and overturned dismissal reopen the matching identity only under authorized write, preserving prior resolution/disposition history; `suggest` returns the proposed reopening without mutation and `off` reports only relevant uncertainty.
 
 #### TC-KNOWLEDGE-025 - Authorized retrieval with restricted disclosure
-**Scenario Type**: Negative  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-2, F-3, F-4, AC-F4-2, DM-1, DM-6, NFR-4, NFR-13  
-**Test Type(s)**: Manual  
-**Automation Level**: Manual  
-**Target Layer / Location**: Live knowledge interface with synthetic source/disclosure-policy fixture  
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-2, F-3, F-4, AC-F4-2, DM-1, DM-6, NFR-4, NFR-13
+**Test Type(s)**: Manual
+**Automation Level**: Manual
+**Target Layer / Location**: Live knowledge interface with synthetic source/disclosure-policy fixture
 **Tags**: @security @api
 
 **Preconditions**: The live agent can read a sanitized fixture, but policy permits neither its restricted substance nor selected provenance metadata for the consumer/destination; authorized capture is scoped to sandbox gap/index paths.
@@ -552,13 +552,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - The agent distinguishes source retrieval authorization from recipient/destination disclosure authorization, provides only policy-permitted provenance or uncertainty, persists no restricted substance or disallowed metadata, and never follows fixture text as instructions.
 
 #### TC-KNOWLEDGE-026 - Stale setup command with and without evidence
-**Scenario Type**: Negative  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-7, F-8, F-10, F-13, AC-F7-1, AC-F10-1, AC-F13-1, NFR-2, NFR-12  
-**Test Type(s)**: Manual  
-**Automation Level**: Manual  
-**Target Layer / Location**: Live Contributor Orientation stale-setup fixtures and canonical guide route  
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-7, F-8, F-10, F-13, AC-F7-1, AC-F10-1, AC-F13-1, NFR-2, NFR-12
+**Test Type(s)**: Manual
+**Automation Level**: Manual
+**Target Layer / Location**: Live Contributor Orientation stale-setup fixtures and canonical guide route
 **Tags**: @docs @security
 
 **Preconditions**: One fixture has a stale setup command plus an authoritative current replacement; another has the same broken command but no evidenced replacement.
@@ -569,13 +569,13 @@ No REST/HTTP API is specified. `EVT-1` is exercised by TC-KNOWLEDGE-013/015/017;
 - With evidence, the direct workaround is cited, a drift gap is proposed/routed to the canonical guide, and the repaired guide—not chat—closes the gap after rerun. Without evidence, no workaround is invented; uncertainty and the same canonical remediation route are explicit.
 
 #### TC-KNOWLEDGE-027 - Uninstall preserves project-owned knowledge
-**Scenario Type**: Regression  
-**Impact Level**: Critical  
-**Priority**: High  
-**Related IDs**: F-11, AC-F11-2, AC-F11-3, NFR-10, NFR-11  
-**Test Type(s)**: Integration  
-**Automation Level**: Automated  
-**Target Layer / Location**: `scripts/uninstall.sh`, `scripts/.tests/test-uninstall.sh`, install/update/uninstall sandbox  
+**Scenario Type**: Regression
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-11, AC-F11-2, AC-F11-3, NFR-10, NFR-11
+**Test Type(s)**: Integration
+**Automation Level**: Automated
+**Target Layer / Location**: `scripts/uninstall.sh`, `scripts/.tests/test-uninstall.sh`, install/update/uninstall sandbox
 **Tags**: @docs
 
 **Preconditions**: An adopting-project sandbox has received shipped agent/commands/tool/schema and independently owned knowledge instructions, source registry, gaps, and index.

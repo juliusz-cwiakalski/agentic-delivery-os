@@ -5,8 +5,8 @@
 > unchanged as history. The appended "Independent Semantic Rescore (Iteration 2)"
 > section at the end of this file supersedes it.
 
-**Evaluated:** 2026-09-09T12:46:46+02:00  
-**Evaluation baseline:** `c9dbde18da6a6670d93162642d97de0240263f98`  
+**Evaluated:** 2026-09-09T12:46:46+02:00
+**Evaluation baseline:** `c9dbde18da6a6670d93162642d97de0240263f98`
 **Verdict:** **FAIL — return to delivery for missing completion evidence**
 
 The live behavior is generally strong: the knowledge facade answered from evidence,
@@ -122,8 +122,8 @@ repository's unrestricted tools aggregator as passing.
 
 # Independent Semantic Rescore (Iteration 2)
 
-**Rescored:** 2026-09-10T03:33:19Z  
-**Repo HEAD:** `da6667104021784b53097c61b3c4769aa820411d` (branch `feat/GH-41/project-knowledge-management`; working tree clean)  
+**Rescored:** 2026-09-10T03:33:19Z
+**Repo HEAD:** `da6667104021784b53097c61b3c4769aa820411d` (branch `feat/GH-41/project-knowledge-management`; working tree clean)
 **Verdict:** **PASS** — iteration-1's four blocking/partial findings are resolved with
 real tool-event evidence.
 

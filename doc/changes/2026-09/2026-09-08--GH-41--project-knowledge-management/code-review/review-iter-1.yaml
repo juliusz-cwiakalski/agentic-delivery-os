@@ -1,0 +1,103 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-41
+branch: feat/GH-41/project-knowledge-management
+status: PASS
+summary: >
+  Independent Phase 5 review of GH-41 against all 17 acceptance criteria, the TC-001..027
+  matrix, NFR-1..13, and repository contracts (Bash rules, tools/scripts conventions,
+  ados_distribution markers, generated-plugin parity, current-state prompt discipline).
+  All structural contracts were re-verified by execution rather than self-report:
+  tools/knowledge-gap validate/next-id/index behave correctly against the real KG-0001
+  record and reproduce doc/knowledge/00-index.md byte-for-byte; test-knowledge-gap.sh,
+  test-knowledge-contracts.sh, test-doc-distribution.sh, and test-build-claude-plugin.sh
+  (committed plugin matches fresh build) all pass; ShellCheck is clean on every new or
+  modified shell file. The canonical closure KG-0001 is genuinely backed (AGENTS.md#running-tests
+  now documents both aggregators and the extensionless zclaude suite, which exist on disk).
+  Only the proposed KG- prefix is introduced; UNK-*/OQ-*/OPEN-Q* are preserved; ADR-0003
+  remains Proposed. No blocking, high, or medium findings. Four low/info items are recorded
+  below for opportunistic cleanup before Phase 7.3.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 2
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-09/2026-09-08--GH-41--project-knowledge-management/chg-GH-41-dogfood.md:8
+    message: >
+      `git diff --check main...HEAD` reports 193 trailing-whitespace instances, all in
+      chg-GH-41-dogfood.md and chg-GH-41-test-plan.md (two trailing spaces used as Markdown
+      hard line breaks). This is not clean against the plan's repeated "scoped git diff --check
+      PASS" completion signals and the test plan §4 always-on static check, and it will trip
+      the Phase 7.3 gate if that gate runs an unscoped `git diff --check`.
+    suggestion: >
+      Either strip the trailing spaces (convert hard breaks to explicit paragraphs/`<br>`) in
+      the two change artifacts, or document an explicit change-artifact exclusion for the
+      `git diff --check` gate so the release check does not fail unexpectedly. Change-folder
+      files are non-distributable, so this is cosmetic, not a security or correctness issue.
+    suppressed: false
+  - id: F-2
+    severity: low
+    confidence: high
+    category: correctness
+    location: scripts/install.sh:1045
+    message: >
+      A local-only install (`--local`) copies tools/knowledge-gap, the templates, and the
+      redistributable guide, but does NOT install the `@knowledge` agent or the
+      `/knowledge-review` / `/contributor-orientation` commands — those are delivered only by
+      the `--global` path. The `--help` text still claims `--local` installs to
+      `./.opencode/agent/` and `./.opencode/command/`, which is inaccurate for these new
+      interfaces.
+    suggestion: >
+      This is a pre-existing install.sh mismatch that the plan (task 3.2a) explicitly and
+      correctly defers rather than expanding GH-41 into. Recommended follow-up (outside GH-41
+      scope): correct the `--help` local-target description or document that agent/command
+      interfaces are global-only, so local-only adopters are not misled about `@knowledge`
+      availability. Not blocking for GH-41.
+    suppressed: false
+  - id: F-3
+    severity: info
+    confidence: medium
+    category: correctness
+    location: tools/knowledge-gap:153
+    message: >
+      `next-id` blocks only when more than one *untracked* (`??`) gap record is pending; a
+      single pending new record or a *modified* (`M`) record whose ID changed is not itself
+      flagged, because `record_files()` computes max+1 from on-disk state. The plan (task 1.3)
+      phrases this as "any uncommitted new allocation ... blocks another creation", which is
+      stronger than the tool's own guard.
+    suggestion: >
+      The stronger commit-before-allocate workflow is enforced at the agent-prompt layer
+      (knowledge.md persistence §3). This two-layer split is acceptable, but if the tool is
+      ever expected to be the sole enforcement point, extend the pending check to cover
+      modified/deleted records (` M`/` D`) in `doc/knowledge/gaps`. No action required for
+      GH-41 release.
+    suppressed: false
+  - id: F-4
+    severity: info
+    confidence: high
+    category: correctness
+    location: doc/changes/2026-09/2026-09-08--GH-41--project-knowledge-management/chg-GH-41-dogfood.md:28
+    message: >
+      The semantic PASS verdicts for TC-013..027 rest on tool-event logs retained under the
+      gitignored `tmp/run-logs-runner/2026-09-09/`, which are not re-executable without
+      provider credentials. The durable, independently verifiable artifacts — the committed
+      KG-0001 Resolved record (canonical_ref AGENTS.md#running-tests with verified_at and
+      original-task notes), the regenerated 00-index.md, and every structural/generated/
+      install/distribution suite — were re-verified by this review and pass.
+    suggestion: >
+      No action required. This is a provenance-completeness note: the canonical closure and
+      all machine-checkable contracts are genuinely evidenced and reproducible; only the
+      live model-behavior claims depend on ephemeral retained logs, which is an accepted
+      property of the dogfood protocol.
+    suppressed: false
+reviewed_at: 2026-09-10T03:42:54Z
+next_step: PROCEED
