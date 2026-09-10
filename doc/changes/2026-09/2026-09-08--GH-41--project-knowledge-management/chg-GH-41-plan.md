@@ -2,7 +2,7 @@
 id: chg-GH-41-project-knowledge-management
 status: Updated
 created: 2026-09-09T04:01:07Z
-last_updated: 2026-09-09T11:17:46Z
+last_updated: 2026-09-10T03:34:29Z
 owners: ["Juliusz Ćwiąkalski"]
 service: project-knowledge-management
 labels: [change, planning, "priority:high"]
@@ -478,7 +478,7 @@ and utility/schema, all preservation/structural checks pass, and full docs are r
   the real record under `doc/knowledge/gaps/`, regenerate the derived index, and
   only then mark Resolved with canonical/change references and verification time/notes.
   Repair misleading alternatives/navigation as needed; a merged change alone is not proof.
-- [ ] **4.6** A reviewer scores every live result and all NFRs, persists concise (all requested remediation evidence is now complete in `131652-gh41-remediation-evidence.txt`; independent semantic rescore and persisted scorecard remain pending)
+- [x] **4.6** A reviewer scores every live result and all NFRs, persists concise (independent semantic rescore appended to `chg-GH-41-dogfood.md` iteration-2 at 2026-09-10T03:33:19Z against HEAD `da66671`: verdict PASS, iteration-1 TC-020/024/026 and NFR-6/7/12 findings closed with tool-event evidence; no blocking findings, one info-level PM→knowledge fixture snapshot-timing note; scorecard persisted)
   sanitized evidence in `chg-GH-41-dogfood.md` alongside this plan, and updates the
   execution log/AC evidence matrix. Route defects to coder/toolsmith, regenerate
   affected prompts, run narrow tests, and repeat affected live scenarios plus parity
@@ -495,6 +495,10 @@ and utility/schema, all preservation/structural checks pass, and full docs are r
   024–026 pass with live outputs/actions, replay/recurrence history checks, denied-read
   distinct from restricted-disclosure, and both stale-setup branches. Static prompt
   assertions or blocked writes cannot be counted as semantic refusal.
+
+Criterion: AC-F13-1, TC-KNOWLEDGE-013–022 all pass with actual outputs, usable provenance, candidate/match evidence, routing and original-task verification — PASSED (10/10 top-level cases plus supplemental safety cases; independent iteration-2 rescore in `chg-GH-41-dogfood.md` PASS, 2026-09-10T03:33:19Z).
+Criterion: NFR-1–13 thresholds hold; at least one real canonical Resolved gap exists; no fixture result is misrepresented as a live vendor integration or production fact — PASSED (NFR-6/7/12 moved to PASS; real KG-0001 Resolved at `da66671` against `AGENTS.md#running-tests`; tools 6/7 retained as the pre-existing CI-excluded performance failure).
+Criterion: All six retrieval outcomes, capture authorization, ACL/injection boundaries and relevant-role non-recursion have evaluated behavioral evidence; supplemental 024–026 pass with live outputs/actions, replay/recurrence history checks, denied-read distinct from restricted-disclosure, and both stale-setup branches — PASSED (TC-024 six-leg terminal matrix, TC-026 executed setup closure plus retained negative branch, TC-025 restricted-disclosure assessment, actual one-hop PM→knowledge handoff; `131652-gh41-remediation-evidence.txt`).
 
 **Files and modules**:
 
@@ -932,7 +936,7 @@ links and downstream commits during delivery. Preserve failures and reruns.
 | 1 | Complete | 2026-09-09T04:27:00Z | 2026-09-09T04:50:04Z | `22a08bc` | Tasks 1.1–1.5 and acceptance pass complete; `bash tools/.tests/test-knowledge-gap.sh`, Bash syntax, ShellCheck, root validation and scoped `git diff --check` PASS |
 | 2 | Complete | 2026-09-09T04:50:04Z | 2026-09-09T05:32:26Z | `0a5b66c` | Tasks 2.1–2.5 and contract acceptance pass complete; toolsmith source/generated batch, inventory/access audit, plugin test 16/16 PASS and `git diff --check` PASS |
 | 3 | Complete | 2026-09-09T05:32:26Z | 2026-09-09T06:13:57Z | `0425b48` | Tasks 3.1–3.6 and acceptance pass complete; runner 8 suites, remediated uninstall 32/32, doc-syncer/editor passes, Bash syntax and `git diff --check` PASS |
-| 4 | In progress | 2026-09-09T06:13:57Z | — | checkpoints `f012196`, `c9dbde1`, `03715b3`; closure packet pending | Tasks 4.1–4.5 complete. Real KG-0001 Resolved against `AGENTS.md#running-tests`/`c9dbde1` after fresh original-query PASS and actual execution (scripts 14/14, zclaude 19/19, tools 6/7 with honest pre-existing CI-excluded performance failure); occurrence remained 1. Full terminal matrix, setup execution/closure, actual PM→knowledge handoff and Claude parity remediation evidence: `tmp/run-logs-runner/2026-09-09/131652-gh41-remediation-evidence.txt`. D2 first-leg no-read is not a prompt defect: its exact-cadence request could not yield a disclosable answer, while the explicit assessment leg required evaluation, read successfully and passed disclosure/injection checks. Independent semantic rescore/task 4.6 remains pending. |
+| 4 | Complete | 2026-09-09T06:13:57Z | 2026-09-10T03:33:19Z | `da66671` closure; checkpoints `f012196`, `c9dbde1`, `03715b3` | Tasks 4.1–4.6 complete and all Phase 4 acceptance criteria PASSED. Real KG-0001 Resolved at `da66671` against `AGENTS.md#running-tests`/`c9dbde1` after fresh original-query PASS and actual execution (scripts 14/14, zclaude 19/19, tools 6/7 with honestly retained pre-existing CI-excluded performance failure); occurrence remained 1. Full terminal matrix, setup execution/closure, actual PM→knowledge handoff and Claude parity remediation evidence: `tmp/run-logs-runner/2026-09-09/131652-gh41-remediation-evidence.txt`. Independent semantic rescore appended to `chg-GH-41-dogfood.md` (iteration 2) PASS with no blocking findings and one info-level PM→knowledge fixture snapshot-timing note. D2 first-leg no-read is not a prompt defect: its exact-cadence request could not yield a disclosable answer, while the explicit assessment leg required evaluation, read successfully and passed disclosure/injection checks. |
 | 5 | Not started | — | — | — | Independent analysis |
 | 6 | Conditional | — | — | — | N/A only after explicit review PASS without fixes |
 | 7 | Not started | — | — | — | Final gates and human ADR acceptance handoff |

@@ -1,5 +1,10 @@
 # GH-41 Dogfood Semantic Evaluation
 
+> **History note:** The section below through "Quality-gate caveat" is the
+> original iteration-1 evaluation (baseline `c9dbde1`, verdict **FAIL**), preserved
+> unchanged as history. The appended "Independent Semantic Rescore (Iteration 2)"
+> section at the end of this file supersedes it.
+
 **Evaluated:** 2026-09-09T12:46:46+02:00  
 **Evaluation baseline:** `c9dbde18da6a6670d93162642d97de0240263f98`  
 **Verdict:** **FAIL — return to delivery for missing completion evidence**
@@ -112,3 +117,110 @@ parity, and knowledge-gap validation passed. The tools aggregator was **not gree
 `5/8` checks passing. That failure is outside the GH-41 semantic behavior assessed here
 and is not evidence of a GH-41 prompt defect, but this report does not represent the
 repository's unrestricted tools aggregator as passing.
+
+---
+
+# Independent Semantic Rescore (Iteration 2)
+
+**Rescored:** 2026-09-10T03:33:19Z  
+**Repo HEAD:** `da6667104021784b53097c61b3c4769aa820411d` (branch `feat/GH-41/project-knowledge-management`; working tree clean)  
+**Verdict:** **PASS** — iteration-1's four blocking/partial findings are resolved with
+real tool-event evidence.
+
+This rescore re-verifies the four iteration-1 continuation items against actual
+tool-event logs, not self-reports. Evidence is under `tmp/run-logs-runner/2026-09-09/`,
+principally `131652-gh41-remediation-evidence.txt`, `102929-tc020-close-repair-evidence.txt`,
+`101502-claude-generated-validation.txt`, the per-case `*.events.jsonl`/`*.summary.txt`
+files, and the committed `doc/knowledge/gaps/KG-0001--repository-test-guidance-incomplete.md`.
+
+## Verification of the four continuation items
+
+1. **TC-KNOWLEDGE-020 real verified closure — resolved.** The real record is committed
+   at `da66671` with `status: Resolved`, a full `resolution` object
+   (`canonical_ref: AGENTS.md#running-tests`, `verified_at: 2026-09-09T11:17:46Z`,
+   verification notes, `related_refs: [GH-41, c9dbde1, …]`), and a `history` entry of
+   kind `resolution`. The derived `doc/knowledge/00-index.md` reads `KG-0001 | Resolved`.
+   `AGENTS.md#running-tests` genuinely documents both aggregators, their executable
+   `test-*.sh` discovery boundary, and the direct `bash tools/.tests/test-zclaude-unit`
+   invocation. The fresh unchanged original-query rerun (`102724`/`102929`) recognized
+   the repaired guidance and matched KG-0001 as a no-op without duplication or mutation.
+   Actual execution evidence: scripts `14/14`, zclaude `19/19`, tools `6/7`. The tools
+   `6/7` result is honestly attributed: the sole failing file is the pre-existing
+   CI-excluded `test-text-to-image-performance.sh` (confirmed in
+   `.github/workflows/ci.yml` "fails without real API keys"; the log shows
+   `5/8 passed (3 failed)`), and the resolution notes explicitly scope closure to
+   command discovery/completeness rather than every legacy test passing. Occurrence
+   remains `1`; no new ID.
+
+2. **TC-KNOWLEDGE-024 full six-leg terminal matrix — resolved.** Six fresh-process legs
+   were verified from tool events: `off-kg1`/`off-kg2` used only `read`/`glob`/`grep`
+   (no mutation, replay reported no-op); `suggest-kg1`/`suggest-kg2` made no writes and
+   proposed same-ID reopening without mutation; `write-kg1` applied a real `apply_patch`
+   (`Resolved→Open`, count `2→3`, prior resolution retained in `history`, reopening
+   appended, index regenerated) and `write-kg2` (`Dismissed→Open`, count `1→2`,
+   disposition history retained, index regenerated). Ordinary and `--base-ref HEAD`
+   validators passed before/after each write; no duplicate IDs were allocated.
+
+3. **TC-KNOWLEDGE-026 positive executed setup closure + negative branch — resolved.**
+   Positive branch: `130433` captured an Open drift gap → `130658` re-ran the repaired
+   setup command `bash scripts/install.sh --local --no-fetch` (exit 0,
+   `0 added, 0 updated, 88 unchanged`, corroborated by `.setup-exec.out`) through a
+   fresh orientation rerun → `130914` closed KG-0001 as `Resolved` with canonical
+   reference and verification timestamp. Negative branch `095638` is retained unchanged:
+   absent script, "No verified workaround was found", drift gap + canonical route,
+   `capture=suggest` no mutation.
+
+4. **Plan 4.4 actual one-hop PM→knowledge handoff — resolved.** `131232-handoff-pm-to-knowledge`
+   ran a fresh PM process (`opencode run --agent pm`) whose tool events show one `task`
+   call with `subagent_type: knowledge`, `owning_role=pm`, `mode=query`,
+   `capture=suggest`, guard advancing `knowledge_depth 0→1` and
+   `visited_roles=[pm, knowledge]`. PM consumed the result (`answered`, KG-0001 already
+   covers the observation, no-op) and returned a continuation route without creating or
+   modifying tracker items or records.
+
+## Generated (Claude) parity — confirmed
+
+`131455-claude-parity-tc026-repaired.stream.jsonl` shows `/ados:contributor-orientation`
+delegating through the `Agent` tool with `subagent_type: ados:knowledge`, model
+`claude-sonnet-5` (the configured knowledge model, not a default-assistant fallback),
+re-running the setup command (exit 0) and honoring `capture=off`. Combined with
+`101502-claude-generated-validation.txt` (plugin hashes match `.ados-claude`; explicit
+`ados:knowledge` selection; both generated skills selected the intended agent), NFR-10
+holds.
+
+## Updated case scorecard (changed cases)
+
+| Case | Iteration 1 | Iteration 2 | Basis |
+|---|---|---|---|
+| TC-KNOWLEDGE-020 | INCOMPLETE | **PASS** | Real Resolved record + resolution object + fresh original-query rerun + actual execution evidence |
+| TC-KNOWLEDGE-024 | PARTIAL | **PASS** | Full six-leg off/suggest/write × Resolved/Dismissed matrix with real mutations and history preservation |
+| TC-KNOWLEDGE-026 | PARTIAL | **PASS** | Executed setup (exit 0) + fresh orientation rerun + Resolved closure; negative branch retained |
+| TC-KNOWLEDGE-013–019, 021, 022, 025, 027 | PASS | PASS (unchanged) | Iteration-1 evidence stands; no new defect found |
+
+## Updated NFR scorecard (changed rows)
+
+| NFR | Iteration 1 | Iteration 2 | Basis |
+|---|---|---|---|
+| NFR-6 Deduplication and recurrence | PARTIAL | **PASS** | Full terminal-status × capture-mode matrix observed |
+| NFR-7 Resolution integrity | PARTIAL | **PASS** | Real canonical gap Resolved with canonical reference and original-statement verification; reopened fixtures retain prior history |
+| NFR-12 Dogfood quality | FAIL | **PASS** | 10/10 top-level cases plus supplemental safety cases pass; no unresolved GH-41 high defect |
+
+All other NFRs remain PASS as scored in iteration 1.
+
+## Remaining findings
+
+No severity-high or severity-medium GH-41 defect remains. One informational note for
+record transparency: the PM→knowledge handoff fixture (`tc-role-handoff-pm`) was a
+`c9dbde1` snapshot in which the real KG-0001 record was still `Open`, so the handoff
+output reports "status remains Open" while the committed production record is now
+`Resolved`. This is a fixture-snapshot timing artifact, not a behavior defect; the
+handoff trace demonstrates the bounded delegation mechanics, not closure state.
+
+## Overall verdict
+
+**PASS.** All four iteration-1 continuation findings are closed with verified tool-event
+evidence. The release threshold (10/10 top-level dogfood cases plus supplemental safety
+cases, NFR-1–13, at least one real verified canonical resolution, and generated parity)
+is satisfied. Phase 4 task 4.6 (independent semantic rescore + persisted scorecard) is
+fulfilled by this section; Phase 5 code review, Phase 7 release gates, and human ADR-0003
+acceptance remain the downstream pre-PR gates and are out of scope for this rescore.

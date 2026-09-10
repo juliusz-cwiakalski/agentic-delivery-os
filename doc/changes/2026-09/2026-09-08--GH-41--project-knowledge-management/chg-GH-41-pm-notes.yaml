@@ -7,9 +7,9 @@ phases:
   test_planning: { started: "2026-09-09T03:52:36Z", completed: "2026-09-09T04:21:39Z" }
   delivery_planning: { started: "2026-09-09T03:58:28Z", completed: "2026-09-09T04:23:33Z" }
   dor_check: { started: "2026-09-09T04:01:07Z", completed: "2026-09-09T04:33:01Z" }
-  delivery: { started: "2026-09-09T04:33:01Z", completed: null }
+  delivery: { started: "2026-09-09T04:33:01Z", completed: "2026-09-10T03:35:02Z" }
   system_spec_update: { started: null, completed: null }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-09-10T03:35:02Z", completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -36,6 +36,9 @@ blockers:
 notes:
   - text: "Phase4 remediation completed: real KG-0001 Resolved against AGENTS#running-tests repair c9dbde1 with fresh original-query rerun plus actual execution evidence (scripts14/14, zclaude19/19, tools6/7 with preexisting CI-excluded performance failure explicitly retained). Full TC024 terminal matrix, TC026 positive executed setup closure, actual one-hop PM->knowledge handoff, and Claude generated parity all pass. Independent semantic rescore pending after closure commit."
     type: info
+    date: "2026-09-10"
+  - text: "Independent semantic rescore iteration 2 PASS at 2026-09-10T03:33:19Z on HEAD da66671; all four iteration-1 gaps closed with tool-event evidence; one info-level snapshot-timing note only. Phase 4 complete."
+    type: resolved
     date: "2026-09-10"
   - text: "Independent rescore task hit provider usage limit before verdict; closure packet remained uncommitted. Recovery: parent verified closure record content directly, commits closure packet, then retries rescore in a fresh reviewer session."
     type: retro
