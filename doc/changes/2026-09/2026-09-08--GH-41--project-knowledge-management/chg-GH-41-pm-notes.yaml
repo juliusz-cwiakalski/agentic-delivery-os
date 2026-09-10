@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-09-10T03:35:02Z", completed: "2026-09-10T03:44:55Z" }
   quality_gates: { started: "2026-09-10T03:51:43Z", completed: "2026-09-10T03:59:59Z" }
   dod_check: { started: "2026-09-10T03:59:59Z", completed: "2026-09-10T04:15:00Z" }
-  pr_creation: { started: "2026-09-10T04:15:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-09-10T04:15:00Z", completed: "2026-09-10T04:20:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/156" }
 decisions:
   - text: "Use existing GH-41 rather than create a duplicate: its original knowledge-linking scope is the natural work item for the expanded first-class Project Knowledge Management capability."
     date: "2026-09-08"
@@ -45,6 +45,9 @@ notes:
     date: "2026-09-10"
   - text: "DoD audit PASS: all nine spec change-specific DoD obligations satisfied; 17-row AC-to-evidence matrix appended to dogfood report; all 27 TCs have dispositions; no high/medium GH-41 defect open; ADR-0003 remains Proposed as human PR decision. Proceeding to PR creation."
     type: resolved
+    date: "2026-09-10"
+  - text: "PR #156 created and pushed (7aeeeaf, 77 files +5001/-57, 21 commits). STOP: awaiting human review and manual merge. Human decision required: accept or reject ADR-0003 (Proposed); rejection reopens spec and dependent artifacts before merge."
+    type: info
     date: "2026-09-10"
   - text: "Independent rescore task hit provider usage limit before verdict; closure packet remained uncommitted. Recovery: parent verified closure record content directly, commits closure packet, then retries rescore in a fresh reviewer session."
     type: retro
