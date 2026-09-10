@@ -10,8 +10,8 @@ phases:
   delivery: { started: "2026-09-09T04:33:01Z", completed: "2026-09-10T03:35:02Z" }
   system_spec_update: { started: "2026-09-10T03:46:12Z", completed: "2026-09-10T03:51:43Z" }
   review_fix: { started: "2026-09-10T03:35:02Z", completed: "2026-09-10T03:44:55Z" }
-  quality_gates: { started: "2026-09-10T03:51:43Z", completed: null }
-  dod_check: { started: null, completed: null }
+  quality_gates: { started: "2026-09-10T03:51:43Z", completed: "2026-09-10T03:59:59Z" }
+  dod_check: { started: "2026-09-10T03:59:59Z", completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "Use existing GH-41 rather than create a duplicate: its original knowledge-linking scope is the natural work item for the expanded first-class Project Knowledge Management capability."
@@ -39,6 +39,9 @@ notes:
     date: "2026-09-10"
   - text: "Independent semantic rescore iteration 2 PASS at 2026-09-10T03:33:19Z on HEAD da66671; all four iteration-1 gaps closed with tool-event evidence; one info-level snapshot-timing note only. Phase 4 complete."
     type: resolved
+    date: "2026-09-10"
+  - text: "Final quality gates (19ab801): scripts 14/14, zclaude 19/19, shellcheck clean, plugin 16/16, distribution no-drift, base-ref cb20b58 validated, git diff check clean, branch 0 behind origin/main. Tools 6/7 only due to pre-existing CI-excluded text-to-image performance suite (host date %3N returns nanoseconds vs ms thresholds; untouched by GH-41). Documented honestly; no GH-41 fixer needed."
+    type: info
     date: "2026-09-10"
   - text: "Independent rescore task hit provider usage limit before verdict; closure packet remained uncommitted. Recovery: parent verified closure record content directly, commits closure packet, then retries rescore in a fresh reviewer session."
     type: retro
