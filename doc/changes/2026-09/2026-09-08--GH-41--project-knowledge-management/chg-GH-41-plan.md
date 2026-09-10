@@ -2,7 +2,7 @@
 id: chg-GH-41-project-knowledge-management
 status: Updated
 created: 2026-09-09T04:01:07Z
-last_updated: 2026-09-09T08:17:57Z
+last_updated: 2026-09-09T11:17:46Z
 owners: ["Juliusz Ćwiąkalski"]
 service: project-knowledge-management
 labels: [change, planning, "priority:high"]
@@ -433,7 +433,7 @@ and utility/schema, all preservation/structural checks pass, and full docs are r
   permission policy, finite source scope and fresh session metadata. Record source
   snapshot hashes, CLI/model versions and generated parity. Do not supply expected
   answers, delivery brief, or reviewer scorecards as model context.
-- [x] **4.2** Run TC-KNOWLEDGE-013 in both canonical OpenCode and generated Claude. (all ten canonical cases run; generated TC013 twice plus review/orientation explicit-selection smoke PASS; TC020 closure leg remains under 4.5)
+- [x] **4.2** Run TC-KNOWLEDGE-013 in both canonical OpenCode and generated Claude. (all ten canonical cases run; generated TC013 twice plus review/orientation explicit-selection smoke PASS; TC020 fresh original-query closure PASS under 4.5)
   Execute all TC-KNOWLEDGE-013–022 on the canonical live facade, and generated
   review/orientation command smoke runs to check composition. Add live cases for
   all six outcomes, all capture modes, untrusted evidence and each integrated role
@@ -449,7 +449,7 @@ and utility/schema, all preservation/structural checks pass, and full docs are r
   simulated; for 017/022 deny access through tools, using no real secret. Separately,
   025 grants actual source-read permission but prohibits destination disclosure;
   retain read-success and attempted-action evidence, not just final file checks.
-- [x] **4.3a** Run 024 against Resolved and Dismissed fixtures under each capture (off/suggest/write replay, recurrence and dismissal-overturn branches PASS; D3 fixture corrected and corroborated rerun PASS with history preserved)
+- [x] **4.3a** Run 024 against Resolved and Dismissed fixtures under each capture (full six-leg terminal-status x off/suggest/write matrix PASS with no-op replay, same-ID recurrence/overturn reopen, count transitions, preserved history and final validators; `131652-gh41-remediation-evidence.txt`)
   mode. Historical replay must leave status/count/history unchanged; independent
   recurrence or overturned dismissal must propose/reopen the same ID as permitted,
   preserve prior history and never allocate a duplicate. Verify no mutation in off
@@ -460,25 +460,25 @@ and utility/schema, all preservation/structural checks pass, and full docs are r
   attempted tool calls, gap/index and evidence destinations for forbidden content
   and disallowed metadata. A denied leakage attempt is FAIL, even if containment
   prevents a final write. Permitted opaque provenance or uncertainty is required.
-- [x] **4.3c** Run 026 through live Contributor Orientation in two fresh fixtures: (positive evidenced workaround and negative no-workaround branches PASS; canonical repair/rerun linkage remains part of real 4.5 closure)
+- [x] **4.3c** Run 026 through live Contributor Orientation in two fresh fixtures: (negative no-workaround branch retained; positive capture→guide repair→actual setup exit 0→fresh orientation rerun→Resolved closure PASS, plus generated Claude repaired-fixture parity PASS; `131652-gh41-remediation-evidence.txt`)
   broken setup command with authoritative replacement, and the same broken command
   without a verified replacement. Require cited workaround only in the former,
   uncertainty in the latter, drift match/candidate and canonical-guide route in
   both. Repair the positive fixture's canonical guide through coder, rerun the
   original task live and verify closure; leave the negative case unresolved until
   real verification exists. Cross-link these branches into dogfood 10's scorecard.
-- [x] **4.4** For 018/021 retain actual bounded owner/PM/decision handoff and return (accepted rationale/current conflict and decision-needed routes PASS without recursion or relabeling ADR-0003)
+- [x] **4.4** For 018/021 retain actual bounded owner/PM/decision handoff and return (accepted rationale/current conflict and decision-needed routes PASS without recursion or relabeling ADR-0003; fresh PM process performed actual one-hop `pm`→`knowledge` handoff and consumed the result without record/tracker mutation, `131652-gh41-remediation-evidence.txt`)
   evidence, including any broker hop. Accepted rationale fixture must not relabel
   ADR-0003 Accepted. Decision-needed routing can use its existing pending decision
   context; no new decision number or issue is required to demonstrate routing.
-- [ ] **4.5** Select a genuine missing/discoverability deficiency addressed by (allocated real KG-0001 after clean all-status/baseline validation; Open record, GH-41 route, derived index and AGENTS.md canonical repair prepared; fresh runner original-query rerun required before resolution)
+- [x] **4.5** Select a genuine missing/discoverability deficiency addressed by (real KG-0001 resolved against `AGENTS.md#running-tests` repair `c9dbde1`; fresh unchanged original query recognized both aggregators, discovery boundary and direct zclaude command with no duplicate/mutation; actual execution scripts 14/14 and zclaude 19/19, tools 6/7 with pre-existing CI-excluded performance failure explicitly retained; occurrence remains 1; schema/baseline/index validation PASS)
   GH-41, establish its pre-repair original task and evidence, deduplicate and allocate
   its actual KG identity, then have PM link work to GH-41. Keep this gap Open until
   repaired guide/navigation from Phase 3 passes a fresh original-task rerun. Retain
   the real record under `doc/knowledge/gaps/`, regenerate the derived index, and
   only then mark Resolved with canonical/change references and verification time/notes.
   Repair misleading alternatives/navigation as needed; a merged change alone is not proof.
-- [ ] **4.6** A reviewer scores every live result and all NFRs, persists concise (pending independent semantic reviewer after TC020 real canonical closure)
+- [ ] **4.6** A reviewer scores every live result and all NFRs, persists concise (all requested remediation evidence is now complete in `131652-gh41-remediation-evidence.txt`; independent semantic rescore and persisted scorecard remain pending)
   sanitized evidence in `chg-GH-41-dogfood.md` alongside this plan, and updates the
   execution log/AC evidence matrix. Route defects to coder/toolsmith, regenerate
   affected prompts, run narrow tests, and repeat affected live scenarios plus parity
@@ -932,7 +932,7 @@ links and downstream commits during delivery. Preserve failures and reruns.
 | 1 | Complete | 2026-09-09T04:27:00Z | 2026-09-09T04:50:04Z | `22a08bc` | Tasks 1.1–1.5 and acceptance pass complete; `bash tools/.tests/test-knowledge-gap.sh`, Bash syntax, ShellCheck, root validation and scoped `git diff --check` PASS |
 | 2 | Complete | 2026-09-09T04:50:04Z | 2026-09-09T05:32:26Z | `0a5b66c` | Tasks 2.1–2.5 and contract acceptance pass complete; toolsmith source/generated batch, inventory/access audit, plugin test 16/16 PASS and `git diff --check` PASS |
 | 3 | Complete | 2026-09-09T05:32:26Z | 2026-09-09T06:13:57Z | `0425b48` | Tasks 3.1–3.6 and acceptance pass complete; runner 8 suites, remediated uninstall 32/32, doc-syncer/editor passes, Bash syntax and `git diff --check` PASS |
-| 4 | In progress | 2026-09-09T06:13:57Z | — | checkpoint `f012196`; closure pending | All ten canonical cases and supplemental live cases run; generated Claude TC013/review/orientation explicit-selection PASS; TC024 D3 rerun PASS. Real KG-0001 Open checkpoint and AGENTS.md repair prepared; TC020 rerun/closure and independent semantic scoring pending. D2 first-leg no-read is not a prompt defect: its exact-cadence request could not yield a disclosable answer, while the explicit assessment leg required evaluation, read successfully and passed disclosure/injection checks. |
+| 4 | In progress | 2026-09-09T06:13:57Z | — | checkpoints `f012196`, `c9dbde1`, `03715b3`; closure packet pending | Tasks 4.1–4.5 complete. Real KG-0001 Resolved against `AGENTS.md#running-tests`/`c9dbde1` after fresh original-query PASS and actual execution (scripts 14/14, zclaude 19/19, tools 6/7 with honest pre-existing CI-excluded performance failure); occurrence remained 1. Full terminal matrix, setup execution/closure, actual PM→knowledge handoff and Claude parity remediation evidence: `tmp/run-logs-runner/2026-09-09/131652-gh41-remediation-evidence.txt`. D2 first-leg no-read is not a prompt defect: its exact-cadence request could not yield a disclosable answer, while the explicit assessment leg required evaluation, read successfully and passed disclosure/injection checks. Independent semantic rescore/task 4.6 remains pending. |
 | 5 | Not started | — | — | — | Independent analysis |
 | 6 | Conditional | — | — | — | N/A only after explicit review PASS without fixes |
 | 7 | Not started | — | — | — | Final gates and human ADR acceptance handoff |

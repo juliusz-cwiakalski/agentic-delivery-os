@@ -34,6 +34,12 @@ blockers:
     date: "2026-09-08"
     resolved_date: "2026-09-09"
 notes:
+  - text: "Phase4 remediation completed: real KG-0001 Resolved against AGENTS#running-tests repair c9dbde1 with fresh original-query rerun plus actual execution evidence (scripts14/14, zclaude19/19, tools6/7 with preexisting CI-excluded performance failure explicitly retained). Full TC024 terminal matrix, TC026 positive executed setup closure, actual one-hop PM->knowledge handoff, and Claude generated parity all pass. Independent semantic rescore pending after closure commit."
+    type: info
+    date: "2026-09-10"
+  - text: "Independent rescore task hit provider usage limit before verdict; closure packet remained uncommitted. Recovery: parent verified closure record content directly, commits closure packet, then retries rescore in a fresh reviewer session."
+    type: retro
+    date: "2026-09-10"
   - text: "Owner restored Claude login; generated agent and both skills live tests pass. Phase4 semantic iteration1 FAIL pending real KG closure, TC024 complete terminal-mode matrix, TC026 executed repaired-setup closure, actual bounded owner handoff trace. Delivery remains open; no prompt defect found. Full scripts14/14 and zclaude19/19 pass; tools6/7 includes preexisting CI-excluded timing failure, not green unrestricted."
     type: retro
     date: "2026-09-09"
