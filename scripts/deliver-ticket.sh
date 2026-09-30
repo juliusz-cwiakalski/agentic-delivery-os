@@ -1125,24 +1125,51 @@ _reap_opencode_orphan() {
 # RESULT CLASSIFICATION
 # ============================================================================
 
-# Classify the delivery result based on GitHub state.
+# Classify the delivery result based on tracker state.
 # Args: ticket_ref, branch
-# Prints: merged | blocked | pr-open | failed | unknown
+# Prints: merged | blocked | pr-open | failed | state-unverified
 classify_result() {
   local -r ticket_ref="$1"
   # branch is optional: callers without a resolved branch rely on the
   # title-based open-PR fallback below. Default to empty under `set -u`.
   local -r branch="${2:-}"
 
+  # PDEV-490: retry the state poll with backoff — bounded and env-tunable so
+  # offline tests can set DELIVER_STATE_FETCH_BACKOFF_S=0. These are POLL
+  # retries inside the classifier, never PM restarts (GH-126).
+  local fetch_attempts="${DELIVER_STATE_FETCH_ATTEMPTS:-3}"
+  local fetch_backoff_s="${DELIVER_STATE_FETCH_BACKOFF_S:-2}"
+  case "${fetch_attempts}" in ''|*[!0-9]*) fetch_attempts=3 ;; esac
+  case "${fetch_backoff_s}" in ''|*[!0-9]*) fetch_backoff_s=2 ;; esac
+  (( fetch_attempts >= 1 )) || fetch_attempts=1
+
   local issue_json issue_state
-  issue_json="$(tracker_issue_view "$(to_issue_number "${ticket_ref}")" 2>/dev/null)" || {
-    # m-7: gh/network failure (rate limit, connectivity) — return "unknown" so
-    # the loop retries without burning a restart slot. Only warn on real CLI
-    # failures, not on successful GitLab queries (AC-F5-3).
-    log_warn "Could not fetch issue state for ${ticket_ref} (network/rate-limit?)"
-    printf 'unknown'
+  local fetch_attempt=1 fetch_ok=false
+  while (( fetch_attempt <= fetch_attempts )); do
+    if issue_json="$(tracker_issue_view "$(to_issue_number "${ticket_ref}")" 2>/dev/null)"; then
+      fetch_ok=true
+      break
+    fi
+    if (( fetch_attempt < fetch_attempts )); then
+      # m-7: transient tracker/network failure (rate limit, connectivity).
+      # Only warn on real CLI failures, not on successful GitLab queries
+      # (AC-F5-3).
+      log_warn "Could not fetch issue state for ${ticket_ref} (attempt ${fetch_attempt}/${fetch_attempts}, network/rate-limit?) — retrying"
+      if (( fetch_backoff_s > 0 )); then
+        sleep "${fetch_backoff_s}"
+      fi
+    fi
+    fetch_attempt=$((fetch_attempt + 1))
+  done
+  if [[ "${fetch_ok}" != "true" ]]; then
+    # All poll attempts failed — the delivery state is UNVERIFIED. Never
+    # invent a success/terminal classification from missing evidence: the
+    # caller splits on monitor_result (stuck → retry without slot burn;
+    # finished → loud terminal stop, no PM restart).
+    log_warn "Could not fetch issue state for ${ticket_ref} after ${fetch_attempts} attempts — state unverified"
+    printf 'state-unverified'
     return 0
-  }
+  fi
 
   issue_state="$(printf '%s' "${issue_json}" | _jq -r '.state // empty' 2>/dev/null)" || issue_state=""
 
@@ -1228,6 +1255,10 @@ decide_after_iteration() {
       merged)  printf 'stop:0:merged' ;;
       blocked) printf 'stop:0:blocked' ;;
       pr-open) printf 'stop:0:pr-open' ;;
+      # PDEV-490: a clean exit with an unfetchable state must never report
+      # success. Still terminal (no PM restart — GH-126), but it fails LOUD
+      # with a non-zero exit so the caller re-dispatches.
+      state-unverified) printf 'stop:1:state-unverified' ;;
       *)       printf 'stop:0:finished' ;;
     esac
     return 0
@@ -1499,10 +1530,11 @@ deliver_loop() {
     decision="$(decide_after_iteration "${monitor_result}" "${classification}" "${iteration}" "${MAX_RESTARTS}")"
 
     if [[ "${decision}" == continue ]]; then
-      # m-7: "unknown" (gh/network failure) doesn't burn a restart slot —
-      # decrement the iteration counter so MAX_RESTARTS isn't consumed by
-      # transient outages, and retry after a longer sleep.
-      if [[ "${classification}" == "unknown" && "${monitor_result}" == "stuck" ]]; then
+      # m-7: "state-unverified" (tracker fetch failed after the bounded poll
+      # retries, PDEV-490) doesn't burn a restart slot — decrement the
+      # iteration counter so MAX_RESTARTS isn't consumed by transient
+      # outages, and retry after a longer sleep.
+      if [[ "${classification}" == "state-unverified" && "${monitor_result}" == "stuck" ]]; then
         ((iteration--)) || true
         log_warn "Transient failure for ${ticket_ref} (${monitor_result}/${classification}) — retrying after extended sleep"
         sleep "$((LOOP_SLEEP_SECONDS * 6))"
@@ -1524,7 +1556,9 @@ deliver_loop() {
       merged)   log_done "${ticket_ref} — merged/closed" ;;
       blocked)  log_done "${ticket_ref} — blocked (human-input-needed)" ;;
       pr-open)  log_done "${ticket_ref} — PR open" ;;
-      finished) log_done "${ticket_ref} — PM completed (state unverified — GitHub API unavailable)" ;;
+      state-unverified)
+                log_failed "${ticket_ref} — state fetch failed after retries — dispatch outcome UNKNOWN, re-dispatch required" ;;
+      finished) log_done "${ticket_ref} — PM completed (no terminal state matched)" ;;
       max-restarts) log_failed "${ticket_ref} — max restarts exceeded" ;;
       *)        log_warn "${ticket_ref} — ${message}" ;;
     esac
@@ -1587,6 +1621,8 @@ join_delivery() {
   local exit_code=0
   case "${classification}" in
     merged|blocked|pr-open|finished) exit_code=0 ;;
+    # PDEV-490: everything else fails loud — state-unverified (tracker fetch
+    # failed after the bounded poll retries) must never read as a success.
     *) exit_code="${EXIT_FAILURE}" ;;
   esac
 
@@ -1599,7 +1635,9 @@ join_delivery() {
 
 # Print the delivery summary to stdout (key=value, parseable). Additive — the
 # existing stderr logging is unchanged. Consumed by the CEO (Mode A) and
-# batch-deliver.sh (Mode B) via INV-DM-1/4.
+# batch-deliver.sh (Mode B) via INV-DM-1/4. result is one of: merged |
+# blocked | pr-open | failed | finished | max-restarts | state-unverified
+# (PDEV-490: tracker state fetch failed after retries — outcome unverified).
 print_delivery_summary() {
   printf 'result=%s\n' "${DELIVERY_RESULT}"
   printf 'pr_url=%s\n' "${DELIVERY_PR_URL}"
@@ -1793,6 +1831,8 @@ Options:
    DELIVER_MAX_RESTARTS          Max restarts (default: 10)
    DELIVER_STUCK_MINUTES         Stuck threshold in minutes (default: 10)
    DELIVER_POLL_SECONDS          Activity poll interval (default: 60)
+   DELIVER_STATE_FETCH_ATTEMPTS  Post-session state-poll attempts (default: 3)
+   DELIVER_STATE_FETCH_BACKOFF_S Seconds between state-poll attempts (default: 2; 0 = no wait)
    DELIVER_KILL_GRACE_SECONDS    SIGTERM grace before SIGKILL (default: 20)
    PM_LIVENESS_TIMEOUT_SECONDS   Max seconds for the pm-liveness probe (default: 15)
    ADOS_PRE_ITERATION_HOOK       Optional hook path (default: ~/.ados/hooks/pre-opencode-iteration)
@@ -1811,14 +1851,14 @@ Options:
    ADOS_HOOK_ENV_OUTPUT=fresh private absolute path; ADOS_HOOK_ENV_FORMAT=ADOS_HOOK_ENV_V1.
 
 Default invocation prints a delivery summary on stdout (key=value):
-  result=<merged|blocked|pr-open|failed|finished>
+  result=<merged|blocked|pr-open|failed|finished|state-unverified>
   pr_url=<url or empty>
   exit_code=<0|1>
   last_message=<PM final message>
 
 Exit codes:
   0 - Success (merged, blocked, pr-open, or PM finished)
-  1 - Failed (max restarts exceeded)
+  1 - Failed (max restarts exceeded, or state-unverified: tracker state fetch failed after retries)
   2 - Usage error
 EOF
 }

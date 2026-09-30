@@ -385,8 +385,11 @@ test_classify_failed() {
   assert_eq "failed" "${result}" "Should classify as failed"
 }
 
-# TC-DT-07e: gh/network failure → unknown (m-7)
-test_classify_unknown() {
+# TC-DT-07e: tracker failure through all poll retries → state-unverified (m-7)
+# PDEV-490: a fetch failure that survives the bounded poll retries classifies
+# as "state-unverified" — never a success shape.
+test_classify_state_unverified() {
+  DELIVER_STATE_FETCH_BACKOFF_S=0
   _gh() {
     # Simulate gh failure (rate limit, network error)
     return 1
@@ -395,7 +398,7 @@ test_classify_unknown() {
   local result
   result="$(classify_result "GH-112" "feat/test")"
 
-  assert_eq "unknown" "${result}" "Should classify as unknown on gh failure"
+  assert_eq "state-unverified" "${result}" "Should classify as state-unverified on tracker failure"
 }
 
 # TC-DT-07f: classify_result empty-branch fallback — when no branch is resolved,
@@ -417,33 +420,34 @@ test_classify_pr_open_empty_branch_fallback() {
   assert_eq "pr-open" "${result}" "empty branch falls back to title-based open-PR search"
 }
 
-# TC-DT-06d: stuck + unknown classification → continue (no restart burn)
-# m-7: "unknown" (gh/network failure) doesn't burn a restart slot — but only
-# when the session was killed for staleness (stuck). A finished session that
-# can't be classified should STOP instead (see TC-DT-06e).
-test_unknown_continues() {
+# TC-DT-06d: stuck + state-unverified classification → continue (no restart burn)
+# m-7: "state-unverified" (tracker fetch failed after the bounded poll retries,
+# PDEV-490) doesn't burn a restart slot — but only when the session was killed
+# for staleness (stuck). A finished session that can't be classified must STOP
+# loudly instead (see TC-DT-06e).
+test_state_unverified_continues() {
   local result
-  result="$(decide_after_iteration "stuck" "unknown" 1 10)"
+  result="$(decide_after_iteration "stuck" "state-unverified" 1 10)"
 
-  assert_eq "continue" "${result}" "Should continue (not burn restart) on stuck+unknown"
+  assert_eq "continue" "${result}" "Should continue (not burn restart) on stuck+state-unverified"
 }
 
-# TC-DT-06e: decide_after_iteration: finished + unknown → stop:0:finished
-# GH-126: When the PM session finished normally (opencode exited on its own)
-# but post-session GitHub classification is unknown (rate limit / network), the
-# delivery should STOP — the PM completed its work; retrying won't change the
-# outcome. Previously this returned "continue", causing an infinite retry loop.
-test_decide_finished_unknown_stops() {
+# TC-DT-06e: decide_after_iteration: finished + state-unverified → stop:1
+# GH-126: a clean PM exit is NEVER restarted (infinite token-burn loop guard).
+# PDEV-490: but a clean exit whose state could not be verified after the
+# bounded poll retries must not report success either — it stops LOUD with a
+# non-zero exit so the caller re-dispatches (still no PM restart).
+test_decide_finished_state_unverified_stops_loud() {
   local result
-  result="$(decide_after_iteration "finished" "unknown" 1 10)"
-  assert_eq "stop:0:finished" "${result}" "finished+unknown should stop with exit 0"
+  result="$(decide_after_iteration "finished" "state-unverified" 1 10)"
+  assert_eq "stop:1:state-unverified" "${result}" "finished+state-unverified should stop with exit 1 (not success, not continue)"
 }
 
-# TC-DT-06f: decide_after_iteration: stuck + unknown → continue (still retries)
-test_decide_stuck_unknown_continues() {
+# TC-DT-06f: decide_after_iteration: stuck + state-unverified → continue
+test_decide_stuck_state_unverified_continues() {
   local result
-  result="$(decide_after_iteration "stuck" "unknown" 1 10)"
-  assert_eq "continue" "${result}" "stuck+unknown should continue"
+  result="$(decide_after_iteration "stuck" "state-unverified" 1 10)"
+  assert_eq "continue" "${result}" "stuck+state-unverified should continue"
 }
 
 # TC-DT-06g: decide_after_iteration: finished + failed → stop (terminal).
@@ -483,6 +487,98 @@ test_decide_stuck_blocked_stops() {
 test_decide_stuck_pr_open_stops() {
   local result; result="$(decide_after_iteration "stuck" "pr-open" 1 10)"
   assert_eq "stop:0:pr-open" "${result}" "stuck+pr-open stops"
+}
+
+# ============================================================================
+# TESTS: State-fetch failure classification (PDEV-490)
+# ============================================================================
+
+# TC-DT-490-1 (TC-1): tracker fetch fails through ALL poll retries + a clean PM
+# exit → state-unverified + stop:1 — never finished/exit-0, never continue.
+# Covers the PDEV-489 loss shape (false success on a lost dispatch).
+test_state_fetch_failure_is_loud_terminal_stop() {
+  DELIVER_STATE_FETCH_BACKOFF_S=0
+  local cnt_file="${_test_tmpdir}/fetch_calls"
+  : > "${cnt_file}"
+  _gh() {
+    printf 'x\n' >> "${cnt_file}"
+    return 1
+  }
+
+  local result decision
+  result="$(classify_result "GH-112" "feat/test")"
+  assert_eq "state-unverified" "${result}" "fetch failure through all retries classifies state-unverified"
+
+  assert_eq "3" "$(wc -l < "${cnt_file}" | tr -d '[:space:]')" "poll attempted DELIVER_STATE_FETCH_ATTEMPTS (default 3) times before giving up"
+
+  decision="$(decide_after_iteration "finished" "${result}" 1 10)"
+  assert_eq "stop:1:state-unverified" "${decision}" "finished+state-unverified is terminal stop with exit 1"
+
+  # NFR-1 (GH-126) guards: terminal-stop, never a PM restart, never a false success.
+  assert_not_contains "${decision}" "continue" "decision must not continue (no PM restart)"
+  assert_not_contains "${decision}" "stop:0" "decision must not exit 0 (no false success)"
+}
+
+# TC-DT-490-2 (TC-2): tracker fetch failure + watchdog-stuck session → the m-7
+# retry path continues WITHOUT burning a restart slot (PDEV-486 shape).
+test_state_fetch_failure_stuck_continues_without_slot_burn() {
+  local result
+  result="$(decide_after_iteration "stuck" "state-unverified" 1 10)"
+  assert_eq "continue" "${result}" "stuck+state-unverified continues (m-7 retry-without-slot-burn preserved)"
+}
+
+# TC-DT-490-3 (TC-3): tracker fetch fails N-1 times then succeeds → the bounded
+# poll retry recovers and the real classification is returned.
+test_state_fetch_transient_failure_recovers() {
+  DELIVER_STATE_FETCH_BACKOFF_S=0
+  local cnt_file="${_test_tmpdir}/fetch_calls"
+  : > "${cnt_file}"
+  _gh() {
+    case "$1" in
+      issue)
+        printf 'x\n' >> "${cnt_file}"
+        if [[ "$(wc -l < "${cnt_file}" | tr -d '[:space:]')" -ge 2 ]]; then
+          printf '%s' '{"state":"OPEN","labels":[]}'
+        else
+          return 1
+        fi
+        ;;
+      pr) printf '%s' '[]' ;;
+    esac
+  }
+
+  local result
+  result="$(classify_result "GH-112" "feat/test")"
+  assert_eq "failed" "${result}" "recovers after transient failure — real classification (open issue, no PR) returned"
+
+  assert_eq "2" "$(wc -l < "${cnt_file}" | tr -d '[:space:]')" "issue poll attempted twice (1 failure + 1 retry success)"
+}
+
+# TC-DT-490-4 (TC-4): green paths unregressed — merged/blocked/pr-open map
+# unchanged after the state-poll retry refactor (NFR-2).
+test_state_fetch_green_paths_unregressed() {
+  DELIVER_STATE_FETCH_BACKOFF_S=0
+  _gh() { printf '%s' '{"state":"CLOSED","labels":[]}'; }
+  local r_merged; r_merged="$(classify_result "GH-112" "feat/test")"
+  assert_eq "merged" "${r_merged}" "closed issue still classifies merged"
+
+  _gh() { case "$1" in issue) printf '%s' '{"state":"OPEN","labels":[{"name":"human-input-needed"}]}' ;; esac; }
+  local r_blocked; r_blocked="$(classify_result "GH-112" "feat/test")"
+  assert_eq "blocked" "${r_blocked}" "blocked label still classifies blocked"
+
+  _gh() { case "$1" in issue) printf '%s' '{"state":"OPEN","labels":[]}' ;; pr) printf '%s' '[{"number":42}]' ;; esac; }
+  local r_pr_open; r_pr_open="$(classify_result "GH-112" "feat/test")"
+  assert_eq "pr-open" "${r_pr_open}" "open PR still classifies pr-open"
+}
+
+# TC-DT-490-5 (TC-5): --help documents state-unverified in the result map and
+# the exit-code list (AC-2).
+test_help_documents_state_unverified() {
+  local help_text
+  help_text="$(usage)"
+
+  assert_contains "${help_text}" "result=<merged|blocked|pr-open|failed|finished|state-unverified>" "result map includes state-unverified"
+  assert_contains "${help_text}" "1 - Failed (max restarts exceeded, or state-unverified" "exit-code list covers state-unverified"
 }
 
 # ============================================================================
@@ -1962,14 +2058,15 @@ test_gitlab_classify_failed_no_mr() {
   ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
 }
 
-test_gitlab_classify_unknown_tracker_error() {
+test_gitlab_classify_state_unverified_tracker_error() {
   bash -c '
     ADOS_PLATFORM=gitlab
     source "$1" >/dev/null 2>&1
     PLATFORM=gitlab
+    DELIVER_STATE_FETCH_BACKOFF_S=0
     _glab() { return 1; }
     result=$(classify_result GH-148)
-    [[ "$result" == "unknown" ]]
+    [[ "$result" == "state-unverified" ]]
   ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
 }
 
@@ -2084,11 +2181,16 @@ main() {
   run_test "TC-DT-07b: classify merged (closed issue)" test_classify_merged_closed
   run_test "TC-DT-07c: classify pr-open" test_classify_pr_open
   run_test "TC-DT-07d: classify failed" test_classify_failed
-  run_test "TC-DT-07e: classify unknown (gh failure)" test_classify_unknown
+  run_test "TC-DT-07e: classify state-unverified (tracker failure after poll retries)" test_classify_state_unverified
   run_test "TC-DT-07f: classify pr-open (empty-branch title search fallback)" test_classify_pr_open_empty_branch_fallback
-  run_test "TC-DT-06d: stuck+unknown continues without restart burn" test_unknown_continues
-  run_test "TC-DT-06e: finished+unknown stops (GH-126 retry-loop fix)" test_decide_finished_unknown_stops
-  run_test "TC-DT-06f: stuck+unknown continues" test_decide_stuck_unknown_continues
+  run_test "TC-DT-06d: stuck+state-unverified continues without restart burn" test_state_unverified_continues
+  run_test "TC-DT-06e: finished+state-unverified stops loud with exit 1 (GH-126 + PDEV-490)" test_decide_finished_state_unverified_stops_loud
+  run_test "TC-DT-06f: stuck+state-unverified continues" test_decide_stuck_state_unverified_continues
+  run_test "TC-DT-490-1: fetch failure through all retries + clean exit → stop:1:state-unverified (PDEV-490)" test_state_fetch_failure_is_loud_terminal_stop
+  run_test "TC-DT-490-2: stuck+state-unverified continues without slot burn (m-7, PDEV-490)" test_state_fetch_failure_stuck_continues_without_slot_burn
+  run_test "TC-DT-490-3: transient fetch failure recovers via bounded poll retry (PDEV-490)" test_state_fetch_transient_failure_recovers
+  run_test "TC-DT-490-4: green paths unregressed (merged/blocked/pr-open) (PDEV-490)" test_state_fetch_green_paths_unregressed
+  run_test "TC-DT-490-5: --help documents state-unverified (PDEV-490)" test_help_documents_state_unverified
   run_test "TC-DT-06g: finished+failed stops (terminal)" test_decide_finished_failed_stops
   run_test "TC-DT-06h: finished+merged stops" test_decide_finished_merged_stops
   run_test "TC-DT-06h: finished+blocked stops" test_decide_finished_blocked_stops
@@ -2176,7 +2278,7 @@ main() {
   run_test "TC-PLAT-018: GitLab closed issue → merged" test_gitlab_classify_merged_closed_issue
   run_test "TC-PLAT-019: GitLab issue with blocked label → blocked" test_gitlab_classify_blocked
   run_test "TC-PLAT-020: GitLab open issue, no MR → failed" test_gitlab_classify_failed_no_mr
-  run_test "TC-PLAT-021: GitLab tracker error → unknown" test_gitlab_classify_unknown_tracker_error
+  run_test "TC-PLAT-021: GitLab tracker error → state-unverified (after poll retries)" test_gitlab_classify_state_unverified_tracker_error
   run_test "TC-PLAT-023: GitLab open MR → pr_url_for returns web_url" test_gitlab_pr_url_for_open_mr
   run_test "TC-PLAT-024: GitLab no open MR → pr_url_for empty" test_gitlab_pr_url_for_no_mr
 
