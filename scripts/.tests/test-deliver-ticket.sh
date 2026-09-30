@@ -498,6 +498,7 @@ test_decide_stuck_pr_open_stops() {
 # Covers the PDEV-489 loss shape (false success on a lost dispatch).
 test_state_fetch_failure_is_loud_terminal_stop() {
   DELIVER_STATE_FETCH_BACKOFF_S=0
+  DELIVER_STATE_FETCH_ATTEMPTS=3
   local cnt_file="${_test_tmpdir}/fetch_calls"
   : > "${cnt_file}"
   _gh() {
@@ -509,7 +510,7 @@ test_state_fetch_failure_is_loud_terminal_stop() {
   result="$(classify_result "GH-112" "feat/test")"
   assert_eq "state-unverified" "${result}" "fetch failure through all retries classifies state-unverified"
 
-  assert_eq "3" "$(wc -l < "${cnt_file}" | tr -d '[:space:]')" "poll attempted DELIVER_STATE_FETCH_ATTEMPTS (default 3) times before giving up"
+  assert_eq "3" "$(wc -l < "${cnt_file}" | tr -d '[:space:]')" "poll attempted DELIVER_STATE_FETCH_ATTEMPTS (pinned 3) times before giving up"
 
   decision="$(decide_after_iteration "finished" "${result}" 1 10)"
   assert_eq "stop:1:state-unverified" "${decision}" "finished+state-unverified is terminal stop with exit 1"
@@ -531,6 +532,7 @@ test_state_fetch_failure_stuck_continues_without_slot_burn() {
 # poll retry recovers and the real classification is returned.
 test_state_fetch_transient_failure_recovers() {
   DELIVER_STATE_FETCH_BACKOFF_S=0
+  DELIVER_STATE_FETCH_ATTEMPTS=3
   local cnt_file="${_test_tmpdir}/fetch_calls"
   : > "${cnt_file}"
   _gh() {
@@ -577,7 +579,7 @@ test_help_documents_state_unverified() {
   local help_text
   help_text="$(usage)"
 
-  assert_contains "${help_text}" "result=<merged|blocked|pr-open|failed|finished|state-unverified>" "result map includes state-unverified"
+  assert_contains "${help_text}" "result=<merged|blocked|pr-open|failed|finished|max-restarts|state-unverified>" "result map includes state-unverified"
   assert_contains "${help_text}" "1 - Failed (max restarts exceeded, or state-unverified" "exit-code list covers state-unverified"
 }
 

@@ -1851,7 +1851,7 @@ Options:
    ADOS_HOOK_ENV_OUTPUT=fresh private absolute path; ADOS_HOOK_ENV_FORMAT=ADOS_HOOK_ENV_V1.
 
 Default invocation prints a delivery summary on stdout (key=value):
-  result=<merged|blocked|pr-open|failed|finished|state-unverified>
+  result=<merged|blocked|pr-open|failed|finished|max-restarts|state-unverified>
   pr_url=<url or empty>
   exit_code=<0|1>
   last_message=<PM final message>
