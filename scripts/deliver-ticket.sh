@@ -62,6 +62,12 @@ readonly HOOK_ENV_ALLOWLIST="${ADOS_HOOK_ENV_ALLOWLIST:-}"
 
 # Platform configuration
 ADOS_PLATFORM="${ADOS_PLATFORM:-}"  # github | gitlab (empty = auto-detect)
+# PDEV/GH-158: tracker is SEPARATE from the MR host. PLATFORM stays the MR/PR
+# CLI host (github|gitlab); ADOS_TRACKER routes ONLY the issue-state poll
+# (github|gitlab|jira). Default: tracker follows PLATFORM (back-compat —
+# github/gitlab repos behave exactly as before). Jira-tracked fleets set
+# ADOS_TRACKER=jira and keep PLATFORM=gitlab/github for MR operations.
+ADOS_TRACKER="${ADOS_TRACKER:-}"   # github | gitlab | jira (empty = follow PLATFORM)
 # Default the dispatch global so platform-aware helpers (_tracker/_mr and the
 # github|gitlab branch points) never hit an unbound-variable abort under
 # `set -u` before main() resolves the real platform via detect_platform().
@@ -69,6 +75,16 @@ ADOS_PLATFORM="${ADOS_PLATFORM:-}"  # github | gitlab (empty = auto-detect)
 # source this file without invoking main() get the safe github default.
 PLATFORM="${PLATFORM:-github}"
 readonly ADOS_BLOCKED_LABEL="${ADOS_BLOCKED_LABEL:-human-input-needed}"
+# GH-158: optional fleet config file, sourced once at startup so
+# service-manager environments (which do not inherit shell exports) can still
+# set non-readonly dispatch config — e.g. ADOS_TRACKER=jira, ADOS_PLATFORM.
+# The file must not assign readonly vars (ADOS_BLOCKED_LABEL and friends would
+# abort under `set -e` on reassignment).
+if [[ -z "${ADOS_ENV_LOADED:-}" && -r "${ADOS_ENV_FILE:-$HOME/.config/ados/env.sh}" ]]; then
+  ADOS_ENV_LOADED=1
+  # shellcheck disable=SC1090
+  source "${ADOS_ENV_FILE:-$HOME/.config/ados/env.sh}"
+fi
 # F-9: Merge-strategy config surface. deliver-ticket.sh itself never merges
 # (F-2); this is declared so sourcing the script under `set -u` exposes the
 # configured default that batch-deliver.sh (the Mode B merge authority) reads.
@@ -275,15 +291,55 @@ _mr() {
 # Normalized schema (DM-1): {state: open|closed, labels: [name,...]} for issues
 #                          [{number, url, head_branch, merged_at}] for MR/PR lists
 
-# Normalize issue JSON from either GitHub or GitLab
+# Normalize issue JSON from GitHub, GitLab, or Jira (PDEV/GH-158).
+# Routing: ADOS_TRACKER (github|gitlab|jira) when set, else PLATFORM.
 tracker_issue_view() {
   local -r ticket_ref="$1"
   local raw_json normalized
 
   # Default to github if PLATFORM not set
   local platform="${PLATFORM:-github}"
+  local tracker="${ADOS_TRACKER:-${platform}}"
 
-  if [[ "${platform}" == "gitlab" ]]; then
+  if [[ "${tracker}" == "jira" ]]; then
+    # Jira Cloud REST: basic-auth GET, fields limited to status+labels.
+    # Credentials: JIRA_URL / JIRA_USERNAME / JIRA_API_TOKEN from env, with a
+    # one-time optional source of "${JIRA_KEYS_ENV_FILE:-$HOME/.config/ados/jira-env.sh}"
+    # when present (service-manager environments do not inherit shell exports).
+    if [[ -z "${JIRA_URL:-}" || -z "${JIRA_USERNAME:-}" || -z "${JIRA_API_TOKEN:-}" ]]; then
+      local keys_file="${JIRA_KEYS_ENV_FILE:-$HOME/.config/ados/jira-env.sh}"
+      if [[ -f "${keys_file}" ]]; then
+        # shellcheck disable=SC1090
+        source "${keys_file}"
+      fi
+    fi
+    if [[ -z "${JIRA_URL:-}" || -z "${JIRA_USERNAME:-}" || -z "${JIRA_API_TOKEN:-}" ]]; then
+      log_warn "ADOS_TRACKER=jira but JIRA_URL/JIRA_USERNAME/JIRA_API_TOKEN are unset (and no jira-env.sh) — tracker poll will fail"
+      return 1
+    fi
+    if ! raw_json="$(curl -sS --max-time 15 \
+        -u "${JIRA_USERNAME}:${JIRA_API_TOKEN}" \
+        -H "Accept: application/json" \
+        "${JIRA_URL%/}/rest/api/2/issue/${ticket_ref}?fields=status,labels" 2>/dev/null)"; then
+      return 1
+    fi
+    # Jira error payload (e.g. issue not found) carries .errorMessages — treat
+    # as a failed fetch so the bounded PDEV-490 retry/unverified path handles it.
+    if printf '%s' "${raw_json}" | _jq -e '.errorMessages' >/dev/null 2>&1; then
+      return 1
+    fi
+    # Normalize: terminal statuses → "closed" (classify_result maps closed →
+    # merged-class semantics); everything else → "open". Jira labels are
+    # already bare strings (.fields.labels).
+    normalized="$(printf '%s' "${raw_json}" | _jq '{
+      state: (if (.fields.status.name // "") | ascii_downcase | test("^(done|closed|resolved|won.?t do|cancelled)$") then "closed" else "open" end),
+      labels: (.fields.labels // [])
+    }')"
+    printf '%s' "${normalized}"
+    return 0
+  fi
+
+  if [[ "${tracker}" == "gitlab" || "${platform}" == "gitlab" ]]; then
     # GitLab: state is "opened"/"closed", labels are in .labels[].name
     if ! raw_json="$(_tracker issue view "${ticket_ref}" --output json 2>/dev/null)"; then
       return 1
@@ -768,6 +824,12 @@ validate_ticket_ref() {
 # PURE: Convert workItemRef (GH-37) to bare issue number (37) for gh CLI
 to_issue_number() {
   local -r ticket_ref="$1"
+  # PDEV/GH-158: Jira refs are the FULL key (PDEV-208) — numeric stripping is
+  # a GitHub/GitLab-issues convention only.
+  if [[ "${ADOS_TRACKER:-${PLATFORM:-github}}" == "jira" ]]; then
+    printf '%s' "${ticket_ref}"
+    return 0
+  fi
   printf '%s' "${ticket_ref#*-}"
 }
 

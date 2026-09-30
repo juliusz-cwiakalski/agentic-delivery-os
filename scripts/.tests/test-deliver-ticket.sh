@@ -99,6 +99,9 @@ assert_file_exists() {
 # SOURCE THE SCRIPT UNDER TEST
 # ============================================================================
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+# GH-158: isolate the harness from any fleet env.sh on the host machine —
+# tests exercise explicit env only.
+ADOS_ENV_LOADED=1
 # shellcheck source=/dev/null
 source "${SCRIPT_DIR}/deliver-ticket.sh"
 
@@ -347,13 +350,82 @@ test_classify_merged_closed() {
   assert_eq "merged" "${result}" "Should classify as merged (closed issue)"
 }
 
+# TC-DT-491a (PDEV/GH-158): ADOS_TRACKER=jira + Done status → merged;
+# to_issue_number passes the FULL ref through (no numeric strip).
+test_classify_jira_done_merged() {
+  JIRA_URL="https://example.atlassian.net" JIRA_USERNAME="t@example" JIRA_API_TOKEN="dummy"
+  curl() {
+    printf '%s' '{"fields":{"status":{"name":"Done"},"labels":["bug","change"]}}'
+  }
+  ADOS_TRACKER=jira
+  PLATFORM=gitlab
+
+  local result
+  result="$(classify_result "PDEV-208" "feat/test")"
+
+  assert_eq "merged" "${result}" "Jira Done should classify as merged"
+  assert_eq "PDEV-208" "$(to_issue_number "PDEV-208")" "Jira ref must pass through unstripped"
+}
+
+# TC-DT-491b: jira open + blocked label → blocked.
+test_classify_jira_blocked() {
+  JIRA_URL="https://example.atlassian.net" JIRA_USERNAME="t@example" JIRA_API_TOKEN="dummy"
+  curl() {
+    printf '%s' '{"fields":{"status":{"name":"In Progress"},"labels":["human-input-needed"]}}'
+  }
+  ADOS_TRACKER=jira
+  PLATFORM=gitlab
+
+  local result
+  result="$(classify_result "PDEV-208" "feat/test")"
+
+  assert_eq "blocked" "${result}" "Jira blocked label should classify as blocked"
+}
+
+# TC-DT-491c: jira open + open GitLab MR (tracker/MR-host SPLIT) → pr-open.
+test_classify_jira_open_with_gitlab_mr() {
+  JIRA_URL="https://example.atlassian.net" JIRA_USERNAME="t@example" JIRA_API_TOKEN="dummy"
+  curl() {
+    printf '%s' '{"fields":{"status":{"name":"In Review"},"labels":[]}}'
+  }
+  _glab() {
+    case "$1" in
+      mr) printf '%s' '[{"iid":25,"web_url":"https://gitlab.example/mr/25","source_branch":"feat/test","merged_at":null}]' ;;
+      *) printf '%s' '[]' ;;
+    esac
+  }
+  ADOS_TRACKER=jira
+  PLATFORM=gitlab
+
+  local result
+  result="$(classify_result "PDEV-208" "feat/test")"
+
+  assert_eq "pr-open" "${result}" "Jira open + GitLab MR should classify as pr-open"
+}
+
+# TC-DT-491d: jira error payload (issue not found) → fetch failure path
+# (state-unverified via the bounded PDEV-490 retries, never finished).
+test_classify_jira_error_payload() {
+  JIRA_URL="https://example.atlassian.net" JIRA_USERNAME="t@example" JIRA_API_TOKEN="dummy"
+  curl() {
+    printf '%s' '{"errorMessages":["Issue does not exist"],"errors":{}}'
+  }
+  ADOS_TRACKER=jira
+  PLATFORM=gitlab
+
+  local result
+  result="$(classify_result "PDEV-999" "feat/test")"
+
+  assert_eq "state-unverified" "${result}" "Jira error payload must surface as state-unverified"
+}
+
 # TC-DT-07c: open PR → pr-open
 test_classify_pr_open() {
   _gh() {
     case "$1" in
       issue)
         printf '%s' '{"state":"OPEN","labels":[]}'
-        ;;
+      ;;
       pr)
         printf '%s' '[{"number":42}]'
         ;;
@@ -2193,6 +2265,10 @@ main() {
   run_test "TC-DT-490-3: transient fetch failure recovers via bounded poll retry (PDEV-490)" test_state_fetch_transient_failure_recovers
   run_test "TC-DT-490-4: green paths unregressed (merged/blocked/pr-open) (PDEV-490)" test_state_fetch_green_paths_unregressed
   run_test "TC-DT-490-5: --help documents state-unverified (PDEV-490)" test_help_documents_state_unverified
+  run_test "TC-DT-491a: ADOS_TRACKER=jira Done -> merged; full ref passthrough (GH-158)" test_classify_jira_done_merged
+  run_test "TC-DT-491b: jira open + blocked label -> blocked (GH-158)" test_classify_jira_blocked
+  run_test "TC-DT-491c: jira open + GitLab MR -> pr-open (tracker/MR-host split, GH-158)" test_classify_jira_open_with_gitlab_mr
+  run_test "TC-DT-491d: jira error payload -> state-unverified (GH-158)" test_classify_jira_error_payload
   run_test "TC-DT-06g: finished+failed stops (terminal)" test_decide_finished_failed_stops
   run_test "TC-DT-06h: finished+merged stops" test_decide_finished_merged_stops
   run_test "TC-DT-06h: finished+blocked stops" test_decide_finished_blocked_stops
