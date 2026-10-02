@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-AUTONOMOUS-DELIVERY
 status: Current
 created: 2026-07-07
-last_updated: 2026-08-04
+last_updated: 2026-10-02
 owners: ["engineering"]
 service: delivery-os
 summary: "The unattended delivery neighborhood of the lifecycle: the two autonomous modes (Mode A — autonomous CEO loop; Mode B — manual batch), the bash delivery scripts (ceo-loop.sh, deliver-ticket.sh, batch-deliver.sh, pm-liveness.sh, opencode-session.sh), the AI-vs-script split, and the behavioral invariants (INV-DM-1..6) that keep unattended delivery converging instead of burning tokens. Liveness is multi-signal: recursive session-tree message traffic (parent_id traversal of the current session_message table) PLUS git/worktree activity; a race-free delivering marker tells ceo-loop.sh the CEO is blocked on a delivery. deliver-ticket.sh no longer merges. Since GH-148, deliver-ticket.sh and batch-deliver.sh are platform-aware: they auto-detect GitHub vs GitLab (env override > git remote > glab auth > default github) and route tracker/MR operations through a dispatch seam with JSON normalization, so GitLab deliveries report accurate results and populated PR URLs; ceo-loop.sh is unchanged (it delegates delivery and merges, so needs no platform detection)."
 links:
-  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148", "GH-150"]
+  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148", "GH-150", "PDEV-514"]
   decisions: ["TDR-0002"]
   guides:
     - "doc/guides/delivery-modes.md"
@@ -76,7 +76,11 @@ Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it
   is no longer hard-blocked on `gh`). Issue and PR/MR operations route through a
   single dispatch seam (`_tracker` / `_mr`); a JSON normalization shim presents
   a common schema regardless of the divergent `gh --json` vs `glab --output json`
-  field shapes, so `classify_result` and `pr_url_for` are platform-agnostic. On
+  field shapes, so `classify_result` and `pr_url_for` are platform-agnostic. When
+  the branch-scoped MR lookup is empty, both fall back to a bounded ticket-ref
+  lookup that accepts an MR only when the ticket ref appears in its title or its
+  source/head branch (`source_branch`/`headRefName`) — an MR matched only on
+  incidental full-text body is never returned or used to classify `pr-open`. On
   GitLab this makes deliveries report accurate `pr-open`/`merged`/`blocked`
   results with a populated MR web URL, and eliminates the false "Could not fetch
   issue state" warnings that misdiagnosed "wrong platform CLI" as a
@@ -99,7 +103,7 @@ These are the non-negotiable contract the tooling enforces. Full rationale and e
 
 | ID | Invariant |
 |----|-----------|
-| **INV-DM-1** | `deliver-ticket.sh` runs **foreground, never detached** — a caller blocks until merged/blocked/pr-open/failed. The CEO must never `setsid … & disown` it. |
+| **INV-DM-1** | `deliver-ticket.sh` runs **foreground, never detached** — a caller blocks until merged/blocked/pr-open/pr-open-unverified/failed/finished/max-restarts/state-unverified. The CEO must never `setsid … & disown` it. |
 | **INV-DM-2** | `deliver-ticket.sh` is **single-flight + join, per repo working tree** — a live instance for the same ticket is *joined* (wait + classify), never raced with a duplicate PM. SIGTERM/SIGINT is propagated to the PM child (grace period → SIGKILL). |
 | **INV-DM-3** | `ceo-loop.sh` detects a **stuck** CEO (no session traffic **and** no healthy delivery in progress — checked via both the `--is-delivering` PID probe **and** the race-free delivering marker file) — not a healthy wait. Its primary job is stuck-CEO recovery; "parking while a delivery is in progress" is the CEO blocking on `deliver-ticket.sh`, not the loop's job. |
 | **INV-DM-4** | In Mode A the **`@ceo` is the merge authority** — it verifies the PR is approved **and** the PM has finalized all 11 phases (`chg-<ref>-pm-notes.yaml`) before performing the platform-appropriate squash-merge (`gh pr merge --squash` on GitHub, `glab mr merge --squash` on GitLab; the CEO reads `.ai/agent/pr-instructions.md` for the platform). "Merge-not-yield": a ready, approved, finalized PR is merged, not deferred indefinitely. |

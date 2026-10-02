@@ -431,32 +431,50 @@ mr_list_closed_merged() {
   printf '%s' "${normalized}"
 }
 
-# Normalize open MR/PR search by title
+# Normalize open MR/PR full-text search by the given term.
+# Args: search_term [association_ref]
+# DM-2 (PDEV-514): when association_ref is non-empty the whole hit list is
+# bounded to MRs genuinely associated with that ticket — the ref must appear in
+# the MR title OR in its source/head branch (GitLab .source_branch, GitHub
+# .headRefName). The filter runs over the entire list before any caller selects
+# its first element, so an incidental full-text hit can never be selected ahead
+# of a genuine one. Callers that need the raw (unbounded) search pass only the
+# search term; the filter is opt-in and never default-on.
 mr_list_search() {
   local -r search_term="$1"
+  local -r association_ref="${2:-}"
   local raw_json normalized
 
   # Default to github if PLATFORM not set
   local platform="${PLATFORM:-github}"
 
   if [[ "${platform}" == "gitlab" ]]; then
-    # GitLab: .iid, .web_url
+    # GitLab: .iid, .web_url, .title, .source_branch
     if ! raw_json="$(_mr mr list --search "${search_term}" --output json 2>/dev/null)"; then
       return 1
     fi
     normalized="$(echo "${raw_json}" | _jq '[.[] | select(.state == "opened") | {
       number: .iid,
-      url: .web_url
+      url: .web_url,
+      title: (.title // ""),
+      head_branch: (.source_branch // "")
     }]' 2>/dev/null || echo '[]')"
   else
-    # GitHub: .number, .url
-    if ! raw_json="$(_mr pr list --search "${search_term}" --json number,state,url 2>/dev/null)"; then
+    # GitHub: .number, .url, .title, .headRefName
+    if ! raw_json="$(_mr pr list --search "${search_term}" --json number,state,url,title,headRefName 2>/dev/null)"; then
       return 1
     fi
     normalized="$(echo "${raw_json}" | _jq '[.[] | select(.state == "OPEN") | {
       number: .number,
-      url: .url
+      url: .url,
+      title: (.title // ""),
+      head_branch: (.headRefName // "")
     }]' 2>/dev/null || echo '[]')"
+  fi
+
+  if [[ -n "${association_ref}" ]]; then
+    normalized="$(printf '%s' "${normalized}" | _jq --arg ref "${association_ref}" \
+      '[.[] | select((.title | contains($ref)) or (.head_branch | contains($ref)))]' 2>/dev/null || echo '[]')"
   fi
 
   printf '%s' "${normalized}"
@@ -1258,11 +1276,12 @@ classify_result() {
       return 0
     fi
   else
-    # Branch-agnostic fallback: search open PRs by ticket ref in the title.
-    # Ensures classify_result sees the PR even when the branch wasn't resolved
-    # (defense-in-depth — resolve_branch's git scan should normally handle this).
+    # Branch-agnostic fallback: search open PRs by ticket ref, bounded (PDEV-514
+    # DM-2) to a genuine association — the ref must be in the MR title or its
+    # source/head branch. An incidental full-text body mention must never be
+    # enough to classify pr-open.
     local pr_search_json
-    pr_search_json="$(mr_list_search "${ticket_ref}" 2>/dev/null)" || pr_search_json='[]'
+    pr_search_json="$(mr_list_search "${ticket_ref}" "${ticket_ref}" 2>/dev/null)" || pr_search_json='[]'
     if printf '%s' "${pr_search_json}" | _jq -e '.[0]' >/dev/null 2>&1; then
       printf 'pr-open'
       return 0
@@ -1293,7 +1312,9 @@ classify_result() {
 # it is empty at summary time and the branch-scoped lookup cannot see the MR the
 # PM just created. A ref/title fallback (mirroring classify_result's empty-branch
 # search) therefore resolves the URL too; empty is returned only when nothing
-# resolves. F-5: mr_list_for_branch/mr_list_search normalize the .url key.
+# resolves. PDEV-514 DM-2: that fallback is bounded to MRs whose title or
+# source/head branch carries the ref. F-5: mr_list_for_branch/mr_list_search
+# normalize the .url key.
 pr_url_for() {
   local -r ticket_ref="${1:-}"
   local -r branch="${2:-}"
@@ -1306,8 +1327,10 @@ pr_url_for() {
   fi
 
   if [[ -z "${url}" && -n "${ticket_ref}" ]]; then
+    # Bounded (PDEV-514 DM-2): only a title/branch ref match is eligible, so an
+    # unrelated MR that merely mentions the ref in its body is never returned.
     local search_json
-    search_json="$(mr_list_search "${ticket_ref}" 2>/dev/null)" || search_json='[]'
+    search_json="$(mr_list_search "${ticket_ref}" "${ticket_ref}" 2>/dev/null)" || search_json='[]'
     url="$(printf '%s' "${search_json}" | _jq -r '.[0].url // empty' 2>/dev/null)" || url=""
   fi
 

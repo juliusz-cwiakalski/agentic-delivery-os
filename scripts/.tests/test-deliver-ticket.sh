@@ -481,7 +481,9 @@ test_classify_pr_open_empty_branch_fallback() {
       issue) printf '%s' '{"state":"OPEN","labels":[]}' ;;
       pr)
         if printf '%s ' "$@" | grep -q -- '--search'; then
-          printf '%s' '[{"number":777,"state":"OPEN"}]'
+          # PDEV-514 §6.1 FIX-DT-07f: the bounded fallback needs a title/branch
+          # association; keep the assertion below unchanged (pr-open).
+          printf '%s' '[{"number":777,"state":"OPEN","title":"fix(GH-999): open PR"}]'
         else
           printf '%s' '[]'
         fi
@@ -1228,14 +1230,21 @@ test_stdout_returns_pm_last_message_and_result() {
   mkdir -p "${fake_delivery}"
   DELIVERY_DIR="${fake_delivery}"
 
+  # PDEV-514 F-4: the mock must genuinely drive the summary to the asserted
+  # tuple. The branch-scoped lookup (mr_list_for_branch) calls
+  # `gh pr list --head feat/x --json number,url,headRefName,mergedAt`, so return
+  # the open PR for that shape (and [] for the closed/merged lookup) — this makes
+  # classify_result produce pr-open and pr_url_for populate the URL for real,
+  # rather than relying on a pre-set variable.
+  PLATFORM=github
   _gh() {
     case "$1" in
       issue) printf '%s' '{"state":"OPEN","labels":[]}' ;;
       pr)
-        if printf '%s ' "$@" | grep -q -- '--state open'; then
-          printf '%s' '[{"number":143,"url":"https://github.com/x/y/pull/143"}]'
-        else
+        if printf '%s ' "$@" | grep -q -- '--state closed'; then
           printf '%s' '[]'
+        else
+          printf '%s' '[{"number":143,"url":"https://github.com/x/y/pull/143","headRefName":"feat/x","mergedAt":null}]'
         fi
         ;;
     esac
@@ -1249,14 +1258,14 @@ test_stdout_returns_pm_last_message_and_result() {
 
   deliver_loop "GH-142" "feat/x" >/dev/null 2>&1 || true
   local summary
-  summary="$(print_delivery_summary)"
+  summary="$(print_delivery_summary 2>/dev/null)"
 
-  assert_contains "${summary}" "result=" "summary must include result= key"
-  assert_contains "${summary}" "pr_url=" "summary must include pr_url= key"
-  assert_contains "${summary}" "last_message=" "summary must include last_message= key"
-  assert_contains "${summary}" "pr-open" "summary should classify pr-open"
-  assert_contains "${summary}" "PR #143 open" "summary should carry the PM last-message text"
-  return 0
+  # Every assertion is enforced (`|| return 1`): run_test executes the function
+  # under `set -e` and a bare failing assert_* would otherwise be ignored.
+  assert_contains "${summary}" "result=pr-open" "summary must carry the genuine result=pr-open tuple" || return 1
+  assert_contains "${summary}" "pr_url=https://github.com/x/y/pull/143" "summary must carry the resolved PR URL" || return 1
+  assert_contains "${summary}" "exit_code=0" "summary must carry exit_code=0" || return 1
+  assert_contains "${summary}" "last_message=PR #143 open" "summary must carry the PM last-message text" || return 1
 }
 
 # ============================================================================
@@ -2181,7 +2190,7 @@ test_pdev512_pr_url_ref_title_fallback() {
         printf "%s" "{\"state\":\"opened\",\"labels\":[]}"
       elif [[ "$1" == "mr" && "$2" == "list" ]]; then
         if printf "%s " "$@" | grep -q -- "--search"; then
-          printf "%s" "[{\"iid\":512,\"web_url\":\"https://gitlab.example/mr/512\",\"source_branch\":\"feat/x\",\"state\":\"opened\"}]"
+          printf "%s" "[{\"iid\":512,\"web_url\":\"https://gitlab.example/mr/512\",\"source_branch\":\"feat/x\",\"title\":\"fix(GH-512): pr-url fallback\",\"state\":\"opened\"}]"
         else
           printf "%s" "[]"
         fi
@@ -2201,7 +2210,7 @@ test_pdev512_pr_url_ref_title_fallback() {
         printf "%s" "{\"state\":\"OPEN\",\"labels\":[]}"
       elif [[ "$1" == "pr" && "$2" == "list" ]]; then
         if printf "%s " "$@" | grep -q -- "--search"; then
-          printf "%s" "[{\"number\":512,\"url\":\"https://github.example/pull/512\",\"state\":\"OPEN\"}]"
+          printf "%s" "[{\"number\":512,\"url\":\"https://github.example/pull/512\",\"title\":\"fix(GH-512): pr-url fallback\",\"state\":\"OPEN\"}]"
         else
           printf "%s" "[]"
         fi
@@ -2257,7 +2266,7 @@ test_pdev512_mr_list_search_exposes_url() {
     ADOS_ENV_LOADED=1 ADOS_PLATFORM=gitlab
     source "$1" >/dev/null 2>&1
     PLATFORM=gitlab
-    _glab() { printf "%s" "[{\"iid\":9,\"web_url\":\"https://gitlab.example/mr/9\",\"state\":\"opened\"}]"; }
+    _glab() { printf "%s" "[{\"iid\":9,\"web_url\":\"https://gitlab.example/mr/9\",\"title\":\"GH-512\",\"state\":\"opened\"}]"; }
     result=$(mr_list_search GH-512)
     [[ "$result" == *"mr/9"* ]] && [[ "$result" == *"number"* ]]
   ' _ "${SCRIPT_DIR}/deliver-ticket.sh" || return 1
@@ -2266,10 +2275,184 @@ test_pdev512_mr_list_search_exposes_url() {
     ADOS_ENV_LOADED=1 ADOS_PLATFORM=github
     source "$1" >/dev/null 2>&1
     PLATFORM=github
-    _gh() { printf "%s" "[{\"number\":9,\"url\":\"https://github.example/pull/9\",\"state\":\"OPEN\"}]"; }
+    _gh() { printf "%s" "[{\"number\":9,\"url\":\"https://github.example/pull/9\",\"title\":\"GH-512\",\"state\":\"OPEN\"}]"; }
     result=$(mr_list_search GH-512)
     [[ "$result" == *"pull/9"* ]] && [[ "$result" == *"number"* ]]
   ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+# TC-DT-514-1 (F-2, AC-F2-1/AC-F2-3/AC-F2-4, DM-2): the bounded full-text
+# fallback must ignore an MR whose only tie is an incidental full-text body
+# mention, and on a mixed multi-hit list must select the genuine ref-bearing MR
+# — never .[0] of the unfiltered list (spec v1.2 whole-list selection). Both
+# platforms; branch-scoped lookup always returns [].
+test_pdev514_fallback_ignores_incidental_mr() {
+  bash -c '
+    ADOS_ENV_LOADED=1 ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    SEARCH_JSON="[]"
+    _glab() {
+      if [[ "$1" == "mr" && "$2" == "list" ]]; then
+        if printf "%s " "$@" | grep -q -- "--search"; then
+          printf "%s" "$SEARCH_JSON"
+        else
+          printf "%s" "[]"
+        fi
+      fi
+    }
+    incidental="{\"iid\":999,\"web_url\":\"https://gitlab.example/mr/999\",\"source_branch\":\"docs/planning-x\",\"title\":\"docs: planning\",\"state\":\"opened\"}"
+    genuineA="{\"iid\":777,\"web_url\":\"https://gitlab.example/mr/777\",\"source_branch\":\"docs/planning-y\",\"title\":\"fix(PDEV-514): real A\",\"state\":\"opened\"}"
+    genuineB="{\"iid\":778,\"web_url\":\"https://gitlab.example/mr/778\",\"source_branch\":\"fix/PDEV-514/b\",\"title\":\"chore: b\",\"state\":\"opened\"}"
+    # (1) single incidental hit → no URL for either branch or empty-branch calls
+    SEARCH_JSON="[$incidental]"
+    url=$(pr_url_for PDEV-514 feat/x)
+    url_empty=$(pr_url_for PDEV-514 "")
+    [[ -z "$url" ]] || exit 1
+    [[ -z "$url_empty" ]] || exit 1
+    [[ "$url" != *"999"* && "$url_empty" != *"999"* ]] || exit 1
+    # (2) mixed [incidental, genuine] → whole-list filter selects the genuine MR
+    SEARCH_JSON="[$incidental,$genuineA]"
+    url_mixed=$(pr_url_for PDEV-514 "")
+    [[ "$url_mixed" == *"mr/777"* ]] || exit 1
+    [[ "$url_mixed" != *"999"* ]] || exit 1
+    # (3) deterministic first eligible among [incidental, genuineA, genuineB]
+    SEARCH_JSON="[$incidental,$genuineA,$genuineB]"
+    url_first=$(pr_url_for PDEV-514 "")
+    [[ "$url_first" == *"mr/777"* ]] || exit 1
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh" || return 1
+
+  bash -c '
+    ADOS_ENV_LOADED=1 ADOS_PLATFORM=github
+    source "$1" >/dev/null 2>&1
+    PLATFORM=github
+    SEARCH_JSON="[]"
+    _gh() {
+      if [[ "$1" == "pr" && "$2" == "list" ]]; then
+        if printf "%s " "$@" | grep -q -- "--search"; then
+          printf "%s" "$SEARCH_JSON"
+        else
+          printf "%s" "[]"
+        fi
+      fi
+    }
+    incidental="{\"number\":999,\"url\":\"https://github.example/pull/999\",\"title\":\"docs: planning\",\"headRefName\":\"docs/planning-x\",\"state\":\"OPEN\"}"
+    genuineA="{\"number\":777,\"url\":\"https://github.example/pull/777\",\"title\":\"fix(PDEV-514): real A\",\"headRefName\":\"docs/planning-y\",\"state\":\"OPEN\"}"
+    genuineB="{\"number\":778,\"url\":\"https://github.example/pull/778\",\"title\":\"chore: b\",\"headRefName\":\"fix/PDEV-514/b\",\"state\":\"OPEN\"}"
+    SEARCH_JSON="[$incidental]"
+    url=$(pr_url_for PDEV-514 feat/x)
+    url_empty=$(pr_url_for PDEV-514 "")
+    [[ -z "$url" ]] || exit 1
+    [[ -z "$url_empty" ]] || exit 1
+    [[ "$url" != *"999"* && "$url_empty" != *"999"* ]] || exit 1
+    SEARCH_JSON="[$incidental,$genuineA]"
+    url_mixed=$(pr_url_for PDEV-514 "")
+    [[ "$url_mixed" == *"pull/777"* ]] || exit 1
+    [[ "$url_mixed" != *"999"* ]] || exit 1
+    SEARCH_JSON="[$incidental,$genuineA,$genuineB]"
+    url_first=$(pr_url_for PDEV-514 "")
+    [[ "$url_first" == *"pull/777"* ]] || exit 1
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh" || return 1
+}
+
+# TC-DT-514-2 (F-2, AC-F2-2/AC-F2-3, DM-2): the empty-branch classify_result
+# fallback must not classify pr-open on an incidental full-text hit — no genuine
+# association means failed. Both platforms.
+test_pdev514_classify_ignores_incidental_mr() {
+  bash -c '
+    ADOS_ENV_LOADED=1 ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    DELIVER_STATE_FETCH_BACKOFF_S=0
+    _glab() {
+      if [[ "$1" == "issue" ]]; then
+        printf "%s" "{\"state\":\"opened\",\"labels\":[]}"
+      elif [[ "$1" == "mr" && "$2" == "list" ]]; then
+        if printf "%s " "$@" | grep -q -- "--search"; then
+          printf "%s" "[{\"iid\":999,\"web_url\":\"https://gitlab.example/mr/999\",\"source_branch\":\"docs/planning-x\",\"title\":\"docs: planning\",\"state\":\"opened\"}]"
+        else
+          printf "%s" "[]"
+        fi
+      fi
+    }
+    result=$(classify_result PDEV-514 "")
+    [[ "$result" == "failed" ]] || exit 1
+    [[ "$result" != "pr-open" ]] || exit 1
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh" || return 1
+
+  bash -c '
+    ADOS_ENV_LOADED=1 ADOS_PLATFORM=github
+    source "$1" >/dev/null 2>&1
+    PLATFORM=github
+    DELIVER_STATE_FETCH_BACKOFF_S=0
+    _gh() {
+      if [[ "$1" == "issue" ]]; then
+        printf "%s" "{\"state\":\"OPEN\",\"labels\":[]}"
+      elif [[ "$1" == "pr" && "$2" == "list" ]]; then
+        if printf "%s " "$@" | grep -q -- "--search"; then
+          printf "%s" "[{\"number\":999,\"url\":\"https://github.example/pull/999\",\"title\":\"docs: planning\",\"headRefName\":\"docs/planning-x\",\"state\":\"OPEN\"}]"
+        else
+          printf "%s" "[]"
+        fi
+      fi
+    }
+    result=$(classify_result PDEV-514 "")
+    [[ "$result" == "failed" ]] || exit 1
+    [[ "$result" != "pr-open" ]] || exit 1
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh" || return 1
+}
+
+# TC-DT-514-3 (F-2, AC-F2-4, DM-2): a genuine title-or-branch ref match is
+# still resolved — no false negative. Case (c) is the ref-less delivery branch
+# with a ref-bearing title (the shape the F-2 predicate must not drop). Both
+# platforms.
+test_pdev514_fallback_accepts_genuine_match() {
+  bash -c '
+    ADOS_ENV_LOADED=1 ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    SEARCH_JSON="[]"
+    _glab() {
+      if [[ "$1" == "mr" && "$2" == "list" ]]; then
+        if printf "%s " "$@" | grep -q -- "--search"; then
+          printf "%s" "$SEARCH_JSON"
+        else
+          printf "%s" "[]"
+        fi
+      fi
+    }
+    # (a) title match, unrelated source branch
+    SEARCH_JSON="[{\"iid\":701,\"web_url\":\"https://gitlab.example/mr/701\",\"source_branch\":\"docs/planning-y\",\"title\":\"fix(PDEV-514): title match\",\"state\":\"opened\"}]"
+    [[ "$(pr_url_for PDEV-514 "")" == *"mr/701"* ]] || exit 1
+    # (b) branch-ref match, title lacks the ref
+    SEARCH_JSON="[{\"iid\":702,\"web_url\":\"https://gitlab.example/mr/702\",\"source_branch\":\"fix/PDEV-514/deliver-ticket-residuals\",\"title\":\"chore: branch match\",\"state\":\"opened\"}]"
+    [[ "$(pr_url_for PDEV-514 "")" == *"mr/702"* ]] || exit 1
+    # (c) ref-less branch + ref-bearing title
+    SEARCH_JSON="[{\"iid\":703,\"web_url\":\"https://gitlab.example/mr/703\",\"source_branch\":\"feature/cleanup\",\"title\":\"fix(PDEV-514): cleanup\",\"state\":\"opened\"}]"
+    [[ "$(pr_url_for PDEV-514 "")" == *"mr/703"* ]] || exit 1
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh" || return 1
+
+  bash -c '
+    ADOS_ENV_LOADED=1 ADOS_PLATFORM=github
+    source "$1" >/dev/null 2>&1
+    PLATFORM=github
+    SEARCH_JSON="[]"
+    _gh() {
+      if [[ "$1" == "pr" && "$2" == "list" ]]; then
+        if printf "%s " "$@" | grep -q -- "--search"; then
+          printf "%s" "$SEARCH_JSON"
+        else
+          printf "%s" "[]"
+        fi
+      fi
+    }
+    SEARCH_JSON="[{\"number\":701,\"url\":\"https://github.example/pull/701\",\"title\":\"fix(PDEV-514): title match\",\"headRefName\":\"docs/planning-y\",\"state\":\"OPEN\"}]"
+    [[ "$(pr_url_for PDEV-514 "")" == *"pull/701"* ]] || exit 1
+    SEARCH_JSON="[{\"number\":702,\"url\":\"https://github.example/pull/702\",\"title\":\"chore: branch match\",\"headRefName\":\"fix/PDEV-514/deliver-ticket-residuals\",\"state\":\"OPEN\"}]"
+    [[ "$(pr_url_for PDEV-514 "")" == *"pull/702"* ]] || exit 1
+    SEARCH_JSON="[{\"number\":703,\"url\":\"https://github.example/pull/703\",\"title\":\"fix(PDEV-514): cleanup\",\"headRefName\":\"feature/cleanup\",\"state\":\"OPEN\"}]"
+    [[ "$(pr_url_for PDEV-514 "")" == *"pull/703"* ]] || exit 1
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh" || return 1
 }
 
 # TC-PLAT-025..026: Platform-neutral prompt tests
@@ -2472,6 +2655,11 @@ main() {
   run_test "TC-DT-512-2: pr-open + unresolved URL → pr-open-unverified + warn (AC-2)" test_pdev512_summary_never_clean_pr_open_empty
   run_test "TC-DT-512-3: normal URL path keeps result=pr-open + exit 0 (AC-4)" test_pdev512_normal_path_and_exit_contract_unchanged
   run_test "TC-DT-512-4: mr_list_search exposes url (gitlab+github)" test_pdev512_mr_list_search_exposes_url
+
+  # PDEV-514 F-2: the branch-agnostic fallback is bounded to title/branch ref matches.
+  run_test "TC-DT-514-1: bounded fallback ignores incidental MR; mixed hit picks genuine (gitlab+github)" test_pdev514_fallback_ignores_incidental_mr
+  run_test "TC-DT-514-2: empty-branch fallback does not classify incidental full-text MR pr-open (gitlab+github)" test_pdev514_classify_ignores_incidental_mr
+  run_test "TC-DT-514-3: bounded fallback still accepts genuine title/branch match (gitlab+github)" test_pdev514_fallback_accepts_genuine_match
 
   # TC-PLAT-025..026: Platform-neutral prompt tests
   run_test "TC-PLAT-025: Platform-neutral prompt contains no literal gh commands" test_platform_neutral_prompt_no_literal_gh
