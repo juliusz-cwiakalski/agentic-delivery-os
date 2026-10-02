@@ -11,7 +11,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The unattended delivery neighborhood of the lifecycle: the two autonomous modes (Mode A — autonomous CEO loop; Mode B — manual batch), the bash delivery scripts (ceo-loop.sh, deliver-ticket.sh, batch-deliver.sh, pm-liveness.sh, opencode-session.sh), the AI-vs-script split, and the behavioral invariants (INV-DM-1..6) that keep unattended delivery converging instead of burning tokens. Liveness is multi-signal: recursive session-tree message traffic (parent_id traversal of the current session_message table) PLUS git/worktree activity; a race-free delivering marker tells ceo-loop.sh the CEO is blocked on a delivery. deliver-ticket.sh no longer merges. Since GH-148, deliver-ticket.sh and batch-deliver.sh are platform-aware: they auto-detect GitHub vs GitLab (env override > git remote > glab auth > default github) and route tracker/MR operations through a dispatch seam with JSON normalization, so GitLab deliveries report accurate results and populated PR URLs; ceo-loop.sh is unchanged (it delegates delivery and merges, so needs no platform detection)."
 links:
-  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148", "GH-150", "PDEV-514"]
+  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148", "GH-150", "PDEV-514", "PDEV-516"]
   decisions: ["TDR-0002"]
   guides:
     - "doc/guides/delivery-modes.md"
@@ -79,8 +79,11 @@ Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it
   field shapes, so `classify_result` and `pr_url_for` are platform-agnostic. When
   the branch-scoped MR lookup is empty, both fall back to a bounded ticket-ref
   lookup that accepts an MR only when the ticket ref appears in its title or its
-  source/head branch (`source_branch`/`headRefName`) — an MR matched only on
-  incidental full-text body is never returned or used to classify `pr-open`. On
+  source/head branch (`source_branch`/`headRefName`) **as an exact token** (a
+  maximal `[A-Za-z0-9-]` run bounded by a non-token character or a string
+  boundary), so a prefix ref (`PDEV-5`) never matches a longer ref (`PDEV-514`) —
+  an MR matched only on incidental full-text body is never returned or used to
+  classify `pr-open`. On
   GitLab this makes deliveries report accurate `pr-open`/`merged`/`blocked`
   results with a populated MR web URL, and eliminates the false "Could not fetch
   issue state" warnings that misdiagnosed "wrong platform CLI" as a
@@ -189,6 +192,8 @@ The guiding principle is the **AI-vs-script split**: the expensive, stateless, j
 | Manual | Mode B walk-through | Deliver a batch, approve via label, re-run, verify rebase + green-gate + squash-merge |
 | Grep | No-merge contract | `deliver-ticket.sh` must not contain a merge code path; guides/spec must state "does not merge" |
 | Grep | Liveness wording | Docs must describe multi-signal liveness (recursive session-tree traffic + git/worktree) with the 10-minute default, not the retired 30-minute/file-mtime heuristic |
+| CI guard | Result-tuple doc guard | `scripts/.tests/test-deliver-ticket-result-tuples.sh` derives the canonical `result=<…>` set from `deliver-ticket.sh` and fails when a scanned current-truth enumeration omits a value; `scripts/.tests/test-deliver-ticket-result-tuples-modes.sh` injects each failure mode on a synthetic tree |
+| CI guard | Mutation sandbox | `scripts/.tests/test-delivery-mutation-sandbox.sh` breaks the result emission in a temp copy and asserts the harness fails on `TC-DT-SF-12` while the unmutated copy passes and no tracked file changes |
 
 ## Operational & Support
 

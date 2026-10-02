@@ -2,11 +2,11 @@
 id: TEST-SPEC-AUTONOMOUS-DELIVERY
 status: Current
 created: 2026-07-16
-last_updated: 2026-07-16
+last_updated: 2026-10-02
 owners: ["engineering"]
 service: delivery-os
 links:
-  related_changes: ["GH-146"]
+  related_changes: ["GH-146", "PDEV-514", "PDEV-516"]
   feature_spec: doc/spec/features/feature-autonomous-delivery.md
   decisions: ["TDR-0002"]
 ---
@@ -90,6 +90,21 @@ in logs. Tests cover exact 65,536-byte files, 256 records, 8,192-byte lines, and
 both GNU and BSD/macOS metadata adapters. They also prove a valid multi-byte
 UTF-8 literal value is inherited byte-for-byte, while actual CR and NUL bytes
 remain rejected.
+
+### Delivery result-contract guards
+
+`scripts/.tests/test-deliver-ticket-result-tuples.sh` derives the canonical
+`result=<…>` domain from `scripts/deliver-ticket.sh` and fails when any scanned
+current-truth enumeration (`.opencode/agent/ceo.md`,
+`doc/guides/delivery-modes.md`, `doc/spec/features/feature-autonomous-delivery.md`)
+omits a value or a configured doc carries no enumeration. Its companion
+`scripts/.tests/test-deliver-ticket-result-tuples-modes.sh` injects each failure
+mode into a synthetic tree and asserts the guard fires. Both run in CI.
+
+`scripts/.tests/test-delivery-mutation-sandbox.sh` copies `deliver-ticket.sh` and
+its harness to a temp tree, breaks the result emission in the copy, and asserts
+the harness fails on `TC-DT-SF-12` while the unmutated copy passes and no tracked
+file is changed. It runs in CI.
 
 ## Automation Strategy
 
