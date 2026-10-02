@@ -16,7 +16,7 @@ references:
   - "Delivery vehicle: #142"
   - "Related change: GH-146"
 links:
-  related_changes: ["GH-146", "GH-148"]
+  related_changes: ["GH-146", "GH-148", "PDEV-514"]
   decisions: ["TDR-0002"]
 ---
 
@@ -69,7 +69,10 @@ schema regardless of the divergent `gh --json` vs `glab --output json` field
 shapes. This makes result classification, PR URL resolution, the PM prompt,
 and Mode B merge work identically on both forges — a GitLab delivery reports an
 accurate `result` and a populated MR web URL instead of degrading to an
-unverifiable `finished`.
+unverifiable `finished`. When the branch-scoped MR lookup is empty, the
+ticket-ref fallback is bounded: an MR is accepted only when the ticket ref
+appears in its title or its source/head branch, so an MR matched only on
+incidental full-text body is never returned or used to classify `pr-open`.
 
 **Detection resolution order:**
 
@@ -315,8 +318,9 @@ These are the non-negotiable rules. The tooling exists to enforce them.
 
 ### INV-DM-1: `deliver-ticket.sh` runs FOREGROUND, never detached
 
-A caller invoking `deliver-ticket.sh` **blocks until the ticket is merged,
-blocked, PR-open, pr-open-unverified, failed, or state-unverified.** The CEO must never `setsid … & disown` it. This
+A caller invoking `deliver-ticket.sh` **blocks until the delivery returns one of
+the documented results — merged, blocked, PR-open, pr-open-unverified, failed,
+finished, max-restarts, or state-unverified.** The CEO must never `setsid … & disown` it. This
 single rule removes the "CEO exits, delivery orphans, loop respawns" failure
 mode at its source.
 
