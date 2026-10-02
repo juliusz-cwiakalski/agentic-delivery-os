@@ -1230,14 +1230,21 @@ test_stdout_returns_pm_last_message_and_result() {
   mkdir -p "${fake_delivery}"
   DELIVERY_DIR="${fake_delivery}"
 
+  # PDEV-514 F-4: the mock must genuinely drive the summary to the asserted
+  # tuple. The branch-scoped lookup (mr_list_for_branch) calls
+  # `gh pr list --head feat/x --json number,url,headRefName,mergedAt`, so return
+  # the open PR for that shape (and [] for the closed/merged lookup) — this makes
+  # classify_result produce pr-open and pr_url_for populate the URL for real,
+  # rather than relying on a pre-set variable.
+  PLATFORM=github
   _gh() {
     case "$1" in
       issue) printf '%s' '{"state":"OPEN","labels":[]}' ;;
       pr)
-        if printf '%s ' "$@" | grep -q -- '--state open'; then
-          printf '%s' '[{"number":143,"url":"https://github.com/x/y/pull/143"}]'
-        else
+        if printf '%s ' "$@" | grep -q -- '--state closed'; then
           printf '%s' '[]'
+        else
+          printf '%s' '[{"number":143,"url":"https://github.com/x/y/pull/143","headRefName":"feat/x","mergedAt":null}]'
         fi
         ;;
     esac
@@ -1251,14 +1258,14 @@ test_stdout_returns_pm_last_message_and_result() {
 
   deliver_loop "GH-142" "feat/x" >/dev/null 2>&1 || true
   local summary
-  summary="$(print_delivery_summary)"
+  summary="$(print_delivery_summary 2>/dev/null)"
 
-  assert_contains "${summary}" "result=" "summary must include result= key"
-  assert_contains "${summary}" "pr_url=" "summary must include pr_url= key"
-  assert_contains "${summary}" "last_message=" "summary must include last_message= key"
-  assert_contains "${summary}" "pr-open" "summary should classify pr-open"
-  assert_contains "${summary}" "PR #143 open" "summary should carry the PM last-message text"
-  return 0
+  # Every assertion is enforced (`|| return 1`): run_test executes the function
+  # under `set -e` and a bare failing assert_* would otherwise be ignored.
+  assert_contains "${summary}" "result=pr-open" "summary must carry the genuine result=pr-open tuple" || return 1
+  assert_contains "${summary}" "pr_url=https://github.com/x/y/pull/143" "summary must carry the resolved PR URL" || return 1
+  assert_contains "${summary}" "exit_code=0" "summary must carry exit_code=0" || return 1
+  assert_contains "${summary}" "last_message=PR #143 open" "summary must carry the PM last-message text" || return 1
 }
 
 # ============================================================================
