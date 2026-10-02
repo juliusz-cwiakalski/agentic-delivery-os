@@ -335,12 +335,91 @@ test_is_pr_approved_no() {
 test_get_pr_number() {
   _gh() {
     case "$1" in
-      pr) printf '[{"number":42,"state":"OPEN"}]' ;;
+      pr) printf '[{"number":42,"state":"OPEN","title":"fix(GH-200): get pr number"}]' ;;
     esac
   }
   local num
   num="$(get_pr_number "GH-200")"
   assert_eq "42" "${num}" "should find PR #42" || return 1
+  return 0
+}
+
+# TC-BD-516-1 (F-1, AC-F1-1/AC-F1-2, DM-2/DM-4): an unrelated open MR whose
+# title and head/source branch carry no ref token (the ref appears only in
+# incidental full text) is never selected by the bounded lookup — both platforms.
+test_pdev516_batch_lookup_ignores_incidental() {
+  local num
+  PLATFORM=github
+  _gh() {
+    case "$1 $2" in
+      "pr list") printf '[{"number":999,"state":"OPEN","title":"docs: planning","headRefName":"docs/planning-x"}]' ;;
+    esac
+  }
+  num="$(get_pr_number "GH-200")"
+  assert_eq "" "${num}" "incidental GitHub MR must not be selected" || return 1
+  assert_not_contains "${num}" "999" "incidental GitHub MR number must not leak" || return 1
+
+  PLATFORM=gitlab
+  _glab() {
+    case "$1 $2" in
+      "mr list") printf '[{"iid":999,"state":"opened","title":"docs: planning","source_branch":"docs/planning-x"}]' ;;
+    esac
+  }
+  num="$(get_pr_number "GH-200")"
+  assert_eq "" "${num}" "incidental GitLab MR must not be selected" || return 1
+  assert_not_contains "${num}" "999" "incidental GitLab MR number must not leak" || return 1
+  return 0
+}
+
+# TC-BD-516-2 (F-1, AC-F1-3, DM-2/DM-4): a genuine title-only / branch-only /
+# ref-less-branch-with-ref-title match is still returned, including when an
+# incidental hit precedes it (whole-list filter, not .[0]).
+test_pdev516_batch_lookup_accepts_genuine() {
+  local num
+  PLATFORM=github
+  _gh() {
+    case "$1 $2" in
+      "pr list") printf '[{"number":999,"state":"OPEN","title":"docs: planning","headRefName":"docs/planning-x"},{"number":701,"state":"OPEN","title":"fix(GH-200): title match","headRefName":"docs/planning-y"}]' ;;
+    esac
+  }
+  num="$(get_pr_number "GH-200")"
+  assert_eq "701" "${num}" "genuine GitHub title match after incidental must be selected" || return 1
+
+  PLATFORM=gitlab
+  _glab() {
+    case "$1 $2" in
+      "mr list") printf '[{"iid":702,"state":"opened","title":"chore: branch match","source_branch":"feat/GH-200/x"}]' ;;
+    esac
+  }
+  num="$(get_pr_number "GH-200")"
+  assert_eq "702" "${num}" "genuine GitLab branch match must be selected" || return 1
+
+  PLATFORM=github
+  _gh() {
+    case "$1 $2" in
+      "pr list") printf '[{"number":703,"state":"OPEN","title":"fix(GH-200): cleanup","headRefName":"feature/cleanup"}]' ;;
+    esac
+  }
+  num="$(get_pr_number "GH-200")"
+  assert_eq "703" "${num}" "genuine GitHub ref-less-branch title match must be selected" || return 1
+  return 0
+}
+
+# TC-BD-516-3 (F-1, AC-F1-4, DM-2): the raw one-argument path is preserved —
+# no association filter — while the two-argument call filters the same hit list.
+test_pdev516_batch_raw_path_preserved() {
+  PLATFORM=github
+  _gh() {
+    case "$1 $2" in
+      "pr list") printf '[{"number":901,"state":"OPEN","title":"docs: one","headRefName":"docs/one"},{"number":902,"state":"OPEN","title":"docs: two","headRefName":"docs/two"}]' ;;
+    esac
+  }
+  local raw filtered
+  raw="$(mr_list_search "docs")"
+  assert_contains "${raw}" "901" "raw one-arg path keeps the first incidental MR" || return 1
+  assert_contains "${raw}" "902" "raw one-arg path keeps the second incidental MR" || return 1
+  filtered="$(mr_list_search "docs" "GH-200")"
+  assert_eq "[]" "${filtered}" "two-arg bounded call filters both incidental MRs" || return 1
   return 0
 }
 
@@ -379,7 +458,7 @@ test_approved_green_squash_merge() {
   rm -f "${marker}"
   _gh() {
     case "$1 $2" in
-      "pr list")   printf '[{"number":42,"state":"OPEN"}]' ;;
+      "pr list")   printf '[{"number":42,"state":"OPEN","title":"fix(GH-200): approved open PR"}]' ;;
       "pr checks") printf 'PASS  ci  title  detail\n' ;;
       "pr view")   printf '{"title":"GH-200 fix","body":"body text"}' ;;
       "pr merge")  printf 'merged'; printf 'squash' >>"${marker}" ;;
@@ -407,7 +486,7 @@ test_approved_rebase_conflict_ai_resolve_then_merge() {
   local rebase_attempted=0
   _gh() {
     case "$1 $2" in
-      "pr list")   printf '[{"number":42,"state":"OPEN"}]' ;;
+      "pr list")   printf '[{"number":42,"state":"OPEN","title":"fix(GH-200): approved open PR"}]' ;;
       "pr checks") printf 'PASS  ci  title  detail\n' ;;
       "pr view")   printf '{"title":"GH-200","body":"body"}' ;;
       "pr merge")  printf 'merged' ;;
@@ -470,7 +549,7 @@ test_already_on_latest_main_direct_merge() {
   local git_rebase_called=0
   _gh() {
     case "$1 $2" in
-      "pr list")   printf '[{"number":42,"state":"OPEN"}]' ;;
+      "pr list")   printf '[{"number":42,"state":"OPEN","title":"fix(GH-200): approved open PR"}]' ;;
       "pr checks") printf 'PASS  ci  title  detail\n' ;;
       "pr view")   printf '{"title":"GH-200","body":"body"}' ;;
       "pr merge")  printf 'merged' ;;
@@ -498,7 +577,7 @@ test_green_gate_red_routes_to_deliver() {
   local merge_called=0
   _gh() {
     case "$1 $2" in
-      "pr list")   printf '[{"number":42,"state":"OPEN"}]' ;;
+      "pr list")   printf '[{"number":42,"state":"OPEN","title":"fix(GH-200): approved open PR"}]' ;;
       "pr checks") printf 'FAIL  ci  title  detail\n' ;;
       "pr merge")  merge_called=1; printf 'merged' ;;
     esac
@@ -526,7 +605,7 @@ test_commit_msg_from_pr_title_body() {
   rm -f "${marker}"
   _gh() {
     case "$1 $2" in
-      "pr list")   printf '[{"number":42,"state":"OPEN"}]' ;;
+      "pr list")   printf '[{"number":42,"state":"OPEN","title":"fix(GH-200): approved open PR"}]' ;;
       "pr checks") printf 'PASS  ci  title  detail\n' ;;
       "pr view")   printf '{"title":"GH-200 Fix the thing","body":"Detailed description."}' ;;
       "pr merge")
@@ -621,7 +700,7 @@ test_approved_pr_flow_gh_error_parks_not_merges() {
   local merge_called=0
   _gh() {
     case "$1 $2" in
-      "pr list")   printf '[{"number":42,"state":"OPEN"}]' ;;
+      "pr list")   printf '[{"number":42,"state":"OPEN","title":"fix(GH-200): approved open PR"}]' ;;
       "pr checks") return 1 ;;
       "pr view")   return 1 ;;
       "pr merge")  merge_called=1; printf 'merged' ;;
@@ -751,7 +830,7 @@ test_plat_033_gitlab_merge_flags() {
       # Include detailed_merge_status so gitlab_await_mergeable sees "mergeable"
       printf '{"title":"Test","description":"Body","detailed_merge_status":"mergeable"}'
     elif [[ "$1" == "mr" && "$2" == "list" ]]; then
-      printf '[{"iid":42,"title":"Test","state":"opened"}]'
+      printf '[{"iid":42,"title":"Test","source_branch":"feat/GH-200/x","state":"opened"}]'
     elif [[ "$1" == "api" ]]; then
       # Pipeline status for wait_for_pr_green (GitLab CI-gate)
       printf '[{"status":"success"}]'
@@ -893,6 +972,9 @@ main() {
   run_test "TC-BD-09: is_pr_approved yes" test_is_pr_approved_yes
   run_test "TC-BD-09b: is_pr_approved no" test_is_pr_approved_no
   run_test "TC-BD-10: get_pr_number" test_get_pr_number
+  run_test "TC-BD-516-1: bounded lookup ignores incidental MR" test_pdev516_batch_lookup_ignores_incidental
+  run_test "TC-BD-516-2: bounded lookup accepts genuine title/branch match" test_pdev516_batch_lookup_accepts_genuine
+  run_test "TC-BD-516-3: raw one-arg lookup path preserved" test_pdev516_batch_raw_path_preserved
   run_test "TC-BD-11: get_pr_title_and_body" test_get_pr_title_and_body
   run_test "TC-BD-12: wait_for_pr_green green" test_wait_for_pr_green_green
   run_test "TC-BD-12b: wait_for_pr_green red" test_wait_for_pr_green_red
