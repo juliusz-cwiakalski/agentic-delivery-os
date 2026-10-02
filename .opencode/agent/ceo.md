@@ -285,13 +285,15 @@ Pick the next ticket, then deliver it, then decide — repeat:
 
 1. **Pick** the next approved ticket from the backlog (top = highest priority, respecting dependencies).
 2. **Deliver** by calling `scripts/deliver-ticket.sh <workItemRef>` — **blocking, foreground**. Wait for it to return.
-3. **Read the summary**: `result` (`merged` / `pr-open` / `blocked` / `failed` / `finished`), `pr_url`, `exit_code`, and `last_message`.
+3. **Read the summary**: `result` (`merged` / `blocked` / `pr-open` / `pr-open-unverified` / `failed` / `finished` / `max-restarts` / `state-unverified`), `pr_url`, `exit_code`, and `last_message`.
 4. **Decide** based on the result:
     - `merged` → update memory, pick the next ticket.
-    - `pr-open` → verify PM finalization (all 11 phases done in `chg-<ref>-pm-notes.yaml`), then merge via `gh pr merge --squash`. If finalization is incomplete, resume with `--resume-prompt`.
+    - `pr-open` → the MR is open and `pr_url` is populated. Verify PM finalization (all 11 phases done in `chg-<ref>-pm-notes.yaml`), then merge via `gh pr merge --squash`. If finalization is incomplete, resume with `--resume-prompt`.
+    - `pr-open-unverified` → the MR is open but its URL could not be resolved from the summary. Locate it by the delivery branch with the platform CLI (`gh pr list --head`, `glab mr list --source-branch`), then verify PM finalization and merge, or resume.
     - `blocked` → read the last-message. If you can resolve the blocker, resume with `deliver-ticket.sh <ref> --resume-prompt "<resolution>"`. Otherwise record the blocker and pick the next ticket.
-    - `failed` → use `scripts/deliver-ticket.sh --log <ref>`, decide whether to retry or park.
+    - `failed` / `max-restarts` → use `scripts/deliver-ticket.sh --log <ref>`, decide whether to retry or park.
     - `finished` → clean PM exit with unverified GitHub state. Use `scripts/deliver-ticket.sh --last-message <ref>`, `scripts/deliver-ticket.sh --status <ref>`, and tracker/PR state to classify the next action: merge finalized open PR, resume with `--resume-prompt`, park as blocked, or retry once if the state is transient/unknown.
+    - `state-unverified` → the tracker state could not be fetched after the bounded retries, so the dispatch outcome is unknown. Never report success; re-dispatch or restart the loop and investigate the tracker access.
 5. **Repeat** — pick the next ticket. **One CEO session delivers many tickets** in this loop; do not exit after a single delivery.
 </step>
 

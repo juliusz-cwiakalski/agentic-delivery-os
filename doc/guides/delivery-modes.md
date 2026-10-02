@@ -316,7 +316,7 @@ These are the non-negotiable rules. The tooling exists to enforce them.
 ### INV-DM-1: `deliver-ticket.sh` runs FOREGROUND, never detached
 
 A caller invoking `deliver-ticket.sh` **blocks until the ticket is merged,
-blocked, PR-open, or failed.** The CEO must never `setsid … & disown` it. This
+blocked, PR-open, pr-open-unverified, failed, or state-unverified.** The CEO must never `setsid … & disown` it. This
 single rule removes the "CEO exits, delivery orphans, loop respawns" failure
 mode at its source.
 
@@ -450,7 +450,7 @@ To keep the AI from burning tokens rediscovering scriptable facts,
 
 | Invocation | Returns | Used by |
 |---|---|---|
-| `deliver-ticket.sh REF` | Runs the full per-ticket lifecycle (foreground, blocking). On completion, prints a **delivery summary** on stdout: the result classification (`merged` / `blocked` / `pr-open` / `failed`) **plus the PM agent's last message** (so the caller sees open questions, blockers, and the PR link directly). | `@ceo` (Mode A), `batch-deliver.sh` (Mode B) |
+| `deliver-ticket.sh REF` | Runs the full per-ticket lifecycle (foreground, blocking). On completion, prints a **delivery summary** on stdout: the result classification (`merged` / `blocked` / `pr-open` / `pr-open-unverified` / `failed` / `finished` / `max-restarts` / `state-unverified`) **plus the PM agent's last message** (so the caller sees open questions, blockers, and the PR link directly). | `@ceo` (Mode A), `batch-deliver.sh` (Mode B) |
 | `deliver-ticket.sh REF --resume-prompt "<text>"` | Same as above, but resumes the PM session with the given prompt **instead of the default** — lets the CEO resolve a PM-raised blocker by injecting a custom instruction. | `@ceo` (Mode A) |
 | `deliver-ticket.sh --is-delivering [REF]` | Exit `0` if a delivery is in progress in this repo (for `REF`, or any ticket if no `REF` given); non-zero otherwise. Prints nothing on stdout. | `ceo-loop.sh` (stuck-vs-healthy decision), `@ceo` |
 | `deliver-ticket.sh --last-message REF` | Prints the last PM message for `REF` from the most recent delivery (without running a new one). | `@ceo` |

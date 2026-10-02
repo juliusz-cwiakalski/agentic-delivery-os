@@ -99,7 +99,7 @@ These are the non-negotiable contract the tooling enforces. Full rationale and e
 
 | ID | Invariant |
 |----|-----------|
-| **INV-DM-1** | `deliver-ticket.sh` runs **foreground, never detached** — a caller blocks until merged/blocked/pr-open/failed. The CEO must never `setsid … & disown` it. |
+| **INV-DM-1** | `deliver-ticket.sh` runs **foreground, never detached** — a caller blocks until merged/blocked/pr-open/pr-open-unverified/failed/state-unverified. The CEO must never `setsid … & disown` it. |
 | **INV-DM-2** | `deliver-ticket.sh` is **single-flight + join, per repo working tree** — a live instance for the same ticket is *joined* (wait + classify), never raced with a duplicate PM. SIGTERM/SIGINT is propagated to the PM child (grace period → SIGKILL). |
 | **INV-DM-3** | `ceo-loop.sh` detects a **stuck** CEO (no session traffic **and** no healthy delivery in progress — checked via both the `--is-delivering` PID probe **and** the race-free delivering marker file) — not a healthy wait. Its primary job is stuck-CEO recovery; "parking while a delivery is in progress" is the CEO blocking on `deliver-ticket.sh`, not the loop's job. |
 | **INV-DM-4** | In Mode A the **`@ceo` is the merge authority** — it verifies the PR is approved **and** the PM has finalized all 11 phases (`chg-<ref>-pm-notes.yaml`) before performing the platform-appropriate squash-merge (`gh pr merge --squash` on GitHub, `glab mr merge --squash` on GitLab; the CEO reads `.ai/agent/pr-instructions.md` for the platform). "Merge-not-yield": a ready, approved, finalized PR is merged, not deferred indefinitely. |
