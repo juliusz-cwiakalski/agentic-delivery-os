@@ -645,14 +645,15 @@ test_state_fetch_green_paths_unregressed() {
   assert_eq "pr-open" "${r_pr_open}" "open PR still classifies pr-open"
 }
 
-# TC-DT-490-5 (TC-5): --help documents state-unverified in the result map and
-# the exit-code list (AC-2).
+# TC-DT-490-5 (TC-5): --help documents state-unverified and, since PDEV-512,
+# pr-open-unverified in the result map and the exit-code list (AC-2).
 test_help_documents_state_unverified() {
   local help_text
   help_text="$(usage)"
 
-  assert_contains "${help_text}" "result=<merged|blocked|pr-open|failed|finished|max-restarts|state-unverified>" "result map includes state-unverified"
+  assert_contains "${help_text}" "result=<merged|blocked|pr-open|pr-open-unverified|failed|finished|max-restarts|state-unverified>" "result map includes state-unverified and pr-open-unverified"
   assert_contains "${help_text}" "1 - Failed (max restarts exceeded, or state-unverified" "exit-code list covers state-unverified"
+  assert_contains "${help_text}" "0 - Success (merged, blocked, pr-open, pr-open-unverified" "exit-code list covers pr-open-unverified"
 }
 
 # ============================================================================
@@ -2166,6 +2167,111 @@ test_gitlab_pr_url_for_no_mr() {
   ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
 }
 
+# TC-DT-512-1 (AC-1/AC-3, NFR-2): MR create succeeded but the branch-scoped
+# lookup returns nothing; pr_url_for must fall back to the ticket-ref title
+# search and still return the URL — on GitLab and GitHub, and with an empty
+# branch (the fresh-dispatch case where the PM created the branch in-session).
+test_pdev512_pr_url_ref_title_fallback() {
+  bash -c '
+    ADOS_ENV_LOADED=1 ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    _glab() {
+      if [[ "$1" == "issue" ]]; then
+        printf "%s" "{\"state\":\"opened\",\"labels\":[]}"
+      elif [[ "$1" == "mr" && "$2" == "list" ]]; then
+        if printf "%s " "$@" | grep -q -- "--search"; then
+          printf "%s" "[{\"iid\":512,\"web_url\":\"https://gitlab.example/mr/512\",\"source_branch\":\"feat/x\",\"state\":\"opened\"}]"
+        else
+          printf "%s" "[]"
+        fi
+      fi
+    }
+    branch_url=$(pr_url_for GH-512 feat/x)
+    empty_url=$(pr_url_for GH-512 "")
+    [[ "$branch_url" == *"mr/512"* ]] && [[ "$empty_url" == *"mr/512"* ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh" || return 1
+
+  bash -c '
+    ADOS_ENV_LOADED=1 ADOS_PLATFORM=github
+    source "$1" >/dev/null 2>&1
+    PLATFORM=github
+    _gh() {
+      if [[ "$1" == "issue" ]]; then
+        printf "%s" "{\"state\":\"OPEN\",\"labels\":[]}"
+      elif [[ "$1" == "pr" && "$2" == "list" ]]; then
+        if printf "%s " "$@" | grep -q -- "--search"; then
+          printf "%s" "[{\"number\":512,\"url\":\"https://github.example/pull/512\",\"state\":\"OPEN\"}]"
+        else
+          printf "%s" "[]"
+        fi
+      fi
+    }
+    url=$(pr_url_for GH-512 feat/x)
+    [[ "$url" == *"pull/512"* ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
+# TC-DT-512-2 (AC-2): result=pr-open with an unresolved pr_url must never be
+# reported clean — the summary downgrades to pr-open-unverified and warns loud.
+test_pdev512_summary_never_clean_pr_open_empty() {
+  DELIVERY_RESULT="pr-open"; DELIVERY_PR_URL=""; DELIVERY_EXIT_CODE=0; DELIVERY_LAST_MESSAGE="PR open"
+  local err_file="${_test_tmpdir}/pdev512.err"
+  local summary result_line
+  summary="$(print_delivery_summary 2>"${err_file}")"
+  result_line="$(printf '%s\n' "${summary}" | grep '^result=')"
+  assert_eq "result=pr-open-unverified" "${result_line}" "pr-open + empty pr_url must not be reported clean" || return 1
+  assert_contains "${summary}" "pr_url=" "pr_url key still present" || return 1
+  assert_contains "$(<"${err_file}")" "pr_url unresolved" "loud warn emitted for the unverified URL" || return 1
+  return 0
+}
+
+# TC-DT-512-3 (AC-4): the normal path (branch-scoped lookup returns the MR URL)
+# keeps result=pr-open and the exit-code contract unchanged.
+test_pdev512_normal_path_and_exit_contract_unchanged() {
+  bash -c '
+    ADOS_ENV_LOADED=1 ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    _glab() { printf "%s" "[{\"iid\":512,\"web_url\":\"https://gitlab.example/mr/512\",\"source_branch\":\"feat/x\",\"merged_at\":null}]"; }
+    url=$(pr_url_for GH-512 feat/x)
+    [[ "$url" == *"mr/512"* ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh" || return 1
+
+  DELIVERY_RESULT="pr-open"; DELIVERY_PR_URL="https://gitlab.example/mr/512"
+  DELIVERY_EXIT_CODE=0; DELIVERY_LAST_MESSAGE="PR open"
+  local summary result_line
+  summary="$(print_delivery_summary 2>/dev/null)"
+  result_line="$(printf '%s\n' "${summary}" | grep '^result=')"
+  assert_eq "result=pr-open" "${result_line}" "populated URL keeps the clean pr-open result" || return 1
+  assert_contains "${summary}" "pr_url=https://gitlab.example/mr/512" "pr_url populated on the normal path" || return 1
+
+  # AC-4: the pr-open (success) decision and its exit 0 are untouched.
+  assert_eq "stop:0:pr-open" "$(decide_after_iteration finished pr-open 1 10)" "pr-open exit contract unchanged"
+}
+
+# TC-DT-512-4 (AC-3, NFR-2): mr_list_search normalization exposes the URL
+# (GitLab web_url / GitHub url) while keeping number for classify_result.
+test_pdev512_mr_list_search_exposes_url() {
+  bash -c '
+    ADOS_ENV_LOADED=1 ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    _glab() { printf "%s" "[{\"iid\":9,\"web_url\":\"https://gitlab.example/mr/9\",\"state\":\"opened\"}]"; }
+    result=$(mr_list_search GH-512)
+    [[ "$result" == *"mr/9"* ]] && [[ "$result" == *"number"* ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh" || return 1
+
+  bash -c '
+    ADOS_ENV_LOADED=1 ADOS_PLATFORM=github
+    source "$1" >/dev/null 2>&1
+    PLATFORM=github
+    _gh() { printf "%s" "[{\"number\":9,\"url\":\"https://github.example/pull/9\",\"state\":\"OPEN\"}]"; }
+    result=$(mr_list_search GH-512)
+    [[ "$result" == *"pull/9"* ]] && [[ "$result" == *"number"* ]]
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
+}
+
 # TC-PLAT-025..026: Platform-neutral prompt tests
 test_platform_neutral_prompt_no_literal_gh() {
   bash -c '
@@ -2359,6 +2465,13 @@ main() {
   run_test "TC-PLAT-021: GitLab tracker error → state-unverified (after poll retries)" test_gitlab_classify_state_unverified_tracker_error
   run_test "TC-PLAT-023: GitLab open MR → pr_url_for returns web_url" test_gitlab_pr_url_for_open_mr
   run_test "TC-PLAT-024: GitLab no open MR → pr_url_for empty" test_gitlab_pr_url_for_no_mr
+
+  # PDEV-512: pr_url is always populated for a resolved MR; an unresolved URL is
+  # reported explicitly (never a clean result=pr-open + empty pr_url).
+  run_test "TC-DT-512-1: pr_url_for ref/title fallback fills URL (branch/empty, gitlab+github)" test_pdev512_pr_url_ref_title_fallback
+  run_test "TC-DT-512-2: pr-open + unresolved URL → pr-open-unverified + warn (AC-2)" test_pdev512_summary_never_clean_pr_open_empty
+  run_test "TC-DT-512-3: normal URL path keeps result=pr-open + exit 0 (AC-4)" test_pdev512_normal_path_and_exit_contract_unchanged
+  run_test "TC-DT-512-4: mr_list_search exposes url (gitlab+github)" test_pdev512_mr_list_search_exposes_url
 
   # TC-PLAT-025..026: Platform-neutral prompt tests
   run_test "TC-PLAT-025: Platform-neutral prompt contains no literal gh commands" test_platform_neutral_prompt_no_literal_gh

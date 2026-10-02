@@ -440,20 +440,22 @@ mr_list_search() {
   local platform="${PLATFORM:-github}"
 
   if [[ "${platform}" == "gitlab" ]]; then
-    # GitLab: .iid
+    # GitLab: .iid, .web_url
     if ! raw_json="$(_mr mr list --search "${search_term}" --output json 2>/dev/null)"; then
       return 1
     fi
     normalized="$(echo "${raw_json}" | _jq '[.[] | select(.state == "opened") | {
-      number: .iid
+      number: .iid,
+      url: .web_url
     }]' 2>/dev/null || echo '[]')"
   else
-    # GitHub: .number
-    if ! raw_json="$(_mr pr list --search "${search_term}" --json number,state 2>/dev/null)"; then
+    # GitHub: .number, .url
+    if ! raw_json="$(_mr pr list --search "${search_term}" --json number,state,url 2>/dev/null)"; then
       return 1
     fi
     normalized="$(echo "${raw_json}" | _jq '[.[] | select(.state == "OPEN") | {
-      number: .number
+      number: .number,
+      url: .url
     }]' 2>/dev/null || echo '[]')"
   fi
 
@@ -1287,14 +1289,44 @@ classify_result() {
 
 # Resolve the PR URL for a ticket/branch (empty if none). Feeds the delivery
 # summary so the CEO/human can reach the PR directly.
-# F-5: Use mr_list_for_branch for platform-aware URL lookup (normalized .url key)
+# PDEV-512: on a fresh dispatch the branch is resolved BEFORE the PM session, so
+# it is empty at summary time and the branch-scoped lookup cannot see the MR the
+# PM just created. A ref/title fallback (mirroring classify_result's empty-branch
+# search) therefore resolves the URL too; empty is returned only when nothing
+# resolves. F-5: mr_list_for_branch/mr_list_search normalize the .url key.
 pr_url_for() {
   local -r ticket_ref="${1:-}"
   local -r branch="${2:-}"
-  [[ -n "${branch}" ]] || { printf ''; return 0; }
-  local pr_json
-  pr_json="$(mr_list_for_branch "${branch}" 2>/dev/null)" || pr_json='[]'
-  printf '%s' "${pr_json}" | _jq -r '.[0].url // empty' 2>/dev/null || printf ''
+
+  local url=""
+  if [[ -n "${branch}" ]]; then
+    local pr_json
+    pr_json="$(mr_list_for_branch "${branch}" 2>/dev/null)" || pr_json='[]'
+    url="$(printf '%s' "${pr_json}" | _jq -r '.[0].url // empty' 2>/dev/null)" || url=""
+  fi
+
+  if [[ -z "${url}" && -n "${ticket_ref}" ]]; then
+    local search_json
+    search_json="$(mr_list_search "${ticket_ref}" 2>/dev/null)" || search_json='[]'
+    url="$(printf '%s' "${search_json}" | _jq -r '.[0].url // empty' 2>/dev/null)" || url=""
+  fi
+
+  printf '%s' "${url}"
+}
+
+# Re-resolve the delivery branch at summary time for the PR-URL lookup.
+# PDEV-512: a fresh dispatch resolves the branch BEFORE the PM session, so the
+# branch the PM creates inside the session is invisible to the post-session
+# summary. Re-running the same git scan (resolve_branch) surfaces it; an
+# explicit branch (caller arg or mapping hit) is returned unchanged.
+resolve_summary_branch() {
+  local -r ticket_ref="$1"
+  local -r branch="${2:-}"
+  if [[ -n "${branch}" ]]; then
+    printf '%s' "${branch}"
+    return 0
+  fi
+  resolve_branch "${ticket_ref}" ""
 }
 
 # PURE: Decide what to do after an iteration completes.
@@ -1627,7 +1659,11 @@ deliver_loop() {
 
     # Populate the delivery summary fields.
     DELIVERY_RESULT="${message}"
-    DELIVERY_PR_URL="$(pr_url_for "${ticket_ref}" "${branch}")"
+    # PDEV-512: re-resolve the branch — a fresh dispatch had none before the PM
+    # session, so the PM-created branch only becomes visible here.
+    local summary_branch
+    summary_branch="$(resolve_summary_branch "${ticket_ref}" "${branch}")"
+    DELIVERY_PR_URL="$(pr_url_for "${ticket_ref}" "${summary_branch}")"
     DELIVERY_EXIT_CODE="${exit_code}"
     DELIVERY_LAST_MESSAGE="${CURRENT_LAST_MESSAGE}"
 
@@ -1689,7 +1725,10 @@ join_delivery() {
   esac
 
   DELIVERY_RESULT="${classification}"
-  DELIVERY_PR_URL="$(pr_url_for "${ticket_ref}" "${branch}")"
+  # PDEV-512: the JOIN path has the same pre-session branch gap as OWN.
+  local summary_branch
+  summary_branch="$(resolve_summary_branch "${ticket_ref}" "${branch}")"
+  DELIVERY_PR_URL="$(pr_url_for "${ticket_ref}" "${summary_branch}")"
   DELIVERY_EXIT_CODE="${exit_code}"
   DELIVERY_LAST_MESSAGE="${last_msg}"
   printf 'joined:%s' "${exit_code}"
@@ -1698,9 +1737,19 @@ join_delivery() {
 # Print the delivery summary to stdout (key=value, parseable). Additive — the
 # existing stderr logging is unchanged. Consumed by the CEO (Mode A) and
 # batch-deliver.sh (Mode B) via INV-DM-1/4. result is one of: merged |
-# blocked | pr-open | failed | finished | max-restarts | state-unverified
-# (PDEV-490: tracker state fetch failed after retries — outcome unverified).
+# blocked | pr-open | pr-open-unverified | failed | finished | max-restarts |
+# state-unverified (PDEV-490: tracker state fetch failed after retries — outcome
+# unverified). pr-open-unverified (PDEV-512): the PR is open but its URL could
+# not be resolved after the branch-scoped and title/ref lookups.
 print_delivery_summary() {
+  # PDEV-512 / AC-2: a success classification with no resolvable URL is the
+  # "result=pr-open + pr_url=" false-success smell. After pr_url_for's branch
+  # and title fallbacks an empty URL means the MR could not be linked — surface
+  # it explicitly (loud warn + distinct result), never as a clean pr-open.
+  if [[ "${DELIVERY_RESULT}" == "pr-open" && -z "${DELIVERY_PR_URL}" ]]; then
+    log_warn "result=pr-open but pr_url unresolved after branch and title lookups — reporting pr-open-unverified"
+    DELIVERY_RESULT="pr-open-unverified"
+  fi
   printf 'result=%s\n' "${DELIVERY_RESULT}"
   printf 'pr_url=%s\n' "${DELIVERY_PR_URL}"
   printf 'exit_code=%s\n' "${DELIVERY_EXIT_CODE}"
@@ -1913,13 +1962,13 @@ Options:
    ADOS_HOOK_ENV_OUTPUT=fresh private absolute path; ADOS_HOOK_ENV_FORMAT=ADOS_HOOK_ENV_V1.
 
 Default invocation prints a delivery summary on stdout (key=value):
-  result=<merged|blocked|pr-open|failed|finished|max-restarts|state-unverified>
+  result=<merged|blocked|pr-open|pr-open-unverified|failed|finished|max-restarts|state-unverified>
   pr_url=<url or empty>
   exit_code=<0|1>
   last_message=<PM final message>
 
 Exit codes:
-  0 - Success (merged, blocked, pr-open, or PM finished)
+  0 - Success (merged, blocked, pr-open, pr-open-unverified, or PM finished)
   1 - Failed (max restarts exceeded, or state-unverified: tracker state fetch failed after retries)
   2 - Usage error
 EOF
