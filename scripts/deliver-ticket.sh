@@ -431,15 +431,34 @@ mr_list_closed_merged() {
   printf '%s' "${normalized}"
 }
 
+# PDEV-516 / DM-3: escape a validated ticket ref for safe interpolation into a
+# jq (Oniguruma) regex. Duplicated verbatim in batch-deliver.sh — the two
+# wrappers are standalone and share no library.
+_ref_regex_escape() {
+  local -r ref="$1"
+  local out="" ch
+  local i
+  for (( i = 0; i < ${#ref}; i++ )); do
+    ch="${ref:i:1}"
+    if [[ "${ch}" =~ [A-Za-z0-9] ]]; then
+      out+="${ch}"
+    else
+      out+="\\${ch}"
+    fi
+  done
+  printf '%s' "${out}"
+}
+
 # Normalize open MR/PR full-text search by the given term.
 # Args: search_term [association_ref]
-# DM-2 (PDEV-514): when association_ref is non-empty the whole hit list is
-# bounded to MRs genuinely associated with that ticket — the ref must appear in
-# the MR title OR in its source/head branch (GitLab .source_branch, GitHub
-# .headRefName). The filter runs over the entire list before any caller selects
-# its first element, so an incidental full-text hit can never be selected ahead
-# of a genuine one. Callers that need the raw (unbounded) search pass only the
-# search term; the filter is opt-in and never default-on.
+# DM-2/DM-3 (PDEV-514/516): when association_ref is non-empty the whole hit list
+# is bounded to MRs genuinely associated with that ticket — the ref must appear
+# in the MR title OR in its source/head branch (GitLab .source_branch, GitHub
+# .headRefName) as an exact token (maximal [A-Za-z0-9-] run). The filter runs
+# over the entire list before any caller selects its first element, so an
+# incidental full-text hit can never be selected ahead of a genuine one.
+# Callers that need the raw (unbounded) search pass only the search term; the
+# filter is opt-in and never default-on.
 mr_list_search() {
   local -r search_term="$1"
   local -r association_ref="${2:-}"
@@ -473,8 +492,14 @@ mr_list_search() {
   fi
 
   if [[ -n "${association_ref}" ]]; then
-    normalized="$(printf '%s' "${normalized}" | _jq --arg ref "${association_ref}" \
-      '[.[] | select((.title | contains($ref)) or (.head_branch | contains($ref)))]' 2>/dev/null || echo '[]')"
+    if [[ "${association_ref}" =~ ^[A-Z]+-[0-9]+$ ]]; then
+      local escaped_ref
+      escaped_ref="$(_ref_regex_escape "${association_ref}")"
+      normalized="$(printf '%s' "${normalized}" | _jq --arg ref "${escaped_ref}" \
+        '[.[] | select(((.title // "") | test("(^|[^A-Za-z0-9-])" + $ref + "([^A-Za-z0-9-]|$)")) or ((.head_branch // "") | test("(^|[^A-Za-z0-9-])" + $ref + "([^A-Za-z0-9-]|$)")))]' 2>/dev/null || echo '[]')"
+    else
+      normalized='[]'
+    fi
   fi
 
   printf '%s' "${normalized}"
