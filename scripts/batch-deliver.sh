@@ -247,30 +247,69 @@ mr_list_closed_merged() {
   printf '%s' "${normalized}"
 }
 
-# Normalize open MR/PR search by title
+# PDEV-516 / DM-3: escape a validated ticket ref for safe interpolation into a
+# jq (Oniguruma) regex. Duplicated verbatim in deliver-ticket.sh — the two
+# wrappers are standalone and share no library.
+_ref_regex_escape() {
+  local -r ref="$1"
+  local out="" ch
+  local i
+  for (( i = 0; i < ${#ref}; i++ )); do
+    ch="${ref:i:1}"
+    if [[ "${ch}" =~ [A-Za-z0-9] ]]; then
+      out+="${ch}"
+    else
+      out+="\\${ch}"
+    fi
+  done
+  printf '%s' "${out}"
+}
+
+# Normalize open MR/PR search by title.
+# Args: search_term [association_ref]
+# PDEV-516 / DM-2 + DM-3: when association_ref is non-empty the whole hit list
+# is bounded to MRs whose title OR source/head branch carries that ref as an
+# exact token. The filter is opt-in and applied before any caller selects .[0];
+# one-argument callers keep the raw (unbounded) list.
 mr_list_search() {
   local -r search_term="$1"
+  local -r association_ref="${2:-}"
   local raw_json normalized
 
   # Default to github if PLATFORM not set
   local platform="${PLATFORM:-github}"
 
   if [[ "${platform}" == "gitlab" ]]; then
-    # GitLab: .iid
+    # GitLab: .iid, .title, .source_branch
     if ! raw_json="$(_mr mr list --search "${search_term}" --output json 2>/dev/null)"; then
       return 1
     fi
     normalized="$(echo "${raw_json}" | _jq '[.[] | select(.state == "opened") | {
-      number: .iid
+      number: .iid,
+      title: (.title // ""),
+      head_branch: (.source_branch // "")
     }]' 2>/dev/null || echo '[]')"
   else
-    # GitHub: .number
-    if ! raw_json="$(_mr pr list --search "${search_term}" --json number,state 2>/dev/null)"; then
+    # GitHub: .number, .title, .headRefName
+    if ! raw_json="$(_mr pr list --search "${search_term}" --json number,state,title,headRefName 2>/dev/null)"; then
       return 1
     fi
     normalized="$(echo "${raw_json}" | _jq '[.[] | select(.state == "OPEN") | {
-      number: .number
+      number: .number,
+      title: (.title // ""),
+      head_branch: (.headRefName // "")
     }]' 2>/dev/null || echo '[]')"
+  fi
+
+  if [[ -n "${association_ref}" ]]; then
+    if [[ "${association_ref}" =~ ^[A-Z]+-[0-9]+$ ]]; then
+      local escaped_ref
+      escaped_ref="$(_ref_regex_escape "${association_ref}")"
+      normalized="$(printf '%s' "${normalized}" | _jq --arg ref "${escaped_ref}" \
+        '[.[] | select(((.title // "") | test("(^|[^A-Za-z0-9-])" + $ref + "([^A-Za-z0-9-]|$)")) or ((.head_branch // "") | test("(^|[^A-Za-z0-9-])" + $ref + "([^A-Za-z0-9-]|$)")))]' 2>/dev/null || echo '[]')"
+    else
+      normalized='[]'
+    fi
   fi
 
   printf '%s' "${normalized}"
@@ -415,7 +454,8 @@ is_pr_approved() {
 get_pr_number() {
   local -r ticket_ref="$1"
   local pr_json
-  pr_json="$(mr_list_search "${ticket_ref}" 2>/dev/null)" || pr_json='[]'
+  # PDEV-516 / DM-4: bound the branch-agnostic lookup to ref-associated MRs.
+  pr_json="$(mr_list_search "${ticket_ref}" "${ticket_ref}" 2>/dev/null)" || pr_json='[]'
   printf '%s' "${pr_json}" | _jq -r '.[0].number // empty' 2>/dev/null
 }
 

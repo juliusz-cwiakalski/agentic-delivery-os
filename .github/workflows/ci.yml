@@ -69,6 +69,48 @@ jobs:
       - name: Run inception doc-set consistency guard
         run: bash scripts/.tests/test-inception-doc-consistency.sh
 
+  result-tuple-guard:
+    name: Result-tuple doc guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # PDEV-516 F-3: fails when a current-truth documented result enumeration
+      # is stale relative to the `result=<…>` help line in deliver-ticket.sh.
+      - name: Run result-tuple guard
+        run: |
+          set -e
+          bash scripts/.tests/test-deliver-ticket-result-tuples.sh
+
+      # PDEV-516 F-3: committed negative-mode self-tests — injects each guard
+      # failure mode into a synthetic temp tree and asserts it fires.
+      - name: Run result-tuple negative-mode self-tests
+        run: |
+          set -e
+          bash scripts/.tests/test-deliver-ticket-result-tuples-modes.sh
+
+  mutation-sandbox:
+    name: Delivery mutation sandbox
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # PDEV-516 F-4: proves TC-DT-SF-12 genuinely asserts the delivery result
+      # tuple. The sandbox copies deliver-ticket.sh + its harness to a temp tree,
+      # breaks the result emission in the COPY only, and requires the mutated
+      # harness to exit non-zero with `[FAIL] … TC-DT-SF-12` (stderr captured via
+      # 2>&1) while the unmutated copy exits 0 and no tracked file is mutated.
+      #
+      # OQ-4 / DEC-8: this test-*.sh is ALSO discovered by the `bash-tests` `find`,
+      # so it runs twice by design (same accepted precedent as
+      # test-doc-distribution-modes.sh). The duplicate is fast, offline and tiny.
+      - name: Run delivery mutation sandbox
+        run: |
+          set -e
+          bash scripts/.tests/test-delivery-mutation-sandbox.sh
+
   bash-tests:
     name: Bash test suites
     runs-on: ubuntu-latest

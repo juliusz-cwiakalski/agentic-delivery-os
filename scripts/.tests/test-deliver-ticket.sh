@@ -2520,6 +2520,146 @@ test_merge_strategy_rebase() {
   ' _ "${SCRIPT_DIR}/deliver-ticket.sh"
 }
 
+
+# TC-DT-516-1 (F-2, AC-F2-1/AC-F2-2/AC-F2-3, DM-3): the ref-token boundary
+# rejects the prefix/suffix/prefixed collision classes for ref PDEV-5. Step 1
+# carries the retired TC-DT-516-3 no-lookaround static assertion. Both platforms.
+test_pdev516_token_boundary_rejects_collisions() {
+  # Step 1 (retired TC-DT-516-3 coverage): the predicate source must not use
+  # lookaround (DM-3 / DEC-4).
+  if grep -nE '\(\?<?[=!]' "${SCRIPT_DIR}/deliver-ticket.sh" | grep -v '^[[:space:]]*#' >/dev/null 2>&1; then
+    echo "  deliver-ticket.sh must not use a lookaround predicate" >&2
+    return 1
+  fi
+
+  bash -c '
+    ADOS_ENV_LOADED=1 ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    SEARCH_JSON="[]"
+    _glab() {
+      if [[ "$1" == "mr" && "$2" == "list" ]]; then
+        if printf "%s " "$@" | grep -q -- "--search"; then
+          printf "%s" "$SEARCH_JSON"
+        else
+          printf "%s" "[]"
+        fi
+      fi
+    }
+    reject() {
+      SEARCH_JSON="[{\"iid\":1,\"web_url\":\"https://gitlab.example/mr/1\",\"source_branch\":\"docs/planning\",\"title\":\"$1\",\"state\":\"opened\"}]"
+      local out
+      out=$(mr_list_search "PDEV-5" "PDEV-5")
+      [[ "$out" == "[]" ]] || { echo "  GitLab title [$1] was selected: $out" >&2; exit 1; }
+    }
+    reject "fix(PDEV-514): longer suffix"
+    reject "PDEV-51"
+    reject "APDEV-514"
+    reject "XPDEV-5"
+    reject "fix(PDEV-5-extra): hyphen continuation"
+    # Branch-borne collision classes.
+    SEARCH_JSON="[{\"iid\":3,\"web_url\":\"https://gitlab.example/mr/3\",\"source_branch\":\"XPDEV-5\",\"title\":\"chore\",\"state\":\"opened\"}]"
+    out=$(mr_list_search "PDEV-5" "PDEV-5"); [[ "$out" == "[]" ]] || exit 1
+    SEARCH_JSON="[{\"iid\":4,\"web_url\":\"https://gitlab.example/mr/4\",\"source_branch\":\"fix/PDEV-5-extra/b\",\"title\":\"chore\",\"state\":\"opened\"}]"
+    out=$(mr_list_search "PDEV-5" "PDEV-5"); [[ "$out" == "[]" ]] || exit 1
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh" || return 1
+
+  bash -c '
+    ADOS_ENV_LOADED=1 ADOS_PLATFORM=github
+    source "$1" >/dev/null 2>&1
+    PLATFORM=github
+    SEARCH_JSON="[]"
+    _gh() {
+      if [[ "$1" == "pr" && "$2" == "list" ]]; then
+        if printf "%s " "$@" | grep -q -- "--search"; then
+          printf "%s" "$SEARCH_JSON"
+        else
+          printf "%s" "[]"
+        fi
+      fi
+    }
+    reject() {
+      SEARCH_JSON="[{\"number\":1,\"url\":\"https://github.example/pull/1\",\"headRefName\":\"docs/planning\",\"title\":\"$1\",\"state\":\"OPEN\"}]"
+      local out
+      out=$(mr_list_search "PDEV-5" "PDEV-5")
+      [[ "$out" == "[]" ]] || { echo "  GitHub title [$1] was selected: $out" >&2; exit 1; }
+    }
+    reject "fix(PDEV-514): longer suffix"
+    reject "PDEV-51"
+    reject "APDEV-514"
+    reject "XPDEV-5"
+    reject "fix(PDEV-5-extra): hyphen continuation"
+    SEARCH_JSON="[{\"number\":3,\"url\":\"https://github.example/pull/3\",\"headRefName\":\"XPDEV-5\",\"title\":\"chore\",\"state\":\"OPEN\"}]"
+    out=$(mr_list_search "PDEV-5" "PDEV-5"); [[ "$out" == "[]" ]] || exit 1
+    SEARCH_JSON="[{\"number\":4,\"url\":\"https://github.example/pull/4\",\"headRefName\":\"fix/PDEV-5-extra/b\",\"title\":\"chore\",\"state\":\"OPEN\"}]"
+    out=$(mr_list_search "PDEV-5" "PDEV-5"); [[ "$out" == "[]" ]] || exit 1
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh" || return 1
+  return 0
+}
+
+# TC-DT-516-2 (F-2, AC-F2-4, DM-3): the four documented genuine token shapes
+# plus a mixed string are still accepted — no false negative. Both platforms.
+test_pdev516_token_boundary_accepts_genuine() {
+  bash -c '
+    ADOS_ENV_LOADED=1 ADOS_PLATFORM=gitlab
+    source "$1" >/dev/null 2>&1
+    PLATFORM=gitlab
+    SEARCH_JSON="[]"
+    _glab() {
+      if [[ "$1" == "mr" && "$2" == "list" ]]; then
+        if printf "%s " "$@" | grep -q -- "--search"; then
+          printf "%s" "$SEARCH_JSON"
+        else
+          printf "%s" "[]"
+        fi
+      fi
+    }
+    accept() {
+      SEARCH_JSON="[{\"iid\":5,\"web_url\":\"https://gitlab.example/mr/5\",\"source_branch\":\"docs/planning\",\"title\":\"$1\",\"state\":\"opened\"}]"
+      local out
+      out=$(mr_list_search "PDEV-5" "PDEV-5")
+      [[ "$out" != "[]" ]] || { echo "  GitLab title [$1] not selected" >&2; exit 1; }
+    }
+    accept "fix(PDEV-5): title"
+    accept "fix/PDEV-5/slug"
+    accept "[PDEV-5]"
+    accept "PDEV-5"
+    accept "chore: PDEV-5 and more"
+    SEARCH_JSON="[{\"iid\":6,\"web_url\":\"https://gitlab.example/mr/6\",\"source_branch\":\"fix/PDEV-5/slug\",\"title\":\"chore\",\"state\":\"opened\"}]"
+    out=$(mr_list_search "PDEV-5" "PDEV-5"); [[ "$out" != "[]" ]] || exit 1
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh" || return 1
+
+  bash -c '
+    ADOS_ENV_LOADED=1 ADOS_PLATFORM=github
+    source "$1" >/dev/null 2>&1
+    PLATFORM=github
+    SEARCH_JSON="[]"
+    _gh() {
+      if [[ "$1" == "pr" && "$2" == "list" ]]; then
+        if printf "%s " "$@" | grep -q -- "--search"; then
+          printf "%s" "$SEARCH_JSON"
+        else
+          printf "%s" "[]"
+        fi
+      fi
+    }
+    accept() {
+      SEARCH_JSON="[{\"number\":5,\"url\":\"https://github.example/pull/5\",\"headRefName\":\"docs/planning\",\"title\":\"$1\",\"state\":\"OPEN\"}]"
+      local out
+      out=$(mr_list_search "PDEV-5" "PDEV-5")
+      [[ "$out" != "[]" ]] || { echo "  GitHub title [$1] not selected" >&2; exit 1; }
+    }
+    accept "fix(PDEV-5): title"
+    accept "fix/PDEV-5/slug"
+    accept "[PDEV-5]"
+    accept "PDEV-5"
+    accept "chore: PDEV-5 and more"
+    SEARCH_JSON="[{\"number\":6,\"url\":\"https://github.example/pull/6\",\"headRefName\":\"fix/PDEV-5/slug\",\"title\":\"chore\",\"state\":\"OPEN\"}]"
+    out=$(mr_list_search "PDEV-5" "PDEV-5"); [[ "$out" != "[]" ]] || exit 1
+  ' _ "${SCRIPT_DIR}/deliver-ticket.sh" || return 1
+  return 0
+}
+
 main() {
   printf '%s Running tests...\n' "${TEST_TAG}"
 
@@ -2660,6 +2800,10 @@ main() {
   run_test "TC-DT-514-1: bounded fallback ignores incidental MR; mixed hit picks genuine (gitlab+github)" test_pdev514_fallback_ignores_incidental_mr
   run_test "TC-DT-514-2: empty-branch fallback does not classify incidental full-text MR pr-open (gitlab+github)" test_pdev514_classify_ignores_incidental_mr
   run_test "TC-DT-514-3: bounded fallback still accepts genuine title/branch match (gitlab+github)" test_pdev514_fallback_accepts_genuine_match
+
+  # PDEV-516 F-2: the association predicate is token-exact (no substring match).
+  run_test "TC-DT-516-1: token boundary rejects prefix/suffix/prefixed collisions (gitlab+github)" test_pdev516_token_boundary_rejects_collisions
+  run_test "TC-DT-516-2: genuine embedded/edge token shapes still accepted (gitlab+github)" test_pdev516_token_boundary_accepts_genuine
 
   # TC-PLAT-025..026: Platform-neutral prompt tests
   run_test "TC-PLAT-025: Platform-neutral prompt contains no literal gh commands" test_platform_neutral_prompt_no_literal_gh

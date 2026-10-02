@@ -16,7 +16,7 @@ references:
   - "Delivery vehicle: #142"
   - "Related change: GH-146"
 links:
-  related_changes: ["GH-146", "GH-148", "PDEV-514"]
+  related_changes: ["GH-146", "GH-148", "PDEV-514", "PDEV-516"]
   decisions: ["TDR-0002"]
 ---
 
@@ -71,8 +71,11 @@ and Mode B merge work identically on both forges — a GitLab delivery reports a
 accurate `result` and a populated MR web URL instead of degrading to an
 unverifiable `finished`. When the branch-scoped MR lookup is empty, the
 ticket-ref fallback is bounded: an MR is accepted only when the ticket ref
-appears in its title or its source/head branch, so an MR matched only on
-incidental full-text body is never returned or used to classify `pr-open`.
+appears in its title or its source/head branch **as an exact token** (a maximal
+`[A-Za-z0-9-]` run bounded by a non-token character or a string boundary), so a
+prefix ref (`PDEV-5`) never matches a longer ref (`PDEV-514`, `PDEV-5-…`,
+`XPDEV-5`) and an MR matched only on incidental full-text body is never returned
+or used to classify `pr-open`.
 
 **Detection resolution order:**
 
