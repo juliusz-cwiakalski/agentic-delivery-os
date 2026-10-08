@@ -432,6 +432,58 @@ flowchart TD
 > [delivery-modes.md](delivery-modes.md) for the canonical modes guide and
 > behavioral invariants (INV-DM-1..6).
 
+## Lite Lifecycle (T2-LITE)
+
+Opt-in tiered depth for change delivery. T2-LITE is **default-off**: it activates only
+when the repo defines a tier policy file (`doc/guides/change-workflow-tiers.md`) AND the
+ticket meets that policy's lite criteria. Without a policy file, every change runs the
+full 11-phase lifecycle above unchanged — zero behavior change for existing users.
+
+**Opt-in semantics:**
+
+- The tier policy file owns the eligibility criteria (never-lite class overrides such as
+  auth/permissions, persistence/concurrency seams, cross-domain contracts, planned
+  multi-repo changes, first-of-a-kind; then points and blast radius) and the escalation
+  triggers.
+- `@pm` selects the tier at intake (phase 1) and records it in
+  `chg-<workItemRef>-pm-notes.yaml`: `tier: T2-LITE|T2-FULL` plus the `rule:` used.
+
+**Same 11 phases, compressed** — T2-LITE is a depth reduction, never a bypass:
+
+| Phase | T2-LITE execution |
+|-------|-------------------|
+| 1. clarify_scope | unchanged (+ tier selection) |
+| 2-4. specification → test_planning → delivery_planning | collapsed into ONE delegation to `@spec-writer` producing `chg-<workItemRef>-lite.md` (≤300 lines; template: [`doc/templates/change-lite-note-template.md`](../templates/change-lite-note-template.md)); all three phases are still marked done in PM notes |
+| 5. dor_check | **DoR-lite**, PM-owned: AC present; requirements-diff complete (ticket AC ↔ note AC); verify-before-write (every cited code/CI/config fact checked); tier + rule recorded. No `@readiness-reviewer` delegation |
+| 6. delivery | unchanged — `@coder` executes the note's task list |
+| 7. system_spec_update | skipped unless the change alters documented behavior (reviewer-owned trigger) |
+| 8. review_fix | **scoped review**: step 1 re-validates tier eligibility; then diff vs the note's AC; any CRITICAL/MAJOR finding escalates |
+| 9. quality_gates | unchanged, full |
+| 10. dod_check | unchanged — verified against the note's AC and task list |
+| 11. pr_creation | unchanged |
+
+The lite note is the single artifact satisfying the spec/test-plan/plan requirement for a
+T2-LITE change; `chg-<workItemRef>-pm-notes.yaml` remains mandatory and unchanged.
+
+**Escalation ratchet (lite → full, mandatory; never de-escalate after DoR):**
+
+Escalate immediately when any of: a contract/security/persistence/concurrency surface is
+found; blast radius grows beyond one repo; any CRITICAL finding; implementation exceeds
+2× estimate; tests require new determinism machinery; the eligibility premise falsifies
+(claimed existing test coverage absent or broken); the change alters documented behavior.
+On escalation: write forward-useful artifacts only — a test plan plus a risk addendum,
+never a retroactive full spec — record the trigger and phase in PM notes, and continue
+under T2-FULL.
+
+**Cross-cutting rules (both tiers, always):**
+
+1. **Verify-before-write** — cited code/CI/config facts are checked, not remembered.
+2. **Cold-runner protocol** — concurrency/determinism claims pass N-loop + cold/single-core execution before "green".
+3. **CI-parity pre-MR** — the contract tier runs in a CI-like cold environment before the PR/MR.
+
+For the eligibility criteria and the full escalation trigger list, see the repo's tier
+policy file (`doc/guides/change-workflow-tiers.md`) where present.
+
 ---
 
 ## Phase Reopening

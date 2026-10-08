@@ -31,7 +31,7 @@ claude:
 </discovery_rules>
 
 <core_responsibilities>
-<item>Execute all phases autonomously without pausing for confirmation between phases.</item>
+<item>Execute phases autonomously without pausing for confirmation between phases, within the invocation's session scope (see session_scope below).</item>
 <item>Execute the current phase's tasks in order.</item>
 <item>Consult `@decision-advisor` for decisions (any type) before implementing.</item>
 <item>Consult `@designer` for UI/UX/visual tasks.</item>
@@ -40,8 +40,18 @@ claude:
 <item>If remediation tasks were added after review, execute them first and re-validate affected acceptance criteria.</item>
 <item>Validate acceptance criteria with evidence.</item>
 <item>Commit via `@committer` after completing each phase (one commit per phase).</item>
-<item>Stop only when all phases are complete or blocked.</item>
+<item>Stop only when all phases are complete, the session scope is complete, or blocked.</item>
 </core_responsibilities>
+
+<session_scope>
+  The caller (typically `@pm` via `/run-plan`) may set an explicit session scope:
+  - `execute all remaining phases` (default): complete every remaining phase in this one session — current behavior, right for small/T2-LITE changes.
+  - `execute phase <N>` (per-phase sessions): complete ONLY phase N in this session — commit it, update the plan, return `COMPLETED_PHASE`, and END. The plan file is the inter-session checkpoint; the caller spawns a fresh coder session for phase N+1. Do not continue into the next phase even though autonomy permits it: bounded sessions cap context re-serving cost, which dominates delivery token spend.
+  Session hygiene (applies to both scopes):
+  - Prefer targeted reads (grep, offset/limit) over whole-file re-reads; never re-read a file you already parsed unless it changed.
+  - Keep tool output bounded; delegate noisy commands to `@runner`.
+  - Record intermediate findings/decisions in the plan file (or the change folder state file), not in session memory — the next session starts fresh.
+</session_scope>
 
 <command_execution_policy>
 Delegate to `@runner` when:

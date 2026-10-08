@@ -14,9 +14,10 @@
 # (b) obtains time/HTTP strictly through the seams (_now_utc_epoch, _zai_quota_fetch);
 # (c) emits at most one diagnostic line to stderr.
 #
-# v1 registers two conditions:
+# Registered conditions:
 #   - howLongToSleepDueToPeakHours         (pure-bash; behavior-preserving)
 #   - howLongToSleepDueToQuotaExhaustion   (opt-in via ZAI_API_KEY; fail-open)
+#   - howLongToSleepDueToDeepSeekPeak      (active when any OC_*_MODEL -> deepseek/*)
 #
 # Z.AI peak hours: 14:00-18:00 daily (UTC+8) = 06:00-10:00 UTC. GLM-5.2 / GLM-5-
 # Turbo consume quota at 3x during peak, 2x off-peak. A configurable buffer is
@@ -43,7 +44,18 @@ IFS=$'\n\t'
 # Peak knobs are readonly at source time (re-source in a subshell to override).
 readonly ADOS_ZAI_PEAK_START_UTC="${ADOS_ZAI_PEAK_START_UTC:-21600}" # 06:00 UTC
 readonly ADOS_ZAI_PEAK_END_UTC="${ADOS_ZAI_PEAK_END_UTC:-36000}"     # 10:00 UTC
-readonly ADOS_ZAI_BUFFER_SECONDS="${ADOS_ZAI_BUFFER_SECONDS:-7200}"  # 2h buffer
+#readonly ADOS_ZAI_BUFFER_SECONDS="${ADOS_ZAI_BUFFER_SECONDS:-7200}"  # 2h buffer
+
+readonly ADOS_ZAI_BUFFER_SECONDS="${ADOS_ZAI_BUFFER_SECONDS:-900}"  # 15 min buffer - we kill delivery
+
+
+# Weekend policy: z.ai treats the WHOLE weekend (Sat+Sun) as off-peak, so
+# peak-hour deferral applies on working days only (see zai_peak_applicable_day).
+# Set ADOS_ZAI_WEEKEND_OFF_PEAK=0 to restore 7-day peak behavior.
+readonly ADOS_ZAI_WEEKEND_OFF_PEAK="${ADOS_ZAI_WEEKEND_OFF_PEAK:-1}"
+
+
+readonly ZAI_API_KEY=$(cat ~/.local/share/opencode/auth.json | jq -r '."zai-coding-plan".key')
 # ZAI_API_KEY / ADOS_ZAI_QUOTA_DISABLED / ADOS_ZAI_MAX_SLEEP_LOOPS are read at
 # runtime (not readonly-blocked) so they can be overridden per invocation.
 
@@ -133,10 +145,23 @@ _zai_warn() { printf '[WARN] (pre-opencode-iteration-zai) %s\n' "$1" >&2; }
 # Peak-hours condition (behavior-preserving refactor of the prior main() body).
 # Returns seconds-until-peak_end when inside the effective pause window
 # [peak_start - buffer, peak_end); else 0. Pure-bash: no jq, no network.
+# Working-day gate for the peak condition: whole weekend is off-peak at z.ai.
+# Pure Gregorian day-of-week (epoch day 0 = Thu 1970-01-01; dow=(days+4)%7,
+# 0=Sunday..6=Saturday; working days = 1..5).
+zai_peak_applicable_day() {
+  local epoch="$1" days dow
+  [[ "${ADOS_ZAI_WEEKEND_OFF_PEAK:-1}" == "1" ]] || return 0
+  days=$(( epoch / 86400 ))
+  dow=$(( (days + 4) % 7 ))
+  (( dow >= 1 && dow <= 5 ))
+}
+
 howLongToSleepDueToPeakHours() {
   local now
   now="$(_now_utc_epoch)"
-  if is_zai_peak_window "${now}"; then
+  if ! zai_peak_applicable_day "${now}"; then
+    printf '0'
+  elif is_zai_peak_window "${now}"; then
     seconds_until_window_end "${now}"
   else
     printf '0'
@@ -259,11 +284,53 @@ howLongToSleepDueToQuotaExhaustion() {
 readonly -a ADOS_ZAI_CONDITIONS=(
   howLongToSleepDueToPeakHours
   howLongToSleepDueToQuotaExhaustion
+  howLongToSleepDueToDeepSeekPeak
 )
 
 # ============================================================================
 # GENERIC DRIVER (DM-5)
 # ============================================================================
+# DeepSeek peak-hours condition (added 2026-09-07, owner request): DeepSeek
+# prices are 2x during Mon-Fri 01:00-04:00 and 06:00-10:00 UTC; all other
+# hours and whole weekends are off-peak (api-docs.deepseek.com/quick_start/pricing).
+# ACTIVE ONLY when at least one OC_*_MODEL env var routes an agent to deepseek/*
+# (model-profile routing), so pure-z.ai setups are unaffected by this condition.
+# Opt-out: ADOS_DS_PEAK_DISABLED=1.
+# Windows configurable: ADOS_DS_PEAK_WINDOWS_UTC ("start,end;start,end",
+# UTC seconds-of-day). Optional pre-peak buffer: ADOS_DS_PEAK_BUFFER_SECONDS
+# (default 0) pauses just before a window so a fresh session does not roll into it.
+howLongToSleepDueToDeepSeekPeak() {
+  [[ "${ADOS_DS_PEAK_DISABLED:-}" == "1" ]] && { printf '0'; return 0; }
+  if ! env | grep -Eq '^OC_[A-Za-z0-9_]*MODEL=deepseek/'; then
+    printf '0'
+    return 0
+  fi
+  local ds_windows="${ADOS_DS_PEAK_WINDOWS_UTC:-3600,14400;21600,36000}"
+  local buf="${ADOS_DS_PEAK_BUFFER_SECONDS:-0}"
+  local now sod days dow w start end sleep_for best=0
+  now="$(_now_utc_epoch)"
+  sod=$(( now % 86400 ))
+  days=$(( now / 86400 ))
+  dow=$(( (days + 4) % 7 ))   # 0=Sunday..6=Saturday (epoch day 0 = Thursday)
+  if (( dow < 1 || dow > 5 )); then
+    printf '0'
+    return 0
+  fi
+  local IFS=';'
+  for w in ${ds_windows}; do
+    start="${w%,*}"
+    end="${w#*,}"
+    if (( sod >= start && sod < end )); then
+      sleep_for=$(( end - sod ))
+      if (( sleep_for > best )); then best=${sleep_for}; fi
+    elif (( sod < start && sod >= start - buf )); then
+      sleep_for=$(( start - sod ))
+      if (( sleep_for > best )); then best=${sleep_for}; fi
+    fi
+  done
+  printf '%s' "${best}"
+}
+
 main() {
   local model
   model="$(zai_configured_model)"
@@ -304,6 +371,7 @@ main() {
       case "${name}" in
         howLongToSleepDueToPeakHours) name="peak-hours" ;;
         howLongToSleepDueToQuotaExhaustion) name="quota-exhaustion" ;;
+        howLongToSleepDueToDeepSeekPeak) name="deepseek-peak" ;;
       esac
       reason="${reason:+${reason}, }${name}"
     done
