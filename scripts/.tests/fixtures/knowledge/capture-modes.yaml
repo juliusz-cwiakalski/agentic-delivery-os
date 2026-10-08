@@ -1,0 +1,11 @@
+default: suggest
+cases:
+  off:
+    mutation: forbidden
+    result: report-query-uncertainty-only
+  suggest:
+    mutation: forbidden
+    result: propose-no-op-update-or-reopening
+  write:
+    mutation: workflow-authorization-required
+    result: validate-record-and-regenerate-index

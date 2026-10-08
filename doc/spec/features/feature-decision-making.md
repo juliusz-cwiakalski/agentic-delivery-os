@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-DECISION-MAKING
 status: Current
 created: 2026-06-28
-last_updated: 2026-07-05
+last_updated: 2026-09-09
 owners: ["engineering"]
 service: delivery-os
 summary: "The decision-making process/framework: rigor-calibrated ceremony, a universal decision kernel, four-axis classification with domains-first extension and an ADR/TDR tie-breaker, tiered-default section applicability, a bounded AI-authority model, three decision modes, a bounded technical-selection evidence pack with security controls, evidence delegation to @external-researcher, and a two-stage author+challenge agent flow."
 links:
-  related_changes: ["GH-79", "GH-133"]
+  related_changes: ["GH-79", "GH-133", "GH-41"]
   guides:
     - "doc/guides/decision-making.md"
 ---
@@ -51,6 +51,7 @@ ADOS provides a process-first decision-making framework that calibrates the *amo
 - **Tiered-default section applicability (F-8):** Rigor (R1/R2/R3) is the **primary axis** that drives the section set rendered in a record; a record's type and archetype toggle only a small, **enumerated** set of optional add-ons (e.g., a Technical-Selection Evidence pack only when `archetype=selection`; a Communication Plan only when `governance.informed` is non-empty). This deliberately replaces a full 2D applicability matrix (rigor × type), which would push agents to over-emit sections and bloat R1 briefs. The template tags each section by rigor applicability (`R1/R2/R3`, `R2/R3`, `R3-expanded`) and is the section-order authority.
 - **Bounded technical-selection evidence pack (F-9):** For framework/library/tool/vendor selections (`archetype: selection`) at R2/R3, a bounded pack defaults to **top-3 candidate options × ~10 highest-signal fields** (expand when the decision warrants more alternatives) (license, maturity/age, release cadence, contributors/activity, issue responsiveness + bus factor, security advisories, adoption, migration/SemVer discipline, integration fit, lock-in cost). Every signal carries a `FACT`/`ASSUMPTION`/`TO-CONFIRM` label, a **canonical source** (official registry/repo URL, not an aggregator), and an **as-of date**. Three mandatory **security controls**: canonical-source verification, as-of-date + revisit trigger ("dependency security advisory published"), and **data-minimization** (send only the research question + public identifiers externally; wire `ai_assistance.external_data_shared`). Signals are evidence, **not a blind numeric scorecard** (a scorecard is allowed only when D9 deliberately selects MCDA). License is recorded as a `FACT` string; **compatibility is a human/R3 determination**.
 - **Evidence delegation to `@external-researcher` (F-10):** `@decision-advisor` never uses the network directly. For D2 (Context & Evidence) on a selection decision where external facts materially affect the recommendation, it delegates **bounded** evidence gathering to `@external-researcher` and remains the **synthesizer** of the returned pack — labeling findings `FACT`/`ASSUMPTION`/`TO-CONFIRM` and never inventing metrics. **R1 defaults to local:** R1 uses local evidence + `ASSUMPTION` labels and delegates externally only when the decider explicitly opts in (preserving the R1 ≤ 1 business day SLO). **License-as-human-step:** when a selection introduces a dependency, the advisor records the license string as a `FACT` and flags it for human compatibility-determination **and** acceptance — it never autonomously concludes compatibility or accepts a license.
+- **Project-knowledge and gap routing (F-11):** A `decision-needed` Knowledge Gap routes an unresolved choice into this process but is not itself a decision or authorization. At D2, `@decision-advisor` may request one bounded `@knowledge` lookup when material project facts are not settled by known canonical evidence. The advisor retains synthesis, rigor, recommendation, and decision-rights ownership; the handoff cannot call itself or bounce through PM or reconciliation. An accepted decision repairs canonical rationale in its decision record, while a related gap closes only after its original representative knowledge task succeeds against that canonical record.
 
 ### Honest independence
 
@@ -81,6 +82,7 @@ Selection:    archetype=selection (R2/R3) → @decision-advisor delegates bounde
 - **License-as-human-step:** when a selection introduces a dependency, the license is recorded as a `FACT` (with source) but compatibility determination and acceptance are always a human/R3 step — the advisor never autonomously accepts a license.
 - **R1 default-local:** R1 uses local evidence + `ASSUMPTION` labels; external delegation happens only when the decider explicitly requests it, preserving the R1 ≤ 1 business day SLO.
 - **No fabricated metrics:** when external evidence is incomplete, unknowns are marked `TO-CONFIRM` rather than invented.
+- **Decision-needed gap:** route the choice through normal rigor and authorization. Do not treat the gap record as decision authority or close it solely because a decision record was merged.
 
 ## Technical Architecture & Codebase Map
 
@@ -95,6 +97,7 @@ Selection:    archetype=selection (R2/R3) → @decision-advisor delegates bounde
 | `.opencode/command/write-decision.md` | Write Decision command | Renders the record proportionally by rigor; keeps recommendation ≠ decision; refuses auto-Accept of R2/R3 |
 | `.opencode/command/review-decision.md` | Review Decision command | Delegates an independent challenge to `@decision-critic` |
 | `.ai/agent/decision-instructions.md` | Project-local instructions | Optional project-specific strategic context + tracking conventions (read by advisor + critic when present) |
+| `.opencode/agent/knowledge.md` | Bounded project evidence | Shared authority-aware lookup for unresolved project facts; decision advisor remains the synthesizer |
 
 ## Non-Functional Requirements
 
@@ -108,6 +111,8 @@ Selection:    archetype=selection (R2/R3) → @decision-advisor delegates bounde
 | NFR-6 | Evidence bound | Technical-selection evidence pack is bounded | Default 3 candidate options (expand when warranted) × ~10 highest-signal fields |
 | NFR-7 | R1 cycle time | External delegation is off by default at R1 | ≤ 1 business day; R1 defaults to local evidence |
 | NFR-8 | Evidence integrity | Every selection signal carries a canonical source, an as-of date, and a FACT/ASSUMPTION/TO-CONFIRM label | Aggregators never the sole source; license is a human step |
+| NFR-9 | Knowledge handoff safety | Project-fact lookup is bounded and leaf-only; decision authority remains with the configured rights model | No recursive handoff or authority transfer |
+| NFR-10 | Gap closure integrity | Decision-needed gaps close only when accepted canonical rationale answers the original task | No merge-only closure |
 
 ## Quality Assurance Strategy
 
@@ -117,6 +122,7 @@ Selection:    archetype=selection (R2/R3) → @decision-advisor delegates bounde
 |-------|-------|-------|
 | Manual | Two-stage flow | Run `/plan-decision` → `/write-decision` → `/review-decision`; verify tiered-default rendering + tri-state verdict |
 | Manual | R3 guard | Verify an R3 record stays `status: Proposed` until a human decides |
+| Contract/behavioral | Knowledge routing | Verify a decision-needed gap enters normal triage, one bounded lookup preserves rights, and closure requires original-task verification |
 
 ## Dependencies & Risks
 
@@ -139,3 +145,4 @@ Selection:    archetype=selection (R2/R3) → @decision-advisor delegates bounde
 - **Record-artifact reference:** [decision-records-management.md](../../guides/decision-records-management.md).
 - **Record template:** [doc/templates/decision-record-template.md](../../templates/decision-record-template.md) — single source of truth for record body structure; tags each section by rigor applicability; ships worked R1/R2/R3 examples.
 - **System bootstrap:** [AGENTS.md](../../../AGENTS.md) — decision-advisor / decision-critic roles.
+- **Project Knowledge Management:** [feature-project-knowledge-management.md](feature-project-knowledge-management.md) — shared evidence, handoff, and durable-gap semantics.

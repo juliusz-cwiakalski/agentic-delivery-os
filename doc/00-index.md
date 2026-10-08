@@ -31,6 +31,7 @@ ados_distribution: redistributable
 | Document | Description |
 |----------|-------------|
 | [Agents & Commands Guide](guides/opencode-agents-and-commands-guide.md) | How to use AI agents and commands |
+| [Project Knowledge Management](guides/project-knowledge-management.md) | Evidence-backed queries, Knowledge Gaps, review, routing, and Contributor Orientation |
 | [Onboarding Existing Project](guides/onboarding-existing-project.md) | Adopt ADOS in an existing project |
 | [Project Inception](guides/project-inception.md) | Manual 8-phase process for running project inception |
 | [Claude Code Setup](guides/claude-code-setup.md) | Claude Code CLI provider setup (Anthropic, Z.AI) |
@@ -46,6 +47,7 @@ ados_distribution: redistributable
 |------|-------------|
 | [zclaude](tools/zclaude.md) | Launch Claude Code with Z.AI GLM Coding Plan |
 | [text-to-image](tools/text-to-image.md) | Generate images from text prompts (7 providers) |
+| [knowledge-gap](tools/knowledge-gap.md) | Validate Knowledge Gap records, allocate IDs, and derive the index |
 
 ## Templates
 
@@ -58,6 +60,8 @@ ados_distribution: redistributable
 | [Test Spec](templates/test-spec-template.md) | Test specifications |
 | [Test Plan](templates/test-plan-template.md) | Per-change test plans |
 | [Implementation Plan](templates/implementation-plan-template.md) | Per-change implementation plans |
+| [Knowledge Gap](templates/knowledge-gap-template.md) | Durable sanitized knowledge-deficiency record |
+| [Knowledge Instructions](templates/knowledge-instructions-template.md) | Optional project source, disclosure, and capture policy |
 
 Additional profile-aware templates are listed in [templates/README.md](templates/README.md), including optional business/product strategy templates and YAML register templates.
 

@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-QUALITY-GATES-AND-PR
 status: Current
 created: 2026-06-28
-last_updated: 2026-06-28
+last_updated: 2026-09-09
 owners: ["engineering"]
 service: delivery-os
 summary: "The verification-and-release neighborhood of the lifecycle: quality gates (/check, /check-fix), the one-Conventional-Commit workflow (@committer), and the PR/MR workflow (@pr-manager), with a platform/project configuration layer."
 links:
-  related_changes: ["GH-79"]
+  related_changes: ["GH-79", "GH-41"]
   guides:
     - "doc/guides/pr-platform-integration.md"
 ---
@@ -50,6 +50,7 @@ This spec covers the **verification and release neighborhood** of the delivery l
 - **Platform/project configuration layer (F-7):** Two repository-local files externalize platform and review specifics:
   - `.ai/agent/pr-instructions.md` — PR/MR platform config (platform type, access method, an Operations Reference table mapping every PR/MR operation to a concrete CLI command), read by `@pr-manager`, `@reviewer`, and `@review-feedback-applier`.
   - `.ai/agent/code-review-instructions.md` — repository-local review guidance (priorities, checklist, conventions), read by `@reviewer`.
+- **Project-knowledge structural gate (F-8):** `scripts/.tests/test-knowledge-contracts.sh` verifies the canonical and generated knowledge interfaces, inventories, schema/templates/tool, installer and uninstaller registration, and navigation. The all-suite CI job discovers it with the other CI-safe `test-*.sh` suites and provides Python YAML and JSON Schema packages required by the knowledge validator. Focused schema/tool, generated-plugin, distribution, install, and uninstall suites cover the remaining machine-checkable contracts.
 
 ### User Flows
 
@@ -83,6 +84,8 @@ Open/update PR:    /pr (→ @pr-manager)    → update existing open PR/MR, or c
 | `.opencode/agent/pr-manager.md` | PR manager agent | Create/update open PR/MR; never merge |
 | `.ai/agent/pr-instructions.md` | Platform config | PR/MR platform type + Operations Reference (CLI command table) |
 | `.ai/agent/code-review-instructions.md` | Review config | Repository-local review guidance |
+| `scripts/.tests/test-knowledge-contracts.sh` | Knowledge contract gate | Structural consistency across interfaces, inventory, schema/templates, tooling, installation, and navigation |
+| `.github/workflows/ci.yml` | All-suite CI | Installs YAML/JSON Schema test dependencies and executes CI-safe Bash suites |
 
 ## Non-Functional Requirements
 
@@ -92,6 +95,7 @@ Open/update PR:    /pr (→ @pr-manager)    → update existing open PR/MR, or c
 | NFR-2 | Commit discipline | `@committer` produces exactly one Conventional Commit; never pushes or rewrites history | One commit per invocation |
 | NFR-3 | PR idempotency | `@pr-manager` updates an existing open PR/MR rather than duplicating | One open PR/MR per branch |
 | NFR-4 | Safety | `@committer` never commits `tmp/`/`.ai/local/`; `@pr-manager` never merges | Enforced by prompts |
+| NFR-5 | Knowledge contract integrity | Machine-checkable interface, schema, generated, distribution, install, update, and uninstall contracts are covered by focused suites | Applicable suites pass before PR creation |
 
 ## Quality Assurance Strategy
 
@@ -103,6 +107,7 @@ Open/update PR:    /pr (→ @pr-manager)    → update existing open PR/MR, or c
 | Manual | `/check-fix` | Introduce a failing gate; verify fix + single commit |
 | Manual | `/commit` | Verify one Conventional Commit; verify no push |
 | Manual | `/pr` | Verify update-vs-create behavior and never-merge |
+| CI | Knowledge contracts | Run `scripts/.tests/test-knowledge-contracts.sh`, `tools/.tests/test-knowledge-gap.sh`, generated-plugin, distribution, install, and uninstall suites |
 
 ## Dependencies & Risks
 
@@ -120,3 +125,4 @@ Open/update PR:    /pr (→ @pr-manager)    → update existing open PR/MR, or c
 - **System bootstrap:** [AGENTS.md](../../../AGENTS.md) — runner/fixer/committer/pr-manager roles, command table.
 - **Sibling spec (lifecycle context):** [feature-delivery-lifecycle.md](feature-delivery-lifecycle.md) — phases 8–11 (review_fix, quality_gates, dod_check, pr_creation).
 - **Sibling spec (local review):** [feature-local-code-review.md](feature-local-code-review.md) — `/review`/`/review-deep` and the remediation loop, adjacent to this verification neighborhood.
+- **Sibling spec (project knowledge):** [feature-project-knowledge-management.md](feature-project-knowledge-management.md) — schema/tooling, disclosure, generated parity, and project-owned preservation contracts.

@@ -424,6 +424,7 @@ criteria, and pivot criteria.
 - **Cross-linking:** update front-matter `links.*` so the web of docs stays navigable.
 - **Decision compatibility:** business/product/operational metadata fields in the decision template are optional; ADR/TDR
   records remain valid without them.
+- **Project knowledge:** use the authority and provenance rules in `doc/guides/project-knowledge-management.md`. Canonical answers stay in their owning docs, decisions, trackers, code, or configured systems. Durable `doc/knowledge/gaps/KG-NNNN--*.md` files contain sanitized diagnoses and verification history, while `doc/knowledge/00-index.md` is derived. Optional source/capture policy is project-owned and must survive ADOS update/uninstall.
 
 ---
 
@@ -720,6 +721,12 @@ If only validation wording is incorrect, update/revert the validation subsection
 - `doc/templates/implementation-plan-template.md`
 - `doc/templates/north-star-template.md`
 - `doc/templates/pr-instructions-template.md`
+
+### Project Knowledge Management templates
+
+- `doc/templates/knowledge-gap-schema.yaml`
+- `doc/templates/knowledge-gap-template.md`
+- `doc/templates/knowledge-instructions-template.md`
 
 ### Documentation profile contract template
 

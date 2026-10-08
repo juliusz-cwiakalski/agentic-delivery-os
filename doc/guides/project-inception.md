@@ -903,3 +903,5 @@ Inception captures the OUTPUTS of these activities (if provided in
 8. **Capture depth enables delivery autonomy** — the richer the knowledge base produced during inception, the more autonomously agents can deliver later.
 9. **Conditional artifacts** — not every project needs every artifact. Phase 0 activates the right subset.
 10. **Living documents** — the north star is a compass (rarely changes); the roadmap is living (evolves); assumptions get validated/invalidated over time.
+
+Project Inception may optionally establish minimal `.ai/agent/knowledge-instructions.md` policy and a registry for non-obvious or external sources. Neither is required for ordinary repository queries. Material durable inception findings may be proposed for normal Knowledge Gap review after human approval; do not bulk-convert `OPEN-Q`, `OQ`, unknown, or tribal-knowledge items. Contributor Orientation is the later contributor journey and does not replace this inception process.

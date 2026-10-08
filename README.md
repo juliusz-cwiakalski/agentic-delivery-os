@@ -42,6 +42,7 @@ flowchart LR
 - **[Change Delivery](doc/guides/change-lifecycle.md)** — the day-to-day 11-phase loop turning a ticket into a reviewed, tested PR.
 - **[Decision Making](doc/guides/decision-making.md)** — calibrate decision rigor to risk (R0–R3); capture durable records.
 - **[Meeting Management](doc/guides/meeting-preparation-and-summarization.md)** — prepare, run, and document meetings with durable decisions and action items.
+- **[Project Knowledge Management](doc/guides/project-knowledge-management.md)** — cross-cutting evidence-backed queries, Contributor Orientation, and verified repair of durable knowledge deficiencies.
 
 > Documentation Reconciliation (phase 7 of Change Delivery) keeps `doc/spec/**` the living current truth after every change — no separate guide.
 
@@ -94,6 +95,7 @@ Agentic Delivery OS codifies a predictable pipeline where quality and traceabili
 - Commands that compose those agents into repeatable workflows (manual or autopilot).
 - Gated quality: [/review](.opencode/command/review.md) iterates to PASS and [/check](.opencode/command/check.md) is green before a [/pr](.opencode/command/pr.md) reaches you.
 - Less noise: in autopilot, the tracker is the interface — [@pm](.opencode/agent/pm.md) pings you only for decisions, clarifications, and reviews.
+- Evidence-backed project answers through [`@knowledge`](.opencode/agent/knowledge.md), with explicit uncertainty, provenance, disclosure controls, and canonical-source repair.
 
 ## Installation
 

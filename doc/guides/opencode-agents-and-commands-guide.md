@@ -73,6 +73,8 @@ Use these when you want to trigger a specific step in the process.
 | `/bootstrap`             | AI-guided project setup for ADOS adoption.                    | When onboarding a new project to ADOS.     |
 | `/check`                 | Runs quality gates and summarizes logs to files.              | When you need clean, shareable results.    |
 | `/check-fix`             | Runs quality gates and auto-fixes failures.                   | When you want automatic remediation.       |
+| `/knowledge-review`      | Reviews a finite project-knowledge scope through `@knowledge`.| When checking knowledge health.             |
+| `/contributor-orientation` | Orients a contributor using authoritative project evidence. | Before a contributor's first work.          |
 
 ### 2.2 Agents (Autonomous Roles)
 
@@ -99,6 +101,9 @@ Use these when you need intelligent analysis or orchestration.
 | `@toolsmith`      | **Toolsmith**. Creates and tunes OpenCode agents/commands/skills.                          | Use to create or improve tooling.               |
 | `@bootstrapper`   | **Bootstrapper**. Automates ADOS adoption for existing projects.                           | Use when onboarding a new project to ADOS.      |
 | `@external-researcher` | **Researcher**. Researches external sources via MCP servers. | Use when you need external technical research.  |
+| `@knowledge`       | **Knowledge facade**. Answers project questions and stewards durable Knowledge Gaps. | Query directly for evidence-backed project facts. |
+
+`@knowledge` searches narrowly, cites material project facts, labels inference, reports one of six retrieval outcomes, and keeps canonical answers in their owning sources. Retrieval permission does not grant disclosure permission. Its review and orientation commands follow the same rules and never silently fall back to a default agent. See [Project Knowledge Management](project-knowledge-management.md).
 
 ---
 

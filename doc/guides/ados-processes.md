@@ -14,6 +14,8 @@ summary: "Canonical map of ADOS's six processes — master diagram, per-process 
 
 This page is the canonical map of **Agentic Delivery OS's six processes**. Each process is a reusable, repeatable way of working; together they cover how a team adopts ADOS, ships changes, makes decisions, runs meetings, and keeps documentation honest. Scan the master diagram for the whole picture, then jump to a process's detailed guide from its card.
 
+[Project Knowledge Management](project-knowledge-management.md) is a cross-cutting capability used by these processes, not a seventh process. It supplies evidence-backed queries, bounded knowledge-health review, Contributor Orientation, and durable deficiency routing while each process retains ownership.
+
 ## The six processes at a glance
 
 The master diagram below shows all six processes and how they relate. Two **setup** entry points (Project Inception and Project Onboarding) feed the steady-state **Change Delivery** loop. Documentation Reconciliation is **embedded** inside delivery (it is phase 7). Decision Making and Meeting Management are **cross-cutting supporters** invoked from anywhere a hard choice arises or people meet.
@@ -132,5 +134,6 @@ The unattended modes wrap the 11-phase lifecycle with liveness monitoring (kill-
 - **Day-to-day work?** You live in the **Change Delivery** loop.
 - **A hard choice arises?** Use **Decision Making** (consult `@decision-advisor`; record where warranted).
 - **People need to meet?** Use **Meeting Management** to keep decisions and actions durable.
+- **Need project facts or orientation?** Query `@knowledge`; use `/knowledge-review` only with a finite scope and `/contributor-orientation` for contributor context.
 
 > **See also:** [Change Lifecycle](change-lifecycle.md) · [Project Inception](project-inception.md) · [Onboarding](onboarding-existing-project.md) · [Decision Making](decision-making.md) · [Meeting Management](meeting-preparation-and-summarization.md) · [Documentation Index](../00-index.md)

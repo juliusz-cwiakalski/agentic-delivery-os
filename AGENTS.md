@@ -71,6 +71,7 @@ Detail: [doc/guides/change-lifecycle.md](doc/guides/change-lifecycle.md)
 - `pr-manager` — create/update PR/MR; enrich with ticket context via MCP
 
 ### Specialized
+- `knowledge` — answer project questions, review knowledge health, orient contributors, and steward durable Knowledge Gaps
 - `external-researcher` — research external sources via MCP
 - `image-generator` — generate AI images via text-to-image CLI
 - `image-reviewer` — analyze images, screenshots, and visual artifacts
@@ -102,6 +103,8 @@ Full definitions: `.opencode/agent/*.md` | Inventory: [.opencode/README.md](.ope
 | `/write-decision` | Generate Decision Record (ADR/PDR/TDR/BDR/ODR) |
 | `/review-decision` | Independent decision challenge (delegates to `@decision-critic`) |
 | `/design` | Generate/update visual design assets |
+| `/knowledge-review` | Review a bounded project-knowledge scope through `@knowledge` |
+| `/contributor-orientation` | Orient contributors through `@knowledge`, distinct from ADOS Project Onboarding |
 
 Full definitions: `.opencode/command/*.md`
 
@@ -212,7 +215,19 @@ Canonical values: see `doc/decisions/ODR-0001-classify-yaml-register-templates-r
 
 ## Running tests
 
-Test files follow the pattern `test-*.sh` inside `.tests/` subdirectories. Run with `bash <dir>/.tests/test-*.sh`.
+Run one focused test file with `bash <path-to-test-file>`.
+
+Run the executable `test-*.sh` suites under each repository area with its aggregator:
+
+```bash
+bash scripts/test-all.sh
+bash tools/test-all.sh
+```
+
+Each aggregator recursively selects executable files named `test-*.sh` beneath
+`.tests/` or `tests/` in its own default subtree. It does not select extensionless
+tests. Run the extensionless zclaude unit suite directly with
+`bash tools/.tests/test-zclaude-unit`.
 
 ## License headers
 

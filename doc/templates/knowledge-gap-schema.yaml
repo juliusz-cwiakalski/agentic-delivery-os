@@ -1,0 +1,130 @@
+ados_distribution: redistributable
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://agentic-delivery-os.dev/schemas/knowledge-gap-v1
+title: ADOS Knowledge Gap v1
+type: object
+additionalProperties: false
+required: [id, status, type, area, summary, owners, created, updated, context, diagnosis, evidence_checked, impact, occurrence, relationships, desired_resolution, history]
+properties:
+  id: {type: string, pattern: '^KG-[0-9]{4}$'}
+  status: {enum: [Open, Resolved, Dismissed]}
+  type:
+    enum: [missing, completeness, discoverability, contradiction, drift, staleness-risk, ownership, vocabulary, accessibility, source-authority, decision-needed]
+  area: {type: string, minLength: 1}
+  summary: {type: string, minLength: 1, maxLength: 240}
+  owners:
+    type: array
+    minItems: 1
+    uniqueItems: true
+    items: {type: string, minLength: 1}
+  created: {$ref: '#/$defs/timestamp'}
+  updated: {$ref: '#/$defs/timestamp'}
+  context: {type: string, minLength: 1, maxLength: 1000}
+  diagnosis: {type: string, minLength: 1, maxLength: 1000}
+  evidence_checked:
+    type: array
+    minItems: 1
+    items: {$ref: '#/$defs/evidence'}
+  impact: {type: string, minLength: 1, maxLength: 1000}
+  occurrence:
+    type: object
+    additionalProperties: false
+    required: [count, last_observed]
+    properties:
+      count: {type: integer, minimum: 1}
+      last_observed: {$ref: '#/$defs/timestamp'}
+  relationships:
+    type: object
+    additionalProperties: false
+    required: [changes, decisions, work, gaps]
+    properties:
+      changes: {$ref: '#/$defs/refs'}
+      decisions: {$ref: '#/$defs/refs'}
+      work: {$ref: '#/$defs/refs'}
+      gaps: {$ref: '#/$defs/refs'}
+  desired_resolution: {type: string, minLength: 1, maxLength: 1000}
+  resolution:
+    anyOf: [{type: 'null'}, {$ref: '#/$defs/resolution'}]
+  disposition:
+    anyOf: [{type: 'null'}, {$ref: '#/$defs/disposition'}]
+  history:
+    type: array
+    items:
+      oneOf: [{$ref: '#/$defs/resolution_history'}, {$ref: '#/$defs/disposition_history'}, {$ref: '#/$defs/reopening_history'}]
+  reopening_evidence:
+    anyOf: [{type: 'null'}, {$ref: '#/$defs/evidence'}]
+$defs:
+  timestamp: {type: string, format: date-time}
+  refs:
+    type: array
+    uniqueItems: true
+    items: {type: string, minLength: 1}
+  evidence:
+    type: object
+    additionalProperties: false
+    required: [source, observation]
+    properties:
+      source: {type: string, minLength: 1}
+      observation: {type: string, minLength: 1, maxLength: 500}
+  resolution:
+    type: object
+    additionalProperties: false
+    required: [canonical_ref, verified_at, verification_notes, related_refs]
+    properties:
+      canonical_ref: {type: string, minLength: 1}
+      verified_at: {$ref: '#/$defs/timestamp'}
+      verification_notes: {type: string, minLength: 1}
+      related_refs:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items: {type: string, minLength: 1}
+  disposition:
+    type: object
+    additionalProperties: false
+    required: [disposed_at, rationale]
+    properties:
+      disposed_at: {$ref: '#/$defs/timestamp'}
+      rationale: {type: string, minLength: 1}
+  resolution_history:
+    type: object
+    additionalProperties: false
+    required: [kind, at, canonical_ref, verification_notes]
+    properties:
+      kind: {const: resolution}
+      at: {$ref: '#/$defs/timestamp'}
+      canonical_ref: {type: string, minLength: 1}
+      verification_notes: {type: string, minLength: 1}
+  disposition_history:
+    type: object
+    additionalProperties: false
+    required: [kind, at, rationale]
+    properties:
+      kind: {const: disposition}
+      at: {$ref: '#/$defs/timestamp'}
+      rationale: {type: string, minLength: 1}
+  reopening_history:
+    type: object
+    additionalProperties: false
+    required: [kind, at, evidence]
+    properties:
+      kind: {const: reopening}
+      at: {$ref: '#/$defs/timestamp'}
+      evidence: {$ref: '#/$defs/evidence'}
+allOf:
+  - if: {properties: {status: {const: Resolved}}, required: [status]}
+    then:
+      required: [resolution]
+      properties:
+        resolution: {$ref: '#/$defs/resolution'}
+        disposition: {type: 'null'}
+        history: {minItems: 1, contains: {properties: {kind: {const: resolution}}, required: [kind]}}
+  - if: {properties: {status: {const: Dismissed}}, required: [status]}
+    then:
+      required: [disposition]
+      properties:
+        disposition: {$ref: '#/$defs/disposition'}
+        resolution: {type: 'null'}
+        history: {minItems: 1, contains: {properties: {kind: {const: disposition}}, required: [kind]}}
+  - if: {properties: {status: {const: Open}}, required: [status]}
+    then: {properties: {resolution: {type: 'null'}, disposition: {type: 'null'}}}

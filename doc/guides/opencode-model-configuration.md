@@ -60,7 +60,7 @@ Model assignments go in the `"agent"` section of your config:
     "coder":            { "model": "github-copilot/gpt-5.3-codex" },
     "decision-advisor":  { "model": "github-copilot/claude-opus-4.6" },
     "committer":        { "model": "github-copilot/gpt-5-mini" }
-    // ... all 22 agents
+    // ... all agents
   }
 }
 ```
@@ -144,7 +144,7 @@ Create `.opencode/opencode-<provider>.jsonc`:
     "pm": { "model": "anthropic/claude-sonnet-4-6" },
     "coder": { "model": "anthropic/claude-sonnet-4-6" },
     "decision-advisor": { "model": "anthropic/claude-opus-4-6" }
-    // ... configure all 22 agents
+    // ... configure all agents
   }
 }
 ```

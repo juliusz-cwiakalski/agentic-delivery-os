@@ -1,0 +1,10 @@
+resolved:
+  historical_replay: unchanged
+  independent_recurrence: reopen-same-id-with-history
+dismissed:
+  historical_replay: unchanged
+  independent_overturning_evidence: reopen-same-id-with-history
+checks:
+  - compare-id-status-count-history-before-and-after
+  - reject-re-resolution-without-fresh-original-task-verification
+  - keep-different-canonical-remediation-distinct

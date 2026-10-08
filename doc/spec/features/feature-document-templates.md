@@ -6,15 +6,15 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: SPEC-DOCUMENT-TEMPLATES
 status: Current
 created: 2026-03-10
-last_updated: 2026-07-05
+last_updated: 2026-09-09
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
-  related_changes: ["GH-32", "GH-52", "GH-133"]
+  related_changes: ["GH-32", "GH-52", "GH-133", "GH-41"]
   guides:
     - "doc/documentation-handbook.md"
     - "doc/guides/onboarding-existing-project.md"
-summary: "Core ADOS templates plus optional profile-aware business/product strategy templates and YAML register templates in doc/templates/, all readable by agents at runtime with graceful fallback to embedded defaults."
+summary: "Core ADOS templates, Project Knowledge Management contracts, and optional profile-aware business/product strategy templates and YAML registers under doc/templates/."
 ---
 
 # Feature: Document Templates
@@ -55,6 +55,14 @@ ADOS maintains templates in `doc/templates/` that serve as the structural source
 | Template | Purpose | Scope |
 |----------|---------|-------|
 | `meeting-notes-template.md` | Combined agenda + summary with research-informed sections (ideas, parked items, open questions, notes worth keeping) and transcript storage | Repo-scoped (`doc/meetings/`) or business (`doc/business/meetings/`) |
+
+### Project Knowledge Management Templates
+
+| Template | Purpose | Consumer |
+|----------|---------|----------|
+| `knowledge-gap-schema.yaml` | YAML-serialized JSON Schema for durable Knowledge Gap frontmatter, including closed taxonomy/status sets and lifecycle history | `tools/knowledge-gap`, CI, gap authors |
+| `knowledge-gap-template.md` | Sanitized durable record skeleton that keeps canonical answers in owning sources | `@knowledge`, stewards, human authors |
+| `knowledge-instructions-template.md` | Optional project source, authority, access/disclosure, ownership, escalation, and capture policy | `@knowledge`, bootstrapper, project maintainers |
 
 ### Documentation Profile Contract Template
 
@@ -101,6 +109,8 @@ Repositories may use this template to make the documentation profile explicit wh
 - **Profile-aware safety (F-6):** The profile contract template may be used to make disabled or enabled behavior explicit; business strategy templates are optional and should be used only when the repository profile enables business docs.
 - **Structured registers (F-7):** `.yaml` register templates provide valid YAML skeletons with stable IDs and cross-link fields.
 - **Consistency enforcement (F-5):** Templates define structure; agent prompts define quality rules and domain-specific logic. This separation prevents drift.
+- **Knowledge contract support (F-8):** The gap template follows the shared schema and includes occurrence, relationships, nullable resolution/disposition, append-only history, and reopening evidence. The instructions template configures retrieval and stewardship rather than supplying answers, separates read permission from consumer/destination disclosure, and does not require standard repository sources to be registered.
+- **YAML-serialized JSON Schema (F-9):** `knowledge-gap-schema.yaml` places `ados_distribution: redistributable` at top level, loads through safe YAML, removes the distribution annotation before Draft 2020-12 JSON Schema validation, and is shipped with the Markdown templates. It is a schema contract, not a multi-document YAML frontmatter file.
 
 ### Template Structure
 
@@ -149,6 +159,9 @@ Business Markdown templates intentionally stay concise (front matter + headings 
 | `doc/templates/feature-spec-template.md` | Feature spec template | 9-section feature specification structure |
 | `doc/templates/decision-record-template.md` | Decision record template | Single source of truth for the record body: type-selection helper, clean front matter (no top-level `decision_area`/`reversibility` for new records), tiered-default applicability tags per section, 18 body sections (Context → References, incl. Decision Rights, Evidence/Assumptions/Unknowns + Technical-Selection Evidence Pack, recommendation-vs-authorized-decision split, eligibility-first alternatives, Rollback, Communication Plan, Structured Retrospective), and worked R1/R2/R3 examples in an authoring appendix |
 | `doc/templates/test-spec-template.md` | Test spec template | Enduring test specification structure |
+| `doc/templates/knowledge-gap-schema.yaml` | Knowledge Gap schema | Machine-readable frontmatter, status/taxonomy, resolution/disposition, and history constraints |
+| `doc/templates/knowledge-gap-template.md` | Knowledge Gap template | Human-readable sanitized durable record skeleton |
+| `doc/templates/knowledge-instructions-template.md` | Knowledge policy template | Optional project-owned configuration skeleton |
 
 ### Agent Integration
 
@@ -170,6 +183,8 @@ The fallback-to-defaults pattern ensures agents work correctly even when templat
 | NFR-3 | Guidance | Core templates contain inline HTML-comment guidance; business Markdown skeleton templates and YAML registers may use concise heading/schema guidance | 100% required template types follow documented guidance style |
 | NFR-4 | Fallback | Agents produce valid documents when templates are absent | No errors, default structure used |
 | NFR-5 | Consistency | Template structure matches the Documentation Handbook requirements | Handbook section 17 fulfilled |
+| NFR-6 | Knowledge contract validity | Knowledge Gap schema is valid Draft 2020-12 JSON Schema after removing its distribution annotation; template fields agree | Schema and knowledge-contract tests pass |
+| NFR-7 | Distribution | Knowledge templates/schema are redistributable and use the marker form appropriate to Markdown or YAML | Distribution and install checks pass |
 
 ## Quality Assurance Strategy
 
@@ -179,6 +194,7 @@ The fallback-to-defaults pattern ensures agents work correctly even when templat
 |-------|-------|-------|
 | Manual | Template rendering | Open changed Markdown templates; verify structure and readability |
 | Automated | YAML parsing | Parse changed `.yaml` templates with a YAML parser |
+| Automated | Knowledge schema and template | `scripts/.tests/test-knowledge-contracts.sh` plus `tools/.tests/test-knowledge-gap.sh` validate schema shape and record/tool behavior |
 | Manual | Agent fallback | Remove `doc/templates/` directory; run `/write-spec`; verify document is produced with embedded defaults |
 | Manual | Agent template reading | With templates present; run `/write-spec`; verify document follows template structure |
 
@@ -198,3 +214,4 @@ When agent prompt structure changes, the corresponding template should be update
 - **Documentation Handbook:** [doc/documentation-handbook.md](../../documentation-handbook.md) — section 17 defines core and optional template inventories
 - **Templates directory:** [doc/templates/](../../templates/)
 - **Onboarding guide:** [doc/guides/onboarding-existing-project.md](../../guides/onboarding-existing-project.md) — recommends copying templates during adoption
+- **Project Knowledge Management:** [feature-project-knowledge-management.md](feature-project-knowledge-management.md) and [project-knowledge-management.md](../../guides/project-knowledge-management.md)

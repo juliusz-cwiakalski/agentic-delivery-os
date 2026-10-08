@@ -371,6 +371,8 @@ claude --plugin-dir "$PWD/.ados-claude"
 
 Do not hand-edit generated plugin files as a long-term fix; update the generator or `.opencode/` source and rebuild.
 
+The generated plugin exposes the `ados:knowledge` agent and `/ados:knowledge-review` and `/ados:contributor-orientation` skills. Load `.ados-claude` through `--plugin-dir` for repository development; do not copy or edit generated definitions as independent sources.
+
 ## Related documentation
 
 | Document | Description |
@@ -379,6 +381,7 @@ Do not hand-edit generated plugin files as a long-term fix; update the generator
 | [Agents & Commands Guide](opencode-agents-and-commands-guide.md) | How to use ADOS agents and commands |
 | [zclaude User Guide](../tools/zclaude.md) | Z.AI wrapper for Claude Code |
 | [External Researcher Setup](external-researcher-setup.md) | MCP server setup |
+| [Project Knowledge Management](project-knowledge-management.md) | Knowledge query, review, orientation, and gap semantics |
 | [Adding Tool Support](adding-tool-support.md) | Extending ADOS to other AI tools |
 | [Claude Code quickstart](https://code.claude.com/docs/en/quickstart) | Official Claude Code installation docs |
 | [Claude Code authentication](https://code.claude.com/docs/en/authentication) | Official auth and login docs |
