@@ -5,9 +5,9 @@ name: CI
 
 on:
   push:
-    branches: [main, feat/**, fix/**]
+    branches: [main, main-tools, feat/**, fix/**]
   pull_request:
-    branches: [main]
+    branches: [main, main-tools]
 
 jobs:
   verify-claude-build:

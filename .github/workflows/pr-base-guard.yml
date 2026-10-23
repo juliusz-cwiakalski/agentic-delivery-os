@@ -1,0 +1,25 @@
+name: PR base guard
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+    branches: [main, main-tools]
+
+permissions:
+  contents: read
+
+jobs:
+  check-pr-base:
+    name: Check PR base branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce main-tools delivery target
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [[ "${BASE_REF}" == "main" && "${HEAD_REF}" != "main-tools" ]]; then
+            echo "::error::Tooling PRs must target main-tools. Only the release PR from main-tools to main is allowed."
+            exit 1
+          fi
+          echo "Base guard passed: ${HEAD_REF} -> ${BASE_REF}"
