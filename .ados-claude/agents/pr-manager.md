@@ -67,7 +67,7 @@ Schema (JSON):
   "branch": "feat/some-change",
   "branchPath": "feat/some-change",
   "platform": "github|gitlab",
-  "baseBranch": "main",
+  "baseBranch": "<resolved-base>",
   "mergeBaseSha": "<sha>",
   "lastReviewedHeadSha": "<sha>",
   "lastGeneratedHeadSha": "<sha>",
@@ -323,6 +323,7 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
     Resolve desired base branch:
     - If user provided `--base/--target` (or first token): use it.
     - Else if existing PR/MR exists: use its base/target branch.
+    - Else read the `Default base branch` value from `.ai/agent/pr-instructions.md` under `## Base Branch` when the file and value are readable. Use that value.
     - Else: use `main` if it exists, otherwise `master`.
 
     If existing PR/MR base differs from desired base: update the PR/MR to target the desired base.
