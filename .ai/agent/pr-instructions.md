@@ -15,6 +15,13 @@ Repository-level configuration for PR/MR platform access. Agents read this file 
 - **Owner**: `juliusz-cwiakalski`
 - **Repo**: `agentic-delivery-os`
 
+## Base Branch
+
+- **Default base branch**: `main-tools`
+- All PRs/MRs for tooling work target `main-tools`, not `main`.
+- When invoking `@pr-manager`, pass `--base main-tools` explicitly.
+- `main` stays as the frozen public baseline until the owner approves a public release.
+
 ## Access Method Preference
 
 This repo has **both** GitHub MCP tools and `gh` CLI available.

@@ -15,6 +15,18 @@ The agents and their prompt definitions (`.opencode/agent/*.md`, `.opencode/comm
 
 > **New to ADOS?** See [doc/guides/onboarding-existing-project.md](doc/guides/onboarding-existing-project.md) or run `/bootstrap` to get started.
 
+## Branch model (tooling transition)
+
+The repository is in a tooling transition. Until the owner approves a public release:
+
+- `main` is the frozen public baseline. Do not merge tooling work into `main`.
+- `main-tools` is the integration branch and the effective main for tooling delivery.
+- Create feature branches from `main-tools`.
+- All pull requests for tooling work target `main-tools`, not `main`.
+- Do not push directly to `main-tools`; deliver through a ticket and a PR, except for explicit repository setup commits approved by the owner.
+- The cloud product is out of scope for this repository. Do not add cloud names, designs, or code to committed files.
+- Public names are not frozen. Tooling code must not hardcode `ados`; read the binary and product names from configuration.
+
 ## Delivery process
 
 Every change flows through 11 phases. `@pm` orchestrates; phases are gated but can be reopened when gaps are discovered.
