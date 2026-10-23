@@ -1,6 +1,6 @@
 ---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/spec/features/feature-license-header-script.md
 
 id: SPEC-LICENSE-HEADER-SCRIPT
@@ -11,14 +11,14 @@ owners: [Juliusz Ćwiąkalski]
 service: scripts
 links:
   related_changes: ["GH-26"]
-summary: "Script that adds or updates MIT license headers to both Markdown and Bash files in the repository."
+summary: "Script that adds or updates Apache-2.0 license headers to both Markdown and Bash files in the repository."
 ---
 
 # Feature: License Header Script (`scripts/add-header-location.sh`)
 
 ## Overview
 
-`scripts/add-header-location.sh` adds the standard ADOS three-line MIT license header to files in the repository. It supports two file types:
+`scripts/add-header-location.sh` adds the standard ADOS three-line Apache-2.0 license header to files in the repository. It supports two file types:
 
 - **Markdown files** (`.md` extension) — header added as YAML frontmatter
 - **Bash scripts** (`.sh` extension or shebang-detected) — header added as bash comments after the shebang line
@@ -32,7 +32,7 @@ Files with `.md` extension receive the license header as YAML frontmatter with a
 ```yaml
 ---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (...)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/<path>
 ---
 ```
@@ -51,7 +51,7 @@ For shebang-detected files, the header is inserted after the shebang line:
 ```bash
 #!/usr/bin/env bash
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (...)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 # Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/<path>
 ```
 

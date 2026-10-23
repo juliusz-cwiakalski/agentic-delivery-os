@@ -24,7 +24,7 @@
       },
       "homepage": "https://github.com/juliusz-cwiakalski/agentic-delivery-os",
       "repository": "https://github.com/juliusz-cwiakalski/agentic-delivery-os",
-      "license": "MIT",
+      "license": "Apache-2.0",
       "keywords": ["agentic-delivery-os", "ados", "spec-driven", "software-delivery", "automation", "claude-code"],
       "categories": ["developer-tools", "devops"]
     }

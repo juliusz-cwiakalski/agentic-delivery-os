@@ -1,6 +1,6 @@
 ---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/readiness-reviewer.md
 #
 description: Adversarial Definition of Ready gate for change artifacts.

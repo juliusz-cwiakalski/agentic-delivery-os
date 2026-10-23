@@ -4,7 +4,7 @@
 # Regenerate with: scripts/build-claude-plugin.sh
 # If behavior must change, edit the source file above and rebuild.
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 # source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/designer.md
 name: designer
 description: Visual design and UI implementation assistant.   Applies the documented visual design system to UI components, layouts,   navigation chrome, and widget styling.

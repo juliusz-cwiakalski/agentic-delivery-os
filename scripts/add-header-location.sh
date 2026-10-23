@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 # Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/scripts/add-header-location.sh
-# add-header-location.sh — Add MIT license headers to markdown and bash files
+# add-header-location.sh — Add Apache-2.0 license headers to markdown and bash files
 #
 # Dependencies: bash>=4, git, grep, sed
 # Usage: ./add-header-location.sh [options] [PATH]
@@ -169,17 +169,17 @@ is_bash_file() {
   return 1
 }
 
-# Check if bash file already has the MIT license header
+# Check if bash file already has the Apache-2.0 license header
 bash_has_header() {
   local -r file="$1"
   _grep -q "^# Copyright.*2025-2026" "${file}" 2>/dev/null && \
-  _grep -q "^# MIT License.*see LICENSE" "${file}" 2>/dev/null && \
+  _grep -q "^# Apache-2.0 License.*see LICENSE" "${file}" 2>/dev/null && \
   has_source_line "${file}"
 }
 
 # Update source line in markdown frontmatter (handles both old comment and new attribute formats)
 # Replaces any line containing the GitHub base URL in frontmatter with the new line,
-# or inserts after MIT License comment if no URL line found.
+# or inserts after Apache-2.0 License comment if no URL line found.
 update_source_line() {
   local -r file="$1"
   local -r new_line="$2"
@@ -214,7 +214,7 @@ update_source_line() {
       }
       next
     }
-    in_frontmatter && /^#[[:space:]]*MIT License - see LICENSE file for full terms/ {
+    in_frontmatter && /^#[[:space:]]*Apache-2.0 License - see LICENSE file for full terms/ {
       print $0
       if (!replaced) {
         print new_line
@@ -247,7 +247,7 @@ update_source_line() {
   fi
 }
 
-# Ensure basic header with copyright and MIT license lines (for markdown files)
+# Ensure basic header with copyright and Apache-2.0 license lines (for markdown files)
 # Uses source: YAML attribute instead of # Latest version: comment
 ensure_basic_header() {
   local -r file="$1"
@@ -260,20 +260,20 @@ ensure_basic_header() {
   rel_path="$(compute_relative_path "${repo_root}" "${file}")" || return $?
   local source_line="source: ${GITHUB_BASE}/${rel_path}"
   local copyright_line="# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)"
-  local mit_line="# MIT License - see LICENSE file for full terms"
+  local license_line="# Apache-2.0 License - see LICENSE file for full terms"
   
   # Patterns for matching (not exact strings)
   local copyright_pattern="^#[[:space:]]*Copyright.*2025-2026"
-  local mit_pattern="^#[[:space:]]*MIT License.*see LICENSE"
+  local license_pattern="^#[[:space:]]*Apache-2.0 License.*see LICENSE"
   # Match both old comment format and new attribute format
   local old_source_pattern="^#[[:space:]]*Latest version:.*${GITHUB_BASE}/"
   local new_source_pattern="^source:[[:space:]]*${GITHUB_BASE}/"
   
   awk -v copyright_line="${copyright_line}" \
-      -v mit_line="${mit_line}" \
+      -v license_line="${license_line}" \
       -v source_line="${source_line}" \
       -v copyright_pattern="${copyright_pattern}" \
-      -v mit_pattern="${mit_pattern}" \
+      -v license_pattern="${license_pattern}" \
       -v old_source_pattern="${old_source_pattern}" \
       -v new_source_pattern="${new_source_pattern}" '
   BEGIN {
@@ -294,7 +294,7 @@ ensure_basic_header() {
     if (!frontmatter_start) {
       print "---"
       print copyright_line
-      print mit_line
+      print license_line
       print source_line
       print "---"
       for (i = 1; i <= NR; i++) print lines[i]
@@ -303,7 +303,7 @@ ensure_basic_header() {
     
     # Arrays to store header lines and other frontmatter lines
     header_copyright = ""
-    header_mit = ""
+    header_license = ""
     header_source = ""
     other_count = 0
     split("", other)  # clear array
@@ -313,8 +313,8 @@ ensure_basic_header() {
       line = lines[i]
       if (line ~ copyright_pattern && header_copyright == "") {
         header_copyright = line
-      } else if (line ~ mit_pattern && header_mit == "") {
-        header_mit = line
+      } else if (line ~ license_pattern && header_license == "") {
+        header_license = line
       } else if ((line ~ old_source_pattern || line ~ new_source_pattern) && header_source == "") {
         # Match either old or new format; will be replaced with new format
         header_source = source_line
@@ -334,10 +334,10 @@ ensure_basic_header() {
         } else {
           print copyright_line
         }
-        if (header_mit != "") {
-          print header_mit
+        if (header_license != "") {
+          print header_license
         } else {
-          print mit_line
+          print license_line
         }
         if (header_source != "") {
           print header_source
@@ -387,7 +387,7 @@ process_file() {
   
   log_debug "Processing ${file}"
   
-  # First ensure basic header (frontmatter, copyright, MIT lines)
+  # First ensure basic header (frontmatter, copyright, Apache-2.0 lines)
   # This also converts old # Latest version: comments to source: attributes
   local basic_header_changed=false
   if ensure_basic_header "${file}" "${repo_root}"; then
@@ -409,7 +409,7 @@ process_file() {
     [[ "${basic_header_changed}" == "true" ]] && return 0 || return 1
   fi
   
-  # Update source line (replace existing URL line or insert after MIT License line)
+  # Update source line (replace existing URL line or insert after Apache-2.0 License line)
   if update_source_line "${file}" "${source_line}"; then
     # Changed
     return 0
@@ -437,7 +437,7 @@ process_bash_file() {
   local rel_path
   rel_path="$(compute_relative_path "${repo_root}" "${file}")" || return $?
   local -r copyright_line="# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)"
-  local -r mit_line="# MIT License - see LICENSE file for full terms"
+  local -r license_line="# Apache-2.0 License - see LICENSE file for full terms"
   local -r source_line="# Latest version: ${GITHUB_BASE}/${rel_path}"
   
   local -r temp_file="$(mktemp)"
@@ -449,7 +449,7 @@ process_bash_file() {
     {
       echo "${first_line}"
       echo "${copyright_line}"
-      echo "${mit_line}"
+      echo "${license_line}"
       echo "${source_line}"
       tail -n +2 "${file}"
     } > "${temp_file}"
@@ -457,7 +457,7 @@ process_bash_file() {
     # No shebang: insert header at the very top
     {
       echo "${copyright_line}"
-      echo "${mit_line}"
+      echo "${license_line}"
       echo "${source_line}"
       cat "${file}"
     } > "${temp_file}"
@@ -559,10 +559,10 @@ usage() {
   cat <<EOF
 Usage: ${APP_NAME} [options] [PATH]
 
-Add MIT license headers to markdown frontmatter and bash scripts.
+Add Apache-2.0 license headers to markdown frontmatter and bash scripts.
 
 Supported file types:
-  - Markdown (.md): Adds 3-line YAML frontmatter header (copyright, MIT, source URL)
+  - Markdown (.md): Adds 3-line YAML frontmatter header (copyright, Apache-2.0, source URL)
   - Bash scripts (.sh or shebang-detected): Adds 3-line bash comment header after shebang
 
 Arguments:

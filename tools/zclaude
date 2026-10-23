@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 # Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/zclaude
 #
 # zclaude — Launch Claude Code with Z.AI GLM Coding Plan as provider.
@@ -162,7 +162,7 @@ show_version() {
 ${APP_NAME} ${APP_VERSION}
 claude ${claude_ver}
 Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-MIT License - see LICENSE file for full terms
+Apache-2.0 License - see LICENSE file for full terms
 Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/${APP_NAME}
 EOF
 }
@@ -360,7 +360,7 @@ cmd_help() {
 zclaude ${APP_VERSION} — Claude Code with Z.AI GLM Coding Plan
 
 Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com)
-MIT License - see LICENSE file for full terms
+Apache-2.0 License - see LICENSE file for full terms
 
 USAGE:
   zclaude [setup|env]                  — zclaude-specific commands

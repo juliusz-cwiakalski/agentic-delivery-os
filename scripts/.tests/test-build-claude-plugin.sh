@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 # Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/scripts/.tests/test-build-claude-plugin.sh
 # test-build-claude-plugin.sh — Tests for build-claude-plugin.sh
 set -Eeuo pipefail
@@ -271,7 +271,7 @@ test_license_header_applied() {
   
   # Should include license header
   assert_contains "${transformed}" "Copyright (c) 2025-2026" "Should have copyright"
-  assert_contains "${transformed}" "MIT License" "Should have MIT License"
+  assert_contains "${transformed}" "Apache-2.0 License" "Should have Apache-2.0 License"
   assert_contains "${transformed}" "source:" "Should have source reference"
 }
 
@@ -331,7 +331,7 @@ test_manifest_uses_valid_metadata_schema() {
   assert_contains "${manifest}" '"url": "https://www.linkedin.com/in/juliusz-cwiakalski/"' "Author object should include LinkedIn author URL"
   assert_contains "${manifest}" '"homepage": "https://github.com/juliusz-cwiakalski/agentic-delivery-os"' "Manifest should include GitHub homepage"
   assert_contains "${manifest}" '"repository": "https://github.com/juliusz-cwiakalski/agentic-delivery-os"' "Manifest should include repository"
-  assert_contains "${manifest}" '"license": "MIT"' "Manifest should include license"
+  assert_contains "${manifest}" '"license": "Apache-2.0"' "Manifest should include license"
   assert_contains "${manifest}" '"claude-code"' "Manifest should include Claude Code keyword"
   assert_not_contains "${manifest}" '"author": "Juliusz Ćwiąkalski"' "Author must not be a string"
 }

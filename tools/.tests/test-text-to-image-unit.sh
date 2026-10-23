@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 # Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/.tests/test-text-to-image-unit.sh
 #
 # test-text-to-image-unit.sh — Unit tests for text-to-image
@@ -712,7 +712,7 @@ test_show_version_convention_compliant() {
   output="$(show_version)"
   assert_contains "$output" "text-to-image 1.0.0" "Should contain name and version"
   assert_contains "$output" "Copyright" "Should contain copyright"
-  assert_contains "$output" "MIT License" "Should contain MIT license"
+  assert_contains "$output" "Apache-2.0 License" "Should contain Apache-2.0 license"
   assert_contains "$output" "Latest version:" "Should contain latest version URL"
   assert_contains "$output" "github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/text-to-image" "Should link to correct URL"
 }
@@ -722,7 +722,7 @@ test_show_help_convention_compliant() {
   output="$(show_help)"
   assert_contains "$output" "text-to-image 1.0.0" "Should contain name and version"
   assert_contains "$output" "Copyright" "Should contain copyright"
-  assert_contains "$output" "MIT License" "Should contain MIT license"
+  assert_contains "$output" "Apache-2.0 License" "Should contain Apache-2.0 license"
   assert_contains "$output" "Latest version:" "Should contain latest version URL"
   assert_contains "$output" "USAGE:" "Should contain usage section"
   assert_contains "$output" "EXAMPLES:" "Should contain examples section"

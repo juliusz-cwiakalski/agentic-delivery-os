@@ -203,18 +203,18 @@ test_file_without_frontmatter() {
   # Check that frontmatter was added with source: attribute (not # Latest version:)
   assert_contains "${content}" "---" "Should have frontmatter"
   assert_contains "${content}" "# Copyright" "Should have copyright line"
-  assert_contains "${content}" "# MIT License" "Should have MIT license line"
+  assert_contains "${content}" "# Apache-2.0 License" "Should have Apache-2.0 license line"
   assert_contains "${content}" "source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main" "Should have source attribute"
   assert_not_contains "${content}" "# Latest version:" "Should NOT have old comment format"
   
-  # Check structure: copyright first, then MIT, then source
-  local copyright_line mit_line source_line
+  # Check structure: copyright first, then Apache-2.0, then source
+  local copyright_line license_line source_line
   copyright_line="$(grep -n "# Copyright" "${test_file}" | head -1 | cut -d: -f1)"
-  mit_line="$(grep -n "# MIT License" "${test_file}" | head -1 | cut -d: -f1)"
+  license_line="$(grep -n "# Apache-2.0 License" "${test_file}" | head -1 | cut -d: -f1)"
   source_line="$(grep -n "^source:" "${test_file}" | head -1 | cut -d: -f1)"
   
-  [[ "${copyright_line}" -lt "${mit_line}" ]] || return 1
-  [[ "${mit_line}" -lt "${source_line}" ]] || return 1
+  [[ "${copyright_line}" -lt "${license_line}" ]] || return 1
+  [[ "${license_line}" -lt "${source_line}" ]] || return 1
   
   # Original content should remain
   assert_contains "${content}" "This file has no frontmatter"
@@ -240,7 +240,7 @@ Some content here."
   
   # Check that header lines were added at the beginning of frontmatter
   assert_contains "${content}" "# Copyright" "Should have copyright line"
-  assert_contains "${content}" "# MIT License" "Should have MIT license line"
+  assert_contains "${content}" "# Apache-2.0 License" "Should have Apache-2.0 license line"
   assert_contains "${content}" "source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main" "Should have source attribute"
   assert_not_contains "${content}" "# Latest version:" "Should NOT have old comment format"
   
@@ -256,8 +256,8 @@ Some content here."
   assert_eq "---" "${lines[0]}" "First line should be ---"
   # Second line should be copyright
   assert_contains "${lines[1]}" "# Copyright" "Second line should be copyright"
-  # Third line should be MIT license
-  assert_contains "${lines[2]}" "# MIT License" "Third line should be MIT license"
+  # Third line should be Apache-2.0 license
+  assert_contains "${lines[2]}" "# Apache-2.0 License" "Third line should be Apache-2.0 license"
   # Fourth line should be source attribute
   assert_contains "${lines[3]}" "source:" "Fourth line should be source attribute"
 }
@@ -267,7 +267,7 @@ test_file_with_complete_header() {
   local -r rel_path="test/complete-header.md"
   create_test_file "${test_file}" "---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/${rel_path}
 description: Already has complete header
 ---
@@ -296,7 +296,7 @@ Should not change."
   content="$(get_file_content "${test_file}")"
   
   assert_contains "${content}" "# Copyright"
-  assert_contains "${content}" "# MIT License"
+  assert_contains "${content}" "# Apache-2.0 License"
   assert_contains "${content}" "source:" "Should have source attribute"
   assert_contains "${content}" "description: Already has complete header"
 }
@@ -306,7 +306,7 @@ test_file_with_old_url_format() {
   create_test_file "${test_file}" "---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 #
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 #  https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/test/old.md
 description: Has old URL format without prefix
 ---
@@ -337,7 +337,7 @@ test_file_with_old_latest_version_comment() {
   local -r test_file="${_test_tmpdir}/old-comment-format.md"
   create_test_file "${test_file}" "---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 # Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/test/old.md
 description: Has old Latest version comment
 ---
@@ -395,7 +395,7 @@ description: Test
 ---"
   create_test_file "${test_dir}/file3.md" "---
 # Copyright line
-# MIT License
+# Apache-2.0 License
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/path
 ---"
   
@@ -413,7 +413,7 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/path
   
   # File 1 should have full header added with source: attribute
   assert_contains "${file1_content}" "# Copyright"
-  assert_contains "${file1_content}" "# MIT License"
+  assert_contains "${file1_content}" "# Apache-2.0 License"
   assert_contains "${file1_content}" "source:" "Should have source attribute"
   assert_not_contains "${file1_content}" "# Latest version:" "Should NOT have old comment format"
   
@@ -423,7 +423,7 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/path
   
   # File 3 should be unchanged (already has complete header with source: attribute)
   assert_contains "${file3_content}" "# Copyright line"
-  assert_contains "${file3_content}" "# MIT License"
+  assert_contains "${file3_content}" "# Apache-2.0 License"
   assert_contains "${file3_content}" "source:" "Should have source attribute"
 }
 
@@ -501,7 +501,7 @@ test_unicode_copyright_idempotent() {
   # Exact copyright line with Unicode characters, using new source: attribute format
   create_test_file "${test_file}" "---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/${rel_path}
 description: Unicode test
 ---
@@ -528,15 +528,15 @@ description: Unicode test
   local content
   content="$(get_file_content "${test_file}")"
   assert_contains "${content}" "# Copyright.*Ćwiąkalski"
-  assert_contains "${content}" "# MIT License"
+  assert_contains "${content}" "# Apache-2.0 License"
   assert_contains "${content}" "source:" "Should have source attribute"
 }
 
-test_missing_mit_line() {
+test_missing_license_line() {
   local -r test_file="${_test_tmpdir}/missing-mit.md"
   create_test_file "${test_file}" "---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-description: Missing MIT line
+description: Missing Apache-2.0 line
 ---
 # Content"
   
@@ -549,22 +549,22 @@ description: Missing MIT line
   local content
   content="$(get_file_content "${test_file}")"
   
-  # Should have added MIT line and source attribute
-  assert_contains "${content}" "# MIT License"
+  # Should have added Apache-2.0 line and source attribute
+  assert_contains "${content}" "# Apache-2.0 License"
   assert_contains "${content}" "source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main" "Should have source attribute"
   assert_not_contains "${content}" "# Latest version:" "Should NOT have old comment format"
   
-  # Check order: copyright, MIT, source
-  local copyright_line mit_line source_line
+  # Check order: copyright, Apache-2.0, source
+  local copyright_line license_line source_line
   copyright_line="$(grep -n "# Copyright" "${test_file}" | head -1 | cut -d: -f1)"
-  mit_line="$(grep -n "# MIT License" "${test_file}" | head -1 | cut -d: -f1)"
+  license_line="$(grep -n "# Apache-2.0 License" "${test_file}" | head -1 | cut -d: -f1)"
   source_line="$(grep -n "^source:" "${test_file}" | head -1 | cut -d: -f1)"
   
-  [[ "${copyright_line}" -lt "${mit_line}" ]] || return 1
-  [[ "${mit_line}" -lt "${source_line}" ]] || return 1
+  [[ "${copyright_line}" -lt "${license_line}" ]] || return 1
+  [[ "${license_line}" -lt "${source_line}" ]] || return 1
   
   # Original content should remain
-  assert_contains "${content}" "description: Missing MIT line"
+  assert_contains "${content}" "description: Missing Apache-2.0 line"
 }
 
 # ============================================================================
@@ -591,7 +591,7 @@ echo "hello"
   
   # Header should be present as bash comments
   assert_contains "${content}" "# Copyright (c) 2025-2026" "Should have copyright line"
-  assert_contains "${content}" "# MIT License - see LICENSE file for full terms" "Should have MIT line"
+  assert_contains "${content}" "# Apache-2.0 License - see LICENSE file for full terms" "Should have Apache-2.0 line"
   assert_contains "${content}" "# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main" "Should have source URL"
   
   # Shebang should still be first line
@@ -599,7 +599,7 @@ echo "hello"
   mapfile -t lines < "${test_file}"
   assert_eq "#!/usr/bin/env bash" "${lines[0]}" "First line should be shebang"
   assert_contains "${lines[1]}" "# Copyright" "Second line should be copyright"
-  assert_contains "${lines[2]}" "# MIT License" "Third line should be MIT license"
+  assert_contains "${lines[2]}" "# Apache-2.0 License" "Third line should be Apache-2.0 license"
   assert_contains "${lines[3]}" "# Latest version:" "Fourth line should be source URL"
   
   # Original content should be preserved
@@ -633,8 +633,8 @@ main "$@"
   mapfile -t lines < "${test_file}"
   assert_eq "#!/usr/bin/env bash" "${lines[0]}" "First line should be shebang"
   assert_contains "${lines[1]}" "# Copyright" "Header should start after shebang"
-  assert_contains "${lines[2]}" "# MIT License" "MIT line after copyright"
-  assert_contains "${lines[3]}" "# Latest version:" "Source URL after MIT"
+  assert_contains "${lines[2]}" "# Apache-2.0 License" "Apache-2.0 line after copyright"
+  assert_contains "${lines[3]}" "# Latest version:" "Source URL after Apache-2.0"
   
   # Original content should be preserved
   assert_contains "${content}" "main() {" "Original content should remain"
@@ -657,7 +657,7 @@ echo "alt shebang"
   
   # Header should be present
   assert_contains "${content}" "# Copyright (c) 2025-2026" "Should have copyright line"
-  assert_contains "${content}" "# MIT License" "Should have MIT line"
+  assert_contains "${content}" "# Apache-2.0 License" "Should have Apache-2.0 line"
   assert_contains "${content}" "# Latest version:" "Should have source URL"
   
   # Shebang preserved as first line
@@ -670,7 +670,7 @@ test_bash_existing_header_idempotent() {
   local -r test_file="${_test_tmpdir}/already-has-header.sh"
   create_test_file "${test_file}" '#!/usr/bin/env bash
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 # Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/test/already-has-header.sh
 set -Eeuo pipefail
 echo "existing"
@@ -768,7 +768,7 @@ main() {
   run_test "Verbose mode outputs debug info" test_verbose_mode
   run_test "Multiple files as arguments work" test_multiple_files_argument
   run_test "Unicode copyright line handled idempotently" test_unicode_copyright_idempotent
-  run_test "Missing MIT line gets added with source line" test_missing_mit_line
+  run_test "Missing Apache-2.0 line gets added with source line" test_missing_license_line
   
   # Bash file tests
   run_test "Bash .sh file gets license header after shebang" test_bash_sh_extension_gets_header

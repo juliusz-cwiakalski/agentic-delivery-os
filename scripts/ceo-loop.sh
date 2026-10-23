@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 # ceo-loop.sh — Mode A outer process: run @ceo in a restartable loop.
 #
 # Spawns AT MOST ONE @ceo opencode session (INV-DM-3, F-3), detects a genuinely
