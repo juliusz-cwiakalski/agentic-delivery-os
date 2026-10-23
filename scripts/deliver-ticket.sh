@@ -62,6 +62,9 @@ readonly HOOK_ENV_ALLOWLIST="${ADOS_HOOK_ENV_ALLOWLIST:-}"
 
 # Platform configuration
 ADOS_PLATFORM="${ADOS_PLATFORM:-}"  # github | gitlab (empty = auto-detect)
+# Base branch for fresh delivery and resume sync. Empty = read the project
+# config (`.ai/agent/pr-instructions.md`), then fall back to `main`.
+ADOS_BASE_BRANCH="${ADOS_BASE_BRANCH:-}"
 # PDEV/GH-158: tracker is SEPARATE from the MR host. PLATFORM stays the MR/PR
 # CLI host (github|gitlab); ADOS_TRACKER routes ONLY the issue-state poll
 # (github|gitlab|jira). Default: tracker follows PLATFORM (back-compat —
@@ -268,6 +271,27 @@ detect_platform() {
   # 4. Default to github (NFR-5)
   printf '%s' "github"
   return 0
+}
+
+# Resolve the base branch for fresh delivery and resume sync.
+# Resolution order: ADOS_BASE_BRANCH env var > project config > main.
+detect_base_branch() {
+  if [[ -n "${ADOS_BASE_BRANCH}" ]]; then
+    printf '%s' "${ADOS_BASE_BRANCH}"
+    return 0
+  fi
+
+  local config_file="${ROOT_DIR}/.ai/agent/pr-instructions.md"
+  if [[ -r "${config_file}" ]]; then
+    local configured
+    configured="$(sed -n 's/^- \*\*Default base branch\*\*:[[:space:]]*`\([^`]*\)`.*$/\1/p' "${config_file}" | head -n 1)"
+    if [[ -n "${configured}" ]]; then
+      printf '%s' "${configured}"
+      return 0
+    fi
+  fi
+
+  printf '%s' "main"
 }
 
 # F-3: Tracker/MR dispatch seam — routes to correct CLI based on PLATFORM
@@ -887,6 +911,8 @@ build_delivery_prompt() {
   local -r branch="$2"
   local branch_hint=""
   [[ -n "${branch}" ]] && branch_hint=" (branch: ${branch})"
+  local base_branch
+  base_branch="$(detect_base_branch)"
 
   # F-6 / OQ-2: Platform-neutral prompt — detect platform from project config or
   # git remote, then use the configured CLI (GitHub or GitLab) for issue/PR-MR
@@ -903,9 +929,9 @@ Use the project's configured CLI for all issue/PR-MR queries (GitHub or GitLab).
 
 ## Resume Sync (if existing branch with commits — not a brand-new branch)
 If the current branch already has commits (i.e., this is a resume, not a fresh start):
-1. Sync with main to catch breaking changes:
-    git fetch origin main
-    git merge origin/main
+1. Sync with ${base_branch} to catch breaking changes:
+    git fetch origin ${base_branch}
+    git merge origin/${base_branch}
    - If merge conflicts: attempt to resolve them.
       If unresolvable: add ${ADOS_BLOCKED_LABEL:-human-input-needed} label, report "blocked", STOP.
    - If merge brought changes: run quality gates (tests) to verify nothing broke.
@@ -1428,10 +1454,12 @@ decide_after_iteration() {
 # ============================================================================
 
 prepare_main_for_delivery() {
-  log_info "Preparing main for new delivery"
+  local base_branch
+  base_branch="$(detect_base_branch)"
+  log_info "Preparing ${base_branch} for new delivery"
   _git -C "${ROOT_DIR}" fetch --prune origin 2>/dev/null || true
-  _git -C "${ROOT_DIR}" checkout main 2>/dev/null || true
-  _git -C "${ROOT_DIR}" pull --ff-only origin main 2>/dev/null || true
+  _git -C "${ROOT_DIR}" checkout "${base_branch}" 2>/dev/null || true
+  _git -C "${ROOT_DIR}" pull --ff-only origin "${base_branch}" 2>/dev/null || true
 }
 
 # Run a single delivery iteration.

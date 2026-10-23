@@ -717,13 +717,26 @@ test_prompt_has_lifecycle() {
   assert_contains "${prompt}" "11-phase lifecycle" "Prompt should reference ADOS lifecycle"
 }
 
-# TC-DT-08g: prompt merges main into the feature branch before resuming work
+# TC-DT-08g: prompt merges the resolved base into the feature branch before resuming work
 test_prompt_merge_main_on_resume() {
-  local prompt
+  local prompt old_base="${ADOS_BASE_BRANCH:-}"
+  ADOS_BASE_BRANCH="main"
   prompt="$(build_delivery_prompt "GH-112" "feat/test-branch")"
+  ADOS_BASE_BRANCH="${old_base}"
 
-  assert_contains "${prompt}" "git fetch origin main" "Prompt should fetch main before resuming"
-  assert_contains "${prompt}" "git merge origin/main" "Prompt should merge main into the feature branch"
+  assert_contains "${prompt}" "git fetch origin main" "Prompt should fetch the base branch before resuming"
+  assert_contains "${prompt}" "git merge origin/main" "Prompt should merge the base branch into the feature branch"
+}
+
+# TC-DT-08g2: base branch resolves from project config when env is empty
+test_base_branch_reads_project_config() {
+  local old_base="${ADOS_BASE_BRANCH:-}"
+  ADOS_BASE_BRANCH=""
+  local resolved
+  resolved="$(detect_base_branch)"
+  ADOS_BASE_BRANCH="${old_base}"
+
+  assert_eq "main-tools" "${resolved}" "Base branch should resolve from .ai/agent/pr-instructions.md"
 }
 
 # TC-DT-08h: prompt has a Resume Sync section
@@ -2710,7 +2723,8 @@ main() {
   run_test "TC-DT-08c: prompt has blocked workflow" test_prompt_has_blocked_workflow
   run_test "TC-DT-08d: prompt enforces single ticket" test_prompt_single_ticket
   run_test "TC-DT-08e: prompt references 11-phase lifecycle" test_prompt_has_lifecycle
-  run_test "TC-DT-08g: prompt merges main on resume" test_prompt_merge_main_on_resume
+  run_test "TC-DT-08g: prompt merges the resolved base on resume" test_prompt_merge_main_on_resume
+  run_test "TC-DT-08g2: base branch resolves from project config" test_base_branch_reads_project_config
   run_test "TC-DT-08h: prompt has Resume Sync section" test_prompt_has_resume_sync_section
   run_test "TC-DT-08i: prompt fetches review comments on resume" test_prompt_fetches_review_comments
   run_test "TC-DT-CMP-01: kill_process_tree terminates process" test_kill_process_tree_kills_process
