@@ -65,6 +65,7 @@ ADOS_PLATFORM="${ADOS_PLATFORM:-}"  # github | gitlab (empty = auto-detect)
 # Base branch for fresh delivery and resume sync. Empty = read the project
 # config (`.ai/agent/pr-instructions.md`), then fall back to `main`.
 ADOS_BASE_BRANCH="${ADOS_BASE_BRANCH:-}"
+ADOS_PR_INSTRUCTIONS_FILE="${ADOS_PR_INSTRUCTIONS_FILE:-${ROOT_DIR}/.ai/agent/pr-instructions.md}"
 # PDEV/GH-158: tracker is SEPARATE from the MR host. PLATFORM stays the MR/PR
 # CLI host (github|gitlab); ADOS_TRACKER routes ONLY the issue-state poll
 # (github|gitlab|jira). Default: tracker follows PLATFORM (back-compat —
@@ -281,7 +282,7 @@ detect_base_branch() {
     return 0
   fi
 
-  local config_file="${ROOT_DIR}/.ai/agent/pr-instructions.md"
+  local config_file="${ADOS_PR_INSTRUCTIONS_FILE}"
   if [[ -r "${config_file}" ]]; then
     local configured
     configured="$(sed -n 's/^- \*\*Default base branch\*\*:[[:space:]]*`\([^`]*\)`.*$/\1/p' "${config_file}" | head -n 1)"

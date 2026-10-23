@@ -731,13 +731,17 @@ test_prompt_merge_main_on_resume() {
 
 # TC-DT-08g2: base branch resolves from project config when env is empty
 test_base_branch_reads_project_config() {
-  local old_base="${ADOS_BASE_BRANCH:-}"
+  local old_base="${ADOS_BASE_BRANCH:-}" old_file="${ADOS_PR_INSTRUCTIONS_FILE:-}"
+  local config_file="${_test_tmpdir}/pr-instructions.md"
+  printf '%s\n' '- **Default base branch**: `main-tools`' >"${config_file}"
+  ADOS_PR_INSTRUCTIONS_FILE="${config_file}"
   ADOS_BASE_BRANCH=""
   local resolved
   resolved="$(detect_base_branch)"
+  ADOS_PR_INSTRUCTIONS_FILE="${old_file}"
   ADOS_BASE_BRANCH="${old_base}"
 
-  assert_eq "main-tools" "${resolved}" "Base branch should resolve from .ai/agent/pr-instructions.md"
+  assert_eq "main-tools" "${resolved}" "Base branch should resolve from the project config"
 }
 
 # TC-DT-08h: prompt has a Resume Sync section

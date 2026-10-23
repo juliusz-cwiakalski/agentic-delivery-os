@@ -385,6 +385,10 @@ build_plugin() {
     local agent_count=0
     for agent_file in "${source_dir}/agent"/*.md; do
         [[ -f "$agent_file" ]] || continue
+        if git -C "${REPO_ROOT}" check-ignore -q "$agent_file" 2>/dev/null; then
+            log "Skipping ignored agent: ${agent_file}"
+            continue
+        fi
 
         local agent_name
         agent_name="$(basename "$agent_file" .md)"
@@ -411,6 +415,10 @@ build_plugin() {
     local skill_count=0
     for command_file in "${source_dir}/command"/*.md; do
         [[ -f "$command_file" ]] || continue
+        if git -C "${REPO_ROOT}" check-ignore -q "$command_file" 2>/dev/null; then
+            log "Skipping ignored command: ${command_file}"
+            continue
+        fi
 
         local skill_name
         skill_name="$(basename "$command_file" .md)"
