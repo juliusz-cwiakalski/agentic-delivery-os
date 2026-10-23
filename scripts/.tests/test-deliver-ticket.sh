@@ -726,6 +726,7 @@ test_prompt_merge_main_on_resume() {
 
   assert_contains "${prompt}" "git fetch origin main" "Prompt should fetch the base branch before resuming"
   assert_contains "${prompt}" "git merge origin/main" "Prompt should merge the base branch into the feature branch"
+  assert_contains "${prompt}" "--base main" "Prompt should tell the PM to pass the base branch explicitly"
 }
 
 # TC-DT-08g2: base branch resolves from project config when env is empty

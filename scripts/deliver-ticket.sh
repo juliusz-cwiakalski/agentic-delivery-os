@@ -964,8 +964,11 @@ Nothing to do. Report "merged/closed" and STOP.
 1. Resume or start the full ADOS 11-phase lifecycle for ${ticket_ref}.
 2. clarify scope, specification, test planning, delivery planning, DoR, implementation, docs sync, review/fix, quality gates, DoD, PR creation.
 3. Delegate to specialized subagents. Do not implement source code directly as PM.
-4. Create the PR and leave it open for review.
-5. Report "PR open, awaiting review" and STOP.
+4. Create the PR against ${base_branch}. Pass the base branch explicitly to
+   @pr-manager (--base ${base_branch}) even when GitHub's default branch is
+   main.
+5. Leave the PR open for review.
+6. Report "PR open, awaiting review" and STOP.
 
 ### If technically blocked (missing credentials/access/tooling)
 1. Add label: ${ADOS_BLOCKED_LABEL:-human-input-needed}

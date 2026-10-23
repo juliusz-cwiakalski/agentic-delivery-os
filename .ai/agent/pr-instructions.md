@@ -20,7 +20,7 @@ Repository-level configuration for PR/MR platform access. Agents read this file 
 - **Default base branch**: `main-tools`
 - All PRs/MRs for tooling work target `main-tools`, not `main`.
 - When invoking `@pr-manager`, pass `--base main-tools` explicitly.
-- `main` stays as the frozen public baseline until the owner approves a public release.
+- GitHub's default branch stays `main` so public visitors see the frozen baseline. Agents must override the UI default and target `main-tools`.
 
 ## Access Method Preference
 
