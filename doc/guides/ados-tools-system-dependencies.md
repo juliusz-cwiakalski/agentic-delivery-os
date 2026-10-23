@@ -1,6 +1,6 @@
 ---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/guides/ados-tools-system-dependencies.md
 ados_distribution: internal
 ---
@@ -15,7 +15,7 @@ This document covers the four shell programs that ship with the repository:
 | `text-to-image` | `tools/text-to-image` | AI image generation CLI (7 providers) |
 | `install.sh` | `scripts/install.sh` | Install/update ADOS globally or locally |
 | `uninstall.sh` | `scripts/uninstall.sh` | Remove ADOS from global or local install |
-| `add-header-location.sh` | `scripts/add-header-location.sh` | Add MIT license headers to files |
+| `add-header-location.sh` | `scripts/add-header-location.sh` | Add Apache-2.0 license headers to files |
 
 ## Dependency Matrix
 

@@ -1,6 +1,6 @@
 ---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/reviewer.md
 #
 description: Review changes against spec, plan, code quality heuristics, and repo rules. Supports local (ADOS pipeline) and remote (PR/MR) modes.
@@ -358,7 +358,7 @@ is present, its guidance takes priority — it may extend, narrow, or override t
 **Dependencies and build**
 - Unused additions: imports/dependencies added but never used in the change.
 - Version drift: dependency versions inconsistent with existing pins elsewhere in the project.
-- License compliance: new dependencies with incompatible licenses (GPL in MIT project, etc.).
+- License compliance: new dependencies with incompatible licenses (GPL in Apache-2.0 project, etc.).
 - Build impact: changes that would break CI, increase build time significantly, or affect artifact size.
 
 Language-specific review rules (e.g., Bash quoting, Java nullability, React hooks, Python type hints)

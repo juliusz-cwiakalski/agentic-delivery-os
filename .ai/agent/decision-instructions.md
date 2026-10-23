@@ -1,6 +1,6 @@
 ---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ai/agent/decision-instructions.md
 ---
 # Decision Instructions
@@ -34,7 +34,7 @@ Agentic Delivery OS (ADOS) is a spec-driven software delivery system: AI agents 
 
 ### Key constraints
 
-- **License**: MIT (open source). No proprietary dependencies without explicit decision.
+- **License**: Apache-2.0 (open source). No proprietary dependencies without explicit decision.
 - **Team**: Solo developer + AI agents. Decisions must be executable by one person orchestrating AI.
 - **Multi-tool**: ADOS maintains a single source of truth for OpenCode + Claude Code. Changes must work across both.
 - **Redistributable**: ADOS is installed into other projects. Agent/command/guide content must not reference repo-specific ticket numbers or internal issue trackers.

@@ -3,7 +3,7 @@
 # build-claude-plugin.sh - Generate Claude Code plugin from .opencode/ source
 # ==============================================================================
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 #
 # PURPOSE:
 #   Transform .opencode/ agent/command definitions to Claude Code plugin format.
@@ -53,9 +53,11 @@ set -euo pipefail
 # Configuration
 # ==============================================================================
 
-SCRIPT_NAME="$(basename "$0")"
+SCRIPT_SOURCE="${BASH_SOURCE[0]}"
+readonly SCRIPT_SOURCE
+SCRIPT_NAME="$(basename "${SCRIPT_SOURCE}")"
 readonly SCRIPT_NAME
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${SCRIPT_SOURCE}")" && pwd)"
 readonly SCRIPT_DIR
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 readonly REPO_ROOT
@@ -111,7 +113,7 @@ generate_generated_header() {
 # Regenerate with: scripts/build-claude-plugin.sh
 # If behavior must change, edit the source file above and rebuild.
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 # source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/${source_path}
 EOF
 }
@@ -350,7 +352,7 @@ generate_manifest() {
   },
   "homepage": "https://github.com/juliusz-cwiakalski/agentic-delivery-os",
   "repository": "https://github.com/juliusz-cwiakalski/agentic-delivery-os",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "keywords": ["agentic-delivery-os", "ados", "spec-driven", "software-delivery", "opencode", "claude-code"]
 }
 EOF
@@ -385,7 +387,10 @@ build_plugin() {
     local agent_count=0
     for agent_file in "${source_dir}/agent"/*.md; do
         [[ -f "$agent_file" ]] || continue
-        if git -C "${REPO_ROOT}" check-ignore -q "$agent_file" 2>/dev/null; then
+        # Only skip git-ignored sources inside the canonical repo source dir.
+        # Temp test sources outside it (or under a git-ignored tmp/) must still
+        # build, so the harness stays hermetic.
+        if [[ "${agent_file}" == "${REPO_ROOT}/.opencode/agent/"* ]] && git -C "${REPO_ROOT}" check-ignore -q "$agent_file" 2>/dev/null; then
             log "Skipping ignored agent: ${agent_file}"
             continue
         fi
@@ -415,7 +420,7 @@ build_plugin() {
     local skill_count=0
     for command_file in "${source_dir}/command"/*.md; do
         [[ -f "$command_file" ]] || continue
-        if git -C "${REPO_ROOT}" check-ignore -q "$command_file" 2>/dev/null; then
+        if [[ "${command_file}" == "${REPO_ROOT}/.opencode/command/"* ]] && git -C "${REPO_ROOT}" check-ignore -q "$command_file" 2>/dev/null; then
             log "Skipping ignored command: ${command_file}"
             continue
         fi

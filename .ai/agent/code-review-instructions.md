@@ -1,6 +1,6 @@
 ---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.ai/agent/code-review-instructions.md
 ---
 # Code Review Instructions
@@ -16,7 +16,7 @@ Repository-specific review guidance for the `reviewer` agent when reviewing ADOS
 
 - This repo's primary deliverables are **agent prompts** (`.opencode/agent/*.md`) and **command definitions** (`.opencode/command/*.md`). A degraded prompt degrades everything downstream — treat prompt changes with the same rigor as production code.
 - XML structure is preferred for Claude models; Markdown for GPT models; JSON for DeepSeek models.
-- Every Markdown file must carry a three-line YAML frontmatter: copyright, MIT license reference, and canonical URL.
+- Every Markdown file must carry a three-line YAML frontmatter: copyright, Apache-2.0 license reference, and canonical URL.
 - Bash scripts carry the same three lines as comments after the shebang.
 
 ## Review Priorities

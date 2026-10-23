@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 # Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/clean-merged-branches
 #
 # clean-merged-branches — squash-merge-safe branch cleanup
@@ -285,7 +285,7 @@ usage() {
 ${APP_NAME} ${APP_VERSION} — squash-merge-safe branch cleanup
 
 Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-MIT License - see LICENSE file for full terms
+Apache-2.0 License - see LICENSE file for full terms
 Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/${APP_NAME}
 
 USAGE:
@@ -332,7 +332,7 @@ show_version() {
   cat <<EOF
 ${APP_NAME} ${APP_VERSION}
 Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-MIT License - see LICENSE file for full terms
+Apache-2.0 License - see LICENSE file for full terms
 Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/${APP_NAME}
 EOF
 }

@@ -1,6 +1,6 @@
 ---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/guides/tools-convention.md
 ados_distribution: internal
 ---
@@ -83,7 +83,7 @@ Every tool script starts with the standard ADOS license header as bash comments:
 ```bash
 #!/usr/bin/env bash
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-# MIT License - see LICENSE file for full terms
+# Apache-2.0 License - see LICENSE file for full terms
 # Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/<tool-name>
 ```
 
@@ -106,7 +106,7 @@ The `--help` output must include:
 <tool-name> <version> — <one-line description>
 
 Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-MIT License - see LICENSE file for full terms
+Apache-2.0 License - see LICENSE file for full terms
 Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/<tool-name>
 
 USAGE:
@@ -139,7 +139,7 @@ Multi-line format:
 ```
 <tool-name> <version>
 Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-MIT License - see LICENSE file for full terms
+Apache-2.0 License - see LICENSE file for full terms
 Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/<tool-name>
 ```
 
@@ -150,7 +150,7 @@ show_version() {
   cat <<EOF
 ${APP_NAME} ${APP_VERSION}
 Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
-MIT License - see LICENSE file for full terms
+Apache-2.0 License - see LICENSE file for full terms
 Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/${APP_NAME}
 EOF
 }
@@ -475,7 +475,7 @@ When creating a new tool, verify:
 - [ ] License header (3-line bash comment)
 - [ ] `APP_VERSION` set with semver
 - [ ] `--help` with examples, doc link, license info
-- [ ] `--version` with name, version, copyright, MIT, URL
+- [ ] `--version` with name, version, copyright, Apache-2.0, URL
 - [ ] `-n, --dry-run` flag (show what would be done)
 - [ ] `-v, --verbose` flag (debug output)
 - [ ] Automatic version check with 24h cache and opt-out
