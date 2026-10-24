@@ -4,9 +4,9 @@
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/decisions/ADR-0003-oss-monorepo-structure.md
 id: ADR-0003
 decision_type: adr
-status: Proposed
+status: Accepted
 created: 2026-10-23
-decision_date: null
+decision_date: 2026-10-24
 last_updated: 2026-10-24
 summary: "Adopt a root packages/ pnpm-workspace monorepo with Bun pinned as the runtime and build target: a runtime-neutral core with contracts, state, and branding subpaths plus one createRuntime composition root, one adapters package with per-provider and per-I/O subpaths, thin cli/mcp/opencode surfaces, and a private dev-only testkit; six packages, one lockstep publish line, a layered configuration model, and a wrapper-based strangler from the bash stack."
 owners:
@@ -15,7 +15,7 @@ service: delivery-os
 decision_area: architecture
 decision_scope: org
 reversibility: moderate
-review_date: null
+review_date: 2026-10-24
 business_impact: "Unblocks the OSS TypeScript delivery tooling for every roadmap phase that includes any OSS part (the roadmap is to be revised) while isolating change from the running bash stack; makes the public rename a branding-module change inside packages/core and a separate, countable corpus migration."
 customer_impact: "ADOS users keep the current behavior until each engine passes parity, then gain a deterministic CLI, a local MCP surface, and OpenCode-native tools with stable documented error codes, layered configuration, and verifiable installs."
 classification:
@@ -51,7 +51,7 @@ ai_assistance:
   roles: [researcher, analyst, critic, record-writer]
   external_data_shared: false
   citations_verified: false
-  human_decider: null
+  human_decider: "Juliusz Ćwiąkalski (owner, accepted 2026-10-24 via PR #163)"
   reviewers: ["@decision-critic (first pass REWORK 2026-10-24; re-review PASS_WITH_RISKS 2026-10-24; focused re-review of the six-package revision REWORK 2026-10-24, findings F1-F16 all closed; confirmation re-review of the F1-F16 revision PASS_WITH_RISKS 2026-10-24)"]
 revisit_triggers:
   - "An OpenCode native tool or a second TypeScript harness (for example Pi.dev) needs a capability that the documented core entry points do not expose; reshape the harness surface rather than reaching into core internals"
@@ -280,7 +280,7 @@ The earlier draft used verbal weights that disagreed with its own ranked list. W
 - **Performers:** `@coder` for the scaffold and engine delivery; `@toolsmith` only if a later change touches agent or command definitions, which this decision does not.
 - **Informed:** ADOS users and ADOS agents (through the committed architecture and spec documentation).
 
-The record stays `Proposed` until the owner explicitly accepts it. `decision_date` remains null until then. On acceptance, the owner sets `decision_date` and `review_date`; the first retrospective runs after the scaffold and the first parity cutover.
+The owner accepted this record on 2026-10-24 via PR #163 (`status: Accepted`, `decision_date: 2026-10-24`, `review_date: 2026-10-24`). The first retrospective runs after the scaffold and the first parity cutover. The brand name (UQ-9) is deferred until before the first public release and is protected by the branding seam.
 
 ## Evidence, Assumptions & Unknowns
 
@@ -1071,7 +1071,7 @@ The chosen alternative satisfies all constraints C-1 through C-11:
 
 The chosen alternative meets every constraint; no constraint is waived. C-9 is satisfied by design, with the absence of an approved non-Bun state driver at scaffold treated as a scaffold stop condition. The documented degraded mode is read-only JSONL without SQLite indexes until that driver lands; it is a designed operating state, not a relaxed gate. Every constraint is marked `Negotiable: no`, so compliance is pass/fail rather than a documented-risk exception.
 
-**Decider:** Juliusz Ćwiąkalski (owner). This record remains `Proposed` until the owner accepts it. At acceptance the owner sets `decision_date` and `review_date`; the first post-implementation retrospective follows the scaffold and the first parity cutover.
+**Decider:** Juliusz Ćwiąkalski (owner). The owner accepted this record on 2026-10-24 via PR #163, setting `status: Accepted`, `decision_date: 2026-10-24`, and `review_date: 2026-10-24`. The first post-implementation retrospective follows the scaffold and the first parity cutover.
 
 **Conditions for revisit:** See the frontmatter `revisit_triggers`. The most likely early triggers are the non-Bun state driver result, the OpenCode harness form, a need to publish before the naming freeze, and the first adapter or driver that justifies a separate package.
 
@@ -1112,7 +1112,7 @@ The chosen alternative meets every constraint; no constraint is waived. C-9 is s
 
 The owner answered UQ-1 through UQ-8 on 2026-10-24; those answers are recorded as FACTs in the Owner answers section and are reflected throughout this record. Only one owner decision remains open.
 
-- [ ] **UQ-9 Brand name:** product name, binary name, and naming-freeze date. This blocks publication only, not the scaffold (owner).
+- [ ] **UQ-9 Brand name (deferred):** product name, binary name, and naming-freeze date. Owner decision (2026-10-24): defer until before the first public release. Protected by design via the branding seam, the `private: true` publish guard, and the forbidden-literal test. Blocks publication only, not the scaffold (owner).
 
 **Milestone gate note (not an owner question):** after the first multi-workspace exercise, confirm the workspace identity, the per-workspace partition, and the lock-scope model defined in DEC-5. The local-scope envelope fields `workspaceId` and `fenceEpoch` are part of that gate: before project or global state ships, confirm whether each is generalized, re-scoped per level, or replaced. The owner accepted the proposed state shape for now (UQ-8 answer, 2026-10-24); this is a confirmation checkpoint before the shared-state work, not a pending decision.
 
@@ -1161,7 +1161,7 @@ High-level only; each step is delivered as an ADOS change with a spec, test plan
 
 | Audience | Message | Channel | Timing |
 |----------|---------|---------|--------|
-| Owner (decider) | R3 record revised with the 2026-10-24 UQ-1 to UQ-8 answers, the owner-approved six-package structure, and the layered configuration model; the focused `@decision-critic` re-review of the six-package revision returned a narrow REWORK on 2026-10-24 (findings F1-F16), all findings are closed, and the confirmation re-review completed on 2026-10-24 with PASS_WITH_RISKS; only UQ-9 (brand name, publication-only) remains open; acceptance sets date and review date. | PR #163 review and decision record | Before acceptance |
+| Owner (decider) | R3 record revised with the 2026-10-24 UQ-1 to UQ-8 answers, the owner-approved six-package structure, and the layered configuration model; the focused `@decision-critic` re-review of the six-package revision returned a narrow REWORK on 2026-10-24 (findings F1-F16), all findings are closed, and the confirmation re-review completed on 2026-10-24 with PASS_WITH_RISKS; the owner accepted on 2026-10-24 (`status: Accepted`, `decision_date: 2026-10-24`, `review_date: 2026-10-24`); UQ-9 (brand name) is deferred until before the first public release, protected by the branding seam. | PR #163 review and decision record | Accepted 2026-10-24 |
 | `@decision-critic` | Confirmation re-review of the F1-F16 revision completed 2026-10-24: verdict PASS_WITH_RISKS, F1-F16 confirmed closed, residual risks CR-1 to CR-8 accepted. No further review round is scheduled for this revision; a new finding opens a new round. | PR review using `/review-decision` | Completed before acceptance |
 | `@coder` and contributors | The scaffold contract: six packages and their subpaths, `createRuntime`, the state driver port, the layered config resolver, the error table, the wrapper cutover, and stop conditions. | Change spec, plan, and this record | At scaffold start and at each milestone |
 | ADOS users | The bash stack keeps working; new tools appear beside it and take over only after parity; configuration is layered and explainable; installs and checksums are verified. | Release notes, `doc/guides/` updates, installer help | At each release that ships a new artifact |
@@ -1268,7 +1268,7 @@ High-level only; each step is delivered as an ADOS change with a spec, test plan
 
 Three risks accepted in the earlier PASS_WITH_RISKS round remain open and are carried forward: R-2 (the `packages/opencode` versus `.opencode/` legibility trap), R-3 (`SessionStore` and `HostPort` personal-data exposure, bounded by the metadata-only clause), and R-5 (the two remaining evidence-level TO-CONFIRMs on marksync and the license verdicts). R-1, R-4, R-6, R-7, and R-8 are closed as recorded in the table above.
 
-**Publication gate:** UQ-9 (brand name: product name, binary name, and naming-freeze date) is the only open owner question, and it blocks publication only. It does not block the scaffold, the dual-run work, or any implementation step that keeps `private: true` and the publish guard in place. The record is otherwise decision-ready for owner acceptance.
+**Publication gate:** UQ-9 (brand name: product name, binary name, and naming-freeze date) is deferred by the owner (2026-10-24) until before the first public release. It blocks publication only, and the design already protects against the deferred rename: the branding seam, the `private: true` publish guard, the forbidden-literal test, and the rename drill. It does not block the scaffold, the dual-run work, or any implementation step that keeps `private: true` and the publish guard in place. The record was accepted by the owner on 2026-10-24.
 
 **Disposition of the focused re-review findings F1-F16 (2026-10-24):** the confirmation re-review of 2026-10-24 verified every row below as closed; no finding was reopened.
 
@@ -1332,7 +1332,7 @@ Three risks accepted in the earlier PASS_WITH_RISKS round remain open and are ca
 | CG-LEG-001 and CG-LEG-007 (marksync provenance and license) | closed | DEC-9 provenance rule; C-2 |
 | CG-DEC-007 (naming corpus scope) | closed | C-3; DEC-8 scope-of-the-claim rule |
 | Remaining CritiqueGrid warnings (16) and additional findings (22) not individually cited | deferred | First retrospective; none changes the package graph |
-| Open owner questions | open (one) | UQ-9 Brand name (Unresolved Questions) |
+| Open owner questions | deferred (owner, 2026-10-24) | UQ-9 Brand name (Unresolved Questions) - decided before the first public release, protected by the branding seam |
 
 **Disposition of the 15 `@decision-critic` REWORK items (2026-10-24):**
 
@@ -1354,7 +1354,7 @@ Three risks accepted in the earlier PASS_WITH_RISKS round remain open and are ca
 | 14 | No finding disposition table | closed | This section: the CritiqueGrid table and the 15-item table |
 | 15 | Owner-dependent items not consolidated | closed | Unresolved Questions lists the one remaining owner item (UQ-9); the eight answered questions are facts in Context |
 
-**Open items:** the only open owner decision item is UQ-9 (brand name), which blocks publication only. The post-exercise workspace identity confirmation is a milestone gate note, not an open question. The evidence-level TO-CONFIRMs listed in Unresolved Questions remain evidence gaps, not owner decisions. The focused re-review of revision 2 returned a narrow REWORK on 2026-10-24 and all F1-F16 findings are closed in revision 3; the confirmation re-review of revision 3 returned PASS_WITH_RISKS on 2026-10-24, confirmed F1-F16 closed, and accepted the residual risks CR-1 to CR-8 listed above. None of these blocks the scaffold.
+**Open items:** no owner decision item remains open. UQ-9 (brand name) is deferred by the owner (2026-10-24) until before the first public release and is protected by the branding seam. The post-exercise workspace identity confirmation is a milestone gate note, not an open question. The evidence-level TO-CONFIRMs listed in Unresolved Questions remain evidence gaps, not owner decisions. The focused re-review of revision 2 returned a narrow REWORK on 2026-10-24 and all F1-F16 findings are closed in revision 3; the confirmation re-review of revision 3 returned PASS_WITH_RISKS on 2026-10-24, confirmed F1-F16 closed, and accepted the residual risks CR-1 to CR-8 listed above. The owner accepted the record on 2026-10-24 via PR #163.
 
 **Independence caveat:** same-model reviewers share lineage and are not independent evidence. R3 still requires the owner's human decision. The owner is the only authority who can accept this record.
 
@@ -1364,7 +1364,7 @@ Three risks accepted in the earlier PASS_WITH_RISKS round remain open and are ca
 
 ## Structured Retrospective
 
-**Status:** TODO: first retrospective after the scaffold and the first wrapper cutover. `review_date` is null until acceptance; the owner sets it at acceptance.
+**Status:** TODO: first retrospective after the scaffold and the first wrapper cutover. `review_date` is set to 2026-10-24 (acceptance).
 
 ### Process quality
 
