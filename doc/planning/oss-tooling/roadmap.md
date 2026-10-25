@@ -42,7 +42,7 @@ dates are adjusted as evidence lands.
 | M0 | Trust substrate | weeks 1-4 | Typed core, result contract, status and verify change working end-to-end; verify gates, closeout, provider, and pm-notes validation bundled; the delivery loop usable on real tickets |
 | M1 | Attention and minimal surfaces | months 2-3 | Lying-signal class eliminated on migrated engines; merge as a transaction; owner-gate SLA, brief v0, minimal MCP, retro pipeline |
 | M2 | Orchestration and measurement | months 3-6 | Scheduling and ceremonies leave LLM context; metrics and spend measured |
-| M3 | Surfaces, adapters, validators | months 6-9 | Opencode native plus full MCP; adapter completion; validators; v1.0 internal readiness with deprecation notices |
+| M3 | Surfaces, adapters, validators | months 6-9 | Harness surfaces (opencode, Claude Code) plus full MCP; adapter completion; validators; v1.0 internal readiness with deprecation notices |
 | M4 | Public release readiness | after M3 | Naming freeze, publication, docs, merge of the tooling branch to the default branch, bash retirement |
 
 ## M0: Trust substrate (weeks 1-4)
@@ -77,7 +77,9 @@ pipeline.
 Scope: watchdog and lane contracts; state validation at every boundary;
 `doctor`; `merge` plus `verify deploy` (deploy verified by job trace); the
 owner-gate SLA; `brief` render-only v0; minimal MCP mirroring proven
-engines; the retro pipeline; the dispatch dual-run pilot on one repository.
+engines; the retro pipeline; harness adapters making dispatch
+harness-agnostic (opencode first, Claude Code next); the dispatch dual-run
+pilot on one repository.
 
 Exit criteria: false-success and lying-liveness counts near zero on migrated
 engines; merge near-miss classes structurally impossible.

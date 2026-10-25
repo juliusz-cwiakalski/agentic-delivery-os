@@ -5,10 +5,11 @@ scheduled in M0-S17.
 
 ## Summary
 
-All agents, engines, and surfaces interact with trackers, VCS hosts, and CI
-exclusively through ADOS primitives. Adapters translate primitives into
-provider APIs. Agents never hold provider dialect: no `gh` commands, no Jira
-semantics, no GitLab quirks in any agent-facing prompt or tool.
+All agents, engines, and surfaces interact with trackers, VCS hosts, CI,
+and agent harnesses exclusively through ADOS primitives. Adapters translate
+primitives into provider APIs. Agents never hold provider dialect: no `gh`
+commands, no Jira semantics, no GitLab quirks, no harness CLIs in any
+agent-facing prompt or tool.
 
 ## Motivation
 
@@ -68,8 +69,11 @@ metadata.md), and conformance suites guarding drift (adapter-conformance.md).
 - Primitives model the delivery domain, not platform feature matrices. The
   full set, with ids, invariants, and the Planned, Typed, Delivered
   lifecycle, is catalogued in [primitive-catalogue.md](primitive-catalogue.md).
-  The set is derived bottom-up from the engine inventory, not top-down from
-  feature lists.
+  The domain covers provider interaction (tracker, VCS, CI) and harness
+  interaction (spawning, resuming, and supervising delivery sessions, and
+  publishing the plugin surface per harness; see
+  [harness-adapters.md](harness-adapters.md)). The set is derived bottom-up
+  from the engine inventory, not top-down from feature lists.
 - Primitive port types live in core `./contracts`; adapters implement them;
   the createRuntime composition root wires them (ADR-0003).
 - Capability flags: each adapter declares what it supports. Engines degrade
@@ -111,7 +115,10 @@ metadata.md), and conformance suites guarding drift (adapter-conformance.md).
 - M0-S12: primitive ports v1 with capability flags; GitLab, Jira, and a
   minimal GitHub read slice behind them.
 - M1-S7: MCP mirrors proven primitives.
-- M3-S1: opencode permission profiles align with the policy layer.
+- M1-S11: harness primitive ports and the opencode plus Claude Code
+  delivery adapters; dispatch becomes harness-agnostic.
+- M3-S1: harness plugin surfaces (opencode, Claude Code) align with the
+  policy layer.
 - M3-S3: adapter completion (full GitHub, Azure on demand).
 - M0-S17: adapter-contract decision record.
 

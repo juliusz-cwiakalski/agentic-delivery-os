@@ -62,8 +62,8 @@ consumer needs them:
 
 WorkItemRef, RepoRef, ChangeWorkspace, Phase, ArtifactPostcondition,
 DeliveryOutcome, DurableRun, CommandReceipt, GateVerdict, MergeTransaction,
-DispatchRun, LaneLease, LivenessSignal, ReadySet, ProviderRoute, StateStore,
-AuditEvent, AttentionState.
+DispatchRun, HarnessSession, LaneLease, LivenessSignal, ReadySet,
+ProviderRoute, StateStore, AuditEvent, AttentionState.
 
 ## Catalogue
 
@@ -145,6 +145,9 @@ not contracts.
 | P-067 | RetryPolicy | policy | Only known-safe retries; unsafe writes never retry | M0 |
 | P-068 | Compensation | capability | Reversible action for risky writes where feasible | M1 |
 | P-084 | IdempotencyKey | contract | Safe retries for external writes | M0 |
+| P-069 | HarnessInstance | context | Configured agent harness (opencode, claude-code, later pi.dev) with version and capability flags | M1 |
+| P-070 | HarnessSession | capability | Spawn, resume, steer, and collect a delivery session; premature end is classified; liveness stays harness-agnostic | M1 |
+| P-071 | HarnessPluginSurface | contract | Per-harness package format exposing the tooling (commands, agents, MCP), generated from the canonical source, sync-verified | M3 |
 
 ### State, audit, and owner surfaces
 
@@ -185,7 +188,7 @@ the catalogue only when a second consumer appears.
 | C-03 | TaskTree | M2 | Delivery task tree with ownership and bottom-up abort |
 | C-04 | PRWatch | M2 | Watch a delivery request with wake conditions and budgets |
 | C-05 | EventTrigger | M2 | Event or webhook intake with filters, replay, coalesce |
-| C-06 | HarnessAdapter | M3 | Harness abstraction across agent runtimes; spike first |
+| C-06 | HarnessAdapter | M3 | Absorbed into P-069/P-070/P-071; the remaining spike evaluates pi.dev and protocol compatibility |
 | C-07 | CapabilityEnvelope | M3 | Phase capability envelope for agents |
 | C-08 | ScopedAccessGrant | M3 | Pairing, consent, revocation, scoped approvals |
 | C-09 | GuaranteeContract | M1 | Published guarantees and non-guarantees for the durable substrate |
@@ -219,7 +222,7 @@ GateVerdict -> MergeTransaction -> CloseoutTransaction
         v                              v
 DeployVerification              CompletionLedger
 
-DispatchRun -> LaneLease -> LivenessSignal -> WatchdogPolicy -> Supervisor
+HarnessInstance -> HarnessSession -> DispatchRun -> LaneLease -> LivenessSignal -> WatchdogPolicy -> Supervisor
         |
         v
 DurableRun -> Checkpoint -> CommandReceipt -> OutboxEffect -> IdempotencyKey

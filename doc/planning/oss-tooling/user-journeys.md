@@ -24,6 +24,10 @@ still authoritative (strangler).
 - Lane agents: spec writer, test-plan writer, plan writer, readiness
   reviewer, coder, doc syncer, reviewer, runner, fixer, committer, PR
   manager. Each works inside the lifecycle session.
+- Harnesses: the agent runtimes executing lifecycle sessions (opencode by
+  default, Claude Code supported, pi.dev a candidate); dispatch spawns
+  through harness adapters and the tooling ships as a generated plugin per
+  harness (concepts/harness-adapters.md).
 - Owner: reviews briefs, answers gates, approves the backlog and decisions.
   Does not touch the delivery loop directly.
 
@@ -42,7 +46,7 @@ Success is artifacts, never exit codes.
 | 1. Session bootstrap | Coordinator | `ados status` (six collectors: tracker, changes and PRs, CI, lanes or queue, providers, parked work) | M0-S6 | Scripted probing, raw tracker and PR reads | Largest measured token lever; the first call of every session |
 | 2. Pick the next change | Coordinator | `ados queue ready` (read-only ready-set per ticket; close items rank above new starts) | M0-S7 | Manual dependency and repo-free checks | Idle lanes beside a full queue; closing beats opening |
 | 3. Understand the ticket | Lifecycle agent | Tracker read through the adapter | M0 (lifecycle session exists today) | unchanged | - |
-| 4. Deliver the change | Lifecycle session | `ados dispatch` (one delivery per repo, single-flight, supervises the lifecycle session) | M1-S9 pilot, M2-S1 full | deliver-ticket.sh | Exit-zero false success and lying liveness, the most-documented defect family |
+| 4. Deliver the change | Lifecycle session | `ados dispatch` (one delivery per repo, single-flight, spawns and supervises the lifecycle session through the harness adapter) | M1-S9 pilot, M2-S1 full | deliver-ticket.sh | Exit-zero false success and lying liveness, the most-documented defect family |
 | 5. Verify the delivery | Coordinator | `ados verify change` (verify the 11-phase ledger, classify the result tuple; malformed notes classified, never a crash) | M0-S8 | Manual notes and PR reading | The single most-repeated scriptable verification |
 | 6. Run the merge gates | Coordinator | `ados verify gates` (lifecycle finalization, CI on the pushed commit, push parity, owner-gate scan, squash preflight, each gate cited) | M0-S9, M2-S7 extension | Manual merge checklist | Merge near-miss classes; roughly ten minutes per merge |
 | 7. Merge | Coordinator | `ados merge` (verify gates fresh, squash, verify landed) | M1-S4 | Squash merge by hand | Merge as a transaction |
@@ -91,7 +95,7 @@ so the ledger is authoritative and a reopen always carries a reason.
   on one pilot repository; watchdog catches stalled lanes.
 - From M2: dispatch replaces the bash delivery path per repo after two
   clean weeks of verify-change evidence; steer and spend close the loop.
-- From M3: the same loop runs through opencode and MCP surfaces.
+- From M3: the same loop runs through the opencode, Claude Code, and MCP surfaces.
 
 ---
 
@@ -199,7 +203,7 @@ metrics` measures ceremony share, cycle time, and false-signal count
 | ceremony | - | step 7 | - | - | - |
 | metrics / spend | step 10 | - | evidence | core | core |
 | retro | step 10 | - | - | - | core |
-| mcp / opencode | surfaces for all of the above (M1-S7, M3-S1/M3-S2) | | | | |
+| mcp / harness | surfaces for all of the above (M1-S7, M3-S1/M3-S2) | | | | |
 | policy | - | - | - | - | enforcement |
 | repos | support | support | - | - | - |
 | update | distribution (M4-S2) | | | | |

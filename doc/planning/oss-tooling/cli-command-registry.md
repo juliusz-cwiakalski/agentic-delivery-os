@@ -58,7 +58,7 @@ order:
 - See: status, queue ready (queue, lanes later), board, brief
 - Operate: provider (AI model routing), config, state, lint, phase, db, watchdog, doctor, supervise, repos
 - Learn: retro, metrics, spend, policy
-- Surfaces: mcp, opencode
+- Surfaces: mcp, harness (opencode, Claude Code)
 - Maintain: update
 
 ### GLOBAL OPTIONS
@@ -145,7 +145,7 @@ verify from M0); completed in M3-S3 (full GitHub, Azure on demand).
 | `ados brief` | Deterministic render-only owner brief from the M0 collectors with explicit placeholders; no LLM in the render path; decision-first layout | operator | M1-S6 | - |
 | `ados mcp` | Minimal MCP mirroring the CLI scope over proven engines: status, verify-artifact, gate report | sessions | M1-S7 | M3-S2 (full MCP with batch semantics) |
 | `ados retro` | Retrospective evidence pipeline: collection, registry hardening, shape-crash guards, export; home of the periodic memory audit | coordinator | M1-S8 | - |
-| `ados dispatch` | Delivery pilot beside the bash stack on selected tickets with verify-change evidence; shell stays authoritative | coordinator | M1-S9 | M2-S1 (programmatic queue, single-flight, preemption) |
+| `ados dispatch` | Delivery pilot beside the bash stack on selected tickets with verify-change evidence; spawns sessions through the harness adapter (opencode first, Claude Code next); shell stays authoritative | coordinator | M1-S9 | M2-S1 (programmatic queue, single-flight, preemption) |
 
 ### M2: Orchestration and measurement
 
@@ -163,7 +163,7 @@ verify from M0); completed in M3-S3 (full GitHub, Azure on demand).
 
 | Command | Purpose | Primary user | Delivery | Extended |
 |---|---|---|---|---|
-| `ados opencode` | Native opencode commands/agents over the CLI core; same behavior cross-surface | sessions | M3-S1 | - |
+| `ados harness` | Harness integrations: list configured harnesses; install or update the ados plugin for a harness (opencode, Claude Code; pi.dev candidate), generated from the canonical source with sync verification (concepts/harness-adapters.md) | sessions, operator | M3-S1 | - |
 | `ados policy` | Mechanical enforcement of rules at the point of action; prose rules without a check are flagged | coordinator | M3-S5 | - |
 | `ados repos` | Clone, branch, and worktree hygiene with safety rails; never touches repos with live deliveries | operator, coordinator | M3-S6 | - |
 
@@ -256,5 +256,6 @@ Renames made by this audit (before the M0-S17 lock): `change` to `phase`
 `verify change`), `validate` to `lint` (near-synonym of `verify`; lint is
 document conformance, verify is evidence against reality), `workspace` to
 `repos` (workspace is the per-change artifact set in ADOS vocabulary; the
-command does repository hygiene). The remote connection command was deferred
-rather than named.
+command does repository hygiene), `opencode` to `harness` (the command
+manages harness integrations generally, not one harness). The remote
+connection command was deferred rather than named.

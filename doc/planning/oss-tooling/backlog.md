@@ -41,10 +41,14 @@ name is `ados` until the naming freeze.
 - Old bash tools stay until their engine replacement passes parity; removal
   happens at the very last stage with a deprecation notice pointing to the
   new equivalent.
-- Agents and engines speak ADOS primitives only; provider dialect lives in
-  adapters behind typed ports, the role-to-primitive policy layer is
-  enforced at the port boundary, and the raw escape hatch is audited and
-  off by default (concepts/agent-primitive-surface.md).
+- Agents and engines speak ADOS primitives only; provider and harness
+  dialect lives in adapters behind typed ports, the role-to-primitive policy
+  layer is enforced at the port boundary, and the raw escape hatch is
+  audited and off by default (concepts/agent-primitive-surface.md).
+- Delivery is harness-agnostic: dispatch spawns sessions through harness
+  adapters (opencode default, Claude Code supported, pi.dev a candidate),
+  and the tooling ships as a generated plugin per harness from one
+  canonical source (concepts/harness-adapters.md).
 
 ---
 
@@ -216,11 +220,11 @@ floats behind it.
 - AC: mitigations are docs or config only; no shell behavior changes.
 
 ### M0-S17 Decision records and measurement baseline
-- Tasks: decision records for layout, config precedence, adapter contract,
-  state schema, release model; the command naming convention locked (a
-  decision record or the man-page v1 acceptance) before M0 ends; baseline
-  numbers captured (ceremony share, cycle time, CI failure rate,
-  false-signal incidents).
+- Tasks: decision records for layout, config precedence, the adapter
+  contract (providers and harnesses), state schema, release model; the
+  command naming convention locked (a decision record or the man-page v1
+  acceptance) before M0 ends; baseline numbers captured (ceremony share,
+  cycle time, CI failure rate, false-signal incidents).
 - AC: decisions recorded; names locked; baseline committed to the local
   measurement log.
 
@@ -297,6 +301,16 @@ floats behind it.
 - AC: each new collector is artifact-verified and bounded; ticket-hygiene
   assertions are covered by name.
 
+### M1-S11 Harness adapters and dispatch portability
+- Tasks: harness primitive ports (HarnessInstance, HarnessSession); the
+  opencode delivery adapter (porting today's bash session spawn, resume,
+  and liveness handling); the Claude Code delivery adapter (headless
+  spawn); dispatch consumes a harness adapter instead of calling one
+  harness directly (concepts/harness-adapters.md).
+- AC: dispatch runs the same delivery through either harness adapter with
+  identical result classification; liveness signals are harness-agnostic;
+  the harness choice is configuration.
+
 ---
 
 ## Epic M2: Orchestration and measurement (months 3-6)
@@ -349,9 +363,13 @@ floats behind it.
 
 ## Epic M3: Surfaces, adapters, validators (months 6-9)
 
-### M3-S1 Opencode native integration
-- Tasks: native opencode commands/agents over the CLI core.
-- AC: same behavior via CLI and opencode surface, tested cross-surface.
+### M3-S1 Harness surfaces (opencode, Claude Code)
+- Tasks: expose the same commands and agents in each supported harness from
+  one canonical source; generated artifacts per harness, sync-verified in
+  CI, never hand-edited; pi.dev evaluation spike (concepts/
+  harness-adapters.md).
+- AC: same behavior via CLI and each harness surface, tested cross-surface;
+  a definition change regenerates every harness artifact in one step.
 
 ### M3-S2 Full MCP
 - Tasks: full MCP surface over proven engines; batch semantics.
