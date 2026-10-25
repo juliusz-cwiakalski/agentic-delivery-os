@@ -338,14 +338,17 @@ floats behind it.
   state.
 
 ### M2-S3 Ceremony runner
-- Tasks: reduce ceremony share; compact at boundaries; tiered intake. The
-  enumerated ceremony set: morning brief, retro evidence pass, sprint
-  rollover, night-watch, testing-session assessment (owner note to
-  item-by-item assessment with a coverage verdict per item), and
-  decision-record mirror sync to affected repos before a new ticket
-  dispatches there.
+- Tasks: reduce ceremony share; compact at boundaries; tiered intake. A
+  ceremony is a declared unit (schedule, inputs from collectors, render,
+  verification, catch-up semantics), not hardcoded logic. The built-in
+  set: morning brief, retro evidence pass, sprint rollover, night-watch,
+  testing-session assessment (owner note to item-by-item assessment with a
+  coverage verdict per item), and decision-record mirror sync to affected
+  repos before a new ticket dispatches there. Projects declare their own
+  ceremonies through the same contract (custom ceremony packs later).
 - AC: ceremony share measured before and after; trend toward 40 percent;
-  every ceremony in the set is parity-testable.
+  every built-in ceremony is parity-testable; a project-declared ceremony
+  runs through the same runner without tooling changes.
 
 ### M2-S4 Board
 - Tasks: full board of lanes, gates, owner asks, parked work; one screen

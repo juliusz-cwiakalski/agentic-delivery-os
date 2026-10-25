@@ -154,7 +154,7 @@ verify from M0); completed in M3-S3 (full GitHub, Azure on demand).
 | `ados queue` | Programmatic delivery queue: dependency graph, ready-set, per-remote single-flight, preemption with named park state | coordinator | M2-S1 | - |
 | `ados lanes` | Lane plan with dependency awareness and a build-weight class (heavy builds excluded per runner); two lanes cannot deliver the same repo concurrently | coordinator | M2-S1 | - |
 | `ados supervise` | Supervisor service (runs): tri-state status, progress watchdogs, duplicate-supervisor detection, lying-liveness signals | coordinator | M2-S2 | - |
-| `ados ceremony` | Ceremony runner: artifact-verified, resumable, compact at boundaries, tiered intake; enumerated set: morning brief, retro evidence pass, sprint rollover, night-watch, testing-session assessment, decision-record mirror sync | coordinator | M2-S3 | - |
+| `ados ceremony` | Ceremony runner: artifact-verified, resumable, compact at boundaries, tiered intake; the built-in set: morning brief, retro evidence pass, sprint rollover, night-watch, testing-session assessment, decision-record mirror sync; ceremonies are declared units, so projects can add their own | coordinator | M2-S3 | - |
 | `ados steer` | Queued steering notes delivered at phase boundaries; owner asks batched with measured aging | operator, coordinator | M2-S5 | - |
 | `ados metrics` | Delivery metrics: ceremony share, cycle time, CI failure rate, escaped defects | coordinator, operator | M2-S6 | - |
 | `ados spend` | Cost observability: per-dispatch tokens/cost/restarts, quota snapshots, burn-rate alarms | operator, coordinator | M2-S6 | - |
@@ -193,6 +193,39 @@ unless noted.
 | M4-S1 | Naming freeze and rename drill |
 | M4-S4 | Merge the tooling branch to the default branch |
 | M4-S5 | Bash stack retirement (compatibility wrappers during the window, then removal) |
+
+---
+
+## Plain-language notes (commands that need a second look)
+
+- `brief`: the owner's one-screen summary, rendered from live collector
+  data, never chat. Example: three decisions aging past SLA, two red
+  pipelines, one parked lane, one line each.
+- `board`: the whole fleet on one screen (lanes, gates, owner asks, parked
+  work). Brief is the narrative digest; board is the state grid.
+- `ceremony`: the scheduled factory rituals (morning brief render, retro
+  pass, sprint rollover, night-watch) run deterministically, with catch-up
+  when a scheduled run was missed. The ceremony set is declared, not
+  hardcoded: the built-ins ship with the tool and projects declare their
+  own.
+- `steer`: a note that reaches a running delivery at its next phase
+  boundary, with a receipt. How the owner changes course without killing
+  the session ("hold the merge until I review").
+- `spend`: cost truth from the event log: burn by agent, model, and
+  ticket; quota snapshots; alarms that catch silent overnight churn.
+- `watchdog` versus `supervise`: watchdog checks (pre-flight, teardown,
+  liveness probes); supervise runs (the daemon that starts, watches, and
+  restarts lanes). Watchdog checks, supervise runs.
+- `doctor`: diagnose and prescribe. One command checks repo, tracker,
+  provider, state, and CI wiring, and prints a fix hint for each failing
+  check.
+- `phase`: the only way to mark a lifecycle phase complete or reopened (a
+  reopen requires a reason). It writes the ledger every verification reads.
+- `lint`: document conformance (are the pm-notes and decision records
+  well-formed). Verify is evidence against reality; lint is schema and
+  format.
+- `provider`: the AI model routing engine (provider chain, quota, parks).
+  Tracker, VCS, and CI providers are adapters, not this command.
 
 ---
 
