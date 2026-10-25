@@ -28,6 +28,41 @@ semantics, no GitLab quirks in any agent-facing prompt or tool.
 - Portability: GitLab and Jira first, GitHub and Azure next; every new
   provider is one adapter, not a fleet of prompt edits.
 
+## Alternatives considered
+
+Alternative A: direct provider tooling. Agents call the provider CLIs and
+APIs (`gh`, `glab`, Jira APIs) directly, guided by per-provider playbooks in
+prompts. Rejected as the default because:
+
+- Every tracker-touching session re-reads provider playbooks; token cost is
+  permanent and multiplied per session, per agent.
+- Provider knowledge in prompts is probabilistic: the documented incident
+  classes (label replace semantics, merge status quirks, squash commit
+  reporting, comment omission) are exactly the kind of knowledge an LLM
+  misapplies under delivery pressure, and each misuse costs a correction
+  loop.
+- Without ports, every composed engine (closeout, gates, board, ceremony)
+  needs an N-provider matrix, so composition either does not happen or
+  forks per provider.
+- Per-provider skills and playbooks drift independently: the zoo-of-skills
+  problem, where behavior differs per provider and per prompt revision.
+
+Where direct use remains legitimate: humans at a terminal, the bash delivery
+stack until its retirement, and the audited escape hatch. The escape hatch is
+the controlled valve for the residual cases; it is never the default path in
+agent prompts.
+
+Alternative B: a universal tracker/VCS meta-model. Model every provider
+feature (custom fields, sprints, projects, weight, iterations, check runs)
+in one union API. Rejected because it recreates the complexity it removes:
+the meta-model churns with every provider feature change, drags provider
+concepts back into agent cognition, and still fails on gaps no provider has.
+
+Chosen: a domain-modeled primitive set (the delivery domain verbs only,
+catalogued in primitive-catalogue.md) behind typed ports, with capability
+flags declaring gaps, embedded metadata filling provider gaps (embedded-
+metadata.md), and conformance suites guarding drift (adapter-conformance.md).
+
 ## Design
 
 - Primitives model the delivery domain, not platform feature matrices. The
