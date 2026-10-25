@@ -876,6 +876,47 @@ phases:
 YAML
   artifact_pm_notes_complete "TEST-751" "${root}" || return 1
 
+  # A block-form `delivery:` without a `completed:` child must never inherit a
+  # later sibling phase's `completed:` (review F-1) — the probe degrades to
+  # incomplete, so a genuinely unfinished lane can never be reported finished.
+  cat >"${notes}" <<'YAML'
+phases:
+  delivery:
+    started: "2026-10-25"
+    mode: per-phase coder sessions
+  system_spec_update:
+    started: "2026-10-25"
+    completed: "2026-10-25"
+YAML
+  if artifact_pm_notes_complete "TEST-751" "${root}"; then
+    printf '  block delivery without completed inherited system_spec_update.completed\n' >&2
+    return 1
+  fi
+  # Same shape with an explicit null stays incomplete.
+  cat >"${notes}" <<'YAML'
+phases:
+  delivery:
+    started: "2026-10-25"
+    completed: null
+  system_spec_update:
+    completed: "2026-10-25"
+YAML
+  if artifact_pm_notes_complete "TEST-751" "${root}"; then
+    printf '  block delivery with completed: null must stay incomplete\n' >&2
+    return 1
+  fi
+  # Well-formed block form (children after the key, single-quoted value) is
+  # still complete — the sibling reset must not over-correct.
+  cat >"${notes}" <<'YAML'
+phases:
+  delivery:
+    started: '2026-10-25'
+    completed: '2026-10-25'
+  system_spec_update:
+    started: '2026-10-25'
+YAML
+  artifact_pm_notes_complete "TEST-751" "${root}" || return 1
+
   local log="${_test_tmpdir}/lane.log"
   printf 'some output\n' >"${log}"
   if artifact_permission_signature "TEST-751" "${log}"; then

@@ -1466,9 +1466,14 @@ artifact_pm_notes_complete() {
   # pm-notes are YAML (jq cannot parse them and no YAML dependency is allowed).
   # Real files use the flow map `delivery: { started: …, completed: … }`; a
   # block-style `delivery:` / `completed:` pair is handled as a fallback.
+  # Every unmatched/malformed shape must read as incomplete: the fallible
+  # direction of this probe is "not finished", never "finished".
   local completed raw
   for candidate in "${notes_files[@]}"; do
     raw="$(awk '
+      function _indent(s) { match(s, /^[[:space:]]*/); return RLENGTH }
+
+      # Shape 1: single-line flow map, `delivery: { … completed: <v> … }`.
       /^[[:space:]]*delivery:[[:space:]]*\{/ {
         if ($0 !~ /completed:/) { exit }
         line = $0
@@ -1478,14 +1483,30 @@ artifact_pm_notes_complete() {
         print line
         exit
       }
-      /^[[:space:]]*delivery:[[:space:]]*$/ { block = 1; next }
-      block && /^[[:space:]]+completed:/ {
-        line = $0
-        sub(/^[[:space:]]*completed:[[:space:]]*/, "", line)
-        sub(/[[:space:]]+#.*$/, "", line)
-        gsub(/^"|"$/, "", line)
-        print line
-        exit
+
+      # Shape 2: block form, `delivery:` opening a child mapping.
+      /^[[:space:]]*delivery:[[:space:]]*$/ {
+        block = 1
+        block_indent = _indent($0)
+        next
+      }
+
+      # Inside the delivery block only its own children (indent deeper than the
+      # `delivery:` key) may answer. Any blank/comment line is skipped; any key
+      # at the same-or-shallower indent is a sibling phase and ENDS the block,
+      # so a `delivery:` without a `completed:` child cannot inherit the value
+      # of a later sibling phase (review F-1).
+      block {
+        if ($0 ~ /^[[:space:]]*(#|$)/) { next }
+        if (_indent($0) <= block_indent) { block = 0; next }
+        if ($0 ~ /^[[:space:]]*completed:/) {
+          line = $0
+          sub(/^[[:space:]]*completed:[[:space:]]*/, "", line)
+          sub(/[[:space:]]+#.*$/, "", line)
+          gsub(/^"|"$/, "", line)
+          print line
+          exit
+        }
       }
     ' "${candidate}" 2>/dev/null)" || raw=""
     completed="${raw}"
