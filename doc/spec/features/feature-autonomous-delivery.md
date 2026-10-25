@@ -137,7 +137,7 @@ Subcommands:           deliver-ticket.sh --is-delivering [REF]
 - **PM LLM stream hangs:** the liveness watchdog (INV-DM-5) sees no session traffic for ≥ threshold → kill-and-resume the PM; the session resumes from committed artifacts + pm-notes.
 - **Agent hits a forbidden-folder permission prompt:** same detection — no session traffic → stuck → kill+restart (autonomous mode must not block on an unseen prompt).
 - **opencode internally detaches its own grandchildren:** the signal trap kills the child's process group; grandchildren opencode itself `setsid`-detached (LLM transport, bash-tool subprocesses) can escape the group kill. Accepted known limitation; a defense-in-depth sweep by session id can be added if orphans are observed.
-- **Tracker API rate-limit / network error during classification:** `classify_result` returns `unknown`; the iteration does not burn a restart slot. (Platform-aware since GH-148: on a healthy GitLab project this no longer misfires as a rate-limit — the dispatch seam uses the correct CLI.)
+- **Tracker API rate-limit / network error during classification:** `classify_result` returns `state-unverified` (only after the artifact ladder finds no evidence); the iteration does not burn a restart slot. (Platform-aware since GH-148: on a healthy GitLab project this no longer misfires as a rate-limit — the dispatch seam uses the correct CLI.)
 - **Rebase conflict during Mode B merge:** an AI agent resolves conflicts, pushes, and the quality gates re-run before the squash-merge.
 
 ## Technical Architecture & Codebase Map
