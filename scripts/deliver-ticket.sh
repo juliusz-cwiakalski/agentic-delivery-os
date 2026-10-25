@@ -22,8 +22,9 @@
 # primary target — see doc/guides/delivery-modes.md Troubleshooting.
 #
 # Exit codes:
-#   0 - Success (merged, blocked, pr-open, or PM finished)
-#   1 - Failed (max restarts exceeded or unrecoverable error)
+#   0 - Success (merged, blocked, pr-open, pr-open-unverified, noop-lane-nothing-to-do, or PM finished)
+#   1 - Failed (max restarts exceeded, partial, noop-lane-permission, or
+#       state-unverified: tracker state fetch failed after retries)
 #   2 - Usage error
 
 set -Eeuo pipefail
@@ -156,6 +157,10 @@ DELIVERY_RESULT=""
 DELIVERY_PR_URL=""
 DELIVERY_EXIT_CODE=0
 DELIVERY_LAST_MESSAGE=""
+# PDEV-751: "yes" iff the close-out verdict came from the artifact ladder
+# because the tracker poll was exhausted (tracker verdict state-unverified).
+# Additive to the summary contract; "no" everywhere else.
+DELIVERY_CLOSEOUT_UNVERIFIED="no"
 
 # ============================================================================
 # TRAPS
@@ -1232,6 +1237,33 @@ _reap_opencode_orphan() {
 # RESULT CLASSIFICATION
 # ============================================================================
 
+# PURE: inter-attempt wait for state-poll attempt <attempt> (1-based):
+# min(base * 2^(attempt-1), cap). Extracted so the backoff ladder is
+# unit-testable WITHOUT real sleeps (PDEV-751, AC-6).
+# Args: attempt, base_seconds, cap_seconds
+# Prints: seconds to wait (0 when base is 0)
+state_fetch_backoff_delay() {
+  local attempt="${1:-1}" base="${2:-2}" cap="${3:-30}"
+  case "${attempt}" in ''|*[!0-9]*) attempt=1 ;; esac
+  case "${base}" in ''|*[!0-9]*) base=2 ;; esac
+  case "${cap}" in ''|*[!0-9]*) cap=30 ;; esac
+  (( attempt >= 1 )) || attempt=1
+  if (( base == 0 )); then
+    printf '0'
+    return 0
+  fi
+  local delay="${base}" i
+  for (( i = 1; i < attempt; i++ )); do
+    if (( delay >= cap )); then
+      delay="${cap}"
+      break
+    fi
+    delay=$(( delay * 2 ))
+  done
+  (( delay > cap )) && delay="${cap}"
+  printf '%s' "${delay}"
+}
+
 # Classify the delivery result based on tracker state.
 # Args: ticket_ref, branch
 # Prints: merged | blocked | pr-open | failed | state-unverified
@@ -1244,10 +1276,14 @@ classify_result() {
   # PDEV-490: retry the state poll with backoff — bounded and env-tunable so
   # offline tests can set DELIVER_STATE_FETCH_BACKOFF_S=0. These are POLL
   # retries inside the classifier, never PM restarts (GH-126).
-  local fetch_attempts="${DELIVER_STATE_FETCH_ATTEMPTS:-3}"
+  # PDEV-751: exponential ladder min(base * 2^(n-1), cap) with attempts
+  # defaulting to 5 (waits 2/4/8/16 s at defaults → ≤ 30 s added latency).
+  local fetch_attempts="${DELIVER_STATE_FETCH_ATTEMPTS:-5}"
   local fetch_backoff_s="${DELIVER_STATE_FETCH_BACKOFF_S:-2}"
-  case "${fetch_attempts}" in ''|*[!0-9]*) fetch_attempts=3 ;; esac
+  local fetch_backoff_max_s="${DELIVER_STATE_FETCH_BACKOFF_MAX_S:-30}"
+  case "${fetch_attempts}" in ''|*[!0-9]*) fetch_attempts=5 ;; esac
   case "${fetch_backoff_s}" in ''|*[!0-9]*) fetch_backoff_s=2 ;; esac
+  case "${fetch_backoff_max_s}" in ''|*[!0-9]*) fetch_backoff_max_s=30 ;; esac
   (( fetch_attempts >= 1 )) || fetch_attempts=1
 
   local issue_json issue_state
@@ -1262,8 +1298,10 @@ classify_result() {
       # Only warn on real CLI failures, not on successful GitLab queries
       # (AC-F5-3).
       log_warn "Could not fetch issue state for ${ticket_ref} (attempt ${fetch_attempt}/${fetch_attempts}, network/rate-limit?) — retrying"
-      if (( fetch_backoff_s > 0 )); then
-        sleep "${fetch_backoff_s}"
+      local fetch_delay
+      fetch_delay="$(state_fetch_backoff_delay "${fetch_attempt}" "${fetch_backoff_s}" "${fetch_backoff_max_s}")"
+      if (( fetch_delay > 0 )); then
+        sleep "${fetch_delay}"
       fi
     fi
     fetch_attempt=$((fetch_attempt + 1))
@@ -1377,8 +1415,189 @@ resolve_summary_branch() {
   resolve_branch "${ticket_ref}" ""
 }
 
+# ============================================================================
+# ARTIFACT-FIRST CLOSE-OUT (PDEV-751)
+# ============================================================================
+# A tracker poll outage must never override a positive artifact signal — the
+# mirror image of the exit0-no-artifact rule. These probes are deliberately
+# thin and individually stubable (same seam style as _gh/_glab) so the harness
+# overrides them instead of touching real git/tracker state.
+# At most 2 MR-host calls + 2 git calls per close-out (NFR-2).
+
+# The comparison base for "commits ahead": origin/main when it resolves,
+# else the local main (dispatch already pulls origin main).
+artifact_base_ref() {
+  if _git -C "${ROOT_DIR}" rev-parse --verify --quiet origin/main >/dev/null 2>&1; then
+    printf 'origin/main'
+  else
+    printf 'main'
+  fi
+}
+
+# Number of commits on <branch> ahead of the base.
+# Args: branch [root]
+# Prints: count; returns non-zero when the branch/base cannot be resolved.
+artifact_branch_commit_count() {
+  local -r branch="${1:-}"
+  local -r root="${2:-${ROOT_DIR}}"
+  [[ -n "${branch}" ]] || return 1
+  local base count
+  base="$(artifact_base_ref)" || return 1
+  if ! count="$(_git -C "${root}" rev-list --count "${base}..${branch}" 2>/dev/null)"; then
+    return 1
+  fi
+  case "${count}" in ''|*[!0-9]*) return 1 ;; esac
+  printf '%s' "${count}"
+}
+
+# "pm-notes complete" = a chg-<REF>-pm-notes.yaml exists under a change folder
+# AND its .phases.delivery.completed is non-null. Present-but-null = incomplete.
+# Args: ticket_ref [root]
+artifact_pm_notes_complete() {
+  local -r ticket_ref="${1:-}"
+  local -r root="${2:-${ROOT_DIR}}"
+  [[ -n "${ticket_ref}" ]] || return 1
+  local -a notes_files=()
+  local candidate
+  for candidate in "${root}/doc/changes"/*/*--"${ticket_ref}"--*/"chg-${ticket_ref}-pm-notes.yaml"; do
+    [[ -f "${candidate}" ]] && notes_files+=("${candidate}")
+  done
+  (( ${#notes_files[@]} > 0 )) || return 1
+  # pm-notes are YAML (jq cannot parse them and no YAML dependency is allowed).
+  # Real files use the flow map `delivery: { started: …, completed: … }`; a
+  # block-style `delivery:` / `completed:` pair is handled as a fallback.
+  # Every unmatched/malformed shape must read as incomplete: the fallible
+  # direction of this probe is "not finished", never "finished".
+  local completed raw
+  for candidate in "${notes_files[@]}"; do
+    raw="$(awk '
+      function _indent(s) { match(s, /^[[:space:]]*/); return RLENGTH }
+
+      # Shape 1: single-line flow map, `delivery: { … completed: <v> … }`.
+      /^[[:space:]]*delivery:[[:space:]]*\{/ {
+        if ($0 !~ /completed:/) { exit }
+        line = $0
+        sub(/^.*completed:[[:space:]]*/, "", line)
+        sub(/[[:space:]]*[,}].*$/, "", line)
+        gsub(/^"|"$/, "", line)
+        print line
+        exit
+      }
+
+      # Shape 2: block form, `delivery:` opening a child mapping.
+      /^[[:space:]]*delivery:[[:space:]]*$/ {
+        block = 1
+        block_indent = _indent($0)
+        next
+      }
+
+      # Inside the delivery block only its own children (indent deeper than the
+      # `delivery:` key) may answer. Any blank/comment line is skipped; any key
+      # at the same-or-shallower indent is a sibling phase and ENDS the block,
+      # so a `delivery:` without a `completed:` child cannot inherit the value
+      # of a later sibling phase (review F-1).
+      block {
+        if ($0 ~ /^[[:space:]]*(#|$)/) { next }
+        if (_indent($0) <= block_indent) { block = 0; next }
+        if ($0 ~ /^[[:space:]]*completed:/) {
+          line = $0
+          sub(/^[[:space:]]*completed:[[:space:]]*/, "", line)
+          sub(/[[:space:]]+#.*$/, "", line)
+          gsub(/^"|"$/, "", line)
+          print line
+          exit
+        }
+      }
+    ' "${candidate}" 2>/dev/null)" || raw=""
+    completed="${raw}"
+    if [[ -n "${completed}" && "${completed}" != "null" && "${completed}" != "~" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Headless permission auto-reject signature in the per-ref child log
+# (tmp/deliver-ticket/<ref>.log — the stream the PM's stderr is redirected to).
+# Args: ticket_ref [log_file]
+artifact_permission_signature() {
+  local -r ticket_ref="${1:-}"
+  local log_file="${2:-}"
+  if [[ -z "${log_file}" ]]; then
+    local ref_lower
+    ref_lower="$(printf '%s' "${ticket_ref}" | tr '[:upper:]' '[:lower:]')"
+    log_file="${LOG_DIR}/${ref_lower}.log"
+  fi
+  [[ -f "${log_file}" ]] || return 1
+  grep -qE 'permission requested:|auto-rejecting' "${log_file}" 2>/dev/null
+}
+
+# Artifact-first verdict, first match wins (PDEV-751 §2.1 O-1…O-6).
+# Prints: pr-open | merged | finished | partial | noop-lane-permission |
+#         noop-lane-nothing-to-do | none
+# "none" means no artifact evidence was found (the caller keeps the tracker
+# verdict — an UNKNOWN stays loud).
+# The tracker classification is an input only for O-6: "nothing to do" is a
+# tracker judgement and is never invented during an outage.
+# Args: ticket_ref, branch, tracker_classification
+classify_artifact() {
+  local -r ticket_ref="${1:-}"
+  local -r branch="${2:-}"
+  local -r tracker_classification="${3:-}"
+
+  # Branch unresolved ⇒ no artifact evidence to probe.
+  [[ -n "${branch}" ]] || { printf 'none'; return 0; }
+
+  # O-1: an open MR on the delivery branch.
+  local pr_json
+  pr_json="$(mr_list_for_branch "${branch}" 2>/dev/null)" || pr_json='[]'
+  if printf '%s' "${pr_json}" | _jq -e '.[0]' >/dev/null 2>&1; then
+    printf 'pr-open'
+    return 0
+  fi
+
+  # O-2: a merged MR scoped to the delivery branch.
+  local merged_json
+  merged_json="$(mr_list_closed_merged "${branch}" 2>/dev/null)" || merged_json='[]'
+  if printf '%s' "${merged_json}" | _jq -e '.[0].merged_at' >/dev/null 2>&1; then
+    printf 'merged'
+    return 0
+  fi
+
+  # O-3/O-4: commits ahead of base — complete vs incomplete pm-notes.
+  local commits
+  if ! commits="$(artifact_branch_commit_count "${branch}")"; then
+    printf 'none'
+    return 0
+  fi
+  if (( commits > 0 )); then
+    if artifact_pm_notes_complete "${ticket_ref}"; then
+      printf 'finished'
+    else
+      printf 'partial'
+    fi
+    return 0
+  fi
+
+  # O-5: no commits, headless permission auto-reject signature.
+  if artifact_permission_signature "${ticket_ref}"; then
+    printf 'noop-lane-permission'
+    return 0
+  fi
+
+  # O-6: no commits, no signature, tracker polled OK ⇒ nothing was attempted.
+  if [[ "${tracker_classification}" != "state-unverified" ]]; then
+    printf 'noop-lane-nothing-to-do'
+    return 0
+  fi
+
+  # O-7: UNKNOWN stays loud — never inferred from silence.
+  printf 'none'
+}
+
 # PURE: Decide what to do after an iteration completes.
-# Args: monitor_result (stuck|finished), classification, iteration, max_restarts
+# Args: monitor_result (stuck|finished), classification, iteration, max_restarts,
+#       [artifact_verdict] (optional; empty = legacy tracker-only behaviour)
 # Prints: continue | stop:exit_code:message
 #
 # BUG FIX (GH-142 post-delivery): A clean PM exit (monitor_result == "finished")
@@ -1389,10 +1608,22 @@ resolve_summary_branch() {
 # eligible for restart. If the PM exited prematurely, the human/CEO can
 # manually restart — the wrapper must not loop on a clean exit.
 decide_after_iteration() {
-  local -r monitor_result="$1" classification="$2" iteration="$3" max_restarts="$4"
+  local -r monitor_result="$1" iteration="$3" max_restarts="$4"
+  # NOT readonly: the artifact-first close-out may refine an inconclusive
+  # tracker verdict below.
+  local classification="$2"
+  local -r artifact_verdict="${5:-}"
 
   # A clean PM exit is ALWAYS terminal.
   if [[ "${monitor_result}" == "finished" ]]; then
+    # PDEV-751 artifact-first close-out: refine an INCONCLUSIVE tracker verdict
+    # with artifact evidence. Positive tracker verdicts (merged/blocked/
+    # pr-open) stay authoritative — their token/exit never changes.
+    if [[ -n "${artifact_verdict}" && "${artifact_verdict}" != "none" ]]; then
+      case "${classification}" in
+        state-unverified|failed) classification="${artifact_verdict}" ;;
+      esac
+    fi
     case "${classification}" in
       merged)  printf 'stop:0:merged' ;;
       blocked) printf 'stop:0:blocked' ;;
@@ -1401,6 +1632,16 @@ decide_after_iteration() {
       # success. Still terminal (no PM restart — GH-126), but it fails LOUD
       # with a non-zero exit so the caller re-dispatches.
       state-unverified) printf 'stop:1:state-unverified' ;;
+      # PDEV-751 new outcome tokens — each needs an explicit arm BEFORE the
+      # catch-all, otherwise it would silently become stop:0:finished.
+      # O-3: positive artifact, token/exit unchanged from today.
+      finished) printf 'stop:0:finished' ;;
+      # O-4: artifact incomplete ⇒ resume the SAME branch (re-dispatch).
+      partial) printf 'stop:1:partial' ;;
+      # O-5: headless permission auto-reject ⇒ re-dispatch with corrected prompt.
+      noop-lane-permission) printf 'stop:1:noop-lane-permission' ;;
+      # O-6: nothing attempted and the tracker agrees ⇒ close, no re-dispatch.
+      noop-lane-nothing-to-do) printf 'stop:0:noop-lane-nothing-to-do' ;;
       *)       printf 'stop:0:finished' ;;
     esac
     return 0
@@ -1647,8 +1888,23 @@ deliver_loop() {
 
     # Classify result (skip for dry-run)
     local classification="failed"
+    local artifact_verdict=""
     if [[ "${DRY_RUN}" != "true" ]]; then
       classification="$(classify_result "${ticket_ref}" "${branch}")"
+      # PDEV-751: artifact-first close-out. The tracker poll and the artifact
+      # probes are separate layers; only the decision step combines them.
+      # classify_result runs in $( ), so the close-out flag below must be
+      # computed here in deliver_loop's own shell (same subshell trap as the
+      # last-message read below). Probes never run on the dry-run path.
+      local artifact_branch
+      artifact_branch="$(resolve_summary_branch "${ticket_ref}" "${branch}")"
+      artifact_verdict="$(classify_artifact "${ticket_ref}" "${artifact_branch}" "${classification}")"
+    fi
+    # PDEV-751: "yes" only when the artifact ladder replaced an exhausted
+    # tracker poll; every other close-out reports "no".
+    DELIVERY_CLOSEOUT_UNVERIFIED="no"
+    if [[ "${classification}" == "state-unverified" && "${artifact_verdict}" != "none" && -n "${artifact_verdict}" ]]; then
+      DELIVERY_CLOSEOUT_UNVERIFIED="yes"
     fi
 
     # SUBSHELL BOUNDARY: run_single_iteration runs via $(...); the
@@ -1669,7 +1925,7 @@ deliver_loop() {
 
     # Decide next action
     local decision
-    decision="$(decide_after_iteration "${monitor_result}" "${classification}" "${iteration}" "${MAX_RESTARTS}")"
+    decision="$(decide_after_iteration "${monitor_result}" "${classification}" "${iteration}" "${MAX_RESTARTS}" "${artifact_verdict}")"
 
     if [[ "${decision}" == continue ]]; then
       # m-7: "state-unverified" (tracker fetch failed after the bounded poll
@@ -1699,8 +1955,16 @@ deliver_loop() {
       blocked)  log_done "${ticket_ref} — blocked (human-input-needed)" ;;
       pr-open)  log_done "${ticket_ref} — PR open" ;;
       state-unverified)
+                # Keep this legacy string: the workspace monitor keys on it
+                # (V-13). It must appear ONLY on the state-unverified leg.
                 log_failed "${ticket_ref} — state fetch failed after retries — dispatch outcome UNKNOWN, re-dispatch required" ;;
       finished) log_done "${ticket_ref} — PM completed (no terminal state matched)" ;;
+      partial)
+                log_failed "${ticket_ref} — delivery PARTIAL: branch commits exist but pm-notes are absent/incomplete — resume the SAME branch (do not re-dispatch from scratch)" ;;
+      noop-lane-permission)
+                log_failed "${ticket_ref} — noop lane: no branch commits and a headless permission auto-reject was logged — re-dispatch with a corrected prompt" ;;
+      noop-lane-nothing-to-do)
+                log_done "${ticket_ref} — noop lane: no branch commits and the tracker is reachable — nothing to re-dispatch" ;;
       max-restarts) log_failed "${ticket_ref} — max restarts exceeded" ;;
       *)        log_warn "${ticket_ref} — ${message}" ;;
     esac
@@ -1767,12 +2031,18 @@ join_delivery() {
   local exit_code=0
   case "${classification}" in
     merged|blocked|pr-open|finished) exit_code=0 ;;
+    # PDEV-751 outcome tokens (defensive: the JOIN path does not run the
+    # artifact ladder — see R-4 — but the mapping must stay total).
+    noop-lane-nothing-to-do) exit_code=0 ;;
     # PDEV-490: everything else fails loud — state-unverified (tracker fetch
     # failed after the bounded poll retries) must never read as a success.
     *) exit_code="${EXIT_FAILURE}" ;;
   esac
 
   DELIVERY_RESULT="${classification}"
+  # PDEV-751: mirror the additive close-out key. (R-4: these DELIVERY_* writes
+  # never escape — join_delivery runs inside $( ) — so this is parity only.)
+  DELIVERY_CLOSEOUT_UNVERIFIED="no"
   # PDEV-512: the JOIN path has the same pre-session branch gap as OWN.
   local summary_branch
   summary_branch="$(resolve_summary_branch "${ticket_ref}" "${branch}")"
@@ -1787,8 +2057,11 @@ join_delivery() {
 # batch-deliver.sh (Mode B) via INV-DM-1/4. result is one of: merged |
 # blocked | pr-open | pr-open-unverified | failed | finished | max-restarts |
 # state-unverified (PDEV-490: tracker state fetch failed after retries — outcome
-# unverified). pr-open-unverified (PDEV-512): the PR is open but its URL could
-# not be resolved after the branch-scoped and title/ref lookups.
+# unverified) | partial | noop-lane-permission | noop-lane-nothing-to-do
+# (PDEV-751: artifact-first close-out). pr-open-unverified (PDEV-512): the PR is
+# open but its URL could not be resolved after the branch-scoped and title/ref
+# lookups. closeout_unverified=yes (PDEV-751): the verdict came from the
+# artifact ladder because the tracker poll was exhausted.
 print_delivery_summary() {
   # PDEV-512 / AC-2: a success classification with no resolvable URL is the
   # "result=pr-open + pr_url=" false-success smell. After pr_url_for's branch
@@ -1801,6 +2074,9 @@ print_delivery_summary() {
   printf 'result=%s\n' "${DELIVERY_RESULT}"
   printf 'pr_url=%s\n' "${DELIVERY_PR_URL}"
   printf 'exit_code=%s\n' "${DELIVERY_EXIT_CODE}"
+  # PDEV-751: single additive key, emitted between exit_code= and last_message=
+  # so it survives fork-join's 10-line output tail.
+  printf 'closeout_unverified=%s\n' "${DELIVERY_CLOSEOUT_UNVERIFIED:-no}"
   printf 'last_message=%s\n' "${DELIVERY_LAST_MESSAGE}"
 }
 
@@ -1990,8 +2266,9 @@ Options:
    DELIVER_MAX_RESTARTS          Max restarts (default: 10)
    DELIVER_STUCK_MINUTES         Stuck threshold in minutes (default: 10)
    DELIVER_POLL_SECONDS          Activity poll interval (default: 60)
-   DELIVER_STATE_FETCH_ATTEMPTS  Post-session state-poll attempts (default: 3)
-   DELIVER_STATE_FETCH_BACKOFF_S Seconds between state-poll attempts (default: 2; 0 = no wait)
+   DELIVER_STATE_FETCH_ATTEMPTS  Post-session state-poll attempts (default: 5)
+   DELIVER_STATE_FETCH_BACKOFF_S Base wait between state-poll attempts (default: 2; 0 = no wait)
+   DELIVER_STATE_FETCH_BACKOFF_MAX_S  Max wait between state-poll attempts (default: 30)
    DELIVER_KILL_GRACE_SECONDS    SIGTERM grace before SIGKILL (default: 20)
    PM_LIVENESS_TIMEOUT_SECONDS   Max seconds for the pm-liveness probe (default: 15)
    ADOS_PRE_ITERATION_HOOK       Optional hook path (default: ~/.ados/hooks/pre-opencode-iteration)
@@ -2010,14 +2287,15 @@ Options:
    ADOS_HOOK_ENV_OUTPUT=fresh private absolute path; ADOS_HOOK_ENV_FORMAT=ADOS_HOOK_ENV_V1.
 
 Default invocation prints a delivery summary on stdout (key=value):
-  result=<merged|blocked|pr-open|pr-open-unverified|failed|finished|max-restarts|state-unverified>
+  result=<merged|blocked|pr-open|pr-open-unverified|failed|finished|max-restarts|state-unverified|partial|noop-lane-permission|noop-lane-nothing-to-do>
   pr_url=<url or empty>
   exit_code=<0|1>
+  closeout_unverified=<yes|no>
   last_message=<PM final message>
 
 Exit codes:
-  0 - Success (merged, blocked, pr-open, pr-open-unverified, or PM finished)
-  1 - Failed (max restarts exceeded, or state-unverified: tracker state fetch failed after retries)
+  0 - Success (merged, blocked, pr-open, pr-open-unverified, noop-lane-nothing-to-do, or PM finished)
+  1 - Failed (max restarts exceeded, partial, noop-lane-permission, or state-unverified: tracker state fetch failed after retries)
   2 - Usage error
 EOF
 }

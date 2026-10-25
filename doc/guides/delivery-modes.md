@@ -323,7 +323,8 @@ These are the non-negotiable rules. The tooling exists to enforce them.
 
 A caller invoking `deliver-ticket.sh` **blocks until the delivery returns one of
 the documented results — merged, blocked, PR-open, pr-open-unverified, failed,
-finished, max-restarts, or state-unverified.** The CEO must never `setsid … & disown` it. This
+finished, max-restarts, state-unverified, partial, noop-lane-permission, or
+noop-lane-nothing-to-do.** The CEO must never `setsid … & disown` it. This
 single rule removes the "CEO exits, delivery orphans, loop respawns" failure
 mode at its source.
 
@@ -457,7 +458,7 @@ To keep the AI from burning tokens rediscovering scriptable facts,
 
 | Invocation | Returns | Used by |
 |---|---|---|
-| `deliver-ticket.sh REF` | Runs the full per-ticket lifecycle (foreground, blocking). On completion, prints a **delivery summary** on stdout: the result classification (`merged` / `blocked` / `pr-open` / `pr-open-unverified` / `failed` / `finished` / `max-restarts` / `state-unverified`) **plus the PM agent's last message** (so the caller sees open questions, blockers, and the PR link directly). | `@ceo` (Mode A), `batch-deliver.sh` (Mode B) |
+| `deliver-ticket.sh REF` | Runs the full per-ticket lifecycle (foreground, blocking). On completion, prints a **delivery summary** on stdout: the result classification (`merged` / `blocked` / `pr-open` / `pr-open-unverified` / `failed` / `finished` / `max-restarts` / `state-unverified` / `partial` / `noop-lane-permission` / `noop-lane-nothing-to-do`) **plus the PM agent's last message** (so the caller sees open questions, blockers, and the PR link directly). | `@ceo` (Mode A), `batch-deliver.sh` (Mode B) |
 | `deliver-ticket.sh REF --resume-prompt "<text>"` | Same as above, but resumes the PM session with the given prompt **instead of the default** — lets the CEO resolve a PM-raised blocker by injecting a custom instruction. | `@ceo` (Mode A) |
 | `deliver-ticket.sh --is-delivering [REF]` | Exit `0` if a delivery is in progress in this repo (for `REF`, or any ticket if no `REF` given); non-zero otherwise. Prints nothing on stdout. | `ceo-loop.sh` (stuck-vs-healthy decision), `@ceo` |
 | `deliver-ticket.sh --last-message REF` | Prints the last PM message for `REF` from the most recent delivery (without running a new one). | `@ceo` |
@@ -465,6 +466,32 @@ To keep the AI from burning tokens rediscovering scriptable facts,
 The in-progress tracking that backs `--is-delivering` lives entirely inside
 `deliver-ticket.sh` (the repo-local PID file from INV-DM-2). Callers never
 inspect the PID file directly.
+
+### Close-out contract (artifact-first classification)
+
+The delivery summary is a fixed, additive `key=value` contract, in this order:
+`result`, `pr_url`, `exit_code`, `closeout_unverified`, `last_message`.
+`closeout_unverified=yes` means the close-out verdict was produced by the
+artifact ladder because the tracker state poll was exhausted; it is `no`
+everywhere else (and the result token already says so for an unresolved
+outage).
+
+When the tracker poll is inconclusive, artifact evidence decides the outcome —
+a tracker outage never overrides a positive artifact signal. Evidence is
+checked in precedence order, first match wins:
+
+| Artifact evidence | `result` | exit | next action |
+|---|---|---|---|
+| open MR on the delivery branch | `pr-open` | 0 | verify and merge |
+| merged MR scoped to the delivery branch | `merged` | 0 | terminal success |
+| commits ahead of base + complete pm-notes | `finished` | 0 | verify state before merge |
+| commits ahead of base + missing/incomplete pm-notes | `partial` | 1 | resume the SAME branch |
+| no commits + headless permission auto-reject in the lane log | `noop-lane-permission` | 1 | re-dispatch with a corrected prompt |
+| no commits + tracker reachable | `noop-lane-nothing-to-do` | 0 | close or re-prioritize, no re-dispatch |
+| no artifact evidence (or 0 commits under a failed poll) | `state-unverified` | 1 | investigate tracker access, then re-dispatch |
+
+The principle mirrors the exit-0-no-artifact rule: a result that requires a
+lane re-dispatch is never a clean exit 0.
 
 ### Session resume optimization (`ceo-loop.sh`)
 
@@ -647,7 +674,7 @@ The design is robust to the messy realities of long-running AI sessions:
 | opencode internally detaches its own grandchildren | The trap kills the opencode child's process group; grandchildren that opencode itself `setsid`-detached (LLM transport, bash-tool subprocesses) can escape the group kill. | Known limitation (see Troubleshooting). A defense-in-depth sweep by session id (`pgrep -f "opencode.*<session>"`) can be added if orphans are observed; for now the limitation is accepted and documented. |
 | Two `deliver-ticket.sh REF` invoked concurrently (same repo) | Second invocation joins the first (INV-DM-2); both return the same classified result. | No race on the working tree. |
 | Parallel deliveries in two clones of the same repo | Each clone's PID file is repo-local; neither sees the other. | INV-DM-6 is per-working-tree, not per-remote. |
-| GitHub/GitLab API rate-limit during classification | `classify_result` returns `unknown`; the iteration does not burn a restart slot. Since GH-148 the platform-aware dispatch uses the correct CLI, so this no longer misfires on a healthy GitLab project. | Transient outage retried without losing progress. |
+| GitHub/GitLab API rate-limit during classification | `classify_result` returns `state-unverified` (only after the artifact ladder finds no evidence); the iteration does not burn a restart slot. Since GH-148 the platform-aware dispatch uses the correct CLI, so this no longer misfires on a healthy GitLab project. | Transient outage retried without losing progress. |
 
 ## Configuration
 
@@ -670,9 +697,14 @@ All settings are environment variables (CLI flag overrides where noted).
 | `DELIVER_POLL_SECONDS` | `60` | Seconds between liveness checks |
 | `DELIVER_KILL_GRACE_SECONDS` | `20` | Seconds between SIGTERM and SIGKILL when propagating to the PM child |
 | `DELIVER_MAX_RESTARTS` | `10` | Maximum PM restart iterations before giving up |
+| `DELIVER_STATE_FETCH_ATTEMPTS` | `5` | Tracker state-poll attempts in `classify_result` before the delivery is declared `state-unverified` |
+| `DELIVER_STATE_FETCH_BACKOFF_S` | `2` | Base delay in seconds for the exponential state-poll backoff; `0` disables sleeping (offline tests) |
+| `DELIVER_STATE_FETCH_BACKOFF_MAX_S` | `30` | Cap in seconds on the exponential state-poll backoff |
 | `DELIVER_ALLOW_LGTM_COMMENT` | `false` | Opt-in: accept an exact `lgtm` comment by the PR author as a merge signal |
 | `ADOS_PLATFORM` | *(auto-detect)* | Platform override: `github` \| `gitlab`. Empty = auto-detect (env → git remote → `glab auth` → default `github`) |
 | `ADOS_BLOCKED_LABEL` | `human-input-needed` | Label `classify_result` treats as `blocked`, on either platform |
+
+The state-poll backoff is exponential and capped: at the default base of 2 s the waits are 2/4/8/16 s across the five attempts (≤ 30 s added latency); a base of `0` disables sleeping.
 
 ### `batch-deliver.sh`
 
