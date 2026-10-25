@@ -323,7 +323,8 @@ These are the non-negotiable rules. The tooling exists to enforce them.
 
 A caller invoking `deliver-ticket.sh` **blocks until the delivery returns one of
 the documented results — merged, blocked, PR-open, pr-open-unverified, failed,
-finished, max-restarts, or state-unverified.** The CEO must never `setsid … & disown` it. This
+finished, max-restarts, state-unverified, partial, noop-lane-permission, or
+noop-lane-nothing-to-do.** The CEO must never `setsid … & disown` it. This
 single rule removes the "CEO exits, delivery orphans, loop respawns" failure
 mode at its source.
 
@@ -457,7 +458,7 @@ To keep the AI from burning tokens rediscovering scriptable facts,
 
 | Invocation | Returns | Used by |
 |---|---|---|
-| `deliver-ticket.sh REF` | Runs the full per-ticket lifecycle (foreground, blocking). On completion, prints a **delivery summary** on stdout: the result classification (`merged` / `blocked` / `pr-open` / `pr-open-unverified` / `failed` / `finished` / `max-restarts` / `state-unverified`) **plus the PM agent's last message** (so the caller sees open questions, blockers, and the PR link directly). | `@ceo` (Mode A), `batch-deliver.sh` (Mode B) |
+| `deliver-ticket.sh REF` | Runs the full per-ticket lifecycle (foreground, blocking). On completion, prints a **delivery summary** on stdout: the result classification (`merged` / `blocked` / `pr-open` / `pr-open-unverified` / `failed` / `finished` / `max-restarts` / `state-unverified` / `partial` / `noop-lane-permission` / `noop-lane-nothing-to-do`) **plus the PM agent's last message** (so the caller sees open questions, blockers, and the PR link directly). | `@ceo` (Mode A), `batch-deliver.sh` (Mode B) |
 | `deliver-ticket.sh REF --resume-prompt "<text>"` | Same as above, but resumes the PM session with the given prompt **instead of the default** — lets the CEO resolve a PM-raised blocker by injecting a custom instruction. | `@ceo` (Mode A) |
 | `deliver-ticket.sh --is-delivering [REF]` | Exit `0` if a delivery is in progress in this repo (for `REF`, or any ticket if no `REF` given); non-zero otherwise. Prints nothing on stdout. | `ceo-loop.sh` (stuck-vs-healthy decision), `@ceo` |
 | `deliver-ticket.sh --last-message REF` | Prints the last PM message for `REF` from the most recent delivery (without running a new one). | `@ceo` |
@@ -465,6 +466,32 @@ To keep the AI from burning tokens rediscovering scriptable facts,
 The in-progress tracking that backs `--is-delivering` lives entirely inside
 `deliver-ticket.sh` (the repo-local PID file from INV-DM-2). Callers never
 inspect the PID file directly.
+
+### Close-out contract (artifact-first classification)
+
+The delivery summary is a fixed, additive `key=value` contract, in this order:
+`result`, `pr_url`, `exit_code`, `closeout_unverified`, `last_message`.
+`closeout_unverified=yes` means the close-out verdict was produced by the
+artifact ladder because the tracker state poll was exhausted; it is `no`
+everywhere else (and the result token already says so for an unresolved
+outage).
+
+When the tracker poll is inconclusive, artifact evidence decides the outcome —
+a tracker outage never overrides a positive artifact signal. Evidence is
+checked in precedence order, first match wins:
+
+| Artifact evidence | `result` | exit | next action |
+|---|---|---|---|
+| open MR on the delivery branch | `pr-open` | 0 | verify and merge |
+| merged MR scoped to the delivery branch | `merged` | 0 | terminal success |
+| commits ahead of base + complete pm-notes | `finished` | 0 | verify state before merge |
+| commits ahead of base + missing/incomplete pm-notes | `partial` | 1 | resume the SAME branch |
+| no commits + headless permission auto-reject in the lane log | `noop-lane-permission` | 1 | re-dispatch with a corrected prompt |
+| no commits + tracker reachable | `noop-lane-nothing-to-do` | 0 | close or re-prioritize, no re-dispatch |
+| no artifact evidence (or 0 commits under a failed poll) | `state-unverified` | 1 | investigate tracker access, then re-dispatch |
+
+The principle mirrors the exit-0-no-artifact rule: a result that requires a
+lane re-dispatch is never a clean exit 0.
 
 ### Session resume optimization (`ceo-loop.sh`)
 

@@ -102,6 +102,10 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 # GH-158: isolate the harness from any fleet env.sh on the host machine —
 # tests exercise explicit env only.
 ADOS_ENV_LOADED=1
+# PDEV-751 (V-8): pin the harness env so G-2 is reproducible on any operator
+# machine — an ambient ADOS_TRACKER=jira (fleet env) turns 15 tests red.
+ADOS_ENV_FILE=/dev/null
+unset ADOS_TRACKER ADOS_PLATFORM
 # shellcheck source=/dev/null
 source "${SCRIPT_DIR}/deliver-ticket.sh"
 
@@ -572,7 +576,7 @@ test_decide_stuck_pr_open_stops() {
 # Covers the PDEV-489 loss shape (false success on a lost dispatch).
 test_state_fetch_failure_is_loud_terminal_stop() {
   DELIVER_STATE_FETCH_BACKOFF_S=0
-  DELIVER_STATE_FETCH_ATTEMPTS=3
+  DELIVER_STATE_FETCH_ATTEMPTS=5
   local cnt_file="${_test_tmpdir}/fetch_calls"
   : > "${cnt_file}"
   _gh() {
@@ -584,9 +588,11 @@ test_state_fetch_failure_is_loud_terminal_stop() {
   result="$(classify_result "GH-112" "feat/test")"
   assert_eq "state-unverified" "${result}" "fetch failure through all retries classifies state-unverified"
 
-  assert_eq "3" "$(wc -l < "${cnt_file}" | tr -d '[:space:]')" "poll attempted DELIVER_STATE_FETCH_ATTEMPTS (pinned 3) times before giving up"
+  assert_eq "5" "$(wc -l < "${cnt_file}" | tr -d '[:space:]')" "poll attempted DELIVER_STATE_FETCH_ATTEMPTS (pinned 5) times before giving up"
 
-  decision="$(decide_after_iteration "finished" "${result}" 1 10)"
+  # PDEV-751: artifact probe stubbed to "none" — no artifact evidence, so the
+  # UNKNOWN verdict stays loud.
+  decision="$(decide_after_iteration "finished" "${result}" 1 10 "none")"
   assert_eq "stop:1:state-unverified" "${decision}" "finished+state-unverified is terminal stop with exit 1"
 
   # NFR-1 (GH-126) guards: terminal-stop, never a PM restart, never a false success.
@@ -647,16 +653,239 @@ test_state_fetch_green_paths_unregressed() {
   assert_eq "pr-open" "${r_pr_open}" "open PR still classifies pr-open"
 }
 
-# TC-DT-490-5 (TC-5): --help documents state-unverified and, since PDEV-512,
-# pr-open-unverified in the result map and the exit-code list (AC-2).
+# TC-DT-490-5 (TC-5): --help documents state-unverified, pr-open-unverified
+# (PDEV-512) and the PDEV-751 artifact-first outcome tokens + closeout key.
 test_help_documents_state_unverified() {
   local help_text
   help_text="$(usage)"
 
-  assert_contains "${help_text}" "result=<merged|blocked|pr-open|pr-open-unverified|failed|finished|max-restarts|state-unverified>" "result map includes state-unverified and pr-open-unverified"
-  assert_contains "${help_text}" "1 - Failed (max restarts exceeded, or state-unverified" "exit-code list covers state-unverified"
+  assert_contains "${help_text}" "result=<merged|blocked|pr-open|pr-open-unverified|failed|finished|max-restarts|state-unverified|partial|noop-lane-permission|noop-lane-nothing-to-do>" "result map includes state-unverified, pr-open-unverified and the PDEV-751 tokens"
+  assert_contains "${help_text}" "closeout_unverified=<yes|no>" "summary contract documents the additive closeout key"
+  assert_contains "${help_text}" "1 - Failed (max restarts exceeded, partial, noop-lane-permission" "exit-code list covers partial/noop-lane-permission"
+  assert_contains "${help_text}" "0 - Success (merged, blocked, pr-open, pr-open-unverified, noop-lane-nothing-to-do" "exit-code list covers noop-lane-nothing-to-do"
+  assert_contains "${help_text}" "1 - Failed (max restarts exceeded, partial, noop-lane-permission, or state-unverified" "exit-code list covers state-unverified"
   assert_contains "${help_text}" "0 - Success (merged, blocked, pr-open, pr-open-unverified" "exit-code list covers pr-open-unverified"
+  # PDEV-751 (AC-6): backoff knobs documented with the new defaults.
+  assert_contains "${help_text}" "DELIVER_STATE_FETCH_ATTEMPTS  Post-session state-poll attempts (default: 5)" "attempts default documented as 5"
+  assert_contains "${help_text}" "DELIVER_STATE_FETCH_BACKOFF_MAX_S  Max wait between state-poll attempts (default: 30)" "backoff cap documented"
 }
+
+# ============================================================================
+# TESTS: PDEV-751 — artifact-first close-out (O-1…O-7 / TC-1…TC-7)
+# ============================================================================
+
+# Drive ONE close-out through deliver_loop with a stubbed tracker verdict and
+# the caller's artifact-probe stubs. Populates the DELIVERY_* globals and
+# writes the loop's stderr to <err_file>.
+# Args: tracker_classification, err_file, ref
+_pdev751_run_closeout() {
+  local -r _pdev751_tracker_verdict="$1" err_file="$2" ref="$3"
+  local fake_delivery="${_test_tmpdir}/delivery_pdev751"
+  mkdir -p "${fake_delivery}"
+  DELIVERY_DIR="${fake_delivery}"
+  PLATFORM=github
+  resolve_session() { printf ''; }
+  run_single_iteration() { write_last_message "${ref}" "PDEV-751 fixture"; printf 'finished'; }
+  # The tracker verdict is an input to the decision; the artifact ladder is
+  # exercised through the caller's probe stubs (real classify_artifact).
+  # NOTE: the name is unique — bash dynamic scoping would otherwise let
+  # deliver_loop's own `classification` local shadow the fixture.
+  classify_result() { printf '%s' "${_pdev751_tracker_verdict}"; }
+  MAX_RESTARTS=1
+  CAPTURED_PM_MESSAGE=""
+  DELIVERY_RESULT="" DELIVERY_PR_URL="" DELIVERY_EXIT_CODE=0 DELIVERY_LAST_MESSAGE=""
+  DELIVERY_CLOSEOUT_UNVERIFIED="no"
+  CURRENT_REF="${ref}"
+  deliver_loop "${ref}" "feat/pdev751" "" >/dev/null 2>"${err_file}" || true
+}
+
+# TC-1 (O-1 / AC-1): exhausted poll + an open MR on the branch ⇒ pr-open/exit 0
+# + closeout_unverified=yes, and the legacy UNKNOWN line is absent.
+test_pdev751_open_mr_beats_poll_failure() {
+  local -r ref="TEST-751-1" err="${_test_tmpdir}/t1.err"
+  mr_list_for_branch() { printf '[{"number":751,"url":"https://example.test/pull/751"}]'; }
+  mr_list_closed_merged() { printf '[]'; }
+  artifact_branch_commit_count() { printf '1'; }
+  artifact_pm_notes_complete() { return 0; }
+  artifact_permission_signature() { return 1; }
+
+  _pdev751_run_closeout "state-unverified" "${err}" "${ref}"
+
+  assert_eq "pr-open" "${DELIVERY_RESULT}" "O-1: open MR wins over an exhausted poll" || return 1
+  assert_eq "0" "${DELIVERY_EXIT_CODE}" "O-1: exit 0 (no re-dispatch)" || return 1
+  assert_eq "yes" "${DELIVERY_CLOSEOUT_UNVERIFIED}" "O-1: closeout_unverified=yes" || return 1
+
+  local summary keys
+  summary="$(print_delivery_summary 2>/dev/null)"
+  keys="$(printf '%s\n' "${summary}" | cut -d= -f1 | tr '\n' ' ')"
+  assert_eq "result pr_url exit_code closeout_unverified last_message " "${keys}" "summary key order unchanged + closeout key between exit_code and last_message" || return 1
+  assert_contains "${summary}" "closeout_unverified=yes" "flag printed for the artifact-verdict leg" || return 1
+  assert_not_contains "$(cat "${err}")" "dispatch outcome UNKNOWN" "legacy UNKNOWN line must be absent on the artifact leg" || return 1
+}
+
+# TC-2 (O-2 / AC-2): exhausted poll + a merged MR scoped to the branch ⇒ merged.
+test_pdev751_merged_mr_beats_poll_failure() {
+  local -r ref="TEST-751-2" err="${_test_tmpdir}/t2.err"
+  mr_list_for_branch() { printf '[]'; }
+  mr_list_closed_merged() { printf '[{"merged_at":"2026-10-25T10:00:00Z"}]'; }
+  artifact_branch_commit_count() { printf '4'; }
+  artifact_pm_notes_complete() { return 0; }
+  artifact_permission_signature() { return 1; }
+
+  _pdev751_run_closeout "state-unverified" "${err}" "${ref}"
+
+  assert_eq "merged" "${DELIVERY_RESULT}" "O-2: merged MR is terminal success" || return 1
+  assert_eq "0" "${DELIVERY_EXIT_CODE}" "O-2: exit 0" || return 1
+  assert_eq "yes" "${DELIVERY_CLOSEOUT_UNVERIFIED}" "O-2: closeout_unverified=yes" || return 1
+}
+
+# TC-3 (O-3 / AC-3): exhausted poll + commits ahead of base + complete pm-notes
+# ⇒ finished (token/exit unchanged) + flag.
+test_pdev751_commits_and_complete_notes_finish() {
+  local -r ref="TEST-751-3" err="${_test_tmpdir}/t3.err"
+  mr_list_for_branch() { printf '[]'; }
+  mr_list_closed_merged() { printf '[]'; }
+  artifact_branch_commit_count() { printf '3'; }
+  artifact_pm_notes_complete() { return 0; }
+  artifact_permission_signature() { return 1; }
+
+  _pdev751_run_closeout "state-unverified" "${err}" "${ref}"
+
+  assert_eq "finished" "${DELIVERY_RESULT}" "O-3: complete artifact classifies finished" || return 1
+  assert_eq "0" "${DELIVERY_EXIT_CODE}" "O-3: finished keeps exit 0" || return 1
+  assert_eq "yes" "${DELIVERY_CLOSEOUT_UNVERIFIED}" "O-3: closeout_unverified=yes" || return 1
+}
+
+# TC-4 (O-4 / AC-4): exhausted poll + commits but absent/incomplete pm-notes
+# ⇒ partial exit 1 with a loud resume-the-same-branch line.
+test_pdev751_commits_without_notes_partial() {
+  local -r ref="TEST-751-4" err="${_test_tmpdir}/t4.err"
+  mr_list_for_branch() { printf '[]'; }
+  mr_list_closed_merged() { printf '[]'; }
+  artifact_branch_commit_count() { printf '2'; }
+  artifact_pm_notes_complete() { return 1; }
+  artifact_permission_signature() { return 1; }
+
+  _pdev751_run_closeout "state-unverified" "${err}" "${ref}"
+
+  assert_eq "partial" "${DELIVERY_RESULT}" "O-4: incomplete artifact classifies partial" || return 1
+  assert_eq "1" "${DELIVERY_EXIT_CODE}" "O-4: partial exits non-zero (requires action)" || return 1
+  assert_eq "yes" "${DELIVERY_CLOSEOUT_UNVERIFIED}" "O-4: closeout_unverified=yes" || return 1
+  assert_contains "$(cat "${err}")" "PARTIAL" "loud partial log line emitted" || return 1
+  assert_contains "$(cat "${err}")" "resume the SAME branch" "log line names the resume action" || return 1
+}
+
+# TC-5 (O-7 / AC-5, NO-WEAKENING): exhausted poll + no artifact evidence ⇒ the
+# UNKNOWN stays loud: state-unverified, stop:1, legacy string retained, flag no.
+test_pdev751_poll_failure_without_evidence_stays_unverified() {
+  local -r ref="TEST-751-5" err="${_test_tmpdir}/t5.err"
+  mr_list_for_branch() { printf '[]'; }
+  mr_list_closed_merged() { printf '[]'; }
+  artifact_branch_commit_count() { return 1; }
+  artifact_pm_notes_complete() { return 1; }
+  artifact_permission_signature() { return 1; }
+
+  _pdev751_run_closeout "state-unverified" "${err}" "${ref}"
+
+  assert_eq "state-unverified" "${DELIVERY_RESULT}" "O-7: no evidence keeps state-unverified" || return 1
+  assert_eq "1" "${DELIVERY_EXIT_CODE}" "O-7: exit 1" || return 1
+  assert_eq "no" "${DELIVERY_CLOSEOUT_UNVERIFIED}" "O-7: closeout_unverified=no (result already says it)" || return 1
+  assert_contains "$(cat "${err}")" "state fetch failed after retries" "legacy monitor string retained on the state-unverified leg" || return 1
+  assert_contains "$(cat "${err}")" "dispatch outcome UNKNOWN" "UNKNOWN stays loud when no artifact exists" || return 1
+}
+
+# TC-6 (AC-6): exponential ladder asserted through the PURE helper (no sleeps)
+# + exactly ATTEMPTS calls with BACKOFF_S=0, using the DEFAULT attempts=5.
+test_pdev751_state_fetch_backoff_ladder() {
+  assert_eq "2" "$(state_fetch_backoff_delay 1 2 30)" "attempt 1 waits base" || return 1
+  assert_eq "4" "$(state_fetch_backoff_delay 2 2 30)" "attempt 2 doubles" || return 1
+  assert_eq "8" "$(state_fetch_backoff_delay 3 2 30)" "attempt 3 doubles" || return 1
+  assert_eq "16" "$(state_fetch_backoff_delay 4 2 30)" "attempt 4 doubles" || return 1
+  assert_eq "30" "$(state_fetch_backoff_delay 5 2 30)" "attempt 5 hits the cap" || return 1
+  assert_eq "30" "$(state_fetch_backoff_delay 99 2 30)" "huge attempt stays capped (no overflow)" || return 1
+  assert_eq "0" "$(state_fetch_backoff_delay 1 0 30)" "base 0 ⇒ no wait" || return 1
+
+  local total=0 i
+  for i in 1 2 3 4; do
+    total=$(( total + $(state_fetch_backoff_delay "${i}" 2 30) ))
+  done
+  assert_eq "30" "${total}" "worst-case added close-out latency at defaults = 30 s (2+4+8+16)" || return 1
+
+  # No real sleep: BACKOFF_S=0 and the DEFAULT attempts (5).
+  unset DELIVER_STATE_FETCH_ATTEMPTS
+  DELIVER_STATE_FETCH_BACKOFF_S=0
+  local cnt_file="${_test_tmpdir}/t6_calls"
+  : > "${cnt_file}"
+  _gh() { printf 'x\n' >> "${cnt_file}"; return 1; }
+  local result
+  result="$(classify_result "GH-751" "feat/test")"
+  assert_eq "state-unverified" "${result}" "poll still reports state-unverified" || return 1
+  assert_eq "5" "$(wc -l < "${cnt_file}" | tr -d '[:space:]')" "default attempts = 5 tracker calls" || return 1
+}
+
+# TC-7 (AC-7): the successful-poll split of the exit-0-no-MR bucket.
+test_pdev751_successful_poll_split() {
+  mr_list_for_branch() { printf '[]'; }
+  mr_list_closed_merged() { printf '[]'; }
+
+  # commits + incomplete notes ⇒ partial (exit 1).
+  artifact_branch_commit_count() { printf '2'; }
+  artifact_pm_notes_complete() { return 1; }
+  artifact_permission_signature() { return 1; }
+  local verdict
+  verdict="$(classify_artifact "GH-751" "feat/x" "failed")"
+  assert_eq "partial" "${verdict}" "commits + incomplete notes ⇒ partial" || return 1
+  assert_eq "stop:1:partial" "$(decide_after_iteration finished "${verdict}" 1 10)" "partial exits non-zero" || return 1
+
+  # 0 commits + permission signature ⇒ noop-lane-permission (exit 1).
+  artifact_branch_commit_count() { printf '0'; }
+  artifact_permission_signature() { return 0; }
+  verdict="$(classify_artifact "GH-751" "feat/x" "failed")"
+  assert_eq "noop-lane-permission" "${verdict}" "0 commits + signature ⇒ noop-lane-permission" || return 1
+  assert_eq "stop:1:noop-lane-permission" "$(decide_after_iteration finished "${verdict}" 1 10)" "permission noop exits non-zero" || return 1
+
+  # 0 commits, no signature, tracker reachable ⇒ noop-lane-nothing-to-do (exit 0).
+  artifact_permission_signature() { return 1; }
+  verdict="$(classify_artifact "GH-751" "feat/x" "failed")"
+  assert_eq "noop-lane-nothing-to-do" "${verdict}" "0 commits + reachable tracker ⇒ nothing to do" || return 1
+  assert_eq "stop:0:noop-lane-nothing-to-do" "$(decide_after_iteration finished "${verdict}" 1 10)" "nothing-to-do exits 0" || return 1
+
+  # Same 0-commit, no-signature shape under a FAILED poll ⇒ state-unverified,
+  # never an invented "nothing to do".
+  assert_eq "none" "$(classify_artifact "GH-751" "feat/x" "state-unverified")" "outage never invents nothing-to-do" || return 1
+  assert_eq "stop:1:state-unverified" "$(decide_after_iteration finished state-unverified 1 10 none)" "outage keeps the loud UNKNOWN verdict" || return 1
+}
+
+# TC-7b (AC-7 / AC-8): the real pm-notes probe distinguishes complete from
+# present-but-completed-null, and the permission probe matches the log signature.
+test_pdev751_artifact_probes_real_inputs() {
+  local root="${_test_tmpdir}/repo"
+  mkdir -p "${root}/doc/changes/2026-10/2026-10-25--TEST-751--fixture"
+  local notes="${root}/doc/changes/2026-10/2026-10-25--TEST-751--fixture/chg-TEST-751-pm-notes.yaml"
+  cat >"${notes}" <<'YAML'
+phases:
+  delivery: { started: "2026-10-25", completed: null }
+YAML
+  if artifact_pm_notes_complete "TEST-751" "${root}"; then
+    printf '  expected incomplete pm-notes to fail the probe\n' >&2
+    return 1
+  fi
+  cat >"${notes}" <<'YAML'
+phases:
+  delivery: { started: "2026-10-25", completed: "2026-10-25" }
+YAML
+  artifact_pm_notes_complete "TEST-751" "${root}" || return 1
+
+  local log="${_test_tmpdir}/lane.log"
+  printf 'some output\n' >"${log}"
+  if artifact_permission_signature "TEST-751" "${log}"; then
+    printf '  expected a clean log to fail the signature probe\n' >&2
+    return 1
+  fi
+  printf 'permission requested: bash\n' >>"${log}"
+  artifact_permission_signature "TEST-751" "${log}" || return 1
+}
+
 
 # ============================================================================
 # TESTS: Prompt Generation (TC-DT-08)
@@ -2694,6 +2923,14 @@ main() {
   run_test "TC-DT-490-3: transient fetch failure recovers via bounded poll retry (PDEV-490)" test_state_fetch_transient_failure_recovers
   run_test "TC-DT-490-4: green paths unregressed (merged/blocked/pr-open) (PDEV-490)" test_state_fetch_green_paths_unregressed
   run_test "TC-DT-490-5: --help documents state-unverified (PDEV-490)" test_help_documents_state_unverified
+  run_test "TC-1 (PDEV-751): exhausted poll + open MR → pr-open/0, flag yes" test_pdev751_open_mr_beats_poll_failure
+  run_test "TC-2 (PDEV-751): exhausted poll + merged MR → merged/0, flag yes" test_pdev751_merged_mr_beats_poll_failure
+  run_test "TC-3 (PDEV-751): exhausted poll + commits + complete notes → finished/0" test_pdev751_commits_and_complete_notes_finish
+  run_test "TC-4 (PDEV-751): exhausted poll + commits, no notes → partial/1" test_pdev751_commits_without_notes_partial
+  run_test "TC-5 (PDEV-751): exhausted poll + no evidence → state-unverified/1 (no weakening)" test_pdev751_poll_failure_without_evidence_stays_unverified
+  run_test "TC-6 (PDEV-751): exponential backoff ladder via pure helper (no sleeps)" test_pdev751_state_fetch_backoff_ladder
+  run_test "TC-7 (PDEV-751): successful-poll split partial/permission/nothing-to-do" test_pdev751_successful_poll_split
+  run_test "TC-7b (PDEV-751): real pm-notes/permission probes (complete vs null, signature)" test_pdev751_artifact_probes_real_inputs
   run_test "TC-DT-491a: ADOS_TRACKER=jira Done -> merged; full ref passthrough (GH-158)" test_classify_jira_done_merged
   run_test "TC-DT-491b: jira open + blocked label -> blocked (GH-158)" test_classify_jira_blocked
   run_test "TC-DT-491c: jira open + GitLab MR -> pr-open (tracker/MR-host split, GH-158)" test_classify_jira_open_with_gitlab_mr
