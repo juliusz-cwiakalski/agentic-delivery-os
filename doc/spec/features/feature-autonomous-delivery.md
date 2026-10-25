@@ -106,7 +106,7 @@ These are the non-negotiable contract the tooling enforces. Full rationale and e
 
 | ID | Invariant |
 |----|-----------|
-| **INV-DM-1** | `deliver-ticket.sh` runs **foreground, never detached** — a caller blocks until merged/blocked/pr-open/pr-open-unverified/failed/finished/max-restarts/state-unverified. The CEO must never `setsid … & disown` it. |
+| **INV-DM-1** | `deliver-ticket.sh` runs **foreground, never detached** — a caller blocks until merged/blocked/pr-open/pr-open-unverified/failed/finished/max-restarts/state-unverified/partial/noop-lane-permission/noop-lane-nothing-to-do. The CEO must never `setsid … & disown` it. |
 | **INV-DM-2** | `deliver-ticket.sh` is **single-flight + join, per repo working tree** — a live instance for the same ticket is *joined* (wait + classify), never raced with a duplicate PM. SIGTERM/SIGINT is propagated to the PM child (grace period → SIGKILL). |
 | **INV-DM-3** | `ceo-loop.sh` detects a **stuck** CEO (no session traffic **and** no healthy delivery in progress — checked via both the `--is-delivering` PID probe **and** the race-free delivering marker file) — not a healthy wait. Its primary job is stuck-CEO recovery; "parking while a delivery is in progress" is the CEO blocking on `deliver-ticket.sh`, not the loop's job. |
 | **INV-DM-4** | In Mode A the **`@ceo` is the merge authority** — it verifies the PR is approved **and** the PM has finalized all 11 phases (`chg-<ref>-pm-notes.yaml`) before performing the platform-appropriate squash-merge (`gh pr merge --squash` on GitHub, `glab mr merge --squash` on GitLab; the CEO reads `.ai/agent/pr-instructions.md` for the platform). "Merge-not-yield": a ready, approved, finalized PR is merged, not deferred indefinitely. |
@@ -137,7 +137,7 @@ Subcommands:           deliver-ticket.sh --is-delivering [REF]
 - **PM LLM stream hangs:** the liveness watchdog (INV-DM-5) sees no session traffic for ≥ threshold → kill-and-resume the PM; the session resumes from committed artifacts + pm-notes.
 - **Agent hits a forbidden-folder permission prompt:** same detection — no session traffic → stuck → kill+restart (autonomous mode must not block on an unseen prompt).
 - **opencode internally detaches its own grandchildren:** the signal trap kills the child's process group; grandchildren opencode itself `setsid`-detached (LLM transport, bash-tool subprocesses) can escape the group kill. Accepted known limitation; a defense-in-depth sweep by session id can be added if orphans are observed.
-- **Tracker API rate-limit / network error during classification:** `classify_result` returns `unknown`; the iteration does not burn a restart slot. (Platform-aware since GH-148: on a healthy GitLab project this no longer misfires as a rate-limit — the dispatch seam uses the correct CLI.)
+- **Tracker API rate-limit / network error during classification:** `classify_result` returns `state-unverified` (only after the artifact ladder finds no evidence); the iteration does not burn a restart slot. (Platform-aware since GH-148: on a healthy GitLab project this no longer misfires as a rate-limit — the dispatch seam uses the correct CLI.)
 - **Rebase conflict during Mode B merge:** an AI agent resolves conflicts, pushes, and the quality gates re-run before the squash-merge.
 
 ## Technical Architecture & Codebase Map
