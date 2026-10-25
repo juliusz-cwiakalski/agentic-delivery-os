@@ -56,7 +56,7 @@ order:
 
 - Deliver: dispatch, verify change, verify gates, merge, verify deploy, closeout
 - See: status, queue ready (queue, lanes later), board, brief
-- Operate: provider, config, state, lint, phase, db, watchdog, doctor, supervise, repos
+- Operate: provider (AI model routing), config, state, lint, phase, db, watchdog, doctor, supervise, repos
 - Learn: retro, metrics, spend, policy
 - Surfaces: mcp, opencode
 - Maintain: update
@@ -72,7 +72,9 @@ order:
 Configuration follows the layered chain (low to high): built-in defaults,
 system, user-global, project committed (`.ados/config.yaml`), project local
 (`.ados/config.local.yaml`, gitignored), environment (`ADOS_*`), CLI flags.
-`ados config debug` shows the source of every key. Secrets are environment
+`ados config` prints the merged configuration for the current context as a
+plain JSON object; `ados config debug` adds the source of every key (layer,
+file, line) as extended JSON or annotated JSONC. Secrets are environment
 only.
 
 ### ENVIRONMENT
@@ -113,7 +115,7 @@ grow it later.
 
 | Command | Purpose | Primary user | Delivery | Extended |
 |---|---|---|---|---|
-| `ados config` | Inspect and debug configuration; per-key provenance (which layer, file, line) | all users | M0-S4 | - |
+| `ados config` | Two modes. Basic: print the merged configuration evaluated for the current context as a plain JSON object. Debug (`config debug` or `--debug`): per-key provenance (which layer, file, line) as extended JSON, or annotated JSONC with the source as a per-key comment | all users | M0-S4 | - |
 | `ados status` | One bounded, ranked digest of the delivery world: tracker, changes and PRs, CI, lanes or queue, providers, parked work | coordinator, operator | M0-S6 | M1-S10 (collector expansion), M2-S4 (shared board state source) |
 | `ados queue ready` | Read-only ready-set computation for one ticket: deps, repo free, tier known, owner gate, CI healthy, provider available; ranks close items (merge-ready, review-pending) above new starts | coordinator | M0-S7 | M2-S1 (full queue, lanes, dispatch) |
 | `ados verify change` | Verify a delivered change against the 11-phase ledger and classify the delivery result tuple; malformed notes are classified, never a crash | coordinator | M0-S8 | M1-S9 (dual-run evidence consumer) |
@@ -121,9 +123,14 @@ grow it later.
 | `ados lint` | Schema and format conformance for pm-notes and the delivery registry at write time; lands bundled with verify change (M0-S8) | lifecycle agents, coordinator | M0-S10 | M3-S4 (decision records, frontmatter, deploy checklist) |
 | `ados phase` | Phase bookkeeping for the 11-phase ledger: `phase list <ref>`, `phase complete <ref> <phase>`, `phase reopen <ref> <phase> <reason>`; the only write path for phase state, schema-validated and idempotent | lifecycle agents | M0-S10 | - |
 | `ados db` | Session-database admin: size, list, prune, reboot helpers; dry-run by default | operator, coordinator | M0-S11 | - |
-| `ados provider` | The one chain resolver for every AI spawn: provider chain, quota, peak windows, named self-expiring parks, fail-loud announcements | engines, coordinator | M0-S13 | - |
+| `ados provider` | The AI provider family (model hosts only; tracker, VCS, and CI providers are adapters, not this family): chain resolution for every spawn, quota, peak windows, named self-expiring parks, agent-to-model profiles and selection heuristics (concepts/model-profiles.md), fail-loud announcements | engines, coordinator | M0-S13 | - |
 | `ados closeout` | One idempotent post-merge transaction: done flip, label sweep, unassign, owed-flip scan, comment resolution, checkout restore, squash-safe branch cleanup | coordinator | M0-S14 | - |
-| adapters library | GitLab and Jira client libraries plus a minimal GitHub read slice (PRs, pipelines, issues) so this repository dogfoods status and verify from M0; adapters implement the primitive ports with capability flags, embedded metadata, and the conformance suite (concepts: agent-primitive-surface, embedded-metadata, adapter-conformance); the full GitHub adapter lands M3-S3 (not a user command; the adapters package) | engines | M0-S12 | M3-S3 (GitHub, Azure) |
+The adapters package is not a command. It implements the primitive ports
+(concepts/agent-primitive-surface.md) with capability flags and embedded
+metadata, verified by the conformance suite
+(concepts/adapter-conformance.md). First shipped in M0-S12 (GitLab, Jira,
+plus a minimal GitHub read slice so this repository dogfoods status and
+verify from M0); completed in M3-S3 (full GitHub, Azure on demand).
 
 ### M1: Attention and minimal surfaces
 
@@ -237,7 +244,10 @@ M3-S7 or M4-S5 without a replacement.
 - `db` kept: help reads "session-database admin".
 - `update` kept: help reads "update the ados binary to a pinned tagged
   release"; it never mutates tickets or branches.
-- `provider` kept: help reads "the provider chain resolver for AI spawns".
+- `provider` kept, scope clarified: this family manages AI model providers
+  and routing only; tracker, VCS, and CI providers are adapters. The
+  naming lock (M0-S17) confirms the name or renames it now that the scope
+  is explicit.
 - `state` kept, distinct from `status` per the TERMINOLOGY section: state
   manages the persisted stores; status reports what is happening now.
 

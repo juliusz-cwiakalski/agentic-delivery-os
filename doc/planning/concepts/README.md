@@ -27,7 +27,8 @@ lifecycle; the concept doc links the delivered work.
 | [embedded-metadata.md](embedded-metadata.md) | Draft | Provider artifacts carry versioned ADOS metadata; the adapter writes, parses, and strips it; agents see only the primitive view |
 | [adapter-conformance.md](adapter-conformance.md) | Draft | One flow suite in primitives, run against every adapter; mock in CI plus scheduled live runs; green gates adapter changes |
 | [naming-and-branding-seam.md](naming-and-branding-seam.md) | Draft | One branding constant derives every name-derived value; command names locked before M0 ends; rename drill rehearsed |
-| [telemetry-and-events.md](telemetry-and-events.md) | Draft | Schema-versioned local-first event log; cloud-shippable by design; opt-in sink that never gates local function |
+| [telemetry-and-events.md](telemetry-and-events.md) | Draft | Schema-versioned local-first event log; exportable by design; opt-in sink that never gates local function |
+| [model-profiles.md](model-profiles.md) | Draft | The AI provider family: agent-to-model profiles in difficulty classes (lite, regular, powerful); coordinator proposes, lifecycle cross-validates, delivery selects |
 
 ## Related documents
 
