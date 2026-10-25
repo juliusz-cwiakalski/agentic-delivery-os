@@ -23,14 +23,16 @@ telemetry contract).
 
 ## Status
 
-Draft under review. Feedback happens on the open pull request; the docs are
-iterated there until approved, then maintained as living planning documents
-and reconciled by the delivery process as milestones land.
+Living planning documents, reconciled by the delivery process as milestones
+land: story delivery updates the backlog rows, delivered primitives
+graduate in the catalogue, and the roadmap is re-baselined after each
+milestone retrospective. Changes to these documents flow through pull
+requests on the tooling branch.
 
 ## Constraints honored by everything here
 
-- Open source only in committed files; local telemetry is cloud-shippable by
-  design, but no cloud capability gates local function.
+- Open source only in committed files; local telemetry is exportable by
+  design, but no hosted capability gates local function.
 - Working name `ados` protected by the branding seam; publication stays
   blocked until the naming freeze.
 - The bash delivery stack keeps running until each replacement passes

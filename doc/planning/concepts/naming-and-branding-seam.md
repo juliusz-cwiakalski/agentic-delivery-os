@@ -29,12 +29,20 @@ before M0 ends because renames after the public release are API churn.
   private and a release-job publish guard blocks publication until the
   freeze (ADR-0003).
 - The forbidden-literal test fails CI on any name literal outside the
-  branding module; the seed legacy set (`ADOS_`, `~/.ados`) remains readable
+  allowlist (the branding module plus the legacy adapter, per ADR-0003
+  DEC-8); the scan covers new code, and the pre-existing corpus migrates
+  separately. The seed legacy set (`ADOS_`, `~/.ados`) remains readable
   through the legacy adapter with a one-time warning.
 - Command names: locked before M0 ends via a decision record or the
   man-page v1 acceptance. The registry groups commands into families so the
   daily loop reads in order; names follow the one-glance distinguishability
   and guessability rules.
+- Command naming rules: each name has exactly one meaning in the delivery
+  domain; near-synonym pairs are rejected (verify is evidence against
+  reality, lint is document conformance; status is now, state is stores);
+  domain nouns are not command names when the command does something
+  narrower (phase bookkeeping is `phase`, not `change`; repository hygiene
+  is `repos`, not `workspace`, which is the per-change artifact set).
 - The rename drill is documented and rehearsed before the freeze: constant
   swap, legacy config migration once, docs and package scope update,
   forbidden-literal gate green.

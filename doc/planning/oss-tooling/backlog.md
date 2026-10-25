@@ -80,12 +80,15 @@ floats behind it.
   driving binary, package scope, env prefix `ADOS_`, config dir `.ados`,
   MCP prefix, telemetry namespace, docs URL; env override to swap the name
   at the naming freeze; forbidden-literal test that fails CI on any name
-  literal outside the branding module; legacy `ADOS_*` and `~/.ados`
-  adapter with a one-time warning; neutral telemetry schema
-  (delivery.event.v1); rename drill documented.
+  literal outside the allowlist (the branding module plus the legacy
+  adapter, per ADR-0003 DEC-8; the scan covers new code, the pre-existing
+  corpus migrates separately); legacy `ADOS_*` and `~/.ados` adapter with a
+  one-time warning; neutral telemetry schema (delivery.event.v1); rename
+  drill documented.
 - AC: every name-derived value traces to the branding constant; the
-  forbidden-literal test fails CI on a literal outside the module; legacy
-  env/config still read with a warning.
+  forbidden-literal test fails CI on a literal outside the allowlist; the
+  legacy adapter itself passes the scan; legacy env/config still read with
+  a warning.
 
 ### M0-S3 Result contract and error table
 - Tasks: CommandResult envelope (schemaVersion, runId, exitCode, timing,
@@ -140,8 +143,8 @@ floats behind it.
 ### M0-S8 verify change and exit taxonomy
 - Tasks: verify a delivered change against the 11-phase ledger, classify
   the delivery result tuple; exit taxonomy mapped to classified results.
-  Malformed pm-notes are classified with a code, never a crash (validation
-  from M0-S10 lands with this story).
+  Malformed pm-notes are classified with a code, never a crash (lint from
+  M0-S10 lands with this story).
 - AC: verify on an incomplete ledger names the missing phases; malformed
   notes are classified; the taxonomy matches the delivery result enum.
 
@@ -152,13 +155,14 @@ floats behind it.
 - AC: verify gates catches a red pipeline, a missing job, and a vacuous
   green.
 
-### M0-S10 pm-notes, registry validation, and phase transitions
-- Tasks: schema validation at write time for pm-notes and the delivery
-  registry; error on parse failure; key-set assertions. Phase transitions
-  through `ados change` (`change list`, `change phase complete`, `change
-  phase reopen` with a required reason) as the only write path for phase
-  state; the coordinating agent and every lifecycle agent mark phases
-  through it. Bundled with M0-S8 (verify change depends on it).
+### M0-S10 pm-notes and registry lint, and phase transitions
+- Tasks: schema and format conformance checks at write time for pm-notes
+  and the delivery registry (`ados lint`); error on parse failure; key-set
+  assertions. Phase transitions through `ados phase` (`phase list`,
+  `phase complete`, `phase reopen` with a required reason) as the only
+  write path for phase state; the coordinating agent and every lifecycle
+  agent mark phases through it. Bundled with M0-S8 (verify change depends
+  on it).
 - AC: malformed notes are rejected at write; transitions are idempotent; a
   reopen without a reason is rejected; the ledger read by verify change is
   safe.
@@ -271,7 +275,9 @@ floats behind it.
 ### M1-S7 Minimal MCP
 - Tasks: thin MCP mirroring the CLI scope over proven engines: status,
   verify-artifact, gate report; no batch.
-- AC: MCP tool calls return the same machine contract as the CLI.
+- AC: MCP tool calls return the same core results and stable error codes
+  as the CLI; the MCP surface never propagates process exit codes
+  (CommandResult envelope rendering stays in the CLI, per ADR-0003).
 
 ### M1-S8 OSS retro pipeline
 - Tasks: retro collection, registry hardening, shape-crash guards, export;
@@ -410,15 +416,19 @@ floats behind it.
   target the old branch.
 
 ### M4-S5 Bash stack retirement
-- Tasks: remove the retired bash tools after the deprecation window; keep
-  wrappers for the transition period per the strangler plan.
-- AC: the same commands work through the new tooling; removed scripts print
-  the final deprecation notice.
+- Tasks: during the deprecation window the retired entry points are
+  compatibility wrappers that print a deprecation notice and delegate to
+  the new equivalents (installed from M3-S7); after the window, remove the
+  wrappers entirely.
+- AC: during the window, every retired entry point prints the notice and
+  delegates; after removal, no retired entry point remains and the new
+  commands cover the documented surface.
 
-### M4-S6 Cloud contract hooks (open-source side)
-- Tasks: telemetry sink hooks behind the neutral event schema; `ados cloud
-  connect` relay agent mode; workspace config for hosted enrollment.
-  Hosted capabilities themselves stay proprietary and out of this
-  repository (boundary rule: local function never depends on them).
-- AC: the sink is opt-in and off by default; local function works with no
-  hosted configuration; no proprietary content enters committed files.
+### M4-S6 Extension hooks (open-source side)
+- Tasks: telemetry sink hooks behind the neutral event schema; a documented
+  connection point for remote coordination services (off by default). No
+  hosted-product behavior is specified or implemented in this repository;
+  hosted capabilities live outside it (boundary rule).
+- AC: the sink is opt-in and off by default; local function is complete
+  with no remote service configured; the hook surface is a documented
+  versioned contract; no proprietary content enters committed files.

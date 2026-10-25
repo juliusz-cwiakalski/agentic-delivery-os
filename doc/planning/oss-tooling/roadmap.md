@@ -104,7 +104,7 @@ delivers this repository itself; internal v1.0 readiness.
 
 Scope: opencode native integration; full MCP; GitHub and Azure adapters
 alongside GitLab and Jira; validators (decision records, frontmatter,
-deploy checklist); the policy engine; workspace utilities; v1.0 internal
+deploy checklist); the policy engine; repository utilities; v1.0 internal
 readiness with deprecation notices on the bash stack.
 
 Exit criteria: this repository self-delivers through the new CLI for a
@@ -121,8 +121,10 @@ Scope: the naming freeze and rename drill; publication and release
 automation (lockstep versioning, provenance, SBOM, pinned tagged releases
 as the stable install source, `ados update`); docs and the license registry
 completed; the tooling branch merged into the default branch and retired;
-bash stack retirement; opt-in cloud contract hooks (sink, relay agent
-mode, workspace config) that never gate local function.
+bash stack retirement; neutral extension hooks (an opt-in telemetry sink
+and a documented connection point for remote coordination services) that
+never gate local function. Hosted capabilities stay outside this
+repository.
 
 Exit criteria: a release publishes the public packages at one version; the
 install path works from the default branch; the bash stack is retired with

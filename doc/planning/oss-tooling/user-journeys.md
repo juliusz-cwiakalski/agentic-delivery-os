@@ -52,13 +52,13 @@ Success is artifacts, never exit codes.
 
 ### 1.2 The 11 phases, who runs them
 
-Phases are marked complete or reopened only through `ados change phase`
+Phases are marked complete or reopened only through `ados phase`
 (M0-S10). Every lifecycle agent writes through the same single-writer path,
 so the ledger is authoritative and a reopen always carries a reason.
 
 | Phase | Agent | Command or surface that helps |
 |---|---|---|
-| 1. clarify_scope | Lifecycle agent | Tracker read through the adapter; `ados state` keeps notes validated (M0-S10, M1-S2) |
+| 1. clarify_scope | Lifecycle agent | Tracker read through the adapter; `ados lint` keeps notes conformant (M0-S10, M1-S2) |
 | 2. specification | Spec writer | inside dispatch |
 | 3. test_planning | Test-plan writer | inside dispatch |
 | 4. delivery_planning | Plan writer | inside dispatch |
@@ -76,7 +76,7 @@ so the ledger is authoritative and a reopen always carries a reason.
 |---|---|---|---|
 | Configuration hygiene | `ados config` | M0-S4 | Per-key provenance, no silent precedence |
 | Provider resolution for every spawn | `ados provider` | M0-S13 | Park defects cost hours each; subscription-first routing |
-| State integrity | `ados state`, `ados validate` | M0-S10, M1-S2 | Malformed notes and torn registries are classified, never zeros |
+| State integrity | `ados state`, `ados lint` | M0-S10, M1-S2 | Malformed notes and torn registries are classified, never zeros |
 | Session-database hygiene | `ados db` | M0-S11 | State bloat and reboot helpers, safe prune |
 | Mid-flight steering | `ados steer` | M2-S5 | Owner notes that must land before the next phase boundary; interim: resume prompts |
 | Cost visibility | `ados spend` | M2-S6 | Silent churn classes |
@@ -147,8 +147,8 @@ lane.
 - From M2: the programmatic queue, lanes, supervise, board, steer, and
   ceremony make the multi-repo cycle a single deterministic loop; the
   coordinating session stops being the dispatcher.
-- From M4: fleet coordination stays local and open; hosted integration adds
-  an inbox and telemetry without gating local function.
+- From M4: fleet coordination stays local and open; optional remote
+  services can consume the same contracts without gating local function.
 
 ---
 
@@ -157,8 +157,8 @@ lane.
 Brief in the morning (`ados brief`, M1-S6, deterministic, no LLM in render),
 aging gates with SLA (`ados board`, M1-S5), one batched decision window
 (`ados steer`, M2-S5), metrics and spend as the evidence (`ados metrics`,
-`ados spend`, M2-S6). From M4 a hosted inbox can replace the morning block,
-still backed by the same contracts.
+`ados spend`, M2-S6). From M4 the same contracts can feed an optional
+remote service; the local brief remains complete without it.
 
 ## 4. Journey 4: cost and provider loop (secondary, summarized)
 
@@ -187,8 +187,8 @@ metrics` measures ceremony share, cycle time, and false-signal count
 | merge / verify deploy | steps 7-8 | producers first | - | - | - |
 | closeout | step 9 | step 9 | - | - | - |
 | provider | step support | step support | - | core | - |
-| validate / state | support | support | - | - | - |
-| change | phase bookkeeping (1.2) | support | - | - | - |
+| lint / state | support | support | - | - | - |
+| phase | phase bookkeeping (1.2) | support | - | - | - |
 | db | support | - | - | - | - |
 | watchdog | support | step 5 | - | - | - |
 | doctor | support | support | - | - | - |
@@ -201,8 +201,8 @@ metrics` measures ceremony share, cycle time, and false-signal count
 | retro | step 10 | - | - | - | core |
 | mcp / opencode | surfaces for all of the above (M1-S7, M3-S1/M3-S2) | | | | |
 | policy | - | - | - | - | enforcement |
-| workspace | support | support | - | - | - |
-| update / cloud connect | distribution (M4-S2, M4-S6) | | | | |
+| repos | support | support | - | - | - |
+| update | distribution (M4-S2) | | | | |
 
 Every command in the registry appears in at least one journey; there are no
 orphan commands.
@@ -218,11 +218,11 @@ orphan commands.
 | Decision-record mirror sync to affected repos | Closed: folded into `ados ceremony` (M2-S3) and named in journey 2.1 step 2 |
 | Testing-session assessment flow | Closed: enumerated as a ceremony type under `ados ceremony` (M2-S3) |
 | Periodic memory audit | Closed: folded into `ados retro` (M1-S8), no new command |
-| Phase transitions for lifecycle agents | Closed: `ados change` (M0-S10) is the only write path for phase state; reopen requires a reason |
+| Phase transitions for lifecycle agents | Closed: `ados phase` (M0-S10) is the only write path for phase state; reopen requires a reason |
 | Cross-repo shared state | Deliberately deferred (local-first). No journey blocks on it |
-| Owner decision capture into decision records | `ados validate` (M3-S4) plus policy (M3-S5) enforce records. No new command needed |
+| Owner decision capture into decision records | `ados lint` (M3-S4) plus policy (M3-S5) enforce records. No new command needed |
 | Deprecation of the bash stack | M3-S7 notices and M4-S5 retirement cover it; wrappers during the transition; the strangler table carries explicit stays-bash rows |
-| Hosted-only surfaces | Proprietary, out of this repository (M4-S6 is the only open-source hook) |
+| Hosted-only surfaces | Proprietary, out of this repository; only neutral extension hooks (the opt-in telemetry sink, M4-S6) are open |
 
 ## Iterative delivery order (pain first, then de-AI)
 
