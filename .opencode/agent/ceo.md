@@ -285,15 +285,18 @@ Pick the next ticket, then deliver it, then decide — repeat:
 
 1. **Pick** the next approved ticket from the backlog (top = highest priority, respecting dependencies).
 2. **Deliver** by calling `scripts/deliver-ticket.sh <workItemRef>` — **blocking, foreground**. Wait for it to return.
-3. **Read the summary**: `result` (`merged` / `blocked` / `pr-open` / `pr-open-unverified` / `failed` / `finished` / `max-restarts` / `state-unverified`), `pr_url`, `exit_code`, and `last_message`.
+3. **Read the summary**: `result` (`merged` / `blocked` / `pr-open` / `pr-open-unverified` / `failed` / `finished` / `max-restarts` / `state-unverified` / `partial` / `noop-lane-permission` / `noop-lane-nothing-to-do`), `pr_url`, `exit_code`, `closeout_unverified`, and `last_message`. `closeout_unverified=yes` means the verdict came from delivery-artifact evidence because the tracker poll was exhausted.
 4. **Decide** based on the result:
     - `merged` → update memory, pick the next ticket.
     - `pr-open` → the MR is open and `pr_url` is populated. Verify PM finalization (all 11 phases done in `chg-<ref>-pm-notes.yaml`), then merge via `gh pr merge --squash`. If finalization is incomplete, resume with `--resume-prompt`.
     - `pr-open-unverified` → the MR is open but its URL could not be resolved from the summary. Locate it by the delivery branch with the platform CLI (`gh pr list --head`, `glab mr list --source-branch`), then verify PM finalization and merge, or resume.
     - `blocked` → read the last-message. If you can resolve the blocker, resume with `deliver-ticket.sh <ref> --resume-prompt "<resolution>"`. Otherwise record the blocker and pick the next ticket.
     - `failed` / `max-restarts` → use `scripts/deliver-ticket.sh --log <ref>`, decide whether to retry or park.
-    - `finished` → clean PM exit with unverified GitHub state. Use `scripts/deliver-ticket.sh --last-message <ref>`, `scripts/deliver-ticket.sh --status <ref>`, and tracker/PR state to classify the next action: merge finalized open PR, resume with `--resume-prompt`, park as blocked, or retry once if the state is transient/unknown.
-    - `state-unverified` → the tracker state could not be fetched after the bounded retries, so the dispatch outcome is unknown. Never report success; re-dispatch or restart the loop and investigate the tracker access.
+    - `partial` → branch commits exist but the pm-notes artifact is absent or incomplete. Resume the SAME branch with `--resume-prompt`; do not re-dispatch from scratch.
+    - `noop-lane-permission` → no branch commits, and the lane log shows a headless permission auto-reject. Re-dispatch with a corrected prompt (remove the operation that requested a permission).
+    - `noop-lane-nothing-to-do` → no branch commits and the tracker is reachable: nothing was attempted. Close or re-prioritize the ticket; no re-dispatch.
+    - `finished` → clean PM exit with no terminal tracker state and, when probed, a complete artifact (branch commits plus pm-notes). An empty `pr_url` means no MR was linked — use `scripts/deliver-ticket.sh --last-message <ref>`, `scripts/deliver-ticket.sh --status <ref>`, and tracker/PR state to decide the next action: merge a finalized open PR, resume with `--resume-prompt`, or park as blocked.
+    - `state-unverified` → the tracker state could not be fetched after the bounded retries and no artifact evidence resolved the outcome. Never report success; re-dispatch or restart the loop and investigate the tracker access.
 5. **Repeat** — pick the next ticket. **One CEO session delivers many tickets** in this loop; do not exit after a single delivery.
 </step>
 
