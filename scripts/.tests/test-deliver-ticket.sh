@@ -103,8 +103,11 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 # tests exercise explicit env only.
 ADOS_ENV_LOADED=1
 # PDEV-751 (V-8): pin the harness env so G-2 is reproducible on any operator
-# machine — an ambient ADOS_TRACKER=jira (fleet env) turns 15 tests red.
-ADOS_ENV_FILE=/dev/null
+# machine — an ambient ADOS_TRACKER=jira (fleet env) turns tests red.
+# EXPORTED: the platform tests invoke `bash -c` child shells, and each child
+# re-sources the host env file inside deliver-ticket.sh unless the pin reaches
+# its environment; unset removes the ambient vars from children too.
+export ADOS_ENV_LOADED ADOS_ENV_FILE=/dev/null
 unset ADOS_TRACKER ADOS_PLATFORM
 # shellcheck source=/dev/null
 source "${SCRIPT_DIR}/deliver-ticket.sh"
