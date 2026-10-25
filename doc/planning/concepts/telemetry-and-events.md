@@ -32,6 +32,11 @@ depends on any sink; the sink is opt-in and off by default.
   justifies them.
 - Emitters: every command emits through one chokepoint that owns redaction;
   embedded metadata and provider payloads never enter events unredacted.
+- Capture points: commands emit lifecycle events; closeout additionally
+  captures harness session statistics extracted read-only from harness
+  stores (tokens by class, calls, tool usage, per agent and model), so the
+  event log is the durable record even after harness session stores are
+  pruned (harness-telemetry.md).
 - Consumers (local): metrics and spend aggregation, retro evidence passes,
   board and status enrichments, park and provider diagnostics.
 - Sink (opt-in, M4-S6): an outbound sink pushes the event stream to a
@@ -55,6 +60,8 @@ depends on any sink; the sink is opt-in and off by default.
 - M0-S5: storage mechanics (JSONL plus indexes, single-writer, atomic).
 - M1: schema v1 frozen so later external ingestion never migrates.
 - M2-S6: metrics and spend consume the stream.
+- M1-S11: harness telemetry events (extraction at closeout, cross-harness
+  attribution).
 - M4-S6: opt-in sink hooks and the documented connection point.
 
 ## Open questions

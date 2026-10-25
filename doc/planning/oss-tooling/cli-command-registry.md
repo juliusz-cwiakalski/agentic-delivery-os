@@ -124,7 +124,7 @@ grow it later.
 | `ados phase` | Phase bookkeeping for the 11-phase ledger: `phase list <ref>`, `phase complete <ref> <phase>`, `phase reopen <ref> <phase> <reason>`; the only write path for phase state, schema-validated and idempotent | lifecycle agents | M0-S10 | - |
 | `ados db` | Session-database admin: size, list, prune, reboot helpers; dry-run by default | operator, coordinator | M0-S11 | - |
 | `ados provider` | The AI provider family (model hosts only; tracker, VCS, and CI providers are adapters, not this family): chain resolution for every spawn, quota, peak windows, named self-expiring parks, agent-to-model profiles and selection heuristics (concepts/model-profiles.md), fail-loud announcements | engines, coordinator | M0-S13 | - |
-| `ados closeout` | One idempotent post-merge transaction: done flip, label sweep, unassign, owed-flip scan, comment resolution, checkout restore, squash-safe branch cleanup | coordinator | M0-S14 | - |
+| `ados closeout` | One idempotent post-merge transaction: done flip, label sweep, unassign, owed-flip scan, comment resolution, checkout restore, squash-safe branch cleanup; captures harness session telemetry into the event log | coordinator | M0-S14 | M1-S11 (harness telemetry capture) |
 The adapters package is not a command. It implements the primitive ports
 (concepts/agent-primitive-surface.md) with capability flags and embedded
 metadata, verified by the conformance suite

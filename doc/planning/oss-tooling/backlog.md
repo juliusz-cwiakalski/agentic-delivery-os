@@ -203,7 +203,9 @@ floats behind it.
 
 ### M0-S14 closeout v1 with branch cleanup
 - Tasks: ticket to done, label sweep, unassign, owed-flip sweep, comment
-  resolution, checkout restore, squash-safe branch cleanup.
+  resolution, checkout restore, squash-safe branch cleanup. Harness
+  telemetry capture joins closeout in M1-S11 (concepts/
+  harness-telemetry.md).
 - AC: closeout is idempotent; a re-run after restart converges.
 
 ### M0-S15 Privacy and no-cloud guards
@@ -306,10 +308,15 @@ floats behind it.
   opencode delivery adapter (porting today's bash session spawn, resume,
   and liveness handling); the Claude Code delivery adapter (headless
   spawn); dispatch consumes a harness adapter instead of calling one
-  harness directly (concepts/harness-adapters.md).
+  harness directly (concepts/harness-adapters.md); harness telemetry
+  extraction (read-only, from the opencode session store and Claude Code
+  local files) captured into the event log at closeout, with session-tree
+  attribution to work items (concepts/harness-telemetry.md).
 - AC: dispatch runs the same delivery through either harness adapter with
   identical result classification; liveness signals are harness-agnostic;
-  the harness choice is configuration.
+  the harness choice is configuration; after closeout the event log holds
+  the delivery's session statistics (tokens by class, calls, tool usage,
+  per agent and model) without re-querying harness stores.
 
 ---
 

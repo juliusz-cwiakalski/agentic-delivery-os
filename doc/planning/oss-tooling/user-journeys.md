@@ -84,6 +84,7 @@ so the ledger is authoritative and a reopen always carries a reason.
 | Session-database hygiene | `ados db` | M0-S11 | State bloat and reboot helpers, safe prune |
 | Mid-flight steering | `ados steer` | M2-S5 | Owner notes that must land before the next phase boundary; interim: resume prompts |
 | Cost visibility | `ados spend` | M2-S6 | Silent churn classes |
+| Session telemetry capture | harness adapters, at closeout (`ados closeout`) | M1-S11 | Durable retro and spend data without re-querying pruned harness stores; cross-harness attribution |
 
 ### 1.4 What is possible when (iterative)
 

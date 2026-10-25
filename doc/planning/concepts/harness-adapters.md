@@ -50,6 +50,11 @@ customization even better; evaluation spike before any commitment).
   - HarnessPluginSurface: the per-harness package format for exposing the
     tooling (commands, agents, MCP wiring), generated from the canonical
     source, sync-verified in CI.
+  - Harness telemetry extraction: read-only extraction of session
+    statistics from each harness's local stores into the event log at
+    closeout (tokens by class, calls, tool usage, per agent and model,
+    session-tree attribution); see
+    [harness-telemetry.md](harness-telemetry.md).
 - Dispatch consumes a harness adapter instead of calling a harness
   directly; the harness choice is configuration, not code.
 - Capability flags per harness: what the harness supports (headless spawn,
@@ -80,7 +85,9 @@ customization even better; evaluation spike before any commitment).
   providers.
 - M1-S11 (new): harness primitive ports, the opencode delivery adapter
   (porting today's bash spawn and liveness handling), the Claude Code
-  delivery adapter (headless spawn), dispatch made harness-agnostic.
+  delivery adapter (headless spawn), dispatch made harness-agnostic, and
+  telemetry extraction into the event log at closeout
+  (harness-telemetry.md).
 - M3-S1: harness surfaces: the plugin side for opencode and Claude Code,
   generated from the canonical source, sync-verified; pi.dev evaluation
   spike.

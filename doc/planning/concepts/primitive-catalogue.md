@@ -148,6 +148,7 @@ not contracts.
 | P-069 | HarnessInstance | context | Configured agent harness (opencode, claude-code, later pi.dev) with version and capability flags | M1 |
 | P-070 | HarnessSession | capability | Spawn, resume, steer, and collect a delivery session; premature end is classified; liveness stays harness-agnostic | M1 |
 | P-071 | HarnessPluginSurface | contract | Per-harness package format exposing the tooling (commands, agents, MCP), generated from the canonical source, sync-verified | M3 |
+| P-072 | HarnessTelemetry | event | Read-only session statistics extracted from harness stores at capture points (closeout first): tokens by class, calls, tool usage, per agent and model, session-tree attributed to work items; persisted as events, harness-neutral schema | M1 |
 
 ### State, audit, and owner surfaces
 
