@@ -175,7 +175,9 @@ Subscription quota before pay-per-token as policy data.
 
 `ados retro` collects and hardens the evidence registry (M1-S8); `ados
 metrics` measures ceremony share, cycle time, and false-signal count
-(M2-S6); `ados policy` keeps prose rules machine-enforced (M3-S5).
+(M2-S6); `ados policy` keeps fleet repository policy and written rules
+machine-checked: drift is reported and fixed with rollback snapshots, and
+a rule without a check behind it is flagged as advisory (M3-S5).
 
 ---
 

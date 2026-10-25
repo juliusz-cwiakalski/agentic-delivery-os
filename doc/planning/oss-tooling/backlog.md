@@ -397,8 +397,14 @@ floats behind it.
 - AC: validation errors are classified with codes and fix hints.
 
 ### M3-S5 Policy engine
-- Tasks: mechanical enforcement of rules at the point of action.
-- AC: a prose rule without a check is flagged, not enforced silently.
+- Tasks: declared repository policy (branch protection, required checks,
+  merge rules) with fleet check and apply, exception profiles, and
+  timestamped snapshots for rollback and forensics; a rules register
+  mapping every written rule to its mechanical check or flagging it
+  prose-only; enforcement consulted at the point of action.
+- AC: policy drift across repos is detected and applies take a
+  pre-change snapshot; a prose rule without a check is flagged by name,
+  not enforced silently.
 
 ### M3-S6 Workspace utilities
 - Tasks: backup, restore, migration helpers for state and config; clone,
