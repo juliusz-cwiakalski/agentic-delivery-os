@@ -170,7 +170,8 @@ floats behind it.
   deleted.
 
 ### M0-S12 Primitive ports and client seeds with trap catalogs
-- Tasks: primitive ports v1 with capability flags in core ./contracts;
+- Tasks: primitive ports v1 with capability flags in core ./contracts (the
+  primitive set is catalogued in ../concepts/primitive-catalogue.md);
   provider-agnostic adapters behind them; the Jira read slice precedes
   M0-S6 (tracker collector); GitLab client (MRs, pipelines per commit,
   merge status quirks); Jira client (label replace, custom fields,

@@ -30,13 +30,11 @@ semantics, no GitLab quirks in any agent-facing prompt or tool.
 
 ## Design
 
-- Primitives model the delivery domain, not platform feature matrices:
-  change (get, search, create, update), transition (provider state machine
-  normalized behind one ADOS state model), labels (normalized replace
-  semantics), comment, assign, link (dependencies and blocks), delivery
-  request (create, update, review state, merge, merge status), pipeline
-  (per pushed commit, job trace). The set is derived bottom-up from the
-  engine inventory, not top-down from feature lists.
+- Primitives model the delivery domain, not platform feature matrices. The
+  full set, with ids, invariants, and the Planned, Typed, Delivered
+  lifecycle, is catalogued in [primitive-catalogue.md](primitive-catalogue.md).
+  The set is derived bottom-up from the engine inventory, not top-down from
+  feature lists.
 - Primitive port types live in core `./contracts`; adapters implement them;
   the createRuntime composition root wires them (ADR-0003).
 - Capability flags: each adapter declares what it supports. Engines degrade

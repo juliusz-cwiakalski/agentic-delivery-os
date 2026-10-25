@@ -23,6 +23,7 @@ lifecycle; the concept doc links the delivered work.
 | Concept | Status | One-line summary |
 |---|---|---|
 | [agent-primitive-surface.md](agent-primitive-surface.md) | Draft | Agents speak ADOS primitives only; adapters translate; policy layer and audited escape hatch guard the boundary |
+| [primitive-catalogue.md](primitive-catalogue.md) | Draft | The catalogue of primitives with a Planned, Typed, Delivered lifecycle; the load-bearing set, dependency graph, and change discipline |
 | [embedded-metadata.md](embedded-metadata.md) | Draft | Provider artifacts carry versioned ADOS metadata; the adapter writes, parses, and strips it; agents see only the primitive view |
 | [adapter-conformance.md](adapter-conformance.md) | Draft | One flow suite in primitives, run against every adapter; mock in CI plus scheduled live runs; green gates adapter changes |
 | [naming-and-branding-seam.md](naming-and-branding-seam.md) | Draft | One branding constant derives every name-derived value; command names locked before M0 ends; rename drill rehearsed |
