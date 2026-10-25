@@ -20,7 +20,9 @@ dates are adjusted as evidence lands.
    running gate during migration; the bash stack keeps delivering until each
    replacement passes the same tests.
 3. One shared typed core; CLI, MCP, and opencode plugin are thin surfaces;
-   no surface-only logic paths.
+   no surface-only logic paths. Provider interactions are primitive-mediated:
+   agents speak ADOS primitives, adapters translate, the policy layer sits at
+   the port boundary, and the raw escape hatch is audited and off by default.
 4. Layered configuration per DEC-4 in ADR-0003: fail-closed validation,
    per-key provenance, secrets environment-only. Working name `ados` until
    the naming freeze; everything name-derived comes from the branding

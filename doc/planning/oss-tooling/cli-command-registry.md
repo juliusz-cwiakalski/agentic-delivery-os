@@ -105,7 +105,7 @@ grow it later.
 | `ados db` | Session-database admin (help text says so): size, list, prune, reboot helpers; dry-run by default | M0-S11 | - |
 | `ados provider` | The one chain resolver for every AI spawn: provider chain, quota, peak windows, named self-expiring parks, fail-loud announcements | M0-S13 | - |
 | `ados closeout` | One idempotent post-merge transaction: done flip, label sweep, unassign, owed-flip scan, comment resolution, checkout restore, squash-safe branch cleanup | M0-S14 | - |
-| adapters library | GitLab and Jira client libraries with trap catalogs as tests, plus a minimal GitHub read slice (PRs, pipelines, issues) so this repository dogfoods status and verify from M0; the full GitHub adapter lands M3-S3 (not a user command; the adapters package) | M0-S12 | M3-S3 (GitHub, Azure) |
+| adapters library | GitLab and Jira client libraries plus a minimal GitHub read slice (PRs, pipelines, issues) so this repository dogfoods status and verify from M0; adapters implement the primitive ports with capability flags, embedded metadata, and the conformance suite (concepts: agent-primitive-surface, embedded-metadata, adapter-conformance); the full GitHub adapter lands M3-S3 (not a user command; the adapters package) | M0-S12 | M3-S3 (GitHub, Azure) |
 
 ### M1: Attention and minimal surfaces
 

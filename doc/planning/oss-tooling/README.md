@@ -16,6 +16,11 @@ name-derived comes from the single branding constant.
 | [cli-command-registry.md](cli-command-registry.md) | The `ados(1)` man page v0 and the command registry with delivery and extension stories |
 | [user-journeys.md](user-journeys.md) | How the CEO agent and other agents use the commands: the change lifecycle and multi-repository coordination |
 
+Design-level intentions that mature into decision records and stories are
+collected separately in [../concepts/README.md](../concepts/README.md)
+(primitive surface, embedded metadata, adapter conformance, branding seam,
+telemetry contract).
+
 ## Status
 
 Draft under review. Feedback happens on the open pull request; the docs are

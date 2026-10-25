@@ -41,6 +41,10 @@ name is `ados` until the naming freeze.
 - Old bash tools stay until their engine replacement passes parity; removal
   happens at the very last stage with a deprecation notice pointing to the
   new equivalent.
+- Agents and engines speak ADOS primitives only; provider dialect lives in
+  adapters behind typed ports, the role-to-primitive policy layer is
+  enforced at the port boundary, and the raw escape hatch is audited and
+  off by default (concepts/agent-primitive-surface.md).
 
 ---
 
@@ -165,14 +169,21 @@ floats behind it.
 - AC: prune is idempotent and safe to re-run; no live session lock is
   deleted.
 
-### M0-S12 GitLab and Jira client seeds with trap catalogs
-- Tasks: provider-agnostic ports; the Jira read slice precedes M0-S6
-  (tracker collector); GitLab client (MRs, pipelines per commit, merge
-  status quirks); Jira client (label replace, custom fields, transitions as
-  data, comment omission); a minimal GitHub read slice (PRs, pipelines,
-  issues) so this repository dogfoods status and verify from M0; the full
-  GitHub adapter stays in M3-S3; trap catalogs encoded as tests.
-- AC: trap catalog tests pass for each documented quirk.
+### M0-S12 Primitive ports and client seeds with trap catalogs
+- Tasks: primitive ports v1 with capability flags in core ./contracts;
+  provider-agnostic adapters behind them; the Jira read slice precedes
+  M0-S6 (tracker collector); GitLab client (MRs, pipelines per commit,
+  merge status quirks); Jira client (label replace, custom fields,
+  transitions as data, comment omission); a minimal GitHub read slice
+  (PRs, pipelines, issues) so this repository dogfoods status and verify
+  from M0; the full GitHub adapter stays in M3-S3; embedded metadata
+  envelope v1 (comments and provenance, adapter-chosen carrier); the
+  conformance suite v1 (change lifecycle, comment provenance roundtrip,
+  label semantics) with test tenants (scratch repos, Jira sandbox, strict
+  teardown); trap catalogs encoded as tests.
+- AC: trap catalog tests pass for each documented quirk; the conformance
+  suite passes for every shipped adapter; metadata round-trips through the
+  primitive view and degrades gracefully when absent.
 
 ### M0-S13 provider v1
 - Tasks: quota and peak-window awareness; parks carry cause and expiry;
@@ -188,8 +199,10 @@ floats behind it.
 
 ### M0-S15 Privacy and no-cloud guards
 - Tasks: privacy-literal guard (denylist or hash list; generic paths);
-  no-cloud-in-committed-files check; wired into CI.
-- AC: a committed file containing a guarded literal fails CI.
+  no-cloud-in-committed-files check; no secrets or private identifiers in
+  embedded ADOS metadata; wired into CI.
+- AC: a committed file containing a guarded literal fails CI; metadata
+  envelopes are scanned at the emitter.
 
 ### M0-S16 Interim mitigations, docs and config only
 - Tasks: document permission-denial handling, stuck-minute defaults,
