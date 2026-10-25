@@ -31,6 +31,7 @@ lifecycle; the concept doc links the delivered work.
 | [model-profiles.md](model-profiles.md) | Draft | The AI provider family: agent-to-model profiles in difficulty classes (lite, regular, powerful); coordinator proposes, lifecycle cross-validates, delivery selects |
 | [harness-adapters.md](harness-adapters.md) | Draft | Agent runtimes as a provider domain: dispatch delivers through harness adapters (opencode default, Claude Code supported) and the tooling ships as a generated plugin per harness |
 | [harness-telemetry.md](harness-telemetry.md) | Draft | Read-only extraction of session statistics from harness stores (tokens by class, calls, tool usage) into the durable event log at closeout; cross-harness by construction |
+| [policy-as-code.md](policy-as-code.md) | Draft | Policies as declared, checkable rules across repository settings, delivery actions, and the rules register; inventories what is enforced today, what is prose today (first scope), and future ideas |
 
 ## Related documents
 

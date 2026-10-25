@@ -164,7 +164,7 @@ verify from M0); completed in M3-S3 (full GitHub, Azure on demand).
 | Command | Purpose | Primary user | Delivery | Extended |
 |---|---|---|---|---|
 | `ados harness` | Harness integrations: list configured harnesses; install or update the ados plugin for a harness (opencode, Claude Code; pi.dev candidate), generated from the canonical source with sync verification (concepts/harness-adapters.md) | sessions, operator | M3-S1 | - |
-| `ados policy` | Policy as code, two jobs: fleet policy check and apply (declared repository policy: branch protection, required checks, merge rules) with exception profiles and timestamped snapshots for rollback and forensics; and a rules register that flags prose rules without a mechanical check | operator, coordinator | M3-S5 | - |
+| `ados policy` | Policy as code, two jobs: fleet policy check and apply (declared repository policy: branch protection, required checks, merge rules) with exception profiles and timestamped snapshots for rollback and forensics; and a rules register that flags prose rules without a mechanical check (concepts/policy-as-code.md) | operator, coordinator | M3-S5 | - |
 | `ados repos` | Clone, branch, and worktree hygiene with safety rails; never touches repos with live deliveries | operator, coordinator | M3-S6 | - |
 
 ### M4: Public release readiness

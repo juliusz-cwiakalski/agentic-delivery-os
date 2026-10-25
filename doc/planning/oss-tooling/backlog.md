@@ -401,7 +401,9 @@ floats behind it.
   merge rules) with fleet check and apply, exception profiles, and
   timestamped snapshots for rollback and forensics; a rules register
   mapping every written rule to its mechanical check or flagging it
-  prose-only; enforcement consulted at the point of action.
+  prose-only; enforcement consulted at the point of action. The policy
+  inventory and classification live in ../concepts/policy-as-code.md
+  (enforced today, prose today, future ideas).
 - AC: policy drift across repos is detected and applies take a
   pre-change snapshot; a prose rule without a check is flagged by name,
   not enforced silently.
