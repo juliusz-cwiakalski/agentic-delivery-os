@@ -5,7 +5,7 @@
 # If behavior must change, edit the source file above and rebuild.
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # Apache-2.0 License - see LICENSE file for full terms
-# source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/command/review-deep.md
+# source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/.opencode/command/review-deep.md
 name: review-deep
 description: Review change vs spec, plan, code quality heuristics, and repo rules; append remediation phase if needed.
 model: sonnet
