@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # Apache-2.0 License - see LICENSE file for full terms
-# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/tools/.tests/generate-e2e-report.sh
+# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/tools/.tests/generate-e2e-report.sh
 #
 # generate-e2e-report.sh — Generate HTML & Markdown comparison reports from E2E eval YAML files
 #

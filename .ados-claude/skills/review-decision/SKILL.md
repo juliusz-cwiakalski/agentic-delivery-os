@@ -5,7 +5,7 @@
 # If behavior must change, edit the source file above and rebuild.
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # Apache-2.0 License - see LICENSE file for full terms
-# source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/command/review-decision.md
+# source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/.opencode/command/review-decision.md
 name: review-decision
 description: Review a decision record via @decision-critic for an independent challenge (read-only; returns PASS / PASS_WITH_RISKS / REWORK).
 model: sonnet

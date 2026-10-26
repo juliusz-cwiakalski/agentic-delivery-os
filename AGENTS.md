@@ -237,13 +237,16 @@ The script adds headers only to files that are installed when users onboard ADOS
 - `.opencode/command/` — command definitions
 - `doc/guides/` — reusable guides
 - `doc/documentation-handbook.md` — documentation handbook
+- `doc/planning/concepts/` — concept documents
 - `tools/` — CLI utilities
+
+Generated source links point at `main-tools` until the public release. Set `GITHUB_BRANCH=main` when flipping to the public baseline.
 
 ### Where headers are NOT required
 
 - `doc/changes/` — change artifacts (spec, plan, test-plan, pm-notes) are temporary working files
 - `doc/decisions/` — decision records are project-specific
-- `doc/planning/` — internal planning notes
+- `doc/planning/` — internal planning notes other than `doc/planning/concepts/`
 - `.ai/` — configuration and ephemeral state
 
 ## Multi-tool support

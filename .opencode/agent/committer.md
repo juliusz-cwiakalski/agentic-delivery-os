@@ -1,7 +1,7 @@
 ---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # Apache-2.0 License - see LICENSE file for full terms
-source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/committer.md
+source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/.opencode/agent/committer.md
 #
 description: Create one Conventional Commit.
 mode: subagent
