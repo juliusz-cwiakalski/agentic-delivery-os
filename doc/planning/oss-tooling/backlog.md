@@ -287,8 +287,11 @@ floats behind it.
 
 ### M1-S8 OSS retro pipeline
 - Tasks: retro collection, registry hardening, shape-crash guards, export;
-  home of the periodic memory audit.
-- AC: retro output survives a malformed entry without data loss.
+  home of the periodic memory audit; the independent evidence sidecar -
+  a collector identity delivery agents cannot write, append-only
+  storage, trace ids, pipeline-truth checks (concepts/retrospectives.md).
+- AC: retro output survives a malformed entry without data loss; a
+  delivery agent cannot alter evidence the retro will read.
 
 ### M1-S9 Dispatch dual-run pilot
 - Tasks: dispatch runs beside the bash stack on selected tickets in one
@@ -373,10 +376,12 @@ floats behind it.
   reason, superseded); board surface next to owner asks; improvement
   WIP limit per window (concepts/retrospectives.md; tracker anchor
   issue #43).
-- AC: an action without all five fields cannot be filed; every L4+
+- AC: an action without all five fields cannot be filed; every R4+
   retro opens with artifact-verified follow-through; aging is visible
   on the board; no action closes without an explicit decision and
-  artifact or reason.
+  artifact or reason; actions carry outcome verifiers (delayed metric
+  windows) and rollback conditions, and closure distinguishes artifact
+  closure from outcome closure.
 
 ### M2-S4 Board
 - Tasks: full board of lanes, gates, owner asks, parked work; one screen
@@ -484,8 +489,11 @@ floats behind it.
   policy-class candidate cannot promote without recorded human approval;
   supersession closes validity windows without deleting history; records
   and index lines carry visibility tags, lint fails out-of-visibility
-  references, and compile emits role-filtered projections
-  (concepts/memory-autonomy-and-visibility.md).
+  references, and compile emits role-filtered projections (concepts/
+  memory-autonomy-and-visibility.md); behavior-changing lessons cannot
+  reach authoritative without validation evidence (replay, shadow, or
+  canary result) and flag expired revalidation windows (concepts/
+  memory-architecture.md, retrospectives.md).
 
 ### M3-S9 Memory compiler to harness surfaces
 - Tasks: compile canonical memory into each harness's native context

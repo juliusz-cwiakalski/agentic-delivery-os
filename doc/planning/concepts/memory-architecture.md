@@ -41,6 +41,7 @@ AGENTS.md                      # kernel: hard facts + routing + invariants
   memory/                      # committed durable memory (new)
     README.md                  # index: one line per entry + read-when
     lessons/                   # one record per file (typed frontmatter)
+    external/                  # imported fleet lessons; candidates only, never authoritative without local validation
     tacit/                     # advisory heuristics, low authority
     preferences/               # project-level owner/team preferences
     agents/<agent>.md          # per-agent memory entry point (capped)
@@ -100,10 +101,16 @@ trust: agent_verified   # see trust levels below
 confidence: 0.9
 valid_from: 2026-10-22
 supersedes: []          # record ids this one replaces
-status: candidate       # candidate -> authoritative -> superseded/archived
+status: candidate       # candidate -> validated -> authoritative -> superseded/archived
+applies_when:           # applicability predicate (SWE-skill mismatch regresses)
+  - "change touches schema migrations"
 evidence:
   - test: migration_backfill_order
-review_at: 2027-01-22   # when a human or audit should re-check it
+evaluation:             # required before authoritative for behavior-changing lessons
+  control_pass_rate: 0.72
+  treatment_pass_rate: 0.96
+  safety_regression: 0.0
+revalidate_after: 2027-01-22   # mandatory expiry; unrevalidated lessons demote to hypothesis
 ```
 
 Free-text markdown files (preferences, per-agent memory) carry lighter
@@ -115,13 +122,22 @@ adding a newer entry - never silently rewrite.
 ```mermaid
 stateDiagram-v2
     [*] --> candidate: capture bar met, write gate passed
-    candidate --> authoritative: promotion (verify + authority)
+    candidate --> validated: behavioral evidence (replay, shadow, canary)
     candidate --> archived: rejected
+    validated --> authoritative: promotion (policy enable + authority)
     authoritative --> superseded: replaced by newer record
     authoritative --> archived: decayed or retired
+    authoritative --> candidate: demoted (unrevalidated or contradicted)
     superseded --> [*]
     archived --> [*]
 ```
+
+The validated state applies to behavior-changing lessons (procedural,
+skill, heuristic classes): tested SWE skills showed no gain in 39 of 49
+cases with some regressions, so past-event evidence alone is not
+sufficient - a trusted lesson needs treatment evidence that using it
+changes future behavior in the intended direction. Facts and decisions
+verify directly against reality and skip the validated state.
 
 Six distinct states, deliberately not collapsed: not retrieved,
 superseded, and archived are three different things. Supersession keeps
@@ -159,8 +175,12 @@ possible (lint, ceremony) and by convention everywhere else:
 5. Contradiction check; if it contradicts, it must supersede explicitly.
 6. Default-deny: not derivable from the repo in one command.
 7. No secrets, no credentials, no private identifiers.
-8. Review/expiry date where the type needs one.
+8. Review/expiry date where the type needs one; revalidation windows are
+   mandatory for behavior-changing lessons.
 9. Promotion authority: who confirms candidate to authoritative.
+10. For behavior-changing classes: validation evidence (replay, shadow,
+    or canary result) - write trust is not empirical validity, and a
+    T5-authorized writer can still author a false lesson.
 
 ## Retrieval and budgets
 

@@ -55,19 +55,19 @@ flowchart TD
         T5[milestone / inception phase exit]
         T6[schedule + corpus: fleet cadence]
     end
-    T1 --> L1
-    T2 --> L2
-    T3 --> L3
-    T4 --> L4
-    T5 --> L5
-    T6 --> L6
+    T1 --> R1
+    T2 --> R2
+    T3 --> R3
+    T4 --> R4
+    T5 --> R5
+    T6 --> R6
     subgraph levels
-        L1[L1 change closeout<br/>scope: the capsule]
-        L2[L2 session retro<br/>scope: one agent session]
-        L3[L3 incident retro<br/>scope: the event]
-        L4[L4 window retro<br/>scope: project, time-boxed]
-        L5[L5 project retro<br/>scope: milestone or inception]
-        L6[L6 fleet retro<br/>scope: cross-repo]
+        L1[R1 change closeout<br/>scope: the capsule]
+        R2[R2 session retro<br/>scope: one agent session]
+        R3[R3 incident retro<br/>scope: the event]
+        R4[R4 window retro<br/>scope: project, time-boxed]
+        R5[R5 project retro<br/>scope: milestone or inception]
+        R6[R6 fleet retro<br/>scope: cross-repo]
     end
     L1 --> O1[memory promotions V2 to V0/V1<br/>rare ticket candidates]
     L2 --> O2[private lessons, V3 promotions<br/>incident triggers]
@@ -79,12 +79,12 @@ flowchart TD
 
 | Level | Trigger | Runs | Frequency |
 |---|---|---|---|
-| L1 change closeout | Every merged change | Closeout ceremony (memory step) | Always |
-| L2 session | Session end, or accumulated significance | The agent itself, inline | Per session |
-| L3 incident | Pre-declared severity thresholds | Coordinator + involved agents | Event-driven |
-| L4 window | Daily / sprint cadence | Coordinator (curator role) | Scheduled |
-| L5 project | Milestone end, inception phase exits | Coordinator + human gate | Lifecycle |
-| L6 fleet | Fleet cadence + corpus analysis | Fleet curator; human samples | Scheduled |
+| R1 change closeout | Every merged change | Closeout ceremony (memory step) | Always |
+| R2 session | Session end, or accumulated significance | The agent itself, inline | Per session |
+| R3 incident | Pre-declared severity thresholds | Coordinator + involved agents | Event-driven |
+| R4 window | Daily / sprint cadence | Coordinator (curator role) | Scheduled |
+| R5 project | Milestone end, inception phase exits | Coordinator + human gate | Lifecycle |
+| R6 fleet | Fleet cadence + corpus analysis | Fleet curator; human samples | Scheduled |
 
 Meta-retro is a property of every level, not a level: each procedure
 variant records what produced insight versus wasted effort in a
@@ -93,9 +93,37 @@ change process (the pilot's proven pattern; research calls this
 double/triple-loop learning and shows it is the rarest, highest-value
 loop).
 
+## Autonomy is orthogonal to scope
+
+A routine R1 closeout can run at high autonomy while a severe incident
+retro stays supervised, on the same ladder. The autonomy ladder (deep
+research 2026-10, L0-L6):
+
+| Level | Meaning | Human role |
+|---|---|---|
+| L0 human | Humans do everything; AI absent or transcribing | Everything |
+| L1 prompted | Human selects evidence, AI drafts | Approves all |
+| L2 mixed initiative | Auto evidence collection, AI proposes findings | Approves all durable writes |
+| L3 supervised autonomous | Auto trigger, analysis, drafting, follow-through checks | Gates every promotion and mutation |
+| L4 bounded delegated | Routine retros close automatically inside a policy envelope; rollback | On the loop: reviews novel and sensitive classes, samples routine |
+| L5 fleet adaptive | Cross-repo mining, experimental validation, canary rollout and rollback of bounded changes | Governs risk budgets, schemas, authority classes |
+| L6 lights-out | Recursive self-modification without routine approval | Emergency only - not a production target |
+
+ADOS operating targets: L4 for routine scopes (R1, R2, R4), L3 for
+incidents and projects until evidence accumulates, L5 capabilities
+behind the fleet retro as the multi-repos grow. L6 is explicitly not a
+target; continuous-operation benchmarks are far below the assurance a
+self-modifying system needs.
+
+The maturity rule that gates every step up:
+
+> Better model does not mean more autonomy. Better independent
+> evidence, better verifiers, better causal tests, bounded authority,
+> measured rollout - that is what earns more autonomy.
+
 ## The process (five stages, follow-through first)
 
-1. **Verify prior actions.** The first item of every L4+ retro: inspect
+1. **Verify prior actions.** The first item of every R4+ retro: inspect
    each open action's verification artifact (test, metric, PR, ticket),
    not the owner's status claim. Applied / partial / violated-with-
    consequence; violated fresh rules feed the self-error audit.
@@ -104,19 +132,47 @@ loop).
    immutable evidence ledger with trace ids; collectors are GET-only,
    watermarked, bounded; a collector finding is evidence, not a
    verdict. Pipeline-truth checks catch vacuous green (a pipeline with
-   zero jobs never ran).
+   zero jobs never ran). The evidence plane is outside delivery-agent
+   write authority (P0, deep research 2026-10: tested coding-agent
+   harnesses let agents delete their own traces): the retro collector
+   runs under an independent identity, storage is append-only, and no
+   delivery agent can rewrite what the retro will read.
 3. **Generate insights.** Mandatory gate before decisions (the
    documented anti-pattern is jumping from data to start/stop/continue).
    Separate observed facts (each linked to evidence) from inferences
-   (each carrying confidence). Analysis dimensions with proven value
-   from the pilot: self-error audit (my own errors and near-misses,
+   (each carrying confidence); free-form reflection is a hypothesis
+   generator, never a truth source. Analysis dimensions with proven
+   value from the pilot: self-error audit (my own errors and near-misses,
    including violations of existing rules - a violated rule needs an
-   enforcement change, not a restatement), owner-caught escapes
-   (defects that survived all my checks - highest signal), adversarial-
-   review escapes, expensive loops and cost anomalies, vacuous checks,
+   enforcement change, not a restatement), owner-caught escapes (defects
+   that survived all my checks - highest signal), adversarial-review
+   escapes, expensive loops and cost anomalies, vacuous checks,
    tool-mechanics failures, delivery friction metrics (phase reopens,
    review iterations, branch-open duration) where clusters across
-   tickets indicate systemic gaps and one-offs usually do not.
+   tickets indicate systemic gaps and one-offs usually do not, and
+   near-miss capture (successful defensive interventions - a critic
+   catch, a rollback that limited impact, a sandbox block - are
+   reinforcement candidates, not just failure analysis).
+
+   Attribution uses three labels, not one: the originating step, the
+   propagation or control failure, and the missed detection opportunity.
+   Blaming the final visible actor discards the information needed to
+   improve the system.
+
+   For incident and severe retros (R3, and R4+ when stakes warrant),
+   analysis runs independent-then-merge: two or more analysts work the
+   same sealed evidence blind to each other, normalize claims to
+   evidence ids, then a challenger tries to falsify each causal claim
+   (alternative chains, hindsight bias, correlation-as-causation) and
+   returns supported, refuted, or unresolved; an adjudicator resolves -
+   disagreement is a valid persistent state, not something to flatten
+   into consensus. A facilitator agent may run the procedure
+   (completeness, order, deadlines) but holds procedural, not
+   epistemic, authority: no extra vote on whether a claim is true.
+
+   **Null retro is a success**: "no supported finding, no action, no
+   lesson" is a valid outcome and prevents forced lessons when evidence
+   is weak.
 4. **Decide.** Two distinct outputs, never conflated:
    - **Memory promotions**: per the memory model routing table, to
      exactly one canonical home, evidence-gated.
@@ -125,6 +181,10 @@ loop).
      or human), verifiable verb (add/remove/change/test/deploy - never
      "review" or "improve"), measurable outcome, real tracker entry,
      due date, verification artifact. Team-owned actions are invalid.
+     Actions carry an outcome verifier (a delayed metric window: did
+     the intended behavior actually change) and a rollback condition;
+     closure distinguishes artifact closure (the guard, test, or change
+     exists) from outcome closure (the metric moved as predicted).
 5. **Close.** Write the note (fixed schema, machine-readable
    frontmatter: level, trigger, window, scope key, participants,
    evidence refs, facts, interpretations, wins with mechanism, gaps,
@@ -150,6 +210,43 @@ loop).
   decision retro comparing predicted versus actual outcomes; the
   structured retro section and calibration dimensions are the L4/L5
   input.
+
+## Measuring whether retros work
+
+The key measurement mistake is evaluating the retro artifact instead of
+the subsequent system; a polished narrative can be causally wrong, and
+an ugly one-line guard can eliminate a defect class. Activity metrics
+(lesson count, retro count, prompt length) are vanity metrics - tested
+SWE skills showed no pass-rate gain in 39 of 49 cases, mean +1.2
+points, some regressing (deep research 2026-10).
+
+The hard rule for behavior-changing lessons:
+
+> A model-authored observation may become a hypothesis immediately. It
+> becomes a trusted lesson only after evidence that using it changes
+> subsequent behavior in the intended direction.
+
+The progressive evaluation ladder: replay gate (same task with and
+without the candidate, frozen environment, predefined threshold) ->
+shadow gate (retrieved by an evaluator without production authority)
+-> canary gate (bounded cohort, randomized where feasible) -> promotion
+gate (efficacy AND safety thresholds - a lesson that raises success
+but violates policy does not pass) -> longitudinal gate (revalidate on
+fresh work and after model, dependency, or harness upgrades) ->
+meta-retro gate (compare procedures: did the second analyst raise
+promotion precision enough to justify its cost).
+
+Headline metrics: lesson treatment effect (P(success | lesson) minus
+P(success | control)), promotion precision, harmful-promotion rate,
+recurrence hazard (repeat rate of the failure class after
+intervention), verified versus outcome-verified action closure,
+owner-caught and adversarial escape rates, autonomy quality (human
+intervention and rollback frequency, autonomous run length), retro
+efficiency (tokens per verified useful intervention) and ROI.
+Cadence follows value-of-information: cheap deterministic closeout
+every change; richer analysis when significance accumulates;
+high-assurance analysis for severe or novel incidents; expensive
+replay only when resolving the causal uncertainty is worth its cost.
 
 ## Autonomy model
 
@@ -187,8 +284,12 @@ backward-looking and banned from notes.
 | Hallucinated or surface-attributed synthesis | Every fact links evidence; sampling audits; low-confidence synthesis flagged |
 | Playbook context collapse from repeated summarization | Incremental dated deltas; dedup by merging with provenance; never wholesale rewrite |
 | Unverified lessons encoding wrong behavior | Evidence gate before promotion; lessons carry first-seen and last-validated dates |
-| Agent conformity: many agents, same mistake | L6 aggregates by failure signature across the fleet; common-mode = harness defect, not N agent defects |
+| Agent conformity: many agents, same mistake | R6 aggregates by failure signature across the fleet; common-mode = harness defect, not N agent defects |
 | Retro theater (writing rewarded, closing not) | Closure rate and time-to-close are the process meta-metrics; document-only actions invalid |
+| Unvalidated lessons regressing performance | Behavior-changing lessons require treatment evidence before trusted status; expiry and revalidation; applicability predicates |
+| Memory volume treated as progress | Activity metrics are vanity metrics; treatment effect and promotion precision are the value metrics |
+| Rubber-stamping / automation bias at human gates | Sampling design; gates see evidence ids and unresolved disagreement, not polished summaries; override is always available |
+| Trace tampering by the reviewed system | Evidence plane outside delivery-agent write authority; independent collector identity; append-only storage |
 
 ## Story mapping
 
@@ -198,10 +299,29 @@ backward-looking and banned from notes.
 - M2-S3 AC extends with: declared trigger model, follow-through-first,
   the note schema, and idempotent scope keys.
 - New M2-S10: the action registry and follow-through enforcement
-  (five-field contract, aging, board surface, closure rules).
+  (five-field contract, artifact and outcome verifiers, rollback
+  conditions, aging, board surface, closure rules).
+- M1-S8 (retro pipeline) carries the independent evidence sidecar: a
+  collector identity delivery agents cannot write, append-only storage,
+  trace ids, pipeline-truth checks.
 - The `ados retro` command family (registry) runs levels on demand;
   ceremonies schedule them; the doctor audits the corpus (index
   coverage, schema, dangling evidence links).
+- Pilot ladder from the research, mapped: lesson A/B gate and
+  expiry/compatibility checks fold into M3-S8 (memory commands); the
+  failure-to-regression-test compiler (incidents yield regression
+  fixtures, contrastive pairs, and adversarial scenarios - not just
+  prose) into M2-S10; the evidence sidecar into M1-S8; blind analyst
+  and falsifier experiments, causal replay for severe failures, the
+  near-miss lesson exchange (the aviation ASRS analogue: sanitized,
+  provenance-preserving, entering local systems only as candidates
+  requiring local validation), and the meta-retro experiment stay
+  post-M4 candidates until telemetry justifies them.
+- Governance note: where deployments fall under regulatory logging and
+  retention duties (for example the EU AI Act high-risk regime),
+  automatic event logging and bounded retention become compliance
+  requirements, not just engineering hygiene; the policy engine is the
+  natural home.
 - Long-term retro research (corpus mining with reusable extractors,
   per-question analyses, findings) is a fleet capability on the pilot's
   blueprint; candidate for the post-M4 research track.

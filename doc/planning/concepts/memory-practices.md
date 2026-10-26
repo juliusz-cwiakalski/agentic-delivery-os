@@ -120,7 +120,12 @@ Template section for an ADOS-driven project's AGENTS.md:
 
 Repeat-mistake rate, rediscovery rate, memory miss rate, stale influence
 rate, promotion precision (share of promoted lessons still useful after
-N tasks), write rejection rate, token cost per phase attributable to
-memory. The headline experiment is counterfactual: same task with and
-without a candidate memory; if it does not improve the outcome or cost,
-it does not promote.
+N tasks), harmful-promotion rate (regressive lessons - the documented
+failure: 39 of 49 tested SWE skills showed no gain, some regressed),
+recurrence hazard (repeat rate of a failure class after intervention),
+write rejection rate, token cost per phase attributable to memory,
+autonomy quality (human intervention and rollback frequency, autonomous
+run length). The headline experiment is counterfactual: same task with
+and without a candidate memory; if it does not improve the outcome or
+cost, it does not promote. Activity metrics (lesson count, memory size,
+retro count) are vanity metrics.

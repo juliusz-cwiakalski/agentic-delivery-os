@@ -69,6 +69,13 @@ first-class metric. The autonomy tax is real: remove the human filter
 and you must pay in mechanical verification, or memory degrades from
 governed knowledge into autobiography.
 
+The autonomy ladder L0-L6 (human, prompted, mixed initiative,
+supervised autonomous, bounded delegated, fleet adaptive, lights-out)
+and the maturity rule that gates each step up are defined in
+[retrospectives.md](retrospectives.md) and apply to memory promotion
+identically: more model capability never earns more authority by
+itself; stronger independent evidence and verifiers do.
+
 ## 2. Which agents should be self-learning
 
 Short answer: **every agent captures and proposes; not every agent

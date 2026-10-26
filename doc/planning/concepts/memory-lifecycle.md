@@ -78,6 +78,14 @@ executable lesson becomes a skill; cross-repo value plus owner approval
 makes it fleet practice. Skipping levels is the definition of premature
 promotion.
 
+Behavior-changing lessons (procedural, skill, heuristic classes) carry a
+second gate between candidate and authoritative: treatment evidence
+that using the lesson changes future behavior in the intended direction
+(replay, shadow, or canary result; the progressive evaluation ladder in
+retrospectives.md). Facts and decisions verify directly against reality
+and skip it. Every behavior-changing lesson carries a revalidation
+window; unrevalidated lessons demote back to hypothesis.
+
 Under fully autonomous delivery the same matrix runs with delegated
 authority: the curator agent promotes with mandatory machine-checkable
 evidence, second-agent sign-off on high-impact classes, asynchronous
@@ -123,7 +131,7 @@ superseded_by: fact-auth-031
 | Fact | No decay; supersede when reality changes |
 | Decision | Immutable; supersede only |
 | Episode | Rank decay; archive after a window; keep the evidence pointer |
-| Lesson | Confidence decays when unused; reinforced by verified use; demoted on contradiction |
+| Lesson | Confidence decays when unused; reinforced by verified use; demoted on contradiction; revalidate on schedule or demote to hypothesis |
 | Tacit fragment | Faster decay; requires examples; never hard-enforced |
 | Skill | No time decay while replay passes; retires when environment or tests fail |
 | Policy | No autonomous decay; human-controlled validity only |
