@@ -69,9 +69,10 @@ first-class metric. The autonomy tax is real: remove the human filter
 and you must pay in mechanical verification, or memory degrades from
 governed knowledge into autobiography.
 
-The autonomy ladder L0-L6 (manual, assisted, mixed initiative,
-supervised autonomous, bounded delegated, fleet adaptive, lights-out)
-and the maturity rule that gates each step up are defined canonically
+The autonomy ladder L0-L5 (manual, assisted, mixed initiative,
+supervised autonomous, bounded delegated, fleet adaptive), the separate
+self-modification axis, and the maturity rule that gates each step up
+are defined canonically
 in [software-delivery-autonomy.md](software-delivery-autonomy.md) and
 apply to memory promotion identically: more model capability never
 earns more authority by itself; stronger independent evidence and

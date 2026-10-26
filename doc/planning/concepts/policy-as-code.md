@@ -33,7 +33,13 @@ A policy has: id, declaration (desired state or rule), check mechanism,
 enforcement point (check-time, apply-time, or point-of-action), exceptions
 (profiled, with reason and expiry), and provenance (snapshot before apply,
 audit trail of changes). Policies are data; engines and commands consult
-them.
+them. Authority policy (the autonomy ladder) is declared with its
+operational autonomy domain: scope, risk classes, caps, required
+verifiers, fallback, and evidence TTL (concepts/
+software-delivery-autonomy.md). One hard anti-circumvention rule: a
+change that touches approval policy is evaluated under the prior
+policy - a policy can never loosen the requirements governing its own
+approval.
 
 ## A. Enforced today (machine-enforced in the pilot and this repository)
 

@@ -96,10 +96,11 @@ loop).
 ## Autonomy is orthogonal to scope
 
 A routine R1 closeout can run at high autonomy while a severe incident
-retro stays supervised, on the same ladder. The ladder L0-L6 (manual,
+retro stays supervised, on the same ladder. The ladder L0-L5 (manual,
 assisted, mixed initiative, supervised autonomous, bounded delegated,
-fleet adaptive, lights-out), its level-by-level infrastructure
-requirements, and the maturity rule live canonically in
+fleet adaptive; self-modification is a separate axis), its
+level-by-level infrastructure requirements, and the maturity rule live
+canonically in
 [software-delivery-autonomy.md](software-delivery-autonomy.md).
 
 ADOS operating targets for the retro domain: L4 for routine scopes
