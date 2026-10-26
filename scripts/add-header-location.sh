@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # Apache-2.0 License - see LICENSE file for full terms
-# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/scripts/add-header-location.sh
+# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/scripts/add-header-location.sh
 # add-header-location.sh — Add Apache-2.0 license headers to markdown and bash files
 #
 # Dependencies: bash>=4, git, grep, sed
 # Usage: ./add-header-location.sh [options] [PATH]
 #
 # Environment:
-#   DRY_RUN     - Set to 'true' to skip writing (default false)
-#   VERBOSE     - Set to 'true' for debug output
+#   DRY_RUN       - Set to 'true' to skip writing (default false)
+#   VERBOSE       - Set to 'true' for debug output
+#   GITHUB_BRANCH - Branch used in generated source URLs (default main-tools)
 #
 # Exit codes:
 #   0 - Success
@@ -27,7 +28,7 @@ IFS=$'\n\t'
 # SETTINGS
 # ============================================================================
 readonly APP_NAME="add-header-location"
-readonly APP_VERSION="1.0.0"
+readonly APP_VERSION="1.1.0"
 readonly LOG_TAG="(${APP_NAME})"
 
 # Exit codes
@@ -39,11 +40,17 @@ readonly EXIT_RUNTIME=4
 DRY_RUN="${DRY_RUN:-false}"
 VERBOSE="${VERBOSE:-false}"
 
-# Base GitHub URL
-readonly GITHUB_BASE="https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main"
+# Upstream repository and branch used in generated source links.
+readonly GITHUB_REPO_SLUG="juliusz-cwiakalski/agentic-delivery-os"
+# Branch the source links point at. Tooling docs live on main-tools until the
+# public release; set GITHUB_BRANCH=main when flipping to the public baseline.
+GITHUB_BRANCH="${GITHUB_BRANCH:-main-tools}"
+readonly GITHUB_BRANCH
+readonly GITHUB_URL_PREFIX="https://github.com/${GITHUB_REPO_SLUG}/blob/"
+readonly GITHUB_BASE="${GITHUB_URL_PREFIX}${GITHUB_BRANCH}"
 
 # Default paths to process when no arguments provided
-readonly DEFAULT_PATHS=(".opencode/agent" ".opencode/command" "doc/guides" "doc/documentation-handbook.md" "tools")
+readonly DEFAULT_PATHS=(".opencode/agent" ".opencode/command" "doc/guides" "doc/documentation-handbook.md" "doc/planning/concepts" "tools")
 
 # ============================================================================
 # TRAPS
@@ -131,25 +138,32 @@ compute_relative_path() {
   printf '%s' "${rel_path}"
 }
 
-# Check if markdown file already has source attribute (new format)
+# Check if markdown file already has the source attribute for the current branch
 has_md_source_attr() {
   local -r file="$1"
   local -r pattern="^source:[[:space:]]*${GITHUB_BASE}/"
   _grep -q "${pattern}" "${file}" 2>/dev/null
 }
 
-# Check if file has old-style source comment (# Latest version:)
+# Check if file has any ADOS source comment (# Latest version:), regardless of branch
 has_old_source_comment() {
   local -r file="$1"
-  local -r pattern="^#[[:space:]]*Latest version:[[:space:]]*${GITHUB_BASE}/"
+  local -r pattern="^#[[:space:]]*Latest version:[[:space:]]*${GITHUB_URL_PREFIX}"
   _grep -q "${pattern}" "${file}" 2>/dev/null
 }
 
-# Check if file already has source line with exact prefix (for bash files)
+# Check if file has a source line for the current branch (for bash files)
 has_source_line() {
   local -r file="$1"
   local -r prefix="Latest version:"
   local -r pattern="^#[[:space:]]*${prefix}[[:space:]]*${GITHUB_BASE}/"
+  _grep -q "${pattern}" "${file}" 2>/dev/null
+}
+
+# Check if file has any ADOS source line, regardless of branch (for bash files)
+has_any_source_line() {
+  local -r file="$1"
+  local -r pattern="^#[[:space:]]*Latest version:[[:space:]]*${GITHUB_URL_PREFIX}"
   _grep -q "${pattern}" "${file}" 2>/dev/null
 }
 
@@ -174,7 +188,7 @@ bash_has_header() {
   local -r file="$1"
   _grep -q "^# Copyright.*2025-2026" "${file}" 2>/dev/null && \
   _grep -q "^# Apache-2.0 License.*see LICENSE" "${file}" 2>/dev/null && \
-  has_source_line "${file}"
+  has_any_source_line "${file}"
 }
 
 # Update source line in markdown frontmatter (handles both old comment and new attribute formats)
@@ -186,8 +200,8 @@ update_source_line() {
   local -r temp_file="$(mktemp)"
   local changed=false
   
-  # Pattern to match any line containing the GitHub base URL (with or without prefix)
-  local -r url_pattern="${GITHUB_BASE}/"
+  # Pattern to match any line containing an ADOS source URL (any branch)
+  local -r url_pattern="${GITHUB_URL_PREFIX}"
   
   awk -v new_line="${new_line}" -v url_pattern="${url_pattern}" '
     BEGIN { in_frontmatter = 0; replaced = 0; }
@@ -265,9 +279,10 @@ ensure_basic_header() {
   # Patterns for matching (not exact strings)
   local copyright_pattern="^#[[:space:]]*Copyright.*2025-2026"
   local license_pattern="^#[[:space:]]*Apache-2.0 License.*see LICENSE"
-  # Match both old comment format and new attribute format
-  local old_source_pattern="^#[[:space:]]*Latest version:.*${GITHUB_BASE}/"
-  local new_source_pattern="^source:[[:space:]]*${GITHUB_BASE}/"
+  # Match old comment, old bare URL, and new attribute formats for any branch
+  local old_source_pattern="^#[[:space:]]*Latest version:.*${GITHUB_URL_PREFIX}"
+  local bare_source_pattern="^#[[:space:]]*${GITHUB_URL_PREFIX}"
+  local new_source_pattern="^source:[[:space:]]*${GITHUB_URL_PREFIX}"
   
   awk -v copyright_line="${copyright_line}" \
       -v license_line="${license_line}" \
@@ -275,6 +290,7 @@ ensure_basic_header() {
       -v copyright_pattern="${copyright_pattern}" \
       -v license_pattern="${license_pattern}" \
       -v old_source_pattern="${old_source_pattern}" \
+      -v bare_source_pattern="${bare_source_pattern}" \
       -v new_source_pattern="${new_source_pattern}" '
   BEGIN {
     frontmatter_start = 0
@@ -315,8 +331,8 @@ ensure_basic_header() {
         header_copyright = line
       } else if (line ~ license_pattern && header_license == "") {
         header_license = line
-      } else if ((line ~ old_source_pattern || line ~ new_source_pattern) && header_source == "") {
-        # Match either old or new format; will be replaced with new format
+      } else if ((line ~ old_source_pattern || line ~ bare_source_pattern || line ~ new_source_pattern) && header_source == "") {
+        # Match old or new format; will be replaced with the current branch URL
         header_source = source_line
       } else {
         other[++other_count] = line
@@ -427,12 +443,6 @@ process_bash_file() {
   
   log_debug "Processing bash file ${file}"
   
-  # Check idempotency: if already has complete header, skip
-  if bash_has_header "${file}"; then
-    log_debug "Skipping ${file} (already has bash header)"
-    return 1
-  fi
-  
   # Compute relative path and header lines
   local rel_path
   rel_path="$(compute_relative_path "${repo_root}" "${file}")" || return $?
@@ -440,6 +450,36 @@ process_bash_file() {
   local -r license_line="# Apache-2.0 License - see LICENSE file for full terms"
   local -r source_line="# Latest version: ${GITHUB_BASE}/${rel_path}"
   
+  # Existing header: refresh only the source line when the branch changed.
+  if bash_has_header "${file}"; then
+    if has_source_line "${file}"; then
+      log_debug "Skipping ${file} (already has bash header)"
+      return 1
+    fi
+
+    local -r existing_temp_file="$(mktemp)"
+    if ! awk -v new_line="${source_line}" '
+      BEGIN { replaced = 0 }
+      !replaced && /^#[[:space:]]*Latest version:/ { print new_line; replaced = 1; next }
+      { print }
+    ' "${file}" > "${existing_temp_file}"; then
+      log_err "Failed to update source line in ${file}"
+      rm -f "${existing_temp_file}"
+      return "${EXIT_RUNTIME}"
+    fi
+
+    if ! diff -q "${file}" "${existing_temp_file}" >/dev/null 2>&1; then
+      run_cmd cp "${existing_temp_file}" "${file}"
+      log_info "Updated source line in bash header in ${file}"
+      rm -f "${existing_temp_file}"
+      return 0
+    fi
+
+    rm -f "${existing_temp_file}"
+    log_debug "No changes needed for ${file}"
+    return 1
+  fi
+
   local -r temp_file="$(mktemp)"
   local first_line
   first_line="$(head -1 "${file}")"
@@ -476,10 +516,10 @@ process_bash_file() {
   return 1
 }
 
-# Find markdown files under given directory
+# Find markdown files under given directory (prune temporary tmp/ subtrees)
 find_markdown_files() {
   local -r dir="$1"
-  find "${dir}" -type f -name '*.md' | sort
+  find "${dir}" -type d -name tmp -prune -o -type f -name '*.md' -print | sort
 }
 
 # Find bash script files under given directory (.sh extension or shebang)
@@ -487,9 +527,9 @@ find_bash_files() {
   local -r dir="$1"
   {
     # Find .sh files
-    find "${dir}" -type f -name '*.sh' 2>/dev/null
+    find "${dir}" -type d -name tmp -prune -o -type f -name '*.sh' -print 2>/dev/null
     # Find files with bash shebang (no .sh extension, exclude .md files)
-    find "${dir}" -type f ! -name '*.md' ! -name '*.sh' ! -name '*.yaml' ! -name '*.yml' ! -name '*.json' ! -name '*.txt' ! -name '*.log' ! -name '*.metadata' 2>/dev/null | while IFS= read -r f; do
+    find "${dir}" -type d -name tmp -prune -o -type f ! -name '*.md' ! -name '*.sh' ! -name '*.yaml' ! -name '*.yml' ! -name '*.json' ! -name '*.txt' ! -name '*.log' ! -name '*.metadata' -print 2>/dev/null | while IFS= read -r f; do
       local first_line
       first_line="$(head -1 "${f}" 2>/dev/null)" || continue
       if [[ "${first_line}" == "#!/usr/bin/env bash"* ]] || [[ "${first_line}" == "#!/bin/bash"* ]]; then
@@ -566,7 +606,10 @@ Supported file types:
   - Bash scripts (.sh or shebang-detected): Adds 3-line bash comment header after shebang
 
 Arguments:
-  PATH          File or directory to process (default: .opencode)
+  PATH          File or directory to process
+                (defaults: .opencode/agent .opencode/command doc/guides
+                 doc/documentation-handbook.md doc/planning/concepts tools;
+                 missing defaults are skipped)
 
 Options:
   -h, --help      Show this help message
@@ -578,12 +621,14 @@ Examples:
   ${APP_NAME} .opencode
   ${APP_NAME} --dry-run .opencode/agent
   ${APP_NAME} --verbose doc
+  ${APP_NAME} doc/planning/concepts
   ${APP_NAME} tools/text-to-image
   ${APP_NAME} scripts/
 
 Environment:
-  DRY_RUN     Set to 'true' to skip writing
-  VERBOSE     Set to 'true' for debug output
+  DRY_RUN        Set to 'true' to skip writing
+  VERBOSE        Set to 'true' for debug output
+  GITHUB_BRANCH  Branch used in generated source URLs (default: main-tools)
 EOF
 }
 
@@ -606,17 +651,29 @@ parse_args() {
 }
 
 validate_args() {
-  # Default paths if none provided
+  local using_defaults=false
   if [[ ${#ARGS[@]} -eq 0 ]]; then
     ARGS=("${DEFAULT_PATHS[@]}")
+    using_defaults=true
   fi
   
-  # Validate each path exists
+  # Validate paths. Missing default paths are skipped so the same defaults work
+  # on branches where a managed directory does not exist yet.
+  local -a existing=()
   for path in "${ARGS[@]}"; do
-    if [[ ! -e "${path}" ]]; then
+    if [[ -e "${path}" ]]; then
+      existing+=("${path}")
+    elif [[ "${using_defaults}" == "true" ]]; then
+      log_warn "Skipping missing default path: ${path}"
+    else
       die "Path does not exist: ${path}"
     fi
   done
+
+  ARGS=()
+  if [[ ${#existing[@]} -gt 0 ]]; then
+    ARGS=("${existing[@]}")
+  fi
 }
 
 # ============================================================================
@@ -636,9 +693,13 @@ main() {
   log_debug "DRY_RUN=${DRY_RUN}"
   log_debug "VERBOSE=${VERBOSE}"
   
-  for path in "${ARGS[@]}"; do
-    process_path "${path}"
-  done
+  if [[ ${#ARGS[@]} -eq 0 ]]; then
+    log_warn "No existing paths to process"
+  else
+    for path in "${ARGS[@]}"; do
+      process_path "${path}"
+    done
+  fi
   
   log_info "Done"
 }

@@ -204,7 +204,7 @@ test_file_without_frontmatter() {
   assert_contains "${content}" "---" "Should have frontmatter"
   assert_contains "${content}" "# Copyright" "Should have copyright line"
   assert_contains "${content}" "# Apache-2.0 License" "Should have Apache-2.0 license line"
-  assert_contains "${content}" "source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main" "Should have source attribute"
+  assert_contains "${content}" "source: ${GITHUB_BASE}" "Should have source attribute"
   assert_not_contains "${content}" "# Latest version:" "Should NOT have old comment format"
   
   # Check structure: copyright first, then Apache-2.0, then source
@@ -241,7 +241,7 @@ Some content here."
   # Check that header lines were added at the beginning of frontmatter
   assert_contains "${content}" "# Copyright" "Should have copyright line"
   assert_contains "${content}" "# Apache-2.0 License" "Should have Apache-2.0 license line"
-  assert_contains "${content}" "source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main" "Should have source attribute"
+  assert_contains "${content}" "source: ${GITHUB_BASE}" "Should have source attribute"
   assert_not_contains "${content}" "# Latest version:" "Should NOT have old comment format"
   
   # Check that original frontmatter fields remain
@@ -264,15 +264,18 @@ Some content here."
 
 test_file_with_complete_header() {
   local -r test_file="${_test_tmpdir}/complete-header.md"
-  local -r rel_path="test/complete-header.md"
+  touch "${test_file}"
+  local rel_path
+  rel_path="$(compute_relative_path "$(get_repo_root)" "${test_file}")"
   create_test_file "${test_file}" "---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # Apache-2.0 License - see LICENSE file for full terms
-source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/${rel_path}
+source: ${GITHUB_BASE}/${rel_path}
 description: Already has complete header
 ---
 # Content
-Should not change."
+Should not change.
+"
   
   # Get original content hash
   local original_hash
@@ -322,7 +325,7 @@ description: Has old URL format without prefix
   content="$(get_file_content "${test_file}")"
   
   # Should have updated to source: attribute (new format)
-  assert_contains "${content}" "source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main"
+  assert_contains "${content}" "source: ${GITHUB_BASE}"
   
   # Should NOT have old comment format
   assert_not_contains "${content}" "# Latest version:" "Should not have old comment format"
@@ -353,7 +356,7 @@ description: Has old Latest version comment
   content="$(get_file_content "${test_file}")"
   
   # Should have source: attribute now
-  assert_contains "${content}" "source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main" "Should have source attribute"
+  assert_contains "${content}" "source: ${GITHUB_BASE}" "Should have source attribute"
   # Should NOT have old # Latest version: comment
   assert_not_contains "${content}" "# Latest version:" "Old comment format should be replaced"
   # Original frontmatter fields should remain
@@ -396,7 +399,7 @@ description: Test
   create_test_file "${test_dir}/file3.md" "---
 # Copyright line
 # Apache-2.0 License
-source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/path
+source: ${GITHUB_BASE}/path
 ---"
   
   # Run script on directory
@@ -425,6 +428,25 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/path
   assert_contains "${file3_content}" "# Copyright line"
   assert_contains "${file3_content}" "# Apache-2.0 License"
   assert_contains "${file3_content}" "source:" "Should have source attribute"
+}
+
+test_directory_skips_tmp_subtree() {
+  local -r test_dir="${_test_tmpdir}/skip-tmp"
+  mkdir -p "${test_dir}/tmp/drafts"
+  create_test_file "${test_dir}/doc.md" "# Doc"
+  create_test_file "${test_dir}/tmp/drafts/draft.md" "# Draft"
+
+  local stdout exit_code=0
+  stdout="$(DRY_RUN=false "${SCRIPT_DIR}/add-header-location.sh" "${test_dir}" 2>&1)" || exit_code=$?
+
+  assert_exit_code 0 "${exit_code}" "Directory processing should succeed"
+
+  local doc_content draft_content
+  doc_content="$(get_file_content "${test_dir}/doc.md")"
+  draft_content="$(get_file_content "${test_dir}/tmp/drafts/draft.md")"
+
+  assert_contains "${doc_content}" "# Copyright" "Regular file should get a header"
+  assert_not_contains "${draft_content}" "# Copyright" "tmp/ subtree should be skipped"
 }
 
 test_non_markdown_file() {
@@ -458,6 +480,86 @@ EOF
   
   assert_exit_code 0 "${exit_code}" "Help should succeed"
   assert_contains "${stdout}" "Usage:" "Should show usage"
+}
+
+test_default_paths_include_concepts() {
+  local found=0 path
+  for path in "${DEFAULT_PATHS[@]}"; do
+    [[ "${path}" == "doc/planning/concepts" ]] && found=1
+  done
+  assert_eq "1" "${found}" "Default paths should include doc/planning/concepts"
+}
+
+test_missing_default_paths_are_skipped() {
+  local -r test_repo="${_test_tmpdir}/mini-repo"
+  mkdir -p "${test_repo}/doc/guides"
+  create_test_file "${test_repo}/doc/guides/guide.md" "# Guide
+"
+
+  local exit_code=0
+  ( cd "${test_repo}" && git init -q && DRY_RUN=false "${SCRIPT_DIR}/add-header-location.sh" ) \
+    > "${_test_tmpdir}/mini-repo.log" 2>&1 || exit_code=$?
+
+  assert_exit_code 0 "${exit_code}" "Missing default paths should be skipped"
+  assert_contains "$(cat "${_test_tmpdir}/mini-repo.log")" "Skipping missing default path" "Should warn about missing defaults"
+
+  local content
+  content="$(get_file_content "${test_repo}/doc/guides/guide.md")"
+  assert_contains "${content}" "# Copyright" "Existing default path should still be processed"
+}
+
+test_markdown_source_branch_migrates() {
+  local -r test_file="${_test_tmpdir}/branch-migrate.md"
+  create_test_file "${test_file}" "---
+# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+# Apache-2.0 License - see LICENSE file for full terms
+source: https://github.com/${GITHUB_REPO_SLUG}/blob/main/test/branch-migrate.md
+description: Old branch source
+---
+# Content"
+
+  local stdout exit_code=0
+  stdout="$(env DRY_RUN=false GITHUB_BRANCH=release-test "${SCRIPT_DIR}/add-header-location.sh" "${test_file}" 2>&1)" || exit_code=$?
+
+  assert_exit_code 0 "${exit_code}" "Script should succeed"
+
+  local content
+  content="$(get_file_content "${test_file}")"
+  assert_contains "${content}" "source: https://github.com/${GITHUB_REPO_SLUG}/blob/release-test" "Source should point at the configured branch"
+  assert_not_contains "${content}" "/blob/main/" "Old branch URL should be replaced"
+
+  local source_count
+  source_count="$(grep -c "^source:" "${test_file}" || true)"
+  assert_eq "1" "${source_count}" "Should have exactly one source attribute"
+}
+
+test_bash_source_branch_migrates_without_duplication() {
+  local -r test_file="${_test_tmpdir}/branch-migrate.sh"
+  create_test_file "${test_file}" '#!/usr/bin/env bash
+# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+# Apache-2.0 License - see LICENSE file for full terms
+# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/test/branch-migrate.sh
+set -Eeuo pipefail
+echo "hello"
+'
+
+  local stdout exit_code=0
+  stdout="$(env DRY_RUN=false GITHUB_BRANCH=release-test "${SCRIPT_DIR}/add-header-location.sh" "${test_file}" 2>&1)" || exit_code=$?
+
+  assert_exit_code 0 "${exit_code}" "Script should succeed"
+
+  local content
+  content="$(get_file_content "${test_file}")"
+  assert_contains "${content}" "# Latest version: https://github.com/${GITHUB_REPO_SLUG}/blob/release-test" "Source should point at the configured branch"
+  assert_not_contains "${content}" "/blob/main/" "Old branch URL should be replaced"
+
+  local copyright_count license_count source_count
+  copyright_count="$(grep -c "^# Copyright" "${test_file}" || true)"
+  license_count="$(grep -c "^# Apache-2.0 License" "${test_file}" || true)"
+  source_count="$(grep -c "^# Latest version:" "${test_file}" || true)"
+  assert_eq "1" "${copyright_count}" "Copyright line should not be duplicated"
+  assert_eq "1" "${license_count}" "License line should not be duplicated"
+  assert_eq "1" "${source_count}" "Source line should not be duplicated"
 }
 
 test_verbose_mode() {
@@ -497,15 +599,18 @@ test_multiple_files_argument() {
 
 test_unicode_copyright_idempotent() {
   local -r test_file="${_test_tmpdir}/unicode-copyright.md"
-  local -r rel_path="test/unicode-copyright.md"
+  touch "${test_file}"
+  local rel_path
+  rel_path="$(compute_relative_path "$(get_repo_root)" "${test_file}")"
   # Exact copyright line with Unicode characters, using new source: attribute format
   create_test_file "${test_file}" "---
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # Apache-2.0 License - see LICENSE file for full terms
-source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/${rel_path}
+source: ${GITHUB_BASE}/${rel_path}
 description: Unicode test
 ---
-# Content"
+# Content
+"
   
   # Get original hash
   local original_hash
@@ -527,7 +632,7 @@ description: Unicode test
   # Verify all required lines still exist
   local content
   content="$(get_file_content "${test_file}")"
-  assert_contains "${content}" "# Copyright.*Ćwiąkalski"
+  assert_match "# Copyright.*Ćwiąkalski" "${content}"
   assert_contains "${content}" "# Apache-2.0 License"
   assert_contains "${content}" "source:" "Should have source attribute"
 }
@@ -551,7 +656,7 @@ description: Missing Apache-2.0 line
   
   # Should have added Apache-2.0 line and source attribute
   assert_contains "${content}" "# Apache-2.0 License"
-  assert_contains "${content}" "source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main" "Should have source attribute"
+  assert_contains "${content}" "source: ${GITHUB_BASE}" "Should have source attribute"
   assert_not_contains "${content}" "# Latest version:" "Should NOT have old comment format"
   
   # Check order: copyright, Apache-2.0, source
@@ -592,7 +697,7 @@ echo "hello"
   # Header should be present as bash comments
   assert_contains "${content}" "# Copyright (c) 2025-2026" "Should have copyright line"
   assert_contains "${content}" "# Apache-2.0 License - see LICENSE file for full terms" "Should have Apache-2.0 line"
-  assert_contains "${content}" "# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main" "Should have source URL"
+  assert_contains "${content}" "# Latest version: ${GITHUB_BASE}" "Should have source URL"
   
   # Shebang should still be first line
   local lines
@@ -668,13 +773,13 @@ echo "alt shebang"
 
 test_bash_existing_header_idempotent() {
   local -r test_file="${_test_tmpdir}/already-has-header.sh"
-  create_test_file "${test_file}" '#!/usr/bin/env bash
+  create_test_file "${test_file}" "#!/usr/bin/env bash
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # Apache-2.0 License - see LICENSE file for full terms
-# Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/test/already-has-header.sh
+# Latest version: ${GITHUB_BASE}/test/already-has-header.sh
 set -Eeuo pipefail
-echo "existing"
-'
+echo \"existing\"
+"
   
   # Get original hash
   local original_hash
@@ -763,8 +868,13 @@ main() {
   run_test "File with old # Latest version: comment gets converted to source attribute" test_file_with_old_latest_version_comment
   run_test "Dry-run mode doesn't modify files" test_dry_run_mode
   run_test "Directory processing works recursively" test_directory_processing
+  run_test "Directory processing skips tmp/ subtree" test_directory_skips_tmp_subtree
   run_test "Non-markdown file causes error" test_non_markdown_file
   run_test "Default paths work" test_default_paths
+  run_test "Default paths include concept docs" test_default_paths_include_concepts
+  run_test "Missing default paths are skipped" test_missing_default_paths_are_skipped
+  run_test "Markdown source URL migrates to configured branch" test_markdown_source_branch_migrates
+  run_test "Bash source URL migrates without duplicating header" test_bash_source_branch_migrates_without_duplication
   run_test "Verbose mode outputs debug info" test_verbose_mode
   run_test "Multiple files as arguments work" test_multiple_files_argument
   run_test "Unicode copyright line handled idempotently" test_unicode_copyright_idempotent
