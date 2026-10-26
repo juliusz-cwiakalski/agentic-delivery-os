@@ -5,7 +5,7 @@
 # If behavior must change, edit the source file above and rebuild.
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # Apache-2.0 License - see LICENSE file for full terms
-# source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/command/check-fix.md
+# source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/.opencode/command/check-fix.md
 name: check-fix
 description: Execute quality gates, fix any issues found, and create a single high-quality Conventional Commit summarizing all changes made.
 model: sonnet

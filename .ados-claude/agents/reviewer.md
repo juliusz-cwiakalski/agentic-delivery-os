@@ -5,7 +5,7 @@
 # If behavior must change, edit the source file above and rebuild.
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # Apache-2.0 License - see LICENSE file for full terms
-# source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/agent/reviewer.md
+# source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/.opencode/agent/reviewer.md
 name: reviewer
 description: Review changes against spec, plan, code quality heuristics, and repo rules. Supports local (ADOS pipeline) and remote (PR/MR) modes.
 model: opus

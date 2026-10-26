@@ -65,6 +65,11 @@ readonly REPO_ROOT
 # Tool configuration (extensible pattern)
 readonly TOOL="${TOOL:-claude}"
 
+# Branch used in generated source links. Tooling docs live on main-tools until
+# the public release; set GITHUB_BRANCH=main when flipping to the public baseline.
+GITHUB_BRANCH="${GITHUB_BRANCH:-main-tools}"
+readonly GITHUB_BRANCH
+
 # Verbosity flags (needed by log() below)
 VERBOSE="${VERBOSE:-false}"
 DRY_RUN="${DRY_RUN:-false}"
@@ -114,7 +119,7 @@ generate_generated_header() {
 # If behavior must change, edit the source file above and rebuild.
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # Apache-2.0 License - see LICENSE file for full terms
-# source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/${source_path}
+# source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/${GITHUB_BRANCH}/${source_path}
 EOF
 }
 
@@ -486,7 +491,8 @@ Options:
   --help       Show this help message
 
 Environment:
-  TOOL         Tool name (default: claude)
+  TOOL           Tool name (default: claude)
+  GITHUB_BRANCH  Branch used in generated source URLs (default: main-tools)
 
 Examples:
   ${SCRIPT_NAME}

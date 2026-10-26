@@ -5,7 +5,7 @@
 # If behavior must change, edit the source file above and rebuild.
 # Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
 # Apache-2.0 License - see LICENSE file for full terms
-# source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/.opencode/command/write-decision.md
+# source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/.opencode/command/write-decision.md
 name: write-decision
 description: Generate a Decision Record (ADR/PDR/TDR/BDR/ODR) from planning context, rendered proportionally by rigor.
 model: sonnet
