@@ -62,19 +62,19 @@ flowchart TD
     T5 --> R5
     T6 --> R6
     subgraph levels
-        L1[R1 change closeout<br/>scope: the capsule]
+        R1[R1 change closeout<br/>scope: the capsule]
         R2[R2 session retro<br/>scope: one agent session]
         R3[R3 incident retro<br/>scope: the event]
         R4[R4 window retro<br/>scope: project, time-boxed]
         R5[R5 project retro<br/>scope: milestone or inception]
         R6[R6 fleet retro<br/>scope: cross-repo]
     end
-    L1 --> O1[memory promotions V2 to V0/V1<br/>rare ticket candidates]
-    L2 --> O2[private lessons, V3 promotions<br/>incident triggers]
-    L3 --> O3[blameless findings, actions,<br/>checklist and gate additions]
-    L4 --> O4[cross-change patterns, lesson promotion,<br/>action follow-through verification]
-    L5 --> O5[project memory consolidation,<br/>tribal knowledge graduation]
-    L6 --> O6[common-mode failure detection,<br/>fleet memory and policy promotion]
+    R1 --> O1[memory promotions V2 to V0/V1<br/>rare ticket candidates]
+    R2 --> O2[private lessons, V3 promotions<br/>incident triggers]
+    R3 --> O3[blameless findings, actions,<br/>checklist and gate additions]
+    R4 --> O4[cross-change patterns, lesson promotion,<br/>action follow-through verification]
+    R5 --> O5[project memory consolidation,<br/>tribal knowledge graduation]
+    R6 --> O6[common-mode failure detection,<br/>fleet memory and policy promotion]
 ```
 
 | Level | Trigger | Runs | Frequency |
