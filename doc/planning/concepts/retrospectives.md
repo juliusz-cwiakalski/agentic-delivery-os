@@ -96,30 +96,17 @@ loop).
 ## Autonomy is orthogonal to scope
 
 A routine R1 closeout can run at high autonomy while a severe incident
-retro stays supervised, on the same ladder. The autonomy ladder (deep
-research 2026-10, L0-L6):
+retro stays supervised, on the same ladder. The ladder L0-L6 (manual,
+assisted, mixed initiative, supervised autonomous, bounded delegated,
+fleet adaptive, lights-out), its level-by-level infrastructure
+requirements, and the maturity rule live canonically in
+[software-delivery-autonomy.md](software-delivery-autonomy.md).
 
-| Level | Meaning | Human role |
-|---|---|---|
-| L0 human | Humans do everything; AI absent or transcribing | Everything |
-| L1 prompted | Human selects evidence, AI drafts | Approves all |
-| L2 mixed initiative | Auto evidence collection, AI proposes findings | Approves all durable writes |
-| L3 supervised autonomous | Auto trigger, analysis, drafting, follow-through checks | Gates every promotion and mutation |
-| L4 bounded delegated | Routine retros close automatically inside a policy envelope; rollback | On the loop: reviews novel and sensitive classes, samples routine |
-| L5 fleet adaptive | Cross-repo mining, experimental validation, canary rollout and rollback of bounded changes | Governs risk budgets, schemas, authority classes |
-| L6 lights-out | Recursive self-modification without routine approval | Emergency only - not a production target |
-
-ADOS operating targets: L4 for routine scopes (R1, R2, R4), L3 for
-incidents and projects until evidence accumulates, L5 capabilities
-behind the fleet retro as the multi-repos grow. L6 is explicitly not a
-target; continuous-operation benchmarks are far below the assurance a
-self-modifying system needs.
-
-The maturity rule that gates every step up:
-
-> Better model does not mean more autonomy. Better independent
-> evidence, better verifiers, better causal tests, bounded authority,
-> measured rollout - that is what earns more autonomy.
+ADOS operating targets for the retro domain: L4 for routine scopes
+(R1, R2, R4), L3 for incidents and projects until evidence accumulates,
+L5 capabilities behind the fleet retro as the multi-repos grow. L6 is
+explicitly not a target; continuous-operation benchmarks are far below
+the assurance a self-modifying system needs.
 
 ## The process (five stages, follow-through first)
 
