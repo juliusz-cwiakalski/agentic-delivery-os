@@ -318,6 +318,18 @@ floats behind it.
   the delivery's session statistics (tokens by class, calls, tool usage,
   per agent and model) without re-querying harness stores.
 
+### M1-S12 Change capsule completion and closeout promotion
+- Tasks: complete every change folder as a memory episode capsule:
+  append-only events.jsonl (phase transitions, gate outcomes, review
+  verdicts; one stream with the telemetry concept) and a candidates/
+  directory for memory promotion candidates; wire the memory step into
+  closeout: validate capsule, identify candidates, dedup against
+  project memory, link evidence, promote accepted items to exactly one
+  canonical home, archive the capsule (concepts/memory-lifecycle.md).
+- AC: every merged change leaves behind a closed capsule with events and
+  a promotion decision (promoted or rejected with reason) per candidate;
+  no candidate skips the capture bar or the evidence link.
+
 ---
 
 ## Epic M2: Orchestration and measurement (months 3-6)
@@ -369,6 +381,30 @@ floats behind it.
 - Tasks: local gates must cite the same suite breadth as CI.
 - AC: a narrower local suite cannot masquerade as full green.
 
+### M2-S8 Memory records, layout, and lint
+- Tasks: the committed memory tree (.ai/memory: index README, lessons,
+  tacit fragments, preferences, per-agent entry points, retro archive)
+  with one typed record per file (id, kind, scope, provenance, trust,
+  validity, status; concepts/memory-architecture.md); memory lint in the
+  quality gates: schema, dating, provenance, dangling references, index
+  coverage, budget caps (kernel ~200 lines, index ~200 lines, agent
+  entry ~150 lines), derivable-content heuristics, secret patterns.
+- AC: lint fails on a record missing id/date/evidence, on an index line
+  without a backing record and vice versa, and on budget violations;
+  concurrent agents creating records produce zero merge conflicts.
+
+### M2-S9 Memory conventions in bootstrap templates
+- Tasks: adoption checklist into the bootstrap flow and templates:
+  memory tree scaffold, AGENTS.md kernel section, per-agent entry
+  points, capture bar and promotion rules in the coordinator
+  instructions and the retro ceremony, append-only retro notes with a
+  generated index and a meta-learning file (concepts/
+  memory-practices.md).
+- AC: a newly bootstrapped project starts with the memory layout, the
+  kernel section, and the capture/promotion rules wired into its
+  ceremonies; the doctor runs as a manual checklist until tooling
+  lands.
+
 ---
 
 ## Epic M3: Surfaces, adapters, validators (months 6-9)
@@ -419,6 +455,25 @@ floats behind it.
   pointing to the new equivalents; removal plan at the very last stage.
 - AC: every replaced bash command has a working new equivalent with a
   deprecation notice.
+
+### M3-S8 Memory command family
+- Tasks: `ados memory` commands over the canonical records: lint,
+  candidates, promote, supersede, conflicts, stale, doctor; the doctor
+  bundles the full audit (schema, index coverage, budgets, dangling
+  references, expired review dates, contradiction candidates); the
+  promotion step enforces the approval matrix and the routing table
+  (concepts/memory-architecture.md, memory-lifecycle.md).
+- AC: every doctor finding is classified with a code and fix hint; a
+  policy-class candidate cannot promote without recorded human approval;
+  supersession closes validity windows without deleting history.
+
+### M3-S9 Memory compiler to harness surfaces
+- Tasks: compile canonical memory into each harness's native context
+  formats (AGENTS.md, CLAUDE.md, path rules, skills) from one canonical
+  source, sync-verified, never hand-edited - the memory-side counterpart
+  of harness surfaces (concepts/memory-architecture.md, M3-S1).
+- AC: a canonical memory change regenerates every harness projection in
+  one step; projections carry no content the canonical source lacks.
 
 ---
 

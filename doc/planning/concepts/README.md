@@ -32,6 +32,10 @@ lifecycle; the concept doc links the delivered work.
 | [harness-adapters.md](harness-adapters.md) | Draft | Agent runtimes as a provider domain: dispatch delivers through harness adapters (opencode default, Claude Code supported) and the tooling ships as a generated plugin per harness |
 | [harness-telemetry.md](harness-telemetry.md) | Draft | Read-only extraction of session statistics from harness stores (tokens by class, calls, tool usage) into the durable event log at closeout; cross-harness by construction |
 | [policy-as-code.md](policy-as-code.md) | Draft | Policies as declared, checkable rules across repository settings, delivery actions, and the rules register; inventories what is enforced today, what is prose today (first scope), and future ideas |
+| [memory-overview.md](memory-overview.md) | Draft | The ADOS memory model in human terms: nine memory types, four scopes, the learning loop, load budgets, and what the model adds; diagrams included |
+| [memory-architecture.md](memory-architecture.md) | Draft | Memory structure: layers, project layout, change capsules, one-record-per-file model, trust levels, write gate, retrieval, budgets, the `ados memory` command family and the compiler to harness surfaces |
+| [memory-lifecycle.md](memory-lifecycle.md) | Draft | Memory processes: capture, closeout consolidation, promotion routing with the human approval matrix, supersession, per-type forgetting, audits, the compaction contract |
+| [memory-practices.md](memory-practices.md) | Draft | Adopt-now rules for every agent, the coordinator, and the human: capture bar, ownership, kernel template, bootstrap checklist, anti-patterns, metrics |
 
 ## Related documents
 
