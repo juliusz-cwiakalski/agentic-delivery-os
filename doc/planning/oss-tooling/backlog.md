@@ -383,7 +383,8 @@ floats behind it.
 
 ### M2-S8 Memory records, layout, and lint
 - Tasks: the committed memory tree (.ai/memory: index README, lessons,
-  tacit fragments, preferences, per-agent entry points, retro archive)
+  tacit fragments, preferences, per-agent entry points, guild trees,
+  retro archive)
   with one typed record per file (id, kind, scope, provenance, trust,
   validity, status; concepts/memory-architecture.md); memory lint in the
   quality gates: schema, dating, provenance, dangling references, index
@@ -465,7 +466,10 @@ floats behind it.
   (concepts/memory-architecture.md, memory-lifecycle.md).
 - AC: every doctor finding is classified with a code and fix hint; a
   policy-class candidate cannot promote without recorded human approval;
-  supersession closes validity windows without deleting history.
+  supersession closes validity windows without deleting history; records
+  and index lines carry visibility tags, lint fails out-of-visibility
+  references, and compile emits role-filtered projections
+  (concepts/memory-autonomy-and-visibility.md).
 
 ### M3-S9 Memory compiler to harness surfaces
 - Tasks: compile canonical memory into each harness's native context

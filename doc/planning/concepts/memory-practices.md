@@ -2,7 +2,9 @@
 
 Status: Draft (2026-10-26). The adopt-now rules: what every agent, the
 coordinator, and the human do, without waiting for tooling. Companion to
-[memory-overview.md](memory-overview.md).
+[memory-overview.md](memory-overview.md). Per-agent applicability,
+adversarial-role exclusions, and visibility classes:
+[memory-autonomy-and-visibility.md](memory-autonomy-and-visibility.md).
 
 ## Every agent
 

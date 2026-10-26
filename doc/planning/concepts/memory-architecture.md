@@ -221,6 +221,11 @@ Trace and eval remain post-M4 candidates until telemetry justifies them.
 
 ## Multi-agent rules
 
+The visibility classes (shared, guild, squad, private, personal), the
+per-agent memory map, and autonomous-mode promotion authority are
+specified in
+[memory-autonomy-and-visibility.md](memory-autonomy-and-visibility.md).
+
 - **Shared memory holds facts and artifacts; private memory holds
   interpretations and working trajectories.** A reviewer receives spec,
   diff, decisions, and constraints - never the coder's scratchpad or

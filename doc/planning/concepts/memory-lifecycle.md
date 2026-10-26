@@ -73,6 +73,14 @@ executable lesson becomes a skill; cross-repo value plus owner approval
 makes it fleet practice. Skipping levels is the definition of premature
 promotion.
 
+Under fully autonomous delivery the same matrix runs with delegated
+authority: the curator agent promotes with mandatory machine-checkable
+evidence, second-agent sign-off on high-impact classes, asynchronous
+human veto instead of synchronous approval, and owner-only classes
+(policies, security, org and fleet rules) still gated on the human.
+Detail and circuit breakers: 
+[memory-autonomy-and-visibility.md](memory-autonomy-and-visibility.md).
+
 The human approval matrix by memory class:
 
 | Class | Agent writes | Agent may promote | Human approval |

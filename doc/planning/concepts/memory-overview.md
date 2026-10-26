@@ -3,7 +3,10 @@
 Status: Draft (2026-10-26). The human-friendly summary of the ADOS memory
 model. Depth: [memory-architecture.md](memory-architecture.md) (structure),
 [memory-lifecycle.md](memory-lifecycle.md) (processes),
-[memory-practices.md](memory-practices.md) (rules to adopt today).
+[memory-practices.md](memory-practices.md) (rules to adopt today),
+[memory-autonomy-and-visibility.md](memory-autonomy-and-visibility.md)
+(full-autonomy operation, per-agent memory map, shared/guild/private
+visibility).
 Grounded in the 2026-10 memory research corpus (three internal workspace
 designs, external research, deep research report).
 

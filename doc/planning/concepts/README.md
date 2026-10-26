@@ -36,6 +36,7 @@ lifecycle; the concept doc links the delivered work.
 | [memory-architecture.md](memory-architecture.md) | Draft | Memory structure: layers, project layout, change capsules, one-record-per-file model, trust levels, write gate, retrieval, budgets, the `ados memory` command family and the compiler to harness surfaces |
 | [memory-lifecycle.md](memory-lifecycle.md) | Draft | Memory processes: capture, closeout consolidation, promotion routing with the human approval matrix, supersession, per-type forgetting, audits, the compaction contract |
 | [memory-practices.md](memory-practices.md) | Draft | Adopt-now rules for every agent, the coordinator, and the human: capture bar, ownership, kernel template, bootstrap checklist, anti-patterns, metrics |
+| [memory-autonomy-and-visibility.md](memory-autonomy-and-visibility.md) | Draft | The model under full autonomy (delegated promotion authority, mechanical verification, async veto), the per-agent memory map with deliberate exclusions, and the shared/guild/squad/private visibility classes with enforcement |
 
 ## Related documents
 
