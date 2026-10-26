@@ -360,7 +360,23 @@ floats behind it.
   ceremonies through the same contract (custom ceremony packs later).
 - AC: ceremony share measured before and after; trend toward 40 percent;
   every built-in ceremony is parity-testable; a project-declared ceremony
-  runs through the same runner without tooling changes.
+  runs through the same runner without tooling changes; retro ceremonies
+  follow concepts/retrospectives.md - declared trigger model,
+  follow-through-first agenda, the fixed note schema, idempotent scope
+  keys, and per-level outputs.
+
+### M2-S10 Retro action registry and follow-through
+- Tasks: the action registry behind every retro level: five-field
+  contract (owner, verifiable verb, measurable outcome, tracker entry,
+  due date) plus verification artifact; aging nudges and escalation;
+  explicit closure rules (done with artifact, deprioritized with
+  reason, superseded); board surface next to owner asks; improvement
+  WIP limit per window (concepts/retrospectives.md; tracker anchor
+  issue #43).
+- AC: an action without all five fields cannot be filed; every L4+
+  retro opens with artifact-verified follow-through; aging is visible
+  on the board; no action closes without an explicit decision and
+  artifact or reason.
 
 ### M2-S4 Board
 - Tasks: full board of lanes, gates, owner asks, parked work; one screen

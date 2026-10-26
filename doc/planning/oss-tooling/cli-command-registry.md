@@ -144,7 +144,7 @@ verify from M0); completed in M3-S3 (full GitHub, Azure on demand).
 | `ados board` | Owner-gate SLA mechanics: 24 h stale escalation, 72 h default-on-expiry, aging visible | operator, coordinator | M1-S5 | M2-S4 (full board: lanes, gates, owner asks, parked work, one screen) |
 | `ados brief` | Deterministic render-only owner brief from the M0 collectors with explicit placeholders; no LLM in the render path; decision-first layout | operator | M1-S6 | - |
 | `ados mcp` | Minimal MCP mirroring the CLI scope over proven engines: status, verify-artifact, gate report | sessions | M1-S7 | M3-S2 (full MCP with batch semantics) |
-| `ados retro` | Retrospective evidence pipeline: collection, registry hardening, shape-crash guards, export; home of the periodic memory audit | coordinator | M1-S8 | - |
+| `ados retro` | Retrospective evidence pipeline: collection, registry hardening, shape-crash guards, export; home of the periodic memory audit; runs retro levels on demand per concepts/retrospectives.md | coordinator | M1-S8 | - |
 | `ados dispatch` | Delivery pilot beside the bash stack on selected tickets with verify-change evidence; spawns sessions through the harness adapter (opencode first, Claude Code next); shell stays authoritative | coordinator | M1-S9 | M2-S1 (programmatic queue, single-flight, preemption) |
 
 ### M2: Orchestration and measurement
@@ -154,7 +154,7 @@ verify from M0); completed in M3-S3 (full GitHub, Azure on demand).
 | `ados queue` | Programmatic delivery queue: dependency graph, ready-set, per-remote single-flight, preemption with named park state | coordinator | M2-S1 | - |
 | `ados lanes` | Lane plan with dependency awareness and a build-weight class (heavy builds excluded per runner); two lanes cannot deliver the same repo concurrently | coordinator | M2-S1 | - |
 | `ados supervise` | Supervisor service (runs): tri-state status, progress watchdogs, duplicate-supervisor detection, lying-liveness signals | coordinator | M2-S2 | - |
-| `ados ceremony` | Ceremony runner: artifact-verified, resumable, compact at boundaries, tiered intake; the built-in set: morning brief, retro evidence pass, sprint rollover, night-watch, testing-session assessment, decision-record mirror sync; ceremonies are declared units, so projects can add their own | coordinator | M2-S3 | - |
+| `ados ceremony` | Ceremony runner: artifact-verified, resumable, compact at boundaries, tiered intake; the built-in set: morning brief, retro evidence pass, sprint rollover, night-watch, testing-session assessment, decision-record mirror sync; ceremonies are declared units, so projects can add their own; retro ceremonies follow concepts/retrospectives.md (levels, triggers, follow-through-first) | coordinator | M2-S3 | - |
 | `ados steer` | Queued steering notes delivered at phase boundaries; owner asks batched with measured aging | operator, coordinator | M2-S5 | - |
 | `ados metrics` | Delivery metrics: ceremony share, cycle time, CI failure rate, escaped defects | coordinator, operator | M2-S6 | - |
 | `ados spend` | Cost observability: per-dispatch tokens/cost/restarts, quota snapshots, burn-rate alarms | operator, coordinator | M2-S6 | - |

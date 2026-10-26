@@ -150,6 +150,10 @@ governance:
 6. **Security model**: trust levels per write channel; external content
    never becomes authoritative memory without quarantine and review.
 
+The processes above run inside the retrospective subsystem
+([retrospectives.md](retrospectives.md)): retros are the consolidation
+and promotion engine at every scope.
+
 ## Adoption in two tracks
 
 - **Practices now** (no tooling required): any ADOS-driven project can

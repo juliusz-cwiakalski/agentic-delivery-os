@@ -37,6 +37,7 @@ lifecycle; the concept doc links the delivered work.
 | [memory-lifecycle.md](memory-lifecycle.md) | Draft | Memory processes: capture, closeout consolidation, promotion routing with the human approval matrix, supersession, per-type forgetting, audits, the compaction contract |
 | [memory-practices.md](memory-practices.md) | Draft | Adopt-now rules for every agent, the coordinator, and the human: capture bar, ownership, kernel template, bootstrap checklist, anti-patterns, metrics |
 | [memory-autonomy-and-visibility.md](memory-autonomy-and-visibility.md) | Draft | The model under full autonomy (delegated promotion authority, mechanical verification, async veto), the per-agent memory map with deliberate exclusions, and the shared/guild/squad/private visibility classes with enforcement |
+| [retrospectives.md](retrospectives.md) | Draft | The retrospective subsystem: six levels with hybrid triggers (closeout, session, incident, window, project, fleet), the five-stage process with follow-through-first, evidence discipline, the action registry contract, memory integration, autonomy and blameless rules, and the failure-mode defense table |
 
 ## Related documents
 

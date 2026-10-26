@@ -153,7 +153,15 @@ kernel (AGENTS.md), memory index, just-in-time records, relevant
 candidates. Durable lessons are formed at phase boundaries by the
 background process, never mid-flight by compaction itself.
 
-## 8. Human-agent shared memory
+## 8. Retrospectives are the engine
+
+Every memory process above (capture quality checks, consolidation,
+promotion, audits, meta-learning) is executed by the retrospective
+subsystem at its levels and triggers: see
+[retrospectives.md](retrospectives.md). The retro is the promotion
+engine, not a parallel system.
+
+## 9. Human-agent shared memory
 
 Humans and agents share the same homes with class-dependent ownership
 (see the approval matrix above). Two hard rules:
