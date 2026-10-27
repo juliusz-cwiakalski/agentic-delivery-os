@@ -1,23 +1,22 @@
 # Concept: software delivery autonomy
 
-Status: Draft (2026-10-26). The canonical autonomy ladder for software
-delivery, the three-axis maturity model, graduation rules, and how ADOS
+Status: Draft (2026-10-27, second research pass). The canonical autonomy
+model for software delivery: the ladder, the AutonomyContract, maturity
+measurement, graduation and demotion, runtime enforcement, and how ADOS
 uses it (roadmap vocabulary, user-facing maturity assessment,
-governance). The ladder was first adopted in retrospectives.md from the
-deep research; it is generalized here and becomes the single home -
-other concepts reference this file. The autonomy deep research
-(2026-10-26) verified the core and drove the revisions in this version:
-the OAD, the three-axis model, the L3/L4 fallback boundary, evidence
-TTLs, and the split of self-modification onto its own axis.
+governance). The ladder was first adopted in retrospectives.md, then
+generalized here; the autonomy deep research (summary pass 2026-10-26,
+full report 2026-10-27) verified the core and drove this revision.
+Other concepts reference this file as the single home.
 
 ## The ladder (L0-L5)
 
 One axis: how much authority agents hold for a given activity class.
 Not a property of the org, the agent, or the model - a property of the
 delegated authority policy for an activity class in a context. The
-classic levels-of-automation research (information, analysis, decision,
-execution stages) is what makes per-class assignment the right shape:
-authority is granted per function, not per organization.
+levels-of-automation research (independent automation of information
+acquisition, analysis, decision, and execution) is what makes per-class
+and per-stage assignment the right shape.
 
 | Level | Name | Meaning | Human role |
 |---|---|---|---|
@@ -25,7 +24,7 @@ authority is granted per function, not per organization.
 | L1 | Assisted | Human selects context and asks; AI drafts | Approves everything |
 | L2 | Mixed initiative | System auto-gathers context and proposes; AI drafts artifacts | Approves all durable writes |
 | L3 | Supervised autonomous | Auto trigger and execute; consequential outputs hit a mandatory human gate | Gates every consequential action |
-| L4 | Bounded delegated | Routine cases close automatically inside a declared policy envelope (scopes, caps, rollback); novel and sensitive escalate | On the loop: samples routine, handles escalations, owns the policy |
+| L4 | Bounded delegated | Routine cases close automatically inside a declared policy envelope; novel and sensitive escalate; the system reaches a safe state without depending on human attention | On the loop: samples routine, handles escalations, owns the policy |
 | L5 | Fleet adaptive | Cross-repo experiments, canary rollout, fleet-wide bounded changes from validated lessons | Governs risk budgets, authority classes, schemas |
 
 ```mermaid
@@ -33,209 +32,329 @@ flowchart LR
     L0[L0 manual] -->|"context packets, citations"| L1[L1 assisted]
     L1 -->|"mechanical collection, trace ids, deterministic validation"| L2[L2 mixed initiative]
     L2 -->|"triggers, pipeline, evidence ledger, action contracts, audit"| L3[L3 supervised]
-    L3 -->|"policy as code, verification gates, rollback, circuit breakers, sampling, tested fallback"| L4[L4 bounded delegated]
+    L3 -->|"policy as code, verification gates, rollback, circuit breakers, tested fallback"| L4[L4 bounded delegated]
     L4 -->|"replay and canary infra, cross-repo isolation, validated lessons"| L5[L5 fleet adaptive]
 ```
 
-The edge labels are the point: each step up is earned by infrastructure,
-not by model capability. The maturity rule:
+Two boundary rules carried over from driving-automation practice (the
+levels transfer as principles, not as a formal mapping; there is no
+numeric equivalence between SAE levels and ours):
 
-> Better model does not mean more autonomy. Better independent
-> evidence, better verifiers, better causal tests, bounded authority,
-> measured rollout - that is what earns more autonomy.
-
-Two boundary definitions carried over from driving-automation practice
-(the levels transfer as a principle, not as a formal mapping):
-
-- **The L3/L4 boundary is fallback responsibility** (NHTSA's rule): at
-  L4, the system's safety may not assume a human will notice and take
-  over. "Human on the loop" means the envelope, rollback, and circuit
-  breakers do the protecting; human attention is a bonus, not a
-  safeguard. A delegation whose safety case is "the owner would catch
-  it" is L3, whatever it is called.
+- **The L3/L4 boundary is fallback responsibility**: at L4 the system's
+  safety may not assume a human will notice and take over. The
+  envelope, rollback, and circuit breakers do the protecting; human
+  attention is a bonus. A delegation whose safety case is "the owner
+  would catch it" is L3, whatever it is called.
 - **Self-modification is not a rung on this ladder.** Whether the
   system may change its own policies, harness, or evaluators is a
-  separate declaration (see below), because a system can be L4 in
-  delivery while its governance is fully human-controlled - the two
-  change independently.
+  separate declaration: agents may propose such changes, only humans
+  approve them, and the evaluator and policy planes are outside agent
+  write authority (same principle as the retro evidence plane).
+  Lights-out operation is a position on that separate axis, not a rung
+  to earn.
 
-### Self-modification axis (separate declaration)
+## Invariants
 
-Lights-out operation and recursive self-modification are not "more
-autonomy" in the same sense as L3 to L5 - they change who controls the
-rules. ADOS declares this separately, defaulting to: agents may propose
-policy, harness, and evaluator changes; only humans approve them; the
-evaluator and policy planes are outside agent write authority (same
-principle as the retro evidence plane). This resolves the old L6: it
-was two things at once, and neither belongs on the delegated-authority
-scale.
+1. No model upgrade or benchmark score raises authority by itself.
+2. Granting authority is an owner-authorized, auditable event.
+3. Runtime checks policy as code on a verified contract snapshot
+   before every consequential action.
+4. When conditions cannot be proven: deny or ask, never default-allow.
+5. An agent cannot raise its own authority or lower the requirements
+   of its independent verifiers (dual control: request yes, approve
+   no).
+6. Autonomy is contextual, time-bound, and reversible in proportion to
+   the action's reversibility class.
+7. Demotion, policy freeze, and emergency stop are first-class process
+   states, not failures.
 
-## Per activity class, not per organization
+## The AutonomyContract
 
-A delivery pipeline decomposes into activity classes: clarify, specify,
-plan, implement, review, test, integrate and merge, release, operate,
-learn (retrospectives and memory). Each class sits at its own level in
-its own context (repo, fleet). The maturity of a delivery organization
-is the resulting profile, not a single number.
+The Lx label is a projection for communication; the source of truth is
+a versioned contract per action family per environment. "Implement at
+L4" is not a policy - this is:
 
-ADOS's own honest profile today (bash era, this repository): clarify
-L1 (the owner writes tickets; agents draft questions), specify and plan
-L2-L3 (agent-authored artifacts behind PR review), implement L3-L4 (the
-lifecycle runs; approved and finalized PRs merge autonomously under
-delegated authority), review L4 (reviewer agents plus the coordinator
-as merge authority), test L3, release L2, learn L2-L3 (memory and retro
-loops running, promotion still largely curator-gated).
-
-The uniform-level assumption is an anti-pattern: a profile with clarify
-at L1 and merge at L4 is normal and healthy - authority follows evidence
-density, and evidence density differs per class.
-
-Classes also decompose into stages (the classic information, analysis,
-decision, execution split; in operations: observe, decide, act). Each
-stage can sit at a different level: an agent may autonomously read
-telemetry and draft root cause (L2-L3 for analysis) while a production
-restart stays human-gated (L0-L1 for execution). "Operational autonomy"
-is never a single bit.
-
-## The operational autonomy domain (OAD)
-
-Borrowed from driving automation's operational design domain: a level
-declaration is incomplete without its domain. "Implement at L4" is not
-a policy; this is:
-
-```text
-activity + level + OAD + authority + verifier set + fallback + evidence TTL
+```yaml
+kind: AutonomyContract
+activity_class: integrate_and_merge
+level: L4                      # the projection, derived from the fields below
+delegation_envelope:           # the operational autonomy domain
+  repo_selectors: ["org/service-a"]
+  path_allow: ["docs/**"]
+  path_deny: [".github/workflows/**", "security/**", "infra/**"]
+  action_families: ["merge_pr"]
+  max_changed_files: 5
+  max_concurrent_actions: 1
+  max_actions_per_day: 4
+  follow_on_effects: { production_deploy_possible: false }
+  reversibility_class: R3
+authority: { may_merge: true, may_release: false, may_modify_policy: false }
+verification:
+  require_checks: ["ci/typecheck", "ci/tests", "policy/paths"]
+  require_independent_signals: 2
+  forbid_ci_configuration_changes: true
+fallback:
+  outside_envelope: escalate_to_L2
+  verifier_unavailable: demote_to_L3
+  policy_unavailable: deny
+  safe_state: draft_pr_no_merge
+evidence:
+  pack_ref: "evidence:merge-docs-2026q4-v3"
+  model_fingerprint: "<exact build or config id>"
+  harness_fingerprint: "<exact build or config id>"
+  valid_until: 2026-11-27
+budget:
+  max_unattended_actions_24h: 4
+  on_exhaustion: demote_to_L3
+controls:
+  emergency_stop_enabled: true
+  model_may_request_promotion: true
+  model_may_approve_promotion: false
+  owner: "human-principal-id"
 ```
 
-The OAD names: repositories or services in scope, environment, action
-types and risk classes (for example: no auth or schema modifications),
-allowed tools, hard blast-radius limits (caps, canary bounds, automatic
-halt on guardrail violation), required verifiers (which gates must be
-green), the tested fallback, and how long the evidence justifying the
-level stays valid.
+Field semantics (schema is ours; values are illustrative):
 
-The market converges on exactly this shape (policy-bounded autonomy):
-repository, branch, and workflow limits on hosted coding agents;
-risk-scored auto-approval with thresholds; allow, ask, and deny tool
-policies; per-plan and per-trigger modes rather than agent-global
-switches. The strongest production precedent for the graduation
-mechanic below is the SRE-agent pattern: run in review mode for a few
-weeks, then flip specific, repeated triggers to autonomous per response
-plan.
+- **Envelope** (the OAD): repositories, branches, paths, action
+  families, data classes, tool allowlists, size and rate caps, and
+  transitive follow-on effects - a merge that triggers auto-deploy is a
+  release, and the policy engine must rate it at its effective
+  downstream risk, not by the API name.
+- **Authority**: discrete rights per action (trigger, write branch, open
+  PR, merge, release, operate, modify policy, change verifier).
+- **Verification**: required checks, independent signal count, and the
+  rule that the implementation agent cannot modify mandatory pipeline
+  configuration.
+- **Fallback**: behavior at each failure boundary, the safe state, and
+  the escalation route.
+- **Evidence**: the pack justifying the level, with model and harness
+  fingerprints and a TTL - the grant expires with its evidence.
+- **Budget and controls**: aggregate caps (per day, per portfolio -
+  ten "safe" changes to one shared dependency have correlated blast
+  radius) and the dual-control flags.
 
-## The three-axis maturity model
+Label discipline: Lx is only ever written with the action and scope
+("L4 merge: non-protected docs paths, CI required, no external
+publishing"), paired with the human role ("observer on routine paths,
+consulted on exceptions"). Contracts that are not comparable in risk
+are not ranked as "more mature" against each other. And the assessment
+carries an honest "unassessed" status for classes without exposure -
+absence of evidence is not L0 and not safety.
 
-| Axis | What it measures | Gated by | Owned by |
-|---|---|---|---|
-| Breadth (adoption) | Which activity classes run under agent operation at all | Organizational change: skills, process redesign, culture | Adoption and change management |
-| Depth (autonomy) | Delegated authority per class, L0-L5, each with its OAD | Verification infrastructure: evidence, verifiers, rollback, policy | Risk and governance |
-| Outcome (evidence) | Whether each delegation actually improves results, net of review, rework, incidents, and infrastructure cost | Measurement: declared vs exercised vs effective authority, escape rates, intervention and rollback frequency, evidence freshness | Engineering measurement |
+## Reversibility classes
 
-Deliberately not blended into one score:
+Fallback and reversibility are not one problem (a revert does not
+unsend a secret, undo a migration, or un-publish). Every action family
+carries a class, and the class sets the default policy:
 
-- Industry AI-maturity models that blend usage and authority produce a
-  single number that hides the decisive variable. An organization can
-  score "high maturity" with AI everywhere and every action human-gated
-  - adoption theater.
-- The outcome axis exists because usage and authority are not results:
-  measured effects can contradict confident impressions (a randomized
-  study found a 19 percent slowdown while participants believed they
-  were faster), so whether a delegation is worth it needs its own
-  evidence, per class.
-- The axes move independently: high breadth at L1 forever is the
-  common stall; a single class at L4 with strong gates is often the
-  right first move. The recommended adoption path: one class, one level
-  up, with the infrastructure built first.
-- For users, the assessment output is a profile card: class -> level
-  and OAD, the evidence infrastructure present, the outcome evidence,
-  and the next-level gap list.
-- External governance frameworks (NIST AI RMF, ISO/IEC 42001 and
-  23894, the EU AI Act risk tiers) are an orthogonal layer around all
-  three axes - management-system and risk duties, not autonomy levels;
-  a level never follows automatically from certification, and
-  certification never follows automatically from a level.
+| Class | Example | Default safe policy |
+|---|---|---|
+| R0 pure read | analysis, log reads | data and egress limits, no gate |
+| R1 ephemeral | scratch, worktree | auto-cleanup, scoped |
+| R2 reversible write | branch, draft PR, tracked file edit | checkpoint, diff, rollback |
+| R3 conditionally reversible | merge, flagged deploy | verifiers, canary, tested rollback |
+| R4 irreversible or externally visible | data deletion, publishing, payments, secrets | mandatory explicit authority, standing human gate |
 
-## Graduation rules (how a class moves up)
+## Per-class profiles
 
-1. Build the infrastructure of the target level (the edge labels
-   above) - no level is granted before its mechanisms exist.
-2. Write the OAD: scope, risk classes, caps, verifiers, fallback,
-   evidence TTL. No level without its domain.
-3. Change the authority policy explicitly (owner-approved; the policy
-   engine is the enforcement point; decision record when
-   precedent-setting). One hard rule against self-loosening: a change
-   that touches the approval policy is evaluated under the prior
-   policy - it can never use its own new version to loosen the
-   requirements governing itself.
-4. Shadow run: the class operates at the target level with authority
-   withheld; outcomes are compared (the evaluation ladder in
-   retrospectives.md). The production-precedent pattern: weeks in
-   review mode first.
-5. Bounded enablement with circuit breakers: caps, rollback, anomaly
-   freezes - enabled per trigger and per plan, never as an agent-global
-   switch.
-6. Sampling verification: routine outcomes sampled, novel and severe
-   at 100 percent; promotion precision and harmful-action rate
-   watched.
-7. Declare the level: the profile is updated - and because the profile
-   is derived from the running policy, declaration and policy are the
-   same act.
+A delivery pipeline decomposes into activity classes - clarify,
+specify, plan, implement, review, test, integrate and merge, release,
+operate, learn - each at its own level with its own contract, and each
+decomposable into stages (observe, decide, act). Within review:
+analysis and defect detection can run at L4, the approval
+recommendation at L3, physical merge under a separate merge contract.
+Operational autonomy is never a single bit.
 
-Demotion is a first-class operation with enumerated triggers: evidence
-TTL expiry, a significant incident (the retro subsystem is the usual
-trigger source), owner veto, and any change that invalidates the
-evidence the level was granted on - a new model, prompt, tool, MCP
-server, policy revision, or repository architecture change resets the
-justification. Demotion latency is itself a KPI: how fast the system
-reacts to invalidated evidence.
+Dependencies, not silos: higher merge needs independent review, CI, and
+branch protection; higher release needs observable operate; learn feeds
+all others (which is why its promotions are quarantined). A roadmap
+raises levels along this graph, one bottleneck at a time.
+
+| Class | Reasonable start | The gate that matters |
+|---|---|---|
+| Clarify | L1 to L2 | human owns product intent |
+| Specify | L2 to L3 | traceability goal to requirement to test; independent ambiguity audit |
+| Plan | L2 to L3 | cross-repo and ADR gates |
+| Implement | L3 to narrow L4 | isolated worktree; no direct main writes |
+| Review | L3, advisory-only L4 | independence from the implementer; missed-defect metrics |
+| Test | L3 to L4 | running tests is not changing tests; immutable mandatory pipeline |
+| Merge | very narrow L3 to L4 | signed CI, protected paths, freshness, transitive effects |
+| Release | L2 to L3, narrow L4 later | separate rights per stage: artifact, staging, canary, promote, rollback, migrate |
+| Operate | L1 to L3 | read-only investigation default; safe-state before human-dependent fallback |
+| Learn | L2 to L3; L5 only after infra | quarantine before propagation |
+
+ADOS's own honest profile (bash era): clarify L1, specify and plan
+L2-L3, implement and review L3-L4 (delegated merge under owner-granted
+authority), test L3, release L2, operate L1, learn L2-L3.
+
+## Measurement: three axes, four layers, no single score
+
+| Axis | What it measures | Gated by |
+|---|---|---|
+| Breadth (adoption) | Which classes run under agent operation at all | Organizational change |
+| Depth (authority) | Delegated authority per class with its contract | Verification infrastructure |
+| Outcome (evidence) | Whether each delegation improves results net of rework, incidents, and infrastructure cost | Measurement |
+
+The axes interact (adoption generates evidence; authority affects
+adoption; the METR randomized result - 19 percent slower while
+participants felt faster - is why self-report never substitutes for
+measurement), so they are reported separately and their interaction is
+analyzed, never averaged.
+
+Within depth, four distinct layers, never conflated: **declared** (the
+dashboard says), **authorized** (the policy actually allows),
+**exercised** (which actions truly ran unattended), **verified** (which
+carry a valid, fresh evidence pack). Status vocabulary instead of
+marketing scores: unknown, declared, configured, shadow-validated,
+canary-active, qualified, stale, suspended. Only qualified - with
+locally defined evidence and outcome thresholds - authorizes L4 in its
+approved envelope, and there are no universal thresholds: at n clean
+trials the rough upper error bound is 3/n, so "100 green tickets"
+proves about 3 percent, and risk-dependent evidence requirements plus
+hard loss caps for R4 classes replace any magic number. The
+denominators that make reporting honest: eligible actions, unattended
+completion rate, policy block rate, escaped defects, rollback rate,
+time-to-safe-state, stale-evidence rate, review burden - segmented by
+class, repo, model, and policy version, never a global average.
+
+The four theaters, each detectable: adoption theater (usage grows,
+bottlenecks and outcomes do not move), autonomy theater (declared L4
+on a permissive tool mode with no audit or safe-state tests),
+approval theater (a human clicks approve hundreds of times without
+information or time - that is not oversight), measurement theater (a
+dashboard without denominators or exposure). The ex-post test for any
+claim: for a random action, can the system show the policy, the owner,
+the context, the decision, the independent evidence, the effects, and
+who owns the fallback?
+
+## Graduation and demotion
+
+Graduation: build the target level's infrastructure -> write the
+contract (envelope, verifiers, fallback, evidence TTL) -> owner approves
+the policy change (dual control; evaluated under the prior policy - a
+change can never loosen its own approval requirements) -> shadow run
+with authority withheld (weeks in review mode first is the production
+precedent) -> canary with hard caps per trigger and per plan, never an
+agent-global switch -> sampling verification (100 percent novel and
+severe, then 10-20 percent routine) -> declare; declaration and policy
+are the same act.
+
+Verifier independence is defined per failure mode, not per agent name:
+deterministic oracles (typecheck, lint, policy checks), semantic
+(BDD against real expectations, property and mutation testing),
+integration, independent analysis (different context, different model
+class, human sampling), operational (canary, SLO, rollback). "Reviewer
+says LGTM" as the only merge evidence is the canonical anti-pattern -
+the same model can misunderstand the requirement, write the code, test
+the misunderstanding, and approve the PR.
+
+Demotion has two directions: vertical (L4 to L3 to freeze) and
+horizontal (same level, narrower envelope - docs-only, file caps, no
+dependency changes). Prefer the smallest restriction that removes the
+actual threat. Automatic triggers: policy engine unreachable -> deny
+consequential actions (fail closed); verifier changed or unavailable ->
+demote; model, prompt, tool, MCP, repo-architecture, or CI-policy
+change -> evidence stale, requalify inside the same envelope; secret
+exposure -> freeze and rotate; high rollback or incident rate -> narrow
+or suspend; operator unavailable for required takeover -> no actions
+needing urgent human fallback (prefer pause-and-quarantine over
+demanding an absent human); cross-repo cascade -> stop the campaign;
+budget exhaustion -> demote. Demotion latency is a KPI.
+
+## Runtime enforcement
+
+The decision sequence at every consequential action: authenticate
+principal and session -> evaluate the effective contract -> verify
+evidence freshness and constraints -> issue a short-lived scoped
+credential (least privilege; an L4 grant is never a standing broad
+token) -> execute through the provider adapter -> postcondition checks
+(the merge commit exists on the target branch) -> immutable audit event
+(policy decision id, evidence ref, tool invocation, effect ref). Agent
+self-report is never evidence: "agent says CI green" is not the CI API.
+
+Effective policy is the intersection, never the union:
+organization maximum, project maximum, repository policy, temporary
+change-scoped grant, tool-provider enforcement, runtime safety state.
+Repo-level overrides may only restrict; widening requires an explicit
+owner change of the parent policy - an import that happens to widen
+rights is a silent-scope-widening defect. Escalations to humans carry a
+takeover packet (why escalated, current state, attempted actions,
+verification results, remaining options, risk assessment, suggested
+safe action, artifact links), and takeover capability is drilled, not
+assumed - out-of-the-loop humans cannot absorb a multi-repo exception
+they have never seen.
+
+## Human roles at L4+
+
+Not fewer humans doing clicks - different, harder work: policy owner
+(sets envelopes and risk), product goal owner (outcomes and
+intent), verification owner (verifier effectiveness), incident
+commander (takeover and recovery), system operator (measurement,
+exceptions, retros), security and data owner (special permissions).
+One person may hold several roles in a small setup, but the system
+still separates "agent implements" from "agent raises its own
+permissions". Autonomy promotion and product release rollout are
+separate changes with separate owners, metrics, and rollbacks.
 
 ## How ADOS uses this
 
-- **Roadmap vocabulary**: stories declare target levels per class.
-  M0-M1 bring implement, review, and learn to L4 on pilot repositories;
-  M2 pushes learn (ceremonies, retro) toward L4 and adds the supervision
-  fabric L4 requires; M3-M4 make the profile configurable per project;
-  L5 capabilities stay behind evidence gates. The ladder replaces vague
-  "more autonomous" goals with testable per-class ACs.
-- **User maturity assessment**: bootstrapper maps a project's current
-  profile during onboarding; the assessment names the next class to
-  raise, and the next-level infrastructure checklist becomes the
-  adoption plan. A future doctor report derives the exercised profile
-  from observed gating data (what actually required a human) versus the
-  declared policy - drift between the two is a finding.
-- **Governance**: the declared ladder IS the authority policy held by
-  the policy engine (policy-as-code concept); the memory model's
-  promotion authority (memory-autonomy-and-visibility.md) and the retro
-  autonomy model (retrospectives.md) are instances of this ladder in
-  their domains.
+- **Roadmap vocabulary**: stories declare per-class target levels
+  along the dependency graph. The implementation ladder: phase 0
+  honest baseline (inventory actions, permissions, declared versus
+  exercised) -> phase 1 contract and policy enforcement in one repo
+  (fail-closed evaluator, audit stream, scoped credentials) ->
+  phase 2 verification and recovery infrastructure (independent
+  oracles, rollback drills, fault injection) -> phase 3 behavior
+  observability (the four-layer dashboard with drill-down) ->
+  phase 4 multi-repo governance (restrict-only inheritance, portfolio
+  caps, cross-repo grants) -> phase 5 fleet learning as progressive
+  delivery (quarantine, offline eval, canary, reversible rollout).
+- **First slice** (the recommended start): docs-only auto-merge in one
+  pilot repository - effective policy, CI evidence, dry run, audit,
+  simple auto-revoke, operator review. A repeatable end-to-end
+  mechanism before any portfolio machinery.
+- **User maturity assessment**: bootstrapper maps the profile during
+  onboarding using the interview instrument (one action family at a
+  time, every answer backed by a document, log, or config - "yes we
+  have" without proof is declared, not verified); the doctor derives
+  the exercised profile from gating data and reports drift between
+  declared, authorized, and exercised.
+- **Governance**: contracts live in the policy engine; the memory
+  model's promotion authority and the retro autonomy model are
+  instances of this ladder in their domains.
 
 ## Anti-patterns
 
-- Autonomy creep: raising a level because the model seems smarter.
-- Lights-out envy: chasing lights-out operation; lights-out is a
-  position on the self-modification axis, not a rung to earn, and the
-  ladder treats it as out of scope for delegation policy.
-- The uniform-level assumption: one number for the whole org.
-- Adoption theater: measuring breadth while depth stays L1-L2 forever.
-- Declaration without policy: claiming a level the authority policy
-  does not actually grant (the doctor's drift check exists for this).
-- Agent-global autonomy switches: authority is granted per trigger and
-  per OAD, never as one toggle for an agent.
-- Safety cases that assume human attention (the L3/L4 fallback rule).
-- Self-loosening: policy changes approving themselves under their own
-  new rules.
+Uniform organization level; benchmark-to-authority leaps;
+permission-mode-as-security (a bypass switch is not an org decision);
+approval everywhere forever (where accountability does not demand it);
+the four theaters; self-verification monoculture; green-pipeline
+fallacy; no exposure denominator ("100 percent success" on three
+trials); silent scope widening via config imports; orphan sessions
+continuing after revoke; log laundering (a model summarizing a
+violation as a success); monotonic autonomy (a system that can only
+rise); maturity-score Goodharting; fast-code slow-release (throughput
+up, WIP and rework worse); fleet lessons straight to production;
+wrong-way fallback (demanding an absent human instead of reaching safe
+state); false reversibility (treating revert as undo for R4 classes);
+risk aggregation blindness; agent-global switches; safety cases that
+assume human attention; self-loosening.
+
+The systemic lesson: the most dangerous configuration is one where an
+agent's output is simultaneously the execution, the control, and the
+quality report. ADOS builds contracts, independent evidence paths, and
+ordinary reliability engineering - not a super-agent.
 
 ## Open questions
 
-- What is the minimal evidence infrastructure that honestly earns L4
-  for the merge class (our current deepest delegation)?
-- OAD declaration format: policy-engine config versus a dedicated
-  document; how much is generated from observed behavior versus
-  declared.
-- Outcome-axis measurement in practice: which KPIs (declared versus
-  exercised versus effective authority, verifier escape rate, evidence
-  freshness, demotion latency, policy drift) justify their
-  instrumentation cost at ADOS scale.
-- Full-report reconciliation pending: the deep-research summary drove
-  these changes; the full report (framework mapping tables, L4/L5
-  checklists, the KPI set) lands for a second pass when available.
+- Minimal honest L4 evidence for the merge class beyond docs-only (our
+  current deepest delegation).
+- Contract schema ownership: core CLI/MCP engine versus optional
+  central service; risk-unit semantics and portfolio caps.
+- Tenant-isolated policy semantics for multi-tenant deployments;
+  portable evidence packs for external auditors and enterprise
+  customers.
+- Assurance model for agent-to-agent delegation chains (accountability
+  must not vanish in the chain).
+- Selective prediction and abstention as escalation triggers for novel
+  tasks.
