@@ -137,10 +137,15 @@ the assurance a self-modifying system needs.
    escapes, expensive loops and cost anomalies, vacuous checks,
    tool-mechanics failures, delivery friction metrics (phase reopens,
    review iterations, branch-open duration) where clusters across
-   tickets indicate systemic gaps and one-offs usually do not, and
+   tickets indicate systemic gaps and one-offs usually do not,
    near-miss capture (successful defensive interventions - a critic
    catch, a rollback that limited impact, a sandbox block - are
-   reinforcement candidates, not just failure analysis).
+   reinforcement candidates, not just failure analysis), and
+   communication analysis (typed messages with origin linkage are
+   evidence: unanswered asks and aging, escalation rates, ask/answer
+   latency, coordination load versus outcomes - per inter-agent-
+   communication.md; collected mechanically, never an agent grading
+   system).
 
    Attribution uses three labels, not one: the originating step, the
    propagation or control failure, and the missed detection opportunity.
