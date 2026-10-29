@@ -1,0 +1,34 @@
+{
+  "name": "@delivery-os/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts/index.d.ts",
+      "default": "./dist/contracts/index.js"
+    },
+    "./state": {
+      "types": "./dist/state/index.d.ts",
+      "default": "./dist/state/index.js"
+    },
+    "./branding": {
+      "types": "./dist/branding/index.d.ts",
+      "default": "./dist/branding/index.js"
+    }
+  },
+  "imports": {
+    "#domain/*": "./src/domain/*.ts",
+    "#app/*": "./src/app/*.ts",
+    "#config/*": "./src/config/*.ts",
+    "#branding/*": "./src/branding/*.ts",
+    "#state/*": "./src/state/*.ts"
+  },
+  "workspaceImports": {},
+  "scripts": {}
+}

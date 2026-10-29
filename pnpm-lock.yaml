@@ -6,4 +6,116 @@ settings:
 
 importers:
 
-  .: {}
+  .:
+    devDependencies:
+      '@delivery-os/adapters':
+        specifier: workspace:*
+        version: link:packages/adapters
+      '@delivery-os/cli':
+        specifier: workspace:*
+        version: link:packages/cli
+      '@delivery-os/core':
+        specifier: workspace:*
+        version: link:packages/core
+      '@delivery-os/mcp':
+        specifier: workspace:*
+        version: link:packages/mcp
+      '@delivery-os/opencode':
+        specifier: workspace:*
+        version: link:packages/opencode
+      '@delivery-os/testkit':
+        specifier: workspace:*
+        version: link:packages/testkit
+      '@types/bun':
+        specifier: 1.4.4
+        version: 1.4.4
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+
+  packages/adapters:
+    dependencies:
+      '@delivery-os/core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/cli:
+    dependencies:
+      '@delivery-os/adapters':
+        specifier: workspace:*
+        version: link:../adapters
+      '@delivery-os/core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/core: {}
+
+  packages/mcp:
+    dependencies:
+      '@delivery-os/adapters':
+        specifier: workspace:*
+        version: link:../adapters
+      '@delivery-os/core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/opencode:
+    dependencies:
+      '@delivery-os/adapters':
+        specifier: workspace:*
+        version: link:../adapters
+      '@delivery-os/core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/testkit:
+    devDependencies:
+      '@delivery-os/adapters':
+        specifier: workspace:*
+        version: link:../adapters
+      '@delivery-os/core':
+        specifier: workspace:*
+        version: link:../core
+
+packages:
+
+  '@types/bun@1.4.4':
+    resolution: {integrity: sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ==}
+
+  '@types/node@26.6.6':
+    resolution: {integrity: sha512-MzQj+8Kx3XI40OmUAE6Qoh58ZMNstNNMwn2nfd3qWsfe7nDNSqJNzes4njhz6AHwrSHOffSLwXU6yb474Q4aog==}
+
+  bun-types@1.4.4:
+    resolution: {integrity: sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ==}
+
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
+  undici-types@8.12.3:
+    resolution: {integrity: sha512-EXE4ydL3S76dFb27UFjNVZHTyv/TLdATj/KUe29ptdcg6qXL48J2tZ3126E5kICj5jn781OR+XlVH1N6Mz8jbA==}
+
+  undici-types@8.9.0:
+    resolution: {integrity: sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg==}
+
+snapshots:
+
+  '@types/bun@1.4.4':
+    dependencies:
+      bun-types: 1.4.4
+
+  '@types/node@26.6.6':
+    dependencies:
+      undici-types: 8.9.0
+
+  bun-types@1.4.4:
+    dependencies:
+      '@types/node': 26.6.6
+      undici-types: 8.12.3
+
+  typescript@6.0.3: {}
+
+  undici-types@8.12.3: {}
+
+  undici-types@8.9.0: {}

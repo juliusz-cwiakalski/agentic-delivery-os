@@ -8,5 +8,14 @@
     "bun": "1.4.4"
   },
   "scripts": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "@delivery-os/adapters": "workspace:*",
+    "@delivery-os/cli": "workspace:*",
+    "@delivery-os/core": "workspace:*",
+    "@delivery-os/mcp": "workspace:*",
+    "@delivery-os/opencode": "workspace:*",
+    "@delivery-os/testkit": "workspace:*",
+    "@types/bun": "1.4.4",
+    "typescript": "6.0.3"
+  }
 }

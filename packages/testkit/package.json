@@ -1,0 +1,33 @@
+{
+  "name": "@delivery-os/testkit",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "workspaceImports": {
+    "@delivery-os/core": [".", "./contracts"],
+    "@delivery-os/adapters": [
+      "./gitlab",
+      "./jira",
+      "./github",
+      "./azure",
+      "./ci",
+      "./registry",
+      "./repo",
+      "./file",
+      "./host",
+      "./session",
+      "./legacy"
+    ]
+  },
+  "scripts": {},
+  "devDependencies": {
+    "@delivery-os/core": "workspace:*",
+    "@delivery-os/adapters": "workspace:*"
+  }
+}

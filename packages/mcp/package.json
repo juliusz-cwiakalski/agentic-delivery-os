@@ -1,0 +1,38 @@
+{
+  "name": "@delivery-os/mcp",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "imports": {
+    "#commands/*": "./src/commands/*.ts",
+    "#output/*": "./src/output/*.ts"
+  },
+  "workspaceImports": {
+    "@delivery-os/core": [".", "./contracts", "./state", "./branding"],
+    "@delivery-os/adapters": [
+      "./gitlab",
+      "./jira",
+      "./github",
+      "./azure",
+      "./ci",
+      "./registry",
+      "./repo",
+      "./file",
+      "./host",
+      "./session",
+      "./legacy"
+    ]
+  },
+  "scripts": {},
+  "dependencies": {
+    "@delivery-os/core": "workspace:*",
+    "@delivery-os/adapters": "workspace:*"
+  }
+}
