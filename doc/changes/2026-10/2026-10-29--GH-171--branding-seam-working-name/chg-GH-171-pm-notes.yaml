@@ -30,7 +30,7 @@ dor_iterations:
   review_fix: { started: "2026-10-30T02:10:00Z", completed: "2026-10-30T02:30:00Z" }
   quality_gates: { started: "2026-10-30T02:35:00Z", completed: "2026-10-30T02:55:00Z" }
   dod_check: { started: "2026-10-30T03:00:00Z", completed: "2026-10-30T03:05:00Z" }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: "2026-10-30T03:10:00Z", completed: null, url: null }
 decisions:
   - text: "Delivery mode autonomous: user directive 'Deliver GH-171 end-to-end using ADOS' with STOP at open PR; merge authority stays with CEO/human."
     date: 2026-10-29
