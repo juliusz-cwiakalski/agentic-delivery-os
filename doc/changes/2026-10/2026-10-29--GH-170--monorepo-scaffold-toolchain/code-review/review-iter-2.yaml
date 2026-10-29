@@ -1,0 +1,64 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-170
+branch: feat/GH-170/monorepo-scaffold-toolchain
+status: PASS
+summary: >-
+  Re-review after remediation R1: every blocking finding from iteration 1 is verified
+  CLOSED with independent empirical evidence, not just diff inspection. F-1 (inert
+  depcruise rules): in a production-shaped temp workspace (real manifests, exports→dist,
+  dist materialized, self-contained node_modules symlinks) the four iter-1 escape edges
+  now fail post-build with the correct named rules — subpath-adapters-core-state,
+  subpath-undeclared, matrix-cli-importer, testkit-no-production-import — and fail
+  pre-build by name via workspace-import-must-resolve, while allowed package-name edges
+  cruise clean (exit 0); the fixture harness now mirrors production resolution and the
+  couldNotResolve/deep-import/registry coverage is reconciled (162/162 tests green).
+  F-2: check:boundaries chains depcruise → ambient-globals → workspace-entrypoints and a
+  forbidden package-name edge fails the local aggregate through two independent layers
+  (depcruise by name pre- and post-build; workspace-entrypoints names the undeclared
+  import). F-3/F-4/F-5/F-7/F-8 all verified closed (PR-time observed-green merge gate
+  recorded with ⏳ DoD markers; literal ADR scope and narrowed-exemption assertions;
+  license allow_list fail-closed 10/10; feature spec/glossary/testing-strategy name
+  workspace-entrypoints and production-resolution fixtures). Current state independently
+  green: pnpm check exit 0 with the three-stage boundaries chain, bun test 162/162 across
+  11 files; protected files untouched, ci.yml additions-only (ci-topology green), no new
+  product tokens. Deferred items (F-6, F-9, pnpm 12.x bump, attw profile, Bun pin shape)
+  remain deferred by design per plan v1.4/1.5 and are not re-raised. One new info-level
+  note recorded; no remediation phase required.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: info
+    confidence: high
+    category: correctness
+    location: .dependency-cruiser.cjs:101
+    message: >-
+      Forward-looking note (no action for this change). The workspace-import-must-resolve
+      catch-all fails EVERY unresolvable @delivery-os/* specifier pre-build, including
+      matrix-allowed edges, because manifests export only dist targets (verified
+      empirically: pre-build probes fail by name regardless of legality). This mirrors
+      the existing typecheck posture (tsc also cannot resolve cross-package imports
+      without dist), so it is consistent fail-closed design, not a regression — but the
+      ts-boundaries and ts-typecheck CI jobs run pre-build, so the first content story
+      that adds a legitimate cross-package import will turn both red until CI builds
+      first or manifests gain a development-condition export.
+    suggestion: >-
+      No action now. When the first cross-package content story lands, order the CI build
+      job before boundaries/typecheck (or add a development condition to the exports
+      maps) and add a pre-build clean control documenting the posture; surface this note
+      in that story's planning.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-10-29T23:59:00Z
+next_step: PROCEED

@@ -1,0 +1,53 @@
+{
+  "name": "@delivery-os/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "imports": {
+    "#commands/*": "./src/commands/*.ts",
+    "#output/*": "./src/output/*.ts"
+  },
+  "workspaceImports": {
+    "@delivery-os/core": [
+      ".",
+      "./contracts",
+      "./state",
+      "./branding"
+    ],
+    "@delivery-os/adapters": [
+      "./gitlab",
+      "./jira",
+      "./github",
+      "./azure",
+      "./ci",
+      "./registry",
+      "./repo",
+      "./file",
+      "./host",
+      "./session",
+      "./legacy"
+    ]
+  },
+  "scripts": {
+    "lint": "biome lint .",
+    "format:check": "biome format .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test",
+    "check:boundaries": "depcruise --config ../../.dependency-cruiser.cjs src",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries",
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@delivery-os/core": "workspace:*",
+    "@delivery-os/adapters": "workspace:*"
+  }
+}

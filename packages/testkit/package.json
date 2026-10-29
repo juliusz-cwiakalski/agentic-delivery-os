@@ -1,0 +1,44 @@
+{
+  "name": "@delivery-os/testkit",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "workspaceImports": {
+    "@delivery-os/core": [
+      ".",
+      "./contracts"
+    ],
+    "@delivery-os/adapters": [
+      "./gitlab",
+      "./jira",
+      "./github",
+      "./azure",
+      "./ci",
+      "./registry",
+      "./repo",
+      "./file",
+      "./host",
+      "./session",
+      "./legacy"
+    ]
+  },
+  "scripts": {
+    "lint": "biome lint .",
+    "format:check": "biome format .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test",
+    "check:boundaries": "depcruise --config ../../.dependency-cruiser.cjs src",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries",
+    "build": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@delivery-os/core": "workspace:*",
+    "@delivery-os/adapters": "workspace:*"
+  }
+}

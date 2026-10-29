@@ -1,0 +1,29 @@
+{
+  "core": [
+    "src/app/index.ts",
+    "src/branding/index.ts",
+    "src/config/index.ts",
+    "src/contracts/index.ts",
+    "src/domain/index.ts",
+    "src/index.ts",
+    "src/state/index.ts"
+  ],
+  "adapters": [
+    "src/azure/index.ts",
+    "src/ci/index.ts",
+    "src/file/index.ts",
+    "src/gitlab/index.ts",
+    "src/github/index.ts",
+    "src/host/index.ts",
+    "src/io/index.ts",
+    "src/jira/index.ts",
+    "src/legacy/index.ts",
+    "src/registry/index.ts",
+    "src/repo/index.ts",
+    "src/session/index.ts"
+  ],
+  "cli": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
+  "mcp": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
+  "opencode": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
+  "testkit": ["src/index.ts"]
+}

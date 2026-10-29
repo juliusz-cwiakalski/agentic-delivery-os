@@ -1,0 +1,11 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/adapters" },
+    { "path": "./packages/cli" },
+    { "path": "./packages/mcp" },
+    { "path": "./packages/opencode" },
+    { "path": "./packages/testkit" }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "unknownRef": "LicenseRef-Proprietary",
+  "nonAllowlisted": "GPL-3.0-only",
+  "compoundOrDisallowed": "MIT OR GPL-3.0-only",
+  "compoundAndAllowed": "MIT AND Apache-2.0",
+  "empty": ""
+}

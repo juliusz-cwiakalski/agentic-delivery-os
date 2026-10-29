@@ -1,0 +1,68 @@
+# Dependency license registry — direct dev-dependency set at scaffold.
+# Machine-readable: every required field is a scalar; no prose in required fields.
+# The C-2 license determination is confirmed by the owner at PR review; entries
+# below are the proposed approved verdicts the audit enforces from the first
+# dependency onward (DEC-10 / OQ-1).
+schema_version: 1
+scope: direct-dev-dependencies
+c2_determination: proposed at delivery; confirmed by the owner at PR review
+entries:
+  - package: "@arethetypeswrong/cli"
+    version: "0.18.5"
+    license: "MIT"
+    source: dev-dependency
+    verdict: approved
+  - package: "@biomejs/biome"
+    version: "2.6.4"
+    license: "MIT OR Apache-2.0"
+    source: dev-dependency
+    verdict: approved
+  - package: "@changesets/cli"
+    version: "3.0.3"
+    license: "MIT"
+    source: dev-dependency
+    verdict: approved
+  - package: "@commitlint/cli"
+    version: "21.2.4"
+    license: "MIT"
+    source: dev-dependency
+    verdict: approved
+  - package: "@commitlint/config-conventional"
+    version: "21.2.4"
+    license: "MIT"
+    source: dev-dependency
+    verdict: approved
+  - package: "@types/bun"
+    version: "1.4.4"
+    license: "MIT"
+    source: dev-dependency
+    verdict: approved
+  - package: dependency-cruiser
+    version: "18.7.0"
+    license: "MIT"
+    source: dev-dependency
+    verdict: approved
+  - package: husky
+    version: "9.1.7"
+    license: "MIT"
+    source: dev-dependency
+    verdict: approved
+  - package: publint
+    version: "0.3.25"
+    license: "MIT"
+    source: dev-dependency
+    verdict: approved
+  - package: typescript
+    version: "6.0.3"
+    license: "Apache-2.0"
+    source: dev-dependency
+    verdict: approved
+  - package: yaml
+    version: "2.9.1"
+    license: "ISC"
+    source: dev-dependency
+    verdict: approved
+allow_list:
+  - Apache-2.0
+  - ISC
+  - MIT

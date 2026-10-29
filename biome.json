@@ -1,0 +1,47 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.6.4/schema.json",
+  "files": {
+    "includes": [
+      "packages/**",
+      "scripts/checks/**",
+      "tests/**",
+      "package.json",
+      "tsconfig.json",
+      "tsconfig.base.json",
+      "biome.json",
+      "!!**/dist",
+      "!!**/node_modules",
+      "!!tmp"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended"
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["tests/fixtures/**"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "useLiteralKeys": "off"
+          },
+          "correctness": {
+            "noUnusedVariables": "off"
+          },
+          "suspicious": {
+            "noFallthroughSwitchClause": "off"
+          }
+        }
+      }
+    }
+  ]
+}

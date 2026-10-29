@@ -1,0 +1,265 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-170
+branch: feat/GH-170/monorepo-scaffold-toolchain
+status: FAIL
+summary: >-
+  The scaffold is structurally faithful to spec v1.1 and plan v1.2: six packages with
+  exact DEC-1/DM-3 shapes, strict TS base, one aggregate check, publish double-lock,
+  fail-closed license audit, additive SHA-pinned CI, protected files untouched, and an
+  independently re-verified green suite (159/159, ~65s; pin/license/entrypoint checks
+  re-run green by this review). However, the central deliverable — mechanical DEC-2
+  enforcement — has a correctness hole: dependency-cruiser's package-name rules
+  (matrix-*, subpath-*, testkit-*) cannot fire in the live tree because production
+  exports resolve to dist/ which the config excludes (verified empirically in a
+  production-shaped workspace: adapters->core ./state, adapters->core root, cli->mcp,
+  core->testkit all cruise clean, pre- and post-build); the negative fixtures prove
+  these rules only in a fixture world whose manifests point exports at src/, so 11 of
+  20 rule registrations are inert on the production resolution path and the only live
+  package-name gate (workspace-entrypoints.ts) sits outside the local aggregate.
+  Secondary: CI obligations (TC-023 step 5, TC-025 step 3, TC-026/029 CI halves,
+  TC-001/022 CI e2e) are defined-but-unobserved while the DoD marks AC-F13-1 green.
+severity_breakdown:
+  critical: 1
+  high: 2
+  medium: 2
+  low: 3
+  info: 2
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: critical
+    confidence: high
+    category: correctness
+    location: .dependency-cruiser.cjs:17
+    message: >-
+      BLOCKING. The depcruise package-name rules are inert in the live tree. Production
+      manifests point exports at ./dist, and the config's exclude/doNotFollow drop dist
+      edges, so matrix-core/adapters/cli/mcp/opencode-importer, subpath-adapters-core-state,
+      subpath-adapters-core-branding, both subpath-undeclared entries, and both testkit-*
+      rules can never fire for package-name imports (post-build the edge resolves to
+      excluded dist/; pre-build it is unresolvable and only the /src|dist/ deep-import
+      pattern catches unresolvable specifiers). Verified empirically in a temp workspace
+      with production-shaped manifests + dist present AND absent: adapters->@delivery-os/core/state,
+      adapters->@delivery-os/core (root .), cli->@delivery-os/mcp, core->@delivery-os/testkit
+      all cruise with zero violations, while alias/relative/runtime-specifier forms fire
+      correctly. The fixture harness (tests/boundaries/harness.ts manifestFor) deliberately
+      points fixture exports at ./src, manufacturing rule firings that cannot occur in
+      production — RSK-T1 (fixture resolution drift) is realized, contradicting the
+      harness contract's "resolve exactly as in the real workspace" and hollowing the
+      TC-016 non-vacuousness proof for 11 of 20 rule registrations. The CI compensating
+      control is workspace-entrypoints.ts (ts-invariants), so forbidden edges ARE blocked
+      in CI, but not by the named rules, not by check:boundaries, and not by the local
+      aggregate — contrary to AC-F1-1/AC-F6-1, NFR-2, and test-plan Flow 2.
+    suggestion: >-
+      Make fixtures mirror production (exports -> dist with dist files materialized in
+      the temp workspace) and extend the affected to-path patterns to both resolution
+      forms, e.g. ^packages/core/(src|dist)/state/ and ^packages/(cli|mcp|opencode)/;
+      alternatively (or additionally) add a couldNotResolve catch-all for ^@delivery-os/
+      specifiers so pre-build undeclared imports fail by name. Keep the clean-cruise
+      controls on both forms. Re-run tests/boundaries and record the harness-contract
+      correction in the plan revision log.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: high
+    confidence: high
+    category: correctness
+    location: package.json:13
+    message: >-
+      MAJOR. scripts/checks/workspace-entrypoints.ts — the only live-tree gate for
+      package-name workspace edges — is not part of the local aggregate; it runs only in
+      the CI ts-invariants job. Post-build, `pnpm check` (the "single green/red signal",
+      F-9/AC-F9-1) stays green while a forbidden package-name edge exists in packages/*/src
+      (typecheck resolves via dist, depcruise is blind per F-1, workspace-entrypoints never
+      runs locally).
+    suggestion: >-
+      Chain `bun run scripts/checks/workspace-entrypoints.ts` into check:boundaries in the
+      root package.json (after depcruise + ambient-globals); it is offline, fast, and
+      closes the local half of AC-F1-1 while F-1's fixture/rule fix lands.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: high
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-10/2026-10-29--GH-170--monorepo-scaffold-toolchain/chg-GH-170-plan.md:534
+    message: >-
+      MAJOR. CI observation obligations are undis-charged: TC-023 step 5 (observed CI run),
+      TC-025 step 3 (job conclusions on the PR), TC-026 CI half, TC-029 CI half, TC-037 CI
+      observation, and the CI halves of TC-001/TC-022 are defined-but-unobserved (execution
+      report: "CI run: none — not pushed in this run"), yet the DoD walkthrough marks
+      AC-F13-1 as met and NFR-8 as verified. The plan's own P8 test step ("Push branch ->
+      observe the CI run") was displaced to PR time without recording that as the
+      gate-completion path.
+    suggestion: >-
+      Record an explicit merge-blocking condition in the PR description and pm-notes: all
+      15 ts-* jobs AND all bash jobs must be observed green on the PR before merge, and
+      amend the AC-F13-1/NFR-8 evidence in the plan to the PR-time completion path. Do not
+      merge on local-equivalent evidence alone.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: test-quality
+    location: tests/boundaries/boundaries.test.ts:79
+    message: >-
+      MINOR. The TC-015 step-1 "ambient guard scope equals the ADR neutral set exactly"
+      test is tautological: it compares AMBIENT_SCOPE.files/directories against
+      PUBLIC_ENTRY/NEUTRAL_TIER_DIRECTORIES — the same exported constants that define
+      AMBIENT_SCOPE — so it can never fail on a coordinated scope narrowing (the exact
+      iter-2 regression class it exists to pin). The effective protection is incidental,
+      via the literal-path ambient fixtures and the meta-check's literal coveredScopes.
+    suggestion: >-
+      Assert the literal ADR set in the test: files === ["packages/core/src/index.ts"] and
+      directories === ["packages/core/src/contracts",".../domain",".../app",".../config",".../branding"]
+      written as string literals, independent of the ambient-globals exports.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: .dependency-cruiser.cjs:173
+    message: >-
+      MINOR. runtime-apis-confinement exempts entire packages (^packages/adapters/,
+      ^packages/cli/, ^packages/opencode/) via pathNot, broader than the ADR-verbatim
+      allowlist ("the core ./state driver code, the adapter I/O subpaths, the CLI build,
+      and the OpenCode host integration"). A node:fs import in adapters/src/registry or
+      adapters/src/gitlab passes. The CLI-build/OpenCode-host over-breadth was accepted as
+      structural at DoR iter-3 (A-T9); the adapters breadth (provider/registry subpaths
+      are not I/O subpaths) is an unrecorded widening of the ADR cell.
+    suggestion: >-
+      Either record the structural simplification explicitly (rule comment + feature spec
+      note) or narrow the adapters exemption to the I/O subpaths
+      (^packages/adapters/src/(repo|file|host|session|legacy)/) when the first adapter
+      content lands; add an allowlist-shape fixture for the narrowed form.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-6
+    severity: low
+    confidence: high
+    category: security
+    location: scripts/checks/ambient-globals.ts:66
+    message: >-
+      MINOR. The ambient guard is evadable and false-positive-prone at the edges:
+      globalThis.process / globalThis.fetch bypass the ban (the identifier sits in
+      property-name position, which isSkippedIdentifierPosition skips), while a local
+      parameter named fetch/process would false-positive. The ban list is a
+      representative enumeration (performance.now passes — accepted DoR iter-3 nit 1).
+    suggestion: >-
+      When the first neutral-tier content story lands, also flag PropertyAccessExpression
+      chains rooted at globalThis whose property name is banned, and track shadowed
+      locals; extend the ban list (performance.now, crypto.randomUUID, navigator).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-7
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/spec/features/feature-monorepo-scaffold-toolchain.md:96
+    message: >-
+      MINOR. Doc truth: the feature spec's Boundary enforcement section presents the
+      package matrix/subpath/testkit rules as dependency-cruiser-enforced via negative
+      fixtures and lists the boundary instruments as "dependency-cruiser + the
+      ambient-globals AST guard", omitting scripts/checks/workspace-entrypoints.ts — which
+      is (and after F-1/F-2 even more so) a load-bearing enforcement instrument. The
+      testing-strategy.md and AGENTS.md edits otherwise match delivered reality.
+    suggestion: >-
+      After the F-1/F-2 remediation settles the mechanism, update the feature spec's
+      enforcement table (and the maintenance note) to name workspace-entrypoints.ts and
+      the actual resolution forms each rule family covers.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-8
+    severity: low
+    confidence: medium
+    category: correctness
+    location: scripts/checks/license-audit.ts:117
+    message: >-
+      NIT. identifiersFrom silently skips expressions that fail SPDX parsing when building
+      the allow set, so a malformed allow_list entry (e.g. "MIT OR") is ignored rather
+      than failed; the per-entry parse check and the allow_list<->approved consistency
+      check catch most but not all paths (a garbage allow_list entry that parses to
+      nothing contributes no failure of its own).
+    suggestion: >-
+      Validate every allow_list entry with parseSpdxExpression and fail closed on any
+      unparseable entry, mirroring the per-dependency treatment.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-9
+    severity: info
+    confidence: high
+    category: security
+    location: scripts/checks/ci-bindingness.ts:8
+    message: >-
+      NIT (recorded-risk note). ci-bindingness/ci-supply-chain scan only ts- prefixed jobs
+      in ci.yml; release.yml relies on publish-guard.test.ts whole-file substring checks
+      (weaker), and ci-topology's additions-only proxy would not flag a pure insertion
+      inside a bash job block (e.g. an added step). Accepted risk given bash jobs are
+      owner-frozen and reviewed; noting for the hardening story.
+    suggestion: >-
+      In a later hardening change, extend both scanners to release.yml and to inserted
+      lines inside the seven bash job blocks (YAML block extraction rather than line diff).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-10
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: scripts/checks/ignore-rules.ts:44
+    message: >-
+      Deviation verdicts and the naming-firewall question (no action required).
+      (1) NAMING FIREWALL CONFIRMED: productTokens = ["ados","ADOS_","~/.ados"] is the
+      AC-F14-1 brand-scan seed mechanism itself — the scanner's signature set, bound
+      verbatim by test-plan TC-034 step 2; it is the only new-code product token in the
+      delivery diff (verified by scanning every changed non-doc file). (2) pnpm 10.18.3
+      instead of latest-tagged 12.16.1: acceptable recorded deviation — 12.16.1 was not
+      installable in the delivery env (switcher failed on @pnpm/linux-x64), evidence
+      recorded under RSK-6; recommend a follow-up ticket to re-attempt the 12.x bump.
+      (3) attw --profile esm-only: acceptable — TC-029 notes explicitly bless a named
+      profile as the allowance form; recorded in the workflow command and execution log.
+      (4) Bun pin copy 3 as workflow-level env.BUN_VERSION: acceptable — single CI copy,
+      shape- and equality-enforced by pin-equality.ts; fail-closed if restructured.
+    suggestion: >-
+      Record the pnpm-bump follow-up and surface the DEC-10 license-verdict item at PR
+      review as planned. Note (awareness): packages/core/src/contracts/index.ts ships a
+      Result<T,E> placeholder type that anticipates M0-S3's envelope naming — types-only,
+      TC-006-permitted, but M0-S3 should confirm rather than inherit the shape silently.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-10-29T22:50:00Z
+next_step: EXECUTE_REMEDIATION_PHASE

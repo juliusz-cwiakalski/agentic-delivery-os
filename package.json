@@ -1,0 +1,39 @@
+{
+  "name": "delivery-os",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.18.3",
+  "engines": {
+    "bun": "1.4.4"
+  },
+  "scripts": {
+    "lint": "biome lint .",
+    "format:check": "biome format .",
+    "typecheck": "pnpm -r typecheck",
+    "test": "bun test",
+    "check:boundaries": "depcruise packages && bun run scripts/checks/ambient-globals.ts && bun run scripts/checks/workspace-entrypoints.ts",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries",
+    "prepare": "husky",
+    "build": "pnpm -r build"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@biomejs/biome": "2.6.4",
+    "@changesets/cli": "3.0.3",
+    "@commitlint/cli": "21.2.4",
+    "@commitlint/config-conventional": "21.2.4",
+    "@delivery-os/adapters": "workspace:*",
+    "@delivery-os/cli": "workspace:*",
+    "@delivery-os/core": "workspace:*",
+    "@delivery-os/mcp": "workspace:*",
+    "@delivery-os/opencode": "workspace:*",
+    "@delivery-os/testkit": "workspace:*",
+    "@types/bun": "1.4.4",
+    "dependency-cruiser": "18.7.0",
+    "husky": "9.1.7",
+    "publint": "0.3.25",
+    "typescript": "6.0.3",
+    "yaml": "2.9.1"
+  }
+}

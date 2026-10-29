@@ -1,0 +1,81 @@
+{
+  "name": "@delivery-os/adapters",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    "./gitlab": {
+      "types": "./dist/gitlab/index.d.ts",
+      "default": "./dist/gitlab/index.js"
+    },
+    "./jira": {
+      "types": "./dist/jira/index.d.ts",
+      "default": "./dist/jira/index.js"
+    },
+    "./github": {
+      "types": "./dist/github/index.d.ts",
+      "default": "./dist/github/index.js"
+    },
+    "./azure": {
+      "types": "./dist/azure/index.d.ts",
+      "default": "./dist/azure/index.js"
+    },
+    "./ci": {
+      "types": "./dist/ci/index.d.ts",
+      "default": "./dist/ci/index.js"
+    },
+    "./registry": {
+      "types": "./dist/registry/index.d.ts",
+      "default": "./dist/registry/index.js"
+    },
+    "./repo": {
+      "types": "./dist/repo/index.d.ts",
+      "default": "./dist/repo/index.js"
+    },
+    "./file": {
+      "types": "./dist/file/index.d.ts",
+      "default": "./dist/file/index.js"
+    },
+    "./host": {
+      "types": "./dist/host/index.d.ts",
+      "default": "./dist/host/index.js"
+    },
+    "./session": {
+      "types": "./dist/session/index.d.ts",
+      "default": "./dist/session/index.js"
+    },
+    "./legacy": {
+      "types": "./dist/legacy/index.d.ts",
+      "default": "./dist/legacy/index.js"
+    }
+  },
+  "imports": {
+    "#gitlab/*": "./src/gitlab/*.ts",
+    "#jira/*": "./src/jira/*.ts",
+    "#github/*": "./src/github/*.ts",
+    "#azure/*": "./src/azure/*.ts",
+    "#ci/*": "./src/ci/*.ts",
+    "#io/*": "./src/io/*.ts",
+    "#registry": "./src/registry/index.ts"
+  },
+  "workspaceImports": {
+    "@delivery-os/core": [
+      "./contracts"
+    ]
+  },
+  "scripts": {
+    "lint": "biome lint .",
+    "format:check": "biome format .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test",
+    "check:boundaries": "depcruise --config ../../.dependency-cruiser.cjs src",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries",
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@delivery-os/core": "workspace:*"
+  }
+}
