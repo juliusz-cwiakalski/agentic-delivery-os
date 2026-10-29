@@ -13,9 +13,10 @@ phases:
   dor_check: { started: "2026-10-29T18:20:00Z", completed: "2026-10-29T20:30:00Z" }
   delivery: { started: "2026-10-29T20:35:00Z", completed: "2026-10-29T21:30:00Z" }
   system_spec_update: { started: "2026-10-29T21:35:00Z", completed: "2026-10-29T22:00:00Z" }
-  review_fix: { started: "2026-10-29T22:05:00Z", completed: null }
+  review_fix: { started: "2026-10-29T22:05:00Z", completed: "2026-10-30T00:30:00Z" }
   review_iterations:
     - { iteration: 1, status: FAIL, date: "2026-10-29T22:50:00Z", artifact: code-review/review-iter-1.yaml }
+    - { iteration: 2, status: PASS, date: "2026-10-30T00:25:00Z", artifact: code-review/review-iter-2.yaml }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -82,6 +83,9 @@ notes:
   - text: "RETRO: reviewer's empirical verification (production-shaped temp workspace, cruise pre+post-build) caught what fixture-based proof structurally could not: the fixtures proved the RULES fire, not that they fire IN PRODUCTION — resolution-world mismatch. 'A rule without a failing fixture is unenforced' needs a corollary: 'a fixture that fires in an artificial resolution world proves nothing about production'. Remediation makes fixtures mirror production resolution (dist materialized). This is the third scope/reality-drift class this change caught (DoR x2, review x1) — each layer of verification paid for itself."
     type: retro
     date: 2026-10-29
+  - text: "Review iteration 2 = PASS (artifact: code-review/review-iter-2.yaml; 0 blocking, 1 info). All six R1 closures adversarially re-verified by reviewer's OWN empirical runs: rebuilt the production-shaped workspace — adapters→core ./state ⇒ subpath-adapters-core-state, adapters→root ⇒ subpath-undeclared, cli→mcp ⇒ matrix-cli-importer, core→testkit ⇒ testkit-no-production-import (post-build via dist; pre-build via workspace-import-must-resolve), allowed controls clean; local aggregate double-layer enforcement confirmed. Regression sweep: protected files empty diff, ci.yml 0 deletions, naming firewall stands. INFO forward-note for the FIRST CONTENT STORY: workspace-import-must-resolve fails every unresolvable @delivery-os/* pre-build, so that story needs build-before-boundaries ordering (or dev-condition export) in CI — surface at PR description + next story's plan. Benign plan gap: task 10.1 checkbox unchecked-but-deferred (work landed: e415024, 28aa036). Remediation commits: 02fad3d (R1.1–R1.5 code), 360acca (R1.6 plan; message-only amend of 90340ab to satisfy the new commitlint CI gate — self-inflicted trap caught by committer, good), 28aa036 (doc truth)."
+    type: info
+    date: 2026-10-30
   - text: "OWNER CONSTRAINT (CEO guidance, 2026-10-29): .ai/local/cli-project is PRIVATE — firewall: never quote, link, or copy its contents into any tracked artifact; no private ids; public artifacts self-contained. Consulted only as background. marksync toolchain adoption is settled — do not re-litigate."
     type: info
     date: 2026-10-29
