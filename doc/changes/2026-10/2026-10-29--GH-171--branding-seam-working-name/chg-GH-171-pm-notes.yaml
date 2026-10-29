@@ -26,7 +26,7 @@ dor_iterations:
     advisories_nonblocking: "A1 myados reserved-case (owner ack at PR); A2 build-time define deferred to freeze; A3 internal->redistributable one-word flip option at PR; A4 explicit console.warn capture in default-instance probe fixture; A6 future changes adding user-facing docs (incl. doc/spec via doc-syncer) must register them in the same change — add explicit clause to task 7.3 inputs; A7 delivery-time orphan-entry mutation (delete registered doc -> named failure) to complete TC-027 matrix. PM directs @coder to honor A4/A6/A7 in the relevant plan phases."
     artifact: "readiness-review/readiness-iter-2.md"
   delivery: { started: "2026-10-30T00:15:00Z", completed: "2026-10-30T01:40:00Z" }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: "2026-10-30T01:50:00Z", completed: "2026-10-30T02:05:00Z" }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }

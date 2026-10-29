@@ -61,5 +61,5 @@
       "patterns": ["Copyright", "source:", "Apache-2.0", "ados_distribution:"]
     }
   ],
-  "registered": ["doc/guides/rename-drill.md"]
+  "registered": ["doc/guides/rename-drill.md", "doc/spec/features/feature-branding-seam.md"]
 }
