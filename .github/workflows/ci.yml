@@ -3,6 +3,10 @@
 
 name: CI
 
+# Bun pin copy 3 (single CI copy; `.bun-version` is the source of truth).
+env:
+  BUN_VERSION: "1.4.4"
+
 on:
   push:
     branches: [main, main-tools, feat/**, fix/**]
@@ -163,3 +167,298 @@ jobs:
         with:
           severity: error
           ignore_paths: node_modules .git .ados-claude tmp
+
+  # --- Binding TypeScript fast loop (additive; bash jobs above are untouched) ---
+  ts-fresh-clone:
+    name: TS fresh clone (install from pins)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+
+      - name: Set up Bun (pin copy 3)
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Set up pnpm (reads packageManager)
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+
+      - name: Clone into an empty directory
+        run: |
+          rm -rf "$RUNNER_TEMP/fresh-clone"
+          git clone --local "$GITHUB_WORKSPACE" "$RUNNER_TEMP/fresh-clone"
+          git -C "$RUNNER_TEMP/fresh-clone" checkout --detach "$GITHUB_SHA"
+
+      - name: Install from the committed pins only
+        working-directory: ${{ runner.temp }}/fresh-clone
+        run: |
+          pnpm install --frozen-lockfile
+          test -z "$(git status --porcelain)"
+          echo "pnpm $(pnpm --version), bun $(bun --version)"
+
+  ts-invariants:
+    name: TS repository invariants
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+
+      - name: Set up Bun (pin copy 3)
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Set up pnpm (reads packageManager)
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Fetch base branch for the topology diff
+        run: git fetch --no-tags origin main-tools
+
+      - name: Run static invariant checks
+        run: |
+          bun run scripts/checks/pnpm-foundation.ts
+          bun run scripts/checks/ignore-rules.ts
+          bun run scripts/checks/manifest-privacy.ts
+          bun run scripts/checks/script-surface.ts
+          bun run scripts/checks/workspace-entrypoints.ts
+          bun run scripts/checks/tsconfig-strictness.ts
+          bun run scripts/checks/changesets-group.ts
+          bun run scripts/checks/testkit-exclusion.ts
+          bun run scripts/checks/ci-topology.ts
+          bun run scripts/checks/ci-bindingness.ts
+          bun run scripts/checks/ci-supply-chain.ts
+
+  ts-typecheck:
+    name: TS typecheck
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+
+  ts-lint:
+    name: TS lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+
+  ts-format:
+    name: TS format check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+
+  ts-test:
+    name: TS tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
+  ts-boundaries:
+    name: TS boundary enforcement
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:boundaries
+
+  ts-build:
+    name: TS build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+  ts-exports:
+    name: TS exports, publint, attw
+    needs: ts-build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: bun run scripts/checks/exports-discipline.ts
+      - run: bun test tests/structure
+      - name: publint (five publishables)
+        run: |
+          for package in core adapters cli mcp opencode; do
+            (cd "packages/$package" && pnpm exec publint)
+          done
+      - name: attw (recorded esm-only allowance profile)
+        run: |
+          for package in core adapters cli mcp opencode; do
+            (cd "packages/$package" && pnpm exec attw --pack . --profile esm-only)
+          done
+
+  ts-pins:
+    name: TS pin equality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - run: pnpm install --frozen-lockfile
+      - run: bun run scripts/checks/pin-equality.ts
+
+  ts-publish-guard:
+    name: TS publish guard
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - run: pnpm install --frozen-lockfile
+      - run: bun test tests/checks/publish-guard.test.ts
+
+  ts-license-audit:
+    name: TS license audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - run: pnpm install --frozen-lockfile
+      - run: bun run scripts/checks/license-audit.ts
+
+  ts-vuln:
+    name: TS vulnerability gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - run: pnpm install --frozen-lockfile
+      - run: bun run scripts/checks/vulnerability-gate.ts
+
+  ts-aggregate:
+    name: TS aggregate check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - run: pnpm install --frozen-lockfile
+      - name: Run the single aggregate check and record duration
+        run: |
+          start=$(date +%s)
+          pnpm check
+          echo "aggregate duration: $(( $(date +%s) - start ))s"
+
+  ts-commitlint:
+    name: TS commitlint (CI authority)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Assert one root commitlint config
+        run: bun run scripts/checks/commitlint-authority.ts
+
+      - name: commitlint against the PR base
+        if: github.event_name == 'pull_request'
+        run: pnpm exec commitlint --from "${{ github.event.pull_request.base.sha }}" --to HEAD
+
+      - name: commitlint against the delivery-branch base
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags origin main-tools
+          pnpm exec commitlint --from "origin/main-tools" --to HEAD
+
+      - name: commitlint against the merge-base range (push)
+        if: github.event_name == 'push'
+        run: |
+          git fetch --no-tags origin main-tools
+          pnpm exec commitlint --from "$(git merge-base origin/main-tools HEAD)" --to HEAD
