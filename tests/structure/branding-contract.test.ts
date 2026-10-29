@@ -324,7 +324,7 @@ describe("BrandIdentity contract", () => {
 
   test("branding imports ./contracts type-only and declares no duplicate", () => {
     const branding = readRepo(BRANDING);
-    expect(branding).toContain('import type { BrandIdentity } from "#contracts";');
+    expect(branding).toMatch(/import type \{[^}]*BrandIdentity[^}]*\} from "#contracts";/);
     expect(branding).toContain("export type { BrandIdentity };");
     expect(branding).not.toContain("type BrandIdentity =");
   });

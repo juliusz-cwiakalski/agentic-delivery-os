@@ -1,10 +1,12 @@
 /**
- * TC-SCAFFOLD-006 — the committed source inventory equals the actual file set,
- * and every inventoried file is types-only (empty-but-enforced).
+ * TC-SCAFFOLD-006 / TC-BRANDING-022 — the committed source inventory equals the
+ * actual file set, and executable content is allowed only per an explicit,
+ * per-file allowlist (never a global switch).
  */
 import { expect, test } from "bun:test";
-import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import ts from "typescript";
 
 const ROOT = process.cwd();
@@ -12,6 +14,14 @@ const PACKAGE_NAMES = ["core", "adapters", "cli", "mcp", "opencode", "testkit"];
 const inventory = JSON.parse(
   readFileSync(join(ROOT, "tests/structure/inventory.json"), "utf8"),
 ) as Record<string, string[]>;
+
+/**
+ * Per-file executable allowances. The value lists the only executable exports a
+ * file may declare; internal helpers are permitted inside an allowed file.
+ */
+const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
+  "core/src/branding/index.ts": ["resolveBrandIdentity"],
+};
 
 const listTypeScriptFiles = (packageDir: string): string[] => {
   const results: string[] = [];
@@ -28,6 +38,85 @@ const listTypeScriptFiles = (packageDir: string): string[] => {
   return results.sort();
 };
 
+const ALLOWED_TYPES_ONLY = new Set<ts.SyntaxKind>([
+  ts.SyntaxKind.TypeAliasDeclaration,
+  ts.SyntaxKind.InterfaceDeclaration,
+  ts.SyntaxKind.ImportDeclaration,
+  ts.SyntaxKind.ExportDeclaration,
+  ts.SyntaxKind.EndOfFileToken,
+]);
+
+const isExported = (node: ts.Node): boolean =>
+  ((node as { modifiers?: readonly ts.Modifier[] }).modifiers ?? []).some(
+    (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
+  );
+
+export const executableViolations = (
+  root: string,
+  packageName: string,
+  relative: string,
+): string[] => {
+  const file = join(root, "packages", packageName, relative);
+  const label = `${packageName}/${relative}`;
+  const source = ts.createSourceFile(
+    file,
+    readFileSync(file, "utf8"),
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const allowance = EXECUTABLE_ALLOWANCES[`${packageName}/${relative}`];
+  const violations: string[] = [];
+
+  for (const statement of source.statements) {
+    if (ts.isFunctionDeclaration(statement)) {
+      const named = statement.name?.text ?? "<anonymous>";
+      const exported = isExported(statement);
+      if (allowance) {
+        if (exported && !allowance.includes(named)) {
+          violations.push(`${label}: undeclared executable export ${named}`);
+        }
+        continue;
+      }
+      if (!exported || named !== "createRuntime" || statement.body) {
+        violations.push(
+          `${label}: ${named === "createRuntime" ? "createRuntime must be an exported declaration without a body" : `unexpected executable function ${named}`}`,
+        );
+      }
+      continue;
+    }
+
+    if (allowance) {
+      if (ts.isVariableStatement(statement)) {
+        if (isExported(statement)) {
+          for (const declaration of statement.declarationList.declarations) {
+            const name = ts.isIdentifier(declaration.name)
+              ? declaration.name.text
+              : declaration.name.getText(source);
+            if (!allowance.includes(name)) {
+              violations.push(`${label}: undeclared executable export ${name}`);
+            }
+          }
+        }
+        continue;
+      }
+      if (!ALLOWED_TYPES_ONLY.has(statement.kind)) {
+        violations.push(
+          `${label}: executable statement ${ts.SyntaxKind[statement.kind]} is not permitted`,
+        );
+      }
+      continue;
+    }
+
+    if (!ALLOWED_TYPES_ONLY.has(statement.kind)) {
+      violations.push(
+        `${label}: executable statement ${ts.SyntaxKind[statement.kind]} is not permitted at scaffold`,
+      );
+    }
+  }
+  return violations;
+};
+
 test("actual source file set equals the committed inventory", () => {
   const failures: string[] = [];
   for (const packageName of PACKAGE_NAMES) {
@@ -42,47 +131,51 @@ test("actual source file set equals the committed inventory", () => {
   expect(failures).toEqual([]);
 });
 
-test("inventoried files contain only type declarations, re-exports, and the createRuntime signature", () => {
-  const allowed = new Set<ts.SyntaxKind>([
-    ts.SyntaxKind.TypeAliasDeclaration,
-    ts.SyntaxKind.InterfaceDeclaration,
-    ts.SyntaxKind.ImportDeclaration,
-    ts.SyntaxKind.ExportDeclaration,
-    ts.SyntaxKind.EndOfFileToken,
-  ]);
+test("executable content is limited to the per-file allowlist", () => {
   const violations: string[] = [];
   for (const packageName of PACKAGE_NAMES) {
     for (const relative of inventory[packageName] ?? []) {
-      const file = join(ROOT, "packages", packageName, relative);
-      const source = ts.createSourceFile(
-        file,
-        readFileSync(file, "utf8"),
-        ts.ScriptTarget.Latest,
-        true,
-        ts.ScriptKind.TS,
-      );
-      for (const statement of source.statements) {
-        if (ts.isFunctionDeclaration(statement)) {
-          const named = statement.name?.text === "createRuntime";
-          const exported = (statement.modifiers ?? []).some(
-            (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
-          );
-          if (!named || !exported || statement.body) {
-            violations.push(
-              `${packageName}/${relative}: ${named ? "createRuntime must be an exported declaration without a body" : `unexpected executable function ${statement.name?.text ?? "<anonymous>"}`}`,
-            );
-          }
-          continue;
-        }
-        if (!allowed.has(statement.kind)) {
-          violations.push(
-            `${packageName}/${relative}: executable statement ${ts.SyntaxKind[statement.kind]} is not permitted at scaffold`,
-          );
-        }
-      }
+      violations.push(...executableViolations(ROOT, packageName, relative));
     }
   }
   expect(violations).toEqual([]);
+});
+
+const makeTempFile = (packageName: string, relative: string, content: string): string => {
+  const root = mkdtempSync(join(tmpdir(), "inventory-"));
+  const path = join(root, "packages", packageName, relative);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, content);
+  return root;
+};
+
+test("an undeclared executable function in a types-only file fails", () => {
+  const root = makeTempFile(
+    "core",
+    "src/domain/index.ts",
+    "export function rogue(): number {\n  return 1;\n}\n",
+  );
+  try {
+    const violations = executableViolations(root, "core", "src/domain/index.ts");
+    expect(violations.some((message) => message.includes("rogue"))).toBe(true);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a second executable export in branding fails", () => {
+  const branding = readFileSync(join(ROOT, "packages/core/src/branding/index.ts"), "utf8");
+  const root = makeTempFile(
+    "core",
+    "src/branding/index.ts",
+    `${branding}\nexport const extraHelper = () => 1;\n`,
+  );
+  try {
+    const violations = executableViolations(root, "core", "src/branding/index.ts");
+    expect(violations.some((message) => message.includes("extraHelper"))).toBe(true);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test("no engine, driver, or command-registration markers exist", () => {
