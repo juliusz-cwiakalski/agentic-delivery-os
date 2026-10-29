@@ -11,7 +11,7 @@ phases:
     - { iteration: 2, verdict: NOT_READY, date: "2026-10-29T19:45:00Z", artifact: readiness-review/readiness-iter-2.md }
     - { iteration: 3, verdict: READY, date: "2026-10-29T20:25:00Z", artifact: readiness-review/readiness-iter-3.md }
   dor_check: { started: "2026-10-29T18:20:00Z", completed: "2026-10-29T20:30:00Z" }
-  delivery: { started: null, completed: null }
+  delivery: { started: "2026-10-29T20:35:00Z", completed: "2026-10-29T21:30:00Z" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -73,4 +73,13 @@ notes:
     date: 2026-10-29
   - text: "Doc-syncer phase-7 input from test-plan author (A-T3): .ai/rules/testing-strategy.md covers docs/bash only — extend it with the TypeScript test layer (bun test + scripts/checks invariants + CI invocation order) during system_spec_update."
     type: info
+    date: 2026-10-29
+  - text: "OWNER CONSTRAINT (CEO guidance, 2026-10-29): .ai/local/cli-project is PRIVATE — firewall: never quote, link, or copy its contents into any tracked artifact; no private ids; public artifacts self-contained. Consulted only as background. marksync toolchain adoption is settled — do not re-litigate."
+    type: info
+    date: 2026-10-29
+  - text: "Delivery COMPLETE and independently verified by PM (not self-report): commits 8ee4430 (P0) ff2c973 (P1) 367599e (P2) b0e6492 (P3) 35657b3 (P4) e350a73 (P5) 1c16723 (P6) b31cc4b (P7) 30bba60 (P8) c4d5125 (P9) d9cf0cb (P10 recording-only; task 10.1 doc reconciliation DEFERRED to phase-7 doc-syncer). Pins: pnpm 10.18.3 (latest tagged 12.16.1 NOT installable in env — version switcher failed on @pnpm/linux-x64; recorded under RSK-6, deviation), Bun 1.4.4 (official installer, no RSK-5 fallback). RSK-4 isolation: undeclared import REJECTED. Independent fresh-clone check: install --frozen-lockfile OK, pnpm check exit 0 in ~69s. scripts/ and ci.yml additions-only; backlog/ranking diff vs origin/main-tools is exactly the owner first commit 22aadb6. Naming-firewall single hit justified: scripts/checks/ignore-rules.ts productTokens seed list ['ados','ADOS_','~/./.ados'] is the AC-F14-1 brand-scan mechanism itself (ADR C-3 seed literal set) — surface to reviewer for confirmation."
+    type: info
+    date: 2026-10-29
+  - text: "Environment retro for this delivery: long subagent runs get interrupted by the harness; one coder run raced a stale orchestrator state read (P8 appeared uncommitted while the coder was still finishing) — a redundant resume was dispatched and interrupted harmlessly. Lesson: after ANY interruption, re-read state before re-delegating; trust git log over stale reports; prefer smaller delegations for long phases."
+    type: retro
     date: 2026-10-29
