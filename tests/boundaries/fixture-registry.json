@@ -1,0 +1,423 @@
+{
+  "matrix-cli-importer": [
+    {
+      "id": "matrix-cli-mcp",
+      "tc": "TC-SCAFFOLD-008",
+      "path": "packages/cli/src/probe.ts"
+    }
+  ],
+  "matrix-mcp-importer": [
+    {
+      "id": "matrix-mcp-opencode",
+      "tc": "TC-SCAFFOLD-008",
+      "path": "packages/mcp/src/probe.ts"
+    }
+  ],
+  "matrix-core-importer": [
+    {
+      "id": "matrix-core-adapters",
+      "tc": "TC-SCAFFOLD-008",
+      "path": "packages/core/src/probe.ts"
+    }
+  ],
+  "matrix-opencode-importer": [
+    {
+      "id": "matrix-opencode-cli",
+      "tc": "TC-SCAFFOLD-008",
+      "path": "packages/opencode/src/probe.ts"
+    }
+  ],
+  "matrix-adapters-importer": [
+    {
+      "id": "matrix-adapters-cli-alias",
+      "tc": "TC-SCAFFOLD-008",
+      "path": "packages/adapters/src/probe.ts"
+    },
+    {
+      "id": "matrix-adapters-opencode-alias",
+      "tc": "TC-SCAFFOLD-008",
+      "path": "packages/adapters/src/probe.ts"
+    },
+    {
+      "id": "matrix-adapters-mcp-relative",
+      "tc": "TC-SCAFFOLD-008",
+      "path": "packages/adapters/src/probe.ts"
+    }
+  ],
+  "subpath-adapters-core-state": [
+    {
+      "id": "subpath-adapters-core-state",
+      "tc": "TC-SCAFFOLD-009",
+      "path": "packages/adapters/src/probe.ts"
+    }
+  ],
+  "subpath-adapters-core-branding": [
+    {
+      "id": "subpath-adapters-core-branding",
+      "tc": "TC-SCAFFOLD-009",
+      "path": "packages/adapters/src/probe.ts"
+    }
+  ],
+  "subpath-undeclared": [
+    {
+      "id": "subpath-adapters-core-root",
+      "tc": "TC-SCAFFOLD-009",
+      "path": "packages/adapters/src/probe.ts",
+      "wholePackage": true
+    },
+    {
+      "id": "subpath-testkit-core-state",
+      "tc": "TC-SCAFFOLD-009",
+      "path": "packages/testkit/src/probe.ts"
+    }
+  ],
+  "no-deep-package-import": [
+    {
+      "id": "deep-import",
+      "tc": "TC-SCAFFOLD-010",
+      "path": "packages/cli/src/probe.ts"
+    }
+  ],
+  "no-relative-cross-package-import": [
+    {
+      "id": "relative-escape-core",
+      "tc": "TC-SCAFFOLD-010",
+      "path": "packages/cli/src/probe.ts"
+    },
+    {
+      "id": "relative-escape-adapters",
+      "tc": "TC-SCAFFOLD-010",
+      "path": "packages/opencode/src/probe.ts"
+    }
+  ],
+  "tier-domain-only-contracts": [
+    {
+      "id": "tier-domain-app",
+      "tc": "TC-SCAFFOLD-011",
+      "path": "packages/core/src/domain/probe.ts"
+    },
+    {
+      "id": "tier-domain-state",
+      "tc": "TC-SCAFFOLD-011",
+      "path": "packages/core/src/domain/probe.ts"
+    },
+    {
+      "id": "tier-relative-domain-app",
+      "tc": "TC-SCAFFOLD-012",
+      "path": "packages/core/src/domain/probe.ts"
+    },
+    {
+      "id": "tier-relative-domain-state",
+      "tc": "TC-SCAFFOLD-012",
+      "path": "packages/core/src/domain/probe.ts"
+    }
+  ],
+  "tier-config-only-contracts": [
+    {
+      "id": "tier-config-domain",
+      "tc": "TC-SCAFFOLD-011",
+      "path": "packages/core/src/config/probe.ts"
+    },
+    {
+      "id": "tier-relative-config-domain",
+      "tc": "TC-SCAFFOLD-012",
+      "path": "packages/core/src/config/probe.ts"
+    }
+  ],
+  "tier-branding-only-contracts": [
+    {
+      "id": "tier-branding-app",
+      "tc": "TC-SCAFFOLD-011",
+      "path": "packages/core/src/branding/probe.ts"
+    },
+    {
+      "id": "tier-relative-branding-app",
+      "tc": "TC-SCAFFOLD-012",
+      "path": "packages/core/src/branding/probe.ts"
+    }
+  ],
+  "tier-app-allowed-set": [
+    {
+      "id": "tier-app-branding",
+      "tc": "TC-SCAFFOLD-011",
+      "path": "packages/core/src/app/probe.ts"
+    },
+    {
+      "id": "tier-app-state",
+      "tc": "TC-SCAFFOLD-011",
+      "path": "packages/core/src/app/probe.ts"
+    },
+    {
+      "id": "tier-relative-app-branding",
+      "tc": "TC-SCAFFOLD-012",
+      "path": "packages/core/src/app/probe.ts"
+    },
+    {
+      "id": "tier-relative-app-state",
+      "tc": "TC-SCAFFOLD-012",
+      "path": "packages/core/src/app/probe.ts"
+    }
+  ],
+  "tier-state-allowed-set": [
+    {
+      "id": "tier-state-domain",
+      "tc": "TC-SCAFFOLD-011",
+      "path": "packages/core/src/state/probe.ts"
+    },
+    {
+      "id": "tier-relative-state-domain",
+      "tc": "TC-SCAFFOLD-012",
+      "path": "packages/core/src/state/probe.ts"
+    }
+  ],
+  "testkit-no-production-import": [
+    {
+      "id": "testkit-prod-core",
+      "tc": "TC-SCAFFOLD-013",
+      "path": "packages/core/src/probe.ts"
+    },
+    {
+      "id": "testkit-prod-adapters",
+      "tc": "TC-SCAFFOLD-013",
+      "path": "packages/adapters/src/probe.ts"
+    },
+    {
+      "id": "testkit-prod-cli",
+      "tc": "TC-SCAFFOLD-013",
+      "path": "packages/cli/src/probe.ts"
+    },
+    {
+      "id": "testkit-prod-mcp",
+      "tc": "TC-SCAFFOLD-013",
+      "path": "packages/mcp/src/probe.ts"
+    },
+    {
+      "id": "testkit-prod-opencode",
+      "tc": "TC-SCAFFOLD-013",
+      "path": "packages/opencode/src/probe.ts"
+    }
+  ],
+  "testkit-no-surface-import": [
+    {
+      "id": "testkit-surface-cli",
+      "tc": "TC-SCAFFOLD-013",
+      "path": "packages/testkit/src/probe.ts"
+    },
+    {
+      "id": "testkit-surface-mcp",
+      "tc": "TC-SCAFFOLD-013",
+      "path": "packages/testkit/src/probe.ts"
+    },
+    {
+      "id": "testkit-surface-opencode",
+      "tc": "TC-SCAFFOLD-013",
+      "path": "packages/testkit/src/probe.ts"
+    }
+  ],
+  "runtime-apis-confinement": [
+    {
+      "id": "runtime-node-fs-domain",
+      "tc": "TC-SCAFFOLD-014",
+      "path": "packages/core/src/domain/probe.ts"
+    },
+    {
+      "id": "runtime-bun-config",
+      "tc": "TC-SCAFFOLD-014",
+      "path": "packages/core/src/config/probe.ts"
+    },
+    {
+      "id": "runtime-node-sqlite-app",
+      "tc": "TC-SCAFFOLD-014",
+      "path": "packages/core/src/app/probe.ts"
+    }
+  ],
+  "ambient-env-branding": [
+    {
+      "id": "ambient-branding-process-env",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/branding/probe.ts"
+    },
+    {
+      "id": "ambient-branding-bun-env",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/branding/probe.ts"
+    }
+  ],
+  "ambient-globals-neutral-tiers": [
+    {
+      "id": "ambient-contracts-process-env",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/contracts/result.ts"
+    },
+    {
+      "id": "ambient-index-process-env",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/index.ts"
+    },
+    {
+      "id": "ambient-index-fetch",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/index.ts"
+    },
+    {
+      "id": "ambient-sweep-domain-process",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/domain/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-app-process",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/app/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-config-process",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/config/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-branding-process",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/branding/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-domain-bun",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/domain/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-app-bun",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/app/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-config-bun",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/config/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-branding-bun",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/branding/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-domain-deno",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/domain/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-app-deno",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/app/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-config-deno",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/config/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-branding-deno",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/branding/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-domain-set-timeout",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/domain/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-app-set-timeout",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/app/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-config-set-timeout",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/config/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-branding-set-timeout",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/branding/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-domain-set-interval",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/domain/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-app-set-interval",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/app/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-config-set-interval",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/config/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-branding-set-interval",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/branding/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-domain-date-now",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/domain/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-app-date-now",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/app/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-config-date-now",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/config/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-branding-date-now",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/branding/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-domain-math-random",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/domain/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-app-math-random",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/app/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-config-math-random",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/config/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-branding-math-random",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/branding/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-domain-fetch",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/domain/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-app-fetch",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/app/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-config-fetch",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/config/probe.ts"
+    },
+    {
+      "id": "ambient-sweep-branding-fetch",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/branding/probe.ts"
+    }
+  ]
+}

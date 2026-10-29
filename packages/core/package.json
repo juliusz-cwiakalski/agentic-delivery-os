@@ -25,6 +25,7 @@
     }
   },
   "imports": {
+    "#contracts": "./src/contracts/index.ts",
     "#domain/*": "./src/domain/*.ts",
     "#app/*": "./src/app/*.ts",
     "#config/*": "./src/config/*.ts",
