@@ -5,9 +5,22 @@ milestone: "M0: Trust substrate"
 phases:
   clarify_scope: { started: "2026-10-29T00:00:00Z", completed: "2026-10-29T22:15:00Z" }
   specification: { started: "2026-10-29T22:20:00Z", completed: "2026-10-29T22:35:00Z" }
-  test_planning: { started: "2026-10-29T22:40:00Z", completed: "2026-10-29T22:50:00Z" }
-  delivery_planning: { started: "2026-10-29T22:55:00Z", completed: "2026-10-29T23:05:00Z" }
-  dor_check: { started: null, completed: null }
+  test_planning: { started: "2026-10-29T22:40:00Z", completed: null }
+  delivery_planning: { started: "2026-10-29T22:55:00Z", completed: null }
+  dor_check: { started: "2026-10-29T23:10:00Z", completed: null }
+dor_iterations:
+  - iteration: 1
+    verdict: NOT_READY
+    date: "2026-10-29T23:25:00Z"
+    facets: "9/10 PASS; cross_artifact_consistency FAIL"
+    blockers:
+      - "CRITICAL: docs-scope meta-check anchors 'new user-facing docs' to the PR base (origin/main-tools) — verified self-breaking: post-merge the added-vs-base set empties while the registry still names the doc (gate red on main-tools after merge and every successor change), and merged docs silently LEAVE scan coverage (degrades AC-F4-2 / ticket AC-2). Fix mandated: anchor 'new' to a fixed corpusBaseline (32784af) recorded in the registry, permanent membership, plus a scope-decay mutation test. Reopens test_planning + delivery_planning."
+      - "MINOR: TC-BRANDING-020 step 2 hardcodes ados_distribution: redistributable while plan D6 binds internal (verified mechanically sound). One-word test-plan fix. Reopens test_planning."
+    advisories_nonblocking: "A1 myados reserved-case residual (owner ack at PR recommended); A2 build-time define channel unimplemented (build-env-supplied value per spec DEC-1); A3 internal->redistributable flip is one word if owner prefers; A4 child-probe wording binding; A5 override-variable checks."
+    artifact: "readiness-review/readiness-iter-1.md"
+  - iteration: 2
+    verdict: PENDING
+    date: null
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -51,5 +64,11 @@ notes:
     text: "Config-driven working name vs config layer timing: layered config ships M0-S4 (GH-173). For M0-S2 the 'config-driven' contract is the pure-resolver input (working name + env facts injected as parameters at a runtime-aware edge); actual layered-config wiring lands with M0-S4. Spec must state this seam contract so M0-S4 consumes it without reshaping. (RESOLVED: spec F-3/DM-2/RSK-1 state exactly this.)"
     date: 2026-10-29
   - type: info
-    text: "Delivery plan complete (7 phases P1-P7, 47 AC traceability points, all 13 ACs + 26 TCs slotted; one conventional commit per phase, aggregate green per commit). Plan decisions pinned: delimiter matching rule (case-insensitive; reserved myados case recorded as accepted residual), forbidden-literals.ts + JSON registry + root check script + separate CI job (aggregate stays 5 steps), hygiene token block subsumed (delta recorded under C-8), no changeset (GH-170 precedent), 12 deterministic derivation rules (neutral constants + input-derived), drill doc internal @ doc/guides/rename-drill.md (flagged: test-plan example said redistributable — one-word flip if owner prefers), Result-enveloped fail-closed resolver, legacy adapter factory + injected warn sink, NO new boundary rules (verified against fixture harness). Plan verified current tree is scan-green (0 delimiter-matched tokens)."
+    text: "Delivery plan COMPLETE (7 phases P1-P7, 47 AC traceability points, all 13 ACs + 26 TCs slotted; commit 666fc18). Decisions pinned: delimiter matching (myados residual recorded), forbidden-literals.ts + JSON registry + separate binding CI job, hygiene token block subsumed (C-8 delta recorded), no changeset (GH-170 precedent), 12 deterministic derivation rules, drill doc internal, Result-enveloped fail-closed resolver, legacy adapter factory + injected warn sink, zero new boundary rules. LATER REOPENED by DoR iter-1 (docs-scope corpusBaseline fix + marker contradiction)."
+    date: 2026-10-29
+  - type: info
+    text: "DoR iter-1 NOT_READY (facets 9/10 PASS; cross_artifact_consistency FAIL). Positive: ticket fidelity exact (no over-delivery, no name leakage anywhere); artifacts' code-state claims verified against the tree. REOPENED test_planning + delivery_planning for the two findings (see dor_iterations)."
+    date: 2026-10-29
+  - text: "RETRO: the critical docs-scope flaw (base-relative 'new docs' scope self-breaking post-merge) was introduced at test-plan authoring and accepted by PM at validation — PM validated coverage counts and gap dispositions but did not probe lifecycle semantics (what the check does AFTER merge). Rule for future PM validations of gate designs: always ask 'what does this check do on main-tools the day after merge, and on every successor change?' Coverage green today is not correctness over time."
+    type: retro
     date: 2026-10-29
