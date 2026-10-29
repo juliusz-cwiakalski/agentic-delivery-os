@@ -12,7 +12,7 @@
     "format:check": "biome format .",
     "typecheck": "pnpm -r typecheck",
     "test": "bun test",
-    "check:boundaries": "depcruise packages && bun run scripts/checks/ambient-globals.ts",
+    "check:boundaries": "depcruise packages && bun run scripts/checks/ambient-globals.ts && bun run scripts/checks/workspace-entrypoints.ts",
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries",
     "prepare": "husky",
     "build": "pnpm -r build"

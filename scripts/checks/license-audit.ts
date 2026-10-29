@@ -141,6 +141,17 @@ export const auditRegistry = (registry: Registry, dependencies: Dependency[]): s
   if (!Array.isArray(registry.entries)) {
     return ["registry has no entries array"];
   }
+  // Fail closed on malformed allow_list entries: silently skipping them would
+  // shrink the enforced set without reporting anything.
+  for (const raw of registry.allow_list ?? []) {
+    const expression = String(raw);
+    const parsed = parseSpdxExpression(expression);
+    if (!parsed.ok) {
+      failures.push(
+        `allow_list entry ${expression} is not a valid SPDX expression (${parsed.reason})`,
+      );
+    }
+  }
   const byName = new Map(registry.entries.map((entry) => [entry.package, entry]));
   const allowed = deriveAllowedIdentifiers(registry);
 

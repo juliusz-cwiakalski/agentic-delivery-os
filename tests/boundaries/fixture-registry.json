@@ -78,6 +78,13 @@
       "path": "packages/cli/src/probe.ts"
     }
   ],
+  "workspace-import-must-resolve": [
+    {
+      "id": "workspace-import-unresolved",
+      "tc": "TC-SCAFFOLD-009",
+      "path": "packages/cli/src/probe.ts"
+    }
+  ],
   "no-relative-cross-package-import": [
     {
       "id": "relative-escape-core",
@@ -229,6 +236,11 @@
       "id": "runtime-node-sqlite-app",
       "tc": "TC-SCAFFOLD-014",
       "path": "packages/core/src/app/probe.ts"
+    },
+    {
+      "id": "runtime-node-fs-adapter-registry",
+      "tc": "TC-SCAFFOLD-014",
+      "path": "packages/adapters/src/registry/probe.ts"
     }
   ],
   "ambient-env-branding": [

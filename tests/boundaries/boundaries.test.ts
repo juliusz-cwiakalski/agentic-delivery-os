@@ -10,12 +10,7 @@ import { createRequire } from "node:module";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  AMBIENT_SCOPE,
-  NEUTRAL_TIER_DIRECTORIES,
-  PUBLIC_ENTRY,
-  scan,
-} from "../../scripts/checks/ambient-globals";
+import { AMBIENT_SCOPE, scan } from "../../scripts/checks/ambient-globals";
 import { AMBIENT_CASES, RULE_CASES } from "./fixtures/cases";
 import { cleanup, cruise, materializeWorkspace, writeProbe } from "./harness";
 
@@ -77,8 +72,16 @@ describe("ambient-global guard", () => {
 
 describe("ADR-verbatim scope and allowlist assertions", () => {
   test("ambient guard scope equals the ADR neutral set exactly", () => {
-    expect([...AMBIENT_SCOPE.files]).toEqual([PUBLIC_ENTRY]);
-    expect([...AMBIENT_SCOPE.directories]).toEqual([...NEUTRAL_TIER_DIRECTORIES]);
+    // Literal ADR strings on purpose: an assertion built from the exported
+    // constants would move with any coordinated narrowing of the guard scope.
+    expect([...AMBIENT_SCOPE.files]).toEqual(["packages/core/src/index.ts"]);
+    expect([...AMBIENT_SCOPE.directories]).toEqual([
+      "packages/core/src/contracts",
+      "packages/core/src/domain",
+      "packages/core/src/app",
+      "packages/core/src/config",
+      "packages/core/src/branding",
+    ]);
   });
 
   test("runtime-apis-confinement names all four ADR allowlist locations", () => {
@@ -93,14 +96,14 @@ describe("ADR-verbatim scope and allowlist assertions", () => {
     ]) {
       expect(comment).toContain(location);
     }
-    const pathNot = (rule?.from?.pathNot ?? []).join("\n");
-    for (const allowed of [
+    const pathNot = rule?.from?.pathNot ?? [];
+    // The adapter exemption is ADR-verbatim I/O subpaths only (DEC-6):
+    // provider (gitlab/jira/github/azure/ci) and registry subpaths are not I/O.
+    expect([...pathNot]).toEqual([
       "^packages/core/src/state/",
-      "^packages/adapters/",
+      "^packages/adapters/src/(repo|file|host|session|legacy)/",
       "^packages/cli/",
       "^packages/opencode/",
-    ]) {
-      expect(pathNot).toContain(allowed);
-    }
+    ]);
   });
 });

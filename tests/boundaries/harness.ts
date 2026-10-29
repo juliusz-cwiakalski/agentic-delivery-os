@@ -59,11 +59,13 @@ const manifestFor = (packageName: PackageName): string => {
     return JSON.stringify({
       name: "@delivery-os/core",
       ...base,
+      // Production shape: package-name specifiers resolve through `exports` to
+      // built `dist` targets (never `src`), so the fixture world must too.
       exports: {
-        ".": "./src/index.ts",
-        "./contracts": "./src/contracts/index.ts",
-        "./state": "./src/state/index.ts",
-        "./branding": "./src/branding/index.ts",
+        ".": "./dist/index.js",
+        "./contracts": "./dist/contracts/index.js",
+        "./state": "./dist/state/index.js",
+        "./branding": "./dist/branding/index.js",
       },
       imports: {
         "#contracts": "./src/contracts/index.ts",
@@ -80,7 +82,7 @@ const manifestFor = (packageName: PackageName): string => {
       name: "@delivery-os/adapters",
       ...base,
       exports: Object.fromEntries(
-        ADAPTER_SUBPATHS.map((subpath) => [`./${subpath}`, `./src/${subpath}/index.ts`]),
+        ADAPTER_SUBPATHS.map((subpath) => [`./${subpath}`, `./dist/${subpath}/index.js`]),
       ),
       imports: {
         "#registry": "./src/registry/index.ts",
@@ -91,12 +93,36 @@ const manifestFor = (packageName: PackageName): string => {
   return JSON.stringify({
     name: `@delivery-os/${packageName}`,
     ...base,
-    exports: { ".": "./src/index.ts" },
+    exports: { ".": "./dist/index.js" },
   });
 };
 
 const placeholder = (packageName: string, modulePath: string): string =>
   `/** Fixture placeholder: ${packageName}/${modulePath}. */\nexport type Placeholder = {\n  readonly module: "${packageName}/${modulePath}";\n};\n`;
+
+const distPlaceholder = (packageName: string, modulePath: string): string =>
+  `/** Fixture build placeholder: ${packageName}/${modulePath}. */\nexport {};\n`;
+
+/**
+ * Materialise the `dist` targets every fixture manifest exports. The production
+ * tree resolves package-name imports through `exports` → `dist`; a fixture
+ * workspace without `dist` would only ever exercise the pre-build path.
+ */
+export const distFilesFor = (packageName: PackageName): Record<string, string> => {
+  const files: Record<string, string> = {};
+  if (packageName === "core") {
+    for (const modulePath of ["index", "contracts/index", "state/index", "branding/index"]) {
+      files[`packages/core/dist/${modulePath}.js`] = distPlaceholder("core", modulePath);
+    }
+  } else if (packageName === "adapters") {
+    for (const subpath of ADAPTER_SUBPATHS) {
+      files[`packages/adapters/dist/${subpath}/index.js`] = distPlaceholder("adapters", subpath);
+    }
+  } else {
+    files[`packages/${packageName}/dist/index.js`] = distPlaceholder(packageName, "index");
+  }
+  return files;
+};
 
 export const baseFilesFor = (packageName: PackageName): Record<string, string> => {
   const files: Record<string, string> = {};
@@ -130,6 +156,7 @@ export const materializeWorkspace = (
     mkdirSync(join(root, "packages", packageName, "src"), { recursive: true });
     writeFileSync(join(root, "packages", packageName, "package.json"), manifestFor(packageName));
     writeFiles(root, baseFilesFor(packageName));
+    writeFiles(root, distFilesFor(packageName));
   }
   mkdirSync(join(root, "node_modules/@delivery-os"), { recursive: true });
   for (const packageName of packages) {

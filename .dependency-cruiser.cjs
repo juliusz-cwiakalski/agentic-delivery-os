@@ -51,19 +51,22 @@ module.exports = {
     },
 
     // --- DEC-2 core subpath permissions for the adapters importer.
+    // Package-name specifiers resolve through each manifest's `exports` to its
+    // built `dist` target in production, so the to-path covers both resolution
+    // forms: source (`src`) in-tree and built (`dist`) for package-name imports.
     {
       name: "subpath-adapters-core-state",
       severity: "error",
       comment: "ADR-0003 DEC-2 subpath table: adapters may not import core ./state.",
       from: { path: "^packages/adapters/" },
-      to: { path: "^packages/core/src/state/" },
+      to: { path: "^packages/core/(src|dist)/state/" },
     },
     {
       name: "subpath-adapters-core-branding",
       severity: "error",
       comment: "ADR-0003 DEC-2 subpath table: adapters may not import core ./branding.",
       from: { path: "^packages/adapters/" },
-      to: { path: "^packages/core/src/branding/" },
+      to: { path: "^packages/core/(src|dist)/branding/" },
     },
     {
       name: "subpath-undeclared",
@@ -71,7 +74,7 @@ module.exports = {
       comment:
         "ADR-0003 DEC-2 subpath preamble: adapters do not declare the core package root `.` (whole-package undeclared import).",
       from: { path: "^packages/adapters/" },
-      to: { path: "^packages/core/src/index\\.ts$" },
+      to: { path: "^packages/core/(src|dist)/index\\.(ts|js)$" },
     },
     {
       name: "subpath-undeclared",
@@ -79,7 +82,7 @@ module.exports = {
       comment:
         "ADR-0003 DEC-2 subpath preamble: testkit declares only core `.` and ./contracts; any other core subpath is undeclared (subpath-level).",
       from: { path: "^packages/testkit/" },
-      to: { path: "^packages/core/src/(state|branding)/" },
+      to: { path: "^packages/core/(src|dist)/(state|branding)/" },
     },
 
     // --- DEC-2 Additional rules bullet 7: no deep package imports.
@@ -90,6 +93,17 @@ module.exports = {
         "ADR-0003 DEC-2: deep imports into another package's src/ or dist/ are forbidden; declared name + declared subpath only.",
       from: { path: "^packages/" },
       to: { couldNotResolve: true, path: "^@delivery-os/[^/]+/(src|dist)/" },
+    },
+    // --- DEC-2 subpath preamble: a package-name import must resolve. In a
+    // pre-build workspace (no `dist` yet) an undeclared @delivery-os/* specifier
+    // is unresolvable; failing it by name keeps the rule live before the build.
+    {
+      name: "workspace-import-must-resolve",
+      severity: "error",
+      comment:
+        "ADR-0003 DEC-2 subpath preamble: every @delivery-os/* import must resolve to a declared workspace package and subpath; an unresolvable specifier fails by name.",
+      from: {},
+      to: { couldNotResolve: true, path: "^@delivery-os/" },
     },
     // --- DEC-2 Additional rules bullet 7: no relative path escaping the package root.
     ...RELATIVE_IMPORTERS.map((importer) => ({
@@ -165,6 +179,8 @@ module.exports = {
     // --- DEC-2 Additional rules bullet 6: runtime-API confinement.
     // Allowlist (ADR verbatim): the `core ./state` driver code, the adapter I/O
     // subpaths, the CLI build, and the OpenCode host integration. Nothing else.
+    // The adapter I/O subpaths are ADR DEC-6's I/O modules
+    // (repo|file|host|session|legacy); provider/registry subpaths are not I/O.
     {
       name: "runtime-apis-confinement",
       severity: "error",
@@ -174,7 +190,7 @@ module.exports = {
         path: "^packages/",
         pathNot: [
           "^packages/core/src/state/",
-          "^packages/adapters/",
+          "^packages/adapters/src/(repo|file|host|session|legacy)/",
           "^packages/cli/",
           "^packages/opencode/",
         ],
@@ -184,8 +200,12 @@ module.exports = {
   ],
 
   options: {
+    // `dist` is not followed, but it is intentionally NOT excluded: production
+    // package-name imports resolve through `exports` to `dist`, and an excluded
+    // target is dropped from the cruise (inert package-name rules). Excluding it
+    // from the cruise would only hide exactly the edges DEC-2 must police.
     doNotFollow: { path: "node_modules|(^|/)dist/" },
-    exclude: { path: "(^|/)node_modules/|(^|/)dist/|(^|/)coverage/" },
+    exclude: { path: "(^|/)node_modules/|(^|/)coverage/" },
     enhancedResolveOptions: {
       exportsFields: ["exports"],
       conditionNames: ["import", "require", "node", "default"],

@@ -214,6 +214,16 @@ export const RULE_CASES: RuleCase[] = [
     "packages/cli/src/probe.ts",
     'import "@delivery-os/core/src/domain/x";\n',
   ),
+  // A missing export in a pre-build workspace is unresolvable; the rule fails
+  // it by name instead of letting the package-name edge silently pass.
+  dep(
+    "workspace-import-unresolved",
+    "TC-SCAFFOLD-009",
+    "workspace-import-must-resolve",
+    ["cli", "core"],
+    "packages/cli/src/probe.ts",
+    'import "@delivery-os/core/nonexistent";\n',
+  ),
   dep(
     "relative-escape-core",
     "TC-SCAFFOLD-010",
@@ -470,6 +480,15 @@ export const RULE_CASES: RuleCase[] = [
     ["core"],
     "packages/core/src/app/probe.ts",
     'import { DatabaseSync } from "node:sqlite";\nexport const value = DatabaseSync;\n',
+  ),
+  // Provider/registry subpaths are not ADR I/O subpaths: runtime APIs stay banned.
+  dep(
+    "runtime-node-fs-adapter-registry",
+    "TC-SCAFFOLD-014",
+    "runtime-apis-confinement",
+    ["adapters"],
+    "packages/adapters/src/registry/probe.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
   ),
 
   clean(

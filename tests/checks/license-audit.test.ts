@@ -85,4 +85,17 @@ describe("license audit", () => {
     const failures = validate(ROOT, registry);
     expect(failures.some((message) => message.includes("GPL-3.0-only"))).toBe(true);
   });
+
+  test("an unparseable allow_list entry fails closed", () => {
+    const registry = clone();
+    registry.allow_list = [...(registry.allow_list ?? []), "MIT OR"];
+    const failures = validate(ROOT, registry);
+    expect(
+      failures.some(
+        (message) =>
+          message.includes("allow_list entry MIT OR") &&
+          message.includes("not a valid SPDX expression"),
+      ),
+    ).toBe(true);
+  });
 });
