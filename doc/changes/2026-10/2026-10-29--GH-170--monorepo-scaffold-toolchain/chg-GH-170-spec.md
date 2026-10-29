@@ -29,7 +29,7 @@ change:
 
 ## 1. SUMMARY
 
-This change delivers the M0-S1 monorepo scaffold: six packages per ADR-0003 DEC-1 (`core` with subpaths `.`, `./contracts`, `./state`, `./branding` and one `createRuntime` composition-root signature; `adapters` with per-provider, `./registry`, and per-I/O subpaths; `cli`; `mcp`; `opencode`; and a private dev-only `testkit`), all `private: true` with a release-job publish guard. It wires the toolchain end to end — pinned pnpm with one lockfile, a pinned Bun with a four-copy equality check, ESM with one strict TypeScript base configuration, Biome, commitlint + husky, changesets fixed-group lockstep versioning, dist-targeted exports with publint/package-export checks — and makes the ADR-0003 DEC-2 boundary matrices mechanically enforced by dependency-cruiser over declared entrypoints, with a failing negative-test fixture for every forbidden edge.
+This change delivers the M0-S1 monorepo scaffold: six packages per ADR-0003 DEC-1 (`core` with subpaths `.`, `./contracts`, `./state`, `./branding` and one `createRuntime` composition-root signature; `adapters` with per-provider, `./registry`, and per-I/O subpaths; `cli`; `mcp`; `opencode`; and a private dev-only `testkit`), all `private: true` with a release-job publish guard. It wires the toolchain end to end — pinned pnpm with one lockfile, a pinned Bun with a four-copy equality check, ESM with one strict TypeScript base configuration, Biome, commitlint + husky, changesets fixed-group lockstep versioning, dist-targeted exports with publint/attw/package-export checks — and makes the ADR-0003 DEC-2 boundary matrices mechanically enforced by dependency-cruiser over declared entrypoints, with a failing negative-test fixture for every forbidden edge.
 
 Scope is **structure over content**: empty-but-enforced structure only (each declared subpath exists, exports resolve, boundary fixtures fail correctly, tests run green). No engines, no business logic, no driver implementations. Existing bash jobs stay untouched and authoritative (C-5/C-8 strangler); new TypeScript CI jobs are additive and binding.
 
@@ -101,7 +101,7 @@ Because the repository has no typed monorepo substrate, every planned OSS toolin
 | F-7 | Negative-fixture proof for every forbidden edge | "A rule without a failing fixture is unenforced" (ADR DEC-2). |
 | F-8 | Quality gates: Biome (one root config), commitlint + husky, binding scripts | Deterministic quality floor; CI commitlint is the authority, the hook is convenience. |
 | F-9 | Package scripts with ONE aggregate check | `lint`, `format check`, `typecheck`, `test`, `boundary check`, and a single `check` chaining them — per package and at root. |
-| F-10 | Build + exports discipline | Builds produce `dist`; every exports target points at `dist` with a `types` condition, never `src`; publint + package-export checks. |
+| F-10 | Build + exports discipline | Builds produce `dist`; every exports target points at `dist` with a `types` condition, never `src`; publint + attw + package-export checks. |
 | F-11 | Publish guard with all-private manifests | Blocks an accidental pre-freeze publish twice: at the manifest and at the release job (C-7, ADR DEC-1/DEC-3). |
 | F-12 | Lockstep versioning group (changesets fixed group) | Five intended publishables share one version line; `testkit` excluded. |
 | F-13 | CI fast loop wired to the delivery branch, additive to bash | Binding TypeScript jobs beside the untouched, authoritative bash jobs (C-5/C-8). |
@@ -118,10 +118,10 @@ Because the repository has no typed monorepo substrate, every planned OSS toolin
 - **F-7**: Every forbidden rule carries at least one negative fixture that demonstrates the edge failing — including a cross-package relative import, an `adapters → core ./state` import, a core tier violation, a sibling-surface import, a runtime-API import in a neutral tier, and a testkit dev-edge violation. A rule without a failing fixture fails the check as unenforced.
 - **F-8**: One root Biome configuration owns format and lint; the type checker owns type correctness (no duplicate). One root commitlint configuration plus a local commit-msg hook; CI runs commitlint against the delivery-branch base and the PR base and is the authority. Gates are binding: no advisory boundary job, no error-swallowing, no continue-on-error.
 - **F-9**: The aggregate `check` is the single green/red signal for the scaffold; it chains the five named checks and exists at root and per package. No other aggregate entry point is created.
-- **F-10**: Builds emit to `dist` per package; every declared entrypoint resolves through `dist` with a `types` condition; `src` is never an exported target. publint and a package-export check run for the five intended publishable packages.
+- **F-10**: Builds emit to `dist` per package; every declared entrypoint resolves through `dist` with a `types` condition; `src` is never an exported target. publint, attw, and a package-export check run for the five intended publishable packages.
 - **F-11**: All six manifests carry `private: true`. The release job runs a publish guard that fails when an intended-publishable package is still private or when the branded scope has not been applied. The freeze change (much later) flips privacy, applies the branded scope, and removes the guard in one reviewed change.
 - **F-12**: The changesets fixed group covers exactly `core`, `adapters`, `cli`, `mcp`, `opencode`; `testkit` is excluded from the group and from every published dependency graph.
-- **F-13**: New binding CI jobs on the delivery branch: frozen-lockfile install, typecheck, Biome lint + format check, tests, boundary negative tests, the aggregate check, pin-equality checks, exports/publint checks, the publish guard, the vulnerability gate (C-10 — applicable from the first dependency), and the minimal license-registry audit (DEC-10). Existing bash jobs run unchanged and remain authoritative.
+- **F-13**: New binding CI jobs on the delivery branch: frozen-lockfile install, typecheck, Biome lint + format check, tests, boundary negative tests, the aggregate check, pin-equality checks, exports/attw/publint checks, the publish guard, the vulnerability gate (C-10 — applicable from the first dependency), and the minimal license-registry audit (DEC-10). Existing bash jobs run unchanged and remain authoritative.
 - **F-14**: Ignore rules gain: workspace dependency directories, build output (root and per-package `dist`), local ephemeral state, and the project-local config location matched by a brand-free glob that names no product (per ADR DEC-1; the rename drill asserts it still matches after a rename).
 
 ## 6. USER & SYSTEM FLOWS
@@ -155,7 +155,7 @@ Flow 3 — Publish attempt before the freeze (ticket AC-3)
 - Root workspace foundation: workspace definition, private root manifest with pinned `packageManager`, one lockfile, runtime pin files (four-copy Bun pin), base + solution TypeScript configs, one root Biome config, one root commitlint config, one root boundary configuration, and the per-package manifests/configs.
 - Boundary enforcement: package matrix, core subpath permissions, core internal tier matrix, testkit dev edges, runtime-API confinement — each rule with a failing negative fixture.
 - Quality toolchain and scripts: Biome; commitlint + husky commit-msg hook (hook = convenience, CI = authority); per-package + root `lint`, format check, `typecheck`, `test`, boundary check, and one aggregate `check`.
-- Build/exports discipline: `dist` output, exports with `types` condition and never `src`, publint + package-export checks.
+- Build/exports discipline: `dist` output, exports with `types` condition and never `src`, publint + attw + package-export checks.
 - Publish safety: all six packages `private: true`; release-job publish guard; changesets fixed group (five publishables, `testkit` excluded).
 - CI fast loop: additive, binding TypeScript jobs on the delivery branch, including the vulnerability gate (C-10), the minimal license-registry audit (DEC-10), and pin-equality checks; bash jobs untouched.
 - License registry seed (DEC-10/OQ-1): `doc/legal/dependency-licenses.yaml` with entries covering the scaffold dev-toolchain dependency set plus the minimal fail-closed license audit in the CI fast loop; full registry policy and gate hardening stay in M0-S18.
@@ -222,7 +222,7 @@ Fully additive (ADR DEC-7): nothing moves, nothing is renamed, no existing job o
 | NFR-3 | Negative-fixture coverage of forbidden rules | 1+ failing fixture per rule; 100%; missing fixture fails the check |
 | NFR-4 | Pin equality (4 Bun copies + pnpm pin + frozen lockfile) | identical, verified every PR |
 | NFR-5 | Solution typecheck clean under the full ADR DEC-3 strict flag set | clean, every PR |
-| NFR-6 | Exports discipline for the five publishable packages | 0 targets at `src`; 100% `dist` + `types`; publint + package-export checks pass |
+| NFR-6 | Exports discipline for the five publishable packages | 0 targets at `src`; 100% `dist` + `types`; publint + attw + package-export checks pass |
 | NFR-7 | CLI startup budget (provisional placeholder; measured at first release smoke) | ≤ 200 ms invocation-to-first-output, placeholder pending measurement |
 | NFR-8 | Existing bash test/CI results | no regression; bash jobs remain authoritative on every PR |
 | NFR-9 | Local commit-msg hook behavior | offline, non-mutating, never blocks the ADOS agent commit flow; CI commitlint is the sole authority |
@@ -284,6 +284,7 @@ No other open questions: all scaffold-step decisions are resolved by the PM (Sec
 | DEC-8 | Vulnerability gate included in scaffold CI; license-registry audit deferred pending OQ-1 | C-10 becomes applicable the moment dependencies exist; the registry itself is M0-S18, and its seeding scope is OQ-1 | 2026-10-29 |
 | DEC-9 | `change.type = feat` | Adds the monorepo substrate and its CI — the first implementation capability of ADR-0003, not a refactor of existing behavior | 2026-10-29 |
 | DEC-10 | Seed the license registry in M0-S1: `doc/legal/dependency-licenses.yaml` covers the scaffold dev-toolchain dependency set (explicit entries for direct dependencies; the audit fails closed on any lockfile license not covered by the registry allow-list, compound expressions included) and a minimal license-registry audit joins the CI fast loop. Owner PR review of the scaffold records the license verdicts (C-2 human determination). M0-S18 keeps full registry policy, deny-list hardening, SBOM/notices, and per-entry review-date governance. Supersedes the deferral clause of DEC-8. | ADR-0003's scaffold stop condition ("a dependency has no license-registry entry") is binding; deferral would need an owner waiver of an R3 constraint and opens a several-story unaudited window the backlog-ranking note itself warns against ("the gate should exist before the dependency count grows further"; M0-S18 is a floater); the seed is small, mechanical, and dev-only; M0-S18 becomes pure hardening; mechanical fail-closed enforcement beats a tracked waiver in a solo-owner + AI-agent flow. Flag at PR review for the ADR-0003 post-scaffold retrospective (scaffold file list gains the registry). | 2026-10-29 |
+| DEC-11 | Exports/type checks: publint + attw + package-export check | ADR DEC-3 requires attw explicitly; restored after test-plan gap flag OQ-T1 | 2026-10-29 |
 
 ### 15.1 Resolved scaffold-step decisions (chosen values + rationale)
 
@@ -330,7 +331,7 @@ Ticket AC coverage: ticket AC-1 → AC-F2-1, AC-F9-1, AC-F13-1, AC-F3-1; ticket 
 | AC-F4-1 | **Given** the strict TypeScript flag set required by ADR DEC-3 (identical to the marksync-proven set), **when** the solution typecheck runs, **then** it is clean across all packages with the full flag set and fails on any flag regression. | F-4, NFR-5 |
 | AC-F8-1 | **Given** any package and the workspace root, **when** their scripts are inspected, **then** lint, format check, typecheck, test, and boundary check exist at both levels, and exactly one aggregate check chains them with no alternate aggregate path. | F-8, F-9 |
 | AC-F8-2 | **Given** a commit made by the ADOS delivery flow, **when** the local commit-msg hook runs, **then** it completes offline without altering the commit, and CI commitlint (against the delivery-branch base and PR base) is the sole authority. | F-8, NFR-9 |
-| AC-F10-1 | **Given** each publishable package build, **when** the exports discipline checks run, **then** every exports target points at `dist` with a `types` condition, none points at `src`, and publint plus the package-export check pass. | F-10, NFR-6 |
+| AC-F10-1 | **Given** each publishable package build, **when** the exports discipline checks run, **then** every exports target points at `dist` with a `types` condition, none points at `src`, and publint, attw, and the package-export check pass. | F-10, NFR-6 |
 | AC-F11-1 | **Given** the six package manifests, **when** inspected, **then** all six declare `private: true`. | F-11 |
 | AC-F11-2 | **Given** a release-job run before the naming freeze, **when** any intended-publishable package is still private or the branded scope has not been applied, **then** the publish guard fails the release job and nothing is published. | F-11 |
 | AC-F12-1 | **Given** the changesets configuration, **when** inspected, **then** the fixed group covers exactly the five intended publishable packages and excludes `testkit`. | F-12 |
@@ -423,6 +424,7 @@ N/A — no user data, no telemetry, no sinks, no network surfaces at scaffold. C
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-10-29 | @spec-writer | Initial specification (fresh authoring after an interrupted earlier attempt; nothing was previously written) |
+| 1.1 | 2026-10-29 | @spec-writer | OQ-T1: added attw to exports/type checks per ADR-0003 DEC-3; DEC-11 recorded |
 
 ---
 
@@ -440,7 +442,7 @@ N/A — no user data, no telemetry, no sinks, no network surfaces at scaffold. C
 - [x] `owners` has at least one entry
 - [x] `status` is "Proposed"
 - [x] All sections present in order (1-25 + guidelines + checklist)
-- [x] ID prefixes consistent and unique (F-1..F-14, DM-1..DM-4, NFR-1..NFR-10, RSK-1..RSK-6, OQ-1, DEC-1..DEC-10, AC-*)
+- [x] ID prefixes consistent and unique (F-1..F-14, DM-1..DM-4, NFR-1..NFR-10, RSK-1..RSK-6, OQ-1, DEC-1..DEC-11, AC-*)
 - [x] Acceptance criteria reference at least one F-/NFR-/DM- ID and use Given/When/Then
 - [x] NFRs include measurable values
 - [x] Risks include Impact & Probability
