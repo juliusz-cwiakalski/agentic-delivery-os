@@ -21,9 +21,7 @@ type Config = {
 
 export const validate = (root: string): string[] => {
   const failures: string[] = [];
-  const config = JSON.parse(
-    readFileSync(join(root, ".changeset/config.json"), "utf8"),
-  ) as Config;
+  const config = JSON.parse(readFileSync(join(root, ".changeset/config.json"), "utf8")) as Config;
   const fixed = config.fixed ?? [];
   if (fixed.length !== 1) {
     failures.push(`expected exactly one fixed group; found ${fixed.length}`);

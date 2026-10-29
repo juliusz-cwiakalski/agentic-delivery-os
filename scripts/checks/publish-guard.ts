@@ -38,7 +38,10 @@ export const evaluate = (root: string): GuardResult => {
       reasons.push({ package: label, reason: "still private: true (pre-freeze)" });
     }
     if (typeof scope === "string" && scope.length > 0 && !label.startsWith(`${scope}/`)) {
-      reasons.push({ package: label, reason: "branded scope not applied: package name is neutral" });
+      reasons.push({
+        package: label,
+        reason: "branded scope not applied: package name is neutral",
+      });
     }
   }
 

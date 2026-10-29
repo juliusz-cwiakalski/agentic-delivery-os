@@ -88,7 +88,8 @@ export const mutationCheck = (root: string): string[] => {
     const run = (file: string) =>
       spawnSync(commitlint, ["--edit", file], { cwd: root, encoding: "utf8" }).status ?? 1;
     if (run(malformed) === 0) failures.push("malformed message unexpectedly passed commitlint");
-    if (run(conventional) !== 0) failures.push("conventional message unexpectedly failed commitlint");
+    if (run(conventional) !== 0)
+      failures.push("conventional message unexpectedly failed commitlint");
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
@@ -101,5 +102,7 @@ if (import.meta.main) {
     for (const message of failures) console.error(`FAIL commitlint-authority: ${message}`);
     process.exit(1);
   }
-  console.log("OK commitlint-authority: one root config, conventional config, mutation round-trip green");
+  console.log(
+    "OK commitlint-authority: one root config, conventional config, mutation round-trip green",
+  );
 }

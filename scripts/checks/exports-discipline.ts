@@ -21,9 +21,7 @@ type Manifest = {
 };
 
 const readManifest = (root: string, packageName: string): Manifest =>
-  JSON.parse(
-    readFileSync(join(root, "packages", packageName, "package.json"), "utf8"),
-  ) as Manifest;
+  JSON.parse(readFileSync(join(root, "packages", packageName, "package.json"), "utf8")) as Manifest;
 
 const collectLeaves = (value: ExportValue, leaves: string[]): void => {
   if (typeof value === "string") {
@@ -43,12 +41,15 @@ export const validate = (root: string): string[] => {
     const files = manifest.files ?? [];
     if (!files.includes("dist")) failures.push(`${label}: files must include "dist"`);
     for (const entry of files) {
-      if (!ALLOWED_FILES.test(entry)) failures.push(`${label}: files entry ${entry} is not dist/readme/license`);
+      if (!ALLOWED_FILES.test(entry))
+        failures.push(`${label}: files entry ${entry} is not dist/readme/license`);
     }
 
     for (const [subpath, entry] of Object.entries(manifest.exports ?? {})) {
       if (typeof entry === "string") {
-        failures.push(`${label}${subpath}: export must be a conditions object with a types condition`);
+        failures.push(
+          `${label}${subpath}: export must be a conditions object with a types condition`,
+        );
         continue;
       }
       const types = entry.types;

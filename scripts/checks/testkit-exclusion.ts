@@ -11,8 +11,7 @@ const PACKAGE_NAMES = ["core", "adapters", "cli", "mcp", "opencode", "testkit"];
 
 type Manifest = Record<string, Record<string, string> | undefined> & { name?: string };
 
-const readManifest = (path: string): Manifest =>
-  JSON.parse(readFileSync(path, "utf8")) as Manifest;
+const readManifest = (path: string): Manifest => JSON.parse(readFileSync(path, "utf8")) as Manifest;
 
 export const validate = (root: string): string[] => {
   const failures: string[] = [];

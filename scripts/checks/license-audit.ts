@@ -6,7 +6,7 @@
  * expressions are parsed, never prefix/substring matched: any disallowed branch
  * of an AND or OR fails closed.
  */
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 
@@ -63,9 +63,7 @@ export const directExternalDependencies = (root: string): Dependency[] => {
   return dependencies.sort((left, right) => left.name.localeCompare(right.name));
 };
 
-export type SpdxParseResult =
-  | { ok: true; identifiers: string[] }
-  | { ok: false; reason: string };
+export type SpdxParseResult = { ok: true; identifiers: string[] } | { ok: false; reason: string };
 
 const IDENTIFIER = /^[A-Za-z0-9.+-]+$/;
 
@@ -170,7 +168,9 @@ export const auditRegistry = (registry: Registry, dependencies: Dependency[]): s
     }
     const parsed = parseSpdxExpression(license);
     if (!parsed.ok) {
-      failures.push(`${dependency.name}: ${license} is not a valid SPDX expression (${parsed.reason})`);
+      failures.push(
+        `${dependency.name}: ${license} is not a valid SPDX expression (${parsed.reason})`,
+      );
       continue;
     }
     for (const identifier of parsed.identifiers) {
@@ -187,9 +187,7 @@ export const auditRegistry = (registry: Registry, dependencies: Dependency[]): s
 };
 
 export const loadRegistry = (root: string): Registry =>
-  parseYaml(
-    readFileSync(join(root, "doc/legal/dependency-licenses.yaml"), "utf8"),
-  ) as Registry;
+  parseYaml(readFileSync(join(root, "doc/legal/dependency-licenses.yaml"), "utf8")) as Registry;
 
 export const validate = (root: string, registry: Registry = loadRegistry(root)): string[] => {
   const failures = auditRegistry(registry, directExternalDependencies(root));

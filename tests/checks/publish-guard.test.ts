@@ -27,7 +27,10 @@ const materialize = (): string => {
   return directory;
 };
 
-const mutate = (directory: string, mutateManifest: (manifest: Record<string, unknown>) => void): void => {
+const mutate = (
+  directory: string,
+  mutateManifest: (manifest: Record<string, unknown>) => void,
+): void => {
   for (const packageName of PUBLISHABLE) {
     const path = join(directory, "packages", packageName, "package.json");
     const manifest = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
@@ -52,9 +55,9 @@ describe("publish guard", () => {
       writeFileSync(path, JSON.stringify(manifest, null, 2));
       const result = evaluate(directory);
       expect(result.ok).toBe(false);
-      expect(result.reasons.some((entry) => entry.reason.includes("branded scope not applied"))).toBe(
-        true,
-      );
+      expect(
+        result.reasons.some((entry) => entry.reason.includes("branded scope not applied")),
+      ).toBe(true);
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
@@ -79,9 +82,7 @@ describe("publish guard", () => {
   });
 
   test("the release workflow runs the guard before publish and cannot skip it", () => {
-    const workflow = parse(
-      readFileSync(join(ROOT, ".github/workflows/release.yml"), "utf8"),
-    ) as {
+    const workflow = parse(readFileSync(join(ROOT, ".github/workflows/release.yml"), "utf8")) as {
       jobs?: Record<string, { needs?: string | string[]; steps?: Array<{ run?: string }> }>;
     };
     const guard = workflow.jobs?.["publish-guard"];
