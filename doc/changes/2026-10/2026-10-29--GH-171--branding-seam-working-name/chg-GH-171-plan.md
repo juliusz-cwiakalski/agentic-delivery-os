@@ -372,10 +372,10 @@ Spec §4.1 table, verified by: 12/12 DEC-8 values from the resolver (TC-BRANDING
 
 > **No product token**: the execution report, DoD walkthrough, and every recorded fact stay brand-free (TC-BRANDING-026 evidence at PR review).
 
-- [ ] **7.1** Full gate battery (TC-BRANDING-024/025): `pnpm check` (five-step chain unchanged); `bun test tests/structure tests/behaviour tests/checks` + `bun test tests/boundaries`; `bun run scripts/checks/{forbidden-literals,ignore-rules,ambient-globals,workspace-entrypoints,ci-topology,ci-bindingness,ci-supply-chain,pin-equality,license-audit,vulnerability-gate}.ts` (the scan resolves its baseline from the registry — the `corpusBaseline` commit must be reachable in the clone); affected bash suites — `bash scripts/.tests/test-doc-distribution.sh` (doc distribution touched in Phase 5) and the CI-safe `bash scripts/.tests/test-*.sh` + `bash tools/.tests/test-*.sh` run; `pnpm install --frozen-lockfile` clean (lockfile unchanged — TC-BRANDING-025 zero new dependencies); `git status --porcelain` clean after everything (no live-tree mutation); `git diff --name-only origin/main-tools...HEAD -- scripts tools .opencode .ados-claude` contains only the new `scripts/checks/forbidden-literals*` files (no existing bash/tool/agent file changed) (AC-F4-3 CI half observed, NFR-8).
-- [ ] **7.2** Version impact + changeset decision (D3): record in this plan's Execution Log — version impact **minor**; no changeset file (GH-170 precedent; all packages private `0.0.0`; `privatePackages: {version:false, tag:false}`; the changesets fixed group owns versioning from the freeze change M4-S1; nothing publishes).
-- [ ] **7.3** Spec reconciliation inputs (lifecycle phase 7, `@doc-syncer` — NOT `@coder` delivery work; listed here so it cannot be lost): `doc/spec/features/feature-branding-seam.md` is the FIRST branding feature spec (none exists — first-spec-only rule, always-resolve); inputs: the seam contract (DM-1/DM-2), the D5 derivation-rule table, the scan contract (DM-3 + D1 matching + D2 subsumption), the legacy adapter rules, EVT-1/EVT-2, the drill obligation; glossary candidates (branding seam, working name, naming firewall, forbidden-literal scan, seed literal set, legacy compatibility adapter, rename drill, scope-of-claim — spec §23); AGENTS.md verified already-consistent (no rewrite expected); `.ai/rules/testing-strategy.md` gains the new check + suites in its module-to-test mapping.
-- [ ] **7.4** DoD walkthrough: all 13 spec §17 ACs green with TC evidence (traceability table below); all plan tasks checked; NFR-1..NFR-9 verified; RSK-1..RSK-6 results recorded; TC-BRANDING-026 (manual name-freedom) and TC-BRANDING-020 step 9 (drill clarity) flagged as PR-time owner gates; protected files untouched.
+- [x] **7.1** Full gate battery (TC-BRANDING-024/025): `pnpm check` (five-step chain unchanged); `bun test tests/structure tests/behaviour tests/checks` + `bun test tests/boundaries`; `bun run scripts/checks/{forbidden-literals,ignore-rules,ambient-globals,workspace-entrypoints,ci-topology,ci-bindingness,ci-supply-chain,pin-equality,license-audit,vulnerability-gate}.ts` (the scan resolves its baseline from the registry — the `corpusBaseline` commit must be reachable in the clone); affected bash suites — `bash scripts/.tests/test-doc-distribution.sh` (doc distribution touched in Phase 5) and the CI-safe `bash scripts/.tests/test-*.sh` + `bash tools/.tests/test-*.sh` run; `pnpm install --frozen-lockfile` clean (lockfile unchanged — TC-BRANDING-025 zero new dependencies); `git status --porcelain` clean after everything (no live-tree mutation); `git diff --name-only origin/main-tools...HEAD -- scripts tools .opencode .ados-claude` contains only the new `scripts/checks/forbidden-literals*` files (no existing bash/tool/agent file changed) (AC-F4-3 CI half observed, NFR-8).
+- [x] **7.2** Version impact + changeset decision (D3): record in this plan's Execution Log — version impact **minor**; no changeset file (GH-170 precedent; all packages private `0.0.0`; `privatePackages: {version:false, tag:false}`; the changesets fixed group owns versioning from the freeze change M4-S1; nothing publishes).
+- [x] **7.3** Spec reconciliation inputs (lifecycle phase 7, `@doc-syncer` — NOT `@coder` delivery work; listed here so it cannot be lost): `doc/spec/features/feature-branding-seam.md` is the FIRST branding feature spec (none exists — first-spec-only rule, always-resolve); inputs: the seam contract (DM-1/DM-2), the D5 derivation-rule table, the scan contract (DM-3 + D1 matching + D2 subsumption), the legacy adapter rules, EVT-1/EVT-2, the drill obligation; glossary candidates (branding seam, working name, naming firewall, forbidden-literal scan, seed literal set, legacy compatibility adapter, rename drill, scope-of-claim — spec §23); AGENTS.md verified already-consistent (no rewrite expected); `.ai/rules/testing-strategy.md` gains the new check + suites in its module-to-test mapping. **A6 clause (binding for the handoff):** any future change that adds user-facing docs — including `doc/spec/**` authored via `@doc-syncer` — MUST register them in `scripts/checks/forbidden-literals.registry.json` in the same change; the docs-scope meta-check fails closed on an unregistered doc absent at `corpusBaseline`.
+- [x] **7.4** DoD walkthrough: all 13 spec §17 ACs green with TC evidence (traceability table below); all plan tasks checked; NFR-1..NFR-9 verified; RSK-1..RSK-6 results recorded; TC-BRANDING-026 (manual name-freedom) and TC-BRANDING-020 step 9 (drill clarity) flagged as PR-time owner gates; protected files untouched.
 
 **Acceptance Criteria**:
 
@@ -455,4 +455,56 @@ Full definitions: [chg-GH-171-test-plan.md](./chg-GH-171-test-plan.md) §5. **Tr
 | 3 — Scan + registry + subsumption | DONE | 2026-10-30 | 2026-10-30 | 97f4378 | `bun run scripts/checks/forbidden-literals.ts` 5/5 classes, 0 violations; `bun test tests/checks/{forbidden-literals,ignore-rules}.test.ts` 24 pass / 0 fail (incl. TC-027 lifecycle + A7 orphan-entry/entry-removal); `bun run scripts/checks/ignore-rules.ts` exit 0; `pnpm check` exit 0 |
 | 4 — Legacy adapter | DONE | 2026-10-30 | 2026-10-30 | da4237c | `bun test tests/behaviour/legacy-adapter.test.ts tests/structure/legacy-confinement.test.ts tests/structure/content-inventory.test.ts` 23 pass / 0 fail (A4: probe asserts captured console.warn output); `bun test tests/boundaries` 103 pass / 0 fail; scan exit 0; `pnpm check` exit 0 |
 | 5 — Rename drill doc | DONE | 2026-10-30 | 2026-10-30 | e2a7329 | `bash scripts/.tests/test-doc-distribution.sh` exit 0; scan 5/5 classes with 1 registered doc; `bun test tests/structure/rename-drill-doc.test.ts` 5 pass / 0 fail; `pnpm check` exit 0. Deviation recorded: the mandated `ados_distribution:` marker line is exempted as a required document header in the single source-header allowlist entry (same five-entry allowlist; otherwise no new doc could pass the name-free scan). |
-| 6 — CI binding + boundaries | DONE | 2026-10-30 | 2026-10-30 | pending | `ci-topology` 16 TS jobs / 7 bash jobs; `ci-bindingness`, `ci-supply-chain` exit 0; `bun test tests/checks` 79 pass / 0 fail (incl. job removal, continue-on-error, shallow/no-baseline-fetch mutations); `bun test tests/boundaries` 103 pass / 0 fail; `pnpm check` exit 0. Task 6.5 (push-branch CI observation) deferred to PR-time: the delivery constraint forbids pushing; local equivalents cover the same assertions. |
+| 6 — CI binding + boundaries | DONE | 2026-10-30 | 2026-10-30 | f3fbc21 | `ci-topology` 16 TS jobs / 7 bash jobs; `ci-bindingness`, `ci-supply-chain` exit 0; `bun test tests/checks` 79 pass / 0 fail (incl. job removal, continue-on-error, shallow/no-baseline-fetch mutations); `bun test tests/boundaries` 103 pass / 0 fail; `pnpm check` exit 0. Task 6.5 (push-branch CI observation) deferred to PR-time: the delivery constraint forbids pushing; local equivalents cover the same assertions. |
+| 7 — Finalize + gates | DONE | 2026-10-30 | 2026-10-30 | pending | Full battery green: `pnpm check`; 145 core tests; 103 boundary tests; ten checks; doc-distribution; all CI-safe bash suites; frozen install. See the delivery completion record below. |
+
+### Delivery completion record (Phase 7)
+
+**Version impact**: minor. **Changeset**: none. D3 applies (GH-170 precedent): all packages are private `0.0.0`, `.changeset/config.json` sets `privatePackages: {version: false, tag: false}`, the changesets fixed group owns versioning from the naming-freeze change (M4-S1), and nothing publishes, so there is no version to bump.
+
+**Full gate battery (task 7.1, all green)**
+
+| Gate | Result |
+|------|--------|
+| `pnpm check` (five-step aggregate unchanged) | exit 0 |
+| `bun test tests/structure tests/behaviour tests/checks` | 145 pass / 0 fail |
+| `bun test tests/boundaries` (all fixtures + fixture-coverage meta-check) | 103 pass / 0 fail |
+| `forbidden-literals`, `ignore-rules`, `ambient-globals`, `workspace-entrypoints`, `ci-topology`, `ci-bindingness`, `ci-supply-chain`, `pin-equality`, `license-audit`, `vulnerability-gate` | exit 0 each |
+| `bash scripts/.tests/test-doc-distribution.sh` | exit 0 |
+| CI-safe bash suites (`find . -path '*/.tests/test-*.sh'` with the CI exclusions) | all pass |
+| `pnpm install --frozen-lockfile` | up to date; `pnpm-lock.yaml` unchanged |
+| `git diff --name-only origin/main-tools...HEAD -- scripts tools .opencode .ados-claude` | only `scripts/checks/{forbidden-literals.ts,forbidden-literals.registry.json,ignore-rules.ts,ci-topology.ts}`; no bash/tool/agent file changed |
+| `git status --porcelain` after the phase commit | clean |
+
+**Spec reconciliation inputs for `@doc-syncer` (task 7.3, lifecycle phase 7)**
+
+- New feature spec: `doc/spec/features/feature-branding-seam.md` (first branding feature spec; always-resolve rule). Inputs: the seam contract (DM-1/DM-2), the D5 derivation table, the scan contract (DM-3 + D1 matching + D2 subsumption), the legacy adapter rules, EVT-1/EVT-2, and the drill obligation.
+- Glossary candidates (spec §23): branding seam, working name, naming firewall, forbidden-literal scan, seed literal set, legacy compatibility adapter, rename drill, scope-of-claim.
+- AGENTS.md verified already consistent (no rewrite expected); `.ai/rules/testing-strategy.md` gains the new check and suites in its module-to-test mapping.
+- **A6 clause (binding for the handoff):** any future change that adds user-facing docs — including `doc/spec/**` authored via `@doc-syncer` — MUST register them in `scripts/checks/forbidden-literals.registry.json` in the same change; the docs-scope meta-check fails closed on an unregistered doc absent at `corpusBaseline`.
+
+**DoD walkthrough (task 7.4) — 13/13 ACs evidenced**
+
+| AC | Evidence | Verdict |
+|----|----------|---------|
+| AC-F1-1 | `tests/behaviour/branding-resolver.test.ts` (001/002/004: 12/12 values, determinism, fail-closed, derivation table) | PASSED |
+| AC-F1-2 | `tests/structure/branding-seam.test.ts` (021) + live scan 0 literals | PASSED |
+| AC-F2-1 | `tests/structure/branding-contract.test.ts` (005) + `tests/boundaries` tier rules | PASSED |
+| AC-F3-1 | `branding-resolver.test.ts` (007 override via `tests/fixtures/branding/edge.ts`) + `branding-seam.test.ts` (no override variable in branding) | PASSED |
+| AC-F4-1 | `tests/checks/forbidden-literals.test.ts` per-class mutations + TC-BRANDING-027 lifecycle (post-merge injection, entry removal, A7 orphan entry, un-anchoring, baseline advance, shallow clone) | PASSED |
+| AC-F4-2 | Live scan 5/5 classes / 0 violations; allowlist exactness tests; `ignore-rules` regression suite | PASSED |
+| AC-F4-3 | `ci-topology`/`ci-bindingness`/`ci-supply-chain` green + `tests/checks/ci-checks.test.ts` mutations (continue-on-error, job removal, baseline-fetch removal, shallow checkout, additions-only diff) | PASSED locally; push-branch CI observation deferred to PR-time (no push permitted) |
+| AC-F5-1 | `tests/structure/legacy-confinement.test.ts` literal inventory + live scan green over the allowlisted legacy subpath | PASSED |
+| AC-F5-2 | `tests/behaviour/legacy-adapter.test.ts` fresh-factory counts + child-process probes (explicit captured `console.warn`) | PASSED |
+| AC-F5-3 | `legacy-confinement.test.ts` zero branding/workspace imports + no-new legacy variable scan | PASSED |
+| AC-F6-1 | `branding-contract.test.ts` telemetry reservation, producer-as-metadata wording, no emission path | PASSED |
+| AC-F7-1 | `tests/structure/rename-drill-doc.test.ts` + `test-doc-distribution.sh` + scan of the registered doc | PASSED |
+| AC-F8-1 | `tests/boundaries` 103 pass (fixture-coverage meta-check included); no new forbidden rule; `content-inventory.test.ts` per-file policy | PASSED |
+
+PR-time owner gates remain: TC-BRANDING-026 (artifact name-freedom) and TC-BRANDING-020 step 9 (drill clarity). Risk outcomes: RSK-1 closed by the DM-2 seam contract; RSK-2 accepted residual lowercase-embedding case recorded in the matcher and TC-010; RSK-3 confined by D9 + confinement tests; RSK-4 guarded by the scan and the owner gate; RSK-5 closed by binding topology/bindingness; RSK-6 handled by the drill's execution obligation.
+
+**Deviations recorded**
+
+1. The mandated `ados_distribution:` marker line contains the seed token; it is exempted as a required document header within the single source-header allowlist entry (the allowlist stays at five entries). Without this, no new user-facing doc could satisfy the name-free scan. The drill body and every non-header doc line remain scanned.
+2. Task 6.5 (push-branch CI observation) is deferred to PR-time because this delivery run must not push. All local equivalents pass; AC-F4-3's CI half remains a merge-blocking observation at PR review.
+3. Task 7.1's prose says the protected-path diff contains "only the new `forbidden-literals*` files"; the delivered diff also touches `scripts/checks/ignore-rules.ts` (D2 subsumption) and `scripts/checks/ci-topology.ts` (task 6.2), both required by the plan and permitted by test-plan TC-BRANDING-024 step 5 (new/changed `scripts/checks/*.ts`). No bash, `tools/`, `.opencode/`, or `.ados-claude/` file changed.
