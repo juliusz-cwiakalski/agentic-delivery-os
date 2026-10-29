@@ -72,7 +72,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "bun test",
     "check:boundaries": "depcruise --config ../../.dependency-cruiser.cjs src",
-    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries"
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries",
+    "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@delivery-os/core": "workspace:*"

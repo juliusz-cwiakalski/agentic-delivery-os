@@ -1,0 +1,67 @@
+name: Release
+
+# Manual only: never triggers pre-freeze. The publish guard runs in its own job
+# and the publish job cannot start unless the guard succeeds.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish-guard:
+    name: Publish guard (pre-freeze)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        # actions/checkout v4.4.0
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Set up Bun
+        # oven-sh/setup-bun v2.2.0 — Bun pin copy 4
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: "1.4.4"
+
+      - name: Set up pnpm
+        # pnpm/action-setup v4.4.0 (reads packageManager)
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run publish guard
+        run: bun run scripts/checks/publish-guard.ts
+
+  publish:
+    name: Publish
+    needs: publish-guard
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        # actions/checkout v4.4.0
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Set up Bun
+        # oven-sh/setup-bun v2.2.0 — Bun pin copy 4
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: "1.4.4"
+
+      - name: Set up pnpm
+        # pnpm/action-setup v4.4.0 (reads packageManager)
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Publish to the registry
+        run: pnpm exec changeset publish

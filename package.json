@@ -14,10 +14,13 @@
     "test": "bun test",
     "check:boundaries": "depcruise packages && bun run scripts/checks/ambient-globals.ts",
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries",
-    "prepare": "husky"
+    "prepare": "husky",
+    "build": "pnpm -r build"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
     "@biomejs/biome": "2.6.4",
+    "@changesets/cli": "3.0.3",
     "@commitlint/cli": "21.2.4",
     "@commitlint/config-conventional": "21.2.4",
     "@delivery-os/adapters": "workspace:*",
@@ -29,6 +32,7 @@
     "@types/bun": "1.4.4",
     "dependency-cruiser": "18.7.0",
     "husky": "9.1.7",
+    "publint": "0.3.25",
     "typescript": "6.0.3",
     "yaml": "2.9.1"
   }

@@ -18,8 +18,10 @@ const listTypeScriptFiles = (packageDir: string): string[] => {
   const walk = (relative: string): void => {
     for (const entry of readdirSync(join(packageDir, relative), { withFileTypes: true })) {
       const next = relative.length > 0 ? `${relative}/${entry.name}` : entry.name;
-      if (entry.isDirectory()) walk(next);
-      else if (entry.name.endsWith(".ts")) results.push(next);
+      if (entry.isDirectory()) {
+        if (entry.name === "dist" || entry.name === "node_modules") continue;
+        walk(next);
+      } else if (entry.name.endsWith(".ts")) results.push(next);
     }
   };
   walk("");
