@@ -6,9 +6,10 @@
  * floating ref (supply chain), or the advisory (vulnerability gate).
  */
 import { describe, expect, test } from "bun:test";
+import { execFileSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import {
   scanText as scanBindingness,
   validate as validateBindingness,
@@ -19,9 +20,10 @@ import {
 } from "../../scripts/checks/ci-supply-chain";
 import { validate as validateTopology } from "../../scripts/checks/ci-topology";
 import { validate as validatePins } from "../../scripts/checks/pin-equality";
+import { validate as validateScriptSurface } from "../../scripts/checks/script-surface";
 import {
-  validate as validateVulnerabilities,
   validateFixture,
+  validate as validateVulnerabilities,
 } from "../../scripts/checks/vulnerability-gate";
 
 const ROOT = process.cwd();
@@ -172,5 +174,119 @@ describe("vulnerability gate", () => {
 describe("CI topology", () => {
   test("bash jobs intact, TS jobs complete, triggers and wiring correct", () => {
     expect(validateTopology(ROOT)).toEqual([]);
+  });
+});
+
+const CI_PATH = ".github/workflows/ci.yml";
+const SCAN_JOB = "ts-forbidden-literals";
+
+const jobBlock = (text: string, jobId: string): string => {
+  const lines = text.split("\n");
+  const start = lines.findIndex((line) => line === `  ${jobId}:`);
+  if (start < 0) return "";
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    if (/^ {2}[a-z0-9-]+:\s*$/.test(lines[index] as string)) {
+      end = index;
+      break;
+    }
+  }
+  return lines.slice(start, end).join("\n");
+};
+
+const replaceInJob = (text: string, jobId: string, search: string, replacement: string): string => {
+  const block = jobBlock(text, jobId);
+  return block.length === 0 ? text : text.replace(block, block.replace(search, replacement));
+};
+
+const makeWorkflowTree = (mutate: (text: string) => string): string => {
+  const directory = mkdtempSync(join(tmpdir(), "ci-forbidden-job-"));
+  mkdirSync(join(directory, ".github/workflows"), { recursive: true });
+  cpSync(join(ROOT, "scripts/checks"), join(directory, "scripts/checks"), { recursive: true });
+  cpSync(join(ROOT, "package.json"), join(directory, "package.json"));
+  const text = readFileSync(join(ROOT, CI_PATH), "utf8");
+  writeFileSync(join(directory, CI_PATH), mutate(text));
+  return directory;
+};
+
+const BASELINE_FETCH_STEP =
+  "      - name: Fetch the recorded corpus baseline\n        run: git fetch --no-tags origin 32784affbb8a1b82a57b6c4578a331b8bd99b4c4\n";
+
+describe("forbidden-literal CI job", () => {
+  test("live job is declared with full history, baseline fetch, and the gate command", () => {
+    expect(validateTopology(ROOT)).toEqual([]);
+    const text = readFileSync(join(ROOT, CI_PATH), "utf8");
+    const block = jobBlock(text, SCAN_JOB);
+    expect(block).toContain("fetch-depth: 0");
+    expect(block).toContain("32784affbb8a1b82a57b6c4578a331b8bd99b4c4");
+    expect(block).toContain("bun run scripts/checks/forbidden-literals.ts");
+    expect(block).not.toContain("continue-on-error");
+  });
+
+  test("continue-on-error on the scan job fails bindingness naming the job", () => {
+    const text = readFileSync(join(ROOT, CI_PATH), "utf8").replace(
+      `  ${SCAN_JOB}:\n`,
+      `  ${SCAN_JOB}:\n    continue-on-error: true\n`,
+    );
+    const failures = scanBindingness(text);
+    expect(failures.some((message) => message.includes(SCAN_JOB))).toBe(true);
+    expect(failures.some((message) => message.includes("continue-on-error"))).toBe(true);
+  });
+
+  test("removing the job from ci.yml fails topology naming it", () => {
+    const directory = makeWorkflowTree((text) => text.replace(jobBlock(text, SCAN_JOB), ""));
+    try {
+      expect(validateTopology(directory).some((message) => message.includes(SCAN_JOB))).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("removing the baseline fetch step fails naming the missing baseline fetch", () => {
+    const directory = makeWorkflowTree((text) => text.replace(BASELINE_FETCH_STEP, ""));
+    try {
+      expect(
+        validateTopology(directory).some((message) => message.includes("missing baseline fetch")),
+      ).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("a shallow checkout without the baseline fetch fails closed", () => {
+    const directory = makeWorkflowTree((text) =>
+      replaceInJob(
+        text.replace(BASELINE_FETCH_STEP, ""),
+        SCAN_JOB,
+        "fetch-depth: 0",
+        "fetch-depth: 1",
+      ),
+    );
+    try {
+      const failures = validateTopology(directory);
+      expect(failures.some((message) => message.includes("full history"))).toBe(true);
+      expect(failures.some((message) => message.includes("missing baseline fetch"))).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("aggregate chain stays five steps and ts-invariants is byte-unchanged", () => {
+    expect(validateScriptSurface(ROOT)).toEqual([]);
+    const head = readFileSync(join(ROOT, CI_PATH), "utf8");
+    const base = execFileSync("git", ["show", "origin/main-tools:.github/workflows/ci.yml"], {
+      cwd: ROOT,
+      encoding: "utf8",
+    });
+    expect(jobBlock(head, "ts-invariants")).toBe(jobBlock(base, "ts-invariants"));
+    const diff = execFileSync(
+      "git",
+      ["diff", "--unified=0", "origin/main-tools...HEAD", "--", CI_PATH],
+      { cwd: ROOT, encoding: "utf8" },
+    );
+    const removed = diff
+      .split("\n")
+      .filter((line) => line.startsWith("-") && !line.startsWith("---"));
+    expect(removed).toEqual([]);
   });
 });

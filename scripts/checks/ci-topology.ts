@@ -3,7 +3,7 @@
  * bash jobs, on PRs to main-tools and pushes to delivery branches.
  */
 import { spawnSync } from "node:child_process";
-import { readFileSync, readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "yaml";
 
@@ -33,7 +33,73 @@ export const TS_JOBS = [
   "ts-vuln",
   "ts-aggregate",
   "ts-commitlint",
+  "ts-forbidden-literals",
 ];
+
+export const SCAN_JOB_ID = "ts-forbidden-literals";
+export const SCAN_COMMAND = "bun run scripts/checks/forbidden-literals.ts";
+
+type WorkflowStep = {
+  name?: string;
+  uses?: string;
+  run?: string;
+  with?: Record<string, unknown>;
+};
+
+type WorkflowJob = {
+  permissions?: Record<string, unknown>;
+  steps?: WorkflowStep[];
+  "continue-on-error"?: unknown;
+};
+
+export const scanJobFailures = (
+  root: string,
+  workflow: { jobs?: Record<string, unknown> },
+): string[] => {
+  const jobs = (workflow.jobs ?? {}) as Record<string, WorkflowJob>;
+  const job = jobs[SCAN_JOB_ID];
+  if (job === undefined) return [];
+
+  const failures: string[] = [];
+  if (job["continue-on-error"] !== undefined) {
+    failures.push(`ci.yml: ${SCAN_JOB_ID} must not be advisory (continue-on-error)`);
+  }
+  if (job.permissions?.contents !== "read") {
+    failures.push(`ci.yml: ${SCAN_JOB_ID} must declare permissions.contents: read`);
+  }
+  const steps = job.steps ?? [];
+  const checkout = steps.find((step) => step.uses?.startsWith("actions/checkout@"));
+  if (checkout === undefined || String(checkout.with?.["fetch-depth"]) !== "0") {
+    failures.push(`ci.yml: ${SCAN_JOB_ID} must check out full history (fetch-depth: 0)`);
+  }
+
+  let baseline = "";
+  try {
+    baseline =
+      (
+        JSON.parse(
+          readFileSync(join(root, "scripts/checks/forbidden-literals.registry.json"), "utf8"),
+        ) as { corpusBaseline?: string }
+      ).corpusBaseline ?? "";
+  } catch {
+    failures.push(`ci.yml: ${SCAN_JOB_ID} cannot resolve the registry corpusBaseline`);
+  }
+  if (!/^[0-9a-f]{40}$/.test(baseline)) {
+    failures.push(`ci.yml: ${SCAN_JOB_ID} registry corpusBaseline is not a full commit SHA`);
+  } else {
+    const fetchStep = steps.find((step) => (step.run ?? "").includes("git fetch"));
+    if (fetchStep === undefined || !(fetchStep.run ?? "").includes(baseline)) {
+      failures.push(
+        `ci.yml: ${SCAN_JOB_ID} must fetch the recorded corpusBaseline commit (missing baseline fetch)`,
+      );
+    }
+  }
+
+  if (!steps.some((step) => (step.run ?? "").includes(SCAN_COMMAND))) {
+    failures.push(`ci.yml: ${SCAN_JOB_ID} must run ${SCAN_COMMAND}`);
+  }
+  return failures;
+};
 
 type Workflow = {
   on?: {
@@ -65,6 +131,8 @@ export const validate = (root: string): string[] => {
   for (const job of TS_JOBS) {
     if (!(job in jobs)) failures.push(`ci.yml: required TypeScript job ${job} is missing`);
   }
+
+  failures.push(...scanJobFailures(root, workflow));
 
   const branches = workflow.on?.pull_request?.branches ?? [];
   if (!branches.includes("main-tools")) {
