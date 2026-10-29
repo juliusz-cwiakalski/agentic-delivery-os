@@ -1,0 +1,158 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-171
+branch: feat/GH-171/branding-seam-working-name
+status: PASS
+summary: >-
+  The delivered seam is faithful to spec v1.0, test plan v1.1 (27 TCs), and plan
+  v1.1 (7 phases, all tasks evidenced): a pure, total, fail-closed resolver
+  producing all twelve DEC-8 values from documented deterministic rules with
+  zero committed name literals (branding/contracts grep for seed tokens = 0
+  hits, independently re-verified), BrandIdentity defined once in core
+  ./contracts with the twelve readonly fields, a neutral edge-owned override,
+  and a full-scope forbidden-literal scan whose mutation/lifecycle suite is
+  genuinely non-vacuous (five per-class mutations, all-violations-in-one-run,
+  registry-shape mutations, TC-027 lifecycle incl. post-merge injection,
+  A7 orphan-entry, baseline un-anchoring/advance, shallow clone). The legacy
+  adapter maps parameter-supplied current names with an exactly-once
+  secret-safe warning and zero workspace imports; the drill doc is complete,
+  registered, and scanned; the CI job is SHA-pinned, contents:read,
+  full-history + explicit baseline fetch, with no bypass construct and an
+  additions-only ci.yml diff asserted mechanically. Every gate was re-run by
+  this review and is green; a full-diff token audit found seed tokens only in
+  sanctioned framings and no candidate/public name in any artifact; commits
+  are Conventional; protected-path changes are exactly the plan-permitted
+  scripts/checks/*.ts set. All three accepted deviations were verified as
+  described and judged acceptable. Remaining findings are two low hardening
+  notes and three informational PR-time reminders; PR-time owner gates
+  (TC-BRANDING-026 name-freedom ack, TC-BRANDING-020 step-9 clarity, A1 myados
+  residual, task-6.5 CI observation as merge-blocking) still apply.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 2
+  info: 3
+spec_compliance: PASS
+plan_compliance: PASS
+publication: null
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: security
+    location: scripts/checks/forbidden-literals.ts:310
+    message: >-
+      MINOR (hardening). The header-line exemption applies its four patterns
+      (`Copyright`, `source:`, `Apache-2.0`, `ados_distribution:`) as
+      substring-anywhere matches, so any scanned line containing one of them is
+      skipped wholesale — including future code lines such as an object-property
+      `source:` in packages/**, where a seed token on the same line would escape
+      the scan (e.g. `{ source: "ados" }`). Current exposure is minimal and
+      verified: only 5 lines in the entire scanned scope match the patterns
+      today (the two registered docs' frontmatter/license headers), the pattern
+      set is registry-pinned, and any pattern change fails the registry-shape
+      mutation tests. Deviation 1 (the `ados_distribution:` marker exemption) is
+      thereby confirmed narrow: marker lines only, doc bodies fully scanned.
+    suggestion: >-
+      In a later hardening change, anchor the patterns to header/frontmatter
+      shape (e.g. `^\s*#?\s*(Copyright|source:|Apache-2.0)` and
+      `^ados_distribution:`) and add corpus fixtures for code-shaped lines
+      containing the patterns, so a same-line token cannot ride an exemption.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: correctness
+    location: scripts/checks/forbidden-literals.ts:288
+    message: >-
+      MINOR (fail-closed consistency). `listRepoFiles` silently returns `[]`
+      when `git ls-files` exits non-zero — a fail-open path for the packageTree
+      and userFacingDocs listings in isolation (the class would report as
+      scanned with 0 files). Practical exposure is small: any git failure that
+      breaks listing also breaks `baselineDocs`/`cat-file`, which fail closed
+      with named errors, and CI guarantees git. But the scan's own contract
+      (never silently skip a class) argues for a named failure instead of an
+      empty list.
+    suggestion: >-
+      Make `listRepoFiles` record a named failure (or throw) when the git
+      child process errors or exits non-zero, mirroring the baseline
+      reachability treatment, and cover it with a mutation (e.g. PATH without
+      git in a temp environment).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: doc/guides/rename-drill.md:33
+    message: >-
+      NIT (no action required). RD-11 is delivered as "record the run and its
+      result" while plan task 5.1 words RD-11 as the execution obligation
+      itself; the obligation is instead stated verbatim as a dedicated
+      "Execution obligation" section and asserted by the content test
+      (rename-drill-doc.test.ts mutation: removing the sentence fails). All
+      AC-F7-1 content — the eleven battery rows, both RD-10 rename-survival
+      assertions, and the obligation — is present; only the row-to-concept
+      mapping differs from the plan prose.
+    suggestion: >-
+      Fold into the TC-BRANDING-020 step-9 clarity review at PR if the owner
+      prefers the plan-bound RD-11 mapping; otherwise record as accepted
+      presentation variance.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-10/2026-10-29--GH-171--branding-seam-working-name/chg-GH-171-plan.md:339
+    message: >-
+      NIT (PR-time obligation, accepted deviation 2 verified as described).
+      Task 6.5 is checked while its substantive obligation — observing the
+      pushed-branch CI run — is deferred to PR time because delivery pushes are
+      forbidden. This mirrors the GH-170 review F-3 pattern: the CI half of
+      AC-F4-3 (and of TC-BRANDING-027: baseline reachable, docs class active on
+      the runner) must be observed on the PR before merge and must not be
+      satisfied by local-equivalent evidence alone.
+    suggestion: >-
+      The PR description must record the merge-blocking condition explicitly:
+      ts-forbidden-literals plus all existing ts-* and bash jobs observed green
+      on the PR before merge (16 ts-* jobs, 7 bash jobs per ci-topology).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: info
+    confidence: medium
+    category: documentation
+    location: doc/guides/rename-drill.md:30
+    message: >-
+      NIT (recorded-risk echo). RD-8/RD-9 compare MCP and OpenCode tool-list
+      snapshots against "the frozen snapshot", but no snapshot mechanism or tool
+      surface exists yet (M0-S3+ stories). RSK-6 already records drill-drift
+      risk and the execution obligation anchors the first run pre-release; the
+      rows are aspirational until those stories land.
+    suggestion: >-
+      When the MCP/OpenCode snapshot infrastructure lands (or at the PR clarity
+      review), note in the drill where the frozen snapshots come from, or mark
+      the two rows as pending that infrastructure.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-10-30T02:45:00Z
+next_step: PROCEED

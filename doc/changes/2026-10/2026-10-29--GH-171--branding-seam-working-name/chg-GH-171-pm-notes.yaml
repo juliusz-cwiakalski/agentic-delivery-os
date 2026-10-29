@@ -27,7 +27,7 @@ dor_iterations:
     artifact: "readiness-review/readiness-iter-2.md"
   delivery: { started: "2026-10-30T00:15:00Z", completed: "2026-10-30T01:40:00Z" }
   system_spec_update: { started: "2026-10-30T01:50:00Z", completed: "2026-10-30T02:05:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-10-30T02:10:00Z", completed: "2026-10-30T02:30:00Z" }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -78,4 +78,7 @@ notes:
     date: 2026-10-29
   - type: info
     text: "Delivery COMPLETE (PM-validated, not self-report): 7 commits f988fa5(P1 contracts+telemetry) 98a45a5(P2 resolver) 97f4378(P3 scan+registry+subsumption) da4237c(P4 legacy adapter) e2a7329(P5 drill doc) f3fbc21(P6 CI binding) 7571d24(P7 finalize); HEAD 7571d24 verified on branch. Gates: pnpm check exit 0; bun tests 145 (structure/behaviour/checks) + 103 (boundaries) all pass; 10 invariant checks exit 0; doc-distribution guard 0; lockfile unchanged, zero new deps; protected paths untouched. PM spot-verification: branding tier grep for ados/ADOS = 0 hits; forbidden-literals.ts+registry and doc/guides/rename-drill.md exist. All 13 ACs evidenced (AC-F4-3 CI half = merge-blocking observation at PR, per plan). DoR advisories A4/A6/A7 honored. Deviations accepted: (1) ados_distribution marker line exempted as required document header (seed token is in the key name itself; bodies fully scanned); (2) task 6.5 push-branch CI observation deferred to PR time (push forbidden in delivery); (3) protected-diff wording (ignore-rules.ts + ci-topology.ts changes are plan-required). PR-time manual gates: TC-BRANDING-026 (name-freedom owner ack) + TC-BRANDING-020 step 9 (drill clarity) + A1/A3 advisories."
+    date: 2026-10-30
+  - type: info
+    text: "Review iter-1 PASS (0 blockers/0 majors/2 low/3 info; artifact code-review/review-iter-1.yaml — reviewer used YAML per sibling convention). Reviewer independently ran all gates green (pnpm check 248 tests, scan 5/5 classes 0 violations, 9 invariant checks, doc-distribution, full-diff token audit: all seed tokens in sanctioned framing, branding/contracts 0 hits, all 15 commits conventional, protected paths untouched, 27/27 TCs non-vacuous, 13/13 ACs verified). LOW findings F-1 (header-exemption substring patterns should be anchored — future hardening) + F-2 (listRepoFiles fail-open on git failure — named failure preferred): OPTIONAL hardening, proposed to owner as PR-time follow-up suggestions (PM does not auto-create tickets). INFO F-4: PR MUST record merge-blocking condition — all 16 ts-* + 7 bash jobs green incl. ts-forbidden-literals on the pushed branch; plus standing owner gates TC-BRANDING-026 (name-freedom ack), TC-BRANDING-020 step 9 (drill clarity), A1 myados ack, A3 distribution flip option. F-3/F-5 presentation notes only (F-5 = drill references future snapshot infrastructure, RSK-6 echo)."
     date: 2026-10-30
