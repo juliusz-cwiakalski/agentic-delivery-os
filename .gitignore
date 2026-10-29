@@ -5,3 +5,20 @@ doc/**/tmp/
 .ai/local/
 .ai/local
 .claudecode.json
+
+# Workspace dependency directories
+node_modules/
+
+# Build output
+dist/
+packages/*/dist/
+*.tsbuildinfo
+coverage/
+
+# Local ephemeral state
+.pnpm-store/
+.local-state/
+
+# Project-local configuration (brand-free: the dot-directory is not named)
+.*/config.local.yaml
+

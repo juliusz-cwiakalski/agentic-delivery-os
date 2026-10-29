@@ -1,0 +1,5 @@
+[test]
+# Repository-root test discovery: `tests/**` and `packages/*/test/**` both live
+# under the root. Fixtures are never named `*.test.ts`, so temp workspaces built
+# from them are not picked up as suites.
+root = "."

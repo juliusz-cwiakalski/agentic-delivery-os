@@ -1,0 +1,12 @@
+{
+  "name": "delivery-os",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.18.3",
+  "engines": {
+    "bun": "1.4.4"
+  },
+  "scripts": {},
+  "devDependencies": {}
+}
