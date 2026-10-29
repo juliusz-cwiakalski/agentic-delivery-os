@@ -1,0 +1,9 @@
+# Local convenience only (RSK-3, NFR-9).
+# Warns about non-conventional messages, always exits 0, performs no network
+# access, and mutates neither the message, the index, nor the working tree.
+# CI commitlint is the authority.
+if [ -x ./node_modules/.bin/commitlint ]; then
+  ./node_modules/.bin/commitlint --edit "$1" >/dev/null 2>&1 ||
+    printf '%s\n' "commitlint (warn-only): commit message is not conventional; CI will enforce it." >&2
+fi
+exit 0
