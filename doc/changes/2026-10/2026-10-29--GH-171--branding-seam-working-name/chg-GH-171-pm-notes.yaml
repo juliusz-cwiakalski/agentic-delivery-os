@@ -5,8 +5,8 @@ milestone: "M0: Trust substrate"
 phases:
   clarify_scope: { started: "2026-10-29T00:00:00Z", completed: "2026-10-29T22:15:00Z" }
   specification: { started: "2026-10-29T22:20:00Z", completed: "2026-10-29T22:35:00Z" }
-  test_planning: { started: null, completed: null }
-  delivery_planning: { started: null, completed: null }
+  test_planning: { started: "2026-10-29T22:40:00Z", completed: "2026-10-29T22:50:00Z" }
+  delivery_planning: { started: "2026-10-29T22:55:00Z", completed: "2026-10-29T23:05:00Z" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -48,5 +48,8 @@ notes:
     text: "Doc impacts for phase 7: NO branding feature spec exists — doc-syncer must author doc/spec/features/feature-branding-seam.md (first-spec-only rule, always-resolve). Possible glossary additions. AGENTS.md already states the no-hardcode rule ('read the binary and product names from configuration') — verify consistency, no rewrite expected. All public artifacts must stay self-contained, generic rationale, no name candidates (owner constraint)."
     date: 2026-10-29
   - type: risk
-    text: "Config-driven working name vs config layer timing: layered config ships M0-S4 (GH-173). For M0-S2 the 'config-driven' contract is the pure-resolver input (working name + env facts injected as parameters at a runtime-aware edge); actual layered-config wiring lands with M0-S4. Spec must state this seam contract so M0-S4 consumes it without reshaping."
+    text: "Config-driven working name vs config layer timing: layered config ships M0-S4 (GH-173). For M0-S2 the 'config-driven' contract is the pure-resolver input (working name + env facts injected as parameters at a runtime-aware edge); actual layered-config wiring lands with M0-S4. Spec must state this seam contract so M0-S4 consumes it without reshaping. (RESOLVED: spec F-3/DM-2/RSK-1 state exactly this.)"
+    date: 2026-10-29
+  - type: info
+    text: "Delivery plan complete (7 phases P1-P7, 47 AC traceability points, all 13 ACs + 26 TCs slotted; one conventional commit per phase, aggregate green per commit). Plan decisions pinned: delimiter matching rule (case-insensitive; reserved myados case recorded as accepted residual), forbidden-literals.ts + JSON registry + root check script + separate CI job (aggregate stays 5 steps), hygiene token block subsumed (delta recorded under C-8), no changeset (GH-170 precedent), 12 deterministic derivation rules (neutral constants + input-derived), drill doc internal @ doc/guides/rename-drill.md (flagged: test-plan example said redistributable — one-word flip if owner prefers), Result-enveloped fail-closed resolver, legacy adapter factory + injected warn sink, NO new boundary rules (verified against fixture harness). Plan verified current tree is scan-green (0 delimiter-matched tokens)."
     date: 2026-10-29
