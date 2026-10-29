@@ -17,7 +17,9 @@ phases:
   review_iterations:
     - { iteration: 1, status: FAIL, date: "2026-10-29T22:50:00Z", artifact: code-review/review-iter-1.yaml }
     - { iteration: 2, status: PASS, date: "2026-10-30T00:25:00Z", artifact: code-review/review-iter-2.yaml }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: "2026-10-30T00:35:00Z", completed: "2026-10-30T00:55:00Z" }
+  dod_check: { started: "2026-10-30T00:56:00Z", completed: "2026-10-30T01:05:00Z" }
+  dod_findings: "PASS with one explicitly-gated item: all 10 phases complete with timestamps; all plan tasks checked (P0-P10, R1.1-R1.6; task 10.1 deferred-to-doc-syncer is DONE — verified landed in e415024 + 28aa036, checkbox annotation benign per review iter-2); all 17 spec ACs verified (16 green with TC evidence + AC-F13-1/NFR-8 on their RECORDED completion path: merge-blocking observed-green CI on the PR — honest gate, not a silent pass); docs complete (doc-syncer no residual gaps, distribution guard green); quality battery green (fresh-clone install+check exit 0 ~64s; publish guard correct pre-freeze fail; pins 4/4; license 11 deps; RSK-4 REJECTED). Human items surfaced to PR: DEC-10 license verdicts (C-2 human determination), ADR-0003 retrospective flag (scaffold file list gains license registry), pnpm 12.x bump follow-up suggestion, core Result placeholder shape confirmation at M0-S3."
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
