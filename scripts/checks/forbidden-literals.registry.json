@@ -58,8 +58,8 @@
     {
       "id": "source-headers",
       "kind": "line",
-      "patterns": ["Copyright", "source:", "Apache-2.0"]
+      "patterns": ["Copyright", "source:", "Apache-2.0", "ados_distribution:"]
     }
   ],
-  "registered": []
+  "registered": ["doc/guides/rename-drill.md"]
 }

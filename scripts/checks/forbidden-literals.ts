@@ -39,7 +39,12 @@ export const EXPECTED_ALLOWLIST_IDS = [
   "historical-change-artifacts",
   "source-headers",
 ] as const;
-export const EXPECTED_HEADER_PATTERNS = ["Copyright", "source:", "Apache-2.0"] as const;
+export const EXPECTED_HEADER_PATTERNS = [
+  "Copyright",
+  "source:",
+  "Apache-2.0",
+  "ados_distribution:",
+] as const;
 
 export type ScopeClass = {
   readonly id: string;
