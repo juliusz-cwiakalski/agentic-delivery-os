@@ -2,7 +2,7 @@
 id: chg-GH-170-test-plan
 status: Updated
 created: 2026-10-29T00:00:00Z
-last_updated: 2026-10-29T16:33:38Z
+last_updated: 2026-10-29T17:45:00Z
 owners: ["Juliusz Ćwiąkalski"]
 service: delivery-os
 labels: ["oss-tooling", "monorepo", "m0", "toolchain", "adr-0003"]
@@ -10,7 +10,7 @@ version_impact: minor
 summary: "Verify the six-package pnpm monorepo scaffold as structure-over-content: every declared subpath and export resolves, every ADR-0003 DEC-2 forbidden edge is mechanically rejected and proven by a failing negative fixture, pins and gates are enforced, and the aggregate check is green from a fresh clone beside an untouched bash CI stack."
 links:
   change_spec: ./chg-GH-170-spec.md
-  implementation_plan: null
+  implementation_plan: ./chg-GH-170-plan.md
   testing_strategy: ../../../../.ai/rules/testing-strategy.md
 ---
 
@@ -25,7 +25,7 @@ The integrity risks guarded here are silent boundary decay (a rule that no longe
 ### 1.1 In Scope
 
 - Workspace structure and resolution: six packages, all F-1 subpaths, `createRuntime` declared exactly once, empty-but-enforced content policy.
-- Boundary enforcement and its negative-fixture proof for every forbidden rule family (package matrix, core subpath permissions, core tiers in alias *and* relative form, testkit dev edges, runtime-API confinement incl. ambient globals).
+- Boundary enforcement and its negative-fixture proof for every forbidden rule family (package matrix — all six importer rows, `core` through `testkit` — core subpath permissions, core tiers in alias *and* relative form, testkit dev edges, runtime-API confinement incl. ambient globals).
 - Toolchain invariants: pnpm pin + single lockfile, four-copy Bun pin equality, strict TS flag set, script surface with exactly one aggregate `check`, exports discipline (`dist` + `types`), publint/attw/package-export checks.
 - Publish safety: six `private: true` manifests, pre-freeze publish guard, changesets fixed group of exactly five.
 - CI properties: additive binding TypeScript jobs, bindingness (no `continue-on-error`, no `|| true`, no advisory job), bash jobs byte-unchanged and green, SHA-pinned actions with job-scoped permissions.
@@ -45,8 +45,8 @@ The integrity risks guarded here are silent boundary decay (a rule that no longe
 
 ## 2. References
 
-- **Change specification**: [chg-GH-170-spec.md](./chg-GH-170-spec.md) — F-1..F-14, DM-1..DM-4, NFR-1..NFR-10, RSK-1..RSK-6, DEC-1..DEC-10, AC-F1-1..AC-F14-1, §17 ticket-AC mapping.
-- **Implementation plan**: `./chg-GH-170-plan.md` (authored in the following phase, delivery_planning) — task/phase IDs are bound there; TC IDs here are behaviour-bound and do not depend on task numbering.
+- **Change specification**: [chg-GH-170-spec.md](./chg-GH-170-spec.md) — F-1..F-14, DM-1..DM-4, NFR-1..NFR-10, RSK-1..RSK-6, DEC-1..DEC-11, AC-F1-1..AC-F14-1, §17 ticket-AC mapping.
+- **Implementation plan**: [chg-GH-170-plan.md](./chg-GH-170-plan.md) — task/phase IDs are bound there (P0–P10); TC IDs here are behaviour-bound and do not depend on task numbering.
 - **Testing strategy**: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — canonical for docs and bash layers; the TypeScript layer is defined in §4 of this plan (A-T3).
 - **Authoritative decision**: [ADR-0003 — OSS Tooling Monorepo Structure](../../../decisions/ADR-0003-oss-monorepo-structure.md) — DEC-1 (package set), DEC-2 (matrices + fixtures + enforcement), DEC-3 (toolchain, pins, exports, publint, attw), C-2/C-7/C-10 (license registry, publish guard, supply chain).
 - **Repo conventions**: [AGENTS.md](../../../../AGENTS.md) — branch model, license-header rule (`doc/changes/` gets none), bash test layout `scripts/.tests/` + `tools/.tests/`.
@@ -120,10 +120,10 @@ Two runners, deliberately separated. **`bun test`** owns everything that needs a
 
 | Layer | Runner / invocation | Location | Covers |
 |-------|--------------------|----------|--------|
-| Bun unit/smoke tests | `bun test tests/structure` | `tests/structure/**` | 004–007 |
+| Bun unit/smoke tests | `bun test tests/structure` | `tests/structure/**` | 004–006 |
 | Boundary negative-fixture suite | `bun test tests/boundaries` | `tests/boundaries/**` + `tests/boundaries/fixtures/**` | 008–016 |
-| Repository invariant checks | `bun run scripts/checks/*.ts` | `scripts/checks/*.ts` (A-T1) | 002, 017–021, 026, 028, 030–038 |
-| Mutation checks (negative probes) | same check, mutated temp copy | temp dirs only | 018, 020, 031 (guard), 036 |
+| Repository invariant checks | `bun run scripts/checks/*.ts` | `scripts/checks/*.ts` (A-T1) | 002, 007, 017–021, 026, 028, 030–038 |
+| Mutation checks (negative probes) | same check, mutated temp copy | temp dirs only | 018, 020, 024, 026, 031, 034, 036, 037 |
 | Local behaviour probe | `bun test` + git in a scratch repo | `tests/behaviour/**` | 003, 027 |
 | CI job check | workflow YAML static assertions + observed run | `.github/workflows/ci.yml` | 023, 024, 025, 038 |
 | e2e-clone | CI job (`fresh-clone`) and the documented local sequence | repo root | 001, 022 |
@@ -138,18 +138,41 @@ Two runners, deliberately separated. **`bun test`** owns everything that needs a
 
 ### 4.1 Forbidden Rule → Fixture → TC Matrix
 
-Rule names below are the names the root configuration must use; the fixture registry keys on them (TC-016), so a rename without a fixture update fails the check.
+Rule names below are the names the root configuration must use; the fixture registry keys on them (TC-016), so a rename without a fixture update fails the check. Every DEC-2 matrix cell with a `no` must map to a named rule here; the package-matrix cell walk immediately below enumerates all six importer rows so no forbidden cell can ship unnamed. All rules in this table are configured with `severity: 'error'` (including `matrix-adapters-importer`); a `warn`-severity rule is treated as unenforced by TC-016.
 
 | Rule family | Rule name(s) | Violating case(s) | TC |
 |-------------|--------------|-------------------|-----|
-| Package matrix | `matrix-core-importer`, `matrix-cli-importer`, `matrix-mcp-importer`, `matrix-opencode-importer` | `cli`→`mcp`; `mcp`→`opencode`; `core`→`adapters`; `opencode`→`cli` | 008 |
-| Core subpath permissions | `subpath-adapters-core-state`, `subpath-adapters-core-branding`, `subpath-undeclared` | `adapters`→`core ./state`; `adapters`→`core ./branding`; importer→subpath absent from its declaration | 009 |
+| Package matrix | `matrix-core-importer`, `matrix-adapters-importer`, `matrix-cli-importer`, `matrix-mcp-importer`, `matrix-opencode-importer` | `cli`→`mcp`; `mcp`→`opencode`; `core`→`adapters`; `opencode`→`cli`; `adapters`→`cli` (alias), `adapters`→`mcp` (relative), `adapters`→`opencode` (alias); control `adapters`→`core ./contracts` clean | 008 |
+| Core subpath permissions | `subpath-adapters-core-state`, `subpath-adapters-core-branding`, `subpath-undeclared` | `adapters`→`core ./state`; `adapters`→`core ./branding`; `adapters`→`core` (whole-package root `.`, undeclared for adapters); importer→subpath absent from its declaration | 009 |
 | Deep / relative cross-package | `no-deep-package-import`, `no-relative-cross-package-import` | `@delivery-os/core/src/domain/x`; `../../core/src/domain/x`; `../../../adapters/src/registry` | 010 |
-| Core tiers — alias form | `tier-domain-only-contracts`, `tier-config-only-contracts`, `tier-branding-only-contracts`, `tier-app-allowed-set`, `tier-state-allowed-set` | `#domain/*`→`#app/*`; `#domain/*`→`#state/*`; `#config/*`→`#domain/*`; `#branding/*`→`#app/*`; `#app/*`→`#branding/*`; `#app/*`→`#state/*` | 011 |
-| Core tiers — relative form | same five rule names | identical edges written as `../app/...`, `./state/...`, `../../branding/...` | 012 |
-| testkit dev edges | `testkit-no-production-import`, `testkit-no-surface-import` | `packages/cli/src/x.ts`→`testkit`; `testkit/src/x.ts`→`cli`; (control: `packages/*/test/*.test.ts`→`testkit` clean) | 013 |
+| Core tiers — alias form | `tier-domain-only-contracts`, `tier-config-only-contracts`, `tier-branding-only-contracts`, `tier-app-allowed-set`, `tier-state-allowed-set` | `#domain/*`→`#app/*`; `#domain/*`→`#state/*`; `#config/*`→`#domain/*`; `#branding/*`→`#app/*`; `#app/*`→`#branding/*`; `#app/*`→`#state/*`; `#state/*`→`#domain/*` | 011 |
+| Core tiers — relative form | same five rule names | identical edges written as `../app/...`, `./state/...`, `../../branding/...`, `../domain/...` | 012 |
+| testkit dev edges | `testkit-no-production-import`, `testkit-no-surface-import` | `packages/*/src/x.ts`→`testkit`; `testkit/src/x.ts`→`cli`/`mcp`/`opencode`; (control: `packages/*/test/*.test.ts`→`testkit` clean) | 013 |
 | Runtime-API confinement | `runtime-apis-confinement` | `node:fs` in `core/src/domain`; `bun:*` in `core/src/config`; `node:sqlite` outside `core/src/state` | 014 |
 | Ambient globals | `ambient-globals-neutral-tiers`, `ambient-env-branding` | `process.env.X` / `Bun.env.X` in `core/src/branding`; `process`, `Bun`, `Deno`, `setTimeout`, `fetch` in `domain`/`app`/`config`/`branding` | 015 |
+
+**DEC-2 package-matrix cell walk.** ADR-0003 DEC-2 has six importer rows. Every `no` cell is enumerated below with the rule that proves it. A rule per importer row uses `pathNot` (or an equivalent allowed-set matcher) so one rule covers every forbidden target in that row; the fixture for the row proves the rule fires, and TC-016 fails the build if the rule or its fixture disappears.
+
+| Importer row | Forbidden cells (DEC-2 `no`) | Proving rule(s) | Fixture case(s) | TC |
+|--------------|-----------------------------|-----------------|-----------------|-----|
+| `core` | → `adapters`, `cli`, `mcp`, `opencode`, `testkit` | `matrix-core-importer` (all five); `testkit-no-production-import` (testkit edge) | `core`→`adapters`; a `packages/*/src`→`testkit` case | 008, 013 |
+| `adapters` | → `cli`, `mcp`, `opencode`, `testkit` (package matrix); core `./state`, `./branding`, and package root `.` (subpath table) | `matrix-adapters-importer` (all three surfaces); `testkit-no-production-import` (testkit edge); `subpath-adapters-core-state`; `subpath-adapters-core-branding`; `subpath-undeclared` (root `.`) | `adapters`→`cli` (alias), →`mcp` (relative), →`opencode` (alias); `packages/adapters/src`→`testkit`; `adapters`→`core ./state`, `./branding`, root `.`; control `adapters`→`core ./contracts` clean | 008, 009, 013 |
+| `cli` | → `mcp`, `opencode`, `testkit` | `matrix-cli-importer` (all three); `testkit-no-production-import` (testkit edge) | `cli`→`mcp`; `packages/cli/src`→`testkit` | 008, 013 |
+| `mcp` | → `cli`, `opencode`, `testkit` | `matrix-mcp-importer`; `testkit-no-production-import` | `mcp`→`opencode`; `packages/mcp/src`→`testkit` | 008, 013 |
+| `opencode` | → `cli`, `mcp`, `testkit` | `matrix-opencode-importer`; `testkit-no-production-import` | `opencode`→`cli`; `packages/opencode/src`→`testkit` | 008, 013 |
+| `testkit` | → `cli`, `mcp`, `opencode` | `testkit-no-surface-import` (one rule, all three surfaces) | `testkit`→`cli`, →`mcp`, →`opencode` | 013 |
+
+Allowed cells are not rules: `core` has no allowed workspace edges; `adapters`→`core ./contracts`, `cli`/`mcp`/`opencode`→`core` (all declared subpaths) and `→adapters`, and `testkit`→`core`/`adapters` are proven by the clean-cruise controls in TC-008/009/011/013. This closes the DEC-2 walk: the previously unnamed `adapters`→surface row now has rule `matrix-adapters-importer` plus fixtures, and the `adapters`→`core` root `.` cell is proven through `subpath-undeclared` at whole-package granularity in TC-009.
+
+**Other DEC-2 matrices (cell walk).** The package matrix is not the only DEC-2 matrix; the remaining forbidden cells are mapped here so none is left unnamed:
+
+| DEC-2 matrix | Forbidden cells | Proving rule(s) | Fixture case(s) | TC |
+|--------------|-----------------|-----------------|-----------------|-----|
+| Core subpath permissions | `adapters`→core root `.`; `adapters`→`./state`; `adapters`→`./branding` (every other importer is `yes` for every listed subpath, so it has no forbidden subpath cell) | `subpath-undeclared` (root `.`); `subpath-adapters-core-state`; `subpath-adapters-core-branding` | TC-009's three forbidden cases + the `./contracts` allowed control | 009 |
+| Core tiers | `domain`→`app`/`config`/`branding`/`state`; `app`→`branding`/`state` (ports only = forbidden at scaffold, A-T7); `config`→`domain`/`app`/`branding`/`state`; `branding`→`domain`/`app`/`config`/`state`; `state`→`domain`/`app`/`config`/`branding` | `tier-domain-only-contracts`; `tier-app-allowed-set`; `tier-config-only-contracts`; `tier-branding-only-contracts`; `tier-state-allowed-set` (one allowed-set rule per tier) | one alias case per rule (TC-011) plus the same edges in relative form (TC-012) | 011, 012 |
+| testkit dev edges | `packages/*/src`→`testkit`; `testkit/src`→`cli`/`mcp`/`opencode`; (allowed: `packages/*/test` and root `e2e`/`bdd`→`testkit` via devDependencies) | `testkit-no-production-import` (one fixture per package); `testkit-no-surface-import` (all three surfaces) | TC-013 cases A and B + the passing dev-edge control C | 013 |
+
+No DEC-2 matrix row now lacks a named rule, and every named rule has at least one registered fixture case enforced by TC-016.
 
 ## 5. Test Scenarios
 
@@ -164,8 +187,8 @@ Rule names below are the names the root configuration must use; the fixture regi
 | TC-SCAFFOLD-005 | `createRuntime` declared exactly once | Happy Path | Critical | High | AC-F1-2 |
 | TC-SCAFFOLD-006 | Empty-but-enforced content inventory | Negative | Critical | High | AC-F1-2 |
 | TC-SCAFFOLD-007 | Declared-entrypoint check: allowed edges resolve, undeclared edges recorded | Happy Path | Critical | High | AC-F1-1, DM-3 |
-| TC-SCAFFOLD-008 | Negative fixtures: package matrix edges | Negative | Critical | High | AC-F6-1, NFR-2 |
-| TC-SCAFFOLD-009 | Negative fixtures: core subpath permissions (`adapters`→`./state`, `./branding`) | Negative | Critical | High | AC-F1-1, NFR-2 |
+| TC-SCAFFOLD-008 | Negative fixtures: package matrix edges (incl. `adapters`→surface alias and relative forms) | Negative | Critical | High | AC-F6-1, NFR-2 |
+| TC-SCAFFOLD-009 | Negative fixtures: core subpath permissions (`adapters`→`./state`, `./branding`, whole-package root `.`) | Negative | Critical | High | AC-F1-1, NFR-2 |
 | TC-SCAFFOLD-010 | Negative fixtures: deep and relative cross-package imports | Negative | Critical | High | AC-F6-1, NFR-2 |
 | TC-SCAFFOLD-011 | Negative fixtures: core tier violations, alias form | Negative | Critical | High | AC-F5-1, NFR-2 |
 | TC-SCAFFOLD-012 | Negative fixtures: core tier violations, relative form | Negative | Critical | High | AC-F5-1, NFR-2 |
@@ -379,19 +402,29 @@ Rule names below are the names the root configuration must use; the fixture regi
 **Test Type(s)**: Negative fixture
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/boundaries/fixtures/matrix-*/`
-**Tags**: @boundary, @negative-fixture, @matrix
+**Tags**: @boundary, @negative-fixture, @matrix, @adapters-row
 
 **Preconditions**:
 - Fixture harness per §4.
+- Rule `matrix-adapters-importer` exists in the production config and is registered (TC-016).
 
 **Steps**:
-1. For each case — `cli`→`mcp`, `mcp`→`opencode`, `core`→`adapters`, `opencode`→`cli` — materialise the fixture workspace and cruise clean (expect 0 violations).
-2. Inject the violating import in alias form.
-3. Re-cruise and parse `summary.violations`.
+1. For each **alias-form** case — `cli`→`mcp` (`matrix-cli-importer`), `mcp`→`opencode` (`matrix-mcp-importer`), `core`→`adapters` (`matrix-core-importer`), `opencode`→`cli` (`matrix-opencode-importer`), `adapters`→`cli` (`matrix-adapters-importer`), `adapters`→`opencode` (`matrix-adapters-importer`) — materialise the fixture workspace and cruise clean (expect 0 violations).
+2. Add the **relative-form** case `adapters`→`mcp` written as `../../../mcp/src/x` (an escaping cross-package relative import that must also fire `matrix-adapters-importer`); cruise clean first.
+3. Inject the violating import in the form named by the case, then re-cruise and parse `summary.violations`.
+4. Cruise the **allowed control**: `adapters`→`@delivery-os/core/contracts` (alias form) and require 0 violations, proving the adapters row's allowed `core ./contracts` edge is not caught by the surface rule.
+5. Assert the adapters cases fire the same rule name in both alias and relative form (one rule per importer, form-independent), mirroring TC-012's alias/relative pairing for tiers.
 
 **Expected Outcome**:
-- Clean cruise: 0 violations.
+- Clean cruise: 0 violations for every case and the control.
 - After injection: the matching `matrix-…-importer` rule for that importer fires, `from`/`to` name the fixture paths, and the process exits non-zero.
+- Specifically, `adapters`→`cli` and `adapters`→`opencode` (alias) and `adapters`→`mcp` (relative) fire `matrix-adapters-importer`; the rule's allowed-set matcher covers all three surface targets.
+- The `adapters`→`core ./contracts` control stays clean, so a blanket "adapters may not import anything" rule fails this scenario.
+- A configuration that omits `matrix-adapters-importer` fails the fixture (expected rule never appears), even if every other matrix rule is present.
+
+**Notes / Clarifications**:
+- For the relative-form case, `no-relative-cross-package-import` may also fire; the case asserts `matrix-adapters-importer` is among the fired rules. TC-010 owns the deep/relative rule separately.
+- The adapters row is the regression target: DEC-2 forbids `adapters`→`cli`/`mcp`/`opencode`, and this TC is the only fixture that proves those surface edges (the `adapters`→`testkit` cell is proven in TC-013).
 
 #### TC-SCAFFOLD-009 - Negative fixtures: core subpath permissions
 
@@ -406,15 +439,20 @@ Rule names below are the names the root configuration must use; the fixture regi
 
 **Preconditions**:
 - Fixture harness per §4.
+- `adapters` manifest declares only `core ./contracts` (never `core` root `.`, `./state`, or `./branding`).
 
 **Steps**:
-1. Cases: `adapters`→`@delivery-os/core/state`, `adapters`→`@delivery-os/core/branding`, and an importer importing a subpath absent from its declaration.
-2. For each, cruise clean, inject the import, re-cruise.
-3. Also assert the allowed counterpart (`adapters`→`@delivery-os/core/contracts`) cruises clean after injection into a control fixture.
+1. Cases: `adapters`→`@delivery-os/core/state`; `adapters`→`@delivery-os/core/branding`.
+2. **Whole-package undeclared case:** `adapters`→`@delivery-os/core` (package root `.`, which the adapters manifest does not declare). This is a whole-specifier undeclared import, not a subpath typo.
+3. **Subpath-level undeclared case:** an importer imports a subpath absent from its declared entrypoints (e.g. a declared package with an undeclared subpath).
+4. For each case, cruise clean, inject the import, re-cruise.
+5. Also assert the allowed counterpart (`adapters`→`@delivery-os/core/contracts`) cruises clean after injection into a control fixture.
 
 **Expected Outcome**:
-- Each forbidden case fires `subpath-adapters-core-state` / `subpath-adapters-core-branding` / `subpath-undeclared`.
+- Each forbidden case fires its rule: `subpath-adapters-core-state`, `subpath-adapters-core-branding`, `subpath-undeclared` (whole-package root `.`), and `subpath-undeclared` (subpath-level miss).
+- `subpath-undeclared` is proven at **whole-specifier** granularity: the root-`.` case must fail even though the package name `@delivery-os/core` is otherwise allowed for other importers. A rule that only compares subpath strings and ignores the package root fails this scenario.
 - The allowed control stays clean; no rule fires on `./contracts`.
+- The two distinct undeclared forms are separate fixture cases, so a missing whole-package case is visible to TC-016.
 
 #### TC-SCAFFOLD-010 - Negative fixtures: deep and relative cross-package imports
 
@@ -456,7 +494,7 @@ Rule names below are the names the root configuration must use; the fixture regi
 
 **Steps**:
 1. Assert the alias map is present and resolves (`#domain/*`, `#app/*`, `#config/*`, `#branding/*`, `#state/*`) and uses the ADR tier names only.
-2. For each forbidden alias edge (`#domain/*`→`#app/*`, `#domain/*`→`#state/*`, `#config/*`→`#domain/*`, `#branding/*`→`#app/*`, `#app/*`→`#branding/*`, `#app/*`→`#state/*`): cruise clean, inject the alias import, re-cruise.
+2. For each forbidden alias edge (`#domain/*`→`#app/*`, `#domain/*`→`#state/*`, `#config/*`→`#domain/*`, `#branding/*`→`#app/*`, `#app/*`→`#branding/*`, `#app/*`→`#state/*`, `#state/*`→`#domain/*`): cruise clean, inject the alias import, re-cruise.
 3. Assert the allowed edges (`#domain/*`→`#contracts`, `#app/*`→`#domain/*`) stay clean in a control fixture.
 
 **Expected Outcome**:
@@ -478,7 +516,7 @@ Rule names below are the names the root configuration must use; the fixture regi
 - Same rules as TC-011; this case asserts the resolver catches the same edges without aliases.
 
 **Steps**:
-1. Write each forbidden edge from TC-011 as a relative import (`../app/x`, `../../branding/x`, `./state/x`, `../../../domain/x`).
+1. Write each forbidden edge from TC-011 as a relative import (from `domain`: `../app/x`, `../state/x`; from `config`: `../domain/x`; from `branding`: `../app/x`; from `app`: `../branding/x`, `../state/x`; from `state`: `../domain/x`).
 2. Cruise clean, inject, re-cruise per case.
 3. Assert the fired rule name is identical to the alias-form rule name (one rule per tier, form-independent).
 
@@ -501,8 +539,8 @@ Rule names below are the names the root configuration must use; the fixture regi
 - Fixture harness per §4; fixture manifests can declare `devDependencies`.
 
 **Steps**:
-1. Case A: `packages/cli/src/**` imports `testkit` → expect `testkit-no-production-import`.
-2. Case B: `testkit/src/**` imports `cli` (a surface) → expect `testkit-no-surface-import`.
+1. Case A: `packages/*/src/**` imports `testkit` — one probe per package (`core`, `adapters`, `cli`, `mcp`, `opencode`; `testkit/src` is exempt by definition) → expect `testkit-no-production-import` for each, covering every package row's `→testkit` cell with a fixture per package (ADR DEC-2 dev-edge table).
+2. Case B: `testkit/src/**` imports each surface in turn — `cli`, then `mcp`, then `opencode` → expect `testkit-no-surface-import` for each (one rule, all three forbidden testkit-row cells).
 3. Case C (control): `packages/core/test/**` imports `testkit` with `testkit` in `devDependencies` → expect 0 violations.
 4. Case D: a publishable manifest lists `testkit` in `dependencies`/`peerDependencies` → covered by TC-033; here assert the rule configuration references the same manifest field.
 
@@ -574,14 +612,17 @@ Rule names below are the names the root configuration must use; the fixture regi
 
 **Steps**:
 1. Load the production `.dependency-cruiser.cjs` and enumerate every `forbidden[].name`.
-2. Load the fixture registry (rule name → fixture case(s)); require every configured rule to have ≥1 case and every registry key to exist in the config (no orphan fixtures).
-3. Assert the ambient-global guard's rule ids are in the same registry.
-4. Run the whole suite in "expected-rule" mode and assert every case fires its declared rule (no case that silently stops firing).
-5. Delete one fixture (in a temp copy of the registry) and assert the meta-check fails.
+2. Load the fixture registry (rule name → fixture case(s)); require every configured rule to have ≥1 case, `severity: 'error'`, and every registry key to exist in the config (no orphan fixtures).
+3. Assert the registry's mandatory rule set is complete: it must contain an entry for each DEC-2 package-matrix importer rule — `matrix-core-importer`, `matrix-adapters-importer`, `matrix-cli-importer`, `matrix-mcp-importer`, `matrix-opencode-importer` — plus `testkit-no-production-import` and `testkit-no-surface-import`. A missing `matrix-adapters-importer` entry fails here even if the rule exists in the config.
+4. Assert `subpath-undeclared` has **two** cases: a whole-package undeclared import (`adapters`→`core` root `.`) and a subpath-level undeclared import. A registry with only the subpath case fails.
+5. Assert the ambient-global guard's rule ids are in the same registry.
+6. Run the whole suite in "expected-rule" mode and assert every case fires its declared rule (no case that silently stops firing).
+7. Delete one fixture (in a temp copy of the registry) and assert the meta-check fails; additionally delete only the `matrix-adapters-importer` fixture and assert the meta-check still fails (the adapters row is gate-protected, not exempted by the other matrix rules).
 
 **Expected Outcome**:
-- Check fails naming any rule without a fixture ("unenforced"), any orphan fixture, and any case whose rule stopped firing.
-- Step 5 proves the meta-check itself is not vacuous.
+- Check fails naming any rule without a fixture ("unenforced"), any orphan fixture, any missing mandatory importer rule (including `matrix-adapters-importer`), and any case whose rule stopped firing.
+- Missing the whole-package `subpath-undeclared` case is reported as a distinct coverage failure, not masked by the subpath-level case.
+- The targeted deletion in step 7 proves the meta-check itself is not vacuous and that the adapters row cannot silently drop out.
 - Exit non-zero in every failure mode.
 
 #### TC-SCAFFOLD-017 - Bun four-copy pin equality
@@ -646,12 +687,12 @@ Rule names below are the names the root configuration must use; the fixture regi
 - Base and per-package configs committed; `pnpm install` done.
 
 **Steps**:
-1. Assert the base config sets the full ADR DEC-3 flag set: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noUnusedLocals`, `noUnusedParameters`, `noImplicitReturns`, `noFallthroughCasesInSwitch`, `noImplicitOverride`, `noUncheckedSideEffectImports`, `verbatimModuleSyntax`, `isolatedModules`, bundler module resolution, `declaration` + declaration maps, `module: ESNext`/`type: module`.
+1. Assert the base config sets the full ADR DEC-3 flag set: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noUnusedLocals`, `noUnusedParameters`, `noImplicitReturns`, `noFallthroughCasesInSwitch`, `noImplicitOverride`, `noUncheckedSideEffectImports`, `verbatimModuleSyntax`, `isolatedModules`, bundler module resolution, `declaration` + declaration maps, `module: ESNext`/`type: module`, plus the plan-added config settings `target: ESNext` and `forceConsistentCasingInFileNames`.
 2. Assert each package config extends the base (no flag overrides that weaken it) and the root solution config references all six packages.
 3. Run `pnpm typecheck` (no-emit, solution-wide).
 
 **Expected Outcome**:
-- Flag set matches exactly; no weakening override; zero `@ts-expect-error`/`skipLibCheck` escape hatches that mask errors (strict `skipLibCheck` decision recorded if used).
+- Flag set matches exactly, including the two plan-added settings (`target: ESNext`, `forceConsistentCasingInFileNames`); no weakening override; zero `@ts-expect-error`/`skipLibCheck` escape hatches that mask errors (strict `skipLibCheck` decision recorded if used).
 - Solution typecheck exits 0 across all six packages.
 
 #### TC-SCAFFOLD-020 - Typecheck fails on strict-flag regression
@@ -666,7 +707,7 @@ Rule names below are the names the root configuration must use; the fixture regi
 **Tags**: @typescript, @negative, @gate
 
 **Preconditions**:
-- A probe file exercising each flag (indexed access, optional property, unused local, implicit return, switch fallthrough, side-effect import).
+- A probe file exercising the probe-covered flags (indexed access, optional property, unused local, implicit return, switch fallthrough, side-effect import); `target: ESNext` and `forceConsistentCasingInFileNames` are config-level settings asserted by name in TC-019 rather than by a probe.
 
 **Steps**:
 1. In a temp copy, remove one flag at a time and run the strictness check + typecheck.
@@ -674,8 +715,8 @@ Rule names below are the names the root configuration must use; the fixture regi
 3. Assert the strictness check flags the removal even when typecheck still passes.
 
 **Expected Outcome**:
-- Removing any single flag fails the strictness check by name.
-- The probe proves each flag is actually enforced, not merely declared.
+- Removing any single asserted flag or setting fails the strictness check by name.
+- The probe proves each probe-covered flag is actually enforced; the two config-level settings are asserted by name in TC-019 and fail on removal without a probe.
 
 #### TC-SCAFFOLD-021 - Script surface: five named checks at both levels, one aggregate
 
@@ -1159,15 +1200,15 @@ All TCs are automated except the manual verdict recording in TC-035. Paths marke
 | TC-SCAFFOLD-005 | `tests/structure/create-runtime.test.ts` † | `bun test tests/structure` | none | To Implement |
 | TC-SCAFFOLD-006 | `tests/structure/content-inventory.test.ts` † | `bun test tests/structure` | AST scan; inventory manifest | To Implement |
 | TC-SCAFFOLD-007 | `scripts/checks/workspace-entrypoints.ts` † | `bun run scripts/checks/workspace-entrypoints.ts` | none | To Implement |
-| TC-SCAFFOLD-008 | `tests/boundaries/fixtures/matrix-*`, `boundaries.test.ts` | `bun test tests/boundaries` | temp fixture workspace; injected import | To Implement |
-| TC-SCAFFOLD-009 | `tests/boundaries/fixtures/subpath-*` | `bun test tests/boundaries` | temp fixture workspace | To Implement |
+| TC-SCAFFOLD-008 | `tests/boundaries/fixtures/matrix-*` (incl. `matrix-adapters-cli`, `matrix-adapters-mcp`, `matrix-adapters-opencode`, `matrix-adapters-control-contracts`), `boundaries.test.ts` | `bun test tests/boundaries` | temp fixture workspace; injected alias + relative import; allowed control | To Implement |
+| TC-SCAFFOLD-009 | `tests/boundaries/fixtures/subpath-*` (incl. whole-package root `.` and subpath-level undeclared cases) | `bun test tests/boundaries` | temp fixture workspace; allowed control | To Implement |
 | TC-SCAFFOLD-010 | `tests/boundaries/fixtures/deep-import-*`, `relative-escape-*` | `bun test tests/boundaries` | temp fixture workspace | To Implement |
 | TC-SCAFFOLD-011 | `tests/boundaries/fixtures/tier-alias-*` | `bun test tests/boundaries` | temp fixture workspace | To Implement |
 | TC-SCAFFOLD-012 | `tests/boundaries/fixtures/tier-relative-*` | `bun test tests/boundaries` | temp fixture workspace | To Implement |
 | TC-SCAFFOLD-013 | `tests/boundaries/fixtures/testkit-*` | `bun test tests/boundaries` | temp fixture workspace + control | To Implement |
 | TC-SCAFFOLD-014 | `tests/boundaries/fixtures/runtime-apis-*` | `bun test tests/boundaries` | temp fixture workspace + control | To Implement |
 | TC-SCAFFOLD-015 | `tests/boundaries/fixtures/ambient-*` | `bun test tests/boundaries` | temp fixture workspace + control | To Implement |
-| TC-SCAFFOLD-016 | `tests/boundaries/fixture-coverage.test.ts` † | `bun test tests/boundaries` | temp registry with a deleted fixture | To Implement |
+| TC-SCAFFOLD-016 | `tests/boundaries/fixture-coverage.test.ts` † | `bun test tests/boundaries` | temp registry with a deleted fixture (generic + targeted `matrix-adapters-importer` deletion) | To Implement |
 | TC-SCAFFOLD-017 | `scripts/checks/pin-equality.ts` † | `bun run scripts/checks/pin-equality.ts` | none; CI adds runtime cross-check | To Implement |
 | TC-SCAFFOLD-018 | `tests/fixtures/pins/**` + pin check | `bun test tests/checks` (mutation driver) | each of 4 copies mutated; range/`latest` | To Implement |
 | TC-SCAFFOLD-019 | `scripts/checks/tsconfig-strictness.ts` † | `bun run scripts/checks/tsconfig-strictness.ts` + `pnpm typecheck` | none | To Implement |
@@ -1193,7 +1234,7 @@ All TCs are automated except the manual verdict recording in TC-035. Paths marke
 
 **Aggregate wiring**: every `scripts/checks/*` check above is invoked by the aggregate `check` or by a named CI job listed in TC-023 — a check that exists but is invoked by nothing fails TC-021/TC-023.
 
-**Execution order**: (1) static/invariant checks (002, 017, 019, 021, 028, 030, 032, 033, 034, 035, 038); (2) structure tests after build (004, 005, 006, 007); (3) boundary suite (008–016); (4) mutation checks (018, 020, 024, 031, 036, 037-mutation); (5) e2e-clone (001 → 022); (6) CI observation (023, 025, 029); (7) hook/isolation probes (003, 027).
+**Execution order**: (1) static/invariant checks (002, 007, 017, 019, 021, 028, 030, 032, 033, 034, 035, 038); (2) structure tests after build (004, 005, 006); (3) boundary suite (008–016); (4) mutation checks (018, 020, 024, 026, 031, 034, 036, 037-mutation); (5) e2e-clone (001 → 022); (6) CI observation (023, 025, 029); (7) hook/isolation probes (003, 027).
 
 ## 8. Risks, Assumptions, and Open Questions
 
@@ -1236,6 +1277,7 @@ All TCs are automated except the manual verdict recording in TC-035. Paths marke
 |---------|------|--------|---------|
 | 1.0 | 2026-10-29 | @test-plan-writer | Initial plan: 38 TCs across structure, boundary fixtures, toolchain pins, CI bindingness, publish path, hygiene, and DEC-10 license audit; all 17 ACs and 3 ticket ACs traced |
 | 1.1 | 2026-10-29 | @test-plan-writer | OQ-T1 resolved: `attw` (`@arethetypeswrong/cli`) added to TC-SCAFFOLD-029 plus its index row, the AC-F10-1 / NFR-6 coverage rows, the §1.1 scope bullet, the §2 ADR reference, the §4 CI invocation order, the §7 automation map and assumption A-T8, per spec v1.1 (F-10, AC-F10-1, NFR-6) and DEC-11. TC count unchanged at 38; no other TC modified |
+| 1.2 | 2026-10-29 | @test-plan-writer | DoR iter-1 remediation. Added `matrix-adapters-importer` to the §4.1 rule contract and a full six-row DEC-2 package-matrix cell walk (no forbidden cell left unnamed); TC-SCAFFOLD-008 gains `adapters`→`cli`/`opencode` alias, `adapters`→`mcp` relative, and an `adapters`→`core ./contracts` control; TC-SCAFFOLD-009 proves `subpath-undeclared` at whole-package granularity (`adapters`→`core` root `.`) in addition to the subpath-level case; TC-SCAFFOLD-016 requires the new rule and both undeclared forms in the registry and adds a targeted adapters-fixture deletion; TC-SCAFFOLD-013 covers all three `testkit`→surface cells; added the missing `tier-state-allowed-set` fixture; corrected TC-007 to the invariant-check runner in §4 and the execution order; extended the §4 mutation row; §2 DEC range → DEC-1..DEC-11; filled `links.implementation_plan`; TC-019/020 flag-set alignment. TC count unchanged at 38. |
 
 ## 10. Test Execution Log
 

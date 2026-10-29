@@ -8,6 +8,7 @@ phases:
   delivery_planning: { started: "2026-10-29T18:30:00Z", completed: null }
   dor_iterations:
     - { iteration: 1, verdict: NOT_READY, date: "2026-10-29T18:25:00Z", artifact: readiness-review/readiness-iter-1.md }
+    - { iteration: 2, verdict: NOT_READY, date: "2026-10-29T19:45:00Z", artifact: readiness-review/readiness-iter-2.md }
   dor_check: { started: "2026-10-29T18:20:00Z", completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -57,7 +58,13 @@ notes:
   - text: "DoR iteration 1 = NOT_READY (artifact: readiness-review/readiness-iter-1.md; 7 PASS / 3 FAIL). MUST-FIX (reopened: test_planning primary + delivery_planning mirror): ADR DEC-2 package matrix forbids adapters→cli/mcp/opencode but no matrix-adapters-importer rule is named and no fixture covers the adapters→surface edge; subpath-undeclared does not provably cover whole-package undeclared imports; TC-016 meta-check only proves named rules — the hole would ship silently, contradicting spec G-2 and ticket AC-2. SHOULD-FIX: (2) plan P10 doc list omits AGENTS.md repo-structure (packages/), scripts/checks *.ts convention vs AGENTS.md '.sh required' rule, glossary, cli-command-registry verification (all phase-7 @doc-syncer targets); (3) plan says 17 checks files, tasks create 18 (ambient-globals.ts uncounted). NITS: stale DEC-1..DEC-10 ref, TC-007 runner misclassification, unasserted tsconfig extras, missing @changesets/cli devDep step, null plan link."
     type: info
     date: 2026-10-29
+  - text: "DoR iteration 2 = NOT_READY (artifact: readiness-review/readiness-iter-2.md). All iter-1 findings VERIFIED GENUINELY CLOSED (rule-name parity, DEC-2 cell walk, counts, P10 docs, nits). NEW MUST-FIX (reopened: test_planning primary + delivery_planning mirror): ambient-globals AST guard scope drift — ADR C-9/DEC-2 (line 535) declares core `.` and `./contracts` runtime-neutral (no process/Bun/Deno/timers/fs/network), but the guard bans only core/src/{domain,app,config,branding}; a process.env read in core/src/contracts/** or core/src/index.ts passes every rule; no fixture; TC-016 can't see it (proves named rules, not guard-scope=ADR-neutrality-set). Secondary: runtime-apis-confinement allowed set omits ADR-verbatim 'CLI build' + 'OpenCode host integration' allowances. NITS: §4 layer table omits TC-029; 'proven by clean-cruise controls' overstated (only adapters→core contracts has an explicit control — add cli/mcp/opencode→core `.` + ./contracts controls); root e2e//bdd/→testkit dev-edge needs a passing fixture (TC-013 Case C covers only packages/*/test). Iteration 3 is the cap before human escalation."
+    type: info
+    date: 2026-10-29
   - text: "RETRO: DoR gate caught a real enforcement-contract hole (missing adapters-importer rule/fixture) that three artifact authors and PM validation all missed — the adversarial gate is earning its cost. Root cause: the fixture-registry table was derived from importer classes intuition (core/cli/mcp/opencode) instead of mechanically walking the ADR DEC-2 matrix rows; lesson for authors: derive rule tables by enumerating every matrix cell, not by pattern."
+    type: retro
+    date: 2026-10-29
+  - text: "RETRO: gate iter-2 caught guard-scope drift on the exact surface iter-1 checked lightly — adversarial re-review with 'pull the new thread' instruction is paying off twice. Pattern: BOTH DoR catches (adapters-importer rule; ambient-guard scope) are scope-set derivation errors — authors derived rule sets from directory intuition instead of transcribing the binding ADR text verbatim. Standing lesson: any rule scope/allowlist in this change must quote the ADR cell/line it implements."
     type: retro
     date: 2026-10-29
   - text: "Doc-syncer phase-7 input from test-plan author (A-T3): .ai/rules/testing-strategy.md covers docs/bash only — extend it with the TypeScript test layer (bun test + scripts/checks invariants + CI invocation order) during system_spec_update."
