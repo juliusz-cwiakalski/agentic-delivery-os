@@ -1,0 +1,344 @@
+---
+# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+# Apache-2.0 License - see LICENSE file for full terms
+source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/doc/planning/concepts/primitive-catalogue.md
+---
+# Concept: primitive catalogue
+
+Status: Draft (2026-10-25). Feeds the adapter-contract decision record
+scheduled in M0-S17. Companion to agent-primitive-surface.md, which defines
+how primitives are exposed; this catalogue defines what the primitives are.
+
+## Purpose
+
+This is the catalogue of ADOS primitives: the smallest units of meaning the
+system exposes, with stable semantic contracts that compose without
+reconstructing internals. Rows start as Planned, gain typed contracts at
+their milestone, and graduate to Delivered as stories land. Over time this
+document becomes the record of the primitives ados actually delivers.
+
+| Status | Meaning |
+|---|---|
+| Planned | Agreed direction; no typed contract yet |
+| Typed | The contract exists in core `./contracts` (story delivered) |
+| Delivered | Implemented, consumed by engines, conformance-tested |
+
+Every row update links the story, decision record, or pull request that
+changed the status.
+
+## What a primitive is (and is not)
+
+The test: an agent could receive this capability with its contract, examples,
+and invariants, then build several materially different features by composing
+it without inventing domain behavior.
+
+A primitive is not a command, an engine, a package, a prompt, or a UI screen.
+Commands and engines compose primitives; the CLI, MCP server, and opencode
+integration are transports over the same core. This distinction keeps the
+catalogue from becoming a feature list.
+
+## Identification and naming
+
+Primitives are identified by their **globally unique names**, never by
+catalog numbers: names are code-native durable identifiers, the same
+rule the ID prefix convention applies to events and schemas
+(id-prefix-catalog.md: code-native names are never numbered). A numeric
+ID would force a table lookup before meaning; the name carries the
+meaning. The catalogue tables therefore key on the name; if a name is
+ever renamed, the old name stays as an alias for one revision
+(maintenance rule below).
+
+Naming discipline: a primitive name must be unambiguous in any context,
+not only inside ADOS. When the bare word has multiple common meanings,
+compound-qualify it. Renames applied under this rule (old names
+aliased):
+
+| Current name | Replaced |
+|---|---|
+| DeliveryPhase | Phase |
+| DeliveryRequest | ChangeRequest |
+| DeliveryMetric | Metric |
+| DeliveryTier | Tier |
+| RunCheckpoint | Checkpoint |
+| WorkItemRelation | Relation |
+| StatusFinding | Finding |
+
+### Referencing primitives in documents
+
+No namespace prefix (`primitive:WorkItemRef`): names are globally
+unique and compound-qualified, so a prefix would add noise and read as
+a second catalog scheme. The convention instead:
+
+- **Primitive names appear as exact PascalCase in backticks**
+  (`WorkItemRef`); the word primitive appears at the first mention in a
+  section ("the `WorkItemRef` primitive") and is implied afterwards.
+- **Commands and config stay lowercase in backticks** (`merge`,
+  `verify gates`, `ADOS_STATE_DIR`), so case alone distinguishes the
+  world an identifier belongs to - the same structural case policy the
+  ID prefix convention uses.
+- **Stale references become a lint finding, not a prose problem**: the
+  document validator (M3-S4) checks that backticked PascalCase tokens
+  matching the primitive-name shape resolve to catalogue names, so a
+  rename cannot leave dangling references. Machines verify; prose stays
+  natural.
+
+## Discipline
+
+Maturity: Candidate (might be reusable) -> Emerging (used by more than one
+capability) -> Stable (canonical; reuse before creating alternatives) ->
+Deprecated (do not use for new development).
+
+Change classification, applied per change:
+
+- COMPOSE: build from existing primitives. Lowest risk.
+- EXTEND: extend an existing primitive because the new behavior belongs to
+  its semantic responsibility. Moderate risk.
+- INTRODUCE: add a new primitive because composition and extension would
+  violate boundaries. Highest scrutiny; must answer:
+  - Which existing primitives did composition fail to cover?
+  - Why is this not an extension of an existing responsibility?
+  - Which invariants and does-not-own boundaries does it add?
+  - Which consumers will depend on it, and how is it removed if wrong?
+
+Card fields (only load-bearing primitives get full cards): status, scope,
+owner, meaning, owns, does not own, invariants, capabilities, composition
+examples, contracts (CLI, MCP, event, store, test), implementation,
+consumers, decisions, limitations.
+
+## Load-bearing set for M0-M1
+
+The first typed core carries these; the rest stay candidates until a second
+consumer needs them:
+
+WorkItemRef, RepoRef, ChangeWorkspace, DeliveryPhase, ArtifactPostcondition,
+DeliveryOutcome, DurableRun, CommandReceipt, GateVerdict, MergeTransaction,
+DispatchRun, HarnessSession, LaneLease, LivenessSignal, ReadySet,
+ProviderRoute, StateStore, AuditEvent, AttentionState.
+
+## Catalogue
+
+Typed at: the milestone where the typed contract first appears. Status today
+is Planned throughout; the bash delivery stack provides behavior prototypes,
+not contracts.
+
+### Context and configuration
+
+| Primitive | Kind | Meaning and invariant | Typed at |
+|---|---|---|---|
+| WorkItemRef | context | Provider-qualified delivery identity; never predicted; resolves to tracker instance and project; the qualification survives tracker migration via a federation mapping (concepts/tracker-federation.md, parked) | M0 |
+| RepoRef | context | Canonical repo identity by resolved remote, not folder; two clones are one lease domain | M0 |
+| ChangeWorkspace | state | Per-change artifact set (spec, test plan, plan, notes); traceability anchor | M0 |
+| DeliveryPhase | state | One of the 11 lifecycle phases; ordinal plus evidence, never a self-reported timestamp | M0 |
+| ConfigLayer | policy | Layered configuration chain; secrets environment-only | M0 |
+| SessionMapping | context | Ticket to session mapping, safe across branch switches | M3 |
+| Intent | context | Durable statement of a desired outcome with acceptance verifiers; every change references the intent it serves; intents close on verified outcomes, not on activity; the autonomy-track linkage (software-delivery-autonomy.md) and the change-spec goal line consume it | parked (autonomy track) |
+| ProviderInstance | context | One configured provider account or instance, separate from the route | M1 |
+
+### Truth, merge, and lifecycle
+
+| Primitive | Kind | Meaning and invariant | Typed at |
+|---|---|---|---|
+| ArtifactPostcondition | contract | Facts required before success: branch pushed, delivery request open or commit landed, ticket transitioned, head pipeline green; exit codes are not evidence | M0 |
+| DeliveryOutcome | contract | Terminal classification plus evidence: done-with-artifact, interrupted, state-fetch-failed, silent-noop, premature-end, failed, unknown; unknown is first-class | M0 |
+| GateVerdict | contract | Named merge precondition with pass or fail and citations; fail-closed on ambiguity | M1 |
+| OwnerGate | contract | Marker that only the owner can clear; never inferred from silence | M1 |
+| FreezeFlag | control | Machine-readable merge freeze; never prose | M1 |
+| MergeTransaction | capability | Re-fetch gates at merge time, squash, verify postconditions, record citations | M1 |
+| CloseoutTransaction | capability | Idempotent post-merge transaction: done flip, labels, unassign, owed flips, branch restore | M0 |
+| DeployVerification | capability | Verify by job trace, not pipeline color; "no changes" is a trigger | M1 |
+| CompletionLedger | state | Closed work cannot be re-dispatched by a stale prompt | M1 |
+
+### Execution and supervision
+
+| Primitive | Kind | Meaning and invariant | Typed at |
+|---|---|---|---|
+| DurableRun | state | Persisted run record: intent, phase, checkpoints, receipts, effects, replay policy; a crash never produces silent success | M0 schema, M1 build |
+| RunCheckpoint | state | Phase-boundary resume without re-derivation | M1 |
+| CommandReceipt | event | Every external mutation gets accepted, in-flight, applied, failed, or unknown | M0 schema |
+| OutboxEffect | state | Pending external effects with idempotency key and retry policy | M0 schema |
+| DispatchRun | capability | One ticket delivery execution with a single-flight lease and verification contract | M1 |
+| LaneLease | state | Per-remote ownership; one delivery per repo; heavy-build semaphore separate | M1 |
+| LivenessSignal | event | Multi-signal progress: session traffic, worktree activity, process; bounded | M1 |
+| WatchdogPolicy | policy | Phase-aware stall budgets and restart rules; no wall-clock-only kills | M1 |
+| Supervisor | capability | Singleton service that starts, watches, and restarts lanes; never a lane | M2 |
+| StopSignal | control | Durable stop and reset that survives restarts | M2 |
+| SteeringNote | control | Mid-flight instruction delivered at a phase boundary, with a receipt | M2 |
+| IdleSignal | event | Machine-readable "no dispatchable work"; replaces polling loops | M2 |
+
+### Queue, scheduling, and provider
+
+| Primitive | Kind | Meaning and invariant | Typed at |
+|---|---|---|---|
+| QueueEntry | state | Work item with deps, priority, tier, repo, notes | M2 |
+| DependencyEdge | state | Blocks and blocked-by, provider-normalized | M2 |
+| ReadySet | projection | Deps satisfied AND repo free AND gates pass AND provider available AND CI healthy; reproducible from source data | M0 read-only, M2 full |
+| DeliveryTier | policy | Delivery tier default with escalation triggers, recorded at intake | M2 |
+| ParkState | state | Named, scoped, self-expiring park with a blocking condition | M0 |
+| QuotaWindow | policy | Provider peak and reset window as scheduler input; pause, never substitute peak-priced | M0 |
+| SchedulePolicy | policy | When to dispatch: peaks, resets, deadlines, CI budgets | M2 |
+| OwnerGateSLA | policy | Aging, escalation, and default-on-expiry for owner decisions | M2 |
+| ProviderRoute | policy | Ordered provider resolution with hysteresis and fail-open | M0 |
+| QuotaSnapshot | state | Quota and balance state per provider and account | M0 |
+| ModelPolicy | policy | Model and tier selection by role and phase, quality-gated | M2 |
+| SpendRecord | event | Tokens and cost by agent, model, session, phase, ticket | M3 |
+
+### Adapters and provider interaction
+
+| Primitive | Kind | Meaning and invariant | Typed at |
+|---|---|---|---|
+| ExternalSystemInstance | context | Configured tracker, VCS, or CI instance with auth method | M0 |
+| AdapterContract | contract | Adapters declare capabilities and gaps; never pretend parity | M0 |
+| WorkItem | adapter | Normalized ticket: id, status, labels, assignee, relations, comments | M0 |
+| WorkflowMap | adapter | Native status to ADOS state alias plus transition mechanism | M0 |
+| WorkItemRelation | adapter | Parent and child, blocks, relates-to | M0 |
+| DeliveryRequest | adapter | Delivery request: PR or MR with target and source refs, review state, threads | M0 |
+| PipelineRun | adapter | Pipeline, job, and trace evidence, not just a status color | M0 |
+| RetryPolicy | policy | Only known-safe retries; unsafe writes never retry | M0 |
+| Compensation | capability | Reversible action for risky writes where feasible | M1 |
+| IdempotencyKey | contract | Safe retries for external writes | M0 |
+| HarnessInstance | context | Configured agent harness (opencode, claude-code, later pi.dev) with version and capability flags | M1 |
+| HarnessSession | capability | Spawn, resume, steer, and collect a delivery session; premature end is classified; liveness stays harness-agnostic | M1 |
+| HarnessPluginSurface | contract | Per-harness package format exposing the tooling (commands, agents, MCP), generated from the canonical source, sync-verified | M3 |
+| HarnessTelemetry | event | Read-only session statistics extracted from harness stores at capture points (closeout first): tokens by class, calls, tool usage, per agent and model, session-tree attributed to work items; persisted as events, harness-neutral schema | M1 |
+
+### State, audit, and owner surfaces
+
+| Primitive | Kind | Meaning and invariant | Typed at |
+|---|---|---|---|
+| RetroRecord | event | One retrospective finding with scope, evidence, and owner | M2 |
+| StateStore | store | Schema-guarded, single-writer, atomic store; parse failures are errors, never zeros | M1 |
+| AuditEvent | event | Actor, operation, target, result, duration, correlation | M0-M1 |
+| Provenance | contract | Who authored an action: owner, agent, service; agent-under-owner is distinct | M1 |
+| MemoryRecord | store | Append-only working memory with schema and dates | M1 |
+| RegistryWatermark | state | Collector-owned watermark; never hand-edited | M2 |
+| TelemetryEvent | event | Local, schema-versioned event log a hosted sink can consume without migration | M0 schema, M1 freeze |
+| DeliveryMetric | metric | Native delivery metric with window and threshold | M3 |
+| Baseline | metric | Reproducible aggregation at gate time, never copied from prose | M3 |
+| AttentionState | state | Waiting, needs-decision, blocked, done; one state behind status, brief, board, and any inbox | M1 |
+| StatusFinding | projection | Ranked anomaly with evidence and next action | M0 |
+| StatusDigest | projection | Bounded digest of findings and next actions | M0 |
+| Brief | projection | Owner brief rendered from source, with decision items and silence meaning | M2 |
+| DecisionItem | contract | One decidable item with options, recommendation, risk, default | M2 |
+| Ask | state | Owner question with answer record and provenance | M2 |
+| Ceremony | capability | Scheduled deterministic ritual with artifact verification and catch-up | M2 |
+| SessionView | projection | Snapshot plus operations for a running session, across CLI, MCP, and opencode | M3 |
+
+Hosted-track note: hosted capabilities consume the open TelemetryEvent and
+AuditEvent contracts and never create a second semantic model (see M4-S6 and
+telemetry-and-events.md). Hosted-only primitives are out of scope for this
+catalogue.
+
+## Research candidates
+
+Not ratified; strong candidates that influence M0-M3 design. Promoted into
+the catalogue only when a second consumer appears.
+
+| Primitive | Proposed | Note |
+|---|---|---|
+| AgentDiffIsolation | M1 | Agent-only diff isolation and branch comparison |
+| DurableTimer | M2 | Timers and wake contracts that survive restarts |
+| TaskTree | M2 | Delivery task tree with ownership and bottom-up abort |
+| PRWatch | M2 | Watch a delivery request with wake conditions and budgets |
+| EventTrigger | M2 | Event or webhook intake with filters, replay, coalesce |
+| HarnessAdapter | M3 | Absorbed into HarnessInstance, HarnessSession, and HarnessPluginSurface; the remaining spike evaluates pi.dev and protocol compatibility |
+| CapabilityEnvelope | M3 | Phase capability envelope for agents |
+| ScopedAccessGrant | M3 | Pairing, consent, revocation, scoped approvals |
+| GuaranteeContract | M1 | Published guarantees and non-guarantees for the durable substrate |
+| CoordinationDocument | M1 | Revisioned coordination document with path operations |
+| ReplayPolicy | M1 | Per-operation replay rules; fold into DurableRun if adopted |
+| CrashRecord | M1 | Crash counting, parked task, retry semantics |
+| ReportTaxonomy | M1 | Typed report taxonomy merged with the exit taxonomy |
+| MultiModelFanout | M2 | Fan one task out to several models for comparison |
+| SnapshotIntake | M2 | Snapshot intake and grouped activity digest |
+| AutoResume | M2 | Resume and snooze at quota reset |
+| LinkedMultiPR | M3 | Linked and multi-delivery-request semantics, data model first |
+| SecretRequestFlow | M3 | Scoped secret request flow through MCP |
+| OpenTelemetryExport | M3 | OpenTelemetry export over the event schema |
+
+## Dependency graph
+
+Semantic composition order, not code dependency:
+
+```text
+WorkItemRef + RepoRef + Provenance
+        |
+        v
+ChangeWorkspace -> DeliveryPhase -> evidence
+        |
+        v
+ArtifactPostcondition -> DeliveryOutcome
+        |
+        v
+GateVerdict -> MergeTransaction -> CloseoutTransaction
+        |                              |
+        v                              v
+DeployVerification              CompletionLedger
+
+HarnessInstance -> HarnessSession -> DispatchRun -> LaneLease -> LivenessSignal -> WatchdogPolicy -> Supervisor
+        |
+        v
+DurableRun -> RunCheckpoint -> CommandReceipt -> OutboxEffect -> IdempotencyKey
+
+QueueEntry -> DependencyEdge -> ReadySet -> LaneLease -> DispatchRun
+
+ExternalSystemInstance -> AdapterContract -> WorkItem / DeliveryRequest / PipelineRun
+        |
+        v
+RetryPolicy -> Compensation
+
+StateStore -> AuditEvent -> Provenance -> TelemetryEvent -> DeliveryMetric -> Baseline
+        |
+        v
+AttentionState -> StatusFinding -> StatusDigest -> Brief -> DecisionItem / Ask
+```
+
+Hard ordering constraints:
+
+1. ArtifactPostcondition and DeliveryOutcome before any automated queue
+   dispatch (the fleet-wedging scenario otherwise).
+2. The status contract before the status aggregator; M0 ships both together.
+3. Provider resolution and quota snapshots before the ceremony runner.
+4. GateVerdict and MergeTransaction before merge authority moves to the CLI.
+5. StateStore and IdempotencyKey before any retrying write path.
+6. AttentionState before brief, board, or any inbox grows its own state model.
+7. MCP follows engines one to one; no MCP-only logic.
+8. Hosted capabilities consume open event contracts; no second semantic model.
+
+## Composition examples
+
+Deliver one change: WorkItemRef + RepoRef + ChangeWorkspace + DispatchRun +
+LaneLease + LivenessSignal + ArtifactPostcondition + DeliveryOutcome +
+GateVerdict + MergeTransaction + CloseoutTransaction = accepted delivery with
+evidence (COMPOSE).
+
+Compute a ready set: QueueEntry + DependencyEdge + RepoRef + LaneLease +
+GateVerdict + ProviderRoute + QuotaSnapshot + PipelineRun health = ReadySet
+(COMPOSE).
+
+Recover a crashed lane: DurableRun + RunCheckpoint + LivenessSignal +
+CommandReceipt + OutboxEffect + RetryPolicy = resumed run or classified
+failure (COMPOSE).
+
+Add a provider: ExternalSystemInstance + AdapterContract + WorkItem +
+WorkflowMap + WorkItemRelation + DeliveryRequest + PipelineRun = normalized provider
+surface (EXTEND; the adapter declares capability gaps, never fake parity).
+
+## Non-primitives
+
+Commands (`status`, `dispatch`, `verify change`, `verify gates`, `merge`,
+`closeout`, `queue`, `ceremony`, `brief`), the MCP tool list, and the
+opencode integration are transports and compositions, not primitives. The
+command registry (cli-command-registry.md) maps every command to the
+primitives it composes. Installers, updaters, validators, and repo bootstrap
+are tools and surfaces. Domain primitives from unrelated products are method
+examples, not ADOS primitives.
+
+## Maintenance
+
+- Add a primitive only when it appears in at least two capabilities, or a
+  single capability cannot be expressed without it.
+- Keep table rows short; promote to a full card only when a change needs it.
+- Mark maturity honestly; bash-era behavior is a stable-behavior,
+  candidate-contract combination.
+- Renames keep the old name as an alias for one revision.
+- Row status changes link the story, decision record, or PR that made them.
