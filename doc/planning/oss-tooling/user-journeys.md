@@ -229,8 +229,8 @@ orphan commands.
 
 | Gap | Verdict |
 |---|---|
-| Tracker evidence in the first-call digest | Closed: a tracker collector is part of status v1 (M0-S6) with the Jira read slice preceding it (M0-S12) |
-| Self-hosted dogfooding of status and verify | Closed: a minimal GitHub read slice lands in M0-S12; the full GitHub adapter stays M3-S3 |
+| Tracker evidence in the first-call digest | Closed: a tracker collector is part of status v1 (M0-S6) with the Jira read slice preceding it (M0-S19) |
+| Self-hosted dogfooding of status and verify | Closed: a minimal GitHub read slice lands in M0-S19; the full GitHub adapter stays M3-S3 |
 | Fleet-wide one-screen status before M2 | Board (M2-S4) is the fleet view; per-repo status covers M0-M1. Acceptable, matches the build order |
 | Ticket creation and backlog refinement as a command | The lifecycle agent and tracker cover it today; revisit as an `ados ticket` candidate after M2 if refinement ceremony grows |
 | Decision-record mirror sync to affected repos | Closed: folded into `ados ceremony` (M2-S3) and named in journey 2.1 step 2 |

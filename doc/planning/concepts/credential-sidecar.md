@@ -175,6 +175,12 @@ without redesign:
   in core, env-backed today; adapters (tracker, VCS, CI) and the
   provider engine never read secrets directly (M0-S12, M0-S13). The
   sidecar becomes the port's second implementation.
+- In the sidecar era, adapters adopt a **mediated mode**: effectively a
+  remote adapter that forwards operations to the sidecar over local
+  transport instead of executing them with local credentials. The
+  primitive port interface stays unchanged; direct and mediated
+  execution are implementations behind it. M0-S12 records this as the
+  port's documented adoption path (no code in M0).
 - The MCP surface keeps authentication at **one transport boundary**
   so the sidecar can front it (M1-S7, M3-S2).
 - Agent prompts and skills never assume key possession; they already

@@ -133,9 +133,12 @@ grow it later.
 The adapters package is not a command. It implements the primitive ports
 (concepts/agent-primitive-surface.md) with capability flags and embedded
 metadata, verified by the conformance suite
-(concepts/adapter-conformance.md). First shipped in M0-S12 (GitLab, Jira,
-plus a minimal GitHub read slice so this repository dogfoods status and
-verify from M0); completed in M3-S3 (full GitHub, Azure on demand).
+(concepts/adapter-conformance.md). Primitive ports, the credential
+port, and the embedded metadata envelope ship in M0-S12; client seeds
+with trap catalogs (GitLab, Jira, plus a minimal GitHub read slice so
+this repository dogfoods status and verify from M0) ship in M0-S19; the
+conformance suite lands in M0-S20; adapter completion is M3-S3 (full
+GitHub, Azure on demand).
 
 ### M1: Attention and minimal surfaces
 

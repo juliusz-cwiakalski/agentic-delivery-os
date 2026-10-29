@@ -68,7 +68,7 @@ delivery.
 
 ## Story mapping
 
-- M0-S12: conformance suite v1 (change lifecycle, comment roundtrip, label
+- M0-S20: conformance suite v1 (change lifecycle, comment roundtrip, label
   semantics) plus test tenants and CI wiring.
 - M1-S4: merge, deploy trace, and pipeline flows join the suite.
 - M3-S3: full matrix green for GitHub and Azure alongside GitLab and Jira.

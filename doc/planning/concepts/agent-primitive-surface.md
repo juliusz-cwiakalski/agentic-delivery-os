@@ -117,8 +117,9 @@ metadata.md), and conformance suites guarding drift (adapter-conformance.md).
 ## Story mapping
 
 - M0-S3: primitive port types in core contracts.
-- M0-S12: primitive ports v1 with capability flags; GitLab, Jira, and a
-  minimal GitHub read slice behind them.
+- M0-S12: primitive ports v1 with capability flags.
+- M0-S19: GitLab, Jira, and a minimal GitHub read slice behind them,
+  with trap catalogs.
 - M1-S7: MCP mirrors proven primitives.
 - M1-S11: harness primitive ports and the opencode plus Claude Code
   delivery adapters; dispatch becomes harness-agnostic.
