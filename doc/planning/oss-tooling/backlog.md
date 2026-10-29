@@ -127,7 +127,14 @@ floats behind it.
   ./contracts); exit codes as a projection of the table in the standalone
   CLI only; error classification chain (domain kind, app error code, exit
   code); runCli(argv, streams) testable; JSON machine output always valid;
-  redaction chokepoint.
+  redaction chokepoint; error codes are self-describing for agents: stable
+  symbolic hierarchical codes (domain.reason.detail, for example
+  provider.quota.exceeded) plus structured fields on every error -
+  category (user, platform, transient, permanent), retryable,
+  consequence (did the mutation land; unknown is first-class), and a
+  remediation hint; the ticket includes a short survey of
+  AI-agent-facing error design (problem-details style structures,
+  tool-use error guidance) validating or refining the convention.
 - AC: unit and golden tests; a broken command under --json still emits a
   valid envelope; secrets never appear in output; error codes resolve to
   documented table entries.
@@ -645,9 +652,12 @@ floats behind it.
 - Depends on: M1-S7.
 
 ### M3-S3 Adapter completion
-- Goal: Adapter completion (full GitHub, Azure on demand) so the matrix of supported providers is real and parity-tested.
+- Goal: Adapter completion (full GitHub, Azure on demand) so the matrix
+  of supported providers is real and parity-tested.
 - Tasks: full GitHub adapter for dogfooding; Azure on demand; parity tests
-  ported.
+  ported. Additional tracker kinds (Linear and others) are additive
+  behind the primitive ports when needed; multi-tracker federation
+  stays a parked concept (concepts/tracker-federation.md).
 - AC: adapter matrix green per provider quirks.
 - Depends on: M0-S19, M0-S20.
 
@@ -655,7 +665,10 @@ floats behind it.
 - Goal: Validators with classified errors for decision records, frontmatter, and deploy prerequisites, folding the validator backlog into the lint family.
 - Tasks: decision-record validator, frontmatter validator,
   deploy-prerequisite checklist; folds the existing validator backlog work
-  in this repository.
+  in this repository; a primitive-reference check: backticked
+  PascalCase tokens matching the primitive-name shape must resolve to
+  catalogue names (primitive-catalogue.md), so renamed or removed
+  primitives cannot leave dangling doc references.
 - AC: validation errors are classified with codes and fix hints.
 - Depends on: M0-S10.
 

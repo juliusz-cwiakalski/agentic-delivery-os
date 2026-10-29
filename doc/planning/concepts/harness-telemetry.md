@@ -57,7 +57,7 @@ harness instance so aggregation is cross-harness by construction.
   refinements. Events reference the run and work item so they join to
   delivery outcomes, gate results, and phases.
 - Event log: statistics land as schema-versioned telemetry events (see
-  telemetry-and-events.md); the spend record primitive (P-054) is their
+  telemetry-and-events.md); the SpendRecord primitive is their
   typed projection. Retention follows the event log policy (forever
   initially).
 - Schema drift discipline (proven in the bash era): pin observed harness
@@ -87,7 +87,7 @@ harness instance so aggregation is cross-harness by construction.
 - M1-S8: the retro pipeline consumes persisted telemetry events instead of
   re-querying harness stores.
 - M2-S6: metrics and spend aggregate the events cross-harness.
-- M3: spend records become native per-dispatch joins (P-054 typed).
+- M3: spend records become native per-dispatch joins (SpendRecord typed).
 
 ## Open questions
 

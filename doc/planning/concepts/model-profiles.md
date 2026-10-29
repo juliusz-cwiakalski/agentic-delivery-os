@@ -51,8 +51,8 @@ from the class group under quota and subscription constraints.
   engine; every selection is recorded as a telemetry event with the
   profile, class, and reason.
 - Tie-in: this concept is the user-facing shape of the ModelPolicy
-  primitive (P-053, typed at M2, primitive-catalogue.md); spend records
-  (P-054) join selections to cost.
+  primitive (ModelPolicy, typed at M2, primitive-catalogue.md); spend records
+  (the SpendRecord primitive) join selections to cost.
 
 ## Guardrails
 
