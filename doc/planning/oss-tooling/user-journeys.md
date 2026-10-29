@@ -1,3 +1,8 @@
+---
+# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+# Apache-2.0 License - see LICENSE file for full terms
+source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/doc/planning/oss-tooling/user-journeys.md
+---
 # User journeys: the coordinating agent and other agents
 
 How the tooling is used. The primary user is the CEO-style coordinating
@@ -88,8 +93,8 @@ so the ledger is authoritative and a reopen always carries a reason.
 
 ### 1.4 What is possible when (iterative)
 
-- From M0 (weeks 1-4): steps 1, 2, 5, 6, 9 plus provider, config, validate,
-  change, and db run beside the bash stack as second opinions. The bash
+- From M0 (weeks 1-4): steps 1, 2, 5, 6, 9 plus provider, config, lint,
+  phase, and db run beside the bash stack as second opinions. The bash
   stack stays authoritative for dispatch and merge. The biggest token waste
   goes first.
 - From M1: merge and verify deploy become transactions; dispatch dual-runs
@@ -121,6 +126,12 @@ single-flight; cross-repo dependencies; one board.
 A peak-window pause is an expected daily state: provider reports it as
 paused with a resume time, and status shows it as paused, never as a blocked
 lane.
+
+The inbox scan stays manual by design: agents read messages at explicit
+read points (session start and own-discretion decision points), never as
+interruptions. The typed message contract behind `ados steer` (M2-S5)
+formalizes this without changing the journey; see
+[../concepts/inter-agent-communication.md](../concepts/inter-agent-communication.md).
 
 ### 2.2 Cross-repository dependency planning
 
@@ -230,6 +241,7 @@ orphan commands.
 | Owner decision capture into decision records | `ados lint` (M3-S4) plus policy (M3-S5) enforce records. No new command needed |
 | Deprecation of the bash stack | M3-S7 notices and M4-S5 retirement cover it; wrappers during the transition; the strangler table carries explicit stays-bash rows |
 | Hosted-only surfaces | Proprietary, out of this repository; only neutral extension hooks (the opt-in telemetry sink, M4-S6) are open |
+| Agent-to-agent messaging | Concept-parked (inter-agent-communication): steer (M2-S5) is the first message type on the shared contract; the wider inbox surface is built when a live need appears, not before |
 
 ## Iterative delivery order (pain first, then de-AI)
 

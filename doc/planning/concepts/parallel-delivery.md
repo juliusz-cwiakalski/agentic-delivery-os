@@ -5,8 +5,9 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tool
 ---
 # Concept: parallel delivery
 
-Status: Draft (2026-10-27, from owner notes; local refinement in
-progress, not committed). How multiple deliveries run concurrently:
+Status: Draft (2026-10-27, from owner notes; parked concept: the
+parallel mode is designed, single-flight stays the scheduled default).
+How multiple deliveries run concurrently:
 the conflict model, the lane abstraction, and the container topology.
 Owner decision (2026-10-27): **single-flight per repo remains the
 default policy** for ADOS and the pilot deployment; the architecture
@@ -194,6 +195,22 @@ dispatch sequencing, not by container placement.
    lane as a unit (`ados supervise`, `ados lanes`).
 5. Single-flight remains the failure-mode fallback: demotion, freeze,
    or arbitration failure re-serializes a lane instantly.
+
+## Compatibility with the current build
+
+What the scheduled stories must keep open so the parallel mode can be
+enabled without redesign:
+
+- Single-flight is enforced through **per-repo lease objects that
+  carry a scope field** (repo-exclusive is the only implemented scope;
+  worktree-scoped leases arrive with the parallel mode) - M2-S1. The
+  invariant "two lanes cannot deliver the same repo concurrently" is
+  the default policy, not a hardcoded assumption.
+- Change capsules stay **self-contained during phases 1 through 10**
+  (no cross-change writes): that is what makes preparation phases
+  safely concurrent later (M1-S12).
+- `ados repos` (M3-S6) stays worktree-aware; worktree-per-delivery is
+  this concept's dormant mechanism, not a new utility family.
 
 ## Open questions
 

@@ -5,8 +5,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tool
 ---
 # Concept: external research isolation
 
-Status: Draft (2026-10-27, from owner notes; local refinement in
-progress, not committed). The external-researcher agent is the
+Status: Draft (2026-10-27, from owner notes; parked concept: designed,
+not scheduled). The external-researcher agent is the
 designated contact point with untrusted internet content, making it
 the **most dangerous zone in the system** - treat it as assumed
 compromised and design accordingly. Companions:
@@ -163,6 +163,19 @@ request logging, tripwire seeding and the freeze-on-trip safe state,
 quarantine-store integration, and the blocklist feed. All local-first
 (one proxy container on the workstation); the fleet service built
 from attribution logs is a later increment.
+
+## Compatibility with the current build
+
+- Shares the execution-environment seam with containerized-delivery
+  (researcher containers are one more environment profile); nothing
+  else in M0-M4 needs to know this concept exists.
+- The researcher container is zero-key by construction: the sidecar
+  serves it nothing (credential-sidecar.md), and "nothing to reap"
+  includes no credentials to find.
+- Research results land as first-class artifacts with provenance and
+  URLs (the memory model's artifact discipline; URL-is-the-artifact),
+  which the capsule and memory stories already define - no separate
+  result store needs inventing later.
 
 ## Open questions
 

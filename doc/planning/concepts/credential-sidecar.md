@@ -5,8 +5,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tool
 ---
 # Concept: credential sidecar (zero-key delivery)
 
-Status: Draft (2026-10-27, from owner notes; local refinement in
-progress, not committed). Delivery containers hold **zero real
+Status: Draft (2026-10-27, from owner notes; parked concept: designed,
+not scheduled). Delivery containers hold **zero real
 credentials**. Every external operation (git push, tracker, registries,
 releases) goes through the ADOS sidecar service - the sole holder of
 keys - using short-lived ADOS tokens that are worthless if leaked.
@@ -165,6 +165,21 @@ acceptable cost.
 - Exceptions: anything that genuinely needs a direct credential
   (rare; e.g. a tool that must authenticate itself) is an
   envelope-declared elevation, reviewed like any other grant.
+
+## Compatibility with the current build
+
+What the scheduled stories must keep open so the sidecar can be adopted
+without redesign:
+
+- All credential reads flow through **one credential-resolution port**
+  in core, env-backed today; adapters (tracker, VCS, CI) and the
+  provider engine never read secrets directly (M0-S12, M0-S13). The
+  sidecar becomes the port's second implementation.
+- The MCP surface keeps authentication at **one transport boundary**
+  so the sidecar can front it (M1-S7, M3-S2).
+- Agent prompts and skills never assume key possession; they already
+  operate through primitives and tools (agent-primitive-surface.md),
+  which is the requirement that makes zero-key delivery possible.
 
 ## Open questions
 

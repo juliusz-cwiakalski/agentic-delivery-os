@@ -1,3 +1,8 @@
+---
+# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+# Apache-2.0 License - see LICENSE file for full terms
+source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/doc/planning/oss-tooling/backlog.md
+---
 # OSS tooling backlog
 
 Story backlog for the open-source tooling. Milestones and sequencing live in
@@ -13,6 +18,10 @@ name is `ados` until the naming freeze.
   lifecycle).
 - Tasks are the concrete work inside a story; they become the story body
   when the tracking issue is created.
+- Every story lists its dependencies (`Depends on:`); dependencies are
+  strict (the story cannot deliver without them), not sequencing
+  preferences. Suggested delivery order, including non-forced
+  placements, lives in [backlog-ranking.md](backlog-ranking.md).
 - M0 is fully specified. M1 through M4 are at outline level and get refined
   at the start of each milestone.
 - Every story ends with machine-checkable acceptance criteria. Success is
@@ -49,6 +58,13 @@ name is `ados` until the naming freeze.
   adapters (opencode default, Claude Code supported, pi.dev a candidate),
   and the tooling ships as a generated plugin per harness from one
   canonical source (concepts/harness-adapters.md).
+- Parked concepts shape seams, not schedules: design-level concepts in
+  [concepts/](../concepts/README.md) that are deliberately not scheduled
+  (containerized execution, the credential sidecar, worktree-scoped
+  parallel leases, typed agent messaging) each name, under "Compatibility
+  with the current build", what current stories must not foreclose. A
+  story that would hardcode an assumption a parked concept needs
+  reopened is a design defect, even when the story itself is correct.
 
 ---
 
@@ -78,6 +94,7 @@ floats behind it.
 - AC: fresh clone builds and runs the aggregate check green in CI;
   boundaries enforced; all six packages private with the publish guard in
   place.
+- Depends on: none.
 
 ### M0-S2 Branding seam and working name
 - Tasks: branding module with the single name constant (working name ados)
@@ -93,6 +110,7 @@ floats behind it.
   forbidden-literal test fails CI on a literal outside the allowlist; the
   legacy adapter itself passes the scan; legacy env/config still read with
   a warning.
+- Depends on: M0-S1.
 
 ### M0-S3 Result contract and error table
 - Tasks: CommandResult envelope (schemaVersion, runId, exitCode, timing,
@@ -104,6 +122,7 @@ floats behind it.
 - AC: unit and golden tests; a broken command under --json still emits a
   valid envelope; secrets never appear in output; error codes resolve to
   documented table entries.
+- Depends on: M0-S1.
 
 ### M0-S4 Config layer (DEC-4)
 - Tasks: layered chain built-in defaults < system < user-global < project
@@ -118,6 +137,7 @@ floats behind it.
   Linux, macOS, Windows.
 - AC: malformed config yields a classified error with a code, not a crash;
   config debug names the file and line for each key.
+- Depends on: M0-S1, M0-S2, M0-S3.
 
 ### M0-S5 State layer
 - Tasks: local-first state behind an implementation-neutral abstraction;
@@ -128,6 +148,7 @@ floats behind it.
   local fields to generalize before shared state.
 - AC: torn state is detected and reported, never silently read as zeros;
   the abstraction has no implementation-dependent call sites.
+- Depends on: M0-S1, M0-S2, M0-S3.
 
 ### M0-S6 status v1
 - Tasks: six collectors: tracker (owner hand-backs, blocked deps, stalls,
@@ -136,6 +157,7 @@ floats behind it.
   Jira read slice from M0-S12 precedes this story.
 - AC: status on a live repository returns the six sections with
   evidence-backed states; no network call is treated as a verdict.
+- Depends on: M0-S5, M0-S12.
 
 ### M0-S7 queue ready (read-only)
 - Tasks: readiness checks (deps satisfied, repo free, tier known, no owner
@@ -143,6 +165,7 @@ floats behind it.
   ranks close items (merge-ready, review-pending) above new starts.
 - AC: a not-ready ticket names the missing readiness condition; close items
   rank above new starts.
+- Depends on: M0-S6.
 
 ### M0-S8 verify change and exit taxonomy
 - Tasks: verify a delivered change against the 11-phase ledger, classify
@@ -151,6 +174,7 @@ floats behind it.
   M0-S10 lands with this story).
 - AC: verify on an incomplete ledger names the missing phases; malformed
   notes are classified; the taxonomy matches the delivery result enum.
+- Depends on: M0-S5, M0-S10.
 
 ### M0-S9 verify gates v1
 - Tasks: bundled with verify change; local gate battery for a pull request
@@ -158,6 +182,7 @@ floats behind it.
   gate.
 - AC: verify gates catches a red pipeline, a missing job, and a vacuous
   green.
+- Depends on: M0-S8, M0-S12.
 
 ### M0-S10 pm-notes and registry lint, and phase transitions
 - Tasks: schema and format conformance checks at write time for pm-notes
@@ -170,12 +195,14 @@ floats behind it.
 - AC: malformed notes are rejected at write; transitions are idempotent; a
   reopen without a reason is rejected; the ledger read by verify change is
   safe.
+- Depends on: M0-S1, M0-S3, M0-S5.
 
 ### M0-S11 db session-admin port
 - Tasks: port the session-database admin prototype: size, list, prune,
   reboot helpers; bounded output; dry-run by default.
 - AC: prune is idempotent and safe to re-run; no live session lock is
   deleted.
+- Depends on: M0-S1, M0-S3.
 
 ### M0-S12 Primitive ports and client seeds with trap catalogs
 - Tasks: primitive ports v1 with capability flags in core ./contracts (the
@@ -189,17 +216,25 @@ floats behind it.
   envelope v1 (comments and provenance, adapter-chosen carrier); the
   conformance suite v1 (change lifecycle, comment provenance roundtrip,
   label semantics) with test tenants (scratch repos, Jira sandbox, strict
-  teardown); trap catalogs encoded as tests.
+  teardown); trap catalogs encoded as tests; credential acquisition
+  behind one credential-resolution port in core (environment-backed
+  now; adapters never read secrets directly, so a future credential
+  sidecar becomes the port's second implementation,
+  concepts/credential-sidecar.md).
 - AC: trap catalog tests pass for each documented quirk; the conformance
   suite passes for every shipped adapter; metadata round-trips through the
-  primitive view and degrades gracefully when absent.
+  primitive view and degrades gracefully when absent; no adapter reads a
+  secret outside the credential port.
+- Depends on: M0-S1, M0-S3, M0-S4.
 
 ### M0-S13 provider v1
 - Tasks: quota and peak-window awareness; parks carry cause and expiry;
   subscription quota before pay-per-token; fail-loud announcements; the
-  ported provider test battery.
+  ported provider test battery; provider credentials resolve through the
+  M0-S12 credential port, never direct environment reads.
 - AC: a park reports its cause and expiry; provider outage is announced,
   not silent.
+- Depends on: M0-S3, M0-S4, M0-S12.
 
 ### M0-S14 closeout v1 with branch cleanup
 - Tasks: ticket to done, label sweep, unassign, owed-flip sweep, comment
@@ -207,6 +242,7 @@ floats behind it.
   telemetry capture joins closeout in M1-S11 (concepts/
   harness-telemetry.md).
 - AC: closeout is idempotent; a re-run after restart converges.
+- Depends on: M0-S12.
 
 ### M0-S15 Privacy and no-cloud guards
 - Tasks: privacy-literal guard (denylist or hash list; generic paths);
@@ -214,12 +250,14 @@ floats behind it.
   embedded ADOS metadata; wired into CI.
 - AC: a committed file containing a guarded literal fails CI; metadata
   envelopes are scanned at the emitter.
+- Depends on: M0-S1.
 
 ### M0-S16 Interim mitigations, docs and config only
 - Tasks: document permission-denial handling, stuck-minute defaults,
   in-flight warning for the delivery loop, pm-notes authoring rule. No
   shell feature work.
 - AC: mitigations are docs or config only; no shell behavior changes.
+- Depends on: M0-S4.
 
 ### M0-S17 Decision records and measurement baseline
 - Tasks: decision records for layout, config precedence, the adapter
@@ -229,6 +267,7 @@ floats behind it.
   cycle time, CI failure rate, false-signal incidents).
 - AC: decisions recorded; names locked; baseline committed to the local
   measurement log.
+- Depends on: none.
 
 ### M0-S18 License registry (doc/legal)
 - Tasks: YAML registry under doc/legal/ (machine-parseable plus
@@ -236,6 +275,7 @@ floats behind it.
   reads the registry and fails closed on unknown licenses; deny list
   enforced (SSPL, BUSL, Elastic, Commons Clause, CC-BY-NC).
 - AC: a dependency with an unregistered or denied license fails CI.
+- Depends on: M0-S1.
 
 ---
 
@@ -246,6 +286,7 @@ floats behind it.
   every exit; memory-publish verification; progress-based liveness.
 - AC: stranded commits and foreign commits are refused or restored with
   evidence.
+- Depends on: M0-S5.
 
 ### M1-S2 State validation everywhere
 - Tasks: schema checks at every state read/write boundary; classification of
@@ -253,23 +294,27 @@ floats behind it.
   retro registry, and ceremony artifacts, not only pm-notes.
 - AC: a torn registry read is classified, not treated as empty; retro and
   ceremony artifacts validate at their boundaries too.
+- Depends on: M0-S5.
 
 ### M1-S3 doctor v1
 - Tasks: doctor-style checks for repo, tracker, provider, state, CI wiring;
   stable exit codes.
 - AC: doctor output names each failing check with a fix hint.
+- Depends on: M0-S6, M0-S13.
 
 ### M1-S4 Merge and verify-deploy engine
 - Tasks: merge transaction helper (verify gates fresh, squash, verify
   landed); deploy verification by job trace, not job status.
 - AC: the merge helper refuses when gates were verified more than a bounded
   time ago; deploy verified by trace.
+- Depends on: M0-S9.
 
 ### M1-S5 Owner-gate SLA
 - Tasks: 24 h stale-review escalation; 72 h default-on-expiry; aging visible
   in brief and board; one pre-agreed default per gate.
 - AC: an owner gate older than the SLA ages into escalation or a proceed
   decision, never silence.
+- Depends on: M0-S6.
 
 ### M1-S6 Brief render-only v0
 - Tasks: deterministic brief from the M0 collectors (tracker included) with
@@ -277,6 +322,7 @@ floats behind it.
   one screen; decision-first layout.
 - AC: brief output matches collector state exactly; placeholders are named,
   not silent.
+- Depends on: M0-S6.
 
 ### M1-S7 Minimal MCP
 - Tasks: thin MCP mirroring the CLI scope over proven engines: status,
@@ -284,6 +330,7 @@ floats behind it.
 - AC: MCP tool calls return the same core results and stable error codes
   as the CLI; the MCP surface never propagates process exit codes
   (CommandResult envelope rendering stays in the CLI, per ADR-0003).
+- Depends on: M0-S6, M0-S8, M0-S9.
 
 ### M1-S8 OSS retro pipeline
 - Tasks: retro collection, registry hardening, shape-crash guards, export;
@@ -292,12 +339,14 @@ floats behind it.
   storage, trace ids, pipeline-truth checks (concepts/retrospectives.md).
 - AC: retro output survives a malformed entry without data loss; a
   delivery agent cannot alter evidence the retro will read.
+- Depends on: M0-S5, M1-S2.
 
 ### M1-S9 Dispatch dual-run pilot
 - Tasks: dispatch runs beside the bash stack on selected tickets in one
   pilot repository; verify-change evidence per ticket; shell stays
   authoritative.
 - AC: pilot tickets produce dual-run evidence; divergence is reported.
+- Depends on: M0-S8, M1-S11.
 
 ### M1-S10 status collector expansion
 - Tasks: expand beyond the six M0 collectors toward attention-state
@@ -305,6 +354,7 @@ floats behind it.
   points, in-sprint state) are named in this expansion.
 - AC: each new collector is artifact-verified and bounded; ticket-hygiene
   assertions are covered by name.
+- Depends on: M0-S6.
 
 ### M1-S11 Harness adapters and dispatch portability
 - Tasks: harness primitive ports (HarnessInstance, HarnessSession); the
@@ -314,12 +364,18 @@ floats behind it.
   harness directly (concepts/harness-adapters.md); harness telemetry
   extraction (read-only, from the opencode session store and Claude Code
   local files) captured into the event log at closeout, with session-tree
-  attribution to work items (concepts/harness-telemetry.md).
+  attribution to work items (concepts/harness-telemetry.md); the spawn
+  path carries an execution-environment descriptor (host is the only
+  implementation now) and harness store locations resolve from
+  configuration, so a containerized executor and bind-mounted shared
+  stores slot in without redesign (concepts/
+  containerized-delivery.md).
 - AC: dispatch runs the same delivery through either harness adapter with
   identical result classification; liveness signals are harness-agnostic;
   the harness choice is configuration; after closeout the event log holds
   the delivery's session statistics (tokens by class, calls, tool usage,
   per agent and model) without re-querying harness stores.
+- Depends on: M0-S12, M0-S13.
 
 ### M1-S12 Change capsule completion and closeout promotion
 - Tasks: complete every change folder as a memory episode capsule:
@@ -328,10 +384,14 @@ floats behind it.
   directory for memory promotion candidates; wire the memory step into
   closeout: validate capsule, identify candidates, dedup against
   project memory, link evidence, promote accepted items to exactly one
-  canonical home, archive the capsule (concepts/memory-lifecycle.md).
+  canonical home, archive the capsule (concepts/memory-lifecycle.md);
+  capsules stay self-contained through phases 1 to 10 (no cross-change
+  writes), which is what later makes preparation phases safely
+  concurrent (concepts/parallel-delivery.md).
 - AC: every merged change leaves behind a closed capsule with events and
   a promotion decision (promoted or rejected with reason) per candidate;
   no candidate skips the capture bar or the evidence link.
+- Depends on: M0-S5, M0-S14, M1-S8.
 
 ---
 
@@ -340,10 +400,15 @@ floats behind it.
 ### M2-S1 Queue, lanes, dispatch
 - Tasks: priority queue, lane plan with dependency awareness and a
   build-weight class (heavy builds excluded per runner), preemption,
-  single-flight per repo keyed on remote.
+  single-flight per repo keyed on remote. Single-flight is enforced
+  through per-repo lease objects carrying a scope field; repo-exclusive
+  is the only implemented scope, and worktree-scoped leases (the
+  dormant N-per-repo mode) arrive without redesign
+  (concepts/parallel-delivery.md).
 - AC: two lanes cannot deliver the same repo concurrently; preemption
   releases the repo with a named park state; a heavy build is not scheduled
   onto a runner already carrying one.
+- Depends on: M1-S9.
 
 ### M2-S2 Supervise
 - Tasks: supervisor service: tri-state status, progress watchdogs,
@@ -351,6 +416,7 @@ floats behind it.
   evidence.
 - AC: a stuck supervisor is detected by artifact evidence, not process
   state.
+- Depends on: M1-S1, M2-S1.
 
 ### M2-S3 Ceremony runner
 - Tasks: reduce ceremony share; compact at boundaries; tiered intake. A
@@ -367,6 +433,7 @@ floats behind it.
   follow concepts/retrospectives.md - declared trigger model,
   follow-through-first agenda, the fixed note schema, idempotent scope
   keys, and per-level outputs.
+- Depends on: M0-S6, M0-S13, M1-S8.
 
 ### M2-S10 Retro action registry and follow-through
 - Tasks: the action registry behind every retro level: five-field
@@ -375,32 +442,45 @@ floats behind it.
   explicit closure rules (done with artifact, deprioritized with
   reason, superseded); board surface next to owner asks; improvement
   WIP limit per window (concepts/retrospectives.md; tracker anchor
-  issue #43).
+  issue #43); communication analytics (unanswered asks, aging,
+  escalation rates) join the evidence inputs once the message contract
+  exists (concepts/inter-agent-communication.md).
 - AC: an action without all five fields cannot be filed; every R4+
   retro opens with artifact-verified follow-through; aging is visible
   on the board; no action closes without an explicit decision and
   artifact or reason; actions carry outcome verifiers (delayed metric
   windows) and rollback conditions, and closure distinguishes artifact
   closure from outcome closure.
+- Depends on: M1-S8.
 
 ### M2-S4 Board
 - Tasks: full board of lanes, gates, owner asks, parked work; one screen
   sharing the brief and status state source.
 - AC: board, brief, and status share one state source.
+- Depends on: M1-S5, M2-S1.
 
 ### M2-S5 Steer
 - Tasks: owner briefs, escalation, resequencing heuristics with measured
-  aging; queued steering notes delivered at phase boundaries.
-- AC: owner asks are batched with drawn defaults and measured aging.
+  aging; queued steering notes delivered at phase boundaries. Steer is
+  the first message type of a typed message contract (origin block,
+  receipt, TTL, artifact-ref completion), not a bespoke owner-note
+  channel; agent-to-agent messaging extends the same contract later
+  (concepts/inter-agent-communication.md).
+- AC: owner asks are batched with drawn defaults and measured aging; a
+  steering note carries origin, a read receipt, and TTL; the message
+  record schema is shared, not owner-specific.
+- Depends on: M0-S10, M1-S11.
 
 ### M2-S6 Metrics and spend
 - Tasks: ceremony share, per-dispatch tokens/cost/restarts, cycle time, CI
   failure rate, escaped defects; burn-rate alarms.
 - AC: exit criteria measurable with committed numbers.
+- Depends on: M1-S11, M2-S3.
 
 ### M2-S7 Suite-to-job mapping in gates
 - Tasks: local gates must cite the same suite breadth as CI.
 - AC: a narrower local suite cannot masquerade as full green.
+- Depends on: M0-S9.
 
 ### M2-S8 Memory records, layout, and lint
 - Tasks: the committed memory tree (.ai/memory: index README, lessons,
@@ -414,6 +494,7 @@ floats behind it.
 - AC: lint fails on a record missing id/date/evidence, on an index line
   without a backing record and vice versa, and on budget violations;
   concurrent agents creating records produce zero merge conflicts.
+- Depends on: M1-S12.
 
 ### M2-S9 Memory conventions in bootstrap templates
 - Tasks: adoption checklist into the bootstrap flow and templates:
@@ -426,6 +507,7 @@ floats behind it.
   kernel section, and the capture/promotion rules wired into its
   ceremonies; the doctor runs as a manual checklist until tooling
   lands.
+- Depends on: M2-S8.
 
 ---
 
@@ -438,45 +520,59 @@ floats behind it.
   harness-adapters.md).
 - AC: same behavior via CLI and each harness surface, tested cross-surface;
   a definition change regenerates every harness artifact in one step.
+- Depends on: M1-S11.
 
 ### M3-S2 Full MCP
 - Tasks: full MCP surface over proven engines; batch semantics.
 - AC: MCP matches CLI contracts and trap catalogs.
+- Depends on: M1-S7.
 
 ### M3-S3 Adapter completion
 - Tasks: full GitHub adapter for dogfooding; Azure on demand; parity tests
   ported.
 - AC: adapter matrix green per provider quirks.
+- Depends on: M0-S12.
 
 ### M3-S4 Validators and deploy checklist
 - Tasks: decision-record validator, frontmatter validator,
   deploy-prerequisite checklist; folds the existing validator backlog work
   in this repository.
 - AC: validation errors are classified with codes and fix hints.
+- Depends on: M0-S10.
 
 ### M3-S5 Policy engine
 - Tasks: declared repository policy (branch protection, required checks,
   merge rules) with fleet check and apply, exception profiles, and
   timestamped snapshots for rollback and forensics; a rules register
   mapping every written rule to its mechanical check or flagging it
-  prose-only; enforcement consulted at the point of action. The policy
-  inventory and classification live in ../concepts/policy-as-code.md
-  (enforced today, prose today, future ideas).
+  prose-only; enforcement consulted at the point of action. Policy
+  documents are typed objects with a kind field (repository settings
+  are the first kind); authority and autonomy policy is a classified
+  future kind, so the engine never hardcodes the repository-settings
+  shape. The policy inventory and classification live in
+  ../concepts/policy-as-code.md (enforced today, prose today, future
+  ideas; authority policy is AutonomyContract-shaped,
+  software-delivery-autonomy.md).
 - AC: policy drift across repos is detected and applies take a
   pre-change snapshot; a prose rule without a check is flagged by name,
   not enforced silently.
+- Depends on: M0-S12.
 
 ### M3-S6 Workspace utilities
 - Tasks: backup, restore, migration helpers for state and config; clone,
-  branch, and worktree hygiene with safety rails.
+  branch, and worktree hygiene with safety rails (worktree-per-delivery
+  is the dormant parallel mode's mechanism; keep the utilities
+  worktree-aware, concepts/parallel-delivery.md).
 - AC: utilities are idempotent and tested against torn state; never touch
   repositories with live deliveries.
+- Depends on: M0-S4, M0-S5.
 
 ### M3-S7 v1.0 internal readiness and bash deprecation
 - Tasks: parity evidence per engine; deprecation notices on old tools
   pointing to the new equivalents; removal plan at the very last stage.
 - AC: every replaced bash command has a working new equivalent with a
   deprecation notice.
+- Depends on: M2-S1, M2-S2, M2-S3, M2-S6.
 
 ### M3-S8 Memory command family
 - Tasks: `ados memory` commands over the canonical records: lint,
@@ -494,6 +590,7 @@ floats behind it.
   reach authoritative without validation evidence (replay, shadow, or
   canary result) and flag expired revalidation windows (concepts/
   memory-architecture.md, retrospectives.md).
+- Depends on: M2-S8.
 
 ### M3-S9 Memory compiler to harness surfaces
 - Tasks: compile canonical memory into each harness's native context
@@ -502,6 +599,7 @@ floats behind it.
   of harness surfaces (concepts/memory-architecture.md, M3-S1).
 - AC: a canonical memory change regenerates every harness projection in
   one step; projections carry no content the canonical source lacks.
+- Depends on: M2-S8, M3-S1.
 
 ---
 
@@ -513,6 +611,7 @@ floats behind it.
   package scope, and registry names.
 - AC: one constant swap plus migration renames everything; legacy paths
   warn.
+- Depends on: M0-S2.
 
 ### M4-S2 Publication and release automation
 - Tasks: release job flips private off for the frozen name; changesets
@@ -521,18 +620,21 @@ floats behind it.
   update` self-update.
 - AC: a release publishes all five public packages at one version; the
   guard blocks any publish under a non-frozen name.
+- Depends on: M0-S17, M3-S7, M4-S1.
 
 ### M4-S3 Docs, license registry, and public materials
 - Tasks: user docs and guides; doc/legal/ registry complete; contributing
   guide and security policy; public changelog.
 - AC: all distributable docs pass the distribution guard; registry is
   exhaustive for production dependencies.
+- Depends on: M0-S18.
 
 ### M4-S4 Merge the tooling branch to the default branch
 - Tasks: owner merges the delivery branch into the default branch; installs
   move there; the delivery branch is deleted.
 - AC: the default branch carries the released tooling; no pull requests
   target the old branch.
+- Depends on: M4-S2.
 
 ### M4-S5 Bash stack retirement
 - Tasks: during the deprecation window the retired entry points are
@@ -542,6 +644,7 @@ floats behind it.
 - AC: during the window, every retired entry point prints the notice and
   delegates; after removal, no retired entry point remains and the new
   commands cover the documented surface.
+- Depends on: M3-S7, M4-S4.
 
 ### M4-S6 Extension hooks (open-source side)
 - Tasks: telemetry sink hooks behind the neutral event schema; a documented
@@ -551,3 +654,5 @@ floats behind it.
 - AC: the sink is opt-in and off by default; local function is complete
   with no remote service configured; the hook surface is a documented
   versioned contract; no proprietary content enters committed files.
+- Depends on: M0-S5.
+

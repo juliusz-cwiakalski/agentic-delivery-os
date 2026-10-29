@@ -1,3 +1,8 @@
+---
+# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+# Apache-2.0 License - see LICENSE file for full terms
+source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/doc/planning/oss-tooling/roadmap.md
+---
 # OSS tooling roadmap
 
 Direction for the open-source tooling: a TypeScript CLI plus MCP server plus
@@ -34,6 +39,12 @@ dates are adjusted as evidence lands.
 7. Success measured by outcomes: ceremony share, false-signal count, cycle
    time, cost per accepted delivery. Baselines are captured in M0.
 8. Timelines are directions, not commitments.
+9. Parked concepts shape seams, not schedules: design concepts in
+   [concepts/](../concepts/README.md) that are deliberately unscheduled
+   still constrain current design - stories must not hardcode assumptions
+   that foreclose them (execution environments, credential sources,
+   lease scopes, message contracts). Each concept names its
+   compatibility seams; violating one is a design defect.
 
 ## Milestones
 

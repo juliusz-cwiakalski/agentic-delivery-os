@@ -5,9 +5,9 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tool
 ---
 # Concept: inter-agent communication
 
-Status: Draft (2026-10-27, from owner notes; local refinement in
-progress, not committed). Positioned as a **design envelope and idea
-box**: nothing here is scheduled for the first milestones; pieces get
+Status: Draft (2026-10-27, from owner notes; parked concept and idea
+box: designed, not scheduled). Positioned as a **design envelope and
+idea box**: nothing here is scheduled for the first milestones; pieces get
 implemented only when a live delivery need shows up (revisit from M2
 as needed). The messaging layer between ADOS agents across scopes.
 Generalizes the proven coordinator-inbox pattern (the pilot's
@@ -197,6 +197,23 @@ appears:
   scopes instead of polling whole inboxes.
 - **Message-to-action auto-linkage**: a completed message proving the
   action with a gate or ceremony artifact automatically.
+
+## Compatibility with the current build
+
+What the scheduled stories must keep open so this concept can be
+adopted without redesign:
+
+- `ados steer` (M2-S5) is the **first shipping vehicle**: build it as
+  the first message type on the typed message record (origin block,
+  receipt, TTL, artifact-ref completion) rather than a bespoke
+  owner-note channel, and agent-to-agent messages extend the same
+  contract later.
+- The session-bootstrap decision-point view (fed by the status
+  collectors, M0-S6) is the read-point surface: keep that view
+  contract extensible with an unread-messages section.
+- Inboxes are append-only local state and fit the state layer (M0-S5)
+  and the git-persisted artifact conventions; no new storage model is
+  required later.
 
 ## Open questions
 

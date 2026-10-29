@@ -5,8 +5,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tool
 ---
 # Concept: containerized delivery
 
-Status: Draft (2026-10-27, from owner notes + local PoC blueprint; local
-refinement in progress, not committed). Every delivery runs inside a
+Status: Draft (2026-10-27, from owner notes and the local PoC blueprint;
+parked concept: designed, not scheduled). Every delivery runs inside a
 container with pinned dependencies and minimal mounted context.
 Companion: [parallel-delivery.md](parallel-delivery.md) (topology and
 scheduling), [inter-agent-communication.md](inter-agent-communication.md),
@@ -158,6 +158,26 @@ is a requirement, not a stretch goal, and it constrains the design:
 - **Test matrix**: the conformance suite runs the same delivery on
   all three platforms - platform drift is a CI finding, not a user
   bug report (adapter-conformance concept).
+
+## Compatibility with the current build
+
+What the scheduled stories must keep open so this concept can be adopted
+without redesign:
+
+- The dispatch spawn path carries an **execution-environment
+  descriptor** (host is the only implementation now); nothing in
+  dispatch, supervision, or the harness adapters may hardcode host
+  execution (M1-S11, M2-S1).
+- Harness session stores, repo locations, and state paths resolve
+  through **configuration**, not hardcoded paths, so bind mounts and
+  per-project shared harness DBs slot in later (M1-S11 telemetry
+  extraction included).
+- The state schema already carries workspace and lane identifiers as
+  local fields (M0-S5); containers key their identity off the same
+  fields.
+- Telemetry and lifecycle events come from the same event stream
+  whether the delivery ran on the host or in a container: collectors
+  never inspect the execution environment directly.
 
 ## Open questions
 

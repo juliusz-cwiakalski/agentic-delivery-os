@@ -1,3 +1,8 @@
+---
+# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+# Apache-2.0 License - see LICENSE file for full terms
+source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/doc/planning/oss-tooling/README.md
+---
 # OSS tooling planning
 
 Planning documents for the open-source tooling: a TypeScript CLI plus MCP
@@ -13,13 +18,18 @@ name-derived comes from the single branding constant.
 |---|---|
 | [roadmap.md](roadmap.md) | Milestones M0-M4, principles, exit criteria (OSS track only) |
 | [backlog.md](backlog.md) | The story backlog per milestone; the unit of delivery |
+| [backlog-ranking.md](backlog-ranking.md) | Stories top to bottom in suggested delivery order, with dependencies and ranking rationale |
 | [cli-command-registry.md](cli-command-registry.md) | The `ados(1)` man page v0 and the command registry with delivery and extension stories |
 | [user-journeys.md](user-journeys.md) | How the CEO agent and other agents use the commands: the change lifecycle and multi-repository coordination |
 
 Design-level intentions that mature into decision records and stories are
-collected separately in [../concepts/README.md](../concepts/README.md)
-(primitive surface, embedded metadata, adapter conformance, branding seam,
-telemetry contract).
+collected separately in [../concepts/README.md](../concepts/README.md):
+adapter and harness seams, telemetry, model profiles, policy as code, the
+agent memory model, retrospectives, delivery autonomy, and parked
+infrastructure concepts (containerized delivery, credential sidecar,
+external-research isolation, inter-agent communication, parallel
+delivery). Parked concepts shape design seams without adding scheduled
+work; each names what current stories must not foreclose.
 
 ## Status
 

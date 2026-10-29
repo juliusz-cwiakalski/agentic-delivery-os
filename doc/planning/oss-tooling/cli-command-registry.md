@@ -1,3 +1,8 @@
+---
+# Copyright (c) 2025-2026 Juliusz Ćwiąkalski (https://www.cwiakalski.com | https://www.linkedin.com/in/juliusz-cwiakalski/ | https://x.com/cwiakalski)
+# Apache-2.0 License - see LICENSE file for full terms
+source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/doc/planning/oss-tooling/cli-command-registry.md
+---
 # ados(1) command registry and man page v0
 
 The command surface of the open-source tooling. Working name `ados` until
@@ -145,7 +150,7 @@ verify from M0); completed in M3-S3 (full GitHub, Azure on demand).
 | `ados brief` | Deterministic render-only owner brief from the M0 collectors with explicit placeholders; no LLM in the render path; decision-first layout | operator | M1-S6 | - |
 | `ados mcp` | Minimal MCP mirroring the CLI scope over proven engines: status, verify-artifact, gate report | sessions | M1-S7 | M3-S2 (full MCP with batch semantics) |
 | `ados retro` | Retrospective evidence pipeline: collection, registry hardening, shape-crash guards, export; home of the periodic memory audit; runs retro levels on demand per concepts/retrospectives.md | coordinator | M1-S8 | - |
-| `ados dispatch` | Delivery pilot beside the bash stack on selected tickets with verify-change evidence; spawns sessions through the harness adapter (opencode first, Claude Code next); shell stays authoritative | coordinator | M1-S9 | M2-S1 (programmatic queue, single-flight, preemption) |
+| `ados dispatch` | Delivery pilot beside the bash stack on selected tickets with verify-change evidence; spawns sessions through the harness adapter (opencode first, Claude Code next) over an execution-environment descriptor (host now; containerized execution is a parked concept); shell stays authoritative | coordinator | M1-S9 | M2-S1 (programmatic queue, single-flight, preemption) |
 
 ### M2: Orchestration and measurement
 
@@ -155,7 +160,7 @@ verify from M0); completed in M3-S3 (full GitHub, Azure on demand).
 | `ados lanes` | Lane plan with dependency awareness and a build-weight class (heavy builds excluded per runner); two lanes cannot deliver the same repo concurrently | coordinator | M2-S1 | - |
 | `ados supervise` | Supervisor service (runs): tri-state status, progress watchdogs, duplicate-supervisor detection, lying-liveness signals | coordinator | M2-S2 | - |
 | `ados ceremony` | Ceremony runner: artifact-verified, resumable, compact at boundaries, tiered intake; the built-in set: morning brief, retro evidence pass, sprint rollover, night-watch, testing-session assessment, decision-record mirror sync; ceremonies are declared units, so projects can add their own; retro ceremonies follow concepts/retrospectives.md (levels, triggers, follow-through-first) | coordinator | M2-S3 | - |
-| `ados steer` | Queued steering notes delivered at phase boundaries; owner asks batched with measured aging | operator, coordinator | M2-S5 | - |
+| `ados steer` | Queued steering notes delivered at phase boundaries; owner asks batched with measured aging; the first message type of the typed message contract (origin, receipt, TTL), extensible to agent-to-agent messaging (concepts/inter-agent-communication.md) | operator, coordinator | M2-S5 | - |
 | `ados metrics` | Delivery metrics: ceremony share, cycle time, CI failure rate, escaped defects | coordinator, operator | M2-S6 | - |
 | `ados spend` | Cost observability: per-dispatch tokens/cost/restarts, quota snapshots, burn-rate alarms | operator, coordinator | M2-S6 | - |
 
@@ -166,7 +171,7 @@ verify from M0); completed in M3-S3 (full GitHub, Azure on demand).
 | `ados harness` | Harness integrations: list configured harnesses; install or update the ados plugin for a harness (opencode, Claude Code; pi.dev candidate), generated from the canonical source with sync verification (concepts/harness-adapters.md) | sessions, operator | M3-S1 | - |
 | `ados policy` | Policy as code, two jobs: fleet policy check and apply (declared repository policy: branch protection, required checks, merge rules) with exception profiles and timestamped snapshots for rollback and forensics; and a rules register that flags prose rules without a mechanical check (concepts/policy-as-code.md) | operator, coordinator | M3-S5 | - |
 | `ados memory` | Memory governance family: lint (schema, provenance, budgets, index coverage), candidates, promote, supersede, conflicts, stale, doctor (full audit), compile (project canonical memory into each harness's native formats) | all agents, coordinator | M3-S8, M3-S9 | `doctor` continues the health-check family; see concepts/memory-architecture.md |
-| `ados repos` | Clone, branch, and worktree hygiene with safety rails; never touches repos with live deliveries | operator, coordinator | M3-S6 | - |
+| `ados repos` | Clone, branch, and worktree hygiene with safety rails; never touches repos with live deliveries; worktree-aware (worktree-per-delivery is the parked parallel mode's mechanism) | operator, coordinator | M3-S6 | - |
 
 ### M4: Public release readiness
 
@@ -277,6 +282,15 @@ M3-S7 or M4-S5 without a replacement.
   never committed in this repository.
 - `ados queue ready` ships in M0 before its parent `ados queue` exists in
   M2. The M0 `--help` notes this so it does not read as a bug.
+- Concept-parked surfaces (no commands in M0-M4; see
+  [../concepts/README.md](../concepts/README.md)): an agent messaging
+  family beyond steer (typed inbox surface; steer M2-S5 is the first
+  message type), a containerized execution profile
+  (containerized-delivery), a credential sidecar with CLI shims
+  (credential-sidecar), and an isolated external-research runner
+  (external-research-isolation). Each names its compatibility seams
+  under "Compatibility with the current build"; commands are named when
+  the concept is scheduled, not before.
 
 ## Naming audit (names reviewed and kept, with disambiguating help lines)
 
