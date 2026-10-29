@@ -29,7 +29,7 @@ dor_iterations:
   system_spec_update: { started: "2026-10-30T01:50:00Z", completed: "2026-10-30T02:05:00Z" }
   review_fix: { started: "2026-10-30T02:10:00Z", completed: "2026-10-30T02:30:00Z" }
   quality_gates: { started: "2026-10-30T02:35:00Z", completed: "2026-10-30T02:55:00Z" }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: "2026-10-30T03:00:00Z", completed: "2026-10-30T03:05:00Z" }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "Delivery mode autonomous: user directive 'Deliver GH-171 end-to-end using ADOS' with STOP at open PR; merge authority stays with CEO/human."
@@ -84,4 +84,7 @@ notes:
     date: 2026-10-30
   - type: info
     text: "Quality gates GREEN (phase 9, independent @runner battery; full log tmp/run-logs-runner/2026-10-30/gh171-quality-gates.log): pnpm check exit 0 (248 tests/0 fail, typecheck 6/6, depcruise 31 modules 0 violations, 78s); forbidden-literals 0 violations 5/5 classes 2 registered docs; 12 further invariant checks exit 0 (incl. ci-topology 7 bash + 16 TS jobs, supply-chain, pins, license 11 deps, vuln 0 high/critical, exports 5 publishables); doc-distribution no drift (80 docs); bun test tests/boundaries 103/103; 23 bash suites green (16 scripts + 6 tools + 1 bonus); 3 text-to-image suites skipped (paid/external APIs, CI-excluded per ci.yml). Sole exit-1: publish-guard.ts = RED BY DESIGN pre-freeze (passes only in freeze configuration; CI runs its unit test which asserts the pre-freeze fail — PM delegation brief had inverted the expectation; retro: verify gate contracts against source before scripting gate batteries). Lint 1 info (useIndexOf), exit 0, non-blocking. Gates did not dirty the tree."
+    date: 2026-10-30
+  - type: info
+    text: "DoD CHECK PASS (phase 10, PM-owned): (1) pm-notes complete — all 9 prior phases carry completion timestamps; (2) plan tasks all done (zero unchecked; task 6.5 CI observation is the documented PR-time merge-blocking condition, accepted by review F-4); (3) all 13 spec ACs satisfied AND reviewer-verified by execution (not self-report); ticket ACs 1-4 evidenced (AC-2 CI half = PR-time observation); (4) current-truth docs complete: feature-branding-seam.md authored + registry-coupled, glossary extended, doc-syncer reported zero residual gaps, doc-distribution no drift, AGENTS.md verified consistent; (5) quality gates green on delivered HEAD. PR-phase inputs ready: base main-tools EXPLICIT; merge-blocking condition (all 16 ts-* + 7 bash jobs green incl. ts-forbidden-literals on pushed branch); owner gates at PR (TC-BRANDING-026 name-freedom ack, TC-BRANDING-020 step 9 drill clarity, A1 myados ack, A3 internal->redistributable flip option); optional hardening follow-ups to propose to owner (F-1 anchored header-exemption patterns, F-2 named failure on git listing failure — no ticket auto-creation)."
     date: 2026-10-30
