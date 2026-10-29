@@ -188,10 +188,10 @@ Spec §4.1 table, verified by: fresh-clone aggregate green 0 manual steps (TC-SC
 
 **Tasks**:
 
-- [ ] **3.1** Create root `biome.json` (one config; lint + format only — the type checker owns type correctness, no duplicated rules). Add `@biomejs/biome` devDependency (floor `^2.5.2`).
-- [ ] **3.2** Add the script surface at root and in each of the six packages: `lint` (`biome lint .`), `format:check` (`biome format .`), `typecheck` (from P2), `test` (`bun test`), `check:boundaries` (`depcruise packages` + ambient guard — config lands in P4; script declared now, enforcing from P4), and the single aggregate `check` = `lint && format:check && typecheck && test && check:boundaries` in that order. No alternate aggregate names (`verify`, `ci`, `all`, `validate`, `precommit`), no bypass flags.
-- [ ] **3.3** Author `scripts/checks/script-surface.ts` (TC-SCAFFOLD-021 — five named checks present and non-empty at both levels; exactly one aggregate; order correct; alternates absent).
-- [ ] **3.4** Add `dependency-cruiser` devDependency (floor `^18.0.0`) so P4 has its runner; lockfile updated.
+- [x] **3.1** Create root `biome.json` (one config; lint + format only — the type checker owns type correctness, no duplicated rules). Add `@biomejs/biome` devDependency (floor `^2.5.2`).
+- [x] **3.2** Add the script surface at root and in each of the six packages: `lint` (`biome lint .`), `format:check` (`biome format .`), `typecheck` (from P2), `test` (`bun test`), `check:boundaries` (`depcruise packages` + ambient guard — config lands in P4; script declared now, enforcing from P4), and the single aggregate `check` = `lint && format:check && typecheck && test && check:boundaries` in that order. No alternate aggregate names (`verify`, `ci`, `all`, `validate`, `precommit`), no bypass flags.
+- [x] **3.3** Author `scripts/checks/script-surface.ts` (TC-SCAFFOLD-021 — five named checks present and non-empty at both levels; exactly one aggregate; order correct; alternates absent).
+- [x] **3.4** Add `dependency-cruiser` devDependency (floor `^18.0.0`) so P4 has its runner; lockfile updated.
 
 **Acceptance Criteria**:
 
@@ -513,7 +513,8 @@ Full definitions: [chg-GH-170-test-plan.md](./chg-GH-170-test-plan.md) §5. **Tr
 |-------|--------|---------|-----------|--------|-------|
 | 0 — Workspace foundation | COMPLETE | 2026-10-29T18:28Z | 2026-10-29T18:37Z | 8ee4430 | Pins resolved: pnpm 10.18.3 (preinstalled, exact), Bun 1.4.4 (official installer via `bun upgrade`). `pnpm install` + `--frozen-lockfile` exit 0, clean tree. `pnpm-foundation.ts`, `ignore-rules.ts` green. RSK-4 probe: undeclared workspace import REJECTED. Note: `pnpm-foundation.ts` treats an empty `packages/` as the transient pre-P1 state and enforces the six-package set from P1. |
 | 1 — Six packages | COMPLETE | 2026-10-29T18:38Z | 2026-10-29T18:48Z | ff2c973 | Six private manifests, 25 types-only sources, full subpath/imports/workspaceImports maps, one `createRuntime` signature. `bun test tests/structure` 8 pass 0 fail (TC-004 dist half annotated pending P6 build); `manifest-privacy.ts` green; `pnpm-foundation.ts` six-package assertion green. `typescript@6.0.3` + `@types/bun@1.4.4` added here (AST structure tests need the compiler API; P2 reuses them). |
-| 2 — Strict TypeScript | COMPLETE | 2026-10-29T18:49Z | 2026-10-29T19:02Z | self | `tsconfig.base.json` carries all 17 asserted flags + declared `skipLibCheck` decision; six composite package configs; solution references all six. `pnpm typecheck` exit 0. `tsconfig-strictness.ts` green. `bun test tests/checks` 25 pass (17 flag-removal mutations, package-override mutation, 6 real tsc probes). |
+| 2 — Strict TypeScript | COMPLETE | 2026-10-29T18:49Z | 2026-10-29T19:02Z | 367599e | `tsconfig.base.json` carries all 17 asserted flags + declared `skipLibCheck` decision; six composite package configs; solution references all six. `pnpm typecheck` exit 0. `tsconfig-strictness.ts` green. `bun test tests/checks` 25 pass (17 flag-removal mutations, package-override mutation, 6 real tsc probes). |
+| 3 — Biome + script surface | COMPLETE | 2026-10-29T19:03Z | 2026-10-29T19:12Z | self | `biome.json` (preset recommended; fixture overrides only for intentional probe lint noise) + `@biomejs/biome@2.6.4`; five named scripts at root and in all six packages, one aggregate in the mandated order; `dependency-cruiser@18.7.0` installed for P4. `pnpm lint` + `pnpm format:check` exit 0 (62 files); `script-surface.ts` green; `pnpm test` 34 pass. `pnpm check` aggregate deferred to P4 (depcruise config lands there, as planned). |
 
 ### Completion report format (filled by @coder at P9/P10)
 

@@ -118,7 +118,9 @@ export const validate = (root: string): string[] => {
       }
     }
     if (paths.length !== PACKAGE_NAMES.length) {
-      failures.push(`solution tsconfig.json must reference exactly six packages; got ${paths.length}`);
+      failures.push(
+        `solution tsconfig.json must reference exactly six packages; got ${paths.length}`,
+      );
     }
   }
 

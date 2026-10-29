@@ -21,14 +21,17 @@ const fail = (message: string): void => {
   failures.push(message);
 };
 
-const rootManifest = JSON.parse(
-  readFileSync(join(ROOT, "package.json"), "utf8"),
-) as Record<string, unknown>;
+const rootManifest = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as Record<
+  string,
+  unknown
+>;
 if (rootManifest.private !== true) fail("root package.json must declare private: true (boolean)");
 
 const packagesDir = join(ROOT, "packages");
 const manifests = readdirSync(packagesDir, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory() && existsSync(join(packagesDir, entry.name, "package.json")))
+  .filter(
+    (entry) => entry.isDirectory() && existsSync(join(packagesDir, entry.name, "package.json")),
+  )
   .map((entry) => ({
     dir: entry.name,
     manifest: JSON.parse(
@@ -46,7 +49,9 @@ if (JSON.stringify(names) !== JSON.stringify(EXPECTED)) {
 
 for (const { dir, manifest } of manifests) {
   if (manifest.private !== true) {
-    fail(`packages/${dir}: private must be the boolean true; got ${JSON.stringify(manifest.private)}`);
+    fail(
+      `packages/${dir}: private must be the boolean true; got ${JSON.stringify(manifest.private)}`,
+    );
   }
   if (manifest.publishConfig !== undefined) {
     fail(`packages/${dir}: publishConfig is not permitted pre-freeze`);

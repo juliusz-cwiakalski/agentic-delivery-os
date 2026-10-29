@@ -39,9 +39,10 @@ const EXPECTED: Record<string, Record<string, string>> = {
 };
 
 const manifestOf = (packageName: string): Record<string, unknown> =>
-  JSON.parse(
-    readFileSync(join(ROOT, "packages", packageName, "package.json"), "utf8"),
-  ) as Record<string, unknown>;
+  JSON.parse(readFileSync(join(ROOT, "packages", packageName, "package.json"), "utf8")) as Record<
+    string,
+    unknown
+  >;
 
 type ExportsEntry = Record<string, string>;
 
@@ -105,7 +106,9 @@ const distIsBuilt = (): boolean =>
 
 test("every declared subpath dynamically imports through its package name", async () => {
   if (!distIsBuilt()) {
-    console.log("TC-SCAFFOLD-004 dist half: build output absent; assertions activate after `pnpm build`.");
+    console.log(
+      "TC-SCAFFOLD-004 dist half: build output absent; assertions activate after `pnpm build`.",
+    );
     return;
   }
   const failures: string[] = [];

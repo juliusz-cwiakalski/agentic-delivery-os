@@ -91,4 +91,6 @@ if (failures.length > 0) {
   for (const message of failures) console.error(`FAIL ignore-rules: ${message}`);
   process.exit(1);
 }
-console.log("OK ignore-rules: four coverage classes, brand-free glob, rename-safe, git probes green");
+console.log(
+  "OK ignore-rules: four coverage classes, brand-free glob, rename-safe, git probes green",
+);

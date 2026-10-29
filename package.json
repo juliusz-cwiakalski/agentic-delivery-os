@@ -7,8 +7,16 @@
   "engines": {
     "bun": "1.4.4"
   },
-  "scripts": {},
+  "scripts": {
+    "lint": "biome lint .",
+    "format:check": "biome format .",
+    "typecheck": "pnpm -r typecheck",
+    "test": "bun test",
+    "check:boundaries": "depcruise packages && bun run scripts/checks/ambient-globals.ts",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries"
+  },
   "devDependencies": {
+    "@biomejs/biome": "2.6.4",
     "@delivery-os/adapters": "workspace:*",
     "@delivery-os/cli": "workspace:*",
     "@delivery-os/core": "workspace:*",
@@ -16,6 +24,7 @@
     "@delivery-os/opencode": "workspace:*",
     "@delivery-os/testkit": "workspace:*",
     "@types/bun": "1.4.4",
+    "dependency-cruiser": "18.7.0",
     "typescript": "6.0.3"
   }
 }

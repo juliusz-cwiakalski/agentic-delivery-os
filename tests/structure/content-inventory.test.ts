@@ -107,7 +107,9 @@ test("no engine, driver, or command-registration markers exist", () => {
     for (const field of dependencyFields) {
       for (const dependency of Object.keys(manifest[field] ?? {})) {
         if (forbiddenDependency.test(dependency)) {
-          violations.push(`${packageName}: forbidden scaffold dependency ${dependency} in ${field}`);
+          violations.push(
+            `${packageName}: forbidden scaffold dependency ${dependency} in ${field}`,
+          );
         }
       }
     }

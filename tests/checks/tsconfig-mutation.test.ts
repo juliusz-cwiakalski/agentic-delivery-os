@@ -9,11 +9,7 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
-import {
-  PACKAGE_NAMES,
-  REQUIRED_FLAGS,
-  validate,
-} from "../../scripts/checks/tsconfig-strictness";
+import { PACKAGE_NAMES, REQUIRED_FLAGS, validate } from "../../scripts/checks/tsconfig-strictness";
 
 const ROOT = process.cwd();
 const TSC = join(ROOT, "node_modules/typescript/bin/tsc");

@@ -38,10 +38,14 @@ if (typeof packageManager !== "string" || !/^pnpm@\d+\.\d+\.\d+$/.test(packageMa
 // 2. Exactly one committed lockfile.
 // Tracked plus untracked-but-not-ignored: identical to `git ls-files` in CI,
 // and a truthful pre-commit view of the files that will be committed.
-const tracked = execFileSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], {
-  cwd: ROOT,
-  encoding: "utf8",
-})
+const tracked = execFileSync(
+  "git",
+  ["ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+  {
+    cwd: ROOT,
+    encoding: "utf8",
+  },
+)
   .split("\u0000")
   .filter((entry) => entry.length > 0);
 const lockfiles = tracked.filter((entry) => /(^|\/)pnpm-lock\.yaml$/.test(entry));

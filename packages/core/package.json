@@ -33,6 +33,11 @@
   },
   "workspaceImports": {},
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "lint": "biome lint .",
+    "format:check": "biome format .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test",
+    "check:boundaries": "depcruise --config ../../.dependency-cruiser.cjs src",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries"
   }
 }
