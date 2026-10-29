@@ -195,11 +195,30 @@ Canonical values: see `doc/decisions/ODR-0001-classify-yaml-register-templates-r
 │   ├── agent/            # PM tracker config (pm-instructions.md), PR/MR platform config (pr-instructions.md), code-review instructions (incl. checklist)
 │   ├── local/            # git-ignored ephemeral state
 │   └── rules/            # language/tool rules (bash.md)
-├── scripts/              # repo-internal automation (.sh extension)
+├── packages/             # pnpm workspace — typed delivery tooling (see doc/spec/features/feature-monorepo-scaffold-toolchain.md)
+│   ├── core/             # @delivery-os/core — runtime-neutral services, contracts, state, branding
+│   ├── adapters/         # @delivery-os/adapters — per-provider and per-I/O adapter subpaths
+│   ├── cli/              # @delivery-os/cli — command-line surface
+│   ├── mcp/              # @delivery-os/mcp — MCP surface
+│   ├── opencode/         # @delivery-os/opencode — OpenCode host integration
+│   └── testkit/          # @delivery-os/testkit — private dev-only test harness
+├── scripts/              # repo-internal automation (.sh extension; scripts/checks/*.ts are Bun-run invariant checks)
+│   ├── checks/           # TypeScript repository invariant checks (bun run / bun test)
 │   ├── hooks/            # inactive, user-selectable pre-iteration hook examples
 │   └── .tests/           # test files for scripts (test-*.sh)
+├── tests/                # Bun test suites (structure, boundaries, behaviour, checks)
 ├── tools/                # PATH-able CLI utilities (no .sh extension)
 │   └── .tests/           # test files for tools (test-*.sh)
+├── package.json          # workspace root manifest: pinned packageManager, aggregate check
+├── pnpm-workspace.yaml   # workspace globs
+├── pnpm-lock.yaml        # single committed lockfile
+├── .bun-version          # Bun pin (source of truth for the four-copy equality check)
+├── bunfig.toml           # Bun test discovery
+├── tsconfig.base.json    # strict shared TypeScript configuration
+├── tsconfig.json         # solution typecheck referencing all six packages
+├── biome.json            # root lint/format configuration
+├── .dependency-cruiser.cjs # package, subpath, tier, and runtime boundary rules
+├── .changeset/           # lockstep versioning configuration
 └── doc/
     ├── 00-index.md           # documentation landing page
     ├── changes/              # change artifacts (spec, plan, test-plan per workItemRef)
@@ -221,10 +240,15 @@ Canonical values: see `doc/decisions/ODR-0001-classify-yaml-register-templates-r
 | Purpose | PATH-able CLI utilities for use beyond this repo | Repo-internal automation |
 | Extension | No `.sh` — invoked by name (e.g., `tools/my-tool`) | `.sh` required |
 | Tests | `tools/.tests/test-<tool-name>.sh` | `scripts/.tests/test-<script-name>.sh` |
+| TypeScript checks | — | `scripts/checks/*.ts` — repository invariant checks run with Bun (`bun run`, covered by `bun test`) |
+
+`scripts/checks/*.ts` holds TypeScript repository invariant checks and runs with Bun; it sits beside the bash automation without changing the bash `.sh` convention. Bash language rules remain in [.ai/rules/bash.md](.ai/rules/bash.md); TypeScript workspace code follows `tsconfig.base.json` and the workspace lint/format configuration.
 
 ## Running tests
 
 Test files follow the pattern `test-*.sh` inside `.tests/` subdirectories. Run with `bash <dir>/.tests/test-*.sh`.
+
+TypeScript workspace tests live under `tests/**/*.test.ts` and run with `bun test` (or `pnpm test`).
 
 ## License headers
 
