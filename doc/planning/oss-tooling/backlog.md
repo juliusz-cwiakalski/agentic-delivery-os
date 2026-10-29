@@ -21,6 +21,9 @@ name is `ados` until the naming freeze.
   and machine-checkable AC.
 - Tasks are the concrete work inside a story; they become the story body
   when the tracking issue is created.
+- Created stories carry their tracking ticket (`- Ticket:` line,
+  milestone-scoped); story codes are stable identifiers even before
+  ticket creation.
 - Every story lists its dependencies (`Depends on:`); dependencies are
   strict (the story cannot deliver without them), not sequencing
   preferences. Suggested delivery order, including non-forced
@@ -86,6 +89,7 @@ protected subset is the weeks 1-4 relief promise; everything else in M0
 floats behind it.
 
 ### M0-S1 Monorepo scaffold and toolchain
+- Ticket: GH-170 (milestone M0)
 - Goal: Stand up the monorepo and toolchain so every later story lands into a typed, CI-verified structure instead of accreting loose scripts; the scaffold is the substrate the whole tooling grows in.
 - Tasks: create packages/ per ADR-0003: core (runtime-neutral, subpaths
   ./contracts, ./state, ./branding, one createRuntime composition root),
@@ -104,6 +108,7 @@ floats behind it.
 - Depends on: none.
 
 ### M0-S2 Branding seam and working name
+- Ticket: GH-171 (milestone M0)
 - Goal: One branding constant derives every name-derived value so the eventual public rename is a single swap, not an archaeology dig; the forbidden-literal test keeps the seam honest.
 - Tasks: branding module with the single name constant (working name ados)
   driving binary, package scope, env prefix `ADOS_`, config dir `.ados`,
@@ -121,6 +126,7 @@ floats behind it.
 - Depends on: M0-S1.
 
 ### M0-S3 Result contract and error table
+- Ticket: GH-172 (milestone M0)
 - Goal: Every command speaks one result contract so machines and agents can trust output even on failure; the error table makes failures classifiable instead of exit-code folklore.
 - Tasks: CommandResult envelope (schemaVersion, runId, exitCode, timing,
   data or error); internal error table as the primary model (types in core
@@ -141,6 +147,7 @@ floats behind it.
 - Depends on: M0-S1.
 
 ### M0-S4 Config layer (DEC-4)
+- Ticket: GH-173 (milestone M0)
 - Goal: Configuration that is layered, validated, and traceable per key, so behavior differences are explainable and secrets never sit in files.
 - Tasks: layered chain built-in defaults < system < user-global < project
   committed (.<product>/config.yaml) < project local (config.local.yaml) <
@@ -157,6 +164,7 @@ floats behind it.
 - Depends on: M0-S1, M0-S2, M0-S3.
 
 ### M0-S5 State layer
+- Ticket: GH-174 (milestone M0)
 - Goal: Durable local state with torn-state detection so every verification reads truth, not zeros; the abstraction keeps the storage engine swappable.
 - Tasks: local-first state behind an implementation-neutral abstraction;
   append-only JSONL plus SQLite indexes; schema-versioned; atomic replace;
@@ -170,6 +178,7 @@ floats behind it.
 - Depends on: M0-S1, M0-S2, M0-S3.
 
 ### M0-S6 status v1
+- Ticket: GH-175 (milestone M0)
 - Goal: The first call of every session returns a bounded, evidence-backed digest of the delivery world, replacing the largest measured token cost (scripted probing) with one command.
 - Tasks: six collectors: tracker (owner hand-backs, blocked deps, stalls,
   ticket hygiene), changes and PRs, CI, lanes or queue, providers,
@@ -183,6 +192,7 @@ floats behind it.
 - Depends on: M0-S5, M0-S19.
 
 ### M0-S7 queue ready (read-only)
+- Ticket: GH-176 (milestone M0)
 - Goal: A read-only ready-set answer for what can start now, so idle lanes beside a full queue become visible and closing beats opening.
 - Tasks: readiness checks (deps satisfied, repo free, tier known, no owner
   gate, CI healthy, provider available - provider availability from the
@@ -194,6 +204,7 @@ floats behind it.
 - Depends on: M0-S6.
 
 ### M0-S8 verify change and exit taxonomy
+- Ticket: GH-177 (milestone M0)
 - Goal: Verify a delivery against the phase ledger and classify the result tuple, killing the exit-zero false-success class at the verification layer.
 - Tasks: verify a delivered change against the phase ledger, classify
   the delivery result tuple; exit taxonomy mapped to classified results.
@@ -210,6 +221,7 @@ floats behind it.
   classified; the taxonomy matches the delivery result enum.
 - Depends on: M0-S5, M0-S10.
 ### M0-S9 verify gates v1
+- Ticket: GH-178 (milestone M0)
 - Goal: One command evaluating all merge gates with citations, removing
   the manual merge checklist and its near-miss classes.
 - Tasks: bundled with verify change; local gate battery for a pull request
@@ -224,6 +236,7 @@ floats behind it.
 - Depends on: M0-S8, M0-S19.
 
 ### M0-S10 pm-notes and registry lint, and phase transitions
+- Ticket: GH-179 (milestone M0)
 - Goal: Pm-notes and registry writes are schema-checked and phase transitions flow through one idempotent path, making the ledger every verification reads authoritative.
 - Tasks: schema and format conformance checks at write time for pm-notes
   and the delivery registry (`ados lint`); error on parse failure; key-set
@@ -241,6 +254,7 @@ floats behind it.
 - Depends on: M0-S1, M0-S3, M0-S5.
 
 ### M0-S11 db session-admin port
+- Ticket: GH-180 (milestone M0)
 - Goal: Safe admin for the harness session database so state bloat is managed without live-session damage.
 - Tasks: port the session-database admin prototype (admin for the harness
   session store, the opencode session database; surface inlined in the
@@ -251,6 +265,7 @@ floats behind it.
 - Depends on: M0-S1, M0-S3.
 
 ### M0-S12 Primitive ports, credential port, and embedded metadata
+- Ticket: GH-181 (milestone M0)
 - Goal: Typed primitive ports with capability flags, one credential-resolution port, and the embedded metadata envelope: the contracts every adapter and provider interaction build on, with secrets centralized and the sidecar adoption path open.
 - Tasks: primitive ports v1 with capability flags in core ./contracts (the
   primitive set is catalogued in ../concepts/primitive-catalogue.md);
@@ -273,6 +288,7 @@ floats behind it.
 - Depends on: M0-S1, M0-S3, M0-S4.
 
 ### M0-S13 provider v1
+- Ticket: GH-182 (milestone M0)
 - Goal: Provider routing with quota awareness and named parks so spawn failures are announced and diagnosable events, not silent stalls; subscription-first keeps cost down.
 - Tasks: quota and peak-window awareness; parks carry cause and expiry;
   subscription quota before pay-per-token; fail-loud announcements; the
@@ -285,6 +301,7 @@ floats behind it.
 - Depends on: M0-S3, M0-S4, M0-S12.
 
 ### M0-S14 closeout v1 with branch cleanup
+- Ticket: GH-183 (milestone M0)
 - Goal: The post-merge ceremony becomes one idempotent transaction, removing routine manual closeout misses per merge.
 - Tasks: ticket to done, label sweep, unassign, owed-flip sweep (tickets
   the merge leaves owed an owner action flip to their owner-owed state),
@@ -295,6 +312,7 @@ floats behind it.
 - Depends on: M0-S19.
 
 ### M0-S15 Privacy and no-cloud guards
+- Ticket: GH-184 (milestone M0)
 - Goal: Privacy and no-cloud guards in CI so private or hosted-only content can never land in committed files.
 - Tasks: privacy-literal guard built from two parts - generic pattern
   rules in committed code plus a project-configurable hashed-literal
@@ -306,6 +324,7 @@ floats behind it.
 - Depends on: M0-S1.
 
 ### M0-S16 Interim mitigations, docs and config only
+- Ticket: GH-185 (milestone M0)
 - Goal: Document the interim mitigations so the bash-era loop known rough edges are handled by config and docs until the engines replace them.
 - Tasks: document permission-denial handling, stuck-minute defaults,
   in-flight warning for the delivery loop, pm-notes authoring rule. No
@@ -314,6 +333,7 @@ floats behind it.
 - Depends on: M0-S4.
 
 ### M0-S17 Decision records and measurement baseline
+- Ticket: GH-186 (milestone M0)
 - Goal: Lock the foundational decisions and command names before scaling delivery, and capture the bash-era baseline so later milestones prove improvement against numbers, not memory.
 - Tasks: decision records for layout, config precedence, the adapter
   contract (providers and harnesses), state schema, release model, and
@@ -331,6 +351,7 @@ floats behind it.
 - Depends on: none.
 
 ### M0-S18 License registry (doc/legal)
+- Ticket: GH-187 (milestone M0)
 - Goal: A machine-read license registry with a fail-closed CI gate so unknown or denied dependency licenses block merges.
 - Tasks: YAML registry under doc/legal/ (machine-parseable plus
   human-readable) listing dependency licenses and policy; CI license gate
@@ -340,6 +361,7 @@ floats behind it.
 - Depends on: M0-S1.
 
 ### M0-S19 Client seeds with trap catalogs
+- Ticket: GH-188 (milestone M0)
 - Goal: Tracker and VCS client seeds behind the primitive ports, each shipping its provider quirks as trap-catalog tests, so higher layers read providers through one truthful interface.
 - Tasks: tracker and VCS client seeds behind the primitive ports, each
   shipping its documented quirks as trap-catalog tests: GitLab client
@@ -362,6 +384,7 @@ floats behind it.
 - Depends on: M0-S12.
 
 ### M0-S20 Adapter conformance suite v1
+- Ticket: GH-189 (milestone M0)
 - Goal: The conformance flow suite that keeps every adapter honest for the same primitives, so adapter changes are gated by behavior, not review vigilance.
 - Tasks: the conformance flow suite in primitives (change lifecycle,
   comment provenance roundtrip, label semantics) per
