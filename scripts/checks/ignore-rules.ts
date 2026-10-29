@@ -6,8 +6,9 @@
  * behaviour on representative paths.
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 const ROOT = process.cwd();
 const failures: string[] = [];
@@ -67,25 +68,35 @@ if (configRegExp.test("packages/core/.nested/config.local.yaml")) {
   fail("project-local config glob must be anchored to the repository root (embedded slash)");
 }
 
-// 4. Real ignore behaviour.
-const expectIgnored = (path: string, ignored: boolean): void => {
-  let actual = false;
-  try {
-    execFileSync("git", ["check-ignore", "-q", "--no-index", path], { cwd: ROOT, stdio: "ignore" });
-    actual = true;
-  } catch {
-    actual = false;
-  }
-  if (actual !== ignored) {
-    fail(`git check-ignore reports ${path} ignored=${actual}; expected ignored=${ignored}`);
-  }
-};
-expectIgnored("node_modules/@delivery-os/core/index.js", true);
-expectIgnored("packages/core/dist/index.js", true);
-expectIgnored("dist/index.js", true);
-expectIgnored(".ai/local/state.json", true);
-expectIgnored(".example-app/config.local.yaml", true);
-expectIgnored("packages/core/.nested/config.local.yaml", false);
+// 4. Real ignore behaviour, probed in a rule-world temp git dir seeded with the repo's real .gitignore — live-tree probes are environment-dependent (pnpm's node_modules symlinks make git check-ignore die with fatal 128), rule-world probes are not.
+const ruleWorld = mkdtempSync(join(tmpdir(), "ignore-rules-"));
+try {
+  writeFileSync(join(ruleWorld, ".gitignore"), ignoreText);
+  execFileSync("git", ["init", "-q"], { cwd: ruleWorld, stdio: "ignore" });
+  const expectIgnored = (path: string, ignored: boolean): void => {
+    let actual = false;
+    try {
+      execFileSync("git", ["check-ignore", "-q", "--no-index", path], {
+        cwd: ruleWorld,
+        stdio: "ignore",
+      });
+      actual = true;
+    } catch {
+      actual = false;
+    }
+    if (actual !== ignored) {
+      fail(`git check-ignore reports ${path} ignored=${actual}; expected ignored=${ignored}`);
+    }
+  };
+  expectIgnored("node_modules/@delivery-os/core/index.js", true);
+  expectIgnored("packages/core/dist/index.js", true);
+  expectIgnored("dist/index.js", true);
+  expectIgnored(".ai/local/state.json", true);
+  expectIgnored(".example-app/config.local.yaml", true);
+  expectIgnored("packages/core/.nested/config.local.yaml", false);
+} finally {
+  rmSync(ruleWorld, { recursive: true, force: true });
+}
 
 if (failures.length > 0) {
   for (const message of failures) console.error(`FAIL ignore-rules: ${message}`);

@@ -294,6 +294,8 @@ jobs:
           bun-version: ${{ env.BUN_VERSION }}
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
       - run: pnpm install --frozen-lockfile
+      - name: Fetch base branch for the topology check
+        run: git fetch --no-tags origin main-tools
       - run: pnpm test
 
   ts-boundaries:
@@ -419,6 +421,8 @@ jobs:
           bun-version: ${{ env.BUN_VERSION }}
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
       - run: pnpm install --frozen-lockfile
+      - name: Fetch base branch for the topology check
+        run: git fetch --no-tags origin main-tools
       - name: Run the single aggregate check and record duration
         run: |
           start=$(date +%s)
