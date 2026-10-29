@@ -9,7 +9,8 @@ phases:
   dor_iterations:
     - { iteration: 1, verdict: NOT_READY, date: "2026-10-29T18:25:00Z", artifact: readiness-review/readiness-iter-1.md }
     - { iteration: 2, verdict: NOT_READY, date: "2026-10-29T19:45:00Z", artifact: readiness-review/readiness-iter-2.md }
-  dor_check: { started: "2026-10-29T18:20:00Z", completed: null }
+    - { iteration: 3, verdict: READY, date: "2026-10-29T20:25:00Z", artifact: readiness-review/readiness-iter-3.md }
+  dor_check: { started: "2026-10-29T18:20:00Z", completed: "2026-10-29T20:30:00Z" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -66,6 +67,9 @@ notes:
     date: 2026-10-29
   - text: "RETRO: gate iter-2 caught guard-scope drift on the exact surface iter-1 checked lightly — adversarial re-review with 'pull the new thread' instruction is paying off twice. Pattern: BOTH DoR catches (adapters-importer rule; ambient-guard scope) are scope-set derivation errors — authors derived rule sets from directory intuition instead of transcribing the binding ADR text verbatim. Standing lesson: any rule scope/allowlist in this change must quote the ADR cell/line it implements."
     type: retro
+    date: 2026-10-29
+  - text: "DoR iteration 3 = READY (10/10 facets PASS; artifact: readiness-review/readiness-iter-3.md). All iter-2 findings verified mechanically closed: byte-checked verbatim ADR L535 quotes in both artifacts; guard self-assertion is a real set-equality gate (under-coverage names missing path, over-coverage caught by state control); allowed-cell controls TC-008:5 / TC-009:15; root-e2e testkit fixture (TC-013 Case E); TC-029 layer row. 3 NON-BLOCKING nits accepted with named handling: (1) ambient ban list is representative enumeration (performance.now would pass) — extend at first content story (surface at PR review); (2) CLI-build/OpenCode-host clean-cruise controls deferred per A-T9, protected by allowlist-shape assertion; (3) harness wording seam covered by TC preconditions. Gate consumed 3/3 iterations — entered delivery exactly at cap."
+    type: info
     date: 2026-10-29
   - text: "Doc-syncer phase-7 input from test-plan author (A-T3): .ai/rules/testing-strategy.md covers docs/bash only — extend it with the TypeScript test layer (bun test + scripts/checks invariants + CI invocation order) during system_spec_update."
     type: info
