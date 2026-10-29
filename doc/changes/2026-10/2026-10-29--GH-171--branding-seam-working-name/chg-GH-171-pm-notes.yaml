@@ -28,7 +28,7 @@ dor_iterations:
   delivery: { started: "2026-10-30T00:15:00Z", completed: "2026-10-30T01:40:00Z" }
   system_spec_update: { started: "2026-10-30T01:50:00Z", completed: "2026-10-30T02:05:00Z" }
   review_fix: { started: "2026-10-30T02:10:00Z", completed: "2026-10-30T02:30:00Z" }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: "2026-10-30T02:35:00Z", completed: "2026-10-30T02:55:00Z" }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
@@ -81,4 +81,7 @@ notes:
     date: 2026-10-30
   - type: info
     text: "Review iter-1 PASS (0 blockers/0 majors/2 low/3 info; artifact code-review/review-iter-1.yaml — reviewer used YAML per sibling convention). Reviewer independently ran all gates green (pnpm check 248 tests, scan 5/5 classes 0 violations, 9 invariant checks, doc-distribution, full-diff token audit: all seed tokens in sanctioned framing, branding/contracts 0 hits, all 15 commits conventional, protected paths untouched, 27/27 TCs non-vacuous, 13/13 ACs verified). LOW findings F-1 (header-exemption substring patterns should be anchored — future hardening) + F-2 (listRepoFiles fail-open on git failure — named failure preferred): OPTIONAL hardening, proposed to owner as PR-time follow-up suggestions (PM does not auto-create tickets). INFO F-4: PR MUST record merge-blocking condition — all 16 ts-* + 7 bash jobs green incl. ts-forbidden-literals on the pushed branch; plus standing owner gates TC-BRANDING-026 (name-freedom ack), TC-BRANDING-020 step 9 (drill clarity), A1 myados ack, A3 distribution flip option. F-3/F-5 presentation notes only (F-5 = drill references future snapshot infrastructure, RSK-6 echo)."
+    date: 2026-10-30
+  - type: info
+    text: "Quality gates GREEN (phase 9, independent @runner battery; full log tmp/run-logs-runner/2026-10-30/gh171-quality-gates.log): pnpm check exit 0 (248 tests/0 fail, typecheck 6/6, depcruise 31 modules 0 violations, 78s); forbidden-literals 0 violations 5/5 classes 2 registered docs; 12 further invariant checks exit 0 (incl. ci-topology 7 bash + 16 TS jobs, supply-chain, pins, license 11 deps, vuln 0 high/critical, exports 5 publishables); doc-distribution no drift (80 docs); bun test tests/boundaries 103/103; 23 bash suites green (16 scripts + 6 tools + 1 bonus); 3 text-to-image suites skipped (paid/external APIs, CI-excluded per ci.yml). Sole exit-1: publish-guard.ts = RED BY DESIGN pre-freeze (passes only in freeze configuration; CI runs its unit test which asserts the pre-freeze fail — PM delegation brief had inverted the expectation; retro: verify gate contracts against source before scripting gate batteries). Lint 1 info (useIndexOf), exit 0, non-blocking. Gates did not dirty the tree."
     date: 2026-10-30
