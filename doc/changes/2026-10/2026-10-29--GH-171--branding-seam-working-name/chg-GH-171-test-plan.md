@@ -1,13 +1,13 @@
 ---
 id: chg-GH-171-test-plan
-status: Proposed
+status: Updated
 created: 2026-10-29T00:00:00Z
-last_updated: 2026-10-29T22:40:00Z
+last_updated: 2026-10-29T23:55:00Z
 owners: ["Juliusz Ćwiąkalski"]
 service: delivery-os
 labels: ["oss-tooling", "branding", "m0", "adr-0003"]
 version_impact: minor
-summary: "Verify the single branding seam: one pure resolver derives all twelve DEC-8 values deterministically from config-driven data and injected environment facts; the BrandIdentity contract lives once in core ./contracts; the forbidden-literal scan covers all five DEC-8 scope classes, fails by file and token, honors exactly the DEC-8 allowlist, and binds in CI; the legacy adapter maps legacy sources with exactly one warning per process and never imports branding; telemetry schema names stay brand-neutral; the rename drill is documented, name-free, and complete; and every existing gate remains green."
+summary: "Verify the single branding seam: one pure resolver derives all twelve DEC-8 values deterministically from config-driven data and injected environment facts; the BrandIdentity contract lives once in core ./contracts; the forbidden-literal scan covers all five DEC-8 scope classes with the docs class anchored to a fixed corpus baseline and permanent registry membership, fails by file and token, honors exactly the DEC-8 allowlist, and binds in CI; the legacy adapter maps legacy sources with exactly one warning per process and never imports branding; telemetry schema names stay brand-neutral; the rename drill is documented, name-free, and complete; and every existing gate remains green."
 links:
   change_spec: ./chg-GH-171-spec.md
   implementation_plan: ./chg-GH-171-plan.md
@@ -28,7 +28,7 @@ The integrity risks guarded here are silent boundary decay, a resolver that acqu
 - Seam integrity: no committed working-name literal, no name-derived value computed outside the resolver, resolver purity (no ambient reads, clock, randomness, or runtime APIs) (F-1, AC-F1-2, NFR-1, NFR-2).
 - `BrandIdentity` single definition in `core ./contracts`; branding imports `./contracts` only; tier matrix green (F-2, AC-F2-1, NFR-7, DM-1).
 - Environment override via injected environment facts: override precedence, no rebuild, neutral override variable, zero ambient reads in branding (F-3, AC-F3-1, NFR-1, DM-2).
-- Forbidden-literal scan: five scope classes, DEC-8 allowlist, seed set, matching semantics, failure path, mutation evidence, CI bindingness, and subsumption of the `.gitignore`-local token scan without weakening the hygiene check (F-4, AC-F4-1, AC-F4-2, AC-F4-3, NFR-3, NFR-4, NFR-8, DM-3, C-8).
+- Forbidden-literal scan: five scope classes, a docs scope anchored to a fixed `corpusBaseline` with permanent registry membership, DEC-8 allowlist, seed set, matching semantics, failure path, mutation evidence, CI bindingness, and subsumption of the `.gitignore`-local token scan without weakening the hygiene check (F-4, AC-F4-1, AC-F4-2, AC-F4-3, NFR-3, NFR-4, NFR-8, DM-3, C-8).
 - Legacy adapter: mapping to parameter-supplied current names, exactly one warning per process, zero when absent, secret-safe warning text, no branding import, no new legacy-prefixed variables, literal confinement and scan allowlist behavior (F-5, AC-F5-1, AC-F5-2, AC-F5-3, NFR-5, NFR-6, NFR-7).
 - Brand-neutral telemetry schema reservation (`delivery.event.v1`, with `delivery.metric.v1` as the informational sibling), producer-name-as-metadata, and absence of an emission path (F-6, AC-F6-1, EVT-1, EVT-2).
 - Rename-drill document completeness, self-containment, name-freedom, and execution obligation (F-7, AC-F7-1, NFR-9).
@@ -40,7 +40,7 @@ The integrity risks guarded here are silent boundary decay, a resolver that acqu
 
 - [OUT] Executing the rename drill, freezing a name, flipping package privacy, applying a branded scope, publishing, or building a release binary (spec §7.2, §7.3, NG-6).
 - [OUT] The layered configuration layer and its wiring (M0-S4), state drivers (M0-S5), telemetry emission, metric implementation, MCP tool implementation, and CLI command implementation (NG-1, NG-4, NG-5).
-- [OUT] Migration or renaming of the pre-existing installed corpus. Per DEC-8 scope-of-claim, the scan claims `packages/**` and **new** user-facing docs only; untouched pre-existing docs are not scanned and are not claimed (NG-2).
+- [OUT] Migration or renaming of the pre-existing installed corpus. Per DEC-8 scope-of-claim, the scan claims `packages/**` and user-facing docs **absent at the fixed `corpusBaseline`** only; docs that already existed at that baseline are not scanned and are not claimed (NG-2, A-T2).
 - [OUT] Any public product name, candidate name, or naming decision. The tests use synthetic names only; detecting a candidate name is not automatable and remains an owner review gate (NG-3, NFR-9).
 - [OUT] Changes to `scripts/*.sh`, `tools/`, `.opencode/`, `.ados-claude/`, or the bash CI jobs. Only non-regression is asserted (NG-8, C-5/C-6/C-8).
 - [OUT] Cloud surfaces, network services, persisted data, and performance/load testing. No such surface exists in this change.
@@ -70,8 +70,8 @@ The integrity risks guarded here are silent boundary decay, a resolver that acqu
 | AC-F2-1 | `BrandIdentity` defined once in `core ./contracts` with the full twelve-value set; branding imports `./contracts` only; tier matrix green | TC-BRANDING-005, TC-BRANDING-006, TC-BRANDING-023 | Covered |
 | AC-F3-1 | Injected override reflects the synthetic name without rebuild; branding has zero ambient environment reads | TC-BRANDING-007, TC-BRANDING-006 | Covered |
 | AC-F8-1 | Tier and ambient rules hold; any new forbidden rule ships with a registered failing negative fixture | TC-BRANDING-006, TC-BRANDING-016, TC-BRANDING-022, TC-BRANDING-023 | Covered |
-| AC-F4-1 | Injecting a seed literal into each of the five scope classes fails the scan, naming file and token, with mutation-test evidence | TC-BRANDING-009 | Covered |
-| AC-F4-2 | Delivered state: five of five classes covered, exactly the DEC-8 allowlist honored, run green | TC-BRANDING-008, TC-BRANDING-010, TC-BRANDING-011, TC-BRANDING-013 | Covered |
+| AC-F4-1 | Injecting a seed literal into each of the five scope classes fails the scan, naming file and token, with mutation-test evidence, including a literal injected into an already-merged registered doc | TC-BRANDING-009, TC-BRANDING-027 | Covered |
+| AC-F4-2 | Delivered state: five of five classes covered, docs scope anchored to a fixed corpus baseline with permanent membership, exactly the DEC-8 allowlist honored, run green | TC-BRANDING-008, TC-BRANDING-010, TC-BRANDING-011, TC-BRANDING-013, TC-BRANDING-027 | Covered |
 | AC-F4-3 | Scan executes as a binding CI job; ci-topology and ci-bindingness green; existing jobs unchanged | TC-BRANDING-012, TC-BRANDING-024 | Covered |
 | AC-F5-1 | Legacy adapter passes the scan under its allowlist entry and contains no token beyond the legacy set used for mapping | TC-BRANDING-011, TC-BRANDING-018 | Covered |
 | AC-F5-2 | Legacy sources map to parameter-supplied current names; exactly one warning per process; zero when no legacy source | TC-BRANDING-014, TC-BRANDING-015 | Covered |
@@ -79,14 +79,14 @@ The integrity risks guarded here are silent boundary decay, a resolver that acqu
 | AC-F6-1 | `delivery.event.v1` reserved brand-neutral; producer name is branding metadata, not schema; no emission path | TC-BRANDING-019 | Covered |
 | AC-F7-1 | Rename drill is self-contained and name-free, passes the scan, covers the full battery, asserts config-glob and root-workspace name-freedom, and states the execution obligation | TC-BRANDING-020, TC-BRANDING-008 | Covered |
 
-**Capability coverage** (no capability left unlinked): F-1 → TC-BRANDING-001, TC-BRANDING-002, TC-BRANDING-003, TC-BRANDING-004, TC-BRANDING-021; F-2 → TC-BRANDING-005, TC-BRANDING-006; F-3 → TC-BRANDING-006, TC-BRANDING-007; F-4 → TC-BRANDING-008, TC-BRANDING-009, TC-BRANDING-010, TC-BRANDING-011, TC-BRANDING-012, TC-BRANDING-013; F-5 → TC-BRANDING-014, TC-BRANDING-015, TC-BRANDING-016, TC-BRANDING-017, TC-BRANDING-018; F-6 → TC-BRANDING-019; F-7 → TC-BRANDING-020; F-8 → TC-BRANDING-006, TC-BRANDING-016, TC-BRANDING-022, TC-BRANDING-023.
+**Capability coverage** (no capability left unlinked): F-1 → TC-BRANDING-001, TC-BRANDING-002, TC-BRANDING-003, TC-BRANDING-004, TC-BRANDING-021; F-2 → TC-BRANDING-005, TC-BRANDING-006; F-3 → TC-BRANDING-006, TC-BRANDING-007; F-4 → TC-BRANDING-008, TC-BRANDING-009, TC-BRANDING-010, TC-BRANDING-011, TC-BRANDING-012, TC-BRANDING-013, TC-BRANDING-027; F-5 → TC-BRANDING-014, TC-BRANDING-015, TC-BRANDING-016, TC-BRANDING-017, TC-BRANDING-018; F-6 → TC-BRANDING-019; F-7 → TC-BRANDING-020; F-8 → TC-BRANDING-006, TC-BRANDING-016, TC-BRANDING-022, TC-BRANDING-023.
 
 **Ticket AC coverage** (spec §17 mapping):
 
 | Ticket AC | Verified by | Notes |
 |-----------|-------------|-------|
 | AC-1 every name-derived value traces to the branding seam | TC-BRANDING-001, TC-BRANDING-002, TC-BRANDING-003, TC-BRANDING-004, TC-BRANDING-005, TC-BRANDING-006, TC-BRANDING-007, TC-BRANDING-016, TC-BRANDING-021, TC-BRANDING-022, TC-BRANDING-023 | Derivation, contract placement, override, confinement, outside-derivation prohibition, and inventory discipline |
-| AC-2 forbidden-literal test fails CI outside the allowlist | TC-BRANDING-008, TC-BRANDING-009, TC-BRANDING-010, TC-BRANDING-011, TC-BRANDING-012, TC-BRANDING-013 | Five-class failure path, exact allowlist, matching semantics, CI bindingness, hygiene subsumption |
+| AC-2 forbidden-literal test fails CI outside the allowlist | TC-BRANDING-008, TC-BRANDING-009, TC-BRANDING-010, TC-BRANDING-011, TC-BRANDING-012, TC-BRANDING-013, TC-BRANDING-027 | Five-class failure path, exact allowlist, matching semantics, CI bindingness, hygiene subsumption, and permanent docs-scope membership after merge |
 | AC-3 legacy adapter itself passes the scan | TC-BRANDING-011, TC-BRANDING-018 | Delivered-state green under the allowlist entry plus reviewed literal inventory |
 | AC-4 legacy environment and config still read with a warning | TC-BRANDING-014, TC-BRANDING-015, TC-BRANDING-016, TC-BRANDING-017 | Mapping, exactly-once warning, secret safety, no branding import, no new legacy variables |
 
@@ -98,7 +98,7 @@ No REST/HTTP surface exists in this change (spec §8.1).
 |--------------|-------------|----------|--------|
 | DM-1 | `BrandIdentity` twelve-value runtime-neutral type in `core ./contracts` | TC-BRANDING-001, TC-BRANDING-004, TC-BRANDING-005 | Covered |
 | DM-2 | Resolver input contract: config-driven working name plus injected environment facts, including the neutral override | TC-BRANDING-003, TC-BRANDING-007 | Covered |
-| DM-3 | Forbidden-literal registry: five scope classes, exact DEC-8 allowlist, seed set, docs scope, growth rule | TC-BRANDING-008, TC-BRANDING-009, TC-BRANDING-010, TC-BRANDING-011 | Covered |
+| DM-3 | Forbidden-literal registry: five scope classes, exact DEC-8 allowlist, seed set, a docs scope anchored to a fixed `corpusBaseline` with permanent membership, growth rule | TC-BRANDING-008, TC-BRANDING-009, TC-BRANDING-010, TC-BRANDING-011, TC-BRANDING-027 | Covered |
 | EVT-1 | `delivery.event.v1` reserved brand-neutral schema name; producer name is branding metadata; no emission | TC-BRANDING-019 | Covered |
 | EVT-2 | `delivery.metric.v1` reserved by the same DEC-8 rule; informational in this change | TC-BRANDING-019 | Covered (informational) |
 
@@ -108,7 +108,7 @@ No REST/HTTP surface exists in this change (spec §8.1).
 |--------|-------------|----------|--------|
 | NFR-1 | Resolver purity: zero ambient environment reads, ambient clock/randomness, or runtime-API imports in branding | TC-BRANDING-006, TC-BRANDING-007 | Covered |
 | NFR-2 | Twelve of twelve values from the resolver; same input → same output; zero values computed outside the resolver in new code | TC-BRANDING-001, TC-BRANDING-002, TC-BRANDING-003, TC-BRANDING-004, TC-BRANDING-021 | Covered |
-| NFR-3 | Five of five scope classes scanned every PR; violation names file and token | TC-BRANDING-008, TC-BRANDING-009, TC-BRANDING-010, TC-BRANDING-011, TC-BRANDING-018 | Covered |
+| NFR-3 | Five of five scope classes scanned every PR, including registered docs that are no longer "new" relative to any recent ref; violation names file and token | TC-BRANDING-008, TC-BRANDING-009, TC-BRANDING-010, TC-BRANDING-011, TC-BRANDING-018, TC-BRANDING-027 | Covered |
 | NFR-4 | At least one mutation proving the failure path; binding CI job; ci-topology and ci-bindingness green | TC-BRANDING-009, TC-BRANDING-012 | Covered |
 | NFR-5 | Exactly one warning per process when any legacy source is read; zero when none; no secret material in warning output | TC-BRANDING-014, TC-BRANDING-015 | Covered |
 | NFR-6 | Zero new pre-freeze-prefixed variables introduced | TC-BRANDING-017 | Covered |
@@ -128,7 +128,7 @@ Three runners, deliberately separated. **`bun test`** owns behaviour and structu
 | Content-inventory discipline | `bun test tests/structure` | `tests/structure/content-inventory.test.ts` + `inventory.json` (updated) | TC-BRANDING-022 |
 | Boundary negative fixtures | `bun test tests/boundaries` | `tests/boundaries/**` + `fixtures/cases.ts` + `fixture-registry.json` | TC-BRANDING-006, TC-BRANDING-023 |
 | Scan invariant | `bun run scripts/checks/forbidden-literals.ts` | `scripts/checks/forbidden-literals.ts` + `forbidden-literals.registry.json` | TC-BRANDING-008 |
-| Scan mutation tests | `bun test tests/checks` | `tests/checks/forbidden-literals.test.ts` | TC-BRANDING-009, TC-BRANDING-010, TC-BRANDING-011, TC-BRANDING-013 |
+| Scan mutation tests | `bun test tests/checks` | `tests/checks/forbidden-literals.test.ts` | TC-BRANDING-009, TC-BRANDING-010, TC-BRANDING-011, TC-BRANDING-013, TC-BRANDING-027 |
 | Hygiene regression | `bun run scripts/checks/ignore-rules.ts` + `bun test tests/checks` | `tests/checks/ignore-rules.test.ts` | TC-BRANDING-013 |
 | CI invariant checks | `bun run scripts/checks/ci-topology.ts`, `ci-bindingness.ts`; `bun test tests/checks` | `tests/checks/ci-checks.test.ts` (updated) | TC-BRANDING-012, TC-BRANDING-024 |
 | Aggregate | `pnpm check` | repo root | TC-BRANDING-024 |
@@ -137,7 +137,7 @@ Three runners, deliberately separated. **`bun test`** owns behaviour and structu
 
 ### 4.1 Forbidden-Literal Scan Contract
 
-The registry at `scripts/checks/forbidden-literals.registry.json` is the single source for scope, allowlist, seed set, and new-doc scope (DM-3). The scan reads it; the mutation tests read the same file so they cannot drift from the implementation.
+The registry at `scripts/checks/forbidden-literals.registry.json` is the single source for scope, allowlist, seed set, the fixed docs baseline, and registered docs membership (DM-3). The scan reads it; the mutation tests read the same file so they cannot drift from the implementation.
 
 | Aspect | Binding contract for this change | Source |
 |--------|----------------------------------|--------|
@@ -145,17 +145,18 @@ The registry at `scripts/checks/forbidden-literals.registry.json` is the single 
 | Scope class 2 — root manifests | `package.json`, `pnpm-lock.yaml` | Spec Appendix B; ADR-0003 root workspace list |
 | Scope class 3 — root workspace files | `pnpm-workspace.yaml`, `tsconfig.json`, `tsconfig.base.json`, `biome.json`, `commitlint.config.js`, `.dependency-cruiser.cjs`, `.bun-version`, `.changeset/config.json`, `bunfig.toml` | ADR-0003 root workspace list |
 | Scope class 4 — ignore rules | `.gitignore` (whole file, line-oriented) | Spec Appendix B |
-| Scope class 5 — new user-facing docs | Docs **added** relative to the delivery base under `doc/**`, excluding `doc/decisions/**` and `doc/changes/**`, and listed in the reviewed `newUserFacingDocs` registry. A docs-scope meta-check fails when a doc added versus base is absent from the registry. Untouched pre-existing corpus is out of claim (A-T2). | Spec Appendix B and scope-of-claim |
+| Scope class 5 — user-facing docs added since the corpus baseline | Docs under the user-facing roots (`doc/**` minus `doc/changes/**` and `doc/decisions/**`) that are **absent at the fixed `corpusBaseline`** commit, whether added in this PR or any earlier merged PR, and that are listed in the reviewed `registered` registry. Membership is conferred permanently at registration and is never re-derived from a moveable comparison ref. Pre-existing corpus docs present at the baseline remain out of claim (A-T2). | Spec Appendix B and scope-of-claim |
+| Corpus baseline | The registry records `corpusBaseline: "32784af"` — the last pre-scan commit on `main-tools` (GH-170 merge), written as a full commit SHA, never a branch or ref name. It is fixed: ordinary changes never advance it. The docs-scope meta-check asserts (docs absent at baseline ⊆ `registered`) ∧ (`registered` ⊆ docs present in the tree ∧ absent at baseline), so a registered doc stays in scope forever, a registry entry naming a pre-existing corpus doc or a missing doc fails, and a baseline advanced past a registered doc fails naming that doc. An absent, non-SHA, or unreachable baseline fails closed with a named error. | DM-3, A-T2, TC-BRANDING-008, TC-BRANDING-009, TC-BRANDING-027 |
 | Seed literal set | Exactly `ados`, `ADOS_`, `~/.ados`; grows by one literal per frozen name in the freeze change | Spec Appendix B, DEC-8 growth rule |
 | Allowlist | Exactly five entries: `packages/core/src/branding/**`; `packages/adapters/src/legacy/**`; `doc/decisions/**`; `doc/changes/**`; required license/source header lines | Spec Appendix B |
 | Matching semantics | Case-insensitive token match. A seed token matches when it is delimited from lowercase ASCII letters on both sides: start/end of file, whitespace, punctuation, digit, slash, dot, underscore, hyphen, `~`, `@`, or an uppercase letter. Thus `ados`, `Ados`, `ADOS_`, `~/.ados`, `ados-cli`, `.ados`, `adosRuntime`, and `2ados` match; `avocados`, `mikados`, `paradosis`, and `agentic-delivery-os` do not. The contract is exercised by committed true-positive and false-positive corpora (TC-BRANDING-010). | RSK-2, spec §14 (matching semantics delegated to delivery planning) |
 | Failure behavior | Non-zero exit naming the offending file and token for every violation; all violations in one run, not first-only | Spec Appendix B |
-| CI binding | One additive `ts-forbidden-literals` job in the existing `ts-*` fast loop; no `continue-on-error`, no OR-true shell fallback, no `set +e`, or advisory construct; `ci-topology` and `ci-bindingness` stay green; the GH-170 aggregate chain remains exactly five steps | Spec §8.4, AC-F4-3, NFR-4 |
+| CI binding | One additive `ts-forbidden-literals` job in the existing `ts-*` fast loop; no `continue-on-error`, no OR-true shell fallback, no `set +e`, or advisory construct; `ci-topology` and `ci-bindingness` stay green; the GH-170 aggregate chain remains exactly five steps; the job makes the `corpusBaseline` commit reachable in the checkout | Spec §8.4, AC-F4-3, NFR-4 |
 | Subsumption | The `.gitignore`-local token scan in `scripts/checks/ignore-rules.ts` is subsumed by the full-scope scan. The hygiene check keeps its four coverage classes and rename-survival assertions; no existing check is removed or weakened (C-8). | Spec F-4, C-8 |
 
 **Root scope is the ADR-named list, not every root file.** Scope classes 2 and 3 are the ADR-0003 root workspace set: the root `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `tsconfig.json`, `tsconfig.base.json`, `biome.json`, `commitlint.config.js`, `.dependency-cruiser.cjs`, `.bun-version`, plus the workspace-adjacent `.changeset/config.json` and `bunfig.toml`. Pre-existing corpus files in the repository root and dot-directories (`.claude-plugin/**`, `.opencode/**`, `.ados-claude/**`, `assets/**`, `AGENTS.md`, `README.md`, `CLAUDE.md`) are outside the five classes and are not scanned; they migrate with the corpus. A scan that walks every root file would fail on the pre-existing corpus and is a scope defect, not a stricter check.
 
-**Delivered-state rule:** the live tree is green. The only seed literals in scope are inside the two allowlisted package subpaths, and the registered new doc is name-free.
+**Delivered-state rule:** the live tree is green on the merge commit of this change **and on every successor commit on the delivery branch**. The only seed literals in scope are inside the two allowlisted package subpaths; every doc registered for class 5 is name-free. The registered drill doc does not leave scope when this PR merges: its membership derives from absence at the fixed `corpusBaseline`, not from newness relative to `HEAD` or `origin/main-tools`.
 
 ### 4.2 Scope Class to Failure-Fixture to TC Matrix
 
@@ -167,9 +168,9 @@ Every scope class has its own registered true-positive mutation, so a class that
 | Root manifests | Add `ados` to a temp `package.json` field | Clean root manifest passes | Non-zero; names the manifest and token | 009, 011 |
 | Root workspace files | Add `ADOS_` to a temp `tsconfig.base.json` or `pnpm-workspace.yaml` | Clean file passes | Non-zero; names the file and `ADOS_` | 009, 011 |
 | `.gitignore` | Append a line containing `~/.ados` or `ados` | No seed literal in the live `.gitignore` | Non-zero; names `.gitignore` and the token | 009, 011 |
-| New user-facing docs | Add a new doc under `doc/**` containing `ados`, listed in the temp docs registry | Added doc absent from the docs registry fails the docs-scope meta-check; a pre-existing corpus doc untouched is not scanned; allowlisted `doc/changes/**` doc is not scanned | Non-zero; names the doc and token, or names the unregistered doc | 009, 010, 011 |
+| User-facing docs (baseline-anchored) | Add a doc under `doc/**` that is absent at the temp `corpusBaseline` commit, register it, and put `ados` in it | A doc present at the baseline is not scanned; an allowlisted `doc/changes/**` doc is not scanned | Non-zero; names the doc and token, or names the unregistered doc | 009, 010, 011, 027 |
 
-**Mutation-test count.** At least five failing mutations (one per scope class) plus the docs-scope meta-check mutation. Controls: five allowlist entries clean; true-positive corpus (all seed forms and delimiter variants) matches; false-positive corpus does not match; a missing base reference fails closed with a message rather than silently skipping the docs class (A-T2).
+**Mutation-test count.** At least five failing mutations (one per scope class), the docs-scope meta-check mutations (unregistered doc absent at baseline), and the baseline-anchoring mutations: an injected literal in a registered doc at a post-merge successor commit still fails; deleting a registry entry fails the meta-check; removing, ref-typing, or advancing `corpusBaseline` past a registered doc fails the registry-shape/meta-check assertion (TC-BRANDING-027). Controls: five allowlist entries clean; true-positive corpus (all seed forms and delimiter variants) matches; false-positive corpus does not match; a doc present at the baseline is out of scope; a missing or unreachable baseline commit fails closed with a named error rather than silently skipping the docs class (A-T2).
 
 ### 4.3 Legacy Adapter Warning Harness
 
@@ -207,6 +208,7 @@ The exactly-once rule is process-scoped, so the decisive test runs in a child pr
 | TC-BRANDING-024 | Aggregate check and existing bash/CI gates unchanged and green | Regression | Critical | High | AC-F4-3, NFR-8 |
 | TC-BRANDING-025 | No new dependencies; frozen lockfile and license audit stay green | Regression | Important | High | NFR-8 |
 | TC-BRANDING-026 | Artifact name-freedom: synthetic names only, no candidate names | Manual | Critical | High | NFR-9, G-6 |
+| TC-BRANDING-027 | Docs scope is anchored to a fixed corpus baseline and registered membership is permanent | Regression | Critical | High | AC-F4-1, AC-F4-2, NFR-3, DM-3 |
 
 ### 5.2 Scenario Details
 
@@ -428,22 +430,23 @@ The exactly-once rule is process-scoped, so the decisive test runs in a child pr
 
 **Preconditions**:
 
-- The scan and registry are implemented; the rename-drill doc is added and registered in `newUserFacingDocs`.
+- The scan and registry are implemented; the rename-drill doc is added and registered in `registered`.
+- The `corpusBaseline` commit (`32784af`) is reachable in the local clone.
 
 **Steps**:
 
-1. Run the scan on the live tree with the delivery base available: `bun run scripts/checks/forbidden-literals.ts --base origin/main-tools`.
-2. Assert exit code 0 and that the output reports all five scope classes as covered.
-3. Read the registry and assert it declares exactly five scope classes with non-empty roots; exactly the three seed tokens; exactly the five allowlist entries from Appendix B; and at least the rename-drill document in `newUserFacingDocs`. The root-workspace class must name the ADR-required files (`pnpm-workspace.yaml`, `tsconfig.base.json`, the solution `tsconfig.json`, `biome.json`, `commitlint.config.js`, `.dependency-cruiser.cjs`, `.bun-version`) and the root-manifest class must name `package.json` and `pnpm-lock.yaml`; a narrower list fails the assertion.
-4. Assert the docs-scope meta-check reports every doc added versus base under the user-facing roots as either registered or excluded by the explicit `doc/changes/**`/`doc/decisions/**` allowlist.
-5. Assert every `newUserFacingDocs` entry corresponds to a doc actually added versus base; an orphan entry, or an entry naming a pre-existing corpus doc, fails the registry-shape assertion.
+1. Run the scan on the live tree with the `corpusBaseline` commit present: `bun run scripts/checks/forbidden-literals.ts`.
+2. Assert exit code 0 and that the output reports all five scope classes as covered, naming the registered docs actually scanned (not a count derived from a diff versus a recent ref).
+3. Read the registry and assert it declares exactly five scope classes with non-empty roots; exactly the three seed tokens; exactly the five allowlist entries from Appendix B; and a `corpusBaseline` that is a full commit SHA equal to `32784af` (never a branch, tag, or `HEAD`-relative expression). The root-workspace class must name the ADR-required files (`pnpm-workspace.yaml`, `tsconfig.base.json`, the solution `tsconfig.json`, `biome.json`, `commitlint.config.js`, `.dependency-cruiser.cjs`, `.bun-version`) and the root-manifest class must name `package.json` and `pnpm-lock.yaml`; a narrower list fails the assertion.
+4. Assert the docs-scope meta-check reports every doc under the user-facing roots that is absent at `corpusBaseline` as either registered or excluded by the explicit `doc/changes/**`/`doc/decisions/**` allowlist. The registry must name at least the rename-drill document.
+5. Assert the registry shape is baseline-anchored and stable: `registered` is an explicit list; there is no derived "added versus base/HEAD" membership mode; every entry names a doc present in the tree and absent at `corpusBaseline`; the drill doc is accepted even though it is no longer "new" relative to the latest commit.
 6. Assert the scan does not report a violation for the allowlisted branding subpath, legacy adapter subpath, decision records, historical change artifacts, or license/source header lines.
-7. Assert the scan reads repository content only: no network call, no environment-derived path, and no write to the tree (`git status --porcelain` clean after the run).
+7. Assert the scan reads repository content and local git history only: no network call, no environment-derived path, and no write to the tree (`git status --porcelain` clean after the run).
 
 **Expected Outcome**:
 
-- The delivered tree is green with five of five classes covered and exactly the DEC-8 allowlist honored.
-- The registry is complete and contains no extra allowlist entry.
+- The delivered tree is green with five of five classes covered, a fixed baseline, and exactly the DEC-8 allowlist honored.
+- The registry is complete, baseline-anchored, and contains no extra allowlist entry and no base-relative membership rule.
 - A clean working tree after the run proves the scan is read-only.
 
 #### TC-BRANDING-009 - Scan fails on a seed literal in each scope class
@@ -468,16 +471,16 @@ The exactly-once rule is process-scoped, so the decisive test runs in a child pr
 2. **Root manifest class:** add `"ados"` to a temp `package.json` field; assert non-zero naming the manifest and token.
 3. **Root workspace class:** add `ADOS_` to a temp `tsconfig.base.json`; assert non-zero naming the file and token.
 4. **Ignore class:** append a line containing `~/.ados` to a temp `.gitignore`; assert non-zero naming `.gitignore` and the token.
-5. **New doc class:** add a new doc under `doc/guides/` listed in the temp `newUserFacingDocs` registry and containing `ados`; assert non-zero naming the doc and token.
-6. **Docs-scope meta-check:** add a new doc versus a temp base commit but omit it from `newUserFacingDocs`; assert the meta-check fails naming the unregistered doc, even if the doc is otherwise clean.
+5. **User-facing docs class:** create a temp git repository with a `corpusBaseline` commit, add a doc under `doc/guides/` that is absent at that baseline, register it, and put `ados` in it; assert non-zero naming the doc and token.
+6. **Docs-scope meta-check:** add a doc absent at the temp baseline but omit it from `registered`; assert the meta-check fails naming the unregistered doc, even if the doc is otherwise clean.
 7. Repeat each case with the other seed forms (`ADOS_`, `~/.ados`) at least once, asserting all three tokens are detected.
 8. Assert every failing run reports all violations in the same run, not only the first.
-9. Run the docs-scope meta-check with an unavailable base ref (and with a shallow history) and assert it fails closed with a named missing-base error rather than silently skipping the docs class.
+9. Run the docs-scope meta-check in a shallow clone or with the `corpusBaseline` commit unavailable and assert it fails closed with a named missing-baseline error rather than silently skipping the docs class.
 
 **Expected Outcome**:
 
-- Five failing scope-class mutations plus one docs-scope mutation, each exiting non-zero with the file and token (or the unregistered doc) named.
-- A missing base ref fails closed with a named error; the docs class is never silently skipped.
+- Five failing scope-class mutations plus the docs-scope mutation, each exiting non-zero with the file and token (or the unregistered doc) named.
+- A missing or unreachable baseline commit fails closed with a named error; the docs class is never silently skipped.
 - No mutation passes; the failure path is proven for every class.
 
 #### TC-BRANDING-010 - Scan matching distinguishes seed tokens from ordinary words
@@ -550,16 +553,16 @@ The exactly-once rule is process-scoped, so the decisive test runs in a child pr
 
 **Preconditions**:
 
-- The `ts-forbidden-literals` job is added and runs the scan with a base ref fetched (`fetch-depth: 0` or an explicit base checkout).
+- The `ts-forbidden-literals` job is added and runs the scan with the `corpusBaseline` commit reachable (`fetch-depth: 0` or an explicit fetch of the baseline commit).
 - `TS_JOBS` in `scripts/checks/ci-topology.ts` is updated with the new job id.
 
 **Steps**:
 
 1. Assert `ci.yml` declares `ts-forbidden-literals` on `pull_request` targeting `main-tools` and on pushes to the delivery branch.
-2. Assert the job invokes `bun run scripts/checks/forbidden-literals.ts` (and the docs-scope meta-check where applicable) and has no `continue-on-error`, `|| true`, `set +e`, or `if: always()` on the gate step.
+2. Assert the job invokes `bun run scripts/checks/forbidden-literals.ts` (the docs-scope meta-check resolves `corpusBaseline` from the registry) and makes the baseline commit reachable; assert no `continue-on-error`, `|| true`, `set +e`, or `if: always()` on the gate step.
 3. Run `bun run scripts/checks/ci-topology.ts` and assert exit 0: all bash jobs present, all `ts-*` jobs including the new one present, triggers correct, additions only.
 4. Run `bun run scripts/checks/ci-bindingness.ts` and assert exit 0.
-5. Mutation (temp copy): add `continue-on-error: true` to `ts-forbidden-literals`; assert `ci-bindingness` fails naming the job and line. Remove the job from `ci.yml`; assert `ci-topology` fails naming it.
+5. Mutation (temp copy): add `continue-on-error: true` to `ts-forbidden-literals`; assert `ci-bindingness` fails naming the job and line. Remove the job from `ci.yml`; assert `ci-topology` fails naming it. Remove the baseline-availability step; assert the new job assertion fails naming the missing baseline fetch.
 6. Assert the GH-170 aggregate `check` chain remains exactly five steps; the scan joins as a named CI job, not by mutating the aggregate chain (TC-BRANDING-024 corroborates).
 
 **Expected Outcome**:
@@ -786,13 +789,13 @@ The exactly-once rule is process-scoped, so the decisive test runs in a child pr
 
 **Preconditions**:
 
-- The drill document is added and registered in `newUserFacingDocs`.
+- The drill document is added and registered in the scan's baseline-anchored docs scope.
 - The document uses stable checklist anchors (for example `RD-1` through `RD-11`) so the content test is not wording-brittle.
 
 **Steps**:
 
-1. Assert the document exists at the delivery-bound path and is registered in the scan's new-doc scope.
-2. Assert the document declares its distribution class in frontmatter (`ados_distribution: redistributable` for `doc/guides/**`) and that `bash scripts/.tests/test-doc-distribution.sh` passes.
+1. Assert the document exists at the delivery-bound path and is registered in the scan's baseline-anchored docs scope.
+2. Assert the document declares a valid `ados_distribution` marker — the delivery plan binds `internal` for `doc/guides/rename-drill.md`; the assertion target is a valid enum value, so an owner-approved one-word flip to `redistributable` at PR review still passes — and that `bash scripts/.tests/test-doc-distribution.sh` passes.
 3. Assert it is self-contained: it defines its procedure without linking into `doc/changes/**`, `.ai/local/**`, or any private artifact; it names gates and commands directly.
 4. Assert it is name-free: no seed literal and no product/candidate name; it references "the CLI", "the runtime", and "the product directory" generically.
 5. Assert the full battery is present: temporary-copy replacement of branding values and the legacy mapping; typecheck; unit and integration tests; boundary tests; the forbidden-literal test; binary build; package publish dry-run; MCP tool-list snapshot; OpenCode tool-list snapshot.
@@ -804,7 +807,7 @@ The exactly-once rule is process-scoped, so the decisive test runs in a child pr
 **Expected Outcome**:
 
 - The drill covers the complete DEC-8 battery, the config-glob and root-workspace assertions, and the execution obligation.
-- The document is self-contained and name-free, and it passes the scan as a new user-facing doc.
+- The document is self-contained and name-free, and it passes the scan as a baseline-anchored registered user-facing doc.
 - Missing a battery row or the obligation fails the automated check.
 
 #### TC-BRANDING-021 - No name-derived value is computed outside the resolver and no working-name literal is committed
@@ -987,15 +990,49 @@ The exactly-once rule is process-scoped, so the decisive test runs in a child pr
 - The automated scan proves code/new-doc token-freedom; the owner review covers what a scan cannot know.
 - A leak is a blocking defect.
 
+#### TC-BRANDING-027 - Docs scope is anchored to a fixed corpus baseline and registered membership is permanent
+
+**Scenario Type**: Regression
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-4, AC-F4-1, AC-F4-2, NFR-3, DM-3
+**Test Type(s)**: Mutation / Integration
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/checks/forbidden-literals.test.ts`; temp git repositories only
+**Tags**: @scan, @scope-lifetime, @baseline-anchor, @mutation
+
+**Preconditions**:
+
+- The scan reads `corpusBaseline` and `registered` from the registry (§4.1).
+- The test builds a temp git repository modelling the full document lifetime; it never writes to the live workspace.
+
+**Steps**:
+
+1. Build a temp repository: commit `B` contains a pre-existing doc under the user-facing roots but no drill doc and is recorded as `corpusBaseline`; commit `D` adds the drill doc and registers it; commit `M` represents the merge onto the integration branch; commit `S` is a successor change that touches nothing under `doc/`.
+2. At `M` and again at `S`, run the scan and assert exit 0, and that the output lists the registered drill doc as inside the class-5 scope (scanned, not skipped). Assert membership is not recomputed from "docs added versus the current base/HEAD".
+3. Assert the registry shape confers permanent membership: an explicit `corpusBaseline` commit SHA plus an explicit `registered` list, with no code path that derives class-5 membership from a moveable comparison ref.
+4. **Post-merge literal injection:** at `S`, inject `ados` into the registered drill doc without adding any new doc or touching any other file; assert the scan exits non-zero naming the doc and the token. The doc must not have left scope merely because the change that introduced it has merged.
+5. **Scope-decay mutation A (entry removal):** at `S`, delete the drill doc's `registered` entry; assert the docs-scope meta-check fails naming the doc as unregistered (present in the tree, absent at the baseline, not registered).
+6. **Scope-decay mutation B (un-anchoring):** at `S`, (i) remove `corpusBaseline` from a temp registry, and (ii) replace it with a moveable ref (the temp repo's `main` branch, then `HEAD`); assert each fails the registry-shape assertion naming the baseline field and that neither run silently skips class 5.
+7. **Scope-decay mutation C (baseline advance):** at `S`, advance `corpusBaseline` to a commit at or after `D`; assert the docs-scope meta-check fails naming the registered drill doc as "present at baseline" — the baseline cannot silently swallow a registered doc.
+8. **Fail-closed:** clone the temp repository shallowly so the `corpusBaseline` commit is unreachable and run the scan; assert non-zero exit with a named missing-baseline error and no class-5 skip.
+9. Assert the live workspace is untouched by these runs (`git status --porcelain` clean).
+
+**Expected Outcome**:
+
+- A registered doc is scanned permanently, not only while it is "new" relative to a recent ref; a seed literal added to it in any later change fails CI.
+- Removing a registry entry, un-anchoring the baseline, or advancing the baseline past a registered doc fails the check by name; the scope cannot decay silently.
+- An unreachable baseline commit fails closed with a named error.
+
 ## 6. Environments and Test Data
 
 ### 6.1 Environments
 
 | Environment | Requirements | Notes |
 |-------------|--------------|-------|
-| Local dev (delivery) | Bun pinned by `.bun-version`; pnpm pinned by `packageManager`; git with `origin/main-tools` fetched; network for install only | The scan's docs-scope meta-check needs the base ref; the static scan and all `bun test` suites run offline after install |
-| CI (GitHub Actions, `ubuntu-latest`) | Frozen-lockfile install; Bun/pnpm from pinned sources; `fetch-depth: 0` or an explicit base checkout for the scan | Authoritative for TC-BRANDING-012, TC-BRANDING-024, TC-BRANDING-025 and all PR gates |
-| Temp fixture trees | `mkdtemp` under the OS temp dir; no network; no writes to the live tree | TC-BRANDING-009, TC-BRANDING-010, TC-BRANDING-011, TC-BRANDING-013, TC-BRANDING-018, TC-BRANDING-021, TC-BRANDING-022, TC-BRANDING-023 |
+| Local dev (delivery) | Bun pinned by `.bun-version`; pnpm pinned by `packageManager`; git with the `corpusBaseline` commit (`32784af`) reachable in the clone; network for install only | The scan's docs-scope meta-check resolves the fixed baseline commit from the registry; the static scan and all `bun test` suites run offline after install |
+| CI (GitHub Actions, `ubuntu-latest`) | Frozen-lockfile install; Bun/pnpm from pinned sources; `fetch-depth: 0` or an explicit fetch making the `corpusBaseline` commit reachable | Authoritative for TC-BRANDING-012, TC-BRANDING-024, TC-BRANDING-025, TC-BRANDING-027 and all PR gates |
+| Temp fixture trees | `mkdtemp` under the OS temp dir; no network; no writes to the live tree | TC-BRANDING-009, TC-BRANDING-010, TC-BRANDING-011, TC-BRANDING-013, TC-BRANDING-018, TC-BRANDING-021, TC-BRANDING-022, TC-BRANDING-023, TC-BRANDING-027 |
 | Child-process probes | Bun runtime; no network; injected environment records only | TC-BRANDING-014, TC-BRANDING-015 |
 
 ### 6.2 Test Data
@@ -1007,7 +1044,8 @@ The exactly-once rule is process-scoped, so the decisive test runs in a child pr
 | Legacy seed tokens | `ados`, `ADOS_`, `~/.ados` used only in the legacy adapter mapping and scan-seed/-negative fixtures | Read-only; never a live product token |
 | Legacy literal inventory | `tests/fixtures/legacy/literal-inventory.json` | Reviewed; new literals require an update |
 | Scan true/false-positive corpora | `tests/fixtures/forbidden-literals/{true,false}-positives.json` | Read-only |
-| Scan registry | `scripts/checks/forbidden-literals.registry.json` — scope classes, seed set, allowlist, `newUserFacingDocs` | Read-only; allowlist/scope edits require review |
+| Scan registry | `scripts/checks/forbidden-literals.registry.json` — scope classes, seed set, allowlist, fixed `corpusBaseline` (`32784af`), `registered` docs list | Read-only; allowlist/scope/baseline/registry edits require review |
+| Temp git repositories | Generated per run in `mkdtemp` with synthetic commits `B`/`D`/`M`/`S` modelling the docs lifecycle | Deleted at test end; never in-tree (TC-BRANDING-027) |
 | Warning probe fixtures | `tests/fixtures/legacy/warn-probe.ts`; synthetic secret `synthetic-secret-value` | Read-only; generated JSON is discarded |
 | Mutated temp trees | Generated per run in `mkdtemp` | Deleted at test end; never in-tree |
 | CI workflow temp copies | `.github/workflows/ci.yml` copied before mutation | Read-only source; temp copy mutated |
@@ -1015,7 +1053,7 @@ The exactly-once rule is process-scoped, so the decisive test runs in a child pr
 ### 6.3 Isolation Strategy
 
 - Every mutation-style test copies the minimal inputs into a temp directory; nothing under version control is written during a test run (`git status --porcelain` must be clean after the full suite — asserted in TC-BRANDING-024).
-- The scan is read-only over repository content; the docs-scope meta-check reads git history but writes nothing.
+- The scan is read-only over repository content; the docs-scope meta-check resolves the fixed `corpusBaseline` commit in local git history but writes nothing. The docs-lifecycle tests (TC-BRANDING-027) run against a temp git repository so no ref or history in the live clone is created, moved, or shallow-cloned.
 - The legacy warning probes run in child processes so the process-scoped once-only state is real, not simulated by a module-scoped test hook.
 - The resolver tests use injected facts and synthetic names only; they never read the real process environment.
 - Boundary and ambient fixtures use the existing `mkdtemp` harness and production configuration copied verbatim; no live-tree probe.
@@ -1033,11 +1071,11 @@ All TCs are automated except the manual owner-constraint review in TC-BRANDING-0
 | TC-BRANDING-005 | `tests/structure/branding-contract.test.ts` | `bun test tests/structure/branding-contract.test.ts` | temp-copy field removal/duplication | To Implement |
 | TC-BRANDING-006 | existing `tests/boundaries/**` + `tests/structure/branding-seam.test.ts` | `bun test tests/boundaries`; `bun run scripts/checks/ambient-globals.ts` | temp-copy ambient/tier probes (existing fixtures) | Existing – Update |
 | TC-BRANDING-007 | `tests/behaviour/branding-resolver.test.ts` + `tests/fixtures/branding/edge.ts` | `bun test tests/behaviour/branding-resolver.test.ts` | injected facts; no build | To Implement |
-| TC-BRANDING-008 | `scripts/checks/forbidden-literals.ts` + registry | `bun run scripts/checks/forbidden-literals.ts --base origin/main-tools` | none | To Implement |
-| TC-BRANDING-009 | `tests/checks/forbidden-literals.test.ts` | `bun test tests/checks/forbidden-literals.test.ts` | five scope-class mutations + docs-scope mutation | To Implement |
+| TC-BRANDING-008 | `scripts/checks/forbidden-literals.ts` + registry | `bun run scripts/checks/forbidden-literals.ts` | none | To Implement |
+| TC-BRANDING-009 | `tests/checks/forbidden-literals.test.ts` | `bun test tests/checks/forbidden-literals.test.ts` | five scope-class mutations + docs-scope mutation + missing-baseline case | To Implement |
 | TC-BRANDING-010 | `tests/checks/forbidden-literals.test.ts` + corpora | same | true/false-positive corpus; vacuity probe | To Implement |
 | TC-BRANDING-011 | `tests/checks/forbidden-literals.test.ts` | same | allowlist add/remove; masking probe | To Implement |
-| TC-BRANDING-012 | `tests/checks/ci-checks.test.ts`; `ci.yml`; `ci-topology.ts` | `bun run scripts/checks/ci-topology.ts`; `bun run scripts/checks/ci-bindingness.ts`; `bun test tests/checks/ci-checks.test.ts` | job removal; `continue-on-error` injection | To Implement |
+| TC-BRANDING-012 | `tests/checks/ci-checks.test.ts`; `ci.yml`; `ci-topology.ts` | `bun run scripts/checks/ci-topology.ts`; `bun run scripts/checks/ci-bindingness.ts`; `bun test tests/checks/ci-checks.test.ts` | job removal; `continue-on-error` injection; baseline-fetch removal | To Implement |
 | TC-BRANDING-013 | `tests/checks/ignore-rules.test.ts`; `scripts/checks/ignore-rules.ts` | `bun run scripts/checks/ignore-rules.ts`; `bun test tests/checks/ignore-rules.test.ts` | temp `.gitignore` mutations | To Implement |
 | TC-BRANDING-014 | `tests/behaviour/legacy-adapter.test.ts` + `tests/fixtures/legacy/warn-probe.ts` | `bun test tests/behaviour/legacy-adapter.test.ts` | child-process probes; injected facts | To Implement |
 | TC-BRANDING-015 | `tests/behaviour/legacy-adapter.test.ts` | same | synthetic secret fixture | To Implement |
@@ -1052,10 +1090,11 @@ All TCs are automated except the manual owner-constraint review in TC-BRANDING-0
 | TC-BRANDING-024 | repo root; existing bash suites | `pnpm check`; `bun test tests/structure tests/behaviour`; `bun test tests/boundaries`; `bash scripts/.tests/test-*.sh`; `bash tools/.tests/test-*.sh` | none | Existing – No Change |
 | TC-BRANDING-025 | `pnpm-lock.yaml`; existing checks | `pnpm install --frozen-lockfile`; `bun run scripts/checks/license-audit.ts`; `bun run scripts/checks/vulnerability-gate.ts` | none | Existing – No Change |
 | TC-BRANDING-026 | PR review record | manual | none | Manual Only |
+| TC-BRANDING-027 | `tests/checks/forbidden-literals.test.ts` (temp git repo) | `bun test tests/checks/forbidden-literals.test.ts` | post-merge literal injection; entry removal; baseline un-anchoring/advance; shallow clone | To Implement |
 
 **Wiring**: `scripts/checks/forbidden-literals.ts` becomes a named `ts-forbidden-literals` CI job and a local `check:forbidden-literals` script. The GH-170 aggregate `check` chain stays exactly five steps; `ci-topology.ts` `TS_JOBS` gains the new job id, and `tests/checks/ci-checks.test.ts` asserts it. Every `scripts/checks/*.ts` file must be invoked by the aggregate or a named job (the existing wiring check enforces this).
 
-**Execution order**: (1) structure and contract checks (005, 019, 021, 022); (2) resolver behaviour (001–004, 007); (3) legacy behaviour and confinement (014–018); (4) scan delivered state (008); (5) scan mutations and matching (009–011, 013); (6) boundary/meta-check (006, 023); (7) CI topology/bindingness (012); (8) aggregate and bash regression (024, 025); (9) manual review (020 clarity, 026 name-freedom).
+**Execution order**: (1) structure and contract checks (005, 019, 021, 022); (2) resolver behaviour (001–004, 007); (3) legacy behaviour and confinement (014–018); (4) scan delivered state (008); (5) scan mutations, matching, and docs-scope lifetime (009–011, 013, 027); (6) boundary/meta-check (006, 023); (7) CI topology/bindingness (012); (8) aggregate and bash regression (024, 025); (9) manual review (020 clarity, 026 name-freedom).
 
 **Evidence commands** (run and record in the change/PR):
 
@@ -1071,7 +1110,7 @@ bun test tests/checks/forbidden-literals.test.ts
 bun test tests/checks/ignore-rules.test.ts
 bun test tests/checks/ci-checks.test.ts
 bun test tests/boundaries
-bun run scripts/checks/forbidden-literals.ts --base origin/main-tools
+bun run scripts/checks/forbidden-literals.ts
 bun run scripts/checks/ignore-rules.ts
 bun run scripts/checks/ambient-globals.ts
 bun run scripts/checks/workspace-entrypoints.ts
@@ -1086,7 +1125,7 @@ git diff --name-only origin/main-tools...HEAD -- scripts tools .opencode .ados-c
 git status --porcelain
 ```
 
-The `git diff` for `scripts` intentionally includes new `scripts/checks/*.ts` files; the no-change assertion applies to existing bash/tool/agent files, not to the new check.
+The `git diff` for `scripts` intentionally includes new `scripts/checks/*.ts` files; the no-change assertion applies to existing bash/tool/agent files, not to the new check. The scan's evidence run requires the registry-recorded `corpusBaseline` commit (`32784af`) to be reachable in the clone; a checkout without it must fail closed rather than skip the docs class.
 
 ## 8. Risks, Assumptions, and Open Questions
 
@@ -1095,8 +1134,8 @@ The `git diff` for `scripts` intentionally includes new `scripts/checks/*.ts` fi
 | ID | Risk | Impact | Probability | Mitigation |
 |----|------|--------|-------------|------------|
 | RSK-T1 | Substring matching trips on ordinary words (`avocados`, `mikados`) or misses an embedded token (`adosRuntime`) | M | M | The matching contract in §4.1; committed true/false-positive corpora (TC-BRANDING-010); failures name file and token for triage; the reserved lowercase-embedding limitation is recorded |
-| RSK-T2 | The docs scope is defined too broadly (false positives on the pre-existing corpus) or too narrowly (a new doc escapes) | H | M | Scope-of-claim interpretation A-T2: added docs only, a reviewed `newUserFacingDocs` registry, and a docs-scope meta-check versus base (TC-BRANDING-008/009); pre-existing corpus is explicitly out of claim |
-| RSK-T3 | The docs-scope meta-check passes silently when the base ref is unavailable or the checkout is shallow | H | L | Fail closed on a missing base with a named error; CI fetches `origin/main-tools`; TC-BRANDING-009 includes the missing-base case |
+| RSK-T2 | The docs scope is defined too broadly (false positives on the pre-existing corpus) or too narrowly (a doc escapes) | H | M | Scope-of-claim interpretation A-T2: docs absent at the fixed `corpusBaseline`, a reviewed `registered` list, and a docs-scope meta-check against that baseline (TC-BRANDING-008/009/027); pre-existing corpus is explicitly out of claim |
+| RSK-T3 | The docs-scope meta-check passes silently when the `corpusBaseline` commit is unavailable or the checkout is shallow | H | L | Fail closed on a missing or unreachable baseline with a named error; CI fetches full history or the baseline commit; TC-BRANDING-009 step 9 and TC-BRANDING-027 step 8 cover it |
 | RSK-T4 | Updating the GH-170 content inventory weakens the empty-but-enforced gate | H | M | Per-file executable allowlist, not a global switch; mutations in TC-BRANDING-022; the "no engine/driver/command" assertions remain |
 | RSK-T5 | The exactly-once warning test is polluted by module cache or test ordering | M | M | Child-process probes for the default process-scoped instance; fresh factory instances for unit-level counts; injected sinks, no test-only reset hook |
 | RSK-T6 | Derivation expectations become a copy of the implementation and cannot catch drift | M | M | Independent `derivation-cases.json` derived from the documented rules; a missing rule row fails TC-BRANDING-004; review the table when rules change |
@@ -1105,14 +1144,15 @@ The `git diff` for `scripts` intentionally includes new `scripts/checks/*.ts` fi
 | RSK-T9 | A candidate or public name leaks through a fixture, comment, commit, or PR text | H | L | Synthetic-name registry (TC-BRANDING-026); automated scan of code/new docs (TC-BRANDING-008); owner PR review is the human gate; test plan/spec use legacy tokens only in quoted scan framing |
 | RSK-T10 | The rename-drill content test is wording-brittle or passes a hollow document | M | M | Stable checklist anchors and required command/gate names; mutation removes a row; manual clarity review |
 | RSK-T11 | The legacy literal-inventory test becomes a rubber stamp if updated casually | M | L | Inventory updates require review; a non-legacy literal fails; the allowlist cannot hide it (TC-BRANDING-018) |
+| RSK-T12 | The docs scope regresses to PR-relative membership, so a registered doc silently leaves scan coverage after merge and a later literal escapes (scope decay) | H | L | Membership is anchored to the fixed `corpusBaseline` in the registry and is permanent once registered; the registry shape forbids a base-relative derivation; TC-BRANDING-027 proves post-merge scanning, entry-removal, un-anchoring, and baseline-advance mutations all fail |
 
 ### 8.2 Assumptions
 
 - **A-T1** — Behaviour is bound by the TCs, not by exact symbol names. Paths and function names marked as assumed (resolver, warning API, drill-doc path) may be bound by the delivery plan without changing the assertions.
-- **A-T2** — Scope class 5 is interpreted per DEC-8 scope-of-claim as **newly added** user-facing docs, not modifications to the pre-existing corpus. A reviewed `newUserFacingDocs` registry names in-scope docs, and a docs-scope meta-check fails any added user-facing doc absent from the registry. Untouched pre-existing docs remain out of claim until the separate corpus migration.
+- **A-T2** — Scope class 5 is interpreted per DEC-8 scope-of-claim as **docs absent at a fixed corpus baseline**, not docs added versus a moveable PR base. The registry records `corpusBaseline: "32784af"` (the last pre-scan commit on `main-tools`) and an explicit `registered` list; membership is permanent once registered. The meta-check asserts (docs absent at baseline ⊆ `registered`) ∧ (`registered` ⊆ docs present in the tree ∧ absent at baseline). Pre-existing docs present at the baseline remain out of claim until the separate corpus migration.
 - **A-T3** — No production runtime-aware edge exists in M0-S2; the override is exercised by an injected-facts test harness. M0-S4 consumes the resolver-input contract without reshaping it. This is deferred wiring, not a test gap.
 - **A-T4** — `tests/**` is not a DEC-8 scan class. All new tests live under `tests/**` (not `packages/*/test/**`), so scan fixtures and legacy tokens never enter the scanned package tree. Test fixtures legitimately contain seed tokens and synthetic names; synthetic-name discipline in tests is enforced by the fixture registry and review, not by the scan.
-- **A-T5** — The scan's docs-scope meta-check runs in CI with `origin/main-tools` available. The static scan (classes 1–4 plus registered docs) is hermetic and runs locally.
+- **A-T5** — The scan's docs-scope meta-check runs in CI and locally with the fixed `corpusBaseline` commit reachable (full history or an explicit fetch of that commit). The static scan (classes 1–4 plus registered docs) is hermetic and runs locally once the baseline commit is present.
 - **A-T6** — The resolver's derivation rules are documented by delivery planning; TC-BRANDING-004 reads an independent expectation table derived from those rules. If a rule is undocumented, TC-BRANDING-004 fails rather than guessing.
 - **A-T7** — The legacy adapter exposes a testable mapping entry point that accepts injected environment facts and a warning sink, plus a factory for an isolated instance; a thin I/O wrapper and the default instance supply the real process environment in production. The default instance's once-only guard is module/process-scoped, and the child-process probe is the authoritative process-level test; unit-level counts use a fresh factory instance, so no test-only reset hook is required in production code.
 - **A-T8** — The new forbidden-literal check is a `scripts/checks/*.ts` invariant, mutation-tested under `tests/checks/**`, and wired as a named CI job; it is not inserted into the GH-170 aggregate chain, which stays at five steps.
@@ -1124,15 +1164,17 @@ The `git diff` for `scripts` intentionally includes new `scripts/checks/*.ts` fi
 | ID | Question | Context | Status | Owner |
 |----|----------|---------|--------|-------|
 | OQ-T1 | Should the scan's matching contract use the lowercase-delimiter rule in §4.1, or a stricter/looser rule? | RSK-2 and spec §14 delegate matching semantics to delivery planning. The proposed rule catches `adosRuntime` while ignoring `avocados`/`mikados`; it deliberately does not catch a fully lowercase embedded identifier such as `myados`. | Resolved for this plan: §4.1 is the binding test contract; a change requires updating the corpora and the registry review | Delivery planning |
-| OQ-T2 | Is "new user-facing docs" added-only or added-plus-modified? | DEC-8 scope-of-claim excludes the pre-existing corpus; the pre-existing corpus already contains seed tokens. A-T2 binds added-only with a reviewed registry; modifying a pre-existing doc is out of claim until the corpus migration. | Resolved for this plan: added-only; residual risk recorded | @pm / owner |
-| OQ-T3 | Where does the drill document live? | The spec requires a self-contained new user-facing doc; the exact path is a delivery-plan decision. | Open — non-blocking; proposed `doc/guides/rename-drill.md`, must be registered in `newUserFacingDocs` | Delivery planning |
+| OQ-T2 | Is the docs scope "new docs only" or "new docs plus modifications to the pre-existing corpus"? | DEC-8 scope-of-claim excludes the pre-existing corpus; the pre-existing corpus already contains seed tokens. A-T2 binds docs absent at the fixed `corpusBaseline`, with permanent registry membership; modifications to a doc that existed at the baseline remain out of claim until the corpus migration. | Resolved for this plan: baseline-anchored, permanent membership; residual risk recorded (RSK-T12) | @pm / owner |
+| OQ-T3 | Where does the drill document live? | The spec requires a self-contained new user-facing doc; the exact path is a delivery-plan decision. | Open — non-blocking; proposed `doc/guides/rename-drill.md`, must be registered in the baseline-anchored `registered` list | Delivery planning |
 | OQ-T4 | Does the resolver expose a runtime constant for the schema name or a type-level reservation? | The contracts subpath is types-only at scaffold; a runtime constant is a reviewed content-inventory exception. | Open — non-blocking; either form is accepted if it is brand-neutral and TC-BRANDING-019 passes | Delivery planning |
+| OQ-T5 | May `corpusBaseline` ever advance? | The baseline is fixed at `32784af` for this change. Only the later corpus-migration change may deliberately move it, and only after the registered docs from the interim period are migrated into the pre-existing corpus and their registry entries removed in the same reviewed change. Ordinary changes never touch it; TC-BRANDING-027 step 7 makes an accidental advance fail closed. | Resolved for this plan: fixed, never advanced by ordinary changes | @pm / owner |
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-10-29 | @test-plan-writer | Initial plan: 26 TCs covering resolver completeness/determinism/fail-closed/derivation, contract placement, branding purity, injected override, full-scope forbidden-literal scan with mutation and CI bindingness, legacy adapter mapping/warning/secret safety/confinement/literal inventory, telemetry neutrality, rename-drill content, seam integrity, content-inventory discipline, boundary meta-check, aggregate/bash regression, dependency/license regression, and the manual name-freedom gate; all 13 ACs, 4 ticket ACs, 9 NFRs, 3 DMs, and 2 EVTs traced |
+| 1.1 | 2026-10-29 | @test-plan-writer | DoR iter-1 remediation: (1) docs scope re-anchored from moveable PR-base membership to the fixed `corpusBaseline` (`32784af`) recorded in the registry with permanent `registered` membership; rewrote §4.1 class 5 + delivered-state rule, §4.2 docs row and mutation count, TC-BRANDING-008/009, TC-BRANDING-012 baseline reachability, A-T2/A-T5, RSK-T2/T3, OQ-T2/T5, and added TC-BRANDING-027 (post-merge permanence, entry-removal, un-anchoring, baseline-advance, fail-closed mutations); (2) fixed TC-BRANDING-020 step 2 to assert the plan-bound `ados_distribution: internal` (valid enum; one-word owner flip note); TC count 26 → 27; 13/13 ACs and 9/9 NFRs still traced |
 
 ## 10. Test Execution Log
 
