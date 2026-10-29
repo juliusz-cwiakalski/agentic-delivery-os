@@ -7,7 +7,7 @@ phases:
   specification: { started: "2026-10-29T22:20:00Z", completed: "2026-10-29T22:35:00Z" }
   test_planning: { started: "2026-10-29T22:40:00Z", completed: "2026-10-29T23:55:00Z" }
   delivery_planning: { started: "2026-10-29T22:55:00Z", completed: "2026-10-29T23:59:30Z" }
-  dor_check: { started: "2026-10-29T23:10:00Z", completed: null }
+  dor_check: { started: "2026-10-29T23:10:00Z", completed: "2026-10-30T00:10:00Z" }
 dor_iterations:
   - iteration: 1
     verdict: NOT_READY
@@ -19,8 +19,12 @@ dor_iterations:
     advisories_nonblocking: "A1 myados reserved-case residual (owner ack at PR recommended); A2 build-time define channel unimplemented (build-env-supplied value per spec DEC-1); A3 internal->redistributable flip is one word if owner prefers; A4 child-probe wording binding; A5 override-variable checks."
     artifact: "readiness-review/readiness-iter-1.md"
   - iteration: 2
-    verdict: PENDING
-    date: null
+    verdict: READY
+    date: "2026-10-30T00:10:00Z"
+    facets: "10/10 PASS; cross_artifact_consistency now PASS; both iter-1 findings verified CLOSED under adversarial scenarios (merge, successor-PR injection, rename, deletion, shallow clone, baseline advance, ref-typed baseline, unregistered new doc, corpus modifications)"
+    blockers: []
+    advisories_nonblocking: "A1 myados reserved-case (owner ack at PR); A2 build-time define deferred to freeze; A3 internal->redistributable one-word flip option at PR; A4 explicit console.warn capture in default-instance probe fixture; A6 future changes adding user-facing docs (incl. doc/spec via doc-syncer) must register them in the same change — add explicit clause to task 7.3 inputs; A7 delivery-time orphan-entry mutation (delete registered doc -> named failure) to complete TC-027 matrix. PM directs @coder to honor A4/A6/A7 in the relevant plan phases."
+    artifact: "readiness-review/readiness-iter-2.md"
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
