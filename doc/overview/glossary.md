@@ -31,13 +31,14 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Four-copy pin check | The CI equality check across `.bun-version`, the root `engines.bun` field, the CI `env.BUN_VERSION`, and the release workflow. `.bun-version` is the source of truth. | Toolchain | — |
 | Lockstep versioning | One version line for the five publishable packages via the changesets fixed group; no package versions independently. | Release | — |
 | Negative fixture | A test that deliberately introduces a forbidden edge and asserts the named boundary rule fails it. A rule without a negative fixture is unenforced and fails the meta-check. | Testing | — |
-| Package matrix | The table of which packages may import which other packages. It is enforced by dependency-cruiser, one rule per importer row. | Boundaries | — |
+| Package matrix | The table of which packages may import which other packages. Forbidden edges are enforced by dependency-cruiser, one rule per importer row; declared edges are enforced by the workspace-entrypoints check. | Boundaries | — |
 | Publish guard | The release-job check that fails when an intended publishable package is still `private: true` or the branded scope has not been applied. The publish job cannot start unless the guard passes. | Release | — |
-| Runtime-API confinement | The rule that runtime imports are permitted only in the `core ./state` driver code, the adapter I/O subpaths, the `cli` build, and the `opencode` host integration. | Boundaries | — |
+| Runtime-API confinement | The rule that runtime imports are permitted only in the `core ./state` driver code, the adapter I/O subpaths (`repo`, `file`, `host`, `session`, `legacy`), the `cli` build, and the `opencode` host integration. | Boundaries | — |
 | SPDX expression | A machine-readable license expression such as `MIT OR Apache-2.0`. The audit parses `AND`/`OR`/parentheses and fails closed on any disallowed branch. | Legal | — |
 | Subpath | A package entrypoint declared in its exports map (for example `core ./contracts`). Cross-package imports use the package name plus a declared subpath; deep `src`/`dist` imports are forbidden. | Boundaries | — |
 | Tier alias (imports alias) | A package-internal layer name declared as a Node `imports` subpath alias (for example `#domain/*` in `core`). The boundary checker resolves aliases, so a forbidden edge fails in alias form and relative form alike. | Boundaries | — |
-| `workspaceImports` | The manifest field where each package declares the workspace-dependency entrypoints it may import. Boundary rules read these declarations, so a new allowed edge requires a manifest change and review. | Boundaries | — |
+| Workspace-entrypoints check | The `check:boundaries` stage (`scripts/checks/workspace-entrypoints.ts`) that enforces `workspaceImports`: declarations must match the expected matrix, every declared edge must resolve to a real export, and no `packages/*/{src,test}` file may import an undeclared `@delivery-os/*` subpath. | Boundaries | — |
+| `workspaceImports` | The manifest field where each package declares the workspace-dependency entrypoints it may import. The workspace-entrypoints check enforces these declarations, so a new allowed edge requires a manifest change and review. | Boundaries | — |
 
 ## Acronyms
 

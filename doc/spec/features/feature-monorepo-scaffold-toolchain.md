@@ -81,7 +81,7 @@ Each package declares its internal layers as `imports` subpath aliases, so viola
 
 ### Declared workspace entrypoints
 
-Each package declares which entrypoints of its workspace dependencies it may import via the `workspaceImports` manifest field. The boundary rules read those declarations, so adding an allowed cross-package edge requires a manifest change and review.
+Each package declares which entrypoints of its workspace dependencies it may import via the `workspaceImports` manifest field. `scripts/checks/workspace-entrypoints.ts` is the live gate for those declarations: it holds the expected matrix, rejects a manifest that declares more or fewer edges than the matrix allows, requires every declared edge to resolve to an existing export, rejects workspace dependencies absent from `workspaceImports`, and scans `packages/*/{src,test}` for undeclared `@delivery-os/*` imports. Adding an allowed cross-package edge therefore requires a manifest change and review.
 
 | Importer | May import from `core` | May import from `adapters` |
 |----------|------------------------|----------------------------|
@@ -100,18 +100,22 @@ Deep imports into another package's `src/` or `dist/`, and relative paths escapi
 - **Deep and relative imports** — no `@delivery-os/<pkg>/(src|dist)/...` deep import and no relative import escaping the importer's package root.
 - **Core tier matrix** — `domain`, `config`, `branding`, and `state` may import `./contracts` only; `app` may import `domain`, `config`, and `./contracts`, but not `branding` or `state` at scaffold.
 - **Testkit dev edges** — production `src` never imports `testkit`; `testkit` imports `core` and `adapters`, never `cli`, `mcp`, or `opencode`.
-- **Runtime-API confinement** — runtime imports are permitted only in the `core ./state` driver code, the adapter I/O subpaths, the `cli` build, and the `opencode` host integration.
+- **Runtime-API confinement** — runtime imports are permitted only in the `core ./state` driver code, the adapter I/O subpaths, the `cli` build, and the `opencode` host integration. The adapter exemption is exactly the ADR I/O subpaths — `repo`, `file`, `host`, `session`, and `legacy`; provider, registry, and remaining adapter subpaths are not exempt.
+
+Package-name specifiers resolve through each manifest's `exports` to built `dist` targets, so the cross-package rules match both forms: `packages/<pkg>/src/...` in-tree and `packages/<pkg>/dist/...` for package-name imports. A `couldNotResolve` catch-all fails any `@delivery-os/*` specifier that resolves to no declared package entrypoint, so an undeclared import fails by name even before a build exists.
+
+`check:boundaries` runs three gates in order: `depcruise packages` against `.dependency-cruiser.cjs`, then `bun run scripts/checks/ambient-globals.ts`, then `bun run scripts/checks/workspace-entrypoints.ts`. The dependency-cruiser rules are static row definitions; the package-name and declared-entrypoint gate is `workspace-entrypoints.ts`.
 
 `bun run scripts/checks/ambient-globals.ts` is the AST guard for two rule ids:
 
 - `ambient-globals-neutral-tiers` — the neutral set (`core` `.` entry, `core/src/contracts/**`, and `core/src/{domain,app,config,branding}/**`) must not use ambient globals (`process`, `Bun`, `Deno`, timers, `fetch`) or ambient clock/randomness (`Date.now`, `Math.random`).
 - `ambient-env-branding` — an environment read (`process.env` / `Bun.env`) inside the branding tier is classified under this rule.
 
-The guard runs as part of `check:boundaries`.
-
 ### Negative fixtures and coverage
 
 Every forbidden rule has at least one registered negative fixture. The harness materializes a throwaway workspace per case in a temporary directory, copies the production boundary configuration verbatim, verifies the clean baseline, injects the forbidden edge, and asserts the named rule fires. Clean-cruise controls prove allowed edges stay green.
+
+Fixture resolution mirrors production: fixture manifests point every `exports` target at `./dist`, and the harness materializes `dist` placeholder files, so package-name probes travel the same `exports`→`dist` path as the live tree. Forbidden edges are probed in package-name and relative-source form; clean-cruise controls prove allowed package-name edges stay green.
 
 `tests/boundaries/fixture-coverage.test.ts` is the meta-check: it fails when a configured rule has no registered case, when a mandatory importer rule is missing, when either `subpath-undeclared` form is unregistered, or when the ambient registry does not cover the neutral set. A rule without a failing fixture is therefore unenforced.
 
@@ -127,7 +131,7 @@ Every forbidden rule has at least one registered negative fixture. The harness m
 | Commit messages | One root `commitlint.config.js` (Conventional Commits); CI commitlint is the authority |
 | Local hook | `.husky/commit-msg` is offline, warn-only, non-mutating, and always exits 0 |
 | Build | `tsc` emits declarations, maps, and JavaScript to each package's `dist/` |
-| Boundaries | `dependency-cruiser` + the ambient-globals AST guard |
+| Boundaries | `dependency-cruiser`, the ambient-globals AST guard, and the workspace-entrypoints check, chained in `check:boundaries` |
 
 ### Quality entry points
 
@@ -229,7 +233,7 @@ core              ──> no workspace dependencies
 | Level | Scope | Mechanism |
 |-------|-------|-----------|
 | Unit/structure | Package inventory, subpaths, exports, `createRuntime` | `bun test tests/structure` |
-| Boundary | Every forbidden rule, alias and relative form | `bun test tests/boundaries` with the `mkdtemp` harness |
+| Boundary | Every forbidden rule, alias and relative form, on production resolution | `bun test tests/boundaries` with the `mkdtemp` harness; `check:boundaries` for the gate |
 | Fixture coverage | Rule-to-fixture completeness | `tests/boundaries/fixture-coverage.test.ts` |
 | Invariants | Manifests, pins, CI topology, bindingness, supply chain, exports, licenses | `bun run scripts/checks/*.ts` and mutation tests under `tests/checks/**` |
 | Behaviour | pnpm isolation, commit-msg hook | `bun test tests/behaviour` |
