@@ -2,7 +2,7 @@
 id: chg-GH-170-monorepo-scaffold-toolchain
 status: Updated
 created: 2026-10-29T00:00:00Z
-last_updated: 2026-10-29T18:35:00Z
+last_updated: 2026-10-29T19:04:47Z
 owners: ["Juliusz Ćwiąkalski"]
 service: delivery-os
 labels: ["oss-tooling", "monorepo", "m0", "toolchain", "adr-0003"]
@@ -459,6 +459,45 @@ Spec §4.1 table, verified by: fresh-clone aggregate green 0 manual steps (TC-SC
 
 ---
 
+### Remediation R1 — review iteration 1 findings (code-review/review-iter-1.yaml)
+
+**Goal**: Close review iteration 1 findings F-1, F-2, F-3, F-4, F-5, F-8 — make the boundary negative-fixture harness mirror production resolution, chain the entrypoints check into the local aggregate, literalize the TC-015 scope assertion, narrow the runtime-apis adapters exemption to the ADR I/O subpaths, fail the license audit closed on unparseable allow-list entries, and harden the AC-F13-1/NFR-8 evidence path to an observed-green CI gate.
+
+**Tasks**:
+
+- [ ] **R1.1 (F-1, critical)** Make boundary negative fixtures mirror production resolution: fixture manifests point exports at `./dist` with dist placeholder files materialized in the temp workspace (build artifacts present, matching production); extend the affected to-path patterns in `.dependency-cruiser.cjs` to BOTH resolution forms (e.g. `^packages/core/(src|dist)/state/`, `^packages/(cli|mcp|opencode)/` surface edges); add a `couldNotResolve` rule for `^@delivery-os/` specifiers (pre-build undeclared imports fail by name); keep clean-cruise controls on both forms. Acceptance: adapters→core `./state`, adapters→core root `.`, cli→mcp, core→testkit FAIL in a production-shaped workspace (exports→dist, dist present) — the reviewer's exact empirically-clean cases now fire; alias/relative forms still fire; controls still cruise clean; `tests/boundaries` green; TC-016 registry reconciled.
+- [ ] **R1.2 (F-2, high)** Chain `bun run scripts/checks/workspace-entrypoints.ts` into the root `check:boundaries` (after depcruise + ambient-globals). Acceptance: forbidden package-name edge in `packages/*/src` fails `pnpm check` locally, not only in CI.
+- [ ] **R1.3 (F-4, medium)** Literalize the TC-015 step-1 assertion: the test asserts the literal ADR scope strings (files === `["packages/core/src/index.ts"]`; directories === the five literal contracts/domain/app/config/branding paths), independent of `ambient-globals.ts` exports. Acceptance: coordinated scope narrowing in `ambient-globals.ts` fails the test.
+- [ ] **R1.4 (F-5, medium)** Narrow the runtime-apis-confinement adapters exemption from `^packages/adapters/` to the ADR I/O subpaths only (`^packages/adapters/src/(repo|file|host|session|legacy)/`) — ADR-verbatim; CLI-build/OpenCode-host structural allowances stay as accepted at DoR (A-T9). Add/adjust the allowlist-shape assertion + control. Acceptance: `node:fs` in `adapters/src/registry` fails; `node:fs` in `adapters/src/file` passes; TC-014 step-5 assertion updated to the narrowed literal set.
+- [ ] **R1.5 (F-8, nit)** `license-audit.ts`: validate every allow_list entry with the SPDX parser; unparseable entry fails closed (mirrors per-dependency treatment). Acceptance: `"MIT OR"` allow_list entry fails the audit.
+- [ ] **R1.6 (F-3, high — plan/tracker amendment, no code)** Amend AC-F13-1/NFR-8 evidence path: CI observation is a PR-time completion gate — record in the plan (P8 test step note + DoD section) that merge is BLOCKED until all 15 `ts-*` jobs AND all bash jobs are observed green on the PR; the orchestrator will encode the same condition in the PR description. Local-equivalent evidence does NOT complete AC-F13-1.
+
+**Deferred (no task)**: F-6 ambient-guard hardening (first content story), F-9 scanner coverage of `release.yml`/bash-block insertions (later hardening), F-7 feature-spec enforcement-table update (doc-syncer, after R1.1/R1.2 settle).
+
+**Acceptance Criteria**:
+
+- Must: every R1 task's stated acceptance holds; `pnpm check` green locally after R1.1–R1.5; AC-F13-1/NFR-8 completes only on observed-green CI (all 15 `ts-*` jobs AND all bash jobs) on the PR (R1.6).
+- Should: fixture set grows only by the production-resolution mirroring and its controls (no per-edge explosion); deferred findings F-6/F-9/F-7 recorded here so they cannot be lost.
+
+**Affected code areas**:
+
+- `tests/boundaries/fixtures/**`, `tests/boundaries/{harness.ts,fixture-registry.json,boundaries.test.ts,fixture-coverage.test.ts}`, `.dependency-cruiser.cjs` (R1.1, R1.4); root `check:boundaries` script (R1.2); TC-015 test (R1.3); `scripts/checks/license-audit.ts` + `tests/fixtures/license/**` (R1.5); this plan's P8 test-step note + DoD evidence section (R1.6 — plan/tracker only, no code)
+
+**System docs to update**:
+
+- none (F-7 feature-spec enforcement-table update deferred to `@doc-syncer` after R1.1/R1.2 settle)
+
+**Tests**:
+
+- `bun test tests/boundaries` → R1.1 production-shaped cases fire, alias/relative still fire, controls clean, registry reconciled; R1.3 literal-scope assertion; R1.4 narrowed exemption + control
+- `pnpm check:boundaries` / `pnpm check` → forbidden package-name edge in `packages/*/src` fails locally (R1.2)
+- `bun test tests/checks` → `"MIT OR"` allow-list entry fails the audit (R1.5)
+- PR CI observation → all 15 `ts-*` jobs AND all bash jobs green before merge (R1.6 gate)
+
+**Completion signal**: `fix(GH-170): remediate review iteration 1 findings (R1.1–R1.6)`
+
+---
+
 ## Test Scenarios
 
 Full definitions: [chg-GH-170-test-plan.md](./chg-GH-170-test-plan.md) §5. **Traceability (phase → ACs → TCs)** — all 17 ACs and all 38 TCs covered:
@@ -476,6 +515,7 @@ Full definitions: [chg-GH-170-test-plan.md](./chg-GH-170-test-plan.md) §5. **Tr
 | 8 — CI fast loop | AC-F13-1, AC-F2-1 (CI), AC-F3-1 (full), AC-F9-1 (CI) | TC-SCAFFOLD-001, TC-SCAFFOLD-017, TC-SCAFFOLD-018, TC-SCAFFOLD-022, TC-SCAFFOLD-023, TC-SCAFFOLD-024, TC-SCAFFOLD-025 (CI half), TC-SCAFFOLD-026 (CI half), TC-SCAFFOLD-029 (CI half), TC-SCAFFOLD-037, TC-SCAFFOLD-038 |
 | 9 — Full verification + recording | AC-F2-1, AC-F9-1 (e2e), AC-F13-1 (observed) | TC-SCAFFOLD-001, TC-SCAFFOLD-022, TC-SCAFFOLD-025, CI observations (023/029/037) |
 | 10 — Finalize | all (DoD) | — (spec reconciliation + doc sync incl. AGENTS.md, glossary, cli-command-registry M0-S1 verification + DoD walkthrough) |
+| R1 — Review-iteration-1 remediation | AC-F1-1, AC-F6-1, AC-F7-1, NFR-2, AC-F13-1 (evidence path), NFR-10 — re-verified | TC-SCAFFOLD-016 (R1.1 registry reconciliation), TC-SCAFFOLD-007 + aggregate wiring (R1.2), TC-SCAFFOLD-015 (R1.3), TC-SCAFFOLD-014 (R1.4), TC-SCAFFOLD-036 (R1.5), AC-F13-1 CI-observation gate on the PR (R1.6) |
 
 **Ticket-AC mapping** (spec §17): AC-1 → Phases 0+8+9 (TC-SCAFFOLD-001/017/022/023); AC-2 → Phases 1+4 (TC-SCAFFOLD-007–012, 016); AC-3 → Phases 1+6 (TC-SCAFFOLD-030/031/032). NFR-7 (CLI startup budget) is deferred by spec §7.3/DEC-5 — not a coverage gap.
 
@@ -505,8 +545,9 @@ Full definitions: [chg-GH-170-test-plan.md](./chg-GH-170-test-plan.md) §5. **Tr
 |---------|------|--------|---------|
 | 1.0 | 2026-10-29 | plan-writer | Initial plan — 11 phases (P0–P10); all 17 ACs and 38 TCs traced; OQ-T4 resolved (push-event commitlint = `origin/main-tools...HEAD` merge-base range); pins resolved at P0 per A-T6, not invented; boundary rules (P4) precede the CI boundary job (P8); fixture-coverage meta-check guards every rule incl. ambient ids. |
 | 1.1 | 2026-10-29 | plan-writer | DoR iter-1 remediation (readiness-iter-1.md findings 1/2/3/7 mirrors): `matrix-adapters-importer` added to task 4.1 mirroring test plan v1.2 §4.1 verbatim (adapters→cli/mcp/opencode forbidden, alias + relative, `severity: 'error'`); task 4.4 fixture cases expanded (TC-008 adapters→surface cases + `./contracts` control; TC-009 whole-package root `.` case; TC-013 per-package probes); task 4.5 meta-check asserts the mandatory importer-rule set and the two `subpath-undeclared` cases incl. adapters-only deletion; P10 doc coverage expanded (10.1a–10.1d: AGENTS.md repo-structure + `scripts/checks/*.ts` exception note, glossary scaffold terms, cli-command-registry M0-S1 verification — all `@doc-syncer` lifecycle-phase-7 work); Artifacts count corrected 17→18 (`ambient-globals.ts` named); `@changesets/cli` devDep added to 6.4. TC count unchanged (38); Phase 4 traceability row unchanged; DEC range verified already DEC-1..DEC-11 (no stale ref in plan). |
-| 1.2 | 2026-10-29 | plan-writer | DoR iter-2 remediation mirror (readiness-iter-2.md finding 1 + nits 3/4; test plan v1.3 §4.1): task 4.2 ambient-guard scope = ADR-0003 DEC-2 "Additional rules" bullet 6 neutrality set verbatim — `packages/core/src/index.ts` (the `.` entry) + `core/src/contracts/**` + `core/src/{domain,app,config,branding}/**` — with the ban list verbatim and the guard's self-scope assertion (TC-015 step 1); `ambient-env-branding` unchanged. Task 4.1 `runtime-apis-confinement` allowed set = the ADR sentence verbatim ("the `core ./state` driver code, the adapter I/O subpaths, the CLI build, and the OpenCode host integration"; CLI-build/OpenCode-host structural, behavioral controls deferred per A-T9, allowlist-shape asserted by TC-014 step 5); any other location forbidden. Task 4.4 mirrors test plan v1.3 counts: TC-008 7 forbidden + 4 new allowed-cell controls (cli/mcp/opencode/testkit-src→adapters/registry); TC-009 +15 allowed controls (surfaces→4 core subpaths, testkit→core `.`/`./contracts`, adapters→`./contracts`); TC-013 Case E root `e2e/`+`bdd/`→testkit passing fixture (synthetic, A-T10; 8 probes + 2 controls + 1 metadata); TC-014 allowlist-shape assertion; TC-015 Cases C+D + per-global sweep = 37 failing + 2 controls. Task 4.5 registry ambient expectations = full neutral set (TC-016 step 5). Test-plan references pinned to v1.3. Rule names unchanged; TC count unchanged (38); spec and test plan untouched. |
+| 1.2 | 2026-10-29 | plan-writer | DoR iter-2 remediation mirror (readiness-iter-2.md finding 1 + nits 3/4; test plan v1.3 §4.1): task 4.2 ambient-guard scope = ADR-0003 DEC-2 "Additional rules" bullet 6 neutrality set verbatim — `packages/core/src/index.ts` (the `.` entry) + `core/src/contracts/**` + `core/src/{domain,app,config,branding}/**` — with the ban list verbatim and the guard's self-scope assertion (TC-015 step 1); `ambient-env-branding` unchanged. Task 4.1 `runtime-apis-confinement` allowed set = the ADR sentence verbatim ("the `core ./state` driver code, the adapter I/O subpaths, the CLI build, and the OpenCode host integration"; CLI-build/OpenCode-host structural, behavioral controls deferred per A-T9, allowlist-shape asserted by TC-014 step 5); any other location forbidden. Task 4.4 mirrors test plan v1.3 counts: TC-008 7 forbidden + 4 new allowed-cell controls (cli/mcp/opencode/testkit-src→adapters/registry); TC-009 +15 allowed controls (surfaces→4 core subpaths, testkit→core `.`/`./contracts`, adapters→`./contracts`); TC-013 Case E root `e2e/`+`bdd/`→testkit passing fixture (synthetic, A-T10; 8 probes + 2 controls + 1 metadata); TC-014 allowlist-shape assertion; TC-015 Cases C+D + per-global sweep = 37 failing + 2 controls. Task 4.5 registry ambient expectations = full neutral set (TC-016 step 5). Test-plan references pinned to v1.3. Rule names unchanged; TC count unchanged (38); this revision authored no spec changes; test plan v1.3 landed separately. |
 | 1.3 | 2026-10-29 | @coder | Execution complete for phases 0–9 and P10.2/P10.3: Execution Log filled with commit hashes, verification results, resolved pins (pnpm 10.18.3, Bun 1.4.4), RSK-4 result, fresh-clone duration (71s), and per-phase deviations. Version impact recorded as **minor** (nothing releases pre-freeze; changesets fixed group owns versioning from the freeze change). Task 10.1 (spec/doc reconciliation incl. AGENTS.md, testing-strategy, glossary, cli-command-registry verification) is deferred to the orchestrator's lifecycle-phase-7 `@doc-syncer` run. |
+| 1.4 | 2026-10-29 | plan-writer | Review-iteration-1 remediation tasks added (R1.1–R1.6, from `code-review/review-iter-1.yaml`): new "Remediation R1" section after Phase 10; harness-contract correction recorded — boundary negative fixtures must mirror production resolution (fixture exports→dist with dist materialized in the temp workspace, to-path patterns covering both src/dist resolution forms, `couldNotResolve` rule for `^@delivery-os/` specifiers); RSK-T1 realized (the fixture-harness resolution blind spot surfaced by the review) and closed by R1.1. Traceability table gains an R1 row (AC-F1-1, AC-F6-1, AC-F7-1, NFR-2, AC-F13-1 evidence path, NFR-10 re-verified); Execution Log gains a pending R1 row. Deferred without tasks: F-6 (first content story), F-9 (later hardening), F-7 (@doc-syncer after R1.1/R1.2 settle). v1.2 row trailing wording corrected: this revision authored no spec changes; test plan v1.3 landed separately. (Numbered 1.4 because 1.3 is taken by the execution-complete entry.) |
 
 ## Execution Log
 
@@ -523,6 +564,7 @@ Full definitions: [chg-GH-170-test-plan.md](./chg-GH-170-test-plan.md) §5. **Tr
 | 8 — CI fast loop | COMPLETE | 2026-10-29T17:51Z | 2026-10-29T18:17Z | 30bba60 | 15 additive `ts-*` jobs in `ci.yml` (fresh-clone, invariants, typecheck, lint, format, test, boundaries, build→exports/publint/attw, pins, publish-guard test, license audit, vuln, aggregate, commitlint with PR-base + `origin/main-tools...HEAD` ranges). Bash job blocks byte-untouched (`ci-topology` diff = additions only). `pin-equality.ts` (four copies + CI runtime cross-check), `ci-topology.ts` (incl. no-orphan-check wiring), `ci-bindingness.ts`, `ci-supply-chain.ts`, `vulnerability-gate.ts` green; mutations in `tests/checks/ci-checks.test.ts` all fail by name. `bun test tests/checks` 48 pass; `pnpm audit` 0 high/critical. RSK-2: 22 CI-safe bash suites pass in a clean clone of the branch (3 paid-API/performance suites are excluded by the unchanged `bash-tests` job). Deviation: Bun pin copy 3 is a workflow-level `env.BUN_VERSION` (one CI copy) rather than a job matrix; pin-equality enforces it as the single CI location. Note: `test-ceo-loop.sh` fails only in the working tree because this very delivery's `.ai/local/delivery/delivering` marker is live; the same suite passes 54/54 in a clean clone. |
 | 9 — Full verification + recording | COMPLETE | 2026-10-29T18:18Z | 2026-10-29T18:26Z | c4d5125 | Fresh clone of `c4d5125` in an empty temp dir: `pnpm install --frozen-lockfile` exit 0 (2s), tree clean; `pnpm check` exit 0 in 71s with all five chained steps observed (lint, format:check, typecheck, test, check:boundaries), 159 tests across 11 files; tree clean after the suite (RSK-T3). Formal bash non-regression in the same clean clone: 22 CI-safe suites pass. Also carries the biome formatting fix and `bunfig.toml` `pathIgnorePatterns` needed for a clean aggregate. |
 | 10 — Finalize | COMPLETE | 2026-10-29T18:27Z | 2026-10-29T18:35Z | this commit | Version impact **minor** recorded (root + packages stay `0.0.0` private pre-freeze; changesets fixed group owns versioning from the freeze change). DoD walkthrough below. **Task 10.1 is DEFERRED to the orchestrator's lifecycle-phase-7 `@doc-syncer` run** (no `doc/spec/**`, `.ai/rules/testing-strategy.md`, `AGENTS.md`, or glossary edits in this run, per the delivery instruction). |
+| R1 — Review-iteration-1 remediation | PENDING | — | — | — | Tasks R1.1–R1.6 appended (plan v1.4) from `code-review/review-iter-1.yaml`; not started. Deferred without tasks: F-6 (first content story), F-9 (later hardening), F-7 (@doc-syncer after R1.1/R1.2 settle). |
 
 ### Completion report format (filled by @coder at P9/P10)
 
