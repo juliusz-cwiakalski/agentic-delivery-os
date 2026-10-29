@@ -3,7 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -30,5 +32,7 @@
     "#state/*": "./src/state/*.ts"
   },
   "workspaceImports": {},
-  "scripts": {}
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
 }

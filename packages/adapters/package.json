@@ -3,7 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "exports": {
     "./gitlab": {
       "types": "./dist/gitlab/index.d.ts",
@@ -60,9 +62,13 @@
     "#registry": "./src/registry/index.ts"
   },
   "workspaceImports": {
-    "@delivery-os/core": ["./contracts"]
+    "@delivery-os/core": [
+      "./contracts"
+    ]
   },
-  "scripts": {},
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
   "dependencies": {
     "@delivery-os/core": "workspace:*"
   }

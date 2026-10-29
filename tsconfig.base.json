@@ -1,0 +1,33 @@
+{
+  // Adapted from marksync-for-confluence/tsconfig.json (MIT License, source path:
+  // marksync-for-confluence/tsconfig.json). The ADR-0003 DEC-3 flag set is carried
+  // verbatim; the only escape hatch is skipLibCheck.
+  //
+  // skipLibCheck decision: `true`. Reason: third-party declaration files (including
+  // Bun's) are not first-party code; checking them adds noise without changing the
+  // strictness applied to `packages/**`. First-party sources are fully checked.
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noUncheckedSideEffectImports": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "types": ["bun"]
+  }
+}

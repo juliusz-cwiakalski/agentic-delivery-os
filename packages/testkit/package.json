@@ -10,7 +10,10 @@
     }
   },
   "workspaceImports": {
-    "@delivery-os/core": [".", "./contracts"],
+    "@delivery-os/core": [
+      ".",
+      "./contracts"
+    ],
     "@delivery-os/adapters": [
       "./gitlab",
       "./jira",
@@ -25,7 +28,9 @@
       "./legacy"
     ]
   },
-  "scripts": {},
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
   "devDependencies": {
     "@delivery-os/core": "workspace:*",
     "@delivery-os/adapters": "workspace:*"

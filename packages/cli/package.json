@@ -3,7 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -15,7 +17,12 @@
     "#output/*": "./src/output/*.ts"
   },
   "workspaceImports": {
-    "@delivery-os/core": [".", "./contracts", "./state", "./branding"],
+    "@delivery-os/core": [
+      ".",
+      "./contracts",
+      "./state",
+      "./branding"
+    ],
     "@delivery-os/adapters": [
       "./gitlab",
       "./jira",
@@ -30,7 +37,9 @@
       "./legacy"
     ]
   },
-  "scripts": {},
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
   "dependencies": {
     "@delivery-os/core": "workspace:*",
     "@delivery-os/adapters": "workspace:*"
