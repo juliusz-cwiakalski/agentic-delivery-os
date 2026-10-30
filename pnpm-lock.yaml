@@ -65,6 +65,9 @@ importers:
       '@delivery-os/core':
         specifier: workspace:*
         version: link:../core
+      yaml:
+        specifier: 2.9.1
+        version: 2.9.1
 
   packages/cli:
     dependencies:
@@ -75,7 +78,11 @@ importers:
         specifier: workspace:*
         version: link:../core
 
-  packages/core: {}
+  packages/core:
+    dependencies:
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
 
   packages/mcp:
     dependencies:

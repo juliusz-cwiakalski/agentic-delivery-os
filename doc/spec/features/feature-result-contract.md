@@ -7,7 +7,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The command-surface result contract: the CommandResult envelope in core ./contracts, the machine-readable error table as the single source of failure identity, the domain-kind to app-error-code to projection classification chain, the standalone CLI {0, 1, 2} exit projection, the deterministic in-process runCli surface, the two-entry fallback containment, the serialization redaction chokepoint, the testkit conformance validator, and the binding docs/code sync and exit-literal invariants."
 links:
-  related_changes: ["GH-172"]
+  related_changes: ["GH-172", "GH-173"]
   related_decisions: ["ADR-0003"]
 ---
 
@@ -17,7 +17,7 @@ links:
 
 Every command renders its outcome into one `CommandResult` envelope. The envelope carries `schemaVersion` (`delivery.result.v1` at v1), an opaque per-invocation `runId`, `exitCode`, `timing`, and exactly one of `data` or `error`. The generic `Result<T, E>` remains the internal computation result returned by engines; the envelope is the command-surface rendering of that result. Both contracts live in the runtime-neutral `@delivery-os/core/contracts` subpath as types and `as const` data only.
 
-Failures are modelled by a machine-readable error table. Each table entry is the single source of an error's identity, its structured fields, and its exit-code projection class. Classification follows one chain: domain kind -> app error code -> table entry -> exit-code projection class. Errors no entry classifies are contained by dedicated fallback entries, so machine output is valid on every outcome, including broken invocations and hostile handler bodies.
+Failures are modelled by a machine-readable error table. Each table entry is the single source of an error's identity, its structured fields, and its exit-code projection class. Classification follows one chain: domain kind and, for multi-row kinds, exact code -> table entry -> exit-code projection class. Errors no entry classifies are contained by dedicated fallback entries, so machine output is valid on every outcome, including broken invocations and hostile handler bodies.
 
 Exit codes exist only in the standalone CLI, where a projection class maps to `0`, `1`, or `2`. The command surface is exercised through the deterministic, in-process `runCli(argv, streams, deps)` entry point, which writes machine envelopes only under `--json` and human diagnostics only to the error stream. A single serialization chokepoint redacts every edge-registered secret value before any byte reaches an output stream.
 
@@ -47,9 +47,9 @@ The authoritative design decision for package placement and tiers is [ADR-0003](
 ### Capabilities
 
 - **CommandResult envelope:** Every command returns `schemaVersion`, `runId`, `exitCode`, `timing`, and exactly one of `data` or `error`. A void success carries an explicit empty `data` object rather than an ambiguous both-absent shape.
-- **Machine-readable error table:** `ERROR_TABLE` in `core ./contracts` declares each failure entry once. `DOMAIN_KINDS` declares the domain kinds that the table is total over (`provider` and `input` at v1); `fallback` is the reserved two-segment containment namespace.
-- **Self-describing errors:** Every error object carries `code`, `category`, `retryable`, `consequence`, `remediationHint`, and an optional non-identifying `summary`. An entry's `summary` supplies the default; a handler may supply a more specific summary without changing identity.
-- **Classification chain:** Domain kinds resolve to exactly one table entry. A code resolves to exactly one entry by code. Undeclared kinds and values that cannot be classified are contained rather than guessed.
+- **Machine-readable error table:** `ERROR_TABLE` in `core ./contracts` declares each failure entry once. `DOMAIN_KINDS` declares `provider`, `input`, and `config`; `fallback` is the reserved two-segment containment namespace. Codes are unique and the table is total over valid declared failure discriminants, not one row per kind.
+- **Self-describing errors:** Every error object carries `code`, `category`, `retryable`, `consequence`, `remediationHint`, and an optional non-identifying `summary`. An entry's `summary` supplies the default; non-config handlers may supply a more specific summary without changing identity. Config summaries always come from the table.
+- **Classification chain:** A `(kind, code)` pair resolves only when the code belongs to that kind. Kind-only lookup requires exactly one matching entry (`provider`, `input`); `config` requires a code. Missing, unknown, or wrong-kind config codes are contained by `fallback.internal`.
 - **Exit-code projection:** The CLI projection module maps `success` to `0`, `user-validation` to `1`, and `platform-provider` to `2`. An unknown projection class is rejected, never defaulted. The numeric code is derived from the class, never read from a table row.
 - **Failure containment:** Broken invocations and unknown commands resolve through `fallback.invocation`; errors no entry classifies resolve through `fallback.internal`. Both containment entries are `consequence: unknown` and `retryable: false`, and their projection classes keep caller-fault and system-side failures on different exit codes.
 - **Deterministic in-process surface:** `runCli(argv, streams, deps)` takes arguments, injected output and error streams, and injected dependencies (brand, clock, run-id factory, secrets, command program). It returns the numeric exit code and never spawns a process, calls `process.exit`, or writes to real process streams.
@@ -61,7 +61,7 @@ The authoritative design decision for package placement and tiers is [ADR-0003](
 ### Outcome flows
 
 - **Successful command:** The handler returns a result carrying `data`. The surface builds a success envelope with the success projection (`0`), redacts the payload, and writes the envelope to the injected output stream when `--json` is present.
-- **Classified failure:** A handler raises a failure carrying a declared domain kind, or returns a result whose `error` carries one. The chain resolves the entry, the envelope carries the projected error object, the exit code comes from the entry's projection class (`1` or `2`), and timing is present on the failure path.
+- **Classified failure:** A handler raises a failure carrying a declared domain kind (and an exact code for multi-row kinds), or returns a result whose `error` carries one. The chain resolves the entry, the envelope carries the projected error object, the exit code comes from the entry's projection class (`1` or `2`), and timing is present on the failure path.
 - **Containment:** A missing command, unknown command, unexpected argument, unknown flag, missing flag value, or conflicting flag pair resolves through `fallback.invocation` and exits `1`. A thrown value, rejected promise, malformed result, or otherwise unclassifiable failure resolves through `fallback.internal` and exits `2`. A serialization failure emits a `fallback.internal` envelope with exit code `2`.
 - **Human output:** Machine envelopes appear only when `--json` is present. Failure diagnostics are prefixed with the brand binary name and written to the injected error stream; they contain no stack trace and never enter the machine envelope.
 - **Agent consumption:** Consumers branch on `code`, `category`, and `retryable`, check `consequence` before any retry (`unknown` forbids a blind retry), and follow `remediationHint`. Prose fields add nuance; they are never identity.
@@ -108,6 +108,15 @@ A success envelope has exactly the keys `schemaVersion`, `runId`, `exitCode`, `t
 | fallback.internal | fallback | platform | false | unknown | Inspect the diagnostics stream and report the failure if it persists. | platform-provider | The failure could not be classified. |
 | provider.quota.exceeded | provider | transient | true | not_landed | Wait for the quota window to reset, then retry the operation. | platform-provider | The provider quota was exceeded. |
 | input.value.rejected | input | user | false | not_landed | Correct the rejected value and retry the command. | user-validation | The supplied value was rejected. |
+| config.file.malformed | config | user | false | not_landed | Correct the named configuration source and retry. | user-validation | A configuration source is malformed. |
+| config.key.unknown | config | user | false | not_landed | Remove or correct the unknown configuration key and retry. | user-validation | A configuration key is unknown. |
+| config.environment.unmapped | config | user | false | not_landed | Remove or map the environment name and retry. | user-validation | An environment configuration name is unmapped. |
+| config.value.invalid | config | user | false | not_landed | Correct the value to match the configuration schema and retry. | user-validation | A configuration value is invalid. |
+| config.interpolation.rejected | config | user | false | not_landed | Use a typed environment override instead and retry. | user-validation | In-file interpolation is not supported. |
+| config.secret.forbidden | config | user | false | not_landed | Move the secret to a supported environment source and retry. | user-validation | A secret was supplied from a forbidden source. |
+| config.path.forbidden | config | user | false | not_landed | Move the machine path to a system or user-global source and retry. | user-validation | A machine path was supplied from a forbidden source. |
+| config.reset.invalid | config | user | false | not_landed | Correct the reset paths and retry. | user-validation | A configuration reset is invalid. |
+| config.warning.strict | config | user | false | not_landed | Resolve the named warning and retry. | user-validation | Strict configuration validation rejected a warning. |
 
 This table is the human- and agent-readable counterpart of `ERROR_TABLE`. The sync check requires each source entry to have exactly one documented row and each documented row to have exactly one source entry; the two fallback rows are included with no containment exemption.
 
@@ -164,7 +173,7 @@ function runCli(
 
 ### Data architecture
 
-The surface determines the outcome, measures `timing`, generates a `runId`, projects the `exitCode` from the outcome, and assembles exactly one of `data` or `error`. The error object is a pure projection of one table entry; the summary defaults to the entry summary and may be replaced by a handler-supplied non-empty string. The table is `as const` data with no behaviour. The documented table in this spec is the checked S2 surface.
+The surface determines the outcome, measures `timing`, generates a `runId`, projects the `exitCode` from the outcome, and assembles exactly one of `data` or `error`. The error object is a pure projection of one table entry; non-config handlers may replace the summary with a non-empty string. Config failures always use the table summary, including malformed config discriminants safely contained by `fallback.internal`. The table is `as const` data with no behaviour. The documented table in this spec is the checked S2 surface.
 
 ### API and interface contracts
 
@@ -215,7 +224,7 @@ The envelope is the observability surface. `runId` correlates machine and human 
 
 ### Cost and infrastructure
 
-The feature adds no runtime dependency and no new CI job. Its golden, behaviour, structure, and check suites run inside the existing workspace test and invariant steps, keeping the fast-loop cost small. The error-table sync check reads the live tree without writing to it.
+The result surface itself adds no runtime dependency or new CI job. Configuration resolution and acquisition declare separate proposed runtime dependencies, governed by the locked runtime-closure registry and owner review before merge/adoption. The result golden, behaviour, structure, and check suites run inside the existing workspace test and invariant steps. The error-table sync check reads the live tree without writing to it.
 
 ## Dependencies & Risks
 

@@ -1,7 +1,7 @@
 /**
  * Classification chain (F-2, F-3): domain kind → app error code → table entry.
  *
- * Pure and total over declared kinds; an unresolvable code is reported as such
+ * Pure and total over declared discriminants; an unresolvable code is reported as such
  * rather than silently contained, and non-classifiable values are contained by
  * `fallback.internal` only at this explicit step.
  */
@@ -29,22 +29,27 @@ export function resolveAppErrorCode(code: string): CodeResolution {
 }
 
 /**
- * Resolve a declared domain kind to exactly one entry.
+ * Resolve a declared domain discriminant to exactly one entry.
  *
  * Throws for an undeclared kind or a declared kind with no mapping: classification
  * is total over declared kinds, so a missing mapping is a programming error.
  */
-export function classifyDomainKind(kind: string): ErrorTableEntry {
+export function classifyDomainKind(kind: string, code?: string): ErrorTableEntry {
   if (!isDeclaredKind(kind)) {
     throw new Error(`undeclared domain kind: ${kind}`);
   }
-  const entry = (ERROR_TABLE as readonly ErrorTableEntry[]).find(
+  if (code !== undefined) {
+    const resolved = resolveAppErrorCode(code);
+    if (!resolved.ok || resolved.entry.domainKind !== kind) {
+      throw new Error("no entry classifies domain discriminant");
+    }
+    return resolved.entry;
+  }
+  const matches = (ERROR_TABLE as readonly ErrorTableEntry[]).filter(
     (candidate) => candidate.domainKind === kind,
   );
-  if (entry === undefined) {
-    throw new Error(`no entry classifies domain kind: ${kind}`);
-  }
-  return entry;
+  if (matches.length !== 1) throw new Error(`ambiguous or missing domain kind: ${kind}`);
+  return matches[0] as ErrorTableEntry;
 }
 
 const containedInternalEntry = (): ErrorTableEntry => {
@@ -64,7 +69,13 @@ export function classifyThrown(value: unknown): ErrorTableEntry {
   if (typeof value === "object" && value !== null && "kind" in value) {
     const kind = (value as { readonly kind?: unknown }).kind;
     if (typeof kind === "string" && isDeclaredKind(kind)) {
-      return classifyDomainKind(kind);
+      const code = (value as { readonly code?: unknown }).code;
+      try {
+        if (code !== undefined && typeof code !== "string") return containedInternalEntry();
+        return classifyDomainKind(kind, code);
+      } catch {
+        return containedInternalEntry();
+      }
     }
   }
   return containedInternalEntry();

@@ -95,7 +95,14 @@ const explicitSummary = (value: unknown): string | undefined => {
 };
 
 const failureOutcome = (entry: ErrorTableEntry, value?: unknown): Outcome => {
-  const summary = explicitSummary(value);
+  // No untrusted config summary, even when the discriminator was malformed and
+  // classification contained it as fallback.internal.
+  const configShaped =
+    isRecord(value) &&
+    (value.kind === "config" ||
+      (typeof value.code === "string" && value.code.startsWith("config.")));
+  const summary =
+    configShaped || entry.domainKind === "config" ? undefined : explicitSummary(value);
   return summary === undefined ? { type: "failure", entry } : { type: "failure", entry, summary };
 };
 
@@ -115,7 +122,7 @@ const outcomeFromResult = (result: unknown): Outcome => {
   const hasData = Object.hasOwn(result, "data");
   const hasError = Object.hasOwn(result, "error");
   if (hasData === hasError) {
-    return failureOutcome(entryFor(FALLBACK_INTERNAL_CODE), result);
+    return failureOutcome(entryFor(FALLBACK_INTERNAL_CODE));
   }
   if (hasError) {
     const failure = result.error;

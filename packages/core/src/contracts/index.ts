@@ -11,6 +11,26 @@ export type Result<T, E> =
       readonly error: E;
     };
 
+export {
+  CONFIG_LAYERS,
+  type ConfigAcquisition,
+  type ConfigErrorCode,
+  type ConfigFailure,
+  type ConfigFileLayer,
+  type ConfigLayer,
+  type ConfigLoadedFile,
+  type ConfigLocation,
+  type ConfigNodeOrigins,
+  type ConfigOrigin,
+  type ConfigPosition,
+  type ConfigSkippedLayer,
+  type ConfigSkipReason,
+  type ConfigSource,
+  type ConfigSourceFacts,
+  type ConfigValue,
+  type ConfigWarning,
+} from "./config.js";
+
 /**
  * The twelve DEC-8 brand values.
  *
