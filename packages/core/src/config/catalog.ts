@@ -1,5 +1,4 @@
-import type { ConfigValue } from "../contracts/config.js";
-import type { ConfigOrigin } from "../contracts/config.js";
+import type { ConfigOrigin, ConfigValue } from "#contracts";
 
 type DefaultMetadata = { readonly defaultOrigin?: ConfigOrigin & { readonly layer: "defaults" } };
 

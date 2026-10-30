@@ -9,8 +9,8 @@ import type {
   ConfigValue,
   ConfigWarning,
   Result,
-} from "../contracts/index.js";
-import { CONFIG_LAYERS } from "../contracts/config.js";
+} from "#contracts";
+import { CONFIG_LAYERS } from "#contracts";
 import {
   type ConfigCatalog,
   type CatalogField,
@@ -175,6 +175,7 @@ const mappedSource = (
     };
     mark(converted, path);
   }
+  // Guard-validated: every value was checked JSON-compatible before assignment.
   return { ok: true, value: { layer, values: values as Record<string, ConfigValue>, origins } };
 };
 
@@ -341,6 +342,7 @@ export function resolveConfig(
   }
   const defaultSource: ConfigSourceFacts = {
     layer: "defaults",
+    // Guard-validated: catalog defaults are JSON-compatible by construction.
     values: defaults as Record<string, ConfigValue>,
     origins: defaultFacts,
   };
@@ -405,6 +407,7 @@ export function resolveConfig(
   return {
     ok: true,
     value: {
+      // Guard-validated: source and final schema validation accepted every value.
       values: values as Record<string, ConfigValue>,
       origins,
       loadedFiles: ordered.flatMap(({ loadedFile }) => (loadedFile ? [loadedFile] : [])),

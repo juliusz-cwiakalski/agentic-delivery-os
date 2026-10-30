@@ -1,4 +1,4 @@
-import type { ConfigNodeOrigins, ConfigOrigin } from "../contracts/config.js";
+import type { ConfigNodeOrigins, ConfigOrigin } from "#contracts";
 
 export const descendants = (path: string, candidate: string): boolean =>
   candidate === path || candidate.startsWith(`${path}.`) || candidate.startsWith(`${path}[`);

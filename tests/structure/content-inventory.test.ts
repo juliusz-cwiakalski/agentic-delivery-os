@@ -56,6 +56,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "PRODUCTION_SCHEMA",
     "compileTrustedSchema",
     "invalidKey",
+    "serializeProductionSchema",
   ],
   "adapters/src/file/config-source.ts": [
     "acquireFileConfig",

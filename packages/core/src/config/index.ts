@@ -18,4 +18,9 @@ export {
   type ResolveConfigInput,
   type ResolvedConfig,
 } from "./resolver.js";
-export { compileTrustedSchema, generateConfigSchema, PRODUCTION_SCHEMA } from "./schema.js";
+export {
+  compileTrustedSchema,
+  generateConfigSchema,
+  PRODUCTION_SCHEMA,
+  serializeProductionSchema,
+} from "./schema.js";

@@ -33,8 +33,9 @@ describe("TC-CONFIG-017/025 deterministic packed config artifacts", () => {
     ) as DefaultPositionManifest;
     const effective = resolveConfig({ defaultPositions: shipped });
     expect(effective).toMatchObject({ ok: true, value: { values: {}, origins: {} } });
+    // Deliberately out-of-contract negative input; production type stays literal.
     const missingIdentity = resolveConfig({
-      defaultPositions: { ...shipped, source: "wrong" } as unknown as DefaultPositionManifest,
+      defaultPositions: { ...shipped, source: "wrong" } as DefaultPositionManifest,
     });
     expect(missingIdentity).toMatchObject({
       ok: false,

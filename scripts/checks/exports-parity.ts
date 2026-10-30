@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
-import { PRODUCTION_SCHEMA } from "../../packages/core/src/config/schema";
+import { serializeProductionSchema } from "@delivery-os/core";
 import { PUBLISHABLE } from "./exports-discipline";
 
 const PROFILE = "esm-only";
@@ -51,7 +51,7 @@ export const configArtifacts = (root: string): Record<string, string> => {
   }
   if (!found) throw new Error("PRODUCTION_DEFAULTS declaration missing");
   return {
-    "config.schema.json": `${JSON.stringify(PRODUCTION_SCHEMA, null, 2)}\n`,
+    "config.schema.json": serializeProductionSchema(),
     "defaults-positions.json": `${JSON.stringify({ source: DISPLAY_SOURCE, sourceHash: hashSource(text), positions }, null, 2)}\n`,
     "schema-sources.json": `${JSON.stringify(Object.fromEntries(schemaSources.map((path) => [path, hashSource(readFileSync(join(root, path), "utf8"))])), null, 2)}\n`,
   };

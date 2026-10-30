@@ -47,6 +47,10 @@ export const generateConfigSchema = (catalog: ConfigCatalog, partial = false): T
 
 export const PRODUCTION_SCHEMA = generateConfigSchema(PRODUCTION_CATALOG);
 
+/** Stable packed-artifact text; the parity check compares source-derived truth. */
+export const serializeProductionSchema = (): string =>
+  `${JSON.stringify(PRODUCTION_SCHEMA, null, 2)}\n`;
+
 export const compileTrustedSchema = (
   catalog: ConfigCatalog,
   partial: boolean,

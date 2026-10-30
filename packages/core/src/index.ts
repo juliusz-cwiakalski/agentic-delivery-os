@@ -31,6 +31,7 @@ export {
   PRODUCTION_CATALOG,
   PRODUCTION_DEFAULTS,
   PRODUCTION_SCHEMA,
+  serializeProductionSchema,
   catalogPaths,
   compileTrustedSchema,
   defaultsFor,
