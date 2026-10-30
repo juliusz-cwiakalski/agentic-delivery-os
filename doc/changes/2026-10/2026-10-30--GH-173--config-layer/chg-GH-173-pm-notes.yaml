@@ -9,8 +9,8 @@ phases:
   dor_check: { started: "2026-10-30T06:53:58Z", completed: "2026-10-30T07:17:28Z" }
   delivery: { started: "2026-10-30T07:17:28Z", completed: "2026-10-30T14:47:14Z" }
   system_spec_update: { started: "2026-10-30T14:47:14Z", completed: "2026-10-30T14:53:21Z" }
-  review_fix: { started: "2026-10-30T14:53:21Z", completed: null }
-  quality_gates: { started: null, completed: null }
+  review_fix: { started: "2026-10-30T14:53:21Z", completed: "2026-10-30T15:52:40Z" }
+  quality_gates: { started: "2026-10-30T15:52:40Z", completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
@@ -29,6 +29,12 @@ blockers:
     date: 2026-10-30
     resolved_date: 2026-10-30
 notes:
+  - text: "Review PASS iteration1 at 15:52:40Z (review/review-iter-1.md): 0 critical/high/medium, 1 low (plan execution-log staleness, fixed same pass), 2 info (TDR-0003 + license closure Proposed pending owner PR review by design; serialize.ts as-cast pre-existing from GH-172 base b2914fd, record-only). Checker-wins rulings: post-guard casts sanctioned under the no-silencing rule; serializeProductionSchema additive public export sanctioned per spec F-7 (no new subpath; byte-identical artifacts). Remediation 35b31c5 verified retroactive-rules violations resolved (#contracts aliases, named package-specifier imports, no deep source imports, cast hygiene). Three consecutive reviewer session drops resolved by pre-collecting mechanical evidence via runner (greps 164107/164255) and delegating a tighter judgment-focused review; artifact produced first attempt after adaptation. Changeset 8.1 landed (.changeset/config-layer-minor.md, five publishable packages, testkit excluded per config). Phase7 conditional fixes not required. Quality gates phase opened."
+    type: "info"
+    date: 2026-10-30
+  - text: "Long-running single-shot review delegations were interrupted 3x by session drops; each produced nothing. Adaptation that worked: split mechanical verification (grep guards, gate logs) into short runner runs first, then hand the reviewer pre-verified evidence and a bounded spot-check scope. Apply this pattern to any remaining heavyweight delegation in this delivery."
+    type: "retro"
+    date: 2026-10-30
   - text: "Phase5 verified 14:45:14Z: pnpm check fully green (512tests/0fail/2879expect/48files; boundaries 55mod/59dep clean; ambient clean; exports-parity 5 publishables attw; doc-distribution 80docs no drift). Packed-consumer harness fixed (per-package tarball dirs, consumer pnpm.overrides to packed core tarball — pack rewrites workspace:* to 0.0.0 — and cleanup-before-rethrow); branding-seam conformance via NEUTRAL_OVERRIDE_NAME module-private; legacy CONFIG literal added to sanctioned structuralLiterals inventory. feature-config-layer.md authored, registered in forbidden-literals registry, scan clean. Retro: runner invocations must avoid /dev/* paths (headless permission auto-reject) — use ./tmp/tmpdir scratch per repo convention. Plan 5.1..5.4 verified pending commit; implementation phases complete; PM-owned phases 7-11 next."
     type: "info"
     date: 2026-10-30
