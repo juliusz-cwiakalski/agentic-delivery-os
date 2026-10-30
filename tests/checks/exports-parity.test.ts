@@ -15,6 +15,7 @@ const ROOT = process.cwd();
 // Inside the repo tree so `pnpm exec attw` resolves the workspace binary through
 // the ancestor node_modules; bunfig ignores tmp/**, so the copy is not a suite.
 const makePackageCopy = (): string => {
+  mkdirSync(join(ROOT, "tmp"), { recursive: true });
   const directory = mkdtempSync(join(ROOT, "tmp", "exports-parity-"));
   mkdirSync(join(directory, "packages"), { recursive: true });
   cpSync(join(ROOT, "packages/core"), join(directory, "packages/core"), { recursive: true });
@@ -41,6 +42,7 @@ describe("exports parity (attw --pack, esm-only)", () => {
   });
 
   test("a missing build fails closed with the build hint", () => {
+    mkdirSync(join(ROOT, "tmp"), { recursive: true });
     const directory = mkdtempSync(join(ROOT, "tmp", "exports-parity-"));
     try {
       const failures = checkPackage(directory, "core");
