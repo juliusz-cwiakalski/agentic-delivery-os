@@ -48,6 +48,15 @@
           }
         }
       }
+    },
+    {
+      "includes": ["tests/fixtures/config/yaml/malformed.yaml"],
+      "formatter": {
+        "enabled": false
+      },
+      "linter": {
+        "enabled": false
+      }
     }
   ]
 }

@@ -1,0 +1,3 @@
+x-test:
+  oldValue: "${SECRET:-default}"
+  localPath: "{env:SECRET}"

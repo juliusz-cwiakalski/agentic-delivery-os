@@ -1,7 +1,18 @@
 /**
  * `@delivery-os/adapters/file` — file I/O adapter subpath.
- * Types only at scaffold.
+ * Supplies line-preserving configuration facts and platform file acquisition.
  */
-
-/** Placeholder marker for the file I/O subpath. */
-export type FileAdapterPlaceholder = { readonly __subpath: "file" };
+export {
+  acquireFileConfig,
+  neutralEnvironmentFacts,
+  nodeFileSystemFacts,
+  runtimePlatform,
+  type FileAcquisitionInput,
+  type FileSystemFacts,
+  type RuntimePlatform,
+} from "./config-source.js";
+export {
+  parseConfigYaml,
+  parserHostSwitchBlocked,
+  type ParsedConfig,
+} from "./yaml-parser.js";

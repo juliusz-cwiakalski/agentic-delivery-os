@@ -84,7 +84,7 @@ const plainVersion = (version: string): string => version.split("(")[0] as strin
 /** All direct uses plus every edge in the new runtime closure and shared tooling uses. */
 export const lockedUses = (root: string, direct: readonly Dependency[]): Dependency[] => {
   const lock = parseYaml(readFileSync(join(root, "pnpm-lock.yaml"), "utf8")) as Lock;
-  if (!lock || !lock.importers || !lock.snapshots) throw new Error("invalid lockfile");
+  if (!lock?.importers || !lock.snapshots) throw new Error("invalid lockfile");
   const uses: Dependency[] = [];
   const runtimeNames = new Set<string>();
   const visited = new Set<string>();

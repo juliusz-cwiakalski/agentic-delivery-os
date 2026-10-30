@@ -29,6 +29,15 @@ blockers:
     date: 2026-10-30
     resolved_date: 2026-10-30
 notes:
+  - text: "Phase3 verified 13:45:27Z: all13 commands exit0, 64tests/386expectations (sources31/parser6/resolver2/schema3/restrictions4/provenance4/legacy14), selected-config attribution bug fixed in config-source.ts (selection hoisted before discovery; actual-path contract restored), biome.json ignores intentionally malformed YAML fixture, all invariants green. Plan 3.1..3.6 marked verified pending commit. Retro: tsconfig typecheck does not cover tests/** — test-only parse errors surfaced only via bun test/biome; keep format+test in every verification loop."
+    type: "info"
+    date: 2026-10-30
+  - text: "CEO added BINDING .ai/rules/typescript.md (commit 1eefbc3) governing all packages/, tests/, scripts/checks/ edits for the remainder of this change. Rules apply RETROACTIVELY to already-committed phase1/phase2 code; coder flagged violations WITHOUT silently fixing them: scripts/checks/exports-parity.ts deep cross-package src import; core/config/{resolver,catalog,provenance}.ts relative ../contracts imports instead of #contracts; unjustified as-casts in resolver.ts, cli/index.ts, license-audit.ts and a double-cast in config-default-positions.test.ts; tests/structure/config-contract.test.ts star import + deep /src/ path; defaults.ts value-import-used-as-type. These are recorded for the review_fix phase to remediate as one rules-conformance pass; no silent fixes, no gate loosening. All phase3+ edits follow the rules file."
+    type: "risk"
+    date: 2026-10-30
+  - text: "Phase3 interrupted-fix recovery: coder completed acquisition implementation (reworked the interrupted untracked yaml-parser.ts into the plan's adapters/file module set with bounds/tag/merge guards, host-switch pre-parse rejection, position-accurate facts; config-source/repo/legacy composition; parser/sources/legacy tests + YAML fixtures). Verification iteration1 found: unbracketed template key parse cascade in config-sources.test.ts, TC-CONFIG-010 origin-shape/line assertion mismatch, malformed.yaml fixture tripping lint/format, plus minor lint items. Interrupted fixer pass landed bracketed keys, biome.json malformed-fixture ignore, defaults.ts import-type and license-audit optional-chain fixes; TC-010 assertion fix unverified. Next: full verification re-run, fix residuals, then phase3 commit."
+    type: "info"
+    date: 2026-10-30
   - text: "Implementation phase1 committed7661d46 after15 green commands/67tests. Phase2 verification iteration1: build,22tests,schema/default artifacts,exports/ambient/boundary/error/license/literal/typecheck/format pass; lint fails useIterableCallbackReturn at resolver.ts162 and fixture facts.ts20. Delivery remains in progress; targeted fixer removes unintended callback return values, then runner rechecks before phase2 commit."
     type: "retro"
     date: 2026-10-30

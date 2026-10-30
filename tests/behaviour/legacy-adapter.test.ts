@@ -175,3 +175,52 @@ describe("secret-safe warning text", () => {
     expect(result.messages.join(" ")).not.toContain("synthetic-secret-value");
   });
 });
+
+describe("legacy config facts", () => {
+  test("current values and selector win over legacy collisions", () => {
+    const home = makeHome();
+    const { compat } = withSink();
+    const facts = compat.resolveConfigFacts({
+      facts: { ADOS_TOKEN: "legacy-token", ADOS_CONFIG: "/legacy/config.yaml" },
+      environment: { SYNTH_TOKEN: "current-token", SYNTH_CONFIG: "/current/config.yaml" },
+      homeDirectory: home,
+    });
+    expect(facts.environment.SYNTH_TOKEN).toBe("current-token");
+    expect(facts.environment.SYNTH_CONFIG).toBe("/current/config.yaml");
+    expect(facts.selectedConfig).toBe("/current/config.yaml");
+    expect(facts.configDirectoryPath).toBe(join(home, ".synthetic"));
+  });
+
+  test("legacy-only environment and selector map to current names", () => {
+    const home = makeHome();
+    const { compat } = withSink();
+    const facts = compat.resolveConfigFacts({
+      facts: { ADOS_TOKEN: "legacy-token", ADOS_CONFIG: "/legacy/config.yaml" },
+      environment: {},
+      homeDirectory: home,
+    });
+    expect(facts.environment.SYNTH_TOKEN).toBe("legacy-token");
+    expect(facts.environment.SYNTH_CONFIG).toBe("/legacy/config.yaml");
+    expect(facts.selectedConfig).toBe("/legacy/config.yaml");
+  });
+
+  test("config facts warn once per instance and never without a legacy source", () => {
+    const home = makeHome();
+    const first = withSink();
+    first.compat.resolveConfigFacts({
+      facts: { ADOS_TOKEN: "x" },
+      environment: {},
+      homeDirectory: home,
+    });
+    first.compat.resolveConfigFacts({
+      facts: { ADOS_TOKEN: "x" },
+      environment: {},
+      homeDirectory: home,
+    });
+    expect(first.messages).toHaveLength(1);
+
+    const quiet = withSink();
+    quiet.compat.resolveConfigFacts({ facts: {}, environment: {}, homeDirectory: home });
+    expect(quiet.messages).toEqual([]);
+  });
+});
