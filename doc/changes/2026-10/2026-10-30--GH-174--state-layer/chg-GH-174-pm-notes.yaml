@@ -7,7 +7,7 @@ phases:
   clarify_scope: { started: "2026-10-30T00:00:00Z", completed: "2026-10-30T00:00:00Z" }
   specification: { started: "2026-10-30T00:00:00Z", completed: "2026-10-30T00:00:00Z", reopened: "2026-10-30T00:00:00Z (test_planning gap findings OQ-T1/OQ-T2/OQ-T6)", reopened_completed: "2026-10-30T00:00:00Z (v1.1 amendment: NFR-9 scoped with single AC-F9-3 exception; AC-F1-2 parity defined over driver-neutral fields; AC-F3-1 failed rebuild pinned to state.write.failed)" }
   test_planning: { started: "2026-10-30T00:00:00Z", completed: "2026-10-30T00:00:00Z" }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: "2026-10-30T00:00:00Z", completed: "2026-10-30T00:00:00Z" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -21,6 +21,9 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Phase 4 delivery_planning COMPLETE: chg-GH-174-plan.md (v1.0, 523 lines, 10 phases / 51 tasks, 25/25 TCs mapped). Key delivery bindings: D1 module layout (contracts/state.ts + state facade + ledger.ts + driver/** as sole runtime-API location); D2 SQLite via runtime built-ins (node:sqlite/bun:sqlite) with TDR-0004 recorded Proposed in Phase 1 before driver work — no third-party dep unless fail-closed license gate; D3 error rows ship in-change (GH-172 precedent) so sync check green from phase 1; D4 no new checks/CI jobs; D7 one conformance harness with driver-neutral parity; D8 new AST structure detector + depcruiser tightening (no rule weakened). 8 risks with mitigations. OQ-1/OQ-2 procedural/non-blocking."
+    type: "info"
+    date: "2026-10-30"
   - text: "Specification REOPEN resolved (iteration 2, spec v1.1): OQ-T1 closed — NFR-9 scoped ('behaviour suites in-process by rule; exactly one documented exception: the AC-F9-3 packed-consumer probe, a packaging assertion'); OQ-T2 closed — AC-F1-2 parity defined over driver-neutral observable fields, driver-specific diagnostics (sqlite rebuild report) asserted separately; OQ-T6 closed — failed index rebuild pinned to state.write.failed (transient/retryable/not_landed). AC numbering unchanged (22 ACs); no hard AC weakened; spec and test plan now agree. test_planning marked completed; proceeding to delivery_planning."
     type: "resolved"
     date: "2026-10-30"
