@@ -6,9 +6,9 @@ created: 2026-10-29
 last_updated: 2026-10-30
 owners: ["engineering"]
 service: delivery-os
-summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
+summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, the typed adapter-port substrate and secret-read boundary invariant, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
 links:
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-181"]
   related_decisions: ["ADR-0003"]
 ---
 
@@ -16,7 +16,7 @@ links:
 
 ## Overview
 
-The repository hosts a six-package pnpm workspace under `packages/` for the TypeScript delivery tooling, alongside the existing bash delivery stack. The workspace is **structure over content** for the remaining engines, business logic, provider implementations, and drivers: every declared package, subpath, export, boundary rule, fixture, and quality gate is enforced. The configuration tier is now implemented and documented separately in [Configuration Layer and Inspection](feature-config-layer.md); the other runtime contracts remain scaffold placeholders.
+The repository hosts a six-package pnpm workspace under `packages/` for the TypeScript delivery tooling, alongside the existing bash delivery stack. The workspace is **structure over content** for the remaining engines, business logic, provider implementations, and drivers: every declared package, subpath, export, boundary rule, fixture, and quality gate is enforced. The configuration tier, result contract, and adapter-era contracts are implemented and documented separately in [Configuration Layer and Inspection](feature-config-layer.md), [Result Contract and Error Table](feature-result-contract.md), and [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); the remaining engines and provider implementations are scaffold placeholders.
 
 The scaffold provides the substrate every later tooling story lands in. Its package matrix, core tier matrix, adapter subpaths, and runtime-API confinement rules are mechanical gates rather than prose, and every forbidden edge is proven by a failing negative fixture.
 
@@ -44,7 +44,7 @@ The authoritative design decision is [ADR-0003](../../decisions/ADR-0003-oss-mon
 | Package | Declared entrypoints | Role |
 |---------|----------------------|------|
 | `@delivery-os/core` | `.`, `./contracts`, `./state`, `./branding` | Runtime-neutral application services, contracts, state abstraction, branding seam |
-| `@delivery-os/adapters` | `./gitlab`, `./jira`, `./github`, `./azure`, `./ci`, `./registry`, `./repo`, `./file`, `./host`, `./session`, `./legacy` | Tracker, VCS, CI, registry, and per-I/O adapters |
+| `@delivery-os/adapters` | `./gitlab`, `./jira`, `./github`, `./azure`, `./ci`, `./registry`, `./repo`, `./file`, `./host`, `./session`, `./legacy`, `./credentials` | Tracker, VCS, CI, registry, per-I/O adapters, and the environment-backed credential port |
 | `@delivery-os/cli` | `.` | Command-line surface |
 | `@delivery-os/mcp` | `.` | MCP surface |
 | `@delivery-os/opencode` | `.` | OpenCode host integration surface |
@@ -102,11 +102,11 @@ Deep imports into another package's `src/` or `dist/`, and relative paths escapi
 - **Deep and relative imports** — no `@delivery-os/<pkg>/(src|dist)/...` deep import and no relative import escaping the importer's package root.
 - **Core tier matrix** — `domain`, `config`, `branding`, and `state` may import `./contracts` only; `app` may import `domain`, `config`, and `./contracts`, but not `branding` or `state` at scaffold.
 - **Testkit dev edges** — production `src` never imports `testkit`; `testkit` imports `core` and `adapters`, never `cli`, `mcp`, or `opencode`.
-- **Runtime-API confinement** — runtime imports are permitted only in the `core ./state` driver code, the adapter I/O subpaths, the `cli` build, and the `opencode` host integration. The adapter exemption is exactly the ADR I/O subpaths — `repo`, `file`, `host`, `session`, and `legacy`; provider, registry, and remaining adapter subpaths are not exempt.
+- **Runtime-API confinement** — runtime imports are permitted only in the `core ./state` driver code, the adapter I/O subpaths, the `cli` build, and the `opencode` host integration. The adapter exemption is exactly the ADR I/O subpaths — `repo`, `file`, `host`, `session`, and `legacy` — plus the credential implementation at `credentials`; provider, registry, and remaining adapter subpaths are not exempt.
 
 Package-name specifiers resolve through each manifest's `exports` to built `dist` targets, so the cross-package rules match both forms: `packages/<pkg>/src/...` in-tree and `packages/<pkg>/dist/...` for package-name imports. A `couldNotResolve` catch-all fails any `@delivery-os/*` specifier that resolves to no declared package entrypoint, so an undeclared import fails by name even before a build exists.
 
-`check:boundaries` runs three gates in order: `depcruise packages` against `.dependency-cruiser.cjs`, then `bun run scripts/checks/ambient-globals.ts`, then `bun run scripts/checks/workspace-entrypoints.ts`. The dependency-cruiser rules are static row definitions; the package-name and declared-entrypoint gate is `workspace-entrypoints.ts`.
+`check:boundaries` runs four gates in order: `depcruise packages` against `.dependency-cruiser.cjs`, then `bun run scripts/checks/ambient-globals.ts`, then `bun run scripts/checks/workspace-entrypoints.ts`, then `bun run scripts/checks/secret-read-boundary.ts`. The dependency-cruiser rules are static row definitions; the package-name and declared-entrypoint gate is `workspace-entrypoints.ts`; the ambient secret-acquisition gate is `secret-read-boundary.ts`.
 
 The cruise runs against the built tree: package-name specifiers resolve through each manifest's `exports` to `dist`, so `check:boundaries` requires a prior `pnpm build`. The `ts-boundaries` CI job builds before cruising, and `scripts/checks/boundary-ci-parity.ts` binds that ordering — it fails when the job omits the `pnpm build` step or places it after `pnpm check:boundaries`.
 
@@ -114,6 +114,8 @@ The cruise runs against the built tree: package-name specifiers resolve through 
 
 - `ambient-globals-neutral-tiers` — the neutral set (`core` `.` entry, `core/src/contracts/**`, and `core/src/{domain,app,config,branding}/**`) must not use ambient globals (`process`, `Bun`, `Deno`, timers, `fetch`) or ambient clock/randomness (`Date.now`, `Math.random`).
 - `ambient-env-branding` — an environment read (`process.env` / `Bun.env`) inside the branding tier is classified under this rule.
+
+`bun run scripts/checks/secret-read-boundary.ts` is the AST guard for ambient secret acquisition across every workspace package production source (`packages/<pkg>/src/**` TypeScript, excluding `dist` and `node_modules`). Ambient environment access is permitted only in an enumerated allowlist. The v1 allowlist has three exact entries: the credential implementation directory (`packages/adapters/src/credentials`, class `credential-material`) and two pre-existing configuration environment readers (`packages/adapters/src/file/yaml-parser.ts` and `packages/adapters/src/legacy/index.ts`, class `configuration-environment-source`). Exactly one entry may be `credential-material`, and every entry carries a reason. Wildcards, prefixes, absolute paths, trailing separators, duplicate paths, and missing targets fail registry validation; an empty scan scope fails closed, so the gate cannot pass vacuously. The check detects `process.env`, `Bun.env`, and `Deno.env` property reads, element access to `env` or an ambient global, runtime imports of `process` or `bun`, and aliased ambient globals, while ignoring identifier positions such as property names, import specifiers, and type declarations. It runs in `check:boundaries` and as a binding step in the CI `ts-invariants` job; the behavior is documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
 
 ### Negative fixtures and coverage
 
@@ -130,12 +132,12 @@ Fixture resolution mirrors production: fixture manifests point every `exports` t
 | Package manager | `pnpm@10.18.3` pinned in `packageManager`; one committed `pnpm-lock.yaml`; CI installs with `--frozen-lockfile` |
 | Runtime/build | Bun `1.4.4` recorded in four copies: `.bun-version`, root `engines.bun`, CI `env.BUN_VERSION`, and the release workflow |
 | Modules | ESM everywhere (`"type": "module"`, bundler module resolution); relative source imports use explicit `.js` specifiers so emitted declarations resolve under `node16` ESM in the packed artifact |
-| Type checking | One `tsconfig.base.json` with the full ADR strict flag set; per-package composite configs; root solution `tsconfig.json` referencing all six packages |
+| Type checking | One `tsconfig.base.json` with the full ADR strict flag set; per-package composite configs; root solution `tsconfig.json` referencing all six packages; a `tests/types/tsconfig.json` type-probe project chained into the root `typecheck` |
 | Lint/format | One root `biome.json` (recommended preset, 2-space, 100-column) |
 | Commit messages | One root `commitlint.config.js` (Conventional Commits); CI commitlint is the authority |
 | Local hook | `.husky/commit-msg` is offline, warn-only, non-mutating, and always exits 0 |
 | Build | `tsc` emits declarations, maps, and JavaScript to each package's `dist/` |
-| Boundaries | `dependency-cruiser`, the ambient-globals AST guard, and the workspace-entrypoints check, chained in `check:boundaries` |
+| Boundaries | `dependency-cruiser`, the ambient-globals AST guard, the workspace-entrypoints check, and the secret-read boundary check, chained in `check:boundaries` |
 
 ### Quality entry points
 
@@ -149,7 +151,7 @@ The five named scripts exist at the root and in all six packages:
 
 Exactly one aggregate `check` chains them in that order: `lint → format:check → typecheck → test → check:boundaries`, then appends the packed-exports invariant `bun run scripts/checks/exports-parity.ts` at the workspace root. No alternate aggregate or bypass flag exists. `pnpm check` is the single green/red signal for the workspace.
 
-The root `typecheck` and `test` scripts each declare a `pnpm build` prerequisite (`pretypecheck` and `pretest`). The aggregate therefore builds every package before it typechecks and tests, so package-name specifiers, emitted declarations, and conditional `imports` aliases resolve against built `dist` targets. `check:boundaries` runs after them, so the aggregate cruises the built tree it just produced; `exports-parity` then packs each publishable from the same `dist/`.
+The root `typecheck` runs `pnpm -r typecheck` and then compiles the `tests/types/tsconfig.json` type-probe project, so compile-time contract probes outside the package graph fail the aggregate. The root `typecheck` and `test` scripts each declare a `pnpm build` prerequisite (`pretypecheck` and `pretest`). The aggregate therefore builds every package before it typechecks and tests, so package-name specifiers, emitted declarations, and conditional `imports` aliases resolve against built `dist` targets. `check:boundaries` runs after them, so the aggregate cruises the built tree it just produced; `exports-parity` then packs each publishable from the same `dist/`.
 
 ### Build and exports discipline
 
@@ -181,7 +183,7 @@ The existing bash jobs remain byte-unchanged and authoritative. Sixteen additive
 
 `ts-fresh-clone`, `ts-invariants`, `ts-typecheck`, `ts-lint`, `ts-format`, `ts-test`, `ts-boundaries`, `ts-build`, `ts-exports`, `ts-pins`, `ts-publish-guard`, `ts-license-audit`, `ts-vuln`, `ts-aggregate`, `ts-commitlint`, `ts-forbidden-literals`.
 
-`ts-boundaries` builds before it cruises, and `ts-invariants` runs `scripts/checks/boundary-ci-parity.ts` beside the other static invariants, so the two CI jobs stay ordered the way the local gates are.
+`ts-boundaries` builds before it cruises, and `ts-invariants` runs `scripts/checks/boundary-ci-parity.ts`, `scripts/checks/secret-read-boundary.ts`, and the other static invariants, so the two CI jobs stay ordered the way the local gates are.
 
 The `ts-forbidden-literals` brand scan is specified in [feature-branding-seam.md](feature-branding-seam.md).
 
@@ -196,15 +198,19 @@ No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scr
 | `packages/*/package.json` | Manifests: exports, imports aliases, `workspaceImports`, scripts, privacy |
 | `packages/*/tsconfig.json` | Composite configs extending the strict base |
 | `packages/core/src/index.ts` | The `createRuntime` composition-root signature |
-| `packages/*/src/**` | Internal tier directories; configuration, file/repo/legacy adapters and CLI inspection carry implemented code, while the remaining engines and providers are placeholders |
+| `packages/core/src/contracts/**` | Result, error-table, configuration, adapter-port, capability, credential, and envelope contracts (types and `as const` data only) |
+| `packages/*/src/**` | Internal tier directories; configuration, result contracts, adapter ports, the credential implementation, the envelope codec, file/repo/legacy adapters, and CLI inspection carry implemented code, while the remaining engines and providers are placeholders |
+| `packages/adapters/src/credentials/index.ts` | Environment-backed credential port implementation at the declared `./credentials` subpath |
+| `packages/adapters/src/io/envelope-codec.ts` | Pure adapter-internal metadata envelope codec |
 | `package.json` | Workspace root: pinned `packageManager`, five named scripts, aggregate `check`, dev toolchain |
 | `pnpm-workspace.yaml` | Workspace globs (`packages/*`) |
 | `tsconfig.base.json` / `tsconfig.json` | Strict base flags / solution references |
 | `.dependency-cruiser.cjs` | Package, subpath, tier, testkit, and runtime-API rules |
 | `scripts/checks/*.ts` | Repository invariant checks run with Bun |
-| `tests/structure/**` | Inventory, subpath, exports, and `createRuntime` assertions |
+| `tests/structure/**` | Inventory, subpath, exports, contract-surface, and `createRuntime` assertions |
+| `tests/types/**` | Compile-time contract probes chained into the root `typecheck` |
 | `tests/boundaries/**` | Negative fixtures, controls, and the fixture-coverage meta-check |
-| `tests/behaviour/**` | pnpm isolation and commit-msg hook behaviour |
+| `tests/behaviour/**` | pnpm isolation, commit-msg hook, adapter-port, credential, and envelope behaviour |
 | `tests/checks/**` | Mutation and contract tests for `scripts/checks/*.ts` |
 | `.changeset/config.json` | Lockstep fixed group and private-package policy |
 | `.github/workflows/ci.yml` | Untouched bash jobs plus the additive `ts-*` fast loop |
@@ -249,8 +255,9 @@ core              ──> no workspace dependencies
 | Unit/structure | Package inventory, subpaths, exports, `createRuntime` | `bun test tests/structure` |
 | Boundary | Every forbidden rule, alias and relative form, on production resolution | `bun test tests/boundaries` with the `mkdtemp` harness; `check:boundaries` for the gate |
 | Fixture coverage | Rule-to-fixture completeness | `tests/boundaries/fixture-coverage.test.ts` |
-| Invariants | Manifests, pins, CI topology, bindingness, supply chain, exports, packed-exports parity, boundary build/cruise parity, licenses, result-contract table sync, exit literals | `bun run scripts/checks/*.ts`, the aggregate check, and mutation tests under `tests/checks/**` |
-| Behaviour | pnpm isolation, commit-msg hook | `bun test tests/behaviour` |
+| Invariants | Manifests, pins, CI topology, bindingness, supply chain, exports, packed-exports parity, boundary build/cruise parity, licenses, result-contract table sync, exit literals, secret-read boundary | `bun run scripts/checks/*.ts`, the aggregate check, and mutation tests under `tests/checks/**` |
+| Type level | Contract typing probes outside the package graph | `tests/types/tsconfig.json` through the root `typecheck` |
+| Behaviour | pnpm isolation, commit-msg hook, adapter ports, credentials, envelope round-trip and degradation | `bun test tests/behaviour` |
 | Aggregate | The whole workspace | `pnpm check` |
 
 ## Dependencies & Risks
@@ -267,5 +274,7 @@ core              ──> no workspace dependencies
 - **Repository conventions:** [AGENTS.md](../../../AGENTS.md) — repo structure, `scripts/` and `tools/` conventions, running tests.
 - **Testing rules:** [.ai/rules/testing-strategy.md](../../../.ai/rules/testing-strategy.md) — TypeScript test layer and aggregate check.
 - **Configuration capability:** [Configuration Layer and Inspection](feature-config-layer.md).
+- **Result capability:** [Result Contract and Error Table](feature-result-contract.md).
+- **Adapter contract substrate:** [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
 - **Glossary:** [doc/overview/glossary.md](../../overview/glossary.md) — scaffold terms.
 - **Change record:** `doc/changes/2026-10/2026-10-29--GH-170--monorepo-scaffold-toolchain/`.

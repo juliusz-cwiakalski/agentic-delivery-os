@@ -7,7 +7,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The command-surface result contract: the CommandResult envelope in core ./contracts, the machine-readable error table as the single source of failure identity, the domain-kind to app-error-code to projection classification chain, the standalone CLI {0, 1, 2} exit projection, the deterministic in-process runCli surface, the two-entry fallback containment, the serialization redaction chokepoint, the testkit conformance validator, and the binding docs/code sync and exit-literal invariants."
 links:
-  related_changes: ["GH-172", "GH-173"]
+  related_changes: ["GH-172", "GH-173", "GH-181"]
   related_decisions: ["ADR-0003"]
 ---
 
@@ -232,6 +232,7 @@ The result surface itself adds no runtime dependency or new CI job. Configuratio
 - **Depends on** the monorepo scaffold ([feature-monorepo-scaffold-toolchain.md](feature-monorepo-scaffold-toolchain.md)) for package tiers, boundary enforcement, the ambient guard, and the aggregate check.
 - **Depends on** the branding seam ([feature-branding-seam.md](feature-branding-seam.md)) for `BrandIdentity` parameter discipline and the forbidden-literal scan.
 - **Consumed by** the configuration layer ([feature-config-layer.md](feature-config-layer.md)) for envelope, error identity and the sole redaction path.
+- **Consumed by** the adapter port substrate ([feature-adapter-ports.md](feature-adapter-ports.md)) for the `config.credential.missing` credential-failure identity and the redaction boundary.
 - **Depends on** [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md) for runtime-neutral contract placement, package boundaries, and gate stability.
 - **Risk — contract cascade:** Every later command and surface consumes the envelope. Mitigation: the field set is fixed at v1, `schemaVersion` provides a breaking-change channel, and evolution is additive within a version.
 - **Risk — documentation drift:** The documented table can diverge from the source. Mitigation: the sync check fails closed in both directions and includes the fallback rows.

@@ -117,9 +117,9 @@ ProviderRoute, StateStore, AuditEvent, AttentionState.
 
 ## Catalogue
 
-Typed at: the milestone where the typed contract first appears. Status today
-is Planned throughout; the bash delivery stack provides behavior prototypes,
-not contracts.
+Typed at: the milestone where the typed contract first appears. The nine
+adapter-interaction rows typed at M0 are Typed; all other rows remain Planned.
+The bash delivery stack provides behavior prototypes, not contracts.
 
 ### Context and configuration
 
@@ -186,20 +186,22 @@ not contracts.
 
 | Primitive | Kind | Meaning and invariant | Typed at |
 |---|---|---|---|
-| ExternalSystemInstance | context | Configured tracker, VCS, or CI instance with auth method | M0 |
-| AdapterContract | contract | Adapters declare capabilities and gaps; never pretend parity | M0 |
-| WorkItem | adapter | Normalized ticket: id, status, labels, assignee, relations, comments | M0 |
-| WorkflowMap | adapter | Native status to ADOS state alias plus transition mechanism | M0 |
-| WorkItemRelation | adapter | Parent and child, blocks, relates-to | M0 |
-| DeliveryRequest | adapter | Delivery request: PR or MR with target and source refs, review state, threads | M0 |
-| PipelineRun | adapter | Pipeline, job, and trace evidence, not just a status color | M0 |
-| RetryPolicy | policy | Only known-safe retries; unsafe writes never retry | M0 |
+| ExternalSystemInstance | context | Configured tracker, VCS, or CI instance with auth method | M0 — Typed ([GH-181]) |
+| AdapterContract | contract | Adapters declare capabilities and gaps; never pretend parity | M0 — Typed ([GH-181]) |
+| WorkItem | adapter | Normalized ticket: id, status, labels, assignee, relations, comments | M0 — Typed ([GH-181]) |
+| WorkflowMap | adapter | Native status to ADOS state alias plus transition mechanism | M0 — Typed ([GH-181]) |
+| WorkItemRelation | adapter | Parent and child, blocks, relates-to | M0 — Typed ([GH-181]) |
+| DeliveryRequest | adapter | Delivery request: PR or MR with target and source refs, review state, threads | M0 — Typed ([GH-181]) |
+| PipelineRun | adapter | Pipeline, job, and trace evidence, not just a status color | M0 — Typed ([GH-181]) |
+| RetryPolicy | policy | Only known-safe retries; unsafe writes never retry | M0 — Typed ([GH-181]) |
 | Compensation | capability | Reversible action for risky writes where feasible | M1 |
-| IdempotencyKey | contract | Safe retries for external writes | M0 |
+| IdempotencyKey | contract | Safe retries for external writes | M0 — Typed ([GH-181]) |
 | HarnessInstance | context | Configured agent harness (opencode, claude-code, later pi.dev) with version and capability flags | M1 |
 | HarnessSession | capability | Spawn, resume, steer, and collect a delivery session; premature end is classified; liveness stays harness-agnostic | M1 |
 | HarnessPluginSurface | contract | Per-harness package format exposing the tooling (commands, agents, MCP), generated from the canonical source, sync-verified | M3 |
 | HarnessTelemetry | event | Read-only session statistics extracted from harness stores at capture points (closeout first): tokens by class, calls, tool usage, per agent and model, session-tree attributed to work items; persisted as events, harness-neutral schema | M1 |
+
+[GH-181]: ../../changes/2026-10/2026-10-30--GH-181--primitive-ports-credential-metadata/chg-GH-181-spec.md
 
 ### State, audit, and owner surfaces
 
