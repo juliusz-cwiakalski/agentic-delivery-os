@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-10-30T23:55:00Z", completed: "2026-10-31T00:40:00Z", iterations: 2, last_verdict: "PASS" }
   quality_gates: { started: "2026-10-31T00:45:00Z", completed: "2026-10-31T01:05:00Z" }
   dod_check: { started: "2026-10-31T01:10:00Z", completed: "2026-10-31T01:15:00Z" }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: "2026-10-31T01:20:00Z", completed: null, url: null }
 decisions:
   - text: "DoR verdict READY at iteration 1 (10/10 facets PASS; 0 critical, 0 major, 1 minor, 3 nits — all advisory). Findings carried as recorded reconciliations rather than reopening artifact phases: (1) spec F-5/DEC-9 testkit-import clause wording is mechanically false — implementers follow the plan's root-test relative-import mechanism; (2) TC-ERR-001 remediation-hint exactness scoped at delivery; (3) plan task 4.5 reworded attribution (ci-topology wiring scan enforces local-chain presence); (4) allowlist entry kinds (file|directory) defined at delivery. Delivery may start."
     date: "2026-10-30"
