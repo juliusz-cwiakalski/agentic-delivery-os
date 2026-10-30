@@ -158,9 +158,20 @@ export const createStateStore = (
         };
       }
       for (const name of edge.listDirectory(directory)) {
-        if (!name.endsWith(".tmp")) continue;
-        edge.removeFile(`${directory}/${name}`);
-        cleanedTemporaries.push(`${directory}/${name}`);
+        const path = `${directory}/${name}`;
+        if (name.endsWith(".tmp")) {
+          edge.removeFile(path);
+          cleanedTemporaries.push(path);
+          continue;
+        }
+        if (!edge.verifyPermissions(path, "file")) {
+          return {
+            kind: "state",
+            code: "state.permission.denied",
+            consequence: "not_landed",
+            location: { path },
+          };
+        }
       }
     }
     if (edge.exists(`${indexPath}.tmp`)) {
