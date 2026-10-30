@@ -1,0 +1,72 @@
+{
+  "cases": [
+    {
+      "workingName": ".renamed-product",
+      "expected": {
+        "productName": ".renamed-product",
+        "binaryName": "renamed-product",
+        "packageScope": "@delivery-os",
+        "environmentPrefix": "RENAMED_PRODUCT_",
+        "configDirectoryName": ".renamed-product",
+        "stateDirectoryName": ".renamed-product-state",
+        "mcpToolPrefix": "renamed-product_",
+        "telemetryNamespace": "delivery",
+        "docsBaseUrl": "https://delivery-os.github.io/renamed-product/",
+        "repositoryUrl": "https://github.com/delivery-os/renamed-product",
+        "releaseAssetPrefix": "renamed-product-",
+        "installPath": "~/.renamed-product/bin/renamed-product"
+      }
+    },
+    {
+      "workingName": ".alt-brand",
+      "expected": {
+        "productName": ".alt-brand",
+        "binaryName": "alt-brand",
+        "packageScope": "@delivery-os",
+        "environmentPrefix": "ALT_BRAND_",
+        "configDirectoryName": ".alt-brand",
+        "stateDirectoryName": ".alt-brand-state",
+        "mcpToolPrefix": "alt-brand_",
+        "telemetryNamespace": "delivery",
+        "docsBaseUrl": "https://delivery-os.github.io/alt-brand/",
+        "repositoryUrl": "https://github.com/delivery-os/alt-brand",
+        "releaseAssetPrefix": "alt-brand-",
+        "installPath": "~/.alt-brand/bin/alt-brand"
+      }
+    },
+    {
+      "workingName": ".synthetic",
+      "expected": {
+        "productName": ".synthetic",
+        "binaryName": "synthetic",
+        "packageScope": "@delivery-os",
+        "environmentPrefix": "SYNTHETIC_",
+        "configDirectoryName": ".synthetic",
+        "stateDirectoryName": ".synthetic-state",
+        "mcpToolPrefix": "synthetic_",
+        "telemetryNamespace": "delivery",
+        "docsBaseUrl": "https://delivery-os.github.io/synthetic/",
+        "repositoryUrl": "https://github.com/delivery-os/synthetic",
+        "releaseAssetPrefix": "synthetic-",
+        "installPath": "~/.synthetic/bin/synthetic"
+      }
+    },
+    {
+      "workingName": "example-product",
+      "expected": {
+        "productName": "example-product",
+        "binaryName": "example-product",
+        "packageScope": "@delivery-os",
+        "environmentPrefix": "EXAMPLE_PRODUCT_",
+        "configDirectoryName": ".example-product",
+        "stateDirectoryName": ".example-product-state",
+        "mcpToolPrefix": "example-product_",
+        "telemetryNamespace": "delivery",
+        "docsBaseUrl": "https://delivery-os.github.io/example-product/",
+        "repositoryUrl": "https://github.com/delivery-os/example-product",
+        "releaseAssetPrefix": "example-product-",
+        "installPath": "~/.example-product/bin/example-product"
+      }
+    }
+  ]
+}

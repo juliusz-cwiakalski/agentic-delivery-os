@@ -1,0 +1,13 @@
+{
+  "legacyLiterals": ["ADOS_", ".ados"],
+  "diagnosticLiterals": [
+    "legacy compatibility: ",
+    "legacy environment variables with prefix ",
+    " map to ",
+    " names",
+    "the legacy config directory ",
+    " maps to ",
+    "; "
+  ],
+  "structuralLiterals": [""]
+}

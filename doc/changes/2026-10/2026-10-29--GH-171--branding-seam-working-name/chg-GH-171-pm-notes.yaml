@@ -1,0 +1,110 @@
+change_id: GH-171
+title: "M0-S2: Branding seam and working name"
+delivery_mode: autonomous  # user-directed end-to-end delivery (manual invocation); STOP at open PR
+milestone: "M0: Trust substrate"
+phases:
+  clarify_scope: { started: "2026-10-29T00:00:00Z", completed: "2026-10-29T22:15:00Z" }
+  specification: { started: "2026-10-29T22:20:00Z", completed: "2026-10-29T22:35:00Z" }
+  test_planning: { started: "2026-10-29T22:40:00Z", completed: "2026-10-29T23:55:00Z" }
+  delivery_planning: { started: "2026-10-29T22:55:00Z", completed: "2026-10-29T23:59:30Z" }
+  dor_check: { started: "2026-10-29T23:10:00Z", completed: "2026-10-30T00:10:00Z" }
+dor_iterations:
+  - iteration: 1
+    verdict: NOT_READY
+    date: "2026-10-29T23:25:00Z"
+    facets: "9/10 PASS; cross_artifact_consistency FAIL"
+    blockers:
+      - "CRITICAL: docs-scope meta-check anchors 'new user-facing docs' to the PR base (origin/main-tools) — verified self-breaking: post-merge the added-vs-base set empties while the registry still names the doc (gate red on main-tools after merge and every successor change), and merged docs silently LEAVE scan coverage (degrades AC-F4-2 / ticket AC-2). Fix mandated: anchor 'new' to a fixed corpusBaseline (32784af) recorded in the registry, permanent membership, plus a scope-decay mutation test. Reopens test_planning + delivery_planning."
+      - "MINOR: TC-BRANDING-020 step 2 hardcodes ados_distribution: redistributable while plan D6 binds internal (verified mechanically sound). One-word test-plan fix. Reopens test_planning."
+    advisories_nonblocking: "A1 myados reserved-case residual (owner ack at PR recommended); A2 build-time define channel unimplemented (build-env-supplied value per spec DEC-1); A3 internal->redistributable flip is one word if owner prefers; A4 child-probe wording binding; A5 override-variable checks."
+    artifact: "readiness-review/readiness-iter-1.md"
+  - iteration: 2
+    verdict: READY
+    date: "2026-10-30T00:10:00Z"
+    facets: "10/10 PASS; cross_artifact_consistency now PASS; both iter-1 findings verified CLOSED under adversarial scenarios (merge, successor-PR injection, rename, deletion, shallow clone, baseline advance, ref-typed baseline, unregistered new doc, corpus modifications)"
+    blockers: []
+    advisories_nonblocking: "A1 myados reserved-case (owner ack at PR); A2 build-time define deferred to freeze; A3 internal->redistributable one-word flip option at PR; A4 explicit console.warn capture in default-instance probe fixture; A6 future changes adding user-facing docs (incl. doc/spec via doc-syncer) must register them in the same change — add explicit clause to task 7.3 inputs; A7 delivery-time orphan-entry mutation (delete registered doc -> named failure) to complete TC-027 matrix. PM directs @coder to honor A4/A6/A7 in the relevant plan phases."
+    artifact: "readiness-review/readiness-iter-2.md"
+  delivery: { started: "2026-10-30T00:15:00Z", completed: "2026-10-30T01:40:00Z" }
+  system_spec_update: { started: "2026-10-30T01:50:00Z", completed: "2026-10-30T02:05:00Z" }
+  review_fix: { started: "2026-10-30T02:10:00Z", completed: "2026-10-30T02:30:00Z" }
+  quality_gates: { started: "2026-10-30T02:35:00Z", completed: "2026-10-30T03:30:00Z" }
+quality_gates_iterations:
+  - iteration: 1
+    scope: "local battery"
+    verdict: GREEN
+    date: "2026-10-30T02:55:00Z"
+    note: "Local full-history battery green (248+103 tests, invariants, doc-dist, 23 bash suites). CI half (AC-F4-3) deferred to PR observation."
+  - iteration: 2
+    scope: "PR #192 CI observation (AC-F4-3 merge-blocking half)"
+    verdict: RED — REOPENED, remediation in progress
+    date: "2026-10-30T00:00:00Z"
+    root_cause: "One class, two sub-mechanisms (local-vs-CI git-history drift; partial fetch-depth:1 checkouts): (a) ts-exports (no fetch) — tests/structure/rename-drill-doc.test.ts:104 + legacy-confinement.test.ts:179 exec the live scan whose `git cat-file -e 32784affbb8a1b82a57b6c4578a331b8bd99b4c4` fails closed on the missing baseline commit (fail-closed CORRECT by design; environment starved). (b) ts-test + ts-aggregate — tests/checks/ci-checks.test.ts:277/:282 resolve the REMOTE-TRACKING ref origin/main-tools (git show / git diff origin/main-tools...HEAD), but the jobs' `git fetch --no-tags origin main-tools` (no refspec) writes only FETCH_HEAD and never creates refs/remotes/origin/main-tools. The scan job itself held (fetch-depth: 0 + explicit sha fetch, asserted by ci-checks mutations)."
+    remediation_directive: "CEO 2026-10-30: make the baseline reachable in EVERY CI job executing these tests — uniform fetch-depth: 0 across ts-* jobs (or explicit fetch of the recorded sha), keep fail-closed semantics intact, do NOT weaken tests; audit ALL jobs for hidden git-history deps in one pass; prove failure mode + fix via local simulated partial clone (clone --depth 1 + explicit baseline fetch); push; confirm all checks green on PR #192 (16 ts-* + 7 bash); pm-notes retro (third local-vs-CI drift instance; consider standing CI-parity gate)."
+    fix_design: "Uniform `with: fetch-depth: 0` added to every ts-* checkout lacking it — PURE LINE ADDITIONS (ci-checks.test.ts:287-290 asserts the ci.yml diff is additions-only; ts-invariants byte-unchanged assertion and the scan-job asserted block untouched); existing explicit fetch steps kept (harmless with full history, secondary insurance). Audit + hermetic CI-runnable partial-clone simulation test added per owner directive."
+    remediation: "COMPLETED by @coder, commits 2a95b8f (ci: full history for 12 ts-* jobs, additions-only 52/0 numstat, ts-invariants byte-unchanged, scan-job block untouched) + 022e683 (fix: #contracts alias resolved in published branding types). SECOND ROOT CAUSE found during fix (masked by the drift failure): attw InternalResolutionError on @delivery-os/core/branding — dist types preserved `import from \"#contracts\"` while the manifest mapped it to unpublished src; fixed via conditional exports {types: dist, default: dist} + package-local tsconfig paths (packaging-boundary correction, no gate weakening, no source-import change). Audit: full consumer table recorded — no bash-suite or release.yml consumer of live git history (temp-repo tests self-contained). New standing simulation tests/checks/ci-baseline-parity.test.ts (network-free, ~1s): partial clone (--depth 1 --no-local) proves scan RED fail-closed with the recorded message, then explicit sha fetch proves GREEN; also asserts partial clone lacks origin/main-tools (second sub-mechanism). Local battery green (249 tests). Pushed 71c6649..022e683."
+    verification: "PM-independent via @runner gh pr checks: 47/47 pass, 0 pending/failing on head 022e6833b9f51cb1ba6dabaacf36464db8329b3b (state OPEN, MERGEABLE, base main-tools); all 16 ts-* jobs green x2 (push+PR triggers) incl. TS forbidden-literal scan; all 8 bash-side jobs green (7 + pr-base-guard). MERGE-BLOCKING CONDITION SATISFIED."
+    verdict_final: GREEN
+    date_final: "2026-10-30T03:30:00Z"
+  dod_check: { started: "2026-10-30T03:00:00Z", completed: "2026-10-30T03:05:00Z" }
+  pr_creation: { started: "2026-10-30T03:10:00Z", completed: "2026-10-30T03:25:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/192" }
+decisions:
+  - text: "Delivery mode autonomous: user directive 'Deliver GH-171 end-to-end using ADOS' with STOP at open PR; merge authority stays with CEO/human."
+    date: 2026-10-29
+  - text: "Owner constraint (issue #171 comment, 2026-10-29, binding): branding SEAM only — the working name is config-driven and read through the branding module; NO hardcoded product token anywhere (GH-170 brand-scan seed mechanism enforces); no public product name may be selected, proposed, or revealed in any artifact; candidate names and the naming decision are private owner-gated work outside this repo; public artifacts stay self-contained with generic rationale. Refines the backlog task's 'single name constant (working name ados)' — the constant is the seam, not a hardcoded literal."
+    date: 2026-10-29
+  - text: "Legacy literal set (ados, ADOS_, ~/.ados) remains the DEC-8 seed set: owned by the legacy adapter + the scan seed; the pre-existing corpus migrates separately (out of scope here, per DEC-8 scope-of-claim)."
+    date: 2026-10-29
+  - text: "BrandIdentity type belongs in core ./contracts per ADR-0003 DEC-8; branding imports ./contracts for the type only. Current scaffold has the type defined locally in packages/core/src/branding/index.ts with a narrower shape than DEC-8's derived-value list — this change moves/completes it."
+    date: 2026-10-29
+open_questions: []  # none blocking: owner comment resolved the seam-scope ambiguity; remaining shape decisions are technical and reversible (spec/plan territory)
+blockers: []
+notes:
+  - type: info
+    text: "State detection: GH-171 OPEN, no labels at intake, milestone M0 (19 open). No open PRs repo-wide. No local change folder. Dependency M0-S1 (GH-170) CLOSED completed — PR #191 merged to main-tools 2026-10-29T21:05Z (commit 32784af). Local main-tools == origin/main-tools (32784af); no resume-sync needed. Labels set to change+planning per pm-instructions mapping."
+    date: 2026-10-29
+  - type: info
+    text: "Current-truth baseline (from merged GH-170): packages/core/src/branding/index.ts is a type-only stub defining BrandIdentity LOCALLY (productName, binaryName, environmentPrefix, configDirectoryName) with a doc comment 'pure resolver; no ambient environment read'. packages/core/src/config/index.ts is a types-only placeholder (config layer arrives M0-S4). packages/adapters/src/legacy/index.ts exists as a placeholder subpath. contracts has only Result<T,E>."
+    date: 2026-10-29
+  - type: info
+    text: "Mechanisms already enforced that this change must respect: tier matrix (branding imports ./contracts ONLY; app/config/state may not import branding; adapters may not import core ./branding; testkit may not import branding); ambient-env-branding AST rule forbids process.env/Bun.env in branding tier (env override must be injected at a runtime-aware edge); runtime-API confinement excludes branding; every new forbidden boundary rule needs a failing negative fixture + fixture-coverage registration (meta-check)."
+    date: 2026-10-29
+  - type: info
+    text: "GH-170 brand-scan seed located: scripts/checks/ignore-rules.ts productTokens seed list ['ados','ADOS_','~/.ados'] — currently scans ONLY .gitignore lines (its own scope). DEC-8 requires the forbidden-literal test over packages/**, root manifests, root workspace files, .gitignore, and new user-facing docs, with allowlist: packages/core/src/branding/**, packages/adapters/src/legacy/**, decision records, historical change artifacts, license/source headers. M0-S2 extends the scan to the full DEC-8 scope; seed list grows with each frozen name (freeze adds its literal in the same change)."
+    date: 2026-10-29
+  - type: info
+    text: "AC decode (issue body, 4 ACs): (1) every name-derived value traces to the branding constant — full DEC-8 derived set: product name, binary name, package scope, env prefix, config dir name, state dir name, MCP tool prefix, telemetry namespace, docs base URL (+ repository URL, release asset prefix, install path per DEC-8 export list); (2) forbidden-literal test fails CI on a literal outside the allowlist — must be binding in CI (ci-topology/bindingness constraints) with negative evidence; (3) the legacy adapter itself passes the scan — legacy adapter is scanned, green under its allowlist entry, and must not exceed the legacy token set; (4) legacy env/config still read with a warning — legacy ADOS_* and ~/.ados adapter with one-time warning, receives current names as parameters (never imports branding); no new pre-freeze-prefixed variables (DEC-8)."
+    date: 2026-10-29
+  - type: info
+    text: "Remaining issue-body tasks: neutral telemetry schema (delivery.event.v1 — schema name brand-neutral; producer name is branding metadata per DEC-8); env override to swap the name at the naming freeze without rebuild (injected env facts; override var naming is a neutral token, not a product token — spec decides); rename drill DOCUMENTED (procedure doc; drill executes pre-release/whenever branding changes)."
+    date: 2026-10-29
+  - type: risk
+    text: "Doc impacts for phase 7: NO branding feature spec exists — doc-syncer must author doc/spec/features/feature-branding-seam.md (first-spec-only rule, always-resolve). Possible glossary additions. AGENTS.md already states the no-hardcode rule ('read the binary and product names from configuration') — verify consistency, no rewrite expected. All public artifacts must stay self-contained, generic rationale, no name candidates (owner constraint)."
+    date: 2026-10-29
+  - type: risk
+    text: "Config-driven working name vs config layer timing: layered config ships M0-S4 (GH-173). For M0-S2 the 'config-driven' contract is the pure-resolver input (working name + env facts injected as parameters at a runtime-aware edge); actual layered-config wiring lands with M0-S4. Spec must state this seam contract so M0-S4 consumes it without reshaping. (RESOLVED: spec F-3/DM-2/RSK-1 state exactly this.)"
+    date: 2026-10-29
+  - type: info
+    text: "Delivery plan COMPLETE (7 phases P1-P7, 47 AC traceability points, all 13 ACs + 26 TCs slotted; commit 666fc18). Decisions pinned: delimiter matching (myados residual recorded), forbidden-literals.ts + JSON registry + separate binding CI job, hygiene token block subsumed (C-8 delta recorded), no changeset (GH-170 precedent), 12 deterministic derivation rules, drill doc internal, Result-enveloped fail-closed resolver, legacy adapter factory + injected warn sink, zero new boundary rules. LATER REOPENED by DoR iter-1 (docs-scope corpusBaseline fix + marker contradiction)."
+    date: 2026-10-29
+  - type: info
+    text: "DoR iter-1 NOT_READY (facets 9/10 PASS; cross_artifact_consistency FAIL). Positive: ticket fidelity exact (no over-delivery, no name leakage anywhere); artifacts' code-state claims verified against the tree. REOPENED test_planning + delivery_planning for the two findings (see dor_iterations)."
+    date: 2026-10-29
+  - text: "RETRO: the critical docs-scope flaw (base-relative 'new docs' scope self-breaking post-merge) was introduced at test-plan authoring and accepted by PM at validation — PM validated coverage counts and gap dispositions but did not probe lifecycle semantics (what the check does AFTER merge). Rule for future PM validations of gate designs: always ask 'what does this check do on main-tools the day after merge, and on every successor change?' Coverage green today is not correctness over time."
+    type: retro
+    date: 2026-10-29
+  - type: info
+    text: "Delivery COMPLETE (PM-validated, not self-report): 7 commits f988fa5(P1 contracts+telemetry) 98a45a5(P2 resolver) 97f4378(P3 scan+registry+subsumption) da4237c(P4 legacy adapter) e2a7329(P5 drill doc) f3fbc21(P6 CI binding) 7571d24(P7 finalize); HEAD 7571d24 verified on branch. Gates: pnpm check exit 0; bun tests 145 (structure/behaviour/checks) + 103 (boundaries) all pass; 10 invariant checks exit 0; doc-distribution guard 0; lockfile unchanged, zero new deps; protected paths untouched. PM spot-verification: branding tier grep for ados/ADOS = 0 hits; forbidden-literals.ts+registry and doc/guides/rename-drill.md exist. All 13 ACs evidenced (AC-F4-3 CI half = merge-blocking observation at PR, per plan). DoR advisories A4/A6/A7 honored. Deviations accepted: (1) ados_distribution marker line exempted as required document header (seed token is in the key name itself; bodies fully scanned); (2) task 6.5 push-branch CI observation deferred to PR time (push forbidden in delivery); (3) protected-diff wording (ignore-rules.ts + ci-topology.ts changes are plan-required). PR-time manual gates: TC-BRANDING-026 (name-freedom owner ack) + TC-BRANDING-020 step 9 (drill clarity) + A1/A3 advisories."
+    date: 2026-10-30
+  - type: info
+    text: "Review iter-1 PASS (0 blockers/0 majors/2 low/3 info; artifact code-review/review-iter-1.yaml — reviewer used YAML per sibling convention). Reviewer independently ran all gates green (pnpm check 248 tests, scan 5/5 classes 0 violations, 9 invariant checks, doc-distribution, full-diff token audit: all seed tokens in sanctioned framing, branding/contracts 0 hits, all 15 commits conventional, protected paths untouched, 27/27 TCs non-vacuous, 13/13 ACs verified). LOW findings F-1 (header-exemption substring patterns should be anchored — future hardening) + F-2 (listRepoFiles fail-open on git failure — named failure preferred): OPTIONAL hardening, proposed to owner as PR-time follow-up suggestions (PM does not auto-create tickets). INFO F-4: PR MUST record merge-blocking condition — all 16 ts-* + 7 bash jobs green incl. ts-forbidden-literals on the pushed branch; plus standing owner gates TC-BRANDING-026 (name-freedom ack), TC-BRANDING-020 step 9 (drill clarity), A1 myados ack, A3 distribution flip option. F-3/F-5 presentation notes only (F-5 = drill references future snapshot infrastructure, RSK-6 echo)."
+    date: 2026-10-30
+  - type: info
+    text: "Quality gates GREEN (phase 9, independent @runner battery; full log tmp/run-logs-runner/2026-10-30/gh171-quality-gates.log): pnpm check exit 0 (248 tests/0 fail, typecheck 6/6, depcruise 31 modules 0 violations, 78s); forbidden-literals 0 violations 5/5 classes 2 registered docs; 12 further invariant checks exit 0 (incl. ci-topology 7 bash + 16 TS jobs, supply-chain, pins, license 11 deps, vuln 0 high/critical, exports 5 publishables); doc-distribution no drift (80 docs); bun test tests/boundaries 103/103; 23 bash suites green (16 scripts + 6 tools + 1 bonus); 3 text-to-image suites skipped (paid/external APIs, CI-excluded per ci.yml). Sole exit-1: publish-guard.ts = RED BY DESIGN pre-freeze (passes only in freeze configuration; CI runs its unit test which asserts the pre-freeze fail — PM delegation brief had inverted the expectation; retro: verify gate contracts against source before scripting gate batteries). Lint 1 info (useIndexOf), exit 0, non-blocking. Gates did not dirty the tree."
+    date: 2026-10-30
+  - type: info
+    text: "DoD CHECK PASS (phase 10, PM-owned): (1) pm-notes complete — all 9 prior phases carry completion timestamps; (2) plan tasks all done (zero unchecked; task 6.5 CI observation is the documented PR-time merge-blocking condition, accepted by review F-4); (3) all 13 spec ACs satisfied AND reviewer-verified by execution (not self-report); ticket ACs 1-4 evidenced (AC-2 CI half = PR-time observation); (4) current-truth docs complete: feature-branding-seam.md authored + registry-coupled, glossary extended, doc-syncer reported zero residual gaps, doc-distribution no drift, AGENTS.md verified consistent; (5) quality gates green on delivered HEAD. PR-phase inputs ready: base main-tools EXPLICIT; merge-blocking condition (all 16 ts-* + 7 bash jobs green incl. ts-forbidden-literals on pushed branch); owner gates at PR (TC-BRANDING-026 name-freedom ack, TC-BRANDING-020 step 9 drill clarity, A1 myados ack, A3 internal->redistributable flip option); optional hardening follow-ups to propose to owner (F-1 anchored header-exemption patterns, F-2 named failure on git listing failure — no ticket auto-creation)."
+    date: 2026-10-30
+  - text: "RETRO (CEO resume, PR #192 CI red): THIRD instance of the local-vs-CI git-history drift class. (1) GH-170: ci-topology base fetch + rule-world git probes; (2) GH-170 batch retro: base fetch in test jobs; (3) GH-171: corpusBaseline cat-file + remote-tracking-ref resolution failed on partial checkouts despite explicit fetch steps — the fetch-without-refspec trap (writes FETCH_HEAD only, never refs/remotes/origin/main-tools) is subtle and recurring. Local batteries keep passing because the local clone has full history — the drift is structural, not careless. PROPOSAL for owner (no ticket auto-created): a standing CI-parity gate in the battery — every git-history-dependent test either runs inside a hermetic partial-clone simulation, or the battery includes a mandatory partial-clone pass; candidate name: 'parity: partial-clone run of history-dependent suites'. This change adds the first such simulation (owner-directed) as the template."
+    type: retro
+    date: 2026-10-30

@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-MONOREPO-SCAFFOLD-TOOLCHAIN
 status: Current
 created: 2026-10-29
-last_updated: 2026-10-29
+last_updated: 2026-10-30
 owners: ["engineering"]
 service: delivery-os
 summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check, dist-targeted exports with publint/attw, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
 links:
-  related_changes: ["GH-170"]
+  related_changes: ["GH-170", "GH-171"]
   related_decisions: ["ADR-0003"]
 ---
 
@@ -78,6 +78,8 @@ Each package declares its internal layers as `imports` subpath aliases, so viola
 | surfaces (`cli`, `mcp`, `opencode`) | `#commands/*`, `#output/*` |
 
 `core` uses the ADR tier set `domain` / `app` / `config` / `branding` / `state`. The boundary configuration resolves aliases so an edge written with an alias and the same edge written relatively fail identically.
+
+In `core`, `#contracts` is a conditional `imports` target: `types` → `./dist/contracts/index.d.ts` and `default` → `./dist/contracts/index.js`. Emitted declarations preserve the `#contracts` specifier, and the published package ships only `dist`, so the alias must resolve to built targets. A package-local `paths` mapping in `packages/core/tsconfig.json` resolves `#contracts` to `./src/contracts/index.ts`, so source typechecking works before a build exists. The remaining core aliases (`#domain/*`, `#app/*`, `#config/*`, `#branding/*`, `#state/*`) stay src-relative.
 
 ### Declared workspace entrypoints
 
@@ -169,9 +171,13 @@ Exactly one aggregate `check` chains them in that order: `lint → format:check 
 
 ### CI coexistence
 
-The existing bash jobs remain byte-unchanged and authoritative. Fifteen additive `ts-*` jobs run beside them as binding gates:
+The existing bash jobs remain byte-unchanged and authoritative. Sixteen additive `ts-*` jobs run beside them as binding gates:
 
-`ts-fresh-clone`, `ts-invariants`, `ts-typecheck`, `ts-lint`, `ts-format`, `ts-test`, `ts-boundaries`, `ts-build`, `ts-exports`, `ts-pins`, `ts-publish-guard`, `ts-license-audit`, `ts-vuln`, `ts-aggregate`, `ts-commitlint`.
+`ts-fresh-clone`, `ts-invariants`, `ts-typecheck`, `ts-lint`, `ts-format`, `ts-test`, `ts-boundaries`, `ts-build`, `ts-exports`, `ts-pins`, `ts-publish-guard`, `ts-license-audit`, `ts-vuln`, `ts-aggregate`, `ts-commitlint`, `ts-forbidden-literals`.
+
+The `ts-forbidden-literals` brand scan is specified in [feature-branding-seam.md](feature-branding-seam.md).
+
+All `ts-*` jobs check out full history (`fetch-depth: 0`), so jobs that read a recorded commit SHA or a remote-tracking ref resolve it in CI.
 
 No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scripts/checks/ci-bindingness.ts` rejects those constructs. Actions are SHA-pinned, permissions are job-scoped, and the vulnerability gate fails on any high or critical advisory.
 

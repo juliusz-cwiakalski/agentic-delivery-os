@@ -1,14 +1,17 @@
 /**
- * TC-SCAFFOLD-034 — ignore rules incl. the brand-free project-local config glob.
+ * TC-SCAFFOLD-034 / TC-BRANDING-013 — ignore rules incl. the brand-free
+ * project-local config glob.
  *
- * Asserts the four coverage classes, the absence of product-name literals in the
- * ignore rules, rename survival of the config glob, and real `git check-ignore`
- * behaviour on representative paths.
+ * Asserts the four coverage classes, the brand-free glob, rename survival of the
+ * config glob, and real `git check-ignore` behaviour on representative paths.
+ * Token enforcement for `.gitignore` is subsumed by the full-scope
+ * `forbidden-literals` scan (class 4); the coverage classes, glob, rename
+ * simulation, and probes below remain load-bearing.
  */
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const ROOT = process.cwd();
 const failures: string[] = [];
@@ -37,18 +40,10 @@ for (const entry of coverage) {
   }
 }
 
-// 2. Brand-free glob + no product-name literals in the ignore rules.
+// 2. Brand-free glob.
 const configPattern = ".*/config.local.yaml";
 if (!configPattern.includes("*")) {
   fail(`project-local config pattern ${configPattern} must be a glob, not a literal path`);
-}
-const productTokens = ["ados", "ADOS_", "~/.ados"];
-for (const line of lines) {
-  for (const token of productTokens) {
-    if (line.toLowerCase().includes(token.toLowerCase())) {
-      fail(`.gitignore line ${JSON.stringify(line)} contains product-name token ${token}`);
-    }
-  }
 }
 
 // 3. Rename simulation: a synthetic product name still matches the same path shape.

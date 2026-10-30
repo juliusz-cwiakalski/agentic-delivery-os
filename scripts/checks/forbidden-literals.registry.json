@@ -1,0 +1,65 @@
+{
+  "corpusBaseline": "32784affbb8a1b82a57b6c4578a331b8bd99b4c4",
+  "scopeClasses": [
+    {
+      "id": "packageTree",
+      "root": "packages"
+    },
+    {
+      "id": "rootManifests",
+      "files": ["package.json", "pnpm-lock.yaml"]
+    },
+    {
+      "id": "rootWorkspaceFiles",
+      "files": [
+        "pnpm-workspace.yaml",
+        "tsconfig.json",
+        "tsconfig.base.json",
+        "biome.json",
+        "commitlint.config.js",
+        ".dependency-cruiser.cjs",
+        ".bun-version",
+        ".changeset/config.json",
+        "bunfig.toml"
+      ]
+    },
+    {
+      "id": "ignoreRules",
+      "files": [".gitignore"]
+    },
+    {
+      "id": "userFacingDocs",
+      "roots": ["doc"],
+      "excludedPrefixes": ["doc/changes/", "doc/decisions/"]
+    }
+  ],
+  "seedLiterals": ["ados", "ADOS_", "~/.ados"],
+  "allowlist": [
+    {
+      "id": "branding-subpath",
+      "kind": "path",
+      "path": "packages/core/src/branding/"
+    },
+    {
+      "id": "legacy-adapter-subpath",
+      "kind": "path",
+      "path": "packages/adapters/src/legacy/"
+    },
+    {
+      "id": "decision-records",
+      "kind": "path",
+      "path": "doc/decisions/"
+    },
+    {
+      "id": "historical-change-artifacts",
+      "kind": "path",
+      "path": "doc/changes/"
+    },
+    {
+      "id": "source-headers",
+      "kind": "line",
+      "patterns": ["Copyright", "source:", "Apache-2.0", "ados_distribution:"]
+    }
+  ],
+  "registered": ["doc/guides/rename-drill.md", "doc/spec/features/feature-branding-seam.md"]
+}
