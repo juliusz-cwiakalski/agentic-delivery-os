@@ -47,7 +47,7 @@ export type ProviderQualifiedIdentity = {
   readonly entityId: string;
 };
 
-/** The ADOS state alias a native workflow status maps onto (DM-4). */
+/** The delivery-state alias a native workflow status maps onto (DM-4). */
 export type DeliveryStateAlias =
   | "backlog"
   | "ready"
@@ -63,14 +63,14 @@ export type WorkflowTransitionMechanism =
   | "label-swap"
   | "manual";
 
-/** One native-status to ADOS-state mapping (DM-4). */
+/** One native-status to delivery-state mapping (DM-4). */
 export type WorkflowStateMapping = {
   readonly nativeStatus: string;
   readonly deliveryState: DeliveryStateAlias;
   readonly transitionMechanism: WorkflowTransitionMechanism;
 };
 
-/** The provider's native status to ADOS state alias map (DM-4). */
+/** The provider's native status to delivery-state alias map (DM-4). */
 export type WorkflowMap = {
   readonly systemName: string;
   readonly states: readonly WorkflowStateMapping[];

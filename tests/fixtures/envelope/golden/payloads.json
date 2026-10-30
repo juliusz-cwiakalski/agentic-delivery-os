@@ -1,0 +1,76 @@
+{
+  "cases": [
+    {
+      "id": "minimum",
+      "humanContent": "Original body",
+      "envelope": {
+        "schema": "delivery.metadata.v1",
+        "kind": "work-item-comment",
+        "payload": {
+          "comment": {
+            "producingAgent": "a",
+            "operatorAuthority": "o"
+          },
+          "delivery": {
+            "workItemRef": "GH-1",
+            "runId": "r"
+          }
+        }
+      }
+    },
+    {
+      "id": "typical",
+      "humanContent": "Body with `code` and **markdown**.",
+      "envelope": {
+        "schema": "delivery.metadata.v1",
+        "kind": "work-item-comment",
+        "payload": {
+          "comment": {
+            "producingAgent": "claude-code",
+            "operatorAuthority": "operator:juliusz"
+          },
+          "delivery": {
+            "workItemRef": "GH-181",
+            "runId": "run-20261030-01"
+          }
+        }
+      }
+    },
+    {
+      "id": "maximum-field",
+      "humanContent": "Line one\nLine two",
+      "envelope": {
+        "schema": "delivery.metadata.v1",
+        "kind": "work-item-comment",
+        "payload": {
+          "comment": {
+            "producingAgent": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "operatorAuthority": "oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
+          },
+          "delivery": {
+            "workItemRef": "GH-181/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "runId": "run-yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+          }
+        }
+      }
+    },
+    {
+      "id": "quoting-unicode",
+      "humanContent": "Quoted \"text\" and \\ backslash — üñïçødé.",
+      "envelope": {
+        "schema": "delivery.metadata.v1",
+        "kind": "work-item-comment",
+        "payload": {
+          "comment": {
+            "producingAgent": "agent \"quoted\"",
+            "operatorAuthority": "operator \\ backslash"
+          },
+          "delivery": {
+            "workItemRef": "GH-181/üñïçødé",
+            "runId": "run-\nmultiline"
+          }
+        }
+      }
+    }
+  ]
+}

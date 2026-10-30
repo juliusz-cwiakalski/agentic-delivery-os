@@ -72,6 +72,14 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "runtimePlatform",
   ],
   "adapters/src/file/yaml-parser.ts": ["parseConfigYaml", "parserHostSwitchBlocked"],
+  "adapters/src/io/envelope-codec.ts": [
+    "ENVELOPE_FIELD_NAME",
+    "isClosedV1Payload",
+    "parseEnvelope",
+    "readRawCarrier",
+    "serializeEnvelope",
+    "stripEnvelope",
+  ],
   "adapters/src/repo/index.ts": ["findGitRoot", "resolveRepositoryRoot", "nodeRepositoryIo"],
   "adapters/src/legacy/index.ts": [
     "createLegacyCompat",

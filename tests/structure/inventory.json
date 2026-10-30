@@ -29,6 +29,7 @@
     "src/github/index.ts",
     "src/gitlab/index.ts",
     "src/host/index.ts",
+    "src/io/envelope-codec.ts",
     "src/io/index.ts",
     "src/jira/index.ts",
     "src/legacy/index.ts",

@@ -1,0 +1,17 @@
+{
+  "humanContent": "Valid control body",
+  "envelope": {
+    "schema": "delivery.metadata.v1",
+    "kind": "work-item-comment",
+    "payload": {
+      "comment": {
+        "producingAgent": "claude-code",
+        "operatorAuthority": "operator:juliusz"
+      },
+      "delivery": {
+        "workItemRef": "GH-181",
+        "runId": "run-20261030-01"
+      }
+    }
+  }
+}
