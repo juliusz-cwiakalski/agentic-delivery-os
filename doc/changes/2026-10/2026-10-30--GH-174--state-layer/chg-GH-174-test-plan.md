@@ -1,8 +1,8 @@
 ---
 id: chg-GH-174-test-plan
-status: Proposed
+status: Updated
 created: 2026-10-30T17:54:23Z
-last_updated: 2026-10-30T17:54:23Z
+last_updated: 2026-10-30T18:26:41Z
 owners: [engineering]
 service: delivery-os state layer
 labels: [change, planning]
@@ -10,7 +10,7 @@ version_impact: minor
 summary: "Verify the M0-S5 state layer: one driver-neutral port proven by a parameterized conformance suite over both declared driver kinds; append-only schema-versioned ledger truth; classified detection of all torn-state classes and honest verified-empty evidence; key-set assertions with no default substitution; atomic replace under deterministic crash injection; single-writer fenced contention, staleness and explicit recovery; fail-closed POSIX permissions with a platform-conditional Windows ACL contract; seven exact-code state error rows with bidirectional doc/code sync and not_landed consequence; packed Node/Bun import; and boundary, runtime-confinement, branding, literal and foundation-scope conformance."
 links:
   change_spec: ./chg-GH-174-spec.md
-  implementation_plan: null
+  implementation_plan: ./chg-GH-174-plan.md
   testing_strategy: ../../../../.ai/rules/testing-strategy.md
 ---
 
@@ -45,15 +45,15 @@ The tests are deliberately built around the mechanism the specification names as
 - [OUT] Changes to the branding seam contract, the bash stack, existing gates, `.opencode/` or `.ados-claude/` (NG-6, NG-7). The existing gates are run, not weakened.
 - [OUT] The storage-engine selection details reserved to the TDR: JSONL framing/checksum algorithm, per-runtime SQLite binding and fallback, fence staleness basis, index rebuild trigger, atomic-replace technique and Windows ACL mechanism (OQ-1). Tests bind the observable contracts, not the chosen mechanics.
 - [GAP-1 — platform-conditional] **AC-F8-2 (Windows ACL) is not verifiable on the Linux CI matrix.** The spec records the limitation and OQ-2. This plan hard-gates the POSIX half (TC-STATE-016) and makes the Windows half a declared platform-conditional test (TC-STATE-017) with an explicit skip record on Linux; no Linux run may claim Windows verification. Owner-environment verification remains OQ-2, non-blocking for delivery.
-- [GAP-2 — metric tension] **NFR-9's threshold "0 tests requiring a spawned process" conflicts with AC-F9-3**, which requires importing the packed artifact under Node (and Bun). The packed-consumer test necessarily spawns a runtime. This plan treats the packed Node/Bun probe as the single documented exception and flags the contradiction in §8.3 (OQ-T1) rather than silently weakening either criterion. The behaviour/contract suites themselves remain in-process and spawn-free.
-- [GAP-3 — parity interpretation] **AC-F1-2 says "identical observable results", while DM-5 permits an index-rebuild report only for the indexed kind.** This plan defines parity over driver-neutral observable fields (success/failure, values, error identity, sequence/checksum outcomes and driver-neutral evidence classes) and asserts driver-specific rebuild evidence separately for `sqlite`. That reading needs DoR confirmation (§8.3, OQ-T2); it does not relax the conformance requirement.
+- [GAP-2 — metric tension, resolved by spec v1.1 §14] **NFR-9's in-process rule and AC-F9-3's packed Node/Bun import** are reconciled as a scoped single-probe exception: the packed-consumer test necessarily spawns a runtime and is the only spawned test this change licenses. This plan records the tension in §8.3 (OQ-T1, resolved) rather than silently weakening either criterion. The behaviour/contract suites themselves remain in-process and spawn-free.
+- [GAP-3 — parity interpretation, resolved by spec v1.1 AC-F1-2] **AC-F1-2's "identical results" is defined over driver-neutral observable fields**, while DM-5 permits an index-rebuild report only for the indexed kind. This plan defines parity over driver-neutral observable fields (success/failure, values, error identity, sequence/checksum outcomes and driver-neutral evidence classes) and asserts driver-specific rebuild evidence separately for `sqlite`. Spec v1.1 AC-F1-2 states the same rule and the DoR confirmed it (§8.3, OQ-T2, resolved); it does not relax the conformance requirement.
 - [GAP-4 — test seam dependency] Deterministic crash injection for AC-F6-1 and stale-fence simulation for AC-F7-3 require a test-only fault/lock/clock seam at the state driver's runtime edge. The seam is a testability requirement, not a public port feature; its exact shape follows the TDR (§8.3, OQ-T4/OQ-T5).
-- [GAP-5 — plan absent] The implementation plan (`chg-GH-174-plan.md`) does not exist at authoring time. This test plan binds behaviour and assertions, not task numbering; delivery planning must map its phases onto these TCs rather than reshape the TCs.
+- [GAP-5 — plan absent, resolved] The implementation plan now exists at [chg-GH-174-plan.md](./chg-GH-174-plan.md) (v1.0, 2026-10-30T18:12:08Z). This test plan binds behaviour and assertions, not task numbering; the plan's phases map onto these TCs and must not reshape them.
 
 ## 2. References
 
 - **Change specification**: [chg-GH-174-spec.md](./chg-GH-174-spec.md) — F-1..F-10, DM-1..DM-5, NFR-1..NFR-9, DEC-1..DEC-10, AC-F1-1..AC-F10-2, §17 ticket-AC mapping, §18 open-PR Definition of Done, Appendix A (torn-state classes), Appendix B (key-set semantics), Appendix C (identity seams).
-- **Implementation plan**: absent at authoring (GAP-5). TCs are behaviour-bound; the plan must map onto them.
+- **Implementation plan**: [chg-GH-174-plan.md](./chg-GH-174-plan.md) — Phases 1–10, the driver/TDR ordering (TDR-0004 in Phase 1), the test-scenario rollup mapping every TC to a phase, and decision D7 (conformance harness) / D8 (state-tier structure enforcement). TCs are behaviour-bound; the plan maps onto them.
 - **Testing strategy**: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — `bun:test`, `tests/{structure,behaviour,checks,boundaries,golden}`, `scripts/checks/*.ts` mutation tests, boundary fixtures and `pnpm check`.
 - **TypeScript rules**: [.ai/rules/typescript.md](../../../../.ai/rules/typescript.md) — strict typing, injected time/randomness/environment, runtime-API confinement, `bun:test` authoring and no ambient reads.
 - **Authoritative decision**: [ADR-0003 — OSS Tooling Monorepo Structure](../../../decisions/ADR-0003-oss-monorepo-structure.md) — tier matrix, runtime-API allowlist, C-3/C-4, subpath table.
@@ -74,7 +74,7 @@ The tests are deliberately built around the mechanism the specification names as
 | AC-F1-4 | Two workspace identifiers sharing one state directory cannot observe each other's records | TC-STATE-004 | Covered |
 | AC-F2-1 | Appends land with schema version, kind, key, contiguous sequence, checksum; append-only order with no in-place rewrite | TC-STATE-005 | Covered |
 | AC-F2-2 | Unsupported store/record schema version fails `state.schema.mismatch`, returns no payload values, never coerces | TC-STATE-006 | Covered |
-| AC-F3-1 | Independent index corruption/deletion is detected; index rebuilds from verified ledger or read fails classified; rebuild is reported; values equal ledger truth | TC-STATE-007, TC-STATE-024 | Covered |
+| AC-F3-1 | Independent index corruption/deletion is detected; index rebuilds from verified ledger or the read fails classified (rebuild storage I/O failure → exactly `state.write.failed`, transient/retryable, `not_landed`); rebuild is reported; values equal ledger truth | TC-STATE-007, TC-STATE-024 | Covered |
 | AC-F4-1 | Every injected torn class is detected as `state.store.torn` with safe location; no value from unverified bytes; no negative control passes silently | TC-STATE-008, TC-STATE-024 | Covered |
 | AC-F4-2 | Absent store yields explicit verified-empty evidence; torn store fails classified; the two are never conflated | TC-STATE-009, TC-STATE-024 | Covered |
 | AC-F4-3 | Terminal truncation is repaired with report and intact survivors; mid-record corruption refuses repair under `state.store.torn` and changes nothing | TC-STATE-010, TC-STATE-024 | Covered |
@@ -119,7 +119,7 @@ No REST/HTTP endpoints and no events/messages exist in this change (spec §8.1, 
 | NFR ID | Requirement | TC ID(s) | Status |
 |--------|-------------|----------|--------|
 | NFR-1 | Driver neutrality: 0 implementation-dependent call sites; 0 port operations/types discriminating by kind; 100% conformance parity | TC-STATE-001, TC-STATE-002, TC-STATE-021, TC-STATE-022 | Covered |
-| NFR-2 | Torn detection: 5/5 classes; 0 unverified-value reads; 0 silent-zero reads | TC-STATE-008, TC-STATE-009, TC-STATE-010, TC-STATE-024 | Covered |
+| NFR-2 | Torn detection: 5/5 classes; 0 unverified-value reads; 0 silent-zero reads | TC-STATE-007, TC-STATE-008, TC-STATE-009, TC-STATE-010, TC-STATE-024 | Covered — the four ledger classes plus the index/ledger-divergence class, asserted solely by TC-STATE-007 |
 | NFR-3 | Atomicity: 0 partial target states; 100% of write failures report `not_landed` | TC-STATE-012, TC-STATE-020 | Covered |
 | NFR-4 | Single-writer: 0 double-writes; 0 silent steals; 100% of contention classified `state.lock.busy` | TC-STATE-013, TC-STATE-014, TC-STATE-015 | Covered |
 | NFR-5 | Permissions: 100% POSIX matrix applied; 0 permissive continuations; ACL contract delivered and platform-conditionally tested | TC-STATE-016, TC-STATE-017 | Covered — Windows half conditional (GAP-1/OQ-2) |
@@ -151,7 +151,7 @@ The parity proof is one suite, not two parallel suites:
 
 1. **One case set, two driver bindings.** The suite declares cases once (`open`, `append`, `read`, `key-set pass/fail`, `contention`, `torn detection`, `atomic replace`) and instantiates the driver map `{ jsonl, sqlite }` from the public edge factory. Case definitions are data, not per-driver code. The suite asserts the number of cases executed per kind is equal and non-zero.
 2. **Identical fixture bytes.** Both kinds consume the same generated ledger fixtures; the suite asserts fixture identity (byte digest) before running the cases, so a driver cannot silently receive a friendlier fixture.
-3. **Parity over driver-neutral observables.** The comparison normalizer retains success/failure discriminant, returned values, error `code`/`category`/`retryable`/`consequence`/projection, record sequence/checksum verdicts, and driver-neutral evidence classes (`verified`, `verified-empty`, `torn`, `repaired`, `recovered`). The `sqlite`-only index-rebuild report is excluded from parity and asserted separately in TC-STATE-007; this is the GAP-3 reading and needs DoR confirmation.
+3. **Parity over driver-neutral observables.** The comparison normalizer retains success/failure discriminant, returned values, error `code`/`category`/`retryable`/`consequence`/projection, record sequence/checksum verdicts, and driver-neutral evidence classes (`verified`, `verified-empty`, `torn`, `repaired`, `recovered`). The `sqlite`-only index-rebuild report is excluded from parity and asserted separately in TC-STATE-007; this is the GAP-3 reading, stated by spec v1.1 AC-F1-2 and confirmed at DoR iteration 1.
 4. **No caller-facing discrimination.** A structure test asserts the public port's public operations and result types do not take or expose `StateDriverKind` except at the edge factory that selects the driver; call sites in the suite are helper-mediated, not branched on kind. The type-level assertion is supplemented by an AST scan for `kind === "jsonl"` / `"sqlite"` branches in caller-side tests.
 5. **Anti-vacuity.** A deliberately divergent fake driver (returns a different value / swallows one failure) must fail parity. A suite that reports zero executed cases or collapses to one kind must fail. Parity is not satisfied by constant output: the suite includes a case whose value differs by input.
 
@@ -411,7 +411,7 @@ Every failure and every read evidence object is passed through a canary sweep. A
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-3, F-4, AC-F3-1, DM-5, NFR-1
+**Related IDs**: F-3, F-4, AC-F3-1, DM-5, NFR-1, NFR-2
 **Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/state-index.test.ts`, `tests/fixtures/state/**`
@@ -424,13 +424,13 @@ Every failure and every read evidence object is passed through a canary sweep. A
 **Steps**:
 
 1. Delete the index file, then separately corrupt it, and read through the `sqlite` kind. Assert divergence is detected, the index is rebuilt from the verified ledger, the rebuild is reported in read evidence, and returned values equal ledger truth.
-2. Inject a rebuild I/O failure; assert the read fails with a documented `state.*` code, `consequence: "not_landed"`, and no values (expected `state.write.failed` for storage I/O; the TDR may bind another documented state code, never a silent stale read).
+2. Inject a storage I/O failure during the rebuild; assert the read fails exactly `state.write.failed` — category `transient`, `retryable: true`, `consequence: "not_landed"`, projection class 2 (platform-provider) — with no values returned, the ledger bytes unchanged, and no silent stale read. No alternative code satisfies this assertion.
 3. Assert the ledger bytes are unchanged by index rebuild and that a `jsonl` read of the same ledger returns the same values without an index.
 4. Run a stale-index/ignored-divergence control; assert the test catches the stale value.
 
 **Expected Outcome**:
 
-- Index/ledger divergence is detected; rebuild yields ledger truth and is reported; a failed rebuild is classified, never a stale read.
+- Index/ledger divergence is detected; rebuild yields ledger truth and is reported; a failed rebuild fails exactly `state.write.failed` (transient, retryable, `not_landed`), never a stale read.
 - Driver-specific index evidence does not leak into the parity comparison; the ledger remains truth.
 
 #### TC-STATE-008 - Torn-class detection matrix
@@ -1062,11 +1062,11 @@ git status --porcelain
 ### 8.2 Assumptions
 
 - **A-T1 — Behaviour-bound TCs.** Exact filenames/symbols marked "assumed" may change in delivery planning; the behaviour, assertion target and AC mapping must not. Spec-fixed names (state codes, `delivery.state.v1`, level values, `not_landed`) may not be rebound.
-- **A-T2 — Parity fields.** "Identical observable results" (AC-F1-2) means driver-neutral result/error/evidence classes; the `sqlite` rebuild report is driver-specific evidence asserted separately (GAP-3/OQ-T2).
+- **A-T2 — Parity fields.** "Identical results" (AC-F1-2) means driver-neutral result/error/evidence classes; the `sqlite` rebuild report is driver-specific evidence asserted separately (GAP-3/OQ-T2, resolved by spec v1.1 AC-F1-2).
 - **A-T3 — Fault seam.** Deterministic crash/staleness testing requires a test-only injection seam at the state driver's runtime edge; it is not part of the public port and is not a third-party dependency.
 - **A-T4 — POSIX is the hard gate.** Linux CI proves AC-F8-1; Windows verification is an owner-environment dependency (OQ-2), not a Linux pass.
 - **A-T5 — Packed pattern.** The GH-173 packed-tarball consumer pattern applies to `core`; Node/Bun support is asserted against the TDR-recorded matrix, not an assumed universal SQLite binding.
-- **A-T6 — Plan absent.** Delivery planning maps phases onto these TCs; a later plan that changes a TC's behaviour must reopen this test plan.
+- **A-T6 — Plan-relative, behaviour-bound.** The implementation plan ([chg-GH-174-plan.md](./chg-GH-174-plan.md)) maps its phases onto these TCs; any later plan or implementation change that alters a TC's behaviour, assertion target or AC mapping must reopen this test plan.
 - **A-T7 — TDR candidate.** Storage-engine selections and the runtime support matrix are recorded during delivery (OQ-1); tests bind the contracts, and an unsupported binding is a recorded constraint, not a weakened AC.
 - **A-T8 — Append-only observation.** "No in-place rewrite" is observed via ledger prefix bytes and sequence continuity; the JSONL ledger is the durable truth for both driver kinds.
 - **A-T9 — Safe locations.** Naming missing keys is required by AC-F5-1 and is not payload leakage; payload values/checksum bytes are the forbidden content.
@@ -1076,19 +1076,19 @@ git status --porcelain
 
 | ID | Question | Context | Status | Owner |
 |----|----------|---------|--------|-------|
-| OQ-T1 | NFR-9 says "0 tests requiring a spawned process", but AC-F9-3 requires importing the packed artifact under Node and Bun. Which wins? | Packed Node import necessarily spawns Node; Bun can be spawned too. This plan treats the packed consumer as the single documented exception and keeps all behaviour suites in-process. This is a spec-internal tension, not an invented requirement. | **Open — needs DoR/spec clarification; non-blocking for test authoring** | @spec-writer / @readiness-reviewer |
-| OQ-T2 | Does AC-F1-2's "identical observable results" include the `sqlite`-only index-rebuild report? | DM-5 permits a rebuild report when one occurs; parity cannot require the `jsonl` kind to fabricate one. This plan excludes driver-specific evidence from parity and asserts it separately. | **Open — DoR confirmation; non-blocking** | @readiness-reviewer |
+| OQ-T1 | NFR-9 says "0 tests requiring a spawned process", but AC-F9-3 requires importing the packed artifact under Node and Bun. Which wins? | Packed Node import necessarily spawns Node; Bun can be spawned too. NFR-9's in-process rule holds for every behaviour/contract suite; the packed probe is the single scoped exception. | **Resolved — spec v1.1 §14 / AC-F9-3: the packed Node/Bun probe is the one documented spawned-process exception; NFR-9's in-process rule otherwise stands, and no other spawned test is licensed.** | @spec-writer (resolved) |
+| OQ-T2 | Does AC-F1-2's "identical results" include the `sqlite`-only index-rebuild report? | DM-5 permits a rebuild report when one occurs; parity cannot require the `jsonl` kind to fabricate one. This plan excludes driver-specific evidence from parity and asserts it separately. | **Resolved — spec v1.1 §14 / AC-F1-2: parity is defined over driver-neutral observable fields and driver-specific diagnostic evidence (the `sqlite` rebuild report) is excluded and asserted separately via AC-F3-1/TC-STATE-007; reading confirmed at DoR iteration 1.** | @readiness-reviewer (resolved) |
 | OQ-T3 | Which Windows environment verifies the ACL half (spec OQ-2)? | Linux CI cannot verify Windows ACLs; TC-STATE-017 is platform-conditional and records the limitation. | **Open (spec OQ-2) — owner environment before public-release claims; non-blocking for this change** | @pm / owner |
 | OQ-T4 | What exact runtime support matrix does the TDR record for the SQLite binding? | AC-F9-3 says "within their recorded runtime support matrix"; the matrix does not exist until delivery. TC-STATE-021 asserts the recorded matrix and fails an undeclared skip. | **Open (spec OQ-1/TDR) — recorded during delivery; non-blocking** | @coder / @decision-advisor |
 | OQ-T5 | What staleness basis and recovery-report shape does the TDR bind for fences? | AC-F7-3 requires "detectably stale" but the mechanism is a TDR candidate; tests inject staleness and assert the observable contract. | **Open (spec OQ-1/TDR) — recorded during delivery; non-blocking** | @coder / @decision-advisor |
-| OQ-T6 | Which documented state code should a failed index rebuild use? | AC-F3-1 requires "fails classified, never a silent stale read"; the table's `state.write.failed` covers storage I/O, but the spec does not name the rebuild code explicitly. This plan accepts any documented state code with `not_landed`, expecting `state.write.failed` for I/O. | **Open — delivery binds a documented row; non-blocking** | @coder / @spec-writer |
+| OQ-T6 | Which documented state code should a failed index rebuild use? | AC-F3-1 requires the failed rebuild to be classified, never a silent stale read; a storage I/O failure during rebuild is the pinned case. | **Resolved — spec v1.1 §14 / AC-F3-1: a rebuild storage I/O failure fails exactly `state.write.failed` (transient, retryable, `not_landed`); TC-STATE-007 step 2 asserts that code and accepts no alternative.** | @spec-writer (resolved) |
 
 **Spec gaps recorded explicitly (not silently adjusted):**
 
-1. **NFR-9 spawn contradiction** — see OQ-T1. As written, NFR-9 and AC-F9-3 cannot both hold without an exception. The test plan records the exception rather than claiming 0 spawned tests.
-2. **AC-F1-2 parity scope** — see OQ-T2. "Identical observable results" needs a driver-neutral definition because DM-5 allows kind-specific rebuild evidence.
+1. **NFR-9 spawn rule** — see OQ-T1 (resolved). NFR-9 holds as an in-process rule with exactly one scoped exception: the AC-F9-3 packed Node/Bun probe. The plan records the exception rather than claiming 0 spawned tests.
+2. **AC-F1-2 parity scope** — see OQ-T2 (resolved). "Identical results" is defined over driver-neutral observables because DM-5 allows kind-specific rebuild evidence; that evidence is asserted separately (AC-F3-1/TC-STATE-007).
 3. **AC-F8-2 platform reach** — see GAP-1/OQ-T3. Testable only on a Windows host; the Linux limitation is explicit in the spec and this plan.
-4. **Failed-rebuild code** — see OQ-T6. AC-F3-1 requires classification but does not pin the exact code; the plan requires a documented state code with `not_landed`.
+4. **Failed-rebuild code** — see OQ-T6 (resolved). AC-F3-1 (v1.1) pins `state.write.failed` (transient, retryable, `not_landed`) for a rebuild storage I/O failure; TC-STATE-007 asserts that exact code and admits no alternative.
 5. **No caller beyond tests** — see RSK-T11. Static scanning plus a review step is the practical proof; a future consumer change is out of scope.
 
 No AC is left without a TC. AC-F8-2 is conditional by platform, not unmapped.
@@ -1098,6 +1098,7 @@ No AC is left without a TC. AC-F8-2 is conditional by platform, not unmapped.
 | Version | Date (UTC) | Author | Changes |
 |---|---|---|---|
 | 1.0 | 2026-10-30T17:54:23Z | Change Test Plan Writer | Initial plan: 24 `STATE` TCs plus TC-REVIEW-001; all 22 spec ACs mapped; DM-1..DM-5 and NFR-1..NFR-9 traced; parameterized both-driver conformance contract, non-vacuous torn matrix, deterministic crash/fence injection, POSIX hard gate with conditional Windows ACL, seven-code error identity and bidirectional sync, packed Node/Bun surface, boundary/scope conformance; spec gaps (NFR-9 spawn tension, parity scope, Windows reach, rebuild code, caller proof) recorded rather than reinterpreted. |
+| 1.1 | 2026-10-30T18:26:41Z | Change Test Plan Writer | Post-spec-amendment alignment and DoR iteration-1 fixes (test_planning reopened; readiness-iter-1 F1–F3). F1: TC-STATE-007 step 2 now asserts exactly `state.write.failed` (transient, retryable, `not_landed`) for an injected rebuild storage I/O failure; the "TDR may bind another documented state code" latitude is deleted and the §3.1 AC-F3-1 row mirrors the pin. F2: OQ-T1/T2/T6 marked resolved by spec v1.1 §14 (NFR-9 scoped exception AC-F9-3; AC-F1-2 driver-neutral parity; AC-F3-1 pinned rebuild code); OQ-T3/T4/T5 remain open and non-blocking; `implementation_plan` link set to `./chg-GH-174-plan.md`; GAP-5, §2 plan reference and A-T6 updated from "plan absent". F3: NFR-2's 5/5 evidence row now cites TC-STATE-007 (sole assertor of the index/ledger-divergence class) and TC-STATE-007 lists NFR-2. No TC renumbering, no behaviour/AC-mapping change. |
 
 ## 10. Test Execution Log
 

@@ -1,8 +1,8 @@
 ---
 id: chg-GH-174-state-layer
-status: Proposed
+status: Updated
 created: 2026-10-30T18:12:08Z
-last_updated: 2026-10-30T18:12:08Z
+last_updated: 2026-10-30T18:30:22Z
 owners: [engineering]
 service: delivery-os state layer
 labels: [change, planning]
@@ -35,7 +35,7 @@ version_impact: minor
 
 ## Context and Goals
 
-This plan executes [chg-GH-174-spec.md](./chg-GH-174-spec.md) (v1.1) and is verified by [chg-GH-174-test-plan.md](./chg-GH-174-test-plan.md) (v1.0, 25 TCs: TC-STATE-001..024 + TC-REVIEW-001). All product-shape decisions are resolved in the spec (DEC-1..DEC-10); none are re-opened here. Behavior targets come from the test plan and must not change (A-T1); this plan binds file paths, module layout, task order, per-phase verification, and the commit sequence. Baseline: `main-tools` with M0-S1..S4 merged (GH-170/171/172/173, PR #194). The `core ./state` subpath is a types-only placeholder (`StateDriverKind = "jsonl" | "sqlite"`); `DOMAIN_KINDS = ["provider", "input", "config"]`. Execution belongs on `feat/GH-174/state-layer`; the unmerged PR targets `main-tools`; the orchestrator verifies branch state before delivery.
+This plan executes [chg-GH-174-spec.md](./chg-GH-174-spec.md) (v1.1) and is verified by [chg-GH-174-test-plan.md](./chg-GH-174-test-plan.md) (v1.1, 25 TCs: TC-STATE-001..024 + TC-REVIEW-001). All product-shape decisions are resolved in the spec (DEC-1..DEC-10); none are re-opened here. Behavior targets come from the test plan and must not change (A-T1); this plan binds file paths, module layout, task order, per-phase verification, and the commit sequence. Baseline: `main-tools` with M0-S1..S4 merged (GH-170/171/172/173, PR #194). The `core ./state` subpath is a types-only placeholder (`StateDriverKind = "jsonl" | "sqlite"`); `DOMAIN_KINDS = ["provider", "input", "config"]`. Execution belongs on `feat/GH-174/state-layer`; the unmerged PR targets `main-tools`; the orchestrator verifies branch state before delivery.
 
 **Goals** (spec G-1..G-8): one implementation-neutral port · durable JSONL ledger truth with disposable derived projections · torn state never silent · single-writer + atomic write discipline · classified state failure identity · least-privilege storage on both platform families · generalization-without-implementation (levels, workspace/fence identifiers) · boundary/branding/scope conformance.
 
@@ -47,7 +47,7 @@ This plan executes [chg-GH-174-spec.md](./chg-GH-174-spec.md) (v1.1) and is veri
 - **D4 — No new checks, no new CI jobs**: extend existing suites and existing checks only (`error-table-sync` reads the table dynamically; the forbidden-literals registry gains the new feature doc path — a registry JSON edit, GH-173 precedent, not a bash-stack change). `ci-topology` must stay green with no `ci.yml` change; any discovered wiring need escalates to PM before editing CI.
 - **D5 — Changeset**: minor for the five publishable fixed-group packages (`.changeset/config.json`), `.changeset/state-layer-minor.md`, the GH-173 `config-layer-minor.md` precedent; `testkit` stays excluded; nothing publishes.
 - **D6 — Evidence artifact**: `chg-GH-174-evidence.md` in this folder (GH-172 pattern: phase commits, per-phase green criteria, final gate consolidation, TC coverage, rollback instructions), authored in the final phase.
-- **D7 — Conformance harness**: one suite (`tests/behaviour/state-conformance.test.ts`) with case definitions as data under `tests/fixtures/state/**`, a driver map built from the public edge factory, and the parity normalizer scoped to driver-neutral observables per test-plan §4.1 (the `sqlite` rebuild report is excluded from parity and asserted by TC-STATE-007). The case registry grows as behaviors land (Phases 2→5); the 2/2 parity gate is asserted from Phase 3 onward and re-asserted at every later phase boundary.
+- **D7 — Conformance harness**: one suite (`tests/behaviour/state-conformance.test.ts`) with case definitions as data under `tests/fixtures/state/**`, a driver map built from the public edge factory, and the parity normalizer scoped to driver-neutral observables per test-plan §4.1 (the `sqlite` rebuild report is excluded from parity and asserted by TC-STATE-007). Anti-vacuity guards are map-relative: the zero-case guard is active from Phase 2; the single-kind-collapse guard asserts executed kinds against the current driver-map contents — a singleton map (`{jsonl}`, Phase 2) is detected with the divergent-driver control recorded pending/skipped-with-reason in evidence, and the full two-kind divergence control and parity apply once the map is `{jsonl, sqlite}` (Phase 3 onward), with end-state assertion strength unchanged. The case registry grows as behaviors land (Phases 2→5); the 2/2 parity gate is asserted from Phase 3 onward and re-asserted at every later phase boundary.
 - **D8 — State-tier structure enforcement**: a new AST detector `tests/structure/state-imports.test.ts` (the `config-imports` pattern) enforces `#contracts`-plus-own-module imports across `packages/core/src/state/**` and runtime-API use only inside the declared driver edge, with synthetic negative controls. The `runtime-apis-confinement` state allowance in `.dependency-cruiser.cjs` is tightened from the whole `core/src/state/` tree to the driver edge in the same change, shipping with a new failing fixture + clean control (matrix update + fixture together, rules §4); no rule is weakened.
 
 ### Open questions
@@ -156,7 +156,7 @@ Spec §4.1, verified by the 25 TCs: 5/5 injected torn classes detected and class
 - [ ] **2.4** Author the jsonl scan driver: read by verified ledger scan; key-set assertion semantics (missing declared keys fail `state.keys.missing` naming exactly the missing keys; present keys return recorded values exactly including falsy values; empty declaration succeeds with an empty result on a non-empty ledger); verified-empty evidence for an absent store at an initialized directory; no prune/delete/expiry operation exists on the port.
 - [ ] **2.5** Author `tests/behaviour/state-ledger.test.ts` and `tests/behaviour/state-keys.test.ts` (TC-STATE-004, TC-STATE-005, TC-STATE-011): envelope field inspection with independent checksum verification; prefix-snapshot append-only assertion; reopen/continuity; no-prune-surface type assertion; in-place-rewrite control; two workspace identifiers sharing one directory with the scoping-disabled control; key-set pass/fail with falsy payloads and the default-substitution control.
 - [ ] **2.6** Author `tests/structure/state-contract.test.ts` and the `tests/structure/state-scope.test.ts` skeleton (TC-STATE-001, TC-STATE-003, TC-STATE-023 structure half): identity determinism under ambient stubs that throw; differing inputs yield differing identity; no name/path default or brand derivation in the types; levels and unsupported rejection with the local-fallback control and a write recorder proving zero writes; no state CLI command and no config import (consumer scan completes in Phase 7).
-- [ ] **2.7** Land the conformance harness (D7): `tests/behaviour/state-conformance.test.ts` + `tests/fixtures/state/**` — case definitions as data, driver map from the public edge factory, parity normalizer over driver-neutral observables, fixture digest equality, anti-vacuity guards (zero-case and single-kind collapse fail), the kind-branch AST scan for caller-side tests, and the initial case set (open, append, read, key-set pass/fail) executing against the `jsonl` binding; the `sqlite` binding and 2/2 parity assertions activate in Phase 3 through the same shared registry.
+- [ ] **2.7** Land the conformance harness (D7): `tests/behaviour/state-conformance.test.ts` + `tests/fixtures/state/**` — case definitions as data, driver map from the public edge factory, parity normalizer over driver-neutral observables, fixture digest equality, map-relative anti-vacuity guards, the kind-branch AST scan for caller-side tests, and the initial case set (open, append, read, key-set pass/fail) executing against the `jsonl` binding; the `sqlite` binding and 2/2 parity assertions activate in Phase 3 through the same shared registry. The anti-vacuity guards are map-relative: the zero-case guard fails from Phase 2; the single-kind-collapse guard asserts executed kinds against the current driver-map contents — while the map has fewer than two entries (the Phase 2 singleton `{jsonl}`), the control detects the singleton map and marks the divergent-driver control pending/skipped-with-reason in the recorded evidence (a declared conditional, never a silent `.skip`); once two kinds are bound (Phase 3, map exactly `{jsonl, sqlite}`), it asserts the full two-kind divergence control and parity, with end-state assertion strength identical to the final-state guard — no phase boundary is self-red.
 
 **Acceptance Criteria**:
 
@@ -349,6 +349,7 @@ Spec §4.1, verified by the 25 TCs: 5/5 injected torn classes detected and class
 **System docs to update**:
 
 - `doc/spec/features/feature-state-layer.md` (new, registered); scaffold/branding/result-contract/glossary reconciliation belongs to lifecycle phase 7 (`@doc-syncer`) using this change's inputs — the documented error-table section must not be rewritten (D3)
+- `.ai/rules/typescript.md` (the runtime-API allowlist line) — registered as a lifecycle-phase-7 (`@doc-syncer`) reconciliation input alongside the scaffold/branding/result-contract/glossary entries: D8 tightens the state runtime-API allowance from the whole `core/src/state/` tree to the driver edge, and the rules line must be reconciled to the tightened boundary in the same pass (no true-but-coarser allowance left behind)
 
 **Tests**:
 
@@ -492,7 +493,7 @@ Ticket-AC rollup (spec §17): ticket AC-1 (torn state never silently zeros) → 
 | Artifact | Location | Role / handling |
 |---|---|---|
 | Change specification (v1.1) | [chg-GH-174-spec.md](./chg-GH-174-spec.md) | Source of requirements, §8.3 rows, §18 DoD |
-| Test plan (v1.0, 25 TCs) | [chg-GH-174-test-plan.md](./chg-GH-174-test-plan.md) | Source of TC IDs, §4.1–4.7 binding contracts, execution order |
+| Test plan (v1.1, 25 TCs) | [chg-GH-174-test-plan.md](./chg-GH-174-test-plan.md) | Source of TC IDs, §4.1–4.7 binding contracts, execution order |
 | PM notes | [chg-GH-174-pm-notes.yaml](./chg-GH-174-pm-notes.yaml) | Read-only; clarify_scope record and scope guardrails |
 | This plan | `./chg-GH-174-plan.md` | Only file written by this authoring pass |
 | Proposed engine decisions | `doc/decisions/TDR-0004-state-storage-engine.md` | New in Phase 1; Proposed status; owner PR-review gate |
@@ -515,6 +516,7 @@ No new standalone delivery-infrastructure check or CI job is planned (D4). If ex
 | Version | Date (UTC) | Author | Changes |
 |---|---|---|---|
 | 1.0 | 2026-10-30T18:12:08Z | Implementation Plan Writer | Initial ten-phase, 51-task plan: TDR-0004-first ordering, in-change error rows (D3), driver layout and structure enforcement bindings (D1/D8), built-in SQLite preference with runtime matrix (D2), conformance registry growth 2→5 with 2/2 parity from Phase 3 (D7), packed probe as the single spawn exception, changeset and evidence bindings (D5/D6); all 25 TCs mapped to phases and ACs; per-phase single-commit discipline and full final gate battery. |
+| 1.1 | 2026-10-30T18:30:22Z | Implementation Plan Writer | Targeted DoR iteration-1 remediation, non-blocking findings F4–F5 (delivery_planning reopened; `readiness-review/readiness-iter-1.md`; test plan amended to v1.1 in the same reopen cycle — plan task 3.2 already restates the pinned `state.write.failed`, so no TC-driven change was needed here). F4: task 2.7 and D7 single-kind-collapse guard made map-relative — zero-case guard active from Phase 2; while the driver map has fewer than two entries the control asserts against current map contents (singleton `{jsonl}` detected; divergent-driver control marked pending/skipped-with-reason in evidence); from Phase 3 (map `{jsonl, sqlite}`) the full two-kind divergence control and parity apply with unchanged end-state assertion strength, so no phase boundary is self-red. F5: `.ai/rules/typescript.md` (runtime-API allowlist line) registered as a Phase 7 / lifecycle-phase-7 doc reconciliation input alongside scaffold/branding/result-contract/glossary (D8 driver-edge tightening). Cross-reference refresh only: test-plan version labels v1.0 → v1.1 (Context and Goals, Artifacts and Links). No task or phase renumbering, no behavior change, TC references unchanged; spec, test plan, and PM notes untouched. |
 
 ## Execution Log
 
