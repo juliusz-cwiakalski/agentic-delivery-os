@@ -3,9 +3,9 @@ title: "M0-S4: Config layer (DEC-4)"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-10-30T06:40:00Z", completed: "2026-10-30T06:55:00Z" }
-  specification: { started: "2026-10-30T06:04:46Z", completed: "2026-10-30T06:24:43Z" }
-  test_planning: { started: "2026-10-30T06:32:47Z", completed: "2026-10-30T06:38:27Z" }
-  delivery_planning: { started: "2026-10-30T06:46:03Z", completed: "2026-10-30T06:53:58Z" }
+  specification: { started: "2026-10-30T06:04:46Z", completed: null }
+  test_planning: { started: "2026-10-30T06:32:47Z", completed: null }
+  delivery_planning: { started: "2026-10-30T06:46:03Z", completed: null }
   dor_check: { started: "2026-10-30T06:53:58Z", completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -29,6 +29,12 @@ blockers:
     date: 2026-10-30
     resolved_date: 2026-10-30
 notes:
+  - text: "DoR iteration 1 NOT_READY at 07:05:39Z, 2 major findings, no human pause: CI+selected-file has contradictory project-local reason oracles; spec lacks explicit delivery DoD. Reopen specification then sequentially align test plan and implementation plan; delivery remains unstarted. Prior successful artifacts completed 06:24:43/06:38:27/06:53:58Z respectively. Remediation must define one eligibility-reason matrix and spec DoD without changing source eligibility or introducing pre-PR human acceptance."
+    type: "risk"
+    date: 2026-10-30
+  - text: "Readiness caught an overlapping-condition evidence contradiction missed in artifact validation: TC005 expected ci-disabled while TC006 expected selected-config for same invocation. Explicit overlap matrices should be authored alongside eligibility rules; also require spec DoD, not only plan gates. One artifact remediation loop needed before implementation."
+    type: "retro"
+    date: 2026-10-30
   - text: "Implementation plan validated: 8 phases/39 tasks trace 25/25 ACs, contracts/error rows and license accounting first, pure resolver then real acquisition then CLI, packed/default/schema evidence and docs. Independent review/fixes and final handoff tasks are PM lifecycle-owned when coder runs with no review; do not prematurely mark those done. No upstream coverage gaps reported; proceed to adversarial DoR."
     type: "info"
     date: 2026-10-30
