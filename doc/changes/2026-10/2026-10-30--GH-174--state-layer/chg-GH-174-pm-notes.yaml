@@ -8,7 +8,7 @@ phases:
   specification: { started: "2026-10-30T00:00:00Z", completed: "2026-10-30T00:00:00Z", reopened: "2026-10-30T00:00:00Z (test_planning gap findings OQ-T1/OQ-T2/OQ-T6)", reopened_completed: "2026-10-30T00:00:00Z (v1.1 amendment: NFR-9 scoped with single AC-F9-3 exception; AC-F1-2 parity defined over driver-neutral fields; AC-F3-1 failed rebuild pinned to state.write.failed)" }
   test_planning: { started: "2026-10-30T00:00:00Z", completed: "2026-10-30T00:00:00Z", reopened: "2026-10-30T00:00:00Z (DoR iter-1 findings F1-F3)", reopened_completed: "2026-10-30T00:00:00Z (test-plan v1.1: TC-STATE-007 pins exactly state.write.failed; OQ-T1/T2/T6 marked resolved; NFR-2 evidence includes TC-STATE-007; revision log entry)" }
   delivery_planning: { started: "2026-10-30T00:00:00Z", completed: "2026-10-30T00:00:00Z", reopened: "2026-10-30T00:00:00Z (DoR iter-1 findings F4-F5, non-blocking, rides same cycle)", reopened_completed: "2026-10-30T00:00:00Z (plan v1.1: task 2.7/D7 guard map-relative; Phase 7 registers .ai/rules/typescript.md allowlist line; revision log entry)" }
-  dor_check: { started: "2026-10-30T00:00:00Z", completed: null, iterations: "iter-1 NOT_READY (1 major/3 minor/1 nit; reopened test_planning F1-F3 + delivery_planning F4-F5); pending iter-2" }
+  dor_check: { started: "2026-10-30T00:00:00Z", completed: "2026-10-30T00:00:00Z", iterations: "iter-1 NOT_READY (1 major/3 minor/1 nit; reopened test_planning F1-F3 + delivery_planning F4-F5); iter-2 READY (10/10 facets PASS, 0 blocking, 2 nits)" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -21,6 +21,9 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "DoR iter-2 verdict READY (artifact: readiness-review/readiness-iter-2.md; 10/10 facets PASS). All five iter-1 findings verified resolved hunk-by-hunk (git diff ed1c6e5..ab65de0). Two NEW non-blocking nits introduced by the remediation itself, no phase reopened, to be folded into @coder's first commit on PM instruction: (N1) test-plan §1.2 GAP-5 still cites plan as v1.0 while plan is v1.1; (N2) plan v1.1 revision-log closing line 'spec, test plan, and PM notes untouched' is literally false at commit scope — reword. Reviewer: nits do not warrant a third gate run; delivery unblocked."
+    type: "decision"
+    date: "2026-10-30"
   - text: "DoR iter-1 remediation COMPLETE: test-plan v1.1 (F1: TC-STATE-007 step 2 now asserts exactly state.write.failed, no alternative code — residual-oracle grep clean; F2: OQ-T1/T2/T6 marked resolved with spec-v1.1 references, implementation_plan linked, revision log added; F3: NFR-2 evidence row includes TC-STATE-007, bidirectional NFR-2 link added) + plan v1.1 (F4: single-kind-collapse guard map-relative, declared conditional never silent skip, end-state strength unchanged; F5: .ai/rules/typescript.md runtime-API allowline registered for phase-7 reconciliation). No renumbering, no behavior/mapping changes. Re-running DoR as iteration 2 (max 3)."
     type: "resolved"
     date: "2026-10-30"
