@@ -1,0 +1,52 @@
+change_id: GH-173
+title: "M0-S4: Config layer (DEC-4)"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-10-30T06:40:00Z", completed: "2026-10-30T06:55:00Z" }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions:
+  - text: "CI-layer cross-check resolved PM-side: ticket body says 'CI mode disables the system and user-global layers' but owner-accepted ADR-0003 DEC-4 (debug/explainability section) additionally disables the project-local layer under CI=true, reported as skipped with reason ci-disabled. DEC-4 is authoritative (the ticket's References name ADR-0003; the backlog story cites DEC-4) and its reading is strictly safer. No human question needed."
+    date: 2026-10-30
+  - text: "Exit-code cross-check resolved PM-side: DEC-4 wording 'a malformed file fails closed with a distinct exit code' predates the delivered {0,1,2} projection contract (GH-172 current truth: exit codes are a projection of table entry classes, fixed at {0,1,2}, call-site literals forbidden). Distinctness lands at the error-code level: dedicated config table entries in the user-validation class (exit 1); no new numeric code. The GH-172 result contract wins; spec-writer formalizes the mapping."
+    date: 2026-10-30
+  - text: "Branding coupling confirmed non-blocking: the ticket's '.<product>/config.yaml' and 'ADOS_*' are branding-derived values — feature-branding-seam.md 'Consumption by later layers' pre-documents that M0-S4 consumes resolveBrandIdentity unchanged and uses configDirectoryName for the committed config path and environmentPrefix for environment-layer names. Hardcoding either would violate ADR-0003 C-3 and fail the live ts-forbidden-literals scan."
+    date: 2026-10-30
+open_questions: []
+blockers: []
+notes:
+  - text: "Autonomous delivery started on explicit user directive: one workItemRef only (GH-173), full 11-phase lifecycle, PR against main-tools (--base main-tools passed explicitly to @pr-manager), PM never merges. State detection: issue #173 open, no labels/comments/assignees (labels change+planning added); zero open PRs in repo; no prior change folder or branch anywhere (fresh start); worktree clean on main-tools == origin/main-tools == b2914fd (the GH-172 merge commit). GH-172 housekeeping: PR #193 merged 2026-10-30T05:36:51Z, issue #172 closed completed; moved to recently_delivered (GH-85 pruned on overflow)."
+    type: "info"
+    date: 2026-10-30
+  - text: "Issue body == backlog.md M0-S4 verbatim; dependencies M0-S1 (GH-170), M0-S2 (GH-171), M0-S3 (GH-172) all merged. Greenfield surface: packages/core/src/config is a placeholder tier (ConfigPlaceholder type only); no ConfigSource port exists yet; core ./contracts currently carries Result<T,E>, BrandIdentity, telemetry schema names, CommandResult envelope, and ERROR_TABLE with 4 entries (fallback.invocation, fallback.internal, provider.quota.exceeded, input.value.rejected)."
+    type: "info"
+    date: 2026-10-30
+  - text: "Authoritative model is ADR-0003 DEC-4 (owner-accepted): 7-layer precedence built-in defaults < system < user-global < project committed (<repo>/<configDirectoryName>/config.yaml) < project local (config.local.yaml, gitignored) < environment (typed <ENVIRONMENTPREFIX>* mapping, __ as the nesting separator, e.g. KEY__SUB maps to key.sub) < CLI flags. Merge semantics: recursive map merge, scalar replace, list replace (no union/append), explicit reset:[dotted.paths] clears inherited values, null invalid unless the schema allows it. One JSON Schema validates each layer AND the merged result; layer errors name the layer and line. Unknown keys are errors except the reserved $schema, reset, and x- vendor namespace. The typed env mapping is the only environment mechanism; in-file interpolation ({env:...}, ${VAR:-default}) is rejected. Secrets are environment-only; any secret value in a repository-scoped layer (committed AND project-local — gitignored does not exempt; the rule is location, not tracking) is a hard fail-closed error regardless of --strict, with a canary-secret fixture. Warnings on deprecated keys and shadowed values; --strict escalates. Platform table for system/user-global: Linux XDG ($XDG_CONFIG_DIRS, $XDG_CONFIG_HOME), macOS (/Library and ~/Library Application Support), Windows (%PROGRAMDATA%, %APPDATA%). Discovery walks from cwd up to the git root, never above; v1 resolves repository layers at the git root only; outside git, repository layers are skipped with reason no-git-root; explicit --project-root for deliberate tests. Restrict-only policy overlay and template extends are explicitly NOT v1."
+    type: "info"
+    date: 2026-10-30
+  - text: "Debug/explainability surface (DEC-4): config debug prints key | value | origin with a fixed per-layer origin grammar (file layers: layer=<l> file=<path> line=<n>; built-in defaults: layer=defaults file=core/src/config/defaults.ts line=<n>; environment: layer=environment env=<KEY> with no file/line; cli: layer=cli flag=<--flag> with no file/line); config get <key> --show-origin; loaded-files and skipped-layers lists with reasons (ci-disabled, no-git-root). cli-command-registry.md (planning truth) prescribes the config command: basic mode prints the merged configuration as plain JSON; debug mode prints per-key provenance as extended JSON or annotated JSONC. Ticket AC-2 requires config debug to name the file and line for each key."
+    type: "info"
+    date: 2026-10-30
+  - text: "Architecture constraints carried to spec/plan: C-9 runtime neutrality — the DEC-4 resolver is pure and lives in core/src/config; file/environment acquisition sits behind the ConfigSource port declared in core ./contracts (ADR-0003 names ConfigSource as the repository-config and environment acquisition port); the legacy compatibility adapter at packages/adapters/src/legacy (adapters ./legacy) is the ConfigSource implementation for pre-freeze sources, warning exactly once; the filesystem ConfigSource implementation placement (adapters vs cli edge) is a spec decision. The origin grammar requires line-preserving config parsing — the parser/dependency choice is a spec design point under the C-2 license gate (no unapproved dependency; GH-172 precedent: zero new runtime dependencies)."
+    type: "info"
+    date: 2026-10-30
+  - text: "Error-table evolution discipline applies (GH-172 binding invariant): config failure codes (malformed layer file, unknown key, unmapped env key, null rejection, interpolation rejection, secret-in-repository-layer) must enter ERROR_TABLE with structured fields and a projection class AND receive documented rows in feature-result-contract.md's documented table in the SAME change — the error-table-sync check fails closed in both directions. CONFIG_INVALID is DEC-4's legacy shorthand; actual codes follow the hierarchical domain.reason.detail convention. Lesson from GH-172 spec iteration 1: a binding check over an artifact requires the artifact to ship in the same change."
+    type: "risk"
+    date: 2026-10-30
+  - text: "Doc impacts for phase 7 (doc-syncer): NEW feature spec doc/spec/features/feature-config-layer.md (first-spec-only, always-resolve in every mode); feature-result-contract.md documented table gains config rows (sync-checked); possible touch of feature-monorepo-scaffold-toolchain.md (config tier no longer a placeholder), feature-branding-seam.md (M0-S4 consumption realized), glossary (config terms). New user-facing docs must register in forbidden-literals.registry.json in the same change and must stay product-free (seed literals ados/ADOS_/~/.ados never appear; write environmentPrefix/configDirectoryName or placeholders instead)."
+    type: "risk"
+    date: 2026-10-30
+  - text: "Ticket ACs: (1) malformed config yields a classified error with a code, not a crash; (2) config debug names the file and line for each key. The full DEC-4 validation/merge/discovery matrix is the acceptance baseline. Unblocks M0-S12 (GH-181 primitive ports), M0-S16 (GH-185 interim mitigations), and all config consumers (M0-S5 consumes stateDirectoryName and config dir override; M0-S13 reads the provider chain)."
+    type: "info"
+    date: 2026-10-30
+  - text: "Standing operational constraints inherited from GH-172 retros: commit bodies wrapped at <=100 chars (ts-commitlint CI job errors above that on PRs to main-tools); packages must be built before typecheck/test (pretypecheck/pretest hooks); bash stack, .opencode/, .ados-claude/, and doc/planning/ stay untouched; no license headers added by agents."
+    type: "info"
+    date: 2026-10-30
