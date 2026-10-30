@@ -1,0 +1,58 @@
+{
+  "rows": [
+    {
+      "id": "reserved-result-schema",
+      "text": "delivery.result.v1",
+      "recognized": false,
+      "resolves": false
+    },
+    {
+      "id": "reserved-event-schema",
+      "text": "delivery.event.v1",
+      "recognized": false,
+      "resolves": false
+    },
+    {
+      "id": "reserved-metric-schema",
+      "text": "delivery.metric.v1",
+      "recognized": false,
+      "resolves": false
+    },
+    {
+      "id": "semantic-version",
+      "text": "1.4.4",
+      "recognized": false,
+      "resolves": false
+    },
+    {
+      "id": "dotted-filename",
+      "text": "package.json",
+      "recognized": false,
+      "resolves": false
+    },
+    {
+      "id": "hostname",
+      "text": "example.invalid",
+      "recognized": false,
+      "resolves": false
+    },
+    {
+      "id": "ordinary-prose",
+      "text": "The command completed successfully.",
+      "recognized": false,
+      "resolves": false
+    },
+    {
+      "id": "foreign-namespace",
+      "text": "com.example.telemetry.sink",
+      "recognized": false,
+      "resolves": false
+    },
+    {
+      "id": "http-status-shape",
+      "text": "HTTP_404",
+      "recognized": false,
+      "resolves": false
+    }
+  ]
+}

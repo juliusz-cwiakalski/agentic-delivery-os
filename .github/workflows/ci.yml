@@ -239,6 +239,8 @@ jobs:
           bun run scripts/checks/ci-topology.ts
           bun run scripts/checks/ci-bindingness.ts
           bun run scripts/checks/ci-supply-chain.ts
+          bun run scripts/checks/error-table-sync.ts
+          bun run scripts/checks/exit-code-literals.ts
 
   ts-typecheck:
     name: TS typecheck

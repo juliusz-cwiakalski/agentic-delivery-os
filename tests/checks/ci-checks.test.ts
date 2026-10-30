@@ -271,14 +271,20 @@ describe("forbidden-literal CI job", () => {
     }
   });
 
-  test("aggregate chain stays five steps and ts-invariants is byte-unchanged", () => {
+  test("aggregate chain stays five steps and ts-invariants changes are additions-only", () => {
     expect(validateScriptSurface(ROOT)).toEqual([]);
     const head = readFileSync(join(ROOT, CI_PATH), "utf8");
     const base = execFileSync("git", ["show", "origin/main-tools:.github/workflows/ci.yml"], {
       cwd: ROOT,
       encoding: "utf8",
     });
-    expect(jobBlock(head, "ts-invariants")).toBe(jobBlock(base, "ts-invariants"));
+    const headJob = jobBlock(head, "ts-invariants");
+    const baseJob = jobBlock(base, "ts-invariants");
+    for (const line of baseJob.split("\n").filter((entry) => entry.length > 0)) {
+      expect(headJob).toContain(line);
+    }
+    expect(headJob).toContain("bun run scripts/checks/error-table-sync.ts");
+    expect(headJob).toContain("bun run scripts/checks/exit-code-literals.ts");
     const diff = execFileSync(
       "git",
       ["diff", "--unified=0", "origin/main-tools...HEAD", "--", CI_PATH],

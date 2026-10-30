@@ -1,0 +1,28 @@
+{
+  "rows": [
+    {
+      "id": "declared-provider",
+      "text": "provider.quota.exceeded",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "declared-input",
+      "text": "input.value.rejected",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "fallback-invocation",
+      "text": "fallback.invocation",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "fallback-internal",
+      "text": "fallback.internal",
+      "recognized": true,
+      "resolves": true
+    }
+  ]
+}
