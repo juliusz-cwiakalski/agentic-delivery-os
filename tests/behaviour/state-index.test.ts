@@ -5,7 +5,6 @@
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 
 import { classifyDomainKind } from "../../packages/cli/src/classify";
 import { STATE_SCHEMA_VERSION } from "../../packages/core/src/contracts/index";
@@ -98,6 +97,40 @@ describe("TC-STATE-007 index divergence and rebuild", () => {
         expect(read.value.values).toEqual({ k1: { n: 1 }, k2: { n: 2 } });
         expect(read.value.evidence.rebuild?.reason).toBe("divergent");
       }
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("a payload-only index divergence is detected and rebuilt to ledger truth", () => {
+    const root = makeTempRoot("index-payload-divergence");
+    try {
+      const identity = makeIdentity(root);
+      seed(root);
+      const before = ledgerText(identity);
+      const edge = createTestEdge();
+      const path = indexPath(identity.workspaceId, root);
+      const rows = edge.indexRead(path);
+      expect(rows).toBeDefined();
+      if (rows === undefined) return;
+      // Corrupt only the projected payload; the copied checksum, key, kind and
+      // sequence still agree with the ledger, so a tuple check that omits the
+      // payload would serve this forged value.
+      edge.indexWrite(
+        path,
+        rows.map((row, index) =>
+          index === 0 ? { ...row, payload: JSON.stringify("forged-index-value") } : row,
+        ),
+      );
+
+      const { store } = openStore(identity, { driver: "sqlite", edge });
+      const read = store.read({ requiredKeys: ["k1"] });
+      expect(read.ok).toBe(true);
+      if (read.ok) {
+        expect(read.value.values).toEqual({ k1: { n: 1 } });
+        expect(read.value.evidence.rebuild?.reason).toBe("divergent");
+      }
+      expect(ledgerText(identity)).toBe(before);
     } finally {
       removeRoot(root);
     }

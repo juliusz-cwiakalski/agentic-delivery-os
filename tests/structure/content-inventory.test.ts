@@ -49,7 +49,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "verifiedPrefixLength",
     "verifyLedger",
   ],
-  "core/src/state/driver/runtime-edge.ts": ["createNodeStateEdge"],
+  "core/src/state/driver/runtime-edge.ts": ["createNodeStateEdge", "hasForeignAclGrant"],
   "core/src/state/driver/strategy.ts": ["createJsonlStrategy", "createSqliteStrategy"],
   "cli/src/classify.ts": ["classifyDomainKind", "classifyThrown", "resolveAppErrorCode"],
   "cli/src/commands/config.ts": ["createConfigCommandDefinition"],

@@ -20,7 +20,6 @@ import {
   openStore,
   removeRoot,
   type TestClock,
-  withinFence,
 } from "../fixtures/state/harness";
 
 const LOCK_BUSY = "state.lock.busy";

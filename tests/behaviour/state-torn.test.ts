@@ -5,7 +5,7 @@
  * asserts its own precondition before the read.
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import type { StateStorePort } from "../../packages/core/src/contracts/index";
 import { STATE_SCHEMA_VERSION } from "../../packages/core/src/contracts/index";
 import {
@@ -203,6 +203,30 @@ describe("TC-STATE-006 schema-version mismatch", () => {
         expect(read.error.location.record).toBe(2);
         expect(JSON.stringify(read.error)).not.toContain("planted-payload-");
       }
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("repair refuses before mutating when the store version is unsupported", () => {
+    const root = makeTempRoot("schema-repair-refusal");
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      seed(store);
+      writeFileSync(
+        `${root}/header.${encodeURIComponent(identity.workspaceId)}.json`,
+        `${JSON.stringify({ schemaVersion: "delivery.state.v999" })}\n`,
+      );
+      writeFileSync(
+        ledgerPath(identity),
+        `${ledgerText(identity)}{"schemaVersion":"delivery.state.v1"`,
+      );
+      const before = ledgerText(identity);
+      const repair = store.repairTornTail();
+      expect(repair.ok).toBe(false);
+      if (!repair.ok) expect(repair.error.code).toBe("state.schema.mismatch");
+      expect(ledgerText(identity)).toBe(before);
     } finally {
       removeRoot(root);
     }

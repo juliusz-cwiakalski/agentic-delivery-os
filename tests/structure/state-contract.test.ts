@@ -183,6 +183,11 @@ describe("TC-STATE-003 levels and unsupported rejection", () => {
           expect(read.error.code).toBe("state.level.unsupported");
           expect(read.error.consequence).toBe("not_landed");
         }
+        // Every public operation inherits the open verdict; integrity checking
+        // must not bypass the unsupported level and report a verified store.
+        const integrity = store.checkIntegrity();
+        expect(integrity.ok).toBe(false);
+        if (!integrity.ok) expect(integrity.error.code).toBe("state.level.unsupported");
         const entry = STATE_ENTRY("state.level.unsupported");
         expect(entry).toMatchObject({
           category: "user",

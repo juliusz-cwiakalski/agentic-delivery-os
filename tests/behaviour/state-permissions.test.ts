@@ -9,6 +9,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, statSync } from "node:f
 import { join } from "node:path";
 
 import { classifyDomainKind } from "../../packages/cli/src/classify";
+import { hasForeignAclGrant } from "../../packages/core/src/state/driver/runtime-edge";
 import {
   createNodeStateEdge,
   createStateStore,
@@ -124,6 +125,26 @@ describe("TC-STATE-016 POSIX permission matrix and fail-closed", () => {
     }
   });
 
+  test("checkIntegrity fails closed on a permission violation", () => {
+    if (!POSIX) return;
+    const root = makeTempRoot("permissions-integrity");
+    try {
+      const { identity } = create(root);
+      chmodSync(root, 0o755);
+      const violated = openStore(identity).store;
+      expect(violated.read({ requiredKeys: [] }).ok).toBe(false);
+      const integrity = violated.checkIntegrity();
+      expect(integrity.ok).toBe(false);
+      if (!integrity.ok) {
+        expect(integrity.error.code).toBe("state.permission.denied");
+        expect(integrity.error.consequence).toBe("not_landed");
+      }
+      chmodSync(root, 0o700);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
   test("the mode-ignoring control is detected by the exact-bit assertion", () => {
     if (!POSIX) return;
     const root = makeTempRoot("permissions-control");
@@ -152,6 +173,13 @@ describe("TC-STATE-016 POSIX permission matrix and fail-closed", () => {
 });
 
 describe("TC-STATE-017 Windows ACL contract, platform-conditional", () => {
+  test("the foreign-grant matcher rejects every non-current-user principal form", () => {
+    expect(hasForeignAclGrant("BUILTIN\\Users:(RX)")).toBe(true);
+    expect(hasForeignAclGrant("Everyone:(F)")).toBe(true);
+    expect(hasForeignAclGrant("NT AUTHORITY\\Authenticated Users:(RX)")).toBe(true);
+    expect(hasForeignAclGrant("WIN11\\owner:(F)")).toBe(false);
+  });
+
   test("the platform conditional is recorded; Linux never claims Windows verification", () => {
     const executable = process.platform === "win32";
     const record = {

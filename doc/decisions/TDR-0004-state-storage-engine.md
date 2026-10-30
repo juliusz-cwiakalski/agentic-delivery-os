@@ -170,12 +170,12 @@ The binding is acquired with `createRequire(import.meta.url)`: try `bun:sqlite`,
 - Lock file `fence.<workspace>.lock`, created with exclusive-create semantics (`wx`) and mode 0600. Content: `{"namespace","token","acquiredAtMs"}`.
 - Acquisition is a single exclusive create; `EEXIST` is contention. A second acquisition while the file exists fails `state.lock.busy` and lands nothing.
 - Staleness is decided by the **injected** edge clock and an injected `staleFenceMs` (default 30 000): a lock whose `acquiredAtMs` is older than that is detectably stale. No wall clock is read in the state tier; the production edge supplies `Date.now`.
-- Recovery is explicit (`recoverFence(token)`): it succeeds only for a stale lock, replaces the lock content with the recovering token, and returns a recovery report. A live lock is `state.lock.busy`; silent stealing is structurally impossible.
+- Recovery is explicit (`recoverFence(token)`): it succeeds only for a stale lock, clears the stale lock (invalidating handles held by the old writer), and returns a recovery report; the recovering caller then acquires normally. A live lock is `state.lock.busy`; silent stealing is structurally impossible.
 - A handle is stale when its store instance released it, or when the on-disk token no longer equals the handle's token. Writes through a stale handle fail `state.lock.busy`; reads never consult the fence.
 
 ### 4. Index rebuild policy and trigger — refine GH-174 F-3, AC-F3-1
 
-- Every indexed read first verifies the ledger, then checks index agreement (row count and `(sequence,key,checksum)` tuple equality).
+- Every indexed read first verifies the ledger, then checks index agreement (row count and `(sequence,key,kind,checksum,payload)` tuple equality, so a payload-only divergence is detected and rebuilt rather than served).
 - Missing, corrupt, or divergent index → delete and rebuild from the verified ledger in one transaction, then serve the read and report the rebuild in evidence. The ledger bytes are never touched.
 - Rebuild storage-I/O failure → exactly `state.write.failed` (transient, retryable, `not_landed`), no values returned. No stale read is ever served, and no background/async rebuild exists.
 - Rebuild is read-triggered only; writes keep the index current in the same fence.
@@ -232,6 +232,12 @@ ALT-1 is designed to satisfy C-1..C-5 subject to tests: runtime APIs stay in the
 ## Confidence Rating
 
 **Medium–high.** Binding availability and synchronous acquisition are locally proven on both supported runtimes; the Windows ACL half is designed but unverified on this host.
+
+## Amendments
+
+| Date | Change | Reason |
+|---|---|---|
+| 2026-10-30 | §3 recovery clears the stale lock (the recovering caller then acquires normally); §4 index agreement includes the payload tuple field. | GH-174 Phase 9 review findings F-1/F-5: align the recorded selection with AC-F3-1 (returned values equal ledger truth) and with the shipped `recoverFence` behaviour. |
 
 ## References
 

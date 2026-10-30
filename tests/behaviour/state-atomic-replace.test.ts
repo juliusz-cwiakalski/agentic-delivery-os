@@ -14,7 +14,6 @@ import {
   openStore,
   removeRoot,
   type TestEdge,
-  withinFence,
 } from "../fixtures/state/harness";
 
 const DOCUMENT = "snapshot";

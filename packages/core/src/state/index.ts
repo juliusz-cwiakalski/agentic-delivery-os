@@ -449,6 +449,7 @@ export const createStateStore = (
     },
 
     checkIntegrity(): StateResult<StateIntegrityOutcome> {
+      if (failure !== undefined) return { ok: false, error: failure };
       const verified = verifiedState();
       if (!verified.ok) return verified;
       return ok({ evidence: verified.value.evidence });
@@ -456,6 +457,10 @@ export const createStateStore = (
 
     repairTornTail(): StateResult<StateRepairOutcome> {
       if (failure !== undefined) return { ok: false, error: failure };
+      // A store-version verdict precedes any destructive step: repair must not
+      // truncate bytes and then report the store as unsupported.
+      const header = readHeader();
+      if (!header.ok) return header;
       if (!edge.exists(ledgerPath)) {
         return fail("state.store.torn", { path: ledgerPath, record: 1 });
       }

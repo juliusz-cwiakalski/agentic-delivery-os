@@ -65,7 +65,10 @@ const agreement = (rows: readonly Record<string, unknown>[], records: readonly S
       Number(row.sequence) === record.sequence &&
       String(row.key) === record.key &&
       String(row.kind) === record.kind &&
-      String(row.checksum) === record.checksum
+      String(row.checksum) === record.checksum &&
+      // The payload is the observable value; a copied checksum can still agree
+      // while the projection diverges, so payload equality is part of agreement.
+      String(row.payload) === JSON.stringify(record.payload)
     );
   });
 };

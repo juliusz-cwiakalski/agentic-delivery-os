@@ -95,14 +95,21 @@ const ensureMode = (path: string, kind: StatePathKind): void => {
   chmodSync(path, kind === "directory" ? 0o700 : 0o600);
 };
 
+/**
+ * Whether an `icacls` listing names a principal other than the current user
+ * (AC-F8-2 fail-closed verification). Pure so the matcher is testable without
+ * a Windows host; the regex needs one literal backslash for `BUILTIN\Users`.
+ */
+export const hasForeignAclGrant = (output: string): boolean =>
+  /Everyone|BUILTIN\\Users|Authenticated Users/i.test(output);
+
 const verifyMode = (path: string, kind: StatePathKind): boolean => {
   if (!existsSync(path)) return true;
   if (platform === "win32") {
     const user = currentWindowsUser();
     if (user.length === 0) return false;
     const output = execFileSync("icacls", [path], { encoding: "utf8" });
-    const foreign = /Everyone|BUILTIN\\\\Users|Authenticated Users/i.test(output);
-    return !foreign && output.includes(user);
+    return !hasForeignAclGrant(output) && output.includes(user);
   }
   const expected = kind === "directory" ? 0o700 : 0o600;
   return (statSync(path).mode & 0o777) === expected;
