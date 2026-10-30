@@ -1,0 +1,162 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-174
+branch: feat/GH-174/state-layer
+status: PASS
+summary: >-
+  First independent review of the GH-174 state layer (lifecycle phase 8 review_fix,
+  plan task 9.3) at 52e4de1 against base main-tools d306c20. All 22 ACs traced to real
+  implementation with non-vacuous, control-backed tests; plan bindings D1-D8 verified in
+  code; repo rules clean (no protected paths, 0 forbidden literals, no headers added,
+  changeset exactly five fixed-group packages); the executor's self-review findings F-1..F-7
+  independently confirmed fixed. Independent runs at HEAD: 13 state suites 98/0,
+  error-table-sync 20/20 both directions, forbidden-literals 0, boundaries clean.
+  Six advisory findings (no AC/NFR breach): ledger-creation permission window,
+  O(n) append rescan contradicting spec RSK-7/TDR-0004 tail wording, age-based fence
+  staleness residual double-writer risk, absent-store repair conflating absent with torn
+  (DEC-6 spirit), fixed-file-list ambient scan, invalid-document-name taxonomy. Verdict
+  PASS, no remediation phase appended.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 3
+  low: 3
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: security
+    location: packages/core/src/state/driver/runtime-edge.ts:129
+    message: >-
+      appendFile creates a missing ledger via openSync(path, "a") without a mode, so the
+      file momentarily exists as 0666 & ~umask and is chmod'd to 0600 only after
+      write+fsync. Spec F-8 requires 0600 at creation; the window is invisible to tests
+      (they stat after completion). Invocation-scale severity: minor.
+    suggestion: >-
+      Pass the creation mode: openSync(path, "a", 0o600); optionally add an edge note to
+      TDR-0004 section 6.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: performance
+    location: packages/core/src/state/index.ts:280
+    message: >-
+      Every append re-reads and re-verifies the entire ledger and the sqlite kind rewrites
+      the entire index (afterAppend) - cumulative O(n^2) writes under forever retention.
+      Spec RSK-7 claims "append-time checksums avoid full rescans on write" and TDR-0004
+      section 1 says sequence comes "from the verified ledger tail"; the shipped
+      full-rescan-per-append contradicts both records. No AC threshold breached.
+      Invocation-scale severity: minor.
+    suggestion: >-
+      Record the O(n) append-time verification honestly in a TDR-0004 amendment (and
+      optionally the feature doc), or cache verified ledger state while a fence is held,
+      re-verifying on acquire.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: medium
+    confidence: medium
+    category: correctness
+    location: packages/core/src/state/index.ts:252
+    message: >-
+      Fence staleness is purely age-based (now - acquiredAtMs > staleFenceMs, default
+      30s) with no liveness signal: a live writer holding the fence past the window can
+      have it recovered and re-acquired by another process mid-write. requireFence's
+      token re-check narrows but does not close the check-then-append race; worst case is
+      interleaved appends caught as torn on read (never silent), but NFR-4's
+      "0 concurrent double-writes landing" can be violated cross-process. Invocation-scale
+      severity: minor.
+    suggestion: >-
+      Add the residual lease-expiry risk to TDR-0004 section 3 negative outcomes, or
+      refresh acquiredAtMs on each landed append so staleness tracks activity.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/core/src/state/index.ts:464
+    message: >-
+      repairTornTail on a store whose ledger file is absent returns state.store.torn at
+      record 1 while read() returns verified-empty for the same state - a DEC-6
+      spirit-level conflation of absent with torn on the repair operation (AC-F4-2
+      scopes reads only, so no AC breach). Invocation-scale severity: minor.
+    suggestion: >-
+      Return ok({ repaired: false, report: zeros, evidence: verified-empty }) for the
+      absent-ledger case, mirroring the empty-text branch below it.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: tests/structure/state-contract.test.ts:88
+    message: >-
+      The ambient-global marker scan (process.env, Date.now, Math.random,
+      stateDirectoryName) checks a fixed list of five files; a new state-tier file outside
+      driver/ would not be scanned unless manually added, unlike the dynamic directory
+      walk used by the import detector. Current code is clean - gate hardening only.
+      Invocation-scale severity: minor.
+    suggestion: >-
+      Walk packages/core/src/state/** excluding driver/ dynamically (reuse the
+      stateFiles() pattern from state-imports.test.ts).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/core/src/state/index.ts:354
+    message: >-
+      replaceDocument with an unsafe name fails state.write.failed (transient, retryable)
+      although an invalid name is a permanent caller error and the remediation hint
+      misleads; the seven-code spec set has no input-validation code, and the name is
+      validated before the fence check. Invocation-scale severity: minor.
+    suggestion: >-
+      No change this change (code set is spec-fixed); record a candidate input-shaped
+      state code for the first consumer story or validate names at the consumer edge;
+      optionally move validation after requireFence.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: info
+    confidence: high
+    category: correctness
+    location: doc/decisions/TDR-0004-state-storage-engine.md:185
+    message: >-
+      The atomic-replace technique fsyncs the temp file but not the containing directory
+      after rename. Rename atomicity satisfies AC-F6-1; power-loss durability of the rename
+      itself is neither claimed nor explicitly scoped out under the TDR's durability
+      points.
+    suggestion: Optional one-line TDR amendment naming the omitted dir-fsync and why.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/core/src/state/index.ts:420
+    message: >-
+      fenceStatus is the one public operation outside StateResult and does not consult the
+      open-time failure; on a permission-violating store it still inspects the lock file
+      (read-only, exposes held/stale/token only, no record data). Matches the executor's
+      information-only observation; no action this change.
+    suggestion: Fold into any future port-shape revision (e.g., M0-S6 adoption).
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-10-30T23:20:00Z
+next_step: PROCEED

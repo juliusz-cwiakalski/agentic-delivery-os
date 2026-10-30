@@ -4,7 +4,7 @@
  * values are explicitly contained by `fallback.internal`.
  */
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -271,6 +271,82 @@ describe("TC-CLASSIFY-002 unclassifiable values contain to fallback.internal", (
     const first = JSON.stringify(classifyThrown({ kind: "mystery" }));
     for (let index = 0; index < 5; index += 1) {
       expect(JSON.stringify(classifyThrown({ kind: "mystery" }))).toBe(first);
+    }
+  });
+});
+
+const STATE_ROWS = [
+  ["state.store.torn", "platform", false, "not_landed", "platform-provider"],
+  ["state.schema.mismatch", "platform", false, "not_landed", "platform-provider"],
+  ["state.keys.missing", "platform", false, "not_landed", "platform-provider"],
+  ["state.lock.busy", "transient", true, "not_landed", "platform-provider"],
+  ["state.permission.denied", "user", false, "not_landed", "user-validation"],
+  ["state.write.failed", "transient", true, "not_landed", "platform-provider"],
+  ["state.level.unsupported", "user", false, "not_landed", "user-validation"],
+] as const;
+
+describe("TC-STATE-018 seven exact state identities and containment", () => {
+  test("the table declares exactly the seven state rows with their fixed fields", () => {
+    const state = entries.filter((entry) => entry.domainKind === "state");
+    expect(state).toHaveLength(7);
+    expect(state.map((entry) => entry.code)).toEqual(STATE_ROWS.map(([code]) => code));
+    for (const [code, category, retryable, consequence, projectionClass] of STATE_ROWS) {
+      expect(classifyDomainKind("state", code)).toMatchObject({
+        code,
+        domainKind: "state",
+        category,
+        retryable,
+        consequence,
+        projectionClass,
+      });
+    }
+  });
+
+  test("every state code round-trips as returned and thrown without summary forwarding", () => {
+    for (const [code] of STATE_ROWS) {
+      const row = classifyDomainKind("state", code);
+      expect(resolveAppErrorCode(code)).toEqual({ ok: true, entry: row });
+      expect(classifyThrown({ kind: "state", code })).toEqual(row);
+      expect(classifyThrown({ kind: "state", code, summary: "UNTRUSTED-CANARY" })).toEqual(row);
+      expect(JSON.stringify(classifyThrown({ kind: "state", code }))).not.toContain(
+        "UNTRUSTED-CANARY",
+      );
+    }
+  });
+
+  test("kind-only state is ambiguous and contains; it never selects the first row", () => {
+    expect(() => classifyDomainKind("state")).toThrow();
+    expect(classifyThrown({ kind: "state" }).code).toBe(FALLBACK_INTERNAL_CODE);
+    // The first-row control: a /first/ lookup would happily return a state row,
+    // proving the ambiguity assertion above is live rather than inert.
+    const firstRowClassifier = (kind: string) =>
+      (ERROR_TABLE as readonly ErrorTableEntry[]).find((entry) => entry.domainKind === kind);
+    expect(firstRowClassifier("state")?.code).toBe("state.store.torn");
+  });
+
+  test("wrong, unknown, missing and mismatched state codes contain", () => {
+    for (const failure of [
+      { kind: "state", code: "state.other.unknown" },
+      { kind: "state", code: "config.value.invalid" },
+      { kind: "state", code: 42 },
+      { kind: "state", code: null },
+      { kind: "config", code: "state.store.torn" },
+    ]) {
+      expect(classifyThrown(failure).code).toBe(FALLBACK_INTERNAL_CODE);
+    }
+    expect(() => classifyDomainKind("state", "input.value.rejected")).toThrow();
+  });
+
+  test("existing provider and config behaviours are unchanged", () => {
+    expect(classifyDomainKind("provider").code).toBe("provider.quota.exceeded");
+    expect(classifyDomainKind("input").code).toBe("input.value.rejected");
+    expect(classifyDomainKind("config", "config.value.invalid").domainKind).toBe("config");
+    expect(() => classifyDomainKind("config")).toThrow();
+  });
+
+  test("state read-path failures never claim a landed mutation", () => {
+    for (const [code] of STATE_ROWS) {
+      expect(classifyDomainKind("state", code).consequence).toBe("not_landed");
     }
   });
 });

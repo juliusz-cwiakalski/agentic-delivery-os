@@ -507,11 +507,19 @@ export const RULE_CASES: RuleCase[] = [
     'import fs from "node:fs";\nexport const value = fs;\n',
   ),
 
-  clean(
-    "runtime-control-state",
-    "TC-SCAFFOLD-014",
+  dep(
+    "runtime-node-fs-state-facade",
+    "TC-STATE-022",
+    "runtime-apis-confinement",
     ["core"],
     "packages/core/src/state/probe.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
+  ),
+  clean(
+    "runtime-control-state-driver",
+    "TC-STATE-022",
+    ["core"],
+    "packages/core/src/state/driver/probe.ts",
     'import fs from "node:fs";\nexport const value = fs;\n',
   ),
   clean(

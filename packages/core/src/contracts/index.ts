@@ -67,6 +67,42 @@ export type TelemetryEventSchemaName = "delivery.event.v1";
  */
 export type TelemetryMetricSchemaName = "delivery.metric.v1";
 
+// The state layer's driver-neutral store vocabulary (GH-174 D1, DM-1..DM-5).
+// Runtime-neutral: types and the single `as const` schema-version home only.
+export {
+  STATE_DRIVER_KINDS,
+  STATE_LEVELS,
+  STATE_SCHEMA_VERSION,
+  type StateAppendOutcome,
+  type StateAppendRequest,
+  type StateDocumentReport,
+  type StateDocumentReplaceRequest,
+  type StateDriverKind,
+  type StateFailure,
+  type StateFailureCode,
+  type StateFenceAcquisition,
+  type StateFenceHandle,
+  type StateFenceRecoveryReport,
+  type StateFenceReleaseReport,
+  type StateFenceStatus,
+  type StateIndexRebuildReport,
+  type StateIntegrityOutcome,
+  type StateJsonValue,
+  type StateLevel,
+  type StateReadEvidence,
+  type StateReadOutcome,
+  type StateReadRequest,
+  type StateRecord,
+  type StateRepairOutcome,
+  type StateResult,
+  type StateSafeLocation,
+  type StateSchemaVersion,
+  type StateStoreIdentity,
+  type StateStorePort,
+  type StateTornTailRepairReport,
+  type StateVerificationClass,
+} from "./state.js";
+
 // The error table is the single machine-readable source of failure identity.
 export {
   DOMAIN_KINDS,

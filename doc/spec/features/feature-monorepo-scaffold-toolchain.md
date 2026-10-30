@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
 links:
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174"]
   related_decisions: ["ADR-0003"]
 ---
 
@@ -16,7 +16,7 @@ links:
 
 ## Overview
 
-The repository hosts a six-package pnpm workspace under `packages/` for the TypeScript delivery tooling, alongside the existing bash delivery stack. The workspace is **structure over content** for the remaining engines, business logic, provider implementations, and drivers: every declared package, subpath, export, boundary rule, fixture, and quality gate is enforced. The configuration tier is now implemented and documented separately in [Configuration Layer and Inspection](feature-config-layer.md); the other runtime contracts remain scaffold placeholders.
+The repository hosts a six-package pnpm workspace under `packages/` for the TypeScript delivery tooling, alongside the existing bash delivery stack. The workspace is **structure over content** for the remaining engines, business logic, provider implementations, and drivers: every declared package, subpath, export, boundary rule, fixture, and quality gate is enforced. The configuration and state tiers are implemented and documented separately in [Configuration Layer and Inspection](feature-config-layer.md) and [State Layer](feature-state-layer.md); the remaining runtime contracts are scaffold placeholders.
 
 The scaffold provides the substrate every later tooling story lands in. Its package matrix, core tier matrix, adapter subpaths, and runtime-API confinement rules are mechanical gates rather than prose, and every forbidden edge is proven by a failing negative fixture.
 
@@ -43,7 +43,7 @@ The authoritative design decision is [ADR-0003](../../decisions/ADR-0003-oss-mon
 
 | Package | Declared entrypoints | Role |
 |---------|----------------------|------|
-| `@delivery-os/core` | `.`, `./contracts`, `./state`, `./branding` | Runtime-neutral application services, contracts, state abstraction, branding seam |
+| `@delivery-os/core` | `.`, `./contracts`, `./state`, `./branding` | Runtime-neutral application services, contracts, state layer, branding seam |
 | `@delivery-os/adapters` | `./gitlab`, `./jira`, `./github`, `./azure`, `./ci`, `./registry`, `./repo`, `./file`, `./host`, `./session`, `./legacy` | Tracker, VCS, CI, registry, and per-I/O adapters |
 | `@delivery-os/cli` | `.` | Command-line surface |
 | `@delivery-os/mcp` | `.` | MCP surface |
@@ -103,6 +103,7 @@ Deep imports into another package's `src/` or `dist/`, and relative paths escapi
 - **Core tier matrix** — `domain`, `config`, `branding`, and `state` may import `./contracts` only; `app` may import `domain`, `config`, and `./contracts`, but not `branding` or `state` at scaffold.
 - **Testkit dev edges** — production `src` never imports `testkit`; `testkit` imports `core` and `adapters`, never `cli`, `mcp`, or `opencode`.
 - **Runtime-API confinement** — runtime imports are permitted only in the `core ./state` driver code, the adapter I/O subpaths, the `cli` build, and the `opencode` host integration. The adapter exemption is exactly the ADR I/O subpaths — `repo`, `file`, `host`, `session`, and `legacy`; provider, registry, and remaining adapter subpaths are not exempt.
+- **State-tier structure** — `tests/structure/state-imports.test.ts` is an AST detector over `packages/core/src/state/**`: the tier imports `#contracts` and its own modules only, and runtime API use appears only inside the driver edge, proven by synthetic forbidden-import and runtime-API controls.
 
 Package-name specifiers resolve through each manifest's `exports` to built `dist` targets, so the cross-package rules match both forms: `packages/<pkg>/src/...` in-tree and `packages/<pkg>/dist/...` for package-name imports. A `couldNotResolve` catch-all fails any `@delivery-os/*` specifier that resolves to no declared package entrypoint, so an undeclared import fails by name even before a build exists.
 
@@ -196,7 +197,7 @@ No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scr
 | `packages/*/package.json` | Manifests: exports, imports aliases, `workspaceImports`, scripts, privacy |
 | `packages/*/tsconfig.json` | Composite configs extending the strict base |
 | `packages/core/src/index.ts` | The `createRuntime` composition-root signature |
-| `packages/*/src/**` | Internal tier directories; configuration, file/repo/legacy adapters and CLI inspection carry implemented code, while the remaining engines and providers are placeholders |
+| `packages/*/src/**` | Internal tier directories; the configuration and state tiers, the file/repo/legacy adapters, and CLI inspection carry implemented code, while the remaining engines and providers are placeholders |
 | `package.json` | Workspace root: pinned `packageManager`, five named scripts, aggregate `check`, dev toolchain |
 | `pnpm-workspace.yaml` | Workspace globs (`packages/*`) |
 | `tsconfig.base.json` / `tsconfig.json` | Strict base flags / solution references |
@@ -267,5 +268,6 @@ core              ──> no workspace dependencies
 - **Repository conventions:** [AGENTS.md](../../../AGENTS.md) — repo structure, `scripts/` and `tools/` conventions, running tests.
 - **Testing rules:** [.ai/rules/testing-strategy.md](../../../.ai/rules/testing-strategy.md) — TypeScript test layer and aggregate check.
 - **Configuration capability:** [Configuration Layer and Inspection](feature-config-layer.md).
+- **State capability:** [State Layer](feature-state-layer.md).
 - **Glossary:** [doc/overview/glossary.md](../../overview/glossary.md) — scaffold terms.
 - **Change record:** `doc/changes/2026-10/2026-10-29--GH-170--monorepo-scaffold-toolchain/`.

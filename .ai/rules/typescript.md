@@ -70,7 +70,7 @@ This file states non-inferable policy only; it does not restate what
   import `cli`/`mcp`/`opencode`; `cli`, `mcp`, `opencode` are surfaces.
 - `core` tiers: `domain`, `config`, `branding`, and `state` import
   `./contracts` only; `app` composes `domain` and `config`.
-- Runtime and I/O access only in: `core/src/state`, the `adapters` I/O
+- Runtime and I/O access only in: `core/src/state/driver`, the `adapters` I/O
   subpaths (`repo`, `file`, `host`, `session`, `legacy`), `cli`, and
   `opencode`. Everything else stays pure.
 - Inner code never imports or constructs a concrete adapter; composition

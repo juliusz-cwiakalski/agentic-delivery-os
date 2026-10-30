@@ -99,8 +99,11 @@ describe("ADR-verbatim scope and allowlist assertions", () => {
     const pathNot = rule?.from?.pathNot ?? [];
     // The adapter exemption is ADR-verbatim I/O subpaths only (DEC-6):
     // provider (gitlab/jira/github/azure/ci) and registry subpaths are not I/O.
+    // GH-174 D8 tightens the state allowance from the whole state tree to the
+    // driver edge (no rule is weakened; the state facade and verifier stay
+    // runtime-neutral and the tightening ships with failing fixtures).
     expect([...pathNot]).toEqual([
-      "^packages/core/src/state/",
+      "^packages/core/src/state/driver/",
       "^packages/adapters/src/(repo|file|host|session|legacy)/",
       "^packages/cli/",
       "^packages/opencode/",
