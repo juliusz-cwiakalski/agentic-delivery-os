@@ -29,6 +29,9 @@ blockers:
     date: 2026-10-30
     resolved_date: 2026-10-30
 notes:
+  - text: "Phase5 verified 14:45:14Z: pnpm check fully green (512tests/0fail/2879expect/48files; boundaries 55mod/59dep clean; ambient clean; exports-parity 5 publishables attw; doc-distribution 80docs no drift). Packed-consumer harness fixed (per-package tarball dirs, consumer pnpm.overrides to packed core tarball — pack rewrites workspace:* to 0.0.0 — and cleanup-before-rethrow); branding-seam conformance via NEUTRAL_OVERRIDE_NAME module-private; legacy CONFIG literal added to sanctioned structuralLiterals inventory. feature-config-layer.md authored, registered in forbidden-literals registry, scan clean. Retro: runner invocations must avoid /dev/* paths (headless permission auto-reject) — use ./tmp/tmpdir scratch per repo convention. Plan 5.1..5.4 verified pending commit; implementation phases complete; PM-owned phases 7-11 next."
+    type: "info"
+    date: 2026-10-30
   - text: "Phase4 verified 14:09Z: build/typecheck/lint/boundaries/ambient/entrypoints/error-table-sync/license/forbidden-literals/exports-parity all green; 126tests/730expectations across 10 files (config-cli14, goldens incl redaction14/broken-command16/config-output4, inventory5). Strict-TS fixes per binding rules (typed next locals; conditional RepositoryRootFacts under exactOptionalPropertyTypes); structure inventory refreshed with real module registration; error-table-sync S1 false positive resolved by destructuring (config.warnings.map token removed; recognizer/table untouched). Plan 4.1..4.6 verified pending commit; phase5 next."
     type: "info"
     date: 2026-10-30

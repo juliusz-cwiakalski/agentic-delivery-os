@@ -216,7 +216,7 @@ Golden cases are directories under `tests/fixtures/result/envelopes/` containing
 
 ### Configuration
 
-The surface has no ambient configuration reads. Callers inject brand values, clock facts, a run-id factory, registered secrets, and the command program. `createProductionDependencies` supplies production defaults for the clock and run id and registers secrets from an environment record handed in as data. `--json` selects machine output; without it, successful runs write nothing and failures write only the human diagnostic.
+The surface has no ambient configuration reads. Callers inject brand values, clock facts, a run-id factory, registered secrets, and the command program. `createProductionDependencies` supplies production defaults for the clock and run id and registers secrets from an environment record handed in as data. `--json` selects machine output; without it, generic successful runs write nothing, the opt-in configuration command prints its selected payload as plain JSON, and failures write only the human diagnostic. Configuration-specific payloads and safe warnings are documented in [Configuration Layer and Inspection](feature-config-layer.md).
 
 ### Observability
 
@@ -230,6 +230,7 @@ The result surface itself adds no runtime dependency or new CI job. Configuratio
 
 - **Depends on** the monorepo scaffold ([feature-monorepo-scaffold-toolchain.md](feature-monorepo-scaffold-toolchain.md)) for package tiers, boundary enforcement, the ambient guard, and the aggregate check.
 - **Depends on** the branding seam ([feature-branding-seam.md](feature-branding-seam.md)) for `BrandIdentity` parameter discipline and the forbidden-literal scan.
+- **Consumed by** the configuration layer ([feature-config-layer.md](feature-config-layer.md)) for envelope, error identity and the sole redaction path.
 - **Depends on** [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md) for runtime-neutral contract placement, package boundaries, and gate stability.
 - **Risk — contract cascade:** Every later command and surface consumes the envelope. Mitigation: the field set is fixed at v1, `schemaVersion` provides a breaking-change channel, and evolution is additive within a version.
 - **Risk — documentation drift:** The documented table can diverge from the source. Mitigation: the sync check fails closed in both directions and includes the fallback rows.

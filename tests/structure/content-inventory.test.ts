@@ -36,7 +36,6 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "registerEdgeSecrets",
     "readShippedDefaultsManifest",
     "createConfigProgram",
-    "NEUTRAL_OVERRIDE_NAME",
   ],
   "cli/src/index.ts": ["runCli"],
   "cli/src/output/serialize.ts": ["redact", "serializeEnvelope", "writeOutput"],

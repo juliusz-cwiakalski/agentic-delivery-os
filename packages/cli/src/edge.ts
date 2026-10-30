@@ -35,7 +35,7 @@ import {
 } from "./commands/config.js";
 import type { CliDependencies, CommandFlags, CommandProgram } from "./index.js";
 
-export const NEUTRAL_OVERRIDE_NAME = "DELIVERY_OS_WORKING_NAME";
+const NEUTRAL_OVERRIDE_NAME = "DELIVERY_OS_WORKING_NAME";
 
 /** Register non-empty secret values from an injected environment record. */
 export function registerEdgeSecrets(

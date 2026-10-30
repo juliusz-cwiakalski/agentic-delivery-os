@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The single branding seam: a pure, fail-closed resolver deriving the twelve brand values from one config-driven working name, the BrandIdentity contract in core ./contracts, reserved brand-neutral telemetry schema names, a CI-binding forbidden-literal scan anchored to a fixed corpus baseline, a one-warning legacy compatibility adapter, and the documented rename drill."
 links:
-  related_changes: ["GH-171"]
+  related_changes: ["GH-171", "GH-173"]
   related_decisions: ["ADR-0003"]
 ---
 
@@ -183,7 +183,7 @@ The process-scoped default sink is the console. `resolveProcessLegacyFromEnviron
 
 ### Consumption by later layers
 
-- **M0-S4 (config layer)** consumes `ResolverInput` and `resolveBrandIdentity` without reshaping them: it supplies the configured working name and injected environment facts, then uses `configDirectoryName` for the committed `<repo>/<configDirectoryName>/config.yaml` path and `environmentPrefix` for environment-layer names.
+- **M0-S4 (config layer)** is implemented and consumes `ResolverInput` and `resolveBrandIdentity` without reshaping them: the runtime-aware edge supplies the configured working name and injected environment facts, then uses `configDirectoryName` for the committed `<repo>/<configDirectoryName>/config.yaml` path and `environmentPrefix` for environment-layer names. The implemented behavior is documented in [Configuration Layer and Inspection](feature-config-layer.md).
 - **M0-S5 (state layer)** consumes `stateDirectoryName`.
 - **MCP surface and telemetry** consume `mcpToolPrefix` and `telemetryNamespace`. Tool names are the prefix plus a canonical primitive ID; telemetry schema names remain brand-neutral.
 
@@ -236,7 +236,7 @@ Tests use synthetic names only (for example `.renamed-product`, `.alt-brand`, `.
 ## Dependencies & Risks
 
 - **Authoritative decision:** [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md) (C-3, DEC-4, DEC-8).
-- **Consumers:** The M0-S4 layered configuration consumes `ResolverInput` and derives config paths and environment layer names from branding without reshaping the contract. The M0-S5 state layer consumes `stateDirectoryName`. MCP tool names are a projection of `mcpToolPrefix` plus a canonical primitive ID. The M4-S1 freeze uses the override channel, the seed-growth rule, and the drill.
+- **Consumers:** The implemented M0-S4 layered configuration consumes `ResolverInput` and derives config paths and environment layer names from branding without reshaping the contract. The M0-S5 state layer consumes `stateDirectoryName`. MCP tool names are a projection of `mcpToolPrefix` plus a canonical primitive ID. The M4-S1 freeze uses the override channel, the seed-growth rule, and the drill.
 - **Corpus scope:** The single-seam guarantee covers `packages/**` and new user-facing docs. The pre-existing installed corpus migrates separately and is not claimed by this seam.
 - **Registry coupling:** Every new user-facing doc under the scanned `doc/` scope must be registered in `forbidden-literals.registry.json` in the same change; otherwise the scan fails. Registered membership is permanent for docs added after the baseline.
 - **Baseline availability:** The scan requires the recorded baseline commit to be reachable. CI checks out full history and fetches the baseline explicitly; a shallow clone fails closed. `tests/checks/ci-baseline-parity.test.ts` is the standing hermetic partial-clone simulation guarding this drift class: it proves the depth-1 fail-closed result and the explicit-SHA fetch remedy.
@@ -247,6 +247,7 @@ Tests use synthetic names only (for example `.renamed-product`, `.alt-brand`, `.
 
 - **Decision record:** [ADR-0003 — OSS Tooling Monorepo Structure](../../decisions/ADR-0003-oss-monorepo-structure.md).
 - **Scaffold substrate:** [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md).
+- **Configuration consumer:** [Configuration Layer and Inspection](feature-config-layer.md).
 - **Rename procedure:** [Rename Drill](../../guides/rename-drill.md).
 - **Glossary:** [doc/overview/glossary.md](../../overview/glossary.md) — branding-seam terms.
 - **Change record:** `doc/changes/2026-10/2026-10-29--GH-171--branding-seam-working-name/`.
