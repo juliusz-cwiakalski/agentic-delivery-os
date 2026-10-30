@@ -96,7 +96,7 @@ The v1 allowlist has exactly three entries:
 
 Exactly one entry may carry the `credential-material` class, and it must be the credential implementation directory. Wildcards, prefixes, absolute paths, trailing separators, duplicate paths, and reasonless entries fail registry validation. Allowlist growth is a reviewed change.
 
-The invariant detects `process.env`, `Bun.env`, and `Deno.env` property reads, element access to `env` or an ambient global, runtime imports of `process` or `bun`, and aliased ambient globals, while ignoring identifier positions such as property names, import specifiers, and type declarations. It runs as a stage of `check:boundaries` and as a binding step in the CI `ts-invariants` job; no advisory or bypass construct is accepted.
+The invariant detects `process.env`, `Bun.env`, and `Deno.env` property reads; element access to `env` or an ambient global by string-literal key; element access with a computed or template-literal key on `process`, `Bun`, `Deno`, or `globalThis`; runtime imports of `process` or `bun`; and aliased ambient globals. A non-literal key cannot be resolved statically, so it fails closed by name instead of being silently accepted. Identifier positions such as property names, import specifiers, and type declarations are ignored. Negative fixtures cover the literal, computed-key, and template-key forms. The invariant runs as a stage of `check:boundaries` and as a binding step in the CI `ts-invariants` job; no advisory or bypass construct is accepted.
 
 ### Embedded metadata envelope
 

@@ -9,8 +9,8 @@ phases:
   dor_check: { started: "2026-10-30T22:25:00Z", completed: "2026-10-30T22:40:00Z" }
   delivery: { started: "2026-10-30T22:45:00Z", completed: "2026-10-30T23:30:00Z" }
   system_spec_update: { started: "2026-10-30T23:35:00Z", completed: "2026-10-30T23:50:00Z" }
-  review_fix: { started: "2026-10-30T23:55:00Z", completed: null, iterations: 1, last_verdict: "FAIL" }
-  quality_gates: { started: null, completed: null }
+  review_fix: { started: "2026-10-30T23:55:00Z", completed: "2026-10-31T00:40:00Z", iterations: 2, last_verdict: "PASS" }
+  quality_gates: { started: "2026-10-31T00:45:00Z", completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
@@ -51,6 +51,9 @@ notes:
   - text: "RETRO: review iteration 1 caught a real security hole the delivery-phase battery missed — the invariant's own tests covered only literal-key forms, so the computed-key gap was invisible to every green check (tests green, claim false). Lesson: for security invariants, the test matrix must enumerate AST form classes, not just instances; an invariant is only as strong as its form-class coverage. Also: codec quadratic-scan and strip-corruption issues were findable only by adversarial input testing (DoR/plan reviews check artifacts, not runtime hostility) — the reviewer's empirical probing earned its cost."
     type: "retro"
     date: "2026-10-30"
+  - text: "RESOLVED: Review iteration 1 blocker cleared — remediation R-1 (da1b00a), R-2 (e45207e), R-3 (a12bbc5) verified closed by reviewer's independent re-execution; iteration 2 PASS (0 critical/high/medium/low; 3 info, all pre-existing or accepted: F-6 require()-based env read unreachable through gate battery, F-7 fail-closed literal-key false-positive class, F-8 stamp drift dup). Plan task 6.3 satisfied by iter-2 PASS; remediation doc delta reconciled by doc-syncer addendum (2 specs patched, no residual gaps)."
+    type: "resolved"
+    date: "2026-10-31"
   - text: "Scope sources: issue body + backlog.md M0-S12 + concepts/primitive-catalogue.md + concepts/credential-sidecar.md + concepts/embedded-metadata.md. AC: (1) typed ports with capability flags, (2) CI boundary check fails on secret reads outside the credential port, (3) metadata envelope round-trips and degrades gracefully when a provider strips it. Dependencies M0-S1/S3/S4 verified merged (PRs 191/193/194)."
     type: "info"
     date: "2026-10-30"

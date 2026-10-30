@@ -86,3 +86,22 @@ None. Current-truth documentation covers the delivered ports, credential impleme
 ## Next Step
 
 Ready for Finalization.
+
+## Addendum — Remediation Delta (2026-10-30)
+
+Scope: current-truth reconciliation of the three review-remediation code fixes landed after the original sync (`git diff f6a5d50..HEAD -- packages scripts tests`).
+
+| Fix | Change | Documentation outcome |
+|-----|--------|----------------------|
+| R-1 (`da1b00a`) | `scripts/checks/secret-read-boundary.ts` fails closed on element access with a non-literal key on `process`, `Bun`, `Deno`, or `globalThis`; new negative fixtures cover computed-key, template-key, and computed-global-name forms. | **Patched.** Both form-coverage sentences asserted literal-key-only element access, so they were stale. `feature-adapter-ports.md` and `feature-monorepo-scaffold-toolchain.md` now state the computed/template-key fail-closed rule, the `globalThis` host, and the added fixture coverage. |
+| R-2 (`e45207e`) | `packages/adapters/src/io/envelope-codec.ts` caps the marker payload scan at `ENVELOPE_MAX_BYTES` characters; an over-cap marker does not match and degrades as `missing`. | **No change needed.** `feature-adapter-ports.md` already documents the bound, the linear-scan rationale, and the `missing` degradation, consistent with the F-5 degradation taxonomy (`missing` = no envelope found; never a flow failure). |
+| R-3 (`a12bbc5`) | Strip rebuilds from non-overlapping spans in one pass over the untouched input; a nested lookalike inside a stripped marker is payload content. | **No change needed.** The spec described only the outcome (every marker removed, no residue or extra blank line) plus lookalike-inside-payload behavior, which remains accurate; no stale-index or ordering claim existed. |
+
+Consistency checks:
+
+- Grep over current-truth docs (`doc/**` excluding `doc/changes/**` and `doc/inception/**`) found no remaining literal-key-only invariant claim, no unbounded-scan claim, and no stale-index strip description.
+- `bash scripts/.tests/test-doc-distribution.sh` → `no drift — 80 in-scope docs; install set matches ados_distribution markers`.
+- `bun run scripts/checks/forbidden-literals.ts` → `OK forbidden-literals: 5/5 scope classes scanned, 0 violations`.
+- No source code, change spec, plan, test plan, or pm-notes modified; the only change artifact touched is this addendum. No license headers added.
+
+Residual documentation gaps: none.
