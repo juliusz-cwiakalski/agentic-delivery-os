@@ -1,0 +1,4 @@
+{
+  "baseline": ["fallback.invocation", "fallback.internal"],
+  "allowed": []
+}

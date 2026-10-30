@@ -3,6 +3,7 @@
     "src/app/index.ts",
     "src/branding/index.ts",
     "src/config/index.ts",
+    "src/contracts/error-table.ts",
     "src/contracts/index.ts",
     "src/contracts/result.ts",
     "src/domain/index.ts",
@@ -23,7 +24,13 @@
     "src/repo/index.ts",
     "src/session/index.ts"
   ],
-  "cli": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
+  "cli": [
+    "src/classify.ts",
+    "src/commands/index.ts",
+    "src/index.ts",
+    "src/output/index.ts",
+    "src/projection.ts"
+  ],
   "mcp": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
   "opencode": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
   "testkit": ["src/index.ts", "src/result-conformance.ts"]

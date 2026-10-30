@@ -1,0 +1,7 @@
+{
+  "resultType": "export type Result<T, E> =",
+  "okTrue": "readonly ok: true",
+  "okFalse": "readonly ok: false",
+  "commandResultType": "export type CommandResult<TData = unknown> =",
+  "declaredOnce": ["readonly ok: true", "readonly ok: false"]
+}

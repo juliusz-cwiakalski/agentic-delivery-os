@@ -47,6 +47,15 @@ export type TelemetryEventSchemaName = "delivery.event.v1";
  */
 export type TelemetryMetricSchemaName = "delivery.metric.v1";
 
+// The error table is the single machine-readable source of failure identity.
+export {
+  DOMAIN_KINDS,
+  ERROR_TABLE,
+  type ErrorTableDomainKind,
+  type ErrorTableEntry,
+  FALLBACK_INTERNAL_CODE,
+  FALLBACK_INVOCATION_CODE,
+} from "./error-table";
 // The command-surface envelope lives beside the generic `Result<T, E>` and does
 // not replace it (DEC-1). See `./result` for the full contract documentation.
 export {
