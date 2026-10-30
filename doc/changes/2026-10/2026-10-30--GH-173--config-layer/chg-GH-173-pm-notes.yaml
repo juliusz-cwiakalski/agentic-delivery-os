@@ -4,7 +4,7 @@ delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-10-30T06:40:00Z", completed: "2026-10-30T06:55:00Z" }
   specification: { started: "2026-10-30T06:04:46Z", completed: "2026-10-30T07:09:28Z" }
-  test_planning: { started: "2026-10-30T06:32:47Z", completed: null }
+  test_planning: { started: "2026-10-30T06:32:47Z", completed: "2026-10-30T07:12:51Z" }
   delivery_planning: { started: "2026-10-30T06:46:03Z", completed: null }
   dor_check: { started: "2026-10-30T06:53:58Z", completed: null }
   delivery: { started: null, completed: null }
@@ -29,6 +29,9 @@ blockers:
     date: 2026-10-30
     resolved_date: 2026-10-30
 notes:
+  - text: "Test-plan remediation complete 07:12:51Z: TC004..006 share exact first-match reason matrix and zero-read checks for selected/CI/no-root overlaps; independent enable flags and explicit roots covered, implementation plan link reconciled. All25 mappings/scenarios/automation entries retained, no whitespace. Proceed to plan alignment."
+    type: "info"
+    date: 2026-10-30
   - text: "Specification remediation complete 07:09:28Z: DM2 first-match skip matrix selected-config > ci-disabled > no-git-root > missing for project-local, independent CI system/user exclusions; root/selection never silently enable sources. AC-F2-2..4 aligned, explicit spec DoD includes 25AC/9NFR evidence, reviews/docs/packed artifacts/release intent, green pushed CI before open-PR handoff; human acceptance only gates merge/adoption. Proceed sequential test-plan reconciliation."
     type: "info"
     date: 2026-10-30

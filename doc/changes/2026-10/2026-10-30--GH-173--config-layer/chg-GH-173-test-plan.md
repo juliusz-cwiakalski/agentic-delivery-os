@@ -1,8 +1,8 @@
 ---
 id: chg-GH-173-test-plan
-status: Proposed
+status: Updated
 created: 2026-10-30T06:33:54Z
-last_updated: 2026-10-30T06:33:54Z
+last_updated: 2026-10-30T07:11:22Z
 owners: [engineering]
 service: delivery-os configuration
 labels: [change, planning]
@@ -10,7 +10,7 @@ version_impact: minor
 summary: "Verify seven-layer configuration resolution, source-accurate inspection, fail-closed validation and GH-172-compatible classified/redacted results."
 links:
   change_spec: ./chg-GH-173-spec.md
-  implementation_plan: null
+  implementation_plan: ./chg-GH-173-plan.md
   testing_strategy: .ai/rules/testing-strategy.md
 ---
 
@@ -26,14 +26,15 @@ Seven levels, platform/git/CI/selector discovery, partial and final schema check
 
 ### 1.2 Out of Scope & Known Gaps
 
-No credential resolver (owned by M0-S12), keyring, sidecar, transport, remote execution, consumer-specific provider/state fields, persisted events, REST APIs, extends, policy overlays or bash delivery-stack changes. Proposed TDR-0003 and dependency licenses require **human owner acceptance before merge/adoption**, not before branch implementation or opening an unmerged PR. There is no implementation plan yet; reconcile this mapping when one is written. No spec AC is unmapped; upstream parser hardening and actual host portability remain to be demonstrated by delivery tests, not assumed.
+No credential resolver (owned by M0-S12), keyring, sidecar, transport, remote execution, consumer-specific provider/state fields, persisted events, REST APIs, extends, policy overlays or bash delivery-stack changes. Proposed TDR-0003 and dependency licenses require **human owner acceptance before merge/adoption**, not before branch implementation or opening an unmerged PR. No spec AC is unmapped; upstream parser hardening and actual host portability remain to be demonstrated by delivery tests, not assumed.
 
 ## 2. References
 
-- [Change specification](./chg-GH-173-spec.md), especially §§5, 8, 9 and 17 (25 ACs); adjacent `chg-GH-173-pm-notes.yaml` supplies scope/CI/exit clarifications only.
+- [Change specification](./chg-GH-173-spec.md), especially §§5, 8.3 (DM-2 first-match matrix), 9, 17 (25 ACs) and 18 (open-PR Definition of Done).
+- [Implementation plan](./chg-GH-173-plan.md), especially phases 3–4 for discovery/CLI and phase 8 for handoff evidence.
 - [Accepted ADR-0003](../../../decisions/ADR-0003-oss-monorepo-structure.md) DEC-4; [Proposed TDR-0003](../../../decisions/TDR-0003-config-parser-schema-and-acquisition.md), refinements 1–8 (not owner-accepted).
 - [Testing strategy](../../../../.ai/rules/testing-strategy.md); [branding seam](../../../spec/features/feature-branding-seam.md); [GH-172 result contract](../../../spec/features/feature-result-contract.md); `.github/workflows/ci.yml`.
-- Implementation plan: absent at authoring; frontmatter `null` is intentional, not a fabricated link.
+- The implementation plan was absent at initial test-plan authoring; it now exists and is linked above.
 
 ## 3. Coverage Overview
 
@@ -74,7 +75,7 @@ No API-* endpoints or EVT-* messages exist in the spec. Diagnostics are not even
 | Interface | TC IDs | Observable assertion |
 |---|---|---|
 | DM-1 resolved tree/origins | TC-CONFIG-001, 002, 008, 009, 011, 017, 018 | Valid effective JSON tree; directives/bootstrap absent; winning origins |
-| DM-2 loaded/skipped and per-node positions | TC-CONFIG-003, 004, 005, 006, 010, 015, 017 | Ordered evidence and real lines/reasons |
+| DM-2 loaded/skipped and per-node positions | TC-CONFIG-003, 004, 005, 006, 010, 015, 017 | First-match reason matrix and non-read evidence for overlaps; ordered evidence and real lines |
 | DM-3 ConfigSource plain facts/port | TC-CONFIG-004, 007, 010, 023, 024, 025 | No raw parser/document crosses core contracts |
 | DM-4 generated schema/catalog | TC-CONFIG-008, 009, 011, 012, 013, 025 | Same trusted draft-07 schema and typed fixture semantics |
 
@@ -95,7 +96,7 @@ No API-* endpoints or EVT-* messages exist in the spec. Diagnostics are not even
 ## 4. Test Types and Layers
 
 - **Unit/behaviour**: `bun:test` in `tests/behaviour/config-*.test.ts`, use typed fixture catalogs and imported **public production** `resolveConfig`; no duplicate test resolver, simulated CLI renderer or ambient core reads. Add determinism, schema, merge, restrictions, classifier and warning assertions.
-- **Integration/contract**: `tests/behaviour/config-sources.test.ts` and `tests/behaviour/config-cli.test.ts` use actual adapters `./file`, `./repo`, `./legacy` and in-process `runCli` with injected streams, temporary repository trees and controlled environment facts; exercise production YAML parser, not just hand-built facts. Extend `tests/structure/`, `tests/golden/`, `tests/checks/` for contract, outputs and mutation checks. Fixtures in `tests/fixtures/config/**` (not `*.test.ts`). No external APIs.
+- **Integration/contract**: `tests/behaviour/config-sources.test.ts` and `tests/behaviour/config-cli.test.ts` use actual adapters `./file`, `./repo`, `./legacy` and in-process `runCli` with injected streams, temporary repository trees and controlled environment facts; exercise production YAML parser, not just hand-built facts. For DM-2 overlaps, assert exact skipped-layer records and instrument acquisition to prove skipped sources are not read, including present poisoned files. Extend `tests/structure/`, `tests/golden/`, `tests/checks/` for contract, outputs and mutation checks. Fixtures in `tests/fixtures/config/**` (not `*.test.ts`). No external APIs.
 - **Static/non-functional**: `tests/boundaries/**` failing fixtures for any new rule; `bun run scripts/checks/error-table-sync.ts` and `tests/checks/error-table-sync.test.ts` for bidirectional drift; corresponding manifest/default-position check + line-insertion mutation; existing license, forbidden-literal, ambient, workspace-entrypoint, pin/export/publish checks. Node/Bun packed-import tests and repository docs review.
 - **Gate handoff (not run by this writer)**: after `pnpm install --frozen-lockfile`, build before dist-dependent tests/exports; narrow `bun test tests/behaviour/config-*.test.ts` only if shell expansion matches the created tests; `bun test tests/structure tests/behaviour tests/golden tests/checks tests/boundaries`; `pnpm check`; `bun run scripts/checks/error-table-sync.ts`; `bun run scripts/checks/license-audit.ts`; `bun run scripts/checks/vulnerability-gate.ts`; `bun run scripts/checks/forbidden-literals.ts`; `git diff --check`. For new docs review rendered Markdown, links and AC mapping. PR **base `main-tools`**; orchestrator checks **all** `ts-*` jobs and `bash-tests` (plus other required CI jobs) green on the **pushed HEAD**, not an earlier SHA. CI's bash job runs its own excluded-suite matrix; this plan does not change bash scripts.
 
@@ -208,14 +209,14 @@ No API-* endpoints or EVT-* messages exist in the spec. Diagnostics are not even
 **Tags**: @backend
 
 **Preconditions**:
-- Temporary git root with files at root, nested cwd/intermediate decoys, hostile parent directory above root; a second cwd outside git and independent optional system/user facts.
+- Temporary git root with files at root, nested cwd/intermediate decoys, hostile parent directory above root; a second cwd outside git and independent optional system/user facts. Record file-read attempts and use distinct valid and poisoned decoys.
 
 **Steps**:
-1. Resolve from nested cwd and explicit `--project-root`; move or remove root files while retaining intermediate/above-root files.
-2. Resolve outside git with and without deliberate explicit root.
+1. Resolve from nested cwd and explicit `--project-root`; move or remove root files while retaining intermediate/above-root files. Assert both project layers report `missing` when eligible root files are absent, never reading decoys.
+2. Resolve outside git without selection/root under CI off, then with deliberate explicit root under CI off and on; compare read attempts and reasons with TC-CONFIG-005/006.
 
 **Expected Outcome**:
-- Only root-level committed/local files are read; never intermediate or above the git/explicit root. Outside git without explicit selection both project layers skip `no-git-root`, while other enabled layers resolve; explicit root bounds discovery, never widens it above that root.
+- Only root-level committed/local files are read; never intermediate or above the git/explicit root. Outside git without selection/root and CI off, both project layers skip `no-git-root` even if a parent decoy exists; enabled system/user still resolve or report `missing`. Under CI outside git, committed stays `no-git-root` while local is `ci-disabled` unless explicitly enabled (then `no-git-root`). An explicit root makes root files eligible or `missing` if absent, never widens discovery above that root and never overrides CI disabling. All skipped/decoy sources have zero read attempts.
 
 #### TC-CONFIG-005 - CI disables ambient layers
 
@@ -229,13 +230,41 @@ No API-* endpoints or EVT-* messages exist in the spec. Diagnostics are not even
 **Tags**: @backend
 
 **Preconditions**:
-- All file layers present with distinct valid values; injected `CI=true`.
+- All file layers present with distinct valid values; injected `CI=true`, alternate outside-git cwd, explicit root and selected-file variants. Instrument acquisition and place poisoned present content in sources expected to be skipped; separately remove optional files for `missing` controls.
 
 **Steps**:
-1. Resolve baseline, then separately enable `--enable-system-config`, `--enable-user-config`, `--enable-project-local-config` and all three; include explicit project root/selected file runs.
+1. Resolve baseline, then separately enable `--enable-system-config`, `--enable-user-config`, `--enable-project-local-config` and all three; include inside-git, outside-git, explicit project root and selected file runs.
+2. For every row in the DM-2 oracle below, assert the **exact** reason per skipped layer and the absence of reads of skipped sources, even when present/poisoned. When a source becomes eligible, use valid content to show a read or remove it to show `missing`; keep system and user flags independent.
 
 **Expected Outcome**:
-- Three ambient layers each skip `ci-disabled` unless their own flag re-enables them; committed/env/CLI still work; root/selection does not re-enable ambient layers; no skipped layer silently contributes a value.
+- System and user each skip `ci-disabled` unless **their own** flag re-enables them. Project-local checks selection first (`selected-config`), then CI/local enable (`ci-disabled`), then root (`no-git-root`), then optional absence (`missing`). Committed checks root only when unselected; a selected file occupies that slot. Defaults/env/CLI have no optional-file skip reason. Root/selection does not re-enable system/user; no skipped source is read or contributes a value. The following oracle is checked with source-read counts, not merely value precedence.
+
+**DM-2 exact overlap oracle** (S/U/L = `--enable-system-config` / `--enable-user-config` / `--enable-project-local-config`; `load` means eligible present file is read, `missing` means eligible absent optional file is not read; `selected` means the selected file is read in the committed slot, or fails `config.value.invalid` if missing/unreadable). Unless noted, optional files are present; for each `ci-disabled`, `no-git-root` or `selected-config` cell, place a present poisoned decoy where possible and assert **zero read attempts** for that layer. Repeat eligible `load` cells with the optional file removed to assert `missing` without reading that file. Read-attempt assertions distinguish a skip from a parsed-but-ignored source.
+
+| CI | Git root / explicit root | Selection | Flags | System | User-global | Project-committed | Project-local |
+|---|---|---|---|---|---|---|---|
+| off | git / none | none | none | load | load | load | load |
+| off | git / none | none | none; optional files absent | missing | missing | missing | missing |
+| off | none / none | none | none | load | load | no-git-root | no-git-root |
+| off | none / explicit | none | none | load | load | load | load |
+| on | git / none | none | none | ci-disabled | ci-disabled | load | ci-disabled |
+| on | none / none | none | none | ci-disabled | ci-disabled | no-git-root | ci-disabled |
+| on | none / none | none | L | ci-disabled | ci-disabled | no-git-root | no-git-root |
+| on | none / explicit | none | none | ci-disabled | ci-disabled | load | ci-disabled |
+| on | none / explicit | none | L; local absent | ci-disabled | ci-disabled | load | missing |
+| on | git / none | none | S only | load | ci-disabled | load | ci-disabled |
+| on | git / none | none | U only | ci-disabled | load | load | ci-disabled |
+| on | git / none | none | L only | ci-disabled | ci-disabled | load | load |
+| on | git / none | none | S, U, L | load | load | load | load |
+| on | git / none | none | S, U, L; system/user absent | missing | missing | load | load |
+| off | none / none | selected | none | load | load | selected | selected-config |
+| on | none / none | selected | none | ci-disabled | ci-disabled | selected | selected-config |
+| on | none / explicit | selected | L only | ci-disabled | ci-disabled | selected | selected-config |
+| on | git / none | selected | S only | load | ci-disabled | selected | selected-config |
+| on | git / none | selected | U only | ci-disabled | load | selected | selected-config |
+| on | git / none | selected | S, U, L | load | load | selected | selected-config |
+
+In the selected rows, the selected file itself must be valid/present for `selected`; a missing or unreadable selected file is an error, **never** a `missing` skip. TC-CONFIG-006 covers CLI-vs-env selector choice and restriction/error controls. For CI outside git without root, local is `ci-disabled` unless L is set, when it is `no-git-root`; selected local remains `selected-config` even with L set. System/user remain independent of selection, root and each other's enable flags.
 
 #### TC-CONFIG-006 - Selected-file slot
 
@@ -249,14 +278,14 @@ No API-* endpoints or EVT-* messages exist in the spec. Diagnostics are not even
 **Tags**: @backend
 
 **Preconditions**:
-- Committed and local files, alternate selected file, brand-derived `${environmentPrefix}CONFIG` and recognized legacy selector, temp outside-git cwd, `CI=true` variant.
+- Committed and local files, alternate selected file, brand-derived `${environmentPrefix}CONFIG` and recognized legacy selector, temp outside-git cwd, `CI=true` and explicit-root variants. Instrument reads of present/poisoned root local and of system/user files.
 
 **Steps**:
-1. Resolve with each selector alone, both selectors and `--config` together; repeat inside/outside git and with higher env/CLI field overrides.
-2. Select missing and unreadable paths; inject invalid schema/forbidden secret into selected file; inspect skipped and origin facts.
+1. Resolve with each selector alone, both selectors and `--config` together; repeat inside/outside git, with/without explicit root, CI on/off and local enable on/off, and with higher env/CLI field overrides. Assert `selected-config` for project-local in **every** selected case, zero local reads, and `ci-disabled` for system/user under CI unless each individually enabled, as in TC-CONFIG-005's overlap oracle.
+2. Select missing and unreadable paths; inject invalid schema/forbidden secret into selected file; inspect skipped, read-count and origin facts. Test CI selection with system only, user only, both or neither re-enabled; selection must not alter their outcomes.
 
 **Expected Outcome**:
-- `--config` wins selector collisions; selected file occupies committed (not eighth) slot, local skips `selected-config` even outside git; its actual path/line wins until higher layer overrides. Missing/unreadable selection yields `config.value.invalid` with no invented line. Selection does not override CI disabling or restrictions.
+- `--config` wins selector collisions; selected file occupies committed (not eighth) slot even outside git, local skips `selected-config` **before** CI/root/absence checks even when local is enabled, with zero local reads. Its actual path/line wins until higher layer overrides. Missing/unreadable selection yields `config.value.invalid` with no invented line, not `missing`; schema/secret restrictions still apply. Under CI, system/user are `ci-disabled` independently unless their respective flags enable them; neither root nor selection implicitly enables either or changes their `missing` outcomes when eligible but absent.
 
 #### TC-CONFIG-007 - Malformed source
 
@@ -445,7 +474,7 @@ No API-* endpoints or EVT-* messages exist in the spec. Diagnostics are not even
 2. Request unknown key; inspect loaded-files and skipped-layer evidence.
 
 **Expected Outcome**:
-- Exact file origin grammar `layer=... file=... line=<true positive 1-based line>` (default label `core/src/config/defaults.ts` with real manifest/fixture line), env/flag origins have no file/line; unknown get fails, never empty success; debug names every loaded file and skipped reason.
+- Exact file origin grammar uses the actual positive 1-based line (default label `core/src/config/defaults.ts` with real manifest/fixture line); env/flag origins have no file/line; unknown get fails, never empty success; debug names every loaded file and the exact first-match skipped reason from TC-CONFIG-005, with no loaded record for skipped sources.
 
 #### TC-CONFIG-016 - Safe warnings and strict
 
@@ -659,7 +688,7 @@ No API-* endpoints or EVT-* messages exist in the spec. Diagnostics are not even
 
 ## 6. Environments and Test Data
 
-- Bun pinned by root/CI, Node for packed-import parity; `pnpm install --frozen-lockfile` and `pnpm build` before tests that resolve dist. Test-platform facts for Linux/macOS/Windows are injected or temp-rooted; no dependency on actual `/etc`, `%APPDATA%`, workstation HOME or developer secrets. CI-mode fixtures explicitly control `CI=true` and each re-enable flag.
+- Bun pinned by root/CI, Node for packed-import parity; `pnpm install --frozen-lockfile` and `pnpm build` before tests that resolve dist. Test-platform facts for Linux/macOS/Windows are injected or temp-rooted; no dependency on actual `/etc`, `%APPDATA%`, workstation HOME or developer secrets. CI-mode fixtures explicitly control `CI=true`, each independent re-enable flag, selected-file priority and explicit-root eligibility; instrument reads of skipped layers as well as debug evidence.
 - Place committed YAML fixtures with deliberately recorded line numbers under `tests/fixtures/config/yaml/**`, typed catalog cases under `tests/fixtures/config/**` or test modules. Production public resolver/schema is the system under test, even with fixture catalogs. Synthetic `x-test` keys and deliberately distinct brand names are test inputs, not shipped defaults or new production config keys.
 - Use per-test disposable git-root trees with nested cwd, above-root decoys, selected file and gitignored local file; isolate process-wide legacy warning and YAML `LOG_TOKENS`/`LOG_STREAM` switch checks in subprocesses. Clean up temporary roots, snapshots and subprocesses; mutation tests edit **copies** only. Do not expose real secrets: use unregistered distinctive canaries, assert both raw and JSON-escaped variants absent in captured streams; include a registered env-secret positive control.
 - Default source manifest test checks actual positions/source drift against `packages/core/src/config/defaults.ts` (shipped origin label `core/src/config/defaults.ts`) and line-insertion mutation in isolated copy, not a hardcoded guessed source line. Because the production defaults are empty, the source-drift control must fail on an insertion even with zero current value entries; a separate typed fixture tests actual default-leaf lines. CLI uses injected streams/run IDs/ticks where possible; actual host-switch checks use isolated processes to exercise upstream guard.
@@ -673,9 +702,9 @@ All rows are **To Implement** except stated updates; path names are proposed tes
 | TC-CONFIG-001 | `tests/behaviour/config-resolver.test.ts` / `bun test tests/behaviour/config-resolver.test.ts` | injected seven layers; To Implement |
 | TC-CONFIG-002 | `tests/behaviour/config-resolver.test.ts` / same | invalid reset and shadowed control; To Implement |
 | TC-CONFIG-003 | `tests/behaviour/config-sources.test.ts` / `bun test tests/behaviour/config-sources.test.ts` | platform path facts; To Implement |
-| TC-CONFIG-004 | `tests/behaviour/config-sources.test.ts` / same | temp git bounds/decoys; To Implement |
-| TC-CONFIG-005 | `tests/behaviour/config-sources.test.ts` / same | CI re-enable matrix; To Implement |
-| TC-CONFIG-006 | `tests/behaviour/config-sources.test.ts`, `config-cli.test.ts` / `bun test tests/behaviour/config-sources.test.ts tests/behaviour/config-cli.test.ts` | selected file/CI; To Implement |
+| TC-CONFIG-004 | `tests/behaviour/config-sources.test.ts` / same | root bounds/decoys; outside-git and explicit-root first-match reasons, read counts; To Implement |
+| TC-CONFIG-005 | `tests/behaviour/config-sources.test.ts` / same | exact DM-2 overlap oracle above, independent flags, eligible/missing and zero-read negative controls; To Implement |
+| TC-CONFIG-006 | `tests/behaviour/config-sources.test.ts`, `config-cli.test.ts` / `bun test tests/behaviour/config-sources.test.ts tests/behaviour/config-cli.test.ts` | selector priority and selected-config first, CI/root/flags overlap and selected error/non-read controls; To Implement |
 | TC-CONFIG-007 | `tests/behaviour/config-sources.test.ts`, `config-cli.test.ts` / same | real malformed file; To Implement |
 | TC-CONFIG-008 | `tests/behaviour/config-schema.test.ts` / `bun test tests/behaviour/config-schema.test.ts` | partial/final fixtures; To Implement |
 | TC-CONFIG-009 | `tests/behaviour/config-schema.test.ts`, `tests/structure/config-contract.test.ts` / `bun test tests/behaviour/config-schema.test.ts tests/structure/config-contract.test.ts` | production vs test catalog; To Implement |
@@ -696,7 +725,7 @@ All rows are **To Implement** except stated updates; path names are proposed tes
 | TC-CONFIG-024 | `tests/behaviour/legacy-adapter.test.ts`, `tests/behaviour/config-cli.test.ts` / `bun test tests/behaviour/legacy-adapter.test.ts tests/behaviour/config-cli.test.ts` | process warning; Existing – Update |
 | TC-CONFIG-025 | `tests/structure/config-contract.test.ts`, `tests/boundaries/**`, `tests/checks/**` / `bun test tests/structure/config-contract.test.ts tests/boundaries tests/checks`; `pnpm check` plus CI gates in §4 | packed Node/Bun, dependency closure, manual PR/owner gate; Semi-automated / To Implement |
 
-Gate evidence to record later (not run now): exact commands, SHA, statuses and fail logs in §10; local `git diff --check`, focused tests, full `pnpm check`, `pnpm build` then `bun run scripts/checks/exports-discipline.ts`, `pnpm exec publint` and `pnpm exec attw --pack . --profile esm-only` on five publishables (as in CI), pins, publish guard, license audit, vulnerability gate, forbidden-literals, bidirectional error-table sync; confirm CI `ts-fresh-clone`, `ts-invariants`, `ts-typecheck`, `ts-lint`, `ts-format`, `ts-test`, `ts-boundaries`, `ts-build`, `ts-exports`, `ts-pins`, `ts-publish-guard`, `ts-license-audit`, `ts-vuln`, `ts-aggregate`, `ts-commitlint`, `ts-forbidden-literals` and `bash-tests` green on pushed HEAD. Also retain remaining required bash/doc CI checks; no gate waived by proposed license entries. A shell/tool file changed unexpectedly needs its corresponding `.tests/test-*.sh` (strategy), not an assumed N/A.
+Gate evidence to record later (not run now): exact commands, SHA, statuses and fail logs in §10; local `git diff --check`, focused tests, full `pnpm check`, `pnpm build` then `bun run scripts/checks/exports-discipline.ts`, `pnpm exec publint` and `pnpm exec attw --pack . --profile esm-only` on five publishables (as in CI), pins, publish guard, license audit, vulnerability gate, forbidden-literals, bidirectional error-table sync; confirm CI `ts-fresh-clone`, `ts-invariants`, `ts-typecheck`, `ts-lint`, `ts-format`, `ts-test`, `ts-boundaries`, `ts-build`, `ts-exports`, `ts-pins`, `ts-publish-guard`, `ts-license-audit`, `ts-vuln`, `ts-aggregate`, `ts-commitlint`, `ts-forbidden-literals` and `bash-tests` green on pushed HEAD. Also retain remaining required bash/doc CI checks; no gate waived by proposed license entries. A shell/tool file changed unexpectedly needs its corresponding `.tests/test-*.sh` (strategy), not an assumed N/A. The spec §18 open-PR DoD requires passing traceable evidence for all 25 ACs and all nine NFR thresholds, executable negative and positive controls (including DM-2 non-reads), current docs/review, packed Node/Bun/schema/default artifacts, minor release intent and green required pushed-HEAD jobs. Do not record unrun evidence as passing; human TDR/license acceptance gates merge/adoption only.
 
 ## 8. Risks, Assumptions, and Open Questions
 
@@ -709,8 +738,8 @@ Gate evidence to record later (not run now): exact commands, SHA, statuses and f
 
 ### 8.2 Assumptions
 
-- The accepted ADR and current GH-172 projection resolve ticket shorthand as documented in the spec: `ci-disabled` includes project-local; distinct malformed identity is a code, not a new numeric exit. Empty ordinary production catalog/defaults are intentional; bootstrap requires caller-supplied working name.
-- There is no implementation plan at test-planning time; test files/checks above are proposed implementation targets. If the plan changes paths, preserve TC identity and AC coverage when reconciling.
+- The accepted ADR and current GH-172 projection resolve ticket shorthand as documented in the spec: CI disables project-local only when no file is selected and its own flag is unset; when selected it reports `selected-config` first. Distinct malformed identity is a code, not a new numeric exit. Empty ordinary production catalog/defaults are intentional; bootstrap requires caller-supplied working name.
+- The implementation plan was absent at initial authoring but is now linked; its phases 1–5 and 8 retain these proposed test targets and final handoff gates. If delivery changes paths, preserve TC identity and AC coverage when reconciling.
 - TDR-0003 remains Proposed. Sidecar mediated adoption is documentation-only: later M0-S12 owns the credential port; unchanged primitive ports permit direct and mediated adapters later. No credential sourcing in this slice.
 
 ### 8.3 Open Questions
@@ -718,7 +747,6 @@ Gate evidence to record later (not run now): exact commands, SHA, statuses and f
 | Item | Owner / timing | Blocking? |
 |---|---|---|
 | OQ-1 from spec: acceptance of Proposed TDR-0003 and exact runtime/closure licensing (including BSD-3-Clause). | Human owner at PR review, before merge/adoption; consult `@decision-advisor` if selection rejected. | **Not** a branch delivery or unmerged-PR blocker; acceptance needed before merge/adoption. |
-| Actual implementation plan not present; reconcile test placement and phases when published. | PM/plan writer before delivery. | No AC coverage gap; mapping update needed if paths change. |
 | Conditional upstream runtime code-generation limitation: if evidenced by actual host/Node/Bun packing tests, revisit proposed TDR rather than choosing an unreviewed alternative. | PM/decision advisor upon failed TC-CONFIG-025. | Conditional implementation/design escalation; no assumed gap or waiver. |
 
 No other spec requirement lacks a mapped test; no ungrounded requirements or invented production config keys are accepted.
@@ -728,6 +756,7 @@ No other spec requirement lacks a mapped test; no ungrounded requirements or inv
 | Version | Date (UTC) | Author | Changes |
 |---|---|---|---|
 | 1.0 | 2026-10-30T06:33:54Z | Change Test Plan Writer | Initial 25/25 AC traceability; production resolver fixtures, security and provenance controls; no execution claimed. |
+| 1.1 | 2026-10-30T07:11:22Z | Change Test Plan Writer | DoR iteration 1: aligned TC-CONFIG-004–006 and debug evidence with spec DM-2 first-match overlap/non-read oracle; linked existing implementation plan and spec open-PR DoD; retained all 25 TC/AC IDs and execution history. |
 
 ## 10. Test Execution Log
 
