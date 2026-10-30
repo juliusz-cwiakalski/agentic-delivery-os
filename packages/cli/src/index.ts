@@ -16,11 +16,11 @@ import {
   FALLBACK_INVOCATION_CODE,
   RESULT_SCHEMA_VERSION,
 } from "@delivery-os/core/contracts";
-import { classifyThrown, resolveAppErrorCode } from "./classify";
-import { type CliStreams, writeOutput } from "./output/serialize";
-import { projectExitCode } from "./projection";
+import { classifyThrown, resolveAppErrorCode } from "./classify.js";
+import { type CliStreams, writeOutput } from "./output/serialize.js";
+import { projectExitCode } from "./projection.js";
 
-export type { CliSink, CliStreams } from "./output/serialize";
+export type { CliSink, CliStreams } from "./output/serialize.js";
 
 /** Flags parsed for a command invocation. */
 export type CommandFlags = Readonly<Record<string, string | true>>;

@@ -6,7 +6,7 @@
  * `BrandIdentity` parameter. No ambient `process.env`/`Bun.env` read ships here.
  */
 import type { BrandIdentity } from "@delivery-os/core/contracts";
-import type { CliDependencies, CommandProgram } from "./index";
+import type { CliDependencies, CommandProgram } from "./index.js";
 
 /** Register non-empty secret values from an injected environment record. */
 export function registerEdgeSecrets(

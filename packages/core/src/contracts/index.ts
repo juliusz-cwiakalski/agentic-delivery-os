@@ -55,7 +55,7 @@ export {
   type ErrorTableEntry,
   FALLBACK_INTERNAL_CODE,
   FALLBACK_INVOCATION_CODE,
-} from "./error-table";
+} from "./error-table.js";
 // The command-surface envelope lives beside the generic `Result<T, E>` and does
 // not replace it (DEC-1). See `./result` for the full contract documentation.
 export {
@@ -70,4 +70,4 @@ export {
   RESULT_SCHEMA_VERSION,
   type RunTiming,
   type VoidSuccessPayload,
-} from "./result";
+} from "./result.js";

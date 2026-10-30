@@ -336,12 +336,12 @@ describe("GH-172 CI binding", () => {
     expect(Object.keys(workflow.jobs ?? {}).sort()).toEqual([...TS_JOBS, ...BASH_JOBS].sort());
   });
 
-  test("the aggregate chain is unchanged and excludes the new checks", () => {
+  test("the aggregate chain keeps the GH-172 checks out and ends with the exports parity gate", () => {
     const manifest = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
       scripts: Record<string, string>;
     };
     expect(manifest.scripts.check).toBe(
-      "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries",
+      "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && bun run scripts/checks/exports-parity.ts",
     );
     expect(manifest.scripts.check).not.toContain("error-table-sync");
     expect(manifest.scripts.check).not.toContain("exit-code-literals");

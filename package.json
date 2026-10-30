@@ -14,7 +14,7 @@
     "test": "bun test",
     "check:boundaries": "depcruise packages && bun run scripts/checks/ambient-globals.ts && bun run scripts/checks/workspace-entrypoints.ts",
     "check:forbidden-literals": "bun run scripts/checks/forbidden-literals.ts",
-    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && bun run scripts/checks/exports-parity.ts",
     "prepare": "husky",
     "build": "pnpm -r build",
     "pretypecheck": "pnpm build",

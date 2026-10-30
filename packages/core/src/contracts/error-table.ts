@@ -8,7 +8,7 @@
  * failure projection class. `fallback` is the reserved two-segment namespace;
  * declared domain kinds are exactly `provider` and `input` at v1.
  */
-import type { AppErrorCode, ErrorCategory, ErrorConsequence, ProjectionClass } from "./result";
+import type { AppErrorCode, ErrorCategory, ErrorConsequence, ProjectionClass } from "./result.js";
 
 /** The declared domain kinds: the first link of the classification chain. */
 export const DOMAIN_KINDS = ["provider", "input"] as const;
