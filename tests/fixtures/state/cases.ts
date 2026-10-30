@@ -6,6 +6,7 @@
  * compared by the suite.
  */
 import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import type { StateStorePort } from "../../packages/core/src/contracts/index";
 import type { TestEdge } from "./harness";
 
@@ -147,6 +148,42 @@ export const CONFORMANCE_CASES: readonly ConformanceCase[] = [
       });
     },
     observe: (context) => readOutcome(context, ["t1"]),
+  },
+  {
+    id: "fence-contention",
+    seed: (context) => {
+      const held = context.store.acquireFence("held-writer");
+      if (!held.ok) throw new Error(`acquire failed: ${held.error.code}`);
+    },
+    observe: (context) => {
+      const contender = context.store.acquireFence("other-writer");
+      const read = context.store.read({ requiredKeys: [] });
+      return {
+        ok: !contender.ok && read.ok,
+        ...(contender.ok ? {} : { code: contender.error.code }),
+        ...(read.ok ? { recordCount: read.value.evidence.recordCount } : {}),
+      };
+    },
+  },
+  {
+    id: "atomic-document-replace",
+    seed: (context) =>
+      withFence(context, (handle) => {
+        const replaced = context.store.replaceDocument(handle, {
+          name: "snapshot",
+          content: { version: "new" },
+        });
+        if (!replaced.ok) throw new Error(`replace failed: ${replaced.error.code}`);
+      }),
+    observe: (context) => {
+      const target = join(
+        context.root,
+        `documents.${encodeURIComponent(context.workspaceId)}`,
+        "snapshot",
+      );
+      const parsed = JSON.parse(readFileSync(target, "utf8")) as { version: string };
+      return { ok: parsed.version === "new", values: { snapshot: parsed } };
+    },
   },
   {
     id: "value-depends-on-input",

@@ -421,14 +421,9 @@ export const createStateStore = (
       if (!lock.held || !lock.stale) return fail("state.lock.busy", { path: fencePath });
       const recoveredAtMs = edge.now();
       try {
-        edge.writeFile(
-          fencePath,
-          `${JSON.stringify({
-            namespace: identity.fenceNamespace,
-            token,
-            acquiredAtMs: recoveredAtMs,
-          })}\n`,
-        );
+        // Explicit recovery clears the stale lock and reports it; the next
+        // writer acquires normally. Nothing is stolen silently.
+        edge.removeFile(fencePath);
       } catch {
         return fail("state.write.failed", { path: fencePath });
       }

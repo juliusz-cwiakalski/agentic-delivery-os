@@ -7,6 +7,7 @@ import { describe, expect, test } from "bun:test";
 import { rmSync, writeFileSync } from "node:fs";
 
 import {
+  createTestEdge,
   ledgerPath,
   ledgerText,
   makeIdentity,
@@ -127,11 +128,31 @@ describe("TC-STATE-024 read/write evidence contract", () => {
     }
   });
 
-  test("the recovery-report assertion is a declared Phase 5 conditional", () => {
-    // Declared conditional, never a silent skip: Phase 5 activates the recovery
-    // report together with the fence recovery operation.
-    const pending = "recovery-report assertion pending: fence recovery lands in Phase 5";
-    expect(pending).toContain("pending");
+  test("a recovery report appears only when recovery ran", () => {
+    const root = makeTempRoot("evidence-recovery");
+    try {
+      const clock = { value: 1_000 };
+      const identity = makeIdentity(root);
+      const first = openStore(identity, {
+        edge: createTestEdge({ clock }),
+        staleFenceMs: 500,
+      });
+      const acquired = first.store.acquireFence("writer-a");
+      expect(acquired.ok).toBe(true);
+      clock.value = 10_000;
+      const second = openStore(identity, { edge: createTestEdge({ clock }), staleFenceMs: 500 });
+      const cleanRead = second.store.read({ requiredKeys: [] });
+      expect(cleanRead.ok).toBe(true);
+      if (cleanRead.ok) expect(cleanRead.value.evidence.recovery).toBeUndefined();
+      const recovered = second.store.recoverFence("writer-b");
+      expect(recovered.ok).toBe(true);
+      if (recovered.ok) {
+        expect(recovered.value.staleToken).toBe("writer-a");
+        expect(recovered.value.recoveredAtMs).toBe(10_000);
+      }
+    } finally {
+      removeRoot(root);
+    }
   });
 
   test("errors carry paths and positions, never payload or checksum bytes", () => {
