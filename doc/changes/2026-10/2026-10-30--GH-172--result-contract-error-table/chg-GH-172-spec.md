@@ -18,7 +18,7 @@ change:
       - "M0-S2 branding seam (GH-171; merged to main-tools) — BrandIdentity parameter discipline; the forbidden-literal CI scan is live and binding on every artifact of this change"
       - "ADR-0003 — OSS Tooling Monorepo Structure (Accepted 2026-10-24, PR #163) — runtime-neutral contracts, package tiers"
       - "Man-page v0 planning truth (doc/planning/oss-tooling/cli-command-registry.md) — CommandResult fields, --json machine output always valid, exit-code projection {0, 1, 2} with the error table as source of truth"
-      - "doc/spec tooling feature area — post-delivery reconciliation authors feature-result-contract.md (first-spec-only authoring)"
+      - "doc/spec tooling feature area — feature-result-contract.md ships in-change (documented error table included, authored during delivery); phase-7 reconciliation completes the feature doc"
     external:
       - "GitHub Actions CI (existing runners; the new checks join the existing ts-* fast loop; no new job topology, no new vendors or services)"
 ---
@@ -31,7 +31,7 @@ change:
 
 This change delivers the M0-S3 result contract: the `CommandResult` envelope (schemaVersion, runId, exitCode, timing, and data or error) as the one shape every command returns, and the internal error table in the `core` `./contracts` subpath as the primary model of failure. Errors are self-describing for AI agents: a stable symbolic hierarchical code (`domain.reason.detail`, for example `provider.quota.exceeded`) plus structured fields on every error — category (`user` | `platform` | `transient` | `permanent`), `retryable`, `consequence` (`landed` | `not_landed` | `unknown`, with `unknown` first-class), and an action-first remediation hint. Exit codes are a projection of the error table in the standalone CLI only (0 success, 1 user-or-validation, 2 platform-or-provider), never hardcoded at call sites.
 
-The command surface is exercised through `runCli(argv, streams)` — injectable standard-output and error streams, deterministic, testable in-process without spawning a process. Machine output under `--json` is always valid JSON, even on failure and even for a broken command: unclassifiable failures are contained by a fallback table entry whose consequence is `unknown`. A redaction chokepoint on the serialization path guarantees secrets never appear in any output. The error table is declared once as a machine-readable single source, so the acceptance criterion "error codes resolve to documented table entries" is mechanically testable rather than aspirational.
+The command surface is exercised through `runCli(argv, streams)` — injectable standard-output and error streams, deterministic, testable in-process without spawning a process. Machine output under `--json` is always valid JSON, even on failure and even for a broken command: unclassifiable failures are contained by dedicated fallback table entries whose consequence is `unknown`. A redaction chokepoint on the serialization path guarantees secrets never appear in any output. The error table is declared once as a machine-readable single source, so the acceptance criterion "error codes resolve to documented table entries" is mechanically testable rather than aspirational.
 
 A short survey of AI-agent-facing error design (problem-details structures, RFC 9457 lineage; tool-use error guidance from major LLM tool-use surfaces) was conducted as a companion artifact in this change folder ([survey-agent-facing-error-design.md](survey-agent-facing-error-design.md)); its verdict validates the convention with recorded refinements (Section 15, DEC-10).
 
@@ -111,7 +111,7 @@ Because the delivery tooling has no shared result contract and no model of failu
 | F-3 | Self-describing errors: hierarchical symbolic codes + structured fields | Ticket: agents need stable identity plus category, retryability, consequence, and a remediation hint to act. |
 | F-4 | Exit-code projection in the standalone CLI only, derived from the table | Ticket + man-page v0: {0, 1, 2} projected from table entries; the CLI is the only place the projection exists. |
 | F-5 | `runCli(argv, streams)` — injectable, deterministic, testable without spawning a process | Ticket: the command surface must be exercisable as a unit. |
-| F-6 | Machine output always valid — failure containment via the fallback table entry | Ticket AC: a broken command under `--json` still emits a valid envelope. |
+| F-6 | Machine output always valid — failure containment via the fallback table entries | Ticket AC: a broken command under `--json` still emits a valid envelope. |
 | F-7 | Redaction chokepoint at the serialization edge | Ticket AC: secrets never appear in output; serialization belongs at edges, not in runtime-neutral contracts. |
 | F-8 | Machine-readable error table as single source with a binding docs/code sync check | Ticket AC: error codes resolve to documented table entries — testably, not aspirationally. |
 | F-9 | Boundary and branding conformance of the delivered surface | Binding M0-S1/M0-S2 constraints: zero forbidden literals, `BrandIdentity` parameters, runtime-neutral contracts, tier matrix. |
@@ -119,13 +119,13 @@ Because the delivery tooling has no shared result contract and no model of failu
 ### 5.1 Capability Details
 
 - **F-1**: Every command returns a `CommandResult` envelope containing exactly the man-page v0 fields: `schemaVersion`, `runId`, `exitCode`, `timing`, and exactly one of `data` (success payload) or `error` (failure object) — never both, never neither. A void success carries an explicit empty data payload rather than an ambiguous both-absent shape. `schemaVersion` is a brand-neutral, stable string identifying the envelope schema (fixed at v1 introduction: `delivery.result.v1`, following the reserved schema-name lineage); it changes only on a breaking shape change. `runId` is an opaque, per-invocation correlation identifier generated at the runtime-aware edge (contracts carry the field; generation mechanics — clock, randomness — stay out of the runtime-neutral contracts). `timing` carries the run's measured timing facts (at minimum total duration) and is present on every envelope, success and failure alike. The envelope is declared in `core` `./contracts` alongside the generic `Result<T, E>`: `Result` remains the internal computation result returned by engines; `CommandResult` is the command-surface envelope a command's result is rendered into. Evolution is additive within `schemaVersion`; breaking shape changes require a new schema version (survey verdict 8).
-- **F-2**: The error table is the primary model of failure: a declared, machine-readable set of entries in `core` `./contracts`, each entry defining an app error code, its domain kind, its structured fields (F-3), and its exit-code projection class (F-4). Errors raised by domain engines carry a domain kind and are classified through the chain: domain kind → app error code → exit-code projection class. An error that no entry classifies is contained by the fallback table entry (F-6). The contracts tier stays runtime-neutral and I/O-free: the table is data and types, not behavior; classification and rendering live at the surface tiers.
-- **F-3**: Every error is self-describing for agents. Identity is a stable symbolic hierarchical app error code `domain.reason.detail` (for example `provider.quota.exceeded`) — not a URI, not an HTTP status (survey verdicts 2–3). Every error additionally carries structured fields: `category` — fixed at four values, `user` | `platform` | `transient` | `permanent` (responsibility and persistence of the failure); `retryable` — boolean, an explicit retry signal so agents branch without guessing; `consequence` — `landed` | `not_landed` | `unknown`, recording whether the attempted mutation landed, with `unknown` first-class and mandatory for the fallback entry (survey verdict 6: the surveyed designs' shared gap; this convention's contribution, motivated by retry safety); `remediationHint` — an action-first, non-secret hint of what the caller should try next (survey verdict 9); plus an optional non-identifying human-readable summary. Prose is never identity and never carries secret material.
+- **F-2**: The error table is the primary model of failure: a declared, machine-readable set of entries in `core` `./contracts`, each entry defining an app error code, its domain kind, its structured fields (F-3), and its exit-code projection class (F-4). Errors raised by domain engines carry a domain kind and are classified through the chain: domain kind → app error code → exit-code projection class. An error that no entry classifies is contained by the fallback entries (F-6). The contracts tier stays runtime-neutral and I/O-free: the table is data and types, not behavior; classification and rendering live at the surface tiers.
+- **F-3**: Every error is self-describing for agents. Identity is a stable symbolic hierarchical app error code `domain.reason.detail` (for example `provider.quota.exceeded`) — not a URI, not an HTTP status (survey verdicts 2–3). Every error additionally carries structured fields: `category` — fixed at four values, `user` | `platform` | `transient` | `permanent` (responsibility and persistence of the failure); `retryable` — boolean, an explicit retry signal so agents branch without guessing; `consequence` — `landed` | `not_landed` | `unknown`, recording whether the attempted mutation landed, with `unknown` first-class and mandatory for the fallback entries (survey verdict 6: the surveyed designs' shared gap; this convention's contribution, motivated by retry safety); `remediationHint` — an action-first, non-secret hint of what the caller should try next (survey verdict 9); plus an optional non-identifying human-readable summary. Prose is never identity and never carries secret material.
 - **F-4**: Exit codes exist only as the standalone CLI's projection of the table: 0 success; 1 user-or-validation error; 2 platform-or-provider error (man-page v0). Each table entry declares exactly one projection class; the numeric exit code is derived from the entry — never written as a literal at a command call site, and never numerically diversified beyond {0, 1, 2} (survey verdict 10: a small fixed projection plus structured fields beats a wide numeric vocabulary). No other surface projects exit codes.
 - **F-5**: The command surface is exercised through `runCli(argv, streams)`: arguments in, injected standard-output and standard-error streams out, plus the resulting exit code. It is deterministic — identical argv and injected streams (and injected clock facts where timing is involved) yield identical output — and testable in-process without spawning a process. Machine envelopes are written to the injected standard-output stream; human-oriented diagnostics, where any exist, go to the injected error stream and never corrupt the machine channel. Brand-dependent strings (for example the binary name in usage text) are received as `BrandIdentity` parameters supplied at this runtime-aware edge — never ambient reads, never committed literals.
-- **F-6**: Machine output under `--json` is always valid: success, classified failure, unknown failure, and broken command (unrecognized invocation, malformed arguments) all emit a valid envelope. Unclassifiable failures and broken commands are contained by the fallback table entry — its consequence is `unknown`, its class is user-or-validation (broken command) with the caller-directed remediation hint — so the machine channel never crashes, never emits a stack trace or raw diagnostics, and never emits non-JSON (survey verdict 11: diagnostics belong to human-oriented output and logs, never the machine envelope).
+- **F-6**: Machine output under `--json` is always valid: success, classified failure, unknown failure, and broken command (unrecognized invocation, malformed arguments) all emit a valid envelope. Containment uses two dedicated fallback table entries (DEC-13): `fallback.invocation` contains broken invocations and unknown commands — category `user`, `retryable: false`, projection class user-validation, caller-directed remediation hint; `fallback.internal` contains errors no table entry classifies — category `platform`, `retryable: false`, projection class platform-provider, remediation hint directing the caller to diagnostics; both carry consequence `unknown`. Each population resolves through the entry matching its responsibility, keeping the {0, 1, 2} projection faithful (exit 1 for caller-fault containment, exit 2 for system-side containment). The machine channel never crashes, never emits a stack trace or raw diagnostics, and never emits non-JSON (survey verdict 11: diagnostics belong to human-oriented output and logs, never the machine envelope).
 - **F-7**: A single redaction chokepoint sits on the serialization path — the edge where envelopes become output — and transforms or removes secret material before any byte reaches a stream. It covers the success `data` payload and the `error` object alike, on both failure and success paths. Contracts stay I/O-free; redaction is edge behavior with golden tests proving planted secrets (for example environment-sourced tokens) never survive into any output stream.
-- **F-8**: The error table is declared once as a machine-readable single source; the documentation of the table (the entries a human or agent consults) is derived from — or validated against — that source by a binding sync check: every app error code emitted anywhere (code, docs, fixtures) resolves to exactly one documented table entry, and every documented entry exists in the source. Drift fails the CI fast loop. This makes the ticket's acceptance criterion "error codes resolve to documented table entries" mechanically true rather than a documentation aspiration.
+- **F-8**: The error table is declared once as a machine-readable single source; the documented table — the entries a human or agent consults — lives at `doc/spec/features/feature-result-contract.md` and ships in-change: it is authored during delivery as part of this change, derived from (and validated against) the machine-readable source by a binding sync check, so both drift directions are testable at merge time. Every app error code emitted anywhere (code, docs, fixtures) resolves to exactly one documented table entry, and every documented entry exists in the source; drift in either direction fails the CI fast loop. System-spec reconciliation (phase 7) then updates and completes the surrounding feature doc — the documented table itself already exists by merge. This makes the ticket's acceptance criterion "error codes resolve to documented table entries" mechanically true rather than a documentation aspiration.
 - **F-9**: The delivered surface respects every binding constraint: zero forbidden product tokens in new code (the live M0-S2 scan is binding); brand-dependent values flow as `BrandIdentity` parameters at the runtime-aware edge; `core` `./contracts` gains types and data only — no I/O, no ambient environment, clock, or randomness reads; the `cli` tiers respect the existing tier matrix; every new forbidden boundary rule ships with its failing negative fixture; existing gates stay green.
 
 ## 6. USER & SYSTEM FLOWS
@@ -149,12 +149,16 @@ Flow 2 — Classified failure
     → a valid envelope is emitted; timing is present on the failure path
 
 Flow 3 — Unknown failure / broken command (containment)
-  An error no table entry classifies — or a broken invocation
-  (unknown command, malformed arguments) — occurs under --json
-    → the fallback table entry contains it (consequence = unknown,
-      caller-directed remediation hint)
-    → a valid envelope is emitted on the machine channel; exit code per the
-      fallback entry's projection class
+  A broken invocation (unknown command, malformed arguments) occurs
+  under --json
+    → the fallback.invocation entry contains it (category user,
+      retryable false, consequence = unknown, caller-directed
+      remediation hint); exit code 1 (user-validation)
+  An error no table entry classifies occurs under --json
+    → the fallback.internal entry contains it (category platform,
+      retryable false, consequence = unknown, remediation hint
+      directing to diagnostics); exit code 2 (platform-provider)
+    → a valid envelope is emitted on the machine channel in either case
     → diagnostics, if any, go to the human-oriented error stream only;
       no stack traces or raw errors in the machine envelope
 
@@ -186,7 +190,7 @@ Flow 6 — Branding discipline (standing constraint)
 
 - The `CommandResult` envelope contract in `core` `./contracts` — exactly the man-page v0 fields, data/error mutual exclusivity, timing on all paths (F-1).
 - The declaration of the relationship: generic `Result<T, E>` stays the internal computation result; `CommandResult` is the command-surface envelope (F-1, DM-1).
-- The internal error table as a machine-readable single source in `core` `./contracts`: entries with app error code, domain kind, category, retryable, consequence, remediation hint, projection class, and non-identifying summary; including the fallback entry with consequence `unknown` (F-2, F-3, F-8).
+- The internal error table as a machine-readable single source in `core` `./contracts`: entries with app error code, domain kind, category, retryable, consequence, remediation hint, projection class, and non-identifying summary; including the two fallback entries `fallback.invocation` and `fallback.internal` with consequence `unknown` (F-2, F-3, F-8).
 - The classification chain (domain kind → app error code → exit-code projection class) and the exit-code projection {0, 1, 2} in the standalone CLI only, derived from table entries (F-2, F-4).
 - `runCli(argv, streams)` with injected standard-output and error streams, deterministic, in-process testable, machine envelopes on the output stream and human diagnostics on the error stream (F-5).
 - Failure containment: machine output always valid under `--json`, including broken commands; no diagnostics or stack traces in the machine envelope (F-6).
@@ -195,7 +199,8 @@ Flow 6 — Branding discipline (standing constraint)
 - Unit and golden tests: success and failure envelope goldens, classification-chain unit tests, planted-secret redaction goldens, broken-command containment golden, determinism/in-process `runCli` tests, projection derivation tests (per ticket AC).
 - The AI-agent-facing error design survey as a companion artifact in this change folder (already authored: [survey-agent-facing-error-design.md](survey-agent-facing-error-design.md)); its verdicts validate the convention and are incorporated here (DEC-10).
 - Boundary and branding conformance for all of the above, with negative fixtures for any new forbidden rule (F-9).
-- Post-delivery system-spec reconciliation inputs: `feature-result-contract.md` is authored during phase 7 (first-spec-only).
+- Authoring `doc/spec/features/feature-result-contract.md` during delivery as part of this change — the documented error table included, derived from the machine-readable source and kept true by the binding sync check (F-8).
+- Post-delivery system-spec reconciliation inputs: the feature doc is updated and completed during phase 7 (the documented table itself already ships in-change).
 
 ### 7.2 Out of Scope
 
@@ -231,7 +236,7 @@ N/A — no events or messages are emitted. The reserved brand-neutral telemetry 
 |----|---------|-------------|
 | DM-1 | `CommandResult` envelope (in `core` `./contracts`) | The command-surface result contract: `schemaVersion` (stable brand-neutral string, `delivery.result.v1` at v1), `runId` (opaque per-invocation correlation id, generated at the runtime-aware edge), `exitCode`, `timing` (present on every path; at minimum total duration), and exactly one of `data` or `error`. Generic `Result<T, E>` remains the internal computation result; the envelope is the surface rendering. Evolution additive within `schemaVersion`; breaking shape change ⇒ new version. |
 | DM-2 | Envelope error object | `code` (app error code, DM-4), `category` (`user` | `platform` | `transient` | `permanent`), `retryable` (boolean), `consequence` (`landed` | `not_landed` | `unknown`; `unknown` first-class), `remediationHint` (action-first, secret-free), optional non-identifying `summary`. Prose is never identity. |
-| DM-3 | Error table entry | The table's declared row shape: app error code, domain kind, category, retryable, consequence, remediation hint, exit-code projection class (`success` | `user-validation` | `platform-provider`), non-identifying summary. Declared once as a machine-readable single source (F-8); includes the fallback entry (consequence `unknown`). |
+| DM-3 | Error table entry | The table's declared row shape: app error code, domain kind, category, retryable, consequence, remediation hint, exit-code projection class (`success` | `user-validation` | `platform-provider`), non-identifying summary. Declared once as a machine-readable single source (F-8); includes the two fallback entries `fallback.invocation` and `fallback.internal` (both consequence `unknown`). |
 | DM-4 | App error code format | Stable symbolic hierarchical code `domain.reason.detail` (for example `provider.quota.exceeded`); resolves to exactly one table entry; documented table derived from the machine-readable source. |
 
 ### 8.4 External Integrations
@@ -269,9 +274,9 @@ No product telemetry is emitted; the reserved schema names stay untouched (NG-3)
 | RSK-2 | Error-table docs and code drift, resurrecting "exit-code folklore" as documentation folklore | M | M | Machine-readable table as single source; binding two-directional sync check in the CI fast loop (NFR-6); doc derivation during phase 7 | Low |
 | RSK-3 | The redaction chokepoint is bypassed (a surface writes a stream without it) and secrets leak | H | L | Single chokepoint on the serialization path; planted-secret golden tests on success and failure paths; review asserts no direct stream writes outside the chokepoint (NFR-5) | Low–Medium |
 | RSK-4 | Exit-code folklore re-emerges: per-call-site codes or numeric diversification beyond {0, 1, 2} | M | M | Projection derived only from table entries; NFR-7 forbids call-site exit-code literals; survey verdict 10 records the principle; reviewer checks it | Low |
-| RSK-5 | A crash path escapes containment (failure before envelope construction) and breaks the always-valid guarantee | M | M | Containment is a top-level `runCli` responsibility wrapping all command execution; broken-command golden test proves a valid fallback envelope (AC-F6-1); unknown-failure mapping to the fallback entry is unit-tested | Low–Medium |
+| RSK-5 | A crash path escapes containment (failure before envelope construction) and breaks the always-valid guarantee | M | M | Containment is a top-level `runCli` responsibility wrapping all command execution; broken-command golden test proves a valid fallback envelope (AC-F6-1); unknown-failure mapping to the fallback entries is unit-tested | Low–Medium |
 | RSK-6 | Product-token leakage into the new CLI surface (usage text, output strings) violating the M0-S2 naming firewall | M | L | Live forbidden-literal scan is binding; brand strings received as `BrandIdentity` parameters at the runtime-aware edge; NFR-9 | Low |
-| RSK-7 | `consequence: unknown` is overused as a lazy default on classifiable failures, eroding agent trust in the field | M | L | Table entries require explicit consequence values; `unknown` is reserved for the fallback entry and genuinely indeterminate outcomes; review and table-entry authoring discipline | Low |
+| RSK-7 | `consequence: unknown` is overused as a lazy default on classifiable failures, eroding agent trust in the field | M | L | Table entries require explicit consequence values; `unknown` is reserved for the fallback entries and genuinely indeterminate outcomes; review and table-entry authoring discipline | Low |
 | RSK-8 | Scope creep: envelope work balloons into config/state/command implementation | M | L | NG-1/NG-2 fix the boundary; the change delivers the contract plus a testable surface; first real command is M0-S4 | Low |
 
 ## 12. ASSUMPTIONS
@@ -301,7 +306,7 @@ No product telemetry is emitted; the reserved schema names stay untouched (NG-3)
 
 ## 14. OPEN QUESTIONS
 
-None at spec time. The questions surfaced at clarify_scope were resolved: the envelope JSON details (schemaVersion value, runId format, exact shapes) are fixed here as design decisions within the spec-writer's remit per PM planning (DEC-1, DEC-8, DM-1); the survey's home (companion artifact vs. new doc area) was decided by PM (DEC-10); exit-code values come from man-page v0. Remaining mechanics (fixture organization, exact check wiring) are technical and reversible, owned by delivery planning within the contracts fixed here.
+None — none remain open. The questions surfaced at clarify_scope were resolved: the envelope JSON details (schemaVersion value, runId format, exact shapes) are fixed here as design decisions within the spec-writer's remit per PM planning (DEC-1, DEC-8, DM-1); the survey's home (companion artifact vs. new doc area) was decided by PM (DEC-10); exit-code values come from man-page v0. The two items raised by test planning (OQ-T1 — the documented-entry artifact for the sync check; OQ-T2 — fallback-entry semantics and fields) are resolved by this amendment: the documented table ships in-change at `doc/spec/features/feature-result-contract.md` (F-8), and containment uses two fallback entries with fixed `category` and `retryable` values (DEC-13). Remaining mechanics (fixture organization, exact check wiring) are technical and reversible, owned by delivery planning within the contracts fixed here.
 
 ## 15. DECISION LOG
 
@@ -319,16 +324,17 @@ None at spec time. The questions surfaced at clarify_scope were resolved: the en
 | DEC-10 | The AI-agent-facing error design survey is authored as a companion artifact inside this change folder (not a distributable doc); its verdict (convention validated; refinements: action-first hints, category enum fixed at four values, consequence retained as the novel element, additive evolution) is incorporated into this spec. | PM decision 2026-10-30 — avoids one-off research notes entering the distributable doc set and their `ados_distribution` obligations; the validated convention lands in current-truth docs via phase 7. | 2026-10-30 |
 | DEC-11 | A single redaction chokepoint sits on the serialization path; contracts stay I/O-free; the sync check for the error table is binding in the CI fast loop. | Ticket ACs (secrets never in output; codes resolve to documented entries). Runtime neutrality (ADR-0003) places redaction at edges; a binding check is the only way the documentation criterion stays true (F-7, F-8). | 2026-10-30 |
 | DEC-12 | `change.type = feat` | Adds the result-contract and error-table capability — new behavior on a greenfield surface, not a refactor of existing behavior. | 2026-10-30 |
+| DEC-13 | Failure containment uses two fallback table entries: `fallback.invocation` (broken invocations and unknown commands; category `user`, `retryable: false`, consequence `unknown`, projection class user-validation, caller-directed remediation hint) and `fallback.internal` (errors no table entry classifies; category `platform`, `retryable: false`, consequence `unknown`, projection class platform-provider, remediation hint directing the caller to diagnostics). Refines DEC-5/DEC-7 from a single containment entry to two. | One entry cannot project faithfully: broken commands are caller-fault (exit 1, user-or-validation) while unclassifiable runtime failures are system-side (exit 2, platform-or-provider); a single class would misattribute one population and erode man-page v0's {0, 1, 2} semantics. Both entries carry consequence `unknown` (containment never asserts a mutation landed or not — DEC-5 discipline) and `retryable: false` (an identical broken invocation fails identically; an unclassifiable failure with unknown consequence must not invite blind retry — the remediation hint, not `retryable`, directs the next step). Resolves test-plan GAP-4/OQ-T2. | 2026-10-30 |
 
 ## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
 
 | Component | Impact |
 |-----------|--------|
-| `core` `./contracts` subpath | New — `CommandResult` envelope, envelope error object, error-table entry types, app error code format, fallback entry; `Result<T, E>` unchanged; stays runtime-neutral and I/O-free |
+| `core` `./contracts` subpath | New — `CommandResult` envelope, envelope error object, error-table entry types, app error code format, fallback entries; `Result<T, E>` unchanged; stays runtime-neutral and I/O-free |
 | `cli` surface/commands/output tiers | New — `runCli(argv, streams)`, classification chain, exit-code projection, serialization with the redaction chokepoint; placeholder tiers gain their first real surface |
 | Workspace tests (`tests/**`) | New — golden suites (success, failure, broken command, planted-secret), classification-chain and projection unit tests, in-process `runCli` determinism tests, sync check |
 | CI fast loop | Updated — the sync check and golden suites join the existing `ts-*` jobs; no new job topology |
-| `doc/spec/**` | Reconciled post-delivery — `feature-result-contract.md` authored during phase 7 (first-spec-only) |
+| `doc/spec/**` | `feature-result-contract.md` authored in-change (documented error table) and reconciled/completed during phase 7 |
 | Man-page v0 (doc/planning/oss-tooling/cli-command-registry.md) | Unchanged — remains planning truth; already consistent with this spec |
 | Companion survey (this folder) | Referenced — validates the convention; not part of the distributable doc set |
 | `packages/adapters`, `packages/mcp`, `packages/opencode`, bash stack, `.opencode/`, `.ados-claude/` | Untouched |
@@ -345,15 +351,15 @@ Ticket AC coverage: ticket AC-1 (unit and golden tests) → AC-F1-3, AC-F3-1, AC
 | AC-F2-1 | **Given** the `core` `./contracts` surface, **when** inspected, **then** the generic `Result<T, E>` is unchanged as the internal computation result, `CommandResult` is declared as the command-surface envelope, and neither carries I/O, ambient environment, clock, or randomness dependencies. | F-2, DM-1, NFR-1 |
 | AC-F2-2 | **Given** the internal error table, **when** any entry is inspected, **then** it carries the full row shape — app error code, domain kind, category, retryable, consequence, remediation hint, exit-code projection class, non-identifying summary — and each entry maps to exactly one projection class. | F-2, DM-3, NFR-7 |
 | AC-F3-1 | **Given** an error raised by a domain engine, **when** the classification chain resolves it (domain kind → app error code → exit-code projection class), **then** the resulting code is a stable symbolic hierarchical code that resolves to exactly one documented table entry. | F-3, DM-4, NFR-6 |
-| AC-F3-2 | **Given** an error that no table entry classifies, **when** its envelope is built, **then** the fallback table entry is applied — consequence `unknown`, caller-directed remediation hint, projection class per the fallback definition — and **given** table entries for mutation-bearing failures, **when** inspected, **then** each states consequence explicitly as `landed`, `not_landed`, or `unknown`. | F-3, DM-2, DM-3 |
+| AC-F3-2 | **Given** an error that no table entry classifies, **when** its envelope is built, **then** the `fallback.internal` entry is applied — consequence `unknown`, category `platform`, `retryable: false`, platform-provider projection class, remediation hint directing to diagnostics — and **given** table entries for mutation-bearing failures, **when** inspected, **then** each states consequence explicitly as `landed`, `not_landed`, or `unknown`. | F-3, DM-2, DM-3 |
 | AC-F4-1 | **Given** the error table, **when** exit codes are computed for any outcome, **then** every code is in {0, 1, 2} per the fixed classes (0 success; 1 user-or-validation; 2 platform-or-provider), derived from table entries — and **when** command call sites are inspected, **then** no exit-code constant exists outside the projection. | F-4, NFR-7 |
 | AC-F5-1 | **Given** `runCli` invoked with argv and injected streams, **when** it executes a command to completion, **then** it writes deterministic output to the injected streams and returns the exit code, without spawning a process. | F-5, NFR-8 |
 | AC-F5-2 | **Given** the `runCli` contract tests, **when** executed, **then** they run in-process (zero spawned processes), and identical argv plus identical injected streams (and clock facts) yield identical output. | F-5, NFR-8 |
-| AC-F6-1 | **Given** a broken invocation (unknown command or malformed arguments) under `--json`, **when** `runCli` executes, **then** it still emits a valid envelope whose error resolves to a documented table entry with a caller-directed remediation hint, instead of crashing or emitting non-JSON. | F-6, NFR-2 |
+| AC-F6-1 | **Given** a broken invocation (unknown command or malformed arguments) under `--json`, **when** `runCli` executes, **then** it still emits a valid envelope whose error resolves to the documented `fallback.invocation` entry (category `user`, `retryable: false`, consequence `unknown`, user-validation class, caller-directed remediation hint) and the projected exit code is 1, instead of crashing or emitting non-JSON. | F-6, NFR-2 |
 | AC-F6-2 | **Given** any failure outcome under `--json`, **when** the machine channel is inspected, **then** it contains no stack traces or raw diagnostics — diagnostics, if any, appear only on the human-oriented error stream. | F-6, DEC-7 |
 | AC-F7-1 | **Given** success and failure payloads that would carry planted secret material (for example environment-sourced tokens), **when** the envelopes are serialized for output, **then** the redaction chokepoint removes or transforms the material such that no secret appears in any output stream, proven by golden tests on both paths. | F-7, NFR-5 |
 | AC-F7-2 | **Given** the delivered surface code, **when** reviewed, **then** no output stream is written outside the redaction chokepoint's serialization path, and remediation hints and summaries are secret-free by construction. | F-7, NFR-5 |
-| AC-F8-1 | **Given** the machine-readable error table as single source, **when** the binding sync check runs, **then** every app error code referenced in code, docs, and fixtures resolves to exactly one documented table entry, every documented entry exists in the source, and drift in either direction fails the CI fast loop. | F-8, NFR-6 |
+| AC-F8-1 | **Given** the machine-readable error table as single source and the documented table shipped in-change at `doc/spec/features/feature-result-contract.md`, **when** the binding sync check runs, **then** every app error code referenced in code, docs, and fixtures resolves to exactly one documented table entry in that in-change artifact, every documented entry in that artifact exists in the source, and drift in either direction against the in-change artifact fails the CI fast loop. | F-8, NFR-6 |
 | AC-F9-1 | **Given** the forbidden-literal scan and the boundary suites, **when** they run on the delivered change, **then** zero product-token literals appear in new code, brand-dependent strings flow from `BrandIdentity` parameters at the runtime-aware edge, the contracts tier remains I/O-free, the tier matrix is green, and every new forbidden boundary rule has its failing negative fixture. | F-9, NFR-9, NFR-10 |
 
 ## 18. ROLLOUT & CHANGE MANAGEMENT (HIGH-LEVEL)
@@ -361,7 +367,7 @@ Ticket AC coverage: ticket AC-1 (unit and golden tests) → AC-F1-3, AC-F3-1, AC
 - Single PR targeting `main-tools`; branch `feat/GH-172/result-contract-error-table`; one conventional commit per plan phase.
 - Fully additive greenfield surface; the bash stack, existing gates, and user-facing behavior are unchanged; no data migration. Reversal is a single PR revert.
 - The contract is the stability promise to M0-S4/S5/S10/S11/S12 — the DoR gate (phase 5) reviews spec + test plan + plan against the ticket before any delivery begins.
-- Post-delivery, phase 7 authors `feature-result-contract.md` (first-spec-only) and derives the human-readable error-table documentation from the machine-readable source; the sync check keeps them honest from then on.
+- The documented error table (`doc/spec/features/feature-result-contract.md`) is authored during delivery as part of this change, derived from the machine-readable source, so the sync check binds both drift directions from merge time; phase 7 then reconciles and completes the surrounding feature doc, and the sync check keeps them honest from then on.
 - The companion survey stays a change-folder artifact; its validated convention reaches current-truth docs only via phase 7.
 
 ## 19. DATA MIGRATION / SEEDING (IF APPLICABLE)
@@ -399,9 +405,9 @@ The redaction chokepoint is the privacy-relevant control of this change: envelop
 | Domain kind | The failure classification a domain engine attaches to an error; the first link of the classification chain. |
 | Classification chain | domain kind → app error code → exit-code projection class; the path from an engine failure to a table entry. |
 | Exit-code projection | The standalone CLI's mapping of table entries to {0, 1, 2}: 0 success; 1 user-or-validation; 2 platform-or-provider. The only place exit codes exist. |
-| Consequence | Structured field recording whether the attempted mutation landed: `landed` | `not_landed` | `unknown`; `unknown` is first-class and mandatory on the fallback entry. |
+| Consequence | Structured field recording whether the attempted mutation landed: `landed` | `not_landed` | `unknown`; `unknown` is first-class and mandatory on the fallback entries. |
 | Remediation hint | Action-first, secret-free guidance on what the caller should try next; prose, never identity. |
-| Fallback entry | The table entry containing unclassifiable failures and broken commands; consequence `unknown`; keeps machine output always valid. |
+| Fallback entries | `fallback.invocation` (broken invocations and unknown commands; category `user`, projection class user-validation) and `fallback.internal` (unclassifiable failures; category `platform`, projection class platform-provider); both consequence `unknown`, `retryable: false`; keep machine output always valid. |
 | runCli(argv, streams) | The testable command-surface entry point: arguments in, injected standard-output and error streams out, exit code returned; deterministic; no process spawning in tests. |
 | Redaction chokepoint | The single serialization-path control that removes or transforms secret material before any byte reaches an output stream. |
 | Machine output | The `--json` channel: always a valid envelope, on every outcome, with no diagnostics; written to the injected output stream. |
@@ -431,7 +437,7 @@ The redaction chokepoint is the privacy-relevant control of this change: envelop
 | Domain kind | The engine-level failure classification that maps to this entry. |
 | Category | Fixed enum: `user` | `platform` | `transient` | `permanent`. |
 | Retryable | Boolean; explicit retry signal for agents. |
-| Consequence | `landed` | `not_landed` | `unknown`; explicit per entry; `unknown` mandatory on the fallback entry. |
+| Consequence | `landed` | `not_landed` | `unknown`; explicit per entry; `unknown` mandatory on both fallback entries (`fallback.invocation`, `fallback.internal`). |
 | Remediation hint | Action-first, secret-free next-step guidance. |
 | Projection class | `success` | `user-validation` | `platform-provider`; exactly one; yields the {0, 1, 2} exit code in the standalone CLI. |
 | Summary | Optional non-identifying human-readable prose; never identity, never secret material. |
@@ -441,8 +447,8 @@ The redaction chokepoint is the privacy-relevant control of this change: envelop
 | Exit code | Class | Derived from |
 |-----------|-------|--------------|
 | 0 | Success | The success projection (no table entry required). |
-| 1 | User-or-validation error | Entries whose projection class is `user-validation` (includes the fallback entry for broken commands). |
-| 2 | Platform-or-provider error | Entries whose projection class is `platform-provider`. |
+| 1 | User-or-validation error | Entries whose projection class is `user-validation` (includes the `fallback.invocation` entry for broken commands). |
+| 2 | Platform-or-provider error | Entries whose projection class is `platform-provider` (includes the `fallback.internal` entry for unclassifiable failures). |
 
 ### Appendix D — Companion survey (reference)
 
@@ -464,6 +470,7 @@ The redaction chokepoint is the privacy-relevant control of this change: envelop
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-10-30 | @spec-writer | Initial specification |
+| 1.1 | 2026-10-30 | @spec-writer | Amendment after DoR reopen: documented error table ships in-change at `doc/spec/features/feature-result-contract.md`, authored during delivery; phase 7 reconciles the feature doc (GAP-1/OQ-T1); fallback semantics fixed at two entries — `fallback.invocation` and `fallback.internal` — with explicit `category`/`retryable` values (GAP-4/OQ-T2, DEC-13). |
 
 ---
 
@@ -479,7 +486,7 @@ The redaction chokepoint is the privacy-relevant control of this change: envelop
 - [x] `owners` has at least one entry
 - [x] `status` is "Proposed"
 - [x] All sections present in order (1-25 + guidelines + checklist)
-- [x] ID prefixes consistent and unique (F-1..F-9, DM-1..DM-4, NFR-1..NFR-10, RSK-1..RSK-8, DEC-1..DEC-12, AC-*)
+- [x] ID prefixes consistent and unique (F-1..F-9, DM-1..DM-4, NFR-1..NFR-10, RSK-1..RSK-8, DEC-1..DEC-13, AC-*)
 - [x] Acceptance criteria reference at least one F-/NFR-/DM- ID and use Given/When/Then
 - [x] NFRs include measurable values
 - [x] Risks include Impact & Probability
