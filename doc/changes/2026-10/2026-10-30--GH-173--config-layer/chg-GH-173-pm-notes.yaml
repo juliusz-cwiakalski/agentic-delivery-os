@@ -29,6 +29,12 @@ blockers:
     date: 2026-10-30
     resolved_date: 2026-10-30
 notes:
+  - text: "Coder delegation returned incomplete before edits: its child session cannot invoke runner/committer/decision-advisor, while PM has these tools available. No code/plan edits, no tests, HEAD12e54ad clean. Remediation: PM supplies orchestration proxies, coder writes one plan phase at a time and returns exact verification commands; PM invokes runner and committer before next code phase. This preserves specialist ownership and per-phase commits rather than treating child tool visibility as missing repository tooling. Delivery remains in progress."
+    type: "risk"
+    date: 2026-10-30
+  - text: "Nested agent inventory differs from PM inventory; blanket run-plan stalled before implementation despite available parent tools. Explicit parent-proxied verification/commits avoids repeated nested-delegation failure. Confirm child capability before large execution requests."
+    type: "retro"
+    date: 2026-10-30
   - text: "DoR iteration2 READY 07:17:28Z, zero findings; both iteration1 majors resolved, single DM2 matrix/spec DoD consistent and all25AC traced. Implementation authorized after verdict checkpoint. Coder executes plan with no review; PM owns subsequent docs/review/gates/DoD/PR tasks, no premature completion of those plan tasks."
     type: "info"
     date: 2026-10-30
