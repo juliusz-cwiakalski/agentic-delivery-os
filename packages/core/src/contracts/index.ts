@@ -46,3 +46,19 @@ export type TelemetryEventSchemaName = "delivery.event.v1";
  * EVT-2 — reserved brand-neutral telemetry metric schema name (same rule).
  */
 export type TelemetryMetricSchemaName = "delivery.metric.v1";
+
+// The command-surface envelope lives beside the generic `Result<T, E>` and does
+// not replace it (DEC-1). See `./result` for the full contract documentation.
+export {
+  type AppErrorCode,
+  type CommandResult,
+  type CommandResultError,
+  type CommandResultFailure,
+  type CommandResultSuccess,
+  type ErrorCategory,
+  type ErrorConsequence,
+  type ProjectionClass,
+  RESULT_SCHEMA_VERSION,
+  type RunTiming,
+  type VoidSuccessPayload,
+} from "./result";

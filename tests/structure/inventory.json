@@ -4,6 +4,7 @@
     "src/branding/index.ts",
     "src/config/index.ts",
     "src/contracts/index.ts",
+    "src/contracts/result.ts",
     "src/domain/index.ts",
     "src/index.ts",
     "src/state/index.ts"
@@ -25,5 +26,5 @@
   "cli": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
   "mcp": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
   "opencode": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
-  "testkit": ["src/index.ts"]
+  "testkit": ["src/index.ts", "src/result-conformance.ts"]
 }

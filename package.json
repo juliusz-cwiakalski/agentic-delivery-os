@@ -16,7 +16,9 @@
     "check:forbidden-literals": "bun run scripts/checks/forbidden-literals.ts",
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries",
     "prepare": "husky",
-    "build": "pnpm -r build"
+    "build": "pnpm -r build",
+    "pretypecheck": "pnpm build",
+    "pretest": "pnpm build"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",

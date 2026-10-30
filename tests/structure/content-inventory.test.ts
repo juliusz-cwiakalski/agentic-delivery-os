@@ -21,6 +21,8 @@ const inventory = JSON.parse(
  */
 const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "core/src/branding/index.ts": ["resolveBrandIdentity"],
+  "core/src/contracts/result.ts": ["RESULT_SCHEMA_VERSION"],
+  "testkit/src/result-conformance.ts": ["assertEnvelopeContract", "RULES"],
   "adapters/src/legacy/index.ts": [
     "createLegacyCompat",
     "resolveProcessLegacy",
