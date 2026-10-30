@@ -123,6 +123,8 @@ The pure codec lives in the adapters package as an adapter-internal shared modul
 
 Marker scanning is bounded: a marker payload span is capped at `ENVELOPE_MAX_BYTES` characters (a valid v1 envelope is byte-bounded below that), so marker-dense hostile carrier text is scanned linearly rather than quadratically. A marker whose payload exceeds the cap does not match and degrades as `missing`.
 
+Marker-shaped text in plain human content is stripped as if it were an envelope: `See docs [delivery.metadata.v1:{"x":1}] for details` loses the bracketed span. This is inherent to text-marker carriers; adapter authors keep marker-shaped text out of human content. A marker lookalike inside an envelope payload is payload content and does not disturb stripping of trailing human content.
+
 Carrier forms are brand-neutral:
 
 - `invisible-comment-block` — an HTML comment `<!-- delivery.metadata.v1 {...} -->` appended after human content.

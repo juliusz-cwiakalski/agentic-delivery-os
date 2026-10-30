@@ -93,6 +93,15 @@ describe("TC-META-003 degradation matrix", () => {
     expect(view.degradation?.reason).toBe("malformed");
   });
 
+  test("a nested marker lookalike degrades visibly without dropping human content", () => {
+    const lookalike = `[${ENVELOPE_SCHEMA_ID}:${JSON.stringify({ q: 1 })}]`;
+    const text = `<!-- ${ENVELOPE_SCHEMA_ID} ${JSON.stringify({ x: lookalike })} -->\nTAIL body that must survive`;
+    const view = readComment({ carrier: "invisible-comment-block", text, account: ACCOUNT });
+    expect(view.degradation?.reason).toBe("malformed");
+    expect(view.body).toBe("TAIL body that must survive");
+    expect(view.provenance.structural).toBe(false);
+  });
+
   test("the valid-envelope control reads structurally with no evidence", () => {
     const view = readComment({
       carrier: "provider-custom-field",

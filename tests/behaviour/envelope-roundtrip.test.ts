@@ -148,6 +148,38 @@ describe("TC-META-002 parse and strip", () => {
     expect(stripped).not.toBe("Original body");
   });
 
+  test("a payload marker lookalike does not corrupt trailing human content", () => {
+    const lookalike = `[${ENVELOPE_SCHEMA_ID}:${JSON.stringify({ q: 1 })}]`;
+    const payload = { x: `${lookalike}y` };
+    const nested = `<!-- ${ENVELOPE_SCHEMA_ID} ${JSON.stringify(payload)} -->\nTAIL line that must survive`;
+    expect(stripEnvelope("invisible-comment-block", nested)).toBe("TAIL line that must survive");
+    const parsed = parseEnvelope({ carrier: "invisible-comment-block", text: nested });
+    expect(parsed.ok).toBe(false);
+    if (!parsed.ok) {
+      expect(parsed.reason).toBe("malformed");
+      expect(parsed.humanContent).toBe("TAIL line that must survive");
+    }
+  });
+
+  test("a valid envelope whose payload holds a marker lookalike preserves trailing content", () => {
+    const lookalike = `[${ENVELOPE_SCHEMA_ID}:${JSON.stringify({ q: 1 })}]`;
+    const withLookalike: MetadataEnvelopeV1 = {
+      ...envelope,
+      payload: {
+        ...envelope.payload,
+        comment: { ...envelope.payload.comment, producingAgent: lookalike },
+      },
+    };
+    const text = `<!-- ${ENVELOPE_SCHEMA_ID} ${JSON.stringify(withLookalike)} -->\nTAIL line that must survive`;
+    expect(stripEnvelope("invisible-comment-block", text)).toBe("TAIL line that must survive");
+    const parsed = parseEnvelope({ carrier: "invisible-comment-block", text });
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.envelope).toEqual(withLookalike);
+      expect(parsed.humanContent).toBe("TAIL line that must survive");
+    }
+  });
+
   test("marker-dense hostile input is scanned in bounded time and degrades as missing", () => {
     const hostile: Array<[CarrierKind, string]> = [
       ["invisible-comment-block", "<!-- delivery.metadata.v1 {".repeat(8000)],

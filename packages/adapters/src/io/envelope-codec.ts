@@ -162,8 +162,10 @@ const readEnvelope = (
 
 const byteLengthOf = (text: string): number => new TextEncoder().encode(text).length;
 
-/** Remove every envelope marker, leaving no marker residue or extra blank line. */
-const removeMarkers = (text: string): string => {
+/** Collect every marker span, sorted by start position. */
+const collectMarkerSpans = (
+  text: string,
+): Array<{ readonly start: number; readonly end: number }> => {
   const spans: Array<{ readonly start: number; readonly end: number }> = [];
   for (const pattern of [COMMENT_MARKER, COMPACT_MARKER]) {
     pattern.lastIndex = 0;
@@ -171,20 +173,37 @@ const removeMarkers = (text: string): string => {
       spans.push({ start: match.index, end: match.index + match[0].length });
     }
   }
-  let result = text;
-  for (const span of spans.sort((left, right) => right.start - left.start)) {
-    result = stripSpan(result, span.start, span.end);
-  }
-  return result;
+  return spans.sort((left, right) => left.start - right.start);
 };
 
-const stripSpan = (text: string, start: number, end: number): string => {
-  const before = text.slice(0, start);
-  const after = text.slice(end);
-  if (before.endsWith("\n") && after.startsWith("\n")) return before + after.slice(1);
-  if (before.length === 0 && after.startsWith("\n")) return after.slice(1);
-  if (before.endsWith("\n") && after.length === 0) return before.slice(0, -1);
-  return before + after;
+/**
+ * Remove every envelope marker, leaving no marker residue or extra blank line.
+ *
+ * The original text is rebuilt once from non-overlapping spans in ascending
+ * order, so indices always refer to the untouched input and cannot go stale.
+ * A nested lookalike inside an already stripped marker (for example a compact
+ * marker inside a comment payload) is payload content and is skipped.
+ */
+const removeMarkers = (text: string): string => {
+  let result = "";
+  let cursor = 0;
+  let lastEnd = 0;
+  for (const span of collectMarkerSpans(text)) {
+    if (span.start < lastEnd) continue;
+    result += text.slice(cursor, span.start);
+    const after = text[span.end];
+    if (after === "\n" && (result.length === 0 || result.endsWith("\n"))) {
+      cursor = span.end + 1;
+    } else if (span.end === text.length && result.endsWith("\n")) {
+      result = result.slice(0, -1);
+      cursor = span.end;
+    } else {
+      cursor = span.end;
+    }
+    lastEnd = span.end;
+  }
+  result += text.slice(cursor);
+  return result;
 };
 
 /**
