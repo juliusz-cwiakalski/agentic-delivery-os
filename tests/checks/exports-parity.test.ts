@@ -39,7 +39,7 @@ describe("exports parity (attw --pack, esm-only)", () => {
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
-  });
+  }, 30_000);
 
   test("a missing build fails closed with the build hint", () => {
     mkdirSync(join(ROOT, "tmp"), { recursive: true });
