@@ -402,3 +402,54 @@ describe("GH-172 CI binding", () => {
     );
   });
 });
+
+describe("GH-181 secret-read invariant binding", () => {
+  const SECRET_COMMAND = "bun run scripts/checks/secret-read-boundary.ts";
+
+  const chainCommands = (manifest: { scripts: Record<string, string> }): string[] =>
+    (manifest.scripts["check:boundaries"] ?? "").split("&&").map((command) => command.trim());
+
+  test("the invariant is invoked by name from ts-invariants", () => {
+    const text = readFileSync(join(ROOT, CI_PATH), "utf8");
+    expect(jobBlock(text, "ts-invariants")).toContain(SECRET_COMMAND);
+  });
+
+  test("the invariant is part of the local boundary chain", () => {
+    const manifest = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    expect(chainCommands(manifest)).toContain(SECRET_COMMAND);
+  });
+
+  test("removing the command from a temp workflow copy fails by name", () => {
+    const text = readFileSync(join(ROOT, CI_PATH), "utf8");
+    const mutated = replaceInJob(text, "ts-invariants", `${SECRET_COMMAND}\n`, "");
+    expect(jobBlock(mutated, "ts-invariants")).not.toContain(SECRET_COMMAND);
+    expect(
+      jobBlock(mutated, "ts-invariants").includes(SECRET_COMMAND)
+        ? []
+        : [`ts-invariants: missing ${SECRET_COMMAND}`],
+    ).toEqual([`ts-invariants: missing ${SECRET_COMMAND}`]);
+  });
+
+  test("removing the command from a temp package.json copy fails the local-chain assertion", () => {
+    const manifest = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    manifest.scripts["check:boundaries"] = manifest.scripts["check:boundaries"]?.replace(
+      ` && ${SECRET_COMMAND}`,
+      "",
+    );
+    const missing = chainCommands(manifest).includes(SECRET_COMMAND)
+      ? []
+      : [`check:boundaries: missing ${SECRET_COMMAND}`];
+    expect(missing).toEqual([`check:boundaries: missing ${SECRET_COMMAND}`]);
+  });
+
+  test("the invariant introduces no bypass construct and no new job", () => {
+    const text = readFileSync(join(ROOT, CI_PATH), "utf8");
+    expect(scanBindingness(text)).toEqual([]);
+    const workflow = parseYaml(text) as { jobs?: Record<string, unknown> };
+    expect(Object.keys(workflow.jobs ?? {}).sort()).toEqual([...TS_JOBS, ...BASH_JOBS].sort());
+  });
+});
