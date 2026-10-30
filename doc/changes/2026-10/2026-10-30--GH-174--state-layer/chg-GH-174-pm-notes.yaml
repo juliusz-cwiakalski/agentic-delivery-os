@@ -9,7 +9,7 @@ phases:
   test_planning: { started: "2026-10-30T00:00:00Z", completed: "2026-10-30T00:00:00Z", reopened: "2026-10-30T00:00:00Z (DoR iter-1 findings F1-F3)", reopened_completed: "2026-10-30T00:00:00Z (test-plan v1.1: TC-STATE-007 pins exactly state.write.failed; OQ-T1/T2/T6 marked resolved; NFR-2 evidence includes TC-STATE-007; revision log entry)" }
   delivery_planning: { started: "2026-10-30T00:00:00Z", completed: "2026-10-30T00:00:00Z", reopened: "2026-10-30T00:00:00Z (DoR iter-1 findings F4-F5, non-blocking, rides same cycle)", reopened_completed: "2026-10-30T00:00:00Z (plan v1.1: task 2.7/D7 guard map-relative; Phase 7 registers .ai/rules/typescript.md allowlist line; revision log entry)" }
   dor_check: { started: "2026-10-30T00:00:00Z", completed: "2026-10-30T00:00:00Z", iterations: "iter-1 NOT_READY (1 major/3 minor/1 nit; reopened test_planning F1-F3 + delivery_planning F4-F5); iter-2 READY (10/10 facets PASS, 0 blocking, 2 nits)" }
-  delivery: { started: "2026-10-30T00:00:00Z", completed: null }
+  delivery: { started: "2026-10-30T00:00:00Z", completed: "2026-10-30T00:00:00Z", commits: "dbab409(P1) 776c525(P2) d8d7844(P3) c658cc9(P4) 0b79d06(P5) f71d19d(P6) 8e5c22e(P7) 2232300(P8/P9) b4a01d4(flake-fix) db55fec(P10); pushed HEAD db55fec" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -21,6 +21,15 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "LIFECYCLE PHASE 6 (delivery) COMPLETE — branch pushed, HEAD db55fec on origin/feat/GH-174/state-layer. 10/10 plan phases done across 10 commits; final pnpm check 6/6 (627 tests/0 fail/62 files), bash suites 19/19, tools CI-safe 3/3, error-table-sync 20/20, forbidden-literals 0 violations, doc-distribution no drift, ci-topology 7 bash/16 TS. Phase 8 self-review found and fixed 3 medium defects (payload-less index divergence = forged reads; checkIntegrity fail-closed bypass; Windows ACL backslash regex) + 1 low repair-ordering issue, regression-first. Two open items carried to PR review: Windows ACL owner-environment run (spec OQ-2), TDR-0004 Proposed. Exports-parity 5s-timeout flake fixed in b4a01d4 (one-line explicit 30s timeout, matching file's sibling pattern). Plan task 9.3 (independent review) maps to lifecycle review_fix — next."
+    type: "info"
+    date: "2026-10-30"
+  - text: "retro: chunked micro-delegations (verify via runner → commit via committer → fix via fixer → small coder chunks) succeeded where three whole-run coder delegations were killed by the runtime window. Pattern for long deliveries: keep each delegation single-purpose and <~10 min; commit after every verifiable unit; carry state in git, not in the delegation prompt."
+    type: "retro"
+    date: "2026-10-30"
+  - text: "retro: exports-parity flake was a PRE-EXISTING resilience gap (5s default bun timeout vs multi-second attw packing work) surfaced only under host load during finalize — good gate design catches its own flakes at delivery time; consider sweeping other spawn-heavy test cases for explicit timeouts in a future hygiene ticket (owner decides; not created per no-autonomous-ticket rule)."
+    type: "retro"
+    date: "2026-10-30"
   - text: "SESSION RESUME (user re-issued directive): state re-detected. Issue open/no labels; no open/merged PR; origin/main-tools 0 ahead (merge no-op). Prior @coder run was INTERRUPTED during plan Phase 7 — phases 1-6 committed (dbab409 TDR+vocab+error rows; 776c525 port+ledger; d8d7844 sqlite parity; c658cc9 torn detection; 0b79d06 fences+replace; f71d19d permissions), dirty worktree holds in-flight Phase 7 output (feature-state-layer.md untracked, packed/state-imports/boundary tests, depcruiser+forbidden-literals registry edits, state-permissions/scope test edits). Branch not pushed (correct). Resuming @coder at Phase 7 with inline authorization; it must first verify the in-flight Phase 7 work is complete/coherent (pnpm check) before committing, then continue through Phase 10 + push."
     type: "info"
     date: "2026-10-30"
