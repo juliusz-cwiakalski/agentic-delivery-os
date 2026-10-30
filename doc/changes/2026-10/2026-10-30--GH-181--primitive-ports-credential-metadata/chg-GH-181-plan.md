@@ -400,4 +400,4 @@ Protected paths untouched by every phase: `scripts/*.sh`, `tools/`, `.opencode/`
 | 4 | Complete | 2026-10-30T22:41Z | 2026-10-30T23:20Z | f81ec70 | 5/5 tasks; 160 targeted+boundaries PASS; `pnpm check` 604 PASS (remediation: per-test timeout on the pre-existing attw pack mutation, behavior unchanged). |
 | 5 | Skipped | — | — | — | Skipped per run instruction `no review`; no review artifact. |
 | 6 | Not required | — | — | — | No review findings to close (Phase 5 skipped by instruction). |
-| 7 | Complete (PR pending) | 2026-10-30T23:21Z | 2026-10-30T23:45Z | pending | Changeset + gate battery + DoD verified; open PR not created because push/PR was not requested. |
+| 7 | Complete (PR pending) | 2026-10-30T23:21Z | 2026-10-30T23:45Z | ffd2a34 | Changeset + gate battery + DoD verified; open PR not created because push/PR was not requested. |
