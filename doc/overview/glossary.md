@@ -8,8 +8,8 @@ area: domain
 document_classification: current-truth
 links:
   related_decisions: ["ADR-0003"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173"]
-summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, and configuration-layer terms used across the repository."
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174"]
+summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, and state-layer terms used across the repository."
 ---
 
 # Glossary
@@ -32,8 +32,8 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Consequence | Structured error field recording whether the attempted mutation landed: `landed`, `not_landed`, or `unknown`. `unknown` is first-class and mandatory on the two fallback entries. | Result contract | — |
 | Corpus baseline | The fixed commit SHA recorded in the forbidden-literal registry that anchors the user-facing-doc membership rule. A doc absent at the baseline must be registered; an unreachable baseline fails the scan closed. | Branding | — |
 | Declared entrypoint | A subpath a package lists in its exports map, and which an importer must declare in its `workspaceImports` manifest field before importing. | Boundaries | — |
-| Domain kind | The engine-level failure classification a domain engine attaches to an error; the first link of the classification chain. Declared kinds are `provider`, `input`, and `config`, beside the reserved `fallback` containment kind. | Result contract | — |
-| Empty-but-enforced | Scaffold content policy for the remaining engines, business logic, provider implementations, and drivers: structure, exports, rules, fixtures, and green tests exist. The configuration tier now carries implemented code. | Scaffold | [feature-config-layer.md](../spec/features/feature-config-layer.md) |
+| Domain kind | The engine-level failure classification a domain engine attaches to an error; the first link of the classification chain. Declared kinds are `provider`, `input`, `config`, and `state`, beside the reserved `fallback` containment kind. | Result contract | — |
+| Empty-but-enforced | Scaffold content policy for the remaining engines, business logic, provider implementations, and drivers: structure, exports, rules, fixtures, and green tests exist. The configuration and state tiers carry implemented code. | Scaffold | [feature-config-layer.md](../spec/features/feature-config-layer.md) |
 | Error table | The internal, machine-readable, single-source set of failure entries from which error identity, structured fields, and exit-code projection are all derived. Declared once in `core ./contracts` as data and types. | Result contract | — |
 | Exit-code projection | The standalone CLI's mapping of table entries to `{0, 1, 2}`: `success` -> 0, `user-validation` -> 1, `platform-provider` -> 2. The only place exit codes exist. | Result contract | — |
 | Fail-closed audit | A check that fails when required evidence is missing or ambiguous rather than passing by default. The license audit fails on an unregistered direct/runtime/transitive use, an empty license, or a disallowed SPDX branch. | Quality | — |
@@ -66,6 +66,11 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | ConfigSource | Plain-JSON acquisition port carrying ordered source values, positions and safe failures; not a credential resolver. | Configuration | [feature-config-layer.md](../spec/features/feature-config-layer.md) |
 | DM-2 | The configuration skip-reason first-match matrix: `selected-config`, `ci-disabled`, `no-git-root`, `missing`. | Configuration | [feature-config-layer.md](../spec/features/feature-config-layer.md) |
 | Origin | The winning source label for an effective configuration leaf or collection. | Configuration | [feature-config-layer.md](../spec/features/feature-config-layer.md) |
+| JSONL ledger | The append-only, schema-versioned, line-delimited JSON store that is the single durable truth of a state store. Every mutation is first a ledger record; derived documents and indexes are rebuildable projections. | State | [feature-state-layer.md](../spec/features/feature-state-layer.md) |
+| State fence (lock token) | The single-writer lock for a state store: acquisition binds a caller-supplied token by exclusively creating a lock file, and a second acquisition fails `state.lock.busy`. Writes require the acquired handle; reads never do. | State | [feature-state-layer.md](../spec/features/feature-state-layer.md) |
+| State level | The store scope declared in the injected identity. `local` is implemented; `project` and `global` are declared and fail `state.level.unsupported` with no filesystem effect until implemented. | State | [feature-state-layer.md](../spec/features/feature-state-layer.md) |
+| Torn state | A state store that fails verification of framing, terminal completeness, sequence continuity, checksum, or index/ledger agreement. It is classified and reported, never read as empty or stale. | State | [feature-state-layer.md](../spec/features/feature-state-layer.md) |
+| Verified-empty | Explicit evidence that a state store is absent or holds zero records. It satisfies only an empty key-set declaration; a non-empty declaration fails `state.keys.missing`. Verified-empty and torn are never conflated. | State | [feature-state-layer.md](../spec/features/feature-state-layer.md) |
 
 ## Acronyms
 
@@ -89,4 +94,5 @@ _Expand every acronym at first use; keep the expanded list here._
 - [Branding Seam and Working Name](../spec/features/feature-branding-seam.md)
 - [Result Contract and Error Table](../spec/features/feature-result-contract.md)
 - [Configuration Layer and Inspection](../spec/features/feature-config-layer.md)
+- [State Layer](../spec/features/feature-state-layer.md)
 - [ADR-0003 — OSS Tooling Monorepo Structure](../decisions/ADR-0003-oss-monorepo-structure.md)

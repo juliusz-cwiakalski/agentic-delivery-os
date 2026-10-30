@@ -10,7 +10,7 @@ phases:
   delivery_planning: { started: "2026-10-30T00:00:00Z", completed: "2026-10-30T00:00:00Z", reopened: "2026-10-30T00:00:00Z (DoR iter-1 findings F4-F5, non-blocking, rides same cycle)", reopened_completed: "2026-10-30T00:00:00Z (plan v1.1: task 2.7/D7 guard map-relative; Phase 7 registers .ai/rules/typescript.md allowlist line; revision log entry)" }
   dor_check: { started: "2026-10-30T00:00:00Z", completed: "2026-10-30T00:00:00Z", iterations: "iter-1 NOT_READY (1 major/3 minor/1 nit; reopened test_planning F1-F3 + delivery_planning F4-F5); iter-2 READY (10/10 facets PASS, 0 blocking, 2 nits)" }
   delivery: { started: "2026-10-30T00:00:00Z", completed: "2026-10-30T00:00:00Z", commits: "dbab409(P1) 776c525(P2) d8d7844(P3) c658cc9(P4) 0b79d06(P5) f71d19d(P6) 8e5c22e(P7) 2232300(P8/P9) b4a01d4(flake-fix) db55fec(P10); pushed HEAD db55fec" }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: "2026-10-30T00:00:00Z", completed: "2026-10-30T00:00:00Z", reconciled: "feature-result-contract (traceability), feature-monorepo-scaffold-toolchain (state tier implemented + structure detector), feature-branding-seam (M0-S5 consumer implemented), glossary (5 new terms + domain kind), .ai/rules/typescript.md (runtime allowance tightened to driver edge); 00-index no-gap; residual gaps: none" }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
