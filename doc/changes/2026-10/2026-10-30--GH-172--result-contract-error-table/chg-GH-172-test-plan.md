@@ -1,8 +1,8 @@
 ---
 id: chg-GH-172-test-plan
-status: Proposed
+status: Updated
 created: 2026-10-30T02:20:00Z
-last_updated: 2026-10-30T02:20:00Z
+last_updated: 2026-10-30T02:30:00Z
 owners: ["Juliusz Ćwiąkalski"]
 service: delivery-os
 labels: ["oss-tooling", "contracts", "cli", "m0", "adr-0003"]
@@ -18,7 +18,7 @@ links:
 
 ## 1. Scope and Objectives
 
-This change ships the trust substrate every later command stands on, so the tests must prove four properties and nothing beyond them: **envelope integrity** (one shape, exactly the six contracted field names, data/error mutual exclusivity, `timing` on success and failure equally, `schemaVersion` brand-neutral and fixed, `runId` opaque and present), **failure identity** (every emitted code is a stable hierarchical app code that resolves to exactly one declared table entry with category, retryable, consequence, remediation hint and projection class; unclassifiable failures and broken invocations are contained by the fallback entry whose consequence is `unknown`), **surface guarantees** (`runCli` is deterministic and in-process, `--json` output is always one valid envelope even for a broken command, no stack traces or raw diagnostics reach the machine channel, and no secret material survives on either stream because exactly one redaction chokepoint sits between the envelope and the streams), and **enforcement durability** (exit codes exist only as a {0,1,2} projection of the table, no exit-code literal exists at a call site, and a binding two-directional sync check fails CI when emitted codes and documented table entries diverge).
+This change ships the trust substrate every later command stands on, so the tests must prove four properties and nothing beyond them: **envelope integrity** (one shape, exactly the six contracted field names, data/error mutual exclusivity, `timing` on success and failure equally, `schemaVersion` brand-neutral and fixed, `runId` opaque and present), **failure identity** (every emitted code is a stable hierarchical app code that resolves to exactly one declared table entry with category, retryable, consequence, remediation hint and projection class; unclassifiable failures and broken invocations are contained by the two fallback entries — `fallback.internal` and `fallback.invocation` — both with consequence `unknown`), **surface guarantees** (`runCli` is deterministic and in-process, `--json` output is always one valid envelope even for a broken command, no stack traces or raw diagnostics reach the machine channel, and no secret material survives on either stream because exactly one redaction chokepoint sits between the envelope and the streams), and **enforcement durability** (exit codes exist only as a {0,1,2} projection of the table, no exit-code literal exists at a call site, and a binding two-directional sync check fails CI when emitted codes and documented table entries diverge).
 
 The risks guarded here are the ones that make every downstream story expensive later: a contract shape that is wrong in a way M0-S4/S5/S10/S11/S12 inherit, exit-code folklore re-emerging at call sites, a crash path escaping containment and breaking the always-valid machine guarantee, a redaction bypass, documentation drift that turns "error codes resolve to documented table entries" into an aspiration, and any weakening of the M0-S1/M0-S2 gates that already bind this repository.
 
@@ -27,7 +27,7 @@ The risks guarded here are the ones that make every downstream story expensive l
 - `CommandResult` envelope field contract: exact field set, `data`/`error` mutual exclusivity, explicit empty data payload for void success (F-1, AC-F1-1, DM-1, NFR-3).
 - `timing` presence and measurement on success, classified failure, unknown failure, and broken invocation (F-1, AC-F1-2, NFR-4).
 - Golden suites under `--json`: success envelope, classified failure, broken invocation, planted-secret success and failure (F-6, F-7, AC-F1-3, AC-F6-1, AC-F7-1, NFR-2).
-- Error-table row shape, code identity and format, single-declaration discipline, and the fallback entry (F-2, F-3, AC-F2-2, AC-F3-2, DM-3, DM-4).
+- Error-table row shape, code identity and format, single-declaration discipline, and the two fallback entries (`fallback.invocation`, `fallback.internal`) (F-2, F-3, AC-F2-2, AC-F3-2, DM-3, DM-4).
 - Classification chain domain kind → app error code → projection class, including totality over declared domain kinds and containment of unclassifiable and non-`Error` failures (F-2, F-3, AC-F3-1, AC-F3-2).
 - Exit-code projection {0, 1, 2}: derivation per class, totality, confinement to the standalone CLI, and zero exit-code literals at call sites (F-4, AC-F4-1, NFR-7).
 - `runCli(argv, streams, injected facts)`: in-process execution, returned exit code, zero spawned processes, determinism, and channel split between machine output and human diagnostics (F-5, AC-F5-1, AC-F5-2, AC-F6-2, NFR-8).
@@ -44,17 +44,18 @@ The risks guarded here are the ones that make every downstream story expensive l
 - [OUT] Human-facing terminal UX: color, progress, interactivity, and the shape of non-`--json` stdout. Tests assert the returned exit code and the internal envelope for non-`--json` runs, not human text (NG-5).
 - [OUT] Telemetry emission; the reserved schema names stay untouched and are asserted unchanged only where they touch the envelope's `schemaVersion` lineage (NG-3).
 - [OUT] Any product name decision or reveal; fixtures use synthetic brand values only (NG-6, NFR-9).
-- [OUT] Cloud surfaces, `doc/spec` authoring (`feature-result-contract.md` is phase 7), bash stack changes, `.opencode/`, `.ados-claude/`, and performance/load testing (NG-7, NG-8).
+- [OUT] Cloud surfaces, completion of the surrounding `doc/spec/features/feature-result-contract.md` feature doc beyond the documented error table (the table section is authored as part of this change; phase 7 reconciles and completes the rest of the feature doc), bash stack changes, `.opencode/`, `.ados-claude/`, and performance/load testing (NG-7, NG-8).
 - [OUT] Promulgating the companion survey into the distributable doc set (NG-8); it is referenced, not tested.
-- [GAP-1] **Documented-table artifact timing.** AC-F8-1 requires that documented entries exist in the machine-readable source. At test-planning time the human-readable table has no current-truth doc (`doc/spec/features/feature-result-contract.md` is authored in phase 7). The sync check is only non-vacuous if a documentation target exists inside this change; this plan binds that requirement (§4.4) and raises OQ-T1 for delivery planning. Not silently reinterpreted.
+- [RESOLVED — GAP-1 / OQ-T1] **Documented-table artifact timing.** AC-F8-1 requires documented entries to exist in a real artifact at merge time. Resolved by spec v1.1: the documented error table ships in-change at `doc/spec/features/feature-result-contract.md`, authored during delivery as part of this change. The sync check binds both drift directions against that in-change artifact from merge time (§4.4, TC-SYNC-003); phase 7 reconciles and completes the surrounding feature doc but does not rewrite the table section, which stays sync-checked.
 - [GAP-2] **`tests/**` is outside the forbidden-literal scan scope.** The M0-S2 scan covers five scope classes that exclude `tests/**` (established by GH-171 A-T4). This plan adds an explicit fixture-hygiene test (TC-BOUNDARY-004) so new goldens/fixtures cannot smuggle a product token.
 - [GAP-3] **"Secrets never appear" needs a defined secret set.** The redaction guarantee is only testable against a declared secret set; the spec names "environment-sourced tokens" as the example. This plan binds the edge-registered secret-value set as the redaction input contract (A-T4) and records the consequence as a limitation.
-- [GAP-4] **Fallback entry `category`/`retryable` are delivery decisions.** The spec fixes the fallback's consequence (`unknown`) and class (`user-validation`) but not its category or retryable value. Tests assert the fields are declared and enum-valid, not which values are chosen; recorded for review (TC-REVIEW-001, OQ-T3).
+- [RESOLVED — GAP-4 / OQ-T2] **Fallback entries' fields.** Resolved by spec v1.1 / DEC-13: containment uses two entries with fixed values — `fallback.invocation` (category `user`, `retryable: false`, consequence `unknown`, user-validation → exit 1) and `fallback.internal` (category `platform`, `retryable: false`, consequence `unknown`, platform-provider → exit 2). Tests assert these fixed values (TC-TABLE-002, TC-CLASSIFY-002, TC-CONTAIN-001..003).
 
 ## 2. References
 
-- **Change specification**: [chg-GH-172-spec.md](./chg-GH-172-spec.md) — F-1..F-9, DM-1..DM-4, NFR-1..NFR-10, DEC-1..DEC-12, AC-F1-1..AC-F9-1, §17 ticket-AC mapping, Appendix A (envelope field contract), Appendix B (table entry contract), Appendix C (exit-code projection).
+- **Change specification**: [chg-GH-172-spec.md](./chg-GH-172-spec.md) — spec v1.1; F-1..F-9, DM-1..DM-4, NFR-1..NFR-10, DEC-1..DEC-13 (DEC-13 fixes the two fallback entries), AC-F1-1..AC-F9-1, §17 ticket-AC mapping, Appendix A (envelope field contract), Appendix B (table entry contract), Appendix C (exit-code projection).
 - **Implementation plan**: [chg-GH-172-plan.md](./chg-GH-172-plan.md) — authored in delivery planning (phase 4) after this plan. TC IDs are behaviour-bound and do not depend on task numbering; plan phases must map onto these TCs, not the reverse.
+- **Documented-table artifact (in-change)**: [feature-result-contract.md](../../../spec/features/feature-result-contract.md) — authored during delivery as part of this change; carries the documented error table that is the S2 surface of the sync check (§4.4). Phase 7 reconciles and completes the surrounding feature doc; the table section already exists by merge.
 - **Testing strategy**: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — canonical for layers, runners, module-to-test mapping, `scripts/checks/*.ts` mutation tests, and the aggregate `pnpm check`.
 - **Companion survey**: [survey-agent-facing-error-design.md](./survey-agent-facing-error-design.md) — validates the error convention (action-first hints, four-value category, consequence as the novel element, additive evolution); verdicts attach to structural elements, not vendor payloads.
 - **Authoritative decision**: [ADR-0003 — OSS Tooling Monorepo Structure](../../../decisions/ADR-0003-oss-monorepo-structure.md) — runtime-neutral contracts, package tiers, C-4/C-5/C-6/C-8 constraints.
@@ -77,15 +78,15 @@ The risks guarded here are the ones that make every downstream story expensive l
 | AC-F2-1 | `Result<T, E>` unchanged; `CommandResult` declared separately; contracts carry no I/O, ambient env, clock, or randomness | TC-TABLE-004, TC-BOUNDARY-001, TC-RESULT-005 | Covered |
 | AC-F2-2 | Every table entry carries the full row shape and exactly one projection class | TC-TABLE-001, TC-EXIT-001 | Covered |
 | AC-F3-1 | Classification chain yields a stable hierarchical code resolving to exactly one documented entry | TC-CLASSIFY-001, TC-TABLE-003, TC-SYNC-001 | Covered |
-| AC-F3-2 | Unclassifiable error applies the fallback entry (consequence `unknown`, caller-directed hint); table entries state consequence explicitly | TC-CLASSIFY-002, TC-TABLE-002, TC-TABLE-001 | Covered — second clause is structurally implied by "every entry states consequence explicitly" (see GAP-4 note and §8.3) |
+| AC-F3-2 | Unclassifiable error applies `fallback.internal` (consequence `unknown`, category `platform`, `retryable: false`, hint to diagnostics); table entries state consequence explicitly | TC-CLASSIFY-002, TC-TABLE-002, TC-TABLE-001, TC-CONTAIN-003 | Covered — first clause via `fallback.internal` (DEC-13); second clause remains structurally subsumed because TC-TABLE-001 step 4 asserts every entry states `consequence` explicitly (no wording change required) |
 | AC-F4-1 | Exit codes all in {0,1,2}, derived from table entries; no exit-code constant at call sites | TC-EXIT-001, TC-EXIT-002, TC-EXIT-003 | Covered |
 | AC-F5-1 | `runCli` writes deterministic output to injected streams and returns the exit code, no spawned process | TC-RUNCLI-001, TC-RUNCLI-003 | Covered |
 | AC-F5-2 | `runCli` contract tests run in-process (zero spawned processes); identical argv + streams + clock facts ⇒ identical output | TC-RUNCLI-001, TC-RUNCLI-002 | Covered |
-| AC-F6-1 | Broken invocation under `--json` still emits a valid envelope resolving to a documented entry with a caller-directed hint | TC-CONTAIN-001, TC-CONTAIN-002, TC-CONTAIN-003 | Covered |
+| AC-F6-1 | Broken invocation under `--json` still emits a valid envelope resolving to the documented `fallback.invocation` entry (category `user`, `retryable: false`, consequence `unknown`, exit 1) with a caller-directed hint | TC-CONTAIN-001, TC-CONTAIN-002, TC-CONTAIN-003 | Covered |
 | AC-F6-2 | Failure machine channel contains no stack traces or raw diagnostics; diagnostics only on the human error stream | TC-CONTAIN-002, TC-CONTAIN-003, TC-RUNCLI-003, TC-CLASSIFY-002 | Covered |
 | AC-F7-1 | Planted secret material removed/transformed on both success and failure paths; zero occurrences in any stream | TC-REDACT-001, TC-REDACT-002, TC-REDACT-003 | Covered |
 | AC-F7-2 | No stream write outside the redaction chokepoint's serialization path; hints/summaries secret-free by construction | TC-REDACT-004, TC-BOUNDARY-002, TC-REVIEW-001 | Covered — structural assertions automated; a manual review step covers dynamic access the scan cannot see |
-| AC-F8-1 | Binding sync check: emitted codes resolve to exactly one documented entry, documented entries exist in the source, drift either way fails CI | TC-SYNC-001, TC-SYNC-002, TC-SYNC-003, TC-SYNC-004, TC-SYNC-005, TC-SYNC-006 | Covered — conditional on the documented-table artifact binding (GAP-1, OQ-T1) |
+| AC-F8-1 | Binding sync check: emitted codes resolve to exactly one documented entry, documented entries exist in the in-change doc table, drift either way fails CI | TC-SYNC-001, TC-SYNC-002, TC-SYNC-003, TC-SYNC-004, TC-SYNC-005, TC-SYNC-006 | Covered — documented table bound at `doc/spec/features/feature-result-contract.md`, authored in-change; both drift directions tested against it from merge time (GAP-1/OQ-T1 resolved) |
 | AC-F9-1 | Zero product tokens; brand strings from `BrandIdentity` parameters; contracts I/O-free; tier matrix green; every new forbidden rule has its failing negative fixture | TC-BOUNDARY-001, TC-BOUNDARY-002, TC-BOUNDARY-003, TC-BOUNDARY-004, TC-BOUNDARY-005, TC-RUNCLI-004 | Covered |
 
 **Capability coverage** (no capability left unlinked): F-1 → TC-RESULT-001, TC-RESULT-002, TC-RESULT-003, TC-RESULT-004, TC-RESULT-005, TC-RESULT-006; F-2 → TC-TABLE-001, TC-TABLE-002, TC-TABLE-003, TC-TABLE-004, TC-CLASSIFY-001; F-3 → TC-TABLE-001, TC-TABLE-002, TC-TABLE-003, TC-CLASSIFY-001, TC-CLASSIFY-002; F-4 → TC-EXIT-001, TC-EXIT-002, TC-EXIT-003; F-5 → TC-RUNCLI-001, TC-RUNCLI-002, TC-RUNCLI-003, TC-RUNCLI-004; F-6 → TC-CONTAIN-001, TC-CONTAIN-002, TC-CONTAIN-003, TC-RESULT-004; F-7 → TC-REDACT-001, TC-REDACT-002, TC-REDACT-003, TC-REDACT-004; F-8 → TC-SYNC-001, TC-SYNC-002, TC-SYNC-003, TC-SYNC-004, TC-SYNC-005, TC-SYNC-006; F-9 → TC-BOUNDARY-001, TC-BOUNDARY-002, TC-BOUNDARY-003, TC-BOUNDARY-004, TC-BOUNDARY-005, TC-RUNCLI-004, TC-REVIEW-001.
@@ -107,7 +108,7 @@ No REST/HTTP surface and no events/messages exist in this change (spec §8.1, §
 |--------------|-------------|----------|--------|
 | DM-1 | `CommandResult` envelope: `schemaVersion` (`delivery.result.v1`), `runId`, `exitCode`, `timing`, exactly one of `data`/`error`; generic `Result<T, E>` remains the internal result | TC-RESULT-001, TC-RESULT-002, TC-RESULT-005, TC-TABLE-004, TC-BOUNDARY-001 | Covered |
 | DM-2 | Envelope error object: `code`, `category`, `retryable`, `consequence`, `remediationHint`, optional non-identifying `summary` | TC-TABLE-001, TC-TABLE-002, TC-CLASSIFY-002, TC-CONTAIN-002 | Covered |
-| DM-3 | Error-table entry: code, domain kind, category, retryable, consequence, hint, projection class, summary; declared once as a machine-readable source; includes the fallback entry | TC-TABLE-001, TC-TABLE-002, TC-TABLE-004, TC-CLASSIFY-001, TC-SYNC-001 | Covered |
+| DM-3 | Error-table entry: code, domain kind, category, retryable, consequence, hint, projection class, summary; declared once as a machine-readable source; includes the two fallback entries (`fallback.invocation`, `fallback.internal`) | TC-TABLE-001, TC-TABLE-002, TC-TABLE-004, TC-CLASSIFY-001, TC-SYNC-001 | Covered |
 | DM-4 | App error code format `domain.reason.detail`; resolves to exactly one entry; documented table derived from the source | TC-TABLE-003, TC-SYNC-002, TC-SYNC-005 | Covered |
 | EVT-1/EVT-2 | Reserved brand-neutral telemetry schema names; untouched, no emission path | TC-BOUNDARY-003, TC-BOUNDARY-005 | Covered (non-regression only) |
 
@@ -120,7 +121,7 @@ No REST/HTTP surface and no events/messages exist in this change (spec §8.1, §
 | NFR-3 | 0 field-contract violations (missing fields; both/neither of data/error) | TC-RESULT-001, TC-RESULT-006, TC-RUNCLI-003 | Covered |
 | NFR-4 | 100% of failure envelopes carry `timing` | TC-RESULT-003, TC-RESULT-004 | Covered |
 | NFR-5 | 0 occurrences of planted secret material in any stream; `data` and `error` both covered | TC-REDACT-001, TC-REDACT-002, TC-REDACT-003, TC-REDACT-004 | Covered |
-| NFR-6 | 100% of emitted codes resolve to exactly one documented entry; documented entries exist in the source; binding in CI, drift fails both ways | TC-SYNC-001, TC-SYNC-002, TC-SYNC-003, TC-SYNC-004, TC-SYNC-005, TC-SYNC-006 | Covered |
+| NFR-6 | 100% of emitted codes resolve to exactly one documented entry; documented entries exist in the in-change `feature-result-contract.md` table; binding in CI, drift fails both ways | TC-SYNC-001, TC-SYNC-002, TC-SYNC-003, TC-SYNC-004, TC-SYNC-005, TC-SYNC-006 | Covered |
 | NFR-7 | 0 codes outside {0,1,2}; 0 entries without exactly one projection class; 0 call-site exit literals | TC-EXIT-001, TC-EXIT-002, TC-EXIT-003, TC-TABLE-001 | Covered |
 | NFR-8 | 0 spawned-process contract tests; deterministic output for identical argv + streams + clock facts | TC-RUNCLI-001, TC-RUNCLI-002 | Covered |
 | NFR-9 | 0 forbidden product-token literals in new code; 0 ambient brand derivations | TC-BOUNDARY-003, TC-BOUNDARY-004, TC-RUNCLI-004 | Covered |
@@ -179,10 +180,12 @@ The invariant check `scripts/checks/error-table-sync.ts` (†name, †path; deli
 | Surface | Content scanned | Assertion |
 |---------|------------------|-----------|
 | S1 — code | `packages/cli/src/**`, `packages/core/src/contracts/**` (excluding the table module itself) | every recognized code-like literal resolves to exactly one entry |
-| S2 — documentation | the documented table artifact (path bound by delivery planning; **must exist in this change** — see GAP-1/OQ-T1) | every entry appears exactly once; every documented row resolves to exactly one source entry; malformed rows fail, never skip |
+| S2 — documentation | the documented table at `doc/spec/features/feature-result-contract.md`, authored in-change (GAP-1/OQ-T1 resolved) | every entry appears exactly once; every documented row resolves to exactly one source entry; malformed rows fail, never skip |
 | S3 — fixtures | `tests/fixtures/result/**` and other error fixtures intended as code references | every recognized code-like literal resolves to exactly one entry |
 
-**Recognized code-like literal**: a string matching `^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$` (three or more lowercase segments) **whose first segment is a declared domain kind**. The namespace qualifier is what keeps reserved schema names (`delivery.result.v1`, `delivery.event.v1`, `delivery.metric.v1`), versions, and ordinary dotted identifiers out of the scan; the corpora in TC-SYNC-005 pin this behaviour in both directions.
+The S2 artifact ships in this change: authored during delivery as part of this change, derived from the machine-readable source. Phase 7 reconciles and completes the surrounding feature doc but does not rewrite the documented table section, which remains the sync-checked surface from merge time onward (GAP-1/OQ-T1 resolved; TC-SYNC-003 fails closed if the table section is missing or unparseable).
+
+**Recognized code-like literal**: a string matching `^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$` (three or more lowercase segments) **whose first segment is a declared domain kind**, plus the two fixed containment identifiers `fallback.invocation` and `fallback.internal` (two segments; the reserved `fallback` namespace, DEC-13), which are always recognized. The namespace qualifier is what keeps reserved schema names (`delivery.result.v1`, `delivery.event.v1`, `delivery.metric.v1`), versions, and ordinary dotted identifiers out of the scan; any other `fallback.*` literal is unresolvable and fails. The corpora in TC-SYNC-005 pin this behaviour in both directions.
 
 **Required assertions**: code uniqueness; format validity; bijection between table entries and documented rows; totality over declared domain kinds; deterministic resolution. **Failure discipline**: exit non-zero, name the offending code, the surface, and the line; fail closed when the documented table is missing, empty, or unparseable (a vacuous green is a failure). **CI**: invoked by name from an existing `ts-*` job (`ts-invariants` step list) — no new job, no change to `TS_JOBS`; the wiring rule in `ci-topology.ts` and the bypass scan in `ci-bindingness.ts` both stay green.
 
@@ -232,11 +235,11 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 | TC-RESULT-005 | `schemaVersion` fixed and brand-neutral; `runId` opaque and edge-generated | unit | `tests/structure/result-contract.test.ts` (†) | High | AC-F1-1, DM-1, NFR-1 |
 | TC-RESULT-006 | Envelope conformance validator is rule-complete and not vacuous | unit | `tests/structure/result-contract.test.ts` (†) + testkit (†) | High | NFR-2, NFR-3 |
 | TC-TABLE-001 | Every table entry carries the full row shape | unit | `tests/structure/error-table.test.ts` (†) | High | AC-F2-2, DM-3, NFR-7 |
-| TC-TABLE-002 | Fallback entry: consequence `unknown`, caller-directed hint, `unknown` reserved | unit | `tests/structure/error-table.test.ts` (†) | High | AC-F3-2, DM-3 |
+| TC-TABLE-002 | Fallback entries: consequence `unknown`, fixed DEC-13 fields, `unknown` reserved | unit | `tests/structure/error-table.test.ts` (†) | High | AC-F3-2, DM-3 |
 | TC-TABLE-003 | App error code identity: format, uniqueness, single resolution | unit | `tests/structure/error-table.test.ts` (†) | High | AC-F3-1, DM-4 |
 | TC-TABLE-004 | Table declared once as runtime-neutral data; `Result` unchanged | unit | `tests/structure/error-table.test.ts` (†) | High | AC-F2-1, DM-1, DM-3, NFR-1 |
 | TC-CLASSIFY-001 | Classification chain is total and deterministic | unit | `tests/behaviour/error-classification.test.ts` (†) | High | AC-F3-1, DM-4 |
-| TC-CLASSIFY-002 | Unclassifiable and non-`Error` failures contain to the fallback entry | unit | `tests/behaviour/error-classification.test.ts` (†) | High | AC-F3-2, AC-F6-2 |
+| TC-CLASSIFY-002 | Unclassifiable and non-`Error` failures contain to `fallback.internal`; broken invocations to `fallback.invocation` | unit | `tests/behaviour/error-classification.test.ts` (†) | High | AC-F3-2, AC-F6-2 |
 | TC-EXIT-001 | Projection is exhaustive, total, and confined to {0,1,2} | unit | `tests/behaviour/exit-projection.test.ts` (†) | High | AC-F4-1, NFR-7 |
 | TC-EXIT-002 | No exit-code literal at any call site | invariant-check | `scripts/checks/exit-code-literals.ts` (†) + `tests/checks/exit-code-literals.test.ts` (†) | High | AC-F4-1, NFR-7 |
 | TC-EXIT-003 | Exit-code projection exists only in the standalone CLI | boundary-fixture | `tests/behaviour/exit-projection.test.ts` (†) + boundary suite | High | AC-F4-1, F-4 |
@@ -244,7 +247,7 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 | TC-RUNCLI-002 | Determinism: identical argv + streams + clock facts ⇒ identical output | unit | `tests/behaviour/run-cli.test.ts` (†) | High | AC-F5-2, NFR-8 |
 | TC-RUNCLI-003 | Channel split: machine envelope on stdout, diagnostics on stderr | golden | `tests/golden/broken-command.test.ts` (†) | High | AC-F6-2, AC-F5-1, NFR-2 |
 | TC-RUNCLI-004 | Brand-dependent strings arrive as `BrandIdentity` parameters at the edge | negative-fixture | `tests/structure/cli-edge-seam.test.ts` (†) + boundary suite | High | AC-F9-1, NFR-9 |
-| TC-CONTAIN-001 | Broken-invocation goldens: valid envelope, no crash, exit 1 | golden | `tests/golden/broken-command.test.ts` (†) | High | AC-F6-1, NFR-2 |
+| TC-CONTAIN-001 | Broken-invocation goldens: valid envelope, no crash, `fallback.invocation` fields, exit 1 | golden | `tests/golden/broken-command.test.ts` (†) | High | AC-F6-1, NFR-2 |
 | TC-CONTAIN-002 | No stack traces or raw diagnostics on the machine channel | golden | `tests/golden/envelope-failure.test.ts` (†) | High | AC-F6-2 |
 | TC-CONTAIN-003 | Hostile command bodies cannot escape containment | negative-fixture | `tests/golden/broken-command.test.ts` (†) | High | AC-F6-1, AC-F6-2 |
 | TC-REDACT-001 | Planted secret in a success payload never reaches a stream | golden | `tests/golden/redaction.test.ts` (†) | High | AC-F7-1, NFR-5 |
@@ -468,7 +471,7 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 1. Assert the table is non-empty and every entry declares: `code`, `domainKind`, `category`, `retryable`, `consequence`, `remediationHint`, `projectionClass`, and optional `summary` with the declared types.
 2. Assert `category ∈ {user, platform, transient, permanent}` and `consequence ∈ {landed, not_landed, unknown}` for every entry; `retryable` is a boolean; `projectionClass ∈ {success, user-validation, platform-provider}` and exactly one per entry.
 3. Assert every `remediationHint` is a non-empty string and every `summary`, when present, is a non-empty string; assert no entry carries a hint or summary containing a secret-shaped fixture value.
-4. Assert every entry states `consequence` explicitly — no optional/absent value — which is what makes "mutation-bearing entries state consequence explicitly" (AC-F3-2, second clause) structurally true for all entries (see GAP-4 note).
+4. Assert every entry states `consequence` explicitly — no optional/absent value — which is what makes "mutation-bearing entries state consequence explicitly" (AC-F3-2, second clause) structurally true for all entries, including both fallback entries (DEC-13).
 5. Assert entry count is reported so a silently emptied table fails a non-vacuity assertion.
 
 **Expected Outcome**:
@@ -476,12 +479,12 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 - No entry can exist with a missing or mistyped column (NFR-7's "entries without exactly one projection class" is 0).
 - Hint phrasing quality is not asserted mechanically; it is a review item (TC-REVIEW-001).
 
-#### TC-TABLE-002 - Fallback entry: consequence `unknown`, caller-directed hint, `unknown` reserved
+#### TC-TABLE-002 - Fallback entries: consequence `unknown`, fixed DEC-13 fields, `unknown` reserved
 
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-3, F-6, AC-F3-2, AC-F6-1, DM-3, DEC-5, DEC-7
+**Related IDs**: F-3, F-6, AC-F3-2, AC-F6-1, DM-3, DEC-5, DEC-7, DEC-13
 **Test Type(s)**: Unit
 **Automation Level**: Automated
 **Tier**: unit
@@ -490,20 +493,20 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 
 **Preconditions**:
 
-- The table exposes a named fallback code constant (`FALLBACK_ERROR_CODE`†name, A-T1).
+- The table exposes the two named fallback codes `fallback.invocation` and `fallback.internal` (DEC-13, A-T1, A-T11).
 - An allowlist fixture records every non-fallback entry permitted to use `consequence: unknown`.
 
 **Steps**:
 
-1. Assert exactly one entry has the fallback code.
-2. Assert the fallback entry's `consequence` is `unknown`, its `projectionClass` is `user-validation` (F-6 broken-command class → exit 1), and its `remediationHint` is non-empty and caller-directed.
-3. Assert the fallback entry's `category` and `retryable` are declared and enum-valid (values are delivery decisions, not spec-fixed — GAP-4).
-4. Assert every other entry using `consequence: unknown` appears in the allowlist fixture; adding a new `unknown` entry outside the allowlist fails the suite by name (RSK-7: `unknown` must not become a lazy default).
-5. Assert the fallback code resolves to the fallback entry through the normal resolution path (no special-case bypass).
+1. Assert exactly one entry has each fallback code (`fallback.invocation`, `fallback.internal`), and that no third containment entry exists.
+2. Assert both fallback entries carry `consequence: unknown`, `retryable: false`, and the DEC-13 projection classes: `fallback.invocation` is category `user`, projection class `user-validation` (→ exit 1) with a non-empty caller-directed hint; `fallback.internal` is category `platform`, projection class `platform-provider` (→ exit 2) with a non-empty hint directing the caller to diagnostics.
+3. Assert each fallback entry's `category` and `retryable` equal the spec-fixed DEC-13 values and are enum-valid (the values are no longer delivery decisions).
+4. Assert every other entry using `consequence: unknown` appears in the allowlist fixture; both fallback entries are the baseline and are excluded from it. Adding a new `unknown` entry outside the allowlist fails the suite by name (RSK-7: `unknown` must not become a lazy default).
+5. Assert each fallback code resolves to its own entry through the normal resolution path (no special-case bypass).
 
 **Expected Outcome**:
 
-- Exactly one containment entry exists, with `unknown` consequence and a caller-directed hint, and it is reachable through ordinary resolution.
+- Exactly two containment entries exist — one per containment population — with `unknown` consequence, DEC-13 fields, and caller-directed/ diagnostics-directed hints, and both are reachable through ordinary resolution.
 - `unknown` cannot spread silently: each additional use is a reviewed allowlist entry.
 
 #### TC-TABLE-003 - App error code identity: format, uniqueness, single resolution
@@ -524,16 +527,16 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 
 **Steps**:
 
-1. Assert every code matches `^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$` (three or more lowercase dotted segments) — the `domain.reason.detail` shape of DM-4, with the spec example `provider.quota.exceeded` as a true-positive corpus row.
+1. Assert every code matches `^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$` (three or more lowercase dotted segments) — the `domain.reason.detail` shape of DM-4, with the spec example `provider.quota.exceeded` as a true-positive corpus row — except the two spec-fixed containment identifiers `fallback.invocation` and `fallback.internal` (DEC-13), which are the declared two-segment exception (A-T11).
 2. Assert codes are unique across the table.
 3. Assert the resolution index is total (every code resolves) and functional (each code resolves to exactly one entry; no two codes resolve to the same entry).
-4. Assert negative identity forms are rejected: numeric-only (`404`), two-segment (`provider.quota`), uppercase, leading digit, URI (`https://…`), and HTTP-status-shaped (`HTTP_404`).
-5. Assert resolution distinguishes "not found" from "fallback containment" — an unknown code is reported as unresolvable, so a caller must apply the documented containment explicitly rather than have a silent fallback hide a typo.
+4. Assert negative identity forms are rejected: numeric-only (`404`), two-segment non-fallback (`provider.quota`), uppercase, leading digit, URI (`https://…`), and HTTP-status-shaped (`HTTP_404`), and any `fallback.*` literal other than the two DEC-13 identifiers.
+5. Assert resolution distinguishes "not found" from "fallback containment" — an unknown code is reported as unresolvable, so a caller must apply the documented containment explicitly rather than have silent containment hide a typo.
 
 **Expected Outcome**:
 
 - Identity is stable, symbolic, hierarchical, unique, and singly resolvable.
-- A code that cannot be resolved is surfaced as such; the fallback is a deliberate containment step, not a blanket lookup default.
+- A code that cannot be resolved is surfaced as such; containment is a deliberate step, not a blanket lookup default.
 
 #### TC-TABLE-004 - Table declared once as runtime-neutral data; `Result` unchanged
 
@@ -583,7 +586,7 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 **Steps**:
 
 1. Enumerate every declared domain kind.
-2. Resolve each kind → assert it yields exactly one entry and one code; assert the code resolves back to that same entry (round-trip).
+2. Resolve each kind → assert it yields exactly one entry and one code; assert the code resolves back to that same entry (round-trip) and is never either containment entry (`fallback.invocation`, `fallback.internal`, DEC-13).
 3. Assert the resolved error object takes `category`, `retryable`, `consequence`, and `remediationHint` from the entry with no per-call-site override (a mutation that passes an override is rejected by the type or by the resolver assertion).
 4. Assert the code is symbolic and hierarchical, and is not numeric, not a URI, and not HTTP-status-coupled.
 5. Assert determinism: repeat resolution 10 times per kind and assert identical results.
@@ -591,15 +594,15 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 
 **Expected Outcome**:
 
-- Every declared domain failure class resolves deterministically to exactly one documented entry.
-- Adding a domain kind without a classification is a test failure, not a silent fallback.
+- Every declared domain failure class resolves deterministically to exactly one documented entry, never to a containment entry.
+- Adding a domain kind without a classification is a test failure, not a silent default.
 
-#### TC-CLASSIFY-002 - Unclassifiable and non-`Error` failures contain to the fallback entry
+#### TC-CLASSIFY-002 - Unclassifiable and non-`Error` failures contain to `fallback.internal`; broken invocations to `fallback.invocation`
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-3, F-6, AC-F3-2, AC-F6-2, DM-2, DEC-7
+**Related IDs**: F-3, F-6, AC-F3-2, AC-F6-2, DM-2, DEC-7, DEC-13
 **Test Type(s)**: Unit
 **Automation Level**: Automated
 **Tier**: unit
@@ -612,16 +615,17 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 
 **Steps**:
 
-1. Raise an error carrying an undeclared domain kind; resolve and assert the fallback entry is applied.
-2. Raise a thrown string, a thrown `undefined`, and a thrown plain object without a kind; each resolves to the fallback entry.
-3. Assert the resulting error object has `consequence: unknown`, the fallback `projectionClass` (→ exit 1), and a caller-directed hint.
-4. Raise a thrown value whose message contains a stack-like string, an absolute path, and a planted secret marker; assert the envelope carries none of them (only table-derived fields plus an optional non-identifying summary).
-5. Assert determinism: identical thrown input yields an identical error object.
+1. Raise an error carrying an undeclared domain kind; resolve and assert `fallback.internal` is applied.
+2. Raise a thrown string, a thrown `undefined`, and a thrown plain object without a kind; each resolves to `fallback.internal`.
+3. Assert the resulting error object has `consequence: unknown`, category `platform`, `retryable: false`, the `platform-provider` projection class (→ exit 2), and a hint directing the caller to diagnostics.
+4. Assert the two containment routes are distinct: a broken invocation (no command resolved) yields `fallback.invocation` (category `user`, `retryable: false`, consequence `unknown`, → exit 1), never `fallback.internal`; cross-checked by TC-CONTAIN-001.
+5. Raise a thrown value whose message contains a stack-like string, an absolute path, and a planted secret marker; assert the envelope carries none of them (only table-derived fields plus an optional non-identifying summary).
+6. Assert determinism: identical thrown input yields an identical error object.
 
 **Expected Outcome**:
 
-- No thrown shape can escape classification, and no raw thrown content can reach the envelope.
-- Containment is deterministic and honest: consequence `unknown`, caller-directed hint, exit 1.
+- No thrown shape can escape classification, no raw thrown content can reach the envelope, and unclassifiable failures never masquerade as caller-fault broken invocations.
+- Containment is deterministic and honest: `fallback.internal`, consequence `unknown`, platform-provider, exit 2.
 
 #### TC-EXIT-001 - Projection is exhaustive, total, and confined to {0,1,2}
 
@@ -828,12 +832,12 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 - Brand values are parameters at the edge; ambient derivation is impossible in the delivered surface.
 - The brand firewall from M0-S2 extends to the new CLI surface with its own failing fixture.
 
-#### TC-CONTAIN-001 - Broken-invocation goldens: valid envelope, no crash, exit 1
+#### TC-CONTAIN-001 - Broken-invocation goldens: valid envelope, no crash, `fallback.invocation` fields, exit 1
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-6, AC-F6-1, AC-F3-2, DM-2, NFR-2
+**Related IDs**: F-6, AC-F6-1, AC-F3-2, DM-2, NFR-2, DEC-13
 **Test Type(s)**: Golden
 **Automation Level**: Automated
 **Tier**: golden
@@ -847,7 +851,7 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 **Steps**:
 
 1. Run each case under `--json` with injected clock/id.
-2. Assert each emits exactly one valid envelope byte-equal to its golden; assert `error` resolves to the fallback entry with a caller-directed hint.
+2. Assert each emits exactly one valid envelope byte-equal to its golden; assert `error` resolves to `fallback.invocation` with category `user`, `retryable: false`, consequence `unknown`, projection class `user-validation`, and a caller-directed hint.
 3. Assert the projected and returned exit code is `1` and `timing` is present.
 4. Assert no crash, no non-JSON output, no stack trace, no raw parser error object in the envelope.
 5. Assert human diagnostics, where present, are on stderr only and are non-empty human text (not a duplicate envelope).
@@ -855,7 +859,7 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 
 **Expected Outcome**:
 
-- A broken command is a classified outcome, not a crash: valid envelope, documented fallback entry, exit 1, timing present.
+- A broken command is a classified outcome, not a crash: valid envelope, documented `fallback.invocation` entry (category `user`, `retryable: false`, consequence `unknown`), exit 1, timing present.
 - This is the ticket's second AC, proven per broken-invocation shape.
 
 #### TC-CONTAIN-002 - No stack traces or raw diagnostics on the machine channel
@@ -863,7 +867,7 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-6, AC-F6-2, DEC-7, DM-2
+**Related IDs**: F-6, AC-F6-2, DEC-7, DEC-13, DM-2
 **Test Type(s)**: Golden / Contract
 **Automation Level**: Automated
 **Tier**: golden
@@ -873,11 +877,12 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 **Preconditions**:
 
 - Failure cases cover classified, unknown, and broken outcomes, each raising a value carrying a stack, a path, and a planted marker in its message.
+- Each failure case declares its expected entry: the classified entry, `fallback.internal` for unknown failures, `fallback.invocation` for broken invocations (DEC-13).
 
 **Steps**:
 
 1. For every failure case, assert stdout contains no stack-frame markers (`at `, `.ts:`, `.js:`), no absolute paths, no `Error:`/`TypeError:` prefix, and no raw thrown message text.
-2. Assert the envelope's `error` contains only contracted keys and table-derived values (plus an optional non-identifying summary).
+2. Assert the envelope's `error` contains only contracted keys and table-derived values (plus an optional non-identifying summary); for broken-invocation cases it is `fallback.invocation` (category `user`, `retryable: false`, consequence `unknown`), and for unknown failures it is `fallback.internal` (category `platform`, `retryable: false`, consequence `unknown`).
 3. Assert any diagnostic text appears only on stderr.
 4. Vacuity control: a temp-copy serializer that appends the raw stack to the envelope makes the assertion fail (proving detection).
 5. Assert the planted marker in the thrown message never appears on either stream (cross-link to TC-REDACT-002).
@@ -892,7 +897,7 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-6, AC-F6-1, AC-F6-2, RSK-5
+**Related IDs**: F-6, AC-F6-1, AC-F6-2, RSK-5, DEC-13
 **Test Type(s)**: Unit / Negative
 **Automation Level**: Automated
 **Tier**: negative-fixture
@@ -902,11 +907,12 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 **Preconditions**:
 
 - Synthetic command programs can be injected: synchronous throw, thrown non-`Error`, rejected promise, throw after partial payload assembly, and a handler returning a malformed result.
+- The broken-invocation argv corpus from TC-CONTAIN-001 is replayed alongside the hostile programs, so both containment entries are exercised.
 
 **Steps**:
 
-1. Run each hostile program under `--json`.
-2. Assert each produces exactly one valid envelope (never two documents, never partial JSON), with the fallback entry and a derived exit code.
+1. Run each hostile program and each broken-invocation case under `--json`.
+2. Assert each produces exactly one valid envelope (never two documents, never partial JSON), resolving to the containment entry matching its responsibility: broken invocations → `fallback.invocation` (category `user`, `retryable: false`, consequence `unknown`, exit 1); handler-level throws, rejections, and malformed results → `fallback.internal` (category `platform`, `retryable: false`, consequence `unknown`, exit 2).
 3. Assert a partial write cannot corrupt the channel: stdout must not begin with a fragment — the serializer writes the envelope in a single pass after the run completes; mutation: a temp-copy serializer that streams partial output fails the assertion.
 4. Assert the process survives and the returned code is non-zero.
 5. Assert repeated invocations produce identical envelopes (determinism holds on the containment path).
@@ -1047,13 +1053,13 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 
 **Preconditions**:
 
-- §4.4 is the binding contract; the documented table artifact exists in this change (GAP-1, OQ-T1).
+- §4.4 is the binding contract; the documented table at `doc/spec/features/feature-result-contract.md` ships in this change (GAP-1/OQ-T1 resolved).
 
 **Steps**:
 
 1. Run the check on the delivered tree; assert exit 0.
 2. Assert the summary reports non-zero counts for entries, documented rows, and recognized code references (a zero-count summary is a vacuous pass and fails).
-3. Assert the bijection: every entry appears exactly once in the documented table, and every documented row resolves to exactly one entry.
+3. Assert the bijection: every entry appears exactly once in the documented table, and every documented row resolves to exactly one entry; both fallback codes (`fallback.invocation`, `fallback.internal`) appear exactly once on each side.
 4. Assert every recognized code reference in S1/S3 resolves, and every declared domain kind maps to an entry.
 5. Assert the check is read-only: `git status --porcelain` is unchanged after the run.
 6. Assert a failure message format exists (code, surface, line) by inspecting the reported shape on a deliberately mutated copy in the mutation suite (cross-link TC-SYNC-002).
@@ -1084,7 +1090,7 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 1. In a temp copy, add an unregistered hierarchical code to a CLI module source string; run the check; assert non-zero exit naming code, surface, and line.
 2. In a temp copy, add an unregistered code to an error fixture; assert non-zero exit naming the fixture path.
 3. Assert the two reports are distinguishable by surface label (so triage knows where to fix).
-4. Assert the check does not silently fall back to the fallback entry when a code is unresolvable.
+4. Assert the check does not silently fall back to either containment entry when a code is unresolvable.
 5. Assert the live tree remains untouched by these runs.
 
 **Expected Outcome**:
@@ -1106,18 +1112,20 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 
 **Preconditions**:
 
-- The documented table's row format is parseable per Appendix B.
+- The documented table at `doc/spec/features/feature-result-contract.md` is parseable per Appendix B and ships in this change (GAP-1/OQ-T1 resolved).
 
 **Steps**:
 
 1. In a temp copy, add a well-formed documented row for a code absent from the source; assert non-zero exit naming the code as documented-but-not-in-source.
 2. In a temp copy, remove a required column from one documented row; assert non-zero exit (parse strictness) rather than a silent skip.
 3. Assert a missing documented-table file fails closed with a named error and no vacuous green.
+4. Assert the check reads the in-change artifact at `doc/spec/features/feature-result-contract.md`; phase-7 reconciliation of the surrounding feature doc does not remove the table section from the S2 surface (a temp copy without the table section fails closed).
+5. In a temp copy, add a documented row for a phantom containment code (`fallback.legacy`); assert non-zero exit naming it — the reserved `fallback` namespace contains exactly the two DEC-13 entries.
 
 **Expected Outcome**:
 
 - Documentation cannot invent entries the source does not declare.
-- Missing or malformed documentation fails closed — the check never degrades to "nothing to check".
+- Missing or malformed documentation fails closed — the check never degrades to "nothing to check"; the in-change artifact is the bound S2 target and stays bound after phase-7 reconciliation.
 
 #### TC-SYNC-004 - Drift C: source entry missing from the documented table fails
 
@@ -1140,6 +1148,7 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 1. In a temp copy, delete one documented row while leaving the source entry present; assert non-zero exit naming the entry as undocumented.
 2. In a temp copy, add a new source entry with no documented row; assert the same failure mode.
 3. Assert a duplicated documented row for one entry also fails (exactly-once, not at-least-once).
+4. Repeat the deletion for each fallback entry's documented row (`fallback.invocation`, `fallback.internal`) in turn; assert both are reported as undocumented — no containment exemption.
 
 **Expected Outcome**:
 
@@ -1160,15 +1169,15 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 
 **Preconditions**:
 
-- §4.4 defines a recognized code-like literal by pattern plus declared domain-kind namespace.
+- §4.4 defines a recognized code-like literal by pattern plus declared domain-kind namespace, with the reserved two-segment `fallback` namespace (`fallback.invocation`, `fallback.internal`, DEC-13) always recognized.
 
 **Steps**:
 
 1. Assert duplicate codes in the source fail naming both positions.
-2. Assert invalid source codes fail: two segments, uppercase, leading digit, URI, `HTTP_404`.
+2. Assert invalid source codes fail: two segments (other than the two DEC-13 containment identifiers), uppercase, leading digit, URI, `HTTP_404`.
 3. Assert the false-positive corpus is clean: `delivery.result.v1`, `delivery.event.v1`, `delivery.metric.v1`, semantic versions, dotted file names, hostnames, and ordinary prose produce zero violations.
-4. Assert the true-positive corpus is flagged: valid hierarchical codes from an undeclared namespace, and registered codes referenced from an unexpected surface.
-5. Assert foreign-namespace handling is explicit: a code whose first segment is not a declared domain kind fails with a named error rather than being ignored.
+4. Assert the true-positive corpus is flagged: valid hierarchical codes from an undeclared namespace, registered codes referenced from an unexpected surface, and both fallback codes (`fallback.invocation`, `fallback.internal`) in both the source and the documented table.
+5. Assert foreign-namespace handling is explicit: a code whose first segment is neither a declared domain kind nor the reserved `fallback` namespace fails with a named error rather than being ignored; any `fallback.*` literal other than the two DEC-13 identifiers also fails.
 
 **Expected Outcome**:
 
@@ -1357,7 +1366,7 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 **Scenario Type**: Happy Path
 **Impact Level**: Important
 **Priority**: Medium
-**Related IDs**: F-3, F-7, F-9, AC-F7-2, AC-F9-1, DEC-4, DEC-9
+**Related IDs**: F-3, F-7, F-9, AC-F7-2, AC-F9-1, DEC-4, DEC-9, DEC-13
 **Test Type(s)**: Manual
 **Automation Level**: Manual
 **Tier**: manual
@@ -1371,7 +1380,7 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 **Steps**:
 
 1. Review every `remediationHint` for action-first phrasing and non-identifying content, and every `summary` for carrying no identity (DEC-4).
-2. Confirm the fallback entry's `category` and `retryable` values are deliberate decisions (GAP-4) and that no other entry uses `consequence: unknown` without justification (RSK-7).
+2. Confirm both fallback entries carry the DEC-13 values (`fallback.invocation`: category `user`, `retryable: false`, class user-validation; `fallback.internal`: category `platform`, `retryable: false`, class platform-provider), and that no other entry uses `consequence: unknown` without justification (RSK-7).
 3. Confirm envelope/table evolution discipline: no `schemaVersion` change; goldens updated only for this change's deliberate contract authorship; no automatic golden-update path exists in scripts or CI.
 4. Review the delivered surface for any stream write the automated scan cannot see (dynamic property access, aliased writers) — AC-F7-2's human half.
 5. Confirm no item of this plan required weakening, skipping, or relaxing an existing gate (C-8); confirm no product name appears in any artifact of the change.
@@ -1405,7 +1414,7 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 | Code corpora | `tests/fixtures/result/code-corpora/{true,false}-positives.json` (†) | Read-only; reviewed when the recognition rule changes |
 | `unknown`-consequence allowlist | `tests/fixtures/result/unknown-consequence-allowlist.json` (†) | Reviewed; each addition justified |
 | Error-table source | `packages/core/src/contracts/**` (code) | The single source of truth |
-| Documented table artifact | Path bound by delivery planning (must exist in this change — GAP-1) | Read-only at test time; drift fails |
+| Documented table artifact | `doc/spec/features/feature-result-contract.md` — authored in-change (GAP-1/OQ-T1 resolved) | Read-only at test time; drift fails |
 | Mutated temp copies | Generated per run in `mkdtemp` | Deleted at test end; never in-tree |
 
 ### 6.3 Isolation Strategy
@@ -1509,8 +1518,8 @@ The `git diff` for `scripts` intentionally includes the two new `scripts/checks/
 | RSK-T2 | The golden suites pass because a fixture never carried a secret / never contained a stack | H | M | Vacuity controls in TC-REDACT-001/002 and TC-CONTAIN-002: a disabled-chokepoint copy must leak, or the assertion is not proven |
 | RSK-T3 | "Zero spawned processes" is asserted by convention, not proof | H | M | Guard with a self-test (TC-RUNCLI-001), static AST assertion, and real process-survival assertion |
 | RSK-T4 | The sync check becomes vacuous (empty table, absent doc, missing artifact silently skipped) | H | M | Non-zero count assertions; fail-closed on missing/unparseable doc (TC-SYNC-003); count non-vacuity in TC-SYNC-001 |
-| RSK-T5 | The sync check's recognition rule either misses real codes or floods on ordinary dotted strings | H | M | Pattern plus declared-domain-kind namespace (§4.4); true/false-positive corpora with `delivery.*.v1` reserved names (TC-SYNC-005) |
-| RSK-T6 | The documented table artifact does not exist at delivery time, so AC-F8-1's doc direction is untestable | H | M | GAP-1 + OQ-T1: delivery planning must bind a doc target inside this change; otherwise the AC is reported back for phase reopen rather than reinterpreted |
+| RSK-T5 | The sync check's recognition rule either misses real codes or floods on ordinary dotted strings | H | M | Pattern plus declared-domain-kind namespace and the reserved `fallback` namespace (§4.4); true/false-positive corpora with `delivery.*.v1` reserved names and both fallback codes (TC-SYNC-005) |
+| RSK-T6 | Phase-7 reconciliation rewrites or drops the in-change documented table, making AC-F8-1's doc direction untestable or vacuous | H | L | The documented table is authored in-change at `doc/spec/features/feature-result-contract.md` (GAP-1/OQ-T1 resolved) and stays sync-checked; TC-SYNC-003 fails closed if the table section is missing or unparseable after phase-7 reconciliation |
 | RSK-T7 | The redaction guarantee is assumed from an unregistered secret set | H | M | A-T4 binds the edge-registered secret set; the limitation is documented rather than hidden |
 | RSK-T8 | The exit-code literal check is satisfied by loosening scope or an allowlist | M | M | Explicit scope boundary asserted (TC-EXIT-002 step 6); no allowlist; mutation per forbidden form |
 | RSK-T9 | The no-spawn guard interferes with legitimate test infrastructure (e.g. boundary harness spawning depcruise) | M | M | Guard is scoped to `runCli` invocations only, installed/removed per test; boundary suites remain outside it |
@@ -1525,19 +1534,20 @@ The `git diff` for `scripts` intentionally includes the two new `scripts/checks/
 - **A-T2** — A void success carries `data: {}` (an explicit empty payload) and no `error` key. If delivery binds a different explicit empty form (`null`), only TC-RESULT-001 step 4 and the corresponding fixture row change; "explicitly present" is non-negotiable.
 - **A-T3** — `runCli` accepts injected clock facts and an injected `runId` source in addition to `(argv, streams)`, as F-5 permits ("injected clock facts where timing is involved"). Determinism is asserted only with injection; production defaults are asserted for shape, not value.
 - **A-T4** — The redaction input is the set of secret values registered by the runtime-aware edge (secrets are environment-only per man-page v0). The guarantee covers registered values; unregistered secret-shaped strings are out of the guarantee (documented limitation, GAP-3).
-- **A-T5** — The documented table artifact ships inside this change (the sync check's S2 surface). Phase 7 reconciles it into `doc/spec/features/feature-result-contract.md`; if delivery planning defers the artifact to phase 7, AC-F8-1's documentation direction is untestable and this plan must be reopened (OQ-T1).
+- **A-T5** — The documented table ships in this change at `doc/spec/features/feature-result-contract.md` (the sync check's S2 surface), authored during delivery as part of this change. Phase 7 reconciles and completes the surrounding feature doc; the table section already exists by merge and remains sync-checked (GAP-1/OQ-T1 resolved).
 - **A-T6** — The new invariant checks are `scripts/checks/*.ts` (mutation-tested under `tests/checks/**`) invoked from the existing `ts-invariants` job; they are not inserted into the aggregate `check` chain, which stays at five named steps (matches `script-surface.ts` and the GH-171 precedent).
 - **A-T7** — A new `tests/golden/` layer is acceptable under `tests/{layer}/*.test.ts`; root `bun test` discovery picks it up, and no check hardcodes the layer set.
 - **A-T8** — Synthetic commands are injected as test programs/pure handlers; no command registration ships in this change (NG-1). The surface's command dispatch is exercised through injection, not through a registry.
 - **A-T9** — `packages/testkit` may host the envelope conformance helper and golden loader because it is dev-only and may import `@delivery-os/core`/`./contracts` (never `@delivery-os/cli`). New testkit source files require an inventory and per-file allowance update.
 - **A-T10** — `tests/**` is outside the M0-S2 scan's scope classes (GH-171 A-T4); fixture hygiene is therefore covered by TC-BOUNDARY-004, not by the scan.
+- **A-T11** — The two containment entries are identified by the spec-fixed codes `fallback.invocation` and `fallback.internal` (DEC-13). They are the declared two-segment exception to the `domain.reason.detail` pattern and the only members of the reserved `fallback` namespace; every other code matches the three-segment pattern, and every other `fallback.*` literal is unresolvable.
 
 ### 8.3 Open Questions
 
 | ID | Question | Context | Status | Owner |
 |----|----------|---------|--------|-------|
-| OQ-T1 | Which documentation artifact carries the documented error table inside this change, and where does it live? | AC-F8-1's second direction ("documented entry missing from source") is untestable without a doc target. Options: (a) a documented table section co-located with the machine-readable source and reconciled into `feature-result-contract.md` in phase 7; (b) an in-change doc artifact under the change folder (not distributable); (c) defer the doc surface to phase 7 (unacceptable: makes the AC vacuous at DoR and delivery). | **Open — blocking for AC-F8-1's doc direction.** Recommended: (a) with a phase-7 reconciliation note. If delivery planning chooses a non-doc target, this plan must be reopened rather than the assertion weakened. | @pm / delivery planning |
-| OQ-T2 | Does the fallback entry need a `retryable: false` value, and which `category` should it carry? | The spec fixes consequence (`unknown`) and class (`user-validation`) but not category/retryable. Tests assert declaration and enum validity only (GAP-4). | Open — non-blocking; a deliberate choice recorded in the table and reviewed (TC-REVIEW-001) | Delivery planning |
+| OQ-T1 | Which documentation artifact carries the documented error table inside this change, and where does it live? | AC-F8-1's second direction ("documented entry missing from source") is untestable without a doc target. Spec v1.1 fixes the target: the documented table ships in-change at `doc/spec/features/feature-result-contract.md`, authored during delivery; phase 7 reconciles and completes the surrounding feature doc without rewriting the table section. | **Resolved (spec v1.1)** — in-change doc target bound in §4.4; the sync check binds both directions from merge time (TC-SYNC-001..006). | @pm / @spec-writer |
+| OQ-T2 | Does the fallback entry need a `retryable: false` value, and which `category` should it carry? | Spec v1.1 / DEC-13 fixes two containment entries and their fields: `fallback.invocation` (category `user`, `retryable: false`, consequence `unknown`, user-validation → exit 1) and `fallback.internal` (category `platform`, `retryable: false`, consequence `unknown`, platform-provider → exit 2). | **Resolved (spec v1.1, DEC-13)** — tests assert these fixed values (TC-TABLE-002, TC-CLASSIFY-002, TC-CONTAIN-001..003). | @pm / @spec-writer |
 | OQ-T3 | Redaction policy for registered secrets: remove the field, or replace the value with a fixed placeholder? | Both satisfy "removed or transformed"; the choice changes the goldens. Tests assert zero marker occurrences plus payload-shape preservation, so either is acceptable if bound. | Open — non-blocking; bound once by delivery planning, then fixed in the goldens | Delivery planning |
 | OQ-T4 | Should the CLI's ambient-brand confinement be a dependency-cruiser rule, an AST structure test, or an extension of the ambient guard? | Any of the three can enforce it, but the choice determines whether a new negative fixture is required in `tests/boundaries` or an inline temp-copy mutation in `tests/structure`. | Open — non-blocking; whichever is chosen must ship with a failing-fixture proof (AC-F9-1) | Delivery planning |
 | OQ-T5 | Is a non-`--json` success expected to write anything to stdout, and must it be asserted? | NG-5 puts human UX out of scope; this plan asserts only the returned exit code and the internal envelope for non-`--json` runs. | Resolved for this plan: human stdout shape is unasserted; revisit when M0-S4 ships human output | @pm |
@@ -1547,6 +1557,7 @@ The `git diff` for `scripts` intentionally includes the two new `scripts/checks/
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-10-30 | @test-plan-writer | Initial plan: 38 TCs across envelope contract (RESULT), error table (TABLE), classification chain (CLASSIFY), exit projection (EXIT), `runCli` surface and determinism (RUNCLI), failure containment (CONTAIN), redaction chokepoint (REDACT), docs/code sync (SYNC), boundary/branding/regression (BOUNDARY), and a manual contract review (REVIEW). All 16 spec ACs covered (AC-F8-1 conditional on OQ-T1), all 4 ticket ACs mapped, DM-1..DM-4 and NFR-1..NFR-10 traced; golden/invariant contracts fixed (§4.1–§4.7); GAP-1..GAP-4 recorded rather than reinterpreted |
+| 1.1 | 2026-10-30 | @test-plan-writer | Touch-up after spec v1.1 (commit 3b1f5f5): GAP-1/OQ-T1 resolved — the documented table ships in-change at `doc/spec/features/feature-result-contract.md`, the sync check binds both drift directions against it from merge time, and phase 7 reconciles the surrounding feature doc without rewriting the sync-checked table section. GAP-4/OQ-T2 resolved via DEC-13 — two fallback entries, `fallback.invocation` (category `user`, `retryable: false`, consequence `unknown`, user-validation → exit 1) and `fallback.internal` (category `platform`, `retryable: false`, consequence `unknown`, platform-provider → exit 2), with the reserved two-segment `fallback` namespace recognized by the sync check (A-T11). All fallback references synced; TC IDs, count (38), tiers, thresholds, and suite structure unchanged |
 
 ## 10. Test Execution Log
 
