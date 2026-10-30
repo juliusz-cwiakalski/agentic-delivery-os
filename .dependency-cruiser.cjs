@@ -208,12 +208,14 @@ module.exports = {
       name: "runtime-apis-confinement",
       severity: "error",
       comment:
-        "ADR-0003 DEC-2 allowlist: runtime APIs are permitted only in the `core ./state` driver code, the adapter I/O subpaths, the CLI build, and the OpenCode host integration.",
+        "ADR-0003 DEC-2 allowlist: runtime APIs are permitted only in the `core ./state` driver edge, the adapter I/O subpaths, the CLI build, and the OpenCode host integration (GH-174 tightened the state allowance from the whole state tree to the driver edge).",
       from: {
         path: "^packages/",
         pathNot: [
           "^packages/core/src/state/",
           "^packages/adapters/src/(repo|file|host|session|legacy|credentials)/",
+          "^packages/core/src/state/driver/",
+          "^packages/adapters/src/(repo|file|host|session|legacy)/",
           "^packages/cli/",
           "^packages/opencode/",
         ],

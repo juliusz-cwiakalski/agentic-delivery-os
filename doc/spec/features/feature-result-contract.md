@@ -8,6 +8,7 @@ service: delivery-os
 summary: "The command-surface result contract: the CommandResult envelope in core ./contracts, the machine-readable error table as the single source of failure identity, the domain-kind to app-error-code to projection classification chain, the standalone CLI {0, 1, 2} exit projection, the deterministic in-process runCli surface, the two-entry fallback containment, the serialization redaction chokepoint, the testkit conformance validator, and the binding docs/code sync and exit-literal invariants."
 links:
   related_changes: ["GH-172", "GH-173", "GH-181"]
+  related_changes: ["GH-172", "GH-173", "GH-174"]
   related_decisions: ["ADR-0003"]
 ---
 
@@ -47,9 +48,9 @@ The authoritative design decision for package placement and tiers is [ADR-0003](
 ### Capabilities
 
 - **CommandResult envelope:** Every command returns `schemaVersion`, `runId`, `exitCode`, `timing`, and exactly one of `data` or `error`. A void success carries an explicit empty `data` object rather than an ambiguous both-absent shape.
-- **Machine-readable error table:** `ERROR_TABLE` in `core ./contracts` declares each failure entry once. `DOMAIN_KINDS` declares `provider`, `input`, and `config`; `fallback` is the reserved two-segment containment namespace. Codes are unique and the table is total over valid declared failure discriminants, not one row per kind.
+- **Machine-readable error table:** `ERROR_TABLE` in `core ./contracts` declares each failure entry once. `DOMAIN_KINDS` declares `provider`, `input`, `config`, and `state`; `fallback` is the reserved two-segment containment namespace. Codes are unique and the table is total over valid declared failure discriminants, not one row per kind.
 - **Self-describing errors:** Every error object carries `code`, `category`, `retryable`, `consequence`, `remediationHint`, and an optional non-identifying `summary`. An entry's `summary` supplies the default; non-config handlers may supply a more specific summary without changing identity. Config summaries always come from the table.
-- **Classification chain:** A `(kind, code)` pair resolves only when the code belongs to that kind. Kind-only lookup requires exactly one matching entry (`provider`, `input`); `config` requires a code. Missing, unknown, or wrong-kind config codes are contained by `fallback.internal`.
+- **Classification chain:** A `(kind, code)` pair resolves only when the code belongs to that kind. Kind-only lookup requires exactly one matching entry (`provider`, `input`); `config` and `state` require a code. Missing, unknown, or wrong-kind config and state codes are contained by `fallback.internal`.
 - **Exit-code projection:** The CLI projection module maps `success` to `0`, `user-validation` to `1`, and `platform-provider` to `2`. An unknown projection class is rejected, never defaulted. The numeric code is derived from the class, never read from a table row.
 - **Failure containment:** Broken invocations and unknown commands resolve through `fallback.invocation`; errors no entry classifies resolve through `fallback.internal`. Both containment entries are `consequence: unknown` and `retryable: false`, and their projection classes keep caller-fault and system-side failures on different exit codes.
 - **Deterministic in-process surface:** `runCli(argv, streams, deps)` takes arguments, injected output and error streams, and injected dependencies (brand, clock, run-id factory, secrets, command program). It returns the numeric exit code and never spawns a process, calls `process.exit`, or writes to real process streams.
@@ -118,6 +119,13 @@ A success envelope has exactly the keys `schemaVersion`, `runId`, `exitCode`, `t
 | config.reset.invalid | config | user | false | not_landed | Correct the reset paths and retry. | user-validation | A configuration reset is invalid. |
 | config.warning.strict | config | user | false | not_landed | Resolve the named warning and retry. | user-validation | Strict configuration validation rejected a warning. |
 | config.credential.missing | config | user | false | not_landed | Supply the credential through its declared environment source and retry. | user-validation | A required credential was not resolvable from its source. |
+| state.store.torn | state | platform | false | not_landed | Inspect or restore the named state store; never treat it as empty. | platform-provider | The state store is torn. |
+| state.schema.mismatch | state | platform | false | not_landed | Use a compatible tool version or migrate the store explicitly, then retry. | platform-provider | The state store schema version is not supported. |
+| state.keys.missing | state | platform | false | not_landed | Verify the writing operation completed and inspect the named store; never substitute defaults. | platform-provider | A state read key-set assertion failed. |
+| state.lock.busy | state | transient | true | not_landed | Wait for the current writer to release the state fence, then acquire and retry. | platform-provider | The state store is locked by another writer. |
+| state.permission.denied | state | user | false | not_landed | Correct operating-system permissions on the named state path and retry. | user-validation | A state path permission requirement was not met. |
+| state.write.failed | state | transient | true | not_landed | Resolve the underlying storage error and retry; the failed write or rebuild did not land, the ledger remains durable truth, and the index stays disposable. | platform-provider | A state write or index rebuild did not land. |
+| state.level.unsupported | state | user | false | not_landed | Use a state level with an implemented driver; shared levels arrive with later stories. | user-validation | The requested state level has no implementation. |
 
 This table is the human- and agent-readable counterpart of `ERROR_TABLE`. The sync check requires each source entry to have exactly one documented row and each documented row to have exactly one source entry; the two fallback rows are included with no containment exemption.
 

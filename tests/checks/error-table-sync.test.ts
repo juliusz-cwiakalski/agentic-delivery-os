@@ -368,3 +368,77 @@ describe("TC-SYNC-005 identity hygiene and level separation", () => {
     expect(text).toContain("true-positives.json");
   });
 });
+
+const ROW_STATE_TORN =
+  "| state.store.torn | state | platform | false | not_landed | Inspect or restore the named state store; never treat it as empty. | platform-provider | The state store is torn. |";
+const ROW_STATE_LOCK =
+  "| state.lock.busy | state | transient | true | not_landed | Wait for the current writer to release the state fence, then acquire and retry. | platform-provider | The state store is locked by another writer. |";
+
+describe("TC-STATE-019 state rows synchronize in both directions", () => {
+  test("the delivered state is green with non-zero counts for the state rows", async () => {
+    const result = await runSyncCheck({ root: ROOT });
+    expect(result.failures).toEqual([]);
+    expect(result.counts.sourceEntries).toBeGreaterThanOrEqual(20);
+    expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
+    expect(result.counts.recognizedS1).toBeGreaterThan(0);
+  });
+
+  test("removing a machine state row fails naming the documented code", async () => {
+    const root = makeTempRoot();
+    editFile(root, TABLE, (text) =>
+      text.replace(/\n? {2}\{\n {4}code: "state\.store\.torn",[\s\S]*?\n {2}\},/, ""),
+    );
+    const failures = messages((await runSyncCheck({ root })).failures);
+    expect(failures).toContain("documented code state.store.torn has no source entry");
+  });
+
+  test("removing state from DOMAIN_KINDS fails naming the undeclared namespace", async () => {
+    const root = makeTempRoot();
+    editFile(root, TABLE, (text) =>
+      text.replace('["provider", "input", "config", "state"]', '["provider", "input", "config"]'),
+    );
+    const failures = messages((await runSyncCheck({ root })).failures);
+    expect(failures).toContain("undeclared namespace state");
+  });
+
+  test("removing a documented state row fails naming the source entry", async () => {
+    const root = makeTempRoot();
+    editFile(root, DOC, removeDocRow(ROW_STATE_LOCK));
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "source entry state.lock.busy is undocumented",
+    );
+  });
+
+  test("a documentation-only, malformed, or duplicated state row fails", async () => {
+    const phantom = makeTempRoot();
+    editFile(
+      phantom,
+      DOC,
+      insertDocRow(
+        "| state.phantom.row | state | platform | false | not_landed | Retry. | platform-provider | Phantom. |",
+      ),
+    );
+    expect(messages((await runSyncCheck({ root: phantom })).failures)).toContain(
+      "documented code state.phantom.row has no source entry",
+    );
+
+    const malformed = makeTempRoot();
+    editFile(malformed, DOC, (text) =>
+      text.replace(ROW_STATE_TORN, ROW_STATE_TORN.replace("| platform |", "| platform | extra |")),
+    );
+    expect(messages((await runSyncCheck({ root: malformed })).failures)).toContain("columns");
+
+    const duplicated = makeTempRoot();
+    editFile(duplicated, DOC, (text) =>
+      text.replace(ROW_STATE_TORN, `${ROW_STATE_TORN}\n${ROW_STATE_TORN}`),
+    );
+    expect(messages((await runSyncCheck({ root: duplicated })).failures)).toContain(
+      "duplicate documented row for state.store.torn",
+    );
+  });
+
+  test("the unchanged copy remains green (control)", async () => {
+    const root = makeTempRoot();
+    expect((await runSyncCheck({ root })).failures).toEqual([]);
+  });
+});

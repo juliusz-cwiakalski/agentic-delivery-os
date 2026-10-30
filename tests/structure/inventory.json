@@ -16,9 +16,14 @@
     "src/contracts/index.ts",
     "src/contracts/ports.ts",
     "src/contracts/result.ts",
+    "src/contracts/state.ts",
     "src/domain/index.ts",
     "src/index.ts",
-    "src/state/index.ts"
+    "src/state/driver/runtime-edge.ts",
+    "src/state/driver/strategy.ts",
+    "src/state/edge.ts",
+    "src/state/index.ts",
+    "src/state/ledger.ts"
   ],
   "adapters": [
     "src/azure/index.ts",
