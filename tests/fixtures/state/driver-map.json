@@ -1,1 +1,1 @@
-{ "kinds": ["jsonl"] }
+{ "kinds": ["jsonl", "sqlite"] }

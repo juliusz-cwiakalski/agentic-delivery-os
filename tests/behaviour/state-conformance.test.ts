@@ -142,24 +142,23 @@ describe("TC-STATE-002 driver conformance parity", () => {
       expect(pending).toContain("pending");
       return;
     }
-    const definition = CONFORMANCE_CASES[0] as ConformanceCase;
+    const definition = CONFORMANCE_CASES.find(
+      (candidate) => candidate.id === "append-and-read",
+    ) as ConformanceCase;
     const baseline = runCase(KINDS[0] as StateDriverKind, definition);
     const identity = makeIdentity(makeTempRoot("conformance-control"), {
       workspaceId: "conformance",
     });
-    const divergent = divergentStore(openStore(identity, { driver: KINDS[0] }).store);
-    definition.seed?.({
+    const { store, edge } = openStore(identity, { driver: KINDS[0] });
+    const divergent = divergentStore(store);
+    const context = {
       store: divergent,
-      edge: openStore(identity, { driver: KINDS[0] }).edge,
+      edge,
       root: identity.stateDirectory,
       workspaceId: identity.workspaceId,
-    });
-    const outcome = definition.observe({
-      store: divergent,
-      edge: openStore(identity, { driver: KINDS[0] }).edge,
-      root: identity.stateDirectory,
-      workspaceId: identity.workspaceId,
-    });
+    };
+    definition.seed?.(context);
+    const outcome = definition.observe(context);
     expect(normalize(outcome)).not.toBe(normalize(baseline.outcome));
     removeRoot(identity.stateDirectory);
   });

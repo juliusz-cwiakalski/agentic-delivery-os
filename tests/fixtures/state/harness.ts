@@ -8,7 +8,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 import {
   STATE_SCHEMA_VERSION,
@@ -110,7 +110,9 @@ export const ledgerLines = (text: string): string[] =>
 export const digestPaths = (paths: readonly string[]): string => {
   const hash = createHash("sha256");
   for (const path of paths) {
-    hash.update(path);
+    // Only the file name and bytes participate, so per-driver temp roots do
+    // not make identical fixtures look different.
+    hash.update(basename(path));
     hash.update(existsSync(path) ? readFileSync(path) : Buffer.from("absent"));
   }
   return hash.digest("hex");
