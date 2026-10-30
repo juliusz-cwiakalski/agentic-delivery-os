@@ -4,7 +4,15 @@
  * per-file allowlist (never a global switch).
  */
 import { expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import ts from "typescript";
@@ -29,6 +37,20 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/contracts/result.ts": ["RESULT_SCHEMA_VERSION"],
   "core/src/contracts/state.ts": ["STATE_DRIVER_KINDS", "STATE_LEVELS", "STATE_SCHEMA_VERSION"],
+  "core/src/state/index.ts": ["createStateStore"],
+  "core/src/state/ledger.ts": [
+    "CHECKSUM_HEX_LENGTH",
+    "RECORD_FIELDS",
+    "buildRecord",
+    "checksumOfPayload",
+    "parseRecordLine",
+    "serializeRecord",
+    "valuesFromRecords",
+    "verifiedPrefixLength",
+    "verifyLedger",
+  ],
+  "core/src/state/driver/runtime-edge.ts": ["createNodeStateEdge"],
+  "core/src/state/driver/strategy.ts": ["createJsonlStrategy", "createSqliteStrategy"],
   "cli/src/classify.ts": ["classifyDomainKind", "classifyThrown", "resolveAppErrorCode"],
   "cli/src/commands/config.ts": ["createConfigCommandDefinition"],
   "cli/src/commands/index.ts": ["createConfigCommandDefinition"],
@@ -229,44 +251,74 @@ test("a second executable export in branding fails", () => {
   }
 });
 
-test("no engine, driver, or command-registration markers exist", () => {
-  const dependencyFields = [
-    "dependencies",
-    "devDependencies",
-    "peerDependencies",
-    "optionalDependencies",
-  ];
-  const forbiddenDependency = /sqlite|confluence|@opencode-ai\/|cliffy|^commander$|^yargs$/i;
-  const forbiddenSource = [
-    "node:sqlite",
-    "better-sqlite3",
-    ".mcpb",
-    "registerCommand",
-    "program.command(",
-  ];
-  const violations: string[] = [];
+/**
+ * Scaffold-stage marker guard. The state driver edge is the one sanctioned
+ * runtime home for a built-in SQLite binding (GH-174 TDR-0004); every other
+ * file and every third-party engine dependency stays forbidden.
+ */
+const RUNTIME_ENGINE_ALLOWED = ["core/src/state/driver/runtime-edge.ts"];
+const FORBIDDEN_DEPENDENCY = /sqlite|confluence|@opencode-ai\/|cliffy|^commander$|^yargs$/i;
+const FORBIDDEN_MARKERS = [
+  "node:sqlite",
+  "better-sqlite3",
+  ".mcpb",
+  "registerCommand",
+  "program.command(",
+];
 
+export const engineMarkerViolations = (root: string, files: Record<string, string[]>): string[] => {
+  const violations: string[] = [];
   for (const packageName of PACKAGE_NAMES) {
+    if (!existsSync(join(root, "packages", packageName, "package.json"))) continue;
     const manifest = JSON.parse(
-      readFileSync(join(ROOT, "packages", packageName, "package.json"), "utf8"),
+      readFileSync(join(root, "packages", packageName, "package.json"), "utf8"),
     ) as Record<string, Record<string, string> | undefined>;
-    for (const field of dependencyFields) {
+    for (const field of [
+      "dependencies",
+      "devDependencies",
+      "peerDependencies",
+      "optionalDependencies",
+    ]) {
       for (const dependency of Object.keys(manifest[field] ?? {})) {
-        if (forbiddenDependency.test(dependency)) {
+        if (FORBIDDEN_DEPENDENCY.test(dependency)) {
           violations.push(
             `${packageName}: forbidden scaffold dependency ${dependency} in ${field}`,
           );
         }
       }
     }
-    for (const relative of inventory[packageName] ?? []) {
-      const content = readFileSync(join(ROOT, "packages", packageName, relative), "utf8");
-      for (const marker of forbiddenSource) {
-        if (content.includes(marker)) {
-          violations.push(`${packageName}/${relative}: forbidden marker ${marker}`);
-        }
+    for (const relative of files[packageName] ?? []) {
+      const label = `${packageName}/${relative}`;
+      const allowed = RUNTIME_ENGINE_ALLOWED.includes(label);
+      const content = readFileSync(join(root, "packages", packageName, relative), "utf8");
+      for (const marker of FORBIDDEN_MARKERS) {
+        if (marker === "node:sqlite" && allowed) continue;
+        if (content.includes(marker)) violations.push(`${label}: forbidden marker ${marker}`);
       }
     }
   }
-  expect(violations).toEqual([]);
+  return violations;
+};
+
+test("no engine, driver, or command-registration markers exist", () => {
+  expect(engineMarkerViolations(ROOT, inventory)).toEqual([]);
+});
+
+test("the runtime-engine exemption is path-scoped to the state driver edge", () => {
+  const root = mkdtempSync(join(tmpdir(), "engine-probe-"));
+  try {
+    mkdirSync(join(root, "packages/core/src/state/driver"), { recursive: true });
+    writeFileSync(join(root, "packages/core/package.json"), JSON.stringify({ name: "core" }));
+    writeFileSync(join(root, "packages/core/src/state/index.ts"), 'import "node:sqlite";\n');
+    writeFileSync(
+      join(root, "packages/core/src/state/driver/runtime-edge.ts"),
+      'import "node:sqlite";\n',
+    );
+    const violations = engineMarkerViolations(root, {
+      core: ["src/state/index.ts", "src/state/driver/runtime-edge.ts"],
+    });
+    expect(violations).toEqual(["core/src/state/index.ts: forbidden marker node:sqlite"]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
