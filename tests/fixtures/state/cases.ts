@@ -5,6 +5,7 @@
  * driver map. No case branches on a driver kind; kind-neutral observables are
  * compared by the suite.
  */
+import { readFileSync, writeFileSync } from "node:fs";
 import type { StateStorePort } from "../../packages/core/src/contracts/index";
 import type { TestEdge } from "./harness";
 
@@ -13,6 +14,7 @@ export type CaseContext = {
   readonly edge: TestEdge;
   readonly root: string;
   readonly workspaceId: string;
+  readonly ledgerPath: string;
 };
 
 export type CaseOutcome = {
@@ -40,6 +42,30 @@ const withFence = (
   } finally {
     context.store.releaseFence(acquired.value.handle);
   }
+};
+
+const mutateLine = (
+  context: CaseContext,
+  index: number,
+  mutate: (record: Record<string, unknown>) => void,
+): void => {
+  const lines = readFileSync(context.ledgerPath, "utf8").split("\n");
+  const record = JSON.parse(lines[index] as string) as Record<string, unknown>;
+  mutate(record);
+  lines[index] = JSON.stringify(record);
+  writeFileSync(context.ledgerPath, lines.join("\n"));
+};
+
+const seedThreeRecords = (context: CaseContext): void => {
+  withFence(context, (handle) => {
+    for (const [key, payload] of [
+      ["t1", "planted-payload-one"],
+      ["t2", "planted-payload-two"],
+      ["t3", "planted-payload-three"],
+    ] as const) {
+      context.store.append(handle, { kind: "park", recordKey: key, payload });
+    }
+  });
 };
 
 const readOutcome = (context: CaseContext, requiredKeys: readonly string[]): CaseOutcome => {
@@ -82,6 +108,45 @@ export const CONFORMANCE_CASES: readonly ConformanceCase[] = [
         context.store.append(handle, { kind: "park", recordKey: "present", payload: 0 });
       }),
     observe: (context) => readOutcome(context, ["absent"]),
+  },
+  {
+    id: "torn-truncated-tail",
+    seed: (context) => {
+      seedThreeRecords(context);
+      const text = readFileSync(context.ledgerPath, "utf8");
+      writeFileSync(context.ledgerPath, text.slice(0, -4));
+    },
+    observe: (context) => readOutcome(context, ["t1"]),
+  },
+  {
+    id: "torn-framing-break",
+    seed: (context) => {
+      seedThreeRecords(context);
+      const lines = readFileSync(context.ledgerPath, "utf8").split("\n");
+      lines[1] = "{this-is-not-framed";
+      writeFileSync(context.ledgerPath, lines.join("\n"));
+    },
+    observe: (context) => readOutcome(context, ["t1"]),
+  },
+  {
+    id: "torn-sequence-gap",
+    seed: (context) => {
+      seedThreeRecords(context);
+      mutateLine(context, 2, (record) => {
+        record.sequence = Number(record.sequence) + 2;
+      });
+    },
+    observe: (context) => readOutcome(context, ["t1"]),
+  },
+  {
+    id: "torn-checksum-mismatch",
+    seed: (context) => {
+      seedThreeRecords(context);
+      mutateLine(context, 1, (record) => {
+        record.payload = "planted-payload-flipped";
+      });
+    },
+    observe: (context) => readOutcome(context, ["t1"]),
   },
   {
     id: "value-depends-on-input",

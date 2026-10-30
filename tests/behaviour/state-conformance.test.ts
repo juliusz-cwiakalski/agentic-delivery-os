@@ -36,7 +36,13 @@ const runCase = (driver: StateDriverKind, definition: ConformanceCase): Run => {
   try {
     const identity = makeIdentity(root, { workspaceId: "conformance" });
     const { store, edge } = openStore(identity, { driver });
-    const context = { store, edge, root, workspaceId: identity.workspaceId };
+    const context = {
+      store,
+      edge,
+      root,
+      workspaceId: identity.workspaceId,
+      ledgerPath: ledgerPath(identity),
+    };
     definition.seed?.(context);
     const digest = digestPaths([ledgerPath(identity)]);
     const outcome = definition.observe(context);
@@ -156,6 +162,7 @@ describe("TC-STATE-002 driver conformance parity", () => {
       edge,
       root: identity.stateDirectory,
       workspaceId: identity.workspaceId,
+      ledgerPath: ledgerPath(identity),
     };
     definition.seed?.(context);
     const outcome = definition.observe(context);
