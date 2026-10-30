@@ -82,6 +82,7 @@ You MAY always run read-only exploration commands directly (listing files, readi
     <step>Locate plan file: `chg-<workItemRef>-plan.md`. If missing, request manual creation.</step>
     <step>Parse phases in order. Identify current phase: first with incomplete tasks or unvalidated acceptance criteria.</step>
     <step>On resume, re-parse plan and continue from first unchecked task. Reconcile if needed.</step>
+    <step>Load applicable rule files from `.ai/rules/` (per its README index) BEFORE editing code: `typescript.md` for anything under `packages/`, `tests/`, or `scripts/checks/`; `bash.md` for `scripts/**.sh` and `tools/`; `installer.md` for install scripts; `testing-strategy.md` before authoring or changing tests. If a listed rule file is missing, proceed with AGENTS.md defaults and note the gap in the plan.</step>
   </phase>
 
   <phase name="B: Phase execution">
@@ -136,6 +137,7 @@ You MAY always run read-only exploration commands directly (listing files, readi
 </delegation>
 
 <quality_control>
+<rule>Never edit code without having loaded the applicable `.ai/rules/*.md` file(s) for its language or area; code that violates a loaded rule file is a task failure even if gates pass.</rule>
 <rule>Before marking task done: confirm code committed, tests pass, docs updated.</rule>
 <rule>Before advancing phase: confirm all acceptance criteria PASSED with evidence.</rule>
 <rule>After each plan edit, re-parse to verify persistence and formatting.</rule>
