@@ -1,0 +1,41 @@
+change_id: GH-174
+title: "M0-S5: State layer"
+milestone: "M0: Trust substrate"
+story_code: M0-S5
+delivery_mode: interactive
+phases:
+  clarify_scope: { started: "2026-10-30T00:00:00Z", completed: "2026-10-30T00:00:00Z" }
+  specification: { started: "2026-10-30T00:00:00Z", completed: "2026-10-30T00:00:00Z" }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions:
+  - text: "clarify_scope completed with ZERO open questions — no STOP, proceed to artifact generation. Basis: ticket body is owner-authored and matches backlog M0-S5 verbatim; all dependencies merged; discovered details (storage-engine mechanics, state error-table rows/domain kind, state directory location policy) are implementation-level with established precedent (GH-170 scaffold placeholders, GH-172 result contract, GH-173 TDR pattern), belonging to spec/plan authoring."
+    date: "2026-10-30"
+open_questions: []
+blockers: []
+notes:
+  - text: "Phase 2 specification COMPLETE: @spec-writer authored chg-GH-174-spec.md (438 lines, canonical GH-172/173 format) — ledger-truth driver model (append-only schema-versioned JSONL = durable truth; SQLite = derived disposable index selected via StateDriverKind, one conformance suite across both kinds), new 'state' domain kind + 7 exact-code rows in ERROR_TABLE, five torn-state classes with explicit verified-empty distinction, fence lock tokens enforced type-level, 22 ACs each with DoD predicate. PM decisions adopted: DEC-1 state domain kind, DEC-2 ledger-truth/index-derived interpretation (flagged for DoR scrutiny), DEC-5/6 retention-forever exception = torn-tail repair only, DEC-7 fence type-level enforcement, permission.denied = user/exit 1. Open questions carried to delivery: OQ-1 TDR candidate (engine mechanics, recorded by @coder during delivery); OQ-2 Windows ACL end-to-end verification environment (CI is Linux — owner-environment run before public-release claims; non-blocking for this change)."
+    type: "info"
+    date: "2026-10-30"
+  - text: "Cross-check ticket vs system spec — CONSISTENT, no contradictions: (1) scaffold pre-declares core ./state subpath + state tier; runtime-API confinement reserves runtime I/O for core ./state driver code; state tier imports ./contracts only. (2) core/src/state/index.ts is a types-only placeholder already declaring StateDriverKind = 'jsonl' | 'sqlite' — matches backlog 'append-only JSONL plus SQLite indexes'. (3) Branding seam: state consumes stateDirectoryName, injected as a parameter — state tier may NOT import branding (boundary conformance). (4) Result contract: DOMAIN_KINDS currently provider|input|config; state failures will need table entries (possible new 'state' domain kind) with the two-directional doc/code sync check. (5) cli-command-registry: M0-S5 is a foundation story WITHOUT a user command — no CLI surface in this change. (6) user-journeys: cross-repo state stays local-first; shared-level is abstraction-only now (workspace + fence identifiers as local fields)."
+    type: "info"
+    date: "2026-10-30"
+  - text: "Documentation impacts anticipated for phase 7 (@doc-syncer): NEW first-spec doc/spec/features/feature-state-layer.md (always-resolve in-change); reconcile feature-monorepo-scaffold-toolchain.md (state tier placeholder -> implemented), feature-result-contract.md (new state.* rows / domain kind), feature-branding-seam.md (M0-S5 consumer line becomes implemented), doc/overview/glossary.md (new terms: torn state, fence/lock token, state level). TDR candidate: storage-engine mechanics (JSONL ledger + SQLite index driver selection across Bun/Node)."
+    type: "info"
+    date: "2026-10-30"
+  - text: "Scope guardrails for authors: implementation-neutral abstraction is a HARD AC (no implementation-dependent call sites); torn-state detection is a HARD AC (never silently read as zeros); retention = forever; permissions POSIX 0700/0600 + Windows ACL equivalent; single-writer with fence lock tokens scoped as local fields; schema-versioned; atomic replace."
+    type: "info"
+    date: "2026-10-30"
+  - text: "Session start: state detection per user directive. GH-174 open, no labels/comments, no open/merged PR, no local artifacts — fresh start. Dependencies M0-S1 (GH-170), M0-S2 (GH-171), M0-S3 (GH-172) merged; M0-S4 (GH-173, PR #194) also merged at d306c20 before start. Local main-tools == origin/main-tools == d306c20, worktree clean. Housekeeping applied: GH-173 moved to recently_delivered, GH-90 pruned (overflow)."
+    type: "info"
+    date: "2026-10-30"
+  - text: "Branch plan: feat/GH-174/state-layer cut from main-tools @ d306c20; PR base main-tools (explicit, per user directive). PM never merges."
+    type: "decision"
+    date: "2026-10-30"
