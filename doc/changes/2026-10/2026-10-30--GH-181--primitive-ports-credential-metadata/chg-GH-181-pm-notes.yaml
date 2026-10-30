@@ -7,7 +7,7 @@ phases:
   test_planning: { started: "2026-10-30T21:30:00Z", completed: "2026-10-30T22:00:00Z" }
   delivery_planning: { started: "2026-10-30T22:05:00Z", completed: "2026-10-30T22:20:00Z" }
   dor_check: { started: "2026-10-30T22:25:00Z", completed: "2026-10-30T22:40:00Z" }
-  delivery: { started: "2026-10-30T22:45:00Z", completed: null }
+  delivery: { started: "2026-10-30T22:45:00Z", completed: "2026-10-30T23:30:00Z" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -39,6 +39,12 @@ notes:
     date: "2026-10-30"
   - text: "Delivery plan complete: 7 phases / 35 tasks, 17 ACs + 19 TCs mapped, per-phase commit signals. Plan resolved four artifact inconsistencies: codec at packages/adapters/src/io/envelope-codec.ts with root-test relative import (testkit package cannot reach adapter-internal module); fixture adapters at tests/fixtures/ports (root); new tests/types/ project chained into root typecheck for the AC-F2-2 type probe (vehicle for TC-PORT-004); invariant as ts-invariants step + check:boundaries append; schema id delivery.metadata.v1, bound 2048 bytes; absent/empty -> config.credential.missing."
     type: "resolved"
+    date: "2026-10-30"
+  - text: "Delivery complete (plan phases P1-P4, P7; P5 skipped per no-review instruction, P6 not required): commits 2beeaf2, 806cbef, 2273b2b, f81ec70, ffd2a34, 94bccc0. Final aggregate pnpm check 604 pass / 0 fail; 554 tests across structure/behaviour/checks/boundaries; ten invariants green incl. new secret-read-boundary (3-entry allowlist); exports-parity/publint/attw green on all five publishables; 17/17 ACs + 19/19 TCs recorded in test-plan §10. All five DoR carry-forwards honored. One in-pass remediation: added 240s timeout to pre-existing exports-parity attw pack-mutation test (was exceeding 5s default; behavior already passing; no logic change). PR creation deferred to phase 11 (PM-owned)."
+    type: "info"
+    date: "2026-10-30"
+  - text: "RETRO: pre-existing exports-parity attw pack-mutation test had no per-test timeout and began exceeding Bun's 5s default — silent infra drift surfaced only when the suite grew. Lesson: new long-running pack-mutation tests should declare explicit timeouts at authoring time; consider a follow-up housekeeping pass across other pack-mutation tests (not created — PM ticket-creation rule)."
+    type: "retro"
     date: "2026-10-30"
   - text: "Scope sources: issue body + backlog.md M0-S12 + concepts/primitive-catalogue.md + concepts/credential-sidecar.md + concepts/embedded-metadata.md. AC: (1) typed ports with capability flags, (2) CI boundary check fails on secret reads outside the credential port, (3) metadata envelope round-trips and degrades gracefully when a provider strips it. Dependencies M0-S1/S3/S4 verified merged (PRs 191/193/194)."
     type: "info"
