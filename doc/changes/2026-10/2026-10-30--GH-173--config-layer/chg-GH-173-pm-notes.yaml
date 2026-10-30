@@ -29,6 +29,9 @@ blockers:
     date: 2026-10-30
     resolved_date: 2026-10-30
 notes:
+  - text: "Phase4 verified 14:09Z: build/typecheck/lint/boundaries/ambient/entrypoints/error-table-sync/license/forbidden-literals/exports-parity all green; 126tests/730expectations across 10 files (config-cli14, goldens incl redaction14/broken-command16/config-output4, inventory5). Strict-TS fixes per binding rules (typed next locals; conditional RepositoryRootFacts under exactOptionalPropertyTypes); structure inventory refreshed with real module registration; error-table-sync S1 false positive resolved by destructuring (config.warnings.map token removed; recognizer/table untouched). Plan 4.1..4.6 verified pending commit; phase5 next."
+    type: "info"
+    date: 2026-10-30
   - text: "Phase3 verified 13:45:27Z: all13 commands exit0, 64tests/386expectations (sources31/parser6/resolver2/schema3/restrictions4/provenance4/legacy14), selected-config attribution bug fixed in config-source.ts (selection hoisted before discovery; actual-path contract restored), biome.json ignores intentionally malformed YAML fixture, all invariants green. Plan 3.1..3.6 marked verified pending commit. Retro: tsconfig typecheck does not cover tests/** — test-only parse errors surfaced only via bun test/biome; keep format+test in every verification loop."
     type: "info"
     date: 2026-10-30

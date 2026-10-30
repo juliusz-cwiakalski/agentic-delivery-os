@@ -30,6 +30,7 @@ export type CommandInvocation = {
   readonly command: string;
   readonly flags: CommandFlags;
   readonly argv: readonly string[];
+  readonly positionals: readonly string[];
   readonly brand: BrandIdentity;
 };
 
@@ -42,6 +43,8 @@ export type CommandDefinition = {
   readonly flags?: readonly string[];
   readonly requiresValue?: readonly string[];
   readonly conflicts?: readonly (readonly [string, string])[];
+  readonly positionals?: { readonly max: number };
+  readonly humanSuccess?: boolean;
 };
 
 /** The injected command program. */
@@ -62,7 +65,11 @@ export type CliDependencies = {
 };
 
 type Outcome =
-  | { readonly type: "success"; readonly data: unknown }
+  | {
+      readonly type: "success";
+      readonly data: unknown;
+      readonly warnings?: readonly string[];
+    }
   | {
       readonly type: "failure";
       readonly entry: ErrorTableEntry;
@@ -75,6 +82,7 @@ type ParsedInvocation =
       readonly ok: true;
       readonly command: string;
       readonly flags: Record<string, string | true>;
+      readonly positionals: readonly string[];
       readonly tokens: readonly string[];
     }
   | { readonly ok: false; readonly reason: string };
@@ -128,7 +136,14 @@ const outcomeFromResult = (result: unknown): Outcome => {
     const failure = result.error;
     return failureOutcome(classifyThrown(failure), failure);
   }
-  return { type: "success", data: result.data === undefined ? {} : result.data };
+  const warnings = Array.isArray(result.warnings)
+    ? result.warnings.filter((warning): warning is string => typeof warning === "string")
+    : [];
+  return {
+    type: "success",
+    data: result.data === undefined ? {} : result.data,
+    ...(warnings.length === 0 ? {} : { warnings }),
+  };
 };
 
 const parseInvocation = (argv: readonly string[], program: CommandProgram): ParsedInvocation => {
@@ -147,10 +162,19 @@ const parseInvocation = (argv: readonly string[], program: CommandProgram): Pars
     ...(definition.conflicts ?? []).flat(),
   ]);
   const flags: Record<string, string | true> = {};
+  const positionals: string[] = [];
   for (let index = 1; index < tokens.length; index += 1) {
-    const token = tokens[index] as string;
+    const token = tokens[index];
+    if (token === undefined) continue;
     if (!token.startsWith("--")) {
-      return { ok: false, reason: `unexpected argument "${token}"` };
+      if (
+        definition.positionals === undefined ||
+        positionals.length >= definition.positionals.max
+      ) {
+        return { ok: false, reason: `unexpected argument "${token}"` };
+      }
+      positionals.push(token);
+      continue;
     }
     if (!allowedFlags.has(token)) {
       return { ok: false, reason: `unknown flag "${token}"` };
@@ -171,7 +195,7 @@ const parseInvocation = (argv: readonly string[], program: CommandProgram): Pars
       return { ok: false, reason: `conflicting flags "${first}" and "${second}"` };
     }
   }
-  return { ok: true, command, flags, tokens };
+  return { ok: true, command, flags, positionals, tokens };
 };
 
 const toErrorObject = (entry: ErrorTableEntry, summary: string | undefined): CommandResultError => {
@@ -231,6 +255,7 @@ export async function runCli(
   const startedAt = deps.clock.now();
   const runId = deps.newRunId();
   let outcome: Outcome;
+  let humanSuccess = false;
 
   try {
     const parsed = parseInvocation(argv, deps.program);
@@ -239,11 +264,13 @@ export async function runCli(
     } else {
       const definition = deps.program.commands[parsed.command];
       if (definition === undefined) throw new Error("command definition disappeared");
+      humanSuccess = definition.humanSuccess === true;
       try {
         const result = await definition.handler({
           command: parsed.command,
           flags: parsed.flags,
           argv: parsed.tokens,
+          positionals: parsed.positionals,
           brand: deps.brand,
         });
         outcome = outcomeFromResult(result);
@@ -262,7 +289,12 @@ export async function runCli(
   let exitCode = envelope.exitCode;
 
   try {
-    writeOutput(streams, envelope, diagnostic, deps.secrets, emitEnvelope);
+    writeOutput(streams, envelope, diagnostic, deps.secrets, emitEnvelope, {
+      ...(humanSuccess && outcome.type === "success" ? { humanJson: outcome.data } : {}),
+      ...(outcome.type === "success" && outcome.warnings !== undefined
+        ? { warnings: outcome.warnings }
+        : {}),
+    });
   } catch {
     const fallback = buildEnvelope(internalFailure("Output serialization failed."), runId, timing);
     writeOutput(
