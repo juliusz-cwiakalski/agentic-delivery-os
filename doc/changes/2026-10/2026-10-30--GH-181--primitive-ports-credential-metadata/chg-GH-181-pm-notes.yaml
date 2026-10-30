@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-10-30T22:25:00Z", completed: "2026-10-30T22:40:00Z" }
   delivery: { started: "2026-10-30T22:45:00Z", completed: "2026-10-30T23:30:00Z" }
   system_spec_update: { started: "2026-10-30T23:35:00Z", completed: "2026-10-30T23:50:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-10-30T23:55:00Z", completed: null, iterations: 1, last_verdict: "FAIL" }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -29,7 +29,9 @@ open_questions:
     date: "2026-10-30"
   - text: "OQ-3 (spec): exact v1 constants (envelope schema identifier within delivery.*.v1 discipline; size bound <= 2048 bytes)."
     date: "2026-10-30"
-blockers: []
+blockers:
+  - text: "Review iteration 1 FAIL — remediation required before re-review. F-1 (major): secret-read invariant silently accepts computed-key ambient reads (process[key], process[`env`], globalThis[expr].env) at scripts/checks/secret-read-boundary.ts:138, violating spec F-4 'never silently accepted'. F-2 (minor): codec marker regexes quadratic on adversarial marker-dense input (1747ms @ 193KB), packages/adapters/src/io/envelope-codec.ts:33. F-3 (minor): stale-index strip corruption — nested marker lookalike + trailing content makes stripEnvelope return empty string, silently destroying human content (violates AC-F5-2), envelope-codec.ts:149. Remediation tasks R-1..R-3 appended to plan Phase 6 (activated); PASS at iteration 2 requires R-1 closed with fixtures, R-2/R-3 closed or PM-accepted with rationale. F-4/F-5 informational (lookalike prose stripping — document; wall-clock stamp drift — no action)."
+    date: "2026-10-30"
 notes:
   - text: "RETRO: specification reopened at test_planning (iteration 2). @test-plan-writer found two spec gaps: (1) older-schema-version read window undefined — no AC covers it; (2) absent-vs-stripped metadata may be observationally indistinguishable but the degradation reason taxonomy did not say so. Plus codec placement left open (contracts tier forbids behavior; boundary matrix restricts adapters to core ./contracts). Caught here instead of at DoR — reopening upstream immediately was cheaper than a DoR NOT_READY iteration."
     type: "retro"
@@ -44,6 +46,9 @@ notes:
     type: "info"
     date: "2026-10-30"
   - text: "RETRO: pre-existing exports-parity attw pack-mutation test had no per-test timeout and began exceeding Bun's 5s default — silent infra drift surfaced only when the suite grew. Lesson: new long-running pack-mutation tests should declare explicit timeouts at authoring time; consider a follow-up housekeeping pass across other pack-mutation tests (not created — PM ticket-creation rule)."
+    type: "retro"
+    date: "2026-10-30"
+  - text: "RETRO: review iteration 1 caught a real security hole the delivery-phase battery missed — the invariant's own tests covered only literal-key forms, so the computed-key gap was invisible to every green check (tests green, claim false). Lesson: for security invariants, the test matrix must enumerate AST form classes, not just instances; an invariant is only as strong as its form-class coverage. Also: codec quadratic-scan and strip-corruption issues were findable only by adversarial input testing (DoR/plan reviews check artifacts, not runtime hostility) — the reviewer's empirical probing earned its cost."
     type: "retro"
     date: "2026-10-30"
   - text: "Scope sources: issue body + backlog.md M0-S12 + concepts/primitive-catalogue.md + concepts/credential-sidecar.md + concepts/embedded-metadata.md. AC: (1) typed ports with capability flags, (2) CI boundary check fails on secret reads outside the credential port, (3) metadata envelope round-trips and degrades gracefully when a provider strips it. Dependencies M0-S1/S3/S4 verified merged (PRs 191/193/194)."

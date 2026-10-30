@@ -271,9 +271,15 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → (6 if findings) → 7**. Each 
 
 **Tasks**:
 
-- [ ] **6.1** If findings exist: reproduce each via the relevant TC/negative fixture, add the missing regression first, then apply the smallest fix; preserve behavior outside the accepted slice. — not required — no review findings exist because Phase 5 was skipped by instruction
-- [ ] **6.2** Fix code, registries, fixtures, and any affected docs together; an error-table change carries both tables in the same fix; an allowlist or boundary-rule change carries its failing fixture in the same fix. — not required — no review findings exist because Phase 5 was skipped by instruction
-- [ ] **6.3** PM delegates `@runner` repetition of affected suites/mutations and the full applicable gates, and independent re-review until PASS. If no findings, record the phase as not required with the Phase 5 PASS as evidence. — not required — no review findings exist because Phase 5 was skipped by instruction
+- [ ] **6.1** If findings exist: reproduce each via the relevant TC/negative fixture, add the missing regression first, then apply the smallest fix; preserve behavior outside the accepted slice. — activated by review iteration 1 (see remediation tasks R-1..R-3 below)
+- [ ] **6.2** Fix code, registries, fixtures, and any affected docs together; an error-table change carries both tables in the same fix; an allowlist or boundary-rule change carries its failing fixture in the same fix. — activated by review iteration 1 (see remediation tasks R-1..R-3 below)
+- [ ] **6.3** PM delegates `@runner` repetition of affected suites/mutations and the full applicable gates, and independent re-review until PASS. If no findings, record the phase as not required with the Phase 5 PASS as evidence. — pending; re-review (iteration 2) required after R-1..R-3
+
+**Remediation tasks from review iteration 1** (`review/review-iter-1.md`; verdict FAIL — 0 blockers, 1 major, 2 minor, 2 informational):
+
+- [ ] **R-1 (major — finding F-1)** Close the computed-key hole in `scripts/checks/secret-read-boundary.ts`: element access over an ambient-global identifier with a non-literal key (`process[key]`, `process[\`env\`]`) and computed global names (`globalThis[expr].env`) is currently silently accepted (empirically proven: zero violations), violating spec F-4 / task 4.1 "never silently accepted". Fix fail-closed: flag `ElementAccessExpression` whose expression is an ambient-global identifier whenever the argument is not a string literal, naming it `ambient element access with non-literal key` (or document these as unsupported forms with negative-control fixtures per task 4.1). Add fixtures to `tests/fixtures/secret-boundary/cases.ts` for computed-key and template-literal keys; keep the clean control green; re-run `bun test tests/checks/secret-read-boundary.test.ts` and `bun run scripts/checks/secret-read-boundary.ts`.
+- [ ] **R-2 (minor — finding F-2)** Bound adversarial marker scanning in `packages/adapters/src/io/envelope-codec.ts`: the lazy-quantifier marker regexes are quadratic on marker-dense input (measured 1747 ms for a 193 KB hostile comment in a single parse call; provider comment text becomes external user-controlled content when M0-S13 adapters land). Fix by capping the scanned input (documented maximum with `missing` degradation beyond it) or an equivalent non-quadratic scan; add a pathological-input regression test with a time bound.
+- [ ] **R-3 (minor — finding F-3)** Fix stale-index span stripping in `removeMarkers`/`stripSpan`: when an envelope payload string contains a compact-marker lookalike and trailing human content follows the comment marker, `stripEnvelope` returns `""`/truncated output — silently destroying human-readable content with no degradation evidence (violates AC-F5-2 identity; empirically proven). Fix by rebuilding the string from non-overlapping spans in a single pass (or one combined regex) so indices cannot go stale; add a regression fixture with a nested lookalike plus trailing content. Informational F-4 (lookalike text in plain human content is stripped as a marker) may be documented alongside in `doc/spec/features/feature-adapter-ports.md`; no code change required.
 
 **Acceptance Criteria**:
 
@@ -388,6 +394,7 @@ Protected paths untouched by every phase: `scripts/*.sh`, `tools/`, `.opencode/`
 | Version | Date (UTC) | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-10-30T20:31:46Z | Implementation Plan Writer | Initial seven-phase, 35-task plan: 17/17 AC and 19/19 TC mapping; codec placement mechanics (DEC-9) resolved to `packages/adapters/src/io/` with root-test dev-edge imports; type-test project added for AC-F2-2; secret-read invariant wiring as a `ts-invariants` step plus `check:boundaries` entry; error-row lockstep in Phase 1; changeset and DoD/rollback in Phase 7. |
+| 1.1 | 2026-10-30T21:48:32Z | Reviewer (review iteration 1) | Phase 6 activated with remediation tasks R-1..R-3 from `review/review-iter-1.md` (1 major: computed-key ambient reads silently accepted by the secret-read invariant; 2 minor: codec quadratic marker scan, stale-index strip corruption). Phase 5 execution-log row recorded. No other plan content changed. |
 
 ## Execution Log
 
@@ -398,6 +405,6 @@ Protected paths untouched by every phase: `scripts/*.sh`, `tools/`, `.opencode/`
 | 2 | Complete | 2026-10-30T21:52Z | 2026-10-30T22:20Z | 806cbef | 8/8 tasks; typecheck incl. `tests/types` green; 264 structure+behaviour tests PASS; forbidden-literals green. |
 | 3 | Complete | 2026-10-30T22:21Z | 2026-10-30T22:40Z | 2273b2b | 5/5 tasks (3.5 not required); 148 targeted+boundaries PASS; check:boundaries, workspace-entrypoints, forbidden-literals green. |
 | 4 | Complete | 2026-10-30T22:41Z | 2026-10-30T23:20Z | f81ec70 | 5/5 tasks; 160 targeted+boundaries PASS; `pnpm check` 604 PASS (remediation: per-test timeout on the pre-existing attw pack mutation, behavior unchanged). |
-| 5 | Skipped | — | — | — | Skipped per run instruction `no review`; no review artifact. |
-| 6 | Not required | — | — | — | No review findings to close (Phase 5 skipped by instruction). |
+| 5 | Complete | 2026-10-30T21:05Z | 2026-10-30T21:48Z | none | Independent review iteration 1 (`review/review-iter-1.md`): FAIL — 0 blockers, 1 major (secret-read invariant silently accepts computed-key ambient reads), 2 minor (codec quadratic marker scan; stale-index strip corruption), 2 informational. All 17 AC/19 TC evidence spot-verified by re-running suites (36 behaviour + 121 structure + 153 checks + 115 boundaries PASS; invariants green). |
+| 6 | Activated (pending) | 2026-10-30T21:48Z | — | — | Remediation tasks R-1..R-3 appended to Phase 6; re-review iteration 2 required after fixes. |
 | 7 | Complete (PR pending) | 2026-10-30T23:21Z | 2026-10-30T23:45Z | ffd2a34 | Changeset + gate battery + DoD verified; open PR not created because push/PR was not requested. |
