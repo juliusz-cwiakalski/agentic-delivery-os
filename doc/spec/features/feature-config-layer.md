@@ -69,7 +69,7 @@ The authoritative selection is [ADR-0003](../../decisions/ADR-0003-oss-monorepo-
 One trusted draft-07 schema is generated from the typed catalog. A recursively relaxed partial view validates each supplied layer; the final view enforces required fields after merge. The validator performs no coercion, does not remove unknown properties, and does not insert defaults.
 
 - `$schema` and `reset` are recognized wrappers, validated and excluded from the effective tree. `$schema` never loads another schema.
-- `x-` data is allowed in files as vendor data but does not create environment or CLI mappings.
+- Top-level `x-` keys are allowed in files as vendor data but do not create environment or CLI mappings.
 - Unknown ordinary keys fail `config.key.unknown`; invalid types, directive shapes and disallowed null fail `config.value.invalid`.
 - Explicit null requires catalog permission.
 - The ordinary production catalog and defaults are empty. `workingName` is the separate required bootstrap descriptor, supplied before discovery and never a mutable config key.
@@ -79,7 +79,7 @@ One trusted draft-07 schema is generated from the typed catalog. A recursively r
 
 Scalars and new collections replace lower values. Nested maps merge recursively when both sides are maps; lists replace as a whole, including element origins. `reset` paths are validated before setting and remove inherited descendant values and origins. Unaffected sibling origins survive.
 
-Deprecated and shadowed inputs produce safe warnings that name the kind, layer and key, never the value. `--strict` converts any warning into `config.warning.strict` and returns no partial tree.
+Deprecated and shadowed inputs produce safe warnings that name the kind, layer and key, never the value. `--strict` converts any warning into `config.warning.strict` and returns no partial tree. Recognized legacy environment and selector names map to current names; the legacy adapter emits at most one safe compatibility notice per process, and that notice goes to the error stream.
 
 Origin grammar is exact:
 
@@ -99,13 +99,14 @@ Without `--json`:
 - Basic success prints the effective tree as one JSON value.
 - Debug success prints `{ "config": <tree>, "origins": { "<dottedKey>": "<origin>" }, "loadedFiles": ["<path>"], "skippedLayers": [{ "layer": "<layer>", "reason": "<reason>" }] }`.
 - Get success prints the JSON value; with `--show-origin` it prints `{ "key": "<dottedKey>", "value": <value>, "origin": "<origin>" }`.
+- An unknown `get` key fails `config.key.unknown`; it never prints an empty success payload.
 - Warnings and human failure diagnostics go to the error stream through the same redaction boundary.
 
-With `--json`, the identical selected success payload is placed under `CommandResult.data`; one envelope is written, never a second bare document. Failures use `CommandResult.error` with no partial `data`. Secret values registered by the runtime edge are redacted from every mode before any byte is written. File-supplied secrets are rejected before merge rather than relying on redaction.
+With `--json`, the identical selected success payload is placed under `CommandResult.data`; one envelope is written, never a second bare document. Failures use `CommandResult.error` with no partial `data`. Secret values registered by the runtime edge are redacted from every mode before any byte is written. Catalog-designated secrets supplied by files are rejected before merge rather than relying on redaction.
 
 ### Errors
 
-Config failures carry `kind=config` and one exact code; all are `category=user`, `retryable=false`, `consequence=not_landed`, and project to `user-validation`/exit 1:
+Config failures carry `kind=config`, one exact code, and optional safe location metadata (`layer`, `key`, `file`, `line`); source text, values and exceptions never enter a failure. All are `category=user`, `retryable=false`, `consequence=not_landed`, and project to `user-validation`/exit 1:
 
 `config.file.malformed`, `config.key.unknown`, `config.environment.unmapped`, `config.value.invalid`, `config.interpolation.rejected`, `config.secret.forbidden`, `config.path.forbidden`, `config.reset.invalid`, and `config.warning.strict`.
 
@@ -140,13 +141,13 @@ Core configuration imports only its contracts and the trusted validator; it does
 - The actual host `LOG_TOKENS` or `LOG_STREAM` switch causes a safe `config.value.invalid` before the YAML parser is constructed. The parser never forwards source text, snippets, stacks or raw summaries.
 - The edge registers non-empty catalog-designated environment secrets before inspection. Redaction runs at the single serialization chokepoint.
 - Disabled or selection-skipped sources are never read, including poisoned files present on disk.
-- No credential, keyring, sidecar, transport or remote-mediated operation is implemented here. The M0-S12 story supplies one credential-resolution port later (environment-backed initially); a later sidecar may replace it. Direct and mediated adapters implement the same unchanged primitive ports, with mediated operations forwarded locally rather than receiving local credentials. That is a documentation-only adoption path for this change.
+- No credential, keyring, sidecar, transport or remote-mediated operation is implemented here. M0-S12 owns one credential-resolution port (environment-backed initially); a later sidecar may supply another implementation. Later direct and mediated adapters implement the same unchanged primitive ports, with mediated operations forwarded locally rather than receiving local credentials; that adoption path is documentation-only in this feature.
 
 ## Operational & Support
 
 ### Configuration and artifacts
 
-The core build emits the trusted `config.schema.json`, the defaults-position manifest and source identity files into `dist/config`. The existing exports-parity check validates that the shipped schema, manifest and defaults source identity stay synchronized with the typed source. Packed consumers import the built core `.` entry and core `./contracts`, plus the existing adapters `./file`, `./repo` and `./legacy` entries; no `./config` core subpath or new adapter subpath exists.
+The core build emits `config.schema.json`, `defaults-positions.json` and `schema-sources.json` into `dist/config`. The existing exports-parity check validates that the shipped schema, defaults-position manifest and schema-source hashes stay synchronized with the typed source. Packed consumers import the built core `.` entry and core `./contracts`, plus the existing adapters `./file`, `./repo` and `./legacy` entries; no `./config` core subpath or new adapter subpath exists.
 
 ### Inspection workflow
 
@@ -180,7 +181,7 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 - **Risk — untraceable values:** mitigated by per-node origins, the shipped defaults manifest and origin replacement rules.
 - **Risk — parser diagnostics:** mitigated by safe constructed failures, host-switch guard and no parser text crossing the port.
 - **Risk — dependency compatibility:** Proposed TDR-0003 and the truthful runtime-closure license registry require owner acceptance before merge/adoption.
-- **Deferred:** credential resolution, keyring/sidecar, provider routing and state storage are owned by M0-S12 and later consumers.
+- **Deferred:** M0-S12 owns credential resolution, keyring and sidecar; provider routing and state storage belong to later consumer stories.
 
 ## Glossary & References
 
