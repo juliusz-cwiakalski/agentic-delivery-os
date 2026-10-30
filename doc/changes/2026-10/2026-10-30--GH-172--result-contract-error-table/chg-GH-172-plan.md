@@ -494,6 +494,7 @@ Ticket-AC rollup (spec §17): T-AC1 (unit + golden tests) → Phases 1–4; T-AC
 | 1.0 | 2026-10-30 | @plan-writer | Initial plan: 7 phases (envelope contracts → error table/classification/projection → runCli+containment+goldens → redaction+edge seam → documented table+invariant checks → boundaries+CI+regression → finalize/evidence). OQ-T3 resolved as D1 (fixed `[redacted]` placeholder, value/key/substring replacement); OQ-T4 resolved as D2 (three depcruise rules with fixtures + one AST structure test with temp-copy mutations). D3–D12 bind modules, seed table, timing/runId/void-payload shapes, doc-table format, changeset/install.sh/marker/runtime-allowance decisions (all verified against the repo). All 38 TCs mapped to phases and ACs; per-phase single-commit discipline with ≤100-char lines; full quality-gates run list consolidated. |
 | 1.1 | 2026-10-30 | @plan-writer | DoR iteration-1 remediation (NOT_READY fixes): precision mirror of test plan v1.2 — D1 gains the contiguity clamp (contiguous per-registered-value replacement, never stitched across fields; fragments in-guarantee only when registered; split corpus case registers its fragments; marker-prefix/value-pattern matching rejected at v1); tasks 3.2/4.1/4.2 carry the clamp, fragment registration, and per-fragment zero-occurrence + byte-exact-golden vacuity guard; task 5.2 rewritten to the three recognizer levels (Level A namespace rule with foreign-namespace literals ignored/uncounted, Level B strict source-entry validation, Level C corpus as named default input with per-row `recognized`/`resolves`; S3 excludes exactly `tests/fixtures/result/code-corpora/**`; per-level counts; corpus file+row failure naming; `tests/**/*.test.ts` outside S1/S3); task 5.4 re-targeted to the level-scoped TC-SYNC-005 steps and TC-SYNC-001 corpus/ignored-literal counts; corpora documented as direct Level C input with the row schema; task 2.5 scopes TC-CLASSIFY-002 to classify-level route distinctness, cross-referencing the dispatch-level proof (TC-CONTAIN-001, Phase 3). Phase structure, phase count (7), and commit-message semantics unchanged. |
 | 1.2 | 2026-10-30 | @plan-writer | Review F-1 bookkeeping remediation (review artifact code-review/review-iter-1.yaml): all 41 task checkboxes across Phases 1–7 reconciled from unchecked to checked, and the Execution Log rewritten from all-Pending to all-Delivered with per-phase commit hashes, 2026-10-30 dates, and green-criteria results — matching the delivered state (every phase commit matches the plan's completion signal verbatim). Records the known deviation that the task-6.3 CI wiring landed in Phase 5 (`0d3352a`) because the `ci-topology` invariant requires every `scripts/checks` file to be invoked by a named job, while Phase 6 (`a1e2070`) delivered the boundary rules. No substantive plan change: tasks, scope, acceptance criteria, and commit messages untouched. |
+| 1.3 | 2026-10-30 | @plan-writer | Post-DoD CI remediation record (quality gates iteration 2, PR #193): appended the "Post-DoD CI Remediation (quality gates iteration 2)" appendix after the Execution Log — trigger (`ts-boundaries` exit 6, 6 dependency violations over 40 modules; `attw` InternalResolutionError for `@delivery-os/core/contracts` and `@delivery-os/core/branding` under node16 ESM in the packed tarball), root causes (cruise over an unbuilt tree; extensionless relative imports emitted into `.d.ts`), fixes (`pnpm build` before `check:boundaries` in `ts-boundaries`, rules unchanged; ESM-explicit `./*.js` relative specifiers in 4 source files), standing parity checks (`scripts/checks/boundary-ci-parity.ts`, `scripts/checks/exports-parity.ts`, both with tests and wired per the `ci-topology` every-check-invoked rule), and fresh-clone verification evidence. No change to Phases 1–7 tasks, checkboxes, or commit messages. |
 
 ## Execution Log
 
@@ -508,3 +509,34 @@ Ticket-AC rollup (spec §17): T-AC1 (unit + golden tests) → Phases 1–4; T-AC
 | 7 | Delivered | 2026-10-30 | 2026-10-30 | `b6d0ad4` | Evidence + reconciliation — `pnpm check` exit 0 (410 pass, 0 fail). |
 
 **Deviation note (recorded in the evidence pack and pm-notes)**: the CI wiring tasks (task 6.3's `ci.yml` lines + TC-SYNC-006 assertions) landed in Phase 5, commit `0d3352a` — the existing `ci-topology` invariant requires every `scripts/checks/*.ts` file to be invoked by a named CI job, so the two new checks could not ship unwired. Phase 6, commit `a1e2070`, delivered the boundary rules (tasks 6.1/6.2/6.4/6.5). All Phase 5 and Phase 6 tasks are complete; only the landing commit of the wiring slice differs from the phase plan.
+
+## Post-DoD CI Remediation (quality gates iteration 2)
+
+> Record appended post-DoD (plan v1.3): PR #193 CI went red on quality gates iteration 2 after this plan closed. The remediation is recorded here so reviewers of PR #193 see the complete artifact chain. Phases 1–7 tasks, checkboxes, and commit messages are unchanged by this record.
+
+**Trigger**: PR #193 CI red — two failures (raw):
+
+- `ts-boundaries`: 6 dependency violations across 40 modules — exit 6.
+- `ts-exports`: `attw` InternalResolutionError for `@delivery-os/core/contracts` and `@delivery-os/core/branding` under node16 ESM resolution in the packed tarball.
+
+**Root causes**:
+
+- `ts-boundaries` cruised an unbuilt tree — package subpaths resolve to `dist/` artifacts that did not exist in CI's fresh checkout; the local battery was green because the aggregate check chain builds first.
+- 8 extensionless relative imports in 4 source files were emitted verbatim into `.d.ts` output — unresolvable under node16 ESM in the pack; the bundler-mode typecheck permitted them locally.
+
+**Fixes**:
+
+- `pnpm build` added to `ts-boundaries` before `check:boundaries`; boundary rules unchanged — `.dependency-cruiser.cjs` diff empty.
+- ESM-explicit relative specifiers (`./*.js`) in `packages/core/src/contracts/index.ts`, `packages/core/src/contracts/error-table.ts`, `packages/cli/src/index.ts`, `packages/cli/src/edge.ts`.
+
+**Standing parity additions** (prevent local-green/CI-red recurrence):
+
+- `scripts/checks/boundary-ci-parity.ts` — asserts build-before-cruise ordering; mutation-proven.
+- `scripts/checks/exports-parity.ts` — `attw --pack` esm-only per publishable package; proven by packed-copy mutation.
+- Both ship with tests and are wired into CI per the `ci-topology` every-check-invoked rule.
+
+**Verification** (fresh clone, no-dist reproduction):
+
+- Boundary: exit 0 — 39 modules, 0 violations.
+- Exports: publint 5× good; attw 36 green / 0 failures across 5 packages.
+- `pnpm check` exit 0 — 417 pass / 0 fail.

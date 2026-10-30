@@ -20,11 +20,12 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 
 | Term / acronym | Definition | Category | Related UL term |
 |---|---|---|---|
-| Aggregate check | The single quality entry point `check` that chains `lint`, `format:check`, `typecheck`, `test`, and `check:boundaries` in that order. It exists at the workspace root and in every package; no alternate aggregate or bypass flag exists. | Quality | — |
+| Aggregate check | The single quality entry point `check` that chains `lint`, `format:check`, `typecheck`, `test`, and `check:boundaries` in that order. It exists at the workspace root and in every package; at the root it also appends the packed-exports parity check. No alternate aggregate or bypass flag exists. | Quality | — |
 | App error code | Stable symbolic hierarchical failure identity `domain.reason.detail` (for example `provider.quota.exceeded`) that resolves to exactly one error-table entry. Prose is never identity. | Result contract | — |
 | Brand-free glob | An ignore pattern that matches the project-local configuration path without naming any product, so it keeps matching after a rename. | Repository hygiene | — |
 | Branding seam | The single place where the working name enters and all name-derived values leave: the pure resolver in `core ./branding` plus its resolver-input contract. Every other component receives brand values as parameters. | Branding | — |
 | Changesets fixed group | The changesets configuration that versions `core`, `adapters`, `cli`, `mcp`, and `opencode` on one shared version line. `testkit` is excluded from the group and from every published dependency graph. | Release | — |
+| CI parity check | An invariant that binds a local gate to the way CI executes it instead of duplicating its logic. `boundary-ci-parity` requires `ts-boundaries` to build before cruising (the boundary rules resolve package names through built `dist`), and `exports-parity` runs `attw --pack` per publishable so declarations must resolve inside the packed artifact. | Quality | — |
 | Classification chain | The path from an engine failure to a table entry: domain kind -> app error code -> exit-code projection class. | Result contract | — |
 | CommandResult envelope | The one result contract of every command: `schemaVersion`, `runId`, `exitCode`, `timing`, and exactly one of `data` or `error`. The generic `Result<T, E>` remains the internal computation result; the envelope is the command-surface rendering. | Result contract | — |
 | Composition root | The single `createRuntime({ config, adapters, store, clock })` entry declared in `core` `.`; surfaces call it instead of wiring engines themselves. The scaffold declares the signature only. | Architecture | — |
@@ -70,6 +71,7 @@ _Expand every acronym at first use; keep the expanded list here._
 |---|---|---|
 | ADR | Architecture Decision Record | `doc/decisions/` |
 | AST | Abstract Syntax Tree | `scripts/checks/ambient-globals.ts` |
+| attw | `@arethetypeswrong/cli` | `scripts/checks/exports-parity.ts` |
 | CI | Continuous Integration | `.github/workflows/ci.yml` |
 | CLI | Command-Line Interface | `packages/cli/` |
 | ESM | ECMAScript Modules | `packages/*/package.json` |
