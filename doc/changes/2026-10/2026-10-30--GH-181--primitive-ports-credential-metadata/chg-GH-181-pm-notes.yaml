@@ -5,7 +5,7 @@ phases:
   clarify_scope: { started: "2026-10-30T21:00:00Z", completed: "2026-10-30T21:05:00Z" }
   specification: { started: "2026-10-30T21:06:00Z", completed: "2026-10-30T21:50:00Z", reopened: "2026-10-30T21:40:00Z", iterations: 2 }
   test_planning: { started: "2026-10-30T21:30:00Z", completed: "2026-10-30T22:00:00Z" }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: "2026-10-30T22:05:00Z", completed: "2026-10-30T22:20:00Z" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -33,6 +33,9 @@ notes:
     type: "retro"
     date: "2026-10-30"
   - text: "Specification iteration 2 completed: version window policy (DEC-7), closed reason taxonomy (DEC-8), codec placement in adapters internal module (DEC-9); AC-F5-6 added (17 ACs total). Test plan aligned to spec v1.1: 19 TCs, 17/17 AC coverage, no TODOs remaining (value-level secret scanning correctly deferred to M0-S15)."
+    type: "resolved"
+    date: "2026-10-30"
+  - text: "Delivery plan complete: 7 phases / 35 tasks, 17 ACs + 19 TCs mapped, per-phase commit signals. Plan resolved four artifact inconsistencies: codec at packages/adapters/src/io/envelope-codec.ts with root-test relative import (testkit package cannot reach adapter-internal module); fixture adapters at tests/fixtures/ports (root); new tests/types/ project chained into root typecheck for the AC-F2-2 type probe (vehicle for TC-PORT-004); invariant as ts-invariants step + check:boundaries append; schema id delivery.metadata.v1, bound 2048 bytes; absent/empty -> config.credential.missing."
     type: "resolved"
     date: "2026-10-30"
   - text: "Scope sources: issue body + backlog.md M0-S12 + concepts/primitive-catalogue.md + concepts/credential-sidecar.md + concepts/embedded-metadata.md. AC: (1) typed ports with capability flags, (2) CI boundary check fails on secret reads outside the credential port, (3) metadata envelope round-trips and degrades gracefully when a provider strips it. Dependencies M0-S1/S3/S4 verified merged (PRs 191/193/194)."
