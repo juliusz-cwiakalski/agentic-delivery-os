@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-fixture-0002",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 4
+  },
+  "data": {}
+}

@@ -27,8 +27,10 @@
   "cli": [
     "src/classify.ts",
     "src/commands/index.ts",
+    "src/edge.ts",
     "src/index.ts",
     "src/output/index.ts",
+    "src/output/serialize.ts",
     "src/projection.ts"
   ],
   "mcp": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],

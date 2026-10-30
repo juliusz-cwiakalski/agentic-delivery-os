@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-fixture-0003",
+  "exitCode": 1,
+  "timing": {
+    "totalMs": 7
+  },
+  "error": {
+    "code": "input.value.rejected",
+    "category": "user",
+    "retryable": false,
+    "consequence": "not_landed",
+    "remediationHint": "Correct the rejected value and retry the command.",
+    "summary": "The supplied value was rejected."
+  }
+}

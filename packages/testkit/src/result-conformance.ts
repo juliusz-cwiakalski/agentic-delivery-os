@@ -6,7 +6,7 @@
  * surface — so tests can validate bytes without handing the helper a CLI object.
  */
 
-import type { ErrorCategory, ErrorConsequence } from "@delivery-os/core/contracts";
+import type { BrandIdentity, ErrorCategory, ErrorConsequence } from "@delivery-os/core/contracts";
 import { RESULT_SCHEMA_VERSION } from "@delivery-os/core/contracts";
 
 export const RULES = [
@@ -239,3 +239,81 @@ export const assertEnvelopeContract = (parsed: unknown): Violation[] => {
 };
 
 export type { ErrorCategory, ErrorConsequence };
+
+/** Shape of a golden case's `injected.json` (A-T3, A-T4). */
+export type GoldenInjected = {
+  readonly ticks: readonly [number, number];
+  readonly runId: string;
+  readonly brand: BrandIdentity;
+  readonly program: string;
+  readonly secrets?: readonly string[];
+};
+
+/** Shape of a golden case's `meta.json`. */
+export type GoldenMeta = {
+  readonly outcome: "success" | "classified-failure" | "unknown-failure" | "broken-invocation";
+  readonly secrets: boolean;
+};
+
+/** One discovered golden case. */
+export type GoldenCase = {
+  readonly id: string;
+  readonly directory: string;
+  readonly argv: readonly string[];
+  readonly injected: GoldenInjected;
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly meta: GoldenMeta;
+};
+
+const readText = async (path: string): Promise<string> => {
+  const file = Bun.file(path);
+  if (!(await file.exists())) throw new Error(`golden file is missing: ${path}`);
+  return file.text();
+};
+
+const readJson = async <T>(path: string): Promise<T> => JSON.parse(await readText(path)) as T;
+
+/**
+ * Discover golden cases from disk. A case with no golden fails rather than being
+ * skipped; there is no auto-accept/update path.
+ */
+export const loadGoldenCases = async (root: string): Promise<GoldenCase[]> => {
+  const matches = [...new Bun.Glob("*/argv.json").scanSync({ cwd: root })];
+  if (matches.length === 0) throw new Error(`golden root has no cases: ${root}`);
+  const cases: GoldenCase[] = [];
+  for (const match of matches) {
+    const id = match.slice(0, -"/argv.json".length);
+    const directory = `${root}/${id}`;
+    const argv = await readJson<readonly string[]>(`${directory}/argv.json`);
+    const injected = await readJson<GoldenInjected>(`${directory}/injected.json`);
+    const meta = await readJson<GoldenMeta>(`${directory}/meta.json`);
+    if (!Array.isArray(argv) || argv.length === 0) {
+      throw new Error(`${id}: argv.json must be a non-empty array`);
+    }
+    if (
+      !Array.isArray(injected.ticks) ||
+      injected.ticks.length !== 2 ||
+      typeof injected.ticks[0] !== "number" ||
+      typeof injected.ticks[1] !== "number"
+    ) {
+      throw new Error(`${id}: injected.json must declare a two-tick clock`);
+    }
+    if (typeof injected.runId !== "string" || injected.runId.length === 0) {
+      throw new Error(`${id}: injected.json must declare a runId`);
+    }
+    const stdout = await readText(`${directory}/stdout.json`);
+    const stderrFile = Bun.file(`${directory}/stderr.txt`);
+    const stderr = (await stderrFile.exists()) ? await stderrFile.text() : "";
+    cases.push({
+      id,
+      directory,
+      argv,
+      injected,
+      stdout,
+      stderr,
+      meta,
+    });
+  }
+  return cases.sort((left, right) => left.id.localeCompare(right.id));
+};

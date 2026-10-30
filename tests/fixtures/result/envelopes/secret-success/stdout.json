@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-fixture-0010",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 13
+  },
+  "data": {
+    "token": "[redacted]",
+    "nested": {
+      "credential": "[redacted]"
+    },
+    "items": ["[redacted]", "safe-value"],
+    "[redacted]": "as-object-key",
+    "url": "https://example.invalid/dsn?token=[redacted]"
+  }
+}

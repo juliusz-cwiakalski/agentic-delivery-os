@@ -1,0 +1,6 @@
+{
+  "id": "rejected-promise",
+  "command": "synthetic.ok",
+  "kind": "reject",
+  "message": "synthetic rejection planted-fake-secret-0004"
+}

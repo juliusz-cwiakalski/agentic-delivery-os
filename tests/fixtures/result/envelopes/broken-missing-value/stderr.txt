@@ -1,0 +1,1 @@
+example-product: missing value for "--name"

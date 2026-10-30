@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-fixture-0004",
+  "exitCode": 2,
+  "timing": {
+    "totalMs": 7
+  },
+  "error": {
+    "code": "provider.quota.exceeded",
+    "category": "transient",
+    "retryable": true,
+    "consequence": "not_landed",
+    "remediationHint": "Wait for the quota window to reset, then retry the operation.",
+    "summary": "The provider quota was exceeded."
+  }
+}

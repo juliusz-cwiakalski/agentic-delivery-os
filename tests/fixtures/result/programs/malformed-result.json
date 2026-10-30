@@ -1,0 +1,5 @@
+{
+  "id": "malformed-result",
+  "command": "synthetic.ok",
+  "kind": "malformed"
+}

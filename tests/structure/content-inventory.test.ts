@@ -29,8 +29,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/contracts/result.ts": ["RESULT_SCHEMA_VERSION"],
   "cli/src/classify.ts": ["classifyDomainKind", "classifyThrown", "resolveAppErrorCode"],
+  "cli/src/edge.ts": ["createProductionDependencies", "registerEdgeSecrets"],
+  "cli/src/index.ts": ["runCli"],
+  "cli/src/output/serialize.ts": ["redact", "serializeEnvelope", "writeOutput"],
   "cli/src/projection.ts": ["projectExitCode"],
-  "testkit/src/result-conformance.ts": ["assertEnvelopeContract", "RULES"],
+  "testkit/src/result-conformance.ts": ["assertEnvelopeContract", "RULES", "loadGoldenCases"],
   "adapters/src/legacy/index.ts": [
     "createLegacyCompat",
     "resolveProcessLegacy",

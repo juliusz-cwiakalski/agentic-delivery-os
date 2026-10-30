@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-fixture-0009",
+  "exitCode": 1,
+  "timing": {
+    "totalMs": 2
+  },
+  "error": {
+    "code": "fallback.invocation",
+    "category": "user",
+    "retryable": false,
+    "consequence": "unknown",
+    "remediationHint": "Check the command name and arguments, then retry the invocation.",
+    "summary": "The invocation could not be understood."
+  }
+}

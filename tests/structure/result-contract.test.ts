@@ -9,6 +9,7 @@ import ts from "typescript";
 import { RESULT_SCHEMA_VERSION } from "../../packages/core/src/contracts/index";
 import {
   assertEnvelopeContract,
+  loadGoldenCases,
   RULES,
   type RuleId,
 } from "../../packages/testkit/src/result-conformance";
@@ -329,5 +330,16 @@ describe("TC-RESULT-006 conformance validator rule bijection", () => {
   test("validator imports no CLI surface", () => {
     const source = readFileSync(join(ROOT, "packages/testkit/src/result-conformance.ts"), "utf8");
     expect(source).not.toContain("@delivery-os/cli");
+  });
+});
+
+describe("TC-RESULT-006 golden-file sweep", () => {
+  test("every delivered golden is accepted with zero violations", async () => {
+    const cases = await loadGoldenCases(join(ROOT, "tests/fixtures/result/envelopes"));
+    expect(cases.length).toBeGreaterThan(0);
+    for (const testCase of cases) {
+      const parsed = JSON.parse(testCase.stdout) as unknown;
+      expect(assertEnvelopeContract(parsed), testCase.id).toEqual([]);
+    }
   });
 });
