@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { originLabel, resolveConfig } from "../../packages/core/src/index";
 import type { ConfigOrigin } from "../../packages/core/src/contracts/config";
+import { originLabel, resolveConfig } from "../../packages/core/src/index";
 import { FIXTURE_CATALOG } from "../fixtures/config/catalog";
 import { fileFacts } from "../fixtures/config/facts";
 

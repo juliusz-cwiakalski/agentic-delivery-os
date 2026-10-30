@@ -12,8 +12,8 @@ import type {
 } from "#contracts";
 import { CONFIG_LAYERS } from "#contracts";
 import {
-  type ConfigCatalog,
   type CatalogField,
+  type ConfigCatalog,
   catalogPaths,
   fieldAt,
   PRODUCTION_CATALOG,

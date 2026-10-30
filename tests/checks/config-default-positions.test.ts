@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { type DefaultPositionManifest, resolveConfig } from "../../packages/core/src/index";
 import {
   checkConfigArtifacts,
   configArtifacts,
   generateConfigArtifacts,
 } from "../../scripts/checks/exports-parity";
-import { resolveConfig, type DefaultPositionManifest } from "../../packages/core/src/index";
 
 const ROOT = process.cwd();
 

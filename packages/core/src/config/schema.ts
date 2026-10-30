@@ -1,5 +1,5 @@
 import Ajv, { type ErrorObject, type ValidateFunction } from "ajv";
-import { PRODUCTION_CATALOG, type ConfigCatalog, type CatalogField } from "./catalog.js";
+import { type CatalogField, type ConfigCatalog, PRODUCTION_CATALOG } from "./catalog.js";
 
 export type TrustedSchema = Readonly<Record<string, unknown>>;
 const valueSchema = (field: CatalogField, partial: boolean): TrustedSchema => {

@@ -2,7 +2,7 @@
  * TC-SCAFFOLD-033 — testkit is absent from every published dependency graph and
  * appears only in devDependencies.
  */
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const TESTKIT = "@delivery-os/testkit";

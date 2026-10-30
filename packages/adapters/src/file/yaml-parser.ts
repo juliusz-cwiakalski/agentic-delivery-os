@@ -12,8 +12,8 @@ import {
   isScalar,
   isSeq,
   LineCounter,
-  parseAllDocuments,
   type Node,
+  parseAllDocuments,
 } from "yaml";
 
 export type ParsedConfig =

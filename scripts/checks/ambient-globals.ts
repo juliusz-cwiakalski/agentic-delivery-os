@@ -6,7 +6,7 @@
  * tiers `core/src/{domain,app,config,branding}/**`. `bun:*` / `node:*` specifiers
  * are enforced over the same set by `runtime-apis-confinement` (dependency-cruiser).
  */
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 

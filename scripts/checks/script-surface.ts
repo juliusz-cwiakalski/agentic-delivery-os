@@ -3,7 +3,7 @@
  * exactly one aggregate `check` chains them in order, and no alternate aggregate
  * or bypass flag exists.
  */
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 export const NAMED_CHECKS = ["lint", "format:check", "typecheck", "test", "check:boundaries"];

@@ -1,4 +1,4 @@
-import type { PRODUCTION_CATALOG, ConfigCatalog } from "./catalog.js";
+import type { ConfigCatalog, PRODUCTION_CATALOG } from "./catalog.js";
 
 /** Typed catalog declarations are the only source of ordinary default values. */
 export const PRODUCTION_DEFAULTS = {} as const satisfies Readonly<

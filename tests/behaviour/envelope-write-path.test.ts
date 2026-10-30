@@ -3,12 +3,12 @@
  * select a declared carrier and write the envelope.
  */
 import { describe, expect, test } from "bun:test";
+import { parseEnvelope } from "../../packages/adapters/src/io/envelope-codec";
 import {
+  type CommentWriteRequest,
   ENVELOPE_KINDS,
   ENVELOPE_SCHEMA_ID,
-  type CommentWriteRequest,
 } from "../../packages/core/src/contracts/index";
-import { parseEnvelope } from "../../packages/adapters/src/io/envelope-codec";
 import {
   commentBlockOnlyAdapter,
   customFieldOnlyAdapter,

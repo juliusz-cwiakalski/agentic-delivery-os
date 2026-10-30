@@ -177,6 +177,8 @@ export const ERROR_TABLE = [
     remediationHint: "Supply the credential through its declared environment source and retry.",
     projectionClass: "user-validation",
     summary: "A required credential was not resolvable from its source.",
+  },
+  {
     code: "state.store.torn",
     domainKind: "state",
     category: "platform",

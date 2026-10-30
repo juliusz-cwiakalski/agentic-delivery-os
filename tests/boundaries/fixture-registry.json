@@ -256,6 +256,8 @@
       "id": "runtime-node-fs-adapter-io",
       "tc": "TC-SCAFFOLD-014",
       "path": "packages/adapters/src/io/probe.ts"
+    },
+    {
       "id": "runtime-node-fs-state-facade",
       "tc": "TC-STATE-022",
       "path": "packages/core/src/state/probe.ts"

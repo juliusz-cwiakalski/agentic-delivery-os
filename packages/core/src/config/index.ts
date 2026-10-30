@@ -5,18 +5,18 @@
 
 export {
   BOOTSTRAP_DESCRIPTOR,
-  PRODUCTION_CATALOG,
   type CatalogField,
   type ConfigCatalog,
   catalogPaths,
+  PRODUCTION_CATALOG,
 } from "./catalog.js";
-export { PRODUCTION_DEFAULTS, defaultsFor } from "./defaults.js";
+export { defaultsFor, PRODUCTION_DEFAULTS } from "./defaults.js";
 export { originLabel } from "./provenance.js";
 export {
-  resolveConfig,
   type DefaultPositionManifest,
   type ResolveConfigInput,
   type ResolvedConfig,
+  resolveConfig,
 } from "./resolver.js";
 export {
   compileTrustedSchema,
