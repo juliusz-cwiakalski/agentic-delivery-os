@@ -6,10 +6,11 @@
  * floating ref (supply chain), or the advisory (vulnerability gate).
  */
 import { describe, expect, test } from "bun:test";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { parse as parseYaml } from "yaml";
 import {
   scanText as scanBindingness,
   validate as validateBindingness,
@@ -18,7 +19,8 @@ import {
   scanText as scanSupplyChain,
   validate as validateSupplyChain,
 } from "../../scripts/checks/ci-supply-chain";
-import { validate as validateTopology } from "../../scripts/checks/ci-topology";
+import { BASH_JOBS, TS_JOBS, validate as validateTopology } from "../../scripts/checks/ci-topology";
+import { runSyncCheck } from "../../scripts/checks/error-table-sync";
 import { validate as validatePins } from "../../scripts/checks/pin-equality";
 import { validate as validateScriptSurface } from "../../scripts/checks/script-surface";
 import {
@@ -294,5 +296,109 @@ describe("forbidden-literal CI job", () => {
       .split("\n")
       .filter((line) => line.startsWith("-") && !line.startsWith("---"));
     expect(removed).toEqual([]);
+  });
+});
+
+describe("GH-172 CI binding", () => {
+  const NEW_CHECKS = [
+    "bun run scripts/checks/error-table-sync.ts",
+    "bun run scripts/checks/exit-code-literals.ts",
+  ];
+
+  test("both new checks are invoked by name from ts-invariants", () => {
+    const text = readFileSync(join(ROOT, CI_PATH), "utf8");
+    const job = jobBlock(text, "ts-invariants");
+    for (const check of NEW_CHECKS) expect(job).toContain(check);
+  });
+
+  test("TS_JOBS is unchanged and no new job id appears", () => {
+    expect(TS_JOBS).toEqual([
+      "ts-fresh-clone",
+      "ts-invariants",
+      "ts-typecheck",
+      "ts-lint",
+      "ts-format",
+      "ts-test",
+      "ts-boundaries",
+      "ts-build",
+      "ts-exports",
+      "ts-pins",
+      "ts-publish-guard",
+      "ts-license-audit",
+      "ts-vuln",
+      "ts-aggregate",
+      "ts-commitlint",
+      "ts-forbidden-literals",
+    ]);
+    const workflow = parseYaml(readFileSync(join(ROOT, CI_PATH), "utf8")) as {
+      jobs?: Record<string, unknown>;
+    };
+    expect(Object.keys(workflow.jobs ?? {}).sort()).toEqual([...TS_JOBS, ...BASH_JOBS].sort());
+  });
+
+  test("the aggregate chain is unchanged and excludes the new checks", () => {
+    const manifest = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    expect(manifest.scripts.check).toBe(
+      "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries",
+    );
+    expect(manifest.scripts.check).not.toContain("error-table-sync");
+    expect(manifest.scripts.check).not.toContain("exit-code-literals");
+  });
+
+  test("ci-bindingness reports no bypass in the invariant job", () => {
+    const text = readFileSync(join(ROOT, CI_PATH), "utf8");
+    const job = jobBlock(text, "ts-invariants");
+    for (const bypass of ["continue-on-error", "|| true", "set +e", "exit 0"]) {
+      expect(job).not.toContain(bypass);
+    }
+    expect(validateTopology(ROOT)).toEqual([]);
+  });
+
+  test("a drift mutation produces the non-zero exit CI would surface", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "ci-sync-drift-"));
+    try {
+      cpSync(
+        join(ROOT, "packages/core/src/contracts"),
+        join(directory, "packages/core/src/contracts"),
+        {
+          recursive: true,
+        },
+      );
+      cpSync(join(ROOT, "packages/cli/src"), join(directory, "packages/cli/src"), {
+        recursive: true,
+      });
+      cpSync(join(ROOT, "tests/fixtures/result"), join(directory, "tests/fixtures/result"), {
+        recursive: true,
+      });
+      mkdirSync(join(directory, "doc/spec/features"), { recursive: true });
+      cpSync(
+        join(ROOT, "doc/spec/features/feature-result-contract.md"),
+        join(directory, "doc/spec/features/feature-result-contract.md"),
+      );
+      writeFileSync(
+        join(directory, "packages/cli/src/index.ts"),
+        `${readFileSync(join(directory, "packages/cli/src/index.ts"), "utf8")}\nconst drift = "input.ci.drift";\n`,
+      );
+      const live = await runSyncCheck({ root: ROOT });
+      expect(live.failures).toEqual([]);
+      const drifted = await runSyncCheck({ root: directory });
+      expect(drifted.failures.length).toBeGreaterThan(0);
+      const spawned = spawnSync("bun", ["run", join(ROOT, "scripts/checks/error-table-sync.ts")], {
+        cwd: directory,
+        encoding: "utf8",
+      });
+      expect(spawned.status).not.toBe(0);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("the exit-literal check is invoked by name (TC-EXIT-002 step 7)", () => {
+    const text = readFileSync(join(ROOT, CI_PATH), "utf8");
+    expect(jobBlock(text, "ts-invariants")).toContain(
+      "bun run scripts/checks/exit-code-literals.ts",
+    );
   });
 });

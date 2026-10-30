@@ -431,5 +431,29 @@
       "tc": "TC-SCAFFOLD-015",
       "path": "packages/core/src/branding/probe.ts"
     }
+  ],
+  "surface-serializer-entry-only": [
+    {
+      "id": "surface-serializer-command-import",
+      "tc": "TC-BOUNDARY-002",
+      "path": "packages/cli/src/commands/probe.ts"
+    }
+  ],
+  "surface-projection-cli-only": [
+    {
+      "id": "surface-projection-mcp-import",
+      "tc": "TC-EXIT-003",
+      "path": "packages/mcp/src/probe.ts"
+    },
+    {
+      "id": "surface-projection-opencode-import",
+      "tc": "TC-EXIT-003",
+      "path": "packages/opencode/src/probe.ts"
+    },
+    {
+      "id": "surface-projection-adapters-import",
+      "tc": "TC-EXIT-003",
+      "path": "packages/adapters/src/probe.ts"
+    }
   ]
 }

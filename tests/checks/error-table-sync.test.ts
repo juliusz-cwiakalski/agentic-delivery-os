@@ -336,7 +336,7 @@ describe("TC-SYNC-005 identity hygiene and level separation", () => {
       const parsed = JSON.parse(text) as { rows: unknown[] };
       parsed.rows.push({
         id: "undeclared-corpus-only",
-        text: "input.corpus.only",
+        text: "input.corpus.unmapped",
         recognized: true,
         resolves: false,
       });
@@ -346,7 +346,7 @@ describe("TC-SYNC-005 identity hygiene and level separation", () => {
     expect(withoutCorpus.failures).toEqual([]);
     const withCorpus = await runSyncCheck({ root });
     const text = messages(withCorpus.failures);
-    expect(text).toContain("input.corpus.only");
+    expect(text).toContain("input.corpus.unmapped");
     expect(text).toContain("true-positives.json");
   });
 });

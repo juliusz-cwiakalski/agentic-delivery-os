@@ -176,6 +176,28 @@ module.exports = {
       to: { path: "^packages/(cli|mcp|opencode)/" },
     },
 
+    // --- GH-172 result-contract boundaries: one serialization entry point and
+    // a CLI-only exit projection. Both ship with failing fixtures + clean controls.
+    {
+      name: "surface-serializer-entry-only",
+      severity: "error",
+      comment:
+        "GH-172: only the CLI surface entry may import the serialization module; command modules must not write streams.",
+      from: {
+        path: "^packages/cli/src/",
+        pathNot: "^packages/cli/src/index\\.ts$",
+      },
+      to: { path: "^packages/cli/(src|dist)/output/serialize\\." },
+    },
+    {
+      name: "surface-projection-cli-only",
+      severity: "error",
+      comment:
+        "GH-172: the exit-code projection may not be imported from core, adapters, mcp, or opencode; the standalone CLI owns it.",
+      from: { path: "^packages/(core|adapters|mcp|opencode)/" },
+      to: { path: "^packages/cli/(src|dist)/projection\\." },
+    },
+
     // --- DEC-2 Additional rules bullet 6: runtime-API confinement.
     // Allowlist (ADR verbatim): the `core ./state` driver code, the adapter I/O
     // subpaths, the CLI build, and the OpenCode host integration. Nothing else.
