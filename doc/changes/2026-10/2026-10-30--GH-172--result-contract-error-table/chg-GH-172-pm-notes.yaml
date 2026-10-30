@@ -5,7 +5,7 @@ phases:
   clarify_scope: { started: "2026-10-30T01:18:00Z", completed: "2026-10-30T01:25:00Z" }
   specification: { started: "2026-10-30T01:45:00Z", completed: "2026-10-30T02:25:00Z" }
   test_planning: { started: "2026-10-30T02:05:00Z", completed: "2026-10-30T02:35:00Z" }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: "2026-10-30T02:42:00Z", completed: "2026-10-30T02:52:00Z" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -59,6 +59,9 @@ notes:
   - text: "Commitlint CI discovery (pre-push): ts-commitlint is a real CI job on PRs to main-tools enforcing body-max-line-length=100 as ERROR (not a required context — turns PR red without blocking merge; squash-merge bodies on main-tools are never linted, which is why b3a00a9/32784af history violates but stayed green). Commit ffdd850 violated (body lines up to 350 chars); amended locally while unpushed. Retro: the warn-only local hook masked an error-severity CI rule — committer flow should wrap commit bodies <=100 chars by default on this repo; caught cheaply because the amend happened before push."
     type: "retro"
     date: 2026-10-30
-  - text: "Test plan COMPLETED at v1.1 after touch-up: 38 TCs (IDs/counts/tiers unchanged), fully consistent with spec v1.1 — OQ-T1/OQ-T2 resolved in-plan (in-change documented table; DEC-13 two-entry fallback with fallback.invocation/fallback.internal recorded as the declared two-segment exception in the sync-check literal rules + assumption A-T11); OQ-T3 (redaction placeholder policy) and OQ-T4 (ambient-brand enforcement vehicle) remain open as NON-BLOCKING delivery-planning inputs — plan-writer must resolve both. Ticket ACs fully covered; no blocking gaps for DoR."
+  - text: "Test plan COMPLETED at v1.1 after touch-up: 38 TCs (IDs/counts/tiers unchanged), fully consistent with spec v1.1 — OQ-T1/OQ-T2 resolved in-plan (in-change documented table; DEC-13 two-entry fallback with fallback.invocation/fallback.internal recorded as the declared two-segment exception in the sync-check literal rules + assumption A-T11); OQ-T3 (redaction placeholder policy) and OQ-T4 (ambient-brand enforcement vehicle) remained open as NON-BLOCKING delivery-planning inputs — both since resolved by the plan. Ticket ACs fully covered; no blocking gaps for DoR."
+    type: "info"
+    date: 2026-10-30
+  - text: "Delivery plan COMPLETED (48d1a08, marker committed separately): 7 phases, one Conventional Commit each, independently green at every boundary; all 38 TCs mapped to phases/ACs; OQ-T3 resolved as fixed [redacted] placeholder policy (substring-embedded corpus + golden determinism); OQ-T4 resolved as split enforcement (3 depcruise rules with failing fixtures + 1 AST structure test for content/source-order bans); repo-constraint findings: no changeset (private 0.0.0 packages), no ADOS_DELIVERY_SCRIPTS registration (matches convention), feature doc without ados_distribution marker (doc/spec outside drift-guard scan set), one confined runtime allowance (cli edge). Retro: PM forgot the pm-notes delivery_planning marker before delegating the commit — committer correctly refused to fabricate tracker state; marker committed separately; lesson: pm-notes phase transitions must precede every committer invocation. Retro 2: a malformed edit tool call truncated the test-plan note and corrupted the YAML — detected by reading the file, repaired in place; lesson: edit oldString must be the complete exact text, never a prefix."
     type: "info"
     date: 2026-10-30
