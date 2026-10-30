@@ -212,10 +212,8 @@ module.exports = {
       from: {
         path: "^packages/",
         pathNot: [
-          "^packages/core/src/state/",
-          "^packages/adapters/src/(repo|file|host|session|legacy|credentials)/",
           "^packages/core/src/state/driver/",
-          "^packages/adapters/src/(repo|file|host|session|legacy)/",
+          "^packages/adapters/src/(repo|file|host|session|legacy|credentials)/",
           "^packages/cli/",
           "^packages/opencode/",
         ],

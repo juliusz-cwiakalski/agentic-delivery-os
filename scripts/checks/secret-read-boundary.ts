@@ -27,13 +27,19 @@ export type AllowlistEntry = {
   readonly reason: string;
 };
 
-/** The enumerated v1 allowlist: one credential implementation and two readers. */
+/** The enumerated v1 allowlist: one credential implementation and three readers. */
 export const SECRET_READ_ALLOWLIST: readonly AllowlistEntry[] = [
   {
     kind: "directory",
     path: "packages/adapters/src/credentials",
     class: "credential-material",
     reason: "The single environment-backed credential-port implementation.",
+  },
+  {
+    kind: "file",
+    path: "packages/core/src/state/driver/runtime-edge.ts",
+    class: "configuration-environment-source",
+    reason: "State driver Windows owner-identity resolution for icacls ACL verification.",
   },
   {
     kind: "file",

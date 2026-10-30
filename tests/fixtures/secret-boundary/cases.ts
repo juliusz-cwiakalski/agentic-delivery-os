@@ -129,6 +129,8 @@ export const SECRET_READ_CASES: readonly SecretReadCase[] = [
       "packages/adapters/src/file/yaml-parser.ts":
         "export const blocked = Boolean(process.env.LOG_TOKENS);\n",
       "packages/adapters/src/legacy/index.ts": "export const legacy = process.env.LEGACY;\n",
+      "packages/core/src/state/driver/runtime-edge.ts":
+        "export const windowsUser = process.env.USERNAME ?? process.env.USER;\n",
     },
     assertFile: "packages/adapters/src/credentials/index.ts",
   },
