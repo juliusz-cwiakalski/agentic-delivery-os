@@ -6,7 +6,7 @@ phases:
   specification: { started: "2026-10-30T01:45:00Z", completed: "2026-10-30T02:25:00Z" }
   test_planning: { started: "2026-10-30T02:05:00Z", completed: "2026-10-30T03:12:00Z" }
   delivery_planning: { started: "2026-10-30T02:42:00Z", completed: "2026-10-30T02:52:00Z" }
-  dor_check: { started: "2026-10-30T02:58:00Z", completed: null }
+  dor_check: { started: "2026-10-30T02:58:00Z", completed: "2026-10-30T03:20:00Z" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -72,5 +72,8 @@ notes:
     type: "info"
     date: 2026-10-30
   - text: "Test planning iteration 2 COMPLETED (2026-10-30T03:12Z): test plan v1.2 — Finding 1 [major] fixed with three recognizer levels (Level A scan-level namespace rule, foreign namespaces ignored/uncounted; Level B strict source-entry validation; Level C corpus as direct named input with per-row recognized/resolves expectations) plus narrow S3 exclusion of tests/fixtures/result/code-corpora/** only; Finding 2 [minor] fixed via fragment registration (option a; marker-prefix matching rejected at v1, D1 contiguity clamp documented, vacuity guard added for short fragments); Finding 3 [minor] fixed (TC-CLASSIFY-002 = classify-level distinctness; dispatch proof is TC-CONTAIN-001/Phase 3); nit 5 handled by reference note (survey pre-dates DEC-13, superseded phrasing); nit 6 covered by the S1/S3 scope sentence. Plan mirrored to v1.1 (9 items, phase structure and commit messages unchanged, 38 TCs unchanged). No spec change required. DoR re-run (iteration 2) follows."
+    type: "info"
+    date: 2026-10-30
+  - text: "DoR gate iteration 2: READY (2026-10-30T03:20Z), all 10 facets PASS; verdict persisted in readiness-iter-2.md. Iteration-1 findings verified substantively resolved; no new inconsistencies introduced by remediation. Non-blocking observations carried to reviewer/coder: plan D10 invariant-count nit (19 today, rides a future revision); S3 corpus-exclusion glob is load-bearing (must match tests/fixtures/result/code-corpora/** exactly); doc-syncer must source fallback semantics from spec DEC-13, not the survey (pre-DEC-13 phrasing retained by design). Delivery (phase 6) unblocked; hard gate satisfied at iteration 2 of ~3 cap."
     type: "info"
     date: 2026-10-30
