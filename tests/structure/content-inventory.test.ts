@@ -28,6 +28,13 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "FALLBACK_INVOCATION_CODE",
   ],
   "core/src/contracts/result.ts": ["RESULT_SCHEMA_VERSION"],
+  "core/src/contracts/adapter-capabilities.ts": ["ADAPTER_OPERATIONS", "CARRIER_KINDS"],
+  "core/src/contracts/envelope.ts": [
+    "DEGRADATION_REASONS",
+    "ENVELOPE_KINDS",
+    "ENVELOPE_MAX_BYTES",
+    "ENVELOPE_SCHEMA_ID",
+  ],
   "cli/src/classify.ts": ["classifyDomainKind", "classifyThrown", "resolveAppErrorCode"],
   "cli/src/commands/config.ts": ["createConfigCommandDefinition"],
   "cli/src/commands/index.ts": ["createConfigCommandDefinition"],

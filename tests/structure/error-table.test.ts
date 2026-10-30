@@ -215,10 +215,14 @@ describe("TC-TABLE-002 fallback containment", () => {
 describe("TC-TABLE-003 code identity", () => {
   test("all config discriminants are declared once with a matching namespace", () => {
     const config = entries.filter((entry) => entry.domainKind === "config");
-    expect(config).toHaveLength(9);
+    expect(config).toHaveLength(10);
     const declared = [
       ...readFileSync(join(ROOT, CONTRACTS_DIR, "config.ts"), "utf8").matchAll(
         /\| "(config\.[a-z]+\.[a-z]+)"|= "(config\.[a-z]+\.[a-z]+)"/g,
+      ),
+      // The credential port carries the `config`-kind identity it surfaces.
+      ...readFileSync(join(ROOT, CONTRACTS_DIR, "credentials.ts"), "utf8").matchAll(
+        /= "(config\.[a-z]+\.[a-z]+)"/g,
       ),
     ].map((match) => match[1] ?? match[2]);
     expect(declared.sort()).toEqual(config.map((entry) => entry.code).sort());

@@ -117,6 +117,7 @@ A success envelope has exactly the keys `schemaVersion`, `runId`, `exitCode`, `t
 | config.path.forbidden | config | user | false | not_landed | Move the machine path to a system or user-global source and retry. | user-validation | A machine path was supplied from a forbidden source. |
 | config.reset.invalid | config | user | false | not_landed | Correct the reset paths and retry. | user-validation | A configuration reset is invalid. |
 | config.warning.strict | config | user | false | not_landed | Resolve the named warning and retry. | user-validation | Strict configuration validation rejected a warning. |
+| config.credential.missing | config | user | false | not_landed | Supply the credential through its declared environment source and retry. | user-validation | A required credential was not resolvable from its source. |
 
 This table is the human- and agent-readable counterpart of `ERROR_TABLE`. The sync check requires each source entry to have exactly one documented row and each documented row to have exactly one source entry; the two fallback rows are included with no containment exemption.
 

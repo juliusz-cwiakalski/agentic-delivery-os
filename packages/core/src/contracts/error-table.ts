@@ -168,4 +168,14 @@ export const ERROR_TABLE = [
     projectionClass: "user-validation",
     summary: "Strict configuration validation rejected a warning.",
   },
+  {
+    code: "config.credential.missing",
+    domainKind: "config",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint: "Supply the credential through its declared environment source and retry.",
+    projectionClass: "user-validation",
+    summary: "A required credential was not resolvable from its source.",
+  },
 ] as const satisfies readonly ErrorTableEntry[];

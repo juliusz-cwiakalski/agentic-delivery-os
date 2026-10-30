@@ -67,6 +67,45 @@ export type TelemetryEventSchemaName = "delivery.event.v1";
  */
 export type TelemetryMetricSchemaName = "delivery.metric.v1";
 
+export {
+  ADAPTER_OPERATIONS,
+  type AdapterCapabilityDeclaration,
+  type AdapterOperation,
+  CARRIER_KINDS,
+  type CapabilityGap,
+  type CapabilityGapReason,
+  type CarrierKind,
+  type CarrierSelectionInput,
+  type DeclaredCarrierWrite,
+} from "./adapter-capabilities.js";
+
+export type {
+  CredentialFailureCode,
+  CredentialPort,
+  CredentialReference,
+  CredentialResolution,
+  CredentialResolutionFailure,
+  CredentialSourceKey,
+  SecretMaterial,
+} from "./credentials.js";
+
+export {
+  type CommentReadView,
+  type CommentWriteRequest,
+  DEGRADATION_REASONS,
+  type DegradationReason,
+  ENVELOPE_KINDS,
+  ENVELOPE_MAX_BYTES,
+  ENVELOPE_SCHEMA_ID,
+  type EnvelopeCarrierKind,
+  type EnvelopeCommentProvenance,
+  type EnvelopeDeliveryLinkage,
+  type EnvelopeKind,
+  type EnvelopeV1Payload,
+  type HeuristicProvenance,
+  type MetadataDegradationEvidence,
+  type MetadataEnvelopeV1,
+} from "./envelope.js";
 // The error table is the single machine-readable source of failure identity.
 export {
   DOMAIN_KINDS,
@@ -76,6 +115,32 @@ export {
   FALLBACK_INTERNAL_CODE,
   FALLBACK_INVOCATION_CODE,
 } from "./error-table.js";
+export type {
+  AdapterContract,
+  DeliveryRequest,
+  DeliveryRequestReviewState,
+  DeliveryStateAlias,
+  DeliveryThread,
+  ExternalSystemAuthMethod,
+  ExternalSystemInstance,
+  ExternalSystemKind,
+  IdempotencyKey,
+  PipelineJob,
+  PipelineJobState,
+  PipelineRun,
+  ProviderQualifiedIdentity,
+  RetryBackoff,
+  RetryPolicy,
+  TraceEvidenceRef,
+  WorkflowMap,
+  WorkflowStateMapping,
+  WorkflowTransitionMechanism,
+  WorkItem,
+  WorkItemComment,
+  WorkItemRelation,
+  WorkItemRelationKind,
+  WorkItemStatus,
+} from "./ports.js";
 // The command-surface envelope lives beside the generic `Result<T, E>` and does
 // not replace it (DEC-1). See `./result` for the full contract documentation.
 export {
