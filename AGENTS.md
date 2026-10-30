@@ -194,7 +194,7 @@ Canonical values: see `doc/decisions/ODR-0001-classify-yaml-register-templates-r
 ├── .ai/
 │   ├── agent/            # PM tracker config (pm-instructions.md), PR/MR platform config (pr-instructions.md), code-review instructions (incl. checklist)
 │   ├── local/            # git-ignored ephemeral state
-│   └── rules/            # language/tool rules (bash.md)
+│   └── rules/            # language/tool rules (bash.md, typescript.md, testing-strategy.md)
 ├── packages/             # pnpm workspace — typed delivery tooling (see doc/spec/features/feature-monorepo-scaffold-toolchain.md)
 │   ├── core/             # @delivery-os/core — runtime-neutral services, contracts, state, branding
 │   ├── adapters/         # @delivery-os/adapters — per-provider and per-I/O adapter subpaths
@@ -243,6 +243,10 @@ Canonical values: see `doc/decisions/ODR-0001-classify-yaml-register-templates-r
 | TypeScript checks | — | `scripts/checks/*.ts` — repository invariant checks run with Bun (`bun run`, covered by `bun test`) |
 
 `scripts/checks/*.ts` holds TypeScript repository invariant checks and runs with Bun; it sits beside the bash automation without changing the bash `.sh` convention. Bash language rules remain in [.ai/rules/bash.md](.ai/rules/bash.md); TypeScript workspace code follows `tsconfig.base.json` and the workspace lint/format configuration.
+
+## TypeScript workspace rules
+
+Before editing `packages/**`, `tests/**`, or `scripts/checks/**` (or root workspace configs), read [.ai/rules/typescript.md](.ai/rules/typescript.md): strict-TS patterns, layering and purity, ports and adapters, the error contract, and bun:test authoring rules. Test-run conventions and the gate battery live in [.ai/rules/testing-strategy.md](.ai/rules/testing-strategy.md); the aggregate gate is `pnpm check`.
 
 ## Running tests
 

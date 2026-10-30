@@ -52,9 +52,17 @@ const writeText = (stream: CliSink, text: string): void => {
   stream.write(text);
 };
 
+export type WriteOutputOptions = {
+  /** Opt-in human success JSON; machine mode always uses the envelope instead. */
+  readonly humanJson?: unknown;
+  /** Safe structured notices, emitted once each on stderr in every mode. */
+  readonly warnings?: readonly string[];
+};
+
 /**
- * Write the machine envelope (when requested) and the human diagnostic (when
- * present). Both go through redaction; the write helper is the single call site.
+ * Write the machine envelope (when requested), opt-in human success JSON, the
+ * human diagnostic and safe warnings. Every path goes through redaction; the
+ * write helper remains the single stream-write call site.
  */
 export function writeOutput(
   streams: CliStreams,
@@ -62,13 +70,21 @@ export function writeOutput(
   diagnostic: string | undefined,
   secrets: readonly string[],
   emitEnvelope: boolean,
+  options: WriteOutputOptions = {},
 ): void {
   if (emitEnvelope) {
     const text = serializeEnvelope(envelope, secrets);
     writeText(streams.stdout, text);
+  } else if (options.humanJson !== undefined) {
+    const redacted = redact(options.humanJson, secrets);
+    const text = JSON.stringify(redacted, null, 2);
+    writeText(streams.stdout, `${text ?? "null"}\n`);
   }
   if (diagnostic !== undefined) {
     const redactedDiagnostic = redact(diagnostic, secrets);
     writeText(streams.stderr, redactedDiagnostic);
+  }
+  for (const warning of options.warnings ?? []) {
+    writeText(streams.stderr, `${redact(warning, secrets)}\n`);
   }
 }

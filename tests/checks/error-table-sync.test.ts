@@ -50,6 +50,8 @@ const ROW_INVOCATION =
   "| fallback.invocation | fallback | user | false | unknown | Check the command name and arguments, then retry the invocation. | user-validation | The invocation could not be understood. |";
 const ROW_INTERNAL =
   "| fallback.internal | fallback | platform | false | unknown | Inspect the diagnostics stream and report the failure if it persists. | platform-provider | The failure could not be classified. |";
+const ROW_CONFIG =
+  "| config.value.invalid | config | user | false | not_landed | Correct the value to match the configuration schema and retry. | user-validation | A configuration value is invalid. |";
 
 const insertDocRow =
   (row: string): ((text: string) => string) =>
@@ -195,6 +197,22 @@ describe("TC-SYNC-003 drift B: documented rows without source entries", () => {
 });
 
 describe("TC-SYNC-004 drift C: source entries without documented rows", () => {
+  test("config row drift fails from either side", async () => {
+    const docMissing = makeTempRoot();
+    editFile(docMissing, DOC, removeDocRow(ROW_CONFIG));
+    expect(messages((await runSyncCheck({ root: docMissing })).failures)).toContain(
+      "source entry config.value.invalid is undocumented",
+    );
+    const machineMissing = makeTempRoot();
+    editFile(
+      machineMissing,
+      TABLE,
+      replaceTableCode("config.value.invalid", "config.value.changed"),
+    );
+    const failures = messages((await runSyncCheck({ root: machineMissing })).failures);
+    expect(failures).toContain("documented code config.value.invalid has no source entry");
+    expect(failures).toContain("source entry config.value.changed is undocumented");
+  });
   test("deleting a documented row reports the source entry as undocumented", async () => {
     const root = makeTempRoot();
     editFile(root, DOC, removeDocRow(ROW_INPUT));

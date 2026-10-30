@@ -43,7 +43,7 @@ Your workflow:
    - If the failing workflow produces screenshots or other visual artifacts:
      - call `@image-reviewer` and pass the artifact(s) plus the expected UI state/behavior
      - incorporate its findings into your hypotheses (visual regressions, missing states, misaligned selectors, layout shifts).
-4. Inspect related code, configs, scripts, or dependencies.
+4. Inspect related code, configs, scripts, or dependencies. Before editing, load the applicable rule files from `.ai/rules/` (per its README index): `typescript.md` for anything under `packages/`, `tests/`, or `scripts/checks/`; `bash.md` for `scripts/**.sh` and `tools/`; `installer.md` for install scripts.
 5. Form one or more hypotheses explaining the failure.
 6. Evaluate each hypothesis by targeted checks or experiments.
 7. Decide on the most probable root cause.
@@ -74,6 +74,7 @@ Escalation rules:
 
 Quality control:
 
+- Load the applicable `.ai/rules/*.md` file(s) before editing code; fixes must satisfy them, not just make the failure disappear.
 - After each fix, ask `@runner` to re-run relevant tests.
 - Validate that no new regressions were introduced.
 - If the failure involved UI regressions and you used `@image-reviewer`, ensure the critique's issues are addressed or explicitly ruled out with evidence.

@@ -14,7 +14,7 @@ Repository-specific review guidance for the `reviewer` agent when reviewing ADOS
 
 ## Repository Context
 
-- This repo's primary deliverables are **agent prompts** (`.opencode/agent/*.md`) and **command definitions** (`.opencode/command/*.md`). A degraded prompt degrades everything downstream — treat prompt changes with the same rigor as production code.
+- This repo has two stacks. (1) Agent prompts and commands (`.opencode/agent/*.md`, `.opencode/command/*.md`): a degraded prompt degrades everything downstream, treat prompt changes with the same rigor as production code. (2) The typed delivery tooling monorepo (`packages/**`, ADR-0003): pnpm + Bun, strict TypeScript, enforced boundaries.
 - XML structure is preferred for Claude models; Markdown for GPT models; JSON for DeepSeek models.
 - Every Markdown file must carry a three-line YAML frontmatter: copyright, Apache-2.0 license reference, and canonical URL.
 - Bash scripts carry the same three lines as comments after the shebang.
@@ -75,7 +75,21 @@ The `reviewer` agent evaluates each applicable item against the diff.
 
 - [ ] Changed code paths have corresponding test coverage
 - [ ] Test files follow `test-*.sh` naming in `.tests/` directories
+- [ ] TypeScript tests follow `tests/<layer>/**/*.test.ts` with `bun:test`, are deterministic (no clock, network, `$HOME`, or order dependence), and prefer injected fakes over `mock.module`
 - [ ] Acceptance criteria from spec are verifiable
+
+### TypeScript workspace (`packages/`, `tests/`, `scripts/checks/`)
+
+Review order is mechanical-first: assume `pnpm check` gates (Biome, tsc, depcruise, exports parity) ran or will run in CI; do not spend findings on what they already block. Verify the gates RAN (evidence in plan/gates), then spend judgment on what tooling cannot check. Findings that mirror a rule must cite the `.ai/rules/typescript.md` section so coder and reviewer stay aligned.
+
+- [ ] `.ai/rules/typescript.md` compliance: imports via `#` aliases or declared subpaths only; optional props modelled as absent; indexed reads handled; no `any`/`!`/unjustified `as`
+- [ ] Layering intent: runtime and I/O only in allowed locations; inner code never constructs adapters; new edges carry a matrix update plus a failing negative fixture in the same change
+- [ ] Purity seams: time, randomness, env arrive as parameters; no ambient globals outside the guarded set
+- [ ] Error contract: result envelope used; error codes registry-synced both directions; messages name the failing input and next action; no secrets in any emission
+- [ ] Branding: no hardcoded product names; seed tokens only inside the scanner mechanism and its tests
+- [ ] Test quality: fakes over module mocks; golden files normalized and regenerable; snapshots reviewed as code
+- [ ] Empirical verification: run targeted checks yourself when feasible (a focused `bun test`, a production-shaped probe). Prefer proving a rule fires in the production resolution world over trusting fixture-only evidence; a fixture that fires only in an artificial resolution world proves nothing (GH-170 lesson)
+- [ ] Environment contracts: a check that depends on local state (built `dist`, fetched baseline commits, materialized `node_modules`) must declare and satisfy that contract in CI, not silently assume it
 
 ### Consistency
 
@@ -87,6 +101,7 @@ The `reviewer` agent evaluates each applicable item against the diff.
 ## What to Ignore
 
 - Formatting handled by CI (line length, trailing whitespace) — do not flag these.
+- TypeScript style owned by Biome (formatting, import organization, lint style) and boundary violations already gated by dependency-cruiser: verify the gate ran and note a miss on the GATE, do not duplicate per-line findings.
 - Minor wording preferences in documentation prose — focus on correctness over style.
 - Model selection choices — these are intentional and context-dependent.
 

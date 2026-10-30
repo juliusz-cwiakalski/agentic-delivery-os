@@ -1,7 +1,5 @@
 /**
  * `@delivery-os/testkit` — dev-only fakes and conformance helpers (`.`).
- * Types only at scaffold; never published.
+ * Re-exports the envelope conformance validator for test suites.
  */
-
-/** Placeholder marker for the testkit entry. */
-export type TestkitPlaceholder = { readonly __package: "testkit" };
+export { assertEnvelopeContract } from "./result-conformance.js";

@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
 links:
-  related_changes: ["GH-170", "GH-171", "GH-172"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173"]
   related_decisions: ["ADR-0003"]
 ---
 
@@ -16,7 +16,7 @@ links:
 
 ## Overview
 
-The repository hosts a six-package pnpm workspace under `packages/` for the TypeScript delivery tooling, alongside the existing bash delivery stack. The workspace is **structure over content**: every declared package, subpath, export, boundary rule, fixture, and quality gate exists and is enforced, while engines, business logic, provider implementations, and drivers are intentionally absent (`empty-but-enforced`).
+The repository hosts a six-package pnpm workspace under `packages/` for the TypeScript delivery tooling, alongside the existing bash delivery stack. The workspace is **structure over content** for the remaining engines, business logic, provider implementations, and drivers: every declared package, subpath, export, boundary rule, fixture, and quality gate is enforced. The configuration tier is now implemented and documented separately in [Configuration Layer and Inspection](feature-config-layer.md); the other runtime contracts remain scaffold placeholders.
 
 The scaffold provides the substrate every later tooling story lands in. Its package matrix, core tier matrix, adapter subpaths, and runtime-API confinement rules are mechanical gates rather than prose, and every forbidden edge is proven by a failing negative fixture.
 
@@ -63,7 +63,7 @@ createRuntime(options: {
 }): Runtime;
 ```
 
-The signature is types-only. `RuntimeConfig`, `RuntimeAdapters`, `RuntimeStore`, `RuntimeClock`, and `Runtime` are placeholder contracts at scaffold; no implementation exists.
+The composition-root signature remains types-only. `RuntimeConfig`, `RuntimeAdapters`, `RuntimeStore`, `RuntimeClock`, and `Runtime` are placeholder contracts; the configuration capability is exposed through the separate `resolveConfig` core entry and the CLI edge rather than through `createRuntime`.
 
 The `adapters` package's `./azure` subpath exists as an empty placeholder with no consumer.
 
@@ -169,7 +169,7 @@ The root `typecheck` and `test` scripts each declare a `pnpm build` prerequisite
 
 ### License registry
 
-`doc/legal/dependency-licenses.yaml` records the direct external dev-dependency set with exact versions, SPDX identifiers, source, and approved verdicts, plus the allow-list. `scripts/checks/license-audit.ts` parses SPDX expressions (AND/OR/parentheses) and fails closed on unregistered dependencies, non-allow-listed branches, empty licenses, or a registry/allow-list mismatch.
+`doc/legal/dependency-licenses.yaml` records direct external development and runtime uses plus the locked runtime closure, with exact resolved versions, SPDX identifiers, owners, dependency fields, and proposed approved verdicts, plus the allow-list. `scripts/checks/license-audit.ts` parses SPDX expressions (AND/OR/parentheses) and fails closed on unregistered uses, non-allow-listed branches, empty licenses, conflicting or missing versions, or a registry/allow-list mismatch.
 
 ### Repository hygiene
 
@@ -196,7 +196,7 @@ No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scr
 | `packages/*/package.json` | Manifests: exports, imports aliases, `workspaceImports`, scripts, privacy |
 | `packages/*/tsconfig.json` | Composite configs extending the strict base |
 | `packages/core/src/index.ts` | The `createRuntime` composition-root signature |
-| `packages/*/src/**` | Placeholder sources and internal tier directories |
+| `packages/*/src/**` | Internal tier directories; configuration, file/repo/legacy adapters and CLI inspection carry implemented code, while the remaining engines and providers are placeholders |
 | `package.json` | Workspace root: pinned `packageManager`, five named scripts, aggregate `check`, dev toolchain |
 | `pnpm-workspace.yaml` | Workspace globs (`packages/*`) |
 | `tsconfig.base.json` / `tsconfig.json` | Strict base flags / solution references |
@@ -240,7 +240,7 @@ core              ──> no workspace dependencies
 | NFR-7 | CI bindingness | No advisory job, bypass flag, or error-swallowing construct |
 | NFR-8 | Bash stack | No regression; bash jobs remain authoritative |
 | NFR-9 | Local commit-msg hook | Offline, non-mutating, never blocks an agent commit |
-| NFR-10 | Dependency risk | 0 high/critical advisories; every direct dev dependency licensed and registered |
+| NFR-10 | Dependency risk | 0 high/critical advisories; every direct development/runtime use and locked runtime closure entry licensed and registered |
 
 ## Quality Assurance Strategy
 
@@ -266,5 +266,6 @@ core              ──> no workspace dependencies
 - **Decision record:** [ADR-0003 — OSS Tooling Monorepo Structure](../../decisions/ADR-0003-oss-monorepo-structure.md).
 - **Repository conventions:** [AGENTS.md](../../../AGENTS.md) — repo structure, `scripts/` and `tools/` conventions, running tests.
 - **Testing rules:** [.ai/rules/testing-strategy.md](../../../.ai/rules/testing-strategy.md) — TypeScript test layer and aggregate check.
+- **Configuration capability:** [Configuration Layer and Inspection](feature-config-layer.md).
 - **Glossary:** [doc/overview/glossary.md](../../overview/glossary.md) — scaffold terms.
 - **Change record:** `doc/changes/2026-10/2026-10-29--GH-170--monorepo-scaffold-toolchain/`.

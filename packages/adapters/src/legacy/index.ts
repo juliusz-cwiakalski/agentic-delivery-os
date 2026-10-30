@@ -34,8 +34,25 @@ export type LegacyCompatOptions = {
   readonly warn: (message: string) => void;
 };
 
+export type LegacyConfigInput = LegacyResolveInput & {
+  /** Current-name environment facts; these always win over legacy mappings. */
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  /** A current-name selector, if one was supplied explicitly. */
+  readonly selectedConfig?: string;
+};
+
+/** Plain config facts produced before catalog-aware environment mapping. */
+export type LegacyConfigFacts = {
+  readonly environment: Record<string, string | undefined>;
+  readonly selectedConfig?: string;
+  readonly configDirectoryPath: string;
+  readonly legacySourcesPresent: boolean;
+};
+
 export type LegacyCompat = {
   resolveLegacy(input: LegacyResolveInput): LegacyResolveResult;
+  /** Maps legacy inputs to plain facts; not an eighth configuration layer. */
+  resolveConfigFacts(input: LegacyConfigInput): LegacyConfigFacts;
 };
 
 const LEGACY_ENV_PREFIX = "ADOS_";
@@ -89,8 +106,29 @@ const mapLegacy = (
 /** Factory for an isolated instance with its own once-warning state. */
 export const createLegacyCompat = (options: LegacyCompatOptions): LegacyCompat => {
   const state: WarningState = { warned: false };
+  const configFacts = (input: LegacyConfigInput): LegacyConfigFacts => {
+    const mapped = mapLegacy(state, options.warn, options.current, input);
+    const environment: Record<string, string | undefined> = {
+      ...input.environment,
+      ...mapped.environment,
+    };
+    // Current-name facts always win over their legacy counterparts.
+    for (const [key, value] of Object.entries(input.environment)) {
+      if (value !== undefined) environment[key] = value;
+    }
+    const selectorName = `${options.current.environmentPrefix}CONFIG`;
+    const selectedConfig =
+      input.selectedConfig ?? input.environment[selectorName] ?? mapped.environment[selectorName];
+    return {
+      environment,
+      ...(selectedConfig !== undefined && selectedConfig.length > 0 ? { selectedConfig } : {}),
+      configDirectoryPath: mapped.configDirectoryPath,
+      legacySourcesPresent: mapped.legacySourcesPresent,
+    };
+  };
   return {
     resolveLegacy: (input) => mapLegacy(state, options.warn, options.current, input),
+    resolveConfigFacts: configFacts,
   };
 };
 

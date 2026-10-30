@@ -18,6 +18,11 @@
       "id": "matrix-core-adapters",
       "tc": "TC-SCAFFOLD-008",
       "path": "packages/core/src/probe.ts"
+    },
+    {
+      "id": "matrix-core-config-adapters",
+      "tc": "TC-SCAFFOLD-008",
+      "path": "packages/core/src/config/probe.ts"
     }
   ],
   "matrix-opencode-importer": [
@@ -128,6 +133,11 @@
     {
       "id": "tier-relative-config-domain",
       "tc": "TC-SCAFFOLD-012",
+      "path": "packages/core/src/config/probe.ts"
+    },
+    {
+      "id": "tier-config-branding",
+      "tc": "TC-SCAFFOLD-011",
       "path": "packages/core/src/config/probe.ts"
     }
   ],

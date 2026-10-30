@@ -1,0 +1,17 @@
+$schema: "local"
+x-test:
+  nested:
+    first: system
+    second: 7
+  list:
+    - one
+    - two
+  emptyMap: {}
+  emptyList: []
+  aliasSource: &source
+    value: alias-value
+  aliasUse: *source
+  block: |
+    line-a
+    line-b
+  flow: { a: 1, b: [2, 3] }

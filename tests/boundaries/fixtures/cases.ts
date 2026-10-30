@@ -66,6 +66,14 @@ export const RULE_CASES: RuleCase[] = [
     'import "@delivery-os/adapters/registry";\n',
   ),
   dep(
+    "matrix-core-config-adapters",
+    "TC-SCAFFOLD-008",
+    "matrix-core-importer",
+    ["core", "adapters"],
+    "packages/core/src/config/probe.ts",
+    'import "@delivery-os/adapters/file";\n',
+  ),
+  dep(
     "matrix-opencode-cli",
     "TC-SCAFFOLD-008",
     "matrix-opencode-importer",
@@ -265,6 +273,14 @@ export const RULE_CASES: RuleCase[] = [
     ["core"],
     "packages/core/src/config/probe.ts",
     'import "#domain/index";\n',
+  ),
+  dep(
+    "tier-config-branding",
+    "TC-SCAFFOLD-011",
+    "tier-config-only-contracts",
+    ["core"],
+    "packages/core/src/config/probe.ts",
+    'import "#branding/index";\n',
   ),
   dep(
     "tier-branding-app",

@@ -213,6 +213,23 @@ describe("TC-TABLE-002 fallback containment", () => {
 });
 
 describe("TC-TABLE-003 code identity", () => {
+  test("all config discriminants are declared once with a matching namespace", () => {
+    const config = entries.filter((entry) => entry.domainKind === "config");
+    expect(config).toHaveLength(9);
+    const declared = [
+      ...readFileSync(join(ROOT, CONTRACTS_DIR, "config.ts"), "utf8").matchAll(
+        /\| "(config\.[a-z]+\.[a-z]+)"|= "(config\.[a-z]+\.[a-z]+)"/g,
+      ),
+    ].map((match) => match[1] ?? match[2]);
+    expect(declared.sort()).toEqual(config.map((entry) => entry.code).sort());
+    for (const entry of config) {
+      expect(entry.code.startsWith("config.")).toBe(true);
+      expect(entry.category).toBe("user");
+      expect(entry.retryable).toBe(false);
+      expect(entry.consequence).toBe("not_landed");
+      expect(entry.projectionClass).toBe("user-validation");
+    }
+  });
   test("codes are well-formed and unique", () => {
     const codes = entries.map((entry) => entry.code);
     for (const code of codes) expect(isValidCode(code), code).toBe(true);

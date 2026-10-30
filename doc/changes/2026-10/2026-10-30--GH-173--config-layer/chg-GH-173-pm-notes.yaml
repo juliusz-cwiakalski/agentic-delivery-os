@@ -1,0 +1,148 @@
+change_id: GH-173
+title: "M0-S4: Config layer (DEC-4)"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-10-30T06:40:00Z", completed: "2026-10-30T06:55:00Z" }
+  specification: { started: "2026-10-30T06:04:46Z", completed: "2026-10-30T07:09:28Z" }
+  test_planning: { started: "2026-10-30T06:32:47Z", completed: "2026-10-30T07:12:51Z" }
+  delivery_planning: { started: "2026-10-30T06:46:03Z", completed: "2026-10-30T07:14:25Z" }
+  dor_check: { started: "2026-10-30T06:53:58Z", completed: "2026-10-30T07:17:28Z" }
+  delivery: { started: "2026-10-30T07:17:28Z", completed: "2026-10-30T14:47:14Z" }
+  system_spec_update: { started: "2026-10-30T14:47:14Z", completed: "2026-10-30T14:53:21Z" }
+  review_fix: { started: "2026-10-30T14:53:21Z", completed: "2026-10-30T15:52:40Z" }
+  quality_gates: { started: "2026-10-30T15:52:40Z", completed: "2026-10-30T16:46:38Z" }
+  dod_check: { started: "2026-10-30T16:46:38Z", completed: "2026-10-30T16:55:00Z" }
+  pr_creation: { started: "2026-10-30T16:55:00Z", completed: "2026-10-30T17:05:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/194" }
+decisions:
+  - text: "CI-layer cross-check resolved PM-side: ticket body says 'CI mode disables the system and user-global layers' but owner-accepted ADR-0003 DEC-4 (debug/explainability section) additionally disables the project-local layer under CI=true, reported as skipped with reason ci-disabled. DEC-4 is authoritative (the ticket's References name ADR-0003; the backlog story cites DEC-4) and its reading is strictly safer. No human question needed."
+    date: 2026-10-30
+  - text: "Exit-code cross-check resolved PM-side: DEC-4 wording 'a malformed file fails closed with a distinct exit code' predates the delivered {0,1,2} projection contract (GH-172 current truth: exit codes are a projection of table entry classes, fixed at {0,1,2}, call-site literals forbidden). Distinctness lands at the error-code level: dedicated config table entries in the user-validation class (exit 1); no new numeric code. The GH-172 result contract wins; spec-writer formalizes the mapping."
+    date: 2026-10-30
+  - text: "Branding coupling confirmed non-blocking: the ticket's '.<product>/config.yaml' and 'ADOS_*' are branding-derived values — feature-branding-seam.md 'Consumption by later layers' pre-documents that M0-S4 consumes resolveBrandIdentity unchanged and uses configDirectoryName for the committed config path and environmentPrefix for environment-layer names. Hardcoding either would violate ADR-0003 C-3 and fail the live ts-forbidden-literals scan."
+    date: 2026-10-30
+open_questions: []
+blockers:
+  - text: "Test-plan checkpoint stopped at committer preflight: git diff --cached --check reports trailing whitespace on scenario-detail lines. No commit created; test plan and matching PM notes staged. Mandatory stop before delivery planning. Author must clean whitespace without changing coverage, then committer must stage latest PM notes and retry checkpoint."
+    date: 2026-10-30
+    resolved_date: 2026-10-30
+  - text: "Specification checkpoint commit failed: committer reported corrupted patch at line 9 while selectively staging decision index. No commit created; spec, TDR and prior PM notes staged, index unstaged. Mandatory stop on checkpoint failure; no test-planning delegation. Resume must inspect staged/unstaged state before retrying through committer."
+    date: 2026-10-30
+    resolved_date: 2026-10-30
+notes:
+  - text: "Quality gates GREEN 16:46:38Z (HEAD a868892): pnpm check all six stages exit0 (512tests/0fail/2879expect/48files; boundaries 55mod/59dep; ambient clean; entrypoints OK; exports-parity 5 publishables attw; verify log 171804); CI parity confirmed via ci-topology validate (7 bash jobs intact, 16 TS jobs): scripts/.tests 19/19 PASS incl batch-deliver 47/47 and mutation sandbox non-vacuous; tools/.tests CI-wired 3/3 PASS (integration suite mocked 21/21); e2e-providers/e2e-suite/performance credential-gated and CI-excluded by design; test-zclaude-unit extensionless not CI-wired (pre-existing convention, 19/19 local, out of scope); doc-distribution no drift. Merge-blocking condition verified locally; final confirmation on pushed HEAD at PR. Heavyweight loops split into small runner batches after repeated session drops (gates batches all completed first-try)."
+    type: "info"
+    date: 2026-10-30
+  - text: "DoD check PASSED 16:55:00Z (mechanical verification 174943): 38/39 plan tasks checked; sole remaining 8.5 executes atomically with PR creation per its inline note (PM-owned handoff); spec §18 open-PR DoD predicates all verified — 25 ACs traceable (123 TC refs in test plan), 9 NFRs, negative controls in green gates, packed artifacts proven, docs reconciled zero-residual, independent review PASS, minor changeset present, 21 commits ahead on clean tree. Human acceptance (TDR-0003 + runtime licenses incl BSD-3-Clause closure) explicitly deferred to owner PR review before merge/adoption — not a handoff blocker. Proceeding pr_creation: PR base main-tools explicit, PM never merges, pushed-HEAD CI green is the standing merge-blocking condition verified by CI after push."
+    type: "info"
+    date: 2026-10-30
+  - text: "PR CREATED: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/194 (feat(GH-173): add seven-layer config resolution and inspection) — base main-tools explicit, head feat/GH-173/config-layer, non-draft, OPEN, no closing keyword, PM did not merge. Plan 8.5 marked complete with the PR record; pr_creation phase closed. Pushed-HEAD CI is the merge-blocking condition; owner review gates: TDR-0003 acceptance, runtime license closure (BSD-3-Clause transitive), then manual merge. STOP per standing directive."
+    type: "info"
+    date: 2026-10-30
+  - text: "Pushed-HEAD CI GREEN 17:24:46Z on 0b97f82: all 23 unique checks SUCCESS (46 rollup entries across push+PR runs) incl TS tests + TS aggregate check that had failed on c5e5a65. Root causes of the CI-red: (a) six mkdtemp sites assumed gitignored tmp/tmpdir exists (fresh-checkout violation — tests now pre-create it); (b) packed-config consumer install relied on warm pnpm store and swallowed diagnostics (now hermetic scratch HOME/XDG cold store, real error output, --offline dropped because packed tarballs declare registry deps ajv/yaml resolved by exact pins). Remediation commit 0b97f82 pushed; verified locally via rm -rf tmp/tmpdir fresh-checkout simulation (38/38 tests). Retro validated: warm-local passes hid fresh-checkout divergence; the pushed-HEAD CI condition caught it exactly as designed. DELIVERY COMPLETE — awaiting owner review/merge of PR #194."
+    type: "info"
+    date: 2026-10-30
+  - text: "Review PASS iteration1 at 15:52:40Z (review/review-iter-1.md): 0 critical/high/medium, 1 low (plan execution-log staleness, fixed same pass), 2 info (TDR-0003 + license closure Proposed pending owner PR review by design; serialize.ts as-cast pre-existing from GH-172 base b2914fd, record-only). Checker-wins rulings: post-guard casts sanctioned under the no-silencing rule; serializeProductionSchema additive public export sanctioned per spec F-7 (no new subpath; byte-identical artifacts). Remediation 35b31c5 verified retroactive-rules violations resolved (#contracts aliases, named package-specifier imports, no deep source imports, cast hygiene). Three consecutive reviewer session drops resolved by pre-collecting mechanical evidence via runner (greps 164107/164255) and delegating a tighter judgment-focused review; artifact produced first attempt after adaptation. Changeset 8.1 landed (.changeset/config-layer-minor.md, five publishable packages, testkit excluded per config). Phase7 conditional fixes not required. Quality gates phase opened."
+    type: "info"
+    date: 2026-10-30
+  - text: "Long-running single-shot review delegations were interrupted 3x by session drops; each produced nothing. Adaptation that worked: split mechanical verification (grep guards, gate logs) into short runner runs first, then hand the reviewer pre-verified evidence and a bounded spot-check scope. Apply this pattern to any remaining heavyweight delegation in this delivery."
+    type: "retro"
+    date: 2026-10-30
+  - text: "Phase5 verified 14:45:14Z: pnpm check fully green (512tests/0fail/2879expect/48files; boundaries 55mod/59dep clean; ambient clean; exports-parity 5 publishables attw; doc-distribution 80docs no drift). Packed-consumer harness fixed (per-package tarball dirs, consumer pnpm.overrides to packed core tarball — pack rewrites workspace:* to 0.0.0 — and cleanup-before-rethrow); branding-seam conformance via NEUTRAL_OVERRIDE_NAME module-private; legacy CONFIG literal added to sanctioned structuralLiterals inventory. feature-config-layer.md authored, registered in forbidden-literals registry, scan clean. Retro: runner invocations must avoid /dev/* paths (headless permission auto-reject) — use ./tmp/tmpdir scratch per repo convention. Plan 5.1..5.4 verified pending commit; implementation phases complete; PM-owned phases 7-11 next."
+    type: "info"
+    date: 2026-10-30
+  - text: "Phase4 verified 14:09Z: build/typecheck/lint/boundaries/ambient/entrypoints/error-table-sync/license/forbidden-literals/exports-parity all green; 126tests/730expectations across 10 files (config-cli14, goldens incl redaction14/broken-command16/config-output4, inventory5). Strict-TS fixes per binding rules (typed next locals; conditional RepositoryRootFacts under exactOptionalPropertyTypes); structure inventory refreshed with real module registration; error-table-sync S1 false positive resolved by destructuring (config.warnings.map token removed; recognizer/table untouched). Plan 4.1..4.6 verified pending commit; phase5 next."
+    type: "info"
+    date: 2026-10-30
+  - text: "Phase3 verified 13:45:27Z: all13 commands exit0, 64tests/386expectations (sources31/parser6/resolver2/schema3/restrictions4/provenance4/legacy14), selected-config attribution bug fixed in config-source.ts (selection hoisted before discovery; actual-path contract restored), biome.json ignores intentionally malformed YAML fixture, all invariants green. Plan 3.1..3.6 marked verified pending commit. Retro: tsconfig typecheck does not cover tests/** — test-only parse errors surfaced only via bun test/biome; keep format+test in every verification loop."
+    type: "info"
+    date: 2026-10-30
+  - text: "CEO added BINDING .ai/rules/typescript.md (commit 1eefbc3) governing all packages/, tests/, scripts/checks/ edits for the remainder of this change. Rules apply RETROACTIVELY to already-committed phase1/phase2 code; coder flagged violations WITHOUT silently fixing them: scripts/checks/exports-parity.ts deep cross-package src import; core/config/{resolver,catalog,provenance}.ts relative ../contracts imports instead of #contracts; unjustified as-casts in resolver.ts, cli/index.ts, license-audit.ts and a double-cast in config-default-positions.test.ts; tests/structure/config-contract.test.ts star import + deep /src/ path; defaults.ts value-import-used-as-type. These are recorded for the review_fix phase to remediate as one rules-conformance pass; no silent fixes, no gate loosening. All phase3+ edits follow the rules file."
+    type: "risk"
+    date: 2026-10-30
+  - text: "Phase3 interrupted-fix recovery: coder completed acquisition implementation (reworked the interrupted untracked yaml-parser.ts into the plan's adapters/file module set with bounds/tag/merge guards, host-switch pre-parse rejection, position-accurate facts; config-source/repo/legacy composition; parser/sources/legacy tests + YAML fixtures). Verification iteration1 found: unbracketed template key parse cascade in config-sources.test.ts, TC-CONFIG-010 origin-shape/line assertion mismatch, malformed.yaml fixture tripping lint/format, plus minor lint items. Interrupted fixer pass landed bracketed keys, biome.json malformed-fixture ignore, defaults.ts import-type and license-audit optional-chain fixes; TC-010 assertion fix unverified. Next: full verification re-run, fix residuals, then phase3 commit."
+    type: "info"
+    date: 2026-10-30
+  - text: "Implementation phase1 committed7661d46 after15 green commands/67tests. Phase2 verification iteration1: build,22tests,schema/default artifacts,exports/ambient/boundary/error/license/literal/typecheck/format pass; lint fails useIterableCallbackReturn at resolver.ts162 and fixture facts.ts20. Delivery remains in progress; targeted fixer removes unintended callback return values, then runner rechecks before phase2 commit."
+    type: "retro"
+    date: 2026-10-30
+  - text: "Coder delegation returned incomplete before edits: its child session cannot invoke runner/committer/decision-advisor, while PM has these tools available. No code/plan edits, no tests, HEAD12e54ad clean. Remediation: PM supplies orchestration proxies, coder writes one plan phase at a time and returns exact verification commands; PM invokes runner and committer before next code phase. This preserves specialist ownership and per-phase commits rather than treating child tool visibility as missing repository tooling. Delivery remains in progress."
+    type: "risk"
+    date: 2026-10-30
+  - text: "Nested agent inventory differs from PM inventory; blanket run-plan stalled before implementation despite available parent tools. Explicit parent-proxied verification/commits avoids repeated nested-delegation failure. Confirm child capability before large execution requests."
+    type: "retro"
+    date: 2026-10-30
+  - text: "DoR iteration2 READY 07:17:28Z, zero findings; both iteration1 majors resolved, single DM2 matrix/spec DoD consistent and all25AC traced. Implementation authorized after verdict checkpoint. Coder executes plan with no review; PM owns subsequent docs/review/gates/DoD/PR tasks, no premature completion of those plan tasks."
+    type: "info"
+    date: 2026-10-30
+  - text: "Plan remediation complete 07:14:25Z: tasks3.4/3.5 and acceptance aligned to single DM2 matrix and zero-read requirements, spec DoD and existing test-plan link reflected, all task IDs/25AC mappings preserved. DoR iteration2 requested after checkpoint; no implementation yet."
+    type: "info"
+    date: 2026-10-30
+  - text: "Test-plan remediation complete 07:12:51Z: TC004..006 share exact first-match reason matrix and zero-read checks for selected/CI/no-root overlaps; independent enable flags and explicit roots covered, implementation plan link reconciled. All25 mappings/scenarios/automation entries retained, no whitespace. Proceed to plan alignment."
+    type: "info"
+    date: 2026-10-30
+  - text: "Specification remediation complete 07:09:28Z: DM2 first-match skip matrix selected-config > ci-disabled > no-git-root > missing for project-local, independent CI system/user exclusions; root/selection never silently enable sources. AC-F2-2..4 aligned, explicit spec DoD includes 25AC/9NFR evidence, reviews/docs/packed artifacts/release intent, green pushed CI before open-PR handoff; human acceptance only gates merge/adoption. Proceed sequential test-plan reconciliation."
+    type: "info"
+    date: 2026-10-30
+  - text: "DoR iteration 1 NOT_READY at 07:05:39Z, 2 major findings, no human pause: CI+selected-file has contradictory project-local reason oracles; spec lacks explicit delivery DoD. Reopen specification then sequentially align test plan and implementation plan; delivery remains unstarted. Prior successful artifacts completed 06:24:43/06:38:27/06:53:58Z respectively. Remediation must define one eligibility-reason matrix and spec DoD without changing source eligibility or introducing pre-PR human acceptance."
+    type: "risk"
+    date: 2026-10-30
+  - text: "Readiness caught an overlapping-condition evidence contradiction missed in artifact validation: TC005 expected ci-disabled while TC006 expected selected-config for same invocation. Explicit overlap matrices should be authored alongside eligibility rules; also require spec DoD, not only plan gates. One artifact remediation loop needed before implementation."
+    type: "retro"
+    date: 2026-10-30
+  - text: "Implementation plan validated: 8 phases/39 tasks trace 25/25 ACs, contracts/error rows and license accounting first, pure resolver then real acquisition then CLI, packed/default/schema evidence and docs. Independent review/fixes and final handoff tasks are PM lifecycle-owned when coder runs with no review; do not prematurely mark those done. No upstream coverage gaps reported; proceed to adversarial DoR."
+    type: "info"
+    date: 2026-10-30
+  - text: "CEO authorized whitespace-only cleanup and immediate removal of obsolete blocker labels. State recheck via gh: OPEN, change/planning, no open/merged matching PR; expected branch 86c9f65, only known checkpoint artifacts dirty. Test-plan author stripped trailing spaces/tabs across whole file without content/structure changes and retained 25 cases. Fresh exact-path staging will replace stale staged whitespace before retrying checkpoint. Mechanical failures were not substantive human-input questions; preflight before committer avoids repeated wasted sessions."
+    type: "resolved"
+    date: 2026-10-30
+  - text: "Test-plan writer emitted trailing spaces in scenario details (Markdown hard breaks); committer diff-check rejected them, stopping checkpoint before commit. No implementation planning delegated. Next author pass must remove trailing whitespace and confirm diff-check before checkpoint; retain 25/25 AC coverage. Prior specification staging blocker was resolved successfully at 86c9f65."
+    type: "retro"
+    date: 2026-10-30
+  - text: "Test plan validated: 25/25 ACs map to TC-CONFIG-001..025, concrete production resolver/adapter fixtures plus negative controls for YAML positions, secret/source restrictions, CI/root/selection, nine code classifications, parser debug switches, packed schema/default manifest parity. No upstream spec gaps reported. Credential scope and owner-review acceptance gate retained."
+    type: "info"
+    date: 2026-10-30
+  - text: "CEO explicitly resumed from completed specification. State detection at 06:30:39Z verified expected branch HEAD 7fc4b54 and only known spec-checkpoint artifacts dirty, no PR. Retry checkpoint now; authorize full decision-index staging including its factual ADR-0003 Accepted-status correction (matches canonical accepted record), avoiding fragile selective patches. Sync main-tools after clean checkpoint, then test planning. Previous staging failure needs no product decision."
+    type: "resolved"
+    date: 2026-10-30
+  - text: "Commit checkpoint failed during selective index staging because decision-advisor also corrected an unrelated ADR index status. Committer stopped without creating a commit. PM recorded blocker and cancelled the premature test_planning started timestamp. On resume preserve artifacts, separate unrelated index edit, and retry the checkpoint before downstream delegation."
+    type: "retro"
+    date: 2026-10-30
+  - text: "Specification v1.1 validated: 25 ACs cover both ticket ACs, full DEC-4 and CEO credential boundary. Decision-advisor authored Proposed TDR-0003 (yaml/Ajv, existing acquisition exports, bootstrap separation, exact code+kind classification, provenance and unregistered-secret safety). PM confirmed reversible bootstrap/empty catalog/selected-config mechanics. Dependency/license and R2 acceptance remain explicit owner PR-review merge/adoption gates; existing GH-170 DEC-10 policy permits truthful proposed registry/allowlist entries before the unmerged PR."
+    type: "info"
+    date: 2026-10-30
+  - text: "Initial spec deferred parser, catalog bootstrap and multi-code classifier choices, preventing deterministic planning. Decision-advisor resolved mechanics; initial advice incorrectly suggested pre-PR license approval. Checking registry/GH-170 policy corrected timing to owner PR review before merge/adoption. One spec refinement iteration; no requirements waived."
+    type: "retro"
+    date: 2026-10-30
+  - text: "CEO resume: gh CLI confirmed issue OPEN, no matching open/merged/closed PR; expected branch clean at 7fc4b54; git fetch origin main-tools and git merge origin/main-tools brought no changes. No partial spec exists. Resume from specification. Credential resolution belongs to M0-S12, not this story; document the credential-sidecar mediated-mode adoption path without implementing credentials or sidecar. PR must target main-tools and all ts-* plus bash CI must be green on pushed HEAD; never merge."
+    type: "info"
+    date: 2026-10-30
+  - text: "Interrupted spec-writer delegation produced no spec. Rechecked artifacts and remote state before retrying. Existing clarify timestamps (06:40/06:55Z) are later than the observed resume clock (06:04:46Z); retain the prior record and use observed UTC timestamps from here rather than inventing chronology."
+    type: "retro"
+    date: 2026-10-30
+  - text: "Autonomous delivery started on explicit user directive: one workItemRef only (GH-173), full 11-phase lifecycle, PR against main-tools (--base main-tools passed explicitly to @pr-manager), PM never merges. State detection: issue #173 open, no labels/comments/assignees (labels change+planning added); zero open PRs in repo; no prior change folder or branch anywhere (fresh start); worktree clean on main-tools == origin/main-tools == b2914fd (the GH-172 merge commit). GH-172 housekeeping: PR #193 merged 2026-10-30T05:36:51Z, issue #172 closed completed; moved to recently_delivered (GH-85 pruned on overflow)."
+    type: "info"
+    date: 2026-10-30
+  - text: "Issue body == backlog.md M0-S4 verbatim; dependencies M0-S1 (GH-170), M0-S2 (GH-171), M0-S3 (GH-172) all merged. Greenfield surface: packages/core/src/config is a placeholder tier (ConfigPlaceholder type only); no ConfigSource port exists yet; core ./contracts currently carries Result<T,E>, BrandIdentity, telemetry schema names, CommandResult envelope, and ERROR_TABLE with 4 entries (fallback.invocation, fallback.internal, provider.quota.exceeded, input.value.rejected)."
+    type: "info"
+    date: 2026-10-30
+  - text: "Authoritative model is ADR-0003 DEC-4 (owner-accepted): 7-layer precedence built-in defaults < system < user-global < project committed (<repo>/<configDirectoryName>/config.yaml) < project local (config.local.yaml, gitignored) < environment (typed <ENVIRONMENTPREFIX>* mapping, __ as the nesting separator, e.g. KEY__SUB maps to key.sub) < CLI flags. Merge semantics: recursive map merge, scalar replace, list replace (no union/append), explicit reset:[dotted.paths] clears inherited values, null invalid unless the schema allows it. One JSON Schema validates each layer AND the merged result; layer errors name the layer and line. Unknown keys are errors except the reserved $schema, reset, and x- vendor namespace. The typed env mapping is the only environment mechanism; in-file interpolation ({env:...}, ${VAR:-default}) is rejected. Secrets are environment-only; any secret value in a repository-scoped layer (committed AND project-local — gitignored does not exempt; the rule is location, not tracking) is a hard fail-closed error regardless of --strict, with a canary-secret fixture. Warnings on deprecated keys and shadowed values; --strict escalates. Platform table for system/user-global: Linux XDG ($XDG_CONFIG_DIRS, $XDG_CONFIG_HOME), macOS (/Library and ~/Library Application Support), Windows (%PROGRAMDATA%, %APPDATA%). Discovery walks from cwd up to the git root, never above; v1 resolves repository layers at the git root only; outside git, repository layers are skipped with reason no-git-root; explicit --project-root for deliberate tests. Restrict-only policy overlay and template extends are explicitly NOT v1."
+    type: "info"
+    date: 2026-10-30
+  - text: "Debug/explainability surface (DEC-4): config debug prints key | value | origin with a fixed per-layer origin grammar (file layers: layer=<l> file=<path> line=<n>; built-in defaults: layer=defaults file=core/src/config/defaults.ts line=<n>; environment: layer=environment env=<KEY> with no file/line; cli: layer=cli flag=<--flag> with no file/line); config get <key> --show-origin; loaded-files and skipped-layers lists with reasons (ci-disabled, no-git-root). cli-command-registry.md (planning truth) prescribes the config command: basic mode prints the merged configuration as plain JSON; debug mode prints per-key provenance as extended JSON or annotated JSONC. Ticket AC-2 requires config debug to name the file and line for each key."
+    type: "info"
+    date: 2026-10-30
+  - text: "Architecture constraints carried to spec/plan: C-9 runtime neutrality — the DEC-4 resolver is pure and lives in core/src/config; file/environment acquisition sits behind the ConfigSource port declared in core ./contracts (ADR-0003 names ConfigSource as the repository-config and environment acquisition port); the legacy compatibility adapter at packages/adapters/src/legacy (adapters ./legacy) is the ConfigSource implementation for pre-freeze sources, warning exactly once; the filesystem ConfigSource implementation placement (adapters vs cli edge) is a spec decision. The origin grammar requires line-preserving config parsing — the parser/dependency choice is a spec design point under the C-2 license gate (no unapproved dependency; GH-172 precedent: zero new runtime dependencies)."
+    type: "info"
+    date: 2026-10-30
+  - text: "Error-table evolution discipline applies (GH-172 binding invariant): config failure codes (malformed layer file, unknown key, unmapped env key, null rejection, interpolation rejection, secret-in-repository-layer) must enter ERROR_TABLE with structured fields and a projection class AND receive documented rows in feature-result-contract.md's documented table in the SAME change — the error-table-sync check fails closed in both directions. CONFIG_INVALID is DEC-4's legacy shorthand; actual codes follow the hierarchical domain.reason.detail convention. Lesson from GH-172 spec iteration 1: a binding check over an artifact requires the artifact to ship in the same change."
+    type: "risk"
+    date: 2026-10-30
+  - text: "Doc impacts for phase 7 (doc-syncer): NEW feature spec doc/spec/features/feature-config-layer.md (first-spec-only, always-resolve in every mode); feature-result-contract.md documented table gains config rows (sync-checked); possible touch of feature-monorepo-scaffold-toolchain.md (config tier no longer a placeholder), feature-branding-seam.md (M0-S4 consumption realized), glossary (config terms). New user-facing docs must register in forbidden-literals.registry.json in the same change and must stay product-free (seed literals ados/ADOS_/~/.ados never appear; write environmentPrefix/configDirectoryName or placeholders instead)."
+    type: "risk"
+    date: 2026-10-30
+  - text: "Ticket ACs: (1) malformed config yields a classified error with a code, not a crash; (2) config debug names the file and line for each key. The full DEC-4 validation/merge/discovery matrix is the acceptance baseline. Unblocks M0-S12 (GH-181 primitive ports), M0-S16 (GH-185 interim mitigations), and all config consumers (M0-S5 consumes stateDirectoryName and config dir override; M0-S13 reads the provider chain)."
+    type: "info"
+    date: 2026-10-30
+  - text: "Standing operational constraints inherited from GH-172 retros: commit bodies wrapped at <=100 chars (ts-commitlint CI job errors above that on PRs to main-tools); packages must be built before typecheck/test (pretypecheck/pretest hooks); bash stack, .opencode/, .ados-claude/, and doc/planning/ stay untouched; no license headers added by agents."
+    type: "info"
+    date: 2026-10-30

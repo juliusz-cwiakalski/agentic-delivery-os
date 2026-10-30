@@ -12,6 +12,7 @@ import {
   auditRegistry,
   directExternalDependencies,
   loadRegistry,
+  lockedUses,
   parseSpdxExpression,
   validate,
 } from "../../scripts/checks/license-audit";
@@ -22,7 +23,7 @@ const FIXTURES = JSON.parse(
 ) as Record<string, string>;
 
 const clone = (): Registry => JSON.parse(JSON.stringify(loadRegistry(ROOT))) as Registry;
-const dependencies = (): Dependency[] => directExternalDependencies(ROOT);
+const dependencies = (): Dependency[] => lockedUses(ROOT, directExternalDependencies(ROOT));
 
 const setLicense = (registry: Registry, license: string): void => {
   const entry = registry.entries.find((candidate) => candidate.package === "typescript");
@@ -97,5 +98,55 @@ describe("license audit", () => {
           message.includes("not a valid SPDX expression"),
       ),
     ).toBe(true);
+  });
+
+  test("runtime closure and direct/dev multi-use entries are accounted independently", () => {
+    const uses = dependencies();
+    expect(uses.filter((use) => use.name === "yaml").length).toBeGreaterThan(1);
+    expect(uses).toContainEqual({
+      owner: "ajv@8.20.0",
+      field: "dependencies",
+      name: "fast-uri",
+      version: "3.1.9",
+    });
+    expect(uses).toContainEqual({
+      owner: "@commitlint/config-validator@21.2.3",
+      field: "dependencies",
+      name: "ajv",
+      version: "8.20.0",
+    });
+    expect(uses.some((use) => use.owner === "yaml@2.9.1")).toBe(false);
+  });
+
+  test("missing transitive, erased runtime, and duplicated or wrong-version uses fail", () => {
+    const uses = dependencies();
+    for (const [name, owner] of [
+      ["fast-uri", "ajv@8.20.0"],
+      ["ajv", "packages/core/package.json"],
+    ]) {
+      const registry = clone();
+      const entry = registry.entries.find((item) => item.package === name);
+      if (!entry) throw new Error(`missing ${name}`);
+      entry.uses = entry.uses.filter((use) => use.owner !== owner);
+      expect(auditRegistry(registry, uses).join("\n")).toContain("missing registered use");
+    }
+    const registry = clone();
+    const entry = registry.entries.find((item) => item.package === "yaml");
+    if (!entry) throw new Error("missing yaml");
+    entry.uses.push({ ...(entry.uses[0] as Omit<Dependency, "name">) });
+    expect(auditRegistry(registry, uses).join("\n")).toContain("duplicate use");
+    entry.uses[0] = { ...(entry.uses[0] as Omit<Dependency, "name">), version: "2.9.0" };
+    expect(auditRegistry(registry, uses).join("\n")).toContain("conflicting version");
+  });
+
+  test("disallowed SPDX branch and duplicate package rows fail closed", () => {
+    const registry = clone();
+    const entry = registry.entries.find((item) => item.package === "fast-uri");
+    if (!entry) throw new Error("missing fast-uri");
+    entry.license = "BSD-3-Clause OR GPL-3.0-only";
+    registry.entries.push({ ...entry });
+    const failures = auditRegistry(registry, dependencies()).join("\n");
+    expect(failures).toContain("not allow-listed");
+    expect(failures).toContain("duplicate registry entry");
   });
 });

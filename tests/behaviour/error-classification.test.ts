@@ -12,8 +12,9 @@ import {
   classifyThrown,
   resolveAppErrorCode,
 } from "../../packages/cli/src/classify";
+import { type CliDependencies, runCli } from "../../packages/cli/src/index";
+import { resolveBrandIdentity } from "../../packages/core/src/branding/index";
 import {
-  DOMAIN_KINDS,
   ERROR_TABLE,
   type ErrorTableEntry,
   FALLBACK_INTERNAL_CODE,
@@ -25,7 +26,7 @@ const CONTAINMENT = new Set([FALLBACK_INTERNAL_CODE, FALLBACK_INVOCATION_CODE]);
 
 describe("TC-CLASSIFY-001 declared domain kinds are total", () => {
   test("every declared kind resolves to exactly one non-containment entry and round-trips", () => {
-    for (const kind of DOMAIN_KINDS) {
+    for (const kind of ["provider", "input"] as const) {
       const entry = classifyDomainKind(kind);
       expect(entry.domainKind).toBe(kind);
       expect(CONTAINMENT.has(entry.code)).toBe(false);
@@ -36,7 +37,7 @@ describe("TC-CLASSIFY-001 declared domain kinds are total", () => {
   });
 
   test("resolved fields come from the entry with no per-call-site override", () => {
-    for (const kind of DOMAIN_KINDS) {
+    for (const kind of ["provider", "input"] as const) {
       const entry = classifyDomainKind(kind);
       expect(entry.category).toBe(
         entries.find((candidate) => candidate.code === entry.code)?.category,
@@ -54,7 +55,7 @@ describe("TC-CLASSIFY-001 declared domain kinds are total", () => {
   });
 
   test("identity is symbolic and hierarchical, not numeric or URI-shaped", () => {
-    for (const kind of DOMAIN_KINDS) {
+    for (const kind of ["provider", "input"] as const) {
       const code = classifyDomainKind(kind).code;
       expect(code).toMatch(/^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$/);
       expect(code).not.toMatch(/^\d/);
@@ -64,7 +65,7 @@ describe("TC-CLASSIFY-001 declared domain kinds are total", () => {
   });
 
   test("resolution is deterministic across ten iterations", () => {
-    for (const kind of DOMAIN_KINDS) {
+    for (const kind of ["provider", "input"] as const) {
       const first = JSON.stringify(classifyDomainKind(kind));
       for (let index = 0; index < 10; index += 1) {
         expect(JSON.stringify(classifyDomainKind(kind))).toBe(first);
@@ -100,6 +101,123 @@ describe("TC-CLASSIFY-001 declared domain kinds are total", () => {
       expect(missing).toContain("mystery");
     } finally {
       rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("TC-CONFIG-020 exact discriminants and safe containment", () => {
+  const codes = entries.filter((entry) => entry.domainKind === "config").map((entry) => entry.code);
+  test("all nine codes resolve individually with identical table fields", () => {
+    expect(codes).toHaveLength(9);
+    for (const code of codes) {
+      const row = classifyDomainKind("config", code);
+      expect(row).toMatchObject({
+        code,
+        domainKind: "config",
+        category: "user",
+        retryable: false,
+        consequence: "not_landed",
+        projectionClass: "user-validation",
+      });
+      expect(classifyThrown({ kind: "config", code })).toEqual(row);
+    }
+    expect(() => classifyDomainKind("config")).toThrow();
+    expect(() => classifyDomainKind("config", "input.value.rejected")).toThrow();
+  });
+
+  test("malformed, missing, unknown and wrong-kind values contain", () => {
+    for (const failure of [
+      { kind: "config" },
+      { kind: "config", code: "config.other.unknown" },
+      { kind: "config", code: "provider.quota.exceeded" },
+      { kind: "config", code: 42 },
+      { kind: "provider", code: "config.value.invalid" },
+    ]) {
+      expect(classifyThrown(failure).code).toBe(FALLBACK_INTERNAL_CODE);
+    }
+    expect(classifyDomainKind("provider").code).toBe("provider.quota.exceeded");
+    expect(classifyDomainKind("input").code).toBe("input.value.rejected");
+  });
+
+  test("each returned and thrown config failure reaches runCli with safe authoritative prose", async () => {
+    const branded = resolveBrandIdentity({ workingName: "Fixture" });
+    if (!branded.ok) throw new Error("invalid fixture brand");
+    for (const code of codes) {
+      for (const thrown of [false, true]) {
+        const output: string[] = [];
+        const errors: string[] = [];
+        const deps: CliDependencies = {
+          brand: branded.value,
+          clock: { now: () => 100 },
+          newRunId: () => "run-config-fixture",
+          secrets: [],
+          program: {
+            commands: {
+              probe: {
+                handler: () => {
+                  const error = { kind: "config", code, summary: "UNTRUSTED-CANARY" };
+                  if (thrown) throw error;
+                  return { error };
+                },
+              },
+            },
+          },
+        };
+        const exit = await runCli(
+          ["probe", "--json"],
+          {
+            stdout: { write: (text) => output.push(text) },
+            stderr: { write: (text) => errors.push(text) },
+          },
+          deps,
+        );
+        const envelope = JSON.parse(output.join("")) as Record<string, unknown>;
+        expect(exit).toBe(1);
+        expect(envelope.exitCode).toBe(1);
+        expect(envelope).not.toHaveProperty("data");
+        expect(envelope.error).toMatchObject({
+          code,
+          summary: classifyDomainKind("config", code).summary,
+        });
+        expect(output.join("") + errors.join("")).not.toContain("UNTRUSTED-CANARY");
+      }
+    }
+  });
+
+  test("malformed returned and thrown config discriminants cannot forward summaries", async () => {
+    const branded = resolveBrandIdentity({ workingName: "Fixture" });
+    if (!branded.ok) throw new Error("invalid fixture brand");
+    for (const code of [undefined, "config.invalid.unknown", "input.value.rejected", 9]) {
+      for (const thrown of [false, true]) {
+        const writes: string[] = [];
+        const failure = { kind: "config", code, summary: "UNTRUSTED-CANARY" };
+        const exit = await runCli(
+          ["probe", "--json"],
+          {
+            stdout: { write: (text) => writes.push(text) },
+            stderr: { write: (text) => writes.push(text) },
+          },
+          {
+            brand: branded.value,
+            clock: { now: () => 1 },
+            newRunId: () => "run-config-fixture",
+            secrets: [],
+            program: {
+              commands: {
+                probe: {
+                  handler: () => {
+                    if (thrown) throw failure;
+                    return { error: failure };
+                  },
+                },
+              },
+            },
+          },
+        );
+        expect(exit).toBe(2);
+        expect(writes.join("")).toContain(FALLBACK_INTERNAL_CODE);
+        expect(writes.join("")).not.toContain("UNTRUSTED-CANARY");
+      }
     }
   });
 });

@@ -1,7 +1,7 @@
 /**
  * `@delivery-os/cli` commands tier (`#commands/*` alias target).
- * Types only at scaffold; no command registration yet.
+ * Exposes the config command definition for edge composition.
  */
 
-/** Placeholder marker for the CLI commands tier. */
-export type CliCommandsPlaceholder = { readonly __tier: "commands" };
+export { createConfigCommandDefinition } from "./config.js";
+export type { ConfigCommandRuntime } from "./config.js";

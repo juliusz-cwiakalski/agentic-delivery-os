@@ -8,8 +8,8 @@ area: domain
 document_classification: current-truth
 links:
   related_decisions: ["ADR-0003"]
-  related_changes: ["GH-170", "GH-171", "GH-172"]
-summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, and result-contract terms used across the repository."
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173"]
+summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, and configuration-layer terms used across the repository."
 ---
 
 # Glossary
@@ -28,15 +28,15 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | CI parity check | An invariant that binds a local gate to the way CI executes it instead of duplicating its logic. `boundary-ci-parity` requires `ts-boundaries` to build before cruising (the boundary rules resolve package names through built `dist`), and `exports-parity` runs `attw --pack` per publishable so declarations must resolve inside the packed artifact. | Quality | — |
 | Classification chain | The path from an engine failure to a table entry: domain kind -> app error code -> exit-code projection class. | Result contract | — |
 | CommandResult envelope | The one result contract of every command: `schemaVersion`, `runId`, `exitCode`, `timing`, and exactly one of `data` or `error`. The generic `Result<T, E>` remains the internal computation result; the envelope is the command-surface rendering. | Result contract | — |
-| Composition root | The single `createRuntime({ config, adapters, store, clock })` entry declared in `core` `.`; surfaces call it instead of wiring engines themselves. The scaffold declares the signature only. | Architecture | — |
+| Composition root | The single `createRuntime({ config, adapters, store, clock })` entry declared in `core` `.`; surfaces call it instead of wiring engines themselves. The signature remains declaration-only; configuration is exposed through the separate resolver and CLI edge. | Architecture | [feature-config-layer.md](../spec/features/feature-config-layer.md) |
 | Consequence | Structured error field recording whether the attempted mutation landed: `landed`, `not_landed`, or `unknown`. `unknown` is first-class and mandatory on the two fallback entries. | Result contract | — |
 | Corpus baseline | The fixed commit SHA recorded in the forbidden-literal registry that anchors the user-facing-doc membership rule. A doc absent at the baseline must be registered; an unreachable baseline fails the scan closed. | Branding | — |
 | Declared entrypoint | A subpath a package lists in its exports map, and which an importer must declare in its `workspaceImports` manifest field before importing. | Boundaries | — |
-| Domain kind | The engine-level failure classification a domain engine attaches to an error; the first link of the classification chain. Declared kinds are `provider` and `input` at v1, beside the reserved `fallback` containment kind. | Result contract | — |
-| Empty-but-enforced | Scaffold content policy: structure, exports, rules, fixtures, and green tests exist, while engines, business logic, provider implementations, and drivers are absent. | Scaffold | — |
+| Domain kind | The engine-level failure classification a domain engine attaches to an error; the first link of the classification chain. Declared kinds are `provider`, `input`, and `config`, beside the reserved `fallback` containment kind. | Result contract | — |
+| Empty-but-enforced | Scaffold content policy for the remaining engines, business logic, provider implementations, and drivers: structure, exports, rules, fixtures, and green tests exist. The configuration tier now carries implemented code. | Scaffold | [feature-config-layer.md](../spec/features/feature-config-layer.md) |
 | Error table | The internal, machine-readable, single-source set of failure entries from which error identity, structured fields, and exit-code projection are all derived. Declared once in `core ./contracts` as data and types. | Result contract | — |
 | Exit-code projection | The standalone CLI's mapping of table entries to `{0, 1, 2}`: `success` -> 0, `user-validation` -> 1, `platform-provider` -> 2. The only place exit codes exist. | Result contract | — |
-| Fail-closed audit | A check that fails when required evidence is missing or ambiguous rather than passing by default. The license audit fails on an unregistered dependency, an empty license, or a disallowed SPDX branch. | Quality | — |
+| Fail-closed audit | A check that fails when required evidence is missing or ambiguous rather than passing by default. The license audit fails on an unregistered direct/runtime/transitive use, an empty license, or a disallowed SPDX branch. | Quality | — |
 | Fallback entries | The two containment rows: `fallback.invocation` for broken invocations and unknown commands (category `user`, exit 1) and `fallback.internal` for unclassifiable failures (category `platform`, exit 2). Both are `consequence: unknown` and `retryable: false`. | Result contract | — |
 | Fixture-coverage meta-check | The test that fails when any configured boundary rule lacks a registered failing fixture, when a mandatory importer rule is missing, or when the ambient-global rule set is not covered. | Testing | — |
 | Forbidden-literal scan | The CI-binding check (`ts-forbidden-literals`) that fails when a seed literal appears in a DEC-8 scope class outside the DEC-8 allowlist, naming the file and token. The registry is its authority. | Branding | — |
@@ -62,6 +62,10 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Working name | The config-driven name from which all twelve brand values are derived. It is data supplied at a runtime-aware edge and is never a committed literal. | Branding | — |
 | Workspace-entrypoints check | The `check:boundaries` stage (`scripts/checks/workspace-entrypoints.ts`) that enforces `workspaceImports`: declarations must match the expected matrix, every declared edge must resolve to a real export, and no `packages/*/{src,test}` file may import an undeclared `@delivery-os/*` subpath. | Boundaries | — |
 | `workspaceImports` | The manifest field where each package declares the workspace-dependency entrypoints it may import. The workspace-entrypoints check enforces these declarations, so a new allowed edge requires a manifest change and review. | Boundaries | — |
+| Configuration layer | One of the seven ordered configuration sources: defaults, system, user-global, project-committed, project-local, environment, and CLI. | Configuration | [feature-config-layer.md](../spec/features/feature-config-layer.md) |
+| ConfigSource | Plain-JSON acquisition port carrying ordered source values, positions and safe failures; not a credential resolver. | Configuration | [feature-config-layer.md](../spec/features/feature-config-layer.md) |
+| DM-2 | The configuration skip-reason first-match matrix: `selected-config`, `ci-disabled`, `no-git-root`, `missing`. | Configuration | [feature-config-layer.md](../spec/features/feature-config-layer.md) |
+| Origin | The winning source label for an effective configuration leaf or collection. | Configuration | [feature-config-layer.md](../spec/features/feature-config-layer.md) |
 
 ## Acronyms
 
@@ -84,4 +88,5 @@ _Expand every acronym at first use; keep the expanded list here._
 - [Monorepo Scaffold and Toolchain](../spec/features/feature-monorepo-scaffold-toolchain.md)
 - [Branding Seam and Working Name](../spec/features/feature-branding-seam.md)
 - [Result Contract and Error Table](../spec/features/feature-result-contract.md)
+- [Configuration Layer and Inspection](../spec/features/feature-config-layer.md)
 - [ADR-0003 — OSS Tooling Monorepo Structure](../decisions/ADR-0003-oss-monorepo-structure.md)

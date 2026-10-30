@@ -36,6 +36,9 @@
     "#state/*": "./src/state/*.ts"
   },
   "workspaceImports": {},
+  "dependencies": {
+    "ajv": "8.20.0"
+  },
   "scripts": {
     "lint": "biome lint .",
     "format:check": "biome format .",
@@ -43,6 +46,6 @@
     "test": "bun test",
     "check:boundaries": "depcruise --config ../../.dependency-cruiser.cjs src",
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries",
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json && bun run ../../scripts/checks/exports-parity.ts --generate-config-artifacts"
   }
 }
