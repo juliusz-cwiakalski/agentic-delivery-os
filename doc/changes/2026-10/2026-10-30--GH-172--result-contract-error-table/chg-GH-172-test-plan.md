@@ -2,7 +2,7 @@
 id: chg-GH-172-test-plan
 status: Updated
 created: 2026-10-30T02:20:00Z
-last_updated: 2026-10-30T02:30:00Z
+last_updated: 2026-10-30T03:00:00Z
 owners: ["Juliusz Ćwiąkalski"]
 service: delivery-os
 labels: ["oss-tooling", "contracts", "cli", "m0", "adr-0003"]
@@ -32,7 +32,7 @@ The risks guarded here are the ones that make every downstream story expensive l
 - Exit-code projection {0, 1, 2}: derivation per class, totality, confinement to the standalone CLI, and zero exit-code literals at call sites (F-4, AC-F4-1, NFR-7).
 - `runCli(argv, streams, injected facts)`: in-process execution, returned exit code, zero spawned processes, determinism, and channel split between machine output and human diagnostics (F-5, AC-F5-1, AC-F5-2, AC-F6-2, NFR-8).
 - Failure containment: broken invocation goldens, hostile command bodies (throws, rejected promises, malformed results), and absence of stack traces/raw diagnostics on the machine channel (F-6, AC-F6-1, AC-F6-2).
-- Redaction chokepoint: planted-secret goldens on success and failure payloads, no-partial-leak sweeps, chokepoint exclusivity, secret-free hints/summaries (F-7, AC-F7-1, AC-F7-2, NFR-5).
+- Redaction chokepoint: planted-secret goldens on success and failure payloads, no-partial-leak sweeps, chokepoint exclusivity, secret-free hints/summaries (F-7, AC-F7-1, AC-F7-2, NFR-5). The contract is contiguous registered-value replacement (plan D1): a secret split across adjacent strings is in-guarantee only when its fragments are themselves registered, so the split corpus case registers its fragments (§4.5, TC-REDACT-003).
 - Binding docs/code sync check: green path plus failure in every drift direction, identity-hygiene corpora, and CI bindingness (F-8, AC-F8-1, NFR-6).
 - Conformance of the delivered surface to the standing M0-S1/M0-S2 constraints: contracts runtime-neutrality, tier matrix, new forbidden rules with failing negative fixtures, forbidden-literal scan, fixture hygiene, and no gate regression (F-9, AC-F9-1, NFR-1, NFR-9, NFR-10).
 
@@ -57,7 +57,7 @@ The risks guarded here are the ones that make every downstream story expensive l
 - **Implementation plan**: [chg-GH-172-plan.md](./chg-GH-172-plan.md) — authored in delivery planning (phase 4) after this plan. TC IDs are behaviour-bound and do not depend on task numbering; plan phases must map onto these TCs, not the reverse.
 - **Documented-table artifact (in-change)**: [feature-result-contract.md](../../../spec/features/feature-result-contract.md) — authored during delivery as part of this change; carries the documented error table that is the S2 surface of the sync check (§4.4). Phase 7 reconciles and completes the surrounding feature doc; the table section already exists by merge.
 - **Testing strategy**: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — canonical for layers, runners, module-to-test mapping, `scripts/checks/*.ts` mutation tests, and the aggregate `pnpm check`.
-- **Companion survey**: [survey-agent-facing-error-design.md](./survey-agent-facing-error-design.md) — validates the error convention (action-first hints, four-value category, consequence as the novel element, additive evolution); verdicts attach to structural elements, not vendor payloads.
+- **Companion survey**: [survey-agent-facing-error-design.md](./survey-agent-facing-error-design.md) — validates the error convention (action-first hints, four-value category, consequence as the novel element, additive evolution); verdicts attach to structural elements, not vendor payloads. The survey is a point-in-time companion authored before DEC-13 and predates the two-entry containment decision: its singular phrasing ("the fallback table entry", verdict 7) is superseded by DEC-13's `fallback.invocation` / `fallback.internal` pair, and the survey is referenced, not edited, by this change.
 - **Authoritative decision**: [ADR-0003 — OSS Tooling Monorepo Structure](../../../decisions/ADR-0003-oss-monorepo-structure.md) — runtime-neutral contracts, package tiers, C-4/C-5/C-6/C-8 constraints.
 - **Planning truth**: [doc/planning/oss-tooling/cli-command-registry.md](../../../planning/oss-tooling/cli-command-registry.md) — envelope field set, `--json` always-valid machine output, exit-code projection 0/1/2 with the table as source of truth.
 - **Ticket**: issue #172 — M0-S3: Result contract and error table (goal, tasks, four ACs; identical to backlog M0-S3).
@@ -86,7 +86,7 @@ The risks guarded here are the ones that make every downstream story expensive l
 | AC-F6-2 | Failure machine channel contains no stack traces or raw diagnostics; diagnostics only on the human error stream | TC-CONTAIN-002, TC-CONTAIN-003, TC-RUNCLI-003, TC-CLASSIFY-002 | Covered |
 | AC-F7-1 | Planted secret material removed/transformed on both success and failure paths; zero occurrences in any stream | TC-REDACT-001, TC-REDACT-002, TC-REDACT-003 | Covered |
 | AC-F7-2 | No stream write outside the redaction chokepoint's serialization path; hints/summaries secret-free by construction | TC-REDACT-004, TC-BOUNDARY-002, TC-REVIEW-001 | Covered — structural assertions automated; a manual review step covers dynamic access the scan cannot see |
-| AC-F8-1 | Binding sync check: emitted codes resolve to exactly one documented entry, documented entries exist in the in-change doc table, drift either way fails CI | TC-SYNC-001, TC-SYNC-002, TC-SYNC-003, TC-SYNC-004, TC-SYNC-005, TC-SYNC-006 | Covered — documented table bound at `doc/spec/features/feature-result-contract.md`, authored in-change; both drift directions tested against it from merge time (GAP-1/OQ-T1 resolved) |
+| AC-F8-1 | Binding sync check: emitted codes resolve to exactly one documented entry, documented entries exist in the in-change doc table, drift either way fails CI | TC-SYNC-001, TC-SYNC-002, TC-SYNC-003, TC-SYNC-004, TC-SYNC-005, TC-SYNC-006 | Covered — documented table bound at `doc/spec/features/feature-result-contract.md`, authored in-change; both drift directions tested against it from merge time (GAP-1/OQ-T1 resolved); recognition level-scoped A/B/C per §4.4 |
 | AC-F9-1 | Zero product tokens; brand strings from `BrandIdentity` parameters; contracts I/O-free; tier matrix green; every new forbidden rule has its failing negative fixture | TC-BOUNDARY-001, TC-BOUNDARY-002, TC-BOUNDARY-003, TC-BOUNDARY-004, TC-BOUNDARY-005, TC-RUNCLI-004 | Covered |
 
 **Capability coverage** (no capability left unlinked): F-1 → TC-RESULT-001, TC-RESULT-002, TC-RESULT-003, TC-RESULT-004, TC-RESULT-005, TC-RESULT-006; F-2 → TC-TABLE-001, TC-TABLE-002, TC-TABLE-003, TC-TABLE-004, TC-CLASSIFY-001; F-3 → TC-TABLE-001, TC-TABLE-002, TC-TABLE-003, TC-CLASSIFY-001, TC-CLASSIFY-002; F-4 → TC-EXIT-001, TC-EXIT-002, TC-EXIT-003; F-5 → TC-RUNCLI-001, TC-RUNCLI-002, TC-RUNCLI-003, TC-RUNCLI-004; F-6 → TC-CONTAIN-001, TC-CONTAIN-002, TC-CONTAIN-003, TC-RESULT-004; F-7 → TC-REDACT-001, TC-REDACT-002, TC-REDACT-003, TC-REDACT-004; F-8 → TC-SYNC-001, TC-SYNC-002, TC-SYNC-003, TC-SYNC-004, TC-SYNC-005, TC-SYNC-006; F-9 → TC-BOUNDARY-001, TC-BOUNDARY-002, TC-BOUNDARY-003, TC-BOUNDARY-004, TC-BOUNDARY-005, TC-RUNCLI-004, TC-REVIEW-001.
@@ -181,23 +181,30 @@ The invariant check `scripts/checks/error-table-sync.ts` (†name, †path; deli
 |---------|------------------|-----------|
 | S1 — code | `packages/cli/src/**`, `packages/core/src/contracts/**` (excluding the table module itself) | every recognized code-like literal resolves to exactly one entry |
 | S2 — documentation | the documented table at `doc/spec/features/feature-result-contract.md`, authored in-change (GAP-1/OQ-T1 resolved) | every entry appears exactly once; every documented row resolves to exactly one source entry; malformed rows fail, never skip |
-| S3 — fixtures | `tests/fixtures/result/**` and other error fixtures intended as code references | every recognized code-like literal resolves to exactly one entry |
+| S3 — fixtures | `tests/fixtures/result/**` (excluding `code-corpora/**`, which is the Level C input below) and other error fixtures intended as code references | every recognized code-like literal resolves to exactly one entry |
 
 The S2 artifact ships in this change: authored during delivery as part of this change, derived from the machine-readable source. Phase 7 reconciles and completes the surrounding feature doc but does not rewrite the documented table section, which remains the sync-checked surface from merge time onward (GAP-1/OQ-T1 resolved; TC-SYNC-003 fails closed if the table section is missing or unparseable).
 
-**Recognized code-like literal**: a string matching `^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$` (three or more lowercase segments) **whose first segment is a declared domain kind**, plus the two fixed containment identifiers `fallback.invocation` and `fallback.internal` (two segments; the reserved `fallback` namespace, DEC-13), which are always recognized. The namespace qualifier is what keeps reserved schema names (`delivery.result.v1`, `delivery.event.v1`, `delivery.metric.v1`), versions, and ordinary dotted identifiers out of the scan; any other `fallback.*` literal is unresolvable and fails. The corpora in TC-SYNC-005 pin this behaviour in both directions.
+**Recognizer levels.** Recognition is deliberately level-scoped, because one rule cannot simultaneously be a low-noise tree scan and a strict identity validator:
 
-**Required assertions**: code uniqueness; format validity; bijection between table entries and documented rows; totality over declared domain kinds; deterministic resolution. **Failure discipline**: exit non-zero, name the offending code, the surface, and the line; fail closed when the documented table is missing, empty, or unparseable (a vacuous green is a failure). **CI**: invoked by name from an existing `ts-*` job (`ts-invariants` step list) — no new job, no change to `TS_JOBS`; the wiring rule in `ci-topology.ts` and the bypass scan in `ci-bindingness.ts` both stay green.
+- **Level A — scan-level recognition (S1 source, S3 delivered tree).** A literal is *recognized* when it matches `^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$` (three or more lowercase segments) **and** its first segment is a declared domain kind, plus the two fixed containment identifiers `fallback.invocation` and `fallback.internal` (two segments; the reserved `fallback` namespace, DEC-13), which are always recognized. A dotted code-like literal whose first segment is neither a declared domain kind nor the reserved `fallback` namespace is **ignored** at this level — not recognized, not an error, not counted. That namespace qualifier is what keeps reserved schema names (`delivery.result.v1`, `delivery.event.v1`, `delivery.metric.v1`), versions, dotted filenames, hostnames, and foreign-namespace identifiers out of the scan. A *recognized* literal that is not declared fails, naming code, surface, and line; any `fallback.*` literal other than the two DEC-13 identifiers is recognized by the reserved namespace and is therefore unresolvable → fails.
+- **Level B — strict source validation.** The entries of the machine-readable table are validated directly (not by scanning): every entry's code is well-formed (three or more segments, or one of the two DEC-13 identifiers), its namespace segment is declared (a declared domain kind, or `fallback` for exactly those two identifiers), the whole code is unique, and no required row field is missing. Failures name the entry and its position. This is where malformed, foreign-namespace, and duplicate *entries* fail, regardless of whether any call site references them.
+- **Level C — direct corpus input.** The true/false-positive corpus at `tests/fixtures/result/code-corpora/` is fed to the check **explicitly** (a corpus path argument or exported entry point used by the mutation suite), not discovered by the S1/S3 tree walk; `tests/fixtures/result/code-corpora/**` is accordingly excluded from S3. The delivered-state invocation passes the corpus path by name (its default input), so the Level C verdicts are part of the green run, while the S1/S3 walk never reads that directory. Justification: the corpora are deliberately adversarial rows that a green delivered state must not treat as references — the true-positive corpus intentionally contains codes with no table entry — so walking them as delivered files would make the green path unreachable, while feeding them explicitly keeps both precision directions testable without weakening S3 coverage of real fixtures. Each corpus row declares its expectation (`recognized`, `resolves`); the check must produce exactly that verdict for every row and fail, naming corpus file and row, on any mismatch.
+
+**Test sources are outside the scan.** `tests/**/*.test.ts` source files sit outside S1 and S3: their code literals are runtime-resolved by the suites themselves (a test may deliberately assert an unresolvable or malformed code to prove a failure), so scanning them would manufacture false drift. AC-F8-1's "referenced in code" is satisfied by S1 plus Level B (the source table) plus Level C (the corpora) — not by scanning test sources.
+
+**Required assertions**: code uniqueness; format validity; namespace validity; bijection between table entries and documented rows; totality over declared domain kinds; deterministic resolution; per-level counts reported (S1/S3 recognized references, source entries, documented rows, corpus rows) so an ignored-literal change or an empty feed cannot pass silently. **Failure discipline**: exit non-zero, name the offending code, the surface (or corpus file and row), and the line; fail closed when the documented table is missing, empty, or unparseable (a vacuous green is a failure). **CI**: invoked by name from an existing `ts-*` job (`ts-invariants` step list) — no new job, no change to `TS_JOBS`; the wiring rule in `ci-topology.ts` and the bypass scan in `ci-bindingness.ts` both stay green.
 
 ### 4.5 Redaction Proof Contract
 
 The "secrets never appear" guarantee is testable only against a declared secret set, so the plan binds it:
 
-1. **Input**: the runtime-aware edge registers the secret values it knows (secret values are environment-sourced per man-page v0; secrets are never written to config). The serialization chokepoint receives that registered set and removes or transforms every occurrence before a byte reaches a stream.
-2. **Assertion**: for every planted value, the marker prefix `planted-fake-` occurs **zero times** in the raw and unescaped-decoded bytes of both streams, for every outcome class. Zero occurrences of the marker is deliberately stricter than "the exact string is gone" and catches embedded, escaped, and nested forms.
-3. **Vacuity control**: a temp-copy serializer with the chokepoint disabled must leak the marker and make the assertion fail. Without this control the suite can pass because the fixture never carried the secret.
-4. **Over-redaction guard**: a payload containing realistic-but-non-secret values must round-trip byte-identically, proving redaction is targeted, not a blanket scrub that destroys the payload.
-5. **Documented limitation**: values not registered at the edge are out of the guarantee (GAP-3). This is recorded rather than papered over; a value-pattern heuristic is not required at v1.
+1. **Input**: the runtime-aware edge registers the secret values it knows (secret values are environment-sourced per man-page v0; secrets are never written to config). The serialization chokepoint receives that registered set and transforms every registered occurrence (item 2) before a byte reaches a stream.
+2. **Replacement is per registered value, contiguous (plan D1).** Each registered value is replaced with the fixed placeholder `[redacted]` wherever it occurs — as a whole string value, as an object key, and as a substring embedded in a larger string (URL/DSN), at any nesting depth. The chokepoint never stitches adjacent fields together, so a secret *split* across two adjacent strings is in the guarantee only when each fragment is itself a registered value; TC-REDACT-003's split case registers its fragments and expects `[redacted]` at each fragment position, so that case proves multi-fragment objects, not substring matching across field boundaries. A marker-prefix or value-pattern heuristic is deliberately not adopted at v1 (item 6, GAP-3).
+3. **Assertion**: for every planted value, the marker prefix `planted-fake-` occurs **zero times** in the raw and unescaped-decoded bytes of both streams, for every outcome class; for the split case, zero occurrences of each registered fragment are asserted as well, and the byte-exact golden carries `[redacted]` at each planted position (which is the vacuity control for fragments too short to contain the marker). Zero occurrences of the marker is deliberately stricter than "the exact string is gone" and catches embedded, escaped, and nested forms.
+4. **Vacuity control**: a temp-copy serializer with the chokepoint disabled must leak the marker and make the assertion fail. Without this control the suite can pass because the fixture never carried the secret.
+5. **Over-redaction guard**: a payload containing realistic-but-non-secret values must round-trip byte-identically, proving redaction is targeted, not a blanket scrub that destroys the payload.
+6. **Documented limitation**: values not registered at the edge are out of the guarantee (GAP-3), and that includes fragments of a secret that were never registered as values. This is recorded rather than papered over; a value-pattern or prefix heuristic is not required at v1.
 
 ### 4.6 Exit-Code Literal Contract (binding for AC-F4-1, NFR-7)
 
@@ -527,7 +534,7 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 
 **Steps**:
 
-1. Assert every code matches `^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$` (three or more lowercase dotted segments) — the `domain.reason.detail` shape of DM-4, with the spec example `provider.quota.exceeded` as a true-positive corpus row — except the two spec-fixed containment identifiers `fallback.invocation` and `fallback.internal` (DEC-13), which are the declared two-segment exception (A-T11).
+1. Assert every code matches `^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$` (three or more lowercase dotted segments) — the `domain.reason.detail` shape of DM-4, with the spec example `provider.quota.exceeded` as the declared exemplar (also a true-positive row of the Level C corpus, §4.4) — except the two spec-fixed containment identifiers `fallback.invocation` and `fallback.internal` (DEC-13), which are the declared two-segment exception (A-T11).
 2. Assert codes are unique across the table.
 3. Assert the resolution index is total (every code resolves) and functional (each code resolves to exactly one entry; no two codes resolve to the same entry).
 4. Assert negative identity forms are rejected: numeric-only (`404`), two-segment non-fallback (`provider.quota`), uppercase, leading digit, URI (`https://…`), and HTTP-status-shaped (`HTTP_404`), and any `fallback.*` literal other than the two DEC-13 identifiers.
@@ -618,7 +625,7 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 1. Raise an error carrying an undeclared domain kind; resolve and assert `fallback.internal` is applied.
 2. Raise a thrown string, a thrown `undefined`, and a thrown plain object without a kind; each resolves to `fallback.internal`.
 3. Assert the resulting error object has `consequence: unknown`, category `platform`, `retryable: false`, the `platform-provider` projection class (→ exit 2), and a hint directing the caller to diagnostics.
-4. Assert the two containment routes are distinct: a broken invocation (no command resolved) yields `fallback.invocation` (category `user`, `retryable: false`, consequence `unknown`, → exit 1), never `fallback.internal`; cross-checked by TC-CONTAIN-001.
+4. Assert the two containment routes are distinct: a broken invocation (no command resolved) yields `fallback.invocation` (category `user`, `retryable: false`, consequence `unknown`, → exit 1), never `fallback.internal`; cross-checked by TC-CONTAIN-001. This suite asserts classify-level route distinctness only: the dispatch-level proof (no command resolved → a `fallback.invocation` envelope) is TC-CONTAIN-001 in plan Phase 3.
 5. Raise a thrown value whose message contains a stack-like string, an absolute path, and a planted secret marker; assert the envelope carries none of them (only table-derived fields plus an optional non-identifying summary).
 6. Assert determinism: identical thrown input yields an identical error object.
 
@@ -996,18 +1003,19 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 **Preconditions**:
 
 - The case corpus plants the value as: whole token, embedded in a URL/DSN, as a JSON key, split across adjacent nested strings, repeated in multiple fields, and in a value requiring JSON/unicode escaping.
+- The split case registers **each fragment as its own secret value** in the case's fixture data (the case entry in `redaction/cases.json`; `injected.json` where the case is an envelope fixture) and expects the golden to carry `[redacted]` at each fragment position. Rationale: plan D1 binds contiguous per-registered-value replacement, so the chokepoint never assembles a secret from adjacent fields; the case therefore proves multi-fragment objects, not substring matching across field boundaries (§4.5). Marker-prefix matching is deliberately not the chosen mechanism.
 
 **Steps**:
 
-1. Run each corpus case through success and failure paths.
-2. Assert zero `planted-fake-` occurrences in raw output and in the unescaped/decoded form of stdout/stderr (so escaping cannot hide a leak).
+1. Run each corpus case through success and failure paths; for the split case, assert each registered fragment is replaced independently.
+2. Assert zero `planted-fake-` occurrences in raw output and in the unescaped/decoded form of stdout/stderr (so escaping cannot hide a leak); for the split case, assert zero occurrences of each registered fragment as well, and byte-exact equality with a golden carrying `[redacted]` at every planted position (the vacuity control for fragments too short to contain the marker).
 3. Assert redaction is applied to both streams; assert the human channel is not an escape hatch.
 4. Over-redaction guard: a control payload with realistic non-secret values (URLs, dotted identifiers, version strings) round-trips byte-identically.
 5. Assert repeated runs produce identical redacted output (determinism of the chokepoint).
 
 **Expected Outcome**:
 
-- No planting form, encoding, or channel defeats the chokepoint.
+- No planting form, encoding, or channel defeats the chokepoint **for the declared secret set** (registered values and registered fragments).
 - Redaction is targeted: ordinary values survive unchanged.
 
 #### TC-REDACT-004 - Single serialization chokepoint; no other stream write path
@@ -1053,14 +1061,14 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 
 **Preconditions**:
 
-- §4.4 is the binding contract; the documented table at `doc/spec/features/feature-result-contract.md` ships in this change (GAP-1/OQ-T1 resolved).
+- §4.4 is the binding contract, including its three recognizer levels: Level A (scan-level recognition over S1/S3), Level B (strict source-entry validation), Level C (the corpora fed explicitly, never discovered by the S1/S3 walk). The documented table at `doc/spec/features/feature-result-contract.md` ships in this change (GAP-1/OQ-T1 resolved).
 
 **Steps**:
 
 1. Run the check on the delivered tree; assert exit 0.
-2. Assert the summary reports non-zero counts for entries, documented rows, and recognized code references (a zero-count summary is a vacuous pass and fails).
+2. Assert the summary reports non-zero counts for source entries, documented rows, recognized S1/S3 code references, and Level C corpus rows (the delivered-state invocation feeds the corpus by name; a zero-count summary — including an empty corpus feed — is a vacuous pass and fails).
 3. Assert the bijection: every entry appears exactly once in the documented table, and every documented row resolves to exactly one entry; both fallback codes (`fallback.invocation`, `fallback.internal`) appear exactly once on each side.
-4. Assert every recognized code reference in S1/S3 resolves, and every declared domain kind maps to an entry.
+4. Assert every recognized code reference in S1/S3 resolves; every Level C true-positive row produces its declared verdict; every declared domain kind maps to an entry; and ignored foreign-namespace literals do not enter the recognized-reference count.
 5. Assert the check is read-only: `git status --porcelain` is unchanged after the run.
 6. Assert a failure message format exists (code, surface, line) by inspecting the reported shape on a deliberately mutated copy in the mutation suite (cross-link TC-SYNC-002).
 
@@ -1087,8 +1095,8 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 
 **Steps**:
 
-1. In a temp copy, add an unregistered hierarchical code to a CLI module source string; run the check; assert non-zero exit naming code, surface, and line.
-2. In a temp copy, add an unregistered code to an error fixture; assert non-zero exit naming the fixture path.
+1. In a temp copy, add an unregistered hierarchical code with a *declared* first segment (so Level A recognizes it) to a CLI module source string; run the check; assert non-zero exit naming code, surface, and line.
+2. In a temp copy, add an unregistered code (same declared-namespace shape) to an error fixture; assert non-zero exit naming the fixture path.
 3. Assert the two reports are distinguishable by surface label (so triage knows where to fix).
 4. Assert the check does not silently fall back to either containment entry when a code is unresolvable.
 5. Assert the live tree remains untouched by these runs.
@@ -1120,7 +1128,7 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 2. In a temp copy, remove a required column from one documented row; assert non-zero exit (parse strictness) rather than a silent skip.
 3. Assert a missing documented-table file fails closed with a named error and no vacuous green.
 4. Assert the check reads the in-change artifact at `doc/spec/features/feature-result-contract.md`; phase-7 reconciliation of the surrounding feature doc does not remove the table section from the S2 surface (a temp copy without the table section fails closed).
-5. In a temp copy, add a documented row for a phantom containment code (`fallback.legacy`); assert non-zero exit naming it — the reserved `fallback` namespace contains exactly the two DEC-13 entries.
+5. In a temp copy, add a documented row for a phantom containment code (`fallback.legacy`); assert non-zero exit naming it — the reserved `fallback` namespace admits exactly the two DEC-13 identifiers (Level A recognizes the literal, Level B rejects the entry).
 
 **Expected Outcome**:
 
@@ -1169,20 +1177,22 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 
 **Preconditions**:
 
-- §4.4 defines a recognized code-like literal by pattern plus declared domain-kind namespace, with the reserved two-segment `fallback` namespace (`fallback.invocation`, `fallback.internal`, DEC-13) always recognized.
+- §4.4 defines the recognizer's three levels: Level A scan-level recognition (declared domain-kind first segment, plus the reserved two-segment `fallback` namespace for `fallback.invocation`/`fallback.internal`, DEC-13; foreign-namespace dotted literals ignored and uncounted), Level B strict validation of source entries, and Level C direct corpus input (`tests/fixtures/result/code-corpora/**` fed explicitly and excluded from the S3 walk).
+- Each corpus row declares its expectation (`recognized`, `resolves`).
 
 **Steps**:
 
-1. Assert duplicate codes in the source fail naming both positions.
-2. Assert invalid source codes fail: two segments (other than the two DEC-13 containment identifiers), uppercase, leading digit, URI, `HTTP_404`.
-3. Assert the false-positive corpus is clean: `delivery.result.v1`, `delivery.event.v1`, `delivery.metric.v1`, semantic versions, dotted file names, hostnames, and ordinary prose produce zero violations.
-4. Assert the true-positive corpus is flagged: valid hierarchical codes from an undeclared namespace, registered codes referenced from an unexpected surface, and both fallback codes (`fallback.invocation`, `fallback.internal`) in both the source and the documented table.
-5. Assert foreign-namespace handling is explicit: a code whose first segment is neither a declared domain kind nor the reserved `fallback` namespace fails with a named error rather than being ignored; any `fallback.*` literal other than the two DEC-13 identifiers also fails.
+1. (Level B) Assert duplicate codes in the source fail naming both positions.
+2. (Level B) Assert invalid source entries fail: two segments other than the two DEC-13 containment identifiers, uppercase, leading digit, URI, `HTTP_404`, and a foreign-namespace first segment.
+3. (Level C false-positive corpus) Assert the corpus is clean: `delivery.result.v1`, `delivery.event.v1`, `delivery.metric.v1`, semantic versions, dotted file names, hostnames, ordinary prose, **and foreign-namespace dotted identifiers** produce zero violations, and none of them enters the recognized-reference count.
+4. (Level C true-positive corpus) Assert every recognized-code row produces its declared verdict: declared codes (`provider.quota.exceeded`, `input.value.rejected`) resolve to exactly one entry; a **recognized-but-undeclared** code (declared first segment, unknown full code) fails with a named error naming code, corpus file, and row; both fallback codes (`fallback.invocation`, `fallback.internal`) are recognized and appear exactly once in the source and in the documented table.
+5. (Level A negative control) In temp copies, plant a foreign-namespace dotted literal (e.g. `com.example.telemetry.sink`) in an S1 module and in an S3 fixture: the check stays green and the recognized-reference count is unchanged — the literal is ignored, not flagged. In the same temp copies, plant an undeclared code with a declared first segment (e.g. `input.legacy.marker`) at those two locations: the check fails naming code, surface, and line. Any `fallback.*` literal other than the two DEC-13 identifiers also fails (recognized by the reserved namespace, therefore unresolvable).
+6. (Level separation) In a temp copy, add an undeclared true-positive row to the corpus only; assert the tree walk alone stays green (the corpora are not part of S3) and the failure appears only when the corpus is fed at Level C.
 
 **Expected Outcome**:
 
-- The scan is precise enough to run on real code (no noise) and strict enough to catch real drift.
-- Identity malformations fail loudly at the source, where they are cheap to fix.
+- The scan is precise at Level A (declared namespaces only; reserved schema names, versions, and foreign-namespace identifiers ignored by rule, not by accident), strict at Level B (malformed, foreign-namespace, and duplicate entries fail loudly at the source, where they are cheap to fix), and controlled at Level C (the adversarial corpora prove both directions explicitly without polluting the delivered-tree scan).
+- Coarse or silent classification of a dotted literal is impossible: every literal is either a resolvable code, an explicitly ignored identifier, or a named failure.
 
 #### TC-SYNC-006 - Sync check binds in the existing CI fast loop
 
@@ -1410,8 +1420,8 @@ CI cost is additive only inside existing jobs (no new job topology). Soft target
 | Injected `runId` | Fixed opaque synthetic value per case (e.g. `run-fixture-0001`) | Read-only |
 | Synthetic `BrandIdentity` | `example-product`, `.renamed-product` — never a product token | Read-only |
 | Synthetic command programs | `tests/fixtures/result/programs/**` (†): ok-data, ok-void, classified-user, classified-platform, unknown-kind, throwing variants, malformed-result | Read-only |
-| Planted secrets | Marker prefix `planted-fake-` (e.g. `planted-fake-secret-0001`); synthetic env key name | Read-only; obviously fake |
-| Code corpora | `tests/fixtures/result/code-corpora/{true,false}-positives.json` (†) | Read-only; reviewed when the recognition rule changes |
+| Planted secrets | Marker prefix `planted-fake-` (e.g. `planted-fake-secret-0001`); synthetic env key name; the split case additionally registers each fragment as its own secret value (A-T13) | Read-only; obviously fake |
+| Code corpora | `tests/fixtures/result/code-corpora/{true,false}-positives.json` (†) — Level C direct recognizer input, fed explicitly and excluded from the S3 walk | Read-only; reviewed when the recognition rule changes |
 | `unknown`-consequence allowlist | `tests/fixtures/result/unknown-consequence-allowlist.json` (†) | Reviewed; each addition justified |
 | Error-table source | `packages/core/src/contracts/**` (code) | The single source of truth |
 | Documented table artifact | `doc/spec/features/feature-result-contract.md` — authored in-change (GAP-1/OQ-T1 resolved) | Read-only at test time; drift fails |
@@ -1456,13 +1466,13 @@ All TCs are automated except TC-REVIEW-001 (manual). Paths marked † are assume
 | TC-CONTAIN-003 | `tests/golden/broken-command.test.ts` (†) + hostile programs (†) | same | hostile handlers; partial-write serializer copy | To Implement |
 | TC-REDACT-001 | `tests/golden/redaction.test.ts` (†) + secret-success fixtures (†) | `bun test tests/golden/redaction.test.ts` | redaction-disabled serializer copy | To Implement |
 | TC-REDACT-002 | `tests/golden/redaction.test.ts` (†) + secret-failure fixtures (†) | same | redaction-disabled serializer copy | To Implement |
-| TC-REDACT-003 | `tests/golden/redaction.test.ts` (†) + `redaction/cases.json` (†) | same | encoded/nested/partial forms; over-redaction control | To Implement |
+| TC-REDACT-003 | `tests/golden/redaction.test.ts` (†) + `redaction/cases.json` (†) | same | encoded/nested forms; split case with registered fragments; over-redaction control | To Implement |
 | TC-REDACT-004 | `tests/structure/cli-edge-seam.test.ts` (†) + `tests/boundaries/**` (update) | `bun test tests/structure/cli-edge-seam.test.ts tests/boundaries` | command-imports-serializer fixture; console.log injection; order swap | To Implement |
-| TC-SYNC-001 | `scripts/checks/error-table-sync.ts` (†) | `bun run scripts/checks/error-table-sync.ts` | none (delivered state); count non-vacuity | To Implement |
+| TC-SYNC-001 | `scripts/checks/error-table-sync.ts` (†) | `bun run scripts/checks/error-table-sync.ts` | none (delivered state); count and Level C corpus non-vacuity | To Implement |
 | TC-SYNC-002 | `tests/checks/error-table-sync.test.ts` (†) | `bun test tests/checks/error-table-sync.test.ts` | unregistered code in code/fixture (temp copy) | To Implement |
 | TC-SYNC-003 | `tests/checks/error-table-sync.test.ts` (†) | same | doc-only row; malformed row; missing doc file | To Implement |
 | TC-SYNC-004 | `tests/checks/error-table-sync.test.ts` (†) | same | removed row; undocumented new entry; duplicate row | To Implement |
-| TC-SYNC-005 | `tests/checks/error-table-sync.test.ts` (†) + code corpora (†) | same | duplicates; malformed codes; true/false-positive corpora | To Implement |
+| TC-SYNC-005 | `tests/checks/error-table-sync.test.ts` (†) + code corpora (†) | same | duplicates; malformed entries; corpora at Level C; foreign-namespace negative control | To Implement |
 | TC-SYNC-006 | `tests/checks/ci-checks.test.ts` (update) + `.github/workflows/ci.yml` | `bun run scripts/checks/ci-topology.ts`; `bun run scripts/checks/ci-bindingness.ts`; `bun test tests/checks/ci-checks.test.ts` | job-list mutation; bypass injection | Existing – Update |
 | TC-BOUNDARY-001 | ambient suite + `tests/structure/error-table.test.ts` (†) | `bun run scripts/checks/ambient-globals.ts`; `bun test tests/boundaries` | temp-copy ambient probes | Existing – Update |
 | TC-BOUNDARY-002 | `tests/boundaries/**` (update) | `bun test tests/boundaries` | new-rule fixtures; fixture deletion | Existing – Update |
@@ -1518,7 +1528,7 @@ The `git diff` for `scripts` intentionally includes the two new `scripts/checks/
 | RSK-T2 | The golden suites pass because a fixture never carried a secret / never contained a stack | H | M | Vacuity controls in TC-REDACT-001/002 and TC-CONTAIN-002: a disabled-chokepoint copy must leak, or the assertion is not proven |
 | RSK-T3 | "Zero spawned processes" is asserted by convention, not proof | H | M | Guard with a self-test (TC-RUNCLI-001), static AST assertion, and real process-survival assertion |
 | RSK-T4 | The sync check becomes vacuous (empty table, absent doc, missing artifact silently skipped) | H | M | Non-zero count assertions; fail-closed on missing/unparseable doc (TC-SYNC-003); count non-vacuity in TC-SYNC-001 |
-| RSK-T5 | The sync check's recognition rule either misses real codes or floods on ordinary dotted strings | H | M | Pattern plus declared-domain-kind namespace and the reserved `fallback` namespace (§4.4); true/false-positive corpora with `delivery.*.v1` reserved names and both fallback codes (TC-SYNC-005) |
+| RSK-T5 | The sync check's recognition rule either misses real codes or floods on ordinary dotted strings | H | M | Recognition is level-scoped (§4.4): Level A namespace rule (declared domain kind or reserved `fallback`; foreign namespaces ignored and uncounted), Level B strict source-entry validation, Level C explicit corpus feed with `delivery.*.v1` reserved names, foreign-namespace rows, dotted filenames, and both fallback codes (TC-SYNC-005) |
 | RSK-T6 | Phase-7 reconciliation rewrites or drops the in-change documented table, making AC-F8-1's doc direction untestable or vacuous | H | L | The documented table is authored in-change at `doc/spec/features/feature-result-contract.md` (GAP-1/OQ-T1 resolved) and stays sync-checked; TC-SYNC-003 fails closed if the table section is missing or unparseable after phase-7 reconciliation |
 | RSK-T7 | The redaction guarantee is assumed from an unregistered secret set | H | M | A-T4 binds the edge-registered secret set; the limitation is documented rather than hidden |
 | RSK-T8 | The exit-code literal check is satisfied by loosening scope or an allowlist | M | M | Explicit scope boundary asserted (TC-EXIT-002 step 6); no allowlist; mutation per forbidden form |
@@ -1540,7 +1550,9 @@ The `git diff` for `scripts` intentionally includes the two new `scripts/checks/
 - **A-T8** — Synthetic commands are injected as test programs/pure handlers; no command registration ships in this change (NG-1). The surface's command dispatch is exercised through injection, not through a registry.
 - **A-T9** — `packages/testkit` may host the envelope conformance helper and golden loader because it is dev-only and may import `@delivery-os/core`/`./contracts` (never `@delivery-os/cli`). New testkit source files require an inventory and per-file allowance update.
 - **A-T10** — `tests/**` is outside the M0-S2 scan's scope classes (GH-171 A-T4); fixture hygiene is therefore covered by TC-BOUNDARY-004, not by the scan.
-- **A-T11** — The two containment entries are identified by the spec-fixed codes `fallback.invocation` and `fallback.internal` (DEC-13). They are the declared two-segment exception to the `domain.reason.detail` pattern and the only members of the reserved `fallback` namespace; every other code matches the three-segment pattern, and every other `fallback.*` literal is unresolvable.
+- **A-T11** — The two containment entries are identified by the spec-fixed codes `fallback.invocation` and `fallback.internal` (DEC-13). They are the declared two-segment exception to the `domain.reason.detail` pattern and the only members of the reserved `fallback` namespace; every other code matches the three-segment pattern, and every other `fallback.*` literal is unresolvable. Recognition of these identifiers happens at Level A; their admission as entries is validated at Level B.
+- **A-T12** — The sync recognizer is level-scoped (§4.4): Level A scan-level namespace recognition over S1/S3, Level B strict validation of source entries, Level C direct corpus input. `tests/fixtures/result/code-corpora/**` is excluded from the S3 walk and fed only explicitly; `tests/**/*.test.ts` sources are outside S1/S3 because their literals are runtime-resolved by the suites (AC-F8-1's "referenced in code" is satisfied by S1 + Level B + Level C).
+- **A-T13** — Redaction is contiguous registered-value replacement (plan D1): `[redacted]` replaces each registered value wherever it occurs, but the chokepoint never assembles a value from adjacent fields. Fragments of a secret are in-guarantee only when registered as values, so TC-REDACT-003's split case registers its fragments; marker-prefix or value-pattern matching is deliberately not adopted at v1 (§4.5 item 6, GAP-3).
 
 ### 8.3 Open Questions
 
@@ -1548,7 +1560,7 @@ The `git diff` for `scripts` intentionally includes the two new `scripts/checks/
 |----|----------|---------|--------|-------|
 | OQ-T1 | Which documentation artifact carries the documented error table inside this change, and where does it live? | AC-F8-1's second direction ("documented entry missing from source") is untestable without a doc target. Spec v1.1 fixes the target: the documented table ships in-change at `doc/spec/features/feature-result-contract.md`, authored during delivery; phase 7 reconciles and completes the surrounding feature doc without rewriting the table section. | **Resolved (spec v1.1)** — in-change doc target bound in §4.4; the sync check binds both directions from merge time (TC-SYNC-001..006). | @pm / @spec-writer |
 | OQ-T2 | Does the fallback entry need a `retryable: false` value, and which `category` should it carry? | Spec v1.1 / DEC-13 fixes two containment entries and their fields: `fallback.invocation` (category `user`, `retryable: false`, consequence `unknown`, user-validation → exit 1) and `fallback.internal` (category `platform`, `retryable: false`, consequence `unknown`, platform-provider → exit 2). | **Resolved (spec v1.1, DEC-13)** — tests assert these fixed values (TC-TABLE-002, TC-CLASSIFY-002, TC-CONTAIN-001..003). | @pm / @spec-writer |
-| OQ-T3 | Redaction policy for registered secrets: remove the field, or replace the value with a fixed placeholder? | Both satisfy "removed or transformed"; the choice changes the goldens. Tests assert zero marker occurrences plus payload-shape preservation, so either is acceptable if bound. | Open — non-blocking; bound once by delivery planning, then fixed in the goldens | Delivery planning |
+| OQ-T3 | Redaction policy for registered secrets: remove the field, or replace the value with a fixed placeholder? | Both satisfy "removed or transformed"; the choice changes the goldens. Tests assert zero marker occurrences plus payload-shape preservation, so either is acceptable if bound. | **Resolved (plan D1)** — fixed `[redacted]` placeholder, applied per registered value (string values, keys, embedded substrings), never stitched across fields; the split corpus case registers its fragments (A-T13) | Delivery planning |
 | OQ-T4 | Should the CLI's ambient-brand confinement be a dependency-cruiser rule, an AST structure test, or an extension of the ambient guard? | Any of the three can enforce it, but the choice determines whether a new negative fixture is required in `tests/boundaries` or an inline temp-copy mutation in `tests/structure`. | Open — non-blocking; whichever is chosen must ship with a failing-fixture proof (AC-F9-1) | Delivery planning |
 | OQ-T5 | Is a non-`--json` success expected to write anything to stdout, and must it be asserted? | NG-5 puts human UX out of scope; this plan asserts only the returned exit code and the internal envelope for non-`--json` runs. | Resolved for this plan: human stdout shape is unasserted; revisit when M0-S4 ships human output | @pm |
 
@@ -1558,6 +1570,7 @@ The `git diff` for `scripts` intentionally includes the two new `scripts/checks/
 |---------|------|--------|---------|
 | 1.0 | 2026-10-30 | @test-plan-writer | Initial plan: 38 TCs across envelope contract (RESULT), error table (TABLE), classification chain (CLASSIFY), exit projection (EXIT), `runCli` surface and determinism (RUNCLI), failure containment (CONTAIN), redaction chokepoint (REDACT), docs/code sync (SYNC), boundary/branding/regression (BOUNDARY), and a manual contract review (REVIEW). All 16 spec ACs covered (AC-F8-1 conditional on OQ-T1), all 4 ticket ACs mapped, DM-1..DM-4 and NFR-1..NFR-10 traced; golden/invariant contracts fixed (§4.1–§4.7); GAP-1..GAP-4 recorded rather than reinterpreted |
 | 1.1 | 2026-10-30 | @test-plan-writer | Touch-up after spec v1.1 (commit 3b1f5f5): GAP-1/OQ-T1 resolved — the documented table ships in-change at `doc/spec/features/feature-result-contract.md`, the sync check binds both drift directions against it from merge time, and phase 7 reconciles the surrounding feature doc without rewriting the sync-checked table section. GAP-4/OQ-T2 resolved via DEC-13 — two fallback entries, `fallback.invocation` (category `user`, `retryable: false`, consequence `unknown`, user-validation → exit 1) and `fallback.internal` (category `platform`, `retryable: false`, consequence `unknown`, platform-provider → exit 2), with the reserved two-segment `fallback` namespace recognized by the sync check (A-T11). All fallback references synced; TC IDs, count (38), tiers, thresholds, and suite structure unchanged |
+| 1.2 | 2026-10-30 | @test-plan-writer | Remediation of DoR iteration 1 findings (NOT_READY). **F1 (major)**: §4.4 now defines the sync recognizer in three levels — Level A scan-level recognition (S1/S3; declared domain-kind first segment or the reserved `fallback` namespace; foreign-namespace dotted literals ignored and uncounted), Level B strict validation of source entries, Level C direct corpus input — with `tests/fixtures/result/code-corpora/**` explicitly excluded from the S3 walk so TC-SYNC-001's green path is reachable; TC-SYNC-005 steps re-targeted per level (recognized-but-undeclared code fails; foreign-namespace literal ignored as the negative control; corpus rows driven at Level C with their own failure naming; Level-separation step added); TC-SYNC-001/002/003 and RSK-T5 aligned; `tests/**/*.test.ts` declared outside S1/S3 (nit 6) and AC-F8-1's "referenced in code" grounded in S1 + Level B + Level C. **F2 (minor)**: TC-REDACT-003's split case now registers its fragments (contiguous per-registered-value replacement, plan D1 retained in kind) with per-fragment zero-occurrence and byte-exact golden assertions; §1.1, §4.5 (new item 2, renumbered), §6.2, OQ-T3, A-T13 updated; plan mirror required. **F3 (minor)**: TC-CLASSIFY-002 step 4 clarified — classify-level route distinctness only; the dispatch-level proof is TC-CONTAIN-001 in plan Phase 3. **Nit 5**: references note the companion survey predates DEC-13 and its singular fallback phrasing is superseded. No TC IDs, count (38), tiers, thresholds, or suite structure changed |
 
 ## 10. Test Execution Log
 

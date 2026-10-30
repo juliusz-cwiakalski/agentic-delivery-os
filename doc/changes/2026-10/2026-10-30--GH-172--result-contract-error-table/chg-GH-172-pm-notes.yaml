@@ -4,7 +4,7 @@ delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-10-30T01:18:00Z", completed: "2026-10-30T01:25:00Z" }
   specification: { started: "2026-10-30T01:45:00Z", completed: "2026-10-30T02:25:00Z" }
-  test_planning: { started: "2026-10-30T02:05:00Z", completed: null }
+  test_planning: { started: "2026-10-30T02:05:00Z", completed: "2026-10-30T03:12:00Z" }
   delivery_planning: { started: "2026-10-30T02:42:00Z", completed: "2026-10-30T02:52:00Z" }
   dor_check: { started: "2026-10-30T02:58:00Z", completed: null }
   delivery: { started: null, completed: null }
@@ -69,5 +69,8 @@ notes:
     type: "retro"
     date: 2026-10-30
   - text: "Delivery plan COMPLETED (48d1a08, marker committed separately): 7 phases, one Conventional Commit each, independently green at every boundary; all 38 TCs mapped to phases/ACs; OQ-T3 resolved as fixed [redacted] placeholder policy (substring-embedded corpus + golden determinism); OQ-T4 resolved as split enforcement (3 depcruise rules with failing fixtures + 1 AST structure test for content/source-order bans); repo-constraint findings: no changeset (private 0.0.0 packages), no ADOS_DELIVERY_SCRIPTS registration (matches convention), feature doc without ados_distribution marker (doc/spec outside drift-guard scan set), one confined runtime allowance (cli edge). Retro: PM forgot the pm-notes delivery_planning marker before delegating the commit — committer correctly refused to fabricate tracker state; marker committed separately; lesson: pm-notes phase transitions must precede every committer invocation. Retro 2: a malformed edit tool call truncated the test-plan note and corrupted the YAML — detected by reading the file, repaired in place; lesson: edit oldString must be the complete exact text, never a prefix. Retro 3: the same prefix-truncation fault recurred when inserting the DoR NOT_READY record — the oldString anchored on the delivery note's opening line instead of the complete entry; repaired again. Lesson enforced: when appending pm-notes, anchor edits on a COMPLETE unique existing block (or rewrite the file tail wholesale), never on an entry-opening prefix."
+    type: "info"
+    date: 2026-10-30
+  - text: "Test planning iteration 2 COMPLETED (2026-10-30T03:12Z): test plan v1.2 — Finding 1 [major] fixed with three recognizer levels (Level A scan-level namespace rule, foreign namespaces ignored/uncounted; Level B strict source-entry validation; Level C corpus as direct named input with per-row recognized/resolves expectations) plus narrow S3 exclusion of tests/fixtures/result/code-corpora/** only; Finding 2 [minor] fixed via fragment registration (option a; marker-prefix matching rejected at v1, D1 contiguity clamp documented, vacuity guard added for short fragments); Finding 3 [minor] fixed (TC-CLASSIFY-002 = classify-level distinctness; dispatch proof is TC-CONTAIN-001/Phase 3); nit 5 handled by reference note (survey pre-dates DEC-13, superseded phrasing); nit 6 covered by the S1/S3 scope sentence. Plan mirrored to v1.1 (9 items, phase structure and commit messages unchanged, 38 TCs unchanged). No spec change required. DoR re-run (iteration 2) follows."
     type: "info"
     date: 2026-10-30
