@@ -251,6 +251,11 @@
       "id": "runtime-node-fs-adapter-registry",
       "tc": "TC-SCAFFOLD-014",
       "path": "packages/adapters/src/registry/probe.ts"
+    },
+    {
+      "id": "runtime-node-fs-adapter-io",
+      "tc": "TC-SCAFFOLD-014",
+      "path": "packages/adapters/src/io/probe.ts"
     }
   ],
   "ambient-env-branding": [

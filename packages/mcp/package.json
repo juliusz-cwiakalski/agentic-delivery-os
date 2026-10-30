@@ -34,7 +34,8 @@
       "./file",
       "./host",
       "./session",
-      "./legacy"
+      "./legacy",
+      "./credentials"
     ]
   },
   "scripts": {

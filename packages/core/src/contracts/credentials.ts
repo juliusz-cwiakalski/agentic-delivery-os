@@ -39,8 +39,8 @@ export type CredentialFailureCode = "config.credential.missing";
 /**
  * The reified `config.credential.missing` failure (F-6).
  *
- * The fields mirror the machine-readable error-table row exactly; the
- * environment-backed implementation builds them from that row.
+ * The fields mirror the machine-readable error-table row exactly; the delivery
+ * suite binds the two so drift fails by name.
  */
 export type CredentialResolutionFailure = {
   readonly ok: false;

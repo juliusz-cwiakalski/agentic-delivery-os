@@ -6,8 +6,8 @@
  * and must stay clean.
  */
 import { describe, expect, test } from "bun:test";
-import { createRequire } from "node:module";
 import { mkdtempSync, rmSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AMBIENT_SCOPE, scan } from "../../scripts/checks/ambient-globals";
@@ -101,7 +101,7 @@ describe("ADR-verbatim scope and allowlist assertions", () => {
     // provider (gitlab/jira/github/azure/ci) and registry subpaths are not I/O.
     expect([...pathNot]).toEqual([
       "^packages/core/src/state/",
-      "^packages/adapters/src/(repo|file|host|session|legacy)/",
+      "^packages/adapters/src/(repo|file|host|session|legacy|credentials)/",
       "^packages/cli/",
       "^packages/opencode/",
     ]);

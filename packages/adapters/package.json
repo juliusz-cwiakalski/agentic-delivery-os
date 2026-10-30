@@ -50,6 +50,10 @@
     "./legacy": {
       "types": "./dist/legacy/index.d.ts",
       "default": "./dist/legacy/index.js"
+    },
+    "./credentials": {
+      "types": "./dist/credentials/index.d.ts",
+      "default": "./dist/credentials/index.js"
     }
   },
   "imports": {
@@ -59,7 +63,8 @@
     "#azure/*": "./src/azure/*.ts",
     "#ci/*": "./src/ci/*.ts",
     "#io/*": "./src/io/*.ts",
-    "#registry": "./src/registry/index.ts"
+    "#registry": "./src/registry/index.ts",
+    "#credentials/*": "./src/credentials/*.ts"
   },
   "workspaceImports": {
     "@delivery-os/core": [

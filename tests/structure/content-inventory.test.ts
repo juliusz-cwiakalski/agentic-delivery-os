@@ -65,6 +65,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "invalidKey",
     "serializeProductionSchema",
   ],
+  "adapters/src/credentials/index.ts": [
+    "createEnvironmentCredentialPort",
+    "createProcessCredentialPort",
+    "resolveCredentialSourceKey",
+  ],
   "adapters/src/file/config-source.ts": [
     "acquireFileConfig",
     "neutralEnvironmentFacts",

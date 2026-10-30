@@ -23,6 +23,7 @@
   "adapters": [
     "src/azure/index.ts",
     "src/ci/index.ts",
+    "src/credentials/index.ts",
     "src/file/config-source.ts",
     "src/file/index.ts",
     "src/file/yaml-parser.ts",
