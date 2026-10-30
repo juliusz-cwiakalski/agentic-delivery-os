@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check, dist-targeted exports with publint/attw, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
 links:
-  related_changes: ["GH-170", "GH-171"]
+  related_changes: ["GH-170", "GH-171", "GH-172"]
   related_decisions: ["ADR-0003"]
 ---
 
@@ -147,6 +147,8 @@ The five named scripts exist at the root and in all six packages:
 
 Exactly one aggregate `check` chains them in that order: `lint → format:check → typecheck → test → check:boundaries`. No alternate aggregate or bypass flag exists. `pnpm check` is the single green/red signal for the workspace.
 
+The root `typecheck` and `test` scripts each declare a `pnpm build` prerequisite (`pretypecheck` and `pretest`). The aggregate therefore builds every package before it typechecks and tests, so package-name specifiers, emitted declarations, and conditional `imports` aliases resolve against built `dist` targets.
+
 ### Build and exports discipline
 
 - Builds emit to `dist/`.
@@ -241,7 +243,7 @@ core              ──> no workspace dependencies
 | Unit/structure | Package inventory, subpaths, exports, `createRuntime` | `bun test tests/structure` |
 | Boundary | Every forbidden rule, alias and relative form, on production resolution | `bun test tests/boundaries` with the `mkdtemp` harness; `check:boundaries` for the gate |
 | Fixture coverage | Rule-to-fixture completeness | `tests/boundaries/fixture-coverage.test.ts` |
-| Invariants | Manifests, pins, CI topology, bindingness, supply chain, exports, licenses | `bun run scripts/checks/*.ts` and mutation tests under `tests/checks/**` |
+| Invariants | Manifests, pins, CI topology, bindingness, supply chain, exports, licenses, result-contract table sync, exit literals | `bun run scripts/checks/*.ts` and mutation tests under `tests/checks/**` |
 | Behaviour | pnpm isolation, commit-msg hook | `bun test tests/behaviour` |
 | Aggregate | The whole workspace | `pnpm check` |
 
