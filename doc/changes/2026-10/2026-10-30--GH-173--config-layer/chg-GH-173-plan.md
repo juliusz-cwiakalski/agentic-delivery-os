@@ -1,8 +1,8 @@
 ---
 id: chg-GH-173-config-layer
-status: Proposed
+status: Updated
 created: 2026-10-30T06:47:31Z
-last_updated: 2026-10-30T06:53:58Z
+last_updated: 2026-10-30T07:14:25Z
 owners: [engineering]
 service: delivery-os configuration
 labels: [change, planning]
@@ -24,7 +24,7 @@ version_impact: minor
 
 ## Context and Goals
 
-Implement F-1–F-7 against the completed specification and test plan, identified by the requesting handoff as checkpoints `86c9f65` and `96af73f`. This writer read the working-tree artifacts; it performed no git operations to independently verify checkpoint or branch identity. Execution belongs on `feat/GH-173/config-layer`; the orchestrator verifies branch/checkpoint state before delivery and targets `main-tools` for the unmerged PR.
+Implement F-1–F-7 against the completed specification and test plan, identified by the reopened handoff as checkpoints `4097f60` and `f548533`. This writer read the working-tree artifacts and readiness iteration 1; it performed no git operations to independently verify checkpoint or branch identity. Execution belongs on `feat/GH-173/config-layer`; the orchestrator verifies branch/checkpoint state before delivery and targets `main-tools` for the unmerged PR. Spec §8.3 DM-2 defines the first-match skip-reason oracle; spec §18 defines completion for the open-PR handoff, not merge/adoption.
 
 The current core config tier and file/repo adapter entries are scaffolds. Core `.` declares `createRuntime` but does not implement it. The existing CLI supplies injected command programs and streams, error classification, exit projection and one serialization boundary, but rejects positional subcommands and emits no human success payload. These are concrete implementation seams, not already-delivered config behavior. Do not implement unrelated runtime services to activate `createRuntime`.
 
@@ -35,7 +35,7 @@ Deliver a pure, exported production resolver with a plain ConfigSource port; lin
 - **OQ-1 — owner review before merge/adoption:** Proposed TDR-0003 selects runtime `yaml@2.9.1` and `Ajv@8.20.0`, subject to exact closure/license compatibility review, including BSD-3-Clause. It remains Proposed. Branch implementation and an open unmerged PR are permitted with truthful proposed registry determinations and passing gates. Decision needed: consult `@decision-advisor` if rejected or if actual host evidence prohibits validator code generation. Decision-record follow-up: amend the existing TDR-0003 proposal with evidence and obtain the human decision; do not mark it Accepted as part of implementation.
 - **Observed upstream implementation gaps, not missing ACs:** `license-audit.ts` indexes by package name, requires `dev-dependency` even when manifests use runtime dependencies, and does not traverse runtime closure. `classifyDomainKind()` selects the first kind row; `classifyThrown()` ignores exact code; `runCli()` forwards handler summaries. Phases 1 and 4 must repair these seams without weakening existing approved singleton classification or generic command behavior.
 - **Delivery-infrastructure scope constraint:** new standalone checks under `scripts/` require install registration, while this change excludes bash-stack edits. Use existing registered check modules for artifact generation/parity and audit extensions as specified below, plus test modules, rather than adding an unregistered script. If that cannot be implemented coherently, stop for PM scope reconciliation before adding a check or editing `scripts/install.sh`; no silent registration exception.
-- **Artifact linkage:** the completed test plan intentionally has `implementation_plan: null` and historical statements that no plan existed at authoring. This plan provides the reciprocal canonical link and preserves all proposed test paths. No test-plan edit is needed for this writer's one-file scope; PM may reconcile that historical link later through its artifact workflow.
+- **Artifact linkage:** the completed test plan links this existing implementation plan and retains its initial-authoring chronology. The reciprocal canonical link above and all proposed test paths remain intact; no test-plan edit is needed in this writer's one-file scope.
 
 No additional product requirements or blocking spec/test coverage gaps were found. Actual security, parser portability and packed-artifact results remain unproven until execution.
 
@@ -84,7 +84,7 @@ No additional product requirements or blocking spec/test coverage gaps were foun
 
 ## Phases
 
-Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → (7 if findings) → 8**. Parser/discovery helpers may be developed after Phase 1 contracts stabilize, but Phase 3 completes only against Phase 2's real resolver. Phase completion signals are states; the orchestrator delegates any commits to `@committer`. Review and fixes loop until pass, never around a failing gate.
+Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → (7 if findings) → 8**. Parser/discovery helpers may be developed after Phase 1 contracts stabilize, but Phase 3 completes only against Phase 2's real resolver. Phase completion signals are states; the orchestrator delegates any commits to `@committer`. After coder's no-review implementation handoff, PM owns scheduling and evidence for Phases 6–8 through the lifecycle, including independent review, delegated fixes/re-review, final gates and PR handoff. Coder must not mark those phases complete merely by finishing implementation. Review and fixes loop until pass, never around a failing gate.
 
 ### Phase 1: Contracts, dependency governance and exact failure identities
 
@@ -157,13 +157,14 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → (7 if findings) → 8**.
 - [ ] **3.1** Implement YAML 1.2 parsing under adapters `src/file` with document/node ranges and LineCounter before conversion. Accept one unique-string-key mapping and JSON-compatible values; reject duplicate/non-string keys, multiple documents, custom/executable tags, merge semantics, cyclic/non-JSON data and excessive alias expansion. Record actual value-node lines, array element/empty collection positions and alias referenced-value positions in plain facts.
 - [ ] **3.2** Check actual host `LOG_TOKENS` and `LOG_STREAM` before invoking the Node-selected parser; reject either nonempty switch as safe `config.value.invalid`. Disable parser logging/snippet diagnostics, catch exceptions into safe constructed codes/available locations and expose no parser document/text, stack or raw summary. Do not mutate environment or intercept global console.
 - [ ] **3.3** Implement file/platform source acquisition with injected runtime facts and brand-derived directory/prefix: Linux XDG ordered first-existing system candidate and home defaults, macOS Application Support paths and Windows PROGRAMDATA/APPDATA. Optional absent sources report `missing`; unusable explicitly selected files fail `config.value.invalid` with actual path and no invented line.
-- [ ] **3.4** Implement git-root facts behind existing `./repo` (or an injected explicit root) and root-only project file selection. Never load intermediate/above-root decoys; outside git skip both project layers as `no-git-root` unless explicit root/selection applies. Under `CI=true`, skip system/user-global/project-local as `ci-disabled`, each re-enabled only by its own control.
-- [ ] **3.5** Apply `--config` over brand/legacy selector at project-committed priority, with project-local `selected-config` even outside git; retain CI exclusions, schema and source restrictions. Return ordered loaded/skipped evidence, not an eighth layer. Feed catalog-aware env facts and explicit recognized-name exclusions to the core mapping without inferring arbitrary extension keys.
+- [ ] **3.4** Implement git-root facts behind existing `./repo` (or an injected explicit root) and root-only project file selection. Never read intermediate/above-root decoys. Apply spec DM-2 before source reads: system and user-global independently check `CI=true` without their own enable flag (`ci-disabled`), then optional absence (`missing`); committed checks lack of selection and git/explicit root (`no-git-root`), then optional root-file absence (`missing`). Explicit root bounds discovery but never enables CI-disabled sources. For unselected project-local, check CI/local enable (`ci-disabled`) before root eligibility (`no-git-root`), then optional absence (`missing`); selected-local precedence belongs to 3.5. Skipped sources are never read, even when present/poisoned.
+- [ ] **3.5** Apply `--config` over brand/legacy selector at project-committed priority, not an eighth layer. Project-local uses the first-match order `selected-config` > `ci-disabled` > `no-git-root` > `missing`: selection wins regardless of CI, explicit/git root, local enable flag or local-file presence, with zero local reads. Missing/unreadable selection fails `config.value.invalid`, never an optional skip; schema and source restrictions still apply. Neither selection nor root implicitly enables system/user; each retains its independent CI/enable/missing outcome. Return ordered loaded/skipped evidence and feed catalog-aware env facts and explicit recognized-name exclusions to core mapping without inferring arbitrary extension keys.
 - [ ] **3.6** Adapt legacy acquisition through the same ConfigSource contract using current names as parameters. Preserve existing legacy-name compatibility and current-wins collisions; use an injected safe warning sink with process-scoped once state for config calls, not the console-default helper or a fresh per-invocation warning state. Add actual-parser/temp-repository/platform/CI/selection/legacy tests, including isolated parser-host-switch and warning-lifetime controls.
 
 **Acceptance Criteria**:
 
 - Must: AC-F2-1/2/3/4, AC-F3-1/4, AC-F6-4 and source-acquisition portions of AC-F7-2 pass against actual adapters.
+- Must: TC-CONFIG-004–006 assert exact DM-2 overlap reasons and acquisition read counts, including poisoned skipped sources and eligible/missing positive controls. Under CI outside git without root/selection, committed is `no-git-root`, local is `ci-disabled` unless locally enabled (then `no-git-root`); selection always makes local `selected-config`. System/user remain independently CI-disabled unless their own flags enable them; no skipped layer has a source read or loaded record.
 - Must: every file leaf/array element/collection is associated with its true available position, selected-file errors invent none and parser invocation count is zero for both blocked host switches.
 - Must: no YAML/Ajv/raw-source types cross ConfigSource; adapters import only core contracts and never branding/core root; legacy unused control warns zero times.
 
@@ -175,6 +176,7 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → (7 if findings) → 8**.
 **Tests**:
 
 - TC-CONFIG-003–007, 010, 012, 013, 017, 021, 024 with production parser and disposable roots; aliases/multiline/flow/lists have independently recorded fixture line expectations.
+- TC-CONFIG-005's exact DM-2 overlap oracle, with TC-CONFIG-004 root/decoy and TC-CONFIG-006 selector/error controls: assert first-match records and zero skipped-source reads, not merely ignored values; repeat eligible loads with absent optional files for `missing`.
 - Runner: build then focused suites under controlled facts; Node subprocesses exercise actual parser entry and actual host switches with unregistered source canaries, unset/empty positive controls and no parent-environment mutation.
 
 **Completion signal**: adapters supply bounded, position-accurate, safely classified plain facts and loaded/skipped evidence; negative parser/discovery controls pass.
@@ -245,7 +247,7 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → (7 if findings) → 8**.
 
 **Tasks**:
 
-- [ ] **6.1** Have `@reviewer` trace every row of the 25-AC mapping below to code and non-vacuous test evidence; inspect seven-layer ordering, per-layer-before-merge restrictions, frozen bootstrap, source position/default drift handling, exact code containment and preserved upstream behavior.
+- [ ] **6.1** PM delegates independent analysis to `@reviewer` after coder's no-review handoff: trace every row of the 25-AC mapping below to code and non-vacuous test evidence; inspect seven-layer ordering, DM-2 first-match/non-read controls, per-layer-before-merge restrictions, frozen bootstrap, source position/default drift handling, exact code containment and preserved upstream behavior.
 - [ ] **6.2** Audit all output paths and failure constructors for unregistered secrets/snippets, malformed discriminator summaries and writer bypass; inspect parser host-switch ordering, alias bounds, trusted-validator imports and packed consumer isolation. Inspect truthful runtime closure/multi-use accounting, fail-closed mutation tests and Proposed owner-review wording.
 - [ ] **6.3** Record findings/verdict and evidence gaps through the normal review artifact workflow; verify no out-of-scope bash/prompt/plugin/planning changes, headers, credentials or unapproved boundary exceptions. Route implementation findings to Phase 7; route changed decisions to PM/decision advisor, not a silent alternative.
 
@@ -273,7 +275,7 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → (7 if findings) → 8**.
 
 - [ ] **7.1** If findings exist, reproduce each via the relevant TC/negative fixture and add the missing regression before making the smallest fix; preserve current behavior outside the accepted config slice.
 - [ ] **7.2** Fix code, catalog/artifacts, dependency accounting and matching docs together. Any error-table change carries its documented row in the same fix. Consult `@decision-advisor` through PM for selection/boundary changes; retain TDR-0003 Proposed pending the human decision.
-- [ ] **7.3** Have runner repeat affected focused tests/mutations and full applicable gates; request independent re-review until PASS. If no findings, record this phase as not required with reviewer evidence, rather than claim fixes were executed.
+- [ ] **7.3** PM delegates runner repetition of affected focused tests/mutations and full applicable gates, and independent re-review until PASS after delegated fixes. If no findings, record this phase as not required with reviewer evidence, rather than claim fixes were executed.
 
 **Acceptance Criteria**:
 
@@ -298,14 +300,14 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → (7 if findings) → 8**.
 **Tasks**:
 
 - [ ] **8.1** Add the minor Changesets release intent per the existing five-publishable fixed group; verify group membership, dependency updates and private/publish guard. Do not flip private flags, publish, tag or hand-bump unrelated package versions. The release pipeline owns applying the eventual version bump; this change supplies the required minor bump declaration.
-- [ ] **8.2** Reconcile the completed implementation against all 25 ACs and current system specs one final time, including exact error rows, schema/default artifacts, CLI payloads and credential/mediated boundaries. Record actual execution states/evidence in plan/test execution logs through the executor workflow; leave approved spec behavior intact or escalate real divergences rather than rewriting requirements to match bugs.
+- [ ] **8.2** PM verifies spec §18's open-PR DoD: passing traceable evidence for all 25 ACs and applicable measured evidence for all nine NFR thresholds; executable negative controls and green positive controls for DM-2 disabled/selected non-reads, root bounds, malformed/shadowed/forbidden input, registered/unregistered canaries, parser switches, position/default-manifest drift, schema/error-table parity and boundary/ambient regressions. Reconcile current configuration/result/branding/scaffold/index/glossary docs, empty production/fixture behavior, packed schema/default-position artifacts, isolated Node/Bun consumption, CLI payloads and credential/mediated boundaries. Record actual states/evidence through executor logs; escalate divergences rather than rewriting approved requirements to match bugs.
 - [ ] **8.3** Ask `@runner` to run the final ordered gate set below with exact commands/results and tested SHA, including whitespace preflight `git diff --check`. Require Markdown without trailing spaces and inspect newly created files too before committer staging; no claim that a plain unstaged diff checks untracked additions. Resolve failures and repeat affected/full gates rather than bypass them.
 - [ ] **8.4** Have PM/committer/PR manager manage checkpoint commits and pushed-state verification; PR targets `main-tools` and all required jobs must be green on the **pushed HEAD**, not an earlier SHA. Present Proposed TDR-0003, exact runtime/license/closure rows, mechanical/security/portability evidence and pending human compatibility determination to the owner. STOP at the open unmerged PR; acceptance is required before merge/adoption, not before opening it.
 - [ ] **8.5** Include rollback instructions and scope proof in the handoff: no persisted migration or operator-file rewrite. If rejected or unsafe, revert config composition, resolver/adapters, artifacts/build wiring, runtime dependency+lock+registry changes, corresponding tests/docs/error rows and Changeset as one coherent reviewed unit; retain upstream GH-170/171/172 behavior. Never roll back one side of the error-table sync, leave an unaccounted runtime dependency or replace a failure with permissive parsing. Re-run baseline checks after rollback; human review governs any replacement selection.
 
 **Acceptance Criteria**:
 
-- Must: 25/25 ACs and all applicable gates have current evidence; minor release intent and spec reconciliation are complete.
+- Must: spec §18's open-PR DoD has current passing evidence for 25/25 ACs, all nine applicable NFR thresholds, executable negative and positive controls, independent review/re-review, synchronized docs and packed artifacts; minor release intent and spec reconciliation are complete. Applicable local quality, license/security, packaging and existing bash gates pass without implying human TDR/license acceptance.
 - Must: all `ts-*`, `bash-tests` and remaining required CI jobs are green on handoff HEAD, PR base is `main-tools`, pending human acceptance is explicit and no merge/publish occurs.
 - Must: rollback is coherent and does not touch operator data, bash-stack behavior or upstream approved contracts.
 
@@ -333,9 +335,9 @@ All 25 ACs map one-to-one to the completed test plan. All are high priority; TC-
 | TC-CONFIG-001 | Seven intermediate winners; recursive maps, scalars and whole-list replacement; deterministic origins | AC-F1-1 | 2, 3 | Unit/integration: `tests/behaviour/config-resolver.test.ts` |
 | TC-CONFIG-002 | Reset before same-layer set; invalid targets fail even if later shadowed; descendants removed | AC-F1-2 | 2 | Unit/integration: `config-resolver.test.ts` |
 | TC-CONFIG-003 | Linux XDG defaults/order, macOS/Windows paths and optional `missing` evidence | AC-F2-1 | 3 | Integration: `tests/behaviour/config-sources.test.ts` |
-| TC-CONFIG-004 | Git/explicit root bounds, intermediate/parent decoys, outside-git skips | AC-F2-2 | 3 | Integration: `config-sources.test.ts` |
-| TC-CONFIG-005 | CI disables exactly three ambient layers; individual enable/root/selection matrix | AC-F2-3 | 3, 4 | Integration: `config-sources.test.ts` |
-| TC-CONFIG-006 | Current/legacy/env/flag selector priority, committed slot, selected-config skip and unusable selection | AC-F2-4 | 3, 4 | Integration: `config-sources.test.ts`, `config-cli.test.ts` |
+| TC-CONFIG-004 | Git/explicit root bounds, intermediate/parent decoys, outside-git first-match reasons and zero skipped/decoy reads | AC-F2-2 | 3 | Integration: `config-sources.test.ts` |
+| TC-CONFIG-005 | Exact DM-2 CI/root/selection/independent-enable oracle; local selected > CI > root > missing; zero skipped reads | AC-F2-3 | 3, 4 | Integration: `config-sources.test.ts` |
+| TC-CONFIG-006 | Selector priority and committed slot; selected-config first with zero local reads; independent system/user CI and selected-file errors | AC-F2-4 | 3, 4 | Integration: `config-sources.test.ts`, `config-cli.test.ts` |
 | TC-CONFIG-007 | Actual malformed YAML fails safely at real available line, no partial data, human/machine exit 1 | AC-F3-1 | 3, 4 | Integration/contract: sources and CLI tests |
 | TC-CONFIG-008 | Reserved metadata/reset, vendor extensions, unknown keys/types/null, partial and final checks | AC-F3-2 | 2, 3 | Unit/integration: `config-schema.test.ts`, sources tests |
 | TC-CONFIG-009 | Empty production versus typed fixture catalog; required/nullable/defaulted semantics on same API | AC-F3-3 | 2, 4 | Unit/contract: schema tests, `tests/structure/config-contract.test.ts` |
@@ -362,8 +364,9 @@ Phase 6 independently reviews all rows; Phase 7 replays affected rows; Phase 8 r
 
 | Artifact | Location | Role / handling |
 |---|---|---|
-| Completed change spec | [chg-GH-173-spec.md](./chg-GH-173-spec.md) | Source of requirements; checkpoint identified as `86c9f65` |
-| Completed test plan | [chg-GH-173-test-plan.md](./chg-GH-173-test-plan.md) | Source of 25 TC IDs, test locations, automation and AC mappings; checkpoint identified as `96af73f` |
+| Completed change spec | [chg-GH-173-spec.md](./chg-GH-173-spec.md) | Source of requirements, DM-2 matrix and §18 DoD; supplied checkpoint `4097f60` |
+| Completed test plan | [chg-GH-173-test-plan.md](./chg-GH-173-test-plan.md) | Source of 25 TC IDs, overlap/read-count oracle, test locations, automation and AC mappings; supplied checkpoint `f548533` |
+| Readiness iteration 1 | [readiness-iter-1.md](./readiness-review/readiness-iter-1.md) | Reopened skip-reason consistency and explicit DoD findings; PM must obtain renewed readiness verdict |
 | This plan | `./chg-GH-173-plan.md` | Only file written by this authoring pass |
 | PM scope evidence | [PM notes](./chg-GH-173-pm-notes.yaml) | Read-only; historical chronology and resolved checkpoint issues preserved |
 | Accepted architecture | [ADR-0003](../../../decisions/ADR-0003-oss-monorepo-structure.md) | Seven layers and package/tier matrix |
@@ -386,6 +389,7 @@ No new standalone delivery-infrastructure check is planned. Existing check modul
 | Version | Date (UTC) | Author | Changes |
 |---|---|---|---|
 | 1.0 | 2026-10-30T06:53:58Z | Implementation Plan Writer | Initial eight-phase, 39-task plan; 25/25 AC mapping, synchronous error docs, runtime closure governance, parser/provenance/security/packed controls, rollback and owner-review gate. |
+| 1.1 | 2026-10-30T07:14:25Z | Implementation Plan Writer | DoR iteration 1: aligned tasks 3.4/3.5, acceptance and scenarios with DM-2 first-match/non-read oracle; synchronized explicit spec §18 DoD, existing test-plan linkage and supplied checkpoints; clarified PM-owned review/fixes/final handoff after coder no-review. Preserved all task/AC/TC IDs and execution history; only this plan edited, no git/build/test operations. |
 
 ## Execution Log
 

@@ -5,7 +5,7 @@ phases:
   clarify_scope: { started: "2026-10-30T06:40:00Z", completed: "2026-10-30T06:55:00Z" }
   specification: { started: "2026-10-30T06:04:46Z", completed: "2026-10-30T07:09:28Z" }
   test_planning: { started: "2026-10-30T06:32:47Z", completed: "2026-10-30T07:12:51Z" }
-  delivery_planning: { started: "2026-10-30T06:46:03Z", completed: null }
+  delivery_planning: { started: "2026-10-30T06:46:03Z", completed: "2026-10-30T07:14:25Z" }
   dor_check: { started: "2026-10-30T06:53:58Z", completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -29,6 +29,9 @@ blockers:
     date: 2026-10-30
     resolved_date: 2026-10-30
 notes:
+  - text: "Plan remediation complete 07:14:25Z: tasks3.4/3.5 and acceptance aligned to single DM2 matrix and zero-read requirements, spec DoD and existing test-plan link reflected, all task IDs/25AC mappings preserved. DoR iteration2 requested after checkpoint; no implementation yet."
+    type: "info"
+    date: 2026-10-30
   - text: "Test-plan remediation complete 07:12:51Z: TC004..006 share exact first-match reason matrix and zero-read checks for selected/CI/no-root overlaps; independent enable flags and explicit roots covered, implementation plan link reconciled. All25 mappings/scenarios/automation entries retained, no whitespace. Proceed to plan alignment."
     type: "info"
     date: 2026-10-30
