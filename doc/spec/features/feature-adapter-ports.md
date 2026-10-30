@@ -121,6 +121,8 @@ The pure codec lives in the adapters package as an adapter-internal shared modul
 - `parseEnvelope({ carrier, text?, fieldValue?, expectedKind? })` — returns the v1 envelope plus the stripped human content, or visible degradation evidence plus the stripped human content.
 - `stripEnvelope(carrier, text)` — removes every envelope marker from human-readable carrier text with no residue or extra blank line. The provider custom-field carrier keeps human content separate and is returned unchanged.
 
+Marker scanning is bounded: a marker payload span is capped at `ENVELOPE_MAX_BYTES` characters (a valid v1 envelope is byte-bounded below that), so marker-dense hostile carrier text is scanned linearly rather than quadratically. A marker whose payload exceeds the cap does not match and degrades as `missing`.
+
 Carrier forms are brand-neutral:
 
 - `invisible-comment-block` — an HTML comment `<!-- delivery.metadata.v1 {...} -->` appended after human content.

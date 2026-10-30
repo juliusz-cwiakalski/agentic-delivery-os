@@ -147,4 +147,43 @@ describe("TC-META-002 parse and strip", () => {
     expect(stripped).toContain("delivery.metadata.v1");
     expect(stripped).not.toBe("Original body");
   });
+
+  test("marker-dense hostile input is scanned in bounded time and degrades as missing", () => {
+    const hostile: Array<[CarrierKind, string]> = [
+      ["invisible-comment-block", "<!-- delivery.metadata.v1 {".repeat(8000)],
+      ["compact-marker", "[delivery.metadata.v1:{".repeat(9000)],
+    ];
+    for (const [carrier, text] of hostile) {
+      expect(text.length, carrier).toBeGreaterThan(200_000);
+      const start = performance.now();
+      const parsed = parseEnvelope({ carrier, text });
+      const elapsed = performance.now() - start;
+      expect(parsed.ok, carrier).toBe(false);
+      if (!parsed.ok) expect(parsed.reason, carrier).toBe("missing");
+      expect(elapsed, carrier).toBeLessThan(1000);
+    }
+  });
+
+  test("a valid envelope near the size bound still parses under the bounded scan", () => {
+    const nearBound: MetadataEnvelopeV1 = {
+      schema: ENVELOPE_SCHEMA_ID,
+      kind: "work-item-comment",
+      payload: {
+        comment: { producingAgent: "a".repeat(800), operatorAuthority: "o".repeat(800) },
+        delivery: { workItemRef: "GH-181", runId: "run-1" },
+      },
+    };
+    const serialized = serializeEnvelope({
+      envelope: nearBound,
+      carrier: "invisible-comment-block",
+      humanContent: "body",
+    });
+    expect(serialized.ok).toBe(true);
+    if (!serialized.ok) return;
+    expect(serialized.byteLength).toBeGreaterThan(1500);
+    expect(serialized.byteLength).toBeLessThanOrEqual(ENVELOPE_MAX_BYTES);
+    const reparsed = parseCarrier(serialized.carrier);
+    expect(reparsed.ok).toBe(true);
+    if (reparsed.ok) expect(reparsed.envelope).toEqual(nearBound);
+  });
 });

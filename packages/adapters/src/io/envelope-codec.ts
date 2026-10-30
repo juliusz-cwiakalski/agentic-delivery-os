@@ -30,8 +30,25 @@ import {
 export const ENVELOPE_FIELD_NAME = "delivery.metadata.v1" as const;
 
 const SCHEMA_VERSION_PATTERN = /^delivery\.metadata\.v\d+$/;
-const COMMENT_MARKER = /<!--\s*(delivery\.metadata\.v\d+)\s+(\{[\s\S]*?\})\s*-->/g;
-const COMPACT_MARKER = /\[(delivery\.metadata\.v\d+):(\{[\s\S]*?\})\]/g;
+
+/**
+ * The maximum marker payload span scanned by the carrier patterns, in characters.
+ *
+ * A serialized v1 envelope is bounded by `ENVELOPE_MAX_BYTES` and UTF-8 bytes
+ * are never fewer than characters, so a valid marker payload cannot exceed this
+ * many characters. Bounding the lazy quantifier keeps a marker-dense hostile
+ * carrier linear in the input rather than quadratic; a marker whose payload
+ * exceeds the bound does not match and degrades as `missing`.
+ */
+const MARKER_PAYLOAD_MAX_CHARS = ENVELOPE_MAX_BYTES;
+const COMMENT_MARKER = new RegExp(
+  `<!--\\s*(delivery\\.metadata\\.v\\d+)\\s+(\\{[\\s\\S]{0,${MARKER_PAYLOAD_MAX_CHARS}}?\\})\\s*-->`,
+  "g",
+);
+const COMPACT_MARKER = new RegExp(
+  `\\[(delivery\\.metadata\\.v\\d+):(\\{[\\s\\S]{0,${MARKER_PAYLOAD_MAX_CHARS}}?\\})\\]`,
+  "g",
+);
 
 /** A serialized envelope in its carrier form. */
 export type SerializedCarrier =
