@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-10-30T02:58:00Z", completed: "2026-10-30T03:20:00Z" }
   delivery: { started: "2026-10-30T03:25:00Z", completed: "2026-10-30T04:05:00Z" }
   system_spec_update: { started: "2026-10-30T04:10:00Z", completed: "2026-10-30T04:20:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-10-30T04:25:00Z", completed: "2026-10-30T04:55:00Z" }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -78,5 +78,8 @@ notes:
     type: "info"
     date: 2026-10-30
   - text: "DoR gate iteration 2: READY (2026-10-30T03:20Z), all 10 facets PASS; verdict persisted in readiness-iter-2.md. Iteration-1 findings verified substantively resolved; no new inconsistencies introduced by remediation. Non-blocking observations carried to reviewer/coder: plan D10 invariant-count nit (19 today, rides a future revision); S3 corpus-exclusion glob is load-bearing (must match tests/fixtures/result/code-corpora/** exactly); doc-syncer must source fallback semantics from spec DEC-13, not the survey (pre-DEC-13 phrasing retained by design). Delivery (phase 6) unblocked; hard gate satisfied at iteration 2 of ~3 cap. Retro 4: the prefix-anchor edit fault recurred a THIRD time when inserting the delivery-completion note (oldString ended mid-note at 'readiness-iter-2.md.'), consuming the DoR-READY note's opening and gluing its remainder onto a date line; repaired by full-block reconstruction. Rule is now absolute: pm-notes appends anchor on the COMPLETE final entry or rewrite the whole notes list — mid-note anchors are forbidden no matter how convenient."
+    type: "info"
+    date: 2026-10-30
+  - text: "Review iteration 1: PASS (2026-10-30T04:45Z; 0 blocker / 0 major / 1 minor / 3 low / 2 info; verdict artifact code-review/review-iter-1.yaml). Spec implemented faithfully; reviewer independently re-verified sync/exit-literal/forbidden-literal checks (all exit 0, counts match evidence), 71 spot-check tests pass, chokepoint exclusivity via grep+AST+depcruiser, DEC-13 values exact, gate integrity additive, zero product names, repo rules clean, all six coder deviations judged acceptable. F-1 [minor, PRE-DoD]: plan checkboxes unchecked + Execution Log 'Pending' despite 7 delivered commits — dod_check reads that checklist; docs-only remediation delegated to plan-writer before phase 10. Non-blocking follow-ups for the PR description: F-2 AppErrorCode branded-type decision (runtime-enforced today), F-3 exit-literal scan blind spots (Bun.exit/Deno.exit, bare literal returns), F-4 cyclic/getter-throwing hostile payload fixture, F-5 serialization-fallback force-JSON+unguarded-retry note (near-unreachable), F-6 doc understates diagnostic emission (one-liner next doc-sync). TC-REVIEW-001 satisfied by this review. Retro 5: reviewer delegation was interrupted three times — root cause identified as nested delegation (subagents cannot spawn sub-subagents here; coder had reported the same); fixed by an explicit no-delegation constraint with self-run verification commands; candidate for toolsmith tuning of the reviewer agent definition."
     type: "info"
     date: 2026-10-30
