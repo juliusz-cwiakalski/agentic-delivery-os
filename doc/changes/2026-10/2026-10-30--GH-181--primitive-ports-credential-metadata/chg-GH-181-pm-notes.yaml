@@ -1,0 +1,40 @@
+change_id: GH-181
+title: "M0-S12: Primitive ports, credential port, and embedded metadata"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-10-30T21:00:00Z", completed: "2026-10-30T21:05:00Z" }
+  specification: { started: "2026-10-30T21:06:00Z", completed: "2026-10-30T21:25:00Z" }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions:
+  - text: "Spec selects v1 port set = exactly the nine catalogue adapter-interaction rows typed at M0 (ExternalSystemInstance, AdapterContract, WorkItem, WorkflowMap, WorkItemRelation, DeliveryRequest, PipelineRun, RetryPolicy, IdempotencyKey) + ticket-mandated credential port and metadata envelope; fail-closed inventory in both directions. Catalogue rows outside the set stay with owning stories."
+    date: "2026-10-30"
+  - text: "Env-backed credential implementation placement: adapters package I/O tier as new declared ./credentials subpath admitted to runtime-API confinement allowlist (contracts tier is ambient-neutral; core has no runtime home). Alternative (env-as-data at surface edges) recorded as spec OQ-1 with TDR path."
+    date: "2026-10-30"
+  - text: "Single new error code config.credential.missing (kind config, user, non-retryable, not_landed, user-validation) — chosen to avoid kind-only classification ripples. Malformed metadata gets no error code (degradation is a view state, not a failure)."
+    date: "2026-10-30"
+open_questions:
+  - text: "OQ-1 (spec): env-as-data vs ambient-read placement for the credential implementation — TDR via @decision-advisor if DEC-2 confinement is disputed during delivery; not a plan/test-plan blocker."
+    date: "2026-10-30"
+  - text: "OQ-2 (spec): catalogue bookkeeping for the two rowless contracts (credential port, metadata envelope) — now vs M0-S17 adapter-contract decision record."
+    date: "2026-10-30"
+  - text: "OQ-3 (spec): exact v1 constants (envelope schema identifier within delivery.*.v1 discipline; size bound <= 2048 bytes)."
+    date: "2026-10-30"
+blockers: []
+notes:
+  - text: "Scope sources: issue body + backlog.md M0-S12 + concepts/primitive-catalogue.md + concepts/credential-sidecar.md + concepts/embedded-metadata.md. AC: (1) typed ports with capability flags, (2) CI boundary check fails on secret reads outside the credential port, (3) metadata envelope round-trips and degrades gracefully when a provider strips it. Dependencies M0-S1/S3/S4 verified merged (PRs 191/193/194)."
+    type: "info"
+    date: "2026-10-30"
+  - text: "System-spec cross-check: contracts tier (core ./contracts) is runtime-neutral (types + as const only; ambient-globals guard covers core/src/contracts/**) — the credential port contract is neutral but its env-backed implementation must live at a runtime-aware location; spec-writer must place it deliberately (TDR candidate). New error codes must satisfy error-table-sync. Boundary check follows scripts/checks/*.ts + CI binding patterns (ci-topology, boundary-ci-parity). Config layer precedent: environment-only secrets (feature-config-layer.md)."
+    type: "info"
+    date: "2026-10-30"
+  - text: "Doc impacts for phase 7: new feature spec for the adapter/credential ports (always-resolve first-spec rule); feature-monorepo-scaffold-toolchain.md contracts-placeholder wording; feature-result-contract.md error-table rows if codes added; glossary terms; possible primitive-catalogue status updates; AGENTS.md/CI notes if a new check job is added."
+    type: "risk"
+    date: "2026-10-30"
