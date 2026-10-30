@@ -10,7 +10,7 @@
 import type { AppErrorCode, ErrorCategory, ErrorConsequence, ProjectionClass } from "./result.js";
 
 /** The declared domain kinds: the first link of the classification chain. */
-export const DOMAIN_KINDS = ["provider", "input", "config"] as const;
+export const DOMAIN_KINDS = ["provider", "input", "config", "state"] as const;
 
 /** Reserved containment code for broken invocations and unknown commands. */
 export const FALLBACK_INVOCATION_CODE = "fallback.invocation" as const;
@@ -167,5 +167,79 @@ export const ERROR_TABLE = [
     remediationHint: "Resolve the named warning and retry.",
     projectionClass: "user-validation",
     summary: "Strict configuration validation rejected a warning.",
+  },
+  {
+    code: "state.store.torn",
+    domainKind: "state",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint: "Inspect or restore the named state store; never treat it as empty.",
+    projectionClass: "platform-provider",
+    summary: "The state store is torn.",
+  },
+  {
+    code: "state.schema.mismatch",
+    domainKind: "state",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint: "Use a compatible tool version or migrate the store explicitly, then retry.",
+    projectionClass: "platform-provider",
+    summary: "The state store schema version is not supported.",
+  },
+  {
+    code: "state.keys.missing",
+    domainKind: "state",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Verify the writing operation completed and inspect the named store; never substitute defaults.",
+    projectionClass: "platform-provider",
+    summary: "A state read key-set assertion failed.",
+  },
+  {
+    code: "state.lock.busy",
+    domainKind: "state",
+    category: "transient",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Wait for the current writer to release the state fence, then acquire and retry.",
+    projectionClass: "platform-provider",
+    summary: "The state store is locked by another writer.",
+  },
+  {
+    code: "state.permission.denied",
+    domainKind: "state",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint: "Correct operating-system permissions on the named state path and retry.",
+    projectionClass: "user-validation",
+    summary: "A state path permission requirement was not met.",
+  },
+  {
+    code: "state.write.failed",
+    domainKind: "state",
+    category: "transient",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Resolve the underlying storage error and retry; the failed write or rebuild did not land, the ledger remains durable truth, and the index stays disposable.",
+    projectionClass: "platform-provider",
+    summary: "A state write or index rebuild did not land.",
+  },
+  {
+    code: "state.level.unsupported",
+    domainKind: "state",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Use a state level with an implemented driver; shared levels arrive with later stories.",
+    projectionClass: "user-validation",
+    summary: "The requested state level has no implementation.",
   },
 ] as const satisfies readonly ErrorTableEntry[];

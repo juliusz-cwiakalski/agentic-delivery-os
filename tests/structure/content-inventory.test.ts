@@ -28,6 +28,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "FALLBACK_INVOCATION_CODE",
   ],
   "core/src/contracts/result.ts": ["RESULT_SCHEMA_VERSION"],
+  "core/src/contracts/state.ts": ["STATE_DRIVER_KINDS", "STATE_LEVELS", "STATE_SCHEMA_VERSION"],
   "cli/src/classify.ts": ["classifyDomainKind", "classifyThrown", "resolveAppErrorCode"],
   "cli/src/commands/config.ts": ["createConfigCommandDefinition"],
   "cli/src/commands/index.ts": ["createConfigCommandDefinition"],

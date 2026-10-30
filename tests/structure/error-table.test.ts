@@ -10,6 +10,7 @@ import { join } from "node:path";
 import ts from "typescript";
 import { resolveAppErrorCode } from "../../packages/cli/src/classify";
 import {
+  DOMAIN_KINDS,
   ERROR_TABLE,
   type ErrorTableEntry,
   FALLBACK_INTERNAL_CODE,
@@ -365,6 +366,28 @@ describe("TC-BOUNDARY-001 contracts ambient coverage", () => {
       expect(violations.some((message) => message.includes("node:fs"))).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("TC-STATE-018 state rows join the declared kind set", () => {
+  test("state is a declared multi-row domain kind and never singleton-classified", () => {
+    expect(DOMAIN_KINDS).toContain("state");
+    const state = entries.filter((entry) => entry.domainKind === "state");
+    expect(state).toHaveLength(7);
+    for (const entry of state) {
+      expect(entry.code.startsWith("state.")).toBe(true);
+      expect(entry.consequence).toBe("not_landed");
+      expect(entry.remediationHint.length).toBeGreaterThan(0);
+      expect(entry.summary ?? "").not.toContain("planted-");
+    }
+  });
+
+  test("the documented and machine state rows agree row for row", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const entry of entries.filter((candidate) => candidate.domainKind === "state")) {
+      const row = `| ${entry.code} | state | ${entry.category} | ${entry.retryable} | ${entry.consequence} | ${entry.remediationHint} | ${entry.projectionClass} | ${entry.summary ?? ""} |`;
+      expect(doc, entry.code).toContain(row);
     }
   });
 });

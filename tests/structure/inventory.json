@@ -12,6 +12,7 @@
     "src/contracts/error-table.ts",
     "src/contracts/index.ts",
     "src/contracts/result.ts",
+    "src/contracts/state.ts",
     "src/domain/index.ts",
     "src/index.ts",
     "src/state/index.ts"
