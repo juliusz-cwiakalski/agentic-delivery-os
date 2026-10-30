@@ -69,6 +69,26 @@ describe("TC-SECRET-001 planted violations fire", () => {
     }
   });
 
+  test("computed and template keys over ambient globals fail closed by name", () => {
+    const ids = ["computed-key-env", "template-literal-key-env", "computed-global-name"];
+    for (const id of ids) {
+      const testCase = SECRET_READ_CASES.find((entry) => entry.id === id);
+      if (testCase === undefined) throw new Error(`fixture ${id} is missing`);
+      const root = materialize(testCase);
+      try {
+        const violations = scan(root);
+        expect(
+          violations.some((violation) =>
+            violation.detail.includes("ambient element access with non-literal key"),
+          ),
+          id,
+        ).toBe(true);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    }
+  });
+
   test("the clean control of sanctioned readers passes", () => {
     const testCase = SECRET_READ_CASES.find((entry) => entry.expect === "clean");
     if (testCase === undefined) throw new Error("clean control fixture is missing");

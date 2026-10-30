@@ -51,6 +51,14 @@ export const SECRET_READ_ALLOWLIST: readonly AllowlistEntry[] = [
 
 const AMBIENT_GLOBALS = new Set(["process", "Bun", "Deno"]);
 
+/**
+ * Element-access hosts scanned fail-closed for non-literal keys. Unlike property
+ * access, a computed key can be resolved at runtime, so it cannot be checked
+ * statically and is reported instead of silently accepted. `globalThis` is
+ * included because it reaches the same ambient objects.
+ */
+const AMBIENT_ELEMENT_HOSTS = new Set([...AMBIENT_GLOBALS, "globalThis"]);
+
 export type SecretReadViolation = {
   readonly rule: string;
   readonly file: string;
@@ -135,10 +143,21 @@ export const sourceViolations = (
         detail: `ambient environment read ${node.expression.text}.env`,
       });
     }
-    if (ts.isElementAccessExpression(node) && ts.isStringLiteral(node.argumentExpression)) {
-      const name = node.argumentExpression.text;
-      if (name === "env" || AMBIENT_GLOBALS.has(name)) {
-        violations.push({ line: lineOf(node), detail: `ambient element access ["${name}"]` });
+    if (ts.isElementAccessExpression(node)) {
+      const argument = node.argumentExpression;
+      if (ts.isStringLiteral(argument)) {
+        const name = argument.text;
+        if (name === "env" || AMBIENT_GLOBALS.has(name)) {
+          violations.push({ line: lineOf(node), detail: `ambient element access ["${name}"]` });
+        }
+      } else if (
+        ts.isIdentifier(node.expression) &&
+        AMBIENT_ELEMENT_HOSTS.has(node.expression.text)
+      ) {
+        violations.push({
+          line: lineOf(node),
+          detail: `ambient element access with non-literal key on ${node.expression.text}`,
+        });
       }
     }
     if (ts.isIdentifier(node) && AMBIENT_GLOBALS.has(node.text)) {
