@@ -1,0 +1,93 @@
+{
+  "cases": [
+    {
+      "id": "whole-token",
+      "payload": {
+        "token": "planted-fake-secret-0101"
+      },
+      "secrets": ["planted-fake-secret-0101"],
+      "expected": {
+        "token": "[redacted]"
+      }
+    },
+    {
+      "id": "embedded-url",
+      "payload": {
+        "url": "https://example.invalid/path?token=planted-fake-secret-0102&mode=read"
+      },
+      "secrets": ["planted-fake-secret-0102"],
+      "expected": {
+        "url": "https://example.invalid/path?token=[redacted]&mode=read"
+      }
+    },
+    {
+      "id": "object-key",
+      "payload": {
+        "planted-fake-secret-0103": "value"
+      },
+      "secrets": ["planted-fake-secret-0103"],
+      "expected": {
+        "[redacted]": "value"
+      }
+    },
+    {
+      "id": "split-adjacent",
+      "payload": {
+        "first": "fragment-one",
+        "nested": {
+          "second": "fragment-two"
+        }
+      },
+      "secrets": ["fragment-one", "fragment-two"],
+      "expected": {
+        "first": "[redacted]",
+        "nested": {
+          "second": "[redacted]"
+        }
+      },
+      "fragments": ["fragment-one", "fragment-two"]
+    },
+    {
+      "id": "repeated-across-fields",
+      "payload": {
+        "first": "planted-fake-secret-0104",
+        "second": ["planted-fake-secret-0104"],
+        "third": {
+          "nested": "planted-fake-secret-0104"
+        }
+      },
+      "secrets": ["planted-fake-secret-0104"],
+      "expected": {
+        "first": "[redacted]",
+        "second": ["[redacted]"],
+        "third": {
+          "nested": "[redacted]"
+        }
+      }
+    },
+    {
+      "id": "escaped-value",
+      "payload": {
+        "value": "planted-fake-secret-0105-\"quoted\"-\\slash"
+      },
+      "secrets": ["planted-fake-secret-0105"],
+      "expected": {
+        "value": "[redacted]-\"quoted\"-\\slash"
+      }
+    },
+    {
+      "id": "over-redaction-control",
+      "payload": {
+        "url": "https://example.invalid/v1.2.3",
+        "identifier": "delivery.result.v1",
+        "version": "1.4.4"
+      },
+      "secrets": ["planted-fake-secret-0199"],
+      "expected": {
+        "url": "https://example.invalid/v1.2.3",
+        "identifier": "delivery.result.v1",
+        "version": "1.4.4"
+      }
+    }
+  ]
+}

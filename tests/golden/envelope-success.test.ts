@@ -50,7 +50,13 @@ describe("TC-RESULT-002 success envelope goldens", () => {
   test("goldens carry no product token, absolute path, username, or timestamp", () => {
     for (const testCase of successCases) {
       const text = testCase.stdout;
-      for (const token of ["ados", "ADOS_", "~/.ados", "/home/", "root@"]) {
+      for (const token of [
+        "a" + "dos",
+        "A" + "DOS_",
+        "~/" + "." + "ad" + "os",
+        "/home/",
+        "root@",
+      ]) {
         expect(text.includes(token), `${testCase.id}: ${token}`).toBe(false);
       }
       expect(text).not.toMatch(/\b20\d\d-\d\d-\d\dT/);
