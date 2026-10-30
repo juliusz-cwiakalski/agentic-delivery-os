@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-fixture-0001",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 13
+  },
+  "data": {
+    "message": "all good",
+    "count": 2
+  }
+}

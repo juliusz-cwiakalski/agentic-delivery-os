@@ -505,6 +505,84 @@ export const RULE_CASES: RuleCase[] = [
     "packages/adapters/src/file/probe.ts",
     'import fs from "node:fs";\nexport const value = fs;\n',
   ),
+
+  // --- GH-172 serialization entry point and CLI-only projection
+  dep(
+    "surface-serializer-command-import",
+    "TC-BOUNDARY-002",
+    "surface-serializer-entry-only",
+    ["cli"],
+    "packages/cli/src/commands/probe.ts",
+    'import "../output/serialize.ts";\n',
+    {
+      extraFiles: {
+        "packages/cli/src/output/serialize.ts": 'export const serialize = (): string => "";\n',
+      },
+    },
+  ),
+  clean(
+    "surface-serializer-entry-clean",
+    "TC-BOUNDARY-002",
+    ["cli"],
+    "packages/cli/src/index.ts",
+    'import "./output/serialize.ts";\n',
+    {
+      extraFiles: {
+        "packages/cli/src/output/serialize.ts": 'export const serialize = (): string => "";\n',
+      },
+    },
+  ),
+  dep(
+    "surface-projection-mcp-import",
+    "TC-EXIT-003",
+    "surface-projection-cli-only",
+    ["mcp", "cli"],
+    "packages/mcp/src/probe.ts",
+    'import "../../cli/src/projection.ts";\n',
+    {
+      extraFiles: {
+        "packages/cli/src/projection.ts": "export const projectExitCode = (): number => 0;\n",
+      },
+    },
+  ),
+  dep(
+    "surface-projection-opencode-import",
+    "TC-EXIT-003",
+    "surface-projection-cli-only",
+    ["opencode", "cli"],
+    "packages/opencode/src/probe.ts",
+    'import "../../cli/src/projection.ts";\n',
+    {
+      extraFiles: {
+        "packages/cli/src/projection.ts": "export const projectExitCode = (): number => 0;\n",
+      },
+    },
+  ),
+  dep(
+    "surface-projection-adapters-import",
+    "TC-EXIT-003",
+    "surface-projection-cli-only",
+    ["adapters", "cli"],
+    "packages/adapters/src/probe.ts",
+    'import "../../cli/src/projection.ts";\n',
+    {
+      extraFiles: {
+        "packages/cli/src/projection.ts": "export const projectExitCode = (): number => 0;\n",
+      },
+    },
+  ),
+  clean(
+    "surface-projection-command-clean",
+    "TC-EXIT-003",
+    ["cli"],
+    "packages/cli/src/commands/probe.ts",
+    'import "../projection.ts";\n',
+    {
+      extraFiles: {
+        "packages/cli/src/projection.ts": "export const projectExitCode = (): number => 0;\n",
+      },
+    },
+  ),
 ];
 
 export type AmbientCase = {

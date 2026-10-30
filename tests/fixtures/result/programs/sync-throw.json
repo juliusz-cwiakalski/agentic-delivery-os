@@ -1,0 +1,6 @@
+{
+  "id": "sync-throw",
+  "command": "synthetic.ok",
+  "kind": "throw-error",
+  "message": "synthetic throw with planted-fake-secret-0003 at /srv/example/secret.ts:12"
+}

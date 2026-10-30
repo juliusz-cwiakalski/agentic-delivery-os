@@ -6,9 +6,9 @@ created: 2026-10-29
 last_updated: 2026-10-30
 owners: ["engineering"]
 service: delivery-os
-summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check, dist-targeted exports with publint/attw, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
+summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
 links:
-  related_changes: ["GH-170", "GH-171"]
+  related_changes: ["GH-170", "GH-171", "GH-172"]
   related_decisions: ["ADR-0003"]
 ---
 
@@ -108,6 +108,8 @@ Package-name specifiers resolve through each manifest's `exports` to built `dist
 
 `check:boundaries` runs three gates in order: `depcruise packages` against `.dependency-cruiser.cjs`, then `bun run scripts/checks/ambient-globals.ts`, then `bun run scripts/checks/workspace-entrypoints.ts`. The dependency-cruiser rules are static row definitions; the package-name and declared-entrypoint gate is `workspace-entrypoints.ts`.
 
+The cruise runs against the built tree: package-name specifiers resolve through each manifest's `exports` to `dist`, so `check:boundaries` requires a prior `pnpm build`. The `ts-boundaries` CI job builds before cruising, and `scripts/checks/boundary-ci-parity.ts` binds that ordering — it fails when the job omits the `pnpm build` step or places it after `pnpm check:boundaries`.
+
 `bun run scripts/checks/ambient-globals.ts` is the AST guard for two rule ids:
 
 - `ambient-globals-neutral-tiers` — the neutral set (`core` `.` entry, `core/src/contracts/**`, and `core/src/{domain,app,config,branding}/**`) must not use ambient globals (`process`, `Bun`, `Deno`, timers, `fetch`) or ambient clock/randomness (`Date.now`, `Math.random`).
@@ -127,7 +129,7 @@ Fixture resolution mirrors production: fixture manifests point every `exports` t
 |---------|-----------------------|
 | Package manager | `pnpm@10.18.3` pinned in `packageManager`; one committed `pnpm-lock.yaml`; CI installs with `--frozen-lockfile` |
 | Runtime/build | Bun `1.4.4` recorded in four copies: `.bun-version`, root `engines.bun`, CI `env.BUN_VERSION`, and the release workflow |
-| Modules | ESM everywhere (`"type": "module"`, bundler module resolution) |
+| Modules | ESM everywhere (`"type": "module"`, bundler module resolution); relative source imports use explicit `.js` specifiers so emitted declarations resolve under `node16` ESM in the packed artifact |
 | Type checking | One `tsconfig.base.json` with the full ADR strict flag set; per-package composite configs; root solution `tsconfig.json` referencing all six packages |
 | Lint/format | One root `biome.json` (recommended preset, 2-space, 100-column) |
 | Commit messages | One root `commitlint.config.js` (Conventional Commits); CI commitlint is the authority |
@@ -145,14 +147,18 @@ The five named scripts exist at the root and in all six packages:
 4. `test`
 5. `check:boundaries`
 
-Exactly one aggregate `check` chains them in that order: `lint → format:check → typecheck → test → check:boundaries`. No alternate aggregate or bypass flag exists. `pnpm check` is the single green/red signal for the workspace.
+Exactly one aggregate `check` chains them in that order: `lint → format:check → typecheck → test → check:boundaries`, then appends the packed-exports invariant `bun run scripts/checks/exports-parity.ts` at the workspace root. No alternate aggregate or bypass flag exists. `pnpm check` is the single green/red signal for the workspace.
+
+The root `typecheck` and `test` scripts each declare a `pnpm build` prerequisite (`pretypecheck` and `pretest`). The aggregate therefore builds every package before it typechecks and tests, so package-name specifiers, emitted declarations, and conditional `imports` aliases resolve against built `dist` targets. `check:boundaries` runs after them, so the aggregate cruises the built tree it just produced; `exports-parity` then packs each publishable from the same `dist/`.
 
 ### Build and exports discipline
 
 - Builds emit to `dist/`.
 - Every exports target points at `dist/` and carries a `types` condition; no target points at `src/`.
-- The five publishable packages pass `publint` and `@arethetypeswrong/cli` under the recorded ESM-only profile.
+- Relative imports between source files name the emitted file explicitly: `./result.js` for `src/result.ts`. TypeScript preserves the specifier in the emitted declarations, and the packed tarball is consumed under `node16` ESM resolution, where an extensionless relative specifier in a declaration does not resolve. Bundler-mode workspace typechecking accepts both forms and therefore does not prove pack resolution.
+- The five publishable packages pass `publint` in the `ts-exports` job and `@arethetypeswrong/cli` under the recorded ESM-only profile against the packed artifact (`attw --pack . --profile esm-only`), not only the unpacked workspace tree.
 - `scripts/checks/exports-discipline.ts` asserts the exports map and the `files` allowlist.
+- `scripts/checks/exports-parity.ts` runs `attw --pack . --profile esm-only` for each publishable package against its built `dist/` and fails closed when `dist/` is missing, so a declaration graph that resolves only in the workspace fails the aggregate check.
 
 ### Publish path
 
@@ -174,6 +180,8 @@ Exactly one aggregate `check` chains them in that order: `lint → format:check 
 The existing bash jobs remain byte-unchanged and authoritative. Sixteen additive `ts-*` jobs run beside them as binding gates:
 
 `ts-fresh-clone`, `ts-invariants`, `ts-typecheck`, `ts-lint`, `ts-format`, `ts-test`, `ts-boundaries`, `ts-build`, `ts-exports`, `ts-pins`, `ts-publish-guard`, `ts-license-audit`, `ts-vuln`, `ts-aggregate`, `ts-commitlint`, `ts-forbidden-literals`.
+
+`ts-boundaries` builds before it cruises, and `ts-invariants` runs `scripts/checks/boundary-ci-parity.ts` beside the other static invariants, so the two CI jobs stay ordered the way the local gates are.
 
 The `ts-forbidden-literals` brand scan is specified in [feature-branding-seam.md](feature-branding-seam.md).
 
@@ -228,7 +236,7 @@ core              ──> no workspace dependencies
 | NFR-3 | Negative-fixture coverage of forbidden rules | 1+ failing fixture per rule; missing fixture fails the check |
 | NFR-4 | Pin equality (four Bun copies plus the pnpm pin) | Identical; checked every pull request |
 | NFR-5 | Solution typecheck under the full strict flag set | Clean every pull request |
-| NFR-6 | Exports discipline for the five publishables | `dist` + `types` only; publint and attw pass |
+| NFR-6 | Exports discipline for the five publishables | `dist` + `types` only; publint and `attw --pack` pass against built `dist` |
 | NFR-7 | CI bindingness | No advisory job, bypass flag, or error-swallowing construct |
 | NFR-8 | Bash stack | No regression; bash jobs remain authoritative |
 | NFR-9 | Local commit-msg hook | Offline, non-mutating, never blocks an agent commit |
@@ -241,7 +249,7 @@ core              ──> no workspace dependencies
 | Unit/structure | Package inventory, subpaths, exports, `createRuntime` | `bun test tests/structure` |
 | Boundary | Every forbidden rule, alias and relative form, on production resolution | `bun test tests/boundaries` with the `mkdtemp` harness; `check:boundaries` for the gate |
 | Fixture coverage | Rule-to-fixture completeness | `tests/boundaries/fixture-coverage.test.ts` |
-| Invariants | Manifests, pins, CI topology, bindingness, supply chain, exports, licenses | `bun run scripts/checks/*.ts` and mutation tests under `tests/checks/**` |
+| Invariants | Manifests, pins, CI topology, bindingness, supply chain, exports, packed-exports parity, boundary build/cruise parity, licenses, result-contract table sync, exit literals | `bun run scripts/checks/*.ts`, the aggregate check, and mutation tests under `tests/checks/**` |
 | Behaviour | pnpm isolation, commit-msg hook | `bun test tests/behaviour` |
 | Aggregate | The whole workspace | `pnpm check` |
 

@@ -28,6 +28,12 @@
   },
   "overrides": [
     {
+      "includes": ["tests/fixtures/result/envelopes/**"],
+      "formatter": {
+        "enabled": false
+      }
+    },
+    {
       "includes": ["tests/fixtures/**"],
       "linter": {
         "rules": {

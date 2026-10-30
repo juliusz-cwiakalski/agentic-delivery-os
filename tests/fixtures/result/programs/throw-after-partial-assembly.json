@@ -1,0 +1,5 @@
+{
+  "id": "throw-after-partial-assembly",
+  "command": "synthetic.ok",
+  "kind": "partial"
+}

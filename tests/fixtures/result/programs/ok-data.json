@@ -1,0 +1,12 @@
+{
+  "id": "ok-data",
+  "command": "synthetic.ok",
+  "kind": "data",
+  "data": {
+    "message": "all good",
+    "count": 2
+  },
+  "flags": ["--format", "--raw"],
+  "requiresValue": ["--name"],
+  "conflicts": [["--format", "--raw"]]
+}

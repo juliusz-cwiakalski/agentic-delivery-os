@@ -1,0 +1,6 @@
+{
+  "id": "classified-user",
+  "command": "synthetic.ok",
+  "kind": "classified",
+  "failureKind": "input"
+}

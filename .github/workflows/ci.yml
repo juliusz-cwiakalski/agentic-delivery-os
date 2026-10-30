@@ -239,6 +239,9 @@ jobs:
           bun run scripts/checks/ci-topology.ts
           bun run scripts/checks/ci-bindingness.ts
           bun run scripts/checks/ci-supply-chain.ts
+          bun run scripts/checks/error-table-sync.ts
+          bun run scripts/checks/exit-code-literals.ts
+          bun run scripts/checks/boundary-ci-parity.ts
 
   ts-typecheck:
     name: TS typecheck
@@ -320,6 +323,10 @@ jobs:
           bun-version: ${{ env.BUN_VERSION }}
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
       - run: pnpm install --frozen-lockfile
+      # GH-172: build before cruising. Package-name specifiers resolve through
+      # each manifest's `exports` to the built `dist` target, so an unbuilt tree
+      # fails `workspace-import-must-resolve` on declared subpaths.
+      - run: pnpm build
       - run: pnpm check:boundaries
 
   ts-build:

@@ -1,0 +1,5 @@
+{
+  "id": "thrown-non-Error",
+  "command": "synthetic.ok",
+  "kind": "throw-non-error"
+}

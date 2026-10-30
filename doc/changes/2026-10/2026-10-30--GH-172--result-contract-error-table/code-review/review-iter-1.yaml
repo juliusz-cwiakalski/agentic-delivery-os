@@ -1,0 +1,167 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-172
+branch: feat/GH-172/result-contract-error-table
+status: PASS
+summary: >
+  First review of GH-172 (M0-S3 result contract and error table). The delivered
+  7-phase diff (dadab48..b6d0ad4, docs reconciliation 8afc5ad) implements spec
+  v1.1 faithfully: DM-1..DM-4 contracts are exact (delivery.result.v1, exclusive
+  data|error, timing on all paths, DEC-13 fallback values verbatim), the
+  classification/projection/containment chain is correct and CLI-confined, the
+  redaction chokepoint is the single write path with mutation-proven structure
+  guards, and the binding sync check enforces both docs/code drift directions
+  with the exactly-scoped code-corpora exclusion. All three invariant checks and
+  the spot-checked suites re-ran green during review; repo rules hold (no
+  .opencode/.ados-claude/bash/doc-planning changes, no product tokens, no gate
+  weakening, additions-only CI). Findings are non-blocking: a stale plan
+  checklist/execution log (must be reconciled before phase-10 dod_check reads
+  it), an unbranded AppErrorCode alias vs plan task 1.1 wording, two
+  hardening/coverage gaps in the exit-literal scan and hostile-payload corpus,
+  and two informational notes.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 1
+  low: 3
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-10/2026-10-30--GH-172--result-contract-error-table/chg-GH-172-plan.md:499
+    message: >
+      The plan's Execution Log lists all 7 phases as "Pending" and every task
+      checkbox is unchecked, while the 7 phase commits exist (one per phase,
+      matching the completion signals verbatim) and chg-GH-172-evidence.md
+      records them complete. Task 7.5 ("Update this plan's Execution Log and the
+      change-folder artifacts to reflect phase completions") is therefore itself
+      only partially delivered. Gap type: DONE_BUT_UNCHECKED across phases 1-7
+      plus one open bookkeeping task.
+    suggestion: >
+      Before lifecycle phase 10 (dod_check verifies "all plan tasks done"
+      against this checklist), check off the delivered task boxes, fill the
+      Execution Log rows with the seven commit hashes from chg-GH-172-evidence.md,
+      and append a plan revision-log entry recording the evidence/reconciliation
+      commits. Owner: @coder or @pm as a docs-only remediation; no code change.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: api
+    location: packages/core/src/contracts/result.ts:30
+    message: >
+      Plan task 1.1 binds AppErrorCode as a "branded string type documented with
+      the domain.reason.detail format"; the implementation is a plain documented
+      `string` alias, so the type layer accepts any string as an app error code.
+      Runtime enforcement exists (TC-TABLE-003 format corpus, Level B validation,
+      sync check), so this is a plan-wording deviation, not a correctness hole.
+    suggestion: >
+      Either brand the type (e.g. `string & { readonly __brand: "AppErrorCode" }`)
+      with a cast at the table declaration, or record the alias-with-doc-comment
+      decision as an accepted deviation in the plan revision log so the plan and
+      code stop disagreeing.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: low
+    confidence: high
+    category: security
+    location: scripts/checks/exit-code-literals.ts:63
+    message: >
+      The exit-literal invariant detects only `process.exit(...)` via an
+      identifier owner named `process`. Runtime-equivalent escapes `Bun.exit(n)`
+      and `Deno.exit(n)` (this is a Bun-first repository) evade the scan, as do
+      bare numeric `return 2` statements from surface functions whose return
+      value is an exit code. Only `exitCode` assignments/declarations and
+      projection-table literals are covered today.
+    suggestion: >
+      Extend the CallExpression predicate to flag any `<Identifier>.exit` call
+      whose owner is one of process/Bun/Deno (mutation: `Bun.exit(2)` in a
+      command module). Optionally scan numeric literal returns in modules that
+      re-export runCli. Keep failures naming file, line, and literal.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: low
+    confidence: medium
+    category: testing
+    location: tests/fixtures/result/programs/
+    message: >
+      The hostile-body corpus (TC-CONTAIN-003) covers throws, rejections,
+      non-Error values, malformed results, and partial assembly, but not a cyclic
+      success payload (or a `toJSON()`/getter-throwing payload). Containment does
+      hold by construction (redactValue/JSON.stringify throw inside the guarded
+      write path and route to fallback.internal), yet no test proves it; the
+      first real command (M0-S4 config) will pass arbitrary user-shaped objects.
+    suggestion: >
+      Add a cyclic-data program fixture (and optionally a getter-throwing one)
+      to the hostile corpus asserting exit 2, a single valid fallback.internal
+      envelope on stdout, and no partial-write fragment.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/cli/src/index.ts:257
+    message: >
+      The serialization-failure fallback re-invokes writeOutput with
+      emitEnvelope forced to true even for runs without `--json`, and the retry
+      is unguarded: if the injected sink itself is hostile, the fallback write
+      throws out of runCli. Near-unreachable in practice (without `--json` the
+      only fallible write is the sink itself), and forcing the machine envelope
+      is defensible containment-first behavior, but the asymmetry is worth
+      recording.
+    suggestion: >
+      No action required for M0-S3. If M0-S4 formalizes sink-failure semantics,
+      either wrap the fallback write in a catch that still returns the projected
+      exit code, or document that sink failure rejects the runCli promise.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-6
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/spec/features/feature-result-contract.md:171
+    message: >
+      The doc states runCli "always emits a failure diagnostic to the error
+      stream when a failure outcome has a message or summary", but diagnosticFor
+      emits a diagnostic for every failure outcome, falling back to the entry
+      code when neither message nor summary exists. The doc understates the
+      behavior.
+    suggestion: >
+      Rephrase to "every failure outcome emits a diagnostic naming the entry
+      code or handler reason". One-line doc fix; can ride the next doc-sync of
+      this feature file (the Documented error table section must not be touched).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-10-30T00:00:00Z
+next_step: >
+  PROCEED to quality_gates (phase 9). Non-blocking remediations for @coder in
+  one docs/hardening pass, with F-1 (plan checklist + execution log) completed
+  BEFORE phase-10 dod_check reads the plan. F-2/F-3/F-4/F-6 are PR-description
+  follow-up candidates or a small remediation commit; F-5 needs no action.

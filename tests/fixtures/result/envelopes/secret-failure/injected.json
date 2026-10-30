@@ -1,0 +1,20 @@
+{
+  "ticks": [11000, 11007],
+  "runId": "run-fixture-0011",
+  "brand": {
+    "productName": "example-product",
+    "binaryName": "example-product",
+    "packageScope": "@example-scope",
+    "environmentPrefix": "EXAMPLE_PRODUCT_",
+    "configDirectoryName": ".example-product",
+    "stateDirectoryName": ".example-product-state",
+    "mcpToolPrefix": "example-product_",
+    "telemetryNamespace": "delivery",
+    "docsBaseUrl": "https://example-scope.github.io/example-product/",
+    "repositoryUrl": "https://github.com/example-scope/example-product",
+    "releaseAssetPrefix": "example-product-",
+    "installPath": "~/.example-product/bin/example-product"
+  },
+  "program": "secret-failure",
+  "secrets": ["planted-fake-secret-0006"]
+}
