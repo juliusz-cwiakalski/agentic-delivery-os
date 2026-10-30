@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, statSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import { classifyDomainKind } from "../../packages/cli/src/classify";
@@ -186,5 +186,22 @@ describe("TC-STATE-017 Windows ACL contract, platform-conditional", () => {
     } finally {
       removeRoot(root);
     }
+  });
+});
+
+describe("TC-STATE-017 step 2 — documented platform contract", () => {
+  test("the feature doc states the Windows contract behind the same port", () => {
+    const doc = readFileSync(
+      join(process.cwd(), "doc/spec/features/feature-state-layer.md"),
+      "utf8",
+    );
+    expect(doc).toContain("Windows platform contract");
+    expect(doc).toContain("state.permission.denied");
+    expect(doc).toContain("StateRuntimeEdge");
+    expect(doc).toContain("OQ-2");
+    const registry = JSON.parse(
+      readFileSync(join(process.cwd(), "scripts/checks/forbidden-literals.registry.json"), "utf8"),
+    ) as { registered: string[] };
+    expect(registry.registered).toContain("doc/spec/features/feature-state-layer.md");
   });
 });

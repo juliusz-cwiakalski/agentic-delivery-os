@@ -21,6 +21,9 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "SESSION RESUME (user re-issued directive): state re-detected. Issue open/no labels; no open/merged PR; origin/main-tools 0 ahead (merge no-op). Prior @coder run was INTERRUPTED during plan Phase 7 — phases 1-6 committed (dbab409 TDR+vocab+error rows; 776c525 port+ledger; d8d7844 sqlite parity; c658cc9 torn detection; 0b79d06 fences+replace; f71d19d permissions), dirty worktree holds in-flight Phase 7 output (feature-state-layer.md untracked, packed/state-imports/boundary tests, depcruiser+forbidden-literals registry edits, state-permissions/scope test edits). Branch not pushed (correct). Resuming @coder at Phase 7 with inline authorization; it must first verify the in-flight Phase 7 work is complete/coherent (pnpm check) before committing, then continue through Phase 10 + push."
+    type: "info"
+    date: "2026-10-30"
   - text: "PM DECISION: @coder delivery authorized INLINE (option B) after it reported BLOCKED — its runtime exposes no task/subagent dispatch, so nested @committer/@doc-syncer/@runner channels are unavailable. Committer discipline inlined as protocol: one Conventional Commit per phase (feat(GH-174): ...), commitlint-clean, explicit staging lists, never stage .ai/local/ or tmp/, protected paths untouched. The uncommitted pm-notes delivery.started line folds into the Phase 1 commit. @doc-syncer remains PM-owned at lifecycle phase 7 (I dispatch it); @runner duties (pnpm check) run inline by @coder with logs."
     type: "decision"
     date: "2026-10-30"

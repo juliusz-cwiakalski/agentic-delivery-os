@@ -65,6 +65,7 @@
     "doc/guides/rename-drill.md",
     "doc/spec/features/feature-branding-seam.md",
     "doc/spec/features/feature-config-layer.md",
-    "doc/spec/features/feature-result-contract.md"
+    "doc/spec/features/feature-result-contract.md",
+    "doc/spec/features/feature-state-layer.md"
   ]
 }
