@@ -10,8 +10,8 @@ phases:
   delivery: { started: "2026-10-30T22:45:00Z", completed: "2026-10-30T23:30:00Z" }
   system_spec_update: { started: "2026-10-30T23:35:00Z", completed: "2026-10-30T23:50:00Z" }
   review_fix: { started: "2026-10-30T23:55:00Z", completed: "2026-10-31T00:40:00Z", iterations: 2, last_verdict: "PASS" }
-  quality_gates: { started: "2026-10-31T00:45:00Z", completed: null }
-  dod_check: { started: null, completed: null }
+  quality_gates: { started: "2026-10-31T00:45:00Z", completed: "2026-10-31T01:05:00Z" }
+  dod_check: { started: "2026-10-31T01:10:00Z", completed: "2026-10-31T01:15:00Z" }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "DoR verdict READY at iteration 1 (10/10 facets PASS; 0 critical, 0 major, 1 minor, 3 nits — all advisory). Findings carried as recorded reconciliations rather than reopening artifact phases: (1) spec F-5/DEC-9 testkit-import clause wording is mechanically false — implementers follow the plan's root-test relative-import mechanism; (2) TC-ERR-001 remediation-hint exactness scoped at delivery; (3) plan task 4.5 reworded attribution (ci-topology wiring scan enforces local-chain presence); (4) allowlist entry kinds (file|directory) defined at delivery. Delivery may start."
@@ -62,6 +62,12 @@ notes:
     date: "2026-10-31"
   - text: "PM-DECIDED: fixer delegation for the ceo-loop isolation fix was declined by the environment — scope discipline respected (GH-181 carries no unrelated bash test changes). The 2 ceo-loop failures are accepted as environmental: suite reads ambient .ai/local/delivery/delivering and can only pass outside an active delivery; GH-181 diff has zero bash lines; isolation proof recorded by runner; CI re-runs the suite without ambient state at PR time and remains the binding bash gate (merge gate precedent from GH-170/171/172/173). Remaining gate steps proceed."
     type: "decision"
+    date: "2026-10-31"
+  - text: "RESOLVED: Quality gates complete — pnpm check 610/610; bash battery 21/21 suites plus test-ceo-loop 54/54 under the original failing condition (live ambient marker) with the hermeticity patch committed (3913f55); doc-distribution no drift; secret-read-boundary 51 files clean; git diff --check clean. Ambient delivering marker clobbered by a passing suite (test-deliver-ticket.sh writes into .ai/local/delivery) was restored byte-exact while pid 1002659 alive; residue TEST-*.last-message files left (ephemeral, git-ignored). Note for review: test-deliver-ticket.sh ambient-state writes are a separate hermeticity defect, out of GH-181 scope, not fixed."
+    type: "resolved"
+    date: "2026-10-31"
+  - text: "DoD check PASS: (1) all lifecycle phases completed with timestamps except pr_creation (phase 11, next); (2) plan tasks 5.1-5.3 re-annotated as fulfilled by the PM-level phase-8 review (review-iter-1/2 artifacts), 6.3 ticked with iter-2 PASS + gate evidence; only 7.5 + open-PR item remain, both owned by phase 11 by design; (3) all 17 ACs satisfied — reviewer iter-2 independently verified with truthful evidence, test-plan §10 records 19/19 TCs; (4) current-truth docs reconciled with no residual gaps; (5) single remaining spec §18 DoD predicate is the open unmerged PR targeting main-tools with CI green on pushed HEAD — delivered by phase 11."
+    type: "resolved"
     date: "2026-10-31"
   - text: "Scope sources: issue body + backlog.md M0-S12 + concepts/primitive-catalogue.md + concepts/credential-sidecar.md + concepts/embedded-metadata.md. AC: (1) typed ports with capability flags, (2) CI boundary check fails on secret reads outside the credential port, (3) metadata envelope round-trips and degrades gracefully when a provider strips it. Dependencies M0-S1/S3/S4 verified merged (PRs 191/193/194)."
     type: "info"
