@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-10-30T23:55:00Z", completed: "2026-10-31T00:40:00Z", iterations: 2, last_verdict: "PASS" }
   quality_gates: { started: "2026-10-31T00:45:00Z", completed: "2026-10-31T01:05:00Z" }
   dod_check: { started: "2026-10-31T01:10:00Z", completed: "2026-10-31T01:15:00Z" }
-  pr_creation: { started: "2026-10-31T01:20:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-10-31T01:20:00Z", completed: "2026-10-31T01:35:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/196" }
 decisions:
   - text: "DoR verdict READY at iteration 1 (10/10 facets PASS; 0 critical, 0 major, 1 minor, 3 nits — all advisory). Findings carried as recorded reconciliations rather than reopening artifact phases: (1) spec F-5/DEC-9 testkit-import clause wording is mechanically false — implementers follow the plan's root-test relative-import mechanism; (2) TC-ERR-001 remediation-hint exactness scoped at delivery; (3) plan task 4.5 reworded attribution (ci-topology wiring scan enforces local-chain presence); (4) allowlist entry kinds (file|directory) defined at delivery. Delivery may start."
     date: "2026-10-30"
@@ -68,6 +68,9 @@ notes:
     date: "2026-10-31"
   - text: "DoD check PASS: (1) all lifecycle phases completed with timestamps except pr_creation (phase 11, next); (2) plan tasks 5.1-5.3 re-annotated as fulfilled by the PM-level phase-8 review (review-iter-1/2 artifacts), 6.3 ticked with iter-2 PASS + gate evidence; only 7.5 + open-PR item remain, both owned by phase 11 by design; (3) all 17 ACs satisfied — reviewer iter-2 independently verified with truthful evidence, test-plan §10 records 19/19 TCs; (4) current-truth docs reconciled with no residual gaps; (5) single remaining spec §18 DoD predicate is the open unmerged PR targeting main-tools with CI green on pushed HEAD — delivered by phase 11."
     type: "resolved"
+    date: "2026-10-31"
+  - text: "PR open: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/196 (feat(GH-181) -> main-tools, pushed HEAD bcc4184). Labels change+review, assigned juliusz-cwiakalski. Merge BLOCKED pending green CI on pushed HEAD; merge authority: CEO (Mode A) / owner via batch-deliver.sh (Mode B). PM stops here per stop condition — delivery complete, awaiting review/merge."
+    type: "info"
     date: "2026-10-31"
   - text: "Scope sources: issue body + backlog.md M0-S12 + concepts/primitive-catalogue.md + concepts/credential-sidecar.md + concepts/embedded-metadata.md. AC: (1) typed ports with capability flags, (2) CI boundary check fails on secret reads outside the credential port, (3) metadata envelope round-trips and degrades gracefully when a provider strips it. Dependencies M0-S1/S3/S4 verified merged (PRs 191/193/194)."
     type: "info"
