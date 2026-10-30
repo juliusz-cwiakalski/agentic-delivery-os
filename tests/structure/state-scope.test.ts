@@ -12,6 +12,7 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
 
@@ -105,7 +106,7 @@ export const cliStateCommandViolations = (root: string): string[] => {
 };
 
 const cloneCommandRegistry = (): string => {
-  const root = mkdtempSync(join(ROOT, "tmp", "tmpdir", "scope-seed-"));
+  const root = mkdtempSync(join(tmpdir(), "scope-seed-"));
   return root;
 };
 

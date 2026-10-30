@@ -6,6 +6,7 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const ROOT = process.cwd();
@@ -72,8 +73,7 @@ const packCore = (destination: string): string => {
 };
 
 const makeConsumer = (): string => {
-  mkdirSync(join(ROOT, "tmp", "tmpdir"), { recursive: true });
-  const directory = mkdtempSync(join(ROOT, "tmp", "tmpdir", "packed-state-"));
+  const directory = mkdtempSync(join(tmpdir(), "packed-state-"));
   const consumer = join(directory, "consumer");
   try {
     const tarballs = join(directory, "tarballs");
@@ -133,7 +133,7 @@ describe("TC-STATE-021 packed Node/Bun state surface", () => {
     const stateRoots: string[] = [];
     try {
       for (const runtime of ["node", "bun"] as const) {
-        const stateRoot = mkdtempSync(join(ROOT, "tmp", "tmpdir", `packed-state-${runtime}-`));
+        const stateRoot = mkdtempSync(join(tmpdir(), `packed-state-${runtime}-`));
         stateRoots.push(stateRoot);
         const result = runRuntime(runtime, "probe.mjs", consumer, stateRoot);
         if (result.status !== 0) {
