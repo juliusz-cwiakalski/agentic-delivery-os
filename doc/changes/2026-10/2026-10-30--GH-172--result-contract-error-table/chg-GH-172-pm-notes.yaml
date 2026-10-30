@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-10-30T04:25:00Z", completed: "2026-10-30T04:55:00Z" }
   quality_gates: { started: "2026-10-30T05:00:00Z", completed: "2026-10-30T05:10:00Z" }
   dod_check: { started: "2026-10-30T05:20:00Z", completed: "2026-10-30T05:25:00Z" }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: "2026-10-30T05:30:00Z", completed: null, url: null }
 decisions:
   - text: "REOPEN resolution for test-plan GAP-1/OQ-T1 (specification reopened, iteration 2): the documented error table SHIPS IN-CHANGE at doc/spec/features/feature-result-contract.md (authored during delivery as part of the change, containing the documented table derived from the machine-readable source; phase 7 reconciles the full feature doc). Keeps ticket AC-4 ('error codes resolve to documented table entries') and spec AC-F8-1 fully testable in both directions at merge time; no AC weakened; no phase reordering. Alternative (defer doc to phase 7) rejected: sync check would be vacuous on the PR, failing the ticket AC. Change-scoped decision, PM-decided to unblock; no decision record needed."
     date: 2026-10-30
