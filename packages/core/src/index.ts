@@ -25,3 +25,21 @@ export declare function createRuntime(options: {
   store: RuntimeStore;
   clock: RuntimeClock;
 }): Runtime;
+
+export {
+  BOOTSTRAP_DESCRIPTOR,
+  PRODUCTION_CATALOG,
+  PRODUCTION_DEFAULTS,
+  PRODUCTION_SCHEMA,
+  catalogPaths,
+  compileTrustedSchema,
+  defaultsFor,
+  generateConfigSchema,
+  originLabel,
+  resolveConfig,
+  type CatalogField,
+  type ConfigCatalog,
+  type DefaultPositionManifest,
+  type ResolveConfigInput,
+  type ResolvedConfig,
+} from "./config/index.js";

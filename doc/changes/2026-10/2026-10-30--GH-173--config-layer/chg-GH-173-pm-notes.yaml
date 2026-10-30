@@ -29,6 +29,9 @@ blockers:
     date: 2026-10-30
     resolved_date: 2026-10-30
 notes:
+  - text: "Implementation phase1 committed7661d46 after15 green commands/67tests. Phase2 verification iteration1: build,22tests,schema/default artifacts,exports/ambient/boundary/error/license/literal/typecheck/format pass; lint fails useIterableCallbackReturn at resolver.ts162 and fixture facts.ts20. Delivery remains in progress; targeted fixer removes unintended callback return values, then runner rechecks before phase2 commit."
+    type: "retro"
+    date: 2026-10-30
   - text: "Coder delegation returned incomplete before edits: its child session cannot invoke runner/committer/decision-advisor, while PM has these tools available. No code/plan edits, no tests, HEAD12e54ad clean. Remediation: PM supplies orchestration proxies, coder writes one plan phase at a time and returns exact verification commands; PM invokes runner and committer before next code phase. This preserves specialist ownership and per-phase commits rather than treating child tool visibility as missing repository tooling. Delivery remains in progress."
     type: "risk"
     date: 2026-10-30
