@@ -469,6 +469,7 @@ describe("TC-CONFIG-004/005/006 exact DM-2 first-match oracle with zero skipped 
 
 describe("TC-CONFIG-004 root-only git discovery and worktree gitfile", () => {
   test("finds a normal .git directory and a linked-worktree .git file, never above the first marker", () => {
+    mkdirSync(join(ROOT, "tmp", "tmpdir"), { recursive: true });
     const directory = mkdtempSync(join(ROOT, "tmp", "tmpdir", "repo-root-"));
     try {
       const root = join(directory, "project");
@@ -495,6 +496,7 @@ describe("TC-CONFIG-004 root-only git discovery and worktree gitfile", () => {
   });
 
   test("reads only the root files, never intermediate or above-root decoys", () => {
+    mkdirSync(join(ROOT, "tmp", "tmpdir"), { recursive: true });
     const directory = mkdtempSync(join(ROOT, "tmp", "tmpdir", "root-bounds-"));
     try {
       const root = join(directory, "repo");
@@ -540,6 +542,7 @@ describe("TC-CONFIG-024 legacy facts: current names win and warn once", () => {
   const current = { environmentPrefix: "SYNTH_", configDirectoryName: ".synthetic" } as const;
 
   test("maps legacy names but keeps current values and selector on collision", () => {
+    mkdirSync(join(ROOT, "tmp", "tmpdir"), { recursive: true });
     const home = mkdtempSync(join(ROOT, "tmp", "tmpdir", "legacy-config-"));
     try {
       const compat = createLegacyCompat({ current, warn: () => undefined });
@@ -558,6 +561,7 @@ describe("TC-CONFIG-024 legacy facts: current names win and warn once", () => {
   });
 
   test("legacy-only selector is mapped to the current name", () => {
+    mkdirSync(join(ROOT, "tmp", "tmpdir"), { recursive: true });
     const home = mkdtempSync(join(ROOT, "tmp", "tmpdir", "legacy-selector-"));
     try {
       const compat = createLegacyCompat({ current, warn: () => undefined });
@@ -574,6 +578,7 @@ describe("TC-CONFIG-024 legacy facts: current names win and warn once", () => {
   });
 
   test("warns exactly once per instance and never without a legacy source", () => {
+    mkdirSync(join(ROOT, "tmp", "tmpdir"), { recursive: true });
     const home = mkdtempSync(join(ROOT, "tmp", "tmpdir", "legacy-warn-"));
     try {
       const messages: string[] = [];

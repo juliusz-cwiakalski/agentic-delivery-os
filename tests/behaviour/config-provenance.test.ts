@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { originLabel, resolveConfig } from "../../packages/core/src/index";
 import type { ConfigOrigin } from "../../packages/core/src/contracts/config";
@@ -20,6 +20,7 @@ describe("TC-CONFIG-017 actual positions, replacement and labels", () => {
 
   test("fixture source-copy line insertion independently invalidates the declared default position", () => {
     const fixture = join(process.cwd(), "tests/fixtures/config/catalog.ts");
+    mkdirSync(join(process.cwd(), "tmp", "tmpdir"), { recursive: true });
     const directory = mkdtempSync(join(process.cwd(), "tmp", "tmpdir", "fixture-line-"));
     const copy = join(directory, "catalog.ts");
     const declarationLine = (source: string): number => {

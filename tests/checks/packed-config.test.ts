@@ -24,8 +24,17 @@ process.stdout.write(JSON.stringify({ schema: PRODUCTION_SCHEMA, parsed: parsed.
 `;
 const SUBPATH = 'import "@delivery-os/core/config";\n';
 
-const command = (name: string, args: readonly string[], cwd: string) => {
-  const result = spawnSync(name, [...args], { cwd, encoding: "utf8" });
+const command = (
+  name: string,
+  args: readonly string[],
+  cwd: string,
+  env?: Record<string, string>,
+) => {
+  const result = spawnSync(name, [...args], {
+    cwd,
+    encoding: "utf8",
+    ...(env !== undefined ? { env } : {}),
+  });
   if (result.status !== 0) {
     throw new Error(`${name} ${args.join(" ")} failed: ${result.stderr || result.stdout}`);
   }
@@ -72,11 +81,22 @@ const makeConsumer = (): string => {
         2,
       )}\n`,
     );
-    command(
-      "pnpm",
-      ["install", "--ignore-workspace", "--offline", "--ignore-scripts", "--reporter=silent"],
-      consumer,
-    );
+    // Hermetic install env: HOME and the XDG roots point into this run's
+    // scratch directory, so pnpm resolves from a cold store on every machine
+    // and local runs match fresh-checkout CI truth.
+    const hermeticHome = join(directory, "hermetic-home");
+    mkdirSync(join(hermeticHome, "data"), { recursive: true });
+    mkdirSync(join(hermeticHome, "cache"), { recursive: true });
+    mkdirSync(join(hermeticHome, "config"), { recursive: true });
+    const installEnv: Record<string, string> = {};
+    for (const [name, value] of Object.entries(process.env)) {
+      if (value !== undefined) installEnv[name] = value;
+    }
+    installEnv.HOME = hermeticHome;
+    installEnv.XDG_DATA_HOME = join(hermeticHome, "data");
+    installEnv.XDG_CACHE_HOME = join(hermeticHome, "cache");
+    installEnv.XDG_CONFIG_HOME = join(hermeticHome, "config");
+    command("pnpm", ["install", "--ignore-workspace", "--ignore-scripts"], consumer, installEnv);
     writeFileSync(join(consumer, "probe.mjs"), PROBE);
     writeFileSync(join(consumer, "subpath.mjs"), SUBPATH);
     return consumer;
