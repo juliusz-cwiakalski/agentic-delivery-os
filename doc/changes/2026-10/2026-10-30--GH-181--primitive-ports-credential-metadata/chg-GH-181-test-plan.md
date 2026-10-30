@@ -796,4 +796,23 @@ Plan version **1.1 (iteration 2)** aligns with change specification **v1.1 (iter
 
 | TC ID / gate | Run Date (UTC) | Result | Notes / command / HEAD |
 |---|---|---|---|
-| Not run | — | Planned | This writer ran no builds or tests. The executor records per-TC commands, results, and pushed-HEAD CI evidence here. |
+| TC-PORT-001 | 2026-10-30 | PASS | `bun test tests/structure/port-contract-inventory.test.ts` — 7 tests; inventory equals fixture both directions; add/remove mutations fail by name. |
+| TC-PORT-002 | 2026-10-30 | PASS | `bun test tests/structure/port-neutrality.test.ts`; `bun run scripts/checks/ambient-globals.ts` — 18 neutral files clean; injected ambient/clock/randomness/function fails by file+line. |
+| TC-PORT-003 | 2026-10-30 | PASS | `bun test tests/behaviour/port-capabilities.test.ts` — explicit gaps, no implied parity, gap-removal detectable, positive control clean. |
+| TC-PORT-004 | 2026-10-30 | PASS | `bun test tests/structure/port-carrier-types.test.ts tests/behaviour/port-capabilities.test.ts`; `pnpm typecheck` compiles `tests/types/port-carrier-types.type-test.ts` (declared union, widened `string[]` rejected). |
+| TC-PORT-005 | 2026-10-30 | PASS | `bun test tests/behaviour/credential-port.test.ts` — canary returned once; host env isolated; deterministic. |
+| TC-PORT-006 | 2026-10-30 | PASS | `bun test tests/behaviour/credential-port.test.ts tests/behaviour/error-classification.test.ts` — absent/empty classified exactly; no containment; kind-only `config` still throws. |
+| TC-PORT-007 | 2026-10-30 | PASS | `bun test tests/structure/port-credential-surface.test.ts` — no mode/implementation/mediated/direct; injected mode detected; sidecar constraint documented. |
+| TC-PORT-008 | 2026-10-30 | PASS | `bun test tests/behaviour/credential-port.test.ts tests/structure/credential-constants.test.ts`; forbidden-literals green over both credential files. |
+| TC-SECRET-001 | 2026-10-30 | PASS | `bun test tests/checks/secret-read-boundary.test.ts` — every env-read form fires naming rule/file/line; clean control passes; live scan read-only. |
+| TC-SECRET-002 | 2026-10-30 | PASS | `bun test tests/checks/ci-checks.test.ts tests/checks/boundary-ci-parity.test.ts`; `ci-topology`/`ci-bindingness` green; both wiring surfaces asserted with removal-by-name mutations. |
+| TC-SECRET-003 | 2026-10-30 | PASS | `bun test tests/checks/secret-read-boundary.test.ts` — mutations A–E fail closed; sole `credential-material` entry. |
+| TC-SECRET-004 | 2026-10-30 | PASS | `bun test tests/checks/secret-read-boundary.test.ts tests/boundaries/fixture-coverage.test.ts` — non-vacuity 51 files, clean control meaningful, fixture-coverage meta-check green. |
+| TC-META-001 | 2026-10-30 | PASS | `bun test tests/behaviour/envelope-roundtrip.test.ts` — 4 payloads × 3 carriers round-trip; all ≤ 2048 bytes; over-bound fails by name. |
+| TC-META-002 | 2026-10-30 | PASS | `bun test tests/behaviour/envelope-roundtrip.test.ts` — strip at beginning/middle/end and custom field; re-parse `missing`; residue control. |
+| TC-META-003 | 2026-10-30 | PASS | `bun test tests/behaviour/envelope-degradation.test.ts` — 6/6 cases, closed taxonomy, identical heuristic fallback, valid control clean. |
+| TC-META-004 | 2026-10-30 | PASS | `bun test tests/structure/envelope-contract.test.ts` — closed schema mutations rejected; no secret field; canary absent; markers `delivery.*.v1`. |
+| TC-META-005 | 2026-10-30 | PASS | `bun test tests/behaviour/envelope-write-path.test.ts tests/structure/envelope-contract.test.ts` — agent views expose no raw carrier; codec adapter-internal; hoist/raw-writer mutations fail. |
+| TC-META-006 | 2026-10-30 | PASS | `bun test tests/behaviour/envelope-degradation.test.ts` — older/newer unknown versions degrade visibly; v1 structural; window matrix recorded. |
+| TC-ERR-001 | 2026-10-30 | PASS | `bun test tests/checks/error-table-sync.test.ts tests/structure/error-table.test.ts tests/behaviour/error-classification.test.ts`; sync 14/14 with bidirectional drift mutations. |
+| Final gates | 2026-10-30 | PASS | `bun test tests/structure tests/behaviour tests/checks tests/boundaries` 554 PASS; `pnpm check` 604 PASS; ten invariant checks green; `pnpm check:boundaries` green; exports-parity + five `publint`/`attw` runs green; `git diff --check` clean. HEAD `f81ec70` + phase-7 changeset. |

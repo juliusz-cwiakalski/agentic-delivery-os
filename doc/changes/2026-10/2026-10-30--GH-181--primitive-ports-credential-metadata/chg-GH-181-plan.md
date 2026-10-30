@@ -243,9 +243,9 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → (6 if findings) → 7**. Each 
 
 **Tasks**:
 
-- [ ] **5.1** PM delegates independent analysis to `@reviewer` after the coder's no-review handoff: trace all 17 ACs and 19 TCs to code and non-vacuous test evidence; inspect the inventory fail-closed proof, capability/gap typing, credential classification and leak controls, invariant firing/bindingness/mutation proofs, and matrix exhaustiveness.
-- [ ] **5.2** Audit secret handling end-to-end (canary coverage, returned-once discipline, allowlist integrity, no diagnostic channel), codec purity and placement (no runtime imports under `src/io`, no core-subpath hoist, no agent-facing raw carrier), contract neutrality, and protected-path compliance (no `scripts/*.sh`, `tools/`, `.opencode/`, `.ados-claude/` changes; no hand-added headers; brand-neutral constants).
-- [ ] **5.3** Record findings/verdict through the review artifact workflow; route implementation findings to Phase 6 and decision-class findings (placement, allowlist growth, contract shape disputes) to the PM and `@decision-advisor` — never a silent alternative.
+- [ ] **5.1** PM delegates independent analysis to `@reviewer` after the coder's no-review handoff: trace all 17 ACs and 19 TCs to code and non-vacuous test evidence; inspect the inventory fail-closed proof, capability/gap typing, credential classification and leak controls, invariant firing/bindingness/mutation proofs, and matrix exhaustiveness. — skipped per this run instruction (`no review`); no review artifact produced
+- [ ] **5.2** Audit secret handling end-to-end (canary coverage, returned-once discipline, allowlist integrity, no diagnostic channel), codec purity and placement (no runtime imports under `src/io`, no core-subpath hoist, no agent-facing raw carrier), contract neutrality, and protected-path compliance (no `scripts/*.sh`, `tools/`, `.opencode/`, `.ados-claude/` changes; no hand-added headers; brand-neutral constants). — skipped per this run instruction (`no review`); no review artifact produced
+- [ ] **5.3** Record findings/verdict through the review artifact workflow; route implementation findings to Phase 6 and decision-class findings (placement, allowlist growth, contract shape disputes) to the PM and `@decision-advisor` — never a silent alternative. — skipped per this run instruction (`no review`); no review artifact produced
 
 **Acceptance Criteria**:
 
@@ -271,9 +271,9 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → (6 if findings) → 7**. Each 
 
 **Tasks**:
 
-- [ ] **6.1** If findings exist: reproduce each via the relevant TC/negative fixture, add the missing regression first, then apply the smallest fix; preserve behavior outside the accepted slice.
-- [ ] **6.2** Fix code, registries, fixtures, and any affected docs together; an error-table change carries both tables in the same fix; an allowlist or boundary-rule change carries its failing fixture in the same fix.
-- [ ] **6.3** PM delegates `@runner` repetition of affected suites/mutations and the full applicable gates, and independent re-review until PASS. If no findings, record the phase as not required with the Phase 5 PASS as evidence.
+- [ ] **6.1** If findings exist: reproduce each via the relevant TC/negative fixture, add the missing regression first, then apply the smallest fix; preserve behavior outside the accepted slice. — not required — no review findings exist because Phase 5 was skipped by instruction
+- [ ] **6.2** Fix code, registries, fixtures, and any affected docs together; an error-table change carries both tables in the same fix; an allowlist or boundary-rule change carries its failing fixture in the same fix. — not required — no review findings exist because Phase 5 was skipped by instruction
+- [ ] **6.3** PM delegates `@runner` repetition of affected suites/mutations and the full applicable gates, and independent re-review until PASS. If no findings, record the phase as not required with the Phase 5 PASS as evidence. — not required — no review findings exist because Phase 5 was skipped by instruction
 
 **Acceptance Criteria**:
 
@@ -299,11 +299,11 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → (6 if findings) → 7**. Each 
 
 **Tasks**:
 
-- [ ] **7.1** Add a Changesets minor release declaration for the five publishable fixed-group packages (`@delivery-os/core`, `@delivery-os/adapters`, `@delivery-os/cli`, `@delivery-os/mcp`, `@delivery-os/opencode`), mirroring the GH-173 precedent (`.changeset/` file with all five `minor` entries and a GH-181 description); the contract surface change (new core `./contracts` exports and the new adapters subpath) warrants minor; `changesets-group` and `testkit-exclusion` checks green; no version hand-bumps, no publish, no private-flag flips.
-- [ ] **7.2** Spec reconciliation handoff: confirm the in-change doc set is exactly the documented error-table row (Phase 1); hand the new feature spec (adapter/credential/envelope ports), primitive-catalogue status updates for the nine rows, glossary terms, and OQ-2 catalogue bookkeeping to the lifecycle documentation-sync phase (`@doc-syncer`); verify no stale doc claims contradict the delivered surface.
-- [ ] **7.3** Ask `@runner` to execute and record the final ordered gate battery with commands, results, and the tested SHA: `pnpm install --frozen-lockfile` → `pnpm build` → `bun test tests/structure tests/behaviour tests/checks tests/boundaries` → `bun run scripts/checks/{ambient-globals,error-table-sync,secret-read-boundary,ci-topology,ci-bindingness,ci-supply-chain,workspace-entrypoints,forbidden-literals,changesets-group,testkit-exclusion}.ts` → `pnpm check:boundaries` → `pnpm check` → exports gates (`exports-discipline`, `exports-parity`, per-package `publint`/`attw` since the adapters exports map changed) → `git diff --check`. Resolve failures and repeat rather than bypassing; record per-TC evidence in the test plan's §10 execution log.
-- [ ] **7.4** Verify the Definition of Done checklist (below) against current evidence; PM confirms all 17 ACs have passing traceable evidence and records divergences for escalation rather than rewriting requirements to match bugs.
-- [ ] **7.5** Rollback instructions and scope proof in the PR handoff: additive-only change (no persisted state, no config keys, no bash-stack edits, no installed-corpus changes); revert all phase commits as one coherent unit per the Scope > Rollback paragraph — error-table rows and boundary/allowlist registrations never revert one-sided; re-run baseline gates after any rollback. PR targets `main-tools`; all required `ts-*` and bash jobs green on the pushed HEAD, not an earlier SHA; STOP at the open unmerged PR.
+- [x] **7.1** Add a Changesets minor release declaration for the five publishable fixed-group packages (`@delivery-os/core`, `@delivery-os/adapters`, `@delivery-os/cli`, `@delivery-os/mcp`, `@delivery-os/opencode`), mirroring the GH-173 precedent (`.changeset/` file with all five `minor` entries and a GH-181 description); the contract surface change (new core `./contracts` exports and the new adapters subpath) warrants minor; `changesets-group` and `testkit-exclusion` checks green; no version hand-bumps, no publish, no private-flag flips. — done — `.changeset/gh-181-primitive-ports-minor.md` (five minor entries); changesets-group + testkit-exclusion green
+- [x] **7.2** Spec reconciliation handoff: confirm the in-change doc set is exactly the documented error-table row (Phase 1); hand the new feature spec (adapter/credential/envelope ports), primitive-catalogue status updates for the nine rows, glossary terms, and OQ-2 catalogue bookkeeping to the lifecycle documentation-sync phase (`@doc-syncer`); verify no stale doc claims contradict the delivered surface. — done — in-change doc set is exactly the `config.credential.missing` row; feature-spec, catalogue status, glossary, OQ-2 handed to doc-sync
+- [x] **7.3** Ask `@runner` to execute and record the final ordered gate battery with commands, results, and the tested SHA: `pnpm install --frozen-lockfile` → `pnpm build` → `bun test tests/structure tests/behaviour tests/checks tests/boundaries` → `bun run scripts/checks/{ambient-globals,error-table-sync,secret-read-boundary,ci-topology,ci-bindingness,ci-supply-chain,workspace-entrypoints,forbidden-literals,changesets-group,testkit-exclusion}.ts` → `pnpm check:boundaries` → `pnpm check` → exports gates (`exports-discipline`, `exports-parity`, per-package `publint`/`attw` since the adapters exports map changed) → `git diff --check`. Resolve failures and repeat rather than bypassing; record per-TC evidence in the test plan's §10 execution log. — done — ordered battery green (554 targeted PASS, `pnpm check` 604 PASS, ten invariants, boundaries, exports/publint/attw, `git diff --check`); per-TC rows in test-plan §10
+- [x] **7.4** Verify the Definition of Done checklist (below) against current evidence; PM confirms all 17 ACs have passing traceable evidence and records divergences for escalation rather than rewriting requirements to match bugs. — done — 17/17 ACs traceable to passing TCs; all DoD predicates verified except the open PR
+- [ ] **7.5** Rollback instructions and scope proof in the PR handoff: additive-only change (no persisted state, no config keys, no bash-stack edits, no installed-corpus changes); revert all phase commits as one coherent unit per the Scope > Rollback paragraph — error-table rows and boundary/allowlist registrations never revert one-sided; re-run baseline gates after any rollback. PR targets `main-tools`; all required `ts-*` and bash jobs green on the pushed HEAD, not an earlier SHA; STOP at the open unmerged PR. — rollback/scope proof recorded; open PR NOT created — push/PR was not requested in this run, so the `/pr` handoff is pending
 
 **Acceptance Criteria**:
 
@@ -324,14 +324,14 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → (6 if findings) → 7**. Each 
 
 ### Definition of Done checklist (mirrors spec §18)
 
-- [ ] All 17 ACs (AC-F1-1 … AC-F6-1) have passing, traceable evidence via the 19 TCs.
-- [ ] Secret-read invariant green on the clean tree and proven to fire on planted violations; clean controls stay green.
-- [ ] Round-trip and degradation matrices pass exhaustively (100% / 0 failures / 100% visible evidence).
-- [ ] Error-table sync green with `config.credential.missing` in both tables; existing classification unchanged.
-- [ ] All existing binding gates (bash and TypeScript) remain green; `pnpm check` passes; bash jobs byte-unchanged.
-- [ ] Placement disputes (if any) resolved through a TDR per OQ-1 before merging the affected tier changes.
-- [ ] Documentation synchronized (in-change: error row; remainder via the doc-sync phase handoff).
-- [ ] Open unmerged PR targeting `main-tools` with all required CI jobs green on the pushed HEAD.
+- [x] All 17 ACs (AC-F1-1 … AC-F6-1) have passing, traceable evidence via the 19 TCs (test-plan §10).
+- [x] Secret-read invariant green on the clean tree and proven to fire on planted violations; clean controls stay green.
+- [x] Round-trip and degradation matrices pass exhaustively (100% / 0 failures / 100% visible evidence).
+- [x] Error-table sync green with `config.credential.missing` in both tables; existing classification unchanged.
+- [x] All existing binding gates (bash and TypeScript) remain green; `pnpm check` passes; bash jobs byte-unchanged.
+- [x] Placement disputes: none raised (DEC-2 undisputed); no TDR required.
+- [x] Documentation synchronized in-change (error row); remainder handed to the doc-sync phase.
+- [ ] Open unmerged PR targeting `main-tools` — NOT created: push/PR was not requested in this run.
 
 ---
 
@@ -397,7 +397,7 @@ Protected paths untouched by every phase: `scripts/*.sh`, `tools/`, `.opencode/`
 | 1 | Complete | 2026-10-30T20:45Z | 2026-10-30T21:51Z | 2beeaf2 | 6/6 tasks; `bun test tests/structure tests/behaviour` 229 PASS; ambient-globals + error-table-sync (14/14) + `pnpm check:boundaries` green. |
 | 2 | Complete | 2026-10-30T21:52Z | 2026-10-30T22:20Z | 806cbef | 8/8 tasks; typecheck incl. `tests/types` green; 264 structure+behaviour tests PASS; forbidden-literals green. |
 | 3 | Complete | 2026-10-30T22:21Z | 2026-10-30T22:40Z | 2273b2b | 5/5 tasks (3.5 not required); 148 targeted+boundaries PASS; check:boundaries, workspace-entrypoints, forbidden-literals green. |
-| 4 | Complete | 2026-10-30T22:41Z | 2026-10-30T23:20Z | pending | 5/5 tasks; 160 targeted+boundaries PASS; `pnpm check` 604 PASS (remediation: per-test timeout on the pre-existing attw pack mutation, behavior unchanged). |
-| 5 | Not started | — | — | — | |
-| 6 | Not started | — | — | — | |
-| 7 | Not started | — | — | — | |
+| 4 | Complete | 2026-10-30T22:41Z | 2026-10-30T23:20Z | f81ec70 | 5/5 tasks; 160 targeted+boundaries PASS; `pnpm check` 604 PASS (remediation: per-test timeout on the pre-existing attw pack mutation, behavior unchanged). |
+| 5 | Skipped | — | — | — | Skipped per run instruction `no review`; no review artifact. |
+| 6 | Not required | — | — | — | No review findings to close (Phase 5 skipped by instruction). |
+| 7 | Complete (PR pending) | 2026-10-30T23:21Z | 2026-10-30T23:45Z | pending | Changeset + gate battery + DoD verified; open PR not created because push/PR was not requested. |
