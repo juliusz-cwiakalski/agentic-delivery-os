@@ -2,7 +2,7 @@
 id: chg-GH-180-test-plan
 status: Updated
 created: 2026-10-31T19:45:00Z
-last_updated: 2026-10-31T19:55:00Z
+last_updated: 2026-10-31T20:10:00Z
 owners: [engineering]
 service: delivery-os CLI session-database administration
 labels: [change, planning]
@@ -83,7 +83,7 @@ The plan is built around three binding mechanisms: an **injected fake `OpencodeS
 | AC-D7 | The pre-delete re-check skips a candidate that gained a child (no delete, counted reason, others proceed) and re-asserts cold and live on the same predicate | TC-DB-018, TC-DB-019 | Covered |
 | AC-D8 | Partial failure returns `db.delete.failed` (exit 2, retryable) with the failed count and first failed id; successful deletes are not failures; a retry converges | TC-DB-020, TC-DB-022 | Covered |
 | AC-D9 | An already-absent row is a counted skip mid-run, not a hard failure; the run continues | TC-DB-019, TC-DB-021 | Covered |
-| AC-D10 | `reboot --apply` with a live session returns `db.reboot.live-session` and does nothing; with zero live sessions it performs exactly one checkpoint and reports WAL before/after; dry-run reports the block without erroring | TC-DB-031, TC-DB-032 | Covered |
+| AC-D10 | `reboot --apply` with a live session returns `db.reboot.live` and does nothing; with zero live sessions it performs exactly one checkpoint and reports WAL before/after; dry-run reports the block without erroring | TC-DB-031, TC-DB-032 | Covered |
 | AC-D11 | No reboot run kills/signals/suspends/restarts a process or deletes/truncates a sidecar; human output states the operator restarts opencode manually | TC-DB-016, TC-DB-033 | Covered |
 | AC-D12 | Grammar is validated before I/O: missing/unknown subcommand, unexpected positional (including a single-dash token such as `-x`), wrong flag for the subcommand, missing value, out-of-range number, value-bearing `--apply` are `input.value.rejected`; an undeclared `--`-prefixed token is `fallback.invocation`; both at exit 1 with zero reads and zero mutations | TC-DB-023, TC-DB-024 | Covered |
 | AC-D13 | Numeric flags at min/max/one-below/one-above and injection-shaped ids: out-of-range rejected, in-range values are the only ones interpolated, no id outside `^[A-Za-z0-9_-]+$` is interpolated or passed to delete | TC-DB-025, TC-DB-026, TC-DB-027 | Covered |
@@ -258,7 +258,7 @@ This table is binding: a TC is complete only when every column is satisfied. `Le
 | TC-DB-028 | AC-D14, NFR-D2 | Behaviour / OUT | Runtime fake; max-fixture; goldens | Run every success and failure class in both modes | One valid envelope in `--json`, no `data` on failure, `data.schemaVersion` exact; human ≤ 32 item lines/40 lines/8192 bytes; `+N more`; rendered + N = total; machine data ≤ 524288 | Exits 0/1/2 by class | Over-cap renderer and 40-item mutants both fail |
 | TC-DB-029 | AC-D14, NFR-D6 | Behaviour / PRV + OUT | Canary constants; forbidden-shaped fake columns; env canary | Run every class; walk stdout, stderr, parsed envelope, human text, error objects; scan fixtures | Zero canary occurrences; exact key sets; zero extra fields; no forbidden field name in committed fixtures | Exits by class | Presence asserted first; wide-projection and extra-field mutants expose the canary |
 | TC-DB-030 | AC-D2, AC-D3, AC-D14, NFR-D1 | Behaviour / OUT | Runtime + IO fakes; fixed clock/runId; throwing ambient stubs | Run each subcommand three times; compare bytes and call logs; stub `Date.now`/`Math.random`/`fetch` | Identical stdout bytes, deep-equal data, identical call log; stubbed run unchanged | Exit 0 | A `Date.now()` renderer mutant drifts and fails |
-| TC-DB-031 | AC-D10, DM-D4 | Behaviour / REB | 2 live sessions; 0 live sessions | Dry-run with live; apply with live; inspect the log | Dry-run `mode dry-run`, `liveSessions 2`, `blockedByLiveSession true`, `checkpointPerformed false`, exit 0; apply `db.reboot.live-session`, transient, retryable, exit 2, zero checkpoint/delete | Exit 0 then 2 | A checkpointing-despite-gate mutant fails |
+| TC-DB-031 | AC-D10, DM-D4 | Behaviour / REB | 2 live sessions; 0 live sessions | Dry-run with live; apply with live; inspect the log | Dry-run `mode dry-run`, `liveSessions 2`, `blockedByLiveSession true`, `checkpointPerformed false`, exit 0; apply `db.reboot.live`, transient, retryable, exit 2, zero checkpoint/delete | Exit 0 then 2 | A checkpointing-despite-gate mutant fails |
 | TC-DB-032 | AC-D10, DM-D4 | Behaviour / REB | 0 live sessions; WAL before/after fixtures | Apply; inspect data and call log | Exactly one `checkpoint`; SQL exactly `PRAGMA wal_checkpoint(TRUNCATE)`; `walBytesBefore`/`After` present; `checkpointPerformed true` | Exit 0 | A double-checkpoint or `VACUUM` mutant fails |
 | TC-DB-033 | AC-D11, NFR-D3, NFR-D10 | Behaviour / REB + OUT | Adapter AST scan; human goldens | Run dry-run and apply; assert no process/file action; assert human text | Zero kill/signal/suspend/restart; zero sidecar deletion; human text contains the manual-restart sentence and no restart claim | Exit 0/2 by branch | A planted `process.kill` and a "restarted" mutant text both fail |
 | TC-DB-034 | AC-D16, NFR-D9 | Contract / EDG | `createProgram` with and without `db`; commands index; edge | Compose without `db`; run `db size`; compose with `db`; inspect exports | Without composition `commands.db` absent and `db size` is `fallback.invocation` exit 1; with composition registered and running; handler has no `exitCode` decision | Exit 1 then 0 | Both branches asserted, so a no-op registration fails |
@@ -276,7 +276,7 @@ This table is binding: a TC is complete only when every column is satisfied. `Le
 | `opencode` unavailable, `opencode db path` fails, database absent/unreadable | `db.opencode.unavailable` | platform | false | not_landed | platform-provider | 2 | TC-DB-022 |
 | A query fails or returns a malformed result | `db.query.failed` | platform | true | not_landed | platform-provider | 2 | TC-DB-022, TC-DB-026 |
 | A delete did not land (including partial failure) | `db.delete.failed` | transient | true | not_landed | platform-provider | 2 | TC-DB-020 |
-| `reboot --apply` while a live session exists | `db.reboot.live-session` | transient | true | not_landed | platform-provider | 2 | TC-DB-031 |
+| `reboot --apply` while a live session exists | `db.reboot.live` | transient | true | not_landed | platform-provider | 2 | TC-DB-031 |
 | Unclassifiable failure, including kind-only `db` | `fallback.internal` | platform | false | unknown | platform-provider | 2 | TC-DB-005 |
 | Any success | — | — | — | — | success | 0 | TC-DB-028 |
 
@@ -1323,7 +1323,7 @@ Accepted values are asserted to be the exact values the seam receives (never sil
 
 1. Run `db reboot` (dry-run) with two live sessions; assert `mode "dry-run"`, `liveWindowMinutes 15`, `liveSessions 2`, `blockedByLiveSession true`, `checkpointPerformed false`, `walBytesBefore` present, no `walBytesAfter`, exit 0.
 2. Assert the call log contains exactly one live-count query, zero `checkpoint`, zero `deleteSession`.
-3. Run `db reboot --apply` with two live sessions; assert the failure envelope `db.reboot.live-session`, `category transient`, `retryable true`, `consequence not_landed`, exit 2, and zero `checkpoint`/`deleteSession` calls.
+3. Run `db reboot --apply` with two live sessions; assert the failure envelope `db.reboot.live`, `category transient`, `retryable true`, `consequence not_landed`, exit 2, and zero `checkpoint`/`deleteSession` calls.
 4. Assert the blocked apply changed no file metadata and no store row.
 5. Run a mutant that checkpoints despite the live gate and assert the suite fails.
 
@@ -1784,6 +1784,7 @@ Notes on the battery:
 |---|---|---|---|
 | 1.0 | 2026-10-31T19:45:00Z | Change Test Plan Writer | Initial plan: 38 TCs (`TC-DB-001..TC-DB-038`, a new prefix). All 18 ACs (AC-D1..AC-D18) and all 10 NFRs mapped with no orphan TCs; a binding cold/live/leaf boundary matrix (B-01..B-16) with both sides asserted; grammar and parser-containment matrices; numeric-range and id-shape/SQL-discipline matrices; dry-run zero mutation, official-delete-only apply, idempotency, TOCTOU, vanished-row and already-absent handling, partial-failure truthfulness and retry convergence, reboot gate and single checkpoint, no process kill and no sidecar deletion; machine and human caps with `+N more`; metadata-only whitelist with a canary and mutation-sensitivity controls; four `db.*` rows with bidirectional sync and kind-only containment; tier/purity/no-SQLite/allowlist confinement and composition-absent non-registration; the scoped `config-default-positions` baseline repair; hermeticity and no-real-home-path scan; bounded-work NFR-D4 evidence with an explicitly non-CI reference measurement; and the C-11 sign-off gate. Recorded gaps: plan absent, NFR-D4 non-CI latency, AC-D18's PR-body half, delivery-bound spellings, four AC-less spec behaviours, and the single scoped repair. |
 | 1.1 | 2026-10-31T19:55:00Z | Change Test Plan Writer | Targeted amendment aligning the grammar oracle with spec v1.1: P-04 is now `size --x` (parser `fallback.invocation`); added G-13 `size -x` as an unexpected positional (`input.value.rejected`); AC-D12 wording, the exit oracle, TC-DB-023/TC-DB-024, §7 mapping and A-T3 now state the two-class rule. TC count unchanged at 38; exits, AC mappings and the zero-I/O oracle unchanged; privacy scan 0 matches. |
+| 1.2 | 2026-10-31T20:10:00Z | Change Test Plan Writer | Targeted amendment: renamed the reboot failure identity to `db.reboot.live`. The earlier spelling appended a hyphenated `session` segment, which the repo error-code format `^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$` rejects because a segment may contain only lowercase letters and digits; the gate was not widened. Updated every occurrence — AC-D10 in §3.1, TC-DB-031 in §5.1 and §5.2, the exit-code oracle row, and the TC-DB-031 step in §5.2. TC count unchanged at 38; all AC mappings, exits, categories and assertions unchanged. Post-edit scan for the retired spelling: 0 matches. |
 
 ## 10. Test Execution Log
 

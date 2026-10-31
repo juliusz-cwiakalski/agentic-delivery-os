@@ -160,7 +160,7 @@ Dry-run by default; `--apply` performs the only mutation.
 
 1. Count sessions inside the live window. The live window is the pinned 15 minutes from the injected clock.
 2. **Dry-run:** return `mode: "dry-run"`, the live-session count, `blockedByLiveSession` (true when the count is non-zero), current WAL bytes, `checkpointPerformed: false`. A dry-run never returns the live-session failure.
-3. **Apply with any live session:** return the classified `db.reboot.live-session` failure and perform nothing. No checkpoint, no delete, no process action.
+3. **Apply with any live session:** return the classified `db.reboot.live` failure and perform nothing. No checkpoint, no delete, no process action.
 4. **Apply with no live session:** perform exactly one bounded `PRAGMA wal_checkpoint(TRUNCATE)` through `opencode db`, report bytes before and after, and the outcome. It never kills or signals a process, never deletes WAL or SHM files, never runs `VACUUM`, and never truncates the database.
 
 The human output states that the operator still restarts the opencode host manually; `reboot` only prepares the database. No automatic restart exists in this change.
@@ -215,7 +215,7 @@ The binary name comes from the injected brand; no product literal is committed. 
 | `opencode` unavailable, `opencode db path` fails, database absent/unreadable | `db.opencode.unavailable` | 2 |
 | A session database query fails or returns a malformed result | `db.query.failed` | 2 |
 | A session delete did not land (including partial failure) | `db.delete.failed` | 2 |
-| `reboot --apply` while a live session exists | `db.reboot.live-session` | 2 |
+| `reboot --apply` while a live session exists | `db.reboot.live` | 2 |
 | Unclassifiable failure | `fallback.internal` | 2 |
 
 Engine consequences are `not_landed` for every new `db.*` row. For a partial prune, `not_landed` is the aggregate statement that the prune did not fully land; the per-row truth is carried in the bounded failure summary, and the surviving rows make retry converge.
@@ -227,7 +227,7 @@ Engine consequences are `not_landed` for every new `db.*` row. For a partial pru
 3. **Prune dry-run:** validate grammar → compute cutoff from the injected clock → select candidates → report candidates, counts, and live exclusions → mutate nothing.
 4. **Prune apply:** validate grammar → compute cutoff → select candidates → for each candidate re-read its row and re-check cold, not live, and leaf → skip on any failed condition → `opencode session delete <id>` → continue on a failed delete → return success only when every attempted delete landed; otherwise return `db.delete.failed` with the bounded partial-failure summary.
 5. **Reboot dry-run:** validate grammar → count live sessions → report the plan and WAL bytes → mutate nothing.
-6. **Reboot apply:** validate grammar → count live sessions → if any, return `db.reboot.live-session` and stop → otherwise checkpoint once → re-stat WAL → report.
+6. **Reboot apply:** validate grammar → count live sessions → if any, return `db.reboot.live` and stop → otherwise checkpoint once → re-stat WAL → report.
 7. **Rejection:** validate grammar → return the classified rejection before any I/O.
 
 ### 3.10 Pinned constants
@@ -360,7 +360,7 @@ Session ids that fail the shape check abort the operation with `db.query.failed`
 | `db.opencode.unavailable` | `db` | platform | false | not_landed | platform-provider | The opencode session database is unavailable. |
 | `db.query.failed` | `db` | platform | true | not_landed | platform-provider | A session database query failed. |
 | `db.delete.failed` | `db` | transient | true | not_landed | platform-provider | A session delete did not land. |
-| `db.reboot.live-session` | `db` | transient | true | not_landed | platform-provider | A live session is using the database. |
+| `db.reboot.live` | `db` | transient | true | not_landed | platform-provider | A live session is using the database. |
 
 Remediation hints: install or repair the opencode CLI so `opencode db path` resolves; retry a failed query and verify the store is readable; retry the prune because failed rows remain and are selected again; wait until the live window is empty or stop the host before retrying `reboot`.
 
@@ -461,7 +461,7 @@ No new user-facing configuration key or environment override, and no state-schem
 - Run `db list` to inspect bounded session metadata; raise `--limit` only up to 100.
 - Run `db prune` without `--apply` and review candidates; apply only when the candidate set is expected.
 - Expect leaf-only behaviour: any session with children is not eligible, so pruning proceeds bottom-up over repeated runs and child sessions without children are pruned first.
-- `reboot --apply` is safe to run only when no session is active; an active session produces `db.reboot.live-session` and changes nothing. The operator still restarts opencode manually.
+- `reboot --apply` is safe to run only when no session is active; an active session produces `db.reboot.live` and changes nothing. The operator still restarts opencode manually.
 - A partial prune failure is safe to retry; failed rows remain and are selected again.
 
 ### 8.3 Observability
@@ -590,7 +590,7 @@ Each criterion is testable and traceable to a test-plan case that asserts the cu
   *DoD predicate*: absent-row fixture yields `skipped ≥ 1`, no `db.delete.failed` for that case, and subsequent candidates are attempted. (F-D3, DM-D3, NFR-D10)
 
 - **AC-D10 — Reboot checkpoints only with no live session.**
-  Given injected live sessions, when `db reboot --apply` runs, then it returns `db.reboot.live-session` and performs no checkpoint, no delete, and no process action; given zero live sessions, it performs exactly one `PRAGMA wal_checkpoint(TRUNCATE)` and reports WAL bytes before and after.
+  Given injected live sessions, when `db reboot --apply` runs, then it returns `db.reboot.live` and performs no checkpoint, no delete, and no process action; given zero live sessions, it performs exactly one `PRAGMA wal_checkpoint(TRUNCATE)` and reports WAL bytes before and after.
   *DoD predicate*: both branches asserted; the blocked branch records zero checkpoint calls; the success branch records exactly one. A dry-run with live sessions reports the block without erroring. (F-D4, DM-D4, NFR-D3, NFR-D10)
 
 - **AC-D11 — Reboot never kills a process or deletes a sidecar.**
@@ -627,5 +627,6 @@ Each criterion is testable and traceable to a test-plan case that asserts the cu
 
 ## 14. DOCUMENT HISTORY
 
+- **v1.2 (2026-10-31)** — Readiness amendment renaming the reboot live-session failure identity to `db.reboot.live`. The previous form placed a hyphen inside its final segment and therefore failed the repository error-code format `^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$` enforced by the error-table sync check and its structure test; the identity was renamed rather than the gate being widened. The row keeps the same kind `db`, category `transient`, retryability `true`, consequence `not_landed`, projection class `platform-provider`, and summary "A live session is using the database."; §3.5, §3.8, §3.9, §4.7, §8.2, and AC-D10 now use the renamed identity. No gate change, no AC count change (remains 18), no AC semantics change, and no other decision change.
 - **v1.1 (2026-10-31)** — Delivery-planning amendment clarifying the grammar rejection split against the unchanged shared parser (`packages/cli/src/index.ts`, which recognizes only `--`-prefixed tokens as flags). §3.1, §3.8, §7.1, DEC-D7, and AC-D12 now name the two classes: a single-dash token (`-x`) is an unexpected positional the handler rejects as `input.value.rejected`, while an undeclared `--`-prefixed token (`--x`) is the parser's `fallback.invocation` containment; both are input-domain, user-validation rejections at exit 1. Root cause was the prior wording treating any token outside the declared flag set as parser containment; the parser and all product behaviour are unchanged. No AC, NFR, risk, scope, or error-identity count changes; AC count remains 18.
 - **v1.0 (2026-10-31)** — Initial specification. Authored from the ticket summary, the M0-S11 backlog entry, the recorded PM fallback (the inline prototype is absent), live read-only environment facts, and the binding repo rules. Pins the four-subcommand surface, dry-run defaults, the 15-minute live window, leaf-only pruning, the TOCTOU re-check, the opencode-CLI-only access path, the `SessionStorePort`/`SessionAdminPort` split, the four `db` error rows, the bounded metadata-only output, the owner merge gate for the ADR-0003 C-11 sign-off, and the scoped defaults-position baseline repair.
