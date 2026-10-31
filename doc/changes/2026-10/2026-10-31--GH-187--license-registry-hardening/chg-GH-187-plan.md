@@ -471,7 +471,7 @@ Revert the entire change set (registry + audit + tests/fixtures) as one unit. Ne
 - [x] **8.1** Apply repo versioning: `version_impact: none` means no package version bump, no `.changeset/` entry, no changelog, and no release artifact. Release-time SBOM/checksum/notice artifacts remain **M4-S2**; registry completeness and public materials remain **M4-S3**. The registry `schema_version` 2 → 3 is a data-contract bump only. Record this rationale in the PR. — done: no bump/changeset/artifact; `.changeset/` byte-unchanged.
 - [x] **8.2** Run the final battery once more on the exact PR head: `bun test tests/checks`, `pnpm check`, the inherited bash suites, the four invariant scripts, and `git status --porcelain` empty. — done: `pnpm check` exit 0 (1434/1434); tests/checks 331/331; 22/22 bash suites; all seven invariants OK; worktree clean.
 - [x] **8.3** Verify atomic delivery against the spec §18.1 Definition of Done predicates: the registry v3 and the audit v3 are in the same commit set / same PR; no commit leaves the v3 registry with a v2-only audit or vice versa; every plan task is checked; the **31-TC** AC/TC traceability matrix is complete; AC-F1-3's wrong-scope extension is proven by TC-LICREG-031; TDR-0007 is cited as Proposed and no acceptance is claimed; no out-of-scope file changed. — done: atomic 439f6f1; 31/31 TCs; TDR-0007 Proposed; only the documented enabling test repair is outside the license surface.
-- [ ] **8.4** Create the PR via `@pr-manager` targeting `main-tools`, with the GH-187 change artifacts, the evidence pack, the TC-LICREG-030 record, the owner's TDR-0007 decision, and the required `ts-license-audit` check. Assign the human reviewer and record the PR URL. Do not merge. — next: PR creation.
+- [x] **8.4** Create the PR via `@pr-manager` targeting `main-tools`, with the GH-187 change artifacts, the evidence pack, the TC-LICREG-030 record, the owner's TDR-0007 decision, and the required `ts-license-audit` check. Assign the human reviewer and record the PR URL. Do not merge. — done: PR #208 https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/208, base main-tools, labels change+review, assignee owner, 47/47 checks pass, not merged.
 
 **Acceptance Criteria**:
 
@@ -620,7 +620,7 @@ Revert the entire change set (registry + audit + tests/fixtures) as one unit. Ne
 | 5 | Completed | 2026-10-31 | 2026-10-31 | c58b63a | Full battery green after the base-relative repair of inherited GH-184 `privacy-release.test.ts` TC-RELEASE-001: `pnpm test` 1434/1434, `bun test tests/checks` 331/331, 22/22 CI-excluded bash suites, all invariant checks, and no dependency/lockfile/CI-job change. Evidence below. |
 | 6 | Completed | 2026-10-31 | 2026-10-31 | d5db953 | Workflow phase 7 (`@doc-syncer`): system spec reconciled with the deny policy; `doc-sync-report.md` SUCCESS. |
 | 7 | Completed | 2026-10-31 | 2026-10-31 | 0073fe1 | Review iterations 1 and 2 PASS (0 blocking); non-blocking F-1..F-5 remediated; doc nits closed. |
-| 8 | In Progress | 2026-10-31 | — | — | 8.1-8.3 complete (no version bump, final battery green, DoD predicates verified); 8.4 PR creation is next. |
+| 8 | Completed | 2026-10-31 | 2026-10-31 | 1e00611 | 8.1-8.3 complete; PR #208 opened against main-tools (47/47 checks pass, not merged). |
 
 ### Review remediation iteration 1 (2026-10-31)
 
