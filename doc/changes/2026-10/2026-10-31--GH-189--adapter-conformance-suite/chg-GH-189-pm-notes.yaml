@@ -5,10 +5,10 @@ milestone: "M0: Trust substrate"
 story_code: "M0-S20"
 phases:
   clarify_scope: { started: "2026-10-31T18:30:00Z", completed: "2026-10-31T18:45:00Z" }
-  specification: { started: "2026-10-31T18:46:00Z", completed: "2026-10-31T19:05:00Z" }
-  test_planning: { started: "2026-10-31T19:06:00Z", completed: "2026-10-31T19:24:00Z" }
-  delivery_planning: { started: "2026-10-31T19:25:00Z", completed: "2026-10-31T19:56:00Z" }
-  dor_check: { started: null, completed: null }
+  specification: { started: "2026-10-31T18:46:00Z", completed: null, reopened: "2026-10-31T20:10:00Z" }
+  test_planning: { started: "2026-10-31T19:06:00Z", completed: null, reopened: "2026-10-31T20:10:00Z" }
+  delivery_planning: { started: "2026-10-31T19:25:00Z", completed: null, reopened: "2026-10-31T20:10:00Z" }
+  dor_check: { started: "2026-10-31T19:57:00Z", completed: null, iteration: 1, verdict: "NOT_READY" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -35,7 +35,9 @@ decisions:
 open_questions:
   - text: "Which concrete scratch repositories / Jira sandbox and secrets the owner will provision for scheduled live runs; the workflow is tenant-agnostic and records not-configured until the documented environment names are supplied."
     date: "2026-10-31"
-blockers: []
+blockers:
+  - text: "DoR iteration 1 = NOT_READY (2 blocking): (B-1) not-configured presence-by-name is wrong for GitHub Actions, which materialises unset vars/secrets as present empty strings, so a no-tenant scheduled run would be classified configured and fail instead of not-configured/exit 0; fix = treat undefined/empty/whitespace as missing and test the present-but-empty shape. (B-2) test plan says Jira has three non-secret settings while spec §22/plan D-6 use two. Reopened specification, test_planning, and delivery_planning for one remediation pass; re-run gate after."
+    date: "2026-10-31"
 notes:
   - text: "State detection: issue GH-189 OPEN, no labels, milestone 'M0: Trust substrate', 0 comments; no GH-189 branch, no open or merged PR, worktree clean at origin/main-tools tip (b31ec47). Fresh delivery, not a resume."
     type: "info"
@@ -54,4 +56,7 @@ notes:
     date: "2026-10-31"
   - text: "No blocking product question found: the ticket ACs, backlog story M0-S20, concepts/adapter-conformance.md, and ADR-0003 constrain scope enough to proceed. Interpretations recorded as decisions, not invented requirements."
     type: "info"
+    date: "2026-10-31"
+  - text: "DoR iteration 1: NOT_READY, 2 blocking / 6 advisory / 4 nit. The blocking find is a genuine mechanism defect the authoring chain missed: GitHub Actions evaluates unset vars/secrets to present empty strings, defeating a presence-only not-configured check. Also caught a test-plan Jira setting-count contradiction the plan had flagged but deliberately left unfixed. Advisory set hardens ticket AC-2 evidence (if-no-files-found: error, --out equals upload path), control write dispatch, declaration-only registration scan, artifact skipKind, privacy/forbidden-literal gates, and repository-wide workflow invariant scope."
+    type: "retro"
     date: "2026-10-31"
