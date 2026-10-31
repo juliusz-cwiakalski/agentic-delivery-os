@@ -6,14 +6,23 @@ This record contains only executed evidence. Unrun checks are marked as such.
 
 | Phase | Commit | Completion signal |
 |---|---|---|
-| 1 | `d56401c` | `feat(GH-175): add status digest contracts with pure aggregator and renderer` |
-| 2 | `d5c2d71` | `feat(GH-175): add bounded GitHub collection reads with trap coverage` |
-| 3 | `58290d0` | `feat(GH-175): add origin repository binding and local PM-context read` |
-| 4 | `a5bce0d` | `feat(GH-175): add status command with runtime composition and human digest hook` |
-| 5 | `9c64fba` | `test(GH-175): prove collector truthfulness, negative controls, and read-only determinism` |
-| 6 | this commit | `docs(GH-175): record status changeset and delivery evidence with final battery` |
+| 1 | `d65a7e5a5` | `feat(GH-175): add status digest contracts with pure aggregator and renderer` |
+| 2 | `32c843f4b` | `feat(GH-175): add bounded GitHub collection reads with trap coverage` |
+| 3 | `3aa9b1ba7` | `feat(GH-175): add origin repository binding and local PM-context read` |
+| 4 | `978d7b311` | `feat(GH-175): add status command with runtime composition and human digest hook` |
+| 5 | `807223255` | `test(GH-175): prove collector truthfulness, negative controls, and read-only determinism` |
+| 6 | `aa6a6d1e9` | `docs(GH-175): record status changeset and delivery evidence with final battery` |
 
 Phase 7 is the `@doc-syncer` handoff and was not executed by `@coder`.
+
+Commit-message reword note: three commits were reworded message-only to satisfy
+commitlint's 100-character body rule; every tree is byte-identical. The phase
+SHAs above and elsewhere in this record are the post-reword SHAs. Full old→new
+map: `234a766`→`0e06be96d`, `3cb79f6`→`d3412e014`, `7d4389a`→`c89bb05af`,
+`d56401c`→`d65a7e5a5`, `d5c2d71`→`32c843f4b`, `58290d0`→`3aa9b1ba7`,
+`a5bce0d`→`978d7b311`, `9c64fba`→`807223255`, `a77dde7`→`aa6a6d1e9`,
+`9053aa2`→`3057d184b`, `94166ea`→`4298bf8bc`, `1df7659`→`7b6679899`,
+`7688690`→`47fe1563f`. `commitlint --from origin/main-tools --to HEAD` exits 0.
 
 ## Gate consolidation
 
