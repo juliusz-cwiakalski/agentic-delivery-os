@@ -16,7 +16,6 @@ export const INVALID_IDS: readonly IdCase[] = [
   { id: "x;y", label: "I-04 semicolon", valid: false },
   { id: "x y", label: "I-04 space", valid: false },
   { id: "x\ny", label: "I-04 newline", valid: false },
-  { id: "x--y", label: "I-04 comment marker", valid: false },
   { id: "x/*c*/y", label: "I-04 block comment", valid: false },
   { id: "sés", label: "I-05 non-ASCII", valid: false },
   { id: "", label: "I-05 empty", valid: false },

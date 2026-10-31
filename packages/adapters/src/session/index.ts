@@ -10,17 +10,26 @@
 import { execFile } from "node:child_process";
 import { statSync } from "node:fs";
 import {
+  classifyPruneCandidate,
+  computeDbCutoffMs,
+  computeDbLiveBoundaryMs,
   DB_CHECKPOINT_TIMEOUT_MS,
   DB_DELETE_TIMEOUT_MS,
+  DB_LIVE_WINDOW_MINUTES,
   DB_MAX_ID_CHARS,
   DB_MAX_LIST_LIMIT,
+  DB_MAX_OLDER_THAN_DAYS,
   DB_MAX_PATH_CHARS,
+  DB_MAX_PRUNE_LIMIT,
   DB_MIN_LIMIT,
+  DB_MIN_OLDER_THAN_DAYS,
   DB_QUERY_TIMEOUT_MS,
   DB_SCHEMA_VERSION,
   DB_SESSION_ID_PATTERN,
   isLiveDbSession,
+  selectPruneCandidates,
   type ListData,
+  type PruneCandidateFact,
   type SessionAdminError,
   type SessionAdminPort,
   type SessionListRead,
@@ -380,20 +389,265 @@ export const createSessionStore = (io: OpencodeSessionIo): SessionStorePort => (
   list: (input) => readList(io, input),
 });
 
-/**
- * The admin port. Prune and reboot are completed in the mutation phase; until
- * then they return the classified query identity and perform nothing.
- */
+const candidateSummarySql = [
+  "s.id AS id, s.parent_id AS parent_id, s.time_created AS time_created,",
+  "s.time_updated AS time_updated, s.time_archived AS time_archived,",
+  "EXISTS(SELECT 1 FROM session c WHERE c.parent_id = s.id) AS has_children,",
+  "(SELECT COUNT(*) FROM message m WHERE m.session_id = s.id) AS message_count,",
+  "(SELECT COUNT(*) FROM part p WHERE p.session_id = s.id) AS part_count,",
+  "(SELECT COALESCE(SUM(LENGTH(CAST(m.data AS BLOB))),0) FROM message m WHERE m.session_id = s.id)",
+  " + (SELECT COALESCE(SUM(LENGTH(CAST(p.data AS BLOB))),0) FROM part p WHERE p.session_id = s.id) AS data_bytes",
+].join(" ");
+
+const SELECTION_SQL = (cutoff: number, liveBoundary: number, limit: number): string =>
+  [
+    `SELECT ${candidateSummarySql} FROM session s`,
+    `WHERE s.time_updated < ${cutoff}`,
+    `AND s.time_updated < ${liveBoundary}`,
+    "AND NOT EXISTS (SELECT 1 FROM session c WHERE c.parent_id = s.id)",
+    "ORDER BY s.time_updated ASC, s.id ASC",
+    `LIMIT ${limit}`,
+  ].join(" ");
+
+const RE_READ_SQL = (id: string, cutoff: number, liveBoundary: number): string =>
+  [
+    "SELECT s.id AS id, s.time_updated AS time_updated,",
+    "EXISTS(SELECT 1 FROM session c WHERE c.parent_id = s.id) AS has_children",
+    "FROM session s",
+    `WHERE s.id = '${id}'`,
+    `AND s.time_updated < ${cutoff}`,
+    `AND s.time_updated < ${liveBoundary}`,
+    "AND NOT EXISTS (SELECT 1 FROM session c WHERE c.parent_id = s.id)",
+    "LIMIT 1",
+  ].join(" ");
+
+const EXISTS_SQL = (id: string): string =>
+  `SELECT s.id AS id FROM session s WHERE s.id = '${id}' LIMIT 1`;
+
+const readCandidate = (row: Record<string, unknown>, nowMs: number): PruneCandidateFact => {
+  const read = readSessionRow(row, nowMs);
+  return {
+    id: read.summary.id,
+    updatedAtMs: read.updatedAtMs,
+    hasChildren: read.hasChildren,
+    summary: read.summary,
+  };
+};
+
+const fileFacts = async (io: OpencodeSessionIo, path: string): Promise<SessionFileFacts> =>
+  io.stat(path).catch(() => ({ bytes: 0, present: false }));
+
+const readPrune = async (
+  io: OpencodeSessionIo,
+  input: {
+    readonly olderThanDays: number;
+    readonly limit: number;
+    readonly apply: boolean;
+    readonly nowMs: number;
+  },
+): Promise<SessionPruneRead> => {
+  try {
+    validatePath(await io.databasePath());
+    const olderThanDays = clamp(
+      input.olderThanDays,
+      DB_MIN_OLDER_THAN_DAYS,
+      DB_MAX_OLDER_THAN_DAYS,
+    );
+    const limit = clamp(input.limit, DB_MIN_LIMIT, DB_MAX_PRUNE_LIMIT);
+    const cutoff = computeDbCutoffMs(input.nowMs, olderThanDays);
+    const liveBoundary = computeDbLiveBoundaryMs(input.nowMs);
+    const rows = await io.query(SELECTION_SQL(cutoff, liveBoundary, limit));
+    let liveExcluded = 0;
+    const eligible: PruneCandidateFact[] = [];
+    for (const row of rows) {
+      const fact = readCandidate(row, input.nowMs);
+      const decision = classifyPruneCandidate(fact, { nowMs: input.nowMs, olderThanDays });
+      if (decision.eligible) eligible.push(fact);
+      else if (decision.reason === "live") liveExcluded += 1;
+    }
+    const selected = selectPruneCandidates(eligible, { nowMs: input.nowMs, olderThanDays, limit });
+    const base = {
+      schemaVersion: DB_SCHEMA_VERSION,
+      command: "prune" as const,
+      olderThanDays,
+      limit,
+      liveWindowMinutes: DB_LIVE_WINDOW_MINUTES,
+      cutoff: isoFromMs(cutoff, "cutoff"),
+      candidates: selected.map((fact) => fact.summary),
+    };
+    if (!input.apply) {
+      return {
+        ok: true,
+        value: {
+          ...base,
+          mode: "dry-run",
+          counts: {
+            selected: selected.length,
+            deleted: 0,
+            failed: 0,
+            skipped: 0,
+            liveExcluded,
+          },
+        },
+      };
+    }
+
+    let deleted = 0;
+    let failed = 0;
+    let skipped = 0;
+    let firstFailed: string | undefined;
+    const abortAfterLand = (id: string): SessionAdminError => {
+      const attempted = deleted + failed + 1;
+      return sessionError(
+        "db.delete.failed",
+        `${failed + 1} of ${attempted} session deletes did not land (first: ${firstFailed ?? id}); ${deleted} landed`,
+      );
+    };
+    for (const candidate of selected) {
+      let reReadRows: readonly Record<string, unknown>[];
+      try {
+        reReadRows = await io.query(RE_READ_SQL(candidate.id, cutoff, liveBoundary));
+      } catch (thrown) {
+        const error = failure(thrown, "db.query.failed");
+        if (deleted === 0 && failed === 0) return { ok: false, error };
+        return { ok: false, error: abortAfterLand(candidate.id) };
+      }
+      if (reReadRows.length === 0) {
+        skipped += 1;
+        continue;
+      }
+      const reFact = readCandidate(reReadRows[0] ?? {}, input.nowMs);
+      if (!classifyPruneCandidate(reFact, { nowMs: input.nowMs, olderThanDays }).eligible) {
+        skipped += 1;
+        continue;
+      }
+      try {
+        await io.deleteSession(candidate.id);
+        deleted += 1;
+      } catch (thrown) {
+        const error = failure(thrown, "db.delete.failed");
+        if (error.code === "db.opencode.unavailable" || error.code === "db.query.failed") {
+          if (deleted === 0 && failed === 0) return { ok: false, error };
+          return { ok: false, error: abortAfterLand(candidate.id) };
+        }
+        let existsRows: readonly Record<string, unknown>[];
+        try {
+          existsRows = await io.query(EXISTS_SQL(candidate.id));
+        } catch (existThrown) {
+          const existError = failure(existThrown, "db.query.failed");
+          if (deleted === 0 && failed === 0) return { ok: false, error: existError };
+          return { ok: false, error: abortAfterLand(candidate.id) };
+        }
+        if (existsRows.length === 0) {
+          skipped += 1;
+          continue;
+        }
+        failed += 1;
+        firstFailed ??= candidate.id;
+      }
+    }
+    if (failed > 0) {
+      const attempted = deleted + failed;
+      return {
+        ok: false,
+        error: sessionError(
+          "db.delete.failed",
+          `${failed} of ${attempted} session deletes did not land (first: ${firstFailed ?? ""}); ${deleted} landed`,
+        ),
+      };
+    }
+    return {
+      ok: true,
+      value: {
+        ...base,
+        mode: "applied",
+        counts: {
+          selected: selected.length,
+          deleted,
+          failed,
+          skipped,
+          liveExcluded,
+        },
+      },
+    };
+  } catch (thrown) {
+    return { ok: false, error: failure(thrown, "db.query.failed") };
+  }
+};
+
+const readReboot = async (
+  io: OpencodeSessionIo,
+  input: { readonly apply: boolean; readonly nowMs: number },
+): Promise<SessionRebootRead> => {
+  try {
+    const liveBoundary = computeDbLiveBoundaryMs(input.nowMs);
+    const liveRows = await io.query(
+      `SELECT COUNT(*) AS live_sessions FROM session WHERE time_updated >= ${liveBoundary}`,
+    );
+    const liveSessions = asNumber(liveRows[0]?.live_sessions, "session.live_sessions");
+    if (input.apply && liveSessions > 0) {
+      return { ok: false, error: sessionError("db.reboot.live") };
+    }
+    const path = validatePath(await io.databasePath());
+    const database = await io.stat(path).catch(() => ({ bytes: 0, present: false }));
+    if (!database.present) {
+      return { ok: false, error: sessionError("db.opencode.unavailable") };
+    }
+    const wal = await fileFacts(io, `${path}-wal`);
+    const shm = await fileFacts(io, `${path}-shm`);
+    if (!input.apply) {
+      return {
+        ok: true,
+        value: {
+          schemaVersion: DB_SCHEMA_VERSION,
+          command: "reboot",
+          mode: "dry-run",
+          liveWindowMinutes: DB_LIVE_WINDOW_MINUTES,
+          liveSessions,
+          blockedByLiveSession: liveSessions > 0,
+          checkpointPerformed: false,
+          database: {
+            path,
+            walBytesBefore: wal.bytes,
+            walPresent: wal.present,
+            shmPresent: shm.present,
+          },
+        },
+      };
+    }
+    await io.checkpoint();
+    const after = await fileFacts(io, `${path}-wal`);
+    return {
+      ok: true,
+      value: {
+        schemaVersion: DB_SCHEMA_VERSION,
+        command: "reboot",
+        mode: "applied",
+        liveWindowMinutes: DB_LIVE_WINDOW_MINUTES,
+        liveSessions,
+        blockedByLiveSession: false,
+        checkpointPerformed: true,
+        database: {
+          path,
+          walBytesBefore: wal.bytes,
+          walBytesAfter: after.bytes,
+          walPresent: after.present,
+          shmPresent: shm.present,
+        },
+      },
+    };
+  } catch (thrown) {
+    return { ok: false, error: failure(thrown, "db.query.failed") };
+  }
+};
+
+/** The admin port over one injected seam. */
 export const createSessionAdmin = (io: OpencodeSessionIo): SessionAdminPort => {
   const store = createSessionStore(io);
   return {
     size: () => store.size(),
     list: (input) => store.list(input),
-    async prune(): Promise<SessionPruneRead> {
-      return { ok: false, error: sessionError("db.query.failed") };
-    },
-    async reboot(): Promise<SessionRebootRead> {
-      return { ok: false, error: sessionError("db.query.failed") };
-    },
+    prune: (input) => readPrune(io, input),
+    reboot: (input) => readReboot(io, input),
   };
 };

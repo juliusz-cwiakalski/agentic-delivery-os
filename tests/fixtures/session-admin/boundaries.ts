@@ -83,10 +83,9 @@ export const LEAF_SESSIONS: readonly SessionFixture[] = [
 
 /** The five-candidate ordering fixture (t1 < t2 = t3 < t4 < t5). */
 export const ORDER_SESSIONS: readonly SessionFixture[] = [
-  makeSession({ id: "ses_t5", timeUpdated: cutoffMs(30) - 5_000 }),
-  makeSession({ id: "ses_t3_b", timeUpdated: cutoffMs(30) - 3_000 }),
-  makeSession({ id: "ses_t1", timeUpdated: cutoffMs(30) - 1_000 }),
-  makeSession({ id: "ses_t2_a", timeUpdated: cutoffMs(30) - 2_000 }),
-  makeSession({ id: "ses_t4", timeUpdated: cutoffMs(30) - 4_000 }),
-  makeSession({ id: "ses_t2_b", timeUpdated: cutoffMs(30) - 2_000 }),
+  makeSession({ id: "ses_t5", timeUpdated: cutoffMs(30) - 2_000 }),
+  makeSession({ id: "ses_t1", timeUpdated: cutoffMs(30) - 5_000 }),
+  makeSession({ id: "ses_t2_a", timeUpdated: cutoffMs(30) - 4_000 }),
+  makeSession({ id: "ses_t4", timeUpdated: cutoffMs(30) - 3_000 }),
+  makeSession({ id: "ses_t2_b", timeUpdated: cutoffMs(30) - 4_000 }),
 ];

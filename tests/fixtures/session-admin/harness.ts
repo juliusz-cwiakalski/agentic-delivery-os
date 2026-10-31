@@ -86,6 +86,7 @@ export const createFakeIo = (options: FakeIoOptions = {}): FakeSessionIo => {
     get checkpointCalls() {
       return checkpointCalls;
     },
+    checkpointBefore: undefined,
     databasePathValue: options.databasePath ?? SYNTHETIC_DB_PATH,
     databasePathError: options.databasePathError,
     nowValue: options.now ?? NOW_MS,
@@ -123,6 +124,7 @@ export const createFakeIo = (options: FakeIoOptions = {}): FakeSessionIo => {
     },
     async checkpoint(): Promise<void> {
       calls.push({ kind: "checkpoint", value: "PRAGMA wal_checkpoint(TRUNCATE)" });
+      io.checkpointBefore?.();
       checkpointCalls += 1;
     },
     now(): number {
