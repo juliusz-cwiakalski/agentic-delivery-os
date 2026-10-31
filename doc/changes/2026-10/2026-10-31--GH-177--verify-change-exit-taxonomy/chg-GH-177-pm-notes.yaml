@@ -7,7 +7,7 @@ phases:
   clarify_scope: { started: "2026-10-31T00:00:00Z", completed: "2026-10-31T00:20:00Z" }
   specification: { started: "2026-10-31T00:25:00Z", completed: "2026-10-31T01:05:00Z" }
   test_planning: { started: "2026-10-31T01:10:00Z", completed: "2026-10-31T01:50:00Z" }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: "2026-10-31T01:55:00Z", completed: "2026-10-31T02:40:00Z" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -37,6 +37,9 @@ notes:
     type: "info"
     date: "2026-10-31"
   - text: "Test planning complete: chg-GH-177-test-plan.md, 21 TCs (TC-VERIFY-001..021); AC-V1..V14 all covered, NFR-1..NFR-7 all covered, zero uncovered. Includes non-vacuous rejection matrix, two-direction overlay controls, bash-enum extraction test, real-corpus fixtures (read-only), envelope/exit matrix, read-only/network-free/determinism controls, error-table sync mutations. Non-blocking gaps recorded: A-T6 summary detail optionality, GAP-2 state.level.unsupported proven via table totality, delivery-bound names."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Delivery planning complete: chg-GH-177-plan.md, 10 phases / 44 tasks. Phases 1-6 @coder-executed (contracts+error row same phase; pure classifier+tolerant read; command; state/envelope/determinism; real corpus+battery; changeset+evidence), Phases 7-10 PM-scheduled lifecycle (review, conditional remediation, doc-syncer, finalize/PR). 21/21 TCs mapped, 14/14 ACs, 7/7 NFRs. PIN-1..PIN-7 and D1..D12 bind delivery spellings; no spec/test-plan reshaping. Fixed one plan typo (AC range V9..V15 -> V9..V14)."
     type: "info"
     date: "2026-10-31"
   - text: "Runtime learnings carried forward: pre-authorize inline committer discipline for @coder (one Conventional Commit per plan phase, explicit staging, never stage .ai/local/ or tmp/); PM owns @runner/@doc-syncer/@pr-manager. Prefer chunked authoring delegations for long artifacts (GH-179 retros)."
