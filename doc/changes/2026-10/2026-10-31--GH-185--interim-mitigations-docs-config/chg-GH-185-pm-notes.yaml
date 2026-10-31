@@ -10,7 +10,7 @@ phases:
   delivery: { started: "2026-10-31T02:25:00Z", completed: "2026-10-31T03:05:00Z" }
   system_spec_update: { started: "2026-10-31T03:10:00Z", completed: "2026-10-31T03:20:00Z" }
   review_fix: { started: "2026-10-31T03:25:00Z", completed: "2026-10-31T03:40:00Z" }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: "2026-10-31T03:45:00Z", completed: "2026-10-31T03:55:00Z" }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
