@@ -1,0 +1,84 @@
+# inception-state.yaml
+#
+# Live inception state for the OSS tooling subproject run (GH-200).
+# Instantiated from doc/templates/inception-state-template.yaml.
+# Single-branch mode: all phases commit to docs/GH-200/tooling-inception
+# after each human gate; one PR to main-tools carries the run.
+schema_version: 1
+
+project:
+  name: OSS delivery tooling subproject
+  flow: legacy
+  profile: engineering-repo
+  characteristics:
+    ui_bearing: false        # CLI, MCP, and harness-plugin surfaces; no GUI
+    multi_user: false        # single-operator local-first design; shared state is future work
+    complex_domain: true     # delivery domain: lifecycle, primitives, adapters, migration
+    code_project: true       # TypeScript monorepo under packages/
+
+run:
+  anchor_issue: GH-200
+  branch: docs/GH-200/tooling-inception
+  base: main-tools
+  mode: single-branch-single-pr   # owner instruction 2026-10-31; overrides PR-per-phase default
+  scope_guard: >
+    Incepts the OSS tooling subproject (packages/ monorepo plus its delivery
+    stack) only. Repo framework artifacts (AGENTS.md, .ai/agent/*,
+    .opencode/**, doc/guides/**, delivery-system feature specs) are inputs,
+    verified never regenerated. Decision seeds for the M0-S17 batch are
+    proposals; ratification stays with GH-186.
+  inputs_commit: e424423     # doc/inception/inputs/tooling/ committed by owner
+
+phases:
+  - { id: 0, name: "Intake & material scan", status: in_progress, started: "2026-10-31T08:10:00+01:00", completed: null }
+  - { id: 1, name: "North star & vision", status: pending, started: null, completed: null }
+  - { id: 2, name: "Scope & roadmap", status: pending, started: null, completed: null }
+  - { id: 3, name: "Tech stack & architecture", status: pending, started: null, completed: null }
+  - { id: 4, name: "Domain, conventions & quality baseline", status: pending, started: null, completed: null }
+  - { id: 5, name: "ADOS framework integration", status: pending, started: null, completed: null }
+  - { id: 6, name: "Inception readiness check", status: pending, started: null, completed: null }
+  - { id: 7, name: "Inception summary & handoff", status: pending, started: null, completed: null }
+
+artifacts:
+  # status: pending | draft | approved | written ; confidence: 0.0-1.0
+  north_star:        { status: pending, path: "doc/overview/01-north-star.md", confidence: 0.0 }
+  roadmap:           { status: pending, path: "doc/planning/oss-tooling/roadmap.md", confidence: 0.0, note: "exists, committed; run verifies and extends, never rewrites" }
+  tech_stack:        { status: pending, path: "doc/overview/tech-stack.md", confidence: 0.0 }
+  architecture:      { status: pending, path: "doc/overview/architecture-overview.md", confidence: 0.0 }
+  glossary:          { status: pending, path: "doc/overview/glossary.md", confidence: 0.0, note: "exists; run extends with tooling terms" }
+  ost:               { status: pending, path: "doc/overview/opportunity-solution-tree.md", confidence: 0.0 }
+  personas_jtbd:     { status: pending, path: "doc/overview/01-north-star.md", confidence: 0.0, note: "not activated (multi_user false)" }
+  user_journeys:     { status: pending, path: "doc/planning/oss-tooling/user-journeys.md", confidence: 0.0, note: "exists, committed; run verifies" }
+  screen_inventory:  { status: pending, path: "doc/overview/screen-inventory.md", confidence: 0.0, note: "not activated (ui_bearing false)" }
+  ux_guidance:       { status: pending, path: "doc/overview/ux-guidance.md", confidence: 0.0, note: "not activated (ui_bearing false)" }
+  ubiquitous_language: { status: pending, path: "doc/overview/ubiquitous-language.md", confidence: 0.0 }
+  assumptions:       { status: pending, path: "doc/inception/analysis/assumptions.md", confidence: 0.0 }
+  risks:             { status: pending, path: "doc/inception/analysis/risks.md", confidence: 0.0 }
+  material_inventory: { status: draft, path: "doc/inception/analysis/material-inventory.md", confidence: 0.9 }
+  retrospective_notes: { status: draft, path: "doc/inception/retrospective/", confidence: 0.8 }
+  open_questions:    { status: draft, path: "doc/inception/open-questions/", confidence: 0.8 }
+  inception_summary: { status: pending, path: "doc/inception/inception-summary.md", confidence: 0.0 }
+  repo_analysis:     { status: draft, path: "doc/inception/analysis/repo-analysis.md", confidence: 0.85 }
+  tribal_knowledge:  { status: draft, path: "doc/inception/analysis/tribal-knowledge.md", confidence: 0.8 }
+  project_prd:       { status: pending, path: "doc/overview/prd.md", confidence: 0.0, note: "not activated; roadmap + backlog are the living plan" }
+  nonfunctional:     { status: pending, path: "doc/spec/nonfunctional.md", confidence: 0.0 }
+  feature_specs:     { status: pending, path: "doc/spec/features/", confidence: 0.0, note: "per-delivery specs exist and keep growing; run reconciles" }
+  decision_records:  { status: pending, path: "doc/decisions/", confidence: 0.0, note: "10 records exist; run seeds the open M0-S17 batch" }
+
+decisions:
+  - { phase: 0, text: "project.flow = legacy, scoped to the OSS tooling subproject", rationale: "subproject exists with real delivery history but no inception record; repo framework is out of scope", date: "2026-10-31" }
+  - { phase: 0, text: "single-branch single-PR mode on docs/GH-200/tooling-inception, base main-tools", rationale: "explicit owner instruction; overrides the PR-per-phase default", date: "2026-10-31" }
+  - { phase: 0, text: "framework artifacts are inputs; verify-only, deltas route to tickets", rationale: "AGENTS.md, .ai/agent/*, .opencode/**, doc/guides/**, delivery-system specs predate the run and are the product", date: "2026-10-31" }
+  - { phase: 0, text: "decision-record seeds for the M0-S17 batch are proposals with options; ratification stays with GH-186", rationale: "keeps inception advisory and the delivery ticket authoritative", date: "2026-10-31" }
+  - { phase: 0, text: "committed input pack (e424423) accepted as trusted owner direction", rationale: "owner reviewed and committed doc/inception/inputs/tooling/ before kickoff", date: "2026-10-31" }
+
+assumptions:
+  # risk_type: value | usability | feasibility | viability
+  - { text: "M0 in-flight stories (GH-177, GH-182, GH-184) merge without breaking the reconciliation baseline of this run", risk_type: feasibility, validation_status: testing, date: "2026-10-31" }
+  - { text: "committed planning corpus (roadmap, backlog, registry, journeys) stays the living plan; the run only verifies and proposes refinements", risk_type: value, validation_status: validated, date: "2026-10-31" }
+  - { text: "parallel M0 delivery and inception doc work can proceed without blocking conflicts (disjoint surfaces)", risk_type: feasibility, validation_status: testing, date: "2026-10-31" }
+
+sessions:
+  - { started: "2026-10-31T08:10:00+01:00", phase: 0, notes: "phase 0 artifacts drafted: state, material inventory, repo analysis with gap map, tribal knowledge; gate 0 presented" }
+
+last_updated: "2026-10-31T08:10:00+01:00"
