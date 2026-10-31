@@ -3,10 +3,10 @@ title: "M0-S17: Decision records and measurement baseline"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-10-31T13:55:00Z", completed: "2026-10-31T14:05:00Z" }
-  specification: { started: "2026-10-31T14:06:00Z", completed: "2026-10-31T15:25:00Z", reopened: "2026-10-31T15:05:00Z" }
-  test_planning: { started: "2026-10-31T14:32:00Z", completed: "2026-10-31T15:25:00Z" }
-  delivery_planning: { started: "2026-10-31T15:27:00Z", completed: "2026-10-31T15:50:00Z" }
-  dor_check: { started: null, completed: null }
+  specification: { started: "2026-10-31T14:06:00Z", completed: null, reopened: "2026-10-31T16:10:00Z", iterations: 2 }
+  test_planning: { started: "2026-10-31T14:32:00Z", completed: null, reopened: "2026-10-31T16:10:00Z", iterations: 2 }
+  delivery_planning: { started: "2026-10-31T15:27:00Z", completed: null, reopened: "2026-10-31T16:10:00Z", iterations: 2 }
+  dor_check: { started: "2026-10-31T15:52:00Z", completed: "2026-10-31T16:08:00Z", iterations: 1, verdict: "NOT_READY" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -53,4 +53,13 @@ notes:
     date: "2026-10-31"
   - text: "Delivery plan complete (chg-GH-186-plan.md): 13 phases, 76 tasks, per-phase commit table, 21-AC coverage ledger, 37-TC to phase map, PD-1..PD-10 pins, measurement computation procedure, exact gate battery, rollback. Branch name (feat/GH-186/decision-records-and-measurement-baseline) differs slightly from the spec slug (decision-records-measurement-baseline); branch is authoritative and this is cosmetic, not a scope deviation."
     type: "info"
+    date: "2026-10-31"
+  - text: "DoR iteration 1 verdict NOT_READY (readiness-review/readiness-iter-1.md). Blocking: (B1) measurement corpus not computable as specified - GH-171 pm-notes is invalid YAML and the corpus contains YAML-native date/datetime values that the test-plan helpers reject; the exclusion vocabulary has no honest reason for invalid YAML. (B2) plan phase order runs review (lifecycle 8) before doc-sync (lifecycle 7), and its 21-AC trace claims Phase-12 deliverables. (B3) TC-MEAS-007 omits the included filter and would count the excluded GH-186 row. Should-fix: (S4) spec requires registering feature-measurement-baseline.md before it exists, contradicting the plan's same-commit staging; (S5) Appendix A corpus counts are wrong (41 files, 40 parseable, 30 timestamped starts, 10 date-only, 1 invalid). Notes: branch/slug mismatch; Phase-13 clean-tree assertion vs PM-modified pm-notes; unpinned ados_distribution for the new feature spec; stale implementation_plan in the test plan."
+    type: "blocker"
+    date: "2026-10-31"
+  - text: "DoR remediation plan: reopen specification (B1 exclusion/flat-parse rules, S4 registration sequencing, S5 corpus counts, ados_distribution note), test_planning (B1 date/datetime handling, B3 included filter, stale implementation_plan), and delivery_planning (B2 phase order + AC trace, clean-tree assertion). Re-delegate in spec -> test-plan -> plan order, then re-run DoR iteration 2. Max 3 iterations."
+    type: "decision"
+    date: "2026-10-31"
+  - text: "Retro: DoR iteration 1 found real computability defects (invalid-YAML artifact, native date values) that the spec and test plan asserted away. The spec should have grounded the corpus census by enumerating and parsing the actual files rather than stating counts. Improvement: any measurement-baseline spec must include a dry-run corpus parse (or a cited parse audit) before the DoR gate."
+    type: "retro"
     date: "2026-10-31"
