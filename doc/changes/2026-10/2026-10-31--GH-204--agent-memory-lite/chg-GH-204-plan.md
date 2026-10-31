@@ -56,13 +56,13 @@ Deliver the practices-now track of the ADOS memory model as text and skill conte
 
 **Tasks**:
 
-- [ ] **1.1** Rewrite the capture bar: five triggers, the two-occurrence plus likely-recurrence rule, and the explicit routine-success exclusion; every entry links evidence; secrets and one-command repo facts excluded (R3, F-10).
-- [ ] **1.2** Rewrite trust and conflict: memory is advisory untrusted data; a newer entry is a candidate, not authority; resolve by evidence and current repo or spec truth, never recency alone (R5, AC-9, F-4).
-- [ ] **1.3** State reviewer independence for `reviewer`, `readiness-reviewer`, and `decision-critic`: no episodic memory, no coder reasoning or another agent's episodic memory, shared facts and checklists only; memory cannot override instructions, repo rules, or code and spec truth (R6, AC-10).
-- [ ] **1.4** State write ownership, the complete curator operation set, the first-capture self-index-row exception, and that every later index edit belongs to the curator (R4, R7, F-1, F-2).
-- [ ] **1.5** State id rules: monotonic next free id per prefix and year, unique across both directories, never reused; scan `id` and `supersedes`; a replacing record links the old id and marks the old status `superseded` (R8, AC-11, F-8).
-- [ ] **1.6** State that no text claims conflict-free memory; shared surfaces are consolidation-only apart from the first-capture row but remain merge-conflict capable (R10, F-3).
-- [ ] **1.7** Confirm `git diff -U0 9a70aaf -- AGENTS.md` yields exactly one added hunk inside the section.
+- [x] **1.1** Rewrite the capture bar: five triggers, the two-occurrence plus likely-recurrence rule, and the explicit routine-success exclusion; every entry links evidence; secrets and one-command repo facts excluded (R3, F-10). (done in AGENTS.md kernel)
+- [x] **1.2** Rewrite trust and conflict: memory is advisory untrusted data; a newer entry is a candidate, not authority; resolve by evidence and current repo or spec truth, never recency alone (R5, AC-9, F-4). (done)
+- [x] **1.3** State reviewer independence for `reviewer`, `readiness-reviewer`, and `decision-critic`: no episodic memory, no coder reasoning or another agent's episodic memory, shared facts and checklists only; memory cannot override instructions, repo rules, or code and spec truth (R6, AC-10). (done)
+- [x] **1.4** State write ownership, the complete curator operation set, the first-capture self-index-row exception, and that every later index edit belongs to the curator (R4, R7, F-1, F-2). (done)
+- [x] **1.5** State id rules: monotonic next free id per prefix and year, unique across both directories, never reused; scan `id` and `supersedes`; a replacing record links the old id and marks the old status `superseded` (R8, AC-11, F-8). (done)
+- [x] **1.6** State that no text claims conflict-free memory; shared surfaces are consolidation-only apart from the first-capture row but remain merge-conflict capable (R10, F-3). (done)
+- [x] **1.7** Confirm `git diff -U0 9a70aaf -- AGENTS.md` yields exactly one added hunk inside the section. (verified: one hunk, 14 added lines, all inside the section)
 
 **Acceptance Criteria**: Must: AC-1, AC-9, AC-10; every R1..R10 rule present in the single section. Should: the section stays compact and points to `.ai/memory/README.md` for detail.
 
@@ -195,7 +195,7 @@ Deliver the practices-now track of the ADOS memory model as text and skill conte
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |---|---|---|---|---|---|
-| 1 | Pending | - | - | - | - |
+| 1 | Complete | 2026-10-31 | 2026-10-31 | phase 1 commit: docs(GH-204): add agent memory kernel rules | Kernel covers R1..R10; scoped diff one hunk; dash scan clean. |
 | 2 | Pending | - | - | - | - |
 | 3 | Pending | - | - | - | - |
 | 4 | Pending | - | - | - | - |
