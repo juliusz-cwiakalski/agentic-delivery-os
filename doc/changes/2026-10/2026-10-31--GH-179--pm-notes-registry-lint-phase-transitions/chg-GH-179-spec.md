@@ -152,12 +152,28 @@ owner reviewing LITE-mode adoption at PR review.
 
 - **AC-L6 — The schema accepts the real corpus.**
   Given every pm-notes document committed under the change-artifact
-  convention today, when lint runs over each with the effective-variant
-  default, then each passes (parseable, required keys present and typed,
-  required phases of the effective variant present, free-form extras
-  opaque — never schema-validated).
-  *DoD predicate*: lint over the full committed pm-notes corpus → zero
-  failures; "reject malformed" and "accept real files" both demonstrated.
+  convention from the variant era onward — change folders dated 2026-10 or
+  later — minus the explicit exclusion manifest (the corpus boundary), when
+  lint runs over each with the effective-variant default, then each passes
+  (parseable, required keys present and typed, required phases of the
+  effective variant present, free-form extras opaque — never
+  schema-validated).
+  *DoD predicate*: the variant-era corpus scan — zero failures over the
+  boundary files minus the exclusion manifest; "reject malformed" and
+  "accept real files" both demonstrated.
+
+  Corpus boundary evidence (test-planning scan of 2026-10-31): every
+  variant-era document passes (GH-170, GH-172, GH-173, GH-174, GH-181); 21
+  of 35 total committed documents fail legacy-era rules (14 predate the
+  dor_check phase; 20 predate delivery_mode) and are outside the corpus.
+  The exclusion manifest explicitly names exactly one file —
+  `doc/changes/2026-10/2026-10-29--GH-171--branding-seam-working-name/chg-GH-171-pm-notes.yaml`,
+  a known-unparseable historical artifact (orphaned indentation; rejected
+  by YAML 1.2 parsers) — excluded from the corpus fixture; its repair is
+  owner follow-up work outside this change. Legacy-era documents (folders
+  before 2026-10) are outside the corpus — authored before the schema
+  existed — but the schema still applies to them whenever a write path
+  targets them.
 
 ## Capabilities & Functionality
 
@@ -174,7 +190,7 @@ and, for a declared `lite` variant, to the variant's required set (a
 subset of the canonical 11, see C-2). Keys outside that applicable set —
 non-canonical phase ids in the `phases` map and any extra keys on a phase
 entry — are opaque: free-form values of any type, never schema-validated,
-never lint-inspected; this is what keeps the committed corpus (entries
+never lint-inspected; this is what keeps the variant-era corpus (entries
 carrying extra keys with sequence or plain-string values) passing under
 AC-L6. Collection entries are objects with
 `text` (string, required) and `type`/`date` (string, typed when present).
@@ -317,7 +333,7 @@ contain through `fallback.internal`.
 | NFR-1 | Runtime neutrality and tier conformance: tier-rule violations (contracts carrying behavior; state tier importing anything but `./contracts`; runtime APIs anywhere but the existing state driver edge; CLI delegating rendering/exit decisions into core); runtime-conditional branches in the contracts or domain tiers; packed `core` surface consumption failures on either supported runtime (Node, Bun) | 0 / 0 / 0 / 0 / 0 — both runtimes consume the surface; all boundary and ambient gates green |
 | NFR-2 | Machine-output validity: `ados lint` and `ados phase` invocations (success and failure) returning through the CommandResult envelope; `--json` outputs produced by the single serializer; exit codes outside the `{0, 1, 2}` projection; user-category failures projecting to any exit but 1 | 100% / 100% / 0 / 0 — envelope shape asserted for every fixture run |
 | NFR-3 | Determinism and read-only lint: lint verdict drift (identity, category, or evidence class) across repeated runs over identical target bytes; ambient reads (environment, clock, randomness) outside declared edges; bytes written by a standalone lint run | 0 drift across fixture replays / 0 ambient reads / 0 bytes written — identical inputs yield identical verdicts and evidence classes |
-| NFR-4 | Corpus compatibility: failures over the full committed pm-notes corpus with the effective-variant default; legitimate-shape regressions introduced by later schema edits; corpus coverage gaps (the corpus fixture not re-asserted when the schema module changes) | 0 corpus failures (AC-L6, pinned as a permanent CI fixture) / 0 regressions / 100% re-assertion on schema-module change |
+| NFR-4 | Corpus compatibility: failures over the committed variant-era pm-notes corpus — change folders dated 2026-10 or later, minus the explicit exclusion manifest (the AC-L6 corpus boundary) — with the effective-variant default; legitimate-shape regressions introduced by later schema edits; corpus coverage gaps (the corpus fixture not re-asserted when the schema module changes) | 0 corpus failures over the boundary minus manifest (AC-L6, pinned as a permanent CI fixture) / 0 regressions / 100% re-assertion on schema-module change |
 | NFR-5 | Error-table binding: the five lint codes round-tripping exactly with documented rows (kind, category, retryability, consequence, projection class, remediation hint); two-directional documented-table drift; wrong/missing/mismatched `lint` codes escaping `fallback.internal` containment; kind-only `lint` classification selecting a row | 5/5 round-trip / 0 drift both directions / 0 escapes / 0 ambiguous selections |
 
 ## Technical Architecture & Codebase Map
@@ -352,7 +368,7 @@ High-level design, respecting the scaffold tier rules (contracts = types and as-
 | Approach | What it covers | Notable fixtures / controls |
 |----------|----------------|------------------------------|
 | Behaviour suites (in-process; no spawned processes) | Command semantics through the command definitions: every idempotency-matrix cell of C-4 (rows 1–9), each asserting exit code, ledger-record count delta, and evidence class; reason-less reopen and unknown phase id each rejecting with `input.value.rejected` (AC-L3, row 8); write-path lint blocking a mutation (AC-L1) | No-op cells (rows 2, 5) assert zero appended records, no entry creation, and no-op evidence; row 3 asserts a new transition record lands; row 9 asserts entry creation for an absent canonical phase, with advisory evidence when outside the declared variant's required set |
-| Golden fixtures — corpus acceptance | The real corpus: every pm-notes document committed under the change-artifact convention lints clean with the effective-variant default (AC-L6) | Corpus pinned as a permanent CI fixture; schema-module changes re-assert it (NFR-4) |
+| Golden fixtures — corpus acceptance | The real corpus under the AC-L6 corpus boundary: every pm-notes document committed under the change-artifact convention from the variant era onward (change folders dated 2026-10 or later), minus the explicit exclusion manifest, lints clean with the effective-variant default; legacy-era folders (before 2026-10) sit outside the fixture | Corpus fixture defined by the same boundary + exclusion manifest, so it drifts correctly as new variant-era changes land; pinned as a permanent CI fixture; schema-module changes re-assert it (NFR-4) |
 | Golden fixtures — rejection classes | Malformed-notes classes, each mapping to exactly one pinned identity with exit 1 and zero ledger records (AC-L1): unparseable document → `lint.notes.malformed`; missing required top-level key → `lint.keys.missing`; wrong-typed top-level value → `lint.notes.malformed`; canonical phase entry missing `started`/`completed` → `lint.keys.missing`; non-timestamp typed value → `lint.notes.malformed`; missing pm-notes target for a change ref → `lint.target.missing`; unknown `variant` value → `lint.variant.unknown`; LITE-missing-phase: for each pinned LITE phase, a fixture omitting exactly that phase, failing `lint.phases.incomplete` naming it, and passing once restored (AC-L4) | Negative controls are non-vacuous: detection asserted, never silent passes; opaque-extra positive controls: extra phase keys carrying arbitrary value types (sequences, plain strings) pass (AC-L6) |
 | Structure & boundary suites | Tier rules per the architecture table (contracts data-only; domain pure; state imports `./contracts` only; runtime APIs only in the existing driver edge); zero product literals; envelope and `--json` validity for every invocation (NFR-1, NFR-2) | Existing boundary/ambient gates extended to the new paths |
 | Contract sync checks | Error-table round-trip of the five lint codes; two-directional documented-table drift; multi-row-kind ambiguity for `lint`; `fallback.internal` containment (NFR-5) | GH-174 sync-check machinery reused unchanged |
@@ -394,6 +410,18 @@ High-level design, respecting the scaffold tier rules (contracts = types and as-
 
 ## Revision Log
 
+- **v1.2 (2026-10-31)** — Reopened a second time from test planning;
+  corpus boundary resolved ("option A refined"): AC-L6 and NFR-4 define
+  the corpus as every pm-notes document committed under the change-artifact
+  convention from the variant era onward (change folders dated 2026-10 or
+  later) minus an explicit exclusion manifest — measured scan of
+  2026-10-31: all variant-era documents pass, 21 of 35 total committed
+  documents fail legacy-era rules and sit outside the corpus. The manifest
+  names exactly one known-unparseable historical artifact (the GH-171
+  pm-notes; orphaned indentation; repair is owner follow-up outside this
+  change). Legacy-era documents remain schema-bound whenever a write path
+  targets them. The QA corpus fixture derives from the same boundary +
+  manifest so it drifts correctly as new variant-era changes land.
 - **v1.1 (2026-10-31)** — Reopened after test-planning findings; amendments
   R1–R3e applied: `lint.notes.malformed` broadened to syntax, structure,
   and value-type conformance with every rejection class pinned to exactly
