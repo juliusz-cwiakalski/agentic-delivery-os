@@ -203,6 +203,26 @@ export const destructiveApiFailures = (text: string, label: string): string[] =>
   return failures;
 };
 
+const SUITE_PROCESS_PATTERNS = [
+  "node:" + "child_process",
+  "node:" + "http",
+  "node:" + "https",
+  "Bun." + "spawn",
+  /\bspawn\s*\(/,
+  /(?<!\.)\bexec\s*\(/,
+  /\bfork\s*\(/,
+  /\bfetch\s*\(/,
+] as const;
+
+export const suiteProcessFailures = (text: string, label: string): string[] => {
+  const failures: string[] = [];
+  for (const pattern of SUITE_PROCESS_PATTERNS) {
+    const matched = typeof pattern === "string" ? text.includes(pattern) : pattern.test(text);
+    if (matched) failures.push(`${label}: process/network token`);
+  }
+  return failures;
+};
+
 const HOME_PATTERN =
   /(?:\/home\/[A-Za-z0-9._-]+\/|\/Users\/[A-Za-z0-9._-]+\/|[A-Za-z]:\\Users\\[A-Za-z0-9._-]+\\)/;
 
@@ -257,7 +277,7 @@ describe("TC-DB-002 contract and domain tier discipline", () => {
         adapterSpecifiers.push(specifier);
       }
     }
-    expect(adapterSpecifiers.sort()).toEqual(["node:child_process", "node:fs"]);
+    expect(adapterSpecifiers.sort()).toEqual(["node:" + "child_process", "node:fs"]);
   });
 
   test("the adapter references the three declared timeouts on its I/O classes", () => {
@@ -358,9 +378,9 @@ describe("TC-DB-036 hermeticity scan", () => {
       const text = readFileSync(join(ROOT, file), "utf8");
       const source = parse(file, text);
       for (const specifier of specifiersOf(source)) {
-        expect(specifier.startsWith("node:child_process"), file).toBe(false);
-        expect(specifier.startsWith("node:http"), file).toBe(false);
-        expect(specifier.startsWith("node:https"), file).toBe(false);
+        expect(specifier.startsWith("node:" + "child_process"), file).toBe(false);
+        expect(specifier.startsWith("node:" + "http"), file).toBe(false);
+        expect(specifier.startsWith("node:" + "https"), file).toBe(false);
       }
       for (const banned of [
         "Bun." + "spawn",
@@ -378,6 +398,24 @@ describe("TC-DB-036 hermeticity scan", () => {
     const home = `/home/${"synthetic-user"}/session/opencode.db`;
     expect(homePathFailures(home, "probe.ts").length).toBe(1);
     expect(homePathFailures("/synthetic/harness/opencode/opencode.db", "probe.ts")).toEqual([]);
+  });
+
+  test("all nine session-admin suites are in scope and call no process or network API", () => {
+    const suites = presentSuites();
+    expect(suites.sort()).toEqual([...SESSION_SUITES].sort());
+    for (const file of suites) {
+      expect(suiteProcessFailures(readFileSync(join(ROOT, file), "utf8"), file)).toEqual([]);
+    }
+  });
+
+  test("a planted spawn and a runtime-synthesized home path are detected", () => {
+    const planted = [
+      'import { spawn } from "node:' + 'child_process";',
+      "const child = sp" + 'awn("synthetic");',
+    ].join("\n");
+    expect(suiteProcessFailures(planted, "planted.ts").length).toBeGreaterThan(0);
+    const home = `/home/${"runtime-user"}/session/opencode.db`;
+    expect(homePathFailures(home, "planted.ts").length).toBe(1);
   });
 
   test("the introduced files carry no real home path and the scan has scope", () => {

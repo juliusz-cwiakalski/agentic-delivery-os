@@ -169,9 +169,9 @@ describe("TC-DB-036 hermeticity scaffold", () => {
           continue;
         }
         const specifier = statement.moduleSpecifier.text;
-        expect(specifier.startsWith("node:child_process"), file).toBe(false);
-        expect(specifier.startsWith("node:http"), file).toBe(false);
-        expect(specifier.startsWith("node:https"), file).toBe(false);
+        expect(specifier.startsWith("node:" + "child_process"), file).toBe(false);
+        expect(specifier.startsWith("node:" + "http"), file).toBe(false);
+        expect(specifier.startsWith("node:" + "https"), file).toBe(false);
       }
       for (const banned of [
         "Bun." + "spawn",
