@@ -28,8 +28,6 @@ import {
   isConfigured,
   type LiveEnvironment,
   type LiveProviderConfig,
-  PROVIDER_LIVE_SETTINGS,
-  PROVIDER_LIVE_TOKEN_KEYS,
   readLiveConfig,
 } from "./config";
 import {
@@ -198,10 +196,7 @@ export const runLive = async (input: LiveRunInput): Promise<LiveRunResult> => {
       provider: entry.provider,
       adapterName: adapterNameFor(input.adapters, entry.provider),
       status: "not-configured",
-      missingSettings: [
-        ...PROVIDER_LIVE_SETTINGS[entry.provider],
-        PROVIDER_LIVE_TOKEN_KEYS[entry.provider],
-      ],
+      missingSettings: [...entry.missingSettings],
       flows: [],
     });
   }
@@ -300,7 +295,7 @@ if (import.meta.main) {
     clock: new Date().toISOString(),
     runId: `live-${Date.now()}`,
     writer: (artifact) => writeFileSync(out, serializeConformanceArtifact(artifact)),
-    transportFactory: () => createRecordingTransport(createNativeFetchTransport()),
+    transportFactory: () => createNativeFetchTransport(),
     credentials: createProcessCredentialPort(SYNTHETIC_BRAND),
   });
   process.exit(result.exitCode);

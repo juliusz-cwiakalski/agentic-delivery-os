@@ -69,6 +69,10 @@ const CONTROL_CLIENT: ConformanceAdapterClient = {
   readPipelineRun: async () => ({ ok: true, value: CONTROL_PIPELINES }),
 };
 
+/** A test-only normalized view that illegally retains a provider-native key. */
+const leakedWorkItem = (): WorkItem =>
+  Object.assign({}, CONTROL_WORK_ITEM, { html_url: "https://github.example.com/native-view" });
+
 const controlTenant = (): MockTenant => ({
   provenance: "test-only-control 2026-10-31",
   provider: "github",
@@ -564,6 +568,10 @@ describe("TC-CONF-015 exact-URL replay and the throwing-fetch guard", () => {
     expect(failed?.failure !== undefined).toBe(true);
     expect(failed?.provider).toBe("github");
     expect(failed?.flowId).toBe("change-lifecycle");
+    expect(failed?.failure?.reference).toContain("GET ");
+    expect(failed?.failure?.reference).toContain(missingSha);
+    expect(failed?.failure?.reference).toContain("check-runs");
+    expect(failed?.failure?.detail).toContain(missingSha);
     expect(
       transport.requests.some(
         (request) => request.url.includes(missingSha) && request.url.includes("check-runs"),
@@ -700,7 +708,42 @@ describe("TC-CONF-006 mock suite green for all three adapters", () => {
     expect(failed?.status).toBe("failed");
     expect(failed?.provider).toBe("github");
     expect(failed?.flowId).toBe("change-lifecycle");
+    expect(failed?.failure?.reference).toContain("GET ");
+    expect(failed?.failure?.reference).toContain("/issues/");
+    expect(failed?.failure?.detail).toContain("/issues/");
     expect(transport.requests.some((request) => request.url.includes("/issues/"))).toBe(true);
+  });
+
+  test("a normalized view carrying a native key fails primitive-purity naming the path", async () => {
+    const leaked: ConformanceAdapterClient = {
+      readWorkItem: async () => ({ ok: true, value: leakedWorkItem() }),
+    };
+    const control = makeControl({
+      supported: ["read-work-item"],
+      gaps: gapsExcept(["read-work-item"]),
+      client: leaked,
+    });
+    const report = await runMock(...controlInput(control, controlTenant()));
+    const failed = report.steps.find((step) => step.stepId === "change-lifecycle.read-work-item");
+    expect(report.status).toBe("failed");
+    expect(failed?.status).toBe("failed");
+    expect(failed?.failure?.assertion).toBe("primitive-purity");
+    expect(failed?.failure?.received).toBe("html_url");
+    expect(failed?.failure?.reference).toBe("tenant:github:change-lifecycle.read-work-item");
+  });
+
+  test("the unmodified control passes the same flow with no purity failure", async () => {
+    const control = makeControl({
+      supported: ["read-work-item"],
+      gaps: gapsExcept(["read-work-item"]),
+    });
+    const report = await runMock(...controlInput(control, controlTenant()));
+    const workItemStep = report.steps.find(
+      (step) => step.stepId === "change-lifecycle.read-work-item",
+    );
+    expect(report.status).toBe("passed");
+    expect(workItemStep?.status).toBe("executed");
+    expect(report.steps.some((step) => step.failure?.assertion === "primitive-purity")).toBe(false);
   });
 });
 

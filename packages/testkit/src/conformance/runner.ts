@@ -160,6 +160,36 @@ const nativeKeyPaths = (value: unknown, path: string, findings: string[]): strin
   return findings;
 };
 
+/** One attempted provider request, when the injected transport exposes its log. */
+type AttemptedRequest = {
+  readonly method: string;
+  readonly url: string;
+};
+
+const requestLog = (transport: unknown): readonly unknown[] | undefined => {
+  if (!isRecord(transport)) return undefined;
+  const requests = transport.requests;
+  if (Array.isArray(requests)) return requests;
+  const records = transport.records;
+  return Array.isArray(records) ? records : undefined;
+};
+
+const requestCount = (transport: unknown): number => requestLog(transport)?.length ?? 0;
+
+const lastRequestSince = (
+  transport: unknown,
+  previousCount: number,
+): AttemptedRequest | undefined => {
+  const log = requestLog(transport);
+  if (log === undefined || log.length <= previousCount) return undefined;
+  const last = log[log.length - 1];
+  if (!isRecord(last)) return undefined;
+  const method = last.method;
+  const url = last.url;
+  if (typeof method !== "string" || typeof url !== "string") return undefined;
+  return { method, url };
+};
+
 const identityViolations = (
   value: Record<string, unknown>,
   tenant: MockTenant,
@@ -606,6 +636,7 @@ export const runConformance = async (input: RunConformanceInput): Promise<Confor
         }
 
         if (READ_OPERATIONS.has(step.operation)) {
+          const requestsBefore = requestCount(transport);
           const result = await readValue(
             client,
             step.operation,
@@ -615,6 +646,9 @@ export const runConformance = async (input: RunConformanceInput): Promise<Confor
           );
           if (!result.ok) {
             const detail = "detail" in result ? result.detail : result.code;
+            const attempted = lastRequestSince(transport, requestsBefore);
+            const descriptor =
+              attempted === undefined ? undefined : `${attempted.method} ${attempted.url}`;
             flowSteps.push({
               ...base,
               status: "failed",
@@ -625,8 +659,8 @@ export const runConformance = async (input: RunConformanceInput): Promise<Confor
                 "provider-read",
                 "successful read",
                 "classified failure",
-                `tenant:${provider}:${step.stepId}`,
-                detail,
+                descriptor ?? `tenant:${provider}:${step.stepId}`,
+                descriptor === undefined ? detail : `${detail} (request ${descriptor})`,
               ),
             });
             continue;

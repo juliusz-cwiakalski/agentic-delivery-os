@@ -247,7 +247,7 @@ describe("TC-CONF-020 live status matrix and writer", () => {
     expect(validateConformanceArtifact(artifacts[0])).toEqual([]);
   });
 
-  test("the mock tier stays in memory and a missing artifact fails the check", async () => {
+  test("the mock tier stays in memory and is never persisted as an artifact", async () => {
     const tenants = loadMockTenants();
     const report = await runConformance({
       adapters: CONFORMANCE_ADAPTERS,
@@ -270,10 +270,23 @@ describe("TC-CONF-020 live status matrix and writer", () => {
     });
     expect(report.tier).toBe("mock");
     expect(report.status).toBe("passed");
-    const noArtifacts: ConformanceArtifact[] = [];
+    expect("schema" in report).toBe(false);
+  });
+
+  test("a writer that skips on failure leaves no artifact and the presence check fails", async () => {
+    const artifacts: ConformanceArtifact[] = [];
+    const { result } = await runOnce({
+      environment: githubOnlyEnvironment(),
+      transportFactory: () => failingTransport(),
+      writer: (artifact) => {
+        if (artifact.status !== "failed") artifacts.push(artifact);
+      },
+    });
+    expect(result.status).toBe("failed");
+    expect(artifacts).toEqual([]);
     expect(() => {
-      const first = noArtifacts[0];
-      if (first === undefined) throw new Error("missing artifact");
+      const artifact = artifacts[0];
+      if (artifact === undefined) throw new Error(`missing artifact for ${result.status} run`);
     }).toThrow("missing artifact");
   });
 });
@@ -324,9 +337,11 @@ describe("TC-CONF-021 not-configured occupancy matrix", () => {
     const gitlab = artifact.providers.find((provider) => provider.provider === "gitlab");
     const jira = artifact.providers.find((provider) => provider.provider === "jira");
     expect(github?.status).toBe("not-configured");
-    expect(github?.missingSettings).toHaveLength(7);
+    expect(github?.missingSettings).toEqual(["CONFORMANCE_LIVE_GITHUB_OWNER"]);
     expect(gitlab?.status).toBe("passed");
+    expect(gitlab?.missingSettings).toEqual([]);
     expect(jira?.status).toBe("passed");
+    expect(jira?.missingSettings).toEqual([]);
     expect(result.status).toBe("passed");
   });
 
@@ -437,7 +452,7 @@ describe("TC-CONF-023 live read-only and no-mutation proof", () => {
     expect(declareGap?.skipReason).toBe("adapter-not-implemented");
   });
 
-  test("both mutation counters are present in every status", async () => {
+  test("both mutation counters are pinned to zero in every status", async () => {
     const passed = await runOnce({ environment: githubOnlyEnvironment() });
     const failed = await runOnce({
       environment: githubOnlyEnvironment(),
@@ -445,9 +460,12 @@ describe("TC-CONF-023 live read-only and no-mutation proof", () => {
     });
     const notConfigured = await runOnce({ environment: {} });
     for (const { result } of [passed, failed, notConfigured]) {
-      expect(typeof result.artifact.mutationRequests).toBe("number");
-      expect(typeof result.artifact.createdArtifacts).toBe("number");
+      expect(result.artifact.mutationRequests).toBe(0);
+      expect(result.artifact.createdArtifacts).toBe(0);
     }
+    expect(notConfigured.result.status).toBe("not-configured");
+    expect(passed.result.status).toBe("passed");
+    expect(failed.result.status).toBe("failed");
   });
 });
 
@@ -494,22 +512,15 @@ describe("TC-CONF-024 config reader and credential-port exclusivity", () => {
     expect(serialized.includes("canary-token-material")).toBe(false);
   });
 
-  test("no production source imports the live config reader", () => {
-    const files = listSourceFiles("packages");
-    for (const file of files) {
-      if (!file.includes("/src/")) continue;
+  test("production source is non-empty and free of live reader references", () => {
+    const files = listSourceFiles("packages").filter((file) => file.includes("/src/"));
+    expect(files.length).toBeGreaterThan(0);
+    const offenders = files.filter((file) => {
       const text = readFileSync(join(ROOT, file), "utf8");
-      expect(text.includes("tests/conformance/live"), file).toBe(false);
-      expect(text.includes("CONFORMANCE_LIVE_"), file).toBe(false);
-    }
+      return text.includes("tests/conformance/live") || text.includes("CONFORMANCE_LIVE_");
+    });
+    expect(offenders).toEqual([]);
     expect(SECRET_READ_ALLOWLIST).toHaveLength(4);
-  });
-
-  test("the config reader and token names stay out of packages/*/src", () => {
-    const files = listSourceFiles("packages");
-    for (const file of files) {
-      expect(file.startsWith("packages/")).toBe(true);
-    }
   });
 });
 
