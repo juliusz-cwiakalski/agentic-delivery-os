@@ -64,9 +64,11 @@
   "registered": [
     "doc/guides/provider-conditions-and-parks.md",
     "doc/guides/rename-drill.md",
+    "doc/planning/oss-tooling/measurement-baseline.yaml",
     "doc/spec/features/feature-adapter-ports.md",
     "doc/spec/features/feature-branding-seam.md",
     "doc/spec/features/feature-config-layer.md",
+    "doc/spec/features/feature-measurement-baseline.md",
     "doc/spec/features/feature-pm-notes-lint-and-phase-transitions.md",
     "doc/spec/features/feature-privacy-guard.md",
     "doc/spec/features/feature-provider-client-seeds.md",

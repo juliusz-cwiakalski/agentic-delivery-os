@@ -14,6 +14,14 @@ milestone IDs
 and the M0-S17 decision batch. Proven in one production workspace; the
 grammar, rules, and mechanics below are project-agnostic.
 
+**Adopted by [ODR-0002](../../decisions/ODR-0002-id-prefix-scheme-and-project-catalog.md)**
+(Proposed; owner acceptance pending at the GH-186 PR review). The project
+catalog declaration — per-type decision ranges, unchanged change-local
+prefixes, catalogued tracker/story/`RTC-` allocations, and `MET-` with the
+measurement baseline log as allocator — is recorded in ODR-0002 §Decision.
+The Draft history above is retained; the grammar and rules below are not
+rewritten.
+
 ## Why this exists
 
 Delivery documents accumulate durable item IDs: decisions, change-local

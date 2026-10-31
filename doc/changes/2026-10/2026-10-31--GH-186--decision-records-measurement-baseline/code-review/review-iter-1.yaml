@@ -1,0 +1,152 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-186
+branch: feat/GH-186/decision-records-and-measurement-baseline
+status: FAIL
+summary: >-
+  First review of GH-186 (merge-base c62cdb8..HEAD c6fa771, 26 files) against
+  spec v1.3, test plan v1.3 (37 TCs), and plan v1.2. The delivery is otherwise
+  complete and disciplined: docs-only plus one data-only registry edit; four
+  Proposed records (0 Accepted); the 8-topic binding register with resolving
+  anchors; 2/2 index repairs; annotation-only v1 registry promotion with
+  byte-identical tables and zero renames; and a measurement baseline whose four
+  metrics reproduce exactly (spine 41 = 23+18; ceremony 204.3/502.4 = 0.406648;
+  cycle n=20, median 5.3, p90 18.4 with GH-177/185/188 missing_metric_input;
+  CI 3/4 with 19 no_ci_observation; false-signal 4). All gates re-ran green
+  (doc-distribution, modes, inception, forbidden-literals, privacy-literals,
+  commitlint-authority, branch-range commitlint, git diff --check). One major
+  defect blocks: the GH-170 source locator and both GH-170 row anchors cite
+  phases.quality_gates.iterations, which does not exist (the data is at
+  phases.quality_gate_iterations), so AC-F4-2 / TC-MEAS-003 anchor resolution
+  fails and the plan's "every anchor resolves" claim is inaccurate. One minor
+  scope deviation: pre-existing duplicated front matter in glossary.md and
+  feature-adapter-ports.md was repaired, which NG-7 explicitly excludes. The
+  pnpm-check failure on tests/checks/privacy-release.test.ts TC-RELEASE-001 is
+  PRE-EXISTING (reproduced on a clean origin/main-tools worktree c62cdb8) and
+  tracked as GH-206; it is not attributable to GH-186 and must not be fixed
+  here.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 1
+  low: 0
+  info: 4
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: doc/planning/oss-tooling/measurement-baseline.yaml:23,472,478
+    message: >-
+      The GH-170 source locator and both GH-170 row anchors cite
+      phases.quality_gates.iterations, which does not exist at source_commit
+      75b4e76; the GH-170 pm-notes has quality_gates {started, completed} and a
+      separate quality_gate_iterations list. The cited numbers (ci_outcome
+      mixed; the local-green/CI-red incident) are correct and recomputable from
+      the artifact, but the locator does not resolve, so AC-F4-2 / NFR-1 and
+      TC-MEAS-003 step 3 fail and the plan's "every anchor resolves" claim
+      (Phases 7.6/9.5, Execution Log) is inaccurate.
+    suggestion: >-
+      Replace phases.quality_gates.iterations with phases.quality_gate_iterations
+      in the sources[gh170-ci].locator, the GH-170 ci_observations[0].anchor, and
+      the GH-170 false_signal_incidents[0].anchor; re-run TC-MEAS-003 step 3 and
+      confirm 0 unresolved anchors. No number changes.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: doc/overview/glossary.md:9-18; doc/spec/features/feature-adapter-ports.md:8-18
+    message: >-
+      Both files carried duplicated summary/links front-matter blocks (the
+      glossary also duplicated related_decisions/related_changes) from earlier
+      merges. This change consolidates them to one block and updates the links,
+      but spec §7.2 [OUT]/NG-7 explicitly excludes "the glossary's duplicate
+      front-matter keys" beyond the two named index defects; F-6 required only
+      adding the new terms and the ADR-0008/M1-S11 pointer. The doc-sync report
+      documents the repair and argues it was needed to expose GH-186
+      traceability, but the spec was not amended.
+    suggestion: >-
+      Either revert the front-matter consolidation in both files and keep only
+      the in-scope body edits, or amend chg-GH-186-spec.md (v1.4) to explicitly
+      authorize the bounded dedup in these two files and state that the other
+      three duplicated-frontmatter docs remain out of scope. Owner/PM decision.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: info
+    confidence: high
+    category: traceability
+    location: doc/planning/oss-tooling/measurement-baseline.yaml:512,518,524,543,549
+    message: >-
+      GH-172/GH-173 compound row anchors use descriptors that are not verbatim
+      substrings of the notes ("REOPENED iteration 2" vs "REOPENED (iteration 2)";
+      "CLOSED iteration 2" vs "iteration 2 CLOSED"; "third local-green" vs "THIRD
+      local-green"; "root causes of the CI-red" vs "Root causes of the CI-red").
+      The load-bearing field path notes resolves, but the test plan's literal
+      fixed-string fallback would flag these compound anchors.
+    suggestion: >-
+      Normalize the descriptors to exact note substrings, or document the
+      "field path + human hint" anchor convention so the fixed-string fallback is
+      not applied to compound anchors. Numbers unaffected.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-10/2026-10-31--GH-186--decision-records-measurement-baseline/chg-GH-186-plan.md:715-723,750-753,619,771
+    message: >-
+      The Definition of Done checklist is entirely unchecked while Phase 13.4
+      and the Execution Log mark the DoD check complete; the revision log lists
+      v1.3 before v1.2; and the recorded commitlint-range deviation ("red only
+      on 49b4c32") is stale because the range now exits 0 against the current
+      merge-base c62cdb8. No delivered content is affected.
+    suggestion: >-
+      At the next plan touch, tick the DoD boxes (or mark them PM-owned for
+      dod_check), reorder the revision log, and replace the stale commitlint note
+      with the current green result.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: info
+    confidence: high
+    category: correctness
+    location: doc/planning/oss-tooling/measurement-baseline.yaml:570
+    message: >-
+      The GH-174 ci_observations row lists checks_affected "state-scope tests,
+      publint/attw", but the GH-174 pm-notes ci_remediation records publint/attw
+      as SKIPPED, not failed (one root cause, state-scope). GH-174 is
+      spine-excluded (placeholder_zero_time) and outside the CI sample, so there
+      is no metric impact.
+    suggestion: >-
+      Optionally reword to "state-scope tests (publint/attw skipped, not failed)".
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: info
+    confidence: high
+    category: correctness
+    location: doc/planning/oss-tooling/measurement-baseline.yaml:482-496
+    message: >-
+      The unparseable GH-171 row records phase_pairs_* = 0 (sum 0, not 11). That
+      is correct for a document that cannot be parsed (plan PD-3 scopes the
+      11-pair conservation rule to included changes), but a strict reader of spec
+      §185 ("The per-change counters conserve at 11") could flag it.
+    suggestion: >-
+      Optionally exempt unparseable_yaml rows from the 11-pair conservation rule
+      in one sentence of the feature spec or spec §185.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-10-31T16:30:00Z
+next_step: EXECUTE_REMEDIATION_PHASE

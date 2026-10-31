@@ -19,7 +19,8 @@ name-derived comes from the single branding constant.
 | [roadmap.md](roadmap.md) | Milestones M0-M4, principles, exit criteria (OSS track only) |
 | [backlog.md](backlog.md) | The story backlog per milestone; the unit of delivery |
 | [backlog-ranking.md](backlog-ranking.md) | Stories top to bottom in suggested delivery order, with dependencies and ranking rationale |
-| [cli-command-registry.md](cli-command-registry.md) | The `ados(1)` man page v0 and the command registry with delivery and extension stories |
+| [cli-command-registry.md](cli-command-registry.md) | The `ados(1)` man page v1 (locked) and the command registry with delivery and extension stories |
+| [measurement-baseline.yaml](measurement-baseline.yaml) | Committed bash-era measurement baseline log: the canonical data for M2-S6 comparison (schema version 1; four `MET-` metric IDs) |
 | [user-journeys.md](user-journeys.md) | How the CEO agent and other agents use the commands: the change lifecycle and multi-repository coordination |
 
 Design-level intentions that mature into decision records and stories are
