@@ -1,0 +1,97 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-180
+branch: feat/GH-180/db-session-admin-port
+status: PASS
+summary: >-
+  Iteration-1 remediation is complete and independently reproduced. The prune
+  re-read now parses the full nine-column projection on the real schema, with
+  the projection parse inside the guarded step so pre-land failures keep
+  db.query.failed and post-land failures return db.delete.failed with the
+  normative partial-abort summary (F-1/F-5). The contracts tier is data-only
+  again with the pure policy injected from the CLI edge, verified by a
+  non-vacuous structure test (F-4). forbidden-literals and commitlint are green
+  (F-2/F-3), clamp/clock reject non-finite values (F-7), and liveExcluded is
+  documented as a defensive invariant (F-6). pnpm check reproduces 1759 pass /
+  2 skip / 0 fail. Only non-blocking evidence/PR-body items remain.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 4
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: R-1
+    severity: info
+    confidence: high
+    category: evidence
+    location: doc/changes/2026-10/2026-10-31--GH-180--db-session-admin-port/chg-GH-180-evidence.md:153
+    message: >-
+      Evidence §10 records the intermediate remediation battery (pnpm check
+      1758 pass / 1 fail at 8eef562) and never records the final green battery
+      at HEAD; the final 1759 pass / 2 skip / 0 fail is recorded only in
+      pm-notes.yaml:78.
+    suggestion: >-
+      Append a final-battery line to evidence §10 reflecting the HEAD tree
+      (1759 pass / 2 skip / 0 fail) before finalizing the PR body.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: R-2
+    severity: info
+    confidence: high
+    category: documentation
+    location: packages/cli/src/edge.ts:265
+    message: >-
+      Carry-forward F-8. The db command is composed only from tests; no
+      production entry point calls createDbCommandRuntime. This matches spec
+      §4.4 (no bin entry) but operators cannot invoke it until an embedder
+      composes DbComposition.
+    suggestion: >-
+      State the composition status in the PR body so it is not read as a
+      delivered end-user command.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: R-3
+    severity: info
+    confidence: high
+    category: risk
+    location: doc/changes/2026-10/2026-10-31--GH-180--db-session-admin-port/chg-GH-180-spec.md:648
+    message: >-
+      Carry-forward F-9 / AC-D18. Residual risks are surfaced and not claimed
+      accepted activity-based liveness, checkpoint-only reboot, the
+      unverifiable external opencode surface, and the ADR-0003 C-11 owner merge
+      gate; ADR-0010 is Proposed.
+    suggestion: >-
+      Copy all four statements into the PR body; do not claim the sign-off.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: R-4
+    severity: info
+    confidence: high
+    category: evidence
+    location: doc/changes/2026-10/2026-10-31--GH-180--db-session-admin-port/chg-GH-180-evidence.md:60
+    message: >-
+      Carry-forward F-11. The non-CI real-store smoke exercises only size/list,
+      never prune/reboot; the plan retro already recommends a dry-run prune.
+    suggestion: >-
+      Note the non-CI coverage gap in the PR body/evidence; not required for the
+      PR gate.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-10-31T22:20:00Z
+next_step: PROCEED

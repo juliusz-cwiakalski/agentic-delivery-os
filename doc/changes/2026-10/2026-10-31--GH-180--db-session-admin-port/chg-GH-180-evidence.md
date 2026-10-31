@@ -144,21 +144,17 @@ This section records the remediation on `feat/GH-180/db-session-admin-port`.
   the SQL predicate holds; the fake bypasses SQL filtering).
 - **F-7 (low).** `clamp` and the injected clock guard `Number.isFinite`; a
   non-finite direct-port value returns `db.query.failed` and no SQL is issued.
-- **Remediation HEAD.** The single remediation commit on this branch (`git log
-  -1`), parent `076f5cc`.
-- **Re-run counts (working tree):** nine session-admin suites **131 pass, 0
-  fail** (9 files; 126 before the five new regressions); focused port/error/
-  content/edge suites **156 pass, 0 fail**; `error-table-sync` **S1=51**;
-  `pnpm check:boundaries` **120 modules, 232 deps, no violations**;
-  `pnpm check` **1758 pass, 2 pre-existing skips, 1 fail** — the one failure is
-  `tests/checks/ci-baseline-parity.test.ts`, which clones committed `HEAD`
-  (still carrying the F-2 docs state); the working-tree
-  `scripts/checks/forbidden-literals.ts` run is green (5/5 scopes, 0
-  violations), and the parallel F-2 doc fix is not part of this commit.
-  `git diff --check` exit 0; `commitlint --from origin/main-tools --to HEAD`
-  exit 0.
+- **Remediation commits.** `8eef562` (F-1/F-4/F-5/F-7), `0ca7bc8` (F-2 docs/registry), `41b450f` (F-3 message fix).
+- **Re-run counts (final committed tree):** nine session-admin suites **131 pass,
+  0 fail**; focused port/error/content/edge suites **156 pass, 0 fail**;
+  `error-table-sync` **35/35, S1=51**; `pnpm check:boundaries` **120 modules,
+  232 deps, no violations**; `pnpm check` **1759 pass, 2 pre-existing skips,
+  0 fail** (1761 tests, 158 files); `check:forbidden-literals` **0**;
+  `check:privacy-literals` **0**; `doc-distribution` **no drift**;
+  `git diff --check` **exit 0**; `commitlint --from origin/main-tools --to HEAD`
+  **exit 0**. `publish-guard` is release-only (`release.yml`), not a PR gate.
 
 ## 11. Handoff status
 
-- No PR, push, merge, or owner-approval claim was made.
-- Lifecycle phase 7 reconciliation and the ADR-0003 decision proposal are recorded as deferred handoffs in §8.
+- No PR, push, merge, or owner-approval claim was made by the coder.
+- Phase 7 reconciliation is complete; ADR-0010 is recorded as `Proposed` with owner acceptance and the C-11 sign-off as PR merge gates.
