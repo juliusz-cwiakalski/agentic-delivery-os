@@ -128,6 +128,17 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "cli/src/output/serialize.ts": ["redact", "serializeEnvelope", "writeOutput"],
   "cli/src/projection.ts": ["projectExitCode"],
   "testkit/src/result-conformance.ts": ["assertEnvelopeContract", "RULES", "loadGoldenCases"],
+  "testkit/src/conformance/artifact.ts": [
+    "CONFORMANCE_FLOW_STATUSES",
+    "CONFORMANCE_LIMITS",
+    "CONFORMANCE_PROVIDER_STATUSES",
+    "CONFORMANCE_SCHEMA_ID",
+    "CONFORMANCE_SKIP_KINDS",
+    "CONFORMANCE_STATUSES",
+    "CONFORMANCE_STEP_STATUSES",
+    "CONFORMANCE_TIERS",
+  ],
+  "testkit/src/conformance/flows.ts": ["CONFORMANCE_FLOWS", "findFlow"],
   "core/src/contracts/provider.ts": [
     "ANNOUNCEMENT_CODES",
     "ANNOUNCEMENT_EVIDENCE_FIELDS",

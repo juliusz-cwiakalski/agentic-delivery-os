@@ -9,7 +9,7 @@ phases:
   test_planning: { started: "2026-10-31T19:06:00Z", completed: "2026-10-31T21:25:00Z", reopened: "2026-10-31T21:05:00Z" }
   delivery_planning: { started: "2026-10-31T19:25:00Z", completed: "2026-10-31T21:35:00Z", reopened: "2026-10-31T21:26:00Z" }
   dor_check: { started: "2026-10-31T19:57:00Z", completed: "2026-10-31T21:50:00Z", iteration: 3, verdict: "READY", iteration_1_verdict: "NOT_READY", iteration_2_verdict: "NOT_READY", iteration_3_started: "2026-10-31T21:36:00Z" }
-  delivery: { started: null, completed: null }
+  delivery: { started: "2026-10-31T21:52:00Z", completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
