@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-10-31T20:30:00Z", completed: "2026-10-31T21:00:00Z", iterations: 2, verdict: "PASS (iter 2)" }
   quality_gates: { started: "2026-10-31T21:05:00Z", completed: "2026-10-31T21:30:00Z", note: "all GH-186 gates green; pnpm check red only on pre-existing GH-206" }
   dod_check: { started: "2026-10-31T21:32:00Z", completed: "2026-10-31T21:40:00Z", verdict: "PASS (with documented GH-206 external exception)" }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: "2026-10-31T21:45:00Z", completed: null, url: null }
 decisions:
   - text: "Interpretation of 'baseline committed to the local measurement log': the log is repository-local (committed under doc/planning/oss-tooling/), not a git-ignored .ai/local/ path. The AC's 'committed' and 'local' would otherwise contradict, since .ai/local/** is ignored by design."
     date: "2026-10-31"
