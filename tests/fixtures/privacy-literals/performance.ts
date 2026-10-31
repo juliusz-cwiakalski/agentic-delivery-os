@@ -42,3 +42,12 @@ export const NON_MATCHING_HASHES = REGISTERED_LENGTHS.map((length, index) => ({
   length,
   reason: "Synthetic performance entry that must not match the corpus.",
 }));
+
+/** A match-dense single-line corpus: many credential assignments on one line. */
+export const generateMatchDense = (matches: number): string => {
+  const value = "ZQ7XK9M2P4R6T8V0W1Y3A5B7C9D2E4F6";
+  return Array.from(
+    { length: matches },
+    (_, index) => `api_key = "${value}${index.toString(16).padStart(4, "0")}"`,
+  ).join(" ");
+};

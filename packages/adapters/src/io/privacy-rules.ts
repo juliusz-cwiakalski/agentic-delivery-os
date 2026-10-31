@@ -65,7 +65,7 @@ export const PRIVACY_RULES = [
     recognizerClass: "credential-assignment",
     severity: "error",
     patternSource:
-      "\\b(?:[A-Za-z0-9]+[_-]){0,4}(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|client[_-]?secret|auth[_-]?token|credential)\\b[\"']?\\s*[:=](?!-)\\s*\\\\?[\"']?(?=[A-Za-z0-9_+/=.-]{20,})(?=[A-Za-z0-9_+/=.-]*[0-9])(?=[A-Za-z0-9_+/=.-]*[A-Za-z])[A-Za-z0-9_+/=.-]+[\"']?",
+      "\\b(?:[A-Za-z0-9]+[_-]){0,4}(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|client[_-]?secret|auth[_-]?token|credential)\\b\\\\?[\"']?\\s*[:=](?!-)\\s*\\\\?[\"']?(?=[A-Za-z0-9_+/=.-]{20,})(?=[A-Za-z0-9_+/=.-]*[0-9])(?=[A-Za-z0-9_+/=.-]*[A-Za-z])[A-Za-z0-9_+/=.-]+[\"']?",
     flags: "gi",
     minimumMatchLength: 14,
   },
@@ -82,7 +82,7 @@ export const PRIVACY_RULES = [
     recognizerClass: "absolute-user-path",
     severity: "error",
     patternSource:
-      "(?:[A-Za-z]:[\\\\/]Users[\\\\/]|/Users/|/home/(?!(?:environment|shared|data|bin|lib|tmp|var|etc|opt|usr)\\b))[A-Za-z0-9._-]{2,}(?:[\\\\/][^\\s\"'<>|)]*)?",
+      "(?:[A-Za-z]:[\\\\/]+Users[\\\\/]+|/Users/|/home/(?!(?:environment|shared|data|bin|lib|tmp|var|etc|opt|usr)\\b))[A-Za-z0-9._-]{2,}(?:[\\\\/][^\\s\"'<>|)]*)?",
     flags: "g",
     minimumMatchLength: 12,
   },
@@ -186,9 +186,9 @@ export const normalizeLiteral = (literal: string): string => literal.trim().toLo
 export const privacyDigestInput = (literal: string): string =>
   `${PRIVACY_HASH_DOMAIN}:${normalizeLiteral(literal)}`;
 
-/** The suppression class whose marker appears inside the matched span, if any. */
-export const suppressionClassFor = (matchedText: string): string | null => {
-  const lowered = matchedText.toLowerCase();
+/** The suppression class whose marker appears inside the supplied value segment. */
+export const suppressionClassFor = (valueSegment: string): string | null => {
+  const lowered = valueSegment.toLowerCase();
   for (const suppressionClass of PRIVACY_SUPPRESSION_CLASSES) {
     if (suppressionClass.markers.some((marker) => lowered.includes(marker))) {
       return suppressionClass.id;
@@ -197,12 +197,77 @@ export const suppressionClassFor = (matchedText: string): string | null => {
   return null;
 };
 
-const lineAt = (text: string, index: number): number => {
-  let line = 1;
-  for (let cursor = 0; cursor < index && cursor < text.length; cursor += 1) {
-    if (text[cursor] === "\n") line += 1;
+const WINDOWS_USER_PREFIX = /^[A-Za-z]:[\\/]+Users[\\/]+/;
+
+/**
+ * The opaque value portion of a match, used for marker evaluation.
+ *
+ * Markers are checked only against the value a rule protects, never against
+ * the separator or key that introduces it. This keeps bare markers such as
+ * `user` from suppressing every `/Users/…` or `C:\Users\…` path (the
+ * separator itself contains "user") while preserving the intended
+ * synthetic-user placeholder suppressions.
+ */
+const suppressionValueFor = (ruleId: string, matchedText: string): string => {
+  switch (ruleId) {
+    case "private.absolute-user-path": {
+      const prefix = matchedText.startsWith("/home/")
+        ? "/home/"
+        : matchedText.startsWith("/Users/")
+          ? "/Users/"
+          : (WINDOWS_USER_PREFIX.exec(matchedText)?.[0] ?? null);
+      if (prefix === null) return matchedText;
+      const rest = matchedText.slice(prefix.length);
+      const separator = rest.search(/[\\/]/);
+      return separator === -1 ? rest : rest.slice(0, separator);
+    }
+    case "secret.credential-assignment": {
+      const separator = matchedText.search(/[:=](?!-)/);
+      if (separator === -1) return matchedText;
+      return matchedText
+        .slice(separator + 1)
+        .replace(/^\s*\\?["']?/, "")
+        .replace(/["']$/, "");
+    }
+    case "secret.bearer-credential": {
+      const bearer = /^\s*[Bb]earer\s+(.+)$/.exec(matchedText);
+      return bearer?.[1] ?? matchedText;
+    }
+    case "secret.connection-string-credential": {
+      const schemeEnd = matchedText.indexOf("://");
+      if (schemeEnd === -1) return matchedText;
+      const rest = matchedText.slice(schemeEnd + 3);
+      const at = rest.indexOf("@");
+      if (at === -1) return matchedText;
+      const userInfo = rest.slice(0, at);
+      const colon = userInfo.indexOf(":");
+      return colon === -1 ? userInfo : userInfo.slice(colon + 1);
+    }
+    default:
+      return matchedText;
   }
-  return line;
+};
+
+/** Precomputed line-start offsets keep attribution linear for match-dense input. */
+const lineStartOffsets = (text: string): number[] => {
+  const starts = [0];
+  for (let index = 0; index < text.length; index += 1) {
+    if (text[index] === "\n") starts.push(index + 1);
+  }
+  return starts;
+};
+
+/** Binary-search the 1-based line for an offset against the precomputed index. */
+const lineForIndex = (starts: readonly number[], index: number): number => {
+  let low = 0;
+  let high = starts.length - 1;
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2);
+    const start = starts[middle];
+    if (start !== undefined && start <= index) low = middle;
+    else high = middle - 1;
+  }
+  return low + 1;
 };
 
 /**
@@ -212,6 +277,7 @@ const lineAt = (text: string, index: number): number => {
  */
 export const matchGenericRules = (text: string): GenericRuleMatch[] => {
   const matches: GenericRuleMatch[] = [];
+  const starts = lineStartOffsets(text);
   for (const rule of PRIVACY_RULES) {
     const pattern = new RegExp(rule.patternSource, rule.flags);
     for (let match = pattern.exec(text); match !== null; match = pattern.exec(text)) {
@@ -219,11 +285,11 @@ export const matchGenericRules = (text: string): GenericRuleMatch[] => {
       if (matchedText.length < rule.minimumMatchLength) continue;
       matches.push({
         id: rule.id,
-        line: lineAt(text, match.index),
+        line: lineForIndex(starts, match.index),
         start: match.index,
         end: match.index + matchedText.length,
         matchedText,
-        suppressionClass: suppressionClassFor(matchedText),
+        suppressionClass: suppressionClassFor(suppressionValueFor(rule.id, matchedText)),
       });
     }
   }
@@ -246,6 +312,11 @@ export type PrivacyDigest = (normalizedWindow: string) => string;
  * length and hand every window's digest to the injected matcher. Windows
  * whose normalized length differs from the registered length are skipped
  * before digesting, so whitespace at a window edge never produces a match.
+ *
+ * The distinct-length cap below is a belt-and-braces guard: the registry
+ * validation (RV-29) and the policy-builder construction check reject an
+ * over-cap input before this function is reachable, so an empty result here
+ * cannot silently allow a valid hashed entry.
  */
 export const findWindowMatches = (
   text: string,
@@ -258,6 +329,7 @@ export const findWindowMatches = (
     .sort((left, right) => left - right);
   const matches: CandidateWindowMatch[] = [];
   if (distinct.length > PRIVACY_CAPS.maxDistinctLengths) return matches;
+  const starts = lineStartOffsets(text);
   for (const length of distinct) {
     for (let index = 0; index + length <= text.length; index += 1) {
       const window = text.slice(index, index + length);
@@ -265,7 +337,7 @@ export const findWindowMatches = (
       if (normalized.length !== length) continue;
       const windowDigest = digest(normalized);
       if (!isMatch(windowDigest)) continue;
-      matches.push({ length, index, line: lineAt(text, index), digest: windowDigest });
+      matches.push({ length, index, line: lineForIndex(starts, index), digest: windowDigest });
     }
   }
   return matches;

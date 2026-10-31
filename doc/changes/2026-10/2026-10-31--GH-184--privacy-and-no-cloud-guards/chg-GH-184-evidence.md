@@ -152,3 +152,40 @@ allowlist + guard suites; `ci.yml` wiring + the check script;
 inventory/allowances registrations; the changeset. After rollback run
 `pnpm check`, `pnpm check:boundaries`, `bun run scripts/checks/ci-topology.ts`,
 and `bun run scripts/checks/forbidden-literals.ts` to confirm the baseline.
+
+## 8. Review iteration 1 remediation (Phase 9)
+
+Source: `review/review-iter-1.md` and `code-review/review-iter-1.yaml`.
+
+| Finding | Fix | Regression evidence |
+|---------|-----|---------------------|
+| F-1 | Marker evaluation is scoped to the rule's protected value segment (user segment, URI password, assigned value, bearer tail), not the whole span. Windows separator handling accepts repeated separators. | `PLATFORM_FORM_POSITIVES` breadth matrix (`/home/`, `/Users/`, `C:\Users\`, connection-string userinfo, `apikey` key) plus marker-broadening mutant in `privacy-literals.test.ts`; synthetic-user suppression preservation. |
+| F-2 | Emitter policy no longer applies documentation-placeholder suppression. | Marker-carrying assignment and bearer payloads denied at every field × carrier in `envelope-content-policy.test.ts`. |
+| F-3 | Precomputed newline-offset index with binary-search line attribution. | Match-dense N/2N performance case in `privacy-performance.test.ts`. |
+| F-4 | Policy builder validates injected entries at construction (hash function, digest shape, lengths, duplicate ids/digests, distinct-length cap, optional algorithm) and fails closed. | Construction-failure tests in `envelope-content-policy.test.ts`; window-matcher cap documented as unreachable after validation. |
+| F-5 | Each file is read and binary-checked once; the scan loop passes the decoded text into matching. | Existing scan/reporting suites remain byte-identical. |
+| F-6 | Removed the dead per-class length map. | Registry matrix remains green. |
+| F-7 | Code-unit ordering replaces locale-dependent comparison. | Mixed-case and non-ASCII ordering test in `privacy-scope.test.ts`. |
+| F-8 | Unknown positional arguments fail closed with a usage exit; the diagnostic names the argument position without echoing its value. | `privacy-authoring.test.ts` positional-argument test plus the existing argv no-echo test. |
+| F-9 | Single-serialization-point audit walks `packages`, `scripts`, and `tools`. | Seeded second serializer under `scripts/` is caught in `envelope-contract.test.ts`. |
+| F-10 | Layout mapping recorded here (no code change). | Temp-tree support lives in `tests/checks/privacy-support.ts`; corpus data lives in `rules.ts` constants; mutants are generated in temp copies. Functionally equivalent to the plan wording; no assertion depends on the old names. |
+| F-11 | No action (benign index housekeeping). | — |
+| F-12 | JSON parse failures emit a generic content-free diagnostic instead of the parser message. | Content-free parse-failure test in `privacy-registry.test.ts`. |
+
+**New suppression entries (unavoidable after the F-1 fix):** the two archival
+review artifacts now report true-positive probe shapes. Both entries are
+exact-path and rule-scoped; no production file, marker, rule, or cap was
+weakened.
+
+| Path | Rule scope | Reason |
+|------|------------|--------|
+| `doc/changes/2026-10/2026-10-31--GH-184--privacy-and-no-cloud-guards/review/review-iter-1.md` | `private.absolute-user-path`, `secret.connection-string-credential`, `secret.credential-assignment` | Read-only review evidence quoting the F-1 runtime probe values. |
+| `doc/changes/2026-10/2026-10-31--GH-184--privacy-and-no-cloud-guards/code-review/review-iter-1.yaml` | `private.absolute-user-path` | Read-only machine-readable review evidence quoting the F-1 path example. |
+
+**Remediation gate results:** focused privacy/policy suites 151 pass / 0 fail;
+`bun test` 1136 pass / 0 fail; `pnpm check`; `pnpm check:privacy-literals` exit 0
+(1006 files, 7 rules, 0 violations, 25 allowlisted files, 1 exclusion, 3 binary
+skips, both classes vacuous); `ci-topology`, `ci-bindingness`, `ci-supply-chain`,
+`script-surface`, `boundary-ci-parity`, `secret-read-boundary`,
+`ambient-globals`, `forbidden-literals`, and `error-table-sync` all exit 0;
+`git diff --check` clean.

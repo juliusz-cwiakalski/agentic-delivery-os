@@ -157,6 +157,24 @@
       "path": "tests/checks/privacy-release.test.ts",
       "rules": ["*"],
       "reason": "The guard's release-integrity suite names the changeset, package set, and lockfile assertions."
+    },
+    {
+      "id": "gh-184-review-iter-1-md",
+      "kind": "file",
+      "path": "doc/changes/2026-10/2026-10-31--GH-184--privacy-and-no-cloud-guards/review/review-iter-1.md",
+      "rules": [
+        "private.absolute-user-path",
+        "secret.connection-string-credential",
+        "secret.credential-assignment"
+      ],
+      "reason": "Archival review evidence quoting the F-1 runtime probe values; the review record is read-only and is not production content."
+    },
+    {
+      "id": "gh-184-code-review-iter-1-yaml",
+      "kind": "file",
+      "path": "doc/changes/2026-10/2026-10-31--GH-184--privacy-and-no-cloud-guards/code-review/review-iter-1.yaml",
+      "rules": ["private.absolute-user-path"],
+      "reason": "Archival machine-readable review evidence quoting the F-1 path example; the review record is read-only and is not production content."
     }
   ],
   "exclusions": [

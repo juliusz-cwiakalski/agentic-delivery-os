@@ -120,6 +120,24 @@ describe("TC-PRIVACY-014 working-tree scan boundary", () => {
     }
   });
 
+  test("violation ordering is deterministic code-unit order for mixed-case and non-ASCII paths", () => {
+    const repo = createPrivacyRepo({
+      "scanned/zeta.txt": `${value}\n`,
+      "scanned/Alpha.txt": `${value}\n`,
+      "scanned/Ärger.txt": `${value}\n`,
+      "scanned/beta.txt": `${value}\n`,
+    });
+    try {
+      const first = scan(repo.root);
+      const second = scan(repo.root);
+      expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+      const files = first.violations.map((violation) => violation.file);
+      expect(files).toEqual([...files].sort());
+    } finally {
+      repo.cleanup();
+    }
+  });
+
   test("the file list is independent of materialization order", () => {
     const first = createPrivacyRepo({
       "a/first.txt": "one\n",

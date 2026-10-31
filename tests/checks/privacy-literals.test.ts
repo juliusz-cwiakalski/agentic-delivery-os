@@ -36,6 +36,7 @@ import {
   FALSE_POSITIVE_CORPUS,
   MIXED_SUPPRESSION_LINE,
   MIXED_SUPPRESSION_POSITIVE,
+  PLATFORM_FORM_POSITIVES,
   RULE_NEAR_MISSES,
   RULE_POSITIVES,
   SUPPRESSION_FIXTURES,
@@ -127,6 +128,63 @@ describe("TC-PRIVACY-001 seven generic rules fire on planted positives", () => {
     try {
       expect(scan(repo.root).violations.length).toBeGreaterThan(0);
       expect(readFileSync(join(repo.root, "scanned/planted.txt"), "utf8")).toContain(value);
+      const mutantCheck = await mutant.importCheck();
+      expect(mutantCheck.runPrivacyScan(repo.root).violations).toEqual([]);
+    } finally {
+      mutant.cleanup();
+      repo.cleanup();
+    }
+  });
+});
+
+describe("F-1 platform-form breadth matrix and marker anchoring", () => {
+  test("three platform home forms and the credential-shaped forms fire exactly once", () => {
+    for (const positive of PLATFORM_FORM_POSITIVES) {
+      const repo = withPositiveFile(positive.value);
+      try {
+        const outcome = scan(repo.root);
+        expect(outcome.failures, positive.value).toEqual([]);
+        const matches = outcome.violations.filter(
+          (violation) => violation.ruleOrEntryId === positive.id,
+        );
+        expect(matches.length, positive.value).toBe(1);
+        expect(
+          outcome.violations.filter((violation) => violation.ruleOrEntryId !== positive.id),
+          positive.value,
+        ).toEqual([]);
+      } finally {
+        repo.cleanup();
+      }
+    }
+  });
+
+  test("synthetic user-segment placeholders remain suppressed", () => {
+    for (const value of [
+      SUPPRESSION_FIXTURES.syntheticUserHome,
+      SUPPRESSION_FIXTURES.syntheticUserWindows,
+    ]) {
+      const repo = withPositiveFile(value);
+      try {
+        expect(
+          scan(repo.root).violations.filter(
+            (violation) => violation.ruleOrEntryId === "private.absolute-user-path",
+          ),
+          value,
+        ).toEqual([]);
+      } finally {
+        repo.cleanup();
+      }
+    }
+  });
+
+  test("a marker-broadening mutant that re-checks the whole span is caught", async () => {
+    const value = PLATFORM_FORM_POSITIVES[1]?.value as string;
+    const repo = withPositiveFile(value);
+    const mutant = makeMutantCheck({
+      moduleMutations: [{ name: "suppressionValueFor", body: "return matchedText;" }],
+    });
+    try {
+      expect(scan(repo.root).violations.length).toBe(1);
       const mutantCheck = await mutant.importCheck();
       expect(mutantCheck.runPrivacyScan(repo.root).violations).toEqual([]);
     } finally {
@@ -690,6 +748,20 @@ describe("TC-PRIVACY-009 synthetic cloud-term activation and removal", () => {
   });
 });
 
+describe("F-5/F-6 single-read scan loop and dead-code removal", () => {
+  test("scanFileViolations does not re-read or re-check binary; no dead lengthsByClass", () => {
+    const source = readFileSync(join(ROOT, CHECK_PATH), "utf8");
+    const start = source.indexOf("const scanFileViolations");
+    const end = source.indexOf("/** Deterministic code-unit ordering", start);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const body = source.slice(start, end);
+    expect(body).not.toContain("readFileSync");
+    expect(body).not.toContain("looksBinary");
+    expect(source).not.toContain("lengthsByClass");
+  });
+});
+
 describe("TC-PRIVACY-020 live-tree green and non-vacuous scope reporting", () => {
   test("the live tree is green with a non-vacuous summary", () => {
     const live = readLiveRegistry();
@@ -731,7 +803,7 @@ describe("TC-PRIVACY-020 live-tree green and non-vacuous scope reporting", () =>
       paths.some(
         (path) =>
           path.startsWith("doc/changes/2026-10/2026-10-31--GH-184--privacy-and-no-cloud-guards/") &&
-          !path.includes("/readiness-review/"),
+          !/\/(?:readiness-review|review|code-review)\//.test(path),
       ),
     ).toBe(false);
     expect(paths).toContain("tests/fixtures/privacy-literals");

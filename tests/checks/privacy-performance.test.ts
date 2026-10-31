@@ -10,6 +10,7 @@ import {
 } from "../../packages/adapters/src/io/privacy-rules.js";
 import {
   generateCorpus,
+  generateMatchDense,
   generatePathological,
   NON_MATCHING_HASHES,
   REGISTERED_LENGTHS,
@@ -22,7 +23,10 @@ const registryWith = (
 ): RegistryLike => {
   const base = readLiveRegistry();
   const registry = structuredClone(base);
-  registry.classes["private-literal"] = { emptyReason: null, entries };
+  registry.classes["private-literal"] = {
+    emptyReason: entries.length === 0 ? base.classes["private-literal"].emptyReason : null,
+    entries,
+  };
   return registry;
 };
 
@@ -72,6 +76,31 @@ describe("TC-PRIVACY-021 performance and linearity", () => {
       const largeMedian = median([measure(large.root), measure(large.root)]);
       const ratio = largeMedian / Math.max(smallMedian, 1);
       expect(ratio).toBeLessThanOrEqual(3);
+    } finally {
+      small.cleanup();
+      large.cleanup();
+    }
+  }, 120_000);
+
+  test("a match-dense single-line file stays within the N/2N linearity slack", () => {
+    const registry = registryWith([]);
+    const small = createPrivacyRepo(
+      { "scanned/dense.txt": generateMatchDense(1000) },
+      { registry },
+    );
+    const large = createPrivacyRepo(
+      { "scanned/dense.txt": generateMatchDense(2000) },
+      { registry },
+    );
+    try {
+      measure(small.root);
+      measure(large.root);
+      const smallMedian = median([measure(small.root), measure(small.root)]);
+      const largeMedian = median([measure(large.root), measure(large.root)]);
+      const ratio = largeMedian / Math.max(smallMedian, 1);
+      expect(ratio).toBeLessThanOrEqual(3);
+      expect(scan(small.root).violations.length).toBe(1000);
+      expect(scan(large.root).violations.length).toBe(2000);
     } finally {
       small.cleanup();
       large.cleanup();

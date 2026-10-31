@@ -15,6 +15,7 @@ import {
   makeMutantCheck,
   ROOT,
   runAuthoring,
+  runCheck,
   snapshotTree,
   withoutCiEnvironment,
 } from "./privacy-support";
@@ -89,6 +90,15 @@ describe("TC-PRIVACY-018 authoring mode: stdin-only record, no echo, no writes",
   });
 });
 
+describe("F-8 unknown positional arguments fail closed", () => {
+  test("a positional argument is rejected with a usage diagnostic naming it", () => {
+    const result = runCheck(ROOT, ["some/path"]);
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("unexpected positional argument at position 1");
+    expect(result.stderr).not.toContain("some/path");
+  });
+});
+
 describe("TC-PRIVACY-019 authoring mode: CI refusal and no argv/env channel", () => {
   test("both CI markers refuse before reading input, without echoing content", () => {
     for (const marker of ["CI", "GITHUB_ACTIONS"]) {
@@ -111,7 +121,7 @@ describe("TC-PRIVACY-019 authoring mode: CI refusal and no argv/env channel", ()
     const viaArgv = runAuthoring("", [AUTHORING_LITERAL], noCi());
     expect(viaArgv.status).toBe(2);
     expect(`${viaArgv.stdout}${viaArgv.stderr}`).not.toContain(AUTHORING_LITERAL);
-    expect(viaArgv.stderr).toContain("empty");
+    expect(viaArgv.stderr).toContain("unexpected positional argument");
 
     const viaEnvironment = runAuthoring("", [], {
       ...noCi(),

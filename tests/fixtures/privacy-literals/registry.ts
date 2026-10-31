@@ -162,6 +162,22 @@ export const EXPECTED_ALLOWLIST: readonly ExpectedAllowlist[] = [
     path: "tests/checks/privacy-release.test.ts",
     rules: ["*"],
   },
+  {
+    id: "gh-184-review-iter-1-md",
+    kind: "file",
+    path: "doc/changes/2026-10/2026-10-31--GH-184--privacy-and-no-cloud-guards/review/review-iter-1.md",
+    rules: [
+      "private.absolute-user-path",
+      "secret.connection-string-credential",
+      "secret.credential-assignment",
+    ],
+  },
+  {
+    id: "gh-184-code-review-iter-1-yaml",
+    kind: "file",
+    path: "doc/changes/2026-10/2026-10-31--GH-184--privacy-and-no-cloud-guards/code-review/review-iter-1.yaml",
+    rules: ["private.absolute-user-path"],
+  },
 ];
 
 export const fixtureEntry = (index: number, className: string, length = 8): EntryLike => ({

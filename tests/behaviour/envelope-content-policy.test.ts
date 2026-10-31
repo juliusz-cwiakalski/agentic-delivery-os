@@ -50,7 +50,11 @@ import {
   PAYLOAD_FIELDS,
   type PayloadField,
 } from "../fixtures/privacy-literals/envelopes";
-import { RULE_POSITIVES } from "../fixtures/privacy-literals/rules";
+import {
+  PLATFORM_FORM_POSITIVES,
+  RULE_POSITIVES,
+  SUPPRESSION_FIXTURES,
+} from "../fixtures/privacy-literals/rules";
 
 const hash = (preimage: string): string =>
   createHash("sha256").update(preimage, "utf8").digest("hex");
@@ -167,6 +171,32 @@ describe("TC-POLICY-001 guarded payload denied in every field and carrier", () =
         policy: genericPolicy(),
       });
       expect(result.ok, carrier).toBe(true);
+    }
+  });
+});
+
+describe("F-2 emitter policy ignores documentation-placeholder suppression", () => {
+  test("marker-carrying guarded payloads are denied at every field and carrier", () => {
+    const cases: Array<[string, string]> = [
+      ["secret.credential-assignment", SUPPRESSION_FIXTURES.placeholder],
+      ["secret.bearer-credential", SUPPRESSION_FIXTURES.markerBearer],
+    ];
+    for (const [expectedId, value] of cases) {
+      for (const field of PAYLOAD_FIELDS) {
+        for (const carrier of CARRIERS) {
+          const result = serializeEnvelope({
+            envelope: guardedEnvelope(field, value),
+            carrier,
+            humanContent: "body",
+            policy: genericPolicy(),
+          });
+          expect(result.ok, `${expectedId}/${field}/${carrier}`).toBe(false);
+          if (!result.ok && result.failure === "content-policy-violation") {
+            expect(result.ruleOrEntryId, `${expectedId}/${field}/${carrier}`).toBe(expectedId);
+            expect(Object.hasOwn(result, "carrier")).toBe(false);
+          }
+        }
+      }
     }
   });
 });
@@ -396,9 +426,60 @@ describe("TC-POLICY-008 hashed entries at the emitter with injected hash/entries
   });
 });
 
+describe("F-4 policy builder fails closed on invalid injected entries", () => {
+  const valid = { id: "entry-one", hash: "a".repeat(64), length: 8 };
+  const call = (inputs: unknown): EnvelopeContentPolicy =>
+    buildEnvelopeContentPolicy(inputs as Parameters<typeof buildEnvelopeContentPolicy>[0]);
+
+  test("valid inputs construct a policy", () => {
+    expect(() => buildEnvelopeContentPolicy({ hash, entries: [valid] })).not.toThrow();
+  });
+
+  test("more than 32 distinct lengths are rejected at construction", () => {
+    const entries = Array.from({ length: 33 }, (_, index) => ({
+      id: `entry-${index}`,
+      hash: index.toString(16).padStart(64, "0"),
+      length: 4 + index,
+    }));
+    expect(() => buildEnvelopeContentPolicy({ hash, entries })).toThrow(/distinct length cap/);
+  });
+
+  test("malformed digests, lengths, duplicate ids, and duplicate digests are rejected", () => {
+    expect(() =>
+      buildEnvelopeContentPolicy({ hash, entries: [{ ...valid, hash: "not-a-digest" }] }),
+    ).toThrow(/64-character lowercase hex digest/);
+    expect(() => buildEnvelopeContentPolicy({ hash, entries: [{ ...valid, length: 3 }] })).toThrow(
+      /length must be an integer/,
+    );
+    expect(() =>
+      buildEnvelopeContentPolicy({ hash, entries: [{ ...valid, length: 513 }] }),
+    ).toThrow(/length must be an integer/);
+    expect(() =>
+      buildEnvelopeContentPolicy({
+        hash,
+        entries: [{ ...valid, algorithm: "sha1" as unknown as "sha256" }],
+      }),
+    ).toThrow(/unsupported algorithm/);
+    expect(() =>
+      buildEnvelopeContentPolicy({
+        hash,
+        entries: [valid, { ...valid, hash: "b".repeat(64) }],
+      }),
+    ).toThrow(/duplicate entry id/);
+    expect(() =>
+      buildEnvelopeContentPolicy({ hash, entries: [valid, { ...valid, id: "entry-two" }] }),
+    ).toThrow(/duplicate digest/);
+  });
+
+  test("non-array entries and a non-function hash are rejected", () => {
+    expect(() => call({ hash, entries: null })).toThrow(/entries must be an array/);
+    expect(() => call({ hash: "not-a-function", entries: [] })).toThrow(/hash must be a function/);
+  });
+});
+
 describe("TC-POLICY-006 shared-rule parity between scan and emitter", () => {
   test("every paired rule reports the same id at both surfaces", () => {
-    for (const positive of RULE_POSITIVES) {
+    for (const positive of [...RULE_POSITIVES, ...PLATFORM_FORM_POSITIVES]) {
       const repo = createPrivacyRepo({ "scanned/planted.txt": `${positive.value}\n` });
       try {
         const fileIds = new Set(

@@ -39,6 +39,40 @@ export const RULE_POSITIVES: readonly RulePositive[] = [
   },
 ];
 
+/**
+ * F-1 platform-form breadth matrix: the three platform home forms and the
+ * credential/authorization-shaped forms named in review iteration 1. Each
+ * value is markerless in its protected segment, so it must fire after marker
+ * anchoring; the bare `user`/`apikey` tokens in separators/keys must not
+ * suppress it.
+ */
+export const PLATFORM_FORM_POSITIVES: readonly RulePositive[] = [
+  {
+    id: "private.absolute-user-path",
+    value: "/home/q7x9m2p4r6t8v0/secret-notes.txt",
+  },
+  {
+    id: "private.absolute-user-path",
+    value: "/Users/q7x9m2p4r6t8v0/secret-notes.txt",
+  },
+  {
+    id: "private.absolute-user-path",
+    value: "C:\\Users\\q7x9m2p4r6t8v0\\Documents\\keys",
+  },
+  {
+    id: "secret.connection-string-credential",
+    value: "postgres://user:ZQ7XK9M2P4R6T8V0@db.invalid/app",
+  },
+  {
+    id: "secret.credential-assignment",
+    value: 'apikey = "ZQ7XK9M2P4R6T8V0W1Y3A5B7C9D2E4F6"',
+  },
+  {
+    id: "secret.credential-assignment",
+    value: '"apikey": "ZQ7XK9M2P4R6T8V0W1Y3A5B7C9D2E4F6"',
+  },
+];
+
 export type RuleNearMiss = {
   readonly id: string;
   /** A substring the near-miss shares with its positive. */
@@ -74,6 +108,9 @@ export const SUPPRESSION_FIXTURES = {
   placeholder: 'api_key = "your-ZQ7XK9M2P4R6T8V0W1Y3"',
   redaction: 'api_key = "REDACTED-ZQ7XK9M2P4R6T8V0"',
   fabricated: 'api_key = "fake-ZQ7XK9M2P4R6T8V0W1Y3"',
+  syntheticUserHome: "/home/synthetic/secret-notes.txt",
+  syntheticUserWindows: "C:/Users/synthetic/Documents/keys",
+  markerBearer: "Bearer test-ZQ7XK9M2P4R6T8V0W1Y3A5B7C9D2E4F6",
 } as const;
 
 /** A suppressed placeholder and a markerless positive on the same line. */

@@ -122,6 +122,21 @@ describe("TC-PRIVACY-010..013 fail-closed registry matrix", () => {
     }
   });
 
+  test("a JSON parse failure emits a content-free diagnostic", () => {
+    const canary = "snippet-canary-value";
+    const invalid = `{\n  "schemaVersion": ${JSON.stringify(canary)},\n  "broken": CANARY\n}\n`;
+    const repo = withRegistry(invalid);
+    try {
+      const outcome = scan(repo.root);
+      expect(outcome.failures).toHaveLength(1);
+      expect(outcome.failures[0]).toContain("not valid JSON");
+      expect(outcome.failures[0]).not.toContain(canary);
+      expect(outcome.failures[0]).not.toContain("CANARY");
+    } finally {
+      repo.cleanup();
+    }
+  });
+
   test("a malformation plus a planted violation reports only the registry failure", () => {
     const mutated = mutateRegistry(readLiveRegistry(), "RV-01");
     const repo = withRegistry(mutated, {

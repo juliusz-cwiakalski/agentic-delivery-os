@@ -330,8 +330,9 @@ export const callSitePolicyViolations = (file: string, text: string): string[] =
 
 const envelopeSourceFiles = (): Record<string, string> => {
   const files: Record<string, string> = {};
-  for (const file of listFiles(ROOT, "packages"))
-    files[file] = readFileSync(join(ROOT, file), "utf8");
+  for (const tree of ["packages", "scripts", "tools"]) {
+    for (const file of listFiles(ROOT, tree)) files[file] = readFileSync(join(ROOT, file), "utf8");
+  }
   return files;
 };
 
@@ -356,10 +357,12 @@ test("TC-POLICY-002 the policy member is required and the order is pinned", () =
 });
 
 test("TC-POLICY-005 exactly one envelope serialization point exists", () => {
-  expect(serializationPointViolations(envelopeSourceFiles())).toEqual([]);
+  const audited = envelopeSourceFiles();
+  expect(Object.keys(audited).some((file) => file.startsWith("scripts/"))).toBe(true);
+  expect(serializationPointViolations(audited)).toEqual([]);
   expect(
     serializationPointViolations({
-      "packages/adapters/src/io/rogue.ts":
+      "scripts/rogue.ts":
         'export const serializeEnvelope = () => ""; const schema = ENVELOPE_SCHEMA_ID;',
     }).some((failure) => failure.includes("second envelope serialization path")),
   ).toBe(true);

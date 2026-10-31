@@ -205,7 +205,6 @@ const validateEntries = (registry: Record<string, unknown>): string | null => {
   const ids = new Set<string>();
   const digests = new Map<string, HashedEntry>();
   let total = 0;
-  const lengthsByClass = new Map<string, Set<number>>();
 
   for (const classId of CLASS_IDS) {
     const rawClass = classes[classId];
@@ -267,9 +266,6 @@ const validateEntries = (registry: Record<string, unknown>): string | null => {
       };
       digests.set(entry.hash, entry);
       total += 1;
-      const lengths = lengthsByClass.get(classId) ?? new Set<number>();
-      lengths.add(entry.length);
-      lengthsByClass.set(classId, lengths);
     }
   }
 
@@ -388,9 +384,8 @@ export const readRegistry = (
   let parsed: unknown;
   try {
     parsed = JSON.parse(readFileSync(path, "utf8"));
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return { failure: `registry file is not valid JSON: ${reason}`, registry: null };
+  } catch {
+    return { failure: "registry file is not valid JSON (parse error)", registry: null };
   }
   if (!isRecord(parsed)) return { failure: "registry must be a JSON object", registry: null };
 
@@ -531,16 +526,13 @@ const summarize = (
 };
 
 const scanFileViolations = (
-  root: string,
   file: string,
+  text: string,
   registry: PrivacyRegistry,
   digests: Map<string, HashedEntry>,
   lengths: readonly number[],
 ): PrivacyViolation[] => {
   const allowlist = registry.allowlist;
-  const buffer = readFileSync(join(root, file));
-  if (looksBinary(buffer)) return [];
-  const text = buffer.toString("utf8");
   const violations: PrivacyViolation[] = [];
   const seen = new Set<string>();
 
@@ -575,6 +567,13 @@ const scanFileViolations = (
     });
   }
   return violations;
+};
+
+/** Deterministic code-unit ordering (matches `Array.prototype.sort()` on paths). */
+const compareCodeUnits = (left: string, right: string): number => {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
 };
 
 /** Validate the registry and scan the working tree. Never throws on findings. */
@@ -617,14 +616,15 @@ export const runPrivacyScan = (root: string): ScanOutcome => {
       continue;
     }
     scannedFiles += 1;
-    violations.push(...scanFileViolations(root, file, registry, digests, lengths));
+    const text = buffer.toString("utf8");
+    violations.push(...scanFileViolations(file, text, registry, digests, lengths));
   }
 
   violations.sort(
     (left, right) =>
-      left.file.localeCompare(right.file) ||
+      compareCodeUnits(left.file, right.file) ||
       left.line - right.line ||
-      left.ruleOrEntryId.localeCompare(right.ruleOrEntryId),
+      compareCodeUnits(left.ruleOrEntryId, right.ruleOrEntryId),
   );
 
   return {
@@ -764,6 +764,12 @@ export const parseArgs = (argv: readonly string[]): ParsedArgs => {
     if (argument?.startsWith("-")) {
       return { json, author, class: className, failure: `unknown flag: ${argument}` };
     }
+    return {
+      json,
+      author,
+      class: className,
+      failure: `unexpected positional argument at position ${index + 1}`,
+    };
   }
   return { json, author, class: className, failure: null };
 };

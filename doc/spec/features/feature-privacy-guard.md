@@ -69,7 +69,7 @@ The committed rules are data in `packages/adapters/src/io/privacy-rules.ts`; the
 | `secret.connection-string-credential` | A connection URI or DSN whose user-information segment carries a password. |
 | `private.absolute-user-path` | An absolute personal home or profile path containing a concrete user segment. |
 
-The patterns are high-specificity by design: they prioritize low false positives over recall, and rule tuning happens in code review rather than through registry data. A committed placeholder-suppression list recognises documentation placeholders, redaction markers, and obviously fabricated sample markers. Suppression is scoped to the matched span, so a markerless value still fires.
+The patterns are high-specificity by design: they prioritize low false positives over recall, and rule tuning happens in code review rather than through registry data. A committed placeholder-suppression list recognises documentation placeholders, redaction markers, and obviously fabricated sample markers. Marker evaluation is scoped to the rule's protected value segment — the user segment for home/profile paths, the password portion of URI userinfo, the assigned value for credential assignments, and the token tail for bearer credentials — never to the separator, prefix, or key that introduces it. A markerless value therefore still fires even when its separator contains a bare marker token (for example, the `user` in `/Users/` or the `apikey` key in an assignment). The emitter policy is different: it deliberately does not apply documentation-placeholder suppression, because machine-generated metadata has no documentation context.
 
 ### Registry authority and schema
 
@@ -116,7 +116,7 @@ The scan enumerates the working tree exactly once through `git ls-files --cached
 
 - Binary detection skips a file when its leading window contains a NUL byte or is not decodable as UTF-8. Binary skips are counted and reported, never silent.
 - Exclusions are applied before binary detection; allowlisted files are still scanned, and the allowlist suppresses only the rules named by each entry at that exact path.
-- Violations are sorted by path, then line, then id. Nothing is written and no network-capable module is imported by the check.
+- Violations are sorted by path, then line, then id using deterministic code-unit ordering, independent of locale or ICU. Nothing is written and no network-capable module is imported by the check.
 - History, archive, encoded-content, and binary deep inspection are outside the claim; a literal that landed before the guard remains in history until a separate owner action.
 
 ### Fail-closed validation
@@ -164,7 +164,7 @@ type EnvelopeContentPolicy = (compactJson: string) => ContentPolicyVerdict;
 
 A denial returns `{ ok: false, failure: "content-policy-violation", byteLength, ruleOrEntryId }` and produces no carrier. The failure carries the rule or entry id only and never content. Existing `payload-not-closed` and `size-bound-exceeded` failures are unchanged. `content-policy-violation` is codec-local; it is not an error-table row and has no result-contract projection in this feature.
 
-The policy builder `buildEnvelopeContentPolicy({ hash, entries })` combines the shared generic rules with injected hashed entries. Generic rules take deterministic precedence, then hashed entries are consulted through the injected hash. The policy is total, non-throwing, and free of I/O, ambient reads, clock, and randomness. The codec imports only contract types and receives the policy and hash as injected inputs, so codec purity is preserved. Human-readable comment content is outside the policy input and is never scanned at the emitter; committed human content is governed by the file scan.
+The policy builder `buildEnvelopeContentPolicy({ hash, entries })` combines the shared generic rules with injected hashed entries. Generic rules take deterministic precedence, then hashed entries are consulted through the injected hash. The returned policy is total, non-throwing, and free of I/O, ambient reads, clock, and randomness. The builder validates its injected inputs at construction time and fails closed (throws) on a non-function hash, malformed or duplicate digests, duplicate ids, out-of-range lengths, and more than 32 distinct lengths; this is the fail-closed point for injected entries. The emitter policy intentionally does not apply documentation-placeholder suppression, so a marker-carrying guarded payload is still denied. The distinct-length guard inside the window matcher is a belt-and-braces check that is unreachable after registry and builder validation. The codec imports only contract types and receives the policy and hash as injected inputs, so codec purity is preserved. Human-readable comment content is outside the policy input and is never scanned at the emitter; committed human content is governed by the file scan.
 
 ### Flows
 
@@ -282,6 +282,7 @@ Maintainers own four guarded surfaces: the generic rule set (code and corpus tun
 - Git history is not scanned, and no baseline or retroactive remediation is claimed.
 - Binary files are skipped and counted; archive, encoded, and compressed payloads are not decoded or inspected.
 - Human-readable comment content is not scanned at the emitter; committed human content is covered by the file scan only.
+- File-scan placeholder suppression remains marker-based. A value whose protected segment itself carries a committed fabricated-sample marker (for example, a `test-`-prefixed bearer tail) is treated as fabricated at the file scan; the emitter still denies it.
 - No policy engine, policy DSL, rule-authoring UI, salt, key rotation, or configuration-layer policy key exists in this feature; registry placement is revisited with the policy engine.
 - `content-policy-violation` has no result-contract error identity yet; projection belongs to the first production emitter.
 

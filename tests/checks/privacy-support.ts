@@ -163,7 +163,9 @@ export const gitStatus = (root: string): string =>
 
 /** Replace the body of an exported arrow function, preserving its signature. */
 export const mutateArrowFunction = (source: string, name: string, body: string): string => {
-  const marker = `export const ${name} = `;
+  const exported = `export const ${name} = `;
+  const internal = `const ${name} = `;
+  const marker = source.includes(exported) ? exported : internal;
   const start = source.indexOf(marker);
   if (start < 0) throw new Error(`function not found: ${name}`);
   const open = source.indexOf("(", start);

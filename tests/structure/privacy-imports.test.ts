@@ -277,7 +277,7 @@ export const codecPurityViolations = (text: string): string[] => {
     }
   }
   failures.push(...ambientReferences("envelope-codec.ts", text));
-  if (text.includes("createHash") || text.includes("sha256")) {
+  if (text.includes("createHash") || text.includes("node:crypto")) {
     failures.push("envelope-codec.ts: default hash implementation is not permitted");
   }
   return failures;
@@ -294,7 +294,7 @@ export const policyPurityViolations = (text: string): string[] => {
     }
   }
   failures.push(...ambientReferences("envelope-content-policy.ts", text));
-  if (text.includes("createHash") || text.includes("sha256")) {
+  if (text.includes("createHash") || text.includes("node:crypto")) {
     failures.push("envelope-content-policy.ts: default hash implementation is not permitted");
   }
   return failures;
