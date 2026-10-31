@@ -48,6 +48,13 @@ Canonical testing strategy for this repository. Use this file as the default rul
 - Prefer narrow, changed-module checks first; escalate to broader checks only when risk requires it.
 - Record evidence in change artifacts (commands run + result summary).
 
+## Invariant-test authoring (permanent suites)
+
+- Permanent suites (`tests/**`) assert properties of the current tree or HEAD. They must never assert a diff against a moving base branch (`origin/main-tools...HEAD`): such an assertion only holds at the PR that introduced it and fails every later delivery.
+- Branch-diff shape checks (exactly one changeset added, only these files changed, coverage titles preserved) belong to review and CI PR-time gates, not the permanent suite. When such a check is needed permanently, convert it to a tree invariant (golden/snapshot fixture, coverage floor, structural assertion).
+- Snapshots and goldens that pin preserved data are updated deliberately in review; regenerate them with an explicit command, never by blanket rewrite.
+- Assert the value's meaning, not a count that grows (non-vacuity bounds such as `toBeGreaterThan(0)` or a floor), when the population is expected to grow.
+
 ## Quality gates
 
 - Required before completion:

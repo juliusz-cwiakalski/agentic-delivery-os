@@ -4,9 +4,37 @@
 # The C-2 license determination is confirmed by the owner at PR review; entries
 # below are the proposed approved verdicts the audit enforces from the first
 # dependency onward (DEC-10 / OQ-1).
-schema_version: 2
+#
+# Policy:
+# - Unregistered dependencies and unknown licenses fail closed.
+# - NOASSERTION and SEE LICENSE are never accepted.
+# - Every branch of a compound SPDX expression is evaluated individually.
+# - The deny list wins over the allow list; allow/deny overlap is a policy failure.
+# - The allow list contains only identifiers backed by approved verdicts.
+schema_version: 3
 scope: direct-and-runtime-closure
 c2_determination: proposed at delivery; confirmed by the owner at PR review
+deny_list:
+  - SSPL-1.0
+  - BUSL-1.0
+  - BUSL-1.1
+  - Elastic-2.0
+  - Commons-Clause
+  - CC-BY-NC-1.0
+  - CC-BY-NC-2.0
+  - CC-BY-NC-2.5
+  - CC-BY-NC-3.0
+  - CC-BY-NC-4.0
+  - CC-BY-NC-SA-1.0
+  - CC-BY-NC-SA-2.0
+  - CC-BY-NC-SA-2.5
+  - CC-BY-NC-SA-3.0
+  - CC-BY-NC-SA-4.0
+  - CC-BY-NC-ND-1.0
+  - CC-BY-NC-ND-2.0
+  - CC-BY-NC-ND-2.5
+  - CC-BY-NC-ND-3.0
+  - CC-BY-NC-ND-4.0
 entries:
   - package: "@arethetypeswrong/cli"
     version: "0.18.5"
