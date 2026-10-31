@@ -1,0 +1,128 @@
+# PM delivery ledger for GH-187 (M0-S18 License registry).
+# Authored and maintained by @pm only; delegates must not edit this file.
+change_id: GH-187
+title: "M0-S18: License registry (doc/legal)"
+milestone: M0
+story_code: M0-S18
+variant: full
+delivery_mode: autonomous
+
+phases:
+  clarify_scope:
+    started: "2026-10-31T13:47:00Z"
+    completed: "2026-10-31T13:56:00Z"
+  specification:
+    started: "2026-10-31T13:58:00Z"
+    completed: "2026-10-31T16:12:00Z"
+  test_planning:
+    started: "2026-10-31T14:08:00Z"
+    completed: "2026-10-31T16:18:00Z"
+  delivery_planning:
+    started: "2026-10-31T14:45:00Z"
+    completed: "2026-10-31T16:24:00Z"
+  dor_check:
+    started: "2026-10-31T15:28:00Z"
+    completed: "2026-10-31T17:18:00Z"
+  delivery:
+    started: "2026-10-31T17:22:00Z"
+    completed: "2026-10-31T18:05:00Z"
+  system_spec_update:
+    started: "2026-10-31T18:10:00Z"
+    completed: "2026-10-31T18:22:00Z"
+  review_fix:
+    started: "2026-10-31T18:25:00Z"
+    completed: "2026-10-31T19:05:00Z"
+  quality_gates:
+    started: "2026-10-31T19:10:00Z"
+    completed: "2026-10-31T19:20:00Z"
+  dod_check:
+    started: "2026-10-31T19:25:00Z"
+    completed: "2026-10-31T19:30:00Z"
+  pr_creation:
+    started: "2026-10-31T19:40:00Z"
+    completed: "2026-10-31T19:55:00Z"
+    url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/208"
+
+decisions:
+  - text: "This is hardening, not greenfield: GH-170 already seeded doc/legal/dependency-licenses.yaml and scripts/checks/license-audit.ts wired into the binding ts-license-audit CI job. GH-187 adds explicit policy/deny-list enforcement, closes remaining fail-closed gaps, and proves the acceptance criterion with tests; it must not regress the existing allowed-compound behavior unless a documented decision requires it."
+    date: "2026-10-31"
+  - text: "Deny list is explicit and authoritative: SSPL-1.0, BUSL-1.0/BUSL-1.1, Elastic-2.0, Commons-Clause, and the CC-BY-NC family are denied even if a future edit accidentally adds them to the allow list (deny wins over allow). The registry carries the deny list so policy is machine-readable and human-readable in one committed YAML."
+    date: "2026-10-31"
+  - text: "Compound SPDX expressions stay parsed (AND/OR/parentheses) with fail-closed per-branch evaluation, matching the current system spec (feature-monorepo-scaffold-toolchain) and GH-170 behavior, including the live @biomejs/biome 'MIT OR Apache-2.0' row. ADR-0003 C-2's 'fails closed on compound expressions' is applied as 'no branch may be unknown, denied, or non-allow-listed'; changing to reject all compounds would contradict the current spec and break a legitimate live dependency, so it is out of scope for GH-187."
+    date: "2026-10-31"
+  - text: "Out of scope: SBOM generation, checksums, THIRD-PARTY-NOTICES/licences bundle, and per-entry review-date governance (carried as a forward note from GH-170 but absent from the GH-187 ticket body). GH-187 covers the registry policy, deny list, fail-closed gate, and their tests; release-artifact obligations remain with M4-S3 and will be flagged at PR review."
+    date: "2026-10-31"
+  - text: "No new CI job: ts-license-audit already runs the audit and is binding. The change must keep ci-topology and ci-bindingness green and may not weaken any gate."
+    date: "2026-10-31"
+  - text: "DoR correction to deferral targets: release-time SBOM/checksums/provenance belongs to M4-S2 (Publication and release automation); M4-S3 covers registry completeness and public materials. GH-170 DEC-10's M0-S18 assignment of SBOM/notices is cited and superseded by the GH-187 ticket scope, not silently reassigned."
+    date: "2026-10-31"
+  - text: "DoR required decision capture for the compound-expression interpretation: DEC-3 is routed to @decision-advisor for a decision record that clarifies ADR-0003 C-2 per-branch semantics; the spec and plan reference the record and the delivery updates the current-truth docs."
+    date: "2026-10-31"
+  - text: "Inherited base repair: tests/checks/privacy-release.test.ts TC-RELEASE-001 hardcodes GH-184's changeset as 'added by this change' relative to origin/main-tools. GH-184 is already merged into main-tools, so the test fails identically on the base branch and breaks the shared ts-test/ts-aggregate gates. The repair makes the assertion base-relative (expect the GH-184 changeset added only when the base does not already contain it) and preserves the original on-branch guarantee; it is an enabling fix required for a green GH-187 delivery, not a product change."
+    date: "2026-10-31"
+
+open_questions: []
+
+blockers: []
+
+notes:
+  - text: "Tracker state detected: GH-187 OPEN, labels change+planning, no assignee, no comments, no open PR, no prior change folder. Branch feat/GH-187/license-registry-hardening created from origin/main-tools 7155074; working tree clean."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Phase 2 specification COMPLETE: chg-GH-187-spec.md v1.0 (469 lines; F-1..F-6, CON-1..CON-9, DM-1..DM-5, NFR-1..NFR-6, RSK-1..RSK-6, DEC-1..DEC-7, AC-F1-1..AC-F6-1). Key bindings: policy stays in doc/legal YAML via required deny_list, schema 2->3; deny-before-allow plus allow/deny overlap failure; mandatory denied-family floor (Appendix A); per-branch compound evaluation preserved; existing ts-license-audit stays the only gate; SBOM/notices/review dates deferred to M4-S3."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Phase 3 test planning surfaced a specification defect: AC-F1-1 required an 'approved' C-2 determination while CON-6/§19/§12 and the registry preserve the proposed determination until owner confirmation at PR review. Reopened specification for a one-line AC correction plus the deny-identifier grammar note (OQ-T2). Retro: the AC drifted from the preserved-state constraint at authoring time; cross-checking ACs against constraints would have caught it before test planning."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "Phase 3 test plan COMPLETE: chg-GH-187-test-plan.md v1 (1333 lines, 30 TCs, prefix TC-LICREG to avoid colliding with GH-188's TC-LICENSE-001). Covers all 15 ACs with a traceability matrix, DM/NFR tracing, negative/mutation matrix (denied families, deny-over-allow, deny-list integrity, denied compound branches, unknown/NOASSERTION/SEE LICENSE, unregistered), preserved live compound, and CI bindingness/exit-code cases. Spec corrected to v1.1 (AC-F1-1 wording; DM-2 deny-identifier grammar). No blocking spec gap remains; OQ-T1/OQ-T2 resolved in-plan."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Phase 4 delivery planning COMPLETE: chg-GH-187-plan.md v1.1 (8 phases, 31 tasks, all 15 ACs and 30 TCs mapped). Flags from planning were resolved rather than guessed: test plan v1.2 reconciles 18 malformed cases, 10 spawned cases (1 green + 9 failures; four classes in process), and the spec v1.1 deny grammar; both artifacts also corrected the registry entry count to 16. Binding plan constraints: atomic registry+audit change, 20-identifier Appendix A floor, deny/allow disjointness, unchanged ci.yml/lockfile/manifests, existing ts-license-audit only."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Retro: both the plan and test plan initially stated 15 registry entries; the committed registry has 16. The downstream author caught it, but the upstream artifacts should verify counts against the source file. Similarly, test-plan counts drifted between the summary and the detailed matrix. Lesson: authoring should recount and cross-check summary counts against the detail tables before handoff."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "Phase 5 DoR iteration 1 NOT_READY (artifact readiness-review/readiness-iter-1.md). 4 blocking findings: (1) critical: no change-specific Definition of Done in the spec while the plan requires a DoD checklist; (2) major: plan/test plan say 12 pre-existing tests, live file has 13; (3) major: DEC-3 per-branch compound interpretation contradicts ADR-0003 C-2 with no decision record/amendment; (4) major: TC-LICREG-013 step 5 expects overlap+denial after removing the identifier from deny_list (impossible) and 20-vs-25 removal-count drift. Plus 6 non-blocking findings (TC-026 7-vs-13 representatives; schema/values TC count drift; SBOM milestone should be M4-S2 and must reconcile GH-170 DEC-10; preserve wrong-scope fail-closed check; stale test-plan v1.1/OQ citations; deny-list 'no accidental extras' wording). Reopened specification, test_planning, delivery_planning; delivery remains blocked. No human pause required."
+    type: "blocker"
+    date: "2026-10-31"
+  - text: "Retro: readiness review caught four real defects that the authoring chain missed, including an impossible test expectation and a binding ADR contradiction. Root cause: upstream artifacts were accepted after count corrections without a full cross-artifact consistency pass, and DEC-3 reinterpreted an ADR constraint without routing it to @decision-advisor. Lesson: any reinterpretation of a binding ADR must go through decision capture before the spec is frozen, and downstream authors must recount against live files."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "DoR iteration 1 remediation COMPLETE. (1) decision-advisor authored doc/decisions/TDR-0007 (Proposed; clarifies ADR-0003 C-2 per-branch compound evaluation) and indexed it. (2) Spec v1.2 adds §18.1 change-specific DoD, cites TDR-0007, corrects release-artifact ownership to M4-S2 vs registry completeness M4-S3 with explicit GH-170 DEC-10 supersession, and adds CON-10/AC-F1-3 wrong-scope preservation. (3) Test plan v1.3 corrects 12->13 pre-existing tests, TC-013 floor-only expectation and 25 removal cases, TC-026 13 representatives, schema/value/GAP count drift, adds TC-LICREG-031 wrong-scope (31 TCs), and aligns SBOM milestones. (4) Plan v1.2 corrects 12->13, adds TDR/ADR doc tasks (33 tasks), maps TC-031, preserves scope, fixes stale citations and deny-extension wording, and references spec §18.1 DoD. Re-running DoR."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Phase 5 DoR iteration 2 NOT_READY (artifact readiness-review/readiness-iter-2.md). Iteration-1 blockers all resolved. One residual blocking finding: plan task 2.1/Phase 2 acceptance still said floor 20 / 20/20 removals while the test plan requires 25 removal cases (20 single + 5 adversarial). Non-blocking: spec §18.1 gate battery wording, spec wrong-scope TC citation, test-plan TC-016 row and execution order/NFR-6 missing TC-031, plan RSK-P2 stale v1.1, TDR-0007 omitted non-asserted. Remediated: plan v1.3 (floor 25, RSK v1.3), spec v1.3 (battery + TC-031), test plan v1.4 (counts/order/NFR-6), TDR-0007 wording. Re-running DoR iteration 3."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Phase 5 DoR iteration 3 READY (artifact readiness-review/readiness-iter-3.md): all ten facets pass, 0 blocking findings, no override, 3-iteration cap not triggered. Four non-blocking cleanup items were then completed before locking the gate: spec v1.4 completes the §18.1 gate battery (script-surface/pin-equality/vulnerability-gate); test plan v1.5 refreshes stale spec-v1.2 citations; plan v1.4 refreshes citations and corrects TDR-0007 wording to 'created in this change as Proposed; no further delivery/doc-sync edits'. DoR gate locked. Proceeding to delivery."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Phase 6 delivery COMPLETE (phases 1-5 of the plan; phases 6-8 are PM/doc-sync/review/PR). Resume sync merged origin/main-tools c62cdb8 (GH-204) as 41c3f8b with no conflicts. Implementation: 439f6f1 registry v3 + deny policy + audit; feb51d7 84-case matrix + policy/audit suites; 9ad0e36 exit/stream contract; 5851f35 CI binding/dependency surface. Inherited GH-184 TC-RELEASE-001 was failing identically on origin/main-tools (changeset already in base); repaired base-relatively in c58b63a with the on-branch guarantee preserved. Final battery: pnpm test 1434/1434; tests/checks 331/331; 22/22 CI-excluded bash suites; all invariant checks OK; no lockfile/manifest/CI-job drift; worktree clean. Plan phase 5 marked Completed."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Retro: the delivery run was interrupted twice by tool-window limits, and the first resume exposed a pre-existing broken base gate (GH-184 TC-RELEASE-001) that had blocked main-tools unbeknownst to this change. Lessons: long test batteries should run in the background with polling; and every resume should re-verify the base branch's gates, because a red base can masquerade as this change's failure. The repair was kept minimal and documented as an enabling fix."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "Phase 7 system_spec_update COMPLETE (doc-sync-report.md): reconciled feature-monorepo-scaffold-toolchain.md License registry section (schema v3, required deny_list/20-identifier 5-family baseline, deny-before-allow, allow/deny disjointness, single-identifier grammar, preserved scope check, non-asserted fail-closed, per-branch compound, TDR-0007 Proposed), updated the codebase map and QA row, and added Deny list/License registry glossary terms plus traceability. No spec-coverage gap; doc distribution guard passes (81 docs, no drift); license audit and 44 license tests green; front matter parses. Residual gaps: none for GH-187 (pre-existing out-of-scope duplicate paragraphs and the TDR-0005/0006 index label swap noted only)."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Phase 8 review iteration 1 PASS (review/review-iter-1.md): 0 blocking; all 15 ACs and plan tasks 1.1-5.4 verified. Non-blocking fixes applied: F-1/F-3 TC-LICREG-024 now executes all 84 declared cases through failuresForCase (executed==declared, 84/84); F-4 duplicate blank fixture removed and deniedSingles/unknownReferences now used; F-2 test plan §10 execution log populated; F-5 plan Phase 6 marked Completed with doc-sync evidence. F-6/F-7 accepted as informational. Re-reviewing the changed tests."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Phase 8 review iteration 2 PASS (review/review-iter-2.md): 0 blocking; all iteration-1 findings closed; no product change since iteration 1; 52/52 license+privacy tests, tests/checks 331/331, full suite 1434/1434, 7 invariants OK, doc distribution 81 no drift, no skip/only. Trivial doc nits corrected: test plan expect-call count 13062->13181 and current spec citations v1.3->v1.4; plan current test-plan citations v1.5->v1.7 plus revision rows. F-4 (per-class assertion in TC-024) accepted as informational because class-specific proof lives in TC-007/008/009/011/012/013/016/017. Review phase complete."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Phase 9 quality_gates COMPLETE: `pnpm check` exit 0 (lint, format:check, typecheck, test, check:boundaries, exports-parity). Final `bun test` 1434 pass / 0 fail / 13181 expect calls across 133 files; boundaries 111 modules clean; ambient-globals 35 clean; workspace-entrypoints OK; secret-read-boundary 95 clean; exports-parity 5 publishables OK. 22/22 CI-excluded bash suites passed earlier in the run. No failures, no gate weakening."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Commit SHAs were rewritten message-only on 2026-10-31 to satisfy commitlint line-length; the tree is unchanged (tree 6831e4d) and references were refreshed."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Phase 10 dod_check COMPLETE: all lifecycle phases complete (clarify, spec, test planning, delivery planning, DoR READY, delivery, system spec update, review PASS x2, quality gates); plan tasks 1.1-5.4, 6.1-6.5, 7.1-7.4, 8.1-8.3 checked, 8.4 PR creation is the remaining step; all 15 ACs satisfied per review; 31/31 TCs mapped; current-truth docs reconciled with no residual gaps; TDR-0007 Proposed and C-2 owner confirmation pending at PR; no version bump/changeset/release artifact; worktree clean. Proceeding to PR creation against main-tools."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Phase 11 pr_creation COMPLETE: PR #208 https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/208 created against main-tools (head feat/GH-187/license-registry-hardening, base main-tools), labels change+review, assignee juliusz-cwiakalski, mergeStateStatus CLEAN, auto-merge disabled, not merged. 47/47 checks pass on both push and pull_request runs, including TS license audit, TS aggregate, TS tests, typecheck, lint, build, boundaries, publish guard, commitlint, and all doc/bash guards. Note: ts-license-audit runs non-bypass but is not in the classic branch-protection required-context list; enabling required-check enforcement is a repo-settings decision for the owner. Awaiting human review/merge; PM does not merge."
+    type: "info"
+    date: "2026-10-31"
