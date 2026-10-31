@@ -290,7 +290,11 @@ describe("TC-REDACT-004 single serialization chokepoint", () => {
 const COMMANDS_INDEX = `${CLI_DIR}/commands/index.ts`;
 const EDGE = `${CLI_DIR}/edge.ts`;
 const CORE_DIR = "packages/core/src";
-const NEW_COMMAND_FILES = [`${CLI_DIR}/commands/lint.ts`, `${CLI_DIR}/commands/phase.ts`];
+const NEW_COMMAND_FILES = [
+  `${CLI_DIR}/commands/lint.ts`,
+  `${CLI_DIR}/commands/phase.ts`,
+  `${CLI_DIR}/commands/verify.ts`,
+];
 
 const moduleSpecifiers = (root: string, relative: string): string[] => {
   const source = parse(root, relative);
@@ -349,18 +353,23 @@ const exitDecisionFailures = (root: string): string[] => {
 };
 
 describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
-  test("lint and phase are exported from the commands tier", () => {
+  test("lint, phase, and verify are exported from the commands tier", () => {
     const index = readFileSync(join(ROOT, COMMANDS_INDEX), "utf8");
     expect(index).toContain('export { createLintCommandDefinition } from "./lint.js"');
     expect(index).toContain('export { createPhaseCommandDefinition } from "./phase.js"');
+    expect(index).toContain('export { createVerifyCommandDefinition } from "./verify.js"');
   });
 
-  test("the CLI edge composes both commands beside config", () => {
+  test("the CLI edge composes the commands beside config", () => {
     const edge = readFileSync(join(ROOT, EDGE), "utf8");
     expect(edge).toContain('from "./commands/lint.js"');
     expect(edge).toContain('from "./commands/phase.js"');
+    expect(edge).toContain('from "./commands/verify.js"');
     expect(edge).toContain("commands.lint = createLintCommandDefinition(options.lint)");
     expect(edge).toContain("commands.phase = createPhaseCommandDefinition(options.phase)");
+    expect(edge).toContain("commands.verify = createVerifyCommandDefinition(options.verify)");
+    expect(edge).toContain("createVerifyCommandRuntime");
+    expect(edge).toContain("readChangeTransitionsTolerant");
   });
 
   test("the adapters parser is composed at the CLI edge, never by core", () => {
@@ -393,6 +402,7 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     };
     expect(exported(`${CLI_DIR}/commands/lint.ts`)).toEqual(["createLintCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/phase.ts`)).toEqual(["createPhaseCommandDefinition"]);
+    expect(exported(`${CLI_DIR}/commands/verify.ts`)).toEqual(["createVerifyCommandDefinition"]);
   });
 
   test("a seeded core-imports-CLI violation is caught", () => {

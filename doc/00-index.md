@@ -15,6 +15,7 @@ ados_distribution: redistributable
 | [ADOS Processes Map](guides/ados-processes.md) | Canonical map of ADOS's six processes — start here for the big picture |
 | [Overview](overview/) | North star, roadmap, architecture, glossary |
 | [System Spec](spec/) | Current truth — feature specs, API descriptions, NFRs |
+| [Verify Change and Exit Taxonomy](spec/features/feature-verify-change-and-exit-taxonomy.md) | Read-only ledger verification, the delivery-result enum, and the CLI exit taxonomy |
 | [Documentation Handbook](documentation-handbook.md) | How docs work — structure, conventions, workflow |
 
 ## Changing Behavior?

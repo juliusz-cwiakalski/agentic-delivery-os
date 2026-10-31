@@ -55,6 +55,18 @@ export type PhaseTransitionsRead = {
   readonly evidence: StateReadEvidence;
 };
 
+/**
+ * A presence-tolerant verified read (PIN-6): an absent per-change record in a
+ * verified store is no evidence (`present: false`), never `state.keys.missing`.
+ */
+export type PhaseTransitionsTolerantRead = {
+  readonly changeRef: string;
+  readonly present: boolean;
+  readonly verifiedEmpty: boolean;
+  readonly transitions: readonly PhaseTransitionRecord[];
+  readonly evidence: StateReadEvidence;
+};
+
 /** One landing: the new record, the full history, and the append outcome. */
 export type PhaseTransitionAppendOutcome = {
   readonly record: PhaseTransitionRecord;
@@ -195,6 +207,58 @@ export const readChangeTransitions = (
   if (!parsed.ok) return parsed;
   return ok({
     changeRef,
+    verifiedEmpty: false,
+    transitions: parsed.value,
+    evidence: read.value.evidence,
+  });
+};
+
+/**
+ * Read one change's verified history with presence tolerance (PIN-6).
+ *
+ * The store is verified first. A verified-empty (or absent) store and an absent
+ * per-change record are both no evidence; a corrupt per-change payload remains
+ * the existing classified `state.*` failure. The derived projection is never
+ * read, and nothing is written.
+ */
+export const readChangeTransitionsTolerant = (
+  store: StateStorePort,
+  changeRef: string,
+): StateResult<PhaseTransitionsTolerantRead> => {
+  const probe = store.read({ requiredKeys: [] });
+  if (!probe.ok) return probe;
+  if (probe.value.evidence.verifiedEmpty) {
+    return ok({
+      changeRef,
+      present: false,
+      verifiedEmpty: true,
+      transitions: [],
+      evidence: probe.value.evidence,
+    });
+  }
+  const recordKey = phaseTransitionRecordKey(changeRef);
+  const read = store.read({ requiredKeys: [recordKey] });
+  if (!read.ok) {
+    const absentRecord =
+      read.error.code === "state.keys.missing" &&
+      (read.error.location.missingKeys ?? []).includes(recordKey);
+    if (!absentRecord) return read;
+    return ok({
+      changeRef,
+      present: false,
+      verifiedEmpty: false,
+      transitions: [],
+      evidence: probe.value.evidence,
+    });
+  }
+  const parsed = parseTransitions(read.value.values[recordKey], {
+    path: read.value.evidence.storePath,
+    record: read.value.evidence.recordCount,
+  });
+  if (!parsed.ok) return parsed;
+  return ok({
+    changeRef,
+    present: true,
     verifiedEmpty: false,
     transitions: parsed.value,
     evidence: read.value.evidence,

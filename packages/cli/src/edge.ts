@@ -49,6 +49,7 @@ import {
 import {
   appendPhaseTransition,
   readChangeTransitions,
+  readChangeTransitionsTolerant,
   replacePhaseProjection,
 } from "@delivery-os/core/state";
 import {
@@ -66,6 +67,7 @@ import {
   createProviderCommandDefinition,
   type ProviderCommandRuntime,
 } from "./commands/provider.js";
+import { createVerifyCommandDefinition, type VerifyCommandRuntime } from "./commands/verify.js";
 import type { CliDependencies, CommandDefinition, CommandFlags, CommandProgram } from "./index.js";
 
 const NEUTRAL_OVERRIDE_NAME = "DELIVERY_OS_WORKING_NAME";
@@ -150,6 +152,35 @@ export const createPhaseCommandRuntime = (options: PhaseRuntimeOptions): PhaseCo
   newFenceToken: options.newFenceToken,
 });
 
+/** Compose the read-only verify runtime from injected I/O and the state port. */
+export type VerifyRuntimeOptions = {
+  readonly store: StateStorePort;
+  readonly changesDirectory: string;
+  readonly fs: PmNotesFileSystemFacts;
+};
+
+export const createVerifyCommandRuntime = (
+  options: VerifyRuntimeOptions,
+): VerifyCommandRuntime => ({
+  readPmNotes: (changeRef) =>
+    readPmNotesText({
+      changeRef,
+      changesDirectory: options.changesDirectory,
+      fs: options.fs,
+    }),
+  readRegistry: (changeRef) => {
+    const read = readChangeTransitionsTolerant(options.store, changeRef);
+    if (!read.ok) return { ok: false, error: read.error };
+    return {
+      ok: true,
+      present: read.value.present,
+      verifiedEmpty: read.value.verifiedEmpty,
+      transitions: read.value.transitions,
+      recordCount: read.value.evidence.recordCount,
+    };
+  },
+});
+
 export type EdgeOptions = {
   readonly brand: BrandIdentity;
   readonly program: CommandProgram;
@@ -193,6 +224,7 @@ export type ConfigProgramOptions = {
   readonly lint?: LintCommandRuntime;
   readonly phase?: PhaseCommandRuntime;
   readonly provider?: ProviderComposition;
+  readonly verify?: VerifyCommandRuntime;
 };
 
 export type ConfigProgramResult =
@@ -417,6 +449,8 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
       parks: (input) => engine.parks(input),
     };
     commands.provider = createProviderCommandDefinition(providerRuntime);
+  if (options.verify !== undefined) {
+    commands.verify = createVerifyCommandDefinition(options.verify);
   }
   return {
     ok: true,

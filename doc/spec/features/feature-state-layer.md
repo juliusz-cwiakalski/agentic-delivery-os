@@ -9,6 +9,8 @@ summary: "The implemented M0-S5 state layer: an injected store identity, an appe
 links:
   related_changes: ["GH-174", "GH-179", "GH-181", "GH-182"]
   related_decisions: ["ADR-0003", "TDR-0004"]
+  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181"]
+  related_decisions: ["ADR-0003", "TDR-0004", "TDR-0005"]
 ---
 
 # Feature: State Layer
@@ -68,12 +70,19 @@ The per-change phase state is a derived document (`phase-state.<REF>.json`) prod
 The provider engine composes the same public port without adding a runtime-API location. It appends `provider.park` records under the store-scoped key `provider.parks` and `provider.announcement` records under `provider.announcements`; each landed payload carries the full verified history, so a verified read returns the history from the ledger record itself. Persistence is fenced and occurs only in a mutating provider `resolve`; `quota` and `parks list` perform zero state writes.
 
 The `provider-parks.json` derived document is a per-park-name fold of the latest record, ordered by expiry ascending then name lexical, with schema `delivery.provider.parks.v1`. It is replaced atomically only when park truth changes. Read paths fold verified ledger truth directly, so a missing or divergent projection is served from the fold with zero writes; the persisted document catches up on the next mutating resolve. A park is active while `expiresAt > now`, expired at `expiresAt <= now` with no write, and `cleared` only when a `cleared` record for a clear observed before expiry was appended; a park observed after expiry stays `expired` with no write, while the next mutating resolve emits its `provider.resumed` announcement. The provider vocabulary and read views are specified in [Provider Engine](feature-provider-engine.md).
+### Verify-change consumer
+
+Verify change is a read-only consumer of the state layer. It reads the registry's per-change transition history through a presence-tolerant verified read: the store is verified first, an absent store or an absent per-change record is explicit no-evidence (`present: false`), and a torn, schema-mismatched, or corrupt-payload read remains the classified `state.*` failure. The read acquires no fence and writes nothing.
+
+The derived `phase-state.<REF>.json` projection is not evidence for verification: verify folds the verified ledger directly, so a stale or missing projection cannot change the verdict. Verification never mutates the ledger, the header, the index, or a derived document. Its consumer contract is in [verify change and exit taxonomy](feature-verify-change-and-exit-taxonomy.md).
 
 ## Technical Architecture & Codebase Map
 
 - `packages/core/src/contracts/state.ts` — driver-neutral vocabulary: identity, record envelope, fence handle, evidence, failure, and the single `STATE_SCHEMA_VERSION` home. Types and data only.
 - `packages/core/src/contracts/error-table.ts` — the `state` domain kind and seven exact-code rows.
 - `packages/core/src/state/index.ts` — the facade over injected identity and the injected runtime edge; the only public factory that accepts a driver kind.
+- `packages/core/src/state/registry.ts` — registry records over the state port, including the presence-tolerant verified transition read (`readChangeTransitionsTolerant`) and the pure fold; no runtime API.
+- `packages/core/src/domain/verify-change.ts` — pure verify classification over parsed documents and folded transition records; no state access itself.
 - `packages/core/src/state/ledger.ts` — framing, FNV-1a 64-bit payload checksum, terminal completeness, sequence continuity, and schema-version verification. Pure.
 - `packages/core/src/state/edge.ts` — the runtime-edge interface and the named fault points. Types only.
 - `packages/core/src/state/driver/runtime-edge.ts` — the only location of runtime APIs: filesystem, permissions, the Windows owner-identity environment read, injected clock, and the built-in SQLite binding.
@@ -117,6 +126,7 @@ The state tier imports `./contracts` and its own modules only; runtime APIs appe
 - [Result contract and error table](feature-result-contract.md) — the `state` and `lint` rows and the binding sync check.
 - [PM-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md) — the delivery registry consumer, its record vocabulary, and the derived projection.
 - [Provider engine](feature-provider-engine.md) — the provider park and announcement record kinds, read-time expiry, and the `provider-parks.json` fold.
+- [Verify change and exit taxonomy](feature-verify-change-and-exit-taxonomy.md) — the read-only verification consumer and the delivery-result exit taxonomy.
 - [Monorepo scaffold and toolchain](feature-monorepo-scaffold-toolchain.md) — tier and runtime-API boundaries.
 - [Branding seam](feature-branding-seam.md) — `stateDirectoryName` is consumed as an injected parameter, never imported here.
 - [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0004](../../decisions/TDR-0004-state-storage-engine.md).

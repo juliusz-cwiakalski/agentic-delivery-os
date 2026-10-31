@@ -35,6 +35,12 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "FALLBACK_INTERNAL_CODE",
     "FALLBACK_INVOCATION_CODE",
   ],
+  "core/src/contracts/delivery-result.ts": [
+    "DELIVERY_RESULT_DERIVATION_CLASSES",
+    "DELIVERY_RESULT_PROJECTION_CLASSES",
+    "DELIVERY_RESULT_TAXONOMY",
+    "DELIVERY_RESULT_TOKENS",
+  ],
   "core/src/contracts/result.ts": ["RESULT_SCHEMA_VERSION"],
   "core/src/contracts/adapter-capabilities.ts": ["ADAPTER_OPERATIONS", "CARRIER_KINDS"],
   "core/src/contracts/envelope.ts": [
@@ -63,6 +69,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/contracts/state.ts": ["STATE_DRIVER_KINDS", "STATE_LEVELS", "STATE_SCHEMA_VERSION"],
   "core/src/domain/pm-notes-lint.ts": ["lintPmNotes"],
+  "core/src/domain/verify-change.ts": [
+    "classifyVerifyChange",
+    "classifyVerifyDocument",
+    "formatVerifySummary",
+  ],
   "core/src/state/index.ts": ["createStateStore"],
   "core/src/state/registry.ts": [
     "PHASE_TRANSITION_RECORD_KEY_PREFIX",
@@ -71,6 +82,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "phaseStateDocumentName",
     "phaseTransitionRecordKey",
     "readChangeTransitions",
+    "readChangeTransitionsTolerant",
     "rebuildPhaseProjection",
     "replacePhaseProjection",
   ],
@@ -93,10 +105,12 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "createConfigCommandDefinition",
     "createLintCommandDefinition",
     "createPhaseCommandDefinition",
+    "createVerifyCommandDefinition",
   ],
   "cli/src/commands/lint.ts": ["createLintCommandDefinition"],
   "cli/src/commands/phase.ts": ["createPhaseCommandDefinition"],
   "cli/src/commands/provider.ts": ["createProviderCommandDefinition"],
+  "cli/src/commands/verify.ts": ["createVerifyCommandDefinition"],
   "cli/src/edge.ts": [
     "createProductionDependencies",
     "registerEdgeSecrets",
@@ -104,6 +118,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "createConfigProgram",
     "createPhaseCommandRuntime",
     "createRegistryLintReader",
+    "createVerifyCommandRuntime",
   ],
   "cli/src/index.ts": ["runCli"],
   "cli/src/output/serialize.ts": ["redact", "serializeEnvelope", "writeOutput"],

@@ -20,3 +20,9 @@ export type {
 export { createPhaseCommandDefinition } from "./phase.js";
 export type { ProviderCommandRuntime } from "./provider.js";
 export { createProviderCommandDefinition } from "./provider.js";
+export type {
+  VerifyCommandRuntime,
+  VerifyPmNotesRead,
+  VerifyRegistryRead,
+} from "./verify.js";
+export { createVerifyCommandDefinition } from "./verify.js";

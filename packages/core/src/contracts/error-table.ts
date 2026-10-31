@@ -10,7 +10,7 @@
 import type { AppErrorCode, ErrorCategory, ErrorConsequence, ProjectionClass } from "./result.js";
 
 /** The declared domain kinds: the first link of the classification chain. */
-export const DOMAIN_KINDS = ["provider", "input", "config", "state", "lint"] as const;
+export const DOMAIN_KINDS = ["provider", "input", "config", "state", "lint", "verify"] as const;
 
 /** Reserved containment code for broken invocations and unknown commands. */
 export const FALLBACK_INVOCATION_CODE = "fallback.invocation" as const;
@@ -345,5 +345,16 @@ export const ERROR_TABLE = [
       "pm-notes target only: initialize pm-notes for the named change ref or correct the reference (an absent registry target is a verified-empty pass, C-3).",
     projectionClass: "user-validation",
     summary: "The pm-notes target is missing.",
+  },
+  {
+    code: "verify.ledger.incomplete",
+    domainKind: "verify",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Complete the named required phases of the declared variant through the phase command, or correct the declaration, then re-run verify.",
+    projectionClass: "user-validation",
+    summary: "The declared variant's required phases are not all completed.",
   },
 ] as const satisfies readonly ErrorTableEntry[];
