@@ -49,7 +49,7 @@ decisions:
     date: "2026-10-31"
   - text: "DoR iter-1 resolution F-3: the index has one row per agent folder and one row per promoted record file. lessons/ and tacit/ get no directory-level rows; empty trees are described in the layout."
     date: "2026-10-31"
-  - text: "DoR iter-1 resolution F-20: the owner superseded the ticket body statement that the full 11-phase lifecycle was waived. This delivery runs all 11 phases with pm-notes evidence; the ticket body remains design input only."
+  - text: "DoR iter-1 resolution F-20 (corrected attribution): the owner approved a lightweight implementation of the ticket design; he did not supersede the lifecycle or waive it for others. The ticket body's waived-lifecycle wording is not an owner instruction to skip phases. Running all 11 phases and keeping the pm-notes ledger complete is a CEO operating requirement for merge verification, not a new owner directive. No owner statement is invented."
     date: "2026-10-31"
   - text: "DoR iter-1 resolution F-12: AC-15 covers PR creation by PM, merge to main-tools by owner or CEO, and ticket closure with a delivery summary. PM does not merge."
     date: "2026-10-31"
@@ -58,6 +58,9 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Attribution correction: an earlier F-20 decision said the owner superseded the ticket's lifecycle waiver. That was inaccurate and is retracted. The owner approved a lightweight implementation. The all-phase ledger is a CEO operating requirement for merge verification."
+    type: "decision"
+    date: "2026-10-31"
   - text: "DoR iter-1 NOT_READY: 3 blocker, 10 major, 7 minor, 3 nit. Artifact readiness-review/readiness-iter-1.md. Reopened specification, test_planning, and delivery_planning (never delivery). PM resolutions recorded in decisions. Revised artifacts: spec v1.1 143 lines, test plan v1.1 201 lines, plan v1.1 202 lines. Re-running dor_check as iter-2."
     type: "decision"
     date: "2026-10-31"

@@ -33,7 +33,7 @@ Deliver the practices-now track of the ADOS memory model as text and skill conte
 - Memory is advisory untrusted data; a newer entry is a candidate, not authority. Conflicts resolve by evidence and current repo or spec truth, never recency alone. No text claims conflict-free memory.
 - Promoted ids use the monotonic next free id per prefix and year, unique across `lessons/` and `tacit/`, never reused; validation scans both `id` and `supersedes`, and duplicates are rejected, never reallocated.
 - Facts go to `@doc-syncer` (`doc/spec`), decisions to `@decision-advisor` (`doc/decisions`) as a handoff proposal; the skill never writes those targets. Policies and security rules remain owner-only.
-- Lifecycle pins: the owner superseded the ticket's "waived full lifecycle" statement and requested all 11 phases (F-20). This is repo operating documentation, so phase 7 is a true no-op and R11 is a hard boundary (F-15). PM creates the PR and does not merge; the owner or CEO merges to `main-tools` and closes the ticket (F-12, AC-15).
+- Lifecycle pins: the owner approved a lightweight implementation of this ticket; the ticket body's waived-lifecycle wording is not an owner instruction to skip phases. Running all 11 phases with a complete pm-notes ledger is a CEO operating requirement for merge verification, not a new owner directive (F-20). This is repo operating documentation, so phase 7 is a true no-op and R11 is a hard boundary (F-15). PM creates the PR and does not merge; the owner or CEO merges to `main-tools` and closes the ticket (F-12, AC-15).
 - `@toolsmith` refines `SKILL.md` before `@coder`; coder validates and integrates it and does not rewrite it unless it contradicts the spec, logging any correction.
 
 ## Scope
