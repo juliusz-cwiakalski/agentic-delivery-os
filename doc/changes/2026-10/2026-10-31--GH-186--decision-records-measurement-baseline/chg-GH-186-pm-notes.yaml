@@ -7,7 +7,7 @@ phases:
   test_planning: { started: "2026-10-31T14:32:00Z", completed: "2026-10-31T17:20:00Z", reopened: "2026-10-31T16:55:00Z", iterations: 3 }
   delivery_planning: { started: "2026-10-31T15:27:00Z", completed: "2026-10-31T17:20:00Z", reopened: "2026-10-31T16:55:00Z", iterations: 3 }
   dor_check: { started: "2026-10-31T17:22:00Z", completed: "2026-10-31T17:40:00Z", iterations: 3, verdict: "READY (iter 3)" }
-  delivery: { started: null, completed: null }
+  delivery: { started: "2026-10-31T17:45:00Z", completed: "2026-10-31T18:20:00Z" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -80,4 +80,10 @@ notes:
     date: "2026-10-31"
   - text: "DoR iteration 3 verdict READY (readiness-review/readiness-iter-3.md); iteration-2 B4/B5 and both should-fix items closed and independently re-verified. Seven non-blocking notes (5 minor, 2 nit) recorded: stale defensive clause in test-plan §2; TC-DEC-015 step 6 greps provider-quota in the wrong file; TC-GATE-005 step 2 assumes both docs registered at Phases 7/9; TC-MEAS-010 step 3 denominator rule vs count metric; PD-3 per-pair-rounding phrasing; vacuous line-wrapped absence grep in TC-DEC-014 step 4; DM-2 leaves ci_outcome domain to plan step 6. No AC/count/order/baseline value affected; delivery may start and @coder should fold them in where natural."
     type: "info"
+    date: "2026-10-31"
+  - text: "Delivery completed by @coder at HEAD 762564f (pushed): four Proposed records (ADR-0008, ADR-0009, ODR-0002, ODR-0003), binding register, index repair, registry v1 annotation, measurement-baseline.yaml (spine 41 = 23 included + 18 excluded; ceremony share 0.406648 PARTIAL; cycle sample 20, median 5.3 h PARTIAL; CI proxy numerator 3 / denominator 4 = 0.75 PARTIAL; false-signal 4 MEASURED; top-level PARTIAL), registry data registration, seven doc-sync edits. Gate battery green except a pre-existing branch-commit message-length failure on planning commit 49b4c32 (body line >100), and the branch is one commit behind origin/main-tools (GH-204). Follow-ups before review: reword 49b4c32, merge origin/main-tools, correct the baseline captured_at (it read 18:55Z local-as-Z instead of the actual ~14:50Z capture)."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Retro: the coder report's 'all gates green' was qualified by a branch-range commitlint failure caused by a planning-commit message the committer created earlier; the gate battery must run over the whole branch, not only delivery commits, before declaring green. Also the baseline captured_at was written in local time with a Z suffix, a reproducibility defect the review stage would catch."
+    type: "retro"
     date: "2026-10-31"
