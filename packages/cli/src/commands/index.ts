@@ -18,3 +18,5 @@ export type {
   PhaseTransitionWrite,
 } from "./phase.js";
 export { createPhaseCommandDefinition } from "./phase.js";
+export type { ProviderCommandRuntime } from "./provider.js";
+export { createProviderCommandDefinition } from "./provider.js";

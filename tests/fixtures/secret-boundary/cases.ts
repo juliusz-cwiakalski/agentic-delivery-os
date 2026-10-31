@@ -158,6 +158,16 @@ export const SECRET_READ_CASES: readonly SecretReadCase[] = [
     assertFile: "packages/core/src/provider/probe.ts",
   },
   {
+    id: "provider-cli-process-env",
+    tc: "TC-PROV-038",
+    expect: "violation",
+    rule: SECRET_READ_RULE,
+    files: {
+      "packages/cli/src/commands/provider.ts": "export const secret = process.env.SECRET;\n",
+    },
+    assertFile: "packages/cli/src/commands/provider.ts",
+  },
+  {
     id: "provider-quota-process-env",
     tc: "TC-PROV-038",
     expect: "violation",

@@ -380,7 +380,7 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
             );
           }
         }
-        if (evaluation.park !== undefined) parksPush(views, evaluation, nowMs);
+        parksPush(views, evaluation, nowMs);
         if (evaluation.announcement !== undefined) announcements.push(evaluation.announcement);
       }
       return { ok: true, providers: views, announcements };

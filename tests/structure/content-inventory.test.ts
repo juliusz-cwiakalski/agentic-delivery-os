@@ -96,6 +96,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "cli/src/commands/lint.ts": ["createLintCommandDefinition"],
   "cli/src/commands/phase.ts": ["createPhaseCommandDefinition"],
+  "cli/src/commands/provider.ts": ["createProviderCommandDefinition"],
   "cli/src/edge.ts": [
     "createProductionDependencies",
     "registerEdgeSecrets",
