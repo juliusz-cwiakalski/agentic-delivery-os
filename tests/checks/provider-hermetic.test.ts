@@ -116,3 +116,40 @@ describe("TC-PROV-048 hermetic guarantees", () => {
     }
   });
 });
+
+/** The documented condition/park contract (TC-PROV-062 steps 2-4). */
+export const guideFailures = (text: string): string[] => {
+  const failures: string[] = [];
+  for (const required of [
+    "condition kinds",
+    "park causes",
+    "resume",
+    "expiry",
+    "fail-loud",
+    "provider.peak.parked",
+    "provider.quota.reset_missing",
+    "provider.resumed",
+  ]) {
+    if (!text.toLowerCase().includes(required.toLowerCase())) failures.push(`missing ${required}`);
+  }
+  for (const forbidden of ["process.env", "ZAI_API_KEY", "legacy hook contract"]) {
+    if (text.toLowerCase().includes(forbidden.toLowerCase())) failures.push(`forbidden ${forbidden}`);
+  }
+  return failures;
+};
+
+describe("TC-PROV-062 documentation contract", () => {
+  const path = join(ROOT, "doc/guides/provider-conditions-and-parks.md");
+  test("the guide documents the provider condition/park contract", () => {
+    const text = readFileSync(path, "utf8");
+    expect(guideFailures(text)).toEqual([]);
+    expect(text).toContain("ados_distribution: redistributable");
+    expect(text).not.toContain("test-hook-zai" + "-example.sh");
+  });
+
+  test("removing the condition/park section fails the guide contract", () => {
+    const text = readFileSync(path, "utf8");
+    const removed = text.replace(/## Condition kinds[\s\S]*## Configuration/, "## Configuration");
+    expect(guideFailures(removed).length).toBeGreaterThan(0);
+  });
+});
