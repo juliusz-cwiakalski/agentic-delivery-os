@@ -26,7 +26,8 @@
     "src/state/driver/strategy.ts",
     "src/state/edge.ts",
     "src/state/index.ts",
-    "src/state/ledger.ts"
+    "src/state/ledger.ts",
+    "src/state/registry.ts"
   ],
   "adapters": [
     "src/azure/index.ts",
