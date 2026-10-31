@@ -38,7 +38,10 @@ phases:
   dod_check:
     started: "2026-11-01T00:10:00Z"
     completed: "2026-11-01T00:20:00Z"
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation:
+    started: "2026-11-01T00:25:00Z"
+    completed: null
+    url: null
 
 decisions:
   - text: "Guard architecture is one repo invariant check plus a committed schema-versioned registry as the single authority for scope, generic rule ids, hashed entries, allowlist, and exclusions; adding a literal is a data edit. Recorded as TDR-0005 (Proposed; owner accepts at PR)."
