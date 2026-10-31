@@ -212,7 +212,7 @@ No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scr
 | `tsconfig.base.json` / `tsconfig.json` | Strict base flags / solution references |
 | `.dependency-cruiser.cjs` | Package, subpath, tier, testkit, and runtime-API rules |
 | `scripts/checks/*.ts` | Repository invariant checks run with Bun, including `privacy-literals.ts` and its committed `privacy-literals.registry.json` |
-| `tests/structure/**` | Inventory, subpath, exports, contract-surface, and `createRuntime` assertions |
+| `tests/structure/**` | Inventory, subpath, exports, contract-surface, `createRuntime` assertions, and the envelope single-serialization audit over `packages/`, `scripts/`, and `tools/` |
 | `tests/types/**` | Compile-time contract probes chained into the root `typecheck` |
 | `tests/boundaries/**` | Negative fixtures, controls, and the fixture-coverage meta-check |
 | `tests/behaviour/**` | pnpm isolation, commit-msg hook, adapter-port, credential, envelope round-trip/degradation, envelope content policy, pm-notes lint, corpus, phase, and delivery-registry behaviour |

@@ -67,9 +67,9 @@ The committed rules are data in `packages/adapters/src/io/privacy-rules.ts`; the
 | `secret.bearer-credential` | An authorization assignment carrying a bearer-scheme credential value. |
 | `secret.credential-assignment` | A secret-named key assigned an opaque value satisfying minimum-length and character-class heuristics. |
 | `secret.connection-string-credential` | A connection URI or DSN whose user-information segment carries a password. |
-| `private.absolute-user-path` | An absolute personal home or profile path containing a concrete user segment. |
+| `private.absolute-user-path` | An absolute personal home or profile path in a Unix home form or a Windows drive user-profile form, containing a concrete user segment. |
 
-The patterns are high-specificity by design: they prioritize low false positives over recall, and rule tuning happens in code review rather than through registry data. A committed placeholder-suppression list recognises documentation placeholders, redaction markers, and obviously fabricated sample markers. Marker evaluation is scoped to the rule's protected value segment — the user segment for home/profile paths, the password portion of URI userinfo, the assigned value for credential assignments, and the token tail for bearer credentials — never to the separator, prefix, or key that introduces it. A markerless value therefore still fires even when its separator contains a bare marker token (for example, the `user` in `/Users/` or the `apikey` key in an assignment). The emitter policy is different: it deliberately does not apply documentation-placeholder suppression, because machine-generated metadata has no documentation context.
+The patterns are high-specificity by design: they prioritize low false positives over recall, and rule tuning happens in code review rather than through registry data. A committed placeholder-suppression list recognises documentation placeholders, redaction markers, and obviously fabricated sample markers. Where a rule has a distinct protected value segment — the user segment for home/profile paths, the password portion of URI userinfo, the assigned value for credential assignments, and the token tail for bearer credentials — marker evaluation uses only that segment, never the separator, prefix, or key that introduces it. For the remaining rules, marker evaluation uses the matched span. A markerless value therefore still fires even when its separator contains a bare marker token (for example, the `user` in `/Users/` or the `apikey` key in an assignment). The emitter policy is different: it deliberately does not apply documentation-placeholder suppression, because machine-generated metadata has no documentation context.
 
 ### Registry authority and schema
 
@@ -88,7 +88,7 @@ The patterns are high-specificity by design: they prioritize low false positives
 
 A hashed entry fixes `algorithm` to `sha256`, stores `hash` as exactly 64 lowercase hexadecimal characters, stores `length` as the normalized literal length between 4 and 512 characters, and requires a non-empty `reason`. The raw literal, digest input, salt, and key never appear in the repository. Adding or removing a guarded literal is a reviewed data edit with no code change.
 
-Allowlist entries are exact paths with a written reason and a rule scope. A rule scope is either `["*"]` alone or a non-empty subset of committed rule ids; unknown ids, duplicates, mixed wildcard scopes, absolute paths, POSIX-invalid paths, parent segments, trailing separators, and prefix or wildcard path forms fail closed. Only the synthetic fixture root (`tests/fixtures/privacy-literals/`) may be a directory entry, so a synthetic value can live beside a test without hiding a real value elsewhere. An allowlist entry that matches no enumerated path fails closed. Exclusions are file-only and must exist. The guard's own rule module, check, registry, suites, fixture root, and the enumerated pre-existing or archival paths that cannot be remediated in this change are the only allowlisted surfaces.
+Allowlist entries are exact paths with a written reason and a rule scope. A rule scope is either `["*"]` alone or a non-empty subset of committed rule ids; unknown ids, duplicates, mixed wildcard scopes, absolute paths, POSIX-invalid paths, parent segments, trailing separators, and prefix or wildcard path forms fail closed. Only the synthetic fixture root (`tests/fixtures/privacy-literals/`) may be a directory entry, so a synthetic value can live beside a test without hiding a real value elsewhere. An allowlist entry that matches no enumerated path fails closed. Exclusions are file-only and must exist. The guard's own rule module, check, registry, suites, fixture root, and the enumerated pre-existing or archival paths that cannot be remediated in this change are the only allowlisted surfaces. Archival review and evidence artifacts that quote guard-probe values are allowlisted at their exact path with a rule scope limited to the rules those quotes trigger; they are read-only records, not production content.
 
 ### Normalization, hashing, and matching
 
@@ -116,12 +116,13 @@ The scan enumerates the working tree exactly once through `git ls-files --cached
 
 - Binary detection skips a file when its leading window contains a NUL byte or is not decodable as UTF-8. Binary skips are counted and reported, never silent.
 - Exclusions are applied before binary detection; allowlisted files are still scanned, and the allowlist suppresses only the rules named by each entry at that exact path.
+- Line attribution uses a precomputed newline-offset index and a binary search, so match-dense input stays linear instead of rescanning from the start for each match.
 - Violations are sorted by path, then line, then id using deterministic code-unit ordering, independent of locale or ICU. Nothing is written and no network-capable module is imported by the check.
 - History, archive, encoded-content, and binary deep inspection are outside the claim; a literal that landed before the guard remains in history until a separate owner action.
 
 ### Fail-closed validation
 
-Registry validation runs before any scan result can be reported green. The sequence is: registry presence and size cap; JSON parse and object shape; schema version; scope mode; enabled-rule set equality; class declarations; entry shape, algorithm, digest, length, reason, duplicates, and cross-entry digest/length consistency; entry and class caps; allowlist and exclusion path shape, rule scope, reasons, duplicates, and existence against the enumerated tree. A malformed or weakening edit stops the scan and names the field or entry id; no partial scan is reported as a pass.
+Registry validation runs before any scan result can be reported green. The sequence is: registry presence and size cap; JSON parse and object shape; schema version; scope mode; enabled-rule set equality; class declarations; entry shape, algorithm, digest, length, reason, duplicates, and cross-entry digest/length consistency; entry and class caps; allowlist and exclusion path shape, rule scope, reasons, duplicates, and existence against the enumerated tree. A malformed or weakening edit stops the scan and names the field or entry id; no partial scan is reported as a pass. A JSON parse failure reports a fixed content-free parse-error message rather than the parser's text, so malformed registry content cannot be echoed.
 
 Rejected states include a missing or unknown schema version, an unknown or weaker scope mode, a missing, extra, or unknown enabled rule id, an undeclared or extra class, an empty class without an `emptyReason`, a non-empty class with a non-null `emptyReason`, a malformed entry, a duplicate id, a duplicate digest, a duplicate digest with an inconsistent length, an unknown algorithm, a digest or length shape mismatch, a reasonless entry, an allowlist entry matching no path, a duplicate or reasonless allowlist or exclusion entry, a non-existent exclusion, and any count above the caps.
 
@@ -130,6 +131,7 @@ Rejected states include a missing or unknown schema version, an unknown or weake
 `bun run scripts/checks/privacy-literals.ts --author [--class private-literal|cloud-term]` produces a paste-ready registry entry from a literal supplied on standard input.
 
 - Input is read from hidden terminal input when a TTY is present, or from piped standard input for controlled local use. Command-line arguments and environment variables are never input channels.
+- An unexpected positional argument fails as a usage error that names only its position; the argument value is not echoed.
 - The command never echoes the literal, the digest input, or the domain-separated preimage. It prints only the record fields: an id placeholder, the chosen class, `sha256`, the digest, the normalized length, and a reason placeholder.
 - It writes no repository file and refuses to run when a CI environment is detected.
 - The default class is `private-literal`. The normalized length must be between the minimum and maximum caps; failures do not echo the supplied value.
@@ -164,7 +166,7 @@ type EnvelopeContentPolicy = (compactJson: string) => ContentPolicyVerdict;
 
 A denial returns `{ ok: false, failure: "content-policy-violation", byteLength, ruleOrEntryId }` and produces no carrier. The failure carries the rule or entry id only and never content. Existing `payload-not-closed` and `size-bound-exceeded` failures are unchanged. `content-policy-violation` is codec-local; it is not an error-table row and has no result-contract projection in this feature.
 
-The policy builder `buildEnvelopeContentPolicy({ hash, entries })` combines the shared generic rules with injected hashed entries. Generic rules take deterministic precedence, then hashed entries are consulted through the injected hash. The returned policy is total, non-throwing, and free of I/O, ambient reads, clock, and randomness. The builder validates its injected inputs at construction time and fails closed (throws) on a non-function hash, malformed or duplicate digests, duplicate ids, out-of-range lengths, and more than 32 distinct lengths; this is the fail-closed point for injected entries. The emitter policy intentionally does not apply documentation-placeholder suppression, so a marker-carrying guarded payload is still denied. The distinct-length guard inside the window matcher is a belt-and-braces check that is unreachable after registry and builder validation. The codec imports only contract types and receives the policy and hash as injected inputs, so codec purity is preserved. Human-readable comment content is outside the policy input and is never scanned at the emitter; committed human content is governed by the file scan.
+The policy builder `buildEnvelopeContentPolicy({ hash, entries })` combines the shared generic rules with injected hashed entries. Generic rules take deterministic precedence, then hashed entries are consulted through the injected hash. The returned policy is total, non-throwing, and free of I/O, ambient reads, clock, and randomness. The builder validates its injected inputs at construction time and fails closed (throws) on a non-function hash, a non-array entry set, malformed entry objects, empty or duplicate ids, an unsupported algorithm, malformed or duplicate digests, out-of-range lengths, and more than 32 distinct lengths; this is the fail-closed point for injected entries. The emitter policy intentionally does not apply documentation-placeholder suppression, so a marker-carrying guarded payload is still denied. The distinct-length guard inside the window matcher is a belt-and-braces check that is unreachable after registry and builder validation. The codec imports only contract types and receives the policy and hash as injected inputs, so codec purity is preserved. Human-readable comment content is outside the policy input and is never scanned at the emitter; committed human content is governed by the file scan.
 
 ### Flows
 
@@ -192,7 +194,7 @@ The policy builder `buildEnvelopeContentPolicy({ hash, entries })` combines the 
 | `tests/checks/privacy-support.ts` | Shared synthetic harness for the privacy suites. |
 | `tests/behaviour/envelope-content-policy.test.ts` | Emitter policy denial, ordering, carrier coverage, purity, and shared-rule parity. |
 | `tests/structure/privacy-imports.test.ts` | Rule-module purity and definition-set assertions. |
-| `tests/structure/envelope-contract.test.ts` | Required-policy contract and single-serialization-point assertions. |
+| `tests/structure/envelope-contract.test.ts` | Required-policy contract and single-serialization-point assertions across `packages/`, `scripts/`, and `tools/`. |
 | `tests/types/envelope-policy.type-test.ts` | Compile-time proof that a policy-less call is rejected. |
 | `tests/fixtures/privacy-literals/**` | The synthetic-only fixture root, the sole directory-style allowlist entry. |
 
@@ -216,7 +218,7 @@ The policy builder `buildEnvelopeContentPolicy({ hash, entries })` combines the 
 - **Scan result:** summary counts, per-class entry counts, vacuous classes with reasons, and violation records of `{ ruleOrEntryId, file, line, fingerprint }`.
 - **Human and machine output:** both carry the same content-free fields; the machine mode is the JSON rendering used by tests and CI assertions.
 - **`serializeEnvelope(input)`:** returns `{ ok: true, carrier, byteLength }`, `{ ok: false, failure: "payload-not-closed" | "size-bound-exceeded", byteLength }`, or `{ ok: false, failure: "content-policy-violation", byteLength, ruleOrEntryId }`.
-- **`buildEnvelopeContentPolicy(inputs)`:** returns an `EnvelopeContentPolicy`; its inputs are a pure hash function and hashed entries carrying only `{ id, hash, length }`.
+- **`buildEnvelopeContentPolicy(inputs)`:** returns an `EnvelopeContentPolicy`; its inputs are a pure hash function and hashed entries carrying `{ id, hash, length }` plus an optional `algorithm` declaration fixed to `sha256`. Invalid inputs throw at construction.
 - **Authoring record:** `{ id, class, algorithm, hash, length, reason }` with placeholders for id and reason; the literal and digest input are never output.
 
 ## Non-Functional Requirements
@@ -227,7 +229,7 @@ The policy builder `buildEnvelopeContentPolicy({ hash, entries })` combines the 
 | NFR-2 | Generic-rule precision | 0 violations on the committed false-positive corpus; at least one positive and one near-miss negative per enabled rule. |
 | NFR-3 | Public-log safety | 0 occurrences of a planted literal, a scanned content window, or a digest input in human or machine output; fingerprint derived only from identifiers. |
 | NFR-4 | Non-vacuity | Every enabled rule has positive, near-miss, and mutation coverage; every declared class has a synthetic activation case; every empty class carries a reason. |
-| NFR-5 | Scan performance and linearity | Full working-tree scan within 60 s on the CI reference runner for a text corpus up to 50 MiB; window hashing linear per distinct registered length with at most 32 lengths; emitter policy within 10 ms per 2048-byte envelope; no superlinear backtracking pattern. |
+| NFR-5 | Scan performance and linearity | Full working-tree scan within 60 s on the CI reference runner for a text corpus up to 50 MiB; window hashing linear per distinct registered length with at most 32 lengths; line attribution linear over match-dense input through a precomputed offset index; emitter policy within 10 ms per 2048-byte envelope; no superlinear backtracking pattern. |
 | NFR-6 | Codec purity and compatibility | 0 `node:*`/`bun:*` imports in the codec; 0 ambient environment, clock, randomness, filesystem, or network accesses; all existing envelope behaviour suites green; every serialization call site supplies a policy. |
 | NFR-7 | CI bindingness | The guard is invoked by name in `ts-invariants`; no bypass construct; the binding test job runs the new suites; topology, bindingness, supply-chain, script-surface, and CI-check assertions stay green. |
 | NFR-8 | Release and dependency integrity | 0 new dependencies; unchanged lockfile; one deliberate fixed-group minor release for the contract/codec surface. |
@@ -237,15 +239,15 @@ The policy builder `buildEnvelopeContentPolicy({ hash, entries })` combines the 
 
 | Level | Scope | Evidence |
 |-------|-------|----------|
-| Detection | Each generic rule, placeholder suppression, hashed entries, case and whitespace variants, length boundaries, synthetic class activation | `tests/checks/privacy-literals.test.ts` |
+| Detection | Each generic rule, value-segment placeholder suppression, platform home forms, hashed entries, case and whitespace variants, length boundaries, synthetic class activation | `tests/checks/privacy-literals.test.ts` |
 | Registry validation | Schema, scope, enabled rules, class declarations, entry shape, duplicates, caps, allowlist and exclusion policy | `tests/checks/privacy-registry.test.ts` |
 | Scope | History versus working tree, untracked-but-not-ignored files, ignored files, binary skips, exclusions, deterministic ordering | `tests/checks/privacy-scope.test.ts` |
 | Reporting | Human and machine output, no content echo, fingerprint stability, read-only and offline behavior | `tests/checks/privacy-reporting.test.ts` |
-| Authoring | Record shape, no echo, no writes, CI refusal, no argv or environment channel | `tests/checks/privacy-authoring.test.ts` |
+| Authoring | Record shape, no echo, no writes, CI refusal, no argv or environment input channel, content-free unexpected-positional rejection | `tests/checks/privacy-authoring.test.ts` |
 | Performance | Corpus timing, N/2N scaling, pattern-shape lint, emitter budget | `tests/checks/privacy-performance.test.ts` |
 | CI wiring | Invocation by name, additions-only workflow, local command, binding test execution | `tests/checks/privacy-ci-wiring.test.ts` |
 | Release | Changeset shape, package set, lockfile, dependency integrity | `tests/checks/privacy-release.test.ts` |
-| Emitter policy | Field × carrier denial, validation order, totality, clean round-trip, shared-rule parity, human-content exclusion | `tests/behaviour/envelope-content-policy.test.ts`, `tests/types/envelope-policy.type-test.ts`, `tests/structure/envelope-contract.test.ts` |
+| Emitter policy | Field × carrier denial, validation order, totality, clean round-trip, shared-rule parity, human-content exclusion, construction-time input validation, and the single-serialization audit over `packages/`, `scripts/`, and `tools/` | `tests/behaviour/envelope-content-policy.test.ts`, `tests/types/envelope-policy.type-test.ts`, `tests/structure/envelope-contract.test.ts` |
 | Rule-module purity | Shared definition set, zero-import module, inventory registration | `tests/structure/privacy-imports.test.ts`, `tests/structure/content-inventory.test.ts` |
 | Existing envelope regression | Parse, strip, carriers, degradation, and write path unchanged | `tests/behaviour/envelope-roundtrip.test.ts`, `envelope-degradation.test.ts`, `envelope-write-path.test.ts` |
 | Aggregate | The whole workspace | `pnpm check` |
