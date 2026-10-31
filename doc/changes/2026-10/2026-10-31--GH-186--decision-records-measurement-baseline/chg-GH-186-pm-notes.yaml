@@ -3,10 +3,10 @@ title: "M0-S17: Decision records and measurement baseline"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-10-31T13:55:00Z", completed: "2026-10-31T14:05:00Z" }
-  specification: { started: "2026-10-31T14:06:00Z", completed: "2026-10-31T16:30:00Z", reopened: "2026-10-31T16:10:00Z", iterations: 2 }
-  test_planning: { started: "2026-10-31T14:32:00Z", completed: "2026-10-31T16:30:00Z", reopened: "2026-10-31T16:10:00Z", iterations: 2 }
-  delivery_planning: { started: "2026-10-31T15:27:00Z", completed: "2026-10-31T16:30:00Z", reopened: "2026-10-31T16:10:00Z", iterations: 2 }
-  dor_check: { started: "2026-10-31T15:52:00Z", completed: "2026-10-31T16:08:00Z", iterations: 1, verdict: "NOT_READY" }
+  specification: { started: "2026-10-31T14:06:00Z", completed: null, reopened: "2026-10-31T16:55:00Z", iterations: 3 }
+  test_planning: { started: "2026-10-31T14:32:00Z", completed: null, reopened: "2026-10-31T16:55:00Z", iterations: 3 }
+  delivery_planning: { started: "2026-10-31T15:27:00Z", completed: null, reopened: "2026-10-31T16:55:00Z", iterations: 3 }
+  dor_check: { started: "2026-10-31T16:32:00Z", completed: "2026-10-31T16:52:00Z", iterations: 2, verdict: "NOT_READY (iter 1 and 2)" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -64,5 +64,14 @@ notes:
     type: "retro"
     date: "2026-10-31"
   - text: "DoR remediation complete: spec v1.2 (DEC-14 corpus ingestion: parse -> normalize native date/datetime -> classify; closed exclusion vocabulary; GH-171 unparseable_yaml; corrected reproducible census with command + HEAD; same-commit registration sequencing; ados_distribution internal), test plan v1.2 (native-value helpers, TC-MEAS-007 included filter, v1.2 vocabulary, implementation_plan link), plan v1.1 (doc-sync before review, 77 tasks, produced-in/verified-after AC ledger, clean-tree disposition). 21 ACs / 37 TCs preserved. Re-run DoR iteration 2."
+    type: "decision"
+    date: "2026-10-31"
+  - text: "DoR iteration 2 verdict NOT_READY (readiness-review/readiness-iter-2.md). Closed: iter-1 B1/B2/B3/S5 and notes 7-9; census reproduced exactly at HEAD 4d79116. New blocking: (B4) sample-counter semantics contradict - DM-2 forces changes_included=23 for every metric while the cycle metric needs 20 (GH-177/185/188 lack clarify_scope.started) and the CI metric needs its observed denominator; DM-2 lacks a per-metric excluded field. (B5) TC-MEAS-006 step 2 sums unrounded pair hours while spec F-4/plan PD-5 define sums of recorded 1-decimal change-row values (raw 0.406438 vs recorded 0.406648). Should-fix: spec §18 still says 'plan Phase 12' after the reorder (now Phase 10); test-plan preconditions still use the wrong branch name. Iteration 3 of 3."
+    type: "blocker"
+    date: "2026-10-31"
+  - text: "Retro: iteration 1 remediation fixed the corpus rule but introduced/left a per-metric sample-count contradiction and a rounding-method mismatch. Root cause: the sample model was specified globally (one spine) while metrics legitimately have different inclusion sets. Improvement: define per-metric sample counts in the schema from the start and never equate a spine count with a metric denominator."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "DoR iteration 3 remediation plan: spec DM-2 gains per-metric sample counts and per-metric exclusion reasons (spine included != metric included), and §18's Phase 12 reference becomes Phase 10; test plan aligns TC-MEAS-005/006/007/008 to per-metric counts and sums recorded 1-decimal rows, and fixes branch names; plan PD-4/PD-5 and measurement steps align. Then final DoR iteration 3."
     type: "decision"
     date: "2026-10-31"
