@@ -299,7 +299,7 @@ The observability surface is the park and announcement record plus the command e
 
 ### 14.1 Decision Candidates
 
-The following decisions have system-wide or precedent-setting impact and warrant a decision record. This spec records the chosen behavior; it does not author the records.
+The following decisions have system-wide or precedent-setting impact and warrant a decision record. This spec records the chosen behavior; it does not author the records. The durable decision is recorded in [ADR-0007](../../../decisions/ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md) (R2, status Proposed; owner acceptance pending at the GH-182 PR).
 
 | ID | Candidate | Why it warrants a record |
 |----|-----------|--------------------------|
