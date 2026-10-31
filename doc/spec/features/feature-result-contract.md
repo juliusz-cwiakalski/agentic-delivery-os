@@ -125,6 +125,11 @@ A success envelope has exactly the keys `schemaVersion`, `runId`, `exitCode`, `t
 | state.permission.denied | state | user | false | not_landed | Correct operating-system permissions on the named state path and retry. | user-validation | A state path permission requirement was not met. |
 | state.write.failed | state | transient | true | not_landed | Resolve the underlying storage error and retry; the failed write or rebuild did not land, the ledger remains durable truth, and the index stays disposable. | platform-provider | A state write or index rebuild did not land. |
 | state.level.unsupported | state | user | false | not_landed | Use a state level with an implemented driver; shared levels arrive with later stories. | user-validation | The requested state level has no implementation. |
+| lint.notes.malformed | lint | user | false | not_landed | Correct the document so it conforms to the pm-notes schema (syntax, structure, and value types) and retry. | user-validation | The pm-notes document is malformed. |
+| lint.keys.missing | lint | user | false | not_landed | Add the named required key(s) with a conforming value and retry. | user-validation | A required pm-notes key is missing. |
+| lint.variant.unknown | lint | user | false | not_landed | Set `variant` to `full` or `lite` and retry. | user-validation | The pm-notes variant is unknown. |
+| lint.phases.incomplete | lint | user | false | not_landed | Add the named missing required phase(s) of the declared variant or correct the declared variant. | user-validation | A required phase of the declared variant is missing. |
+| lint.target.missing | lint | user | false | not_landed | pm-notes target only: initialize pm-notes for the named change ref or correct the reference (an absent registry target is a verified-empty pass, C-3). | user-validation | The pm-notes target is missing. |
 
 This table is the human- and agent-readable counterpart of `ERROR_TABLE`. The sync check requires each source entry to have exactly one documented row and each documented row to have exactly one source entry; the two fallback rows are included with no containment exemption.
 

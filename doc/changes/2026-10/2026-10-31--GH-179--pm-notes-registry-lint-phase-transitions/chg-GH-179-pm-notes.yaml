@@ -9,7 +9,7 @@ phases:
   test_planning: { started: "2026-10-31T02:25:00Z", completed: "2026-10-31T03:40:00Z", iterations: "iter-1 STOPPED (B1/B2); iter-2 STOPPED (corpus-vs-rule); iter-3 COMPLETE — 25 TCs, full AC-L1..L6 + NFR-1..5 traceability, zero uncovered" }
   delivery_planning: { started: "2026-10-31T03:45:00Z", completed: "2026-10-31T04:10:00Z", iterations: "iter-1 chunked two-part — 716 lines, 12 phases (8 @coder + 4 lifecycle-mapped), 58 tasks, 25/25 TCs mapped, PIN-1..PIN-8 binding, no inconsistencies found" }
   dor_check: { started: "2026-10-31T04:15:00Z", completed: "2026-10-31T04:30:00Z", verdict: "READY iter-1 (10/10 facets PASS; 0 blocker/0 major/0 minor/3 nit; artifact readiness-review/readiness-iter-1.md; reviewer independently re-ran corpus scan: 6-file corpus 0 failures, GH-171 unparseable confirmed; nits fold at next touches: plan timestamps + spec code-map adapters line + TC-LINT-004 exit-2 oracle)" }
-  delivery: { started: null, completed: null }
+  delivery: { started: "2026-10-31T04:35:00Z", completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
