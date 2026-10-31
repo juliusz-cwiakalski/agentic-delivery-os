@@ -31,7 +31,7 @@ run:
 
 phases:
   - { id: 0, name: "Intake & material scan", status: completed, started: "2026-10-31T08:10:00+01:00", completed: "2026-10-31T08:40:00+01:00" }
-  - { id: 1, name: "North star & vision", status: in_progress, started: "2026-10-31T08:40:00+01:00", completed: null }
+  - { id: 1, name: "North star & vision", status: completed, started: "2026-10-31T08:40:00+01:00", completed: "2026-10-31T12:50:24+01:00" }
   - { id: 2, name: "Scope & roadmap", status: pending, started: null, completed: null }
   - { id: 3, name: "Tech stack & architecture", status: pending, started: null, completed: null }
   - { id: 4, name: "Domain, conventions & quality baseline", status: pending, started: null, completed: null }
@@ -41,12 +41,12 @@ phases:
 
 artifacts:
   # status: pending | draft | approved | written ; confidence: 0.0-1.0
-  north_star:        { status: pending, path: "doc/overview/01-north-star.md", confidence: 0.0 }
+  north_star:        { status: approved, path: "doc/overview/01-north-star.md", confidence: 0.85 }
   roadmap:           { status: pending, path: "doc/planning/oss-tooling/roadmap.md", confidence: 0.0, note: "exists, committed; run verifies and extends, never rewrites" }
   tech_stack:        { status: pending, path: "doc/overview/tech-stack.md", confidence: 0.0 }
   architecture:      { status: pending, path: "doc/overview/architecture-overview.md", confidence: 0.0 }
   glossary:          { status: pending, path: "doc/overview/glossary.md", confidence: 0.0, note: "exists; run extends with tooling terms" }
-  ost:               { status: pending, path: "doc/overview/opportunity-solution-tree.md", confidence: 0.0 }
+  ost:               { status: pending, path: "doc/overview/opportunity-solution-tree.md", confidence: 0.0, note: "not activated; owner approved roadmap/backlog/registry as canonical planning homes at gate 1" }
   personas_jtbd:     { status: pending, path: "doc/overview/01-north-star.md", confidence: 0.0, note: "not activated (multi_user false)" }
   user_journeys:     { status: pending, path: "doc/planning/oss-tooling/user-journeys.md", confidence: 0.0, note: "exists, committed; run verifies" }
   screen_inventory:  { status: pending, path: "doc/overview/screen-inventory.md", confidence: 0.0, note: "not activated (ui_bearing false)" }
@@ -66,6 +66,7 @@ artifacts:
   decision_records:  { status: pending, path: "doc/decisions/", confidence: 0.0, note: "10 records exist; run seeds the open M0-S17 batch" }
 
 decisions:
+  - { phase: 1, text: "Gate 1 approved; owner attention per accepted delivery is the NSM; no separate OST or PRD; no owner-known registry/journeys drift", rationale: "owner answers OPEN-Q4..Q6 and explicit instruction to commit and proceed", date: "2026-10-31" }
   - { phase: 0, text: "project.flow = legacy, scoped to the OSS tooling subproject", rationale: "subproject exists with real delivery history but no inception record; repo framework is out of scope", date: "2026-10-31" }
   - { phase: 0, text: "single-branch single-PR mode on docs/GH-200/tooling-inception, base main-tools", rationale: "explicit owner instruction; overrides the PR-per-phase default", date: "2026-10-31" }
   - { phase: 0, text: "framework artifacts are inputs; verify-only, deltas route to tickets", rationale: "AGENTS.md, .ai/agent/*, .opencode/**, doc/guides/**, delivery-system specs predate the run and are the product", date: "2026-10-31" }
@@ -87,4 +88,4 @@ sessions:
   - { started: "2026-10-31T08:10:00+01:00", phase: 0, notes: "phase 0 artifacts drafted: state, material inventory, repo analysis with gap map, tribal knowledge; gate 0 presented" }
   - { started: "2026-10-31T08:40:00+01:00", phase: 0, notes: "gate 0 closed: OPEN-Q1..Q3 answered inline, answers folded into state and inventory conditions; phase 0 committed" }
 
-last_updated: "2026-10-31T08:40:00+01:00"
+last_updated: "2026-10-31T12:50:24+01:00"
