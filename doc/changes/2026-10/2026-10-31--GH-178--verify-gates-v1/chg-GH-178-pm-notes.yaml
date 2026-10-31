@@ -1,0 +1,70 @@
+change_id: GH-178
+title: "M0-S9: verify gates v1"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-10-31T17:34:58Z", completed: "2026-10-31T17:40:00Z" }
+  specification: { started: "2026-10-31T17:40:30Z", completed: "2026-10-31T19:30:00Z" }
+  test_planning: { started: "2026-10-31T17:44:00Z", completed: "2026-10-31T19:30:00Z" }
+  delivery_planning: { started: "2026-10-31T17:50:00Z", completed: "2026-10-31T19:30:00Z" }
+  dor_check: { started: "2026-10-31T17:56:00Z", completed: "2026-10-31T19:45:00Z" }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions:
+  - text: "Command surface is `verify gates <changeRef>`: the change ref selects the pm-notes ledger and ticket evidence, while the current checkout identifies the delivery branch. No PR-number argument in v1; a detached HEAD or absent open PR fails the relevant gate rather than passing vacuously."
+    date: "2026-10-31"
+  - text: "Owner-gate scan reuses the existing owner-attention contract (`hand-back`, `human-input-needed`) on the open work item, matching status-digest semantics. Unanswered-comment detection is out of scope because the GitHub read slice omits comment sets (ADR-0006)."
+    date: "2026-10-31"
+  - text: "Missing-job detection needs a declared expected job set. The design uses the repository's CI workflow job names read at the runtime edge as the declared CI topology; an unreadable or empty expected set is a gate failure, never a green."
+    date: "2026-10-31"
+  - text: "Push parity compares the local checkout HEAD SHA with the delivery request head SHA for the same branch. A missing PR, unreadable head, or unresolvable SHA fails the gate."
+    date: "2026-10-31"
+  - text: "Squash preflight verifies the PR targets `main-tools` (the integration base per AGENTS.md), is open and non-draft, and has a non-vacuous commit/change surface. Unknown mergeability is not treated as mergeable."
+    date: "2026-10-31"
+open_questions:
+  - text: "Whether a later story should accept a PR number or arbitrary ref as the gate target. Deferred; v1 operates on the checked-out delivery branch."
+    date: "2026-10-31"
+blockers: []
+notes:
+  - text: "Spec authored with 30 ACs; five fixed gate ids; two additive verify error rows; DeliveryRequest gate facts additive; expected job set read at the edge from the CI workflow."
+    type: decision
+    date: "2026-10-31"
+  - text: "DoR iteration 1 NOT_READY: 3 critical (unreachable branch-mismatch; 404/absent not distinguishable on the delivered provider read; lifecycle failure citations lack structured missing-phase evidence), 5 major (test-inventory updates missing; trap coverage/paths wrong; open-PR limit undeclared and one-sided; new feature doc missing from forbidden-literal registry; humanText hook underspecified). Reopened specification, test_planning, and delivery_planning."
+    type: retro
+    date: "2026-10-31"
+  - text: "DoR READY: final verification pass (iteration 5) reports 0 blocking findings, all 10 facets PASS, 36/36 ACs and 70/70 TCs traced, and exact reverse traceability. Two minor advisory notes remain for delivery planning (cli-edge-seam NEW_COMMAND_FILES/command-surface registration); tracked as delivery-time details, not blockers."
+    type: decision
+    date: "2026-10-31"
+  - text: "Redaction-order remediation complete: spec v1.5 widens humanText to string|undefined, verify change returns undefined and stays on redact-then-serialize, gates returns the six-line report; failure summaries always render counts=/names= with '-' when empty; test plan v1.5 and plan v1.4 align TC-063/042/038/040 and reverse traceability."
+    type: info
+    date: "2026-10-31"
+  - text: "Verification pass 4 NOT_READY: iteration-3 findings 1-3 closed, but the shared humanText hook contradicted verify change byte-identity/redaction order for JSON-escaping-sensitive secrets. Fix: widen the hook to return string|undefined; verify change returns undefined and stays on humanSuccess/humanJson (redact-then-serialize); gates returns the six-line report. Also pin empty-counts rendering and the omitted-count assertions."
+    type: retro
+    date: "2026-10-31"
+  - text: "Final citation/sequencing remediation complete: spec v1.4 allows empty counts/names on failed/absent/not-attempted sources while keeping every citation source+reason complete; test plan v1.4 aligns TC-039/040/061/067 and adds the TC-063 secret control; plan v1.3 moves the error-table baseline to Phase 1.3 and the output suite to Phase 5.6."
+    type: info
+    date: "2026-10-31"
+  - text: "DoR iteration 3 NOT_READY: one critical citation-completeness conflict on the squash detail-404/failed-detail path, plus two plan sequencing defects (error-table baseline updated too late; output suite created before the CLI). All other iteration-2 findings closed. Running one narrowly scoped final remediation and verification pass to avoid blocking delivery on mechanical citation/sequencing rules; recorded as a deliberate cap exception."
+    type: retro
+    date: "2026-10-31"
+  - text: "Final DoR remediation complete: spec v1.3 (36 ACs), test plan v1.3 (70 TCs), plan v1.2 (10 phases/53 tasks) define the detail-404 head-unresolved rule, check-run 404 as absent/unknown, package-root exports, the combined verify runtime, DM-15 failure fields, CI denominators, empty squash signals, and bounded failureClass."
+    type: info
+    date: "2026-10-31"
+  - text: "DoR iteration 2 NOT_READY: CI PR-detail 404 undefined (critical); check-run 404 source-outcome contradiction; missing core package-root export; stale TC-013/TC-008; stale OQ-T4; ambiguous CLI composition seam. Reopened specification, test_planning, delivery_planning for the final iteration."
+    type: retro
+    date: "2026-10-31"
+  - text: "DoR remediation complete: spec v1.2 adds the shared open-PR resolution rule, provider.not-found, structured VerifyLedgerEvaluation, the open-PR limit, trap/registry fixes, and humanText dispatch; test plan v1.2 covers 34 ACs/66 TCs; plan v1.1 has 10 phases/52 tasks."
+    type: info
+    date: "2026-10-31"
+  - text: "Reopened specification: test planning found the squash-preflight citation did not declare draft/mergeability fields (GAP-3). Fixing the citation contract before planning resumes."
+    type: retro
+    date: "2026-10-31"
+  - text: "Ticket AC: verify gates catches a red pipeline, a missing job, and a vacuous green; each verdict cites its evidence."
+    type: info
+    date: "2026-10-31"
+  - text: "Doc-risk inventory: new feature spec for verify gates; reconcile feature-verify-change (consumer link), change-lifecycle/DoD guides (manual merge checklist), glossary (gate, citation), documentation index, and any adapter/port spec touched by PR head metadata."
+    type: risk
+    date: "2026-10-31"
