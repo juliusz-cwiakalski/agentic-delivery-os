@@ -150,6 +150,13 @@
       "path": "tests/behaviour/envelope-content-policy.test.ts",
       "rules": ["*"],
       "reason": "The codec content-policy suite imports synthetic fixture values and asserts rule/entry ids at the emitter."
+    },
+    {
+      "id": "privacy-release-suite",
+      "kind": "file",
+      "path": "tests/checks/privacy-release.test.ts",
+      "rules": ["*"],
+      "reason": "The guard's release-integrity suite names the changeset, package set, and lockfile assertions."
     }
   ],
   "exclusions": [

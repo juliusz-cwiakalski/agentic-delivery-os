@@ -156,6 +156,12 @@ export const EXPECTED_ALLOWLIST: readonly ExpectedAllowlist[] = [
     path: "tests/behaviour/envelope-content-policy.test.ts",
     rules: ["*"],
   },
+  {
+    id: "privacy-release-suite",
+    kind: "file",
+    path: "tests/checks/privacy-release.test.ts",
+    rules: ["*"],
+  },
 ];
 
 export const fixtureEntry = (index: number, className: string, length = 8): EntryLike => ({
