@@ -83,3 +83,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - `/write-plan`: generate an implementation plan
 - `/write-spec`: generate a change spec
 - `/write-test-plan`: generate a change test plan
+
+## Skills
+
+- `consolidate-memory`: curate `.ai/memory` by validating evidence, deduplicating, superseding, pruning, promoting, enforcing caps, and rebuilding the index (`.opencode/skills/consolidate-memory/SKILL.md`).

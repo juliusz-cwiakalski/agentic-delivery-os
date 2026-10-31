@@ -105,11 +105,11 @@ Deliver the practices-now track of the ADOS memory model as text and skill conte
 
 **Tasks**:
 
-- [ ] **3.1** Shorten the `description` to one concise sentence of at most 20 words while keeping trigger keywords in the body; keep it a quoted scalar containing a colon-space; keep `name` equal to `consolidate-memory`; prove a real YAML parse succeeds (R9, AC-5, F-21).
-- [ ] **3.2** Replace direct fact and decision promotion with a handoff proposal naming `@doc-syncer` for `doc/spec` and `@decision-advisor` for `doc/decisions`; the skill never writes those targets, and policies and security rules stay owner-only (R9, AC-8, F-5).
-- [ ] **3.3** Align the hard rules with the complete operation set: dedup merge preserving evidence and substance, demote or drop evidence-less entries with a reason, supersede, stale prune with a reason, move promoted lines to pointers, cap splits, and index rebuild; no substantive rewording; report every cross-folder edit (R4, R9, F-2).
-- [ ] **3.4** Replace recency-as-authority wording with evidence and current-truth resolution; make record creation use the quoted YAML 1.2 form and verify a real parse (R5, R8, F-4, F-7).
-- [ ] **3.5** Add one skills inventory line to `.opencode/README.md` for `.opencode/skills/consolidate-memory/SKILL.md`; change no agent or command inventory line (AC-6).
+- [x] **3.1** Shorten the `description` to one concise sentence of at most 20 words while keeping trigger keywords in the body; keep it a quoted scalar containing a colon-space; keep `name` equal to `consolidate-memory`; prove a real YAML parse succeeds (R9, AC-5, F-21). (validated: 15 words, quoted, PyYAML parse ok, non-vacuity ScannerError)
+- [x] **3.2** Replace direct fact and decision promotion with a handoff proposal naming `@doc-syncer` for `doc/spec` and `@decision-advisor` for `doc/decisions`; the skill never writes those targets, and policies and security rules stay owner-only (R9, AC-8, F-5). (validated present in routing table and hard rules)
+- [x] **3.3** Align the hard rules with the complete operation set: dedup merge preserving evidence and substance, demote or drop evidence-less entries with a reason, supersede, stale prune with a reason, move promoted lines to pointers, cap splits, and index rebuild; no substantive rewording; report every cross-folder edit (R4, R9, F-2). (validated present)
+- [x] **3.4** Replace recency-as-authority wording with evidence and current-truth resolution; make record creation use the quoted YAML 1.2 form and verify a real parse (R5, R8, F-4, F-7). (validated: conflict section, record frontmatter section)
+- [x] **3.5** Add one skills inventory line to `.opencode/README.md` for `.opencode/skills/consolidate-memory/SKILL.md`; change no agent or command inventory line (AC-6). (done: Skills section appended, no other diff)
 
 **Acceptance Criteria**: Must: AC-5, AC-6, AC-8, R9, NFR-1. Should: the skill stays at or under 150 lines and follows the short-description convention.
 
@@ -197,6 +197,6 @@ Deliver the practices-now track of the ADOS memory model as text and skill conte
 |---|---|---|---|---|---|
 | 1 | Complete | 2026-10-31 | 2026-10-31 | phase 1 commit: docs(GH-204): add agent memory kernel rules | Kernel covers R1..R10; scoped diff one hunk; dash scan clean. |
 | 2 | Complete | 2026-10-31 | 2026-10-31 | phase 2 commit: docs(GH-204): add memory index, seeds, and record trees | README 150 lines, seeds 12-13 lines, both .gitkeep empty, index coverage 4/4. |
-| 3 | Pending | - | - | - | - |
+| 3 | Complete | 2026-10-31 | 2026-10-31 | phase 3 commit: docs(GH-204): add consolidate-memory skill and inventory entry | Skill 135 lines, description 15 words, parse ok; one Skills section in README. |
 | 4 | Pending | - | - | - | - |
 | 5..11 | PM-owned | - | - | - | not marked by coder; AC-15 evidence added at phase 11 |
