@@ -108,6 +108,7 @@ type InvariantViolation = {
 const redactText = (value: string): string =>
   value
     .replace(/Authorization"\s*:\s*"Bearer\s+[^\s"]+/gi, 'Authorization": "Bearer [redacted]')
+    .replace(/\bBearer\s+[A-Za-z0-9._-]{8,}/g, "Bearer [redacted]")
     .replace(/\bghp_[A-Za-z0-9]{16,}\b/g, "[redacted-token]")
     .replace(/\bglpat-[A-Za-z0-9_-]{16,}\b/g, "[redacted-token]")
     .replace(/\bATATT3?[A-Za-z0-9_-]{10,}\b/g, "[redacted-token]")

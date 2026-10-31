@@ -12,6 +12,10 @@ export {
   CONFORMANCE_STATUSES,
   CONFORMANCE_STEP_STATUSES,
   CONFORMANCE_TIERS,
+  CONFORMANCE_TRUNCATION_MARKER,
+  serializeConformanceArtifact,
+  toConformanceArtifact,
+  validateConformanceArtifact,
 } from "./conformance/artifact.js";
 export { CONFORMANCE_ADAPTERS } from "./conformance/adapters.js";
 export {
