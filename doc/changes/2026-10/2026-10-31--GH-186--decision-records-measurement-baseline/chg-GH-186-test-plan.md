@@ -7,7 +7,7 @@ owners: ["Juliusz Ćwiąkalski"]
 service: delivery-os decision and measurement substrate
 labels: ["documentation", "decision-records", "measurement", "M0"]
 version_impact: none
-summary: "Verify the documentation-only M0-S17 change without runtime code: exactly four new Proposed decision records and a binding register whose eight topic rows resolve to existing records/anchors, a prospective v1 command-name lock with byte-identical command tables and zero renames, a schema-versioned measurement baseline whose four MET metrics are recomputed exactly from named committed sources after YAML-native date/datetime normalization and a closed exclusion vocabulary (MEASURED/PARTIAL/UNAVAILABLE honoured; unparseable/placeholder-only artifacts named and counted; ratio 0–1 canonical and percent derived; p90 nearest-rank; DM-2 change mapping), the two named index repairs, link integrity, doc-distribution and guarded-literal gates, and a docs-only diff with zero changes under packages/** and tools/** whose only scripts/** edit is the data-only `registered` addition in scripts/checks/forbidden-literals.registry.json (DEC-13), including same-commit forbidden-literal registration and seed-literal compliance for both new user-facing docs (C-10, AC-C10-1)."
+summary: "Verify the documentation-only M0-S17 change without runtime code: exactly four new Proposed decision records and a binding register whose eight topic rows resolve to existing records/anchors, a prospective v1 command-name lock with byte-identical command tables and zero renames, a schema-versioned measurement baseline whose four MET metrics are recomputed exactly from named committed sources after YAML-native date/datetime normalization and a closed exclusion vocabulary (MEASURED/PARTIAL/UNAVAILABLE honoured; unparseable/placeholder-only artifacts named and counted in a shared spine plus per-metric sample counters that conserve independently; ratio 0–1 canonical and percent derived; p90 nearest-rank; DM-2 change mapping), the two named index repairs, link integrity, doc-distribution and guarded-literal gates, and a docs-only diff with zero changes under packages/** and tools/** whose only scripts/** edit is the data-only `registered` addition in scripts/checks/forbidden-literals.registry.json (DEC-13), including same-commit forbidden-literal registration and seed-literal compliance for both new user-facing docs (C-10, AC-C10-1)."
 links:
   change_spec: ./chg-GH-186-spec.md
   implementation_plan: ./chg-GH-186-plan.md
@@ -46,10 +46,10 @@ The plan is therefore a checklist of reproducible verification procedures (file 
 
 ## 2. References
 
-- Change specification: [chg-GH-186-spec.md](./chg-GH-186-spec.md) v1.2 — ACs in §17 (21 criteria, including AC-C10-1), hard constraints §9.1 (C-1…C-10), NFRs §9.2 (NFR-1…NFR-10), DM contracts §8.3, decision log §15 (DEC-1…DEC-14, including the normative corpus-ingestion rule DEC-14), Appendix A census §24.1, artifact inventory §24.2.
+- Change specification: [chg-GH-186-spec.md](./chg-GH-186-spec.md) v1.3 — ACs in §17 (21 criteria, including AC-C10-1), hard constraints §9.1 (C-1…C-10), NFRs §9.2 (NFR-1…NFR-10), DM contracts §8.3 (DM-2 carries the v1.3 per-metric sample model), decision log §15 (DEC-1…DEC-14, including the normative corpus-ingestion rule DEC-14), Appendix A census §24.1, artifact inventory §24.2.
 - PM notes (clarify decisions, delivery mode): [chg-GH-186-pm-notes.yaml](./chg-GH-186-pm-notes.yaml).
 - Repository testing strategy: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — docs → static/diff + content checks; `git diff --check`; evidence recorded in change artifacts.
-- Implementation plan: [chg-GH-186-plan.md](./chg-GH-186-plan.md) — the plan's PD-3/PD-4 corpus pins and Phase-6 measurement procedure are the delivery counterpart of this plan's recompute checks; this plan remains spec-derived and TC numbering is independent of the plan's phase numbering.
+- Implementation plan: [chg-GH-186-plan.md](./chg-GH-186-plan.md) — the plan's PD-3/PD-4 corpus pins, PD-5 recorded-row rounding, and Phase-6 measurement procedure are the delivery counterpart of this plan's recompute checks; where PD-4 still names the retired global `changes_parsed`/`changes_included`/`changes_excluded` counters, spec v1.3 DM-2 (per-metric `spine_*`/`metric_*` sample counters) is authoritative. This plan remains spec-derived and TC numbering is independent of the plan's phase numbering.
 - Corpus-exclusion precedent: [tests/fixtures/pm-notes/corpus-exclusions.json](../../../../tests/fixtures/pm-notes/corpus-exclusions.json) — the manifest naming the single known-unparseable historical pm-notes artifact (GH-171); the baseline mirrors it with `unparseable_yaml` and does not edit it.
 - Guard entry points actually present in the repository:
   - `bash scripts/.tests/test-doc-distribution.sh` and `bash scripts/.tests/test-doc-distribution-modes.sh` (CI job `doc-distribution-guard`, [.github/workflows/ci.yml](../../../../.github/workflows/ci.yml)).
@@ -75,11 +75,11 @@ All 21 acceptance criteria map to at least one scenario, and every scenario maps
 | AC-F2-2 | Each Decision section states the required elements from spec §5.1 (per record) | TC-DEC-004, TC-DEC-005, TC-DEC-006, TC-DEC-007 | Manual review + token assertions | Covered |
 | AC-F3-1 | Registry title/heading say v1, lock banner names ODR-0003 + date, every command table row byte-identical | TC-DEC-014, TC-DEC-015 | Assertion + base-vs-HEAD table diff | Covered |
 | AC-F3-2 | 0 command renames; ODR-0003 states freeze/new-command/superseding-record rule and confirms `provider`, `provider-quota`, `DeliveryRequest` | TC-DEC-007, TC-DEC-015 | Command-token set diff + content review | Covered |
-| AC-F4-1 | Log exists at the pinned path, parses as YAML, carries the required top-level keys, `source_commit` 40-hex, all four `MET-` IDs, the DM-2 `change` mapping identifying `GH-186`, and `changes` sequence of exactly one row per committed `chg-*-pm-notes.yaml` at `source_commit` (including `included: false` rows for unparseable files) | TC-MEAS-001, TC-MEAS-002, TC-MEAS-005 | YAML parse + key/spine assertions | Covered |
-| AC-F4-2 | Metric rows carry definition/formula/unit/window/sources/status/value/sample/direction; every non-null number cited; every change row cites pm-notes; incident rows cite artifact + anchor | TC-MEAS-002, TC-MEAS-003, TC-MEAS-004 | Schema assertion + source resolution | Covered |
-| AC-F4-3 | Ratio metrics reproduce exactly on recomputation (0 tolerance) after normalizing YAML-native `date`/`datetime` scalars and excluding placeholder zero times; no denominator without a sample count/inclusion rule | TC-MEAS-005, TC-MEAS-006, TC-MEAS-007, TC-MEAS-008, TC-MEAS-009 | Recompute from named sources after DEC-14 normalization | Covered |
+| AC-F4-1 | Log exists at the pinned path, parses as YAML, carries the required top-level keys, `source_commit` 40-hex, all four `MET-` IDs, the DM-2 `change` mapping identifying `GH-186`, and `changes` sequence of exactly one row per committed `chg-*-pm-notes.yaml` at `source_commit` (including `included: false` rows for unparseable files); the shared `changes` spine is distinct from the per-metric samples (a spine `included` flag does not by itself define any metric's `metric_included`) | TC-MEAS-001, TC-MEAS-002, TC-MEAS-005 | YAML parse + key/spine/sample-separation assertions | Covered |
+| AC-F4-2 | Metric rows carry definition/formula/unit/window/sources/status/value/per-metric `sample` counters/`metric_excluded_changes`/direction; every non-null number cited; every change row cites pm-notes; incident rows cite artifact + anchor | TC-MEAS-002, TC-MEAS-003, TC-MEAS-004 | Schema assertion + source resolution | Covered |
+| AC-F4-3 | Every metric reproduces exactly on recomputation (0 tolerance) after normalizing YAML-native `date`/`datetime` scalars and excluding placeholder zero times; `spine_rows`/`spine_included`/`spine_excluded` are identical on every metric row and conserve `spine_rows = spine_included + spine_excluded`; each metric conserves `spine_included = metric_included + metric_excluded` with `metric_excluded = len(metric_excluded_changes)`; cycle-time `metric_included` counts spine-included rows with a usable `clarify_scope.started`; CI `metric_included` equals its observed denominator; no denominator without a sample count/inclusion rule | TC-MEAS-005, TC-MEAS-006, TC-MEAS-007, TC-MEAS-008, TC-MEAS-009 | Recompute from named sources after DEC-14 normalization; per-metric conservation | Covered |
 | AC-F4-4 | `UNAVAILABLE` → `value: null` + `missing_source`; CI metric is `session_proxy` with a limitation naming the absent run log; no estimate as measurement; a time metric over an unparseable/placeholder corpus is `PARTIAL`, not `MEASURED` | TC-MEAS-008, TC-MEAS-010 | Status-matrix assertion | Covered |
-| AC-F4-5 | Window start/end exact; GH-186 excluded as `capture_change`; date-only pairs counted; every excluded change carries exactly one closed-vocabulary reason (`unparseable_yaml`, `date_only_or_missing_time`, `placeholder_zero_time`, `capture_change`, `outside_window`; `no_ci_observation` is a CI-sample reason only); GH-171 appears as its own `unparseable_yaml` row counted in `changes_excluded`; comparison protocol states same-definition/equal-window/supersede-on-change | TC-MEAS-005, TC-MEAS-011 | Field assertion + content review | Covered |
+| AC-F4-5 | Window start/end exact; GH-186 excluded as `capture_change`; date-only pairs counted; every excluded change carries exactly one closed-vocabulary reason (`unparseable_yaml`, `date_only_or_missing_time`, `placeholder_zero_time`, `capture_change`, `outside_window`; `no_ci_observation` is a CI-sample reason only); GH-171 appears as its own `unparseable_yaml` row counted in `sample.spine_excluded`; metric-level exclusions are listed in `metric_excluded_changes` with exactly one closed metric reason (`missing_metric_input`/`no_ci_observation`) and conserve `spine_included = metric_included + metric_excluded`; comparison protocol states same-definition/equal-window/supersede-on-change | TC-MEAS-005, TC-MEAS-011 | Field assertion + conservation check + content review | Covered |
 | AC-F5-1 | Four new index rows with correct type/title/status/date/owner, in numeric order | TC-DEC-011 | Row parse + record cross-check | Covered |
 | AC-F5-2 | TDR-0005 row ID/link text repaired and ordered before TDR-0006; PDR-0002 title matches its heading; no other pre-existing row changed | TC-DEC-012 | Row-set diff against base | Covered |
 | AC-F5-3 | Every new/changed index/register link resolves; index and `doc/decisions/README.md` both link the register | TC-DEC-013, TC-SYNC-004 | Link extraction + resolution + manual anchor check | Covered |
@@ -106,7 +106,7 @@ No HTTP endpoints or events are added (spec §8.1–§8.2). The documented data 
 | ID | Interface / Contract | TC ID(s) |
 |----|----------------------|----------|
 | DM-1 | Foundational decision register: columns `Topic`, `Binding record(s)`, `Anchor(s)`, `Status`, `Binding note`; eight rows; no decision text; update rule; `ados_distribution: project-generated`; linked from index and README | TC-DEC-008, TC-DEC-009, TC-DEC-013 |
-| DM-2 | Measurement baseline log schema: top-level keys (including the `change` mapping `{ref, tracker, excluded_from_samples}`), `change-row` keys, `metric-row` keys, `sample`/`aggregates`/incident-row keys; canonical ratio 0–1 `value`; `p90_h` by nearest-rank | TC-MEAS-001, TC-MEAS-002, TC-MEAS-005, TC-MEAS-006, TC-MEAS-007, TC-MEAS-008, TC-MEAS-011 |
+| DM-2 | Measurement baseline log schema: top-level keys (including the `change` mapping `{ref, tracker, excluded_from_samples}`), `change-row` keys, `metric-row` keys (including per-metric `sample` `spine_*`/`metric_*` counters and `metric_excluded_changes[]`), `aggregates`/incident-row keys; canonical ratio 0–1 `value`; `p90_h` by nearest-rank | TC-MEAS-001, TC-MEAS-002, TC-MEAS-005, TC-MEAS-006, TC-MEAS-007, TC-MEAS-008, TC-MEAS-011 |
 | DM-3 | Command-name lock surface: command/family names + `provider` family + `provider-quota` adapters subpath + `DeliveryRequest`; global options/config keys/brand name outside the lock | TC-DEC-007, TC-DEC-014, TC-DEC-015 |
 | DM-4 | New decision-record front matter contract: `id`, `decision_type`, `status: Proposed`, `created`, `decision_date: null`, `last_updated`, `summary`, `owners`, `service`, `classification`, `governance`, `links` | TC-DEC-002, TC-DEC-003, TC-DEC-010 |
 
@@ -225,7 +225,7 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
 
 **Preconditions**:
 
-- Branch `feat/GH-186/decision-records-measurement-baseline` checked out; `origin/main-tools` fetched.
+- Branch `feat/GH-186/decision-records-and-measurement-baseline` checked out; `origin/main-tools` fetched.
 - `BASE="$(git merge-base origin/main-tools HEAD)"` recorded.
 
 **Steps**:
@@ -990,22 +990,27 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
 
 **Steps**:
 
-1. Assert every `metric-row` carries the DM-2 key set (`id`, `name`, `status`, `measurement_kind`, `definition`, `formula`, `unit`, `window`, `sources`, `sample`, `numerator`, `denominator`, `value`, `aggregates`, `limitation`, `direction`, `comparison_note`):
+1. Assert every `metric-row` carries the DM-2 key set (`id`, `name`, `status`, `measurement_kind`, `definition`, `formula`, `unit`, `window`, `sources`, `sample`, `metric_excluded_changes`, `numerator`, `denominator`, `value`, `aggregates`, `limitation`, `direction`, `comparison_note`):
    ```bash
    python3 - <<'PY'
    import yaml
    d=yaml.safe_load(open("doc/planning/oss-tooling/measurement-baseline.yaml"))
    need={"id","name","status","measurement_kind","definition","formula","unit","window","sources",
-         "sample","numerator","denominator","value","aggregates","limitation","direction","comparison_note"}
-   sample_need={"changes_parsed","changes_included","changes_excluded","phase_pairs_included",
-                "phase_pairs_excluded","date_only_pairs_excluded","excluded_unobserved"}
+         "sample","metric_excluded_changes","numerator","denominator","value","aggregates","limitation",
+         "direction","comparison_note"}
+   sample_need={"spine_rows","spine_included","spine_excluded","metric_included","metric_excluded",
+                "phase_pairs_included","phase_pairs_excluded","date_only_pairs_excluded",
+                "excluded_unobserved"}
    for m in d["metrics"]:
        assert not need-set(m), (m["id"], sorted(need-set(m)))
        assert not sample_need-set(m["sample"] or {}), (m["id"], sorted(sample_need-set(m["sample"] or {})))
+       for c in (m["metric_excluded_changes"] or []):
+           assert {"ref","reason"} <= set(c), (m["id"], c)
+           assert c["reason"] in {"missing_metric_input","no_ci_observation"}, (m["id"], c)
    print("metric rows ok")
    PY
    ```
-   `missing_source` is required only when `status == "UNAVAILABLE"` (asserted in TC-MEAS-010).
+   `missing_source` is required only when `status == "UNAVAILABLE"` (asserted in TC-MEAS-010). The retired global `changes_parsed`/`changes_included`/`changes_excluded` counters are not valid metric-row keys; their presence is a defect.
 2. Assert every `change-row` carries: `ref`, `pm_notes`, `included`, `excluded_reason`, `phase_pairs_included`, `phase_pairs_excluded`, `date_only_pairs_excluded`, `ceremony_duration_h`, `total_phase_duration_h`, `cycle_time_h`, `cycle_time_censored`, `ci_observed`, `ci_outcome`, `ci_observations`, `false_signal_incidents`.
 3. Assert each `ci_observations[]` entry carries `artifact`, `anchor`, `outcome`, `checks_affected`, and each `false_signal_incidents[]` entry carries `class`, `artifact`, `anchor`, `signal`, `reality`, `checks_affected`.
 4. Assert `aggregates` carries `median_h`, `min_h`, `max_h`, and that each metric `window` carries `start`/`end` consistent with the top-level window.
@@ -1206,28 +1211,52 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
    ```
    ```bash
    python3 - <<'PY'
-   import yaml
+   import re, datetime as dt, yaml
    d=yaml.safe_load(open("doc/planning/oss-tooling/measurement-baseline.yaml"))
    assert len(d["changes"])==len({r["pm_notes"] for r in d["changes"]})
    included=[r for r in d["changes"] if r["included"]]
-   for m in d["metrics"]:
-       s=m["sample"]
-       assert s["changes_parsed"]==len(d["changes"]), m["id"]
-       assert s["changes_excluded"]==sum(1 for r in d["changes"] if not r["included"]), m["id"]
-       assert s["changes_parsed"]==s["changes_included"]+s["changes_excluded"], m["id"]
-       if m["id"]=="MET-CI-FAILURE-RATE":
-           observed=[r for r in included if r["ci_observed"] is True]
-           assert s["changes_included"]==len(observed), m["id"]
-           assert s["excluded_unobserved"]==len(included)-len(observed), m["id"]
-       else:
-           assert s["changes_included"]==len(included), m["id"]
+   def usable_start(r):
+       ph=(yaml.safe_load(open(r["pm_notes"])).get("phases") or {})
+       v=(ph.get("clarify_scope") or {}).get("started")
+       if isinstance(v,dt.datetime): return (v.hour,v.minute,v.second)!=(0,0,0)
+       if isinstance(v,dt.date): return False
+       if isinstance(v,str):
+           s=v.strip()
+           return bool(re.search(r"T\d{2}:\d{2}",s)) and not re.search(r"T00:00:00",s)
+       return False
    gh171=[r for r in d["changes"] if r["pm_notes"].endswith("chg-GH-171-pm-notes.yaml")]
    assert len(gh171)==1, gh171
    assert gh171[0]["included"] is False and gh171[0]["excluded_reason"]=="unparseable_yaml", gh171[0]
-   print("spine and sample arithmetic ok")
+   for m in d["metrics"]:
+       s=m["sample"]; excluded=[c["ref"] for c in (m["metric_excluded_changes"] or [])]
+       # Shared spine counters: identical on every metric row and separately conserved.
+       assert s["spine_rows"]==len(d["changes"]), m["id"]
+       assert s["spine_included"]==len(included), m["id"]
+       assert s["spine_excluded"]==len(d["changes"])-len(included), m["id"]
+       assert s["spine_rows"]==s["spine_included"]+s["spine_excluded"], m["id"]
+       # Per-metric counters: metric inclusion is independent of spine inclusion.
+       assert s["spine_included"]==s["metric_included"]+s["metric_excluded"], m["id"]
+       assert s["metric_excluded"]==len(excluded), m["id"]
+       if m["id"]=="MET-CI-FAILURE-RATE":
+           observed=[r for r in included if r["ci_observed"] is True]
+           assert s["metric_included"]==len(observed), m["id"]
+           assert s["excluded_unobserved"]==s["metric_excluded"], m["id"]
+           assert set(excluded)=={r["ref"] for r in included if r["ci_observed"] is not True}, m["id"]
+           assert all(c["reason"]=="no_ci_observation" for c in m["metric_excluded_changes"]), m["id"]
+       elif m["id"]=="MET-CYCLE-TIME":
+           cyc=[r for r in included if usable_start(r)]
+           assert s["metric_included"]==len(cyc), m["id"]
+           assert s["excluded_unobserved"]==0, m["id"]
+           assert set(excluded)=={r["ref"] for r in included if not usable_start(r)}, m["id"]
+           assert all(c["reason"]=="missing_metric_input" for c in m["metric_excluded_changes"]), m["id"]
+       else:  # ceremony share and false-signal incidents scan every spine-included row
+           assert s["metric_included"]==s["spine_included"], m["id"]
+           assert s["metric_excluded"]==0 and not excluded, m["id"]
+           assert s["excluded_unobserved"]==0, m["id"]
+   print("spine and per-metric sample arithmetic ok")
    PY
    ```
-   The CI metric's sample is the observed subset (`changes_included` = denominator, `excluded_unobserved` = included-but-unobserved); the other metrics use all included rows. The log must state the metric-specific sample rule in its `definition`/`limitation` (TC-MEAS-008 cross-checks the CI row).
+   `sample.spine_rows`/`spine_included`/`spine_excluded` are the shared corpus counters (identical on every metric row). Each metric's `sample` is independently conserved: ceremony share and false-signal incidents scan all spine-included rows (`metric_included = spine_included`, `metric_excluded = 0`); cycle time uses the spine-included rows with a usable non-placeholder `clarify_scope.started` (`metric_included`, with the rest listed in `metric_excluded_changes` as `missing_metric_input`); the CI metric's sample is the observed subset (`metric_included` = denominator, `excluded_unobserved` = `metric_excluded` = included-but-unobserved, each listed as `no_ci_observation`). No metric is forced to `len(included)`. The log must state each metric-specific sample rule in its `definition`/`limitation` (TC-MEAS-008 cross-checks the CI row).
 5. Assert per-change phase-pair counters recompute from the cited pm-notes **after the DEC-14 normalization** (YAML-native `datetime` → ISO-8601 time, YAML-native `date` → date-only, `00:00:00` → placeholder). Classification order: a pair with any date-only endpoint counts in `date_only_pairs_excluded`; else a pair with any null/missing endpoint **or placeholder zero-time endpoint** counts in `phase_pairs_excluded`; else it is included:
    ```bash
    python3 - <<'PY'
@@ -1260,21 +1289,21 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
    print("phase-pair counts ok after normalization")
    PY
    ```
-6. Assert each metric `sample`'s phase-pair totals equal the sums over its included change rows.
-7. **Census cross-check (spec-time observation, re-derived at `source_commit`).** Re-run the Appendix A command from the spec at `source_commit` and reconcile it with the delivered spine. For orientation only, the spec-time observation at HEAD `5a511f4bec4ce2a2fff6e3248b88ecafed34a2ca` is: **41 files, 40 parseable, 30 time-bearing, 24 real-time, 10 date-only, 1 unparseable, 6 placeholder-only (GH-57, GH-67, GH-69, GH-71, GH-72, GH-174)**; after excluding the capture change GH-186, **23 changes enter the time-metric corpus**. These are spec-time observations, not baseline values: assert the log's spine and `sample` counts reconcile with the re-derived census at `SRC`, do not copy the spec-time numbers into the log, and do not treat a different delivery-time count as a defect without recording the delta and its cause.
+6. Assert each metric `sample`'s `phase_pairs_included`/`phase_pairs_excluded`/`date_only_pairs_excluded` are summed over that metric's `metric_included` rows only (not the whole spine); the sums reconcile with the per-change pair counters above.
+7. **Census cross-check (spec-time observation, re-derived at `source_commit`).** Re-run the Appendix A command from the spec at `source_commit` and reconcile it with the delivered spine and per-metric samples. For orientation only, the spec-time observation at HEAD `5a511f4bec4ce2a2fff6e3248b88ecafed34a2ca` is: **41 files, 40 parseable, 30 time-bearing, 24 real-time, 10 date-only, 1 unparseable, 6 placeholder-only (GH-57, GH-67, GH-69, GH-71, GH-72, GH-174)**; after excluding the capture change GH-186, **23 changes enter the time-metric spine**, of which **20 carry a usable non-placeholder `clarify_scope.started`** (cycle-time sample), with GH-177, GH-185, and GH-188 listed in the cycle metric's `metric_excluded_changes` as `missing_metric_input`. These are spec-time observations, not baseline values: assert the log's spine and per-metric `sample` counters reconcile with the re-derived census at `SRC`, do not copy the spec-time numbers into the log, and do not treat a different delivery-time count as a defect without recording the delta and its cause.
 
 **Expected Outcome**:
 
 - Window strings exactly as pinned; GH-186 excluded as `capture_change`; every excluded change carries exactly one reason from the closed vocabulary; `no_ci_observation` is never a change-row reason.
-- The `changes` spine covers 100% of the committed pm-notes corpus at `source_commit`, including GH-171 as its own `unparseable_yaml` row counted in `changes_excluded`, never silently dropped or zero-filled.
-- All sample counters recompute from the cited sources after normalization; date-only and placeholder zero-time pairs are counted, not silently dropped.
+- The `changes` spine covers 100% of the committed pm-notes corpus at `source_commit`, including GH-171 as its own `unparseable_yaml` row counted in every metric row's `sample.spine_excluded`, never silently dropped or zero-filled.
+- All spine counters are identical on every metric row and conserve `spine_rows = spine_included + spine_excluded`; each metric sample independently conserves `spine_included = metric_included + metric_excluded` with `metric_excluded = len(metric_excluded_changes)`; date-only and placeholder zero-time pairs are counted, not silently dropped.
 
 **Notes / Clarifications**:
 
 - DEC-14 is the normative rule: parse each file as one YAML document, normalize YAML-native scalars to ISO-8601 before classification, and treat a `00:00:00` time as a placeholder. Pair precedence is date-only first, then null/missing/placeholder; change-row precedence is `unparseable_yaml` → `capture_change` → `outside_window` → `placeholder_zero_time` → `date_only_or_missing_time`.
 - The six placeholder-only pm-notes (GH-57, GH-67, GH-69, GH-71, GH-72, GH-174) carry only date-plus-midnight values. Under the change-row precedence they are `placeholder_zero_time` (time-bearing endpoints exist but all are placeholders) and are counted; a fake zero-hour duration is a defect.
 - The unparseable-file precedent is `tests/fixtures/pm-notes/corpus-exclusions.json`; the baseline mirrors it with `unparseable_yaml` and does not edit the manifest.
-- If a delivery-time census differs from the spec-time observation, the log must record the re-derived count and the reason; the counters must still conserve (`included + excluded + date_only == 11` per included row, `changes_parsed == changes_included + changes_excluded` per metric). A non-conserving total is a defect.
+- If a delivery-time census differs from the spec-time observation, the log must record the re-derived count and the reason; the counters must still conserve (`included + excluded + date_only == 11` per included row; per metric `spine_rows == spine_included + spine_excluded` and `spine_included == metric_included + metric_excluded`, with `metric_excluded == len(metric_excluded_changes)`). A non-conserving total is a defect.
 
 #### TC-MEAS-006 - Ceremony share recomputes exactly
 
@@ -1294,7 +1323,7 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
 **Steps**:
 
 1. Apply representation rule **R-1** (canonical ratio 0–1; percent derived, not stored) and rounding rule **Q-1** from §6 (Decimal arithmetic, `ROUND_HALF_UP`, no float equality), as pinned by OQ-T3.
-2. Recompute each included change row's durations from its cited pm-notes (ceremony set and all-eleven-phase total). The `ts()` helper implements **N-1**: it accepts YAML-native `datetime` values (usable only when the time component is nonzero), treats YAML-native `date` values as date-only, accepts ISO-8601 strings with a nonzero time, and returns `None` for missing/placeholder endpoints:
+2. Recompute each included change row's durations from its cited pm-notes (ceremony set and all-eleven-phase total). The `ts()` helper implements **N-1**: it accepts YAML-native `datetime` values (usable only when the time component is nonzero), treats YAML-native `date` values as date-only, accepts ISO-8601 strings with a nonzero time, and returns `None` for missing/placeholder endpoints. The aggregate `num`/`den` are the sums of the **recorded 1-decimal change-row fields** (`ceremony_duration_h`, `total_phase_duration_h`) per spec F-4 and plan PD-5 — never sums of unrounded per-pair hours:
    ```bash
    python3 - <<'PY'
    import yaml
@@ -1316,7 +1345,7 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
        return None
    def h(a,b): return (b-a).total_seconds()/3600.0
    d=yaml.safe_load(open("doc/planning/oss-tooling/measurement-baseline.yaml"))
-   num=den=0.0
+   num=Decimal(0); den=Decimal(0)
    for r in d["changes"]:
        if not r["included"]: continue
        ph=yaml.safe_load(open(r["pm_notes"])).get("phases") or {}
@@ -1326,10 +1355,11 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
        cer=sum(dur(p) for p in CER); tot=sum(dur(p) for p in ALL)
        assert q(cer)==Decimal(str(r["ceremony_duration_h"])), (r["ref"],"cer",cer,r["ceremony_duration_h"])
        assert q(tot)==Decimal(str(r["total_phase_duration_h"])), (r["ref"],"tot",tot,r["total_phase_duration_h"])
-       num+=cer; den+=tot
+       # Aggregate over the recorded 1-decimal change-row values (PD-5), never unrounded pair sums.
+       num+=Decimal(str(r["ceremony_duration_h"])); den+=Decimal(str(r["total_phase_duration_h"]))
    m=[x for x in d["metrics"] if x["id"]=="MET-CEREMONY-SHARE"][0]
    val=Decimal(str(m["value"])); dp=max(0,-val.as_tuple().exponent)
-   ratio=Decimal(str(num))/Decimal(str(den))
+   ratio=num/den
    print("recomputed ratio", ratio, "recorded", val, "numerator", m["numerator"], "denominator", m["denominator"])
    assert m["unit"]=="ratio"
    assert 0 <= val <= 1
@@ -1339,15 +1369,15 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
    assert not any(k in m for k in ("percent","percent_value","value_percent"))
    PY
    ```
-3. Assert the recorded `numerator`/`denominator` reproduce the same ratio under R-1 (`q(numerator/denominator, dp) == value`) when they are durations; if the row represents them differently, the row's `formula` must say so and the value check still holds.
-4. Assert the inclusion rule is stated: the ceremony/work phase lists (or an equivalent explicit enumeration) appear in `definition`/`formula`, and `sample` reports the change and phase-pair counts used.
+3. Second assertion: check the recorded `numerator`/`denominator` reproduce the same ratio under R-1 (`q(numerator/denominator, dp) == value`) when they are durations; if the row represents them differently, the row's `formula` must say so and the value check still holds. Both methods must agree because the aggregate is defined over the recorded 1-decimal rows, not over unrounded pair sums.
+4. Assert the inclusion rule is stated: the ceremony/work phase lists (or an equivalent explicit enumeration) appear in `definition`/`formula`, and `sample.metric_included` (with the phase-pair counters) reports the rows used.
 5. Assert the duration-share caveat is stated: the `limitation` must say overlapping phases count in both numerator and denominator (not a wall-clock union).
 6. Record per-row recomputed vs recorded values for all included changes (or a checksum plus the exact-match count) in §10.
 
 **Expected Outcome**:
 
-- Every per-change duration and the aggregate ratio reproduce exactly at the recorded precision (0 tolerance); the canonical `value` is a 0–1 ratio, and the percent is derived from it (1 decimal) rather than stored.
-- The phase sets, formula and duration-share limitation are stated; `sample` supports the denominator.
+- Every per-change duration and the aggregate ratio reproduce exactly at the recorded precision (0 tolerance); the aggregate is the sum of the recorded 1-decimal change-row values (never unrounded pair sums); the canonical `value` is a 0–1 ratio, and the percent is derived from it (1 decimal) rather than stored.
+- The phase sets, formula and duration-share limitation are stated; `sample.metric_included` supports the denominator.
 
 #### TC-MEAS-007 - Cycle time recomputes exactly, incl. censoring and aggregates
 
@@ -1404,13 +1434,14 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
        vals.append(h)
    m=[x for x in d["metrics"] if x["id"]=="MET-CYCLE-TIME"][0]
    assert all(r["ref"]!="GH-186" for r in d["changes"] if r["included"])
-   print("n", len(vals), "logged-included", m["sample"]["changes_included"])
+   assert len(vals)==m["sample"]["metric_included"], (len(vals), m["sample"]["metric_included"])
+   print("n", len(vals), "logged-metric_included", m["sample"]["metric_included"])
    assert q(statistics.median(vals))==Decimal(str(m["aggregates"]["median_h"]))
    assert q(min(vals))==Decimal(str(m["aggregates"]["min_h"]))
    assert q(max(vals))==Decimal(str(m["aggregates"]["max_h"]))
    PY
    ```
-   Note: `changes_included` for the cycle metric must equal the count of **included** rows whose `clarify_scope.started` is present (the metric's stated data condition); GH-186 and every other `included: false` row are excluded before the sample is built. If the row records a different n, the discrepancy must be explained by a stated exclusion reason.
+   Note: `sample.metric_included` for the cycle metric must equal the count of **spine-included** rows whose `clarify_scope.started` is usable (a non-placeholder time-bearing value under N-1) — this is the metric's stated input condition. GH-186 and every other spine-excluded row are removed before the sample is built; spine-included rows without a usable start (for example GH-177, GH-185, and GH-188 at spec time) stay in the spine, are absent from `vals`, and appear in `metric_excluded_changes` with reason `missing_metric_input`, conserving `spine_included = metric_included + metric_excluded`. If the row records a different n, the discrepancy must be explained by a stated metric exclusion reason.
 2. Assert the **pinned p90 rule** (OQ-T2): when `len(vals) < 10`, `aggregates.p90_h` must be absent/`null` and no p90 claimed; when `len(vals) >= 10`, `p90_h` must be present and equal to the **nearest-rank** value — sort ascending and take the `ceil(0.9 × n)`-th smallest (1-indexed), with no interpolation:
    ```bash
    python3 - <<'PY'
@@ -1463,7 +1494,7 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
 **Expected Outcome**:
 
 - Every row's cycle time and all aggregates reproduce exactly; censoring flags match the sources; p90 obeys the n≥10 rule and the pinned nearest-rank method (`ceil(0.9 × n)`-th smallest, no interpolation).
-- The sample is built from `included: true` rows only, so GH-186 (`capture_change`) and every other excluded/out-of-window row are absent from `vals` and from the aggregates.
+- The sample is built from spine-included rows with a usable `clarify_scope.started`, so GH-186 (`capture_change`) and every other spine-excluded row are absent from `vals` and from the aggregates; spine-included rows without a usable start are absent from `vals`, listed in `metric_excluded_changes` as `missing_metric_input`, and counted in `metric_excluded`.
 - Limitations (self-reported timestamps, clock skew, elapsed-not-effort) are stated.
 
 **Notes / Clarifications**:
@@ -1511,7 +1542,11 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
    assert 0 <= derived <= 100
    assert not any(k in m for k in ("percent","percent_value","value_percent"))
    assert m["sample"]["excluded_unobserved"]==len(unobserved)
-   assert m["sample"]["changes_included"]==den
+   assert m["sample"]["metric_included"]==den, (m["sample"]["metric_included"], den)
+   assert m["sample"]["metric_excluded"]==len(unobserved)
+   assert m["sample"]["excluded_unobserved"]==m["sample"]["metric_excluded"]
+   assert {c["ref"] for c in m["metric_excluded_changes"]}=={r["ref"] for r in unobserved}
+   assert all(c["reason"]=="no_ci_observation" for c in m["metric_excluded_changes"])
    print("ci proxy ok", num, den, val)
    PY
    ```
@@ -1526,7 +1561,7 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
 
 **Expected Outcome**:
 
-- numerator/denominator and the canonical 0–1 ratio reproduce exactly from the change rows; `denominator > 0` and fully supported by observations.
+- numerator/denominator and the canonical 0–1 ratio reproduce exactly from the change rows; `denominator > 0`, `sample.metric_included` equals the denominator, and `sample.metric_excluded`/`excluded_unobserved` equal the unobserved spine-included rows, each named in `metric_excluded_changes` as `no_ci_observation`.
 - The percent is derived from the canonical value (1 decimal) and not stored; the metric is labelled `session_proxy` with the missing-run-log limitation; no per-run claim and no green-by-default.
 
 #### TC-MEAS-009 - False-signal incident count recomputes exactly per class
@@ -1558,6 +1593,8 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
    per=collections.Counter(i["class"] for i in rows)
    assert set(per) <= set(CLASSES), set(per)-set(CLASSES)
    assert m["value"]==len(rows), (m["value"], len(rows))
+   assert m["sample"]["metric_included"]==len([r for r in d["changes"] if r["included"]])
+   assert m["sample"]["metric_excluded"]==0 and not (m["metric_excluded_changes"] or [])
    recorded={k:v for k,v in (m.get("aggregates") or {}).items() if k in CLASSES}
    print("total", m["value"], "per-class", dict(per), "recorded-classes", recorded)
    PY
@@ -1922,7 +1959,7 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
 
 **Preconditions**:
 
-- Branch `feat/GH-186/decision-records-measurement-baseline` checked out.
+- Branch `feat/GH-186/decision-records-and-measurement-baseline` checked out.
 - `origin/main-tools` fetched (or a local `main-tools` ref exists).
 - No unintended uncommitted files.
 
@@ -2251,7 +2288,7 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
 
   **P-1 — Percentile**: `p90_h` is **nearest-rank**: sort ascending and take the `ceil(0.9 × n)`-th smallest (1-indexed); no interpolation. It is reported only when `n ≥ 10`; otherwise it is absent/`null` and no p90 is claimed (OQ-T2 pinned).
 
-  **N-1 — Corpus normalization (apply to TC-MEAS-005…TC-MEAS-009)**: before classification, convert YAML-native scalars to ISO-8601 equivalents. A `datetime.datetime` is an ISO-8601 timestamp and is usable only when its time component is nonzero (a `00:00:00` value is a **placeholder**, not a measured time). A `datetime.date` is date-only (`YYYY-MM-DD`) and follows the date-only exclusion. A string is used as written: `YYYY-MM-DD` is date-only, an ISO-8601 string with `T` and a nonzero time is usable, and a `T00:00:00` string is a placeholder. `None`/missing is a null endpoint. No endpoint is discarded merely because the YAML parser produced a `date`/`datetime` object instead of a string. A file that fails document-level YAML parsing is **never** passed to a phase loop; it is represented by its `included: false` / `unparseable_yaml` change row and counted in `changes_excluded`.
+  **N-1 — Corpus normalization (apply to TC-MEAS-005…TC-MEAS-009)**: before classification, convert YAML-native scalars to ISO-8601 equivalents. A `datetime.datetime` is an ISO-8601 timestamp and is usable only when its time component is nonzero (a `00:00:00` value is a **placeholder**, not a measured time). A `datetime.date` is date-only (`YYYY-MM-DD`) and follows the date-only exclusion. A string is used as written: `YYYY-MM-DD` is date-only, an ISO-8601 string with `T` and a nonzero time is usable, and a `T00:00:00` string is a placeholder. `None`/missing is a null endpoint. No endpoint is discarded merely because the YAML parser produced a `date`/`datetime` object instead of a string. A file that fails document-level YAML parsing is **never** passed to a phase loop; it is represented by its `included: false` / `unparseable_yaml` change row and counted in every metric row's `sample.spine_excluded`.
 
   **Timestamp parsing**: a timestamp is usable only after N-1 produces a non-placeholder time-bearing value (native `datetime` or an ISO-8601 string with a nonzero time); date-only, null/missing, and placeholder zero-time endpoints are excluded per the spec's inclusion rules (TC-MEAS-005).
 
@@ -2324,19 +2361,19 @@ No new test file or code is created by this change (docs-only plus the DEC-13 da
 
 - **A-1**: The base branch is `main-tools`; `origin/main-tools` is fetchable, and the merge base is the correct diff anchor.
 - **A-2**: DEC-14 pins the corpus-ingestion precedence. **Pair level**: a date-only endpoint first (`date_only_pairs_excluded`); else a null/missing or placeholder zero-time endpoint (`phase_pairs_excluded`); else included. **Change level**: `unparseable_yaml` → `capture_change` → `outside_window` → `placeholder_zero_time` → `date_only_or_missing_time`. The counters must conserve (`included + excluded + date_only == 11` per included row) and the log must state the precedence; a non-conserving total is a defect.
-- **A-3**: For `MET-CI-FAILURE-RATE`, `sample.changes_included` equals the denominator (the observed set), and `sample.excluded_unobserved` counts the unobserved included changes; `no_ci_observation` is a CI-sample reason only and never a change-row `excluded_reason`. If the delivery defines `changes_included` as all included changes, the row must state that and the denominator/`excluded_unobserved` must still reconcile.
+- **A-3**: For `MET-CI-FAILURE-RATE`, `sample.metric_included` equals the denominator (the observed set), `sample.metric_excluded` equals `sample.excluded_unobserved` (the unobserved spine-included rows), and every dropped row is named in `metric_excluded_changes` with reason `no_ci_observation`; the metric conserves `spine_included = metric_included + metric_excluded`. `no_ci_observation` is a CI-sample reason only and never a change-row `excluded_reason`. The retired global `changes_parsed`/`changes_included`/`changes_excluded` counters must not be reintroduced: the spine counters are shared and identical on every metric row, and a metric sample is never assumed to equal `spine_included` unless its definition says so.
 - **A-4**: Representation rule R-1 follows spec §5.1/DM-2: ratio metrics store a 0–1 `value` and derive any percent form (1 decimal); a stored percent field or a percent-only representation is a spec deviation to flag, not an alternative convention to accept.
 - **A-5**: There is no automated link/anchor checker in the repository; NFR-3's verification is the semi-automated procedure in TC-SYNC-004 plus reviewer confirmation, consistent with `.ai/rules/testing-strategy.md`.
 - **A-6**: A YAML parser and `rg` are available in the verification environment; if PyYAML is absent, `yq` or `bun -e` with the `yaml` package provides the same assertions (record which was used).
 - **A-7**: The implementation plan exists (`./chg-GH-186-plan.md`); its PD-3/PD-4 corpus pins and Phase-6 measurement procedure are the delivery counterpart of this plan's checks. This plan remains spec-derived and its TC numbering is independent of the plan's phase numbering.
-- **A-8**: The percentile method is pinned by spec v1.2 (OQ-T2): nearest-rank, `ceil(0.9 × n)`-th smallest, no interpolation, reported only when `n ≥ 10`. A different method or an interpolated value is a defect, not an ambiguity.
+- **A-8**: The percentile method is pinned by the spec (OQ-T2): nearest-rank, `ceil(0.9 × n)`-th smallest, no interpolation, reported only when `n ≥ 10`. A different method or an interpolated value is a defect, not an ambiguity.
 - **A-9**: The `doc/decisions/` artifacts are excluded from the forbidden-literal scan (`excludedPrefixes: ["doc/changes/", "doc/decisions/"]`), so new records and the register cannot trip that gate; only the two new docs under `doc/planning/` and `doc/spec/` are registered and scanned.
 - **A-10**: DEC-13 is the authorization for the one non-doc edit: the two new doc paths are added to `registered` in `scripts/checks/forbidden-literals.registry.json`. Any other `scripts/**` change, or any non-`registered` key change, violates C-1. Each entry is staged in the commit that creates its doc (spec §18); pre-registration fails the check.
-- **A-11**: DEC-14 is the normative corpus-ingestion rule. YAML-native `datetime`/`date` scalars are normalized before classification (N-1); a `00:00:00` time is a placeholder, not a measurement; GH-171's unparseable pm-notes is excluded as `unparseable_yaml`, keeps its own row, and is counted in `changes_excluded`. The precedent manifest `tests/fixtures/pm-notes/corpus-exclusions.json` is read-only.
+- **A-11**: DEC-14 is the normative corpus-ingestion rule. YAML-native `datetime`/`date` scalars are normalized before classification (N-1); a `00:00:00` time is a placeholder, not a measurement; GH-171's unparseable pm-notes is excluded as `unparseable_yaml`, keeps its own row, and is counted in every metric row's `sample.spine_excluded`. The precedent manifest `tests/fixtures/pm-notes/corpus-exclusions.json` is read-only.
 
 ### 8.3 Open Questions
 
-No open questions remain; every prior question is resolved by spec v1.2 or is explicitly out of scope.
+No open questions remain; every prior question is resolved by spec v1.3 or is explicitly out of scope.
 
 | ID | Question | Status | Resolution |
 |----|----------|--------|------------|
@@ -2353,6 +2390,7 @@ No open questions remain; every prior question is resolved by spec v1.2 or is ex
 | 1.0 | 2026-10-31 | @test-plan-writer | Initial test plan derived from `chg-GH-186-spec.md`: 37 scenarios (15 decision-artifact, 11 measurement, 5 sync, 6 gate) covering all 20 ACs, DM-1…DM-4, NFR-1…NFR-9 and C-1…C-9; verified repository gate names; recompute-and-compare procedures for NFR-7; documented the forbidden-literal registry blocker (OQ-T1). |
 | 1.1 | 2026-10-31 | @test-plan-writer | Re-based on `chg-GH-186-spec.md` v1.1: AC set is now 21 (adds AC-C10-1), C-1 narrowed to permit the DEC-13 data-only `registered` addition in `scripts/checks/forbidden-literals.registry.json`, and C-10/NFR-10 added. TC-GATE-001 now asserts exactly one permitted `scripts/**` path; TC-GATE-005 replaces the OQ-T1 blocker guidance with concrete registry-scope, registration, guard-exit, and delimited-seed-literal checks; TC-GATE-002 and TC-SYNC-005 allowlists include the registry; OQ-T1…OQ-T4 are closed (DEC-13 and pinned p90/ratio/`change` conventions); TC-MEAS-001/002/006/007/008/011 and TC-SYNC-002 encode those conventions; coverage, automation, risk, and execution-log sections updated. TC count remains 37; all 21 ACs covered. |
 | 1.2 | 2026-10-31 | @test-plan-writer | DoR iteration 1 remediation (B1, B3, stale links, AC alignment) against `chg-GH-186-spec.md` v1.2/DEC-14. TC-MEAS-005 now asserts the parse → normalize → classify rule: YAML-native `datetime`/`date` normalization, placeholder zero-time handling (GH-57/67/69/71/72/174), the closed vocabulary (`unparseable_yaml`, `date_only_or_missing_time`, `placeholder_zero_time`, `capture_change`, `outside_window`; `no_ci_observation` as a CI-sample reason only), GH-171's own `unparseable_yaml` row, the 100% corpus spine, and the corrected spec-time census (41/40/30/24/10/1/6; 23 time-metric changes after excluding GH-186). TC-MEAS-006/007 helpers accept normalized native values; TC-MEAS-007 step 1 now filters `included: true`, excluding GH-186 and every other excluded row. TC-MEAS-010 adds the time-metric PARTIAL rule; TC-SYNC-002 asserts `ados_distribution: internal`; TC-GATE-005 adds same-commit registration and no-pre-registration history checks. Frontmatter/§2/§8 now link `./chg-GH-186-plan.md`; coverage descriptions and assumptions align with amended AC-F4-1/F4-3/F4-5/F6-1/C10-1. TC count remains 37; all 21 ACs covered. |
+| 1.3 | 2026-10-31 | @test-plan-writer | DoR iteration 2 remediation against `chg-GH-186-spec.md` v1.3 (DM-2 per-metric sample model). Replaced the retired global `changes_parsed`/`changes_included`/`changes_excluded` counters with `sample.spine_rows`/`spine_included`/`spine_excluded`/`metric_included`/`metric_excluded` plus `metric_excluded_changes` throughout TC-MEAS-002/005/006/007/008/009, the AC-F4-1/F4-2/F4-3/F4-5 coverage rows, N-1, A-3, A-11, and DM-2. TC-MEAS-005 now asserts per-metric conservation (`spine_rows = spine_included + spine_excluded`; `spine_included = metric_included + metric_excluded`; `metric_excluded = len(metric_excluded_changes)`) and does not force non-CI metrics to `len(included)`; cycle time uses `metric_included` with GH-177/GH-185/GH-188 in `metric_excluded_changes` as `missing_metric_input`, and CI uses `metric_included` = observed denominator. GH-171 is counted in `sample.spine_excluded`. TC-MEAS-006 step 2 now sums the recorded 1-decimal change-row hours (spec F-4/plan PD-5) instead of unrounded pair sums, keeping the numerator/denominator ratio as the second assertion. TC-MEAS-007/008 assert `sample.metric_included`. Corrected the precondition branch to `feat/GH-186/decision-records-and-measurement-baseline`. TC count remains 37; all 21 ACs covered. |
 
 ## 10. Test Execution Log
 
@@ -2381,7 +2419,7 @@ Populated during delivery, at the phase-9 quality gates, and at review. Record t
 | TC-MEAS-004 | — | Not run | |
 | TC-MEAS-005 | — | Not run | Record the re-derived census at `source_commit`, the spine-vs-corpus diff result, the closed-vocabulary set observed, and the GH-171 `unparseable_yaml` row count. |
 | TC-MEAS-006 | — | Not run | Record recomputed ratio vs recorded `value`, derived-percent presentation, and row-duration exact-match count. |
-| TC-MEAS-007 | — | Not run | Record n (included rows only), median/min/max, censored count, and nearest-rank p90 (or its suppression when n<10). |
+| TC-MEAS-007 | — | Not run | Record n (= `sample.metric_included`), median/min/max, censored count, nearest-rank p90 (or its suppression when n<10), and the `metric_excluded_changes` refs/reasons. |
 | TC-MEAS-008 | — | Not run | Record numerator, denominator, canonical ratio, derived-percent presentation, unobserved count. |
 | TC-MEAS-009 | — | Not run | Record total and per-class counts; duplicate check result. |
 | TC-MEAS-010 | — | Not run | Record the status set and matrix verdict. |

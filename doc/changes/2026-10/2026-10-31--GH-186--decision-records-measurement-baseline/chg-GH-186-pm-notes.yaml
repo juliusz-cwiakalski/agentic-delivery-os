@@ -3,10 +3,10 @@ title: "M0-S17: Decision records and measurement baseline"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-10-31T13:55:00Z", completed: "2026-10-31T14:05:00Z" }
-  specification: { started: "2026-10-31T14:06:00Z", completed: null, reopened: "2026-10-31T16:55:00Z", iterations: 3 }
-  test_planning: { started: "2026-10-31T14:32:00Z", completed: null, reopened: "2026-10-31T16:55:00Z", iterations: 3 }
-  delivery_planning: { started: "2026-10-31T15:27:00Z", completed: null, reopened: "2026-10-31T16:55:00Z", iterations: 3 }
-  dor_check: { started: "2026-10-31T16:32:00Z", completed: "2026-10-31T16:52:00Z", iterations: 2, verdict: "NOT_READY (iter 1 and 2)" }
+  specification: { started: "2026-10-31T14:06:00Z", completed: "2026-10-31T17:20:00Z", reopened: "2026-10-31T16:55:00Z", iterations: 3 }
+  test_planning: { started: "2026-10-31T14:32:00Z", completed: "2026-10-31T17:20:00Z", reopened: "2026-10-31T16:55:00Z", iterations: 3 }
+  delivery_planning: { started: "2026-10-31T15:27:00Z", completed: "2026-10-31T17:20:00Z", reopened: "2026-10-31T16:55:00Z", iterations: 3 }
+  dor_check: { started: "2026-10-31T17:22:00Z", completed: null, iterations: 3, verdict: "NOT_READY (iter 1 and 2); iter 3 pending" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -73,5 +73,8 @@ notes:
     type: "retro"
     date: "2026-10-31"
   - text: "DoR iteration 3 remediation plan: spec DM-2 gains per-metric sample counts and per-metric exclusion reasons (spine included != metric included), and §18's Phase 12 reference becomes Phase 10; test plan aligns TC-MEAS-005/006/007/008 to per-metric counts and sums recorded 1-decimal rows, and fixes branch names; plan PD-4/PD-5 and measurement steps align. Then final DoR iteration 3."
+    type: "decision"
+    date: "2026-10-31"
+  - text: "Iteration 3 remediation complete: spec v1.3 (DM-2 per-metric sample model with spine_rows/spine_included/spine_excluded/metric_included/metric_excluded/metric_excluded_changes; conservation rules; cycle 20/23 with GH-177/185/188 missing_metric_input; CI metric_included = denominator; old counters retired; §18 Phase 10), test plan v1.3 (per-metric assertions, GH-171 in spine_excluded, TC-MEAS-006 sums recorded 1-decimal rows, authoritative branch name), plan v1.2 (retired counters removed, cycle censoring missing_metric_input, PD-5 rounding aligned, lifecycle order confirmed). 21 ACs / 37 TCs / 13 phases / 77 tasks preserved. Final DoR iteration 3."
     type: "decision"
     date: "2026-10-31"
