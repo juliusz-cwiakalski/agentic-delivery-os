@@ -28,11 +28,13 @@ run:
     verified never regenerated. Decision seeds for the M0-S17 batch are
     proposals; ratification stays with GH-186.
   inputs_commit: e424423     # doc/inception/inputs/tooling/ committed by owner
+  integrated_main_tools: 9a70aaf
+  integration_commit: 5bc121e
 
 phases:
   - { id: 0, name: "Intake & material scan", status: completed, started: "2026-10-31T08:10:00+01:00", completed: "2026-10-31T08:40:00+01:00" }
   - { id: 1, name: "North star & vision", status: completed, started: "2026-10-31T08:40:00+01:00", completed: "2026-10-31T12:50:24+01:00" }
-  - { id: 2, name: "Scope & roadmap", status: pending, started: null, completed: null }
+  - { id: 2, name: "Scope & roadmap", status: in_progress, started: "2026-10-31T12:50:24+01:00", completed: null }
   - { id: 3, name: "Tech stack & architecture", status: pending, started: null, completed: null }
   - { id: 4, name: "Domain, conventions & quality baseline", status: pending, started: null, completed: null }
   - { id: 5, name: "ADOS framework integration", status: pending, started: null, completed: null }
@@ -52,8 +54,10 @@ artifacts:
   screen_inventory:  { status: pending, path: "doc/overview/screen-inventory.md", confidence: 0.0, note: "not activated (ui_bearing false)" }
   ux_guidance:       { status: pending, path: "doc/overview/ux-guidance.md", confidence: 0.0, note: "not activated (ui_bearing false)" }
   ubiquitous_language: { status: pending, path: "doc/overview/ubiquitous-language.md", confidence: 0.0 }
-  assumptions:       { status: pending, path: "doc/inception/analysis/assumptions.md", confidence: 0.0 }
-  risks:             { status: pending, path: "doc/inception/analysis/risks.md", confidence: 0.0 }
+  assumptions:       { status: draft, path: "doc/inception/analysis/assumptions.md", confidence: 0.8 }
+  risks:             { status: draft, path: "doc/inception/analysis/risks.md", confidence: 0.8 }
+  scope_coverage:    { status: draft, path: "doc/inception/analysis/phase-2-scope-and-coverage.md", confidence: 0.85 }
+  tribal_graduation: { status: draft, path: "doc/inception/analysis/tribal-knowledge-graduation.md", confidence: 0.8, note: "permanent-home changes await gate 2 authorization; no graduation completion claimed" }
   material_inventory: { status: written, path: "doc/inception/analysis/material-inventory.md", confidence: 0.9 }
   retrospective_notes: { status: draft, path: "doc/inception/retrospective/", confidence: 0.8 }
   open_questions:    { status: draft, path: "doc/inception/open-questions/", confidence: 0.8 }
@@ -81,11 +85,12 @@ decisions:
 assumptions:
   # risk_type: value | usability | feasibility | viability
   - { text: "M0 in-flight stories (GH-177, GH-182, GH-184) merge without breaking the reconciliation baseline of this run", risk_type: feasibility, validation_status: testing, date: "2026-10-31" }
-  - { text: "committed planning corpus (roadmap, backlog, registry, journeys) stays the living plan; the run only verifies and proposes refinements", risk_type: value, validation_status: validated, date: "2026-10-31" }
+  # Canonical planning ownership is ratified governance, not validated value evidence.
+  # Outcome hypotheses and validation plans live in artifacts.assumptions.
   - { text: "parallel M0 delivery and inception doc work can proceed without blocking conflicts (disjoint surfaces)", risk_type: feasibility, validation_status: testing, date: "2026-10-31" }
 
 sessions:
   - { started: "2026-10-31T08:10:00+01:00", phase: 0, notes: "phase 0 artifacts drafted: state, material inventory, repo analysis with gap map, tribal knowledge; gate 0 presented" }
   - { started: "2026-10-31T08:40:00+01:00", phase: 0, notes: "gate 0 closed: OPEN-Q1..Q3 answered inline, answers folded into state and inventory conditions; phase 0 committed" }
 
-last_updated: "2026-10-31T12:50:24+01:00"
+last_updated: "2026-10-31T12:59:59+01:00"
