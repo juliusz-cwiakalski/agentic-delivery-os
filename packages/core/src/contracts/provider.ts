@@ -385,3 +385,44 @@ export type QuotaEvaluation =
       readonly failureClass: string;
       readonly httpStatus: number;
     };
+
+/** One provider's non-mutating quota view (F-8). */
+export type ProviderQuotaView = {
+  readonly providerName: string;
+  readonly status: "clear" | "parked";
+  readonly cause?: ParkCause;
+  readonly conditions: readonly ProviderConditionKind[];
+  readonly resumeAt?: string;
+  readonly evidence: ProviderParkEvidence;
+};
+
+/** The `resolve` engine result: a decision or a classified provider failure. */
+export type ProviderResolveResult =
+  | {
+      readonly ok: true;
+      readonly chainName: string;
+      readonly decision: ProviderDecision;
+      readonly skipped: readonly ProviderSkippedEntry[];
+      readonly parks: readonly ProviderParkRecord[];
+      readonly announcements: readonly ProviderAnnouncementRecord[];
+    }
+  | {
+      readonly ok: false;
+      readonly errorCode: ProviderErrorCode;
+      readonly announcementCode?: AnnouncementCode;
+      readonly summary: string;
+    };
+
+/** The `quota` engine result: per-provider views or a classified failure. */
+export type ProviderEngineResult =
+  | {
+      readonly ok: true;
+      readonly providers: readonly ProviderQuotaView[];
+      readonly announcements: readonly ProviderAnnouncementRecord[];
+    }
+  | {
+      readonly ok: false;
+      readonly errorCode: ProviderErrorCode;
+      readonly announcementCode?: AnnouncementCode;
+      readonly summary: string;
+    };

@@ -181,6 +181,7 @@ export type AnnouncementInput = {
   readonly cause?: ParkCause;
   readonly conditions?: readonly ProviderConditionKind[];
   readonly park?: ProviderParkRecord;
+  readonly generation?: string;
   readonly evidence: ProviderAnnouncementEvidence;
 };
 
@@ -189,9 +190,7 @@ export const createAnnouncementRecord = (
   input: AnnouncementInput,
 ): ProviderAnnouncementRecord => {
   const generation =
-    input.park === undefined
-      ? "none"
-      : parkGeneration(input.park);
+    input.generation ?? (input.park === undefined ? "none" : parkGeneration(input.park));
   return {
     schemaVersion: "delivery.provider.announcement.v1",
     identity: announcementIdentity(

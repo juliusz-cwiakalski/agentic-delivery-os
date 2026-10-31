@@ -132,7 +132,14 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "PROVIDER_RECORD_KINDS",
     "PROVIDER_SKIP_REASONS",
   ],
+  "core/src/provider/announcements.ts": [
+    "announcementCodeForCondition",
+    "createParkAnnouncement",
+    "createResumedAnnouncement",
+    "severityForAnnouncementCode",
+  ],
   "core/src/provider/chain.ts": ["resolveProviderChain"],
+  "core/src/provider/engine.ts": ["createProviderEngine"],
   "core/src/provider/conditions.ts": ["combineProviderConditions"],
   "core/src/provider/parks.ts": [
     "announcementEvidence",
@@ -150,6 +157,13 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "providerParkName",
   ],
   "core/src/provider/peak.ts": ["evaluatePeakWindow", "utcSecondsOfDay"],
+  "core/src/provider/loop.ts": ["runProviderLoop"],
+  "core/src/provider/quota.ts": [
+    "classifyQuotaTransport",
+    "evaluateQuotaResponse",
+    "evaluateQuotaSnapshot",
+    "normalizeQuotaEnvelopeResult",
+  ],
   "core/src/provider/validate.ts": [
     "parseAndValidateProviderConfiguration",
     "parseProviderConfiguration",

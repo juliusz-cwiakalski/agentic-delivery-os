@@ -5,12 +5,33 @@
  * chain resolution. All I/O enters through injected seams in later phases.
  */
 export {
+  createProviderEngine,
+  type ProviderEngine,
+  type ProviderEngineDependencies,
+  type ProviderQuotaInput,
+  type ProviderResolveInput,
+} from "./engine.js";
+export {
+  announcementCodeForCondition,
+  createParkAnnouncement,
+  createResumedAnnouncement,
+  severityForAnnouncementCode,
+} from "./announcements.js";
+export {
   type ChainEntryState,
   type ChainResolutionInput,
   type ChainResolutionOutcome,
   resolveProviderChain,
 } from "./chain.js";
 export { combineProviderConditions } from "./conditions.js";
+export {
+  classifyQuotaTransport,
+  evaluateQuotaResponse,
+  evaluateQuotaSnapshot,
+  type QuotaNormalizationFailure,
+  normalizeQuotaEnvelopeResult,
+} from "./quota.js";
+export { type ProviderLoopInput, type ProviderLoopResult, runProviderLoop } from "./loop.js";
 export {
   announcementEvidence,
   announcementIdentity,
