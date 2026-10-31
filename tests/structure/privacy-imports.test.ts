@@ -208,3 +208,128 @@ describe("shared rule module purity", () => {
     }
   });
 });
+
+const CODEC_PATH = "packages/adapters/src/io/envelope-codec.ts";
+const POLICY_PATH = "packages/adapters/src/io/envelope-content-policy.ts";
+const AMBIENT = new Set([
+  "process",
+  "Bun",
+  "Deno",
+  "fetch",
+  "performance",
+  "crypto",
+  "setTimeout",
+  "setInterval",
+  "require",
+]);
+
+const importSpecifiers = (fileName: string, text: string): string[] => {
+  const source = ts.createSourceFile(
+    fileName,
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const specifiers: string[] = [];
+  for (const statement of source.statements) {
+    if (ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier)) {
+      specifiers.push(statement.moduleSpecifier.text);
+    }
+  }
+  return specifiers;
+};
+
+const ambientReferences = (fileName: string, text: string): string[] => {
+  const source = ts.createSourceFile(
+    fileName,
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const failures: string[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isIdentifier(node) && !isSkippedIdentifier(node) && AMBIENT.has(node.text)) {
+      failures.push(`${fileName}: ambient global ${node.text}`);
+    }
+    if (
+      ts.isPropertyAccessExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      ((node.expression.text === "Math" && node.name.text === "random") ||
+        (node.expression.text === "Date" && node.name.text === "now"))
+    ) {
+      failures.push(`${fileName}: clock/randomness ${node.expression.text}.${node.name.text}`);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return failures;
+};
+
+export const codecPurityViolations = (text: string): string[] => {
+  const failures: string[] = [];
+  for (const specifier of importSpecifiers("envelope-codec.ts", text)) {
+    if (specifier.startsWith("node:") || specifier.startsWith("bun:")) {
+      failures.push(`envelope-codec.ts: runtime import ${specifier}`);
+    } else if (specifier !== "@delivery-os/core/contracts" && specifier !== "./privacy-rules.js") {
+      failures.push(`envelope-codec.ts: unexpected import ${specifier}`);
+    }
+  }
+  failures.push(...ambientReferences("envelope-codec.ts", text));
+  if (text.includes("createHash") || text.includes("sha256")) {
+    failures.push("envelope-codec.ts: default hash implementation is not permitted");
+  }
+  return failures;
+};
+
+export const policyPurityViolations = (text: string): string[] => {
+  const failures: string[] = [];
+  const specifiers = importSpecifiers("envelope-content-policy.ts", text);
+  for (const specifier of specifiers) {
+    if (specifier.startsWith("node:") || specifier.startsWith("bun:")) {
+      failures.push(`envelope-content-policy.ts: runtime import ${specifier}`);
+    } else if (specifier !== "@delivery-os/core/contracts" && specifier !== "./privacy-rules.js") {
+      failures.push(`envelope-content-policy.ts: unexpected import ${specifier}`);
+    }
+  }
+  failures.push(...ambientReferences("envelope-content-policy.ts", text));
+  if (text.includes("createHash") || text.includes("sha256")) {
+    failures.push("envelope-content-policy.ts: default hash implementation is not permitted");
+  }
+  return failures;
+};
+
+describe("TC-POLICY-005 codec and policy purity", () => {
+  test("the codec imports only contract members and the pure shared module", () => {
+    const text = readFileSync(join(ROOT, CODEC_PATH), "utf8");
+    expect(codecPurityViolations(text)).toEqual([]);
+    const specifiers = importSpecifiers("envelope-codec.ts", text);
+    expect(specifiers).toContain("@delivery-os/core/contracts");
+    expect(specifiers.every((specifier) => !specifier.startsWith("node:"))).toBe(true);
+  });
+
+  test("the policy imports only the contract type and the pure shared module", () => {
+    const text = readFileSync(join(ROOT, POLICY_PATH), "utf8");
+    expect(policyPurityViolations(text)).toEqual([]);
+    expect(importSpecifiers("envelope-content-policy.ts", text).sort()).toEqual(
+      ["@delivery-os/core/contracts", "./privacy-rules.js"].sort(),
+    );
+  });
+
+  test("a seeded node:fs import in a temp codec copy fails the purity scan", () => {
+    const text = readFileSync(join(ROOT, CODEC_PATH), "utf8");
+    expect(codecPurityViolations(`import "node:fs";\n${text}`)).toContain(
+      "envelope-codec.ts: runtime import node:fs",
+    );
+  });
+
+  test("a seeded default hash implementation in a temp policy copy fails", () => {
+    const text = readFileSync(join(ROOT, POLICY_PATH), "utf8");
+    expect(
+      policyPurityViolations(`${text}\nconst hash = createHash("sha256");\n`).some((failure) =>
+        failure.includes("default hash implementation"),
+      ),
+    ).toBe(true);
+  });
+});

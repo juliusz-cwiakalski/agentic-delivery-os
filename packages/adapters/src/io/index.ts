@@ -20,3 +20,8 @@ export {
   serializeEnvelope,
   stripEnvelope,
 } from "./envelope-codec.js";
+export {
+  buildEnvelopeContentPolicy,
+  type ContentPolicyInputs,
+  type HashedPolicyEntry,
+} from "./envelope-content-policy.js";

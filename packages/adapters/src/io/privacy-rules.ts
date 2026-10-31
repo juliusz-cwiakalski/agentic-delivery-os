@@ -65,7 +65,7 @@ export const PRIVACY_RULES = [
     recognizerClass: "credential-assignment",
     severity: "error",
     patternSource:
-      "\\b(?:[A-Za-z0-9]+[_-]){0,4}(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|client[_-]?secret|auth[_-]?token|credential)\\b[\"']?\\s*[:=](?!-)\\s*[\"']?(?=[A-Za-z0-9_+/=.-]{20,})(?=[A-Za-z0-9_+/=.-]*[0-9])(?=[A-Za-z0-9_+/=.-]*[A-Za-z])[A-Za-z0-9_+/=.-]+[\"']?",
+      "\\b(?:[A-Za-z0-9]+[_-]){0,4}(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|client[_-]?secret|auth[_-]?token|credential)\\b[\"']?\\s*[:=](?!-)\\s*\\\\?[\"']?(?=[A-Za-z0-9_+/=.-]{20,})(?=[A-Za-z0-9_+/=.-]*[0-9])(?=[A-Za-z0-9_+/=.-]*[A-Za-z])[A-Za-z0-9_+/=.-]+[\"']?",
     flags: "gi",
     minimumMatchLength: 14,
   },
@@ -73,7 +73,7 @@ export const PRIVACY_RULES = [
     id: "secret.connection-string-credential",
     recognizerClass: "connection-string-credential",
     severity: "error",
-    patternSource: "\\b[a-z][a-z0-9+.-]{1,20}://[^\\s:/@]+:[^\\s/@]+@[^\\s]+",
+    patternSource: "\\b[a-z][a-z0-9+.-]{1,20}://[^\\s:/@\"'<>}]+:[^\\s/@\"'<>}]+@[^\\s\"'<>}]+",
     flags: "gi",
     minimumMatchLength: 16,
   },

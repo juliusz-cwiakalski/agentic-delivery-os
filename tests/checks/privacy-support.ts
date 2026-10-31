@@ -211,6 +211,7 @@ export type MutantOptions = {
 };
 
 export type MutantCheck = {
+  readonly root: string;
   readonly checkPath: string;
   readonly importCheck: () => Promise<typeof import("../../scripts/checks/privacy-literals")>;
   readonly cleanup: () => void;
@@ -245,6 +246,7 @@ export const makeMutantCheck = (options: MutantOptions = {}): MutantCheck => {
   const version = mutantCounter;
   mutantCounter += 1;
   return {
+    root,
     checkPath,
     importCheck: () =>
       import(`${pathToFileURL(checkPath).href}?v=${version}`) as Promise<

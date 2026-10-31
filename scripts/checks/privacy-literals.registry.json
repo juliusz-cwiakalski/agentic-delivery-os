@@ -143,6 +143,13 @@
       "path": "tests/checks/privacy-ci-wiring.test.ts",
       "rules": ["*"],
       "reason": "The guard's CI-wiring suite names the invocation, workflow mutation controls, and local-command proofs."
+    },
+    {
+      "id": "envelope-content-policy-suite",
+      "kind": "file",
+      "path": "tests/behaviour/envelope-content-policy.test.ts",
+      "rules": ["*"],
+      "reason": "The codec content-policy suite imports synthetic fixture values and asserts rule/entry ids at the emitter."
     }
   ],
   "exclusions": [

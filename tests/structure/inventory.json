@@ -49,6 +49,7 @@
     "src/gitlab/normalize.ts",
     "src/host/index.ts",
     "src/io/envelope-codec.ts",
+    "src/io/envelope-content-policy.ts",
     "src/io/index.ts",
     "src/io/privacy-rules.ts",
     "src/io/provider-transport.ts",

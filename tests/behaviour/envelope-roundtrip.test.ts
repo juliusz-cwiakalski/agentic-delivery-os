@@ -42,6 +42,7 @@ describe("TC-META-001 golden carrier round-trip", () => {
           envelope: testCase.envelope,
           carrier,
           humanContent: testCase.humanContent,
+          policy: () => ({ ok: true }),
         });
         expect(serialized.ok, `${testCase.id}/${carrier}`).toBe(true);
         if (!serialized.ok) continue;
@@ -79,6 +80,7 @@ describe("TC-META-001 golden carrier round-trip", () => {
       envelope: oversized,
       carrier: "invisible-comment-block",
       humanContent: "body",
+      policy: () => ({ ok: true }),
     });
     expect(serialized.ok).toBe(false);
     if (!serialized.ok) {
@@ -209,6 +211,7 @@ describe("TC-META-002 parse and strip", () => {
       envelope: nearBound,
       carrier: "invisible-comment-block",
       humanContent: "body",
+      policy: () => ({ ok: true }),
     });
     expect(serialized.ok).toBe(true);
     if (!serialized.ok) return;

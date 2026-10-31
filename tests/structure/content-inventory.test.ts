@@ -144,6 +144,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "runtimePlatform",
   ],
   "adapters/src/file/yaml-parser.ts": ["parseConfigYaml", "parserHostSwitchBlocked"],
+  "adapters/src/io/envelope-content-policy.ts": ["buildEnvelopeContentPolicy"],
   "adapters/src/io/envelope-codec.ts": [
     "ENVELOPE_FIELD_NAME",
     "isClosedV1Payload",

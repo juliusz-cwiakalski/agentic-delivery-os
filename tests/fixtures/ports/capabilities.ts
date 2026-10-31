@@ -185,6 +185,7 @@ export const writeMetadata = (
     envelope: envelopeForRequest(request),
     carrier: selection.carrier,
     humanContent: request.body,
+    policy: () => ({ ok: true }),
   });
   if (!serialized.ok) {
     return { ok: false, gap: { operation: "write-comment", reason: "plan-restriction" } };
