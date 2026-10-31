@@ -2,7 +2,7 @@
 id: chg-GH-188-test-plan
 status: Proposed
 created: 2026-10-31T12:00:00Z
-last_updated: 2026-10-31
+last_updated: 2026-10-31T14:30:00Z
 owners: [engineering]
 service: delivery-os provider adapters
 labels: [change, planning]
@@ -18,7 +18,7 @@ links:
 
 ## 1. Scope and Objectives
 
-Protect the first real provider clients behind the delivered primitive ports: each seed must return normalized primitive views (`WorkItem`, `DeliveryRequest`, `PipelineRun`), declare its capabilities and gaps honestly, and prove every ticket-named provider quirk against recorded, sanitized fixtures with zero live network calls in CI. The highest risks are (a) a provider quirk silently flattened into normalized truth (pipeline multiplicity, asynchronous merge status, label replace, comment omission, custom-field typing), (b) a committed fixture leaking a secret, private identifier, or personal data, (c) the confinement extension eroding the runtime-API allowlist or the secret-read allowlist growing past four entries, and (d) a trap catalog that looks complete but whose assertions do not actually fire when normalization regresses. This plan is a design and implementation map, not an execution claim.
+Protect the first real provider clients behind the delivered primitive ports: each seed must return normalized primitive views (`WorkItem`, `DeliveryRequest`, `PipelineRun`), declare its capabilities and gaps honestly, and prove every ticket-named provider quirk against committed sanitized fixtures — hand-authored synthetic captures modeled on recorded provider response shapes — with zero live network calls in CI. The highest risks are (a) a provider quirk silently flattened into normalized truth (pipeline multiplicity, asynchronous merge status, label replace, comment omission, custom-field typing), (b) a committed fixture leaking a secret, private identifier, or personal data, (c) the confinement extension eroding the runtime-API allowlist or the secret-read allowlist growing past four entries, and (d) a trap catalog that looks complete but whose assertions do not actually fire when normalization regresses. This plan is a design and implementation map, not an execution claim.
 
 ### 1.1 In Scope
 
@@ -26,7 +26,7 @@ Protect the first real provider clients behind the delivered primitive ports: ea
 - Per-client trap coverage: GitLab ≥3 entries, Jira ≥4 entries, GitHub ≥3 entries (spec NFR-2), each entry carrying exactly the four DM-2 fields and a stable fixture reference.
 - The Jira read slice answering the four M0-S6 tracker query families from normalized `WorkItem` data, including the optional `WorkItem.updatedAt` stall signal (ADR-0004) with absent = activity unknown.
 - The minimal GitHub read slice providing the PR, pipeline-per-commit, and issue reads that the M0-S6 status collector and M0-S8/M0-S9 verify change consume as inputs (spec DEC-5).
-- Recorded provider fixtures under `tests/fixtures/**`, sanitization audit, and a canary-style negative check that proves the audit catches a planted secret-shaped string (RSK-3).
+- Hand-authored synthetic provider fixtures (modeled on recorded provider response shapes) under `tests/fixtures/**`, sanitization audit, and a canary-style negative check that proves the audit catches a planted secret-shaped string (RSK-3).
 - The additive `WorkItem.updatedAt` contract extension (DM-6, ADR-0004): contract-inventory/field-shape evidence and a type-level probe.
 - The ADR-0006 representations: optional `WorkItem.comments` (absent = comment set unknown; present-empty = genuinely none) with contract/type evidence, and the Jira custom-field normalization mapping (mapped fields typed; unmapped visibly unrepresented; no raw key leak) with trap evidence.
 - Capability declarations from the closed `ADAPTER_OPERATIONS` set, with read-only/gapped postures per spec DEC-2 and resolved OQ-2.
@@ -46,7 +46,7 @@ Protect the first real provider clients behind the delivered primitive ports: ea
 
 ## 2. References
 
-- [Change specification](./chg-GH-188-spec.md) v1.2, especially §§5 (F-1 to F-8), 8.3 (DM-1 to DM-6), 8.4 (provider surfaces and trapped quirk families), 9 (NFR-1 to NFR-7), 11 (RSK-1 to RSK-6), 14 (OQ-1 to OQ-4), 15 (DEC-1 to DEC-6), 17 (12 ACs), 18 (Definition of Done), and §24 (ticket-AC and M0-S6 query traceability).
+- [Change specification](./chg-GH-188-spec.md) v1.3, especially §§5 (F-1 to F-8), 8.3 (DM-1 to DM-8), 8.4 (provider surfaces and trapped quirk families), 9 (NFR-1 to NFR-7), 11 (RSK-1 to RSK-6), 14 (OQ-1 to OQ-6), 15 (DEC-1 to DEC-8), 17 (12 ACs), 18 (Definition of Done), and §24 (ticket-AC and M0-S6 query traceability).
 - [Ticket GH-188](https://github.com/cwiakalski/agentic-delivery-os/issues/188): four ticket ACs (trap tests pass against recorded fixtures; Jira read slice answers M0-S6 queries; GitHub read slice serves status/verify inputs; no client reads a secret outside the credential port).
 - [Repository testing strategy](../../../../.ai/rules/testing-strategy.md); [TypeScript workspace rules](../../../../.ai/rules/typescript.md); [AGENTS.md](../../../../AGENTS.md).
 - [Feature: Adapter ports, credential resolution, and embedded metadata](../../../spec/features/feature-adapter-ports.md) — §Security and Boundaries and §Quality Assurance Strategy (structure/behaviour/type-level/checks/boundaries/aggregate).
@@ -163,7 +163,7 @@ The spec declares no API-* endpoints and no EVT-* messages (§8.1, §8.2): consu
 
 #### Trap-catalog index (entry → TC → fixture)
 
-Catalog files live under `tests/fixtures/providers/traps/<provider>.traps.json`; each entry has exactly the four DM-2 fields, and the trap name is its stable identifier. Fixture references use `path#/json-pointer` so they survive re-recording.
+Catalog files live under `tests/fixtures/providers/traps/<provider>.traps.json`; each entry has exactly the four DM-2 fields, and the trap name is its stable identifier. Fixture references use `path#/json-pointer` so they survive re-authoring.
 
 | Trap name | Provider | Quirk family | TC | Fixture reference |
 |---|---|---|---|---|
@@ -197,7 +197,7 @@ Coverage minima: GitLab 3 entries, Jira 5 entries, GitHub 3 entries — each mee
 **Preconditions**:
 
 - The GitLab seed accepts an injected `CredentialPort` and an injected provider transport.
-- A recorded MR fixture covers identity, source/target refs, draft/open state, and review threads.
+- A committed synthetic MR fixture (modeled on the provider's documented response shape) covers identity, source/target refs, draft/open state, and review threads.
 
 **Steps**:
 
@@ -229,7 +229,7 @@ Coverage minima: GitLab 3 entries, Jira 5 entries, GitHub 3 entries — each mee
 
 **Steps**:
 
-1. Replay `read-pipeline-run` for the commit; assert the result contains every pipeline recorded for that SHA, not just the newest.
+1. Replay `read-pipeline-run` for the commit; assert the result contains every pipeline present in the fixture for that SHA, not just the newest.
 2. Assert each returned `PipelineRun` carries a distinct identity, job states from the closed `PipelineJobState` set, and at least one `TraceEvidenceRef` where the fixture records a trace.
 3. Assert ordering/singleton selection is not silently applied: reordering the fixture's pipeline array yields the same set (order-insensitive comparison).
 4. Assert no job is represented by a bare status colour; a missing jobs list in the fixture is reported, never invented.
@@ -284,7 +284,7 @@ Coverage minima: GitLab 3 entries, Jira 5 entries, GitHub 3 entries — each mee
 
 **Preconditions**:
 
-- Two recorded reads of the same issue: before a label replacement (`[x, y]`) and after (`[y, z]`).
+- Two committed synthetic reads of the same issue: before a label replacement (`[x, y]`) and after (`[y, z]`).
 - The trap entry `JIRA-LABEL-REPLACE` references both fixtures.
 
 **Steps**:
@@ -339,7 +339,7 @@ Coverage minima: GitLab 3 entries, Jira 5 entries, GitHub 3 entries — each mee
 
 **Preconditions**:
 
-- A recorded workflow fixture lists native statuses and their transition mechanisms.
+- A committed synthetic workflow fixture (modeled on the provider's documented response shape) lists native statuses and their transition mechanisms.
 - The trap entry `JIRA-TRANSITIONS-AS-DATA` references the fixture.
 
 **Steps**:
@@ -681,7 +681,7 @@ Coverage minima: GitLab 3 entries, Jira 5 entries, GitHub 3 entries — each mee
 **Preconditions**:
 
 - A declared placeholder registry (for example `<REDACTED_TOKEN>`, `person-1@example.invalid`, `acct-0001`, `owner-placeholder`) is committed.
-- The fixture tree contains only sanitized responses and the trap catalogs.
+- The fixture tree contains only sanitized hand-authored synthetic captures and the trap catalogs.
 
 **Steps**:
 
@@ -995,10 +995,10 @@ Coverage minima: GitLab 3 entries, Jira 5 entries, GitHub 3 entries — each mee
 - **Runtime:** Bun pinned by `.bun-version`; Node only where packed-import parity requires it. `pnpm install --frozen-lockfile` and `pnpm build` precede dist-dependent and boundary suites.
 - **Network:** None in CI. Trap suites use an injected fixture transport and a throwing `fetch` guard; an unfixtured request fails instead of reaching a network. Live provider validation is M0-S20 (spec NG-4, RSK-2).
 - **Secrets:** No real secrets. Credentials are unique canary strings supplied through an injected environment record, never the developer's `process.env`. Fixtures contain only declared placeholders; the sanitization audit and its canary run offline.
-- **Fixtures:** Raw provider responses live under `tests/fixtures/providers/{gitlab,jira,github}/**/*.json`; trap catalogs under `tests/fixtures/providers/traps/<provider>.traps.json`; sanitization placeholders and canary cases under `tests/fixtures/providers/sanitization/`. Fixtures are never named `*.test.ts`, so temp workspaces are not discovered as suites. Fixture references use `path#/json-pointer` and stay stable across re-recording.
+- **Fixtures:** Hand-authored synthetic captures live under `tests/fixtures/providers/{gitlab,jira,github}/**/*.json`; trap catalogs under `tests/fixtures/providers/traps/<provider>.traps.json`; sanitization placeholders and canary cases under `tests/fixtures/providers/sanitization/`. Fixtures are never named `*.test.ts`, so temp workspaces are not discovered as suites. Fixture references use `path#/json-pointer` and stay stable across re-authoring.
 - **Isolation:** Planted violations, corrupted catalogs/normalizers, allowlist mutations, and sanitization canaries live only in `tests/fixtures/**` or `mkdtemp` workspaces. Nothing is written under `packages/**`; `git status --porcelain` is checked before/after read-only scans.
 - **Determinism:** Trap predicates use an injected clock/threshold where time is involved (stalls); no sleeps, no real `$HOME`, no order-dependent assertions. Trap replay is deterministic and asserted twice.
-- **Test data provenance:** Fixtures are recorded at authoring time against controlled/scratch tenants and sanitized before commit (F-6). Their fidelity to live providers is assumed, not proven here; M0-S20 revalidates (spec §12, RSK-2).
+- **Test data provenance:** Fixtures are hand-authored synthetic captures modeled on recorded provider response shapes (public API documentation), sanitized per F-6 before commit; none is a copy of a live-tenant response. Their fidelity to live providers is deferred to M0-S20 for revalidation (spec §12, RSK-2).
 
 ## 7. Automation Plan and Implementation Mapping
 
@@ -1039,10 +1039,10 @@ All rows are **To Implement** unless marked otherwise. Paths are proposed under 
 
 ### 7.2 Implementation Notes and Gate Handoff
 
-- **Testability contract for delivery:** each client seed must accept (a) a `CredentialPort` implementation and (b) a fetch-shaped provider transport as explicit construction inputs. Trap tests inject a fixture transport that resolves recorded responses and throws on anything unfixtured. This is the mechanism for NFR-3/F-7; it does not change the port surface consumers see.
+- **Testability contract for delivery:** each client seed must accept (a) a `CredentialPort` implementation and (b) a fetch-shaped provider transport as explicit construction inputs. Trap tests inject a fixture transport that resolves committed fixture responses and throws on anything unfixtured. This is the mechanism for NFR-3/F-7; it does not change the port surface consumers see.
 - **Trap harness:** implement `tests/behaviour/providers/trap-harness.ts` with `runTrapCatalog({ catalogRoot, client, transport })` returning per-entry results keyed by trap name. Every failure message must include the trap name and fixture reference. The catalog root must be a parameter so §5.2 negative controls can point at temp copies.
 - **Catalog↔assertion coverage:** keep a per-provider assertion map keyed by trap name; a meta-assertion fails when a catalog entry has no assertion or an assertion has no entry. This prevents a catalog that looks complete but silently skips a quirk.
-- **Fixtures:** commit sanitized raw responses under `tests/fixtures/providers/**`; fixture references are `path#/json-pointer`. Re-recording keeps the path and pointer stable; if a pointer must move, the catalog update is a reviewed diff (AC-F6-1).
+- **Fixtures:** commit sanitized hand-authored synthetic captures under `tests/fixtures/providers/**`; fixture references are `path#/json-pointer`. Re-authoring keeps the path and pointer stable; if a pointer must move, the catalog update is a reviewed diff (AC-F6-1).
 - **Sanitization audit:** implement `scripts`-style purity in `tests/checks/fixture-sanitization.test.ts` with an exported `scan(root)` exercised by the canary cases. Run it from `bun test` (already CI-wired via `pnpm test`); no new CI job is required. Value-level privacy scanning remains M0-S15.
 - **Contract inventory:** `tests/fixtures/ports/v1-contract-inventory.json` pins export names, so adding a field does not change it. Extend `port-contract-inventory.test.ts` with a field-shape fixture/probe for `WorkItem` (all fields, optionality, readonly) so ADR-0004 C-1 is mechanically proven. Add `tests/types/workitem-updated-at.type-test.ts` to the `tests/types/tsconfig.json` project.
 - **Boundary rules:** update the `runtime-apis-confinement` `pathNot` array to include `github|gitlab|jira` with per-subpath reason comments; update the literal assertion in `tests/boundaries/boundaries.test.ts`; add clean controls (`runtime-control-provider-{github,gitlab,jira}`) to `cases.ts` and register them; keep `runtime-node-fs-adapter-registry`, `runtime-node-fs-adapter-io`, and add `azure`/`ci` negative cases. Do not add `registry` to the allowance.
@@ -1058,10 +1058,10 @@ All rows are **To Implement** unless marked otherwise. Paths are proposed under 
 
 - **Catalog completeness can be illusory.** A four-field entry proves documentation, not that the assertion fires. TC-TRAP-002's corrupted-normalization control and the bidirectional catalog↔assertion meta-check are the mitigation; both must be implemented, not stubbed.
 - **Offline proof is only as strong as the transport seam.** A client that reaches `fetch` outside the injected transport would pass a naive suite. The throwing-fetch guard and an unfixtured-request failure close this; a future client that caches a module-level transport would need the same seam re-asserted.
-- **Fixture fidelity is assumed.** Recorded fixtures can drift from live provider behavior (RSK-2); this change cannot detect drift offline. M0-S20's scheduled live runs are the drift detector; fixtures are dated and re-recordable with stable references.
+- **Fixture fidelity is assumed.** Hand-authored synthetic captures modeled on recorded provider response shapes can drift from live provider behavior (RSK-2); this change cannot detect drift offline. M0-S20's scheduled live runs are the drift detector; fixtures are dated and re-authorable with stable references.
 - **Sanitization is pattern-based.** TC-FIXTURE-001/002 prove declared placeholder discipline and canary shapes, not universal secret absence. A novel secret format or a secret in an allowed string field could pass; M0-S15 owns the durable scan (RSK-3 residual risk L).
 - **Confinement allowlist erosion.** Exact-path entries plus negative controls (registry/azure/ci/io) and the literal `pathNot` assertion in `boundaries.test.ts` mitigate RSK-4; widening to `providers/**` must fail.
-- **Custom-field/comment-omission representations are settled but bounded (ADR-0006).** Residual: hygiene conformance for unmapped tenant custom fields and the *cause* of comment omission are unrepresented until a named consumer justifies a further additive extension; fixtures prove the recorded response shapes only (M0-S20 revalidates).
+- **Custom-field/comment-omission representations are settled but bounded (ADR-0006).** Residual: hygiene conformance for unmapped tenant custom fields and the *cause* of comment omission are unrepresented until a named consumer justifies a further additive extension; fixtures prove only the committed synthetic shapes they contain (M0-S20 revalidates).
 - **Merge-status mapping is under-specified.** The spec says asynchronous/multi-valued native semantics become delivery-meaningful states without silent flattening, but does not pin the native→delivery table or whether mergeability has a dedicated field. TC-GITLAB-003 asserts exhaustiveness/non-flattening; the concrete mapping must be recorded at delivery (§8.3 OQ-D).
 - **`updatedAt` string normalization is ambiguous.** ADR-0004/DM-6 say ISO-8601 UTC and "normalized verbatim"; provider values may carry offsets or millisecond precision. Tests assert parseable UTC and non-fabrication, not byte-identical formatting, until the plan records the rule (§8.3 OQ-E).
 - **Gap reason taxonomy is not pinned per operation.** TC-CAP-001 asserts closed-set validity and gapped-ness; without a recorded mapping, a delivered reason could be defensible but inconsistent (§8.3 OQ-G).
@@ -1070,7 +1070,7 @@ All rows are **To Implement** unless marked otherwise. Paths are proposed under 
 
 - The change specification is the single source of truth; no quirk family, fixture, or requirement is invented beyond the spec, ticket, and ADRs.
 - The client seeds accept injected credentials and transport, so trap tests are hermetic and deterministic (mechanism for NFR-3/F-7).
-- Fixtures are recorded at authoring time and sanitized; live fidelity is M0-S20's concern.
+- Fixtures are hand-authored synthetic captures modeled on recorded provider response shapes (public API documentation), sanitized per F-6; live-tenant revalidation is M0-S20's concern (RSK-2).
 - The Jira slice returns normalized data only; the M0-S6 collector's four predicates are test-local stand-ins in this change, not delivered commands.
 - GitHub status/verify consume the slice's input set; the commands are downstream (DEC-5), so TC-GITHUB-004 proves input completeness, not command behavior.
 - The implementation basis recorded in the ticket (native `fetch`; custom Jira read slice; zero new dependencies) holds; a basis change is a new change with its own license-registry impact.
@@ -1088,9 +1088,9 @@ All rows are **To Implement** unless marked otherwise. Paths are proposed under 
 | OQ-E: **`updatedAt` string policy.** Decide verbatim provider string vs canonical UTC ISO-8601 rendering; align DM-6 wording ("normalized verbatim") with ISO-8601 UTC. | Spec writer / plan writer | Not blocking; tests assert UTC-parseable + non-fabricated now. |
 | OQ-F: **Contract-inventory claim.** The spec/ADR say the inventory test pins exact contract shape, but the committed fixture pins export names only. This plan adds a field-shape probe; confirm that satisfies ADR-0004 C-1 or extend the fixture format. | Plan writer / delivery | Not blocking; mechanical consequence documented in TC-CONTRACT-001. |
 | OQ-G: **Gap reason per operation.** Record `provider-unsupported` vs `adapter-not-implemented` vs `plan-restriction` for each gapped operation so TC-CAP-001 can assert the mapping after delivery. | Plan writer / delivery | Not blocking; tests assert validity + gapped-ness now. |
-| OQ-H: **Fixture provenance.** Fixtures must be recorded against controlled/scratch tenants; confirm the recording source and date per fixture so re-recording is auditable. If live capture is impossible in this environment, hand-authored fixtures must be labelled as such and revalidated at M0-S20. | Delivery / M0-S20 | Not blocking; note in §10. |
+| OQ-H: **Fixture provenance.** Resolved 2026-10-31 — fixtures are hand-authored synthetic captures modeled on recorded provider response shapes (public API documentation), sanitized per F-6; none is a live-tenant capture, and live-tenant revalidation is deferred to M0-S20 (RSK-2). Per-fixture authoring dates remain recorded in §10 for auditability. | Delivery / M0-S20 | Resolved — no longer blocking. |
 
-No AC is left without a mapped test. Twelve of twelve ACs are traced and fully assertable; OQ-A/OQ-B are resolved by ADR-0006, and AC-F8-1 is process evidence (manual). The remaining open questions are recorded above rather than hidden.
+No AC is left without a mapped test. Twelve of twelve ACs are traced and fully assertable; OQ-A/OQ-B are resolved by ADR-0006, OQ-H is resolved by the fixture-provenance correction aligned with the spec, and AC-F8-1 is process evidence (manual). The remaining open questions are recorded above rather than hidden.
 
 ## 9. Plan Revision Log
 
@@ -1098,6 +1098,7 @@ No AC is left without a mapped test. Twelve of twelve ACs are traced and fully a
 |---|---|---|---|
 | 1.0 | 2026-10-31T12:00:00Z | Change Test Plan Writer | Initial plan: 28 test cases across structure/behaviour/type/checks/boundaries/aggregate, 12/12 spec-AC traceability (two AC-F3-2 clauses TODO and raised as OQ-A/OQ-B), trap-catalog index (GitLab 3, Jira 5, GitHub 3), sanitization audit + canary, four-entry secret-read boundary, ADR-0004 field probe, ADR-0005 boundary controls, capability honesty, license and gate integrity, and the ticket-AC mapping; no execution claimed. |
 | 1.1 | 2026-10-31T13:00:00Z | Change Test Plan Writer | Correction pass after ADR-0006: TC-JIRA-002/TC-JIRA-004 unblocked with concrete assertions (custom-field mapping semantics; optional `comments` absence semantics); TODO markers removed from §1.1/§1.2/§3.1/§5.1/§7.1; DM-7/DM-8 coverage rows added; TC-CONTRACT-001 extended to pin `comments` optionality; §8.1 risk and §8.3 OQ-A/OQ-B resolved. |
+| 1.2 | 2026-10-31T14:30:00Z | Change Test Plan Writer | DoR remediation: fixture provenance aligned with spec v1.3 — hand-authored synthetic captures modeled on recorded provider response shapes; §2 reference ranges updated to v1.2 numbering. |
 
 ## 10. Test Execution Log
 

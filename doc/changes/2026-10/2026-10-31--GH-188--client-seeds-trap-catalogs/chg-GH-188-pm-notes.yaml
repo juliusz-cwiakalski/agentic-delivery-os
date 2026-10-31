@@ -32,7 +32,10 @@ open_questions:
 blockers:
   - text: "DoR iteration 1 = NOT_READY: fixture-provenance contradiction (spec F-6/DM-3/flow-5/§12 + test-plan §6 say 'captured against controlled/scratch tenants'; plan OQ-H adopts hand-authored synthetic captures — no live tenant). Remediation: reopen specification + test_planning for provenance-language correction; then re-run gate."
     date: "2026-10-31"
-    resolved_date: null
+    resolved_date: "2026-10-31"
+  - text: "ADR-0005 overstated FACT rows (fetch-global invisible to dependency-cruiser rule; ban scoped to core neutral tiers) — corrected 4 rows + ALT-0 declared-structure rewording; decision and status (Proposed) unchanged."
+    date: "2026-10-31"
+    resolved_date: "2026-10-31"
 notes:
   - text: "State detection: issue OPEN, no labels, milestone M0; no change folder, no branch artifacts, no open/merged PR — fresh delivery. Dependency GH-181 (M0-S12 credential port) closed 2026-10-30, so dependency is satisfied."
     type: "info"
