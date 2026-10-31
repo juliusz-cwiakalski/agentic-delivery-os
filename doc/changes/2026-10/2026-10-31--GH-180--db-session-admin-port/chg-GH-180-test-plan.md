@@ -1,8 +1,8 @@
 ---
 id: chg-GH-180-test-plan
-status: Proposed
+status: Updated
 created: 2026-10-31T19:45:00Z
-last_updated: 2026-10-31T19:45:00Z
+last_updated: 2026-10-31T19:55:00Z
 owners: [engineering]
 service: delivery-os CLI session-database administration
 labels: [change, planning]
@@ -24,7 +24,7 @@ The plan is built around three binding mechanisms: an **injected fake `OpencodeS
 
 ### 1.1 In Scope
 
-- Command grammar: the closed subcommand set, declared flag sets, value and range validation before any I/O, the boolean `--apply` forms, repeated-flag rejection, `--json` as a rendering-only global, and the `input.value.rejected` / `fallback.invocation` split with exit `1` (F-D5, AC-D12).
+- Command grammar: the closed subcommand set, declared flag sets, value and range validation before any I/O, the boolean `--apply` forms, repeated-flag rejection, `--json` as a rendering-only global, and the two-class `input.value.rejected` / `fallback.invocation` split with exit `1` (F-D5, AC-D12).
 - `db size`: runtime path resolution, database/WAL/SHM bytes with explicit presence, session/message/part counts, oldest/newest ISO-8601 UTC timestamps or `null`, zero mutations (F-D1, DM-D1, AC-D1).
 - `db list`: bounded page, `updatedAt` descending then `id` ascending, default 20 / max 100, `total`/`omitted`/`truncated`, the exact nine-field item shape, `live` from the injected clock (F-D2, DM-D2, AC-D2).
 - `db prune`: dry-run zero mutation, the cold/live/leaf candidate rule at each boundary, oldest-first ordering with `id` tiebreak, the cap, apply through one `deleteSession` per candidate, idempotent re-runs, the pre-delete re-check (gained child, vanished row), the already-absent row at delete, partial failure with the bounded summary and retry convergence, and abort on unavailable/query failure (F-D3, DM-D3, AC-D3..AC-D9).
@@ -85,7 +85,7 @@ The plan is built around three binding mechanisms: an **injected fake `OpencodeS
 | AC-D9 | An already-absent row is a counted skip mid-run, not a hard failure; the run continues | TC-DB-019, TC-DB-021 | Covered |
 | AC-D10 | `reboot --apply` with a live session returns `db.reboot.live-session` and does nothing; with zero live sessions it performs exactly one checkpoint and reports WAL before/after; dry-run reports the block without erroring | TC-DB-031, TC-DB-032 | Covered |
 | AC-D11 | No reboot run kills/signals/suspends/restarts a process or deletes/truncates a sidecar; human output states the operator restarts opencode manually | TC-DB-016, TC-DB-033 | Covered |
-| AC-D12 | Grammar is validated before I/O: missing/unknown subcommand, unexpected positional, wrong flag for the subcommand, missing value, out-of-range number, value-bearing `--apply` are `input.value.rejected` (or `fallback.invocation` for a token outside the declared set) at exit 1 with zero reads and zero mutations | TC-DB-023, TC-DB-024 | Covered |
+| AC-D12 | Grammar is validated before I/O: missing/unknown subcommand, unexpected positional (including a single-dash token such as `-x`), wrong flag for the subcommand, missing value, out-of-range number, value-bearing `--apply` are `input.value.rejected`; an undeclared `--`-prefixed token is `fallback.invocation`; both at exit 1 with zero reads and zero mutations | TC-DB-023, TC-DB-024 | Covered |
 | AC-D13 | Numeric flags at min/max/one-below/one-above and injection-shaped ids: out-of-range rejected, in-range values are the only ones interpolated, no id outside `^[A-Za-z0-9_-]+$` is interpolated or passed to delete | TC-DB-025, TC-DB-026, TC-DB-027 | Covered |
 | AC-D14 | Machine `data` ≤ 524288 bytes; human ≤ 32 item lines, 40 lines, 8192 bytes with `+N more`; no forbidden field or real user path in any output/error/evidence/fixture/log; canary appears zero times; redaction removal fails the suite | TC-DB-010, TC-DB-026, TC-DB-028, TC-DB-029, TC-DB-030 | Covered |
 | AC-D15 | The four `db.*` failures map to their declared rows; documented table matches both directions; kind-only `db` contains via `fallback.internal`; no redundant grammar row | TC-DB-003, TC-DB-004, TC-DB-005, TC-DB-022 | Covered |
@@ -251,7 +251,7 @@ This table is binding: a TC is complete only when every column is satisfied. `Le
 | TC-DB-021 | AC-D9, NFR-D10 | Behaviour / PRU | Row absent at delete (re-read succeeds, delete rejects, store lacks the row) | Apply; inspect counts and continuation | `skipped >= 1`, no `db.delete.failed` for that candidate, subsequent candidates attempted | Exit 0 | Present-row sibling still deleted and counted in the same run |
 | TC-DB-022 | AC-D8, AC-D15 | Behaviour / PRU | `databasePath` throws; malformed JSON; non-array; non-zero; mid-run re-read failure | Run each class through `db prune` | `db.opencode.unavailable` / `db.query.failed` at exit 2; zero deletes on selection failure; zero further candidates on mid-run failure; never success | Exit 2 | A failure-to-empty mutant returns success while candidates exist and is caught |
 | TC-DB-023 | AC-D12, NFR-D8 | Behaviour / GRA | Runtime fake; rejection matrix §4.5 | Run each rejection class | Exactly `input.value.rejected`; zero runtime calls; `--json` stripped and accepted | Exit 1; zero I/O | A valid sibling invocation succeeds and calls the runtime |
-| TC-DB-024 | AC-D12 | Behaviour / GRA | Runtime fake; containment matrix §4.5 | Run each parser-containment token | Exactly `fallback.invocation`; zero runtime calls | Exit 1; zero I/O | A valid flag with the same prefix succeeds |
+| TC-DB-024 | AC-D12 | Behaviour / GRA | Runtime fake; containment matrix §4.5 | Run each undeclared `--`-prefixed containment token | Exactly `fallback.invocation`; zero runtime calls | Exit 1; zero I/O | A valid flag with the same prefix succeeds |
 | TC-DB-025 | AC-D13, NFR-D8 | Behaviour / SQL + GRA | Range matrix §4.6; pure selection probe | Run min/max/±1 for each flag; probe defensive clamping | Out-of-range rejected with `input.value.rejected`; in-range passed through exactly; a direct out-of-range injection is clamped before interpolation | Exit 1 out of range; exit 0 in range | A raw-value mutant emits `99999` and fails |
 | TC-DB-026 | AC-D13, AC-D14, NFR-D8 | Behaviour / SQL | Id-shape matrix §4.7; over-cap id/path | Run each shape through the adapter | Invalid id → `db.query.failed`, zero deletes; no SQL/argv contains an invalid id; over-cap id/path → `db.query.failed` naming the field, never truncation | Exit 2 | An interpolating mutant puts `';` into SQL and fails |
 | TC-DB-027 | AC-D13, AC-D5, NFR-D8 | Behaviour / SQL | Call log from every run | Assert statement count and text; assert delete path | One statement per query (no `;`), no `DELETE`/`DROP`/`TRUNCATE`/`VACUUM`/`ALTER`/`CREATE`, no `IN (`, per-candidate delete only | Exit 0 | A `DELETE FROM session` mutant fails |
@@ -271,8 +271,8 @@ This table is binding: a TC is complete only when every column is satisfied. `Le
 
 | Condition | Identity | Category | Retryable | Consequence | Projection class | Exit | TC |
 |---|---|---|---|---|---|---|---|
-| Missing/unknown subcommand, unexpected positional, flag not declared for the subcommand, missing value, out-of-range numeric, value-bearing or repeated `--apply` reaching the handler | `input.value.rejected` | user | false | not_landed | user-validation | 1 | TC-DB-023 |
-| Token outside the command's declared flag set (`--bogus`, `--accept`, `--apply=false`, `--limit=5`) | `fallback.invocation` | user | false | unknown | user-validation | 1 | TC-DB-024 |
+| Missing/unknown subcommand, unexpected positional (including a single-dash token such as `-x`), flag not declared for the subcommand, missing value, out-of-range numeric, value-bearing or repeated `--apply` reaching the handler | `input.value.rejected` | user | false | not_landed | user-validation | 1 | TC-DB-023 |
+| Undeclared `--`-prefixed token (`--bogus`, `--accept`, `--apply=false`, `--limit=5`) | `fallback.invocation` | user | false | unknown | user-validation | 1 | TC-DB-024 |
 | `opencode` unavailable, `opencode db path` fails, database absent/unreadable | `db.opencode.unavailable` | platform | false | not_landed | platform-provider | 2 | TC-DB-022 |
 | A query fails or returns a malformed result | `db.query.failed` | platform | true | not_landed | platform-provider | 2 | TC-DB-022, TC-DB-026 |
 | A delete did not land (including partial failure) | `db.delete.failed` | transient | true | not_landed | platform-provider | 2 | TC-DB-020 |
@@ -319,12 +319,13 @@ Time base: `NOW_MS = Date.UTC(2026, 9, 31, 12, 0, 0)`; `LIVE_BOUNDARY = NOW_MS �
 | G-10 | `list --limit abc`, `--limit 1.5`, `prune --older-than -1` | `input.value.rejected` | 1 | 0 |
 | G-11 | `prune --apply false` (stray value token) | `input.value.rejected` | 1 | 0 |
 | G-12 | `prune --apply --apply`; `prune --limit 5 --limit 10` | `input.value.rejected` | 1 | 0 |
+| G-13 | `size -x` (single-dash token; unexpected positional) | `input.value.rejected` | 1 | 0 |
 | P-01 | `size --bogus` | `fallback.invocation` | 1 | 0 |
 | P-02 | `size --limit=5` | `fallback.invocation` | 1 | 0 |
 | P-03 | `reboot --apply=false` | `fallback.invocation` | 1 | 0 |
-| P-04 | `size -x` | `fallback.invocation` | 1 | 0 |
+| P-04 | `size --x` | `fallback.invocation` | 1 | 0 |
 
-**Why G-03/G-07/G-08 are handler rejections and P-01..P-04 are parser containments** (A-T3): the command declares its full flag set and enough positional capacity for the handler to see the tokens, so missing values, unexpected positionals, wrong-for-subcommand flags and repetitions are validated in the handler and classified `input.value.rejected` per §3.1; a token that is not in the declared flag set at all (including a fused `--flag=value` and a short token) is contained by the shared parser as `fallback.invocation` per DEC-D7. Both are exit 1 with zero I/O.
+**Why G-03/G-07/G-08/G-13 are handler rejections and P-01..P-04 are parser containments** (A-T3): the shared parser recognizes only `--`-prefixed tokens as flags. The command declares its full `--` flag set and enough positional capacity for the handler to see the tokens, so missing values, unexpected positionals (including a single-dash token such as `-x`), wrong-for-subcommand flags and repetitions are validated in the handler and classified `input.value.rejected` per §3.1. An undeclared `--`-prefixed token (including a fused `--flag=value`) is contained by the parser as `fallback.invocation` per DEC-D7. Both classes are exit 1 with zero I/O.
 
 ### 4.6 Numeric Flag Range Matrix (binding for AC-D13, NFR-D8)
 
@@ -1086,11 +1087,11 @@ Accepted values are asserted to be the exact values the seam receives (never sil
 **Preconditions**:
 
 - The runtime-level fake `DbCommandRuntime` recording every subcommand call.
-- The rejection matrix G-01..G-05 and G-07..G-12 (§4.5), plus the `--json` acceptance case G-06.
+- The rejection matrix G-01..G-05, G-07..G-13 (§4.5), plus the `--json` acceptance case G-06.
 
 **Steps**:
 
-1. For each of G-01..G-05 and G-07..G-12, run the invocation in both human and `--json` modes.
+1. For each of G-01..G-05 and G-07..G-13, run the invocation in both human and `--json` modes.
 2. Assert exactly `input.value.rejected`, `category user`, `retryable false`, `consequence not_landed`, `projectionClass user-validation`, exit 1, and no `data` key.
 3. Assert the runtime fake recorded zero calls (no read, no mutation, no path resolution).
 4. Assert G-06 (`prune --json`) succeeds and that the handler's `argv` excludes `--json`, proving `--json` is not a grammar token.
@@ -1113,7 +1114,7 @@ Accepted values are asserted to be the exact values the seam receives (never sil
 
 **Preconditions**:
 
-- The tokens P-01..P-04: `--bogus`, `--limit=5`, `--apply=false`, `-x`.
+- The tokens P-01..P-04: `--bogus`, `--limit=5`, `--apply=false`, `--x`.
 - A valid flag with the same prefix (`--limit 5`) as the live control.
 
 **Steps**:
@@ -1125,7 +1126,7 @@ Accepted values are asserted to be the exact values the seam receives (never sil
 
 **Expected Outcome**:
 
-- Tokens outside the declared flag set are contained by the parser as `fallback.invocation`; both rejection classes exit 1; the control proves the split is token-shape driven.
+- Undeclared `--`-prefixed tokens are contained by the parser as `fallback.invocation`; a single-dash token such as `-x` is an unexpected positional rejected by the handler as `input.value.rejected` (TC-DB-023, G-13); both classes exit 1; the control proves the split is token-shape driven.
 
 #### TC-DB-025 - Numeric flag ranges and the defensive clamp
 
@@ -1640,8 +1641,8 @@ All TCs are automated except the PR-body half of TC-DB-038 and the reference mea
 | TC-DB-020 | same + `session-admin-output.test.ts` | corresponding `bun test` | success-on-partial and summary-without-id mutants | To Implement |
 | TC-DB-021 | `tests/behaviour/session-admin-prune.test.ts` | same | absent-row-at-delete with a present sibling | To Implement |
 | TC-DB-022 | same + `tests/fixtures/session-admin/malformed.ts` | same | failure-to-empty mutant | To Implement |
-| TC-DB-023 | `tests/behaviour/session-admin-grammar.test.ts` | `bun test tests/behaviour/session-admin-grammar.test.ts` | per-class matrix; valid sibling control | To Implement |
-| TC-DB-024 | same | same | containment tokens; same-prefix valid control | To Implement |
+| TC-DB-023 | `tests/behaviour/session-admin-grammar.test.ts` | `bun test tests/behaviour/session-admin-grammar.test.ts` | per-class matrix including the single-dash positional; valid sibling control | To Implement |
+| TC-DB-024 | same | same | undeclared `--`-prefixed containment tokens; same-prefix valid control | To Implement |
 | TC-DB-025 | same + `tests/behaviour/session-admin-sql-safety.test.ts` | corresponding `bun test` | raw-value mutant; boundary matrix | To Implement |
 | TC-DB-026 | `tests/behaviour/session-admin-sql-safety.test.ts` + `ids.ts` | `bun test tests/behaviour/session-admin-sql-safety.test.ts` | interpolating mutant; over-cap id/path | To Implement |
 | TC-DB-027 | same | same | `DELETE FROM session` mutant | To Implement |
@@ -1752,7 +1753,7 @@ Notes on the battery:
 
 - **A-T1 — Behaviour-bound TCs.** Proposed helper names, fixture file contents, golden file names and the internal SQL text may change in delivery planning; the behaviour, assertions, identities, shapes, exits and AC mapping must not. Spec-fixed values (`delivery.session-admin.v1`, the four `db.*` codes, the live window, the ranges, the caps, the id pattern, the timeouts) may not be rebound.
 - **A-T2 — In-process harness.** The suites exercise the production modules through the fake IO and the fake runtime, in-process. No session-admin test spawns a process, opens a database, reads a home directory or uses the network (TC-DB-036 asserts the absence).
-- **A-T3 — Grammar split and declaration.** The `db` command declares its full flag set and enough positional capacity for the handler to see the tokens, so missing values, unexpected positionals, wrong-for-subcommand flags and repetitions are handler rejections (`input.value.rejected`), while a token outside the declared set is parser containment (`fallback.invocation`). This is the implementable reading of §3.1 and DEC-D7; the matrix in §4.5 is the binding oracle.
+- **A-T3 — Grammar split and declaration.** The shared parser recognizes only `--`-prefixed tokens as flags. The `db` command declares its full `--` flag set and enough positional capacity for the handler to see the tokens, so missing values, unexpected positionals (including a single-dash token such as `-x`), wrong-for-subcommand flags and repetitions are handler rejections (`input.value.rejected`), while an undeclared `--`-prefixed token (including a fused `--flag=value`) is parser containment (`fallback.invocation`). This is the implementable reading of §3.1 and DEC-D7; the matrix in §4.5 is the binding oracle.
 - **A-T4 — Partial-failure summary format.** The summary is asserted against the spec's documented example (`"3 of 50 session deletes did not land (first: <id>)"`); a wording change requires a spec amendment and a plan update, not a silent test relaxation.
 - **A-T5 — Absent-row representation is delivery-bound.** The seam is not extended by this plan. Absence at delete is derived from the store state after the failed delete (or an equivalent delivery representation); the test binds to the observable (skipped, run continues, no `db.delete.failed`).
 - **A-T6 — NFR-D4 evidence.** The latency thresholds are evidenced only by the recorded reference measurement; the CI oracle is bounded work. A missing reference measurement is recorded as "not run", never as passing.
@@ -1782,6 +1783,7 @@ Notes on the battery:
 | Version | Date (UTC) | Author | Changes |
 |---|---|---|---|
 | 1.0 | 2026-10-31T19:45:00Z | Change Test Plan Writer | Initial plan: 38 TCs (`TC-DB-001..TC-DB-038`, a new prefix). All 18 ACs (AC-D1..AC-D18) and all 10 NFRs mapped with no orphan TCs; a binding cold/live/leaf boundary matrix (B-01..B-16) with both sides asserted; grammar and parser-containment matrices; numeric-range and id-shape/SQL-discipline matrices; dry-run zero mutation, official-delete-only apply, idempotency, TOCTOU, vanished-row and already-absent handling, partial-failure truthfulness and retry convergence, reboot gate and single checkpoint, no process kill and no sidecar deletion; machine and human caps with `+N more`; metadata-only whitelist with a canary and mutation-sensitivity controls; four `db.*` rows with bidirectional sync and kind-only containment; tier/purity/no-SQLite/allowlist confinement and composition-absent non-registration; the scoped `config-default-positions` baseline repair; hermeticity and no-real-home-path scan; bounded-work NFR-D4 evidence with an explicitly non-CI reference measurement; and the C-11 sign-off gate. Recorded gaps: plan absent, NFR-D4 non-CI latency, AC-D18's PR-body half, delivery-bound spellings, four AC-less spec behaviours, and the single scoped repair. |
+| 1.1 | 2026-10-31T19:55:00Z | Change Test Plan Writer | Targeted amendment aligning the grammar oracle with spec v1.1: P-04 is now `size --x` (parser `fallback.invocation`); added G-13 `size -x` as an unexpected positional (`input.value.rejected`); AC-D12 wording, the exit oracle, TC-DB-023/TC-DB-024, §7 mapping and A-T3 now state the two-class rule. TC count unchanged at 38; exits, AC mappings and the zero-I/O oracle unchanged; privacy scan 0 matches. |
 
 ## 10. Test Execution Log
 

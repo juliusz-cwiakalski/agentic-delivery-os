@@ -5,9 +5,9 @@ story_code: M0-S11
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-10-31T13:52:00Z", completed: "2026-10-31T18:50:00Z", stopped: "2026-10-31T13:56:00Z (blocking open questions: prototype surface absent)", resumed: "2026-10-31T18:32:00Z (CEO resume: merge origin/main-tools @ b31ec47, proceed on the documented fallback)" }
-  specification: { started: "2026-10-31T18:55:00Z", completed: "2026-10-31T19:20:00Z", iterations: "iter-1 — chg-GH-180-spec.md 629 lines; 18 ACs (AC-D1..AC-D18); 11 decisions (DEC-D1..DEC-D11); no blocking open questions" }
-  test_planning: { started: "2026-10-31T19:25:00Z", completed: "2026-10-31T19:55:00Z", iterations: "iter-1 — chg-GH-180-test-plan.md 1791 lines; 38 TCs (TC-DB-001..038); 18/18 ACs covered, 0 orphans/0 uncovered; non-CI cases recorded (NFR-D4 reference measurement, AC-D18 PR-body half); privacy-literal amendment removed all committed home-shaped paths" }
-  delivery_planning: { started: null, completed: null }
+  specification: { started: "2026-10-31T18:55:00Z", completed: "2026-10-31T19:20:00Z", iterations: "iter-1 — chg-GH-180-spec.md 629 lines; 18 ACs (AC-D1..AC-D18); 11 decisions (DEC-D1..DEC-D11); no blocking open questions", reopened: "2026-10-31T20:15:00Z (delivery_planning found TC-DB-023 G-03 vs TC-DB-024 P-04 grammar contradiction: the unchanged parser treats single-dash tokens as positionals; DEC-D7/§3.1/AC-D12 clarified)", reopened_completed: "2026-10-31T20:30:00Z (spec v1.1 grammar clarification: single-dash -> input.value.rejected; undeclared -- -> fallback.invocation; AC count 18)" }
+  test_planning: { started: "2026-10-31T19:25:00Z", completed: "2026-10-31T19:55:00Z", iterations: "iter-1 — chg-GH-180-test-plan.md 1791 lines; 38 TCs (TC-DB-001..038); 18/18 ACs covered, 0 orphans/0 uncovered; non-CI cases recorded (NFR-D4 reference measurement, AC-D18 PR-body half); privacy-literal amendment removed all committed home-shaped paths", reopened: "2026-10-31T20:15:00Z (align TC-DB-024 P-04 and the single-dash case with the clarified grammar; no TC count change)", reopened_completed: "2026-10-31T20:40:00Z (test plan v1.1: G-13 single-dash -> input.value.rejected; P-04 -> size --x -> fallback.invocation; 38 TCs)" }
+  delivery_planning: { started: "2026-10-31T20:45:00Z", completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }

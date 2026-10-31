@@ -102,8 +102,9 @@ The absence of an admin surface has three consequences. First, bloat is managed 
 
 Grammar rules, all validated before any I/O:
 
-- A missing subcommand, an unknown subcommand, an unexpected positional, a flag not declared for the selected subcommand, a missing flag value, or a numeric value outside its declared range is a classified `input.value.rejected` rejection with exit `1`. No state is read and no mutation is attempted.
-- The shared parser rejects a token outside the command's declared flag set before dispatch (the existing `fallback.invocation` containment). That is the same observable class: an input-domain, user-validation rejection at exit `1`. The declarative carve-out is pinned in DEC-D7.
+- A missing subcommand, an unknown subcommand, an unexpected positional, a `--`-prefixed flag not declared for the selected subcommand, a missing flag value, or a numeric value outside its declared range is a classified `input.value.rejected` rejection with exit `1`. No state is read and no mutation is attempted.
+- The shared parser recognizes only `--`-prefixed tokens as flags. A single-dash token such as `-x` is not a flag; it is an unexpected positional that the handler rejects as `input.value.rejected` (exit `1`). An undeclared `--`-prefixed token such as `--x` is rejected by the parser as `fallback.invocation` (exit `1`). Both classes are input-domain, user-validation rejections at exit `1`; the split is pinned in DEC-D7.
+- The shared parser is `packages/cli/src/index.ts`, which this change consumes unchanged; only the two token classes above determine which layer rejects.
 - `--apply` is boolean; `--apply=false`, a value-bearing `--apply`, or a repeated conflicting flag pair is rejected. Boolean and value flags never share a name.
 - `--json` is not a command-specific flag; the handler never inspects it.
 
@@ -209,8 +210,8 @@ The binary name comes from the injected brand; no product literal is committed. 
 
 | Condition | Identity | Exit |
 |---|---|---|
-| Missing/unknown subcommand, positional, wrong flag for subcommand, missing value, out-of-range numeric | `input.value.rejected` | 1 |
-| Token outside the command's declared flag set (parser containment) | `fallback.invocation` | 1 |
+| Missing/unknown subcommand, unexpected positional (including a single-dash token such as `-x`), missing value, out-of-range numeric | `input.value.rejected` | 1 |
+| Undeclared `--`-prefixed token (parser containment) | `fallback.invocation` | 1 |
 | `opencode` unavailable, `opencode db path` fails, database absent/unreadable | `db.opencode.unavailable` | 2 |
 | A session database query fails or returns a malformed result | `db.query.failed` | 2 |
 | A session delete did not land (including partial failure) | `db.delete.failed` | 2 |
@@ -423,7 +424,7 @@ ADR-0003 requires an explicit privacy sign-off before the `db` administration en
 | Behaviour — size and list | Metadata fields, runtime path resolution, ordering, `--limit` bounds, `live` classification at the window boundary, empty-store `null` timestamps, sidecar presence, bounds, determinism | `tests/behaviour/session-admin-size-list.test.ts` |
 | Behaviour — prune | Candidate rule across cold/live/leaf boundaries, oldest-first ordering, cap, dry-run zero mutations, apply deletes only candidates, TOCTOU skip when a candidate gains a child or disappears, idempotent second run, partial failure shape and summary, already-absent row skipped mid-run, abort on query failure | `tests/behaviour/session-admin-prune.test.ts` |
 | Behaviour — reboot | Dry-run plan, live-session gate on `--apply`, zero action on the gate, one checkpoint on success, no file deletion, no process kill, WAL before/after reporting | `tests/behaviour/session-admin-reboot.test.ts` |
-| Behaviour — grammar and errors | Missing/unknown subcommand, positionals, undeclared flags, missing values, out-of-range numbers, `--apply` value forms, parser containment carve-out, exit projection | `tests/behaviour/session-admin-grammar.test.ts` |
+| Behaviour — grammar and errors | Missing/unknown subcommand, positionals (including single-dash tokens), undeclared `--` flags, missing values, out-of-range numbers, `--apply` value forms, parser containment carve-out, exit projection | `tests/behaviour/session-admin-grammar.test.ts` |
 | Behaviour — output | Envelope validity on success and failure, schema version, machine byte cap, human grammar and caps, `+N more` truncation, byte-identical replays, no extra fields | `tests/behaviour/session-admin-output.test.ts` |
 | Behaviour — SQL safety | Id shape validation before interpolation and before the delete command, injection attempts, numeric clamping invariant, no bulk interpolation, single-statement queries | `tests/behaviour/session-admin-sql-safety.test.ts` |
 | Contract and privacy | Fake-IO conformance to both ports, read-only store surface, metadata-only whitelist, canary secret, mutation sensitivity | `tests/behaviour/session-admin-privacy.test.ts` |
@@ -511,7 +512,7 @@ The envelope's `runId` and `timing`, the per-run counts, the explicit mode, the 
 | DEC-D4 | ADR-0003's `SessionStore` stays read-only/metadata-only; a separate `SessionAdminPort` owns mutation. | PM decision 2026-10-31 | Reversible only by a new decision |
 | DEC-D5 | Live session means activity inside the 15-minute window; the SQLite WAL/SHM sidecars are never touched by `prune`; `reboot --apply` performs one bounded checkpoint only when no live session exists. | PM decision 2026-10-31 | Reversible at PR review |
 | DEC-D6 | Prune deletes leaf sessions only, because `session.parent_id` has no foreign key and descendants do not cascade. | PM decision 2026-10-31 | Reversible at PR review |
-| DEC-D7 | Grammar rejections use `input.value.rejected`; a token outside the command's declared flag set is contained by the shared parser as `fallback.invocation`. Both are input-domain user rejections at exit 1, and both are asserted. | Spec decision reconciling the requested identity with the existing parser | Reversible at PR review |
+| DEC-D7 | Grammar rejections use `input.value.rejected`; the shared parser treats only `--`-prefixed tokens as flags. A single-dash token is an unexpected positional that the handler rejects as `input.value.rejected`; an undeclared `--`-prefixed token is contained by the parser as `fallback.invocation`. Both are input-domain, user-validation rejections at exit 1, and both are asserted. The shared parser (`packages/cli/src/index.ts`) is unchanged. | Spec decision reconciling the requested identity with the existing parser | Reversible at PR review |
 | DEC-D8 | User numeric flags outside their declared ranges are rejected, not silently clamped; values are additionally clamped before SQL interpolation as a defence-in-depth invariant. | Spec decision reconciling "validated and clamped" with explicit grammar rejection | Reversible at PR review |
 | DEC-D9 | A partial prune returns `db.delete.failed` (exit 2) with a bounded summary naming the failed count and first failed identity, rather than a success envelope. | Spec decision derived from the "never pretend success" requirement and the closed error object | Reversible at PR review |
 | DEC-D10 | ADR-0003 C-11 privacy sign-off is an owner merge gate, not a delivery blocker; the PR is left open and no approval is claimed. | PM decision 2026-10-31 | Owner decision |
@@ -597,8 +598,8 @@ Each criterion is testable and traceable to a test-plan case that asserts the cu
   *DoD predicate*: fake process seam records zero kill/signal calls; fake filesystem records zero deletions; the human report contains the manual-restart sentence. (F-D4, NFR-D3, NFR-D10)
 
 - **AC-D12 — Grammar is validated before I/O and rejections are classified.**
-  Given a missing subcommand, an unknown subcommand, an unexpected positional, a flag not declared for the subcommand, a missing flag value, an out-of-range `--limit` or `--older-than`, or a value-bearing `--apply`, when the command runs, then the rejection is classified as `input.value.rejected` (or `fallback.invocation` for a token outside the declared flag set) with exit 1, and the fake IO records zero reads and zero mutations.
-  *DoD predicate*: one case per rejection class; every case asserts the code and exit; the IO call log is empty for grammar cases. (F-D5, DM-D7, NFR-D8)
+  Given a missing subcommand, an unknown subcommand, an unexpected positional (including a single-dash token such as `db size -x`), a missing flag value, an out-of-range `--limit` or `--older-than`, or a value-bearing `--apply`, when the command runs, then the rejection is classified as `input.value.rejected` with exit 1; given an undeclared `--`-prefixed token such as `db size --x`, when the command runs, then the rejection is classified as `fallback.invocation` with exit 1; in both classes the fake IO records zero reads and zero mutations.
+  *DoD predicate*: one case per rejection class; `db size -x` yields `input.value.rejected` and `db size --x` yields `fallback.invocation`, both at exit 1 with an empty IO call log; the `--json` stripping case still succeeds. (F-D5, DM-D7, NFR-D8)
 
 - **AC-D13 — Numeric values and session ids are safe to interpolate.**
   Given user numeric flags at their minimum, maximum, one below, and one above each bound, and database ids including shapes with quotes, spaces, semicolons, or comment markers, when the command runs, then out-of-range flags are rejected, in-range values are the only values interpolated, and no id outside `^[A-Za-z0-9_-]+$` is ever interpolated or passed to the delete command.
@@ -626,4 +627,5 @@ Each criterion is testable and traceable to a test-plan case that asserts the cu
 
 ## 14. DOCUMENT HISTORY
 
+- **v1.1 (2026-10-31)** — Delivery-planning amendment clarifying the grammar rejection split against the unchanged shared parser (`packages/cli/src/index.ts`, which recognizes only `--`-prefixed tokens as flags). §3.1, §3.8, §7.1, DEC-D7, and AC-D12 now name the two classes: a single-dash token (`-x`) is an unexpected positional the handler rejects as `input.value.rejected`, while an undeclared `--`-prefixed token (`--x`) is the parser's `fallback.invocation` containment; both are input-domain, user-validation rejections at exit 1. Root cause was the prior wording treating any token outside the declared flag set as parser containment; the parser and all product behaviour are unchanged. No AC, NFR, risk, scope, or error-identity count changes; AC count remains 18.
 - **v1.0 (2026-10-31)** — Initial specification. Authored from the ticket summary, the M0-S11 backlog entry, the recorded PM fallback (the inline prototype is absent), live read-only environment facts, and the binding repo rules. Pins the four-subcommand surface, dry-run defaults, the 15-minute live window, leaf-only pruning, the TOCTOU re-check, the opencode-CLI-only access path, the `SessionStorePort`/`SessionAdminPort` split, the four `db` error rows, the bounded metadata-only output, the owner merge gate for the ADR-0003 C-11 sign-off, and the scoped defaults-position baseline repair.
