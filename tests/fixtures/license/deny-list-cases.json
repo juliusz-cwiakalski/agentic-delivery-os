@@ -1,0 +1,790 @@
+{
+  "classes": [
+    "denied",
+    "unknown license reference",
+    "non-asserted",
+    "not a valid SPDX expression",
+    "empty license",
+    "not allow-listed",
+    "missing registry entry",
+    "missing registered use",
+    "unverified use",
+    "malformed registry policy",
+    "allow/deny overlap",
+    "schema/scope policy",
+    "mandatory floor",
+    "allow-list/verdict drift",
+    "control"
+  ],
+  "groups": {
+    "schema": 5,
+    "scope": 5,
+    "presence": 7,
+    "malformed": 18,
+    "floor": 25,
+    "overlap": 3,
+    "extension": 2,
+    "unknown-reference": 2,
+    "empty": 2,
+    "non-asserted": 2,
+    "unparseable": 6,
+    "non-allow-listed": 7
+  },
+  "cases": [
+    {
+      "id": "schema-old",
+      "group": "schema",
+      "classToken": "schema/scope policy",
+      "mutation": "set",
+      "field": "schema_version",
+      "value": 2,
+      "expectedValue": "2"
+    },
+    {
+      "id": "schema-absent",
+      "group": "schema",
+      "classToken": "schema/scope policy",
+      "mutation": "delete",
+      "field": "schema_version",
+      "expectedValue": "absent"
+    },
+    {
+      "id": "schema-string",
+      "group": "schema",
+      "classToken": "schema/scope policy",
+      "mutation": "set",
+      "field": "schema_version",
+      "value": "3",
+      "expectedValue": "3"
+    },
+    {
+      "id": "schema-future",
+      "group": "schema",
+      "classToken": "schema/scope policy",
+      "mutation": "set",
+      "field": "schema_version",
+      "value": 4,
+      "expectedValue": "4"
+    },
+    {
+      "id": "schema-null",
+      "group": "schema",
+      "classToken": "schema/scope policy",
+      "mutation": "set",
+      "field": "schema_version",
+      "value": null,
+      "expectedValue": "null"
+    },
+    {
+      "id": "scope-wrong",
+      "group": "scope",
+      "classToken": "schema/scope policy",
+      "mutation": "set",
+      "field": "scope",
+      "value": "full-transitive",
+      "expectedValue": "full-transitive"
+    },
+    {
+      "id": "scope-near-miss",
+      "group": "scope",
+      "classToken": "schema/scope policy",
+      "mutation": "set",
+      "field": "scope",
+      "value": "direct-and-runtime",
+      "expectedValue": "direct-and-runtime"
+    },
+    {
+      "id": "scope-empty",
+      "group": "scope",
+      "classToken": "schema/scope policy",
+      "mutation": "set",
+      "field": "scope",
+      "value": "",
+      "expectedValue": ""
+    },
+    {
+      "id": "scope-absent",
+      "group": "scope",
+      "classToken": "schema/scope policy",
+      "mutation": "delete",
+      "field": "scope",
+      "expectedValue": "absent"
+    },
+    {
+      "id": "scope-null",
+      "group": "scope",
+      "classToken": "schema/scope policy",
+      "mutation": "set",
+      "field": "scope",
+      "value": null,
+      "expectedValue": "null"
+    },
+    {
+      "id": "presence-absent",
+      "group": "presence",
+      "classToken": "malformed registry policy",
+      "mutation": "delete",
+      "field": "deny_list",
+      "expectedValue": "absent",
+      "expectedReason": "absent"
+    },
+    {
+      "id": "presence-undefined",
+      "group": "presence",
+      "classToken": "malformed registry policy",
+      "mutation": "set-undefined",
+      "field": "deny_list",
+      "expectedValue": "absent",
+      "expectedReason": "absent"
+    },
+    {
+      "id": "presence-null",
+      "group": "presence",
+      "classToken": "malformed registry policy",
+      "mutation": "set",
+      "field": "deny_list",
+      "value": null,
+      "expectedValue": "null",
+      "expectedReason": "not an array"
+    },
+    {
+      "id": "presence-string",
+      "group": "presence",
+      "classToken": "malformed registry policy",
+      "mutation": "set",
+      "field": "deny_list",
+      "value": "SSPL-1.0",
+      "expectedValue": "SSPL-1.0",
+      "expectedReason": "not an array"
+    },
+    {
+      "id": "presence-object",
+      "group": "presence",
+      "classToken": "malformed registry policy",
+      "mutation": "set",
+      "field": "deny_list",
+      "value": { "SSPL": ["SSPL-1.0"] },
+      "expectedValue": "[object Object]",
+      "expectedReason": "not an array"
+    },
+    {
+      "id": "presence-empty-array",
+      "group": "presence",
+      "classToken": "malformed registry policy",
+      "mutation": "set",
+      "field": "deny_list",
+      "value": [],
+      "expectedValue": "empty",
+      "expectedReason": "empty"
+    },
+    {
+      "id": "presence-absent-widened-allow",
+      "group": "presence",
+      "classToken": "malformed registry policy",
+      "mutation": "remove-with-widened-allow",
+      "field": "deny_list",
+      "value": "SSPL-1.0",
+      "expectedValue": "absent",
+      "expectedReason": "absent"
+    },
+    {
+      "id": "malformed-nonstring-number",
+      "group": "malformed",
+      "classToken": "malformed registry policy",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": 123,
+      "expectedValue": "123",
+      "expectedReason": "not a single identifier"
+    },
+    {
+      "id": "malformed-nonstring-boolean",
+      "group": "malformed",
+      "classToken": "malformed registry policy",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": true,
+      "expectedValue": "true",
+      "expectedReason": "not a single identifier"
+    },
+    {
+      "id": "malformed-nonstring-null",
+      "group": "malformed",
+      "classToken": "malformed registry policy",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": null,
+      "expectedValue": "null",
+      "expectedReason": "not a single identifier"
+    },
+    {
+      "id": "malformed-nonstring-object",
+      "group": "malformed",
+      "classToken": "malformed registry policy",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": {},
+      "expectedValue": "[object Object]",
+      "expectedReason": "not a single identifier"
+    },
+    {
+      "id": "malformed-nonstring-array",
+      "group": "malformed",
+      "classToken": "malformed registry policy",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": ["SSPL-1.0"],
+      "expectedValue": "SSPL-1.0",
+      "expectedReason": "not a single identifier"
+    },
+    {
+      "id": "malformed-empty-empty",
+      "group": "malformed",
+      "classToken": "malformed registry policy",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": "",
+      "expectedValue": "",
+      "expectedReason": "empty"
+    },
+    {
+      "id": "malformed-empty-space",
+      "group": "malformed",
+      "classToken": "malformed registry policy",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": " ",
+      "expectedValue": " ",
+      "expectedReason": "empty"
+    },
+    {
+      "id": "malformed-empty-spaces",
+      "group": "malformed",
+      "classToken": "malformed registry policy",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": "   ",
+      "expectedValue": "   ",
+      "expectedReason": "empty"
+    },
+    {
+      "id": "malformed-whitespace-leading",
+      "group": "malformed",
+      "classToken": "malformed registry policy",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": " SSPL-1.0",
+      "expectedValue": " SSPL-1.0",
+      "expectedReason": "not a single identifier"
+    },
+    {
+      "id": "malformed-whitespace-trailing",
+      "group": "malformed",
+      "classToken": "malformed registry policy",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": "SSPL-1.0 ",
+      "expectedValue": "SSPL-1.0 ",
+      "expectedReason": "not a single identifier"
+    },
+    {
+      "id": "malformed-whitespace-inner",
+      "group": "malformed",
+      "classToken": "malformed registry policy",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": "SSPL 1.0",
+      "expectedValue": "SSPL 1.0",
+      "expectedReason": "not a single identifier"
+    },
+    {
+      "id": "malformed-duplicate",
+      "group": "malformed",
+      "classToken": "malformed registry policy",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": "SSPL-1.0",
+      "expectedValue": "SSPL-1.0",
+      "expectedReason": "duplicate"
+    },
+    {
+      "id": "malformed-compound-or",
+      "group": "malformed",
+      "classToken": "malformed registry policy",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": "MIT OR SSPL-1.0",
+      "expectedValue": "MIT OR SSPL-1.0",
+      "expectedReason": "not a single identifier"
+    },
+    {
+      "id": "malformed-compound-parens",
+      "group": "malformed",
+      "classToken": "malformed registry policy",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": "(SSPL-1.0)",
+      "expectedValue": "(SSPL-1.0)",
+      "expectedReason": "not a single identifier"
+    },
+    {
+      "id": "malformed-compound-with",
+      "group": "malformed",
+      "classToken": "malformed registry policy",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": "GPL-2.0-only WITH Classpath-exception-2.0",
+      "expectedValue": "GPL-2.0-only WITH Classpath-exception-2.0",
+      "expectedReason": "not a single identifier"
+    },
+    {
+      "id": "malformed-operator-and",
+      "group": "malformed",
+      "classToken": "malformed registry policy",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": "AND",
+      "expectedValue": "AND",
+      "expectedReason": "not a single identifier"
+    },
+    {
+      "id": "malformed-operator-or",
+      "group": "malformed",
+      "classToken": "malformed registry policy",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": "OR",
+      "expectedValue": "OR",
+      "expectedReason": "not a single identifier"
+    },
+    {
+      "id": "malformed-operator-with",
+      "group": "malformed",
+      "classToken": "malformed registry policy",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": "WITH",
+      "expectedValue": "WITH",
+      "expectedReason": "not a single identifier"
+    },
+    {
+      "id": "floor-remove-SSPL-1.0",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "SSPL-1.0",
+      "expectedValue": "SSPL-1.0"
+    },
+    {
+      "id": "floor-remove-BUSL-1.0",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "BUSL-1.0",
+      "expectedValue": "BUSL-1.0"
+    },
+    {
+      "id": "floor-remove-BUSL-1.1",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "BUSL-1.1",
+      "expectedValue": "BUSL-1.1"
+    },
+    {
+      "id": "floor-remove-Elastic-2.0",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "Elastic-2.0",
+      "expectedValue": "Elastic-2.0"
+    },
+    {
+      "id": "floor-remove-Commons-Clause",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "Commons-Clause",
+      "expectedValue": "Commons-Clause"
+    },
+    {
+      "id": "floor-remove-CC-BY-NC-1.0",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "CC-BY-NC-1.0",
+      "expectedValue": "CC-BY-NC-1.0"
+    },
+    {
+      "id": "floor-remove-CC-BY-NC-2.0",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "CC-BY-NC-2.0",
+      "expectedValue": "CC-BY-NC-2.0"
+    },
+    {
+      "id": "floor-remove-CC-BY-NC-2.5",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "CC-BY-NC-2.5",
+      "expectedValue": "CC-BY-NC-2.5"
+    },
+    {
+      "id": "floor-remove-CC-BY-NC-3.0",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "CC-BY-NC-3.0",
+      "expectedValue": "CC-BY-NC-3.0"
+    },
+    {
+      "id": "floor-remove-CC-BY-NC-4.0",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "CC-BY-NC-4.0",
+      "expectedValue": "CC-BY-NC-4.0"
+    },
+    {
+      "id": "floor-remove-CC-BY-NC-SA-1.0",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "CC-BY-NC-SA-1.0",
+      "expectedValue": "CC-BY-NC-SA-1.0"
+    },
+    {
+      "id": "floor-remove-CC-BY-NC-SA-2.0",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "CC-BY-NC-SA-2.0",
+      "expectedValue": "CC-BY-NC-SA-2.0"
+    },
+    {
+      "id": "floor-remove-CC-BY-NC-SA-2.5",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "CC-BY-NC-SA-2.5",
+      "expectedValue": "CC-BY-NC-SA-2.5"
+    },
+    {
+      "id": "floor-remove-CC-BY-NC-SA-3.0",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "CC-BY-NC-SA-3.0",
+      "expectedValue": "CC-BY-NC-SA-3.0"
+    },
+    {
+      "id": "floor-remove-CC-BY-NC-SA-4.0",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "CC-BY-NC-SA-4.0",
+      "expectedValue": "CC-BY-NC-SA-4.0"
+    },
+    {
+      "id": "floor-remove-CC-BY-NC-ND-1.0",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "CC-BY-NC-ND-1.0",
+      "expectedValue": "CC-BY-NC-ND-1.0"
+    },
+    {
+      "id": "floor-remove-CC-BY-NC-ND-2.0",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "CC-BY-NC-ND-2.0",
+      "expectedValue": "CC-BY-NC-ND-2.0"
+    },
+    {
+      "id": "floor-remove-CC-BY-NC-ND-2.5",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "CC-BY-NC-ND-2.5",
+      "expectedValue": "CC-BY-NC-ND-2.5"
+    },
+    {
+      "id": "floor-remove-CC-BY-NC-ND-3.0",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "CC-BY-NC-ND-3.0",
+      "expectedValue": "CC-BY-NC-ND-3.0"
+    },
+    {
+      "id": "floor-remove-CC-BY-NC-ND-4.0",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "remove",
+      "field": "deny_list",
+      "value": "CC-BY-NC-ND-4.0",
+      "expectedValue": "CC-BY-NC-ND-4.0"
+    },
+    {
+      "id": "floor-adversarial-SSPL-1.0",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "adversarial-remove",
+      "field": "deny_list",
+      "value": "SSPL-1.0",
+      "expectedValue": "SSPL-1.0"
+    },
+    {
+      "id": "floor-adversarial-BUSL-1.1",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "adversarial-remove",
+      "field": "deny_list",
+      "value": "BUSL-1.1",
+      "expectedValue": "BUSL-1.1"
+    },
+    {
+      "id": "floor-adversarial-Elastic-2.0",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "adversarial-remove",
+      "field": "deny_list",
+      "value": "Elastic-2.0",
+      "expectedValue": "Elastic-2.0"
+    },
+    {
+      "id": "floor-adversarial-Commons-Clause",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "adversarial-remove",
+      "field": "deny_list",
+      "value": "Commons-Clause",
+      "expectedValue": "Commons-Clause"
+    },
+    {
+      "id": "floor-adversarial-CC-BY-NC-4.0",
+      "group": "floor",
+      "classToken": "mandatory floor",
+      "mutation": "adversarial-remove",
+      "field": "deny_list",
+      "value": "CC-BY-NC-4.0",
+      "expectedValue": "CC-BY-NC-4.0"
+    },
+    {
+      "id": "overlap-minimal",
+      "group": "overlap",
+      "classToken": "allow/deny overlap",
+      "mutation": "minimal-overlap",
+      "expectedValue": "MIT"
+    },
+    {
+      "id": "overlap-unused",
+      "group": "overlap",
+      "classToken": "allow/deny overlap",
+      "mutation": "unused-overlap",
+      "value": "Zlib",
+      "expectedValue": "Zlib"
+    },
+    {
+      "id": "overlap-live-deny",
+      "group": "overlap",
+      "classToken": "allow/deny overlap",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": "MIT",
+      "expectedValue": "MIT"
+    },
+    {
+      "id": "extension-valid-floor",
+      "group": "extension",
+      "classToken": "control",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": "AGPL-3.0-only",
+      "failureExpected": false
+    },
+    {
+      "id": "extension-valid-policy",
+      "group": "extension",
+      "classToken": "control",
+      "mutation": "append",
+      "field": "deny_list",
+      "value": "Zlib",
+      "failureExpected": false
+    },
+    {
+      "id": "unknown-reference-proprietary",
+      "group": "unknown-reference",
+      "classToken": "unknown license reference",
+      "mutation": "set-license",
+      "value": "LicenseRef-Proprietary",
+      "expectedValue": "LicenseRef-Proprietary"
+    },
+    {
+      "id": "unknown-reference-scancode",
+      "group": "unknown-reference",
+      "classToken": "unknown license reference",
+      "mutation": "set-license",
+      "value": "LicenseRef-scancode-unknown",
+      "expectedValue": "LicenseRef-scancode-unknown"
+    },
+    {
+      "id": "empty-blank",
+      "group": "empty",
+      "classToken": "empty license",
+      "mutation": "set-license",
+      "value": "",
+      "expectedValue": ""
+    },
+    {
+      "id": "empty-whitespace",
+      "group": "empty",
+      "classToken": "empty license",
+      "mutation": "set-license",
+      "value": "   ",
+      "expectedValue": "   "
+    },
+    {
+      "id": "nonasserted-noassertion",
+      "group": "non-asserted",
+      "classToken": "non-asserted",
+      "mutation": "set-license",
+      "value": "NOASSERTION",
+      "expectedValue": "NOASSERTION"
+    },
+    {
+      "id": "nonasserted-see-license",
+      "group": "non-asserted",
+      "classToken": "non-asserted",
+      "mutation": "set-license",
+      "value": "SEE LICENSE",
+      "expectedValue": "SEE LICENSE"
+    },
+    {
+      "id": "unparseable-trailing-or",
+      "group": "unparseable",
+      "classToken": "not a valid SPDX expression",
+      "mutation": "set-license",
+      "value": "MIT OR",
+      "expectedValue": "MIT OR"
+    },
+    {
+      "id": "unparseable-leading-and",
+      "group": "unparseable",
+      "classToken": "not a valid SPDX expression",
+      "mutation": "set-license",
+      "value": "AND MIT",
+      "expectedValue": "AND MIT"
+    },
+    {
+      "id": "unparseable-missing-paren",
+      "group": "unparseable",
+      "classToken": "not a valid SPDX expression",
+      "mutation": "set-license",
+      "value": "MIT (ISC",
+      "expectedValue": "MIT (ISC"
+    },
+    {
+      "id": "unparseable-empty-parens",
+      "group": "unparseable",
+      "classToken": "not a valid SPDX expression",
+      "mutation": "set-license",
+      "value": "()",
+      "expectedValue": "()"
+    },
+    {
+      "id": "unparseable-with",
+      "group": "unparseable",
+      "classToken": "not a valid SPDX expression",
+      "mutation": "set-license",
+      "value": "MIT WITH Classpath-exception-2.0",
+      "expectedValue": "MIT WITH Classpath-exception-2.0"
+    },
+    {
+      "id": "unparseable-slash",
+      "group": "unparseable",
+      "classToken": "not a valid SPDX expression",
+      "mutation": "set-license",
+      "value": "MIT/Apache-2.0",
+      "expectedValue": "MIT/Apache-2.0"
+    },
+    {
+      "id": "non-allow-listed-gpl",
+      "group": "non-allow-listed",
+      "classToken": "not allow-listed",
+      "mutation": "set-license",
+      "value": "GPL-3.0-only",
+      "expectedValue": "GPL-3.0-only"
+    },
+    {
+      "id": "non-allow-listed-mpl",
+      "group": "non-allow-listed",
+      "classToken": "not allow-listed",
+      "mutation": "set-license",
+      "value": "MPL-2.0",
+      "expectedValue": "MPL-2.0"
+    },
+    {
+      "id": "non-allow-listed-agpl",
+      "group": "non-allow-listed",
+      "classToken": "not allow-listed",
+      "mutation": "set-license",
+      "value": "AGPL-3.0-only",
+      "expectedValue": "AGPL-3.0-only"
+    },
+    {
+      "id": "non-allow-listed-unlicense",
+      "group": "non-allow-listed",
+      "classToken": "not allow-listed",
+      "mutation": "set-license",
+      "value": "Unlicense",
+      "expectedValue": "Unlicense"
+    },
+    {
+      "id": "non-allow-listed-0bsd",
+      "group": "non-allow-listed",
+      "classToken": "not allow-listed",
+      "mutation": "set-license",
+      "value": "0BSD",
+      "expectedValue": "0BSD"
+    },
+    {
+      "id": "non-allow-listed-bsd2",
+      "group": "non-allow-listed",
+      "classToken": "not allow-listed",
+      "mutation": "set-license",
+      "value": "BSD-2-Clause",
+      "expectedValue": "BSD-2-Clause"
+    },
+    {
+      "id": "non-allow-listed-mit0",
+      "group": "non-allow-listed",
+      "classToken": "not allow-listed",
+      "mutation": "set-license",
+      "value": "MIT-0",
+      "expectedValue": "MIT-0"
+    }
+  ]
+}
