@@ -7,9 +7,9 @@ owners: ["engineering"]
 area: domain
 document_classification: current-truth
 links:
-  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-184", "GH-188", "GH-175"]
-summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer, adapter-port, provider-engine, provider-client-seed, pm-notes, phase-transition, delivery-registry, verify-change, and status-digest terms used across the repository."
+  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175"]
+summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer, adapter-port, provider-client-seed, pm-notes, phase-transition, delivery-registry, and verify-change terms used across the repository."
 ---
 
 # Glossary
@@ -40,14 +40,17 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Corpus boundary | The pm-notes corpus accepted by the conformance fixture: every pm-notes document under change folders dated 2026-10 or later, minus an explicit exclusion manifest of repo-relative POSIX paths. The manifest names one known-unparseable historical artifact, and a guard keeps it from growing silently; legacy-era documents stay outside the corpus but remain schema-bound at write time. | Testing | [feature-pm-notes-lint-and-phase-transitions.md](../spec/features/feature-pm-notes-lint-and-phase-transitions.md) |
 | Declared entrypoint | A subpath a package lists in its exports map, and which an importer must declare in its `workspaceImports` manifest field before importing. | Boundaries | — |
 | Delivery registry | The state-layer consumer that records phase transitions: schema version `delivery.registry.v1`, one `phase.transition` record per landing under a per-change record key, with fenced appends and verified reads through the state port. | Delivery state | [feature-pm-notes-lint-and-phase-transitions.md](../spec/features/feature-pm-notes-lint-and-phase-transitions.md) |
+| Deny list | The authoritative set of license identifiers the audit never accepts, checked before the allow list so a denied identifier fails even when it is also allow-listed or approved. Each entry is a single identifier, the list must stay disjoint from the allow list, and it must contain the mandatory five-family baseline (SSPL, BUSL, Elastic, Commons Clause, and the CC-BY-NC family). | Legal | [feature-monorepo-scaffold-toolchain.md](../spec/features/feature-monorepo-scaffold-toolchain.md) |
+| Domain kind | The engine-level failure classification a domain engine attaches to an error; the first link of the classification chain. Declared kinds are `provider`, `input`, `config`, `state`, and `lint`, beside the reserved `fallback` containment kind. | Result contract | — |
+| Empty-but-enforced | Scaffold content policy for the remaining engines, business logic, adapters, and drivers: structure, exports, rules, fixtures, and green tests exist. The configuration and state tiers, result contract, adapter contract substrate, provider engine, provider client read slices, and pm-notes lint/phase-transition surface carry implemented code. | Scaffold | [feature-monorepo-scaffold-toolchain.md](../spec/features/feature-monorepo-scaffold-toolchain.md) |
 | Delivery result tuple | The classified verification outcome: result token, effective variant, ordered missing phases, and evidence. Success carries it as structured `data`; failure carries the token, variant, and missing set in the deterministic summary. | Verification | [feature-verify-change-and-exit-taxonomy.md](../spec/features/feature-verify-change-and-exit-taxonomy.md) |
 | Delivery result enum | The eleven bash-era delivery-summary tokens adopted as the single typed CLI vocabulary: `merged`, `blocked`, `pr-open`, `pr-open-unverified`, `failed`, `finished`, `max-restarts`, `state-unverified`, `partial`, `noop-lane-permission`, and `noop-lane-nothing-to-do`. | Verification | [feature-verify-change-and-exit-taxonomy.md](../spec/features/feature-verify-change-and-exit-taxonomy.md) |
 | Domain kind | The engine-level failure classification a domain engine attaches to an error; the first link of the classification chain. Declared kinds are `provider`, `input`, `config`, `state`, `lint`, and `verify`, beside the reserved `fallback` containment kind. | Result contract | — |
-| Empty-but-enforced | Scaffold content policy for the remaining engines, business logic, and drivers: structure, exports, rules, fixtures, and green tests exist. The configuration and state tiers, result contract, adapter contract substrate, provider engine, the three provider client read slices, the pm-notes lint and phase-transition surface, the verify-change surface, and the status digest carry implemented code. | Scaffold | [feature-monorepo-scaffold-toolchain.md](../spec/features/feature-monorepo-scaffold-toolchain.md) |
+| Empty-but-enforced | Scaffold content policy for the remaining engines, business logic, and drivers: structure, exports, rules, fixtures, and green tests exist. The configuration and state tiers, result contract, adapter contract substrate, the three provider client read slices, and the pm-notes lint, phase-transition, and verify-change surfaces carry implemented code. | Scaffold | [feature-monorepo-scaffold-toolchain.md](../spec/features/feature-monorepo-scaffold-toolchain.md) |
 | Error table | The internal, machine-readable, single-source set of failure entries from which error identity, structured fields, and exit-code projection are all derived. Declared once in `core ./contracts` as data and types. | Result contract | — |
 | Exit-code projection | The standalone CLI's mapping of table entries to `{0, 1, 2}`: `success` -> 0, `user-validation` -> 1, `platform-provider` -> 2. The only place exit codes exist. | Result contract | — |
 | Exit taxonomy | The total mapping from every delivery-result token to exactly one projection class and therefore one CLI exit in `{0, 1, 2}`. Only `finished` yields exit `0`; `state-unverified` projects `platform-provider` (exit `2`) where bash exits `1`, a deliberate divergence recorded in TDR-0005. | Verification | [feature-verify-change-and-exit-taxonomy.md](../spec/features/feature-verify-change-and-exit-taxonomy.md) |
-| Fail-closed audit | A check that fails when required evidence is missing or ambiguous rather than passing by default. The license audit fails on an unregistered direct/runtime/transitive use, an empty license, or a disallowed SPDX branch. | Quality | — |
+| Fail-closed audit | A check that fails when required evidence is missing or ambiguous rather than passing by default. The license audit fails on an unregistered direct/runtime/transitive use, an empty or non-asserted license, a denied identifier, or a disallowed SPDX branch. | Quality | — |
 | Fallback entries | The two containment rows: `fallback.invocation` for broken invocations and unknown commands (category `user`, exit 1) and `fallback.internal` for unclassifiable failures (category `platform`, exit 2). Both are `consequence: unknown` and `retryable: false`. | Result contract | — |
 | Fixture-coverage meta-check | The test that fails when any configured boundary rule lacks a registered failing fixture, when a mandatory importer rule is missing, or when the ambient-global rule set is not covered. | Testing | — |
 | Fixture provenance | The marker on a committed provider fixture or trap catalog naming its synthetic origin and date, distinguishing it from a live capture. | Testing | [feature-provider-client-seeds.md](../spec/features/feature-provider-client-seeds.md) |
@@ -75,6 +78,7 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Presence-tolerant read | A verified registry read that treats an absent per-change record (or an absent store) as explicit no-evidence rather than a key-set failure, while a torn, schema-mismatched, or corrupt-payload read remains a classified `state.*` failure. | Verification | [feature-verify-change-and-exit-taxonomy.md](../spec/features/feature-verify-change-and-exit-taxonomy.md) |
 | LITE | The explicitly declared compressed change variant. Its required phase set is the pinned six — `clarify_scope`, `specification`, `delivery`, `quality_gates`, `dod_check`, `pr_creation`; phase keys beyond the set remain allowed and opaque. | Delivery state | [feature-pm-notes-lint-and-phase-transitions.md](../spec/features/feature-pm-notes-lint-and-phase-transitions.md) |
 | Lockstep versioning | One version line for the five publishable packages via the changesets fixed group; no package versions independently. | Release | — |
+| License registry | The committed YAML policy and verdict registry under `doc/legal/`: schema v3, the deny list, the allow list, and one exact-version entry with an approved verdict per direct and runtime-closure use. The audit reads it directly and fails closed on any unregistered or denied use. | Legal | [feature-monorepo-scaffold-toolchain.md](../spec/features/feature-monorepo-scaffold-toolchain.md) |
 | Machine output | The `--json` channel: always exactly one valid envelope on every outcome, with no diagnostics. Written to the injected output stream. | Result contract | — |
 | Metadata envelope | The versioned `delivery.metadata.v1` data contract embedded in provider artifacts: a schema identifier, a closed v1 payload carrying comment provenance and delivery linkage, and a 2048-byte serialized bound. Its pure codec is an adapter-internal module. | Adapter contracts | [feature-adapter-ports.md](../spec/features/feature-adapter-ports.md) |
 | Negative fixture | A test that deliberately introduces a forbidden edge and asserts the named boundary rule fails it. A rule without a negative fixture is unenforced and fails the meta-check. | Testing | — |
@@ -110,7 +114,7 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | schemaVersion | The brand-neutral stable string identifying the envelope schema (`delivery.result.v1` at v1); changes only on a breaking shape change. | Result contract | — |
 | Secret-read boundary | The mechanically enforced property that ambient environment access in workspace package production sources occurs only in the enumerated allowlist: the credential implementation, the state driver runtime edge, and the two configuration environment readers. The provider engine, CLI command, and quota transport add no entry. `secret-read-boundary.ts` enforces it in `check:boundaries` and CI. | Adapter contracts | [feature-adapter-ports.md](../spec/features/feature-adapter-ports.md) |
 | Seed literal set | The three legacy tokens already public in the repository — the lowercase product token, its uppercase environment-prefix form, and its home-directory config path. It is the scan's searched set and grows by one literal per frozen name. | Branding | — |
-| SPDX expression | A machine-readable license expression such as `MIT OR Apache-2.0`. The audit parses `AND`/`OR`/parentheses and fails closed on any disallowed branch. | Legal | — |
+| SPDX expression | A machine-readable license expression such as `MIT OR Apache-2.0`. The audit parses `AND`/`OR`/parentheses and evaluates every branch, so an expression passes only when no branch is unknown, non-asserted, denied, or non-allow-listed. Blanket rejection of compound expressions is not the policy ([TDR-0007](../decisions/TDR-0007-license-gate-compound-spdx-expression-evaluation.md), Proposed). | Legal | — |
 | Subpath | A package entrypoint declared in its exports map (for example `core ./contracts`). Cross-package imports use the package name plus a declared subpath; deep `src`/`dist` imports are forbidden. | Boundaries | — |
 | Sync check | The binding invariant that every emitted or referenced app error code resolves to exactly one documented table entry and every documented entry exists in the machine-readable source; drift in either direction fails the CI fast loop. | Result contract | — |
 | Tier alias (imports alias) | A package-internal layer name declared as a Node `imports` subpath alias (for example `#domain/*` in `core`). The boundary checker resolves aliases, so a forbidden edge fails in alias form and relative form alike. | Boundaries | — |
@@ -127,6 +131,23 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | State level | The store scope declared in the injected identity. `local` is implemented; `project` and `global` are declared and fail `state.level.unsupported` with no filesystem effect until implemented. | State | [feature-state-layer.md](../spec/features/feature-state-layer.md) |
 | Torn state | A state store that fails verification of framing, terminal completeness, sequence continuity, checksum, or index/ledger agreement. It is classified and reported, never read as empty or stale. | State | [feature-state-layer.md](../spec/features/feature-state-layer.md) |
 | Verified-empty | Explicit evidence that a state store is absent or holds zero records. It satisfies only an empty key-set declaration; a non-empty declaration fails `state.keys.missing`. Verified-empty and torn are never conflated. | State | [feature-state-layer.md](../spec/features/feature-state-layer.md) |
+| Verification summary | The deterministic failure prose `result=<token>; variant=<full|lite|unknown>; missing=<ids|->[; detail=<one-line>]`, with missing ids in required-set order. It is prose, never identity; `error.code` remains the identity. | Verification | [feature-verify-change-and-exit-taxonomy.md](../spec/features/feature-verify-change-and-exit-taxonomy.md) |
+
+## Acronyms
+
+_Expand every acronym at first use; keep the expanded list here._
+
+| Acronym | Expansion | First-use location |
+|---|---|---|
+| ADR | Architecture Decision Record | `doc/decisions/` |
+| AST | Abstract Syntax Tree | `scripts/checks/ambient-globals.ts` |
+| attw | `@arethetypeswrong/cli` | `scripts/checks/exports-parity.ts` |
+| CI | Continuous Integration | `.github/workflows/ci.yml` |
+| CLI | Command-Line Interface | `packages/cli/` |
+| ESM | ECMAScript Modules | `packages/*/package.json` |
+| MCP | Model Context Protocol | `packages/mcp/` |
+| SPDX | Software Package Data Exchange | `doc/legal/dependency-licenses.yaml` |
+| Empty-but-enforced | Scaffold content policy for the remaining engines, business logic, and drivers: structure, exports, rules, fixtures, and green tests exist. The configuration and state tiers, result contract, adapter contract substrate, provider engine, the three provider client read slices, the pm-notes lint and phase-transition surface, the verify-change surface, and the status digest carry implemented code. | Scaffold | [feature-monorepo-scaffold-toolchain.md](../spec/features/feature-monorepo-scaffold-toolchain.md) |
 | Status digest | The bounded `delivery.status.v1` payload returned by the read-only status command: six fixed sections, states, evidence, counts, ranked items, and truncation markers. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
 | Section state | One of `observed`, `degraded`, `unknown`, `unavailable`, `not-delivered`; describes the quality and availability of a section's evidence, never a global all-clear. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
 | Evidence record | The bounded sources, outcomes, reasons, and failure codes or classes that justify a section or item state; never raw provider payloads. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
@@ -148,22 +169,6 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Repository binding | The `origin`-derived GitHub owner, name, and host used for read-only tracker, pull-request, and CI reads; no credentials or userinfo. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
 | Source truncation | The explicit status marker that output items were dropped by a cap or that the source returned its declared read limit, so more may exist. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
 | Live smoke | The opt-in, credentialed structural status test against a real repository; not a default-CI network test and never pinning volatile item counts. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
-| Verification summary | The deterministic failure prose `result=<token>; variant=<full|lite|unknown>; missing=<ids|->[; detail=<one-line>]`, with missing ids in required-set order. It is prose, never identity; `error.code` remains the identity. | Verification | [feature-verify-change-and-exit-taxonomy.md](../spec/features/feature-verify-change-and-exit-taxonomy.md) |
-
-## Acronyms
-
-_Expand every acronym at first use; keep the expanded list here._
-
-| Acronym | Expansion | First-use location |
-|---|---|---|
-| ADR | Architecture Decision Record | `doc/decisions/` |
-| AST | Abstract Syntax Tree | `scripts/checks/ambient-globals.ts` |
-| attw | `@arethetypeswrong/cli` | `scripts/checks/exports-parity.ts` |
-| CI | Continuous Integration | `.github/workflows/ci.yml` |
-| CLI | Command-Line Interface | `packages/cli/` |
-| ESM | ECMAScript Modules | `packages/*/package.json` |
-| MCP | Model Context Protocol | `packages/mcp/` |
-| SPDX | Software Package Data Exchange | `doc/legal/dependency-licenses.yaml` |
 
 ## See also
 
@@ -179,6 +184,5 @@ _Expand every acronym at first use; keep the expanded list here._
 - [State Layer](../spec/features/feature-state-layer.md)
 - [PM-Notes Lint and Phase Transitions](../spec/features/feature-pm-notes-lint-and-phase-transitions.md)
 - [Verify Change and Exit Taxonomy](../spec/features/feature-verify-change-and-exit-taxonomy.md)
-- [Status Digest](../spec/features/feature-status-digest.md)
 - [ADR-0003 — OSS Tooling Monorepo Structure](../decisions/ADR-0003-oss-monorepo-structure.md)
 - [TDR-0005 — Delivery Result Enum and CLI Exit Taxonomy](../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md)

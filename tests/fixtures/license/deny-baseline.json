@@ -1,0 +1,50 @@
+{
+  "families": [
+    { "family": "SSPL", "identifiers": ["SSPL-1.0"] },
+    { "family": "BUSL", "identifiers": ["BUSL-1.0", "BUSL-1.1"] },
+    { "family": "Elastic License", "identifiers": ["Elastic-2.0"] },
+    { "family": "Commons Clause", "identifiers": ["Commons-Clause"] },
+    {
+      "family": "CC-BY-NC",
+      "identifiers": [
+        "CC-BY-NC-1.0",
+        "CC-BY-NC-2.0",
+        "CC-BY-NC-2.5",
+        "CC-BY-NC-3.0",
+        "CC-BY-NC-4.0",
+        "CC-BY-NC-SA-1.0",
+        "CC-BY-NC-SA-2.0",
+        "CC-BY-NC-SA-2.5",
+        "CC-BY-NC-SA-3.0",
+        "CC-BY-NC-SA-4.0",
+        "CC-BY-NC-ND-1.0",
+        "CC-BY-NC-ND-2.0",
+        "CC-BY-NC-ND-2.5",
+        "CC-BY-NC-ND-3.0",
+        "CC-BY-NC-ND-4.0"
+      ]
+    }
+  ],
+  "identifiers": [
+    "SSPL-1.0",
+    "BUSL-1.0",
+    "BUSL-1.1",
+    "Elastic-2.0",
+    "Commons-Clause",
+    "CC-BY-NC-1.0",
+    "CC-BY-NC-2.0",
+    "CC-BY-NC-2.5",
+    "CC-BY-NC-3.0",
+    "CC-BY-NC-4.0",
+    "CC-BY-NC-SA-1.0",
+    "CC-BY-NC-SA-2.0",
+    "CC-BY-NC-SA-2.5",
+    "CC-BY-NC-SA-3.0",
+    "CC-BY-NC-SA-4.0",
+    "CC-BY-NC-ND-1.0",
+    "CC-BY-NC-ND-2.0",
+    "CC-BY-NC-ND-2.5",
+    "CC-BY-NC-ND-3.0",
+    "CC-BY-NC-ND-4.0"
+  ]
+}
