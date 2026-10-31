@@ -7,7 +7,10 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
-import { createSessionAdmin, createSessionStore } from "../../packages/adapters/src/session/index";
+import {
+  createSessionAdmin as createSessionAdminBase,
+  createSessionStore as createSessionStoreBase,
+} from "../../packages/adapters/src/session/index";
 import {
   CANARY,
   ENV_CANARY,
@@ -18,9 +21,15 @@ import {
   createFakeIo,
   NOW_MS,
   runDbWithIo,
+  SESSION_POLICY,
   SYNTHETIC_DB_PATH,
 } from "../fixtures/session-admin/harness";
 import { makeSession, sessionRow } from "../fixtures/session-admin/store";
+
+const createSessionAdmin = (io: Parameters<typeof createSessionAdminBase>[0]) =>
+  createSessionAdminBase(io, SESSION_POLICY);
+const createSessionStore = (io: Parameters<typeof createSessionStoreBase>[0]) =>
+  createSessionStoreBase(io, SESSION_POLICY);
 
 const ROOT = process.cwd();
 const CONTRACT = "packages/core/src/contracts/session.ts";

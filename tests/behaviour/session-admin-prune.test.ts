@@ -9,21 +9,23 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { createSessionAdmin } from "../../packages/adapters/src/session/index";
+import { createSessionAdmin as createSessionAdminBase } from "../../packages/adapters/src/session/index";
 import { classifyDomainKind } from "../../packages/cli/src/classify";
 import {
-  classifyPruneCandidate,
-  computeDbCutoffMs,
-  computeDbLiveBoundaryMs,
   DB_DEFAULT_PRUNE_LIMIT,
   DB_LIVE_WINDOW_MINUTES,
   DB_MAX_OLDER_THAN_DAYS,
   DB_MAX_PRUNE_LIMIT,
   DB_SCHEMA_VERSION,
-  renderSessionAdminHuman,
-  type PruneCandidateFact,
-  selectPruneCandidates,
 } from "../../packages/core/src/contracts/index";
+import {
+  classifyPruneCandidate,
+  computeDbCutoffMs,
+  computeDbLiveBoundaryMs,
+  type PruneCandidateFact,
+  renderSessionAdminHuman,
+  selectPruneCandidates,
+} from "../../packages/core/src/domain/session-admin";
 import { SYNTHETIC_BRAND } from "../golden/helpers";
 import {
   BOUNDARY_CASES,
@@ -39,10 +41,15 @@ import {
   fakeSetChildren,
   LIVE_BOUNDARY,
   NOW_MS,
+  projectionAliases,
   queries,
+  SESSION_POLICY,
 } from "../fixtures/session-admin/harness";
 import { malformedQueryError, unavailableError } from "../fixtures/session-admin/malformed";
 import { makeSession, sessionRow, type SessionFixture } from "../fixtures/session-admin/store";
+
+const createSessionAdmin = (io: Parameters<typeof createSessionAdminBase>[0]) =>
+  createSessionAdminBase(io, SESSION_POLICY);
 
 const ROOT = process.cwd();
 const ADAPTER = "packages/adapters/src/session/index.ts";
@@ -78,7 +85,7 @@ const queueReRead = (
   const row = sessionRow(
     hasChildren === undefined ? session : makeSession({ ...session, hasChildren }),
   );
-  io.queueQuery([row], before);
+  io.queueProjectedQuery([row], before);
 };
 
 const queueZeroRows = (io: ReturnType<typeof createFakeIo>, before?: () => void): void => {
@@ -260,6 +267,9 @@ describe("TC-DB-013 live window and leaf-only selection", () => {
     if (!read.ok) return;
     const selected = read.value.candidates.map((candidate) => candidate.id).sort();
     expect(selected).toEqual([BOUNDARY_IDS.b10, "ses_cold_child_leaf"].sort());
+    // Defensive invariant: the real selection SQL already excludes live rows,
+    // so production reports liveExcluded 0. The fake bypasses SQL filtering and
+    // returns these live rows anyway, which exercises the counter.
     expect(read.value.counts.liveExcluded).toBe(4);
     expect(read.value.counts.selected).toBe(2);
     const sql = queries(io)[0] ?? "";
@@ -279,9 +289,9 @@ describe("TC-DB-013 live window and leaf-only selection", () => {
     );
   });
 
-  test("the adapter imports the shared predicate and has no inline parent comparison", () => {
+  test("the adapter consumes the injected shared predicate and has no inline parent comparison", () => {
     const source = readFileSync(join(ROOT, ADAPTER), "utf8");
-    expect(source).toContain("classifyPruneCandidate");
+    expect(source).toContain("policy.classify");
     expect(source).not.toContain("parent_id ===");
     expect(source).not.toContain("parent_id !==");
   });
@@ -560,6 +570,113 @@ describe("TC-DB-022 pre-land abort identities and post-land partial-abort truth"
     const read = await runPrune(io, { apply: true });
     expect(read.ok).toBe(true);
     if (read.ok) expect(read.value.counts.selected).toBe(0);
+  });
+});
+
+describe("Review iter-1 regressions: real re-read projection and non-finite inputs", () => {
+  test("the issued re-read projects every column readSessionRow parses, and deletes", async () => {
+    const [x] = coldLeaves(1) as [SessionFixture];
+    const io = createFakeIo();
+    queueSelection(io, [x]);
+    queueReRead(io, x);
+    const read = await runPrune(io, { apply: true });
+    expect(read.ok).toBe(true);
+    expect(io.deleted).toEqual([x.id]);
+    const reReadSql = queries(io)[1] ?? "";
+    const aliases = projectionAliases(reReadSql);
+    for (const alias of [
+      "id",
+      "parent_id",
+      "time_created",
+      "time_updated",
+      "time_archived",
+      "has_children",
+      "message_count",
+      "part_count",
+      "data_bytes",
+    ]) {
+      expect(aliases).toContain(alias);
+    }
+  });
+
+  test("a projected row missing a required column fails before any delete", async () => {
+    const [x] = coldLeaves(1) as [SessionFixture];
+    const io = createFakeIo();
+    queueSelection(io, [x]);
+    const staleProjection = { ...sessionRow(x) } as Record<string, unknown>;
+    delete staleProjection.time_created;
+    io.queueQuery([staleProjection]);
+    const read = await runPrune(io, { apply: true });
+    expect(read.ok).toBe(false);
+    if (read.ok) return;
+    expect(read.error.code).toBe("db.query.failed");
+    expect(read.error.field).toBe("session.time_created");
+    expect(callsOf(io, "deleteSession")).toEqual([]);
+  });
+
+  test("a parse failure after a landed delete returns db.delete.failed with landed truth", async () => {
+    const [x, y] = coldLeaves(2) as [SessionFixture, SessionFixture];
+    const io = createFakeIo();
+    queueSelection(io, [x, y]);
+    queueReRead(io, x);
+    const staleProjection = { ...sessionRow(y) } as Record<string, unknown>;
+    delete staleProjection.time_created;
+    io.queueQuery([staleProjection]);
+    const read = await runPrune(io, { apply: true });
+    expect(read.ok).toBe(false);
+    if (read.ok) return;
+    expect(read.error.code).toBe("db.delete.failed");
+    expect(read.error.summary).toBe(
+      "1 of 2 session deletes did not land (first: ses_cold_1); 1 landed",
+    );
+    expect(io.deleted).toEqual([x.id]);
+  });
+
+  test("non-finite direct-port values fail closed without interpolating into SQL", async () => {
+    const cases: readonly ((io: ReturnType<typeof createFakeIo>) => Promise<unknown>)[] = [
+      (io) =>
+        createSessionAdminBase(io, SESSION_POLICY).prune({
+          olderThanDays: 30,
+          limit: Number.NaN,
+          apply: true,
+          nowMs: NOW_MS,
+        }),
+      (io) =>
+        createSessionAdminBase(io, SESSION_POLICY).prune({
+          olderThanDays: Number.POSITIVE_INFINITY,
+          limit: 50,
+          apply: true,
+          nowMs: NOW_MS,
+        }),
+      (io) =>
+        createSessionAdminBase(io, SESSION_POLICY).prune({
+          olderThanDays: 30,
+          limit: 50,
+          apply: true,
+          nowMs: Number.NaN,
+        }),
+      (io) =>
+        createSessionAdminBase(io, SESSION_POLICY).list({
+          limit: Number.NaN,
+          nowMs: NOW_MS,
+        }),
+      (io) =>
+        createSessionAdminBase(io, SESSION_POLICY).reboot({
+          apply: false,
+          nowMs: Number.POSITIVE_INFINITY,
+        }),
+    ];
+    for (const invoke of cases) {
+      const io = createFakeIo();
+      const read = (await invoke(io)) as {
+        readonly ok: boolean;
+        readonly error?: { code: string };
+      };
+      expect(read.ok).toBe(false);
+      expect(read.error?.code).toBe("db.query.failed");
+      expect(queries(io)).toEqual([]);
+      expect(callsOf(io, "deleteSession")).toEqual([]);
+    }
   });
 });
 

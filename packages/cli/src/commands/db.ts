@@ -5,6 +5,7 @@
  * ranges, and defaults. It performs no stream write, chooses no exit code, and
  * never inspects `--json`. The shared parser is consumed unchanged.
  */
+import { renderSessionAdminHuman } from "@delivery-os/core";
 import {
   type BrandIdentity,
   DB_COMMANDS,
@@ -20,7 +21,6 @@ import {
   type ListData,
   type PruneData,
   type RebootData,
-  renderSessionAdminHuman,
   type SessionListRead,
   type SessionPruneRead,
   type SessionRebootRead,

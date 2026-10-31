@@ -28,7 +28,52 @@ import {
   type SessionSizeRead,
   type SizeData,
 } from "../../../packages/core/src/contracts/index";
+import {
+  classifyPruneCandidate,
+  computeDbCutoffMs,
+  computeDbLiveBoundaryMs,
+  isLiveDbSession,
+  selectPruneCandidates,
+} from "../../../packages/core/src/domain/session-admin";
 import { bufferSink, SYNTHETIC_BRAND } from "../../golden/helpers";
+
+/** The pure policy the adapter receives from the composition root. */
+export const SESSION_POLICY = {
+  isLive: isLiveDbSession,
+  cutoff: computeDbCutoffMs,
+  liveBoundary: computeDbLiveBoundaryMs,
+  classify: classifyPruneCandidate,
+  select: selectPruneCandidates,
+};
+
+/**
+ * The `AS <alias>` column names a single-statement SELECT projects. `CAST(...
+ * AS BLOB)` carries a type name, not a column, so it is filtered out.
+ */
+export const projectionAliases = (sql: string): string[] => {
+  const aliases: string[] = [];
+  for (const match of sql.matchAll(/\bAS\s+([A-Za-z_][A-Za-z0-9_]*)/gi)) {
+    const alias = match[1];
+    if (alias !== undefined && alias.toUpperCase() !== "BLOB") aliases.push(alias);
+  }
+  return aliases;
+};
+
+/**
+ * Project a full fixture row down to exactly the columns the issued SQL
+ * selects. This is the regression guard: if the adapter's re-read projection
+ * loses a column, the fake loses it too, and the adapter's parse fails.
+ */
+export const projectSessionRow = (
+  sql: string,
+  row: Record<string, unknown>,
+): Record<string, unknown> => {
+  const projected: Record<string, unknown> = {};
+  for (const alias of projectionAliases(sql)) {
+    if (alias in row) projected[alias] = row[alias];
+  }
+  return projected;
+};
 
 export const NOW_MS = Date.UTC(2026, 9, 31, 12, 0, 0);
 export const DAY_MS = 86_400_000;
@@ -56,6 +101,8 @@ export type QueryStep = {
   readonly rows?: readonly Record<string, unknown>[];
   readonly error?: unknown;
   readonly before?: () => void;
+  /** Mirror the issued SQL projection instead of returning the full row. */
+  readonly projectRows?: boolean;
 };
 
 export type FakeSessionIo = OpencodeSessionIo & {
@@ -71,6 +118,7 @@ export type FakeSessionIo = OpencodeSessionIo & {
   databasePathError: unknown;
   nowValue: number;
   queueQuery(rows: readonly Record<string, unknown>[], before?: () => void): void;
+  queueProjectedQuery(rows: readonly Record<string, unknown>[], before?: () => void): void;
   queueError(error: unknown): void;
   queueStep(step: QueryStep): void;
   resetCalls(): void;
@@ -113,6 +161,11 @@ export const createFakeIo = (options: FakeIoOptions = {}): FakeSessionIo => {
     queueQuery(rows, before) {
       steps.push(before === undefined ? { rows } : { rows, before });
     },
+    queueProjectedQuery(rows, before) {
+      steps.push(
+        before === undefined ? { rows, projectRows: true } : { rows, before, projectRows: true },
+      );
+    },
     queueError(error) {
       steps.push({ error });
     },
@@ -133,7 +186,8 @@ export const createFakeIo = (options: FakeIoOptions = {}): FakeSessionIo => {
       if (step === undefined) throw sessionError("db.query.failed");
       step.before?.();
       if (step.error !== undefined) throw step.error;
-      return step.rows ?? [];
+      const rows = step.rows ?? [];
+      return step.projectRows === true ? rows.map((row) => projectSessionRow(sql, row)) : rows;
     },
     async deleteSession(id: string): Promise<void> {
       calls.push({ kind: "deleteSession", value: id });

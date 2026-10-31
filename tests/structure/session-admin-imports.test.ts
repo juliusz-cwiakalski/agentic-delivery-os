@@ -6,13 +6,14 @@
  * tree must be clean. No suite spawns a process or reads a real path.
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 import { SECRET_READ_ALLOWLIST } from "../../scripts/checks/secret-read-boundary";
 
 const ROOT = process.cwd();
 const CONTRACT = "packages/core/src/contracts/session.ts";
+const CONTRACTS_INDEX = "packages/core/src/contracts/index.ts";
 const DOMAIN = "packages/core/src/domain/session-admin.ts";
 const ADAPTER = "packages/adapters/src/session/index.ts";
 const DB_COMMAND = "packages/cli/src/commands/db.ts";
@@ -79,6 +80,14 @@ const DATA_ONLY = new Set<number>([
   ts.SyntaxKind.VariableStatement,
   ts.SyntaxKind.EndOfFileToken,
 ]);
+
+/** The contracts barrel must never import or re-export the domain tier. */
+export const contractsDomainRefs = (text: string, label = CONTRACTS_INDEX): string[] => {
+  const source = parse(label, text);
+  return specifiersOf(source).filter(
+    (specifier) => specifier === "../domain" || specifier.startsWith("../domain/"),
+  );
+};
 
 export const contractsDataOnly = (text: string, label = CONTRACT): string[] => {
   const source = parse(label, text);
@@ -253,6 +262,23 @@ describe("TC-DB-002 contract and domain tier discipline", () => {
   test("the live session contract is data-only and the domain is pure", () => {
     expect(contractsDataOnly(readFileSync(join(ROOT, CONTRACT), "utf8"))).toEqual([]);
     expect(domainPure(readFileSync(join(ROOT, DOMAIN), "utf8"))).toEqual([]);
+  });
+
+  test("the contracts barrel has no domain import or re-export, with a planted control", () => {
+    const live = readFileSync(join(ROOT, CONTRACTS_INDEX), "utf8");
+    expect(contractsDomainRefs(live)).toEqual([]);
+
+    mkdirSync(join(ROOT, "tmp/tmpdir"), { recursive: true });
+    const directory = mkdtempSync(join(ROOT, "tmp/tmpdir/contracts-tier-"));
+    try {
+      const planted = `${live}\nexport {\n  classifyPruneCandidate,\n} from "../domain/session-admin.js";\n`;
+      writeFileSync(join(directory, "index.ts"), planted);
+      expect(
+        contractsDomainRefs(readFileSync(join(directory, "index.ts"), "utf8"), "index.ts"),
+      ).not.toEqual([]);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   test("runtime APIs stay confined and no ambient environment is read", () => {

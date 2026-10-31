@@ -347,20 +347,6 @@ export {
   type SizeData,
 } from "./session.js";
 
-// The shared cold/live/leaf predicate and renderer are exposed through the
-// contracts barrel so the adapter seam and the CLI import one core subpath
-// (GH-180 PIN-3/D5). The implementation stays in the pure domain tier.
-export {
-  classifyPruneCandidate,
-  computeDbCutoffMs,
-  computeDbLiveBoundaryMs,
-  isLiveDbSession,
-  type PruneCandidateDecision,
-  type PruneCandidateFact,
-  renderSessionAdminHuman,
-  selectPruneCandidates,
-} from "../domain/session-admin.js";
-
 // The `delivery.status.v1` vocabulary (GH-175 F-2, DM-1..DM-15): constants and
 // types only; the pure aggregator lives in the core domain tier.
 export {

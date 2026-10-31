@@ -7,22 +7,28 @@
  * sidecar is deleted. The injected clock is load-bearing.
  */
 import { describe, expect, test } from "bun:test";
-import { createSessionAdmin } from "../../packages/adapters/src/session/index";
+import { createSessionAdmin as createSessionAdminBase } from "../../packages/adapters/src/session/index";
 import {
-  computeDbLiveBoundaryMs,
   DB_CHECKPOINT_TIMEOUT_MS,
   DB_LIVE_WINDOW_MINUTES,
   DB_SCHEMA_VERSION,
-  renderSessionAdminHuman,
 } from "../../packages/core/src/contracts/index";
+import {
+  computeDbLiveBoundaryMs,
+  renderSessionAdminHuman,
+} from "../../packages/core/src/domain/session-admin";
 import { SYNTHETIC_BRAND } from "../golden/helpers";
 import {
   callsOf,
   createFakeIo,
   NOW_MS,
   queries,
+  SESSION_POLICY,
   SYNTHETIC_DB_PATH,
 } from "../fixtures/session-admin/harness";
+
+const createSessionAdmin = (io: Parameters<typeof createSessionAdminBase>[0]) =>
+  createSessionAdminBase(io, SESSION_POLICY);
 
 const WAL_BEFORE = 19_800_000;
 const WAL_AFTER = 0;

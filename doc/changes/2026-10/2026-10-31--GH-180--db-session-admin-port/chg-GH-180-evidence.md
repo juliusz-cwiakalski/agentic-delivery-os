@@ -2,7 +2,7 @@
 id: chg-GH-180-evidence
 status: Complete
 created: 2026-10-31T23:55:00Z
-last_updated: 2026-10-31T23:55:00Z
+last_updated: 2026-11-01T01:00:00Z
 owners: [engineering]
 service: delivery-os CLI session-database administration
 labels: [change, evidence]
@@ -38,7 +38,7 @@ All commands were executed on the delivery tree; logs are under `.ai/local/` (gi
 | Gate | Command | Result |
 |---|---|---|
 | Phase 1 contracts/error suites | `bun test tests/structure/session-admin-contract.test.ts tests/structure/session-admin-imports.test.ts tests/structure/error-table.test.ts tests/behaviour/error-classification.test.ts tests/checks/error-table-sync.test.ts tests/structure/port-contract-inventory.test.ts tests/structure/content-inventory.test.ts tests/checks/config-default-positions.test.ts` | 8/8 suites, 157 pass, 0 fail |
-| Error-table sync | `bun run scripts/checks/error-table-sync.ts` | exit 0; entries=35 documented=35; S1=50 S3=15 corpus=13 |
+| Error-table sync | `bun run scripts/checks/error-table-sync.ts` | exit 0; entries=35 documented=35; S1=51 S3=15 corpus=13 |
 | Phase 2 suites | `bun test tests/behaviour/session-admin-size-list.test.ts tests/behaviour/session-admin-privacy.test.ts tests/structure/session-admin-imports.test.ts` | 3/3 suites, 41 pass, 0 fail |
 | Boundaries and secret-read | `bun test tests/boundaries`; `bun run scripts/checks/secret-read-boundary.ts` | 132 pass, 0 fail; 102 production files clean, 4 allowlisted |
 | Phase 3 suites | `bun test tests/behaviour/session-admin-prune.test.ts tests/behaviour/session-admin-reboot.test.ts tests/behaviour/session-admin-sql-safety.test.ts tests/structure/session-admin-imports.test.ts` | 4/4 suites, 54 pass, 0 fail |
@@ -119,7 +119,46 @@ The two skips are pre-existing conditional `status-live` tests, not session-admi
 - Tests mutate only fakes/temp copies and never the real database, so no data cleanup is required.
 - The fixed-group changeset and the four documented rows must be reverted together with the machine rows.
 
-## 10. Handoff status
+## 10. Review iter-1 remediation
+
+Review iteration 1 returned `FAIL` with `REMEDIATE` (F-1, F-4, F-5, F-6, F-7 in coder scope).
+This section records the remediation on `feat/GH-180/db-session-admin-port`.
+
+- **F-1 (critical) — re-read projection.** `RE_READ_SQL` now selects the same
+  nine-column projection as selection (`candidateSummarySql`) plus the cold,
+  live, and leaf predicates. The re-read query and its row parse are one guarded
+  step: a pre-land failure keeps `db.query.failed`; a parse failure after a
+  landed delete returns `db.delete.failed` with the normative partial summary.
+- **F-4 (major) — contracts tier.** The pure-domain function/type re-export
+  block is removed from `packages/core/src/contracts/index.ts`; the contracts
+  tier is data-only again. The adapter may import only `core ./contracts`
+  (ADR-0003 DEC-2), so the pure policy is injected from the CLI edge, which
+  imports it from `@delivery-os/core`; `packages/cli/src/commands/db.ts` imports
+  `renderSessionAdminHuman` from `@delivery-os/core`. The boundary matrix is
+  unchanged.
+- **F-5 (major) — regression coverage.** The prune fake projects each re-read
+  row down to the aliases in the issued SQL, so a stale projection loses columns
+  and fails. Tests assert every required alias, a missing required column fails
+  with zero deletes, and a post-land parse failure returns `db.delete.failed`.
+- **F-6 (minor).** `liveExcluded` is documented as a defensive invariant (0 when
+  the SQL predicate holds; the fake bypasses SQL filtering).
+- **F-7 (low).** `clamp` and the injected clock guard `Number.isFinite`; a
+  non-finite direct-port value returns `db.query.failed` and no SQL is issued.
+- **Remediation HEAD.** The single remediation commit on this branch (`git log
+  -1`), parent `076f5cc`.
+- **Re-run counts (working tree):** nine session-admin suites **131 pass, 0
+  fail** (9 files; 126 before the five new regressions); focused port/error/
+  content/edge suites **156 pass, 0 fail**; `error-table-sync` **S1=51**;
+  `pnpm check:boundaries` **120 modules, 232 deps, no violations**;
+  `pnpm check` **1758 pass, 2 pre-existing skips, 1 fail** — the one failure is
+  `tests/checks/ci-baseline-parity.test.ts`, which clones committed `HEAD`
+  (still carrying the F-2 docs state); the working-tree
+  `scripts/checks/forbidden-literals.ts` run is green (5/5 scopes, 0
+  violations), and the parallel F-2 doc fix is not part of this commit.
+  `git diff --check` exit 0; `commitlint --from origin/main-tools --to HEAD`
+  exit 0.
+
+## 11. Handoff status
 
 - No PR, push, merge, or owner-approval claim was made.
 - Lifecycle phase 7 reconciliation and the ADR-0003 decision proposal are recorded as deferred handoffs in §8.

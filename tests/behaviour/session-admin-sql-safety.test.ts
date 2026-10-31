@@ -9,7 +9,10 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { createSessionAdmin, createSessionStore } from "../../packages/adapters/src/session/index";
+import {
+  createSessionAdmin as createSessionAdminBase,
+  createSessionStore as createSessionStoreBase,
+} from "../../packages/adapters/src/session/index";
 import {
   DB_MAX_OLDER_THAN_DAYS,
   DB_MAX_PRUNE_LIMIT,
@@ -19,10 +22,16 @@ import {
   createFakeIo,
   NOW_MS,
   queries,
+  SESSION_POLICY,
   SYNTHETIC_DB_PATH,
 } from "../fixtures/session-admin/harness";
 import { OVER_CAP_PATH, allInvalidIds, VALID_IDS } from "../fixtures/session-admin/ids";
 import { makeSession, sessionRow, type SessionFixture } from "../fixtures/session-admin/store";
+
+const createSessionAdmin = (io: Parameters<typeof createSessionAdminBase>[0]) =>
+  createSessionAdminBase(io, SESSION_POLICY);
+const createSessionStore = (io: Parameters<typeof createSessionStoreBase>[0]) =>
+  createSessionStoreBase(io, SESSION_POLICY);
 
 const ROOT = process.cwd();
 const ADAPTER = "packages/adapters/src/session/index.ts";

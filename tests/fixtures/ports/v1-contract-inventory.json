@@ -271,8 +271,6 @@
       "ProviderSkipReason",
       "ProviderSkippedEntry",
       "ProviderSleep",
-      "PruneCandidateDecision",
-      "PruneCandidateFact",
       "PruneData",
       "QuotaEvaluation",
       "QuotaLimit",
@@ -418,13 +416,7 @@
       "WorkItemStatus",
       "WorkflowMap",
       "WorkflowStateMapping",
-      "WorkflowTransitionMechanism",
-      "classifyPruneCandidate",
-      "computeDbCutoffMs",
-      "computeDbLiveBoundaryMs",
-      "isLiveDbSession",
-      "renderSessionAdminHuman",
-      "selectPruneCandidates"
+      "WorkflowTransitionMechanism"
     ],
     "pm-notes.ts": [
       "CANONICAL_PHASE_IDS",

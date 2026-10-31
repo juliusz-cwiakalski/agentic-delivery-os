@@ -36,7 +36,16 @@ import {
   type OpencodeSessionIo,
 } from "@delivery-os/adapters/session";
 import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
-import { catalogPaths, PRODUCTION_CATALOG, resolveConfig } from "@delivery-os/core";
+import {
+  catalogPaths,
+  classifyPruneCandidate,
+  computeDbCutoffMs,
+  computeDbLiveBoundaryMs,
+  isLiveDbSession,
+  PRODUCTION_CATALOG,
+  resolveConfig,
+  selectPruneCandidates,
+} from "@delivery-os/core";
 import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
@@ -256,8 +265,17 @@ export type DbComposition = {
 
 /** Compose the db runtime over the store/admin ports and the injected clock. */
 export const createDbCommandRuntime = (composition: DbComposition): DbCommandRuntime => {
-  const store = createSessionStore(composition.io);
-  const admin = createSessionAdmin(composition.io);
+  // The adapter may import only core contracts; the pure policy is injected
+  // here from the core root so the single domain predicate remains the source.
+  const policy = {
+    isLive: isLiveDbSession,
+    cutoff: computeDbCutoffMs,
+    liveBoundary: computeDbLiveBoundaryMs,
+    classify: classifyPruneCandidate,
+    select: selectPruneCandidates,
+  };
+  const store = createSessionStore(composition.io, policy);
+  const admin = createSessionAdmin(composition.io, policy);
   return {
     size: () => store.size(),
     list: (input) => store.list({ limit: input.limit, nowMs: composition.clock.nowMs() }),

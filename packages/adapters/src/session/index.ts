@@ -10,9 +10,6 @@
 import { execFile } from "node:child_process";
 import { statSync } from "node:fs";
 import {
-  classifyPruneCandidate,
-  computeDbCutoffMs,
-  computeDbLiveBoundaryMs,
   DB_CHECKPOINT_TIMEOUT_MS,
   DB_DELETE_TIMEOUT_MS,
   DB_LIVE_WINDOW_MINUTES,
@@ -26,10 +23,7 @@ import {
   DB_QUERY_TIMEOUT_MS,
   DB_SCHEMA_VERSION,
   DB_SESSION_ID_PATTERN,
-  isLiveDbSession,
-  selectPruneCandidates,
   type ListData,
-  type PruneCandidateFact,
   type SessionAdminError,
   type SessionAdminPort,
   type SessionListRead,
@@ -43,6 +37,41 @@ import {
 
 /** One bounded file-metadata read result. */
 export type SessionFileFacts = { readonly bytes: number; readonly present: boolean };
+
+/** One candidate fact carried by selection and the pre-delete re-check. */
+type PruneFact = {
+  readonly id: string;
+  readonly updatedAtMs: number;
+  readonly hasChildren: boolean;
+  readonly summary: SessionSummary;
+};
+
+/** The closed cold/live/leaf decision returned by the injected policy. */
+type PruneDecision =
+  | { readonly eligible: true }
+  | { readonly eligible: false; readonly reason: "live" | "warm" | "parent" };
+
+/**
+ * The pure session-admin policy, supplied by the composition root.
+ *
+ * The adapter may import only `@delivery-os/core/contracts` (ADR-0003 DEC-2),
+ * so the domain functions are injected rather than imported here. The single
+ * home of the predicate stays `@delivery-os/core`; the adapter never duplicates
+ * it or compares `parent_id` inline.
+ */
+type SessionAdminPolicy = {
+  readonly isLive: (updatedAtMs: number, nowMs: number) => boolean;
+  readonly cutoff: (nowMs: number, olderThanDays: number) => number;
+  readonly liveBoundary: (nowMs: number) => number;
+  readonly classify: (
+    fact: PruneFact,
+    input: { readonly nowMs: number; readonly olderThanDays: number },
+  ) => PruneDecision;
+  readonly select: (
+    facts: readonly PruneFact[],
+    input: { readonly nowMs: number; readonly olderThanDays: number; readonly limit: number },
+  ) => readonly PruneFact[];
+};
 
 /**
  * The single injected session-I/O seam. Adapter-local by contract: it is never
@@ -252,8 +281,15 @@ const isoFromMs = (value: number, field: string): string => {
   }
 };
 
-const clamp = (value: number, min: number, max: number): number =>
-  Math.min(max, Math.max(min, Math.trunc(value)));
+const clamp = (value: number, min: number, max: number, field: string): number => {
+  if (!Number.isFinite(value)) throw fieldFailure(field);
+  return Math.min(max, Math.max(min, Math.trunc(value)));
+};
+
+const finite = (value: number, field: string): number => {
+  if (!Number.isFinite(value)) throw fieldFailure(field);
+  return value;
+};
 
 type ReadRow = {
   readonly summary: SessionSummary;
@@ -261,7 +297,11 @@ type ReadRow = {
   readonly hasChildren: boolean;
 };
 
-const readSessionRow = (row: Record<string, unknown>, nowMs: number): ReadRow => {
+const readSessionRow = (
+  row: Record<string, unknown>,
+  nowMs: number,
+  policy: SessionAdminPolicy,
+): ReadRow => {
   const id = validateSessionId(asString(row.id, "session.id"), "session.id");
   const parentId = asNullableString(row.parent_id, "session.parent_id");
   const createdAtMs = asNumber(row.time_created, "session.time_created");
@@ -284,7 +324,7 @@ const readSessionRow = (row: Record<string, unknown>, nowMs: number): ReadRow =>
       partCount,
       dataBytes,
       archived: archivedAtMs !== null,
-      live: isLiveDbSession(updatedAtMs, nowMs),
+      live: policy.isLive(updatedAtMs, nowMs),
     },
   };
 };
@@ -351,15 +391,17 @@ const readSize = async (io: OpencodeSessionIo): Promise<SessionSizeRead> => {
 const readList = async (
   io: OpencodeSessionIo,
   input: { readonly limit: number; readonly nowMs: number },
+  policy: SessionAdminPolicy,
 ): Promise<SessionListRead> => {
   try {
-    const limit = clamp(input.limit, DB_MIN_LIMIT, DB_MAX_LIST_LIMIT);
+    const limit = clamp(input.limit, DB_MIN_LIMIT, DB_MAX_LIST_LIMIT, "limit");
+    const nowMs = finite(input.nowMs, "nowMs");
     const totalRows = await io.query("SELECT COUNT(*) AS total FROM session");
     const total = asNumber(totalRows[0]?.total, "session.total");
     const pageRows = await io.query(LIST_SQL(limit));
     const items = pageRows
       .map((row) => {
-        const read = readSessionRow(row, input.nowMs);
+        const read = readSessionRow(row, nowMs, policy);
         return { summary: read.summary, updatedAtMs: read.updatedAtMs };
       })
       .sort((left, right) => {
@@ -383,10 +425,13 @@ const readList = async (
   }
 };
 
-/** The read-only store port over one injected seam. */
-export const createSessionStore = (io: OpencodeSessionIo): SessionStorePort => ({
+/** The read-only store port over one injected seam and the injected policy. */
+export const createSessionStore = (
+  io: OpencodeSessionIo,
+  policy: SessionAdminPolicy,
+): SessionStorePort => ({
   size: () => readSize(io),
-  list: (input) => readList(io, input),
+  list: (input) => readList(io, input, policy),
 });
 
 const candidateSummarySql = [
@@ -411,9 +456,7 @@ const SELECTION_SQL = (cutoff: number, liveBoundary: number, limit: number): str
 
 const RE_READ_SQL = (id: string, cutoff: number, liveBoundary: number): string =>
   [
-    "SELECT s.id AS id, s.time_updated AS time_updated,",
-    "EXISTS(SELECT 1 FROM session c WHERE c.parent_id = s.id) AS has_children",
-    "FROM session s",
+    `SELECT ${candidateSummarySql} FROM session s`,
     `WHERE s.id = '${id}'`,
     `AND s.time_updated < ${cutoff}`,
     `AND s.time_updated < ${liveBoundary}`,
@@ -424,8 +467,12 @@ const RE_READ_SQL = (id: string, cutoff: number, liveBoundary: number): string =
 const EXISTS_SQL = (id: string): string =>
   `SELECT s.id AS id FROM session s WHERE s.id = '${id}' LIMIT 1`;
 
-const readCandidate = (row: Record<string, unknown>, nowMs: number): PruneCandidateFact => {
-  const read = readSessionRow(row, nowMs);
+const readCandidate = (
+  row: Record<string, unknown>,
+  nowMs: number,
+  policy: SessionAdminPolicy,
+): PruneFact => {
+  const read = readSessionRow(row, nowMs, policy);
   return {
     id: read.summary.id,
     updatedAtMs: read.updatedAtMs,
@@ -445,27 +492,33 @@ const readPrune = async (
     readonly apply: boolean;
     readonly nowMs: number;
   },
+  policy: SessionAdminPolicy,
 ): Promise<SessionPruneRead> => {
   try {
-    validatePath(await io.databasePath());
     const olderThanDays = clamp(
       input.olderThanDays,
       DB_MIN_OLDER_THAN_DAYS,
       DB_MAX_OLDER_THAN_DAYS,
+      "olderThanDays",
     );
-    const limit = clamp(input.limit, DB_MIN_LIMIT, DB_MAX_PRUNE_LIMIT);
-    const cutoff = computeDbCutoffMs(input.nowMs, olderThanDays);
-    const liveBoundary = computeDbLiveBoundaryMs(input.nowMs);
+    const limit = clamp(input.limit, DB_MIN_LIMIT, DB_MAX_PRUNE_LIMIT, "limit");
+    const nowMs = finite(input.nowMs, "nowMs");
+    validatePath(await io.databasePath());
+    const cutoff = policy.cutoff(nowMs, olderThanDays);
+    const liveBoundary = policy.liveBoundary(nowMs);
     const rows = await io.query(SELECTION_SQL(cutoff, liveBoundary, limit));
+    // Defensive invariant: SELECTION_SQL already filters live rows, so a real
+    // store yields 0 here. The counter only observes a row the SQL predicate
+    // would have excluded (the test fake does not interpret SQL).
     let liveExcluded = 0;
-    const eligible: PruneCandidateFact[] = [];
+    const eligible: PruneFact[] = [];
     for (const row of rows) {
-      const fact = readCandidate(row, input.nowMs);
-      const decision = classifyPruneCandidate(fact, { nowMs: input.nowMs, olderThanDays });
+      const fact = readCandidate(row, nowMs, policy);
+      const decision = policy.classify(fact, { nowMs, olderThanDays });
       if (decision.eligible) eligible.push(fact);
       else if (decision.reason === "live") liveExcluded += 1;
     }
-    const selected = selectPruneCandidates(eligible, { nowMs: input.nowMs, olderThanDays, limit });
+    const selected = policy.select(eligible, { nowMs, olderThanDays, limit });
     const base = {
       schemaVersion: DB_SCHEMA_VERSION,
       command: "prune" as const,
@@ -504,20 +557,22 @@ const readPrune = async (
       );
     };
     for (const candidate of selected) {
-      let reReadRows: readonly Record<string, unknown>[];
+      // The re-read query *and* its projection parse are one guarded step: a
+      // malformed row after a landed delete is a delete-run failure, not an
+      // unlanded query failure.
+      let eligibleNow = false;
       try {
-        reReadRows = await io.query(RE_READ_SQL(candidate.id, cutoff, liveBoundary));
+        const reReadRows = await io.query(RE_READ_SQL(candidate.id, cutoff, liveBoundary));
+        if (reReadRows.length > 0) {
+          const reFact = readCandidate(reReadRows[0] ?? {}, nowMs, policy);
+          eligibleNow = policy.classify(reFact, { nowMs, olderThanDays }).eligible;
+        }
       } catch (thrown) {
         const error = failure(thrown, "db.query.failed");
         if (deleted === 0 && failed === 0) return { ok: false, error };
         return { ok: false, error: abortAfterLand(candidate.id) };
       }
-      if (reReadRows.length === 0) {
-        skipped += 1;
-        continue;
-      }
-      const reFact = readCandidate(reReadRows[0] ?? {}, input.nowMs);
-      if (!classifyPruneCandidate(reFact, { nowMs: input.nowMs, olderThanDays }).eligible) {
+      if (!eligibleNow) {
         skipped += 1;
         continue;
       }
@@ -578,9 +633,11 @@ const readPrune = async (
 const readReboot = async (
   io: OpencodeSessionIo,
   input: { readonly apply: boolean; readonly nowMs: number },
+  policy: SessionAdminPolicy,
 ): Promise<SessionRebootRead> => {
   try {
-    const liveBoundary = computeDbLiveBoundaryMs(input.nowMs);
+    const nowMs = finite(input.nowMs, "nowMs");
+    const liveBoundary = policy.liveBoundary(nowMs);
     const liveRows = await io.query(
       `SELECT COUNT(*) AS live_sessions FROM session WHERE time_updated >= ${liveBoundary}`,
     );
@@ -641,13 +698,16 @@ const readReboot = async (
   }
 };
 
-/** The admin port over one injected seam. */
-export const createSessionAdmin = (io: OpencodeSessionIo): SessionAdminPort => {
-  const store = createSessionStore(io);
+/** The admin port over one injected seam and the injected policy. */
+export const createSessionAdmin = (
+  io: OpencodeSessionIo,
+  policy: SessionAdminPolicy,
+): SessionAdminPort => {
+  const store = createSessionStore(io, policy);
   return {
     size: () => store.size(),
     list: (input) => store.list(input),
-    prune: (input) => readPrune(io, input),
-    reboot: (input) => readReboot(io, input),
+    prune: (input) => readPrune(io, input, policy),
+    reboot: (input) => readReboot(io, input, policy),
   };
 };
