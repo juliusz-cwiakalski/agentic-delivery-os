@@ -23,6 +23,7 @@ export type Registry = {
   c2_determination: string;
   entries: RegistryEntry[];
   allow_list?: string[];
+  deny_list?: string[];
 };
 export type Dependency = { owner: string; field: string; name: string; version: string };
 
@@ -221,6 +222,125 @@ const identifiersFrom = (expressions: string[]): Set<string> => {
 const deriveAllowedIdentifiers = (registry: Registry): Set<string> =>
   identifiersFrom((registry.allow_list ?? []).map((entry) => String(entry)));
 
+/** The enforced deny set is the registry's explicit deny_list. */
+const deriveDeniedIdentifiers = (registry: Registry): Set<string> => {
+  const denied = new Set<string>();
+  if (!Array.isArray(registry.deny_list)) return denied;
+  for (const entry of registry.deny_list) {
+    if (typeof entry === "string") denied.add(entry);
+  }
+  return denied;
+};
+
+/** The Appendix A baseline the registry may extend but never shrink. */
+export const MANDATORY_DENIED_IDENTIFIERS: ReadonlySet<string> = new Set([
+  "SSPL-1.0",
+  "BUSL-1.0",
+  "BUSL-1.1",
+  "Elastic-2.0",
+  "Commons-Clause",
+  "CC-BY-NC-1.0",
+  "CC-BY-NC-2.0",
+  "CC-BY-NC-2.5",
+  "CC-BY-NC-3.0",
+  "CC-BY-NC-4.0",
+  "CC-BY-NC-SA-1.0",
+  "CC-BY-NC-SA-2.0",
+  "CC-BY-NC-SA-2.5",
+  "CC-BY-NC-SA-3.0",
+  "CC-BY-NC-SA-4.0",
+  "CC-BY-NC-ND-1.0",
+  "CC-BY-NC-ND-2.0",
+  "CC-BY-NC-ND-2.5",
+  "CC-BY-NC-ND-3.0",
+  "CC-BY-NC-ND-4.0",
+]);
+
+const NON_ASSERTED = new Set(["NOASSERTION", "NONE", "SEE LICENSE"]);
+
+const describeValue = (value: unknown): string => {
+  if (value === undefined) return "absent";
+  if (value === null) return "null";
+  if (typeof value === "string") return JSON.stringify(value);
+  return String(value);
+};
+
+/**
+ * Registry policy layer: schema, scope, deny-list integrity, disjointness, and
+ * the mandatory Appendix A floor. Evaluated before any dependency check so a
+ * broken policy fails closed even with an empty or malformed entry set.
+ */
+export const validateRegistryPolicy = (registry: Registry): string[] => {
+  const failures: string[] = [];
+  if (registry.schema_version !== 3) {
+    failures.push(
+      `registry schema field: schema_version ${describeValue(registry.schema_version)} is unsupported; expected 3 as a number`,
+    );
+  }
+  if (registry.scope !== "direct-and-runtime-closure") {
+    failures.push(
+      `registry scope field: scope ${describeValue(registry.scope)} is unsupported; supported value is direct-and-runtime-closure`,
+    );
+  }
+  const rawDenyList: unknown = registry.deny_list;
+  if (rawDenyList === undefined) {
+    failures.push("registry deny_list field is absent; a non-empty deny_list array is required");
+    return failures;
+  }
+  if (!Array.isArray(rawDenyList)) {
+    failures.push(
+      `registry deny_list field ${describeValue(rawDenyList)} is not an array; a non-empty deny_list array is required`,
+    );
+    return failures;
+  }
+  if (rawDenyList.length === 0) {
+    failures.push("registry deny_list field is empty; a non-empty deny_list array is required");
+    return failures;
+  }
+  const denyEntries: unknown[] = rawDenyList;
+  const denied = new Set<string>();
+  denyEntries.forEach((entry: unknown, index: number) => {
+    const label = `deny_list[${index}]`;
+    if (typeof entry !== "string") {
+      failures.push(`${label} ${describeValue(entry)} is not a single identifier`);
+      return;
+    }
+    if (entry.trim().length === 0) {
+      failures.push(
+        `${label} ${JSON.stringify(entry)} is empty; every deny entry must be a single identifier`,
+      );
+      return;
+    }
+    if (entry === "AND" || entry === "OR" || entry === "WITH" || !IDENTIFIER.test(entry)) {
+      failures.push(`${label} ${JSON.stringify(entry)} is not a single identifier`);
+      return;
+    }
+    if (denied.has(entry)) {
+      failures.push(`${label} duplicate identifier ${JSON.stringify(entry)} in deny_list`);
+      return;
+    }
+    denied.add(entry);
+  });
+  const allowed = new Set(
+    (Array.isArray(registry.allow_list) ? registry.allow_list : []).map((entry) => String(entry)),
+  );
+  for (const identifier of denied) {
+    if (allowed.has(identifier)) {
+      failures.push(
+        `deny_list and allow_list both contain ${JSON.stringify(identifier)}; deny wins, remove the identifier from one list`,
+      );
+    }
+  }
+  for (const identifier of MANDATORY_DENIED_IDENTIFIERS) {
+    if (!denied.has(identifier)) {
+      failures.push(
+        `deny_list is missing mandatory denied identifier ${JSON.stringify(identifier)}`,
+      );
+    }
+  }
+  return failures;
+};
+
 /** Live consistency: the allow_list must be exactly the set of approved verdicts. */
 const approvedIdentifiers = (registry: Registry): Set<string> =>
   identifiersFrom(
@@ -230,12 +350,9 @@ const approvedIdentifiers = (registry: Registry): Set<string> =>
   );
 
 export const auditRegistry = (registry: Registry, dependencies: Dependency[]): string[] => {
-  const failures: string[] = [];
+  const failures: string[] = validateRegistryPolicy(registry);
   if (!Array.isArray(registry.entries)) {
-    return ["registry has no entries array"];
-  }
-  if (registry.schema_version !== 2 || registry.scope !== "direct-and-runtime-closure") {
-    failures.push("registry schema version or scope is unsupported");
+    return [...failures, "registry has no entries array"];
   }
   if (typeof registry.c2_determination !== "string" || !registry.c2_determination.trim()) {
     failures.push("registry lacks proposed owner determination");
@@ -264,6 +381,7 @@ export const auditRegistry = (registry: Registry, dependencies: Dependency[]): s
     byName.set(entry.package, entry);
   }
   const allowed = deriveAllowedIdentifiers(registry);
+  const denied = deriveDeniedIdentifiers(registry);
   const expected = new Map(dependencies.map((dependency) => [useKey(dependency), dependency]));
   const actual = new Set<string>();
   for (const dependency of dependencies) {
@@ -317,6 +435,12 @@ export const auditRegistry = (registry: Registry, dependencies: Dependency[]): s
       failures.push(`${entry.package}: empty license field`);
       continue;
     }
+    if (NON_ASSERTED.has(license)) {
+      failures.push(
+        `${entry.package}: ${license}: non-asserted license value ${license} is never accepted`,
+      );
+      continue;
+    }
     const parsed = parseSpdxExpression(license);
     if (!parsed.ok) {
       failures.push(
@@ -325,7 +449,11 @@ export const auditRegistry = (registry: Registry, dependencies: Dependency[]): s
       continue;
     }
     for (const identifier of parsed.identifiers) {
-      if (identifier.startsWith("LicenseRef-")) {
+      if (denied.has(identifier)) {
+        failures.push(
+          `${entry.package}: ${license}: license ${identifier} is denied by deny_list (denied branch fails closed)`,
+        );
+      } else if (identifier.startsWith("LicenseRef-")) {
         failures.push(`${entry.package}: ${license}: unknown license reference ${identifier}`);
       } else if (!allowed.has(identifier)) {
         failures.push(
