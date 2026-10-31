@@ -53,6 +53,17 @@ export const SECRET_READ_CASES: readonly SecretReadCase[] = [
     assertFile: "packages/adapters/src/github/provider.ts",
   },
   {
+    id: "testkit-conformance-env-read",
+    tc: "TC-CONF-028",
+    expect: "violation",
+    rule: SECRET_READ_RULE,
+    files: {
+      "packages/testkit/src/conformance/probe.ts":
+        'export const a = process.env.SECRET; export const b = Bun.env.SECRET; const key = "SECRET"; export const c = process[key];\n',
+    },
+    assertFile: "packages/testkit/src/conformance/probe.ts",
+  },
+  {
     id: "optional-chaining",
     tc: "TC-SECRET-001",
     expect: "violation",

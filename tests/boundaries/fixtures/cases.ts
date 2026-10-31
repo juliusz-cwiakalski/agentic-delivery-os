@@ -546,6 +546,16 @@ export const RULE_CASES: RuleCase[] = [
     'import fs from "node:fs";\nexport const value = fs;\n',
   ),
 
+  // GH-189: testkit conformance source is not a runtime-API location.
+  dep(
+    "runtime-node-testkit-conformance",
+    "TC-CONF-029",
+    "runtime-apis-confinement",
+    ["testkit"],
+    "packages/testkit/src/conformance/probe.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
+  ),
+
   dep(
     "runtime-node-fs-state-facade",
     "TC-STATE-022",

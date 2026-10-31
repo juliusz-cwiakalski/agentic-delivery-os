@@ -276,6 +276,11 @@
       "id": "runtime-node-fs-core-provider",
       "tc": "TC-PROV-006",
       "path": "packages/core/src/provider/probe.ts"
+    },
+    {
+      "id": "runtime-node-testkit-conformance",
+      "tc": "TC-CONF-029",
+      "path": "packages/testkit/src/conformance/probe.ts"
     }
   ],
   "ambient-env-branding": [
