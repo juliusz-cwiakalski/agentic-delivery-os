@@ -30,8 +30,8 @@ run:
   inputs_commit: e424423     # doc/inception/inputs/tooling/ committed by owner
 
 phases:
-  - { id: 0, name: "Intake & material scan", status: in_progress, started: "2026-10-31T08:10:00+01:00", completed: null }
-  - { id: 1, name: "North star & vision", status: pending, started: null, completed: null }
+  - { id: 0, name: "Intake & material scan", status: completed, started: "2026-10-31T08:10:00+01:00", completed: "2026-10-31T08:40:00+01:00" }
+  - { id: 1, name: "North star & vision", status: in_progress, started: "2026-10-31T08:40:00+01:00", completed: null }
   - { id: 2, name: "Scope & roadmap", status: pending, started: null, completed: null }
   - { id: 3, name: "Tech stack & architecture", status: pending, started: null, completed: null }
   - { id: 4, name: "Domain, conventions & quality baseline", status: pending, started: null, completed: null }
@@ -54,12 +54,12 @@ artifacts:
   ubiquitous_language: { status: pending, path: "doc/overview/ubiquitous-language.md", confidence: 0.0 }
   assumptions:       { status: pending, path: "doc/inception/analysis/assumptions.md", confidence: 0.0 }
   risks:             { status: pending, path: "doc/inception/analysis/risks.md", confidence: 0.0 }
-  material_inventory: { status: draft, path: "doc/inception/analysis/material-inventory.md", confidence: 0.9 }
+  material_inventory: { status: written, path: "doc/inception/analysis/material-inventory.md", confidence: 0.9 }
   retrospective_notes: { status: draft, path: "doc/inception/retrospective/", confidence: 0.8 }
   open_questions:    { status: draft, path: "doc/inception/open-questions/", confidence: 0.8 }
   inception_summary: { status: pending, path: "doc/inception/inception-summary.md", confidence: 0.0 }
-  repo_analysis:     { status: draft, path: "doc/inception/analysis/repo-analysis.md", confidence: 0.85 }
-  tribal_knowledge:  { status: draft, path: "doc/inception/analysis/tribal-knowledge.md", confidence: 0.8 }
+  repo_analysis:     { status: written, path: "doc/inception/analysis/repo-analysis.md", confidence: 0.85 }
+  tribal_knowledge:  { status: written, path: "doc/inception/analysis/tribal-knowledge.md", confidence: 0.8 }
   project_prd:       { status: pending, path: "doc/overview/prd.md", confidence: 0.0, note: "not activated; roadmap + backlog are the living plan" }
   nonfunctional:     { status: pending, path: "doc/spec/nonfunctional.md", confidence: 0.0 }
   feature_specs:     { status: pending, path: "doc/spec/features/", confidence: 0.0, note: "per-delivery specs exist and keep growing; run reconciles" }
@@ -71,6 +71,11 @@ decisions:
   - { phase: 0, text: "framework artifacts are inputs; verify-only, deltas route to tickets", rationale: "AGENTS.md, .ai/agent/*, .opencode/**, doc/guides/**, delivery-system specs predate the run and are the product", date: "2026-10-31" }
   - { phase: 0, text: "decision-record seeds for the M0-S17 batch are proposals with options; ratification stays with GH-186", rationale: "keeps inception advisory and the delivery ticket authoritative", date: "2026-10-31" }
   - { phase: 0, text: "committed input pack (e424423) accepted as trusted owner direction", rationale: "owner reviewed and committed doc/inception/inputs/tooling/ before kickoff", date: "2026-10-31" }
+  - { phase: 0, text: "gate 0 passed: flow, profile, characteristics, inventory, repo analysis, tribal knowledge approved", rationale: "owner answered OPEN-Q1..Q3 inline and confirmed continuation", date: "2026-10-31" }
+  - { phase: 0, text: "multi_user=false confirmed: build for a single user operating locally for now", rationale: "owner answer to OPEN-Q1; personas/JTBD stay deactivated", date: "2026-10-31" }
+  - { phase: 0, text: "ubiquitous-language artifact approved (thin, mapping to concept homes); overlap with the primitive catalogue resolved in phase 4", rationale: "owner answer to OPEN-Q2 pointing at the primitive catalogue", date: "2026-10-31" }
+  - { phase: 0, text: "sync policy: when a delivery merges to main-tools, merge main-tools into the inception branch; per-ticket worktrees readable for in-progress state", rationale: "owner answer to OPEN-Q3 (reconciliation stance)", date: "2026-10-31" }
+  - { phase: 0, text: "owner-maintained local working materials inform the run via owner direction and trust-boundary reading only; never referenced from committed artifacts", rationale: "owner remark at gate 0 on material-inventory scope", date: "2026-10-31" }
 
 assumptions:
   # risk_type: value | usability | feasibility | viability
@@ -80,5 +85,6 @@ assumptions:
 
 sessions:
   - { started: "2026-10-31T08:10:00+01:00", phase: 0, notes: "phase 0 artifacts drafted: state, material inventory, repo analysis with gap map, tribal knowledge; gate 0 presented" }
+  - { started: "2026-10-31T08:40:00+01:00", phase: 0, notes: "gate 0 closed: OPEN-Q1..Q3 answered inline, answers folded into state and inventory conditions; phase 0 committed" }
 
-last_updated: "2026-10-31T08:10:00+01:00"
+last_updated: "2026-10-31T08:40:00+01:00"

@@ -67,5 +67,12 @@ only and never enter committed artifacts.
   patterns refused (trust boundary per the bootstrapper contract).
 - In-flight stories (GH-177, GH-182, GH-184) will add feature specs and
   decision content during the run; material inventory rows D1, C4, F1 are
-  re-verified at every phase gate.
-- No material under git-ignored local state is part of this inventory.
+  re-verified at every phase gate. When a delivery merges to `main-tools`,
+  `main-tools` is merged into the inception branch so the run always sees
+  the latest merged state (owner direction, gate 0).
+- Owner-maintained working materials exist under the repository's
+  git-ignored local state (`.ai/local/`, documented in AGENTS.md as
+  ephemeral). They inform this run through owner-provided direction and
+  direct reading by the bootstrapper under the trust boundary; their
+  content, identifiers, and paths never enter committed artifacts. They are
+  intentionally absent from the inventory tables above.
