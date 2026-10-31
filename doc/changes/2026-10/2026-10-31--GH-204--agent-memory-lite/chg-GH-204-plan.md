@@ -80,14 +80,14 @@ Deliver the practices-now track of the ADOS memory model as text and skill conte
 
 **Tasks**:
 
-- [ ] **2.1** Rewrite `.ai/memory/README.md`: layout, capture bar, first-capture template, concurrency and conflict reality, record format, id allocation, promotion routing, caps, and the curator operation set.
-- [ ] **2.2** Add the reviewer exclusion to the read policy and index hints: own README only always read, index and topic files just-in-time, and the three adversarial roles barred from coder reasoning and episodic memory (R2, R6, AC-10, F-11).
-- [ ] **2.3** Pin index granularity: exactly one row per agent folder (seeded or self-created) and one row per promoted record file under `lessons/` and `tacit/`, each with a read-when hint; no directory-level rows for `lessons/` or `tacit/`; describe the empty trees in the layout only (R7, AC-2, F-3).
-- [ ] **2.4** Define record frontmatter under YAML 1.2 core semantics: quote `statement`, `applies_when`, and `created` or use block scalars; `created` stays a string, not a date scalar (R8, F-7).
-- [ ] **2.5** Define id allocation and validation: monotonic next free per prefix and year, unique across both directories, duplicate or reused ids rejected and never reallocated, scan `id` and `supersedes`, replacement links the old id and sets the old status to `superseded` (R8, AC-11, F-8).
-- [ ] **2.6** Keep the first-capture template complete: charter, Lessons section, evidence format, advisory label, cap and split pointer; an unseeded agent creates its own README and appends exactly one own-folder row on first capture only (R4, R7, AC-4, F-1).
-- [ ] **2.7** Refine the four seeds in place: charter and capture instructions only, zero dated lessons and zero invented evidence, 150 lines or fewer each; keep both `.gitkeep` files empty and add no fifth agent folder (AC-2, AC-3, NFR-1).
-- [ ] **2.8** Confirm every index row added in this commit points at a file committed in this commit; count rows from agent folders and record files, not directories.
+- [x] **2.1** Rewrite `.ai/memory/README.md`: layout, capture bar, first-capture template, concurrency and conflict reality, record format, id allocation, promotion routing, caps, and the curator operation set. (done)
+- [x] **2.2** Add the reviewer exclusion to the read policy and index hints: own README only always read, index and topic files just-in-time, and the three adversarial roles barred from coder reasoning and episodic memory (R2, R6, AC-10, F-11). (done)
+- [x] **2.3** Pin index granularity: exactly one row per agent folder (seeded or self-created) and one row per promoted record file under `lessons/` and `tacit/`, each with a read-when hint; no directory-level rows for `lessons/` or `tacit/`; describe the empty trees in the layout only (R7, AC-2, F-3). (done; 4 rows = 4 folders, 0 record files)
+- [x] **2.4** Define record frontmatter under YAML 1.2 core semantics: quote `statement`, `applies_when`, and `created` or use block scalars; `created` stays a string, not a date scalar (R8, F-7). (done)
+- [x] **2.5** Define id allocation and validation: monotonic next free per prefix and year, unique across both directories, duplicate or reused ids rejected and never reallocated, scan `id` and `supersedes`, replacement links the old id and sets the old status to `superseded` (R8, AC-11, F-8). (done)
+- [x] **2.6** Keep the first-capture template complete: charter, Lessons section, evidence format, advisory label, cap and split pointer; an unseeded agent creates its own README and appends exactly one own-folder row on first capture only (R4, R7, AC-4, F-1). (done in README first-capture section)
+- [x] **2.7** Refine the four seeds in place: charter and capture instructions only, zero dated lessons and zero invented evidence, 150 lines or fewer each; keep both `.gitkeep` files empty and add no fifth agent folder (AC-2, AC-3, NFR-1). (done; 12-13 lines each, zero dated lines)
+- [x] **2.8** Confirm every index row added in this commit points at a file committed in this commit; count rows from agent folders and record files, not directories. (verified: 4 rows, 4 folders, 0 record files, no dangling rows)
 
 **Acceptance Criteria**: Must: AC-2, AC-3, AC-4, AC-10, NFR-1, NFR-2. Should: the README stays copy-pasteable and under 200 lines.
 
@@ -196,7 +196,7 @@ Deliver the practices-now track of the ADOS memory model as text and skill conte
 | Phase | Status | Started | Completed | Commit | Notes |
 |---|---|---|---|---|---|
 | 1 | Complete | 2026-10-31 | 2026-10-31 | phase 1 commit: docs(GH-204): add agent memory kernel rules | Kernel covers R1..R10; scoped diff one hunk; dash scan clean. |
-| 2 | Pending | - | - | - | - |
+| 2 | Complete | 2026-10-31 | 2026-10-31 | phase 2 commit: docs(GH-204): add memory index, seeds, and record trees | README 150 lines, seeds 12-13 lines, both .gitkeep empty, index coverage 4/4. |
 | 3 | Pending | - | - | - | - |
 | 4 | Pending | - | - | - | - |
 | 5..11 | PM-owned | - | - | - | not marked by coder; AC-15 evidence added at phase 11 |
