@@ -7,7 +7,7 @@ owners: [engineering]
 service: delivery-os provider engine
 labels: [change, planning]
 version_impact: minor
-summary: "Verify all 46 acceptance criteria for the v1 provider engine: typed provider configuration, deterministic subscription-first chain resolution with eight closed skip reasons including `shadowed`, UTC peak-window and quota evaluation ported from the legacy battery, named self-expiring parks persisted through the state layer and folded into `provider-parks.json`, fail-loud announcements with closed secret-free evidence allowlists, credential-port-only quota authorization, the three-command provider surface, exact-code provider classification, completed-sleep loop-cap accounting, and a 49-check legacy parity mapping with explicit fail-loud divergence."
+summary: "Verify all 48 acceptance criteria for the v1 provider engine: typed provider configuration, deterministic subscription-first chain resolution with eight closed skip reasons including `shadowed`, failed-entry skip-then-continue (`quota-exhausted`, no park, `reset_missing` announcement retained), UTC peak-window and quota evaluation ported from the legacy battery with mixed past/absent-reset indeterminacy and future-reset-wins, named self-expiring parks persisted through the state layer and folded into `provider-parks.json`, fail-loud announcements with closed secret-free evidence allowlists, credential-port-only quota authorization, the three-command provider surface, exact-code provider classification, completed-sleep loop-cap accounting, and a 49-check legacy parity mapping with explicit fail-loud divergence."
 links:
   change_spec: ./chg-GH-182-spec.md
   testing_strategy: .ai/rules/testing-strategy.md
@@ -21,11 +21,11 @@ Protect the provider engine contract before any spawn integration consumes it: a
 
 ### 1.1 In Scope
 
-- All 46 acceptance criteria in spec §17: AC-F1-1 through AC-F9-2, including AC-F2-5, and AC-NFR-1 through AC-NFR-6, plus the linked NFR-7, NFR-8, NFR-9, and NFR-10 thresholds.
+- All 48 acceptance criteria in spec §17: AC-F1-1 through AC-F9-2, including AC-F2-5, AC-F2-6, and AC-F4-7, and AC-NFR-1 through AC-NFR-6, plus the linked NFR-7, NFR-8, NFR-9, and NFR-10 thresholds.
 - Provider contract inventory, closed sets, schema identifiers, deterministic park naming, configuration schema validation, semantic validation, shipped defaults, and provenance.
-- Chain resolution: declared order, subscription-first selection, the eight closed skip reasons with deterministic precedence (`disabled` > own condition > `paid-fallback-not-allowed` > `shadowed`), the `shadowed` versus `paid-fallback-not-allowed` distinction, empty/missing chain failure, chain-exhausted park, and the no-paid-substitution peak rule.
+- Chain resolution: declared order, subscription-first selection, the eight closed skip reasons with deterministic precedence (`disabled` > own condition > `paid-fallback-not-allowed` > `shadowed`), the `shadowed` versus `paid-fallback-not-allowed` distinction, failed-entry skip-then-continue (`quota-exhausted`, no park, announcement retained), empty/missing chain failure, chain-exhausted park, and the no-paid-substitution peak rule.
 - Peak evaluation: UTC half-open window, buffer clamp, custom windows, invalid-window rejection, and MAX combination with quota.
-- Quota evaluation: TOKENS_LIMIT filtering, percentage threshold, reset parsing/clamping, soonest reset, mixed reset behavior, clear conditions, exhausted-without-reset classification, fresh re-evaluation, and the completed-sleep loop cap.
+- Quota evaluation: TOKENS_LIMIT filtering, percentage threshold, reset parsing/clamping, soonest future reset, mixed past/absent-reset indeterminacy, future-reset-wins over past/absent evidence, clear conditions, exhausted-without-reset classification, fresh re-evaluation, and the completed-sleep loop cap.
 - Named parks: record shape, state round-trip, exact-expiry inactivity, dedupe/refresh/clear, the `provider-parks.json` rebuild-on-read projection with no separate rebuild CLI, park-versus-blocked-lane distinction, list ordering/filtering, and bounded cap/chain expiry.
 - Structured announcements: closed codes, severity, subject/cause/conditions/park/expiry, deterministic identity, closed park and announcement evidence allowlists, skipped-entry outage visibility, and all CLI surfaces.
 - Credential-port-only quota authorization, missing/rejected credential behavior, canary scans, secret-read boundary (zero new allowlist entries), and the single declared `provider-quota` runtime-confinement admission with a negative fixture and clean control.
@@ -46,7 +46,7 @@ Protect the provider engine contract before any spawn integration consumes it: a
 
 ## 2. References
 
-- [Change specification](./chg-GH-182-spec.md) v1.2, especially §5 (F-1 to F-9), §6 flows, §8.2 (EVT-1 to EVT-4), §8.3 (DM-1 to DM-13, evidence allowlists, contract rules), §9 (NFR-1 to NFR-10), §11 (RSK-1 to RSK-10), §14, §15 (DEC-1 to DEC-13), §16 (components and codebase map), §17 (46 ACs and QA strategy), §18 (Definition of Done), §21 (security review), §24 Appendix A (legacy parity, 49 executed checks), Appendix B (config contract), Appendix C (error/announcement mapping), and Appendix D (ticket traceability). Plan OQ-1 to OQ-5 are resolved in §8.3 below.
+- [Change specification](./chg-GH-182-spec.md) v1.3, especially §5 (F-1 to F-9), §6 flows, §8.2 (EVT-1 to EVT-4), §8.3 (DM-1 to DM-13, evidence allowlists, contract rules), §9 (NFR-1 to NFR-10), §11 (RSK-1 to RSK-10), §14, §15 (DEC-1 to DEC-13), §16 (components and codebase map), §17 (48 ACs and QA strategy), §18 (Definition of Done), §21 (security review), §24 Appendix A (legacy parity, 49 executed checks), Appendix B (config contract), Appendix C (error/announcement mapping), and Appendix D (ticket traceability). Plan OQ-1 to OQ-5 are resolved in §8.3 below.
 - [Repository testing strategy](../../../../.ai/rules/testing-strategy.md): layers, module-to-test mapping, gates, CI order, fixture discipline.
 - [TypeScript workspace rules](../../../../.ai/rules/typescript.md): strict TS, purity, injected seams, boundary rules, bun:test authoring.
 - [AGENTS.md](../../../../AGENTS.md): package tiers, delivery workflow, change artifact conventions, no hand-added headers.
@@ -71,6 +71,7 @@ Protect the provider engine contract before any spawn integration consumes it: a
 | F-2, F-5, F-6 | AC-F2-3 | TC-PROV-009 | Planned |
 | F-2, F-3 | AC-F2-4 | TC-PROV-010 | Planned |
 | F-2, F-3, DM-2, DM-6, DM-7 | AC-F2-5 | TC-PROV-010 | Planned |
+| F-2, F-4, F-6, DM-7, DM-9, NFR-7 | AC-F2-6 | TC-PROV-063 | Planned |
 | F-3, DM-3 | AC-F3-1 | TC-PROV-011, TC-PROV-054 | Planned |
 | F-3, NFR-1 | AC-F3-2 | TC-PROV-012, TC-PROV-054 | Planned |
 | F-1, F-3, NFR-8 | AC-F3-3 | TC-PROV-002 | Planned |
@@ -78,9 +79,10 @@ Protect the provider engine contract before any spawn integration consumes it: a
 | F-4, F-5 | AC-F4-1 | TC-PROV-014 | Planned |
 | F-4 | AC-F4-2 | TC-PROV-015, TC-PROV-016, TC-PROV-017, TC-PROV-018, TC-PROV-019, TC-PROV-020, TC-PROV-057 | Planned |
 | F-4 | AC-F4-3 | TC-PROV-021 | Planned |
-| F-4, F-6, F-9 | AC-F4-4 | TC-PROV-022, TC-PROV-057 | Planned |
+| F-4, F-6, F-9 | AC-F4-4 | TC-PROV-022, TC-PROV-057, TC-PROV-063 | Planned |
 | F-4, F-6, NFR-6 | AC-F4-5 | TC-PROV-023, TC-PROV-058, TC-PROV-061 | Planned |
 | F-4, F-6, F-9, NFR-9 | AC-F4-6 | TC-PROV-024, TC-PROV-025, TC-PROV-026, TC-PROV-027, TC-PROV-037, TC-PROV-052, TC-PROV-055, TC-PROV-056, TC-PROV-057 | Planned |
+| F-4, F-6, F-9, DM-9, NFR-7 | AC-F4-7 | TC-PROV-064 | Planned |
 | F-5, NFR-5 | AC-F5-1 | TC-PROV-001, TC-PROV-028 | Planned |
 | F-5, NFR-7 | AC-F5-2 | TC-PROV-029 | Planned |
 | F-5, F-6, NFR-6 | AC-F5-3 | TC-PROV-030 | Planned |
@@ -108,7 +110,7 @@ Protect the provider engine contract before any spawn integration consumes it: a
 | NFR-6 | AC-NFR-5 | TC-PROV-050 | Planned |
 | NFR-10 | AC-NFR-6 | TC-PROV-051 | Planned |
 
-All 46 ACs are mapped, including AC-F2-5 through TC-PROV-010. There is no TODO acceptance criterion. NFR-7, NFR-8, and NFR-9 have no separate AC IDs in §17; they are traced through AC-F5-6, AC-F9-1/2, and AC-F4-6/AC-F6-4 respectively, and appear in the NFR table below.
+All 48 ACs are mapped, including AC-F2-5 through TC-PROV-010, AC-F2-6 through TC-PROV-063, and AC-F4-7 through TC-PROV-064. There is no TODO acceptance criterion. NFR-7, NFR-8, and NFR-9 have no separate AC IDs in §17; they are traced through AC-F5-6, AC-F9-1/2, and AC-F4-6/AC-F6-4 respectively, and appear in the NFR table below.
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
 
@@ -125,11 +127,11 @@ The spec declares no `API-*` identifiers and no served HTTP endpoint (§8.1). Th
 | DM-3 peak window | TC-PROV-011, TC-PROV-012, TC-PROV-013 | UTC seconds-of-day, buffer clamp, half-open effective window, custom window, MAX with quota. |
 | DM-4 quota policy | TC-PROV-002, TC-PROV-003, TC-PROV-014, TC-PROV-023 | Endpoint/credential reference/timeout/threshold/loop cap/TTLs; defaults; engine cap default when policy absent. |
 | DM-5 credential reference binding | TC-PROV-002, TC-PROV-038, TC-PROV-039 | Declarative `literal`/`environment-prefixed` reference; resolution yields material or `config.credential.missing`; no secret in config. |
-| DM-6 provider chain | TC-PROV-002, TC-PROV-004, TC-PROV-005, TC-PROV-007, TC-PROV-009, TC-PROV-010 | Ordered entries plus paid-fallback boolean; empty/duplicate/unknown/cost-order violations rejected. |
-| DM-7 chain resolution decision | TC-PROV-007, TC-PROV-008, TC-PROV-009, TC-PROV-010, TC-PROV-041 | `selected` or `parked` decision plus ordered skipped entries with exactly one of the eight closed reasons and deterministic precedence (`disabled` > own condition > `paid-fallback-not-allowed` > `shadowed`). |
-| DM-8 condition evaluation | TC-PROV-011, TC-PROV-013, TC-PROV-021, TC-PROV-042 | Clear/parked/blocked state with active condition kinds, wait seconds, and absolute expiry where parkable. |
-| DM-9 quota snapshot and limit | TC-PROV-014 through TC-PROV-022, TC-PROV-027 | Normalized limits only, TOKENS_LIMIT filtering, integer percentage, reset epoch milliseconds, never raw body. |
-| DM-10 park record | TC-PROV-028, TC-PROV-029, TC-PROV-030, TC-PROV-031, TC-PROV-033, TC-PROV-034, TC-PROV-040, TC-PROV-049 | Name, subject, closed cause, conditions, state, creation time, absolute expiry, clear time, and bounded secret-free evidence drawn only from the eight-field park allowlist. |
+| DM-6 provider chain | TC-PROV-002, TC-PROV-004, TC-PROV-005, TC-PROV-007, TC-PROV-009, TC-PROV-010, TC-PROV-063 | Ordered entries plus paid-fallback boolean; empty/duplicate/unknown/cost-order violations rejected; a failed entry does not abort the walk. |
+| DM-7 chain resolution decision | TC-PROV-007, TC-PROV-008, TC-PROV-009, TC-PROV-010, TC-PROV-041, TC-PROV-063 | `selected` or `parked` decision plus ordered skipped entries with exactly one of the eight closed reasons and deterministic precedence (`disabled` > own condition > `paid-fallback-not-allowed` > `shadowed`); a failed entry is `quota-exhausted`, not a park. |
+| DM-8 condition evaluation | TC-PROV-011, TC-PROV-013, TC-PROV-021, TC-PROV-042, TC-PROV-064 | Clear/parked/blocked state with active condition kinds, wait seconds, and absolute expiry where parkable; indeterminate mixed-reset verdict. |
+| DM-9 quota snapshot and limit | TC-PROV-014 through TC-PROV-022, TC-PROV-027, TC-PROV-064 | Normalized limits only, TOKENS_LIMIT filtering, integer percentage, reset epoch milliseconds, future-reset-wins, past/absent indeterminacy, never raw body. |
+| DM-10 park record | TC-PROV-028, TC-PROV-029, TC-PROV-030, TC-PROV-031, TC-PROV-033, TC-PROV-034, TC-PROV-040, TC-PROV-049, TC-PROV-063 | Name, subject, closed cause, conditions, state, creation time, absolute expiry, clear time, and bounded secret-free evidence drawn only from the eight-field park allowlist; a failed entry creates no park. |
 | DM-11 announcement record | TC-PROV-034, TC-PROV-040, TC-PROV-049, TC-PROV-050 | Deterministic identity, closed code, severity, subject, optional cause/conditions/park/expiry, safe message, and bounded evidence drawn only from the eleven-field announcement allowlist. |
 | DM-12 parks projection and view | TC-PROV-029, TC-PROV-030, TC-PROV-032, TC-PROV-033, TC-PROV-043, TC-PROV-050 | Derived document `provider-parks.json`; rebuild from verified ledger truth on read when missing/divergent; v1 adds no separate rebuild CLI; active/expired/cleared state; ISO-8601 UTC expiry; deterministic ordering. |
 | DM-13 re-evaluation policy | TC-PROV-023, TC-PROV-033, TC-PROV-051, TC-PROV-058, TC-PROV-061 | MAX over conditions, fresh fetch per iteration, injected sleep, loop cap counted as completed sleeps (N = `maxSleepLoops`), cap park after the Nth sleep with cap TTL expiry, no further fetch, no extra iteration. |
@@ -144,7 +146,7 @@ The spec declares no `API-*` identifiers and no served HTTP endpoint (§8.1). Th
 | NFR-4 Secret safety | TC-PROV-040, TC-PROV-049 | Planted canary absent from envelopes, diagnostics, parks, announcements, and `provider-parks.json`; no raw body, auth header, credential value, or endpoint userinfo. |
 | NFR-5 Bounded output | TC-PROV-049 | Evidence ≤ 1024 serialized bytes and ≤ 20 fields, drawn only from the closed allowlists (8 park fields; 8 base + 3 announcement fields = 11); announcements bounded by evaluated-entry count. |
 | NFR-6 Idempotence | TC-PROV-050 | Unchanged condition appends 0 duplicate records; repeated `parks list` has 0 side effects; repeated `quota` writes 0 state; missing/divergent `provider-parks.json` is rebuilt on read without extra ledger writes. |
-| NFR-7 Expiry correctness | TC-PROV-029, TC-PROV-033 | Inactive at exactly `expiresAt`; TTL/chain expiry strictly future; never a past or absent expiry. |
+| NFR-7 Expiry correctness | TC-PROV-029, TC-PROV-033, TC-PROV-063, TC-PROV-064 | Inactive at exactly `expiresAt`; TTL/chain expiry strictly future; failed/mixed-reset cases never fabricate a past or absent expiry. |
 | NFR-8 Error-table synchronization | TC-PROV-045, TC-PROV-046 | Both machine and documented tables agree in both directions; exact-code provider classification is total; unclassified/wrong-kind contains to `fallback.internal`. |
 | NFR-9 Legacy parity | TC-PROV-037, TC-PROV-052, TC-PROV-054 through TC-PROV-062 | Every Appendix A group has a ported case; all 49 executed `TC-ZAI-*` checks are mapped; every legacy fail-open class asserts an announcement or classified error; 0 silent clear. |
 | NFR-10 Evaluation cost | TC-PROV-051 | 100 provider entries pure evaluation ≤ 50 ms on the reference environment, excluding transport. |
@@ -231,6 +233,8 @@ All tests use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`.
 | TC-PROV-060 | Legacy parity group G (055..056) | Regression | Legacy Parity | Critical | High | NFR-1 |
 | TC-PROV-061 | Legacy parity group H (060..064) and completed-sleep cap | Regression | Legacy Parity | Critical | High | AC-F4-5, AC-F6-4 |
 | TC-PROV-062 | Legacy parity group I (070..071) | Regression | Legacy Parity | Critical | High | AC-NFR-2, NFR-9 |
+| TC-PROV-063 | Failed entry is skipped; later eligible entry selected | Corner Case | Behaviour | Critical | High | AC-F2-6, AC-F4-4 |
+| TC-PROV-064 | Mixed past/absent reset is indeterminate; future reset wins | Edge Case | Behaviour | Critical | High | AC-F4-7 |
 
 ### 5.2 Scenario Details
 
@@ -1732,6 +1736,55 @@ All tests use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`.
 **Expected Outcome**:
 - Then hermetic-by-construction and the documented provider contract are both asserted.
 
+#### TC-PROV-063 - Failed entry is skipped; later eligible entry selected
+
+**Scenario Type**: Corner Case
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-2, F-4, F-6, AC-F2-6, AC-F4-4, DM-6, DM-7, DM-9, DM-10, NFR-7
+**Test Type(s)**: Unit, Integration
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/provider-chain-resolution.test.ts`, `tests/behaviour/provider-quota-evaluation.test.ts`, `tests/fixtures/provider/config/failed-then-eligible.yaml`, `tests/fixtures/provider/config/only-failed.yaml`, `tests/fixtures/provider/quota/failed-then-eligible.json`
+**Tags**: @backend
+
+**Preconditions**:
+- The `failed-then-eligible` chain has entry A (subscription) quota-exhausted with no valid reset and entry B later eligible.
+- A has no honest future expiry and therefore must not become a park; B has a clear condition.
+- The `only-failed` variant contains only A, or no later entry is eligible and no contributing provider park has an honest future expiry.
+
+**Steps**:
+1. Evaluate A; assert the per-entry verdict is `provider.quota.exceeded` with `provider.quota.reset_missing`, no fabricated expiry, and no park/persistent announcement.
+2. Resolve `failed-then-eligible`; assert A appears in the skipped list with reason `quota-exhausted` and no state park, B is selected, and the `provider.quota.reset_missing` announcement remains in `data.announcements`; the walk does not abort.
+3. Resolve `only-failed`; assert the command fails loud with `provider.quota.exceeded` (transient, retryable, exit `2`), `provider.quota.reset_missing` in the safe summary/diagnostic, and no fabricated expiry or state park.
+4. Assert A contributes no chain-park expiry; in a temp fixture make A parkable and assert it is parked and contributes an expiry instead of being skipped.
+
+**Expected Outcome**:
+- Then a failed entry is skipped with `quota-exhausted`, creates no park, and retains its `reset_missing` announcement while a later eligible entry is selected; only-failed/no-honest-park chains fail loud with `provider.quota.exceeded`.
+
+#### TC-PROV-064 - Mixed past/absent reset is indeterminate; future reset wins
+
+**Scenario Type**: Edge Case
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-4, F-6, F-9, AC-F4-7, DM-9, NFR-7
+**Test Type(s)**: Unit
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/provider-quota-evaluation.test.ts`, `tests/fixtures/provider/quota/mixed-past-absent-reset.json`, `tests/fixtures/provider/quota/mixed-past-future-reset.json`
+**Tags**: @backend
+
+**Preconditions**:
+- Fixture 1: exhausted A has a past reset; exhausted B has no valid reset; no exhausted limit has a future reset.
+- Fixture 2: exhausted A has a past reset; exhausted B has a future reset.
+
+**Steps**:
+1. Evaluate fixture 1; assert the snapshot is indeterminate, no past reset is treated as a future reset, and no expiry is fabricated.
+2. Assert the classified identity is `provider.quota.exceeded` (transient, retryable, exit `2`) with `provider.quota.reset_missing`; assert no park is written.
+3. Evaluate fixture 2; assert B's future reset wins as the soonest reset, the wait is `reset - now`, and the park expiry equals that future reset; assert no `reset_missing`.
+4. Add an absent+future variant; assert any exhausted future reset wins over past/absent evidence and no past/absent expiry is used.
+
+**Expected Outcome**:
+- Then past+absent exhausted evidence is indeterminate and fails loud with `provider.quota.exceeded` + `provider.quota.reset_missing`, while any exhausted future reset wins as the soonest honest expiry.
+
 ### 5.3 Legacy Battery Parity Matrix (Appendix A)
 
 The legacy battery is treated as a parity source for boundary math, not as a behavior to preserve wholesale. Each row is a subcase inside the named v1 TC; the v1 assertion is the explicit fail-loud divergence. The delivered battery executes 49 `TC-ZAI-*` checks; the nominal `TC-ZAI-001..071` numeric range has gaps. All 49 executed checks are listed below; OQ-3 is resolved and this is not an open blocker.
@@ -1802,7 +1855,8 @@ Every row must produce an announcement/park or a classified error. A "clear" out
 | Invalid envelope (`code`/`success`) | `envelope-code`, `envelope-success` | `provider-outage` park | classified outage, exit 2 | `provider.quota.malformed` | `provider.outage` | TC-PROV-027, 052, 055 |
 | Limits absent / non-array | `limits-absent`, `limits-nonarray` | `provider-outage` park | classified outage, exit 2 | `provider.quota.malformed` | `provider.outage` | TC-PROV-027, 052, 055 |
 | Non-numeric percentage | `pct-non-numeric` | `provider-outage` park | classified outage, exit 2 | `provider.quota.malformed` | `provider.outage` | TC-PROV-027, 052, 055 |
-| Exhausted, reset absent/malformed/null | `reset-*` | classified error, no park | classified error, exit 2 | `provider.quota.reset_missing` | `provider.quota.exceeded` | TC-PROV-022, 052, 055, 057 |
+| Exhausted, reset absent/malformed/null | `reset-*`, `failed-then-eligible` | skipped `quota-exhausted` + announcement, no park when a later entry is eligible; only-failed → classified error | classified error, exit 2 | `provider.quota.reset_missing` | `provider.quota.exceeded` | TC-PROV-022, 052, 055, 057, 063 |
+| Mixed exhausted past-reset + absent-reset | `mixed-past-absent-reset` | no honest park; only-failed → classified error | classified error, exit 2 | `provider.quota.reset_missing` | `provider.quota.exceeded` | TC-PROV-064, 052 |
 | Missing credential | absent/empty injected key | `credential-missing` park (credential TTL) | classified credential failure, exit 1 | `provider.credential.missing` | `config.credential.missing` (quota) | TC-PROV-039, 052, 056 |
 | Loop cap reached after N completed sleeps | fixed clock + `maxSleepLoops: N` | `reevaluation-cap` park (cap TTL), no post-cap fetch | n/a (driver only) | `provider.reevaluation.cap` | none | TC-PROV-023, 052, 061 |
 | All chain entries parked | `all-parked` | `chain-exhausted` park (earliest provider expiry) | n/a | `provider.chain.exhausted` | none | TC-PROV-009, 052 |
@@ -1816,8 +1870,8 @@ Every row must produce an announcement/park or a classified error. A "clear" out
 - **Clock and sleep:** Every time-dependent case injects a fixed or stepping clock. The sleep seam records durations and counts completed sleeps; it never calls a real timer. A sleep spy asserts 0 real sleeps. The cap is asserted as exactly N completed sleeps (`N = maxSleepLoops`), with no further fetch and no extra iteration for the cap park.
 - **Credentials:** No real secrets. Fixtures use unique canary strings supplied through an injected credential/env record, never the developer's `process.env`. The canary is scanned in raw and JSON-escaped forms.
 - **Network:** 0 live calls. The quota transport is an injected fake that returns committed `(status, body)` pairs; a throwing `fetch` guard fails any unfixtured request. The legacy bash battery is not executed as a live script.
-- **Config fixtures (`tests/fixtures/provider/config/`):** `valid-chain.yaml`, `valid-chain-multi.yaml`, `paid-before-subscription.yaml`, `duplicate-entries.yaml`, `unknown-reference.yaml`, `empty-chain.yaml`, `no-chain.yaml`, `missing-required.yaml`, `optional-omitted.yaml`, `defaults.yaml`, `quota-policy.yaml`, `quota-policy-minimal.yaml`, `quota-disabled.yaml`, `skip-matrix.yaml`, `subscription-first.yaml`, `peak-substitution.yaml`, `peak-zai.yaml`, `peak-custom.yaml`, `peak-invalid-timezone.yaml`, `peak-end-before-start.yaml`, `peak-out-of-range.yaml`, `all-parked.yaml`, `disabled-entry.yaml`, `allowed-paid-fallback.yaml`, `disallowed-paid-fallback.yaml`, `skipped-outage.yaml`.
-- **Quota fixtures (`tests/fixtures/provider/quota/`):** `clear-no-tokens.json`, `clear-below-threshold.json`, `exhausted-valid-reset.json`, `both-exhausted.json`, `time-limit-only.json`, `pct-99.json`, `pct-100.json`, `pct-105.json`, `past-reset.json`, `mixed-reset.json`, `non-exhausted-earlier.json`, `reset-absent.json`, `reset-malformed.json`, `reset-null.json`, `malformed-json.json`, `envelope-code.json`, `envelope-success.json`, `limits-absent.json`, `limits-nonarray.json`, `pct-non-numeric.json`, `transport-failure.ts`, `http-401.ts`, `http-403.ts`, `http-500.ts`, `http-429.ts`, `http-302.ts`, `peak-plus-quota.json`, `sequence-*.json`. All bodies are sanitized; no live tenant data, no real token, no raw account identifiers.
+- **Config fixtures (`tests/fixtures/provider/config/`):** `valid-chain.yaml`, `valid-chain-multi.yaml`, `paid-before-subscription.yaml`, `duplicate-entries.yaml`, `unknown-reference.yaml`, `empty-chain.yaml`, `no-chain.yaml`, `missing-required.yaml`, `optional-omitted.yaml`, `defaults.yaml`, `quota-policy.yaml`, `quota-policy-minimal.yaml`, `quota-disabled.yaml`, `skip-matrix.yaml`, `subscription-first.yaml`, `peak-substitution.yaml`, `peak-zai.yaml`, `peak-custom.yaml`, `peak-invalid-timezone.yaml`, `peak-end-before-start.yaml`, `peak-out-of-range.yaml`, `all-parked.yaml`, `disabled-entry.yaml`, `allowed-paid-fallback.yaml`, `disallowed-paid-fallback.yaml`, `failed-then-eligible.yaml`, `only-failed.yaml`, `skipped-outage.yaml`.
+- **Quota fixtures (`tests/fixtures/provider/quota/`):** `clear-no-tokens.json`, `clear-below-threshold.json`, `exhausted-valid-reset.json`, `both-exhausted.json`, `time-limit-only.json`, `pct-99.json`, `pct-100.json`, `pct-105.json`, `past-reset.json`, `mixed-reset.json`, `non-exhausted-earlier.json`, `reset-absent.json`, `reset-malformed.json`, `reset-null.json`, `failed-then-eligible.json`, `mixed-past-absent-reset.json`, `mixed-past-future-reset.json`, `malformed-json.json`, `envelope-code.json`, `envelope-success.json`, `limits-absent.json`, `limits-nonarray.json`, `pct-non-numeric.json`, `transport-failure.ts`, `http-401.ts`, `http-403.ts`, `http-500.ts`, `http-429.ts`, `http-302.ts`, `peak-plus-quota.json`, `sequence-*.json`. All bodies are sanitized; no live tenant data, no real token, no raw account identifiers.
 - **Park/announcement fixtures (`tests/fixtures/provider/parks/`, `announcements/`):** `park-active.json`, `park-cleared.json`, `park-expired.json`, `park-cap.json`, `park-chain-exhausted.json`, `cap-and-chain.json` (cap park + chain-exhausted park fixtures), `park-expiry-boundary.json`, `park-generations.json`, `park-vs-lane.json`, `provider-parks.json` (including a torn/missing variant), `list-matrix.json`, `announcement-matrix.json`, `severity-matrix.json`, `dedupe-cases.json`.
 - **Evidence fixtures (`tests/fixtures/provider/evidence/`):** `max-evidence.json` at the 1024-byte/20-field boundary; `over-bound-evidence.json` one byte/one field over; `unknown-key-evidence.json` for the closed-allowlist rejection; `park-allowlist.json` with the eight park fields; `announcement-allowlist.json` with the eleven announcement fields; `raw-body-canary.json` for the no-raw-body assertion.
 - **Golden fixtures (`tests/fixtures/provider/golden/`):** `resolve-selected.json`, `resolve-parked.json`, `resolve-outage-skipped.json`, `quota-success.json`, `quota-failure.json`, `parks-list-active.json`, `parks-list-all.json`, and matching `.txt` human outputs. Volatile values (absolute paths, wall-clock) are normalized before comparison.
@@ -1895,12 +1949,15 @@ All rows are **To Implement** unless marked **Existing – Update** or **Existin
 | TC-PROV-060 | NFR-1 | `tests/behaviour/provider-legacy-parity.test.ts`, `tests/fixtures/provider/legacy/group-g.json` | `bun test tests/behaviour/provider-legacy-parity.test.ts` | TC-ZAI-055..056 portable UTC; To Implement |
 | TC-PROV-061 | AC-F4-5, AC-F6-4 | `tests/behaviour/provider-legacy-parity.test.ts`, `tests/fixtures/provider/legacy/group-h.ts` | `bun test tests/behaviour/provider-legacy-parity.test.ts` | TC-ZAI-060..064 re-eval + completed-sleep cap; To Implement |
 | TC-PROV-062 | AC-NFR-2, NFR-9 | `tests/behaviour/provider-legacy-parity.test.ts`, `tests/checks/provider-hermetic.test.ts`, `doc/guides/**` | `bun test tests/behaviour/provider-legacy-parity.test.ts tests/checks/provider-hermetic.test.ts` | TC-ZAI-070..071 hermetic + guide contract; To Implement |
+| TC-PROV-063 | AC-F2-6, AC-F4-4 | `tests/behaviour/provider-chain-resolution.test.ts`, `tests/behaviour/provider-quota-evaluation.test.ts`, `tests/fixtures/provider/config/failed-then-eligible.yaml`, `tests/fixtures/provider/config/only-failed.yaml`, `tests/fixtures/provider/quota/failed-then-eligible.json` | `bun test tests/behaviour/provider-chain-resolution.test.ts tests/behaviour/provider-quota-evaluation.test.ts` | Failed entry skipped as `quota-exhausted`, no park, later entry selected; only-failed fails loud; To Implement |
+| TC-PROV-064 | AC-F4-7 | `tests/behaviour/provider-quota-evaluation.test.ts`, `tests/fixtures/provider/quota/mixed-past-absent-reset.json`, `mixed-past-future-reset.json` | `bun test tests/behaviour/provider-quota-evaluation.test.ts` | Mixed past/absent indeterminate; future reset wins; no fabricated expiry; To Implement |
 
 ### 7.2 Implementation Notes and Gate Handoff
 
 - **Injected seams are the testability contract:** the engine must accept a `Clock`, a `Sleep`, a `CredentialPort`, a quota `Transport`, and a state store/port as explicit construction inputs. The CLI composition edge wires the production implementations; tests wire fakes. This mechanism is required by NFR-2 and is not a new consumer-facing port.
 - **Fixture transport:** implement a fake that returns committed `(status, body)` pairs and throws on an unfixtured request. The behavior test asserts the recording transport is the only HTTP path; a throwing global `fetch` guard proves no live call.
 - **Skip reasons:** implement the eight-value closed set and precedence exactly as pinned: `disabled` > own condition > `paid-fallback-not-allowed` > `shadowed`. `paid-fallback-not-allowed` means fallback is disabled; `shadowed` means a later entry has no higher-precedence reason relative to the selected or determining entry. Do not use `paid-fallback-not-allowed` merely because an earlier entry won.
+- **Failed entries:** a quota-exhausted entry with no honest reset is not a park. Skip it with `quota-exhausted`, keep its `provider.quota.reset_missing` announcement in `data.announcements`, continue the walk, and fail loud only when no later entry is eligible and no contributing provider park can supply an honest future expiry.
 - **Loop driver:** expose the re-evaluation policy as a pure/testable function taking the condition evaluator, clock, sleep, and loop cap. Count completed sleeps; after the Nth completed sleep (`N = maxSleepLoops`), emit the cap announcement and cap park with no further fetch and no extra iteration for the park. Test with a fixed clock and a sleep spy so no wall-clock wait occurs.
 - **State-layer tests:** use the delivered state test harness to append/read `provider.park` and `provider.announcement` records and to build the `provider-parks.json` derived document. A missing/divergent projection is rebuilt from verified ledger truth on read; no separate rebuild CLI exists in v1. Do not invent a second store.
 - **Evidence allowlists:** park evidence is exactly the eight fields; announcement evidence is the eight base fields plus `parkName`, `parkExpiresAt`, and `announcementCode`. Reject unknown keys and never admit a raw body, auth header, credential value, or endpoint userinfo.
@@ -1917,7 +1974,7 @@ All rows are **To Implement** unless marked **Existing – Update** or **Existin
 
 The change is test-complete only when all of the following hold:
 
-1. **AC evidence:** every one of the 46 ACs in §17 has at least one passing scenario and an evidence path recorded in §10; no AC is TODO.
+1. **AC evidence:** every one of the 48 ACs in §17 has at least one passing scenario and an evidence path recorded in §10; no AC is TODO.
 2. **Legacy parity:** every Appendix A group has a ported case (TC-PROV-054 through TC-PROV-062), all 49 executed `TC-ZAI-*` checks appear in §5.3, and every legacy fail-open class asserts an announcement or classified error with **0 silent-clear** cases.
 3. **No orphans:** every TC in §5.1 appears in §5.2 and §7.1 and maps to at least one AC or NFR; every TC in §7.1 appears in §5.1/§5.2.
 4. **Hermeticity:** 0 live network calls, 0 live credential reads, 0 real sleeps, and the throwing-fetch/sleep-spy guards pass.
@@ -1931,13 +1988,13 @@ Coverage accounting:
 
 | Accounting item | Count / result |
 |---|---|
-| Spec ACs mapped | 46 / 46 (40 functional + 6 NFR ACs), including AC-F2-5 |
+| Spec ACs mapped | 48 / 48 (42 functional + 6 NFR ACs), including AC-F2-5, AC-F2-6, AC-F4-7 |
 | Appendix A groups mapped | 9 / 9 (TC-PROV-054 through TC-PROV-062) |
 | Delivered legacy check IDs mapped | 49 / 49 (nominal 001..071 range has gaps) |
-| Test cases defined | 62 |
-| Test cases with an AC/NFR owner | 62 / 62 (no orphan tests) |
+| Test cases defined | 64 |
+| Test cases with an AC/NFR owner | 64 / 64 (no orphan tests) |
 | TODO acceptance criteria | 0 |
-| Claimed executions | 0 (authoring only; §10 is empty until delivery) |
+| Recorded executions | Delivery rows in §10; TC-PROV-063/064 are NOT RUN pending v1.3 execution |
 
 ## 8. Risks, Assumptions, and Open Questions
 
@@ -1945,6 +2002,7 @@ Coverage accounting:
 
 - **Legacy parity can look complete while missing a case.** The matrix in §5.3 maps all 49 executed IDs, but a ported subcase could assert the wrong outcome. Mitigation: each row names the v1 assertion and the asserting TC; TC-PROV-052 adds a class-level no-silent-path mutation that fails when any class returns clear.
 - **The fail-loud divergence changes operator-visible behavior.** `resolve` now parks where the legacy hook proceeded. Mitigation: every divergence is asserted and documented; the legacy hook remains untouched; no spawn cutover is in this change.
+- **Failed-entry continuation could regress to aborting the walk.** TC-PROV-063 asserts that a quota-exhausted/no-reset entry is skipped as `quota-exhausted`, creates no park, retains `provider.quota.reset_missing` in `data.announcements`, and does not prevent a later eligible entry; only-failed/no-honest-park chains fail loud with `provider.quota.exceeded`.
 - **Skip-reason precedence could be implemented inconsistently.** The spec now pins the eight-value set and precedence. The residual risk is a deliverer applying `paid-fallback-not-allowed` merely because an earlier entry won, or omitting the determining-entry rule. TC-PROV-007/008/010 assert the exact precedence and the `shadowed` versus fallback-disabled distinction; §8.3 OQ-1 is resolved.
 - **Evidence allowlists could erode.** TC-PROV-034/040/049 assert the exact eight park fields and eleven announcement fields; a later field addition could slip through if the allowlist fixture is not regenerated. Mitigation: the allowlist fixtures are committed and the unknown-key/over-bound mutations must fail.
 - **The runtime-confinement admission could be widened accidentally.** Mitigation: exact-path allowance, clean control, negative controls for neighboring paths, and the fixture-coverage meta-check. Do not add `adapters/**`.
@@ -1963,7 +2021,7 @@ Coverage accounting:
 - The CLI composition edge can inject the clock, sleep, credential port, quota transport, and state store.
 - The shipped Z.AI response shape is the only concrete quota shape; other providers conform to the generic snapshot contract.
 - The legacy hook remains the spawn gate; this change returns a decision and does not cut over.
-- `provider.quota.exceeded` remains the immediate-refusal code when quota exhaustion cannot produce an honest expiry.
+- `provider.quota.exceeded` remains the immediate-refusal code when quota exhaustion cannot produce an honest expiry; a failed entry is skipped, not parked, and never contributes a chain-park expiry.
 - Optional defaults and the config field contract follow Appendix B exactly; an omitted optional block may remain absent.
 - Evidence bounds apply to the bounded `evidence` payload of a park/announcement, not to the whole record envelope; park evidence is exactly eight fields and announcement evidence at most eleven.
 - `provider-parks.json` is the pinned derived-document name; a missing/divergent projection is rebuilt from verified ledger truth on read, and v1 has no separate rebuild CLI.
@@ -1973,7 +2031,7 @@ Coverage accounting:
 
 ### 8.3 Open Questions
 
-All prior open questions are resolved by spec v1.2 and are closed here. No open questions remain.
+All prior open questions are resolved by spec v1.2/v1.3 and are closed here. No open questions remain.
 
 | ID | Resolution | Evidence |
 |---|---|---|
@@ -1983,18 +2041,19 @@ All prior open questions are resolved by spec v1.2 and are closed here. No open 
 | OQ-4 | Park evidence is exactly `providerName`, `chainName`, `conditionKinds`, `waitSeconds`, `resetEpochMs`, `httpStatus`, `failureClass`, `credentialRefName` (8 fields). Announcement evidence is those 8 base fields plus `parkName`, `parkExpiresAt`, `announcementCode` (max 11). No other field is permitted; no raw body, auth header, credential value, or endpoint userinfo. | DM-10, DM-11, NFR-5, AC-F5-1, AC-F6-1, AC-NFR-4; TC-PROV-034/040/049 |
 | OQ-5 | The loop cap counts completed sleeps. N = `maxSleepLoops`; after exactly N completed sleeps the engine announces `provider.reevaluation.cap` and returns a `reevaluation-cap` park with no further quota fetch; cap-park creation consumes no additional iteration. | F-4, DM-13, AC-F4-5; TC-PROV-023/058/061 |
 
-No AC is left without a mapped test. All 46 ACs, all 9 Appendix A groups, and all 49 delivered legacy check IDs are traced. Open questions: none.
+No AC is left without a mapped test. All 48 ACs, all 9 Appendix A groups, and all 49 delivered legacy check IDs are traced. Open questions: none.
 
 ## 9. Plan Revision Log
 
 | Version | Date (UTC) | Author | Changes |
 |---|---|---|---|
-| 1.0 | 2026-10-31T15:00:00Z | Change Test Plan Writer | Initial plan: 62 test cases across structure/behaviour/golden/legacy-parity/checks levels; initial AC traceability (raised to 46/46 in 1.1 with AC-F2-5); 9/9 Appendix A group mapping with 49 delivered legacy IDs; fail-loud no-silent-path matrix; fixture inventory; hermetic/security/determinism/idempotence/bounds/cost coverage; CI wiring and definition of test completion; no execution claimed. |
-| 1.1 | 2026-10-31T16:00:00Z | Change Test Plan Writer | Aligned to spec v1.2: added AC-F2-5 and raised AC traceability to 46/46; pinned the eight-value skip set and `shadowed`/`paid-fallback-not-allowed` precedence; pinned `provider-parks.json` rebuild-on-read with no separate CLI; asserted the closed 8-field park and 11-field announcement evidence allowlists; pinned loop-cap counting to completed sleeps (N = `maxSleepLoops`); recorded 49 executed legacy `TC-ZAI-*` checks and closed OQ-1 through OQ-5. No TC IDs changed; no execution claimed. |
+| 1.0 | 2026-10-31T15:00:00Z | Change Test Plan Writer | Initial plan: initial test-case set across structure/behaviour/golden/legacy-parity/checks levels; initial AC traceability (expanded by later revisions to 48/48); 9/9 Appendix A group mapping with 49 delivered legacy IDs; fail-loud no-silent-path matrix; fixture inventory; hermetic/security/determinism/idempotence/bounds/cost coverage; CI wiring and definition of test completion; no execution claimed. |
+| 1.1 | 2026-10-31T16:00:00Z | Change Test Plan Writer | Aligned to spec v1.2: added AC-F2-5 and raised AC traceability (superseded by v1.2: 48/48); pinned the eight-value skip set and `shadowed`/`paid-fallback-not-allowed` precedence; pinned `provider-parks.json` rebuild-on-read with no separate CLI; asserted the closed 8-field park and 11-field announcement evidence allowlists; pinned loop-cap counting to completed sleeps (N = `maxSleepLoops`); recorded 49 executed legacy `TC-ZAI-*` checks and closed OQ-1 through OQ-5. No TC IDs changed; no execution claimed. |
+| 1.2 | 2026-10-31T17:00:00Z | Change Test Plan Writer | Aligned to spec v1.3: added AC-F2-6 and AC-F4-7 (48/48 ACs); added TC-PROV-063 (failed-entry skip-then-continue) and TC-PROV-064 (mixed past/absent/future reset), bringing the plan to 64 TCs; kept the 9 Appendix A groups and 49 legacy IDs unchanged; added §10 NOT RUN rows for the new cases. No other TC IDs changed; no execution claimed for TC-PROV-063/064. |
 
 ## 10. Test Execution Log
 
-Executions recorded during GH-182 delivery. HEAD `this Phase 9 commit` (Phase 9 aggregate commit).
+Executions recorded during GH-182 delivery. HEAD `this Phase 9 commit` (Phase 9 aggregate commit). Coverage target after spec v1.3: **48 ACs / 64 TCs**; TC-PROV-063/064 are new and have no execution row yet.
 
 | TC ID / gate | Run Date (UTC) | Result | Notes / command / HEAD |
 |---|---|---|---|
@@ -2008,6 +2067,7 @@ Executions recorded during GH-182 delivery. HEAD `this Phase 9 commit` (Phase 9 
 | TC-PROV-047..049 | 2026-11-01 | PASS | `bun test tests/behaviour/provider-legacy-parity.test.ts tests/checks/provider-hermetic.test.ts tests/checks/provider-evidence-bounds.test.ts` |
 | TC-PROV-050..051 | 2026-11-01 | PASS | `bun test tests/behaviour/provider-parks.test.ts tests/behaviour/provider-quota-evaluation.test.ts` — idempotence and 100-entry cost |
 | TC-PROV-052..062 | 2026-11-01 | PASS | `bun test tests/behaviour/provider-legacy-parity.test.ts tests/checks/provider-hermetic.test.ts` — 9/9 groups, 49/49 IDs, no-silent-path matrix, guide contract |
+| TC-PROV-063..064 | — | NOT RUN | New in spec v1.3: failed-entry skip-then-continue and mixed past/absent/future reset; execution pending. |
 | TC-PROV-053 | 2026-11-01 | PASS | `bun test tests/golden` — normalized machine/human provider goldens |
 | Aggregate `pnpm check` | 2026-11-01 | PASS | lint, format:check, typecheck, 1138 tests, boundaries, exports parity |
 | `pnpm check:boundaries` | 2026-11-01 | PASS | depcruise + ambient-globals + workspace-entrypoints + secret-read-boundary |

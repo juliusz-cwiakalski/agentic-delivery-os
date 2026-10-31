@@ -1,8 +1,8 @@
 ---
 id: chg-GH-182-provider-v1
-status: Proposed
+status: Updated
 created: 2026-10-31T18:30:00Z
-last_updated: 2026-10-31T19:15:00Z
+last_updated: 2026-11-01T03:05:00Z
 owners: [engineering]
 service: delivery-os provider engine
 labels: [change, planning]
@@ -404,31 +404,35 @@ Execution order is strict: **1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 �
 
 **Completion signal**: `chore(GH-182): verify aggregate gates and record execution evidence`
 
-### Phase 10: Delivery review remediation (conditional)
+### Phase 10: Delivery review remediation (conditional — activated: review iter-1 FAIL, R1–R7)
 
-**Goal**: Absorb `@reviewer` findings, if any, without scope creep, and return the tree to a fully green, re-reviewed state.
+**Goal**: Close the FAIL findings of delivery review iteration 1 (`./review/review-iter-1.md`; diff base `c1ba948`, head `5e3c72f`) without scope creep, implement the spec-v1.3 reopen (AC-F2-6, AC-F4-7) in code and tests, hand the one documentation finding to `@doc-syncer`, and return the tree to a fully green, re-reviewed PASS state. The phase remains conditional by rule — it runs only on a FAIL review verdict — and review iteration 1 activates it.
 
 **Tasks**:
 
-- [ ] **10.1** Trigger condition — execute this phase only if the lifecycle delivery review (phase 8, `@reviewer`) returns FAIL: classify every finding against the spec, this plan, and the repo rules; accepted findings become remediation tasks mapped to the owning phase; disputed findings are answered with evidence in the review thread, never silently dropped. **Refs**: delivery lifecycle. **ACs**: protects all. **TCs**: protects all. **Verify**: remediation task list recorded in the Execution Log.
-- [ ] **10.2** Apply the accepted remediation through `@coder`/`@fixer` with the targeted suites plus the phase-appropriate commit(s) (`fix(GH-182): ...` via `@committer`); no changes beyond the accepted findings; synchronized pairs move together. **Refs**: plan Constraints. **ACs**: per finding. **TCs**: per finding. **Verify**: targeted suites named by the finding's area.
-- [ ] **10.3** Re-run the Phase 9 battery and the review; repeat until the review passes; record each loop in the Execution Log. Skip this phase entirely when the review passes on first run. **Refs**: delivery lifecycle. **ACs**: protects all. **TCs**: protects all. **Verify**: review PASS + Phase 9 battery green.
+- [ ] **10.1** **R1 — gate the cleared record on prior expiry** (`packages/core/src/provider/parks.ts` persist/clear path): append a `cleared` record only when the previously active park has not yet expired (`prior.expiresAtMs > nowMs` — DM-10 permits a `cleared` record only for a clear observed before expiry); a park already expired at the observation stays `expired` in `--all` views with no `cleared` record and no expiry write; emit the `provider.resumed` informational announcement unconditionally on the next mutating resolve that observes the previously active park gone (both the early-clear and the post-expiry paths); add the clock-past-expiry test — advance the injected clock beyond `expiresAt`, run a mutating resolve, assert zero `cleared` records, the expired view, and exactly one `provider.resumed`. **Refs**: review R1; F-5; DM-10, DM-12; EVT-4; DEC-12. **ACs**: AC-F5-2, AC-F5-3, AC-F6-1. **TCs**: extends TC-PROV-029/030. **Verify**: `bun test tests/behaviour/provider-parks.test.ts`.
+- [ ] **10.2** **R2 — a failed entry does not abort the walk** (`packages/core/src/provider/{engine,chain}.ts`): per spec v1.3 (F-2, DM-7, AC-F2-6, amended AC-F4-4) — an entry whose quota verdict is failed (exhausted with no honest reset) is skipped with reason `quota-exhausted`, is not parked, keeps its `provider.quota.reset_missing` announcement in `data.announcements`, and resolution continues to later entries; a later eligible entry is selected; the command fails loud with `provider.quota.exceeded` (transient, retryable, exit 2) and no fabricated expiry only when the failed entry is the only entry or no later entry is eligible and no contributing provider park has an honest future expiry; implement TC-PROV-063 — the multi-entry matrix `[failed, eligible]`, `[failed, failed]`, and single-failed controls, including the envelope assertion that the failed entry's announcement remains visible while a later entry serves. **Refs**: review R2; F-2, F-4, F-6; DM-7, DM-9; spec v1.3. **ACs**: AC-F2-6, AC-F4-4 (walk half). **TCs**: TC-PROV-063 (extends TC-PROV-007/022). **Verify**: `bun test tests/behaviour/provider-chain-resolution.test.ts tests/behaviour/provider-cli.test.ts`.
+- [ ] **10.3** **R4 — `quota.enabled: false` validation detail** (`packages/core/src/provider/validate.ts`): `quota: { enabled: false }` without `endpoint`/`credentialRef` must no longer fail with the misleading "references unknown credential" detail — reject with the exact missing field path(s), or skip both relational checks (endpoint and credential-reference validation) when `enabled === false`; add the config fixture (for example `tests/fixtures/provider/config/quota-disabled-minimal.yaml`) and the validation test asserting the exact classified identity and detail. **Refs**: review R4; F-1; DM-4, DM-5; Appendix B. **ACs**: AC-F1-1, AC-F1-5. **TCs**: extends TC-PROV-002. **Verify**: `bun test tests/behaviour/provider-chain-resolution.test.ts tests/behaviour/config-schema.test.ts`.
+- [ ] **10.4** **R5 — filter announcement evidence to the closed allowlist** (`packages/core/src/provider/parks.ts` announcement-evidence path): `announcementEvidence` must filter keys against the closed 11-field announcement allowlist constant exactly as the park path filters against the 8-field park allowlist — no runtime pass-through of unfiltered evidence; add the unknown-key and over-bound tests (a non-allowlisted key never survives; the 1024-byte/20-field bound still rejects). **Refs**: review R5; F-6; DM-11; NFR-5. **ACs**: AC-F6-1, AC-NFR-4. **TCs**: extends TC-PROV-034/049. **Verify**: `bun test tests/behaviour/provider-announcements.test.ts tests/checks/provider-evidence-bounds.test.ts`.
+- [ ] **10.5** **R6 — explicit park-vs-lane and shared-store parks-list tests** (`tests/behaviour/provider-parks.test.ts`, `tests/behaviour/provider-cli.test.ts`): add the explicit AC-F5-4 test (a provider park and a blocked lane inspected together are distinct record kinds and states; the park always carries a resume time; no park reports a lane as blocked and no lane readiness field derives from a park); strengthen the `parks list` read-only test by reusing one populated store across both invocations — identical deterministic output, zero appends, zero projection writes — replacing the fresh-empty-store-only assertion. **Refs**: review R6; F-5; DM-10, DM-12. **ACs**: AC-F5-4, AC-F5-5, AC-F8-3. **TCs**: extends TC-PROV-031/032/043. **Verify**: `bun test tests/behaviour/provider-parks.test.ts tests/behaviour/provider-cli.test.ts`.
+- [ ] **10.6** **R7 — mixed past/absent reset rule** (`packages/core/src/provider/quota.ts`): implement the spec-v1.3 quota semantics (F-4, DM-9, AC-F4-7, amended AC-F4-2) — a future reset on any exhausted limit wins as the soonest reset; a past reset clamps to zero wait only when the exhausted limits' only reset evidence is past and no exhausted limit lacks a valid reset; exhausted limit A (past reset) plus exhausted limit B (no valid reset) with no future reset anywhere is indeterminate and fails loud with `provider.quota.exceeded` + `provider.quota.reset_missing` and no fabricated expiry — never a clear verdict via the clamp path; implement TC-PROV-064 with the mixed past/absent fixture and the future-reset-wins control. **Refs**: review R7; F-4, F-6, F-9; DM-9; spec v1.3. **ACs**: AC-F4-7, AC-F4-2 (mixed-reset halves). **TCs**: TC-PROV-064 (extends TC-PROV-018/019/022). **Verify**: `bun test tests/behaviour/provider-quota-evaluation.test.ts`.
+- [ ] **10.7** **Re-verification and the R3 documentation handoff**: re-run the targeted suites named above, then `pnpm check` and `pnpm check:boundaries` (the Phase 9.2 fix-forward rules apply — no check loosened, synchronized pairs intact); hand R3 to `@doc-syncer` as a documentation follow-up: reword the composition-edge claim in `doc/spec/features/feature-provider-engine.md` to the delivered truth — the host/binary composition injects the production credential port and quota transport, the CLI edge wires them into the engine, and tests inject fakes — a current-truth documentation fix, **not a code change**; record the remediation loop in the Execution Log and request the review re-check of the delta; Phase 11 proceeds only on PASS. **Refs**: review R3 + remediation path; delivery lifecycle phases 7–8. **ACs**: protects all. **TCs**: protects all. **Verify**: `pnpm check`; `pnpm check:boundaries`; re-review PASS.
 
 **Acceptance Criteria**:
 
-- Must: (when triggered) every accepted finding fixed, verified, and re-reviewed to PASS; no scope creep.
-- Should: zero findings requiring a second remediation loop.
+- Must: R1, R2, R4, R5, R6, and R7 closed in code with the targeted tests green — TC-PROV-063/064 implemented and AC-F2-6/AC-F4-7 satisfied (spec v1.3); R3 handed to `@doc-syncer` as a current-truth doc fix; `pnpm check` and `pnpm check:boundaries` green; the review re-check returns PASS.
+- Should: zero findings in the re-review loop; remediation stays strictly inside the accepted findings (no scope creep).
 
 **Files and modules**:
 
-- Code areas: whichever the accepted findings name (remediation only).
-- System docs: none beyond findings that name Phase 1/Phase 8 artifacts.
+- Code areas: updated `packages/core/src/provider/{parks,engine,chain,quota,validate}.ts`; updated `tests/behaviour/{provider-parks,provider-chain-resolution,provider-quota-evaluation,provider-cli,provider-announcements}.test.ts` and `tests/checks/provider-evidence-bounds.test.ts`; new fixtures under `tests/fixtures/provider/config/` (quota-disabled minimal) and `tests/fixtures/provider/quota/` (mixed past/absent reset).
+- System docs: none in-change — the R3 rewording of `doc/spec/features/feature-provider-engine.md` is a `@doc-syncer` current-truth fix owned by the lifecycle documentation-sync phase, not a code or in-change-doc edit.
 
 **Tests**:
 
-- The Phase 9 battery plus the review verdict.
+- `bun test tests/behaviour/provider-parks.test.ts tests/behaviour/provider-chain-resolution.test.ts tests/behaviour/provider-quota-evaluation.test.ts tests/behaviour/provider-cli.test.ts tests/behaviour/provider-announcements.test.ts tests/checks/provider-evidence-bounds.test.ts`; then `pnpm check` and `pnpm check:boundaries`; then the review re-check.
 
-**Completion signal** (used only if the phase runs): `fix(GH-182): apply delivery review remediation`
+**Completion signal**: `fix(GH-182): apply delivery review remediation`
 
 ### Phase 11: PR readiness and documentation handoff
 
@@ -436,7 +440,7 @@ Execution order is strict: **1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 �
 
 **Tasks**:
 
-- [x] **11.1** Traceability verification: 46/46 ACs, 62/62 TCs, 9/9 Appendix A groups, and 49/49 executed legacy IDs have passing recorded evidence (test-plan §10 and §7.3 completion accounting); every plan task above is checked; no orphan TC or unowned AC remains. **Refs**: spec §17; test plan §7.3. **ACs**: all. **TCs**: all. **Verify**: ledger cross-check against §10 rows.
+- [ ] **11.1** Traceability verification: 48/48 ACs, 64/64 TCs, 9/9 Appendix A groups, and 49/49 executed legacy IDs have passing recorded evidence (test-plan §10 and §7.3 completion accounting; TC-PROV-063/064 per the Phase 10 remediation); every plan task above is checked; no orphan TC or unowned AC remains. Reopened by the v1.1 plan update: the earlier 46/62 refresh is superseded by the spec-v1.3 ledger and must be re-verified after Phase 10. **Refs**: spec §17 (v1.3); test plan §7.3. **ACs**: all. **TCs**: all. **Verify**: ledger cross-check against §10 rows.
 - [ ] **11.2** Owner-policy gate (spec OQ-2/OQ-3, carried from this plan's Open questions): confirm the fail-closed posture (`allowPaidFallback: false`; shipped Z.AI descriptor with no enabled chain) with the owner **before merging the configuration surface**; if the owner disputes either default, author the decision record through `@decision-advisor` (spec §14.1 DC-4/DC-5) before merge. Non-blocking for delivery; blocking for merge. Decision needed: consult `@decision-advisor`. **Refs**: spec §14/§14.1/§18; OQ-2, OQ-3. **ACs**: protects AC-F1-5, AC-F2-4 posture. **TCs**: none (policy gate). **Verify**: owner confirmation or decision record linked in the PR description.
 - [ ] **11.3** Spec reconciliation: the in-change synchronization is complete (the Phase 1 error-table rows in `doc/spec/features/feature-result-contract.md` and the Phase 8 guide); hand the remaining system documentation to the lifecycle `system_spec_update` phase (`@doc-syncer`): the provider-engine feature spec, `provider` keys in the config-layer spec, the park/announcement vocabulary in the state-layer spec, the provider command row in the registry, and the glossary terms (spec §16 Documentation row). **Refs**: spec §16/§18; plan Out of Scope. **ACs**: supports DoD "documentation is synchronized". **TCs**: supports TC-PROV-045/062 doc halves. **Verify**: handoff recorded; `@doc-syncer` output reviewed in the lifecycle phase.
 - [ ] **11.4** Version bump per repo conventions: none in-change — all workspace packages are private `0.0.0` under the lockstep release convention and this change adds no dependency, so no version or changeset action belongs in this PR; the spec's `version_impact: minor` is realized by the release flow, not by this change. **Refs**: repo conventions; spec front matter. **ACs**: none (release policy). **TCs**: none. **Verify**: no version fields or lockfile versions touched in the diff.
@@ -460,7 +464,7 @@ Execution order is strict: **1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 �
 
 ### Phase Sequence and Commit Plan
 
-Strict order; each phase ends green and lands as exactly one Conventional Commit (scope `GH-182`, bodies within the 100-character limit) via `@committer`. `pnpm build` precedes dist-dependent suites and `pnpm check:boundaries`. Synchronized pairs never split across commits. Phase 10 runs only on a FAIL review verdict.
+Strict order; each phase ends green and lands as exactly one Conventional Commit (scope `GH-182`, bodies within the 100-character limit) via `@committer`. `pnpm build` precedes dist-dependent suites and `pnpm check:boundaries`. Synchronized pairs never split across commits. Phase 10 runs only on a FAIL review verdict (activated by review iteration 1: R1–R7).
 
 | Phase | Title | Depends on | Commit subject |
 |-------|-------|------------|----------------|
@@ -473,14 +477,14 @@ Strict order; each phase ends green and lands as exactly one Conventional Commit
 | 7 | Ported legacy battery, golden outputs, hermetic and security checks | 6 | `test(GH-182): add legacy parity battery, goldens, hermetic and evidence checks` |
 | 8 | In-change documentation floor | 7 | `docs(GH-182): add provider conditions and parks guide` |
 | 9 | Aggregate verification and remediation gate | 8 | `chore(GH-182): verify aggregate gates and record execution evidence` |
-| 10 | Delivery review remediation (conditional) | 9, FAIL verdict only | `fix(GH-182): apply delivery review remediation` |
-| 11 | PR readiness and documentation handoff | 10 if run, else 9 | `chore(GH-182): finalize traceability and PR readiness handoff` |
+| 10 | Delivery review remediation (conditional) | 9 (activated: review iter-1 FAIL R1–R7) | `fix(GH-182): apply delivery review remediation` |
+| 11 | PR readiness and documentation handoff | 10 (review PASS) | `chore(GH-182): finalize traceability and PR readiness handoff` |
 
 ## Coverage Ledger
 
-Every acceptance criterion, every Appendix A group with all 49 executed legacy IDs, and every TC is mapped to a phase and a test home. Shared ACs/TCs name each half's phase. This ledger adds no requirement; it reconciles spec §17, test-plan §3.1/§5.3/§7.1, and the phases above.
+Every acceptance criterion, every Appendix A group with all 49 executed legacy IDs, and every TC is mapped to a phase and a test home. Shared ACs/TCs name each half's phase. This ledger adds no requirement; it reconciles spec §17 **v1.3** (48 ACs — AC-F2-6 and AC-F4-7 added by the review reopen), test-plan §3.1/§5.3/§7.1, and the phases above. **Currency note**: the test-plan artifact still records 46 ACs / 62 TCs; TC-PROV-063 (AC-F2-6) and TC-PROV-064 (AC-F4-7) are the Phase 10 remediation cases designated by this plan, and the 48/64 counts here follow the test plan when its update lands — TC IDs, AC traces, and legacy mappings never change.
 
-### Acceptance-criterion ledger (46/46)
+### Acceptance-criterion ledger (48/48)
 
 | AC | Phase(s) | Primary evidence (TCs) |
 |----|----------|------------------------|
@@ -494,16 +498,18 @@ Every acceptance criterion, every Appendix A group with all 49 executed legacy I
 | AC-F2-3 | 2, 3 | TC-PROV-009 |
 | AC-F2-4 | 2 | TC-PROV-010 |
 | AC-F2-5 | 2 | TC-PROV-010 |
+| AC-F2-6 | 10 | TC-PROV-063 |
 | AC-F3-1 | 2, 7 | TC-PROV-011, TC-PROV-054 |
 | AC-F3-2 | 2, 7 | TC-PROV-012, TC-PROV-054 |
 | AC-F3-3 | 1, 2 | TC-PROV-002 |
 | AC-F3-4 | 2, 3 | TC-PROV-013 |
 | AC-F4-1 | 3 | TC-PROV-014 |
-| AC-F4-2 | 3, 7 | TC-PROV-015..020, TC-PROV-057 |
+| AC-F4-2 | 3, 7, 10 | TC-PROV-015..020, TC-PROV-057, TC-PROV-064 |
 | AC-F4-3 | 3 | TC-PROV-021 |
-| AC-F4-4 | 3, 7 | TC-PROV-022, TC-PROV-057 |
+| AC-F4-4 | 3, 7, 10 | TC-PROV-022, TC-PROV-057, TC-PROV-063 |
 | AC-F4-5 | 3, 7 | TC-PROV-023, TC-PROV-058, TC-PROV-061 |
 | AC-F4-6 | 3, 7 | TC-PROV-024..027, TC-PROV-037, TC-PROV-052, TC-PROV-055..057, TC-PROV-059, TC-PROV-061 |
+| AC-F4-7 | 10 | TC-PROV-064 |
 | AC-F5-1 | 1, 3, 5 | TC-PROV-001, TC-PROV-028 |
 | AC-F5-2 | 3, 5 | TC-PROV-029 |
 | AC-F5-3 | 3, 5 | TC-PROV-030 |
@@ -531,7 +537,7 @@ Every acceptance criterion, every Appendix A group with all 49 executed legacy I
 | AC-NFR-5 (NFR-6) | 3, 5 | TC-PROV-050 |
 | AC-NFR-6 (NFR-10) | 7 | TC-PROV-051 |
 
-Accounting: 46/46 ACs mapped (40 functional + 6 NFR ACs); NFR-7/NFR-8/NFR-9 trace through AC-F5-6, AC-F9-1/2, and AC-F4-6/AC-F6-4 exactly as the test plan §3.1 records.
+Accounting: 48/48 ACs mapped (42 functional + 6 NFR ACs per spec v1.3; AC-F2-6 and AC-F4-7 land in Phase 10); NFR-7/NFR-8/NFR-9 trace through AC-F5-6, AC-F9-1/2, and AC-F4-6/AC-F6-4 exactly as the test plan §3.1 records.
 
 ### Appendix A legacy-parity ledger (9/9 groups, 49/49 executed IDs)
 
@@ -549,7 +555,7 @@ Accounting: 46/46 ACs mapped (40 functional + 6 NFR ACs); NFR-7/NFR-8/NFR-9 trac
 
 Count check: 5 + 11 + 5 + 14 + 2 + 3 + 2 + 5 + 2 = 49 executed checks (the nominal 001..071 range has gaps; test-plan §5.3 is the per-ID authority).
 
-### Test-case ledger (62/62)
+### Test-case ledger (64/64)
 
 | TC(s) | Phase(s) | Test home |
 |-------|----------|-----------|
@@ -585,14 +591,16 @@ Count check: 5 + 11 + 5 + 14 + 2 + 3 + 2 + 5 + 2 = 49 executed checks (the nomin
 | TC-PROV-053 | 7 | `tests/golden/provider-{resolve,quota,parks-list}.test.ts` |
 | TC-PROV-054..061 | 7 | `tests/behaviour/provider-legacy-parity.test.ts` (059 also `provider-credentials`) |
 | TC-PROV-062 | 7 (hermetic), 8 (guide) | `tests/checks/provider-hermetic.test.ts` + `doc/guides/provider-conditions-and-parks.md` |
+| TC-PROV-063 | 10 | `tests/behaviour/provider-chain-resolution.test.ts` (+ `provider-cli.test.ts` envelope half) — multi-entry failed/eligible non-abort matrix (AC-F2-6) |
+| TC-PROV-064 | 10 | `tests/behaviour/provider-quota-evaluation.test.ts` — mixed past-reset/absent-reset indeterminate rule and future-reset-wins control (AC-F4-7) |
 
-Count check: 62 distinct TCs (40 functional-AC owners + 6 NFR-AC owners + 16 parity/regression/golden rows sharing owners per §3.1); no TC is unmapped and no AC is left without evidence.
+Count check: 64 distinct TCs (62 recorded by the test plan plus TC-PROV-063/064 designated by Phase 10 pending the test-plan update); no TC is unmapped and no AC is left without evidence.
 
 ## Definition of Done
 
 Tied to spec §18's Definition of Done predicates, Appendix D's ticket acceptance criteria, and test-plan §7.3:
 
-- [ ] All 46 acceptance criteria have passing, traceable evidence recorded in test-plan §10; no unrun evidence is recorded as passing; no AC is TODO.
+- [ ] All 48 acceptance criteria (spec v1.3) have passing, traceable evidence recorded in test-plan §10; no unrun evidence is recorded as passing; no AC is TODO.
 - [ ] Ticket AC — a park reports its cause and expiry: 100% of parks carry a closed cause and an absolute future expiry, round-trip through state, expire exactly at `expiresAt` with no write, and stay distinct from blocked lanes (AC-F5-1..F5-6, AC-F2-3).
 - [ ] Ticket AC — provider outage is announced, not silent: every legacy fail-open class asserts an announcement plus a park or classified error; the §5.4 no-silent-path matrix has zero clear outcomes; skipped-entry outages stay visible (AC-F4-6, AC-F6-1..F6-4, AC-F7-4).
 - [ ] Ticket AC — subscription-first quota ordering: validation rejects paid-before-subscription with no resolution attempt; subscription selection precedes paid; a peak-window park never substitutes paid capacity (AC-F1-3, AC-F2-2, AC-F2-4, AC-F2-5).
@@ -607,20 +615,21 @@ Tied to spec §18's Definition of Done predicates, Appendix D's ticket acceptanc
 - [ ] The legacy bash hook and its battery are byte-unchanged; no edits to `scripts/*.sh`, `tools/`, `.opencode/`, `.ados-claude/`, or CI workflows.
 - [ ] An unmerged pull request targets `main-tools` with all required CI jobs green on the pushed HEAD, assigned to the human owner.
 - [ ] The owner-policy check for spec OQ-2/OQ-3 (paid-fallback default; shipped chain posture) is complete before any merge of the configuration surface (task 11.2).
+- [ ] The delivery review re-check after Phase 10 remediation returns PASS: R1, R2, R4, R5, R6, and R7 closed in code/tests (TC-PROV-063/064 green; AC-F2-6/AC-F4-7 satisfied) and R3 closed as a current-truth documentation fix by `@doc-syncer` (review artifact: `./review/review-iter-1.md`; task 10.7).
 
-**Remaining blockers**: none. Delivery can start at Phase 1 immediately. The only pre-merge (not pre-delivery) gate is the OQ-2/OQ-3 owner-policy confirmation carried as task 11.2; until resolved, the fail-closed defaults (DEC-3/DEC-4) govern.
+**Remaining blockers**: none for the remediation itself — Phase 10 (review R1–R7) is in progress with the spec reopen already complete (v1.3). The gates before Phase 11 and any merge are the review PASS re-check (task 10.7) and the OQ-2/OQ-3 owner-policy confirmation (task 11.2); until the latter is resolved, the fail-closed defaults (DEC-3/DEC-4) govern.
 
 ## Test Scenarios
 
-All 62 scenarios are specified in test-plan §5.2 with their ACs, levels, fixtures, and steps; the Coverage Ledger above maps every TC to its phase and test home. Per-level execution map:
+All 62 scenarios are specified in test-plan §5.2 with their ACs, levels, fixtures, and steps; Phase 10 adds the remediation cases TC-PROV-063/064 (designated by this plan pending the test-plan update); the Coverage Ledger above maps every TC to its phase and test home. Per-level execution map:
 
 | Level | Suites | Extended by phases | Primary verify command |
 |-------|--------|--------------------|------------------------|
 | Structure / contract inventory | `tests/structure/provider-contract.test.ts`, `error-table.test.ts`, `content-inventory.test.ts`, `subpaths.test.ts` | 1, 2, 4, 6 | `bun test tests/structure` |
-| Behaviour (engine + CLI) | `tests/behaviour/provider-{chain-resolution,peak-window,quota-evaluation,parks,announcements,credentials,cli}.test.ts` | 1, 2, 3, 5, 6, 7 | `bun test tests/behaviour` |
+| Behaviour (engine + CLI) | `tests/behaviour/provider-{chain-resolution,peak-window,quota-evaluation,parks,announcements,credentials,cli}.test.ts` | 1, 2, 3, 5, 6, 7, 10 | `bun test tests/behaviour` |
 | Golden output | `tests/golden/provider-*.test.ts` | 7 | `bun test tests/golden` |
 | Legacy parity | `tests/behaviour/provider-legacy-parity.test.ts` | 7 | `bun test tests/behaviour/provider-legacy-parity.test.ts` |
-| Checks / security | `tests/checks/provider-{hermetic,evidence-bounds}.test.ts`, `secret-read-boundary.test.ts`, `error-table-sync.test.ts` | 1, 4, 7, 8 | `bun test tests/checks` |
+| Checks / security | `tests/checks/provider-{hermetic,evidence-bounds}.test.ts`, `secret-read-boundary.test.ts`, `error-table-sync.test.ts` | 1, 4, 7, 8, 10 | `bun test tests/checks` |
 | Boundaries | `tests/boundaries/**` | 4 | `bun test tests/boundaries`; `pnpm check:boundaries` |
 | Aggregate | whole workspace | 9, 10, 11 | `pnpm check` |
 
@@ -628,8 +637,9 @@ All 62 scenarios are specified in test-plan §5.2 with their ACs, levels, fixtur
 
 | Artifact | Location | Type |
 |----------|----------|------|
-| Change specification (v1.2) | `./chg-GH-182-spec.md` | Input — source of truth |
-| Test plan (v1.1) | `./chg-GH-182-test-plan.md` | Input — TC/AC/legacy authority |
+| Change specification (v1.3) | `./chg-GH-182-spec.md` | Input — source of truth (review reopen: AC-F2-6, AC-F4-7) |
+| Test plan (v1.1; update to 48 ACs / 64 TCs pending — TC-PROV-063/064 designated by this plan) | `./chg-GH-182-test-plan.md` | Input — TC/AC/legacy authority |
+| Delivery review (iteration 1) | `./review/review-iter-1.md` | Input — FAIL verdict, findings R1–R7 |
 | This implementation plan | `./chg-GH-182-plan.md` | Output |
 | Provider contracts and error rows | `packages/core/src/contracts/{provider,error-table}.ts`, `doc/spec/features/feature-result-contract.md` | Code + synchronized system doc |
 | Pure engine | `packages/core/src/provider/{index,validate,peak,conditions,chain,quota,parks,announcements,loop}.ts` | Code |
@@ -645,6 +655,7 @@ All 62 scenarios are specified in test-plan §5.2 with their ACs, levels, fixtur
 | Version | Date (UTC) | Author | Changes |
 |---------|------------|--------|---------|
 | 1.0 | 2026-10-31 | plan-writer | Initial plan: 11 phases (66 tasks) — contracts/error rows/config branch, pure validation and chain policy, quota/parks/announcements/loop, quota transport subpath with confined admission, state integration, CLI surface, legacy parity battery with goldens/hermetic/evidence checks, documentation floor, aggregate gate, conditional review remediation, PR readiness handoff; phase sequence with per-phase Conventional Commits; full coverage ledger (46/46 ACs, 9/9 Appendix A groups, 49/49 legacy IDs, 62/62 TCs); Definition of Done tied to spec §18 and the ticket ACs; no remaining blockers. |
+| 1.1 | 2026-11-01 | plan-writer | Review remediation update (review iter-1 FAIL, R1–R7; spec reopened to v1.3): replaced the conditional Phase 10 stub with concrete tasks — 10.1 R1 cleared-record gating on `prior.expiresAtMs > nowMs` with unconditional `provider.resumed` and a clock-past-expiry test; 10.2 R2 failed-entry non-abort walk (AC-F2-6, TC-PROV-063); 10.3 R4 `quota.enabled: false` exact field paths / skipped relational checks; 10.4 R5 announcement-evidence closed-allowlist filtering with unknown-key/over-bound tests; 10.5 R6 explicit AC-F5-4 park-vs-lane test and shared-store parks-list test; 10.6 R7 mixed past/absent reset rule with future-reset-wins (AC-F4-7, TC-PROV-064); 10.7 targeted suites + `pnpm check` + boundaries re-run and the R3 doc-syncer handoff (current-truth doc fix, not code). Coverage ledger raised to 48 ACs / 64 TCs (counts follow the pending test-plan update; AC-F4-2/AC-F4-4 rows extended to Phase 10 per the v1.3 amendments). Execution Log: Phase 10 in progress, task 11.1 reopened against the 48/64 ledger. DoD adds the review PASS re-check and the 48-AC count. No Phase 1–9 scope change. |
 
 ## Execution Log
 
@@ -659,6 +670,6 @@ All 62 scenarios are specified in test-plan §5.2 with their ACs, levels, fixtur
 | 7 | Completed | 2026-11-01T00:00:00Z | 2026-11-01T01:10:00Z | 91f7fe5 | Ported battery: 9/9 groups and 49/49 executed IDs mapped, fail-open classes driven through `resolve`+`quota` (always park/announce or classify), quota C/D boundary matrix, opt-out/credential, loop/cap, UTC formatting, 100-run replay; no-silent-path matrix; hermetic fetch/sleep/timer guards; evidence 1024-byte/20-field and 8/11 allowlist bounds; normalized provider goldens; exact-code classified-platform fixture updated. Verify: 99 targeted tests + all goldens PASS; ambient-globals/secret-read PASS. Deviation: group fixtures are data tables driving representative engine/evaluator assertions rather than one test per ID; the 49-ID mapping is asserted exactly. |
 | 8 | Completed | 2026-11-01T01:15:00Z | 2026-11-01T01:35:00Z | 557ffef | New `doc/guides/provider-conditions-and-parks.md` with `ados_distribution: redistributable`, closed condition/park vocabulary, resume/expiry semantics, fail-loud rule, announcement vocabulary, and an Appendix B pointer (no duplicated field table); guide contract assertions added to the hermetic check (including a temp-copy section-removal mutation). Verify: doc-distribution guard PASS (81 docs, no drift); guide contract tests PASS. No other system docs touched (boundary preserved). |
 | 9 | Completed | 2026-11-01T01:40:00Z | 2026-11-01T02:20:00Z | 32e65e3 | Aggregate green on one tree: `pnpm check` (lint, format:check, typecheck, 1138 tests, boundaries, exports parity), `pnpm check:boundaries`, ambient-globals, secret-read-boundary, error-table-sync, workspace-entrypoints, doc-distribution, `git diff --check`. Fix-forward recorded: Biome formatting/import cleanup; new guide registered in the forbidden-literals user-facing registry; packed-state expected core exports gained `./provider`; classified-platform golden carries the now-required exact `provider.quota.exceeded` code; GH-182 pm-notes phase timestamps normalized to ISO-8601 so the existing corpus lint gate passes; test-plan §10 execution log populated. |
-| 10 | Skipped (conditional, not triggered) | — | — | — | No delivery review ran in this execution; the conditional remediation phase was not triggered. |
-| 11 | Partial (11.1 complete; 11.2–11.5 deferred) | 2026-11-01T02:25:00Z | 2026-11-01T02:35:00Z | this Phase 11.1 commit | Traceability refresh: 46/46 AC ledger rows, plan tasks 1–9 checked, 9/9 Appendix A groups, 49/49 executed legacy IDs, 62/62 TC definitions, test-plan §10 populated, 1138 aggregate tests green on the Phase 9 tree. 11.2 owner-policy confirmation and 11.3–11.5 doc handoff/PR/CI handoff were not executed: this run explicitly forbids push/merge/PR and no review ran. |
+| 10 | In progress (review FAIL: R1–R7) | 2026-11-01T03:05:00Z | — | — | Review artifact: `./review/review-iter-1.md` (verdict FAIL; diff base `c1ba948`, head `5e3c72f`; no critical/high findings, no secret-leak path). The spec reopen the review required is complete (spec v1.3 pins R2/R7 as AC-F2-6/AC-F4-7). R1/R2/R4/R5/R6/R7 are code/test remediation (tasks 10.1–10.6, TC-PROV-063/064); **R3 is docs-only** — the `feature-provider-engine.md` composition-edge rewording handed to `@doc-syncer` (task 10.7), a current-truth doc fix, not code. |
+| 11 | Partial (11.1 complete; 11.2–11.5 deferred) | 2026-11-01T02:25:00Z | 2026-11-01T02:35:00Z | this Phase 11.1 commit | Traceability refresh: 46/46 AC ledger rows, plan tasks 1–9 checked, 9/9 Appendix A groups, 49/49 executed legacy IDs, 62/62 TC definitions, test-plan §10 populated, 1138 aggregate tests green on the Phase 9 tree. 11.2 owner-policy confirmation and 11.3–11.5 doc handoff/PR/CI handoff were not executed: this run explicitly forbids push/merge/PR and no review ran. Update (plan v1.1): 11.1 is reopened against the spec-v1.3 ledger (48 ACs / 64 TCs) and re-verifies after Phase 10 PASS. |
 

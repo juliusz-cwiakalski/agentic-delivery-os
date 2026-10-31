@@ -10,7 +10,7 @@ phases:
   dor_check: { started: "2026-10-31T19:15:00Z", completed: "2026-10-31T19:30:00Z" }
   delivery: { started: "2026-10-31T19:30:00Z", completed: "2026-10-31T20:30:00Z" }
   system_spec_update: { started: "2026-10-31T20:30:00Z", completed: "2026-10-31T21:00:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-10-31T21:00:00Z", completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -47,3 +47,9 @@ notes:
   - text: "Delivery phases 1-9 + 11.1 completed across 11 commits; aggregate pnpm check green (1138 tests / 113 files), boundaries green, 49/49 legacy IDs mapped, 46/46 ACs and 62/62 TCs traceable. Coder reported @committer delegation was unavailable and created commits directly, bypassing the canonical commit agent; commit messages still follow the planned Conventional Commit sequence and the tree is clean. Process deviation noted for retro; no content correctness issue observed."
     type: retro
     date: "2026-10-31"
+  - text: "Review iteration 1 FAIL (R1-R7: 2 medium code, 1 medium doc, 3 low, 1 info). Reopened specification to v1.3 (48 ACs; failed-entry walk and mixed-reset semantics pinned), synced test plan to v1.2 (64 TCs: TC-PROV-063/064) and plan to v1.1 (Phase 10 tasks 10.1-10.7). Remediation in progress; re-review required after coder + doc-syncer."
+    type: blocker
+    date: "2026-11-01"
+  - text: "Retro: the first review was run as two bounded passes because single-run @reviewer invocations exceeded the execution window twice. Splitting worked and produced high-signal findings, but it missed persisting a native reviewer artifact; PM consolidated the two reports into review/review-iter-1.md. Suggest reviewer prompts cap runtime and always write the verdict artifact early."
+    type: retro
+    date: "2026-11-01"
