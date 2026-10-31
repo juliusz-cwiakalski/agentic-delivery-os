@@ -6,7 +6,7 @@ phases:
   specification: { started: "2026-10-31T14:06:00Z", completed: "2026-10-31T17:20:00Z", reopened: "2026-10-31T16:55:00Z", iterations: 3 }
   test_planning: { started: "2026-10-31T14:32:00Z", completed: "2026-10-31T17:20:00Z", reopened: "2026-10-31T16:55:00Z", iterations: 3 }
   delivery_planning: { started: "2026-10-31T15:27:00Z", completed: "2026-10-31T17:20:00Z", reopened: "2026-10-31T16:55:00Z", iterations: 3 }
-  dor_check: { started: "2026-10-31T17:22:00Z", completed: null, iterations: 3, verdict: "NOT_READY (iter 1 and 2); iter 3 pending" }
+  dor_check: { started: "2026-10-31T17:22:00Z", completed: "2026-10-31T17:40:00Z", iterations: 3, verdict: "READY (iter 3)" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -77,4 +77,7 @@ notes:
     date: "2026-10-31"
   - text: "Iteration 3 remediation complete: spec v1.3 (DM-2 per-metric sample model with spine_rows/spine_included/spine_excluded/metric_included/metric_excluded/metric_excluded_changes; conservation rules; cycle 20/23 with GH-177/185/188 missing_metric_input; CI metric_included = denominator; old counters retired; §18 Phase 10), test plan v1.3 (per-metric assertions, GH-171 in spine_excluded, TC-MEAS-006 sums recorded 1-decimal rows, authoritative branch name), plan v1.2 (retired counters removed, cycle censoring missing_metric_input, PD-5 rounding aligned, lifecycle order confirmed). 21 ACs / 37 TCs / 13 phases / 77 tasks preserved. Final DoR iteration 3."
     type: "decision"
+    date: "2026-10-31"
+  - text: "DoR iteration 3 verdict READY (readiness-review/readiness-iter-3.md); iteration-2 B4/B5 and both should-fix items closed and independently re-verified. Seven non-blocking notes (5 minor, 2 nit) recorded: stale defensive clause in test-plan §2; TC-DEC-015 step 6 greps provider-quota in the wrong file; TC-GATE-005 step 2 assumes both docs registered at Phases 7/9; TC-MEAS-010 step 3 denominator rule vs count metric; PD-3 per-pair-rounding phrasing; vacuous line-wrapped absence grep in TC-DEC-014 step 4; DM-2 leaves ci_outcome domain to plan step 6. No AC/count/order/baseline value affected; delivery may start and @coder should fold them in where natural."
+    type: "info"
     date: "2026-10-31"
