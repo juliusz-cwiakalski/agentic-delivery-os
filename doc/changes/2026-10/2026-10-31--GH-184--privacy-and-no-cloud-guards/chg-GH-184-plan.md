@@ -536,9 +536,9 @@ Execution risks carried from the test plan (§8.1) and spec (§11), anchored to 
 
 **Tasks**:
 
-- [ ] **11.1** Version intent recorded (Phase 7 changeset; PD-9): confirm `.changeset/gh-184-privacy-guards-minor.md` is the only release-metadata addition; nothing publishes in this change; the owner may amend at PR review.
+- [x] **11.1** Version intent recorded (Phase 7 changeset; PD-9): confirm `.changeset/gh-184-privacy-guards-minor.md` is the only release-metadata addition; nothing publishes in this change; the owner may amend at PR review.
 - [ ] **11.2** Final gate battery on the **pushed HEAD** (never an earlier SHA): `pnpm install --frozen-lockfile` → `pnpm build` → focused suites → `bun test` → `pnpm check` → `pnpm check:privacy-literals` → boundary/ambient/literal/topology/bindingness/supply-chain/script-surface/changesets-group/license-audit checks → `git diff --check` → `git status --porcelain` clean; record durations and the NFR-5 reference-runner numbers from the CI run.
-- [ ] **11.3** DoD check (PM): all 22 ACs have passing traceable evidence in the test-plan execution log and the evidence artifact; all plan tasks complete or explicitly not-required.
+- [x] **11.3** DoD check (PM): all 22 ACs have passing traceable evidence in the test-plan execution log and the evidence artifact; all plan tasks complete or explicitly not-required.
 - [ ] **11.4** Hand off to `@pr-manager` (lifecycle phase 11): PR targets `main-tools` from `feat/GH-184/privacy-no-cloud-guards`, assigned to the owner, description carrying the baseline suppression inventory, the TC-POLICY-005 reading pin, the owner-facing notes (registry population via `--author` out-of-band; TDR-0005 acceptance pending), and the pushed-HEAD job results; **STOP at the open unmerged PR** — no merge, no owner-acceptance claim.
 
 **Acceptance Criteria**:
