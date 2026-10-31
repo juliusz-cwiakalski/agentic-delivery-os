@@ -22,6 +22,7 @@
     "src/contracts/state.ts",
     "src/domain/index.ts",
     "src/domain/pm-notes-lint.ts",
+    "src/domain/verify-change.ts",
     "src/index.ts",
     "src/state/driver/runtime-edge.ts",
     "src/state/driver/strategy.ts",

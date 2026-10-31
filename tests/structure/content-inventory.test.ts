@@ -69,6 +69,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/contracts/state.ts": ["STATE_DRIVER_KINDS", "STATE_LEVELS", "STATE_SCHEMA_VERSION"],
   "core/src/domain/pm-notes-lint.ts": ["lintPmNotes"],
+  "core/src/domain/verify-change.ts": [
+    "classifyVerifyChange",
+    "classifyVerifyDocument",
+    "formatVerifySummary",
+  ],
   "core/src/state/index.ts": ["createStateStore"],
   "core/src/state/registry.ts": [
     "PHASE_TRANSITION_RECORD_KEY_PREFIX",
@@ -77,6 +82,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "phaseStateDocumentName",
     "phaseTransitionRecordKey",
     "readChangeTransitions",
+    "readChangeTransitionsTolerant",
     "rebuildPhaseProjection",
     "replacePhaseProjection",
   ],
