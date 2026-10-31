@@ -1,0 +1,24 @@
+{
+  "provider": "github",
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "entries": [
+    {
+      "trapName": "GH-REVIEW-STATE",
+      "providerBehavior": "GitHub PR review state is split across merged/state/draft flags and the native reviewDecision, which may disagree with the raw state.",
+      "expectedNormalizedOutcome": "Every PR variant maps to one closed DeliveryRequestReviewState; a merged or closed PR never reports open, and a flattening regression fails by trap name.",
+      "fixtureReference": "tests/fixtures/providers/github/pr-review-states.json#/pulls"
+    },
+    {
+      "trapName": "GH-CHECK-RUNS-PER-SHA",
+      "providerBehavior": "A commit can carry several check runs per SHA plus a check-suite roll-up whose conclusion can be greener than an individual run.",
+      "expectedNormalizedOutcome": "read-pipeline-run for the SHA returns every check run as a job with a closed-set state and trace evidence where a details URL exists; a failed run is never hidden behind the roll-up and SHAs yield disjoint sets.",
+      "fixtureReference": "tests/fixtures/providers/github/check-runs-per-sha.json"
+    },
+    {
+      "trapName": "GH-ISSUE-TO-WORKITEM",
+      "providerBehavior": "GitHub issue payloads cover labels, optional assignee, open/closed state, optional updated_at, and issue links.",
+      "expectedNormalizedOutcome": "Issues normalize to WorkItem with labels, optional assignee, closed Set status alias, updatedAt verbatim when present (absent otherwise), and typed relations only when the payload records them.",
+      "fixtureReference": "tests/fixtures/providers/github/issues.json#/issues"
+    }
+  ]
+}
