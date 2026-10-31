@@ -1838,4 +1838,3 @@ Notes on the battery:
 | TC-DB-037 — mandatory read-only real-store smoke | — | Planned (non-CI, required before PR) | Run `db size` and `db list --limit 5` against the real opencode store read-only; record commands, exit codes, bounded output, and before/after database/WAL/SHM bytes and row counts showing no mutation. |
 | TC-DB-037 — reference latency measurement | — | Optional (non-CI, not a pass gate) | Record environment, date and median timings for `db size`, `db list --limit 100`, prune selection, one re-check, `db reboot` live check and a disposable-copy 500-candidate apply; or record "not run". NFR-D4 remains a target. |
 | TC-DB-038 — PR-body checklist | — | Planned (manual, non-CI) | Record the PR URL, the open/not-merged state, and the C-11 sign-off, activity-based-liveness, reboot-deviation and external-surface statements. |
-

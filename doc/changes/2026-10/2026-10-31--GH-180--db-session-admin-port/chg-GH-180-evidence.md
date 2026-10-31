@@ -17,7 +17,7 @@ links:
 ## 1. Delivery summary
 
 - Branch: `feat/GH-180/db-session-admin-port` (PR base `main-tools`).
-- Delivery HEAD at Phase 5 start: `f339843`.
+- Delivery HEAD at Phase 5 start: `ae87ce3`.
 - Delivery model: Phases 1–5 executed in order; one Conventional Commit per phase.
 - No pull request, push, merge, or owner-approval claim was made by the coder.
 
@@ -25,11 +25,11 @@ links:
 
 | Phase | Commit | Subject |
 |---|---|---|
-| 1 | `2426640` | `feat(GH-180): add session-admin contracts, pure policy, and synchronized db error rows` |
-| 2 | `e7d6cd7` | `feat(GH-180): add opencode-backed session size and list with fake-IO fixtures` |
-| 3 | `d850727` | `feat(GH-180): add leaf-only prune and guarded reboot administration with TOCTOU and partial-failure proofs` |
-| 4 | `f339843` | `feat(GH-180): add db command and edge composition with grammar, output, privacy, and SQL-safety proofs` |
-| 5 | (this evidence commit) | `test(GH-180): verify db surfaces, record real-store smoke and aggregate evidence` |
+| 1 | `7748668` | `feat(GH-180): add session-admin contracts and db error rows` |
+| 2 | `20ddbd6` | `feat(GH-180): add opencode-backed session size and list` |
+| 3 | `c186068` | `feat(GH-180): add leaf-only prune and guarded reboot` |
+| 4 | `ae87ce3` | `feat(GH-180): add db command and edge composition` |
+| 5 | `6822124` | `test(GH-180): verify db surfaces and record evidence` |
 
 ## 3. Focused and aggregate gate results
 
