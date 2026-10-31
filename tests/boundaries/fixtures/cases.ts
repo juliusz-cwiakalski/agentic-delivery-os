@@ -323,6 +323,20 @@ export const RULE_CASES: RuleCase[] = [
     'import "#contracts";\n',
   ),
   clean(
+    "tier-control-state-contracts",
+    "TC-SCAFFOLD-011",
+    ["core"],
+    "packages/core/src/state/probe.ts",
+    'import "#contracts";\n',
+  ),
+  clean(
+    "matrix-control-cli-command-core-contracts",
+    "TC-SCAFFOLD-008",
+    ["cli", "core"],
+    "packages/cli/src/commands/probe.ts",
+    'import "@delivery-os/core/contracts";\n',
+  ),
+  clean(
     "tier-control-app-domain",
     "TC-SCAFFOLD-011",
     ["core"],
