@@ -48,6 +48,40 @@ describe("TC-SECRET-001 planted violations fire", () => {
     expect(validate(ROOT)).toEqual([]);
   });
 
+  test("the allowlist is exactly four entries with one credential-material entry", () => {
+    expect(SECRET_READ_ALLOWLIST).toHaveLength(4);
+    expect(
+      SECRET_READ_ALLOWLIST.filter((entry) => entry.class === "credential-material"),
+    ).toHaveLength(1);
+    expect(scopedFiles(ROOT).length).toBeGreaterThan(0);
+  });
+
+  test("planted reads fire in every provider subpath", () => {
+    for (const subpath of ["github", "gitlab", "jira"]) {
+      const testCase = SECRET_READ_CASES.find(
+        (entry) =>
+          entry.expect === "violation" &&
+          entry.assertFile.startsWith(`packages/adapters/src/${subpath}/`),
+      );
+      if (testCase === undefined) throw new Error(`no planted case for ${subpath}`);
+      const root = materialize(testCase);
+      try {
+        const violations = scan(root);
+        expect(violations.length, subpath).toBeGreaterThan(0);
+        expect(
+          violations.some((violation) => violation.file === testCase.assertFile),
+          subpath,
+        ).toBe(true);
+        expect(
+          violations.some((violation) => violation.line === 1),
+          subpath,
+        ).toBe(true);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    }
+  });
+
   test("every environment-read form is reported by the rule, naming file and line", () => {
     for (const testCase of SECRET_READ_CASES.filter((entry) => entry.expect === "violation")) {
       const root = materialize(testCase);

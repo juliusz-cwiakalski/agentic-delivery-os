@@ -1,0 +1,19 @@
+{
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "transitions": [
+    {
+      "id": "11",
+      "name": "Start progress",
+      "to": { "name": "In Progress" },
+      "mechanism": "field-update"
+    },
+    {
+      "id": "21",
+      "name": "Submit for review",
+      "to": { "name": "In Review" },
+      "mechanism": "api-transition"
+    },
+    { "id": "31", "name": "Close", "to": { "name": "Done" }, "mechanism": "api-transition" },
+    { "id": "41", "name": "Reject", "to": { "name": "Won't Do" }, "mechanism": "label-swap" }
+  ]
+}

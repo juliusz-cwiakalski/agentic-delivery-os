@@ -258,6 +258,16 @@
       "path": "packages/adapters/src/io/probe.ts"
     },
     {
+      "id": "runtime-node-fs-adapter-azure",
+      "tc": "TC-BOUNDARY-001",
+      "path": "packages/adapters/src/azure/probe.ts"
+    },
+    {
+      "id": "runtime-node-fs-adapter-ci",
+      "tc": "TC-BOUNDARY-001",
+      "path": "packages/adapters/src/ci/probe.ts"
+    },
+    {
       "id": "runtime-node-fs-state-facade",
       "tc": "TC-STATE-022",
       "path": "packages/core/src/state/probe.ts"

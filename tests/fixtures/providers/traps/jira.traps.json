@@ -1,0 +1,39 @@
+{
+  "provider": "jira",
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "entries": [
+    {
+      "trapName": "JIRA-LABEL-REPLACE",
+      "providerBehavior": "A Jira label update replaces the whole label set; it never appends to the previous set.",
+      "expectedNormalizedOutcome": "WorkItem.labels equals the full native label set of each read: the after-read carries the replacement set and never the accumulated union.",
+      "fixtureReference": [
+        "tests/fixtures/providers/jira/labels-replace-before.json#/issue",
+        "tests/fixtures/providers/jira/labels-replace-after.json#/issue"
+      ]
+    },
+    {
+      "trapName": "JIRA-CUSTOM-FIELD-TYPING",
+      "providerBehavior": "Jira custom fields carry tenant-specific ids with inconsistent native typing (numeric values arrive as strings, select values arrive as objects).",
+      "expectedNormalizedOutcome": "Every declared mapping feeds its normalized label destination as typed data (numeric string parsed to a number before rendering, select object reduced to its value); unmapped custom fields are visibly unrepresented and no raw customfield_* key crosses the boundary.",
+      "fixtureReference": "tests/fixtures/providers/jira/custom-fields.json#/issue"
+    },
+    {
+      "trapName": "JIRA-TRANSITIONS-AS-DATA",
+      "providerBehavior": "Jira workflow transitions are provider data; executing them is a separate write operation.",
+      "expectedNormalizedOutcome": "Every native status in the WorkflowMap carries a closed delivery alias and a named transition mechanism; the read path executes no transition.",
+      "fixtureReference": "tests/fixtures/providers/jira/transitions.json#/transitions"
+    },
+    {
+      "trapName": "JIRA-COMMENT-OMISSION",
+      "providerBehavior": "Jira may omit the comment payload entirely (permission or paging causes) instead of returning an empty comment list.",
+      "expectedNormalizedOutcome": "WorkItem.comments is absent when the payload was omitted (comment set unknown) and a present empty array only when the provider asserted an empty set; omission never collapses into [].",
+      "fixtureReference": "tests/fixtures/providers/jira/comments-omitted.json#/issue"
+    },
+    {
+      "trapName": "JIRA-UPDATED-ABSENT",
+      "providerBehavior": "Jira may omit the native updated timestamp on some issue shapes.",
+      "expectedNormalizedOutcome": "WorkItem.updatedAt is absent when the provider omits updated (activity unknown) and is never derived from comments, ordering, or a clock; a fresh/stale classification is not fabricated for absence.",
+      "fixtureReference": "tests/fixtures/providers/jira/stalls.json#/issues/1"
+    }
+  ]
+}

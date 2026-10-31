@@ -10,6 +10,8 @@ summary: "The packages/ pnpm-workspace monorepo: six typed packages with declare
 links:
   related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-179", "GH-181"]
   related_decisions: ["ADR-0003"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-181", "GH-188"]
+  related_decisions: ["ADR-0003", "ADR-0005"]
 ---
 
 # Feature: Monorepo Scaffold and Toolchain
@@ -17,6 +19,7 @@ links:
 ## Overview
 
 The repository hosts a six-package pnpm workspace under `packages/` for the TypeScript delivery tooling, alongside the existing bash delivery stack. The workspace is **structure over content** for the remaining engines, business logic, provider implementations, and drivers: every declared package, subpath, export, boundary rule, fixture, and quality gate is enforced. The configuration and state tiers, the result contract, the adapter-era contracts, and the pm-notes lint and phase-transition surface are implemented and documented separately in [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), and [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md); the remaining engines and provider implementations are scaffold placeholders.
+The repository hosts a six-package pnpm workspace under `packages/` for the TypeScript delivery tooling, alongside the existing bash delivery stack. The workspace is **structure over content** for the remaining engines, business logic, and drivers: every declared package, subpath, export, boundary rule, fixture, and quality gate is enforced. The configuration and state tiers, the result contract, the adapter-era contracts, and the Jira, GitLab, and GitHub client read slices are implemented and documented separately in [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), and [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md); the remaining engines and the `azure` and `ci` provider subpaths are scaffold placeholders, and provider write operations are declared capability gaps.
 
 The scaffold provides the substrate every later tooling story lands in. Its package matrix, core tier matrix, adapter subpaths, and runtime-API confinement rules are mechanical gates rather than prose, and every forbidden edge is proven by a failing negative fixture.
 
@@ -102,7 +105,7 @@ Deep imports into another package's `src/` or `dist/`, and relative paths escapi
 - **Deep and relative imports** — no `@delivery-os/<pkg>/(src|dist)/...` deep import and no relative import escaping the importer's package root.
 - **Core tier matrix** — `domain`, `config`, `branding`, and `state` may import `./contracts` only; `app` may import `domain`, `config`, and `./contracts`, but not `branding` or `state` at scaffold.
 - **Testkit dev edges** — production `src` never imports `testkit`; `testkit` imports `core` and `adapters`, never `cli`, `mcp`, or `opencode`.
-- **Runtime-API confinement** — runtime imports are permitted only in the `core` state driver edge (`packages/core/src/state/driver/`), the adapter I/O subpaths, the `cli` build, and the `opencode` host integration. The adapter exemption is exactly the ADR I/O subpaths — `repo`, `file`, `host`, `session`, and `legacy` — plus the credential implementation at `credentials`; provider, registry, and remaining adapter subpaths are not exempt.
+- **Runtime-API confinement** — runtime imports are permitted only in the `core` state driver edge (`packages/core/src/state/driver/`), the adapter I/O subpaths, the `cli` build, and the `opencode` host integration. The adapter exemption is the ADR I/O subpaths — `repo`, `file`, `host`, `session`, and `legacy` — plus the credential implementation at `credentials`, and the provider client subpaths `github`, `gitlab`, and `jira` as exact, reason-bearing entries for network I/O per [ADR-0005](../../decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md); the provider registry and the remaining adapter subpaths (`azure`, `ci`) are not exempt. Runtime-API confinement matches Node core-module imports; the ambient-globals guard separately bans runtime globals in the core neutral tiers.
 - **State-tier structure** — `tests/structure/state-imports.test.ts` is an AST detector over `packages/core/src/state/**`: the tier imports `#contracts` and its own modules only, and runtime API use appears only inside the driver edge, proven by synthetic forbidden-import and runtime-API controls.
 
 Package-name specifiers resolve through each manifest's `exports` to built `dist` targets, so the cross-package rules match both forms: `packages/<pkg>/src/...` in-tree and `packages/<pkg>/dist/...` for package-name imports. A `couldNotResolve` catch-all fails any `@delivery-os/*` specifier that resolves to no declared package entrypoint, so an undeclared import fails by name even before a build exists.
@@ -201,6 +204,7 @@ No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scr
 | `packages/core/src/index.ts` | The `createRuntime` composition-root signature |
 | `packages/core/src/contracts/**` | Result, error-table, configuration, adapter-port, capability, credential, and envelope contracts (types and `as const` data only) |
 | `packages/*/src/**` | Internal tier directories; the configuration and state tiers, result contracts, adapter ports, the credential implementation, the envelope codec, file/repo/legacy adapters, pm-notes parsing, delivery-registry records, and the CLI inspection, lint, and phase commands carry implemented code, while the remaining engines and providers are placeholders |
+| `packages/*/src/**` | Internal tier directories; the configuration and state tiers, result contracts, adapter ports, the credential implementation, the envelope codec, file/repo/legacy adapters, CLI inspection, and the three provider client read slices carry implemented code, while the remaining engines and the `azure` and `ci` provider subpaths are placeholders and provider write operations are declared gaps |
 | `packages/adapters/src/credentials/index.ts` | Environment-backed credential port implementation at the declared `./credentials` subpath |
 | `packages/adapters/src/io/envelope-codec.ts` | Pure adapter-internal metadata envelope codec |
 | `package.json` | Workspace root: pinned `packageManager`, five named scripts, aggregate `check`, dev toolchain |

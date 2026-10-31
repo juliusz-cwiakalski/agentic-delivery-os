@@ -1,4 +1,5 @@
 ---
+ados_distribution: internal
 id: SPEC-ADAPTER-PORTS
 status: Current
 created: 2026-10-30
@@ -9,6 +10,8 @@ summary: "The adapter-era contract substrate: nine typed provider-agnostic primi
 links:
   related_changes: ["GH-174", "GH-179", "GH-181"]
   related_decisions: ["ADR-0003"]
+  related_changes: ["GH-174", "GH-181", "GH-188"]
+  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006"]
 ---
 
 # Feature: Adapter Ports, Credential Resolution, and Embedded Metadata
@@ -23,7 +26,7 @@ Secret acquisition is centralized behind one `CredentialPort` in core. A caller 
 
 The embedded metadata envelope v1 is a versioned data contract in core `./contracts` (`delivery.metadata.v1`). Its pure codec — serialize, parse, strip — is an adapter-internal shared module. The envelope travels in an adapter-declared carrier, round-trips with logical payload equality, and degrades visibly instead of failing when metadata is absent, malformed, of the wrong kind, or of an unknown version.
 
-The surrounding workspace is described in [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md); the failure identity and redaction boundary in [Result Contract and Error Table](feature-result-contract.md); environment-only secrets and configuration acquisition in [Configuration Layer and Inspection](feature-config-layer.md); brand-derived values in [Branding Seam and Working Name](feature-branding-seam.md). Package placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
+The surrounding workspace is described in [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md); the client seeds that consume this substrate in [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md); the failure identity and redaction boundary in [Result Contract and Error Table](feature-result-contract.md); environment-only secrets and configuration acquisition in [Configuration Layer and Inspection](feature-config-layer.md); brand-derived values in [Branding Seam and Working Name](feature-branding-seam.md). Package placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 
 ## Business Context
 
@@ -51,7 +54,7 @@ The v1 port set is bounded to the catalogue's adapter-interaction rows typed at 
 |------|----------|
 | `ExternalSystemInstance` | Configured tracker, VCS, or CI instance: instance name, system kind, base URL, and an auth method. A credential-bearing auth method references a `CredentialReference`; it never carries inline secret material. An anonymous auth method is representable. |
 | `AdapterContract` | Adapter name, system kind, and an `AdapterCapabilityDeclaration`. |
-| `WorkItem` | Normalized ticket: provider-qualified identity, title, native and delivery status, labels, optional assignee, typed relations, comments. |
+| `WorkItem` | Normalized ticket: provider-qualified identity, title, native and delivery status, labels, optional assignee, typed relations, optional comments, and optional activity timestamp. Optional fields share one absence rule: absent = the provider did not supply the signal, so the value is unknown — never derived, fabricated, or collapsed into an empty value. `comments` absent = the comment set is unknown (omitted or not fetched); present — including an explicitly empty array — = the provider-asserted set. `updatedAt` is the provider-native last-modified timestamp copied verbatim as an ISO-8601 UTC string; absent = activity unknown. |
 | `WorkflowMap` | Native status to delivery-state alias mappings, each naming its transition mechanism. |
 | `WorkItemRelation` | Closed relation kinds — `parent`, `child`, `blocks`, `blocked-by`, `relates-to` — targeting a provider-qualified identity. |
 | `DeliveryRequest` | Delivery request (PR/MR) view: identity, source and target refs, review state, review threads. |
@@ -203,7 +206,7 @@ Version policy: v1 is the only schema version, so any version string outside the
 ## Security and Boundaries
 
 - Secret material is reachable only through the credential port. The environment-backed implementation is the sole `credential-material` allowlist entry.
-- The secret-read boundary closes the ambient channel that runtime-API confinement does not cover. Runtime-API confinement admits the `core` state driver edge (`packages/core/src/state/driver/`) and the adapters I/O subpaths `repo`, `file`, `host`, `session`, `legacy`, and `credentials`; the credential subpath is the only one that may resolve secret material.
+- The secret-read boundary closes the ambient channel that runtime-API confinement does not cover. Runtime-API confinement admits the `core` state driver edge (`packages/core/src/state/driver/`), the adapters I/O subpaths `repo`, `file`, `host`, `session`, `legacy`, and `credentials`, the provider client subpaths `github`, `gitlab`, and `jira` as exact, reason-bearing entries per ADR-0005, and the `cli` build and `opencode` host integration. The provider registry subpath and the remaining adapter subpaths stay non-I/O; the credential subpath is the only one that may resolve secret material.
 - Resolved material never enters diagnostics, logs, error payloads, or metadata; the existing redaction chokepoint governs any surfaced payload.
 - The envelope payload is closed, compact, size-bounded, and secret-free; carrier markers and namespaces use brand-neutral constants with no committed product token.
 - Capability data is declarative; enforcement of undeclared operations belongs to adapter implementations consulting the flags.
@@ -249,8 +252,8 @@ Capability flags and gap records are inspectable data. Degradation evidence name
 - **Depends on** the result contract for the error table, classification chain, projection, and redaction chokepoint.
 - **Depends on** the configuration layer for the environment-only secrets precedent and environment facts as injected adapter data.
 - **Depends on** the branding seam for environment-prefixed source keys and brand-neutral constants.
-- **Consumed by** the provider engine and the tracker, VCS, and CI adapters.
-- **Risk — contract churn:** The first real adapters may reveal port-shape gaps. Mitigation: contracts derive from the catalogue's semantic rows, evolution is additive within v1, and a decision record governs adapter-contract changes.
+- **Consumed by** the provider engine, the tracker, VCS, and CI adapters, and the delivered client seeds at `adapters ./jira`, `adapters ./gitlab`, and `adapters ./github`.
+- **Risk — contract churn:** The first real adapters may reveal port-shape gaps. Mitigation: contracts derive from the catalogue's semantic rows, evolution is additive within v1, and a decision record governs adapter-contract changes. The first additive round executed under ADR-0004 (optional `updatedAt`) and ADR-0006 (optional `comments`); further evolutions stay additive within v1 and remain decision-record governed.
 - **Risk — allowlist erosion:** Credential reads could migrate into allowlisted configuration readers. Mitigation: reason-bearing entries, exact paths, mutation tests, and non-vacuity checks.
 - **Risk — carrier mangling:** Providers may reformat or strip carriers. Mitigation: graceful degradation with visible evidence and a compact-marker fallback carrier.
 - **Risk — metadata leakage:** Public provider artifacts could expose private identifiers. Mitigation: a closed secret-free payload and brand-neutral carrier constants.
@@ -268,6 +271,7 @@ Capability flags and gap records are inspectable data. Degradation evidence name
 | Carrier | The adapter-chosen, capability-flagged form the envelope takes inside a provider artifact. |
 | Graceful degradation | Heuristic fallback with visible degradation evidence, never a flow failure. |
 
-See also: [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [Branding Seam and Working Name](feature-branding-seam.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
+See also: [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [Branding Seam and Working Name](feature-branding-seam.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 
 **Change record:** `doc/changes/2026-10/2026-10-30--GH-181--primitive-ports-credential-metadata/`.
+**Contract-extension change record:** `doc/changes/2026-10/2026-10-31--GH-188--client-seeds-trap-catalogs/`.

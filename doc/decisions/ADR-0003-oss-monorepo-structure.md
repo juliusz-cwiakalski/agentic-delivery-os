@@ -7,7 +7,7 @@ decision_type: adr
 status: Accepted
 created: 2026-10-23
 decision_date: 2026-10-24
-last_updated: 2026-10-24
+last_updated: 2026-10-31
 summary: "Adopt a root packages/ pnpm-workspace monorepo with Bun pinned as the runtime and build target: a runtime-neutral core with contracts, state, and branding subpaths plus one createRuntime composition root, one adapters package with per-provider and per-I/O subpaths, thin cli/mcp/opencode surfaces, and a private dev-only testkit; six packages, one lockstep publish line, a layered configuration model, and a wrapper-based strangler from the bash stack."
 owners:
   - "Juliusz Ćwiąkalski"
@@ -73,7 +73,7 @@ links:
   spec: []
   contracts: []
   diagrams: []
-  decisions: ["ADR-0001", "ADR-0002"]
+  decisions: ["ADR-0001", "ADR-0002", "ADR-0005"]
   experiments: []
   metrics: []
   roadmap_items: []
@@ -532,7 +532,7 @@ Additional rules:
 - `adapters` depends on `core` only, and only on `.` and `./contracts`. It never imports `core ./state` (a driver is chosen by the composition root, not by an adapter), `core ./branding` (brand values are injected), a surface, or `testkit` in production code. Provider subpaths may share an internal HTTP, retry, and timeout module but must not import each other. No provider SDK may appear in `core` or a surface.
 - `cli`, `mcp`, and `opencode` are sibling surfaces. None imports another. The argument-parsing framework is confined to `cli`; the MCP SDK is confined to `mcp`; host APIs are confined to `opencode`. All call the same `createRuntime` composition root.
 - `testkit` is dev-only and `private: true`. No published package may list it in `dependencies` or `peerDependencies`.
-- `core` `.`, `./contracts`, and `./branding` are runtime-neutral: no `bun:*`, no `node:*`, no `process`, no `Bun`, no `Deno`, no ambient clock or randomness, no filesystem or network globals, and no ambient environment read. In `./branding` this is explicit: the environment override arrives as an argument from a runtime-aware edge, and the module never reads `process.env` or `Bun.env`. Time and identifiers come from ports. Runtime APIs are confined to the `core ./state` driver code, the adapter I/O subpaths, the CLI build, and the OpenCode host integration.
+- `core` `.`, `./contracts`, and `./branding` are runtime-neutral: no `bun:*`, no `node:*`, no `process`, no `Bun`, no `Deno`, no ambient clock or randomness, no filesystem or network globals, and no ambient environment read. In `./branding` this is explicit: the environment override arrives as an argument from a runtime-aware edge, and the module never reads `process.env` or `Bun.env`. Time and identifiers come from ports. Runtime APIs are confined to the `core ./state` driver code, the adapter I/O subpaths, the CLI build, and the OpenCode host integration. *(Editorial pointer: [ADR-0005](ADR-0005-runtime-confinement-provider-client-subpaths.md) refines the adapter I/O reading — provider client subpaths performing network I/O are admitted per subpath as exact, reason-bearing entries; the provider registry subpath stays non-I/O.)*
 - No package may import another package through a relative path that escapes its own root. Cross-package imports use the declared package name and a declared subpath only. Because pnpm is expected to install an isolated dependency graph (ASSUMPTION until the scaffold verifies it), an undeclared cross-package import should also fail to resolve at install and build time; that is a second enforcement layer once verified, not a substitute for the rules below.
 
 Inside `core`, enforce this tier matrix:
@@ -881,6 +881,8 @@ Adapter order and packaging:
 | Azure DevOps | On demand | No skeleton until a consumer and trap catalog exist. |
 | CI | First delivery | `CiHealthPort` reads that `VcsPort` does not already cover. |
 | Non-provider I/O (repo, file, host, session, legacy) | First delivery onward | These are the only I/O home besides `core ./state`; no engine may land without a port home. |
+
+> **Editorial pointer:** [ADR-0005](ADR-0005-runtime-confinement-provider-client-subpaths.md) refines the reading of the adapter I/O edge: provider client subpaths performing network I/O (`github`, `gitlab`, `jira`) are admitted per subpath as exact, reason-bearing entries, while the provider registry subpath stays non-I/O. The decision content above is not amended; ADR-0005 records the refinement and is the current confinement truth.
 
 `packages/adapters` starts as one package with subpath exports and a `./registry` that enumerates the available providers. The owner-approved package list names the five provider adapters; the non-provider I/O adapters also live here because core must stay runtime-neutral and no other package owns I/O. That keeps the package count at six. Split a provider (or a driver) into its own package only when it needs a vendor SDK with heavy transitive dependencies, an external maintainer, or an independent version line. Split the non-provider I/O group (`./repo`, `./file`, `./host`, `./session`, `./legacy`) into its own package when that group grows a heavy or runtime-specific dependency, acquires an independent consumer or maintainer, or needs a separate release cadence; a split moves implementations, never the ports, which stay in `core ./contracts`. Do not pre-split.
 

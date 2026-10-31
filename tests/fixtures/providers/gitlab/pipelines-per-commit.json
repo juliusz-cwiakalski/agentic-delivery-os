@@ -1,0 +1,29 @@
+{
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "sha": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+  "pipelines": [
+    {
+      "id": 501,
+      "sha": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+      "source": "push",
+      "jobs": [
+        { "name": "typecheck", "status": "success" },
+        { "name": "test", "status": "success" }
+      ],
+      "trace": {
+        "evidenceName": "job-log",
+        "location": "https://gitlab.example.com/group-placeholder/project-placeholder/-/jobs/9001/trace"
+      }
+    },
+    {
+      "id": 502,
+      "sha": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+      "source": "merge_request_event",
+      "jobs": [{ "name": "verify", "status": "failed" }],
+      "trace": {
+        "evidenceName": "job-log",
+        "location": "https://gitlab.example.com/group-placeholder/project-placeholder/-/jobs/9002/trace"
+      }
+    }
+  ]
+}

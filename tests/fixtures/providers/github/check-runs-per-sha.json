@@ -1,0 +1,49 @@
+{
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "shas": {
+    "1111111111111111111111111111111111111111": {
+      "check_suite": { "status": "completed", "conclusion": "success" },
+      "check_runs": [
+        {
+          "id": 9001,
+          "name": "build",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://api.github.example.com/group-placeholder/project-placeholder/checks/9001"
+        },
+        {
+          "id": 9002,
+          "name": "test",
+          "status": "completed",
+          "conclusion": "failure",
+          "details_url": "https://api.github.example.com/group-placeholder/project-placeholder/checks/9002"
+        },
+        {
+          "id": 9003,
+          "name": "deploy",
+          "status": "queued",
+          "conclusion": null
+        },
+        {
+          "id": 9004,
+          "name": "lint",
+          "status": "completed",
+          "conclusion": "skipped",
+          "details_url": "https://api.github.example.com/group-placeholder/project-placeholder/checks/9004"
+        }
+      ]
+    },
+    "2222222222222222222222222222222222222222": {
+      "check_suite": { "status": "completed", "conclusion": "success" },
+      "check_runs": [
+        {
+          "id": 9101,
+          "name": "build",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://api.github.example.com/group-placeholder/project-placeholder/checks/9101"
+        }
+      ]
+    }
+  }
+}

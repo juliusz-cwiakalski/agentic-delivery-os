@@ -1,0 +1,88 @@
+{
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "pulls": [
+    {
+      "number": 501,
+      "title": "Draft pull request",
+      "state": "open",
+      "draft": true,
+      "merged": false,
+      "reviewDecision": null,
+      "head": { "ref": "feat/GH-501/draft", "sha": "2222222222222222222222222222222222222222" },
+      "base": { "ref": "main-tools" },
+      "review_threads": []
+    },
+    {
+      "number": 502,
+      "title": "Open pull request without a decision",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "reviewDecision": null,
+      "head": { "ref": "feat/GH-502/open", "sha": "2222222222222222222222222222222222222222" },
+      "base": { "ref": "main-tools" },
+      "review_threads": []
+    },
+    {
+      "number": 503,
+      "title": "Changes requested",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "reviewDecision": "CHANGES_REQUESTED",
+      "head": { "ref": "feat/GH-503/changes", "sha": "1111111111111111111111111111111111111111" },
+      "base": { "ref": "main-tools" },
+      "review_threads": [{ "id": "PRRT_3", "resolved": false, "notes": [{ "id": 1 }] }]
+    },
+    {
+      "number": 504,
+      "title": "Approved pull request",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "reviewDecision": "APPROVED",
+      "head": {
+        "ref": "feat/GH-188/client-seeds-trap-catalogs",
+        "sha": "1111111111111111111111111111111111111111"
+      },
+      "base": { "ref": "main-tools" },
+      "review_threads": [
+        { "id": "PRRT_1", "resolved": true, "notes": [{ "id": 1 }, { "id": 2 }] },
+        { "id": "PRRT_2", "resolved": false, "notes": [{ "id": 3 }] }
+      ]
+    },
+    {
+      "number": 505,
+      "title": "Merged pull request with an approving decision",
+      "state": "closed",
+      "draft": false,
+      "merged": true,
+      "reviewDecision": "APPROVED",
+      "head": { "ref": "feat/GH-505/merged", "sha": "1111111111111111111111111111111111111111" },
+      "base": { "ref": "main-tools" },
+      "review_threads": []
+    },
+    {
+      "number": 506,
+      "title": "Closed without merging",
+      "state": "closed",
+      "draft": false,
+      "merged": false,
+      "reviewDecision": null,
+      "head": { "ref": "feat/GH-506/closed", "sha": "1111111111111111111111111111111111111111" },
+      "base": { "ref": "main-tools" },
+      "review_threads": []
+    },
+    {
+      "number": 507,
+      "title": "Closed while a stale approval remains",
+      "state": "closed",
+      "draft": false,
+      "merged": false,
+      "reviewDecision": "APPROVED",
+      "head": { "ref": "feat/GH-507/divergent", "sha": "1111111111111111111111111111111111111111" },
+      "base": { "ref": "main-tools" },
+      "review_threads": []
+    }
+  ]
+}
