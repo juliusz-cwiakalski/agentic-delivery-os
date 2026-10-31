@@ -7,7 +7,7 @@ phases:
   clarify_scope: { started: "2026-10-31T18:30:00Z", completed: "2026-10-31T18:45:00Z" }
   specification: { started: "2026-10-31T18:46:00Z", completed: "2026-10-31T20:20:00Z", reopened: "2026-10-31T20:10:00Z" }
   test_planning: { started: "2026-10-31T19:06:00Z", completed: "2026-10-31T20:35:00Z", reopened: "2026-10-31T20:10:00Z" }
-  delivery_planning: { started: "2026-10-31T19:25:00Z", completed: null, reopened: "2026-10-31T20:10:00Z" }
+  delivery_planning: { started: "2026-10-31T19:25:00Z", completed: "2026-10-31T20:50:00Z", reopened: "2026-10-31T20:10:00Z" }
   dor_check: { started: "2026-10-31T19:57:00Z", completed: null, iteration: 1, verdict: "NOT_READY" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -39,7 +39,7 @@ blockers:
   - text: "DoR iteration 1 = NOT_READY (2 blocking): (B-1) not-configured presence-by-name is wrong for GitHub Actions, which materialises unset vars/secrets as present empty strings, so a no-tenant scheduled run would be classified configured and fail instead of not-configured/exit 0; fix = treat undefined/empty/whitespace as missing and test the present-but-empty shape. (B-2) test plan says Jira has three non-secret settings while spec §22/plan D-6 use two. Reopened specification, test_planning, and delivery_planning for one remediation pass; re-run gate after."
     date: "2026-10-31"
 notes:
-  - text: "State detection: issue GH-189 OPEN, no labels, milestone 'M0: Trust substrate', 0 comments; no GH-189 branch, no open or merged PR, worktree clean at origin/main-tools tip (b31ec47). Fresh delivery, not a resume."
+  - text: "State detection (clarify-scope snapshot): issue GH-189 was OPEN, no labels, milestone 'M0: Trust substrate', 0 comments; no GH-189 branch, no open or merged PR, worktree clean at origin/main-tools tip (b31ec47). Fresh delivery, not a resume. Current state: issue carries change+planning labels; branch feat/GH-189/adapter-conformance-suite holds spec, test plan, plan, DoR iter-1 verdict, and remediation commits."
     type: "info"
     date: "2026-10-31"
   - text: "Dependency M0-S19 (GH-188) is delivered: client seeds and trap catalogs are on main-tools, and doc/spec/features/feature-provider-client-seeds.md records the read-slice capability posture. GH-188's GitHub trap entry explicitly defers live-shape revalidation to M0-S20."
