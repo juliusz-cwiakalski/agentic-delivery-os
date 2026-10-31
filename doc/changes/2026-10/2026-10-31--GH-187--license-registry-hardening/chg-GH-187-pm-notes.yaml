@@ -16,8 +16,10 @@ phases:
     completed: "2026-10-31T14:18:00Z"
   test_planning:
     started: "2026-10-31T14:08:00Z"
-    completed: "2026-10-31T14:22:00Z"
-  delivery_planning: { started: null, completed: null }
+    completed: "2026-10-31T15:26:00Z"
+  delivery_planning:
+    started: "2026-10-31T14:45:00Z"
+    completed: "2026-10-31T15:20:00Z"
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -54,4 +56,10 @@ notes:
     date: "2026-10-31"
   - text: "Phase 3 test plan COMPLETE: chg-GH-187-test-plan.md v1 (1333 lines, 30 TCs, prefix TC-LICREG to avoid colliding with GH-188's TC-LICENSE-001). Covers all 15 ACs with a traceability matrix, DM/NFR tracing, negative/mutation matrix (denied families, deny-over-allow, deny-list integrity, denied compound branches, unknown/NOASSERTION/SEE LICENSE, unregistered), preserved live compound, and CI bindingness/exit-code cases. Spec corrected to v1.1 (AC-F1-1 wording; DM-2 deny-identifier grammar). No blocking spec gap remains; OQ-T1/OQ-T2 resolved in-plan."
     type: "info"
+    date: "2026-10-31"
+  - text: "Phase 4 delivery planning COMPLETE: chg-GH-187-plan.md v1.1 (8 phases, 31 tasks, all 15 ACs and 30 TCs mapped). Flags from planning were resolved rather than guessed: test plan v1.2 reconciles 18 malformed cases, 10 spawned cases (1 green + 9 failures; four classes in process), and the spec v1.1 deny grammar; both artifacts also corrected the registry entry count to 16. Binding plan constraints: atomic registry+audit change, 20-identifier Appendix A floor, deny/allow disjointness, unchanged ci.yml/lockfile/manifests, existing ts-license-audit only."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Retro: both the plan and test plan initially stated 15 registry entries; the committed registry has 16. The downstream author caught it, but the upstream artifacts should verify counts against the source file. Similarly, test-plan counts drifted between the summary and the detailed matrix. Lesson: authoring should recount and cross-check summary counts against the detail tables before handoff."
+    type: "retro"
     date: "2026-10-31"
