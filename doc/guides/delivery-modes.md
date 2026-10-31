@@ -493,6 +493,26 @@ checked in precedence order, first match wins:
 The principle mirrors the exit-0-no-artifact rule: a result that requires a
 lane re-dispatch is never a clean exit 0.
 
+When pm-notes completeness decides `finished` versus `partial`, the canonical
+[pm-notes authoring rule](change-lifecycle.md#pm-notes-structure-chgworkitemref-pm-notesyaml)
+states who maintains the ledger, when, and why.
+
+### Interim mitigations: permission denial and the JOIN warning
+
+Two bash-era rough edges have a documented recognition-and-recovery path here. Both are interim: they disappear when the typed engines replace the shell loop.
+
+**Headless permission denial (`noop-lane-permission`).** When the PM exits cleanly with **zero branch commits** and the per-ticket lane log carries a **headless permission auto-reject signature** (a permission request raised in an unattended session and auto-rejected by the harness), the close-out classifies the delivery as `noop-lane-permission`, exits 1, and prints "re-dispatch with a corrected prompt". Recognize it from the delivery-summary result token, and confirm the signature in the per-ticket lane log. Recover by correcting the dispatch rather than repeating it unchanged: adjust the prompt/context so the work needs no interactive permission acceptance — re-scope the task, or grant the needed permission out-of-band per operator policy — then re-dispatch the same ticket.
+
+This is a different mechanism from the mid-run permission-prompt stall. There the session stays live but goes silent waiting for an answer, multi-signal liveness declares it stuck (see [INV-DM-5](#inv-dm-5-liveness-means-multi-signal-progress-not-process-alive)), and the remedy is kill-and-restart. In the close-out path the session already exited and the remedy is a corrected re-dispatch.
+
+**In-flight warning (`JOIN:`).** A second `deliver-ticket.sh` invocation for a ticket whose single-flight owner is live in this repo working tree joins the owner and logs:
+
+```
+JOIN: live delivery for <REF> (pid=…); waiting
+```
+
+Meaning: a live delivery already owns this ticket in this working tree (INV-DM-2). Action: wait for the owner; do not kill it, and never start a parallel delivery of the same ticket in the same repo working tree. Expected outcome: the joiner returns the same classified result as the owner. To check for a live delivery, use the `--is-delivering [REF]` probe; stale state self-heals rather than blocking a legitimate new owner. Do not inspect, edit, or delete the repo-local runtime state files by hand — the scripts own that lifecycle.
+
 ### Session resume optimization (`ceo-loop.sh`)
 
 Starting every CEO iteration from a blank slate wastes tokens re-deriving
