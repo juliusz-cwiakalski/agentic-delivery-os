@@ -1,0 +1,303 @@
+{
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "provider": "github",
+  "adapterName": "github",
+  "instance": {
+    "instanceName": "github",
+    "systemKind": "vcs",
+    "baseUrl": "https://github.example.com",
+    "authMethod": {
+      "mechanism": "credential-reference",
+      "reference": {
+        "referenceName": "conformance-mock-github",
+        "sourceKey": {
+          "style": "literal",
+          "name": "CONFORMANCE_LIVE_GITHUB_TOKEN"
+        }
+      }
+    }
+  },
+  "credentialReferenceName": "conformance-mock-github",
+  "addressing": {
+    "provider": "github",
+    "owner": "owner-placeholder",
+    "repo": "project-placeholder",
+    "issueNumber": 601,
+    "pullNumber": 504,
+    "commitSha": "1111111111111111111111111111111111111111"
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "url": "https://github.example.com/repos/owner-placeholder/project-placeholder/issues/601",
+      "status": 200,
+      "body": {
+        "number": 601,
+        "title": "Status and verify input issue",
+        "state": "open",
+        "labels": [
+          {
+            "name": "tracker"
+          },
+          {
+            "name": "hand-back"
+          }
+        ],
+        "assignee": {
+          "login": "owner-placeholder"
+        },
+        "updated_at": "2026-10-29T08:00:00Z",
+        "issue_links": [
+          {
+            "type": "blocks",
+            "number": 602
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "url": "https://github.example.com/repos/owner-placeholder/project-placeholder/pulls/504",
+      "status": 200,
+      "body": {
+        "number": 504,
+        "title": "Approved pull request",
+        "state": "open",
+        "draft": false,
+        "merged": false,
+        "reviewDecision": "APPROVED",
+        "head": {
+          "ref": "feat/GH-188/client-seeds-trap-catalogs",
+          "sha": "1111111111111111111111111111111111111111"
+        },
+        "base": {
+          "ref": "main-tools"
+        },
+        "review_threads": [
+          {
+            "id": "PRRT_1",
+            "resolved": true,
+            "notes": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "id": "PRRT_2",
+            "resolved": false,
+            "notes": [
+              {
+                "id": 3
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "url": "https://github.example.com/repos/owner-placeholder/project-placeholder/commits/1111111111111111111111111111111111111111/check-runs?per_page=20",
+      "status": 200,
+      "body": {
+        "check_runs": [
+          {
+            "id": 9001,
+            "name": "build",
+            "status": "completed",
+            "conclusion": "success",
+            "details_url": "https://api.github.example.com/group-placeholder/project-placeholder/checks/9001"
+          },
+          {
+            "id": 9002,
+            "name": "test",
+            "status": "completed",
+            "conclusion": "failure",
+            "details_url": "https://api.github.example.com/group-placeholder/project-placeholder/checks/9002"
+          },
+          {
+            "id": 9003,
+            "name": "deploy",
+            "status": "queued",
+            "conclusion": null
+          },
+          {
+            "id": 9004,
+            "name": "lint",
+            "status": "completed",
+            "conclusion": "skipped",
+            "details_url": "https://api.github.example.com/group-placeholder/project-placeholder/checks/9004"
+          }
+        ]
+      }
+    }
+  ],
+  "expected": {
+    "change-lifecycle.read-work-item": {
+      "identity": {
+        "systemName": "github",
+        "entityId": "601"
+      },
+      "title": "Status and verify input issue",
+      "status": {
+        "nativeStatus": "open",
+        "deliveryState": "ready"
+      },
+      "labels": ["tracker", "hand-back"],
+      "assignee": "owner-placeholder",
+      "relations": [
+        {
+          "relationKind": "blocks",
+          "target": {
+            "systemName": "github",
+            "entityId": "602"
+          }
+        }
+      ],
+      "updatedAt": "2026-10-29T08:00:00Z"
+    },
+    "change-lifecycle.read-delivery-request": {
+      "identity": {
+        "systemName": "github",
+        "entityId": "504"
+      },
+      "sourceRef": "feat/GH-188/client-seeds-trap-catalogs",
+      "targetRef": "main-tools",
+      "reviewState": "approved",
+      "threads": [
+        {
+          "threadId": "PRRT_1",
+          "resolved": true,
+          "commentCount": 2
+        },
+        {
+          "threadId": "PRRT_2",
+          "resolved": false,
+          "commentCount": 1
+        }
+      ]
+    },
+    "change-lifecycle.read-pipeline-run": [
+      {
+        "identity": {
+          "systemName": "github",
+          "entityId": "1111111111111111111111111111111111111111:9001"
+        },
+        "pipelineName": "build",
+        "jobs": [
+          {
+            "jobName": "build",
+            "jobState": "succeeded"
+          }
+        ],
+        "traceEvidence": [
+          {
+            "evidenceName": "check-run",
+            "location": "https://api.github.example.com/group-placeholder/project-placeholder/checks/9001"
+          }
+        ]
+      },
+      {
+        "identity": {
+          "systemName": "github",
+          "entityId": "1111111111111111111111111111111111111111:9002"
+        },
+        "pipelineName": "test",
+        "jobs": [
+          {
+            "jobName": "test",
+            "jobState": "failed"
+          }
+        ],
+        "traceEvidence": [
+          {
+            "evidenceName": "check-run",
+            "location": "https://api.github.example.com/group-placeholder/project-placeholder/checks/9002"
+          }
+        ]
+      },
+      {
+        "identity": {
+          "systemName": "github",
+          "entityId": "1111111111111111111111111111111111111111:9003"
+        },
+        "pipelineName": "deploy",
+        "jobs": [
+          {
+            "jobName": "deploy",
+            "jobState": "queued"
+          }
+        ],
+        "traceEvidence": []
+      },
+      {
+        "identity": {
+          "systemName": "github",
+          "entityId": "1111111111111111111111111111111111111111:9004"
+        },
+        "pipelineName": "lint",
+        "jobs": [
+          {
+            "jobName": "lint",
+            "jobState": "skipped"
+          }
+        ],
+        "traceEvidence": [
+          {
+            "evidenceName": "check-run",
+            "location": "https://api.github.example.com/group-placeholder/project-placeholder/checks/9004"
+          }
+        ]
+      }
+    ],
+    "comment-provenance.read-comments": {
+      "identity": {
+        "systemName": "github",
+        "entityId": "601"
+      },
+      "title": "Status and verify input issue",
+      "status": {
+        "nativeStatus": "open",
+        "deliveryState": "ready"
+      },
+      "labels": ["tracker", "hand-back"],
+      "assignee": "owner-placeholder",
+      "relations": [
+        {
+          "relationKind": "blocks",
+          "target": {
+            "systemName": "github",
+            "entityId": "602"
+          }
+        }
+      ],
+      "updatedAt": "2026-10-29T08:00:00Z"
+    },
+    "label-semantics.read-labels": {
+      "identity": {
+        "systemName": "github",
+        "entityId": "601"
+      },
+      "title": "Status and verify input issue",
+      "status": {
+        "nativeStatus": "open",
+        "deliveryState": "ready"
+      },
+      "labels": ["tracker", "hand-back"],
+      "assignee": "owner-placeholder",
+      "relations": [
+        {
+          "relationKind": "blocks",
+          "target": {
+            "systemName": "github",
+            "entityId": "602"
+          }
+        }
+      ],
+      "updatedAt": "2026-10-29T08:00:00Z"
+    }
+  }
+}

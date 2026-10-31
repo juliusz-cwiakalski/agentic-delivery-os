@@ -101,5 +101,15 @@
   ],
   "mcp": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
   "opencode": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
-  "testkit": ["src/index.ts", "src/result-conformance.ts"]
+  "testkit": [
+    "src/conformance/adapters.ts",
+    "src/conformance/artifact.ts",
+    "src/conformance/coverage.ts",
+    "src/conformance/flows.ts",
+    "src/conformance/mock-tenant.ts",
+    "src/conformance/runner.ts",
+    "src/conformance/types.ts",
+    "src/index.ts",
+    "src/result-conformance.ts"
+  ]
 }

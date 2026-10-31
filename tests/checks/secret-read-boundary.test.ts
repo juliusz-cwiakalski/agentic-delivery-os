@@ -56,6 +56,14 @@ describe("TC-SECRET-001 planted violations fire", () => {
     expect(scopedFiles(ROOT).length).toBeGreaterThan(0);
   });
 
+  test("the testkit conformance source is not allowlisted", () => {
+    expect(SECRET_READ_ALLOWLIST.some((entry) => entry.path.includes("testkit"))).toBe(false);
+    expect(SECRET_READ_ALLOWLIST).toHaveLength(4);
+    expect(
+      SECRET_READ_ALLOWLIST.filter((entry) => entry.class === "credential-material"),
+    ).toHaveLength(1);
+  });
+
   test("planted reads fire in every provider subpath", () => {
     for (const subpath of ["github", "gitlab", "jira"]) {
       const testCase = SECRET_READ_CASES.find(
