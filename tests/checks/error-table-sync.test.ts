@@ -569,6 +569,8 @@ describe("TC-PROV-045 provider rows synchronize in both directions", () => {
     const root = makeTempRoot();
     editFile(root, TABLE, replaceTableCode("provider.chain.invalid", "provider.chain.changed"));
     const result = await runSyncCheck({ root });
-    expect(messages(result.failures)).toContain("source entry provider.chain.changed is undocumented");
+    expect(messages(result.failures)).toContain(
+      "source entry provider.chain.changed is undocumented",
+    );
   });
 });

@@ -157,17 +157,11 @@ import type {
 } from "../../packages/core/src/contracts/index";
 import { createProviderEngine } from "../../packages/core/src/provider/engine";
 import {
-  persistProviderResolution,
   providerParksProjection,
   readProviderLedger,
   readProviderParkViews,
 } from "../../packages/core/src/provider/parks";
-import {
-  makeIdentity,
-  makeTempRoot,
-  openStore,
-  removeRoot,
-} from "../fixtures/state/harness";
+import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
 
 const engineClock: ProviderClock = { nowMs: () => NOW };
 const engineSleep: ProviderSleep = { sleep: async () => undefined };
@@ -175,7 +169,7 @@ const engineCredential: CredentialPort = {
   resolve: () => ({ ok: true, material: { value: "CANARY-SECRET" } }),
 };
 
-const stateConfig = (reset = NOW + 3600 * 1000): ProviderConfiguration => ({
+const stateConfig = (_reset = NOW + 3600 * 1000): ProviderConfiguration => ({
   defaultChain: "default",
   credentials: { zai: { sourceKey: { style: "literal", name: "ZAI_API_KEY" } } },
   entries: {

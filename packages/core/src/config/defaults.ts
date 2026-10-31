@@ -67,7 +67,8 @@ export const defaultsFor = (catalog: ConfigCatalog): Record<string, unknown> => 
   const collect = (fields: ConfigCatalog): Record<string, unknown> => {
     const values: Record<string, unknown> = {};
     for (const [key, field] of Object.entries(fields)) {
-      if ("default" in field && field.default !== undefined) values[key] = cloneValue(field.default);
+      if ("default" in field && field.default !== undefined)
+        values[key] = cloneValue(field.default);
       else if (field.type === "object") {
         const nested = collect(field.fields);
         if (Object.keys(nested).length) values[key] = nested;

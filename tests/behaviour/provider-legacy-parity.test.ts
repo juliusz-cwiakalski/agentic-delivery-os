@@ -12,7 +12,6 @@ import type {
   CombinedProviderCondition,
   CredentialPort,
   ProviderClock,
-  ProviderConditionKind,
   ProviderConditionResult,
   ProviderConfiguration,
   ProviderSleep,
@@ -24,24 +23,23 @@ import { runProviderLoop } from "../../packages/core/src/provider/loop";
 import { formatUtcIso } from "../../packages/core/src/provider/parks";
 import { evaluatePeakWindow } from "../../packages/core/src/provider/peak";
 import { evaluateQuotaResponse } from "../../packages/core/src/provider/quota";
-import { GROUP_A } from "../fixtures/provider/legacy/group-a.json";
+import { FAIL_OPEN_CASES } from "../fixtures/provider/legacy/fail-open-matrix.ts";
 import { GROUP_B } from "../fixtures/provider/legacy/group-b.ts";
 import { GROUP_B_PRIME } from "../fixtures/provider/legacy/group-b-prime.ts";
-import { GROUP_C_D } from "../fixtures/provider/legacy/group-c-d.json";
 import { GROUP_E } from "../fixtures/provider/legacy/group-e.ts";
 import { GROUP_F } from "../fixtures/provider/legacy/group-f.ts";
-import { GROUP_G } from "../fixtures/provider/legacy/group-g.json";
 import { GROUP_H } from "../fixtures/provider/legacy/group-h.ts";
 import { GROUP_I } from "../fixtures/provider/legacy/group-i.ts";
-import { FAIL_OPEN_CASES } from "../fixtures/provider/legacy/fail-open-matrix.ts";
 import { NO_SILENT_PATH_CLASSES } from "../fixtures/provider/legacy/no-silent-paths.ts";
 
 // JSON group fixtures are imported as plain data so the suite never executes a
 // script; they are intentionally `.json` for readability.
 const readJson = (name: string): { group: string; tc: string; ids: string[] } =>
-  JSON.parse(
-    readFileSync(join(process.cwd(), "tests/fixtures/provider/legacy", name), "utf8"),
-  ) as { group: string; tc: string; ids: string[] };
+  JSON.parse(readFileSync(join(process.cwd(), "tests/fixtures/provider/legacy", name), "utf8")) as {
+    group: string;
+    tc: string;
+    ids: string[];
+  };
 
 const groups = [
   readJson("group-a.json"),
@@ -62,12 +60,14 @@ const credential: CredentialPort = {
   resolve: () => ({ ok: true, material: { value: "CANARY-SECRET" } }),
 };
 
-const config = (options: {
-  readonly quota?: boolean;
-  readonly credentialRef?: string;
-  readonly peak?: boolean;
-  readonly maxSleepLoops?: number;
-} = {}): ProviderConfiguration => ({
+const config = (
+  options: {
+    readonly quota?: boolean;
+    readonly credentialRef?: string;
+    readonly peak?: boolean;
+    readonly maxSleepLoops?: number;
+  } = {},
+): ProviderConfiguration => ({
   defaultChain: "default",
   credentials: {
     zai: { sourceKey: { style: "literal", name: "ZAI_API_KEY" } },
@@ -108,9 +108,7 @@ const config = (options: {
   chains: { default: { name: "default", entries: ["p0"], allowPaidFallback: false } },
 });
 
-const transportFrom = (
-  result: () => { status: number; bodyText: string },
-): QuotaTransport => ({
+const transportFrom = (result: () => { status: number; bodyText: string }): QuotaTransport => ({
   send: async () => result(),
 });
 
@@ -146,14 +144,33 @@ describe("legacy battery mapping", () => {
 });
 
 describe("TC-PROV-054 group A — peak boundary math and gating", () => {
-  const window = { timezone: "UTC" as const, startSecondsOfDay: 21600, endSecondsOfDay: 36000, bufferSeconds: 7200 };
+  const window = {
+    timezone: "UTC" as const,
+    startSecondsOfDay: 21600,
+    endSecondsOfDay: 36000,
+    bufferSeconds: 7200,
+  };
   test("off-peak clear, in-peak and buffer park, custom window, half-open end", () => {
     expect(evaluatePeakWindow(window, at(3, 59, 59)).status).toBe("clear");
-    expect(evaluatePeakWindow(window, at(4, 0, 0))).toMatchObject({ status: "parked", waitSeconds: 21600 });
-    expect(evaluatePeakWindow(window, at(9, 59, 59))).toMatchObject({ status: "parked", waitSeconds: 1 });
+    expect(evaluatePeakWindow(window, at(4, 0, 0))).toMatchObject({
+      status: "parked",
+      waitSeconds: 21600,
+    });
+    expect(evaluatePeakWindow(window, at(9, 59, 59))).toMatchObject({
+      status: "parked",
+      waitSeconds: 1,
+    });
     expect(evaluatePeakWindow(window, at(10, 0, 0)).status).toBe("clear");
-    const custom = { timezone: "UTC" as const, startSecondsOfDay: 3600, endSecondsOfDay: 7200, bufferSeconds: 0 };
-    expect(evaluatePeakWindow(custom, at(1, 30, 0))).toMatchObject({ status: "parked", waitSeconds: 1800 });
+    const custom = {
+      timezone: "UTC" as const,
+      startSecondsOfDay: 3600,
+      endSecondsOfDay: 7200,
+      bufferSeconds: 0,
+    };
+    expect(evaluatePeakWindow(custom, at(1, 30, 0))).toMatchObject({
+      status: "parked",
+      waitSeconds: 1800,
+    });
   });
 
   test("a disabled descriptor is not evaluated and no fetch occurs", async () => {
@@ -337,7 +354,9 @@ describe("TC-PROV-057 groups C/D — quota math and the reset divergence", () =>
         bodyText: JSON.stringify({
           code: 200,
           success: true,
-          data: { limits: [{ type: "TOKENS_LIMIT", percentage: 100, nextResetTime: at(14, 0, 0) }] },
+          data: {
+            limits: [{ type: "TOKENS_LIMIT", percentage: 100, nextResetTime: at(14, 0, 0) }],
+          },
         }),
       },
       100,
@@ -416,9 +435,7 @@ describe("TC-PROV-058..061 groups E/F/G/H", () => {
   test("TC-ZAI-055/056 portable UTC formatting without shell date", () => {
     expect(formatUtcIso(0)).toBe("1970-01-01T00:00:00.000Z");
     expect(formatUtcIso(Date.UTC(2026, 0, 1, 6, 0, 0))).toBe("2026-01-01T06:00:00.000Z");
-    expect(formatUtcIso(Date.UTC(2024, 1, 29, 23, 59, 59, 999))).toBe(
-      "2024-02-29T23:59:59.999Z",
-    );
+    expect(formatUtcIso(Date.UTC(2024, 1, 29, 23, 59, 59, 999))).toBe("2024-02-29T23:59:59.999Z");
     const source = readFileSync(join(process.cwd(), "packages/core/src/provider/parks.ts"), "utf8");
     expect(source).not.toContain("date -d");
     expect(source).not.toContain(["child", "process"].join("_"));
@@ -431,7 +448,9 @@ describe("TC-PROV-058..061 groups E/F/G/H", () => {
         bodyText: JSON.stringify({
           code: 200,
           success: true,
-          data: { limits: [{ type: "TOKENS_LIMIT", percentage: 100, nextResetTime: at(13, 0, 0) }] },
+          data: {
+            limits: [{ type: "TOKENS_LIMIT", percentage: 100, nextResetTime: at(13, 0, 0) }],
+          },
         }),
       },
       100,
@@ -445,20 +464,22 @@ describe("TC-PROV-058..061 groups E/F/G/H", () => {
     if (peak.status !== "parked") throw new Error("expected a peak park");
     expect(quota.waitSeconds).toBe(7 * 3600);
     expect(peak.waitSeconds).toBe(3 * 3600);
-    expect(evaluateQuotaResponse(
-      {
-        status: 200,
-        bodyText: JSON.stringify({
-          code: 200,
-          success: true,
-          data: {
-            limits: [{ type: "TOKENS_LIMIT", percentage: 100, nextResetTime: at(5, 0, 0) }],
-          },
-        }),
-      },
-      100,
-      at(6, 0, 0),
-    ).status).toBe("clear");
+    expect(
+      evaluateQuotaResponse(
+        {
+          status: 200,
+          bodyText: JSON.stringify({
+            code: 200,
+            success: true,
+            data: {
+              limits: [{ type: "TOKENS_LIMIT", percentage: 100, nextResetTime: at(5, 0, 0) }],
+            },
+          }),
+        },
+        100,
+        at(6, 0, 0),
+      ).status,
+    ).toBe("clear");
   });
 });
 
@@ -492,7 +513,9 @@ describe("TC-PROV-047 100-run deterministic replay", () => {
         bodyText: JSON.stringify({
           code: 200,
           success: true,
-          data: { limits: [{ type: "TOKENS_LIMIT", percentage: 100, nextResetTime: NOW + 3600 * 1000 }] },
+          data: {
+            limits: [{ type: "TOKENS_LIMIT", percentage: 100, nextResetTime: NOW + 3600 * 1000 }],
+          },
         }),
       })),
     });

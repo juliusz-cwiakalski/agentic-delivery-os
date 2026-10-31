@@ -69,9 +69,7 @@ const capOutcome = (
 };
 
 /** Drive the re-evaluation policy until clear, failed, or the completed-sleep cap. */
-export const runProviderLoop = async (
-  input: ProviderLoopInput,
-): Promise<ProviderLoopResult> => {
+export const runProviderLoop = async (input: ProviderLoopInput): Promise<ProviderLoopResult> => {
   let completedSleeps = 0;
   let condition = await input.evaluate();
   for (;;) {

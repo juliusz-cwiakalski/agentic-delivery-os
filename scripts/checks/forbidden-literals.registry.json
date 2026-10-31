@@ -62,6 +62,7 @@
     }
   ],
   "registered": [
+    "doc/guides/provider-conditions-and-parks.md",
     "doc/guides/rename-drill.md",
     "doc/spec/features/feature-adapter-ports.md",
     "doc/spec/features/feature-branding-seam.md",

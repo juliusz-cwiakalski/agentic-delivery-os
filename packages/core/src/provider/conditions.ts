@@ -20,9 +20,7 @@ const tieOrder = (kind: ProviderConditionKind): number =>
 const orderedKinds = (kinds: readonly ProviderConditionKind[]): readonly ProviderConditionKind[] =>
   [...new Set(kinds)].sort((left, right) => tieOrder(left) - tieOrder(right));
 
-const mergeEvidence = (
-  conditions: readonly ProviderConditionResult[],
-): ProviderParkEvidence => {
+const mergeEvidence = (conditions: readonly ProviderConditionResult[]): ProviderParkEvidence => {
   const merged: Record<string, unknown> = {};
   const ordered = [...conditions].sort((left, right) => {
     if (left.status === "clear" || right.status === "clear") return 0;

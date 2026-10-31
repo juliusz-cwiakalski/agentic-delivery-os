@@ -9,12 +9,12 @@ import {
   type AnnouncementCode,
   type CombinedProviderCondition,
   type ParkCause,
+  PROVIDER_CONDITION_KINDS,
   type ProviderChain,
   type ProviderConditionKind,
   type ProviderDecision,
   type ProviderDescriptor,
   type ProviderErrorCode,
-  PROVIDER_CONDITION_KINDS,
   type ProviderSkippedEntry,
   type ProviderSkipReason,
 } from "#contracts";
@@ -49,10 +49,7 @@ const asConditionKind = (cause: ParkCause): ProviderConditionKind | undefined =>
     ? (cause as ProviderConditionKind)
     : undefined;
 
-const skipReason = (
-  entry: ChainEntryState,
-  chain: ProviderChain,
-): ProviderSkipReason => {
+const skipReason = (entry: ChainEntryState, chain: ProviderChain): ProviderSkipReason => {
   if (!entry.descriptor.enabled) return "disabled";
   if (entry.condition.status === "parked") {
     return asConditionKind(entry.condition.cause) ?? "shadowed";
@@ -69,8 +66,7 @@ export const resolveProviderChain = (input: ChainResolutionInput): ChainResoluti
   const peakBlocked = chain.entries.some((name) => {
     const state = states[name];
     return (
-      state !== undefined &&
-      state.descriptor.enabled &&
+      state?.descriptor.enabled &&
       state.descriptor.class === "subscription" &&
       state.condition.status === "parked" &&
       state.condition.cause === "peak-window"
@@ -122,9 +118,7 @@ export const resolveProviderChain = (input: ChainResolutionInput): ChainResoluti
     .map((name) => states[name] as ChainEntryState | undefined)
     .filter(
       (state): state is ChainEntryState =>
-        state !== undefined &&
-        state.descriptor.enabled &&
-        state.condition.status === "parked",
+        state !== undefined && state.descriptor.enabled && state.condition.status === "parked",
     );
   if (contributing.length === 0) {
     return {

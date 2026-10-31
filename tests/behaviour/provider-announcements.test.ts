@@ -41,7 +41,10 @@ const park = (cause: ParkCause) =>
     conditions: cause === "chain-exhausted" || cause === "reevaluation-cap" ? [] : [cause],
     createdAtMs: NOW,
     expiresAtMs: NOW + 60 * 1000,
-    evidence: { providerName: "zai-coding-plan", conditionKinds: cause === "chain-exhausted" || cause === "reevaluation-cap" ? [] : [cause] },
+    evidence: {
+      providerName: "zai-coding-plan",
+      conditionKinds: cause === "chain-exhausted" || cause === "reevaluation-cap" ? [] : [cause],
+    },
   });
 
 describe("TC-PROV-034 announcement shape, severity, and identity", () => {

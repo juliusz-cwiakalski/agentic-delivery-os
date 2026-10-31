@@ -9,12 +9,12 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parse } from "yaml";
+import type { ConfigValue } from "../../packages/core/src/contracts/config";
 import { resolveConfig } from "../../packages/core/src/index";
 import {
   parseAndValidateProviderConfiguration,
   parseProviderConfiguration,
 } from "../../packages/core/src/provider/validate";
-import type { ConfigValue } from "../../packages/core/src/contracts/config";
 
 const ROOT = process.cwd();
 const fixture = (name: string): unknown =>
@@ -207,7 +207,10 @@ describe("TC-PROV-002/004/005 provider validation", () => {
     const unknownCredential = parseProviderConfiguration({
       provider: {
         entries: {
-          bad: { class: "subscription", quota: { endpoint: "https://example.test/q", credentialRef: "nope" } },
+          bad: {
+            class: "subscription",
+            quota: { endpoint: "https://example.test/q", credentialRef: "nope" },
+          },
         },
         chains: { default: { entries: ["bad"] } },
       },
@@ -222,7 +225,10 @@ describe("TC-PROV-002/004/005 provider validation", () => {
 describe("TC-PROV-007/008/009/010 chain resolution", () => {
   const resolve = (
     chain: ProviderChain,
-    states: Record<string, { descriptor: ProviderDescriptor; condition: CombinedProviderCondition }>,
+    states: Record<
+      string,
+      { descriptor: ProviderDescriptor; condition: CombinedProviderCondition }
+    >,
   ) => resolveProviderChain({ chain, states, nowMs: NOW });
 
   test("declared order selects the first eligible subscription; paid is shadowed", () => {
@@ -242,7 +248,11 @@ describe("TC-PROV-007/008/009/010 chain resolution", () => {
   });
 
   test("paid fallback disabled marks a later paid entry paid-fallback-not-allowed", () => {
-    const chain: ProviderChain = { name: "default", entries: ["sub", "paid"], allowPaidFallback: false };
+    const chain: ProviderChain = {
+      name: "default",
+      entries: ["sub", "paid"],
+      allowPaidFallback: false,
+    };
     const outcome = resolve(chain, {
       sub: { descriptor: descriptor("sub"), condition: clear },
       paid: { descriptor: descriptor("paid", "pay-per-token"), condition: clear },
@@ -261,12 +271,21 @@ describe("TC-PROV-007/008/009/010 chain resolution", () => {
       allowPaidFallback: true,
     };
     const outcome = resolve(chain, {
-      disabled: { descriptor: descriptor("disabled", "subscription", false), condition: parked("peak-window", 10, NOW) },
+      disabled: {
+        descriptor: descriptor("disabled", "subscription", false),
+        condition: parked("peak-window", 10, NOW),
+      },
       peak: { descriptor: descriptor("peak"), condition: parked("peak-window", 10, NOW) },
       quota: { descriptor: descriptor("quota"), condition: parked("quota-exhausted", 20, NOW) },
       outage: { descriptor: descriptor("outage"), condition: parked("provider-outage", 30, NOW) },
-      missing: { descriptor: descriptor("missing"), condition: parked("credential-missing", 40, NOW) },
-      rejected: { descriptor: descriptor("rejected"), condition: parked("credential-rejected", 50, NOW) },
+      missing: {
+        descriptor: descriptor("missing"),
+        condition: parked("credential-missing", 40, NOW),
+      },
+      rejected: {
+        descriptor: descriptor("rejected"),
+        condition: parked("credential-rejected", 50, NOW),
+      },
       eligible: { descriptor: descriptor("eligible"), condition: clear },
       paid: { descriptor: descriptor("paid", "pay-per-token"), condition: clear },
     });
@@ -285,7 +304,11 @@ describe("TC-PROV-007/008/009/010 chain resolution", () => {
   });
 
   test("a peak-parked subscription never permits paid substitution", () => {
-    const chain: ProviderChain = { name: "default", entries: ["sub", "paid"], allowPaidFallback: true };
+    const chain: ProviderChain = {
+      name: "default",
+      entries: ["sub", "paid"],
+      allowPaidFallback: true,
+    };
     const outcome = resolve(chain, {
       sub: { descriptor: descriptor("sub"), condition: parked("peak-window", 3600, NOW) },
       paid: { descriptor: descriptor("paid", "pay-per-token"), condition: clear },

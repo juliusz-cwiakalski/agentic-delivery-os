@@ -5,39 +5,36 @@
  * seams. The CLI edge wires production implementations; tests wire fakes. No
  * module-level singleton, cache, or side effect exists here.
  */
-import {
-  type AnnouncementCode,
-  type CombinedProviderCondition,
-  type CredentialPort,
-  type CredentialReference,
-  type ProviderAnnouncementRecord,
-  type ProviderChain,
-  type ProviderClock,
-  type ProviderConditionKind,
-  type ProviderConditionResult,
-  type ProviderConfiguration,
-  type ProviderDecision,
-  type ProviderDescriptor,
-  type ProviderEngineResult,
-  type ProviderErrorCode,
-  type ProviderParkEvidence,
-  type ProviderParkRecord,
-  type ProviderParkView,
-  type ProviderQuotaView,
-  type ProviderResolveResult,
-  type ProviderSleep,
-  type StateResult,
-  type StateStorePort,
-  type QuotaTransport,
+import type {
+  AnnouncementCode,
+  CombinedProviderCondition,
+  CredentialPort,
+  CredentialReference,
+  ProviderAnnouncementRecord,
+  ProviderChain,
+  ProviderClock,
+  ProviderConditionKind,
+  ProviderConditionResult,
+  ProviderConfiguration,
+  ProviderDecision,
+  ProviderDescriptor,
+  ProviderEngineResult,
+  ProviderErrorCode,
+  ProviderParkEvidence,
+  ProviderParkRecord,
+  ProviderParkView,
+  ProviderQuotaView,
+  ProviderResolveResult,
+  ProviderSleep,
+  QuotaTransport,
+  QuotaTransportResult,
+  StateResult,
+  StateStorePort,
 } from "#contracts";
 import { createParkAnnouncement } from "./announcements.js";
-import { resolveProviderChain, type ChainEntryState } from "./chain.js";
+import { type ChainEntryState, resolveProviderChain } from "./chain.js";
 import { combineProviderConditions } from "./conditions.js";
-import {
-  createParkRecord,
-  persistProviderResolution,
-  readProviderParkViews,
-} from "./parks.js";
+import { createParkRecord, persistProviderResolution, readProviderParkViews } from "./parks.js";
 import { evaluatePeakWindow } from "./peak.js";
 import { evaluateQuotaResponse } from "./quota.js";
 import { selectProviderChain, validateProviderConfiguration } from "./validate.js";
@@ -112,23 +109,35 @@ const evaluateQuotaCondition = async (
   if (quota === undefined || !quota.enabled) return undefined;
   const reference = credentialReference(config, quota.credentialRef);
   if (reference === undefined) {
-    return parkedCondition("credential-missing", quota.credentialParkTtlSeconds, nowMs, "provider.credential.missing", {
-      conditionKinds: ["credential-missing"],
-      waitSeconds: quota.credentialParkTtlSeconds,
-      failureClass: "config.credential.missing",
-      credentialRefName: quota.credentialRef,
-    });
+    return parkedCondition(
+      "credential-missing",
+      quota.credentialParkTtlSeconds,
+      nowMs,
+      "provider.credential.missing",
+      {
+        conditionKinds: ["credential-missing"],
+        waitSeconds: quota.credentialParkTtlSeconds,
+        failureClass: "config.credential.missing",
+        credentialRefName: quota.credentialRef,
+      },
+    );
   }
   const resolved = deps.credentialPort.resolve(reference);
   if (!resolved.ok) {
-    return parkedCondition("credential-missing", quota.credentialParkTtlSeconds, nowMs, "provider.credential.missing", {
-      conditionKinds: ["credential-missing"],
-      waitSeconds: quota.credentialParkTtlSeconds,
-      failureClass: "config.credential.missing",
-      credentialRefName: quota.credentialRef,
-    });
+    return parkedCondition(
+      "credential-missing",
+      quota.credentialParkTtlSeconds,
+      nowMs,
+      "provider.credential.missing",
+      {
+        conditionKinds: ["credential-missing"],
+        waitSeconds: quota.credentialParkTtlSeconds,
+        failureClass: "config.credential.missing",
+        credentialRefName: quota.credentialRef,
+      },
+    );
   }
-  let result;
+  let result: QuotaTransportResult;
   try {
     result = await deps.transport.send({
       endpoint: quota.endpoint,
@@ -309,10 +318,7 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
           announcements,
         });
         if (!persisted.ok) {
-          return failure(
-            "provider.outage",
-            `provider state write failed: ${persisted.error.code}`,
-          );
+          return failure("provider.outage", `provider state write failed: ${persisted.error.code}`);
         }
         return {
           ok: true,
@@ -359,7 +365,11 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
       for (const evaluation of evaluations) {
         const condition = evaluation.condition;
         if (condition.status === "failed") {
-          return failure(condition.errorCode, `${evaluation.descriptor.name}: ${condition.announcementCode}`, condition.announcementCode);
+          return failure(
+            condition.errorCode,
+            `${evaluation.descriptor.name}: ${condition.announcementCode}`,
+            condition.announcementCode,
+          );
         }
         if (condition.status === "parked") {
           if (

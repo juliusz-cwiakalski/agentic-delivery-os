@@ -173,7 +173,8 @@ export const SECRET_READ_CASES: readonly SecretReadCase[] = [
     expect: "violation",
     rule: SECRET_READ_RULE,
     files: {
-      "packages/adapters/src/provider-quota/probe.ts": "export const secret = process.env.SECRET;\n",
+      "packages/adapters/src/provider-quota/probe.ts":
+        "export const secret = process.env.SECRET;\n",
     },
     assertFile: "packages/adapters/src/provider-quota/probe.ts",
   },

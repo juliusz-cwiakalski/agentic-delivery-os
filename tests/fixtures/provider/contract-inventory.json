@@ -61,10 +61,7 @@
     "QuotaTransportResult"
   ],
   "closedSets": {
-    "costClasses": [
-      "subscription",
-      "pay-per-token"
-    ],
+    "costClasses": ["subscription", "pay-per-token"],
     "conditionKinds": [
       "peak-window",
       "quota-exhausted",
@@ -104,18 +101,9 @@
       "provider.reevaluation.cap",
       "provider.resumed"
     ],
-    "recordKinds": [
-      "provider.park",
-      "provider.announcement"
-    ],
-    "parkStates": [
-      "active",
-      "cleared"
-    ],
-    "severities": [
-      "info",
-      "warning"
-    ]
+    "recordKinds": ["provider.park", "provider.announcement"],
+    "parkStates": ["active", "cleared"],
+    "severities": ["info", "warning"]
   },
   "evidence": {
     "park": [

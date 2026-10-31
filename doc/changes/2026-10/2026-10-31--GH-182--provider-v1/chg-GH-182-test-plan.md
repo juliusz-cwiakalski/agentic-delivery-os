@@ -1994,9 +1994,22 @@ No AC is left without a mapped test. All 46 ACs, all 9 Appendix A groups, and al
 
 ## 10. Test Execution Log
 
-No executions are recorded at authoring time. Populate this table only after running the commands in §7; do not record unrun evidence as passing.
+Executions recorded during GH-182 delivery. HEAD `this Phase 9 commit` (Phase 9 aggregate commit).
 
 | TC ID / gate | Run Date (UTC) | Result | Notes / command / HEAD |
 |---|---|---|---|
-| — | — | Not run | Authoring only; delivery owns execution. |
+| TC-PROV-001 | 2026-11-01 | PASS | `bun test tests/structure/provider-contract.test.ts` — contract inventory, closed sets, allowlists, identifiers |
+| TC-PROV-002..013 | 2026-11-01 | PASS | `bun test tests/behaviour/provider-chain-resolution.test.ts tests/behaviour/provider-peak-window.test.ts` — schema/semantic validation, cost order, skip matrix, peak boundaries, MAX |
+| TC-PROV-014..027 | 2026-11-01 | PASS | `bun test tests/behaviour/provider-quota-evaluation.test.ts` — quota math, reset clamping/selection, malformed/failure classes, loop cap, cost |
+| TC-PROV-028..035 | 2026-11-01 | PASS | `bun test tests/behaviour/provider-parks.test.ts tests/behaviour/provider-announcements.test.ts` — park shape/expiry/fold/persistence, announcements, skipped-entry outage |
+| TC-PROV-036..044, 046 | 2026-11-01 | PASS | `bun test tests/behaviour/provider-cli.test.ts tests/behaviour/error-classification.test.ts tests/behaviour/exit-projection.test.ts` — envelopes, exits, flags, exact-code classification |
+| TC-PROV-038..040 | 2026-11-01 | PASS | `bun test tests/behaviour/provider-credentials.test.ts` — port-only resolution, no cache, canary-free surfaces, wrapper security |
+| TC-PROV-045 | 2026-11-01 | PASS | `bun run scripts/checks/error-table-sync.ts`; `bun test tests/checks/error-table-sync.test.ts tests/structure/error-table.test.ts` |
+| TC-PROV-047..049 | 2026-11-01 | PASS | `bun test tests/behaviour/provider-legacy-parity.test.ts tests/checks/provider-hermetic.test.ts tests/checks/provider-evidence-bounds.test.ts` |
+| TC-PROV-050..051 | 2026-11-01 | PASS | `bun test tests/behaviour/provider-parks.test.ts tests/behaviour/provider-quota-evaluation.test.ts` — idempotence and 100-entry cost |
+| TC-PROV-052..062 | 2026-11-01 | PASS | `bun test tests/behaviour/provider-legacy-parity.test.ts tests/checks/provider-hermetic.test.ts` — 9/9 groups, 49/49 IDs, no-silent-path matrix, guide contract |
+| TC-PROV-053 | 2026-11-01 | PASS | `bun test tests/golden` — normalized machine/human provider goldens |
+| Aggregate `pnpm check` | 2026-11-01 | PASS | lint, format:check, typecheck, 1138 tests, boundaries, exports parity |
+| `pnpm check:boundaries` | 2026-11-01 | PASS | depcruise + ambient-globals + workspace-entrypoints + secret-read-boundary |
+| Static invariants | 2026-11-01 | PASS | `error-table-sync.ts`, `forbidden-literals.ts`, doc-distribution guard, `git diff --check` |
 

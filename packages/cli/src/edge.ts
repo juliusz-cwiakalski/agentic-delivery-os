@@ -27,10 +27,6 @@ import {
   type RepositoryRootFacts,
 } from "@delivery-os/adapters/repo";
 import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
-import {
-  createProviderEngine,
-  parseAndValidateProviderConfiguration,
-} from "@delivery-os/core/provider";
 import { catalogPaths, PRODUCTION_CATALOG, resolveConfig } from "@delivery-os/core";
 import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
@@ -46,6 +42,10 @@ import {
   type Result,
   type StateStorePort,
 } from "@delivery-os/core/contracts";
+import {
+  createProviderEngine,
+  parseAndValidateProviderConfiguration,
+} from "@delivery-os/core/provider";
 import {
   appendPhaseTransition,
   readChangeTransitions,

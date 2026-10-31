@@ -4,13 +4,7 @@
  * Runtime-neutral: pure validation, peak arithmetic, condition combination, and
  * chain resolution. All I/O enters through injected seams in later phases.
  */
-export {
-  createProviderEngine,
-  type ProviderEngine,
-  type ProviderEngineDependencies,
-  type ProviderQuotaInput,
-  type ProviderResolveInput,
-} from "./engine.js";
+
 export {
   announcementCodeForCondition,
   createParkAnnouncement,
@@ -25,17 +19,17 @@ export {
 } from "./chain.js";
 export { combineProviderConditions } from "./conditions.js";
 export {
-  classifyQuotaTransport,
-  evaluateQuotaResponse,
-  evaluateQuotaSnapshot,
-  type QuotaNormalizationFailure,
-  normalizeQuotaEnvelopeResult,
-} from "./quota.js";
+  createProviderEngine,
+  type ProviderEngine,
+  type ProviderEngineDependencies,
+  type ProviderQuotaInput,
+  type ProviderResolveInput,
+} from "./engine.js";
 export { type ProviderLoopInput, type ProviderLoopResult, runProviderLoop } from "./loop.js";
 export {
+  type AnnouncementInput,
   announcementEvidence,
   announcementIdentity,
-  type AnnouncementInput,
   chainParkName,
   clearParkRecord,
   compareParks,
@@ -44,10 +38,10 @@ export {
   foldParks,
   formatUtcIso,
   type ParkInput,
-  parkGeneration,
-  parkView,
   type PersistResolutionInput,
   type PersistResolutionOutcome,
+  parkGeneration,
+  parkView,
   persistProviderResolution,
   projectParkEvidence,
   providerParkName,
@@ -57,11 +51,18 @@ export {
 } from "./parks.js";
 export { evaluatePeakWindow, utcSecondsOfDay } from "./peak.js";
 export {
-  parseAndValidateProviderConfiguration,
-  parseProviderConfiguration,
+  classifyQuotaTransport,
+  evaluateQuotaResponse,
+  evaluateQuotaSnapshot,
+  normalizeQuotaEnvelopeResult,
+  type QuotaNormalizationFailure,
+} from "./quota.js";
+export {
   type ProviderChainSelection,
   type ProviderConfigResult,
-  selectProviderChain,
   type ProviderValidationError,
+  parseAndValidateProviderConfiguration,
+  parseProviderConfiguration,
+  selectProviderChain,
   validateProviderConfiguration,
 } from "./validate.js";

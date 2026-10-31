@@ -4,12 +4,12 @@
  * Every non-clear condition that persists a park emits exactly one announcement
  * for that park generation. Codes, severities, and evidence are closed sets.
  */
-import {
-  type AnnouncementCode,
-  type AnnouncementSeverity,
-  type ParkCause,
-  type ProviderAnnouncementRecord,
-  type ProviderParkRecord,
+import type {
+  AnnouncementCode,
+  AnnouncementSeverity,
+  ParkCause,
+  ProviderAnnouncementRecord,
+  ProviderParkRecord,
 } from "#contracts";
 import { createAnnouncementRecord, parkGeneration } from "./parks.js";
 
@@ -53,9 +53,8 @@ export const announcementCodeForCondition = (
 };
 
 /** `info` for parks and resumes; `warning` for every failure class. */
-export const severityForAnnouncementCode = (
-  code: AnnouncementCode,
-): AnnouncementSeverity => (INFO_CODES.has(code) ? "info" : "warning");
+export const severityForAnnouncementCode = (code: AnnouncementCode): AnnouncementSeverity =>
+  INFO_CODES.has(code) ? "info" : "warning";
 
 const messageFor = (
   subjectKind: "provider" | "chain",

@@ -326,14 +326,12 @@ export function resolveConfig(
   const warnings: ConfigWarning[] = [];
   const defaults = defaultsFor(catalog);
   const defaultFacts: Record<string, ConfigOrigin> = {};
-  const markDescendantOrigins = (
-    path: string,
-    value: unknown,
-    origin: ConfigOrigin,
-  ): void => {
+  const markDescendantOrigins = (path: string, value: unknown, origin: ConfigOrigin): void => {
     defaultFacts[path] = origin;
     if (Array.isArray(value)) {
-      value.forEach((child, index) => markDescendantOrigins(`${path}[${index}]`, child, origin));
+      value.forEach((child, index) => {
+        markDescendantOrigins(`${path}[${index}]`, child, origin);
+      });
       return;
     }
     if (isRecord(value)) {

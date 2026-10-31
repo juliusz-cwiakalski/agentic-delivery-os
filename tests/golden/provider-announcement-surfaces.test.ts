@@ -7,9 +7,7 @@ describe("TC-PROV-053/036 announcements on the declared surfaces", () => {
     try {
       const machine = await harness.run(["resolve", "--json"], outageTransport);
       const data = machine.data as { announcements: Array<{ code: string }> };
-      expect(data.announcements.map((entry) => entry.code)).toContain(
-        "provider.quota.unreachable",
-      );
+      expect(data.announcements.map((entry) => entry.code)).toContain("provider.quota.unreachable");
       expect(machine.stderr).toContain("provider");
       const quota = await harness.run(["quota", "--json"], clearTransport);
       expect(quota.error).toBeUndefined();

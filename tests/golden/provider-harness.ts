@@ -38,7 +38,9 @@ export const exhaustedTransport: QuotaTransport = {
     bodyText: JSON.stringify({
       code: 200,
       success: true,
-      data: { limits: [{ type: "TOKENS_LIMIT", percentage: 100, nextResetTime: NOW + 3600 * 1000 }] },
+      data: {
+        limits: [{ type: "TOKENS_LIMIT", percentage: 100, nextResetTime: NOW + 3600 * 1000 }],
+      },
     }),
   }),
 };
@@ -49,14 +51,20 @@ export const outageTransport: QuotaTransport = {
 };
 
 export type ProviderHarness = {
-  readonly run: (args: readonly string[], transport?: QuotaTransport) => Promise<{
+  readonly run: (
+    args: readonly string[],
+    transport?: QuotaTransport,
+  ) => Promise<{
     exitCode: number;
     stdout: string;
     stderr: string;
     data: unknown;
     error: unknown;
   }>;
-  readonly runSequence: (args: readonly string[][], transports: readonly QuotaTransport[]) => Promise<
+  readonly runSequence: (
+    args: readonly string[][],
+    transports: readonly QuotaTransport[],
+  ) => Promise<
     Array<{ exitCode: number; stdout: string; stderr: string; data: unknown; error: unknown }>
   >;
   readonly dispose: () => void;
@@ -84,7 +92,11 @@ export const createHarness = (): ProviderHarness => {
         return CONFIG;
       },
     },
-    repositoryIo: { exists: (path) => path === "/repo/.git", isFile: () => false, readText: () => "" },
+    repositoryIo: {
+      exists: (path) => path === "/repo/.git",
+      isFile: () => false,
+      readText: () => "",
+    },
     provider: {
       clock,
       credentialPort: credential,
@@ -105,11 +117,25 @@ export const createHarness = (): ProviderHarness => {
       secrets: program.secrets,
       program: program.program,
     };
-    const exitCode = await runCli(["provider", ...args], {
-      stdout: { write: (chunk) => { stdout += chunk; } },
-      stderr: { write: (chunk) => { stderr += chunk; } },
-    }, deps);
-    const envelope = stdout.startsWith("{") ? (JSON.parse(stdout) as { data?: unknown; error?: unknown }) : {};
+    const exitCode = await runCli(
+      ["provider", ...args],
+      {
+        stdout: {
+          write: (chunk) => {
+            stdout += chunk;
+          },
+        },
+        stderr: {
+          write: (chunk) => {
+            stderr += chunk;
+          },
+        },
+      },
+      deps,
+    );
+    const envelope = stdout.startsWith("{")
+      ? (JSON.parse(stdout) as { data?: unknown; error?: unknown })
+      : {};
     return { exitCode, stdout, stderr, data: envelope.data, error: envelope.error };
   };
   return {

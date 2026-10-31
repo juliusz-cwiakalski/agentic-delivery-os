@@ -483,7 +483,6 @@ describe("TC-SYNC-007 lint rows are exact and additive", () => {
   });
 });
 
-
 const PROVIDER_ROWS = [
   [
     "provider.quota.exceeded",
@@ -536,7 +535,15 @@ describe("TC-PROV-045 provider rows are exact and synced", () => {
   test("the five provider rows carry their declared fields", () => {
     const provider = entries.filter((entry) => entry.domainKind === "provider");
     expect(provider.map((entry) => entry.code)).toEqual(PROVIDER_ROWS.map(([code]) => code));
-    for (const [code, category, retryable, consequence, hint, projectionClass, summary] of PROVIDER_ROWS) {
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of PROVIDER_ROWS) {
       expect(classifyDomainKind("provider", code)).toMatchObject({
         code,
         domainKind: "provider",

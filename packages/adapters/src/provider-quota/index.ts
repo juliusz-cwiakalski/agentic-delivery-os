@@ -43,8 +43,7 @@ export type ProviderQuotaTransportOptions = {
 export const createProviderQuotaTransport = (
   options: ProviderQuotaTransportOptions = {},
 ): QuotaTransport => {
-  const fetchImpl: QuotaFetch =
-    options.fetch ?? ((input, init) => globalThis.fetch(input, init));
+  const fetchImpl: QuotaFetch = options.fetch ?? ((input, init) => globalThis.fetch(input, init));
   return {
     send: async (request: QuotaTransportRequest): Promise<QuotaTransportResult> => {
       const controller = new AbortController();

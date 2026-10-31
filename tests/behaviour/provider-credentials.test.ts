@@ -122,7 +122,9 @@ describe("TC-PROV-038 credential-port-only resolution", () => {
       transport: requestRecordingTransport(requests),
     });
     await engine.resolve({ config: config(["zai"]) });
-    expect(port.references).toEqual([{ referenceName: "zai", sourceKey: { style: "literal", name: "ZAI_API_KEY" } }]);
+    expect(port.references).toEqual([
+      { referenceName: "zai", sourceKey: { style: "literal", name: "ZAI_API_KEY" } },
+    ]);
     expect(requests).toHaveLength(1);
     expect(requests[0]?.credential.value).toBe(CREDENTIAL_CANARY);
     await engine.resolve({ config: config(["zai"]) });
@@ -204,8 +206,7 @@ describe("TC-PROV-040 production wrapper security", () => {
         calls.push({ url, init });
         return {
           status: 200,
-          text: async () =>
-            JSON.stringify({ code: 200, success: true, data: { limits: [] } }),
+          text: async () => JSON.stringify({ code: 200, success: true, data: { limits: [] } }),
         };
       },
     });

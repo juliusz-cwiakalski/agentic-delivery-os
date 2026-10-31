@@ -25,7 +25,9 @@ describe("TC-PROV-053 quota goldens", () => {
     const harness = createHarness();
     try {
       const machine = await harness.run(["quota", "--json"], outageTransport);
-      expect(machine.error).toMatchObject((golden("quota-failure.json") as { error: object }).error);
+      expect(machine.error).toMatchObject(
+        (golden("quota-failure.json") as { error: object }).error,
+      );
       expect(machine.stderr).toContain(text("quota-failure.txt").trim());
     } finally {
       harness.dispose();

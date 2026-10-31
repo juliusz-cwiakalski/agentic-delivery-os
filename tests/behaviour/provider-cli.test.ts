@@ -72,7 +72,13 @@ const outage: QuotaTransport = {
 const run = async (
   args: readonly string[],
   quota: QuotaTransport,
-): Promise<{ exitCode: number; stdout: string; stderr: string; store: StateStorePort; root: string }> => {
+): Promise<{
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  store: StateStorePort;
+  root: string;
+}> => {
   const root = makeTempRoot("provider-cli");
   const { store } = openStore(makeIdentity(root));
   let counter = 0;

@@ -57,14 +57,21 @@ const grammarOf = (
   const [subcommand, second, ...rest] = positionals;
   if (subcommand === undefined) return invocationError("provider requires a subcommand");
   if (subcommand === "resolve") {
-    if (second !== undefined || rest.length > 0) return invocationError("resolve takes no positional");
+    if (second !== undefined || rest.length > 0)
+      return invocationError("resolve takes no positional");
     if (flags["--provider"] !== undefined || flags["--all"] !== undefined) {
       return invocationError("resolve accepts only --chain");
     }
-    return { kind: "resolve", ...(stringFlag(flags, "--chain") === undefined ? {} : { chainName: stringFlag(flags, "--chain") as string }) };
+    return {
+      kind: "resolve",
+      ...(stringFlag(flags, "--chain") === undefined
+        ? {}
+        : { chainName: stringFlag(flags, "--chain") as string }),
+    };
   }
   if (subcommand === "quota") {
-    if (second !== undefined || rest.length > 0) return invocationError("quota takes no positional");
+    if (second !== undefined || rest.length > 0)
+      return invocationError("quota takes no positional");
     if (flags["--chain"] !== undefined || flags["--all"] !== undefined) {
       return invocationError("quota accepts only --provider");
     }
@@ -75,7 +82,8 @@ const grammarOf = (
     if (second !== "list" || rest.length > 0) {
       return invocationError('provider parks requires the "list" subcommand');
     }
-    if (flags["--chain"] !== undefined) return invocationError("parks list accepts only --all and --provider");
+    if (flags["--chain"] !== undefined)
+      return invocationError("parks list accepts only --all and --provider");
     const providerName = stringFlag(flags, "--provider");
     return {
       kind: "parks-list",

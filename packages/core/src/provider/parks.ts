@@ -5,8 +5,8 @@
  * persistence helpers and the fold/projection view are added in Phase 3/5.
  */
 import {
-  type ParkCause,
   PARK_EVIDENCE_FIELDS,
+  type ParkCause,
   PROVIDER_PARK_SCHEMA_ID,
   type ProviderAnnouncementEvidence,
   type ProviderAnnouncementRecord,
@@ -61,9 +61,7 @@ const uniqueKinds = (kinds: readonly ProviderConditionKind[]): readonly Provider
 ];
 
 /** Project evidence through the closed eight-field allowlist only. */
-export const projectParkEvidence = (
-  evidence: ProviderParkEvidence,
-): ProviderParkEvidence => {
+export const projectParkEvidence = (evidence: ProviderParkEvidence): ProviderParkEvidence => {
   const projected: Record<string, unknown> = {};
   for (const field of PARK_EVIDENCE_FIELDS) {
     const value = evidence[field];
@@ -187,19 +185,12 @@ export type AnnouncementInput = {
 };
 
 /** Construct one announcement record with deterministic identity. */
-export const createAnnouncementRecord = (
-  input: AnnouncementInput,
-): ProviderAnnouncementRecord => {
+export const createAnnouncementRecord = (input: AnnouncementInput): ProviderAnnouncementRecord => {
   const generation =
     input.generation ?? (input.park === undefined ? "none" : parkGeneration(input.park));
   return {
     schemaVersion: "delivery.provider.announcement.v1",
-    identity: announcementIdentity(
-      input.subjectKind,
-      input.subjectName,
-      input.code,
-      generation,
-    ),
+    identity: announcementIdentity(input.subjectKind, input.subjectName, input.code, generation),
     code: input.code,
     severity: input.severity,
     subjectKind: input.subjectKind,
@@ -265,11 +256,7 @@ const announcementFromJson = (value: unknown): ProviderAnnouncementRecord | unde
   if (!isRecordValue(value)) return undefined;
   if (value.schemaVersion !== PROVIDER_ANNOUNCEMENT_SCHEMA_ID) return undefined;
   if (typeof value.identity !== "string" || typeof value.code !== "string") return undefined;
-  if (
-    value.severity !== "info" &&
-    value.severity !== "warning"
-  )
-    return undefined;
+  if (value.severity !== "info" && value.severity !== "warning") return undefined;
   return value as unknown as ProviderAnnouncementRecord;
 };
 
@@ -279,10 +266,7 @@ export type ProviderLedgerState = {
   readonly evidence: StateReadEvidence | undefined;
 };
 
-const readKey = (
-  store: StateStorePort,
-  key: string,
-): StateResult<StateJsonValue | undefined> => {
+const readKey = (store: StateStorePort, key: string): StateResult<StateJsonValue | undefined> => {
   const read = store.read({ requiredKeys: [key] });
   if (read.ok) return { ok: true, value: read.value.values[key] };
   if (read.error.code === "state.keys.missing") return { ok: true, value: undefined };
@@ -349,9 +333,7 @@ const announcementsPayload = (
 });
 
 /** The rebuildable projection content: latest record per park name (DM-12). */
-export const providerParksProjection = (
-  parks: readonly ProviderParkRecord[],
-): StateJsonValue => ({
+export const providerParksProjection = (parks: readonly ProviderParkRecord[]): StateJsonValue => ({
   schemaVersion: PROVIDER_PARKS_PROJECTION_SCHEMA_ID,
   parks: foldParks(parks) as unknown as StateJsonValue,
 });
@@ -404,9 +386,7 @@ export const persistProviderResolution = (
   const previousLatest = latestByName(previous.value.parks);
   const currentLatest = latestByName(input.parks);
   const appendedParks: ProviderParkRecord[] = [...previous.value.parks];
-  const appendedAnnouncements: ProviderAnnouncementRecord[] = [
-    ...previous.value.announcements,
-  ];
+  const appendedAnnouncements: ProviderAnnouncementRecord[] = [...previous.value.announcements];
   let parksChanged = false;
   let announcementsChanged = false;
   const newParks: ProviderParkRecord[] = [];

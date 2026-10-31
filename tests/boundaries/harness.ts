@@ -114,7 +114,13 @@ const distPlaceholder = (packageName: string, modulePath: string): string =>
 export const distFilesFor = (packageName: PackageName): Record<string, string> => {
   const files: Record<string, string> = {};
   if (packageName === "core") {
-    for (const modulePath of ["index", "contracts/index", "state/index", "branding/index", "provider/index"]) {
+    for (const modulePath of [
+      "index",
+      "contracts/index",
+      "state/index",
+      "branding/index",
+      "provider/index",
+    ]) {
       files[`packages/core/dist/${modulePath}.js`] = distPlaceholder("core", modulePath);
     }
   } else if (packageName === "adapters") {

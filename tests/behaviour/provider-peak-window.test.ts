@@ -6,7 +6,10 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "yaml";
-import type { ProviderConditionResult, ProviderPeakWindow } from "../../packages/core/src/contracts/index";
+import type {
+  ProviderConditionResult,
+  ProviderPeakWindow,
+} from "../../packages/core/src/contracts/index";
 import { combineProviderConditions } from "../../packages/core/src/provider/conditions";
 import { evaluatePeakWindow } from "../../packages/core/src/provider/peak";
 import { parseProviderConfiguration } from "../../packages/core/src/provider/validate";
@@ -93,10 +96,7 @@ describe("TC-PROV-013 peak and quota combine by MAX", () => {
     const now = at(6, 0, 0);
     const peak = evaluatePeakWindow(zai, now);
     if (peak.status !== "parked") throw new Error("expected a peak park");
-    const combined = combineProviderConditions([
-      peak,
-      parked(30000, now + 30000 * 1000),
-    ]);
+    const combined = combineProviderConditions([peak, parked(30000, now + 30000 * 1000)]);
     expect(combined.status).toBe("parked");
     if (combined.status !== "parked") return;
     expect(combined.waitSeconds).toBe(30000);
@@ -104,10 +104,7 @@ describe("TC-PROV-013 peak and quota combine by MAX", () => {
     expect(combined.conditions).toEqual(["peak-window", "quota-exhausted"]);
     expect(combined.cause).toBe("quota-exhausted");
 
-    const swapped = combineProviderConditions([
-      peak,
-      parked(1000, now + 1000 * 1000),
-    ]);
+    const swapped = combineProviderConditions([peak, parked(1000, now + 1000 * 1000)]);
     expect(swapped.status).toBe("parked");
     if (swapped.status === "parked") {
       expect(swapped.cause).toBe("peak-window");

@@ -133,7 +133,8 @@ export const guideFailures = (text: string): string[] => {
     if (!text.toLowerCase().includes(required.toLowerCase())) failures.push(`missing ${required}`);
   }
   for (const forbidden of ["process.env", "ZAI_API_KEY", "legacy hook contract"]) {
-    if (text.toLowerCase().includes(forbidden.toLowerCase())) failures.push(`forbidden ${forbidden}`);
+    if (text.toLowerCase().includes(forbidden.toLowerCase()))
+      failures.push(`forbidden ${forbidden}`);
   }
   return failures;
 };

@@ -81,23 +81,33 @@ export const normalizeQuotaEnvelopeResult = (
   const limits: QuotaLimit[] = [];
   for (const entry of data.limits) {
     if (!isRecord(entry)) {
-      return failed("provider.outage", "provider.quota.malformed", "limits_nonarray", result.status);
+      return failed(
+        "provider.outage",
+        "provider.quota.malformed",
+        "limits_nonarray",
+        result.status,
+      );
     }
     const type = entry.type;
     const percentage = entry.percentage;
     if (typeof type !== "string") {
-      return failed("provider.outage", "provider.quota.malformed", "limits_nonarray", result.status);
+      return failed(
+        "provider.outage",
+        "provider.quota.malformed",
+        "limits_nonarray",
+        result.status,
+      );
     }
-    if (
-      typeof percentage !== "number" ||
-      !Number.isInteger(percentage) ||
-      percentage < 0
-    ) {
-      return failed("provider.outage", "provider.quota.malformed", "pct_non_numeric", result.status);
+    if (typeof percentage !== "number" || !Number.isInteger(percentage) || percentage < 0) {
+      return failed(
+        "provider.outage",
+        "provider.quota.malformed",
+        "pct_non_numeric",
+        result.status,
+      );
     }
     const reset = entry.nextResetTime;
-    const resetEpochMs =
-      typeof reset === "number" && Number.isFinite(reset) ? reset : undefined;
+    const resetEpochMs = typeof reset === "number" && Number.isFinite(reset) ? reset : undefined;
     limits.push({
       type,
       percentage,

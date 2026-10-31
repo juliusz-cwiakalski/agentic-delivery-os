@@ -327,7 +327,12 @@ const validateScan = (
   let ignored = 0;
   for (const file of listFiles(root, relativeDir, [".ts", ".json", ".txt"])) {
     if (excludedPrefix !== undefined && file.startsWith(excludedPrefix)) continue;
-    const excluded = excludedFiles === undefined ? [] : (typeof excludedFiles === "string" ? [excludedFiles] : excludedFiles);
+    const excluded =
+      excludedFiles === undefined
+        ? []
+        : typeof excludedFiles === "string"
+          ? [excludedFiles]
+          : excludedFiles;
     if (excluded.includes(file)) continue;
     const text = readFileSync(join(root, file), "utf8");
     for (const reference of scanReferences(text, domainKinds)) {

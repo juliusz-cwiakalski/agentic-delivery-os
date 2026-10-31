@@ -165,10 +165,7 @@ const parseEntry = (name: string, value: unknown): ProviderDescriptor | string =
   };
 };
 
-const parseCredential = (
-  name: string,
-  value: unknown,
-): ProviderCredentialDeclaration | string => {
+const parseCredential = (name: string, value: unknown): ProviderCredentialDeclaration | string => {
   if (!isRecord(value) || !isRecord(value.sourceKey)) return `credentials.${name}.sourceKey`;
   const style = value.sourceKey.style;
   if (style === "literal") {

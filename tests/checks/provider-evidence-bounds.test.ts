@@ -16,9 +16,7 @@ import {
 
 const ROOT = process.cwd();
 const fixture = (name: string): unknown =>
-  JSON.parse(
-    readFileSync(join(ROOT, "tests/fixtures/provider/evidence", name), "utf8"),
-  ) as unknown;
+  JSON.parse(readFileSync(join(ROOT, "tests/fixtures/provider/evidence", name), "utf8")) as unknown;
 
 /** Validate one evidence object against a closed allowlist and the bounds. */
 export const evidenceFailures = (
@@ -43,7 +41,12 @@ const announcementAllowlist = (fixture("announcement-allowlist.json") as { field
 
 describe("TC-PROV-049 evidence bounds and closed allowlists", () => {
   test("maximum evidence is inside both bounds", () => {
-    expect(evidenceFailures(fixture("max-evidence.json") as Record<string, unknown>, announcementAllowlist)).toEqual([]);
+    expect(
+      evidenceFailures(
+        fixture("max-evidence.json") as Record<string, unknown>,
+        announcementAllowlist,
+      ),
+    ).toEqual([]);
     expect(PROVIDER_EVIDENCE_MAX_BYTES).toBe(1024);
     expect(PROVIDER_EVIDENCE_MAX_FIELDS).toBe(20);
   });
@@ -75,6 +78,8 @@ describe("TC-PROV-049 evidence bounds and closed allowlists", () => {
       announcementCode: "provider.peak.parked" as AnnouncementCode,
     };
     expect(Object.keys(park).every((key) => parkAllowlist.includes(key))).toBe(true);
-    expect(Object.keys(announcement).every((key) => announcementAllowlist.includes(key))).toBe(true);
+    expect(Object.keys(announcement).every((key) => announcementAllowlist.includes(key))).toBe(
+      true,
+    );
   });
 });

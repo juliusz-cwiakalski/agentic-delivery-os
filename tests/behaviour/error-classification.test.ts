@@ -434,7 +434,9 @@ describe("TC-SYNC-009 lint containment and multi-row-kind ambiguity", () => {
 
 describe("TC-PROV-046 exact-code provider classification", () => {
   test("each declared provider code resolves exactly; no/unknown/wrong-kind contain", async () => {
-    const { CLASSIFICATION_CASES } = await import("../fixtures/provider/security/classification-cases");
+    const { CLASSIFICATION_CASES } = await import(
+      "../fixtures/provider/security/classification-cases"
+    );
     for (const testCase of CLASSIFICATION_CASES) {
       const row = classifyThrown(testCase.failure);
       if (testCase.expect === "classified") {

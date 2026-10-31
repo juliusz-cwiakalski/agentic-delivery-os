@@ -11,14 +11,12 @@ import type {
   ProviderClock,
   ProviderConditionResult,
   ProviderConfiguration,
-  ProviderParkRecord,
   ProviderSleep,
   QuotaTransport,
-  QuotaTransportRequest,
   QuotaTransportResult,
 } from "../../packages/core/src/contracts/index";
-import { combineProviderConditions } from "../../packages/core/src/provider/conditions";
 import { resolveProviderChain } from "../../packages/core/src/provider/chain";
+import { combineProviderConditions } from "../../packages/core/src/provider/conditions";
 import { createProviderEngine } from "../../packages/core/src/provider/engine";
 import { runProviderLoop } from "../../packages/core/src/provider/loop";
 import { evaluateQuotaResponse } from "../../packages/core/src/provider/quota";
@@ -57,10 +55,7 @@ describe("TC-PROV-014..022 quota math", () => {
     const first = evaluateQuotaResponse(quotaFile("both-exhausted.json"), 100, NOW);
     expect(first.status).toBe("parked");
     if (first.status === "parked") expect(first.expiresAtMs).toBe(NOW + 3600 * 1000);
-    const reordered = envelope([
-      tokens(100, NOW + 3600 * 1000),
-      tokens(100, NOW + 7200 * 1000),
-    ]);
+    const reordered = envelope([tokens(100, NOW + 3600 * 1000), tokens(100, NOW + 7200 * 1000)]);
     const second = evaluateQuotaResponse(reordered, 100, NOW);
     if (second.status === "parked") expect(second.expiresAtMs).toBe(NOW + 3600 * 1000);
   });
@@ -158,10 +153,7 @@ describe("TC-PROV-024..027 failure classification", () => {
   });
 });
 
-const credentialPort = (
-  ok: boolean,
-  calls: { count: number },
-): CredentialPort => ({
+const credentialPort = (ok: boolean, calls: { count: number }): CredentialPort => ({
   resolve: () => {
     calls.count += 1;
     return ok
@@ -283,7 +275,11 @@ describe("TC-PROV-024/025/039 engine parks and classifications", () => {
   });
 
   test("no canary appears in the returned resolution", async () => {
-    const engine = engineFor({ send: async () => { throw new Error("down"); } });
+    const engine = engineFor({
+      send: async () => {
+        throw new Error("down");
+      },
+    });
     const resolved = await engine.resolve({ config: config() });
     expect(JSON.stringify(resolved)).not.toContain("CANARY-SECRET");
   });
@@ -308,7 +304,11 @@ describe("TC-PROV-023 completed-sleep cap", () => {
       subjectName: "default",
       evaluate: async () => responses[calls++] as CombinedProviderCondition,
       clock,
-      sleep: { sleep: async (ms) => { sleeps.push(ms); } },
+      sleep: {
+        sleep: async (ms) => {
+          sleeps.push(ms);
+        },
+      },
       maxSleepLoops: 4,
       capParkTtlSeconds: 300,
     });
@@ -329,7 +329,11 @@ describe("TC-PROV-023 completed-sleep cap", () => {
           return parked(60);
         },
         clock,
-        sleep: { sleep: async (ms) => { sleeps.push(ms); } },
+        sleep: {
+          sleep: async (ms) => {
+            sleeps.push(ms);
+          },
+        },
         maxSleepLoops: max,
         capParkTtlSeconds: 300,
       });
@@ -363,7 +367,10 @@ describe("TC-PROV-051 100-entry evaluation cost", () => {
     const states = Object.fromEntries(
       names.map((name) => [
         name,
-        { descriptor: { name, class: "subscription" as const, enabled: true }, condition: parkedCondition },
+        {
+          descriptor: { name, class: "subscription" as const, enabled: true },
+          condition: parkedCondition,
+        },
       ]),
     );
     const run = (): number => {

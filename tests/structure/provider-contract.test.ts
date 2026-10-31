@@ -8,7 +8,7 @@
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import ts from "typescript";
 import {
   ANNOUNCEMENT_CODES,
@@ -20,11 +20,11 @@ import {
   PROVIDER_ANNOUNCEMENT_SCHEMA_ID,
   PROVIDER_CONDITION_KINDS,
   PROVIDER_COST_CLASSES,
-  PROVIDER_PARKS_DOCUMENT_NAME,
-  PROVIDER_PARKS_PROJECTION_SCHEMA_ID,
   PROVIDER_PARK_RECORD_KEY,
   PROVIDER_PARK_SCHEMA_ID,
   PROVIDER_PARK_STATES,
+  PROVIDER_PARKS_DOCUMENT_NAME,
+  PROVIDER_PARKS_PROJECTION_SCHEMA_ID,
   PROVIDER_RECORD_KINDS,
   PROVIDER_SKIP_REASONS,
 } from "../../packages/core/src/contracts/provider";
@@ -75,8 +75,10 @@ export const diffNames = (
   expected: readonly string[],
 ): string[] => {
   const failures: string[] = [];
-  for (const name of expected) if (!actual.includes(name)) failures.push(`${label}: missing ${name}`);
-  for (const name of actual) if (!expected.includes(name)) failures.push(`${label}: unexpected ${name}`);
+  for (const name of expected)
+    if (!actual.includes(name)) failures.push(`${label}: missing ${name}`);
+  for (const name of actual)
+    if (!expected.includes(name)) failures.push(`${label}: unexpected ${name}`);
   return failures;
 };
 
@@ -143,11 +145,7 @@ describe("TC-PROV-001 contract surface", () => {
         ),
       ).toContain("closed set parkCauses: unexpected not-a-cause");
       expect(
-        diffNames(
-          "evidence park",
-          [...PARK_EVIDENCE_FIELDS, "rawBody"],
-          INVENTORY.evidence.park,
-        ),
+        diffNames("evidence park", [...PARK_EVIDENCE_FIELDS, "rawBody"], INVENTORY.evidence.park),
       ).toContain("evidence park: unexpected rawBody");
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -190,7 +188,9 @@ describe("TC-PROV-006 provider-policy purity and neutrality", () => {
   });
 
   test("the ambient-globals guard is clean over the provider tier", () => {
-    const violations = scan(ROOT).filter((violation) => violation.file.startsWith("packages/core/src/provider/"));
+    const violations = scan(ROOT).filter((violation) =>
+      violation.file.startsWith("packages/core/src/provider/"),
+    );
     expect(violations).toEqual([]);
   });
 
