@@ -126,7 +126,7 @@ grow it later.
 | Command | Purpose | Primary user | Delivery | Extended |
 |---|---|---|---|---|
 | `ados config` | Two modes. Basic: print the merged configuration evaluated for the current context as a plain JSON object. Debug (`config debug` or `--debug`): per-key provenance (which layer, file, line) as extended JSON, or annotated JSONC with the source as a per-key comment | all users | M0-S4 | - |
-| `ados status` | One bounded, ranked digest of the delivery world: tracker, changes and PRs, CI, lanes or queue, providers, parked work | coordinator, operator | M0-S6 | M1-S10 (collector expansion), M2-S4 (shared board state source) |
+| `ados status` | One bounded, ranked digest of the delivery world: six fixed sections — tracker, changes and PRs, CI, lanes or queue, providers, parked work — each with an observed/degraded/unknown/unavailable/not-delivered state and bounded evidence. The lanes-or-queue section reports a declared `not-delivered` gap until M2-S1 establishes the queue/lane engine; it never presents an empty queue and never duplicates `ados queue ready` (M0-S7) | coordinator, operator | M0-S6 | M1-S10 (collector expansion), M2-S4 (shared board state source) |
 | `ados queue ready` | Read-only ready-set computation for one ticket: deps, repo free, tier known, owner gate, CI healthy, provider available; ranks close items (merge-ready, review-pending) above new starts | coordinator | M0-S7 | M2-S1 (full queue, lanes, dispatch) |
 | `ados verify change` | Verify a delivered change against the 11-phase ledger and classify the delivery result tuple; malformed notes are classified, never a crash | coordinator | M0-S8 | M1-S9 (dual-run evidence consumer) |
 | `ados verify gates` | One command evaluating all merge gates for a change, each gate cited in the result | coordinator | M0-S9 | M2-S7 (suite-to-job mapping) |
@@ -243,6 +243,12 @@ unless noted.
   without writing state; `parks list` reads the park projection. None of
   them sleeps or spawns. Tracker, VCS, and CI providers are adapters, not
   this command.
+- `status`: the read-only first-call digest. Six sections in fixed order,
+  each with an explicit evidence state; a failed, absent, or unattempted
+  read is reported as degraded, unknown, unavailable, or not-delivered,
+  never as clear or zero. The queue/lane section is a declared
+  `not-delivered` gap until M2-S1, so an empty queue is never implied;
+  `queue ready` (M0-S7) remains the separate ready-set command.
 - `policy`: policy as code. Declare what repos should enforce (branch
   protection, required checks, merge rules); check reports drift across the
   fleet; apply fixes it with a rollback snapshot first. Also the rules

@@ -34,6 +34,12 @@
       }
     },
     {
+      "includes": ["tests/fixtures/status/golden/**"],
+      "formatter": {
+        "enabled": false
+      }
+    },
+    {
       "includes": ["tests/fixtures/**"],
       "linter": {
         "rules": {

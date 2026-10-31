@@ -7,7 +7,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175"]
   related_decisions: ["ADR-0003", "TDR-0003"]
 ---
 
@@ -88,6 +88,8 @@ The provider branch is the first ordinary production setting. It declares:
 The shipped defaults declare one concrete subscription descriptor, `provider.entries.zai-coding-plan`, with an enabled UTC peak window of `06:00–10:00` and a `7200`-second buffer, and an enabled quota policy against the public Z.AI quota endpoint with credential reference `zai`. The matching `provider.credentials.zai` entry declares a `literal` source key named `ZAI_API_KEY`. `provider.chains` ships empty and `provider.defaultChain` is absent, so a fresh installation fails closed until an operator declares a chain. Every shipped value is overridable per layer and reports its origin through `config debug`.
 
 The full field contract, evaluation semantics, and defaults are documented in [Provider Engine](feature-provider-engine.md); provider semantic-validation failures surface as `provider.chain.invalid` or `provider.chain.empty` from the provider engine, while schema-level configuration failures remain the configuration layer's classified errors.
+
+The status digest consumes the resolved provider branch through the ordinary configuration resolver: `provider.defaultChain`, `provider.chains`, and `provider.entries`. It adds no configuration key, no tracker, VCS, CI, or repository-addressing branch, and no status-specific cap or threshold setting. Status reads the branch and never writes configuration; repository addressing comes from the checkout's `origin` remote. The consumer contract is in [Status Digest](feature-status-digest.md).
 
 ### Merge, reset, warnings and origins
 
@@ -196,6 +198,7 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 - **Risk — parser diagnostics:** mitigated by safe constructed failures, host-switch guard and no parser text crossing the port.
 - **Risk — dependency compatibility:** Proposed TDR-0003 and the truthful runtime-closure license registry require owner acceptance before merge/adoption.
 - **Consumed by** the provider engine ([Provider Engine](feature-provider-engine.md)) for descriptors, credential references, chains, and shipped defaults.
+- **Consumed by** the status digest ([Status Digest](feature-status-digest.md)) for the resolved provider branch only; status adds no keys.
 - **Separate capability:** credential resolution is the port documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); keyring sources and sidecar transport remain later capabilities, and state storage is the separate [State Layer](feature-state-layer.md).
 
 ## Glossary & References

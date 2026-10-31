@@ -12,7 +12,7 @@ export {
   type PmNotesLintLocation,
   type PmNotesLintVerdict,
 } from "./pm-notes-lint.js";
-
+export { aggregateStatus, renderStatusHuman } from "./status.js";
 export {
   classifyVerifyChange,
   classifyVerifyDocument,

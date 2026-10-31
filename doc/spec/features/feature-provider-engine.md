@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The provider v1 engine: the typed provider configuration branch and shipped defaults, deterministic subscription-first chain resolution with eight skip reasons, UTC peak and subscription-quota evaluation combined by MAX, named self-expiring parks persisted as provider.park ledger records and folded into provider-parks.json, fail-loud announcements, credential-port-only quota authorization, the resolve/quota/parks-list CLI surface, the five provider error identities, and the pure-core / provider-quota adapter boundaries."
 links:
-  related_changes: ["GH-182"]
+  related_changes: ["GH-182", "GH-175"]
   related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007"]
   contracts:
     - "packages/core/src/contracts/provider.ts"
@@ -185,6 +185,12 @@ The secret-read boundary remains unchanged: the provider engine, the CLI provide
 
 All three accept the global `--json` and emit one CommandResult envelope. Human `resolve` prints the selected provider or the park's cause and resume time; warnings go to the error stream. `quota` without `--provider` evaluates the default chain's entries when `defaultChain` is declared, otherwise every declared entry. `parks list` reads verified park state, makes no network call, and mutates nothing. Invalid subcommands, flags, flag values, and positionals fail as classified invocation or input errors and never crash or emit an invalid envelope.
 
+### Status consumer
+
+The status digest consumes the provider vocabulary without running the provider engine. It reads the declared `provider.defaultChain`, `provider.chains`, and `provider.entries` from the resolved configuration snapshot, and it reads active park views from the verified state fold documented in [State Layer](feature-state-layer.md). It never calls `resolve`, `quota`, or `parks`, never fetches quota, never evaluates a peak or quota condition, and never writes a park or announcement.
+
+Consequently, status reports an entry with an active park as `parked` and every other declared entry as `unverified`, never `available`. A declared chain that does not resolve makes the providers section `unknown`; an absent default chain makes it `unavailable`; a park-fold failure makes it `degraded`. The section's config/state evidence reuses the engine's declared identities rather than adding new ones: an unresolved chain carries `failureCode: "config.value.invalid"` with reason `provider-chain-unresolved` and no `failureClass`, and a configuration resolution failure carries the relevant existing `config.*` code. The status contract is specified in [Status Digest](feature-status-digest.md).
+
 ### Error taxonomy
 
 The provider kind carries five error identities, classified by exact code:
@@ -303,7 +309,8 @@ Adding a provider is a descriptor plus a credential reference, not a code branch
 - **Depends on** the configuration layer ([feature-config-layer.md](feature-config-layer.md)) for the typed catalog, layered resolution, provenance, and shipped defaults.
 - **Depends on** the state layer ([feature-state-layer.md](feature-state-layer.md)) for the append-only ledger, fences, verified reads, and atomic derived-document replacement.
 - **Depends on** the credential port and runtime confinement ([feature-adapter-ports.md](feature-adapter-ports.md), [feature-monorepo-scaffold-toolchain.md](feature-monorepo-scaffold-toolchain.md)).
-- **Consumed by** later status, queue-readiness, doctor, spend, ceremony, and spawn surfaces for the park and announcement vocabulary.
+- **Consumed by** the status digest ([feature-status-digest.md](feature-status-digest.md)) for the declared configuration branch and verified park views only; status never runs the engine or fetches quota.
+- **Consumed by** later queue-readiness, doctor, spend, ceremony, and spawn surfaces for the park and announcement vocabulary.
 - **Risk — fail-loud pauses change operator expectations:** each pause carries a cause and resume time, and a peak park never substitutes paid capacity.
 - **Risk — quota response drift:** every malformed class is announced and parked or classified, never treated as clear.
 - **Risk — ledger growth:** deterministic generation and identity dedupe plus bounded evidence limit record growth; the projection is rebuildable.

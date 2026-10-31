@@ -1,0 +1,78 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-175
+branch: feat/GH-175/status-v1
+status: PASS
+summary: >-
+  PASS. All fourteen review-iteration-1 findings are resolved and independently
+  verified, and no regression was found. F-1: a failed PR read with an observed
+  active change now renders `changes degraded active GH-175 | PRs ? (review state
+  unknown)` (never `PRs 0`/`review state observed`), driven by the `changes`
+  evidence-source outcome; F-2: park-fold failure and untrusted config render
+  `active parks ?` with a restored `active parks 0` control and the dead
+  `providers.parks !== undefined` guard removed; F-3: equal-severity runs sort by
+  numeric-descending identity only when both identities are numeric, otherwise
+  lexical ascending (`alpha:1,beta:2,gamma:3`; `11,10,9`); F-4: a declared but
+  unresolved chain is `unknown`/`provider-chain-unresolved`/`config.value.invalid`/
+  `chain: unknown` while an absent chain stays `unavailable`/`provider-chain-not-declared`/
+  `chain: none`; F-5 adds `peakDeclared` to `StatusProviderEntry` with a binding
+  test; F-6 uses `STATUS_MAX_DETAIL_CHARS`; F-7 asserts the passed runtime
+  recorder, `definition.flags`/`positionals`, and a throwing-handler
+  `fallback.internal` containment control; F-8 extends the corpus schema to
+  per-section state/reasons/counts/ordered ids/truncated plus a completeness
+  meta-check over the section-state matrix and AC-F9-1 controls; F-9 adds tracker
+  raw-page-at-limit and non-numeric run-tie coverage; F-10 counts tracker
+  observed/unknown over the fully ranked family before the cap with
+  doc/golden consistency (`stalls 12 (8 unknown)`); F-11 degrades on all four
+  declared delivery signals; F-12 ticks Phase 7, records the @doc-syncer execution
+  row, and fixes the 1.5/1.6/1.7 revision-log order; F-13 aligns the
+  negative-controls title/scope; F-14 confirms `tests/checks/privacy-release.test.ts`
+  is unchanged. Gates: focused status suites 170 pass / 2 skip / 0 fail; full
+  suite 1583 pass / 2 skip / 1 fail with the only red being the pre-existing,
+  unrelated `TC-RELEASE-001`; lint, format:check, typecheck, check:boundaries,
+  exports-parity, error-table-sync, forbidden-literals, exit-code-literals,
+  ambient-globals, workspace-entrypoints, privacy-literals,
+  test-doc-distribution.sh, and `git diff --check` all exit 0. spec_compliance and
+  plan_compliance PASS; the single info note is that the change-spec Appendix
+  E/DM-13 summary grammar was not re-reconciled to the delivered `{n|?}` /
+  `{name|none|unknown}` tokens (the plan Appendix E and the current-truth
+  `doc/spec/features/feature-status-digest.md` are correct).
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: info
+    classification: info
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-10/2026-10-31--GH-175--status-v1/chg-GH-175-spec.md:612
+    message: >-
+      The change spec's Appendix E grammar (lines 612-615) and DM-13 (line 240)
+      still present the pre-remediation human grammar `PRs <n>`, `active parks
+      <n>`, and `chain <name|none>`, whereas the delivered renderer and the plan
+      Appendix E (chg-GH-175-plan.md:161-169) and the current-truth
+      `doc/spec/features/feature-status-digest.md:199-204` pin `PRs {n|?}`,
+      `active parks {n|?}`, and `chain {name|none|unknown}`. The behavior is
+      correct and all ACs (AC-F1-3/F-9/AC-F7-1/AC-F11-2) pass; only the change
+      artifact's summary grammar is out of date.
+    suggestion: >-
+      Optional follow-up: add a short spec revision note aligning Appendix E and
+      DM-13 with the plan/current-truth grammar (the `?` and `unknown` tokens),
+      or record that the plan Appendix E is the authoritative detailed grammar.
+      No code or behavior change required for merge.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-10-31T21:50:00Z
+next_step: >-
+  PROCEED. All mandatory and recommended iteration-1 findings are remediated and
+  verified; the only gate red is the pre-existing, unrelated TC-RELEASE-001
+  (tracked separately). The change is ready for the definition-of-done and PR
+  phases.

@@ -8,7 +8,7 @@ area: domain
 document_classification: current-truth
 links:
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175"]
 summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer, adapter-port, provider-client-seed, pm-notes, phase-transition, delivery-registry, and verify-change terms used across the repository."
 ---
 
@@ -161,6 +161,28 @@ _Expand every acronym at first use; keep the expanded list here._
 | ESM | ECMAScript Modules | `packages/*/package.json` |
 | MCP | Model Context Protocol | `packages/mcp/` |
 | SPDX | Software Package Data Exchange | `doc/legal/dependency-licenses.yaml` |
+| Empty-but-enforced | Scaffold content policy for the remaining engines, business logic, and drivers: structure, exports, rules, fixtures, and green tests exist. The configuration and state tiers, result contract, adapter contract substrate, provider engine, the three provider client read slices, the pm-notes lint and phase-transition surface, the verify-change surface, and the status digest carry implemented code. | Scaffold | [feature-monorepo-scaffold-toolchain.md](../spec/features/feature-monorepo-scaffold-toolchain.md) |
+| Status digest | The bounded `delivery.status.v1` payload returned by the read-only status command: six fixed sections, states, evidence, counts, ranked items, and truncation markers. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Section state | One of `observed`, `degraded`, `unknown`, `unavailable`, `not-delivered`; describes the quality and availability of a section's evidence, never a global all-clear. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Evidence record | The bounded sources, outcomes, reasons, and failure codes or classes that justify a section or item state; never raw provider payloads. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Observed | Every required source read for a section succeeded, including verified-empty and provider-asserted empty results. Item-level unknown signals may still exist and are counted. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Degraded | Partial evidence: some required source reads succeeded and some are missing, failed, or declared unavailable. The digest is truthful but incomplete. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Unknown | No usable evidence remains for a section or signal; it is never a clear or zero claim. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Unavailable | The section's source is known to be absent or not configured, such as no repository binding, no declared provider chain, or no local PM context. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Not-delivered | The capability itself does not exist in this release; used only by the status lanes-or-queue section until the queue/lane engine lands. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Item-level unknown | A signal on an individual digest item is absent or unavailable; it is counted and never fabricated, and it does not by itself make the section unobserved. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Source availability | The declared per-family and per-signal statement of what the bound adapter supplies, deciding whether a status family or item signal is observed or unavailable. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Owner hand-back | An open work item carrying a declared owner-attention label; absence of `assignee` is not used because absence means unknown. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Blocked dependency | An open work item with a `blocked-by` relation whose target completion is observed or explicitly unknown, never assumed resolved. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Stall | An open work item whose provider-native last-modified timestamp is older than the declared 14-day threshold; absent or invalid activity is unknown, never stale or fresh. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Ticket hygiene | Status conformance over mapped normalized data: non-blank title and non-empty label set; comment and unmapped custom-field conformance are not evaluated. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Active change | The local PM context's `active_change`: work-item ref, branch, and change folder. Git-ignored local state; absence is unknown, never "none". | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Parked work | A non-provider delivery change recorded in the local PM context's `parked_changes`; distinct from a provider park. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Provider park | A named, self-expiring provider or chain availability pause read from the verified state fold by status; distinct from parked delivery work. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Provider entry availability | `parked` when an active park exists, `unverified` otherwise; status never claims `available` because it does not run the provider engine. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Repository binding | The `origin`-derived GitHub owner, name, and host used for read-only tracker, pull-request, and CI reads; no credentials or userinfo. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Source truncation | The explicit status marker that output items were dropped by a cap or that the source returned its declared read limit, so more may exist. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Live smoke | The opt-in, credentialed structural status test against a real repository; not a default-CI network test and never pinning volatile item counts. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
 
 ## See also
 
