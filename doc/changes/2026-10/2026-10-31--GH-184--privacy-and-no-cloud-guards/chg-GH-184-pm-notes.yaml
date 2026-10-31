@@ -23,7 +23,9 @@ phases:
   dor_check:
     started: "2026-10-31T06:55:00Z"
     completed: "2026-10-31T08:30:00Z"
-  delivery: { started: null, completed: null }
+  delivery:
+    started: "2026-10-31T08:35:00Z"
+    completed: "2026-10-31T08:47:00Z"
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -51,6 +53,12 @@ open_questions:
 blockers: []
 
 notes:
+  - text: "Delivery phases 1-7 complete in seven Conventional Commits (0b94517, 2ef90be, 65c9f4b, 86bb608, bc8f73f, 517326e, bdefee2). Independent verification: privacy-literals exits 0 over 1003 files with 0 violations and both hashed classes explicitly vacuous; ci-topology, ci-bindingness, script-surface all exit 0; the only CI change is one additive line in ts-invariants; the aggregate check string is unchanged; no doc/spec changes. Coder reports pnpm check and 1123 tests green."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Baseline suppressions added by the live scan (owner-visible at PR): three rule-scoped entries for the pre-existing sanitization fixture corpus and four rule-scoped entries for archival change artifacts quoting real owner paths, plus the generated lockfile exclusion. Phantom rows from the plan were NOT allowlisted because they do not trip. No rule was globally weakened."
+    type: "info"
+    date: "2026-10-31"
   - text: "DoR iteration 2 verdict READY (10/10 facets PASS, 0 blocking). Iteration-1 finding closed: per-entry staging co-location plus rule-scoped allowlist entries keep every intermediate phase self-consistent; the baseline batch is owned by a named task with a regression test. Advisory: the PD-7 batch table lists three phantom archival trip rows that contain no path-shaped content; harmless because the Phase-2 live scan is authoritative, but the coder should allowlist only files that actually trip."
     type: "info"
     date: "2026-10-31"
