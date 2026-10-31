@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-10-31T01:45:00Z", completed: "2026-10-31T02:10:00Z", iteration: 2, verdict: "READY" }
   delivery: { started: "2026-10-31T02:15:00Z", completed: "2026-10-31T03:30:00Z" }
   system_spec_update: { started: "2026-10-31T03:35:00Z", completed: "2026-10-31T04:00:00Z" }
-  review_fix: { started: "2026-10-31T04:05:00Z", completed: null, iteration: 1, status: "PASS_with_remediation_P11" }
+  review_fix: { started: "2026-10-31T04:05:00Z", completed: "2026-10-31T05:30:00Z", iteration: 2, status: "PASS_loop_closed" }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -87,4 +87,7 @@ notes:
     date: "2026-10-31"
   - text: "Commitlint discipline: one commit (DoR remediation) landed with body lines >100 chars — warn-only locally but CI-enforced; fixed via authorized amend (2c25f56→a7e2c2e) + rebase reword (904646f→64aa63c) before push, then SHA references synced across 5 artifacts. Lesson: PM commit prompts must state the 100-char body/footer line constraint explicitly; committers must self-check body wrapping, not rely on the warn-only hook."
     type: "retro"
+    date: "2026-10-31"
+  - text: "Review iteration 2: PASS, 0 findings, P11 discharged in full (all 4 low items verified with smallest honest diffs; extended GH-REVIEW-STATE assertion non-vacuous, behavior unchanged; rebase verified tree-identical; gates independently reproduced 806/0, allowlist 4, zero deps, commitlint clean). Review loop closed. Artifacts: code-review/review-iter-2.yaml."
+    type: "info"
     date: "2026-10-31"
