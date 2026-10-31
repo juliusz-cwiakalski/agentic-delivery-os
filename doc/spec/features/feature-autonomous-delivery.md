@@ -207,7 +207,7 @@ All settings are environment variables (CLI flag overrides where noted). Full ta
 | `DELIVER_POLL_SECONDS` | `60` | Seconds between liveness checks |
 | `DELIVER_MAX_RESTARTS` | `10` | Max PM restart iterations |
 | `DELIVER_ALLOW_LGTM_COMMENT` | `false` | Opt-in: exact `lgtm` comment by PR author as a merge signal (Mode B) |
-| `CEO_LOOP_STALL_MINUTES` | `10` | Minutes of no session traffic **and** no healthy delivery (marker + PID probe) before a CEO is killed (INV-DM-3/5) |
+| `CEO_LOOP_STUCK_MINUTES` | `10` | Minutes of no session traffic **and** no healthy delivery (marker + PID probe) before a CEO is killed (INV-DM-3/5) |
 | `CEO_LOOP_POLL_SECONDS` | `30` | Seconds between CEO stuck checks |
 | `CEO_RESUME_TOKEN_LIMIT` | `100000` | Resume the previous CEO session if its context is under this limit |
 | `CEO_LOOP_MAX_RESTARTS` | `10` | Max CEO kill+restart iterations |
@@ -219,6 +219,8 @@ All settings are environment variables (CLI flag overrides where noted). Full ta
 | `ADOS_PLATFORM` | *(auto-detect)* | Platform override for `deliver-ticket.sh` / `batch-deliver.sh`: `github` \| `gitlab`. Empty = auto-detect via `ADOS_PLATFORM` env → git remote → `glab auth` → default `github` (F-9, GH-148) |
 | `ADOS_BLOCKED_LABEL` | `human-input-needed` | Label that `classify_result` treats as `blocked`, on either platform (F-9) |
 | `ADOS_MERGE_STRATEGY` | `squash` | `batch-deliver.sh` Mode B merge strategy: `squash` \| `merge` \| `rebase` — mapped to platform-appropriate flags (F-9) |
+
+`CEO_LOOP_STALL_MINUTES` (default `10`) is the `pm-liveness.sh` probe threshold, not the loop knob; both wrappers export it aligned to their own stuck threshold when invoking the probe.
 
 ## Dependencies & Risks
 
