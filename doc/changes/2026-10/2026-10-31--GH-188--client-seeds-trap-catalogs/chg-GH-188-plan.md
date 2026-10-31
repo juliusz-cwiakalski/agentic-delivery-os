@@ -427,6 +427,36 @@ Execution order is strict: **P1 → P2 → P3 → P4 → P5 → P6 → P7 → P8
 
 **Completion signal**: `chore(GH-188): add minor release intent, gate evidence and DoD checklist for PR handoff`
 
+---
+
+### Phase P11: Code Review Remediation (Iteration 1)
+
+**Goal**: Close the four low-severity findings from the independent review iteration 1 (`code-review/review-iter-1.yaml`; verdict PASS, 0 blocker / 0 major / 4 low / 4 info). This phase discharges the P9 conditional obligation for iteration-1 findings; the info findings (F-5..F-8) are optional and require no gate change.
+
+**Tasks**:
+
+- [ ] **P11-1** (F-1) Fix the module-header reference typo in `packages/adapters/src/jira/workflow-map.ts` ("DH-188 DM-4" → "GH-188 DM-4"). Comment-only; no behavior change; `pnpm check` stays green. **Files**: `packages/adapters/src/jira/workflow-map.ts`.
+- [ ] **P11-2** (F-2) Document the intra-package import exception for shared adapter support modules: relative `../io/*.js` imports (not the src-mapped `#io/*` alias, which cannot resolve in the dist-only packed tarball) in `doc/spec/features/feature-provider-client-seeds.md` (Provider transport section) or record the alternative — a dist-conditioned `#io` alias — as a decision for a later change. **Files**: `doc/spec/features/feature-provider-client-seeds.md` (or a decision-record stub).
+- [ ] **P11-3** (F-3) Record the GitHub issue-status mapping limitation in the `GH-ISSUE-TO-WORKITEM` trap entry: `closed` maps to `done`; `state_reason` (`not_planned`) is not modeled until M0-S20 live runs record real shapes. Update `expectedNormalizedOutcome`/`providerBehavior` wording in `tests/fixtures/providers/traps/github.traps.json` (also reword the garbled "closed Set status alias" phrase, F-5); trap-catalog schema test must stay green. **Files**: `tests/fixtures/providers/traps/github.traps.json`.
+- [ ] **P11-4** (F-4) Declare the unknown-`reviewDecision` fallback ("open") on the `GITHUB_REVIEW_DECISION_STATES` table comment in `packages/adapters/src/github/review-state.ts`, or make the table exhaustive-with-visible-failure mirroring the GitLab OQ-D discipline. Comment-level fix preferred (no fixture change). **Files**: `packages/adapters/src/github/review-state.ts`.
+- [ ] **P11-5** Re-run `pnpm check` and the provider trap suites; commit the remediation as one Conventional Commit (`fix(GH-188): ...` or `docs(GH-188): ...` per the touched surface); commit the pending `chg-GH-188-pm-notes.yaml` working-tree change (F-8) so the tree is clean before phase 11 PR creation.
+
+**Acceptance Criteria**:
+
+- Must: all four low findings closed with the smallest diff; no assertion weakened; `pnpm check` green; trap-catalog schema test green after the F-3/F-5 wording updates.
+- Must: working tree clean of stray doc modifications before PR creation.
+
+**Files and modules**:
+
+- Code areas: `packages/adapters/src/jira/workflow-map.ts`, `packages/adapters/src/github/review-state.ts` (comment-only edits); `tests/fixtures/providers/traps/github.traps.json` (data wording); `doc/spec/features/feature-provider-client-seeds.md` (convention note).
+- System docs: the P11-2 note rides the doc-sync surface owned by lifecycle phase 7.
+
+**Tests**:
+
+- `pnpm check` (aggregate) — no dedicated new suite; the existing trap-catalog schema test covers the fixture wording change.
+
+**Completion signal**: `fix(GH-188): close review iteration 1 low findings`
+
 ## Test Scenarios
 
 All 28 TCs from the test plan (v1.2) land in a phase; TC IDs, AC traces, and target files follow test-plan §§5–7 (locations authoritative there; this plan's only reconciliations are the phase assignments and the OQ-C..OQ-H decisions recorded in Context).
@@ -492,6 +522,7 @@ Protected paths untouched by every phase: `scripts/*.sh`, `scripts/checks/secret
 | Version | Date (UTC) | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-10-31T14:30:00Z | Implementation Plan Writer | Initial ten-phase, 38-task plan: contract extensions (ADR-0004/0006) first, confinement admission (ADR-0005) second, then Jira → GitLab → GitHub seeds with per-client trap suites, cross-client honesty/credential/surface suites, catalog/sanitization discipline, review/fix phases, and finalize/release with the §18 DoD checklist; 12/12 AC and 28/28 TC mapping; test-plan §8.3 OQ-C..OQ-H resolutions recorded (incl. the OQ-G gap-reason table and OQ-D merge-status rule); implementation-basis evaluations referenced as settled inputs (ticket comment 6536692124), not re-executed. |
+| 1.1 | 2026-10-31T12:00:00Z | Reviewer (review_fix phase) | Appended Phase P11 (Code Review Remediation, Iteration 1) from `code-review/review-iter-1.yaml`: verdict PASS (0 blocker / 0 major / 4 low / 4 info), all 12 ACs verified with independently re-run suites; remediation covers F-1 workflow-map comment typo, F-2 undocumented relative-io-import exception, F-3 GitHub closed→done state_reason limitation note, F-4 unknown-reviewDecision fallback declaration, plus the F-8 clean-tree requirement. |
 
 ## Execution Log
 

@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-10-31T01:45:00Z", completed: "2026-10-31T02:10:00Z", iteration: 2, verdict: "READY" }
   delivery: { started: "2026-10-31T02:15:00Z", completed: "2026-10-31T03:30:00Z" }
   system_spec_update: { started: "2026-10-31T03:35:00Z", completed: "2026-10-31T04:00:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-10-31T04:05:00Z", completed: null, iteration: 1, status: "PASS_with_remediation_P11" }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -77,5 +77,11 @@ notes:
     type: "info"
     date: "2026-10-31"
   - text: "Doc-sync surfaced its write-scope boundary cleanly (registry file = scripts/, outside doc-sync scope) and the fix routed to @coder without phase reopen — the always-resolve + in-change-remediation pattern held."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "Review iteration 1: Status=PASS (0 blocker/0 major/4 low/4 info). Reviewer independently re-ran suites (providers 78, structure 154, boundaries 124, secret-read 17 — all green), verified 12/12 ACs non-vacuous, all mutation controls fire by name, ADR conformance exact, all 5 coder deviations sound. Remediation Phase P11 appended to plan: (1) DH-188→GH-188 typo in jira/workflow-map.ts; (2) document the relative-import convention exception (packed-export parity) in feature spec; (3) record GitHub closed-not_planned mapping limitation in GH-ISSUE-TO-WORKITEM trap; (4) github review-state unknown-value fallback asymmetry vs GitLab fail-visible — declare or mirror. Then P10-1 changeset + P10-4 DoD checklist. Review artifacts: code-review/review-iter-1.yaml."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Review found no AC-washing and no boundary erosion — the coder's in-plan P6/P7 honesty suites did their job; findings were all documentation-truthfulness items. Anti-AC-washing investment (mutation controls, bidirectional coverage) paid off at review."
     type: "retro"
     date: "2026-10-31"

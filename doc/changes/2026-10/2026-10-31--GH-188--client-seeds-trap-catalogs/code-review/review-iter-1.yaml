@@ -1,0 +1,190 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-188
+branch: feat/GH-188/client-seeds-trap-catalogs
+status: PASS
+summary: >-
+  First review iteration of the GH-188 client seeds delivery (commits 2ed11eb..7904700, base
+  origin/main-tools). All 12 spec ACs trace to real implementing code with passing, non-vacuous
+  tests: the reviewer independently re-ran the provider/structure/checks/boundary suites
+  (78+154+17+124 tests, all green), pnpm typecheck, doc-distribution, forbidden-literals,
+  license-audit, and the secret-read invariant (exactly 4 allowlist entries, live tree clean).
+  Trap assertions were adversarially inspected for AC-washing: every catalog entry has a real,
+  keyed assertion, mutation controls genuinely fail naming their trap entry and fixture, the
+  throwing-fetch guard proves zero live calls, and catalog-assertion coverage is bidirectional.
+  ADR conformance verified (ADR-0004 additive updatedAt + optional comments pinned by the new
+  field-shape probe with firing removal/re-tighten mutations; ADR-0005 exact reason-bearing
+  confinement entries with registry/azure/ci negative controls and a widening guard; ADR-0006
+  custom-field mapping as declared data with typed boundary parsing and no raw-key leak).
+  Ticket AC-F8-1 process evidence verified: decision comment 6536692124 (2026-10-31T00:44:36Z)
+  predates the first implementation commit and matches the delivered basis. The four coder-declared
+  deviations were each verified as sound (details in findings): the relative io import, the
+  labels-destination custom-field mapping, the string|array fixtureReference schema, and the
+  regex-to-slicer replacement in the pre-existing WorkItem removal test. Remaining findings are
+  low/info: a DH-188 comment typo, an undocumented (but justified) intra-package import-style
+  exception, a forward-looking GitHub closed-to-done state_reason gap, and an asymmetric
+  unknown-decision fallback. No blocker or major findings; delivery may proceed to P10
+  finalization and PR creation, routing the low findings through the appended remediation phase.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 4
+  info: 4
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: documentation
+    location: packages/adapters/src/jira/workflow-map.ts:2
+    message: The module header comment references "DH-188 DM-4" — a typo for GH-188. The wrong
+      work-item ref in a product-code comment misdirects future archaeology.
+    suggestion: Change "DH-188" to "GH-188" in the workflow-map.ts header comment.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: low
+    confidence: medium
+    category: maintainability
+    location: packages/adapters/src/jira/client.ts:14
+    message: >-
+      The three provider seeds and their normalizers import the shared transport via the relative
+      path ../io/provider-transport.js (6 files) although .ai/rules/typescript.md §2 says
+      intra-package imports use the declared # aliases and #io/* exists in the adapters imports
+      map. The packed-export-parity rationale is technically sound — #io/* is src-mapped
+      (./src/io/*.ts) and would not resolve in the dist-only packed tarball, unlike the
+      dist-conditioned #contracts entry, so a relative .js import is the only rule-compatible
+      spelling that survives packaging — but the exception is documented nowhere (not in the plan
+      constraints, ADR-0005, or the feature spec), and the triplicated nativeFetchTransport is a
+      direct consequence of keeping fetch inside the admitted subpaths.
+    suggestion: Record the convention (one paragraph in doc/spec/features/feature-provider-client-seeds.md
+      or the plan's constraints): shared adapter support modules under src/io are imported
+      relatively with .js extensions because src-mapped # aliases cannot cross into packed dist;
+      alternatively propose a dist-conditioned #io alias via a reviewed change.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/adapters/src/github/review-state.ts:31
+    message: GITHUB_WORK_ITEM_STATUS_MAP maps every closed issue to deliveryState "done". Live
+      GitHub REST issues carry state_reason ("completed" | "not_planned" | "reopened"), so a
+      closed-not-planned issue would normalize as done rather than canceled. The synthetic
+      fixtures model open/closed only — which matches spec F-4 scope, so no trap fails today —
+      but the flattening risk surfaces exactly when M0-S20 live runs revalidate.
+    suggestion: Record the limitation in the GH-ISSUE-TO-WORKITEM trap entry (providerBehavior or
+      expectedNormalizedOutcome: closed maps to done; state_reason not modeled until a named
+      consumer) and revisit the mapping when M0-S20 records live shapes.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: low
+    confidence: medium
+    category: consistency
+    location: packages/adapters/src/github/review-state.ts:55
+    message: resolveGithubReviewState falls back to "open" for an unrecognized reviewDecision
+      value, while the GitLab merge-status resolver fails visibly on any native value outside its
+      declared table (the OQ-D no-silent-flattening discipline). Not spec-mandated for GitHub
+      (the decision set is closed at three values), but the asymmetry is undeclared.
+    suggestion: Either declare the fallback in a comment on the declared table (unknown decision
+      reads as open because the merged/closed/draft terminal truth precedes it) or make the
+      decision table exhaustive-with-visible-failure to mirror the GitLab discipline.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: info
+    confidence: high
+    category: documentation
+    location: tests/fixtures/providers/traps/github.traps.json:21
+    message: The GH-ISSUE-TO-WORKITEM expectedNormalizedOutcome contains the garbled phrase
+      "closed Set status alias" (intended: "closed-set status alias"). Catalog entries are the
+      reviewable data surface; wording should be clean.
+    suggestion: Reword to "a closed-set status alias" in the trap entry.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: info
+    confidence: high
+    category: code-quality
+    location: tests/behaviour/providers/trap-harness.ts:122
+    message: runTrapCatalog accepts client and transport options it never reads (assertions close
+      over them at the call site). The parameters match the planned P3-3 signature but are dead
+      surface on the harness API.
+    suggestion: Optional cleanup — drop the unused fields or use them in failure context.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: info
+    confidence: medium
+    category: documentation
+    location: packages/adapters/src/jira/normalize.ts:41
+    message: The relation normalizers silently drop link kinds outside the closed set (e.g., a
+      Jira "Caused" link, or a GitHub issue_links type other than blocks/blocked-by/relates-to).
+      Defensible under the closed relation-kind contract, but unlike custom fields (whose
+      non-representation is declared DM-8 data) nothing documents the drop.
+    suggestion: Optional — note the closed-set drop behavior in the feature spec's relation
+      section or the trap data so the next adapter author inherits the decision.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: info
+    confidence: high
+    category: process
+    location: doc/changes/2026-10/2026-10-31--GH-188--client-seeds-trap-catalogs/chg-GH-188-pm-notes.yaml:1
+    message: The working tree carries an uncommitted modification to the PM notes (phase
+      bookkeeping for review_fix). Harmless during the review phase, but the tree must be clean
+      before PR creation.
+    suggestion: Commit the pm-notes update with the review docs; verify git status --porcelain is
+      empty before phase 11.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-10-31T12:00:00Z
+next_step: PROCEED
+verification_evidence:
+  suites_rerun_by_reviewer:
+    - "bun test tests/behaviour/providers tests/structure/{trap-catalog,provider-surface,port-contract-inventory}.test.ts tests/checks/fixture-sanitization.test.ts -> 78 pass / 0 fail"
+    - "bun test tests/checks/secret-read-boundary.test.ts -> 17 pass / 0 fail"
+    - "bun test tests/structure -> 154 pass / 0 fail"
+    - "bun test tests/boundaries -> 124 pass / 0 fail"
+    - "pnpm typecheck -> green (incl. tests/types probes)"
+    - "bash scripts/.tests/test-doc-distribution.sh -> PASS"
+    - "bun run scripts/checks/forbidden-literals.ts -> PASS"
+    - "bun run scripts/checks/license-audit.ts -> PASS"
+    - "bun run scripts/checks/secret-read-boundary.ts -> OK (70 files clean, 4 allowlisted entries)"
+  ticket_evidence: "GH-188 decision comment 6536692124 (2026-10-31T00:44:36Z) — implementation-basis evaluation for all three clients against F-8 criteria, predates first implementation commit 2ed11eb; delivered code matches the recorded basis (direct REST GitHub/GitLab, custom Jira read slice, zero new dependencies; pnpm-lock.yaml and package manifests byte-unchanged vs origin/main-tools)."
+  deviation_verdicts:
+    - "Deviation 1 (relative ../io/provider-transport.js import): ACCEPTED as sound — src-mapped #io/* cannot resolve in the dist-only packed tarball (only the dist-conditioned #contracts can); documented-exception gap captured as F-2."
+    - "Deviation 2 (custom fields into prefixed labels with typed parsing): ACCEPTED — conforms to ADR-0006 E-b and DM-8 (declared mapping data, typed boundary parse '008'->story-points:8, unmapped visibly unrepresented, no raw customfield_* key); trap asserts canonicalization and non-leak."
+    - "Deviation 3 (fixtureReference string | non-empty array): ACCEPTED — matches the test plan's own trap index (JIRA-LABEL-REPLACE lists two fixtures); schema test rejects empty arrays and enforces four keys exactly."
+    - "Deviation 4 (WorkItem removal-test regex -> declaration slicer): ACCEPTED — assertion strength preserved (same inventory failure named for the missing contract); replacement was required because the P1 doc-comment rewrite broke the old regex anchor."
+    - "Deviation 5 (tests/types/tsconfig.json untouched): VERIFIED — glob already covers the new type probes; pnpm typecheck compiles them."
+ac_trace:
+  AC-F1-1: "PASS — provider-capabilities.test.ts asserts the exact OQ-G postures incl. per-operation gap reasons; remove-gap and non-operation mutations fail"
+  AC-F1-2: "PASS — provider-surface.test.ts (exact export lists, native/parallel-view rejection, any-escape scan) + provider-views.type-test.ts (Equal<> probes) + boundary matrix green with the DEC-1 extension"
+  AC-F2-1: "PASS — gitlab-trap.test.ts: complete per-commit pipeline set (order-insensitive, drop-mutation fires), declared merge-status table with detailed-over-merge_status precedence, async-never-terminal, unknown value fails visibly"
+  AC-F3-1: "PASS — jira-queries.test.ts: all four families answered from normalized WorkItem data; updatedAt present->active/stalled, absent->unknown; fabrication mutation fails naming JIRA-UPDATED-ABSENT; reverse-order replay deterministic"
+  AC-F3-2: "PASS — label replace before/after set-compare (accumulation mutation fires), custom-field typed mapping + no raw-key leak, WorkflowMap closed/exhaustive with per-mapping mechanism (removal fires), comments absent vs present-[] distinguishable (collapse mutation fires)"
+  AC-F4-1: "PASS — github-trap.test.ts per-variant review states incl. reviewDecision!=state divergence, failed check run not hidden behind green roll-up, disjoint SHA sets, issue updatedAt presence/absence; github-inputs.test.ts proves the exact three-view input set"
+  AC-F5-1: "PASS — trap-catalog.test.ts: four-key schema (fifth key fails), unique names, resolvable path#/json-pointer refs (with ~0/~1), minima 3/5/3, ticket-named families, data-only, provenance markers"
+  AC-F5-2: "PASS — trap suites pass offline; throwing-fetch guard records zero calls; double replay identical; corrupted-normalization controls fail naming trap + fixture; bidirectional catalog<->assertion coverage meta-check"
+  AC-F6-1: "PASS — fixture-sanitization.test.ts: 10 canary shapes fire with file/line; placeholders declared-and-used; example-domain hosts only; provenance markers; non-vacuity; audit read-only"
+  AC-F7-1: "PASS — secret-read allowlist exactly 4 (one credential-material); planted process.env reads fire in all three provider subpaths; zero ambient reads in provider modules (reviewer grep clean)"
+  AC-F7-2: "PASS — absent and empty credential values yield exactly config.credential.missing (domain config, category user, retryable false, consequence not_landed, projection user-validation); transport never called after failure; no canary/heap/env-dump leak"
+  AC-F8-1: "PASS — ticket comment 6536692124 records all three bases against F-8 criteria with the jira.js fallback trigger, before custom code; code matches the recorded basis"
+plan_task_audit:
+  OPEN_TASKS: "P8-1/P8-2 (discharged by this review), P9 (activated by appended P11 for the low findings), P10-1/P10-4/P10-5 (deferred pending this verdict by design), P10-2 (doc-sync handoff — content already landed in commit 7904700 and verified accurate)"
+  DONE_BUT_UNCHECKED: none
+  CHECKED_BUT_MISSING: none
+test_coverage_gaps: none
