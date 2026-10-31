@@ -1,0 +1,2 @@
+example-product db size  /synthetic/harness/opencode/opencode.db  db 4096 B | wal 512 B (present) | shm 0 B (absent)
+sessions 3 | messages 7 | parts 9  oldest 2026-10-01T12:00:00.000Z | newest 2026-10-31T11:59:59.000Z

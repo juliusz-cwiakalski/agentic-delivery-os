@@ -30,6 +30,11 @@ import {
   type RepositoryRootFacts,
   readRepositoryFacts,
 } from "@delivery-os/adapters/repo";
+import {
+  createSessionAdmin,
+  createSessionStore,
+  type OpencodeSessionIo,
+} from "@delivery-os/adapters/session";
 import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import { catalogPaths, PRODUCTION_CATALOG, resolveConfig } from "@delivery-os/core";
 import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
@@ -69,6 +74,7 @@ import {
   type ConfigResolvedSnapshot,
   createConfigCommandDefinition,
 } from "./commands/config.js";
+import { createDbCommandDefinition, type DbCommandRuntime } from "./commands/db.js";
 import {
   createLintCommandDefinition,
   type LintCommandRuntime,
@@ -242,6 +248,30 @@ export type StatusComposition = {
   readonly github: { readonly instance: ExternalSystemInstance };
 };
 
+/** Injected I/O and clock for the db command family (GH-180 PIN-6). */
+export type DbComposition = {
+  readonly io: OpencodeSessionIo;
+  readonly clock: { readonly nowMs: () => number };
+};
+
+/** Compose the db runtime over the store/admin ports and the injected clock. */
+export const createDbCommandRuntime = (composition: DbComposition): DbCommandRuntime => {
+  const store = createSessionStore(composition.io);
+  const admin = createSessionAdmin(composition.io);
+  return {
+    size: () => store.size(),
+    list: (input) => store.list({ limit: input.limit, nowMs: composition.clock.nowMs() }),
+    prune: (input) =>
+      admin.prune({
+        olderThanDays: input.olderThanDays,
+        limit: input.limit,
+        apply: input.apply,
+        nowMs: composition.clock.nowMs(),
+      }),
+    reboot: (input) => admin.reboot({ apply: input.apply, nowMs: composition.clock.nowMs() }),
+  };
+};
+
 const providerFailure = (failure: { readonly code: string }): StatusReadFailure =>
   failure.code === "config.credential.missing"
     ? { ok: false, reason: "credential-unavailable", failureCode: "config.credential.missing" }
@@ -382,6 +412,7 @@ export type ConfigProgramOptions = {
   readonly provider?: ProviderComposition;
   readonly verify?: VerifyCommandRuntime;
   readonly status?: StatusComposition;
+  readonly db?: DbComposition;
 };
 
 export type ConfigProgramResult =
@@ -628,6 +659,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   }
   if (options.verify !== undefined) {
     commands.verify = createVerifyCommandDefinition(options.verify);
+  }
+  if (options.db !== undefined) {
+    commands.db = createDbCommandDefinition(createDbCommandRuntime(options.db));
   }
   return {
     ok: true,

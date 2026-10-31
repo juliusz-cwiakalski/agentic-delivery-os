@@ -1,0 +1,4 @@
+example-product db prune  dry-run  older than 30 d | live window 15 min | limit 50
+  candidates 2 | deleted 0 | failed 0 | skipped 0 | live excluded 0
+  ses_alpha  updated 2026-10-01T11:59:59.000Z  messages 2 | parts 1 | bytes 11
+  ses_beta  updated 2026-10-01T11:59:58.000Z  messages 2 | parts 1 | bytes 11

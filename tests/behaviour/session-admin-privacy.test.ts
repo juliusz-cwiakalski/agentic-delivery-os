@@ -4,12 +4,22 @@
  * seam is adapter-local and destructively inert, and the item shape is closed.
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 import { createSessionAdmin, createSessionStore } from "../../packages/adapters/src/session/index";
-import { CANARY, FORBIDDEN_FIELDS, forbiddenRow } from "../fixtures/session-admin/canary";
-import { createFakeIo, NOW_MS, SYNTHETIC_DB_PATH } from "../fixtures/session-admin/harness";
+import {
+  CANARY,
+  ENV_CANARY,
+  FORBIDDEN_FIELDS,
+  forbiddenRow,
+} from "../fixtures/session-admin/canary";
+import {
+  createFakeIo,
+  NOW_MS,
+  runDbWithIo,
+  SYNTHETIC_DB_PATH,
+} from "../fixtures/session-admin/harness";
 import { makeSession, sessionRow } from "../fixtures/session-admin/store";
 
 const ROOT = process.cwd();
@@ -183,5 +193,121 @@ describe("TC-DB-036 hermeticity scaffold", () => {
     expect(CANARY.length).toBeGreaterThan(0);
     expect(CANARY).toContain("CANARY");
     expect(forbiddenRow("ses_probe").title).toBe(CANARY);
+  });
+});
+
+describe("TC-DB-029 metadata-only whitelist, canary, and mutation sensitivity", () => {
+  const listRow = (): Record<string, unknown> => ({
+    ...forbiddenRow("ses_canary"),
+    ...sessionRow(makeSession({ id: "ses_canary", timeUpdated: NOW_MS - 1_000 })),
+  });
+
+  test("the canary is present in the raw response before it is absent from output", async () => {
+    const raw = listRow();
+    expect(raw.title).toBe(CANARY);
+    expect(raw.prompt).toBe(CANARY);
+    expect(JSON.stringify(raw)).toContain(CANARY);
+    const io = createFakeIo();
+    io.queueQuery([{ total: 1 }]);
+    io.queueQuery([raw]);
+    const machine = await runDbWithIo(["db", "list", "--json"], io);
+    expect(machine.exitCode).toBe(0);
+    expect(machine.stdout).not.toContain(CANARY);
+    expect(machine.stderr).not.toContain(CANARY);
+    const envelope = JSON.parse(machine.stdout) as Record<string, unknown>;
+    expect(JSON.stringify(envelope)).not.toContain(CANARY);
+    expect(envelope.data).toMatchObject({
+      schemaVersion: "delivery.session-admin.v1",
+      command: "list",
+    });
+
+    const humanIo = createFakeIo();
+    humanIo.queueQuery([{ total: 1 }]);
+    humanIo.queueQuery([listRow()]);
+    const human = await runDbWithIo(["db", "list"], humanIo);
+    expect(human.exitCode).toBe(0);
+    expect(human.stdout).not.toContain(CANARY);
+  });
+
+  test("an invalid id carrying the canary is rejected without echoing it", async () => {
+    const io = createFakeIo();
+    io.queueQuery([{ total: 1 }]);
+    io.queueQuery([{ ...listRow(), id: `${CANARY} '` }]);
+    const run = await runDbWithIo(["db", "list", "--json"], io);
+    expect(run.exitCode).toBe(2);
+    expect(run.stdout).not.toContain(CANARY);
+    expect(run.stderr).not.toContain(CANARY);
+    expect(JSON.parse(run.stdout)).toMatchObject({ error: { code: "db.query.failed" } });
+  });
+
+  test("the exact key sets stay closed and no extra field survives", async () => {
+    const io = createFakeIo();
+    io.queueQuery([{ total: 1 }]);
+    io.queueQuery([listRow()]);
+    const run = await runDbWithIo(["db", "list", "--json"], io);
+    const envelope = JSON.parse(run.stdout) as { data: { items: Record<string, unknown>[] } };
+    expect(Object.keys(envelope.data).sort()).toEqual([
+      "command",
+      "items",
+      "limit",
+      "omitted",
+      "schemaVersion",
+      "total",
+      "truncated",
+    ]);
+    const item = envelope.data.items[0] ?? {};
+    expect(Object.keys(item).sort()).toEqual([
+      "archived",
+      "createdAt",
+      "dataBytes",
+      "id",
+      "live",
+      "messageCount",
+      "partCount",
+      "updatedAt",
+    ]);
+    const wide = { ...item, title: CANARY };
+    expect(JSON.stringify(wide)).toContain(CANARY);
+    expect(Object.hasOwn(item, "title")).toBe(false);
+  });
+
+  test("the injected environment value never appears in output", async () => {
+    const io = createFakeIo();
+    (io as { environment: Readonly<Record<string, string | undefined>> }).environment = {
+      PATH: "/synthetic/bin",
+      SECRET: ENV_CANARY,
+    };
+    io.statFacts.set(SYNTHETIC_DB_PATH, { bytes: 4096, present: true });
+    io.statFacts.set(`${SYNTHETIC_DB_PATH}-wal`, { bytes: 0, present: false });
+    io.statFacts.set(`${SYNTHETIC_DB_PATH}-shm`, { bytes: 0, present: false });
+    io.queueQuery([{ sessions: 0, oldest: null, newest: null }]);
+    io.queueQuery([{ messages: 0 }]);
+    io.queueQuery([{ parts: 0 }]);
+    const run = await runDbWithIo(["db", "size", "--json"], io);
+    expect(run.exitCode).toBe(0);
+    expect(run.stdout).not.toContain(ENV_CANARY);
+    expect(run.stderr).not.toContain(ENV_CANARY);
+  });
+
+  test("committed fixtures outside the canary source carry no forbidden field", () => {
+    const root = join(ROOT, "tests/fixtures/session-admin");
+    const files: string[] = [];
+    const walk = (path: string): void => {
+      for (const entry of readdirSync(path, { withFileTypes: true })) {
+        const next = join(path, entry.name);
+        if (entry.isDirectory()) walk(next);
+        else if (entry.name.endsWith(".ts")) files.push(next);
+      }
+    };
+    walk(root);
+    expect(files.length).toBeGreaterThan(0);
+    for (const file of files) {
+      if (file.endsWith("canary.ts")) continue;
+      const text = readFileSync(file, "utf8");
+      for (const field of FORBIDDEN_FIELDS) {
+        expect(text.includes(`"${field}"`), `${file} carries ${field}`).toBe(false);
+      }
+      expect(text).not.toContain(CANARY);
+    }
   });
 });

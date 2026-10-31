@@ -1,0 +1,3 @@
+example-product db reboot  dry-run  live sessions 1 | checkpoint not-performed
+  wal 19800000 B -> unchanged B
+  restart the opencode host manually; this command only prepares the database

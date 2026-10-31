@@ -8,8 +8,9 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
-import { registerEdgeSecrets } from "../../packages/cli/src/edge";
+import { createConfigProgram, registerEdgeSecrets } from "../../packages/cli/src/edge";
 import { type CliDependencies, runCli } from "../../packages/cli/src/index";
+import { createFakeIo, NOW_MS, SYNTHETIC_DB_PATH } from "../fixtures/session-admin/harness";
 import { bufferSink, loadProgram, programFor, SYNTHETIC_BRAND } from "../golden/helpers";
 
 const ROOT = process.cwd();
@@ -291,6 +292,7 @@ const COMMANDS_INDEX = `${CLI_DIR}/commands/index.ts`;
 const EDGE = `${CLI_DIR}/edge.ts`;
 const CORE_DIR = "packages/core/src";
 const NEW_COMMAND_FILES = [
+  `${CLI_DIR}/commands/db.ts`,
   `${CLI_DIR}/commands/lint.ts`,
   `${CLI_DIR}/commands/phase.ts`,
   `${CLI_DIR}/commands/status.ts`,
@@ -354,8 +356,10 @@ const exitDecisionFailures = (root: string): string[] => {
 };
 
 describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
-  test("lint, phase, status, and verify are exported from the commands tier", () => {
+  test("db, lint, phase, status, and verify are exported from the commands tier", () => {
     const index = readFileSync(join(ROOT, COMMANDS_INDEX), "utf8");
+    expect(index).toContain('export type { DbCommandRuntime } from "./db.js"');
+    expect(index).toContain('export { createDbCommandDefinition } from "./db.js"');
     expect(index).toContain('export { createLintCommandDefinition } from "./lint.js"');
     expect(index).toContain('export { createPhaseCommandDefinition } from "./phase.js"');
     expect(index).toContain('export { createStatusCommandDefinition } from "./status.js"');
@@ -371,6 +375,10 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(edge).toContain("commands.phase = createPhaseCommandDefinition(options.phase)");
     expect(edge).toContain("commands.status = createStatusCommandDefinition");
     expect(edge).toContain("commands.verify = createVerifyCommandDefinition(options.verify)");
+    expect(edge).toContain('from "./commands/db.js"');
+    expect(edge).toContain("createDbCommandRuntime");
+    expect(edge).toContain("options.db !== undefined");
+    expect(edge).toContain("commands.db = createDbCommandDefinition");
     expect(edge).toContain('from "./commands/status.js"');
     expect(edge).toContain("createStatusCommandRuntime");
     expect(edge).toContain("createVerifyCommandRuntime");
@@ -405,17 +413,83 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
       }
       return names;
     };
+    expect(exported(`${CLI_DIR}/commands/db.ts`)).toEqual(["createDbCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/lint.ts`)).toEqual(["createLintCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/phase.ts`)).toEqual(["createPhaseCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/verify.ts`)).toEqual(["createVerifyCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/status.ts`)).toEqual(["createStatusCommandDefinition"]);
   });
 
-  test("only status declares the optional human-text renderer", () => {
+  test("only db and status declare the optional human-text renderer", () => {
     const declarers = listTypeScriptFiles(ROOT, `${CLI_DIR}/commands`).filter((file) =>
       readFileSync(join(ROOT, file), "utf8").includes("humanText"),
     );
-    expect(declarers).toEqual([`${CLI_DIR}/commands/status.ts`]);
+    expect(declarers).toEqual([`${CLI_DIR}/commands/db.ts`, `${CLI_DIR}/commands/status.ts`]);
+  });
+
+  test("db is registered only when the composition is supplied", async () => {
+    const options = {
+      workingName: "synthetic",
+      environment: {},
+      cwd: "/work",
+      homeDirectory: "/home/synthetic",
+      platform: "linux" as const,
+      fs: { exists: () => false, readText: () => "" },
+      repositoryIo: { exists: () => false, isFile: () => false, readText: () => "" },
+    };
+    const absent = createConfigProgram(options);
+    expect(absent.ok).toBe(true);
+    if (!absent.ok) return;
+    expect(absent.program.commands.db).toBeUndefined();
+    const absentStdout = bufferSink();
+    const absentStderr = bufferSink();
+    const absentDeps: CliDependencies = {
+      brand: absent.brand,
+      clock: { now: () => 100 },
+      newRunId: () => "run-db-absent",
+      secrets: [],
+      program: absent.program,
+    };
+    const absentExit = await runCli(
+      ["db", "size", "--json"],
+      { stdout: absentStdout, stderr: absentStderr },
+      absentDeps,
+    );
+    expect(absentExit).toBe(1);
+    expect(JSON.parse(absentStdout.value)).toMatchObject({
+      error: { code: "fallback.invocation" },
+    });
+
+    const io = createFakeIo();
+    io.statFacts.set(SYNTHETIC_DB_PATH, { bytes: 4096, present: true });
+    io.statFacts.set(`${SYNTHETIC_DB_PATH}-wal`, { bytes: 0, present: false });
+    io.statFacts.set(`${SYNTHETIC_DB_PATH}-shm`, { bytes: 0, present: false });
+    io.queueQuery([{ sessions: 1, oldest: NOW_MS, newest: NOW_MS }]);
+    io.queueQuery([{ messages: 1 }]);
+    io.queueQuery([{ parts: 1 }]);
+    const present = createConfigProgram({
+      ...options,
+      db: { io, clock: { nowMs: () => NOW_MS } },
+    });
+    expect(present.ok).toBe(true);
+    if (!present.ok) return;
+    expect(present.program.commands.db).toBeDefined();
+    const presentStdout = bufferSink();
+    const presentStderr = bufferSink();
+    const presentDeps: CliDependencies = {
+      brand: present.brand,
+      clock: { now: () => 100 },
+      newRunId: () => "run-db-present",
+      secrets: [],
+      program: present.program,
+    };
+    const presentExit = await runCli(
+      ["db", "size", "--json"],
+      { stdout: presentStdout, stderr: presentStderr },
+      presentDeps,
+    );
+    expect(presentExit).toBe(0);
+    expect(JSON.parse(presentStdout.value)).toMatchObject({ data: { command: "size" } });
   });
 
   test("a seeded core-imports-CLI violation is caught", () => {

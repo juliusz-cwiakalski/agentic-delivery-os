@@ -5,6 +5,8 @@
 
 export type { ConfigCommandRuntime } from "./config.js";
 export { createConfigCommandDefinition } from "./config.js";
+export type { DbCommandRuntime } from "./db.js";
+export { createDbCommandDefinition } from "./db.js";
 export type {
   LintCommandRuntime,
   LintPmNotesRead,

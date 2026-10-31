@@ -1,0 +1,4 @@
+example-product db list  3 of 3 sessions  limit 20  live in page 1
+  ses_alpha  live  updated 2026-10-31T11:59:59.000Z  messages 2 | parts 1 | bytes 11
+  ses_beta  idle  updated 2026-10-31T11:59:58.000Z  messages 2 | parts 1 | bytes 11
+  ses_gamma  idle  updated 2026-10-31T11:59:57.000Z  messages 2 | parts 1 | bytes 11

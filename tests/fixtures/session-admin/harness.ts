@@ -6,9 +6,29 @@
  * the network. Query answers are scripted per call; mutation hooks change the
  * scripted state between calls, never a live store.
  */
-import type { SessionFileFacts } from "../../../packages/adapters/src/session/index";
-import type { OpencodeSessionIo } from "../../../packages/adapters/src/session/index";
-import type { SessionAdminError } from "../../../packages/core/src/contracts/index";
+import type {
+  OpencodeSessionIo,
+  SessionFileFacts,
+} from "../../../packages/adapters/src/session/index";
+import {
+  createDbCommandDefinition,
+  type DbCommandRuntime,
+} from "../../../packages/cli/src/commands/db";
+import { createDbCommandRuntime } from "../../../packages/cli/src/edge";
+import { type CliDependencies, runCli } from "../../../packages/cli/src/index";
+import {
+  DB_SCHEMA_VERSION,
+  type ListData,
+  type PruneData,
+  type RebootData,
+  type SessionAdminError,
+  type SessionListRead,
+  type SessionPruneRead,
+  type SessionRebootRead,
+  type SessionSizeRead,
+  type SizeData,
+} from "../../../packages/core/src/contracts/index";
+import { bufferSink, SYNTHETIC_BRAND } from "../../golden/helpers";
 
 export const NOW_MS = Date.UTC(2026, 9, 31, 12, 0, 0);
 export const DAY_MS = 86_400_000;
@@ -156,3 +176,148 @@ export const callsOf = (io: FakeSessionIo, kind: FakeCall["kind"]): FakeCall[] =
 
 export const queries = (io: FakeSessionIo): string[] =>
   callsOf(io, "query").map((call) => call.value);
+
+export const emptySizeData = (): SizeData => ({
+  schemaVersion: DB_SCHEMA_VERSION,
+  command: "size",
+  database: {
+    path: SYNTHETIC_DB_PATH,
+    dbBytes: 0,
+    walBytes: 0,
+    shmBytes: 0,
+    walPresent: false,
+    shmPresent: false,
+  },
+  counts: { sessions: 0, messages: 0, parts: 0 },
+  oldestSessionUpdatedAt: null,
+  newestSessionUpdatedAt: null,
+});
+
+export const emptyListData = (limit = 20): ListData => ({
+  schemaVersion: DB_SCHEMA_VERSION,
+  command: "list",
+  limit,
+  total: 0,
+  omitted: 0,
+  truncated: false,
+  items: [],
+});
+
+export const emptyPruneData = (apply = false): PruneData => ({
+  schemaVersion: DB_SCHEMA_VERSION,
+  command: "prune",
+  mode: apply ? "applied" : "dry-run",
+  olderThanDays: 30,
+  limit: 50,
+  liveWindowMinutes: 15,
+  cutoff: new Date(NOW_MS - 30 * DAY_MS).toISOString(),
+  counts: { selected: 0, deleted: 0, failed: 0, skipped: 0, liveExcluded: 0 },
+  candidates: [],
+});
+
+export const emptyRebootData = (apply = false): RebootData => ({
+  schemaVersion: DB_SCHEMA_VERSION,
+  command: "reboot",
+  mode: apply ? "applied" : "dry-run",
+  liveWindowMinutes: 15,
+  liveSessions: 0,
+  blockedByLiveSession: false,
+  checkpointPerformed: apply,
+  database: {
+    path: SYNTHETIC_DB_PATH,
+    walBytesBefore: 0,
+    ...(apply ? { walBytesAfter: 0 } : {}),
+    walPresent: false,
+    shmPresent: false,
+  },
+});
+
+export type FakeRuntimeScript = {
+  readonly size?: SessionSizeRead;
+  readonly list?: SessionListRead;
+  readonly prune?: SessionPruneRead;
+  readonly reboot?: SessionRebootRead;
+};
+
+export type RuntimeCall = {
+  readonly method: "size" | "list" | "prune" | "reboot";
+  readonly input?: unknown;
+};
+
+export type FakeDbRuntime = DbCommandRuntime & {
+  readonly calls: RuntimeCall[];
+};
+
+export const createFakeRuntime = (script: FakeRuntimeScript = {}): FakeDbRuntime => {
+  const calls: RuntimeCall[] = [];
+  return {
+    calls,
+    async size() {
+      calls.push({ method: "size" });
+      return script.size ?? { ok: true, value: emptySizeData() };
+    },
+    async list(input) {
+      calls.push({ method: "list", input });
+      return script.list ?? { ok: true, value: emptyListData(input.limit) };
+    },
+    async prune(input) {
+      calls.push({ method: "prune", input });
+      return script.prune ?? { ok: true, value: emptyPruneData(input.apply) };
+    },
+    async reboot(input) {
+      calls.push({ method: "reboot", input });
+      return script.reboot ?? { ok: true, value: emptyRebootData(input.apply) };
+    },
+  };
+};
+
+export type DbCliRun = {
+  readonly exitCode: number;
+  readonly stdout: string;
+  readonly stderr: string;
+};
+
+export type DbCliOptions = {
+  readonly brand?: typeof SYNTHETIC_BRAND;
+  readonly secrets?: readonly string[];
+  readonly runId?: string;
+  readonly ticks?: readonly [number, number];
+};
+
+export const runDbCli = async (
+  argv: readonly string[],
+  runtime: DbCommandRuntime,
+  options: DbCliOptions = {},
+): Promise<DbCliRun> => {
+  const stdout = bufferSink();
+  const stderr = bufferSink();
+  const ticks = options.ticks ?? [100, 110];
+  let tick = 0;
+  const deps: CliDependencies = {
+    brand: options.brand ?? SYNTHETIC_BRAND,
+    clock: {
+      now: () => {
+        const value = ticks[Math.min(tick, 1)] as number;
+        tick += 1;
+        return value;
+      },
+    },
+    newRunId: () => options.runId ?? "run-db-fixture",
+    secrets: options.secrets ?? [],
+    program: { commands: { db: createDbCommandDefinition(runtime) } },
+  };
+  const exitCode = await runCli(argv, { stdout, stderr }, deps);
+  return { exitCode, stdout: stdout.value, stderr: stderr.value };
+};
+
+export const runDbWithIo = async (
+  argv: readonly string[],
+  io: FakeSessionIo,
+  options: DbCliOptions & { readonly nowMs?: number } = {},
+): Promise<DbCliRun> => {
+  const runtime = createDbCommandRuntime({
+    io,
+    clock: { nowMs: () => options.nowMs ?? NOW_MS },
+  });
+  return runDbCli(argv, runtime, options);
+};
