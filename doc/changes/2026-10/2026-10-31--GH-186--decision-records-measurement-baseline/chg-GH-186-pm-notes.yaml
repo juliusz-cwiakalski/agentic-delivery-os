@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-10-31T17:22:00Z", completed: "2026-10-31T17:40:00Z", iterations: 3, verdict: "READY (iter 3)" }
   delivery: { started: "2026-10-31T17:45:00Z", completed: "2026-10-31T18:20:00Z" }
   system_spec_update: { started: "2026-10-31T18:40:00Z", completed: "2026-10-31T19:05:00Z" }
-  review_fix: { started: "2026-10-31T19:07:00Z", completed: null, iterations: 1, verdict: "FAIL" }
+  review_fix: { started: "2026-10-31T20:30:00Z", completed: "2026-10-31T21:00:00Z", iterations: 2, verdict: "PASS (iter 2)" }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -105,5 +105,8 @@ notes:
     type: "retro"
     date: "2026-10-31"
   - text: "Review remediation applied in fdec870 (pushed): R-1 fixed all three GH-170 anchors to phases.quality_gate_iterations (every source locator and row anchor resolves at 75b4e76); R-2 restored glossary.md and feature-adapter-ports.md to 36e878f, dropping the NG-7-excluded dedup while keeping delivered content; R-4 plan bookkeeping; R-5 GH-174 checks_affected wording; R-6 GH-171 by-design zero/null note. Metrics unchanged (ceremony 0.406648, cycle n=20 median 5.3 p90 18.4, CI 3/4, false-signal 4); all doc gates green. doc-sync-report.md reconciled to the reverted state. Proceeding to independent re-review."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Review iteration 2 verdict PASS (review/review-iter-2.md, code-review/review-iter-2.yaml): 0 critical/high/medium/low, 2 info. F-1 closed with 0 unresolved anchors; F-2 closed (both files byte-identical to 36e878f); metrics independently recomputed and unchanged; all gates green including branch-range commitlint. Residual info: GH-172/173 compound anchor descriptors (field paths resolve) and plan Phase 13.4 still says Phases 11-12 not executed while their boxes are ticked (stale under-claim, no false completion)."
     type: "info"
     date: "2026-10-31"
