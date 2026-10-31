@@ -476,8 +476,8 @@ in the CLI or domain. Order is the bash usage order.
 | `blocked` | Blocked label present | **Reserved** — tracker evidence | none | `success` | `0` |
 | `pr-open` | Open PR resolved for the branch/ref | **Reserved** — PR evidence | none | `success` | `0` |
 | `pr-open-unverified` | Open PR but its URL could not be resolved | **Reserved** — PR evidence | none | `success` | `0` |
-| `finished` | PM finished / complete artifact ledger | All required phases of the declared variant completed (declaration + registry overlay) | success envelope | `success` | `0` |
 | `failed` | Classification failed / delivery failure | Document-conformance failure (`lint.notes.malformed`, `lint.keys.missing`, `lint.variant.unknown`, `lint.target.missing`, `input.value.rejected`) or a user-category `state.*` failure | the pinned identity | `user-validation` | `1` |
+| `finished` | PM finished / complete artifact ledger | All required phases of the declared variant completed (declaration + registry overlay) | success envelope | `success` | `0` |
 | `max-restarts` | Restart budget exhausted | **Reserved** — dispatch/session evidence (M1-S9) | none | `user-validation` | `1` |
 | `state-unverified` | Delivery state could not be verified (bash: tracker poll failed) | Platform-category registry/store failure (`state.store.torn`, `state.schema.mismatch`, `state.keys.missing`) | the specific `state.*` identity | `platform-provider` | `2` (see DEC-5) |
 | `partial` | Incomplete artifact ledger | Required phase(s) not completed after overlay: absent from the declaration → `lint.phases.incomplete`; declared but not completed → `verify.ledger.incomplete` | one of those identities | `user-validation` | `1` |
@@ -1000,6 +1000,11 @@ serialization redaction path are unchanged.
 
 ## Revision Log
 
+- **v1.2 (2026-10-31)** — Delivery-discovered correction. The C-4 table listed
+  `finished` before `failed`, contradicting the section's own "Order is the bash
+  usage order" rule and TC-VERIFY-018's in-order row assertion; the two rows are
+  swapped to the normative bash order (`failed` then `finished`). No token,
+  taxonomy value, identity, exit, summary, or AC changed — row order only.
 - **v1.1 (2026-10-31)** — DoR iter-1 amendment. The `verify.ledger.incomplete`
   remediation hint is pinned to one brand-neutral exact string (the phase
   command, not a product literal) so the additive machine row and its documented

@@ -9,7 +9,7 @@ phases:
   test_planning: { started: "2026-10-31T01:10:00Z", completed: "2026-10-31T01:50:00Z", reopened: "2026-10-31T03:05:00Z (dor iter-1 minor/nit: TC-012 outside-taxonomy bucket; TC-018 'none' comparer rule)", reopened_completed: "2026-10-31T03:40:00Z (test plan v1.1: outside-taxonomy bucket; none-prefix rule; TC-019 hint pinned)" }
   delivery_planning: { started: "2026-10-31T01:55:00Z", completed: "2026-10-31T02:40:00Z", reopened: "2026-10-31T03:05:00Z (dor iter-1 major fold-in: plan 1.2 must mirror the brand-neutral pinned hint and drop the contradictory clause)", reopened_completed: "2026-10-31T03:45:00Z (plan v1.1: task 1.2 byte-for-byte hint; version refs updated; phases/tasks/TCs unchanged)" }
   dor_check: { started: "2026-10-31T02:45:00Z", completed: "2026-10-31T04:05:00Z", verdict: "READY iter-2 (10/10 facets PASS; zero blockers/majors; 1 non-blocking nit: stale test-plan pointers, folded). iter-1 NOT_READY (9/10; 1 major/1 minor/3 nits) closed in one reopen cycle (spec/test-plan/plan v1.1). Artifacts readiness-review/readiness-iter-1.md, readiness-iter-2.md. Reviewer independently re-verified corpus, bash enum, 21 TC/14 AC/7 NFR, 10 phases/44 tasks, and the brand-neutral hint byte-match." }
-  delivery: { started: null, completed: null }
+  delivery: { started: "2026-10-31T04:10:00Z", completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -23,7 +23,11 @@ decisions:
   - text: "PM decision (precedent-setting, recorded): TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md adopts the eleven bash tokens verbatim as the single CLI vocabulary with a total taxonomy; CLI exits derive only from the result-contract projection classes. One deliberate divergence: state-unverified -> platform-provider -> exit 2 (bash exits 1). Token parity, not numeric exit parity, is the dual-run comparison unit; broken invocations stay fallback.invocation -> 1. Status Proposed pending owner ratification at PR review."
     date: "2026-10-31"
 open_questions: []  # exit-taxonomy question RESOLVED by spec DEC-5/DEC-11 and TDR-0005 (state-unverified -> 2; token parity is the dual-run unit)
-blockers: []
+blockers:
+  - text: "Delivery Phase 1 stopped @coder at task 1.4: spec C-4 table listed `finished` before `failed`, contradicting the section's own 'Order is the bash usage order' rule and TC-VERIFY-018's in-order row assertion. @coder correctly refused to weaken the test or silently edit the spec."
+    date: "2026-10-31"
+    resolved_date: "2026-10-31"
+    resolution: "PM corrected spec v1.2 (swap the two C-4 rows to the normative bash order; no token/taxonomy/identity/exit change). Delivery resumed."
 notes:
   - text: "State detected at session start: GH-177 open, no labels, no comments, no open PR, no local change artifacts, detached HEAD; treated as fresh delivery on a new branch from main-tools. Exactly one workItemRef this session. PR base main-tools; PM never merges."
     type: "info"
@@ -51,6 +55,9 @@ notes:
     date: "2026-10-31"
   - text: "DoR iter-2 READY (10/10 facets PASS, zero blockers/majors). All five iter-1 findings verified closed with independent evidence; one new non-blocking nit (test-plan implementation_plan null and 'revision log v1.0') folded immediately (frontmatter now points at the plan; §2 says v1.1). Delivery may start at plan Phase 1. TDR-0005 owner ratification remains scheduled at PR review."
     type: "info"
+    date: "2026-10-31"
+  - text: "Delivery Phase 1 blocker (resolved same session): @coder correctly stopped rather than weaken TC-VERIFY-018 or edit binding artifacts. Root cause: spec C-4 table row order drifted from the normative bash order (`failed` before `finished`) while the section declared bash order and the test asserted row order. PM correction: spec v1.2 swaps the two rows only; test plan/plan unchanged. Lesson: artifact authors/DoR must compare documented-table ROW order against the extracted reference order, not just token membership — iter-2 checked membership/fields but not the table's own order."
+    type: "retro"
     date: "2026-10-31"
   - text: "Runtime learnings carried forward: pre-authorize inline committer discipline for @coder (one Conventional Commit per plan phase, explicit staging, never stage .ai/local/ or tmp/); PM owns @runner/@doc-syncer/@pr-manager. Prefer chunked authoring delegations for long artifacts (GH-179 retros)."
     type: "info"
