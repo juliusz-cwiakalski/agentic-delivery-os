@@ -1,0 +1,45 @@
+change_id: GH-188
+title: "M0-S19: Client seeds with trap catalogs"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-10-31T00:00:00Z", completed: "2026-10-31T00:35:00Z" }
+  specification: { started: "2026-10-31T00:35:00Z", completed: "2026-10-31T01:00:00Z" }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions:
+  - text: "Implementation basis (ticket-mandated, recorded in ticket comment 6536692124): GitHub + GitLab = direct REST API via native fetch (CLIs disqualified: own token caches, subprocess output drift); Jira = custom minimal read-slice client (no official TS client; jira.js MIT viable but unused surface; MCP clients need host+creds outside credential port). Fallback: re-evaluate jira.js at M0-S14 write ops. Zero new dependencies."
+    date: "2026-10-31"
+  - text: "ADR-0004 (Proposed): additive optional WorkItem.updatedAt (ISO-8601 UTC; absent = activity unknown) resolves the stall-query port-shape gap; contract-inventory test + fixture update ride in this change."
+    date: "2026-10-31"
+  - text: "ADR-0005 (Proposed): runtime-API confinement gains reason-bearing entries for github/gitlab/jira provider client subpaths; refines ADR-0003 via new record + editorial pointer (no in-place semantic rewrite); secret-read allowlist stays at exactly 4 entries."
+    date: "2026-10-31"
+  - text: "OQ-2 resolved to spec default: transitions-as-data quirk covered read-only via WorkflowMap + trap entry; Jira write/transition declared gaps; write ops arrive with M0-S14 per ticket-recorded outcome."
+    date: "2026-10-31"
+open_questions: []
+blockers: []
+notes:
+  - text: "State detection: issue OPEN, no labels, milestone M0; no change folder, no branch artifacts, no open/merged PR — fresh delivery. Dependency GH-181 (M0-S12 credential port) closed 2026-10-30, so dependency is satisfied."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Ticket AC 'the GitHub read slice serves status and verify change on this repository' is interpreted as: the read slice provides the PR/pipeline/issue reads that the M0-S6 status collector and M0-S8 verify-change need as inputs — status and verify commands themselves are downstream stories (backlog confirms M0-S6 and M0-S9 depend on M0-S19, and 'The Jira read slice from M0-S19 precedes this story')."
+    type: "decision"
+    date: "2026-10-31"
+  - text: "Ticket mandates an implementation-basis evaluation recorded in the ticket: GitHub/GitLab provider CLI vs direct API; Jira official/open-source client evaluation before custom code. Plan: delegate evaluation to @decision-advisor during planning, record outcome as a ticket comment (decision log)."
+    type: "decision"
+    date: "2026-10-31"
+  - text: "Doc impacts anticipated: new feature spec for provider client seeds (doc/spec/features/feature-*.md authored by doc-syncer in phase 7 per always-resolve rule); possible updates to feature-adapter-ports.md (consumed-by/risks); AGENTS.md repo structure section only if new top-level dirs appear (avoid). Trap-catalog fixtures are change-scoped test assets."
+    type: "risk"
+    date: "2026-10-31"
+  - text: "Specification reopened once mid-chain: spec-writer surfaced 3 decision-worthy items (implementation basis, WorkItem stall timestamp, ADR-0003 confinement tension). Resolved via one @decision-advisor session (ADR-0004, ADR-0005, ticket-recorded D-A), then re-delegated corrections to @spec-writer (13 items) + 4 PM consistency line-edits. Chain resumed cleanly."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "M0-S14 cross-story note: closeout needs Jira write ops; the seed delivers them as declared gaps with WorkflowMap as foundation plus the jira.js re-evaluation fallback trigger — M0-S14 must extend the seed or trigger the fallback."
+    type: "info"
+    date: "2026-10-31"
