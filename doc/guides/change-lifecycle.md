@@ -494,6 +494,8 @@ The PM notes file is **mandatory** for every change. It serves as:
 ```yaml
 change_id: GH-5
 title: "Improve PM agent configuration and context storage"
+delivery_mode: interactive
+# Optional: variant: lite (the pinned six-phase required set). Absence means full.
 phases:
   clarify_scope: { started: "2026-02-02T10:00:00Z", completed: "2026-02-02T10:30:00Z" }
   specification: { started: "2026-02-02T10:30:00Z", completed: "2026-02-02T11:00:00Z" }
@@ -511,6 +513,10 @@ open_questions: []
 blockers: []
 notes: [] # { text, type, date }
 ```
+
+The enforced schema requires `change_id`, `title`, `delivery_mode`, and `phases`; `milestone`, `story_code`, and `variant` are optional typed keys, and the declared collections are validated when present. Extra phase or entry keys (for example `url`, `commits`, or `reopened`) are opaque and preserved.
+
+The default `full` variant requires the canonical eleven lifecycle phases. An explicit `variant: lite` declares the pinned six-phase required set (`clarify_scope`, `specification`, `delivery`, `quality_gates`, `dod_check`, `pr_creation`) for small changes; omission never yields LITE. The CLI tooling provides the `phase` command family as the schema-validated, idempotent write path for phase state, linting the post-transition document before mutating it. Lifecycle agents are the intended callers and adopt it through their prompts; prompt adoption is a separate operating-model change. The behavior is specified at `doc/spec/features/feature-pm-notes-lint-and-phase-transitions.md`.
 
 ---
 

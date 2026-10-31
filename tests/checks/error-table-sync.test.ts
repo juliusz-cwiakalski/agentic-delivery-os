@@ -395,7 +395,10 @@ describe("TC-STATE-019 state rows synchronize in both directions", () => {
   test("removing state from DOMAIN_KINDS fails naming the undeclared namespace", async () => {
     const root = makeTempRoot();
     editFile(root, TABLE, (text) =>
-      text.replace('["provider", "input", "config", "state"]', '["provider", "input", "config"]'),
+      text.replace(
+        '["provider", "input", "config", "state", "lint"]',
+        '["provider", "input", "config", "lint"]',
+      ),
     );
     const failures = messages((await runSyncCheck({ root })).failures);
     expect(failures).toContain("undeclared namespace state");
@@ -434,6 +437,92 @@ describe("TC-STATE-019 state rows synchronize in both directions", () => {
     );
     expect(messages((await runSyncCheck({ root: duplicated })).failures)).toContain(
       "duplicate documented row for state.store.torn",
+    );
+  });
+
+  test("the unchanged copy remains green (control)", async () => {
+    const root = makeTempRoot();
+    expect((await runSyncCheck({ root })).failures).toEqual([]);
+  });
+});
+
+const ROW_LINT_MALFORMED =
+  "| lint.notes.malformed | lint | user | false | not_landed | Correct the document so it conforms to the pm-notes schema (syntax, structure, and value types) and retry. | user-validation | The pm-notes document is malformed. |";
+
+describe("TC-SYNC-008 lint rows synchronize in both directions", () => {
+  test("the delivered state is green with the five lint rows and non-zero counts", async () => {
+    const result = await runSyncCheck({ root: ROOT });
+    expect(result.failures).toEqual([]);
+    expect(result.counts.sourceEntries).toBeGreaterThanOrEqual(26);
+    expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
+    const doc = readFile(ROOT, DOC);
+    for (const code of [
+      "lint.notes.malformed",
+      "lint.keys.missing",
+      "lint.variant.unknown",
+      "lint.phases.incomplete",
+      "lint.target.missing",
+    ]) {
+      expect(doc.split(`| ${code} |`).length - 1, code).toBe(1);
+    }
+  });
+
+  test("removing a machine lint row fails naming the documented code", async () => {
+    const root = makeTempRoot();
+    editFile(root, TABLE, (text) =>
+      text.replace(/\n? {2}\{\n {4}code: "lint\.notes\.malformed",[\s\S]*?\n {2}\},/, ""),
+    );
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "documented code lint.notes.malformed has no source entry",
+    );
+  });
+
+  test("removing lint from DOMAIN_KINDS fails naming the undeclared namespace", async () => {
+    const root = makeTempRoot();
+    editFile(root, TABLE, (text) =>
+      text.replace(
+        '["provider", "input", "config", "state", "lint"]',
+        '["provider", "input", "config", "state"]',
+      ),
+    );
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "undeclared namespace lint",
+    );
+  });
+
+  test("removing a documented lint row fails naming the source entry", async () => {
+    const root = makeTempRoot();
+    editFile(root, DOC, removeDocRow(ROW_LINT_MALFORMED));
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "source entry lint.notes.malformed is undocumented",
+    );
+  });
+
+  test("a documentation-only, malformed, or duplicated lint row fails", async () => {
+    const phantom = makeTempRoot();
+    editFile(
+      phantom,
+      DOC,
+      insertDocRow(
+        "| lint.phantom.row | lint | user | false | not_landed | Retry. | user-validation | Phantom. |",
+      ),
+    );
+    expect(messages((await runSyncCheck({ root: phantom })).failures)).toContain(
+      "documented code lint.phantom.row has no source entry",
+    );
+
+    const malformed = makeTempRoot();
+    editFile(malformed, DOC, (text) =>
+      text.replace(ROW_LINT_MALFORMED, ROW_LINT_MALFORMED.replace("| lint |", "| lint | extra |")),
+    );
+    expect(messages((await runSyncCheck({ root: malformed })).failures)).toContain("columns");
+
+    const duplicated = makeTempRoot();
+    editFile(duplicated, DOC, (text) =>
+      text.replace(ROW_LINT_MALFORMED, `${ROW_LINT_MALFORMED}\n${ROW_LINT_MALFORMED}`),
+    );
+    expect(messages((await runSyncCheck({ root: duplicated })).failures)).toContain(
+      "duplicate documented row for lint.notes.malformed",
     );
   });
 

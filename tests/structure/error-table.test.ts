@@ -8,7 +8,11 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
-import { resolveAppErrorCode } from "../../packages/cli/src/classify";
+import {
+  classifyDomainKind,
+  classifyThrown,
+  resolveAppErrorCode,
+} from "../../packages/cli/src/classify";
 import {
   DOMAIN_KINDS,
   ERROR_TABLE,
@@ -340,6 +344,8 @@ describe("TC-BOUNDARY-001 contracts ambient coverage", () => {
     const scoped = scopedFiles(ROOT);
     expect(scoped).toContain(`${CONTRACTS_DIR}/result.ts`);
     expect(scoped).toContain(`${CONTRACTS_DIR}/error-table.ts`);
+    expect(scoped).toContain(`${CONTRACTS_DIR}/pm-notes.ts`);
+    expect(scoped).toContain(`${CONTRACTS_DIR}/registry.ts`);
     expect(scan(ROOT)).toEqual([]);
   });
 
@@ -393,5 +399,80 @@ describe("TC-STATE-018 state rows join the declared kind set", () => {
       const row = `| ${entry.code} | state | ${entry.category} | ${entry.retryable} | ${entry.consequence} | ${entry.remediationHint} | ${entry.projectionClass} | ${entry.summary ?? ""} |`;
       expect(doc, entry.code).toContain(row);
     }
+  });
+});
+
+const LINT_ROWS = [
+  [
+    "lint.notes.malformed",
+    "Correct the document so it conforms to the pm-notes schema (syntax, structure, and value types) and retry.",
+    "The pm-notes document is malformed.",
+  ],
+  [
+    "lint.keys.missing",
+    "Add the named required key(s) with a conforming value and retry.",
+    "A required pm-notes key is missing.",
+  ],
+  [
+    "lint.variant.unknown",
+    "Set `variant` to `full` or `lite` and retry.",
+    "The pm-notes variant is unknown.",
+  ],
+  [
+    "lint.phases.incomplete",
+    "Add the named missing required phase(s) of the declared variant or correct the declared variant.",
+    "A required phase of the declared variant is missing.",
+  ],
+  [
+    "lint.target.missing",
+    "pm-notes target only: initialize pm-notes for the named change ref or correct the reference (an absent registry target is a verified-empty pass, C-3).",
+    "The pm-notes target is missing.",
+  ],
+] as const;
+
+describe("TC-SYNC-007 lint rows are exact and additive", () => {
+  test("lint is a declared multi-row kind with exactly the five pinned rows", () => {
+    expect(DOMAIN_KINDS).toContain("lint");
+    const lint = entries.filter((entry) => entry.domainKind === "lint");
+    expect(lint).toHaveLength(5);
+    expect(lint.map((entry) => entry.code)).toEqual(LINT_ROWS.map(([code]) => code));
+    for (const [code, hint, summary] of LINT_ROWS) {
+      expect(classifyDomainKind("lint", code)).toMatchObject({
+        code,
+        domainKind: "lint",
+        category: "user",
+        retryable: false,
+        consequence: "not_landed",
+        projectionClass: "user-validation",
+        remediationHint: hint,
+        summary,
+      });
+    }
+  });
+
+  test("lint codes round-trip exactly through returned and thrown classification", () => {
+    for (const [code] of LINT_ROWS) {
+      const row = classifyDomainKind("lint", code);
+      expect(resolveAppErrorCode(code)).toEqual({ ok: true, entry: row });
+      expect(classifyThrown({ kind: "lint", code })).toEqual(row);
+      expect(classifyThrown({ kind: "lint", code, summary: "UNTRUSTED-CANARY" })).toEqual(row);
+    }
+  });
+
+  test("the documented and machine lint rows agree row for row, exactly once", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const [code, hint, summary] of LINT_ROWS) {
+      const row = `| ${code} | lint | user | false | not_landed | ${hint} | user-validation | ${summary} |`;
+      expect(doc.split(row).length - 1, code).toBe(1);
+    }
+  });
+
+  test("existing provider, input, config and state rows are unchanged", () => {
+    expect(classifyDomainKind("provider").code).toBe("provider.quota.exceeded");
+    expect(classifyDomainKind("input").code).toBe("input.value.rejected");
+    expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
+    expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(7);
+    expect(() => classifyDomainKind("config")).toThrow();
+    expect(() => classifyDomainKind("state")).toThrow();
   });
 });

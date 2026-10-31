@@ -10,7 +10,7 @@
 import type { AppErrorCode, ErrorCategory, ErrorConsequence, ProjectionClass } from "./result.js";
 
 /** The declared domain kinds: the first link of the classification chain. */
-export const DOMAIN_KINDS = ["provider", "input", "config", "state"] as const;
+export const DOMAIN_KINDS = ["provider", "input", "config", "state", "lint"] as const;
 
 /** Reserved containment code for broken invocations and unknown commands. */
 export const FALLBACK_INVOCATION_CODE = "fallback.invocation" as const;
@@ -251,5 +251,58 @@ export const ERROR_TABLE = [
       "Use a state level with an implemented driver; shared levels arrive with later stories.",
     projectionClass: "user-validation",
     summary: "The requested state level has no implementation.",
+  },
+  {
+    code: "lint.notes.malformed",
+    domainKind: "lint",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Correct the document so it conforms to the pm-notes schema (syntax, structure, and value types) and retry.",
+    projectionClass: "user-validation",
+    summary: "The pm-notes document is malformed.",
+  },
+  {
+    code: "lint.keys.missing",
+    domainKind: "lint",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint: "Add the named required key(s) with a conforming value and retry.",
+    projectionClass: "user-validation",
+    summary: "A required pm-notes key is missing.",
+  },
+  {
+    code: "lint.variant.unknown",
+    domainKind: "lint",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint: "Set `variant` to `full` or `lite` and retry.",
+    projectionClass: "user-validation",
+    summary: "The pm-notes variant is unknown.",
+  },
+  {
+    code: "lint.phases.incomplete",
+    domainKind: "lint",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Add the named missing required phase(s) of the declared variant or correct the declared variant.",
+    projectionClass: "user-validation",
+    summary: "A required phase of the declared variant is missing.",
+  },
+  {
+    code: "lint.target.missing",
+    domainKind: "lint",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "pm-notes target only: initialize pm-notes for the named change ref or correct the reference (an absent registry target is a verified-empty pass, C-3).",
+    projectionClass: "user-validation",
+    summary: "The pm-notes target is missing.",
   },
 ] as const satisfies readonly ErrorTableEntry[];

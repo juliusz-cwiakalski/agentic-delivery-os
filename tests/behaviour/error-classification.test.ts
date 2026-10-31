@@ -365,3 +365,51 @@ describe("TC-STATE-018 seven exact state identities and containment", () => {
     }
   });
 });
+
+const LINT_CODES = [
+  "lint.notes.malformed",
+  "lint.keys.missing",
+  "lint.variant.unknown",
+  "lint.phases.incomplete",
+  "lint.target.missing",
+] as const;
+
+describe("TC-SYNC-009 lint containment and multi-row-kind ambiguity", () => {
+  test("kind-only lint is ambiguous and contains; it never selects the first row", () => {
+    expect(() => classifyDomainKind("lint")).toThrow();
+    expect(classifyThrown({ kind: "lint" }).code).toBe(FALLBACK_INTERNAL_CODE);
+    const firstRowClassifier = (kind: string) =>
+      (ERROR_TABLE as readonly ErrorTableEntry[]).find((entry) => entry.domainKind === kind);
+    expect(firstRowClassifier("lint")?.code).toBe("lint.notes.malformed");
+  });
+
+  test("wrong, unknown, missing, mismatched and non-string lint codes contain", () => {
+    for (const failure of [
+      { kind: "lint", code: "lint.other.unknown" },
+      { kind: "lint", code: "state.store.torn" },
+      { kind: "lint" },
+      { kind: "lint", code: 42 },
+      { kind: "lint", code: null },
+      { kind: "state", code: "lint.notes.malformed" },
+    ]) {
+      expect(classifyThrown(failure).code).toBe(FALLBACK_INTERNAL_CODE);
+    }
+    expect(() => classifyDomainKind("lint", "input.value.rejected")).toThrow();
+  });
+
+  test("every lint code resolves exactly and round-trips", () => {
+    for (const code of LINT_CODES) {
+      const row = classifyDomainKind("lint", code);
+      expect(row.code).toBe(code);
+      expect(classifyThrown({ kind: "lint", code })).toEqual(row);
+      expect(resolveAppErrorCode(code)).toEqual({ ok: true, entry: row });
+    }
+  });
+
+  test("existing config and state behaviours are unchanged", () => {
+    expect(classifyDomainKind("config", "config.value.invalid").domainKind).toBe("config");
+    expect(classifyDomainKind("state", "state.store.torn").domainKind).toBe("state");
+    expect(() => classifyDomainKind("config")).toThrow();
+    expect(() => classifyDomainKind("state")).toThrow();
+  });
+});

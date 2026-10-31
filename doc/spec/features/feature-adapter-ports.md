@@ -8,6 +8,8 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the binding secret-read boundary invariant, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec and visible graceful degradation."
 links:
+  related_changes: ["GH-174", "GH-179", "GH-181"]
+  related_decisions: ["ADR-0003"]
   related_changes: ["GH-174", "GH-181", "GH-188"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006"]
 ---
@@ -173,6 +175,7 @@ An unresolvable credential carries the synchronized error-table row `config.cred
 | `packages/adapters/src/credentials/index.ts` | Environment-backed credential port, injected-environment factory, production process-environment wrapper, and source-key derivation. |
 | `packages/adapters/src/io/envelope-codec.ts` | Pure envelope codec: serialize, parse, strip, closed-payload validation, raw-carrier escape hatch, and carrier constants. |
 | `packages/adapters/src/io/index.ts` | Internal `#io/*` alias target re-exporting the codec. |
+| `packages/adapters/src/file/pm-notes-parser.ts` | pm-notes file edge: locates a change ref's committed notes under the change-artifact convention, parses YAML 1.2 core with bounded size/nodes/depth/aliases, and stages in-memory phase-entry edits; runtime file access stays at the adapter I/O edge. |
 | `scripts/checks/secret-read-boundary.ts` | The secret-read boundary invariant, allowlist registry, scoped-file scan, and fixture-coverage helpers. |
 | `tests/types/tsconfig.json` | The type-probe project chained into the root `typecheck`. |
 | `tests/fixtures/ports/**` | Fixture adapters, capability declarations, and the exact v1 contract inventory. |

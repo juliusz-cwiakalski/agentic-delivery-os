@@ -7,7 +7,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The implemented M0-S5 state layer: an injected store identity, an append-only schema-versioned JSONL ledger as durable truth, disposable JSONL-scan and SQLite-index driver kinds over the same ledger, classified torn-state detection with verified-empty evidence and terminal-tail repair, key-set assertions with no default substitution, single-writer fences with explicit reported recovery, atomic derived-document replace, and least-privilege permissions with a documented Windows ACL contract."
 links:
-  related_changes: ["GH-174", "GH-181"]
+  related_changes: ["GH-174", "GH-179", "GH-181"]
   related_decisions: ["ADR-0003", "TDR-0004"]
 ---
 
@@ -19,12 +19,12 @@ The state layer is the durable local substrate later verification reads through.
 
 The append-only, schema-versioned JSONL ledger is the single durable truth. The declared driver kinds select only the read/index strategy over that same ledger: `jsonl` reads by verified scan, `sqlite` maintains a disposable derived index that is rebuilt from verified ledger truth whenever it is missing, corrupt, or divergent. No operation, result, or type on the public port discriminates by driver kind.
 
-The foundation story ships no command surface, no configuration read, and no consumer beyond tests. Store identity, paths, clock, and platform arrive as injected parameters; the state tier never imports branding and never derives a name.
+The layer ships no command surface and no configuration read. Its first durable consumer is the delivery registry, which appends `phase.transition` records through the fenced port and replaces the per-change phase-state document as a rebuildable fold of verified records. Store identity, paths, clock, and platform arrive as injected parameters; the state tier never imports branding and never derives a name.
 
 ## Business Context
 
 - **Problem:** Without durable state and integrity discipline, later verification reads either nothing or unverified bytes; corruption presents as empty truth, concurrent writers corrupt shared stores, and partially written documents masquerade as landed mutations.
-- **Affected users:** Later consumer stories (status, verify-change, phase lint) and the operators and agents that rely on their verdicts.
+- **Affected users:** The delivery registry and later consumer stories (status, verify-change), and the operators and agents that rely on their verdicts.
 - **Value:** One truthful substrate with classified failures, so "no data" and "corrupt data" are never confused.
 
 ## User Experience & Functionality
@@ -55,6 +55,12 @@ One store per workspace inside the injected state directory:
 | `index.<workspace>.sqlite` | disposable derived index (indexed kind only) |
 | `fence.<workspace>.lock` | single-writer lock token |
 | `documents.<workspace>/` | atomically replaced derived documents |
+
+### Delivery registry consumer
+
+The delivery registry composes the public port without adding a runtime-API location. It appends `phase.transition` records under one store-scoped key per change; each landed payload carries the new transition plus the full verified history, so a verified read returns the history from the ledger record itself. A no-op transition appends nothing.
+
+The per-change phase state is a derived document (`phase-state.<REF>.json`) produced by a pure fold: a completion records the first-completion start and the latest completion, and a reopen clears `completed` while keeping the start. The projection is replaced atomically through the derived-document kind and is rebuildable from verified ledger truth; a torn store never produces one. Registry behavior is specified in [pm-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md).
 
 ## Technical Architecture & Codebase Map
 
@@ -101,7 +107,8 @@ The state tier imports `./contracts` and its own modules only; runtime APIs appe
 
 ## Related
 
-- [Result contract and error table](feature-result-contract.md) — the `state` rows and the binding sync check.
+- [Result contract and error table](feature-result-contract.md) — the `state` and `lint` rows and the binding sync check.
+- [PM-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md) — the delivery registry consumer, its record vocabulary, and the derived projection.
 - [Monorepo scaffold and toolchain](feature-monorepo-scaffold-toolchain.md) — tier and runtime-API boundaries.
 - [Branding seam](feature-branding-seam.md) — `stateDirectoryName` is consumed as an injected parameter, never imported here.
 - [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0004](../../decisions/TDR-0004-state-storage-engine.md).

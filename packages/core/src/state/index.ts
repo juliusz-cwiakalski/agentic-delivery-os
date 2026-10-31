@@ -53,6 +53,21 @@ export type {
   StatePlatform,
   StateRuntimeEdge,
 } from "./edge.js";
+export {
+  appendPhaseTransition,
+  foldPhaseState,
+  PHASE_TRANSITION_RECORD_KEY_PREFIX,
+  type PhaseProjectionOutcome,
+  type PhaseProjectionRebuildOutcome,
+  type PhaseTransitionAppendOutcome,
+  type PhaseTransitionRequest,
+  type PhaseTransitionsRead,
+  phaseStateDocumentName,
+  phaseTransitionRecordKey,
+  readChangeTransitions,
+  rebuildPhaseProjection,
+  replacePhaseProjection,
+} from "./registry.js";
 
 /** Options for opening a store: the driver kind and the injected edge. */
 export type StateStoreOptions = {

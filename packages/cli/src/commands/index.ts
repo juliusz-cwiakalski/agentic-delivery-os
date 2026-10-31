@@ -5,3 +5,16 @@
 
 export type { ConfigCommandRuntime } from "./config.js";
 export { createConfigCommandDefinition } from "./config.js";
+export type {
+  LintCommandRuntime,
+  LintPmNotesRead,
+  LintRegistryRead,
+} from "./lint.js";
+export { createLintCommandDefinition } from "./lint.js";
+export type {
+  PhaseCommandRuntime,
+  PhasePmNotesRead,
+  PhaseRegistryRead,
+  PhaseTransitionWrite,
+} from "./phase.js";
+export { createPhaseCommandDefinition } from "./phase.js";

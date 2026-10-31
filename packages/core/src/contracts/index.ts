@@ -115,6 +115,29 @@ export {
   FALLBACK_INTERNAL_CODE,
   FALLBACK_INVOCATION_CODE,
 } from "./error-table.js";
+// pm-notes schema vocabulary (GH-179 C-1, C-2): types and `as const` data only.
+export {
+  CANONICAL_PHASE_IDS,
+  LITE_REQUIRED_PHASES,
+  PM_NOTES_COLLECTION_KEYS,
+  PM_NOTES_DEFAULT_VARIANT,
+  PM_NOTES_LINT_CODES,
+  PM_NOTES_OPTIONAL_STRING_KEYS,
+  PM_NOTES_REQUIRED_PHASES_BY_VARIANT,
+  PM_NOTES_REQUIRED_TOP_LEVEL_KEYS,
+  PM_NOTES_VARIANT_VALUES,
+  type PmNotesCollectionEntry,
+  type PmNotesDocument,
+  type PmNotesEffectiveVariant,
+  type PmNotesLintCode,
+  type PmNotesLitePhaseId,
+  type PmNotesParseFailure,
+  type PmNotesParseOutcome,
+  type PmNotesPhaseEntry,
+  type PmNotesPhaseId,
+  type PmNotesTimestamp,
+  type PmNotesVariant,
+} from "./pm-notes.js";
 export type {
   AdapterContract,
   DeliveryRequest,
@@ -141,6 +164,19 @@ export type {
   WorkItemRelationKind,
   WorkItemStatus,
 } from "./ports.js";
+// Delivery registry record vocabulary (GH-179 C-5, PIN-3).
+export {
+  PHASE_STATE_DOCUMENT_NAME_PATTERN,
+  PHASE_STATE_DOCUMENT_PREFIX,
+  PHASE_STATE_DOCUMENT_SUFFIX,
+  PHASE_TRANSITION_KIND,
+  type PhaseStateProjection,
+  type PhaseStateProjectionEntry,
+  type PhaseTransitionOperation,
+  type PhaseTransitionOutcome,
+  type PhaseTransitionRecord,
+  REGISTRY_SCHEMA_VERSION,
+} from "./registry.js";
 // The command-surface envelope lives beside the generic `Result<T, E>` and does
 // not replace it (DEC-1). See `./result` for the full contract documentation.
 export {

@@ -1,0 +1,152 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-179
+branch: feat/GH-179/pm-notes-registry-lint-phase-transitions
+status: PASS
+summary: >-
+  First review iteration of GH-179 (f6c8d18..HEAD, 20 commits). All six ACs and
+  five NFRs verified against the delivered suites with non-vacuity controls
+  checked (not just pass flags); plan Phases 1-8 complete with each task backed
+  by its commit and the aggregate battery re-run green at this gate (913/913,
+  error-table-sync 26/26 both directions, doc-distribution clean, boundaries,
+  ambient, secret, literal, inventory gates green, no protected path touched).
+  Documented deviations (Phase 5 payload-history fold, Phase 6 parser/stage API
+  and state-scope supersession) verified additive and spec-consistent. No
+  blockers or majors: three record-accuracy/advisory minors (Phase-11 evidence
+  overstatement, unexecuted DoR nit N1 fold, landing-sequence partial-failure
+  window) and four informational notes. Phase 10 code remediation not required;
+  F-1/F-2 fold into the open Phase 11 window before Phase 12.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 3
+  low: 4
+  info: 0
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-10/2026-10-31--GH-179--pm-notes-registry-lint-phase-transitions/chg-GH-179-pm-notes.yaml:13
+    message: >-
+      system_spec_update is recorded complete with "residual gaps: NONE" (and
+      commit 3d0d3cf claims the same), but plan tasks 11.5/11.6
+      (chg-GH-179-plan.md:491-492) are unexecuted - doc/planning/** is
+      untouched: cli-command-registry.md lacks delivered markers for
+      `ados lint`/`ados phase`, and backlog.md/backlog-ranking.md do not mark
+      M0-S10 delivered. Execution-log row 11 (chg-GH-179-plan.md:715) still
+      says "Not started" while 3d0d3cf delivered seven of nine touchpoints
+      early. Phase 12's dod_check would inherit a false "NONE".
+    suggestion: >-
+      Before Phase 12: complete 11.5/11.6 (planning-registry markers) or record
+      their explicit reassignment in the plan; correct execution-log row 11 to
+      reference 3d0d3cf and its actual scope.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-10/2026-10-31--GH-179--pm-notes-registry-lint-phase-transitions/chg-GH-179-plan.md:4
+    message: >-
+      DoR nit N1 (plan metadata timestamps contradict the delivery sequence)
+      was dispositioned "fold into the first execution-log update"; two plan
+      edits followed (98ce450, 327b5b8) but created/last_updated (:4-5) and the
+      v1.0 revision-log timestamp (:698) are unchanged. The review input brief
+      claimed N1 folded; the tree contradicts it. (N2 verified folded in
+      3d0d3cf; N3 verified folded - pm-notes-lint.test.ts:260 asserts exit 2.)
+    suggestion: >-
+      Correct created/last_updated and the revision-log timestamp to the
+      03:45-04:10Z window at the next plan edit; fold with F-1's log correction.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/phase.ts:328
+    message: >-
+      Landing sequence is append -> writePmNotes -> replaceProjection with no
+      compensation. If the document write fails after a landed append, the
+      command reports fallback.internal and the pm-notes entry stays open while
+      the authoritative ledger says completed; a re-run is a row-2 no-op that
+      never converges the document (recovery only via reopen+complete, two
+      extra records). No test covers the failed writePmNotes branch. Ledger
+      authority (PIN-6/RSK-2) keeps this a consistency window, not data loss.
+    suggestion: >-
+      Advisory for PR review: document the recovery path in the feature doc;
+      consider converging the document on a row-2 no-op when the staged entry
+      differs, and add a regression test for the failed-write branch if
+      pursued.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/pm-notes-lint.ts:121
+    message: >-
+      With an unknown variant string, variantDecidable gates the entry-level
+      keys/types families, so a document with both an unknown variant and a
+      missing `started` on an applicable entry reports lint.variant.unknown
+      where strict PIN-5 family order (keys before variant) would report
+      lint.keys.missing. Single-defect behavior is exactly per C-6; the gating
+      is defensible (applicable set undecidable).
+    suggestion: >-
+      Optional: one sentence in the feature doc noting cross-defect precedence
+      when the variant is unknown. No action required.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: low
+    confidence: high
+    category: performance
+    location: packages/core/src/state/registry.ts:100
+    message: >-
+      Each phase.transition payload embeds the full verified history under
+      transitions[], so store bytes grow quadratically over a change's
+      lifetime. Documented Phase-5 deviation (the port offers no all-records
+      read); bounded by lifecycle size (tens of transitions per change).
+    suggestion: >-
+      Revisit only if a future story batches many transitions per change.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: low
+    confidence: high
+    category: performance
+    location: tests/behaviour/pm-notes-corpus-support.ts:146
+    message: >-
+      copyChangesTree copies the entire doc/changes tree (all artifacts, not
+      just pm-notes files) into a temp root for each of ~5 mutation controls
+      per run. Hermetic and correct; scales linearly with repository history.
+    suggestion: >-
+      Optional future optimization: copy only chg-*-pm-notes.yaml files.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/adapters/src/file/pm-notes-parser.ts:204
+    message: >-
+      A filesystem read error (e.g. EACCES) maps to malformed and surfaces as
+      lint.notes.malformed (location = file path). Contained and classified,
+      never a crash, but the identity conflates I/O failure with document
+      malformation; acceptable within C-6's five-code budget.
+    suggestion: >-
+      No action required; note for any future I/O-failure identity work.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-10-31T13:30:00Z
+next_step: PROCEED
