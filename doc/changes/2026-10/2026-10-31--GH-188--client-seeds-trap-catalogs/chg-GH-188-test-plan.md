@@ -1102,6 +1102,26 @@ No AC is left without a mapped test. Twelve of twelve ACs are traced and fully a
 
 ## 10. Test Execution Log
 
+Delivery executed phases P1–P7 on `feat/GH-188/client-seeds-trap-catalogs`; the
+independent review (`@reviewer`) is a separate lifecycle phase. Gate battery run
+at code HEAD `2a25434` (docs for this log land after it).
+
 | TC ID / gate | Run Date (UTC) | Result | Notes / command / HEAD |
 |---|---|---|---|
-| — | — | Not run | Plan authored at `2026-10-31T12:00:00Z`; no test execution or build was performed by the test-plan writer. Populate during delivery with exact commands, SHA, and results. |
+| TC-CONTRACT-001 | 2026-10-31 | PASS | `port-contract-inventory.test.ts` field-shape probe + `workitem-{updated-at,comments}.type-test.ts`; removal/re-tighten mutations fail by field; `pnpm typecheck` green. |
+| TC-BOUNDARY-001 | 2026-10-31 | PASS | `bun test tests/boundaries` (124 pass): provider clean controls, azure/ci/registry/io negatives, exact `pathNot` literal, widening guard. |
+| TC-JIRA-001–004 | 2026-10-31 | PASS | `tests/behaviour/providers/jira-trap.test.ts`; 5 entries pass offline; corrupted normalization fails by trap name + fixture. |
+| TC-JIRA-005–008 | 2026-10-31 | PASS | `tests/behaviour/providers/jira-queries.test.ts`; four families from normalized `WorkItem`; fabrication fails `JIRA-UPDATED-ABSENT`. |
+| TC-GITLAB-001–003 | 2026-10-31 | PASS | `tests/behaviour/providers/gitlab-trap.test.ts`; per-commit set, declared merge-status table, precedence and async non-terminal; mutations fail by name. |
+| TC-GITHUB-001–003 | 2026-10-31 | PASS | `tests/behaviour/providers/github-trap.test.ts`; review-state table, per-SHA check runs (failed run not hidden), issue→`WorkItem`. |
+| TC-GITHUB-004 | 2026-10-31 | PASS | `tests/behaviour/providers/github-inputs.test.ts`; exactly `DeliveryRequest`+`PipelineRun`+`WorkItem`; unfixtured request fails. |
+| TC-TRAP-001 | 2026-10-31 | PASS | `tests/structure/trap-catalog.test.ts`; four-field schema, minima 3/5/3, resolvable pointers, mutations fail by name. |
+| TC-TRAP-002 | 2026-10-31 | PASS | `tests/behaviour/providers/trap-harness.test.ts` + per-client suites; throwing-`fetch` guard records 0 calls; double replay identical; bidirectional coverage enforced. |
+| TC-FIXTURE-001/002 | 2026-10-31 | PASS | `tests/checks/fixture-sanitization.test.ts`; live tree clean, declared placeholders all used, 10 canary shapes fire with file/line. |
+| TC-CAP-001 | 2026-10-31 | PASS | `tests/behaviour/providers/provider-capabilities.test.ts`; exact OQ-G postures; declaration↔implementation pairs; mutations fail. |
+| TC-SURFACE-001 | 2026-10-31 | PASS | `tests/structure/provider-surface.test.ts` + `provider-views.type-test.ts`; exact export surfaces; native/parallel-view mutations fail. |
+| TC-CRED-001/002 | 2026-10-31 | PASS | `tests/behaviour/providers/provider-credentials.test.ts`, `tests/checks/secret-read-boundary.test.ts`; allowlist exactly 4; planted reads fire in all three subpaths; classified failure exact. |
+| TC-LICENSE-001 | 2026-10-31 | PASS | `bun run scripts/checks/license-audit.ts`; manifests/lockfile byte-unchanged vs `origin/main-tools` (zero new dependencies). |
+| TC-GATE-001 | 2026-10-31 | PASS | `pnpm install --frozen-lockfile`; `pnpm build`; `bun test tests/structure tests/behaviour tests/checks tests/boundaries` (756 pass); `pnpm check:boundaries`; `pnpm typecheck`; `pnpm check`; `bash scripts/.tests/test-doc-distribution.sh`; `git diff --check`. |
+| TC-PLAN-001 | 2026-10-31 | PASS (process evidence) | Implementation basis recorded at ticket comment 6536692124 per plan; delivery did not re-query the ticket. Code matches the recorded basis (direct REST + custom Jira read slice, zero new dependencies). |
+| Code HEAD | 2026-10-31 | GREEN | P1 `2ed11eb`, P2 `41fb233`, P3 `28ef7e3`, P4 `c894a0e`, P5 `a1a6fc6`, P6 `f83735b`, P7 `2a25434`; `pnpm check` green at every phase commit. |
