@@ -29,6 +29,7 @@ const EXPECTED: Record<string, Record<string, string>> = {
     "./contracts": "src/contracts/index.ts",
     "./state": "src/state/index.ts",
     "./branding": "src/branding/index.ts",
+    "./provider": "src/provider/index.ts",
   },
   adapters: Object.fromEntries(
     ADAPTER_SUBPATHS.map((subpath) => [subpath, `src/${subpath.slice(2)}/index.ts`]),

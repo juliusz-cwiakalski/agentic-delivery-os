@@ -34,4 +34,6 @@ provider:
   chains:
     default:
       entries:
-        - zai-coding-plan\n        - alt-plan\n      allowPaidFallback: false
+        - zai-coding-plan
+        - alt-plan
+      allowPaidFallback: false

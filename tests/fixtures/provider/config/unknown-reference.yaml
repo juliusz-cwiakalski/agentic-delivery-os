@@ -34,4 +34,5 @@ provider:
   chains:
     default:
       entries:
-        - missing-plan\n      allowPaidFallback: false
+        - missing-plan
+      allowPaidFallback: false

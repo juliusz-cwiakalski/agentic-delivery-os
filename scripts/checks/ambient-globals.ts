@@ -17,6 +17,7 @@ export const NEUTRAL_TIER_DIRECTORIES = [
   "packages/core/src/app",
   "packages/core/src/config",
   "packages/core/src/branding",
+  "packages/core/src/provider",
 ] as const;
 
 export const AMBIENT_SCOPE = {

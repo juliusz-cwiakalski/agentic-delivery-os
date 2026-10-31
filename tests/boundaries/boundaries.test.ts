@@ -81,6 +81,7 @@ describe("ADR-verbatim scope and allowlist assertions", () => {
       "packages/core/src/app",
       "packages/core/src/config",
       "packages/core/src/branding",
+      "packages/core/src/provider",
     ]);
   });
 

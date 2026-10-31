@@ -154,3 +154,52 @@ describe("TC-PROV-001 contract surface", () => {
     }
   });
 });
+
+import { readdirSync } from "node:fs";
+import { scan } from "../../scripts/checks/ambient-globals";
+
+const providerFiles = (): string[] =>
+  readdirSync(join(ROOT, "packages/core/src/provider"))
+    .filter((entry) => entry.endsWith(".ts"))
+    .map((entry) => `packages/core/src/provider/${entry}`)
+    .sort();
+
+describe("TC-PROV-006 provider-policy purity and neutrality", () => {
+  test("imports are only #contracts and intra-provider #provider/*", () => {
+    const failures: string[] = [];
+    for (const file of providerFiles()) {
+      const source = ts.createSourceFile(
+        file,
+        readFileSync(join(ROOT, file), "utf8"),
+        ts.ScriptTarget.Latest,
+        true,
+        ts.ScriptKind.TS,
+      );
+      for (const statement of source.statements) {
+        if (!ts.isImportDeclaration(statement)) continue;
+        if (!ts.isStringLiteral(statement.moduleSpecifier)) continue;
+        const specifier = statement.moduleSpecifier.text;
+        const allowed =
+          specifier === "#contracts" ||
+          specifier.startsWith("#provider/") ||
+          /^\.\/[a-z-]+\.js$/.test(specifier);
+        if (!allowed) failures.push(`${file}: import ${specifier}`);
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
+  test("the ambient-globals guard is clean over the provider tier", () => {
+    const violations = scan(ROOT).filter((violation) => violation.file.startsWith("packages/core/src/provider/"));
+    expect(violations).toEqual([]);
+  });
+
+  test("provider policy source carries no vendor constant or product token", () => {
+    for (const file of providerFiles()) {
+      const text = readFileSync(join(ROOT, file), "utf8");
+      for (const token of ["api.z.ai", "zai-coding-plan", "ZAI_API_KEY", "ados", "ADOS_"]) {
+        expect(text.toLowerCase(), `${file}: ${token}`).not.toContain(token.toLowerCase());
+      }
+    }
+  });
+});

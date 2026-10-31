@@ -33,5 +33,5 @@ provider:
       enabled: false
   chains:
     default:
-      entries:
+      entries: []
       allowPaidFallback: false

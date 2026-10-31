@@ -34,4 +34,6 @@ provider:
   chains:
     default:
       entries:
-        - disabled-plan\n        - alt-plan\n      allowPaidFallback: false
+        - disabled-plan
+        - alt-plan
+      allowPaidFallback: false

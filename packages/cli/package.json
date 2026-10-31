@@ -21,7 +21,8 @@
       ".",
       "./contracts",
       "./state",
-      "./branding"
+      "./branding",
+      "./provider"
     ],
     "@delivery-os/adapters": [
       "./gitlab",
