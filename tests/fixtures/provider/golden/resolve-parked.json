@@ -1,0 +1,15 @@
+{
+  "decision": {
+    "kind": "parked",
+    "park": {
+      "name": "chain:default",
+      "cause": "chain-exhausted"
+    }
+  },
+  "skipped": [
+    {
+      "providerName": "p0",
+      "reason": "quota-exhausted"
+    }
+  ]
+}

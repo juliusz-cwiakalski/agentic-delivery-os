@@ -8,6 +8,7 @@ import { execFileSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { ERROR_TABLE, type ErrorTableEntry } from "../../packages/core/src/contracts/index";
 import { runSyncCheck } from "../../scripts/checks/error-table-sync";
 
 const ROOT = process.cwd();
@@ -396,7 +397,7 @@ describe("TC-STATE-019 state rows synchronize in both directions", () => {
     const root = makeTempRoot();
     editFile(root, TABLE, (text) =>
       text.replace(
-        '["provider", "input", "config", "state", "lint"]',
+        '["provider", "input", "config", "state", "lint", "verify"]',
         '["provider", "input", "config", "lint"]',
       ),
     );
@@ -481,7 +482,7 @@ describe("TC-SYNC-008 lint rows synchronize in both directions", () => {
     const root = makeTempRoot();
     editFile(root, TABLE, (text) =>
       text.replace(
-        '["provider", "input", "config", "state", "lint"]',
+        '["provider", "input", "config", "state", "lint", "verify"]',
         '["provider", "input", "config", "state"]',
       ),
     );
@@ -529,5 +530,479 @@ describe("TC-SYNC-008 lint rows synchronize in both directions", () => {
   test("the unchanged copy remains green (control)", async () => {
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
+  });
+});
+
+describe("TC-PROV-045 provider rows synchronize in both directions", () => {
+  const PROVIDER_CODES = [
+    "provider.quota.exceeded",
+    "provider.outage",
+    "provider.auth.rejected",
+    "provider.chain.empty",
+    "provider.chain.invalid",
+  ] as const;
+
+  test("every provider code is present exactly once on each side", async () => {
+    const result = await runSyncCheck({ root: ROOT });
+    expect(result.failures).toEqual([]);
+    const doc = readFile(ROOT, DOC);
+    for (const code of PROVIDER_CODES) {
+      expect(doc.split(`| ${code} |`).length - 1, code).toBe(1);
+    }
+  });
+
+  test("a provider doc-only row fails by name", async () => {
+    const root = makeTempRoot();
+    editFile(
+      root,
+      DOC,
+      insertDocRow(
+        "| provider.phantom.entry | provider | user | false | not_landed | Fix the value. | user-validation | Phantom. |",
+      ),
+    );
+    const result = await runSyncCheck({ root });
+    expect(messages(result.failures)).toContain(
+      "documented code provider.phantom.entry has no source entry",
+    );
+  });
+
+  test("a provider machine-only row fails by name", async () => {
+    const root = makeTempRoot();
+    editFile(root, TABLE, replaceTableCode("provider.chain.invalid", "provider.chain.changed"));
+    const result = await runSyncCheck({ root });
+    expect(messages(result.failures)).toContain(
+      "source entry provider.chain.changed is undocumented",
+    );
+  });
+});
+
+const ROW_VERIFY =
+  "| verify.ledger.incomplete | verify | user | false | not_landed | Complete the named required phases of the declared variant through the phase command, or correct the declaration, then re-run verify. | user-validation | The declared variant's required phases are not all completed. |";
+
+/**
+ * Frozen oracle of every row present before the verify addition (full column
+ * set). The verify row is the only permitted addition; a changed existing row
+ * fails naming it.
+ */
+const BASELINE_ROWS: ReadonlyArray<
+  readonly [string, string, string, boolean, string, string, string, string]
+> = [
+  [
+    "fallback.invocation",
+    "fallback",
+    "user",
+    false,
+    "unknown",
+    "Check the command name and arguments, then retry the invocation.",
+    "user-validation",
+    "The invocation could not be understood.",
+  ],
+  [
+    "fallback.internal",
+    "fallback",
+    "platform",
+    false,
+    "unknown",
+    "Inspect the diagnostics stream and report the failure if it persists.",
+    "platform-provider",
+    "The failure could not be classified.",
+  ],
+  [
+    "provider.quota.exceeded",
+    "provider",
+    "transient",
+    true,
+    "not_landed",
+    "Wait for the quota window to reset, then retry the operation.",
+    "platform-provider",
+    "The provider quota was exceeded.",
+  ],
+  [
+    "provider.outage",
+    "provider",
+    "transient",
+    true,
+    "not_landed",
+    "Retry after the provider becomes reachable; consult the announcement and park for the resume time.",
+    "platform-provider",
+    "The provider is unreachable.",
+  ],
+  [
+    "provider.auth.rejected",
+    "provider",
+    "user",
+    false,
+    "not_landed",
+    "Correct or replace the declared credential and retry.",
+    "user-validation",
+    "The provider rejected the credential.",
+  ],
+  [
+    "provider.chain.empty",
+    "provider",
+    "user",
+    false,
+    "not_landed",
+    "Declare a non-empty provider chain (or select one) and retry.",
+    "user-validation",
+    "No provider chain is declared.",
+  ],
+  [
+    "provider.chain.invalid",
+    "provider",
+    "user",
+    false,
+    "not_landed",
+    "Correct the named chain entries, ordering, or references and retry.",
+    "user-validation",
+    "The provider chain is invalid.",
+  ],
+  [
+    "input.value.rejected",
+    "input",
+    "user",
+    false,
+    "not_landed",
+    "Correct the rejected value and retry the command.",
+    "user-validation",
+    "The supplied value was rejected.",
+  ],
+  [
+    "config.file.malformed",
+    "config",
+    "user",
+    false,
+    "not_landed",
+    "Correct the named configuration source and retry.",
+    "user-validation",
+    "A configuration source is malformed.",
+  ],
+  [
+    "config.key.unknown",
+    "config",
+    "user",
+    false,
+    "not_landed",
+    "Remove or correct the unknown configuration key and retry.",
+    "user-validation",
+    "A configuration key is unknown.",
+  ],
+  [
+    "config.environment.unmapped",
+    "config",
+    "user",
+    false,
+    "not_landed",
+    "Remove or map the environment name and retry.",
+    "user-validation",
+    "An environment configuration name is unmapped.",
+  ],
+  [
+    "config.value.invalid",
+    "config",
+    "user",
+    false,
+    "not_landed",
+    "Correct the value to match the configuration schema and retry.",
+    "user-validation",
+    "A configuration value is invalid.",
+  ],
+  [
+    "config.interpolation.rejected",
+    "config",
+    "user",
+    false,
+    "not_landed",
+    "Use a typed environment override instead and retry.",
+    "user-validation",
+    "In-file interpolation is not supported.",
+  ],
+  [
+    "config.secret.forbidden",
+    "config",
+    "user",
+    false,
+    "not_landed",
+    "Move the secret to a supported environment source and retry.",
+    "user-validation",
+    "A secret was supplied from a forbidden source.",
+  ],
+  [
+    "config.path.forbidden",
+    "config",
+    "user",
+    false,
+    "not_landed",
+    "Move the machine path to a system or user-global source and retry.",
+    "user-validation",
+    "A machine path was supplied from a forbidden source.",
+  ],
+  [
+    "config.reset.invalid",
+    "config",
+    "user",
+    false,
+    "not_landed",
+    "Correct the reset paths and retry.",
+    "user-validation",
+    "A configuration reset is invalid.",
+  ],
+  [
+    "config.warning.strict",
+    "config",
+    "user",
+    false,
+    "not_landed",
+    "Resolve the named warning and retry.",
+    "user-validation",
+    "Strict configuration validation rejected a warning.",
+  ],
+  [
+    "config.credential.missing",
+    "config",
+    "user",
+    false,
+    "not_landed",
+    "Supply the credential through its declared environment source and retry.",
+    "user-validation",
+    "A required credential was not resolvable from its source.",
+  ],
+  [
+    "state.store.torn",
+    "state",
+    "platform",
+    false,
+    "not_landed",
+    "Inspect or restore the named state store; never treat it as empty.",
+    "platform-provider",
+    "The state store is torn.",
+  ],
+  [
+    "state.schema.mismatch",
+    "state",
+    "platform",
+    false,
+    "not_landed",
+    "Use a compatible tool version or migrate the store explicitly, then retry.",
+    "platform-provider",
+    "The state store schema version is not supported.",
+  ],
+  [
+    "state.keys.missing",
+    "state",
+    "platform",
+    false,
+    "not_landed",
+    "Verify the writing operation completed and inspect the named store; never substitute defaults.",
+    "platform-provider",
+    "A state read key-set assertion failed.",
+  ],
+  [
+    "state.lock.busy",
+    "state",
+    "transient",
+    true,
+    "not_landed",
+    "Wait for the current writer to release the state fence, then acquire and retry.",
+    "platform-provider",
+    "The state store is locked by another writer.",
+  ],
+  [
+    "state.permission.denied",
+    "state",
+    "user",
+    false,
+    "not_landed",
+    "Correct operating-system permissions on the named state path and retry.",
+    "user-validation",
+    "A state path permission requirement was not met.",
+  ],
+  [
+    "state.write.failed",
+    "state",
+    "transient",
+    true,
+    "not_landed",
+    "Resolve the underlying storage error and retry; the failed write or rebuild did not land, the ledger remains durable truth, and the index stays disposable.",
+    "platform-provider",
+    "A state write or index rebuild did not land.",
+  ],
+  [
+    "state.level.unsupported",
+    "state",
+    "user",
+    false,
+    "not_landed",
+    "Use a state level with an implemented driver; shared levels arrive with later stories.",
+    "user-validation",
+    "The requested state level has no implementation.",
+  ],
+  [
+    "lint.notes.malformed",
+    "lint",
+    "user",
+    false,
+    "not_landed",
+    "Correct the document so it conforms to the pm-notes schema (syntax, structure, and value types) and retry.",
+    "user-validation",
+    "The pm-notes document is malformed.",
+  ],
+  [
+    "lint.keys.missing",
+    "lint",
+    "user",
+    false,
+    "not_landed",
+    "Add the named required key(s) with a conforming value and retry.",
+    "user-validation",
+    "A required pm-notes key is missing.",
+  ],
+  [
+    "lint.variant.unknown",
+    "lint",
+    "user",
+    false,
+    "not_landed",
+    "Set `variant` to `full` or `lite` and retry.",
+    "user-validation",
+    "The pm-notes variant is unknown.",
+  ],
+  [
+    "lint.phases.incomplete",
+    "lint",
+    "user",
+    false,
+    "not_landed",
+    "Add the named missing required phase(s) of the declared variant or correct the declared variant.",
+    "user-validation",
+    "A required phase of the declared variant is missing.",
+  ],
+  [
+    "lint.target.missing",
+    "lint",
+    "user",
+    false,
+    "not_landed",
+    "pm-notes target only: initialize pm-notes for the named change ref or correct the reference (an absent registry target is a verified-empty pass, C-3).",
+    "user-validation",
+    "The pm-notes target is missing.",
+  ],
+] as const;
+
+const tupleOf = (
+  entry: ErrorTableEntry,
+): readonly [string, string, string, boolean, string, string, string, string] => [
+  entry.code,
+  entry.domainKind,
+  entry.category,
+  entry.retryable,
+  entry.consequence,
+  entry.remediationHint,
+  entry.projectionClass,
+  entry.summary ?? "",
+];
+
+const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
+  const failures: string[] = [];
+  const liveByCode = new Map(live.map((entry) => [entry.code, entry]));
+  for (const expected of BASELINE_ROWS) {
+    const actual = liveByCode.get(expected[0]);
+    if (actual === undefined) {
+      failures.push(`${expected[0]}: pre-existing row was removed`);
+      continue;
+    }
+    const actualTuple = tupleOf(actual);
+    if (JSON.stringify(actualTuple) !== JSON.stringify(expected)) {
+      failures.push(`${expected[0]}: pre-existing row changed`);
+    }
+  }
+  if (live.length !== BASELINE_ROWS.length + 1) {
+    failures.push(`table length ${live.length} != baseline + 1 (${BASELINE_ROWS.length + 1})`);
+  }
+  return failures;
+};
+
+describe("TC-VERIFY-019 verify row syncs in both directions and leaves the baseline intact", () => {
+  test("the live table is exactly the frozen baseline plus the one verify row", () => {
+    expect(baselineViolations(ERROR_TABLE as readonly ErrorTableEntry[])).toEqual([]);
+    const live = ERROR_TABLE as readonly ErrorTableEntry[];
+    expect(live.filter((entry) => entry.domainKind === "verify")).toHaveLength(1);
+    expect(
+      live.filter((entry) => entry.code === "verify.ledger.incomplete")[0]?.projectionClass,
+    ).toBe("user-validation");
+    const kinds = new Map<string, number>();
+    for (const entry of live) kinds.set(entry.domainKind, (kinds.get(entry.domainKind) ?? 0) + 1);
+    expect(Object.fromEntries(kinds)).toMatchObject({
+      provider: 5,
+      input: 1,
+      config: 10,
+      state: 7,
+      lint: 5,
+      verify: 1,
+    });
+  });
+
+  test("removing the machine verify row fails naming the documented code", async () => {
+    const root = makeTempRoot();
+    editFile(root, TABLE, (text) =>
+      text.replace(/\n? {2}\{\n {4}code: "verify\.ledger\.incomplete",[\s\S]*?\n {2}\},/, ""),
+    );
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "documented code verify.ledger.incomplete has no source entry",
+    );
+  });
+
+  test("removing verify from DOMAIN_KINDS fails naming the undeclared namespace", async () => {
+    const root = makeTempRoot();
+    editFile(root, TABLE, (text) =>
+      text.replace(
+        '["provider", "input", "config", "state", "lint", "verify"]',
+        '["provider", "input", "config", "state", "lint"]',
+      ),
+    );
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "undeclared namespace verify",
+    );
+  });
+
+  test("removing the documented verify row fails naming the source entry", async () => {
+    const root = makeTempRoot();
+    editFile(root, DOC, removeDocRow(ROW_VERIFY));
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "source entry verify.ledger.incomplete is undocumented",
+    );
+  });
+
+  test("a malformed or duplicated verify row fails", async () => {
+    const malformed = makeTempRoot();
+    editFile(malformed, DOC, (text) =>
+      text.replace(ROW_VERIFY, ROW_VERIFY.replace("| verify |", "| verify | extra |")),
+    );
+    expect(messages((await runSyncCheck({ root: malformed })).failures)).toContain("columns");
+
+    const duplicated = makeTempRoot();
+    editFile(duplicated, DOC, (text) => text.replace(ROW_VERIFY, `${ROW_VERIFY}\n${ROW_VERIFY}`));
+    expect(messages((await runSyncCheck({ root: duplicated })).failures)).toContain(
+      "duplicate documented row for verify.ledger.incomplete",
+    );
+  });
+
+  test("the unchanged copy remains green (control)", async () => {
+    const root = makeTempRoot();
+    expect((await runSyncCheck({ root })).failures).toEqual([]);
+    expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
+      BASELINE_ROWS.length + 1,
+    );
+  });
+
+  test("mutating an existing row fails the baseline oracle naming the row", () => {
+    const mutated = (ERROR_TABLE as readonly ErrorTableEntry[]).map((entry) =>
+      entry.code === "state.store.torn"
+        ? { ...entry, projectionClass: "user-validation" as const }
+        : entry,
+    );
+    expect(baselineViolations(mutated).join("\n")).toContain("state.store.torn");
+    const live = ERROR_TABLE as readonly ErrorTableEntry[];
+    expect(baselineViolations(live)).toEqual([]);
   });
 });

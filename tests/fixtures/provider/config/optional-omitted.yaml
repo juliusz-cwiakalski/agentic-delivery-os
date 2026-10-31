@@ -1,0 +1,13 @@
+provider:
+  credentials:
+    zai:
+      sourceKey:
+        style: literal
+        name: ZAI_API_KEY
+  entries:
+    minimal:
+      class: subscription
+  chains:
+    default:
+      entries:
+        - minimal

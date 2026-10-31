@@ -1,0 +1,15 @@
+{
+  "fields": [
+    "providerName",
+    "chainName",
+    "conditionKinds",
+    "waitSeconds",
+    "resetEpochMs",
+    "httpStatus",
+    "failureClass",
+    "credentialRefName",
+    "parkName",
+    "parkExpiresAt",
+    "announcementCode"
+  ]
+}

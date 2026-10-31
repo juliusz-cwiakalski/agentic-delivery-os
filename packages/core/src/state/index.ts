@@ -62,9 +62,11 @@ export {
   type PhaseTransitionAppendOutcome,
   type PhaseTransitionRequest,
   type PhaseTransitionsRead,
+  type PhaseTransitionsTolerantRead,
   phaseStateDocumentName,
   phaseTransitionRecordKey,
   readChangeTransitions,
+  readChangeTransitionsTolerant,
   rebuildPhaseProjection,
   replacePhaseProjection,
 } from "./registry.js";

@@ -2,12 +2,12 @@
 id: SPEC-CONFIG-LAYER
 status: Current
 created: 2026-10-30
-last_updated: 2026-10-30
+last_updated: 2026-10-31
 owners: ["engineering"]
 service: delivery-os
-summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, an empty production catalog with typed extensions, source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
+summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181"]
+  related_changes: ["GH-173", "GH-181", "GH-182"]
   related_decisions: ["ADR-0003", "TDR-0003"]
 ---
 
@@ -15,7 +15,7 @@ links:
 
 ## Overview
 
-Configuration resolves from seven ordered layers into one validated, traceable tree. Resolution is pure in `@delivery-os/core`; acquisition of files, platform locations, repository roots, environment facts and legacy names lives behind the existing adapters and the runtime-aware CLI edge. The production ordinary catalog is empty, so a fresh installation resolves to `{}` until a consumer declares typed settings.
+Configuration resolves from seven ordered layers into one validated, traceable tree. Resolution is pure in `@delivery-os/core`; acquisition of files, platform locations, repository roots, environment facts and legacy names lives behind the existing adapters and the runtime-aware CLI edge. The production ordinary catalog declares the typed `provider` branch; no other ordinary production settings are declared, so unrelated configuration resolves to `{}` until a consumer declares typed settings.
 
 Every source is validated before it is merged, every effective value can report where it came from, and inspection through the `config` command uses the same serialization and redaction boundary as every other command. Configuration cannot rename the frozen brand identity, supply a credential from a repository file, or silently interpolate environment values into files.
 
@@ -72,12 +72,26 @@ One trusted draft-07 schema is generated from the typed catalog. A recursively r
 - Top-level `x-` keys are allowed in files as vendor data but do not create environment or CLI mappings.
 - Unknown ordinary keys fail `config.key.unknown`; invalid types, directive shapes and disallowed null fail `config.value.invalid`.
 - Explicit null requires catalog permission.
-- The ordinary production catalog and defaults are empty. `workingName` is the separate required bootstrap descriptor, supplied before discovery and never a mutable config key.
+- The ordinary production catalog declares the typed `provider` branch. Its dynamic-name maps (`provider.credentials`, `provider.entries`, `provider.chains`) use the additive `record` field kind: every child name is arbitrary and every child value is validated against the declared shape, while fixed branches keep exact unknown-key discipline.
+- `workingName` is the separate required bootstrap descriptor, supplied before discovery and never a mutable config key.
 - Typed extension catalogs exercise the same production resolver for required, nullable, defaulted, deprecated, nested, list, secret and machine-path fields. They are not production settings.
+
+### Provider catalog branch
+
+The provider branch is the first ordinary production setting. It declares:
+
+- `provider.defaultChain`: the chain used when `--chain` is omitted; absent by default.
+- `provider.credentials.<name>.sourceKey`: a `literal` key name or an `environment-prefixed` suffix; a credential reference, never secret material.
+- `provider.entries.<name>`: a required `class` (`subscription` or `pay-per-token`), an `enabled` flag defaulting to `true`, an optional UTC `peak` window, and an optional `quota` policy.
+- `provider.chains.<name>`: a required non-empty `entries` list and an `allowPaidFallback` boolean defaulting to `false`.
+
+The shipped defaults declare one concrete subscription descriptor, `provider.entries.zai-coding-plan`, with an enabled UTC peak window of `06:00–10:00` and a `7200`-second buffer, and an enabled quota policy against the public Z.AI quota endpoint with credential reference `zai`. The matching `provider.credentials.zai` entry declares a `literal` source key named `ZAI_API_KEY`. `provider.chains` ships empty and `provider.defaultChain` is absent, so a fresh installation fails closed until an operator declares a chain. Every shipped value is overridable per layer and reports its origin through `config debug`.
+
+The full field contract, evaluation semantics, and defaults are documented in [Provider Engine](feature-provider-engine.md); provider semantic-validation failures surface as `provider.chain.invalid` or `provider.chain.empty` from the provider engine, while schema-level configuration failures remain the configuration layer's classified errors.
 
 ### Merge, reset, warnings and origins
 
-Scalars and new collections replace lower values. Nested maps merge recursively when both sides are maps; lists replace as a whole, including element origins. `reset` paths are validated before setting and remove inherited descendant values and origins. Unaffected sibling origins survive.
+Scalars and new collections replace lower values. Nested maps merge recursively when both sides are maps; lists replace as a whole, including element origins. `reset` paths are validated before setting and remove inherited descendant values and origins. Unaffected sibling origins survive. The provider branch follows the same rules: its record maps merge by child name, chain entry lists replace as a whole, and a reset removes inherited provider values.
 
 Deprecated and shadowed inputs produce safe warnings that name the kind, layer and key, never the value. `--strict` converts any warning into `config.warning.strict` and returns no partial tree. Recognized legacy environment and selector names map to current names; the legacy adapter emits at most one safe compatibility notice per process, and that notice goes to the error stream.
 
@@ -117,9 +131,9 @@ The machine table in [Result Contract and Error Table](feature-result-contract.m
 | Path | Responsibility |
 |---|---|
 | `packages/core/src/contracts/config.ts` | Plain JSON-compatible facts, layers, origins, skips, warnings and failure identity |
-| `packages/core/src/config/catalog.ts` | Typed catalog, bootstrap descriptor and empty production catalog |
+| `packages/core/src/config/catalog.ts` | Typed catalog, bootstrap descriptor, the production `provider` branch, and the `record` field kind for dynamic-name maps |
 | `packages/core/src/config/schema.ts` | Trusted schema generation, partial/final compilation and safe invalid-key detection |
-| `packages/core/src/config/defaults.ts` | Typed default extraction and empty production defaults |
+| `packages/core/src/config/defaults.ts` | Typed default extraction and the shipped overridable provider defaults |
 | `packages/core/src/config/resolver.ts` | Pure seven-layer validation, merge, reset, restrictions, warnings and origins |
 | `packages/core/src/config/provenance.ts` | Origin replacement, descendant removal and display grammar |
 | `packages/adapters/src/file/yaml-parser.ts` | YAML 1.2 one-document parsing, bounds, positions and safe diagnostics |
@@ -147,7 +161,7 @@ Core configuration imports only its contracts and the trusted validator; it does
 
 ### Configuration and artifacts
 
-The core build emits `config.schema.json`, `defaults-positions.json` and `schema-sources.json` into `dist/config`. The existing exports-parity check validates that the shipped schema, defaults-position manifest and schema-source hashes stay synchronized with the typed source. Packed consumers import the built core `.` entry and core `./contracts`, plus the existing adapters `./file`, `./repo` and `./legacy` entries; configuration adds no `./config` core subpath and no adapter subpath. Credential resolution ships separately as the adapters `./credentials` entry documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
+The core build emits `config.schema.json`, `defaults-positions.json` and `schema-sources.json` into `dist/config`. The existing exports-parity check validates that the shipped schema, defaults-position manifest and schema-source hashes stay synchronized with the typed source. Packed consumers import the built core `.` entry and core `./contracts`, plus the existing adapters `./file`, `./repo` and `./legacy` entries; configuration adds no `./config` core subpath and no adapter subpath of its own. The provider engine consumes the same resolver and declares its own core `./provider` and adapters `./provider-quota` entrypoints, documented in [Provider Engine](feature-provider-engine.md). Credential resolution ships separately as the adapters `./credentials` entry documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
 
 ### Inspection workflow
 
@@ -159,7 +173,7 @@ The core build emits `config.schema.json`, `defaults-positions.json` and `schema
 
 ### Cost and limitations
 
-Configuration adds the proposed Ajv and YAML runtime dependencies recorded in the dependency registry; owner license/TDR review gates merge/adoption. The ordinary catalog is intentionally empty, so no production setting or default is invented by this feature. File interpolation, credential resolution through configuration, and sidecar behavior are not available here; credential resolution is the separate port documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
+Configuration adds the proposed Ajv and YAML runtime dependencies recorded in the dependency registry; owner license/TDR review gates merge/adoption. The provider branch is the only ordinary production catalog currently declared; its Z.AI descriptor and credential reference ship as overridable defaults, and no chain is enabled. File interpolation, credential resolution through configuration, and sidecar behavior are not available here; credential resolution is the separate port documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
 
 ## Quality Assurance Strategy
 
@@ -181,7 +195,8 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 - **Risk — untraceable values:** mitigated by per-node origins, the shipped defaults manifest and origin replacement rules.
 - **Risk — parser diagnostics:** mitigated by safe constructed failures, host-switch guard and no parser text crossing the port.
 - **Risk — dependency compatibility:** Proposed TDR-0003 and the truthful runtime-closure license registry require owner acceptance before merge/adoption.
-- **Separate capability:** credential resolution is the port documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); keyring sources, sidecar transport, provider routing and state storage belong to later consumer stories.
+- **Consumed by** the provider engine ([Provider Engine](feature-provider-engine.md)) for descriptors, credential references, chains, and shipped defaults.
+- **Separate capability:** credential resolution is the port documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); keyring sources and sidecar transport remain later capabilities, and state storage is the separate [State Layer](feature-state-layer.md).
 
 ## Glossary & References
 
@@ -194,4 +209,4 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 | Origin | The winning source label for an effective leaf or collection. |
 | Selected file | The `--config`/environment/legacy file occupying project-committed priority. |
 
-See also: [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0003](../../decisions/TDR-0003-config-parser-schema-and-acquisition.md), and the [repository glossary](../../overview/glossary.md).
+See also: [Provider Engine](feature-provider-engine.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0003](../../decisions/TDR-0003-config-parser-schema-and-acquisition.md), and the [repository glossary](../../overview/glossary.md).

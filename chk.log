@@ -1,0 +1,208 @@
+
+> delivery-os@0.0.0 check /home/juliusz/git/cwiakalski-pub-gh/agentic-delivery-os-gh-182
+> pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && bun run scripts/checks/exports-parity.ts
+
+
+> delivery-os@0.0.0 lint /home/juliusz/git/cwiakalski-pub-gh/agentic-delivery-os-gh-182
+> biome lint .
+
+ at tests/behaviour/phase-transitions.test.ts:81:30 lint/complexity/useLiteralKeys  FIXABLE  ━━━━━━━━━━
+
+  i The computed expression can be simplified without the use of a string literal.
+  
+    79 │           timestamp: data.timestamp,
+    80 │         });
+  > 81 │         expect(payloads[0]?.["reason"]).toBeUndefined();
+       │                              ^^^^^^^^
+    82 │ 
+    83 │         const entry = entryOf(documentValue(harness.targetText()), "delivery");
+  
+  i A literal key is easier to read, and tools such as type checkers and minifiers can understand the property name.
+  
+  i Unsafe fix: Use a literal key instead.
+  
+    81 │ ········expect(payloads[0]?.["reason"]).toBeUndefined();
+       │                             --      --                  
+
+ at tests/behaviour/phase-transitions.test.ts:352:68 lint/complexity/useLiteralKeys  FIXABLE  ━━━━━━━━━━
+
+  i The computed expression can be simplified without the use of a string literal.
+  
+    350 │         const data = dataOf(list);
+    351 │         expect(data.phases).toMatchObject({
+  > 352 │           delivery: { completed: harness.transitionPayloads()[2]?.["timestamp"] },
+        │                                                                    ^^^^^^^^^^^
+    353 │         });
+    354 │         const landingPayload = harness.transitionPayloads()[2];
+  
+  i A literal key is easier to read, and tools such as type checkers and minifiers can understand the property name.
+  
+  i Unsafe fix: Use a literal key instead.
+  
+    352 │ ··········delivery:·{·completed:·harness.transitionPayloads()[2]?.["timestamp"]·},
+        │                                                                   --         --   
+
+ at tests/checks/ci-checks.test.ts:187:17 lint/complexity/useIndexOf  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━
+
+  i Prefer Array#indexOf() over Array#findIndex() when looking for the index of an item.
+  
+    185 │ const jobBlock = (text: string, jobId: string): string => {
+    186 │   const lines = text.split("\n");
+  > 187 │   const start = lines.findIndex((line) => line === `  ${jobId}:`);
+        │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    188 │   if (start < 0) return "";
+    189 │   let end = lines.length;
+  
+  i This callback only tests for equality against a single value. This value can be passed directly to indexOf() instead.
+  
+  i Unsafe fix: Replace Array#findIndex() with Array#indexOf()
+  
+    185 185 │   const jobBlock = (text: string, jobId: string): string => {
+    186 186 │     const lines = text.split("\n");
+    187     │ - ··const·start·=·lines.findIndex((line)·=>·line·===·`··${jobId}:`);
+        187 │ + ··const·start·=·lines.indexOf(`··${jobId}:`);
+    188 188 │     if (start < 0) return "";
+    189 189 │     let end = lines.length;
+  
+
+ at packages/core/src/provider/chain.ts:121:9 lint/complexity/useOptionalChain  FIXABLE  ━━━━━━━━━━━
+
+  ! Change to an optional chain.
+  
+    119 │     .filter(
+    120 │       (state): state is ChainEntryState =>
+  > 121 │         state !== undefined && state.descriptor.enabled && state.condition.status === "parked",
+        │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    122 │     );
+    123 │   if (contributing.length === 0) {
+  
+  i An optional chain is shorter, and it avoids repeating the same expression in each check.
+  
+  i Unsafe fix: Change to an optional chain.
+  
+    119 119 │       .filter(
+    120 120 │         (state): state is ChainEntryState =>
+    121     │ - ········state·!==·undefined·&&·state.descriptor.enabled·&&·state.condition.status·===·"parked",
+        121 │ + ········state?.descriptor.enabled·&&·state.condition.status·===·"parked",
+    122 122 │       );
+    123 123 │     if (contributing.length === 0) {
+  
+
+ at tests/behaviour/config-cli.test.ts:313:52 lint/suspicious/noTemplateCurlyInString ━━━━━━━━━━━━━━
+
+  ! Unexpected template string placeholder.
+  
+    311 │         environment: baseEnvironment,
+    312 │         catalog: FIXTURE_CATALOG,
+  > 313 │         contents: committed('x-test:\n  oldValue: "${SECRET:-default}"\n'),
+        │                                                    ^^^^^^^^^^^^^^^^^^
+    314 │       },
+    315 │       "config.interpolation.rejected",
+  
+  i Turn the string into a template string.
+  
+
+ at tests/behaviour/config-restrictions.test.ts:48:27 lint/suspicious/noTemplateCurlyInString ━━━━━━━━━━
+
+  ! Unexpected template string placeholder.
+  
+    46 │       }
+    47 │     }
+  > 48 │     for (const value of ["${SOME:-default}", "{env:SOME}"]) {
+       │                           ^^^^^^^^^^^^^^^^
+    49 │       const result = run({ sources: [fileFacts("system", { "x-test": { oldValue: value } }, 2)] });
+    50 │       expect(result.ok).toBe(false);
+  
+  i Turn the string into a template string.
+  
+
+ at tests/behaviour/config-restrictions.test.ts:141:75 lint/suspicious/noTemplateCurlyInString ━━━━━━━━━━
+
+  ! Unexpected template string placeholder.
+  
+    139 │           {
+    140 │             provider: {
+  > 141 │               credentials: { zai: { sourceKey: { style: "literal", name: "${SECRET}" } } },
+        │                                                                           ^^^^^^^^^
+    142 │             },
+    143 │           },
+  
+  i Turn the string into a template string.
+  
+
+ at tests/golden/redaction.test.ts:96:11 lint/suspicious/noTemplateCurlyInString ━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected template string placeholder.
+  
+    94 │     target,
+    95 │     "export const serializeEnvelope = (envelope: unknown, _secrets: readonly string[]): string =>\n" +
+  > 96 │       "  `${JSON.stringify(envelope, null, 2)}\\n`;\n",
+       │           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    97 │   );
+    98 │   return import(`${pathToFileURL(target).href}?v=${Date.now()}`) as Promise<{
+  
+  i Turn the string into a template string.
+  
+
+ at packages/cli/src/edge.ts:462:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × expected `}` but instead the file ends
+  
+    460 │   };
+    461 │ };
+  > 462 │ 
+        │ 
+  
+  i the file ends here
+  
+    460 │   };
+    461 │ };
+  > 462 │ 
+        │ 
+  
+
+ at tests/checks/error-table-sync.test.ts:966:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × expected `}` but instead the file ends
+  
+    964 │   });
+    965 │ });
+  > 966 │ 
+        │ 
+  
+  i the file ends here
+  
+    964 │   });
+    965 │ });
+  > 966 │ 
+        │ 
+  
+
+ at tests/structure/error-table.test.ts:616:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × expected `}` but instead the file ends
+  
+    614 │   });
+    615 │ });
+  > 616 │ 
+        │ 
+  
+  i the file ends here
+  
+    614 │   });
+    615 │ });
+  > 616 │ 
+        │ 
+  
+
+Checked 507 files in 140ms. No fixes applied.
+Found 3 errors.
+Found 5 warnings.
+Found 3 infos.
+lint ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while running checks.
+  
+
+ ELIFECYCLE  Command failed with exit code 1.
+ ELIFECYCLE  Command failed with exit code 1.

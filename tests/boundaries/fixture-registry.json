@@ -271,6 +271,11 @@
       "id": "runtime-node-fs-state-facade",
       "tc": "TC-STATE-022",
       "path": "packages/core/src/state/probe.ts"
+    },
+    {
+      "id": "runtime-node-fs-core-provider",
+      "tc": "TC-PROV-006",
+      "path": "packages/core/src/provider/probe.ts"
     }
   ],
   "ambient-env-branding": [

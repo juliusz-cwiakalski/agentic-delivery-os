@@ -5,6 +5,8 @@ export type TrustedSchema = Readonly<Record<string, unknown>>;
 const valueSchema = (field: CatalogField, partial: boolean): TrustedSchema => {
   let base: TrustedSchema;
   if (field.type === "object") base = objectSchema(field.fields, partial, false);
+  else if (field.type === "record")
+    base = { type: "object", additionalProperties: valueSchema(field.value, partial) };
   else if (field.type === "array")
     base = { type: "array", items: valueSchema(field.items, partial) };
   else base = { type: field.type };

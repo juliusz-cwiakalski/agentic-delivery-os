@@ -1,0 +1,11 @@
+provider:
+  credentials:
+    zai:
+      sourceKey:
+        style: literal
+        name: ZAI_API_KEY
+  entries:
+    zai-coding-plan:
+      class: subscription
+      enabled: true
+  chains: {}
