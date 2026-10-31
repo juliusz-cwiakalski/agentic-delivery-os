@@ -14,8 +14,14 @@ export {
   CONFORMANCE_TIERS,
 } from "./conformance/artifact.js";
 export { CONFORMANCE_ADAPTERS } from "./conformance/adapters.js";
+export {
+  LIVE_READ_OPERATIONS,
+  runtimeCoverageViolations,
+  structuralCoverageViolations,
+} from "./conformance/coverage.js";
 export { CONFORMANCE_FLOWS, findFlow } from "./conformance/flows.js";
 export { createMockTenantTransport, decodeMockTenant } from "./conformance/mock-tenant.js";
+export { runConformance } from "./conformance/runner.js";
 export type { MockTenantTransport } from "./conformance/mock-tenant.js";
 export type {
   ConformanceAdapterClient,

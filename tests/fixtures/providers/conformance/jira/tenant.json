@@ -28,50 +28,48 @@
       "url": "https://jira.example.com/rest/api/2/issue/TRACK-101",
       "status": 200,
       "body": {
-        "issue": {
-          "id": "10001",
-          "key": "TRACK-101",
-          "self": "https://jira.example.com/rest/api/2/issue/10001",
-          "fields": {
-            "summary": "Seed the tracker collector read slice",
-            "status": {
-              "name": "In Progress"
-            },
-            "labels": [
-              "tracker",
-              "hand-back"
-            ],
-            "assignee": {
-              "displayName": "owner-placeholder",
-              "accountId": "acct-0001"
-            },
-            "updated": "2026-10-28T09:15:00.000+0000",
-            "comment": {
-              "comments": [
-                {
-                  "id": "c-1",
-                  "author": {
-                    "displayName": "person-placeholder",
-                    "accountId": "acct-0002"
-                  },
-                  "body": "Starting the read slice."
-                }
-              ]
-            },
-            "issuelinks": [
+        "id": "10001",
+        "key": "TRACK-101",
+        "self": "https://jira.example.com/rest/api/2/issue/10001",
+        "fields": {
+          "summary": "Seed the tracker collector read slice",
+          "status": {
+            "name": "In Progress"
+          },
+          "labels": [
+            "tracker",
+            "hand-back"
+          ],
+          "assignee": {
+            "displayName": "owner-placeholder",
+            "accountId": "acct-0001"
+          },
+          "updated": "2026-10-28T09:15:00.000+0000",
+          "comment": {
+            "comments": [
               {
-                "type": {
-                  "name": "Blocks",
-                  "inward": "is blocked by",
-                  "outward": "blocks"
+                "id": "c-1",
+                "author": {
+                  "displayName": "person-placeholder",
+                  "accountId": "acct-0002"
                 },
-                "outwardIssue": {
-                  "id": "10002",
-                  "key": "TRACK-102"
-                }
+                "body": "Starting the read slice."
               }
             ]
-          }
+          },
+          "issuelinks": [
+            {
+              "type": {
+                "name": "Blocks",
+                "inward": "is blocked by",
+                "outward": "blocks"
+              },
+              "outwardIssue": {
+                "id": "10002",
+                "key": "TRACK-102"
+              }
+            }
+          ]
         }
       }
     }

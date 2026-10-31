@@ -19,7 +19,12 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { JIRA_ADAPTER_CONTRACT } from "@delivery-os/adapters/jira";
 import { ADAPTER_OPERATIONS } from "@delivery-os/core/contracts";
-import { CONFORMANCE_ADAPTERS, CONFORMANCE_FLOWS, findFlow } from "@delivery-os/testkit";
+import {
+  CONFORMANCE_ADAPTERS,
+  CONFORMANCE_FLOWS,
+  findFlow,
+  structuralCoverageViolations,
+} from "@delivery-os/testkit";
 
 const ROOT = process.cwd();
 
@@ -508,6 +513,175 @@ describe("TC-CONF-003 provider-contract registration scan", () => {
       expect(scanContractDeclarations(root)).toEqual([]);
     } finally {
       rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TC-CONF-004 / TC-CONF-005 — adapter-level structural coverage
+// ---------------------------------------------------------------------------
+
+const flowsWithout = (predicate: (operation: string) => boolean): unknown[] =>
+  CONFORMANCE_FLOWS.map((flow) => ({
+    ...flow,
+    steps: flow.steps.filter((step) => !predicate(step.operation)),
+  }));
+
+describe("TC-CONF-004 structural step and carrier coverage", () => {
+  test("every supported operation and declared gap has at least one step", () => {
+    expect(
+      structuralCoverageViolations({ flows: CONFORMANCE_FLOWS, adapters: CONFORMANCE_ADAPTERS }),
+    ).toEqual([]);
+    const operations = new Set(
+      CONFORMANCE_FLOWS.flatMap((flow) => flow.steps.map((step) => step.operation)),
+    );
+    for (const registration of CONFORMANCE_ADAPTERS) {
+      for (const operation of registration.contract.capabilities.supportedOperations) {
+        expect(operations.has(operation), `${registration.provider}:${operation}`).toBe(true);
+      }
+      for (const gap of registration.contract.capabilities.declaredGaps) {
+        expect(operations.has(gap.operation), `${registration.provider}:${gap.operation}`).toBe(
+          true,
+        );
+      }
+    }
+  });
+
+  test("the shipped adapters declare no carriers and the carrier step stays registered", () => {
+    for (const registration of CONFORMANCE_ADAPTERS) {
+      expect(registration.contract.capabilities.writableCarriers).toEqual([]);
+      expect(registration.contract.capabilities.readableCarriers).toEqual([]);
+    }
+    const carrierSteps = CONFORMANCE_FLOWS.flatMap((flow) =>
+      flow.steps.filter((step) => step.requiresCarrier === true),
+    );
+    expect(carrierSteps.map((step) => step.stepId)).toEqual([
+      "comment-provenance.carrier-roundtrip",
+    ]);
+  });
+
+  test("a declared carrier without a carrier step fails by provider", () => {
+    const flows = CONFORMANCE_FLOWS.map((flow) => ({
+      ...flow,
+      steps: flow.steps.filter((step) => step.requiresCarrier !== true),
+    }));
+    const adapter = {
+      provider: "github",
+      contract: {
+        adapterName: "github",
+        systemKind: "vcs",
+        capabilities: {
+          supportedOperations: ["read-work-item"],
+          declaredGaps: ["write-work-item"],
+          writableCarriers: ["invisible-comment-block"],
+          readableCarriers: ["invisible-comment-block"],
+        },
+      },
+    };
+    expect(
+      structuralCoverageViolations({ flows, adapters: [adapter] }).some((message) =>
+        message.includes("github: declared carrier has no carrier step"),
+      ),
+    ).toBe(true);
+  });
+
+  test("removing the only step for a supported operation fails by provider and operation", () => {
+    const violations = structuralCoverageViolations({
+      flows: flowsWithout((operation) => operation === "read-work-item"),
+      adapters: CONFORMANCE_ADAPTERS,
+    });
+    expect(
+      violations.some((message) =>
+        message.includes("github: supported operation read-work-item has no step"),
+      ),
+    ).toBe(true);
+  });
+
+  test("removing the only step for a declared gap fails by provider and operation", () => {
+    const violations = structuralCoverageViolations({
+      flows: flowsWithout((operation) => operation === "write-work-item"),
+      adapters: CONFORMANCE_ADAPTERS,
+    });
+    expect(
+      violations.some((message) =>
+        message.includes("github: declared gap write-work-item has no step"),
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("TC-CONF-005 structural non-vacuity floors", () => {
+  test("exact sets are complete and every adapter participates in every operation", () => {
+    expect(CONFORMANCE_FLOWS).toHaveLength(3);
+    expect(CONFORMANCE_ADAPTERS).toHaveLength(3);
+    expect(
+      structuralCoverageViolations({ flows: CONFORMANCE_FLOWS, adapters: CONFORMANCE_ADAPTERS }),
+    ).toEqual([]);
+    expect(CONFORMANCE_FLOWS.every((flow) => flow.steps.length > 0)).toBe(true);
+  });
+
+  test("an empty registry fails with a non-vacuity message", () => {
+    expect(
+      structuralCoverageViolations({ flows: [], adapters: CONFORMANCE_ADAPTERS }).some((message) =>
+        message.includes("flows: registry is empty"),
+      ),
+    ).toBe(true);
+  });
+
+  test("an empty flow fails with a non-vacuity message", () => {
+    const mutated = [{ flowId: "empty-flow", name: "Empty", steps: [] }];
+    expect(
+      structuralCoverageViolations({ flows: mutated, adapters: CONFORMANCE_ADAPTERS }).some(
+        (message) => message.includes("empty-flow: flow has no steps"),
+      ),
+    ).toBe(true);
+  });
+
+  test("removing all steps for one operation fails naming the operation", () => {
+    expect(
+      structuralCoverageViolations({
+        flows: flowsWithout((operation) => operation === "transition-work-item"),
+        adapters: CONFORMANCE_ADAPTERS,
+      }).some((message) => message.includes("missing operation transition-work-item")),
+    ).toBe(true);
+  });
+
+  test("removing all adapters fails with a non-vacuity message", () => {
+    expect(
+      structuralCoverageViolations({ flows: CONFORMANCE_FLOWS, adapters: [] }).some((message) =>
+        message.includes("adapters: registration set is empty"),
+      ),
+    ).toBe(true);
+  });
+
+  test("an adapter with zero supported operations and zero gaps fails", () => {
+    const adapter = {
+      provider: "github",
+      contract: {
+        adapterName: "github",
+        systemKind: "vcs",
+        capabilities: {
+          supportedOperations: [],
+          declaredGaps: [],
+          writableCarriers: [],
+          readableCarriers: [],
+        },
+      },
+    };
+    expect(
+      structuralCoverageViolations({ flows: CONFORMANCE_FLOWS, adapters: [adapter] }).some(
+        (message) => message.includes("github: adapter declares no operations"),
+      ),
+    ).toBe(true);
+  });
+
+  test("the gates do not compare against a moving base ref", () => {
+    for (const file of [
+      "packages/testkit/src/conformance/coverage.ts",
+      "packages/testkit/src/conformance/runner.ts",
+    ]) {
+      const source = readFileSync(join(ROOT, file), "utf8");
+      expect(source.includes("origin/main-tools"), file).toBe(false);
     }
   });
 });
