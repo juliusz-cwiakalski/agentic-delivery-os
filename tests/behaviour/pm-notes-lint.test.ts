@@ -7,10 +7,25 @@
  * are proven never inspected while the same shapes on applicable entries fail.
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { createRegistryLintReader } from "../../packages/cli/src/edge";
 import { LITE_REQUIRED_PHASES } from "../../packages/core/src/contracts/index";
 import { lintPmNotes } from "../../packages/core/src/domain/pm-notes-lint";
+import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
+import {
+  ledgerPath,
+  makeIdentity,
+  makeTempRoot,
+  openStore,
+  removeRoot,
+} from "../fixtures/state/harness";
+import {
+  emptyRegistry,
+  runLint,
+  runtimeForFixture,
+  runtimeWithoutTarget,
+} from "./pm-notes-lint-command-support";
 import { documentOf, entryOf, loadPmNotes, mutated, parsePmNotes } from "./pm-notes-lint-support";
 
 const CANARY = "planted-payload-variant-0002";
@@ -157,5 +172,216 @@ describe("TC-LINT-006 variant semantics and opaque keys", () => {
       ok: true,
       variant: "full",
     });
+  });
+});
+
+const withStore = (
+  label: string,
+  body: (context: {
+    readonly root: string;
+    readonly reader: ReturnType<typeof createRegistryLintReader>;
+    readonly ledger: string;
+    readonly torn: () => void;
+  }) => Promise<void>,
+): Promise<void> => {
+  const root = makeTempRoot(label);
+  const identity = makeIdentity(root);
+  const { store } = openStore(identity);
+  const acquired = store.acquireFence("lint-fixture");
+  if (!acquired.ok) throw new Error("fence acquisition failed");
+  const appended = store.append(acquired.value.handle, {
+    kind: "phase.transition",
+    recordKey: "GH-179:clarify_scope",
+    payload: {
+      changeRef: "GH-179",
+      phaseId: "clarify_scope",
+      operation: "complete",
+      timestamp: "2026-10-31T00:00:00Z",
+      outcome: "landed",
+    },
+  });
+  if (!appended.ok) throw new Error("append failed");
+  store.releaseFence(acquired.value.handle);
+  const path = ledgerPath(identity);
+  return body({
+    root,
+    reader: createRegistryLintReader(store),
+    ledger: path,
+    torn: () => {
+      const text = readFileSync(path, "utf8");
+      writeFileSync(path, text.replace('"sequence":1', '"sequence":9'));
+    },
+  }).finally(() => removeRoot(root));
+};
+
+describe("TC-LINT-004 target resolution", () => {
+  test("missing pm-notes is the only target-resolution failure", async () => {
+    const fixture = runtimeWithoutTarget();
+    try {
+      const run = await runLint(fixture.runtime, ["GH-179"]);
+      expect(run.exitCode).toBe(1);
+      expect(run.envelope?.error).toMatchObject({ code: "lint.target.missing" });
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test("an absent registry is an explicit verified-empty pass, distinct from target.missing", async () => {
+    const root = makeTempRoot("gh179-lint-absent");
+    try {
+      const identity = makeIdentity(`${root}/absent`);
+      const { store } = openStore(identity);
+      const fixture = runtimeForFixture(
+        "valid/full-complete.yaml",
+        createRegistryLintReader(store),
+      );
+      try {
+        const run = await runLint(fixture.runtime, ["GH-179", "--registry"]);
+        expect(run.exitCode).toBe(0);
+        expect(run.envelope?.error).toBeUndefined();
+        expect(run.envelope?.data).toMatchObject({
+          target: "registry",
+          evidence: { class: "verified-empty", target: "registry" },
+        });
+      } finally {
+        fixture.cleanup();
+      }
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("a present-but-torn registry is a classified storage failure, never empty", async () => {
+    await withStore("gh179-lint-torn", async ({ reader, torn }) => {
+      torn();
+      const fixture = runtimeForFixture("valid/full-complete.yaml", reader);
+      try {
+        const run = await runLint(fixture.runtime, ["GH-179", "--registry"]);
+        expect(run.exitCode).toBe(2);
+        expect(run.envelope?.error).toMatchObject({ code: "state.store.torn" });
+        expect(run.envelope?.error).not.toMatchObject({ code: "lint.target.missing" });
+        expect(run.envelope?.data).toBeUndefined();
+      } finally {
+        fixture.cleanup();
+      }
+    });
+  });
+
+  test("valid pm-notes plus a valid registry passes in both mode", async () => {
+    await withStore("gh179-lint-valid", async ({ reader, ledger }) => {
+      const before = readFileSync(ledger, "utf8");
+      const fixture = runtimeForFixture("valid/full-complete.yaml", reader);
+      try {
+        const run = await runLint(fixture.runtime, ["GH-179", "--pm-notes", "--registry"]);
+        expect(run.exitCode).toBe(0);
+        const data = run.envelope?.data as { targets?: unknown[] } | undefined;
+        expect(data?.targets).toHaveLength(2);
+      } finally {
+        fixture.cleanup();
+      }
+      expect(readFileSync(ledger, "utf8")).toBe(before);
+    });
+  });
+
+  test("both-mode failures report pm-notes first (PIN-1 order)", async () => {
+    await withStore("gh179-lint-order", async ({ reader, torn }) => {
+      torn();
+      const fixture = runtimeForFixture(
+        "malformed/unparseable-orphaned-indentation.yaml.txt",
+        reader,
+      );
+      try {
+        const run = await runLint(fixture.runtime, ["GH-179", "--pm-notes", "--registry"]);
+        expect(run.exitCode).toBe(1);
+        expect(run.envelope?.error).toMatchObject({ code: "lint.notes.malformed" });
+      } finally {
+        fixture.cleanup();
+      }
+    });
+  });
+});
+
+describe("TC-LINT-010 lint envelope and exit projection", () => {
+  test("success is one valid envelope with exit 0 in json mode", async () => {
+    const fixture = runtimeForFixture("valid/full-complete.yaml");
+    try {
+      const run = await runLint(fixture.runtime, ["GH-179"]);
+      expect(run.exitCode).toBe(0);
+      expect(assertEnvelopeContract(run.envelope)).toEqual([]);
+      expect(run.envelope?.data).toMatchObject({
+        target: "pm-notes",
+        variant: "full",
+        evidence: { class: "conforms" },
+      });
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test("an unknown flag stays on fallback.invocation with exit 1", async () => {
+    const fixture = runtimeForFixture("valid/full-complete.yaml");
+    try {
+      const run = await runLint(fixture.runtime, ["GH-179", "--unknown"]);
+      expect(run.exitCode).toBe(1);
+      expect(assertEnvelopeContract(run.envelope)).toEqual([]);
+      expect(run.envelope?.error).toMatchObject({ code: "fallback.invocation" });
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test("human success writes output and no diagnostic; failure writes only the error stream", async () => {
+    const success = runtimeForFixture("valid/full-complete.yaml");
+    try {
+      const run = await runLint(success.runtime, ["GH-179"], { json: false });
+      expect(run.exitCode).toBe(0);
+      expect(run.stdout).toContain("pm-notes");
+      expect(run.stderr).toBe("");
+    } finally {
+      success.cleanup();
+    }
+    const failure = runtimeForFixture("malformed/unparseable-orphaned-indentation.yaml.txt");
+    try {
+      const run = await runLint(failure.runtime, ["GH-179"], { json: false });
+      expect(run.exitCode).toBe(1);
+      expect(run.stdout).toBe("");
+      expect(run.stderr).toContain("lint.notes.malformed");
+    } finally {
+      failure.cleanup();
+    }
+  });
+
+  test("a missing positional ref is a user validation failure, not a crash", async () => {
+    const fixture = runtimeForFixture("valid/full-complete.yaml");
+    try {
+      const run = await runLint(fixture.runtime, []);
+      expect(run.exitCode).toBe(1);
+      expect(run.envelope?.error).toMatchObject({ code: "input.value.rejected" });
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test("the registry verified evidence includes count and no projection", async () => {
+    await withStore("gh179-lint-evidence", async ({ reader }) => {
+      const fixture = runtimeForFixture("valid/full-complete.yaml", reader);
+      try {
+        const run = await runLint(fixture.runtime, ["GH-179", "--registry"]);
+        expect(run.exitCode).toBe(0);
+        expect(run.envelope?.data).toMatchObject({
+          evidence: {
+            class: "verified",
+            recordCount: 1,
+            projection: { present: false },
+          },
+        });
+      } finally {
+        fixture.cleanup();
+      }
+    });
+  });
+
+  test("unused empty registry helper remains the default control", () => {
+    expect(emptyRegistry()).toMatchObject({ ok: true, verifiedEmpty: true, recordCount: 0 });
   });
 });

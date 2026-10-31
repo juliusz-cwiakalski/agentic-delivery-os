@@ -79,12 +79,14 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "core/src/state/driver/strategy.ts": ["createJsonlStrategy", "createSqliteStrategy"],
   "cli/src/classify.ts": ["classifyDomainKind", "classifyThrown", "resolveAppErrorCode"],
   "cli/src/commands/config.ts": ["createConfigCommandDefinition"],
-  "cli/src/commands/index.ts": ["createConfigCommandDefinition"],
+  "cli/src/commands/index.ts": ["createConfigCommandDefinition", "createLintCommandDefinition"],
+  "cli/src/commands/lint.ts": ["createLintCommandDefinition"],
   "cli/src/edge.ts": [
     "createProductionDependencies",
     "registerEdgeSecrets",
     "readShippedDefaultsManifest",
     "createConfigProgram",
+    "createRegistryLintReader",
   ],
   "cli/src/index.ts": ["runCli"],
   "cli/src/output/serialize.ts": ["redact", "serializeEnvelope", "writeOutput"],
@@ -111,6 +113,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "createEnvironmentCredentialPort",
     "createProcessCredentialPort",
     "resolveCredentialSourceKey",
+  ],
+  "adapters/src/file/pm-notes-parser.ts": [
+    "nodePmNotesFileSystemFacts",
+    "parsePmNotesText",
+    "readPmNotesTarget",
   ],
   "adapters/src/file/config-source.ts": [
     "acquireFileConfig",

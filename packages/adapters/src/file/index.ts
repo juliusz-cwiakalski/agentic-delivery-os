@@ -12,6 +12,15 @@ export {
   runtimePlatform,
 } from "./config-source.js";
 export {
+  nodePmNotesFileSystemFacts,
+  type PmNotesFileSystemFacts,
+  type PmNotesParseResult,
+  type PmNotesTargetRead,
+  type PmNotesTargetRequest,
+  parsePmNotesText,
+  readPmNotesTarget,
+} from "./pm-notes-parser.js";
+export {
   type ParsedConfig,
   parseConfigYaml,
   parserHostSwitchBlocked,

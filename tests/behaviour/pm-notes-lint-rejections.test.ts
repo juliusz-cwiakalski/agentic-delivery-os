@@ -264,3 +264,111 @@ describe("TC-LINT-003 unknown variant versus wrong-typed variant", () => {
     expect(lintPmNotes({ ok: true, value: lite })).toEqual({ ok: true, variant: "lite" });
   });
 });
+
+import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
+import {
+  runLint,
+  runtimeForFixture,
+  runtimeForValue,
+  runtimeWithoutTarget,
+} from "./pm-notes-lint-command-support";
+
+describe("TC-LINT-001/002/003/005 command halves through runCli", () => {
+  const commandCases: Array<[string, () => ReturnType<typeof runtimeForFixture>, string]> = [
+    [
+      "unparseable document",
+      () => runtimeForFixture("malformed/unparseable-orphaned-indentation.yaml.txt"),
+      "lint.notes.malformed",
+    ],
+    [
+      "wrong-typed change_id",
+      () =>
+        runtimeForValue(
+          documentOf(
+            mutated(BASE, CANARY, (document) => {
+              document.change_id = 42;
+            }),
+          ),
+        ),
+      "lint.notes.malformed",
+    ],
+    [
+      "missing title",
+      () =>
+        runtimeForValue(
+          documentOf(
+            mutated(BASE, CANARY, (document) => {
+              delete document.title;
+            }),
+          ),
+        ),
+      "lint.keys.missing",
+    ],
+    [
+      "unknown variant",
+      () => runtimeForFixture("variant/unknown-compressed.yaml"),
+      "lint.variant.unknown",
+    ],
+    [
+      "lite missing delivery",
+      () =>
+        runtimeForValue(
+          documentOf(
+            mutated(loadPmNotes("valid/lite-six.yaml"), CANARY, (document) => {
+              delete (document.phases as Record<string, unknown>).delivery;
+            }),
+          ),
+        ),
+      "lint.phases.incomplete",
+    ],
+  ];
+
+  for (const [name, makeRuntime, code] of commandCases) {
+    test(`${name} fails exactly ${code} with a valid envelope`, async () => {
+      const fixture = makeRuntime();
+      try {
+        const run = await runLint(fixture.runtime, ["GH-179"]);
+        expect(run.exitCode).toBe(1);
+        expect(run.envelope).toBeDefined();
+        const envelope = run.envelope as Record<string, unknown>;
+        expect(assertEnvelopeContract(envelope)).toEqual([]);
+        expect(envelope).not.toHaveProperty("data");
+        expect(envelope.error).toMatchObject({
+          code,
+          category: "user",
+          retryable: false,
+          consequence: "not_landed",
+        });
+        expect(run.stdout + run.stderr).not.toContain(CANARY);
+      } finally {
+        fixture.cleanup();
+      }
+    });
+  }
+
+  test("a missing pm-notes target fails lint.target.missing and creates nothing", async () => {
+    const fixture = runtimeWithoutTarget();
+    try {
+      const run = await runLint(fixture.runtime, ["GH-179"]);
+      expect(run.exitCode).toBe(1);
+      expect(run.envelope?.error).toMatchObject({ code: "lint.target.missing" });
+      expect(fixture.target).not.toContain("chg-GH-179-pm-notes.yaml");
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test("positive controls exit 0 through the same invocation path", async () => {
+    for (const relative of ["valid/full-complete.yaml", "valid/lite-six.yaml"]) {
+      const fixture = runtimeForFixture(relative);
+      try {
+        const run = await runLint(fixture.runtime, ["GH-179"]);
+        expect(run.exitCode).toBe(0);
+        expect(assertEnvelopeContract(run.envelope)).toEqual([]);
+        expect(run.envelope?.data).toBeDefined();
+      } finally {
+        fixture.cleanup();
+      }
+    }
+  });
+});
