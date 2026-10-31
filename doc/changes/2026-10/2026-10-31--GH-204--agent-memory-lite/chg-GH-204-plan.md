@@ -127,12 +127,12 @@ Deliver the practices-now track of the ADOS memory model as text and skill conte
 
 **Tasks**:
 
-- [ ] **4.1** Run static content and diff checks: TC-MEMORY-003 rule-by-rule kernel checklist; TC-MEMORY-004 tree and index; TC-MEMORY-005 seed honesty; TC-MEMORY-009 conflict truth and reviewer independence in both the kernel and README; TC-MEMORY-011 forbidden paths plus the license-header scan; TC-MEMORY-012 dash scan.
-- [ ] **4.2** Run parsers: TC-MEMORY-001 skill frontmatter with non-vacuity, and TC-MEMORY-014 promoted record with a colon-space and a quoted `created` string under YAML 1.2 core.
-- [ ] **4.3** Run disposable `mktemp -d` dry-runs: TC-MEMORY-006 missing-agent path and template completeness; TC-MEMORY-007 AC-7.1..AC-7.6 plus the conflict scenario where a newer unsupported claim loses to an older evidence-backed claim; TC-MEMORY-008 curator limits; TC-MEMORY-010 id reuse. Hash the real seeds before and after.
-- [ ] **4.4** Run gates with the install precondition: `pnpm install --frozen-lockfile` first, then `bun test tests/behaviour/pm-notes-corpus.test.ts`, the doc-distribution guard, the plugin drift check, and `git diff --check` (TC-MEMORY-013, F-16).
-- [ ] **4.5** Capture AC-15 lifecycle evidence at phase 11: PM creates the PR to `main-tools` and does not merge; the owner or CEO merges and the ticket closes with a delivery summary (TC-MEMORY-015).
-- [ ] **4.6** Fix only in-scope findings, never by adding exclusions or regenerating `.ados-claude/**`; report results to PM.
+- [x] **4.1** Run static content and diff checks: TC-MEMORY-003 rule-by-rule kernel checklist; TC-MEMORY-004 tree and index; TC-MEMORY-005 seed honesty; TC-MEMORY-009 conflict truth and reviewer independence in both the kernel and README; TC-MEMORY-011 forbidden paths plus the license-header scan; TC-MEMORY-012 dash scan. (all PASS: kernel 26/26, index 4/4, seeds 0 dated, forbidden paths none, header scan clean, dash scan clean)
+- [x] **4.2** Run parsers: TC-MEMORY-001 skill frontmatter with non-vacuity, and TC-MEMORY-014 promoted record with a colon-space and a quoted `created` string under YAML 1.2 core. (PASS: PyYAML safe_load, name and 15-word quoted description, non-vacuity ScannerError, created stays str)
+- [x] **4.3** Run disposable `mktemp -d` dry-runs: TC-MEMORY-006 missing-agent path and template completeness; TC-MEMORY-007 AC-7.1..AC-7.6 plus the conflict scenario where a newer unsupported claim loses to an older evidence-backed claim; TC-MEMORY-008 curator limits; TC-MEMORY-010 id reuse. Hash the real seeds before and after. (all PASS; seed hash 19e298171658acb6e225f625fa7b4ca2754117f80f99941d0170cc57fa791998 before and after; temp cleaned)
+- [x] **4.4** Run gates with the install precondition: `pnpm install --frozen-lockfile` first, then `bun test tests/behaviour/pm-notes-corpus.test.ts`, the doc-distribution guard, the plugin drift check, and `git diff --check` (TC-MEMORY-013, F-16). (PASS: install and build ok; corpus 17/17; distribution OK; plugin drift none; diff check clean)
+- [ ] **4.5** Capture AC-15 lifecycle evidence at phase 11: PM creates the PR to `main-tools` and does not merge; the owner or CEO merges and the ticket closes with a delivery summary (TC-MEMORY-015). (deferred: PM-owned at phase 11, not coder evidence)
+- [x] **4.6** Fix only in-scope findings, never by adding exclusions or regenerating `.ados-claude/**`; report results to PM. (one in-scope fix: advisory label added to the README first-capture template; no exclusions, no plugin regeneration)
 
 **Acceptance Criteria**: Must: AC-4 and AC-7..AC-15 evidenced; forbidden path, header, and dash checks clean. Should: seed hash unchanged and no dry-run artifact left inside the repository.
 
@@ -198,5 +198,5 @@ Deliver the practices-now track of the ADOS memory model as text and skill conte
 | 1 | Complete | 2026-10-31 | 2026-10-31 | phase 1 commit: docs(GH-204): add agent memory kernel rules | Kernel covers R1..R10; scoped diff one hunk; dash scan clean. |
 | 2 | Complete | 2026-10-31 | 2026-10-31 | phase 2 commit: docs(GH-204): add memory index, seeds, and record trees | README 150 lines, seeds 12-13 lines, both .gitkeep empty, index coverage 4/4. |
 | 3 | Complete | 2026-10-31 | 2026-10-31 | phase 3 commit: docs(GH-204): add consolidate-memory skill and inventory entry | Skill 135 lines, description 15 words, parse ok; one Skills section in README. |
-| 4 | Pending | - | - | - | - |
+| 4 | Complete (4.5 PM-owned) | 2026-10-31 | 2026-10-31 | phase 4 commit: docs(GH-204): validate agent memory artifacts | Static, parser, dry-run, and gate checks pass; seed hash unchanged; 4.5 deferred to phase 11; build needed before the Bun corpus test. |
 | 5..11 | PM-owned | - | - | - | not marked by coder; AC-15 evidence added at phase 11 |
