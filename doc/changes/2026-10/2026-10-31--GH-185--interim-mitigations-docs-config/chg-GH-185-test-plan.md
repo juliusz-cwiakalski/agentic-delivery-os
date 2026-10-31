@@ -848,20 +848,20 @@ Populated during delivery / phase 9 quality gates and at review. Record the comm
 
 | TC ID | Run Date | Result | Notes / Evidence |
 |-------|----------|--------|------------------|
-| TC-MITIG-001 | | | |
-| TC-MITIG-002 | | | |
-| TC-MITIG-003 | | | |
-| TC-MITIG-004 | | | |
-| TC-MITIG-005 | | | |
-| TC-MITIG-006 | | | |
-| TC-MITIG-007 | | | |
-| TC-MITIG-008 | | | |
-| TC-MITIG-009 | | | |
-| TC-MITIG-010 | | | |
-| TC-MITIG-011 | | | |
-| TC-MITIG-012 | | | |
-| TC-MITIG-013 | | | |
-| TC-MITIG-014 | | | |
-| TC-MITIG-015 | | | |
-| TC-MITIG-016 | | | |
-| TC-MITIG-017 | | | |
+| TC-MITIG-001 | 2026-10-31 | PASS | Docs-only diff: 4 target docs modified + doc/changes artifacts added; zero `scripts/**`/`tools/**` paths. |
+| TC-MITIG-002 | 2026-10-31 | PASS | `git diff --check` on merge-base...HEAD clean. |
+| TC-MITIG-003 | 2026-10-31 | PASS | All four elements present (trigger/outcome/recognition/recovery); grounded at `deliver-ticket.sh` L1614/L1672/L1996-1997. |
+| TC-MITIG-004 | 2026-10-31 | PASS | Close-out denial vs mid-run stall explicitly contrasted as different mechanisms/remedies. |
+| TC-MITIG-005 | 2026-10-31 | PASS | `CEO_LOOP_STUCK_MINUTES` in guide config row + troubleshooting + spec row; every `STALL` hit is probe/misname explanation; `--help` rough edge noted. |
+| TC-MITIG-006 | 2026-10-31 | PASS | 10-minute defaults, `--stuck-minutes`, multi-signal semantics, raise-for-long-reasoning guidance, test-only seconds all documented. |
+| TC-MITIG-007 | 2026-10-31 | PASS | JOIN meaning/action/expected outcome/`--is-delivering`/stale self-healing present; generic line shape only. |
+| TC-MITIG-008 | 2026-10-31 | PASS | Canonical who/when/who-not/why in change-lifecycle; agents-guide pointer + modes-guide cross-link only. |
+| TC-MITIG-009 | 2026-10-31 | PASS | One rule body per mitigation; no new `doc/guides/*mitigation*` file; spec row is a permitted factual mention. |
+| TC-MITIG-010 | 2026-10-31 | PASS | Grounding greps matched current scripts: noop token/exit/guidance, knob names/defaults, JOIN shape, finished/partial keyed on pm-notes. |
+| TC-MITIG-011 | 2026-10-31 | PASS | verify-change (M0-S8) and `ados lint`/`ados phase` (M0-S10) framed as not yet landed; ledger discipline stated as process-enforced today. |
+| TC-MITIG-012 | 2026-10-31 | PASS | `test-doc-distribution.sh` exit 0; all three guides retain `redistributable`. |
+| TC-MITIG-013 | 2026-10-31 | PASS | `test-deliver-ticket-result-tuples.sh` exit 0; `-modes.sh` 6/6 pass. |
+| TC-MITIG-014 | 2026-10-31 | PASS | Multi-signal + 10-minute default in both files; 30-minute/file-mtime mentions are retired history only. |
+| TC-MITIG-015 | 2026-10-31 | PASS | Anchors resolve (INV-DM-5 and corrected pm-notes slug `#pm-notes-structure-chg-workitemref-pm-notesyaml`); tables/frontmatter/markers intact. |
+| TC-MITIG-016 | 2026-10-31 | PASS | inception-doc-consistency 0; doc-distribution-modes 0; forbidden-literals 0. |
+| TC-MITIG-017 | 2026-10-31 | PASS | `chg-GH-185-pm-notes.yaml` parses as a single YAML mapping (python3 + PyYAML). |
