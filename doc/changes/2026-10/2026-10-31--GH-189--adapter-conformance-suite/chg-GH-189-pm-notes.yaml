@@ -5,10 +5,10 @@ milestone: "M0: Trust substrate"
 story_code: "M0-S20"
 phases:
   clarify_scope: { started: "2026-10-31T18:30:00Z", completed: "2026-10-31T18:45:00Z" }
-  specification: { started: "2026-10-31T18:46:00Z", completed: "2026-10-31T20:20:00Z", reopened: "2026-10-31T20:10:00Z" }
-  test_planning: { started: "2026-10-31T19:06:00Z", completed: "2026-10-31T20:35:00Z", reopened: "2026-10-31T20:10:00Z" }
+  specification: { started: "2026-10-31T18:46:00Z", completed: null, reopened: "2026-10-31T21:05:00Z" }
+  test_planning: { started: "2026-10-31T19:06:00Z", completed: null, reopened: "2026-10-31T21:05:00Z" }
   delivery_planning: { started: "2026-10-31T19:25:00Z", completed: "2026-10-31T20:50:00Z", reopened: "2026-10-31T20:10:00Z" }
-  dor_check: { started: "2026-10-31T19:57:00Z", completed: null, iteration: 1, verdict: "NOT_READY" }
+  dor_check: { started: "2026-10-31T19:57:00Z", completed: null, iteration: 3, verdict: null, iteration_1_verdict: "NOT_READY", iteration_2_verdict: "NOT_READY", iteration_3_started: "2026-10-31T21:05:00Z" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -36,7 +36,7 @@ open_questions:
   - text: "Which concrete scratch repositories / Jira sandbox and secrets the owner will provision for scheduled live runs; the workflow is tenant-agnostic and records not-configured until the documented environment names are supplied."
     date: "2026-10-31"
 blockers:
-  - text: "DoR iteration 1 = NOT_READY (2 blocking): (B-1) not-configured presence-by-name is wrong for GitHub Actions, which materialises unset vars/secrets as present empty strings, so a no-tenant scheduled run would be classified configured and fail instead of not-configured/exit 0; fix = treat undefined/empty/whitespace as missing and test the present-but-empty shape. (B-2) test plan says Jira has three non-secret settings while spec §22/plan D-6 use two. Reopened specification, test_planning, and delivery_planning for one remediation pass; re-run gate after."
+  - text: "DoR iteration 2 = NOT_READY (1 blocking): the B-1 behavior is correct in spec §22/DEC-12, plan D-6/P5.3/P5.8, and TC-CONF-021/024, but AC-F7-5 and three prose statements (§8.4, §21, §16 path map) plus test-plan §6 still say the live entrypoint never reads token values, which contradicts the required token-source-key occupancy inspection. Remediation: one wording pass in spec + test plan; no behavior change. Advisory items: flat steps[] provider/flowId vs spec §24, TC-CONF-013 handler assertion missing, TC-CONF-027 missing-file control non-mechanical, AC-F2-3 declared-gap vs capability-absent. Reopened specification and test_planning for the final pass; delivery_planning stays complete."
     date: "2026-10-31"
 notes:
   - text: "State detection (clarify-scope snapshot): issue GH-189 was OPEN, no labels, milestone 'M0: Trust substrate', 0 comments; no GH-189 branch, no open or merged PR, worktree clean at origin/main-tools tip (b31ec47). Fresh delivery, not a resume. Current state: issue carries change+planning labels; branch feat/GH-189/adapter-conformance-suite holds spec, test plan, plan, DoR iter-1 verdict, and remediation commits."
@@ -58,5 +58,8 @@ notes:
     type: "info"
     date: "2026-10-31"
   - text: "DoR iteration 1: NOT_READY, 2 blocking / 6 advisory / 4 nit. The blocking find is a genuine mechanism defect the authoring chain missed: GitHub Actions evaluates unset vars/secrets to present empty strings, defeating a presence-only not-configured check. Also caught a test-plan Jira setting-count contradiction the plan had flagged but deliberately left unfixed. Advisory set hardens ticket AC-2 evidence (if-no-files-found: error, --out equals upload path), control write dispatch, declaration-only registration scan, artifact skipKind, privacy/forbidden-literal gates, and repository-wide workflow invariant scope."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "DoR iteration 2: NOT_READY, 1 blocking / 4 advisory / 2 nit. The B-1 mechanism and B-2 count are resolved, but the fix did not propagate to AC-F7-5 and three prose statements that still say token values are never read while occupancy requires inspecting the token source key. Lesson: when a mechanism changes, sweep every acceptance criterion and prose boundary that mentions the old behavior, not just the primary section. Remaining advisories are cheap alignment items (flat steps provider/flowId, TC-CONF-013 handler, TC-CONF-027 static control, AC-F2-3 skip kind)."
     type: "retro"
     date: "2026-10-31"
