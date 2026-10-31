@@ -5,7 +5,7 @@ Work Item: GH-184
 Date: 2026-10-31
 Pause Required: no
 
-Reviewer: @readiness-reviewer (local DoR mode). Inputs re-read in full: spec v1.1 (unchanged since iteration 1 — verified by git history), test plan v1.1 (unchanged), plan **v2.0** (commit f85f4c7), pm-notes (updated with the DoR record and advisory dispositions), ticket GH-184, TDR-0005, and the live repository. This record is written content-free: real owner paths verified below are described, not quoted, so this file adds no new baseline trip.
+Reviewer: @readiness-reviewer (local DoR mode). Inputs re-read in full: spec v1.1 (unchanged since iteration 1 — verified by git history), test plan v1.1 (unchanged), plan **v2.0** (commit f85f4c7), pm-notes (updated with the DoR record and advisory dispositions), ticket GH-184, TDR-0006, and the live repository. This record is written content-free: real owner paths verified below are described, not quoted, so this file adds no new baseline trip.
 
 ## Changes since iteration 1
 

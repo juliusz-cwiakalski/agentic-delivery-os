@@ -6,15 +6,11 @@ created: 2026-10-29
 last_updated: 2026-10-31
 owners: ["engineering"]
 service: delivery-os
-summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, the typed adapter-port substrate and secret-read boundary invariant, the binding privacy and no-cloud guard with its hashed-literal registry and envelope content policy, the durable local state layer, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
+summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, the typed adapter-port substrate and secret-read boundary invariant, the binding privacy and no-cloud guard with its hashed-literal registry and envelope content policy, the durable local state layer, the provider engine and its confined quota transport, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
 links:
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-179", "GH-181", "GH-184", "GH-188"]
-  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005"]
-summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, the typed adapter-port substrate and secret-read boundary invariant, the durable local state layer, the provider engine and its confined quota transport, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
-links:
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-179", "GH-181", "GH-188", "GH-182"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182"]
   related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-188"]
-  related_decisions: ["ADR-0003", "ADR-0005"]
+  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0006"]
 ---
 
 # Feature: Monorepo Scaffold and Toolchain
@@ -219,15 +215,10 @@ No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scr
 | `packages/adapters/src/io/privacy-rules.ts` | Pure, dependency-free privacy rule vocabulary shared by the file check and the envelope policy |
 | `packages/adapters/src/io/envelope-content-policy.ts` | Pure envelope content-policy builder over shared rules and injected hashed entries |
 | `package.json` | Workspace root: pinned `packageManager`, five named scripts, `check:privacy-literals`, aggregate `check`, dev toolchain |
+| `scripts/checks/*.ts` | Repository invariant checks run with Bun, including `privacy-literals.ts` and its committed `privacy-literals.registry.json` |
 | `pnpm-workspace.yaml` | Workspace globs (`packages/*`) |
 | `tsconfig.base.json` / `tsconfig.json` | Strict base flags / solution references |
 | `.dependency-cruiser.cjs` | Package, subpath, tier, testkit, and runtime-API rules |
-| `scripts/checks/*.ts` | Repository invariant checks run with Bun, including `privacy-literals.ts` and its committed `privacy-literals.registry.json` |
-| `tests/structure/**` | Inventory, subpath, exports, contract-surface, `createRuntime` assertions, and the envelope single-serialization audit over `packages/`, `scripts/`, and `tools/` |
-| `tests/types/**` | Compile-time contract probes chained into the root `typecheck` |
-| `tests/boundaries/**` | Negative fixtures, controls, and the fixture-coverage meta-check |
-| `tests/behaviour/**` | pnpm isolation, commit-msg hook, adapter-port, credential, envelope round-trip/degradation, envelope content policy, pm-notes lint, corpus, phase, and delivery-registry behaviour |
-| `tests/checks/**` | Mutation and contract tests for `scripts/checks/*.ts`, including the privacy guard suites |
 | `scripts/checks/*.ts` | Repository invariant checks run with Bun |
 | `tests/structure/**` | Inventory, subpath, exports, contract-surface, delivery-result taxonomy, verify tier/import, and `createRuntime` assertions |
 | `tests/types/**` | Compile-time contract probes chained into the root `typecheck` |
@@ -272,7 +263,6 @@ core              ──> no workspace dependencies
 | NFR-8 | Bash stack | No regression; bash jobs remain authoritative |
 | NFR-9 | Local commit-msg hook | Offline, non-mutating, never blocks an agent commit |
 | NFR-10 | Dependency risk | 0 high/critical advisories; every direct development/runtime use and locked runtime closure entry licensed and registered |
-| NFR-11 | Privacy guard bindingness | `privacy-literals` is invoked by name in `ts-invariants`, stays green on the clean tree, and fails on a planted guarded value; every envelope serialization supplies a content policy. |
 
 ## Quality Assurance Strategy
 
@@ -281,6 +271,7 @@ core              ──> no workspace dependencies
 | Unit/structure | Package inventory, subpaths, exports, `createRuntime` | `bun test tests/structure` |
 | Boundary | Every forbidden rule, alias and relative form, on production resolution | `bun test tests/boundaries` with the `mkdtemp` harness; `check:boundaries` for the gate |
 | Fixture coverage | Rule-to-fixture completeness | `tests/boundaries/fixture-coverage.test.ts` |
+| NFR-11 | Privacy guard bindingness | `privacy-literals` is invoked by name in `ts-invariants`, stays green on the clean tree, and fails on a planted guarded value; every envelope serialization supplies a content policy. |
 | Invariants | Manifests, pins, CI topology, bindingness, supply chain, exports, packed-exports parity, boundary build/cruise parity, licenses, result-contract table sync, exit literals, secret-read boundary, privacy-literals | `bun run scripts/checks/*.ts`, the aggregate check, and mutation tests under `tests/checks/**` |
 | Type level | Contract typing probes outside the package graph | `tests/types/tsconfig.json` through the root `typecheck` |
 | Behaviour | pnpm isolation, commit-msg hook, adapter ports, credentials, envelope round-trip and degradation, pm-notes lint, corpus acceptance, phase transitions, delivery-registry records, and verify classification, rejection, evidence-failure, envelope, and real-corpus behaviour | `bun test tests/behaviour` |
@@ -305,7 +296,6 @@ core              ──> no workspace dependencies
 - **State capability:** [State Layer](feature-state-layer.md).
 - **Provider capability:** [Provider Engine](feature-provider-engine.md).
 - **PM-notes and phase capability:** [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md).
-- **Privacy and no-cloud capability:** [Privacy and No-Cloud Guards](feature-privacy-guard.md).
 - **Verify capability:** [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md).
 - **Glossary:** [doc/overview/glossary.md](../../overview/glossary.md) — scaffold terms.
 - **Change record:** `doc/changes/2026-10/2026-10-29--GH-170--monorepo-scaffold-toolchain/`.

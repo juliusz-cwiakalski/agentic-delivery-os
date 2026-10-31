@@ -201,7 +201,7 @@ None. The guard uses runtime built-ins at the check edge, the codec receives pur
 
 ## 9. NON-FUNCTIONAL REQUIREMENTS (NFRs)
 
-**Hard constraints (binding, from TDR-0005):**
+**Hard constraints (binding, from TDR-0006):**
 
 - **C-1**: No raw private literal, private identifier, hosted-product term, or secret is committed in any artifact of the guard.
 - **C-2**: A committed file containing a guarded literal fails CI in a binding job.
@@ -231,11 +231,11 @@ No new event schema, sink, or metric. Observability is the command output: the s
 
 | ID | Risk | Impact | Probability | Mitigation | Residual Risk |
 |----|------|--------|-------------|------------|---------------|
-| RSK-1 | Unsalted committed digests form an offline verification oracle for low-entropy guesses | M | M | Documented and accepted in TDR-0005; threat model is accidental inclusion, not a determined attacker with repository access; true secrets are covered by generic rules and must never be listed; revisit trigger on confirmed abuse. | M — low-entropy literals remain guessable by an offline attacker |
+| RSK-1 | Unsalted committed digests form an offline verification oracle for low-entropy guesses | M | M | Documented and accepted in TDR-0006; threat model is accidental inclusion, not a determined attacker with repository access; true secrets are covered by generic rules and must never be listed; revisit trigger on confirmed abuse. | M — low-entropy literals remain guessable by an offline attacker |
 | RSK-2 | Generic rules produce false positives in public docs and invite allowlist erosion | M | M | High-specificity heuristics, placeholder suppression, a committed false-positive corpus, near-miss negatives, and reason-bearing exact-path suppressions reviewed in the change. | L |
 | RSK-3 | Unlisted secret shapes or binary/encoded content slip through | H | M | Generic rules cover common credential and private-path shapes; owner-supplied hashes cover project literals; binary/encoded coverage is an explicit non-goal and a documented residual. | M — novel or encoded shapes can pass |
 | RSK-4 | Empty `cloud-term`/`private-literal` classes give a false sense of coverage | M | H | Explicit empty reason, class-level vacuity reporting, and synthetic activation tests per class; owner digest population is a visible follow-up. | M — real coverage waits for owner hashes |
-| RSK-5 | A future refactor adds a default-open policy or a second serialization path | H | L | Required parameter with no optional overload; single-serialization-point audit; codec-purity and call-site tests; revisit trigger in TDR-0005. | L |
+| RSK-5 | A future refactor adds a default-open policy or a second serialization path | H | L | Required parameter with no optional overload; single-serialization-point audit; codec-purity and call-site tests; revisit trigger in TDR-0006. | L |
 | RSK-6 | Window hashing or a pathological pattern makes CI slow or superlinear | M | M | Caps on distinct lengths and literal length; bounded patterns; performance fixture and NFR-5 budget; measured in CI. | L |
 | RSK-7 | The guard's own allowlist hides a real literal | H | L | Exact-path entries with reasons; the allowlist covers only rule definitions, registry, tests, and synthetic fixtures; an allowlist entry matching nothing fails closed; review of any growth. | M |
 | RSK-8 | Registry weakening (scope, enabled rules, caps) silently disables coverage | H | L | Supported scope mode and enabled-rule set are exact-match validated; caps enforced; any change is a reviewed data edit; mutation tests prove fail-closed behavior. | L |
@@ -260,7 +260,7 @@ No new event schema, sink, or metric. Observability is the command output: the s
 | Depends on | GH-173 / M0-S4 (config layer) | Confirms environment-only secrets and the empty production catalog; policy data is deliberately not placed there. |
 | Depends on | GH-171 / M0-S2 (branding seam) | Brand-neutral constants and the registry-as-authority precedent. |
 | Depends on | GH-181 / M0-S12 (adapter ports and embedded metadata) | The envelope contract and the single `serializeEnvelope` point that gains the required policy. |
-| Depends on | TDR-0005 (guard mechanics) | Binding mechanics: hashing scheme, no-echo, class model, emitter policy, working-tree boundary, non-choice on config. |
+| Depends on | TDR-0006 (guard mechanics) | Binding mechanics: hashing scheme, no-echo, class model, emitter policy, working-tree boundary, non-choice on config. |
 | Depends on | ADR-0003 C-1/C-4/C-11, C-9/DEC-2 | OSS-only committed artifacts, codec purity, privacy baseline. |
 | Constrains | Future metadata emitters | Must supply a content policy to serialize; no bypass path. |
 | Constrains | M3-S5 policy engine | Absorbs or replaces this registry deliberately; placement is not decided here. |
@@ -273,14 +273,14 @@ No new event schema, sink, or metric. Observability is the command output: the s
 | OQ-1 | Which real private and hosted-product literals should the owner register? | The mechanism ships empty by design; real coverage requires owner-supplied digests. | Open — owner action after landing; not a delivery blocker. |
 | OQ-2 | Should a future production emitter map `content-policy-violation` to a result-contract error code? | The failure is codec-local and carries a rule id only; no emitter exists to project it. | Deferred — Decision needed when the first emitter lands: consult `@decision-advisor`. |
 | OQ-3 | What exact minimum lengths, entropy thresholds, and placeholder segments should each generic rule use? | The rule ids and classes are fixed; tuning is empirical against the real corpus. | Decision needed during delivery: consult `@decision-advisor` only if tuning changes the recognized classes materially. |
-| OQ-4 | Where should policy data live after the policy engine (M3-S5) lands? | TDR-0005 records the config-key alternative and defers placement. | Deferred — Decision needed at M3-S5: consult `@decision-advisor`. |
+| OQ-4 | Where should policy data live after the policy engine (M3-S5) lands? | TDR-0006 records the config-key alternative and defers placement. | Deferred — Decision needed at M3-S5: consult `@decision-advisor`. |
 | OQ-5 | Should binary/archive/encoded content ever be scanned? | Current scope is text working-tree content; deep inspection is a documented residual. | Deferred — revisit if a real exposure path appears. |
 
 ## 15. DECISION LOG
 
 | ID | Decision | Rationale | Date |
 |----|----------|-----------|------|
-| DEC-1 | Conform to TDR-0005 in full: one check plus one committed hashed registry, domain-separated unsalted SHA-256, no-echo reporting, hashed `cloud-term` class, required policy at `serializeEnvelope`, working-tree-only scan, and no config-layer production key. | The TDR is the authoritative mechanics decision; the spec's job is to define WHAT and ACs without re-litigating it. | 2026-10-31 |
+| DEC-1 | Conform to TDR-0006 in full: one check plus one committed hashed registry, domain-separated unsalted SHA-256, no-echo reporting, hashed `cloud-term` class, required policy at `serializeEnvelope`, working-tree-only scan, and no config-layer production key. | The TDR is the authoritative mechanics decision; the spec's job is to define WHAT and ACs without re-litigating it. | 2026-10-31 |
 | DEC-2 | Generic rule definitions live in one pure, dependency-free module shared by the file check and the emitter policy; the registry holds enabled rule ids and data, never pattern overrides. | Single source of truth prevents drift and keeps patterns non-weakenable through data. The module stays pure so the codec can consume it without runtime imports. | 2026-10-31 |
 | DEC-3 | No new CI job and no change to the aggregate `check` script. The guard runs by name in `ts-invariants`; the local command is a standalone `check:privacy-literals` script; new tests run under `ts-test`. | `ci-checks.test.ts` pins the exact `TS_JOBS` list, workflow job set, and aggregate string; adding a job or changing the aggregate would require weakening those assertions. Additive wiring in the existing binding job satisfies the ticket without that churn. | 2026-10-31 |
 | DEC-4 | The registry declares the two classes explicitly; an empty class requires an explicit empty reason; caps are fixed at the NFR-9 values. | This distinguishes a deliberately vacuous class from a broken or silently emptied one, and bounds scan cost and oracle surface. | 2026-10-31 |
@@ -353,7 +353,7 @@ No migration. The privacy registry is new and ships with no `private-literal` en
 
 ## 20. PRIVACY / COMPLIANCE REVIEW
 
-This change exists to satisfy the ADR-0003 C-11 privacy baseline and the C-1/C-4 OSS boundary without committing the protected content. The registry stores only domain-separated digests and lengths; raw literals never enter the repository, tests, docs, or CI logs. Reporting is content-free by construction so public CI logs cannot become the leak channel. The accepted residual — low-entropy digests are offline-guessable — is explicitly bounded to accidental-inclusion protection and is documented in TDR-0005. Human-readable comment content is not scanned at the emitter; the file guard governs committed human content. No personal data beyond existing repository metadata is collected or stored.
+This change exists to satisfy the ADR-0003 C-11 privacy baseline and the C-1/C-4 OSS boundary without committing the protected content. The registry stores only domain-separated digests and lengths; raw literals never enter the repository, tests, docs, or CI logs. Reporting is content-free by construction so public CI logs cannot become the leak channel. The accepted residual — low-entropy digests are offline-guessable — is explicitly bounded to accidental-inclusion protection and is documented in TDR-0006. Human-readable comment content is not scanned at the emitter; the file guard governs committed human content. No personal data beyond existing repository metadata is collected or stored.
 
 ## 21. SECURITY REVIEW HIGHLIGHTS
 
@@ -395,7 +395,7 @@ Maintainers own four guarded surfaces: the generic rule set (code review and cor
 | A committed file containing a guarded literal fails CI | AC-F1-1, AC-F2-1, AC-F3-2, AC-F4-2, AC-F5-1, AC-F7-1 | Planted-value mutation cases fire with named id/file/line/fingerprint; the guard is invoked by name in the binding `ts-invariants` job; no content is echoed. |
 | Metadata envelopes are scanned at the emitter | AC-F6-1, AC-F6-2, AC-F6-3, AC-F6-4, AC-F6-5, AC-F7-3 | Guarded payload returns the new fail-closed failure with a rule id only; clean payload round-trips; codec purity and shared-rule parity proven; human content explicitly outside the scan. |
 
-### B. TDR-0005 position traceability
+### B. TDR-0006 position traceability
 
 | TDR position | Spec coverage |
 |--------------|---------------|
@@ -433,7 +433,7 @@ Maintainers own four guarded surfaces: the generic rule set (code review and cor
 
 | Apparent tension | Resolution in this spec |
 |------------------|-------------------------|
-| The ticket names a "no-cloud-in-committed-files check"; TDR-0005 realizes it as a hashed class inside the privacy guard. | F-3 keeps it inside the single guard and reports `cloud-term` as a named class, so the no-cloud outcome stays visible without a second raw-term surface. |
+| The ticket names a "no-cloud-in-committed-files check"; TDR-0006 realizes it as a hashed class inside the privacy guard. | F-3 keeps it inside the single guard and reports `cloud-term` as a named class, so the no-cloud outcome stays visible without a second raw-term surface. |
 | The ticket says metadata envelopes are scanned "at the emitter"; no production emitter exists. | F-6 attaches the required policy at the only serialization point; later emitters inherit it by construction. |
 | A required policy changes the serialization signature. | §8.5 treats this as an intentional pre-release tightening, updates all in-repo call sites, and forbids a default-open overload; the fixed-group minor changeset records it. |
 | Fail-closed rejects "empty-but-claimed" entries, yet `cloud-term` may ship empty. | F-3/F-4 require an explicit empty reason per empty class plus a synthetic activation proof, so an intentional empty class is distinguishable from a broken one. |
@@ -443,20 +443,20 @@ Maintainers own four guarded surfaces: the generic rule set (code review and cor
 
 ### F. Sources
 
-Ticket GH-184 (M0-S15); backlog story M0-S15; policy-as-code concept (privacy and no-cloud prose rows); embedded-metadata concept (guardrails and story mapping); TDR-0005; ADR-0003 (C-1/C-4/C-9/C-11, DEC-2); the delivered forbidden-literal scan and registry; the secret-read boundary check; the CI topology/bindingness/script-surface checks; the envelope contract and codec; the envelope round-trip and behaviour suites; the GH-184 clarify-scope ledger.
+Ticket GH-184 (M0-S15); backlog story M0-S15; policy-as-code concept (privacy and no-cloud prose rows); embedded-metadata concept (guardrails and story mapping); TDR-0006; ADR-0003 (C-1/C-4/C-9/C-11, DEC-2); the delivered forbidden-literal scan and registry; the secret-read boundary check; the CI topology/bindingness/script-surface checks; the envelope contract and codec; the envelope round-trip and behaviour suites; the GH-184 clarify-scope ledger.
 
 ## 25. DOCUMENT HISTORY
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | 2026-10-31 | Change Spec Writer | Initial GH-184 specification from the ticket, TDR-0005, the backlog story, the policy-as-code and embedded-metadata concepts, ADR-0003, and the delivered check/codec precedents. |
+| 1.0 | 2026-10-31 | Change Spec Writer | Initial GH-184 specification from the ticket, TDR-0006, the backlog story, the policy-as-code and embedded-metadata concepts, ADR-0003, and the delivered check/codec precedents. |
 | 1.1 | 2026-10-31 | Change Spec Writer | Corrected the changeset claim in AC-F8-1, F-8, NFR-8, the success metric, DEC-9, §16, and §18 so "exactly one changeset" means exactly one new changeset added by this change (five pre-existing unreleased changesets already exist and must remain untouched); added a §17 coverage note mapping F-1/F-4/F-6/NFR-5 details that intentionally have no standalone AC to the ACs that cover them. No AC ids changed. |
 
 ---
 
 ## AUTHORING GUIDELINES
 
-Grounded only in the ticket, TDR-0005, the planning concepts, and the delivered repository surfaces. The spec fixes WHAT and acceptance evidence, not implementation steps. Named scripts, jobs, contract modules, and commands are integration contracts required by the ticket and the repository's binding-check conventions; no line-level edits, code snippets, or step-by-step tasks are included. The no-cloud rule is expressed through the TDR's hashed-class mechanics rather than a separate raw list, and the emitter scan is expressed at the single serialization point because no production emitter exists. The specification contains no raw private literal, no hosted-product name, and no secret-shaped example; all recognizers are described by class and rule id.
+Grounded only in the ticket, TDR-0006, the planning concepts, and the delivered repository surfaces. The spec fixes WHAT and acceptance evidence, not implementation steps. Named scripts, jobs, contract modules, and commands are integration contracts required by the ticket and the repository's binding-check conventions; no line-level edits, code snippets, or step-by-step tasks are included. The no-cloud rule is expressed through the TDR's hashed-class mechanics rather than a separate raw list, and the emitter scan is expressed at the single serialization point because no production emitter exists. The specification contains no raw private literal, no hosted-product name, and no secret-shaped example; all recognizers are described by class and rule id.
 
 ## VALIDATION CHECKLIST
 
@@ -465,7 +465,7 @@ Grounded only in the ticket, TDR-0005, the planning concepts, and the delivered 
 - [x] ID prefixes consistent and unique (F-, DM-, NFR-, RSK-, DEC-, OQ-, AC-).
 - [x] Every AC is Given/When/Then, references at least one F-/DM-/NFR- ID, and is independently verifiable.
 - [x] NFRs include measurable thresholds; risks include impact, probability, mitigation, and residual risk.
-- [x] Out-of-scope items marked `[OUT]`; non-goals align with TDR-0005 and the ticket.
+- [x] Out-of-scope items marked `[OUT]`; non-goals align with TDR-0006 and the ticket.
 - [x] Ticket ACs and TDR positions traced in the appendices.
 - [x] No raw private literal, hosted-product term, secret-shaped example, salt, key, or dependency is introduced.
 - [x] Only this spec file was written; no other files were modified.

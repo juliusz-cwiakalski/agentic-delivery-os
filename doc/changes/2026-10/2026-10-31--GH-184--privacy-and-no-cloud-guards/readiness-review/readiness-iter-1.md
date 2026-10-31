@@ -5,7 +5,7 @@ Work Item: GH-184
 Date: 2026-10-31
 Pause Required: no
 
-Reviewer: @readiness-reviewer (local DoR mode). Inputs read in full: spec v1.1, test plan v1.1, plan v1.0, pm-notes, ticket GH-184, TDR-0005 (Proposed), and the live repository gates named below. No prior readiness records exist under this change folder; this is iteration 1.
+Reviewer: @readiness-reviewer (local DoR mode). Inputs read in full: spec v1.1, test plan v1.1, plan v1.0, pm-notes, ticket GH-184, TDR-0006 (Proposed), and the live repository gates named below. No prior readiness records exist under this change folder; this is iteration 1.
 
 ## Facet Summary
 
@@ -57,7 +57,7 @@ Blocking finding count: 1 (Finding 1). Finding 2 is major but non-blocking (proc
 - **CI wiring blast radius**: `ci-topology` requires every `scripts/checks/*.ts` name to appear in ci.yml-or-package.json text — correctly satisfied by landing `check:privacy-literals` in Phase 2 (task 2.7) before any CI wiring; `script-surface` permits additional named scripts (`check:forbidden-literals` precedent) and the plan keeps the aggregate byte-unchanged; `tests/checks/ci-checks.test.ts` pins the exact `TS_JOBS` list and exact aggregate string — both preserved (no new job, no aggregate edit).
 - **Codec call sites**: `serializeEnvelope` (codec) is called only from `tests/structure/envelope-contract.test.ts`, `tests/behaviour/envelope-roundtrip.test.ts`, and `tests/fixtures/ports/capabilities.ts`; `packages/cli/src/output/serialize.ts` defines an unrelated same-named CLI function and the golden mutants wrap that CLI module, not the codec — the plan's three-call-site list is complete. `envelope-contract.test.ts`'s placement check (no `envelope-codec` reference outside `io/`, no `./io` export) is compatible with PD-1/PD-8; `agentFacingViolations` inspects only two named type aliases, so the two new contract types are safe.
 - **Inventory**: `tests/structure/inventory.json` + `EXECUTABLE_ALLOWANCES` cover packages only; the plan registers both new package files (tasks 1.3, 6.2) — correct. Type-only contract exports need no executable allowance (plan 6.1 consistent).
-- **AC satisfiability**: AC-F8-1 (v1.1) — exactly the five named pre-existing changesets exist in `.changeset/`; the change-diff semantics is assertable. AC-F3-1 — satisfiable and non-vacuous: the passing scan must report the empty class as scanned-and-vacuous with a populated field (TC-PRIVACY-008 step 3) plus the RV-09 malformed control, and activation is proven synthetically (AC-F3-2); mechanism-only shipping is a captured, documented residual (TDR-0005 §4, RSK-4, OQ-1, pm-notes). AC-F7-1 — the CI-evidence boundary is declared in all three artifacts, not silently deferred.
+- **AC satisfiability**: AC-F8-1 (v1.1) — exactly the five named pre-existing changesets exist in `.changeset/`; the change-diff semantics is assertable. AC-F3-1 — satisfiable and non-vacuous: the passing scan must report the empty class as scanned-and-vacuous with a populated field (TC-PRIVACY-008 step 3) plus the RV-09 malformed control, and activation is proven synthetically (AC-F3-2); mechanism-only shipping is a captured, documented residual (TDR-0006 §4, RSK-4, OQ-1, pm-notes). AC-F7-1 — the CI-evidence boundary is declared in all three artifacts, not silently deferred.
 - **Artifact hygiene**: change-folder scans found no cloud/hosted-product names, no owner/private paths, no secret-shaped literals, no salts/keys in any GH-184 artifact.
 
 ## Gate result

@@ -44,7 +44,7 @@ phases:
     url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/203"
 
 decisions:
-  - text: "Guard architecture is one repo invariant check plus a committed schema-versioned registry as the single authority for scope, generic rule ids, hashed entries, allowlist, and exclusions; adding a literal is a data edit. Recorded as TDR-0005 (Proposed; owner accepts at PR)."
+  - text: "Guard architecture is one repo invariant check plus a committed schema-versioned registry as the single authority for scope, generic rule ids, hashed entries, allowlist, and exclusions; adding a literal is a data edit. Recorded as TDR-0006 (Proposed; owner accepts at PR)."
     date: "2026-10-31"
   - text: "Hashing is SHA-256 over a versioned domain prefix plus the normalized literal, no salt and no HMAC; residual offline dictionary-guessability is accepted because the threat model is accidental public exposure, not a determined attacker with repo access."
     date: "2026-10-31"
@@ -79,7 +79,7 @@ notes:
   - text: "Retro: @pr-manager authored two PM-ledger commits (pr_creation start and PR reference) although the ledger is PM-owned. The content was correct, but delegation should have returned the PR URL to the PM for the ledger write. Lesson: PR handoff must state explicitly that pm-notes is PM-owned and must not be edited by the delegate."
     type: "retro"
     date: "2026-11-01"
-  - text: "PR handoff complete: pull request #203 opened against main-tools (head feat/GH-184/privacy-no-cloud-guards), assigned to the owner with change/review labels, TDR-0005 marked Proposed for owner acceptance, and no merge or auto-merge enabled. Merge authority stays with the owner/CEO."
+  - text: "PR handoff complete: pull request #203 opened against main-tools (head feat/GH-184/privacy-no-cloud-guards), assigned to the owner with change/review labels, TDR-0006 marked Proposed for owner acceptance, and no merge or auto-merge enabled. Merge authority stays with the owner/CEO."
     type: "info"
     date: "2026-11-01"
   - text: "DoD check passed: all prior phases carry completion timestamps; 64/68 plan tasks checked with only the push-battery and PR handoff tasks remaining; test plan maps 22/22 ACs and evidence maps 34/34 TCs; review iteration 2 confirms all 22 ACs hold; doc-syncer reports no residual documentation gaps. Version intent is one new five-package minor changeset with pre-existing changesets untouched."

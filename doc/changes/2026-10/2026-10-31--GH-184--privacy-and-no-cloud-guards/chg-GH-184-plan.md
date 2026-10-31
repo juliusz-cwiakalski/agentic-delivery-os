@@ -12,14 +12,14 @@ links:
   testing_strategy: ../../../../.ai/rules/testing-strategy.md
   typescript_rules: ../../../../.ai/rules/typescript.md
   tdr_refs:
-    - ../../../decisions/TDR-0005-privacy-and-no-cloud-guard-mechanics.md
+    - ../../../decisions/TDR-0006-privacy-and-no-cloud-guard-mechanics.md
   adr_refs:
     - ../../../decisions/ADR-0003-oss-monorepo-structure.md
   related_changes:
     - ../2026-10-30--GH-181--primitive-ports-credential-metadata/chg-GH-181-plan.md
     - ../2026-10-31--GH-179--pm-notes-registry-lint-phase-transitions/chg-GH-179-plan.md
 summary: >-
-  Deliver M0-S15 per spec v1.1 and TDR-0005: one privacy-literals repository
+  Deliver M0-S15 per spec v1.1 and TDR-0006: one privacy-literals repository
   invariant built from a pure shared rule module (seven committed generic rule
   definitions) and a schema-versioned hashed-literal registry (private-literal
   and cloud-term classes, fail-closed validation, caps, rule-scoped
@@ -43,7 +43,7 @@ version_impact: minor
 - **Inputs (authoritative, read in full by this pass)**:
   - [chg-GH-184-spec.md](./chg-GH-184-spec.md) — **v1.1**: F-1..F-8, DM-1..DM-7, NFR-1..NFR-9, C-1..C-7, 22 ACs (AC-F1-1..AC-F8-1), §17 coverage note, §18 rollout order and Definition of Done.
   - [chg-GH-184-test-plan.md](./chg-GH-184-test-plan.md) — **v1.1** (34 TCs: TC-PRIVACY-001..021, TC-POLICY-001..008, TC-WIRE-001..003, TC-RELEASE-001..002); §4.1 in-process/spawned contract, §4.2 mutation-triple contract, §4.3 no-echo proof contract, §4.4 RV-01..RV-30 fail-closed matrix, §7 execution order and evidence battery.
-  - [TDR-0005](../../../decisions/TDR-0005-privacy-and-no-cloud-guard-mechanics.md) — binding mechanics (one check + one registry authority, domain-separated unsalted SHA-256, no-echo reporting, hashed `cloud-term` class, required injected policy at the single serialization point, working-tree boundary, no config-layer key).
+  - [TDR-0006](../../../decisions/TDR-0006-privacy-and-no-cloud-guard-mechanics.md) — binding mechanics (one check + one registry authority, domain-separated unsalted SHA-256, no-echo reporting, hashed `cloud-term` class, required injected policy at the single serialization point, working-tree boundary, no config-layer key).
   - [readiness-review/readiness-iter-1.md](./readiness-review/readiness-iter-1.md) — DoR iteration 1 verdict **NOT_READY** (blocking Finding 1: allowlist staging contradiction; major non-blocking Finding 2: baseline load under-enumerated). This v2 revision remediates both; the spec and test plan pass unchanged (no reopen of either).
 - **Status**: Updated (v2; DoR iteration 1 remediation — awaiting re-run of the DoR gate, lifecycle phase 5).
 - **Baseline**: `main-tools` with M0-S1..S5, S10, S12, S19 merged; five unreleased changesets exist in `.changeset/` (`config-layer-minor.md`, `state-layer-minor.md`, `gh-181-primitive-ports-minor.md`, `pm-notes-lint-minor.md`, `gh-188-client-seeds-minor.md`) and must remain untouched.
@@ -145,7 +145,7 @@ No other inconsistencies found; all 22 ACs and 34 TCs are covered below with no 
 ### Out of Scope
 
 - Any new package dependency, external scanner, secret manager, keyed hashing, salt, or key rotation (NG-1; C-5).
-- A configuration-layer production key or any user-overridable weakening surface (NG-2; TDR-0005 §7).
+- A configuration-layer production key or any user-overridable weakening surface (NG-2; TDR-0006 §7).
 - Git-history replay, corpus baselines, retroactive remediation (NG-3; AC-F4-2 asserts the boundary negatively).
 - Scanning human-readable comment content at the emitter (NG-4; AC-F6-5) and binary/archive/encoded deep inspection (NG-7).
 - A separate no-cloud script, job, or registry (NG-5); production emitters/provider adapters (NG-6); a new result-contract error row or domain mapping for the codec-local failure (NG-8; DEC-5).
@@ -539,7 +539,7 @@ Execution risks carried from the test plan (§8.1) and spec (§11), anchored to 
 - [x] **11.1** Version intent recorded (Phase 7 changeset; PD-9): confirm `.changeset/gh-184-privacy-guards-minor.md` is the only release-metadata addition; nothing publishes in this change; the owner may amend at PR review.
 - [x] **11.2** Final gate battery on the **pushed HEAD** (never an earlier SHA): `pnpm install --frozen-lockfile` → `pnpm build` → focused suites → `bun test` → `pnpm check` → `pnpm check:privacy-literals` → boundary/ambient/literal/topology/bindingness/supply-chain/script-surface/changesets-group/license-audit checks → `git diff --check` → `git status --porcelain` clean; record durations and the NFR-5 reference-runner numbers from the CI run.
 - [x] **11.3** DoD check (PM): all 22 ACs have passing traceable evidence in the test-plan execution log and the evidence artifact; all plan tasks complete or explicitly not-required.
-- [x] **11.4** Hand off to `@pr-manager` (lifecycle phase 11): PR targets `main-tools` from `feat/GH-184/privacy-no-cloud-guards`, assigned to the owner, description carrying the baseline suppression inventory, the TC-POLICY-005 reading pin, the owner-facing notes (registry population via `--author` out-of-band; TDR-0005 acceptance pending), and the pushed-HEAD job results; **STOP at the open unmerged PR** — no merge, no owner-acceptance claim.
+- [x] **11.4** Hand off to `@pr-manager` (lifecycle phase 11): PR targets `main-tools` from `feat/GH-184/privacy-no-cloud-guards`, assigned to the owner, description carrying the baseline suppression inventory, the TC-POLICY-005 reading pin, the owner-facing notes (registry population via `--author` out-of-band; TDR-0006 acceptance pending), and the pushed-HEAD job results; **STOP at the open unmerged PR** — no merge, no owner-acceptance claim.
 
 **Acceptance Criteria**:
 
@@ -637,7 +637,7 @@ No TC is orphaned; no task exists without a TC or spec anchor; phases 8–11 are
 | This plan | `./chg-GH-184-plan.md` | The only file written by this authoring pass |
 | PM notes | `./chg-GH-184-pm-notes.yaml` | Delivery ledger (not edited by this pass) |
 | DoR review | [readiness-review/readiness-iter-1.md](./readiness-review/readiness-iter-1.md) | Iteration 1 verdict NOT_READY; Findings 1–2 remediated by this v2 (staging rule, baseline batch); also a live-tree file quoted in PD-7's batch table (rule-scoped entry) |
-| Decision records | [TDR-0005](../../../decisions/TDR-0005-privacy-and-no-cloud-guard-mechanics.md), [ADR-0003](../../../decisions/ADR-0003-oss-monorepo-structure.md) | Binding mechanics; tier/boundary matrix |
+| Decision records | [TDR-0006](../../../decisions/TDR-0006-privacy-and-no-cloud-guard-mechanics.md), [ADR-0003](../../../decisions/ADR-0003-oss-monorepo-structure.md) | Binding mechanics; tier/boundary matrix |
 | Shared rule module | `packages/adapters/src/io/privacy-rules.ts` | New (PD-1); the single rule-definition set |
 | Policy builder | `packages/adapters/src/io/envelope-content-policy.ts` | New (PD-1, Phase 6); pure, injected hash + entries |
 | Guard check + registry | `scripts/checks/privacy-literals.ts`, `scripts/checks/privacy-literals.registry.json` | New (PD-2..PD-5); registry is data-only extension surface |
@@ -653,14 +653,14 @@ No TC is orphaned; no task exists without a TC or spec anchor; phases 8–11 are
 
 | Version | Date (UTC) | Author | Changes |
 |---------|------------|--------|---------|
-| 1.0 | 2026-10-31T07:05:00Z | Implementation Plan Writer | Initial eleven-phase plan from spec v1.1, test plan v1.1, TDR-0005, and the live repo constraints (ci-topology/bindingness/supply-chain/script-surface/boundary-ci-parity, content-inventory, changesets config, the codec and its three call sites, the five pre-existing changesets). PD-1..PD-10 pinned (module location and sharing with layering justification, registry schema and caps-as-code, validation order, scan/reporting mechanics, authoring mode, CI wiring, baseline policy, codec shape, changeset, test discipline); three authoring findings recorded (TC-POLICY-005 import wording, execution-order halves, allowlist enumeration); full 34-TC traceability; rollback; DoD; execution log. 11 phases, 56 tasks, 34 TCs — none orphaned. |
+| 1.0 | 2026-10-31T07:05:00Z | Implementation Plan Writer | Initial eleven-phase plan from spec v1.1, test plan v1.1, TDR-0006, and the live repo constraints (ci-topology/bindingness/supply-chain/script-surface/boundary-ci-parity, content-inventory, changesets config, the codec and its three call sites, the five pre-existing changesets). PD-1..PD-10 pinned (module location and sharing with layering justification, registry schema and caps-as-code, validation order, scan/reporting mechanics, authoring mode, CI wiring, baseline policy, codec shape, changeset, test discipline); three authoring findings recorded (TC-POLICY-005 import wording, execution-order halves, allowlist enumeration); full 34-TC traceability; rollback; DoD; execution log. 11 phases, 56 tasks, 34 TCs — none orphaned. |
 | 2.0 | 2026-10-31T08:15:00Z | Implementation Plan Writer | DoR iteration 1 remediation (verdict NOT_READY; reopen reason: **allowlist staging contradiction** — v1.0 committed registry entries for Phase 4–7 files at Phase 1, which RV-21 fail-closed validation would reject, making the Phase-2 green gate unachievable, while TC-PRIVACY-012's exact-set assertion could only pass at end-state). Two changes: **(1) PD-2 staging rule** — each allowlist/exclusion entry lands in the same commit as the file it covers, with a per-phase staging table (Phases 1/2/4/5/6/7), a rule-scoped `rules` entry field (the "class" TC-PRIVACY-012 step 2 anticipated; `["*"]` reserved for guard-own surfaces), rule-scope validation in PD-3 step 8, a second-rule-still-fires regression in task 4.4, phase-tracked exact-set assertions (tasks 4.4/5.2/6.5/7.2, end-state at Phase 7), and task 1.2/2.1/2.4/4.1/4.7 rewritten so no phase fails its own self-consistency rule; **(2) PD-7 expected baseline batch** — the DoR-verified live-tree trips enumerated file-by-file with mechanism per file (placeholder suppression for marker-carrying fabricated values; rule-scoped exact-path entries for archival true positives incl. the DoR artifact itself; remediate-not-suppress for files this change touches), as named task 2.4 with live-tree-scan verification, owner visibility in the commit message/evidence/PR description, and rollback notes. Also: the three v1.0 findings reconciled with the DoR dispositions (TC-POLICY-005 import-reading pin CONFIRMED); RSK-E9 updated and RSK-E10 added; execution-notes staging invariant. No spec or test-plan change; no new CI job; aggregate `check` byte-unchanged; task count unchanged at 56; all 34 TCs still traced. |
 
 ## Execution Log
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| Authoring | Complete | 2026-10-31T06:39:00Z | 2026-10-31T07:05:00Z | none | Read spec v1.1, test plan v1.1, TDR-0005, the GH-179/GH-181 plan precedents, and the live gate files; verified the `ts-invariants` no-build constraint, the `depcruise packages` scope, the adapters `#io/*` alias, the codec's three in-repo call sites, and the five pre-existing changesets. Only this plan file was written; no code, builds, tests, or git operations. Executors record per-phase evidence, commands, HEAD, and the pushed-HEAD CI results here; unrun evidence must never be recorded as passing. |
+| Authoring | Complete | 2026-10-31T06:39:00Z | 2026-10-31T07:05:00Z | none | Read spec v1.1, test plan v1.1, TDR-0006, the GH-179/GH-181 plan precedents, and the live gate files; verified the `ts-invariants` no-build constraint, the `depcruise packages` scope, the adapters `#io/*` alias, the codec's three in-repo call sites, and the five pre-existing changesets. Only this plan file was written; no code, builds, tests, or git operations. Executors record per-phase evidence, commands, HEAD, and the pushed-HEAD CI results here; unrun evidence must never be recorded as passing. |
 | Authoring v2 (DoR reopen) | Complete | 2026-10-31T08:00:00Z | 2026-10-31T08:15:00Z | none | DoR iteration 1 NOT_READY remediation: read `readiness-review/readiness-iter-1.md` in full; re-verified the baseline trip set against the live tree (sanitization fixture, hook-example script, text-to-image doc, config-sources test, the GH-26/GH-32/GH-124 archival artifacts, and the DoR artifact itself — raw values deliberately not reproduced in the plan). Applied the PD-2 staging rule, rule-scoped allowlist entries, PD-7 batch table, task 1.2/2.1/2.4/4.1/4.4/4.7/5.2/6.5/7.2 amendments, RSK-E10, rollback/owner-visibility notes, and the v2 revision log. Only this plan file was modified; no spec, test plan, pm-notes, code, or git operations. |
 | 1 | Complete | 2026-10-31T11:05:00Z | 2026-10-31T11:35:00Z | phase-1 commit | Rule module + registry committed; inventory/allowances registered; `pnpm build`, `pnpm check:boundaries`, ambient-globals, secret-read-boundary, `bun test tests/structure/privacy-imports.test.ts tests/structure/content-inventory.test.ts` (13 pass), and `pnpm check` (1001 pass) all green. No boundary rule needed an edit (zero-import module). |
 | 2 | Complete | 2026-10-31T11:40:00Z | 2026-10-31T12:25:00Z | phase-2 commit | Guard check implemented (PD-3 validation order, working-tree scan, content-free human/JSON reporting, rule-scope validation, stdin-only CI-refusing authoring). Live tree green: 975 files scanned, 7 rules, 0 violations, 9 allowlist entries, 1 exclusion, 2 explicit vacuous classes, 3 binary skips. Baseline batch added: sanitization fixture (3 rule ids), GH-32 red-team v3/v4, GH-124 plan, GH-184 readiness-iter-1 (private.absolute-user-path). No entry added for files that no longer trip (GH-26 plan/pm-notes, GH-32 v2, GH-32 pm-notes, .ados-claude mirror). Temp-tree detection/no-echo/determinism spot checks PASS; `package.json` gains `check:privacy-literals`; `ci-topology` and `pnpm check` green. |

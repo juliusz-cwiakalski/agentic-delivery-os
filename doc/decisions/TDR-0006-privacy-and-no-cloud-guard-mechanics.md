@@ -1,5 +1,5 @@
 ---
-id: TDR-0005
+id: TDR-0006
 decision_type: tdr
 status: Proposed
 created: 2026-10-31
@@ -60,7 +60,7 @@ links:
   roadmap_items: []
 ---
 
-# TDR-0005: Privacy and No-Cloud Guard Mechanics
+# TDR-0006: Privacy and No-Cloud Guard Mechanics
 
 ## Context
 

@@ -51,7 +51,7 @@ The plan is built around three binding disciplines: a **mutation triple** for ev
 ## 2. References
 
 - **Change specification**: [chg-GH-184-spec.md](./chg-GH-184-spec.md) **v1.1** — F-1..F-8, DM-1..DM-7, NFR-1..NFR-9, C-1..C-7, AC-F1-1..AC-F8-1 (22 ACs), RSK-1..RSK-9, DEC-1..DEC-9, §17 coverage note, §18 Definition of Done. v1.1 corrected the changeset semantics (exactly one new changeset added by this change; pre-existing untouched) and added the §17 coverage note this plan cites.
-- **Decision record**: [TDR-0005](../../../decisions/TDR-0005-privacy-and-no-cloud-guard-mechanics.md) — one check plus one registry authority, domain-separated unsalted digest, no-echo reporting, hashed `cloud-term` class, required policy at the single serialization point, working-tree boundary, no config-layer key.
+- **Decision record**: [TDR-0006](../../../decisions/TDR-0006-privacy-and-no-cloud-guard-mechanics.md) — one check plus one registry authority, domain-separated unsalted digest, no-echo reporting, hashed `cloud-term` class, required policy at the single serialization point, working-tree boundary, no config-layer key.
 - **Testing strategy**: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — `bun:test`, `tests/{structure,behaviour,checks,boundaries,golden}`, `scripts/checks/*.ts` mutation tests, `pnpm check`.
 - **TypeScript rules**: [.ai/rules/typescript.md](../../../../.ai/rules/typescript.md) — injected time/randomness/environment, runtime-API confinement, purity, error contract.
 - **Existing invariant precedents**: [`scripts/checks/forbidden-literals.ts`](../../../../scripts/checks/forbidden-literals.ts) + `forbidden-literals.registry.json` (registry-as-authority, allowlist, live-tree scan); [`scripts/checks/secret-read-boundary.ts`](../../../../scripts/checks/secret-read-boundary.ts) (exact-path, reason-bearing, fail-closed allowlist); [`scripts/checks/ci-topology.ts`](../../../../scripts/checks/ci-topology.ts), `ci-bindingness.ts`, `ci-supply-chain.ts`, `script-surface.ts`.
@@ -1311,7 +1311,7 @@ All fixtures live under the allowlisted root `tests/fixtures/privacy-literals/`,
 
 **Entry (before execution)**
 
-- The spec is accepted into the change and TDR-0005 is on record (Proposed is acceptable, per the delivery precedent).
+- The spec is accepted into the change and TDR-0006 is on record (Proposed is acceptable, per the delivery precedent).
 - `.ai/rules/testing-strategy.md` has been read (this plan was authored against it).
 - The delivered `scripts/checks/privacy-literals.ts`, its registry, the shared rule module, the policy injection, the test suites, the CI invocation, the local script, and the new changeset exist.
 - `origin/main-tools` is fetched; the release assertions (TC-RELEASE-001, TC-RELEASE-002) compare the change against that base, and CI fetches it. The base ref is a hard prerequisite for those two TCs, not a waiver: if it is missing the run fails, and no release assertion is recorded as passing.

@@ -8,7 +8,7 @@ service: delivery-os
 summary: "The two-part privacy and no-cloud guard: a binding working-tree invariant with seven generic secret/private-shape rules and a schema-versioned hashed-literal registry, plus a required injected pure content policy at the envelope codec's single serialization point; content-free reporting, a stdin-only CI-refusing authoring mode, fixed caps, and explicit accepted residuals."
 links:
   related_changes: ["GH-184"]
-  related_decisions: ["ADR-0003", "TDR-0005"]
+  related_decisions: ["ADR-0003", "TDR-0006"]
   contracts:
     - "packages/core/src/contracts/envelope.ts"
 ---
@@ -24,7 +24,7 @@ The privacy and no-cloud guard keeps project-private content, secret-shaped cont
 
 The registry is the single authority for scan scope, enabled generic rule ids, hashed-entry classes and entries, the reason-bearing allowlist, reason-bearing exclusions, and the fixed caps. The guard never commits a raw private literal, hosted-product term, salt, or key. Violation output names an id, file, line, and identifier-only fingerprint, never matched content, so public CI logs cannot become the leak channel.
 
-The pure rule vocabulary lives in `packages/adapters/src/io/privacy-rules.ts`; the policy builder lives in `packages/adapters/src/io/envelope-content-policy.ts`; the check consumes both across the established dev edge. The envelope contract additions (`ContentPolicyVerdict`, `EnvelopeContentPolicy`) live in `packages/core/src/contracts/envelope.ts`. The unrelated branding scan is described in [Branding Seam and Working Name](feature-branding-seam.md); the envelope contract and codec in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); the workspace and CI inventory in [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md). The authoritative decision is [TDR-0005](../../decisions/TDR-0005-privacy-and-no-cloud-guard-mechanics.md); the OSS boundary is [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
+The pure rule vocabulary lives in `packages/adapters/src/io/privacy-rules.ts`; the policy builder lives in `packages/adapters/src/io/envelope-content-policy.ts`; the check consumes both across the established dev edge. The envelope contract additions (`ContentPolicyVerdict`, `EnvelopeContentPolicy`) live in `packages/core/src/contracts/envelope.ts`. The unrelated branding scan is described in [Branding Seam and Working Name](feature-branding-seam.md); the envelope contract and codec in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); the workspace and CI inventory in [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md). The authoritative decision is [TDR-0006](../../decisions/TDR-0006-privacy-and-no-cloud-guard-mechanics.md); the OSS boundary is [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 
 ## Business Context
 
@@ -99,7 +99,7 @@ A literal is normalized exactly once: trimmed, then lowercased. Entry building a
 - Detection enumerates fixed-length candidate windows for each distinct registered length, normalizes each window identically, skips any window whose normalized length differs from the registered length, and compares digests.
 - Case and edge-whitespace variants that normalize to a registered literal are detected. Repeated runs over the same tree and registry are byte-identical.
 
-**Accepted residual risk.** A committed digest list is an offline verification oracle for low-entropy guesses. This is accepted because the guard protects against accidental inclusion in public artifacts, not against a determined attacker with repository access. True secrets must never be listed as hashed entries; secret-shaped content is covered by the generic rules instead. This residual is bound in TDR-0005 and is revisited if oracle abuse is confirmed.
+**Accepted residual risk.** A committed digest list is an offline verification oracle for low-entropy guesses. This is accepted because the guard protects against accidental inclusion in public artifacts, not against a determined attacker with repository access. True secrets must never be listed as hashed entries; secret-shaped content is covered by the generic rules instead. This residual is bound in TDR-0006 and is revisited if oracle abuse is confirmed.
 
 ### No-echo reporting
 
@@ -307,6 +307,6 @@ Maintainers own four guarded surfaces: the generic rule set (code and corpus tun
 | Vacuous class | A declared hashed-entry class with no production entries, carrying an explicit reason and proven activatable by a synthetic test. |
 | Working-tree scan | A scan of tracked plus untracked-but-not-ignored files at the current tip, with no history replay. |
 
-See also: [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Result Contract and Error Table](feature-result-contract.md), the [repository glossary](../../overview/glossary.md), [TDR-0005](../../decisions/TDR-0005-privacy-and-no-cloud-guard-mechanics.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
+See also: [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Result Contract and Error Table](feature-result-contract.md), the [repository glossary](../../overview/glossary.md), [TDR-0006](../../decisions/TDR-0006-privacy-and-no-cloud-guard-mechanics.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 
 **Change record:** `doc/changes/2026-10/2026-10-31--GH-184--privacy-and-no-cloud-guards/`.

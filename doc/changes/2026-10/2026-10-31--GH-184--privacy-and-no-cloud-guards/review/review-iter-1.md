@@ -4,7 +4,7 @@
 - **Date**: 2026-10-31
 - **Implementation HEAD reviewed**: `fe0043e` (phase commits `0b94517`…`bdefee2`, plus doc-sync `3a7635e`/`fe0043e`)
 - **Base**: `origin/main-tools`
-- **Inputs**: spec v1.1 (22 ACs), test plan v1.1 (34 TCs), plan v2 (PD-1..PD-10, DoR iteration 2 READY), TDR-0005, evidence artifact, readiness iterations 1–2
+- **Inputs**: spec v1.1 (22 ACs), test plan v1.1 (34 TCs), plan v2 (PD-1..PD-10, DoR iteration 2 READY), TDR-0006, evidence artifact, readiness iterations 1–2
 - **Method**: full diff read (`git diff origin/main-tools...HEAD`, 49 files, +9,502/−43); all guard/policy/codec/registry sources read in full; key suites re-run; guard re-run on the live tree; one targeted runtime probe of the shared matcher.
 
 ## Verdict: FAIL
@@ -121,7 +121,7 @@ The evidence artifact (`chg-GH-184-evidence.md`) is honest: every claim I re-ran
 
 ### F-11 — [INFO] `doc/decisions/00-index.md` also adds the pre-existing TDR-0004 row
 
-- **Evidence**: the diff adds both TDR-0004 (state-layer change, already merged as a record but unindexed) and TDR-0005. Benign, correct housekeeping; noting for scope transparency.
+- **Evidence**: the diff adds both TDR-0004 (state-layer change, already merged as a record but unindexed) and TDR-0006. Benign, correct housekeeping; noting for scope transparency.
 
 ### F-12 — [INFO] Registry JSON parse errors may echo a short file snippet
 
@@ -137,7 +137,7 @@ The evidence artifact (`chg-GH-184-evidence.md`) is honest: every claim I re-ran
 
 **TC coverage (34/34)**: evidence map matches the delivered suites; every suite I re-ran is green and non-vacuous (each mutation/echo/writing mutant control genuinely fails the assertion it guards; the RV-01..30 matrix, rule-scope regression, boundary placements 4/5/7/16/64/512, no-echo recursive-JSON/candidate-window/hex-inventory checks, and CI-wiring mutation controls are all substantive).
 
-**TDR-0005 conformance**: §1 one check + one registry + shared pure rules ✓; §2 domain-separated unsalted SHA-256 with single-sourced normalization ✓; §3 no-echo identifiers-only reporting ✓ (verified, incl. authoring mode); §4 hashed empty `cloud-term` class with synthetic activation ✓; §5 required injected policy at the single serialization point, codec purity ✓; §6 working-tree-only boundary, reason-bearing exceptions, fail-closed ✓; §7 no config-layer key ✓. Deviations: none of substance; F-1/F-2 are implementation defects inside the conformed mechanics, not departures from the TDR.
+**TDR-0006 conformance**: §1 one check + one registry + shared pure rules ✓; §2 domain-separated unsalted SHA-256 with single-sourced normalization ✓; §3 no-echo identifiers-only reporting ✓ (verified, incl. authoring mode); §4 hashed empty `cloud-term` class with synthetic activation ✓; §5 required injected policy at the single serialization point, codec purity ✓; §6 working-tree-only boundary, reason-bearing exceptions, fail-closed ✓; §7 no config-layer key ✓. Deviations: none of substance; F-1/F-2 are implementation defects inside the conformed mechanics, not departures from the TDR.
 
 **TC-POLICY-005 import pin (explicitly requested)**: honored — codec imports exactly `@delivery-os/core/contracts` (type members via `import type`; `as const` data by value) and nothing else; policy builder adds only `./privacy-rules.js` + `import type` contract member; purity suite enforces it with seeded-violation controls (`tests/structure/privacy-imports.test.ts:303-334`). Pin confirmed.
 
