@@ -34,7 +34,7 @@ version_impact: minor
 
 ## Context and Goals
 
-Implement F-1–F-8 of the completed specification (v1.2; 12 ACs in §17, DEC-1–DEC-8 in §15, DM-1–DM-8 in §8.3, §18 DoD predicates) against the completed test plan (v1.1; 28 TCs). Both artifacts are committed; this plan derives every task, file location, and gate from them and adds no requirement. Execution belongs on `feat/GH-188/client-seeds-trap-catalogs`; the PR targets `main-tools`.
+Implement F-1–F-8 of the completed specification (v1.3; 12 ACs in §17, DEC-1–DEC-8 in §15, DM-1–DM-8 in §8.3, §18 DoD predicates) against the completed test plan (v1.2; 28 TCs). Both artifacts are committed; this plan derives every task, file location, and gate from them and adds no requirement. Execution belongs on `feat/GH-188/client-seeds-trap-catalogs`; the PR targets `main-tools`.
 
 **Settled inputs — the plan does NOT re-do them:**
 
@@ -429,7 +429,7 @@ Execution order is strict: **P1 → P2 → P3 → P4 → P5 → P6 → P7 → P8
 
 ## Test Scenarios
 
-All 28 TCs from the test plan (v1.1) land in a phase; TC IDs, AC traces, and target files follow test-plan §§5–7 (locations authoritative there; this plan's only reconciliations are the phase assignments and the OQ-C..OQ-H decisions recorded in Context).
+All 28 TCs from the test plan (v1.2) land in a phase; TC IDs, AC traces, and target files follow test-plan §§5–7 (locations authoritative there; this plan's only reconciliations are the phase assignments and the OQ-C..OQ-H decisions recorded in Context).
 
 | TC ID | Scenario | AC | Phase(s) | Suite / file |
 |---|---|---|---|---|
@@ -497,7 +497,7 @@ Protected paths untouched by every phase: `scripts/*.sh`, `scripts/checks/secret
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| Authoring | Complete | 2026-10-31T14:30:00Z | 2026-10-31T14:30:00Z | none | Read the completed spec (v1.2) and test plan (v1.1), PM notes, ADR-0004/0005/0006, the GH-181 house-format plan, and the live repo surfaces (core contracts, adapters subpaths/manifest, `.dependency-cruiser.cjs`, boundary harness/fixtures/registry, secret-read invariant, ambient-globals scope, changeset fixed group, test layout). Only this plan file written; no git/build/test operations. |
+| Authoring | Complete | 2026-10-31T14:30:00Z | 2026-10-31T14:30:00Z | none | Read the completed spec (v1.3) and test plan (v1.2), PM notes, ADR-0004/0005/0006, the GH-181 house-format plan, and the live repo surfaces (core contracts, adapters subpaths/manifest, `.dependency-cruiser.cjs`, boundary harness/fixtures/registry, secret-read invariant, ambient-globals scope, changeset fixed group, test layout). Only this plan file written; no git/build/test operations. |
 | P1 | Not started | — | — | — | |
 | P2 | Not started | — | — | — | |
 | P3 | Not started | — | — | — | |

@@ -10,7 +10,7 @@ version_impact: minor
 summary: "Verify the GitLab, Jira, and GitHub client seeds behind the primitive ports: fixture-based trap catalogs with a firing negative control, the four M0-S6 tracker query families, the GitHub status/verify input set, sanitized fixtures, the additive WorkItem.updatedAt contract extension, capability honesty, credential-port exclusivity at exactly four allowlist entries, and the reviewed runtime-confinement extension, and the ADR-0006 representations (custom-field mapping semantics; optional WorkItem.comments absence semantics)."
 links:
   change_spec: ./chg-GH-188-spec.md
-  implementation_plan: null # chg-GH-188-plan.md not authored yet; reconcile locations/commands when it lands
+  implementation_plan: ./chg-GH-188-plan.md
   testing_strategy: .ai/rules/testing-strategy.md
 ---
 
@@ -1088,7 +1088,7 @@ All rows are **To Implement** unless marked otherwise. Paths are proposed under 
 | OQ-E: **`updatedAt` string policy.** Decide verbatim provider string vs canonical UTC ISO-8601 rendering; align DM-6 wording ("normalized verbatim") with ISO-8601 UTC. | Spec writer / plan writer | Not blocking; tests assert UTC-parseable + non-fabricated now. |
 | OQ-F: **Contract-inventory claim.** The spec/ADR say the inventory test pins exact contract shape, but the committed fixture pins export names only. This plan adds a field-shape probe; confirm that satisfies ADR-0004 C-1 or extend the fixture format. | Plan writer / delivery | Not blocking; mechanical consequence documented in TC-CONTRACT-001. |
 | OQ-G: **Gap reason per operation.** Record `provider-unsupported` vs `adapter-not-implemented` vs `plan-restriction` for each gapped operation so TC-CAP-001 can assert the mapping after delivery. | Plan writer / delivery | Not blocking; tests assert validity + gapped-ness now. |
-| OQ-H: **Fixture provenance.** Resolved 2026-10-31 — fixtures are hand-authored synthetic captures modeled on recorded provider response shapes (public API documentation), sanitized per F-6; none is a live-tenant capture, and live-tenant revalidation is deferred to M0-S20 (RSK-2). Per-fixture authoring dates remain recorded in §10 for auditability. | Delivery / M0-S20 | Resolved — no longer blocking. |
+| OQ-H: **Fixture provenance.** Resolved 2026-10-31 — fixtures are hand-authored synthetic captures modeled on recorded provider response shapes (public API documentation), sanitized per F-6; none is a live-tenant capture, and live-tenant revalidation is deferred to M0-S20 (RSK-2). Per-fixture authoring dates are recorded in the fixture files themselves as provenance markers (per plan OQ-H) for auditability. | Delivery / M0-S20 | Resolved — no longer blocking. |
 
 No AC is left without a mapped test. Twelve of twelve ACs are traced and fully assertable; OQ-A/OQ-B are resolved by ADR-0006, OQ-H is resolved by the fixture-provenance correction aligned with the spec, and AC-F8-1 is process evidence (manual). The remaining open questions are recorded above rather than hidden.
 
