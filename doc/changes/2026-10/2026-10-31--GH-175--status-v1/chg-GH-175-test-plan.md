@@ -2,7 +2,7 @@
 id: chg-GH-175-test-plan
 status: Updated
 created: 2026-10-31T14:30:00Z
-last_updated: 2026-10-31T16:20:00Z
+last_updated: 2026-10-31T17:10:00Z
 owners: [engineering]
 service: delivery-os CLI status digest
 labels: [change, planning]
@@ -52,7 +52,7 @@ The plan is built around three adversarial mechanisms the specification names. F
 - [OUT] Full GitHub adapter, GraphQL review decisions/threads, structured issue-dependency reads, push parity, open-PR-head CI, merge-gate evaluation (NG-6, OQ-3, OQ-5).
 - [OUT] LLM summarization/semantic ranking/recommendations/prose, cross-repository/fleet status, MCP/OpenCode surfaces, agent prompt adoption, pm-notes ledger reads, and `verify change` duplication (NG-7, NG-8, NG-10).
 - [OUT] New error-table rows/identities, envelope changes, state-schema changes, new packages/subpaths/runtime-API locations, or new secret-read allowlist entries (NG-9, DEC-15).
-- [GAP-1 — implementation-plan mapping — RESOLVED by plan v1.1 (`chg-GH-175-plan.md`)] The implementation plan now exists and maps every TC to a delivery phase/task; it must not reshape these TCs. This plan binds behaviour, states, reasons, bounds, assertions, and AC/NFR mapping. If a later plan or implementation changes a pinned contract, this test plan reopens.
+- [GAP-1 — implementation-plan mapping — RESOLVED by the current implementation plan (v1.1 onward; currently v1.3) (`chg-GH-175-plan.md`)] The implementation plan now exists and maps every TC to a delivery phase/task; it must not reshape these TCs. This plan binds behaviour, states, reasons, bounds, assertions, and AC/NFR mapping. If a later plan or implementation changes a pinned contract, this test plan reopens.
 - [GAP-2 — tracker cap interaction — RESOLVED by spec v1.3 (DM-5, DM-12, Appendix C, Appendix D)] Appendix C declares both `STATUS_MAX_ITEMS_PER_SECTION = 8` and `STATUS_MAX_TRACKER_FAMILY_ITEMS = 4`, while DM-5 gives each tracker family its own capped `items` and DM-2 allows a common `items` list *or* section-specific family/item fields. Spec v1.3 states that each tracker family caps independently at 4; the tracker section has no common `items` list; `truncated` is true when any family dropped items; `counts.omitted` is the sum across families; and no tracker family list exceeds 4. §8.3 OQ-T1 is resolved; the tests assert per-family 4 and would also fail an implementation that emits a single tracker list longer than 8.
 - [GAP-3 — non-tracker rank keys not enumerated — RESOLVED by spec v1.3 (§8.3 rank-key table, DM-12, Appendix D)] Appendix D pins the tracker rank keys only. DM-12 requires "deterministic rank keys" and F-10 requires order independence; spec v1.3 enumerates the rank keys and tie-breakers for PRs, CI runs, provider entries/parks, and parked work. This plan tests **permutation invariance** (reversed API/map order yields identical item order) and the pinned §8.3 key for each section. §8.3 OQ-T2 is resolved. No AC is weakened: order independence is still asserted.
 - [GAP-4 — providers state precedence — RESOLVED by spec v1.3 (DM-9, Appendix A, §8.3)] Appendix A gives `providers` rows for `unknown` (config read failed/invalid/unresolved), `unavailable` (no declared default chain), and `degraded` (config/entries observed but park fold failed); spec v1.3 fixes the precedence `unknown` (config untrusted) → `unavailable` (no default chain) → `degraded` (park fold failed) → `observed` as canonical. This plan tests the clear cells and the previously ambiguous combination; §8.3 OQ-T3 is resolved.
@@ -103,13 +103,13 @@ The plan is built around three adversarial mechanisms the specification names. F
 | AC-F10-1 | Caps enforced; `counts.omitted` records drops; `truncated` on drops or source-at-limit (raw page vs `STATUS_SOURCE_ITEM_LIMIT` for issues/pulls and `STATUS_SOURCE_PIPELINE_LIMIT` for check runs); `source-truncated`; deterministic ranks | TC-STATUS-007 | Covered |
 | AC-F11-1 | `--json` emits exactly one valid envelope with `delivery.status.v1` data, `generatedAt`, `repository`, `summary`, six sections; ≤64 KiB; no `error` on success | TC-STATUS-005 | Covered |
 | AC-F11-2 | Human mode: optional header plus one line per section in order, state and counts; ≤24 lines/4096 bytes; no titles/secrets/LLM; zero extra reads; same digest | TC-STATUS-006 | Covered |
-| AC-F12-1 | `origin` HTTPS/SSH binding, no userinfo/credentials; absent/unparseable/non-GitHub unavailable; downstream reasons; no new key/remote | TC-STATUS-020 | Covered |
+| AC-F12-1 | `origin` HTTPS/SSH binding, no userinfo/credentials; absent/unparseable/non-GitHub unavailable; downstream reasons; no new key/remote; anonymous/credential-less instance refused at composition before any read | TC-STATUS-020, TC-STATUS-021 | Covered |
 | AC-F13-1 | List reads exclude PRs, bounded page, no native payload; closed set/capability unchanged; four trap entries with assertions; credentials only via port | TC-STATUS-021, TC-STATUS-022 | Covered |
 | AC-F14-1 | Tier, boundary, ambient, forbidden-literal, privacy, secret-read gates green; no new runtime location/subpath; secret allowlist four; no product literal | TC-STATUS-026, TC-STATUS-027, TC-STATUS-028 | Covered |
-| AC-F15-1 | No new row/kind; evidence uses existing `config.*`/`state.*` codes or adapter-local classes; two-way sync and classification green; only fallback failures | TC-STATUS-029 | Covered |
+| AC-F15-1 | No new row/kind; evidence uses existing `config.*`/`state.*` codes or adapter-local classes; provider chain/config validation failure is `failureCode: "config.value.invalid"` + reason `provider-chain-unresolved` + no `failureClass`; config resolution is `config-invalid` + the relevant `config.*` code; `provider.chain.invalid` is never a `failureCode`/`failureClass`; two-way sync and classification green; only fallback failures | TC-STATUS-017, TC-STATUS-029 | Covered |
 | AC-F16-1 | Fixture corpus produces expected six sections, states, evidence, ordering, caps, controls with zero live calls; opt-in live structural smoke, no volatile counts | TC-STATUS-030, TC-STATUS-031, TC-STATUS-032 | Covered |
 
-**Capability coverage** (no capability left unlinked): F-1 → TC-STATUS-001, TC-STATUS-002; F-2 → TC-STATUS-002, TC-STATUS-003, TC-STATUS-004; F-3 → TC-STATUS-009, TC-STATUS-010, TC-STATUS-011, TC-STATUS-012; F-4 → TC-STATUS-013; F-5 → TC-STATUS-014, TC-STATUS-015; F-6 → TC-STATUS-016; F-7 → TC-STATUS-017, TC-STATUS-018; F-8 → TC-STATUS-019; F-9 → TC-STATUS-023; F-10 → TC-STATUS-007; F-11 → TC-STATUS-005, TC-STATUS-006; F-12 → TC-STATUS-020; F-13 → TC-STATUS-021, TC-STATUS-022; F-14 → TC-STATUS-024, TC-STATUS-025, TC-STATUS-026, TC-STATUS-027, TC-STATUS-028; F-15 → TC-STATUS-029; F-16 → TC-STATUS-030, TC-STATUS-031, TC-STATUS-032, TC-STATUS-033.
+**Capability coverage** (no capability left unlinked): F-1 → TC-STATUS-001, TC-STATUS-002; F-2 → TC-STATUS-002, TC-STATUS-003, TC-STATUS-004; F-3 → TC-STATUS-009, TC-STATUS-010, TC-STATUS-011, TC-STATUS-012; F-4 → TC-STATUS-013; F-5 → TC-STATUS-014, TC-STATUS-015; F-6 → TC-STATUS-016; F-7 → TC-STATUS-017, TC-STATUS-018; F-8 → TC-STATUS-019; F-9 → TC-STATUS-023; F-10 → TC-STATUS-007; F-11 → TC-STATUS-005, TC-STATUS-006; F-12 → TC-STATUS-020, TC-STATUS-021; F-13 → TC-STATUS-021, TC-STATUS-022; F-14 → TC-STATUS-024, TC-STATUS-025, TC-STATUS-026, TC-STATUS-027, TC-STATUS-028; F-15 → TC-STATUS-017, TC-STATUS-029; F-16 → TC-STATUS-030, TC-STATUS-031, TC-STATUS-032, TC-STATUS-033.
 
 **TC → AC traceability**: every scenario's `Related IDs` line and the Scenario Index (§5.1) carry the reverse direction; the table above carries the forward direction. All 24 ACs are covered; there is no deferred AC and no uncovered AC.
 
@@ -122,7 +122,7 @@ The specification declares no `API-#` or `EVT-#` identifiers and no HTTP endpoin
 | DM-1 — `StatusDigest` | `schemaVersion`, injected `generatedAt`, `repository`, `summary` counts incl. `actionable`, exactly six sections | TC-STATUS-002, TC-STATUS-005 | Covered |
 | DM-2 — `StatusSection` | `id`, `title`, `state`, bounded `evidence`, uniform `counts`, ranked `items`/section fields, `truncated` | TC-STATUS-003 | Covered |
 | DM-3 — Section states | Closed five-value vocabulary and observed-vs-item-unknown distinction | TC-STATUS-004 | Covered |
-| DM-4 — Evidence model | ≤6 sources `{source,outcome,failureCode?,failureClass?}`, ≤6 unique reasons, closed vocabularies, no raw payload | TC-STATUS-003, TC-STATUS-008, TC-STATUS-023, TC-STATUS-029 | Covered |
+| DM-4 — Evidence model | ≤6 sources `{source,outcome,failureCode?,failureClass?}`, ≤6 unique reasons, closed vocabularies, no raw payload; pinned provider-config identity | TC-STATUS-003, TC-STATUS-008, TC-STATUS-017, TC-STATUS-023, TC-STATUS-029 | Covered |
 | DM-5 — Tracker section | Four fixed-order families, per-family state/reason/items/counts, item fields | TC-STATUS-009, TC-STATUS-010, TC-STATUS-011, TC-STATUS-012 | Covered |
 | DM-6 — Changes/PRs section | `activeChange` observed/observed-empty/unknown; capped ranked `pullRequests` with refs/state and observed-or-unknown review signals | TC-STATUS-013 | Covered |
 | DM-7 — CI section | `commit {branch,sha?}`, `result`, capped `runs` with normalized job states and trace evidence, read from one bounded check-runs page at `per_page=STATUS_SOURCE_PIPELINE_LIMIT` (20) with no pagination | TC-STATUS-014, TC-STATUS-015 | Covered |
@@ -146,7 +146,7 @@ The specification declares no `API-#` or `EVT-#` identifiers and no HTTP endpoin
 | NFR-5 | Output contract: 100% one valid envelope, 100% six-section human lines + optional header, 0 extra render reads | TC-STATUS-005, TC-STATUS-006 | Covered |
 | NFR-6 | Fixture corpus expected; default-CI live calls 0; opt-in live structural checks 100%, no volatile counts | TC-STATUS-030, TC-STATUS-031, TC-STATUS-032 | Covered |
 | NFR-7 | Boundaries/branding: 0 new runtime-API locations, 0 new secret-read entries, 0 product literals, gates green | TC-STATUS-026, TC-STATUS-027, TC-STATUS-028 | Covered |
-| NFR-8 | Error-table stability: 0 new rows/kinds, 0 documented drift, 0 existing-row changes; sync/classification green | TC-STATUS-029 | Covered |
+| NFR-8 | Error-table stability: 0 new rows/kinds, 0 documented drift, 0 existing-row changes; sync/classification green; provider-config identity pin holds | TC-STATUS-017, TC-STATUS-029 | Covered |
 | NFR-9 | Performance: ≤50 ms pure aggregation, ≤3 network reads, ≤1 logical park-fold read (`readProviderParkViews` invocation; internal verified reads not multiplied), ≤1 config resolve, 0 retries/loops | TC-STATUS-033 | Covered |
 | NFR-10 | Privacy: 0 secrets/raw payloads in digest/evidence/human; 0 ambient reads outside the allowlist; 0 canary escapes | TC-STATUS-005, TC-STATUS-006, TC-STATUS-027 | Covered |
 
@@ -218,13 +218,13 @@ All ten NFRs are covered. No NFR is marked TODO or deferred.
 | TC-STATUS-014 | CI result classification: failed/pending/succeeded/canceled/none | Regression | Critical | High | AC-F5-1 |
 | TC-STATUS-015 | CI unresolved SHA and failed read are unknown, never green | Negative | Critical | High | AC-F5-1 |
 | TC-STATUS-016 | Lanes-or-queue is always not-delivered, never observed-empty | Regression | Critical | High | AC-F6-1 |
-| TC-STATUS-017 | Providers: parked vs unverified, chain park, no chain, park failure | Corner Case | Critical | High | AC-F7-1 |
+| TC-STATUS-017 | Providers: parked vs unverified, chain park, no chain, park failure, config identity pin | Corner Case | Critical | High | AC-F7-1, AC-F15-1, NFR-8 |
 | TC-STATUS-018 | Providers perform zero engine/quota/write calls | Negative | Critical | High | AC-F7-2, NFR-4 |
 | TC-STATUS-019 | Parked work: observed/empty/absent/malformed, optional age, no notes | Corner Case | Critical | High | AC-F8-1 |
 | TC-STATUS-020 | Repository binding: HTTPS/SSH, credential stripping, unavailable forms | Corner Case | Critical | High | AC-F12-1 |
-| TC-STATUS-021 | GitHub collection reads: PR exclusion, bounded page, absent signals | Happy Path | Critical | High | AC-F13-1, DM-14 |
+| TC-STATUS-021 | GitHub collection reads: PR exclusion, bounded page, absent signals, anonymous-instance guard | Happy Path | Critical | High | AC-F12-1, AC-F13-1, DM-14 |
 | TC-STATUS-022 | Capability unchanged and trap catalog four-field bidirectional coverage | Regression | Critical | High | AC-F13-1, NFR-7, NFR-8 |
-| TC-STATUS-023 | Exhaustive negative-control matrix: no false all-clear | Negative | Critical | High | AC-F9-1, NFR-3 |
+| TC-STATUS-023 | Exhaustive negative-control matrix: no false all-clear, incl. anonymous instance | Negative | Critical | High | AC-F9-1, NFR-3 |
 | TC-STATUS-024 | Read-only execution: zero writes/fences/mutations/network writes/spawns | Regression | Critical | High | AC-F1-2, AC-F7-2, NFR-4 |
 | TC-STATUS-025 | Determinism and byte-identical replay over identical inputs | Regression | Critical | High | AC-F1-2, NFR-4 |
 | TC-STATUS-026 | Tier, purity, runtime-API location, no new package/subpath | Regression | Critical | High | AC-F14-1, NFR-7 |
@@ -233,7 +233,7 @@ All ten NFRs are covered. No NFR is marked TODO or deferred.
 | TC-STATUS-029 | Error-table stability and evidence code/class discipline | Regression | Critical | High | AC-F15-1, NFR-8 |
 | TC-STATUS-030 | Committed fixture corpus drives all six sections with zero live calls | Regression | Critical | High | AC-F16-1, NFR-6 |
 | TC-STATUS-031 | Golden full-digest snapshot and bounds over the corpus | Regression | Important | High | AC-F16-1, NFR-2, NFR-5 |
-| TC-STATUS-032 | Opt-in live smoke: structural only, no volatile counts, outside default CI | Regression | Important | Medium | AC-F16-1, NFR-6 |
+| TC-STATUS-032 | Opt-in live smoke: structural only, no volatile counts, anonymous control, outside default CI | Regression | Important | Medium | AC-F16-1, NFR-6 |
 | TC-STATUS-033 | Performance and read-cost bounds (NFR-9) | Regression | Important | High | NFR-9, AC-F16-1 |
 
 All thirty-three TCs are automated except TC-STATUS-032, which is opt-in automated (skipped without the switch) and manual-when-invoked. Every TC is non-vacuous per §4.2; the controls are named in each scenario.
@@ -743,7 +743,7 @@ All thirty-three TCs are automated except TC-STATUS-032, which is opt-in automat
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-7, DM-9, DM-14, AC-F7-1, NFR-3
+**Related IDs**: F-7, F-15, DM-4, DM-9, DM-14, AC-F7-1, AC-F15-1, NFR-3, NFR-8
 **Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/status-providers-parked.test.ts`, `tests/fixtures/status/providers/**`, `tests/fixtures/state/harness.ts`
@@ -751,7 +751,8 @@ All thirty-three TCs are automated except TC-STATUS-032, which is opt-in automat
 
 **Preconditions**:
 
-- Resolved provider-config snapshots: (a) default chain + declared entries; (b) same + an active provider park (`provider:` prefix); (c) same + an active chain park (`chain:` prefix); (d) no default chain (`provider.defaultChain` absent, `provider.chains` empty); (e) chain declared but not resolving to declared entries; (f) park fold failure.
+- Resolved provider-config snapshots: (a) default chain + declared entries; (b) same + an active provider park (`provider:` prefix); (c) same + an active chain park (`chain:` prefix); (d) no default chain (`provider.defaultChain` absent, `provider.chains` empty); (e) chain declared but not resolving to declared entries; (f) park fold failure; (g) provider config read failed or invalid.
+- The pinned evidence identity from spec F-15/DM-4/DM-9: a provider chain/config validation failure carries `failureCode: "config.value.invalid"` + reason `provider-chain-unresolved` + **no** `failureClass`; a config-resolution failure carries reason `config-invalid` + the relevant existing `config.*` code; the error-table row `provider.chain.invalid` is never used as a `failureCode` or `failureClass`.
 - Verified park views built with the state harness (`foldParks`/`parkView`) with `expiresAt` on both sides of the injected clock.
 - Counting provider-engine/quota stubs.
 
@@ -761,15 +762,16 @@ All thirty-three TCs are automated except TC-STATUS-032, which is opt-in automat
 2. Case (b): assert the parked entry is `parked` with cause, conditions, and expiry; assert other entries are `unverified`; assert the chain is not `available`.
 3. Case (c): assert the chain is `parked` (chain park), with cause/expiry; assert entries remain `unverified`/`parked` truthfully.
 4. Case (d): assert `section.state === "unavailable"` with `provider-chain-not-declared`; assert zero entries/parks and no `available`.
-5. Case (e): assert `section.state === "unknown"` with `provider-chain-unresolved`; assert no fabricated entries.
-6. Case (f): assert `section.state === "degraded"`, entries observed, parks unknown, the state failure code present, and no "no parks" claim; assert the parks list is not silently empty-observed.
-7. Assert expiry is read-time: a park at T−1 is active, at T is expired/inactive, at T+1 stays expired with no write.
-8. Assert caps at `STATUS_MAX_PROVIDER_ENTRIES`/`STATUS_MAX_PROVIDER_PARKS` and `omitted`/`truncated`.
-9. Negative controls: mark a no-park entry `available` and assert the test fails; render a park read failure as "0 parks" and assert the test fails; render no chain as an empty observed chain and assert the test fails.
+5. Case (e): assert `section.state === "unknown"`; assert `evidence.reasons` contains exactly `provider-chain-unresolved`; assert the `provider-config` source entry has `failureCode: "config.value.invalid"` and **no** `failureClass`; assert no fabricated entries; assert the error-table row `provider.chain.invalid` appears nowhere in the evidence or digest as a `failureCode` or `failureClass`.
+6. Case (g): assert `section.state === "unknown"`; assert `evidence.reasons` contains `config-invalid`; assert the `provider-config` source entry has the relevant existing `config.*` code as `failureCode` (for example `config.value.invalid`) and **no** `failureClass`; assert `provider.chain.invalid` is not used as a `failureCode` or `failureClass`.
+7. Case (f): assert `section.state === "degraded"`, entries observed, parks unknown, the state failure code present, and no "no parks" claim; assert the parks list is not silently empty-observed.
+8. Assert expiry is read-time: a park at T−1 is active, at T is expired/inactive, at T+1 stays expired with no write.
+9. Assert caps at `STATUS_MAX_PROVIDER_ENTRIES`/`STATUS_MAX_PROVIDER_PARKS` and `omitted`/`truncated`.
+10. Negative controls: mark a no-park entry `available` and assert the test fails; render a park read failure as "0 parks" and assert the test fails; render no chain as an empty observed chain and assert the test fails; assign `provider.chain.invalid` as the case-(e) `failureCode` or `failureClass` and assert the identity assertion fails.
 
 **Expected Outcome**:
 
-- Providers report the declared chain/entries and verified active parks; availability is `parked` or `unverified` only; absent chain is unavailable; park failure is degraded with no false all-clear.
+- Providers report the declared chain/entries and verified active parks; availability is `parked` or `unverified` only; absent chain is unavailable; a chain/config validation failure is `unknown` with `failureCode: "config.value.invalid"` + `provider-chain-unresolved` and no `failureClass`; a config-resolution failure is `unknown` with `config-invalid` + the relevant `config.*` code; `provider.chain.invalid` is never an evidence identity; park failure is degraded with no false all-clear.
 
 #### TC-STATUS-018 - Providers perform zero engine/quota/write calls
 
@@ -867,7 +869,7 @@ All thirty-three TCs are automated except TC-STATUS-032, which is opt-in automat
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-13, DM-14, AC-F13-1, NFR-7
+**Related IDs**: F-12, F-13, DM-14, AC-F12-1, AC-F13-1, NFR-7
 **Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/providers/github-collection.test.ts`, `tests/fixtures/providers/github/**`
@@ -878,6 +880,7 @@ All thirty-three TCs are automated except TC-STATUS-032, which is opt-in automat
 - A mixed issues page containing issue objects and pull-request objects; a 100-item page at `STATUS_SOURCE_ITEM_LIMIT`; an issue without structured links; a PR list page with no review decision/threads.
 - The injected fixture transport (records requests; throws on unfixtured URL/non-GET) and the credential port.
 - A native-key sentinel list (`reviewDecision`, `head`, `base`, `sha`, `issue_links`, `check_suite`, `check_runs`, `updated_at`).
+- A credential-less/anonymous GitHub `ExternalSystemInstance` (`authMethod.mechanism: "anonymous"`) injected into the status composition, with a fixture transport that would return a 2xx if any read were attempted. The control is satisfiable through the spec F-12/DEC-5 composition guard and does **not** assume the GitHub client itself rejects an anonymous instance.
 
 **Steps**:
 
@@ -887,11 +890,13 @@ All thirty-three TCs are automated except TC-STATUS-032, which is opt-in automat
 4. `listDeliveryRequests(limit)`: assert one bounded PRs page and normalized `DeliveryRequest` items with refs/draft/state; assert the list's absent review decision/threads are not trusted as `open`/`0` and status reports them unknown.
 5. Assert no provider-native payload key crosses the subpath surface or the status digest; assert the serialized result contains none of the sentinels.
 6. Assert credentials resolve only through `CredentialPort`: a missing/rejected credential yields a classified read failure (evidence), not a command failure; assert no ambient env read.
-7. Negative controls: an unfixtured URL throws (no live fallback); a non-GET method throws; a mixed page with the PR filter removed yields a failing assertion.
+7. Anonymous/credential-less control: inject the `authMethod.mechanism: "anonymous"` instance into the composition and assert it is refused before any read — the recording transport shows zero requests; the tracker, changes-and-prs, and CI sections classify `unknown`/`unavailable` with `credential-unavailable`/`source-unavailable`; no section is `observed`. Assert the refusal comes from the composition guard, not from the client rejecting anonymous auth (the fixture transport is live and would answer a read).
+8. Negative controls: an unfixtured URL throws (no live fallback); a non-GET method throws; a mixed page with the PR filter removed yields a failing assertion; a composition that skips the anonymous guard and reads anonymously yields a failing assertion (the section must not become `observed`).
+9. Restored control: the same composition with the credential-reference instance reaches `observed` through the same fixture transport, proving the anonymous control is not vacuous.
 
 **Expected Outcome**:
 
-- Collection reads are one bounded page each, exclude PRs from issues, preserve absent relations/review signals as unavailable/unknown, never leak native payloads, and authenticate only through the credential port.
+- Collection reads are one bounded page each, exclude PRs from issues, preserve absent relations/review signals as unavailable/unknown, never leak native payloads, and authenticate only through the credential port; an anonymous/credential-less instance is refused at composition before any read, so the dependent sections are `unknown`/`unavailable` (`credential-unavailable`/`source-unavailable`), never `observed`.
 
 #### TC-STATUS-022 - Capability unchanged and trap catalog four-field bidirectional coverage
 
@@ -935,7 +940,7 @@ All thirty-three TCs are automated except TC-STATUS-032, which is opt-in automat
 
 **Preconditions**:
 
-- The ten AC-F9-1 controls, each with a restored control:
+- The ten AC-F9-1 controls plus the credential-less/anonymous composition control, each with a restored control:
   1. failed issues read;
   2. failed PR read;
   3. failed check-runs read;
@@ -945,8 +950,9 @@ All thirty-three TCs are automated except TC-STATUS-032, which is opt-in automat
   7. torn park store (`state-unreadable`);
   8. missing provider chain (`provider-chain-not-declared`);
   9. missing PM context (`local-context-missing`);
-  10. provider with an active park.
-- A fully-observed baseline.
+  10. provider with an active park;
+  11. credential-less/anonymous GitHub `ExternalSystemInstance` (`authMethod.mechanism: "anonymous"`) injected into the status composition, with a fixture transport that would answer a 2xx if read. This control is satisfiable through the spec F-12/DEC-5 composition guard and does not assume the client itself rejects anonymous auth.
+- A fully-observed baseline and a credential-reference-instance restored control for the anonymous case.
 
 **Steps**:
 
@@ -955,13 +961,14 @@ All thirty-three TCs are automated except TC-STATUS-032, which is opt-in automat
 3. Assert the queue section remains `not-delivered` in every control and the digest still has all six sections.
 4. Assert the active-park control marks the entry `parked` (not `available`) and the missing-chain control is `unavailable` (not empty observed).
 5. Assert the torn park store is `degraded`/`unknown` and never "no parks".
-6. For every control, run the restored fixture and assert the section reaches the expected `observed`/`parked` outcome, proving the negative is not vacuous.
-7. Assert every control's reason is drawn from the closed set and every failure class is an adapter-local class, not an error-table identity.
-8. Cross-check the matrix coverage against the ten named controls and fail if any is missing (a meta-assertion in the fixture builder).
+6. Anonymous control: assert the composition refuses the anonymous instance before any read (zero transport requests); the tracker, changes-and-prs, and CI sections are `unknown`/`unavailable` with `credential-unavailable`/`source-unavailable`; no section is `observed`; and the refusal is the composition guard, not a client-level rejection.
+7. For every control, run the restored fixture (credential-reference instance for the anonymous case) and assert the section reaches the expected `observed`/`parked` outcome, proving the negative is not vacuous.
+8. Assert every control's reason is drawn from the closed set and every failure class is an adapter-local class, not an error-table identity; assert `provider.chain.invalid` is never used as a `failureCode` or `failureClass` in the provider-config controls.
+9. Cross-check the matrix coverage against the named controls (the ten AC-F9-1 controls plus the anonymous composition control) and fail if any is missing (a meta-assertion in the fixture builder).
 
 **Expected Outcome**:
 
-- Every named failure/absence/credential/state/park control is reflected in a non-observed state and a reason; none becomes an observed-zero, clear, green, or available claim; the queue stays `not-delivered`; restored controls pass.
+- Every named failure/absence/credential/state/park control is reflected in a non-observed state and a reason; none becomes an observed-zero, clear, green, or available claim; an anonymous/credential-less instance is refused before any read and its dependent sections are never `observed`; the queue stays `not-delivered`; restored controls pass.
 
 #### TC-STATUS-024 - Read-only execution: zero writes/fences/mutations/network writes/spawns
 
@@ -1130,19 +1137,21 @@ All thirty-three TCs are automated except TC-STATUS-032, which is opt-in automat
 - The delivered `ERROR_TABLE`/`DOMAIN_KINDS` and the documented result-contract table.
 - A baseline snapshot of the pre-change rows/kinds.
 - Status evidence fixtures with `failureCode` (`config.credential.missing`, `state.unreadable`, etc.) and `failureClass` (`provider.payload.invalid`).
+- Provider-config identity fixtures from spec v1.3/v1.4 F-15/DM-4/DM-9: (a) a provider chain/config validation failure (`failureCode: "config.value.invalid"`, reason `provider-chain-unresolved`, no `failureClass`); (b) a config-resolution failure (reason `config-invalid` with the relevant existing `config.*` code, no `failureClass`).
 
 **Steps**:
 
 1. Assert `DOMAIN_KINDS` is unchanged (six kinds) and `ERROR_TABLE` has no new row; assert the documented table is unchanged and `error-table-sync` reports zero failures in both directions.
 2. Assert every status evidence `failureCode` is an existing `config.*`/`state.*` code present in `ERROR_TABLE`; assert no `failureCode` is a status-specific or unknown code.
-3. Assert every `failureClass` is an adapter-local class string and is **not** an `ERROR_TABLE` code/identity (e.g., `provider.payload.invalid`).
-4. Assert the status command failures use only `fallback.invocation` (parser) and `fallback.internal` (containment); assert no `status.*` identity exists in the code or docs.
-5. Assert existing classification tests remain green; assert the mutation controls (add a row, remove a row, change a code) still fail.
-6. Assert the error-table sync check is read-only (git status unchanged).
+3. Assert the pinned provider-config identity: fixture (a) carries `failureCode: "config.value.invalid"`, reason `provider-chain-unresolved`, and **no** `failureClass`; fixture (b) carries reason `config-invalid` and the relevant existing `config.*` code, with no `failureClass`; assert the error-table row `provider.chain.invalid` is never used as a `failureCode` or `failureClass` anywhere in status evidence or the digest.
+4. Assert every `failureClass` is an adapter-local class string and is **not** an `ERROR_TABLE` code/identity (e.g., `provider.payload.invalid`).
+5. Assert the status command failures use only `fallback.invocation` (parser) and `fallback.internal` (containment); assert no `status.*` identity exists in the code or docs.
+6. Assert existing classification tests remain green; assert the mutation controls (add a row, remove a row, change a code) still fail.
+7. Assert the error-table sync check is read-only (git status unchanged).
 
 **Expected Outcome**:
 
-- No new error row or domain kind is added; section evidence uses existing codes or adapter-local classes; the two-way sync and classification tests stay green.
+- No new error row or domain kind is added; section evidence uses existing codes or adapter-local classes; the exact provider-config pin (`config.value.invalid` + `provider-chain-unresolved` + no `failureClass`; `config-invalid` + `config.*` for a config-resolution failure) holds and `provider.chain.invalid` is never an evidence identity; the two-way sync and classification tests stay green.
 
 #### TC-STATUS-030 - Committed fixture corpus drives all six sections with zero live calls
 
@@ -1219,6 +1228,7 @@ All thirty-three TCs are automated except TC-STATUS-032, which is opt-in automat
 - `ADOS_STATUS_LIVE=1` and a resolvable `GITHUB_TOKEN` in the environment (supplied explicitly; never committed).
 - The live smoke runs against this repository's `origin` and current HEAD.
 - The default CI environment has neither the switch nor the credential.
+- An explicit credential-less/anonymous control: the same live invocation with an `authMethod.mechanism: "anonymous"` GitHub `ExternalSystemInstance` injected (or the token deliberately suppressed for that case). The control is satisfiable through the spec F-12/DEC-5 composition guard and does not assume the live client rejects anonymous auth.
 
 **Steps**:
 
@@ -1229,10 +1239,12 @@ All thirty-three TCs are automated except TC-STATUS-032, which is opt-in automat
 5. Assert no volatile count is pinned (the assertions read structural properties, not exact issue/PR/CI counts); assert the run is tolerant of the repository's real (possibly empty) data.
 6. Assert the live smoke is not part of `pnpm check` or default CI; assert the optional evidence artifact is bounded, secret-free, and not committed by default.
 7. Negative control: an injected failure (e.g., missing credential) in the live path yields `unknown` sections, not an all-clear; the structural assertions still pass on the failure shape.
+8. Anonymous/credential-less control: run the live suite with the anonymous instance injected (token suppressed for the case) and assert the composition refuses it before any live read (zero live requests), the tracker/changes-and-prs/CI sections are `unknown`/`unavailable` with `credential-unavailable`/`source-unavailable`, and no section is `observed`; assert the refusal is the composition guard, not the live client rejecting anonymous auth.
+9. Restored control: with the credential-reference instance restored, the structural assertions reach the expected live (possibly empty) shape, proving the anonymous control is not vacuous.
 
 **Expected Outcome**:
 
-- The opt-in live smoke proves the six-section structural contract against the real repository without pinning volatile counts or running in default CI; default CI has zero live calls.
+- The opt-in live smoke proves the six-section structural contract against the real repository without pinning volatile counts or running in default CI; an anonymous/credential-less instance is refused at composition before any live read and its dependent sections are never `observed`; default CI has zero live calls.
 
 #### TC-STATUS-033 - Performance and read-cost bounds (NFR-9)
 
@@ -1327,22 +1339,22 @@ All TCs are automated except TC-STATUS-032, which is opt-in automated. Locations
 | TC-STATUS-014 | same + CI fixtures | same | one bounded check-runs page at `per_page=20`; failed/pending/canceled/succeeded/none/all-skipped; precedence controls; none-not-green | To Implement |
 | TC-STATUS-015 | same + CI failure fixtures | same | unresolved SHA, missing HEAD, failed read, credential, no binding; restored controls; one-attempt no-retry | To Implement |
 | TC-STATUS-016 | `tests/behaviour/status-providers-parked.test.ts` | `bun test tests/behaviour/status-providers-parked.test.ts` | always not-delivered; zero queue read; observed-empty/queue-ready controls | To Implement |
-| TC-STATUS-017 | same + `tests/fixtures/status/providers/**` + state harness | same | declared/parked/chain-parked/no-chain/unresolved/park-failure; expiry T−1/T/T+1; caps | To Implement |
+| TC-STATUS-017 | same + `tests/fixtures/status/providers/**` + state harness | same | declared/parked/chain-parked/no-chain/unresolved/config-invalid/park-failure; `config.value.invalid` + `provider-chain-unresolved` + no class; expiry T−1/T/T+1; caps | To Implement |
 | TC-STATUS-018 | same + `status-readonly-determinism.test.ts` | corresponding `bun test` | counting engine/quota stubs; guarded store; deliberate-call controls | To Implement |
 | TC-STATUS-019 | same + PM-context fixtures | same | observed/empty/absent/malformed/wrong-shape; item-unknown; age only from `parkedAt`; notes canary | To Implement |
 | TC-STATUS-020 | `tests/behaviour/status-repository.test.ts` + repository fixtures | `bun test tests/behaviour/status-repository.test.ts` | HTTPS/SSH/userinfo/no-origin/unparseable/non-GitHub; downstream propagation; no-spawn; linked worktree | To Implement |
-| TC-STATUS-021 | `tests/behaviour/providers/github-collection.test.ts` + GitHub fixtures | `bun test tests/behaviour/providers/github-collection.test.ts` | mixed page PR exclusion; page limit; absent relations; review-default not trusted; native-key/credential controls | To Implement |
+| TC-STATUS-021 | `tests/behaviour/providers/github-collection.test.ts` + GitHub fixtures | `bun test tests/behaviour/providers/github-collection.test.ts` | mixed page PR exclusion; page limit; absent relations; review-default not trusted; native-key/credential controls; anonymous-instance refused before read | To Implement |
 | TC-STATUS-022 | `tests/structure/trap-catalog.test.ts`, `provider-surface.test.ts`, `port-contract-inventory.test.ts` | corresponding `bun test` | unchanged operation set/capability; four-field entries; bidirectional coverage; deletion controls | Existing – Update |
-| TC-STATUS-023 | `tests/behaviour/status-negative-controls.test.ts` + cases | `bun test tests/behaviour/status-negative-controls.test.ts` | ten AC-F9-1 controls; no-clear scan; queue retained; restored controls; matrix meta-check | To Implement |
+| TC-STATUS-023 | `tests/behaviour/status-negative-controls.test.ts` + cases | `bun test tests/behaviour/status-negative-controls.test.ts` | ten AC-F9-1 controls + anonymous composition control; no-clear scan; queue retained; restored controls; matrix meta-check | To Implement |
 | TC-STATUS-024 | `tests/behaviour/status-readonly-determinism.test.ts` + state harness + verify-support | `bun test tests/behaviour/status-readonly-determinism.test.ts` | guarded store; transport method/URL; PM-context bytes; spawn sentinel; seeded controls | To Implement |
 | TC-STATUS-025 | same + `tests/golden/helpers.ts` | same | byte-identical replays; reversed twin; changed-fact control; AST purity scan | To Implement |
 | TC-STATUS-026 | `tests/structure/status-imports.test.ts`, `subpaths.test.ts`, `content-inventory.test.ts`, `cli-edge-seam.test.ts` | corresponding `bun test` | contracts data-only, domain purity, adapter-subpath confinement, inventory, edge composition; seeded violations | To Implement (new suite) + Existing – Update |
 | TC-STATUS-027 | `tests/checks/secret-read-boundary.test.ts`, `forbidden-literals.test.ts`, `status-imports.test.ts` | corresponding `bun test` | allowlist length 4; no status file; no product literal; brand-derived header; test-only live literal; seeded violations | Existing – Update |
 | TC-STATUS-028 | `tests/boundaries/**`, `scripts/checks/*.ts`, subpaths/inventory suites | `bun test tests/boundaries`; `bun run scripts/checks/{ambient-globals,forbidden-literals,exit-code-literals,workspace-entrypoints}.ts` | existing negative fixtures; seeded violations; rule baseline diff; fixture-coverage meta-check | Existing – Update |
-| TC-STATUS-029 | `tests/structure/error-table.test.ts`, `tests/checks/error-table-sync.test.ts`, `scripts/checks/error-table-sync.ts` | `bun run scripts/checks/error-table-sync.ts`; `bun test tests/checks/error-table-sync.test.ts`; `bun test tests/structure/error-table.test.ts` | no new row/kind; evidence code subset; class-not-identity; both drift directions; read-only | Existing – Update |
+| TC-STATUS-029 | `tests/structure/error-table.test.ts`, `tests/checks/error-table-sync.test.ts`, `scripts/checks/error-table-sync.ts` | `bun run scripts/checks/error-table-sync.ts`; `bun test tests/checks/error-table-sync.test.ts`; `bun test tests/structure/error-table.test.ts` | no new row/kind; evidence code subset; class-not-identity; exact provider-config pin; both drift directions; read-only | Existing – Update |
 | TC-STATUS-030 | `tests/behaviour/status-corpus.test.ts` + corpus | `bun test tests/behaviour/status-corpus.test.ts` | corpus completeness; expected states/order/caps; zero-live guard; corruption/removal controls | To Implement |
 | TC-STATUS-031 | `tests/golden/status-digest.test.ts` + golden | `bun test tests/golden/status-digest.test.ts` | byte-for-byte digest + human; bounds; changed-fact control; read-only golden | To Implement |
-| TC-STATUS-032 | `tests/behaviour/status-live.test.ts` | `ADOS_STATUS_LIVE=1 bun test tests/behaviour/status-live.test.ts` | skipped-without-switch; structural-only assertions; no volatile counts; failure-shape control | To Implement (opt-in) |
+| TC-STATUS-032 | `tests/behaviour/status-live.test.ts` | `ADOS_STATUS_LIVE=1 bun test tests/behaviour/status-live.test.ts` | skipped-without-switch; structural-only assertions; no volatile counts; failure-shape control; anonymous-instance refusal | To Implement (opt-in) |
 | TC-STATUS-033 | `tests/behaviour/status-performance.test.ts` + cap-sized fixtures | `bun test tests/behaviour/status-performance.test.ts` | read counters; check-runs `per_page=20`/raw-size; one-attempt/no-loop; median ≤50 ms; unavailable-binding zero-read; live-control | To Implement |
 
 **Execution order.**
@@ -1443,7 +1455,7 @@ ADOS_STATUS_LIVE=1 bun test tests/behaviour/status-live.test.ts   # opt-in, cred
 
 - **A-T1 — Spec binding.** The spec is the single source of truth for section ids/order, states, reasons, sources, outcomes, bounds, schema version, and non-verdict semantics. Delivery planning may choose helper/file names but may not rebind a pinned value.
 - **A-T2 — In-process harness.** Every status behaviour test uses `runCli` with injected dependencies and source readers; no status suite spawns a child process or reads the ambient environment/network in default CI.
-- **A-T3 — Plan mapping.** GAP-1 resolved by plan v1.1 (`chg-GH-175-plan.md`), which maps all 33 TCs onto its delivery phases/tasks and must not reshape them; any later plan or implementation that alters a TC's behaviour, state, reason, or AC/NFR mapping reopens this test plan.
+- **A-T3 — Plan mapping.** GAP-1 resolved by the current implementation plan (v1.1 onward; currently v1.3) (`chg-GH-175-plan.md`), which maps all 33 TCs onto its delivery phases/tasks and must not reshape them; any later plan or implementation that alters a TC's behaviour, state, reason, or AC/NFR mapping reopens this test plan.
 - **A-T4 — Delivery-bound spellings.** Contract export names, runtime type names, helper names, section `title` strings, human line labels, and header wording are delivery-bound (GAP-8). The vocabulary, order, caps, reasons, sources, outcomes, and schema version are pinned.
 - **A-T5 — Tracker cap reading.** GAP-2/OQ-T1: spec v1.3 (DM-5, DM-12, Appendix C, Appendix D) fixes per-family 4 as the binding cap, no common list, and aggregate `truncated`/`omitted`. The test would also fail a single tracker list longer than 8.
 - **A-T6 — Non-tracker rank keys.** GAP-3/OQ-T2: spec v1.3 §8.3 (rank-key table) and DM-12 fix the exact keys; the tests assert permutation invariance and a documented stable key, so order independence is proven without over-pinning a spelling.
@@ -1467,7 +1479,7 @@ ADOS_STATUS_LIVE=1 bun test tests/behaviour/status-live.test.ts   # opt-in, cred
 
 **Recorded gaps, not silently adjusted:**
 
-1. **Implementation-plan mapping** — GAP-1/A-T3; resolved by plan v1.1, which maps all 33 TCs onto its phases and must not reshape them.
+1. **Implementation-plan mapping** — GAP-1/A-T3; resolved by the current implementation plan (v1.1 onward; currently v1.3), which maps all 33 TCs onto its phases and must not reshape them.
 2. **Tracker cap interaction** — GAP-2/A-T5/OQ-T1; resolved by spec v1.3 (DM-5, DM-12, Appendix C, Appendix D); per-family 4 asserted, aggregate truncation asserted.
 3. **Non-tracker rank keys** — GAP-3/A-T6/OQ-T2; resolved by spec v1.3 (§8.3 rank-key table, DM-12); permutation invariance and the pinned keys asserted.
 4. **Providers precedence** — GAP-4/A-T7/OQ-T3; resolved by spec v1.3 (DM-9, Appendix A, §8.3); clear cells and the previously ambiguous combination tested.
@@ -1487,6 +1499,7 @@ No AC and no NFR is left without a TC.
 | 1.1 | 2026-10-31T15:15:00Z | Change Test Plan Writer | Reconciliation with spec v1.1. §1.2 GAP-2..GAP-7 and GAP-9 marked resolved (pinned behavior prose retained); §8.3 OQ-T1..OQ-T7 closed as resolved by spec v1.1 with the canonical sections named (DM-1, DM-5, DM-9, DM-12, Appendix A/B/C/D/F, F-10, F-16, AC-F10-1, AC-F11-1, AC-F16-1, NFR-2, §8.3), while OQ-T8 (CI timing tolerance) remains the delivery-bound open question; §8.2 A-T5..A-T9 and the §8.3 recorded-gaps list now cite spec v1.1 as authority rather than a plan-local reading. TC-STATUS-007/TC-STATUS-027 references point at the pinned tables. No TC renumbered and no assertion, TC count, coverage, or behavior changed; the rank-key cross-check required no assertion update. |
 | 1.2 | 2026-10-31T15:50:00Z | PM (planning reconciliation) | NFR-9/TC-STATUS-033 read-cost clarification driven by the implementation plan: the metric counts one **logical park-fold read** (one `readProviderParkViews` invocation); the fold's documented internal verified reads are not multiplied by status. No other assertion, TC count, coverage, or behavior changed. |
 | 1.3 | 2026-10-31T16:20:00Z | Change Test Plan Writer | DoR iteration-1 closeout for the test_planning-routed findings. **TC-STATUS-002** rebuilt from a reachable fixture — binding `observed`; issues read failed → tracker `unknown`; PR read failed with the active change observed → changes/PRs `degraded`; check-runs read failed for the resolved checkout SHA → CI `unknown`; providers `unavailable` (no declared chain); parked `unavailable` (no PM context); lanes `not-delivered` — with the corrected summary `{sections: 6, observed: 0, degraded: 1, unknown: 2, unavailable: 2, notDelivered: 1, actionable: 0}`; the prior no-binding/CI-`unavailable` combination was unreachable through `runCli` and is removed. **TC-STATUS-007**, **TC-STATUS-033**, **TC-STATUS-014**, and **TC-STATUS-022** aligned to the spec v1.3 CI rule: the check-runs read is one bounded page at `per_page=STATUS_SOURCE_PIPELINE_LIMIT` (20), no pagination, and the raw page size (19 vs 20 runs) drives the at-limit/`source-truncated` signal even though `STATUS_MAX_PIPELINE_RUNS` renders at most 8; the existing all-skipped/`none`-never-green assertions are unchanged, and `readPipelineRun` keeps its name with only the optional declared page limit and raw-page-size reporting. **GAP-1/A-T3** marked resolved by plan v1.1 (all 33 TCs mapped, none reshaped); all current spec references updated from v1.1 to v1.3, with the v1.1 revision-log row retained as history; `last_updated` bumped. No TC renumbered or added/removed; 33 TCs, 24 ACs, 10 NFRs, and 15 DMs remain covered. |
+| 1.4 | 2026-10-31T17:10:00Z | Change Test Plan Writer | DoR iteration-2 closeout for the test_planning-routed findings. **TC-STATUS-017** and **TC-STATUS-029** now assert the spec v1.3/v1.4 provider-config identity pin: a chain/config validation failure carries `failureCode: "config.value.invalid"` + reason `provider-chain-unresolved` + no `failureClass`; a config-resolution failure carries reason `config-invalid` + the relevant existing `config.*` code; `provider.chain.invalid` is never a `failureCode` or `failureClass` (TC-017 gains a config-invalid case (g) and identity negative control; TC-029 gains the exact fixtures, step, and expected outcome; AC-F15-1 traceability updated). **TC-STATUS-021**, **TC-STATUS-023**, and **TC-STATUS-032** now carry an explicit credential-less/anonymous GitHub `ExternalSystemInstance` (`authMethod.mechanism: "anonymous"`) control: the composition guard refuses it before any read; tracker/changes/CI classify `unknown`/`unavailable` with `credential-unavailable`/`source-unavailable`, never `observed`; each control is satisfiable and does not assume the client rejects anonymous auth, with a credential-reference restored control. **GAP-1/A-T3** citations updated to "the current implementation plan (v1.1 onward; currently v1.3)" while the historical v1.1 revision-log row is retained. `last_updated` bumped. No TC renumbered, added, or removed; 33 TCs, 24 ACs, 10 NFRs, and 15 DMs remain covered. |
 
 ## 10. Test Execution Log
 
