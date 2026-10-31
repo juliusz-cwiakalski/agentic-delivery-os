@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type DefaultPositionManifest, resolveConfig } from "../../packages/core/src/index";
 import {
@@ -9,6 +9,11 @@ import {
 } from "../../scripts/checks/exports-parity";
 
 const ROOT = process.cwd();
+
+// Test-environment repair (GH-180 TC-DB-035, DEC-D11): the temporary workspace
+// parent must exist before the first `mkdtempSync`, so the suite is
+// deterministic in a clean checkout. No assertion or fixture semantics change.
+mkdirSync(join(ROOT, "tmp", "tmpdir"), { recursive: true });
 
 describe("TC-CONFIG-017/025 deterministic packed config artifacts", () => {
   test("the built core ships the same trusted schema and verified source manifest", () => {

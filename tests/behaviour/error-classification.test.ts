@@ -432,6 +432,64 @@ describe("TC-SYNC-009 lint containment and multi-row-kind ambiguity", () => {
   });
 });
 
+const DB_CODES = [
+  "db.opencode.unavailable",
+  "db.query.failed",
+  "db.delete.failed",
+  "db.reboot.live",
+] as const;
+
+describe("TC-DB-005 db containment and exact-code classification", () => {
+  test("kind-only db is ambiguous and contains; the first-row control is live", () => {
+    expect(() => classifyDomainKind("db")).toThrow();
+    expect(classifyThrown({ kind: "db" }).code).toBe(FALLBACK_INTERNAL_CODE);
+    const firstRowClassifier = (kind: string) =>
+      (ERROR_TABLE as readonly ErrorTableEntry[]).find((entry) => entry.domainKind === kind);
+    expect(firstRowClassifier("db")?.code).toBe("db.opencode.unavailable");
+  });
+
+  test("wrong, unknown, missing, mismatched and non-string db codes contain", () => {
+    for (const failure of [
+      { kind: "db", code: "db.other.unknown" },
+      { kind: "db", code: "state.store.torn" },
+      { kind: "db" },
+      { kind: "db", code: 42 },
+      { kind: "db", code: null },
+      { kind: "state", code: "db.query.failed" },
+      { kind: "provider", code: "db.reboot.live" },
+    ]) {
+      expect(classifyThrown(failure).code).toBe(FALLBACK_INTERNAL_CODE);
+    }
+    expect(() => classifyDomainKind("db", "input.value.rejected")).toThrow();
+  });
+
+  test("each exact db code resolves to its declared row and round-trips", () => {
+    for (const code of DB_CODES) {
+      const row = classifyDomainKind("db", code);
+      expect(row.code).toBe(code);
+      expect(row.domainKind).toBe("db");
+      expect(row.consequence).toBe("not_landed");
+      expect(resolveAppErrorCode(code)).toEqual({ ok: true, entry: row });
+      expect(classifyThrown({ kind: "db", code })).toEqual(row);
+      expect(classifyThrown({ kind: "db", code, summary: "UNTRUSTED-CANARY" })).toEqual(row);
+    }
+  });
+
+  test("existing kinds are unchanged beside the db additions", () => {
+    expect(classifyDomainKind("provider", "provider.quota.exceeded").code).toBe(
+      "provider.quota.exceeded",
+    );
+    expect(classifyDomainKind("config", "config.value.invalid").domainKind).toBe("config");
+    expect(classifyDomainKind("state", "state.store.torn").domainKind).toBe("state");
+    expect(classifyDomainKind("lint", "lint.notes.malformed").domainKind).toBe("lint");
+    expect(classifyDomainKind("verify", "verify.ledger.incomplete").domainKind).toBe("verify");
+    expect(classifyDomainKind("input").code).toBe("input.value.rejected");
+    expect(() => classifyDomainKind("provider")).toThrow();
+    expect(() => classifyDomainKind("config")).toThrow();
+    expect(() => classifyDomainKind("state")).toThrow();
+  });
+});
+
 describe("TC-PROV-046 exact-code provider classification", () => {
   test("each declared provider code resolves exactly; no/unknown/wrong-kind contain", async () => {
     const { CLASSIFICATION_CASES } = await import(

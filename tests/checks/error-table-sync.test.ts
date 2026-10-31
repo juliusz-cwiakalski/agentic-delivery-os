@@ -69,6 +69,18 @@ const replaceTableCode =
   (text) =>
     text.replace(`code: "${from}"`, `code: "${to}"`);
 
+/**
+ * Replace the live DOMAIN_KINDS declaration regardless of formatter line
+ * wrapping, so the declared-kind drift controls stay live as the array grows.
+ */
+const replaceDomainKinds =
+  (kinds: readonly string[]): ((text: string) => string) =>
+  (text) =>
+    text.replace(
+      /export const DOMAIN_KINDS = \[[\s\S]*?\] as const;/,
+      `export const DOMAIN_KINDS = ${JSON.stringify(kinds)} as const;`,
+    );
+
 const gitStatus = (): string =>
   execFileSync("git", ["status", "--porcelain"], { cwd: ROOT, encoding: "utf8" });
 
@@ -395,12 +407,7 @@ describe("TC-STATE-019 state rows synchronize in both directions", () => {
 
   test("removing state from DOMAIN_KINDS fails naming the undeclared namespace", async () => {
     const root = makeTempRoot();
-    editFile(root, TABLE, (text) =>
-      text.replace(
-        '["provider", "input", "config", "state", "lint", "verify"]',
-        '["provider", "input", "config", "lint"]',
-      ),
-    );
+    editFile(root, TABLE, replaceDomainKinds(["provider", "input", "config", "lint"]));
     const failures = messages((await runSyncCheck({ root })).failures);
     expect(failures).toContain("undeclared namespace state");
   });
@@ -480,12 +487,7 @@ describe("TC-SYNC-008 lint rows synchronize in both directions", () => {
 
   test("removing lint from DOMAIN_KINDS fails naming the undeclared namespace", async () => {
     const root = makeTempRoot();
-    editFile(root, TABLE, (text) =>
-      text.replace(
-        '["provider", "input", "config", "state", "lint", "verify"]',
-        '["provider", "input", "config", "state"]',
-      ),
-    );
+    editFile(root, TABLE, replaceDomainKinds(["provider", "input", "config", "state"]));
     expect(messages((await runSyncCheck({ root })).failures)).toContain(
       "undeclared namespace lint",
     );
@@ -580,8 +582,9 @@ const ROW_VERIFY =
   "| verify.ledger.incomplete | verify | user | false | not_landed | Complete the named required phases of the declared variant through the phase command, or correct the declaration, then re-run verify. | user-validation | The declared variant's required phases are not all completed. |";
 
 /**
- * Frozen oracle of every row present before the verify addition (full column
- * set). The verify row is the only permitted addition; a changed existing row
+ * Frozen oracle of every row except the verify row (full column set). GH-180
+ * pinned the four db rows here when it added them, so the frozen baseline plus
+ * the single verify row still equals the live table; a changed baseline row
  * fails naming it.
  */
 const BASELINE_ROWS: ReadonlyArray<
@@ -887,6 +890,46 @@ const BASELINE_ROWS: ReadonlyArray<
     "user-validation",
     "The pm-notes target is missing.",
   ],
+  [
+    "db.opencode.unavailable",
+    "db",
+    "platform",
+    false,
+    "not_landed",
+    "Install or repair the opencode CLI so opencode db path resolves.",
+    "platform-provider",
+    "The opencode session database is unavailable.",
+  ],
+  [
+    "db.query.failed",
+    "db",
+    "platform",
+    true,
+    "not_landed",
+    "Retry the failed query and verify the session store is readable.",
+    "platform-provider",
+    "A session database query failed.",
+  ],
+  [
+    "db.delete.failed",
+    "db",
+    "transient",
+    true,
+    "not_landed",
+    "Retry the prune; failed rows remain and are selected again.",
+    "platform-provider",
+    "A session delete did not land.",
+  ],
+  [
+    "db.reboot.live",
+    "db",
+    "transient",
+    true,
+    "not_landed",
+    "Wait until the live window is empty or stop the opencode host, then retry.",
+    "platform-provider",
+    "A live session is using the database.",
+  ],
 ] as const;
 
 const tupleOf = (
@@ -954,12 +997,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
 
   test("removing verify from DOMAIN_KINDS fails naming the undeclared namespace", async () => {
     const root = makeTempRoot();
-    editFile(root, TABLE, (text) =>
-      text.replace(
-        '["provider", "input", "config", "state", "lint", "verify"]',
-        '["provider", "input", "config", "state", "lint"]',
-      ),
-    );
+    editFile(root, TABLE, replaceDomainKinds(["provider", "input", "config", "state", "lint"]));
     expect(messages((await runSyncCheck({ root })).failures)).toContain(
       "undeclared namespace verify",
     );
@@ -1004,5 +1042,82 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     expect(baselineViolations(mutated).join("\n")).toContain("state.store.torn");
     const live = ERROR_TABLE as readonly ErrorTableEntry[];
     expect(baselineViolations(live)).toEqual([]);
+  });
+});
+
+const ROW_DB_QUERY =
+  "| db.query.failed | db | platform | true | not_landed | Retry the failed query and verify the session store is readable. | platform-provider | A session database query failed. |";
+
+describe("TC-DB-004 db rows synchronize in both directions", () => {
+  test("the delivered state is green with the four db rows and non-zero counts", async () => {
+    const result = await runSyncCheck({ root: ROOT });
+    expect(result.failures).toEqual([]);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 1);
+    expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
+    expect(result.counts.recognizedS1).toBeGreaterThan(0);
+    const doc = readFile(ROOT, DOC);
+    for (const code of [
+      "db.opencode.unavailable",
+      "db.query.failed",
+      "db.delete.failed",
+      "db.reboot.live",
+    ]) {
+      expect(doc.split(`| ${code} |`).length - 1, code).toBe(1);
+    }
+  });
+
+  test("removing a machine db row fails naming the documented code", async () => {
+    const root = makeTempRoot();
+    editFile(root, TABLE, (text) =>
+      text.replace(/\n? {2}\{\n {4}code: "db\.query\.failed",[\s\S]*?\n {2}\},/, ""),
+    );
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "documented code db.query.failed has no source entry",
+    );
+  });
+
+  test("removing db from DOMAIN_KINDS fails naming the undeclared namespace", async () => {
+    const root = makeTempRoot();
+    editFile(
+      root,
+      TABLE,
+      replaceDomainKinds(["provider", "input", "config", "state", "lint", "verify"]),
+    );
+    expect(messages((await runSyncCheck({ root })).failures)).toContain("undeclared namespace db");
+  });
+
+  test("removing a documented db row fails naming the source entry", async () => {
+    const root = makeTempRoot();
+    editFile(root, DOC, removeDocRow(ROW_DB_QUERY));
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "source entry db.query.failed is undocumented",
+    );
+  });
+
+  test("a documentation-only or altered db row fails", async () => {
+    const phantom = makeTempRoot();
+    editFile(
+      phantom,
+      DOC,
+      insertDocRow(
+        "| db.phantom.row | db | platform | false | not_landed | Retry. | platform-provider | Phantom. |",
+      ),
+    );
+    expect(messages((await runSyncCheck({ root: phantom })).failures)).toContain(
+      "documented code db.phantom.row has no source entry",
+    );
+
+    const altered = makeTempRoot();
+    editFile(altered, DOC, (text) =>
+      text.replace(ROW_DB_QUERY, ROW_DB_QUERY.replace("| platform |", "| transient |")),
+    );
+    expect(messages((await runSyncCheck({ root: altered })).failures)).toContain(
+      "db.query.failed category mismatch",
+    );
+  });
+
+  test("the unchanged copy remains green (control)", async () => {
+    const root = makeTempRoot();
+    expect((await runSyncCheck({ root })).failures).toEqual([]);
   });
 });

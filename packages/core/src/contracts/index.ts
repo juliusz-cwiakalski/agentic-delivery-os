@@ -303,6 +303,64 @@ export {
   type StateVerificationClass,
 } from "./state.js";
 
+// The `delivery.session-admin.v1` vocabulary (GH-180 PIN-1, DM-D1..DM-D8).
+export {
+  DB_CHECKPOINT_TIMEOUT_MS,
+  DB_COMMANDS,
+  DB_DEFAULT_LIST_LIMIT,
+  DB_DEFAULT_OLDER_THAN_DAYS,
+  DB_DEFAULT_PRUNE_LIMIT,
+  DB_DELETE_TIMEOUT_MS,
+  DB_LIVE_WINDOW_MINUTES,
+  DB_MAX_HUMAN_BYTES,
+  DB_MAX_HUMAN_ITEMS,
+  DB_MAX_HUMAN_LINES,
+  DB_MAX_ID_CHARS,
+  DB_MAX_LIST_LIMIT,
+  DB_MAX_MACHINE_BYTES,
+  DB_MAX_OLDER_THAN_DAYS,
+  DB_MAX_PATH_CHARS,
+  DB_MAX_PRUNE_LIMIT,
+  DB_MAX_TIMESTAMP_CHARS,
+  DB_MIN_LIMIT,
+  DB_MIN_OLDER_THAN_DAYS,
+  DB_MODES,
+  DB_QUERY_TIMEOUT_MS,
+  DB_SCHEMA_VERSION,
+  DB_SESSION_ID_PATTERN,
+  type DbCommand,
+  type DbCounts,
+  type DbDatabaseFacts,
+  type DbMode,
+  type ListData,
+  type PruneData,
+  type RebootData,
+  type SessionAdminError,
+  type SessionAdminPort,
+  type SessionAdminResult,
+  type SessionListRead,
+  type SessionPruneRead,
+  type SessionRebootRead,
+  type SessionSizeRead,
+  type SessionStorePort,
+  type SessionSummary,
+  type SizeData,
+} from "./session.js";
+
+// The shared cold/live/leaf predicate and renderer are exposed through the
+// contracts barrel so the adapter seam and the CLI import one core subpath
+// (GH-180 PIN-3/D5). The implementation stays in the pure domain tier.
+export {
+  classifyPruneCandidate,
+  computeDbCutoffMs,
+  computeDbLiveBoundaryMs,
+  isLiveDbSession,
+  type PruneCandidateDecision,
+  type PruneCandidateFact,
+  renderSessionAdminHuman,
+  selectPruneCandidates,
+} from "../domain/session-admin.js";
+
 // The `delivery.status.v1` vocabulary (GH-175 F-2, DM-1..DM-15): constants and
 // types only; the pure aggregator lives in the core domain tier.
 export {
