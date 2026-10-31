@@ -26,3 +26,4 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0004](TDR-0004-state-storage-engine.md) | TDR | State Storage Engine | Proposed | 2026-10-30 | Juliusz Ćwiąkalski |
 | [TDR-0006](TDR-0006-privacy-and-no-cloud-guard-mechanics.md) | TDR | Privacy and No-Cloud Guard Mechanics | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | [TDR-0006](TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md) | TDR | Delivery Result Enum and CLI Exit Taxonomy | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
+| [TDR-0007](TDR-0007-license-gate-compound-spdx-expression-evaluation.md) | TDR | License Gate Compound SPDX Expression Evaluation | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |

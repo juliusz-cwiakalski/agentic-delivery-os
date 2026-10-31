@@ -3,5 +3,71 @@
   "nonAllowlisted": "GPL-3.0-only",
   "compoundOrDisallowed": "MIT OR GPL-3.0-only",
   "compoundAndAllowed": "MIT AND Apache-2.0",
-  "empty": ""
+  "empty": "",
+  "noassertion": "NOASSERTION",
+  "seeLicense": "SEE LICENSE",
+  "none": "NONE",
+  "whitespace": "   ",
+  "unknownRefScancode": "LicenseRef-scancode-unknown",
+  "unparseableTrailingOr": "MIT OR",
+  "unparseableLeadingAnd": "AND MIT",
+  "unparseableMissingParen": "MIT (ISC",
+  "unparseableEmptyParens": "()",
+  "unparseableWith": "MIT WITH Classpath-exception-2.0",
+  "unparseableSlash": "MIT/Apache-2.0",
+  "deniedSingles": ["SSPL-1.0", "BUSL-1.1", "Elastic-2.0", "Commons-Clause", "CC-BY-NC-4.0"],
+  "deniedCompounds": [
+    {
+      "license": "MIT OR SSPL-1.0",
+      "denied": "SSPL-1.0",
+      "identifiers": ["MIT", "SSPL-1.0"]
+    },
+    {
+      "license": "MIT AND Elastic-2.0",
+      "denied": "Elastic-2.0",
+      "identifiers": ["MIT", "Elastic-2.0"]
+    },
+    {
+      "license": "Commons-Clause OR MIT",
+      "denied": "Commons-Clause",
+      "identifiers": ["Commons-Clause", "MIT"]
+    },
+    {
+      "license": "MIT OR BUSL-1.0",
+      "denied": "BUSL-1.0",
+      "identifiers": ["MIT", "BUSL-1.0"]
+    },
+    {
+      "license": "(MIT OR Apache-2.0) AND (ISC OR BUSL-1.1)",
+      "denied": "BUSL-1.1",
+      "identifiers": ["MIT", "Apache-2.0", "ISC", "BUSL-1.1"]
+    },
+    {
+      "license": "MIT OR (Apache-2.0 AND CC-BY-NC-4.0)",
+      "denied": "CC-BY-NC-4.0",
+      "identifiers": ["MIT", "Apache-2.0", "CC-BY-NC-4.0"]
+    },
+    {
+      "license": "((MIT OR ISC) AND SSPL-1.0)",
+      "denied": "SSPL-1.0",
+      "identifiers": ["MIT", "ISC", "SSPL-1.0"]
+    }
+  ],
+  "allowedCompounds": [
+    {
+      "license": "(MIT AND ISC) OR Apache-2.0",
+      "identifiers": ["MIT", "ISC", "Apache-2.0"]
+    },
+    { "license": "((MIT))", "identifiers": ["MIT"] }
+  ],
+  "unknownReferences": ["LicenseRef-Proprietary", "LicenseRef-scancode-unknown"],
+  "nonAllowlistedGuards": [
+    "GPL-3.0-only",
+    "MPL-2.0",
+    "AGPL-3.0-only",
+    "Unlicense",
+    "0BSD",
+    "BSD-2-Clause",
+    "MIT-0"
+  ]
 }
