@@ -26,7 +26,9 @@ phases:
   delivery:
     started: "2026-10-31T17:22:00Z"
     completed: "2026-10-31T18:05:00Z"
-  system_spec_update: { started: null, completed: null }
+  system_spec_update:
+    started: "2026-10-31T18:10:00Z"
+    completed: "2026-10-31T18:22:00Z"
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -93,4 +95,7 @@ notes:
     date: "2026-10-31"
   - text: "Retro: the delivery run was interrupted twice by tool-window limits, and the first resume exposed a pre-existing broken base gate (GH-184 TC-RELEASE-001) that had blocked main-tools unbeknownst to this change. Lessons: long test batteries should run in the background with polling; and every resume should re-verify the base branch's gates, because a red base can masquerade as this change's failure. The repair was kept minimal and documented as an enabling fix."
     type: "retro"
+    date: "2026-10-31"
+  - text: "Phase 7 system_spec_update COMPLETE (doc-sync-report.md): reconciled feature-monorepo-scaffold-toolchain.md License registry section (schema v3, required deny_list/20-identifier 5-family baseline, deny-before-allow, allow/deny disjointness, single-identifier grammar, preserved scope check, non-asserted fail-closed, per-branch compound, TDR-0007 Proposed), updated the codebase map and QA row, and added Deny list/License registry glossary terms plus traceability. No spec-coverage gap; doc distribution guard passes (81 docs, no drift); license audit and 44 license tests green; front matter parses. Residual gaps: none for GH-187 (pre-existing out-of-scope duplicate paragraphs and the TDR-0005/0006 index label swap noted only)."
+    type: "info"
     date: "2026-10-31"

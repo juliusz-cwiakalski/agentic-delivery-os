@@ -8,9 +8,8 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, the typed adapter-port substrate and secret-read boundary invariant, the binding privacy and no-cloud guard with its hashed-literal registry and envelope content policy, the durable local state layer, the provider engine and its confined quota transport, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
 links:
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-188"]
-  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0006"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187"]
+  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0006", "TDR-0007"]
 ---
 
 # Feature: Monorepo Scaffold and Toolchain
@@ -177,7 +176,16 @@ The root `typecheck` runs `pnpm -r typecheck` and then compiles the `tests/types
 
 ### License registry
 
-`doc/legal/dependency-licenses.yaml` records direct external development and runtime uses plus the locked runtime closure, with exact resolved versions, SPDX identifiers, owners, dependency fields, and proposed approved verdicts, plus the allow-list. `scripts/checks/license-audit.ts` parses SPDX expressions (AND/OR/parentheses) and fails closed on unregistered uses, non-allow-listed branches, empty licenses, conflicting or missing versions, or a registry/allow-list mismatch.
+`doc/legal/dependency-licenses.yaml` is the single committed source of the dependency license policy. It declares `schema_version: 3`, `scope: direct-and-runtime-closure`, the proposed C-2 owner determination, a required `deny_list`, a required `allow_list`, and the entry set: direct external development and runtime uses plus the locked runtime closure, each with an exact resolved version, SPDX license text, owner, dependency field, and an approved verdict. The four allow-list identifiers are `Apache-2.0`, `BSD-3-Clause`, `ISC`, and `MIT`, and they are exactly the identifiers backed by approved verdicts.
+
+The policy is enforced in the registry by `scripts/checks/license-audit.ts` in two layers:
+
+- **Registry policy layer** — checked before any dependency. The registry must declare schema version 3 and scope `direct-and-runtime-closure`; any other schema or scope fails closed and reports the observed value. `deny_list` must be a non-empty array of single identifiers matching `^[A-Za-z0-9.+-]+$`; a non-string, empty, whitespace-affixed, operator-only, parenthesized, compound, or duplicate entry is a policy failure. The deny list and allow list must be disjoint, and the deny list must contain the mandatory 20-identifier baseline: `SSPL-1.0`; `BUSL-1.0` and `BUSL-1.1`; `Elastic-2.0`; `Commons-Clause`; and the `CC-BY-NC`, `CC-BY-NC-SA`, and `CC-BY-NC-ND` version family. Additional identifiers may be added; removing a baseline identifier fails closed.
+- **Entry layer** — deny-before-allow. Every registered use must resolve to an entry with the exact version and an approved verdict. The license text is parsed into SPDX identifier branches (`AND`/`OR`/parentheses), and each branch is evaluated in the order deny, `LicenseRef-*`, allow. A denied branch fails with an explicit `denied` message naming the package, license text, and identifier even when that identifier is also allow-listed or approved; denial is never reported only as `not allow-listed`. Empty licenses, `NOASSERTION`, `NONE`, `SEE LICENSE`, unknown `LicenseRef-*` references, unparseable expressions, and valid but non-allow-listed identifiers all fail closed.
+
+Compound expressions are evaluated per branch, not rejected wholesale: an expression passes only when every branch is known, not denied, not non-asserted, and allow-listed. The live `@biomejs/biome` entry with `MIT OR Apache-2.0` passes. This per-branch reading of ADR-0003 C-2 is recorded in [TDR-0007](../../decisions/TDR-0007-license-gate-compound-spdx-expression-evaluation.md) (Proposed; owner accepts or rejects at PR review), which clarifies C-2 without amending or superseding ADR-0003.
+
+The audit is invoked by the binding `ts-license-audit` CI job, which remains the only license gate. It is offline and deterministic, performs no network call, and exits non-zero on any policy, entry, version, or use failure; it exits zero only when the live registry and the resolved dependency closure are fully registered and allowed. Adding a dependency requires a reviewed registry entry, and changing the deny or allow list is a policy change reviewed like code.
 
 ### Repository hygiene
 
@@ -229,7 +237,7 @@ No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scr
 | `.changeset/config.json` | Lockstep fixed group and private-package policy |
 | `.github/workflows/ci.yml` | Untouched bash jobs plus the additive `ts-*` fast loop |
 | `.github/workflows/release.yml` | Manual pre-freeze publish guard and publish path |
-| `doc/legal/dependency-licenses.yaml` | License verdict registry and allow-list |
+| `doc/legal/dependency-licenses.yaml` | License registry: schema v3, deny list, allow list, entries, and verdicts |
 
 ### Package graph
 
@@ -273,6 +281,7 @@ core              ──> no workspace dependencies
 | Fixture coverage | Rule-to-fixture completeness | `tests/boundaries/fixture-coverage.test.ts` |
 | NFR-11 | Privacy guard bindingness | `privacy-literals` is invoked by name in `ts-invariants`, stays green on the clean tree, and fails on a planted guarded value; every envelope serialization supplies a content policy. |
 | Invariants | Manifests, pins, CI topology, bindingness, supply chain, exports, packed-exports parity, boundary build/cruise parity, licenses, result-contract table sync, exit literals, secret-read boundary, privacy-literals | `bun run scripts/checks/*.ts`, the aggregate check, and mutation tests under `tests/checks/**` |
+| License policy | Schema v3, scope, deny-list integrity and mandatory floor, deny-before-allow, denied compound branches, non-asserted values, live registry, and the spawned exit contract | `bun test tests/checks/license-*.test.ts`; `bun run scripts/checks/license-audit.ts` |
 | Type level | Contract typing probes outside the package graph | `tests/types/tsconfig.json` through the root `typecheck` |
 | Behaviour | pnpm isolation, commit-msg hook, adapter ports, credentials, envelope round-trip and degradation, pm-notes lint, corpus acceptance, phase transitions, delivery-registry records, and verify classification, rejection, evidence-failure, envelope, and real-corpus behaviour | `bun test tests/behaviour` |
 | Aggregate | The whole workspace | `pnpm check` |
