@@ -53,7 +53,7 @@ The authoritative design decision is [ADR-0003](../../decisions/ADR-0003-oss-mon
 | `@delivery-os/cli` | `.` | Command-line surface |
 | `@delivery-os/mcp` | `.` | MCP surface |
 | `@delivery-os/opencode` | `.` | OpenCode host integration surface |
-| `@delivery-os/testkit` | `.` | Private, dev-only test harness |
+| `@delivery-os/testkit` | `.` | Private, dev-only test harness and the provider conformance suite |
 
 All six packages are `private: true`, `version: 0.0.0`, and ESM (`"type": "module"`).
 
@@ -258,7 +258,7 @@ testkit (dev-only) ──> core (., ./contracts)
 core              ──> no workspace dependencies
 ```
 
-`testkit` is a dev-only leaf: production sources never import it, and it is excluded from the publish line.
+`testkit` is a dev-only leaf: production sources never import it, and it is excluded from the publish line. It carries the provider conformance suite described in [Adapter Conformance Suite](feature-adapter-conformance.md); that suite adds no package, subpath, dependency, or workspace edge.
 
 ## Non-Functional Requirements
 
@@ -279,7 +279,8 @@ core              ──> no workspace dependencies
 
 | Level | Scope | Mechanism |
 |-------|-------|-----------|
-| Unit/structure | Package inventory, subpaths, exports, `createRuntime` | `bun test tests/structure` |
+| Unit/structure | Package inventory, subpaths, exports, `createRuntime`, conformance registry and inventory | `bun test tests/structure` |
+| Conformance | Three primitive flows against every shipped provider contract, with capability-gated skips and the `delivery.conformance.v1` artifact | `bun test tests/conformance`; see [Adapter Conformance Suite](feature-adapter-conformance.md) |
 | Boundary | Every forbidden rule, alias and relative form, on production resolution | `bun test tests/boundaries` with the `mkdtemp` harness; `check:boundaries` for the gate |
 | Fixture coverage | Rule-to-fixture completeness | `tests/boundaries/fixture-coverage.test.ts` |
 | NFR-11 | Privacy guard bindingness | `privacy-literals` is invoked by name in `ts-invariants`, stays green on the clean tree, and fails on a planted guarded value; every envelope serialization supplies a content policy. |

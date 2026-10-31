@@ -36,10 +36,7 @@
           "status": {
             "name": "In Progress"
           },
-          "labels": [
-            "tracker",
-            "hand-back"
-          ],
+          "labels": ["tracker", "hand-back"],
           "assignee": {
             "displayName": "owner-placeholder",
             "accountId": "acct-0001"
@@ -85,10 +82,7 @@
         "nativeStatus": "In Progress",
         "deliveryState": "in-progress"
       },
-      "labels": [
-        "tracker",
-        "hand-back"
-      ],
+      "labels": ["tracker", "hand-back"],
       "assignee": "owner-placeholder",
       "relations": [
         {
@@ -118,10 +112,7 @@
         "nativeStatus": "In Progress",
         "deliveryState": "in-progress"
       },
-      "labels": [
-        "tracker",
-        "hand-back"
-      ],
+      "labels": ["tracker", "hand-back"],
       "assignee": "owner-placeholder",
       "relations": [
         {
@@ -151,10 +142,7 @@
         "nativeStatus": "In Progress",
         "deliveryState": "in-progress"
       },
-      "labels": [
-        "tracker",
-        "hand-back"
-      ],
+      "labels": ["tracker", "hand-back"],
       "assignee": "owner-placeholder",
       "relations": [
         {
