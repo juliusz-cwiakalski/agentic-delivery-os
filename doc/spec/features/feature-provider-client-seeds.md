@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The first real provider clients behind the primitive ports: GitLab, Jira, and a minimal GitHub read slice in the adapters package's per-provider subpaths, with normalized primitive views, honest capability/gap declarations, offline trap catalogs proven against sanitized hand-authored synthetic fixtures, credential-port-exclusive auth, declared custom-field and merge-status mappings, uniform absence semantics, bounded GitHub collection reads under the existing operations, and the reviewed runtime-API confinement admission."
 links:
-  related_changes: ["GH-188", "GH-175"]
+  related_changes: ["GH-188", "GH-175", "GH-189"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006"]
 ---
 
