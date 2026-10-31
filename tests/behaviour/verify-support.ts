@@ -6,7 +6,15 @@
  * builders over the state harness. The in-process CLI runner is added with the
  * command in Phase 3 so the pure suites never depend on a command module.
  */
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parse } from "yaml";
@@ -322,3 +330,145 @@ export const materializeAbsentTarget = (): { root: string; changesDirectory: str
 
 export const ledgerFile = (identity: ReturnType<typeof makeIdentity>): string =>
   ledgerPath(identity);
+
+export { createVerifyState as createState };
+
+import { readPmNotesText } from "../../packages/adapters/src/file";
+import {
+  createVerifyCommandDefinition,
+  type VerifyCommandRuntime,
+} from "../../packages/cli/src/commands/verify";
+import { type CliDependencies, runCli } from "../../packages/cli/src/index";
+import { readChangeTransitionsTolerant } from "../../packages/core/src/state/index";
+import { bufferSink, SYNTHETIC_BRAND } from "../golden/helpers";
+
+export type VerifyRun = {
+  readonly exitCode: number;
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly envelope?: Record<string, unknown>;
+};
+
+export type VerifyHarnessOptions = {
+  readonly changesDirectory?: string;
+  readonly targetText?: string;
+  readonly omitTarget?: boolean;
+  readonly state?: VerifyState;
+  readonly recorder?: VerifyCallRecorder;
+  readonly throwOnMutation?: boolean;
+  readonly runId?: string;
+  readonly ticks?: readonly [number, number];
+};
+
+export type VerifyHarness = {
+  readonly changesDirectory: string;
+  readonly state: VerifyState;
+  readonly recorder: VerifyCallRecorder;
+  readonly runtime: VerifyCommandRuntime;
+  run(args: readonly string[], options?: { readonly json?: boolean }): Promise<VerifyRun>;
+  cleanup(): void;
+};
+
+/**
+ * Build the in-process verify harness: injected brand/clock/run id/streams,
+ * recording read seams, and a state store that throws on mutation by default.
+ */
+export const createVerifyHarness = (options: VerifyHarnessOptions = {}): VerifyHarness => {
+  const state = options.state ?? createVerifyState();
+  const ownsState = options.state === undefined;
+  const recorder = options.recorder ?? createVerifyRecorder();
+  let materialized: { root: string; changesDirectory: string } | undefined;
+  let changesDirectory = options.changesDirectory;
+  if (changesDirectory === undefined) {
+    if (options.omitTarget === true) {
+      const absent = materializeAbsentTarget();
+      materialized = { root: absent.root, changesDirectory: absent.changesDirectory };
+    } else {
+      const target = materializeTarget(options.targetText ?? "");
+      materialized = { root: target.root, changesDirectory: target.changesDirectory };
+    }
+    changesDirectory = materialized.changesDirectory;
+  }
+  const directory = changesDirectory;
+  const guarded = guardStore(state.store, recorder, {
+    throwOnMutation: options.throwOnMutation ?? true,
+  });
+  const runtime: VerifyCommandRuntime = {
+    readPmNotes: (changeRef) => {
+      recorder.calls.push("readPmNotes");
+      return readPmNotesText({
+        changeRef,
+        changesDirectory: directory,
+        fs: verifyFileSystemFacts,
+      });
+    },
+    readRegistry: (changeRef) => {
+      recorder.calls.push("readRegistry");
+      const read = readChangeTransitionsTolerant(guarded.store, changeRef);
+      if (!read.ok) return { ok: false, error: read.error };
+      return {
+        ok: true,
+        present: read.value.present,
+        verifiedEmpty: read.value.verifiedEmpty,
+        transitions: read.value.transitions,
+        recordCount: read.value.evidence.recordCount,
+      };
+    },
+  };
+  const definition = createVerifyCommandDefinition(runtime);
+  const run = async (
+    args: readonly string[],
+    runOptions: { readonly json?: boolean } = {},
+  ): Promise<VerifyRun> => {
+    const stdout = bufferSink();
+    const stderr = bufferSink();
+    const ticks = options.ticks ?? [100, 100];
+    let tick = 0;
+    const deps: CliDependencies = {
+      brand: SYNTHETIC_BRAND,
+      clock: {
+        now: () => {
+          const value = ticks[Math.min(tick, 1)] as number;
+          tick += 1;
+          return value;
+        },
+      },
+      newRunId: () => options.runId ?? "run-verify-fixture",
+      secrets: [],
+      program: { commands: { verify: definition } },
+    };
+    const argv = runOptions.json === false ? ["verify", ...args] : ["--json", "verify", ...args];
+    const exitCode = await runCli(argv, { stdout, stderr }, deps);
+    const text = stdout.value.trim();
+    const envelope = text.length === 0 ? undefined : (JSON.parse(text) as Record<string, unknown>);
+    return {
+      exitCode,
+      stdout: stdout.value,
+      stderr: stderr.value,
+      ...(envelope === undefined ? {} : { envelope }),
+    };
+  };
+  return {
+    changesDirectory: directory,
+    state,
+    recorder,
+    runtime,
+    run,
+    cleanup: () => {
+      if (materialized !== undefined) rmSync(materialized.root, { recursive: true, force: true });
+      if (ownsState) state.cleanup();
+    },
+  };
+};
+
+const verifyFileSystemFacts = {
+  exists: (path: string) => existsSync(path),
+  readText: (path: string) => readFileSync(path, "utf8"),
+  listDirectory: (path: string) => {
+    try {
+      return readdirSync(path);
+    } catch {
+      return [];
+    }
+  },
+};

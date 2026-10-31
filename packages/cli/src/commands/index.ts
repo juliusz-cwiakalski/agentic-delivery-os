@@ -18,3 +18,9 @@ export type {
   PhaseTransitionWrite,
 } from "./phase.js";
 export { createPhaseCommandDefinition } from "./phase.js";
+export type {
+  VerifyCommandRuntime,
+  VerifyPmNotesRead,
+  VerifyRegistryRead,
+} from "./verify.js";
+export { createVerifyCommandDefinition } from "./verify.js";

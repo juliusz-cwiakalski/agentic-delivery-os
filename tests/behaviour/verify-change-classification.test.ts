@@ -456,3 +456,518 @@ describe("TC-VERIFY-005 overlay precedence and presence-tolerant evidence (pure)
     }
   });
 });
+
+import { stringify } from "yaml";
+import { readChangeTransitions } from "../../packages/core/src/state/index";
+import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
+import {
+  appendLandingForRef,
+  createVerifyHarness,
+  type VerifyHarness,
+  type VerifyRun,
+  type VerifyState,
+  writeProjectionDocument,
+} from "./verify-support";
+
+const envelopeOf = (run: VerifyRun): Record<string, unknown> => {
+  if (run.envelope === undefined) throw new Error("expected one envelope");
+  return run.envelope;
+};
+
+const errorOf = (run: VerifyRun): Record<string, unknown> => {
+  const error = envelopeOf(run).error;
+  if (typeof error !== "object" || error === null || Array.isArray(error)) {
+    throw new Error("expected an error envelope");
+  }
+  return error as Record<string, unknown>;
+};
+
+const expectErrorEnvelope = (run: VerifyRun, code: string, summary: string): void => {
+  expect(run.exitCode).toBe(1);
+  expect(assertEnvelopeContract(run.envelope)).toEqual([]);
+  const envelope = envelopeOf(run);
+  expect(Object.hasOwn(envelope, "data")).toBe(false);
+  const error = errorOf(run);
+  expect(error.code).toBe(code);
+  expect(error.category).toBe("user");
+  expect(error.retryable).toBe(false);
+  expect(error.consequence).toBe("not_landed");
+  expect(error.summary).toBe(summary);
+  expect(run.stdout).not.toContain(CANARY);
+  expect(run.stderr).not.toContain(CANARY);
+};
+
+const expectSuccessEnvelope = (run: VerifyRun): Record<string, unknown> => {
+  expect(run.exitCode).toBe(0);
+  expect(assertEnvelopeContract(run.envelope)).toEqual([]);
+  const envelope = envelopeOf(run);
+  expect(Object.hasOwn(envelope, "error")).toBe(false);
+  expect(Object.keys(envelope).sort()).toEqual([
+    "data",
+    "exitCode",
+    "runId",
+    "schemaVersion",
+    "timing",
+  ]);
+  const data = envelope.data;
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    throw new Error("expected success data");
+  }
+  return data as Record<string, unknown>;
+};
+
+type HarnessBody = (harness: VerifyHarness) => Promise<void>;
+
+const withHarness = async (
+  document: unknown,
+  setup: (state: VerifyState) => void,
+  body: HarnessBody,
+  options: { readonly omitTarget?: boolean; readonly state?: VerifyState } = {},
+): Promise<void> => {
+  const state = options.state ?? createVerifyState();
+  const ownsState = options.state === undefined;
+  try {
+    setup(state);
+    const harness = createVerifyHarness({
+      ...(options.omitTarget === true ? { omitTarget: true } : { targetText: stringify(document) }),
+      state,
+    });
+    try {
+      await body(harness);
+    } finally {
+      harness.cleanup();
+    }
+  } finally {
+    if (ownsState) state.cleanup();
+  }
+};
+
+const runOnce = async (harness: VerifyHarness): Promise<VerifyRun> => harness.run(["change", REF]);
+
+describe("TC-VERIFY-001 full incomplete ledger names each missing phase (command)", () => {
+  test("every single-missing fixture is a verify.ledger.incomplete error envelope", async () => {
+    for (const phaseId of CANONICAL_PHASE_IDS) {
+      await withHarness(
+        withOpenPhase(phaseId),
+        () => {},
+        async (harness) => {
+          const run = await runOnce(harness);
+          expectErrorEnvelope(
+            run,
+            "verify.ledger.incomplete",
+            `result=partial; variant=full; missing=${phaseId}`,
+          );
+          expect(harness.recorder.calls).toContain("readPmNotes");
+          expect(harness.recorder.calls).toContain("readRegistry");
+        },
+      );
+    }
+  });
+
+  test("the multi-missing envelope uses canonical order", async () => {
+    const document = withOpenPhase("quality_gates");
+    const phases = document.phases as Record<string, unknown>;
+    phases.test_planning = { ...(phases.test_planning as object), completed: null };
+    phases.dor_check = { ...(phases.dor_check as object), completed: null };
+    await withHarness(
+      document,
+      () => {},
+      async (harness) => {
+        const run = await runOnce(harness);
+        expectErrorEnvelope(
+          run,
+          "verify.ledger.incomplete",
+          "result=partial; variant=full; missing=test_planning,dor_check,quality_gates",
+        );
+      },
+    );
+  });
+
+  test("complete and restored controls finish with exit 0", async () => {
+    await withHarness(
+      fullBase(),
+      () => {},
+      async (harness) => {
+        const data = expectSuccessEnvelope(await runOnce(harness));
+        expect(data.result).toBe("finished");
+        expect(data.missingPhases).toEqual([]);
+      },
+    );
+    for (const phaseId of CANONICAL_PHASE_IDS.slice(0, 3)) {
+      const restored = withCompletedPhase(phaseId, withOpenPhase(phaseId));
+      await withHarness(
+        restored,
+        () => {},
+        async (harness) => {
+          expectSuccessEnvelope(await runOnce(harness));
+        },
+      );
+    }
+  });
+});
+
+describe("TC-VERIFY-002 complete full ledger success and registry states (command)", () => {
+  test("no store, verified-empty store, and other-ref-only store all finish", async () => {
+    for (const variant of ["absent", "empty", "other-ref"] as const) {
+      const state =
+        variant === "absent" ? createVerifyState({ omitStore: true }) : createVerifyState();
+      try {
+        await withHarness(
+          fullBase(),
+          (target) => {
+            if (variant === "other-ref") {
+              appendLandingForRef(target, "GH-999", "delivery", "complete", "2026-10-31T05:00:00Z");
+            }
+          },
+          async (harness) => {
+            const run = await runOnce(harness);
+            const data = expectSuccessEnvelope(run);
+            expect(data.changeRef).toBe(REF);
+            expect(data.target).toBe("change");
+            expect(data.result).toBe("finished");
+            expect(data.variant).toBe("full");
+            expect(data.requiredPhases).toEqual([...CANONICAL_PHASE_IDS]);
+            expect(data.completedPhases).toEqual([...CANONICAL_PHASE_IDS]);
+            expect(data.missingPhases).toEqual([]);
+            const evidence = data.evidence as Record<string, Record<string, unknown>>;
+            expect(evidence.declaration).toEqual({ completedCount: 11, requiredCount: 11 });
+            expect(evidence.registry.present).toBe(false);
+            expect(evidence.registry.transitionCount).toBe(0);
+            expect(evidence.registry.overlaidPhases).toEqual([]);
+            const recordCount = evidence.registry.recordCount;
+            expect(typeof recordCount).toBe("number");
+            expect(Number(recordCount)).toBeGreaterThanOrEqual(0);
+            if (variant === "other-ref") {
+              expect(evidence.registry.verifiedEmpty).toBe(false);
+              expect(JSON.stringify(run)).not.toContain("state.keys.missing");
+            } else {
+              expect(evidence.registry.verifiedEmpty).toBe(true);
+            }
+          },
+          { state },
+        );
+      } finally {
+        state.cleanup();
+      }
+    }
+  });
+
+  test("replay is byte-identical under the fixed run id and clock", async () => {
+    const state = createVerifyState();
+    try {
+      const first = createVerifyHarness({ targetText: stringify(fullBase()), state });
+      const a = await runOnce(first);
+      const b = await runOnce(first);
+      first.cleanup();
+      expect(a.stdout).toBe(b.stdout);
+    } finally {
+      state.cleanup();
+    }
+  });
+});
+
+describe("TC-VERIFY-003 LITE required six (command)", () => {
+  test("each LITE omission names only the LITE phase", async () => {
+    for (const phaseId of LITE_REQUIRED_PHASES) {
+      await withHarness(
+        withOpenPhase(phaseId, liteCompleteAbsent()),
+        () => {},
+        async (harness) => {
+          const run = await runOnce(harness);
+          expectErrorEnvelope(
+            run,
+            "verify.ledger.incomplete",
+            `result=partial; variant=lite; missing=${phaseId}`,
+          );
+          const summary = String(errorOf(run).summary);
+          for (const ignored of [
+            "test_planning",
+            "delivery_planning",
+            "dor_check",
+            "system_spec_update",
+            "review_fix",
+          ]) {
+            expect(summary).not.toContain(ignored);
+          }
+        },
+      );
+    }
+  });
+
+  test("complete LITE controls finish and the full dor_check control names dor_check", async () => {
+    for (const document of [liteCompleteAbsent(), liteCompleteNull(), liteWrongTyped()]) {
+      await withHarness(
+        document,
+        () => {},
+        async (harness) => {
+          const data = expectSuccessEnvelope(await runOnce(harness));
+          expect(data.variant).toBe("lite");
+          expect(data.requiredPhases).toEqual([...LITE_REQUIRED_PHASES]);
+          expect(data.completedPhases).toEqual([...LITE_REQUIRED_PHASES]);
+        },
+      );
+    }
+    await withHarness(
+      withOpenPhase("dor_check", fullBase()),
+      () => {},
+      async (harness) => {
+        expectErrorEnvelope(
+          await runOnce(harness),
+          "verify.ledger.incomplete",
+          "result=partial; variant=full; missing=dor_check",
+        );
+      },
+    );
+  });
+});
+
+describe("TC-VERIFY-004 partial identity split (command)", () => {
+  test("A is verify.ledger.incomplete, B is lint.phases.incomplete, C uses absence precedence", async () => {
+    await withHarness(
+      partialA(),
+      () => {},
+      async (harness) => {
+        expectErrorEnvelope(
+          await runOnce(harness),
+          "verify.ledger.incomplete",
+          "result=partial; variant=full; missing=dor_check",
+        );
+      },
+    );
+    await withHarness(
+      partialB(),
+      () => {},
+      async (harness) => {
+        expectErrorEnvelope(
+          await runOnce(harness),
+          "lint.phases.incomplete",
+          "result=partial; variant=full; missing=dor_check",
+        );
+      },
+    );
+    await withHarness(
+      partialC(),
+      () => {},
+      async (harness) => {
+        expectErrorEnvelope(
+          await runOnce(harness),
+          "lint.phases.incomplete",
+          "result=partial; variant=full; missing=dor_check,quality_gates",
+        );
+      },
+    );
+  });
+
+  test("restored B and completed C controls classify", async () => {
+    const restoredB = partialB();
+    const phases = restoredB.phases as Record<string, unknown>;
+    phases.dor_check = { started: "2026-10-31T00:30:00Z", completed: null };
+    await withHarness(
+      restoredB,
+      () => {},
+      async (harness) => {
+        expectErrorEnvelope(
+          await runOnce(harness),
+          "verify.ledger.incomplete",
+          "result=partial; variant=full; missing=dor_check",
+        );
+      },
+    );
+    await withHarness(
+      withCompletedPhase("quality_gates", withCompletedPhase("dor_check", partialC())),
+      () => {},
+      async (harness) => {
+        expectSuccessEnvelope(await runOnce(harness));
+      },
+    );
+  });
+});
+
+describe("TC-VERIFY-005 overlay precedence and presence tolerance (command)", () => {
+  test("O1..O5 apply the registry over the declaration in both directions", async () => {
+    await withHarness(
+      fullBase(),
+      (state) => {
+        appendLanding(state, "delivery", "complete", "2026-10-31T05:00:00Z");
+        appendLanding(state, "delivery", "reopen", "2026-10-31T05:05:00Z");
+      },
+      async (harness) => {
+        expectErrorEnvelope(
+          await runOnce(harness),
+          "verify.ledger.incomplete",
+          "result=partial; variant=full; missing=delivery",
+        );
+      },
+    );
+
+    for (const [phaseId, document] of [
+      ["delivery", withOpenPhase("delivery")],
+      ["review_fix", withoutPhaseKey("review_fix")],
+      ["quality_gates", fullBase()],
+    ] as const) {
+      await withHarness(
+        document,
+        (state) => {
+          appendLanding(state, phaseId, "complete", "2026-10-31T05:00:00Z");
+        },
+        async (harness) => {
+          const data = expectSuccessEnvelope(await runOnce(harness));
+          const evidence = data.evidence as Record<string, Record<string, unknown>>;
+          expect(evidence.registry.overlaidPhases).toEqual([phaseId]);
+        },
+      );
+    }
+
+    await withHarness(
+      withOpenPhase("dor_check"),
+      (state) => {
+        appendLanding(state, "dor_check", "complete", "2026-10-31T05:00:00Z");
+        appendLanding(state, "dor_check", "reopen", "2026-10-31T05:05:00Z");
+      },
+      async (harness) => {
+        expectErrorEnvelope(
+          await runOnce(harness),
+          "verify.ledger.incomplete",
+          "result=partial; variant=full; missing=dor_check",
+        );
+      },
+    );
+  });
+
+  test("O6..O9 absent records and absent stores are no evidence", async () => {
+    for (const variant of ["other-ref", "absent-store"] as const) {
+      const state =
+        variant === "absent-store" ? createVerifyState({ omitStore: true }) : createVerifyState();
+      try {
+        await withHarness(
+          fullBase(),
+          (target) => {
+            if (variant === "other-ref") {
+              appendLandingForRef(target, "GH-999", "delivery", "complete", "2026-10-31T05:00:00Z");
+            }
+          },
+          async (harness) => {
+            const data = expectSuccessEnvelope(await runOnce(harness));
+            const evidence = data.evidence as Record<string, Record<string, unknown>>;
+            expect(evidence.registry.present).toBe(false);
+            expect(JSON.stringify(harness.recorder.calls)).not.toContain("state.keys.missing");
+          },
+          { state },
+        );
+
+        await withHarness(
+          withOpenPhase("dor_check"),
+          (target) => {
+            if (variant === "other-ref") {
+              appendLandingForRef(target, "GH-999", "delivery", "complete", "2026-10-31T05:00:00Z");
+            }
+          },
+          async (harness) => {
+            expectErrorEnvelope(
+              await runOnce(harness),
+              "verify.ledger.incomplete",
+              "result=partial; variant=full; missing=dor_check",
+            );
+          },
+          { state },
+        );
+      } finally {
+        state.cleanup();
+      }
+    }
+  });
+
+  test("P1/P2 the derived projection is not evidence", async () => {
+    await withHarness(
+      fullBase(),
+      (state) => {
+        appendLanding(state, "delivery", "complete", "2026-10-31T05:00:00Z");
+        appendLanding(state, "delivery", "reopen", "2026-10-31T05:05:00Z");
+        writeProjectionDocument(
+          state,
+          REF,
+          Object.fromEntries(
+            CANONICAL_PHASE_IDS.map((phaseId) => [
+              phaseId,
+              { started: "2026-10-31T05:00:00Z", completed: "2026-10-31T05:00:00Z" },
+            ]),
+          ),
+        );
+      },
+      async (harness) => {
+        expectErrorEnvelope(
+          await runOnce(harness),
+          "verify.ledger.incomplete",
+          "result=partial; variant=full; missing=delivery",
+        );
+      },
+    );
+
+    await withHarness(
+      withOpenPhase("dor_check"),
+      (state) => {
+        writeProjectionDocument(
+          state,
+          REF,
+          Object.fromEntries(
+            CANONICAL_PHASE_IDS.map((phaseId) => [
+              phaseId,
+              { started: "2026-10-31T05:00:00Z", completed: "2026-10-31T05:00:00Z" },
+            ]),
+          ),
+        );
+      },
+      async (harness) => {
+        expectErrorEnvelope(
+          await runOnce(harness),
+          "verify.ledger.incomplete",
+          "result=partial; variant=full; missing=dor_check",
+        );
+      },
+    );
+  });
+
+  test("directional controls: declaration-only, registry-required, projection-reading all differ", async () => {
+    // Declaration-only would answer finished for O1.
+    expectFinished(classify(fullBase()));
+    const state = createVerifyState();
+    try {
+      appendLanding(state, "delivery", "complete", "2026-10-31T05:00:00Z");
+      appendLanding(state, "delivery", "reopen", "2026-10-31T05:05:00Z");
+      const nonTolerant = readChangeTransitions(state.store, REF);
+      expect(nonTolerant.ok).toBe(true);
+      writeProjectionDocument(state, REF, {
+        delivery: { started: "2026-10-31T05:00:00Z", completed: "2026-10-31T05:00:00Z" },
+      });
+      const harness = createVerifyHarness({ targetText: stringify(fullBase()), state });
+      try {
+        expectErrorEnvelope(
+          await runOnce(harness),
+          "verify.ledger.incomplete",
+          "result=partial; variant=full; missing=delivery",
+        );
+      } finally {
+        harness.cleanup();
+      }
+    } finally {
+      state.cleanup();
+    }
+
+    // Registry-required would answer state.keys.missing for the other-ref store.
+    const other = createVerifyState();
+    try {
+      appendLandingForRef(other, "GH-999", "delivery", "complete", "2026-10-31T05:00:00Z");
+      const nonTolerant = readChangeTransitions(other.store, REF);
+      expect(nonTolerant.ok).toBe(false);
+      if (!nonTolerant.ok) expect(nonTolerant.error.code).toBe("state.keys.missing");
+      const harness = createVerifyHarness({ targetText: stringify(fullBase()), state: other });
+      try {
+        expectSuccessEnvelope(await runOnce(harness));
+      } finally {
+        harness.cleanup();
+      }
+    } finally {
+      other.cleanup();
+    }
+  });
+});

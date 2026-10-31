@@ -70,6 +70,7 @@
     "src/commands/index.ts",
     "src/commands/lint.ts",
     "src/commands/phase.ts",
+    "src/commands/verify.ts",
     "src/edge.ts",
     "src/index.ts",
     "src/output/index.ts",
