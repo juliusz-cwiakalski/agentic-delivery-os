@@ -10,7 +10,7 @@ version_impact: none
 summary: "Verify the documentation-only interim-mitigations change: docs-only diff scope, grounded knob/result/JOIN/pm-notes claims, one canonical rule body per mitigation, and green doc-distribution and doc-derived guards."
 links:
   change_spec: ./chg-GH-185-spec.md
-  implementation_plan: ""
+  implementation_plan: "./chg-GH-185-plan.md"
   testing_strategy: .ai/rules/testing-strategy.md
 ---
 
@@ -40,7 +40,7 @@ This plan protects a **documentation-only** change: four bash-era delivery-loop 
 ## 2. References
 
 - Change specification: [chg-GH-185-spec.md](./chg-GH-185-spec.md) — ACs in §17, NFRs in §9, DM contracts in §8.3.
-- Implementation plan: none for this change (docs-only; no plan artifact exists).
+- Implementation plan: [chg-GH-185-plan.md](./chg-GH-185-plan.md) — its phases map to this plan's TCs.
 - Repository testing strategy: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — static/diff checks, content checks, module-to-test mapping for `doc/**`.
 - Canonical delivery-mechanics guide (edit target): [doc/guides/delivery-modes.md](../../../guides/delivery-modes.md).
 - Canonical lifecycle guide (edit target): [doc/guides/change-lifecycle.md](../../../guides/change-lifecycle.md).
@@ -822,7 +822,7 @@ No new test files or code are created by this change. The required checks are ex
 ### 8.2 Assumptions
 
 - The base branch for diff comparison is `main-tools`; `origin/main-tools` is fetchable.
-- No implementation plan exists; this test plan derives solely from the change spec (confirmed: only `chg-GH-185-spec.md` and `chg-GH-185-pm-notes.yaml` are present at authoring time).
+- The implementation plan ([chg-GH-185-plan.md](./chg-GH-185-plan.md)) landed after this plan was authored (delivery lifecycle order: spec → test plan → plan); this test plan derives from the change spec, and its TCs map onto the plan's phases.
 - All four target docs are edited in place; no new doc files are added (spec DEC-1 / DEC-2).
 - The scripts (`deliver-ticket.sh`, `ceo-loop.sh`, `pm-liveness.sh`) are unchanged by this change, so they are stable grounding references.
 - `rg`, `awk`, and `bash` >= 4 are available in the verification environment.

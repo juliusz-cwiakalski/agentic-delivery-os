@@ -61,7 +61,7 @@ Because the bash-era delivery loop's known rough edges are handled at runtime bu
 | Metric | Target |
 |--------|--------|
 | Changes under `scripts/**` and `tools/**` in this change's diff | 0 files (hard constraint) |
-| Doc locations naming `CEO_LOOP_STALL_MINUTES` as the ceo-loop threshold | 0 (all corrected to `CEO_LOOP_STUCK_MINUTES`, with the pm-liveness probe variable explained where relevant) |
+| Doc locations in this change's edited docs naming `CEO_LOOP_STALL_MINUTES` as the ceo-loop threshold | 0 (all corrected to `CEO_LOOP_STUCK_MINUTES`, with the pm-liveness probe variable explained where relevant; historical `doc/changes/**` artifacts are out of scope) |
 | Mitigation claims not verifiable against current script behavior | 0 (100% of documented claims grounded and re-verified at review) |
 | Canonical homes per mitigation | Exactly 1 per mitigation, cross-linked from related sections (no duplicated rule statements) |
 | Existing doc-derived CI guards after the edits (result-tuple doc guard, liveness-wording grep guard, doc-distribution guard) | All green |
