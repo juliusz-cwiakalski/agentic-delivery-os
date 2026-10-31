@@ -1,0 +1,41 @@
+change_id: GH-186
+title: "M0-S17: Decision records and measurement baseline"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-10-31T13:55:00Z", completed: "2026-10-31T14:05:00Z" }
+  specification: { started: "2026-10-31T14:06:00Z", completed: "2026-10-31T14:30:00Z" }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions:
+  - text: "Interpretation of 'baseline committed to the local measurement log': the log is repository-local (committed under doc/planning/oss-tooling/), not a git-ignored .ai/local/ path. The AC's 'committed' and 'local' would otherwise contradict, since .ai/local/** is ignored by design."
+    date: "2026-10-31"
+  - text: "Scope: bind already-decided topics to their existing records instead of duplicating immutable decisions. Layout -> ADR-0003 DEC-1/2/7 (Accepted); config precedence -> ADR-0003 DEC-4 + TDR-0003; provider adapter contract -> ADR-0003 DEC-6 + ADR-0005 + ADR-0007; state schema -> ADR-0003 DEC-5 + TDR-0004; release model direction -> ADR-0003 DEC-3. New records are authored only for genuinely undecided topics: harness adapter contract, ID prefix scheme + customization model, command naming convention/man-page v1, and the release-model lock that M4-S2 elaborates."
+    date: "2026-10-31"
+  - text: "Names lock is prospective: the v0 command registry names are frozen as the v1 surface; no code renames are in scope. Deferred renames already applied by the v0 naming audit stand. New decision records ship Proposed; owner acceptance at PR review is the acceptance gate, matching the established ADR-0005/0007 and TDR-0003/0004/0005/0006 pattern. AI does not self-accept R2/R3 records."
+    date: "2026-10-31"
+  - text: "Baseline method: define each metric (ceremony share, cycle time, CI failure rate, false-signal incidents) with formula, window, and source; compute only from committed evidence (pm-notes phase timestamps, evidence artifacts, git history). Metrics not reconstructable from committed evidence are recorded as unavailable with the reason and the named source that is missing — no invented denominator or estimate presented as a measurement."
+    date: "2026-10-31"
+  - text: "Delivery type is docs: decision records, measurement log, and index updates. No source-code or shell changes expected; version_impact none."
+    date: "2026-10-31"
+open_questions: []
+blockers: []
+notes:
+  - text: "State detection: ticket GH-186 OPEN, no labels, 0 comments, milestone M0; no open PR for GH-186; no GH-186 branch or change folder; detached HEAD at 7155074 == origin/main-tools tip, worktree clean. Fresh delivery. Branch created from origin/main-tools."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Clarify analysis: backlog M0-S17 (doc/planning/oss-tooling/backlog.md lines 335-351); ranking rank 20, gates M0 exit. Five of six named decision topics already have records (mostly Proposed); genuinely missing are harness adapter contract, ID prefix scheme, command naming convention, and measurement baseline. 'man-page v1' is undefined; the story permits 'a decision record or the man-page v1 acceptance', so the decision-record branch is chosen."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Doc risks for phase 7: doc/decisions/00-index.md has pre-existing defects (TDR-0005 row labelled TDR-0006; PDR-0002 title drift). The change updates the index for new records; whether to repair the pre-existing rows is bounded in the spec rather than left implicit. doc/planning/oss-tooling/cli-command-registry.md must be promoted from v0 to a v1-locked surface or cross-linked to the naming decision."
+    type: "risk"
+    date: "2026-10-31"
+  - text: "Spec complete (chg-GH-186-spec.md): 20 ACs, 12 decisions (DEC-1..DEC-12), no open questions. Four new Proposed records: ADR-0008 harness adapter contract, ADR-0009 release model v1 lock, ODR-0002 ID prefix scheme + project catalog, ODR-0003 CLI command naming v1 lock. New binding register doc/decisions/00-register.md and committed baseline log doc/planning/oss-tooling/measurement-baseline.yaml (schema-versioned, MET- ids, fixed window 2026-02-01..2026-10-31, MEASURED/PARTIAL/UNAVAILABLE statuses). Bounded index repair of the two pre-existing defects. Hard constraint: 0 changes under packages/**, scripts/**, tools/**."
+    type: "decision"
+    date: "2026-10-31"
