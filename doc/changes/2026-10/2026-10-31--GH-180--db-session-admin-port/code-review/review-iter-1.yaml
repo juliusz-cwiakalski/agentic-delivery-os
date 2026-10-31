@@ -1,0 +1,232 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-180
+branch: feat/GH-180/db-session-admin-port
+status: FAIL
+summary: >-
+  The surface, constants, error rows, store pin, time_archived, byte-exact
+  dataBytes, and doc reconciliation are present and the focused suites pass, but
+  the delivered prune --apply re-read parses a row the real opencode query never
+  returns (zero deletes, db.query.failed on the real schema) and the fake masks
+  it; the phase-7 docs commit also breaks the merge-blocking commitlint and
+  forbidden-literals CI jobs. The contracts barrel additionally exports pure
+  domain behaviour against the spec's data-only tier rule.
+severity_breakdown:
+  critical: 1
+  high: 4
+  medium: 1
+  low: 1
+  info: 4
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: critical
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/session/index.ts:519
+    message: >-
+      BLOCKER. RE_READ_SQL selects only id, time_updated, has_children, but
+      readCandidate -> readSessionRow requires time_created (and message/part/
+      bytes). Against the real opencode db JSON projection asNumber(undefined)
+      throws db.query.failed (field session.time_created) before any delete, so
+      prune --apply can never delete on a real store. The throw is outside the
+      inner try, so even a post-land parse error would be misclassified as
+      db.query.failed instead of db.delete.failed. Reproduced with a minimal-row
+      fake: zero delete calls, db.query.failed.
+    suggestion: >-
+      Select every column readSessionRow reads (or build a minimal re-check
+      fact), move readCandidate/classifyPruneCandidate inside the guarded block
+      so post-land failures map to db.delete.failed with landed truth, and add
+      a real-projection regression test.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: doc/spec/features/feature-session-database-admin.md:1
+    message: >-
+      BLOCKER (CI). pnpm check:forbidden-literals exits 1: the new user-facing
+      doc is unregistered and absent at corpusBaseline, and
+      doc/spec/features/feature-adapter-ports.md:30 introduces the 'ados' seed
+      literal. The new doc also contains 'ados' on many lines and will fail the
+      literal scan once registered. Merge-blocking job ts-forbidden-literals.
+    suggestion: >-
+      Register the new doc in forbidden-literals.registry.json 'registered' and
+      replace the 'ados' literal in user-facing docs with brand-neutral wording
+      (e.g. 'the db command family'); re-run pnpm check:forbidden-literals.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: high
+    confidence: high
+    category: build
+    location: 'commit 4e65628'
+    message: >-
+      BLOCKER (CI). pnpm exec commitlint --from origin/main-tools --to HEAD
+      exits 1 on 4e65628 with body-max-line-length and footer-max-line-length
+      (lines of 211/170/146/195 chars). Merge-blocking job ts-commitlint. Every
+      other commit in the range passes.
+    suggestion: >-
+      Reword the body/footer to <=100 chars per line and re-run the same
+      commitlint command.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/contracts/index.ts:350
+    message: >-
+      MAJOR. The contracts barrel re-exports the pure domain functions
+      (classifyPruneCandidate, computeDbCutoffMs, computeDbLiveBoundaryMs,
+      isLiveDbSession, renderSessionAdminHuman, selectPruneCandidates). This
+      contradicts spec 4.2 'No behaviour enters the contracts tier', NFR-D9
+      'contracts-tier behaviour: 0', and AC-D16 'contracts remain data-only',
+      and creates a contracts -> domain tier inversion. The data-only AST scans
+      cover only session.ts, so no gate catches it.
+    suggestion: >-
+      Either amend spec 4.1/4.2, NFR-D9, and ADR-0010 to record the deliberate
+      barrel re-export and extend the tier-purity check to assert the
+      re-export allowlist, or invert the dependency so contracts has no domain
+      edge (governed pure-policy subpath with matrix update + negative fixture).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: high
+    confidence: high
+    category: testing
+    location: tests/behaviour/session-admin-prune.test.ts:72
+    message: >-
+      MAJOR. queueReRead uses sessionRow(), which returns every column, so the
+      prune suite never exercises the real re-read projection and masks F-1.
+      Tests assert the re-read SQL text but not that the adapter parses the
+      selected columns.
+    suggestion: >-
+      Add a test whose re-read fake returns only { id, time_updated,
+      has_children } (the actual SELECT projection) and assert the delete path
+      still succeeds.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-6
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/session/index.ts:402
+    message: >-
+      MINOR. SELECTION_SQL already filters live rows (s.time_updated <
+      liveBoundary), so liveExcluded is structurally always 0 in production;
+      TC-DB-013 reaches 4 only because the fake bypasses SQL filtering. The
+      reported field is then meaningless.
+    suggestion: >-
+      Compute liveExcluded with its own bounded count, or document it as a
+      defensive-invariant field and make the test explicit that the fake returns
+      rows the real query would exclude.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-7
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/session/index.ts:255
+    message: >-
+      MINOR. clamp(NaN) returns NaN, which would be interpolated into SQL as
+      'NaN'. Unreachable through the CLI handler but the defence-in-depth clamp
+      does not guard non-finite values on a direct port call.
+    suggestion: >-
+      Guard Number.isFinite in clamp (or at each call site) and return a
+      classified failure.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-8
+    severity: info
+    confidence: high
+    category: documentation
+    location: packages/cli/src/edge.ts:252
+    message: >-
+      INFO. The db command is not wired into any production entry point (no
+      production caller of createOpencodeSessionIo; createConfigProgram is
+      constructed only in tests). This matches spec 4.4 'no bin entry', but
+      operators cannot invoke it until an embedder composes DbComposition.
+    suggestion: >-
+      State the composition status in the PR body so it is not read as a
+      delivered end-user command.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-9
+    severity: info
+    confidence: high
+    category: risk
+    location: doc/changes/2026-10/2026-10-31--GH-180--db-session-admin-port/chg-GH-180-spec.md:648
+    message: >-
+      INFO. Residual risks are correctly surfaced and not claimed accepted:
+      activity-based liveness, checkpoint-only reboot, external opencode
+      surface, ADR-0003 C-11 owner merge gate; ADR-0010 is Proposed.
+    suggestion: >-
+      Copy all four statements into the PR body (AC-D18); do not claim the
+      sign-off.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-10
+    severity: info
+    confidence: high
+    category: process
+    location: doc/changes/2026-10/2026-10-31--GH-180--db-session-admin-port/chg-GH-180-pm-notes.yaml
+    message: >-
+      INFO. The working tree has one uncommitted change (review_fix.started
+      timestamp) not present in HEAD. It was not modified by this review.
+    suggestion: >-
+      Decide whether to commit or discard it before opening the PR.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-11
+    severity: info
+    confidence: high
+    category: evidence
+    location: doc/changes/2026-10/2026-10-31--GH-180--db-session-admin-port/chg-GH-180-evidence.md:60
+    message: >-
+      INFO. The real-store smoke exercised only size/list, never prune/reboot,
+      which is why F-1 survived; evidence records S1=50 while the current sync
+      check reports S1=51. Re-run the evidence battery after remediation.
+    suggestion: >-
+      Add a non-CI real-store smoke for prune dry-run (and a scratch-store apply
+      if feasible) and refresh the evidence counts.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-10-31T21:55:00Z
+next_step: EXECUTE_REMEDIATION_PHASE
