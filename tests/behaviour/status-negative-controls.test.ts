@@ -201,7 +201,7 @@ describe("TC-STATUS-023 exhaustive negative controls", () => {
     }
   });
 
-  test("the named matrix has all ten AC-F9-1 controls plus the anonymous case", () => {
+  test("the named matrix has all nine matrix controls plus the separate active-park control", () => {
     const names = new Set(controls.map((control) => control.name));
     for (const required of [
       "failed issues read",

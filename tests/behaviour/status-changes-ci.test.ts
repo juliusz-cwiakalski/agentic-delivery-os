@@ -85,6 +85,34 @@ describe("TC-STATUS-013 changes and pull requests", () => {
     expect(section.evidence.reasons).toContain("signal-unavailable");
   });
 
+  test("each declared delivery signal unavailable degrades the section", () => {
+    const variants = [
+      { ...REVIEWS_AVAILABLE, state: "unavailable" as const },
+      { ...REVIEWS_AVAILABLE, refs: "unavailable" as const },
+      { ...REVIEWS_AVAILABLE, reviewState: "unavailable" as const },
+      { ...REVIEWS_AVAILABLE, reviewThreads: "unavailable" as const },
+    ];
+    for (const availability of variants) {
+      const section = changes(
+        baseFacts({
+          changes: deliveryRequestRead([makeDeliveryRequest({ entityId: "501" })], availability),
+        }),
+      );
+      expect(section.state).toBe("degraded");
+      expect(section.evidence.reasons).toContain("signal-unavailable");
+    }
+    expect(
+      changes(
+        baseFacts({
+          changes: deliveryRequestRead(
+            [makeDeliveryRequest({ entityId: "501" })],
+            REVIEWS_AVAILABLE,
+          ),
+        }),
+      ).state,
+    ).toBe("observed");
+  });
+
   test("a partial PR failure is degraded while the active change is preserved", () => {
     const section = changes(
       baseFacts({

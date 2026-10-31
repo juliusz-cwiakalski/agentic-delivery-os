@@ -426,6 +426,7 @@ export type StatusProviderEntry = {
   readonly enabled: boolean;
   readonly availability: StatusProviderAvailability;
   readonly quotaDeclared: boolean;
+  readonly peakDeclared: boolean;
 };
 
 /** One active provider park (DM-9). */

@@ -38,12 +38,13 @@
           ],
           "reasons": [
             "observed",
+            "item-signal-absent",
             "source-truncated"
           ]
         },
         "counts": {
-          "observed": 16,
-          "unknown": 0,
+          "observed": 24,
+          "unknown": 8,
           "total": 32,
           "omitted": 16
         },
@@ -142,7 +143,7 @@
             "state": "observed",
             "counts": {
               "observed": 4,
-              "unknown": 0,
+              "unknown": 8,
               "total": 12,
               "omitted": 8
             },
@@ -185,7 +186,7 @@
             "family": "hygiene",
             "state": "observed",
             "counts": {
-              "observed": 4,
+              "observed": 12,
               "unknown": 0,
               "total": 12,
               "omitted": 8

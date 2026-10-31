@@ -1,0 +1,81 @@
+{
+  "name": "torn-park-degraded",
+  "scenario": "torn-park-degraded",
+  "controls": ["torn park store"],
+  "expected": {
+    "sections": {
+      "tracker": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "changes-and-prs": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "ci": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "lanes-or-queue": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "providers": {
+        "state": "degraded",
+        "reasons": ["state-unreadable", "partial-evidence"],
+        "counts": {
+          "observed": 1,
+          "unknown": 0,
+          "total": 1,
+          "omitted": 0
+        },
+        "orderedIds": ["entry:primary"],
+        "truncated": false
+      },
+      "parked-work": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      }
+    }
+  }
+}

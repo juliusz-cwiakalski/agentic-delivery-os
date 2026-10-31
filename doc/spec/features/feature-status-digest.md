@@ -83,7 +83,7 @@ The evidence record contains up to six source entries `{ source, outcome, failur
 
 The closed reason set is `observed`, `observed-empty`, `read-failed`, `source-unavailable`, `signal-unavailable`, `addressing-unresolved`, `remote-unsupported`, `credential-unavailable`, `config-invalid`, `state-unreadable`, `commit-unresolved`, `provider-chain-not-declared`, `provider-chain-unresolved`, `local-context-missing`, `local-context-malformed`, `local-state-untracked`, `engine-not-delivered`, `source-truncated`, `item-signal-absent`, and `partial-evidence`. Reasons are unique per section and ordered by first occurrence in the fixed source and family order.
 
-Every section owns uniform counts `{ observed, unknown, total, omitted }`. A rendered list that drops items records the drop in `omitted`. `truncated` is true when output items were dropped, or when the raw source page returned exactly its declared read limit before any object filtering. The source-at-limit signal is therefore visible even when filtering reduces the normalized item count, for example a full issue page that contained pull-request objects.
+Every section owns uniform counts `{ observed, unknown, total, omitted }`. A rendered list that drops items records the drop in `omitted`. Tracker family counts aggregate over the fully ranked family before the render cap, so an unknown item is counted even when the cap omits it; `omitted` remains the number of ranked items the cap dropped. `truncated` is true when output items were dropped, or when the raw source page returned exactly its declared read limit before any object filtering. The source-at-limit signal is therefore visible even when filtering reduces the normalized item count, for example a full issue page that contained pull-request objects.
 
 Declared bounds:
 
@@ -139,7 +139,7 @@ Tracker ranks are deterministic. Owner hand-backs order by label group, then old
 
 The section combines the local active change with the open pull-request list. The active change is projected from the local PM context as `workItemRef`, optional `branch`, and optional `changeFolder`, or as `observed-empty`. An absent PM context makes the active change `unknown`, never "none"; a malformed context is also `unknown`.
 
-Open pull requests carry identity, source and target refs, delivery state, and draft status. Review state and review-thread counts are observed-or-unknown item signals. When the bound VCS source declares review state or review threads unavailable, as the minimal GitHub REST list does, those signals are `unknown` with `signal-unavailable`; they are never defaulted to open or zero. A partial source failure yields a `degraded` section. Pull requests rank non-draft before draft, then numeric-aware identity ascending, then source ref, then target ref, and are capped at eight.
+Open pull requests carry identity, source and target refs, delivery state, and draft status. Review state and review-thread counts are observed-or-unknown item signals. When the bound VCS source declares any of its four delivery signals (`state`, `refs`, `reviewState`, `reviewThreads`) unavailable, the section is `degraded` with `signal-unavailable`; the review signals are item-level `unknown` (as the minimal GitHub REST list does) and are never defaulted to open or zero. A partial source failure yields a `degraded` section. Pull requests rank non-draft before draft, then numeric-aware identity ascending, then source ref, then target ref, and are capped at eight.
 
 ### CI
 
@@ -194,14 +194,14 @@ Human mode renders the same digest deterministically:
 ```
 <binary> status <owner>/<name> @ <branch|detached> <sha7>
 tracker    <state>  hand-backs <n> | blocked <state> | stalls <n> (<unknown> unknown) | hygiene <n>
-changes    <state>  active <ref|none> | PRs <n> (review state <state>)
+changes    <state>  active <ref|none|unknown> | PRs <n|?> (review state <unavailable|observed|unknown>)
 ci         <state>  <failed|pending|succeeded|canceled|none-reported|unknown> (<failed>/<total> jobs)
 lanes      not-delivered  no queue or lane engine in this release
-providers  <state>  chain <name|none> | active parks <n> | <entries> entries
-parked     <state>  <n> parked changes (git-ignored local state)
+providers  <state>  chain <name|none|unknown> | active parks <n|?> | <entries|?> entries
+parked     <state>  <n|?> parked changes (git-ignored local state)
 ```
 
-The header is optional and appears only when the repository binding is observed and the commit SHA is resolved. There is exactly one line per section in fixed order, and every line names its state. Truncation is marked with `+N` when items were omitted or `+more` for a source-at-limit signal. The digest is at most 24 lines and 4096 bytes, contains no raw provider payloads, no item titles, no secrets, and no LLM-generated prose, performs no extra reads, and contains no timestamps.
+The header is optional and appears only when the repository binding is observed and the commit SHA is resolved. There is exactly one line per section in fixed order, and every line names its state. `PRs ?` and `review state unknown` replace the count when the PR read did not succeed; `active parks ?` replaces the count when the park fold did not succeed or the provider configuration is untrusted; `parked ?` replaces the count when the local context was not observed. Truncation is marked with `+N` when items were omitted or `+more` for a source-at-limit signal. The digest is at most 24 lines and 4096 bytes, contains no raw provider payloads, no item titles, no secrets, and no LLM-generated prose, performs no extra reads, and contains no timestamps.
 
 ### Error identity reuse
 

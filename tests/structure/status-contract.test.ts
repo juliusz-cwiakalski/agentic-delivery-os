@@ -6,6 +6,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
+import type { StatusProviderEntry } from "../../packages/core/src/contracts/index";
 import {
   STATUS_CI_RESULTS,
   STATUS_DEPENDENCY_STATES,
@@ -241,6 +242,21 @@ describe("TC-STATUS-008 declared constants bind Appendix C", () => {
     expect(STATUS_SECTION_ORDER).toHaveLength(6);
     expect(STATUS_EVIDENCE_REASONS).toHaveLength(20);
     expect(STATUS_EVIDENCE_SOURCES).toHaveLength(8);
+  });
+
+  test("StatusProviderEntry binds the emitted quota and peak declarations", () => {
+    const entry: StatusProviderEntry = {
+      name: "primary",
+      class: "subscription",
+      enabled: true,
+      availability: "unverified",
+      quotaDeclared: false,
+      peakDeclared: false,
+    };
+    expect(Object.keys(entry).sort()).toEqual(
+      ["availability", "class", "enabled", "name", "peakDeclared", "quotaDeclared"].sort(),
+    );
+    expect(typeof entry.peakDeclared).toBe("boolean");
   });
 
   test("the contracts module is data-only", () => {

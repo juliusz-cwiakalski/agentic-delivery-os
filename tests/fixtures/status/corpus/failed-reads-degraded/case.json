@@ -1,19 +1,86 @@
 {
   "name": "failed-reads-degraded",
   "scenario": "failed-reads-degraded",
+  "controls": [
+    "failed issues read",
+    "failed PR read",
+    "failed check-runs read",
+    "missing provider chain"
+  ],
   "expected": {
-    "states": {
-      "tracker": "unknown",
-      "changes-and-prs": "degraded",
-      "ci": "unknown",
-      "lanes-or-queue": "not-delivered",
-      "providers": "unavailable",
-      "parked-work": "observed"
-    },
-    "reasons": {
-      "tracker": ["read-failed"],
-      "ci": ["read-failed"],
-      "changes-and-prs": ["read-failed", "partial-evidence"]
+    "sections": {
+      "tracker": {
+        "state": "unknown",
+        "reasons": ["read-failed"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "changes-and-prs": {
+        "state": "degraded",
+        "reasons": ["read-failed", "partial-evidence"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "ci": {
+        "state": "unknown",
+        "reasons": ["read-failed"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "lanes-or-queue": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "providers": {
+        "state": "unavailable",
+        "reasons": ["provider-chain-not-declared"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "parked-work": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      }
     }
   }
 }

@@ -10,6 +10,7 @@ import {
 } from "../../packages/core/src/contracts/index";
 import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
 import {
+  ALL_AVAILABLE,
   activeChange,
   baseFacts,
   blockedBy,
@@ -375,6 +376,63 @@ describe("TC-STATUS-007 caps, omitted, truncation, and ordering", () => {
     const belowCiData = belowCi.data;
     if (!isRecord(belowCiData)) throw new Error("data missing");
     expect(section(belowCiData, "ci").truncated).toBe(false);
+
+    const atLimitIssues = await runJson(
+      baseFacts({
+        tracker: workItemRead(handBackItems(2), ALL_AVAILABLE, STATUS_SOURCE_ITEM_LIMIT),
+      }),
+    );
+    const atIssuesData = atLimitIssues.data;
+    if (!isRecord(atIssuesData)) throw new Error("data missing");
+    expect(section(atIssuesData, "tracker").truncated).toBe(true);
+    expect(section(atIssuesData, "tracker").evidence).toMatchObject({
+      reasons: expect.arrayContaining(["source-truncated"]),
+    });
+
+    const belowIssues = await runJson(
+      baseFacts({
+        tracker: workItemRead(handBackItems(2), ALL_AVAILABLE, STATUS_SOURCE_ITEM_LIMIT - 1),
+      }),
+    );
+    const belowIssuesData = belowIssues.data;
+    if (!isRecord(belowIssuesData)) throw new Error("data missing");
+    expect(section(belowIssuesData, "tracker").truncated).toBe(false);
+  });
+
+  test("non-numeric run identities tie lexically ascending; numeric ones descend", async () => {
+    const nonNumeric = await runJson(
+      baseFacts({
+        ci: pipelineRunRead([
+          makePipelineRun({ entityId: "gamma:3" }),
+          makePipelineRun({ entityId: "alpha:1" }),
+          makePipelineRun({ entityId: "beta:2" }),
+        ]),
+      }),
+    );
+    const nonNumericData = nonNumeric.data;
+    if (!isRecord(nonNumericData)) throw new Error("data missing");
+    expect(
+      (section(nonNumericData, "ci").runs as { identity: { entityId: string } }[]).map(
+        (run) => run.identity.entityId,
+      ),
+    ).toEqual(["alpha:1", "beta:2", "gamma:3"]);
+
+    const numeric = await runJson(
+      baseFacts({
+        ci: pipelineRunRead([
+          makePipelineRun({ entityId: "9" }),
+          makePipelineRun({ entityId: "11" }),
+          makePipelineRun({ entityId: "10" }),
+        ]),
+      }),
+    );
+    const numericData = numeric.data;
+    if (!isRecord(numericData)) throw new Error("data missing");
+    expect(
+      (section(numericData, "ci").runs as { identity: { entityId: string } }[]).map(
+        (run) => run.identity.entityId,
+      ),
+    ).toEqual(["11", "10", "9"]);
   });
 
   test("reversed input order yields identical rendered identities", async () => {

@@ -6,16 +6,20 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createEnvironmentCredentialPort } from "../../packages/adapters/src/credentials/index";
 import type { RepositoryIo } from "../../packages/adapters/src/repo/index";
+import { createStatusCommandDefinition } from "../../packages/cli/src/commands/status";
 import { createStatusCommandRuntime, type StatusComposition } from "../../packages/cli/src/edge";
 import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
 import { fixtureBrand } from "../fixtures/credentials/cases";
 import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
 import {
+  activeChange,
   anonymousInstance,
   baseFacts,
   deliveryRequestRead,
+  failedDeliveryRequestRead,
   failedPipelineRunRead,
   failedWorkItemRead,
+  localContext,
   missingLocalContext,
   NOW_ISO,
   NOW_MS,
@@ -130,6 +134,7 @@ describe("TC-STATUS-001 status command surface", () => {
       const recorder = { calls: [] as string[] };
       const run = await runStatusCli(argv, statusRuntime(baseFacts(), recorder));
       expect(run.exitCode).toBe(1);
+      expect(recorder.calls).toEqual([]);
       expect(run.recorder.calls).toEqual([]);
       if (argv.includes("--json")) {
         const envelope = PARSE(run.stdout);
@@ -146,9 +151,31 @@ describe("TC-STATUS-001 status command surface", () => {
   });
 
   test("the definition declares no command flags and no positionals", async () => {
+    const definition = createStatusCommandDefinition(statusRuntime(baseFacts()));
+    expect(definition.flags).toEqual([]);
+    expect(definition.positionals).toEqual({ max: 0 });
     const run = await runStatusCli(["--json", "status"], statusRuntime(baseFacts()));
     expect(run.exitCode).toBe(0);
     // The parser accepts no positionals: a second positional is rejected above.
+  });
+
+  test("a throwing handler is contained as fallback.internal with exit 2", async () => {
+    const runtime = {
+      ...statusRuntime(baseFacts()),
+      readRepository: (): never => {
+        throw new Error("planted-status-handler-canary");
+      },
+    };
+    const run = await runStatusCli(["--json", "status"], runtime);
+    expect(run.exitCode).toBe(2);
+    const envelope = PARSE(run.stdout);
+    if (isRecord(envelope) && isRecord(envelope.error)) {
+      expect(envelope.error.code).toBe("fallback.internal");
+    } else {
+      throw new Error("containment envelope has no error object");
+    }
+    expect(run.stdout).not.toContain("planted-status-handler-canary");
+    expect(run.stderr).not.toContain("planted-status-handler-canary");
   });
 });
 
@@ -195,6 +222,36 @@ describe("TC-STATUS-002 non-observed sections still succeed", () => {
     if (!isRecord(envelope) || !isRecord(envelope.data)) throw new Error("data missing");
     expect(section(envelope.data, "tracker").state).toBe("observed");
     expect(section(envelope.data, "ci").state).toBe("observed");
+  });
+
+  test("a failed PR read never prints PRs 0 or an observed review state", async () => {
+    const facts = baseFacts({
+      changes: failedDeliveryRequestRead(),
+      localContext: localContext({ activeChange: activeChange() }),
+    });
+    const run = await runStatusCli(["status"], statusRuntime(facts));
+    expect(run.exitCode).toBe(0);
+    const changesLine = run.stdout.split("\n").find((line) => line.startsWith("changes"));
+    if (changesLine === undefined) throw new Error("missing changes line");
+    expect(changesLine).toContain("active GH-175");
+    expect(changesLine).toContain("PRs ?");
+    expect(changesLine).toContain("review state unknown");
+    expect(changesLine).not.toContain("PRs 0");
+    expect(changesLine).not.toContain("review state observed");
+
+    const restored = await runStatusCli(
+      ["status"],
+      statusRuntime(
+        baseFacts({
+          changes: deliveryRequestRead([], REVIEWS_UNAVAILABLE),
+          localContext: localContext({ activeChange: activeChange() }),
+        }),
+      ),
+    );
+    const restoredLine = restored.stdout.split("\n").find((line) => line.startsWith("changes"));
+    if (restoredLine === undefined) throw new Error("missing restored changes line");
+    expect(restoredLine).toContain("PRs 0");
+    expect(restoredLine).toContain("review state unavailable");
   });
 });
 

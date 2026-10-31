@@ -178,6 +178,8 @@ import {
   providerConfig,
   providerConfigRead,
   providers,
+  runStatusCli,
+  statusRuntime,
 } from "../fixtures/status/harness";
 
 const section = (facts: Parameters<typeof aggregateStatus>[0], id: string) =>
@@ -295,6 +297,7 @@ describe("TC-STATUS-017 providers from config and the verified park fold", () =>
       "providers",
     );
     expect(providersSection.state).toBe("unavailable");
+    expect(providersSection.chain).toEqual({ state: "absent" });
     expect(providersSection.evidence.reasons).toContain("provider-chain-not-declared");
     expect(providersSection.entries).toEqual([]);
     expect(providersSection.parks).toEqual([]);
@@ -325,6 +328,37 @@ describe("TC-STATUS-017 providers from config and the verified park fold", () =>
     expect(JSON.stringify(providersSection)).not.toContain("provider.chain.invalid");
   });
 
+  test("a declared default chain that does not resolve is unknown, not absent", () => {
+    const providersSection = section(
+      baseFacts({
+        providers: providers({
+          config: providerConfigRead(
+            providerConfig({
+              defaultChain: "ghost",
+              entries: { primary: { name: "primary", class: "subscription", enabled: true } },
+              chains: {
+                primary: { name: "primary", entries: ["primary"], allowPaidFallback: false },
+              },
+            }),
+          ),
+        }),
+      }),
+      "providers",
+    );
+    expect(providersSection.state).toBe("unknown");
+    expect(providersSection.chain).toEqual({ state: "unknown" });
+    expect(providersSection.evidence.reasons).toContain("provider-chain-unresolved");
+    expect(providersSection.evidence.sources[0]).toMatchObject({
+      source: "provider-config",
+      outcome: "failed",
+      failureCode: "config.value.invalid",
+    });
+    expect(providersSection.evidence.sources[0]?.failureClass).toBeUndefined();
+    expect(JSON.stringify(providersSection)).not.toContain("provider.chain.invalid");
+    expect(providersSection.entries).toEqual([]);
+    expect(providersSection.parks).toEqual([]);
+  });
+
   test("a config-resolution failure is unknown with config-invalid and the config code", () => {
     const providersSection = section(
       baseFacts({
@@ -342,20 +376,46 @@ describe("TC-STATUS-017 providers from config and the verified park fold", () =>
     expect(providersSection.evidence.sources[0]?.failureClass).toBeUndefined();
   });
 
-  test("a park-fold failure degrades the section without claiming no parks", () => {
-    const providersSection = section(
-      baseFacts({
-        providers: providerFacts({
-          parks: { ok: false, reason: "state-unreadable", failureCode: "state.store.torn" },
-        }),
+  test("a park-fold failure degrades the section without claiming no parks", async () => {
+    const facts = baseFacts({
+      providers: providerFacts({
+        parks: { ok: false, reason: "state-unreadable", failureCode: "state.store.torn" },
       }),
-      "providers",
-    );
+    });
+    const providersSection = section(facts, "providers");
     expect(providersSection.state).toBe("degraded");
     expect(providersSection.evidence.reasons).toContain("state-unreadable");
     expect(providersSection.evidence.reasons).toContain("partial-evidence");
     expect(providersSection.parks).toEqual([]);
     expect(JSON.stringify(providersSection)).not.toContain("no parks");
+
+    const failedRun = await runStatusCli(["status"], statusRuntime(facts));
+    expect(failedRun.exitCode).toBe(0);
+    const failedLine = failedRun.stdout.split("\n").find((line) => line.startsWith("providers"));
+    if (failedLine === undefined) throw new Error("missing providers line");
+    expect(failedLine).toContain("active parks ?");
+    expect(failedLine).not.toContain("active parks 0");
+    expect(failedLine).not.toContain("no parks");
+
+    const untrustedConfig = baseFacts({
+      providers: providers({ config: { ok: false, reason: "config-invalid" } }),
+    });
+    const untrustedRun = await runStatusCli(["status"], statusRuntime(untrustedConfig));
+    const untrustedLine = untrustedRun.stdout
+      .split("\n")
+      .find((line) => line.startsWith("providers"));
+    if (untrustedLine === undefined) throw new Error("missing untrusted providers line");
+    expect(untrustedLine).toContain("active parks ?");
+
+    const restoredRun = await runStatusCli(
+      ["status"],
+      statusRuntime(baseFacts({ providers: providerFacts({}) })),
+    );
+    const restoredLine = restoredRun.stdout
+      .split("\n")
+      .find((line) => line.startsWith("providers"));
+    if (restoredLine === undefined) throw new Error("missing restored providers line");
+    expect(restoredLine).toContain("active parks 0");
   });
 
   test("expiry is read-time: T-1 active, T expired, T+1 active only at T+1", () => {

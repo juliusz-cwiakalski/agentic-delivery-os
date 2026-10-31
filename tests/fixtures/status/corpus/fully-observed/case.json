@@ -2,18 +2,122 @@
   "name": "fully-observed",
   "scenario": "fully-observed",
   "expected": {
-    "states": {
-      "tracker": "observed",
-      "changes-and-prs": "observed",
-      "ci": "observed",
-      "lanes-or-queue": "not-delivered",
-      "providers": "observed",
-      "parked-work": "observed"
-    },
-    "reasons": {
-      "tracker": ["observed"],
-      "ci": ["observed"],
-      "providers": ["observed"]
+    "sections": {
+      "tracker": {
+        "state": "observed",
+        "reasons": ["observed", "item-signal-absent", "source-truncated"],
+        "counts": {
+          "observed": 24,
+          "unknown": 8,
+          "total": 32,
+          "omitted": 16
+        },
+        "orderedIds": [
+          "ownerHandBacks:GH-100",
+          "ownerHandBacks:GH-101",
+          "ownerHandBacks:GH-102",
+          "ownerHandBacks:GH-103",
+          "blockedDependencies:GH-200",
+          "blockedDependencies:GH-201",
+          "blockedDependencies:GH-202",
+          "blockedDependencies:GH-203",
+          "stalls:GH-300",
+          "stalls:GH-301",
+          "stalls:GH-302",
+          "stalls:GH-303",
+          "hygiene:GH-200",
+          "hygiene:GH-201",
+          "hygiene:GH-202",
+          "hygiene:GH-203"
+        ],
+        "truncated": true
+      },
+      "changes-and-prs": {
+        "state": "observed",
+        "reasons": ["observed"],
+        "counts": {
+          "observed": 8,
+          "unknown": 0,
+          "total": 8,
+          "omitted": 0
+        },
+        "orderedIds": ["500", "502", "504", "506", "501", "503", "505", "507"],
+        "truncated": false
+      },
+      "ci": {
+        "state": "observed",
+        "reasons": ["observed"],
+        "counts": {
+          "observed": 8,
+          "unknown": 0,
+          "total": 8,
+          "omitted": 0
+        },
+        "orderedIds": ["700", "707", "706", "705", "704", "703", "702", "701"],
+        "truncated": false
+      },
+      "lanes-or-queue": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "providers": {
+        "state": "observed",
+        "reasons": ["observed"],
+        "counts": {
+          "observed": 16,
+          "unknown": 0,
+          "total": 16,
+          "omitted": 0
+        },
+        "orderedIds": [
+          "entry:provider-0",
+          "entry:provider-1",
+          "entry:provider-2",
+          "entry:provider-3",
+          "entry:provider-4",
+          "entry:provider-5",
+          "entry:provider-6",
+          "entry:provider-7",
+          "park:provider:provider-0",
+          "park:provider:provider-1",
+          "park:provider:provider-2",
+          "park:provider:provider-3",
+          "park:provider:provider-4",
+          "park:provider:provider-5",
+          "park:provider:provider-6",
+          "park:provider:provider-7"
+        ],
+        "truncated": false
+      },
+      "parked-work": {
+        "state": "observed",
+        "reasons": ["observed"],
+        "counts": {
+          "observed": 8,
+          "unknown": 0,
+          "total": 8,
+          "omitted": 0
+        },
+        "orderedIds": [
+          "GH-800",
+          "GH-801",
+          "GH-802",
+          "GH-803",
+          "GH-804",
+          "GH-805",
+          "GH-806",
+          "GH-807"
+        ],
+        "truncated": false
+      }
     }
   }
 }

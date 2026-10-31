@@ -9,6 +9,7 @@ import {
   type BrandIdentity,
   type DeliveryRequest,
   type PipelineRun,
+  STATUS_MAX_DETAIL_CHARS,
   STATUS_MAX_EVIDENCE_SOURCES,
   STATUS_MAX_OPEN_PULL_REQUESTS,
   STATUS_MAX_PARKED_CHANGES,
@@ -56,7 +57,6 @@ import {
 } from "#contracts";
 
 const DAY_MS = 86_400_000;
-const MAX_DETAIL = 160;
 
 const clampTitle = (title: string): string =>
   title.length > STATUS_MAX_TITLE_CHARS ? title.slice(0, STATUS_MAX_TITLE_CHARS) : title;
@@ -64,8 +64,8 @@ const clampTitle = (title: string): string =>
 const clampDetail = (detail: string | undefined): string | undefined =>
   detail === undefined
     ? undefined
-    : detail.length > MAX_DETAIL
-      ? detail.slice(0, MAX_DETAIL)
+    : detail.length > STATUS_MAX_DETAIL_CHARS
+      ? detail.slice(0, STATUS_MAX_DETAIL_CHARS)
       : detail;
 
 /** Ascending Unicode code-point comparison on normalized strings. */
@@ -226,10 +226,19 @@ type FamilyResult = {
   readonly reasons: readonly StatusEvidenceReason[];
 };
 
-const familyCounts = (rendered: readonly StatusTrackerItem[], total: number): StatusCounts => {
-  const observed = rendered.filter((item) => item.itemState === "observed").length;
-  const unknown = rendered.filter((item) => item.itemState === "unknown").length;
-  return countOf(observed, unknown, total, total - rendered.length);
+/**
+ * Counts aggregate over the fully ranked family, before the render cap, so an
+ * unknown item is never hidden by truncation; `omitted` remains the number of
+ * ranked items the cap dropped.
+ */
+const familyCounts = (
+  all: readonly StatusTrackerItem[],
+  renderedCount: number,
+  total: number,
+): StatusCounts => {
+  const observed = all.filter((item) => item.itemState === "observed").length;
+  const unknown = all.filter((item) => item.itemState === "unknown").length;
+  return countOf(observed, unknown, total, total - renderedCount);
 };
 
 const capped = <T>(ranked: readonly T[], limit: number): readonly T[] => ranked.slice(0, limit);
@@ -274,7 +283,7 @@ const ownerHandBacksFamily = (items: readonly WorkItem[], available: boolean): F
     if (leftAt !== rightAt) return leftAt < rightAt ? -1 : 1;
     return compareText(refOf(left), refOf(right));
   });
-  const rendered = capped(ranked, STATUS_MAX_TRACKER_FAMILY_ITEMS).map(
+  const mapped = ranked.map(
     (item): StatusTrackerItem => ({
       workItemRef: refOf(item),
       title: clampTitle(item.title),
@@ -283,11 +292,12 @@ const ownerHandBacksFamily = (items: readonly WorkItem[], available: boolean): F
       labels: [...item.labels],
     }),
   );
+  const rendered = capped(mapped, STATUS_MAX_TRACKER_FAMILY_ITEMS);
   return {
     family: {
       family: "ownerHandBacks",
       state: "observed",
-      counts: familyCounts(rendered, matching.length),
+      counts: familyCounts(mapped, rendered.length, matching.length),
       items: rendered,
     },
     reasons: matching.length === 0 ? ["observed-empty"] : ["observed"],
@@ -340,7 +350,7 @@ const blockedDependenciesFamily = (
     }
     return compareText(refOf(left.item), refOf(right.item));
   });
-  const rendered = capped(ranked, STATUS_MAX_TRACKER_FAMILY_ITEMS).map(
+  const mapped = ranked.map(
     (entry): StatusTrackerItem => ({
       workItemRef: refOf(entry.item),
       title: clampTitle(entry.item.title),
@@ -349,11 +359,12 @@ const blockedDependenciesFamily = (
       dependencyState: entry.dependencyState,
     }),
   );
+  const rendered = capped(mapped, STATUS_MAX_TRACKER_FAMILY_ITEMS);
   return {
     family: {
       family: "blockedDependencies",
       state: "observed",
-      counts: familyCounts(rendered, blocked.length),
+      counts: familyCounts(mapped, rendered.length, blocked.length),
       items: rendered,
     },
     reasons: blocked.length === 0 ? ["observed-empty"] : ["observed"],
@@ -406,7 +417,7 @@ const stallsFamily = (
     }
     return compareText(refOf(left.item), refOf(right.item));
   });
-  const rendered = capped(ranked, STATUS_MAX_TRACKER_FAMILY_ITEMS).map(
+  const mapped = ranked.map(
     (entry): StatusTrackerItem => ({
       workItemRef: refOf(entry.item),
       title: clampTitle(entry.item.title),
@@ -416,11 +427,12 @@ const stallsFamily = (
       ...(entry.ageDays === undefined ? {} : { ageDays: entry.ageDays }),
     }),
   );
+  const rendered = capped(mapped, STATUS_MAX_TRACKER_FAMILY_ITEMS);
   return {
     family: {
       family: "stalls",
       state: "observed",
-      counts: familyCounts(rendered, entries.length),
+      counts: familyCounts(mapped, rendered.length, entries.length),
       items: rendered,
     },
     reasons: entries.length === 0 ? ["observed-empty"] : ["observed"],
@@ -454,7 +466,7 @@ const hygieneFamily = (items: readonly WorkItem[], available: boolean): FamilyRe
     if (count !== 0) return count;
     return compareText(refOf(left.item), refOf(right.item));
   });
-  const rendered = capped(ranked, STATUS_MAX_TRACKER_FAMILY_ITEMS).map(
+  const mapped = ranked.map(
     (entry): StatusTrackerItem => ({
       workItemRef: refOf(entry.item),
       title: clampTitle(entry.item.title),
@@ -463,11 +475,12 @@ const hygieneFamily = (items: readonly WorkItem[], available: boolean): FamilyRe
       findings: [...entry.findings],
     }),
   );
+  const rendered = capped(mapped, STATUS_MAX_TRACKER_FAMILY_ITEMS);
   return {
     family: {
       family: "hygiene",
       state: "observed",
-      counts: familyCounts(rendered, entries.length),
+      counts: familyCounts(mapped, rendered.length, entries.length),
       items: rendered,
     },
     reasons: entries.length === 0 ? ["observed-empty"] : ["observed"],
@@ -660,6 +673,8 @@ const changesSection = (facts: StatusFacts): StatusSection => {
     : [];
   const prSignalsUnavailable =
     !prRead.ok ||
+    prRead.availability.state === "unavailable" ||
+    prRead.availability.refs === "unavailable" ||
     prRead.availability.reviewState === "unavailable" ||
     prRead.availability.reviewThreads === "unavailable";
   const activeUsable = active.state === "observed" || active.state === "observed-empty";
@@ -744,7 +759,12 @@ const jobSeverity = (run: PipelineRun): number => {
 const compareRuns = (left: PipelineRun, right: PipelineRun): number => {
   const severity = jobSeverity(left) - jobSeverity(right);
   if (severity !== 0) return severity;
-  const identity = compareIdentity(right.identity.entityId, left.identity.entityId);
+  const leftIdentity = left.identity.entityId;
+  const rightIdentity = right.identity.entityId;
+  const bothNumeric = numeric(leftIdentity) !== undefined && numeric(rightIdentity) !== undefined;
+  const identity = bothNumeric
+    ? compareIdentity(rightIdentity, leftIdentity)
+    : compareText(leftIdentity, rightIdentity);
   if (identity !== 0) return identity;
   return compareText(left.pipelineName, right.pipelineName);
 };
@@ -860,14 +880,23 @@ const lanesSection = (): StatusSection => ({
 
 /* -------------------------------- providers ------------------------------- */
 
-const providerChainFor = (
-  config: StatusProviderConfigRead,
-): { readonly name: string; readonly entries: readonly string[] } | undefined => {
-  if (!config.ok) return undefined;
+type ProviderChainLookup =
+  | { readonly state: "declared"; readonly name: string; readonly entries: readonly string[] }
+  | { readonly state: "absent" }
+  | { readonly state: "unresolved" };
+
+/**
+ * Distinguishes "no default chain declared" (unavailable) from "a default chain
+ * is declared but names no declared chain entry" (unknown, DM-9).
+ */
+const providerChainFor = (config: StatusProviderConfigRead): ProviderChainLookup => {
+  if (!config.ok) return { state: "unresolved" };
   const defaultChain = config.config.defaultChain;
-  if (defaultChain === undefined) return undefined;
+  if (defaultChain === undefined) return { state: "absent" };
   const chain = config.config.chains[defaultChain];
-  return chain === undefined ? undefined : { name: chain.name, entries: chain.entries };
+  return chain === undefined
+    ? { state: "unresolved" }
+    : { state: "declared", name: chain.name, entries: chain.entries };
 };
 
 const compareEntries = (left: StatusProviderEntry, right: StatusProviderEntry): number => {
@@ -918,7 +947,24 @@ const providersSection = (facts: StatusFacts): StatusSection => {
 
   const config = configRead.config;
   const chainInfo = providerChainFor(configRead);
-  if (chainInfo === undefined) {
+  if (chainInfo.state === "unresolved") {
+    return {
+      ...sectionBase({
+        id: "providers",
+        state: "unknown",
+        counts: zeroCounts(),
+        truncated: false,
+        sources: [
+          { source: "provider-config", outcome: "failed", failureCode: "config.value.invalid" },
+        ],
+        reasons: ["provider-chain-unresolved"],
+      }),
+      chain: { state: "unknown" },
+      entries: [],
+      parks: [],
+    };
+  }
+  if (chainInfo.state === "absent") {
     return {
       ...sectionBase({
         id: "providers",
@@ -1195,6 +1241,13 @@ const humanCiResult = (result: StatusCiResult | undefined): string => {
   return result === "none" ? "none-reported" : result;
 };
 
+/** A source is known when its evidence outcome is a successful read. */
+const sourceKnown = (section: StatusSection, source: StatusEvidenceSource): boolean =>
+  section.evidence.sources.some(
+    (entry) =>
+      entry.source === source && (entry.outcome === "read" || entry.outcome === "observed-empty"),
+  );
+
 /** Render the deterministic human digest from the digest and injected brand. */
 export const renderStatusHuman = (digest: StatusDigest, brand: BrandIdentity): string => {
   const lines: string[] = [];
@@ -1226,14 +1279,12 @@ export const renderStatusHuman = (digest: StatusDigest, brand: BrandIdentity): s
         : active?.state === "observed-empty"
           ? "none"
           : "unknown";
-    const prKnown =
-      changes.pullRequests !== undefined &&
-      changes.state !== "unknown" &&
-      changes.state !== "unavailable";
+    const prKnown = sourceKnown(changes, "changes");
     const prCount = prKnown ? String(changes.pullRequests?.length ?? 0) : "?";
     const review = !prKnown
       ? "unknown"
-      : (changes.pullRequests ?? []).some((item) => item.reviewState === "unknown")
+      : changes.evidence.reasons.includes("signal-unavailable") ||
+          (changes.pullRequests ?? []).some((item) => item.reviewState === "unknown")
         ? "unavailable"
         : "observed";
     lines.push(
@@ -1264,7 +1315,10 @@ export const renderStatusHuman = (digest: StatusDigest, brand: BrandIdentity): s
         : chainState === "absent"
           ? "none"
           : "unknown";
-    const parksKnown = providers.parks !== undefined;
+    const parksKnown =
+      sourceKnown(providers, "provider-parks") &&
+      providers.state !== "unknown" &&
+      providers.state !== "unavailable";
     const parkCount = parksKnown ? String(providers.parks?.length ?? 0) : "?";
     const entries = providers.state === "unknown" ? "?" : String(providers.entries?.length ?? 0);
     lines.push(
