@@ -4,10 +4,10 @@ delivery_mode: autonomous
 variant: full
 phases:
   clarify_scope: { started: "2026-10-31T12:23:47Z", completed: "2026-10-31T12:26:00Z" }
-  specification: { started: "2026-10-31T12:27:00Z", completed: "2026-10-31T12:35:00Z" }
-  test_planning: { started: "2026-10-31T12:36:00Z", completed: "2026-10-31T12:46:00Z", reopened: "2026-10-31T13:15:00Z (delivery_planning found implementation_plan link null; corrected to ./chg-GH-204-plan.md)" }
-  delivery_planning: { started: "2026-10-31T12:47:00Z", completed: "2026-10-31T13:18:00Z" }
-  dor_check: { started: null, completed: null }
+  specification: { started: "2026-10-31T12:27:00Z", completed: "2026-10-31T13:40:00Z", reopened: "2026-10-31T13:28:00Z (DoR iter-1 F-1/F-2/F-3/F-8/F-12/F-13/F-15/F-18/F-19/F-22; spec v1.1 143 lines)" }
+  test_planning: { started: "2026-10-31T12:36:00Z", completed: "2026-10-31T13:46:00Z", reopened: "2026-10-31T13:15:00Z (delivery_planning found implementation_plan link null; corrected to ./chg-GH-204-plan.md); 2026-10-31T13:42:00Z (DoR iter-1 F-3/F-6/F-7/F-9/F-11/F-13/F-16/F-17/F-22; test plan v1.1 201 lines, TC-001..015)" }
+  delivery_planning: { started: "2026-10-31T12:47:00Z", completed: "2026-10-31T13:52:00Z", reopened: "2026-10-31T13:48:00Z (DoR iter-1 F-3/F-4/F-5/F-10/F-11/F-14/F-15/F-20/F-21/F-23; plan v1.1 202 lines, 4 self-consistent phases, 15/15 TCs)" }
+  dor_check: { started: "2026-10-31T13:25:00Z", completed: null, iterations: "iter-1 NOT_READY (3 blocker, 10 major, 7 minor, 3 nit); artifact readiness-review/readiness-iter-1.md; reopened specification, test_planning, delivery_planning; re-run pending" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -43,9 +43,27 @@ decisions:
     date: "2026-10-31"
   - text: "Branch feat/GH-204/agent-memory-lite fast-forwarded to origin/main-tools at 9a70aaf before authoring. PR base is main-tools, never main. PM does not merge; CEO merges after finalization."
     date: "2026-10-31"
+  - text: "DoR iter-1 resolution F-1: a non-seeded agent may create its own folder and README and append exactly one self-scoped index row on first capture. Consolidation owns every other folder, every record row, and every later index edit."
+    date: "2026-10-31"
+  - text: "DoR iter-1 resolution F-2: the curator operation set is complete: mechanical duplicate merge that preserves evidence and substance, demote or drop evidence-less entries, mark supersession, prune stale with a recorded reason, move promoted lines to one-line pointers, split over-cap folders, and rebuild the index. No substantive rewording."
+    date: "2026-10-31"
+  - text: "DoR iter-1 resolution F-3: the index has one row per agent folder and one row per promoted record file. lessons/ and tacit/ get no directory-level rows; empty trees are described in the layout."
+    date: "2026-10-31"
+  - text: "DoR iter-1 resolution F-20: the owner superseded the ticket body statement that the full 11-phase lifecycle was waived. This delivery runs all 11 phases with pm-notes evidence; the ticket body remains design input only."
+    date: "2026-10-31"
+  - text: "DoR iter-1 resolution F-12: AC-15 covers PR creation by PM, merge to main-tools by owner or CEO, and ticket closure with a delivery summary. PM does not merge."
+    date: "2026-10-31"
+  - text: "DoR iter-1 resolution F-8: ids are allocated as a monotonic next free id per prefix and year. Duplicate or reused ids are rejected, never silently reallocated. Validation scans id and supersedes."
+    date: "2026-10-31"
 open_questions: []
 blockers: []
 notes:
+  - text: "DoR iter-1 NOT_READY: 3 blocker, 10 major, 7 minor, 3 nit. Artifact readiness-review/readiness-iter-1.md. Reopened specification, test_planning, and delivery_planning (never delivery). PM resolutions recorded in decisions. Revised artifacts: spec v1.1 143 lines, test plan v1.1 201 lines, plan v1.1 202 lines. Re-running dor_check as iter-2."
+    type: "decision"
+    date: "2026-10-31"
+  - text: "retro: the readiness gate earned its keep on the first pass. It caught three real cross-artifact contradictions that the authors missed: index write ownership, incomplete curator permissions, and index granularity. Root cause: the index write model was written in the ticket at a high level and then implemented differently in spec, test plan, and plan. Improvement: for governance docs, pin the write-ownership model and index granularity in the spec first, then mirror them mechanically in test and plan."
+    type: "retro"
+    date: "2026-10-31"
   - text: "Phase 4 delivery_planning COMPLETE: chg-GH-204-plan.md, 200 lines, 4 coder phases, 13/13 TCs mapped, lifecycle 5 and 7..11 marked PM-owned. Plan flagged the unquoted skill description, recency wording, missing kernel rules, and missing skills inventory section, all assigned to delivery phases."
     type: "info"
     date: "2026-10-31"
