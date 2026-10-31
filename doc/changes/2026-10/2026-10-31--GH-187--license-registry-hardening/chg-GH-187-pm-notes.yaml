@@ -23,7 +23,9 @@ phases:
   dor_check:
     started: "2026-10-31T15:28:00Z"
     completed: "2026-10-31T17:18:00Z"
-  delivery: { started: null, completed: null }
+  delivery:
+    started: "2026-10-31T17:22:00Z"
+    completed: null
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
