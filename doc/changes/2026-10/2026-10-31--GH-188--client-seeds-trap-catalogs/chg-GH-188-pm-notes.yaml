@@ -5,7 +5,7 @@ phases:
   clarify_scope: { started: "2026-10-31T00:00:00Z", completed: "2026-10-31T00:35:00Z" }
   specification: { started: "2026-10-31T00:35:00Z", completed: "2026-10-31T01:20:00Z" }
   test_planning: { started: "2026-10-31T01:05:00Z", completed: "2026-10-31T01:25:00Z" }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: "2026-10-31T01:30:00Z", completed: "2026-10-31T01:40:00Z" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -24,7 +24,11 @@ decisions:
     date: "2026-10-31"
   - text: "ADR-0006 (Proposed): Jira custom fields = documented mapping semantics, NO v1 contract change (mapped fields typed at boundary; unmapped visibly unrepresented, no raw key leak); WorkItem.comments = optional (absent = comment set unknown; present incl. empty = provider-asserted set). Unblocked TC-JIRA-002/TC-JIRA-004; spec v1.2 + test plan v1.1 corrected; 12/12 ACs fully assertable."
     date: "2026-10-31"
-open_questions: []
+open_questions:
+  - text: "OQ-C (plan): GitLab ≥3 trap-entry minimum relies on merge-status variant split (asynchronous/multi-valued as two entries per spec OQ-3 allowance) — DoR gate to confirm; fallback is a third named GitLab family in P4."
+    date: "2026-10-31"
+  - text: "OQ-D residual: per-value merge-status mapping rows are declared adapter data authored at P4; invariants pinned, per-value rows first reviewed at PR."
+    date: "2026-10-31"
 blockers: []
 notes:
   - text: "State detection: issue OPEN, no labels, milestone M0; no change folder, no branch artifacts, no open/merged PR — fresh delivery. Dependency GH-181 (M0-S12 credential port) closed 2026-10-30, so dependency is satisfied."
