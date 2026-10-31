@@ -41,6 +41,52 @@
       "path": "tests/structure/privacy-imports.test.ts",
       "rules": ["*"],
       "reason": "The guard's purity and definition-set suite names every committed rule id and seeds a mutant import."
+    },
+    {
+      "id": "privacy-check",
+      "kind": "file",
+      "path": "scripts/checks/privacy-literals.ts",
+      "rules": ["*"],
+      "reason": "The guard implementation itself names the rule vocabulary, path forms, and working-tree enumeration."
+    },
+    {
+      "id": "sanitization-canary-fixture",
+      "kind": "file",
+      "path": "tests/fixtures/providers/sanitization/cases.ts",
+      "rules": [
+        "secret.provider-token-prefix",
+        "secret.private-key-block",
+        "secret.credential-assignment"
+      ],
+      "reason": "Pre-existing sanitization canary corpus purpose-built to carry realistic synthetic secret shapes; rewriting it is out of this change's scope (NG-3)."
+    },
+    {
+      "id": "gh-32-red-team-v3",
+      "kind": "file",
+      "path": "doc/changes/2026-03/2026-03-10--GH-32--bootstrap-onboarding-consistency/feedback/red-team-report-v3.md",
+      "rules": ["private.absolute-user-path"],
+      "reason": "Archival review record quoting real owner paths; NG-3 excludes retroactive remediation and this change does not edit the file."
+    },
+    {
+      "id": "gh-32-red-team-v4",
+      "kind": "file",
+      "path": "doc/changes/2026-03/2026-03-10--GH-32--bootstrap-onboarding-consistency/feedback/red-team-report-v4.md",
+      "rules": ["private.absolute-user-path"],
+      "reason": "Archival review record quoting a real owner path; NG-3 excludes retroactive remediation and this change does not edit the file."
+    },
+    {
+      "id": "gh-124-plan",
+      "kind": "file",
+      "path": "doc/changes/2026-07/2026-07-03--GH-124--batch-delivery-infrastructure/chg-GH-124-plan.md",
+      "rules": ["private.absolute-user-path"],
+      "reason": "Archival plan artifact quoting real owner paths as planning inputs; NG-3 excludes retroactive remediation."
+    },
+    {
+      "id": "gh-184-readiness-iteration-1",
+      "kind": "file",
+      "path": "doc/changes/2026-10/2026-10-31--GH-184--privacy-and-no-cloud-guards/readiness-review/readiness-iter-1.md",
+      "rules": ["private.absolute-user-path"],
+      "reason": "Archival DoR review record that quotes the verified owner paths as evidence; the review artifact is read-only to this delivery phase."
     }
   ],
   "exclusions": [

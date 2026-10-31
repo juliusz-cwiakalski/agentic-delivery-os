@@ -65,7 +65,7 @@ export const PRIVACY_RULES = [
     recognizerClass: "credential-assignment",
     severity: "error",
     patternSource:
-      "\\b(?:[A-Za-z0-9]+[_-]){0,4}(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|client[_-]?secret|auth[_-]?token|credential)\\b\\s*[:=]\\s*[\"']?[A-Za-z0-9_+/=.-]{8,}[\"']?",
+      "\\b(?:[A-Za-z0-9]+[_-]){0,4}(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|client[_-]?secret|auth[_-]?token|credential)\\b[\"']?\\s*[:=](?!-)\\s*[\"']?(?=[A-Za-z0-9_+/=.-]{20,})(?=[A-Za-z0-9_+/=.-]*[0-9])(?=[A-Za-z0-9_+/=.-]*[A-Za-z])[A-Za-z0-9_+/=.-]+[\"']?",
     flags: "gi",
     minimumMatchLength: 14,
   },
@@ -82,7 +82,7 @@ export const PRIVACY_RULES = [
     recognizerClass: "absolute-user-path",
     severity: "error",
     patternSource:
-      "(?:[A-Za-z]:[\\\\/]Users[\\\\/]|/Users/|/home/)[A-Za-z0-9._-]{2,}(?:[\\\\/][^\\s\"'<>|)]*)?",
+      "(?:[A-Za-z]:[\\\\/]Users[\\\\/]|/Users/|/home/(?!(?:environment|shared|data|bin|lib|tmp|var|etc|opt|usr)\\b))[A-Za-z0-9._-]{2,}(?:[\\\\/][^\\s\"'<>|)]*)?",
     flags: "g",
     minimumMatchLength: 12,
   },
@@ -134,6 +134,14 @@ export const PRIVACY_SUPPRESSION_CLASSES = [
       "placeholder",
       "fixture-",
       "fixture_",
+      "apikey",
+      "user",
+      "username",
+      "synthetic",
+      "somebody",
+      "someone",
+      "your",
+      "owner",
     ],
   },
 ] as const satisfies readonly PrivacySuppressionClass[];
