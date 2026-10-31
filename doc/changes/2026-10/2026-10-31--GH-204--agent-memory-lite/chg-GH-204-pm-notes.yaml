@@ -10,7 +10,7 @@ phases:
   dor_check: { started: "2026-10-31T13:25:00Z", completed: "2026-10-31T14:05:00Z", verdict: "READY iter-2 (0 blocker, 0 major, 3 minor, 4 nit; artifact readiness-review/readiness-iter-2.md; all 23 iter-1 findings resolved; advisory items folded into delivery notes) ", iterations: "iter-1 NOT_READY (3 blocker, 10 major, 7 minor, 3 nit; reopened specification, test_planning, delivery_planning); iter-2 READY after revisions" }
   delivery: { started: "2026-10-31T14:10:00Z", completed: "2026-10-31T14:45:00Z", commits: "d87a977(P1 kernel) a748f5b(P2 index/seeds/trees) e05789f(P3 skill/inventory) a10515e(P4 validation); HEAD a10515e; 4 phases, 4 Conventional Commits; worktree clean" }
   system_spec_update: { started: "2026-10-31T14:50:00Z", completed: "2026-10-31T15:00:00Z", reconciled: "NONE (no-op confirmed). AGENTS.md kernel and .opencode/README.md skills inventory are already current. No doc/spec feature area, no doc/guides change, no redistributable doc. doc-sync-report.md; doc distribution guard 81/81 no drift; residual gaps NONE." }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-10-31T15:05:00Z", completed: "2026-10-31T15:25:00Z", verdict: "PASS iter-1 (0 blocker, 0 major, 1 minor, 2 info; artifact review/review-iter-1.md and review/code-review/review-iter-1.yaml; dimensions A spec/plan compliance and B content quality and safety both PASS). F-1 test-plan execution log was stale; fixed by marking TC-001..014 Pass and TC-015 deferred to phase 11. F-2 and F-3 are informational." }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -58,6 +58,9 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Phase 8 review_fix COMPLETE: @reviewer returned PASS iter-1 (0 blocker, 0 major, 1 minor, 2 info). The minor F-1 was a stale test-plan execution log; test-plan-writer updated TC-001..014 to Pass with evidence and TC-015 to deferred at phase 11. No remediation code change."
+    type: "info"
+    date: "2026-10-31"
   - text: "Phase 7 system_spec_update COMPLETE: @doc-syncer confirmed a no-op. No current-truth doc is stale. doc distribution guard passed 81/81. Report: doc-sync-report.md. Residual gaps NONE."
     type: "info"
     date: "2026-10-31"

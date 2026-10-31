@@ -2,7 +2,7 @@
 id: chg-GH-204-test-plan
 status: Updated
 created: 2026-10-31T13:00:00Z
-last_updated: 2026-10-31
+last_updated: 2026-10-31T15:20:00Z
 owners: [engineering]
 service: repo operating documentation
 labels: [change, planning, documentation]
@@ -43,27 +43,27 @@ Memory lint, `ados memory`, compiler, `events.jsonl`, preferences or retro trees
 
 | AC | Description | TC IDs | Status |
 |---|---|---|---|
-| AC-1 | Kernel covers R1..R10, no hunk outside the section | TC-MEMORY-003 | Planned |
-| AC-2 | Tree shape, one index row per agent folder and per record file | TC-MEMORY-004 | Planned |
-| AC-3 | Seeds not fabricated | TC-MEMORY-005 | Planned |
-| AC-4 | Missing-agent first-capture path | TC-MEMORY-006 | Planned |
-| AC-5 | Skill frontmatter parses | TC-MEMORY-001 | Planned |
-| AC-6 | Skill inventoried, no other inventory change | TC-MEMORY-002 | Planned |
-| AC-7 | Consolidation dry-run scenarios | TC-MEMORY-007 | Planned |
-| AC-7.1 | Dedup merge unions evidence, no paraphrase | TC-MEMORY-007 | Planned |
-| AC-7.2 | Evidence-less entry demoted or dropped with reason | TC-MEMORY-007 | Planned |
-| AC-7.3 | Stale prune reason names the contradiction | TC-MEMORY-007 | Planned |
-| AC-7.4 | Cap split moves content without rewording | TC-MEMORY-007 | Planned |
-| AC-7.5 | Index rebuild, read-when hints, only matching records read | TC-MEMORY-007 | Planned |
-| AC-7.6 | Clean-tree no-op, hash unchanged | TC-MEMORY-007 | Planned |
-| AC-8 | Curator limits hold | TC-MEMORY-008 | Planned |
-| AC-9 | No conflict-free claim, evidence over recency | TC-MEMORY-009, TC-MEMORY-007 | Planned |
-| AC-10 | Reviewer independence and advisory trust | TC-MEMORY-009 | Planned |
-| AC-11 | Ids unique and never reused | TC-MEMORY-010, TC-MEMORY-014 | Planned |
-| AC-12 | Forbidden paths unchanged, no added headers | TC-MEMORY-011 | Planned |
-| AC-13 | No em or en dashes | TC-MEMORY-012 | Planned |
-| AC-14 | Existing gates stay green | TC-MEMORY-013 | Planned |
-| AC-15 | Owner or CEO merges, ticket closed, PM does not merge | TC-MEMORY-015 | Planned |
+| AC-1 | Kernel covers R1..R10, no hunk outside the section | TC-MEMORY-003 | Pass |
+| AC-2 | Tree shape, one index row per agent folder and per record file | TC-MEMORY-004 | Pass |
+| AC-3 | Seeds not fabricated | TC-MEMORY-005 | Pass |
+| AC-4 | Missing-agent first-capture path | TC-MEMORY-006 | Pass |
+| AC-5 | Skill frontmatter parses | TC-MEMORY-001 | Pass |
+| AC-6 | Skill inventoried, no other inventory change | TC-MEMORY-002 | Pass |
+| AC-7 | Consolidation dry-run scenarios | TC-MEMORY-007 | Pass |
+| AC-7.1 | Dedup merge unions evidence, no paraphrase | TC-MEMORY-007 | Pass |
+| AC-7.2 | Evidence-less entry demoted or dropped with reason | TC-MEMORY-007 | Pass |
+| AC-7.3 | Stale prune reason names the contradiction | TC-MEMORY-007 | Pass |
+| AC-7.4 | Cap split moves content without rewording | TC-MEMORY-007 | Pass |
+| AC-7.5 | Index rebuild, read-when hints, only matching records read | TC-MEMORY-007 | Pass |
+| AC-7.6 | Clean-tree no-op, hash unchanged | TC-MEMORY-007 | Pass |
+| AC-8 | Curator limits hold | TC-MEMORY-008 | Pass |
+| AC-9 | No conflict-free claim, evidence over recency | TC-MEMORY-009, TC-MEMORY-007 | Pass |
+| AC-10 | Reviewer independence and advisory trust | TC-MEMORY-009 | Pass |
+| AC-11 | Ids unique and never reused | TC-MEMORY-010, TC-MEMORY-014 | Pass |
+| AC-12 | Forbidden paths unchanged, no added headers | TC-MEMORY-011 | Pass |
+| AC-13 | No em or en dashes | TC-MEMORY-012 | Pass |
+| AC-14 | Existing gates stay green | TC-MEMORY-013 | Pass |
+| AC-15 | Owner or CEO merges, ticket closed, PM does not merge | TC-MEMORY-015 | Deferred to phase 11 |
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
 
@@ -198,4 +198,18 @@ No test file is created. Dry-run evidence is the step log, the report excerpt, a
 
 | TC ID | Run Date | Result | Notes |
 |---|---|---|---|
-| 001..015 | - | Not run | Populated at delivery; AC-15 evidence added at phase 11. |
+| TC-MEMORY-001 | 2026-10-31 | Pass | PyYAML `safe_load` of `SKILL.md` frontmatter: `name` is `consolidate-memory`, description is a quoted 15-word scalar, and the unquoted colon-space copy raises ScannerError (plan Phase 4 task 4.2; review-iter-1.md AC-5 row). |
+| TC-MEMORY-002 | 2026-10-31 | Pass | `.opencode/README.md` adds one `## Skills` section with one entry; no agent or command line changed (plan Phase 4 task 4.1; review-iter-1.md AC-6 row). |
+| TC-MEMORY-003 | 2026-10-31 | Pass | Rule-by-rule kernel checklist 26/26 assertions; `git diff -U0 9a70aaf..HEAD -- AGENTS.md` yields one hunk inside `## Agent memory`, additions only (plan Phase 4 task 4.1; review-iter-1.md AC-1 row). |
+| TC-MEMORY-004 | 2026-10-31 | Pass | Index coverage 4 rows for 4 agent folders and 0 record files, no stale or directory-level rows; README 150 lines, seeds 12 to 13 lines, skill 135 lines, both `.gitkeep` present (plan Phase 4 task 4.1; review-iter-1.md AC-2 row). |
+| TC-MEMORY-005 | 2026-10-31 | Pass | Seed scan reports 0 dated lesson lines and 0 invented evidence outside comments (plan Phase 4 task 4.1; review-iter-1.md AC-3 row). |
+| TC-MEMORY-006 | 2026-10-31 | Pass | Disposable `mktemp -d` dry-run created `agents/<agent>/README.md` from the template with all five parts plus exactly one index row, no other folder changed; temp tree cleaned (plan Phase 4 task 4.3). |
+| TC-MEMORY-007 | 2026-10-31 | Pass | Disposable dry-run walked AC-7.1..AC-7.6 plus the conflict scenario where the older evidence-backed claim wins; real seed hash `19e298171658acb6e225f625fa7b4ca2754117f80f99941d0170cc57fa791998` unchanged before and after (plan Phase 4 task 4.3; review-iter-1.md AC-7 row). |
+| TC-MEMORY-008 | 2026-10-31 | Pass | Curator refused the reword, the fact or decision edit, and the policy change, with reported handoffs and an unchanged target; the permitted demotion in the same tree succeeded (plan Phase 4 task 4.3; review-iter-1.md AC-8 row). |
+| TC-MEMORY-009 | 2026-10-31 | Pass | Zero conflict-free claims; evidence and current repo or spec truth decide; `reviewer`, `readiness-reviewer`, and `decision-critic` named with the advisory untrusted-data label in kernel, README, and skill (plan Phase 4 task 4.1; review-iter-1.md AC-9 and AC-10 rows). |
+| TC-MEMORY-010 | 2026-10-31 | Pass | Id scan across `lessons/` and `tacit/` found zero duplicates; duplicate and reused pruned ids rejected, valid unique fixture accepted, next free id per prefix and year allocated (plan Phase 4 task 4.3; review-iter-1.md AC-11 row). |
+| TC-MEMORY-011 | 2026-10-31 | Pass | No forbidden path in the diff; modified files limited to `AGENTS.md` and `.opencode/README.md`; license and source header scan of new memory and skill files clean (plan Phase 4 task 4.1; review-iter-1.md AC-12 row). |
+| TC-MEMORY-012 | 2026-10-31 | Pass | Dash scan of change artifacts, added diff lines, and new files returns zero U+2013 and U+2014 matches (plan Phase 4 task 4.1; review-iter-1.md AC-13 row). |
+| TC-MEMORY-013 | 2026-10-31 | Pass | `pnpm install --frozen-lockfile` and build ok; pm-notes corpus 17/17; doc distribution 81/81 with no drift; plugin drift none after the staged `.ados-claude/` diff; `git diff --check` clean (plan Phase 4 task 4.4; review-iter-1.md AC-14 row; CI `verify-claude-build`). |
+| TC-MEMORY-014 | 2026-10-31 | Pass | PyYAML parse of the promoted record sample and the quoted README template: `statement` and `applies_when` keep the colon-space text as strings and `created` stays a string (plan Phase 4 task 4.2; review-iter-1.md record-template check). |
+| TC-MEMORY-015 | 2026-10-31 | Deferred to PM phase 11 | Not Pass. AC-15 expectation recorded for phase 11: PM creates the PR to `main-tools` and does not merge; the owner or CEO merges; the ticket closes with a delivery summary. Plan task 4.5 is open and review-iter-1.md records AC-15 as PENDING; evidence to be pasted into this table at phase 11. |
