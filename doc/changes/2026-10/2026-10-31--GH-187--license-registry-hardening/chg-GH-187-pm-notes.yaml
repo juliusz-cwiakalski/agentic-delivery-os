@@ -13,14 +13,16 @@ phases:
     completed: "2026-10-31T13:56:00Z"
   specification:
     started: "2026-10-31T13:58:00Z"
-    completed: "2026-10-31T14:18:00Z"
+    completed: null
   test_planning:
     started: "2026-10-31T14:08:00Z"
-    completed: "2026-10-31T15:26:00Z"
+    completed: null
   delivery_planning:
     started: "2026-10-31T14:45:00Z"
-    completed: "2026-10-31T15:20:00Z"
-  dor_check: { started: null, completed: null }
+    completed: null
+  dor_check:
+    started: "2026-10-31T15:28:00Z"
+    completed: null
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -38,6 +40,10 @@ decisions:
   - text: "Out of scope: SBOM generation, checksums, THIRD-PARTY-NOTICES/licences bundle, and per-entry review-date governance (carried as a forward note from GH-170 but absent from the GH-187 ticket body). GH-187 covers the registry policy, deny list, fail-closed gate, and their tests; release-artifact obligations remain with M4-S3 and will be flagged at PR review."
     date: "2026-10-31"
   - text: "No new CI job: ts-license-audit already runs the audit and is binding. The change must keep ci-topology and ci-bindingness green and may not weaken any gate."
+    date: "2026-10-31"
+  - text: "DoR correction to deferral targets: release-time SBOM/checksums/provenance belongs to M4-S2 (Publication and release automation); M4-S3 covers registry completeness and public materials. GH-170 DEC-10's M0-S18 assignment of SBOM/notices is cited and superseded by the GH-187 ticket scope, not silently reassigned."
+    date: "2026-10-31"
+  - text: "DoR required decision capture for the compound-expression interpretation: DEC-3 is routed to @decision-advisor for a decision record that clarifies ADR-0003 C-2 per-branch semantics; the spec and plan reference the record and the delivery updates the current-truth docs."
     date: "2026-10-31"
 
 open_questions: []
@@ -61,5 +67,11 @@ notes:
     type: "info"
     date: "2026-10-31"
   - text: "Retro: both the plan and test plan initially stated 15 registry entries; the committed registry has 16. The downstream author caught it, but the upstream artifacts should verify counts against the source file. Similarly, test-plan counts drifted between the summary and the detailed matrix. Lesson: authoring should recount and cross-check summary counts against the detail tables before handoff."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "Phase 5 DoR iteration 1 NOT_READY (artifact readiness-review/readiness-iter-1.md). 4 blocking findings: (1) critical: no change-specific Definition of Done in the spec while the plan requires a DoD checklist; (2) major: plan/test plan say 12 pre-existing tests, live file has 13; (3) major: DEC-3 per-branch compound interpretation contradicts ADR-0003 C-2 with no decision record/amendment; (4) major: TC-LICREG-013 step 5 expects overlap+denial after removing the identifier from deny_list (impossible) and 20-vs-25 removal-count drift. Plus 6 non-blocking findings (TC-026 7-vs-13 representatives; schema/values TC count drift; SBOM milestone should be M4-S2 and must reconcile GH-170 DEC-10; preserve wrong-scope fail-closed check; stale test-plan v1.1/OQ citations; deny-list 'no accidental extras' wording). Reopened specification, test_planning, delivery_planning; delivery remains blocked. No human pause required."
+    type: "blocker"
+    date: "2026-10-31"
+  - text: "Retro: readiness review caught four real defects that the authoring chain missed, including an impossible test expectation and a binding ADR contradiction. Root cause: upstream artifacts were accepted after count corrections without a full cross-artifact consistency pass, and DEC-3 reinterpreted an ADR constraint without routing it to @decision-advisor. Lesson: any reinterpretation of a binding ADR must go through decision capture before the spec is frozen, and downstream authors must recount against live files."
     type: "retro"
     date: "2026-10-31"
