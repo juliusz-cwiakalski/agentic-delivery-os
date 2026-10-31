@@ -49,7 +49,7 @@ The plan is therefore a checklist of reproducible verification procedures (file 
 - Change specification: [chg-GH-186-spec.md](./chg-GH-186-spec.md) v1.3 — ACs in §17 (21 criteria, including AC-C10-1), hard constraints §9.1 (C-1…C-10), NFRs §9.2 (NFR-1…NFR-10), DM contracts §8.3 (DM-2 carries the v1.3 per-metric sample model), decision log §15 (DEC-1…DEC-14, including the normative corpus-ingestion rule DEC-14), Appendix A census §24.1, artifact inventory §24.2.
 - PM notes (clarify decisions, delivery mode): [chg-GH-186-pm-notes.yaml](./chg-GH-186-pm-notes.yaml).
 - Repository testing strategy: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — docs → static/diff + content checks; `git diff --check`; evidence recorded in change artifacts.
-- Implementation plan: [chg-GH-186-plan.md](./chg-GH-186-plan.md) — the plan's PD-3/PD-4 corpus pins, PD-5 recorded-row rounding, and Phase-6 measurement procedure are the delivery counterpart of this plan's recompute checks; where PD-4 still names the retired global `changes_parsed`/`changes_included`/`changes_excluded` counters, spec v1.3 DM-2 (per-metric `spine_*`/`metric_*` sample counters) is authoritative. This plan remains spec-derived and TC numbering is independent of the plan's phase numbering.
+- Implementation plan: [chg-GH-186-plan.md](./chg-GH-186-plan.md) — the plan's PD-3/PD-4 corpus pins, PD-5 recorded-row rounding, and Phase-6 measurement procedure are the delivery counterpart of this plan's recompute checks; spec v1.3 DM-2 is authoritative for the sample model and PD-4 mirrors it (shared `spine_*` counters plus per-metric `metric_*` counters and `metric_excluded_changes`). This plan remains spec-derived and TC numbering is independent of the plan's phase numbering.
 - Corpus-exclusion precedent: [tests/fixtures/pm-notes/corpus-exclusions.json](../../../../tests/fixtures/pm-notes/corpus-exclusions.json) — the manifest naming the single known-unparseable historical pm-notes artifact (GH-171); the baseline mirrors it with `unparseable_yaml` and does not edit it.
 - Guard entry points actually present in the repository:
   - `bash scripts/.tests/test-doc-distribution.sh` and `bash scripts/.tests/test-doc-distribution-modes.sh` (CI job `doc-distribution-guard`, [.github/workflows/ci.yml](../../../../.github/workflows/ci.yml)).
@@ -832,7 +832,7 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
    Record the banner date and confirm it matches the lock date stated in ODR-0003.
 4. Assert the pre-lock introduction sentence is replaced by the ODR-0003 statement:
    ```bash
-   rg -n 'via a decision record or the man-page v1 acceptance' \
+   rg -n -U 'via a decision record or the\s+man-page v1 acceptance' \
      doc/planning/oss-tooling/cli-command-registry.md ; echo "old-intro-exit=$?"   # expect 1
    rg -n 'ODR-0003' doc/planning/oss-tooling/cli-command-registry.md
    ```
@@ -894,7 +894,7 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
 6. Assert the `provider-quota` adapters subpath and its package manifest are untouched:
    ```bash
    git diff --exit-code "$BASE"...HEAD -- packages/adapters/package.json
-   rg -n 'provider-quota' doc/planning/oss-tooling/cli-command-registry.md
+   rg -n 'provider-quota' doc/decisions/ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md
    ```
 
 **Expected Outcome**:
@@ -1636,7 +1636,7 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
    - `PARTIAL` ⇒ `value` is non-null, sample counts reported, and the excluded/limited part stated in `limitation` (not presented as complete).
    - `MEASURED` ⇒ `value` is non-null, coverage complete for the definition, `missing_source` absent/`null`.
    - A **time metric** (`MET-CEREMONY-SHARE`, `MET-CYCLE-TIME`) whose corpus contains an `unparseable_yaml` or `placeholder_zero_time` change cannot be `MEASURED`; it must be `PARTIAL` and report the excluded count. Assert zero time metrics are `MEASURED` over such a corpus (spec KPI).
-3. Assert no zero/absent denominator is reported as a measured `0`: `denominator == 0` (or null) must force `UNAVAILABLE` (or a non-numeric status), never `value: 0`.
+3. Assert no zero/absent denominator is reported as a measured `0`: for a **ratio** metric (`unit: ratio`), `denominator == 0` (or null) must force `UNAVAILABLE` (or a non-numeric status), never `value: 0`. Count metrics (e.g. `MET-FALSE-SIGNAL-INCIDENTS`) legitimately have no denominator and are governed by the empty-sample rule.
 4. Assert no estimate-shaped numeric fields exist:
    ```bash
    rg -n 'estimate|interpolat|assum(ed|ption_value)|proxy_value' doc/planning/oss-tooling/measurement-baseline.yaml ; echo "estimate-exit=$?"   # hits must be explanatory text only
@@ -2146,10 +2146,12 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
    import json
    base=json.load(open('/tmp/forbidden.registry.base.json'))
    head=json.load(open('scripts/checks/forbidden-literals.registry.json'))
-   expected={
-       "doc/planning/oss-tooling/measurement-baseline.yaml",
-       "doc/spec/features/feature-measurement-baseline.md",
-   }
+   import os
+   # Phase-aware expected set: before the doc-sync commit only the YAML exists; after it,
+   # both docs are registered. A feature spec must never be pre-registered (PD-1).
+   expected={"doc/planning/oss-tooling/measurement-baseline.yaml"}
+   if os.path.exists("doc/spec/features/feature-measurement-baseline.md"):
+       expected.add("doc/spec/features/feature-measurement-baseline.md")
    added=set(head["registered"])-set(base["registered"])
    removed=set(base["registered"])-set(head["registered"])
    assert added==expected, sorted(added)
