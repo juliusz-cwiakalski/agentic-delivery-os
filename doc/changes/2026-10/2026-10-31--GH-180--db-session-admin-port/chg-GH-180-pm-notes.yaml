@@ -5,7 +5,7 @@ story_code: M0-S11
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-10-31T13:52:00Z", completed: "2026-10-31T18:50:00Z", stopped: "2026-10-31T13:56:00Z (blocking open questions: prototype surface absent)", resumed: "2026-10-31T18:32:00Z (CEO resume: merge origin/main-tools @ b31ec47, proceed on the documented fallback)" }
-  specification: { started: null, completed: null }
+  specification: { started: "2026-10-31T18:55:00Z", completed: "2026-10-31T19:20:00Z", iterations: "iter-1 — chg-GH-180-spec.md 629 lines; 18 ACs (AC-D1..AC-D18); 11 decisions (DEC-D1..DEC-D11); no blocking open questions" }
   test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
@@ -40,7 +40,7 @@ notes:
   - text: "Cross-check vs current system docs: ADR-0003 DEC-6/C-11 defines SessionStore as read-only, metadata-only access to foreign session databases for db administration and requires an explicit privacy sign-off before the db engine ships. The adapters ./session subpath is a types-only stub. The CLI composes command definitions through an injected program (no bin entry), so M0-S11 adds a db command definition plus edge wiring. The opencode session DB is currently read only through `opencode db` / `opencode session list` in scripts/pm-liveness.sh and scripts/ceo-loop.sh; no prune or reboot helper exists in repo history."
     type: "info"
     date: "2026-10-31"
-  - text: "Live environment facts established read-only for the spec: opencode 1.19.3; DB `/home/juliusz/.local/share/opencode/opencode.db` (~120 GiB, WAL mode, 19.8 MB WAL); 6,882 sessions (6,431 child sessions, 0 archived); 209k messages; oldest session ~19 days (2026-10-12), newest 2026-10-31; 23 sessions active in the last 15 minutes; `session_input`, `session_context_epoch`, and `control_account` empty. `opencode session delete <id>` is the only deletion command; `PRAGMA foreign_keys=1`; no triggers; session.parent_id has no FK; event_sequence/event are not session-FK-cascaded. `opencode db` accepts multi-statement input but returns [] for multi-statement, so a typed single-query path is required."
+  - text: "Live environment facts established read-only for the spec: opencode 1.19.3; DB path is runtime-resolved under the harness data directory (`<data-dir>/opencode/opencode.db`, not committed) (~120 GiB, WAL mode, 19.8 MB WAL); 6,882 sessions (6,431 child sessions, 0 archived); 209k messages; oldest session ~19 days (2026-10-12), newest 2026-10-31; 23 sessions active in the last 15 minutes; `session_input`, `session_context_epoch`, and `control_account` empty. `opencode session delete <id>` is the only deletion command; `PRAGMA foreign_keys=1`; no triggers; session.parent_id has no FK; event_sequence/event are not session-FK-cascaded. `opencode db` accepts multi-statement input but returns [] for multi-statement, so a typed single-query path is required."
     type: "info"
     date: "2026-10-31"
   - text: "Ticket metadata gaps: the Dependencies line reads 'M0-S1, M0-S3..' with a trailing '..', the issue carried no `change` label (now added), and the referenced prototype is missing. The prototype gap is resolved by the recorded fallback, not by a discovered source."
