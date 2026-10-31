@@ -54,13 +54,13 @@ generation appends nothing; a changed cause or expiry appends one new record.
 
 ## Fail-loud rule
 
-The legacy hook warned and proceeded when quota could not be determined. This
-engine does not: every transport, HTTP, envelope, parse, auth, or credential
-failure produces a structured announcement plus a park or a classified error.
-The re-evaluation loop cap parks instead of proceeding. An exhausted quota with
-no honest reset fails loud as `provider.quota.exceeded` rather than fabricating
-a resume time. A skipped entry's outage stays announced and parked so it remains
-visible when another entry serves the chain.
+An indeterminate availability verdict is never treated as clear. Every
+transport, HTTP, envelope, parse, auth, or credential failure produces a
+structured announcement plus a park or a classified error. The re-evaluation
+loop cap parks instead of proceeding. An exhausted quota with no honest reset
+fails loud as `provider.quota.exceeded` rather than fabricating a resume time. A
+skipped entry's outage stays announced and parked so it remains visible when
+another entry serves the chain.
 
 ## Announcement vocabulary
 
@@ -77,7 +77,8 @@ authorization header, credential value, or endpoint userinfo is retained.
 ## Configuration
 
 Provider descriptors, credential references, and chains are declared under the
-`provider` configuration branch. The field-level required/optional/default
-contract is owned by the change specification's Appendix B; this guide does not
-duplicate it. The shipped descriptor is overridable, and a fresh installation
-ships no enabled chain, so a resolve fails closed until an operator declares one.
+`provider` configuration branch. The field-level contract, shipped defaults, and
+evaluation semantics are documented in the provider engine specification
+(`doc/spec/features/feature-provider-engine.md`); this guide does not duplicate
+them. The shipped descriptor is overridable, and a fresh installation ships no
+enabled chain, so a resolve fails closed until an operator declares one.

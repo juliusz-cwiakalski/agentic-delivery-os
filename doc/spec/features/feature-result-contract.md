@@ -5,9 +5,9 @@ created: 2026-10-30
 last_updated: 2026-10-31
 owners: ["engineering"]
 service: delivery-os
-summary: "The command-surface result contract: the CommandResult envelope in core ./contracts, the machine-readable error table as the single source of failure identity including the lint rows for pm-notes conformance, the domain-kind to app-error-code to projection classification chain, the standalone CLI {0, 1, 2} exit projection, the deterministic in-process runCli surface, the two-entry fallback containment, the serialization redaction chokepoint, the testkit conformance validator, and the binding docs/code sync and exit-literal invariants."
+summary: "The command-surface result contract: the CommandResult envelope in core ./contracts, the machine-readable error table as the single source of failure identity including the five provider-engine rows and the lint rows for pm-notes conformance, the domain-kind to app-error-code to projection classification chain with exact-code provider classification, the standalone CLI {0, 1, 2} exit projection, the deterministic in-process runCli surface, the two-entry fallback containment, the serialization redaction chokepoint, the testkit conformance validator, and the binding docs/code sync and exit-literal invariants."
 links:
-  related_changes: ["GH-172", "GH-173", "GH-174", "GH-179", "GH-181"]
+  related_changes: ["GH-172", "GH-173", "GH-174", "GH-179", "GH-181", "GH-182"]
   related_decisions: ["ADR-0003"]
 ---
 
@@ -248,6 +248,7 @@ The result surface itself adds no runtime dependency or new CI job. Configuratio
 - **Depends on** the monorepo scaffold ([feature-monorepo-scaffold-toolchain.md](feature-monorepo-scaffold-toolchain.md)) for package tiers, boundary enforcement, the ambient guard, and the aggregate check.
 - **Depends on** the branding seam ([feature-branding-seam.md](feature-branding-seam.md)) for `BrandIdentity` parameter discipline and the forbidden-literal scan.
 - **Consumed by** the configuration layer ([feature-config-layer.md](feature-config-layer.md)) for envelope, error identity and the sole redaction path.
+- **Consumed by** the provider engine ([feature-provider-engine.md](feature-provider-engine.md)) for the five provider identities, exact-code provider classification, announcement-code-bearing error summaries, and envelope rendering.
 - **Consumed by** pm-notes lint and phase transitions ([feature-pm-notes-lint-and-phase-transitions.md](feature-pm-notes-lint-and-phase-transitions.md)) for the five `lint` identities, exit projection, and envelope rendering.
 - **Consumed by** the adapter port substrate ([feature-adapter-ports.md](feature-adapter-ports.md)) for the `config.credential.missing` credential-failure identity and the redaction boundary.
 - **Depends on** [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md) for runtime-neutral contract placement, package boundaries, and gate stability.

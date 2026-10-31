@@ -6,11 +6,9 @@ created: 2026-10-30
 last_updated: 2026-10-31
 owners: ["engineering"]
 service: delivery-os
-summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the binding secret-read boundary invariant, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec and visible graceful degradation."
+summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec and visible graceful degradation."
 links:
-  related_changes: ["GH-174", "GH-179", "GH-181"]
-  related_decisions: ["ADR-0003"]
-  related_changes: ["GH-174", "GH-181", "GH-188"]
+  related_changes: ["GH-174", "GH-179", "GH-181", "GH-188", "GH-182"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006"]
 ---
 
@@ -26,7 +24,7 @@ Secret acquisition is centralized behind one `CredentialPort` in core. A caller 
 
 The embedded metadata envelope v1 is a versioned data contract in core `./contracts` (`delivery.metadata.v1`). Its pure codec — serialize, parse, strip — is an adapter-internal shared module. The envelope travels in an adapter-declared carrier, round-trips with logical payload equality, and degrades visibly instead of failing when metadata is absent, malformed, of the wrong kind, or of an unknown version.
 
-The surrounding workspace is described in [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md); the client seeds that consume this substrate in [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md); the failure identity and redaction boundary in [Result Contract and Error Table](feature-result-contract.md); environment-only secrets and configuration acquisition in [Configuration Layer and Inspection](feature-config-layer.md); brand-derived values in [Branding Seam and Working Name](feature-branding-seam.md). Package placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
+The surrounding workspace is described in [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md); the provider engine that consumes the credential port for quota authorization in [Provider Engine](feature-provider-engine.md); the client seeds that consume this substrate in [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md); the failure identity and redaction boundary in [Result Contract and Error Table](feature-result-contract.md); environment-only secrets and configuration acquisition in [Configuration Layer and Inspection](feature-config-layer.md); brand-derived values in [Branding Seam and Working Name](feature-branding-seam.md). Package placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 
 ## Business Context
 
@@ -85,6 +83,12 @@ The mapping is declared data, never guessed from an external system's name. Reso
 
 The environment-backed implementation is `createEnvironmentCredentialPort({ environment, brand })`, where the environment record is injected. `createProcessCredentialPort(brand)` is the production wrapper that supplies the process environment. The port exposes no mode flag, so the future credential sidecar becomes a second implementation: adapters forward operations to the sidecar over local transport instead of executing with local credentials, and the interface does not change. No sidecar or forwarded-execution code exists.
 
+### Provider quota authorization
+
+The provider engine authorizes quota requests only through `CredentialPort`. It resolves the descriptor's declared `credentialRef` to material at use time and hands that material once to the quota transport for one request; the transport builds the authorization header in memory and stores nothing. Material is never cached, logged, persisted, or returned in evidence.
+
+A missing or unresolvable reference parks the provider with cause `credential-missing` and failure class `config.credential.missing`; no fetch is attempted. HTTP 401/403 parks it with cause `credential-rejected`; a non-mutating quota command surfaces the `provider.auth.rejected` identity. Transport, non-auth HTTP, envelope, and parse failures become `provider-outage` parks. The provider core, the CLI provider command, and the `./provider-quota` transport add zero secret-read allowlist entries. The engine's park and announcement vocabulary is documented in [Provider Engine](feature-provider-engine.md).
+
 ### Secret-read boundary
 
 `scripts/checks/secret-read-boundary.ts` is an AST invariant over every workspace package production source (`packages/<pkg>/src/**` TypeScript, excluding `dist` and `node_modules`). It names the rule, file, and line for each ambient environment access outside an enumerated allowlist and is fail-closed and non-vacuous: an empty scope fails, and every allowlisted path must exist with a reason.
@@ -98,7 +102,7 @@ The v1 allowlist has exactly four entries:
 | file | `packages/adapters/src/file/yaml-parser.ts` | `configuration-environment-source` | The file-tier parser host-switch guard. |
 | file | `packages/adapters/src/legacy/index.ts` | `configuration-environment-source` | The legacy-name adapter environment reader. |
 
-Exactly one entry may carry the `credential-material` class, and it must be the credential implementation directory. Wildcards, prefixes, absolute paths, trailing separators, duplicate paths, and reasonless entries fail registry validation. Allowlist growth is a reviewed change.
+Exactly one entry may carry the `credential-material` class, and it must be the credential implementation directory. Wildcards, prefixes, absolute paths, trailing separators, duplicate paths, and reasonless entries fail registry validation. Allowlist growth is a reviewed change. The provider engine adds no entry: its core policy and CLI command read no ambient environment, and its quota transport receives credential material as data.
 
 The invariant detects `process.env`, `Bun.env`, and `Deno.env` property reads; element access to `env` or an ambient global by string-literal key; element access with a computed or template-literal key on `process`, `Bun`, `Deno`, or `globalThis`; runtime imports of `process` or `bun`; and aliased ambient globals. A non-literal key cannot be resolved statically, so it fails closed by name instead of being silently accepted. Identifier positions such as property names, import specifiers, and type declarations are ignored. Negative fixtures cover the literal, computed-key, and template-key forms. The invariant runs as a stage of `check:boundaries` and as a binding step in the CI `ts-invariants` job; no advisory or bypass construct is accepted.
 
@@ -171,8 +175,11 @@ An unresolvable credential carries the synchronized error-table row `config.cred
 | `packages/core/src/contracts/adapter-capabilities.ts` | `ADAPTER_OPERATIONS`, `CARRIER_KINDS`, capability/gap types, and declared-carrier selection types. |
 | `packages/core/src/contracts/credentials.ts` | `CredentialPort`, `CredentialReference`, `CredentialSourceKey`, resolution result, and the reified missing-credential failure. |
 | `packages/core/src/contracts/envelope.ts` | Envelope schema id, size bound, kinds, closed payload types, degradation reasons, and agent-facing comment views. |
-| `packages/core/src/contracts/index.ts` | The `core ./contracts` export surface for the ports, capability, credential, and envelope contracts. |
+| `packages/core/src/contracts/index.ts` | The `core ./contracts` export surface for the ports, capability, credential, provider, and envelope contracts. |
+| `packages/core/src/contracts/provider.ts` | Provider descriptors, conditions, parks, announcements, decisions, skip reasons, error codes, and the quota transport contract. |
+| `packages/core/src/provider/**` | Pure provider validation, chain resolution, peak/quota evaluation, park/announcement projection, and re-evaluation loop. |
 | `packages/adapters/src/credentials/index.ts` | Environment-backed credential port, injected-environment factory, production process-environment wrapper, and source-key derivation. |
+| `packages/adapters/src/provider-quota/index.ts` | Injectable quota transport and native-fetch production wrapper at the declared `./provider-quota` subpath. |
 | `packages/adapters/src/io/envelope-codec.ts` | Pure envelope codec: serialize, parse, strip, closed-payload validation, raw-carrier escape hatch, and carrier constants. |
 | `packages/adapters/src/io/index.ts` | Internal `#io/*` alias target re-exporting the codec. |
 | `packages/adapters/src/file/pm-notes-parser.ts` | pm-notes file edge: locates a change ref's committed notes under the change-artifact convention, parses YAML 1.2 core with bounded size/nodes/depth/aliases, and stages in-memory phase-entry edits; runtime file access stays at the adapter I/O edge. |
@@ -206,7 +213,7 @@ Version policy: v1 is the only schema version, so any version string outside the
 ## Security and Boundaries
 
 - Secret material is reachable only through the credential port. The environment-backed implementation is the sole `credential-material` allowlist entry.
-- The secret-read boundary closes the ambient channel that runtime-API confinement does not cover. Runtime-API confinement admits the `core` state driver edge (`packages/core/src/state/driver/`), the adapters I/O subpaths `repo`, `file`, `host`, `session`, `legacy`, and `credentials`, the provider client subpaths `github`, `gitlab`, and `jira` as exact, reason-bearing entries per ADR-0005, and the `cli` build and `opencode` host integration. The provider registry subpath and the remaining adapter subpaths stay non-I/O; the credential subpath is the only one that may resolve secret material.
+- The secret-read boundary closes the ambient channel that runtime-API confinement does not cover. Runtime-API confinement admits the `core` state driver edge (`packages/core/src/state/driver/`), the adapters I/O subpaths `repo`, `file`, `host`, `session`, `legacy`, and `credentials`, the provider client subpaths `github`, `gitlab`, and `jira`, and the provider quota transport `provider-quota`, all as exact, reason-bearing entries per the ADR-0005 reviewed-allowance precedent; it also admits the `cli` build and `opencode` host integration. The provider core tier is runtime-neutral, the provider registry subpath and the remaining adapter subpaths stay non-I/O, and the credential subpath is the only one that may resolve secret material.
 - Resolved material never enters diagnostics, logs, error payloads, or metadata; the existing redaction chokepoint governs any surfaced payload.
 - The envelope payload is closed, compact, size-bounded, and secret-free; carrier markers and namespaces use brand-neutral constants with no committed product token.
 - Capability data is declarative; enforcement of undeclared operations belongs to adapter implementations consulting the flags.
@@ -252,7 +259,7 @@ Capability flags and gap records are inspectable data. Degradation evidence name
 - **Depends on** the result contract for the error table, classification chain, projection, and redaction chokepoint.
 - **Depends on** the configuration layer for the environment-only secrets precedent and environment facts as injected adapter data.
 - **Depends on** the branding seam for environment-prefixed source keys and brand-neutral constants.
-- **Consumed by** the provider engine, the tracker, VCS, and CI adapters, and the delivered client seeds at `adapters ./jira`, `adapters ./gitlab`, and `adapters ./github`.
+- **Consumed by** the provider engine ([Provider Engine](feature-provider-engine.md)) for credential-port-only quota authorization, the tracker, VCS, and CI adapters, and the delivered client seeds at `adapters ./jira`, `adapters ./gitlab`, and `adapters ./github`.
 - **Risk — contract churn:** The first real adapters may reveal port-shape gaps. Mitigation: contracts derive from the catalogue's semantic rows, evolution is additive within v1, and a decision record governs adapter-contract changes. The first additive round executed under ADR-0004 (optional `updatedAt`) and ADR-0006 (optional `comments`); further evolutions stay additive within v1 and remain decision-record governed.
 - **Risk — allowlist erosion:** Credential reads could migrate into allowlisted configuration readers. Mitigation: reason-bearing entries, exact paths, mutation tests, and non-vacuity checks.
 - **Risk — carrier mangling:** Providers may reformat or strip carriers. Mitigation: graceful degradation with visible evidence and a compact-marker fallback carrier.
@@ -267,6 +274,7 @@ Capability flags and gap records are inspectable data. Degradation evidence name
 | Gap record | An adapter's explicit declaration that it does not support a capability; parity is never implied. |
 | Credential reference | A declared mapping from an external system's auth method to its source key; resolved only through the credential port. |
 | Secret-read boundary | The mechanically enforced property that ambient secret acquisition occurs only in the enumerated allowlist. |
+| Quota transport | The injectable provider quota request edge at `adapters ./provider-quota`: one bounded GET, in-memory authorization header, no credential storage. |
 | Metadata envelope | The versioned `delivery.metadata.v1` data contract embedded in provider artifacts by adapters. |
 | Carrier | The adapter-chosen, capability-flagged form the envelope takes inside a provider artifact. |
 | Graceful degradation | Heuristic fallback with visible degradation evidence, never a flow failure. |
@@ -275,3 +283,4 @@ See also: [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.
 
 **Change record:** `doc/changes/2026-10/2026-10-30--GH-181--primitive-ports-credential-metadata/`.
 **Contract-extension change record:** `doc/changes/2026-10/2026-10-31--GH-188--client-seeds-trap-catalogs/`.
+**Provider engine change record:** `doc/changes/2026-10/2026-10-31--GH-182--provider-v1/`.
