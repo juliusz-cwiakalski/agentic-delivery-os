@@ -1,8 +1,8 @@
 ---
 id: chg-GH-189-test-plan
-status: Proposed
+status: Updated
 created: 2026-10-31T19:20:00Z
-last_updated: 2026-10-31T19:20:00Z
+last_updated: 2026-10-31T20:30:00Z
 owners: [engineering]
 service: delivery-os provider adapters
 labels: [change, planning]
@@ -37,14 +37,14 @@ Protect the first provider-agnostic conformance contract: every shipped provider
 - No provider write adapters and no full GitHub adapter (NG-2, M3-S3).
 - No core-contract, package, subpath, dependency, export-map, or `ci.yml` job change (NG-3, NG-4).
 - The live tier is evidence-only and is not a merge gate; a failed live run does not create a tracker ticket in v1 (NG-5, DEC-5).
-- No tenant-provisioning automation; tenants remain manual and the live run records `not-configured` until the documented settings exist (NG-6, DEC-12).
+- No tenant-provisioning automation; tenants remain manual and the live run records `not-configured` until the documented settings exist (NG-6, DEC-12). A provider counts as configured only when every documented non-secret setting and its token source key are present and non-empty (non-whitespace); the present-but-empty GitHub Actions no-tenant shape is `not-configured`, not a failure.
 - No conformance coverage for `azure`/`ci` placeholders, the provider registry, or non-provider I/O adapters (NG-7, DEC-1).
-- The implementation plan is absent at authoring time. When `chg-GH-189-plan.md` lands, reconcile file locations and commands only; every TC ID and AC trace is preserved.
+- The implementation plan exists (v1.1) and is the authority for exact file locations, flag spelling, and command names; this plan keeps every TC ID and AC trace and defers only those delivery-defined details (see §8.3).
 - AC-F8-1's "bounded provider, flow, and step counts" has no numeric cap in the spec. The plan tests the mechanism (validator-declared finite caps, rejection of over-cap synthetic reports) and the explicit 256 KiB bound; the concrete numbers are delivery-defined and recorded as OQ-A. No AC is blocked by this.
 
 ## 2. References
 
-- [Change specification](./chg-GH-189-spec.md) v1.0, especially §§4 (G-1 to G-9), 5 (F-1 to F-10), 6 (flows), 7 (scope), 8.3 (DM-1 to DM-8), 8.4 (live tenants), 9 (NFR-1 to NFR-9), 11 (RSK-1 to RSK-10), 15 (DEC-1 to DEC-15), 17 (22 ACs), 18 (Definition of Done), 22 (tenant variable names), and 24 (operation coverage matrix and artifact shape).
+- [Change specification](./chg-GH-189-spec.md) v1.1, especially §§4 (G-1 to G-9), 5 (F-1 to F-10), 6 (flows), 7 (scope), 8.3 (DM-1 to DM-8), 8.4 (live tenants), 9 (NFR-1 to NFR-9), 11 (RSK-1 to RSK-10), 15 (DEC-1 to DEC-15), 17 (22 ACs), 18 (Definition of Done), 22 (tenant variable names and the non-empty configured decision), and 24 (operation coverage matrix and normative artifact shape).
 - [Ticket GH-189](https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/189): three ticket ACs (mock suite green for every shipped adapter; scheduled live run records a result artifact; an adapter change that breaks a flow fails CI).
 - [Adapter conformance concept](../../../planning/concepts/adapter-conformance.md) — flow families, mock/live tiers, guardrails.
 - [Feature: Adapter ports, credential resolution, and embedded metadata](../../../spec/features/feature-adapter-ports.md) — primitive views, capability/gap contract, credential port, secret-read boundary, quality strategy.
@@ -281,22 +281,26 @@ The exact reasons come from the shipped contracts: GitHub gaps all `adapter-not-
 
 **Preconditions**:
 
-- The scan reads the adapters package source and finds exported `*_ADAPTER_CONTRACT` bindings.
+- Provider contracts are declared as `export const GITHUB_ADAPTER_CONTRACT`, `GITLAB_ADAPTER_CONTRACT`, and `JIRA_ADAPTER_CONTRACT` in `packages/adapters/src/{github,gitlab,jira}/capabilities.ts`, and each provider subpath `index.ts` re-exports the same symbol.
+- The scan counts **declarations only**: it matches `export const *_ADAPTER_CONTRACT` declarations and dedupes by adapter directory (equivalently by adapter name). A re-export in an `index.ts` is not a declaration and never adds an occurrence.
 - The scan accepts a root parameter so negative controls can use a temp tree.
 
 **Steps**:
 
-1. On the live tree, assert every exported provider `*_ADAPTER_CONTRACT` source has a matching conformance registration, and every registration names a matching contract.
-2. Create a temp adapters tree with a new `packages/adapters/src/example/capabilities.ts` exporting `EXAMPLE_ADAPTER_CONTRACT`; assert the gate fails naming the source file and `example` adapter.
-3. Create a temp registration naming a contract that does not exist; assert the gate fails naming the registration and the missing contract.
-4. Assert the scan ignores non-provider I/O subpaths and placeholder modules that expose no `*_ADAPTER_CONTRACT` export.
-5. Assert the live scan is non-vacuous: it finds exactly the three known contracts and at least one source file.
+1. On the live tree, assert the scan finds exactly three `*_ADAPTER_CONTRACT` declarations — one per `github`, `gitlab`, and `jira` `capabilities.ts` — and no fourth declaration anywhere under the adapters source.
+2. Assert the same-symbol re-export in each provider `index.ts` contributes zero occurrences (a raw text count of the symbol yields six; the scan reports three after declaration matching and per-directory dedupe).
+3. Assert every declaration has a matching conformance registration and every registration names a matching declared contract.
+4. Create a temp adapters tree with a new `packages/adapters/src/example/capabilities.ts` exporting `EXAMPLE_ADAPTER_CONTRACT` (also re-exported from `example/index.ts`); assert the gate fails naming the source file and `example` adapter, and the declaration count becomes four.
+5. Create a temp tree whose `example` subpath only re-exports a symbol from elsewhere (`index.ts`-only): assert the scan still reports three declarations and does not fail, because a re-export is not a declaration.
+6. Create a temp registration naming a contract that does not exist; assert the gate fails naming the registration and the missing contract.
+7. Assert the scan ignores non-provider I/O subpaths and placeholder modules that expose no `*_ADAPTER_CONTRACT` declaration.
+8. Assert the live scan is non-vacuous: it finds exactly the three known declarations, from three distinct declaring files.
 
 **Expected Outcome**:
 
-- A new provider contract without registration fails structurally before review can waive it.
-- A dangling registration fails by name.
-- Non-provider modules do not create false positives.
+- The declaration-only scan finds exactly three contracts, so the six raw symbol occurrences do not produce a false count.
+- A new provider contract declaration without registration fails structurally before review can waive it; an `index.ts`-only re-export does not count.
+- A dangling registration fails by name; non-provider modules do not create false positives.
 
 #### TC-CONF-004 - Structural step and carrier coverage per adapter
 
@@ -725,14 +729,18 @@ The exact reasons come from the shipped contracts: GitHub gaps all `adapter-not-
 **Steps**:
 
 1. Serialize the mock report and assert `schema === "delivery.conformance.v1"` and the required top-level fields: `runId`, `tier`, `generatedAt`, `status`, `providers`, `flows`, `steps`, `mutationRequests`, `createdArtifacts`, `totals`.
-2. Assert each provider entry has provider name, adapter name, status, missing-setting names, and flows; each flow entry has flow id, name, status, and steps; each step entry has step id, operation, status, skip reason, assertion count, and optional failure.
-3. Assert status values are members of the schema's closed sets and timestamps are ISO-8601 UTC.
-4. Assert an unknown schema version, a missing required array, an invalid status, and a missing mutation counter are each rejected naming the field.
-5. Assert the mock report and a persisted live artifact validate through the same validator and shape.
+2. Assert each `providers[]` entry carries `provider`, `adapterName`, `status`, missing-setting names, and `flows[]`; assert each `providers[].flows[]` entry is a **flow summary only**, carrying exactly `flowId`, `name`, and `status`, with no `steps` array.
+3. Assert top-level `flows[]` carries the canonical per-flow results: one entry per provider × flow, each with `provider`, `flowId`, `name`, `status`, and an ordered nested `steps[]`. Assert the nested `steps[]` is the only place steps are nested; step order equals registry order.
+4. Assert top-level `steps[]` is a flat index of the same step results as the nested arrays (same step ids and statuses across both views), each entry carrying `stepId`, `operation`, `status`, `skipReason`, `skipKind`, `assertionCount`, and optional `failure`.
+5. Assert every skipped step carries a `skipKind` from the closed set `declared-gap`, `capability-absent`, `live-read-only`; assert the validator rejects a missing `skipKind` on a skipped step and any value outside the set, naming the step and field.
+6. Assert status values are members of the schema's closed sets and timestamps are ISO-8601 UTC.
+7. Assert an unknown schema version, a missing required array, an invalid status, and a missing mutation counter are each rejected naming the field; also assert a `providers[].flows[]` entry carrying `steps` is rejected as a non-summary shape.
+8. Assert the mock report and a persisted live artifact validate through the same validator and shape.
 
 **Expected Outcome**:
 
-- The mock and live tiers share one versioned artifact contract.
+- The mock and live tiers share one versioned artifact contract with unambiguous shape: `providers[].flows[]` are summaries, canonical per-flow results with nested `steps[]` live in top-level `flows[]`, and `steps[]` is their flat index.
+- Skipped steps are machine-distinguishable through the closed `skipKind` set alongside `skipReason`.
 - Malformed artifacts fail by field name rather than being silently accepted.
 
 #### TC-CONF-019 - Artifact bounds and redaction
@@ -808,21 +816,27 @@ The exact reasons come from the shipped contracts: GitHub gaps all `adapter-not-
 
 **Preconditions**:
 
-- All documented `CONFORMANCE_LIVE_*` names are absent from the injected environment.
-- The documented names are the GitHub six settings plus token, the GitLab four settings plus token, and the Jira three settings plus token.
+- The injected environment record is the only configuration input; it is a `Record<string, string | undefined>` so a key can be absent, present with `""`, or present with whitespace.
+- The documented names total 15: GitHub 7 (six settings plus the token source key), GitLab 5 (four settings plus the token source key), and Jira 3 (two settings plus the token source key). Jira's non-secret settings are `CONFORMANCE_LIVE_JIRA_BASE_URL` and `CONFORMANCE_LIVE_JIRA_ISSUE_KEY`.
+- **"Configured" definition:** a provider is configured only when every one of its documented non-secret settings is present AND non-empty (non-whitespace) and its token source key is present AND non-empty (non-whitespace) in the injected environment record. `undefined`, `""`, and whitespace-only values are MISSING.
+- Three environment shapes are exercised: (A) all 15 names absent, (B) all 15 names present with `""` — the real GitHub Actions no-tenant shape, where an unset repository variable or secret materialises as a present empty-string key — and (C) all 15 names present with whitespace-only values.
 
 **Steps**:
 
-1. Run the entrypoint composition with an empty environment; assert all three providers are `not-configured`, overall is `not-configured`, and the exit code is `0`.
-2. Assert the artifact lists, per provider, every missing variable name and never a value.
-3. Spawn `bun run tests/conformance/live/run-live.ts --out "$TMPDIR/conformance-live.json"` with the documented names unset; assert process exit `0` and a valid artifact file at the output path.
-4. Assert no provider request was attempted and no credential was resolved in the not-configured path.
-5. Assert the artifact is still uploaded by the workflow contract test (TC-CONF-026).
+1. Absent-keys case: run the composition with an environment where all 15 documented names are absent; assert all three providers are `not-configured`, overall is `not-configured`, and the exit code is `0`.
+2. Present-but-empty case: build an environment where all 15 documented names are PRESENT with `""` (the GitHub Actions no-tenant shape) and run the composition; assert all three providers are `not-configured`, overall is `not-configured`, and the exit code is `0`.
+3. Whitespace-only case: build an environment where the non-secret settings and the three token source keys are present with whitespace-only values (`" "`, `"\t"`); assert they are treated as MISSING, all three providers are `not-configured`, and the exit code is `0`.
+4. For cases A, B, and C, assert the artifact lists exactly the 15 missing names — GitHub 7, GitLab 5, Jira 3 — per provider, and never a value.
+5. Assert no credential was resolved and no provider request was attempted in any of the three not-configured shapes; the recording transport is empty and the recording credential port records zero lookups.
+6. Occupancy case: supply all 15 names with non-empty (non-whitespace) values; assert all three providers are classified configured and the run is no longer `not-configured`. Then blank a single GitHub setting and assert only GitHub returns to `not-configured` with exactly its 7 names, proving the decision is per provider and occupancy-based.
+7. Spawn `bun run tests/conformance/live/run-live.ts --out "$TMPDIR/conformance-live.json"` with the documented names unset; assert process exit `0` and a valid artifact file at the output path.
+8. Assert the artifact is still uploaded by the workflow contract test (TC-CONF-026).
 
 **Expected Outcome**:
 
-- A run before tenants exist is a clean no-false-alarm `not-configured` with an artifact and exit `0`.
-- Missing names are actionable without exposing values.
+- A run before tenants exist is a clean no-false-alarm `not-configured` with an artifact and exit `0`, including the real GitHub Actions present-but-empty shape and whitespace-only values.
+- Missing names are exact and actionable (15 names: 7 + 5 + 3) without exposing values, and no credential or provider request is made in the not-configured path.
+- Occupancy is evaluated per provider, so one blank name demotes only its own provider.
 
 #### TC-CONF-022 - Configured-provider live failure
 
@@ -837,7 +851,7 @@ The exact reasons come from the shipped contracts: GitHub gaps all `adapter-not-
 
 **Preconditions**:
 
-- All GitHub settings and its token source key are present; the GitLab and Jira settings are absent.
+- All GitHub settings and its token source key are present with non-empty (non-whitespace) values, so GitHub is configured; the GitLab and Jira names are absent or present-but-empty (`undefined`/`""`), so both are missing.
 - An injected recording transport returns a failing response for the GitHub read.
 
 **Steps**:
@@ -902,7 +916,7 @@ The exact reasons come from the shipped contracts: GitHub gaps all `adapter-not-
 **Steps**:
 
 1. Assert the config reader returns only non-secret settings (base URLs, owner/repo/project/issue/pull/SHA addressing) and credential reference names.
-2. Assert it determines configuration by the presence of every documented setting name and the token source-key name only; it never returns or logs a token value.
+2. Assert it classifies a provider as configured only when every documented non-secret setting and the token source key are present **and non-empty (non-whitespace)**; assert `undefined`, `""`, and whitespace-only values are treated as missing and never yield a configured provider or a credential resolution. It never returns or logs a token value.
 3. Inject a recording credential port; assert the live composition resolves each configured provider's token through the port using the declared reference, and the token value never enters the artifact, diagnostics, or errors.
 4. Assert `packages/*/src` contains no import of the live config reader and no live tenant configuration.
 5. Assert the secret-read allowlist stays exactly four entries (TC-CONF-028) and no `packages/*/src` ambient environment read is introduced.
@@ -956,6 +970,7 @@ The exact reasons come from the shipped contracts: GitHub gaps all `adapter-not-
 
 - The workflow is a separate file from `ci.yml`.
 - The workflow-contract test parses the YAML with the repository `yaml` dependency.
+- The live step's `--out` path and the upload `path` are the same file: `$RUNNER_TEMP/conformance-live.json` (plan D-2, one spelling and one source of truth).
 
 **Steps**:
 
@@ -964,12 +979,14 @@ The exact reasons come from the shipped contracts: GitHub gaps all `adapter-not-
 3. Assert every `uses:` action is pinned to a full 40-hex commit SHA.
 4. Assert the Bun setup resolves the version from `.bun-version` (`bun-version-file`) and does not hardcode a second version; assert `.bun-version` is `1.4.4`.
 5. Assert token secrets are referenced only inside the live job/step, are never present in a trigger or unrelated step, and `secrets: inherit` is absent.
-6. Assert the artifact upload step uses `if: always()`, the `conformance-live` artifact name, `retention-days: 90`, and the artifact path written by the entrypoint.
-7. Assert the live job has `timeout-minutes: 10`, no `continue-on-error`, no `|| true`, no `set +e`, and no ticket-creation command (`gh issue create`, Jira write, or tracker POST).
+6. Assert the artifact upload step uses `if: always()`, `if-no-files-found: error`, the `conformance-live` artifact name, `retention-days: 90`, and the artifact path written by the entrypoint.
+7. Assert the entrypoint's `--out` argument equals the upload `path`: normalize `$RUNNER_TEMP` and `${{ runner.temp }}` (and `${RUNNER_TEMP}`) to one token, then assert both resolve to `$RUNNER_TEMP/conformance-live.json`. Assert the workflow uses one spelling consistently for both references and introduces no second output flag or environment variable.
+8. Assert the live job has `timeout-minutes: 10`, no `continue-on-error`, no `|| true`, no `set +e`, and no ticket-creation command (`gh issue create`, Jira write, or tracker POST).
 
 **Expected Outcome**:
 
 - The live workflow is weekly/dispatch-only, least-privilege, SHA-pinned, secret-scoped to non-PR runs, always uploads the artifact, and uses the single Bun pin source.
+- The uploaded path is provably the written path, and a run that writes no artifact fails the upload step (`if-no-files-found: error`) instead of passing green.
 - No automatic ticket is created.
 
 #### TC-CONF-027 - Scheduled workflow mutation controls
@@ -993,13 +1010,14 @@ The exact reasons come from the shipped contracts: GitHub gaps all `adapter-not-
 2. Replace a SHA pin with `@v4`, add an unpinned action, and add `continue-on-error: true`; assert each fails naming the step.
 3. Change permissions to `contents: write` and add `id-token: write`; assert each fails naming the job.
 4. Remove `if: always()` from the upload, change the retention to `0`, and change the artifact name; assert each fails naming the upload step.
-5. Hardcode `bun-version: "1.4.4"` instead of `bun-version-file: .bun-version`; assert it fails the single-source pin rule.
-6. Add `secrets: inherit`, move a token secret to an unrelated step, and add `gh issue create`; assert each fails naming the offending location.
-7. Assert the unmutated live workflow passes all checks.
+5. Change the upload `path` to a different file while the entrypoint keeps `--out "$RUNNER_TEMP/conformance-live.json"`; assert the contract test fails naming both the `--out` value and the upload path. Remove the artifact file (simulate a run that produces nothing) and assert the upload contract fails; change `if-no-files-found: error` to `warn` and assert it fails naming the upload step, because a green upload with no file must not pass.
+6. Hardcode `bun-version: "1.4.4"` instead of `bun-version-file: .bun-version`; assert it fails the single-source pin rule.
+7. Add `secrets: inherit`, move a token secret to an unrelated step, and add `gh issue create`; assert each fails naming the offending location.
+8. Assert the unmutated live workflow passes all checks.
 
 **Expected Outcome**:
 
-- Every contract clause has a failing control, so the workflow test is not vacuous.
+- Every contract clause has a failing control, including wrong `--out` vs upload path, a missing artifact file, and `if-no-files-found: warn`, so the workflow test proves the artifact is really the uploaded file.
 - The unmodified workflow passes.
 
 #### TC-CONF-028 - Secret-read allowlist stays exactly four
@@ -1190,8 +1208,8 @@ The exact reasons come from the shipped contracts: GitHub gaps all `adapter-not-
 - **Fixtures:** New conformance tenants live at `tests/fixtures/providers/conformance/{github,gitlab,jira}/tenant.json`, inside the existing sanitization audit root. Fixtures are valid JSON (no comments/trailing commas), never named `*.test.ts`, and are decoded by `tests/conformance/support/fixtures.ts`.
 - **Isolation:** Negative controls (mutated registries, tenants, reports, workflow text, boundary fixtures, and sanitization canaries) live in `mkdtemp` workspaces or in-memory copies. Nothing writes under `packages/**`; read-only scans are wrapped with a `git status --porcelain` before/after assertion where practical.
 - **Determinism:** Clock, run id, writer, ordering, and credentials are injected. No sleeps, no real clock, no randomness, no ambient environment in testkit source. Mock replay is asserted twice.
-- **Live environment names:** The documented names are the GitHub six settings plus `CONFORMANCE_LIVE_GITHUB_TOKEN`; the GitLab four settings plus `CONFORMANCE_LIVE_GITLAB_TOKEN`; the Jira three settings plus `CONFORMANCE_LIVE_JIRA_TOKEN` (spec §22). Tests assert names only, never values.
-- **Live output:** The plan proposes `bun run tests/conformance/live/run-live.ts --out "$OUT"`; the exact flag/env spelling is delivery-defined and recorded in the implementation plan (OQ-B). Tests call the exported composition function for injected statuses and use one subprocess for the not-configured exit path.
+- **Live environment names:** 15 documented names total (spec §22): GitHub 7 — six settings plus `CONFORMANCE_LIVE_GITHUB_TOKEN`; GitLab 5 — four settings plus `CONFORMANCE_LIVE_GITLAB_TOKEN`; Jira 3 — two settings (`CONFORMANCE_LIVE_JIRA_BASE_URL`, `CONFORMANCE_LIVE_JIRA_ISSUE_KEY`) plus `CONFORMANCE_LIVE_JIRA_TOKEN`. A provider is configured only when every one of its documented non-secret settings is present **and non-empty (non-whitespace)** and its token source key is present **and non-empty (non-whitespace)** in the injected environment record; `undefined`, `""`, and whitespace-only values are MISSING. GitHub Actions materialises an unset repository variable or secret as a present empty-string key, so that no-tenant shape must be `not-configured`/exit `0`. Tests assert names only, never values.
+- **Live output:** `bun run tests/conformance/live/run-live.ts --out "$RUNNER_TEMP/conformance-live.json"`; the workflow uploads that exact path and uses one spelling for both (plan D-2). Tests call the exported composition function for injected statuses and use one subprocess for the not-configured exit path.
 - **Provenance:** Each tenant carries `"provenance": "hand-authored-synthetic 2026-10-31"` (or the delivery date). The sanitization audit requires a top-level `provenance` string on every scoped JSON fixture.
 
 ### 6.1 Conformance tenant data plan
@@ -1228,7 +1246,7 @@ All rows are **To Implement** unless marked otherwise. Paths follow the spec's i
 |---|---|---|---|---|
 | TC-CONF-001 | AC-F1-1 | `tests/structure/conformance-coverage.test.ts`; `packages/testkit/src/conformance/{flows,types}.ts` | `bun test tests/structure/conformance-coverage.test.ts` | Exact three flows, twelve steps, unique ids, all seven operations; mutations fail by id/operation; To Implement |
 | TC-CONF-002 | AC-F3-2 | `tests/structure/conformance-coverage.test.ts`; `conformance/adapters.ts` | `bun test tests/structure/conformance-coverage.test.ts` | Exactly GitHub/GitLab/Jira, contract binding, no placeholders; wrong-contract/azure mutations fail; To Implement |
-| TC-CONF-003 | AC-F3-1 | `tests/structure/conformance-coverage.test.ts`; adapters source scan | `bun test tests/structure/conformance-coverage.test.ts` | Unregistered `*_ADAPTER_CONTRACT` fails naming source/adapter; dangling registration fails; To Implement |
+| TC-CONF-003 | AC-F3-1 | `tests/structure/conformance-coverage.test.ts`; adapters source scan | `bun test tests/structure/conformance-coverage.test.ts` | Declaration-only scan deduped by adapter dir finds exactly 3; `index.ts` re-export not counted; new `capabilities.ts` declaration fails naming source/adapter; dangling registration fails; To Implement |
 | TC-CONF-004 | AC-F2-3, AC-F5-1 | `tests/structure/conformance-coverage.test.ts`; `conformance/coverage.ts` | `bun test tests/structure/conformance-coverage.test.ts` | Every supported op and gap has a step; carrier step registered; mutations fail; To Implement |
 | TC-CONF-005 | AC-F1-1, AC-F5-1 | `tests/structure/conformance-coverage.test.ts`; `conformance/coverage.ts` | `bun test tests/structure/conformance-coverage.test.ts` | Exact sets/floors; empty/shrunken registry mutations fail; no moving-base comparison; To Implement |
 | TC-CONF-006 | AC-F2-1, AC-F6-1 | `tests/conformance/mock-conformance.test.ts` | `bun test tests/conformance/mock-conformance.test.ts` | 3 providers × 3 flows green; per-adapter executed step and encountered gap; missing route fails; To Implement |
@@ -1243,16 +1261,16 @@ All rows are **To Implement** unless marked otherwise. Paths follow the spec's i
 | TC-CONF-015 | AC-F4-1 | `tests/conformance/mock-conformance.test.ts`; support fixtures | `bun test tests/conformance/mock-conformance.test.ts` | Throwing fetch 0 calls; exact URL; unfixtured request fails with method/URL; To Implement |
 | TC-CONF-016 | AC-F5-2, AC-F6-2 | `tests/conformance/broken-adapter-control.test.ts` | `bun test tests/conformance/broken-adapter-control.test.ts` | Corruption fails naming provider/flow/step; unmodified passes; localized failure; To Implement |
 | TC-CONF-017 | AC-F10-1, AC-F8-1 | `tests/conformance/broken-adapter-control.test.ts`; `conformance/runner.ts` | `bun test tests/conformance/broken-adapter-control.test.ts` | Diagnostic fields complete; canary/raw/header absent; injection mutation fails; To Implement |
-| TC-CONF-018 | AC-F8-1 | `tests/conformance/artifact.test.ts`; `conformance/artifact.ts` | `bun test tests/conformance/artifact.test.ts` | Schema/fields/status/timestamp; malformed field mutations fail; mock/live share validator; To Implement |
+| TC-CONF-018 | AC-F8-1 | `tests/conformance/artifact.test.ts`; `conformance/artifact.ts` | `bun test tests/conformance/artifact.test.ts` | Schema/fields/status/timestamp; provider-flow summaries vs canonical `flows[]` with nested `steps[]`; flat `steps[]` index; closed `skipKind`; malformed-field mutations fail; mock/live share validator; To Implement |
 | TC-CONF-019 | AC-F8-1 | `tests/conformance/artifact.test.ts`; `conformance/artifact.ts` | `bun test tests/conformance/artifact.test.ts` | ≤256 KiB; truncation; count caps; canary/header/raw rejection; To Implement |
 | TC-CONF-020 | AC-F7-1, AC-F7-2, AC-F7-3 | `tests/conformance/artifact.test.ts`; `tests/conformance/live/live-entrypoint.test.ts` | `bun test tests/conformance/artifact.test.ts tests/conformance/live` | Status matrix 0/1/0; artifact in every status; mock in memory; To Implement |
-| TC-CONF-021 | AC-F7-1, AC-F7-2 | `tests/conformance/live/live-entrypoint.test.ts`; `live/{config,run-live}.ts` | `bun test tests/conformance/live` | Empty env → `not-configured`, exit 0, missing names, artifact file; To Implement |
+| TC-CONF-021 | AC-F7-1, AC-F7-2 | `tests/conformance/live/live-entrypoint.test.ts`; `live/{config,run-live}.ts` | `bun test tests/conformance/live` | Absent, present-but-empty, and whitespace env → `not-configured`, exit 0, exactly 15 missing names (7/5/3), no credential/request; spawned entrypoint artifact; To Implement |
 | TC-CONF-022 | AC-F7-1, AC-F7-3 | `tests/conformance/live/live-entrypoint.test.ts`; `live/run-live.ts` | `bun test tests/conformance/live` | Configured failure → `failed`, exit 1, artifact, unconfigured listed, no ticket; To Implement |
 | TC-CONF-023 | AC-F9-1 | `tests/conformance/live/live-entrypoint.test.ts`; `live/run-live.ts` | `bun test tests/conformance/live` | All GET; POST guard fails; `live-read-only` deferral; counters 0; To Implement |
 | TC-CONF-024 | AC-F7-5 | `tests/conformance/live/config.ts`; `live/live-entrypoint.test.ts`; secret-read | `bun test tests/conformance/live`; `bun run scripts/checks/secret-read-boundary.ts` | Non-secret config only; port-only token; no packages/*/src env read; To Implement |
 | TC-CONF-025 | AC-F4-2, NFR-1 | `tests/conformance/live/live-entrypoint.test.ts`; testkit source scan | `bun test tests/conformance/live` | Identical artifacts from injected inputs; no ambient time/random/env; To Implement |
-| TC-CONF-026 | AC-F7-1, AC-F7-4 | `tests/checks/conformance-workflow.test.ts`; `conformance-live.yml` | `bun test tests/checks/conformance-workflow.test.ts` | Triggers, permissions, SHA pins, secret scope, upload, Bun pin, timeout, no ticket; To Implement |
-| TC-CONF-027 | AC-F7-4 | `tests/checks/conformance-workflow.test.ts` | `bun test tests/checks/conformance-workflow.test.ts` | Nine mutation families fail by location; unmodified passes; To Implement |
+| TC-CONF-026 | AC-F7-1, AC-F7-4 | `tests/checks/conformance-workflow.test.ts`; `conformance-live.yml` | `bun test tests/checks/conformance-workflow.test.ts` | Triggers, permissions, SHA pins, secret scope, `if-no-files-found: error`, `--out` == upload path, Bun pin, timeout, no ticket; To Implement |
+| TC-CONF-027 | AC-F7-4 | `tests/checks/conformance-workflow.test.ts` | `bun test tests/checks/conformance-workflow.test.ts` | Every clause including wrong `--out`, missing artifact file, and `if-no-files-found: warn` fails by location; unmodified passes; To Implement |
 | TC-CONF-028 | AC-F7-5 | `tests/checks/secret-read-boundary.test.ts`; `scripts/checks/secret-read-boundary.ts` | `bun test tests/checks/secret-read-boundary.test.ts`; `bun run scripts/checks/secret-read-boundary.ts` | Exactly 4 entries; planted testkit reads fire; mutations fail closed; To Implement |
 | TC-CONF-029 | AC-F7-5 | `tests/boundaries/**`; `.dependency-cruiser.cjs`; `testkit-exclusion`; `workspace-entrypoints` | `bun test tests/boundaries`; `bun run scripts/checks/testkit-exclusion.ts`; `bun run scripts/checks/workspace-entrypoints.ts` | node:* testkit negative; clean control; dev-only; no new subpath/edge; To Implement |
 | TC-CONF-030 | NFR-9 | `tests/structure/content-inventory.test.ts`; `inventory.json` | `bun test tests/structure/content-inventory.test.ts` | Inventory equality; per-file allowances; missing-file/export mutations fail; To Implement |
@@ -1303,7 +1321,7 @@ Run narrow commands while iterating; run the aggregate gate only when the change
 - **`ci.yml` byte-unchanged:** the permanent suite asserts exact job sets and the absence of a conformance job. The byte-identical claim is change-scoped review evidence: `git diff --exit-code "$(git merge-base HEAD origin/main-tools)" -- .github/workflows/ci.yml`, recorded in §10. Do not add a permanent branch-diff assertion (testing-strategy invariant rule).
 - **Inventory and allowances:** add every new `packages/testkit/src/conformance/*.ts` file to `tests/structure/inventory.json` and its exported functions/values to the per-file `EXECUTABLE_ALLOWANCES` in `tests/structure/content-inventory.test.ts`. Do not add a global executable switch.
 - **Fixtures and placeholders:** keep tenants under `tests/fixtures/providers/conformance/{provider}/tenant.json`; reuse declared placeholders; add any new placeholder token to `placeholders.json` in the same change; keep every JSON valid and provenance-marked.
-- **Non-vacuity controls (must be implemented, not stubbed):** duplicate flow/step id; unknown operation; missing operation; extra flow; wrong contract binding; unregistered `*_ADAPTER_CONTRACT`; dangling registration; removed supported-operation step; removed declared-gap step; declared carrier without carrier step; empty registry/flow/step; undeclared unsupported operation; `no-declared-carrier` branch; lost executed step; stale gap; masked failure; missing tenant route; near-miss URL; corrupt normalized outcome; injected raw payload/secret in diagnostics/artifact; oversized failure; over-cap counts; invalid artifact status/version/field; POST request; non-read supported step; missing writer on failure; each workflow mutation in TC-CONF-027; planted testkit env read; node:* testkit import; missing inventory entry; undeclared executable export; fixture without provenance; non-example host; undeclared placeholder; stale placeholder.
+- **Non-vacuity controls (must be implemented, not stubbed):** duplicate flow/step id; unknown operation; missing operation; extra flow; wrong contract binding; unregistered `*_ADAPTER_CONTRACT` declaration; `index.ts`-only re-export that must not count; dangling registration; removed supported-operation step; removed declared-gap step; declared carrier without carrier step; empty registry/flow/step; undeclared unsupported operation; `no-declared-carrier` branch; lost executed step; stale gap; masked failure; missing tenant route; near-miss URL; corrupt normalized outcome; injected raw payload/secret in diagnostics/artifact; oversized failure; over-cap counts; invalid artifact status/version/field; provider-flow summary carrying `steps`; unknown `skipKind`; POST request; non-read supported step; missing writer on failure; each workflow mutation in TC-CONF-027 including wrong `--out` vs upload path, a missing artifact file, and `if-no-files-found: warn`; planted testkit env read; node:* testkit import; missing inventory entry; undeclared executable export; fixture without provenance; non-example host; undeclared placeholder; stale placeholder.
 - **Gate handoff commands to record in §10:** `pnpm install --frozen-lockfile`; `pnpm build`; `bun test tests/conformance`; `bun test tests/conformance/mock-conformance.test.ts`; `bun test tests/conformance/broken-adapter-control.test.ts`; `bun test tests/conformance/artifact.test.ts`; `bun test tests/conformance/live`; `bun test tests/structure/conformance-coverage.test.ts`; `bun test tests/checks/conformance-workflow.test.ts`; `bun test tests/checks/fixture-sanitization.test.ts`; `bun test tests/checks/secret-read-boundary.test.ts`; `bun test tests/checks/ci-checks.test.ts`; `bun run scripts/checks/secret-read-boundary.ts`; `bun run scripts/checks/ci-topology.ts`; `bun run scripts/checks/ci-bindingness.ts`; `bun run scripts/checks/ci-supply-chain.ts`; `bun run scripts/checks/testkit-exclusion.ts`; `bun run scripts/checks/workspace-entrypoints.ts`; `bun test tests/boundaries`; `pnpm check`; `git diff --check`; `bash scripts/.tests/test-doc-distribution.sh` (docs phase); and the review-time `ci.yml` diff.
 - **Do not record unrun evidence as passing.** If the implementation plan renames files, preserve TC IDs and update only locations/commands.
 
@@ -1334,7 +1352,7 @@ Run narrow commands while iterating; run the aggregate gate only when the change
 - Live scratch tenants remain manually provisioned; until then the live run records `not-configured`.
 - The workflow can reference repository variables and secrets for scheduled/dispatch runs, and the artifact upload action/retention policy is available on the repository plan.
 - The testkit root export can gain conformance helpers without a new subpath or package export change.
-- The exact live output flag is delivery-defined; the plan proposes `--out "$OUT"` and records the actual spelling in OQ-B.
+- The exact live output flag is settled: `--out PATH` (default `conformance-live.json`), and the workflow writes and uploads `$RUNNER_TEMP/conformance-live.json` (plan D-2, asserted by TC-CONF-026).
 - No license headers are added manually; change artifacts are header-free.
 
 ### 8.3 Open Questions
@@ -1342,7 +1360,7 @@ Run narrow commands while iterating; run the aggregate gate only when the change
 | Item | Owner / timing | Blocking? |
 |---|---|---|
 | OQ-A: **Artifact count caps.** The spec bounds provider/flow/step counts but gives no numeric caps. Delivery must export finite caps from the artifact module and assert over-cap rejection; record the numbers in the feature spec at doc-sync. | Plan writer / delivery / doc-syncer | Not blocking; TC-CONF-019 tests the mechanism and the explicit 256 KiB size bound. |
-| OQ-B: **Live entrypoint output path.** The spec says "with an output path" but does not pin the flag or env name. The plan proposes `--out "$OUT"`; record the actual spelling and wire it in the workflow. | Delivery | Not blocking; TC-CONF-021 uses the recorded invocation. |
+| OQ-B: **Live entrypoint output path.** Resolved by plan D-2: `--out PATH`, default `conformance-live.json`; the workflow passes `--out "$RUNNER_TEMP/conformance-live.json"` and uploads that exact path (one spelling). TC-CONF-026 step 7 asserts the equality. | Delivery (decided) | Not blocking. |
 | OQ-C: **Provider result status enum.** The artifact shape names provider status and missing settings but does not enumerate the provider-level status set. Delivery must export the closed set; tests assert membership against it. | Delivery | Not blocking; the overall status set (`passed`/`failed`/`not-configured`) is fixed by the spec. |
 | OQ-D: **Live count of configured providers.** A run with at least one configured provider and no failures is `passed`, with unconfigured providers listed separately (DEC-12). The artifact shape should make "configured" distinguishable from `passed` per provider. | Delivery | Not blocking; TC-CONF-022 asserts the separation. |
 | OQ-E: **Wall-clock evidence.** The mock ≤60 s budget is recorded, not hard-asserted, to avoid a flaky permanent test. Confirm the review accepts measured evidence plus the existing CI job timeout. | @pm / @reviewer | Not blocking; the live ≤10 min bound is enforced structurally. |
@@ -1354,6 +1372,7 @@ No AC is left without a mapped test. All 22 spec ACs are traced and assertable; 
 | Version | Date (UTC) | Author | Changes |
 |---|---|---|---|
 | 1.0 | 2026-10-31T19:20:00Z | Change Test Plan Writer | Initial plan: 33 test cases across structure/behaviour/artifact/live/checks/boundaries/aggregate; 22/22 spec-AC traceability; three-flow × three-adapter operation and step matrices; declared-gap skip exactness; structural and runtime coverage gates; broken-adapter and carrier controls; `delivery.conformance.v1` schema/bounds/status/exit matrix; live not-configured/failed/read-only/determinism; scheduled-workflow contract and mutation controls; secret-read, testkit confinement, inventory, fixture sanitization, CI topology, and aggregate gates; conformance tenant data plan and placeholder-registry update; no execution claimed. |
+| 1.1 | 2026-10-31T20:30:00Z | Change Test Plan Writer | DoR iteration-1 remediation (test-plan scope only; TC ids and AC mappings unchanged): B-2 corrects the Jira live names to two settings plus token and states the 15-name set (7+5+3) in §6 and TC-CONF-021; B-1 defines "configured" as present and non-empty (non-whitespace) in TC-CONF-021/022/024 and adds absent, present-but-empty (GitHub Actions), whitespace-only, and per-provider occupancy cases; advisory 3 hardens TC-CONF-026/027 with `if-no-files-found: error`, `--out` == upload path, and wrong-path/missing-file/warn mutation controls; advisory 5 specifies the declaration-only, deduped TC-CONF-003 scan with re-export and new-declaration controls; advisory 6 aligns TC-CONF-018 to the §24 v1.1 shape and closed `skipKind` set; NIT 10 replaces the stale "plan absent" note and records spec v1.1 and the plan-decided output path. |
 
 ## 10. Test Execution Log
 
