@@ -8,10 +8,14 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the binding secret-read boundary invariant, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec, required injected content policy, fail-closed content-policy failure, and visible graceful degradation."
 links:
-  related_changes: ["GH-174", "GH-179", "GH-181", "GH-182", "GH-184", "GH-186", "GH-188"]
-  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0008", "TDR-0005"]
+  related_changes: ["GH-174", "GH-179", "GH-181", "GH-184", "GH-188"]
+  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/envelope.ts"
+summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec and visible graceful degradation."
+links:
+  related_changes: ["GH-174", "GH-179", "GH-181", "GH-188", "GH-182"]
+  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006"]
 ---
 
 # Feature: Adapter Ports, Credential Resolution, and Embedded Metadata

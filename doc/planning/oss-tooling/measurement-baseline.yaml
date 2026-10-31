@@ -20,7 +20,7 @@ sources:
   locator: git ls-tree -r --name-only 75b4e7602ad89bd26f96912ac06ed8bfcb72a5ae -- doc/changes | rg 'chg-.*-evidence\.md$' (5 files)
 - id: gh170-ci
   kind: file
-  locator: doc/changes/2026-10/2026-10-29--GH-170--monorepo-scaffold-toolchain/chg-GH-170-pm-notes.yaml#phases.quality_gates.iterations
+  locator: doc/changes/2026-10/2026-10-29--GH-170--monorepo-scaffold-toolchain/chg-GH-170-pm-notes.yaml#phases.quality_gate_iterations
 - id: gh172-ci
   kind: file
   locator: doc/changes/2026-10/2026-10-30--GH-172--result-contract-error-table/chg-GH-172-pm-notes.yaml#notes
@@ -469,16 +469,19 @@ changes:
   ci_outcome: mixed
   ci_observations:
   - artifact: doc/changes/2026-10/2026-10-29--GH-170--monorepo-scaffold-toolchain/chg-GH-170-pm-notes.yaml
-    anchor: phases.quality_gates.iterations (iteration 2 FAIL_CI; iteration 3 PASS_CI)
+    anchor: phases.quality_gate_iterations (iteration 2 FAIL_CI; iteration 3 PASS_CI)
     outcome: mixed
     checks_affected: ci-topology, ignore-rules, commitlint
   false_signal_incidents:
   - class: local-green-ci-red
     artifact: doc/changes/2026-10/2026-10-29--GH-170--monorepo-scaffold-toolchain/chg-GH-170-pm-notes.yaml
-    anchor: phases.quality_gates.iterations (iteration 1 PASS_LOCAL; iteration 2 FAIL_CI)
+    anchor: phases.quality_gate_iterations (iteration 1 PASS_LOCAL; iteration 2 FAIL_CI)
     signal: local 9-gate battery green
     reality: 'PR #191 CI red on 3 checks'
     checks_affected: ci-topology, ignore-rules, commitlint
+# GH-171 is unparseable_yaml (document-level parse failure). Its phase-pair counters
+# are 0 and its durations/times are null by design, not measured zeros: the excluded
+# row is kept for spine completeness and must not be read as a measurement.
 - ref: GH-171
   pm_notes: doc/changes/2026-10/2026-10-29--GH-171--branding-seam-working-name/chg-GH-171-pm-notes.yaml
   included: false
@@ -567,7 +570,7 @@ changes:
   - artifact: doc/changes/2026-10/2026-10-30--GH-174--state-layer/chg-GH-174-pm-notes.yaml
     anchor: phases.ci_remediation
     outcome: mixed
-    checks_affected: state-scope tests, publint/attw
+    checks_affected: state-scope tests (publint/attw skipped, not failed)
   false_signal_incidents: []
 - ref: GH-181
   pm_notes: doc/changes/2026-10/2026-10-30--GH-181--primitive-ports-credential-metadata/chg-GH-181-pm-notes.yaml

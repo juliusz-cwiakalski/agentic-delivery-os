@@ -7,9 +7,15 @@ owners: ["engineering"]
 area: domain
 document_classification: current-truth
 links:
-  related_decisions: ["ADR-0003", "ADR-0005", "ODR-0002", "ODR-0003", "TDR-0005"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-184", "GH-186", "GH-188"]
-summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer, adapter-port, provider-client-seed, privacy-guard, envelope-content-policy, pm-notes, phase-transition, delivery-registry, verify-change, decision-governance, and measurement-baseline terms used across the repository."
+  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-179", "GH-181", "GH-184", "GH-188"]
+summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer, adapter-port, provider-client-seed, privacy-guard, and envelope-content-policy terms used across the repository."
+  related_decisions: ["ADR-0003", "ADR-0005"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-179", "GH-181", "GH-188", "GH-182"]
+summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer, adapter-port, provider-engine, provider-client-seed, pm-notes, phase-transition, and delivery-registry terms used across the repository."
+  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-188"]
+summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer, adapter-port, provider-client-seed, pm-notes, phase-transition, delivery-registry, and verify-change terms used across the repository."
 ---
 
 # Glossary
