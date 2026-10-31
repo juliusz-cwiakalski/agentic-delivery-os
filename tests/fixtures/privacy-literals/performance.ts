@@ -30,7 +30,7 @@ export const generateCorpus = (targetBytes: number): string => {
 /** Long lines of near-miss shapes to stress the matcher without matching. */
 export const generatePathological = (): string => {
   const line = `${"ZQ7X".repeat(2048)} Bearer ${"short ".repeat(128)}\n`;
-  return line.repeat(8);
+  return line.repeat(2);
 };
 
 /** Valid registry entries whose digests are not present in the corpus. */

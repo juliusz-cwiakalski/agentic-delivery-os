@@ -144,6 +144,12 @@ export const EXPECTED_ALLOWLIST: readonly ExpectedAllowlist[] = [
     path: "tests/checks/privacy-performance.test.ts",
     rules: ["*"],
   },
+  {
+    id: "privacy-ci-wiring-suite",
+    kind: "file",
+    path: "tests/checks/privacy-ci-wiring.test.ts",
+    rules: ["*"],
+  },
 ];
 
 export const fixtureEntry = (index: number, className: string, length = 8): EntryLike => ({

@@ -136,6 +136,13 @@
       "path": "tests/checks/privacy-performance.test.ts",
       "rules": ["*"],
       "reason": "The guard's performance suite generates a synthetic corpus and names the registered lengths."
+    },
+    {
+      "id": "privacy-ci-wiring-suite",
+      "kind": "file",
+      "path": "tests/checks/privacy-ci-wiring.test.ts",
+      "rules": ["*"],
+      "reason": "The guard's CI-wiring suite names the invocation, workflow mutation controls, and local-command proofs."
     }
   ],
   "exclusions": [
