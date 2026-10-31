@@ -421,7 +421,7 @@ activity, the session is healthy:
 A hung LLM stream keeps the process alive (blocked on I/O) while making zero
 progress on *both* signals; the ps-only heuristic must not call that "healthy."
 
-A session with **no activity from either signal for ≥ `CEO_LOOP_STALL_MINUTES`**
+A session with **no activity from either signal for ≥ `CEO_LOOP_STUCK_MINUTES`**
 (default **10**; at-threshold == stalled, matching the `>=` comparison in
 `pm-liveness.sh`/`ceo-loop.sh`) is **stalled**, not slow, and is killed-and-resumed.
 
@@ -680,14 +680,18 @@ The design is robust to the messy realities of long-running AI sessions:
 
 All settings are environment variables (CLI flag overrides where noted).
 
+**Stuck thresholds.** `deliver-ticket.sh` reads `DELIVER_STUCK_MINUTES` (default `10`; override with the `--stuck-minutes <n>` flag) and `ceo-loop.sh` reads `CEO_LOOP_STUCK_MINUTES` (default `10`). Liveness is multi-signal — recursive session-message traffic is the primary signal and git/worktree activity the secondary; a session is stalled only when both are quiet for the threshold (see [INV-DM-5](#inv-dm-5-liveness-means-multi-signal-progress-not-process-alive)). Raise the threshold when a step is legitimately long: too-low values kill healthy sessions and cause restarts. The seconds-level overrides (`DELIVER_STUCK_SECONDS` and ceo-loop's internal seconds seam) are test-only accelerators, not operator knobs.
+
 ### `ceo-loop.sh`
 
 | Variable | Default | Description |
 |---|---|---|
 | `CEO_LOOP_POLL_SECONDS` | `30` | Seconds between liveness/stuck checks of the live CEO session |
-| `CEO_LOOP_STALL_MINUTES` | `10` | Minutes with no session-message traffic AND no healthy delivery (delivering marker + `--is-delivering`) before a CEO is declared stuck and killed (INV-DM-5) |
+| `CEO_LOOP_STUCK_MINUTES` | `10` | Minutes with no session-message traffic AND no healthy delivery (delivering marker + `--is-delivering`) before a CEO is declared stuck and killed (INV-DM-5) |
 | `CEO_RESUME_TOKEN_LIMIT` | `100000` | Resume the previous CEO session if its context (input+output+reasoning tokens) is under this limit; otherwise start fresh |
 | `CEO_LOOP_MAX_RESTARTS` | `10` | Max CEO kill+restart iterations before giving up |
+
+`CEO_LOOP_STALL_MINUTES` (default `10`) is the `pm-liveness.sh` probe threshold, not the loop knob: both wrappers export it aligned to their own stuck threshold when they invoke the probe.
 
 ### `deliver-ticket.sh`
 
@@ -727,13 +731,15 @@ The state-poll backoff is exponential and capped: at the default base of 2 s the
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| CEO keeps getting killed and restarted | Genuine stall (LLM hang) *or* `CEO_LOOP_STALL_MINUTES` too low for a legitimately long reasoning step | Check the session traffic in the log; raise the threshold if the step is legitimately long |
+| CEO keeps getting killed and restarted | Genuine stall (LLM hang) *or* `CEO_LOOP_STUCK_MINUTES` too low for a legitimately long reasoning step | Check the session traffic in the log; raise the threshold if the step is legitimately long |
 | `ceo-loop.sh` kills a CEO that was waiting on a healthy delivery | `--is-delivering` not reflecting the in-flight delivery (PID file stale/cleared) | Ensure `deliver-ticket.sh` writes/clears the PID file correctly; do not delete `.ai/local/delivery/` manually |
 | Orphaned `opencode` process after killing a delivery | Signal trap missing or not forwarded | All delivery scripts must propagate SIGTERM/SIGINT → SIGKILL to children (INV-DM-2) |
 | Two PMs spawned for the same ticket | JOIN probe failed (PID file race or stale PID reused by the OS) | `deliver-ticket.sh` must validate the PID is still `deliver-ticket.sh` for this repo before treating it as live |
 | Merge used a poor commit message | PR description not merge-ready | `@pr-manager` must always emit descriptions fit to be the squash commit message |
 | `clean-merged-branches` deleted a branch I needed | Misconfigured `--base` / `--protected`, or a branch that looked merged | It must never delete unmerged or protected branches; if it did, that is a bug |
 | On macOS, an owner/CEO is rejected as stale right after it starts | macOS `ps` lacks the Linux `-o etimes=` (elapsed **seconds**) column. The scripts fall back to parsing `-o etime=` (elapsed `[[dd-]hh:]mm:ss`) when `etimes=` is absent; this needs `ps` from a modern macOS build. If the fallback also fails the start-epoch guard degrades gracefully (treats the owner as live rather than wrongly killing it). | Ensure `ceo-loop.sh`/`deliver-ticket.sh` are current (they carry the `etime=` fallback); no action needed otherwise. |
+
+> **Known rough edge:** `ceo-loop.sh --help` still prints the stale name `CEO_LOOP_STALL_MINUTES` for the loop threshold — a bash-era usage-text inaccuracy to be fixed in a future shell-allowed change; the knob the loop actually reads is `CEO_LOOP_STUCK_MINUTES`.
 
 ## Process management via script API
 
