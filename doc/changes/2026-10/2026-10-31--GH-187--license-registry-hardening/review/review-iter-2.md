@@ -4,7 +4,7 @@ Verdict: PASS
 Work Item: GH-187
 Branch: feat/GH-187/license-registry-hardening
 Base: origin/main-tools (c62cdb8)
-Reviewed HEAD: 8bc49a5
+Reviewed HEAD: 3dc6adb
 Merge base: c62cdb8
 Mode: local
 Date: 2026-10-31
@@ -50,7 +50,7 @@ informational notes remain; none blocks quality gates, DoD, or PR.
 | F-2 | medium | CLOSED | Test-plan section 10 populated (v1.6) with license 44/44, checks 331/331, full 1434/1434, seven invariant checks, 22/22 bash, doc-distribution 81, privacy-release 8/8. Pass/fail, file, and suite counts match freshness. Residual: expect-call figure (new F-1). |
 | F-3 | low | CLOSED | `failuresForCase` is used (line 669); `biome check` on the changed tests is clean. |
 | F-4 | low | CLOSED | `blank` removed from `cases.json` and both `LicenseCases` types; `deniedSingles`/`unknownReferences` asserted in TC-LICREG-024; all 21 remaining `cases.json` keys are referenced by a test. |
-| F-5 | low | CLOSED | Plan tasks 6.1-6.5 checked; Execution Log row 6 Completed with commit 7819ea0; remediation note records F-1..F-7 dispositions. |
+| F-5 | low | CLOSED | Plan tasks 6.1-6.5 checked; Execution Log row 6 Completed with commit d5db953; remediation note records F-1..F-7 dispositions. |
 | F-6, F-7 | info | ACCEPTED | Informational; no code change required, unchanged. |
 | F-8 | info | ACCEPTED | Enabling privacy-release repair unchanged since iteration 1 and still sound. |
 
@@ -83,7 +83,7 @@ ADR-0003 remains unedited.
 
 | Check | Result |
 |-------|--------|
-| `git diff --name-only 7819ea0...HEAD -- scripts doc/legal .github pnpm-lock.yaml package.json 'packages/*/package.json' doc/decisions` | empty — no product/CI/lockfile/manifest/decision change since iteration 1 |
+| `git diff --name-only d5db953...HEAD -- scripts doc/legal .github pnpm-lock.yaml package.json 'packages/*/package.json' doc/decisions` | empty — no product/CI/lockfile/manifest/decision change since iteration 1 |
 | `bun test tests/checks/license-*.test.ts tests/checks/privacy-release.test.ts` | PASS — 52 pass, 0 fail (44 license + 8 privacy) |
 | `bun test tests/checks` | PASS — 331 pass, 0 fail, 29 files |
 | `bun test` (== `pnpm test`) | PASS — 1434 pass, 0 fail, 133 files, 13181 expect calls |
@@ -118,7 +118,7 @@ with the current 13181 (or omit it / pin the run commit).
 
 Location: `doc/changes/2026-10/2026-10-31--GH-187--license-registry-hardening/chg-GH-187-plan.md:27` (also lines 43-49 and RSK-P2 line 137)
 
-The test plan is now v1.6 (row 1.6 in 8bc49a5), but the plan still refers to "test plan
+The test plan is now v1.6 (row 1.6 in 3dc6adb), but the plan still refers to "test plan
 v1.5" in seven current-state references (Context line 27, lines 43-49, RSK-P2 line 137;
 the eighth v1.5 mention is a legitimate historical revision-log row) and has no Plan
 Revision Log row for the iteration-1 remediation that changed Phase 6 status and added
@@ -144,8 +144,8 @@ strengthening only.
 
 ## Notes
 
-- Working tree is clean; both remediation commits are present (`d0d88c1` tests/fixtures/
-  plan, `8bc49a5` docs/test-plan/review artifacts/pm-notes).
+- Working tree is clean; both remediation commits are present (`5485abb` tests/fixtures/
+  plan, `3dc6adb` docs/test-plan/review artifacts/pm-notes).
 - No `.changeset` entry, SBOM, notice, or checksum artifact was introduced.
 - The remediation did not edit `scripts/checks/license-audit.ts`, the registry, the
   workflow, the lockfile, the manifests, TDR-0007, or ADR-0003.

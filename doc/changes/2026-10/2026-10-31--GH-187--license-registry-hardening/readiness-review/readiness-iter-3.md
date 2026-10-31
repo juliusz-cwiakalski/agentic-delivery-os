@@ -43,7 +43,7 @@ Blocking findings: 0. Non-blocking findings: 4 (2 minor, 2 nit). No override is 
    Suggested fix: Update the current spec citations to v1.3; leave the revision-log entries and the v1.2 history intact.
 
 3. [minor] cross_artifact_consistency — `chg-GH-187-plan.md` Phase 6 task 6.4 (L386), Phase 6 acceptance (L392), Phase 6 files (L399, L405), Phase 8 acceptance (L470)
-   Gap: The plan says "do not edit TDR-0007 … during this change" and "no TDR-0007 or ADR-0003 file is edited in this change", and lists TDR-0007 as "unchanged; remains Proposed". GH-187 created TDR-0007 and edited it during the iteration-1/2 remediation (commits 611e45f and 680dac7), so the literal "in this change" statement is false even though the intended delivery/doc-sync rule — no further edits, keep it Proposed — is sound. A strict Phase 8 check could read the change diff and treat the created TDR as an out-of-scope edit.
+   Gap: The plan says "do not edit TDR-0007 … during this change" and "no TDR-0007 or ADR-0003 file is edited in this change", and lists TDR-0007 as "unchanged; remains Proposed". GH-187 created TDR-0007 and edited it during the iteration-1/2 remediation (commits 23bfcda and ce533ee), so the literal "in this change" statement is false even though the intended delivery/doc-sync rule — no further edits, keep it Proposed — is sound. A strict Phase 8 check could read the change diff and treat the created TDR as an out-of-scope edit.
    Suggested remediation target phase: delivery_planning
    Suggested fix: Reword to "no further TDR-0007/ADR-0003 edits during delivery/doc-sync; TDR-0007 remains Proposed as authored by `@decision-advisor` and is referenced, not re-decided." Keep the Phase 6 `git diff` cleanliness check.
 

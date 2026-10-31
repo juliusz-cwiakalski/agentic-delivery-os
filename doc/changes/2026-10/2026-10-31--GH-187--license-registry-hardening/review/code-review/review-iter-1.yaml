@@ -124,12 +124,12 @@ findings:
     location: doc/changes/2026-10/2026-10-31--GH-187--license-registry-hardening/chg-GH-187-plan.md:393
     message: >-
       Plan Phase 6 tasks 6.1-6.5 are still unchecked and the Execution Log row 6
-      says "Pending", while doc-sync-report.md reports SUCCESS and commit 7819ea0
+      says "Pending", while doc-sync-report.md reports SUCCESS and commit d5db953
       reconciles the feature spec, glossary, and TDR-0007/index (the DONE_BUT_
       UNCHECKED pattern). The substantive work is done; only the plan bookkeeping
       lags.
     suggestion: >-
-      Tick 6.1-6.5 and set Execution Log row 6 to Completed with commit 7819ea0
+      Tick 6.1-6.5 and set Execution Log row 6 to Completed with commit d5db953
       so the plan reflects the delivered doc-sync.
     suppressed: false
     published_url: null

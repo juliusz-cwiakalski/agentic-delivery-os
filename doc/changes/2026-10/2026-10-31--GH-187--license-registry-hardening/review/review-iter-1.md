@@ -4,7 +4,7 @@ Verdict: PASS
 Work Item: GH-187
 Branch: feat/GH-187/license-registry-hardening
 Base: origin/main-tools (c62cdb8)
-Reviewed HEAD: 7819ea0
+Reviewed HEAD: d5db953
 Merge base: c62cdb8
 Mode: local
 Date: 2026-10-31
@@ -72,7 +72,7 @@ bypass — all satisfied.
   runs below.
 - OPEN_TASKS: 7.x (review, in progress) and 8.x (finalization) — expected at this
   phase.
-- DONE_BUT_UNCHECKED: 6.1-6.5 (doc-sync completed in commit 7819ea0 and
+- DONE_BUT_UNCHECKED: 6.1-6.5 (doc-sync completed in commit d5db953 and
   doc-sync-report.md, but the Phase 6 checkboxes and Execution Log row 6 still say
   pending) — F-5.
 - CHECKED_BUT_MISSING: none.
@@ -89,7 +89,7 @@ bypass — all satisfied.
 | `pnpm typecheck` | PASS — all six packages plus type probes |
 | `pnpm exec biome check` on changed TS sources/tests | 1 warning (unused `failuresForCase`, F-3), 1 info (style), no errors; `pnpm lint` gate remains green |
 | `git diff --name-only ... -- .github pnpm-lock.yaml package.json 'packages/*/package.json' ADR-0003` | empty — no CI job, lockfile, manifest, or ADR-0003 change |
-| `rg '^status:' doc/decisions/TDR-0007-...md` | `status: Proposed`; TDR last touched in 680dac7, not by doc-sync 7819ea0 |
+| `rg '^status:' doc/decisions/TDR-0007-...md` | `status: Proposed`; TDR last touched in ce533ee, not by doc-sync d5db953 |
 | Front matter parse of glossary and feature spec | both parse; `related_changes` includes GH-187, `related_decisions` includes TDR-0007 |
 | `rg 'test\.(skip|only|todo)' tests/checks/license-*.test.ts` | none |
 
@@ -152,7 +152,7 @@ assert every declared fixture key is used.
 
 Location: `doc/changes/2026-10/2026-10-31--GH-187--license-registry-hardening/chg-GH-187-plan.md:393` (also Execution Log row 6 at line 619)
 
-Doc-sync is complete (doc-sync-report.md SUCCESS, commit 7819ea0), but tasks 6.1-6.5
+Doc-sync is complete (doc-sync-report.md SUCCESS, commit d5db953), but tasks 6.1-6.5
 remain unchecked and Execution Log row 6 says "Pending". Tick the tasks and mark the
 row Completed.
 

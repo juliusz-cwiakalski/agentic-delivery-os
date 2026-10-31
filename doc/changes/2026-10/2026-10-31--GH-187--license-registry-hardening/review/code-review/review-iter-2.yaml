@@ -57,7 +57,7 @@ closed_findings:
       status: closed
       evidence: >-
         Plan tasks 6.1-6.5 are checked and Execution Log row 6 is Completed with
-        commit 7819ea0; a remediation note records F-1..F-7 dispositions.
+        commit d5db953; a remediation note records F-1..F-7 dispositions.
 findings:
   - id: F-1
     severity: low
@@ -70,7 +70,7 @@ findings:
       `bun test` (identical to `pnpm test`) on this HEAD reports 1434 pass / 0 fail
       across 133 files with 13181 expect calls. The pass/fail, file, and suite
       counts are correct; the expect-call figure appears to predate the
-      TC-LICREG-024 loop added in d0d88c1.
+      TC-LICREG-024 loop added in 5485abb.
     suggestion: >-
       Replace 13062 with the current 13181 (or omit the expect-call figure), or
       state the run commit so the number is reproducible.
@@ -85,7 +85,7 @@ findings:
     category: documentation
     location: doc/changes/2026-10/2026-10-31--GH-187--license-registry-hardening/chg-GH-187-plan.md:27
     message: >-
-      The test plan is now v1.6 (revision row 1.6 in 8bc49a5), but the plan still
+      The test plan is now v1.6 (revision row 1.6 in 3dc6adb), but the plan still
       cites "test plan v1.5" in seven current-state references (Context line 27,
       lines 43-49, and RSK-P2 line 137; the eighth v1.5 mention is a legitimate
       historical revision-log row) and has no Plan Revision Log row for the
