@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-10-31T04:05:00Z", completed: "2026-10-31T05:30:00Z", iteration: 2, status: "PASS_loop_closed" }
   quality_gates: { started: "2026-10-31T05:35:00Z", completed: "2026-10-31T05:45:00Z" }
   dod_check: { started: "2026-10-31T05:50:00Z", completed: "2026-10-31T05:55:00Z" }
-  pr_creation: { started: "2026-10-31T06:00:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-10-31T06:00:00Z", completed: "2026-10-31T06:10:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/198" }
 decisions:
   - text: "Implementation basis (ticket-mandated, recorded in ticket comment 6536692124): GitHub + GitLab = direct REST API via native fetch (CLIs disqualified: own token caches, subprocess output drift); Jira = custom minimal read-slice client (no official TS client; jira.js MIT viable but unused surface; MCP clients need host+creds outside credential port). Fallback: re-evaluate jira.js at M0-S14 write ops. Zero new dependencies."
     date: "2026-10-31"
