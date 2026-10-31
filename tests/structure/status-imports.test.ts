@@ -14,6 +14,7 @@ import { STATUS_EVIDENCE_REASONS } from "../../packages/core/src/contracts/index
 const ROOT = process.cwd();
 const CONTRACT = "packages/core/src/contracts/status.ts";
 const DOMAIN = "packages/core/src/domain/status.ts";
+const COMMAND = "packages/cli/src/commands/status.ts";
 const BRAND_SEEDS = ["ados", "ADOS_", "~/.ados"];
 const RUNTIME_SPECIFIERS = ["node:", "bun:"];
 
@@ -123,6 +124,20 @@ export const domainPure = (text: string, label = DOMAIN): string[] => {
   return violations;
 };
 
+export const commandCoreOnly = (text: string, label = COMMAND): string[] => {
+  const source = parse(label, text);
+  const violations: string[] = [];
+  for (const specifier of specifiersOf(source)) {
+    const allowed =
+      specifier === "@delivery-os/core" ||
+      specifier === "@delivery-os/core/contracts" ||
+      specifier.startsWith("./") ||
+      specifier.startsWith("../");
+    if (!allowed) violations.push(`${label}: non-core command import ${specifier}`);
+  }
+  return violations;
+};
+
 export const brandLiteralViolations = (text: string, label: string): string[] => {
   const violations: string[] = [];
   for (const seed of BRAND_SEEDS) {
@@ -187,8 +202,19 @@ describe("TC-STATUS-026 contracts/domain tier discipline", () => {
     expect(singleVocabularyHomeFailures(ROOT)).toEqual([]);
   });
 
+  test("the command module imports only core/contracts and local types", () => {
+    expect(commandCoreOnly(readFileSync(join(ROOT, COMMAND), "utf8"))).toEqual([]);
+  });
+
+  test("an adapter import in the command fails by name", () => {
+    const mutated = `import "@delivery-os/adapters/github";\n${readFileSync(join(ROOT, COMMAND), "utf8")}`;
+    expect(
+      commandCoreOnly(mutated).some((line) => line.includes("@delivery-os/adapters/github")),
+    ).toBe(true);
+  });
+
   test("no product literal appears in the status modules", () => {
-    for (const relative of [CONTRACT, DOMAIN]) {
+    for (const relative of [CONTRACT, DOMAIN, COMMAND]) {
       expect(brandLiteralViolations(readFileSync(join(ROOT, relative), "utf8"), relative)).toEqual(
         [],
       );

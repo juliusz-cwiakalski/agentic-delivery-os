@@ -293,6 +293,7 @@ const CORE_DIR = "packages/core/src";
 const NEW_COMMAND_FILES = [
   `${CLI_DIR}/commands/lint.ts`,
   `${CLI_DIR}/commands/phase.ts`,
+  `${CLI_DIR}/commands/status.ts`,
   `${CLI_DIR}/commands/verify.ts`,
 ];
 
@@ -353,10 +354,11 @@ const exitDecisionFailures = (root: string): string[] => {
 };
 
 describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
-  test("lint, phase, and verify are exported from the commands tier", () => {
+  test("lint, phase, status, and verify are exported from the commands tier", () => {
     const index = readFileSync(join(ROOT, COMMANDS_INDEX), "utf8");
     expect(index).toContain('export { createLintCommandDefinition } from "./lint.js"');
     expect(index).toContain('export { createPhaseCommandDefinition } from "./phase.js"');
+    expect(index).toContain('export { createStatusCommandDefinition } from "./status.js"');
     expect(index).toContain('export { createVerifyCommandDefinition } from "./verify.js"');
   });
 
@@ -367,7 +369,10 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(edge).toContain('from "./commands/verify.js"');
     expect(edge).toContain("commands.lint = createLintCommandDefinition(options.lint)");
     expect(edge).toContain("commands.phase = createPhaseCommandDefinition(options.phase)");
+    expect(edge).toContain("commands.status = createStatusCommandDefinition");
     expect(edge).toContain("commands.verify = createVerifyCommandDefinition(options.verify)");
+    expect(edge).toContain('from "./commands/status.js"');
+    expect(edge).toContain("createStatusCommandRuntime");
     expect(edge).toContain("createVerifyCommandRuntime");
     expect(edge).toContain("readChangeTransitionsTolerant");
   });
@@ -403,6 +408,14 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(exported(`${CLI_DIR}/commands/lint.ts`)).toEqual(["createLintCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/phase.ts`)).toEqual(["createPhaseCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/verify.ts`)).toEqual(["createVerifyCommandDefinition"]);
+    expect(exported(`${CLI_DIR}/commands/status.ts`)).toEqual(["createStatusCommandDefinition"]);
+  });
+
+  test("only status declares the optional human-text renderer", () => {
+    const declarers = listTypeScriptFiles(ROOT, `${CLI_DIR}/commands`).filter((file) =>
+      readFileSync(join(ROOT, file), "utf8").includes("humanText"),
+    );
+    expect(declarers).toEqual([`${CLI_DIR}/commands/status.ts`]);
   });
 
   test("a seeded core-imports-CLI violation is caught", () => {

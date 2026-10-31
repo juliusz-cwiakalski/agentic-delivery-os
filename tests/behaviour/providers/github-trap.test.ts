@@ -295,10 +295,10 @@ const swapAssignee = async (number: number): Promise<WorkItem> => ({
 
 // --- TC-STATUS-021 read side: bounded collection reads -----------------------
 
-const mixedListBody = readJson(MIXED_LIST);
-const limitListBody = readJson(LIMIT_LIST);
-const relationsAbsentBody = readJson(RELATIONS_ABSENT);
-const pullsListBody = readJson(PULLS_LIST);
+const mixedListBody = arrayField(readJson(MIXED_LIST), "issues");
+const limitListBody = arrayField(readJson(LIMIT_LIST), "issues");
+const relationsAbsentBody = arrayField(readJson(RELATIONS_ABSENT), "issues");
+const pullsListBody = arrayField(readJson(PULLS_LIST), "pulls");
 
 const listWorkItemsCheck = async (): Promise<void> => {
   const transport = createFixtureTransport([{ url: issuesListUrl(100), body: mixedListBody }]);

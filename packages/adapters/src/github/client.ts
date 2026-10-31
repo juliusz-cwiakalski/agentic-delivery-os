@@ -59,9 +59,7 @@ export type GithubClient = {
   ) => Promise<
     ProviderReadResult<{ readonly items: readonly WorkItem[]; readonly pageItemCount: number }>
   >;
-  readonly listDeliveryRequests: (
-    limit: number,
-  ) => Promise<
+  readonly listDeliveryRequests: (limit: number) => Promise<
     ProviderReadResult<{
       readonly items: readonly DeliveryRequest[];
       readonly pageItemCount: number;

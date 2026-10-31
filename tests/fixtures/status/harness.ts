@@ -5,6 +5,11 @@
  * network, or live tree. The builders are deliberately boring and total so an
  * individual case only states the delta it exercises.
  */
+import {
+  createStatusCommandDefinition,
+  type StatusCommandRuntime,
+} from "../../../packages/cli/src/commands/status";
+import { type CliDependencies, runCli } from "../../../packages/cli/src/index";
 import type {
   DeliveryRequest,
   DeliveryThread,
@@ -29,6 +34,7 @@ import type {
   WorkItem,
   WorkItemRelation,
 } from "../../../packages/core/src/contracts/index";
+import { bufferSink, SYNTHETIC_BRAND } from "../../golden/helpers";
 
 export const NOW_ISO = "2026-10-31T00:00:00Z";
 export const NOW_MS = Date.parse(NOW_ISO);
@@ -319,4 +325,95 @@ export const sectionById = <T extends { readonly id: string }>(
   const found = sections.find((section) => section.id === id);
   if (found === undefined) throw new Error(`section ${id} is missing`);
   return found;
+};
+
+export type StatusCallRecorder = {
+  readonly calls: string[];
+};
+
+export const createStatusRecorder = (): StatusCallRecorder => ({ calls: [] });
+
+/** Build a runtime over the injected facts; the recorder proves call order/count. */
+export const statusRuntime = (
+  facts: StatusFacts,
+  recorder: StatusCallRecorder = createStatusRecorder(),
+): StatusCommandRuntime => ({
+  readRepository: () => {
+    recorder.calls.push("readRepository");
+    return facts.repository;
+  },
+  readWorkItems: async () => {
+    recorder.calls.push("readWorkItems");
+    return facts.tracker;
+  },
+  readDeliveryRequests: async () => {
+    recorder.calls.push("readDeliveryRequests");
+    return facts.changes;
+  },
+  readPipelineRuns: async () => {
+    recorder.calls.push("readPipelineRuns");
+    return facts.ci;
+  },
+  readProviderConfig: () => {
+    recorder.calls.push("readProviderConfig");
+    return facts.providers.config;
+  },
+  readProviderParks: () => {
+    recorder.calls.push("readProviderParks");
+    return facts.providers.parks;
+  },
+  readLocalContext: () => {
+    recorder.calls.push("readLocalContext");
+    return facts.localContext;
+  },
+  nowIso: () => {
+    recorder.calls.push("nowIso");
+    return facts.nowIso;
+  },
+  nowMs: () => {
+    recorder.calls.push("nowMs");
+    return facts.nowMs;
+  },
+});
+
+export type StatusCliRun = {
+  readonly exitCode: number;
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly recorder: StatusCallRecorder;
+};
+
+export type StatusCliOptions = {
+  readonly recorder?: StatusCallRecorder;
+  readonly brand?: typeof SYNTHETIC_BRAND;
+  readonly secrets?: readonly string[];
+  readonly runId?: string;
+};
+
+/** Run the status definition in process with fixed brand/clock/run id/streams. */
+export const runStatusCli = async (
+  argv: readonly string[],
+  runtime: StatusCommandRuntime,
+  options: StatusCliOptions = {},
+): Promise<StatusCliRun> => {
+  const recorder = options.recorder ?? createStatusRecorder();
+  const stdout = bufferSink();
+  const stderr = bufferSink();
+  const ticks = [100, 110] as const;
+  let tick = 0;
+  const deps: CliDependencies = {
+    brand: options.brand ?? SYNTHETIC_BRAND,
+    clock: {
+      now: () => {
+        const value = ticks[Math.min(tick, 1)] as number;
+        tick += 1;
+        return value;
+      },
+    },
+    newRunId: () => options.runId ?? "run-status-fixture",
+    secrets: options.secrets ?? [],
+    program: { commands: { status: createStatusCommandDefinition(runtime) } },
+  };
+  const exitCode = await runCli(argv, { stdout, stderr }, deps);
+  return { exitCode, stdout: stdout.value, stderr: stderr.value, recorder };
 };

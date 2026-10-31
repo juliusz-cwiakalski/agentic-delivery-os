@@ -9,6 +9,7 @@ import { createGitHubClient } from "../../../packages/adapters/src/github/client
 import type { ExternalSystemInstance } from "../../../packages/core/src/contracts/index";
 import { fixtureBrand } from "../../fixtures/credentials/cases";
 import {
+  arrayField,
   createFixtureTransport,
   installThrowingFetchGuard,
   isRecord,
@@ -53,10 +54,10 @@ const checksUrl = (sha: string, limit: number): string =>
 
 const asArray = (value: unknown): readonly unknown[] => (Array.isArray(value) ? value : []);
 
-const mixedBody = readJson(MIXED);
-const limitBody = readJson(LIMIT);
-const relationsBody = readJson(RELATIONS);
-const pullsBody = readJson(PULLS);
+const mixedBody = arrayField(readJson(MIXED), "issues");
+const limitBody = arrayField(readJson(LIMIT), "issues");
+const relationsBody = arrayField(readJson(RELATIONS), "issues");
+const pullsBody = arrayField(readJson(PULLS), "pulls");
 const checksBody = readJson(CHECKS);
 const checkRunsForA =
   isRecord(checksBody) && isRecord(checksBody.shas) ? checksBody.shas[SHA_A] : undefined;
