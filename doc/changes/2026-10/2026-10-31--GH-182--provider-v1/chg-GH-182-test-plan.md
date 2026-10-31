@@ -2050,10 +2050,11 @@ No AC is left without a mapped test. All 48 ACs, all 9 Appendix A groups, and al
 | 1.0 | 2026-10-31T15:00:00Z | Change Test Plan Writer | Initial plan: initial test-case set across structure/behaviour/golden/legacy-parity/checks levels; initial AC traceability (expanded by later revisions to 48/48); 9/9 Appendix A group mapping with 49 delivered legacy IDs; fail-loud no-silent-path matrix; fixture inventory; hermetic/security/determinism/idempotence/bounds/cost coverage; CI wiring and definition of test completion; no execution claimed. |
 | 1.1 | 2026-10-31T16:00:00Z | Change Test Plan Writer | Aligned to spec v1.2: added AC-F2-5 and raised AC traceability (superseded by v1.2: 48/48); pinned the eight-value skip set and `shadowed`/`paid-fallback-not-allowed` precedence; pinned `provider-parks.json` rebuild-on-read with no separate CLI; asserted the closed 8-field park and 11-field announcement evidence allowlists; pinned loop-cap counting to completed sleeps (N = `maxSleepLoops`); recorded 49 executed legacy `TC-ZAI-*` checks and closed OQ-1 through OQ-5. No TC IDs changed; no execution claimed. |
 | 1.2 | 2026-10-31T17:00:00Z | Change Test Plan Writer | Aligned to spec v1.3: added AC-F2-6 and AC-F4-7 (48/48 ACs); added TC-PROV-063 (failed-entry skip-then-continue) and TC-PROV-064 (mixed past/absent/future reset), bringing the plan to 64 TCs; kept the 9 Appendix A groups and 49 legacy IDs unchanged; added §10 NOT RUN rows for the new cases. No other TC IDs changed; no execution claimed for TC-PROV-063/064. |
+| 1.3 | 2026-11-01T00:00:00Z | Change Test Plan Writer | Refreshed §10 execution evidence at HEAD 7de3be2 (Phase 10 post-remediation): `pnpm check` 1149 tests / 113 files, boundaries 106 modules / 188 deps with 0 violations, secret-read boundary 90 files / 4 allowlist entries, doc-distribution 81 in-scope docs, error-table 30/30, forbidden-literals 0, commitlint 0 problems, `git diff --check` clean. TC-PROV-063/064 PASS. Counts unchanged (48/48 ACs, 64/64 TCs). |
 
 ## 10. Test Execution Log
 
-Executions recorded during GH-182 delivery. HEAD `this Phase 9 commit` (Phase 9 aggregate commit). Coverage target after spec v1.3: **48 ACs / 64 TCs**; TC-PROV-063/064 were executed in the Phase 10 remediation (see their row).
+Executions recorded during GH-182 delivery. Run date: 2026-11-01. HEAD `7de3be2` (Phase 10 post-remediation). Coverage target after spec v1.3: **48 ACs / 64 TCs**; TC-PROV-063/064 PASS in the Phase 10 remediation (see their row).
 
 | TC ID / gate | Run Date (UTC) | Result | Notes / command / HEAD |
 |---|---|---|---|
@@ -2069,7 +2070,7 @@ Executions recorded during GH-182 delivery. HEAD `this Phase 9 commit` (Phase 9 
 | TC-PROV-052..062 | 2026-11-01 | PASS | `bun test tests/behaviour/provider-legacy-parity.test.ts tests/checks/provider-hermetic.test.ts` — 9/9 groups, 49/49 IDs, no-silent-path matrix, guide contract |
 | TC-PROV-063..064 | 2026-11-01 | PASS | Phase 10 remediation: `bun test tests/behaviour/provider-chain-resolution.test.ts tests/behaviour/provider-quota-evaluation.test.ts` — failed-entry skip-then-continue (reset_missing retained, no park, later entry selected; only-failed fails `provider.quota.exceeded`) and mixed past/absent indeterminate with future-reset-wins. |
 | TC-PROV-053 | 2026-11-01 | PASS | `bun test tests/golden` — normalized machine/human provider goldens |
-| Aggregate `pnpm check` | 2026-11-01 | PASS | lint, format:check, typecheck, 1138 tests, boundaries, exports parity |
-| `pnpm check:boundaries` | 2026-11-01 | PASS | depcruise + ambient-globals + workspace-entrypoints + secret-read-boundary |
-| Static invariants | 2026-11-01 | PASS | `error-table-sync.ts`, `forbidden-literals.ts`, doc-distribution guard, `git diff --check` |
+| Aggregate `pnpm check` (HEAD 7de3be2, Phase 10 post-remediation) | 2026-11-01 | PASS | 1149 tests / 113 files / 0 fail; lint, format:check, typecheck, boundaries, exports parity |
+| `pnpm check:boundaries` (HEAD 7de3be2) | 2026-11-01 | PASS | depcruise 106 modules / 188 deps, 0 violations; ambient-globals, workspace-entrypoints, secret-read-boundary (90 files, 4 allowlist entries) OK |
+| Static invariants (HEAD 7de3be2) | 2026-11-01 | PASS | doc-distribution guard (81 in-scope docs, no drift); error-table sync (30 machine / 30 documented); forbidden-literals 0 violations; commitlint 0 problems across origin/main-tools..HEAD (1 non-blocking warning on an earlier commit); `git diff --check` clean |
 

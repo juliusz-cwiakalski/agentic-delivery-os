@@ -11,9 +11,9 @@ phases:
   delivery: { started: "2026-10-31T19:30:00Z", completed: "2026-10-31T20:30:00Z" }
   system_spec_update: { started: "2026-10-31T20:30:00Z", completed: "2026-10-31T21:00:00Z" }
   review_fix: { started: "2026-10-31T21:00:00Z", completed: "2026-11-01T04:00:00Z" }
-  quality_gates: { started: "2026-11-01T04:00:00Z", completed: null }
-  dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null, url: null }
+  quality_gates: { started: "2026-11-01T04:00:00Z", completed: "2026-11-01T04:15:00Z" }
+  dod_check: { started: "2026-11-01T05:30:00Z", completed: "2026-11-01T05:45:00Z" }
+  pr_creation: { started: "2026-11-01T05:45:00Z", completed: null, url: null }
 decisions:
   - text: "Scope is the M0-S13 provider engine family: chain resolution, quota and peak-window awareness, named self-expiring parks (cause + expiry), subscription-first ordering, and fail-loud announcements. Model-profiles selection heuristics stay out (M2 candidate); harness spawn stays out (M1-S11)."
     date: "2026-10-31"
@@ -55,4 +55,7 @@ notes:
     date: "2026-11-01"
   - text: "Review iteration 2 PASS after remediation 7588b26 + docs a11def4: all R1-R7 closed, no new contradictions, tests strengthened. Phase 10 remediation complete; proceed to quality gates."
     type: resolved
+    date: "2026-11-01"
+  - text: "Quality gates PASS at HEAD 7de3be2: pnpm check 1149 tests/113 files, boundaries, doc-distribution (81 docs), error-table sync (30/30), secret-read boundary (4 entries), forbidden-literals (0), commitlint (0 problems), git diff --check. DoD audit: all delivery evidence satisfied; plan and test-plan bookkeeping reconciled (48 ACs/64 TCs). Only PR-phase gates remain: unmerged main-tools PR with green CI/owner assignment (11.5) and owner-policy OQ-2/OQ-3 confirmation (11.2, merge gate)."
+    type: decision
     date: "2026-11-01"
