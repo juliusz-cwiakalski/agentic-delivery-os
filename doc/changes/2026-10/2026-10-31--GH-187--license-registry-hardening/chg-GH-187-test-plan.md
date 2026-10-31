@@ -2,7 +2,7 @@
 id: chg-GH-187-test-plan
 status: Updated
 created: 2026-10-31T14:30:00Z
-last_updated: 2026-10-31T16:05:00Z
+last_updated: 2026-10-31T16:40:00Z
 owners: [engineering]
 service: delivery-os repository license compliance gate
 labels: [change, planning]
@@ -126,7 +126,7 @@ No HTTP/REST surface and no events or messages exist in this change (spec §8.1,
 | NFR-3 | 0 new dependencies, 0 lockfile changes, 0 new CI jobs | TC-LICREG-028, TC-LICREG-020, TC-LICREG-003 | Covered |
 | NFR-4 | `ts-license-audit` stays binding; 0 `continue-on-error`, 0 shell-truthy suffixes, 0 `set +e`, or equivalent; topology and bindingness invariants pass | TC-LICREG-020, TC-LICREG-021, TC-LICREG-029 | Covered |
 | NFR-5 | Live audit completes within 30 s with no additional job timeout | TC-LICREG-027 | Covered — upper bound asserted, measured value recorded (GAP-4) |
-| NFR-6 | 100% of failures name package, use (where applicable), license text or identifier, and reason; expected validation failures produce no uncaught stack trace | TC-LICREG-022, TC-LICREG-026, TC-LICREG-010 | Covered — uses the failure-class vocabulary fixed in §4.2 |
+| NFR-6 | 100% of failures name package, use (where applicable), license text or identifier, and reason; expected validation failures produce no uncaught stack trace | TC-LICREG-022, TC-LICREG-026, TC-LICREG-010, TC-LICREG-031 | Covered — uses the failure-class vocabulary fixed in §4.2; the schema/scope representative is TC-LICREG-026 plus TC-LICREG-031, which asserts the observed-scope diagnostic |
 
 ## 4. Test Types and Layers
 
@@ -1269,7 +1269,7 @@ All TCs are automated except TC-LICREG-030. Paths marked † are assumed locatio
 | TC-LICREG-013 | `tests/checks/license-policy.test.ts` (†) | same | 20 single removals + 5 adversarial removals + extension control | To Implement |
 | TC-LICREG-014 | `tests/checks/license-audit.test.ts` (extend) | `bun test tests/checks/license-audit.test.ts` | extension + 3 prefix/substring traps | To Implement |
 | TC-LICREG-015 | `tests/checks/license-audit.test.ts` (extend) | same | removed entry, removed use, synthetic use, version bump | Existing – Update |
-| TC-LICREG-016 | `tests/checks/license-audit.test.ts` (extend) + `cases.json` (extend) | same | 13 non-asserted/empty/unparseable cases + `NONE` | Existing – Update |
+| TC-LICREG-016 | `tests/checks/license-audit.test.ts` (extend) + `cases.json` (extend) | same | 12 listed non-asserted/empty/reference/unparseable cases + `NONE` from step 3 (13 total) | Existing – Update |
 | TC-LICREG-017 | `tests/checks/license-audit.test.ts` (extend) | same | 7 guard licenses + 2 compounds + drift case | Existing – Update |
 | TC-LICREG-018 | `tests/checks/license-audit.test.ts` (extend) | same | none; isolation registry | To Implement |
 | TC-LICREG-019 | `tests/checks/license-audit.test.ts` (extend) | same | 5 all-allowed compounds + 1 disallowed control | To Implement |
@@ -1291,12 +1291,14 @@ All TCs are automated except TC-LICREG-030. Paths marked † are assumed locatio
 **Execution order** (fast feedback first):
 
 1. Delivered-state assertions: TC-LICREG-001, TC-LICREG-002, TC-LICREG-003, TC-LICREG-005, TC-LICREG-018, TC-LICREG-023.
-2. Schema and policy integrity: TC-LICREG-004, TC-LICREG-008, TC-LICREG-011, TC-LICREG-012, TC-LICREG-013, TC-LICREG-024.
+2. Schema and policy integrity: TC-LICREG-004, TC-LICREG-008, TC-LICREG-011, TC-LICREG-012, TC-LICREG-013, TC-LICREG-024, TC-LICREG-031.
 3. Enforcement matrix: TC-LICREG-006, TC-LICREG-007, TC-LICREG-009, TC-LICREG-010, TC-LICREG-014, TC-LICREG-015, TC-LICREG-016, TC-LICREG-017, TC-LICREG-019.
 4. Process contract: TC-LICREG-022, TC-LICREG-025, TC-LICREG-026, TC-LICREG-027.
 5. CI binding and non-weakening: TC-LICREG-020, TC-LICREG-021, TC-LICREG-028.
 6. Regression battery: TC-LICREG-029.
 7. Manual review: TC-LICREG-030.
+
+All 31 TCs are scheduled exactly once across these seven steps (31/31); TC-LICREG-031 runs in step 2 with the other schema and policy-integrity cases.
 
 **Evidence commands** (run in this order and record the results in §10):
 
@@ -1367,6 +1369,8 @@ git status --porcelain
 | 1.1 | 2026-10-31 | @test-plan-writer | Documentation corrections only; no TC added, removed, or renumbered, and no requirement changed. (1) Reconciled the malformed-entry case count: the §7 automation row said 15 while TC-LICREG-012 and TC-LICREG-024 enumerate 18 (5 non-string, 3 empty, 3 whitespace-affixed, 1 duplicate, 3 compound, 3 operator-only); all three now state 18. (2) Corrected the spawned-case claim in §4.4 (and the matching §4.6 threshold row and RSK-T2 mitigation): TC-LICREG-022 spawns one live green case plus exactly nine failure cases — denied single, denied branch, denied nested compound, deny-list absent, old schema, floor removal, allow/deny overlap, non-asserted license, unregistered dependency — while unknown reference, empty license, non-allow-listed, and allow/verdict drift stay in-process (TC-LICREG-016, TC-LICREG-017, TC-LICREG-023); no spawn case added. (3) Removed the stale note that the deny-identifier grammar is absent from the spec: §4.1, A-T2, and OQ-T2 now cite spec v1.1 DM-2 and Appendix A (`^[A-Za-z0-9.+-]+$`, no whitespace, operator, parenthesis, or compound expression). OQ-T1 and GAP-6 were realigned to spec v1.1's corrected AC-F1-1 C-2 wording, which is the same spec revision now cited |
 | 1.2 | 2026-10-31 | @test-plan-writer | Factual correction only; no TC added, removed, or renumbered, no assertion changed. The live registry `doc/legal/dependency-licenses.yaml` carries 16 `package:` entries (verified by counting the committed file), not 15. Corrected both stale statements: the §2 "Registry artifact" bullet (15 → 16 entries) and the §6.2 "Live closure" row, which now reads 16 package entries across 20 registered uses so the closure's use-row count is not conflated with the entry count. The four-entry allow list and every other count (20 Appendix A identifiers, 18 malformed-entry cases, 10 spawned cases, 20 floor-removal cases) are unchanged; no other `15 entries` occurrence exists in the file |
 | 1.3 | 2026-10-31 | @test-plan-writer | DoR iteration 1 remediation (`readiness-review/readiness-iter-1.md`, findings 2, 4, 5, 6, 8, and the SBOM milestone note). (A) Pre-existing test count corrected from 12 to 13 in §2 and TC-LICREG-029 step 1: the live suite has 13 `test(...)` cases, all 13 titles must remain and pass, and the base-branch title check stays the authority. (B) TC-LICREG-013 step 5 now expects only the mandatory-floor failure — with the identifier removed from `deny_list`, neither overlap nor denial is reachable — and asserts that no overlap-class or denial-class message appears, so the floor itself is proven load-bearing; step 7 and the expected outcome reconcile the count at 25 (20 single removals + 5 adversarial removals), matched by TC-LICREG-024, §4.4, §4.6, and RSK-T6. (C) TC-LICREG-026 aligned to 13 class representatives in §7 (was 7), with the precondition and step 1 enumerating all thirteen and asserting the executed count. (D) Count drift reconciled: TC-LICREG-004 declares 5 schema mutations (the duplicate "key removed while deny_list present" variant dropped) to match TC-LICREG-024; TC-LICREG-016 states 12 listed values plus `NONE` = 13; GAP-2 now says four TCs depend on `origin/main-tools` (adding TC-LICREG-029), matching §6.1. (E) New TC-LICREG-031 (wrong-`scope` schema-v3 registry fails closed and reports the observed scope) added with index row, detail, §7 row, and AC-F1-3/DM-1/CON-10 traceability; §4.1 items 1 and 7 and the §4.2 class row now cover the preserved scope check, and the totals move from 30 to 31 TCs with counts 5 schema + 5 scope mutations. (F) SBOM/checksum/notice deferral corrected to the milestone split (release-time artifacts → M4-S2; registry completeness and public materials → M4-S3) with GH-187 superseding GH-170 DEC-10's M0-S18 assignment; spec and TDR-0007 citations updated to spec v1.2 and the TDR-0007 Proposed record, including TC-LICREG-019 and TC-LICREG-030. |
+| 1.4 | 2026-10-31 | @test-plan-writer | DoR iteration 2 remediation, test-plan findings only (`readiness-review/readiness-iter-2.md`, findings 4, 5, 8); no TC added, removed, or renumbered and no assertion changed. (4) §7 TC-LICREG-016 automation row now reads "12 listed non-asserted/empty/reference/unparseable cases + `NONE` from step 3 (13 total)", matching the TC detail's 12 listed values plus `NONE`. (5) §7 execution order now schedules TC-LICREG-031 in step 2 (schema and policy integrity), and a 31/31 statement records that all TCs are scheduled exactly once. (8) §3.3 NFR-6 now cites TC-LICREG-031 and states that the schema/scope representative is TC-LICREG-026 plus TC-LICREG-031, which asserts the observed-scope diagnostic. The iteration-2 blocking finding (plan task 2.1 `floor 20` / Phase 2 acceptance `20/20 floor removals` versus the test plan's 25 removal cases) is a delivery-planning correction and is deliberately not touched here; the test plan keeps floor 25 (20 single + 5 adversarial). |
+
 ## 10. Test Execution Log
 
 | TC ID | Run Date | Result | Notes |

@@ -359,10 +359,10 @@ None. The PM decisions recorded in Section 15 resolve the policy location, deny 
 The change is done only when all of the following are true, with evidence traceable to the test plan:
 
 - **All 15 ACs have passing evidence.** Every acceptance criterion in §17 maps to passing TCs in the test plan's AC traceability matrix; the automated suites (`bun test tests/checks`, the spawned-exit suite, and the repository invariant commands) pass, and the manual TC-LICREG-030 items are confirmed on the PR.
-- **Live registry is valid at schema v3.** `validate(ROOT)` returns zero failures; the delivered registry declares `schema_version: 3` and `scope: direct-and-runtime-closure`; the wrong-scope schema-v3 negative case added by the test plan (TC-LICREG-001/004 family) fails closed and reports the observed scope.
+- **Live registry is valid at schema v3.** `validate(ROOT)` returns zero failures; the delivered registry declares `schema_version: 3` and `scope: direct-and-runtime-closure`; the wrong-scope schema-v3 negative case added by the test plan (TC-LICREG-031) fails closed and reports the observed scope.
 - **Deny policy is complete and disjoint.** The deny list contains 20/20 Appendix A baseline identifiers, the allow list and deny list are disjoint, and removing any baseline identifier fails closed (TC-LICREG-002, TC-LICREG-007, TC-LICREG-008, TC-LICREG-013).
 - **Required matrices pass.** The 18 malformed deny-entry variants (TC-LICREG-012), the 10 spawned cases — 1 live green plus 9 failure (TC-LICREG-022) — and the preserved-compound cases (TC-LICREG-018, TC-LICREG-019) all pass.
-- **Full gate battery is green.** `pnpm check` passes, including the inherited bash suites and the `ts-license-audit` command; the existing `ts-license-audit` job remains required and green.
+- **Full gate battery is green.** The actual battery passes: `pnpm check`; `bun run scripts/checks/license-audit.ts`; the CI-topology, bindingness, and supply-chain invariant checks; `bash scripts/.tests/test-*.sh`; and `bash tools/.tests/test-*.sh`. The existing `ts-license-audit` job remains required and green.
 - **Surface is unchanged.** No lockfile, manifest, dependency, workflow-job, or aggregate-chain change is present; TC-LICREG-020, TC-LICREG-021, TC-LICREG-028, and TC-LICREG-029 pass.
 - **No release artifacts were introduced.** No SBOM, notices, checksum, or review-date artifact exists in the change (TC-LICREG-028, TC-LICREG-030).
 - **C-2 remains proposed.** The C-2 owner determination is preserved verbatim from the seed and recorded for owner confirmation at PR review; no approval is fabricated (TC-LICREG-003, TC-LICREG-030).
@@ -468,6 +468,7 @@ TDR-0007 remains Proposed; this specification does not claim it is accepted. The
 | 1.0 | 2026-10-31 | @spec-writer | Initial specification for GH-187 license registry hardening. |
 | 1.1 | 2026-10-31 | @spec-writer | Corrected AC-F1-1 C-2 wording and added the deny-identifier grammar to DM-2 and Appendix A (OQ-T2). |
 | 1.2 | 2026-10-31 | @spec-writer | DoR iteration 1 remediation: added §18.1 Definition of Done predicates; cited TDR-0007 in DEC-3/Appendix C; corrected M4-S2/M4-S3 deferrals and GH-170 DEC-10 supersession; preserved and AC-linked the schema-v3 scope check (CON-10, AC-F1-3). |
+| 1.3 | 2026-10-31 | @spec-writer | DoR iteration 2 remediation: corrected the DoD gate-battery commands and replaced the wrong-scope TC citation with TC-LICREG-031. |
 
 ---
 

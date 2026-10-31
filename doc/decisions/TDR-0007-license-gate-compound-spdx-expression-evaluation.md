@@ -5,12 +5,12 @@ status: Proposed
 created: 2026-10-31
 decision_date: null
 last_updated: 2026-10-31
-summary: "Interpret ADR-0003 C-2's 'fails closed on compound expressions' as per-branch fail-closed SPDX evaluation: every AND/OR branch must be known, not denied, and allow-listed; blanket rejection of all compound expressions is not the policy."
+summary: "Interpret ADR-0003 C-2's 'fails closed on compound expressions' as per-branch fail-closed SPDX evaluation: no branch may be unknown, non-asserted (`NOASSERTION`/`SEE LICENSE`), denied, or non-allow-listed; blanket rejection of all compound expressions is not the policy."
 owners: ["Juliusz Ćwiąkalski"]
 service: delivery-os
 decision_scope: repo
 review_date: null
-business_impact: "Preserves the live MIT OR Apache-2.0 dependency while keeping the license gate fail-closed on any unknown, denied, or non-allow-listed branch, and removes an authoritative-policy ambiguity that could invite an incompatible reinterpretation."
+business_impact: "Preserves the live MIT OR Apache-2.0 dependency while keeping the license gate fail-closed on any unknown, non-asserted (`NOASSERTION`/`SEE LICENSE`), denied, or non-allow-listed branch, and removes an authoritative-policy ambiguity that could invite an incompatible reinterpretation."
 classification:
   domains: [legal, security, tooling, operations]
   archetype: policy
@@ -82,7 +82,7 @@ Because ADR-0003 is `Accepted`, its core decision statement is immutable under t
 
 ## Constraints (Hard Requirements)
 
-### C-1: The gate never accepts an unresolved, denied, or non-allow-listed license
+### C-1: The gate never accepts an unresolved, non-asserted, denied, or non-allow-listed license
 
 - **Statement:** For every registry entry, the gate fails when a license is empty, unparseable, `NOASSERTION`, `SEE LICENSE`, a `LicenseRef-*` reference, an unknown identifier, a denied identifier, or a valid identifier absent from the allow-list — including when that identifier is one branch of a compound expression.
 - **Source:** prior decision (ADR-0003 C-2); AC (GH-187 F-4, G-4)
@@ -115,7 +115,7 @@ Because ADR-0003 is `Accepted`, its core decision statement is immutable under t
 Prioritized (highest first):
 
 1. **Preserve legitimate live dependency use.** The `MIT OR Apache-2.0` entry is a real, needed dependency; a policy that rejects it forces either dependency churn or a hidden exemption. *(C-4 is the binary scope gate; this driver is the value preference for keeping the tool without rework. They are related but distinct: an option can satisfy C-4 and still score poorly here if it keeps the dependency only by adding complexity or a special case.)*
-2. **Preserve the fail-closed intent.** The policy must remain conservative: no unknown, denied, or unallow-listed branch may slip through.
+2. **Preserve the fail-closed intent.** The policy must remain conservative: no unknown, non-asserted (`NOASSERTION`/`SEE LICENSE`), denied, or unallow-listed branch may slip through.
 3. **Consistency with the current system specification and GH-170 behavior.** The interpretation should describe the delivered behavior, not create a second policy.
 4. **Determinism and auditability.** Each branch's outcome should be explicit and testable, so reviewers can see exactly which identifier failed.
 5. **Minimal change and lean process.** Prefer the paved road: no rewrite of an accepted ADR, no new gate, no new dependency.
@@ -198,8 +198,8 @@ Legend: ✅ passes · ❌ fails · ⚠️ passes only via accepted-risk exceptio
 ### Alternative 3 — Per-Branch Fail-Closed Parsing (selected)
 
 - **Eligibility:** Eligible.
-- **Summary:** Parse the SPDX expression into identifier branches and require every branch to be known, not denied, and allow-listed; the expression passes only when every branch passes.
-- **Constraint compliance:** Passes all constraints. C-1: any unresolved, denied, or non-allow-listed branch fails the expression. C-2: branches come from the parser, not string matching. C-3: the existing binding gate is retained and remains fail-closed. C-4: the live `MIT OR Apache-2.0` entry validates unchanged.
+- **Summary:** Parse the SPDX expression into identifier branches and require every branch to be known, asserted (`NOASSERTION`/`SEE LICENSE` are never accepted), not denied, and allow-listed; the expression passes only when every branch passes.
+- **Constraint compliance:** Passes all constraints. C-1: any unresolved, non-asserted (`NOASSERTION`/`SEE LICENSE`), denied, or non-allow-listed branch fails the expression. C-2: branches come from the parser, not string matching. C-3: the existing binding gate is retained and remains fail-closed. C-4: the live `MIT OR Apache-2.0` entry validates unchanged.
 - **Driver fit:** Best on drivers 1–4 and 6: keeps the live dependency, preserves fail-closed intent, matches the spec and GH-170 behavior, and produces per-identifier diagnostics. Adequate on driver 5: no new gate, dependency, or ADR rewrite.
 - **Pros:** Resolves the ambiguity in favor of the delivered behavior; no dependency churn; explicit, testable branch outcomes; no hidden exemptions.
 - **Cons:** Stricter than SPDX OR semantics (an OR expression with any non-allow-listed branch is rejected even if one branch alone would be acceptable); `WITH` expressions remain unsupported; the Accepted ADR's literal text still needs a cross-reference to be discoverable.
@@ -207,7 +207,7 @@ Legend: ✅ passes · ❌ fails · ⚠️ passes only via accepted-risk exceptio
 
 ## Decision
 
-- **Decision:** ALT-3. Compound SPDX expressions are parsed with per-branch fail-closed evaluation. No branch may be unknown, denied, or non-allow-listed; the expression passes only when every branch passes. Blanket rejection of all compound expressions is **not** the policy.
+- **Decision:** ALT-3. Compound SPDX expressions are parsed with per-branch fail-closed evaluation. No branch may be unknown, non-asserted (`NOASSERTION`/`SEE LICENSE`), denied, or non-allow-listed; the expression passes only when every branch passes. Blanket rejection of all compound expressions is **not** the policy.
 - **Rationale (tied to drivers):** ALT-3 preserves the live `MIT OR Apache-2.0` dependency (driver 1), keeps the gate conservative on every branch (driver 2), matches the current system specification and GH-170 behavior (driver 3), yields explicit per-identifier diagnostics (driver 4), and requires no new gate, dependency, or ADR rewrite (driver 5). It also records the interpretation durably so it is not re-litigated per change (driver 6).
 - **Decider:** Juliusz Ćwiąkalski (owner) — acceptance pending at PR review; this record does not claim approval.
 - **Conditions for revisit:** See `revisit_triggers` in the front matter; primary triggers are a later decision to reject all compounds, a material change to the expression grammar, and any legal review that rejects per-branch allow-listing as a compatibility proxy.
@@ -232,7 +232,7 @@ This record interprets the gate's **policy mechanics**. It does not determine th
 
 ### Constraint Compliance Attestation
 
-The chosen alternative satisfies all constraints C-1 through C-4: every unresolved, denied, or non-allow-listed branch fails (C-1); identifiers come from the parser, never from prefix/substring matching (C-2); the existing binding `ts-license-audit` gate is retained without a bypass or new job (C-3); and the live dependency graph, lockfile, and registry entries remain unchanged, including `@biomejs/biome` `MIT OR Apache-2.0` (C-4). No accepted-risk exceptions are taken against any constraint.
+The chosen alternative satisfies all constraints C-1 through C-4: every unresolved, non-asserted (`NOASSERTION`/`SEE LICENSE`), denied, or non-allow-listed branch fails (C-1); identifiers come from the parser, never from prefix/substring matching (C-2); the existing binding `ts-license-audit` gate is retained without a bypass or new job (C-3); and the live dependency graph, lockfile, and registry entries remain unchanged, including `@biomejs/biome` `MIT OR Apache-2.0` (C-4). No accepted-risk exceptions are taken against any constraint.
 
 ## Trade-offs & Consequences
 
