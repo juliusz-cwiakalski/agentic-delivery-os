@@ -39,7 +39,7 @@ links:
 
 The change introduces one injected I/O seam, `OpencodeSessionIo`, and two core ports: the read-only `SessionStorePort` (ADR-0003's read-only `SessionStore` semantics preserved as `size`/`list`) and `SessionAdminPort`, which extends the read surface with `prune` and `reboot`. Production I/O lives only in the already-admitted `@delivery-os/adapters/session` subpath and reaches the database exclusively through the opencode CLI. Core carries types, `as const` data, and pure policy only. No package, subpath, dependency, or runtime-API location is added.
 
-Safety is the product. A prune candidate is a session older than the declared threshold, outside the live window, and a leaf (no other session names it as `parent_id`). The live window is 15 minutes. Candidate conditions are re-checked immediately before each delete. Deletes go one by one through `opencode session delete <sessionID>`; the database file, WAL, and SHM sidecars are never deleted or truncated by `prune`. `reboot --apply` performs one bounded `PRAGMA wal_checkpoint(TRUNCATE)` only when no live session exists, never kills a process, and never removes a sidecar. The operator still restarts opencode manually; `reboot` prepares the database safely.
+Safety is the product. A prune candidate is a session older than the declared threshold, outside the live window, and a leaf (no other session names it as `parent_id`). The live window is 15 minutes. Candidate conditions are re-checked immediately before each delete. Liveness is activity-based only: a session is live when `time_updated` falls inside the 15-minute window; there is no PID or lock-file probe, so an open-but-idle session older than `--older-than` is a prune candidate, and the ticket's "no live session lock is deleted" is satisfied only under this narrowed definition. Deletes go one by one through `opencode session delete <sessionID>`; the database file, WAL, and SHM sidecars are never deleted or truncated by `prune`. `reboot --apply` performs one bounded `PRAGMA wal_checkpoint(TRUNCATE)` only when no live session exists, never kills a process, and never removes a sidecar. The operator still restarts opencode manually; `reboot` prepares the database safely. This is a deliberate, safer deviation from the offered fallback, which said reboot restarts the opencode process only when no live session is detected: this change performs a checkpoint only and requires a manual restart (NG-D2, §3.5). The deviation and the activity-based liveness limitation are surfaced for owner acceptance in the PR body.
 
 The ticket's inline admin prototype is absent from the issue body, comments, and history. This specification is authored from the ticket summary, the M0-S11 backlog entry, and the recorded PM fallback (durable, reversible, owner-amendable at PR review), not from a reconstructed prototype. ADR-0003 C-11 requires an explicit privacy sign-off before the `db` administration engine ships; this change records that sign-off as an owner merge gate and does not claim it is granted.
 
@@ -70,7 +70,7 @@ The absence of an admin surface has three consequences. First, bloat is managed 
 
 1. Port the session-database admin surface as `ados db` — `size`, `list`, `prune`, `reboot` — with bounded output and dry-run by default.
 2. Make prune idempotent and safe to re-run.
-3. Never delete a live session or a live-session lock.
+3. Never delete a live session or a live-session lock under the activity-based definition in §3.4 (no PID or lock-file probe; an open-but-idle session older than `--older-than` is prunable).
 4. Keep ADR-0003's `SessionStore` read-only and metadata-only; add a distinct admin port for mutation.
 5. Ship classified failure identities and documented error-table rows in-change.
 6. Keep the delivery gate green, including the scoped baseline repair.
@@ -103,9 +103,10 @@ The absence of an admin surface has three consequences. First, bloat is managed 
 Grammar rules, all validated before any I/O:
 
 - A missing subcommand, an unknown subcommand, an unexpected positional, a `--`-prefixed flag not declared for the selected subcommand, a missing flag value, or a numeric value outside its declared range is a classified `input.value.rejected` rejection with exit `1`. No state is read and no mutation is attempted.
+- The command definition declares `positionals.max: 8`, so positionals 1–8 reach the handler (the first is the subcommand). An unexpected positional among those slots is rejected by the handler as `input.value.rejected`; the ninth and later positionals are contained by the parser as `fallback.invocation`. Both are exit `1`.
 - The shared parser recognizes only `--`-prefixed tokens as flags. A single-dash token such as `-x` is not a flag; it is an unexpected positional that the handler rejects as `input.value.rejected` (exit `1`). An undeclared `--`-prefixed token such as `--x` is rejected by the parser as `fallback.invocation` (exit `1`). Both classes are input-domain, user-validation rejections at exit `1`; the split is pinned in DEC-D7.
-- The shared parser is `packages/cli/src/index.ts`, which this change consumes unchanged; only the two token classes above determine which layer rejects.
-- `--apply` is boolean; `--apply=false`, a value-bearing `--apply`, or a repeated conflicting flag pair is rejected. Boolean and value flags never share a name.
+- The shared parser is `packages/cli/src/index.ts`, which this change consumes unchanged; only the token and positional-cap classes above determine which layer rejects.
+- `--apply` is boolean. `--apply=false` is an undeclared exact token contained by the parser as `fallback.invocation`; a value-bearing `--apply` (for example `prune --apply false`) is rejected by the handler as `input.value.rejected`. Boolean and value flags never share a name. The shared parser's `conflicts` mechanism rejects only declared conflicting pairs, and `db` declares none; repeated occurrences of the same flag are therefore not a parser conflict, and the parser applies the last value.
 - `--json` is not a command-specific flag; the handler never inspects it.
 
 The command handler returns data or an error object. It performs no stream write and chooses no exit code. The CLI edge renders the human text or the machine envelope and projects the exit code through the existing classification chain.
@@ -120,17 +121,23 @@ Read-only. Resolves the database path at runtime through `opencode db path` — 
 - session count, message count, and part count;
 - oldest and newest session `time_updated` as ISO-8601 UTC strings, or `null` when the session table is empty.
 
-Message count is over `session_message` (the current message store). The legacy `message` table is not written by current opencode and is not counted. Part count is over `part`. Sidecar absence is reported explicitly (`walPresent: false`, `shmPresent: false`, bytes `0`) so an absent file is never confused with a real zero-byte file.
+Message count is over `message`, the current message store on the reference opencode 1.19.3 schema, where `message` and `part` hold the live data. The store-wide counts are `sessions = COUNT(*) FROM session`, `messages = COUNT(*) FROM message`, and `parts = COUNT(*) FROM part`.
+
+`session_message` is the legacy/alternate store. It is present in the reference schema but empty on the reference opencode 1.19.3 store (0 rows against roughly 209k rows in `message`), so it is not counted anywhere in `size`; counting it would report zero messages and zero payload bytes on a fully populated store. If a future harness version moves the current store, the adapter's pinned queries are updated through a versioned contract change rather than being discovered from a silent zero (RSK-D13).
+
+Sidecar absence is reported explicitly (`walPresent: false`, `shmPresent: false`, bytes `0`) so an absent file is never confused with a real zero-byte file.
 
 `size` takes no command-specific flags and performs no writes, fences, or checkpoints.
 
 ### 3.3 `db list` (F-D2)
 
-Read-only. Returns a bounded page of session summaries ordered by `updatedAt` descending, then `id` ascending. `--limit` defaults to 20 and is capped at 100. The page reports `total` (all sessions), `omitted` (total minus returned), and `truncated` (true when `omitted > 0`).
+Read-only. `list` issues exactly two read queries: one total-session count query and one bounded page query. The page query selects the ordered page of `session` rows and derives the three per-item aggregates in that same single statement over the current stores `message` and `part`: `messageCount = COUNT(*) FROM message WHERE session_id = s.id`, `partCount = COUNT(*) FROM part WHERE session_id = s.id`, and `dataBytes = COALESCE(SUM(LENGTH(message.data)),0) + COALESCE(SUM(LENGTH(part.data)),0)` over the session's rows, returning `0` when the session has no `message` or `part` rows. `session_message` is the legacy/alternate store and is empty on the reference opencode 1.19.3 store, so it is never counted or summed here (RSK-D13). The page query carries these as correlated scalar subqueries, or an equivalent single-statement form that preserves one row per session, ordered by `time_updated DESC, id ASC` with a `LIMIT`; no per-session query is issued.
+
+Returns a bounded page of session summaries ordered by `updatedAt` descending, then `id` ascending. `--limit` defaults to 20 and is capped at 100. The page reports `total` (all sessions), `omitted` (total minus returned), and `truncated` (true when `omitted > 0`).
 
 Each item carries exactly: `id`, optional `parentId`, `createdAt`, `updatedAt`, `messageCount`, `partCount`, `dataBytes`, `archived`, and `live`. `live` is computed from the injected clock and the pinned 15-minute window; it is never derived from the host clock inside the adapter. No title, prompt, message body, part data, credential, environment value, or command argument is read into output, evidence, or fixtures.
 
-`dataBytes` is the summed stored payload size of the session's messages and parts, read as a length only and never returned as content. It is advisory metadata, not a billing or retention figure.
+`dataBytes` is the summed stored payload length of the session's messages and parts, read as a length only and never returned as content. It is advisory metadata, not a billing or retention figure.
 
 ### 3.4 `db prune` (F-D3)
 
@@ -146,13 +153,17 @@ Candidates are ordered oldest-first by `time_updated`, then `id` ascending, and 
 
 **Live-session rule.** A live session is never a candidate, never selected, and never deleted, and the live condition is re-asserted on every re-read. Candidate conditions are re-checked immediately before each delete (the TOCTOU guard). The reachable races are leaf status and row disappearance: a candidate that gained a child between selection and delete is skipped so no orphan is created, and a row that vanished is a skip. The cold and live conditions ride the same re-read so the selection interpretation and the guard cannot drift; with the one-day minimum threshold the live condition is a defensive invariant rather than a reachable transition. Skip reasons are counted, never fabricated as success.
 
-**Deletion path.** A delete is one `opencode session delete <sessionID>` invocation per candidate. The command cascades `message`, `part`, `session_message`, `session_share`, `session_input`, `session_context_epoch`, and `todo` rows through opencode's own implementation. `prune` never issues a `DELETE` statement itself, never drops or truncates a table, and never deletes or truncates the database file, WAL, or SHM sidecar.
+Liveness is activity-based only: a session is live when `time_updated` is inside the 15-minute window. There is no PID or lock-file probe, so an open-but-idle session older than `--older-than` is a prune candidate; the ticket's "no live session lock is deleted" is satisfied only under this narrowed, activity-based definition (RSK-D12).
+
+**Deletion path.** A delete is one `opencode session delete <sessionID>` invocation per candidate. The command cascades `message`, `part`, `session_message`, `session_share`, `session_input`, `session_context_epoch`, and `todo` rows through opencode's own implementation. `prune` never issues a `DELETE` statement itself, never drops or truncates a table, and never deletes or truncates the database file, WAL, or SHM sidecar. After a delete invocation reports failure, one bounded post-delete existence read by id decides absence versus failure: zero rows is a counted skip, a present row is a failed delete. This is a normal single-statement query and adds no seam member.
 
 **Leaf-only rationale.** `session.parent_id` has no foreign key and descendant sessions do not cascade. Deleting a session that has children would orphan them, so a session with any child is never eligible. A leaf is a session with no children of its own: a child session with no children is a leaf and is eligible, while a parent becomes eligible only after its last child has been removed by an earlier run.
 
 **Idempotency.** A second identical run selects zero candidates because the first run removed them. Dry-run is repeatable and mutates nothing. A failed delete leaves its row in place, so a later run selects it again. Deleting a row that is already absent is a skipped/zero outcome, never a hard failure mid-run.
 
-**Partial failure.** A per-candidate delete failure does not stop the run; remaining candidates are attempted. When one or more deletes fail, the command returns the classified `db.delete.failed` failure (exit `2`) whose bounded summary states the failed count and the first failed session identity (for example `"3 of 50 session deletes did not land (first: <id>)"`). Successful deletions are not re-listed. The failure never reports overall success, and the surviving rows make the retry converge. `db.opencode.unavailable` and `db.query.failed` abort the run because selection validity can no longer be guaranteed.
+**Partial failure and mid-run abort.** A per-candidate delete failure does not stop the run; remaining candidates are attempted, each failed delete increments `failed`, and each successful delete increments `landed`. When one or more deletes fail, the command returns the classified `db.delete.failed` failure (exit `2`, transient, retryable) whose bounded summary is the normative string `"<failed> of <attempted> session deletes did not land (first: <id>); <landed> landed"`, where `attempted = landed + failed` and `<id>` is the first failed session identity. Successful deletions are never re-listed as failures, and the failure never reports overall success; the surviving rows make the retry converge.
+
+A query or re-read failure **before any delete has landed** returns `db.query.failed` (exit `2`) because selection validity can no longer be guaranteed; a `db.opencode.unavailable` failure before any delete lands keeps its own identity. An aborting query, pre-delete re-read, post-delete existence-read, or `db.opencode.unavailable` failure **after at least one delete has landed** stops the run and returns `db.delete.failed` (exit `2`, transient, retryable) with the same bounded partial-abort summary: `landed` is the count of deletes that succeeded, `failed` counts candidates whose delete did not land (including the aborting candidate whose re-read failed), `attempted = landed + failed`, and `<id>` is the first failed identity. The summary carries the per-row truth; `not_landed` on the identity is the aggregate run statement that the prune did not fully land. Candidates not reached by the aborted run are not counted as attempted and are selected again by the retry.
 
 ### 3.5 `db reboot` (F-D4)
 
@@ -164,6 +175,8 @@ Dry-run by default; `--apply` performs the only mutation.
 4. **Apply with no live session:** perform exactly one bounded `PRAGMA wal_checkpoint(TRUNCATE)` through `opencode db`, report bytes before and after, and the outcome. It never kills or signals a process, never deletes WAL or SHM files, never runs `VACUUM`, and never truncates the database.
 
 The human output states that the operator still restarts the opencode host manually; `reboot` only prepares the database. No automatic restart exists in this change.
+
+**Deviation from the offered fallback.** The fallback offered on the ticket said reboot restarts the opencode process only when no live session is detected. This change deliberately does not restart any process: `reboot --apply` performs one bounded checkpoint and instructs the operator to restart the host manually (NG-D2). The deviation is safer because no process is signalled; it is recorded in §1 and RSK-D11 and must be surfaced in the PR body for owner acceptance.
 
 ### 3.6 Output contract (F-D6)
 
@@ -210,22 +223,22 @@ The binary name comes from the injected brand; no product literal is committed. 
 
 | Condition | Identity | Exit |
 |---|---|---|
-| Missing/unknown subcommand, unexpected positional (including a single-dash token such as `-x`), missing value, out-of-range numeric | `input.value.rejected` | 1 |
-| Undeclared `--`-prefixed token (parser containment) | `fallback.invocation` | 1 |
-| `opencode` unavailable, `opencode db path` fails, database absent/unreadable | `db.opencode.unavailable` | 2 |
-| A session database query fails or returns a malformed result | `db.query.failed` | 2 |
-| A session delete did not land (including partial failure) | `db.delete.failed` | 2 |
+| Missing/unknown subcommand, an unexpected positional within the 8-positional capacity (including a single-dash token such as `-x`), missing value, out-of-range numeric | `input.value.rejected` | 1 |
+| Undeclared `--`-prefixed token, or a positional beyond the 8-positional capacity (parser containment) | `fallback.invocation` | 1 |
+| `opencode` unavailable, `opencode db path` fails, database absent/unreadable before any delete lands | `db.opencode.unavailable` | 2 |
+| A session database query or re-read fails, or returns a malformed result, before any delete lands | `db.query.failed` | 2 |
+| A session delete did not land, or an aborting query/re-read/availability failure occurred after at least one delete landed (including partial failure) | `db.delete.failed` | 2 |
 | `reboot --apply` while a live session exists | `db.reboot.live` | 2 |
 | Unclassifiable failure | `fallback.internal` | 2 |
 
-Engine consequences are `not_landed` for every new `db.*` row. For a partial prune, `not_landed` is the aggregate statement that the prune did not fully land; the per-row truth is carried in the bounded failure summary, and the surviving rows make retry converge.
+Engine consequences are `not_landed` for every new `db.*` row. For a partial prune or a post-landed abort, `not_landed` is the aggregate statement that the prune did not fully land; the per-row truth is carried in the normative bounded summary (`"<failed> of <attempted> session deletes did not land (first: <id>); <landed> landed"`, where `attempted = landed + failed`), and the surviving rows make retry converge. A query or re-read failure before any delete lands returns `db.query.failed`; any failure after at least one delete has landed returns `db.delete.failed`.
 
 ### 3.9 Flows
 
 1. **Size:** validate grammar → resolve path via `opencode db path` → stat database and sidecars → run bounded count and timestamp aggregates → assemble `size` data → render.
 2. **List:** validate grammar and range → count sessions → read one bounded ordered page → classify `live` against the injected clock → assemble `list` data → render.
 3. **Prune dry-run:** validate grammar → compute cutoff from the injected clock → select candidates → report candidates, counts, and live exclusions → mutate nothing.
-4. **Prune apply:** validate grammar → compute cutoff → select candidates → for each candidate re-read its row and re-check cold, not live, and leaf → skip on any failed condition → `opencode session delete <id>` → continue on a failed delete → return success only when every attempted delete landed; otherwise return `db.delete.failed` with the bounded partial-failure summary.
+4. **Prune apply:** validate grammar → compute cutoff → select candidates → for each candidate re-read its row and re-check cold, not live, and leaf → skip on any failed condition → `opencode session delete <id>` → continue on a failed delete; an unavailable/database read failure before any delete lands returns its own identity (`db.opencode.unavailable` or `db.query.failed`), while an aborting query, re-read, or availability failure after at least one delete lands stops the run and returns `db.delete.failed` with the partial-abort summary → return success only when every attempted delete landed; otherwise return `db.delete.failed` with the normative partial-failure summary.
 5. **Reboot dry-run:** validate grammar → count live sessions → report the plan and WAL bytes → mutate nothing.
 6. **Reboot apply:** validate grammar → count live sessions → if any, return `db.reboot.live` and stop → otherwise checkpoint once → re-stat WAL → report.
 7. **Rejection:** validate grammar → return the classified rejection before any I/O.
@@ -331,7 +344,7 @@ The production implementation lives in `packages/adapters/src/session/index.ts`.
 | DM-D4 | `RebootData` | Mode, live window, live count, blocked flag, checkpoint outcome, and database/WAL facts. |
 | DM-D5 | Vocabulary data | `DB_SCHEMA_VERSION`, the closed command set, and the closed mode set. |
 | DM-D6 | Constants | Bounds, defaults, flag ranges, the live window, the id pattern, and the timeouts as `as const` data. |
-| DM-D7 | Error identities | The `db` domain kind and the four rows of §4.7, with kind, category, retryability, consequence, projection class, and summary. |
+| DM-D7 | Error identities | The `db` domain kind and the four rows of §4.7, with kind, category, retryability, consequence, remediation hint, projection class, and summary. |
 | DM-D8 | Ports and seam | `SessionStorePort` and `SessionAdminPort` in core contracts; the adapter-local `OpencodeSessionIo` seam exported from `@delivery-os/adapters/session`. |
 
 All timestamps in these shapes are ISO-8601 UTC strings, never raw epoch numbers. A session id longer than `DB_MAX_ID_CHARS` or a database path longer than `DB_MAX_PATH_CHARS` is not truncated (truncation would corrupt identity or the path); it is a `db.query.failed` failure naming the over-cap field.
@@ -340,12 +353,16 @@ All timestamps in these shapes are ISO-8601 UTC strings, never raw epoch numbers
 
 Read set (each one single statement):
 
-- Session counts and `min`/`max` `time_updated` over `session`.
-- Message count over `session_message`; part count over `part`.
-- One ordered page over `session` for `list`.
+- Session counts and `min`/`max` `time_updated` over `session` for `size`.
+- Message count over `message` and part count over `part` for `size`, as store-wide `COUNT(*)` aggregates.
+- **`list` uses exactly two queries**: one total-session count and one ordered page over `session`. The page derives `messageCount = COUNT(*) FROM message WHERE session_id = s.id`, `partCount = COUNT(*) FROM part WHERE session_id = s.id`, and `dataBytes = COALESCE(SUM(LENGTH(message.data)),0) + COALESCE(SUM(LENGTH(part.data)),0)` over the session's rows, as correlated scalar subqueries or an equivalent single-statement form, ordered by `time_updated DESC, id ASC` with a `LIMIT`.
+- **Current store pinning**: `message` is the current message store and `part` the current part store on the reference opencode 1.19.3 schema. `session_message` is the legacy/alternate store and is empty on the reference store; no `size` or `list` query references it (RSK-D13).
 - Candidate rows for `prune`: cold, outside the live window, and `NOT EXISTS` a child row, ordered oldest-first and limited.
-- One re-read per candidate by id, including a leaf check, immediately before the delete.
+- One pre-delete re-read per candidate by id, including a leaf check, immediately before the delete.
+- One bounded post-delete existence read per failed delete, by id, to distinguish an absent row (skip) from a failed delete.
 - Live-session count for `reboot`.
+
+**Query bounds.** `db size` issues a fixed set of aggregate queries independent of store size. `db list` issues exactly two queries (one total count and one page) and no per-session query. `db prune` issues at most one selection query, plus at most one pre-delete re-read per candidate, plus at most one post-delete existence read per failed delete, plus at most one delete invocation per candidate; no other query is issued. `db reboot` issues exactly one live-count query and at most one checkpoint.
 
 No untrusted value is concatenated into SQL. Session ids are validated against `DB_SESSION_ID_PATTERN` before any interpolation or command use; values read from the database are re-validated before reuse. Numeric flags are range-validated at the grammar (an out-of-range value is rejected, never silently clamped) and additionally clamped to their declared ranges before interpolation as a defensive invariant. Deletes use per-candidate `deleteSession(id)`, so no bulk `IN (...)` list is ever interpolated.
 
@@ -355,14 +372,16 @@ Session ids that fail the shape check abort the operation with `db.query.failed`
 
 `db` joins `DOMAIN_KINDS`. The kind is multi-row, so classification is by exact code; a kind-only `db` error contains via `fallback.internal` rather than selecting a first row.
 
-| Code | Kind | Category | Retryable | Consequence | Projection class | Summary |
-|---|---|---|---|---|---|---|
-| `db.opencode.unavailable` | `db` | platform | false | not_landed | platform-provider | The opencode session database is unavailable. |
-| `db.query.failed` | `db` | platform | true | not_landed | platform-provider | A session database query failed. |
-| `db.delete.failed` | `db` | transient | true | not_landed | platform-provider | A session delete did not land. |
-| `db.reboot.live` | `db` | transient | true | not_landed | platform-provider | A live session is using the database. |
+| Code | Kind | Category | Retryable | Consequence | Remediation hint | Projection class | Summary |
+|---|---|---|---|---|---|---|---|
+| `db.opencode.unavailable` | `db` | platform | false | not_landed | Install or repair the opencode CLI so opencode db path resolves. | platform-provider | The opencode session database is unavailable. |
+| `db.query.failed` | `db` | platform | true | not_landed | Retry the failed query and verify the session store is readable. | platform-provider | A session database query failed. |
+| `db.delete.failed` | `db` | transient | true | not_landed | Retry the prune; failed rows remain and are selected again. | platform-provider | A session delete did not land. |
+| `db.reboot.live` | `db` | transient | true | not_landed | Wait until the live window is empty or stop the opencode host, then retry. | platform-provider | A live session is using the database. |
 
-Remediation hints: install or repair the opencode CLI so `opencode db path` resolves; retry a failed query and verify the store is readable; retry the prune because failed rows remain and are selected again; wait until the live window is empty or stop the host before retrying `reboot`.
+The remediation-hint strings above are the exact machine-table values. The plan's `error-table.ts` rows and the documented table in `doc/spec/features/feature-result-contract.md` copy them verbatim, so the bidirectional sync check compares equal text.
+
+A query or re-read failure before any delete lands carries `db.query.failed`. The same failure after at least one delete has landed carries `db.delete.failed` with the partial-abort summary, because the run consequence is `not_landed` and the per-row truth must be preserved.
 
 Documented rows ship in this change in `doc/spec/features/feature-result-contract.md`, keeping the binding two-directional documented-table sync green from the first delivery phase. Existing rows are untouched. Grammar and range rejections reuse `input.value.rejected`; no redundant row is added.
 
@@ -393,7 +412,7 @@ No direct `node:sqlite`, `bun:sqlite`, `better-sqlite3`, or equivalent import ap
 - `reboot` performs at most one `PRAGMA wal_checkpoint(TRUNCATE)`, only with no live session, and never deletes a sidecar.
 - No process is killed, signalled, suspended, or restarted. No `kill`, `pkill`, `killall`, or supervisor call exists.
 - Only leaf sessions are eligible; a parent with children is never deleted, preventing orphaned descendants.
-- A live session is never a candidate, and the pre-delete re-check closes the race between selection and deletion.
+- A live session is never a candidate under the activity-based definition in §3.4, and the pre-delete re-check closes the race between selection and deletion.
 
 ### 5.5 Privacy sign-off gate (ADR-0003 C-11)
 
@@ -412,7 +431,7 @@ ADR-0003 requires an explicit privacy sign-off before the `db` administration en
 | NFR-D7 | Error-table binding: the four `db` codes round-tripping exactly with documented rows; documented-table drift in either direction; unclassified or wrong-code `db` failures escaping `fallback.internal`; kind-only `db` classification selecting a row. | 4/4 round-trip / 0 drift / 0 escapes / 0 ambiguous selections |
 | NFR-D8 | SQL safety: untrusted values interpolated into SQL or shell arguments; session ids used before shape validation; numeric values interpolated outside their declared ranges; bulk `IN (...)` interpolation. | 0 / 0 / 0 / 0 |
 | NFR-D9 | Tier and runtime confinement: new runtime-API locations; secret-read allowlist entries added; `sqlite` driver imports in product code; new packages, subpaths, or dependencies; contracts-tier behaviour. | 0 / 0 / 0 / 0 / 0 |
-| NFR-D10 | Operational truthfulness: mutation reported as success when a delete failed; a live session reported as deletable; an absent sidecar reported as a real zero-byte file; `reboot` claiming a host restart; a partial failure rendered as success. | 0 occurrences |
+| NFR-D10 | Operational truthfulness: mutation reported as success when a delete failed; a live session reported as deletable; an absent sidecar reported as a real zero-byte file; `reboot` claiming a host restart; a partial failure rendered as success; a post-land abort reported as a pre-land failure with no landed-count truth. | 0 occurrences |
 
 ## 7. QUALITY ASSURANCE STRATEGY
 
@@ -422,7 +441,7 @@ ADR-0003 requires an explicit privacy sign-off before the `db` administration en
 |---|---|---|
 | Structure | Contract inventory and constants, data-only contracts, pure domain imports, export surface, error-table rows and documented sync, no SQLite imports, no product literals, secret-read allowlist unchanged, boundary matrix unchanged | `tests/structure/session-admin-contract.test.ts`, `session-admin-imports.test.ts`, `tests/checks/error-table-sync.test.ts`, existing literal and boundary suites |
 | Behaviour — size and list | Metadata fields, runtime path resolution, ordering, `--limit` bounds, `live` classification at the window boundary, empty-store `null` timestamps, sidecar presence, bounds, determinism | `tests/behaviour/session-admin-size-list.test.ts` |
-| Behaviour — prune | Candidate rule across cold/live/leaf boundaries, oldest-first ordering, cap, dry-run zero mutations, apply deletes only candidates, TOCTOU skip when a candidate gains a child or disappears, idempotent second run, partial failure shape and summary, already-absent row skipped mid-run, abort on query failure | `tests/behaviour/session-admin-prune.test.ts` |
+| Behaviour — prune | Candidate rule across cold/live/leaf boundaries, oldest-first ordering, cap, dry-run zero mutations, apply deletes only candidates, TOCTOU skip when a candidate gains a child or disappears, idempotent second run, partial-failure and post-land partial-abort shape and summary, already-absent row skipped mid-run, pre-land abort on query failure | `tests/behaviour/session-admin-prune.test.ts` |
 | Behaviour — reboot | Dry-run plan, live-session gate on `--apply`, zero action on the gate, one checkpoint on success, no file deletion, no process kill, WAL before/after reporting | `tests/behaviour/session-admin-reboot.test.ts` |
 | Behaviour — grammar and errors | Missing/unknown subcommand, positionals (including single-dash tokens), undeclared `--` flags, missing values, out-of-range numbers, `--apply` value forms, parser containment carve-out, exit projection | `tests/behaviour/session-admin-grammar.test.ts` |
 | Behaviour — output | Envelope validity on success and failure, schema version, machine byte cap, human grammar and caps, `+N more` truncation, byte-identical replays, no extra fields | `tests/behaviour/session-admin-output.test.ts` |
@@ -492,15 +511,17 @@ The envelope's `runId` and `timing`, the per-run counts, the explicit mode, the 
 |---|---|---|---|---|---|
 | RSK-D1 | Selection and deletion race: a candidate gains a child (orphan risk) or the database changes concurrently between selection and delete | H | L | Pre-delete re-read and full re-check (cold, live, leaf) on the same predicate; skip on any failed condition | L |
 | RSK-D2 | Deleting a parent orphans child sessions | H | L | Leaf-only candidate rule; child existence re-checked before delete; schema rationale documented | L |
-| RSK-D3 | A partial delete leaves the store in a mixed state and is reported as success | M | M | Bounded partial-failure summary with failed count and first identity; `db.delete.failed` exit 2; retry converges | L |
+| RSK-D3 | A partial delete leaves the store in a mixed state and is reported as success | M | M | Bounded partial-abort summary with landed and failed counts and the first identity; `db.delete.failed` exit 2; retry converges | L |
 | RSK-D4 | Metadata-only guarantee erodes (a title or message body leaks into output or evidence) | H | L | Closed field whitelist, canary fixture, no-content reads, C-11 owner merge gate | L |
-| RSK-D5 | opencode CLI output shape or command surface changes | M | M | Single adapter seam; malformed results classify as `db.query.failed`; no direct SQLite fallback | M |
+| RSK-D5 | The external opencode CLI surface (`db path`, `db "<SQL>" --format json`, `session delete`, WAL mode) and its output shapes are taken from recorded live environment facts, are not verifiable by repository tests, and can change | M | M | Single adapter seam; malformed results classify as `db.query.failed`; no direct SQLite fallback; the PR body states this unverifiable-surface residual risk | M |
 | RSK-D6 | Aggregate counts over a 120 GiB store time out or block the host | M | M | Declared timeouts, single-statement bounded queries, measured performance bounds, explicit query failure | M |
 | RSK-D7 | The DB path or WAL/SHM handling is wrong on a platform or during an active host | M | L | Path resolved at runtime; sidecar presence explicit; no file deletion; manual restart documented | L |
 | RSK-D8 | SQL or shell injection through a session id | H | L | Shape validation before any interpolation or command use; per-candidate delete; defensive numeric clamping | L |
 | RSK-D9 | ADR-0003 C-11 sign-off is assumed rather than granted | H | M | Sign-off recorded as an owner merge gate; PR left open; no claim of approval; evidence supplied | M until the owner decides |
 | RSK-D10 | The baseline test repair is read as scope creep or changes behaviour | L | M | Test-only change, one parent-directory creation, no assertion or fixture change, explicitly scoped | L |
-| RSK-D11 | The missing prototype leads to a surface the owner would have specified differently | M | M | PM fallback is durable and reversible; owner may amend at PR review; spec states the prototype absence | M |
+| RSK-D11 | The missing prototype leads to a surface the owner would have specified differently, and reboot deliberately deviates from the offered fallback by checkpointing only with no process restart | M | M | PM fallback is durable and reversible; owner may amend at PR review; spec §1/§3.5 record the prototype absence and the reboot deviation; the PR body surfaces both for owner acceptance | M until owner accepts |
+| RSK-D12 | Liveness is activity-based only: there is no PID or lock-file probe, so an open-but-idle session older than `--older-than` is prunable; the ticket's "no live session lock is deleted" holds only under this narrowed definition | H | M | Explicit residual risk in §1/§3.4 and the PR body for owner acceptance; live window and pre-delete re-check; conservative default threshold | M until owner accepts |
+| RSK-D13 | Store-version drift: `db size` and `db list` pin the message store to `message` and the part store to `part` because `session_message` is empty on the reference opencode 1.19.3 store; if a future harness version moves the message data back to `session_message` (or elsewhere), the pinned queries silently under-report counts and payload bytes (zero messages or zero data bytes on a populated store) | M | L | Single adapter-local query builder holds the pinned store names; the pinned definitions are normative in §3.2/§3.3/§4.6 and the reference-store facts are recorded in §3.2 and the change notes; re-verifying the store names is part of the versioned contract change taken when the harness schema moves, not a silent adapter edit; a zero message count on a non-empty session table is a review smell | M until the next harness version is verified |
 
 ## 10. PINNED DECISIONS
 
@@ -510,11 +531,11 @@ The envelope's `runId` and `timing`, the per-run counts, the explicit mode, the 
 | DEC-D2 | `--dry-run` default; prune only sessions older than the declared threshold and never a live one; `--apply` required to mutate; reboot shares the live-session gate. | PM decision 2026-10-31 | Reversible at PR review |
 | DEC-D3 | Database access is the opencode CLI only; no direct SQLite binding, package, or dependency. | PM decision 2026-10-31 | Reversible only by a new decision |
 | DEC-D4 | ADR-0003's `SessionStore` stays read-only/metadata-only; a separate `SessionAdminPort` owns mutation. | PM decision 2026-10-31 | Reversible only by a new decision |
-| DEC-D5 | Live session means activity inside the 15-minute window; the SQLite WAL/SHM sidecars are never touched by `prune`; `reboot --apply` performs one bounded checkpoint only when no live session exists. | PM decision 2026-10-31 | Reversible at PR review |
+| DEC-D5 | Live session means activity inside the 15-minute window; liveness is activity-based only, with no PID or lock-file probe, so an open-but-idle session outside the window is prunable. The SQLite WAL/SHM sidecars are never touched by `prune`; `reboot --apply` performs one bounded checkpoint only when no live session exists. | PM decision 2026-10-31 | Reversible at PR review |
 | DEC-D6 | Prune deletes leaf sessions only, because `session.parent_id` has no foreign key and descendants do not cascade. | PM decision 2026-10-31 | Reversible at PR review |
 | DEC-D7 | Grammar rejections use `input.value.rejected`; the shared parser treats only `--`-prefixed tokens as flags. A single-dash token is an unexpected positional that the handler rejects as `input.value.rejected`; an undeclared `--`-prefixed token is contained by the parser as `fallback.invocation`. Both are input-domain, user-validation rejections at exit 1, and both are asserted. The shared parser (`packages/cli/src/index.ts`) is unchanged. | Spec decision reconciling the requested identity with the existing parser | Reversible at PR review |
 | DEC-D8 | User numeric flags outside their declared ranges are rejected, not silently clamped; values are additionally clamped before SQL interpolation as a defence-in-depth invariant. | Spec decision reconciling "validated and clamped" with explicit grammar rejection | Reversible at PR review |
-| DEC-D9 | A partial prune returns `db.delete.failed` (exit 2) with a bounded summary naming the failed count and first failed identity, rather than a success envelope. | Spec decision derived from the "never pretend success" requirement and the closed error object | Reversible at PR review |
+| DEC-D9 | A partial prune, or a query/re-read failure after at least one delete has landed, returns `db.delete.failed` (exit 2, transient, retryable) with the normative summary `"<failed> of <attempted> session deletes did not land (first: <id>); <landed> landed"` (`attempted = landed + failed`), rather than a success envelope; a query/re-read failure before any delete lands returns `db.query.failed`. | Spec decision derived from the "never pretend success" requirement and the closed error object | Reversible at PR review |
 | DEC-D10 | ADR-0003 C-11 privacy sign-off is an owner merge gate, not a delivery blocker; the PR is left open and no approval is claimed. | PM decision 2026-10-31 | Owner decision |
 | DEC-D11 | The defaults-position test repair is in scope as a test-only, tree-invariant environment fix. | PM decision 2026-10-31 | Reversible at PR review |
 
@@ -531,6 +552,8 @@ No blocking open question remains; delivery proceeds on the pinned decisions abo
 | Term | Definition |
 |---|---|
 | Session database | The opencode SQLite store that holds sessions, messages, parts, and related rows; the admin target of this change. |
+| Current message store | The `message` table on the reference opencode 1.19.3 schema; the only message source for `db size` counts and `db list` `messageCount`/`dataBytes`. The current part store is `part`. |
+| Legacy message store | The `session_message` table; present in the reference schema but empty on the reference opencode 1.19.3 store, so it is never counted or summed and never reported as a zero-data result (RSK-D13). |
 | Session admin | The typed `ados db` surface over the session database: `size`, `list`, `prune`, `reboot`. |
 | Live window | The 15 minutes before the injected current time; a session with `time_updated` inside it is live. The lower boundary is inclusive. |
 | Live session | A session inside the live window. It is never a prune candidate and blocks `reboot --apply`. |
@@ -540,7 +563,7 @@ No blocking open question remains; delivery proceeds on the pinned decisions abo
 | Dry-run | The default mode for `prune` and `reboot`: read, plan, and report without mutating. |
 | Apply | The explicit `--apply` mode that permits a mutation. |
 | TOCTOU guard | The immediate pre-delete re-read that closes the race between candidate selection and deletion. |
-| Partial failure | A prune in which some deletes landed and some did not; reported as `db.delete.failed` with a bounded summary, never as success. |
+| Partial failure | A prune in which some deletes landed and some did not, or a mid-run failure after at least one delete landed; reported as `db.delete.failed` with the normative bounded summary, never as success. |
 | WAL checkpoint | The single `PRAGMA wal_checkpoint(TRUNCATE)` that folds the write-ahead log into the database; the only mutation `reboot --apply` performs. |
 | Sidecar | The SQLite `-wal` and `-shm` files next to the database. Never deleted or truncated by this change. |
 | Metadata-only | The ADR-0003 C-11 rule that session and host inspection surfaces identifiers, counts, timestamps, and non-user paths only. |
@@ -581,9 +604,9 @@ Each criterion is testable and traceable to a test-plan case that asserts the cu
   Given a candidate selected by the batch, when it gains a child before its delete is attempted, then the pre-delete re-read skips it with a counted reason and no delete is issued for it, while unaffected candidates proceed; the same re-read re-asserts the cold and live conditions.
   *DoD predicate*: fixture mutates candidate state between selection and re-check; zero delete calls for the candidate that gained a child; skip count increments; the run does not report it as deleted; the re-read is asserted to carry the cold and live predicates. (F-D3, NFR-D3)
 
-- **AC-D8 — Partial failure is reported, never disguised as success.**
-  Given a run where some deletes fail, when `db prune --apply` completes, then it returns the classified `db.delete.failed` failure (exit 2, retryable) whose bounded summary names the failed count and the first failed session identity, successful deletions are not reported as failure, and a retry selects and deletes only the surviving rows.
-  *DoD predicate*: failure envelope asserted with the exact code, category, retryability, consequence, and summary format; failed rows remain in the fake store; retry converges to zero candidates. (F-D3, DM-D3, DM-D7, NFR-D10)
+- **AC-D8 — Partial failure and post-land abort are reported, never disguised as success.**
+  Given a run where some deletes fail, or a run where a query/re-read failure occurs after at least one delete has landed, when `db prune --apply` completes, then it returns the classified `db.delete.failed` failure (exit 2, transient, retryable) whose bounded summary is the normative string `"<failed> of <attempted> session deletes did not land (first: <id>); <landed> landed"` with `attempted = landed + failed`, successful deletions are not reported as failure, and a retry selects and deletes only the surviving rows; a query/re-read failure before any delete lands instead returns `db.query.failed` (exit 2).
+  *DoD predicate*: failure envelope asserted with the exact code, category, retryability, consequence, and the normative summary format for both the per-candidate partial case and the post-land abort case (landed and failed counts plus first identity); the pre-land abort case returns `db.query.failed`; failed rows remain in the fake store; successful rows are never listed as failures; retry converges to zero candidates. (F-D3, DM-D3, DM-D7, NFR-D10)
 
 - **AC-D9 — An already-absent row is a skipped outcome, not a mid-run failure.**
   Given a candidate whose row disappears between the re-check and the delete, when the delete reports the row absent, then the run counts it as skipped and continues with the remaining candidates instead of aborting.
@@ -598,8 +621,8 @@ Each criterion is testable and traceable to a test-plan case that asserts the cu
   *DoD predicate*: fake process seam records zero kill/signal calls; fake filesystem records zero deletions; the human report contains the manual-restart sentence. (F-D4, NFR-D3, NFR-D10)
 
 - **AC-D12 — Grammar is validated before I/O and rejections are classified.**
-  Given a missing subcommand, an unknown subcommand, an unexpected positional (including a single-dash token such as `db size -x`), a missing flag value, an out-of-range `--limit` or `--older-than`, or a value-bearing `--apply`, when the command runs, then the rejection is classified as `input.value.rejected` with exit 1; given an undeclared `--`-prefixed token such as `db size --x`, when the command runs, then the rejection is classified as `fallback.invocation` with exit 1; in both classes the fake IO records zero reads and zero mutations.
-  *DoD predicate*: one case per rejection class; `db size -x` yields `input.value.rejected` and `db size --x` yields `fallback.invocation`, both at exit 1 with an empty IO call log; the `--json` stripping case still succeeds. (F-D5, DM-D7, NFR-D8)
+  Given a missing subcommand, an unknown subcommand, an unexpected positional within the 8-positional capacity (including a single-dash token such as `db size -x`), a missing flag value, an out-of-range `--limit` or `--older-than`, or a value-bearing `--apply`, when the command runs, then the rejection is classified as `input.value.rejected` with exit 1; given an undeclared `--`-prefixed token such as `db size --x`, or a ninth or later positional beyond the declared capacity, when the command runs, then the rejection is classified as `fallback.invocation` with exit 1; in both classes the fake IO records zero reads and zero mutations.
+  *DoD predicate*: one case per rejection class; `db size -x` yields `input.value.rejected`, an unexpected positional in slots 1–8 yields `input.value.rejected`, a ninth positional yields `fallback.invocation`, and `db size --x` yields `fallback.invocation`, all at exit 1 with an empty IO call log; the `--json` stripping case still succeeds. (F-D5, DM-D7, NFR-D8)
 
 - **AC-D13 — Numeric values and session ids are safe to interpolate.**
   Given user numeric flags at their minimum, maximum, one below, and one above each bound, and database ids including shapes with quotes, spaces, semicolons, or comment markers, when the command runs, then out-of-range flags are rejected, in-range values are the only values interpolated, and no id outside `^[A-Za-z0-9_-]+$` is ever interpolated or passed to the delete command.
@@ -622,11 +645,13 @@ Each criterion is testable and traceable to a test-plan case that asserts the cu
   *DoD predicate*: `pnpm check` green in a clean checkout; the session-admin suites make zero real-process, real-file, and network calls; a path scan over the files introduced by this change finds zero real home paths. (NFR-D1, NFR-D5)
 
 - **AC-D18 — The C-11 privacy sign-off is a recorded owner merge gate.**
-  Given the delivered change, when the pull request is prepared, then this specification, the pull request description, and the change evidence state that the ADR-0003 C-11 privacy sign-off is required before merge, that it is not claimed as granted, and that merge authority is the CEO/human owner; the PR is left open.
-  *DoD predicate*: the sign-off statement exists in the specification and PR body; no artifact asserts approval; the PR remains unmerged by the delivery process. (NFR-D6, RSK-D9)
+  Given the delivered change, when the pull request is prepared, then this specification, the pull request description, and the change evidence state that the ADR-0003 C-11 privacy sign-off is required before merge, that it is not claimed as granted, and that merge authority is the CEO/human owner; the PR body also states, for owner acceptance, (a) the activity-based liveness limitation (no PID or lock-file probe; an open-but-idle session older than `--older-than` is prunable), (b) the deliberate reboot deviation from the offered fallback (checkpoint-only with manual restart, no process restart), and (c) that the external opencode surface is taken from recorded live facts and is not verifiable by repository tests; the PR is left open.
+  *DoD predicate*: the sign-off statement and each of the three residual-risk statements exist in the specification and PR body; no artifact asserts approval; the PR remains unmerged by the delivery process. (NFR-D6, RSK-D9, RSK-D11, RSK-D12)
 
 ## 14. DOCUMENT HISTORY
 
+- **v1.4 (2026-10-31)** — Corrects the pinned message store for the `db size` and `db list` count and aggregate definitions from `session_message` to `message`, and pins the part store as `part`. Root cause: v1.3 asserted that `session_message` was the current message store and that `message` was legacy and unwritten; the verified live facts contradict that on the reference opencode 1.19.3 store — `session_message` has 0 rows while `message` holds roughly 209k rows, and `message`/`part` hold the current data. The v1.3 definition would therefore have reported zero messages and zero data bytes on a fully populated live store. Amended: §3.2 (`messages = COUNT(*) FROM message`, store-wide), §3.3 (`messageCount = COUNT(*) FROM message WHERE session_id = s.id`, `partCount = COUNT(*) FROM part WHERE session_id = s.id`, `dataBytes = COALESCE(SUM(LENGTH(message.data)),0) + COALESCE(SUM(LENGTH(part.data)),0)`), §4.6 (read set and a current-store pinning bullet), §9.2 (new RSK-D13 store-version drift: `session_message` is the legacy/alternate store, empty on the reference store, so it is not counted; a future harness version that moves the store is handled by a versioned contract change that updates the pinned queries), and §12 (current/legacy message store glossary entries). AC count remains 18 and no acceptance criterion, decision, constant, error identity, or scope changes. The test plan and plan are amended separately.
+- **v1.3 (2026-10-31)** — DoR iteration-1 remediation for specification-routed findings. **B4:** a query/re-read failure before any delete lands returns `db.query.failed` (exit 2); any failure after at least one delete has landed returns `db.delete.failed` (exit 2, transient, retryable) with the normative bounded partial-abort summary `"<failed> of <attempted> session deletes did not land (first: <id>); <landed> landed"` (`attempted = landed + failed`), so `not_landed` remains the aggregate statement and the summary carries per-row truth; §3.4, §3.8, §3.9, §4.7, §7.1, §9.2, DEC-D9, and AC-D8 updated. **M1:** `db list` is pinned to exactly two queries (one total count and one page) and the per-item `messageCount`/`partCount`/`dataBytes` derivations, correlated-aggregate page shape, and `time_updated DESC, id ASC` ordering are defined in §3.3/§4.6; the post-delete existence read is in the read set and the failure-path query bound. **M2:** activity-based liveness with no PID/lock probe is an explicit residual risk (RSK-D12) in §1/§3.4/§9.2 and is surfaced for owner acceptance in AC-D18. **M3:** the checkpoint-only reboot is recorded as a deliberate, safer deviation from the offered fallback (NG-D2, §1, §3.5, RSK-D11) and is surfaced for owner acceptance in AC-D18. **m1:** post-delete existence read and failure-path query bound added to §3.4/§4.6. **m2:** positionals 1–8 are handler `input.value.rejected`; a ninth or later positional is parser `fallback.invocation` (§3.1, §3.8, AC-D12). **m3:** repeated flags are last-wins at the shared parser, not a conflict rejection (§3.1). **m4:** the partial-failure summary format is normative and the "for example" wording is removed. **m8:** the external opencode surface is recorded as an unverifiable residual risk in RSK-D5 and the PR body (AC-D18). **n2:** §4.7 pins the exact remediation-hint strings matching the plan's `error-table.ts` rows and the documented table. AC count remains 18; no other decision or constant changes.
 - **v1.2 (2026-10-31)** — Readiness amendment renaming the reboot live-session failure identity to `db.reboot.live`. The previous form placed a hyphen inside its final segment and therefore failed the repository error-code format `^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$` enforced by the error-table sync check and its structure test; the identity was renamed rather than the gate being widened. The row keeps the same kind `db`, category `transient`, retryability `true`, consequence `not_landed`, projection class `platform-provider`, and summary "A live session is using the database."; §3.5, §3.8, §3.9, §4.7, §8.2, and AC-D10 now use the renamed identity. No gate change, no AC count change (remains 18), no AC semantics change, and no other decision change.
 - **v1.1 (2026-10-31)** — Delivery-planning amendment clarifying the grammar rejection split against the unchanged shared parser (`packages/cli/src/index.ts`, which recognizes only `--`-prefixed tokens as flags). §3.1, §3.8, §7.1, DEC-D7, and AC-D12 now name the two classes: a single-dash token (`-x`) is an unexpected positional the handler rejects as `input.value.rejected`, while an undeclared `--`-prefixed token (`--x`) is the parser's `fallback.invocation` containment; both are input-domain, user-validation rejections at exit 1. Root cause was the prior wording treating any token outside the declared flag set as parser containment; the parser and all product behaviour are unchanged. No AC, NFR, risk, scope, or error-identity count changes; AC count remains 18.
 - **v1.0 (2026-10-31)** — Initial specification. Authored from the ticket summary, the M0-S11 backlog entry, the recorded PM fallback (the inline prototype is absent), live read-only environment facts, and the binding repo rules. Pins the four-subcommand surface, dry-run defaults, the 15-minute live window, leaf-only pruning, the TOCTOU re-check, the opencode-CLI-only access path, the `SessionStorePort`/`SessionAdminPort` split, the four `db` error rows, the bounded metadata-only output, the owner merge gate for the ADR-0003 C-11 sign-off, and the scoped defaults-position baseline repair.
