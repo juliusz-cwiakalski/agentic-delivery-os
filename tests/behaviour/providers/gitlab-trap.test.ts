@@ -324,6 +324,12 @@ describe("TC-TRAP-002 GitLab trap catalog replays offline", () => {
     ]);
   });
 
+  test("double replay is identical", async () => {
+    const first = await runWithGuard({ catalogRoot: TRAPS, assertions: defaultAssertions });
+    const second = await runWithGuard({ catalogRoot: TRAPS, assertions: defaultAssertions });
+    expect(second.results).toEqual(first.results);
+  });
+
   test("mutated normalization fails naming the trap entry and fixture", async () => {
     const mutations: Array<{ trapName: string; assertion: () => Promise<void> | void }> = [
       {
