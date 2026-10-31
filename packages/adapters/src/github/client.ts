@@ -5,12 +5,13 @@
  * supplies the native-`fetch` transport. Credentials resolve exclusively through
  * the injected `CredentialPort` on every request.
  */
-import type {
-  CredentialPort,
-  DeliveryRequest,
-  ExternalSystemInstance,
-  PipelineRun,
-  WorkItem,
+import {
+  type CredentialPort,
+  type DeliveryRequest,
+  type ExternalSystemInstance,
+  type PipelineRun,
+  STATUS_SOURCE_PIPELINE_LIMIT,
+  type WorkItem,
 } from "@delivery-os/core/contracts";
 import type {
   ProviderReadResult,
@@ -18,7 +19,13 @@ import type {
   ProviderTransport,
 } from "../io/provider-transport.js";
 import { providerPayloadFailure } from "../io/provider-transport.js";
-import { normalizeCheckRuns, normalizeGithubIssue, normalizePullRequest } from "./normalize.js";
+import {
+  normalizeCheckRuns,
+  normalizeGithubIssue,
+  normalizeGithubIssueList,
+  normalizeGithubPullList,
+  normalizePullRequest,
+} from "./normalize.js";
 
 /** The repository the read slice addresses (declared configuration data). */
 export type GithubRepositoryRef = {
@@ -43,7 +50,23 @@ export type GithubClient = {
   ) => Promise<ProviderReadResult<DeliveryRequest>>;
   readonly readPipelineRun: (
     commitSha: string,
-  ) => Promise<ProviderReadResult<readonly PipelineRun[]>>;
+    limit?: number,
+  ) => Promise<
+    ProviderReadResult<{ readonly items: readonly PipelineRun[]; readonly pageItemCount: number }>
+  >;
+  readonly listWorkItems: (
+    limit: number,
+  ) => Promise<
+    ProviderReadResult<{ readonly items: readonly WorkItem[]; readonly pageItemCount: number }>
+  >;
+  readonly listDeliveryRequests: (
+    limit: number,
+  ) => Promise<
+    ProviderReadResult<{
+      readonly items: readonly DeliveryRequest[];
+      readonly pageItemCount: number;
+    }>
+  >;
 };
 
 const nativeFetchTransport = (): ProviderTransport => ({
@@ -117,12 +140,26 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
       if (!response.ok) return response;
       return normalizePullRequest(response.value, context);
     },
-    readPipelineRun: async (commitSha) => {
+    readPipelineRun: async (commitSha, limit = STATUS_SOURCE_PIPELINE_LIMIT) => {
       const response = await get(
-        `${repositoryPath}/commits/${encodeURIComponent(commitSha)}/check-runs`,
+        `${repositoryPath}/commits/${encodeURIComponent(commitSha)}/check-runs?per_page=${encodeURIComponent(String(limit))}`,
       );
       if (!response.ok) return response;
       return normalizeCheckRuns(response.value, context, commitSha);
+    },
+    listWorkItems: async (limit) => {
+      const response = await get(
+        `${repositoryPath}/issues?state=open&per_page=${encodeURIComponent(String(limit))}&sort=updated&direction=desc`,
+      );
+      if (!response.ok) return response;
+      return normalizeGithubIssueList(response.value, context);
+    },
+    listDeliveryRequests: async (limit) => {
+      const response = await get(
+        `${repositoryPath}/pulls?state=open&per_page=${encodeURIComponent(String(limit))}&sort=updated&direction=desc`,
+      );
+      if (!response.ok) return response;
+      return normalizeGithubPullList(response.value, context);
     },
   };
 };

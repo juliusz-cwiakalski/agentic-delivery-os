@@ -47,7 +47,7 @@ const credentials = createEnvironmentCredentialPort({
 const repository = { owner: "group-placeholder", name: "project-placeholder" } as const;
 const repoPath = `/repos/${repository.owner}/${repository.name}`;
 const pullUrl = `${instance.baseUrl}${repoPath}/pulls/${PULL_NUMBER}`;
-const checkRunsUrl = `${instance.baseUrl}${repoPath}/commits/${HEAD_SHA}/check-runs`;
+const checkRunsUrl = `${instance.baseUrl}${repoPath}/commits/${HEAD_SHA}/check-runs?per_page=20`;
 const issueUrl = `${instance.baseUrl}${repoPath}/issues/${ISSUE_NUMBER}`;
 
 const pulls = arrayField(readJson(`${FIXTURES}/pr-review-states.json`), "pulls");
@@ -85,7 +85,9 @@ describe("TC-GITHUB-004 complete status/verify input set", () => {
         await client.readDeliveryRequest(PULL_NUMBER),
         "delivery request",
       );
-      const runs = requireValue(await client.readPipelineRun(HEAD_SHA), "pipeline runs");
+      const runsRead = requireValue(await client.readPipelineRun(HEAD_SHA), "pipeline runs");
+      expect(runsRead.pageItemCount).toBe(4);
+      const runs = runsRead.items;
       const workItem = requireValue(await client.readWorkItem(ISSUE_NUMBER), "work item");
 
       expect(Object.keys(request).sort()).toEqual(

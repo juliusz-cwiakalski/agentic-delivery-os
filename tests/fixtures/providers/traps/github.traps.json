@@ -19,6 +19,30 @@
       "providerBehavior": "GitHub issue payloads carry labels, an optional assignee, open/closed state, an optional updated_at, issue links, and a state_reason on live closed issues.",
       "expectedNormalizedOutcome": "Issues normalize to WorkItem with labels, an optional assignee, a closed-set status alias (open to ready, closed to done), updatedAt verbatim when present (absent otherwise), and typed relations only when the payload records them. state_reason is not modeled: closed maps to done regardless of not_planned, and live-shape revalidation plus any canceled distinction is deferred to M0-S20.",
       "fixtureReference": "tests/fixtures/providers/github/issues.json#/issues"
+    },
+    {
+      "trapName": "GITHUB-LIST-EXCLUDES-PRS",
+      "providerBehavior": "The repository issue-list endpoint returns both issues and pull-request objects in one page.",
+      "expectedNormalizedOutcome": "listWorkItems skips every object carrying a pull_request property before normalization, so the returned WorkItem set contains no pull-request object while the raw page size is preserved for the source-at-limit signal.",
+      "fixtureReference": "tests/fixtures/providers/github/issues-list-mixed.json#/0"
+    },
+    {
+      "trapName": "GITHUB-LIST-PAGE-LIMIT",
+      "providerBehavior": "List reads are unbounded unless the client sends one declared per_page limit, and the raw returned page size can equal that limit.",
+      "expectedNormalizedOutcome": "Each list read sends exactly one page with state=open, the declared per_page limit, and the declared updated-descending sort; the raw page size is reported separately from the filtered item count so a full page signals possible truncation.",
+      "fixtureReference": "tests/fixtures/providers/github/issues-list-limit.json#/0"
+    },
+    {
+      "trapName": "GITHUB-ISSUE-RELATIONS-ABSENT",
+      "providerBehavior": "The real GitHub REST issue list does not supply structured issue dependency links.",
+      "expectedNormalizedOutcome": "An issue without issue_links normalizes to relations: [], and the tracker source declares blocked-dependency relations unavailable rather than empty.",
+      "fixtureReference": "tests/fixtures/providers/github/issues-list-relations-absent.json#/0"
+    },
+    {
+      "trapName": "GITHUB-PR-LIST-REVIEW-DEFAULT",
+      "providerBehavior": "The GitHub pull-request list payload carries state/draft/head/base but no review decision or review threads.",
+      "expectedNormalizedOutcome": "The list read normalizes refs/draft/state and leaves the absent review decision and threads untrusted, so status reports those item signals unknown instead of open or zero.",
+      "fixtureReference": "tests/fixtures/providers/github/pulls-list-review-default.json#/0"
     }
   ]
 }

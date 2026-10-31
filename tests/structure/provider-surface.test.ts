@@ -18,6 +18,11 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import ts from "typescript";
+import {
+  createGitHubClient,
+  GITHUB_ADAPTER_CONTRACT,
+} from "../../packages/adapters/src/github/index";
+import { ADAPTER_OPERATIONS, type CredentialPort } from "../../packages/core/src/contracts/index";
 
 const ROOT = process.cwd();
 const PROVIDERS = ["jira", "gitlab", "github"] as const;
@@ -139,6 +144,46 @@ const makeProviderCopy = (provider: Provider, extra: string): string => {
   );
   return root;
 };
+
+describe("TC-STATUS-022 unchanged operation set and collection-read surface", () => {
+  test("collection reads stay query-shaped under the unchanged operation set", () => {
+    expect(GITHUB_ADAPTER_CONTRACT.capabilities.supportedOperations).toEqual([
+      "read-work-item",
+      "read-delivery-request",
+      "read-pipeline-run",
+    ]);
+    expect(ADAPTER_OPERATIONS.filter((operation) => operation.startsWith("list-"))).toEqual([]);
+    const credentials: CredentialPort = {
+      resolve: () => ({
+        ok: false,
+        code: "config.credential.missing",
+        domainKind: "config",
+        category: "user",
+        retryable: false,
+        consequence: "not_landed",
+        projectionClass: "user-validation",
+      }),
+    };
+    const client = createGitHubClient({
+      instance: {
+        instanceName: "vcs-github",
+        systemKind: "vcs",
+        baseUrl: "https://api.github.example.com",
+        authMethod: { mechanism: "anonymous" },
+      },
+      credentials,
+      repository: { owner: "owner", name: "name" },
+      transport: { send: async () => ({ status: 200, body: [] }) },
+    });
+    expect(Object.keys(client).sort()).toEqual([
+      "listDeliveryRequests",
+      "listWorkItems",
+      "readDeliveryRequest",
+      "readPipelineRun",
+      "readWorkItem",
+    ]);
+  });
+});
 
 describe("TC-SURFACE-001 provider export surface", () => {
   test("each provider subpath exports only factory, contract, and input/view types", () => {

@@ -1,0 +1,30 @@
+[
+  {
+    "number": 701,
+    "title": "Open pull request",
+    "state": "open",
+    "draft": false,
+    "merged": false,
+    "head": {
+      "ref": "feat/GH-701/list",
+      "sha": "1111111111111111111111111111111111111111"
+    },
+    "base": {
+      "ref": "main-tools"
+    }
+  },
+  {
+    "number": 702,
+    "title": "Draft pull request",
+    "state": "open",
+    "draft": true,
+    "merged": false,
+    "head": {
+      "ref": "feat/GH-702/list",
+      "sha": "2222222222222222222222222222222222222222"
+    },
+    "base": {
+      "ref": "main-tools"
+    }
+  }
+]

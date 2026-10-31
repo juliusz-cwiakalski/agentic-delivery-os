@@ -19,7 +19,7 @@ const REQUIRED_KEYS = [
   "trapName",
 ];
 
-const MINIMA: Readonly<Record<string, number>> = { gitlab: 3, jira: 4, github: 3 };
+const MINIMA: Readonly<Record<string, number>> = { gitlab: 3, jira: 4, github: 7 };
 
 const EXPECTED_TRAPS: Readonly<Record<string, readonly string[]>> = {
   jira: [
@@ -30,7 +30,15 @@ const EXPECTED_TRAPS: Readonly<Record<string, readonly string[]>> = {
     "JIRA-UPDATED-ABSENT",
   ],
   gitlab: ["GL-PIPELINE-MULTIPLICITY", "GL-MERGE-STATUS-ASYNC", "GL-MERGE-STATUS-MULTIVALUED"],
-  github: ["GH-REVIEW-STATE", "GH-CHECK-RUNS-PER-SHA", "GH-ISSUE-TO-WORKITEM"],
+  github: [
+    "GH-REVIEW-STATE",
+    "GH-CHECK-RUNS-PER-SHA",
+    "GH-ISSUE-TO-WORKITEM",
+    "GITHUB-LIST-EXCLUDES-PRS",
+    "GITHUB-LIST-PAGE-LIMIT",
+    "GITHUB-ISSUE-RELATIONS-ABSENT",
+    "GITHUB-PR-LIST-REVIEW-DEFAULT",
+  ],
 };
 
 type CatalogEntry = Record<string, unknown>;

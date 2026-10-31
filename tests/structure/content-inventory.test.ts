@@ -304,6 +304,8 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "adapters/src/github/normalize.ts": [
     "normalizeCheckRuns",
     "normalizeGithubIssue",
+    "normalizeGithubIssueList",
+    "normalizeGithubPullList",
     "normalizePullRequest",
   ],
   "adapters/src/github/review-state.ts": [
