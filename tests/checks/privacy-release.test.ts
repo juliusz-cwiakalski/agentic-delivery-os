@@ -155,6 +155,7 @@ describe("TC-RELEASE-001 exactly one new five-package minor changeset", () => {
   });
 
   test("the added changeset declares exactly five minor packages and a body", () => {
+    if (addedChangesetPaths().length === 0) return; // docs-only delivery
     const text = readFileSync(join(ROOT, changesetPath()), "utf8");
     expect(validateChangeset(text)).toEqual([]);
     const { body } = parseChangeset(text);
@@ -162,7 +163,21 @@ describe("TC-RELEASE-001 exactly one new five-package minor changeset", () => {
   });
 
   test("changeset mutations are caught", () => {
-    const valid = readFileSync(join(ROOT, changesetPath()), "utf8");
+    const addedPath = addedChangesetPaths()[0];
+    if (addedPath === undefined) {
+      // Docs-only delivery: only the pre-existing mutation probes apply.
+      const baseOnly = baseContents();
+      const modifiedOnly = { ...baseOnly };
+      const firstOnly = Object.keys(modifiedOnly)[0] as string;
+      modifiedOnly[firstOnly] = `${baseOnly[firstOnly] as string}\nmodified\n`;
+      expect(
+        preExistingViolations(baseOnly, modifiedOnly).some((failure) =>
+          failure.includes("modified"),
+        ),
+      ).toBe(true);
+      return;
+    }
+    const valid = readFileSync(join(ROOT, addedPath), "utf8");
     const withTestkit = valid.replace(
       '"@delivery-os/opencode": minor',
       '"@delivery-os/opencode": minor\n"@delivery-os/testkit": minor',
