@@ -6,7 +6,7 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: SPEC-DECISION-RECORDS
 status: Current
 created: 2026-03-10
-last_updated: 2026-07-05
+last_updated: 2026-10-31
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
@@ -15,7 +15,7 @@ links:
   guides:
     - "doc/guides/decision-making.md"
     - "doc/guides/decision-records-management.md"
-summary: "Tracker-agnostic decision records standard supporting ADR/PDR/TDR/BDR/ODR with unified storage, optional business/product/operational metadata, and lifecycle integration."
+summary: "Tracker-agnostic decision records standard supporting ADR/PDR/TDR/BDR/ODR with unified storage, optional business/product/operational metadata, lifecycle integration, a foundational binding register, and per-type decision ID ranges."
 ---
 
 # Feature: Decision Records Management

@@ -70,6 +70,7 @@ Additional profile-aware templates are listed in [templates/README.md](templates
 |----------|-------------|
 | [Decision Records](decisions/) | All decision records (ADR/PDR/TDR/BDR/ODR) |
 | [Decision Records Index](decisions/00-index.md) | Index of all decisions |
+| [Foundational Decision Binding Register](decisions/00-register.md) | Topic-to-record binding map for the foundational monorepo topics |
 
 ## For AI Agents
 

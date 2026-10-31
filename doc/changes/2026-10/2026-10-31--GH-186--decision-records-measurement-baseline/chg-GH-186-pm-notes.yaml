@@ -8,7 +8,7 @@ phases:
   delivery_planning: { started: "2026-10-31T15:27:00Z", completed: "2026-10-31T17:20:00Z", reopened: "2026-10-31T16:55:00Z", iterations: 3 }
   dor_check: { started: "2026-10-31T17:22:00Z", completed: "2026-10-31T17:40:00Z", iterations: 3, verdict: "READY (iter 3)" }
   delivery: { started: "2026-10-31T17:45:00Z", completed: "2026-10-31T18:20:00Z" }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: "2026-10-31T18:40:00Z", completed: "2026-10-31T19:05:00Z" }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -29,6 +29,8 @@ blockers:
   - text: "Spec C-1 forbids all changes under scripts/**, but the forbidden-literals guard requires every new user-facing doc under doc/ to be registered in scripts/checks/forbidden-literals.registry.json when absent at corpusBaseline. The two new docs (measurement-baseline.yaml, feature-measurement-baseline.md) would fail CI while the only fix is a scripts/** data edit. Verified in scripts/checks/forbidden-literals.ts lines 413-433 and the registry (userFacingDocs excludes only doc/changes/ and doc/decisions/)."
     date: "2026-10-31"
     resolved_date: "2026-10-31"
+  - text: "PRE-EXISTING, NOT CAUSED BY GH-186: `pnpm check` fails on tests/checks/privacy-release.test.ts TC-RELEASE-001 (and two related cases in a fresh worktree) because the test hardcodes the GH-184 changeset as an added file relative to origin/main-tools; after GH-184 merged, the added set is empty on every descendant. Reproduced on a clean origin/main-tools worktree (c62cdb8). Tracked separately as open issue GH-206 (priority:high, created by the CEO agent). Out of scope for GH-186 (no test/CI changes); the PR must state the exception and cannot be green until GH-206 lands."
+    date: "2026-10-31"
 notes:
   - text: "State detection: ticket GH-186 OPEN, no labels, 0 comments, milestone M0; no open PR for GH-186; no GH-186 branch or change folder; detached HEAD at 7155074 == origin/main-tools tip, worktree clean. Fresh delivery. Branch created from origin/main-tools."
     type: "info"
@@ -86,4 +88,10 @@ notes:
     date: "2026-10-31"
   - text: "Retro: the coder report's 'all gates green' was qualified by a branch-range commitlint failure caused by a planning-commit message the committer created earlier; the gate battery must run over the whole branch, not only delivery commits, before declaring green. Also the baseline captured_at was written in local time with a Z suffix, a reproducibility defect the review stage would catch."
     type: "retro"
+    date: "2026-10-31"
+  - text: "Post-delivery reconciliation: reworded the over-long planning commit so branch-range commitlint passes over all 19 commits; merged origin/main-tools (GH-204) cleanly at 46610b6; corrected measurement captured_at to 14:50Z; confirmed the only aggregate-gate failure is the pre-existing branch-dependent TC-RELEASE-001 tracked as GH-206. All other gates green (doc-distribution + modes, inception consistency, forbidden-literals 0, privacy-literals 0, commitlint-authority, commitlint range 0, git diff --check 0)."
+    type: "info"
+    date: "2026-10-31"
+  - text: "System spec update (phase 7) complete via @doc-syncer: residual gaps NONE. Changes: feature-decision-records.md refreshed (register + per-type ID ranges), feature-adapter-ports.md and glossary front-matter deduplicated with GH-186/ADR-0008/ODR-0002/ODR-0003 traceability, doc/00-index.md gains the register row, doc-sync-report.md recorded. Validation: forbidden-literals 0, doc-distribution no drift, front-matter and link checks pass. Out-of-scope pre-existing doc hygiene observations recorded in the report (duplicate front matter in three specs, ADR-0007 index title drift, legacy README lifecycle line)."
+    type: "info"
     date: "2026-10-31"
