@@ -36,7 +36,8 @@
       "./host",
       "./session",
       "./legacy",
-      "./credentials"
+      "./credentials",
+      "./provider-quota"
     ]
   },
   "scripts": {

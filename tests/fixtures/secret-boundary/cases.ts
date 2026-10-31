@@ -148,6 +148,26 @@ export const SECRET_READ_CASES: readonly SecretReadCase[] = [
     assertFile: "packages/adapters/src/jira/provider.ts",
   },
   {
+    id: "provider-core-process-env",
+    tc: "TC-PROV-038",
+    expect: "violation",
+    rule: SECRET_READ_RULE,
+    files: {
+      "packages/core/src/provider/probe.ts": "export const secret = process.env.SECRET;\n",
+    },
+    assertFile: "packages/core/src/provider/probe.ts",
+  },
+  {
+    id: "provider-quota-process-env",
+    tc: "TC-PROV-038",
+    expect: "violation",
+    rule: SECRET_READ_RULE,
+    files: {
+      "packages/adapters/src/provider-quota/probe.ts": "export const secret = process.env.SECRET;\n",
+    },
+    assertFile: "packages/adapters/src/provider-quota/probe.ts",
+  },
+  {
     id: "clean-sanctioned-readers",
     tc: "TC-SECRET-004",
     expect: "clean",

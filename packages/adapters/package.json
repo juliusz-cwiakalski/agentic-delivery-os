@@ -54,6 +54,10 @@
     "./credentials": {
       "types": "./dist/credentials/index.d.ts",
       "default": "./dist/credentials/index.js"
+    },
+    "./provider-quota": {
+      "types": "./dist/provider-quota/index.d.ts",
+      "default": "./dist/provider-quota/index.js"
     }
   },
   "imports": {
@@ -64,7 +68,8 @@
     "#ci/*": "./src/ci/*.ts",
     "#io/*": "./src/io/*.ts",
     "#registry": "./src/registry/index.ts",
-    "#credentials/*": "./src/credentials/*.ts"
+    "#credentials/*": "./src/credentials/*.ts",
+    "#provider-quota/*": "./src/provider-quota/*.ts"
   },
   "workspaceImports": {
     "@delivery-os/core": [

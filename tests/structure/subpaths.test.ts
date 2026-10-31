@@ -21,6 +21,7 @@ const ADAPTER_SUBPATHS = [
   "./session",
   "./legacy",
   "./credentials",
+  "./provider-quota",
 ];
 
 const EXPECTED: Record<string, Record<string, string>> = {

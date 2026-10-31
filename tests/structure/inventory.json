@@ -69,6 +69,7 @@
     "src/jira/normalize.ts",
     "src/jira/workflow-map.ts",
     "src/legacy/index.ts",
+    "src/provider-quota/index.ts",
     "src/registry/index.ts",
     "src/repo/index.ts",
     "src/session/index.ts"

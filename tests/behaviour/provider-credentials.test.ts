@@ -193,3 +193,58 @@ describe("TC-PROV-040 canary and allowlist safety", () => {
     }
   });
 });
+
+import { createProviderQuotaTransport } from "../../packages/adapters/src/provider-quota/index";
+
+describe("TC-PROV-040 production wrapper security", () => {
+  test("one bounded GET, in-memory authorization, no redirect follow, nothing stored", async () => {
+    const calls: Array<{ url: string; init: unknown }> = [];
+    const transport = createProviderQuotaTransport({
+      fetch: async (url, init) => {
+        calls.push({ url, init });
+        return {
+          status: 200,
+          text: async () =>
+            JSON.stringify({ code: 200, success: true, data: { limits: [] } }),
+        };
+      },
+    });
+    const result = await transport.send({
+      endpoint: "https://example.test/quota",
+      method: "GET",
+      timeoutMs: 1000,
+      credential: { value: CREDENTIAL_CANARY },
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.url).toBe("https://example.test/quota");
+    const init = calls[0]?.init as {
+      method: string;
+      redirect: string;
+      headers: Record<string, string>;
+      signal: AbortSignal;
+    };
+    expect(init.method).toBe("GET");
+    expect(init.redirect).toBe("manual");
+    expect(init.headers.authorization).toBe(`Bearer ${CREDENTIAL_CANARY}`);
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+    expect(result.status).toBe(200);
+    expect(JSON.stringify(result)).not.toContain(CREDENTIAL_CANARY);
+    expect(JSON.stringify(transport)).not.toContain(CREDENTIAL_CANARY);
+  });
+
+  test("a fetch rejection propagates without retaining the credential", async () => {
+    const transport = createProviderQuotaTransport({
+      fetch: async () => {
+        throw new Error("network down");
+      },
+    });
+    await expect(
+      transport.send({
+        endpoint: "https://example.test/quota",
+        method: "GET",
+        timeoutMs: 1000,
+        credential: { value: CREDENTIAL_CANARY },
+      }),
+    ).rejects.toThrow("network down");
+  });
+});

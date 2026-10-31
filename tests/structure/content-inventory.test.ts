@@ -215,6 +215,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "stripEnvelope",
   ],
   "adapters/src/io/provider-transport.ts": ["providerPayloadFailure"],
+  "adapters/src/provider-quota/index.ts": ["createProviderQuotaTransport"],
   "adapters/src/jira/capabilities.ts": ["JIRA_ADAPTER_CONTRACT"],
   "adapters/src/jira/client.ts": ["createJiraClient"],
   "adapters/src/jira/custom-fields.ts": ["JIRA_CUSTOM_FIELD_MAPPINGS", "applyJiraCustomFields"],
