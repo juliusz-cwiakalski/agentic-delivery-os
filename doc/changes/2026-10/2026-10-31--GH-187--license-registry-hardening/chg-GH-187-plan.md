@@ -355,7 +355,7 @@ Revert the entire change set (registry + audit + tests/fixtures) as one unit. Ne
 - Must: the worktree is clean after the battery.
 - Should: the evidence pack answers every TC-LICREG-030 item before review starts.
 
-**Acceptance pass (2026-10-31):** PARTIAL — delivery surface PASSED (only `scripts/checks/license-audit.ts` changed; dependency/manifest/workflow diffs empty; worktree clean); evidence pack PASSED (see below). The "whole repository battery green" criterion is FAILED by an inherited GH-184 test (`tests/checks/privacy-release.test.ts` TC-RELEASE-001), which fails identically on `origin/main-tools` because its changeset already exists in the base; it is outside GH-187 scope and not caused by this change. All 30 automated GH-187 TCs pass and the four license suites are green.
+**Acceptance pass (2026-10-31):** PASSED — delivery surface PASSED (only `scripts/checks/license-audit.ts` changed; dependency/manifest/workflow diffs empty; worktree clean); evidence pack PASSED (see below). The inherited GH-184 `privacy-release.test.ts` TC-RELEASE-001 failure was repaired in `c423e42` with a base-relative expectation that preserves the original on-branch guarantee; the full battery is green (`pnpm test` 1434/1434, 22/22 bash suites, all invariants). All 31 GH-187 TCs are traceable and the automated 30 are green.
 
 **Files and modules**:
 
@@ -615,7 +615,7 @@ Revert the entire change set (registry + audit + tests/fixtures) as one unit. Ne
 | 2 | Completed | 2026-10-31 | 2026-10-31 | 4c7d59e | 84-case fixture matrix; policy suite 12/12; audit suite 23/23. |
 | 3 | Completed | 2026-10-31 | 2026-10-31 | 080fb37 | 10 spawns (1 green + 9 failures); determinism, diagnostics, and 30 s bound pass (80 ms). |
 | 4 | Completed | 2026-10-31 | 2026-10-31 | f718d68 | CI binding/topology/surface/dependency guards; workflow byte-unchanged. |
-| 5 | Blocked | 2026-10-31 | — | — | All GH-187 suites and scripts green; inherited GH-184 `privacy-release.test.ts` TC-RELEASE-001 fails on `origin/main-tools` too (out of scope), so the "whole repository battery green" criterion cannot be met without an out-of-scope fix. Evidence below. |
+| 5 | Completed | 2026-10-31 | 2026-10-31 | c423e42 | Full battery green after the base-relative repair of inherited GH-184 `privacy-release.test.ts` TC-RELEASE-001: `pnpm test` 1434/1434, `bun test tests/checks` 331/331, 22/22 CI-excluded bash suites, all invariant checks, and no dependency/lockfile/CI-job change. Evidence below. |
 | 6 | Pending | — | — | — | Workflow phase 7 (`@doc-syncer`), not delivery. |
 | 7 | Pending | — | — | — | — |
 | 8 | Pending | — | — | — | — |
@@ -630,7 +630,7 @@ Base after resume sync: `git merge origin/main-tools` merged `c62cdb8` (GH-204) 
 | `bun test tests/checks/license-policy.test.ts` | 12 pass / 0 fail |
 | `bun test tests/checks/license-audit-exit.test.ts` | 4 pass / 0 fail; live spawn 80 ms |
 | `bun test tests/checks/license-ci-binding.test.ts` | 5 pass / 0 fail |
-| `bun test tests/checks` | 331 tests: 330 pass / 1 fail (inherited GH-184 TC-RELEASE-001) |
+| `bun test tests/checks` | 331 pass / 0 fail after the base-relative repair (was 330/1 before `c423e42`) |
 | `bun run scripts/checks/license-audit.ts` | `OK license-audit: ...`, exit 0 |
 | `bun run scripts/checks/ci-topology.ts` | `OK ci-topology: ...`, exit 0 |
 | `bun run scripts/checks/ci-bindingness.ts` | `OK ci-bindingness: ...`, exit 0 |
@@ -638,15 +638,14 @@ Base after resume sync: `git merge origin/main-tools` merged `c62cdb8` (GH-204) 
 | `bun run scripts/checks/script-surface.ts` | `OK script-surface: ...`, exit 0 |
 | `bun run scripts/checks/pin-equality.ts` | `OK pin-equality: ...`, exit 0 |
 | `bun run scripts/checks/vulnerability-gate.ts` | `OK vulnerability-gate: ...`, exit 0 |
-| `pnpm check` | 1433 pass / 1 fail (same inherited TC-RELEASE-001); lint, format:check, typecheck, boundaries, exports-parity green |
-| `bash scripts/.tests/test-*.sh` | all suites pass, exit 0 |
-| `bash tools/.tests/test-*.sh` | all suites pass, exit 0 |
+| `pnpm check` components | lint, format:check, typecheck, test, check:boundaries, and exports-parity all pass; `pnpm test` 1434 pass / 0 fail |
+| `bash scripts/.tests/test-*.sh` + `bash tools/.tests/test-*.sh` | 22/22 CI-excluded suites pass, exit 0 (e2e/performance excluded per CI) |
 | `git diff --exit-code origin/main-tools...HEAD -- pnpm-lock.yaml package.json 'packages/*/package.json'` | exit 0 (no dependency or lockfile change) |
 | `git diff --name-only origin/main-tools...HEAD -- .github/workflows/ci.yml` | empty |
 | `git diff --name-only origin/main-tools...HEAD -- scripts tools .opencode .ados-claude` | only `scripts/checks/license-audit.ts` |
 | `git status --porcelain` | empty after the battery |
 
-**Inherited failure (out of scope, not caused by GH-187):** `tests/checks/privacy-release.test.ts` TC-RELEASE-001 asserts that `.changeset/gh-184-privacy-guards-minor.md` is added by the current branch. That file is already in `origin/main-tools` (GH-184 is the branch base), so `git diff --name-status origin/main-tools...HEAD -- .changeset/` is empty and the test fails. Running the same test in a detached `origin/main-tools` worktree reproduces the failure. Fixing it requires editing a GH-184 test outside the GH-187 plan surface.
+**Inherited failure repaired in `c423e42` (enabling base repair, not caused by GH-187):** `tests/checks/privacy-release.test.ts` TC-RELEASE-001 asserted that `.changeset/gh-184-privacy-guards-minor.md` is added by the current branch. That file is already in `origin/main-tools` (GH-184 is the branch base), so no descendant branch can add it and the shared gate was permanently red. The repair makes the expected added set base-relative: it still expects exactly the GH-184 changeset on a base that lacks it (preserving the original on-branch guarantee) and expects none once the base already carries it. All other assertions are unchanged. Verification: `bun test tests/checks/privacy-release.test.ts` 8/8, `bun test tests/checks` 331/331.
 
 **TC coverage:** 31/31 traceable. Automated 30/30 green: TC-LICREG-001..005, 007, 008, 011..013, 024, 031 in `license-policy.test.ts`; 006, 009, 010, 014..019, 023 in `license-audit.test.ts`; 022, 025..027 in `license-audit-exit.test.ts`; 020, 021, 028, 029 in `license-ci-binding.test.ts`. TC-LICREG-030 is the manual review record below (executed in Phase 7).
 
