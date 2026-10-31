@@ -203,6 +203,7 @@ describe("TC-STATE-021 packed Node/Bun state surface", () => {
         ".",
         "./branding",
         "./contracts",
+        "./provider",
         "./state",
       ]);
 

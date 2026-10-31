@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "success": true,
+  "data": {
+    "limits": [
+      {
+        "type": "TIME_LIMIT",
+        "percentage": 100,
+        "nextResetTime": 1767225601000
+      },
+      {
+        "type": "TOKENS_LIMIT",
+        "percentage": 50,
+        "nextResetTime": 1767225605000
+      }
+    ]
+  }
+}

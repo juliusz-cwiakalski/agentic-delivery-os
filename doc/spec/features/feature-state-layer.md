@@ -5,8 +5,10 @@ created: 2026-10-30
 last_updated: 2026-10-31
 owners: ["engineering"]
 service: delivery-os
-summary: "The implemented M0-S5 state layer: an injected store identity, an append-only schema-versioned JSONL ledger as durable truth, disposable JSONL-scan and SQLite-index driver kinds over the same ledger, classified torn-state detection with verified-empty evidence and terminal-tail repair, key-set assertions with no default substitution, single-writer fences with explicit reported recovery, atomic derived-document replace, and least-privilege permissions with a documented Windows ACL contract."
+summary: "The implemented M0-S5 state layer: an injected store identity, an append-only schema-versioned JSONL ledger as durable truth, disposable JSONL-scan and SQLite-index driver kinds over the same ledger, classified torn-state detection with verified-empty evidence and terminal-tail repair, key-set assertions with no default substitution, single-writer fences with explicit reported recovery, atomic derived-document replace, least-privilege permissions with a documented Windows ACL contract, and the provider park/announcement record kinds with the rebuildable provider-parks.json projection."
 links:
+  related_changes: ["GH-174", "GH-179", "GH-181", "GH-182"]
+  related_decisions: ["ADR-0003", "TDR-0004"]
   related_changes: ["GH-174", "GH-177", "GH-179", "GH-181"]
   related_decisions: ["ADR-0003", "TDR-0004", "TDR-0005"]
 ---
@@ -43,6 +45,7 @@ The layer ships no command surface and no configuration read. Its first durable 
 - **Atomic replace:** a derived document is written to a same-directory temporary, flushed, and renamed over the target. The observable target is the previous or the new version, never partial. Stale temporaries are removed on the next open and never read as content.
 - **Least-privilege permissions:** creation applies POSIX mode `0700` to the state directory and `0600` to every store-managed file after creation, independent of the inherited umask; open verifies the same exact bits and a violation fails `state.permission.denied` instead of continuing permissively. On Windows the same port applies and verifies a current-user-only ACL.
 - **Failure identity:** the seven state codes are declared in the machine error table and the documented error table in the same change, and the bidirectional sync check is binding. All state failures carry consequence `not_landed`.
+- **Provider availability records:** the provider engine persists `provider.park` and `provider.announcement` records as additive kinds inside the existing state schema, with payload schemas `delivery.provider.park.v1` and `delivery.provider.announcement.v1`. It folds verified ledger truth into the rebuildable derived document `provider-parks.json` (`delivery.provider.parks.v1`). Park expiry is derived at read time; no expiry write or delete exists, and a park observed after expiry stays `expired` with no `cleared` write.
 
 ### Store layout
 
@@ -54,7 +57,7 @@ One store per workspace inside the injected state directory:
 | `header.<workspace>.json` | store schema version |
 | `index.<workspace>.sqlite` | disposable derived index (indexed kind only) |
 | `fence.<workspace>.lock` | single-writer lock token |
-| `documents.<workspace>/` | atomically replaced derived documents |
+| `documents.<workspace>/` | atomically replaced derived documents, including `phase-state.<REF>.json` and `provider-parks.json` |
 
 ### Delivery registry consumer
 
@@ -62,6 +65,11 @@ The delivery registry composes the public port without adding a runtime-API loca
 
 The per-change phase state is a derived document (`phase-state.<REF>.json`) produced by a pure fold: a completion records the first-completion start and the latest completion, and a reopen clears `completed` while keeping the start. The projection is replaced atomically through the derived-document kind and is rebuildable from verified ledger truth; a torn store never produces one. Registry behavior is specified in [pm-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md).
 
+### Provider parks consumer
+
+The provider engine composes the same public port without adding a runtime-API location. It appends `provider.park` records under the store-scoped key `provider.parks` and `provider.announcement` records under `provider.announcements`; each landed payload carries the full verified history, so a verified read returns the history from the ledger record itself. Persistence is fenced and occurs only in a mutating provider `resolve`; `quota` and `parks list` perform zero state writes.
+
+The `provider-parks.json` derived document is a per-park-name fold of the latest record, ordered by expiry ascending then name lexical, with schema `delivery.provider.parks.v1`. It is replaced atomically only when park truth changes. Read paths fold verified ledger truth directly, so a missing or divergent projection is served from the fold with zero writes; the persisted document catches up on the next mutating resolve. A park is active while `expiresAt > now`, expired at `expiresAt <= now` with no write, and `cleared` only when a `cleared` record for a clear observed before expiry was appended; a park observed after expiry stays `expired` with no write, while the next mutating resolve emits its `provider.resumed` announcement. The provider vocabulary and read views are specified in [Provider Engine](feature-provider-engine.md).
 ### Verify-change consumer
 
 Verify change is a read-only consumer of the state layer. It reads the registry's per-change transition history through a presence-tolerant verified read: the store is verified first, an absent store or an absent per-change record is explicit no-evidence (`present: false`), and a torn, schema-mismatched, or corrupt-payload read remains the classified `state.*` failure. The read acquires no fence and writes nothing.
@@ -110,13 +118,14 @@ The state tier imports `./contracts` and its own modules only; runtime APIs appe
 ## Operational Notes
 
 - Store format evolution requires a new state schema version and the classified `state.schema.mismatch` path; readers never reinterpret a store from another version.
-- Retention is forever. There is no prune, delete, expiry, or compaction surface; only explicit terminal-tail repair removes bytes.
+- Retention is forever. There is no prune, delete, compaction, or scheduled-expiry surface; provider parks become inactive by read-time expiry, but their records remain. Only explicit terminal-tail repair removes bytes.
 - The state schema version is carried by the header and by every record; a store artifact without a version is an integrity failure.
 
 ## Related
 
 - [Result contract and error table](feature-result-contract.md) — the `state` and `lint` rows and the binding sync check.
 - [PM-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md) — the delivery registry consumer, its record vocabulary, and the derived projection.
+- [Provider engine](feature-provider-engine.md) — the provider park and announcement record kinds, read-time expiry, and the `provider-parks.json` fold.
 - [Verify change and exit taxonomy](feature-verify-change-and-exit-taxonomy.md) — the read-only verification consumer and the delivery-result exit taxonomy.
 - [Monorepo scaffold and toolchain](feature-monorepo-scaffold-toolchain.md) — tier and runtime-API boundaries.
 - [Branding seam](feature-branding-seam.md) — `stateDirectoryName` is consumed as an injected parameter, never imported here.

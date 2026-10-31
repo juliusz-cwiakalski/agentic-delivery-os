@@ -39,6 +39,7 @@ ados_distribution: redistributable
 | [Meeting Preparation and Summarization](guides/meeting-preparation-and-summarization.md) | How to prepare, run, document, and follow up on meetings |
 | [Delivery Modes](guides/delivery-modes.md) | The two unattended delivery modes (Mode A CEO loop, Mode B manual batch) + behavioral invariants |
 | [Autonomous Batch Delivery](guides/autonomous-batch-delivery.md) | Unattended multi-ticket delivery: `batch-deliver.sh`, `deliver-ticket.sh`, liveness, approvals |
+| [Provider Conditions and Parks](guides/provider-conditions-and-parks.md) | Provider pauses: condition kinds, park causes and expiry, fail-loud announcements, configuration pointer |
 | [Tools Convention](guides/tools-convention.md) | Standard for building CLI tools |
 
 ## Tools

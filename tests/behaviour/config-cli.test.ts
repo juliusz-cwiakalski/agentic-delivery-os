@@ -174,7 +174,9 @@ describe("TC-CONFIG-014 frozen branding bootstrap", () => {
     expect(result.exitCode).toBe(0);
     expect(order[0]).toBe("synthetic");
     expect(order).toContain("discovery");
-    expect(JSON.parse(result.stdout)).toEqual({});
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      provider: { entries: { "zai-coding-plan": { class: "subscription" } } },
+    });
   });
 
   test("invalid names and overrides keep the echo-free branding failure", () => {
@@ -219,14 +221,18 @@ describe("TC-CONFIG-014 frozen branding bootstrap", () => {
 });
 
 describe("TC-CONFIG-015/018 debug, get and human payloads", () => {
-  test("empty production basic is exactly {}", async () => {
+  test("default production basic is the shipped provider branch", async () => {
     const result = await run(["--project-root", REPO]);
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toBe("{}\n");
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      provider: { entries: { "zai-coding-plan": { class: "subscription" } }, chains: {} },
+    });
     expect(result.stderr).toBe("");
     const machine = await run(["--project-root", REPO, "--json"]);
     const envelope = JSON.parse(machine.stdout) as { data: unknown };
-    expect(envelope.data).toEqual({});
+    expect(envelope.data).toMatchObject({
+      provider: { entries: { "zai-coding-plan": { class: "subscription" } }, chains: {} },
+    });
     expect(assertEnvelopeContract(envelope)).toEqual([]);
   });
 

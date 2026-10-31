@@ -1,0 +1,12 @@
+provider:
+  entries:
+    bad:
+      class: subscription
+      peak:
+        timezone: UTC
+        startSecondsOfDay: 90000
+        endSecondsOfDay: 92000
+  chains:
+    default:
+      entries:
+        - bad

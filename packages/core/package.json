@@ -22,6 +22,10 @@
     "./branding": {
       "types": "./dist/branding/index.d.ts",
       "default": "./dist/branding/index.js"
+    },
+    "./provider": {
+      "types": "./dist/provider/index.d.ts",
+      "default": "./dist/provider/index.js"
     }
   },
   "imports": {
@@ -33,7 +37,8 @@
     "#app/*": "./src/app/*.ts",
     "#config/*": "./src/config/*.ts",
     "#branding/*": "./src/branding/*.ts",
-    "#state/*": "./src/state/*.ts"
+    "#state/*": "./src/state/*.ts",
+    "#provider/*": "./src/provider/*.ts"
   },
   "workspaceImports": {},
   "dependencies": {

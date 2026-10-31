@@ -129,3 +129,23 @@ describe("TC-CONFIG-012/013/016 typed conversion, restrictions and warnings", ()
     }
   });
 });
+
+describe("TC-PROV-002 provider configuration restrictions", () => {
+  test("provider values cannot carry in-file interpolation", () => {
+    const secret = resolveConfig({
+      sources: [
+        fileFacts(
+          "system",
+          {
+            provider: {
+              credentials: { zai: { sourceKey: { style: "literal", name: "${SECRET}" } } },
+            },
+          },
+          2,
+        ),
+      ],
+    });
+    expect(secret.ok).toBe(false);
+    if (!secret.ok) expect(secret.error.code).toBe("config.interpolation.rejected");
+  });
+});

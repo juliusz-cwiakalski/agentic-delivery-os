@@ -19,13 +19,14 @@ const ADAPTER_SUBPATHS = [
   "./session",
   "./legacy",
   "./credentials",
+  "./provider-quota",
 ];
 
 export const EXPECTED_ENTRYPOINTS: Record<string, Record<string, string[]>> = {
   core: {},
   adapters: { "@delivery-os/core": ["./contracts"] },
   cli: {
-    "@delivery-os/core": [".", "./contracts", "./state", "./branding"],
+    "@delivery-os/core": [".", "./contracts", "./state", "./branding", "./provider"],
     "@delivery-os/adapters": ADAPTER_SUBPATHS,
   },
   mcp: {

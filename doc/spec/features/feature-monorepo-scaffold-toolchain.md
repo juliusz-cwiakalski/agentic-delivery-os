@@ -6,8 +6,9 @@ created: 2026-10-29
 last_updated: 2026-10-31
 owners: ["engineering"]
 service: delivery-os
-summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, the typed adapter-port substrate and secret-read boundary invariant, the durable local state layer, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
+summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, the typed adapter-port substrate and secret-read boundary invariant, the durable local state layer, the provider engine and its confined quota transport, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
 links:
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-179", "GH-181", "GH-188", "GH-182"]
   related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-188"]
   related_decisions: ["ADR-0003", "ADR-0005"]
 ---
@@ -16,6 +17,7 @@ links:
 
 ## Overview
 
+The repository hosts a six-package pnpm workspace under `packages/` for the TypeScript delivery tooling, alongside the existing bash delivery stack. The workspace is **structure over content** for the remaining engines, business logic, and drivers: every declared package, subpath, export, boundary rule, fixture, and quality gate is enforced. The configuration and state tiers, the result contract, the adapter-era contracts, the pm-notes lint and phase-transition surface, the provider engine with its confined quota transport, and the Jira, GitLab, and GitHub client read slices are implemented and documented separately in [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md), [Provider Engine](feature-provider-engine.md), and [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md); the remaining engines and the `azure` and `ci` provider subpaths are scaffold placeholders, and provider write operations are declared capability gaps.
 The repository hosts a six-package pnpm workspace under `packages/` for the TypeScript delivery tooling, alongside the existing bash delivery stack. The workspace is **structure over content** for the remaining engines, business logic, and drivers: every declared package, subpath, export, boundary rule, fixture, and quality gate is enforced. The configuration and state tiers, the result contract, the adapter-era contracts, the Jira, GitLab, and GitHub client read slices, and the pm-notes lint, phase-transition, and verify-change surfaces are implemented and documented separately in [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md), and [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md); the remaining engines and the `azure` and `ci` provider subpaths are scaffold placeholders, and provider write operations are declared capability gaps.
 
 The scaffold provides the substrate every later tooling story lands in. Its package matrix, core tier matrix, adapter subpaths, and runtime-API confinement rules are mechanical gates rather than prose, and every forbidden edge is proven by a failing negative fixture.
@@ -45,8 +47,8 @@ The authoritative design decision is [ADR-0003](../../decisions/ADR-0003-oss-mon
 
 | Package | Declared entrypoints | Role |
 |---------|----------------------|------|
-| `@delivery-os/core` | `.`, `./contracts`, `./state`, `./branding` | Runtime-neutral application services, contracts, state layer, branding seam |
-| `@delivery-os/adapters` | `./gitlab`, `./jira`, `./github`, `./azure`, `./ci`, `./registry`, `./repo`, `./file`, `./host`, `./session`, `./legacy`, `./credentials` | Tracker, VCS, CI, registry, per-I/O adapters, and the environment-backed credential port |
+| `@delivery-os/core` | `.`, `./contracts`, `./state`, `./branding`, `./provider` | Runtime-neutral application services, contracts, state layer, branding seam, and the pure provider engine |
+| `@delivery-os/adapters` | `./gitlab`, `./jira`, `./github`, `./azure`, `./ci`, `./registry`, `./repo`, `./file`, `./host`, `./session`, `./legacy`, `./credentials`, `./provider-quota` | Tracker, VCS, CI, registry, per-I/O adapters, the environment-backed credential port, and the quota transport |
 | `@delivery-os/cli` | `.` | Command-line surface |
 | `@delivery-os/mcp` | `.` | MCP surface |
 | `@delivery-os/opencode` | `.` | OpenCode host integration surface |
@@ -75,13 +77,13 @@ Each package declares its internal layers as `imports` subpath aliases, so viola
 
 | Package class | Aliases |
 |---------------|---------|
-| `core` | `#domain/*`, `#app/*`, `#config/*`, `#branding/*`, `#state/*`, `#contracts` |
-| `adapters` | `#gitlab/*`, `#jira/*`, `#github/*`, `#azure/*`, `#ci/*`, `#io/*`, `#registry` |
+| `core` | `#domain/*`, `#app/*`, `#config/*`, `#branding/*`, `#state/*`, `#provider/*`, `#contracts` |
+| `adapters` | `#gitlab/*`, `#jira/*`, `#github/*`, `#azure/*`, `#ci/*`, `#io/*`, `#registry`, `#credentials/*`, `#provider-quota/*` |
 | surfaces (`cli`, `mcp`, `opencode`) | `#commands/*`, `#output/*` |
 
-`core` uses the ADR tier set `domain` / `app` / `config` / `branding` / `state`. The boundary configuration resolves aliases so an edge written with an alias and the same edge written relatively fail identically.
+`core` uses the ADR tier set `domain` / `app` / `config` / `branding` / `state`, plus the runtime-neutral `provider` policy tier. The boundary configuration resolves aliases so an edge written with an alias and the same edge written relatively fail identically.
 
-In `core`, `#contracts` is a conditional `imports` target: `types` → `./dist/contracts/index.d.ts` and `default` → `./dist/contracts/index.js`. Emitted declarations preserve the `#contracts` specifier, and the published package ships only `dist`, so the alias must resolve to built targets. A package-local `paths` mapping in `packages/core/tsconfig.json` resolves `#contracts` to `./src/contracts/index.ts`, so source typechecking works before a build exists. The remaining core aliases (`#domain/*`, `#app/*`, `#config/*`, `#branding/*`, `#state/*`) stay src-relative.
+In `core`, `#contracts` is a conditional `imports` target: `types` → `./dist/contracts/index.d.ts` and `default` → `./dist/contracts/index.js`. Emitted declarations preserve the `#contracts` specifier, and the published package ships only `dist`, so the alias must resolve to built targets. A package-local `paths` mapping in `packages/core/tsconfig.json` resolves `#contracts` to `./src/contracts/index.ts`, so source typechecking works before a build exists. The remaining core aliases (`#domain/*`, `#app/*`, `#config/*`, `#branding/*`, `#state/*`, `#provider/*`) stay src-relative.
 
 ### Declared workspace entrypoints
 
@@ -90,7 +92,8 @@ Each package declares which entrypoints of its workspace dependencies it may imp
 | Importer | May import from `core` | May import from `adapters` |
 |----------|------------------------|----------------------------|
 | `adapters` | `./contracts` | — |
-| `cli`, `mcp`, `opencode` | `.`, `./contracts`, `./state`, `./branding` | every declared adapters subpath |
+| `cli` | `.`, `./contracts`, `./state`, `./branding`, `./provider` | every declared adapters subpath |
+| `mcp`, `opencode` | `.`, `./contracts`, `./state`, `./branding` | every declared adapters subpath |
 | `testkit` | `.`, `./contracts` | every declared adapters subpath |
 
 Deep imports into another package's `src/` or `dist/`, and relative paths escaping the package root, are forbidden.
@@ -102,9 +105,9 @@ Deep imports into another package's `src/` or `dist/`, and relative paths escapi
 - **Package matrix** — one rule per importer row: `core`, `adapters`, `cli`, `mcp`, and `opencode` cannot import forbidden sibling surfaces.
 - **Core subpath permissions** — `adapters` may not import `core ./state`, `core ./branding`, or the core package root; `testkit` may not import undeclared core subpaths.
 - **Deep and relative imports** — no `@delivery-os/<pkg>/(src|dist)/...` deep import and no relative import escaping the importer's package root.
-- **Core tier matrix** — `domain`, `config`, `branding`, and `state` may import `./contracts` only; `app` may import `domain`, `config`, and `./contracts`, but not `branding` or `state` at scaffold.
+- **Core tier matrix** — `domain`, `config`, `branding`, and `state` may import `./contracts` only; `app` may import `domain`, `config`, and `./contracts`, but not `branding` or `state` at scaffold; the `provider` tier is part of the ambient neutral set and composes core contracts with its own modules.
 - **Testkit dev edges** — production `src` never imports `testkit`; `testkit` imports `core` and `adapters`, never `cli`, `mcp`, or `opencode`.
-- **Runtime-API confinement** — runtime imports are permitted only in the `core` state driver edge (`packages/core/src/state/driver/`), the adapter I/O subpaths, the `cli` build, and the `opencode` host integration. The adapter exemption is the ADR I/O subpaths — `repo`, `file`, `host`, `session`, and `legacy` — plus the credential implementation at `credentials`, and the provider client subpaths `github`, `gitlab`, and `jira` as exact, reason-bearing entries for network I/O per [ADR-0005](../../decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md); the provider registry and the remaining adapter subpaths (`azure`, `ci`) are not exempt. Runtime-API confinement matches Node core-module imports; the ambient-globals guard separately bans runtime globals in the core neutral tiers.
+- **Runtime-API confinement** — runtime imports are permitted only in the `core` state driver edge (`packages/core/src/state/driver/`), the adapter I/O subpaths, the `cli` build, and the `opencode` host integration. The adapter exemption is the ADR I/O subpaths — `repo`, `file`, `host`, `session`, and `legacy` — plus the credential implementation at `credentials`, the provider client subpaths `github`, `gitlab`, and `jira`, and the provider quota transport at `provider-quota`, all as exact, reason-bearing entries for network I/O per the [ADR-0005](../../decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md) reviewed-allowance precedent; the provider registry and the remaining adapter subpaths (`azure`, `ci`) are not exempt. Runtime-API confinement matches Node core-module imports; the ambient-globals guard separately bans runtime globals in the core neutral tiers, including the provider tier.
 - **State-tier structure** — `tests/structure/state-imports.test.ts` is an AST detector over `packages/core/src/state/**`: the tier imports `#contracts` and its own modules only, and runtime API use appears only inside the driver edge, proven by synthetic forbidden-import and runtime-API controls.
 
 Package-name specifiers resolve through each manifest's `exports` to built `dist` targets, so the cross-package rules match both forms: `packages/<pkg>/src/...` in-tree and `packages/<pkg>/dist/...` for package-name imports. A `couldNotResolve` catch-all fails any `@delivery-os/*` specifier that resolves to no declared package entrypoint, so an undeclared import fails by name even before a build exists.
@@ -115,7 +118,7 @@ The cruise runs against the built tree: package-name specifiers resolve through 
 
 `bun run scripts/checks/ambient-globals.ts` is the AST guard for two rule ids:
 
-- `ambient-globals-neutral-tiers` — the neutral set (`core` `.` entry, `core/src/contracts/**`, and `core/src/{domain,app,config,branding}/**`) must not use ambient globals (`process`, `Bun`, `Deno`, timers, `fetch`) or ambient clock/randomness (`Date.now`, `Math.random`).
+- `ambient-globals-neutral-tiers` — the neutral set (`core` `.` entry, `core/src/contracts/**`, and `core/src/{domain,app,config,branding,provider}/**`) must not use ambient globals (`process`, `Bun`, `Deno`, timers, `fetch`) or ambient clock/randomness (`Date.now`, `Math.random`).
 - `ambient-env-branding` — an environment read (`process.env` / `Bun.env`) inside the branding tier is classified under this rule.
 
 `bun run scripts/checks/secret-read-boundary.ts` is the AST guard for ambient secret acquisition across every workspace package production source (`packages/<pkg>/src/**` TypeScript, excluding `dist` and `node_modules`). Ambient environment access is permitted only in an enumerated allowlist. The v1 allowlist has four exact entries: the credential implementation directory (`packages/adapters/src/credentials`, class `credential-material`), the state driver runtime edge (`packages/core/src/state/driver/runtime-edge.ts`, class `configuration-environment-source`, for Windows owner-identity resolution in icacls ACL verification), and two pre-existing configuration environment readers (`packages/adapters/src/file/yaml-parser.ts` and `packages/adapters/src/legacy/index.ts`, class `configuration-environment-source`). Exactly one entry may be `credential-material`, and every entry carries a reason. Wildcards, prefixes, absolute paths, trailing separators, duplicate paths, and missing targets fail registry validation; an empty scan scope fails closed, so the gate cannot pass vacuously. The check detects `process.env`, `Bun.env`, and `Deno.env` property reads; element access to `env` or an ambient global by string-literal key; element access with a computed or template-literal key on `process`, `Bun`, `Deno`, or `globalThis`, which fails closed because a non-literal key cannot be checked statically; runtime imports of `process` or `bun`; and aliased ambient globals, while ignoring identifier positions such as property names, import specifiers, and type declarations. It runs in `check:boundaries` and as a binding step in the CI `ts-invariants` job; the behavior is documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
@@ -124,7 +127,7 @@ The cruise runs against the built tree: package-name specifiers resolve through 
 
 Every forbidden rule has at least one registered negative fixture. The harness materializes a throwaway workspace per case in a temporary directory, copies the production boundary configuration verbatim, verifies the clean baseline, injects the forbidden edge, and asserts the named rule fires. Clean-cruise controls prove allowed edges stay green.
 
-Fixture resolution mirrors production: fixture manifests point every `exports` target at `./dist`, and the harness materializes `dist` placeholder files, so package-name probes travel the same `exports`→`dist` path as the live tree. Forbidden edges are probed in package-name and relative-source form; clean-cruise controls prove allowed package-name edges stay green.
+Fixture resolution mirrors production: fixture manifests point every `exports` target at `./dist`, and the harness materializes `dist` placeholder files, so package-name probes travel the same `exports`→`dist` path as the live tree. Forbidden edges are probed in package-name and relative-source form; clean-cruise controls prove allowed package-name edges stay green. The provider quota transport has a clean control, and the runtime-neutral provider core is the negative fixture for the new confinement admission.
 
 `tests/boundaries/fixture-coverage.test.ts` is the meta-check: it fails when a configured rule has no registered case, when a mandatory importer rule is missing, when either `subpath-undeclared` form is unregistered, or when the ambient registry does not cover the neutral set. A rule without a failing fixture is therefore unenforced.
 
@@ -201,6 +204,10 @@ No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scr
 | `packages/*/package.json` | Manifests: exports, imports aliases, `workspaceImports`, scripts, privacy |
 | `packages/*/tsconfig.json` | Composite configs extending the strict base |
 | `packages/core/src/index.ts` | The `createRuntime` composition-root signature |
+| `packages/core/src/contracts/**` | Result, error-table, configuration, adapter-port, capability, credential, provider, and envelope contracts (types and `as const` data only) |
+| `packages/*/src/**` | Internal tier directories; the configuration and state tiers, result contracts, adapter ports, the credential implementation, the envelope codec, file/repo/legacy adapters, pm-notes parsing, delivery-registry records, the provider engine and quota transport, the CLI inspection/lint/phase/provider commands, and the three provider client read slices carry implemented code, while the remaining engines and the `azure` and `ci` provider subpaths are placeholders and provider write operations are declared gaps |
+| `packages/core/src/provider/**` | Pure provider validation, chain resolution, peak/quota evaluation, condition combination, park/announcement projection, the re-evaluation loop, and engine composition |
+| `packages/adapters/src/provider-quota/index.ts` | Injectable quota transport and native-fetch production wrapper at the declared `./provider-quota` subpath |
 | `packages/core/src/contracts/**` | Result, error-table, delivery-result, configuration, adapter-port, capability, credential, and envelope contracts (types and `as const` data only) |
 | `packages/*/src/**` | Internal tier directories; the configuration and state tiers, result and delivery-result contracts, adapter ports, the credential implementation, the envelope codec, file/repo/legacy adapters, pm-notes parsing, delivery-registry records, the pure verify classifier, and the CLI inspection, lint, phase, and verify commands carry implemented code, while the remaining engines and the `azure` and `ci` provider subpaths are placeholders and provider write operations are declared gaps |
 | `packages/adapters/src/credentials/index.ts` | Environment-backed credential port implementation at the declared `./credentials` subpath |
@@ -213,6 +220,7 @@ No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scr
 | `tests/structure/**` | Inventory, subpath, exports, contract-surface, delivery-result taxonomy, verify tier/import, and `createRuntime` assertions |
 | `tests/types/**` | Compile-time contract probes chained into the root `typecheck` |
 | `tests/boundaries/**` | Negative fixtures, controls, and the fixture-coverage meta-check |
+| `tests/behaviour/**` | pnpm isolation, commit-msg hook, adapter-port, credential, envelope, pm-notes lint, corpus, phase, delivery-registry, and provider-engine behaviour |
 | `tests/behaviour/**` | pnpm isolation, commit-msg hook, adapter-port, credential, envelope, pm-notes lint, corpus, phase, delivery-registry, verify classification, rejection, evidence-failure, envelope, and real-corpus behaviour |
 | `tests/checks/**` | Mutation and contract tests for `scripts/checks/*.ts` |
 | `.changeset/config.json` | Lockstep fixed group and private-package policy |
@@ -223,8 +231,10 @@ No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scr
 ### Package graph
 
 ```text
-cli, mcp, opencode ──> core (., ./contracts, ./state, ./branding)
-                   └─> adapters (every declared subpath)
+cli               ──> core (., ./contracts, ./state, ./branding, ./provider)
+                  └─> adapters (every declared subpath)
+mcp, opencode     ──> core (., ./contracts, ./state, ./branding)
+                  └─> adapters (every declared subpath)
 
 adapters          ──> core ./contracts
 
@@ -280,7 +290,9 @@ core              ──> no workspace dependencies
 - **Result capability:** [Result Contract and Error Table](feature-result-contract.md).
 - **Adapter contract substrate:** [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
 - **State capability:** [State Layer](feature-state-layer.md).
+- **Provider capability:** [Provider Engine](feature-provider-engine.md).
 - **PM-notes and phase capability:** [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md).
 - **Verify capability:** [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md).
 - **Glossary:** [doc/overview/glossary.md](../../overview/glossary.md) — scaffold terms.
 - **Change record:** `doc/changes/2026-10/2026-10-29--GH-170--monorepo-scaffold-toolchain/`.
+- **Provider engine change record:** `doc/changes/2026-10/2026-10-31--GH-182--provider-v1/`.
