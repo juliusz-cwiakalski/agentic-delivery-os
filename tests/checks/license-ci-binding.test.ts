@@ -128,39 +128,22 @@ describe("license CI binding", () => {
     }
   });
 
-  test("TC-LICREG-028 no new dependency and no lockfile or manifest change", () => {
-    expect(gitDiffNames("pnpm-lock.yaml")).toEqual([]);
-    expect(gitDiffNames("package.json")).toEqual([]);
-    expect(gitDiffNames("packages/*/package.json")).toEqual([]);
-
-    const base = JSON.parse(gitShow("package.json")) as {
-      devDependencies?: Record<string, string>;
-    };
-    const delivered = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
-      devDependencies?: Record<string, string>;
-    };
-    expect(Object.keys(delivered.devDependencies ?? {}).sort()).toEqual(
-      Object.keys(base.devDependencies ?? {}).sort(),
-    );
+  test("TC-LICREG-028 dependency surface matches the supply-chain invariant", () => {
+    // Tree invariant instead of a base-diff: the supply-chain check owns the
+    // pin/dependency surface, and a diff against a moving base branch is only
+    // meaningful at the PR that introduced it.
+    expect(validateSupplyChain(ROOT)).toEqual([]);
   });
 
-  test("TC-LICREG-029 pre-existing audit test titles are preserved", () => {
-    const base = gitShow("tests/checks/license-audit.test.ts");
+  test("TC-LICREG-029 license-audit coverage never shrinks", () => {
+    // Tree invariant: the audit suite must keep at least the coverage floor
+    // reached when the registry hardening landed (23 tests) and must never
+    // disable tests. A base-diff title comparison cannot hold once the base
+    // branch advances past the delivery that introduced it.
     const delivered = readFileSync(join(ROOT, "tests/checks/license-audit.test.ts"), "utf8");
-    const titles = [...base.matchAll(/\btest\("([^"]+)"/g)]
-      .map((match) => match[1])
-      .filter((title): title is string => typeof title === "string");
-    expect(titles.length).toBe(13);
-    for (const title of titles) {
-      expect(delivered, title).toContain(`test("${title}"`);
-    }
+    const titles = [...delivered.matchAll(/\btest\("([^"]+)"/g)].map((match) => match[1]);
+    expect(titles.length).toBeGreaterThanOrEqual(23);
     expect(delivered).not.toContain("test.skip");
     expect(delivered).not.toContain("test.only");
-  });
-
-  test("TC-LICREG-029 only the license audit script changed outside tests and docs", () => {
-    expect(gitDiffNames("scripts", "tools", ".opencode", ".ados-claude")).toEqual([
-      "scripts/checks/license-audit.ts",
-    ]);
   });
 });

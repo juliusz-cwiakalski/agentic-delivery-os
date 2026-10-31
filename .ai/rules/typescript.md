@@ -142,6 +142,9 @@ Run commands, placement rules, and CI order live in
   `--update-snapshots` to get green.
 - Test real behavior through ports with fakes; do not re-implement the
   logic under test in the test.
+- Assert the current tree, not a diff against a moving base branch. Diff
+  shape belongs to PR-time review gates; permanent invariants use
+  snapshots, floors, or structural assertions (see testing-strategy.md).
 
 ## 10) Gates and commands
 
