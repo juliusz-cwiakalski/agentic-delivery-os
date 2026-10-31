@@ -1,0 +1,180 @@
+{
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "provider": "gitlab",
+  "adapterName": "gitlab",
+  "instance": {
+    "instanceName": "gitlab",
+    "systemKind": "vcs",
+    "baseUrl": "https://gitlab.example.com",
+    "authMethod": {
+      "mechanism": "credential-reference",
+      "reference": {
+        "referenceName": "conformance-mock-gitlab",
+        "sourceKey": {
+          "style": "literal",
+          "name": "CONFORMANCE_LIVE_GITLAB_TOKEN"
+        }
+      }
+    }
+  },
+  "credentialReferenceName": "conformance-mock-gitlab",
+  "addressing": {
+    "provider": "gitlab",
+    "projectPath": "project-placeholder",
+    "mrIid": 42,
+    "commitSha": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678"
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "url": "https://gitlab.example.com/api/v4/projects/project-placeholder/merge_requests/42",
+      "status": 200,
+      "body": {
+        "iid": 42,
+        "id": 4200,
+        "title": "Client seeds with trap catalogs",
+        "state": "opened",
+        "draft": false,
+        "source_branch": "feat/GH-188/client-seeds-trap-catalogs",
+        "target_branch": "main-tools",
+        "approvals": 1,
+        "detailed_merge_status": "mergeable",
+        "merge_status": "can_be_merged",
+        "review_threads": [
+          {
+            "id": "thread-1",
+            "resolved": true,
+            "notes": [
+              {
+                "id": 1
+              },
+              {
+                "id": 2
+              }
+            ]
+          },
+          {
+            "id": "thread-2",
+            "resolved": false,
+            "notes": [
+              {
+                "id": 3
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "url": "https://gitlab.example.com/api/v4/projects/project-placeholder/pipelines?sha=a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+      "status": 200,
+      "body": {
+        "sha": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+        "pipelines": [
+          {
+            "id": 501,
+            "sha": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+            "source": "push",
+            "jobs": [
+              {
+                "name": "typecheck",
+                "status": "success"
+              },
+              {
+                "name": "test",
+                "status": "success"
+              }
+            ],
+            "trace": {
+              "evidenceName": "job-log",
+              "location": "https://gitlab.example.com/group-placeholder/project-placeholder/-/jobs/9001/trace"
+            }
+          },
+          {
+            "id": 502,
+            "sha": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+            "source": "merge_request_event",
+            "jobs": [
+              {
+                "name": "verify",
+                "status": "failed"
+              }
+            ],
+            "trace": {
+              "evidenceName": "job-log",
+              "location": "https://gitlab.example.com/group-placeholder/project-placeholder/-/jobs/9002/trace"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "expected": {
+    "change-lifecycle.read-delivery-request": {
+      "identity": {
+        "systemName": "gitlab",
+        "entityId": "42"
+      },
+      "sourceRef": "feat/GH-188/client-seeds-trap-catalogs",
+      "targetRef": "main-tools",
+      "reviewState": "approved",
+      "threads": [
+        {
+          "threadId": "thread-1",
+          "resolved": true,
+          "commentCount": 2
+        },
+        {
+          "threadId": "thread-2",
+          "resolved": false,
+          "commentCount": 1
+        }
+      ]
+    },
+    "change-lifecycle.read-pipeline-run": [
+      {
+        "identity": {
+          "systemName": "gitlab",
+          "entityId": "501"
+        },
+        "pipelineName": "pipeline-501",
+        "jobs": [
+          {
+            "jobName": "typecheck",
+            "jobState": "succeeded"
+          },
+          {
+            "jobName": "test",
+            "jobState": "succeeded"
+          }
+        ],
+        "traceEvidence": [
+          {
+            "evidenceName": "job-log",
+            "location": "https://gitlab.example.com/group-placeholder/project-placeholder/-/jobs/9001/trace"
+          }
+        ]
+      },
+      {
+        "identity": {
+          "systemName": "gitlab",
+          "entityId": "502"
+        },
+        "pipelineName": "pipeline-502",
+        "jobs": [
+          {
+            "jobName": "verify",
+            "jobState": "failed"
+          }
+        ],
+        "traceEvidence": [
+          {
+            "evidenceName": "job-log",
+            "location": "https://gitlab.example.com/group-placeholder/project-placeholder/-/jobs/9002/trace"
+          }
+        ]
+      }
+    ]
+  }
+}

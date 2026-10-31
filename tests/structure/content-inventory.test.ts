@@ -139,6 +139,8 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "CONFORMANCE_TIERS",
   ],
   "testkit/src/conformance/flows.ts": ["CONFORMANCE_FLOWS", "findFlow"],
+  "testkit/src/conformance/adapters.ts": ["CONFORMANCE_ADAPTERS"],
+  "testkit/src/conformance/mock-tenant.ts": ["createMockTenantTransport", "decodeMockTenant"],
   "core/src/contracts/provider.ts": [
     "ANNOUNCEMENT_CODES",
     "ANNOUNCEMENT_EVIDENCE_FIELDS",

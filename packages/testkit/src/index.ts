@@ -13,7 +13,10 @@ export {
   CONFORMANCE_STEP_STATUSES,
   CONFORMANCE_TIERS,
 } from "./conformance/artifact.js";
+export { CONFORMANCE_ADAPTERS } from "./conformance/adapters.js";
 export { CONFORMANCE_FLOWS, findFlow } from "./conformance/flows.js";
+export { createMockTenantTransport, decodeMockTenant } from "./conformance/mock-tenant.js";
+export type { MockTenantTransport } from "./conformance/mock-tenant.js";
 export type {
   ConformanceAdapterClient,
   ConformanceAdapterRead,

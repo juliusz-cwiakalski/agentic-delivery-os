@@ -6,8 +6,22 @@
  * this module as the registrations and coverage gates are delivered.
  */
 import { describe, expect, test } from "bun:test";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { JIRA_ADAPTER_CONTRACT } from "@delivery-os/adapters/jira";
 import { ADAPTER_OPERATIONS } from "@delivery-os/core/contracts";
-import { CONFORMANCE_FLOWS, findFlow } from "@delivery-os/testkit";
+import { CONFORMANCE_ADAPTERS, CONFORMANCE_FLOWS, findFlow } from "@delivery-os/testkit";
+
+const ROOT = process.cwd();
 
 const CLOSED_OPERATIONS = new Set<string>(ADAPTER_OPERATIONS);
 const EXPECTED_FLOW_IDS = ["change-lifecycle", "comment-provenance", "label-semantics"] as const;
@@ -206,5 +220,294 @@ describe("TC-CONF-005 flow non-vacuity and mutation controls", () => {
         message.includes("empty-flow: flow has no steps"),
       ),
     ).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TC-CONF-002 / TC-CONF-003 — adapter registration and provider-contract scan
+// ---------------------------------------------------------------------------
+
+type ContractDeclaration = {
+  readonly symbol: string;
+  readonly file: string;
+  readonly adapter: string;
+};
+
+const ADAPTERS_SRC = "packages/adapters/src";
+const CONTRACT_DECLARATION = /\bexport\s+const\s+([A-Za-z0-9_]*_ADAPTER_CONTRACT)\b/g;
+const CONTRACT_SYMBOL = /\b[A-Za-z0-9_]*_ADAPTER_CONTRACT\b/g;
+
+const listTsFiles = (root: string, relative: string): string[] => {
+  const directory = join(root, relative);
+  if (!existsSync(directory)) return [];
+  const files: string[] = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const next = `${relative}/${entry.name}`;
+    if (entry.isDirectory()) {
+      files.push(...listTsFiles(root, next));
+    } else if (entry.name.endsWith(".ts")) {
+      files.push(next);
+    }
+  }
+  return files.sort();
+};
+
+/** Declaration-only scan: an `index.ts` re-export is never an occurrence. */
+export const scanContractDeclarations = (root: string): ContractDeclaration[] => {
+  const declarations: ContractDeclaration[] = [];
+  for (const file of listTsFiles(root, ADAPTERS_SRC)) {
+    const text = readFileSync(join(root, file), "utf8");
+    const remainder = file.slice(`${ADAPTERS_SRC}/`.length).split("/");
+    const adapter = remainder.length > 1 ? (remainder[0] ?? "") : "";
+    for (const match of text.matchAll(CONTRACT_DECLARATION)) {
+      const symbol = match[1];
+      if (symbol !== undefined) declarations.push({ symbol, file, adapter });
+    }
+  }
+  return declarations;
+};
+
+const registrationProvider = (value: unknown): string | undefined => {
+  if (!isRecord(value)) return undefined;
+  return text(value, "provider");
+};
+
+const registrationAdapterName = (value: unknown): string | undefined => {
+  if (!isRecord(value)) return undefined;
+  const contract = value.contract;
+  return isRecord(contract) ? text(contract, "adapterName") : undefined;
+};
+
+/** Registry completeness and contract-binding checks, naming both names. */
+export const adapterRegistryViolations = (registrations: readonly unknown[]): string[] => {
+  const violations: string[] = [];
+  if (registrations.length !== EXPECTED_FLOW_IDS.length) {
+    violations.push(
+      `registry: expected 3 adapter registrations but observed ${registrations.length}`,
+    );
+  }
+  const seen = new Set<string>();
+  for (const registration of registrations) {
+    if (!isRecord(registration)) {
+      violations.push("registry: registration is not an object");
+      continue;
+    }
+    const provider = registrationProvider(registration);
+    if (provider === undefined) {
+      violations.push("registry: registration has no provider");
+      continue;
+    }
+    if (seen.has(provider)) violations.push(`registry: duplicate registration ${provider}`);
+    seen.add(provider);
+    if (!["github", "gitlab", "jira"].includes(provider)) {
+      violations.push(`registry: unexpected non-provider registration ${provider}`);
+    }
+    const adapterName = registrationAdapterName(registration);
+    if (adapterName === undefined) {
+      violations.push(`registry: registration ${provider} has no contract adapterName`);
+    } else if (adapterName !== provider) {
+      violations.push(
+        `registry: registration ${provider} names contract ${adapterName} instead of ${provider}`,
+      );
+    }
+    if (typeof registration.buildClient !== "function") {
+      violations.push(`registry: registration ${provider} has no client builder`);
+    }
+  }
+  for (const provider of ["github", "gitlab", "jira"]) {
+    if (!seen.has(provider)) violations.push(`registry: missing registration ${provider}`);
+  }
+  return violations;
+};
+
+/** Every declaration is registered and every registration names a declaration. */
+export const registrationViolations = (
+  declarations: readonly ContractDeclaration[],
+  registrations: readonly unknown[],
+): string[] => {
+  const violations: string[] = [];
+  const declaredAdapters = new Set(declarations.map((entry) => entry.adapter));
+  const registeredProviders = new Set(
+    registrations.flatMap((entry) => {
+      const provider = registrationProvider(entry);
+      return provider === undefined ? [] : [provider];
+    }),
+  );
+  for (const declaration of declarations) {
+    if (!registeredProviders.has(declaration.adapter)) {
+      violations.push(
+        `${declaration.file}: provider contract ${declaration.symbol} has no conformance registration for ${declaration.adapter}`,
+      );
+    }
+  }
+  for (const provider of registeredProviders) {
+    if (!declaredAdapters.has(provider)) {
+      violations.push(`registration ${provider} names no declared provider contract`);
+    }
+  }
+  return violations;
+};
+
+const writeTempTree = (files: Record<string, string>): string => {
+  const root = mkdtempSync(join(tmpdir(), "gh189-contracts-"));
+  for (const [relative, content] of Object.entries(files)) {
+    const path = join(root, relative);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, content);
+  }
+  return root;
+};
+
+const capabilityFile = (name: string, symbol: string): string =>
+  `export const ${symbol} = { adapterName: "${name}", systemKind: "vcs", capabilities: {} };\n`;
+
+describe("TC-CONF-002 adapter registry completeness and contract binding", () => {
+  test("the live registry is exactly GitHub, GitLab and Jira with matching contracts", () => {
+    expect(adapterRegistryViolations(CONFORMANCE_ADAPTERS)).toEqual([]);
+    expect(CONFORMANCE_ADAPTERS.map((entry) => entry.provider).sort()).toEqual([
+      "github",
+      "gitlab",
+      "jira",
+    ]);
+    for (const registration of CONFORMANCE_ADAPTERS) {
+      expect(registration.contract.adapterName).toBe(registration.provider);
+      expect(typeof registration.buildClient).toBe("function");
+      expect(registration.writeHandler).toBeUndefined();
+    }
+  });
+
+  test("a wrong-contract binding fails naming both names", () => {
+    const mutated = CONFORMANCE_ADAPTERS.map((entry) =>
+      entry.provider === "github" ? { ...entry, contract: JIRA_ADAPTER_CONTRACT } : entry,
+    );
+    expect(
+      adapterRegistryViolations(mutated).some(
+        (message) => message.includes("github") && message.includes("jira"),
+      ),
+    ).toBe(true);
+  });
+
+  test("an azure registration fails naming the registration", () => {
+    const mutated = [
+      ...CONFORMANCE_ADAPTERS,
+      { provider: "azure", contract: JIRA_ADAPTER_CONTRACT, buildClient: () => ({}) },
+    ];
+    expect(adapterRegistryViolations(mutated).some((message) => message.includes("azure"))).toBe(
+      true,
+    );
+  });
+});
+
+describe("TC-CONF-003 provider-contract registration scan", () => {
+  test("the live scan finds exactly three declarations from three files", () => {
+    const declarations = scanContractDeclarations(ROOT);
+    expect(declarations.map((entry) => entry.adapter).sort()).toEqual(["github", "gitlab", "jira"]);
+    expect(new Set(declarations.map((entry) => entry.file)).size).toBe(3);
+    expect(registrationViolations(declarations, CONFORMANCE_ADAPTERS)).toEqual([]);
+  });
+
+  test("six raw symbol occurrences collapse to three declarations", () => {
+    const corpus = listTsFiles(ROOT, ADAPTERS_SRC)
+      .map((file) => readFileSync(join(ROOT, file), "utf8"))
+      .join("\n");
+    expect([...corpus.matchAll(CONTRACT_SYMBOL)].length).toBe(6);
+    expect(scanContractDeclarations(ROOT)).toHaveLength(3);
+  });
+
+  test("a new declaration fails naming its source and adapter", () => {
+    const root = writeTempTree({
+      [`${ADAPTERS_SRC}/github/capabilities.ts`]: capabilityFile(
+        "github",
+        "GITHUB_ADAPTER_CONTRACT",
+      ),
+      [`${ADAPTERS_SRC}/gitlab/capabilities.ts`]: capabilityFile(
+        "gitlab",
+        "GITLAB_ADAPTER_CONTRACT",
+      ),
+      [`${ADAPTERS_SRC}/jira/capabilities.ts`]: capabilityFile("jira", "JIRA_ADAPTER_CONTRACT"),
+      [`${ADAPTERS_SRC}/example/capabilities.ts`]: capabilityFile(
+        "example",
+        "EXAMPLE_ADAPTER_CONTRACT",
+      ),
+      [`${ADAPTERS_SRC}/example/index.ts`]:
+        'export { EXAMPLE_ADAPTER_CONTRACT } from "./capabilities.js";\n',
+    });
+    try {
+      const declarations = scanContractDeclarations(root);
+      expect(declarations).toHaveLength(4);
+      const failures = registrationViolations(declarations, CONFORMANCE_ADAPTERS);
+      expect(
+        failures.some(
+          (message) => message.includes("example/capabilities.ts") && message.includes("example"),
+        ),
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("an index.ts-only re-export adds zero declarations", () => {
+    const root = writeTempTree({
+      [`${ADAPTERS_SRC}/github/capabilities.ts`]: capabilityFile(
+        "github",
+        "GITHUB_ADAPTER_CONTRACT",
+      ),
+      [`${ADAPTERS_SRC}/gitlab/capabilities.ts`]: capabilityFile(
+        "gitlab",
+        "GITLAB_ADAPTER_CONTRACT",
+      ),
+      [`${ADAPTERS_SRC}/jira/capabilities.ts`]: capabilityFile("jira", "JIRA_ADAPTER_CONTRACT"),
+      [`${ADAPTERS_SRC}/example/index.ts`]:
+        'export { GITHUB_ADAPTER_CONTRACT as EXAMPLE_ADAPTER_CONTRACT } from "../github/capabilities.js";\n',
+      [`${ADAPTERS_SRC}/io/index.ts`]: "export const PROVIDER_TRANSPORT = 1;\n",
+    });
+    try {
+      expect(scanContractDeclarations(root)).toHaveLength(3);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("a dangling registration fails naming the registration", () => {
+    const root = writeTempTree({
+      [`${ADAPTERS_SRC}/github/capabilities.ts`]: capabilityFile(
+        "github",
+        "GITHUB_ADAPTER_CONTRACT",
+      ),
+      [`${ADAPTERS_SRC}/gitlab/capabilities.ts`]: capabilityFile(
+        "gitlab",
+        "GITLAB_ADAPTER_CONTRACT",
+      ),
+      [`${ADAPTERS_SRC}/jira/capabilities.ts`]: capabilityFile("jira", "JIRA_ADAPTER_CONTRACT"),
+    });
+    try {
+      const declarations = scanContractDeclarations(root);
+      const mutated = [
+        ...CONFORMANCE_ADAPTERS,
+        { provider: "example", contract: JIRA_ADAPTER_CONTRACT, buildClient: () => ({}) },
+      ];
+      expect(
+        registrationViolations(declarations, mutated).some(
+          (message) =>
+            message.includes("registration example") &&
+            message.includes("names no declared provider contract"),
+        ),
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("non-provider modules and placeholders do not false-positive", () => {
+    const root = writeTempTree({
+      [`${ADAPTERS_SRC}/io/index.ts`]: "export const PROVIDER_TRANSPORT = 1;\n",
+      [`${ADAPTERS_SRC}/azure/index.ts`]: "export const AZURE_PLACEHOLDER = 1;\n",
+      [`${ADAPTERS_SRC}/registry/index.ts`]: "export const REGISTRY = 1;\n",
+    });
+    try {
+      expect(scanContractDeclarations(root)).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
