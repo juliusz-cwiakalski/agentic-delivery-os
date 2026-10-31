@@ -529,13 +529,13 @@ Protected paths untouched by every phase: `scripts/*.sh`, `scripts/checks/secret
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
 | Authoring | Complete | 2026-10-31T14:30:00Z | 2026-10-31T14:30:00Z | none | Read the completed spec (v1.3) and test plan (v1.2), PM notes, ADR-0004/0005/0006, the GH-181 house-format plan, and the live repo surfaces (core contracts, adapters subpaths/manifest, `.dependency-cruiser.cjs`, boundary harness/fixtures/registry, secret-read invariant, ambient-globals scope, changeset fixed group, test layout). Only this plan file written; no git/build/test operations. |
-| P1 | Complete | 2026-10-31T02:15:00Z | 2026-10-31T02:40:00Z | 2ed11eb | Contract extended additively; field-shape probe + type probes; `pnpm check` green. |
-| P2 | Complete | 2026-10-31T02:41:00Z | 2026-10-31T03:05:00Z | 41fb233 | Three exact provider entries with reasons; boundary literal assertion, positive/negative fixtures, widening guard; `pnpm check` green. |
-| P3 | Complete | 2026-10-31T03:06:00Z | 2026-10-31T04:10:00Z | 28ef7e3 | Jira read slice, 5-entry trap catalog, harness, four query families; `pnpm check` green. |
-| P4 | Complete | 2026-10-31T04:11:00Z | 2026-10-31T05:05:00Z | c894a0e | GitLab MR/pipeline reads, declared merge-status table with precedence, 3-entry trap catalog; `pnpm check` green. |
-| P5 | Complete | 2026-10-31T05:06:00Z | 2026-10-31T06:00:00Z | a1a6fc6 | GitHub PR/check-run/issue reads, 3-entry trap catalog, complete status/verify input set; `pnpm check` green. |
-| P6 | Complete | 2026-10-31T06:01:00Z | 2026-10-31T07:10:00Z | f83735b | OQ-G honesty suite, credential-port exclusivity at 4 entries, provider-subpath planted reads, surface purity (AST + types); `pnpm check` green. |
-| P7 | Complete | 2026-10-31T07:11:00Z | 2026-10-31T08:05:00Z | 2a25434 | Catalog schema/minima/reference suite, bidirectional coverage meta-check, per-client double replay, sanitization audit + canary; `pnpm check` green. |
+| P1 | Complete | 2026-10-31T02:15:00Z | 2026-10-31T02:40:00Z | a335093 | Contract extended additively; field-shape probe + type probes; `pnpm check` green. |
+| P2 | Complete | 2026-10-31T02:41:00Z | 2026-10-31T03:05:00Z | 07a3834 | Three exact provider entries with reasons; boundary literal assertion, positive/negative fixtures, widening guard; `pnpm check` green. |
+| P3 | Complete | 2026-10-31T03:06:00Z | 2026-10-31T04:10:00Z | 10dce1e | Jira read slice, 5-entry trap catalog, harness, four query families; `pnpm check` green. |
+| P4 | Complete | 2026-10-31T04:11:00Z | 2026-10-31T05:05:00Z | a11bc53 | GitLab MR/pipeline reads, declared merge-status table with precedence, 3-entry trap catalog; `pnpm check` green. |
+| P5 | Complete | 2026-10-31T05:06:00Z | 2026-10-31T06:00:00Z | efda29f | GitHub PR/check-run/issue reads, 3-entry trap catalog, complete status/verify input set; `pnpm check` green. |
+| P6 | Complete | 2026-10-31T06:01:00Z | 2026-10-31T07:10:00Z | 9a136e3 | OQ-G honesty suite, credential-port exclusivity at 4 entries, provider-subpath planted reads, surface purity (AST + types); `pnpm check` green. |
+| P7 | Complete | 2026-10-31T07:11:00Z | 2026-10-31T08:05:00Z | 409781d | Catalog schema/minima/reference suite, bidirectional coverage meta-check, per-client double replay, sanitization audit + canary; `pnpm check` green. |
 | P8 | Deferred | — | — | — | PM runs lifecycle review (`@reviewer`) separately; no analysis performed by delivery. |
 | P9 | Not required yet | — | — | — | Conditional on the independent review verdict. |
-| P10 | Gates complete | 2026-10-31T08:06:00Z | — | docs commit | P10-3 battery green at code HEAD `2a25434`; evidence in test-plan §10. P10-1 changeset and P10-4 DoD finalization deferred per PM instruction pending independent review; P10-2 doc-sync handoff owned by lifecycle phase 7. |
+| P10 | Gates complete | 2026-10-31T08:06:00Z | — | docs commit | P10-3 battery green at code HEAD `409781d`; evidence in test-plan §10. P10-1 changeset and P10-4 DoD finalization deferred per PM instruction pending independent review; P10-2 doc-sync handoff owned by lifecycle phase 7. |

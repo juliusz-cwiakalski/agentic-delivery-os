@@ -1104,7 +1104,7 @@ No AC is left without a mapped test. Twelve of twelve ACs are traced and fully a
 
 Delivery executed phases P1–P7 on `feat/GH-188/client-seeds-trap-catalogs`; the
 independent review (`@reviewer`) is a separate lifecycle phase. Gate battery run
-at code HEAD `2a25434` (docs for this log land after it).
+at code HEAD `409781d` (docs for this log land after it).
 
 | TC ID / gate | Run Date (UTC) | Result | Notes / command / HEAD |
 |---|---|---|---|
@@ -1124,4 +1124,4 @@ at code HEAD `2a25434` (docs for this log land after it).
 | TC-LICENSE-001 | 2026-10-31 | PASS | `bun run scripts/checks/license-audit.ts`; manifests/lockfile byte-unchanged vs `origin/main-tools` (zero new dependencies). |
 | TC-GATE-001 | 2026-10-31 | PASS | `pnpm install --frozen-lockfile`; `pnpm build`; `bun test tests/structure tests/behaviour tests/checks tests/boundaries` (756 pass); `pnpm check:boundaries`; `pnpm typecheck`; `pnpm check`; `bash scripts/.tests/test-doc-distribution.sh`; `git diff --check`. |
 | TC-PLAN-001 | 2026-10-31 | PASS (process evidence) | Implementation basis recorded at ticket comment 6536692124 per plan; delivery did not re-query the ticket. Code matches the recorded basis (direct REST + custom Jira read slice, zero new dependencies). |
-| Code HEAD | 2026-10-31 | GREEN | P1 `2ed11eb`, P2 `41fb233`, P3 `28ef7e3`, P4 `c894a0e`, P5 `a1a6fc6`, P6 `f83735b`, P7 `2a25434`; `pnpm check` green at every phase commit. |
+| Code HEAD | 2026-10-31 | GREEN | P1 `a335093`, P2 `07a3834`, P3 `10dce1e`, P4 `a11bc53`, P5 `efda29f`, P6 `9a136e3`, P7 `409781d`; `pnpm check` green at every phase commit. |

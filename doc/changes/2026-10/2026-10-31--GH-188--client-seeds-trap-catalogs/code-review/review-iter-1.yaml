@@ -5,7 +5,7 @@ work_item_ref: GH-188
 branch: feat/GH-188/client-seeds-trap-catalogs
 status: PASS
 summary: >-
-  First review iteration of the GH-188 client seeds delivery (commits 2ed11eb..7904700, base
+  First review iteration of the GH-188 client seeds delivery (commits a335093..4162c89, base
   origin/main-tools). All 12 spec ACs trace to real implementing code with passing, non-vacuous
   tests: the reviewer independently re-ran the provider/structure/checks/boundary suites
   (78+154+17+124 tests, all green), pnpm typecheck, doc-distribution, forbidden-literals,
@@ -163,7 +163,7 @@ verification_evidence:
     - "bun run scripts/checks/forbidden-literals.ts -> PASS"
     - "bun run scripts/checks/license-audit.ts -> PASS"
     - "bun run scripts/checks/secret-read-boundary.ts -> OK (70 files clean, 4 allowlisted entries)"
-  ticket_evidence: "GH-188 decision comment 6536692124 (2026-10-31T00:44:36Z) — implementation-basis evaluation for all three clients against F-8 criteria, predates first implementation commit 2ed11eb; delivered code matches the recorded basis (direct REST GitHub/GitLab, custom Jira read slice, zero new dependencies; pnpm-lock.yaml and package manifests byte-unchanged vs origin/main-tools)."
+  ticket_evidence: "GH-188 decision comment 6536692124 (2026-10-31T00:44:36Z) — implementation-basis evaluation for all three clients against F-8 criteria, predates first implementation commit a335093; delivered code matches the recorded basis (direct REST GitHub/GitLab, custom Jira read slice, zero new dependencies; pnpm-lock.yaml and package manifests byte-unchanged vs origin/main-tools)."
   deviation_verdicts:
     - "Deviation 1 (relative ../io/provider-transport.js import): ACCEPTED as sound — src-mapped #io/* cannot resolve in the dist-only packed tarball (only the dist-conditioned #contracts can); documented-exception gap captured as F-2."
     - "Deviation 2 (custom fields into prefixed labels with typed parsing): ACCEPTED — conforms to ADR-0006 E-b and DM-8 (declared mapping data, typed boundary parse '008'->story-points:8, unmapped visibly unrepresented, no raw customfield_* key); trap asserts canonicalization and non-leak."
@@ -184,7 +184,7 @@ ac_trace:
   AC-F7-2: "PASS — absent and empty credential values yield exactly config.credential.missing (domain config, category user, retryable false, consequence not_landed, projection user-validation); transport never called after failure; no canary/heap/env-dump leak"
   AC-F8-1: "PASS — ticket comment 6536692124 records all three bases against F-8 criteria with the jira.js fallback trigger, before custom code; code matches the recorded basis"
 plan_task_audit:
-  OPEN_TASKS: "P8-1/P8-2 (discharged by this review), P9 (activated by appended P11 for the low findings), P10-1/P10-4/P10-5 (deferred pending this verdict by design), P10-2 (doc-sync handoff — content already landed in commit 7904700 and verified accurate)"
+  OPEN_TASKS: "P8-1/P8-2 (discharged by this review), P9 (activated by appended P11 for the low findings), P10-1/P10-4/P10-5 (deferred pending this verdict by design), P10-2 (doc-sync handoff — content already landed in commit 4162c89 and verified accurate)"
   DONE_BUT_UNCHECKED: none
   CHECKED_BUT_MISSING: none
 test_coverage_gaps: none
