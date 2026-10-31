@@ -497,7 +497,8 @@ export const RULE_CASES: RuleCase[] = [
     "packages/core/src/app/probe.ts",
     'import { DatabaseSync } from "node:sqlite";\nexport const value = DatabaseSync;\n',
   ),
-  // Provider/registry subpaths are not ADR I/O subpaths: runtime APIs stay banned.
+  // Provider/registry subpaths outside the ADR-0005 admission stay banned:
+  // only `github`, `gitlab`, and `jira` perform admitted provider network I/O.
   dep(
     "runtime-node-fs-adapter-registry",
     "TC-SCAFFOLD-014",
@@ -512,6 +513,22 @@ export const RULE_CASES: RuleCase[] = [
     "runtime-apis-confinement",
     ["adapters"],
     "packages/adapters/src/io/probe.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
+  ),
+  dep(
+    "runtime-node-fs-adapter-azure",
+    "TC-BOUNDARY-001",
+    "runtime-apis-confinement",
+    ["adapters"],
+    "packages/adapters/src/azure/probe.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
+  ),
+  dep(
+    "runtime-node-fs-adapter-ci",
+    "TC-BOUNDARY-001",
+    "runtime-apis-confinement",
+    ["adapters"],
+    "packages/adapters/src/ci/probe.ts",
     'import fs from "node:fs";\nexport const value = fs;\n',
   ),
 
@@ -542,6 +559,29 @@ export const RULE_CASES: RuleCase[] = [
     "TC-SCAFFOLD-014",
     ["adapters"],
     "packages/adapters/src/credentials/probe.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
+  ),
+  // ADR-0005 (GH-188): the three provider client subpaths are admitted as exact,
+  // reason-bearing runtime-I/O entries.
+  clean(
+    "runtime-control-provider-github",
+    "TC-BOUNDARY-001",
+    ["adapters"],
+    "packages/adapters/src/github/probe.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
+  ),
+  clean(
+    "runtime-control-provider-gitlab",
+    "TC-BOUNDARY-001",
+    ["adapters"],
+    "packages/adapters/src/gitlab/probe.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
+  ),
+  clean(
+    "runtime-control-provider-jira",
+    "TC-BOUNDARY-001",
+    ["adapters"],
+    "packages/adapters/src/jira/probe.ts",
     'import fs from "node:fs";\nexport const value = fs;\n',
   ),
 
