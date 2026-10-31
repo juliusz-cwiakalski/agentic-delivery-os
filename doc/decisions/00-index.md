@@ -8,6 +8,8 @@ ados_distribution: project-generated
 
 All decision records for this repository, ordered by type and number.
 
+Binding map: see the [Foundational Decision Binding Register](00-register.md) for the M0-S17 topics and the record/anchors that decide them.
+
 | ID | Type | Title | Status | Date | Owners |
 |----|------|-------|--------|------|--------|
 | ADR-0001 | ADR | Decision-Making Framework Refactor | Proposed | 2026-06-24 | Juliusz Ćwiąkalski |
@@ -17,12 +19,16 @@ All decision records for this repository, ordered by type and number.
 | ADR-0005 | ADR | Runtime-API Confinement for Provider Client Subpaths | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | ADR-0006 | ADR | WorkItem Custom-Field Mapping and Comment-Omission Representation (v1) | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | [ADR-0007](ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md) | ADR | Provider Engine v1: Placement, Fail-Loud Availability, Parks, and Cost Policy | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
+| [ADR-0008](ADR-0008-harness-adapter-contract.md) | ADR | Harness Adapter Contract | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
+| [ADR-0009](ADR-0009-release-model-v1.md) | ADR | Release Model v1 | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | ODR-0001 | ODR | Classify doc/templates/*.yaml register templates as redistributable | Accepted | 2026-06-25 | Juliusz Ćwiąkalski |
+| [ODR-0002](ODR-0002-id-prefix-scheme-and-project-catalog.md) | ODR | ID Prefix Scheme and Project Catalog | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
+| [ODR-0003](ODR-0003-cli-command-naming-v1-lock.md) | ODR | CLI Command Naming v1 Lock | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | PDR-0001 | PDR | Tribal Knowledge Extraction Taxonomy | Accepted | 2026-06-27 | Juliusz Ćwiąkalski |
-| PDR-0002 | PDR | Mode-Aware Spec-Coverage Resolution for Autonomous Delivery | Proposed | 2026-07-02 | Juliusz Ćwiąkalski |
+| PDR-0002 | PDR | Phase-7 Documentation Gap Closure (Always Resolve In-Change) | Proposed | 2026-07-02 | Juliusz Ćwiąkalski |
 | TDR-0001 | TDR | @bootstrapper Inception Sub-Mode Prompt Structure | Proposed | 2026-06-27 | Juliusz Ćwiąkalski |
 | TDR-0002 | TDR | Pre-Iteration Hook Contract — Lifecycle, Failure Semantics, Distribution, and Testability | Accepted | 2026-07-16 | Juliusz Ćwiąkalski |
 | [TDR-0003](TDR-0003-config-parser-schema-and-acquisition.md) | TDR | Config Parser, Schema, and Acquisition | Proposed | 2026-10-30 | Juliusz Ćwiąkalski |
 | [TDR-0004](TDR-0004-state-storage-engine.md) | TDR | State Storage Engine | Proposed | 2026-10-30 | Juliusz Ćwiąkalski |
+| [TDR-0005](TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md) | TDR | Delivery Result Enum and CLI Exit Taxonomy | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | [TDR-0006](TDR-0006-privacy-and-no-cloud-guard-mechanics.md) | TDR | Privacy and No-Cloud Guard Mechanics | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
-| [TDR-0006](TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md) | TDR | Delivery Result Enum and CLI Exit Taxonomy | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
