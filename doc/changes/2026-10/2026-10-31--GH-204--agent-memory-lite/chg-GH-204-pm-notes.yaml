@@ -58,6 +58,9 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "CI note (pre-existing base defect, out of GH-204 scope): TS tests and TS aggregate check fail on tests/checks/privacy-release.test.ts at TC-RELEASE-001. That test hardcodes .changeset/gh-184-privacy-guards-minor.md as the only changeset added relative to origin/main-tools. GH-184 merged into main-tools at 7155074, so the file is already in the base and the added set is empty on every descendant branch. GH-204 changed no test, script, or CI file. All GH-204 scoped gates and commitlint pass. The failure should be fixed or waived by the GH-184 owner or CEO."
+    type: "risk"
+    date: "2026-10-31"
   - text: "Commitlint fix: the readiness-gate commit message had two body lines over 100 characters. The private feature branch was rebased to reword only that message, the tree is byte-identical (tree 75f5fe6), and commitlint now passes over the full range. The remote branch was force-pushed with lease, so descendant hashes changed and the ledger was updated."
     type: "info"
     date: "2026-10-31"
