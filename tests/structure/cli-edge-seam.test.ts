@@ -286,3 +286,122 @@ describe("TC-REDACT-004 single serialization chokepoint", () => {
     expect(failures.some((message) => message.includes("commands/probe.ts:2"))).toBe(true);
   });
 });
+
+const COMMANDS_INDEX = `${CLI_DIR}/commands/index.ts`;
+const EDGE = `${CLI_DIR}/edge.ts`;
+const CORE_DIR = "packages/core/src";
+const NEW_COMMAND_FILES = [`${CLI_DIR}/commands/lint.ts`, `${CLI_DIR}/commands/phase.ts`];
+
+const moduleSpecifiers = (root: string, relative: string): string[] => {
+  const source = parse(root, relative);
+  const specifiers: string[] = [];
+  for (const statement of source.statements) {
+    if (
+      (ts.isImportDeclaration(statement) || ts.isExportDeclaration(statement)) &&
+      statement.moduleSpecifier !== undefined &&
+      ts.isStringLiteral(statement.moduleSpecifier)
+    ) {
+      specifiers.push(statement.moduleSpecifier.text);
+    }
+  }
+  return specifiers;
+};
+
+const coreSurfaceImportFailures = (root: string): string[] => {
+  const failures: string[] = [];
+  for (const file of listTypeScriptFiles(root, CORE_DIR)) {
+    for (const specifier of moduleSpecifiers(root, file)) {
+      if (
+        specifier === "@delivery-os/cli" ||
+        specifier === "@delivery-os/mcp" ||
+        specifier === "@delivery-os/opencode" ||
+        specifier.includes("../../cli/") ||
+        specifier.includes("../../mcp/") ||
+        specifier.includes("../../opencode/")
+      ) {
+        failures.push(`${file}: ${specifier}`);
+      }
+    }
+  }
+  return failures;
+};
+
+const exitDecisionFailures = (root: string): string[] => {
+  const failures: string[] = [];
+  for (const file of NEW_COMMAND_FILES) {
+    const source = parse(root, file);
+    for (const specifier of moduleSpecifiers(root, file)) {
+      if (specifier.includes("projection")) failures.push(`${file}: exit projection import`);
+    }
+    const visit = (node: ts.Node): void => {
+      if (
+        ts.isPropertyAssignment(node) &&
+        ts.isIdentifier(node.name) &&
+        node.name.text === "exitCode"
+      ) {
+        failures.push(`${file}: exitCode decision`);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+  }
+  return failures;
+};
+
+describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
+  test("lint and phase are exported from the commands tier", () => {
+    const index = readFileSync(join(ROOT, COMMANDS_INDEX), "utf8");
+    expect(index).toContain('export { createLintCommandDefinition } from "./lint.js"');
+    expect(index).toContain('export { createPhaseCommandDefinition } from "./phase.js"');
+  });
+
+  test("the CLI edge composes both commands beside config", () => {
+    const edge = readFileSync(join(ROOT, EDGE), "utf8");
+    expect(edge).toContain('from "./commands/lint.js"');
+    expect(edge).toContain('from "./commands/phase.js"');
+    expect(edge).toContain("commands.lint = createLintCommandDefinition(options.lint)");
+    expect(edge).toContain("commands.phase = createPhaseCommandDefinition(options.phase)");
+  });
+
+  test("the adapters parser is composed at the CLI edge, never by core", () => {
+    const edge = readFileSync(join(ROOT, EDGE), "utf8");
+    expect(edge).toContain("readPmNotesText");
+    expect(edge).toContain("stagePmNotesPhaseEntry");
+    expect(coreSurfaceImportFailures(ROOT)).toEqual([]);
+  });
+
+  test("command handlers return data/error without exit decisions", () => {
+    expect(exitDecisionFailures(ROOT)).toEqual([]);
+    const exported = (file: string): string[] => {
+      const source = parse(ROOT, file);
+      const names: string[] = [];
+      for (const statement of source.statements) {
+        const isExported =
+          statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) ===
+          true;
+        if (!isExported) continue;
+        if (ts.isFunctionDeclaration(statement) && statement.name !== undefined) {
+          names.push(statement.name.text);
+        }
+        if (ts.isVariableStatement(statement)) {
+          for (const declaration of statement.declarationList.declarations) {
+            if (ts.isIdentifier(declaration.name)) names.push(declaration.name.text);
+          }
+        }
+      }
+      return names;
+    };
+    expect(exported(`${CLI_DIR}/commands/lint.ts`)).toEqual(["createLintCommandDefinition"]);
+    expect(exported(`${CLI_DIR}/commands/phase.ts`)).toEqual(["createPhaseCommandDefinition"]);
+  });
+
+  test("a seeded core-imports-CLI violation is caught", () => {
+    const root = makeTempCliFile(`${CORE_DIR}/domain/probe.ts`, 'import "@delivery-os/cli";\n');
+    try {
+      const failures = coreSurfaceImportFailures(root);
+      expect(failures.some((message) => message.includes("domain/probe.ts"))).toBe(true);
+    } finally {
+      // temp tree is intentionally left for the OS to reap
+    }
+  });
+});

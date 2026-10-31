@@ -44,3 +44,10 @@ export {
   resolveConfig,
   serializeProductionSchema,
 } from "./config/index.js";
+
+export {
+  lintPmNotes,
+  type PmNotesLintFinding,
+  type PmNotesLintLocation,
+  type PmNotesLintVerdict,
+} from "./domain/index.js";

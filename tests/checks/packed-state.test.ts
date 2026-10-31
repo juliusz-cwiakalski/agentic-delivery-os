@@ -16,7 +16,13 @@ const PROBE = `import {
   createStateStore,
   STATE_SCHEMA_VERSION,
 } from "@delivery-os/core/state";
-import { STATE_DRIVER_KINDS } from "@delivery-os/core/contracts";
+import {
+  LITE_REQUIRED_PHASES,
+  PHASE_TRANSITION_KIND,
+  PM_NOTES_VARIANT_VALUES,
+  REGISTRY_SCHEMA_VERSION,
+  STATE_DRIVER_KINDS,
+} from "@delivery-os/core/contracts";
 
 const root = process.argv[2];
 const identity = {
@@ -32,9 +38,15 @@ for (const driver of STATE_DRIVER_KINDS) {
   const acquired = store.acquireFence("packed-writer");
   if (!acquired.ok) throw new Error("acquire: " + acquired.error.code);
   const appended = store.append(acquired.value.handle, {
-    kind: "packed",
+    kind: PHASE_TRANSITION_KIND,
     recordKey: "k",
-    payload: { driver },
+    payload: {
+      changeRef: "GH-179",
+      phaseId: "delivery",
+      operation: "complete",
+      timestamp: new Date(0).toISOString(),
+      outcome: "landed",
+    },
   });
   if (!appended.ok) throw new Error("append: " + appended.error.code);
   store.releaseFence(acquired.value.handle);
@@ -42,7 +54,16 @@ for (const driver of STATE_DRIVER_KINDS) {
   if (!read.ok) throw new Error("read: " + read.error.code);
   results[driver] = read.value.values.k;
 }
-process.stdout.write(JSON.stringify({ drivers: results, kinds: STATE_DRIVER_KINDS }));
+process.stdout.write(
+  JSON.stringify({
+    drivers: results,
+    kinds: STATE_DRIVER_KINDS,
+    variants: PM_NOTES_VARIANT_VALUES,
+    lite: LITE_REQUIRED_PHASES,
+    transitionKind: PHASE_TRANSITION_KIND,
+    registrySchemaVersion: REGISTRY_SCHEMA_VERSION,
+  }),
+);
 `;
 
 const SUBPATH_PROBE = 'import "@delivery-os/core/state/internals";\n';
@@ -143,12 +164,35 @@ describe("TC-STATE-021 packed Node/Bun state surface", () => {
           );
         }
         const parsed = JSON.parse(result.stdout) as {
-          drivers: Record<string, { driver: string }>;
+          drivers: Record<string, { changeRef: string; phaseId: string; operation: string }>;
           kinds: string[];
+          variants: string[];
+          lite: string[];
+          transitionKind: string;
+          registrySchemaVersion: string;
         };
         expect(parsed.kinds).toEqual(["jsonl", "sqlite"]);
-        expect(parsed.drivers.jsonl).toEqual({ driver: "jsonl" });
-        expect(parsed.drivers.sqlite).toEqual({ driver: "sqlite" });
+        expect(parsed.drivers.jsonl).toMatchObject({
+          changeRef: "GH-179",
+          phaseId: "delivery",
+          operation: "complete",
+        });
+        expect(parsed.drivers.sqlite).toMatchObject({
+          changeRef: "GH-179",
+          phaseId: "delivery",
+          operation: "complete",
+        });
+        expect(parsed.variants).toEqual(["full", "lite"]);
+        expect(parsed.lite).toEqual([
+          "clarify_scope",
+          "specification",
+          "delivery",
+          "quality_gates",
+          "dod_check",
+          "pr_creation",
+        ]);
+        expect(parsed.transitionKind).toBe("phase.transition");
+        expect(parsed.registrySchemaVersion).toBe("delivery.registry.v1");
       }
 
       const manifest = JSON.parse(

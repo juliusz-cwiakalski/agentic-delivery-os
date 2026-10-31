@@ -1,0 +1,22 @@
+change_id: GH-179
+title: "pm-notes fixture: full variant, all canonical phases"
+milestone: "M0: Trust substrate"
+story_code: M0-S10
+delivery_mode: interactive
+phases:
+  clarify_scope: { started: "2026-10-31T01:00:00Z", completed: "2026-10-31T01:10:00Z" }
+  specification: { started: "2026-10-31T01:11:00Z", completed: "2026-10-31T01:20:00Z" }
+  test_planning: { started: "2026-10-31T01:21:00Z", completed: "2026-10-31T01:30:00Z" }
+  delivery_planning: { started: "2026-10-31T01:31:00Z", completed: "2026-10-31T01:40:00Z" }
+  dor_check: { started: "2026-10-31T01:41:00Z", completed: "2026-10-31T01:50:00Z" }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions: []
+open_questions: []
+blockers: []
+notes:
+  - text: "fixture note"

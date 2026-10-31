@@ -1,0 +1,8 @@
+change_id: GH-171
+title: "pm-notes fixture: unparseable orphaned indentation (planted-payload-unparseable-0001)"
+delivery_mode: interactive
+phases:
+  clarify_scope:
+    started: "2026-10-29T01:00:00Z"
+      completed: "2026-10-29T01:10:00Z"
+  specification: { started: null, completed: null }

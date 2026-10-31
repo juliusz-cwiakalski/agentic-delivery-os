@@ -13,8 +13,11 @@ import {
   type FileSystemFacts,
   neutralEnvironmentFacts,
   nodeFileSystemFacts,
+  type PmNotesFileSystemFacts,
   type RuntimePlatform,
+  readPmNotesText,
   runtimePlatform,
+  stagePmNotesPhaseEntry,
 } from "@delivery-os/adapters/file";
 import { createLegacyCompat } from "@delivery-os/adapters/legacy";
 import {
@@ -27,13 +30,31 @@ import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import { catalogPaths, PRODUCTION_CATALOG, resolveConfig } from "@delivery-os/core";
 import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
-import type { BrandIdentity, ConfigFailure, Result } from "@delivery-os/core/contracts";
+import {
+  type BrandIdentity,
+  type ConfigFailure,
+  PHASE_STATE_DOCUMENT_PREFIX,
+  PHASE_STATE_DOCUMENT_SUFFIX,
+  type Result,
+  type StateStorePort,
+} from "@delivery-os/core/contracts";
+import {
+  appendPhaseTransition,
+  readChangeTransitions,
+  replacePhaseProjection,
+} from "@delivery-os/core/state";
 import {
   type ConfigCommandRuntime,
   type ConfigResolvedSnapshot,
   createConfigCommandDefinition,
 } from "./commands/config.js";
-import type { CliDependencies, CommandFlags, CommandProgram } from "./index.js";
+import {
+  createLintCommandDefinition,
+  type LintCommandRuntime,
+  type LintRegistryRead,
+} from "./commands/lint.js";
+import { createPhaseCommandDefinition, type PhaseCommandRuntime } from "./commands/phase.js";
+import type { CliDependencies, CommandDefinition, CommandFlags, CommandProgram } from "./index.js";
 
 const NEUTRAL_OVERRIDE_NAME = "DELIVERY_OS_WORKING_NAME";
 
@@ -51,6 +72,71 @@ export function registerEdgeSecrets(
   }
   return values;
 }
+
+/**
+ * Read the registry target through the injected state port. The derived
+ * projection is observed by its documented record key; no mutation or fence is
+ * acquired by a read.
+ */
+export const createRegistryLintReader = (
+  store: StateStorePort,
+): ((changeRef: string) => LintRegistryRead) => {
+  return (changeRef) => {
+    const read = store.read({ requiredKeys: [] });
+    if (!read.ok) return { ok: false, error: read.error };
+    const { evidence, values } = read.value;
+    const projectionName = `${PHASE_STATE_DOCUMENT_PREFIX}${changeRef}${PHASE_STATE_DOCUMENT_SUFFIX}`;
+    return {
+      ok: true,
+      verifiedEmpty: evidence.verifiedEmpty,
+      recordCount: evidence.recordCount,
+      verification: evidence.verification,
+      projection: { present: Object.hasOwn(values, `document:${projectionName}`) },
+    };
+  };
+};
+
+/** Compose the phase write path from injected I/O, state, and time facts. */
+export type PhaseRuntimeOptions = {
+  readonly store: StateStorePort;
+  readonly changesDirectory: string;
+  readonly fs: PmNotesFileSystemFacts;
+  readonly writeFile: (file: string, text: string) => void;
+  readonly nowIso: () => string;
+  readonly newFenceToken: () => string;
+};
+
+export const createPhaseCommandRuntime = (options: PhaseRuntimeOptions): PhaseCommandRuntime => ({
+  readPmNotes: (changeRef) =>
+    readPmNotesText({
+      changeRef,
+      changesDirectory: options.changesDirectory,
+      fs: options.fs,
+    }),
+  stageEntry: (text, edit) => stagePmNotesPhaseEntry(text, edit),
+  readRegistry: (changeRef) => {
+    const read = readChangeTransitions(options.store, changeRef);
+    if (!read.ok) return { ok: false, error: read.error };
+    return {
+      ok: true,
+      verifiedEmpty: read.value.verifiedEmpty,
+      transitions: read.value.transitions,
+      evidence: read.value.evidence,
+    };
+  },
+  appendTransition: (request) => appendPhaseTransition(options.store, request),
+  replaceProjection: (request) => replacePhaseProjection(options.store, request),
+  writePmNotes: (file, text) => {
+    try {
+      options.writeFile(file, text);
+      return { ok: true };
+    } catch {
+      return { ok: false, message: `failed to write ${file}` };
+    }
+  },
+  nowIso: options.nowIso,
+  newFenceToken: options.newFenceToken,
+});
 
 export type EdgeOptions = {
   readonly brand: BrandIdentity;
@@ -82,6 +168,8 @@ export type ConfigProgramOptions = {
   readonly repositoryIo?: RepositoryIo;
   readonly resolveBrand?: (input: ResolverInput) => Result<BrandIdentity, BrandingInputError>;
   readonly warn?: (message: string) => void;
+  readonly lint?: LintCommandRuntime;
+  readonly phase?: PhaseCommandRuntime;
 };
 
 export type ConfigProgramResult =
@@ -253,10 +341,19 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   };
 
   const runtime: ConfigCommandRuntime = { resolve };
+  const commands: Record<string, CommandDefinition> = {
+    config: createConfigCommandDefinition(runtime, catalog),
+  };
+  if (options.lint !== undefined) {
+    commands.lint = createLintCommandDefinition(options.lint);
+  }
+  if (options.phase !== undefined) {
+    commands.phase = createPhaseCommandDefinition(options.phase);
+  }
   return {
     ok: true,
     brand,
-    program: { commands: { config: createConfigCommandDefinition(runtime, catalog) } },
+    program: { commands },
     secrets,
   };
 };
