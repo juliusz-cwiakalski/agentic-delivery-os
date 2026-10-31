@@ -40,8 +40,8 @@ Doc-sync obligations checked: spec §7.1 (in-scope current-truth sync), F-6 (wha
 | File | Change |
 |------|--------|
 | `doc/spec/features/feature-decision-records.md` | Bumped `last_updated` to `2026-10-31` and extended the summary to name the foundational binding register and per-type decision ID ranges. The register and ODR-0002 sections delivered in phase 10 were verified as accurate. |
-| `doc/spec/features/feature-adapter-ports.md` | Consolidated duplicated front-matter blocks, restored the effective `contracts` entry, and added `GH-186` plus `ADR-0008` to the traceability links. The body already carried the ADR-0008 / M1-S11 pointer. |
-| `doc/overview/glossary.md` | Consolidated duplicated front-matter blocks, added `GH-186` together with `ODR-0002`/`ODR-0003` to the links, and corrected the summary to cover the decision-governance and measurement terms. All 13 delivered terms and their anchors were verified. |
+| `doc/spec/features/feature-adapter-ports.md` | No net change: the front-matter consolidation was reverted after review F-2 (restored to `36e878f`) because NG-7 excludes it. The delivered body already carries the ADR-0008 / M1-S11 pointer. |
+| `doc/overview/glossary.md` | No net change to front matter: the consolidation was reverted after review F-2 (restored to `36e878f`) because NG-7 excludes it. The 13 delivered terms and their anchors remain verified. |
 | `doc/00-index.md` | Added the Foundational Decision Binding Register to the Decision Records table so the top-level index matches `doc/decisions/00-index.md` and `doc/decisions/README.md`. |
 | `doc/changes/2026-10/2026-10-31--GH-186--decision-records-measurement-baseline/doc-sync-report.md` | This report. |
 
@@ -50,11 +50,11 @@ Doc-sync obligations checked: spec §7.1 (in-scope current-truth sync), F-6 (wha
 | Gap | Resolution |
 |-----|------------|
 | `feature-decision-records.md` was materially edited in phase 10 but still claimed `last_updated: 2026-07-05`, and its summary did not name the new register or ID scheme. | Bumped the date and extended the summary. The register, per-type ID ranges, ODR-0002/catalog pointer, and component-map row were already present and correct. |
-| `feature-adapter-ports.md` body gained the harness-contract pointer but its effective front matter did not reference `GH-186` or `ADR-0008`; duplicated `summary`/`links` keys also made the first block's `contracts` entry unreachable. | Consolidated the front matter and added the traceability links, preserving the `envelope.ts` contract. |
-| `glossary.md` had duplicated front-matter keys, so the effective `related_changes` omitted `GH-186` and the effective summary omitted the decision/measurement terms; duplicated blocks also made the metadata invalid under strict YAML parsers. | Consolidated the front matter to one valid block, added `GH-186` and the new decision IDs, and wrote a summary that covers the current term set. |
+| `feature-adapter-ports.md` body gained the harness-contract pointer but its effective front matter did not reference `GH-186` or `ADR-0008`; duplicated `summary`/`links` keys also made the first block's `contracts` entry unreachable. | Reverted: front-matter dedup is out of scope (NG-7, review F-2), so the file was restored to `36e878f`; the delivered body pointer remains. |
+| `glossary.md` had duplicated front-matter keys, so the effective `related_changes` omitted `GH-186` and the effective summary omitted the decision/measurement terms; duplicated blocks also made the metadata invalid under strict YAML parsers. | Reverted: front-matter dedup is out of scope (NG-7, review F-2), so the file was restored to `36e878f`; the delivered terms remain. |
 | The top-level `doc/00-index.md` Decision Records table linked the directory and the index but not the new binding register, while the decisions index and README did link it. | Added the register row for index-to-index consistency. |
 
-The two F-6 documents with malformed front matter (`glossary.md`, `feature-adapter-ports.md`) were repaired because the duplication suppressed the very traceability and contract links GH-186 introduced. This is confined to GH-186-touched documents; unrelated pre-existing duplicates elsewhere were left untouched (see observations).
+The two F-6 documents carried malformed front matter (`glossary.md`, `feature-adapter-ports.md`). The consolidation attempt was **reverted on review iteration 1 (F-2)** because NG-7 explicitly excludes that repair; both files were restored to `36e878f`, keeping the delivered body content. Unrelated pre-existing duplicates elsewhere remain untouched (see observations).
 
 ## Verified without change
 
@@ -100,11 +100,11 @@ These are not GH-186 gaps and were deliberately not modified because they are ou
 
 ## Traceability
 
-The changed current-truth docs reference `GH-186` through `links.related_changes` (`glossary.md`) or the established front-matter traceability fields (`feature-adapter-ports.md`). `feature-decision-records.md` already carried `GH-186` in `related_changes`; the summary/date were corrected. `doc/00-index.md` and the decision indexes are navigation surfaces and do not carry change links.
+After the F-2 revert, the only current-truth edits from this phase are `feature-decision-records.md` (summary/date; it already carried `GH-186` in `related_changes`) and the `doc/00-index.md` register row. `glossary.md` and `feature-adapter-ports.md` are back at `36e878f`; their delivered content (terms and harness pointer) was not part of the reverted front-matter cleanup. `doc/00-index.md` and the decision indexes are navigation surfaces and do not carry change links.
 
 ## Handoff
 
-- PM commits the four current-truth edits and this report. No git operations were performed by `@doc-syncer`.
+- PM commits the two surviving current-truth edits (`feature-decision-records.md`, `doc/00-index.md`) and this report. No git operations were performed by `@doc-syncer`.
 - Optional follow-up outside GH-186: a documentation-hygiene change can consolidate the three remaining duplicated front-matter blocks and the ADR-0007 index title drift. It is not required for GH-186's DoD.
 
 ## Next Step
