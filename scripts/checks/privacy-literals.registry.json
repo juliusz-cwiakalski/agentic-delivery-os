@@ -1,0 +1,196 @@
+{
+  "schemaVersion": "privacy.registry.v1",
+  "scopeMode": "working-tree",
+  "enabledRuleIds": [
+    "secret.provider-token-prefix",
+    "secret.private-key-block",
+    "secret.web-token",
+    "secret.bearer-credential",
+    "secret.credential-assignment",
+    "secret.connection-string-credential",
+    "private.absolute-user-path"
+  ],
+  "classes": {
+    "private-literal": {
+      "emptyReason": "Owner population is out-of-band after landing (OQ-1); the mechanism ships with no project-private literal so no raw value is committed.",
+      "entries": []
+    },
+    "cloud-term": {
+      "emptyReason": "Mechanism-only until the owner supplies hosted-product digests out-of-band (OQ-1); the class ships empty so no raw term is committed and is reported as explicitly vacuous.",
+      "entries": []
+    }
+  },
+  "allowlist": [
+    {
+      "id": "privacy-rule-module",
+      "kind": "file",
+      "path": "packages/adapters/src/io/privacy-rules.ts",
+      "rules": ["*"],
+      "reason": "The one committed generic rule-definition set; its patterns and suppression markers necessarily carry the shapes the guard detects."
+    },
+    {
+      "id": "privacy-registry",
+      "kind": "file",
+      "path": "scripts/checks/privacy-literals.registry.json",
+      "rules": ["*"],
+      "reason": "The registry is the guard's own data authority and contains rule ids, reasons, and path entries only."
+    },
+    {
+      "id": "privacy-imports-test",
+      "kind": "file",
+      "path": "tests/structure/privacy-imports.test.ts",
+      "rules": ["*"],
+      "reason": "The guard's purity and definition-set suite names every committed rule id and seeds a mutant import."
+    },
+    {
+      "id": "privacy-check",
+      "kind": "file",
+      "path": "scripts/checks/privacy-literals.ts",
+      "rules": ["*"],
+      "reason": "The guard implementation itself names the rule vocabulary, path forms, and working-tree enumeration."
+    },
+    {
+      "id": "sanitization-canary-fixture",
+      "kind": "file",
+      "path": "tests/fixtures/providers/sanitization/cases.ts",
+      "rules": [
+        "secret.provider-token-prefix",
+        "secret.private-key-block",
+        "secret.credential-assignment"
+      ],
+      "reason": "Pre-existing sanitization canary corpus purpose-built to carry realistic synthetic secret shapes; rewriting it is out of this change's scope (NG-3)."
+    },
+    {
+      "id": "gh-32-red-team-v3",
+      "kind": "file",
+      "path": "doc/changes/2026-03/2026-03-10--GH-32--bootstrap-onboarding-consistency/feedback/red-team-report-v3.md",
+      "rules": ["private.absolute-user-path"],
+      "reason": "Archival review record quoting real owner paths; NG-3 excludes retroactive remediation and this change does not edit the file."
+    },
+    {
+      "id": "gh-32-red-team-v4",
+      "kind": "file",
+      "path": "doc/changes/2026-03/2026-03-10--GH-32--bootstrap-onboarding-consistency/feedback/red-team-report-v4.md",
+      "rules": ["private.absolute-user-path"],
+      "reason": "Archival review record quoting a real owner path; NG-3 excludes retroactive remediation and this change does not edit the file."
+    },
+    {
+      "id": "gh-124-plan",
+      "kind": "file",
+      "path": "doc/changes/2026-07/2026-07-03--GH-124--batch-delivery-infrastructure/chg-GH-124-plan.md",
+      "rules": ["private.absolute-user-path"],
+      "reason": "Archival plan artifact quoting real owner paths as planning inputs; NG-3 excludes retroactive remediation."
+    },
+    {
+      "id": "gh-184-readiness-iteration-1",
+      "kind": "file",
+      "path": "doc/changes/2026-10/2026-10-31--GH-184--privacy-and-no-cloud-guards/readiness-review/readiness-iter-1.md",
+      "rules": ["private.absolute-user-path"],
+      "reason": "Archival DoR review record that quotes the verified owner paths as evidence; the review artifact is read-only to this delivery phase."
+    },
+    {
+      "id": "privacy-fixture-root",
+      "kind": "directory",
+      "path": "tests/fixtures/privacy-literals",
+      "rules": ["*"],
+      "reason": "The dedicated synthetic-fixture root; the only directory-style entry, so synthetic values cannot hide a real value elsewhere."
+    },
+    {
+      "id": "privacy-literals-suite",
+      "kind": "file",
+      "path": "tests/checks/privacy-literals.test.ts",
+      "rules": ["*"],
+      "reason": "The guard's own mutation and behaviour suite imports the synthetic fixtures and names rule ids."
+    },
+    {
+      "id": "privacy-registry-suite",
+      "kind": "file",
+      "path": "tests/checks/privacy-registry.test.ts",
+      "rules": ["*"],
+      "reason": "The guard's registry validation matrix names rule ids and synthetic registry shapes."
+    },
+    {
+      "id": "privacy-scope-suite",
+      "kind": "file",
+      "path": "tests/checks/privacy-scope.test.ts",
+      "rules": ["*"],
+      "reason": "The guard's scope suite plants synthetic values in temp repositories and names the rule ids under test."
+    },
+    {
+      "id": "privacy-reporting-suite",
+      "kind": "file",
+      "path": "tests/checks/privacy-reporting.test.ts",
+      "rules": ["*"],
+      "reason": "The guard's reporting suite imports synthetic fixtures and asserts content-free output."
+    },
+    {
+      "id": "privacy-authoring-suite",
+      "kind": "file",
+      "path": "tests/checks/privacy-authoring.test.ts",
+      "rules": ["*"],
+      "reason": "The guard's authoring suite spawns the helper with a fabricated literal imported from the fixture root."
+    },
+    {
+      "id": "privacy-performance-suite",
+      "kind": "file",
+      "path": "tests/checks/privacy-performance.test.ts",
+      "rules": ["*"],
+      "reason": "The guard's performance suite generates a synthetic corpus and names the registered lengths."
+    },
+    {
+      "id": "privacy-ci-wiring-suite",
+      "kind": "file",
+      "path": "tests/checks/privacy-ci-wiring.test.ts",
+      "rules": ["*"],
+      "reason": "The guard's CI-wiring suite names the invocation, workflow mutation controls, and local-command proofs."
+    },
+    {
+      "id": "envelope-content-policy-suite",
+      "kind": "file",
+      "path": "tests/behaviour/envelope-content-policy.test.ts",
+      "rules": ["*"],
+      "reason": "The codec content-policy suite imports synthetic fixture values and asserts rule/entry ids at the emitter."
+    },
+    {
+      "id": "privacy-release-suite",
+      "kind": "file",
+      "path": "tests/checks/privacy-release.test.ts",
+      "rules": ["*"],
+      "reason": "The guard's release-integrity suite names the changeset, package set, and lockfile assertions."
+    },
+    {
+      "id": "gh-184-review-iter-1-md",
+      "kind": "file",
+      "path": "doc/changes/2026-10/2026-10-31--GH-184--privacy-and-no-cloud-guards/review/review-iter-1.md",
+      "rules": [
+        "private.absolute-user-path",
+        "secret.connection-string-credential",
+        "secret.credential-assignment"
+      ],
+      "reason": "Archival review evidence quoting the F-1 runtime probe values; the review record is read-only and is not production content."
+    },
+    {
+      "id": "gh-184-code-review-iter-1-yaml",
+      "kind": "file",
+      "path": "doc/changes/2026-10/2026-10-31--GH-184--privacy-and-no-cloud-guards/code-review/review-iter-1.yaml",
+      "rules": ["private.absolute-user-path"],
+      "reason": "Archival machine-readable review evidence quoting the F-1 path example; the review record is read-only and is not production content."
+    },
+    {
+      "id": "provider-chain-resolution-negative-fixture",
+      "kind": "file",
+      "path": "tests/behaviour/provider-chain-resolution.test.ts",
+      "rules": ["secret.connection-string-credential"],
+      "reason": "Deliberate negative fixture proving the provider validator rejects a credential-bearing endpoint; the host is the reserved synthetic example.test domain and the credential is a fabricated placeholder, not private content."
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "lockfile",
+      "kind": "file",
+      "path": "pnpm-lock.yaml",
+      "rules": ["*"],
+      "reason": "Generated dependency-resolution content; the lockfile is never hand-authored and is covered by the separate lockfile-integrity gates."
+    }
+  ]
+}

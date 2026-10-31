@@ -6,10 +6,10 @@ created: 2026-10-29
 last_updated: 2026-10-30
 owners: ["engineering"]
 service: delivery-os
-summary: "The single branding seam: a pure, fail-closed resolver deriving the twelve brand values from one config-driven working name, the BrandIdentity contract in core ./contracts, reserved brand-neutral telemetry schema names, a CI-binding forbidden-literal scan anchored to a fixed corpus baseline, a one-warning legacy compatibility adapter, and the documented rename drill."
+summary: "The single branding seam: a pure, fail-closed resolver deriving the twelve brand values from one config-driven working name, the BrandIdentity contract in core ./contracts, reserved brand-neutral telemetry schema names, a CI-binding forbidden-literal scan anchored to a fixed corpus baseline, the distinct hashed-literal privacy registry that follows the same registry-as-authority precedent, a one-warning legacy compatibility adapter, and the documented rename drill."
 links:
-  related_changes: ["GH-171", "GH-173", "GH-174", "GH-179"]
-  related_decisions: ["ADR-0003"]
+  related_changes: ["GH-171", "GH-173", "GH-174", "GH-179", "GH-184"]
+  related_decisions: ["ADR-0003", "TDR-0005"]
 ---
 
 # Feature: Branding Seam and Working Name
@@ -198,6 +198,12 @@ The process-scoped default sink is the console. `resolveProcessLegacyFromEnviron
 | `allowlist` | The five DEC-8 entries: the branding subpath, the legacy adapter subpath, decision records, historical change artifacts, and required license/source header lines. |
 | `registered` | The explicit list of user-facing docs that are scanned. A doc absent at `corpusBaseline` must be registered or the scan fails; a registered doc must be present in the tree and absent at the baseline. |
 
+### Adjacent hashed-literal registry (privacy guard)
+
+The branding scanner is the registry-as-authority precedent, but its registry stores the three already-public seed tokens as raw literals and scans new user-facing docs for them. It is not a general private-literal mechanism: the registry is committed, so storing a private or hosted-only value there would publish the value it is meant to protect.
+
+The privacy guard applies the same registry-as-authority, reason-bearing allowlist, fail-closed validation, mutation-test, and CI-binding shape with a different data model. `scripts/checks/privacy-literals.registry.json` stores only domain-separated digests, classes, normalized lengths, ids, and reasons, and it scans the whole working tree under seven generic secret/private-shape rules. The two registries are deliberately separate: the branding registry remains the authority for the already-public seed literals and the docs corpus baseline, while the privacy registry is the authority for hashed project literals and hosted-only terms. Consolidating authority belongs to the policy engine; until then both are reviewed data surfaces. The privacy mechanism is documented in [Privacy and No-Cloud Guards](feature-privacy-guard.md).
+
 ### Scan semantics
 
 - **Matching:** Case-insensitive, delimited from lowercase ASCII letters on both sides; the longest matching seed literal is reported. A fully lowercase embedded identifier is deliberately not matched (accepted residual risk).
@@ -240,6 +246,7 @@ Tests use synthetic names only (for example `.renamed-product`, `.alt-brand`, `.
 - **Consumers:** The implemented M0-S4 layered configuration consumes `ResolverInput` and derives config paths and environment layer names from branding without reshaping the contract. The implemented M0-S5 state layer consumes `stateDirectoryName` as an injected parameter. The implemented M0-S10 lint and phase commands run behind the CLI surface, which owns the injected brand identity; their handlers carry no product literal. MCP tool names are a projection of `mcpToolPrefix` plus a canonical primitive ID. The M4-S1 freeze uses the override channel, the seed-growth rule, and the drill.
 - **Corpus scope:** The single-seam guarantee covers `packages/**` and new user-facing docs. The pre-existing installed corpus migrates separately and is not claimed by this seam.
 - **Registry coupling:** Every new user-facing doc under the scanned `doc/` scope must be registered in `forbidden-literals.registry.json` in the same change; otherwise the scan fails. Registered membership is permanent for docs added after the baseline.
+- **Adjacent registry boundary:** The privacy guard's hashed-literal registry is a separate authority. It does not replace or relax the branding scan, and neither registry may hold the other's data class: the branding registry holds already-public seed tokens, while the privacy registry holds only digests of protected literals.
 - **Baseline availability:** The scan requires the recorded baseline commit to be reachable. CI checks out full history and fetches the baseline explicitly; a shallow clone fails closed. `tests/checks/ci-baseline-parity.test.ts` is the standing hermetic partial-clone simulation guarding this drift class: it proves the depth-1 fail-closed result and the explicit-SHA fetch remedy.
 - **Matching residual risk:** A fully lowercase embedded identifier is not matched by the delimiter rule; this is a recorded, accepted residual.
 - **Drift risk:** The documented drill can drift from reality before its first execution. It references gates by contract name and is itself a scanned, name-free document; the first execution is mandatory at the first branding change or pre-release.
@@ -251,6 +258,7 @@ Tests use synthetic names only (for example `.renamed-product`, `.alt-brand`, `.
 - **Configuration consumer:** [Configuration Layer and Inspection](feature-config-layer.md).
 - **State consumer:** [State Layer](feature-state-layer.md).
 - **PM-notes lint and phase consumer:** [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md).
+- **Adjacent hashed-literal registry:** [Privacy and No-Cloud Guards](feature-privacy-guard.md).
 - **Rename procedure:** [Rename Drill](../../guides/rename-drill.md).
 - **Glossary:** [doc/overview/glossary.md](../../overview/glossary.md) — branding-seam terms.
 - **Change record:** `doc/changes/2026-10/2026-10-29--GH-171--branding-seam-working-name/`.

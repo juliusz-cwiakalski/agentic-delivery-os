@@ -243,6 +243,7 @@ jobs:
           bun run scripts/checks/exit-code-literals.ts
           bun run scripts/checks/secret-read-boundary.ts
           bun run scripts/checks/boundary-ci-parity.ts
+          bun run scripts/checks/privacy-literals.ts
 
   ts-typecheck:
     name: TS typecheck

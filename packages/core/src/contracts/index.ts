@@ -103,6 +103,7 @@ export {
 export {
   type CommentReadView,
   type CommentWriteRequest,
+  type ContentPolicyVerdict,
   DEGRADATION_REASONS,
   type DegradationReason,
   ENVELOPE_KINDS,
@@ -110,6 +111,7 @@ export {
   ENVELOPE_SCHEMA_ID,
   type EnvelopeCarrierKind,
   type EnvelopeCommentProvenance,
+  type EnvelopeContentPolicy,
   type EnvelopeDeliveryLinkage,
   type EnvelopeKind,
   type EnvelopeV1Payload,

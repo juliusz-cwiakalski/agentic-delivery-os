@@ -162,6 +162,7 @@ describe("TC-META-004 closed payload and neutral constants", () => {
       },
       carrier: "invisible-comment-block",
       humanContent: request.body,
+      policy: () => ({ ok: true }),
     });
     expect(serialized.ok).toBe(true);
     const text = serialized.ok ? JSON.stringify(serialized.carrier) : "";
@@ -215,4 +216,173 @@ describe("TC-META-005 adapter-only write path", () => {
       true,
     );
   });
+});
+
+/**
+ * TC-POLICY-002 / TC-POLICY-005 — the required policy member, the validation
+ * order, the single serialization point, and call-site completeness.
+ */
+export const requiredPolicyViolations = (text: string): string[] => {
+  const source = ts.createSourceFile(
+    "envelope-codec.ts",
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const failures: string[] = [];
+  for (const statement of source.statements) {
+    if (ts.isTypeAliasDeclaration(statement) && statement.name.text === "SerializeEnvelopeInput") {
+      const members = ts.isTypeLiteralNode(statement.type) ? statement.type.members : [];
+      const policy = members.find(
+        (member): member is ts.PropertySignature =>
+          ts.isPropertySignature(member) && member.name.getText(source) === "policy",
+      );
+      if (policy === undefined) {
+        failures.push("SerializeEnvelopeInput: required policy member is missing");
+      } else if (policy.questionToken !== undefined) {
+        failures.push("SerializeEnvelopeInput: policy must not be optional");
+      }
+    }
+    if (
+      ts.isVariableStatement(statement) &&
+      statement.declarationList.declarations.some(
+        (declaration) =>
+          ts.isIdentifier(declaration.name) && declaration.name.text === "serializeEnvelope",
+      )
+    ) {
+      const declaration = statement.declarationList.declarations[0];
+      const initializer = declaration?.initializer;
+      if (initializer === undefined || !ts.isArrowFunction(initializer)) {
+        failures.push("serializeEnvelope: expected one arrow implementation");
+        continue;
+      }
+      if (initializer.parameters.length !== 1) {
+        failures.push("serializeEnvelope: expected exactly one input parameter");
+      }
+      const parameter = initializer.parameters[0];
+      if (parameter?.questionToken !== undefined || parameter?.initializer !== undefined) {
+        failures.push("serializeEnvelope: input parameter must be required with no default");
+      }
+      const body = initializer.body.getText(source);
+      const closed = body.indexOf("isClosedV1Payload(");
+      const size = body.indexOf("ENVELOPE_MAX_BYTES");
+      const policyIndex = body.indexOf("input.policy(");
+      const carrier = body.indexOf("switch (input.carrier)");
+      if (closed < 0 || size < 0 || policyIndex < 0 || carrier < 0) {
+        failures.push("serializeEnvelope: validation order is incomplete");
+      } else if (!(closed < size && size < policyIndex && policyIndex < carrier)) {
+        failures.push(
+          "serializeEnvelope: order must be closed payload -> size -> policy -> carrier",
+        );
+      }
+      if (body.includes("createHash") || body.includes("sha256")) {
+        failures.push("serializeEnvelope: no default hash implementation is permitted");
+      }
+    }
+  }
+  return failures;
+};
+
+export const serializationPointViolations = (files: Record<string, string>): string[] => {
+  const failures: string[] = [];
+  const codec = `${CODEC_DIR}/envelope-codec.ts`;
+  for (const [file, text] of Object.entries(files)) {
+    if (file === codec) continue;
+    const declaresSerializer = /export\s+(?:const|function)\s+serializeEnvelope\b/.test(text);
+    const carriesEnvelopeContract = text.includes("ENVELOPE_SCHEMA_ID");
+    if (declaresSerializer && carriesEnvelopeContract) {
+      failures.push(`${file}: second envelope serialization path`);
+    }
+    if (text.includes("ENVELOPE_SCHEMA_ID") && /<!--\s|\[delivery\.metadata/.test(text)) {
+      failures.push(`${file}: envelope marker constructed outside the codec`);
+    }
+  }
+  return failures;
+};
+
+export const callSitePolicyViolations = (file: string, text: string): string[] => {
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const failures: string[] = [];
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "serializeEnvelope"
+    ) {
+      const argument = node.arguments[0];
+      if (argument === undefined || !ts.isObjectLiteralExpression(argument)) {
+        failures.push(`${file}: serializeEnvelope call must pass an object literal`);
+      } else if (
+        !argument.properties.some(
+          (property) =>
+            ts.isPropertyAssignment(property) && property.name.getText(source) === "policy",
+        )
+      ) {
+        failures.push(`${file}: serializeEnvelope call omits the required policy`);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return failures;
+};
+
+const envelopeSourceFiles = (): Record<string, string> => {
+  const files: Record<string, string> = {};
+  for (const tree of ["packages", "scripts", "tools"]) {
+    for (const file of listFiles(ROOT, tree)) files[file] = readFileSync(join(ROOT, file), "utf8");
+  }
+  return files;
+};
+
+test("TC-POLICY-002 the policy member is required and the order is pinned", () => {
+  expect(
+    requiredPolicyViolations(readFileSync(join(ROOT, CODEC_DIR, "envelope-codec.ts"), "utf8")),
+  ).toEqual([]);
+  const text = readFileSync(join(ROOT, CODEC_DIR, "envelope-codec.ts"), "utf8");
+  expect(
+    requiredPolicyViolations(text.replace("readonly policy: EnvelopeContentPolicy;", "")).some(
+      (failure) => failure.includes("policy member is missing"),
+    ),
+  ).toBe(true);
+  expect(
+    requiredPolicyViolations(
+      text.replace(
+        "readonly policy: EnvelopeContentPolicy;",
+        "readonly policy?: EnvelopeContentPolicy;",
+      ),
+    ).some((failure) => failure.includes("must not be optional")),
+  ).toBe(true);
+});
+
+test("TC-POLICY-005 exactly one envelope serialization point exists", () => {
+  const audited = envelopeSourceFiles();
+  expect(Object.keys(audited).some((file) => file.startsWith("scripts/"))).toBe(true);
+  expect(serializationPointViolations(audited)).toEqual([]);
+  expect(
+    serializationPointViolations({
+      "scripts/rogue.ts":
+        'export const serializeEnvelope = () => ""; const schema = ENVELOPE_SCHEMA_ID;',
+    }).some((failure) => failure.includes("second envelope serialization path")),
+  ).toBe(true);
+});
+
+test("TC-POLICY-002 every in-repo call site supplies a policy", () => {
+  const callSites = [
+    "tests/structure/envelope-contract.test.ts",
+    "tests/behaviour/envelope-roundtrip.test.ts",
+    "tests/fixtures/ports/capabilities.ts",
+  ];
+  for (const file of callSites) {
+    expect(callSitePolicyViolations(file, readFileSync(join(ROOT, file), "utf8")), file).toEqual(
+      [],
+    );
+  }
+  expect(
+    callSitePolicyViolations(
+      "seeded.ts",
+      'serializeEnvelope({ envelope: clean, carrier: "compact-marker", humanContent: "body" });',
+    ).some((failure) => failure.includes("omits the required policy")),
+  ).toBe(true);
 });

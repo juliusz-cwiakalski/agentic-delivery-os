@@ -109,3 +109,21 @@ export type CommentReadView = {
   readonly provenance: EnvelopeCommentProvenance | HeuristicProvenance;
   readonly degradation?: MetadataDegradationEvidence;
 };
+
+/**
+ * The verdict a content policy returns for one serialized envelope (DM-5).
+ *
+ * A denial carries exactly one rule/entry id and never content; the codec maps
+ * it to the fail-closed `content-policy-violation` serialization failure.
+ */
+export type ContentPolicyVerdict =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly ruleOrEntryId: string };
+
+/**
+ * The injected pure content policy (DM-5).
+ *
+ * It receives the exact compact JSON representation that would be embedded and
+ * is total, non-throwing, and free of I/O, ambient reads, clock, and randomness.
+ */
+export type EnvelopeContentPolicy = (compactJson: string) => ContentPolicyVerdict;
