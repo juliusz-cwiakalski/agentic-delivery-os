@@ -14,7 +14,7 @@ phases:
   review_fix: { started: "2026-10-31T22:16:00Z", completed: "2026-10-31T22:55:00Z", iteration: 2, status: "PASS", iteration_1: "PASS_with_remediation (0 blocker / 0 major / 5 low / 4 info)", iteration_2: "PASS (0 blocker / 0 major / 1 low / 1 info; F-10 docs fixed, F-11 info accepted)" }
   quality_gates: { started: "2026-10-31T22:56:00Z", completed: "2026-10-31T23:05:00Z" }
   dod_check: { started: "2026-10-31T23:06:00Z", completed: "2026-10-31T23:10:00Z" }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: "2026-10-31T23:11:00Z", completed: null, url: null }
 decisions:
   - text: "Scope of 'every shipped adapter' = the provider adapters that implement a real AdapterContract behind the primitive ports: github, gitlab, jira (M0-S19 read slices). Placeholder subpaths (azure, ci) and non-provider I/O subpaths (repo, file, host, session, legacy, credentials, provider-quota, registry) have no provider-primitive surface, so they are out of scope for provider flows; a structural coverage gate must fail when a new *_ADAPTER_CONTRACT source appears without conformance registration."
     date: "2026-10-31"
