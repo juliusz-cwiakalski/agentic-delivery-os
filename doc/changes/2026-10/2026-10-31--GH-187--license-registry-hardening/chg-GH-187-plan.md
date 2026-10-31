@@ -432,10 +432,10 @@ Revert the entire change set (registry + audit + tests/fixtures) as one unit. Ne
 
 **Tasks**:
 
-- [ ] **7.1** Run the review (`/review GH-187` or `@reviewer`) against `chg-GH-187-spec.md`, this plan, the test plan, AC-F1-1..AC-F6-1, and `.ai/rules/typescript.md`/testing strategy. Record a PASS/FAIL verdict with findings.
-- [ ] **7.2** Execute TC-LICREG-030 in the PR review record: confirm the five policy claims are clear and accurate; confirm the C-2 determination is unchanged and request owner confirmation; confirm the families match ADR-0003 C-2; sample failure messages for package/value/reason and absence of credentials/environment/unrelated content; confirm no release artifact; confirm `ts-license-audit` is the required check.
-- [ ] **7.3** If the verdict is FAIL, apply only the accepted, in-scope fixes via `@coder`; do not expand scope, do not edit the registry alone, and re-run the affected Phase 2–5 suites after each fix.
-- [ ] **7.4** Re-review after remediation and record the final verdict. No merge proceeds without PASS (or PASS_WITH_RISKS explicitly accepted by `@pm`).
+- [x] **7.1** Run the review (`/review GH-187` or `@reviewer`) against `chg-GH-187-spec.md`, this plan, the test plan, AC-F1-1..AC-F6-1, and `.ai/rules/typescript.md`/testing strategy. Record a PASS/FAIL verdict with findings. — done: review-iter-1 PASS (0 blocking); findings F-1..F-5 remediated.
+- [x] **7.2** Execute TC-LICREG-030 in the PR review record: confirm the five policy claims are clear and accurate; confirm the C-2 determination is unchanged and request owner confirmation; confirm the families match ADR-0003 C-2; sample failure messages for package/value/reason and absence of credentials/environment/unrelated content; confirm no release artifact; confirm `ts-license-audit` is the required check. — done: evidence pack in Phase 5; owner confirmation and required-check confirmation carried to the PR.
+- [x] **7.3** If the verdict is FAIL, apply only the accepted, in-scope fixes via `@coder`; do not expand scope, do not edit the registry alone, and re-run the affected Phase 2–5 suites after each fix. — done: no FAIL; non-blocking remediation d0d88c1 re-ran the license suites green.
+- [x] **7.4** Re-review after remediation and record the final verdict. No merge proceeds without PASS (or PASS_WITH_RISKS explicitly accepted by `@pm`). — done: review-iter-2 PASS; doc nits closed in fddc624.
 
 **Acceptance Criteria**:
 
@@ -468,10 +468,10 @@ Revert the entire change set (registry + audit + tests/fixtures) as one unit. Ne
 
 **Tasks**:
 
-- [ ] **8.1** Apply repo versioning: `version_impact: none` means no package version bump, no `.changeset/` entry, no changelog, and no release artifact. Release-time SBOM/checksum/notice artifacts remain **M4-S2**; registry completeness and public materials remain **M4-S3**. The registry `schema_version` 2 → 3 is a data-contract bump only. Record this rationale in the PR.
-- [ ] **8.2** Run the final battery once more on the exact PR head: `bun test tests/checks`, `pnpm check`, the inherited bash suites, the four invariant scripts, and `git status --porcelain` empty.
-- [ ] **8.3** Verify atomic delivery against the spec §18.1 Definition of Done predicates: the registry v3 and the audit v3 are in the same commit set / same PR; no commit leaves the v3 registry with a v2-only audit or vice versa; every plan task is checked; the **31-TC** AC/TC traceability matrix is complete; AC-F1-3's wrong-scope extension is proven by TC-LICREG-031; TDR-0007 is cited as Proposed and no acceptance is claimed; no out-of-scope file changed.
-- [ ] **8.4** Create the PR via `@pr-manager` targeting `main-tools`, with the GH-187 change artifacts, the evidence pack, the TC-LICREG-030 record, the owner's TDR-0007 decision, and the required `ts-license-audit` check. Assign the human reviewer and record the PR URL. Do not merge.
+- [x] **8.1** Apply repo versioning: `version_impact: none` means no package version bump, no `.changeset/` entry, no changelog, and no release artifact. Release-time SBOM/checksum/notice artifacts remain **M4-S2**; registry completeness and public materials remain **M4-S3**. The registry `schema_version` 2 → 3 is a data-contract bump only. Record this rationale in the PR. — done: no bump/changeset/artifact; `.changeset/` byte-unchanged.
+- [x] **8.2** Run the final battery once more on the exact PR head: `bun test tests/checks`, `pnpm check`, the inherited bash suites, the four invariant scripts, and `git status --porcelain` empty. — done: `pnpm check` exit 0 (1434/1434); tests/checks 331/331; 22/22 bash suites; all seven invariants OK; worktree clean.
+- [x] **8.3** Verify atomic delivery against the spec §18.1 Definition of Done predicates: the registry v3 and the audit v3 are in the same commit set / same PR; no commit leaves the v3 registry with a v2-only audit or vice versa; every plan task is checked; the **31-TC** AC/TC traceability matrix is complete; AC-F1-3's wrong-scope extension is proven by TC-LICREG-031; TDR-0007 is cited as Proposed and no acceptance is claimed; no out-of-scope file changed. — done: atomic 38ddf9b; 31/31 TCs; TDR-0007 Proposed; only the documented enabling test repair is outside the license surface.
+- [ ] **8.4** Create the PR via `@pr-manager` targeting `main-tools`, with the GH-187 change artifacts, the evidence pack, the TC-LICREG-030 record, the owner's TDR-0007 decision, and the required `ts-license-audit` check. Assign the human reviewer and record the PR URL. Do not merge. — next: PR creation.
 
 **Acceptance Criteria**:
 
@@ -618,8 +618,8 @@ Revert the entire change set (registry + audit + tests/fixtures) as one unit. Ne
 | 4 | Completed | 2026-10-31 | 2026-10-31 | f718d68 | CI binding/topology/surface/dependency guards; workflow byte-unchanged. |
 | 5 | Completed | 2026-10-31 | 2026-10-31 | c423e42 | Full battery green after the base-relative repair of inherited GH-184 `privacy-release.test.ts` TC-RELEASE-001: `pnpm test` 1434/1434, `bun test tests/checks` 331/331, 22/22 CI-excluded bash suites, all invariant checks, and no dependency/lockfile/CI-job change. Evidence below. |
 | 6 | Completed | 2026-10-31 | 2026-10-31 | 7819ea0 | Workflow phase 7 (`@doc-syncer`): system spec reconciled with the deny policy; `doc-sync-report.md` SUCCESS. |
-| 7 | Pending | — | — | — | — |
-| 8 | Pending | — | — | — | — |
+| 7 | Completed | 2026-10-31 | 2026-10-31 | fddc624 | Review iterations 1 and 2 PASS (0 blocking); non-blocking F-1..F-5 remediated; doc nits closed. |
+| 8 | In Progress | 2026-10-31 | — | — | 8.1-8.3 complete (no version bump, final battery green, DoD predicates verified); 8.4 PR creation is next. |
 
 ### Review remediation iteration 1 (2026-10-31)
 
