@@ -1,8 +1,8 @@
 ---
 id: chg-GH-186-decision-records-measurement-baseline
-status: Proposed
+status: Updated
 created: 2026-10-31T14:00:00Z
-last_updated: 2026-10-31T14:00:00Z
+last_updated: 2026-10-31T14:04:45Z
 owners: ["Juliusz Ćwiąkalski"]
 service: delivery-os decision and measurement substrate
 labels: ["documentation", "decision-records", "measurement", "M0"]
@@ -33,30 +33,31 @@ version_impact: none
 
 ## Context and Goals
 
-- **Work item**: GH-186 — M0-S17: Decision records and measurement baseline. The checked-out branch is `feat/GH-186/decision-records-and-measurement-baseline` (the spec slug is `decision-records-measurement-baseline`; the branch name and commit scope remain `GH-186`). The PR targets `main-tools`.
+- **Work item**: GH-186 — M0-S17: Decision records and measurement baseline. The delivery branch is `feat/GH-186/decision-records-and-measurement-baseline`, authoritative per spec §18; the change-folder/spec slug is `decision-records-measurement-baseline` and intentionally differs from the branch slug (no file or folder is renamed to match it). Commit scope remains `GH-186`. The PR targets `main-tools`.
 - **Inputs (both read in full by this authoring pass)**:
-  - [chg-GH-186-spec.md](./chg-GH-186-spec.md) — **v1.1**: F-1…F-6, DM-1…DM-4, C-1…C-10, NFR-1…NFR-10, RSK-1…RSK-10, DEC-1…DEC-13, **21 ACs** (§17), fixed window and metric formulas (§5.1 F-4), artifact inventory (§24.2).
-  - [chg-GH-186-test-plan.md](./chg-GH-186-test-plan.md) — **v1.1**: **37 TCs** (TC-DEC-001…015, TC-MEAS-001…011, TC-SYNC-001…005, TC-GATE-001…006), §3 AC/interface/NFR coverage, §4 gate inventory, §5.2 step-level procedures, §6 representation rules (R-1 ratio, Q-1 rounding).
-- **Governing decisions already made (do not reopen)**: DEC-1 (committed repository-local YAML log), DEC-2 (bind five existing topics, author four new records), DEC-3 (record types/IDs), DEC-4 (register as projection), DEC-5 (prospective names lock; zero renames), DEC-6 (`Proposed`, never self-Accepted), DEC-7/DEC-8 (metric formulas; UNAVAILABLE honesty), DEC-9 (two-row index repair), DEC-10 (`MET-` adoption), DEC-11 (window; GH-186 excluded; date-only excluded and counted), DEC-12 (phase-7 doc-sync set), DEC-13 (one data-only registry edit).
+  - [chg-GH-186-spec.md](./chg-GH-186-spec.md) — **v1.2**: F-1…F-6, DM-1…DM-4, C-1…C-10, NFR-1…NFR-10, RSK-1…RSK-11, DEC-1…DEC-14 (DEC-14 corpus-ingestion rule), **21 ACs** (§17), fixed window and metric formulas (§5.1 F-4), closed exclusion vocabulary, rollout order (§18), artifact inventory (§24.2), spec-time census (Appendix A).
+  - [chg-GH-186-test-plan.md](./chg-GH-186-test-plan.md) — **v1.2**: **37 TCs** (TC-DEC-001…015, TC-MEAS-001…011, TC-SYNC-001…005, TC-GATE-001…006), §3 AC/interface/NFR coverage, §4 gate inventory, §5.2 step-level procedures, §6 representation rules (R-1 ratio, Q-1 rounding).
+- **Governing decisions already made (do not reopen)**: DEC-1 (committed repository-local YAML log), DEC-2 (bind five existing topics, author four new records), DEC-3 (record types/IDs), DEC-4 (register as projection), DEC-5 (prospective names lock; zero renames), DEC-6 (`Proposed`, never self-Accepted), DEC-7/DEC-8 (metric formulas; UNAVAILABLE honesty), DEC-9 (two-row index repair), DEC-10 (`MET-` adoption), DEC-11 (window; GH-186 excluded; date-only excluded and counted), DEC-12 (phase-7 doc-sync set), DEC-13 (one data-only registry edit), DEC-14 (normative corpus ingestion: parse → normalize → classify; closed exclusion vocabulary).
 - **Delivery type**: documentation-only plus exactly one data-only `registered` addition in `scripts/checks/forbidden-literals.registry.json`. No source code, shell, test logic, check logic, template, changeset, or version change.
-- **Status**: Proposed (plan v1.0, derived from spec v1.1 and test plan v1.1; no requirement is added here).
+- **Status**: Updated (plan v1.1, derived from spec v1.2 and test plan v1.2; no requirement is added here).
 
 **Goals** (mirror spec §4): every M0-S17 topic resolves to one binding; four new `Proposed` records ship with owner acceptance pending; command names are frozen prospectively with zero renames; the bash-era baseline is committed with defined formulas, a fixed window, per-number citations, and explicit UNAVAILABLE/PARTIAL states; the register and index are accurate (including the two repairs); the diff stays docs-only with the single DEC-13 registration exemption.
 
-**Delivery model**: `@coder` executes Phases 1–9 and the conditional remediation in Phase 11 in order. Phases 10 and 12–13 map to lifecycle review, doc-sync, and finalize/PR gates and are PM-scheduled; `@coder` must not mark them complete by finishing delivery alone. Decision-record authoring may be delegated to `@decision-advisor` (per AGENTS.md); gate runs may be delegated to `@runner`; each commit is created via `@committer` (one Conventional Commit per writing phase, scope `GH-186`). Read-only phases (1, 6, 9, 10) end with recorded evidence, not a commit.
+**Delivery model**: `@coder` executes Phases 1–9 and the conditional remediation in Phase 12 in order (the Phase-12 fixes follow the Phase-11 verdict). Phase 10 (doc-sync) maps to lifecycle phase 7; Phase 11 (independent review) and Phase 12 (remediation) map to lifecycle phase 8; Phase 13 maps to lifecycle phases 9–11; Phases 10–13 are PM-scheduled (Phase 12 fixes are executed by `@coder` under the PM). `@doc-syncer` owns Phase 10; `@reviewer` owns Phase 11. Decision-record authoring may be delegated to `@decision-advisor` (per AGENTS.md); gate runs may be delegated to `@runner`; each commit is created via `@committer` (one Conventional Commit per writing phase, scope `GH-186`). Read-only phases (1, 6, 9, 11) end with recorded evidence, not a commit.
 
 ### Pinned delivery decisions (binding; changing a pin reopens this plan)
 
 The spec and test plan leave a few execution-level mechanics open. Each pin below only fixes representation/sequencing; it preserves every spec formula, AC, and TC assertion.
 
-- **PD-1 — Registration staging invariant (DEC-13).** The forbidden-literal check fails when a `registered` entry is missing from the tree (`registered doc is missing from the tree`). Therefore **each new user-facing doc is registered in the same commit that creates it**: `doc/planning/oss-tooling/measurement-baseline.yaml` in Phase 7, and `doc/spec/features/feature-measurement-baseline.md` in the Phase-12 doc-sync commit. Never pre-register a not-yet-existing path. The registry edit is data-only: only the `registered` array changes; `corpusBaseline`, `scopeClasses`, `seedLiterals`, `allowlist`, and all check logic stay byte-identical (RSK-10).
+- **PD-1 — Registration staging invariant (DEC-13, spec §18).** The forbidden-literal check fails when a `registered` entry is missing from the tree (`registered doc is missing from the tree`). Therefore **each new user-facing doc is registered in the same commit that creates it**: `doc/planning/oss-tooling/measurement-baseline.yaml` in the Phase-7 baseline commit, and `doc/spec/features/feature-measurement-baseline.md` in the Phase-10 doc-sync commit. Never pre-register a not-yet-existing path, and never register both before doc-sync. The registry edit is data-only: only the `registered` array changes; `corpusBaseline`, `scopeClasses`, `seedLiterals`, `allowlist`, and all check logic stay byte-identical (RSK-10).
 - **PD-2 — `source_commit` semantics.** Capture `SRC="$(git rev-parse HEAD)"` at the start of Phase 6 (after the Phase-5 commit, before the YAML exists) and record the full 40-hex value. Every cited pm-notes/evidence path must exist at `SRC`; the YAML's own commit is intentionally not `source_commit` (self-reference is neither possible nor meaningful). Reproduction: `git rev-parse <40hex>` and `git cat-file -e <40hex>:<path>`.
-- **PD-3 — Phase-pair classification precedence.** For each of the 11 phases, classify the `started`/`completed` pair: **date-only endpoint → `date_only_pairs_excluded` first; else any null/missing/unparsable endpoint → `phase_pairs_excluded`; else included**. Per included change the counters conserve: `phase_pairs_included + phase_pairs_excluded + date_only_pairs_excluded = 11`. Durations are `completed − started` in hours, rounded to 1 decimal (`ROUND_HALF_UP`). **No clamping:** a negative duration is a source defect — stop and escalate to the PM; never clamp or estimate.
-- **PD-4 — Change-level inclusion and metric-specific samples.**
-  - `change-row.included` = the general time-metric corpus condition: not GH-186, window anchor inside the window, and at least one included phase pair. `excluded_reason` uses only the pinned vocabulary: `no_timestamps`, `date_only_only`, `missing_start`, `baseline_change`, `outside_window`, `no_ci_observation`.
-  - Exclusion precedence for a non-GH-186 change: `outside_window` (when a dated anchor exists outside the window) → `date_only_only` (pairs exist, zero included pairs, at least one date-only) → `no_timestamps` (no timestamped endpoints at all) → `missing_start` (time-stamped pairs exist but the metric's required start is absent).
-  - Metric samples are metric-specific: `MET-CEREMONY-SHARE` uses included rows with at least one included pair; `MET-CYCLE-TIME` uses included rows with a timestamped `clarify_scope.started`; `MET-CI-FAILURE-RATE` uses included rows with `ci_observed: true` and counts the rest in `excluded_unobserved`; `MET-FALSE-SIGNAL-INCIDENTS` scans every included row. A metric-specific exclusion is stated in that metric's `definition`/`limitation` and counted in its `sample`; a row is never silently dropped.
-  - Cycle-time censoring: when `pr_creation.completed` is absent, use the latest timestamped completed phase and set `cycle_time_censored: true`; when no completed phase exists at all, exclude the row from the cycle sample (`no_timestamps`), state the rule in `limitation`, and still keep the row in the change spine.
+- **PD-3 — Parse, normalize, and phase-pair classification precedence (DEC-14).** Each pm-notes file is parsed as one YAML document; a document-level parse failure is the named `unparseable_yaml` row (PD-4), never a crash. YAML-native `datetime.datetime` / `datetime.date` scalars are normalized to ISO-8601 before classification (datetime keeps its time and offset/`Z`; date becomes `YYYY-MM-DD`); string values are accepted too. For each of the 11 phases, classify the `started`/`completed` pair: **date-only/missing-time endpoint → `date_only_pairs_excluded` first; else any null/missing/placeholder-zero-time/unparseable endpoint → `phase_pairs_excluded`; else included**. A `00:00:00` time component is a placeholder, not a measured time. Per included change the counters conserve: `phase_pairs_included + phase_pairs_excluded + date_only_pairs_excluded = 11`. Durations are `completed − started` in hours, rounded to 1 decimal (`ROUND_HALF_UP`). **No clamping:** a negative duration is a source defect — stop and escalate to the PM; never clamp or estimate.
+- **PD-4 — Change-level inclusion and metric-specific samples (DEC-14).**
+  - `change-row.included` = the general time-metric corpus condition: parseable, not the capture change GH-186, window anchor inside the window, and at least one included phase pair. `excluded_reason` uses only the closed vocabulary: `unparseable_yaml`, `date_only_or_missing_time`, `placeholder_zero_time`, `capture_change`, `outside_window`; `no_ci_observation` is a CI-metric sample reason only and is never a change-row exclusion reason.
+  - Exclusion precedence is deterministic: `unparseable_yaml` (the document cannot be examined) → `capture_change` (GH-186) → `outside_window` (a dated anchor exists outside the fixed window) → `placeholder_zero_time` (time-bearing endpoints exist but all are placeholders) → `date_only_or_missing_time` (no usable time-bearing pair). Counters conserve: `changes_parsed = changes_included + changes_excluded`; every excluded file keeps its own row and is counted.
+  - Metric samples are metric-specific: `MET-CEREMONY-SHARE` uses included rows with at least one included pair; `MET-CYCLE-TIME` uses included rows with a non-placeholder time-bearing `clarify_scope.started`; `MET-CI-FAILURE-RATE` uses included rows with `ci_observed: true` and counts the rest in `excluded_unobserved` with reason `no_ci_observation`; `MET-FALSE-SIGNAL-INCIDENTS` scans every included row, and an `unparseable_yaml` change may still contribute an incident curated from its committed evidence. A metric-specific exclusion is stated in that metric's `definition`/`limitation` and counted in its `sample`; a row is never silently dropped.
+  - Cycle-time censoring: when `pr_creation.completed` is absent, use the latest timestamped completed phase and set `cycle_time_censored: true`; when no completed phase exists at all, exclude the row from the cycle sample (`date_only_or_missing_time`), state the rule in `limitation`, and still keep the row in the change spine.
+  - Status floor: a time metric whose corpus contains an `unparseable_yaml` or `placeholder_zero_time` change cannot be `MEASURED`; it is `PARTIAL` and reports the excluded count.
 - **PD-5 — Numeric representation and rounding.** Per-change durations and cycle times are recorded at 1 decimal (`ROUND_HALF_UP`). Ceremony `numerator`/`denominator` are the sums of the recorded per-change 1-decimal hours; the ratio is `Decimal(numerator)/Decimal(denominator)` quantized to 6 decimals (`ROUND_HALF_UP`). CI ratio uses the same 6-decimal rule. Ratio metrics store `value` 0–1 with `unit: ratio`; a percent form is derived as `value × 100` at 1 decimal and is **never stored**. Median is the arithmetic median (mean of the two middle values for even n); p90 is nearest-rank only when n ≥ 10 (sorted ascending, `ceil(0.9 × n)`-th value, 1-indexed, no interpolation), otherwise `null` with the suppression stated. No float equality checks in verification.
 - **PD-6 — Record rigor and shape.** All four new records declare `classification.rigor: R2` and render the canonical R2 set: the full template order **except** `Rollback / Reversal`, `Communication Plan`, and `Structured Retrospective` (tiered-default model, `doc/templates/decision-record-template.md`). Pin the H1 titles so index rows and records cannot drift:
   - `# ADR-0008: Harness Adapter Contract`
@@ -66,8 +67,8 @@ The spec and test plan leave a few execution-level mechanics open. Each pin belo
   Each record is `status: Proposed`, `decision_date: null`, `links.related_changes: ["GH-186"]`, names the human decider with "acceptance pending at GH-186 PR review", and links its parent(s) per §5.1 F-2 (ADR-0008 → ADR-0003 DEC-6; ADR-0009 → ADR-0003 DEC-3; ODR-0002 → ODR-0001 + the catalog concept; ODR-0003 → ADR-0007 + the command registry).
 - **PD-7 — Bounded index repair (DEC-9).** Exactly two pre-existing rows change: the TDR-0005 row's ID cell and link text become `TDR-0005` and the row moves before TDR-0006; the PDR-0002 title becomes `Phase-7 Documentation Gap Closure (Always Resolve In-Change)`. The PDR-0002 filename is untouched. Every other pre-existing row is byte-identical; the row-set diff is the authoritative proof.
 - **PD-8 — Registry v1 edit surface.** Exactly five hunks in `doc/planning/oss-tooling/cli-command-registry.md`: H1 → `# ados(1) command registry and man page v1`; man-page heading → `## ados(1): man page v1 (locked)`; a lock banner naming `ODR-0003`, the lock date **2026-10-31**, and the v1 freeze; the pre-lock introduction sentence replaced by the ODR-0003 statement; the `provider` naming-audit bullet changed to `confirmed as v1 by ODR-0003`. Command-table rows and extracted command tokens are byte-identical before/after.
-- **PD-9 — Commit discipline.** One Conventional Commit per writing phase, scope `GH-186`; read-only phases commit nothing. Never stage `chg-GH-186-pm-notes.yaml` (PM-owned and currently modified in the working tree), the spec, the test plan, `.ai/local/**`, `tmp/**`, or untracked scratch. Commit bodies wrap at ≤ 100 characters. No phase commit spans more than its stated file list.
-- **PD-10 — Doc-sync ownership.** `@coder` does not author current-truth feature specs. Phase 12 (`@doc-syncer`) creates `feature-measurement-baseline.md`, updates `feature-decision-records.md`, the glossary, `doc/00-index.md`, and the adapter-ports pointer, and registers the new feature spec in the same commit. Delivery's obligation is to leave every prerequisite (records, register, log, paths, IDs) in place and to record the handoff.
+- **PD-9 — Commit discipline.** One Conventional Commit per writing phase, scope `GH-186`; read-only phases commit nothing. Never stage `chg-GH-186-pm-notes.yaml` (PM-owned and modified by the PM at each phase boundary), the spec, the test plan, `.ai/local/**`, `tmp/**`, or untracked scratch. The PM-owned `.ai/local/**` and change-folder pm-notes are the only paths permitted to be dirty/untracked at finalization; the PM commits them, and the coder must not stage them. Commit bodies wrap at ≤ 100 characters. No phase commit spans more than its stated file list.
+- **PD-10 — Doc-sync ownership.** `@coder` does not author current-truth feature specs. Phase 10 (`@doc-syncer`, lifecycle phase 7) creates `feature-measurement-baseline.md` with `ados_distribution: internal`, updates `feature-decision-records.md`, the glossary, `doc/00-index.md`, and the adapter-ports pointer, and registers the new feature spec in the same commit. Delivery's obligation is to leave every prerequisite (records, register, log, paths, IDs) in place and to record the handoff to Phase 10.
 
 ### Measurement computation procedure (binding for Phases 6–7)
 
@@ -80,15 +81,17 @@ The authoritative formulas are spec §5.1 F-4; the authoritative recompute proce
    git cat-file -e "${SRC}^{commit}"
    git ls-tree -r --name-only "$SRC" -- doc/changes \
      | rg 'chg-[^/]+-pm-notes\.yaml$' | sort > /tmp/gh186-pm-notes.list
+   git ls-tree -r --name-only "$SRC" -- doc/changes \
+     | rg 'chg-[^/]+-evidence\.md$' | sort > /tmp/gh186-evidence.list
    ```
-   The spec-time inventory is 41 pm-notes files and 5 evidence files; delivery must **re-derive** both counts and record any delta. Every source is committed and read at `SRC`; no `tmp/**`, `.ai/local/**`, uncommitted log, or URL is a measurement source.
-2. **Parse phase pairs.** For every pm-notes file load `phases`, then for each of the 11 phases (`clarify_scope`, `specification`, `test_planning`, `delivery_planning`, `dor_check`, `dod_check`, `pr_creation` = ceremony; `delivery`, `system_spec_update`, `review_fix`, `quality_gates` = work) apply PD-3. Date-only means a value without a time component (for example `2026-03-06`); time means an ISO-8601 value with `T` and a time. Compute each included pair's hours and the per-change `ceremony_duration_h` and `total_phase_duration_h` per PD-5.
-3. **Build the change spine.** Emit one `change-row` per pm-notes file, including GH-186 (`included: false`, `excluded_reason: baseline_change`) and every out-of-window or unparseable change (with the PD-4 reason). The row carries `pm_notes` (the committed path at `SRC`), the three pair counters, the two durations, `cycle_time_h`, `cycle_time_censored`, `ci_observed`, `ci_outcome`, `ci_observations[]`, and `false_signal_incidents[]`. This spine is the traceability source for every aggregate.
+   Spec v1.2 Appendix A records the spec-time census at HEAD `5a511f4bec4ce2a2fff6e3248b88ecafed34a2ca` (a spec-time observation, not a baseline value): **41 pm-notes files, 40 parseable, 30 time-bearing (24 with at least one real time and 6 placeholder-zero-time-only: GH-57/67/69/71/72/174), 10 date-only-only, 1 unparseable (GH-171), and 5 evidence files; excluding the capture change GH-186, 23 changes enter the time-metric corpus.** Delivery must **re-derive** the census at `SRC` with the Appendix-A procedure and record any delta; do not copy the spec-time numbers into the log as if re-derived. The single known-unparseable precedent is `tests/fixtures/pm-notes/corpus-exclusions.json`; the baseline mirrors it and does not edit it. Every source is committed and read at `SRC`; no `tmp/**`, `.ai/local/**`, uncommitted log, or URL is a measurement source.
+2. **Parse, normalize, and classify phase pairs (DEC-14).** For every pm-notes file parse one YAML document with `yaml.safe_load`; a document-level parse failure is an `unparseable_yaml` change row (step 3) and never crashes the computation. Normalize YAML-native `datetime.datetime` / `datetime.date` scalars to ISO-8601 before classification (datetime keeps its time and offset/`Z`; date becomes `YYYY-MM-DD`), accepting string and native forms alike. Then for each of the 11 phases (`clarify_scope`, `specification`, `test_planning`, `delivery_planning`, `dor_check`, `dod_check`, `pr_creation` = ceremony; `delivery`, `system_spec_update`, `review_fix`, `quality_gates` = work) apply PD-3: a date-only/missing-time endpoint is `date_only_pairs_excluded`; a null/missing/placeholder-zero-time/unparseable endpoint is `phase_pairs_excluded`; otherwise the pair is included. A `00:00:00` time is a placeholder, not a measurement. Compute each included pair's hours and the per-change `ceremony_duration_h` and `total_phase_duration_h` per PD-5.
+3. **Build the change spine.** Emit one `change-row` per pm-notes file, including GH-186 (`included: false`, `excluded_reason: capture_change`), GH-171 (`included: false`, `excluded_reason: unparseable_yaml`) and every out-of-window, placeholder-only, or date-only change with exactly one reason from the PD-4 closed vocabulary. The row carries `pm_notes` (the committed path at `SRC`), the three pair counters, the two durations, `cycle_time_h`, `cycle_time_censored`, `ci_observed`, `ci_outcome`, `ci_observations[]`, and `false_signal_incidents[]`. Counters must conserve: `changes_parsed = changes_included + changes_excluded`. This spine is the traceability source for every aggregate.
 4. **Ceremony share.** `numerator = Σ change-row.ceremony_duration_h`; `denominator = Σ change-row.total_phase_duration_h` over the ceremony sample; `value = numerator/denominator` at 6 decimals (PD-5); `unit: ratio`; percent derived only. State that overlapping phases count in both numerator and denominator (duration share, not wall-clock union).
-5. **Cycle time.** Per cycle-sample row: `pr_creation.completed − clarify_scope.started` at 1 decimal; fall back to the latest timestamped completed phase and set `cycle_time_censored: true` when `pr_creation.completed` is absent; exclude rows without a timestamped start from the sample (PD-4). Aggregate `n`, median, min, max; `p90_h` only when n ≥ 10 by nearest-rank, else `null` with the suppression stated.
-6. **CI failure session proxy.** A row is observed only when a committed pm-notes or evidence artifact records a CI outcome. Classify `ci_outcome` as `red` (failure recorded, no subsequent green on that change), `mixed` (failure and later green recorded), `green` (only green recorded), or `null` (not observed). Every observation is an `ci_observations[]` row (`artifact`, `anchor`, `outcome`, `checks_affected`). `numerator = count(red or mixed)`; `denominator = count(ci_observed: true)`; `value` ratio at 6 decimals; `measurement_kind: session_proxy`; `limitation` names the absent committed run log and states that unobserved changes are excluded, never assumed green.
-7. **False-signal incidents.** Curate one row per distinct incident or root cause per change from committed pm-notes/evidence; collapse repeated mentions; one root cause across several checks is one row with `checks_affected`. Classes are exactly `local-green-ci-red`, `false-success-exit-zero`, `skipped-read-as-green`, `green-gate-later-failed`, `lying-liveness`. Cite `artifact` + `anchor` for every row. GH-179's corpus-vs-rule defect is excluded (not a delivery-signal lie). The spec's GH-170…GH-177 list is illustrative; curate every committed record under the inclusion rule. The total is the number of rows; state that it is a curated floor.
-8. **Statuses.** `UNAVAILABLE` when the sample is empty or the required source is absent (`value: null` + `missing_source`); `PARTIAL` when at least one sample row could not be examined/observed or a required field was missing (report the counts); `MEASURED` only when the metric's stated corpus was fully examined with no missing required input. Do not pre-label a metric; derive the status from the rule. For the CI metric, unobserved rows make the status `PARTIAL`; do not present a per-run rate.
+5. **Cycle time.** Per cycle-sample row: `pr_creation.completed − clarify_scope.started` at 1 decimal; fall back to the latest timestamped completed phase and set `cycle_time_censored: true` when `pr_creation.completed` is absent; exclude rows without a non-placeholder timestamped start from the sample (PD-4). Aggregate `n`, median, min, max; `p90_h` only when n ≥ 10 by nearest-rank, else `null` with the suppression stated.
+6. **CI failure session proxy.** A row is observed only when a committed pm-notes or evidence artifact records a CI outcome. Classify `ci_outcome` as `red` (failure recorded, no subsequent green on that change), `mixed` (failure and later green recorded), `green` (only green recorded), or `null` (not observed). Every observation is an `ci_observations[]` row (`artifact`, `anchor`, `outcome`, `checks_affected`). `numerator = count(red or mixed)`; `denominator = count(ci_observed: true)`; `value` ratio at 6 decimals; `measurement_kind: session_proxy`; unobserved changes are counted in `excluded_unobserved` with reason `no_ci_observation`; `limitation` names the absent committed run log and states that unobserved changes are excluded, never assumed green.
+7. **False-signal incidents.** Curate one row per distinct incident or root cause per change from committed pm-notes/evidence; collapse repeated mentions; one root cause across several checks is one row with `checks_affected`. Classes are exactly `local-green-ci-red`, `false-success-exit-zero`, `skipped-read-as-green`, `green-gate-later-failed`, `lying-liveness`. Cite `artifact` + `anchor` for every row. GH-179's corpus-vs-rule defect is excluded (not a delivery-signal lie). An `unparseable_yaml` change contributes no incident from its unparseable file but may contribute an incident curated from its committed evidence. The spec's GH-170…GH-177 list is illustrative; curate every committed record under the inclusion rule. The total is the number of rows; state that it is a curated floor.
+8. **Statuses.** `UNAVAILABLE` when the sample is empty or the required source is absent (`value: null` + `missing_source`); `PARTIAL` when at least one sample row could not be examined/observed or a required field was missing (report the counts), and always `PARTIAL` for a time metric whose corpus contains an `unparseable_yaml` or `placeholder_zero_time` change; `MEASURED` only when the metric's stated corpus was fully examined with no missing required input. Do not pre-label a metric; derive the status from the rule. For the CI metric, unobserved rows make the status `PARTIAL`; do not present a per-run rate.
 9. **Recompute-and-compare (before commit).** Execute the test-plan reference procedures TC-MEAS-005…TC-MEAS-009 against the written YAML: every per-change duration, pair counter, ratio, aggregate, and class count must reproduce at the recorded precision (0 mismatches); every cited path must exist at `SRC`; every anchor must resolve. A mismatch is a defect — fix the YAML, never the source.
 
 **Gate battery (run at Phase 9 and again at Phase 13 on the pushed HEAD)**:
@@ -119,9 +122,9 @@ The authoritative formulas are spec §5.1 F-4; the authoritative recompute proce
 | 7 | `docs(GH-186): add bash-era measurement baseline log and register it` |
 | 8 | `docs(GH-186): link baseline and decision IDs from planning docs` |
 | 9 | none (read-only verification battery) |
-| 10 | none (independent review) |
-| 11 | conditional: `docs(GH-186): address review findings` |
-| 12 | `docs(GH-186): sync system spec and glossary with decision and baseline artifacts` |
+| 10 | `docs(GH-186): sync system spec and glossary with decision and baseline artifacts` |
+| 11 | none (independent review) |
+| 12 | conditional: `docs(GH-186): address review findings` |
 | 13 | none (finalize; PR handoff) |
 
 ### Open questions
@@ -139,8 +142,8 @@ The authoritative formulas are spec §5.1 F-4; the authoritative recompute proce
 - **F-3** — ODR-0003 content plus the annotation-only `v0 → v1` promotion of `doc/planning/oss-tooling/cli-command-registry.md`; zero renames (Phases 2 and 5).
 - **F-4** — `doc/planning/oss-tooling/measurement-baseline.yaml` per DM-2, with the four metrics, window, spine, sources, statuses, and comparison protocol (Phases 6–7).
 - **F-5** — index rows for ADR-0008/0009/ODR-0002/0003, the TDR-0005 and PDR-0002 repairs, and register links from the index and README (Phase 4).
-- **F-6 delivery-side** — planning cross-links: `doc/planning/oss-tooling/README.md`, `doc/planning/concepts/id-prefix-catalog.md`, `doc/planning/concepts/agent-primitive-surface.md` (Phase 8); current-truth sync is the Phase-12 handoff.
-- **DEC-13** — data-only registration of the new user-facing docs (Phase 7 registers the YAML; Phase 12 registers the feature spec in the same commit that creates it).
+- **F-6 delivery-side** — planning cross-links: `doc/planning/oss-tooling/README.md`, `doc/planning/concepts/id-prefix-catalog.md`, `doc/planning/concepts/agent-primitive-surface.md` (Phase 8); current-truth sync is the Phase-10 handoff.
+- **DEC-13** — data-only registration of the new user-facing docs (Phase 7 registers the YAML; Phase 10 registers the feature spec in the same commit that creates it).
 - **Change folder** — this change's spec, test plan, plan, and delivery evidence under `doc/changes/2026-10/2026-10-31--GH-186--decision-records-measurement-baseline/`.
 
 ### Out of Scope
@@ -153,7 +156,7 @@ The authoritative formulas are spec §5.1 F-4; the authoritative recompute proce
 - Rewriting historical pm-notes, evidence files, change artifacts, or git history (NG-6).
 - Renaming `PDR-0002-mode-aware-spec-coverage-resolution.md` or fixing unrelated pre-existing doc defects (NG-7).
 - Changing the fixed window, estimating missing values, or presenting a proxy as a complete measurement (NG-9).
-- Authoring `doc/spec/**` current truth in delivery phases; Phase 12 owns it (PD-10).
+- Authoring `doc/spec/**` current truth in delivery phases; Phase 10 (`@doc-syncer`) owns it (PD-10).
 
 ### Constraints
 
@@ -165,7 +168,7 @@ The authoritative formulas are spec §5.1 F-4; the authoritative recompute proce
 - **Repository-local log (C-7)**: the baseline lives under `doc/planning/oss-tooling/`, is tracked, and is never under `.ai/local/**`.
 - **Prefix discipline (C-8)**: IDs re-checked next-free before authoring; `MET-` adopted by ODR-0002; change-local IDs stay local; no number reused.
 - **Forbidden literals (C-10, NFR-10)**: both new user-facing docs are registered when they exist; neither carries a delimited `ados`, `ADOS_`, or `~/.ados` occurrence on a non-allowlisted line. The YAML has no front-matter header block, so it must carry **zero** occurrences; the feature spec must avoid the working-name literal and use "the CLI".
-- **Doc-distribution markers (NFR-6)**: `doc/decisions/00-index.md` keeps `ados_distribution: project-generated`; `doc/decisions/README.md` keeps `ados_distribution: redistributable`; `doc/00-index.md` keeps its marker when Phase 12 edits it. `00-register.md` carries `project-generated` even though it is not in the guard's scan set.
+- **Doc-distribution markers (NFR-6)**: `doc/decisions/00-index.md` keeps `ados_distribution: project-generated`; `doc/decisions/README.md` keeps `ados_distribution: redistributable`; `doc/00-index.md` keeps its marker when Phase 10 edits it; the new `doc/spec/features/feature-measurement-baseline.md` carries `ados_distribution: internal` inside its existing frontmatter block (sibling feature specs; AC-F6-1). `00-register.md` carries `project-generated` even though it is not in the guard's scan set.
 - **Commits (PD-9)**: one Conventional Commit per writing phase, scope `GH-186`, ≤ 100-char body lines; explicit staging lists; no PM-owned or scratch files.
 
 **Do-not guardrails (explicit)**:
@@ -192,7 +195,7 @@ The authoritative formulas are spec §5.1 F-4; the authoritative recompute proce
 | RSK-5 | Index repair expands beyond the two named defects | M | L | PD-7 and the row-set diff (task 4.5); PDR-0002 file untouched |
 | RSK-6 | The AI self-accepts a record | H | L | Front-matter and diff guards (`Proposed`, `decision_date: null`, zero `Accepted` additions) in tasks 2.5 and 9.1 |
 | RSK-4 | The lock freezes a latent naming defect | M | L | The v0 naming audit already applied four deferred renames; the lock is prospective and a later rename needs a superseding record plus a code change |
-| RSK-9 | The new measurement feature spec becomes a second source of truth | M | L | Phase 12 specifies contract-only content and a no-values check (TC-SYNC-002) |
+| RSK-9 | The new measurement feature spec becomes a second source of truth | M | L | Phase 10 specifies contract-only content and a no-values check (TC-SYNC-002) |
 | Measurement drift | Recomputation disagrees with the recorded numbers | H | M | Reference procedures TC-MEAS-005…009 run before commit (task 7.6) and again at Phase 9/13; 0 tolerance, fix the YAML not the source |
 | Missing-source drift | A cited path does not exist at `source_commit` | H | L | `git cat-file -e "$SRC:<path>"` over the full cited set (task 7.6); unpublished/scratch logs are never sources |
 
@@ -207,7 +210,7 @@ The authoritative formulas are spec §5.1 F-4; the authoritative recompute proce
 
 ## Phases
 
-Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 (conditional) → 12 → 13**. Phases 2–8 are writing phases, each ending in exactly one commit via `@committer`; Phases 1, 6, 9, and 10 are read-only and end with recorded evidence. A red gate blocks the phase commit — stop at the last green task boundary and report.
+Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 (doc-sync) → 11 (review) → 12 (conditional remediation) → 13 (finalize)**. This matches lifecycle phase 6 delivery → phase 7 system_spec_update → phase 8 review_fix → phase 9 quality_gates → phase 10 dod_check → phase 11 pr_creation, and spec §18. Writing phases 2–8 and 10 each end in exactly one commit via `@committer`; Phases 1, 6, 9, and 11 are read-only and end with recorded evidence; Phase 12 commits only if review findings are accepted. A red gate blocks the phase commit — stop at the last green task boundary and report.
 
 ### Phase 1: Grounding, ID re-verification, and green baseline
 
@@ -379,9 +382,9 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 →
 
 **Tasks**:
 
-- [ ] **6.1** Pin `SRC="$(git rev-parse HEAD)"` (full 40-hex) and enumerate the committed pm-notes corpus at `SRC` per the procedure step 1; record the count and any delta from the spec-time 41. Confirm every source is committed (no `tmp/**`, `.ai/local/**`, or URL).
-- [ ] **6.2** Parse every pm-notes `phases` map and classify all 11 pairs per PD-3; compute included durations at 1 decimal; confirm the counter conservation per change. Stop and escalate on any negative duration (never clamp).
-- [ ] **6.3** Build the per-change spine per PD-4: one row per pm-notes file, GH-186 excluded as `baseline_change`, every excluded change given a pinned reason, every included row carrying its counters, durations, cycle time, censoring flag, CI fields, and incident rows.
+- [ ] **6.1** Pin `SRC="$(git rev-parse HEAD)"` (full 40-hex) and enumerate the committed pm-notes and evidence corpus at `SRC` per procedure step 1; re-derive the spec-time census (41 pm-notes / 40 parseable / 30 time-bearing / 24 real-time / 10 date-only-only / 1 unparseable / 6 placeholder-only / 23 time-metric changes after excluding GH-186; 5 evidence) and record any delta. Confirm every source is committed (no `tmp/**`, `.ai/local/**`, or URL).
+- [ ] **6.2** Parse, normalize, and classify every pm-notes file per DEC-14/PD-3: parse one YAML document, normalize YAML-native `date`/`datetime` scalars to ISO-8601, classify all 11 pairs (date-only, placeholder zero-time, missing, included), compute included durations at 1 decimal, and confirm counter conservation per change. A document-level parse failure becomes an `unparseable_yaml` row (task 6.3), not a crash; stop and escalate only on a negative duration (never clamp).
+- [ ] **6.3** Build the per-change spine per PD-4: one row per pm-notes file, GH-186 excluded as `capture_change`, GH-171 as its own `unparseable_yaml` row counted in `changes_excluded`, every other excluded change given exactly one reason from the closed vocabulary, and every included row carrying its counters, durations, cycle time, censoring flag, CI fields, and incident rows.
 - [ ] **6.4** Compute `MET-CEREMONY-SHARE`: per-row ceremony/total hours, numerator/denominator as sums of the recorded rows, ratio at 6 decimals, percent derived only; record the overlap caveat.
 - [ ] **6.5** Compute `MET-CYCLE-TIME`: per-row span, censoring fallback, sample n, median/min/max, and p90 only when n ≥ 10 by nearest-rank (PD-5).
 - [ ] **6.6** Extract CI observations and compute `MET-CI-FAILURE-RATE`: every observation with artifact + anchor + outcome + checks_affected; numerator/denominator/value; unobserved rows counted in `excluded_unobserved`; the session-proxy limitation recorded.
@@ -391,8 +394,8 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 →
 **Acceptance Criteria**:
 
 - Must: every number is computed from committed evidence at the pinned `SRC`; no estimate, interpolation, or invented denominator (C-5).
-- Must: the corpus, inclusion/exclusion reasons, pair counters, and sample scopes are complete and internally conserving (NFR-7 precondition).
-- Must: any source defect (negative duration, unparsable phase map, missing source) is escalated rather than papered over.
+- Must: the corpus, inclusion/exclusion reasons, pair counters, and sample scopes are complete and internally conserving under the closed vocabulary (NFR-7 precondition, DEC-14).
+- Must: a negative duration or missing cited source is escalated rather than papered over; a document-level unparseable file is a named and counted `unparseable_yaml` row, never dropped or zero-filled.
 - Should: the worksheet is sufficient for a second person to reproduce every number without re-deriving the rules.
 
 **Files and modules**:
@@ -418,14 +421,14 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 →
 - [ ] **7.2** Write the `changes:` spine rows per DM-2 with every key present (explicit `null` where unused), each `pm_notes` path pointing at the committed artifact, each `ci_observations[]`/`false_signal_incidents[]` row carrying `artifact` + `anchor` and the required fields. The spine is the source of every aggregate; no aggregate may be unreproducible from it.
 - [ ] **7.3** Write the four `metrics:` rows per DM-2 with `id`, `name`, `status`, `measurement_kind`, `definition`, `formula`, `unit`, `window`, `sources`, `sample` (all seven counters), `numerator`, `denominator`, `value`, `aggregates` (`median_h`, `min_h`, `max_h`, `p90_h`, plus `by_class` for the false-signal count), `limitation`, `direction`, `comparison_note`, and `missing_source` only when `UNAVAILABLE`. Ratio metrics use `unit: ratio` and a 0–1 `value`; no percent field.
 - [ ] **7.4** Register the new YAML in `scripts/checks/forbidden-literals.registry.json` in the **same commit** (PD-1): add exactly `"doc/planning/oss-tooling/measurement-baseline.yaml"` to `registered` in sorted position. Do not touch `corpusBaseline`, `scopeClasses`, `seedLiterals`, `allowlist`, or any other key.
-- [ ] **7.5** Parse and schema-check the YAML: it parses as a mapping; all required top-level and row keys exist; the window strings are exact; the `change` mapping is not a bare string; the four `MET-` IDs are exactly present; `source_commit` is 40-hex and reachable.
+- [ ] **7.5** Parse and schema-check the YAML: it parses as a mapping; all required top-level and row keys exist; the window strings are exact; the `change` mapping is not a bare string; the four `MET-` IDs are exactly present; `source_commit` is 40-hex and reachable; GH-186 is `capture_change`, GH-171 is its own `unparseable_yaml` row, every `excluded_reason` is in the closed vocabulary, and `changes_parsed = changes_included + changes_excluded`.
 - [ ] **7.6** Run the recompute-and-compare pass (procedure step 9; TC-MEAS-003/004/005/006/007/008/009/010/011): 0 mismatches; every cited path exists at `SRC`; every anchor resolves; no forbidden source appears (`tmp/`, `.ai/local/`, URLs); `git diff --quiet "$SRC" HEAD -- <cited>` shows only GH-186 artifacts changed.
-- [ ] **7.7** Run `bun run scripts/checks/forbidden-literals.ts` (exit 0), `bun run scripts/checks/privacy-literals.ts`, and a delimited seed-literal scan of the new YAML; the YAML has no allowlisted header lines, so it must contain **zero** occurrences of `ados`, `ADOS_`, or `~/.ados`. Record the handoff: `feature-measurement-baseline.md` is registered by Phase 12 in the commit that creates it (PD-1).
+- [ ] **7.7** Run `bun run scripts/checks/forbidden-literals.ts` (exit 0), `bun run scripts/checks/privacy-literals.ts`, and a delimited seed-literal scan of the new YAML; the YAML has no allowlisted header lines, so it must contain **zero** occurrences of `ados`, `ADOS_`, or `~/.ados`. Record the handoff: `feature-measurement-baseline.md` is registered by Phase 10 (doc-sync) in the same commit that creates it (PD-1); nothing is pre-registered here beyond the YAML.
 - [ ] **7.8** Commit via `@committer` after all checks are green. Record TC-MEAS-001/002 and the recompute evidence.
 
 **Acceptance Criteria**:
 
-- Must: the log exists at the pinned path, parses, carries all DM-2 keys, a reachable 40-hex `source_commit`, the exact window, GH-186 excluded, and the four `MET-` IDs (AC-F4-1, AC-F4-5, NFR-4, C-7).
+- Must: the log exists at the pinned path, parses, carries all DM-2 keys, a reachable 40-hex `source_commit`, the exact window, GH-186 excluded as `capture_change`, GH-171 present as its own `unparseable_yaml` row, the closed exclusion vocabulary only, and the four `MET-` IDs (AC-F4-1, AC-F4-5, NFR-4, C-7, DEC-14).
 - Must: every metric row has definition/formula/unit/window/sources/status/value/sample/direction; every non-null number is cited; every change and incident row resolves (AC-F4-2, NFR-1).
 - Must: ratio metrics and aggregates reproduce exactly on recomputation; p90 nearest-rank and censor rules honoured (AC-F4-3, NFR-7).
 - Must: UNAVAILABLE/PARTIAL semantics honoured; CI is `session_proxy` with the absent-run-log limitation (AC-F4-4, C-5).
@@ -477,7 +480,7 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 →
 
 ### Phase 9: Delivery verification battery
 
-**Goal**: Prove the delivered tree satisfies every delivery-side AC and every hard negative constraint before review, with recorded commands and HEADs.
+**Goal**: Prove the delivered tree satisfies every delivery-side AC and every hard negative constraint before doc-sync and review, with recorded commands and HEADs.
 
 **Tasks**:
 
@@ -487,7 +490,7 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 →
 - [ ] **9.4** Literal gates and registry scope: `bun run scripts/checks/forbidden-literals.ts` exit 0; `bun run scripts/checks/privacy-literals.ts` exit 0; `git diff "$BASE"...HEAD -- scripts/checks/forbidden-literals.registry.json` shows only the `registered` addition; `corpusBaseline`, `scopeClasses`, `seedLiterals`, and `allowlist` byte-identical (RSK-10).
 - [ ] **9.5** Baseline validity and link integrity: YAML parse + DM-2 key assertions; every changed link/anchor resolves (index, register, README, records, planning docs); the register's 8/8 bindings and the index's ordered rows re-checked.
 - [ ] **9.6** Re-run the recompute-and-compare pass at the final HEAD (TC-MEAS-003…011) and confirm 0 mismatches and 0 unresolved citations.
-- [ ] **9.7** AC sweep: map every delivery-side AC to its evidence (all 21 except the feature-spec halves of AC-F6-1/AC-C10-1, which are Phase-12 obligations); record the sweep and the exact HEAD in the Execution Log. No commit.
+- [ ] **9.7** AC sweep: map every delivery-side AC to its evidence (all 21 except the feature-spec halves of AC-F6-1/AC-C10-1, which are Phase-10 doc-sync obligations); record the sweep and the exact HEAD in the Execution Log. No commit.
 
 **Acceptance Criteria**:
 
@@ -504,23 +507,59 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 →
 
 - TC-GATE-001, TC-GATE-002, TC-GATE-003, TC-GATE-004, TC-GATE-005, TC-GATE-006; TC-SYNC-004; TC-MEAS-003…011 re-run; TC-DEC-001/010/015 re-check.
 
-**Completion signal**: state — full delivery battery green at the recorded HEAD; hand off to review.
+**Completion signal**: state — full delivery battery green at the recorded HEAD; hand off to Phase 10 doc-sync.
 
 ---
 
-### Phase 10: Code Review (Analysis) — lifecycle phase 8; PM-scheduled
+### Phase 10: Documentation and spec synchronization — lifecycle phase 7; `@doc-syncer`; PM-scheduled
 
-**Goal**: Independent adversarial audit of the delivered artifacts against the spec, test plan, and this plan, without editing content during analysis.
+**Goal**: Reconcile current truth with the delivered decisions, register, and baseline, without restating baseline values; produce the final current-truth artifacts that Phase 11 reviews.
 
 **Tasks**:
 
-- [ ] **10.1** PM delegates the independent review to `@reviewer` after the delivery handoff: trace all 21 ACs and 37 TCs to delivered files/rows/numbers and recorded evidence; re-run the ID, status, binding, index-diff, and recompute checks personally.
-- [ ] **10.2** Verify the review-dominant ACs per test-plan §3.1: AC-F2-2 semantic completeness per record; AC-F1-2 no-redecision judgment; AC-F4-3/4/5 interpretation of proxies; AC-PROC-1 pending-acceptance wording.
-- [ ] **10.3** Record the verdict through the review artifact workflow; route content findings to Phase 11 and any challenge to a PD pin or the spec to the PM/`@decision-advisor` — never a silent alternative.
+- [ ] **10.1** Create `doc/spec/features/feature-measurement-baseline.md` per `doc/templates/feature-spec-template.md`: the log path, schema, four `MET-` IDs, MEASURED/PARTIAL/UNAVAILABLE semantics, source-traceability rule, fixed window, and comparison protocol. Pin `ados_distribution: internal` inside its existing frontmatter block (AC-F6-1; sibling feature specs). It points to the log as canonical data, references this plan (`chg-GH-186-plan.md`) as the delivery plan, and **does not restate values**. Register it in `scripts/checks/forbidden-literals.registry.json` in the **same commit** (PD-1) and keep it literal-clean (generic "the CLI", no working-name literal).
+- [ ] **10.2** Update `doc/spec/features/feature-decision-records.md`: add the foundational register to the component map, add a short ID-scheme/project-catalog pointer to ODR-0002 and the catalog concept, and update its `links`.
+- [ ] **10.3** Update `doc/overview/glossary.md` with the new terms (foundational decision register, decision binding, command-name lock, per-type decision ranges, `MET-`, measurement baseline log, ceremony share, cycle time, CI failure session proxy, false-signal incident, source traceability, UNAVAILABLE, baseline window).
+- [ ] **10.4** Update `doc/00-index.md` with the measurement baseline spec row; keep its `ados_distribution` marker and existing structure.
+- [ ] **10.5** Add the harness-contract pointer to `doc/spec/features/feature-adapter-ports.md` (recorded in ADR-0008; implemented in M1-S11).
+- [ ] **10.6** Verify mechanically: no metric value is restated in the feature spec (TC-SYNC-002); `ados_distribution: internal` is inside the feature spec's existing frontmatter block; every new/changed link resolves; `bun run scripts/checks/forbidden-literals.ts` exits 0 with both new docs registered; doc-distribution guard green (markers intact).
+- [ ] **10.7** Run the AC sweep for the doc-sync deliverables: AC-F6-1 in full (`feature-decision-records.md` register + ODR-0002 pointer; `feature-measurement-baseline.md` exists with `ados_distribution: internal`, is staged with its `registered` entry for the same commit, and states path/schema/metric IDs/status semantics/source rule/window/comparison protocol without values; glossary, `doc/00-index.md`, planning README, id-prefix-catalog status, primitive-term pointer, adapter-ports harness pointer) and the feature-spec half of AC-C10-1 (same-commit staging, check exit 0, zero delimited seed literals). Record TC-SYNC-001/002/003/004/005 evidence and the pre-commit HEAD in the Execution Log.
+- [ ] **10.8** Commit via `@committer` with the feature spec and its `registered` entry in the **same commit** (PD-1). Record the final AC-F6-1/AC-C10-1 evidence at the commit HEAD and hand off to Phase 11.
+
+**Acceptance Criteria**:
+
+- Must: all nine named current-truth touch points are reconciled or explicitly recorded unchanged (AC-F6-1).
+- Must: the feature spec states the contract, not the values; it carries `ados_distribution: internal`; both new user-facing docs are registered in the commit that creates them and literal-clean (AC-C10-1 complete, NFR-10).
+- Must: no other current-truth or historical artifact is rewritten (AC-C2-1, C-9).
+- Must: AC-F6-1 and the feature-spec half of AC-C10-1 are evidenced before Phase 11 review, not deferred to it.
+
+**Files and modules**:
+
+- Code areas: none.
+- System docs: `doc/spec/features/feature-measurement-baseline.md` (new, `ados_distribution: internal`), `doc/spec/features/feature-decision-records.md` (updated), `doc/overview/glossary.md` (updated), `doc/00-index.md` (updated), `doc/spec/features/feature-adapter-ports.md` (updated), `scripts/checks/forbidden-literals.registry.json` (updated — second `registered` entry in the same commit).
+
+**Tests**:
+
+- TC-SYNC-001, TC-SYNC-002, TC-SYNC-003, TC-SYNC-004, TC-SYNC-005; TC-GATE-005 (complete); doc-distribution gate.
+
+**Completion signal**: `docs(GH-186): sync system spec and glossary with decision and baseline artifacts`
+
+---
+
+### Phase 11: Code Review (Analysis) — lifecycle phase 8; PM-scheduled
+
+**Goal**: Independent adversarial audit of the delivered artifacts — including the Phase-10 doc-sync output — against the spec, test plan, and this plan, without editing content during analysis.
+
+**Tasks**:
+
+- [ ] **11.1** PM delegates the independent review to `@reviewer` after the Phase-10 doc-sync handoff: trace all 21 ACs and 37 TCs to delivered files/rows/numbers and recorded evidence, explicitly including AC-F6-1 and the feature-spec half of AC-C10-1 produced in Phase 10; re-run the ID, status, binding, index-diff, link, and recompute checks personally.
+- [ ] **11.2** Verify the review-dominant ACs per test-plan §3.1: AC-F2-2 semantic completeness per record; AC-F1-2 no-redecision judgment; AC-F4-3/4/5 interpretation of proxies and the DEC-14 closed vocabulary; AC-F6-1 contract-only current truth and `ados_distribution: internal`; AC-C10-1 same-commit registration of both docs; AC-PROC-1 pending-acceptance wording.
+- [ ] **11.3** Record the verdict through the review artifact workflow; route content findings to Phase 12 and any challenge to a PD pin or the spec to the PM/`@decision-advisor` — never a silent alternative.
 
 **Acceptance Criteria**:
 
 - Must: a traceable PASS or actionable findings; no fabricated evidence; no severity downgrade to pass the gate.
+- Must: all 21 ACs and 37 TCs are traced after the phase that produces them; a PASS certifies the post-doc-sync current truth.
 
 **Files and modules**:
 
@@ -531,19 +570,19 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 →
 
 - Evidence inspection for all 37 TCs; `@runner` reproduces questionable evidence instead of assuming a pass.
 
-**Completion signal**: state — independent verdict recorded; PASS advances to Phase 12 with Phase 11 not required; findings activate Phase 11.
+**Completion signal**: state — independent verdict recorded; PASS advances to Phase 13 with Phase 12 not required; findings activate Phase 12.
 
 ---
 
-### Phase 11: Post-review remediation (conditional; PM-scheduled)
+### Phase 12: Post-review remediation (conditional; lifecycle phase 8; PM-scheduled)
 
 **Goal**: Close accepted findings with the smallest docs-only fix, without duplication regression, scope expansion, or gate weakening.
 
 **Tasks**:
 
-- [ ] **11.1** If findings exist: reproduce each through the corresponding TC step, then apply the smallest fix in the affected named file; keep the register binding-only and the feature spec contract-only.
-- [ ] **11.2** Re-run the affected Phase-9 subset (diff scope, doc-distribution, literal gates, YAML/recompute, links) and update the Execution Log; commit via `@committer` as `docs(GH-186): address review findings` when files changed.
-- [ ] **11.3** PM delegates independent re-review until PASS; if no findings, record the phase not-required backed by the Phase-10 PASS.
+- [ ] **12.1** If findings exist: reproduce each through the corresponding TC step, then apply the smallest fix in the affected named file; keep the register binding-only and the feature spec contract-only.
+- [ ] **12.2** Re-run the affected Phase-9 subset (diff scope, doc-distribution, literal gates, YAML/recompute, links) plus the Phase-10 doc-sync checks (feature-spec marker, same-commit registration, link resolution), update the Execution Log, and commit via `@committer` as `docs(GH-186): address review findings` when files changed.
+- [ ] **12.3** PM delegates independent re-review until PASS; if no findings, record the phase not-required backed by the Phase-11 PASS.
 
 **Acceptance Criteria**:
 
@@ -552,46 +591,13 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 →
 **Files and modules**:
 
 - Code areas: none.
-- System docs: only the affected Phase 2–8 files (docs-only fixes).
+- System docs: only the affected Phase 2–8 and Phase 10 files (docs-only fixes).
 
 **Tests**:
 
 - Re-run the failing TC steps, then the Phase-13 final battery.
 
-**Completion signal**: reviewer PASS after fixes, or explicit not-required state backed by the Phase-10 PASS.
-
----
-
-### Phase 12: Documentation and spec synchronization — lifecycle phase 7; `@doc-syncer`; PM-scheduled
-
-**Goal**: Reconcile current truth with the delivered decisions, register, and baseline, without restating baseline values.
-
-**Tasks**:
-
-- [ ] **12.1** Create `doc/spec/features/feature-measurement-baseline.md` per `doc/templates/feature-spec-template.md`: the log path, schema, four `MET-` IDs, MEASURED/PARTIAL/UNAVAILABLE semantics, source-traceability rule, fixed window, and comparison protocol. It points to the log as canonical data and **does not restate values**. Register it in `scripts/checks/forbidden-literals.registry.json` in the **same commit** (PD-1) and keep it literal-clean (generic "the CLI", no working-name literal).
-- [ ] **12.2** Update `doc/spec/features/feature-decision-records.md`: add the foundational register to the component map, add a short ID-scheme/project-catalog pointer to ODR-0002 and the catalog concept, and update its `links`.
-- [ ] **12.3** Update `doc/overview/glossary.md` with the new terms (foundational decision register, decision binding, command-name lock, per-type decision ranges, `MET-`, measurement baseline log, ceremony share, cycle time, CI failure session proxy, false-signal incident, source traceability, UNAVAILABLE, baseline window).
-- [ ] **12.4** Update `doc/00-index.md` with the measurement baseline spec row; keep its `ados_distribution` marker and existing structure.
-- [ ] **12.5** Add the harness-contract pointer to `doc/spec/features/feature-adapter-ports.md` (recorded in ADR-0008; implemented in M1-S11).
-- [ ] **12.6** Verify: no metric value is restated in the feature spec (TC-SYNC-002); every new/changed link resolves; `bun run scripts/checks/forbidden-literals.ts` exit 0 with both new docs registered; doc-distribution guard green (markers intact).
-- [ ] **12.7** Commit via `@committer`. Record TC-SYNC-001/002/003/004/005 and the final AC-F6-1/AC-C10-1 evidence.
-
-**Acceptance Criteria**:
-
-- Must: all nine named current-truth touch points are reconciled or explicitly recorded unchanged (AC-F6-1).
-- Must: the feature spec states the contract, not the values; both new user-facing docs are registered and literal-clean (AC-C10-1 complete, NFR-10).
-- Must: no other current-truth or historical artifact is rewritten (AC-C2-1, C-9).
-
-**Files and modules**:
-
-- Code areas: none.
-- System docs: `doc/spec/features/feature-measurement-baseline.md` (new), `doc/spec/features/feature-decision-records.md` (updated), `doc/overview/glossary.md` (updated), `doc/00-index.md` (updated), `doc/spec/features/feature-adapter-ports.md` (updated), `scripts/checks/forbidden-literals.registry.json` (updated — second `registered` entry).
-
-**Tests**:
-
-- TC-SYNC-001, TC-SYNC-002, TC-SYNC-003, TC-SYNC-004, TC-SYNC-005; TC-GATE-005 (complete); doc-distribution gate.
-
-**Completion signal**: `docs(GH-186): sync system spec and glossary with decision and baseline artifacts`
+**Completion signal**: reviewer PASS after fixes, or explicit not-required state backed by the Phase-11 PASS.
 
 ---
 
@@ -603,7 +609,7 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 →
 
 - [ ] **13.1** Version decision: **none** — `version_impact: none`, docs-only plus one data edit, zero `packages/**` changes, therefore no `.changeset/` entry and no version hand-bump. Record the decision in the PR description.
 - [ ] **13.2** Spec reconciliation: confirm the delivered tree matches spec §5.1/§7.1 (records, register, index, registry, log, cross-links, current truth); record any residual drift for the PM rather than rewriting the spec.
-- [ ] **13.3** Final battery on the **pushed HEAD**: re-run the full gate battery from the procedure table, plus `git status --porcelain` clean; record the CI results for the pushed SHA.
+- [ ] **13.3** Final battery on the **pushed HEAD**: re-run the full gate battery from the procedure table; record the CI results for the pushed SHA. Working-tree assertion: the **only** permitted dirty or untracked paths are PM-owned `.ai/local/**` and the change-folder `chg-GH-186-pm-notes.yaml` (the PM commits it at phase boundaries); every other path must be clean, and the plan/coder must not stage either permitted path. Fail if any other dirty/untracked path exists or if the plan/coder staged a PM-owned path. Do not require an impossible fully-clean tree.
 - [ ] **13.4** DoD check: all 21 ACs have passing traceable evidence; all plan tasks are complete or explicitly not-required; the rollback statement still holds.
 - [ ] **13.5** Hand off to `@pr-manager`: one PR from the feature branch to `main-tools`, assigned to the owner, describing the four `Proposed` records, the eight register bindings, the four baseline metrics and their statuses, the data-only registry edits, and that merge does **not** auto-accept a record. **STOP at the open unmerged PR.**
 
@@ -633,13 +639,13 @@ All 37 TCs map to phases. TC details, preconditions, and expected outcomes are a
 |---|---|---|---|
 | TC-DEC-001 | Exactly four new records with next-free IDs | AC-F2-1, C-8 | 1 (ID check), 2, 9 |
 | TC-DEC-002 | Front matter, `Proposed`, no acceptance, lineage | AC-F2-1, AC-PROC-1, C-3, DM-4 | 2, 9 |
-| TC-DEC-003 | Template/R2 conformance | AC-NFR2-1, NFR-2, DM-4 | 2, 10 |
-| TC-DEC-004 | ADR-0008 harness content complete | AC-F2-2 | 2, 10 |
-| TC-DEC-005 | ADR-0009 release-model content complete | AC-F2-2 | 2, 10 |
-| TC-DEC-006 | ODR-0002 ID-scheme/catalog content complete | AC-F2-2, C-8 | 2, 10 |
-| TC-DEC-007 | ODR-0003 naming rules/confirmations/freeze | AC-F2-2, AC-F3-2, DM-3 | 2, 10 |
+| TC-DEC-003 | Template/R2 conformance | AC-NFR2-1, NFR-2, DM-4 | 2, 11 |
+| TC-DEC-004 | ADR-0008 harness content complete | AC-F2-2 | 2, 11 |
+| TC-DEC-005 | ADR-0009 release-model content complete | AC-F2-2 | 2, 11 |
+| TC-DEC-006 | ODR-0002 ID-scheme/catalog content complete | AC-F2-2, C-8 | 2, 11 |
+| TC-DEC-007 | ODR-0003 naming rules/confirmations/freeze | AC-F2-2, AC-F3-2, DM-3 | 2, 11 |
 | TC-DEC-008 | Register exists with DM-1 schema and eight rows | AC-F1-1, DM-1, NFR-8 | 3, 9 |
-| TC-DEC-009 | Register bindings exact, anchors exist, no duplication | AC-F1-1, AC-F1-2, AC-PROC-1, NFR-8, C-6 | 3, 9, 10 |
+| TC-DEC-009 | Register bindings exact, anchors exist, no duplication | AC-F1-1, AC-F1-2, AC-PROC-1, NFR-8, C-6 | 3, 9, 11 |
 | TC-DEC-010 | Existing decision bodies unmodified | AC-F1-2, AC-C2-1, C-2, C-6 | 2 (baseline), 9 |
 | TC-DEC-011 | Index gains four correct, ordered, linked rows | AC-F5-1 | 4, 9 |
 | TC-DEC-012 | Index repairs TDR-0005/PDR-0002, nothing else | AC-F5-2, NFR-9, C-2 | 4, 9 |
@@ -650,54 +656,56 @@ All 37 TCs map to phases. TC details, preconditions, and expected outcomes are a
 | TC-MEAS-002 | DM-2 row schema complete for metrics/changes/incidents | AC-F4-1, AC-F4-2, NFR-4, DM-2 | 7, 9 |
 | TC-MEAS-003 | Every number cited; rows/anchors resolve | AC-F4-2, NFR-1 | 6, 7, 9 |
 | TC-MEAS-004 | Cited sources exist at `source_commit`; source hygiene | AC-F4-2, NFR-1, C-5, C-7 | 6, 7, 9 |
-| TC-MEAS-005 | Window, GH-186 exclusion, date-only counting, vocabulary | AC-F4-5, C-5 | 6, 7, 9 |
+| TC-MEAS-005 | Window, capture-change exclusion, corpus normalization, date-only/placeholder counting, closed vocabulary | AC-F4-5, DEC-14, C-5 | 6, 7, 9 |
 | TC-MEAS-006 | Ceremony share recomputes exactly | AC-F4-3, NFR-7 | 6, 7, 9 |
 | TC-MEAS-007 | Cycle time recomputes, censoring and aggregates | AC-F4-3, NFR-7 | 6, 7, 9 |
 | TC-MEAS-008 | CI failure rate recomputes (session proxy) | AC-F4-3, AC-F4-4, NFR-7 | 6, 7, 9 |
 | TC-MEAS-009 | False-signal count recomputes per class | AC-F4-3, AC-F4-4, NFR-7 | 6, 7, 9 |
 | TC-MEAS-010 | MEASURED/PARTIAL/UNAVAILABLE semantics honoured | AC-F4-4, C-5 | 6, 7, 9 |
 | TC-MEAS-011 | Comparison protocol and baseline immutability stated | AC-F4-5, NFR-7 | 7, 9 |
-| TC-SYNC-001 | `feature-decision-records.md` register + ID-scheme pointers | AC-F6-1 | 12 |
-| TC-SYNC-002 | `feature-measurement-baseline.md` states the contract, not values | AC-F6-1, NFR-2 | 12 |
-| TC-SYNC-003 | Glossary, `doc/00-index`, planning README, catalog, primitive, adapter-ports | AC-F6-1 | 8 (planning), 12 (spec/glossary) |
-| TC-SYNC-004 | All new/changed links resolve to files and anchors | AC-F5-3, NFR-3 | 3, 4, 8, 9, 12 |
-| TC-SYNC-005 | Sync bounded; no other artifact rewritten | AC-F6-1, AC-C2-1, C-9 | 8, 9, 12 |
+| TC-SYNC-001 | `feature-decision-records.md` register + ID-scheme pointers | AC-F6-1 | 10, 11 |
+| TC-SYNC-002 | `feature-measurement-baseline.md` states the contract, not values, and carries `ados_distribution: internal` | AC-F6-1, NFR-2 | 10, 11 |
+| TC-SYNC-003 | Glossary, `doc/00-index`, planning README, catalog, primitive, adapter-ports | AC-F6-1 | 8 (planning), 10 (spec/glossary), 11 |
+| TC-SYNC-004 | All new/changed links resolve to files and anchors | AC-F5-3, NFR-3 | 3, 4, 8, 9, 10, 11 |
+| TC-SYNC-005 | Sync bounded; no other artifact rewritten | AC-F6-1, AC-C2-1, C-9 | 8, 9, 10, 11 |
 | TC-GATE-001 | Diff scope: zero packages/tools, exactly one scripts data edit | AC-C1-1, C-1, DEC-13 | 9, 13 |
 | TC-GATE-002 | Diff hygiene and changed-path allowlist | AC-C1-1, AC-C2-1, C-1, C-9 | 9, 13 |
 | TC-GATE-003 | Doc-distribution guard (+ negative modes) passes | AC-NFR6-1, NFR-6 | 1 (baseline), 9, 13 |
 | TC-GATE-004 | Branch commits satisfy commitlint | AC-C1-1, NFR-6 | 9, 13 |
-| TC-GATE-005 | Forbidden-literal registration, DEC-13 scope, seed-literal compliance | AC-C1-1, AC-C10-1, AC-F6-1, NFR-10, C-10 | 1 (baseline), 7 (YAML), 9, 12 (spec), 13 |
+| TC-GATE-005 | Forbidden-literal registration, DEC-13 scope, seed-literal compliance | AC-C1-1, AC-C10-1, AC-F6-1, NFR-10, C-10 | 1 (baseline), 7 (YAML), 9, 10 (spec, same commit), 11, 13 |
 | TC-GATE-006 | Ancillary doc-set guard stays green | AC-NFR6-1, NFR-6 | 1 (baseline), 9, 13 |
 
 ### Coverage ledger — every AC
 
-| AC | Satisfied by (phase → evidence) |
-|---|---|
-| AC-F1-1 | Phase 3 (register 8 rows + anchor existence) → Phase 9 re-check; TC-DEC-008/009 |
-| AC-F1-2 | Phase 2 (no re-decision; four new files only) + Phase 9 diff of existing bodies; TC-DEC-009/010 |
-| AC-F2-1 | Phase 2 (four files, `Proposed`, null date, GH-186 link, acceptance statement); TC-DEC-001/002 |
-| AC-F2-2 | Phase 2 content-completeness audit per §5.1 F-2; TC-DEC-004/005/006/007 |
-| AC-F3-1 | Phase 5 (title/heading v1, banner ODR-0003+date, byte-identical tables); TC-DEC-014/015 |
-| AC-F3-2 | Phase 2 (ODR-0003 freeze rule + three confirmations) + Phase 5 (0 renames); TC-DEC-007/015 |
-| AC-F4-1 | Phase 7 (path, parse, top-level keys, 40-hex commit, `change` mapping, four IDs); TC-MEAS-001 |
-| AC-F4-2 | Phase 7 (row schema, citations, anchors); TC-MEAS-002/003/004 |
-| AC-F4-3 | Phases 6–7 (recompute; 0 tolerance); TC-MEAS-006/007/008/009 |
-| AC-F4-4 | Phase 7 (status matrix, `missing_source`, CI `session_proxy` limitation); TC-MEAS-008/010 |
-| AC-F4-5 | Phase 7 (exact window, GH-186 exclusion, date-only counts, comparison protocol); TC-MEAS-005/011 |
-| AC-F5-1 | Phase 4 (four correct ordered rows); TC-DEC-011 |
-| AC-F5-2 | Phase 4 (two repairs only); TC-DEC-012 |
-| AC-F5-3 | Phases 3–4 (register links, index/README) + Phase 9 link resolution; TC-DEC-013/TC-SYNC-004 |
-| AC-F6-1 | Phase 8 (planning prerequisites) + Phase 12 (feature spec, feature-decision-records, glossary, 00-index, adapter-ports); TC-SYNC-001/002/003/005 |
-| AC-C1-1 | Phase 7 (one registry data edit) + Phase 9 diff scope; TC-GATE-001/002/005 |
-| AC-C10-1 | Phase 7 (YAML registered + clean) + Phase 12 (feature spec registered + clean) + Phase 9/13 gates; TC-GATE-005 |
-| AC-C2-1 | Phase 9 (no existing record modified; no other change folder) + Phase 12 bounded sync; TC-DEC-010/TC-GATE-002/TC-SYNC-005 |
-| AC-NFR6-1 | Phases 1/9/13 (`test-doc-distribution.sh` exit 0); TC-GATE-003/006 |
-| AC-NFR2-1 | Phase 2 template/R2 conformance sweep; TC-DEC-003 |
-| AC-PROC-1 | Phase 2 status guard + Phase 3 register pending-acceptance wording; TC-DEC-002/009 |
+Each row names the phase that **produces** the AC evidence, the phase(s) that **verify** it after production, and the TCs. Phase 11 review re-verifies all 21 ACs and 37 TCs after doc-sync, and Phase 13 re-runs the gate battery on the pushed HEAD.
+
+| AC | Produced in | Verified after production | TCs |
+|---|---|---|---|
+| AC-F1-1 | Phase 3 (register 8 rows + anchor existence) | Phase 9 re-check; Phase 11 | TC-DEC-008/009 |
+| AC-F1-2 | Phase 2 (no re-decision; four new files only) + Phase 9 diff of existing bodies | Phase 9; Phase 11 | TC-DEC-009/010 |
+| AC-F2-1 | Phase 2 (four files, `Proposed`, null date, GH-186 link, acceptance statement) | Phase 9; Phase 11 | TC-DEC-001/002 |
+| AC-F2-2 | Phase 2 content-completeness audit per §5.1 F-2 | Phase 11 semantic review | TC-DEC-004/005/006/007 |
+| AC-F3-1 | Phase 5 (title/heading v1, banner ODR-0003+date, byte-identical tables) | Phase 9; Phase 11 | TC-DEC-014/015 |
+| AC-F3-2 | Phase 2 (ODR-0003 freeze rule + three confirmations) + Phase 5 (0 renames) | Phase 9; Phase 11 | TC-DEC-007/015 |
+| AC-F4-1 | Phase 7 (path, parse, top-level keys, 40-hex commit, `change` mapping, four IDs, one row per file) | Phase 9; Phase 11 | TC-MEAS-001 |
+| AC-F4-2 | Phase 7 (row schema, citations, anchors) | Phase 9; Phase 11 | TC-MEAS-002/003/004 |
+| AC-F4-3 | Phases 6–7 (normalize → classify → recompute; 0 tolerance) | Phase 9; Phase 11 | TC-MEAS-006/007/008/009 |
+| AC-F4-4 | Phase 7 (status matrix, `missing_source`, CI `session_proxy` limitation) | Phase 9; Phase 11 | TC-MEAS-008/010 |
+| AC-F4-5 | Phase 7 (exact window, `capture_change`, `unparseable_yaml`, date-only/placeholder counts, closed vocabulary, comparison protocol) | Phase 9; Phase 11 | TC-MEAS-005/011 |
+| AC-F5-1 | Phase 4 (four correct ordered rows) | Phase 9; Phase 11 | TC-DEC-011 |
+| AC-F5-2 | Phase 4 (two repairs only) | Phase 9; Phase 11 | TC-DEC-012 |
+| AC-F5-3 | Phases 3–4 (register links, index/README) | Phase 9 link resolution; Phase 11 | TC-DEC-013/TC-SYNC-004 |
+| AC-F6-1 | Phase 8 (planning prerequisites) + Phase 10 (feature spec with `ados_distribution: internal`, feature-decision-records, glossary, 00-index, adapter-ports) | Phase 10 AC sweep; Phase 11 review; Phase 13 | TC-SYNC-001/002/003/005 |
+| AC-C1-1 | Phase 7 (YAML registry entry) + Phase 10 (feature-spec registry entry) + Phase 9 diff scope | Phase 11; Phase 13 | TC-GATE-001/002/005 |
+| AC-C10-1 | Phase 7 (YAML registered + clean) + Phase 10 (feature spec registered in the same commit + clean) | Phase 10 same-commit proof; Phase 11; Phase 13 | TC-GATE-005 |
+| AC-C2-1 | Phase 9 (no existing record modified; no other change folder) + Phase 10 bounded sync | Phase 11 | TC-DEC-010/TC-GATE-002/TC-SYNC-005 |
+| AC-NFR6-1 | Phases 1/9/10/13 (markers and `test-doc-distribution.sh` exit 0) | Each listed phase | TC-GATE-003/006 |
+| AC-NFR2-1 | Phase 2 template/R2 conformance sweep | Phase 11 | TC-DEC-003 |
+| AC-PROC-1 | Phase 2 status guard + Phase 3 register pending-acceptance wording | Phase 9; Phase 11 | TC-DEC-002/009 |
 
 ### Definition of Done
 
-- [ ] All 21 ACs have passing, traceable evidence at the final HEAD (delivery-side in Phase 9; current-truth halves in Phase 12).
+- [ ] All 21 ACs have passing, traceable evidence at the final HEAD (delivery-side in Phase 9; current-truth in Phase 10 doc-sync; independently re-verified in Phase 11; re-gated in Phase 13).
 - [ ] Exactly four `Proposed` records; 0 `Accepted`; 0 decision dates; 0 existing bodies modified.
 - [ ] Register 8/8 topics; index 4 new rows + 2 repaired rows; 0 other pre-existing row changes; all links resolve.
 - [ ] Registry v1 annotation only; 0 table-row changes; 0 renames; `provider`, `provider-quota`, `DeliveryRequest` confirmed.
@@ -711,18 +719,18 @@ All 37 TCs map to phases. TC details, preconditions, and expected outcomes are a
 
 | Artifact | Location | Role / handling |
 |---|---|---|
-| Change specification (v1.1) | [chg-GH-186-spec.md](./chg-GH-186-spec.md) | Requirements source: F-1…F-6, DM-1…DM-4, C-1…C-10, NFR-1…NFR-10, 21 ACs, metrics/window |
-| Test plan (v1.1, 37 TCs) | [chg-GH-186-test-plan.md](./chg-GH-186-test-plan.md) | TC IDs, §5.2 procedures, §6 representation rules, §4 gate inventory |
-| This plan | `./chg-GH-186-plan.md` | The only file written by this authoring pass |
+| Change specification (v1.2) | [chg-GH-186-spec.md](./chg-GH-186-spec.md) | Requirements source: F-1…F-6, DM-1…DM-4, C-1…C-10, NFR-1…NFR-10, DEC-14, 21 ACs, metrics/window, §18 ordering, Appendix A census |
+| Test plan (v1.2, 37 TCs) | [chg-GH-186-test-plan.md](./chg-GH-186-test-plan.md) | TC IDs, §5.2 procedures, §6 representation rules, §4 gate inventory |
+| This plan | `./chg-GH-186-plan.md` | The only file written by the plan-writer passes |
 | PM notes | `./chg-GH-186-pm-notes.yaml` | PM-owned ledger; **never edited or staged** by this change |
 | New records | `doc/decisions/ADR-0008-harness-adapter-contract.md`, `ADR-0009-release-model-v1.md`, `ODR-0002-id-prefix-scheme-and-project-catalog.md`, `ODR-0003-cli-command-naming-v1-lock.md` | Phase 2; `Proposed`, acceptance pending |
 | Binding register | `doc/decisions/00-register.md` | Phase 3; projection only, `project-generated` marker |
 | Index + README | `doc/decisions/00-index.md`, `doc/decisions/README.md` | Phase 4; four rows, two repairs, register links |
 | Command registry | `doc/planning/oss-tooling/cli-command-registry.md` | Phase 5; five annotation hunks, tables byte-identical |
 | Baseline log | `doc/planning/oss-tooling/measurement-baseline.yaml` | Phase 7; canonical data, `schema_version: 1` |
-| Forbidden-literal registry | `scripts/checks/forbidden-literals.registry.json` | Phase 7 (YAML entry) + Phase 12 (feature-spec entry); data only |
+| Forbidden-literal registry | `scripts/checks/forbidden-literals.registry.json` | Phase 7 (YAML entry) + Phase 10 (feature-spec entry in the same doc-sync commit); data only |
 | Planning cross-links | `doc/planning/oss-tooling/README.md`, `doc/planning/concepts/id-prefix-catalog.md`, `doc/planning/concepts/agent-primitive-surface.md` | Phase 8 |
-| Current-truth sync | `doc/spec/features/feature-measurement-baseline.md` (new), `feature-decision-records.md`, `doc/overview/glossary.md`, `doc/00-index.md`, `feature-adapter-ports.md` | Phase 12 (`@doc-syncer`) |
+| Current-truth sync | `doc/spec/features/feature-measurement-baseline.md` (new, `ados_distribution: internal`), `feature-decision-records.md`, `doc/overview/glossary.md`, `doc/00-index.md`, `feature-adapter-ports.md` | Phase 10 (`@doc-syncer`) |
 | Gate subjects (unchanged) | `scripts/.tests/test-doc-distribution.sh`, `test-doc-distribution-modes.sh`, `test-inception-doc-consistency.sh`, `scripts/checks/forbidden-literals.ts`, `privacy-literals.ts`, `commitlint-authority.ts` | Read-only verification battery |
 | Testing strategy | [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) | `doc/**` static/diff + content-check mapping |
 
@@ -733,9 +741,11 @@ Protected paths untouched by every phase: `packages/**`, `tools/**`, `.opencode/
 | Version | Date (UTC) | Author | Changes |
 |---|---|---|---|
 | 1.0 | 2026-10-31T14:00:00Z | Implementation Plan Writer | Initial thirteen-phase, 76-task plan derived from spec v1.1 (21 ACs) and test plan v1.1 (37 TCs). Pins PD-1…PD-10 (registration staging, `source_commit` semantics, phase-pair precedence, change-level inclusion/metric samples, rounding/representation, R2 record shape and pinned H1s, bounded index repair, registry v1 hunk surface, commit discipline, doc-sync ownership). Adds the binding measurement computation procedure (corpus enumeration, pair classification, four formulas, status rule, recompute-and-compare), the commit plan, the gate battery, the full TC-to-phase map, the 21-AC coverage ledger, the DoD, the risk table, and explicit do-not guardrails. Phases 1/6/9/10 are read-only; Phases 10–13 are PM-scheduled. |
+| 1.1 | 2026-10-31T14:04:45Z | Implementation Plan Writer | DoR iteration 1 remediation (B2 + notes 7–8) against spec v1.2 and test plan v1.2. Reordered lifecycle to delivery (Phases 1–9) → doc-sync (Phase 10, lifecycle 7) → review (Phase 11, lifecycle 8) → remediation (Phase 12) → finalize (Phase 13), renumbering tasks, commit plan, TC map, coverage ledger and references. Moved AC-F6-1 and the feature-spec half of AC-C10-1 into the Phase-10 doc-sync sweep so Phase 11 reviews the post-doc-sync current truth; the ledger now separates produced-in from verified-after-production for all 21 ACs. Replaced the obsolete exclusion tokens with the DEC-14 closed vocabulary and added parse → normalize → classify (YAML-native `date`/`datetime`, GH-171 `unparseable_yaml`, placeholder `00:00:00` as `placeholder_zero_time`, GH-186 `capture_change`), with the spec v1.2 census (41 files, 40 parseable, 30 time-bearing, 24 real-time, 10 date-only, 1 unparseable, 6 placeholder-only; 23 time-metric changes) as a spec-time observation re-derived at capture. Aligned registration sequencing to spec §18 (YAML with its baseline commit; feature spec with its Phase-10 doc-sync commit), pinned `ados_distribution: internal` for the new feature spec, replaced the impossible clean-tree assertion with the PM-owned dirty-path allowance, and updated the branch/slug note to the authoritative spec §18 wording. Phase count stays 13; task count is 77. |
 
 ## Execution Log
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |---|---|---|---|---|---|
 | Authoring | Complete | 2026-10-31T13:40:00Z | 2026-10-31T14:00:00Z | none | Read spec v1.1 and test plan v1.1 in full, the implementation-plan template, the GH-184/GH-185 plan precedents, the live decision corpus (ADR-0001…0007, ODR-0001, PDR/TDR set), the decision template and management guide, the register/index/README targets, the command registry, the planning README and concept docs, the forbidden-literal check and registry, and the pm-notes/evidence corpus shape (41 pm-notes, 5 evidence at authoring). Confirmed the two index defects, the next-free IDs, the `registered` missing-file behavior, and the fixed window. Only this plan file was written; no spec/test-plan/pm-notes edits, no git operations. |
+| Plan remediation | Complete | 2026-10-31T14:01:00Z | 2026-10-31T14:04:45Z | none | DoR iteration 1 (verdict NOT_READY): read `readiness-review/readiness-iter-1.md`, spec v1.2 (DEC-14, closed vocabulary, §18, Appendix A) and test plan v1.2. Reordered doc-sync before review, moved AC-F6-1/AC-C10-1 feature-spec evidence onto the doc-sync phase, aligned the corpus procedure and census, fixed registration sequencing and the `ados_distribution: internal` pin, replaced the clean-tree assertion and updated the branch/slug note. Only this plan file was written; spec, test plan and pm-notes untouched; no git operations. |

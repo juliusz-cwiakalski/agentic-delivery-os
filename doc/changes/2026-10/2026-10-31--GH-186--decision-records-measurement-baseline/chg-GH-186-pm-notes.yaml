@@ -3,9 +3,9 @@ title: "M0-S17: Decision records and measurement baseline"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-10-31T13:55:00Z", completed: "2026-10-31T14:05:00Z" }
-  specification: { started: "2026-10-31T14:06:00Z", completed: null, reopened: "2026-10-31T16:10:00Z", iterations: 2 }
-  test_planning: { started: "2026-10-31T14:32:00Z", completed: null, reopened: "2026-10-31T16:10:00Z", iterations: 2 }
-  delivery_planning: { started: "2026-10-31T15:27:00Z", completed: null, reopened: "2026-10-31T16:10:00Z", iterations: 2 }
+  specification: { started: "2026-10-31T14:06:00Z", completed: "2026-10-31T16:30:00Z", reopened: "2026-10-31T16:10:00Z", iterations: 2 }
+  test_planning: { started: "2026-10-31T14:32:00Z", completed: "2026-10-31T16:30:00Z", reopened: "2026-10-31T16:10:00Z", iterations: 2 }
+  delivery_planning: { started: "2026-10-31T15:27:00Z", completed: "2026-10-31T16:30:00Z", reopened: "2026-10-31T16:10:00Z", iterations: 2 }
   dor_check: { started: "2026-10-31T15:52:00Z", completed: "2026-10-31T16:08:00Z", iterations: 1, verdict: "NOT_READY" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -62,4 +62,7 @@ notes:
     date: "2026-10-31"
   - text: "Retro: DoR iteration 1 found real computability defects (invalid-YAML artifact, native date values) that the spec and test plan asserted away. The spec should have grounded the corpus census by enumerating and parsing the actual files rather than stating counts. Improvement: any measurement-baseline spec must include a dry-run corpus parse (or a cited parse audit) before the DoR gate."
     type: "retro"
+    date: "2026-10-31"
+  - text: "DoR remediation complete: spec v1.2 (DEC-14 corpus ingestion: parse -> normalize native date/datetime -> classify; closed exclusion vocabulary; GH-171 unparseable_yaml; corrected reproducible census with command + HEAD; same-commit registration sequencing; ados_distribution internal), test plan v1.2 (native-value helpers, TC-MEAS-007 included filter, v1.2 vocabulary, implementation_plan link), plan v1.1 (doc-sync before review, 77 tasks, produced-in/verified-after AC ledger, clean-tree disposition). 21 ACs / 37 TCs preserved. Re-run DoR iteration 2."
+    type: "decision"
     date: "2026-10-31"

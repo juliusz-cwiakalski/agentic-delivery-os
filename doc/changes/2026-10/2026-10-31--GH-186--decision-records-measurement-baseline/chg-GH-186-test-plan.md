@@ -7,10 +7,10 @@ owners: ["Juliusz Ćwiąkalski"]
 service: delivery-os decision and measurement substrate
 labels: ["documentation", "decision-records", "measurement", "M0"]
 version_impact: none
-summary: "Verify the documentation-only M0-S17 change without runtime code: exactly four new Proposed decision records and a binding register whose eight topic rows resolve to existing records/anchors, a prospective v1 command-name lock with byte-identical command tables and zero renames, a schema-versioned measurement baseline whose four MET metrics are recomputed exactly from named committed sources (MEASURED/PARTIAL/UNAVAILABLE honoured; ratio 0–1 canonical and percent derived; p90 nearest-rank; DM-2 change mapping), the two named index repairs, link integrity, doc-distribution and guarded-literal gates, and a docs-only diff with zero changes under packages/** and tools/** whose only scripts/** edit is the data-only `registered` addition in scripts/checks/forbidden-literals.registry.json (DEC-13), including forbidden-literal registration and seed-literal compliance for both new user-facing docs (C-10, AC-C10-1)."
+summary: "Verify the documentation-only M0-S17 change without runtime code: exactly four new Proposed decision records and a binding register whose eight topic rows resolve to existing records/anchors, a prospective v1 command-name lock with byte-identical command tables and zero renames, a schema-versioned measurement baseline whose four MET metrics are recomputed exactly from named committed sources after YAML-native date/datetime normalization and a closed exclusion vocabulary (MEASURED/PARTIAL/UNAVAILABLE honoured; unparseable/placeholder-only artifacts named and counted; ratio 0–1 canonical and percent derived; p90 nearest-rank; DM-2 change mapping), the two named index repairs, link integrity, doc-distribution and guarded-literal gates, and a docs-only diff with zero changes under packages/** and tools/** whose only scripts/** edit is the data-only `registered` addition in scripts/checks/forbidden-literals.registry.json (DEC-13), including same-commit forbidden-literal registration and seed-literal compliance for both new user-facing docs (C-10, AC-C10-1)."
 links:
   change_spec: ./chg-GH-186-spec.md
-  implementation_plan: null
+  implementation_plan: ./chg-GH-186-plan.md
   testing_strategy: .ai/rules/testing-strategy.md
 ---
 
@@ -18,7 +18,7 @@ links:
 
 ## 1. Scope and Objectives
 
-This plan protects a **documentation-only** change: four new decision records (shipped `Proposed`), a foundational binding register, an annotation-only `v0 → v1` command-registry promotion, a committed measurement baseline log whose numbers must be reproducible from committed evidence, and a bounded index repair plus phase-7 doc sync. There is no runtime code, so the protective surface is **artifact integrity**, not behaviour: (a) the diff must never touch `packages/**` or `tools/**`, must not modify existing decision-record bodies, and must not rename anything; the one permitted non-doc edit is a data-only addition of the two new user-facing doc paths to `registered` in `scripts/checks/forbidden-literals.registry.json` (DEC-13); (b) every new artifact must be inspectable and traceable — each acceptance criterion resolves to a file, a front-matter field, a YAML key, a row, or a recomputed number; (c) the baseline's numbers must be **re-derived exactly** from the named committed sources, because a plausible-looking but unreproducible number defeats the entire purpose of the baseline; and (d) the repository's real doc and literal gates must stay green, including the forbidden-literal registration and seed-literal checks for both new docs (C-10, NFR-10).
+This plan protects a **documentation-only** change: four new decision records (shipped `Proposed`), a foundational binding register, an annotation-only `v0 → v1` command-registry promotion, a committed measurement baseline log whose numbers must be reproducible from committed evidence, and a bounded index repair plus phase-7 doc sync. There is no runtime code, so the protective surface is **artifact integrity**, not behaviour: (a) the diff must never touch `packages/**` or `tools/**`, must not modify existing decision-record bodies, and must not rename anything; the one permitted non-doc edit is a data-only addition of the two new user-facing doc paths to `registered` in `scripts/checks/forbidden-literals.registry.json` (DEC-13), each staged in the commit that creates its doc; (b) every new artifact must be inspectable and traceable — each acceptance criterion resolves to a file, a front-matter field, a YAML key, a row, or a recomputed number; (c) the baseline's numbers must be **re-derived exactly** from the named committed sources **after the spec's corpus-ingestion normalization** (YAML-native `date`/`datetime` → ISO-8601, placeholder zero-time handling, one named `unparseable_yaml` file), because a plausible-looking but unreproducible number defeats the entire purpose of the baseline; and (d) the repository's real doc and literal gates must stay green, including the forbidden-literal registration and seed-literal checks for both new docs (C-10, NFR-10).
 
 The plan is therefore a checklist of reproducible verification procedures (file existence, front-matter/status assertions, YAML parse and schema-key assertions, grep/absence checks, diff-scope checks, link resolution, number recomputation) plus the repository's actual gate commands. It is a design and verification map, not an execution claim: this writer ran none of the delivery commands and records no PASS results below. Where the spec pins an exact string or count it is asserted verbatim; where the delivery must compute a number, the check is **recompute-and-compare**, never a hardcoded invented value.
 
@@ -28,7 +28,7 @@ The plan is therefore a checklist of reproducible verification procedures (file 
 - New binding register `doc/decisions/00-register.md`: eight topic rows, exact existing bindings, anchors that exist, no duplicated decision text, update rule, marker (F-1, DM-1, AC-F1-1, NFR-8).
 - Index integrity: four new linked rows, the two named pre-existing repairs, register links from index and README, link resolution (F-5, AC-F5-1, AC-F5-2, AC-F5-3, NFR-3, NFR-9).
 - Command-name lock: title/heading `v1`, lock banner naming ODR-0003 and the lock date, replaced introduction and `provider` audit bullet, **byte-identical** command tables, zero renames (F-3, DM-3, AC-F3-1, AC-F3-2, NFR-5, C-4).
-- Measurement baseline `doc/planning/oss-tooling/measurement-baseline.yaml`: schema validity, source traceability, window/exclusions, exact recomputation of ceremony share, cycle time, CI failure rate and false-signal counts, canonical 0–1 ratio values with derived percent, nearest-rank p90, DM-2 `change` mapping, status semantics, comparison protocol (F-4, DM-2, AC-F4-1…AC-F4-5, NFR-1, NFR-4, NFR-7, C-5, C-7).
+- Measurement baseline `doc/planning/oss-tooling/measurement-baseline.yaml`: schema validity, source traceability, window/exclusions, corpus ingestion (parse → normalize → classify with the closed exclusion vocabulary), exact recomputation of ceremony share, cycle time, CI failure rate and false-signal counts, canonical 0–1 ratio values with derived percent, nearest-rank p90, DM-2 `change` mapping, status semantics, comparison protocol (F-4, DM-2, DEC-14, AC-F4-1…AC-F4-5, NFR-1, NFR-4, NFR-7, C-5, C-7).
 - Phase-7 current-truth sync across the nine named documents, including the new `feature-measurement-baseline.md` (F-6, AC-F6-1).
 - Diff scope and gates: docs-only diff plus exactly one data-only `registered` addition in `scripts/checks/forbidden-literals.registry.json` (DEC-13), diff hygiene, doc-distribution guard (+ negative modes), commitlint, guarded-literal gates, inception doc-set consistency (C-1, C-9, C-10, AC-C1-1, AC-C10-1, AC-C2-1, AC-NFR6-1, NFR-10).
 
@@ -39,16 +39,18 @@ The plan is therefore a checklist of reproducible verification procedures (file 
 - **No automated Markdown link/anchor checker exists in this repository.** `doc/spec/features/feature-documentation-profiles.md` records that no `doc-checks.sh` validator exists, and a search of `scripts/checks/**` and `scripts/.tests/**` finds none. Link integrity (NFR-3) is therefore a semi-automated procedure (TC-SYNC-004) plus reviewer confirmation, per `.ai/rules/testing-strategy.md` content checks.
 - **No committed per-run CI log exists for the bash era.** The CI metric is a session proxy by definition (spec §5.1 F-4); this plan verifies the proxy's declared kind, numerator/denominator and limitation, and never asserts a per-run failure rate.
 - **The measurement numbers are not known at plan time.** They are computed during delivery. All numeric assertions are recompute-and-compare against the log's own `changes:` spine and the cited sources.
+- **The corpus is not homogeneous.** Some pm-notes files carry YAML-native `datetime`/`date` scalars, and one historical file (`chg-GH-171-pm-notes.yaml`) fails document-level YAML parsing. The recompute procedures therefore apply the spec's DEC-14 normalization and treat the unparseable file as a named `unparseable_yaml` row; they never load it into a phase loop and never silently drop it.
 - **Acceptance of the four records is not tested here.** No scenario may assert `Accepted`; the owner's PR-review decision is the gate (NG-3, C-3, AC-PROC-1).
-- **Forbidden-literal registration is permitted data, not a blocker.** `scripts/checks/forbidden-literals.ts` treats every `doc/**` file except paths under `doc/changes/` and `doc/decisions/` as user-facing; a user-facing doc absent at `corpusBaseline` must be listed in `registered` in `scripts/checks/forbidden-literals.registry.json`, and registered docs are scanned for the three seed literals. DEC-13 permits exactly that data-only registration for both new docs; TC-GATE-005 verifies the registry diff is data-only and that the two docs are registered and seed-literal clean.
+- **Forbidden-literal registration is permitted data, not a blocker.** `scripts/checks/forbidden-literals.ts` treats every `doc/**` file except paths under `doc/changes/` and `doc/decisions/` as user-facing; a user-facing doc absent at `corpusBaseline` must be listed in `registered` in `scripts/checks/forbidden-literals.registry.json`, and registered docs are scanned for the three seed literals. DEC-13 permits exactly that data-only registration for both new docs, each staged in the commit that creates its doc; TC-GATE-005 verifies the registry diff is data-only, the same-commit staging, and that the two docs are registered and seed-literal clean.
 - **Unrelated pre-existing defects are not repaired or tested** (e.g. the glossary's duplicated front-matter keys, the `PDR-0002` filename/slug drift). They are explicitly out of scope (NG-7, spec §7.3).
 
 ## 2. References
 
-- Change specification: [chg-GH-186-spec.md](./chg-GH-186-spec.md) v1.1 — ACs in §17 (21 criteria, including AC-C10-1), hard constraints §9.1 (C-1…C-10), NFRs §9.2 (NFR-1…NFR-10), DM contracts §8.3, decision log §15 (DEC-1…DEC-13), artifact inventory §24.2.
+- Change specification: [chg-GH-186-spec.md](./chg-GH-186-spec.md) v1.2 — ACs in §17 (21 criteria, including AC-C10-1), hard constraints §9.1 (C-1…C-10), NFRs §9.2 (NFR-1…NFR-10), DM contracts §8.3, decision log §15 (DEC-1…DEC-14, including the normative corpus-ingestion rule DEC-14), Appendix A census §24.1, artifact inventory §24.2.
 - PM notes (clarify decisions, delivery mode): [chg-GH-186-pm-notes.yaml](./chg-GH-186-pm-notes.yaml).
 - Repository testing strategy: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — docs → static/diff + content checks; `git diff --check`; evidence recorded in change artifacts.
-- Implementation plan: not authored at test-plan time (`links.implementation_plan: null`); this plan derives from the change spec and is independent of the plan's phase numbering.
+- Implementation plan: [chg-GH-186-plan.md](./chg-GH-186-plan.md) — the plan's PD-3/PD-4 corpus pins and Phase-6 measurement procedure are the delivery counterpart of this plan's recompute checks; this plan remains spec-derived and TC numbering is independent of the plan's phase numbering.
+- Corpus-exclusion precedent: [tests/fixtures/pm-notes/corpus-exclusions.json](../../../../tests/fixtures/pm-notes/corpus-exclusions.json) — the manifest naming the single known-unparseable historical pm-notes artifact (GH-171); the baseline mirrors it with `unparseable_yaml` and does not edit it.
 - Guard entry points actually present in the repository:
   - `bash scripts/.tests/test-doc-distribution.sh` and `bash scripts/.tests/test-doc-distribution-modes.sh` (CI job `doc-distribution-guard`, [.github/workflows/ci.yml](../../../../.github/workflows/ci.yml)).
   - `bash scripts/.tests/test-inception-doc-consistency.sh` (CI job `inception-doc-consistency`).
@@ -73,17 +75,17 @@ All 21 acceptance criteria map to at least one scenario, and every scenario maps
 | AC-F2-2 | Each Decision section states the required elements from spec §5.1 (per record) | TC-DEC-004, TC-DEC-005, TC-DEC-006, TC-DEC-007 | Manual review + token assertions | Covered |
 | AC-F3-1 | Registry title/heading say v1, lock banner names ODR-0003 + date, every command table row byte-identical | TC-DEC-014, TC-DEC-015 | Assertion + base-vs-HEAD table diff | Covered |
 | AC-F3-2 | 0 command renames; ODR-0003 states freeze/new-command/superseding-record rule and confirms `provider`, `provider-quota`, `DeliveryRequest` | TC-DEC-007, TC-DEC-015 | Command-token set diff + content review | Covered |
-| AC-F4-1 | Log exists at the pinned path, parses as YAML, carries the required top-level keys, `source_commit` 40-hex, all four `MET-` IDs, and the DM-2 `change` mapping identifying `GH-186` | TC-MEAS-001, TC-MEAS-002 | YAML parse + key assertions | Covered |
+| AC-F4-1 | Log exists at the pinned path, parses as YAML, carries the required top-level keys, `source_commit` 40-hex, all four `MET-` IDs, the DM-2 `change` mapping identifying `GH-186`, and `changes` sequence of exactly one row per committed `chg-*-pm-notes.yaml` at `source_commit` (including `included: false` rows for unparseable files) | TC-MEAS-001, TC-MEAS-002, TC-MEAS-005 | YAML parse + key/spine assertions | Covered |
 | AC-F4-2 | Metric rows carry definition/formula/unit/window/sources/status/value/sample/direction; every non-null number cited; every change row cites pm-notes; incident rows cite artifact + anchor | TC-MEAS-002, TC-MEAS-003, TC-MEAS-004 | Schema assertion + source resolution | Covered |
-| AC-F4-3 | Ratio metrics reproduce exactly on recomputation (0 tolerance); no denominator without a sample count/inclusion rule | TC-MEAS-006, TC-MEAS-007, TC-MEAS-008, TC-MEAS-009 | Recompute from named sources | Covered |
-| AC-F4-4 | `UNAVAILABLE` → `value: null` + `missing_source`; CI metric is `session_proxy` with a limitation naming the absent run log; no estimate as measurement | TC-MEAS-008, TC-MEAS-010 | Status-matrix assertion | Covered |
-| AC-F4-5 | Window start/end exact; GH-186 excluded; date-only pairs counted as excluded; comparison protocol states same-definition/equal-window/supersede-on-change | TC-MEAS-005, TC-MEAS-011 | Field assertion + content review | Covered |
+| AC-F4-3 | Ratio metrics reproduce exactly on recomputation (0 tolerance) after normalizing YAML-native `date`/`datetime` scalars and excluding placeholder zero times; no denominator without a sample count/inclusion rule | TC-MEAS-005, TC-MEAS-006, TC-MEAS-007, TC-MEAS-008, TC-MEAS-009 | Recompute from named sources after DEC-14 normalization | Covered |
+| AC-F4-4 | `UNAVAILABLE` → `value: null` + `missing_source`; CI metric is `session_proxy` with a limitation naming the absent run log; no estimate as measurement; a time metric over an unparseable/placeholder corpus is `PARTIAL`, not `MEASURED` | TC-MEAS-008, TC-MEAS-010 | Status-matrix assertion | Covered |
+| AC-F4-5 | Window start/end exact; GH-186 excluded as `capture_change`; date-only pairs counted; every excluded change carries exactly one closed-vocabulary reason (`unparseable_yaml`, `date_only_or_missing_time`, `placeholder_zero_time`, `capture_change`, `outside_window`; `no_ci_observation` is a CI-sample reason only); GH-171 appears as its own `unparseable_yaml` row counted in `changes_excluded`; comparison protocol states same-definition/equal-window/supersede-on-change | TC-MEAS-005, TC-MEAS-011 | Field assertion + content review | Covered |
 | AC-F5-1 | Four new index rows with correct type/title/status/date/owner, in numeric order | TC-DEC-011 | Row parse + record cross-check | Covered |
 | AC-F5-2 | TDR-0005 row ID/link text repaired and ordered before TDR-0006; PDR-0002 title matches its heading; no other pre-existing row changed | TC-DEC-012 | Row-set diff against base | Covered |
 | AC-F5-3 | Every new/changed index/register link resolves; index and `doc/decisions/README.md` both link the register | TC-DEC-013, TC-SYNC-004 | Link extraction + resolution + manual anchor check | Covered |
-| AC-F6-1 | Phase-7 sync across the nine named docs; new feature spec states contract without restating values | TC-SYNC-001, TC-SYNC-002, TC-SYNC-003, TC-SYNC-005, TC-MEAS-011 | Presence assertions + values-not-restated check | Covered |
+| AC-F6-1 | Phase-7 sync across the nine named docs; new feature spec carries `ados_distribution: internal`, was registered in the same doc-sync commit that created it, and states the contract without restating values | TC-SYNC-001, TC-SYNC-002, TC-SYNC-003, TC-SYNC-005, TC-MEAS-011 | Presence assertions + values-not-restated check | Covered |
 | AC-C1-1 | 0 changed paths under `packages/**` and `tools/**`; no source-code, shell, test-logic, or check-logic change; the only `scripts/**` change is the data-only `registered` addition in `scripts/checks/forbidden-literals.registry.json`; every other changed path is under `doc/**` | TC-GATE-001, TC-GATE-002, TC-GATE-005 | `git diff --name-only` + registry key-diff assertion | Covered |
-| AC-C10-1 | Both new user-facing docs are listed in `registered`; the forbidden-literal check exits 0; neither doc has a delimited seed-literal occurrence on a non-allowlisted line | TC-GATE-005 | Registry assertion + guard exit + delimited seed-literal scan | Covered |
+| AC-C10-1 | Both new user-facing docs are listed in `registered`, each entry staged in the same commit that creates its doc (YAML in the baseline commit, feature spec in the doc-sync commit; neither pre-registered); the forbidden-literal check exits 0; neither doc has a delimited seed-literal occurrence on a non-allowlisted line | TC-GATE-005 | Registry assertion + same-commit history + guard exit + delimited seed-literal scan | Covered |
 | AC-C2-1 | No existing decision-record file modified; no other change folder edited | TC-DEC-010, TC-GATE-002, TC-SYNC-005 | `git diff` scoped assertions | Covered |
 | AC-NFR6-1 | `bash scripts/.tests/test-doc-distribution.sh` exits 0 with no drift | TC-GATE-003, TC-GATE-006 | Automated guard | Covered |
 | AC-NFR2-1 | Every new record has the template's required front-matter keys and required sections in order; valid Markdown | TC-DEC-003 | Template conformance inspection | Covered |
@@ -115,18 +117,18 @@ No HTTP endpoints or events are added (spec §8.1–§8.2). The documented data 
 | NFR-1 | 100% of non-null baseline numbers cited; 0 uncited | TC-MEAS-003, TC-MEAS-004 | Metric-level `sources` + row-level artifact/anchor resolution |
 | NFR-2 | New records conform to the template (100%, 0 missing) | TC-DEC-003, TC-SYNC-002 | Decision template + feature template respectively |
 | NFR-3 | 100% of new/changed links resolve; 0 broken | TC-DEC-013, TC-SYNC-004 | Semi-automated (no repo link checker exists) |
-| NFR-4 | Log parses; 0 missing top-level/metric-row keys | TC-MEAS-001, TC-MEAS-002 | YAML parse + DM-2 key set |
+| NFR-4 | Log parses; 0 missing top-level/metric-row keys; `changes` spine covers 100% of committed pm-notes at `source_commit`, including excluded/unparseable rows | TC-MEAS-001, TC-MEAS-002, TC-MEAS-005 | YAML parse + DM-2 key set + corpus/spine diff |
 | NFR-5 | Command tables and names byte-identical; 0 row diffs; 0 renames | TC-DEC-015 | Base-vs-HEAD extraction diff |
 | NFR-6 | `bash scripts/.tests/test-doc-distribution.sh` exit 0, 0 drift | TC-GATE-003, TC-GATE-006 | Plus negative-mode self-tests |
-| NFR-7 | Recomputing each metric from its named sources reproduces the recorded value exactly | TC-MEAS-006, TC-MEAS-007, TC-MEAS-008, TC-MEAS-009 | Representation rule R-1 in §6 |
+| NFR-7 | Recomputing each metric from its named sources after corpus normalization reproduces the recorded value, spine, exclusion reasons and sample counts exactly | TC-MEAS-005, TC-MEAS-006, TC-MEAS-007, TC-MEAS-008, TC-MEAS-009 | Representation rule R-1 in §6 + normalization N-1 |
 | NFR-8 | All 8 M0-S17 topics resolve to ≥1 binding record + anchor (8/8) | TC-DEC-008, TC-DEC-009 | Row count + anchor existence |
 | NFR-9 | Two named index defects repaired, no other pre-existing row changed | TC-DEC-012 | Row-set diff against base |
-| NFR-10 | Forbidden-literal gate passes; both new docs registered; 0 delimited seed-literal occurrences on non-allowlisted lines | TC-GATE-005 | Guard exit + registry assertion + delimited scan |
+| NFR-10 | Forbidden-literal gate passes; both new docs registered in the commit that creates each; 0 delimited seed-literal occurrences on non-allowlisted lines | TC-GATE-005 | Guard exit + registry assertion + same-commit history + delimited scan |
 | C-1 | Docs-only plus one data-only registry registration: 0 paths under `packages/**` and `tools/**`; no source/shell/test/check-logic change; only `scripts/**` edit is the `registered` addition; all other paths under `doc/**` | TC-GATE-001, TC-GATE-002, TC-GATE-005 | Hard negative constraint |
 | C-2 | Existing decision bodies immutable; only index/README/register/new records change in `doc/decisions/` | TC-DEC-010, TC-DEC-012 | Scoped `git diff` |
 | C-3 | New records `Proposed`, `decision_date: null`, never `Accepted` | TC-DEC-002 | Front matter |
 | C-4 | No command/option/package/subpath rename; registry table rows unchanged | TC-DEC-015 | Table diff + command-token set diff |
-| C-5 | Committed evidence only; no estimates/interpolations/invented denominators; missing inputs `UNAVAILABLE` | TC-MEAS-005, TC-MEAS-010 | Status matrix + exclusion vocabulary |
+| C-5 | Committed evidence only; no estimates/interpolations/invented denominators; missing inputs `UNAVAILABLE`; unparseable/placeholder-only/otherwise unusable artifacts excluded with a named closed-vocabulary reason and counted, never dropped or zero-filled | TC-MEAS-005, TC-MEAS-010 | Status matrix + closed exclusion vocabulary |
 | C-6 | No duplication of decided content; binding by ID/anchor | TC-DEC-009, TC-DEC-010 | Register text review + body diff |
 | C-7 | Log is repository-local and committed under `doc/planning/oss-tooling/`, never `.ai/local/**` | TC-MEAS-001, TC-MEAS-004 | Path + `git ls-files` + `git check-ignore` |
 | C-8 | Durable prefixes registered (`MET-` via ODR-0002); change-local prefixes stay local; decision IDs next-free, never reused | TC-DEC-001, TC-DEC-006 | ID sequence + prefix inventory |
@@ -143,7 +145,7 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
 | Content — traceability | Yes | Reviewer checklists in §5.2 against spec §5.1/§5.2/§8.3/§17 |
 | Content — Markdown structure | Yes | Heading/table/fence inspection of every new or changed Markdown file |
 | Content — link/path resolution | Yes | Semi-automated link extraction + `test -e` + heading-anchor resolution (no committed checker exists) |
-| YAML syntax and schema | Yes | `python3` + PyYAML (or `yq`) parse of the log; DM-2 key assertions |
+| YAML syntax and schema | Yes | `python3` + PyYAML (or `yq`) parse of the log; DM-2 key assertions; YAML-native `date`/`datetime` normalization (N-1) before recomputation |
 | Contract (data-artifact) | Yes | DM-1/DM-2/DM-3/DM-4 field-level assertions; reproducibility recomputation |
 | Grep / absence assertions | Yes | `rg` for pinned strings, forbidden strings, renamed tokens, class vocabulary |
 | Automated guards | Yes | `test-doc-distribution.sh` (+ `-modes.sh`), `test-inception-doc-consistency.sh`, `scripts/checks/forbidden-literals.ts`, `scripts/checks/privacy-literals.ts`, `scripts/checks/commitlint-authority.ts` + `commitlint` |
@@ -189,7 +191,7 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
 | TC-MEAS-002 | DM-2 row schema complete for metrics, changes and incidents | Happy Path | Contract | High | AC-F4-1, AC-F4-2, NFR-4, DM-2 |
 | TC-MEAS-003 | Every number is cited; rows and incident anchors resolve | Negative | Traceability | High | AC-F4-2, NFR-1 |
 | TC-MEAS-004 | Cited sources exist at `source_commit`; source hygiene | Negative | Traceability | High | AC-F4-2, NFR-1, C-5, C-7 |
-| TC-MEAS-005 | Window, GH-186 exclusion, date-only counting, exclusion vocabulary | Happy Path | Contract | High | AC-F4-5, C-5 |
+| TC-MEAS-005 | Window, capture-change exclusion, corpus normalization, date-only/placeholder counting, closed vocabulary | Happy Path | Contract | High | AC-F4-1, AC-F4-3, AC-F4-5, C-5, NFR-4, NFR-7 |
 | TC-MEAS-006 | Ceremony share recomputes exactly | Happy Path | Recompute | High | AC-F4-3, NFR-7 |
 | TC-MEAS-007 | Cycle time recomputes exactly, incl. censoring and aggregates | Happy Path | Recompute | High | AC-F4-3, NFR-7 |
 | TC-MEAS-008 | CI failure rate recomputes exactly (session proxy) | Edge Case | Recompute | High | AC-F4-3, AC-F4-4, NFR-7 |
@@ -205,7 +207,7 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
 | TC-GATE-002 | Diff hygiene and changed-path allowlist | Regression | Static/diff | Medium | AC-C1-1, AC-C2-1, C-1, C-9 |
 | TC-GATE-003 | Doc-distribution guard (and negative modes) passes | Regression | Guard | High | AC-NFR6-1, NFR-6 |
 | TC-GATE-004 | Branch commits satisfy commitlint | Regression | Guard | Medium | AC-C1-1, NFR-6 |
-| TC-GATE-005 | Forbidden-literal registration, DEC-13 registry scope, and seed-literal compliance | Negative | Guard + diff | High | AC-C1-1, AC-C10-1, AC-F6-1, NFR-10, C-10 |
+| TC-GATE-005 | Forbidden-literal registration, same-commit staging, DEC-13 registry scope, and seed-literal compliance | Negative | Guard + history + diff | High | AC-C1-1, AC-C10-1, AC-F6-1, NFR-10, C-10 |
 | TC-GATE-006 | Ancillary doc-set guard stays green | Regression | Guard | Low | AC-NFR6-1, NFR-6 |
 
 ### 5.2 Scenario Details
@@ -1143,20 +1145,21 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
 - Every cited path exists at `source_commit`; no baseline evidence rewritten; zero `tmp/**`, `.ai/local/**` or URL measurement sources.
 - The log is committed under `doc/planning/oss-tooling/` and tracked (C-7).
 
-#### TC-MEAS-005 - Window, GH-186 exclusion, date-only counting, exclusion vocabulary
+#### TC-MEAS-005 - Window, capture-change exclusion, corpus normalization, date-only/placeholder counting, closed vocabulary
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-4, DM-2, C-5, AC-F4-5, DEC-11
+**Related IDs**: F-4, DM-2, C-5, NFR-4, NFR-7, AC-F4-1, AC-F4-3, AC-F4-5, DEC-11, DEC-14
 **Test Type(s)**: Contract / assertion
 **Automation Level**: Automated
-**Target Layer / Location**: `window`, `changes[]`, `sample` counts
-**Tags**: @measurement, @window, @exclusions
+**Target Layer / Location**: `window`, `changes[]`, `sample` counts, per-change phase-pair counters
+**Tags**: @measurement, @window, @exclusions, @normalization
 
 **Preconditions**:
 
-- Log present; `BASE` recorded.
+- Log present; `BASE` and `SRC` recorded (TC-MEAS-001).
+- A YAML parser is available (PyYAML, `yq`, or `bun` + `yaml`).
 
 **Steps**:
 
@@ -1164,28 +1167,84 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
    ```bash
    python3 -c 'import yaml;w=yaml.safe_load(open("doc/planning/oss-tooling/measurement-baseline.yaml"))["window"];print(w);assert w["start"]=="2026-02-01T00:00:00Z";assert w["end"]=="2026-10-31T23:59:59Z";assert w.get("basis")'
    ```
-2. Assert GH-186 is present once as an excluded row with the baseline-change reason:
+2. Assert GH-186 is present once as an excluded row with the capture-change reason:
    ```bash
    python3 - <<'PY'
    import yaml
    d=yaml.safe_load(open("doc/planning/oss-tooling/measurement-baseline.yaml"))
    rows=[r for r in d["changes"] if r["ref"]=="GH-186"]
    assert len(rows)==1, rows
-   assert rows[0]["included"] is False and rows[0]["excluded_reason"]=="baseline_change", rows[0]
-   print("GH-186 excluded")
+   assert rows[0]["included"] is False and rows[0]["excluded_reason"]=="capture_change", rows[0]
+   print("GH-186 excluded as capture_change")
    PY
    ```
-3. Assert every excluded row's reason is in the pinned vocabulary — `no_timestamps`, `date_only_only`, `missing_start`, `baseline_change`, `outside_window`, `no_ci_observation` — and no other value appears.
-4. Assert sample arithmetic per metric: `changes_parsed == len(changes)`, `changes_included == count(included)`, `changes_excluded == count(not included)`, and `changes_parsed == changes_included + changes_excluded`.
-5. Assert per-change phase-pair counters recompute from the cited pm-notes. Classification order: a pair with any date-only endpoint counts in `date_only_pairs_excluded`; else a pair with any null/missing endpoint counts in `phase_pairs_excluded`; else it is included:
+3. Assert every excluded change carries exactly one reason from the closed change-row vocabulary — `unparseable_yaml`, `date_only_or_missing_time`, `placeholder_zero_time`, `capture_change`, `outside_window` — that an included row has `excluded_reason: null`, and that `no_ci_observation` never appears as a change-row reason (it is a CI-sample reason only):
    ```bash
    python3 - <<'PY'
-   import yaml,re
+   import yaml
+   VOCAB={"unparseable_yaml","date_only_or_missing_time","placeholder_zero_time","capture_change","outside_window"}
+   d=yaml.safe_load(open("doc/planning/oss-tooling/measurement-baseline.yaml"))
+   for r in d["changes"]:
+       if r["included"]:
+           assert r["excluded_reason"] is None, (r["ref"], r["excluded_reason"])
+       else:
+           assert r["excluded_reason"] in VOCAB, (r["ref"], r["excluded_reason"])
+   assert all(r["excluded_reason"]!="no_ci_observation" for r in d["changes"])
+   print("closed change-row vocabulary ok")
+   PY
+   ```
+4. Assert the `changes` spine is exactly one row per committed `chg-*-pm-notes.yaml` file at `source_commit` (including the unparseable file), then assert the sample arithmetic per metric:
+   ```bash
+   SRC=$(python3 -c 'import yaml;print(yaml.safe_load(open("doc/planning/oss-tooling/measurement-baseline.yaml"))["source_commit"])')
+   git ls-tree -r --name-only "$SRC" -- doc/changes | rg 'chg-.*-pm-notes\.yaml$' | sort > /tmp/corpus.pm
+   python3 - <<'PY' > /tmp/spine.pm
+   import yaml
+   d=yaml.safe_load(open("doc/planning/oss-tooling/measurement-baseline.yaml"))
+   print("\n".join(sorted(r["pm_notes"] for r in d["changes"])))
+   PY
+   diff -u /tmp/corpus.pm /tmp/spine.pm
+   ```
+   ```bash
+   python3 - <<'PY'
+   import yaml
+   d=yaml.safe_load(open("doc/planning/oss-tooling/measurement-baseline.yaml"))
+   assert len(d["changes"])==len({r["pm_notes"] for r in d["changes"]})
+   included=[r for r in d["changes"] if r["included"]]
+   for m in d["metrics"]:
+       s=m["sample"]
+       assert s["changes_parsed"]==len(d["changes"]), m["id"]
+       assert s["changes_excluded"]==sum(1 for r in d["changes"] if not r["included"]), m["id"]
+       assert s["changes_parsed"]==s["changes_included"]+s["changes_excluded"], m["id"]
+       if m["id"]=="MET-CI-FAILURE-RATE":
+           observed=[r for r in included if r["ci_observed"] is True]
+           assert s["changes_included"]==len(observed), m["id"]
+           assert s["excluded_unobserved"]==len(included)-len(observed), m["id"]
+       else:
+           assert s["changes_included"]==len(included), m["id"]
+   gh171=[r for r in d["changes"] if r["pm_notes"].endswith("chg-GH-171-pm-notes.yaml")]
+   assert len(gh171)==1, gh171
+   assert gh171[0]["included"] is False and gh171[0]["excluded_reason"]=="unparseable_yaml", gh171[0]
+   print("spine and sample arithmetic ok")
+   PY
+   ```
+   The CI metric's sample is the observed subset (`changes_included` = denominator, `excluded_unobserved` = included-but-unobserved); the other metrics use all included rows. The log must state the metric-specific sample rule in its `definition`/`limitation` (TC-MEAS-008 cross-checks the CI row).
+5. Assert per-change phase-pair counters recompute from the cited pm-notes **after the DEC-14 normalization** (YAML-native `datetime` → ISO-8601 time, YAML-native `date` → date-only, `00:00:00` → placeholder). Classification order: a pair with any date-only endpoint counts in `date_only_pairs_excluded`; else a pair with any null/missing endpoint **or placeholder zero-time endpoint** counts in `phase_pairs_excluded`; else it is included:
+   ```bash
+   python3 - <<'PY'
+   import yaml,re,datetime as dt
    CER=["clarify_scope","specification","test_planning","delivery_planning","dor_check","dod_check","pr_creation"]
    WRK=["delivery","system_spec_update","review_fix","quality_gates"]; ALL=CER+WRK
    def kind(v):
-       if not isinstance(v,str) or not v.strip(): return "null"
-       return "time" if re.search(r"T\d{2}:\d{2}", v) else "date"
+       if isinstance(v,dt.datetime):
+           return "time" if (v.hour,v.minute,v.second)!=(0,0,0) else "zero"
+       if isinstance(v,dt.date):
+           return "date"
+       if isinstance(v,str):
+           s=v.strip()
+           if not s: return "null"
+           if re.fullmatch(r"\d{4}-\d{2}-\d{2}", s): return "date"
+           if re.search(r"T\d{2}:\d{2}", s): return "zero" if re.search(r"T00:00:00", s) else "time"
+       return "null"
    d=yaml.safe_load(open("doc/planning/oss-tooling/measurement-baseline.yaml"))
    for r in d["changes"]:
        if not r["included"]: continue
@@ -1193,31 +1252,36 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
        inc=exc=donly=0
        for p in ALL:
            s=kind((ph.get(p) or {}).get("started")); c=kind((ph.get(p) or {}).get("completed"))
-           if s=="time" and c=="time": inc+=1
-           elif s=="date" or c=="date": donly+=1
-           else: exc+=1
+           if s=="date" or c=="date": donly+=1
+           elif s=="time" and c=="time": inc+=1
+           else: exc+=1   # null/missing or placeholder zero-time endpoint
        assert (inc,exc,donly)==(r["phase_pairs_included"],r["phase_pairs_excluded"],r["date_only_pairs_excluded"]), (r["ref"],inc,exc,donly)
        assert inc+exc+donly==len(ALL), (r["ref"], inc, exc, donly)
-   print("phase-pair counts ok")
+   print("phase-pair counts ok after normalization")
    PY
    ```
 6. Assert each metric `sample`'s phase-pair totals equal the sums over its included change rows.
+7. **Census cross-check (spec-time observation, re-derived at `source_commit`).** Re-run the Appendix A command from the spec at `source_commit` and reconcile it with the delivered spine. For orientation only, the spec-time observation at HEAD `5a511f4bec4ce2a2fff6e3248b88ecafed34a2ca` is: **41 files, 40 parseable, 30 time-bearing, 24 real-time, 10 date-only, 1 unparseable, 6 placeholder-only (GH-57, GH-67, GH-69, GH-71, GH-72, GH-174)**; after excluding the capture change GH-186, **23 changes enter the time-metric corpus**. These are spec-time observations, not baseline values: assert the log's spine and `sample` counts reconcile with the re-derived census at `SRC`, do not copy the spec-time numbers into the log, and do not treat a different delivery-time count as a defect without recording the delta and its cause.
 
 **Expected Outcome**:
 
-- Window strings exactly as pinned; GH-186 excluded as `baseline_change`; every exclusion uses the pinned vocabulary.
-- All sample counters recompute from the cited sources; date-only pairs are counted, not silently dropped.
+- Window strings exactly as pinned; GH-186 excluded as `capture_change`; every excluded change carries exactly one reason from the closed vocabulary; `no_ci_observation` is never a change-row reason.
+- The `changes` spine covers 100% of the committed pm-notes corpus at `source_commit`, including GH-171 as its own `unparseable_yaml` row counted in `changes_excluded`, never silently dropped or zero-filled.
+- All sample counters recompute from the cited sources after normalization; date-only and placeholder zero-time pairs are counted, not silently dropped.
 
 **Notes / Clarifications**:
 
-- The date-only-before-null classification order is an interpretation required to make the counters deterministic (see §8.2 A-2). If the delivery uses the reverse precedence, the totals must still conserve (`included + excluded + date_only == 11`) and the log must state the precedence; a non-conserving total is a defect.
+- DEC-14 is the normative rule: parse each file as one YAML document, normalize YAML-native scalars to ISO-8601 before classification, and treat a `00:00:00` time as a placeholder. Pair precedence is date-only first, then null/missing/placeholder; change-row precedence is `unparseable_yaml` → `capture_change` → `outside_window` → `placeholder_zero_time` → `date_only_or_missing_time`.
+- The six placeholder-only pm-notes (GH-57, GH-67, GH-69, GH-71, GH-72, GH-174) carry only date-plus-midnight values. Under the change-row precedence they are `placeholder_zero_time` (time-bearing endpoints exist but all are placeholders) and are counted; a fake zero-hour duration is a defect.
+- The unparseable-file precedent is `tests/fixtures/pm-notes/corpus-exclusions.json`; the baseline mirrors it with `unparseable_yaml` and does not edit the manifest.
+- If a delivery-time census differs from the spec-time observation, the log must record the re-derived count and the reason; the counters must still conserve (`included + excluded + date_only == 11` per included row, `changes_parsed == changes_included + changes_excluded` per metric). A non-conserving total is a defect.
 
 #### TC-MEAS-006 - Ceremony share recomputes exactly
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-4, NFR-7, AC-F4-3
+**Related IDs**: F-4, NFR-7, AC-F4-3, DEC-14
 **Test Type(s)**: Contract / recompute
 **Automation Level**: Automated (reference procedure)
 **Target Layer / Location**: `metrics[MET-CEREMONY-SHARE]`, `changes[*].ceremony_duration_h`, `changes[*].total_phase_duration_h`
@@ -1230,7 +1294,7 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
 **Steps**:
 
 1. Apply representation rule **R-1** (canonical ratio 0–1; percent derived, not stored) and rounding rule **Q-1** from §6 (Decimal arithmetic, `ROUND_HALF_UP`, no float equality), as pinned by OQ-T3.
-2. Recompute each included change row's durations from its cited pm-notes (ceremony set and all-eleven-phase total):
+2. Recompute each included change row's durations from its cited pm-notes (ceremony set and all-eleven-phase total). The `ts()` helper implements **N-1**: it accepts YAML-native `datetime` values (usable only when the time component is nonzero), treats YAML-native `date` values as date-only, accepts ISO-8601 strings with a nonzero time, and returns `None` for missing/placeholder endpoints:
    ```bash
    python3 - <<'PY'
    import yaml
@@ -1240,9 +1304,16 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
    ALL=CER+["delivery","system_spec_update","review_fix","quality_gates"]
    def q(x,dp=1): return Decimal(str(x)).quantize(Decimal(1).scaleb(-dp), rounding=ROUND_HALF_UP)
    def ts(v):
-       import re
-       if not isinstance(v,str) or not re.search(r"T\d{2}:\d{2}",v): return None
-       return datetime.fromisoformat(v.replace("Z","+00:00"))
+       import re, datetime as _d
+       if isinstance(v,_d.datetime):
+           return v if (v.hour,v.minute,v.second)!=(0,0,0) else None
+       if isinstance(v,_d.date):
+           return None
+       if isinstance(v,str):
+           s=v.strip()
+           if not re.search(r"T\d{2}:\d{2}",s) or re.search(r"T00:00:00",s): return None
+           return datetime.fromisoformat(s.replace("Z","+00:00"))
+       return None
    def h(a,b): return (b-a).total_seconds()/3600.0
    d=yaml.safe_load(open("doc/planning/oss-tooling/measurement-baseline.yaml"))
    num=den=0.0
@@ -1283,7 +1354,7 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-4, NFR-7, AC-F4-3
+**Related IDs**: F-4, NFR-7, AC-F4-3, AC-F4-5, DEC-14
 **Test Type(s)**: Contract / recompute
 **Automation Level**: Automated (reference procedure)
 **Target Layer / Location**: `metrics[MET-CYCLE-TIME]`, `changes[*].cycle_time_h`
@@ -1303,12 +1374,20 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
    from decimal import Decimal, ROUND_HALF_UP
    def q(x,dp=1): return Decimal(str(x)).quantize(Decimal(1).scaleb(-dp), rounding=ROUND_HALF_UP)
    def ts(v):
-       import re
-       if not isinstance(v,str) or not re.search(r"T\d{2}:\d{2}",v): return None
-       return datetime.fromisoformat(v.replace("Z","+00:00"))
+       import re, datetime as _d
+       if isinstance(v,_d.datetime):
+           return v if (v.hour,v.minute,v.second)!=(0,0,0) else None
+       if isinstance(v,_d.date):
+           return None
+       if isinstance(v,str):
+           s=v.strip()
+           if not re.search(r"T\d{2}:\d{2}",s) or re.search(r"T00:00:00",s): return None
+           return datetime.fromisoformat(s.replace("Z","+00:00"))
+       return None
    d=yaml.safe_load(open("doc/planning/oss-tooling/measurement-baseline.yaml"))
    vals=[]
    for r in d["changes"]:
+       if not r["included"]: continue   # exclude GH-186 (capture_change) and every other excluded/out-of-window row
        ph=yaml.safe_load(open(r["pm_notes"])).get("phases") or {}
        start=ts((ph.get("clarify_scope") or {}).get("started"))
        if start is None: continue
@@ -1324,13 +1403,14 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
        assert q(h)==Decimal(str(r["cycle_time_h"])), (r["ref"],h,r["cycle_time_h"])
        vals.append(h)
    m=[x for x in d["metrics"] if x["id"]=="MET-CYCLE-TIME"][0]
+   assert all(r["ref"]!="GH-186" for r in d["changes"] if r["included"])
    print("n", len(vals), "logged-included", m["sample"]["changes_included"])
    assert q(statistics.median(vals))==Decimal(str(m["aggregates"]["median_h"]))
    assert q(min(vals))==Decimal(str(m["aggregates"]["min_h"]))
    assert q(max(vals))==Decimal(str(m["aggregates"]["max_h"]))
    PY
    ```
-   Note: `changes_included` for the cycle metric must equal the count of rows whose `clarify_scope.started` is present (the metric's stated data condition); if the row records a different n, the discrepancy must be explained by a stated exclusion reason.
+   Note: `changes_included` for the cycle metric must equal the count of **included** rows whose `clarify_scope.started` is present (the metric's stated data condition); GH-186 and every other `included: false` row are excluded before the sample is built. If the row records a different n, the discrepancy must be explained by a stated exclusion reason.
 2. Assert the **pinned p90 rule** (OQ-T2): when `len(vals) < 10`, `aggregates.p90_h` must be absent/`null` and no p90 claimed; when `len(vals) >= 10`, `p90_h` must be present and equal to the **nearest-rank** value — sort ascending and take the `ceil(0.9 × n)`-th smallest (1-indexed), with no interpolation:
    ```bash
    python3 - <<'PY'
@@ -1339,8 +1419,16 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
    from decimal import Decimal, ROUND_HALF_UP
    def q(x,dp=1): return Decimal(str(x)).quantize(Decimal(1).scaleb(-dp), rounding=ROUND_HALF_UP)
    def ts(v):
-       if not isinstance(v,str) or not re.search(r"T\d{2}:\d{2}",v): return None
-       return datetime.fromisoformat(v.replace("Z","+00:00"))
+       import datetime as _d
+       if isinstance(v,_d.datetime):
+           return v if (v.hour,v.minute,v.second)!=(0,0,0) else None
+       if isinstance(v,_d.date):
+           return None
+       if isinstance(v,str):
+           s=v.strip()
+           if not re.search(r"T\d{2}:\d{2}",s) or re.search(r"T00:00:00",s): return None
+           return datetime.fromisoformat(s.replace("Z","+00:00"))
+       return None
    d=yaml.safe_load(open("doc/planning/oss-tooling/measurement-baseline.yaml"))
    m=[x for x in d["metrics"] if x["id"]=="MET-CYCLE-TIME"][0]
    vals=[]
@@ -1375,11 +1463,13 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
 **Expected Outcome**:
 
 - Every row's cycle time and all aggregates reproduce exactly; censoring flags match the sources; p90 obeys the n≥10 rule and the pinned nearest-rank method (`ceil(0.9 × n)`-th smallest, no interpolation).
+- The sample is built from `included: true` rows only, so GH-186 (`capture_change`) and every other excluded/out-of-window row are absent from `vals` and from the aggregates.
 - Limitations (self-reported timestamps, clock skew, elapsed-not-effort) are stated.
 
 **Notes / Clarifications**:
 
 - `vals` is recomputed from the cited pm-notes, not from the log's own `cycle_time_h`, so a correlated error cannot pass; the log's row values are then compared as a second assertion.
+- The `included` filter in step 1 is the B3 fix: without it, GH-186's timestamped `clarify_scope.started` and any out-of-window row would be over-counted while the log correctly excludes them. Step 2 already applies the same filter.
 
 #### TC-MEAS-008 - CI failure rate recomputes exactly (session proxy)
 
@@ -1508,6 +1598,7 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
    - `UNAVAILABLE` ⇒ `value is None` **and** `missing_source` is a non-empty string naming the absent source **and** `limitation` explains why.
    - `PARTIAL` ⇒ `value` is non-null, sample counts reported, and the excluded/limited part stated in `limitation` (not presented as complete).
    - `MEASURED` ⇒ `value` is non-null, coverage complete for the definition, `missing_source` absent/`null`.
+   - A **time metric** (`MET-CEREMONY-SHARE`, `MET-CYCLE-TIME`) whose corpus contains an `unparseable_yaml` or `placeholder_zero_time` change cannot be `MEASURED`; it must be `PARTIAL` and report the excluded count. Assert zero time metrics are `MEASURED` over such a corpus (spec KPI).
 3. Assert no zero/absent denominator is reported as a measured `0`: `denominator == 0` (or null) must force `UNAVAILABLE` (or a non-numeric status), never `value: 0`.
 4. Assert no estimate-shaped numeric fields exist:
    ```bash
@@ -1625,15 +1716,21 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
 
 **Steps**:
 
-1. Assert the front matter carries a spec `id` (`SPEC-*`), `status: Current`, `created`, `last_updated`, `owners`, `summary` and `links` (including `related_changes` with `GH-186`), consistent with sibling feature specs.
+1. Assert the front matter carries a spec `id` (`SPEC-*`), `status: Current`, `created`, `last_updated`, `owners`, `summary`, `ados_distribution: internal`, and `links` (including `related_changes` with `GH-186`), consistent with sibling feature specs:
+   ```bash
+   awk 'NR==1 && /^---$/{f=1;next} f && /^---$/{exit} f' doc/spec/features/feature-measurement-baseline.md \
+     | rg '^(id|status|created|last_updated|owners|summary|ados_distribution):'
+   awk 'NR==1 && /^---$/{f=1;next} f && /^---$/{exit} f' doc/spec/features/feature-measurement-baseline.md \
+     | rg '^ados_distribution: internal$'
+   ```
 2. Assert the document follows `doc/templates/feature-spec-template.md` section order (1 Overview … 8 Dependencies & Risks) and leaves no placeholders:
    ```bash
    rg -n '^## [0-9]\.' doc/spec/features/feature-measurement-baseline.md
    rg -n '<[A-Za-z-]+>|TEMPLATE INSTRUCTIONS' doc/spec/features/feature-measurement-baseline.md ; echo "placeholder-exit=$?"   # expect 1
    ```
-3. Assert the contract elements are stated: the log path, the schema reference (DM-2 keys / schema version, not a copy of the YAML), the four `MET-` IDs, the status semantics, the source-traceability rule, the window, the comparison protocol, and the pinned representation conventions (canonical ratio 0–1 / derived percent, nearest-rank p90, `change` mapping):
+3. Assert the contract elements are stated: the log path, the schema reference (DM-2 keys / schema version, not a copy of the YAML), the four `MET-` IDs, the status semantics, the source-traceability rule, the window, the comparison protocol, the corpus-ingestion/normalization and closed exclusion vocabulary, and the pinned representation conventions (canonical ratio 0–1 / derived percent, nearest-rank p90, `change` mapping):
    ```bash
-   rg -n 'measurement-baseline\.yaml|schema_version|MET-CEREMONY-SHARE|MET-CYCLE-TIME|MET-CI-FAILURE-RATE|MET-FALSE-SIGNAL-INCIDENTS|MEASURED|PARTIAL|UNAVAILABLE|2026-02-01|2026-10-31|nearest.rank|ratio|derived|change' \
+   rg -n 'measurement-baseline\.yaml|schema_version|MET-CEREMONY-SHARE|MET-CYCLE-TIME|MET-CI-FAILURE-RATE|MET-FALSE-SIGNAL-INCIDENTS|MEASURED|PARTIAL|UNAVAILABLE|2026-02-01|2026-10-31|unparseable_yaml|date_only_or_missing_time|placeholder_zero_time|capture_change|outside_window|nearest.rank|ratio|derived|change' \
      doc/spec/features/feature-measurement-baseline.md
    ```
 4. **Values must not be restated.** Extract every recorded numeric result from the log (metric `value`, `numerator`, `denominator`, `aggregates.*`, sample totals) and grep the feature spec for those literals:
@@ -1657,10 +1754,12 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
    git diff --name-status "$BASE"...HEAD -- doc/spec/features/feature-measurement-baseline.md   # expect A
    rg -c '^\s*-?\s*ref: GH-' doc/spec/features/feature-measurement-baseline.md ; echo "per-change-rows-exit=$?"   # expect 1 or 0
    ```
+6. Assert the doc's `registered` entry was added in the same commit that created the doc (AC-F6-1/AC-C10-1); TC-GATE-005 step 3 holds the authoritative history check. Record the add commit here.
 
 **Expected Outcome**:
 
-- The new feature spec is template-conformant, states all seven contract elements, and points to the log as canonical data.
+- The new feature spec is template-conformant, carries `ados_distribution: internal`, states all contract elements (including the corpus-ingestion rule and closed vocabulary), and points to the log as canonical data.
+- Its `registered` entry is in the same doc-sync commit that created it, and the spec was not pre-registered.
 - Zero baseline result values restated; no per-change data duplicated.
 
 #### TC-SYNC-003 - Glossary, `doc/00-index`, planning README, catalog, primitive and adapter-ports pointers
@@ -2027,7 +2126,28 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
    PY
    ```
    This is the DEC-13 boundary: only `registered` entries change; `corpusBaseline`, `scopeClasses`, `seedLiterals`, and `allowlist` are byte-equivalent.
-3. Assert exactly one `scripts/**` path changed and it is the registry, and that no check code, test, or other script is touched:
+3. Assert each new doc's `registered` entry was added in the **same commit that created the doc**, and that neither path was pre-registered (AC-C10-1 same-commit staging):
+   ```bash
+   for pair in "doc/planning/oss-tooling/measurement-baseline.yaml" \
+               "doc/spec/features/feature-measurement-baseline.md"; do
+     c=$(git log --diff-filter=A --format=%H -- "$pair" | tail -1)
+     test -n "$c"
+     python3 - "$c" "$pair" <<'PY'
+   import json, subprocess, sys
+   c, path = sys.argv[1], sys.argv[2]
+   def reg(rev):
+       out = subprocess.run(["git","show",f"{rev}:scripts/checks/forbidden-literals.registry.json"],
+                            capture_output=True, text=True, check=True).stdout
+       return set(json.loads(out)["registered"])
+   assert path in reg(c), (c, path, "not registered in its add commit")
+   parent = subprocess.run(["git","rev-parse",f"{c}^"], capture_output=True, text=True, check=True).stdout.strip()
+   assert path not in reg(parent), (c, path, "pre-registered before the doc existed")
+   print(c, path, "same-commit registration ok")
+   PY
+   done
+   ```
+   The YAML must be registered in the baseline commit and the feature spec in the doc-sync commit; if the delivery genuinely squashes them into one commit, record that as a stated deviation and still prove each path was absent from `registered` before its add commit.
+4. Assert exactly one `scripts/**` path changed and it is the registry, and that no check code, test, or other script is touched:
    ```bash
    git diff --name-only "$BASE"...HEAD -- scripts/ > /tmp/scripts.changed
    test "$(wc -l < /tmp/scripts.changed)" -eq 1
@@ -2035,12 +2155,12 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
    test -z "$(git diff --name-only "$BASE"...HEAD -- scripts/checks/forbidden-literals.ts scripts/checks/privacy-literals.ts scripts/.tests/)"
    echo "check-logic-unchanged"
    ```
-4. Run the forbidden-literal scan and assert exit 0:
+5. Run the forbidden-literal scan and assert exit 0:
    ```bash
    bun run scripts/checks/forbidden-literals.ts ; echo "exit=$?"
    ```
    Expected: exit 0; the output reports the two registered docs and `0 violations`.
-5. Assert neither new doc contains a **delimited** occurrence of `ados`, `ADOS_`, or `~/.ados` on a non-allowlisted line. The scan mirrors `matchSeedLiteral` (case-insensitive, delimited from lowercase ASCII letters) and the header allowlist (`Copyright`, `source:`, `Apache-2.0`, `ados_distribution:`):
+6. Assert neither new doc contains a **delimited** occurrence of `ados`, `ADOS_`, or `~/.ados` on a non-allowlisted line. The scan mirrors `matchSeedLiteral` (case-insensitive, delimited from lowercase ASCII letters) and the header allowlist (`Copyright`, `source:`, `Apache-2.0`, `ados_distribution:`):
    ```bash
    python3 - <<'PY'
    SEEDS=["ados","ADOS_","~/.ados"]
@@ -2066,17 +2186,18 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
    print("violations:", bad); assert not bad
    PY
    ```
-6. Record the registry diff, the guard exit code, the registered-doc list, and the delimited-scan result in §10.
+7. Record the registry diff, the same-commit add SHAs, the guard exit code, the registered-doc list, and the delimited-scan result in §10.
 
 **Expected Outcome**:
 
 - Privacy scan exits 0; the forbidden-literal check exits 0.
-- Both new docs are listed in `registered`; the `scripts/**` diff is exactly the one data-only registry file and changes only the `registered` array (no check code, seed set, allowlist, scope class, or `corpusBaseline` change) — DEC-13 holds.
+- Both new docs are listed in `registered`, each entry added in the same commit that created its doc and neither pre-registered; the `scripts/**` diff is exactly the one data-only registry file and changes only the `registered` array (no check code, seed set, allowlist, scope class, or `corpusBaseline` change) — DEC-13 holds.
 - Zero delimited seed-literal occurrences on non-allowlisted lines of either new doc (C-10 / NFR-10 / AC-C10-1).
 
 **Notes / Clarifications**:
 
 - The check is declarative: a registered doc must be absent at `corpusBaseline` and present in the tree, and registered docs are scanned for the seed set. The registry data edit in step 2 is the only permitted non-doc change (C-1/DEC-13), not a waiver or a check-logic change.
+- Same-commit staging is normative in spec §18: registering a path before its doc exists fails with `registered doc is missing from the tree`. Step 3 proves the add commit and the absence from `registered` in its parent.
 - The delimited scan mirrors the production matcher so a false positive cannot be dismissed by a looser `rg` boundary; a hit is a defect unless it is on an allowlisted header line.
 
 #### TC-GATE-006 - Ancillary doc-set guard stays green
@@ -2119,7 +2240,7 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
 
 - **Environment**: local developer checkout or the CI runner. Required: `git`, `bash` ≥ 4 with `globstar` (doc-distribution guard), `rg` (ripgrep), `python3` with PyYAML (or `yq`, or `bun`'s `yaml`), `bun` 1.4.4 (for `scripts/checks/*.ts`), and `node` + `pnpm` 10.18.3 with `node_modules` installed for commitlint. No network is required except `git fetch origin main-tools` (TC-GATE-001) and `pnpm install` if dependencies are absent.
 - **Base reference**: `origin/main-tools`; record the resolved merge base (`BASE`) once and use it for every `...` diff. If the remote ref is unavailable, use the local `main-tools` ref and record it.
-- **Test data**: the **committed** bash-era corpus — `doc/changes/**/chg-*-pm-notes.yaml`, `doc/changes/**/chg-*-evidence.md`, and git history. No synthetic numbers, no fixtures, no databases, no credentials. The measurement checks read the real corpus at the log's `source_commit`; the log's own `changes:` rows are the traceability spine.
+- **Test data**: the **committed** bash-era corpus — `doc/changes/**/chg-*-pm-notes.yaml`, `doc/changes/**/chg-*-evidence.md`, and git history. No synthetic numbers, no fixtures, no databases, no credentials. The measurement checks read the real corpus at the log's `source_commit`; the log's own `changes:` rows are the traceability spine. The corpus contains YAML-native `date`/`datetime` values and one known-unparseable file (`chg-GH-171-pm-notes.yaml`), so every recompute applies **N-1** and the unparseable file is read only from its `unparseable_yaml` change row.
 - **Isolation**: all checks are read-only against the repository. The doc-distribution guard uses its own temp sandbox; the negative-mode guard uses temp trees. If any guard mutates tracked files, that is a defect to report. Do **not** set `ADOS_GUARD_ROOT` for the production runs (it is the negative-mode seam).
 - **Evidence capture**: for each TC record the command, exit code, and a one-line result in §10; store raw outputs (e.g. the diff, the recomputation stdout with the recomputed-vs-recorded numbers) under `doc/changes/2026-10/2026-10-31--GH-186--decision-records-measurement-baseline/evidence/` as committed artifacts where useful.
 - **Rounding and representation rules** (apply to TC-MEAS-006…TC-MEAS-009):
@@ -2130,7 +2251,9 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**`-only change plus a data-only reg
 
   **P-1 — Percentile**: `p90_h` is **nearest-rank**: sort ascending and take the `ceil(0.9 × n)`-th smallest (1-indexed); no interpolation. It is reported only when `n ≥ 10`; otherwise it is absent/`null` and no p90 is claimed (OQ-T2 pinned).
 
-  **Timestamp parsing**: a timestamp is usable only when it is a string containing a time component (`T\d{2}:\d{2}`); date-only and null endpoints are excluded per the spec's inclusion rules (TC-MEAS-005).
+  **N-1 — Corpus normalization (apply to TC-MEAS-005…TC-MEAS-009)**: before classification, convert YAML-native scalars to ISO-8601 equivalents. A `datetime.datetime` is an ISO-8601 timestamp and is usable only when its time component is nonzero (a `00:00:00` value is a **placeholder**, not a measured time). A `datetime.date` is date-only (`YYYY-MM-DD`) and follows the date-only exclusion. A string is used as written: `YYYY-MM-DD` is date-only, an ISO-8601 string with `T` and a nonzero time is usable, and a `T00:00:00` string is a placeholder. `None`/missing is a null endpoint. No endpoint is discarded merely because the YAML parser produced a `date`/`datetime` object instead of a string. A file that fails document-level YAML parsing is **never** passed to a phase loop; it is represented by its `included: false` / `unparseable_yaml` change row and counted in `changes_excluded`.
+
+  **Timestamp parsing**: a timestamp is usable only after N-1 produces a non-placeholder time-bearing value (native `datetime` or an ISO-8601 string with a nonzero time); date-only, null/missing, and placeholder zero-time endpoints are excluded per the spec's inclusion rules (TC-MEAS-005).
 
 ## 7. Automation Plan and Implementation Mapping
 
@@ -2157,15 +2280,15 @@ No new test file or code is created by this change (docs-only plus the DEC-13 da
 | TC-MEAS-002 | None (DM-2 key set) | `python3` key-set assertions over metrics/changes/observations/incidents | Existing – No Change (ad-hoc) |
 | TC-MEAS-003 | Reviewer checklist + §10 inventory | `python3` sources/pm-notes assertions + anchor resolution loop | Manual Only (semi-automated) |
 | TC-MEAS-004 | None (source-commit assertions) | `/tmp/cited_paths.txt` + `git cat-file -e "$SRC:$path"` + `git diff --quiet` loop | Existing – No Change (ad-hoc) |
-| TC-MEAS-005 | None (window/exclusion assertions) | `python3` window/GH-186/reason-vocabulary/sample-arithmetic + phase-pair recompute | Existing – No Change (ad-hoc) |
-| TC-MEAS-006 | None (recompute procedure) | `python3` ceremony recompute block (§5.2) with canonical ratio + derived percent | Existing – No Change (ad-hoc) |
-| TC-MEAS-007 | None (recompute procedure) | `python3` cycle-time recompute block (§5.2) + nearest-rank p90 block | Existing – No Change (ad-hoc) |
+| TC-MEAS-005 | None (window/exclusion/normalization assertions) | `python3` window/capture-change/closed-vocabulary/spine/sample-arithmetic + normalized phase-pair recompute + census cross-check | Existing – No Change (ad-hoc) |
+| TC-MEAS-006 | None (recompute procedure) | `python3` ceremony recompute block (§5.2) with N-1-normalized `ts()`, canonical ratio + derived percent | Existing – No Change (ad-hoc) |
+| TC-MEAS-007 | None (recompute procedure) | `python3` cycle-time recompute block (§5.2) with `included` filter + N-1-normalized `ts()`, plus nearest-rank p90 block | Existing – No Change (ad-hoc) |
 | TC-MEAS-008 | None (recompute procedure) | `python3` CI numerator/denominator recompute block (§5.2) with canonical ratio + observation spot-checks | Existing – No Change (ad-hoc) |
 | TC-MEAS-009 | None (recompute procedure) | `python3` per-class incident count block (§5.2) + duplicate-triple check | Existing – No Change (ad-hoc) |
-| TC-MEAS-010 | None (status matrix) | `python3` status set + per-status matrix + estimate grep | Existing – No Change (ad-hoc) |
+| TC-MEAS-010 | None (status matrix) | `python3` status set + per-status matrix + time-metric PARTIAL rule + estimate grep | Existing – No Change (ad-hoc) |
 | TC-MEAS-011 | None (content review) | `python3` comparison_protocol print + `rg` keyword checks + `git diff --name-status` | Manual Only (grep-assisted) |
 | TC-SYNC-001 | None (content assertions) | `rg -n '00-register\|ODR-0002'` + front-matter `links` check | Manual Only (grep-assisted) |
-| TC-SYNC-002 | None (content + literal scan) | template heading rg + placeholder absence + `/tmp/log_numbers.txt` literal scan | Manual Only (semi-automated) |
+| TC-SYNC-002 | None (content + literal scan) | template heading rg + `ados_distribution: internal` marker + placeholder absence + `/tmp/log_numbers.txt` literal scan | Manual Only (semi-automated) |
 | TC-SYNC-003 | None (content assertions) | six per-document `rg` blocks + marker/row checks | Manual Only (grep-assisted) |
 | TC-SYNC-004 | None (semi-automated link resolver) | inline `python3` link resolver (no committed checker exists) | Manual Only (semi-automated) |
 | TC-SYNC-005 | None (allowlist diff) | `rg -v` allowlist assertion + other-change-folder assertion | Existing – No Change (ad-hoc) |
@@ -2173,7 +2296,7 @@ No new test file or code is created by this change (docs-only plus the DEC-13 da
 | TC-GATE-002 | None (inline git) | `git diff --check "$BASE"...HEAD` + `git diff --name-status` + allowlist/type assertions | Existing – No Change (ad-hoc) |
 | TC-GATE-003 | `scripts/.tests/test-doc-distribution.sh`, `scripts/.tests/test-doc-distribution-modes.sh` | `bash scripts/.tests/test-doc-distribution.sh`; `bash scripts/.tests/test-doc-distribution-modes.sh` | Existing – No Change |
 | TC-GATE-004 | `scripts/checks/commitlint-authority.ts`, `commitlint.config.js` | `bun run scripts/checks/commitlint-authority.ts`; `pnpm exec commitlint --from "$BASE" --to HEAD` | Existing – No Change |
-| TC-GATE-005 | `scripts/checks/forbidden-literals.ts`, `scripts/checks/privacy-literals.ts`, `scripts/checks/forbidden-literals.registry.json` | `bun run scripts/checks/privacy-literals.ts`; `bun run scripts/checks/forbidden-literals.ts`; registry base-vs-HEAD key-diff + delimited seed scan | Existing – No Change (one data-only registry registration per DEC-13) |
+| TC-GATE-005 | `scripts/checks/forbidden-literals.ts`, `scripts/checks/privacy-literals.ts`, `scripts/checks/forbidden-literals.registry.json` | `bun run scripts/checks/privacy-literals.ts`; `bun run scripts/checks/forbidden-literals.ts`; registry base-vs-HEAD key-diff + same-commit add-history check + delimited seed scan | Existing – No Change (one data-only registry registration per DEC-13) |
 | TC-GATE-006 | `scripts/.tests/test-inception-doc-consistency.sh` | `bash scripts/.tests/test-inception-doc-consistency.sh` | Existing – No Change |
 
 **Recommended execution order**: TC-GATE-001/002 (scope and hygiene) → TC-GATE-003/005 (gates early, so a gate failure is known before the content review) → TC-DEC-001…015 → TC-MEAS-001…011 → TC-SYNC-001…005 → TC-GATE-004/006 (commit/ancillary gates last).
@@ -2185,7 +2308,8 @@ No new test file or code is created by this change (docs-only plus the DEC-13 da
 | ID | Risk | Impact | Mitigation |
 |----|------|--------|------------|
 | RSK-T1 | **Registry scope creep** (spec RSK-10): the DEC-13 data edit expands into a check-logic, seed-set, allowlist, scope-class, or `corpusBaseline` change, eroding the docs-only boundary. | M | TC-GATE-001 asserts exactly one `scripts/**` path; TC-GATE-005 diffs the registry and requires every non-`registered` key to be byte-equivalent; any check-code/test change is a defect. |
-| RSK-T11 | A new user-facing doc contains a delimited seed literal on a non-allowlisted line, so the forbidden-literal gate fails or a brand literal leaks. | H | TC-GATE-005 step 5 mirrors the production matcher and the header allowlist; a hit blocks delivery. |
+| RSK-T11 | A new user-facing doc contains a delimited seed literal on a non-allowlisted line, so the forbidden-literal gate fails or a brand literal leaks. | H | TC-GATE-005 step 6 mirrors the production matcher and the header allowlist; a hit blocks delivery. |
+| RSK-T12 | A YAML-native `date`/`datetime` endpoint is treated as null (because it is not a string), or the unparseable GH-171 file crashes a recompute loop, so real samples are understated and the counters cannot reproduce. | H | TC-MEAS-005…TC-MEAS-009 apply N-1 (native `datetime`/`date` accepted, placeholder zero-time rejected) and never parse an `unparseable_yaml` row; TC-MEAS-005 step 7 reconciles the re-derived census with the spine. |
 | RSK-T2 | Recompute scripts drift from the spec's exact phase sets or rounding, producing false mismatches (or false matches). | M | Phase sets and rounding are pinned in TC-MEAS-006/§6 (Q-1, R-1); compare at the file's recorded precision; record the recomputed-vs-recorded numbers. |
 | RSK-T3 | pm-notes timestamps are self-reported and clock-skewed (GH-179 retro), so ceremony/cycle values are hour-level approximations. | M | The log must state the limitation; the test compares the **same** source, never an external clock; a mismatch against the source is still a defect. |
 | RSK-T4 | A `PARTIAL` sample is presented as `MEASURED` (overstated coverage). | H | TC-MEAS-010's status matrix plus the top-level-status consistency check; the reviewer signs off. |
@@ -2199,23 +2323,24 @@ No new test file or code is created by this change (docs-only plus the DEC-13 da
 ### 8.2 Assumptions
 
 - **A-1**: The base branch is `main-tools`; `origin/main-tools` is fetchable, and the merge base is the correct diff anchor.
-- **A-2**: Phase-pair classification precedence is date-only first, then null/missing (needed to make `date_only_pairs_excluded` vs `phase_pairs_excluded` deterministic). If the delivery chooses the reverse precedence, the counters must still conserve (`included + excluded + date_only == 11` per row) and the log must state the precedence.
-- **A-3**: For `MET-CI-FAILURE-RATE`, `sample.changes_included` equals the denominator (the observed set), and `sample.excluded_unobserved` counts the unobserved included changes. If the delivery defines `changes_included` as all included changes, the row must state that and the denominator/`excluded_unobserved` must still reconcile.
+- **A-2**: DEC-14 pins the corpus-ingestion precedence. **Pair level**: a date-only endpoint first (`date_only_pairs_excluded`); else a null/missing or placeholder zero-time endpoint (`phase_pairs_excluded`); else included. **Change level**: `unparseable_yaml` → `capture_change` → `outside_window` → `placeholder_zero_time` → `date_only_or_missing_time`. The counters must conserve (`included + excluded + date_only == 11` per included row) and the log must state the precedence; a non-conserving total is a defect.
+- **A-3**: For `MET-CI-FAILURE-RATE`, `sample.changes_included` equals the denominator (the observed set), and `sample.excluded_unobserved` counts the unobserved included changes; `no_ci_observation` is a CI-sample reason only and never a change-row `excluded_reason`. If the delivery defines `changes_included` as all included changes, the row must state that and the denominator/`excluded_unobserved` must still reconcile.
 - **A-4**: Representation rule R-1 follows spec §5.1/DM-2: ratio metrics store a 0–1 `value` and derive any percent form (1 decimal); a stored percent field or a percent-only representation is a spec deviation to flag, not an alternative convention to accept.
 - **A-5**: There is no automated link/anchor checker in the repository; NFR-3's verification is the semi-automated procedure in TC-SYNC-004 plus reviewer confirmation, consistent with `.ai/rules/testing-strategy.md`.
 - **A-6**: A YAML parser and `rg` are available in the verification environment; if PyYAML is absent, `yq` or `bun -e` with the `yaml` package provides the same assertions (record which was used).
-- **A-7**: The implementation plan is authored after this test plan; this plan derives from the change spec alone and does not depend on the plan's phase numbering.
-- **A-8**: The percentile method is pinned by the spec v1.1 (OQ-T2): nearest-rank, `ceil(0.9 × n)`-th smallest, no interpolation, reported only when `n ≥ 10`. A different method or an interpolated value is a defect, not an ambiguity.
+- **A-7**: The implementation plan exists (`./chg-GH-186-plan.md`); its PD-3/PD-4 corpus pins and Phase-6 measurement procedure are the delivery counterpart of this plan's checks. This plan remains spec-derived and its TC numbering is independent of the plan's phase numbering.
+- **A-8**: The percentile method is pinned by spec v1.2 (OQ-T2): nearest-rank, `ceil(0.9 × n)`-th smallest, no interpolation, reported only when `n ≥ 10`. A different method or an interpolated value is a defect, not an ambiguity.
 - **A-9**: The `doc/decisions/` artifacts are excluded from the forbidden-literal scan (`excludedPrefixes: ["doc/changes/", "doc/decisions/"]`), so new records and the register cannot trip that gate; only the two new docs under `doc/planning/` and `doc/spec/` are registered and scanned.
-- **A-10**: DEC-13 is the authorization for the one non-doc edit: the two new doc paths are added to `registered` in `scripts/checks/forbidden-literals.registry.json`. Any other `scripts/**` change, or any non-`registered` key change, violates C-1.
+- **A-10**: DEC-13 is the authorization for the one non-doc edit: the two new doc paths are added to `registered` in `scripts/checks/forbidden-literals.registry.json`. Any other `scripts/**` change, or any non-`registered` key change, violates C-1. Each entry is staged in the commit that creates its doc (spec §18); pre-registration fails the check.
+- **A-11**: DEC-14 is the normative corpus-ingestion rule. YAML-native `datetime`/`date` scalars are normalized before classification (N-1); a `00:00:00` time is a placeholder, not a measurement; GH-171's unparseable pm-notes is excluded as `unparseable_yaml`, keeps its own row, and is counted in `changes_excluded`. The precedent manifest `tests/fixtures/pm-notes/corpus-exclusions.json` is read-only.
 
 ### 8.3 Open Questions
 
-No open questions remain; every prior question is resolved by spec v1.1 or is explicitly out of scope.
+No open questions remain; every prior question is resolved by spec v1.2 or is explicitly out of scope.
 
 | ID | Question | Status | Resolution |
 |----|----------|--------|------------|
-| OQ-T1 | How does the delivery satisfy the forbidden-literal corpus rule for the two new docs without violating C-1? | **Closed — resolved by DEC-13** | C-1/AC-C1-1 now permit exactly one data-only addition of the two doc paths to `registered` in `scripts/checks/forbidden-literals.registry.json`; no check logic, seed set, allowlist, scope class, or `corpusBaseline` change. TC-GATE-001/TC-GATE-005 verify the scope. |
+| OQ-T1 | How does the delivery satisfy the forbidden-literal corpus rule for the two new docs without violating C-1? | **Closed — resolved by DEC-13** | C-1/AC-C1-1 now permit exactly one data-only addition of the two doc paths to `registered` in `scripts/checks/forbidden-literals.registry.json`; no check logic, seed set, allowlist, scope class, or `corpusBaseline` change, and each entry is staged in the commit that creates its doc (spec §18). TC-GATE-001/TC-GATE-005 verify the scope and same-commit staging. |
 | OQ-T2 | Which percentile method does the log use for `p90_h`? | **Closed — pinned** | Nearest-rank: sort ascending, take the `ceil(0.9 × n)`-th smallest (1-indexed), no interpolation; reported only when `n ≥ 10`. TC-MEAS-007 verifies it. |
 | OQ-T3 | Is the ratio-metric `value` stored as percent or as a 0–1 ratio? | **Closed — pinned** | The canonical `value` is a 0–1 ratio; any percent is derived as `value × 100` rounded to 1 decimal and is not stored. TC-MEAS-002/006/008 verify it. |
 | OQ-T4 | What exact shape does the top-level `change` field take? | **Closed — pinned** | The DM-2 mapping `{ref, tracker, excluded_from_samples}` (never a bare string); TC-MEAS-001/011 verify it. |
@@ -2227,6 +2352,7 @@ No open questions remain; every prior question is resolved by spec v1.1 or is ex
 |---------|------|--------|---------|
 | 1.0 | 2026-10-31 | @test-plan-writer | Initial test plan derived from `chg-GH-186-spec.md`: 37 scenarios (15 decision-artifact, 11 measurement, 5 sync, 6 gate) covering all 20 ACs, DM-1…DM-4, NFR-1…NFR-9 and C-1…C-9; verified repository gate names; recompute-and-compare procedures for NFR-7; documented the forbidden-literal registry blocker (OQ-T1). |
 | 1.1 | 2026-10-31 | @test-plan-writer | Re-based on `chg-GH-186-spec.md` v1.1: AC set is now 21 (adds AC-C10-1), C-1 narrowed to permit the DEC-13 data-only `registered` addition in `scripts/checks/forbidden-literals.registry.json`, and C-10/NFR-10 added. TC-GATE-001 now asserts exactly one permitted `scripts/**` path; TC-GATE-005 replaces the OQ-T1 blocker guidance with concrete registry-scope, registration, guard-exit, and delimited-seed-literal checks; TC-GATE-002 and TC-SYNC-005 allowlists include the registry; OQ-T1…OQ-T4 are closed (DEC-13 and pinned p90/ratio/`change` conventions); TC-MEAS-001/002/006/007/008/011 and TC-SYNC-002 encode those conventions; coverage, automation, risk, and execution-log sections updated. TC count remains 37; all 21 ACs covered. |
+| 1.2 | 2026-10-31 | @test-plan-writer | DoR iteration 1 remediation (B1, B3, stale links, AC alignment) against `chg-GH-186-spec.md` v1.2/DEC-14. TC-MEAS-005 now asserts the parse → normalize → classify rule: YAML-native `datetime`/`date` normalization, placeholder zero-time handling (GH-57/67/69/71/72/174), the closed vocabulary (`unparseable_yaml`, `date_only_or_missing_time`, `placeholder_zero_time`, `capture_change`, `outside_window`; `no_ci_observation` as a CI-sample reason only), GH-171's own `unparseable_yaml` row, the 100% corpus spine, and the corrected spec-time census (41/40/30/24/10/1/6; 23 time-metric changes after excluding GH-186). TC-MEAS-006/007 helpers accept normalized native values; TC-MEAS-007 step 1 now filters `included: true`, excluding GH-186 and every other excluded row. TC-MEAS-010 adds the time-metric PARTIAL rule; TC-SYNC-002 asserts `ados_distribution: internal`; TC-GATE-005 adds same-commit registration and no-pre-registration history checks. Frontmatter/§2/§8 now link `./chg-GH-186-plan.md`; coverage descriptions and assumptions align with amended AC-F4-1/F4-3/F4-5/F6-1/C10-1. TC count remains 37; all 21 ACs covered. |
 
 ## 10. Test Execution Log
 
@@ -2253,9 +2379,9 @@ Populated during delivery, at the phase-9 quality gates, and at review. Record t
 | TC-MEAS-002 | — | Not run | |
 | TC-MEAS-003 | — | Not run | |
 | TC-MEAS-004 | — | Not run | |
-| TC-MEAS-005 | — | Not run | |
+| TC-MEAS-005 | — | Not run | Record the re-derived census at `source_commit`, the spine-vs-corpus diff result, the closed-vocabulary set observed, and the GH-171 `unparseable_yaml` row count. |
 | TC-MEAS-006 | — | Not run | Record recomputed ratio vs recorded `value`, derived-percent presentation, and row-duration exact-match count. |
-| TC-MEAS-007 | — | Not run | Record n, median/min/max, censored count, and nearest-rank p90 (or its suppression when n<10). |
+| TC-MEAS-007 | — | Not run | Record n (included rows only), median/min/max, censored count, and nearest-rank p90 (or its suppression when n<10). |
 | TC-MEAS-008 | — | Not run | Record numerator, denominator, canonical ratio, derived-percent presentation, unobserved count. |
 | TC-MEAS-009 | — | Not run | Record total and per-class counts; duplicate check result. |
 | TC-MEAS-010 | — | Not run | Record the status set and matrix verdict. |
@@ -2269,6 +2395,6 @@ Populated during delivery, at the phase-9 quality gates, and at review. Record t
 | TC-GATE-002 | — | Not run | |
 | TC-GATE-003 | — | Not run | |
 | TC-GATE-004 | — | Not run | |
-| TC-GATE-005 | — | Not run | Record the registry base-vs-HEAD diff (data-only), forbidden-literal guard exit 0, registered-doc list, and delimited seed-scan result. |
+| TC-GATE-005 | — | Not run | Record the registry base-vs-HEAD diff (data-only), each doc's add-commit SHA and same-commit registration proof, forbidden-literal guard exit 0, registered-doc list, and delimited seed-scan result. |
 | TC-GATE-006 | — | Not run | |
 
