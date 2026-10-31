@@ -31,7 +31,7 @@ phases:
     completed: "2026-10-31T18:22:00Z"
   review_fix:
     started: "2026-10-31T18:25:00Z"
-    completed: null
+    completed: "2026-10-31T19:05:00Z"
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -102,5 +102,8 @@ notes:
     type: "info"
     date: "2026-10-31"
   - text: "Phase 8 review iteration 1 PASS (review/review-iter-1.md): 0 blocking; all 15 ACs and plan tasks 1.1-5.4 verified. Non-blocking fixes applied: F-1/F-3 TC-LICREG-024 now executes all 84 declared cases through failuresForCase (executed==declared, 84/84); F-4 duplicate blank fixture removed and deniedSingles/unknownReferences now used; F-2 test plan §10 execution log populated; F-5 plan Phase 6 marked Completed with doc-sync evidence. F-6/F-7 accepted as informational. Re-reviewing the changed tests."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Phase 8 review iteration 2 PASS (review/review-iter-2.md): 0 blocking; all iteration-1 findings closed; no product change since iteration 1; 52/52 license+privacy tests, tests/checks 331/331, full suite 1434/1434, 7 invariants OK, doc distribution 81 no drift, no skip/only. Trivial doc nits corrected: test plan expect-call count 13062->13181 and current spec citations v1.3->v1.4; plan current test-plan citations v1.5->v1.7 plus revision rows. F-4 (per-class assertion in TC-024) accepted as informational because class-specific proof lives in TC-007/008/009/011/012/013/016/017. Review phase complete."
     type: "info"
     date: "2026-10-31"

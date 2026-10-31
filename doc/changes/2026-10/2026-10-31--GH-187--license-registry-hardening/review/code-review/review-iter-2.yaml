@@ -1,0 +1,144 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-187
+branch: feat/GH-187/license-registry-hardening
+status: PASS
+summary: >-
+  Iteration 1's non-blocking findings are genuinely closed. TC-LICREG-024 now
+  drives all 84 declared deny-list cases through failuresForCase, asserting a
+  non-empty failure set for every negative case (plus the declared expectedReason
+  where present), an empty failure set for the two control extensions, and equal
+  executed/declared and unique-id counts. The duplicate blank fixture is gone,
+  deniedSingles/unknownReferences are now consumed, failuresForCase is used, and
+  every cases.json key is referenced. Plan Phase 6 is checked and the Execution
+  Log row is Completed; the test-plan section 10 log is populated and its
+  pass/fail, file, and suite counts match a fresh run. No product surface changed
+  since iteration 1: the registry, audit, workflow, lockfile, manifests, and
+  ADR-0003 are untouched, and the enabling privacy-release repair is unchanged.
+  Verification: 44/44 license tests (52 with privacy), bun test tests/checks
+  331/331 across 29 files, bun test 1434/1434 across 133 files, live audit and all
+  seven invariant checks exit 0, doc-distribution 81 docs no drift, biome clean.
+  Two low documentation nits and two informational notes remain; none blocks
+  quality gates, DoD, or PR.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 2
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+closed_findings:
+  iteration_1:
+    - id: F-1
+      status: closed
+      evidence: >-
+        TC-LICREG-024 executes all 84 declared cases via failuresForCase; negative
+        cases assert failures.length > 0 (and expectedReason where present), the two
+        failureExpected:false controls assert toEqual([]), and executed/unique-id
+        counts equal the declared 84 (fixture: 84 cases, 84 unique ids, groups sum 84).
+    - id: F-2
+      status: closed
+      evidence: >-
+        Test-plan section 10 is populated (v1.6) with license 44/44, checks 331/331,
+        full 1434/1434, seven invariant checks, 22/22 bash, doc-distribution 81, and
+        privacy-release 8/8. Pass/fail, file, and suite counts match a fresh run.
+    - id: F-3
+      status: closed
+      evidence: failuresForCase is now used by TC-LICREG-024; biome check is clean (no noUnusedVariables).
+    - id: F-4
+      status: closed
+      evidence: >-
+        blank removed from cases.json and the LicenseCases type; deniedSingles and
+        unknownReferences are now asserted in TC-LICREG-024; every remaining
+        cases.json key is referenced by a test.
+    - id: F-5
+      status: closed
+      evidence: >-
+        Plan tasks 6.1-6.5 are checked and Execution Log row 6 is Completed with
+        commit 7819ea0; a remediation note records F-1..F-7 dispositions.
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-10/2026-10-31--GH-187--license-registry-hardening/chg-GH-187-test-plan.md:1384
+    message: >-
+      The populated section 10 test execution log records the full run as
+      "1434 pass / 0 fail across 133 files, 13062 expect calls", but a fresh
+      `bun test` (identical to `pnpm test`) on this HEAD reports 1434 pass / 0 fail
+      across 133 files with 13181 expect calls. The pass/fail, file, and suite
+      counts are correct; the expect-call figure appears to predate the
+      TC-LICREG-024 loop added in d0d88c1.
+    suggestion: >-
+      Replace 13062 with the current 13181 (or omit the expect-call figure), or
+      state the run commit so the number is reproducible.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-10/2026-10-31--GH-187--license-registry-hardening/chg-GH-187-plan.md:27
+    message: >-
+      The test plan is now v1.6 (revision row 1.6 in 8bc49a5), but the plan still
+      cites "test plan v1.5" in seven current-state references (Context line 27,
+      lines 43-49, and RSK-P2 line 137; the eighth v1.5 mention is a legitimate
+      historical revision-log row) and has no Plan Revision Log row for the
+      iteration-1 remediation that changed Phase 6 status and added the remediation
+      section. This is a bookkeeping drift introduced by the remediation, not a
+      behavioural contradiction.
+    suggestion: >-
+      Update the current-state citations to test plan v1.6 and add a short Plan
+      Revision Log row recording the iteration-1 remediation (F-1..F-5) and Phase 6
+      completion.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-10/2026-10-31--GH-187--license-registry-hardening/chg-GH-187-test-plan.md:58
+    message: >-
+      The test plan's References and AC-F1-1 note still cite "spec v1.3" (lines 53
+      and 58) while the delivered spec is v1.4. This predates the remediation and
+      was not introduced by it; noted as a residual citation drift only.
+    suggestion: >-
+      Optional: refresh the two "spec v1.3" references to v1.4 when next touching
+      the test plan.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: info
+    confidence: high
+    category: testing
+    location: tests/checks/license-policy.test.ts:668
+    message: >-
+      The new TC-LICREG-024 loop executes every case and asserts failure presence
+      for negatives and an empty set for controls, but it does not assert each
+      case's declared classToken (only the fixture-wide vocabulary membership in
+      step 1). Class-specific assertions remain in TC-LICREG-007/008/009/011/012/
+      013/016/017, so coverage is not reduced; this is a test-strength note, not a
+      defect, and the test-plan step-4 requirement (executed == declared, one
+      assertion per case) is met.
+    suggestion: >-
+      Optional: assert `failures.some(m => m.includes(definition.classToken))` for
+      cases whose classToken has a stable message marker, to make the per-case
+      expectation directly observable.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-10-31T19:10:00Z
+next_step: PROCEED
