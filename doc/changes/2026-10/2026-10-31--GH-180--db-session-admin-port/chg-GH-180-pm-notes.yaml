@@ -14,7 +14,7 @@ phases:
   review_fix: { started: "2026-11-01T00:25:00Z", completed: "2026-11-01T01:10:00Z", verdict: "PASS iter-2 (A/B/C/D PASS; 0 blocking; 4 info R-1..R-4; artifacts review/review-iter-2.md + code-review/review-iter-2.yaml; F-1..F-7 verified closed)", iterations: "iter-1 FAIL (F-1 critical, F-2/F-3 high, F-4/F-5 major, F-6/F-7 minor; remediation 8eef562 + 0ca7bc8 + 41b450f); iter-2 PASS (all findings verified closed; 4 info notes: evidence final line, composition status, residual risks in PR body, real-store prune/reboot gap)" }
   quality_gates: { started: "2026-11-01T00:45:00Z", completed: "2026-11-01T01:05:00Z", evidence: "pnpm check 1759 pass / 2 pre-existing status-live skips / 0 fail (1761 tests, 158 files); check:forbidden-literals 0; check:privacy-literals 0; check:boundaries 0 (120 modules/232 deps); doc-distribution no drift; 24/25 scripts/checks/*.ts (publish-guard is release-only); commitlint 0; git diff --check 0; nine session-admin suites 131 pass" }
   dod_check: { started: "2026-11-01T01:15:00Z", completed: "2026-11-01T01:20:00Z", verdict: "PASS — 9 prior phases completed; 42/42 plan tasks checked; 18/18 ACs and 38/38 TCs; no open questions/blockers; current-truth docs complete (new feature spec + ADR-0010 Proposed); full battery green (1759 pass/2 pre-existing skips/0 fail); AC-D18 in-tree half satisfied, PR-body half completes at pr_creation" }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: "2026-11-01T01:25:00Z", completed: "2026-11-01T01:35:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/212", head_at_pr_creation: "0e58afc", base: "main-tools", note: "PR #212 open; CI 47/47 pass on 0e58afc; issue assigned to juliusz-cwiakalski with labels change/review; merge authority CEO/human; not merged" }
 decisions:
   - text: "State detected before acting: GH-180 open, no labels, no assignee; no branch, no PR (open or closed), no change folder, and no GH-180 commit in history. Fresh delivery, not a resume."
     date: "2026-10-31"
@@ -79,5 +79,8 @@ notes:
     type: "info"
     date: "2026-11-01"
   - text: "Review iter-2 PASS (0 blocking; 4 info): R-1 evidence final line updated to 1759/2/0; R-2 the `db` command is composed only from tests (no production entry point) to be stated in the PR body; R-3 the four residual risks (activity-based liveness, checkpoint-only reboot, external opencode surface, C-11/ADR-0010 owner gates) to be copied into the PR body; R-4 the real-store smoke covers size/list only, not prune/reboot. Quality gates green. Proceeding to DoD and PR creation."
+    type: "info"
+    date: "2026-11-01"
+  - text: "PR #212 created against `main-tools` (head `0e58afc`, 24 commits, 63 files). CI 47/47 pass on the pushed tip. Issue assigned to `juliusz-cwiakalski`; labels set to `change`/`review` and `blocked`/`human-input-needed` removed; PR-link comment added. The PR is left open; merge authority is the CEO/human. Owner gates: ADR-0003 C-11 privacy sign-off not granted, ADR-0010 Proposed, activity-based liveness, checkpoint-only reboot, unverifiable opencode CLI surface, composition-only `db`, and the `pm-liveness.sh` follow-up."
     type: "info"
     date: "2026-11-01"
