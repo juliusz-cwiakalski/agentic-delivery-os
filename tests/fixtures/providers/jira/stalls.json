@@ -1,0 +1,61 @@
+{
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "issues": [
+    {
+      "id": "20001",
+      "key": "TRACK-201",
+      "fields": {
+        "summary": "Recent activity with comments",
+        "status": { "name": "In Progress" },
+        "labels": ["tracker"],
+        "updated": "2026-10-30T08:00:00.000+0000",
+        "comment": {
+          "comments": [
+            {
+              "id": "c-201",
+              "author": { "displayName": "owner-placeholder", "accountId": "acct-0001" },
+              "body": "Still working."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "20002",
+      "key": "TRACK-202",
+      "fields": {
+        "summary": "Updated absent while comments are present",
+        "status": { "name": "In Progress" },
+        "labels": ["tracker"],
+        "comment": {
+          "comments": [
+            {
+              "id": "c-202",
+              "author": { "displayName": "person-placeholder", "accountId": "acct-0002" },
+              "body": "A comment is not an activity timestamp."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "20003",
+      "key": "TRACK-203",
+      "fields": {
+        "summary": "Updated absent and no comment payload",
+        "status": { "name": "Backlog" },
+        "labels": []
+      }
+    },
+    {
+      "id": "20004",
+      "key": "TRACK-204",
+      "fields": {
+        "summary": "Updated present while comments are omitted",
+        "status": { "name": "In Review" },
+        "labels": ["tracker"],
+        "updated": "2026-10-25T08:00:00.000+0000"
+      }
+    }
+  ]
+}

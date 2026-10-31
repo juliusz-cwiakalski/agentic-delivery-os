@@ -1,0 +1,30 @@
+{
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "issues": [
+    {
+      "number": 601,
+      "title": "Status and verify input issue",
+      "state": "open",
+      "labels": [{ "name": "tracker" }, { "name": "hand-back" }],
+      "assignee": { "login": "owner-placeholder" },
+      "updated_at": "2026-10-29T08:00:00Z",
+      "issue_links": [{ "type": "blocks", "number": 602 }]
+    },
+    {
+      "number": 602,
+      "title": "Closed issue without an activity timestamp",
+      "state": "closed",
+      "labels": [],
+      "assignee": null
+    },
+    {
+      "number": 603,
+      "title": "Issue blocked by the primary item",
+      "state": "open",
+      "labels": [{ "name": "tracker" }],
+      "assignee": { "login": "reviewer-placeholder" },
+      "updated_at": "2026-10-28T08:00:00Z",
+      "issue_links": [{ "type": "blocked-by", "number": 601 }]
+    }
+  ]
+}

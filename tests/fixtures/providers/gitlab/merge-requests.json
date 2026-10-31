@@ -1,0 +1,35 @@
+{
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "projectPath": "group-placeholder/project-placeholder",
+  "merge_requests": [
+    {
+      "iid": 42,
+      "id": 4200,
+      "title": "Client seeds with trap catalogs",
+      "state": "opened",
+      "draft": false,
+      "source_branch": "feat/GH-188/client-seeds-trap-catalogs",
+      "target_branch": "main-tools",
+      "approvals": 1,
+      "detailed_merge_status": "mergeable",
+      "merge_status": "can_be_merged",
+      "review_threads": [
+        { "id": "thread-1", "resolved": true, "notes": [{ "id": 1 }, { "id": 2 }] },
+        { "id": "thread-2", "resolved": false, "notes": [{ "id": 3 }] }
+      ]
+    },
+    {
+      "iid": 43,
+      "id": 4300,
+      "title": "Draft: follow-up seed",
+      "state": "opened",
+      "draft": true,
+      "source_branch": "feat/GH-189/follow-up",
+      "target_branch": "main-tools",
+      "approvals": 0,
+      "detailed_merge_status": "draft_status",
+      "merge_status": "cannot_be_merged",
+      "review_threads": []
+    }
+  ]
+}

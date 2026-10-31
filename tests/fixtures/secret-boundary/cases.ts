@@ -119,6 +119,35 @@ export const SECRET_READ_CASES: readonly SecretReadCase[] = [
     assertFile: "packages/adapters/src/github/provider.ts",
   },
   {
+    id: "provider-github-process-env",
+    tc: "TC-CRED-001",
+    expect: "violation",
+    rule: SECRET_READ_RULE,
+    files: providerFile("export const secret = process.env.SECRET;\n"),
+    assertFile: "packages/adapters/src/github/provider.ts",
+  },
+  {
+    id: "provider-gitlab-process-env",
+    tc: "TC-CRED-001",
+    expect: "violation",
+    rule: SECRET_READ_RULE,
+    files: {
+      "packages/adapters/src/gitlab/provider.ts": "export const secret = process.env.SECRET;\n",
+    },
+    assertFile: "packages/adapters/src/gitlab/provider.ts",
+  },
+  {
+    id: "provider-jira-computed-key",
+    tc: "TC-CRED-001",
+    expect: "violation",
+    rule: SECRET_READ_RULE,
+    files: {
+      "packages/adapters/src/jira/provider.ts":
+        'export const secret = process[readKey("env")].SECRET;\n',
+    },
+    assertFile: "packages/adapters/src/jira/provider.ts",
+  },
+  {
     id: "clean-sanctioned-readers",
     tc: "TC-SECRET-004",
     expect: "clean",
