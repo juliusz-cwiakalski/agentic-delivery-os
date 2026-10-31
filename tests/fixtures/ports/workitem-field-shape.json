@@ -1,0 +1,53 @@
+{
+  "typeName": "WorkItem",
+  "fields": [
+    {
+      "name": "identity",
+      "optional": false,
+      "readonly": true,
+      "typeText": "ProviderQualifiedIdentity"
+    },
+    {
+      "name": "title",
+      "optional": false,
+      "readonly": true,
+      "typeText": "string"
+    },
+    {
+      "name": "status",
+      "optional": false,
+      "readonly": true,
+      "typeText": "WorkItemStatus"
+    },
+    {
+      "name": "labels",
+      "optional": false,
+      "readonly": true,
+      "typeText": "readonly string[]"
+    },
+    {
+      "name": "assignee",
+      "optional": true,
+      "readonly": true,
+      "typeText": "string"
+    },
+    {
+      "name": "relations",
+      "optional": false,
+      "readonly": true,
+      "typeText": "readonly WorkItemRelation[]"
+    },
+    {
+      "name": "comments",
+      "optional": true,
+      "readonly": true,
+      "typeText": "readonly WorkItemComment[]"
+    },
+    {
+      "name": "updatedAt",
+      "optional": true,
+      "readonly": true,
+      "typeText": "string"
+    }
+  ]
+}

@@ -13,6 +13,9 @@ All decision records for this repository, ordered by type and number.
 | ADR-0001 | ADR | Decision-Making Framework Refactor | Proposed | 2026-06-24 | Juliusz Ćwiąkalski |
 | ADR-0002 | ADR | Readiness Gate (Definition of Ready) for Pre-Delivery Artifact Critique | Accepted | 2026-06-28 | Juliusz Ćwiąkalski |
 | ADR-0003 | ADR | OSS Tooling Monorepo Structure | Accepted | 2026-10-24 | Juliusz Ćwiąkalski |
+| ADR-0004 | ADR | WorkItem Activity Timestamp (`updatedAt`) as an Additive v1 Contract Extension | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
+| ADR-0005 | ADR | Runtime-API Confinement for Provider Client Subpaths | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
+| ADR-0006 | ADR | WorkItem Custom-Field Mapping and Comment-Omission Representation (v1) | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | ODR-0001 | ODR | Classify doc/templates/*.yaml register templates as redistributable | Accepted | 2026-06-25 | Juliusz Ćwiąkalski |
 | PDR-0001 | PDR | Tribal Knowledge Extraction Taxonomy | Accepted | 2026-06-27 | Juliusz Ćwiąkalski |
 | PDR-0002 | PDR | Mode-Aware Spec-Coverage Resolution for Autonomous Delivery | Proposed | 2026-07-02 | Juliusz Ćwiąkalski |

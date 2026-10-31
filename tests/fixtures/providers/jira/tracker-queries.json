@@ -1,0 +1,133 @@
+{
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "owner-hand-backs": {
+    "jql": "project = TRACK AND labels = \"hand-back\"",
+    "issues": [
+      {
+        "id": "30001",
+        "key": "TRACK-301",
+        "fields": {
+          "summary": "Handed back to the owner",
+          "status": { "name": "In Progress" },
+          "labels": ["tracker", "hand-back"],
+          "assignee": { "displayName": "owner-placeholder", "accountId": "acct-0001" },
+          "updated": "2026-10-29T09:00:00.000+0000"
+        }
+      },
+      {
+        "id": "30002",
+        "key": "TRACK-302",
+        "fields": {
+          "summary": "Ownership label applied, unassigned",
+          "status": { "name": "To Do" },
+          "labels": ["tracker", "hand-back"],
+          "assignee": null,
+          "updated": "2026-10-29T10:00:00.000+0000"
+        }
+      },
+      {
+        "id": "30003",
+        "key": "TRACK-303",
+        "fields": {
+          "summary": "In flight with a reviewer",
+          "status": { "name": "In Review" },
+          "labels": ["tracker"],
+          "assignee": { "displayName": "reviewer-placeholder", "accountId": "acct-0003" },
+          "updated": "2026-10-29T11:00:00.000+0000"
+        }
+      }
+    ]
+  },
+  "blocked-dependencies": {
+    "jql": "project = TRACK AND issue in linkedIssues(\"TRACK-311\")",
+    "issues": [
+      {
+        "id": "30011",
+        "key": "TRACK-311",
+        "fields": {
+          "summary": "Blocked by a dependency",
+          "status": { "name": "To Do" },
+          "labels": ["tracker"],
+          "updated": "2026-10-29T12:00:00.000+0000",
+          "issuelinks": [
+            {
+              "type": { "name": "Blocks", "inward": "is blocked by", "outward": "blocks" },
+              "inwardIssue": { "id": "30012", "key": "TRACK-312" }
+            }
+          ]
+        }
+      },
+      {
+        "id": "30012",
+        "key": "TRACK-312",
+        "fields": {
+          "summary": "Blocks another item",
+          "status": { "name": "In Progress" },
+          "labels": ["tracker"],
+          "updated": "2026-10-29T13:00:00.000+0000",
+          "issuelinks": [
+            {
+              "type": { "name": "Blocks", "inward": "is blocked by", "outward": "blocks" },
+              "outwardIssue": { "id": "30011", "key": "TRACK-311" }
+            }
+          ]
+        }
+      },
+      {
+        "id": "30013",
+        "key": "TRACK-313",
+        "fields": {
+          "summary": "No dependencies",
+          "status": { "name": "Done" },
+          "labels": ["tracker"],
+          "updated": "2026-10-29T14:00:00.000+0000"
+        }
+      }
+    ]
+  },
+  "ticket-hygiene": {
+    "jql": "project = TRACK ORDER BY key ASC",
+    "issues": [
+      {
+        "id": "30021",
+        "key": "TRACK-321",
+        "fields": {
+          "summary": "Conforming ticket",
+          "status": { "name": "In Progress" },
+          "labels": ["tracker", "hand-back"],
+          "updated": "2026-10-29T15:00:00.000+0000"
+        }
+      },
+      {
+        "id": "30022",
+        "key": "TRACK-322",
+        "fields": {
+          "summary": "Missing labels",
+          "status": { "name": "To Do" },
+          "labels": [],
+          "updated": "2026-10-29T16:00:00.000+0000"
+        }
+      },
+      {
+        "id": "30023",
+        "key": "TRACK-323",
+        "fields": {
+          "summary": "",
+          "status": { "name": "In Progress" },
+          "labels": ["tracker"],
+          "updated": "2026-10-29T17:00:00.000+0000"
+        }
+      },
+      {
+        "id": "30024",
+        "key": "TRACK-324",
+        "fields": {
+          "summary": "Removed label is absent on the next read",
+          "status": { "name": "Done" },
+          "labels": ["tracker"],
+          "updated": "2026-10-29T18:00:00.000+0000"
+        }
+      }
+    ]
+  }
+}

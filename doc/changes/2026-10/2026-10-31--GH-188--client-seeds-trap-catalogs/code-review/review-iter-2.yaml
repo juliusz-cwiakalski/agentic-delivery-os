@@ -1,0 +1,62 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-188
+branch: feat/GH-188/client-seeds-trap-catalogs
+status: PASS
+summary: >-
+  Second review iteration: verification that the P11 remediation (commit 162e61e, plus P10-1/P10-4
+  finalization in e7429f6 and SHA-sync commits d63a79a/2d1b17f) discharged every iteration-1
+  finding. All four low findings and the ride-along F-5 wording fix landed correctly and
+  introduced no new inconsistency: the typo fix is comment-only; the documented #io/* packed-export
+  rationale was verified factually exact against the adapters imports map; the GH-ISSUE-TO-WORKITEM
+  limitation wording matches GITHUB_WORK_ITEM_STATUS_MAP; and GITHUB_UNKNOWN_REVIEW_DECISION_FALLBACK
+  is a value-pinned named constant leaving the resolver semantics identical, not re-exported through
+  the subpath surface. The extended GH-REVIEW-STATE assertion is non-vacuous: it pins the constant
+  value, exercises the unknown-native fallback on an open PR (disjoint fixture numbers 508/509), and
+  proves terminal precedence on a closed PR with an unknown decision. The reviewer independently
+  re-ran pnpm check at HEAD 2d1b17f (806 pass / 0 fail, boundaries clean, secret-read allowlist
+  exactly 4, exports-parity green), the targeted github-trap/trap-catalog/content-inventory suites
+  (18 pass, matching the recorded claim), commitlint across origin/main-tools..HEAD (0 problems),
+  and the zero-new-dependencies diff (lockfile and all manifests byte-unchanged). The authorized
+  rebase reword (904646f->64aa63c) was independently verified tree-identical via matching tree
+  hashes and range-diff; d63a79a's edit to review-iter-1.yaml was SHA-only with verdict and
+  findings intact. No new findings. P11 is discharged in full; the remediation loop closes and
+  delivery proceeds to lifecycle phase 11 (PR creation, P10-5 rides the handoff).
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 0
+spec_compliance: PASS
+plan_compliance: PASS
+findings: []
+remediation_audit:
+  P11-1_F1: "DISCHARGED — packages/adapters/src/jira/workflow-map.ts header now reads GH-188 DM-4 (commit 162e61e); comment-only, no behavior surface."
+  P11-2_F2: "DISCHARGED — new 'Intra-package imports and packed exports' subsection in doc/spec/features/feature-provider-client-seeds.md + matching why-note header on src/io/provider-transport.ts; the documented claim ('#io/*' is src-mapped ./src/io/*.ts, packed tarball ships dist only, relative .js resolves in both) verified exact against packages/adapters/package.json imports map."
+  P11-3_F3_F5: "DISCHARGED — GH-ISSUE-TO-WORKITEM providerBehavior now declares state_reason on live closed issues and expectedNormalizedOutcome records 'state_reason is not modeled: closed maps to done regardless of not_planned ... deferred to M0-S20'; garbled 'closed Set status alias' reworded to 'a closed-set status alias (open to ready, closed to done)' which matches GITHUB_WORK_ITEM_STATUS_MAP exactly; four-key schema retained, trap-catalog schema test green."
+  P11-4_F4: "DISCHARGED — GITHUB_UNKNOWN_REVIEW_DECISION_FALLBACK = 'open' as const declared with a table comment documenting the fallback and the intentional GitLab asymmetry; resolver changed from ?? \"open\" to ?? constant with identical semantics (behavior unchanged, value pinned by test); NOT re-exported through the github subpath index (public surface unchanged; only normalize.ts and the test consume it); content-inventory EXECUTABLE_ALLOWANCES honestly extended by one declared export. The task's 'comment-level fix preferred (no fixture change)' preference was exceeded (test extension + traps.json GH-REVIEW-STATE wording), but the DONE note declares it and it strengthens the declared-behavior surface — considered and accepted, not a finding."
+  P11-5_F8: "DISCHARGED — pnpm check 806/0 reproduced by this reviewer at HEAD; working tree clean before this review; pm-notes change had landed in ef9462d."
+  F6_F7: "INTENTIONALLY LEFT — info-severity, outside P11 scope per its own declaration ('info findings F-5..F-8 are optional'); acceptable."
+  P10_1: "VERIFIED — .changeset/gh-188-client-seeds-minor.md is a five-package minor fixed group (core, adapters, cli, mcp, opencode) mirroring the GH-181 precedent format."
+  P10_4: "VERIFIED — DoD checklist: 9 predicates PASSED with accurate evidence pointers + 1 explicit HANDOFF (PR/CI predicate to lifecycle phase 11, line 411); P10-5 open by design (rides the PR handoff)."
+assertion_meaningfulness:
+  unknown_native: "PR 508 (open, draft=false, merged=false, reviewDecision=SOLICITED_REVIEW) resolves to the fallback — catches a fail-visible regression or a changed fallback value; the constant's value is independently pinned by expect(...).toBe('open')."
+  terminal_precedence: "PR 509 (closed, unknown decision) resolves to 'closed' — catches any resolver reordering that lets the decision table precede terminal truth."
+  fixture_hygiene: "Inline fixture numbers 508/509 are disjoint from pr-review-states.json's 501-507; assertion extended in place inside the existing GH-REVIEW-STATE entry (no new test blocks), consistent with the 806 count being unchanged since iteration 1."
+verification_evidence:
+  suites_rerun_by_reviewer:
+    - "pnpm check at HEAD 2d1b17f -> 806 pass / 0 fail across 85 files; depcruise 84 modules clean; ambient-globals OK; workspace-entrypoints OK; secret-read-boundary: 70 production files clean, exactly 4 allowlisted entries; exports-parity: 5 publishables pass attw --pack."
+    - "bun test github-trap + trap-catalog + content-inventory -> 18 pass / 0 fail (matches the test-plan P11 evidence row exactly)."
+    - "npx commitlint --from origin/main-tools --to HEAD -> 0 problems, 0 warnings on every branch commit."
+    - "git diff origin/main-tools...HEAD -- pnpm-lock.yaml package.json packages/*/package.json -> empty (zero new dependencies)."
+  rebase_verification: "Authorized reword 904646f->64aa63c verified tree-identical: identical tree hashes for the reworded pair and for the P7 head pair (2a25434 vs 409781d); git range-diff over 904646f..2a25434 vs 64aa63c..4162c89 shows '=' on every commit. d63a79a's touch of review-iter-1.yaml is SHA-only (verdict, findings, severity counts untouched); all post-rebase SHA references in plan/test-plan/pm-notes/readiness verdict resolve to real commits; only pre-rebase SHA occurrences are inside the retro note documenting the rebase itself."
+  dod_pointer_accuracy: "Plan lines 402-411 spot-checked: pnpm-check-806 claim reproduced; zero-deps diff reproduced; allowlist-4 reproduced; doc-sync commit 4162c89 and comment 6536692124 verified in iteration 1 and unchanged since; HANDOFF predicate (line 411) correctly left owed to @pr-manager."
+plan_task_audit:
+  OPEN_TASKS: "P10-5 only — by design, its content (rollback instructions and scope proof) rides the lifecycle phase-11 PR handoff; not a gap."
+  DONE_BUT_UNCHECKED: none
+  CHECKED_BUT_MISSING: none
+test_coverage_gaps: none
+reviewed_at: 2026-10-31T16:30:00Z
+next_step: PROCEED

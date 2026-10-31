@@ -1,0 +1,96 @@
+change_id: GH-188
+title: "M0-S19: Client seeds with trap catalogs"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-10-31T00:00:00Z", completed: "2026-10-31T00:35:00Z" }
+  specification: { started: "2026-10-31T00:35:00Z", completed: "2026-10-31T01:20:00Z" }
+  test_planning: { started: "2026-10-31T01:05:00Z", completed: "2026-10-31T01:25:00Z" }
+  delivery_planning: { started: "2026-10-31T01:30:00Z", completed: "2026-10-31T01:40:00Z" }
+  dor_check: { started: "2026-10-31T01:45:00Z", completed: "2026-10-31T02:10:00Z", iteration: 2, verdict: "READY" }
+  delivery: { started: "2026-10-31T02:15:00Z", completed: "2026-10-31T03:30:00Z" }
+  system_spec_update: { started: "2026-10-31T03:35:00Z", completed: "2026-10-31T04:00:00Z" }
+  review_fix: { started: "2026-10-31T04:05:00Z", completed: "2026-10-31T05:30:00Z", iteration: 2, status: "PASS_loop_closed" }
+  quality_gates: { started: "2026-10-31T05:35:00Z", completed: "2026-10-31T05:45:00Z" }
+  dod_check: { started: "2026-10-31T05:50:00Z", completed: "2026-10-31T05:55:00Z" }
+  pr_creation: { started: "2026-10-31T06:00:00Z", completed: "2026-10-31T06:10:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/198" }
+decisions:
+  - text: "Implementation basis (ticket-mandated, recorded in ticket comment 6536692124): GitHub + GitLab = direct REST API via native fetch (CLIs disqualified: own token caches, subprocess output drift); Jira = custom minimal read-slice client (no official TS client; jira.js MIT viable but unused surface; MCP clients need host+creds outside credential port). Fallback: re-evaluate jira.js at M0-S14 write ops. Zero new dependencies."
+    date: "2026-10-31"
+  - text: "ADR-0004 (Proposed): additive optional WorkItem.updatedAt (ISO-8601 UTC; absent = activity unknown) resolves the stall-query port-shape gap; contract-inventory test + fixture update ride in this change."
+    date: "2026-10-31"
+  - text: "ADR-0005 (Proposed): runtime-API confinement gains reason-bearing entries for github/gitlab/jira provider client subpaths; refines ADR-0003 via new record + editorial pointer (no in-place semantic rewrite); secret-read allowlist stays at exactly 4 entries."
+    date: "2026-10-31"
+  - text: "OQ-2 resolved to spec default: transitions-as-data quirk covered read-only via WorkflowMap + trap entry; Jira write/transition declared gaps; write ops arrive with M0-S14 per ticket-recorded outcome."
+    date: "2026-10-31"
+  - text: "ADR-0006 (Proposed): Jira custom fields = documented mapping semantics, NO v1 contract change (mapped fields typed at boundary; unmapped visibly unrepresented, no raw key leak); WorkItem.comments = optional (absent = comment set unknown; present incl. empty = provider-asserted set). Unblocked TC-JIRA-002/TC-JIRA-004; spec v1.2 + test plan v1.1 corrected; 12/12 ACs fully assertable."
+    date: "2026-10-31"
+open_questions:
+  - text: "OQ-C (plan): GitLab ≥3 trap-entry minimum relies on merge-status variant split (asynchronous/multi-valued as two entries per spec OQ-3 allowance) — DoR gate to confirm; fallback is a third named GitLab family in P4."
+    date: "2026-10-31"
+  - text: "OQ-D residual: per-value merge-status mapping rows are declared adapter data authored at P4; invariants pinned, per-value rows first reviewed at PR."
+    date: "2026-10-31"
+blockers:
+  - text: "DoR iteration 1 = NOT_READY: fixture-provenance contradiction (spec F-6/DM-3/flow-5/§12 + test-plan §6 say 'captured against controlled/scratch tenants'; plan OQ-H adopts hand-authored synthetic captures — no live tenant). Remediation: reopen specification + test_planning for provenance-language correction; then re-run gate."
+    date: "2026-10-31"
+    resolved_date: "2026-10-31"
+  - text: "ADR-0005 overstated FACT rows (fetch-global invisible to dependency-cruiser rule; ban scoped to core neutral tiers) — corrected 4 rows + ALT-0 declared-structure rewording; decision and status (Proposed) unchanged."
+    date: "2026-10-31"
+    resolved_date: "2026-10-31"
+notes:
+  - text: "State detection: issue OPEN, no labels, milestone M0; no change folder, no branch artifacts, no open/merged PR — fresh delivery. Dependency GH-181 (M0-S12 credential port) closed 2026-10-30, so dependency is satisfied."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Ticket AC 'the GitHub read slice serves status and verify change on this repository' is interpreted as: the read slice provides the PR/pipeline/issue reads that the M0-S6 status collector and M0-S8 verify-change need as inputs — status and verify commands themselves are downstream stories (backlog confirms M0-S6 and M0-S9 depend on M0-S19, and 'The Jira read slice from M0-S19 precedes this story')."
+    type: "decision"
+    date: "2026-10-31"
+  - text: "Ticket mandates an implementation-basis evaluation recorded in the ticket: GitHub/GitLab provider CLI vs direct API; Jira official/open-source client evaluation before custom code. Plan: delegate evaluation to @decision-advisor during planning, record outcome as a ticket comment (decision log)."
+    type: "decision"
+    date: "2026-10-31"
+  - text: "Doc impacts anticipated: new feature spec for provider client seeds (doc/spec/features/feature-*.md authored by doc-syncer in phase 7 per always-resolve rule); possible updates to feature-adapter-ports.md (consumed-by/risks); AGENTS.md repo structure section only if new top-level dirs appear (avoid). Trap-catalog fixtures are change-scoped test assets."
+    type: "risk"
+    date: "2026-10-31"
+  - text: "Specification reopened once mid-chain: spec-writer surfaced 3 decision-worthy items (implementation basis, WorkItem stall timestamp, ADR-0003 confinement tension). Resolved via one @decision-advisor session (ADR-0004, ADR-0005, ticket-recorded D-A), then re-delegated corrections to @spec-writer (13 items) + 4 PM consistency line-edits. Chain resumed cleanly."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "M0-S14 cross-story note: closeout needs Jira write ops; the seed delivers them as declared gaps with WorkflowMap as foundation plus the jira.js re-evaluation fallback trigger — M0-S14 must extend the seed or trigger the fallback."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Test-plan authoring iteration 1 found 2 BLOCKING spec gaps (reopen specification): AC-F3-2 custom-fields and comment-omission quirks unrepresentable in delivered v1 WorkItem (no custom-field field; comments required array with no omission signal) — TC-JIRA-002/TC-JIRA-004 blocked. 6 non-blocking ambiguities recorded in test-plan §8.3 (OQ-C..H) for the DoR gate."
+    type: "risk"
+    date: "2026-10-31"
+  - text: "Second specification reopen in one change — both finds were genuine substrate contract-shape gaps surfaced exactly when ACs met their evidence requirements. Cost: one decision round + two correction passes. Mitigation working as designed: gaps caught before delivery, not during it."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "DoR iteration 1: 9/10 facets PASS; blocking = fixture-provenance contradiction across spec/test-plan/plan. Advisory: ADR-0005 evidence row overstated (fetch global banned only in core neutral tiers — pure global-fetch client cruises clean; decision unaffected, FACT row correction before owner acceptance); test-plan §2 stale ranges (DM/OQ/DEC numbering pre-v1.2). OQ-C split judged legitimate; Proposed-ADR model accepted; synthetic-fixture fidelity risk coherent once spec states it honestly (RSK-2 → M0-S20)."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Reopening specification (3rd pass) and test_planning (2nd pass) for provenance-language corrections — mechanical, no human decision needed per gate. Gate verdict artifact: readiness-review/readiness-iter-1.md in change folder."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "DoR iteration 2: READY, 10/10 facets PASS, 0 blocking. Blocking provenance finding verified resolved across spec v1.3/test plan v1.2/plan OQ-H; live ticket + comment 6536692124 read directly via gh CLI this iteration (unavailable at iter-1) — all citations match. 4 mechanical advisories fixed ride-along (plan version citations v1.3/v1.2; test-plan implementation_plan frontmatter; OQ-H date record-place); 2 optional nits consciously left (DEC-3 recording-era vocabulary asserting nothing false; NFR-2 count-vs-family wording)."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Delivery complete: P1–P7 committed (a335093, 07a3834, 10dce1e, a11bc53, efda29f, 9a136e3, 409781d) + P10 gate evidence (6bdc03c). Gates green: 804 pass/0 fail on pnpm check; exactly 4 secret-read allowlist entries; zero new dependencies; infra byte-unchanged vs main-tools. 28/28 TCs implemented. 5 justified deviations recorded in coder report (relative #io import for packed-export parity; custom-field→labels prefix mapping per ADR-0006; fixtureReference string|array; tsconfig already globbed type tests; robust removal-test slicer). P8/P9 review loop deferred to PM phase 8; changeset deferred until review passes."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Doc-sync phase 7: new feature-provider-client-seeds.md authored (always-resolve); feature-adapter-ports.md (WorkItem optionality, consumed-by, confinement, GH-188 links); scaffold spec confinement bullet + placeholder claims reconciled; ADR-0003 editorial pointer; glossary terms (client seed, trap catalog, fixture provenance); decision index registered ADR-0004/0005/0006; distribution guard PASS. Residual blocker found and fixed in-change: new spec unregistered in forbidden-literals.registry.json — coder added the entry, checks green (806 pass/0 fail)."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Doc-sync surfaced its write-scope boundary cleanly (registry file = scripts/, outside doc-sync scope) and the fix routed to @coder without phase reopen — the always-resolve + in-change-remediation pattern held."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "Review iteration 1: Status=PASS (0 blocker/0 major/4 low/4 info). Reviewer independently re-ran suites (providers 78, structure 154, boundaries 124, secret-read 17 — all green), verified 12/12 ACs non-vacuous, all mutation controls fire by name, ADR conformance exact, all 5 coder deviations sound. Remediation Phase P11 appended to plan: (1) DH-188→GH-188 typo in jira/workflow-map.ts; (2) document the relative-import convention exception (packed-export parity) in feature spec; (3) record GitHub closed-not_planned mapping limitation in GH-ISSUE-TO-WORKITEM trap; (4) github review-state unknown-value fallback asymmetry vs GitLab fail-visible — declare or mirror. Then P10-1 changeset + P10-4 DoD checklist. Review artifacts: code-review/review-iter-1.yaml."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Review found no AC-washing and no boundary erosion — the coder's in-plan P6/P7 honesty suites did their job; findings were all documentation-truthfulness items. Anti-AC-washing investment (mutation controls, bidirectional coverage) paid off at review."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "Commitlint discipline: one commit (DoR remediation) landed with body lines >100 chars — warn-only locally but CI-enforced; fixed via authorized amend (2c25f56→a7e2c2e) + rebase reword (904646f→64aa63c) before push, then SHA references synced across 5 artifacts. Lesson: PM commit prompts must state the 100-char body/footer line constraint explicitly; committers must self-check body wrapping, not rely on the warn-only hook."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "Review iteration 2: PASS, 0 findings, P11 discharged in full (all 4 low items verified with smallest honest diffs; extended GH-REVIEW-STATE assertion non-vacuous, behavior unchanged; rebase verified tree-identical; gates independently reproduced 806/0, allowlist 4, zero deps, commitlint clean). Review loop closed. Artifacts: code-review/review-iter-2.yaml."
+    type: "info"
+    date: "2026-10-31"
+  - text: "DoD check PASSED: all 9 pre-PR phases complete; 12/12 spec ACs + 4 ticket ACs verified (reviewer ac_trace, iterations 1+2); all gates green; doc-syncer reports Ready for Finalization with zero unresolved gaps. Remaining open items are phase-11 deliverables by design (plan P10-4 line 411 HANDOFF + P10-5): PR must target main-tools, include P10-5 rollback/scope-proof section (additive-only; revert as one coherent unit; never split contract field from probe, confinement entry from fixtures, client from catalog), list ADR-0004/0005/0006 as acceptance-pending, and record green CI on the pushed HEAD as the final DoD predicate."
+    type: "info"
+    date: "2026-10-31"

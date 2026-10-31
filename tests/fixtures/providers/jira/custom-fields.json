@@ -1,0 +1,18 @@
+{
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "issue": {
+    "id": "10005",
+    "key": "TRACK-105",
+    "fields": {
+      "summary": "Custom field typing at the boundary",
+      "status": { "name": "In Review" },
+      "labels": ["hygiene"],
+      "assignee": null,
+      "updated": "2026-10-27T12:00:00.000+0000",
+      "comment": { "comments": [] },
+      "customfield_10020": { "value": "platform" },
+      "customfield_10021": "008",
+      "customfield_10099": "unmapped-raw-value"
+    }
+  }
+}

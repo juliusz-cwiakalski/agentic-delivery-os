@@ -107,6 +107,14 @@ export const compareInventory = (
   return failures;
 };
 
+const removeWorkItemDeclaration = (text: string): string => {
+  const start = text.indexOf("export type WorkItem = {");
+  if (start === -1) return text;
+  const end = text.indexOf("\n};", start);
+  if (end === -1) return text;
+  return `${text.slice(0, start)}${text.slice(end + 3)}`;
+};
+
 const makeContractsCopy = (mutate: (directory: string) => void): string => {
   const root = mkdtempSync(join(tmpdir(), "port-inventory-"));
   mkdirSync(join(root, "packages/core/src"), { recursive: true });
@@ -161,13 +169,7 @@ describe("TC-PORT-001 v1 contract surface inventory", () => {
   test("removing a primitive fails naming the missing contract", () => {
     const root = makeContractsCopy((directory) => {
       const path = join(directory, CONTRACTS_DIR, "ports.ts");
-      writeFileSync(
-        path,
-        readFileSync(path, "utf8").replace(
-          /\/\*\* A normalized ticket \(DM-3\)\. \*\/\nexport type WorkItem = \{[\s\S]*?\n\};\n/,
-          "",
-        ),
-      );
+      writeFileSync(path, removeWorkItemDeclaration(readFileSync(path, "utf8")));
     });
     try {
       const failures = compareInventory(collectInventory(root), expected);
@@ -203,6 +205,155 @@ describe("TC-PORT-001 v1 contract surface inventory", () => {
     try {
       const failures = compareInventory(collectInventory(root), expected);
       expect(failures.some((message) => message.includes("harness-port.ts"))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * TC-CONTRACT-001 — the `WorkItem` field-shape probe (GH-188 OQ-F).
+ *
+ * The export-name inventory above cannot see field changes, so the ADR-0004 and
+ * ADR-0006 extensions are pinned here: exact field set, optionality, readonly
+ * modifiers, and the declared type text.
+ */
+type FieldShape = {
+  readonly name: string;
+  readonly optional: boolean;
+  readonly readonly: boolean;
+  readonly typeText: string;
+};
+
+type FieldShapeFixture = {
+  readonly typeName: string;
+  readonly fields: readonly FieldShape[];
+};
+
+const FIELD_SHAPE_PATH = "tests/fixtures/ports/workitem-field-shape.json";
+
+export const fieldShapeFixture = JSON.parse(
+  readFileSync(join(ROOT, FIELD_SHAPE_PATH), "utf8"),
+) as FieldShapeFixture;
+
+const normalizeTypeText = (text: string): string => text.replace(/\s+/g, " ").trim();
+
+/** Read one type alias's property shape from `ports.ts` under a root. */
+export const collectFieldShape = (root: string, typeName: string): FieldShape[] | undefined => {
+  const file = join(root, CONTRACTS_DIR, "ports.ts");
+  const source = ts.createSourceFile(
+    "ports.ts",
+    readFileSync(file, "utf8"),
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  for (const statement of source.statements) {
+    if (!ts.isTypeAliasDeclaration(statement) || statement.name.text !== typeName) continue;
+    if (!ts.isTypeLiteralNode(statement.type)) return [];
+    return statement.type.members.filter(ts.isPropertySignature).map((member) => ({
+      name: ts.isIdentifier(member.name) ? member.name.text : member.name.getText(source),
+      optional: member.questionToken !== undefined,
+      readonly: (member.modifiers ?? []).some(
+        (modifier) => modifier.kind === ts.SyntaxKind.ReadonlyKeyword,
+      ),
+      typeText: normalizeTypeText(member.type?.getText(source) ?? ""),
+    }));
+  }
+  return undefined;
+};
+
+/** Compare the live field shape to the fixture; every divergence names the field. */
+export const fieldShapeFailures = (root: string, fixture: FieldShapeFixture): string[] => {
+  const actual = collectFieldShape(root, fixture.typeName);
+  if (actual === undefined) return [`${fixture.typeName}: type is missing`];
+  const failures: string[] = [];
+  const expectedNames = fixture.fields.map((field) => field.name);
+  const actualNames = actual.map((field) => field.name);
+  for (const name of expectedNames.filter((entry) => !actualNames.includes(entry))) {
+    failures.push(`${fixture.typeName}.${name}: missing field`);
+  }
+  for (const name of actualNames.filter((entry) => !expectedNames.includes(entry))) {
+    failures.push(`${fixture.typeName}.${name}: unexpected field`);
+  }
+  for (const expectedField of fixture.fields) {
+    const found = actual.find((field) => field.name === expectedField.name);
+    if (found === undefined) continue;
+    if (found.optional !== expectedField.optional) {
+      failures.push(
+        `${fixture.typeName}.${expectedField.name}: optional ${found.optional} != ${expectedField.optional}`,
+      );
+    }
+    if (found.readonly !== expectedField.readonly) {
+      failures.push(
+        `${fixture.typeName}.${expectedField.name}: readonly ${found.readonly} != ${expectedField.readonly}`,
+      );
+    }
+    if (found.typeText !== expectedField.typeText) {
+      failures.push(
+        `${fixture.typeName}.${expectedField.name}: type ${found.typeText} != ${expectedField.typeText}`,
+      );
+    }
+  }
+  return failures;
+};
+
+describe("TC-CONTRACT-001 WorkItem field-shape probe", () => {
+  test("the live WorkItem shape equals the committed fixture exactly", () => {
+    expect(fieldShapeFailures(ROOT, fieldShapeFixture)).toEqual([]);
+    expect(fieldShapeFixture.typeName).toBe("WorkItem");
+    // The additive extensions are pinned by name, not just by field count.
+    expect(fieldShapeFixture.fields.map((field) => field.name)).toEqual([
+      "identity",
+      "title",
+      "status",
+      "labels",
+      "assignee",
+      "relations",
+      "comments",
+      "updatedAt",
+    ]);
+    expect(fieldShapeFixture.fields.find((field) => field.name === "comments")).toMatchObject({
+      optional: true,
+      readonly: true,
+    });
+    expect(fieldShapeFixture.fields.find((field) => field.name === "updatedAt")).toMatchObject({
+      optional: true,
+      readonly: true,
+      typeText: "string",
+    });
+  });
+
+  test("removing WorkItem.updatedAt fails naming the field (ADR-0004 C-1)", () => {
+    const root = makeContractsCopy((directory) => {
+      const path = join(directory, CONTRACTS_DIR, "ports.ts");
+      writeFileSync(
+        path,
+        readFileSync(path, "utf8").replace("  readonly updatedAt?: string;\n", ""),
+      );
+    });
+    try {
+      const failures = fieldShapeFailures(root, fieldShapeFixture);
+      expect(failures.some((message) => message.includes("WorkItem.updatedAt"))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("re-tightening comments to required fails naming the field (ADR-0006 C-1)", () => {
+    const root = makeContractsCopy((directory) => {
+      const path = join(directory, CONTRACTS_DIR, "ports.ts");
+      writeFileSync(
+        path,
+        readFileSync(path, "utf8").replace(
+          "readonly comments?: readonly WorkItemComment[];",
+          "readonly comments: readonly WorkItemComment[];",
+        ),
+      );
+    });
+    try {
+      const failures = fieldShapeFailures(root, fieldShapeFixture);
+      expect(failures.some((message) => message.includes("WorkItem.comments"))).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

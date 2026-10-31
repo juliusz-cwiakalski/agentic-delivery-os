@@ -203,17 +203,27 @@ module.exports = {
     // subpaths, the CLI build, and the OpenCode host integration. Nothing else.
     // The adapter I/O subpaths are ADR DEC-6's I/O modules
     // (repo|file|host|session|legacy) plus the credential implementation;
-    // provider/registry subpaths are not I/O.
+    // ADR-0005 refines that reading for provider client subpaths that perform
+    // network I/O. Each provider entry is exact-path and reason-bearing.
     {
       name: "runtime-apis-confinement",
       severity: "error",
       comment:
-        "ADR-0003 DEC-2 allowlist: runtime APIs are permitted only in the `core ./state` driver edge, the adapter I/O subpaths, the CLI build, and the OpenCode host integration (GH-174 tightened the state allowance from the whole state tree to the driver edge).",
+        "ADR-0003 DEC-2 allowlist: runtime APIs are permitted only in the `core ./state` driver edge, the adapter I/O subpaths, the CLI build, and the OpenCode host integration (GH-174 tightened the state allowance from the whole state tree to the driver edge; ADR-0005 refines the adapter edge for provider client subpaths).",
       from: {
         path: "^packages/",
         pathNot: [
           "^packages/core/src/state/driver/",
           "^packages/adapters/src/(repo|file|host|session|legacy|credentials)/",
+          // ADR-0005 C-2 — `github` provider client subpath: GitHub REST reads
+          // for the minimal status/verify input slice (GH-188).
+          "^packages/adapters/src/github/",
+          // ADR-0005 C-2 — `gitlab` provider client subpath: GitLab MR and
+          // pipeline reads (GH-188).
+          "^packages/adapters/src/gitlab/",
+          // ADR-0005 C-2 — `jira` provider client subpath: Jira read slice for
+          // the tracker collector (GH-188).
+          "^packages/adapters/src/jira/",
           "^packages/cli/",
           "^packages/opencode/",
         ],

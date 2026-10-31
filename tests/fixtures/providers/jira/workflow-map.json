@@ -1,0 +1,20 @@
+{
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "systemName": "jira",
+  "states": [
+    { "nativeStatus": "Backlog", "deliveryState": "backlog", "transitionMechanism": "manual" },
+    { "nativeStatus": "To Do", "deliveryState": "ready", "transitionMechanism": "manual" },
+    {
+      "nativeStatus": "In Progress",
+      "deliveryState": "in-progress",
+      "transitionMechanism": "field-update"
+    },
+    {
+      "nativeStatus": "In Review",
+      "deliveryState": "in-review",
+      "transitionMechanism": "api-transition"
+    },
+    { "nativeStatus": "Done", "deliveryState": "done", "transitionMechanism": "api-transition" },
+    { "nativeStatus": "Won't Do", "deliveryState": "canceled", "transitionMechanism": "label-swap" }
+  ]
+}

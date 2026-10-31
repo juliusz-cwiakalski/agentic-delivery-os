@@ -1,0 +1,14 @@
+{
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "issue": {
+    "id": "10007",
+    "key": "TRACK-107",
+    "fields": {
+      "summary": "Comments omitted by the search-shaped read",
+      "status": { "name": "In Progress" },
+      "labels": ["tracker"],
+      "assignee": { "displayName": "owner-placeholder", "accountId": "acct-0001" },
+      "updated": "2026-10-26T11:00:00.000+0000"
+    }
+  }
+}

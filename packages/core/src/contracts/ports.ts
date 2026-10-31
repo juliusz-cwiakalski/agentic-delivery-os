@@ -98,7 +98,14 @@ export type WorkItemComment = {
   readonly body: string;
 };
 
-/** A normalized ticket (DM-3). */
+/**
+ * A normalized ticket (DM-3).
+ *
+ * Absence semantics are uniform across the optional fields (ADR-0004,
+ * ADR-0006): an absent field means the provider did not supply the signal, so
+ * the value is unknown — it is never derived, fabricated, or collapsed into an
+ * empty set.
+ */
 export type WorkItem = {
   readonly identity: ProviderQualifiedIdentity;
   readonly title: string;
@@ -106,7 +113,19 @@ export type WorkItem = {
   readonly labels: readonly string[];
   readonly assignee?: string;
   readonly relations: readonly WorkItemRelation[];
-  readonly comments: readonly WorkItemComment[];
+  /**
+   * The provider-asserted comment set. Absent = the comment set is unknown
+   * (omitted by the provider for permission/paging causes, or not fetched);
+   * present — including an explicitly empty array — = the provider-asserted set
+   * (ADR-0006).
+   */
+  readonly comments?: readonly WorkItemComment[];
+  /**
+   * The provider-native last-modified timestamp, copied verbatim as an
+   * ISO-8601 UTC string. Absent = activity is unknown, never "no activity"
+   * (ADR-0004; GH-188 OQ-E).
+   */
+  readonly updatedAt?: string;
 };
 
 /** A delivery request's review state (DM-6). */
