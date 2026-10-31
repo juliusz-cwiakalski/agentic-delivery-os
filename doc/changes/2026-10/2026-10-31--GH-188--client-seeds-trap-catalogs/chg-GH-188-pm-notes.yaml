@@ -7,7 +7,7 @@ phases:
   test_planning: { started: "2026-10-31T01:05:00Z", completed: "2026-10-31T01:25:00Z" }
   delivery_planning: { started: "2026-10-31T01:30:00Z", completed: "2026-10-31T01:40:00Z" }
   dor_check: { started: "2026-10-31T01:45:00Z", completed: "2026-10-31T02:10:00Z", iteration: 2, verdict: "READY" }
-  delivery: { started: "2026-10-31T02:15:00Z", completed: null }
+  delivery: { started: "2026-10-31T02:15:00Z", completed: "2026-10-31T03:30:00Z" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -68,5 +68,8 @@ notes:
     type: "retro"
     date: "2026-10-31"
   - text: "DoR iteration 2: READY, 10/10 facets PASS, 0 blocking. Blocking provenance finding verified resolved across spec v1.3/test plan v1.2/plan OQ-H; live ticket + comment 6536692124 read directly via gh CLI this iteration (unavailable at iter-1) — all citations match. 4 mechanical advisories fixed ride-along (plan version citations v1.3/v1.2; test-plan implementation_plan frontmatter; OQ-H date record-place); 2 optional nits consciously left (DEC-3 recording-era vocabulary asserting nothing false; NFR-2 count-vs-family wording)."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Delivery complete: P1–P7 committed (2ed11eb, 41fb233, 28ef7e3, c894a0e, a1a6fc6, f83735b, 2a25434) + P10 gate evidence (7d3ce79). Gates green: 804 pass/0 fail on pnpm check; exactly 4 secret-read allowlist entries; zero new dependencies; infra byte-unchanged vs main-tools. 28/28 TCs implemented. 5 justified deviations recorded in coder report (relative #io import for packed-export parity; custom-field→labels prefix mapping per ADR-0006; fixtureReference string|array; tsconfig already globbed type tests; robust removal-test slicer). P8/P9 review loop deferred to PM phase 8; changeset deferred until review passes."
     type: "info"
     date: "2026-10-31"
