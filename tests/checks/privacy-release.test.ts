@@ -116,7 +116,10 @@ describe("TC-RELEASE-001 exactly one new five-package minor changeset", () => {
       if (path !== CHANGESET_PATH) current[path] = readFileSync(join(ROOT, path), "utf8");
     }
     expect(preExistingViolations(base, current)).toEqual([]);
-    expect(Object.keys(base).length).toBe(5);
+    // The pre-existing changeset count grows with every delivery that lands on
+    // the base branch, so only non-vacuity is asserted here; byte-identity above
+    // and exactly-one-added prove the change's own release metadata.
+    expect(Object.keys(base).length).toBeGreaterThan(0);
   });
 
   test("the added changeset declares exactly five minor packages and a body", () => {

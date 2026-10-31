@@ -175,6 +175,13 @@
       "path": "doc/changes/2026-10/2026-10-31--GH-184--privacy-and-no-cloud-guards/code-review/review-iter-1.yaml",
       "rules": ["private.absolute-user-path"],
       "reason": "Archival machine-readable review evidence quoting the F-1 path example; the review record is read-only and is not production content."
+    },
+    {
+      "id": "provider-chain-resolution-negative-fixture",
+      "kind": "file",
+      "path": "tests/behaviour/provider-chain-resolution.test.ts",
+      "rules": ["secret.connection-string-credential"],
+      "reason": "Deliberate negative fixture proving the provider validator rejects a credential-bearing endpoint; the host is the reserved synthetic example.test domain and the credential is a fabricated placeholder, not private content."
     }
   ],
   "exclusions": [

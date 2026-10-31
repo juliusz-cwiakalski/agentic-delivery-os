@@ -178,6 +178,12 @@ export const EXPECTED_ALLOWLIST: readonly ExpectedAllowlist[] = [
     path: "doc/changes/2026-10/2026-10-31--GH-184--privacy-and-no-cloud-guards/code-review/review-iter-1.yaml",
     rules: ["private.absolute-user-path"],
   },
+  {
+    id: "provider-chain-resolution-negative-fixture",
+    kind: "file",
+    path: "tests/behaviour/provider-chain-resolution.test.ts",
+    rules: ["secret.connection-string-credential"],
+  },
 ];
 
 export const fixtureEntry = (index: number, className: string, length = 8): EntryLike => ({

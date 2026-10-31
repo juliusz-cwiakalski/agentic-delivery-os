@@ -64,6 +64,15 @@ open_questions:
 blockers: []
 
 notes:
+  - text: "Post-merge reconciliation after GH-182 (provider v1) landed on main-tools, merge commit 6675a02: (1) TC-RELEASE-001 no longer hardcodes the pre-existing changeset count (toBe(5)) and asserts non-vacuity plus the unchanged byte-identity and exactly-one-added checks; (2) added rule-scoped exact-path allowlist entry provider-chain-resolution-negative-fixture for tests/behaviour/provider-chain-resolution.test.ts rule secret.connection-string-credential (synthetic example.test host, deliberate negative fixture proving the provider validator rejects credential-in-endpoint), mirrored in EXPECTED_ALLOWLIST; (3) removed the stray tracked chk.log from the repository root. Full battery green: pnpm check, 1403 tests, guard 1189 files / 0 violations / 26 allowlisted files / both hashed classes explicitly vacuous, forbidden-literals, error-table sync 31/31, doc distribution, commitlint."
+    type: "info"
+    date: "2026-11-01"
+  - text: "Suppression inventory change: one new rule-scoped exact-path allowlist entry (provider chain negative fixture) and the existing baseline batch unchanged; no rule, marker, cap, or exclusion was weakened. Full inventory is enumerated in the PR #203 description per PD-7."
+    type: "info"
+    date: "2026-11-01"
+  - text: "Retro: the release-integrity test encoded an absolute count of pending changesets on the base branch, so any unrelated delivery landing on main-tools broke it; and a new provider fixture introduced a credential-in-endpoint shape without the guard's allowlist being updated in the same change. Lessons: release assertions must be relative to the change diff, and cross-change fixture additions need a guard reconciliation step after sync."
+    type: "retro"
+    date: "2026-11-01"
   - text: "PR #203 opened against main-tools (head feat/GH-184/privacy-no-cloud-guards), assigned to the owner, labels change+review, mergeable, no merge or auto-merge. Pushed-HEAD CI run on 1f20ce3 finished 47/47 checks pass, 0 fail, 0 pending (TS aggregate check, TS tests, repository invariants, bash suites, doc guards all green). The merge gate remains CI on the final HEAD."
     type: "info"
     date: "2026-11-01"
