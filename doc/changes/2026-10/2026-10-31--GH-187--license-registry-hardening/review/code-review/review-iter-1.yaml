@@ -1,0 +1,206 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-187
+branch: feat/GH-187/license-registry-hardening
+status: PASS
+summary: >-
+  The deny-list hardening is implemented correctly and fail-closed: the registry
+  is schema v3 with the full 20-identifier five-family floor, the audit enforces
+  deny-before-allow per branch, rejects absent/empty/malformed/duplicated/
+  overlapping/family-stripped deny lists, distinguishes non-asserted values, and
+  preserves the live MIT OR Apache-2.0 entry. All 15 ACs are satisfied, every
+  plan task 1.1-5.4 is delivered and green (44 license tests plus 8 privacy tests
+  pass; live audit and CI-topology/bindingness/supply-chain/surface/pin-equality/
+  vulnerability gates exit 0), and the workflow, lockfile, manifests, and
+  ADR-0003 are unchanged while TDR-0007 remains Proposed. Two non-blocking
+  evidence/consistency gaps remain: TC-LICREG-024 does not implement test-plan
+  step 4 (23 declared fixture cases are never executed), and the test-plan
+  section 10 execution log is still a placeholder. Three low and three info
+  observations add no correctness or security risk.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 2
+  low: 3
+  info: 3
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: test-plan-compliance
+    location: tests/checks/license-policy.test.ts:618
+    message: >-
+      TC-LICREG-024 ("the matrix is complete, registered, and non-vacuous") does
+      not implement test-plan step 4, which requires asserting that the suite
+      executes exactly the declared cases with an executed count equal to the
+      declared count. As delivered, deny-list-cases.json declares 84 cases but
+      the groups unknown-reference (2), empty (2), non-asserted (2),
+      unparseable (6), non-allow-listed (7) and overlap (3) plus
+      extension-valid-policy (1) are never run through applyPolicyCase/validate;
+      only their count and class-token membership are checked. The underlying
+      behaviours are covered in license-audit.test.ts via cases.json, so this is
+      not a product-coverage hole, but the "84-case matrix" and "non-vacuous"
+      claim is materially overstated and RSK-P2 requires a test-plan revision for
+      any such deviation rather than a silent edit.
+    suggestion: >-
+      Either drive every declared case through one generic loop (the unused
+      failuresForCase helper was clearly intended for this) and assert
+      executedCount === declaredCount, or trim deny-list-cases.json to the cases
+      actually executed and reconcile the group counts, TC-LICREG-024, and the
+      test plan (RSK-P2).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-10/2026-10-31--GH-187--license-registry-hardening/chg-GH-187-test-plan.md:1379
+    message: >-
+      The test-plan section 10 "Test Execution Log" still reads "Not yet
+      executed: the deny-list policy, the schema bump, and the extended matrix do
+      not exist yet", while spec section 18.1 makes "the test execution evidence
+      is recorded in the test plan section 10 log" a Definition-of-Done
+      predicate and the plan Phase 5 records the battery as green. The delivery
+      evidence lives only in the plan and doc-sync report, so a reader of the
+      test plan sees stale "not yet executed" text.
+    suggestion: >-
+      Populate section 10 with the actual run evidence (44 license tests and 8
+      privacy tests pass; bun test tests/checks 331/331; pnpm test 1434/1434;
+      live audit and invariant scripts exit 0) or add an explicit pointer to the
+      plan Phase 5 evidence block as authoritative.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: low
+    confidence: high
+    category: maintainability
+    location: tests/checks/license-policy.test.ts:133
+    message: >-
+      The failuresForCase helper is declared but never referenced; Biome reports
+      lint/correctness/noUnusedVariables (warning, not error). Dead test helpers
+      invite confusion about which path actually drives the policy matrix and are
+      likely a leftover from wiring fixture cases.
+    suggestion: >-
+      Remove failuresForCase, or wire it into TC-LICREG-024 to drive every
+      declared case (which also resolves F-1).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: low
+    confidence: high
+    category: testing
+    location: tests/fixtures/license/cases.json:19
+    message: >-
+      The cases.json fields deniedSingles (line 19), unknownReferences (line 64),
+      and blank (line 10, a duplicate of empty) are never read by any test. TC-006
+      iterates the deny-baseline identifiers and TC-016 uses the individual
+      unknownRef/unknownRefScancode keys, so these arrays are dead fixture data
+      that TC-024's meta-check does not cover.
+    suggestion: >-
+      Remove the unused fields or add a test that consumes them; extend the
+      TC-LICREG-024 non-vacuity check to assert every declared fixture key is
+      referenced.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-10/2026-10-31--GH-187--license-registry-hardening/chg-GH-187-plan.md:393
+    message: >-
+      Plan Phase 6 tasks 6.1-6.5 are still unchecked and the Execution Log row 6
+      says "Pending", while doc-sync-report.md reports SUCCESS and commit 7819ea0
+      reconciles the feature spec, glossary, and TDR-0007/index (the DONE_BUT_
+      UNCHECKED pattern). The substantive work is done; only the plan bookkeeping
+      lags.
+    suggestion: >-
+      Tick 6.1-6.5 and set Execution Log row 6 to Completed with commit 7819ea0
+      so the plan reflects the delivered doc-sync.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-6
+    severity: info
+    confidence: high
+    category: correctness
+    location: scripts/checks/license-audit.ts:286
+    message: >-
+      validateRegistryPolicy returns early after "deny_list absent", "not an
+      array", or "empty", so the floor and allow/deny-overlap failures are not
+      accumulated for those inputs. Plan task 1.2 says to "accumulate its
+      failures"; the current behaviour is still fail-closed and reports the
+      relevant integrity failure, so this is a wording/observability nuance, not
+      a defect.
+    suggestion: >-
+      Optional: replace the three early returns with guarded blocks so a single
+      run can also report missing floor identifiers and overlap, or adjust the
+      plan wording to match the early-return design.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-7
+    severity: info
+    confidence: medium
+    category: security
+    location: scripts/checks/license-audit.ts:324
+    message: >-
+      The disjointness check compares deny identifiers against the raw
+      allow_list strings, not against the identifiers parsed out of each allow
+      entry. Under the enforced contract that every allow_list entry is a single
+      identifier (TC-LICREG-001), string and identifier comparison are
+      equivalent, and a compound allow entry carrying a denied identifier still
+      fails closed through the entry-level deny check and the allow/verdict drift
+      check. Noted only so the invariant stays explicit if the allow-list grammar
+      is ever widened.
+    suggestion: >-
+      Optional: compare against the parsed identifier set (deriveAllowedIdentifiers)
+      so the overlap message is emitted for identifier-level contradictions
+      regardless of future allow-list grammar.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-8
+    severity: info
+    confidence: high
+    category: scope
+    location: tests/checks/privacy-release.test.ts:109
+    message: >-
+      The enabling base repair and the glossary/spec front-matter dedup fall
+      outside the license-policy product surface but are justified and safe: the
+      GH-184 TC-RELEASE-001 change is base-relative and still expects exactly the
+      GH-184 changeset when the base lacks it, expects no added changeset when the
+      base already carries it, and still rejects any other added or modified/
+      deleted changeset, so the original on-branch guarantee and release guard are
+      preserved. The front-matter dedup restores parseable YAML while adding
+      GH-187/TDR-0007 traceability. No action required.
+    suggestion: >-
+      None. Call the enabling repair out explicitly in the PR description as
+      already documented in the plan and pm-notes.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-10-31T18:40:00Z
+next_step: PROCEED

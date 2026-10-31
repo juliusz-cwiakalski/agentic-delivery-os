@@ -29,7 +29,9 @@ phases:
   system_spec_update:
     started: "2026-10-31T18:10:00Z"
     completed: "2026-10-31T18:22:00Z"
-  review_fix: { started: null, completed: null }
+  review_fix:
+    started: "2026-10-31T18:25:00Z"
+    completed: null
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -97,5 +99,8 @@ notes:
     type: "retro"
     date: "2026-10-31"
   - text: "Phase 7 system_spec_update COMPLETE (doc-sync-report.md): reconciled feature-monorepo-scaffold-toolchain.md License registry section (schema v3, required deny_list/20-identifier 5-family baseline, deny-before-allow, allow/deny disjointness, single-identifier grammar, preserved scope check, non-asserted fail-closed, per-branch compound, TDR-0007 Proposed), updated the codebase map and QA row, and added Deny list/License registry glossary terms plus traceability. No spec-coverage gap; doc distribution guard passes (81 docs, no drift); license audit and 44 license tests green; front matter parses. Residual gaps: none for GH-187 (pre-existing out-of-scope duplicate paragraphs and the TDR-0005/0006 index label swap noted only)."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Phase 8 review iteration 1 PASS (review/review-iter-1.md): 0 blocking; all 15 ACs and plan tasks 1.1-5.4 verified. Non-blocking fixes applied: F-1/F-3 TC-LICREG-024 now executes all 84 declared cases through failuresForCase (executed==declared, 84/84); F-4 duplicate blank fixture removed and deniedSingles/unknownReferences now used; F-2 test plan §10 execution log populated; F-5 plan Phase 6 marked Completed with doc-sync evidence. F-6/F-7 accepted as informational. Re-reviewing the changed tests."
     type: "info"
     date: "2026-10-31"
