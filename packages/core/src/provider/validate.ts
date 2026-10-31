@@ -294,6 +294,10 @@ const checkDescriptorRelations = (
 ): ProviderValidationError | undefined => {
   const quota = descriptor.quota;
   if (quota === undefined) return undefined;
+  // A disabled quota policy is inert: both endpoint and credential-reference
+  // relational checks are skipped, so `quota.enabled: false` never fails with
+  // the misleading "references unknown credential" detail (review R4).
+  if (!quota.enabled) return undefined;
   if (credentials[quota.credentialRef] === undefined) {
     return {
       code: "provider.chain.invalid",
@@ -301,7 +305,7 @@ const checkDescriptorRelations = (
       entries: [descriptor.name],
     };
   }
-  if (quota.enabled && !endpointAllowed(quota.endpoint)) {
+  if (!endpointAllowed(quota.endpoint)) {
     return {
       code: "provider.chain.invalid",
       detail: `provider ${descriptor.name} quota endpoint must be HTTPS without userinfo`,

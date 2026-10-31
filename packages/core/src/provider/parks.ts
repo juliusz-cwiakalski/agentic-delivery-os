@@ -5,6 +5,7 @@
  * persistence helpers and the fold/projection view are added in Phase 3/5.
  */
 import {
+  ANNOUNCEMENT_EVIDENCE_FIELDS,
   PARK_EVIDENCE_FIELDS,
   type ParkCause,
   PROVIDER_PARK_SCHEMA_ID,
@@ -159,13 +160,14 @@ export const announcementIdentity = (
   generation: string,
 ): string => `${subjectKind}:${subjectName}:${code}:${generation}`;
 
-/** Build the announcement evidence view; it is closed to the eleven-field allowlist. */
+/** Project announcement evidence through the closed eleven-field allowlist only. */
 export const announcementEvidence = (
   evidence: ProviderAnnouncementEvidence,
 ): ProviderAnnouncementEvidence => {
   const projected: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(evidence)) {
-    if (value !== undefined) projected[key] = value;
+  for (const field of ANNOUNCEMENT_EVIDENCE_FIELDS) {
+    const value = evidence[field];
+    if (value !== undefined) projected[field] = value;
   }
   return projected as ProviderAnnouncementEvidence;
 };
@@ -422,10 +424,15 @@ export const persistProviderResolution = (
     const current = currentLatest.get(name);
     if (current !== undefined && parkGeneration(current) === parkGeneration(prior)) continue;
     if (current !== undefined) continue;
-    const cleared = clearParkRecord(prior, input.nowMs);
-    appendedParks.push(cleared);
-    newParks.push(cleared);
-    parksChanged = true;
+    // DM-10: a `cleared` record records a clear observed before expiry. An
+    // already-expired park stays expired in `--all` views with no write; the
+    // resumed announcement is still emitted on this mutating observation.
+    if (prior.expiresAtMs > input.nowMs) {
+      const cleared = clearParkRecord(prior, input.nowMs);
+      appendedParks.push(cleared);
+      newParks.push(cleared);
+      parksChanged = true;
+    }
     addAnnouncement(
       createAnnouncementRecord({
         subjectKind: prior.subjectKind,

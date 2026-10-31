@@ -1,0 +1,24 @@
+provider:
+  defaultChain: default
+  credentials:
+    zai:
+      sourceKey:
+        style: literal
+        name: ZAI_API_KEY
+  entries:
+    quota-failed:
+      class: subscription
+      enabled: true
+      quota:
+        enabled: true
+        endpoint: https://failed.test/quota
+        credentialRef: zai
+    eligible:
+      class: subscription
+      enabled: true
+  chains:
+    default:
+      entries:
+        - quota-failed
+        - eligible
+      allowPaidFallback: false

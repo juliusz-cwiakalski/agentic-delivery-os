@@ -21,7 +21,7 @@ links:
 
 The provider engine decides which declared AI model provider entry is available for a spawn. It validates typed provider configuration, resolves a named chain in declared order, evaluates every entry's peak-window and subscription-quota conditions, and selects the first eligible entry under a subscription-first cost policy — or returns a chain park carrying an honest resume time. Every pause is a named, self-expiring park persisted through the state layer, and every failure to determine availability is a structured announcement rather than a silent "clear" verdict. Quota authorization resolves only through the credential port.
 
-The engine does not select models or spawn sessions. It returns a decision plus durable availability state that the later spawn gate and the status, queue-readiness, doctor, spend, and ceremony surfaces consume. The minimal command surface is `ados provider resolve`, `ados provider quota`, and `ados provider parks list`.
+The engine does not select models or spawn sessions. It returns a decision plus durable availability state that the later spawn gate and the status, queue-readiness, doctor, spend, and ceremony surfaces consume. The minimal CLI surface is `provider resolve`, `provider quota`, and `provider parks list`.
 
 The configuration branch is specified in [Configuration Layer and Inspection](feature-config-layer.md); the ledger records and projection in [State Layer](feature-state-layer.md); failure identity and the envelope in [Result Contract and Error Table](feature-result-contract.md); credential resolution and runtime confinement in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); package tiers and boundary mechanics in [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md). Placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); the quota transport follows the reviewed confinement path of [ADR-0005](../../decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md); the engine's placement, fail-loud semantics, park vocabulary, and cost policy are recorded in [ADR-0007](../../decisions/ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md) (Proposed, owner acceptance pending).
 
@@ -41,7 +41,7 @@ The configuration branch is specified in [Configuration Layer and Inspection](fe
 - Represent every non-clear condition as a named park with a closed cause, the active conditions, and an absolute expiry.
 - Make every outage, indeterminate quota verdict, credential failure, chain exhaustion, and loop-cap outcome a structured announcement.
 - Authorize quota fetches only through the credential port.
-- Expose a bounded `ados provider` surface whose machine results are CommandResult envelopes.
+- Expose a bounded CLI `provider` surface whose machine results are CommandResult envelopes.
 
 ## User Experience & Functionality
 
@@ -178,9 +178,9 @@ The secret-read boundary remains unchanged: the provider engine, the CLI provide
 
 | Subcommand | Mutating | Flags | Success payload |
 |------------|----------|-------|-----------------|
-| `ados provider resolve` | yes; persists parks and announcements for a resolved decision | `--chain <name>` | Decision (selected or parked), skipped entries, parks, announcements |
-| `ados provider quota` | no | `--provider <name>` | Per-provider condition views and announcements, or a classified error |
-| `ados provider parks list` | no | `--all`, `--provider <name>` | Park views folded from verified ledger truth; active by default, expired and cleared with `--all` |
+| `provider resolve` | yes; persists parks and announcements for a resolved decision | `--chain <name>` | Decision (selected or parked), skipped entries, parks, announcements |
+| `provider quota` | no | `--provider <name>` | Per-provider condition views and announcements, or a classified error |
+| `provider parks list` | no | `--all`, `--provider <name>` | Park views folded from verified ledger truth; active by default, expired and cleared with `--all` |
 
 All three accept the global `--json` and emit one CommandResult envelope. Human `resolve` prints the selected provider or the park's cause and resume time; warnings go to the error stream. `quota` without `--provider` evaluates the default chain's entries when `defaultChain` is declared, otherwise every declared entry. `parks list` reads verified park state, makes no network call, and mutates nothing. Invalid subcommands, flags, flag values, and positionals fail as classified invocation or input errors and never crash or emit an invalid envelope.
 

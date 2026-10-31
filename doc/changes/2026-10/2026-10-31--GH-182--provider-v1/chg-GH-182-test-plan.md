@@ -1994,7 +1994,7 @@ Coverage accounting:
 | Test cases defined | 64 |
 | Test cases with an AC/NFR owner | 64 / 64 (no orphan tests) |
 | TODO acceptance criteria | 0 |
-| Recorded executions | Delivery rows in §10; TC-PROV-063/064 are NOT RUN pending v1.3 execution |
+| Recorded executions | Delivery rows in §10; TC-PROV-063/064 executed in the Phase 10 remediation |
 
 ## 8. Risks, Assumptions, and Open Questions
 
@@ -2053,7 +2053,7 @@ No AC is left without a mapped test. All 48 ACs, all 9 Appendix A groups, and al
 
 ## 10. Test Execution Log
 
-Executions recorded during GH-182 delivery. HEAD `this Phase 9 commit` (Phase 9 aggregate commit). Coverage target after spec v1.3: **48 ACs / 64 TCs**; TC-PROV-063/064 are new and have no execution row yet.
+Executions recorded during GH-182 delivery. HEAD `this Phase 9 commit` (Phase 9 aggregate commit). Coverage target after spec v1.3: **48 ACs / 64 TCs**; TC-PROV-063/064 were executed in the Phase 10 remediation (see their row).
 
 | TC ID / gate | Run Date (UTC) | Result | Notes / command / HEAD |
 |---|---|---|---|
@@ -2067,7 +2067,7 @@ Executions recorded during GH-182 delivery. HEAD `this Phase 9 commit` (Phase 9 
 | TC-PROV-047..049 | 2026-11-01 | PASS | `bun test tests/behaviour/provider-legacy-parity.test.ts tests/checks/provider-hermetic.test.ts tests/checks/provider-evidence-bounds.test.ts` |
 | TC-PROV-050..051 | 2026-11-01 | PASS | `bun test tests/behaviour/provider-parks.test.ts tests/behaviour/provider-quota-evaluation.test.ts` — idempotence and 100-entry cost |
 | TC-PROV-052..062 | 2026-11-01 | PASS | `bun test tests/behaviour/provider-legacy-parity.test.ts tests/checks/provider-hermetic.test.ts` — 9/9 groups, 49/49 IDs, no-silent-path matrix, guide contract |
-| TC-PROV-063..064 | — | NOT RUN | New in spec v1.3: failed-entry skip-then-continue and mixed past/absent/future reset; execution pending. |
+| TC-PROV-063..064 | 2026-11-01 | PASS | Phase 10 remediation: `bun test tests/behaviour/provider-chain-resolution.test.ts tests/behaviour/provider-quota-evaluation.test.ts` — failed-entry skip-then-continue (reset_missing retained, no park, later entry selected; only-failed fails `provider.quota.exceeded`) and mixed past/absent indeterminate with future-reset-wins. |
 | TC-PROV-053 | 2026-11-01 | PASS | `bun test tests/golden` — normalized machine/human provider goldens |
 | Aggregate `pnpm check` | 2026-11-01 | PASS | lint, format:check, typecheck, 1138 tests, boundaries, exports parity |
 | `pnpm check:boundaries` | 2026-11-01 | PASS | depcruise + ambient-globals + workspace-entrypoints + secret-read-boundary |

@@ -111,6 +111,36 @@ describe("TC-PROV-014..022 quota math", () => {
       }
     }
   });
+
+  test("TC-PROV-064 mixed past/absent reset is indeterminate; any future reset wins", () => {
+    const mixed = evaluateQuotaResponse(quotaFile("mixed-past-absent-reset.json"), 100, NOW);
+    expect(mixed.status).toBe("failed");
+    expect("expiresAtMs" in mixed).toBe(false);
+    if (mixed.status === "failed") {
+      expect(mixed.errorCode).toBe("provider.quota.exceeded");
+      expect(mixed.announcementCode).toBe("provider.quota.reset_missing");
+      expect(mixed.failureClass).toBe("reset_missing");
+    }
+
+    const future = evaluateQuotaResponse(quotaFile("mixed-past-future-reset.json"), 100, NOW);
+    expect(future.status).toBe("parked");
+    if (future.status === "parked") {
+      expect(future.waitSeconds).toBe(3600);
+      expect(future.expiresAtMs).toBe(NOW + 3600 * 1000);
+      expect(future.evidence.resetEpochMs).toBe(NOW + 3600 * 1000);
+    }
+
+    // An absent+future variant: the honest future reset wins over absent evidence.
+    const absentFuture = evaluateQuotaResponse(
+      envelope([tokens(100), tokens(100, NOW + 3600 * 1000)]),
+      100,
+      NOW,
+    );
+    expect(absentFuture.status).toBe("parked");
+    if (absentFuture.status === "parked") {
+      expect(absentFuture.expiresAtMs).toBe(NOW + 3600 * 1000);
+    }
+  });
 });
 
 describe("TC-PROV-024..027 failure classification", () => {

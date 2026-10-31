@@ -5,7 +5,11 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ProviderParkEvidence } from "../../packages/core/src/contracts/index";
+import {
+  PHASE_TRANSITION_KIND,
+  type ProviderParkEvidence,
+  PROVIDER_RECORD_KINDS,
+} from "../../packages/core/src/contracts/index";
 import { resolveProviderChain } from "../../packages/core/src/provider/chain";
 import {
   chainParkName,
@@ -82,6 +86,33 @@ describe("TC-PROV-029 exact-expiry inactivity with no write", () => {
     };
     expect(parkView(cleared, NOW + 20).state).toBe("cleared");
     expect(parkView(cleared, NOW + 20).clearedAt).toBe(formatUtcIso(NOW + 10));
+  });
+});
+
+describe("TC-PROV-031/AC-F5-4 park versus blocked lane", () => {
+  test("a park and a lane transition are distinct record kinds and states", () => {
+    const record = park();
+    const lane = {
+      kind: PHASE_TRANSITION_KIND,
+      changeRef: "GH-182",
+      phaseId: "delivery",
+      operation: "complete",
+      timestamp: formatUtcIso(NOW),
+      outcome: "landed",
+    } as const;
+    expect(PROVIDER_RECORD_KINDS).toContain("provider.park");
+    expect(PROVIDER_RECORD_KINDS).not.toContain(PHASE_TRANSITION_KIND);
+    expect(record.schemaVersion).not.toBe("delivery.registry.v1");
+    // A park always carries a resume time and never reports a lane as blocked.
+    expect(record.subjectKind).toBe("provider");
+    expect(record.expiresAtMs).toBeGreaterThan(NOW);
+    expect(parkView(record, NOW).state).toBe("active");
+    expect(Object.hasOwn(record, "phaseId")).toBe(false);
+    expect(Object.hasOwn(record, "blocked")).toBe(false);
+    // A lane transition carries no park expiry, cause, or park state.
+    expect(Object.hasOwn(lane, "expiresAtMs")).toBe(false);
+    expect(Object.hasOwn(lane, "cause")).toBe(false);
+    expect(Object.hasOwn(lane, "state")).toBe(false);
   });
 });
 
@@ -335,6 +366,51 @@ describe("TC-PROV-028..033/050 state integration", () => {
       expect(
         ledger.value.announcements.filter((entry) => entry.code === "provider.resumed"),
       ).toHaveLength(2);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("a park observed after expiry stays expired and emits one resumed per park", async () => {
+    const root = makeTempRoot("provider");
+    const { store } = openStore(makeIdentity(root));
+    let counter = 0;
+    let now = NOW;
+    let transport: QuotaTransport = quotaBody(NOW + 1000);
+    const engine = createProviderEngine({
+      clock: { nowMs: () => now },
+      sleep: engineSleep,
+      credentialPort: engineCredential,
+      transport: { send: (request) => transport.send(request) },
+      stateStore: store,
+      newFenceToken: () => `fence-${counter++}`,
+    });
+    try {
+      await engine.resolve({ config: stateConfig(NOW + 1000), persist: true });
+      now = NOW + 2000;
+      transport = clearBody;
+      await engine.resolve({ config: stateConfig(NOW + 1000), persist: true });
+      const ledger = readProviderLedger(store);
+      if (!ledger.ok) throw new Error("read failed");
+      expect(ledger.value.parks.filter((entry) => entry.state === "cleared")).toHaveLength(0);
+      const views = readProviderParkViews(store, now, { all: true });
+      expect(views.ok).toBe(true);
+      if (views.ok) {
+        expect(views.value).toHaveLength(2);
+        expect(views.value.every((view) => view.state === "expired")).toBe(true);
+      }
+      const resumed = ledger.value.announcements.filter(
+        (entry) => entry.code === "provider.resumed",
+      );
+      expect(resumed.filter((entry) => entry.subjectKind === "provider")).toHaveLength(1);
+      expect(resumed).toHaveLength(2);
+      const settled = store.checkIntegrity();
+      if (!settled.ok) throw new Error("integrity failed");
+      const count = settled.value.evidence.recordCount;
+      await engine.resolve({ config: stateConfig(NOW + 1000), persist: true });
+      const after = store.checkIntegrity();
+      if (!after.ok) throw new Error("integrity failed");
+      expect(after.value.evidence.recordCount).toBe(count);
     } finally {
       removeRoot(root);
     }

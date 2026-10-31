@@ -147,11 +147,14 @@ export const evaluateQuotaSnapshot = (
       evidence,
     };
   }
-  const anyReset = exhausted.some((limit) => {
+  // A past reset clamps to zero only when the exhausted limits' only reset
+  // evidence is past and no exhausted limit lacks a valid reset (DM-9). A
+  // mixed past/absent case is indeterminate: never treat it as clear.
+  const everyLimitHasReset = exhausted.every((limit) => {
     const reset = limit.resetEpochMs;
     return reset !== undefined && Number.isFinite(reset);
   });
-  if (anyReset) {
+  if (everyLimitHasReset) {
     return { status: "clear", snapshot };
   }
   return {

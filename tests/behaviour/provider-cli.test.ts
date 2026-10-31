@@ -72,6 +72,7 @@ const outage: QuotaTransport = {
 const run = async (
   args: readonly string[],
   quota: QuotaTransport,
+  reuse?: { readonly store: StateStorePort; readonly root: string },
 ): Promise<{
   exitCode: number;
   stdout: string;
@@ -79,8 +80,8 @@ const run = async (
   store: StateStorePort;
   root: string;
 }> => {
-  const root = makeTempRoot("provider-cli");
-  const { store } = openStore(makeIdentity(root));
+  const root = reuse?.root ?? makeTempRoot("provider-cli");
+  const store = reuse?.store ?? openStore(makeIdentity(root)).store;
   let counter = 0;
   const program = createConfigProgram({
     workingName: "synthetic",
@@ -228,20 +229,35 @@ describe("TC-PROV-036/042 quota surface", () => {
 });
 
 describe("TC-PROV-043 parks list", () => {
-  test("parks list is read-only and returns the projection view", async () => {
-    const first = await run(["resolve", "--json"], exhausted);
+  test("parks list is read-only across repeated reads on one populated store", async () => {
+    const resolved = await run(["resolve", "--json"], exhausted);
     try {
+      expect(resolved.exitCode).toBe(0);
+      const before = resolved.store.checkIntegrity();
+      if (!before.ok) throw new Error("integrity failed");
+      const projectionBefore = resolved.store.read({
+        requiredKeys: ["document:provider-parks.json"],
+      });
+
+      const first = await run(["parks", "list", "--json"], clear, resolved);
+      const second = await run(["parks", "list", "--json"], clear, resolved);
       expect(first.exitCode).toBe(0);
-      const result = await run(["parks", "list", "--json"], clear);
-      try {
-        expect(result.exitCode).toBe(0);
-        const envelope = JSON.parse(result.stdout) as { data: { parks: unknown[] } };
-        expect(Array.isArray(envelope.data.parks)).toBe(true);
-      } finally {
-        removeRoot(result.root);
-      }
+      expect(second.exitCode).toBe(0);
+      expect(first.stdout).toBe(second.stdout);
+      const envelope = JSON.parse(first.stdout) as { data: { parks: Array<{ state: string }> } };
+      expect(Array.isArray(envelope.data.parks)).toBe(true);
+      expect(envelope.data.parks.length).toBeGreaterThan(0);
+      expect(envelope.data.parks.every((park) => park.state === "active")).toBe(true);
+
+      const after = resolved.store.checkIntegrity();
+      if (!after.ok) throw new Error("integrity failed");
+      expect(after.value.evidence.recordCount).toBe(before.value.evidence.recordCount);
+      const projectionAfter = resolved.store.read({
+        requiredKeys: ["document:provider-parks.json"],
+      });
+      expect(projectionAfter).toEqual(projectionBefore);
     } finally {
-      removeRoot(first.root);
+      removeRoot(resolved.root);
     }
   });
 });

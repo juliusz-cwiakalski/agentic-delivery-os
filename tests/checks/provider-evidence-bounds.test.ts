@@ -13,6 +13,7 @@ import {
   type ProviderAnnouncementEvidence,
   type ProviderParkEvidence,
 } from "../../packages/core/src/contracts/index";
+import { announcementEvidence } from "../../packages/core/src/provider/parks";
 
 const ROOT = process.cwd();
 const fixture = (name: string): unknown =>
@@ -69,6 +70,30 @@ describe("TC-PROV-049 evidence bounds and closed allowlists", () => {
     expect(ANNOUNCEMENT_EVIDENCE_FIELDS).toEqual(announcementAllowlist);
     expect(PARK_EVIDENCE_FIELDS).toHaveLength(8);
     expect(ANNOUNCEMENT_EVIDENCE_FIELDS).toHaveLength(11);
+  });
+
+  test("announcement evidence filters unknown keys and the bounds still reject", () => {
+    const raw = {
+      providerName: "zai-coding-plan",
+      announcementCode: "provider.peak.parked",
+      rawBody: "CANARY-RAW-BODY",
+      authorization: "Bearer CANARY",
+    } as unknown as ProviderAnnouncementEvidence;
+    const projected = announcementEvidence(raw);
+    expect(Object.keys(projected).sort()).toEqual(["announcementCode", "providerName"]);
+    expect(JSON.stringify(projected)).not.toContain("CANARY");
+    expect(evidenceFailures(projected, announcementAllowlist)).toEqual([]);
+
+    const overBound = {
+      providerName: "zai-coding-plan",
+      rawBody: "CANARY-RAW-BODY",
+      failureClass: "x".repeat(1100),
+    } as unknown as ProviderAnnouncementEvidence;
+    const bounded = announcementEvidence(overBound);
+    expect(Object.hasOwn(bounded, "rawBody")).toBe(false);
+    expect(evidenceFailures(bounded, announcementAllowlist).join("\n")).toContain(
+      "exceeds 1024 bytes",
+    );
   });
 
   test("no unbounded array or object is admitted by the field contract", () => {

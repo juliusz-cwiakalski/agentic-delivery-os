@@ -109,11 +109,16 @@ describe("TC-PROV-003 shipped defaults", () => {
 
 import type {
   CombinedProviderCondition,
+  CredentialPort,
   ProviderChain,
+  ProviderClock,
   ProviderConditionKind,
   ProviderDescriptor,
+  ProviderSleep,
+  QuotaTransport,
 } from "../../packages/core/src/contracts/index";
 import { resolveProviderChain } from "../../packages/core/src/provider/chain";
+import { createProviderEngine } from "../../packages/core/src/provider/engine";
 import {
   selectProviderChain,
   validateProviderConfiguration,
@@ -219,6 +224,20 @@ describe("TC-PROV-002/004/005 provider validation", () => {
     expect(validateProviderConfiguration(unknownCredential.config)?.code).toBe(
       "provider.chain.invalid",
     );
+  });
+
+  test("quota.enabled false skips both relational checks and validates", () => {
+    const parsed = parseAndValidateProviderConfiguration(
+      parse(
+        readFileSync(join(ROOT, "tests/fixtures/provider/config/quota-disabled.yaml"), "utf8"),
+      ) as never,
+    );
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const entry = parsed.config.entries["disabled-quota"];
+    expect(entry?.quota?.enabled).toBe(false);
+    expect(entry?.quota?.endpoint).toBe("");
+    expect(entry?.quota?.credentialRef).toBe("");
   });
 });
 
@@ -348,5 +367,158 @@ describe("TC-PROV-007/008/009/010 chain resolution", () => {
     const chain: ProviderChain = { name: "default", entries: ["a"], allowPaidFallback: false };
     const states = { a: { descriptor: descriptor("a"), condition: clear } };
     expect(resolve(chain, states)).toEqual(resolve(chain, states));
+  });
+});
+
+describe("TC-PROV-063/AC-F2-6 failed entry skip-then-continue", () => {
+  const failedCondition = (): CombinedProviderCondition => ({
+    status: "failed",
+    cause: "quota-exhausted",
+    conditions: ["quota-exhausted"],
+    errorCode: "provider.quota.exceeded",
+    announcementCode: "provider.quota.reset_missing",
+    evidence: {
+      conditionKinds: ["quota-exhausted"],
+      failureClass: "reset_missing",
+      httpStatus: 200,
+    },
+  });
+  const engineClock: ProviderClock = { nowMs: () => NOW };
+  const engineSleep: ProviderSleep = { sleep: async () => undefined };
+  const engineCredential: CredentialPort = {
+    resolve: () => ({ ok: true, material: { value: "CANARY-SECRET" } }),
+  };
+  const quotaBody = (name: string): QuotaTransport => ({
+    send: async () => ({
+      status: 200,
+      bodyText: readFileSync(join(ROOT, "tests/fixtures/provider/quota", name), "utf8"),
+    }),
+  });
+
+  test("a failed entry is skipped as quota-exhausted; a later eligible entry is selected", () => {
+    const chain: ProviderChain = {
+      name: "default",
+      entries: ["failed", "eligible"],
+      allowPaidFallback: false,
+    };
+    const outcome = resolveProviderChain({
+      chain,
+      nowMs: NOW,
+      states: {
+        failed: { descriptor: descriptor("failed"), condition: failedCondition() },
+        eligible: { descriptor: descriptor("eligible"), condition: clear },
+      },
+    });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.decision).toMatchObject({ kind: "selected", providerName: "eligible" });
+    expect(outcome.skipped).toEqual([{ providerName: "failed", reason: "quota-exhausted" }]);
+  });
+
+  test("only-failed and all-failed chains fail loud with the classified identity", () => {
+    for (const entries of [["failed"], ["failed", "failed-2"]] as const) {
+      const states = Object.fromEntries(
+        entries.map((name) => [
+          name,
+          { descriptor: descriptor(name), condition: failedCondition() },
+        ]),
+      );
+      const outcome = resolveProviderChain({
+        chain: { name: "default", entries, allowPaidFallback: false },
+        states,
+        nowMs: NOW,
+      });
+      expect(outcome.ok).toBe(false);
+      if (outcome.ok) continue;
+      expect(outcome.errorCode).toBe("provider.quota.exceeded");
+      expect(outcome.announcementCode).toBe("provider.quota.reset_missing");
+    }
+  });
+
+  test("a failed entry contributes no expiry, but another honest park still parks the chain", () => {
+    const outcome = resolveProviderChain({
+      chain: { name: "default", entries: ["failed", "parked"], allowPaidFallback: false },
+      states: {
+        failed: { descriptor: descriptor("failed"), condition: failedCondition() },
+        parked: {
+          descriptor: descriptor("parked"),
+          condition: parked("quota-exhausted", 900, NOW),
+        },
+      },
+      nowMs: NOW,
+    });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.decision.kind).toBe("parked");
+    if (outcome.decision.kind !== "parked") return;
+    expect(outcome.decision.park.expiresAtMs).toBe(NOW + 900 * 1000);
+    expect(outcome.skipped).toEqual([
+      { providerName: "failed", reason: "quota-exhausted" },
+      { providerName: "parked", reason: "quota-exhausted" },
+    ]);
+  });
+
+  test("resolve keeps the reset_missing announcement while a later entry serves", async () => {
+    let sends = 0;
+    const bodyText = readFileSync(
+      join(ROOT, "tests/fixtures/provider/quota/failed-then-eligible.json"),
+      "utf8",
+    );
+    const engine = createProviderEngine({
+      clock: engineClock,
+      sleep: engineSleep,
+      credentialPort: engineCredential,
+      transport: {
+        send: async () => {
+          sends += 1;
+          return { status: 200, bodyText };
+        },
+      },
+    });
+    const resolved = await engine.resolve({
+      config: fixtureConfig("failed-then-eligible.yaml"),
+    });
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+    expect(sends).toBe(1);
+    expect(resolved.decision).toMatchObject({ kind: "selected", providerName: "eligible" });
+    expect(resolved.skipped).toEqual([{ providerName: "quota-failed", reason: "quota-exhausted" }]);
+    expect(resolved.parks.some((entry) => entry.name === "provider:quota-failed")).toBe(false);
+    expect(resolved.announcements.map((entry) => entry.code)).toContain(
+      "provider.quota.reset_missing",
+    );
+    expect(resolved.announcements.length).toBeGreaterThan(0);
+  });
+
+  test("resolve of an only-failed chain fails provider.quota.exceeded with no park", async () => {
+    const engine = createProviderEngine({
+      clock: engineClock,
+      sleep: engineSleep,
+      credentialPort: engineCredential,
+      transport: quotaBody("failed-then-eligible.json"),
+    });
+    const resolved = await engine.resolve({ config: fixtureConfig("only-failed.yaml") });
+    expect(resolved.ok).toBe(false);
+    if (resolved.ok) return;
+    expect(resolved.errorCode).toBe("provider.quota.exceeded");
+    expect(resolved.announcementCode).toBe("provider.quota.reset_missing");
+    expect(Object.hasOwn(resolved, "parks")).toBe(false);
+  });
+
+  test("a parkable quota verdict contributes an expiry instead of being skipped", async () => {
+    const engine = createProviderEngine({
+      clock: engineClock,
+      sleep: engineSleep,
+      credentialPort: engineCredential,
+      transport: quotaBody("exhausted-valid-reset.json"),
+    });
+    const resolved = await engine.resolve({ config: fixtureConfig("only-failed.yaml") });
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+    expect(resolved.decision.kind).toBe("parked");
+    if (resolved.decision.kind !== "parked") return;
+    expect(resolved.decision.park.expiresAtMs).toBe(NOW + 3600 * 1000);
+    expect(resolved.skipped).toEqual([{ providerName: "quota-failed", reason: "quota-exhausted" }]);
+    expect(resolved.parks.map((entry) => entry.name)).toContain("provider:quota-failed");
   });
 });

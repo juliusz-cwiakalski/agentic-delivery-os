@@ -31,10 +31,15 @@ import type {
   StateResult,
   StateStorePort,
 } from "#contracts";
-import { createParkAnnouncement } from "./announcements.js";
+import { createParkAnnouncement, severityForAnnouncementCode } from "./announcements.js";
 import { type ChainEntryState, resolveProviderChain } from "./chain.js";
 import { combineProviderConditions } from "./conditions.js";
-import { createParkRecord, persistProviderResolution, readProviderParkViews } from "./parks.js";
+import {
+  createAnnouncementRecord,
+  createParkRecord,
+  persistProviderResolution,
+  readProviderParkViews,
+} from "./parks.js";
 import { evaluatePeakWindow } from "./peak.js";
 import { evaluateQuotaResponse } from "./quota.js";
 import { selectProviderChain, validateProviderConfiguration } from "./validate.js";
@@ -257,6 +262,31 @@ const failure = (
   ...(announcementCode === undefined ? {} : { announcementCode }),
 });
 
+const createFailureAnnouncement = (
+  descriptor: ProviderDescriptor,
+  condition: Extract<CombinedProviderCondition, { status: "failed" }>,
+  nowMs: number,
+): ProviderAnnouncementRecord =>
+  createAnnouncementRecord({
+    subjectKind: "provider",
+    subjectName: descriptor.name,
+    code: condition.announcementCode,
+    severity: severityForAnnouncementCode(condition.announcementCode),
+    createdAtMs: nowMs,
+    message: `provider ${descriptor.name} cannot determine a resume time`,
+    cause: condition.cause,
+    conditions: condition.conditions,
+    evidence: condition.evidence,
+  });
+
+const dedupeAnnouncements = (
+  announcements: readonly ProviderAnnouncementRecord[],
+): readonly ProviderAnnouncementRecord[] =>
+  announcements.filter(
+    (entry, index, all) =>
+      all.findIndex((candidate) => candidate.identity === entry.identity) === index,
+  );
+
 /** Build the pure engine over injected seams. */
 export const createProviderEngine = (deps: ProviderEngineDependencies): ProviderEngine => {
   const evaluateAll = async (
@@ -286,28 +316,31 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
       const evaluations = await evaluateAll(input.config, chain.entries, nowMs);
       const states: Record<string, ChainEntryState> = {};
       const parks: ProviderParkRecord[] = [];
-      const announcements: ProviderAnnouncementRecord[] = [];
+      const parkAnnouncements: ProviderAnnouncementRecord[] = [];
+      const failedAnnouncements: ProviderAnnouncementRecord[] = [];
       for (const evaluation of evaluations) {
         states[evaluation.descriptor.name] = {
           descriptor: evaluation.descriptor,
           condition: evaluation.condition,
         };
         if (evaluation.condition.status === "failed") {
-          return failure(
-            evaluation.condition.errorCode,
-            `${evaluation.descriptor.name}: ${evaluation.condition.announcementCode}`,
-            evaluation.condition.announcementCode,
+          // Not a park and never persisted: the classified failed verdict keeps
+          // its announcement in the command-result list while the walk continues
+          // (F-2/AC-F2-6, DM-7).
+          failedAnnouncements.push(
+            createFailureAnnouncement(evaluation.descriptor, evaluation.condition, nowMs),
           );
+          continue;
         }
         if (evaluation.park !== undefined) parks.push(evaluation.park);
-        if (evaluation.announcement !== undefined) announcements.push(evaluation.announcement);
+        if (evaluation.announcement !== undefined) parkAnnouncements.push(evaluation.announcement);
       }
       const outcome = resolveProviderChain({ chain, states, nowMs });
       if (!outcome.ok) return failure(outcome.errorCode, outcome.detail, outcome.announcementCode);
       const decision: ProviderDecision = outcome.decision;
       if (decision.kind === "parked") {
         parks.push(decision.park);
-        announcements.push(createParkAnnouncement(decision.park, nowMs));
+        parkAnnouncements.push(createParkAnnouncement(decision.park, nowMs));
       }
       if (input.persist !== false && deps.stateStore !== undefined) {
         const persisted = persistProviderResolution({
@@ -315,7 +348,7 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
           fenceToken: deps.newFenceToken?.() ?? `provider-${nowMs}`,
           nowMs,
           parks,
-          announcements,
+          announcements: parkAnnouncements,
         });
         if (!persisted.ok) {
           return failure("provider.outage", `provider state write failed: ${persisted.error.code}`);
@@ -326,10 +359,11 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
           decision,
           skipped: outcome.skipped,
           parks,
-          announcements: [...announcements, ...persisted.value.newAnnouncements].filter(
-            (entry, index, all) =>
-              all.findIndex((candidate) => candidate.identity === entry.identity) === index,
-          ),
+          announcements: dedupeAnnouncements([
+            ...failedAnnouncements,
+            ...parkAnnouncements,
+            ...persisted.value.newAnnouncements,
+          ]),
         };
       }
       return {
@@ -338,7 +372,7 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
         decision,
         skipped: outcome.skipped,
         parks,
-        announcements,
+        announcements: dedupeAnnouncements([...failedAnnouncements, ...parkAnnouncements]),
       };
     },
 

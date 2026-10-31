@@ -51,7 +51,9 @@ const asConditionKind = (cause: ParkCause): ProviderConditionKind | undefined =>
 
 const skipReason = (entry: ChainEntryState, chain: ProviderChain): ProviderSkipReason => {
   if (!entry.descriptor.enabled) return "disabled";
-  if (entry.condition.status === "parked") {
+  // A parked entry's cause and a failed entry's condition kind both map to the
+  // entry-specific skip reason; a failed quota verdict is `quota-exhausted`.
+  if (entry.condition.status !== "clear") {
     return asConditionKind(entry.condition.cause) ?? "shadowed";
   }
   if (entry.descriptor.class === "pay-per-token" && !chain.allowPaidFallback) {
@@ -81,17 +83,15 @@ export const resolveProviderChain = (input: ChainResolutionInput): ChainResoluti
     return chain.allowPaidFallback && !peakBlocked;
   };
 
+  // A failed entry (quota exhausted with no honest reset) does not abort the
+  // walk (F-2/AC-F2-6): it is reported as `quota-exhausted`, creates no park,
+  // and later eligible entries are considered.
   const failed = chain.entries
     .map((name) => states[name])
-    .find((state) => state !== undefined && state.condition.status === "failed");
-  if (failed !== undefined && failed.condition.status === "failed") {
-    return {
-      ok: false,
-      errorCode: failed.condition.errorCode,
-      announcementCode: failed.condition.announcementCode,
-      detail: `provider ${failed.descriptor.name} cannot produce an honest resume time`,
-    };
-  }
+    .find(
+      (state): state is ChainEntryState =>
+        state !== undefined && state.condition.status === "failed",
+    );
 
   const selectedName = chain.entries.find(eligible);
   if (selectedName !== undefined) {
@@ -121,6 +121,14 @@ export const resolveProviderChain = (input: ChainResolutionInput): ChainResoluti
         state !== undefined && state.descriptor.enabled && state.condition.status === "parked",
     );
   if (contributing.length === 0) {
+    if (failed !== undefined && failed.condition.status === "failed") {
+      return {
+        ok: false,
+        errorCode: failed.condition.errorCode,
+        announcementCode: failed.condition.announcementCode,
+        detail: `provider ${failed.descriptor.name} cannot produce an honest resume time`,
+      };
+    }
     return {
       ok: false,
       errorCode: "provider.outage",

@@ -69,6 +69,7 @@
     "doc/spec/features/feature-config-layer.md",
     "doc/spec/features/feature-pm-notes-lint-and-phase-transitions.md",
     "doc/spec/features/feature-provider-client-seeds.md",
+    "doc/spec/features/feature-provider-engine.md",
     "doc/spec/features/feature-result-contract.md",
     "doc/spec/features/feature-state-layer.md"
   ]
