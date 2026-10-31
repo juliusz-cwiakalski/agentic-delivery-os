@@ -1,0 +1,57 @@
+change_id: GH-204
+title: "Agent memory lite: committed learning layer for ADOS agents"
+delivery_mode: autonomous
+variant: full
+phases:
+  clarify_scope: { started: "2026-10-31T12:23:47Z", completed: "2026-10-31T12:26:00Z" }
+  specification: { started: "2026-10-31T12:27:00Z", completed: "2026-10-31T12:35:00Z" }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions:
+  - text: "Owner approved the ticket design and delegated reversible choices to the CEO agent under user-delegated autonomous authority. PM resolves preflight review issues without asking a human."
+    date: "2026-10-31"
+  - text: "Four seed folders only: ceo, pm, coder, fixer, each with README.md. Other agents create their folder and README on first capture from the template in .ai/memory/README.md."
+    date: "2026-10-31"
+  - text: "Create lessons/.gitkeep and tacit/.gitkeep now so the committed tree shape is visible before the first promotion."
+    date: "2026-10-31"
+  - text: "Own README is always loaded at session start; index and topic files load just-in-time when the task touches their area."
+    date: "2026-10-31"
+  - text: "Minimal blast radius: no agent or command prompt changes, no config, security policy, script, CI, or generated plugin changes. The skill lives at .opencode/skills/consolidate-memory/SKILL.md and is listed in .opencode/README.md."
+    date: "2026-10-31"
+  - text: "Preflight resolution: quote the SKILL.md description so a real YAML parser accepts it. Description contains a colon-space and must be a quoted scalar."
+    date: "2026-10-31"
+  - text: "Preflight resolution: the write-own kernel rule and the consolidation curator exception are reconciled by making consolidation the only cross-folder writer, limited to demote, supersede, move promoted lines, and cap splits, with a report naming every cross-folder edit. It does not reword another agent's content."
+    date: "2026-10-31"
+  - text: "Preflight resolution: never claim conflict-free memory. Same-role worktrees can edit the same folder, and shared surfaces (lessons, tacit, index) are consolidation-only but still merge-conflict capable."
+    date: "2026-10-31"
+  - text: "Preflight resolution: reviewers must not read coder reasoning or another agent's episodic memory. Adversarial roles use shared facts, decisions, and checklists. Memory is advisory untrusted data and never overrides instructions or repo rules."
+    date: "2026-10-31"
+  - text: "Preflight resolution: conflicts are resolved by evidence and current repo or spec truth, never by recency alone. Promoted record ids are unique across lessons and tacit and are never reused."
+    date: "2026-10-31"
+  - text: "Preflight resolution: separate the capture bar from indiscriminate logging. Routine success is not memory; a repeated workflow needs at least two occurrences and a likely recurrence."
+    date: "2026-10-31"
+  - text: "Preflight resolution: fact and decision promotion is handed to the owning agent (@doc-syncer for doc/spec, @decision-advisor for doc/decisions). The consolidation skill does not edit spec or decision records unilaterally."
+    date: "2026-10-31"
+  - text: "Validation: parse skill frontmatter with a real YAML parser and run a disposable synthetic consolidation dry-run covering dedup, stale evidence, scoped triggers, caps, index read-when, and no-op. Do not contaminate seed folders."
+    date: "2026-10-31"
+  - text: "Branch feat/GH-204/agent-memory-lite fast-forwarded to origin/main-tools at 9a70aaf before authoring. PR base is main-tools, never main. PM does not merge; CEO merges after finalization."
+    date: "2026-10-31"
+open_questions: []
+blockers: []
+notes:
+  - text: "Phase 2 specification COMPLETE: chg-GH-204-spec.md, 130 lines, AC-1..AC-14, R1..R12, no blocking open questions. Reuses the approved ticket as design input and records the preflight resolutions."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Intentional drafts preserved in this worktree: modified AGENTS.md, untracked .ai/memory/**, and untracked .opencode/skills/consolidate-memory/SKILL.md. Refine in place, do not restart or use another worktree."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Documentation impact: AGENTS.md kernel, .ai/memory/README.md, four seed READMEs, two .gitkeep placeholders, skill file, .opencode/README.md inventory line. No doc/spec feature update expected because this is repo-internal operating documentation, not a product feature."
+    type: "info"
+    date: "2026-10-31"
