@@ -22,7 +22,7 @@ phases:
     completed: "2026-10-31T08:20:00Z"
   dor_check:
     started: "2026-10-31T06:55:00Z"
-    completed: null
+    completed: "2026-10-31T08:30:00Z"
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -51,6 +51,9 @@ open_questions:
 blockers: []
 
 notes:
+  - text: "DoR iteration 2 verdict READY (10/10 facets PASS, 0 blocking). Iteration-1 finding closed: per-entry staging co-location plus rule-scoped allowlist entries keep every intermediate phase self-consistent; the baseline batch is owned by a named task with a regression test. Advisory: the PD-7 batch table lists three phantom archival trip rows that contain no path-shaped content; harmless because the Phase-2 live scan is authoritative, but the coder should allowlist only files that actually trip."
+    type: "info"
+    date: "2026-10-31"
   - text: "Delivery plan v2 resolves the DoR blocking finding: per-entry staging co-location rule (each allowlist entry lands with its target file; exact-set assertion tracks the current set and reaches the end-state enumeration only at the final phase) and rule-scoped allowlist entries. It also enumerates the live-tree baseline suppression batch (placeholder suppression first, rule-scoped exact-path entries for archival real paths, remediate-if-touched) with a named task and a rule-scope regression test."
     type: "info"
     date: "2026-10-31"
