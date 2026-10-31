@@ -1,0 +1,113 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-177
+branch: feat/GH-177/verify-change-exit-taxonomy
+status: PASS
+summary: >-
+  Independent local review of GH-177 (M0-S8 verify change and exit taxonomy) at HEAD
+  253e9f0 against base origin/main-tools 77119b9. All fourteen ACs and seven NFRs are
+  implemented and independently re-verified: every focused verify suite, the boundary
+  suite, the five invariant checks, doc-distribution, and the full `pnpm check` battery
+  (1106 pass / 0 fail) were re-run by this review and reproduce the evidence artifact's
+  claims exactly. The overlay precedence, presence-tolerant registry read, identity
+  split, corpus classification, fail-closed bash-enum binding, and read-only guarantees
+  are proven non-vacuously in source, not just in reports. Four non-blocking findings:
+  two low (plan execution-log bookkeeping; duplicated fold semantics without an
+  equivalence oracle) and two info notes. No remediation phase required.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 2
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-10/2026-10-31--GH-177--verify-change-exit-taxonomy/chg-GH-177-plan.md:532
+    message: >-
+      The plan's Execution Log still records Phases 1-10 as "Not started" and every
+      task checkbox is unchecked, while Phases 1-6 (commits 6141d00..e644d2e) and
+      Phase 9 doc-sync (253e9f0) are complete and evidenced in chg-GH-177-evidence.md
+      and the pm-notes. DONE_BUT_UNCHECKED bookkeeping gap; the plan's own Execution
+      Log section instructs executors to record per-phase evidence there.
+    suggestion: >-
+      At Phase 10 dod_check (task 10.2), tick the Phase 1-6 and 9 tasks/rows (or add a
+      pointer to the evidence artifact) so the trio reflects delivered reality. No code
+      change; PM-owned finalization bookkeeping.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/verify-change.ts:202
+    message: >-
+      foldTransitions re-implements foldPhaseState (packages/core/src/state/registry.ts)
+      instead of reusing it, deviating from PIN-6's letter ("foldPhaseState is reused by
+      the caller for the overlay"); tier rules forbid the domain importing state, so the
+      fold was duplicated. Semantics are identical today (PhaseTransitionOperation is
+      total over complete|reopen; verified by side-by-side reading and by overlay tests
+      built on real appendPhaseTransition histories), but the two folds can drift
+      silently if the operation set or fold rules grow, and the scaffolded equivalence
+      oracle foldedState (tests/behaviour/verify-support.ts:291) is unused - no test
+      pins equivalence.
+    suggestion: >-
+      Add a small equivalence test folding the overlay fixture histories through both
+      foldPhaseState and the classifier and asserting equal per-phase completion, or
+      consolidate the pure fold into one shared home in a follow-up change. Optional;
+      not blocking.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: info
+    confidence: high
+    category: documentation
+    location: tests/behaviour/verify-corpus.test.ts:78
+    message: >-
+      The corpus suite spawns `git status --porcelain` via execFileSync. Test-plan
+      4.1 says "No child process is spawned by any verify suite"; its intent (the CLI
+      under test runs in-process) holds, and the spawn exists to satisfy the D5/task-5.1
+      clean-tree assertion. AC-V10's spawn-free claim concerns the verify invocation,
+      which stays in-process.
+    suggestion: >-
+      Optionally add a one-line comment at the execFileSync call naming 4.1's intent so
+      a future reader does not read it as a 4.1 violation. No behaviour change.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: info
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/verify-change.ts:257
+    message: >-
+      The absent-declaration + registry complete-then-reopen corner classifies
+      verify.ledger.incomplete (a registry fold entry absorbs declaration absence for
+      the identity split), which is a defensible reading of C-7/AC-V3's "absent after
+      the registry overlay" and is semantically consistent (the ledger accounts for the
+      phase). No fixture pins this corner: the covered cases are absent+no-evidence
+      (lint.phases.incomplete) and declared+reopen (verify.ledger.incomplete).
+    suggestion: >-
+      Optional follow-up fixture (O-series) pinning absent-key + complete-then-reopen to
+      the chosen identity before M0-S9 consumes the split. Both readings yield partial /
+      exit 1 with the same summary, so this is a pin, not a fix.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-10-31T07:32:44Z
+next_step: PROCEED
