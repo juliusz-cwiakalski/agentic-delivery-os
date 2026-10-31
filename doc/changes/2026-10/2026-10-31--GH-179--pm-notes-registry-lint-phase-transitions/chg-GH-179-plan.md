@@ -430,9 +430,9 @@ Phases 9–12 (part 2) are gate phases — review, doc synchronization, conditio
 
 **Tasks**:
 
-- [ ] **9.1** Consolidate the review input pack: the per-phase commit list (the eight completion signals), per-phase green criteria with the captured `pnpm check` logs, the 25-TC coverage map (traceability table → suites → execution commands), and the pinned-decision index (PIN-1..PIN-8, D1..D11) so the reviewer can challenge spelling/placement decisions without reshaping TC behaviour, assertions, or AC mappings (A-T1).
-- [ ] **9.2** Produce the scope and protected-path proof: `git diff --name-only origin/main-tools...HEAD` touches no `.opencode/**`, `.ados-claude/**`, `.ai/**`, `scripts/*.sh`, `tools/**`, or CI topology files (D7), and nothing outside this plan's Files-and-modules lists; each phase's staged set matched its explicit staging list (D6).
-- [ ] **9.3** Record the verdict and route findings through the review artifact workflow (`review/review-iter-1.md` in this folder, the GH-174 pattern): implementation findings → Phase 10; any challenge to PIN-5..PIN-8 or a D-binding → PM/`@decision-advisor` (a decision record if accepted) — never a silent alternative.
+- [x] **9.1** Consolidate the review input pack: the per-phase commit list (the eight completion signals), per-phase green criteria with the captured `pnpm check` logs, the 25-TC coverage map (traceability table → suites → execution commands), and the pinned-decision index (PIN-1..PIN-8, D1..D11) so the reviewer can challenge spelling/placement decisions without reshaping TC behaviour, assertions, or AC mappings (A-T1). *(Delivered: the reviewer received the commit list/coverage map/pins via the plan execution log and artifacts, and re-measured NFRs independently — recorded in review/review-iter-1.md.)*
+- [x] **9.2** Produce the scope and protected-path proof: `git diff --name-only origin/main-tools...HEAD` touches no `.opencode/**`, `.ados-claude/**`, `.ai/**`, `scripts/*.sh`, `tools/**`, or CI topology files (D7), and nothing outside this plan's Files-and-modules lists; each phase's staged set matched its explicit staging list (D6). *(Delivered: reviewer dimension B verified no protected path touched and per-phase staging discipline; committer preflight at each checkpoint confirmed explicit staging lists.)*
+- [x] **9.3** Record the verdict and route findings through the review artifact workflow (`review/review-iter-1.md` in this folder, the GH-174 pattern): implementation findings → Phase 10; any challenge to PIN-5..PIN-8 or a D-binding → PM/`@decision-advisor` (a decision record if accepted) — never a silent alternative. *(Delivered: PASS verdict + code-review/review-iter-1.yaml machine state; F-1/F-2 routed as record-accuracy folds; F-3 recorded as advisory; no PIN/D-binding challenges raised.)*
 
 **Acceptance Criteria**:
 
@@ -457,9 +457,9 @@ Phases 9–12 (part 2) are gate phases — review, doc synchronization, conditio
 
 **Tasks**:
 
-- [ ] **10.1** If findings exist: reproduce each through the relevant TC fixture or negative control first, and add the missing regression **before** the smallest fix; behavior outside the accepted lint/phase/registry slice stays unchanged.
-- [ ] **10.2** Fix code, fixtures, and matching docs together: any error-table change carries its documented row in the same fix (sync stays green in both directions, D2); any accepted challenge to a PIN or D-binding is resolved through PM/`@decision-advisor` and recorded as a plan revision — never applied silently.
-- [ ] **10.3** Re-run the affected focused suites, the full `pnpm check` battery, and the independent re-review until PASS; if no findings, record this phase not-required backed by the Phase 9 PASS — never claim fixes that were not executed.
+- [x] **10.1** If findings exist: reproduce each through the relevant TC fixture or negative control first, and add the missing regression **before** the smallest fix; behavior outside the accepted lint/phase/registry slice stays unchanged. *(Not triggered: zero implementation findings — no blocker/major; F-1/F-2 were record-accuracy items folded in the review checkpoint c70eca1, not code defects.)*
+- [x] **10.2** Fix code, fixtures, and matching docs together: any error-table change carries its documented row in the same fix (sync stays green in both directions, D2); any accepted challenge to a PIN or D-binding is resolved through PM/`@decision-advisor` and recorded as a plan revision — never applied silently. *(Not triggered: no code/fixture/error-table fixes required; sync stayed green throughout, verified at the finalize battery.)*
+- [x] **10.3** Re-run the affected focused suites, the full `pnpm check` battery, and the independent re-review until PASS; if no findings, record this phase not-required backed by the Phase 9 PASS — never claim fixes that were not executed. *(Recorded NOT-REQUIRED backed by Phase 9 PASS: advisory minors only, accepted for PR review; battery re-verified green at a026429.)*
 
 **Acceptance Criteria**:
 
