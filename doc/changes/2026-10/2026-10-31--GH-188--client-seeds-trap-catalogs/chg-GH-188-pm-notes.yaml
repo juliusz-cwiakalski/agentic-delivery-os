@@ -8,7 +8,7 @@ phases:
   delivery_planning: { started: "2026-10-31T01:30:00Z", completed: "2026-10-31T01:40:00Z" }
   dor_check: { started: "2026-10-31T01:45:00Z", completed: "2026-10-31T02:10:00Z", iteration: 2, verdict: "READY" }
   delivery: { started: "2026-10-31T02:15:00Z", completed: "2026-10-31T03:30:00Z" }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: "2026-10-31T03:35:00Z", completed: "2026-10-31T04:00:00Z" }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -72,4 +72,10 @@ notes:
     date: "2026-10-31"
   - text: "Delivery complete: P1–P7 committed (2ed11eb, 41fb233, 28ef7e3, c894a0e, a1a6fc6, f83735b, 2a25434) + P10 gate evidence (7d3ce79). Gates green: 804 pass/0 fail on pnpm check; exactly 4 secret-read allowlist entries; zero new dependencies; infra byte-unchanged vs main-tools. 28/28 TCs implemented. 5 justified deviations recorded in coder report (relative #io import for packed-export parity; custom-field→labels prefix mapping per ADR-0006; fixtureReference string|array; tsconfig already globbed type tests; robust removal-test slicer). P8/P9 review loop deferred to PM phase 8; changeset deferred until review passes."
     type: "info"
+    date: "2026-10-31"
+  - text: "Doc-sync phase 7: new feature-provider-client-seeds.md authored (always-resolve); feature-adapter-ports.md (WorkItem optionality, consumed-by, confinement, GH-188 links); scaffold spec confinement bullet + placeholder claims reconciled; ADR-0003 editorial pointer; glossary terms (client seed, trap catalog, fixture provenance); decision index registered ADR-0004/0005/0006; distribution guard PASS. Residual blocker found and fixed in-change: new spec unregistered in forbidden-literals.registry.json — coder added the entry, checks green (806 pass/0 fail)."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Doc-sync surfaced its write-scope boundary cleanly (registry file = scripts/, outside doc-sync scope) and the fix routed to @coder without phase reopen — the always-resolve + in-change-remediation pattern held."
+    type: "retro"
     date: "2026-10-31"
