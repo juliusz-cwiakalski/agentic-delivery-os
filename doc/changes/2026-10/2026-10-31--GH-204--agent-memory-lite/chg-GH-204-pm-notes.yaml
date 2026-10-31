@@ -11,7 +11,7 @@ phases:
   delivery: { started: "2026-10-31T14:10:00Z", completed: "2026-10-31T14:45:00Z", commits: "d87a977(P1 kernel) a748f5b(P2 index/seeds/trees) e05789f(P3 skill/inventory) a10515e(P4 validation); HEAD a10515e; 4 phases, 4 Conventional Commits; worktree clean" }
   system_spec_update: { started: "2026-10-31T14:50:00Z", completed: "2026-10-31T15:00:00Z", reconciled: "NONE (no-op confirmed). AGENTS.md kernel and .opencode/README.md skills inventory are already current. No doc/spec feature area, no doc/guides change, no redistributable doc. doc-sync-report.md; doc distribution guard 81/81 no drift; residual gaps NONE." }
   review_fix: { started: "2026-10-31T15:05:00Z", completed: "2026-10-31T15:25:00Z", verdict: "PASS iter-1 (0 blocker, 0 major, 1 minor, 2 info; artifact review/review-iter-1.md and review/code-review/review-iter-1.yaml; dimensions A spec/plan compliance and B content quality and safety both PASS). F-1 test-plan execution log was stale; fixed by marking TC-001..014 Pass and TC-015 deferred to phase 11. F-2 and F-3 are informational." }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: "2026-10-31T15:30:00Z", completed: "2026-10-31T15:45:00Z", evidence: "scoped battery at f858047: git status clean; git diff --check clean; PyYAML SKILL parse PASS (name, quoted 15-word description with colon-space); PyYAML record parse PASS (created is str); pm-notes corpus 17/17 pass (88 expects); doc distribution 81/81 no drift; plugin build no drift (24 agents, 20 skills); forbidden path scan 19 changed files, 0 forbidden; authored-surface dash scan 0 hits; index 4 rows for 4 folders, 0 directory rows, seeds 12..13 lines, both .gitkeep empty, 0 dated lesson lines; final worktree clean. Logs tmp/run-logs-runner/2026-10-31/141600..141710." }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
@@ -58,6 +58,9 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Phase 9 quality_gates COMPLETE: 11/11 scoped checks pass at f858047. PyYAML skill and record parse, pm-notes corpus 17/17, doc distribution 81/81, plugin drift none, forbidden paths none, dash scan clean, index and seed checks pass, final worktree clean. Runner logs under tmp/run-logs-runner/2026-10-31/."
+    type: "info"
+    date: "2026-10-31"
   - text: "Phase 8 review_fix COMPLETE: @reviewer returned PASS iter-1 (0 blocker, 0 major, 1 minor, 2 info). The minor F-1 was a stale test-plan execution log; test-plan-writer updated TC-001..014 to Pass with evidence and TC-015 to deferred at phase 11. No remediation code change."
     type: "info"
     date: "2026-10-31"
