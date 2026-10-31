@@ -6,7 +6,7 @@ created: 2026-10-31
 last_updated: 2026-10-31
 owners: ["engineering"]
 service: delivery-os
-summary: "The typed `ados db` session-database administration surface: four closed subcommands (`size`, `list`, `prune`, `reboot`) over the opencode SQLite session store, a read-only `SessionStorePort` for size/list and a mutating `SessionAdminPort` for prune/reboot, dry-run-by-default mutation, the 15-minute activity-based live window, the 30-day default prune threshold, leaf-only candidate selection with a pre-delete TOCTOU re-check, official `opencode session delete` per candidate, one bounded WAL checkpoint on reboot, the `message`/`part` current store pin with legacy-empty `session_message`, the `db` error kind and four rows, bounded metadata-only output, and the ADR-0003 C-11 owner merge gate."
+summary: "The typed `db` command-family session-database administration surface: four closed subcommands (`size`, `list`, `prune`, `reboot`) over the opencode SQLite session store, a read-only `SessionStorePort` for size/list and a mutating `SessionAdminPort` for prune/reboot, dry-run-by-default mutation, the 15-minute activity-based live window, the 30-day default prune threshold, leaf-only candidate selection with a pre-delete TOCTOU re-check, official `opencode session delete` per candidate, one bounded WAL checkpoint on reboot, the `message`/`part` current store pin with legacy-empty `session_message`, the `db` error kind and four rows, bounded metadata-only output, and the ADR-0003 C-11 owner merge gate."
 links:
   related_changes: ["GH-180"]
   related_decisions: ["ADR-0003", "ADR-0010"]
@@ -19,7 +19,7 @@ links:
 
 ## Overview
 
-`ados db` is the typed administration surface for the harness session database — the opencode SQLite store. It has exactly four subcommands: `size`, `list`, `prune`, and `reboot`. All four are metadata-only. `size` and `list` are read-only. `prune` and `reboot` are dry-run by default and mutate only with `--apply`.
+The `db` command family is the typed administration surface for the harness session database — the opencode SQLite store. It has exactly four subcommands: `size`, `list`, `prune`, and `reboot`. All four are metadata-only. `size` and `list` are read-only. `prune` and `reboot` are dry-run by default and mutate only with `--apply`.
 
 The surface is the only product-code path to session administration. Production I/O lives in `@delivery-os/adapters/session` and reaches the database exclusively through the opencode CLI (`opencode db path`, `opencode db "<SQL>" --format json`, `opencode session delete <id>`). No package, subpath, dependency, SQLite binding, or new runtime-API location is introduced. Contracts in `core ./contracts` are types and `as const` data only; pure policy in `core ./domain/session-admin` owns candidate selection and rendering; the CLI command definition validates grammar and delegates to the ports.
 
@@ -52,7 +52,7 @@ The surrounding result contract is described in [Result Contract and Error Table
 
 ### Command surface and grammar
 
-`ados db <subcommand> [flags]`. The subcommand set is closed: `size`, `list`, `prune`, `reboot`. The only global flag is `--json`, supplied by the CLI, which changes rendering only. Grammar is validated before any I/O.
+`db <subcommand> [flags]`. The subcommand set is closed: `size`, `list`, `prune`, `reboot`. The only global flag is `--json`, supplied by the CLI, which changes rendering only. Grammar is validated before any I/O.
 
 | Subcommand | Positionals | Flags | Mutation |
 |---|---|---|---|
@@ -149,7 +149,7 @@ The `db` kind is multi-row, so classification is by exact code; a kind-only `db`
 | `packages/core/src/domain/session-admin.ts` | Pure policy and rendering over injected facts: cutoff and live-boundary computation, candidate predicate and ordering, capping, result assembly, and deterministic human text. |
 | `packages/core/src/contracts/error-table.ts` | `db` in `DOMAIN_KINDS` and the four `db.*` rows as data. |
 | `packages/adapters/src/session/index.ts` | Production `OpencodeSessionIo` and the adapter implementations of `SessionStorePort` and `SessionAdminPort`. The only session-admin file admitted to use `node:child_process` and `node:fs`. |
-| `packages/cli/src/commands/db.ts` | `ados db` command definition and `DbCommandRuntime`; grammar validation before I/O; no stream writes and no exit-code choice. |
+| `packages/cli/src/commands/db.ts` | `db` command definition and `DbCommandRuntime`; grammar validation before I/O; no stream writes and no exit-code choice. |
 | `packages/cli/src/edge.ts` | `DbComposition` and `createDbCommandRuntime`; registers `commands.db` only when the composition is provided. |
 | `packages/cli/src/index.ts`, `classify.ts`, `projection.ts`, `output/` | Consumed unchanged: the shared parser, classification chain, `{0, 1, 2}` projection, and redaction chokepoint. |
 
@@ -359,8 +359,8 @@ The envelope's `runId` and `timing`, the per-run counts, the explicit mode, the 
 
 | Term | Definition |
 |---|---|
-| Session database | The opencode SQLite store that holds sessions, messages, parts, and related rows; the admin target of `ados db`. |
-| Session admin | The typed `ados db` surface over the session database: `size`, `list`, `prune`, `reboot`. |
+| Session database | The opencode SQLite store that holds sessions, messages, parts, and related rows; the admin target of the `db` command family. |
+| Session admin | The typed `db` command-family surface over the session database: `size`, `list`, `prune`, `reboot`. |
 | `SessionStorePort` | The read-only session-store port with `size` and `list`; preserves ADR-0003's `SessionStore` semantics. |
 | `SessionAdminPort` | The admin port that extends `SessionStorePort` with mutating `prune` and `reboot`. |
 | Live window | The 15 minutes before the injected current time; a session with `time_updated` inside it is live. The lower boundary is inclusive. |
