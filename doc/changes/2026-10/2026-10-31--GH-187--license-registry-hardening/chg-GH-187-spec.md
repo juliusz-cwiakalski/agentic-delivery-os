@@ -223,7 +223,7 @@ N/A. This change introduces no events, messages, or asynchronous contracts.
 | ID | Element | Description |
 |----|---------|-------------|
 | DM-1 | Registry schema version | Advances from 2 to 3 because the deny list and its integrity rules are required. Older registry versions are rejected by the audit rather than accepted with an implicit empty policy. |
-| DM-2 | `deny_list` | Required, non-empty array of single denied license identifiers. Entries are exact identifiers, not expressions. Duplicate entries, malformed entries, and overlap with the allow list are invalid. |
+| DM-2 | `deny_list` | Required, non-empty array of single denied license identifiers. Each entry must match the registry's identifier token syntax `^[A-Za-z0-9.+-]+$` and contain no whitespace, `AND`/`OR`/`WITH` operators, parentheses, or compound expression. Duplicate entries, malformed entries, and overlap with the allow list are invalid. |
 | DM-3 | `allow_list` | Existing required array of allowed license identifiers. Its contents remain backed by approved verdicts; deny-list identifiers must not appear in it. |
 | DM-4 | Registry entries and verdicts | Existing package/version/license/uses/verdict model is unchanged. Every audited use must still map to an approved entry. |
 | DM-5 | Policy semantics | Deny precedence, per-branch compound evaluation, unknown and non-asserted failure, and allow-list/verdict consistency are encoded in the registry comments and enforced by the audit. The deny list is the authoritative denied-license declaration and may be extended; the mandated family floor in Appendix A may not be removed. |
@@ -323,7 +323,7 @@ None. The PM decisions recorded in Section 15 resolve the policy location, deny 
 
 | ID | Criterion | Linked |
 |----|-----------|--------|
-| AC-F1-1 | **Given** the committed license registry, **when** it is parsed, **then** it declares schema version 3, the scope, the approved C-2 determination, the allow list, and a required non-empty deny list, all in one committed YAML artifact. | F-1, DM-1, DM-2, DM-5 |
+| AC-F1-1 | **Given** the committed license registry, **when** it is parsed, **then** it declares schema version 3, the scope, the C-2 owner determination as preserved (proposed at delivery, confirmed by the owner at PR review), the allow list, and a required non-empty deny list, all in one committed YAML artifact. | F-1, DM-1, DM-2, DM-5 |
 | AC-F1-2 | **Given** the deny list, **when** its contents are inspected, **then** all five mandated families and every identifier in the Appendix A baseline are present. | F-1, F-3, DM-2 |
 | AC-F1-3 | **Given** a registry that declares the old schema version or omits the schema version, **when** the audit runs, **then** it fails closed with a schema-policy failure rather than accepting a registry without the deny-list contract. | F-1, DM-1 |
 | AC-F1-4 | **Given** the registry file, **when** it is reviewed by a maintainer, **then** its human-readable policy notes state that unregistered and unknown licenses fail closed, `NOASSERTION` and `SEE LICENSE` are never accepted, compound branches are evaluated individually, and deny wins over allow. | F-1, DM-5 |
@@ -414,6 +414,7 @@ The registry deny list must contain at least the following identifiers. Addition
 Notes:
 
 - `Commons-Clause` and `BUSL-1.0` are policy labels used by the registry where a single official SPDX identifier may not exist. The registry's identifier syntax accepts them.
+- Each deny-list entry must be a single identifier matching `^[A-Za-z0-9.+-]+$`; whitespace, `AND`/`OR`/`WITH`, parentheses, and compound expressions are invalid.
 - Any other identifier in a denied family that is not in this baseline still fails closed because it is not allow-listed. The floor exists to prevent silent removal of the mandated families, not to enumerate every possible variant.
 
 ### Appendix B — Ticket acceptance-criterion trace
@@ -443,6 +444,7 @@ This interpretation preserves the live dependency and still fails closed on ever
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-10-31 | @spec-writer | Initial specification for GH-187 license registry hardening. |
+| 1.1 | 2026-10-31 | @spec-writer | Corrected AC-F1-1 C-2 wording and added the deny-identifier grammar to DM-2 and Appendix A (OQ-T2). |
 
 ---
 
