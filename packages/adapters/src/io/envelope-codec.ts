@@ -15,7 +15,7 @@
  * inline marker. Human-readable content is never displaced.
  */
 
-import type { CarrierKind } from "@delivery-os/core/contracts";
+import type { CarrierKind, EnvelopeContentPolicy } from "@delivery-os/core/contracts";
 import {
   type DegradationReason,
   ENVELOPE_KINDS,
@@ -61,22 +61,35 @@ export type SerializedCarrier =
   | { readonly carrier: "compact-marker"; readonly text: string };
 
 /** Why serialization was refused. */
-export type EnvelopeSerializationFailure = "payload-not-closed" | "size-bound-exceeded";
+export type EnvelopeSerializationFailure =
+  | "payload-not-closed"
+  | "size-bound-exceeded"
+  | "content-policy-violation";
 
 /** The result of serializing one envelope into one carrier. */
 export type EnvelopeSerialization =
   | { readonly ok: true; readonly carrier: SerializedCarrier; readonly byteLength: number }
   | {
       readonly ok: false;
-      readonly failure: EnvelopeSerializationFailure;
+      readonly failure: "payload-not-closed" | "size-bound-exceeded";
       readonly byteLength: number;
+    }
+  | {
+      readonly ok: false;
+      readonly failure: "content-policy-violation";
+      readonly byteLength: number;
+      readonly ruleOrEntryId: string;
     };
 
-/** Input for serialization: the envelope, the chosen carrier, and human content. */
+/**
+ * Input for serialization: the envelope, the chosen carrier, human content, and
+ * the required injected content policy (no default-open overload exists).
+ */
 export type SerializeEnvelopeInput = {
   readonly envelope: MetadataEnvelopeV1;
   readonly carrier: CarrierKind;
   readonly humanContent: string;
+  readonly policy: EnvelopeContentPolicy;
 };
 
 /** A read either yields the v1 envelope or visible degradation evidence. */
@@ -230,6 +243,15 @@ export const serializeEnvelope = (input: SerializeEnvelopeInput): EnvelopeSerial
   const byteLength = byteLengthOf(json);
   if (byteLength > ENVELOPE_MAX_BYTES) {
     return { ok: false, failure: "size-bound-exceeded", byteLength };
+  }
+  const verdict = input.policy(json);
+  if (!verdict.ok) {
+    return {
+      ok: false,
+      failure: "content-policy-violation",
+      byteLength,
+      ruleOrEntryId: verdict.ruleOrEntryId,
+    };
   }
   switch (input.carrier) {
     case "invisible-comment-block":

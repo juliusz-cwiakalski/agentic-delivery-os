@@ -6,6 +6,12 @@ created: 2026-10-30
 last_updated: 2026-10-31
 owners: ["engineering"]
 service: delivery-os
+summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the binding secret-read boundary invariant, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec, required injected content policy, fail-closed content-policy failure, and visible graceful degradation."
+links:
+  related_changes: ["GH-174", "GH-179", "GH-181", "GH-184", "GH-188"]
+  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "TDR-0005"]
+  contracts:
+    - "packages/core/src/contracts/envelope.ts"
 summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec and visible graceful degradation."
 links:
   related_changes: ["GH-174", "GH-179", "GH-181", "GH-188", "GH-182"]
@@ -22,7 +28,7 @@ The adapter-era contract substrate is typed, provider-agnostic, and mechanically
 
 Secret acquisition is centralized behind one `CredentialPort` in core. A caller resolves a declared credential reference to secret material at use time and receives either the material or the classified `config.credential.missing` failure. The single implementation is environment-backed and lives in the adapters package's I/O tier at the declared `./credentials` subpath, with an injectable environment record for tests. A binding repository invariant, the secret-read boundary, fails on ambient environment access outside an enumerated allowlist, so the centralization claim is mechanical rather than conventional. The credential sidecar remains a future second implementation behind the unchanged port interface; no mediated-mode code exists.
 
-The embedded metadata envelope v1 is a versioned data contract in core `./contracts` (`delivery.metadata.v1`). Its pure codec — serialize, parse, strip — is an adapter-internal shared module. The envelope travels in an adapter-declared carrier, round-trips with logical payload equality, and degrades visibly instead of failing when metadata is absent, malformed, of the wrong kind, or of an unknown version.
+The embedded metadata envelope v1 is a versioned data contract in core `./contracts` (`delivery.metadata.v1`). Its pure codec — serialize, parse, strip — is an adapter-internal shared module. The envelope travels in an adapter-declared carrier, round-trips with logical payload equality, and degrades visibly instead of failing when metadata is absent, malformed, of the wrong kind, or of an unknown version. Serialization requires an injected, pure content policy and fails closed with `content-policy-violation` when that policy denies the exact payload JSON.
 
 The surrounding workspace is described in [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md); the provider engine that consumes the credential port for quota authorization in [Provider Engine](feature-provider-engine.md); the client seeds that consume this substrate in [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md); the failure identity and redaction boundary in [Result Contract and Error Table](feature-result-contract.md); environment-only secrets and configuration acquisition in [Configuration Layer and Inspection](feature-config-layer.md); brand-derived values in [Branding Seam and Working Name](feature-branding-seam.md). Package placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 
@@ -123,11 +129,13 @@ type MetadataEnvelopeV1 = {
 
 `ENVELOPE_SCHEMA_ID` is `delivery.metadata.v1`, `ENVELOPE_MAX_BYTES` is `2048`, and `ENVELOPE_KINDS` contains `work-item-comment`. The payload field set is closed at v1; unknown or missing fields are rejected. The payload admits no secret, credential, or private-identifier field.
 
-The pure codec lives in the adapters package as an adapter-internal shared module (`#io/*`), not in core and not as a public subpath. Core `./contracts` carries only the envelope data contract. The codec provides:
+The pure codec lives in the adapters package as an adapter-internal shared module (`#io/*`), not in core and not as a public subpath. Core `./contracts` carries only the envelope data contract and the content-policy contract types. The codec provides:
 
-- `serializeEnvelope({ envelope, carrier, humanContent })` — returns the serialized carrier and its byte length, or a refusal for `payload-not-closed` or `size-bound-exceeded`. The byte length is measured on the serialized JSON against the 2048-byte bound.
+- `serializeEnvelope({ envelope, carrier, humanContent, policy })` — returns the serialized carrier and its byte length, or a refusal for `payload-not-closed`, `size-bound-exceeded`, or `content-policy-violation`. The byte length is measured on the serialized JSON against the 2048-byte bound. `policy` is required; there is no default-open overload.
 - `parseEnvelope({ carrier, text?, fieldValue?, expectedKind? })` — returns the v1 envelope plus the stripped human content, or visible degradation evidence plus the stripped human content.
 - `stripEnvelope(carrier, text)` — removes every envelope marker from human-readable carrier text with no residue or extra blank line. The provider custom-field carrier keeps human content separate and is returned unchanged.
+
+**Serialization content policy.** `serializeEnvelope` validates in a fixed order: closed-payload validation, serialized byte-size bound, content policy over the exact compact JSON that would be embedded (payload included, so escaping cannot hide a match), then carrier construction. The injected policy is a pure, total, non-throwing function from that JSON to `{ ok: true }` or `{ ok: false, ruleOrEntryId }`. A denial returns `{ ok: false, failure: "content-policy-violation", byteLength, ruleOrEntryId }`, produces no carrier, and never carries content. The failure is codec-local and has no result-contract error row. The policy builder in the same I/O tier combines the shared generic privacy rules with injected hashed entries through an injected hash; it validates that hash and those entries at construction time and fails closed before returning a policy. The emitter policy intentionally does not apply documentation-placeholder suppression, because machine-generated metadata has no documentation context, so a marker-carrying guarded payload is still denied. The structural single-serialization audit covers `packages/`, `scripts/`, and `tools/`. The codec imports only contract types and keeps its no-`node:*`/`bun:*`, no-ambient-read, no-clock, no-randomness purity. Human-readable comment content is outside the policy input and is never scanned at this boundary. The rule set, registry, and no-echo reporting are documented in [Privacy and No-Cloud Guards](feature-privacy-guard.md).
 
 Marker scanning is bounded: a marker payload span is capped at `ENVELOPE_MAX_BYTES` characters (a valid v1 envelope is byte-bounded below that), so marker-dense hostile carrier text is scanned linearly rather than quadratically. A marker whose payload exceeds the cap does not match and degrades as `missing`.
 
@@ -174,6 +182,13 @@ An unresolvable credential carries the synchronized error-table row `config.cred
 | `packages/core/src/contracts/ports.ts` | The nine v1 primitive port types and their supporting normalized value types. |
 | `packages/core/src/contracts/adapter-capabilities.ts` | `ADAPTER_OPERATIONS`, `CARRIER_KINDS`, capability/gap types, and declared-carrier selection types. |
 | `packages/core/src/contracts/credentials.ts` | `CredentialPort`, `CredentialReference`, `CredentialSourceKey`, resolution result, and the reified missing-credential failure. |
+| `packages/core/src/contracts/envelope.ts` | Envelope schema id, size bound, kinds, closed payload types, degradation reasons, agent-facing comment views, and the `ContentPolicyVerdict` / `EnvelopeContentPolicy` contract types. |
+| `packages/core/src/contracts/index.ts` | The `core ./contracts` export surface for the ports, capability, credential, and envelope contracts. |
+| `packages/adapters/src/credentials/index.ts` | Environment-backed credential port, injected-environment factory, production process-environment wrapper, and source-key derivation. |
+| `packages/adapters/src/io/envelope-codec.ts` | Pure envelope codec: serialize, parse, strip, closed-payload validation, required content-policy evaluation, raw-carrier escape hatch, and carrier constants. |
+| `packages/adapters/src/io/privacy-rules.ts` | Pure, dependency-free privacy rule definitions, suppression classes, normalization, matchers, caps, and identifier fingerprint. |
+| `packages/adapters/src/io/envelope-content-policy.ts` | Pure policy builder combining shared generic rules with injected hashed entries and hash. |
+| `packages/adapters/src/io/index.ts` | Internal `#io/*` alias target re-exporting the codec and the policy builder. |
 | `packages/core/src/contracts/envelope.ts` | Envelope schema id, size bound, kinds, closed payload types, degradation reasons, and agent-facing comment views. |
 | `packages/core/src/contracts/index.ts` | The `core ./contracts` export surface for the ports, capability, credential, provider, and envelope contracts. |
 | `packages/core/src/contracts/provider.ts` | Provider descriptors, conditions, parks, announcements, decisions, skip reasons, error codes, and the quota transport contract. |
@@ -205,10 +220,12 @@ Version policy: v1 is the only schema version, so any version string outside the
 ### API and interface contracts
 
 - **`CredentialPort.resolve(reference)`** returns `CredentialResolution` synchronously. There is no diagnostic channel and no implementation mode.
-- **`serializeEnvelope(input)`** returns `{ ok: true, carrier, byteLength }` or `{ ok: false, failure, byteLength }`.
+- **`serializeEnvelope(input)`** requires `policy: EnvelopeContentPolicy` and returns `{ ok: true, carrier, byteLength }`, `{ ok: false, failure: "payload-not-closed" | "size-bound-exceeded", byteLength }`, or `{ ok: false, failure: "content-policy-violation", byteLength, ruleOrEntryId }`.
 - **`parseEnvelope(input)`** returns `{ ok: true, envelope, humanContent }` or `{ ok: false, reason, humanContent }`.
 - **`stripEnvelope(carrier, text)`** returns the text with every envelope marker removed.
 - **`isClosedV1Payload(value)`** is the closed-payload type guard used by both serialization and parsing.
+- **`ContentPolicyVerdict` / `EnvelopeContentPolicy`** are the pure allow/deny verdict and injected predicate contract types declared in core `./contracts`.
+- **`buildEnvelopeContentPolicy(inputs)`** builds an `EnvelopeContentPolicy` from a pure hash function and hashed entries carrying `{ id, hash, length }` plus an optional `algorithm` declaration fixed to `sha256`. Malformed, duplicate, or over-cap inputs throw at construction; the returned policy itself never throws.
 
 ## Security and Boundaries
 
@@ -216,6 +233,7 @@ Version policy: v1 is the only schema version, so any version string outside the
 - The secret-read boundary closes the ambient channel that runtime-API confinement does not cover. Runtime-API confinement admits the `core` state driver edge (`packages/core/src/state/driver/`), the adapters I/O subpaths `repo`, `file`, `host`, `session`, `legacy`, and `credentials`, the provider client subpaths `github`, `gitlab`, and `jira`, and the provider quota transport `provider-quota`, all as exact, reason-bearing entries per the ADR-0005 reviewed-allowance precedent; it also admits the `cli` build and `opencode` host integration. The provider core tier is runtime-neutral, the provider registry subpath and the remaining adapter subpaths stay non-I/O, and the credential subpath is the only one that may resolve secret material.
 - Resolved material never enters diagnostics, logs, error payloads, or metadata; the existing redaction chokepoint governs any surfaced payload.
 - The envelope payload is closed, compact, size-bounded, and secret-free; carrier markers and namespaces use brand-neutral constants with no committed product token.
+- Every serialized envelope is scanned by the required content policy over the exact embedded JSON. The policy and hash are injected pure inputs; a denial fails closed with a rule or entry id only and produces no carrier. The shared rule definitions and the hashed-literal registry are documented in [Privacy and No-Cloud Guards](feature-privacy-guard.md).
 - Capability data is declarative; enforcement of undeclared operations belongs to adapter implementations consulting the flags.
 
 ## Non-Functional Requirements
@@ -226,6 +244,8 @@ Version policy: v1 is the only schema version, so any version string outside the
 | Secret centralization | Zero non-allowlisted ambient environment reads in workspace production sources; exactly one credential-material entry; planted violations fire. |
 | CI bindingness | The secret-read invariant is a binding `check:boundaries` stage and `ts-invariants` step with no bypass construct. |
 | Envelope boundedness | Every golden round-trip case serializes within 2048 bytes; metadata never displaces human-readable content. |
+| Content-policy scan | Every serialization call supplies a policy; a guarded payload returns `content-policy-violation` with one rule or entry id and no carrier; clean payloads round-trip across every declared carrier. |
+| Emitter purity | 0 `node:*`/`bun:*` imports and 0 ambient environment, clock, randomness, filesystem, or network accesses in the codec; the policy and hash are injected. |
 | Degradation totality | Every degradation case returns a view with visible evidence naming a mechanically detectable reason; no case fails the flow. |
 | Error-table sync | `config.credential.missing` agrees with the documented table in both directions; existing classification behavior is unchanged. |
 | Fixture discipline | The invariant has firing negative fixtures and clean controls; fixture coverage and allowlist non-vacuity are proven. |
@@ -236,7 +256,8 @@ Version policy: v1 is the only schema version, so any version string outside the
 |-------|-------|----------|
 | Structure | Exact v1 contract inventory in both directions, neutral-tier purity, carrier typing, credential surface, envelope constants, error-table row | `tests/structure/port-contract-inventory.test.ts`, `port-neutrality.test.ts`, `port-carrier-types.test.ts`, `port-credential-surface.test.ts`, `envelope-contract.test.ts`, `credential-constants.test.ts`, `error-table.test.ts` |
 | Behaviour | Capability/gap declarations, declared-carrier selection, credential resolution and failure, envelope round-trip, parse/strip, degradation matrix, adapter-only write path | `tests/behaviour/port-capabilities.test.ts`, `credential-port.test.ts`, `envelope-roundtrip.test.ts`, `envelope-degradation.test.ts`, `envelope-write-path.test.ts` |
-| Type level | Undeclared carriers and widened sets rejected at compile time | `tests/types/port-carrier-types.type-test.ts` through the root `typecheck` |
+| Emitter policy | Denial across field and carrier cases, validation order, totality, clean round-trip, shared-rule parity, human-content exclusion, no emitter-side placeholder suppression, construction-time input validation, and the single-serialization audit over `packages/`, `scripts/`, and `tools/` | `tests/behaviour/envelope-content-policy.test.ts`, `tests/structure/privacy-imports.test.ts`, `tests/structure/envelope-contract.test.ts` |
+| Type level | Undeclared carriers and widened sets rejected at compile time; a policy-less serialization call rejected at compile time | `tests/types/port-carrier-types.type-test.ts`, `tests/types/envelope-policy.type-test.ts` through the root `typecheck` |
 | Checks | Planted boundary violations, allowlist mutations, non-vacuity, CI wiring and bindingness, error-table sync | `tests/checks/secret-read-boundary.test.ts`, `ci-checks.test.ts`, `error-table-sync.test.ts`; `bun run scripts/checks/secret-read-boundary.ts` |
 | Boundaries | Fixture coverage and the credentials subpath in the entrypoint matrix | `tests/boundaries/**`, `tests/checks/secret-read-boundary.test.ts` |
 | Aggregate | The whole workspace | `pnpm check` |
@@ -259,11 +280,13 @@ Capability flags and gap records are inspectable data. Degradation evidence name
 - **Depends on** the result contract for the error table, classification chain, projection, and redaction chokepoint.
 - **Depends on** the configuration layer for the environment-only secrets precedent and environment facts as injected adapter data.
 - **Depends on** the branding seam for environment-prefixed source keys and brand-neutral constants.
+- **Depends on** the privacy guard's pure rule-definition module for the required envelope content policy; the shared definitions keep file scanning and emitter scanning in agreement.
+- **Consumed by** the provider engine, the tracker, VCS, and CI adapters, the delivered client seeds at `adapters ./jira`, `adapters ./gitlab`, and `adapters ./github`, and the envelope content policy.
 - **Consumed by** the provider engine ([Provider Engine](feature-provider-engine.md)) for credential-port-only quota authorization, the tracker, VCS, and CI adapters, and the delivered client seeds at `adapters ./jira`, `adapters ./gitlab`, and `adapters ./github`.
 - **Risk — contract churn:** The first real adapters may reveal port-shape gaps. Mitigation: contracts derive from the catalogue's semantic rows, evolution is additive within v1, and a decision record governs adapter-contract changes. The first additive round executed under ADR-0004 (optional `updatedAt`) and ADR-0006 (optional `comments`); further evolutions stay additive within v1 and remain decision-record governed.
 - **Risk — allowlist erosion:** Credential reads could migrate into allowlisted configuration readers. Mitigation: reason-bearing entries, exact paths, mutation tests, and non-vacuity checks.
 - **Risk — carrier mangling:** Providers may reformat or strip carriers. Mitigation: graceful degradation with visible evidence and a compact-marker fallback carrier.
-- **Risk — metadata leakage:** Public provider artifacts could expose private identifiers. Mitigation: a closed secret-free payload and brand-neutral carrier constants.
+- **Risk — metadata leakage:** Public provider artifacts could expose private identifiers. Mitigation: a closed secret-free payload, brand-neutral carrier constants, and the required content policy that scans the exact embedded JSON before any carrier is produced.
 
 ## Glossary & References
 
@@ -277,9 +300,11 @@ Capability flags and gap records are inspectable data. Degradation evidence name
 | Quota transport | The injectable provider quota request edge at `adapters ./provider-quota`: one bounded GET, in-memory authorization header, no credential storage. |
 | Metadata envelope | The versioned `delivery.metadata.v1` data contract embedded in provider artifacts by adapters. |
 | Carrier | The adapter-chosen, capability-flagged form the envelope takes inside a provider artifact. |
+| Content policy | The required, injected pure predicate at `serializeEnvelope`: it scans the exact compact JSON that would be embedded and returns allow or a denial carrying one rule or entry id. |
+| `content-policy-violation` | The fail-closed codec-local serialization failure produced when the content policy denies a payload; it carries no content and no carrier. |
 | Graceful degradation | Heuristic fallback with visible degradation evidence, never a flow failure. |
 
-See also: [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [Branding Seam and Working Name](feature-branding-seam.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
+See also: [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [Branding Seam and Working Name](feature-branding-seam.md), [Privacy and No-Cloud Guards](feature-privacy-guard.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 
 **Change record:** `doc/changes/2026-10/2026-10-30--GH-181--primitive-ports-credential-metadata/`.
 **Contract-extension change record:** `doc/changes/2026-10/2026-10-31--GH-188--client-seeds-trap-catalogs/`.
