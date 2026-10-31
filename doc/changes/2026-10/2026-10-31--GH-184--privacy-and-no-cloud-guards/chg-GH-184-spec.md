@@ -76,7 +76,7 @@ Because the privacy and no-cloud boundary is prose and the only existing content
 | Committed raw private literals, raw hosted-product terms, salts, or keys | 0 |
 | Metadata payloads scanned at the single serialization point | 1/1 serialization path; required policy, no default-open |
 | New package dependencies or lockfile changes | 0 |
-| Changeset coverage for the five-package fixed group | 1 minor changeset, 5 packages |
+| Changeset coverage for the five-package fixed group | 1 new minor changeset added by this change, 5 packages; pre-existing changesets untouched |
 
 ### 4.2 Non-Goals
 
@@ -120,7 +120,7 @@ Because the privacy and no-cloud boundary is prose and the only existing content
 - **F-5**: Violation reporting names the rule or entry id, the file, the line, and a short stable fingerprint derived only from the rule/entry id under a versioned domain separator. It never prints the matched literal, the digest input, any content window, or a digest of surrounding file content. Human-readable and machine-readable output modes obey the same content-free rule. A local authoring mode of the guard reads a new literal from standard input only (never from a command-line argument or environment variable), does not echo it, does not write the repository, and prints only the fields needed to paste a registry entry (id placeholder, class, algorithm, digest, length, reason placeholder). It prefers hidden terminal input, accepts piped standard input for controlled local use, and refuses to run when a CI environment is detected so it cannot run or leak in a shared job.
 - **F-6**: `serializeEnvelope` takes a required, injected, pure content policy. The policy receives the exact compact JSON representation that would be embedded for the validated v1 envelope (payload included, so escaping cannot hide a match) and returns either an allow verdict or a deny verdict carrying one rule/entry id. The codec maps a deny verdict to a new fail-closed serialization failure kind, `content-policy-violation`, carrying only the rule/entry id and never content; no carrier is produced. Validation order is: closed-payload validation, size bound, then content policy, then carrier construction; every failure path is total and non-throwing. The policy combines the committed generic rule definitions with the project's hashed entries using an injected pure hash function and injected entry data. The codec imports only contract types and remains free of runtime imports, ambient reads, clock, randomness, filesystem, and network. Because the codec is the only serialization point, every later production emitter inherits the scan by construction. Human-readable comment content is explicitly outside this scan.
 - **F-7**: The guard is wired bindingly into CI. The invariant runs by name in the `ts-invariants` job, which has no `continue-on-error`, no bypass construct, and no need for full git history because the scan is working-tree only. The new mutation and behaviour suites run under the binding `ts-test` job through `pnpm test`. A root script, `check:privacy-literals`, provides the local command; it is deliberately not chained into the aggregate `check` script, preserving the exact aggregate contract asserted by the existing CI checks. `ci-topology` sees the new check as invoked, `ci-bindingness` sees no bypass, `ci-supply-chain` sees no new job surface, `script-surface` remains satisfied, and `tests/checks/ci-checks.test.ts` stays green without weakening its exact assertions.
-- **F-8**: The change ships one changeset declaring a minor bump for the five-package fixed group (`@delivery-os/core`, `@delivery-os/adapters`, `@delivery-os/cli`, `@delivery-os/mcp`, `@delivery-os/opencode`) because the envelope contract and codec signature change. Package manifest versions are not hand-edited; the lockfile is unchanged; the license audit stays green.
+- **F-8**: The change adds exactly one new changeset declaring a minor bump for the five-package fixed group (`@delivery-os/core`, `@delivery-os/adapters`, `@delivery-os/cli`, `@delivery-os/mcp`, `@delivery-os/opencode`) because the envelope contract and codec signature change. Pre-existing unreleased changesets are untouched (not modified or deleted), package manifest versions are not hand-edited, the lockfile is unchanged, and the license audit stays green.
 
 ## 6. USER & SYSTEM FLOWS
 
@@ -142,7 +142,7 @@ Because the privacy and no-cloud boundary is prose and the only existing content
 - Content-free human-readable and machine-readable reporting, including the stable identifier-only fingerprint.
 - A required injected pure content policy at `serializeEnvelope`, the new `content-policy-violation` serialization failure, shared generic rule definitions between the file check and the policy, and codec purity preservation.
 - Binding CI wiring in `ts-invariants`, the local `check:privacy-literals` script, and the mutation/behaviour test suites under the existing test job.
-- The five-package minor changeset and the documentation-sync touch points flagged for the system-spec update phase.
+- The new five-package minor changeset added by this change and the documentation-sync touch points flagged for the system-spec update phase.
 
 ### 7.2 Out of Scope
 
@@ -220,7 +220,7 @@ None. The guard uses runtime built-ins at the check edge, the codec receives pur
 | NFR-5 | Scan performance and linearity | Full working-tree scan completes in ≤ 60 s on the CI reference runner for a text corpus ≤ 50 MiB; per-file hash work is linear in scanned bytes for each distinct registered length, with at most 32 distinct lengths and each window bounded by the literal-length cap; emitter policy adds ≤ 10 ms per 2048-byte envelope on the CI reference runner; no superlinear backtracking pattern is accepted. |
 | NFR-6 | Codec purity and compatibility | 0 `node:*`/`bun:*` imports in the codec; 0 ambient environment, clock, randomness, filesystem, or network accesses; 100% of existing envelope behaviour tests green; 100% of serialization call sites pass a policy; no default-open path. |
 | NFR-7 | CI bindingness and wiring integrity | 0 bypass constructs in the guard's job; the guard is invoked by name in `ts-invariants`; `ci-topology`, `ci-bindingness`, `ci-supply-chain`, `script-surface`, and `tests/checks/ci-checks.test.ts` are green; new suites execute under the binding test job and fail it on failure. |
-| NFR-8 | Release and dependency integrity | Exactly one changeset declares a minor bump for all five fixed-group packages; 0 hand-edited manifest versions; unchanged lockfile; license audit green; 0 new dependencies. |
+| NFR-8 | Release and dependency integrity | Exactly one new changeset, added by this change, declares a minor bump for all five fixed-group packages; pre-existing changesets are untouched (not modified or deleted); 0 hand-edited manifest versions; unchanged lockfile; license audit green; 0 new dependencies. |
 | NFR-9 | Registry bounds | ≤ 256 hashed entries total; ≤ 128 per class; ≤ 32 distinct normalized lengths; normalized literal length 4–512 characters; digest exactly 64 lowercase hexadecimal characters; registry file ≤ 256 KiB; every exceeded bound fails closed naming the bound. |
 
 ## 10. TELEMETRY & OBSERVABILITY REQUIREMENTS
@@ -288,7 +288,7 @@ No new event schema, sink, or metric. Observability is the command output: the s
 | DEC-6 | The authoring helper is a local mode of the guard: stdin-only (never argv or environment), no-echo, no repository writes, prefers hidden terminal input, accepts piped stdin locally, and refuses CI execution. | A safe digest-production path is required for data-only extensibility; command-line arguments and accidental CI use are avoidable leak channels. | 2026-10-31 |
 | DEC-7 | Scan scope is the current working tree (tracked plus untracked-but-not-ignored), text-only, with enumerated reason-bearing exclusions and allowlist; no history or baseline. | Matches the TDR boundary and the existing file-set discipline; history remediation is a separate owner action. Binary skipping is an accepted residual. | 2026-10-31 |
 | DEC-8 | Human-readable comment content is not scanned at the emitter. | The ticket requires metadata-envelope scanning; human content has no envelope and its file-committed form is covered by the file guard. Scanning it at the emitter would exceed the decision and create an unowned false-positive surface. | 2026-10-31 |
-| DEC-9 | Release the contract/codec change as one minor changeset for the five-package fixed group. | The required policy changes the serialization contract surface; the repository's fixed-group release model makes one deliberate minor release the correct shape. | 2026-10-31 |
+| DEC-9 | Release the contract/codec change as one new minor changeset, added by this change, for the five-package fixed group. | The required policy changes the serialization contract surface; the repository's fixed-group release model makes one deliberate minor release the correct shape. | 2026-10-31 |
 
 ## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
 
@@ -300,7 +300,7 @@ No new event schema, sink, or metric. Observability is the command output: the s
 | CI workflow | Additive invocation of the new check in `ts-invariants`; no new job, no bash change, no aggregate change. |
 | Root workspace scripts | New `check:privacy-literals` local command; aggregate `check` unchanged. |
 | Tests | New mutation suite under `tests/checks/**`, behaviour suite for the emitter policy, shared rule parity tests, and structure/inventory updates. |
-| Release metadata | One minor changeset for the five fixed-group packages. |
+| Release metadata | One new minor changeset added by this change for the five fixed-group packages; pre-existing changesets untouched. |
 | System documentation (sync phase) | New privacy-guard feature spec; touch points in the branding-seam, adapter-ports, scaffold/toolchain, and result-contract specs; glossary terms. |
 
 ## 17. ACCEPTANCE CRITERIA
@@ -328,13 +328,24 @@ No new event schema, sink, or metric. Observability is the command output: the s
 | AC-F7-1 | **Given** a guarded value planted in a tracked scanned file, **when** the binding CI jobs run, **then** `ts-invariants` invokes the guard by name and fails; `ci-bindingness` finds no bypass; `ci-topology`, `ci-supply-chain`, `script-surface`, and `tests/checks/ci-checks.test.ts` remain green. | F-7, NFR-7 |
 | AC-F7-2 | **Given** a clean working tree, **when** the local `check:privacy-literals` command runs, **then** it exits 0 offline without a package build and reports scope, rule, entry, and vacuous-class counts. | F-7, NFR-7 |
 | AC-F7-3 | **Given** the new mutation and behaviour suites, **when** the binding test job runs, **then** both suites execute under `pnpm test` and a deliberately failing case in either suite fails the job. | F-7, NFR-7 |
-| AC-F8-1 | **Given** the completed change, **when** changeset and manifest state are checked, **then** exactly one changeset declares a minor bump for all five fixed-group packages, no manifest version is hand-edited, and the lockfile is unchanged. | F-8, NFR-8 |
+| AC-F8-1 | **Given** the completed change and the pre-existing unreleased changesets, **when** the change diff, changeset contents, manifests, and lockfile are checked, **then** the change adds exactly one new changeset declaring a minor bump for all five fixed-group packages, no pre-existing changeset is modified or deleted, no manifest version is hand-edited, and the lockfile is unchanged. | F-8, NFR-8 |
+
+**Coverage note — capability details without a standalone AC.** The following capability details are intentionally evidenced through an existing AC rather than a separate criterion; they are covered, not untested:
+
+| Capability detail | Covered by | Evidence note |
+|-------------------|------------|---------------|
+| F-1 placeholder suppression | AC-F1-2 | The false-positive corpus and per-rule positive/near-miss cases exercise the committed placeholder-suppression list; no separate AC exists by design. |
+| F-6 codec validation order (closed payload → size bound → content policy → carrier) | AC-F6-1 / AC-F6-2 | The denial path and the clean round-trip jointly evidence the ordering; no separate AC exists by design. |
+| F-4 binary-skip reporting | AC-F4-2 | The working-tree scope evidence covers the counted, reported binary exclusion; no separate AC exists by design. |
+| NFR-5 performance bound | AC-F4-2 (bounded/finite scan) with CI-runner evidence | The bounded/finite scan is the behavioural anchor; the numeric bound is evidenced on the CI reference runner. |
+
+AC-F7-1 and NFR-5 are CI-runner-evidenced: the pushed-HEAD job result is the evidence of record, not a local run.
 
 ## 18. ROLLOUT & CHANGE MANAGEMENT (HIGH-LEVEL)
 
 Deliver the guard and the emitter scan in one change, in this order: shared pure rule definitions; the registry and fail-closed validation; the working-tree scan and no-echo reporting; the authoring mode; the mutation and behaviour suites; the CI wiring and local script; the required codec policy and new failure kind; the changeset. The guard must be green on the clean tree before the codec tightening lands, and the codec must be green with all call sites updated before the change is proposed. Documentation is reconciled in the system-spec-update phase.
 
-**Definition of Done predicates:** all 22 ACs have passing, traceable evidence; the guard is proven to fire on every mutation case and to stay green on the clean tree; no output contains planted content; the registry validation matrix fails closed; the `cloud-term` class is explicitly vacuous and the synthetic activation case fires; every serialization call site passes a policy and the codec purity gates pass; the changeset is present for the five fixed-group packages; all existing binding gates (`pnpm check`, CI invariants, tests, boundaries, license audit) remain green; an open unmerged pull request targets the integration branch with all required jobs green.
+**Definition of Done predicates:** all 22 ACs have passing, traceable evidence; the guard is proven to fire on every mutation case and to stay green on the clean tree; no output contains planted content; the registry validation matrix fails closed; the `cloud-term` class is explicitly vacuous and the synthetic activation case fires; every serialization call site passes a policy and the codec purity gates pass; the new changeset is present for the five fixed-group packages and no pre-existing changeset is modified or deleted; all existing binding gates (`pnpm check`, CI invariants, tests, boundaries, license audit) remain green; an open unmerged pull request targets the integration branch with all required jobs green.
 
 ## 19. DATA MIGRATION / SEEDING (IF APPLICABLE)
 
@@ -439,6 +450,7 @@ Ticket GH-184 (M0-S15); backlog story M0-S15; policy-as-code concept (privacy an
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-10-31 | Change Spec Writer | Initial GH-184 specification from the ticket, TDR-0005, the backlog story, the policy-as-code and embedded-metadata concepts, ADR-0003, and the delivered check/codec precedents. |
+| 1.1 | 2026-10-31 | Change Spec Writer | Corrected the changeset claim in AC-F8-1, F-8, NFR-8, the success metric, DEC-9, §16, and §18 so "exactly one changeset" means exactly one new changeset added by this change (five pre-existing unreleased changesets already exist and must remain untouched); added a §17 coverage note mapping F-1/F-4/F-6/NFR-5 details that intentionally have no standalone AC to the ACs that cover them. No AC ids changed. |
 
 ---
 
