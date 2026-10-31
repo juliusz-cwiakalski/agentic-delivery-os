@@ -33,7 +33,16 @@ type GithubDeliveryRequest = Expect<
   Equal<ReadValue<Awaited<ReturnType<GithubClient["readDeliveryRequest"]>>>, DeliveryRequest>
 >;
 type GithubPipelines = Expect<
-  Equal<ReadValue<Awaited<ReturnType<GithubClient["readPipelineRun"]>>>, readonly PipelineRun[]>
+  Equal<
+    ReadValue<Awaited<ReturnType<GithubClient["readPipelineRun"]>>>,
+    { readonly items: readonly PipelineRun[]; readonly pageItemCount: number }
+  >
+>;
+type GithubWorkItemList = Expect<
+  Equal<
+    ReadValue<Awaited<ReturnType<GithubClient["listWorkItems"]>>>,
+    { readonly items: readonly WorkItem[]; readonly pageItemCount: number }
+  >
 >;
 type GithubWorkItem = Expect<
   Equal<ReadValue<Awaited<ReturnType<GithubClient["readWorkItem"]>>>, WorkItem>
@@ -46,4 +55,5 @@ export type Probes = [
   GithubDeliveryRequest,
   GithubPipelines,
   GithubWorkItem,
+  GithubWorkItemList,
 ];

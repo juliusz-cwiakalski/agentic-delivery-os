@@ -1,0 +1,81 @@
+{
+  "name": "changes-unknown-pr-failed",
+  "scenario": "changes-unknown-pr-failed",
+  "controls": ["failed PR read", "missing PM context"],
+  "expected": {
+    "sections": {
+      "tracker": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "changes-and-prs": {
+        "state": "unknown",
+        "reasons": ["local-context-missing", "read-failed", "partial-evidence"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "ci": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "lanes-or-queue": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "providers": {
+        "state": "observed",
+        "reasons": ["observed"],
+        "counts": {
+          "observed": 1,
+          "unknown": 0,
+          "total": 1,
+          "omitted": 0
+        },
+        "orderedIds": ["entry:primary"],
+        "truncated": false
+      },
+      "parked-work": {
+        "state": "unavailable",
+        "reasons": ["local-context-missing"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      }
+    }
+  }
+}

@@ -45,6 +45,7 @@ export {
   serializeProductionSchema,
 } from "./config/index.js";
 export {
+  aggregateStatus,
   classifyVerifyChange,
   classifyVerifyDocument,
   formatVerifySummary,
@@ -52,6 +53,7 @@ export {
   type PmNotesLintFinding,
   type PmNotesLintLocation,
   type PmNotesLintVerdict,
+  renderStatusHuman,
   type VerifyChangeSuccessData,
   type VerifyChangeVerdict,
   type VerifyDocumentClassification,

@@ -1,0 +1,81 @@
+{
+  "name": "malformed-context-unknown",
+  "scenario": "malformed-context-unknown",
+  "controls": ["malformed PM context"],
+  "expected": {
+    "sections": {
+      "tracker": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "changes-and-prs": {
+        "state": "degraded",
+        "reasons": ["local-context-malformed", "partial-evidence"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "ci": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "lanes-or-queue": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "providers": {
+        "state": "observed",
+        "reasons": ["observed"],
+        "counts": {
+          "observed": 1,
+          "unknown": 0,
+          "total": 1,
+          "omitted": 0
+        },
+        "orderedIds": ["entry:primary"],
+        "truncated": false
+      },
+      "parked-work": {
+        "state": "unknown",
+        "reasons": ["local-context-malformed"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      }
+    }
+  }
+}

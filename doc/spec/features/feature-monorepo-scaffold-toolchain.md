@@ -8,8 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, the typed adapter-port substrate and secret-read boundary invariant, the binding privacy and no-cloud guard with its hashed-literal registry and envelope content policy, the durable local state layer, the provider engine and its confined quota transport, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
 links:
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-188"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-184", "GH-188", "GH-175"]
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0006"]
 ---
 
@@ -17,12 +16,13 @@ links:
 
 ## Overview
 
-The repository hosts a six-package pnpm workspace under `packages/` for the TypeScript delivery tooling, alongside the existing bash delivery stack. The workspace is **structure over content** for the remaining engines, business logic, and drivers: every declared package, subpath, export, boundary rule, fixture, and quality gate is enforced. The configuration and state tiers, the result contract, the adapter-era contracts, the pm-notes lint and phase-transition surface, the provider engine with its confined quota transport, and the Jira, GitLab, and GitHub client read slices are implemented and documented separately in [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md), [Provider Engine](feature-provider-engine.md), and [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md); the remaining engines and the `azure` and `ci` provider subpaths are scaffold placeholders, and provider write operations are declared capability gaps.
-The repository hosts a six-package pnpm workspace under `packages/` for the TypeScript delivery tooling, alongside the existing bash delivery stack. The workspace is **structure over content** for the remaining engines, business logic, and drivers: every declared package, subpath, export, boundary rule, fixture, and quality gate is enforced. The configuration and state tiers, the result contract, the adapter-era contracts, the Jira, GitLab, and GitHub client read slices, and the pm-notes lint, phase-transition, and verify-change surfaces are implemented and documented separately in [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md), and [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md); the remaining engines and the `azure` and `ci` provider subpaths are scaffold placeholders, and provider write operations are declared capability gaps.
+The repository hosts a six-package pnpm workspace under `packages/` for the TypeScript delivery tooling, alongside the existing bash delivery stack. The workspace is **structure over content** for the remaining engines, business logic, and drivers: every declared package, subpath, export, boundary rule, fixture, and quality gate is enforced. The configuration and state tiers, the result contract, the adapter-era contracts, the pm-notes lint and phase-transition surface, the verify-change surface, the provider engine with its confined quota transport, the Jira, GitLab, and GitHub client read slices, and the read-only status digest are implemented and documented separately in [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md), [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md), [Provider Engine](feature-provider-engine.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), and [Status Digest](feature-status-digest.md); the remaining engines and the `azure` and `ci` provider subpaths are scaffold placeholders, and provider write operations are declared capability gaps.
 
 The scaffold provides the substrate every later tooling story lands in. Its package matrix, core tier matrix, adapter subpaths, and runtime-API confinement rules are mechanical gates rather than prose, and every forbidden edge is proven by a failing negative fixture.
 
 The verify-change surface follows the same tier split: `packages/core/src/contracts/delivery-result.ts` declares the delivery-result vocabulary and taxonomy as data, `packages/core/src/domain/verify-change.ts` carries the pure classifier, `packages/core/src/state/registry.ts` exposes the presence-tolerant verified transition read, and `packages/cli/src/commands/verify.ts` plus the CLI edge compose the command. No new package, subpath, runtime-API location, or dependency is introduced.
+
+The status surface follows the same split. `packages/core/src/contracts/status.ts` declares the `delivery.status.v1` vocabulary and bounds as data; `packages/core/src/domain/status.ts` carries the pure aggregator and human renderer; `packages/cli/src/commands/status.ts` and the CLI edge compose the command; `packages/adapters/src/github/{client,normalize}.ts` carry the bounded collection reads; `packages/adapters/src/repo/index.ts` carries the origin and HEAD facts; and `packages/adapters/src/file/pm-context.ts` carries the bounded local PM-context read. The status tests live in the existing structure, behaviour, golden, and fixture trees. No new package, subpath, declared entrypoint, workspace edge, runtime-API location, or dependency is introduced.
 
 The authoritative design decision is [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md) (OSS tooling monorepo structure).
 
@@ -203,13 +203,11 @@ No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scr
 |------|----------------|
 | `packages/*/package.json` | Manifests: exports, imports aliases, `workspaceImports`, scripts, privacy |
 | `packages/*/tsconfig.json` | Composite configs extending the strict base |
-| `packages/core/src/index.ts` | The `createRuntime` composition-root signature |
-| `packages/core/src/contracts/**` | Result, error-table, configuration, adapter-port, capability, credential, provider, and envelope contracts (types and `as const` data only) |
-| `packages/*/src/**` | Internal tier directories; the configuration and state tiers, result contracts, adapter ports, the credential implementation, the envelope codec, file/repo/legacy adapters, pm-notes parsing, delivery-registry records, the provider engine and quota transport, the CLI inspection/lint/phase/provider commands, and the three provider client read slices carry implemented code, while the remaining engines and the `azure` and `ci` provider subpaths are placeholders and provider write operations are declared gaps |
+| `packages/core/src/index.ts` | The `createRuntime` composition-root signature plus the published core exports, including the configuration resolver and the pure domain (verify, pm-notes lint, and status) |
+| `packages/core/src/contracts/**` | Result, error-table, delivery-result, configuration, adapter-port, capability, credential, provider, status, and envelope contracts (types and `as const` data only) |
+| `packages/*/src/**` | Internal tier directories; the configuration and state tiers, result and delivery-result contracts, adapter ports, the credential implementation, the envelope codec, file/repo/legacy adapters, pm-notes parsing, delivery-registry records, the provider engine and quota transport, the pure verify classifier, the pure status aggregator and renderer, the CLI inspection/lint/phase/provider/status/verify commands, and the three provider client read slices carry implemented code, while the remaining engines and the `azure` and `ci` provider subpaths are placeholders and provider write operations are declared gaps |
 | `packages/core/src/provider/**` | Pure provider validation, chain resolution, peak/quota evaluation, condition combination, park/announcement projection, the re-evaluation loop, and engine composition |
 | `packages/adapters/src/provider-quota/index.ts` | Injectable quota transport and native-fetch production wrapper at the declared `./provider-quota` subpath |
-| `packages/core/src/contracts/**` | Result, error-table, delivery-result, configuration, adapter-port, capability, credential, and envelope contracts (types and `as const` data only) |
-| `packages/*/src/**` | Internal tier directories; the configuration and state tiers, result and delivery-result contracts, adapter ports, the credential implementation, the envelope codec, file/repo/legacy adapters, pm-notes parsing, delivery-registry records, the pure verify classifier, and the CLI inspection, lint, phase, and verify commands carry implemented code, while the remaining engines and the `azure` and `ci` provider subpaths are placeholders and provider write operations are declared gaps |
 | `packages/adapters/src/credentials/index.ts` | Environment-backed credential port implementation at the declared `./credentials` subpath |
 | `packages/adapters/src/io/envelope-codec.ts` | Pure adapter-internal metadata envelope codec with the required content policy |
 | `packages/adapters/src/io/privacy-rules.ts` | Pure, dependency-free privacy rule vocabulary shared by the file check and the envelope policy |
@@ -220,11 +218,11 @@ No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scr
 | `tsconfig.base.json` / `tsconfig.json` | Strict base flags / solution references |
 | `.dependency-cruiser.cjs` | Package, subpath, tier, testkit, and runtime-API rules |
 | `scripts/checks/*.ts` | Repository invariant checks run with Bun |
-| `tests/structure/**` | Inventory, subpath, exports, contract-surface, delivery-result taxonomy, verify tier/import, and `createRuntime` assertions |
+| `tests/structure/**` | Inventory, subpath, exports, contract-surface, delivery-result taxonomy, verify tier/import, status contract/import, and `createRuntime` assertions |
 | `tests/types/**` | Compile-time contract probes chained into the root `typecheck` |
 | `tests/boundaries/**` | Negative fixtures, controls, and the fixture-coverage meta-check |
-| `tests/behaviour/**` | pnpm isolation, commit-msg hook, adapter-port, credential, envelope, pm-notes lint, corpus, phase, delivery-registry, and provider-engine behaviour |
-| `tests/behaviour/**` | pnpm isolation, commit-msg hook, adapter-port, credential, envelope, pm-notes lint, corpus, phase, delivery-registry, verify classification, rejection, evidence-failure, envelope, and real-corpus behaviour |
+| `tests/behaviour/**` | pnpm isolation, commit-msg hook, adapter-port, credential, envelope, pm-notes lint, corpus, phase, delivery-registry, provider-engine, verify, and status behaviour |
+| `tests/golden/**` | Recorded envelope and status digest output, including the status human digest |
 | `tests/checks/**` | Mutation and contract tests for `scripts/checks/*.ts` |
 | `.changeset/config.json` | Lockstep fixed group and private-package policy |
 | `.github/workflows/ci.yml` | Untouched bash jobs plus the additive `ts-*` fast loop |
@@ -274,7 +272,7 @@ core              ──> no workspace dependencies
 | NFR-11 | Privacy guard bindingness | `privacy-literals` is invoked by name in `ts-invariants`, stays green on the clean tree, and fails on a planted guarded value; every envelope serialization supplies a content policy. |
 | Invariants | Manifests, pins, CI topology, bindingness, supply chain, exports, packed-exports parity, boundary build/cruise parity, licenses, result-contract table sync, exit literals, secret-read boundary, privacy-literals | `bun run scripts/checks/*.ts`, the aggregate check, and mutation tests under `tests/checks/**` |
 | Type level | Contract typing probes outside the package graph | `tests/types/tsconfig.json` through the root `typecheck` |
-| Behaviour | pnpm isolation, commit-msg hook, adapter ports, credentials, envelope round-trip and degradation, pm-notes lint, corpus acceptance, phase transitions, delivery-registry records, and verify classification, rejection, evidence-failure, envelope, and real-corpus behaviour | `bun test tests/behaviour` |
+| Behaviour | pnpm isolation, commit-msg hook, adapter ports, credentials, envelope round-trip and degradation, pm-notes lint, corpus acceptance, phase transitions, delivery-registry records, verify classification, rejection, evidence-failure, envelope, real-corpus behaviour, and the status collectors, states, bounds, and read-only determinism | `bun test tests/behaviour` |
 | Aggregate | The whole workspace | `pnpm check` |
 
 ## Dependencies & Risks
@@ -297,6 +295,8 @@ core              ──> no workspace dependencies
 - **Provider capability:** [Provider Engine](feature-provider-engine.md).
 - **PM-notes and phase capability:** [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md).
 - **Verify capability:** [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md).
+- **Status capability:** [Status Digest](feature-status-digest.md).
 - **Glossary:** [doc/overview/glossary.md](../../overview/glossary.md) — scaffold terms.
 - **Change record:** `doc/changes/2026-10/2026-10-29--GH-170--monorepo-scaffold-toolchain/`.
 - **Provider engine change record:** `doc/changes/2026-10/2026-10-31--GH-182--provider-v1/`.
+- **Status digest change record:** `doc/changes/2026-10/2026-10-31--GH-175--status-v1/`.

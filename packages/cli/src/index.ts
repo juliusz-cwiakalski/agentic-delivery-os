@@ -45,6 +45,7 @@ export type CommandDefinition = {
   readonly conflicts?: readonly (readonly [string, string])[];
   readonly positionals?: { readonly max: number };
   readonly humanSuccess?: boolean;
+  readonly humanText?: (data: unknown, brand: BrandIdentity) => string;
 };
 
 /** The injected command program. */
@@ -256,6 +257,7 @@ export async function runCli(
   const runId = deps.newRunId();
   let outcome: Outcome;
   let humanSuccess = false;
+  let humanText: string | undefined;
 
   try {
     const parsed = parseInvocation(argv, deps.program);
@@ -274,6 +276,9 @@ export async function runCli(
           brand: deps.brand,
         });
         outcome = outcomeFromResult(result);
+        if (outcome.type === "success" && definition.humanText !== undefined && !emitEnvelope) {
+          humanText = definition.humanText(outcome.data, deps.brand);
+        }
       } catch (thrown) {
         outcome = failureOutcome(classifyThrown(thrown), thrown);
       }
@@ -291,6 +296,7 @@ export async function runCli(
   try {
     writeOutput(streams, envelope, diagnostic, deps.secrets, emitEnvelope, {
       ...(humanSuccess && outcome.type === "success" ? { humanJson: outcome.data } : {}),
+      ...(humanText === undefined ? {} : { humanText }),
       ...(outcome.type === "success" && outcome.warnings !== undefined
         ? { warnings: outcome.warnings }
         : {}),

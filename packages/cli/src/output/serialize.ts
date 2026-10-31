@@ -55,6 +55,8 @@ const writeText = (stream: CliSink, text: string): void => {
 export type WriteOutputOptions = {
   /** Opt-in human success JSON; machine mode always uses the envelope instead. */
   readonly humanJson?: unknown;
+  /** Opt-in pre-rendered human text; takes precedence over `humanJson`. */
+  readonly humanText?: string;
   /** Safe structured notices, emitted once each on stderr in every mode. */
   readonly warnings?: readonly string[];
 };
@@ -75,6 +77,8 @@ export function writeOutput(
   if (emitEnvelope) {
     const text = serializeEnvelope(envelope, secrets);
     writeText(streams.stdout, text);
+  } else if (options.humanText !== undefined) {
+    writeText(streams.stdout, redact(options.humanText, secrets));
   } else if (options.humanJson !== undefined) {
     const redacted = redact(options.humanJson, secrets);
     const text = JSON.stringify(redacted, null, 2);

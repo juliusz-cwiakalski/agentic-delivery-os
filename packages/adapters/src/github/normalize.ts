@@ -134,15 +134,19 @@ export const normalizePullRequest = (
   };
 };
 
-/** Normalize the check runs for one commit SHA. */
+/** Normalize the check runs for one commit SHA, reporting the raw page size. */
 export const normalizeCheckRuns = (
   payload: unknown,
   context: GithubNormalizationContext,
   commitSha: string,
-): ProviderReadResult<readonly PipelineRun[]> => {
+): ProviderReadResult<{
+  readonly items: readonly PipelineRun[];
+  readonly pageItemCount: number;
+}> => {
   if (!isRecord(payload) || !Array.isArray(payload.check_runs)) {
     return providerPayloadFailure("GitHub check-runs payload has no check_runs array");
   }
+  const pageItemCount = payload.check_runs.length;
   const runs: PipelineRun[] = [];
   for (const checkRun of payload.check_runs) {
     if (!isRecord(checkRun)) return providerPayloadFailure("GitHub check run is not an object");
@@ -166,7 +170,7 @@ export const normalizeCheckRuns = (
         detailsUrl === undefined ? [] : [{ evidenceName: "check-run", location: detailsUrl }],
     });
   }
-  return { ok: true, value: runs };
+  return { ok: true, value: { items: runs, pageItemCount } };
 };
 
 const relationKindFor = (nativeType: string): WorkItemRelation["relationKind"] | undefined => {
@@ -249,4 +253,48 @@ export const normalizeGithubIssue = (
       ...(updatedAt !== undefined ? { updatedAt } : {}),
     },
   };
+};
+
+/**
+ * Normalize one bounded GitHub issue-list page.
+ *
+ * Pull-request objects are filtered before normalization, while the raw page
+ * size is preserved so the caller can derive the source-at-limit signal even
+ * when filtering reduces the normalized count.
+ */
+export const normalizeGithubIssueList = (
+  payload: unknown,
+  context: GithubNormalizationContext,
+): ProviderReadResult<{ readonly items: readonly WorkItem[]; readonly pageItemCount: number }> => {
+  if (!Array.isArray(payload)) {
+    return providerPayloadFailure("GitHub issue list payload is not an array");
+  }
+  const items: WorkItem[] = [];
+  for (const entry of payload) {
+    if (isRecord(entry) && Object.hasOwn(entry, "pull_request")) continue;
+    const normalized = normalizeGithubIssue(entry, context);
+    if (!normalized.ok) return normalized;
+    items.push(normalized.value);
+  }
+  return { ok: true, value: { items, pageItemCount: payload.length } };
+};
+
+/** Normalize one bounded GitHub pull-request-list page; any bad entry fails the read. */
+export const normalizeGithubPullList = (
+  payload: unknown,
+  context: GithubNormalizationContext,
+): ProviderReadResult<{
+  readonly items: readonly DeliveryRequest[];
+  readonly pageItemCount: number;
+}> => {
+  if (!Array.isArray(payload)) {
+    return providerPayloadFailure("GitHub pull-request list payload is not an array");
+  }
+  const items: DeliveryRequest[] = [];
+  for (const entry of payload) {
+    const normalized = normalizePullRequest(entry, context);
+    if (!normalized.ok) return normalized;
+    items.push(normalized.value);
+  }
+  return { ok: true, value: { items, pageItemCount: payload.length } };
 };

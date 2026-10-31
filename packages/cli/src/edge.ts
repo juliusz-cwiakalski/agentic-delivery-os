@@ -15,16 +15,20 @@ import {
   nodeFileSystemFacts,
   type PmNotesFileSystemFacts,
   type RuntimePlatform,
+  readLocalPmContext,
   readPmNotesText,
   runtimePlatform,
   stagePmNotesPhaseEntry,
 } from "@delivery-os/adapters/file";
+import { createGitHubClient } from "@delivery-os/adapters/github";
 import { createLegacyCompat } from "@delivery-os/adapters/legacy";
 import {
   findGitRoot,
   nodeRepositoryIo,
+  parseGitHubRemote,
   type RepositoryIo,
   type RepositoryRootFacts,
+  readRepositoryFacts,
 } from "@delivery-os/adapters/repo";
 import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import { catalogPaths, PRODUCTION_CATALOG, resolveConfig } from "@delivery-os/core";
@@ -34,6 +38,7 @@ import {
   type BrandIdentity,
   type ConfigFailure,
   type CredentialPort,
+  type ExternalSystemInstance,
   PHASE_STATE_DOCUMENT_PREFIX,
   PHASE_STATE_DOCUMENT_SUFFIX,
   type ProviderClock,
@@ -41,10 +46,17 @@ import {
   type QuotaTransport,
   type Result,
   type StateStorePort,
+  type StatusLocalContextRead,
+  type StatusParkRead,
+  type StatusProviderConfigRead,
+  type StatusReadFailure,
+  type StatusRepositoryFacts,
+  type StatusRepositoryTarget,
 } from "@delivery-os/core/contracts";
 import {
   createProviderEngine,
   parseAndValidateProviderConfiguration,
+  readProviderParkViews,
 } from "@delivery-os/core/provider";
 import {
   appendPhaseTransition,
@@ -67,6 +79,7 @@ import {
   createProviderCommandDefinition,
   type ProviderCommandRuntime,
 } from "./commands/provider.js";
+import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
 import { createVerifyCommandDefinition, type VerifyCommandRuntime } from "./commands/verify.js";
 import type { CliDependencies, CommandDefinition, CommandFlags, CommandProgram } from "./index.js";
 
@@ -209,6 +222,149 @@ export type ProviderComposition = {
   readonly newFenceToken: () => string;
 };
 
+/** The injected provider transport shape used by the GitHub reads. */
+export type StatusTransport = {
+  readonly send: (request: {
+    readonly url: string;
+    readonly method: "GET";
+    readonly headers: Readonly<Record<string, string>>;
+  }) => Promise<{ readonly status: number; readonly body: unknown }>;
+};
+
+/** The status composition seams; the provider resolver is supplied by the edge. */
+export type StatusComposition = {
+  readonly store: StateStorePort;
+  readonly credentials: CredentialPort;
+  readonly transport: StatusTransport;
+  readonly repository: { readonly cwd: string; readonly io: RepositoryIo };
+  readonly localContext: { readonly path: string; readonly fs: FileSystemFacts };
+  readonly clock: { readonly nowMs: () => number; readonly nowIso: () => string };
+  readonly github: { readonly instance: ExternalSystemInstance };
+};
+
+const providerFailure = (failure: { readonly code: string }): StatusReadFailure =>
+  failure.code === "config.credential.missing"
+    ? { ok: false, reason: "credential-unavailable", failureCode: "config.credential.missing" }
+    : { ok: false, reason: "read-failed", failureClass: failure.code };
+
+/** Compose the status runtime, enforcing the credential-reference guard first. */
+export const createStatusCommandRuntime = (
+  options: StatusComposition,
+  resolveProviderConfig: () => StatusProviderConfigRead,
+): StatusCommandRuntime => {
+  const instance = options.github.instance;
+  const admitted =
+    instance.systemKind === "vcs" && instance.authMethod.mechanism === "credential-reference";
+  const refusal: StatusReadFailure = {
+    ok: false,
+    reason: "credential-unavailable",
+    failureCode: "config.credential.missing",
+  };
+  let target: StatusRepositoryTarget | undefined;
+
+  const clientFor = (repository: StatusRepositoryTarget) =>
+    createGitHubClient({
+      instance,
+      credentials: options.credentials,
+      repository,
+      transport: options.transport,
+    });
+
+  const readRepository = (): StatusRepositoryFacts => {
+    const facts = readRepositoryFacts({
+      cwd: options.repository.cwd,
+      io: options.repository.io,
+    });
+    const parsed = parseGitHubRemote(facts.originUrl);
+    if (parsed.ok) {
+      target = { owner: parsed.owner, name: parsed.name };
+      return {
+        binding: {
+          state: "observed",
+          host: "github.com",
+          owner: parsed.owner,
+          name: parsed.name,
+          remoteName: "origin",
+        },
+        head: facts.head,
+      };
+    }
+    target = undefined;
+    return {
+      binding: { state: "unavailable", reason: parsed.reason },
+      head: facts.head,
+    };
+  };
+
+  const readWorkItems: StatusCommandRuntime["readWorkItems"] = async (repository, limit) => {
+    if (!admitted) return refusal;
+    const result = await clientFor(repository).listWorkItems(limit);
+    if (!result.ok) return providerFailure(result);
+    return {
+      ok: true,
+      items: result.value.items,
+      pageItemCount: result.value.pageItemCount,
+      availability: {
+        ownerHandBacks: "available",
+        blockedDependencies: "unavailable",
+        stalls: "available",
+        hygiene: "available",
+      },
+    };
+  };
+
+  const readDeliveryRequests: StatusCommandRuntime["readDeliveryRequests"] = async (
+    repository,
+    limit,
+  ) => {
+    if (!admitted) return refusal;
+    const result = await clientFor(repository).listDeliveryRequests(limit);
+    if (!result.ok) return providerFailure(result);
+    return {
+      ok: true,
+      items: result.value.items,
+      pageItemCount: result.value.pageItemCount,
+      availability: {
+        state: "available",
+        refs: "available",
+        reviewState: "unavailable",
+        reviewThreads: "unavailable",
+      },
+    };
+  };
+
+  const readPipelineRuns: StatusCommandRuntime["readPipelineRuns"] = async (sha, limit) => {
+    if (!admitted) return refusal;
+    if (target === undefined) return { ok: false, reason: "not-configured" };
+    const result = await clientFor(target).readPipelineRun(sha, limit);
+    if (!result.ok) return providerFailure(result);
+    return {
+      ok: true,
+      items: result.value.items,
+      pageItemCount: result.value.pageItemCount,
+    };
+  };
+
+  return {
+    readRepository,
+    readWorkItems,
+    readDeliveryRequests,
+    readPipelineRuns,
+    readProviderConfig: resolveProviderConfig,
+    readProviderParks: (nowMs): StatusParkRead => {
+      const parks = readProviderParkViews(options.store, nowMs);
+      if (!parks.ok) {
+        return { ok: false, reason: "state-unreadable", failureCode: parks.error.code };
+      }
+      return { ok: true, parks: parks.value };
+    },
+    readLocalContext: (): StatusLocalContextRead =>
+      readLocalPmContext({ path: options.localContext.path, fs: options.localContext.fs }),
+    nowIso: options.clock.nowIso,
+    nowMs: options.clock.nowMs,
+  };
+};
+
 export type ConfigProgramOptions = {
   readonly workingName: string;
   readonly environment: Readonly<Record<string, string | undefined>>;
@@ -225,6 +381,7 @@ export type ConfigProgramOptions = {
   readonly phase?: PhaseCommandRuntime;
   readonly provider?: ProviderComposition;
   readonly verify?: VerifyCommandRuntime;
+  readonly status?: StatusComposition;
 };
 
 export type ConfigProgramResult =
@@ -449,6 +606,25 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
       parks: (input) => engine.parks(input),
     };
     commands.provider = createProviderCommandDefinition(providerRuntime);
+  }
+  if (options.status !== undefined) {
+    commands.status = createStatusCommandDefinition(
+      createStatusCommandRuntime(options.status, () => {
+        const snapshot = resolve({});
+        if (!snapshot.ok) {
+          return { ok: false, reason: "config-invalid", failureCode: snapshot.error.code };
+        }
+        const parsed = parseAndValidateProviderConfiguration(snapshot.value.config.values);
+        if (!parsed.ok) {
+          return {
+            ok: false,
+            reason: "provider-chain-unresolved",
+            failureCode: "config.value.invalid",
+          };
+        }
+        return { ok: true, config: parsed.config };
+      }),
+    );
   }
   if (options.verify !== undefined) {
     commands.verify = createVerifyCommandDefinition(options.verify);
