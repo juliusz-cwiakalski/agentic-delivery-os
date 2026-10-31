@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-10-31T20:30:00Z", completed: "2026-10-31T21:00:00Z", iterations: 2, verdict: "PASS (iter 2)" }
   quality_gates: { started: "2026-10-31T21:05:00Z", completed: "2026-10-31T21:30:00Z", note: "all GH-186 gates green; pnpm check red only on pre-existing GH-206" }
   dod_check: { started: "2026-10-31T21:32:00Z", completed: "2026-10-31T21:40:00Z", verdict: "PASS (with documented GH-206 external exception)" }
-  pr_creation: { started: "2026-10-31T21:45:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-10-31T21:45:00Z", completed: "2026-10-31T21:55:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/207" }
 decisions:
   - text: "Interpretation of 'baseline committed to the local measurement log': the log is repository-local (committed under doc/planning/oss-tooling/), not a git-ignored .ai/local/ path. The AC's 'committed' and 'local' would otherwise contradict, since .ai/local/** is ignored by design."
     date: "2026-10-31"
@@ -114,5 +114,8 @@ notes:
     type: "info"
     date: "2026-10-31"
   - text: "DoD check PASS: all 10 prior phases complete with timestamps; 21/21 ACs satisfied per review iteration 2 PASS; plan deliverables and remediation tasks checked; doc-sync residual gaps NONE; rollback statement holds (docs-only, single coherent revert). The only un-checked plan box is the PM-owned PR creation task, which completes in the pr_creation phase. Aggregate `pnpm check` remains red solely on pre-existing GH-206, documented and unrelated."
+    type: "info"
+    date: "2026-10-31"
+  - text: "PR #207 opened against main-tools (not the default main) and left open for owner/CEO review. Ticket #186 assigned to the owner with the review label; no merge, auto-merge, or acceptance was performed. Merge authority remains with the CEO (Mode A) or the owner/CEO via batch-deliver.sh (Mode B). Delivery complete: PR open, awaiting review."
     type: "info"
     date: "2026-10-31"

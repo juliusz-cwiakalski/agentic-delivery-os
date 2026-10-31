@@ -725,7 +725,7 @@ Each row names the phase that **produces** the AC evidence, the phase(s) that **
 - [x] 0 changes under `packages/**`/`tools/**`; exactly one data-only `scripts/**` edit; all other changed paths under `doc/**`. Done: remediated diff adds only the plan, the YAML, and the two restored docs.
 - [x] Both new user-facing docs registered when present; forbidden-literal and privacy gates exit 0; 0 delimited seed-literal occurrences in them. Done: forbidden-literals exit 0 (5/5 classes, 0 violations).
 - [x] Doc-distribution, modes, inception, commitlint, and diff-hygiene gates green on the pushed HEAD. Done: doc-distribution 0, modes 0, inception 0, commitlint-authority 0, range commitlint 0, `git diff --check` 0.
-- [ ] Open unmerged PR to `main-tools`; owner acceptance pending; no merge or acceptance claimed. Note: PM-owned; PR creation is lifecycle phase 11 and remains outside this remediation run.
+- [x] Open unmerged PR to `main-tools`; owner acceptance pending; no merge or acceptance claimed. Done: PR #207 opened against `main-tools`; merge authority remains with the CEO/owner.
 
 ## Artifacts and Links
 
