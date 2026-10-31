@@ -5,8 +5,8 @@ story_code: M0-S10
 delivery_mode: interactive
 phases:
   clarify_scope: { started: "2026-10-31T01:30:00Z", completed: "2026-10-31T01:35:00Z" }
-  specification: { started: "2026-10-31T01:36:00Z", completed: "2026-10-31T02:20:00Z", iterations: "iter-1..3 killed by runtime interruptions (no output); iter-4 chunked two-part delegation succeeded — 347-line spec, PM-validated" }
-  test_planning: { started: null, completed: null }
+  specification: { started: "2026-10-31T01:36:00Z", completed: null, reopened: "2026-10-31T02:35:00Z (test_planning gap findings: 2 blocking + 5 secondary; PM resolutions provided)", reopened_completed: null, iterations: "iter-1..3 killed by runtime interruptions (no output); iter-4 chunked two-part delegation succeeded — 347-line spec, PM-validated; iter-5 amendment after test_planning STOP" }
+  test_planning: { started: "2026-10-31T02:25:00Z", completed: null, iterations: "iter-1 STOPPED correctly on spec defects (no file written, no TC ids allocated) — reopened specification" }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
@@ -22,9 +22,17 @@ decisions:
     date: "2026-10-31"
   - text: "Branch plan: feat/GH-179/pm-notes-registry-lint-phase-transitions cut from main-tools @ f6c8d18; PR base main-tools (explicit, per session directive); PM never merges."
     date: "2026-10-31"
+  - text: "Spec reopen resolutions (PM-decided to unblock, reversible, all spec-level): R1 wrong-typed values map to lint.notes.malformed broadened to syntax+structure+type (5 rows stay, NFR-5 5/5); R2 extra phase keys opaque/never inspected, only canonical+required entries validated; R3a input.value.rejected pins reason-less reopen and unknown phase id; R3b absent registry under lint --registry = verified-empty PASS, lint.target.missing pm-notes-only; R3c complete-on-absent canonical phase creates a valid entry (advisory outside required set), reopen-on-absent no-op; R3d matrix row 1 = 'never completed'; R3e YAML 1.2 core schema pinned (date scalars = strings)."
+    date: "2026-10-31"
 open_questions: []
 blockers: []
 notes:
+  - text: "SPECIFICATION REOPENED (iteration 5) at test_planning: @test-plan-writer STOPPED per protocol — no file written. BLOCKING: (B1) wrong-typed-value rejection classes have no pinned lint.* identity — the 5-row set has no type row and lint.notes.malformed is pinned to syntax; (B2) AC-L6 corpus acceptance contradicts C-1: GH-170 pm-notes has extra phase keys whose values are sequences/strings (dor_iterations, dod_findings), which a literal C-1 validator rejects. SECONDARY pins requested: input-domain row for reason-less reopen/unknown phase; absent-registry lint semantics; phase command on canonical phase absent from a LITE doc; matrix row-1 wording; YAML parser dialect. PM RESOLUTIONS (decided to unblock, reversible): R1 map wrong-typed values to lint.notes.malformed, broadened to syntax+structure+type conformance (keeps 5 rows, NFR-5 stays 5/5); R2 extra phase keys opaque/never inspected, only canonical+effective-variant-required entries validated; R3a pin input.value.rejected for both input rejections; R3b absent registry under lint --registry = explicit verified-empty PASS (state-layer semantics), lint.target.missing stays pm-notes-specific; R3c complete-on-absent-canonical-phase creates a valid entry (advisory evidence when outside the declared variant's required set), reopen-on-absent stays no-op per row 5; R3d matrix row 1 wording to 'never completed'; R3e pin YAML 1.2 core schema (date scalars are strings). Re-delegating targeted spec amendment."
+    type: "risk"
+    date: "2026-10-31"
+  - text: "retro: third consecutive change where the spec passed PM structural validation but internal defects surfaced at test planning (GH-172/GH-173 class: DoR-stage discovery; GH-174: reopen at phase 3; here: STOP at phase 3). The STOP-instead-of-write protocol worked exactly as designed — the cost was one cheap amendment cycle, not a defective plan or a DoR iteration. Consider adding a spec-author self-check for oracle completeness (every rejection class named anywhere in the spec maps to exactly one pinned code) and corpus-vs-rule spot-checks (validate the pinned rules against the OLDEST committed artifact, not just the newest)."
+    type: "retro"
+    date: "2026-10-31"
   - text: "Phase 2 specification COMPLETE (chunked iteration 4): chg-GH-179-spec.md (347 lines, canonical GH-174 format). PM decisions adopted: D1 LITE pinned as {clarify_scope, specification, delivery, quality_gates, dod_check, pr_creation} (variant key optional, absent=full so the pre-variant corpus is accepted); D2 corpus-compat schema (required keys: change_id/title/delivery_mode/phases; open key set; free-form phase extras tolerated); D3 registry over GH-174 state port with phase.transition records + derived projection. Spec adds: AC-L1..L6 with DoD predicates, 8-cell idempotency matrix, 5 new lint.* error rows under a new lint domain kind (input-domain rejections for reason-less reopen / unknown phase; state.* for storage), architecture grounded in the real tree (contracts/pm-notes.ts, contracts/registry.ts, domain/pm-notes-lint.ts, state/registry.ts, cli commands lint.ts/phase.ts). OQ-1 (extra phase keys not command-addressable) resolved by scope boundary, non-blocking."
     type: "info"
     date: "2026-10-31"
