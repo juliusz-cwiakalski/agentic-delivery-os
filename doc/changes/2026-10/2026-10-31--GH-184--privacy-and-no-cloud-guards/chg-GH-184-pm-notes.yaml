@@ -57,6 +57,12 @@ open_questions:
 blockers: []
 
 notes:
+  - text: "Remediation batch landed in e7dc4a9 (fix(GH-184)): F-1 marker anchoring now scopes to the protected value segment and fires for all three platform home forms plus credential/authorization shapes; F-2 emitter drops documentation-placeholder suppression; F-3 line attribution is linear via a newline-offset index; F-4 policy construction fails closed; F-5..F-9 and F-12 closed. Two rule-scoped exact-path entries were added for the review artifacts that quote the F-1 probe values; no rule or cap was weakened. Gates: 1136 tests, pnpm check, guard 1006 files/0 violations, all invariant checks green."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Declined: a bearer value whose tail begins with the fabricated 'test-' marker stays suppressed in the file scan (documented as a marker-based limitation); the emitter denies it because emitter suppression was removed. Owner should confirm at PR that this residual is acceptable."
+    type: "risk"
+    date: "2026-10-31"
   - text: "Review iteration 1 verdict FAIL (12 findings: 0 critical, 1 high, 3 medium, 6 low, 2 info). High F-1: the bare 'user' suppression marker substring-matches the separator in platform home paths, silently disabling private.absolute-user-path for two platforms and suppressing real credential/authorization shapes. Mediums: emitter applies documentation-placeholder suppression to machine payloads; quadratic line attribution on match-dense files; policy builder fails open above the distinct-length cap. Remediation batch (tasks 9.4-9.15) added to the plan; re-review required (iteration 2)."
     type: "blocker"
     date: "2026-10-31"
