@@ -7,7 +7,7 @@ phases:
   specification: { started: "2026-10-31T12:27:00Z", completed: "2026-10-31T13:40:00Z", reopened: "2026-10-31T13:28:00Z (DoR iter-1 F-1/F-2/F-3/F-8/F-12/F-13/F-15/F-18/F-19/F-22; spec v1.1 143 lines)" }
   test_planning: { started: "2026-10-31T12:36:00Z", completed: "2026-10-31T13:46:00Z", reopened: "2026-10-31T13:15:00Z (delivery_planning found implementation_plan link null; corrected to ./chg-GH-204-plan.md); 2026-10-31T13:42:00Z (DoR iter-1 F-3/F-6/F-7/F-9/F-11/F-13/F-16/F-17/F-22; test plan v1.1 201 lines, TC-001..015)" }
   delivery_planning: { started: "2026-10-31T12:47:00Z", completed: "2026-10-31T13:52:00Z", reopened: "2026-10-31T13:48:00Z (DoR iter-1 F-3/F-4/F-5/F-10/F-11/F-14/F-15/F-20/F-21/F-23; plan v1.1 202 lines, 4 self-consistent phases, 15/15 TCs)" }
-  dor_check: { started: "2026-10-31T13:25:00Z", completed: null, iterations: "iter-1 NOT_READY (3 blocker, 10 major, 7 minor, 3 nit); artifact readiness-review/readiness-iter-1.md; reopened specification, test_planning, delivery_planning; re-run pending" }
+  dor_check: { started: "2026-10-31T13:25:00Z", completed: "2026-10-31T14:05:00Z", verdict: "READY iter-2 (0 blocker, 0 major, 3 minor, 4 nit; artifact readiness-review/readiness-iter-2.md; all 23 iter-1 findings resolved; advisory items folded into delivery notes) ", iterations: "iter-1 NOT_READY (3 blocker, 10 major, 7 minor, 3 nit; reopened specification, test_planning, delivery_planning); iter-2 READY after revisions" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -27,7 +27,7 @@ decisions:
     date: "2026-10-31"
   - text: "Preflight resolution: quote the SKILL.md description so a real YAML parser accepts it. Description contains a colon-space and must be a quoted scalar."
     date: "2026-10-31"
-  - text: "Preflight resolution: the write-own kernel rule and the consolidation curator exception are reconciled by making consolidation the only cross-folder writer, limited to demote, supersede, move promoted lines, and cap splits, with a report naming every cross-folder edit. It does not reword another agent's content."
+  - text: "Preflight resolution: the write-own kernel rule and the consolidation curator exception are reconciled by making consolidation the only cross-folder writer, limited to the complete operation set in the F-2 resolution below, with a report naming every cross-folder edit. It does not reword another agent's content."
     date: "2026-10-31"
   - text: "Preflight resolution: never claim conflict-free memory. Same-role worktrees can edit the same folder, and shared surfaces (lessons, tacit, index) are consolidation-only but still merge-conflict capable."
     date: "2026-10-31"
@@ -58,8 +58,11 @@ decisions:
 open_questions: []
 blockers: []
 notes:
-  - text: "Attribution correction: an earlier F-20 decision said the owner superseded the ticket's lifecycle waiver. That was inaccurate and is retracted. The owner approved a lightweight implementation. The all-phase ledger is a CEO operating requirement for merge verification."
+  - text: "DoR iter-2 READY: 0 blocker, 0 major, 3 minor, 4 nit. Artifact readiness-review/readiness-iter-2.md. Advisory items folded into delivery: keep the first-capture template present, describe the Skills section as added by this change, reference the tree created in the same or earlier phase, and note that PyYAML 1.1 is used only to parse quoted strings that are valid under YAML 1.2 core."
     type: "decision"
+    date: "2026-10-31"
+  - text: "Merge policy: CEO squash-merges the PR into main-tools after finalization. PM creates the PR and does not merge. No owner statement is needed for this operating step."
+    type: "info"
     date: "2026-10-31"
   - text: "DoR iter-1 NOT_READY: 3 blocker, 10 major, 7 minor, 3 nit. Artifact readiness-review/readiness-iter-1.md. Reopened specification, test_planning, and delivery_planning (never delivery). PM resolutions recorded in decisions. Revised artifacts: spec v1.1 143 lines, test plan v1.1 201 lines, plan v1.1 202 lines. Re-running dor_check as iter-2."
     type: "decision"
