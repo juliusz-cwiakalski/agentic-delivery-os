@@ -1,0 +1,885 @@
+schema_version: 1
+artifact: bash-era delivery measurement baseline
+change:
+  ref: GH-186
+  tracker: github
+  excluded_from_samples: true
+status: PARTIAL
+captured_at: '2026-10-31T14:50:00Z'
+source_commit: 75b4e7602ad89bd26f96912ac06ed8bfcb72a5ae
+window:
+  start: '2026-02-01T00:00:00Z'
+  end: '2026-10-31T23:59:59Z'
+  basis: 'The bash-era GH-* delivery record: GH-* commit dates run from 2026-02-01 through 2026-10-31. The capture change GH-186 is excluded from all samples because its delivery is the capture act and would be self-referential and incomplete.'
+sources:
+- id: pm-notes-corpus
+  kind: git-tree
+  locator: git ls-tree -r --name-only 75b4e7602ad89bd26f96912ac06ed8bfcb72a5ae -- doc/changes | rg 'chg-.*-pm-notes\.yaml$' (41 files)
+- id: evidence-corpus
+  kind: git-tree
+  locator: git ls-tree -r --name-only 75b4e7602ad89bd26f96912ac06ed8bfcb72a5ae -- doc/changes | rg 'chg-.*-evidence\.md$' (5 files)
+- id: gh170-ci
+  kind: file
+  locator: doc/changes/2026-10/2026-10-29--GH-170--monorepo-scaffold-toolchain/chg-GH-170-pm-notes.yaml#phases.quality_gate_iterations
+- id: gh172-ci
+  kind: file
+  locator: doc/changes/2026-10/2026-10-30--GH-172--result-contract-error-table/chg-GH-172-pm-notes.yaml#notes
+- id: gh173-ci
+  kind: file
+  locator: doc/changes/2026-10/2026-10-30--GH-173--config-layer/chg-GH-173-pm-notes.yaml#notes
+- id: gh174-ci
+  kind: file
+  locator: doc/changes/2026-10/2026-10-30--GH-174--state-layer/chg-GH-174-pm-notes.yaml#phases.ci_remediation
+- id: gh184-ci
+  kind: file
+  locator: doc/changes/2026-10/2026-10-31--GH-184--privacy-and-no-cloud-guards/chg-GH-184-pm-notes.yaml#notes
+changes:
+- ref: GH-26
+  pm_notes: doc/changes/2026-03/2026-03-06--GH-26--text-to-img-toolbox/chg-GH-26-pm-notes.yaml
+  included: false
+  excluded_reason: date_only_or_missing_time
+  phase_pairs_included: 0
+  phase_pairs_excluded: 1
+  date_only_pairs_excluded: 10
+  ceremony_duration_h: null
+  total_phase_duration_h: null
+  cycle_time_h: null
+  cycle_time_censored: null
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-27
+  pm_notes: doc/changes/2026-03/2026-03-06--GH-27--agents-md/chg-GH-27-pm-notes.yaml
+  included: false
+  excluded_reason: date_only_or_missing_time
+  phase_pairs_included: 0
+  phase_pairs_excluded: 3
+  date_only_pairs_excluded: 8
+  ceremony_duration_h: null
+  total_phase_duration_h: null
+  cycle_time_h: null
+  cycle_time_censored: null
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-32
+  pm_notes: doc/changes/2026-03/2026-03-10--GH-32--bootstrap-onboarding-consistency/chg-GH-32-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 10
+  phase_pairs_excluded: 1
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 10.5
+  total_phase_duration_h: 11.6
+  cycle_time_h: 11.5
+  cycle_time_censored: false
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-36
+  pm_notes: doc/changes/2026-03/2026-03-16--GH-36--remote-code-review-automation/chg-GH-36-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 10
+  phase_pairs_excluded: 1
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 87.6
+  total_phase_duration_h: 260.2
+  cycle_time_h: 88.9
+  cycle_time_censored: false
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-44
+  pm_notes: doc/changes/2026-03/2026-03-24--GH-44--remove-anthropic-config-hardcoded-models/chg-GH-44-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 9
+  phase_pairs_excluded: 2
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 0.2
+  total_phase_duration_h: 0.4
+  cycle_time_h: 0.2
+  cycle_time_censored: false
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-47
+  pm_notes: doc/changes/2026-03/2026-03-27--GH-47--fix-image-generator-tool-path/chg-GH-47-pm-notes.yaml
+  included: false
+  excluded_reason: date_only_or_missing_time
+  phase_pairs_included: 0
+  phase_pairs_excluded: 1
+  date_only_pairs_excluded: 10
+  ceremony_duration_h: null
+  total_phase_duration_h: null
+  cycle_time_h: null
+  cycle_time_censored: null
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-40
+  pm_notes: doc/changes/2026-04/2026-04-02--GH-40--multi-tool-support/chg-GH-40-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 9
+  phase_pairs_excluded: 2
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 2.3
+  total_phase_duration_h: 5.3
+  cycle_time_h: 5.3
+  cycle_time_censored: false
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-52
+  pm_notes: doc/changes/2026-04/2026-04-26--GH-52--business-strategy-documentation-profile/chg-GH-52-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 10
+  phase_pairs_excluded: 1
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 0.9
+  total_phase_duration_h: 6.2
+  cycle_time_h: 3.4
+  cycle_time_censored: false
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-46
+  pm_notes: doc/changes/2026-06/2026-06-24--GH-46--decision-making-framework/chg-GH-46-pm-notes.yaml
+  included: false
+  excluded_reason: date_only_or_missing_time
+  phase_pairs_included: 0
+  phase_pairs_excluded: 1
+  date_only_pairs_excluded: 10
+  ceremony_duration_h: null
+  total_phase_duration_h: null
+  cycle_time_h: null
+  cycle_time_censored: null
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-60
+  pm_notes: doc/changes/2026-06/2026-06-24--GH-60--decision-records-hard-requirements/chg-GH-60-pm-notes.yaml
+  included: false
+  excluded_reason: date_only_or_missing_time
+  phase_pairs_included: 0
+  phase_pairs_excluded: 1
+  date_only_pairs_excluded: 10
+  ceremony_duration_h: null
+  total_phase_duration_h: null
+  cycle_time_h: null
+  cycle_time_censored: null
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-67
+  pm_notes: doc/changes/2026-06/2026-06-25--GH-67--marker-driven-doc-distribution/chg-GH-67-pm-notes.yaml
+  included: false
+  excluded_reason: placeholder_zero_time
+  phase_pairs_included: 0
+  phase_pairs_excluded: 11
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: null
+  total_phase_duration_h: null
+  cycle_time_h: null
+  cycle_time_censored: null
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-69
+  pm_notes: doc/changes/2026-06/2026-06-26--GH-69--inception-catalog-templates-guide/chg-GH-69-pm-notes.yaml
+  included: false
+  excluded_reason: placeholder_zero_time
+  phase_pairs_included: 0
+  phase_pairs_excluded: 11
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: null
+  total_phase_duration_h: null
+  cycle_time_h: null
+  cycle_time_censored: null
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-71
+  pm_notes: doc/changes/2026-06/2026-06-26--GH-71--bootstrapper-new-project-inception-mode/chg-GH-71-pm-notes.yaml
+  included: false
+  excluded_reason: placeholder_zero_time
+  phase_pairs_included: 0
+  phase_pairs_excluded: 11
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: null
+  total_phase_duration_h: null
+  cycle_time_h: null
+  cycle_time_censored: null
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-57
+  pm_notes: doc/changes/2026-06/2026-06-27--GH-57--readiness-gate/chg-GH-57-pm-notes.yaml
+  included: false
+  excluded_reason: placeholder_zero_time
+  phase_pairs_included: 0
+  phase_pairs_excluded: 11
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: null
+  total_phase_duration_h: null
+  cycle_time_h: null
+  cycle_time_censored: null
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-72
+  pm_notes: doc/changes/2026-06/2026-06-27--GH-72--tribal-knowledge-extraction/chg-GH-72-pm-notes.yaml
+  included: false
+  excluded_reason: placeholder_zero_time
+  phase_pairs_included: 0
+  phase_pairs_excluded: 11
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: null
+  total_phase_duration_h: null
+  cycle_time_h: null
+  cycle_time_censored: null
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-78
+  pm_notes: doc/changes/2026-06/2026-06-28--GH-78--feature-spec-coverage-gate-and-debt/chg-GH-78-pm-notes.yaml
+  included: false
+  excluded_reason: date_only_or_missing_time
+  phase_pairs_included: 0
+  phase_pairs_excluded: 0
+  date_only_pairs_excluded: 11
+  ceremony_duration_h: null
+  total_phase_duration_h: null
+  cycle_time_h: null
+  cycle_time_censored: null
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-85
+  pm_notes: doc/changes/2026-06/2026-06-28--GH-85--ados-process-map-diagrams/chg-GH-85-pm-notes.yaml  # source: committed pm-notes path at source_commit (historical folder slug)
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 11
+  phase_pairs_excluded: 0
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 3.2
+  total_phase_duration_h: 4.4
+  cycle_time_h: 3.8
+  cycle_time_censored: false
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-90
+  pm_notes: doc/changes/2026-06/2026-06-29--GH-90--architecture-module-governance/chg-GH-90-pm-notes.yaml
+  included: false
+  excluded_reason: date_only_or_missing_time
+  phase_pairs_included: 0
+  phase_pairs_excluded: 0
+  date_only_pairs_excluded: 11
+  ceremony_duration_h: null
+  total_phase_duration_h: null
+  cycle_time_h: null
+  cycle_time_censored: null
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-108
+  pm_notes: doc/changes/2026-07/2026-07-02--GH-108--doc-syncer-reliable-spec-coverage/chg-GH-108-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 11
+  phase_pairs_excluded: 0
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 2.2
+  total_phase_duration_h: 3.8
+  cycle_time_h: 4.0
+  cycle_time_censored: false
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-124
+  pm_notes: doc/changes/2026-07/2026-07-03--GH-124--batch-delivery-infrastructure/chg-GH-124-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 11
+  phase_pairs_excluded: 0
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 0.2
+  total_phase_duration_h: 1.0
+  cycle_time_h: 1.0
+  cycle_time_censored: false
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-133
+  pm_notes: doc/changes/2026-07/2026-07-05--GH-133--decision-process-improvements/chg-GH-133-pm-notes.yaml
+  included: false
+  excluded_reason: date_only_or_missing_time
+  phase_pairs_included: 0
+  phase_pairs_excluded: 0
+  date_only_pairs_excluded: 11
+  ceremony_duration_h: null
+  total_phase_duration_h: null
+  cycle_time_h: null
+  cycle_time_censored: null
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-137
+  pm_notes: doc/changes/2026-07/2026-07-05--GH-137--bootstrapper-inception-meta-practices/chg-GH-137-pm-notes.yaml
+  included: false
+  excluded_reason: date_only_or_missing_time
+  phase_pairs_included: 0
+  phase_pairs_excluded: 0
+  date_only_pairs_excluded: 11
+  ceremony_duration_h: null
+  total_phase_duration_h: null
+  cycle_time_h: null
+  cycle_time_censored: null
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-142
+  pm_notes: doc/changes/2026-07/2026-07-07--GH-142--delivery-modes-reliability/chg-GH-142-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 10
+  phase_pairs_excluded: 1
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 12.0
+  total_phase_duration_h: 18.6
+  cycle_time_h: 18.2
+  cycle_time_censored: true
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-144
+  pm_notes: doc/changes/2026-07/2026-07-09--GH-144--sequential-authoring-yaml-review/chg-GH-144-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 11
+  phase_pairs_excluded: 0
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 1.0
+  total_phase_duration_h: 1.9
+  cycle_time_h: 2.0
+  cycle_time_censored: false
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-146
+  pm_notes: doc/changes/2026-07/2026-07-15--GH-146--quota-aware-pre-iteration-hooks/chg-GH-146-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 11
+  phase_pairs_excluded: 0
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 53.7
+  total_phase_duration_h: 86.0
+  cycle_time_h: 41.4
+  cycle_time_censored: false
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-148
+  pm_notes: doc/changes/2026-07/2026-07-28--GH-148--platform-aware-delivery-scripts/chg-GH-148-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 11
+  phase_pairs_excluded: 0
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 1.8
+  total_phase_duration_h: 17.4
+  cycle_time_h: 6.6
+  cycle_time_censored: false
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-150
+  pm_notes: doc/changes/2026-08/2026-08-04--GH-150--quota-aware-delivery-wait/chg-GH-150-pm-notes.yaml
+  included: false
+  excluded_reason: date_only_or_missing_time
+  phase_pairs_included: 0
+  phase_pairs_excluded: 0
+  date_only_pairs_excluded: 11
+  ceremony_duration_h: null
+  total_phase_duration_h: null
+  cycle_time_h: null
+  cycle_time_censored: null
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-151
+  pm_notes: doc/changes/2026-08/2026-08-04--GH-151--centralize-git-operations/chg-GH-151-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 11
+  phase_pairs_excluded: 0
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 0.5
+  total_phase_duration_h: 1.3
+  cycle_time_h: 1.3
+  cycle_time_censored: false
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-170
+  pm_notes: doc/changes/2026-10/2026-10-29--GH-170--monorepo-scaffold-toolchain/chg-GH-170-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 9
+  phase_pairs_excluded: 2
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 3.4
+  total_phase_duration_h: 9.9
+  cycle_time_h: 9.7
+  cycle_time_censored: false
+  ci_observed: true
+  ci_outcome: mixed
+  ci_observations:
+  - artifact: doc/changes/2026-10/2026-10-29--GH-170--monorepo-scaffold-toolchain/chg-GH-170-pm-notes.yaml
+    anchor: phases.quality_gate_iterations (iteration 2 FAIL_CI; iteration 3 PASS_CI)
+    outcome: mixed
+    checks_affected: ci-topology, ignore-rules, commitlint
+  false_signal_incidents:
+  - class: local-green-ci-red
+    artifact: doc/changes/2026-10/2026-10-29--GH-170--monorepo-scaffold-toolchain/chg-GH-170-pm-notes.yaml
+    anchor: phases.quality_gate_iterations (iteration 1 PASS_LOCAL; iteration 2 FAIL_CI)
+    signal: local 9-gate battery green
+    reality: 'PR #191 CI red on 3 checks'
+    checks_affected: ci-topology, ignore-rules, commitlint
+# GH-171 is unparseable_yaml (document-level parse failure). Its phase-pair counters
+# are 0 and its durations/times are null by design, not measured zeros: the excluded
+# row is kept for spine completeness and must not be read as a measurement.
+- ref: GH-171
+  pm_notes: doc/changes/2026-10/2026-10-29--GH-171--branding-seam-working-name/chg-GH-171-pm-notes.yaml
+  included: false
+  excluded_reason: unparseable_yaml
+  phase_pairs_included: 0
+  phase_pairs_excluded: 0
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: null
+  total_phase_duration_h: null
+  cycle_time_h: null
+  cycle_time_censored: null
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-172
+  pm_notes: doc/changes/2026-10/2026-10-30--GH-172--result-contract-error-table/chg-GH-172-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 11
+  phase_pairs_excluded: 0
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 2.7
+  total_phase_duration_h: 5.5
+  cycle_time_h: 4.4
+  cycle_time_censored: false
+  ci_observed: true
+  ci_outcome: mixed
+  ci_observations:
+  - artifact: doc/changes/2026-10/2026-10-30--GH-172--result-contract-error-table/chg-GH-172-pm-notes.yaml
+    anchor: notes (Quality gates REOPENED iteration 2; CLOSED iteration 2)
+    outcome: mixed
+    checks_affected: ts-boundaries, ts-exports-publint-attw, ts-tests
+  false_signal_incidents:
+  - class: local-green-ci-red
+    artifact: doc/changes/2026-10/2026-10-30--GH-172--result-contract-error-table/chg-GH-172-pm-notes.yaml
+    anchor: notes (Quality gates REOPENED iteration 2)
+    signal: local battery green (39 modules, packed exports)
+    reality: 'PR #193 CI red: boundary violations and attw packed-type failures'
+    checks_affected: ts-boundaries, ts-exports-publint-attw
+  - class: local-green-ci-red
+    artifact: doc/changes/2026-10/2026-10-30--GH-172--result-contract-error-table/chg-GH-172-pm-notes.yaml
+    anchor: 'notes (Quality gates iteration 2 CLOSED: third local-green/CI-red instance)'
+    signal: new parity test green locally
+    reality: 'CI red: parity test assumed the gitignored project-local scratch directory exists'
+    checks_affected: ts-tests
+- ref: GH-173
+  pm_notes: doc/changes/2026-10/2026-10-30--GH-173--config-layer/chg-GH-173-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 11
+  phase_pairs_excluded: 0
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 3.2
+  total_phase_duration_h: 12.7
+  cycle_time_h: 10.4
+  cycle_time_censored: false
+  ci_observed: true
+  ci_outcome: mixed
+  ci_observations:
+  - artifact: doc/changes/2026-10/2026-10-30--GH-173--config-layer/chg-GH-173-pm-notes.yaml
+    anchor: notes (Pushed-HEAD CI GREEN 17:24:46Z)
+    outcome: mixed
+    checks_affected: TS tests, TS aggregate check
+  false_signal_incidents:
+  - class: local-green-ci-red
+    artifact: doc/changes/2026-10/2026-10-30--GH-173--config-layer/chg-GH-173-pm-notes.yaml
+    anchor: notes (Pushed-HEAD CI GREEN; root causes of the CI-red)
+    signal: local gates green and CI parity confirmed locally
+    reality: pushed-HEAD CI red on TS tests and TS aggregate check
+    checks_affected: TS tests, TS aggregate check
+- ref: GH-174
+  pm_notes: doc/changes/2026-10/2026-10-30--GH-174--state-layer/chg-GH-174-pm-notes.yaml
+  included: false
+  excluded_reason: placeholder_zero_time
+  phase_pairs_included: 0
+  phase_pairs_excluded: 11
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: null
+  total_phase_duration_h: null
+  cycle_time_h: null
+  cycle_time_censored: null
+  ci_observed: true
+  ci_outcome: mixed
+  ci_observations:
+  - artifact: doc/changes/2026-10/2026-10-30--GH-174--state-layer/chg-GH-174-pm-notes.yaml
+    anchor: phases.ci_remediation
+    outcome: mixed
+    checks_affected: state-scope tests (publint/attw skipped, not failed)
+  false_signal_incidents: []
+- ref: GH-181
+  pm_notes: doc/changes/2026-10/2026-10-30--GH-181--primitive-ports-credential-metadata/chg-GH-181-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 11
+  phase_pairs_excluded: 0
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 2.2
+  total_phase_duration_h: 4.2
+  cycle_time_h: 4.6
+  cycle_time_censored: false
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-177
+  pm_notes: doc/changes/2026-10/2026-10-31--GH-177--verify-change-exit-taxonomy/chg-GH-177-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 10
+  phase_pairs_excluded: 1
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 3.9
+  total_phase_duration_h: 9.0
+  cycle_time_h: null
+  cycle_time_censored: false
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-179
+  pm_notes: doc/changes/2026-10/2026-10-31--GH-179--pm-notes-registry-lint-phase-transitions/chg-GH-179-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 11
+  phase_pairs_excluded: 0
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 3.4
+  total_phase_duration_h: 4.9
+  cycle_time_h: 5.3
+  cycle_time_censored: false
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-182
+  pm_notes: doc/changes/2026-10/2026-10-31--GH-182--provider-v1/chg-GH-182-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 11
+  phase_pairs_excluded: 0
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 3.0
+  total_phase_duration_h: 11.8
+  cycle_time_h: 13.0
+  cycle_time_censored: false
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-184
+  pm_notes: doc/changes/2026-10/2026-10-31--GH-184--privacy-and-no-cloud-guards/chg-GH-184-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 11
+  phase_pairs_excluded: 0
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 3.9
+  total_phase_duration_h: 19.3
+  cycle_time_h: 18.4
+  cycle_time_censored: false
+  ci_observed: true
+  ci_outcome: green
+  ci_observations:
+  - artifact: doc/changes/2026-10/2026-10-31--GH-184--privacy-and-no-cloud-guards/chg-GH-184-pm-notes.yaml
+    anchor: 'notes (PR #203 pushed-HEAD CI run on 1f20ce3)'
+    outcome: green
+    checks_affected: 47/47 checks (TS aggregate, TS tests, repository invariants, bash suites, doc guards)
+  false_signal_incidents: []
+- ref: GH-185
+  pm_notes: doc/changes/2026-10/2026-10-31--GH-185--interim-mitigations-docs-config/chg-GH-185-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 10
+  phase_pairs_excluded: 1
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 0.6
+  total_phase_duration_h: 1.8
+  cycle_time_h: null
+  cycle_time_censored: false
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-186
+  pm_notes: doc/changes/2026-10/2026-10-31--GH-186--decision-records-measurement-baseline/chg-GH-186-pm-notes.yaml
+  included: false
+  excluded_reason: capture_change
+  phase_pairs_included: 5
+  phase_pairs_excluded: 6
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: null
+  total_phase_duration_h: null
+  cycle_time_h: null
+  cycle_time_censored: null
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+- ref: GH-188
+  pm_notes: doc/changes/2026-10/2026-10-31--GH-188--client-seeds-trap-catalogs/chg-GH-188-pm-notes.yaml
+  included: true
+  excluded_reason: null
+  phase_pairs_included: 10
+  phase_pairs_excluded: 1
+  date_only_pairs_excluded: 0
+  ceremony_duration_h: 1.9
+  total_phase_duration_h: 5.2
+  cycle_time_h: null
+  cycle_time_censored: false
+  ci_observed: false
+  ci_outcome: null
+  ci_observations: []
+  false_signal_incidents: []
+metrics:
+- id: MET-CEREMONY-SHARE
+  name: Ceremony share
+  status: PARTIAL
+  measurement_kind: duration_ratio_proxy
+  definition: Share of recorded lifecycle phase time spent in ceremony phases (clarify_scope, specification, test_planning, delivery_planning, dor_check, dod_check, pr_creation) rather than work phases (delivery, system_spec_update, review_fix, quality_gates) over the spine-included changes in the baseline window.
+  formula: sum(ceremony_duration_h) / sum(total_phase_duration_h) over the ceremony sample (metric_included = spine_included); each change duration is the sum of its included phase-pair hours, recorded once at 1 decimal; overlapping phases count in both numerator and denominator.
+  unit: ratio
+  window: per change within the baseline window; aggregate over the ceremony sample
+  sources:
+  - pm-notes-corpus
+  sample:
+    spine_rows: 41
+    spine_included: 23
+    spine_excluded: 18
+    metric_included: 23
+    metric_excluded: 0
+    phase_pairs_included: 240
+    phase_pairs_excluded: 13
+    date_only_pairs_excluded: 0
+    excluded_unobserved: 0
+  metric_excluded_changes: []
+  numerator: 204.3
+  denominator: 502.4
+  value: 0.406648
+  aggregates:
+    median_h: null
+    min_h: null
+    max_h: null
+    p90_h: null
+  limitation: 'Duration share, not wall-clock union: overlapping phases count in both numerator and denominator. pm-notes timestamps are self-reported and may carry clock skew. The corpus contains 1 unparseable_yaml change and 6 placeholder_zero_time changes, so this time metric is PARTIAL and reports the excluded counts.'
+  direction: lower is better
+  comparison_note: Compare with the same metric ID and definition over an equal-length window; a definition change allocates a new MET- ID and records a supersession note.
+- id: MET-CYCLE-TIME
+  name: Cycle time
+  status: PARTIAL
+  measurement_kind: duration_proxy
+  definition: Elapsed time from the first lifecycle phase start (clarify_scope.started) to PR creation completion for one change, over spine-included changes with a usable non-placeholder clarify_scope.started.
+  formula: 'pr_creation.completed - clarify_scope.started in hours at 1 decimal; when pr_creation.completed is absent, use the latest completed phase and set cycle_time_censored: true. Report n (= metric_included), median, min, max; p90 by nearest-rank ceil(0.9*n)-th smallest (no interpolation) only when n >= 10.'
+  unit: hours
+  window: per change whose clarify_scope.started falls in the baseline window
+  sources:
+  - pm-notes-corpus
+  sample:
+    spine_rows: 41
+    spine_included: 23
+    spine_excluded: 18
+    metric_included: 20
+    metric_excluded: 3
+    phase_pairs_included: 210
+    phase_pairs_excluded: 10
+    date_only_pairs_excluded: 0
+    excluded_unobserved: 0
+  metric_excluded_changes:
+  - ref: GH-177
+    reason: missing_metric_input
+  - ref: GH-185
+    reason: missing_metric_input
+  - ref: GH-188
+    reason: missing_metric_input
+  numerator: null
+  denominator: null
+  value: 5.3
+  aggregates:
+    median_h: 5.3
+    min_h: 0.2
+    max_h: 88.9
+    p90_h: 18.4
+  limitation: Self-reported timestamps; clock skew is possible; measures elapsed time, not effort. 1 right-censored sample (GH-142) uses the latest completed phase. 3 spine-included changes lack a usable clarify_scope.started and are listed in metric_excluded_changes as missing_metric_input. p90 is nearest-rank with no interpolation. The corpus contains 1 unparseable_yaml change and 6 placeholder_zero_time changes, so this time metric is PARTIAL.
+  direction: lower is better
+  comparison_note: Compare with the same metric ID and definition over an equal-length window; p90 uses nearest-rank; a definition change allocates a new MET- ID.
+- id: MET-CI-FAILURE-RATE
+  name: CI failure session proxy
+  status: PARTIAL
+  measurement_kind: session_proxy
+  definition: Share of change deliveries with at least one committed-record CI failure among deliveries with at least one committed-record CI observation, over spine-included changes.
+  formula: 'numerator = changes with ci_outcome red or mixed; denominator = changes with ci_observed: true (= metric_included); value = numerator/denominator as a 0-1 ratio. Unobserved spine-included changes are metric_excluded with reason no_ci_observation.'
+  unit: ratio
+  window: per change within the baseline window
+  sources:
+  - pm-notes-corpus
+  - evidence-corpus
+  sample:
+    spine_rows: 41
+    spine_included: 23
+    spine_excluded: 18
+    metric_included: 4
+    metric_excluded: 19
+    phase_pairs_included: 42
+    phase_pairs_excluded: 2
+    date_only_pairs_excluded: 0
+    excluded_unobserved: 19
+  metric_excluded_changes:
+  - ref: GH-32
+    reason: no_ci_observation
+  - ref: GH-36
+    reason: no_ci_observation
+  - ref: GH-44
+    reason: no_ci_observation
+  - ref: GH-40
+    reason: no_ci_observation
+  - ref: GH-52
+    reason: no_ci_observation
+  - ref: GH-85
+    reason: no_ci_observation
+  - ref: GH-108
+    reason: no_ci_observation
+  - ref: GH-124
+    reason: no_ci_observation
+  - ref: GH-142
+    reason: no_ci_observation
+  - ref: GH-144
+    reason: no_ci_observation
+  - ref: GH-146
+    reason: no_ci_observation
+  - ref: GH-148
+    reason: no_ci_observation
+  - ref: GH-151
+    reason: no_ci_observation
+  - ref: GH-181
+    reason: no_ci_observation
+  - ref: GH-177
+    reason: no_ci_observation
+  - ref: GH-179
+    reason: no_ci_observation
+  - ref: GH-182
+    reason: no_ci_observation
+  - ref: GH-185
+    reason: no_ci_observation
+  - ref: GH-188
+    reason: no_ci_observation
+  numerator: 3
+  denominator: 4
+  value: 0.75
+  aggregates:
+    median_h: null
+    min_h: null
+    max_h: null
+    p90_h: null
+  limitation: No committed CI run log exists. This is a session-level proxy, not a per-run or per-check rate. 19 spine-included changes have no committed CI observation and are excluded (no_ci_observation), never assumed green. A CI observation recorded for a spine-excluded change (GH-174) is carried on that change row but is not in this metric's sample. The count is a session-level floor.
+  direction: lower is better
+  comparison_note: Compare with the same metric ID and definition over an equal-length window; a proxy is never compared to a native measurement without this caveat.
+- id: MET-FALSE-SIGNAL-INCIDENTS
+  name: False-signal incidents
+  status: MEASURED
+  measurement_kind: curated_count
+  definition: Count of distinct committed-record incidents where a delivery signal contradicted reality, curated from committed pm-notes and evidence artifacts over the spine-included changes.
+  formula: 'count of curated incident rows; report total and per class. Classes: local-green-ci-red, false-success-exit-zero, skipped-read-as-green, green-gate-later-failed, lying-liveness.'
+  unit: count
+  window: per change within the baseline window
+  sources:
+  - pm-notes-corpus
+  - evidence-corpus
+  sample:
+    spine_rows: 41
+    spine_included: 23
+    spine_excluded: 18
+    metric_included: 23
+    metric_excluded: 0
+    phase_pairs_included: 240
+    phase_pairs_excluded: 13
+    date_only_pairs_excluded: 0
+    excluded_unobserved: 0
+  metric_excluded_changes: []
+  numerator: null
+  denominator: null
+  value: 4
+  aggregates:
+    median_h: null
+    min_h: null
+    max_h: null
+    p90_h: null
+    local-green-ci-red: 4
+    false-success-exit-zero: 0
+    skipped-read-as-green: 0
+    green-gate-later-failed: 0
+    lying-liveness: 0
+    by_class:
+      local-green-ci-red: 4
+      false-success-exit-zero: 0
+      skipped-read-as-green: 0
+      green-gate-later-failed: 0
+      lying-liveness: 0
+  limitation: Curated from committed prose, not a signal ledger; unrecorded incidents are invisible; the count is a floor, not a census. GH-179 corpus-vs-rule defect is excluded because it is not a delivery-signal lie. Only incidents with an artifact and an anchor are counted.
+  direction: lower is better
+  comparison_note: Compare with the same metric ID and definition over an equal-length window; the curated-floor caveat travels with the number.
+comparison_protocol: Later milestones compare against the same metric ID and definition over a window of equal length. A definition change allocates a new MET- ID and records a supersession note rather than mutating the baseline. Committed baseline values are immutable; a new baseline is appended, not edited. Comparisons state the metric ID and definition version so a proxy is never compared to a native measurement without that caveat. Ratio metrics store a 0-1 value and derive any percent form; p90_h uses nearest-rank ceil(0.9*n)-th smallest with no interpolation; the top-level change field is the DM-2 mapping {ref, tracker, excluded_from_samples}.

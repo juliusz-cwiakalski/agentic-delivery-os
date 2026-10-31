@@ -3,18 +3,23 @@
 # Apache-2.0 License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/doc/planning/oss-tooling/cli-command-registry.md
 ---
-# ados(1) command registry and man page v0
+# ados(1) command registry and man page v1
 
 The command surface of the open-source tooling. Working name `ados` until
 the naming freeze (see [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md));
-command names are locked before M0 ends via a decision record or the
-man-page v1 acceptance. Story references point into
+[ODR-0003](../../decisions/ODR-0003-cli-command-naming-v1-lock.md) locks
+the command names as the v1 surface. Story references point into
 [backlog.md](backlog.md); usage flows live in
 [user-journeys.md](user-journeys.md).
 
+> **v1 lock (2026-10-31):** [ODR-0003](../../decisions/ODR-0003-cli-command-naming-v1-lock.md)
+> freezes the command names and family names below as the v1 public
+> surface. This promotion performs no rename; after M0 a rename requires a
+> superseding decision record plus a code change.
+
 ---
 
-## ados(1): man page v0
+## ados(1): man page v1 (locked)
 
 ### NAME
 
@@ -310,9 +315,8 @@ M3-S7 or M4-S5 without a replacement.
 - `update` kept: help reads "update the ados binary to a pinned tagged
   release"; it never mutates tickets or branches.
 - `provider` kept, scope clarified: this family manages AI model providers
-  and routing only; tracker, VCS, and CI providers are adapters. The
-  naming lock (M0-S17) confirms the name or renames it now that the scope
-  is explicit.
+  and routing only; tracker, VCS, and CI providers are adapters. The name
+  is confirmed as v1 by ODR-0003.
 - `state` kept, distinct from `status` per the TERMINOLOGY section: state
   manages the persisted stores; status reports what is happening now.
 

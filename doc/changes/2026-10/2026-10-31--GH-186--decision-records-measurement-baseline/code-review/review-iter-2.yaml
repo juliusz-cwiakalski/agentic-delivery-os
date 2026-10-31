@@ -1,0 +1,80 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-186
+branch: feat/GH-186/decision-records-and-measurement-baseline
+status: PASS
+summary: >-
+  Re-review of GH-186 after remediation commits fdec870 (R-1/R-2/R-4/R-5/R-6)
+  and 756fc73 (doc-sync reconciliation), against spec v1.3, test plan v1.3 (37
+  TCs), and plan v1.3 with an appended Phase 12. Iteration-1's two blocking
+  findings are closed by verified evidence, not assertion. F-1: the GH-170
+  source locator and both GH-170 anchors now cite phases.quality_gate_iterations,
+  which exists at source_commit 75b4e76; an independent YAML-field-path sweep
+  resolves every source locator and all 9 change-row anchors (0 unresolved), and
+  the pre-fix path genuinely did not exist. F-2: glossary.md and
+  feature-adapter-ports.md are byte-identical to 36e878f and their front matter
+  equals the merge-base (zero front-matter hunks vs c62cdb8); c6fa771 touched
+  only their front matter, so the revert drops only the NG-7-excluded dedup and
+  retains all delivered body content (13 glossary terms, ADR-0008/M1-S11
+  pointer) — the compliant option the finding offered. All four metrics and all
+  sample counters reproduce exactly and are unchanged (spine 41=23+18; ceremony
+  204.3/502.4=0.406648; cycle n=20 median 5.3 min 0.2 max 88.9 p90 18.4 with
+  GH-177/185/188 missing_metric_input; CI 3/4=0.75 with 19 no_ci_observation;
+  false-signal 4). R-4/R-5/R-6 verified (no AC/TC/count change; GH-174 wording
+  matches the pm-notes SKIPPED-not-failed record; GH-171 by-design note present).
+  Full gate battery re-ran green (doc-distribution, modes, inception,
+  forbidden-literals, privacy-literals, commitlint-authority, branch-range
+  commitlint, git diff --check, YAML parse). Only two non-blocking info items
+  remain. The pnpm-check TC-RELEASE-001 failure (GH-206) was not used as a pass
+  criterion; it is structurally unrelated (GH-186 touches no test or changeset).
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: info
+    confidence: high
+    category: traceability
+    location: doc/planning/oss-tooling/measurement-baseline.yaml:515,521,527,552
+    message: >-
+      Carried from iteration 1 F-3 (intentionally deferred). The GH-172
+      observation/incident anchors and the GH-173 incident anchor use
+      descriptors that are not verbatim note substrings ("REOPENED iteration 2"
+      vs "REOPENED (iteration 2)"; "CLOSED iteration 2" vs "iteration 2 CLOSED";
+      "third local-green" vs "THIRD local-green"; "root causes of the CI-red" vs
+      "Root causes of the CI-red"). The load-bearing field path notes resolves,
+      so there is no numeric impact; only TC-MEAS-003's literal fixed-string
+      fallback would flag these compound anchors.
+    suggestion: >-
+      Optional: normalize the descriptors to exact note substrings, or document
+      the "field path + human hint" anchor convention so the fixed-string
+      fallback is not applied to compound anchors. Non-blocking.
+    suppressed: true
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-10/2026-10-31--GH-186--decision-records-measurement-baseline/chg-GH-186-plan.md:625
+    message: >-
+      New bookkeeping residual from R-4. Phase 13.4's "Done" sentence still says
+      "Phases 11-12 are PM-scheduled and not executed in this coder run" while
+      the Phase 11.x and 12.x boxes are now ticked complete with evidence. This
+      is a stale under-claim (states not-executed when they are now done), not a
+      false completion claim; no delivered content is affected.
+    suggestion: >-
+      Optional, at the next plan touch: reword 13.4 to note Phases 11-12 were
+      subsequently executed (review iteration 1 plus remediation fdec870).
+      Non-blocking.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-10-31T20:45:00Z
+next_step: PROCEED

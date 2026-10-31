@@ -33,6 +33,7 @@ Proposed → Under Review → Accepted → (Deprecated | Superseded)
 
 ## References
 
+- [Foundational Decision Binding Register](00-register.md) — topic-to-record binding map for the M0-S17 foundational topics
 - [Decision Records Management Guide](../guides/decision-records-management.md) — full standard including governance, types, and lifecycle
 - [Decision Record Template](../templates/decision-record-template.md) — template for authoring new records
 - [Documentation Handbook](../documentation-handbook.md) — repository documentation standard

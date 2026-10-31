@@ -17,6 +17,7 @@ ados_distribution: redistributable
 | [System Spec](spec/) | Current truth — feature specs, API descriptions, NFRs |
 | [Status Digest](spec/features/feature-status-digest.md) | The read-only six-section delivery digest, its evidence states, bounds, and declared gaps |
 | [Verify Change and Exit Taxonomy](spec/features/feature-verify-change-and-exit-taxonomy.md) | Read-only ledger verification, the delivery-result enum, and the CLI exit taxonomy |
+| [Measurement Baseline](spec/features/feature-measurement-baseline.md) | The committed bash-era measurement baseline: schema, `MET-` metrics, status semantics, source traceability, window, and comparison protocol |
 | [Documentation Handbook](documentation-handbook.md) | How docs work — structure, conventions, workflow |
 
 ## Changing Behavior?
@@ -70,6 +71,7 @@ Additional profile-aware templates are listed in [templates/README.md](templates
 |----------|-------------|
 | [Decision Records](decisions/) | All decision records (ADR/PDR/TDR/BDR/ODR) |
 | [Decision Records Index](decisions/00-index.md) | Index of all decisions |
+| [Foundational Decision Binding Register](decisions/00-register.md) | Topic-to-record binding map for the foundational monorepo topics |
 
 ## For AI Agents
 
