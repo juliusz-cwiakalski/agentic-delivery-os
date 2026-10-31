@@ -5,9 +5,9 @@ story_code: M0-S8
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-10-31T00:00:00Z", completed: "2026-10-31T00:20:00Z" }
-  specification: { started: "2026-10-31T00:25:00Z", completed: "2026-10-31T01:05:00Z", reopened: "2026-10-31T03:05:00Z (dor iter-1 major: C-8 hint embeds forbidden literal; C-3 'mentioned = fold entry' clarification)", reopened_completed: null }
-  test_planning: { started: "2026-10-31T01:10:00Z", completed: "2026-10-31T01:50:00Z", reopened: "2026-10-31T03:05:00Z (dor iter-1 minor/nit: TC-012 outside-taxonomy bucket; TC-018 'none' comparer rule)", reopened_completed: null }
-  delivery_planning: { started: "2026-10-31T01:55:00Z", completed: "2026-10-31T02:40:00Z", reopened: "2026-10-31T03:05:00Z (dor iter-1 major fold-in: plan 1.2 must mirror the brand-neutral pinned hint and drop the contradictory clause)", reopened_completed: null }
+  specification: { started: "2026-10-31T00:25:00Z", completed: "2026-10-31T01:05:00Z", reopened: "2026-10-31T03:05:00Z (dor iter-1 major: C-8 hint embeds forbidden literal; C-3 'mentioned = fold entry' clarification)", reopened_completed: "2026-10-31T03:35:00Z (spec v1.1: brand-neutral pinned hint; fold-entry wording)" }
+  test_planning: { started: "2026-10-31T01:10:00Z", completed: "2026-10-31T01:50:00Z", reopened: "2026-10-31T03:05:00Z (dor iter-1 minor/nit: TC-012 outside-taxonomy bucket; TC-018 'none' comparer rule)", reopened_completed: "2026-10-31T03:40:00Z (test plan v1.1: outside-taxonomy bucket; none-prefix rule; TC-019 hint pinned)" }
+  delivery_planning: { started: "2026-10-31T01:55:00Z", completed: "2026-10-31T02:40:00Z", reopened: "2026-10-31T03:05:00Z (dor iter-1 major fold-in: plan 1.2 must mirror the brand-neutral pinned hint and drop the contradictory clause)", reopened_completed: "2026-10-31T03:45:00Z (plan v1.1: task 1.2 byte-for-byte hint; version refs updated; phases/tasks/TCs unchanged)" }
   dor_check: { started: "2026-10-31T02:45:00Z", completed: null, iterations: "iter-1 NOT_READY (9/10 facets PASS; cross_artifact_consistency FAIL: 1 major, 1 minor, 3 nits; artifact readiness-review/readiness-iter-1.md). Reopened specification (C-8 brand-literal hint + C-3 fold wording), test_planning (TC-012 outside-taxonomy bucket; TC-018 'none' rule), delivery_planning (plan task 1.2 mirror the pinned hint)." }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -44,6 +44,9 @@ notes:
     type: "retro"
     date: "2026-10-31"
   - text: "DoR iter-1 NOT_READY recorded; remediation is a single reopen cycle: specification (major C-8 hint + nit C-3 fold wording), test_planning (minor TC-012 bucket + nit TC-018 comparer rule), delivery_planning (major fold-in plan task 1.2). Gate expected READY at iter-2 after these amendments."
+    type: "info"
+    date: "2026-10-31"
+  - text: "DoR iter-1 remediation complete in one reopen cycle (spec v1.1, test plan v1.1, plan v1.1): C-8 hint is now the exact brand-neutral string 'Complete the named required phases of the declared variant through the phase command, or correct the declaration, then re-run verify.' carried byte-for-byte by ERROR_TABLE and feature-result-contract.md; C-3 defines 'mentioned' as a fold entry; TC-012 parser cells moved to an outside-taxonomy bucket; TC-018 pins the 'none' prefix rule; plan task 1.2 mirrors the hint. Phases/tasks/TC ids/mappings unchanged. Re-running DoR."
     type: "info"
     date: "2026-10-31"
   - text: "Runtime learnings carried forward: pre-authorize inline committer discipline for @coder (one Conventional Commit per plan phase, explicit staging, never stage .ai/local/ or tmp/); PM owns @runner/@doc-syncer/@pr-manager. Prefer chunked authoring delegations for long artifacts (GH-179 retros)."

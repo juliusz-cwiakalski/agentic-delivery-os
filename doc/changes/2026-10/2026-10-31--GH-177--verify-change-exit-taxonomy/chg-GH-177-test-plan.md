@@ -1,8 +1,8 @@
 ---
 id: chg-GH-177-test-plan
-status: Proposed
+status: Updated
 created: 2026-10-31T05:30:00Z
-last_updated: 2026-10-31T05:30:00Z
+last_updated: 2026-10-31T05:46:40Z
 owners: [engineering]
 service: delivery-os CLI verification and state tier
 labels: [change, planning]
@@ -583,7 +583,8 @@ All twenty-one TCs are automated. Every TC is non-vacuous: controls and seeded v
 - A fixture for every verify-reachable identity and both success variants:
   - Success: `finished` full and `finished` LITE.
   - `partial`: `verify.ledger.incomplete` (full and LITE, single and multi-missing) and `lint.phases.incomplete`.
-  - `failed`: `lint.notes.malformed`, `lint.keys.missing` (top-level, entry, collection), `lint.variant.unknown`, `lint.target.missing`, `input.value.rejected` (three handler-grammar cases), `fallback.invocation` (two parser cases), and `state.permission.denied`.
+  - `failed`: `lint.notes.malformed`, `lint.keys.missing` (top-level, entry, collection), `lint.variant.unknown`, `lint.target.missing`, `input.value.rejected` (three handler-grammar cases), and `state.permission.denied`.
+  - `outside-taxonomy`: `fallback.invocation` (two parser cases). These cells carry **no delivery-result token** and are exempt from the C-6 `result=…; variant=…; missing=…` tuple: broken invocations sit outside the delivery-result taxonomy per C-5, DEC-11, TDR-0005 (Decision-5), and A-T6. They are asserted for identity, exit, and error-only envelope only.
   - `state-unverified`: `state.store.torn`, `state.schema.mismatch`, `state.keys.missing`.
 - `assertEnvelopeContract`; `projectExitCode`; `ERROR_TABLE`.
 - The `state.level.unsupported` row is not fabricated as a verify fixture (GAP-2); its totality is TC-VERIFY-019.
@@ -777,7 +778,7 @@ All twenty-one TCs are automated. Every TC is non-vacuous: controls and seeded v
 
 1. Parse the C-4 table rows in order, normalizing backticks and markdown emphasis; assert 11 rows whose tokens equal `DELIVERY_RESULT_TOKENS` in order.
 2. For each row assert the `Projection` cell equals the taxonomy projection class and the `Exit` cell's leading integer equals `projectExitCode(projectionClass)` (the `state-unverified` cell carries the documented `2 (see DEC-5)` annotation).
-3. Assert the `M0-S8 derivation` cell marks exactly the seven reserved tokens with "Reserved" (case-insensitive, after normalizing emphasis) and the four reachable tokens without it; assert the four reachable rows carry a non-"none" `Identity source` cell and the seven reserved rows carry "none".
+3. Assert the `M0-S8 derivation` cell marks exactly the seven reserved tokens with "Reserved" (case-insensitive, after normalizing emphasis) and the four reachable tokens without it; assert the four reachable rows carry an `Identity source` cell that does **not** start with `none`, and the seven reserved rows carry an `Identity source` cell that **starts with** `none` after backtick/emphasis normalization (for example `none in M0-S8`). The rule is a normalized prefix match, not exact equality with the string `none`.
 4. Parse the "Pinned derivation mapping" paragraph; assert each class's token list equals the taxonomy's derivation class (set and order).
 5. Mutation controls: pass mutated table text (wrong projection, swapped exit, reordered rows, a missing row, a twelfth row) to the comparer and assert it fails naming the token/field; the unmutated table is green.
 6. Assert the file digest is unchanged after the comparison (read-only).
@@ -811,7 +812,7 @@ All twenty-one TCs are automated. Every TC is non-vacuous: controls and seeded v
 
 **Steps**:
 
-1. Assert `DOMAIN_KINDS` includes `verify` and the `verify` kind has exactly one row: `verify.ledger.incomplete`, category `user`, retryable `false`, consequence `not_landed`, projection `user-validation`, and the exact C-8 remediation hint and summary.
+1. Assert `DOMAIN_KINDS` includes `verify` and the `verify` kind has exactly one row: `verify.ledger.incomplete`, category `user`, retryable `false`, consequence `not_landed`, projection `user-validation`, and the exact amended C-8 remediation hint (the spec's pinned brand-neutral string quoted below) and summary.
 2. Assert `resolveAppErrorCode("verify.ledger.incomplete")` and `classifyThrown({kind: "verify", code: "verify.ledger.incomplete"})` return the same row; assert `classifyDomainKind("verify", "verify.ledger.incomplete")` resolves; assert `classifyDomainKind("verify", "lint.notes.malformed")` throws (exact code required, no wrong-kind selection).
 3. Assert the documented `verify.ledger.incomplete` row appears exactly once in `feature-result-contract.md` and equals the machine row column-for-column.
 4. Run `runSyncCheck` on temp copies for two-way drift: remove the machine row → "documented code verify.ledger.incomplete has no source entry"; remove the doc row → "source entry verify.ledger.incomplete is undocumented"; remove `verify` from `DOMAIN_KINDS` → "undeclared namespace verify"; malformed row → "columns"; duplicated row → "duplicate documented row"; the unchanged copy is green.
@@ -822,6 +823,10 @@ All twenty-one TCs are automated. Every TC is non-vacuous: controls and seeded v
 **Expected Outcome**:
 
 - The new `verify` kind and row round-trip exactly with the documented table; both drift directions fail; no existing row is modified; the verify path always classifies by exact code.
+
+**Notes / Clarifications**:
+
+- Step 1's exact-hint oracle resolves to the amended C-8 string, quoted here verbatim from the spec (brand-neutral, no product literal): "Complete the named required phases of the declared variant through the phase command, or correct the declaration, then re-run verify." The same string is carried byte-for-byte by `ERROR_TABLE` and by the documented row in `feature-result-contract.md`, which is what the two-way sync check enforces; the test does not paraphrase it.
 
 #### TC-VERIFY-020 - Tier, purity, single-home, and inventory invariants
 
@@ -1047,6 +1052,7 @@ No AC is left without a TC.
 | Version | Date (UTC) | Author | Changes |
 |---|---|---|---|
 | 1.0 | 2026-10-31T05:30:00Z | Change Test Plan Writer | Initial plan: 21 TCs (TC-VERIFY-001..021). All fourteen ACs (AC-V1..V14) and all seven NFRs mapped; full/LITE incomplete fixtures one per required phase; exact summary grammar and reversed-key-order determinism; declaration/registry overlay in both directions with presence-tolerant reads and projection-not-evidence; malformed classes pinned to one identity each; registry failures with the platform/user exit split; grammar before reads; exhaustive envelope/exit matrix with `assertEnvelopeContract`; 11/11 bash-enum binding and a total taxonomy with the exact reachable subset; spec-table agreement; the new `verify` row with two-way sync and untouched existing rows; tier/data-only/single-home/inventory/brand/ambient/exit-literal/boundary gates; the GH-179/GH-170/GH-171 corpus read in place; read-only/network-free/spawn-free/deterministic proofs with seeded controls. Spec gaps, delivery-bound spellings, and the AC-V7/C-6 detail optionality are recorded, not silently reinterpreted. |
+| 1.1 | 2026-10-31T05:46:40Z | Change Test Plan Writer | DoR iter-1 remediation (test-plan-owned findings only). TC-VERIFY-012 Preconditions: the two parser-level `fallback.invocation` cells moved out of the `failed` bucket into an `outside-taxonomy` bucket and explicitly pinned as token-less and C-6-tuple-exempt (C-5, DEC-11, TDR-0005 Decision-5, A-T6); steps unchanged. TC-VERIFY-018 step 3: the reserved-token `Identity source` comparer rule pinned to a normalized prefix match on `none` (e.g. `none in M0-S8`), explicitly not exact equality. TC-VERIFY-019: step 1 now names the amended brand-neutral C-8 hint and a note quotes the spec string verbatim, so the exact-match oracle is satisfiable. No TC id, AC/NFR mapping, fixture path, identity, token, exit, or assertion semantics changed; 21 TCs and all ACs/NFRs still mapped. |
 
 ## 10. Test Execution Log
 

@@ -410,8 +410,11 @@ Verification reads two evidence sources and defines precedence explicitly:
    non-null timestamp string. A missing entry is not declared completed.
 2. **Registry evidence** — the verified `phase.transition` history for the
    change, folded with the existing pure `foldPhaseState` semantics. If the
-   history mentions a phase, its latest operation determines that phase's
-   completion: `complete` → completed, `reopen` → not completed.
+   folded registry state has an entry for a phase, its latest operation
+   determines that phase's completion: `complete` → completed, `reopen` → not
+   completed. "Mentioned" therefore means present in the folded state, not
+   merely present in the raw transition history: a reopen with no prior
+   completion leaves no fold entry, so the declaration stands for that phase.
 
 **Precedence rule**: for every phase the registry history mentions, the folded
 registry state overrides the declaration; for every phase it does not mention,
@@ -632,8 +635,7 @@ binding. Existing rows are untouched.
 |---|---|---|---|---|---|---|---|
 | `verify.ledger.incomplete` | `verify` (new kind) | user | false | not_landed | user-validation | `partial` | The declared variant's required phases are not all completed. |
 
-Remediation hint: "Complete the named required phases of the declared variant
-through `ados phase`, or correct the declaration, then re-run verify."
+Remediation hint: "Complete the named required phases of the declared variant through the phase command, or correct the declaration, then re-run verify."
 
 Reused identities, unchanged:
 
@@ -998,6 +1000,15 @@ serialization redaction path are unchanged.
 
 ## Revision Log
 
+- **v1.1 (2026-10-31)** — DoR iter-1 amendment. The `verify.ledger.incomplete`
+  remediation hint is pinned to one brand-neutral exact string (the phase
+  command, not a product literal) so the additive machine row and its documented
+  row in `feature-result-contract.md` are shippable under the forbidden-literal
+  scan and byte-for-byte error-table sync. C-3 now defines "mentioned" as
+  present in the folded registry state (a phase the `foldPhaseState` result has
+  an entry for), consistent with a reopen that has no prior completion leaving
+  no entry. No AC, identity, token, exit, summary grammar, or codebase-map item
+  changed.
 - **v1.0 (2026-10-31)** — Initial specification. Pins: ledger-only read-only
   scope; `verify change <ref>` surface; eleven-token enum as contracts data with
   a total projection/derivation taxonomy; variant-aware required sets from the
