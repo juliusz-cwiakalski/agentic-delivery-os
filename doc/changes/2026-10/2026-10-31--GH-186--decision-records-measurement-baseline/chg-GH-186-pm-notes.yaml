@@ -10,7 +10,7 @@ phases:
   delivery: { started: "2026-10-31T17:45:00Z", completed: "2026-10-31T18:20:00Z" }
   system_spec_update: { started: "2026-10-31T18:40:00Z", completed: "2026-10-31T19:05:00Z" }
   review_fix: { started: "2026-10-31T20:30:00Z", completed: "2026-10-31T21:00:00Z", iterations: 2, verdict: "PASS (iter 2)" }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: "2026-10-31T21:05:00Z", completed: "2026-10-31T21:30:00Z", note: "all GH-186 gates green; pnpm check red only on pre-existing GH-206" }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
@@ -108,5 +108,8 @@ notes:
     type: "info"
     date: "2026-10-31"
   - text: "Review iteration 2 verdict PASS (review/review-iter-2.md, code-review/review-iter-2.yaml): 0 critical/high/medium/low, 2 info. F-1 closed with 0 unresolved anchors; F-2 closed (both files byte-identical to 36e878f); metrics independently recomputed and unchanged; all gates green including branch-range commitlint. Residual info: GH-172/173 compound anchor descriptors (field paths resolve) and plan Phase 13.4 still says Phases 11-12 not executed while their boxes are ticked (stale under-claim, no false completion)."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Quality gates (phase 9) at HEAD 3c5184f: git diff --check 0; doc-distribution 0 (81 docs); distribution modes 5/5; inception consistency 0; forbidden-literals 0 (5/5 classes); privacy-literals 0 (1225 files); commitlint-authority 0; branch-range commitlint 0 (~26 commits); baseline YAML parses (schema 1, PARTIAL, 41 changes, 4 metrics); check:boundaries 0; exports-parity 0. `pnpm check` fails only TC-RELEASE-001 (1402 pass / 1 fail), reproduced on main-tools and tracked as GH-206; 0 tests/changeset paths in this diff. Documented exception, not a GH-186 defect."
     type: "info"
     date: "2026-10-31"
