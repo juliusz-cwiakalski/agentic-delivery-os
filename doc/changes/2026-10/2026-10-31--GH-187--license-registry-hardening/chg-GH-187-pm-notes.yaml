@@ -47,6 +47,8 @@ decisions:
     date: "2026-10-31"
   - text: "DoR required decision capture for the compound-expression interpretation: DEC-3 is routed to @decision-advisor for a decision record that clarifies ADR-0003 C-2 per-branch semantics; the spec and plan reference the record and the delivery updates the current-truth docs."
     date: "2026-10-31"
+  - text: "Inherited base repair: tests/checks/privacy-release.test.ts TC-RELEASE-001 hardcodes GH-184's changeset as 'added by this change' relative to origin/main-tools. GH-184 is already merged into main-tools, so the test fails identically on the base branch and breaks the shared ts-test/ts-aggregate gates. The repair makes the assertion base-relative (expect the GH-184 changeset added only when the base does not already contain it) and preserves the original on-branch guarantee; it is an enabling fix required for a green GH-187 delivery, not a product change."
+    date: "2026-10-31"
 
 open_questions: []
 

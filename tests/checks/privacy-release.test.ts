@@ -106,7 +106,11 @@ describe("TC-RELEASE-001 exactly one new five-package minor changeset", () => {
       ...nameStatus.filter((line) => line.startsWith("A\t")).map((line) => line.slice(2)),
       ...untracked,
     ];
-    expect([...new Set(added)]).toEqual([CHANGESET_PATH]);
+    // Base-relative: the GH-184 changeset is this change's addition only on a
+    // base that does not already carry it; once it is in the base, the change
+    // adds no changeset of its own.
+    const expectedAdded = baseChangesetFiles().includes(CHANGESET_PATH) ? [] : [CHANGESET_PATH];
+    expect([...new Set(added)]).toEqual(expectedAdded);
     expect(nameStatus.filter((line) => /^[MD]\t/.test(line))).toEqual([]);
     expect(existsSync(join(ROOT, CHANGESET_PATH))).toBe(true);
 
