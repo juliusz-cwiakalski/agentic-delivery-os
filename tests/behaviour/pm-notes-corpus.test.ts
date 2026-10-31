@@ -15,6 +15,7 @@ import {
   LITE_REQUIRED_PHASES,
   type PmNotesParseOutcome,
 } from "../../packages/core/src/contracts/index";
+import { PHASE_REF, withPhaseHarness } from "./phase-support";
 import {
   CORPUS_MANIFEST_PATH,
   type CorpusEntry,
@@ -29,7 +30,7 @@ import {
   writeCorpusFile,
 } from "./pm-notes-corpus-support";
 import { runLint } from "./pm-notes-lint-command-support";
-import { documentOf, loadPmNotes, phasesOf } from "./pm-notes-lint-support";
+import { documentOf, loadPmNotes, parsePmNotes, phasesOf } from "./pm-notes-lint-support";
 
 const ROOT = process.cwd();
 const MANIFEST = readCorpusManifest(ROOT);
@@ -56,10 +57,35 @@ const errorCode = (envelope: Record<string, unknown> | undefined): unknown => {
     : undefined;
 };
 
+const errorSummary = (envelope: Record<string, unknown> | undefined): string => {
+  const error = envelope?.error;
+  if (typeof error !== "object" || error === null) return "";
+  const summary = (error as { readonly summary?: unknown }).summary;
+  return typeof summary === "string" ? summary : "";
+};
+
+type SchemaModule = { readonly LITE_REQUIRED_PHASES: readonly string[] };
+
+const schemaModuleOf = (value: unknown): SchemaModule => {
+  if (typeof value !== "object" || value === null) throw new Error("schema module is not a module");
+  const phases = (value as { readonly LITE_REQUIRED_PHASES?: unknown }).LITE_REQUIRED_PHASES;
+  if (!Array.isArray(phases) || !phases.every((phase) => typeof phase === "string")) {
+    throw new Error("schema module has no LITE_REQUIRED_PHASES");
+  }
+  return { LITE_REQUIRED_PHASES: phases };
+};
+
 const validCorpusText = readFileSync(
   join(ROOT, "tests/fixtures/pm-notes/valid/full-complete.yaml"),
   "utf8",
 );
+
+const LEGACY_PHASE_TEXT = readFileSync(
+  join(ROOT, "tests/fixtures/phase/legacy-missing-delivery-mode.yaml"),
+  "utf8",
+);
+
+const LITE_PHASE_TEXT = readFileSync(join(ROOT, "tests/fixtures/phase/lite-open.yaml"), "utf8");
 
 const unparseableText = readFileSync(
   join(ROOT, "tests/fixtures/pm-notes/malformed/unparseable-orphaned-indentation.yaml.txt"),
@@ -250,18 +276,6 @@ describe("TC-LINT-008 exclusion manifest guard", () => {
 });
 
 describe("TC-LINT-008 schema-mutation re-assertion (corpus half)", () => {
-  type SchemaModule = { readonly LITE_REQUIRED_PHASES: readonly string[] };
-
-  const schemaModuleOf = (value: unknown): SchemaModule => {
-    if (typeof value !== "object" || value === null)
-      throw new Error("schema module is not a module");
-    const phases = (value as { readonly LITE_REQUIRED_PHASES?: unknown }).LITE_REQUIRED_PHASES;
-    if (!Array.isArray(phases) || !phases.every((phase) => typeof phase === "string")) {
-      throw new Error("schema module has no LITE_REQUIRED_PHASES");
-    }
-    return { LITE_REQUIRED_PHASES: phases };
-  };
-
   test("a temp-copy LITE-set change makes a previously passing lite document fail", async () => {
     await withTemp("schema", async (root) => {
       const source = readFileSync(join(ROOT, "packages/core/src/contracts/pm-notes.ts"), "utf8");
@@ -281,5 +295,45 @@ describe("TC-LINT-008 schema-mutation re-assertion (corpus half)", () => {
     expect(text).toContain("LITE_REQUIRED_PHASES");
     expect(/\[\s*"clarify_scope"[\s\S]{0,240}"dod_check"\s*\]/.test(text)).toBe(false);
     expect([...CANONICAL_PHASE_IDS]).toHaveLength(11);
+  });
+});
+
+describe("TC-LINT-008 write-path halves completed in Phase 6", () => {
+  test("a mutating phase invocation binds a legacy-era document at write time", async () => {
+    await withPhaseHarness(
+      LEGACY_PHASE_TEXT,
+      async (harness) => {
+        const before = harness.targetText();
+        const run = await harness.run(["complete", PHASE_REF, "delivery"]);
+        expect(run.exitCode).toBe(1);
+        expect(errorCode(run.envelope)).toBe("lint.keys.missing");
+        expect(errorSummary(run.envelope)).toContain("delivery_mode");
+        expect(harness.rawLedgerLines()).toEqual([]);
+        expect(harness.targetText()).toBe(before);
+      },
+      "legacy",
+      "2026-07/2026-07-01--GH-179--legacy-fixture",
+    );
+  });
+
+  test("a temp-copy LITE-set change re-evaluates the phase fixture", async () => {
+    await withTemp("phase-schema", async (root) => {
+      const source = readFileSync(join(ROOT, "packages/core/src/contracts/pm-notes.ts"), "utf8");
+      const target = join(root, "packages/core/src/contracts/pm-notes.ts");
+      mkdirSync(join(target, ".."), { recursive: true });
+      writeFileSync(target, mutateLitePhaseSet(source, "test_planning"));
+      const moduleValue: unknown = await import(pathToFileURL(target).href);
+      const mutated = schemaModuleOf(moduleValue);
+      const fixture = parsePmNotes(LITE_PHASE_TEXT, "phase-lite-open");
+      expect(missingRequired(fixture, [...LITE_REQUIRED_PHASES])).toEqual([]);
+      expect(missingRequired(fixture, [...mutated.LITE_REQUIRED_PHASES])).toEqual([
+        "test_planning",
+      ]);
+      const phaseSuite = readFileSync(
+        join(ROOT, "tests/behaviour/phase-transitions.test.ts"),
+        "utf8",
+      );
+      expect(phaseSuite).toContain("lite-open.yaml");
+    });
   });
 });

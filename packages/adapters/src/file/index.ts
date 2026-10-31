@@ -13,12 +13,17 @@ export {
 } from "./config-source.js";
 export {
   nodePmNotesFileSystemFacts,
+  type PmNotesEntryEdit,
   type PmNotesFileSystemFacts,
   type PmNotesParseResult,
+  type PmNotesStageResult,
   type PmNotesTargetRead,
   type PmNotesTargetRequest,
+  type PmNotesTextRead,
   parsePmNotesText,
   readPmNotesTarget,
+  readPmNotesText,
+  stagePmNotesPhaseEntry,
 } from "./pm-notes-parser.js";
 export {
   type ParsedConfig,

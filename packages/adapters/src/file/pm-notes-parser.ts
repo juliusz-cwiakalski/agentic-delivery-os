@@ -17,6 +17,7 @@ import {
   LineCounter,
   type Node,
   parseAllDocuments,
+  parseDocument,
 } from "yaml";
 
 const MAX_SOURCE_BYTES = 1_048_576;
@@ -61,6 +62,29 @@ export type PmNotesTargetRead =
       readonly parseFailure: PmNotesParseFailure;
     };
 
+/** A raw target read: the located file text plus its parsed value. */
+export type PmNotesTextRead =
+  | { readonly ok: true; readonly file: string; readonly text: string; readonly value: unknown }
+  | { readonly ok: false; readonly reason: "missing" }
+  | {
+      readonly ok: false;
+      readonly reason: "malformed";
+      readonly file: string;
+      readonly parseFailure: PmNotesParseFailure;
+    };
+
+/** One staged document edit: the new value and its serialized document text. */
+export type PmNotesStageResult =
+  | { readonly ok: true; readonly value: unknown; readonly text: string }
+  | { readonly ok: false; readonly parseFailure: PmNotesParseFailure };
+
+/** The command-side edit: only the target entry's started/completed changes. */
+export type PmNotesEntryEdit = {
+  readonly phaseId: string;
+  readonly operation: "complete" | "reopen";
+  readonly timestamp: string;
+};
+
 /** A parse result; target lookup adds the separate `missing` outcome. */
 export type PmNotesParseResult =
   | { readonly ok: true; readonly file: string; readonly value: unknown }
@@ -80,6 +104,13 @@ const safeList = (fs: PmNotesFileSystemFacts, path: string): readonly string[] =
 };
 
 const malformed = (file: string, location: string): PmNotesParseResult => ({
+  ok: false,
+  reason: "malformed",
+  file,
+  parseFailure: { class: "syntax", location },
+});
+
+const malformedText = (file: string, location: string): PmNotesTextRead => ({
   ok: false,
   reason: "malformed",
   file,
@@ -162,17 +193,75 @@ export const parsePmNotesText = (text: string, file: string): PmNotesParseResult
   }
 };
 
-/** Locate, read, and parse one change ref's pm-notes target. */
-export const readPmNotesTarget = (request: PmNotesTargetRequest): PmNotesTargetRead => {
+/** Locate and read one change ref's raw pm-notes text plus its parsed value. */
+export const readPmNotesText = (request: PmNotesTargetRequest): PmNotesTextRead => {
   const file = locatePmNotes(request);
   if (file === undefined) return { ok: false, reason: "missing" };
   let text: string;
   try {
     text = request.fs.readText(file);
   } catch {
-    return malformed(file, file);
+    return malformedText(file, file);
   }
-  return parsePmNotesText(text, file);
+  const parsed = parsePmNotesText(text, file);
+  if (!parsed.ok) return parsed;
+  return { ok: true, file, text, value: parsed.value };
+};
+
+/** Locate, read, and parse one change ref's pm-notes target. */
+export const readPmNotesTarget = (request: PmNotesTargetRequest): PmNotesTargetRead => {
+  const read = readPmNotesText(request);
+  if (!read.ok) return read;
+  return { ok: true, file: read.file, value: read.value };
+};
+
+/**
+ * Stage one transition entry in memory (PIN-8). The YAML Document is edited in
+ * place so opaque phase keys, extra entry keys, comments, and free-form values
+ * survive value-faithfully; only the target entry's `started`/`completed`
+ * change. Nothing is written here.
+ */
+export const stagePmNotesPhaseEntry = (
+  text: string,
+  edit: PmNotesEntryEdit,
+): PmNotesStageResult => {
+  if (text.length > MAX_SOURCE_BYTES)
+    return { ok: false, parseFailure: { class: "syntax", location: "document" } };
+  try {
+    const document = parseDocument(text, {
+      version: "1.2",
+      schema: "core",
+      uniqueKeys: true,
+      merge: false,
+      logLevel: "silent",
+      prettyErrors: false,
+    });
+    if (document.errors.length > 0 || document.warnings.length > 0) {
+      return { ok: false, parseFailure: { class: "syntax", location: "document" } };
+    }
+    const phases = document.get("phases");
+    if (isMap(phases)) {
+      const existing = phases.get(edit.phaseId, true);
+      if (isMap(existing)) {
+        existing.set("completed", edit.operation === "complete" ? edit.timestamp : null);
+      } else {
+        phases.set(
+          edit.phaseId,
+          document.createNode({
+            started: edit.timestamp,
+            completed: edit.operation === "complete" ? edit.timestamp : null,
+          }),
+        );
+      }
+    }
+    return {
+      ok: true,
+      value: document.toJS({ maxAliasCount: MAX_ALIASES }),
+      text: String(document),
+    };
+  } catch {
+    return { ok: false, parseFailure: { class: "syntax", location: "document" } };
+  }
 };
 
 /** Production filesystem facts for the reader; node:fs stays in this adapter. */

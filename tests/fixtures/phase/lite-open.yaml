@@ -1,0 +1,13 @@
+---
+change_id: GH-179
+title: "phase fixture: lite variant with an open delivery phase"
+delivery_mode: interactive
+variant: lite
+phases:
+  clarify_scope: { started: "2026-10-31T01:00:00Z", completed: "2026-10-31T01:10:00Z" }
+  specification: { started: "2026-10-31T01:11:00Z", completed: "2026-10-31T01:20:00Z" }
+  delivery: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+notes: []

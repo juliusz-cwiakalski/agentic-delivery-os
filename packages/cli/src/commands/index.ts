@@ -11,3 +11,10 @@ export type {
   LintRegistryRead,
 } from "./lint.js";
 export { createLintCommandDefinition } from "./lint.js";
+export type {
+  PhaseCommandRuntime,
+  PhasePmNotesRead,
+  PhaseRegistryRead,
+  PhaseTransitionWrite,
+} from "./phase.js";
+export { createPhaseCommandDefinition } from "./phase.js";

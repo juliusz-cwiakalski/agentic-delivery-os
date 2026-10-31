@@ -1,11 +1,12 @@
 /**
- * TC-STATE-023 — the foundation story ships no CLI command, no configuration
- * import, and no caller beyond tests; the public port is exercisable entirely
- * through a synthetic consumer, and seeded violations prove the scan is live.
+ * TC-STATE-023 — the state tier has no configuration/branding import, and its
+ * consumers are confined to the documented GH-179 surface (the CLI edge and the
+ * phase command). Seeded violations prove the scan is live.
  */
 import { describe, expect, test } from "bun:test";
 import {
   appendFileSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -93,6 +94,37 @@ export const stateConfigViolations = (root: string): string[] => {
   return failures;
 };
 
+/**
+ * The documented GH-179 consumers (C-5, D3): the CLI edge composes the store and
+ * the phase command folds verified transitions. Every other package/file stays
+ * outside the state surface.
+ */
+export const STATE_CONSUMERS = [
+  "packages/cli/src/commands/phase.ts",
+  "packages/cli/src/edge.ts",
+] as const;
+
+export const stateConsumerFiles = (root: string): string[] => {
+  const found: string[] = [];
+  const packages = ["adapters", "cli", "mcp", "opencode", "testkit"];
+  for (const packageName of packages) {
+    if (!existsSync(join(root, `packages/${packageName}/src`))) continue;
+    const walk = (current: string): void => {
+      for (const entry of readdirSync(join(root, current), { withFileTypes: true })) {
+        const next = `${current}/${entry.name}`;
+        if (entry.isDirectory()) walk(next);
+        else if (entry.name.endsWith(".ts")) {
+          if (readFileSync(join(root, next), "utf8").includes("@delivery-os/core/state")) {
+            found.push(next);
+          }
+        }
+      }
+    };
+    walk(`packages/${packageName}/src`);
+  }
+  return found.sort();
+};
+
 export const cliStateCommandViolations = (root: string): string[] => {
   const failures: string[] = [];
   const commands = readFileSync(join(root, "packages/cli/src/commands/index.ts"), "utf8");
@@ -125,23 +157,8 @@ describe("TC-STATE-023 foundation scope", () => {
     expect(stateConfigViolations(ROOT)).toEqual([]);
   });
 
-  test("no state consumer exists outside the state tier and tests", () => {
-    const offenders: string[] = [];
-    const packages = ["adapters", "cli", "mcp", "opencode", "testkit"];
-    for (const packageName of packages) {
-      const walk = (current: string): void => {
-        for (const entry of readdirSync(join(ROOT, current), { withFileTypes: true })) {
-          const next = `${current}/${entry.name}`;
-          if (entry.isDirectory()) walk(next);
-          else if (entry.name.endsWith(".ts")) {
-            const text = readFileSync(join(ROOT, next), "utf8");
-            if (text.includes("@delivery-os/core/state")) offenders.push(next);
-          }
-        }
-      };
-      walk(`packages/${packageName}/src`);
-    }
-    expect(offenders).toEqual([]);
+  test("state consumers are exactly the documented GH-179 surface", () => {
+    expect(stateConsumerFiles(ROOT)).toEqual([...STATE_CONSUMERS].sort());
   });
 
   test("a synthetic consumer exercises every public operation without config or branding", () => {
@@ -200,6 +217,19 @@ describe("TC-STATE-023 foundation scope", () => {
       expect(violations.length).toBe(2);
     } finally {
       removeRoot(cliRoot);
+    }
+
+    const consumerRoot = cloneCommandRegistry();
+    try {
+      mkdirSync(join(consumerRoot, "packages/mcp/src"), { recursive: true });
+      writeFileSync(
+        join(consumerRoot, "packages/mcp/src/probe.ts"),
+        'export * from "@delivery-os/core/state";\n',
+      );
+      expect(stateConsumerFiles(consumerRoot)).toContain("packages/mcp/src/probe.ts");
+      expect([...STATE_CONSUMERS]).not.toContain("packages/mcp/src/probe.ts");
+    } finally {
+      removeRoot(consumerRoot);
     }
 
     const stateRoot = seedStateTier();

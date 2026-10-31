@@ -13,8 +13,11 @@ import {
   type FileSystemFacts,
   neutralEnvironmentFacts,
   nodeFileSystemFacts,
+  type PmNotesFileSystemFacts,
   type RuntimePlatform,
+  readPmNotesText,
   runtimePlatform,
+  stagePmNotesPhaseEntry,
 } from "@delivery-os/adapters/file";
 import { createLegacyCompat } from "@delivery-os/adapters/legacy";
 import {
@@ -36,6 +39,11 @@ import {
   type StateStorePort,
 } from "@delivery-os/core/contracts";
 import {
+  appendPhaseTransition,
+  readChangeTransitions,
+  replacePhaseProjection,
+} from "@delivery-os/core/state";
+import {
   type ConfigCommandRuntime,
   type ConfigResolvedSnapshot,
   createConfigCommandDefinition,
@@ -45,6 +53,7 @@ import {
   type LintCommandRuntime,
   type LintRegistryRead,
 } from "./commands/lint.js";
+import { createPhaseCommandDefinition, type PhaseCommandRuntime } from "./commands/phase.js";
 import type { CliDependencies, CommandDefinition, CommandFlags, CommandProgram } from "./index.js";
 
 const NEUTRAL_OVERRIDE_NAME = "DELIVERY_OS_WORKING_NAME";
@@ -87,6 +96,48 @@ export const createRegistryLintReader = (
   };
 };
 
+/** Compose the phase write path from injected I/O, state, and time facts. */
+export type PhaseRuntimeOptions = {
+  readonly store: StateStorePort;
+  readonly changesDirectory: string;
+  readonly fs: PmNotesFileSystemFacts;
+  readonly writeFile: (file: string, text: string) => void;
+  readonly nowIso: () => string;
+  readonly newFenceToken: () => string;
+};
+
+export const createPhaseCommandRuntime = (options: PhaseRuntimeOptions): PhaseCommandRuntime => ({
+  readPmNotes: (changeRef) =>
+    readPmNotesText({
+      changeRef,
+      changesDirectory: options.changesDirectory,
+      fs: options.fs,
+    }),
+  stageEntry: (text, edit) => stagePmNotesPhaseEntry(text, edit),
+  readRegistry: (changeRef) => {
+    const read = readChangeTransitions(options.store, changeRef);
+    if (!read.ok) return { ok: false, error: read.error };
+    return {
+      ok: true,
+      verifiedEmpty: read.value.verifiedEmpty,
+      transitions: read.value.transitions,
+      evidence: read.value.evidence,
+    };
+  },
+  appendTransition: (request) => appendPhaseTransition(options.store, request),
+  replaceProjection: (request) => replacePhaseProjection(options.store, request),
+  writePmNotes: (file, text) => {
+    try {
+      options.writeFile(file, text);
+      return { ok: true };
+    } catch {
+      return { ok: false, message: `failed to write ${file}` };
+    }
+  },
+  nowIso: options.nowIso,
+  newFenceToken: options.newFenceToken,
+});
+
 export type EdgeOptions = {
   readonly brand: BrandIdentity;
   readonly program: CommandProgram;
@@ -118,6 +169,7 @@ export type ConfigProgramOptions = {
   readonly resolveBrand?: (input: ResolverInput) => Result<BrandIdentity, BrandingInputError>;
   readonly warn?: (message: string) => void;
   readonly lint?: LintCommandRuntime;
+  readonly phase?: PhaseCommandRuntime;
 };
 
 export type ConfigProgramResult =
@@ -294,6 +346,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   };
   if (options.lint !== undefined) {
     commands.lint = createLintCommandDefinition(options.lint);
+  }
+  if (options.phase !== undefined) {
+    commands.phase = createPhaseCommandDefinition(options.phase);
   }
   return {
     ok: true,
