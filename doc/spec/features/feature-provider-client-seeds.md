@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The first real provider clients behind the primitive ports: GitLab, Jira, and a minimal GitHub read slice in the adapters package's per-provider subpaths, with normalized primitive views, honest capability/gap declarations, offline trap catalogs proven against sanitized hand-authored synthetic fixtures, credential-port-exclusive auth, declared custom-field and merge-status mappings, uniform absence semantics, bounded GitHub collection reads under the existing operations, and the reviewed runtime-API confinement admission."
 links:
-  related_changes: ["GH-188", "GH-175"]
+  related_changes: ["GH-188", "GH-175", "GH-189"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006"]
 ---
 
@@ -203,6 +203,7 @@ Shared adapter support modules under `src/io/` are imported by the provider seed
 | Type level | Optional/readonly `updatedAt` and `comments`; normalized-view assignability without provider-native types | `tests/types/workitem-updated-at.type-test.ts`, `tests/types/workitem-comments.type-test.ts`, `tests/types/provider-views.type-test.ts` through the root `typecheck` |
 | Checks | Fixture sanitization audit and planted-secret canary; secret-read boundary; boundary fixture coverage | `tests/checks/fixture-sanitization.test.ts`, `tests/checks/secret-read-boundary.test.ts`, `tests/boundaries/fixture-coverage.test.ts` |
 | Boundaries | Confinement admission and non-exempt negative controls; fixture-coverage registry | `tests/boundaries/boundaries.test.ts`, `tests/boundaries/fixtures/cases.ts`, `tests/boundaries/fixture-registry.json` |
+| Conformance | Three primitive flows against every shipped provider contract, capability-gated skips, exact-URL mock replay, structural/runtime coverage, and the broken-adapter control | `tests/conformance`, `tests/structure/conformance-coverage.test.ts`; see [adapter conformance suite](feature-adapter-conformance.md) |
 | Aggregate | The whole workspace | `pnpm check` |
 
 Evidence details are recorded in the change test plan at `doc/changes/2026-10/2026-10-31--GH-188--client-seeds-trap-catalogs/chg-GH-188-test-plan.md`.
@@ -219,15 +220,15 @@ Capability declarations and gap records are inspectable data. Trap failures name
 
 ### Maintenance
 
-Four surfaces grow deliberately: trap catalogs (new quirks join as four-field entries with fixtures; fixture references stay stable across re-authoring), the confinement allowance (further I/O claims are exact, reason-bearing reviewed extensions), capability declarations (a gap becomes supported only when its consuming story lands, with trap coverage extended in the same change), and collection reads (a list-shaped read stays a query-shaped form of an existing operation and extends the trap catalog in the same change). Fixtures age; scheduled live revalidation belongs to the conformance suite. A transport or implementation-basis swap behind the port boundary requires no consumer change.
+Four surfaces grow deliberately: trap catalogs (new quirks join as four-field entries with fixtures; fixture references stay stable across re-authoring), the confinement allowance (further I/O claims are exact, reason-bearing reviewed extensions), capability declarations (a gap becomes supported only when its consuming story lands, with trap coverage extended in the same change), and collection reads (a list-shaped read stays a query-shaped form of an existing operation and extends the trap catalog in the same change). Fixtures age; scheduled read-only live revalidation is delivered by the [adapter conformance suite](feature-adapter-conformance.md). A transport or implementation-basis swap behind the port boundary requires no consumer change.
 
 ## Dependencies & Risks
 
 - **Depends on** the monorepo scaffold for package tiers, subpath exports, boundary enforcement, and the aggregate check.
 - **Depends on** the adapter ports for the primitive contracts, capability/gap mechanism, credential port, and secret-read boundary.
 - **Depends on** the result contract for failure identity and the redaction chokepoint, and on the configuration and branding layers for injected environment facts and brand-neutral credential source keys.
-- **Consumed by** the status collector (including its bounded GitHub collection reads), verify-change gates, closeout, the conformance suite, and the full GitHub adapter.
-- **Risk — fixture drift:** hand-authored fixtures can diverge from live provider behavior. Mitigation: dated provenance, stable references, and scheduled live revalidation in the conformance suite.
+- **Consumed by** the status collector (including its bounded GitHub collection reads), verify-change gates, closeout, the [adapter conformance suite](feature-adapter-conformance.md), and the full GitHub adapter.
+- **Risk — fixture drift:** hand-authored fixtures can diverge from live provider behavior. Mitigation: dated provenance, stable references, and the scheduled read-only live revalidation delivered by the [adapter conformance suite](feature-adapter-conformance.md).
 - **Risk — sanitization miss:** a committed fixture could leak a secret or personal data. Mitigation: declared placeholders, example-only hosts, a committed sanitization audit, and a planted-secret canary.
 - **Risk — catalog rot:** a catalog can look complete while its assertions stop firing. Mitigation: bidirectional entry↔assertion coverage, a negative control that names the failing entry, and per-provider minima.
 - **Risk — allowlist creep:** provider I/O could widen beyond the admitted subpaths. Mitigation: exact reason-bearing entries, registry/`azure`/`ci` negative controls, and a guard that rejects pattern widening.

@@ -1,0 +1,61 @@
+name: Conformance (live evidence)
+
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version-file: .bun-version
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Run live conformance
+        env:
+          CONFORMANCE_LIVE_GITHUB_BASE_URL: ${{ vars.CONFORMANCE_LIVE_GITHUB_BASE_URL }}
+          CONFORMANCE_LIVE_GITHUB_OWNER: ${{ vars.CONFORMANCE_LIVE_GITHUB_OWNER }}
+          CONFORMANCE_LIVE_GITHUB_REPO: ${{ vars.CONFORMANCE_LIVE_GITHUB_REPO }}
+          CONFORMANCE_LIVE_GITHUB_ISSUE_NUMBER: ${{ vars.CONFORMANCE_LIVE_GITHUB_ISSUE_NUMBER }}
+          CONFORMANCE_LIVE_GITHUB_PULL_NUMBER: ${{ vars.CONFORMANCE_LIVE_GITHUB_PULL_NUMBER }}
+          CONFORMANCE_LIVE_GITHUB_COMMIT_SHA: ${{ vars.CONFORMANCE_LIVE_GITHUB_COMMIT_SHA }}
+          CONFORMANCE_LIVE_GITLAB_BASE_URL: ${{ vars.CONFORMANCE_LIVE_GITLAB_BASE_URL }}
+          CONFORMANCE_LIVE_GITLAB_PROJECT_PATH: ${{ vars.CONFORMANCE_LIVE_GITLAB_PROJECT_PATH }}
+          CONFORMANCE_LIVE_GITLAB_MR_IID: ${{ vars.CONFORMANCE_LIVE_GITLAB_MR_IID }}
+          CONFORMANCE_LIVE_GITLAB_COMMIT_SHA: ${{ vars.CONFORMANCE_LIVE_GITLAB_COMMIT_SHA }}
+          CONFORMANCE_LIVE_JIRA_BASE_URL: ${{ vars.CONFORMANCE_LIVE_JIRA_BASE_URL }}
+          CONFORMANCE_LIVE_JIRA_ISSUE_KEY: ${{ vars.CONFORMANCE_LIVE_JIRA_ISSUE_KEY }}
+          CONFORMANCE_LIVE_GITHUB_TOKEN: ${{ secrets.CONFORMANCE_LIVE_GITHUB_TOKEN }}
+          CONFORMANCE_LIVE_GITLAB_TOKEN: ${{ secrets.CONFORMANCE_LIVE_GITLAB_TOKEN }}
+          CONFORMANCE_LIVE_JIRA_TOKEN: ${{ secrets.CONFORMANCE_LIVE_JIRA_TOKEN }}
+        run: bun run tests/conformance/live/run-live.ts --out "$RUNNER_TEMP/conformance-live.json"
+
+      - name: Upload conformance artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: conformance-live
+          path: ${{ runner.temp }}/conformance-live.json
+          retention-days: 90
+          if-no-files-found: error

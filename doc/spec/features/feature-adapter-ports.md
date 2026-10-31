@@ -6,16 +6,12 @@ created: 2026-10-30
 last_updated: 2026-10-31
 owners: ["engineering"]
 service: delivery-os
-summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the binding secret-read boundary invariant, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec, required injected content policy, fail-closed content-policy failure, and visible graceful degradation."
+summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec, required injected content policy, fail-closed content-policy failure, and visible graceful degradation."
 links:
-  related_changes: ["GH-174", "GH-179", "GH-181", "GH-184", "GH-188"]
+  related_changes: ["GH-174", "GH-179", "GH-181", "GH-182", "GH-184", "GH-188", "GH-189"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/envelope.ts"
-summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec and visible graceful degradation."
-links:
-  related_changes: ["GH-174", "GH-179", "GH-181", "GH-188", "GH-182"]
-  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006"]
 ---
 
 # Feature: Adapter Ports, Credential Resolution, and Embedded Metadata
@@ -30,7 +26,7 @@ Secret acquisition is centralized behind one `CredentialPort` in core. A caller 
 
 The embedded metadata envelope v1 is a versioned data contract in core `./contracts` (`delivery.metadata.v1`). Its pure codec — serialize, parse, strip — is an adapter-internal shared module. The envelope travels in an adapter-declared carrier, round-trips with logical payload equality, and degrades visibly instead of failing when metadata is absent, malformed, of the wrong kind, or of an unknown version. Serialization requires an injected, pure content policy and fails closed with `content-policy-violation` when that policy denies the exact payload JSON.
 
-The surrounding workspace is described in [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md); the provider engine that consumes the credential port for quota authorization in [Provider Engine](feature-provider-engine.md); the client seeds that consume this substrate in [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md); the failure identity and redaction boundary in [Result Contract and Error Table](feature-result-contract.md); environment-only secrets and configuration acquisition in [Configuration Layer and Inspection](feature-config-layer.md); brand-derived values in [Branding Seam and Working Name](feature-branding-seam.md). Package placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md). The harness adapter contract is recorded in [ADR-0008](../../decisions/ADR-0008-harness-adapter-contract.md) and implemented in M1-S11.
+The surrounding workspace is described in [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md); the provider engine that consumes the credential port for quota authorization in [Provider Engine](feature-provider-engine.md); the client seeds that consume this substrate in [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md); the provider-agnostic flow suite that proves them in [Adapter Conformance Suite](feature-adapter-conformance.md); the failure identity and redaction boundary in [Result Contract and Error Table](feature-result-contract.md); environment-only secrets and configuration acquisition in [Configuration Layer and Inspection](feature-config-layer.md); brand-derived values in [Branding Seam and Working Name](feature-branding-seam.md). Package placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md). The harness adapter contract is recorded in [ADR-0008](../../decisions/ADR-0008-harness-adapter-contract.md) and implemented in M1-S11.
 
 ## Business Context
 

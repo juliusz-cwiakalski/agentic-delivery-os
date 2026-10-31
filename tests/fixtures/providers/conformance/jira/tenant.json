@@ -1,0 +1,166 @@
+{
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "provider": "jira",
+  "adapterName": "jira",
+  "instance": {
+    "instanceName": "jira",
+    "systemKind": "tracker",
+    "baseUrl": "https://jira.example.com",
+    "authMethod": {
+      "mechanism": "credential-reference",
+      "reference": {
+        "referenceName": "conformance-mock-jira",
+        "sourceKey": {
+          "style": "literal",
+          "name": "CONFORMANCE_LIVE_JIRA_TOKEN"
+        }
+      }
+    }
+  },
+  "credentialReferenceName": "conformance-mock-jira",
+  "addressing": {
+    "provider": "jira",
+    "issueKey": "TRACK-101"
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "url": "https://jira.example.com/rest/api/2/issue/TRACK-101",
+      "status": 200,
+      "body": {
+        "id": "10001",
+        "key": "TRACK-101",
+        "self": "https://jira.example.com/rest/api/2/issue/10001",
+        "fields": {
+          "summary": "Seed the tracker collector read slice",
+          "status": {
+            "name": "In Progress"
+          },
+          "labels": ["tracker", "hand-back"],
+          "assignee": {
+            "displayName": "owner-placeholder",
+            "accountId": "acct-0001"
+          },
+          "updated": "2026-10-28T09:15:00.000+0000",
+          "comment": {
+            "comments": [
+              {
+                "id": "c-1",
+                "author": {
+                  "displayName": "person-placeholder",
+                  "accountId": "acct-0002"
+                },
+                "body": "Starting the read slice."
+              }
+            ]
+          },
+          "issuelinks": [
+            {
+              "type": {
+                "name": "Blocks",
+                "inward": "is blocked by",
+                "outward": "blocks"
+              },
+              "outwardIssue": {
+                "id": "10002",
+                "key": "TRACK-102"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "change-lifecycle.read-work-item": {
+      "identity": {
+        "systemName": "jira",
+        "entityId": "TRACK-101"
+      },
+      "title": "Seed the tracker collector read slice",
+      "status": {
+        "nativeStatus": "In Progress",
+        "deliveryState": "in-progress"
+      },
+      "labels": ["tracker", "hand-back"],
+      "assignee": "owner-placeholder",
+      "relations": [
+        {
+          "relationKind": "blocks",
+          "target": {
+            "systemName": "jira",
+            "entityId": "TRACK-102"
+          }
+        }
+      ],
+      "comments": [
+        {
+          "commentId": "c-1",
+          "authorAccount": "person-placeholder",
+          "body": "Starting the read slice."
+        }
+      ],
+      "updatedAt": "2026-10-28T09:15:00.000+0000"
+    },
+    "comment-provenance.read-comments": {
+      "identity": {
+        "systemName": "jira",
+        "entityId": "TRACK-101"
+      },
+      "title": "Seed the tracker collector read slice",
+      "status": {
+        "nativeStatus": "In Progress",
+        "deliveryState": "in-progress"
+      },
+      "labels": ["tracker", "hand-back"],
+      "assignee": "owner-placeholder",
+      "relations": [
+        {
+          "relationKind": "blocks",
+          "target": {
+            "systemName": "jira",
+            "entityId": "TRACK-102"
+          }
+        }
+      ],
+      "comments": [
+        {
+          "commentId": "c-1",
+          "authorAccount": "person-placeholder",
+          "body": "Starting the read slice."
+        }
+      ],
+      "updatedAt": "2026-10-28T09:15:00.000+0000"
+    },
+    "label-semantics.read-labels": {
+      "identity": {
+        "systemName": "jira",
+        "entityId": "TRACK-101"
+      },
+      "title": "Seed the tracker collector read slice",
+      "status": {
+        "nativeStatus": "In Progress",
+        "deliveryState": "in-progress"
+      },
+      "labels": ["tracker", "hand-back"],
+      "assignee": "owner-placeholder",
+      "relations": [
+        {
+          "relationKind": "blocks",
+          "target": {
+            "systemName": "jira",
+            "entityId": "TRACK-102"
+          }
+        }
+      ],
+      "comments": [
+        {
+          "commentId": "c-1",
+          "authorAccount": "person-placeholder",
+          "body": "Starting the read slice."
+        }
+      ],
+      "updatedAt": "2026-10-28T09:15:00.000+0000"
+    }
+  }
+}

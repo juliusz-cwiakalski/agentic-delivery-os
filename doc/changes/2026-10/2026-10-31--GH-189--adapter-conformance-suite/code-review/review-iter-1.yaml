@@ -1,0 +1,279 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-189
+branch: feat/GH-189/adapter-conformance-suite
+status: PASS
+summary: >-
+  First local review iteration of GH-189 (feat/GH-189/adapter-conformance-suite vs origin/main-tools,
+  22 commits, 45 files, +10067/-17). The delivery implements the M0-S20 conformance suite with real,
+  non-vacuous evidence: exactly three flows and twelve steps cover all seven closed ADAPTER_OPERATIONS,
+  the GitHub/GitLab/Jira contracts are the sole registry participants, capability-gated skips carry the
+  exact declared gap reasons, exact-URL mock tenants replay through the production clients with a
+  throwing-fetch zero-call guard and a double-replay determinism proof, the deliberately broken adapter
+  control fails by provider/flow/step/assertion while the unmodified client passes, the
+  delivery.conformance.v1 artifact validator enforces shape/closed sets/caps/redaction, and the read-only
+  live composition writes one valid artifact for passed/failed/not-configured with exit 0/1/0 and records
+  mutationRequests=0/createdArtifacts=0. The scheduled workflow is trigger/permission/pin/secret/upload
+  correct with no PR trigger and a .bun-version-resolved Bun pin. Protected paths are untouched
+  (packages/core/**, packages/adapters/** production, ci.yml byte-identical, ci-checks.test.ts,
+  secret-read-boundary.ts), the secret-read allowlist is exactly four, testkit source has no node:*
+  import or ambient time/random/env access, and fixtures are provenance-marked, example-host-only and
+  placeholder-clean. The reviewer independently re-ran pnpm check (1731 pass / 2 skip / 0 fail across
+  155 files; depcruise 125 modules; secret-read 106 files / 4 allowlisted; exports-parity 5 publishables),
+  bun test tests/conformance (77), tests/structure (289), tests/checks (338), tests/boundaries (133),
+  every listed scripts/checks invariant, doc-distribution and the ci.yml byte-diff. Remaining findings are
+  low/info only: a partial-configuration missing-name reporting inaccuracy in the live entrypoint (the
+  no-tenant AC case is correct), a missing positive control for the primitive-purity invariant, two
+  weak/vacuous controls, a too-weak request-URL diagnostic assertion, and small diagnostic/counter/scope
+  nits. No blocker or major findings; all 22 spec ACs and 3 ticket ACs have passed, traceable evidence.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 5
+  info: 4
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: tests/conformance/live/run-live.ts:201
+    message: >-
+      For every provider classified `not-configured`, the live entrypoint builds `missingSettings` from the
+      full documented name set (`PROVIDER_LIVE_SETTINGS[provider]` plus the token key) instead of the
+      actually-missing names carried by `readLiveConfig` (`entry.missingSettings`). A provider missing only
+      one non-secret setting therefore reports all 7/5/3 names — including settings that are present and a
+      present token key — which contradicts "missing variable names only" (spec §10, DEC-12) and can mislead
+      the operator who uses the artifact to provision tenants. The no-tenant / present-but-empty /
+      whitespace AC-F7-2 cases are still correct because every name really is missing there.
+    suggestion: >-
+      Use `missingSettings: [...entry.missingSettings]` for not-configured providers. TC-CONF-021 step 6
+      currently blesses "exactly its 7 names" after blanking one setting, so either update that expectation
+      to the single missing name (and clarify spec §22) or, if the full required-name set is the intended
+      contract, rename/document the field as "required-not-yet-satisfied names" and align spec/DEC-12.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: test-coverage
+    location: tests/conformance/mock-conformance.test.ts:724
+    message: >-
+      The primitive-purity invariant ("no provider-native key appears on a normalized view") is only
+      asserted negatively: the GitHub matrix asserts `failure?.assertion === "primitive-purity"` is absent,
+      but no control injects a native key (for example `html_url`, `fields`, `web_url`) and proves the
+      runner's `nativeKeyPaths` check fires. In mock mode a leaked native key is also caught by the exact
+      expected-projection comparison, but in live mode there is no projection comparison, so the purity
+      assertion is the only guard and it is never shown to be non-vacuous.
+    suggestion: >-
+      Add a test-only control that returns a normalized WorkItem/DeliveryRequest carrying a forbidden
+      native key and assert the step fails with assertion `primitive-purity` naming the offending path.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: low
+    confidence: high
+    category: test-quality
+    location: tests/conformance/live/live-entrypoint.test.ts:508
+    message: >-
+      The test "the config reader and token names stay out of packages/*/src" is vacuous: it iterates
+      `listSourceFiles("packages")` and only asserts each path starts with "packages/", which is true by
+      construction. It provides no evidence for its title; the preceding test ("no production source imports
+      the live config reader") is the meaningful check.
+    suggestion: Drop the redundant test, or replace it with an assertion that every scanned source file
+      lacks the reader import and the CONFORMANCE_LIVE_ token names (without the tautological prefix check).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: low
+    confidence: high
+    category: test-quality
+    location: tests/conformance/live/live-entrypoint.test.ts:250
+    message: >-
+      TC-CONF-020 step 6 ("skip the writer on failure; assert the test fails naming the missing artifact")
+      is not implemented as a control. The test builds an empty local `noArtifacts` array and asserts that
+      reading its first element throws "missing artifact"; it never invokes `runLive` with a writer that
+      skips on failure. The real write-in-every-status guarantee is covered by the status-matrix tests, but
+      this specific control is self-fulfilling.
+    suggestion: >-
+      Implement the control by calling `runLive` with a failure-triggering transport and a writer that does
+      not record, then assert the artifact-presence check fails (or reframe the test plan to rely on the
+      status-matrix tests only).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: low
+    confidence: medium
+    category: test-coverage
+    location: tests/conformance/mock-conformance.test.ts:541
+    message: >-
+      TC-CONF-006 step 6 and TC-CONF-015 step 3 require the failure to name the request URL/method, but the
+      unfixtured-request tests only assert the fixture transport recorded the URL; the runner's failure
+      reference is `tenant:<provider>:<step>` and the client's transport-error detail is
+      "GitHub request failed (Error)", so the diagnostic does not actually carry the URL/method. The spec's
+      looser "fixture reference or request descriptor" wording is still satisfied, which is why this is
+      low severity, but the stricter test-plan assertion is not verified.
+    suggestion: >-
+      Include the request descriptor (method + URL) in the failed step's failure reference/detail, or soften
+      the test-plan wording to "the fixture transport records the request URL" so the evidence matches the
+      claim.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: info
+    confidence: high
+    category: diagnostics
+    location: tests/conformance/live/run-live.ts:229
+    message: >-
+      The synthetic non-GET guard always attributes the guard step to `providers[0]` and hardcodes
+      `operation: "read-work-item"`, so a non-GET recorded for a non-first provider would be misattributed.
+      This is unreachable in production (ProviderRequest.method is typed "GET" and live v1 never dispatches
+      a non-read step); it only affects the test-only `recordedRequests` seam.
+    suggestion: >-
+      Optional hardening for a future write tier: record provider association in the recording transport and
+      attribute the guard failure to the actual provider/operation.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: info
+    confidence: high
+    category: scope
+    location: doc/spec/features/feature-adapter-ports.md:10
+    message: >-
+      Plan P8.3 describes the feature-adapter-ports update as "cross-reference only", but the diff also
+      removes a duplicate `summary:`/`links:` frontmatter block and adjusts the surviving summary. The
+      cleanup is correct (the base frontmatter had duplicate keys) and all doc gates pass; it is recorded
+      only as a scope deviation from the plan wording.
+    suggestion: Optional — note the frontmatter de-duplication in the plan revision log, or reword P8.3 to
+      "cross-reference plus frontmatter cleanup".
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: info
+    confidence: high
+    category: test-quality
+    location: tests/conformance/live/live-entrypoint.test.ts:440
+    message: >-
+      "both mutation counters are present in every status" asserts only `typeof ... === "number"`. Zero is
+      asserted for the passed (TC-CONF-023) and failed (TC-CONF-022) paths, but the not-configured path's
+      counters are not pinned to 0 even though strict teardown requires zero in every status.
+    suggestion: Optional — assert `mutationRequests` and `createdArtifacts` are exactly 0 for all three
+      statuses (or fold the not-configured case into the existing 0/0 assertions).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-9
+    severity: info
+    confidence: high
+    category: code-quality
+    location: tests/conformance/live/run-live.ts:303
+    message: >-
+      The process wrapper passes `createRecordingTransport(createNativeFetchTransport())` as the transport
+      factory, and `runLive` wraps the factory result in another `createRecordingTransport`. The inner
+      recorder is unused (the outer recorder supplies `records`), so every live request is recorded twice.
+      Harmless, but redundant.
+    suggestion: Optional — pass `createNativeFetchTransport` directly from the process wrapper and let
+      `runLive` own the single recording wrapper.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-10-31T19:45:26Z
+next_step: PROCEED
+verification_evidence:
+  change_shape:
+    - "git diff --stat origin/main-tools...HEAD -> 45 files, +10067/-17; delivery commits 51c7b70..5d8b4ac plus planning commits."
+    - "git status --porcelain before/after review -> only the pre-existing PM-notes review_fix bookkeeping line (M chg-GH-189-pm-notes.yaml); no source/test/fixture/workflow change from this review."
+  protected_paths:
+    - "git diff --exit-code $(git merge-base HEAD origin/main-tools) -- .github/workflows/ci.yml tests/checks/ci-checks.test.ts scripts/checks/secret-read-boundary.ts packages/core packages/adapters -> exit 0 (empty)."
+    - "No pnpm-lock.yaml or package.json manifest change; yaml@2.9.1 was already a devDependency; zero new dependencies."
+  suites_rerun_by_reviewer:
+    - "pnpm build -> exit 0 (all six packages)."
+    - "bun test tests/conformance -> 77 pass / 0 fail across 4 files (946 expect calls); run-live.ts is not discovered as a suite."
+    - "bun test tests/structure -> 289 pass / 0 fail across 34 files."
+    - "bun test tests/checks -> 338 pass / 0 fail across 30 files."
+    - "bun test tests/boundaries -> 133 pass / 0 fail across 2 files."
+    - "bun test tests/checks/{fixture-sanitization,secret-read-boundary,conformance-workflow}.test.ts -> 32 pass / 0 fail."
+    - "/usr/bin/time -f '%e s' bun test tests/conformance/mock-conformance.test.ts -> 33 pass / 0 fail; measured 0.06 s (budget 60 s)."
+    - "pnpm check -> exit 0: lint + format + typecheck, 1731 pass / 2 skip / 0 fail across 155 files, depcruise 125 modules / no violations, ambient-globals OK, workspace-entrypoints OK, secret-read-boundary OK (106 files, exactly 4 allowlisted), exports-parity 5 publishables."
+  checks_rerun_by_reviewer:
+    - "bun run scripts/checks/secret-read-boundary.ts -> OK, 4 allowlisted entries (0 growth), no testkit entry."
+    - "bun run scripts/checks/workspace-entrypoints.ts -> OK (declarations match DEC-2, all edges resolve)."
+    - "bun run scripts/checks/ci-topology.ts -> OK (7 bash jobs, 16 TS jobs, no conformance job)."
+    - "bun run scripts/checks/ci-bindingness.ts -> OK (no advisory/bypass constructs)."
+    - "bun run scripts/checks/ci-supply-chain.ts -> OK (ts- actions SHA-pinned, least privilege)."
+    - "bun run scripts/checks/testkit-exclusion.ts -> OK (testkit dev-only, absent from published graph)."
+    - "bun run scripts/checks/privacy-literals.ts -> OK (1330 files, 0 violations)."
+    - "bun run scripts/checks/forbidden-literals.ts -> OK (new feature spec registered, body free of seed literal)."
+    - "bun run scripts/checks/license-audit.ts -> OK."
+    - "bash scripts/.tests/test-doc-distribution.sh -> OK (81 in-scope docs, no drift)."
+    - "git diff --check -> exit 0."
+  security_boundary_evidence:
+    - "grep packages/testkit/src -> no node:/bun: import in conformance modules; no process.env/Bun.env/Date.now/new Date()/Math.random in testkit conformance source."
+    - "tests/conformance/live/config.ts reads environment[tokenKey] only through hasValue(); the token value is never stored/returned/logged/emitted; authorization resolves only through adapters ./credentials."
+    - "tests/conformance/live/run-live.ts composes createProcessCredentialPort; literal CredentialReferences make the CONFORMANCE_ prefix inert."
+    - "fixture-sanitization: three conformance tenants under tests/fixtures/providers/**, provenance 'hand-authored-synthetic 2026-10-31', example-only hosts (github/gitlab/jira.example.com), declared placeholders only; zero findings."
+    - "conformance-live.yml: schedule '17 5 * * 1' + workflow_dispatch only (no pull_request/push), workflow+job contents: read, 40-hex pins for checkout/setup-bun/action-setup/upload-artifact, token secrets only in the live step env, if: always() only on upload, if-no-files-found: error, retention-days 90, timeout-minutes 10, bun-version-file: .bun-version."
+    - "exit codes: runLive returns 0 for passed/not-configured and 1 for failed; artifact written exactly once in every terminal status."
+    - "mutationRequests counts non-GET records; createdArtifacts is 0; live v1 executes read steps only (supported non-read => live-read-only deferral; unsupported => declared gap)."
+  fixture_evidence:
+    - "github tenant routes: /repos/{owner}/{repo}/issues/601, /pulls/504, /commits/{sha}/check-runs?per_page=20; expected projections for all 5 executed read steps."
+    - "gitlab tenant routes: /api/v4/projects/project-placeholder/merge_requests/42, /pipelines?sha=a1b2...; expected for read-delivery-request and read-pipeline-run."
+    - "jira tenant route: /rest/api/2/issue/TRACK-101; expected for read-work-item, comment-provenance.read-comments, label-semantics.read-labels (present comment set, labels, relations, +0000 updatedAt)."
+ac_trace:
+  AC-F1-1: "PASS — tests/structure/conformance-coverage.test.ts: exact 3 flows / 12 ordered steps, unique ids, closed-operation membership, all 7 operations; empty/4th-flow/duplicate/unknown/removed mutations fail."
+  AC-F1-2: "PASS — mock-conformance.test.ts GitHub (3 reads + 2 comment/label read-work-item steps), GitLab (MR + pipelines), Jira (3 work-item reads); write steps capability-gated with declared reasons."
+  AC-F2-1: "PASS — supported operations execute with primitive assertions; unsupported operations skip with exact declared gap reason; undeclared unsupported operation throws naming provider/flow/step/operation."
+  AC-F2-2: "PASS — undeclared op fails closed; lost only executed step, stale declared gap, and failed-step-counted-as-passed mutations each fail by provider/operation."
+  AC-F2-3: "PASS — present Jira comments vs absent GitHub comments; carrier step is declared-gap skip on all shipped adapters; empty-carrier control records no-declared-carrier (capability-absent) while change-lifecycle.comment executes; carrier-declaring control executes the roundtrip."
+  AC-F3-1: "PASS — declaration-only scan finds exactly 3 provider contracts from 3 files; new example declaration and dangling registration fail by source/adapter; index.ts re-export and non-provider modules do not false-positive."
+  AC-F3-2: "PASS — registry is exactly github/gitlab/jira, each contract adapterName matches, no writeHandler in production; wrong-contract and azure controls fail by name."
+  AC-F4-1: "PASS — exact-URL replay; near-miss query string fails; unfixtured request fails; throwing-fetch guard observed 0 calls; every mock request is GET and in the declared route set."
+  AC-F4-2: "PASS — double replay deep-equal with injected clock/runId; failing diagnostics byte-identical; only runId differs across run ids; live artifacts identical from identical injected inputs."
+  AC-F4-3: "PASS — fixture-sanitization.test.ts (within the 338-pass checks battery): conformance tenants have provenance, example-only hosts, declared placeholders, zero findings; audit is read-only."
+  AC-F5-1: "PASS — structural coverage complete for all three adapters; runtime coverage non-vacuous (executed step + encountered gap per adapter); removing supported/gap steps, carrier step, or all adapters fails by name."
+  AC-F5-2: "PASS — broken-adapter-control corrupts GitHub WorkItem title (and label-semantics labels); run fails naming github/change-lifecycle/read-work-item/expected-projection; unmodified client passes the same flow."
+  AC-F6-1: "PASS — mock suite rides the existing bun test/pnpm test path (77 conformance tests; aggregate 1733 tests across 155 files); ts-test/ts-aggregate topology unchanged."
+  AC-F6-2: "PASS — no new ci.yml job and ci.yml is byte-unchanged; ci-topology/ci-bindingness/ci-supply-chain and tests/checks/ci-checks.test.ts all green; a covered-flow break fails via the broken-adapter/coverage controls in the existing test path."
+  AC-F7-1: "PASS — live status matrix writes exactly one valid delivery.conformance.v1 artifact for passed/failed/not-configured; spawned entrypoint with unset names exits 0 and writes a valid artifact."
+  AC-F7-2: "PASS — absent, present-but-empty (GitHub Actions shape), and whitespace-only environments are all not-configured, exit 0, 15 missing names (7/5/3), zero credential lookups, zero provider requests; blanking one GitHub setting demotes only GitHub."
+  AC-F7-3: "PASS — configured GitHub failure => overall failed, exit 1, artifact written, GitLab/Jira not-configured, no write step executed, no ticket; counters 0/0."
+  AC-F7-4: "PASS — conformance-workflow.test.ts (8 tests, 28 assertions): only schedule+workflow_dispatch, cron 17 5 * * 1, least privilege, 40-hex pins, secrets scoped to the live step, if: always() only on upload with if-no-files-found: error, --out == upload path, timeout 10, Bun from .bun-version, no ticket; every mutation control fails by location."
+  AC-F7-5: "PASS — config reader retains non-secret settings + occupancy + credential reference only; token value absent from config/artifact/diagnostics/errors; secret-read allowlist exactly 4 with no testkit entry; testkit node:* boundary fixture and planted testkit env-read cases fire; no packages/*/src import of the reader."
+  AC-F8-1: "PASS — artifact schema/required fields/closed statuses/ISO timestamps; provider-flow summaries without steps; canonical flows[] with nested steps; flat steps[] index; closed skipKind; 256 KiB and count caps with observed counts; truncation marker; canaries/header/raw-payload rejected; non-scalar expected/received rejected."
+  AC-F9-1: "PASS — all live requests GET; synthetic POST fails naming method/URL and records mutationRequests 1 in the control; production counters 0/0 in every status; mock tier reaches no network."
+  AC-F10-1: "PASS — failed diagnostics carry provider/flow/step/operation/assertion, scalar expected/received, fixture reference, bounded detail; canary token/email/avatar/raw-payload/Authorization absent; canary credential absent from report and thrown error; injected raw marker detectable."
+  ticket_AC_1: "PASS — GitHub/GitLab/Jira mock suite green (77 tests) under the existing pnpm test path; declared-gap skips are green only when declared; no new CI job."
+  ticket_AC_2: "PASS — weekly/dispatch conformance-live.yml writes and uploads one valid delivery.conformance.v1 artifact in every terminal status; not-configured exits 0; if-no-files-found: error."
+  ticket_AC_3: "PASS — broken-adapter control and structural/runtime coverage gates fail by provider/flow/step/operation inside the existing test battery; ci.yml unchanged and topology/bindingness/supply-chain green."
+plan_task_audit:
+  OPEN_TASKS: >-
+    None in the plan: all 44 P1-P8 tasks are checked (- [x]); test-plan §10 evidence population remains a
+    PM/test-plan-owner handoff per P8.1 (the coder was told not to edit the test plan) and the plan's own
+    Execution Log plus P8 evidence matrix carry the actual command results.
+  DONE_BUT_UNCHECKED: none
+  CHECKED_BUT_MISSING: none
+  DEVIATIONS:
+    - "Changeset delivered in P4 instead of P8.4 — explicitly documented and justified (the release guard requires exactly one added changeset for pnpm test); the changeset is a five-package minor fixed group matching version_impact: minor."
+    - "P8.3 feature-adapter-ports update is cross-reference plus a duplicate-frontmatter de-duplication (F-7, info); correct cleanup, minor scope wording deviation."
+    - "P8.1 evidence handoff: test-plan §10 is empty by design; the plan Execution Log and P8 matrix are populated and independently reproduced by this review."
+test_coverage_gaps:
+  - "Primitive invariant families (title/status/labels/relations/comments/review-state/job-state/trace-evidence/primitive-purity) lack positive mutation controls; mock failures are exercised through expected-projection equality, and primitive-purity has no firing control (F-2)."
+  - "TC-CONF-020 step 6 live missing-writer control is self-fulfilling rather than a real composition control (F-4)."
+  - "TC-CONF-006 step 6 / TC-CONF-015 step 3 request-URL-in-message assertion is weaker than the test plan claims (F-5)."
+  - "Not-configured mutation counters are typed but not pinned to 0 (F-8, info)."
+recommended_non_blocking_remediation:
+  - "F-1: report actual entry.missingSettings (and align TC-CONF-021 step 6 + spec §22/DEC-12 wording), OR document that missingSettings is the not-yet-satisfied required-name set."
+  - "F-2: add a native-key injection control asserting a primitive-purity failure."
+  - "F-3: remove/replace the tautological packages/*/src test."
+  - "F-4: implement a real skip-the-writer-on-failure control or rely explicitly on the status-matrix tests."
+  - "F-5: put the request descriptor into the failed-step reference/detail or soften the test-plan wording."

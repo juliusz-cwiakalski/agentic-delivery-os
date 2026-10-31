@@ -23,7 +23,7 @@ Canonical testing strategy for this repository. Use this file as the default rul
    - `tools/`: run `bash tools/.tests/test-<tool-name>.sh`.
    - `scripts/`: run `bash scripts/.tests/test-<script-name>.sh`.
 4. **TypeScript workspace checks (when TS changes)**
-   - Runner: `bun test` (or `pnpm test`) for `tests/**/*.test.ts` — structure, boundaries, behaviour, and checks suites. Fixtures are never named `*.test.ts`, so temporary workspaces are not discovered as suites.
+   - Runner: `bun test` (or `pnpm test`) for `tests/**/*.test.ts` — structure, boundaries, behaviour, checks, and the provider `tests/conformance` suite. Fixtures are never named `*.test.ts`, so temporary workspaces and the `tests/conformance/live/run-live.ts` entrypoint are not discovered as suites.
    - Repository invariants: `bun run scripts/checks/*.ts` must exit non-zero and name the offending field; `tests/checks/**` mutation-tests them.
    - Boundaries: `check:boundaries` chains `depcruise packages` → the ambient-globals AST guard → `scripts/checks/workspace-entrypoints.ts` (declared `workspaceImports` edges and undeclared package-name imports). `bun test tests/boundaries` runs every negative fixture in a temporary workspace against the production `.dependency-cruiser.cjs`; fixture manifests export `dist` targets with `dist` materialized, so package-name probes mirror production resolution. The fixture-coverage meta-check fails any rule without a failing fixture.
    - Aggregate: `pnpm check` is the single entry point (`lint → format:check → typecheck → test → check:boundaries`). Prefer it for final verification; use the narrow suites while iterating.
@@ -35,6 +35,8 @@ Canonical testing strategy for this repository. Use this file as the default rul
 - `tools/<tool>` → corresponding `tools/.tests/test-<tool>.sh`.
 - `scripts/<script>.sh` → corresponding `scripts/.tests/test-<script>.sh`.
 - `packages/**` → `bun test tests/structure tests/behaviour`, the boundary suite, and `pnpm typecheck`.
+- `packages/testkit/src/conformance/**` → `bun test tests/structure/conformance-coverage.test.ts` and `bun test tests/conformance`; the mock tier rides the existing `pnpm test` path (no new CI job).
+- `tests/conformance/**` and the scheduled live workflow → `bun test tests/conformance`, `bun test tests/checks/conformance-workflow.test.ts`, and the documented live entrypoint invocation.
 - `scripts/checks/<check>.ts` → `bun run scripts/checks/<check>.ts` plus the matching `tests/checks/**` mutation tests.
 - `.dependency-cruiser.cjs` or any boundary rule → `bun test tests/boundaries` (including the fixture-coverage meta-check).
 - `packages/*/package.json` `workspaceImports` or any declared cross-package edge → `bun run scripts/checks/workspace-entrypoints.ts` (part of `check:boundaries`) plus the boundary suite.

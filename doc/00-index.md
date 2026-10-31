@@ -15,6 +15,7 @@ ados_distribution: redistributable
 | [ADOS Processes Map](guides/ados-processes.md) | Canonical map of ADOS's six processes — start here for the big picture |
 | [Overview](overview/) | North star, roadmap, architecture, glossary |
 | [System Spec](spec/) | Current truth — feature specs, API descriptions, NFRs |
+| [Adapter Conformance Suite](spec/features/feature-adapter-conformance.md) | The three provider-agnostic flows, capability-gated skips, coverage gates, `delivery.conformance.v1` artifact, and the scheduled read-only live tier |
 | [Status Digest](spec/features/feature-status-digest.md) | The read-only six-section delivery digest, its evidence states, bounds, and declared gaps |
 | [Verify Change and Exit Taxonomy](spec/features/feature-verify-change-and-exit-taxonomy.md) | Read-only ledger verification, the delivery-result enum, and the CLI exit taxonomy |
 | [Measurement Baseline](spec/features/feature-measurement-baseline.md) | The committed bash-era measurement baseline: schema, `MET-` metrics, status semantics, source traceability, window, and comparison protocol |

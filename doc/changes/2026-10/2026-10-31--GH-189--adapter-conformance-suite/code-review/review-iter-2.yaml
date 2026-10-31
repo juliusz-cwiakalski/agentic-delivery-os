@@ -1,0 +1,243 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-189
+branch: feat/GH-189/adapter-conformance-suite
+status: PASS
+summary: >-
+  Second local review iteration of GH-189 after remediation phase P11 (commit 4f27d5a). All five low
+  findings (F-1..F-5) and the two cheap info items (F-8, F-9) are genuinely resolved, verified by
+  inspecting the code and tests rather than the coder report: `run-live.ts` now reports
+  `entry.missingSettings` (actually-missing names only) and the partial-config test asserts the single
+  blanked name; a primitive-purity positive control injects `html_url` and proves the runner's
+  `nativeKeyPaths` guard fires (with an unmodified-control pass); the tautological `packages/*/src`
+  scan is replaced by a non-empty offending-file scan; the writer-on-failure control now invokes
+  `runLive` with a real failing transport and a skip writer; failed reads surface the attempted
+  `METHOD URL` descriptor in both reference and detail and the stricter TC-CONF-006/015 assertions are
+  added; not-configured mutation counters are pinned to 0 in every status; and the duplicate recording
+  wrapper is removed from the process entrypoint. No assertion was weakened and no regression was
+  introduced. The reviewer independently re-ran pnpm build, pnpm check (1733 pass / 2 skip / 0 fail
+  across 155 files; depcruise 125 modules; secret-read 106 files / 4 allowlisted; exports-parity 5),
+  bun test tests/conformance (79), tests/structure (289), tests/checks (338), tests/boundaries (133),
+  all nine invariant scripts, doc-distribution (81 docs) and git diff --check, and confirmed the
+  protected paths and ci.yml are byte-unchanged. The only residual issue is low severity documentation
+  drift: the partial-config "actual missing names" contract was not propagated to test-plan
+  TC-CONF-021 step 6, plan P5.8, and the pm-notes delivery note, which still say "exactly its 7
+  names"/"full documented name list". All 22 spec ACs and 3 ticket ACs remain satisfied; no blocker or
+  major finding.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-10
+    severity: low
+    confidence: high
+    category: documentation-truth
+    location: doc/changes/2026-10/2026-10-31--GH-189--adapter-conformance-suite/chg-GH-189-test-plan.md:836
+    message: >-
+      P11.1 changed the partial-configuration contract so a not-configured provider reports only the
+      actually-missing names (`entry.missingSettings`), and the delivered test now asserts
+      `["CONFORMANCE_LIVE_GITHUB_OWNER"]` after blanking one GitHub setting. But the change was not
+      propagated to the controlling prose: test-plan TC-CONF-021 step 6 still says "exactly its 7
+      names", plan P5.8 (line 327) still says "exactly its 7 names", and the delivery note in
+      chg-GH-189-pm-notes.yaml (line 70) still records "not-configured providers report their full
+      documented name list" as an accepted deviation. The spec is already correct (AC-F7-2 and §22 say
+      "missing names only"), so this is stale documentation, not a behavior defect — the same
+      propagation gap the DoR caught when the occupancy mechanism changed.
+    suggestion: >-
+      One documentation-only pass: update TC-CONF-021 step 6 to "only the blanked name is listed"
+      (the all-absent/empty/whitespace cases keep 15 names 7/5/3), reword plan P5.8's occupancy
+      control to match P11.1, and correct the pm-notes delivery deviation to note that P11 superseded
+      the full-list behavior. No code or AC change.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-11
+    severity: info
+    confidence: high
+    category: code-quality
+    location: packages/testkit/src/conformance/runner.ts:169
+    message: >-
+      The new failure-descriptor helper reads an optional transport log via duck typing
+      (`transport.requests` or `transport.records`) that is not part of the `ConformanceTransport`
+      interface. It is guarded with `isRecord`/`Array.isArray` and only activates when a transport
+      exposes the log, so it is safe today (the mock tenant exposes `requests`, the live recording
+      wrapper exposes `records`), but the coupling is implicit and a future transport that exposes a
+      differently shaped or non-request log could be misread.
+    suggestion: >-
+      Optional hardening: add a narrow optional accessor (for example `requestLog?(): readonly
+      { method: string; url: string }[]`) to the transport contract or a typed structural guard, and
+      document the seam used to surface the request descriptor. No action required for v1.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-10-31T20:07:52Z
+next_step: >-
+  PROCEED. No blocker/major findings. Optional documentation-only cleanup (F-10) before DoD; no code
+  change or re-review required.
+iteration_1_resolution:
+  F-1:
+    severity_was: low
+    status: RESOLVED
+    evidence: >-
+      tests/conformance/live/run-live.ts:199 now uses `missingSettings: [...entry.missingSettings]`
+      for not-configured providers instead of the full documented set. The partial-config test at
+      live-entrypoint.test.ts:340 asserts `github?.missingSettings` equals
+      `["CONFORMANCE_LIVE_GITHUB_OWNER"]` and gitlab/jira `[]`; the all-absent/empty/whitespace cases
+      at :319-322 still assert 7/5/3 and 15 names. Residual prose drift tracked as F-10.
+  F-2:
+    severity_was: low
+    status: RESOLVED
+    evidence: >-
+      mock-conformance.test.ts:717 adds "a normalized view carrying a native key fails
+      primitive-purity naming the path": the control returns `{...WorkItem, html_url}` and asserts
+      `failure.assertion === "primitive-purity"`, `received === "html_url"`, reference
+      `tenant:github:change-lifecycle.read-work-item`. The companion test at :736 proves the unmodified
+      control passes the same flow with no purity failure. This shows the tier-independent
+      `nativeKeyPaths` guard fires (it runs before the mock projection comparison), not just that mock
+      projection catches it.
+  F-3:
+    severity_was: low
+    status: RESOLVED
+    evidence: >-
+      live-entrypoint.test.ts:515 replaces the tautological prefix test with "production source is
+      non-empty and free of live reader references": it scans `packages` filtered to `/src/`, asserts
+      `files.length > 0`, computes offenders containing `tests/conformance/live` or
+      `CONFORMANCE_LIVE_`, and asserts `offenders` is empty. Non-vacuous by construction.
+  F-4:
+    severity_was: low
+    status: RESOLVED
+    evidence: >-
+      live-entrypoint.test.ts:276 "a writer that skips on failure leaves no artifact and the presence
+      check fails" invokes `runLive` with the failing transport and a writer that does not record a
+      failed artifact, asserts `result.status === "failed"` and `artifacts === []`, then asserts the
+      presence check throws "missing artifact". Combined with the status-matrix test at :239 (failed
+      run writes exactly one valid artifact via the default writer), the write-in-every-status
+      guarantee is proven; the control itself demonstrates the detection mechanism. The control alone
+      does not assert the writer was invoked, which the matrix covers.
+  F-5:
+    severity_was: low
+    status: RESOLVED
+    evidence: >-
+      runner.ts:639-664 records `requestsBefore`, reads the transport log after a failed read, and puts
+      `METHOD URL` in both the reference and the detail (`<detail> (request GET <url>)`). Tests now
+      assert the actual message: TC-CONF-006 (mock-conformance.test.ts:711-713) asserts reference
+      contains "GET " and "/issues/" and detail contains "/issues/"; TC-CONF-015 (:571-574) asserts
+      reference and detail contain the missing SHA and "check-runs". Matches the stricter test-plan
+      claim.
+  F-6:
+    severity_was: info
+    status: CARRIED
+    evidence: >-
+      Not in P11 scope (info/optional). run-live.ts:212 still attributes the synthetic non-GET guard to
+      `providers[0]` and hardcodes `operation: "read-work-item"`. Unreachable in production (live v1
+      dispatches reads only); remains an optional future-write-tier hardening note.
+  F-7:
+    severity_was: info
+    status: RESOLVED
+    evidence: >-
+      Plan revision log 1.4 (chg-GH-189-plan.md:603) now records P8.3's feature-adapter-ports update as
+      "cross-reference plus duplicate-frontmatter cleanup", closing the scope-wording deviation.
+  F-8:
+    severity_was: info
+    status: RESOLVED
+    evidence: >-
+      live-entrypoint.test.ts:455 "both mutation counters are pinned to zero in every status" asserts
+      `mutationRequests === 0` and `createdArtifacts === 0` for passed, failed, and not-configured, and
+      additionally pins the three status values.
+  F-9:
+    severity_was: info
+    status: RESOLVED
+    evidence: >-
+      run-live.ts:298 now passes `createNativeFetchTransport` directly to `runLive`, which owns the
+      single `createRecordingTransport` wrapper at :177-180. The double-recording in the process
+      wrapper is gone (tests that pass an already-recording transport double-wrap only at test level,
+      which is harmless).
+verification_evidence:
+  change_shape:
+    - "git diff --stat origin/main-tools...HEAD -> 46 files (incl. review-iter-1), +10451/-17; merge-base b31ec475."
+    - "P11 remediation commit 4f27d5a touches 5 files: plan.md, runner.ts, live-entrypoint.test.ts, run-live.ts, mock-conformance.test.ts (+122/-38)."
+    - "git status --porcelain before writing this artifact -> only the pre-existing PM-notes review_fix bookkeeping edit (M chg-GH-189-pm-notes.yaml), which records review iteration 2 start; no source/test/fixture/workflow change. This review writes only review-iter-2.yaml."
+  protected_paths:
+    - "git diff --exit-code $(git merge-base HEAD origin/main-tools) -- .github/workflows/ci.yml tests/checks/ci-checks.test.ts scripts/checks/secret-read-boundary.ts packages/core packages/adapters -> exit 0 (empty)."
+    - "git diff --quiet <merge-base> -- .github/workflows/ci.yml -> exit 0 (byte-identical)."
+    - "No pnpm-lock.yaml or package.json manifest change; zero new dependencies."
+  suites_rerun_by_reviewer:
+    - "pnpm build -> exit 0 (all six packages)."
+    - "bun test tests/conformance -> 79 pass / 0 fail across 4 files (653 expect calls)."
+    - "bun test tests/structure -> 289 pass / 0 fail across 34 files."
+    - "bun test tests/checks -> 338 pass / 0 fail across 30 files."
+    - "bun test tests/boundaries -> 133 pass / 0 fail across 2 files."
+    - "pnpm check -> exit 0: lint + format + typecheck, 1733 pass / 2 skip / 0 fail across 155 files; depcruise 125 modules / no violations; ambient-globals OK; workspace-entrypoints OK; secret-read-boundary OK (106 files, exactly 4 allowlisted); exports-parity 5 publishables."
+  checks_rerun_by_reviewer:
+    - "bun run scripts/checks/secret-read-boundary.ts -> OK (106 files, 4 allowlisted, no testkit entry)."
+    - "bun run scripts/checks/workspace-entrypoints.ts -> OK (DEC-2 declarations match, all edges resolve)."
+    - "bun run scripts/checks/ci-topology.ts -> OK (7 bash jobs, 16 TS jobs)."
+    - "bun run scripts/checks/ci-bindingness.ts -> OK (no advisory/bypass constructs)."
+    - "bun run scripts/checks/ci-supply-chain.ts -> OK (SHA-pinned, least privilege)."
+    - "bun run scripts/checks/testkit-exclusion.ts -> OK (testkit dev-only, absent from published graph)."
+    - "bun run scripts/checks/privacy-literals.ts -> OK (1331 files, 0 violations)."
+    - "bun run scripts/checks/forbidden-literals.ts -> OK (feature-adapter-conformance.md registered)."
+    - "bun run scripts/checks/license-audit.ts -> OK."
+    - "bash scripts/.tests/test-doc-distribution.sh -> OK (81 in-scope docs, no drift)."
+    - "git diff --check -> exit 0."
+  security_boundary_evidence:
+    - "No node:*/bun: import and no process.env/Bun.env/Date.now/new Date()/Math.random in packages/testkit/src/conformance (grep)."
+    - "runner.ts descriptor helper introduces no imports and reads only the injected transport log; the URL is passed through `bounded()` (redaction + 1024-char cap) like every other failure field."
+    - "tests/conformance/live/config.ts still holds token values only via occupancy; no token value stored/returned/logged."
+    - "conformance-live.yml unchanged by P11; schedule-only + workflow_dispatch, least privilege, 40-hex pins, secrets scoped to the live step."
+  plan_log_audit:
+    - "P11.1..P11.7 all checked (- [x]); no unchecked tasks remain in the plan (51 checked tasks = 44 P1-P8 + 7 P11)."
+    - "P11 execution-log evidence matches the independently re-run numbers: conformance 79 (was 77), structure 289, checks 338, boundaries 133, pnpm check 1733/2-skip, depcruise 125, secret-read 106/4, doc-distribution 81, ci.yml byte-diff exit 0."
+    - "P11 log states 'no spec/test-plan edit' — accurate; that is also the source of the residual F-10 prose drift."
+ac_trace:
+  AC-F1-1: "PASS — structure/conformance-coverage.test.ts: exact 3 flows / 12 ordered steps, unique ids, closed-operation membership, all 7 operations; empty/4th-flow/duplicate/unknown/removed mutations fail."
+  AC-F1-2: "PASS — mock-conformance.test.ts GitHub/GitLab/Jira matrices; write steps capability-gated with declared reasons."
+  AC-F2-1: "PASS — supported operations execute with primitive assertions; unsupported operations skip with exact declared gap reason; undeclared unsupported operation throws naming provider/flow/step/operation."
+  AC-F2-2: "PASS — undeclared op fails closed; lost executed step, stale gap, and masked failure mutations each fail by provider/operation."
+  AC-F2-3: "PASS — present Jira comments vs absent GitHub comments; carrier step is declared-gap skip; empty-carrier control records capability-absent while change-lifecycle.comment executes; carrier-declaring control executes the roundtrip."
+  AC-F3-1: "PASS — declaration-only scan finds exactly 3 provider contracts; new example declaration and dangling registration fail by source/adapter; re-export/non-provider modules do not false-positive."
+  AC-F3-2: "PASS — registry is exactly github/gitlab/jira; contract adapterName matches; no writeHandler in production; wrong-contract and azure controls fail by name."
+  AC-F4-1: "PASS — exact-URL replay; near-miss query fails; unfixtured request fails with the recorded METHOD/URL in reference and detail (F-5 fix); throwing-fetch guard observes 0 calls; every mock request is GET and in the declared route set."
+  AC-F4-2: "PASS — double replay deep-equal with injected clock/runId; failing diagnostics byte-identical; only runId differs; live artifacts identical from identical injected inputs."
+  AC-F4-3: "PASS — fixture-sanitization: conformance tenants have provenance, example-only hosts, declared placeholders, zero findings; audit read-only."
+  AC-F5-1: "PASS — structural coverage complete for all three adapters; runtime coverage non-vacuous; removing supported/gap steps, carrier step, or all adapters fails by name."
+  AC-F5-2: "PASS — broken-adapter-control corrupts GitHub WorkItem title/labels; run fails naming github/change-lifecycle/read-work-item/expected-projection; unmodified client passes."
+  AC-F6-1: "PASS — mock suite rides the existing bun test/pnpm test path (79 conformance tests; aggregate 1733 across 155 files); topology unchanged."
+  AC-F6-2: "PASS — no new ci.yml job; ci.yml byte-unchanged; ci-topology/ci-bindingness/ci-supply-chain and tests/checks/ci-checks.test.ts green; covered-flow break fails via broken-adapter/coverage controls."
+  AC-F7-1: "PASS — live status matrix writes exactly one valid delivery.conformance.v1 artifact for passed/failed/not-configured; spawned entrypoint with unset names exits 0 and writes a valid artifact."
+  AC-F7-2: "PASS — absent/empty/whitespace environments are not-configured, exit 0, 15 missing names (7/5/3), zero credential lookups and provider requests; blanking one GitHub setting demotes only GitHub and now lists only the blanked name (P11 F-1)."
+  AC-F7-3: "PASS — configured GitHub failure => overall failed, exit 1, artifact written, GitLab/Jira not-configured, no write step executed, no ticket; counters 0/0."
+  AC-F7-4: "PASS — conformance-workflow.test.ts: schedule+workflow_dispatch only, cron 17 5 * * 1, least privilege, 40-hex pins, secrets scoped to the live step, if: always() only on upload with if-no-files-found: error, --out == upload path, timeout 10, Bun from .bun-version, no ticket; every mutation control fails by location."
+  AC-F7-5: "PASS — config reader retains non-secret settings + occupancy + credential reference only; token value absent; secret-read allowlist exactly 4 with no testkit entry; testkit node:* boundary fixture and planted env-read cases fire; non-vacuous packages/*/src scan now asserts non-empty and zero offending references (P11 F-3)."
+  AC-F8-1: "PASS — artifact schema/required fields/closed statuses/ISO timestamps; provider-flow summaries without steps; canonical flows[] with nested steps; flat steps[] index; closed skipKind; 256 KiB and count caps; truncation marker; canaries/header/raw-payload rejected; non-scalar expected/received rejected."
+  AC-F9-1: "PASS — all live requests GET; synthetic POST fails naming method/URL and records mutationRequests 1; production counters pinned to 0/0 in passed/failed/not-configured (P11 F-8); mock tier reaches no network."
+  AC-F10-1: "PASS — failed diagnostics carry provider/flow/step/operation/assertion, scalar expected/received, fixture reference or request descriptor (METHOD URL, P11 F-5), bounded detail; canaries absent; primitive-purity positive control proves the guard fires (P11 F-2)."
+  AC-F10-note: "PASS — the descriptor is bounded/redacted via failureFor; no secret or raw payload content."
+  ticket_AC_1: "PASS — GitHub/GitLab/Jira mock suite green (79 tests) under the existing pnpm test path; declared-gap skips are green only when declared; no new CI job."
+  ticket_AC_2: "PASS — weekly/dispatch conformance-live.yml writes and uploads one valid delivery.conformance.v1 artifact in every terminal status; not-configured exits 0; if-no-files-found: error."
+  ticket_AC_3: "PASS — broken-adapter control and structural/runtime coverage gates fail by provider/flow/step/operation inside the existing test battery; ci.yml unchanged and topology/bindingness/supply-chain green."
+plan_task_audit:
+  OPEN_TASKS: "None. All 51 tasks are checked (- [x]): 44 P1-P8 plus 7 P11."
+  DONE_BUT_UNCHECKED: "none"
+  CHECKED_BUT_MISSING: >-
+    F-10 is a documentation-propagation gap, not a missing implementation: P11.1 is checked and its
+    code/test evidence exists, but plan P5.8 (line 327) and test-plan TC-CONF-021 step 6 (line 836)
+    still describe the pre-P11 "exactly its 7 names" expectation. P11.1 supersedes P5.8 for this
+    behavior, so no task is unexecuted.
+  DEVIATIONS:
+    - "Changeset delivered in P4 (documented; release guard requires exactly one added changeset)."
+    - "P8.3 feature-adapter-ports update is cross-reference plus duplicate-frontmatter cleanup; now recorded in plan revision log 1.4 (F-7 closed)."
+    - "P8.1 evidence handoff: test-plan section 10 remains empty by design; the plan Execution Log and P8 matrix carry the actual command results, independently reproduced by this review."
+test_coverage_gaps:
+  - "Closed by P11: primitive-purity now has a firing control (F-2); the production-source scan is non-vacuous (F-3); the writer-on-failure control is real (F-4); request-URL/method is asserted (F-5); not-configured counters are pinned to 0 (F-8)."
+  - "Residual: the writer-on-failure control does not assert the writer was invoked (only that a skip writer yields no artifact); the status-matrix test covers the invocation, so the guarantee holds. Optional strengthening only."
+  - "Residual: the descriptor helper depends on a duck-typed transport log (F-11, info)."
+recommended_non_blocking_remediation:
+  - "F-10: documentation-only pass — update test-plan TC-CONF-021 step 6 and plan P5.8 to 'only the actually-missing name(s)' and correct the pm-notes delivery deviation to note P11 superseded the full-list behavior."
+  - "F-11 (optional): add a narrow typed transport-log accessor or document the seam."
