@@ -9,7 +9,7 @@ created: 2026-02-03
 owners: ["engineering"]
 summary: "End-to-end change delivery workflow (planning to PR) with PM-led gates and artifacts." 
 links:
-  related_changes: ["GH-185"]
+  related_changes: ["GH-177", "GH-185"]
 ---
 
 # Change Lifecycle
@@ -391,6 +391,8 @@ flowchart TD
   - All acceptance criteria satisfied (verify against `chg-<workItemRef>-spec.md`).
   - Current-truth documentation is complete and up to date for the delivered change (phase 7 has no unresolved documentation gaps).
   - No pending TODOs without an explicit follow-up ticket.
+  - `verify change <ref>` reports the declared variant's ledger as complete: `finished` with exit `0`. An incomplete or unverifiable ledger is a non-zero failure naming the missing required phases, and finalization does not proceed until the gap is resolved or the phase is reopened.
+- Finalization is variant-aware. A `full` change requires the canonical eleven phases; an explicit `lite` change requires the pinned six (`clarify_scope`, `specification`, `delivery`, `quality_gates`, `dod_check`, `pr_creation`). Verification never infers LITE from omission, and a completed declared-variant ledger is necessary but not sufficient for merge: commit, CI, push-parity, and owner-gate evidence remain separate finalization checks.
 - **If any gap is found**: reopen the appropriate phase and delegate to the relevant agent.
   - Example: if a delivery plan task is incomplete, reopen `delivery` and delegate to `@coder`.
   - Example: if docs are incomplete or stale, reopen `system_spec_update` and re-run `@doc-syncer` with explicit gaps.
@@ -484,7 +486,7 @@ The PM (`@pm`) is the **sole author** of `chg-<workItemRef>-pm-notes.yaml`.
 
 - **When:** at every phase transition — validate the phase outcome, then update the ledger before triggering `@committer` for that phase's commit. Reopening a phase also gets a retro note explaining why.
 - **Who must not:** delivery agents (for example `@coder`) and other delegates never author or hand-edit pm-notes. They report outcomes to the PM, who records them.
-- **Why:** the file is the delivery ledger. The artifact-first close-out keys `finished` (exit 0) versus `partial` (exit 1, "resume the SAME branch") on pm-notes completeness; the CEO's merge-not-yield verification reads PM finalization from it; and once the verify-change engine (M0-S8) lands it will consume the same ledger as input. Until `ados lint` / `ados phase` (M0-S10) land, ledger integrity is enforced by this discipline alone.
+- **Why:** the file is the delivery ledger. The artifact-first close-out keys `finished` (exit 0) versus `partial` (exit 1, "resume the SAME branch") on pm-notes completeness; the CEO's merge-not-yield verification reads PM finalization from it; and `verify change <ref>` consumes the same ledger as its declaration evidence. The `lint` and `phase` command family is the schema-validated conformance and write path for phase state, and verify reuses it as a read-only consumer.
 
 The PM notes file is **mandatory** for every change. It serves as:
 - PM's long-term memory for the change
@@ -517,6 +519,8 @@ notes: [] # { text, type, date }
 The enforced schema requires `change_id`, `title`, `delivery_mode`, and `phases`; `milestone`, `story_code`, and `variant` are optional typed keys, and the declared collections are validated when present. Extra phase or entry keys (for example `url`, `commits`, or `reopened`) are opaque and preserved.
 
 The default `full` variant requires the canonical eleven lifecycle phases. An explicit `variant: lite` declares the pinned six-phase required set (`clarify_scope`, `specification`, `delivery`, `quality_gates`, `dod_check`, `pr_creation`) for small changes; omission never yields LITE. The CLI tooling provides the `phase` command family as the schema-validated, idempotent write path for phase state, linting the post-transition document before mutating it. Lifecycle agents are the intended callers and adopt it through their prompts; prompt adoption is a separate operating-model change. The behavior is specified at `doc/spec/features/feature-pm-notes-lint-and-phase-transitions.md`.
+
+Finalization is variant-aware and read-only. `verify change <ref>` checks the effective variant's required set against the declaration plus the verified delivery registry, names any missing phases in required-set order, and classifies the delivery result. Only a fully completed declared variant yields `finished` and exit `0`; `partial`, malformed, missing-target, and unverifiable outcomes are non-zero failures. The surface is specified at `doc/spec/features/feature-verify-change-and-exit-taxonomy.md`.
 
 ---
 

@@ -1,0 +1,18 @@
+change_id: GH-177
+title: "Full complete classification fixture (reversed key order)"
+delivery_mode: autonomous
+phases:
+  pr_creation: { started: "2026-10-31T00:21:00Z", completed: "2026-10-31T00:22:00Z" }
+  dod_check: { started: "2026-10-31T00:19:00Z", completed: "2026-10-31T00:20:00Z" }
+  quality_gates: { started: "2026-10-31T00:17:00Z", completed: "2026-10-31T00:18:00Z" }
+  review_fix: { started: "2026-10-31T00:15:00Z", completed: "2026-10-31T00:16:00Z" }
+  system_spec_update: { started: "2026-10-31T00:13:00Z", completed: "2026-10-31T00:14:00Z" }
+  delivery: { started: "2026-10-31T00:11:00Z", completed: "2026-10-31T00:12:00Z" }
+  dor_check: { started: "2026-10-31T00:09:00Z", completed: "2026-10-31T00:10:00Z" }
+  delivery_planning: { started: "2026-10-31T00:07:00Z", completed: "2026-10-31T00:08:00Z" }
+  test_planning: { started: "2026-10-31T00:05:00Z", completed: "2026-10-31T00:06:00Z" }
+  specification: { started: "2026-10-31T00:03:00Z", completed: "2026-10-31T00:04:00Z" }
+  clarify_scope: { started: "2026-10-31T00:01:00Z", completed: "2026-10-31T00:02:00Z" }
+notes:
+  - text: "classification fixture"
+    type: info

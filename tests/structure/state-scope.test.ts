@@ -204,6 +204,22 @@ describe("TC-STATE-023 foundation scope", () => {
     }
   });
 
+  test("a temp commands/verify.ts importing core/state fails the consumer list", () => {
+    const root = cloneCommandRegistry();
+    try {
+      mkdirSync(join(root, "packages/cli/src/commands"), { recursive: true });
+      writeFileSync(
+        join(root, "packages/cli/src/commands/verify.ts"),
+        'export * from "@delivery-os/core/state";\n',
+      );
+      const found = stateConsumerFiles(root);
+      expect(found).toContain("packages/cli/src/commands/verify.ts");
+      expect([...STATE_CONSUMERS]).not.toContain("packages/cli/src/commands/verify.ts");
+    } finally {
+      removeRoot(root);
+    }
+  });
+
   test("seeded violations prove the scope scans are live", () => {
     const cliRoot = cloneCommandRegistry();
     try {

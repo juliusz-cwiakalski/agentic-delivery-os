@@ -1,0 +1,7 @@
+change_id: GH-177
+title: "Malformed fixture wrong-typed-phases"
+delivery_mode: autonomous
+phases: "not-a-map"
+notes:
+  - text: "planted-payload-verify-wrong-typed-phases"
+    type: info

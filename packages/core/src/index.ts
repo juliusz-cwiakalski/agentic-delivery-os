@@ -44,10 +44,20 @@ export {
   resolveConfig,
   serializeProductionSchema,
 } from "./config/index.js";
-
 export {
+  classifyVerifyChange,
+  classifyVerifyDocument,
+  formatVerifySummary,
   lintPmNotes,
   type PmNotesLintFinding,
   type PmNotesLintLocation,
   type PmNotesLintVerdict,
+  type VerifyChangeSuccessData,
+  type VerifyChangeVerdict,
+  type VerifyDocumentClassification,
+  type VerifyDocumentReady,
+  type VerifyEvidence,
+  type VerifyFailure,
+  type VerifyFailureKind,
+  type VerifyRegistryEvidence,
 } from "./domain/index.js";

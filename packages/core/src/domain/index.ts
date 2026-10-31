@@ -12,3 +12,17 @@ export {
   type PmNotesLintLocation,
   type PmNotesLintVerdict,
 } from "./pm-notes-lint.js";
+
+export {
+  classifyVerifyChange,
+  classifyVerifyDocument,
+  formatVerifySummary,
+  type VerifyChangeSuccessData,
+  type VerifyChangeVerdict,
+  type VerifyDocumentClassification,
+  type VerifyDocumentReady,
+  type VerifyEvidence,
+  type VerifyFailure,
+  type VerifyFailureKind,
+  type VerifyRegistryEvidence,
+} from "./verify-change.js";
