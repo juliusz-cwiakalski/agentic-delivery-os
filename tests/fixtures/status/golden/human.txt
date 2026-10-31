@@ -1,0 +1,7 @@
+example-product status owner-placeholder/project-placeholder @ feat/GH-175/status-v1 1111111
+tracker    observed  hand-backs 4 | blocked observed | stalls 12 (0 unknown) | hygiene 12+16
+changes    observed  active GH-175 | PRs 8 (review state observed)
+ci         observed  failed (1/8 jobs)
+lanes      not-delivered  no queue or lane engine in this release
+providers  observed  chain primary | active parks 8 | 8 entries
+parked     observed  8 parked changes (git-ignored local state)

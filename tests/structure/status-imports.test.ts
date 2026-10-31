@@ -7,7 +7,7 @@
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import ts from "typescript";
 import { ERROR_TABLE, STATUS_EVIDENCE_REASONS } from "../../packages/core/src/contracts/index";
 import { SECRET_READ_ALLOWLIST } from "../../scripts/checks/secret-read-boundary";

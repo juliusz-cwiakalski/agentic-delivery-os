@@ -22,7 +22,6 @@ import {
   GITHUB_SLICE_AVAILABILITY,
   localContext,
   makeDeliveryRequest,
-  makePipelineRun,
   makeWorkItem,
   malformedLocalContext,
   missingLocalContext,

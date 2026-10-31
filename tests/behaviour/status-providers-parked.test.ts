@@ -167,7 +167,6 @@ describe("TC-STATUS-019 parked work from the local PM context", () => {
 
 // --- Phase 5: lanes and providers -----------------------------------------
 
-import { aggregateStatus } from "../../packages/core/src/domain/index";
 import {
   createParkRecord,
   persistProviderResolution,
@@ -175,12 +174,10 @@ import {
 } from "../../packages/core/src/provider/index";
 import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
 import {
-  baseFacts,
   parkView,
   providerConfig,
   providerConfigRead,
   providers,
-  sectionById,
 } from "../fixtures/status/harness";
 
 const section = (facts: Parameters<typeof aggregateStatus>[0], id: string) =>

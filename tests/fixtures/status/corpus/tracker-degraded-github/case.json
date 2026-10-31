@@ -1,0 +1,18 @@
+{
+  "name": "tracker-degraded-github",
+  "scenario": "tracker-degraded-github",
+  "expected": {
+    "states": {
+      "tracker": "degraded",
+      "changes-and-prs": "observed",
+      "ci": "observed",
+      "lanes-or-queue": "not-delivered",
+      "providers": "observed",
+      "parked-work": "observed"
+    },
+    "reasons": {
+      "tracker": ["signal-unavailable"],
+      "changes-and-prs": ["observed-empty"]
+    }
+  }
+}

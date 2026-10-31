@@ -1,0 +1,17 @@
+{
+  "name": "active-park-observed",
+  "scenario": "active-park",
+  "expected": {
+    "states": {
+      "tracker": "observed",
+      "changes-and-prs": "observed",
+      "ci": "observed",
+      "lanes-or-queue": "not-delivered",
+      "providers": "observed",
+      "parked-work": "observed"
+    },
+    "reasons": {
+      "providers": ["observed"]
+    }
+  }
+}

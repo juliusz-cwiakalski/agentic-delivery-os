@@ -1,0 +1,19 @@
+{
+  "name": "failed-reads-degraded",
+  "scenario": "failed-reads-degraded",
+  "expected": {
+    "states": {
+      "tracker": "unknown",
+      "changes-and-prs": "degraded",
+      "ci": "unknown",
+      "lanes-or-queue": "not-delivered",
+      "providers": "unavailable",
+      "parked-work": "observed"
+    },
+    "reasons": {
+      "tracker": ["read-failed"],
+      "ci": ["read-failed"],
+      "changes-and-prs": ["read-failed", "partial-evidence"]
+    }
+  }
+}
