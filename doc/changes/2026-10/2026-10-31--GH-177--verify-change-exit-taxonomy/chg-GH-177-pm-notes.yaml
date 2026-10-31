@@ -5,10 +5,10 @@ story_code: M0-S8
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-10-31T00:00:00Z", completed: "2026-10-31T00:20:00Z" }
-  specification: { started: "2026-10-31T00:25:00Z", completed: "2026-10-31T01:05:00Z" }
-  test_planning: { started: "2026-10-31T01:10:00Z", completed: "2026-10-31T01:50:00Z" }
-  delivery_planning: { started: "2026-10-31T01:55:00Z", completed: "2026-10-31T02:40:00Z" }
-  dor_check: { started: null, completed: null }
+  specification: { started: "2026-10-31T00:25:00Z", completed: "2026-10-31T01:05:00Z", reopened: "2026-10-31T03:05:00Z (dor iter-1 major: C-8 hint embeds forbidden literal; C-3 'mentioned = fold entry' clarification)", reopened_completed: null }
+  test_planning: { started: "2026-10-31T01:10:00Z", completed: "2026-10-31T01:50:00Z", reopened: "2026-10-31T03:05:00Z (dor iter-1 minor/nit: TC-012 outside-taxonomy bucket; TC-018 'none' comparer rule)", reopened_completed: null }
+  delivery_planning: { started: "2026-10-31T01:55:00Z", completed: "2026-10-31T02:40:00Z", reopened: "2026-10-31T03:05:00Z (dor iter-1 major fold-in: plan 1.2 must mirror the brand-neutral pinned hint and drop the contradictory clause)", reopened_completed: null }
+  dor_check: { started: "2026-10-31T02:45:00Z", completed: null, iterations: "iter-1 NOT_READY (9/10 facets PASS; cross_artifact_consistency FAIL: 1 major, 1 minor, 3 nits; artifact readiness-review/readiness-iter-1.md). Reopened specification (C-8 brand-literal hint + C-3 fold wording), test_planning (TC-012 outside-taxonomy bucket; TC-018 'none' rule), delivery_planning (plan task 1.2 mirror the pinned hint)." }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -22,9 +22,7 @@ decisions:
     date: "2026-10-31"
   - text: "PM decision (precedent-setting, recorded): TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md adopts the eleven bash tokens verbatim as the single CLI vocabulary with a total taxonomy; CLI exits derive only from the result-contract projection classes. One deliberate divergence: state-unverified -> platform-provider -> exit 2 (bash exits 1). Token parity, not numeric exit parity, is the dual-run comparison unit; broken invocations stay fallback.invocation -> 1. Status Proposed pending owner ratification at PR review."
     date: "2026-10-31"
-open_questions:
-  - text: "Exit-taxonomy tension to pin in specification: the bash summary maps finished/pr-open/merged/blocked/noop-lane-nothing-to-do to exit 0 and failed/max-restarts/partial/noop-lane-permission/state-unverified to exit 1 (2 = usage), while the CLI result contract projects success->0, user-validation->1, platform-provider->2. Decide and document the exact per-result projection (including whether state-unverified is platform exit 2 or bash-parity exit 1) without breaking envelope exclusivity. Delegate to @decision-advisor only if precedent-setting."
-    date: "2026-10-31"
+open_questions: []  # exit-taxonomy question RESOLVED by spec DEC-5/DEC-11 and TDR-0005 (state-unverified -> 2; token parity is the dual-run unit)
 blockers: []
 notes:
   - text: "State detected at session start: GH-177 open, no labels, no comments, no open PR, no local change artifacts, detached HEAD; treated as fresh delivery on a new branch from main-tools. Exactly one workItemRef this session. PR base main-tools; PM never merges."
@@ -40,6 +38,12 @@ notes:
     type: "info"
     date: "2026-10-31"
   - text: "Delivery planning complete: chg-GH-177-plan.md, 10 phases / 44 tasks. Phases 1-6 @coder-executed (contracts+error row same phase; pure classifier+tolerant read; command; state/envelope/determinism; real corpus+battery; changeset+evidence), Phases 7-10 PM-scheduled lifecycle (review, conditional remediation, doc-syncer, finalize/PR). 21/21 TCs mapped, 14/14 ACs, 7/7 NFRs. PIN-1..PIN-7 and D1..D12 bind delivery spellings; no spec/test-plan reshaping. Fixed one plan typo (AC range V9..V15 -> V9..V14)."
+    type: "info"
+    date: "2026-10-31"
+  - text: "retro: DoR iter-1 caught an unshippable oracle — spec C-8's remediation hint embedded the product literal `ados phase`, which the forbidden-literals scan treats as a seed literal over doc/** and the error-table sync copies byte-for-byte into feature-result-contract.md, while TC-VERIFY-019 asserted the exact C-8 hint. One-string amendment now; at Phase 1 it would have forced a mid-delivery reopen. Improvement: artifact authors must run the forbidden-literals check (and the error-table sync implication) against any new documented row text at authoring time. The gate also independently re-verified every load-bearing claim (corpus, bash enum, rule order, error-table baseline, machinery) — high-value adversarial pass."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "DoR iter-1 NOT_READY recorded; remediation is a single reopen cycle: specification (major C-8 hint + nit C-3 fold wording), test_planning (minor TC-012 bucket + nit TC-018 comparer rule), delivery_planning (major fold-in plan task 1.2). Gate expected READY at iter-2 after these amendments."
     type: "info"
     date: "2026-10-31"
   - text: "Runtime learnings carried forward: pre-authorize inline committer discipline for @coder (one Conventional Commit per plan phase, explicit staging, never stage .ai/local/ or tmp/); PM owns @runner/@doc-syncer/@pr-manager. Prefer chunked authoring delegations for long artifacts (GH-179 retros)."
