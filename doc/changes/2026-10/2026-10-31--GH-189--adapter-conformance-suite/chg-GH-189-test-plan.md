@@ -1386,40 +1386,42 @@ No AC is left without a mapped test. All 22 spec ACs are traced and assertable; 
 
 Populated during execution. Do not record unrun evidence as passing.
 
+Final gate run: 2026-10-31 at HEAD `010c0c0` (after P11 remediation, before this evidence-log update). Suites were executed with `pnpm install --frozen-lockfile` and `pnpm build` already satisfied by `pnpm check`. `run-live.ts` is not a `*.test.ts` suite.
+
 | TC ID / gate | Run Date (UTC) | Result | Notes / command / HEAD |
 |---|---|---|---|
-| TC-CONF-001 | — | — | `bun test tests/structure/conformance-coverage.test.ts` |
-| TC-CONF-002 | — | — | same |
-| TC-CONF-003 | — | — | same |
-| TC-CONF-004 | — | — | same |
-| TC-CONF-005 | — | — | same |
-| TC-CONF-006 | — | — | `bun test tests/conformance/mock-conformance.test.ts`; record wall clock |
-| TC-CONF-007 | — | — | same |
-| TC-CONF-008 | — | — | same |
-| TC-CONF-009 | — | — | same |
-| TC-CONF-010 | — | — | same |
-| TC-CONF-011 | — | — | same |
-| TC-CONF-012 | — | — | same |
-| TC-CONF-013 | — | — | same |
-| TC-CONF-014 | — | — | same |
-| TC-CONF-015 | — | — | same |
-| TC-CONF-016 | — | — | `bun test tests/conformance/broken-adapter-control.test.ts` |
-| TC-CONF-017 | — | — | same |
-| TC-CONF-018 | — | — | `bun test tests/conformance/artifact.test.ts` |
-| TC-CONF-019 | — | — | same |
-| TC-CONF-020 | — | — | `bun test tests/conformance/artifact.test.ts tests/conformance/live` |
-| TC-CONF-021 | — | — | `bun test tests/conformance/live`; spawned entrypoint |
-| TC-CONF-022 | — | — | same |
-| TC-CONF-023 | — | — | same |
-| TC-CONF-024 | — | — | same; `bun run scripts/checks/secret-read-boundary.ts` |
-| TC-CONF-025 | — | — | same |
-| TC-CONF-026 | — | — | `bun test tests/checks/conformance-workflow.test.ts` |
-| TC-CONF-027 | — | — | same |
-| TC-CONF-028 | — | — | `bun test tests/checks/secret-read-boundary.test.ts`; `bun run scripts/checks/secret-read-boundary.ts` |
-| TC-CONF-029 | — | — | `bun test tests/boundaries`; `bun run scripts/checks/testkit-exclusion.ts`; `bun run scripts/checks/workspace-entrypoints.ts` |
-| TC-CONF-030 | — | — | `bun test tests/structure/content-inventory.test.ts` |
-| TC-CONF-031 | — | — | `bun test tests/checks/fixture-sanitization.test.ts` |
-| TC-CONF-032 | — | — | `bun run scripts/checks/ci-topology.ts`; `ci-bindingness.ts`; `ci-supply-chain.ts`; `bun test tests/checks/ci-checks.test.ts`; review-time `ci.yml` diff |
-| TC-CONF-033 | — | — | `bun test tests/conformance tests/structure tests/checks tests/boundaries`; `pnpm check`; `git diff --check` |
-| `ci.yml` byte-unchanged | — | — | `git diff --exit-code "$(git merge-base HEAD origin/main-tools)" -- .github/workflows/ci.yml` |
-| Aggregate | — | — | `pnpm check` (pretest builds) |
+| TC-CONF-001 | 2026-10-31 | PASS | `bun test tests/structure/conformance-coverage.test.ts` (part of 289-pass structure suite) |
+| TC-CONF-002 | 2026-10-31 | PASS | same |
+| TC-CONF-003 | 2026-10-31 | PASS | same |
+| TC-CONF-004 | 2026-10-31 | PASS | same |
+| TC-CONF-005 | 2026-10-31 | PASS | same |
+| TC-CONF-006 | 2026-10-31 | PASS | `bun test tests/conformance/mock-conformance.test.ts`; conformance suite 79 pass / 0 fail; measured wall clock 0.07 s |
+| TC-CONF-007 | 2026-10-31 | PASS | same (GitHub matrix) |
+| TC-CONF-008 | 2026-10-31 | PASS | same (GitLab matrix) |
+| TC-CONF-009 | 2026-10-31 | PASS | same (Jira matrix) |
+| TC-CONF-010 | 2026-10-31 | PASS | same |
+| TC-CONF-011 | 2026-10-31 | PASS | same |
+| TC-CONF-012 | 2026-10-31 | PASS | same |
+| TC-CONF-013 | 2026-10-31 | PASS | same (handler and carrier controls) |
+| TC-CONF-014 | 2026-10-31 | PASS | same (double replay identical) |
+| TC-CONF-015 | 2026-10-31 | PASS | same (exact-URL, throwing-fetch, descriptor) |
+| TC-CONF-016 | 2026-10-31 | PASS | `bun test tests/conformance/broken-adapter-control.test.ts` (within 79) |
+| TC-CONF-017 | 2026-10-31 | PASS | same |
+| TC-CONF-018 | 2026-10-31 | PASS | `bun test tests/conformance/artifact.test.ts` (within 79) |
+| TC-CONF-019 | 2026-10-31 | PASS | same |
+| TC-CONF-020 | 2026-10-31 | PASS | `bun test tests/conformance/artifact.test.ts tests/conformance/live` (within 79) |
+| TC-CONF-021 | 2026-10-31 | PASS | `bun test tests/conformance/live` (24 pass); spawned not-configured entrypoint; actual missing names |
+| TC-CONF-022 | 2026-10-31 | PASS | same |
+| TC-CONF-023 | 2026-10-31 | PASS | same |
+| TC-CONF-024 | 2026-10-31 | PASS | same; `bun run scripts/checks/secret-read-boundary.ts` OK (106 files, 4 allowlisted) |
+| TC-CONF-025 | 2026-10-31 | PASS | same |
+| TC-CONF-026 | 2026-10-31 | PASS | `bun test tests/checks/conformance-workflow.test.ts` (8 pass, 28 assertions) |
+| TC-CONF-027 | 2026-10-31 | PASS | same |
+| TC-CONF-028 | 2026-10-31 | PASS | `bun test tests/checks/secret-read-boundary.test.ts` (18 pass); `bun run scripts/checks/secret-read-boundary.ts` OK |
+| TC-CONF-029 | 2026-10-31 | PASS | `bun test tests/boundaries` (133 pass); `testkit-exclusion.ts` OK; `workspace-entrypoints.ts` OK |
+| TC-CONF-030 | 2026-10-31 | PASS | `bun test tests/structure/content-inventory.test.ts` (6 pass) |
+| TC-CONF-031 | 2026-10-31 | PASS | `bun test tests/checks/fixture-sanitization.test.ts` (within 338-pass checks suite) |
+| TC-CONF-032 | 2026-10-31 | PASS | `ci-topology.ts`/`ci-bindingness.ts`/`ci-supply-chain.ts` OK; `bun test tests/checks/ci-checks.test.ts` (27 pass); `ci.yml` diff empty |
+| TC-CONF-033 | 2026-10-31 | PASS | `pnpm check` exit 0 — 1733 pass / 2 skip / 0 fail across 155 files; `git diff --check` exit 0 |
+| `ci.yml` byte-unchanged | 2026-10-31 | PASS | `git diff --exit-code "$(git merge-base HEAD origin/main-tools)" -- .github/workflows/ci.yml` exit 0 |
+| Aggregate | 2026-10-31 | PASS | `pnpm check` (pretest builds); 1733 pass / 2 skip / 0 fail |
