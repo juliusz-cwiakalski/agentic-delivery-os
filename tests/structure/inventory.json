@@ -50,6 +50,7 @@
     "src/credentials/index.ts",
     "src/file/config-source.ts",
     "src/file/index.ts",
+    "src/file/pm-context.ts",
     "src/file/pm-notes-parser.ts",
     "src/file/yaml-parser.ts",
     "src/github/capabilities.ts",

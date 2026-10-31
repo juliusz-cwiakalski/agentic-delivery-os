@@ -329,7 +329,14 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "validateWorkflowMap",
     "stateMappingFor",
   ],
-  "adapters/src/repo/index.ts": ["findGitRoot", "resolveRepositoryRoot", "nodeRepositoryIo"],
+  "adapters/src/repo/index.ts": [
+    "findGitRoot",
+    "nodeRepositoryIo",
+    "parseGitHubRemote",
+    "readRepositoryFacts",
+    "resolveRepositoryRoot",
+  ],
+  "adapters/src/file/pm-context.ts": ["readLocalPmContext"],
   "adapters/src/legacy/index.ts": [
     "createLegacyCompat",
     "resolveProcessLegacy",

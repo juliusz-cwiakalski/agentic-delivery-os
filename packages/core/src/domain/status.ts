@@ -669,7 +669,7 @@ const changesSection = (facts: StatusFacts): StatusSection => {
     state = "unavailable";
   } else if (!prRead.ok && !activeUsable) {
     state = "unknown";
-  } else if (prRead.ok && activeUsable && !prSignalsUnavailable) {
+  } else if (bindingFailure === undefined && prRead.ok && activeUsable && !prSignalsUnavailable) {
     state = "observed";
   } else {
     state = "degraded";
