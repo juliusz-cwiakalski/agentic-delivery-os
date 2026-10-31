@@ -11,7 +11,7 @@ phases:
   dor_check: { started: "2026-10-31T19:57:00Z", completed: "2026-10-31T21:50:00Z", iteration: 3, verdict: "READY", iteration_1_verdict: "NOT_READY", iteration_2_verdict: "NOT_READY", iteration_3_started: "2026-10-31T21:36:00Z" }
   delivery: { started: "2026-10-31T21:52:00Z", completed: "2026-10-31T22:05:00Z" }
   system_spec_update: { started: "2026-10-31T22:06:00Z", completed: "2026-10-31T22:15:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-10-31T22:16:00Z", completed: null, iteration: 1, status: "PASS_with_remediation", findings: "0 blocker / 0 major / 5 low / 4 info" }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -78,4 +78,10 @@ notes:
     date: "2026-10-31"
   - text: "Doc-sync phase 7: verified the coder-authored feature spec against the delivered code and fixed 8 inaccuracies/gaps (adapter registry + registration scan rule, per-adapter operation completeness, zero-mutation/teardown, flow status set, validator redaction claim, broken-adapter behavior, evidence paths, GH-189 traceability). Also consolidated duplicate front-matter blocks in feature-adapter-ports.md. Guards: doc-distribution 81 docs PASS, forbidden-literals 0 violations, privacy-literals 0 violations, git diff --check clean. No unresolved documentation gaps."
     type: "info"
+    date: "2026-10-31"
+  - text: "Review iteration 1: PASS (0 blocker / 0 major / 5 low / 4 info). Reviewer independently re-ran pnpm check (1731 pass / 2 skip / 0 fail), conformance 77, structure 289, checks 338, boundaries 133, all invariant scripts, doc-distribution, and the protected-path/ci.yml diffs. Low findings accepted into remediation phase P11: F-1 actual missing-name reporting for partial configuration, F-2 primitive-purity positive control, F-3 vacuous packages/*/src scan test, F-4 self-fulfilling writer-on-failure control, F-5 request descriptor in failed-step diagnostics; plus F-8 not-configured counters and F-9 duplicate recording wrapper. P11 appended to the plan; re-review after."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Review caught test-quality debt the delivery report did not surface: a vacuous source-scan assertion, a self-fulfilling writer control, and a partial-config missing-name mismatch. These are low severity but directly undermine the non-vacuity claim, so they are remediated instead of waived. Lesson: a green suite is not enough; controls must be shown to fire."
+    type: "retro"
     date: "2026-10-31"
