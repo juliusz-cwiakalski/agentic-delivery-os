@@ -50,6 +50,7 @@
     "src/host/index.ts",
     "src/io/envelope-codec.ts",
     "src/io/index.ts",
+    "src/io/privacy-rules.ts",
     "src/io/provider-transport.ts",
     "src/jira/capabilities.ts",
     "src/jira/client.ts",

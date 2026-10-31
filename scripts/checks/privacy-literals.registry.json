@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "privacy.registry.v1",
+  "scopeMode": "working-tree",
+  "enabledRuleIds": [
+    "secret.provider-token-prefix",
+    "secret.private-key-block",
+    "secret.web-token",
+    "secret.bearer-credential",
+    "secret.credential-assignment",
+    "secret.connection-string-credential",
+    "private.absolute-user-path"
+  ],
+  "classes": {
+    "private-literal": {
+      "emptyReason": "Owner population is out-of-band after landing (OQ-1); the mechanism ships with no project-private literal so no raw value is committed.",
+      "entries": []
+    },
+    "cloud-term": {
+      "emptyReason": "Mechanism-only until the owner supplies hosted-product digests out-of-band (OQ-1); the class ships empty so no raw term is committed and is reported as explicitly vacuous.",
+      "entries": []
+    }
+  },
+  "allowlist": [
+    {
+      "id": "privacy-rule-module",
+      "kind": "file",
+      "path": "packages/adapters/src/io/privacy-rules.ts",
+      "rules": ["*"],
+      "reason": "The one committed generic rule-definition set; its patterns and suppression markers necessarily carry the shapes the guard detects."
+    },
+    {
+      "id": "privacy-registry",
+      "kind": "file",
+      "path": "scripts/checks/privacy-literals.registry.json",
+      "rules": ["*"],
+      "reason": "The registry is the guard's own data authority and contains rule ids, reasons, and path entries only."
+    },
+    {
+      "id": "privacy-imports-test",
+      "kind": "file",
+      "path": "tests/structure/privacy-imports.test.ts",
+      "rules": ["*"],
+      "reason": "The guard's purity and definition-set suite names every committed rule id and seeds a mutant import."
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "lockfile",
+      "kind": "file",
+      "path": "pnpm-lock.yaml",
+      "rules": ["*"],
+      "reason": "Generated dependency-resolution content; the lockfile is never hand-authored and is covered by the separate lockfile-integrity gates."
+    }
+  ]
+}
