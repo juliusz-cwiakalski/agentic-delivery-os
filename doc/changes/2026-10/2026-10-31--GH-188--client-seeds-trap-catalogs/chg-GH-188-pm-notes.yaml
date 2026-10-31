@@ -11,7 +11,7 @@ phases:
   system_spec_update: { started: "2026-10-31T03:35:00Z", completed: "2026-10-31T04:00:00Z" }
   review_fix: { started: "2026-10-31T04:05:00Z", completed: "2026-10-31T05:30:00Z", iteration: 2, status: "PASS_loop_closed" }
   quality_gates: { started: "2026-10-31T05:35:00Z", completed: "2026-10-31T05:45:00Z" }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: "2026-10-31T05:50:00Z", completed: "2026-10-31T05:55:00Z" }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "Implementation basis (ticket-mandated, recorded in ticket comment 6536692124): GitHub + GitLab = direct REST API via native fetch (CLIs disqualified: own token caches, subprocess output drift); Jira = custom minimal read-slice client (no official TS client; jira.js MIT viable but unused surface; MCP clients need host+creds outside credential port). Fallback: re-evaluate jira.js at M0-S14 write ops. Zero new dependencies."
@@ -89,5 +89,8 @@ notes:
     type: "retro"
     date: "2026-10-31"
   - text: "Review iteration 2: PASS, 0 findings, P11 discharged in full (all 4 low items verified with smallest honest diffs; extended GH-REVIEW-STATE assertion non-vacuous, behavior unchanged; rebase verified tree-identical; gates independently reproduced 806/0, allowlist 4, zero deps, commitlint clean). Review loop closed. Artifacts: code-review/review-iter-2.yaml."
+    type: "info"
+    date: "2026-10-31"
+  - text: "DoD check PASSED: all 9 pre-PR phases complete; 12/12 spec ACs + 4 ticket ACs verified (reviewer ac_trace, iterations 1+2); all gates green; doc-syncer reports Ready for Finalization with zero unresolved gaps. Remaining open items are phase-11 deliverables by design (plan P10-4 line 411 HANDOFF + P10-5): PR must target main-tools, include P10-5 rollback/scope-proof section (additive-only; revert as one coherent unit; never split contract field from probe, confinement entry from fixtures, client from catalog), list ADR-0004/0005/0006 as acceptance-pending, and record green CI on the pushed HEAD as the final DoD predicate."
     type: "info"
     date: "2026-10-31"
