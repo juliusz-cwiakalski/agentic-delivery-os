@@ -2437,4 +2437,3 @@ Populated during delivery, at the phase-9 quality gates, and at review. Record t
 | TC-GATE-004 | — | Not run | |
 | TC-GATE-005 | — | Not run | Record the registry base-vs-HEAD diff (data-only), each doc's add-commit SHA and same-commit registration proof, forbidden-literal guard exit 0, registered-doc list, and delimited seed-scan result. |
 | TC-GATE-006 | — | Not run | |
-
