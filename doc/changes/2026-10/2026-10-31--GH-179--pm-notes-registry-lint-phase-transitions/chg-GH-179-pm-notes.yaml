@@ -1,0 +1,42 @@
+change_id: GH-179
+title: "M0-S10: pm-notes and registry lint, and phase transitions"
+milestone: "M0: Trust substrate"
+story_code: M0-S10
+delivery_mode: interactive
+phases:
+  clarify_scope: { started: "2026-10-31T01:30:00Z", completed: "2026-10-31T01:35:00Z" }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions:
+  - text: "clarify_scope completed with ZERO blocking open questions — no STOP, proceed to artifact generation. Basis: owner-authored ticket matches backlog M0-S10 verbatim; dependencies M0-S1 (GH-170), M0-S3 (GH-172), M0-S5 (GH-174) merged on main-tools (commits through f6c8d18); command surface for `ados lint` + `ados phase` fixed in cli-command-registry.md; all discovered details (registry record shape, LITE phase-set membership, error-row identity) are implementation-level with established GH-173/174 precedent, belonging to spec/plan authoring."
+    date: "2026-10-31"
+  - text: "PM-decided (unblock): the pm-notes schema declares FIXED per-variant required phase sets — full = the canonical 11 phases from doc/guides/change-lifecycle.md; LITE = a compressed set the spec pins (derived from the lifecycle guide, documented in the spec, visible at PR review). Ticket AC requires lint to reject a LITE declaration missing a required phase, so membership must be enumerable in schema data; the exact LITE set is nowhere defined in the repo, is reversible (schema constant), and low-impact. Owner may amend at review."
+    date: "2026-10-31"
+  - text: "Branch plan: feat/GH-179/pm-notes-registry-lint-phase-transitions cut from main-tools @ f6c8d18; PR base main-tools (explicit, per session directive); PM never merges."
+    date: "2026-10-31"
+open_questions: []
+blockers: []
+notes:
+  - text: "Scope guardrails for authors: (1) `ados lint` = write-time schema/format conformance for pm-notes AND the delivery registry — parse failure errors, key-set assertions, variant-aware required-phase validation; (2) `ados phase` = phase list/complete/reopen, reopen REQUIRES a reason, transitions IDEMPOTENT, and it is the ONLY write path for phase state; (3) M0-S8 (verify change, GH-177) is OUT of scope — this story delivers only its dependency (a safe phase ledger); (4) new error-table rows ship in-change (GH-174 precedent: binding two-directional doc/code sync check stays green); (5) state tier boundaries hold — runtime APIs only in the state driver edge, state imports ./contracts only; (6) no name literals outside the branding seam; (7) the de-facto pm-notes shape is chg-GH-174-pm-notes.yaml (change_id/title/milestone/story_code/delivery_mode/phases map {started,completed,...}/decisions/open_questions/blockers/notes) — schema must accept the real corpus, not invent a new shape."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Documentation impacts anticipated for phase 7 (@doc-syncer): NEW first-spec doc/spec/features/feature-<slug>.md for the lint/phase-ledger surface (always-resolve in-change per pm-instructions); reconcile feature-result-contract.md (new domain rows/kinds); reconcile feature-state-layer.md (first consumer: delivery registry store); glossary terms (phase ledger, change variant/LITE, delivery registry, lint vs verify); possible change-lifecycle guide touchpoint (phases marked through the write path)."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Runtime learnings carried from GH-174 retro notes: @coder cannot dispatch nested subagents — delivery delegation must pre-authorize inline committer-discipline execution (one Conventional Commit per plan phase, explicit staging, never stage .ai/local/ or tmp/) with @runner/@doc-syncer/@pr-manager duties staying PM-owned; keep delegations single-purpose; commit after every verifiable unit."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Cross-check ticket vs system spec — CONSISTENT, no contradictions: (1) state layer (GH-174) ships the store port (append-only ledger, key-set assertions, atomic document replace, fences, torn-state detection) with NO consumers yet — GH-179 becomes the first consumer and 'the ledger read by verify change is safe' maps onto state-layer guarantees + schema-checked writes; (2) result contract (GH-172) DOMAIN_KINDS currently provider|input|config|state — lint/phase failures need new table rows (additive, established pattern, sync check binding); (3) cli-command-registry assigns BOTH `ados lint` and `ados phase` to M0-S10 delivery, no other story; (4) ranking places M0-S10 before M0-S8 which depends on it ('the two run as one bundle' — bundle means M0-S8 consumes it, not same-PR delivery); (5) untrusted-input rule: this story writes/validates pm-notes authored by agents — schema validation is the mechanical trust boundary."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Session start per autopilot directive: state detected (GH-179 open/no labels, no PRs, no local artifacts, detached HEAD at main-tools tip); fresh 11-phase delivery started; exactly one workItemRef this session; PR against main-tools; merge authority stays with CEO/human."
+    type: "info"
+    date: "2026-10-31"
