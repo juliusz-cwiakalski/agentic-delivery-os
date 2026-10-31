@@ -14,12 +14,14 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
 import { DELIVERY_RESULT_TOKENS } from "../../packages/core/src/contracts/index";
 import { scan as scanAmbient, scopedFiles } from "../../scripts/checks/ambient-globals";
 import { scanRoot as scanExitLiterals } from "../../scripts/checks/exit-code-literals";
+import { validate as validateWorkspaceEntrypoints } from "../../scripts/checks/workspace-entrypoints";
 
 const ROOT = process.cwd();
 
@@ -27,12 +29,14 @@ const CONTRACTS_DELIVERY = "packages/core/src/contracts/delivery-result.ts";
 const CONTRACTS_ERROR_TABLE = "packages/core/src/contracts/error-table.ts";
 const DOMAIN_VERIFY = "packages/core/src/domain/verify-change.ts";
 const STATE_REGISTRY = "packages/core/src/state/registry.ts";
+const COMMAND_VERIFY = "packages/cli/src/commands/verify.ts";
 
 const NEW_MODULES = [
   CONTRACTS_DELIVERY,
   CONTRACTS_ERROR_TABLE,
   DOMAIN_VERIFY,
   STATE_REGISTRY,
+  COMMAND_VERIFY,
 ] as const;
 
 const TOKENS: readonly string[] = [...DELIVERY_RESULT_TOKENS];
@@ -214,6 +218,43 @@ export const tokenListViolations = (source: ts.SourceFile, relative: string): st
   return violations;
 };
 
+const commandSurface = (source: ts.SourceFile): string[] => {
+  const violations: string[] = [];
+  for (const specifier of specifiersOf(source)) {
+    if (
+      specifier.startsWith("node:") ||
+      specifier.startsWith("bun:") ||
+      specifier.startsWith("@delivery-os/adapters") ||
+      specifier === "../edge.js" ||
+      specifier.endsWith("/edge.js")
+    ) {
+      violations.push(`command import ${specifier}`);
+    }
+  }
+  for (const name of callNames(source)) {
+    if (
+      ["console.log", "console.error", "process.exit"].includes(name) ||
+      name.endsWith(".write") ||
+      name.endsWith(".exit")
+    ) {
+      violations.push(`handler I/O call ${name}`);
+    }
+  }
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isPropertyAssignment(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === "exitCode" &&
+      ts.isNumericLiteral(node.initializer)
+    ) {
+      violations.push("exit code literal");
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return violations;
+};
+
 export type RuleFixture = {
   readonly id: string;
   readonly expect: "violation" | "clean";
@@ -336,6 +377,39 @@ const DETECTORS: readonly Detector[] = [
         expect: "clean",
         source:
           'import type { StateStorePort } from "#contracts";\nexport type Port = StateStorePort;\n',
+      },
+    ],
+  },
+  {
+    id: "command-surface",
+    modules: [COMMAND_VERIFY],
+    scan: commandSurface,
+    fixtures: [
+      {
+        id: "command-stream-write",
+        expect: "violation",
+        source: "export const leak = (value: unknown): void => console.log(value);\n",
+      },
+      {
+        id: "command-exit-literal",
+        expect: "violation",
+        source: "export const result = { exitCode: 2 };\n",
+      },
+      {
+        id: "command-adapter-import",
+        expect: "violation",
+        source: 'import "@delivery-os/adapters/file";\n',
+      },
+      {
+        id: "command-edge-import",
+        expect: "violation",
+        source: 'import "../edge.js";\n',
+      },
+      {
+        id: "command-clean",
+        expect: "clean",
+        source:
+          'import type { CommandDefinition } from "../index.js";\nexport const build = (): CommandDefinition => ({ handler: () => ({ data: {} }) });\n',
       },
     ],
   },
@@ -488,5 +562,117 @@ describe("TC-VERIFY-020 tests/data/state module coverage", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe("TC-VERIFY-020 inventory registration", () => {
+  test("the inventory lists every new verify file exactly", () => {
+    const inventory = JSON.parse(
+      readFileSync(join(ROOT, "tests/structure/inventory.json"), "utf8"),
+    ) as Record<string, string[]>;
+    expect(inventory.core).toContain("src/contracts/delivery-result.ts");
+    expect(inventory.core).toContain("src/domain/verify-change.ts");
+    expect(inventory.cli).toContain("src/commands/verify.ts");
+    for (const module of NEW_MODULES) {
+      const [, packagePath] = module.split("/src/");
+      const packageName = module.includes("packages/core/")
+        ? "core"
+        : module.includes("packages/cli/")
+          ? "cli"
+          : "";
+      expect(packageName.length, module).toBeGreaterThan(0);
+      expect(inventory[packageName], module).toContain(`src/${packagePath?.replace(/^src\//, "")}`);
+    }
+  });
+});
+
+const DEPCRUISE_RULES = [
+  "matrix-adapters-importer",
+  "matrix-cli-importer",
+  "matrix-core-importer",
+  "matrix-mcp-importer",
+  "matrix-opencode-importer",
+  "no-deep-package-import",
+  "no-relative-cross-package-import",
+  "runtime-apis-confinement",
+  "subpath-adapters-core-branding",
+  "subpath-adapters-core-state",
+  "subpath-undeclared",
+  "surface-projection-cli-only",
+  "surface-serializer-entry-only",
+  "testkit-no-production-import",
+  "testkit-no-surface-import",
+  "tier-app-allowed-set",
+  "tier-branding-only-contracts",
+  "tier-config-only-contracts",
+  "tier-domain-only-contracts",
+  "tier-state-allowed-set",
+  "workspace-import-must-resolve",
+].sort();
+
+const RUNTIME_ALLOWLIST = [
+  "^packages/core/src/state/driver/",
+  "^packages/adapters/src/(repo|file|host|session|legacy|credentials)/",
+  "^packages/adapters/src/github/",
+  "^packages/adapters/src/gitlab/",
+  "^packages/adapters/src/jira/",
+  "^packages/cli/",
+  "^packages/opencode/",
+];
+
+describe("TC-VERIFY-021 boundary, ambient, exit-code, entrypoint gates", () => {
+  const require = createRequire(import.meta.url);
+  const config = require("../../.dependency-cruiser.cjs") as {
+    forbidden: Array<{ name: string; from?: { pathNot?: string[] } }>;
+  };
+
+  test("the dependency-cruiser rule set and runtime allowlist are the pinned pre-change sets", () => {
+    const names = [...new Set(config.forbidden.map((rule) => rule.name))].sort();
+    expect(names).toEqual(DEPCRUISE_RULES);
+    const runtime = config.forbidden.find((rule) => rule.name === "runtime-apis-confinement");
+    expect(runtime?.from?.pathNot).toEqual(RUNTIME_ALLOWLIST);
+  });
+
+  test("the workspace entrypoint check is green for the new modules", () => {
+    expect(validateWorkspaceEntrypoints(ROOT)).toEqual([]);
+  });
+
+  test("a seeded ambient probe fails naming file, line, and kind", () => {
+    for (const [source, detail] of [
+      ["export const value = Date.now();\n", "Date.now"],
+      ["export const value = Math.random();\n", "Math.random"],
+      ["export const value = process.env.EXAMPLE;\n", "process.env"],
+    ] as const) {
+      const root = mkdtempSync(join(tmpdir(), "verify-ambient-"));
+      try {
+        mkdirSync(join(root, "packages/core/src/domain"), { recursive: true });
+        writeFileSync(join(root, "packages/core/src/domain/probe.ts"), source);
+        const violations = scanAmbient(root);
+        expect(violations.length).toBeGreaterThan(0);
+        expect(violations[0]?.file).toBe("packages/core/src/domain/probe.ts");
+        expect(violations[0]?.line).toBe(1);
+        expect(violations[0]?.detail).toContain(detail);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  test("a seeded exit-code literal fails and the live surface stays clean", () => {
+    const root = mkdtempSync(join(tmpdir(), "verify-exit-"));
+    try {
+      mkdirSync(join(root, "packages/cli/src"), { recursive: true });
+      writeFileSync(
+        join(root, "packages/cli/src/probe.ts"),
+        "export const result = { exitCode: 2 };\n",
+      );
+      const report = scanExitLiterals(root);
+      expect(report.failures.length).toBeGreaterThan(0);
+      expect(report.failures[0]).toContain("packages/cli/src/probe.ts:1");
+      expect(report.failures[0]).toContain("exitCode literal 2");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+    expect(scanExitLiterals(ROOT).failures).toEqual([]);
   });
 });
