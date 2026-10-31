@@ -616,6 +616,7 @@ const RUNTIME_ALLOWLIST = [
   "^packages/adapters/src/github/",
   "^packages/adapters/src/gitlab/",
   "^packages/adapters/src/jira/",
+  "^packages/adapters/src/provider-quota/",
   "^packages/cli/",
   "^packages/opencode/",
 ];
@@ -626,7 +627,7 @@ describe("TC-VERIFY-021 boundary, ambient, exit-code, entrypoint gates", () => {
     forbidden: Array<{ name: string; from?: { pathNot?: string[] } }>;
   };
 
-  test("the dependency-cruiser rule set and runtime allowlist are the pinned pre-change sets", () => {
+  test("the dependency-cruiser rule set and runtime allowlist are the pinned unified sets", () => {
     const names = [...new Set(config.forbidden.map((rule) => rule.name))].sort();
     expect(names).toEqual(DEPCRUISE_RULES);
     const runtime = config.forbidden.find((rule) => rule.name === "runtime-apis-confinement");

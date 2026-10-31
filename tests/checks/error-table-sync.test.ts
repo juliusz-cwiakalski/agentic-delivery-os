@@ -574,12 +574,15 @@ describe("TC-PROV-045 provider rows synchronize in both directions", () => {
       "source entry provider.chain.changed is undocumented",
     );
   });
+});
+
 const ROW_VERIFY =
   "| verify.ledger.incomplete | verify | user | false | not_landed | Complete the named required phases of the declared variant through the phase command, or correct the declaration, then re-run verify. | user-validation | The declared variant's required phases are not all completed. |";
 
 /**
- * Frozen oracle of every pre-existing row (full column set). The verify row is
- * the only permitted addition; a changed existing row fails naming it.
+ * Frozen oracle of every row present before the verify addition (full column
+ * set). The verify row is the only permitted addition; a changed existing row
+ * fails naming it.
  */
 const BASELINE_ROWS: ReadonlyArray<
   readonly [string, string, string, boolean, string, string, string, string]
@@ -613,6 +616,46 @@ const BASELINE_ROWS: ReadonlyArray<
     "Wait for the quota window to reset, then retry the operation.",
     "platform-provider",
     "The provider quota was exceeded.",
+  ],
+  [
+    "provider.outage",
+    "provider",
+    "transient",
+    true,
+    "not_landed",
+    "Retry after the provider becomes reachable; consult the announcement and park for the resume time.",
+    "platform-provider",
+    "The provider is unreachable.",
+  ],
+  [
+    "provider.auth.rejected",
+    "provider",
+    "user",
+    false,
+    "not_landed",
+    "Correct or replace the declared credential and retry.",
+    "user-validation",
+    "The provider rejected the credential.",
+  ],
+  [
+    "provider.chain.empty",
+    "provider",
+    "user",
+    false,
+    "not_landed",
+    "Declare a non-empty provider chain (or select one) and retry.",
+    "user-validation",
+    "No provider chain is declared.",
+  ],
+  [
+    "provider.chain.invalid",
+    "provider",
+    "user",
+    false,
+    "not_landed",
+    "Correct the named chain entries, ordering, or references and retry.",
+    "user-validation",
+    "The provider chain is invalid.",
   ],
   [
     "input.value.rejected",
@@ -890,7 +933,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const kinds = new Map<string, number>();
     for (const entry of live) kinds.set(entry.domainKind, (kinds.get(entry.domainKind) ?? 0) + 1);
     expect(Object.fromEntries(kinds)).toMatchObject({
-      provider: 1,
+      provider: 5,
       input: 1,
       config: 10,
       state: 7,

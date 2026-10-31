@@ -449,6 +449,7 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
       parks: (input) => engine.parks(input),
     };
     commands.provider = createProviderCommandDefinition(providerRuntime);
+  }
   if (options.verify !== undefined) {
     commands.verify = createVerifyCommandDefinition(options.verify);
   }

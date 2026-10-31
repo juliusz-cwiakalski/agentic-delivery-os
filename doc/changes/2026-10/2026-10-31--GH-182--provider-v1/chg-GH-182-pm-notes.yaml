@@ -59,3 +59,6 @@ notes:
   - text: "Quality gates PASS at HEAD 7de3be2: pnpm check 1149 tests/113 files, boundaries, doc-distribution (81 docs), error-table sync (30/30), secret-read boundary (4 entries), forbidden-literals (0), commitlint (0 problems), git diff --check. DoD audit: all delivery evidence satisfied; plan and test-plan bookkeeping reconciled (48 ACs/64 TCs). Only PR-phase gates remain: unmerged main-tools PR with green CI/owner assignment (11.5) and owner-policy OQ-2/OQ-3 confirmation (11.2, merge gate)."
     type: decision
     date: "2026-11-01"
+  - text: "Post-delivery integration: main-tools advanced with GH-177 (verify change). The merge commit unioned both sides but left four union seams: missing closing brace in the provider/verify command-runtime composition (edge.ts), missing describe closure before the verify row in error-table-sync.test.ts, missing test/describe closures before the verify section in error-table.test.ts, and GH-177's pinned runtime-allowlist expectation missing the provider-quota admission in verify-imports.test.ts. All four reconciled; error-table baseline oracle extended to the five provider rows (+verify), domainKind counts updated to provider 5 / verify 1 / total 31. pnpm install/build/check/boundaries green: 1261 tests/120 files, 0 fail; targeted error-table suites 88/88."
+    type: info
+    date: "2026-11-01"

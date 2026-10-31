@@ -563,6 +563,9 @@ describe("TC-PROV-045 provider rows are exact and synced", () => {
       const row = `| ${code} | provider | ${PROVIDER_ROWS.find(([candidate]) => candidate === code)?.[1]} | ${String(PROVIDER_ROWS.find(([candidate]) => candidate === code)?.[2])} | not_landed | ${hint} | ${projectionClass} | ${summary} |`;
       expect(doc.split(row).length - 1, code).toBe(1);
     }
+  });
+});
+
 const VERIFY_HINT =
   "Complete the named required phases of the declared variant through the phase command, or correct the declaration, then re-run verify.";
 const VERIFY_SUMMARY = "The declared variant's required phases are not all completed.";
@@ -604,12 +607,12 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(doc).toContain("`verify.ledger.incomplete`");
   });
 
-  test("existing kinds remain untouched and the addition is the only new row", () => {
-    expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(1);
+  test("existing kinds keep their rows and the provider and verify additions are present", () => {
+    expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(5);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(7);
     expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(5);
-    expect(entries).toHaveLength(27);
+    expect(entries).toHaveLength(31);
   });
 });
