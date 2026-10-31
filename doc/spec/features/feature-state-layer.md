@@ -7,9 +7,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The implemented M0-S5 state layer: an injected store identity, an append-only schema-versioned JSONL ledger as durable truth, disposable JSONL-scan and SQLite-index driver kinds over the same ledger, classified torn-state detection with verified-empty evidence and terminal-tail repair, key-set assertions with no default substitution, single-writer fences with explicit reported recovery, atomic derived-document replace, least-privilege permissions with a documented Windows ACL contract, and the provider park/announcement record kinds with the rebuildable provider-parks.json projection."
 links:
-  related_changes: ["GH-174", "GH-179", "GH-181", "GH-182"]
-  related_decisions: ["ADR-0003", "TDR-0004"]
-  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181"]
+  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175"]
   related_decisions: ["ADR-0003", "TDR-0004", "TDR-0005"]
 ---
 
@@ -21,7 +19,7 @@ The state layer is the durable local substrate later verification reads through.
 
 The append-only, schema-versioned JSONL ledger is the single durable truth. The declared driver kinds select only the read/index strategy over that same ledger: `jsonl` reads by verified scan, `sqlite` maintains a disposable derived index that is rebuilt from verified ledger truth whenever it is missing, corrupt, or divergent. No operation, result, or type on the public port discriminates by driver kind.
 
-The layer ships no command surface and no configuration read. Its first durable consumer is the delivery registry, which appends `phase.transition` records through the fenced port and replaces the per-change phase-state document as a rebuildable fold of verified records. Store identity, paths, clock, and platform arrive as injected parameters; the state tier never imports branding and never derives a name.
+The layer ships no command surface and no configuration read. Its durable consumers append through the fenced port and read through verified reads: the delivery registry writes `phase.transition` records and replaces the per-change phase-state document as a rebuildable fold of verified records; verify change reads transition history; the provider engine writes park and announcement records; and the status digest reads the verified provider park fold without writing anything. Store identity, paths, clock, and platform arrive as injected parameters; the state tier never imports branding and never derives a name.
 
 ## Business Context
 
@@ -70,6 +68,12 @@ The per-change phase state is a derived document (`phase-state.<REF>.json`) prod
 The provider engine composes the same public port without adding a runtime-API location. It appends `provider.park` records under the store-scoped key `provider.parks` and `provider.announcement` records under `provider.announcements`; each landed payload carries the full verified history, so a verified read returns the history from the ledger record itself. Persistence is fenced and occurs only in a mutating provider `resolve`; `quota` and `parks list` perform zero state writes.
 
 The `provider-parks.json` derived document is a per-park-name fold of the latest record, ordered by expiry ascending then name lexical, with schema `delivery.provider.parks.v1`. It is replaced atomically only when park truth changes. Read paths fold verified ledger truth directly, so a missing or divergent projection is served from the fold with zero writes; the persisted document catches up on the next mutating resolve. A park is active while `expiresAt > now`, expired at `expiresAt <= now` with no write, and `cleared` only when a `cleared` record for a clear observed before expiry was appended; a park observed after expiry stays `expired` with no write, while the next mutating resolve emits its `provider.resumed` announcement. The provider vocabulary and read views are specified in [Provider Engine](feature-provider-engine.md).
+### Status consumer
+
+The status digest is a read-only consumer of the state layer. Its providers section folds verified ledger truth into active park views through the same read-only `readProviderParkViews` entry the provider command uses; it reads the `provider.park` history, applies read-time expiry, and never reads the persisted `provider-parks.json` projection as truth. One logical park-fold read occurs per status invocation, and the fold's documented internal verified reads are not multiplied by status.
+
+Status acquires no fence, appends no record, replaces no derived document, and never repairs or clears a park. An unreadable store is a classified `state.*` evidence code on a `degraded` providers section, never a command failure and never a "no parks" claim. The status contract and evidence model are specified in [Status Digest](feature-status-digest.md).
+
 ### Verify-change consumer
 
 Verify change is a read-only consumer of the state layer. It reads the registry's per-change transition history through a presence-tolerant verified read: the store is verified first, an absent store or an absent per-change record is explicit no-evidence (`present: false`), and a torn, schema-mismatched, or corrupt-payload read remains the classified `state.*` failure. The read acquires no fence and writes nothing.
@@ -126,6 +130,7 @@ The state tier imports `./contracts` and its own modules only; runtime APIs appe
 - [Result contract and error table](feature-result-contract.md) — the `state` and `lint` rows and the binding sync check.
 - [PM-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md) — the delivery registry consumer, its record vocabulary, and the derived projection.
 - [Provider engine](feature-provider-engine.md) — the provider park and announcement record kinds, read-time expiry, and the `provider-parks.json` fold.
+- [Status digest](feature-status-digest.md) — the read-only verified park-fold consumer.
 - [Verify change and exit taxonomy](feature-verify-change-and-exit-taxonomy.md) — the read-only verification consumer and the delivery-result exit taxonomy.
 - [Monorepo scaffold and toolchain](feature-monorepo-scaffold-toolchain.md) — tier and runtime-API boundaries.
 - [Branding seam](feature-branding-seam.md) — `stateDirectoryName` is consumed as an injected parameter, never imported here.

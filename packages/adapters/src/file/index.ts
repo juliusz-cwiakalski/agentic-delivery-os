@@ -11,6 +11,7 @@ export {
   type RuntimePlatform,
   runtimePlatform,
 } from "./config-source.js";
+export { readLocalPmContext } from "./pm-context.js";
 export {
   nodePmNotesFileSystemFacts,
   type PmNotesEntryEdit,

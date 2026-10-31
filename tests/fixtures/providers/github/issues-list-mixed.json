@@ -1,0 +1,63 @@
+{
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "issues": [
+    {
+      "number": 610,
+      "title": "Open issue with labels",
+      "state": "open",
+      "labels": [
+        {
+          "name": "hand-back"
+        }
+      ],
+      "assignee": {
+        "login": "owner-placeholder"
+      },
+      "updated_at": "2026-10-29T08:00:00Z",
+      "issue_links": []
+    },
+    {
+      "number": 611,
+      "title": "A pull request object",
+      "state": "open",
+      "labels": [],
+      "pull_request": {
+        "url": "https://api.github.example.com/repos/group-placeholder/project-placeholder/pulls/611"
+      }
+    },
+    {
+      "number": 612,
+      "title": "Issue blocked by 610",
+      "state": "open",
+      "labels": [
+        {
+          "name": "tracker"
+        }
+      ],
+      "assignee": null,
+      "updated_at": "2026-10-28T08:00:00Z",
+      "issue_links": [
+        {
+          "type": "blocked-by",
+          "number": 610
+        }
+      ]
+    },
+    {
+      "number": 613,
+      "title": "Another pull request",
+      "state": "open",
+      "labels": [],
+      "pull_request": {
+        "url": "https://api.github.example.com/repos/group-placeholder/project-placeholder/pulls/613"
+      }
+    },
+    {
+      "number": 614,
+      "title": "Closed issue",
+      "state": "closed",
+      "labels": [],
+      "assignee": null
+    }
+  ]
+}

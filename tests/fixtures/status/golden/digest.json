@@ -1,0 +1,805 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-status-fixture",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 10
+  },
+  "data": {
+    "schemaVersion": "delivery.status.v1",
+    "generatedAt": "2026-10-31T00:00:00Z",
+    "repository": {
+      "state": "observed",
+      "host": "github.com",
+      "owner": "owner-placeholder",
+      "name": "project-placeholder",
+      "remoteName": "origin"
+    },
+    "summary": {
+      "sections": 6,
+      "observed": 5,
+      "degraded": 0,
+      "unknown": 0,
+      "unavailable": 0,
+      "notDelivered": 1,
+      "actionable": 56
+    },
+    "sections": [
+      {
+        "id": "tracker",
+        "title": "Tracker",
+        "state": "observed",
+        "evidence": {
+          "sources": [
+            {
+              "source": "tracker",
+              "outcome": "read"
+            }
+          ],
+          "reasons": [
+            "observed",
+            "item-signal-absent",
+            "source-truncated"
+          ]
+        },
+        "counts": {
+          "observed": 24,
+          "unknown": 8,
+          "total": 32,
+          "omitted": 16
+        },
+        "truncated": true,
+        "families": [
+          {
+            "family": "ownerHandBacks",
+            "state": "observed",
+            "counts": {
+              "observed": 4,
+              "unknown": 0,
+              "total": 4,
+              "omitted": 0
+            },
+            "items": [
+              {
+                "workItemRef": "GH-100",
+                "title": "Hand back 0",
+                "family": "ownerHandBacks",
+                "itemState": "observed",
+                "labels": [
+                  "hand-back"
+                ]
+              },
+              {
+                "workItemRef": "GH-101",
+                "title": "Hand back 1",
+                "family": "ownerHandBacks",
+                "itemState": "observed",
+                "labels": [
+                  "hand-back"
+                ]
+              },
+              {
+                "workItemRef": "GH-102",
+                "title": "Hand back 2",
+                "family": "ownerHandBacks",
+                "itemState": "observed",
+                "labels": [
+                  "hand-back"
+                ]
+              },
+              {
+                "workItemRef": "GH-103",
+                "title": "Hand back 3",
+                "family": "ownerHandBacks",
+                "itemState": "observed",
+                "labels": [
+                  "hand-back"
+                ]
+              }
+            ]
+          },
+          {
+            "family": "blockedDependencies",
+            "state": "observed",
+            "counts": {
+              "observed": 4,
+              "unknown": 0,
+              "total": 4,
+              "omitted": 0
+            },
+            "items": [
+              {
+                "workItemRef": "GH-200",
+                "title": "Blocked 0",
+                "family": "blockedDependencies",
+                "itemState": "observed",
+                "dependencyState": "unknown"
+              },
+              {
+                "workItemRef": "GH-201",
+                "title": "Blocked 1",
+                "family": "blockedDependencies",
+                "itemState": "observed",
+                "dependencyState": "unknown"
+              },
+              {
+                "workItemRef": "GH-202",
+                "title": "Blocked 2",
+                "family": "blockedDependencies",
+                "itemState": "observed",
+                "dependencyState": "unknown"
+              },
+              {
+                "workItemRef": "GH-203",
+                "title": "Blocked 3",
+                "family": "blockedDependencies",
+                "itemState": "observed",
+                "dependencyState": "unknown"
+              }
+            ]
+          },
+          {
+            "family": "stalls",
+            "state": "observed",
+            "counts": {
+              "observed": 4,
+              "unknown": 8,
+              "total": 12,
+              "omitted": 8
+            },
+            "items": [
+              {
+                "workItemRef": "GH-300",
+                "title": "Stalled 0",
+                "family": "stalls",
+                "itemState": "observed",
+                "activity": "stalled",
+                "ageDays": 60
+              },
+              {
+                "workItemRef": "GH-301",
+                "title": "Stalled 1",
+                "family": "stalls",
+                "itemState": "observed",
+                "activity": "stalled",
+                "ageDays": 60
+              },
+              {
+                "workItemRef": "GH-302",
+                "title": "Stalled 2",
+                "family": "stalls",
+                "itemState": "observed",
+                "activity": "stalled",
+                "ageDays": 60
+              },
+              {
+                "workItemRef": "GH-303",
+                "title": "Stalled 3",
+                "family": "stalls",
+                "itemState": "observed",
+                "activity": "stalled",
+                "ageDays": 60
+              }
+            ]
+          },
+          {
+            "family": "hygiene",
+            "state": "observed",
+            "counts": {
+              "observed": 12,
+              "unknown": 0,
+              "total": 12,
+              "omitted": 8
+            },
+            "items": [
+              {
+                "workItemRef": "GH-200",
+                "title": "Blocked 0",
+                "family": "hygiene",
+                "itemState": "observed",
+                "findings": [
+                  "missing-labels"
+                ]
+              },
+              {
+                "workItemRef": "GH-201",
+                "title": "Blocked 1",
+                "family": "hygiene",
+                "itemState": "observed",
+                "findings": [
+                  "missing-labels"
+                ]
+              },
+              {
+                "workItemRef": "GH-202",
+                "title": "Blocked 2",
+                "family": "hygiene",
+                "itemState": "observed",
+                "findings": [
+                  "missing-labels"
+                ]
+              },
+              {
+                "workItemRef": "GH-203",
+                "title": "Blocked 3",
+                "family": "hygiene",
+                "itemState": "observed",
+                "findings": [
+                  "missing-labels"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "changes-and-prs",
+        "title": "Changes and pull requests",
+        "state": "observed",
+        "evidence": {
+          "sources": [
+            {
+              "source": "local-context",
+              "outcome": "read"
+            },
+            {
+              "source": "changes",
+              "outcome": "read"
+            }
+          ],
+          "reasons": [
+            "observed"
+          ]
+        },
+        "counts": {
+          "observed": 8,
+          "unknown": 0,
+          "total": 8,
+          "omitted": 0
+        },
+        "truncated": false,
+        "activeChange": {
+          "state": "observed",
+          "workItemRef": "GH-175",
+          "branch": "feat/GH-175/status-v1",
+          "changeFolder": "doc/changes/2026-10/2026-10-31--GH-175--status-v1"
+        },
+        "pullRequests": [
+          {
+            "entityId": "500",
+            "sourceRef": "feat/GH-500",
+            "targetRef": "main-tools",
+            "deliveryState": "open",
+            "draft": false,
+            "reviewState": "observed",
+            "reviewThreads": "observed"
+          },
+          {
+            "entityId": "502",
+            "sourceRef": "feat/GH-502",
+            "targetRef": "main-tools",
+            "deliveryState": "open",
+            "draft": false,
+            "reviewState": "observed",
+            "reviewThreads": "observed"
+          },
+          {
+            "entityId": "504",
+            "sourceRef": "feat/GH-504",
+            "targetRef": "main-tools",
+            "deliveryState": "open",
+            "draft": false,
+            "reviewState": "observed",
+            "reviewThreads": "observed"
+          },
+          {
+            "entityId": "506",
+            "sourceRef": "feat/GH-506",
+            "targetRef": "main-tools",
+            "deliveryState": "open",
+            "draft": false,
+            "reviewState": "observed",
+            "reviewThreads": "observed"
+          },
+          {
+            "entityId": "501",
+            "sourceRef": "feat/GH-501",
+            "targetRef": "main-tools",
+            "deliveryState": "draft",
+            "draft": true,
+            "reviewState": "observed",
+            "reviewThreads": "observed"
+          },
+          {
+            "entityId": "503",
+            "sourceRef": "feat/GH-503",
+            "targetRef": "main-tools",
+            "deliveryState": "draft",
+            "draft": true,
+            "reviewState": "observed",
+            "reviewThreads": "observed"
+          },
+          {
+            "entityId": "505",
+            "sourceRef": "feat/GH-505",
+            "targetRef": "main-tools",
+            "deliveryState": "draft",
+            "draft": true,
+            "reviewState": "observed",
+            "reviewThreads": "observed"
+          },
+          {
+            "entityId": "507",
+            "sourceRef": "feat/GH-507",
+            "targetRef": "main-tools",
+            "deliveryState": "draft",
+            "draft": true,
+            "reviewState": "observed",
+            "reviewThreads": "observed"
+          }
+        ]
+      },
+      {
+        "id": "ci",
+        "title": "CI",
+        "state": "observed",
+        "evidence": {
+          "sources": [
+            {
+              "source": "ci",
+              "outcome": "read"
+            }
+          ],
+          "reasons": [
+            "observed"
+          ]
+        },
+        "counts": {
+          "observed": 8,
+          "unknown": 0,
+          "total": 8,
+          "omitted": 0
+        },
+        "truncated": false,
+        "commit": {
+          "branch": "feat/GH-175/status-v1",
+          "sha": "1111111111111111111111111111111111111111"
+        },
+        "result": "failed",
+        "runs": [
+          {
+            "identity": {
+              "systemName": "github",
+              "entityId": "700"
+            },
+            "pipelineName": "ci-0",
+            "jobs": [
+              {
+                "jobName": "job",
+                "jobState": "failed"
+              }
+            ],
+            "traceEvidence": []
+          },
+          {
+            "identity": {
+              "systemName": "github",
+              "entityId": "707"
+            },
+            "pipelineName": "ci-7",
+            "jobs": [
+              {
+                "jobName": "job",
+                "jobState": "succeeded"
+              }
+            ],
+            "traceEvidence": []
+          },
+          {
+            "identity": {
+              "systemName": "github",
+              "entityId": "706"
+            },
+            "pipelineName": "ci-6",
+            "jobs": [
+              {
+                "jobName": "job",
+                "jobState": "succeeded"
+              }
+            ],
+            "traceEvidence": []
+          },
+          {
+            "identity": {
+              "systemName": "github",
+              "entityId": "705"
+            },
+            "pipelineName": "ci-5",
+            "jobs": [
+              {
+                "jobName": "job",
+                "jobState": "succeeded"
+              }
+            ],
+            "traceEvidence": []
+          },
+          {
+            "identity": {
+              "systemName": "github",
+              "entityId": "704"
+            },
+            "pipelineName": "ci-4",
+            "jobs": [
+              {
+                "jobName": "job",
+                "jobState": "succeeded"
+              }
+            ],
+            "traceEvidence": []
+          },
+          {
+            "identity": {
+              "systemName": "github",
+              "entityId": "703"
+            },
+            "pipelineName": "ci-3",
+            "jobs": [
+              {
+                "jobName": "job",
+                "jobState": "succeeded"
+              }
+            ],
+            "traceEvidence": []
+          },
+          {
+            "identity": {
+              "systemName": "github",
+              "entityId": "702"
+            },
+            "pipelineName": "ci-2",
+            "jobs": [
+              {
+                "jobName": "job",
+                "jobState": "succeeded"
+              }
+            ],
+            "traceEvidence": []
+          },
+          {
+            "identity": {
+              "systemName": "github",
+              "entityId": "701"
+            },
+            "pipelineName": "ci-1",
+            "jobs": [
+              {
+                "jobName": "job",
+                "jobState": "succeeded"
+              }
+            ],
+            "traceEvidence": []
+          }
+        ]
+      },
+      {
+        "id": "lanes-or-queue",
+        "title": "Lanes or queue",
+        "state": "not-delivered",
+        "evidence": {
+          "sources": [
+            {
+              "source": "queue-engine",
+              "outcome": "not-delivered"
+            }
+          ],
+          "reasons": [
+            "engine-not-delivered"
+          ]
+        },
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "truncated": false,
+        "capability": "queue-lane-engine",
+        "expectedStory": "M2-S1",
+        "note": "no queue or lane engine exists in this release",
+        "items": []
+      },
+      {
+        "id": "providers",
+        "title": "Providers",
+        "state": "observed",
+        "evidence": {
+          "sources": [
+            {
+              "source": "provider-config",
+              "outcome": "read"
+            },
+            {
+              "source": "provider-parks",
+              "outcome": "read"
+            }
+          ],
+          "reasons": [
+            "observed"
+          ]
+        },
+        "counts": {
+          "observed": 16,
+          "unknown": 0,
+          "total": 16,
+          "omitted": 0
+        },
+        "truncated": false,
+        "chain": {
+          "state": "declared",
+          "name": "primary",
+          "entries": [
+            "provider-0",
+            "provider-1",
+            "provider-2",
+            "provider-3",
+            "provider-4",
+            "provider-5",
+            "provider-6",
+            "provider-7"
+          ]
+        },
+        "entries": [
+          {
+            "name": "provider-0",
+            "class": "subscription",
+            "enabled": true,
+            "availability": "parked",
+            "quotaDeclared": false,
+            "peakDeclared": false
+          },
+          {
+            "name": "provider-1",
+            "class": "subscription",
+            "enabled": true,
+            "availability": "parked",
+            "quotaDeclared": false,
+            "peakDeclared": false
+          },
+          {
+            "name": "provider-2",
+            "class": "subscription",
+            "enabled": true,
+            "availability": "parked",
+            "quotaDeclared": false,
+            "peakDeclared": false
+          },
+          {
+            "name": "provider-3",
+            "class": "subscription",
+            "enabled": true,
+            "availability": "parked",
+            "quotaDeclared": false,
+            "peakDeclared": false
+          },
+          {
+            "name": "provider-4",
+            "class": "subscription",
+            "enabled": true,
+            "availability": "parked",
+            "quotaDeclared": false,
+            "peakDeclared": false
+          },
+          {
+            "name": "provider-5",
+            "class": "subscription",
+            "enabled": true,
+            "availability": "parked",
+            "quotaDeclared": false,
+            "peakDeclared": false
+          },
+          {
+            "name": "provider-6",
+            "class": "subscription",
+            "enabled": true,
+            "availability": "parked",
+            "quotaDeclared": false,
+            "peakDeclared": false
+          },
+          {
+            "name": "provider-7",
+            "class": "subscription",
+            "enabled": true,
+            "availability": "parked",
+            "quotaDeclared": false,
+            "peakDeclared": false
+          }
+        ],
+        "parks": [
+          {
+            "name": "provider:provider-0",
+            "subjectKind": "provider",
+            "subjectName": "provider-0",
+            "cause": "quota-exhausted",
+            "conditions": [
+              "quota-exhausted"
+            ],
+            "expiresAt": "2026-11-01T00:00:00Z"
+          },
+          {
+            "name": "provider:provider-1",
+            "subjectKind": "provider",
+            "subjectName": "provider-1",
+            "cause": "quota-exhausted",
+            "conditions": [
+              "quota-exhausted"
+            ],
+            "expiresAt": "2026-11-02T00:00:00Z"
+          },
+          {
+            "name": "provider:provider-2",
+            "subjectKind": "provider",
+            "subjectName": "provider-2",
+            "cause": "quota-exhausted",
+            "conditions": [
+              "quota-exhausted"
+            ],
+            "expiresAt": "2026-11-03T00:00:00Z"
+          },
+          {
+            "name": "provider:provider-3",
+            "subjectKind": "provider",
+            "subjectName": "provider-3",
+            "cause": "quota-exhausted",
+            "conditions": [
+              "quota-exhausted"
+            ],
+            "expiresAt": "2026-11-04T00:00:00Z"
+          },
+          {
+            "name": "provider:provider-4",
+            "subjectKind": "provider",
+            "subjectName": "provider-4",
+            "cause": "quota-exhausted",
+            "conditions": [
+              "quota-exhausted"
+            ],
+            "expiresAt": "2026-11-05T00:00:00Z"
+          },
+          {
+            "name": "provider:provider-5",
+            "subjectKind": "provider",
+            "subjectName": "provider-5",
+            "cause": "quota-exhausted",
+            "conditions": [
+              "quota-exhausted"
+            ],
+            "expiresAt": "2026-11-06T00:00:00Z"
+          },
+          {
+            "name": "provider:provider-6",
+            "subjectKind": "provider",
+            "subjectName": "provider-6",
+            "cause": "quota-exhausted",
+            "conditions": [
+              "quota-exhausted"
+            ],
+            "expiresAt": "2026-11-07T00:00:00Z"
+          },
+          {
+            "name": "provider:provider-7",
+            "subjectKind": "provider",
+            "subjectName": "provider-7",
+            "cause": "quota-exhausted",
+            "conditions": [
+              "quota-exhausted"
+            ],
+            "expiresAt": "2026-11-08T00:00:00Z"
+          }
+        ]
+      },
+      {
+        "id": "parked-work",
+        "title": "Parked work",
+        "state": "observed",
+        "evidence": {
+          "sources": [
+            {
+              "source": "local-context",
+              "outcome": "read"
+            }
+          ],
+          "reasons": [
+            "observed"
+          ]
+        },
+        "counts": {
+          "observed": 8,
+          "unknown": 0,
+          "total": 8,
+          "omitted": 0
+        },
+        "truncated": false,
+        "source": {
+          "kind": "local-pm-context",
+          "path": "/home/user/.ai/local/pm-context.yaml",
+          "tracked": false,
+          "gitIgnored": true
+        },
+        "items": [
+          {
+            "workItemRef": "GH-800",
+            "branch": "feat/GH-800/parked",
+            "changeFolder": "doc/changes/2026-10/GH-800",
+            "reason": "waiting",
+            "parkedAt": "2026-10-01T00:00:00Z",
+            "ageDays": 30,
+            "itemState": "observed"
+          },
+          {
+            "workItemRef": "GH-801",
+            "branch": "feat/GH-801/parked",
+            "changeFolder": "doc/changes/2026-10/GH-801",
+            "reason": "waiting",
+            "parkedAt": "2026-10-02T00:00:00Z",
+            "ageDays": 29,
+            "itemState": "observed"
+          },
+          {
+            "workItemRef": "GH-802",
+            "branch": "feat/GH-802/parked",
+            "changeFolder": "doc/changes/2026-10/GH-802",
+            "reason": "waiting",
+            "parkedAt": "2026-10-03T00:00:00Z",
+            "ageDays": 28,
+            "itemState": "observed"
+          },
+          {
+            "workItemRef": "GH-803",
+            "branch": "feat/GH-803/parked",
+            "changeFolder": "doc/changes/2026-10/GH-803",
+            "reason": "waiting",
+            "parkedAt": "2026-10-04T00:00:00Z",
+            "ageDays": 27,
+            "itemState": "observed"
+          },
+          {
+            "workItemRef": "GH-804",
+            "branch": "feat/GH-804/parked",
+            "changeFolder": "doc/changes/2026-10/GH-804",
+            "reason": "waiting",
+            "parkedAt": "2026-10-05T00:00:00Z",
+            "ageDays": 26,
+            "itemState": "observed"
+          },
+          {
+            "workItemRef": "GH-805",
+            "branch": "feat/GH-805/parked",
+            "changeFolder": "doc/changes/2026-10/GH-805",
+            "reason": "waiting",
+            "parkedAt": "2026-10-06T00:00:00Z",
+            "ageDays": 25,
+            "itemState": "observed"
+          },
+          {
+            "workItemRef": "GH-806",
+            "branch": "feat/GH-806/parked",
+            "changeFolder": "doc/changes/2026-10/GH-806",
+            "reason": "waiting",
+            "parkedAt": "2026-10-07T00:00:00Z",
+            "ageDays": 24,
+            "itemState": "observed"
+          },
+          {
+            "workItemRef": "GH-807",
+            "branch": "feat/GH-807/parked",
+            "changeFolder": "doc/changes/2026-10/GH-807",
+            "reason": "waiting",
+            "parkedAt": "2026-10-08T00:00:00Z",
+            "ageDays": 23,
+            "itemState": "observed"
+          }
+        ]
+      }
+    ]
+  }
+}

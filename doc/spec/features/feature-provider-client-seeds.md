@@ -6,9 +6,9 @@ created: 2026-10-31
 last_updated: 2026-10-31
 owners: ["engineering"]
 service: delivery-os
-summary: "The first real provider clients behind the primitive ports: GitLab, Jira, and a minimal GitHub read slice in the adapters package's per-provider subpaths, with normalized primitive views, honest capability/gap declarations, offline trap catalogs proven against sanitized hand-authored synthetic fixtures, credential-port-exclusive auth, declared custom-field and merge-status mappings, uniform absence semantics, and the reviewed runtime-API confinement admission."
+summary: "The first real provider clients behind the primitive ports: GitLab, Jira, and a minimal GitHub read slice in the adapters package's per-provider subpaths, with normalized primitive views, honest capability/gap declarations, offline trap catalogs proven against sanitized hand-authored synthetic fixtures, credential-port-exclusive auth, declared custom-field and merge-status mappings, uniform absence semantics, bounded GitHub collection reads under the existing operations, and the reviewed runtime-API confinement admission."
 links:
-  related_changes: ["GH-188"]
+  related_changes: ["GH-188", "GH-175"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006"]
 ---
 
@@ -18,7 +18,7 @@ links:
 
 The tracker and VCS client layer begins with three provider seeds in the adapters package's per-provider subpaths: Jira (`adapters ./jira`), GitLab (`adapters ./gitlab`), and GitHub (`adapters ./github`). Each is a factory-built client that implements behind the delivered primitive ports and returns only normalized views — `WorkItem`, `DeliveryRequest`, and `PipelineRun` — plus an `AdapterContract` capability declaration. Provider-native payload types never cross the subpath surface.
 
-The seeds are read slices. Jira resolves issues and search-shaped tracker queries; GitLab reads merge requests and the pipelines reported for a commit; GitHub reads pull requests, check runs per commit SHA, and issues. Write operations are declared gaps rather than implied parity: Jira and GitHub gap every write, and GitLab gaps writes and work-item reads. The Jira read slice answers the four M0-S6 tracker-collector query families — owner hand-backs, blocked dependencies, stalls, and ticket hygiene — from normalized `WorkItem` data alone.
+The seeds are read slices. Jira resolves issues and search-shaped tracker queries; GitLab reads merge requests and the pipelines reported for a commit; GitHub reads issues, pull requests, check runs per commit SHA, one bounded page of open issues, and one bounded page of open pull requests. Write operations are declared gaps rather than implied parity: Jira and GitHub gap every write, and GitLab gaps writes and work-item reads. The Jira read slice answers the four M0-S6 tracker-collector query families — owner hand-backs, blocked dependencies, stalls, and ticket hygiene — from normalized `WorkItem` data alone. The GitHub collection reads are the query-shaped form of the existing read operations, so the closed operation set and capability declaration stay unchanged.
 
 Every known provider quirk is captured as a trap-catalog entry: a named data record pairing the provider behavior, the expected normalized outcome at the port boundary, and one or more fixture references. The catalogs and the fixtures they cite are committed test assets; trap suites replay the fixtures through the production clients with zero live network calls. Fixtures are hand-authored synthetic captures modeled on recorded provider response shapes, sanitized before commit, and marked with their provenance.
 
@@ -59,7 +59,7 @@ Client operations:
 
 - **Jira:** `readWorkItem(issueKey)` returns one `WorkItem`; `searchWorkItems(jql)` returns a `WorkItem` set from a search-shaped response.
 - **GitLab:** `readDeliveryRequest(mergeRequestIid)` returns one `DeliveryRequest`; `readPipelineRun(commitSha)` returns every pipeline the provider reports for that commit as a `PipelineRun` set.
-- **GitHub:** `readWorkItem(issueNumber)`, `readDeliveryRequest(pullNumber)`, and `readPipelineRun(commitSha)` return the corresponding normalized views.
+- **GitHub:** `readWorkItem(issueNumber)`, `readDeliveryRequest(pullNumber)`, and `readPipelineRun(commitSha, limit?)` return the corresponding normalized views. `listWorkItems(limit)` returns one bounded page of open issues with pull-request objects filtered out; `listDeliveryRequests(limit)` returns one bounded page of open pull requests. Both list reads report the raw page size alongside the normalized items.
 
 ### Capability and gap posture
 
@@ -91,6 +91,7 @@ Optional `WorkItem` fields follow one rule: absence means the provider did not s
 
 - `updatedAt` is the provider-native last-modified timestamp copied verbatim as an ISO-8601 UTC string. Absent means activity is unknown, not "no activity"; consumers must report "cannot determine" for absence.
 - `comments` is the provider-asserted comment set. Absent means the comment set is unknown (omitted for permission or paging causes, or not fetched). Present — including an explicitly empty array — means the provider asserted that set, so an empty present array means genuinely no comments. An omitted payload never collapses into `[]`.
+- `relations` is the provider-asserted relation set. The GitHub issue list does not supply structured issue links, so list-read issues carry `relations: []` only as the normalized value of an absent provider signal; consumers that need dependency truth must treat GitHub relations as unavailable rather than as an observed empty set. The same rule applies to review state and review threads on the GitHub pull-request list: the list payload carries no review decision or thread data, so those item signals are unknown, never open or zero.
 
 ### Credential resolution and error integration
 
@@ -138,10 +139,12 @@ An unresolvable credential surfaces the synchronized `config.credential.missing`
 | Element | Value / rule |
 |---------|--------------|
 | Trap-catalog entry | Exactly four fields: `trapName`, `providerBehavior`, `expectedNormalizedOutcome`, `fixtureReference` (one reference or a non-empty list). |
-| Trap-catalog coverage | GitLab 3 entries, Jira 5 entries, GitHub 3 entries; every entry has a matching assertion and every assertion has an entry. |
+| Trap-catalog coverage | GitLab 3 entries, Jira 5 entries, GitHub 7 entries; every entry has a matching assertion and every assertion has an entry. |
 | Fixture reference | A repository-relative `path` or `path#/json-pointer`, so references survive fixture re-authoring. |
 | Fixture provenance | Every fixture and catalog carries a `provenance` marker naming its synthetic origin and date. |
-| Fixture set | 17 committed JSON fixtures under the provider fixture area. |
+| Fixture set | 21 committed JSON fixtures under the provider fixture area, including four GitHub list fixtures. |
+| GitHub collection reads | One bounded page per read: `state=open`, the declared `per_page` limit, and updated-descending sort. Issue-list pull-request objects are filtered before normalization while the raw page size is preserved; the pull-request list reports refs, draft, and state only. |
+| Check-runs page limit | One bounded page at `per_page=STATUS_SOURCE_PIPELINE_LIMIT` (20), no pagination; the client returns the raw page size with the normalized runs. |
 | Jira custom-field mappings | `customfield_10020` (`select`, `team:` prefix) and `customfield_10021` (`number`, `story-points:` prefix). |
 | Jira workflow states | Six native statuses mapped to the closed delivery-alias set. |
 | GitLab merge-status rules | A declared table over the observed native values, with a terminal flag and an open-state review mapping per row. |
@@ -152,11 +155,16 @@ An unresolvable credential surfaces the synchronized `config.credential.missing`
 
 - **`createJiraClient({ instance, credentials, transport? })`** returns `{ readWorkItem, searchWorkItems }`; each operation returns `ProviderReadResult<T>`.
 - **`createGitLabClient({ instance, credentials, projectPath, transport? })`** returns `{ readDeliveryRequest, readPipelineRun }`.
-- **`createGitHubClient({ instance, credentials, repository, transport? })`** returns `{ readWorkItem, readDeliveryRequest, readPipelineRun }`.
+- **`createGitHubClient({ instance, credentials, repository, transport? })`** returns `{ readWorkItem, readDeliveryRequest, readPipelineRun, listWorkItems, listDeliveryRequests }`.
+- **`readPipelineRun(commitSha, limit?)`** reads one check-runs page, defaulting `limit` to `STATUS_SOURCE_PIPELINE_LIMIT`, and returns `{ items, pageItemCount }`; `listWorkItems(limit)` and `listDeliveryRequests(limit)` each read one bounded page and return `{ items, pageItemCount }`.
 - **`ProviderTransport.send(request)`** returns a provider response with a status and an untrusted body; tests inject a fixture transport, and production defaults to native `fetch` inside each provider subpath.
 - **`ProviderReadResult<T>`** is either `{ ok: true, value }` or a `CredentialResolutionFailure` or `ProviderPayloadFailure` (`provider.payload.invalid` with a detail).
 
-All three subpath surfaces export only the client factory, its core-built input/return types, and the adapter contract. The shared transport module is internal, imported relatively; the package's `#io/*` alias remains an internal import map, not a published export.
+All three subpath surfaces export only the client factory, its core-built input/return types, and the adapter contract. The GitHub subpath exports five names: `createGitHubClient`, `GithubClient`, `GithubClientOptions`, `GithubRepositoryRef`, and `GITHUB_ADAPTER_CONTRACT`. The shared transport module is internal, imported relatively; the package's `#io/*` alias remains an internal import map, not a published export.
+
+### Collection-read operation rule
+
+Collection reads are the query-shaped form of the existing read operations, following the Jira `searchWorkItems` precedent. `listWorkItems` stays `read-work-item`; `listDeliveryRequests` stays `read-delivery-request`; the page-limited check-runs read stays `read-pipeline-run`. `GITHUB_ADAPTER_CONTRACT.supportedOperations` and every declared write gap are unchanged, no new list operation joins the closed operation set, and no declared read gap becomes supported. A future collection read follows the same rule and extends the trap catalog with fixtures and matching assertions in the same change.
 
 ### Intra-package imports and packed exports
 
@@ -178,6 +186,8 @@ Shared adapter support modules under `src/io/` are imported by the provider seed
 | Normalized-view purity | 100% of returned artifacts are `WorkItem`, `DeliveryRequest`, or `PipelineRun`; 0 provider-native types exported past a subpath surface. |
 | Capability honesty | 100% of capabilities come from the closed operation set; every unimplemented operation carries a declared gap with a valid reason. |
 | Offline determinism | 100% of trap suites run against committed fixtures with 0 live network calls; replay is deterministic and re-runnable. |
+| Bounded collection reads | 100% of issue, pull-request, and check-runs reads issue exactly one bounded page; the raw page size is reported and pull-request objects never enter the issue-list result. |
+| Absent-signal honesty | 100% of absent GitHub relation, review-state, and review-thread signals surface as empty normalized relations or unknown consumer signals, never as fabricated dependencies, review states, or zero thread counts. |
 | Trap-catalog completeness | Every catalog entry has exactly four fields, a resolvable fixture reference, and a matching assertion in both directions. |
 | Fixture hygiene | 0 secrets, tokens, private identifiers, personal data, or non-example provider hosts in committed fixtures; placeholders and references are stable. |
 | Credential centralization | Exactly 4 secret-read allowlist entries; 0 ambient environment reads in client code; planted violations still fire. |
@@ -189,7 +199,7 @@ Shared adapter support modules under `src/io/` are imported by the provider seed
 | Level | Scope | Evidence |
 |-------|-------|----------|
 | Structure | Trap-catalog schema, four-field completeness, per-provider minima, stable fixture references; provider export-surface purity; `WorkItem` field shape | `tests/structure/trap-catalog.test.ts`, `tests/structure/provider-surface.test.ts`, `tests/structure/port-contract-inventory.test.ts` |
-| Behaviour | Per-provider trap replay; Jira query families; GitHub status/verify input set; capability/gap inspection; credential classification | `tests/behaviour/providers/gitlab-trap.test.ts`, `jira-trap.test.ts`, `github-trap.test.ts`, `jira-queries.test.ts`, `github-inputs.test.ts`, `provider-capabilities.test.ts`, `provider-credentials.test.ts`, `trap-harness.test.ts` |
+| Behaviour | Per-provider trap replay; Jira query families; GitHub status/verify input set; bounded GitHub collection reads and their negative controls; capability/gap inspection; credential classification | `tests/behaviour/providers/gitlab-trap.test.ts`, `jira-trap.test.ts`, `github-trap.test.ts`, `github-collection.test.ts`, `jira-queries.test.ts`, `github-inputs.test.ts`, `provider-capabilities.test.ts`, `provider-credentials.test.ts`, `trap-harness.test.ts` |
 | Type level | Optional/readonly `updatedAt` and `comments`; normalized-view assignability without provider-native types | `tests/types/workitem-updated-at.type-test.ts`, `tests/types/workitem-comments.type-test.ts`, `tests/types/provider-views.type-test.ts` through the root `typecheck` |
 | Checks | Fixture sanitization audit and planted-secret canary; secret-read boundary; boundary fixture coverage | `tests/checks/fixture-sanitization.test.ts`, `tests/checks/secret-read-boundary.test.ts`, `tests/boundaries/fixture-coverage.test.ts` |
 | Boundaries | Confinement admission and non-exempt negative controls; fixture-coverage registry | `tests/boundaries/boundaries.test.ts`, `tests/boundaries/fixtures/cases.ts`, `tests/boundaries/fixture-registry.json` |
@@ -209,14 +219,14 @@ Capability declarations and gap records are inspectable data. Trap failures name
 
 ### Maintenance
 
-Three surfaces grow deliberately: trap catalogs (new quirks join as four-field entries with fixtures; fixture references stay stable across re-authoring), the confinement allowance (further I/O claims are exact, reason-bearing reviewed extensions), and capability declarations (a gap becomes supported only when its consuming story lands, with trap coverage extended in the same change). Fixtures age; scheduled live revalidation belongs to the conformance suite. A transport or implementation-basis swap behind the port boundary requires no consumer change.
+Four surfaces grow deliberately: trap catalogs (new quirks join as four-field entries with fixtures; fixture references stay stable across re-authoring), the confinement allowance (further I/O claims are exact, reason-bearing reviewed extensions), capability declarations (a gap becomes supported only when its consuming story lands, with trap coverage extended in the same change), and collection reads (a list-shaped read stays a query-shaped form of an existing operation and extends the trap catalog in the same change). Fixtures age; scheduled live revalidation belongs to the conformance suite. A transport or implementation-basis swap behind the port boundary requires no consumer change.
 
 ## Dependencies & Risks
 
 - **Depends on** the monorepo scaffold for package tiers, subpath exports, boundary enforcement, and the aggregate check.
 - **Depends on** the adapter ports for the primitive contracts, capability/gap mechanism, credential port, and secret-read boundary.
 - **Depends on** the result contract for failure identity and the redaction chokepoint, and on the configuration and branding layers for injected environment facts and brand-neutral credential source keys.
-- **Consumed by** the status collector, verify-change gates, closeout, the conformance suite, and the full GitHub adapter.
+- **Consumed by** the status collector (including its bounded GitHub collection reads), verify-change gates, closeout, the conformance suite, and the full GitHub adapter.
 - **Risk — fixture drift:** hand-authored fixtures can diverge from live provider behavior. Mitigation: dated provenance, stable references, and scheduled live revalidation in the conformance suite.
 - **Risk — sanitization miss:** a committed fixture could leak a secret or personal data. Mitigation: declared placeholders, example-only hosts, a committed sanitization audit, and a planted-secret canary.
 - **Risk — catalog rot:** a catalog can look complete while its assertions stop firing. Mitigation: bidirectional entry↔assertion coverage, a negative control that names the failing entry, and per-provider minima.
@@ -241,4 +251,4 @@ Three surfaces grow deliberately: trap catalogs (new quirks join as four-field e
 
 See also: [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Result Contract and Error Table](feature-result-contract.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md), [ADR-0005](../../decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md), [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md).
 
-**Change record:** `doc/changes/2026-10/2026-10-31--GH-188--client-seeds-trap-catalogs/`.
+**Change records:** `doc/changes/2026-10/2026-10-31--GH-188--client-seeds-trap-catalogs/` (the client seeds) and `doc/changes/2026-10/2026-10-31--GH-175--status-v1/` (the bounded collection reads and trap-catalog extension).

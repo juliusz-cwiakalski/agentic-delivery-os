@@ -18,6 +18,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
+import { ADAPTER_OPERATIONS } from "../../packages/core/src/contracts/index";
 
 const ROOT = process.cwd();
 const CONTRACTS_DIR = "packages/core/src/contracts";
@@ -122,6 +123,12 @@ const makeContractsCopy = (mutate: (directory: string) => void): string => {
   mutate(root);
   return root;
 };
+
+describe("TC-STATUS-022 collection reads add no adapter operation", () => {
+  test("no list-* operation enters the closed adapter set", () => {
+    expect(ADAPTER_OPERATIONS.filter((operation) => operation.startsWith("list-"))).toEqual([]);
+  });
+});
 
 describe("TC-PORT-001 v1 contract surface inventory", () => {
   test("the live surface equals the fixture in both directions", () => {

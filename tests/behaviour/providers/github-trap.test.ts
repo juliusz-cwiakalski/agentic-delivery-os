@@ -40,6 +40,10 @@ const TRAPS = "tests/fixtures/providers/traps";
 const PRS = `${FIXTURES}/pr-review-states.json`;
 const CHECK_RUNS = `${FIXTURES}/check-runs-per-sha.json`;
 const ISSUES = `${FIXTURES}/issues.json`;
+const MIXED_LIST = `${FIXTURES}/issues-list-mixed.json`;
+const LIMIT_LIST = `${FIXTURES}/issues-list-limit.json`;
+const RELATIONS_ABSENT = `${FIXTURES}/issues-list-relations-absent.json`;
+const PULLS_LIST = `${FIXTURES}/pulls-list-review-default.json`;
 const SHA_A = "1111111111111111111111111111111111111111";
 const SHA_B = "2222222222222222222222222222222222222222";
 
@@ -67,9 +71,13 @@ const repoPath = `/repos/${repository.owner}/${repository.name}`;
 const pullUrl = (number: number): string =>
   `${instance.baseUrl}${repoPath}/pulls/${encodeURIComponent(String(number))}`;
 const checkRunsUrl = (sha: string): string =>
-  `${instance.baseUrl}${repoPath}/commits/${encodeURIComponent(sha)}/check-runs`;
+  `${instance.baseUrl}${repoPath}/commits/${encodeURIComponent(sha)}/check-runs?per_page=20`;
 const issueUrl = (number: number): string =>
   `${instance.baseUrl}${repoPath}/issues/${encodeURIComponent(String(number))}`;
+const issuesListUrl = (limit: number): string =>
+  `${instance.baseUrl}${repoPath}/issues?state=open&per_page=${encodeURIComponent(String(limit))}&sort=updated&direction=desc`;
+const pullsListUrl = (limit: number): string =>
+  `${instance.baseUrl}${repoPath}/pulls?state=open&per_page=${encodeURIComponent(String(limit))}&sort=updated&direction=desc`;
 
 const clientFor = (routes: readonly FixtureRoute[]): GithubClient =>
   createGitHubClient({
@@ -175,9 +183,15 @@ const unknownReviewDecisionCheck = async (): Promise<void> => {
 
 const checkRunsBody = (sha: string): unknown => recordField(shaSections, sha);
 
-const defaultCheckRunReader = async (sha: string): Promise<readonly PipelineRun[]> => {
+type CheckRunRead = {
+  readonly items: readonly PipelineRun[];
+  readonly pageItemCount: number;
+};
+
+const defaultCheckRunReader = async (sha: string): Promise<CheckRunRead> => {
   const client = clientFor([{ url: checkRunsUrl(sha), body: checkRunsBody(sha) }]);
-  return requireValue(await client.readPipelineRun(sha), `check runs ${sha}`);
+  const result = requireValue(await client.readPipelineRun(sha), `check runs ${sha}`);
+  return { items: result.items, pageItemCount: result.pageItemCount };
 };
 
 const JOB_STATES: readonly string[] = [
@@ -201,10 +215,10 @@ const checkRunSet = (
   everyRunHasOneJob: runs.every((run) => run.jobs.length === 1),
 });
 
-const checkRunsCheck = async (
-  read: (sha: string) => Promise<readonly PipelineRun[]>,
-): Promise<void> => {
-  const runsA = await read(SHA_A);
+const checkRunsCheck = async (read: (sha: string) => Promise<CheckRunRead>): Promise<void> => {
+  const readA = await read(SHA_A);
+  expect(readA.pageItemCount).toBe(4);
+  const runsA = readA.items;
   expect(runsA).toHaveLength(4);
   const setA = checkRunSet(runsA);
   expect(setA.everyRunHasOneJob).toBe(true);
@@ -219,19 +233,22 @@ const checkRunsCheck = async (
       expect(run.traceEvidence[0]?.location).toContain("https://api.github.example.com");
     }
   }
-  const runsB = await read(SHA_B);
+  const readB = await read(SHA_B);
+  expect(readB.pageItemCount).toBe(1);
+  const runsB = readB.items;
   const setB = checkRunSet(runsB);
   expect(setB.identities.filter((identity) => setA.identities.includes(identity))).toEqual([]);
   expect(setB.jobStates).toEqual(["succeeded"]);
 };
 
-const dropFailedCheckRun = async (sha: string): Promise<readonly PipelineRun[]> => {
+const dropFailedCheckRun = async (sha: string): Promise<CheckRunRead> => {
   const body = checkRunsBody(sha);
   const checkRuns = arrayField(body, "check_runs").filter(
     (candidate) => !(isRecord(candidate) && candidate.name === "test"),
   );
   const client = clientFor([{ url: checkRunsUrl(sha), body: { check_runs: checkRuns } }]);
-  return requireValue(await client.readPipelineRun(sha), "dropped-failure control");
+  const result = requireValue(await client.readPipelineRun(sha), "dropped-failure control");
+  return { items: result.items, pageItemCount: result.pageItemCount };
 };
 
 // --- TC-GITHUB-003: issue to WorkItem ---------------------------------------
@@ -276,6 +293,108 @@ const swapAssignee = async (number: number): Promise<WorkItem> => ({
   assignee: number === 601 ? "reviewer-placeholder" : "owner-placeholder",
 });
 
+// --- TC-STATUS-021 read side: bounded collection reads -----------------------
+
+const mixedListBody = arrayField(readJson(MIXED_LIST), "issues");
+const limitListBody = arrayField(readJson(LIMIT_LIST), "issues");
+const relationsAbsentBody = arrayField(readJson(RELATIONS_ABSENT), "issues");
+const pullsListBody = arrayField(readJson(PULLS_LIST), "pulls");
+
+const listWorkItemsCheck = async (): Promise<void> => {
+  const transport = createFixtureTransport([{ url: issuesListUrl(100), body: mixedListBody }]);
+  const client = createGitHubClient({ instance, credentials, repository, transport });
+  const result = requireValue(await client.listWorkItems(100), "mixed issue list");
+  expect(transport.requests).toHaveLength(1);
+  expect(transport.requests[0]?.url).toBe(issuesListUrl(100));
+  expect(transport.requests[0]?.url).toContain("state=open");
+  expect(transport.requests[0]?.url).toContain("per_page=100");
+  expect(transport.requests[0]?.url).toContain("sort=updated");
+  expect(result.pageItemCount).toBe(5);
+  expect(result.items.map((item) => item.identity.entityId)).toEqual(["610", "612", "614"]);
+  expect(JSON.stringify(result)).not.toContain("pull_request");
+};
+
+const listPageLimitCheck = async (): Promise<void> => {
+  const transport = createFixtureTransport([{ url: issuesListUrl(100), body: limitListBody }]);
+  const client = createGitHubClient({ instance, credentials, repository, transport });
+  const result = requireValue(await client.listWorkItems(100), "at-limit issue list");
+  expect(transport.requests).toHaveLength(1);
+  expect(result.items).toHaveLength(100);
+  expect(result.pageItemCount).toBe(100);
+};
+
+const issueRelationsAbsentCheck = async (): Promise<void> => {
+  const transport = createFixtureTransport([
+    { url: issuesListUrl(100), body: relationsAbsentBody },
+  ]);
+  const client = createGitHubClient({ instance, credentials, repository, transport });
+  const result = requireValue(await client.listWorkItems(100), "relations-absent list");
+  expect(result.items).toHaveLength(2);
+  for (const item of result.items) expect(item.relations).toEqual([]);
+  expect(JSON.stringify(result)).not.toContain("issue_links");
+};
+
+const prListReviewDefaultCheck = async (): Promise<void> => {
+  const transport = createFixtureTransport([{ url: pullsListUrl(100), body: pullsListBody }]);
+  const client = createGitHubClient({ instance, credentials, repository, transport });
+  const result = requireValue(await client.listDeliveryRequests(100), "pull list");
+  expect(transport.requests).toHaveLength(1);
+  expect(result.pageItemCount).toBe(2);
+  expect(result.items.map((item) => item.identity.entityId)).toEqual(["701", "702"]);
+  expect(result.items.map((item) => item.sourceRef)).toEqual([
+    "feat/GH-701/list",
+    "feat/GH-702/list",
+  ]);
+  const raw = JSON.stringify(pullsListBody);
+  expect(raw).not.toContain("reviewDecision");
+  expect(raw).not.toContain("review_threads");
+  for (const item of result.items) expect(item.threads).toEqual([]);
+};
+
+const mutatedListWorkItems = async (limit: number): Promise<void> => {
+  const transport = createFixtureTransport([{ url: issuesListUrl(limit), body: mixedListBody }]);
+  const client = createGitHubClient({ instance, credentials, repository, transport });
+  const result = requireValue(await client.listWorkItems(limit), "mutated issue list");
+  expect(transport.requests[0]?.url).toContain("per_page=100");
+  expect(result.items.map((item) => item.identity.entityId)).not.toContain("611");
+};
+
+const unfilteredIssueList = async (): Promise<void> => {
+  const items = Array.isArray(mixedListBody) ? mixedListBody : [];
+  const normalized = items.map((entry) =>
+    normalizeGithubIssue(entry, { systemName: instance.instanceName }),
+  );
+  const ids = normalized.flatMap((entry) => (entry.ok ? [entry.value.identity.entityId] : []));
+  expect(ids).not.toContain("611");
+};
+
+const relationsPresent = async (): Promise<void> => {
+  const items = Array.isArray(relationsAbsentBody) ? relationsAbsentBody : [];
+  const normalized = items.map((entry) =>
+    normalizeGithubIssue(entry, { systemName: instance.instanceName }),
+  );
+  for (const entry of normalized) {
+    if (entry.ok) expect(entry.value.relations.length).toBeGreaterThan(0);
+  }
+};
+
+const trustedReviewPayload = async (): Promise<void> => {
+  const trusted = normalizePullRequest(
+    {
+      number: 703,
+      state: "open",
+      draft: false,
+      merged: false,
+      reviewDecision: "APPROVED",
+      head: { ref: "feat/GH-703/x" },
+      base: { ref: "main-tools" },
+      review_threads: [],
+    },
+    { systemName: instance.instanceName },
+  );
+  expect(JSON.stringify(trusted)).not.toContain("reviewDecision");
+};
+
 // --- The catalog ------------------------------------------------------------
 
 const defaultAssertions: TrapAssertions = {
@@ -285,6 +404,10 @@ const defaultAssertions: TrapAssertions = {
   },
   "GH-CHECK-RUNS-PER-SHA": () => checkRunsCheck(defaultCheckRunReader),
   "GH-ISSUE-TO-WORKITEM": () => issueCheck(defaultIssueReader),
+  "GITHUB-LIST-EXCLUDES-PRS": listWorkItemsCheck,
+  "GITHUB-LIST-PAGE-LIMIT": listPageLimitCheck,
+  "GITHUB-ISSUE-RELATIONS-ABSENT": issueRelationsAbsentCheck,
+  "GITHUB-PR-LIST-REVIEW-DEFAULT": prListReviewDefaultCheck,
 };
 
 const runWithGuard = async (options: Omit<TrapRunOptions, "provider">): Promise<TrapRun> => {
@@ -306,6 +429,10 @@ describe("TC-TRAP-002 GitHub trap catalog replays offline", () => {
       "GH-REVIEW-STATE",
       "GH-CHECK-RUNS-PER-SHA",
       "GH-ISSUE-TO-WORKITEM",
+      "GITHUB-LIST-EXCLUDES-PRS",
+      "GITHUB-LIST-PAGE-LIMIT",
+      "GITHUB-ISSUE-RELATIONS-ABSENT",
+      "GITHUB-PR-LIST-REVIEW-DEFAULT",
     ]);
   });
 
@@ -328,6 +455,10 @@ describe("TC-TRAP-002 GitHub trap catalog replays offline", () => {
       { trapName: "GH-REVIEW-STATE", assertion: () => reviewStateCheck(flattenReviewStates) },
       { trapName: "GH-CHECK-RUNS-PER-SHA", assertion: () => checkRunsCheck(dropFailedCheckRun) },
       { trapName: "GH-ISSUE-TO-WORKITEM", assertion: () => issueCheck(swapAssignee) },
+      { trapName: "GITHUB-LIST-EXCLUDES-PRS", assertion: unfilteredIssueList },
+      { trapName: "GITHUB-LIST-PAGE-LIMIT", assertion: () => mutatedListWorkItems(99) },
+      { trapName: "GITHUB-ISSUE-RELATIONS-ABSENT", assertion: relationsPresent },
+      { trapName: "GITHUB-PR-LIST-REVIEW-DEFAULT", assertion: trustedReviewPayload },
     ];
     for (const mutation of mutations) {
       const run = await runWithGuard({

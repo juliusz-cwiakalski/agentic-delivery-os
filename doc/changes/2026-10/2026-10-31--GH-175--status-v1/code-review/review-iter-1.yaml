@@ -1,0 +1,172 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-175
+branch: feat/GH-175/status-v1
+status: FAIL
+summary: "The status digest is broadly well built: contracts are data-only, the domain is pure, the six sections/five states, caps, tracker families, changes/CI, lanes, providers, parked work, origin binding, credential guard, bounds, error reuse, and the full gate battery are in place (1576 pass / 2 skipped; the only red is the pre-existing TC-RELEASE-001). The failures are in the human surface and a few pinned rules: a failed PR read renders as `PRs 0 (review state observed)` (a false all-clear), a park-fold failure renders `active parks 0`, non-numeric CI run ties sort descending instead of ascending, and a declared-but-unresolved chain is classified `unavailable` instead of `unknown`. Several assertions (TC-001 zero-read, TC-017 no-parks, corpus counts/order) are vacuous and did not catch these."
+severity_breakdown:
+  critical: 1
+  high: 3
+  medium: 8
+  low: 0
+  info: 2
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: critical
+    classification: blocker
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/status.ts:1229
+    message: "When the PR read fails but the local active change is observed, the human digest prints `changes degraded active <ref> | PRs 0 (review state observed)`. The pinned human grammar (`PRs {n|?}`, `?` when the PR read is not observed) and the non-verdict rule (AC-F1-3/F-9, NFR-3, RSK-1/RSK-5) forbid asserting zero PRs and an observed review state after a failed read. The `prKnown` guard keys off the section state (degraded), not the `changes` source outcome, so the `?` branch is unreachable in this case. Reachable in production: a transient `listDeliveryRequests` failure with a local active change."
+    suggestion: "Derive `prKnown`/`review` from the `changes` evidence source outcome (read/observed-empty) rather than the section state; print `?` and `review state unknown` when the PR read did not succeed; add a degraded human-output test asserting that."
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: high
+    classification: major
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/status.ts:1267
+    message: "On a park-fold failure the human digest prints `providers degraded chain <name> | active parks 0 | ...`; on a config-unknown section the fold result is discarded and it also prints `active parks 0`. AC-F7-1 requires `degraded` with 'no no-parks claim', and the plan grammar allows `active parks {n|?}`. `parksKnown = providers.parks !== undefined` is always true because `parks` is always an array, so the `?` path is dead. The test at tests/behaviour/status-providers-parked.test.ts:345-359 only searches for the literal string 'no parks' (which never appears) and is therefore vacuous."
+    suggestion: "Print `?` when the `provider-parks` source did not succeed (and when the provider config is untrusted); strengthen the test to assert the human line contains `?` (or omits a zero) and that the machine `parks` is not silently empty-observed."
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: high
+    classification: major
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/status.ts:744
+    message: "`compareRuns` reverses the whole identity comparison (`compareIdentity(right, left)`), so equal-severity runs with non-numeric identities sort lexicographically descending. Spec 8.3 and the plan pin 'run identity descending (numeric-aware when both identities are numeric, otherwise lexical ascending)' and 'all lexicographic comparisons are ascending'. GitHub check-run identities are `${sha}:${runId}` (non-numeric), so same-severity GitHub runs are rendered in the wrong pinned order (AC-F10-1). Verified: three non-numeric ids render gamma,beta,alpha instead of alpha,beta,gamma."
+    suggestion: "Compare identities descending only when both are numeric; otherwise use `compareText(left, right)` ascending, then pipeline name ascending. Add a non-numeric run-tie test."
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: high
+    classification: major
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/status.ts:863
+    message: "`providerChainFor` returns `undefined` both for 'no default chain' and for 'declared default chain that does not resolve to a declared chain entry', so the latter is classified `unavailable` / `provider-chain-not-declared` / `chain: absent`. DM-9, the plan, and doc/spec/features/feature-status-digest.md:125/164 pin `unknown` / `provider-chain-unresolved` / `failureCode: config.value.invalid` / `chain: unknown` for the unresolved case. Verified with a config carrying `defaultChain: 'ghost'` and only `primary` declared. Not reachable through `createConfigProgram` (the resolver validates), but `aggregateStatus` is a public, spec-bound surface and the current-truth doc states the other behavior."
+    suggestion: "Distinguish 'no default chain' from 'declared chain missing' in `providersSection`, return the pinned unknown identity for the latter, and add a matrix/corpus case; keep the edge validation as defense in depth."
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: medium
+    classification: minor
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/contracts/status.ts:423
+    message: "`StatusProviderEntry` declares `quotaDeclared` but not `peakDeclared`, although `providersSection` emits `peakDeclared` (packages/core/src/domain/status.ts:969) and the golden digest includes it. Spec DM-9 lists `peak` among the entry fields; the public type under-describes the machine payload."
+    suggestion: "Add `readonly peakDeclared: boolean` to `StatusProviderEntry` and bind it in tests/structure/status-contract.test.ts."
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: medium
+    classification: minor
+    confidence: high
+    category: code-quality
+    location: packages/core/src/domain/status.ts:59
+    message: "`const MAX_DETAIL = 160` duplicates `STATUS_MAX_DETAIL_CHARS` (packages/core/src/contracts/status.ts:186), violating D2's single-source rule. The single-vocabulary test only scans the six named lists, so it does not catch the duplicate scalar."
+    suggestion: "Import and use `STATUS_MAX_DETAIL_CHARS` in `clampDetail`."
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: medium
+    classification: minor
+    confidence: high
+    category: testing
+    location: tests/behaviour/status-command.test.ts:130
+    message: "The TC-STATUS-001 'zero reads' assertion checks `run.recorder` (a fresh recorder created inside `runStatusCli`, tests/fixtures/status/harness.ts:399) instead of the runtime recorder it constructed, so it passes even if the handler ran. The 'definition declares no flags and no positionals' test (lines 148-152) only asserts exit 0. There is no throwing-handler `fallback.internal` containment test despite plan task 4.4 and TC-STATUS-002 step 7."
+    suggestion: "Assert the passed runtime recorder's `calls`; assert `definition.flags` and `definition.positionals`; add the throwing-handler containment control."
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: medium
+    classification: minor
+    confidence: high
+    category: testing
+    location: tests/behaviour/status-corpus.test.ts:86
+    message: "TC-STATUS-030 requires expected states/reasons/counts/ordered ids/`truncated` plus 'every AC-F9-1 control' and 'every transition edge'. The committed `tests/fixtures/status/corpus/*/case.json` carry only `states` and `reasons`, and `completenessFailures` checks only states and sections."
+    suggestion: "Extend the corpus case schema and assertions with counts/ordered ids/truncated and the completeness meta-check, or align the test plan with the delivered corpus scope."
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-9
+    severity: medium
+    classification: minor
+    confidence: high
+    category: testing
+    location: tests/behaviour/status-output.test.ts:336
+    message: "TC-STATUS-007/plan task 4.5 require 99/100/101 raw-issue at-limit coverage and pinned rank-key coverage. The suite exercises only PR and CI raw-page-at-limit, never the tracker (issues) raw page, and never a non-numeric run tie (where F-3 hides)."
+    suggestion: "Add a `workItemRead(..., pageItemCount=STATUS_SOURCE_ITEM_LIMIT)` case asserting tracker `truncated`/`source-truncated`, and a non-numeric run-id tie case."
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-10
+    severity: medium
+    classification: minor
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/status.ts:229
+    message: "`familyCounts` computes observed/unknown from rendered items only. When the tracker cap drops unknown-activity items, the section counts and the human line report `(0 unknown)` while the unknown items are only in `omitted` (golden: `stalls 12 (0 unknown) ... +16`). F-9 says an unknown item signal is counted, never defaulted."
+    suggestion: "Count all family items before capping (and keep `omitted` consistent), or surface omitted unknowns in the human line; document the chosen semantics in the spec/test plan."
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-11
+    severity: medium
+    classification: minor
+    confidence: medium
+    category: spec-compliance
+    location: packages/core/src/domain/status.ts:661
+    message: "`changesSection` degrades only on `reviewState`/`reviewThreads` unavailability. `StatusDeliveryAvailability.state` and `.refs` are declared (DM-14) but never consumed, so a source declaring them unavailable would still render delivery state/source/target refs as observed. Unreachable with the GitHub composition, so this is defense-in-depth."
+    suggestion: "Honor all four declared signals or document that only review signals degrade the changes section."
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-12
+    severity: medium
+    classification: minor
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-10/2026-10-31--GH-175--status-v1/chg-GH-175-plan.md:533
+    message: "Plan Phase 7 tasks 7.1-7.5 remain unchecked although the doc reconciliation landed (commit 94166ea) and chg-GH-175-pm-notes.yaml records `system_spec_update` complete with matching reconciliations. Plan audit: DONE_BUT_UNCHECKED."
+    suggestion: "Tick the Phase 7 tasks (noting @doc-syncer ownership/execution log row 7) or mark the plan's Phase 7 complete."
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-13
+    severity: info
+    classification: info
+    confidence: high
+    category: testing
+    location: tests/behaviour/status-negative-controls.test.ts:204
+    message: "The test named 'all ten AC-F9-1 controls' uses a 9-item `controls` array; the active-park control is a separate test. Coverage is present but the title/count is misleading."
+    suggestion: "Include the active-park control in the array or rename the test to match its scope."
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-14
+    severity: info
+    classification: info
+    confidence: high
+    category: repository-hygiene
+    location: tests/checks/privacy-release.test.ts:12
+    message: "TC-RELEASE-001 hardcodes `origin/main-tools` and `.changeset/gh-184-privacy-guards-minor.md`; on this branch `added = [status-v1-minor.md]` vs expected `[gh-184-privacy-guards-minor.md]`. It fails on any branch off current `main-tools` and is unrelated to GH-175. The change's own changeset is valid and `changesets-group` is green. Independently confirmed pre-existing; it should not block this change."
+    suggestion: "Open a separate ticket to generalize or remove TC-RELEASE-001 from the default suite."
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-10-31T20:10:00Z
+next_step: "EXECUTE_REMEDIATION_PHASE (F-1 mandatory; F-2/F-3/F-4 strongly recommended before merge; F-5..F-12 as follow-ups). Verified non-issues: the test-only privacy wording correction, the scoped Biome golden override, the edge-internal `resolveProviderConfig` callback, and the fixture provenance markers are all consistent with the plan and pass the gates."
