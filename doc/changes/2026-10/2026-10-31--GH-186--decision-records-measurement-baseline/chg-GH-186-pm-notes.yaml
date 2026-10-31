@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-10-31T17:22:00Z", completed: "2026-10-31T17:40:00Z", iterations: 3, verdict: "READY (iter 3)" }
   delivery: { started: "2026-10-31T17:45:00Z", completed: "2026-10-31T18:20:00Z" }
   system_spec_update: { started: "2026-10-31T18:40:00Z", completed: "2026-10-31T19:05:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-10-31T19:07:00Z", completed: null, iterations: 1, verdict: "FAIL" }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -94,4 +94,13 @@ notes:
     date: "2026-10-31"
   - text: "System spec update (phase 7) complete via @doc-syncer: residual gaps NONE. Changes: feature-decision-records.md refreshed (register + per-type ID ranges), feature-adapter-ports.md and glossary front-matter deduplicated with GH-186/ADR-0008/ODR-0002/ODR-0003 traceability, doc/00-index.md gains the register row, doc-sync-report.md recorded. Validation: forbidden-literals 0, doc-distribution no drift, front-matter and link checks pass. Out-of-scope pre-existing doc hygiene observations recorded in the report (duplicate front matter in three specs, ADR-0007 index title drift, legacy README lifecycle line)."
     type: "info"
+    date: "2026-10-31"
+  - text: "Review iteration 1 verdict FAIL (review/review-iter-1.md, code-review/review-iter-1.yaml): 0 blocker, 1 major, 1 minor, 4 info. F-1 major: GH-170 baseline anchor cites phases.quality_gates.iterations but the actual key is phases.quality_gate_iterations (3 sites), so AC-F4-2/NFR-1/TC-MEAS-003 fail even though the numbers are correct. F-2 minor: doc-sync consolidated duplicate front-matter keys in glossary.md and feature-adapter-ports.md, which NG-7 explicitly excludes. Info: compound anchor descriptors (GH-172/173), plan DoD boxes/revision-log order/stale commitlint note, GH-174 checks_affected wording, GH-171 pair-counter exemption note. GH-206 pre-existing failure independently verified and not attributed to GH-186."
+    type: "blocker"
+    date: "2026-10-31"
+  - text: "Review remediation plan: R-1 fix the GH-170 anchor path in all 3 sites; R-2 revert the out-of-scope front-matter dedup in glossary.md and feature-adapter-ports.md to their delivery state (keeping the delivered terms/pointer); R-4 plan bookkeeping (DoD boxes, revision-log order, stale commitlint-range note); optional info wording for GH-174 and GH-171. Then re-run Phase-9 battery and re-review."
+    type: "decision"
+    date: "2026-10-31"
+  - text: "Retro: the measurement YAML cited a plausible-looking field path without resolving it against the source, and doc-sync exceeded the spec's explicit NG-7 exclusion. Both were caught by review, not by the delivery gates. Improvement: baseline anchor resolution should be a required recompute step (it was in the test plan but the coder's self-check missed it), and doc-sync must diff its edits against the spec's out-of-scope list before committing."
+    type: "retro"
     date: "2026-10-31"
