@@ -59,27 +59,38 @@ const singleDocument = (text: string): unknown => {
 };
 
 describe("config human goldens", () => {
-  test("empty production basic is exactly a plain tree", async () => {
+  test("production basic is the shipped provider tree", async () => {
     const result = await run(["--project-root", REPO]);
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toBe("{}\n");
+    expect(singleDocument(result.stdout)).toMatchObject({
+      provider: {
+        entries: { "zai-coding-plan": { class: "subscription" } },
+        chains: {},
+      },
+    });
     expect(result.stderr).toBe("");
   });
 
-  test("empty production debug has exactly the contracted keys and skipped evidence", async () => {
+  test("production debug exposes the shipped provider origins and skipped evidence", async () => {
     const result = await run(["debug", "--project-root", REPO]);
     expect(result.exitCode).toBe(0);
-    expect(singleDocument(result.stdout)).toEqual({
-      config: {},
-      origins: {},
-      loadedFiles: [],
-      skippedLayers: [
-        { layer: "system", reason: "missing" },
-        { layer: "user-global", reason: "missing" },
-        { layer: "project-committed", reason: "missing" },
-        { layer: "project-local", reason: "missing" },
-      ],
+    const payload = singleDocument(result.stdout) as {
+      config: unknown;
+      origins: Record<string, string>;
+      loadedFiles: unknown[];
+      skippedLayers: unknown[];
+    };
+    expect(payload.config).toMatchObject({
+      provider: { entries: { "zai-coding-plan": { class: "subscription" } } },
     });
+    expect(payload.origins.provider).toContain("layer=defaults");
+    expect(payload.loadedFiles).toEqual([]);
+    expect(payload.skippedLayers).toEqual([
+      { layer: "system", reason: "missing" },
+      { layer: "user-global", reason: "missing" },
+      { layer: "project-committed", reason: "missing" },
+      { layer: "project-local", reason: "missing" },
+    ]);
   });
 });
 

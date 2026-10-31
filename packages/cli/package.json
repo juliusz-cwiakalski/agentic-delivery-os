@@ -21,7 +21,8 @@
       ".",
       "./contracts",
       "./state",
-      "./branding"
+      "./branding",
+      "./provider"
     ],
     "@delivery-os/adapters": [
       "./gitlab",
@@ -35,7 +36,8 @@
       "./host",
       "./session",
       "./legacy",
-      "./credentials"
+      "./credentials",
+      "./provider-quota"
     ]
   },
   "scripts": {

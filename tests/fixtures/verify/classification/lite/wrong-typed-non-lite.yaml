@@ -1,0 +1,17 @@
+change_id: GH-177
+title: "LITE with wrong-typed non-LITE phases"
+delivery_mode: autonomous
+variant: lite
+phases:
+  clarify_scope: { started: "2026-10-31T00:01:00Z", completed: "2026-10-31T00:02:00Z" }
+  specification: { started: "2026-10-31T00:03:00Z", completed: "2026-10-31T00:04:00Z" }
+  test_planning: { started: "2026-10-31T00:05:00Z", completed: true }
+  delivery_planning: { started: 42, completed: true }
+  dor_check: { started: true, completed: 7 }
+  delivery: { started: "2026-10-31T00:06:00Z", completed: "2026-10-31T00:07:00Z" }
+  system_spec_update: { started: false, completed: 0 }
+  review_fix: { started: 1, completed: [1, 2, 3] }
+  quality_gates: { started: "2026-10-31T00:08:00Z", completed: "2026-10-31T00:09:00Z" }
+  dod_check: { started: "2026-10-31T00:10:00Z", completed: "2026-10-31T00:11:00Z" }
+  pr_creation: { started: "2026-10-31T00:12:00Z", completed: "2026-10-31T00:13:00Z" }
+non_canonical_sequence: [1, 2, 3]

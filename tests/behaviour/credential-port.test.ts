@@ -133,7 +133,10 @@ describe("TC-PORT-006 missing credential classified", () => {
     const classified = classifyThrown({ kind: "config", code: "config.credential.missing" });
     expect(classified.code).toBe("config.credential.missing");
     expect(() => classifyDomainKind("config")).toThrow();
-    expect(classifyDomainKind("provider").code).toBe("provider.quota.exceeded");
+    expect(classifyDomainKind("provider", "provider.quota.exceeded").code).toBe(
+      "provider.quota.exceeded",
+    );
+    expect(() => classifyDomainKind("provider")).toThrow();
     expect(classifyDomainKind("input").code).toBe("input.value.rejected");
   });
 });

@@ -1,0 +1,12 @@
+provider:
+  entries:
+    bad:
+      class: subscription
+      peak:
+        timezone: Europe/Warsaw
+        startSecondsOfDay: 3600
+        endSecondsOfDay: 7200
+  chains:
+    default:
+      entries:
+        - bad

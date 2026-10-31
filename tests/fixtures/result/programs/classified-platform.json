@@ -2,5 +2,6 @@
   "id": "classified-platform",
   "command": "synthetic.ok",
   "kind": "classified",
-  "failureKind": "provider"
+  "failureKind": "provider",
+  "failureCode": "provider.quota.exceeded"
 }

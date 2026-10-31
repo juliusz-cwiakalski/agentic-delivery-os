@@ -1,0 +1,17 @@
+change_id: GH-177
+title: "LITE complete with the non-LITE phases absent"
+delivery_mode: autonomous
+variant: lite
+phases:
+  clarify_scope: { started: "2026-10-31T00:01:00Z", completed: "2026-10-31T00:02:00Z" }
+  specification: { started: "2026-10-31T00:03:00Z", completed: "2026-10-31T00:04:00Z" }
+  delivery: { started: "2026-10-31T00:05:00Z", completed: "2026-10-31T00:06:00Z" }
+  quality_gates: { started: "2026-10-31T00:07:00Z", completed: "2026-10-31T00:08:00Z" }
+  dod_check: { started: "2026-10-31T00:09:00Z", completed: "2026-10-31T00:10:00Z" }
+  pr_creation: { started: "2026-10-31T00:11:00Z", completed: "2026-10-31T00:12:00Z" }
+  opaque_extra_phase:
+    {
+      started: "2026-10-31T00:13:00Z",
+      completed: "2026-10-31T00:14:00Z",
+      opaque_key: "planted-payload-verify-lite",
+    }

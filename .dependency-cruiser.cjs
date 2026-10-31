@@ -224,6 +224,9 @@ module.exports = {
           // ADR-0005 C-2 — `jira` provider client subpath: Jira read slice for
           // the tracker collector (GH-188).
           "^packages/adapters/src/jira/",
+          // ADR-0005 (GH-182): the provider quota transport is the one declared
+          // network-I/O edge for the quota-aware routing engine. Exact path only.
+          "^packages/adapters/src/provider-quota/",
           "^packages/cli/",
           "^packages/opencode/",
         ],

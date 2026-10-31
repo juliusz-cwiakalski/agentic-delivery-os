@@ -7,7 +7,9 @@ id: GUIDE-DEFINITION-OF-DONE
 status: Draft
 created: 2026-06-28
 owners: ["engineering"]
-summary: "Human-readable Definition of Done: the post-implementation acceptance gate (dod_check) that closes delivery."
+summary: "Human-readable Definition of Done: the post-implementation acceptance gate (dod_check) that closes delivery, including the read-only variant-aware verify-change ledger verdict."
+links:
+  related_changes: ["GH-177"]
 ---
 
 # Definition of Done (DoD)
@@ -20,7 +22,7 @@ The Definition of Done is the **post-implementation acceptance gate** (`dod_chec
 |--------|-------|
 | Phase | 10. `dod_check` |
 | Owner | `@reviewer` (audit via `/review`) → `@pm` (final check) |
-| Commands | `/review <ref>` (phase 8 `review_fix`), then `@pm` runs the final `dod_check` |
+| Commands | `/review <ref>` (phase 8 `review_fix`), `verify change <ref>` (read-only ledger verdict), then `@pm` runs the final `dod_check` |
 | Inputs | `chg-<ref>-spec.md` (incl. the change's DoD + AC) + `chg-<ref>-plan.md` (all checkboxes) + `chg-<ref>-test-plan.md` + implementation + `chg-<ref>-pm-notes.yaml` |
 | Output | `DONE` (proceed to PR) or a reopened phase with a remediation task |
 
@@ -32,6 +34,8 @@ DoD is applied in two layers during verification:
 2. **Project-specific DoD** — `@reviewer` reads `.ai/agent/code-review-instructions.md` for project-local customization (review priorities, checklists, conventions). That file is the project's tailor-made quality bar; where present, it extends the generic heuristics.
 
 The final `dod_check` (phase 10, run by `@pm`) then confirms the whole checklist holds before `pr_creation`.
+
+Finalization is variant-aware. `verify change <ref>` reads the declared `full` or `lite` variant and its required phase set, merges the pm-notes declaration with the verified delivery-registry history, and reports whether the ledger is complete. An incomplete or unverifiable ledger is a non-zero failure naming the missing phases; only a fully completed declared variant yields `finished` and exit `0`. The command is read-only and does not substitute for the merge gates (commit, CI, push parity, owner approval).
 
 ## Each change defines its own DoD
 
@@ -57,3 +61,4 @@ The lifecycle has two gated acceptance checks that bracket delivery:
 - [Change Lifecycle](change-lifecycle.md) — full 11-phase workflow; `dod_check` is phase 10, `review_fix` is phase 8.
 - [Definition of Ready](definition-of-ready.md) — the mirror gate that runs before code; `dod_defined` is one of its facets.
 - [Agents & Commands Guide](opencode-agents-and-commands-guide.md) — manual `/review` placement.
+- [Verify Change and Exit Taxonomy](../spec/features/feature-verify-change-and-exit-taxonomy.md) — read-only ledger verification, variant-aware required sets, and the delivery-result exit taxonomy.

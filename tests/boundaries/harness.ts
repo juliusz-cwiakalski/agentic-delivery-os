@@ -38,6 +38,7 @@ export const ADAPTER_SUBPATHS = [
   "session",
   "legacy",
   "credentials",
+  "provider-quota",
 ];
 
 export type Violation = { rule: string; from: string; to: string };
@@ -67,6 +68,7 @@ const manifestFor = (packageName: PackageName): string => {
         "./contracts": "./dist/contracts/index.js",
         "./state": "./dist/state/index.js",
         "./branding": "./dist/branding/index.js",
+        "./provider": "./dist/provider/index.js",
       },
       imports: {
         "#contracts": "./src/contracts/index.ts",
@@ -112,7 +114,13 @@ const distPlaceholder = (packageName: string, modulePath: string): string =>
 export const distFilesFor = (packageName: PackageName): Record<string, string> => {
   const files: Record<string, string> = {};
   if (packageName === "core") {
-    for (const modulePath of ["index", "contracts/index", "state/index", "branding/index"]) {
+    for (const modulePath of [
+      "index",
+      "contracts/index",
+      "state/index",
+      "branding/index",
+      "provider/index",
+    ]) {
       files[`packages/core/dist/${modulePath}.js`] = distPlaceholder("core", modulePath);
     }
   } else if (packageName === "adapters") {
@@ -128,7 +136,7 @@ export const distFilesFor = (packageName: PackageName): Record<string, string> =
 export const baseFilesFor = (packageName: PackageName): Record<string, string> => {
   const files: Record<string, string> = {};
   if (packageName === "core") {
-    for (const tier of ["contracts", "state", "branding", "domain", "app", "config"]) {
+    for (const tier of ["contracts", "state", "branding", "domain", "app", "config", "provider"]) {
       files[`packages/core/src/${tier}/index.ts`] = placeholder("core", tier);
     }
     files["packages/core/src/index.ts"] = placeholder("core", "index");

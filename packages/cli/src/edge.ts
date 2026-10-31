@@ -33,14 +33,23 @@ import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
   type BrandIdentity,
   type ConfigFailure,
+  type CredentialPort,
   PHASE_STATE_DOCUMENT_PREFIX,
   PHASE_STATE_DOCUMENT_SUFFIX,
+  type ProviderClock,
+  type ProviderSleep,
+  type QuotaTransport,
   type Result,
   type StateStorePort,
 } from "@delivery-os/core/contracts";
 import {
+  createProviderEngine,
+  parseAndValidateProviderConfiguration,
+} from "@delivery-os/core/provider";
+import {
   appendPhaseTransition,
   readChangeTransitions,
+  readChangeTransitionsTolerant,
   replacePhaseProjection,
 } from "@delivery-os/core/state";
 import {
@@ -54,6 +63,11 @@ import {
   type LintRegistryRead,
 } from "./commands/lint.js";
 import { createPhaseCommandDefinition, type PhaseCommandRuntime } from "./commands/phase.js";
+import {
+  createProviderCommandDefinition,
+  type ProviderCommandRuntime,
+} from "./commands/provider.js";
+import { createVerifyCommandDefinition, type VerifyCommandRuntime } from "./commands/verify.js";
 import type { CliDependencies, CommandDefinition, CommandFlags, CommandProgram } from "./index.js";
 
 const NEUTRAL_OVERRIDE_NAME = "DELIVERY_OS_WORKING_NAME";
@@ -138,6 +152,35 @@ export const createPhaseCommandRuntime = (options: PhaseRuntimeOptions): PhaseCo
   newFenceToken: options.newFenceToken,
 });
 
+/** Compose the read-only verify runtime from injected I/O and the state port. */
+export type VerifyRuntimeOptions = {
+  readonly store: StateStorePort;
+  readonly changesDirectory: string;
+  readonly fs: PmNotesFileSystemFacts;
+};
+
+export const createVerifyCommandRuntime = (
+  options: VerifyRuntimeOptions,
+): VerifyCommandRuntime => ({
+  readPmNotes: (changeRef) =>
+    readPmNotesText({
+      changeRef,
+      changesDirectory: options.changesDirectory,
+      fs: options.fs,
+    }),
+  readRegistry: (changeRef) => {
+    const read = readChangeTransitionsTolerant(options.store, changeRef);
+    if (!read.ok) return { ok: false, error: read.error };
+    return {
+      ok: true,
+      present: read.value.present,
+      verifiedEmpty: read.value.verifiedEmpty,
+      transitions: read.value.transitions,
+      recordCount: read.value.evidence.recordCount,
+    };
+  },
+});
+
 export type EdgeOptions = {
   readonly brand: BrandIdentity;
   readonly program: CommandProgram;
@@ -156,6 +199,16 @@ export function createProductionDependencies(options: EdgeOptions): CliDependenc
   };
 }
 
+/** Injected I/O and seams for the provider command family (GH-182 PD-G). */
+export type ProviderComposition = {
+  readonly clock: ProviderClock;
+  readonly credentialPort: CredentialPort;
+  readonly transport: QuotaTransport;
+  readonly sleep: ProviderSleep;
+  readonly stateStore: StateStorePort;
+  readonly newFenceToken: () => string;
+};
+
 export type ConfigProgramOptions = {
   readonly workingName: string;
   readonly environment: Readonly<Record<string, string | undefined>>;
@@ -170,6 +223,8 @@ export type ConfigProgramOptions = {
   readonly warn?: (message: string) => void;
   readonly lint?: LintCommandRuntime;
   readonly phase?: PhaseCommandRuntime;
+  readonly provider?: ProviderComposition;
+  readonly verify?: VerifyCommandRuntime;
 };
 
 export type ConfigProgramResult =
@@ -349,6 +404,54 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   }
   if (options.phase !== undefined) {
     commands.phase = createPhaseCommandDefinition(options.phase);
+  }
+  if (options.provider !== undefined) {
+    const provider = options.provider;
+    const engine = createProviderEngine(provider);
+    const providerRuntime: ProviderCommandRuntime = {
+      resolve: async (input) => {
+        const snapshot = resolve({});
+        if (!snapshot.ok) {
+          return {
+            ok: false,
+            code: snapshot.error.code,
+            summary: `configuration rejected (${snapshot.error.code})`,
+          };
+        }
+        const parsed = parseAndValidateProviderConfiguration(snapshot.value.config.values);
+        if (!parsed.ok) {
+          return { ok: false, code: parsed.error.code, summary: parsed.error.detail };
+        }
+        return engine.resolve({
+          config: parsed.config,
+          ...(input.chainName === undefined ? {} : { chainName: input.chainName }),
+          persist: true,
+        });
+      },
+      quota: async (input) => {
+        const snapshot = resolve({});
+        if (!snapshot.ok) {
+          return {
+            ok: false,
+            code: snapshot.error.code,
+            summary: `configuration rejected (${snapshot.error.code})`,
+          };
+        }
+        const parsed = parseAndValidateProviderConfiguration(snapshot.value.config.values);
+        if (!parsed.ok) {
+          return { ok: false, code: parsed.error.code, summary: parsed.error.detail };
+        }
+        return engine.quota({
+          config: parsed.config,
+          ...(input.providerName === undefined ? {} : { providerName: input.providerName }),
+        });
+      },
+      parks: (input) => engine.parks(input),
+    };
+    commands.provider = createProviderCommandDefinition(providerRuntime);
+  }
+  if (options.verify !== undefined) {
+    commands.verify = createVerifyCommandDefinition(options.verify);
   }
   return {
     ok: true,

@@ -10,7 +10,7 @@
 import type { AppErrorCode, ErrorCategory, ErrorConsequence, ProjectionClass } from "./result.js";
 
 /** The declared domain kinds: the first link of the classification chain. */
-export const DOMAIN_KINDS = ["provider", "input", "config", "state", "lint"] as const;
+export const DOMAIN_KINDS = ["provider", "input", "config", "state", "lint", "verify"] as const;
 
 /** Reserved containment code for broken invocations and unknown commands. */
 export const FALLBACK_INVOCATION_CODE = "fallback.invocation" as const;
@@ -67,6 +67,47 @@ export const ERROR_TABLE = [
     remediationHint: "Wait for the quota window to reset, then retry the operation.",
     projectionClass: "platform-provider",
     summary: "The provider quota was exceeded.",
+  },
+  {
+    code: "provider.outage",
+    domainKind: "provider",
+    category: "transient",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Retry after the provider becomes reachable; consult the announcement and park for the resume time.",
+    projectionClass: "platform-provider",
+    summary: "The provider is unreachable.",
+  },
+  {
+    code: "provider.auth.rejected",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint: "Correct or replace the declared credential and retry.",
+    projectionClass: "user-validation",
+    summary: "The provider rejected the credential.",
+  },
+  {
+    code: "provider.chain.empty",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint: "Declare a non-empty provider chain (or select one) and retry.",
+    projectionClass: "user-validation",
+    summary: "No provider chain is declared.",
+  },
+  {
+    code: "provider.chain.invalid",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint: "Correct the named chain entries, ordering, or references and retry.",
+    projectionClass: "user-validation",
+    summary: "The provider chain is invalid.",
   },
   {
     code: "input.value.rejected",
@@ -304,5 +345,16 @@ export const ERROR_TABLE = [
       "pm-notes target only: initialize pm-notes for the named change ref or correct the reference (an absent registry target is a verified-empty pass, C-3).",
     projectionClass: "user-validation",
     summary: "The pm-notes target is missing.",
+  },
+  {
+    code: "verify.ledger.incomplete",
+    domainKind: "verify",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Complete the named required phases of the declared variant through the phase command, or correct the declaration, then re-run verify.",
+    projectionClass: "user-validation",
+    summary: "The declared variant's required phases are not all completed.",
   },
 ] as const satisfies readonly ErrorTableEntry[];

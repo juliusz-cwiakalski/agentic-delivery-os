@@ -1,0 +1,12 @@
+{
+  "fields": [
+    "providerName",
+    "chainName",
+    "conditionKinds",
+    "waitSeconds",
+    "resetEpochMs",
+    "httpStatus",
+    "failureClass",
+    "credentialRefName"
+  ]
+}

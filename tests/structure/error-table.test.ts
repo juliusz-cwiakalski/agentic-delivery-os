@@ -52,7 +52,10 @@ const PROJECTION_CLASSES = ["success", "user-validation", "platform-provider"];
 const CODE_PATTERN = /^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$/;
 
 const isValidCode = (code: string): boolean =>
-  code === FALLBACK_INVOCATION_CODE || code === FALLBACK_INTERNAL_CODE || CODE_PATTERN.test(code);
+  code === FALLBACK_INVOCATION_CODE ||
+  code === FALLBACK_INTERNAL_CODE ||
+  code === "provider.outage" ||
+  CODE_PATTERN.test(code);
 
 const contractsFiles = (): string[] =>
   readdirSync(join(ROOT, CONTRACTS_DIR))
@@ -468,11 +471,148 @@ describe("TC-SYNC-007 lint rows are exact and additive", () => {
   });
 
   test("existing provider, input, config and state rows are unchanged", () => {
-    expect(classifyDomainKind("provider").code).toBe("provider.quota.exceeded");
+    expect(classifyDomainKind("provider", "provider.quota.exceeded").code).toBe(
+      "provider.quota.exceeded",
+    );
+    expect(() => classifyDomainKind("provider")).toThrow();
     expect(classifyDomainKind("input").code).toBe("input.value.rejected");
     expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(7);
     expect(() => classifyDomainKind("config")).toThrow();
     expect(() => classifyDomainKind("state")).toThrow();
+  });
+});
+
+const PROVIDER_ROWS = [
+  [
+    "provider.quota.exceeded",
+    "transient",
+    true,
+    "not_landed",
+    "Wait for the quota window to reset, then retry the operation.",
+    "platform-provider",
+    "The provider quota was exceeded.",
+  ],
+  [
+    "provider.outage",
+    "transient",
+    true,
+    "not_landed",
+    "Retry after the provider becomes reachable; consult the announcement and park for the resume time.",
+    "platform-provider",
+    "The provider is unreachable.",
+  ],
+  [
+    "provider.auth.rejected",
+    "user",
+    false,
+    "not_landed",
+    "Correct or replace the declared credential and retry.",
+    "user-validation",
+    "The provider rejected the credential.",
+  ],
+  [
+    "provider.chain.empty",
+    "user",
+    false,
+    "not_landed",
+    "Declare a non-empty provider chain (or select one) and retry.",
+    "user-validation",
+    "No provider chain is declared.",
+  ],
+  [
+    "provider.chain.invalid",
+    "user",
+    false,
+    "not_landed",
+    "Correct the named chain entries, ordering, or references and retry.",
+    "user-validation",
+    "The provider chain is invalid.",
+  ],
+] as const;
+
+describe("TC-PROV-045 provider rows are exact and synced", () => {
+  test("the five provider rows carry their declared fields", () => {
+    const provider = entries.filter((entry) => entry.domainKind === "provider");
+    expect(provider.map((entry) => entry.code)).toEqual(PROVIDER_ROWS.map(([code]) => code));
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of PROVIDER_ROWS) {
+      expect(classifyDomainKind("provider", code)).toMatchObject({
+        code,
+        domainKind: "provider",
+        category,
+        retryable,
+        consequence,
+        remediationHint: hint,
+        projectionClass,
+        summary,
+      });
+    }
+  });
+
+  test("the documented provider rows agree exactly once", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const [code, , , , hint, projectionClass, summary] of PROVIDER_ROWS) {
+      const row = `| ${code} | provider | ${PROVIDER_ROWS.find(([candidate]) => candidate === code)?.[1]} | ${String(PROVIDER_ROWS.find(([candidate]) => candidate === code)?.[2])} | not_landed | ${hint} | ${projectionClass} | ${summary} |`;
+      expect(doc.split(row).length - 1, code).toBe(1);
+    }
+  });
+});
+
+const VERIFY_HINT =
+  "Complete the named required phases of the declared variant through the phase command, or correct the declaration, then re-run verify.";
+const VERIFY_SUMMARY = "The declared variant's required phases are not all completed.";
+
+describe("TC-VERIFY-019 verify kind and row", () => {
+  test("verify is a declared single-row kind with the exact C-8 fields", () => {
+    expect(DOMAIN_KINDS).toContain("verify");
+    const verify = entries.filter((entry) => entry.domainKind === "verify");
+    expect(verify).toHaveLength(1);
+    expect(verify[0]).toMatchObject({
+      code: "verify.ledger.incomplete",
+      domainKind: "verify",
+      category: "user",
+      retryable: false,
+      consequence: "not_landed",
+      projectionClass: "user-validation",
+      remediationHint: VERIFY_HINT,
+      summary: VERIFY_SUMMARY,
+    });
+  });
+
+  test("the verify row round-trips through returned, thrown, and exact-code selection", () => {
+    const row = classifyDomainKind("verify", "verify.ledger.incomplete");
+    expect(row.code).toBe("verify.ledger.incomplete");
+    expect(resolveAppErrorCode("verify.ledger.incomplete")).toEqual({ ok: true, entry: row });
+    expect(classifyThrown({ kind: "verify", code: "verify.ledger.incomplete" })).toEqual(row);
+    expect(
+      classifyThrown({ kind: "verify", code: "verify.ledger.incomplete", summary: "x" }),
+    ).toEqual(row);
+    expect(() => classifyDomainKind("verify", "lint.notes.malformed")).toThrow();
+  });
+
+  test("the documented row appears exactly once and matches column-for-column", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
+    expect(doc.split(row).length - 1).toBe(1);
+    const declaredKinds = "`provider`, `input`, `config`, `state`, `lint`, and `verify`";
+    expect(doc).toContain(declaredKinds);
+    expect(doc).toContain("`verify.ledger.incomplete`");
+  });
+
+  test("existing kinds keep their rows and the provider and verify additions are present", () => {
+    expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(5);
+    expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
+    expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
+    expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(7);
+    expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(5);
+    expect(entries).toHaveLength(31);
   });
 });

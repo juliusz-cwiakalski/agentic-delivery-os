@@ -1,0 +1,64 @@
+change_id: GH-182
+title: "M0-S13: provider v1"
+delivery_mode: autonomous
+branch: feat/GH-182/provider-v1
+phases:
+  clarify_scope: { started: "2026-10-31T17:00:00Z", completed: "2026-10-31T17:30:00Z" }
+  specification: { started: "2026-10-31T17:30:00Z", completed: "2026-10-31T18:00:00Z" }
+  test_planning: { started: "2026-10-31T18:00:00Z", completed: "2026-10-31T18:30:00Z" }
+  delivery_planning: { started: "2026-10-31T18:30:00Z", completed: "2026-10-31T19:15:00Z" }
+  dor_check: { started: "2026-10-31T19:15:00Z", completed: "2026-10-31T19:30:00Z" }
+  delivery: { started: "2026-10-31T19:30:00Z", completed: "2026-10-31T20:30:00Z" }
+  system_spec_update: { started: "2026-10-31T20:30:00Z", completed: "2026-10-31T21:00:00Z" }
+  review_fix: { started: "2026-10-31T21:00:00Z", completed: "2026-11-01T04:00:00Z" }
+  quality_gates: { started: "2026-11-01T04:00:00Z", completed: "2026-11-01T04:15:00Z" }
+  dod_check: { started: "2026-11-01T05:30:00Z", completed: "2026-11-01T05:45:00Z" }
+  pr_creation: { started: "2026-11-01T05:45:00Z", completed: "2026-11-01T06:00:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/202" }
+decisions:
+  - text: "Scope is the M0-S13 provider engine family: chain resolution, quota and peak-window awareness, named self-expiring parks (cause + expiry), subscription-first ordering, and fail-loud announcements. Model-profiles selection heuristics stay out (M2 candidate); harness spawn stays out (M1-S11)."
+    date: "2026-10-31"
+  - text: "Provider credentials resolve only through the M0-S12 CredentialPort; the provider engine performs no direct environment reads (secret-read boundary invariant remains binding)."
+    date: "2026-10-31"
+  - text: "The legacy peak/quota battery (TC-ZAI-001..071 in scripts/.tests/test-hook-zai-example.sh, against scripts/hooks/pre-opencode-iteration-zai.sh) is the parity source for the ported provider test battery, adapted to the fail-loud contract (legacy fail-open warnings become structured announcements, not silent proceeds)."
+    date: "2026-10-31"
+  - text: "Provider engine splits pure policy (core, runtime-neutral) from I/O edges (clock and quota HTTP transport injectable in the adapters tier); parks persist through the state layer as records carrying cause and expiry."
+    date: "2026-10-31"
+open_questions: []
+blockers: []
+notes:
+  - text: "Legacy resolver fail-open behavior conflicts with the GH-182 AC 'provider outage is announced, not silent'; the ported battery must assert an explicit announcement record instead of a silent return 0."
+    type: risk
+    date: "2026-10-31"
+  - text: "Doc impact: new feature spec for the provider engine, provider config keys in the config-layer spec, provider error codes in the result-contract spec, park record vocabulary in the state-layer spec, and the provider CLI row in the command registry."
+    type: risk
+    date: "2026-10-31"
+  - text: "No blocking ambiguity found that contradicts the backlog, concepts, ADR-0003, or existing specs: the story, model-profiles concept, CLI registry, and legacy resolver define enough to specify v1. Implementation-detail decisions are delegated to the spec/plan phases and recorded rather than escalated."
+    type: info
+    date: "2026-10-31"
+  - text: "Specification reopened once (test-plan gap feedback): closed five exactness gaps (shadowed skip reason + precedence, provider-parks.json projection identity, closed evidence field allowlists, loop-cap counting unit, 49-check legacy battery accounting) and re-aligned the test plan. No rework past the specification/test-plan boundary."
+    type: retro
+    date: "2026-10-31"
+  - text: "DoR iteration 1 verdict READY (10/10 facets; 0 blockers, 0 major). Fixed 2 minor test-plan over-mapping/fixture-inventory findings and 1 plan nit before the delivery checkpoint. Residual risks: owner-policy OQ-2/OQ-3 pre-merge gate, ADR-0007 stays Proposed until owner acceptance, 50ms threshold environment-sensitive, naming lock may rename provider-quota."
+    type: decision
+    date: "2026-10-31"
+  - text: "Open questions resolved in spec v1.2: provider CLI surface = resolve/quota/parks list; provider config shape = typed catalog branch with Appendix B field contract; provider error rows = provider.outage, provider.auth.rejected, provider.chain.empty, provider.chain.invalid plus retained provider.quota.exceeded, synchronized machine-to-doc."
+    type: resolved
+    date: "2026-10-31"
+  - text: "Delivery phases 1-9 + 11.1 completed across 11 commits; aggregate pnpm check green (1138 tests / 113 files), boundaries green, 49/49 legacy IDs mapped, 46/46 ACs and 62/62 TCs traceable. Coder reported @committer delegation was unavailable and created commits directly, bypassing the canonical commit agent; commit messages still follow the planned Conventional Commit sequence and the tree is clean. Process deviation noted for retro; no content correctness issue observed."
+    type: retro
+    date: "2026-10-31"
+  - text: "Review iteration 1 FAIL (R1-R7: 2 medium code, 1 medium doc, 3 low, 1 info). Reopened specification to v1.3 (48 ACs; failed-entry walk and mixed-reset semantics pinned), synced test plan to v1.2 (64 TCs: TC-PROV-063/064) and plan to v1.1 (Phase 10 tasks 10.1-10.7). Remediation in progress; re-review required after coder + doc-syncer."
+    type: blocker
+    date: "2026-11-01"
+  - text: "Retro: the first review was run as two bounded passes because single-run @reviewer invocations exceeded the execution window twice. Splitting worked and produced high-signal findings, but it missed persisting a native reviewer artifact; PM consolidated the two reports into review/review-iter-1.md. Suggest reviewer prompts cap runtime and always write the verdict artifact early."
+    type: retro
+    date: "2026-11-01"
+  - text: "Review iteration 2 PASS after remediation 7588b26 + docs a11def4: all R1-R7 closed, no new contradictions, tests strengthened. Phase 10 remediation complete; proceed to quality gates."
+    type: resolved
+    date: "2026-11-01"
+  - text: "Quality gates PASS at HEAD 7de3be2: pnpm check 1149 tests/113 files, boundaries, doc-distribution (81 docs), error-table sync (30/30), secret-read boundary (4 entries), forbidden-literals (0), commitlint (0 problems), git diff --check. DoD audit: all delivery evidence satisfied; plan and test-plan bookkeeping reconciled (48 ACs/64 TCs). Only PR-phase gates remain: unmerged main-tools PR with green CI/owner assignment (11.5) and owner-policy OQ-2/OQ-3 confirmation (11.2, merge gate)."
+    type: decision
+    date: "2026-11-01"
+  - text: "Post-delivery integration: main-tools advanced with GH-177 (verify change). The merge commit unioned both sides but left four union seams: missing closing brace in the provider/verify command-runtime composition (edge.ts), missing describe closure before the verify row in error-table-sync.test.ts, missing test/describe closures before the verify section in error-table.test.ts, and GH-177's pinned runtime-allowlist expectation missing the provider-quota admission in verify-imports.test.ts. All four reconciled; error-table baseline oracle extended to the five provider rows (+verify), domainKind counts updated to provider 5 / verify 1 / total 31. pnpm install/build/check/boundaries green: 1261 tests/120 files, 0 fail; targeted error-table suites 88/88."
+    type: info
+    date: "2026-11-01"

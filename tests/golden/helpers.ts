@@ -51,6 +51,7 @@ export type ProgramDescriptor = {
   readonly data?: unknown;
   readonly message?: string;
   readonly failureKind?: string;
+  readonly failureCode?: string;
   readonly summary?: string;
   readonly flags?: readonly string[];
   readonly requiresValue?: readonly string[];
@@ -66,9 +67,11 @@ const handlerFor = (descriptor: ProgramDescriptor): CommandHandler => {
       return () => ({ data: descriptor.data === undefined ? {} : descriptor.data });
     case "classified":
       return () => {
-        throw descriptor.summary === undefined
-          ? { kind: descriptor.failureKind }
-          : { kind: descriptor.failureKind, summary: descriptor.summary };
+        throw {
+          kind: descriptor.failureKind,
+          ...(descriptor.failureCode === undefined ? {} : { code: descriptor.failureCode }),
+          ...(descriptor.summary === undefined ? {} : { summary: descriptor.summary }),
+        };
       };
     case "unknown-kind":
       return () => {

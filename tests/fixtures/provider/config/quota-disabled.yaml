@@ -1,0 +1,10 @@
+provider:
+  entries:
+    disabled-quota:
+      class: subscription
+      quota:
+        enabled: false
+  chains:
+    default:
+      entries:
+        - disabled-quota

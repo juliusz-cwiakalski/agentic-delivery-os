@@ -1,0 +1,18 @@
+change_id: GH-177
+title: [1, 2, 3]
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-10-31T00:00:00Z", completed: "2026-10-31T00:00:30Z" }
+  specification: { started: "2026-10-31T00:01:00Z", completed: "2026-10-31T00:01:30Z" }
+  test_planning: { started: "2026-10-31T00:02:00Z", completed: "2026-10-31T00:02:30Z" }
+  delivery_planning: { started: "2026-10-31T00:03:00Z", completed: "2026-10-31T00:03:30Z" }
+  dor_check: { started: "2026-10-31T00:04:00Z", completed: "2026-10-31T00:04:30Z" }
+  delivery: { started: "2026-10-31T00:05:00Z", completed: "2026-10-31T00:05:30Z" }
+  system_spec_update: { started: "2026-10-31T00:06:00Z", completed: "2026-10-31T00:06:30Z" }
+  review_fix: { started: "2026-10-31T00:07:00Z", completed: "2026-10-31T00:07:30Z" }
+  quality_gates: { started: "2026-10-31T00:08:00Z", completed: "2026-10-31T00:08:30Z" }
+  dod_check: { started: "2026-10-31T00:09:00Z", completed: "2026-10-31T00:09:30Z" }
+  pr_creation: { started: "2026-10-31T00:10:00Z", completed: "2026-10-31T00:10:30Z" }
+notes:
+  - text: "planted-payload-verify-wrong-typed-title"
+    type: info

@@ -62,6 +62,7 @@
     }
   ],
   "registered": [
+    "doc/guides/provider-conditions-and-parks.md",
     "doc/guides/rename-drill.md",
     "doc/spec/features/feature-adapter-ports.md",
     "doc/spec/features/feature-branding-seam.md",
@@ -69,7 +70,9 @@
     "doc/spec/features/feature-pm-notes-lint-and-phase-transitions.md",
     "doc/spec/features/feature-privacy-guard.md",
     "doc/spec/features/feature-provider-client-seeds.md",
+    "doc/spec/features/feature-provider-engine.md",
     "doc/spec/features/feature-result-contract.md",
-    "doc/spec/features/feature-state-layer.md"
+    "doc/spec/features/feature-state-layer.md",
+    "doc/spec/features/feature-verify-change-and-exit-taxonomy.md"
   ]
 }

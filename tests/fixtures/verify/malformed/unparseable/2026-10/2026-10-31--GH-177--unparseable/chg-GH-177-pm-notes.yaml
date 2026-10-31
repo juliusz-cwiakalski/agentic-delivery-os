@@ -1,0 +1,6 @@
+change_id: GH-177
+title: "Malformed unparseable fixture"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-10-31T00:00:00Z", completed: "2026-10-31T00:00:30Z" }
+   orphaned: "planted-payload-verify-unparseable"

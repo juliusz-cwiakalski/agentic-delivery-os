@@ -144,3 +144,18 @@ describe("TC-CONFIG-001/002 real production resolver with typed catalog", () => 
     }
   });
 });
+
+describe("TC-PROV-003 provider provenance through the layered resolver", () => {
+  test("shipped provider defaults carry a defaults-layer origin and layer overrides win", () => {
+    const resolved = resolveConfig({
+      sources: [fileFacts("system", { provider: { defaultChain: "default" } }, 4)],
+    });
+    expect(resolved.ok).toBe(true);
+    if (resolved.ok) {
+      expect(resolved.value.origins["provider.entries.zai-coding-plan.peak.timezone"]?.layer).toBe(
+        "defaults",
+      );
+      expect(resolved.value.origins["provider.defaultChain"]?.layer).toBe("system");
+    }
+  });
+});

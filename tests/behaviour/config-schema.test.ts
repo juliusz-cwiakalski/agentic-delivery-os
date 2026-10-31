@@ -11,12 +11,20 @@ import { FIXTURE_CATALOG } from "../fixtures/config/catalog";
 import { fileFacts } from "../fixtures/config/facts";
 
 describe("TC-CONFIG-008/009/011 canonical schema, partial and final", () => {
-  test("empty production is empty, without bootstrap/test keys or invented origins", () => {
+  test("production exposes the typed provider branch and shipped defaults", () => {
     expect(BOOTSTRAP_DESCRIPTOR.workingName).toEqual({ type: "string", required: true });
-    expect(PRODUCTION_CATALOG).toEqual({});
+    expect(Object.keys(PRODUCTION_CATALOG)).toEqual(["provider"]);
     expect(PRODUCTION_SCHEMA).toEqual(generateConfigSchema(PRODUCTION_CATALOG));
     const result = resolveConfig();
-    expect(result).toMatchObject({ ok: true, value: { values: {}, origins: {} } });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.values.provider).toMatchObject({
+        credentials: { zai: { sourceKey: { style: "literal", name: "ZAI_API_KEY" } } },
+        entries: { "zai-coding-plan": { class: "subscription", enabled: true } },
+        chains: {},
+      });
+      expect(result.value.origins.provider?.layer).toBe("defaults");
+    }
   });
 
   test("reserved metadata is validated, removed, and cannot load a foreign schema", () => {
@@ -34,7 +42,9 @@ describe("TC-CONFIG-008/009/011 canonical schema, partial and final", () => {
     });
     expect(metadata.ok).toBe(true);
     if (metadata.ok)
-      expect(metadata.value.values).toEqual({ "x-vendor": { list: [null, true, { nested: 2 }] } });
+      expect(metadata.value.values["x-vendor"]).toEqual({
+        list: [null, true, { nested: 2 }],
+      });
     const bad = resolveConfig({ sources: [fileFacts("system", { $schema: 12 }, 3)] });
     expect(bad.ok).toBe(false);
     if (!bad.ok) expect(bad.error.code).toBe("config.value.invalid");
@@ -107,5 +117,46 @@ describe("TC-CONFIG-008/009/011 canonical schema, partial and final", () => {
       expect(
         (nullValue.value.values["x-test"] as { nested: { second: unknown } }).nested.second,
       ).toBeNull();
+  });
+});
+
+describe("TC-PROV-002 provider branch schema", () => {
+  const provider = {
+    provider: {
+      defaultChain: "default",
+      credentials: { zai: { sourceKey: { style: "literal", name: "ZAI_API_KEY" } } },
+      entries: { "zai-coding-plan": { class: "subscription", enabled: true } },
+      chains: { default: { entries: ["zai-coding-plan"], allowPaidFallback: false } },
+    },
+  } as const;
+
+  test("a valid provider branch resolves over shipped defaults", () => {
+    const resolved = resolveConfig({ sources: [fileFacts("system", provider, 3)] });
+    expect(resolved.ok).toBe(true);
+    if (resolved.ok) {
+      expect(resolved.value.values.provider).toMatchObject({
+        defaultChain: "default",
+        chains: { default: { entries: ["zai-coding-plan"] } },
+      });
+    }
+  });
+
+  test("unknown keys and missing required entry fields fail closed", () => {
+    const unknown = resolveConfig({
+      sources: [fileFacts("system", { provider: { speculative: true } }, 3)],
+    });
+    expect(unknown.ok).toBe(false);
+    if (!unknown.ok) expect(unknown.error.code).toBe("config.key.unknown");
+    const missing = resolveConfig({
+      sources: [
+        fileFacts(
+          "system",
+          { provider: { entries: { minimal: { enabled: true } }, chains: {} } },
+          3,
+        ),
+      ],
+    });
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) expect(missing.error.code).toBe("config.value.invalid");
   });
 });
