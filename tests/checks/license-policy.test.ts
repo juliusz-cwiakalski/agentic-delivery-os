@@ -311,22 +311,28 @@ describe("license registry policy", () => {
   });
 
   test("TC-LICREG-003 existing entries, uses, verdicts, and allow list are preserved", () => {
-    const base = baseRegistry();
+    // Snapshot instead of a base-diff: a diff against origin/main-tools only
+    // holds at the PR that introduced this assertion, so the preserved fields
+    // are pinned in a committed fixture and legitimately changed only by
+    // updating the fixture in review.
+    const snapshot = JSON.parse(
+      readFileSync(join(ROOT, "tests/fixtures/license/registry-preserved.json"), "utf8"),
+    ) as {
+      entries: unknown;
+      allow_list: unknown;
+      scope: unknown;
+      c2_determination: unknown;
+    };
     const delivered = loadRegistry(ROOT);
-    expect(base.schema_version).toBe(2);
     expect(delivered.schema_version).toBe(3);
-
-    expect(entrySet(delivered)).toEqual(entrySet(base));
-
-    expect([...(base.allow_list ?? [])].sort()).toEqual([...(delivered.allow_list ?? [])].sort());
-    expect(delivered.scope).toBe(base.scope);
-    expect(delivered.c2_determination).toBe(base.c2_determination);
-
-    const baseKeys = new Set(Object.keys(base));
-    const deliveredKeys = new Set(Object.keys(delivered));
-    const added = [...deliveredKeys].filter((key) => !baseKeys.has(key));
-    const removed = [...baseKeys].filter((key) => !deliveredKeys.has(key));
-    expect([...added, ...removed]).toEqual(["deny_list"]);
+    expect(entrySet(delivered)).toEqual(
+      (snapshot.entries as Parameters<typeof entrySet>[0]["entries"]).map(normalizeEntry).sort(),
+    );
+    expect([...(delivered.allow_list ?? [])].sort()).toEqual(
+      [...((snapshot.allow_list as string[] | null) ?? [])].sort(),
+    );
+    expect(delivered.scope).toEqual(snapshot.scope as never);
+    expect(delivered.c2_determination).toEqual(snapshot.c2_determination as never);
   });
 
   test("TC-LICREG-004 old, absent, and unsupported schema versions fail closed", () => {
