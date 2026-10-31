@@ -9,7 +9,7 @@ phases:
   test_planning: { started: "2026-10-31T01:10:00Z", completed: "2026-10-31T01:50:00Z", reopened: "2026-10-31T03:05:00Z (dor iter-1 minor/nit: TC-012 outside-taxonomy bucket; TC-018 'none' comparer rule)", reopened_completed: "2026-10-31T03:40:00Z (test plan v1.1: outside-taxonomy bucket; none-prefix rule; TC-019 hint pinned)" }
   delivery_planning: { started: "2026-10-31T01:55:00Z", completed: "2026-10-31T02:40:00Z", reopened: "2026-10-31T03:05:00Z (dor iter-1 major fold-in: plan 1.2 must mirror the brand-neutral pinned hint and drop the contradictory clause)", reopened_completed: "2026-10-31T03:45:00Z (plan v1.1: task 1.2 byte-for-byte hint; version refs updated; phases/tasks/TCs unchanged)" }
   dor_check: { started: "2026-10-31T02:45:00Z", completed: "2026-10-31T04:05:00Z", verdict: "READY iter-2 (10/10 facets PASS; zero blockers/majors; 1 non-blocking nit: stale test-plan pointers, folded). iter-1 NOT_READY (9/10; 1 major/1 minor/3 nits) closed in one reopen cycle (spec/test-plan/plan v1.1). Artifacts readiness-review/readiness-iter-1.md, readiness-iter-2.md. Reviewer independently re-verified corpus, bash enum, 21 TC/14 AC/7 NFR, 10 phases/44 tasks, and the brand-neutral hint byte-match." }
-  delivery: { started: "2026-10-31T04:10:00Z", completed: null }
+  delivery: { started: "2026-10-31T04:10:00Z", completed: "2026-10-31T08:15:00Z", commits: "6141d00(P1) e77277d(P2) 6620ce9(P3) 4554207(P4) 62b8248(P5) e644d2e(P6); HEAD e644d2e; all 21 TCs green; pnpm check 1106/1106; message-only commitlint reword applied (trees unchanged); worktree clean; no push" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -57,6 +57,12 @@ notes:
     type: "info"
     date: "2026-10-31"
   - text: "Delivery Phase 1 blocker (resolved same session): @coder correctly stopped rather than weaken TC-VERIFY-018 or edit binding artifacts. Root cause: spec C-4 table row order drifted from the normative bash order (`failed` before `finished`) while the section declared bash order and the test asserted row order. PM correction: spec v1.2 swaps the two rows only; test plan/plan unchanged. Lesson: artifact authors/DoR must compare documented-table ROW order against the extracted reference order, not just token membership — iter-2 checked membership/fields but not the table's own order."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "Delivery Phases 1-6 COMPLETE (@coder): commits 6141d00(P1) e77277d(P2) 6620ce9(P3) 4554207(P4) 62b8248(P5) e644d2e(P6); all 21 TCs green; per-phase pnpm check 1015->1049->1076->1096->1106; final battery 1106/1106 plus error-table-sync, ambient, forbidden-literals, exit-literals, entrypoints, doc-distribution, git diff --check all green. Phases 7-10 not executed by @coder. Worktree clean, no push."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Commit hygiene: CI commitlint checks the whole branch range and 7 commits had >100-char body lines. A PM-authorized message-only reword brought the range to commitlint exit 0 with identical trees; the first scripted reword wrapped git's COMMIT_EDITMSG comment block and was restored from the pre-run green HEAD. Current SHAs are recorded in the evidence artifact. Lesson: commit bodies authored inline must keep lines <=100 and avoid leading `Token:` lines; verify commitlint on the range before finishing delivery."
     type: "retro"
     date: "2026-10-31"
   - text: "Runtime learnings carried forward: pre-authorize inline committer discipline for @coder (one Conventional Commit per plan phase, explicit staging, never stage .ai/local/ or tmp/); PM owns @runner/@doc-syncer/@pr-manager. Prefer chunked authoring delegations for long artifacts (GH-179 retros)."

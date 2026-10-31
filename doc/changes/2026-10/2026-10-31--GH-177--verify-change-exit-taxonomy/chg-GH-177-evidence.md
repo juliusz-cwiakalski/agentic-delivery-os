@@ -2,12 +2,14 @@
 
 > **Status: implementation phases 1–6 complete; lifecycle phases 7–10 are not
 > executed by `@coder`.** This artifact records only observed evidence. The
-> final local battery below ran on the working HEAD `5894ef0` with a clean tree;
-> this changeset and evidence file are the subsequent docs-only commit. No push,
-> PR, merge, or owner-acceptance claim is made here.
+> final local battery below ran on the working HEAD `62b8248` with a clean tree;
+> this changeset and evidence file are the subsequent docs-only commit `e644d2e`.
+> Commit SHAs below are the current branch SHAs after a commitlint-driven,
+> message-only reword; the file trees are unchanged. No push, PR, merge, or
+> owner-acceptance claim is made here.
 
 Authoritative inputs: [spec](./chg-GH-177-spec.md) v1.2 (C-4 rows corrected to
-the normative bash order at `a772bfb`; AC-V1..V14, C-1..C-8, DEC-1..11,
+the normative bash order at `83c97c5`; AC-V1..V14, C-1..C-8, DEC-1..11,
 NFR-1..7), [test plan](./chg-GH-177-test-plan.md) v1.1 (21 TCs, §4.1 harness,
 §4.2 non-vacuity), [plan](./chg-GH-177-plan.md) v1.1 (PIN-1..PIN-7, D1..D12,
 Phases 1–10), [TDR-0005](../../../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md)
@@ -19,12 +21,12 @@ Branch: `feat/GH-177/verify-change-exit-taxonomy`, cut from `main-tools`.
 
 | Phase | Commit | Subject |
 |-------|--------|---------|
-| 1 | `4bd71c1` | `feat(GH-177): add delivery result contracts vocabulary with synchronized verify error row` |
-| 2 | `24f2a79` | `feat(GH-177): add pure verify classifier with presence-tolerant registry read` |
-| 3 | `45065ab` | `feat(GH-177): add verify change command with classification and rejection surfaces` |
-| 4 | `b237a8e` | `test(GH-177): prove state-failure classification, envelope exit matrix, and determinism` |
-| 5 | `5894ef0` | `test(GH-177): pin real-corpus classification and fail-closed bindings with full gate battery` |
-| 6 | this docs commit | `docs(GH-177): record changeset and delivery evidence with final local battery` |
+| 1 | `6141d00` | `feat(GH-177): add delivery result contracts vocabulary with synchronized verify error row` |
+| 2 | `e77277d` | `feat(GH-177): add pure verify classifier with presence-tolerant registry read` |
+| 3 | `6620ce9` | `feat(GH-177): add verify change command with classification and rejection surfaces` |
+| 4 | `4554207` | `test(GH-177): prove state-failure classification, envelope exit matrix, and determinism` |
+| 5 | `62b8248` | `test(GH-177): pin real-corpus classification and fail-closed bindings with full gate battery` |
+| 6 | `e644d2e` | `docs(GH-177): record changeset and delivery evidence with final local battery` |
 
 ## Per-phase green criteria (observed)
 
@@ -42,7 +44,7 @@ inside their suites (missing/mutated bash reference, mutated C-4 table,
 malformed/duplicated/absent error-table rows); the unchanged controls were green
 in the same runs. No test was weakened.
 
-## Final local battery (measured at `5894ef0`, clean tree)
+## Final local battery (measured at `62b8248`, clean tree)
 
 | Gate | Command | Result |
 |------|---------|--------|
@@ -89,10 +91,10 @@ deferred TC and no orphaned AC.
 
 ## Deviations from the plan (all additive, no TC reshaped)
 
-1. **Spec C-4 row order (`a772bfb`, PM-owned).** The delivery blocker was a
+1. **Spec C-4 row order (`83c97c5`, PM-owned).** The delivery blocker was a
    documented-table order contradiction: bash and `DELIVERY_RESULT_TOKENS` list
    `failed` before `finished`, while the C-4 table listed `finished` first.
-   PM/user resolved it by reordering the two rows at `a772bfb`; TC-VERIFY-016/018
+   PM/user resolved it by reordering the two rows at `83c97c5`; TC-VERIFY-016/018
    then passed unchanged, including the reordered-rows mutation control.
 2. **`tests/fixtures/ports/v1-contract-inventory.json` (Phase 1, task 1.6).**
    This pre-existing binding fixture pins the whole `core ./contracts` export
