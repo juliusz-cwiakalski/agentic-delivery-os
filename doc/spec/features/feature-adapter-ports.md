@@ -6,16 +6,13 @@ created: 2026-10-30
 last_updated: 2026-10-31
 owners: ["engineering"]
 service: delivery-os
-summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the binding secret-read boundary invariant, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec, required injected content policy, fail-closed content-policy failure, and visible graceful degradation."
+summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, the read-only SessionStorePort and mutating SessionAdminPort implemented over the opencode-CLI-backed adapters ./session subpath, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec and visible graceful degradation."
 links:
-  related_changes: ["GH-174", "GH-179", "GH-181", "GH-184", "GH-188"]
-  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "TDR-0005"]
+  related_changes: ["GH-174", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-180"]
+  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0010", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/envelope.ts"
-summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec and visible graceful degradation."
-links:
-  related_changes: ["GH-174", "GH-179", "GH-181", "GH-188", "GH-182"]
-  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006"]
+    - "packages/core/src/contracts/session.ts"
 ---
 
 # Feature: Adapter Ports, Credential Resolution, and Embedded Metadata
@@ -29,6 +26,8 @@ The adapter-era contract substrate is typed, provider-agnostic, and mechanically
 Secret acquisition is centralized behind one `CredentialPort` in core. A caller resolves a declared credential reference to secret material at use time and receives either the material or the classified `config.credential.missing` failure. The single implementation is environment-backed and lives in the adapters package's I/O tier at the declared `./credentials` subpath, with an injectable environment record for tests. A binding repository invariant, the secret-read boundary, fails on ambient environment access outside an enumerated allowlist, so the centralization claim is mechanical rather than conventional. The credential sidecar remains a future second implementation behind the unchanged port interface; no mediated-mode code exists.
 
 The embedded metadata envelope v1 is a versioned data contract in core `./contracts` (`delivery.metadata.v1`). Its pure codec — serialize, parse, strip — is an adapter-internal shared module. The envelope travels in an adapter-declared carrier, round-trips with logical payload equality, and degrades visibly instead of failing when metadata is absent, malformed, of the wrong kind, or of an unknown version. Serialization requires an injected, pure content policy and fails closed with `content-policy-violation` when that policy denies the exact payload JSON.
+
+The session-administration ports are implemented. `SessionStorePort` in core `./contracts` carries the read-only `size` and `list` surface that preserves ADR-0003's `SessionStore` semantics. `SessionAdminPort` extends that read surface with the mutating `prune` and `reboot` operations. Both are implemented in the adapters `./session` subpath over an injected `OpencodeSessionIo` seam that reaches the opencode session database only through the opencode CLI; the subpath is a production I/O home. The metadata-only guarantee and the ADR-0003 C-11 privacy sign-off gate remain binding for every field the ports surface. The delivered `ados db` surface is documented in [Session Database Administration](feature-session-database-admin.md).
 
 The surrounding workspace is described in [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md); the provider engine that consumes the credential port for quota authorization in [Provider Engine](feature-provider-engine.md); the client seeds that consume this substrate in [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md); the failure identity and redaction boundary in [Result Contract and Error Table](feature-result-contract.md); environment-only secrets and configuration acquisition in [Configuration Layer and Inspection](feature-config-layer.md); brand-derived values in [Branding Seam and Working Name](feature-branding-seam.md). Package placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md). The harness adapter contract is recorded in [ADR-0008](../../decisions/ADR-0008-harness-adapter-contract.md) and implemented in M1-S11.
 
@@ -67,6 +66,19 @@ The v1 port set is bounded to the catalogue's adapter-interaction rows typed at 
 | `IdempotencyKey` | Key value plus scope, making an external write safely retryable. |
 
 Provider-qualified identity is plain typed data (`systemName` plus the provider's own `entityId`). Contracts describe normalized data and invariants; no behaviour, I/O, ambient environment, clock, or randomness enters the tier.
+
+### Session administration ports
+
+The session-database ports are separate from the nine primitive ports and are typed in `packages/core/src/contracts/session.ts`:
+
+| Port | Contract |
+|------|----------|
+| `SessionStorePort` | Read-only `size()` and `list({ limit, nowMs })` reads over the opencode session store. It preserves ADR-0003's `SessionStore` semantics: read-only access to foreign session databases for `db` administration, metadata-only, never a mutation path. |
+| `SessionAdminPort` | Extends `SessionStorePort` with `prune({ olderThanDays, limit, apply, nowMs })` and `reboot({ apply, nowMs })`. These are the only mutating operations. |
+
+Each read returns `{ ok: true, value }` or `{ ok: false, error }` with a declared `db.*` identity. Mutation is dry-run by default and applies only when the caller sets `apply`. The implementation lives in `packages/adapters/src/session/index.ts`, an admitted I/O subpath, over an adapter-local `OpencodeSessionIo` seam; the executable and environment are injected. See [Session Database Administration](feature-session-database-admin.md) for the command surface, bounds, candidate rule, and error rows.
+
+The public, semver-visible mutating `SessionAdminPort` is recorded in [ADR-0010](../../decisions/ADR-0010-session-admin-port-mutating-contract.md), which reconciles ADR-0003's read-only `SessionStore` clause without rewriting it.
 
 ### Capability and gap declaration
 
@@ -183,20 +195,18 @@ An unresolvable credential carries the synchronized error-table row `config.cred
 | `packages/core/src/contracts/adapter-capabilities.ts` | `ADAPTER_OPERATIONS`, `CARRIER_KINDS`, capability/gap types, and declared-carrier selection types. |
 | `packages/core/src/contracts/credentials.ts` | `CredentialPort`, `CredentialReference`, `CredentialSourceKey`, resolution result, and the reified missing-credential failure. |
 | `packages/core/src/contracts/envelope.ts` | Envelope schema id, size bound, kinds, closed payload types, degradation reasons, agent-facing comment views, and the `ContentPolicyVerdict` / `EnvelopeContentPolicy` contract types. |
-| `packages/core/src/contracts/index.ts` | The `core ./contracts` export surface for the ports, capability, credential, and envelope contracts. |
+| `packages/core/src/contracts/session.ts` | `delivery.session-admin.v1` vocabulary, bounds, item/result shapes, read-only `SessionStorePort`, and mutating `SessionAdminPort`; types and `as const` data only. |
+| `packages/core/src/domain/session-admin.ts` | Pure session-admin policy: cutoff, live boundary, cold/live/leaf predicate, ordering, capping, and deterministic human rendering. |
+| `packages/adapters/src/session/index.ts` | Production `OpencodeSessionIo` and the `SessionStorePort` / `SessionAdminPort` implementations over the opencode CLI. |
+| `packages/core/src/contracts/index.ts` | The `core ./contracts` export surface for the ports, capability, credential, envelope, and session-admin contracts. |
 | `packages/adapters/src/credentials/index.ts` | Environment-backed credential port, injected-environment factory, production process-environment wrapper, and source-key derivation. |
 | `packages/adapters/src/io/envelope-codec.ts` | Pure envelope codec: serialize, parse, strip, closed-payload validation, required content-policy evaluation, raw-carrier escape hatch, and carrier constants. |
 | `packages/adapters/src/io/privacy-rules.ts` | Pure, dependency-free privacy rule definitions, suppression classes, normalization, matchers, caps, and identifier fingerprint. |
 | `packages/adapters/src/io/envelope-content-policy.ts` | Pure policy builder combining shared generic rules with injected hashed entries and hash. |
 | `packages/adapters/src/io/index.ts` | Internal `#io/*` alias target re-exporting the codec and the policy builder. |
-| `packages/core/src/contracts/envelope.ts` | Envelope schema id, size bound, kinds, closed payload types, degradation reasons, and agent-facing comment views. |
-| `packages/core/src/contracts/index.ts` | The `core ./contracts` export surface for the ports, capability, credential, provider, and envelope contracts. |
 | `packages/core/src/contracts/provider.ts` | Provider descriptors, conditions, parks, announcements, decisions, skip reasons, error codes, and the quota transport contract. |
 | `packages/core/src/provider/**` | Pure provider validation, chain resolution, peak/quota evaluation, park/announcement projection, and re-evaluation loop. |
-| `packages/adapters/src/credentials/index.ts` | Environment-backed credential port, injected-environment factory, production process-environment wrapper, and source-key derivation. |
 | `packages/adapters/src/provider-quota/index.ts` | Injectable quota transport and native-fetch production wrapper at the declared `./provider-quota` subpath. |
-| `packages/adapters/src/io/envelope-codec.ts` | Pure envelope codec: serialize, parse, strip, closed-payload validation, raw-carrier escape hatch, and carrier constants. |
-| `packages/adapters/src/io/index.ts` | Internal `#io/*` alias target re-exporting the codec. |
 | `packages/adapters/src/file/pm-notes-parser.ts` | pm-notes file edge: locates a change ref's committed notes under the change-artifact convention, parses YAML 1.2 core with bounded size/nodes/depth/aliases, and stages in-memory phase-entry edits; runtime file access stays at the adapter I/O edge. |
 | `scripts/checks/secret-read-boundary.ts` | The secret-read boundary invariant, allowlist registry, scoped-file scan, and fixture-coverage helpers. |
 | `tests/types/tsconfig.json` | The type-probe project chained into the root `typecheck`. |
@@ -230,6 +240,8 @@ Version policy: v1 is the only schema version, so any version string outside the
 ## Security and Boundaries
 
 - Secret material is reachable only through the credential port. The environment-backed implementation is the sole `credential-material` allowlist entry.
+- The session-database ports remain metadata-only: identifiers, counts, byte sizes, timestamps, booleans, and the runtime-resolved store path; no titles, prompts, message bodies, part data, credentials, environment values, or command arguments. The ADR-0003 C-11 privacy sign-off is required before the `db` administration engine ships and remains an owner merge gate.
+- The session adapter adds no secret-read allowlist entry and reads no ambient environment; the executable and environment are injected through the composition.
 - The secret-read boundary closes the ambient channel that runtime-API confinement does not cover. Runtime-API confinement admits the `core` state driver edge (`packages/core/src/state/driver/`), the adapters I/O subpaths `repo`, `file`, `host`, `session`, `legacy`, and `credentials`, the provider client subpaths `github`, `gitlab`, and `jira`, and the provider quota transport `provider-quota`, all as exact, reason-bearing entries per the ADR-0005 reviewed-allowance precedent; it also admits the `cli` build and `opencode` host integration. The provider core tier is runtime-neutral, the provider registry subpath and the remaining adapter subpaths stay non-I/O, and the credential subpath is the only one that may resolve secret material.
 - Resolved material never enters diagnostics, logs, error payloads, or metadata; the existing redaction chokepoint governs any surfaced payload.
 - The envelope payload is closed, compact, size-bounded, and secret-free; carrier markers and namespaces use brand-neutral constants with no committed product token.
@@ -293,6 +305,9 @@ Capability flags and gap records are inspectable data. Degradation evidence name
 | Term | Definition |
 |------|------------|
 | Primitive port | A typed, provider-agnostic contract in core `./contracts` for one catalogue primitive; adapters implement behind it. |
+| `SessionStorePort` | The read-only session-store port with `size` and `list`; preserves ADR-0003's read-only `SessionStore` semantics and the metadata-only guarantee. |
+| `SessionAdminPort` | The admin port that extends `SessionStorePort` with `prune` and `reboot`; the only mutating session-database surface. |
+| Session I/O seam | The adapter-local `OpencodeSessionIo` seam: path resolution, single-statement queries, official delete, one checkpoint, injected clock, and bounded file metadata. |
 | Capability declaration | Typed flags naming supported operations and carrier kinds, with explicit gap records. |
 | Gap record | An adapter's explicit declaration that it does not support a capability; parity is never implied. |
 | Credential reference | A declared mapping from an external system's auth method to its source key; resolved only through the credential port. |
@@ -304,8 +319,9 @@ Capability flags and gap records are inspectable data. Degradation evidence name
 | `content-policy-violation` | The fail-closed codec-local serialization failure produced when the content policy denies a payload; it carries no content and no carrier. |
 | Graceful degradation | Heuristic fallback with visible degradation evidence, never a flow failure. |
 
-See also: [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [Branding Seam and Working Name](feature-branding-seam.md), [Privacy and No-Cloud Guards](feature-privacy-guard.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
+See also: [Session Database Administration](feature-session-database-admin.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [Branding Seam and Working Name](feature-branding-seam.md), [Privacy and No-Cloud Guards](feature-privacy-guard.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 
 **Change record:** `doc/changes/2026-10/2026-10-30--GH-181--primitive-ports-credential-metadata/`.
 **Contract-extension change record:** `doc/changes/2026-10/2026-10-31--GH-188--client-seeds-trap-catalogs/`.
 **Provider engine change record:** `doc/changes/2026-10/2026-10-31--GH-182--provider-v1/`.
+**Session-admin change record:** `doc/changes/2026-10/2026-10-31--GH-180--db-session-admin-port/`.

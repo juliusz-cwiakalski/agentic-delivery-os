@@ -16,7 +16,7 @@ references:
   - "Delivery vehicle: #142"
   - "Related change: GH-146"
 links:
-  related_changes: ["GH-146", "GH-148", "GH-185", "PDEV-514", "PDEV-516"]
+  related_changes: ["GH-146", "GH-148", "GH-185", "PDEV-514", "PDEV-516", "GH-180"]
   decisions: ["TDR-0002"]
 ---
 
@@ -410,10 +410,17 @@ This is the #99 "merge-not-yield" + "proceed-not-halt" backstop.
 activity, the session is healthy:
 
 1. **Session-tree message traffic** — new assistant/tool messages flowing in the
-   session. The probe queries the current `session_message` table across the
+   session. The probe queries the current message store across the
    **recursive session tree** (it traverses `session.parent_id`), so traffic
    from child sessions counts too: when the PM delegates to `@coder` /
    `@spec-writer` (and the parent goes quiet itself), that is NOT a false stall.
+   On the reference opencode 1.19.3 schema messages live in `message` and parts
+   in `part`; `session_message` is a legacy table that is empty on the reference
+   store and is not the current source. The delivered `scripts/pm-liveness.sh`
+   currently queries `session_message`, so on the reference store its
+   session-tree signal observes no traffic and liveness is carried by the
+   git/worktree signal until the script is reconciled; that script change is an
+   owner follow-up.
 2. **Git/worktree activity** — the most recent of git-commit epoch and worktree
    file mtimes. This runs ALONGSIDE the DB signal (not only as a degraded
    fallback), so a healthy delivery that the DB can't see is still recognized.
