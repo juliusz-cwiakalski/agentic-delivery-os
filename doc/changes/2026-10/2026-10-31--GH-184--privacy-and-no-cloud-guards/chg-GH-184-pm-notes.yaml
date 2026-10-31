@@ -19,7 +19,7 @@ phases:
     completed: "2026-10-31T06:36:00Z"
   delivery_planning:
     started: "2026-10-31T06:39:00Z"
-    completed: "2026-10-31T06:52:00Z"
+    completed: "2026-10-31T08:20:00Z"
   dor_check:
     started: "2026-10-31T06:55:00Z"
     completed: null
@@ -51,6 +51,9 @@ open_questions:
 blockers: []
 
 notes:
+  - text: "Delivery plan v2 resolves the DoR blocking finding: per-entry staging co-location rule (each allowlist entry lands with its target file; exact-set assertion tracks the current set and reaches the end-state enumeration only at the final phase) and rule-scoped allowlist entries. It also enumerates the live-tree baseline suppression batch (placeholder suppression first, rule-scoped exact-path entries for archival real paths, remediate-if-touched) with a named task and a rule-scope regression test."
+    type: "info"
+    date: "2026-10-31"
   - text: "DoR iteration 1 verdict NOT_READY (8/10 facets PASS; plan_coverage and cross_artifact_consistency FAIL). Blocking: plan PD-2 allowlists files that land in later phases, so the guard's own fail-closed allowlist validation makes the Phase 2 green gate unachievable as written. Reopened delivery_planning. No human escalation needed."
     type: "blocker"
     date: "2026-10-31"
