@@ -1,5 +1,5 @@
 /**
- * The Jira `WorkflowMap` (DH-188 DM-4) — native statuses mapped to delivery
+ * The Jira `WorkflowMap` (GH-188 DM-4) — native statuses mapped to delivery
  * aliases, each naming its transition mechanism.
  *
  * Transitions are read as data: this seed never executes one. The map is

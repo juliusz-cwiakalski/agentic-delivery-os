@@ -5,7 +5,7 @@
     {
       "trapName": "GH-REVIEW-STATE",
       "providerBehavior": "GitHub PR review state is split across merged/state/draft flags and the native reviewDecision, which may disagree with the raw state.",
-      "expectedNormalizedOutcome": "Every PR variant maps to one closed DeliveryRequestReviewState; a merged or closed PR never reports open, and a flattening regression fails by trap name.",
+      "expectedNormalizedOutcome": "Every PR variant maps to one closed DeliveryRequestReviewState; a merged or closed PR never reports open; an unrecognized native reviewDecision resolves to the declared open fallback instead of a silent default, and a flattening regression fails by trap name.",
       "fixtureReference": "tests/fixtures/providers/github/pr-review-states.json#/pulls"
     },
     {
@@ -16,8 +16,8 @@
     },
     {
       "trapName": "GH-ISSUE-TO-WORKITEM",
-      "providerBehavior": "GitHub issue payloads cover labels, optional assignee, open/closed state, optional updated_at, and issue links.",
-      "expectedNormalizedOutcome": "Issues normalize to WorkItem with labels, optional assignee, closed Set status alias, updatedAt verbatim when present (absent otherwise), and typed relations only when the payload records them.",
+      "providerBehavior": "GitHub issue payloads carry labels, an optional assignee, open/closed state, an optional updated_at, issue links, and a state_reason on live closed issues.",
+      "expectedNormalizedOutcome": "Issues normalize to WorkItem with labels, an optional assignee, a closed-set status alias (open to ready, closed to done), updatedAt verbatim when present (absent otherwise), and typed relations only when the payload records them. state_reason is not modeled: closed maps to done regardless of not_planned, and live-shape revalidation plus any canceled distinction is deferred to M0-S20.",
       "fixtureReference": "tests/fixtures/providers/github/issues.json#/issues"
     }
   ]

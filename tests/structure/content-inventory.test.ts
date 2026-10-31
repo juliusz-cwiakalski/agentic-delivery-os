@@ -128,6 +128,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "adapters/src/github/review-state.ts": [
     "GITHUB_REVIEW_DECISION_STATES",
+    "GITHUB_UNKNOWN_REVIEW_DECISION_FALLBACK",
     "GITHUB_WORK_ITEM_STATUS_MAP",
     "resolveGithubReviewState",
     "workItemStatusFor",

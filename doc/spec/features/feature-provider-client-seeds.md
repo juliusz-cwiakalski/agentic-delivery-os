@@ -158,6 +158,10 @@ An unresolvable credential surfaces the synchronized `config.credential.missing`
 
 All three subpath surfaces export only the client factory, its core-built input/return types, and the adapter contract. The shared transport module is internal, imported relatively; the package's `#io/*` alias remains an internal import map, not a published export.
 
+### Intra-package imports and packed exports
+
+Shared adapter support modules under `src/io/` are imported by the provider seeds through relative `../io/*.js` specifiers, not through the `#io/*` imports alias. The alias is src-mapped (`./src/io/*.ts`), which resolves only in the repository; a packed adapter tarball ships `dist` only, so the alias would dangle after install. The relative `.js` specifier resolves to the built sibling in both the workspace and the tarball, so it is the only spelling that preserves packed-export parity. This is a deliberate, narrow exception to the alias-only intra-package import rule; `src/io/provider-transport.ts` states the same reason in its module header so a future reader does not "fix" the specifiers. A dist-conditioned `#io` alias would be a reviewed change, not a local rewrite.
+
 ## Security and Boundaries
 
 - Credential material is reachable only through `CredentialPort`; no client module reads `process.env`, `Bun.env`, `Deno.env`, or any other ambient source.

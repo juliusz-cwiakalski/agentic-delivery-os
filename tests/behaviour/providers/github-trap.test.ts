@@ -10,6 +10,7 @@ import {
   createGitHubClient,
   type GithubClient,
 } from "../../../packages/adapters/src/github/client";
+import { GITHUB_UNKNOWN_REVIEW_DECISION_FALLBACK } from "../../../packages/adapters/src/github/review-state";
 import type {
   DeliveryRequest,
   ExternalSystemInstance,
@@ -146,6 +147,30 @@ const flattenReviewStates = async (number: number): Promise<DeliveryRequest> => 
   reviewState: "open",
 });
 
+const unknownDecisionPull = (number: number, state: "open" | "closed"): unknown => ({
+  number,
+  title: "Unrecognized review decision",
+  state,
+  draft: false,
+  merged: false,
+  reviewDecision: "SOLICITED_REVIEW",
+  head: { ref: `feat/GH-${number}/unknown`, sha: SHA_A },
+  base: { ref: "main-tools" },
+  review_threads: [],
+});
+
+const unknownReviewDecisionCheck = async (): Promise<void> => {
+  expect(GITHUB_UNKNOWN_REVIEW_DECISION_FALLBACK).toBe("open");
+  const client = clientFor([
+    { url: pullUrl(508), body: unknownDecisionPull(508, "open") },
+    { url: pullUrl(509), body: unknownDecisionPull(509, "closed") },
+  ]);
+  const unknown = requireValue(await client.readDeliveryRequest(508), "unknown review decision");
+  expect(unknown.reviewState).toBe(GITHUB_UNKNOWN_REVIEW_DECISION_FALLBACK);
+  const closed = requireValue(await client.readDeliveryRequest(509), "closed unknown decision");
+  expect(closed.reviewState).toBe("closed");
+};
+
 // --- TC-GITHUB-002: check runs per SHA --------------------------------------
 
 const checkRunsBody = (sha: string): unknown => recordField(shaSections, sha);
@@ -254,7 +279,10 @@ const swapAssignee = async (number: number): Promise<WorkItem> => ({
 // --- The catalog ------------------------------------------------------------
 
 const defaultAssertions: TrapAssertions = {
-  "GH-REVIEW-STATE": () => reviewStateCheck(defaultPullReader),
+  "GH-REVIEW-STATE": async () => {
+    await reviewStateCheck(defaultPullReader);
+    await unknownReviewDecisionCheck();
+  },
   "GH-CHECK-RUNS-PER-SHA": () => checkRunsCheck(defaultCheckRunReader),
   "GH-ISSUE-TO-WORKITEM": () => issueCheck(defaultIssueReader),
 };

@@ -5,6 +5,14 @@
  * `ProviderTransport` as a construction input so trap suites replay committed
  * fixtures offline; the production default wraps native `fetch` inside each
  * provider subpath. No module-level transport or credential is cached.
+ *
+ * Provider seeds import this module with a relative `../io/provider-transport.js`
+ * specifier, not the `#io/*` imports alias. The alias is src-mapped
+ * (`./src/io/*.ts`), which resolves only in the repository; a packed adapter
+ * tarball ships `dist` only, so the alias would dangle after install. The
+ * relative `.js` specifier resolves to the built sibling in both the workspace
+ * and the tarball, preserving packed-export parity. Do not rewrite these
+ * imports to the alias; see the feature spec's intra-package import note.
  */
 import type { CredentialResolutionFailure } from "@delivery-os/core/contracts";
 
