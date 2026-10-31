@@ -1,0 +1,72 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-185
+branch: docs/GH-185/interim-mitigations-docs-config
+status: PASS
+summary: >-
+  First review iteration of the docs-only GH-185 delivery (merge-base f6c8d18..HEAD,
+  10 commits). All 11 ACs trace to delivered content with independently re-verified
+  evidence: the diff is 100% under doc/** with zero scripts/**/tools/** paths; all
+  five doc-derived guards reproduce green at HEAD (doc-distribution, result-tuples
+  + modes, inception-consistency, distribution-modes); every behavioral claim in the
+  four mitigation sections was re-grounded against the unchanged scripts
+  (deliver-ticket.sh L55/861-862/1550-1614/1672/1996-1997/2037/2294, ceo-loop.sh
+  L55/365/813, pm-liveness.sh L27/116/361-363) and matches; the three knob-name
+  drift spots are corrected with remaining CEO_LOOP_STALL_MINUTES occurrences being
+  probe/misname explanations only; canonical-home audit shows exactly one rule body
+  per mitigation with pointers/cross-links elsewhere; anchors resolve; distribution
+  markers retained; no future-engine-as-current statements. Two informational
+  findings, neither requiring doc changes: the doc-sync commit legitimately touched
+  a fifth doc (grounded corrections within its handed-off mandate), and the recorded
+  guard battery predated the doc-sync commit (gap closed by this review's re-run at HEAD).
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: doc/guides/autonomous-batch-delivery.md:113
+    message: >-
+      The doc-sync commit (b4731e8) edited a fifth doc beyond the spec's four named
+      targets, although spec §7.2 [OUT] describes the Mode B operations guide as
+      "left untouched". The three edits are: a related_changes link entry, repair of
+      a broken INV-DM-5 anchor (the old slug referenced a heading renamed in an
+      earlier change), and correction of a factually wrong fallback claim — the old
+      text said pm-liveness "falls back to a process-alive heuristic" while the
+      script (pm-liveness.sh L361-363) actually decides on the git/worktree signal
+      alone. All are grounded and within the plan's explicit doc-syncer handoff
+      ("reconcile the broader doc/spec/** surface with the delivered guides if any
+      drift is found"); the [OUT] item's actual subject (the already-accurate
+      DELIVER_STUCK_MINUTES row) is untouched.
+    suggestion: >-
+      No action required — recorded for AC traceability. The corrected fallback
+      wording and the anchor repair are accuracy improvements; leaving them out would
+      have shipped a broken link and a wrong behavioral claim.
+    suppressed: false
+  - id: F-2
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-10/2026-10-31--GH-185--interim-mitigations-docs-config/chg-GH-185-plan.md:363
+    message: >-
+      Plan task 9.4 records the "final battery at the final SHA" as green at 98d2796,
+      but the branch advanced three commits afterwards (8d8fd2a, 768ade9, b4731e8),
+      and b4731e8 touches five shipped docs with no recorded guard re-run. A
+      doc-sync-introduced guard regression would have reached the PR uncaught.
+    suggestion: >-
+      Gap is closed by this review: the full battery (doc-distribution,
+      result-tuples + modes, inception-consistency, distribution-modes,
+      forbidden-literals path) was re-run at HEAD b4731e8 and is green. For future
+      deliveries, have the doc-sync phase re-run the guard battery when it edits
+      shipped docs, or record the battery re-run in the phase evidence.
+    suppressed: false
+reviewed_at: 2026-10-31T12:00:00Z
+next_step: PROCEED

@@ -8,7 +8,7 @@ status: Draft
 created: 2026-07-03
 owners: ["engineering"]
 links:
-  related_changes: ["GH-146", "GH-148"]
+  related_changes: ["GH-146", "GH-148", "GH-185"]
 summary: "Deliver multiple tickets unattended with liveness monitoring, session resilience, and push-to-completion PR feedback. Covers deliver-ticket.sh, batch-deliver.sh, and clean-merged-branches."
 ---
 
@@ -110,7 +110,7 @@ threshold (default **10 minutes**).
 > the process alive while making zero progress; the file-mtime heuristic could
 > not distinguish that from a healthy long reasoning step. Session-traffic is
 > both more precise and allows the tighter 10-minute threshold. See
-> [delivery-modes.md § INV-DM-5](delivery-modes.md#inv-dm-5-liveness-means-session-message-progress-not-process-alive)
+> [delivery-modes.md § INV-DM-5](delivery-modes.md#inv-dm-5-liveness-means-multi-signal-progress-not-process-alive)
 > for the full rationale. Worktree activity remains a **secondary** signal
 > (used by `ceo-loop.sh` to confirm a CEO blocked on a healthy delivery is not
 > stuck).
@@ -156,7 +156,7 @@ session is declared stalled and killed-and-restarted.
 
 This is more precise than the old file-mtime heuristic: a hung LLM stream keeps the process alive (blocked on I/O) while making zero progress, and only session traffic can tell that apart from a healthy long reasoning step. Worktree activity (commits, `doc/changes/` writes) remains a **secondary** signal, primarily consumed by `ceo-loop.sh` to confirm a CEO that is blocked on a healthy delivery is *not* stuck.
 
-> **Graceful degradation:** if the opencode session DB is unavailable (e.g. in CI), `pm-liveness.sh` warns and falls back to a process-alive heuristic — it never blocks delivery on a missing DB.
+> **Graceful degradation:** if the opencode session DB is unavailable (e.g. in CI), `pm-liveness.sh` warns and decides on the git/worktree-activity signal alone — it never blocks delivery on a missing DB.
 
 > **Activity detection assumption**: A healthy PM iteration produces
 > session-message traffic or git/worktree activity within 10 minutes. If neither

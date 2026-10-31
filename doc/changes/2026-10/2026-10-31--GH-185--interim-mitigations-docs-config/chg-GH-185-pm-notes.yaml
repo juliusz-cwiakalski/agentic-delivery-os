@@ -1,0 +1,42 @@
+change_id: GH-185
+title: "M0-S16: Interim mitigations, docs and config only"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-10-31T00:00:00Z", completed: "2026-10-31T01:35:00Z" }
+  specification: { started: "2026-10-31T01:36:00Z", completed: "2026-10-31T01:45:00Z" }
+  test_planning: { started: "2026-10-31T01:50:00Z", completed: "2026-10-31T01:55:00Z" }
+  delivery_planning: { started: "2026-10-31T02:00:00Z", completed: "2026-10-31T02:05:00Z" }
+  dor_check: { started: "2026-10-31T02:10:00Z", completed: "2026-10-31T02:20:00Z" }
+  delivery: { started: "2026-10-31T02:25:00Z", completed: "2026-10-31T03:05:00Z" }
+  system_spec_update: { started: "2026-10-31T03:10:00Z", completed: "2026-10-31T03:20:00Z" }
+  review_fix: { started: "2026-10-31T03:25:00Z", completed: "2026-10-31T03:40:00Z" }
+  quality_gates: { started: "2026-10-31T03:45:00Z", completed: "2026-10-31T03:55:00Z" }
+  dod_check: { started: "2026-10-31T04:00:00Z", completed: "2026-10-31T04:05:00Z" }
+  pr_creation: { started: "2026-10-31T04:10:00Z", completed: "2026-10-31T04:12:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/197" }
+decisions:
+  - text: "DoR verdict READY (iteration 1, 10/10 facets PASS, 0 blocking); verdict artifact readiness-review/readiness-iter-1.md. Two advisory findings fixed in-place before delivery: (1) Should — test plan stale 'no implementation plan exists' references (frontmatter implementation_plan, §2 References, §8.2 assumption) updated to link chg-GH-185-plan.md; (2) Note — spec KPI row scoped to 'edited docs' matching AC-F2-1, historical doc/changes/** explicitly out of scope."
+    date: "2026-10-31"
+open_questions: []
+blockers: []
+notes:
+  - text: "Ticket GH-185 is OPEN, no labels, 0 comments, milestone M0: Trust substrate. Backlog story M0-S16 (doc/planning/oss-tooling/backlog.md). Dependency M0-S4 (config layer, GH-173) already delivered on main-tools."
+    type: "info"
+    date: "2026-10-31"
+  - text: "State detection: no open PR for GH-185, no merged PR referencing GH-185, no existing change folder, no GH-185 branch. Fresh delivery. Detached HEAD at f6c8d18 == main-tools tip; worktree clean."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Scope analysis: four mitigations to document for the bash-era delivery loop: (1) permission-denial handling — headless permission auto-reject yields noop-lane-permission result, re-dispatch with corrected prompt (scripts/deliver-ticket.sh O-5; classification table in doc/guides/delivery-modes.md); (2) stuck-minute defaults — DELIVER_STUCK_MINUTES / CEO_LOOP_STUCK_MINUTES default 10, multi-signal liveness; (3) in-flight warning — single-flight + JOIN on repo-local PID files (.ai/local/delivery/<REF>.pid), JOIN logs a live-delivery warning and waits; (4) pm-notes authoring rule — pm-notes is the delivery ledger read by verify change (M0-S8); authoring rules must be documented. Constraint: docs or config only, no shell behavior changes, no shell feature work."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Requirements complete: ticket tasks enumerate the four items; AC is machine-checkable (docs/config-only diff, no shell changes). No contradictions with system spec found; existing docs already partially cover stuck-minutes tables and the noop-lane-permission classification row — spec phase determines precise doc targets and gap closure."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Spec complete (chg-GH-185-spec.md): 11 ACs incl. hard negative constraint AC-NFR1-1 (0 changed paths under scripts/** and tools/**). Spec-writer found doc drift: 4 doc locations name CEO_LOOP_STALL_MINUTES as the ceo-loop knob while ceo-loop.sh reads CEO_LOOP_STUCK_MINUTES — correction promoted to DEC-4/DEC-5 (docs-only fix; script-side usage-text misname deferred as bash-era debt). Doc targets: delivery-modes.md (primary consolidation), change-lifecycle.md (canonical pm-notes rule), opencode-agents-and-commands-guide.md (pointer), feature-autonomous-delivery.md (one-row correction). No new files."
+    type: "decision"
+    date: "2026-10-31"
+  - text: "Review verdict PASS (iteration 1, findings 0c/0h/0m/1l/1i, no remediation phase); artifact code-review/review-iter-1.yaml. All 11 ACs traced with evidence; reviewer independently re-ran grounding greps + all five guards at HEAD b4731e8 — all green."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Retro: plan Phase 9.4 recorded its final guard battery at 98d2796, but the later docs-sync commit b4731e8 edited 5 shipped docs without a recorded guard re-run — the reviewer had to close the gap. Improvement: the doc-sync handoff should mandate re-running the doc-derived guards whenever doc-syncer edits shipped (current-truth) docs, not only during the plan's own verification phase."
+    type: "retro"
+    date: "2026-10-31"

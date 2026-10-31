@@ -16,7 +16,7 @@ references:
   - "Delivery vehicle: #142"
   - "Related change: GH-146"
 links:
-  related_changes: ["GH-146", "GH-148", "PDEV-514", "PDEV-516"]
+  related_changes: ["GH-146", "GH-148", "GH-185", "PDEV-514", "PDEV-516"]
   decisions: ["TDR-0002"]
 ---
 
@@ -357,7 +357,7 @@ stuck** — and recover it via kill+restart. It is *not* primarily about "parkin
 while a delivery is in progress"; that is handled by the CEO blocking on
 `deliver-ticket.sh` (INV-DM-1/2).
 
-A CEO session is **stuck** (kill+restart) when, for longer than the stall
+A CEO session is **stuck** (kill+restart) when, for at least the stuck
 threshold, **all** of these hold:
 
 - no new **opencode session message traffic** (the stream of assistant/tool
@@ -421,7 +421,7 @@ activity, the session is healthy:
 A hung LLM stream keeps the process alive (blocked on I/O) while making zero
 progress on *both* signals; the ps-only heuristic must not call that "healthy."
 
-A session with **no activity from either signal for ≥ `CEO_LOOP_STALL_MINUTES`**
+A session with **no activity from either signal for ≥ `CEO_LOOP_STUCK_MINUTES`**
 (default **10**; at-threshold == stalled, matching the `>=` comparison in
 `pm-liveness.sh`/`ceo-loop.sh`) is **stalled**, not slow, and is killed-and-resumed.
 
@@ -492,6 +492,26 @@ checked in precedence order, first match wins:
 
 The principle mirrors the exit-0-no-artifact rule: a result that requires a
 lane re-dispatch is never a clean exit 0.
+
+When pm-notes completeness decides `finished` versus `partial`, the canonical
+[pm-notes authoring rule](change-lifecycle.md#pm-notes-structure-chg-workitemref-pm-notesyaml)
+states who maintains the ledger, when, and why.
+
+### Interim mitigations: permission denial and the JOIN warning
+
+Two bash-era rough edges have a documented recognition-and-recovery path here. Both are interim: they disappear when the typed engines replace the shell loop.
+
+**Headless permission denial (`noop-lane-permission`).** When the PM exits cleanly with **zero branch commits** and the per-ticket lane log carries a **headless permission auto-reject signature** (a permission request raised in an unattended session and auto-rejected by the harness), the close-out classifies the delivery as `noop-lane-permission`, exits 1, and prints "re-dispatch with a corrected prompt". Recognize it from the delivery-summary result token, and confirm the signature in the per-ticket lane log. Recover by correcting the dispatch rather than repeating it unchanged: adjust the prompt/context so the work needs no interactive permission acceptance — re-scope the task, or grant the needed permission out-of-band per operator policy — then re-dispatch the same ticket.
+
+This is a different mechanism from the mid-run permission-prompt stall. There the session stays live but goes silent waiting for an answer, multi-signal liveness declares it stuck (see [INV-DM-5](#inv-dm-5-liveness-means-multi-signal-progress-not-process-alive)), and the remedy is kill-and-restart. In the close-out path the session already exited and the remedy is a corrected re-dispatch.
+
+**In-flight warning (`JOIN:`).** A second `deliver-ticket.sh` invocation for a ticket whose single-flight owner is live in this repo working tree joins the owner and logs:
+
+```
+JOIN: live delivery for <REF> (pid=…); waiting
+```
+
+Meaning: a live delivery already owns this ticket in this working tree (INV-DM-2). Action: wait for the owner; do not kill it, and never start a parallel delivery of the same ticket in the same repo working tree. Expected outcome: the joiner returns the same classified result as the owner. To check for a live delivery, use the `--is-delivering [REF]` probe; stale state self-heals rather than blocking a legitimate new owner. Do not inspect, edit, or delete the repo-local runtime state files by hand — the scripts own that lifecycle.
 
 ### Session resume optimization (`ceo-loop.sh`)
 
@@ -680,14 +700,18 @@ The design is robust to the messy realities of long-running AI sessions:
 
 All settings are environment variables (CLI flag overrides where noted).
 
+**Stuck thresholds.** `deliver-ticket.sh` reads `DELIVER_STUCK_MINUTES` (default `10`; override with the `--stuck-minutes <n>` flag) and `ceo-loop.sh` reads `CEO_LOOP_STUCK_MINUTES` (default `10`). Liveness is multi-signal — recursive session-message traffic is the primary signal and git/worktree activity the secondary; a session is stalled only when both are quiet for the threshold (see [INV-DM-5](#inv-dm-5-liveness-means-multi-signal-progress-not-process-alive)). Raise the threshold when a step is legitimately long: too-low values kill healthy sessions and cause restarts. The seconds-level overrides (`DELIVER_STUCK_SECONDS` and ceo-loop's internal seconds seam) are test-only accelerators, not operator knobs.
+
 ### `ceo-loop.sh`
 
 | Variable | Default | Description |
 |---|---|---|
 | `CEO_LOOP_POLL_SECONDS` | `30` | Seconds between liveness/stuck checks of the live CEO session |
-| `CEO_LOOP_STALL_MINUTES` | `10` | Minutes with no session-message traffic AND no healthy delivery (delivering marker + `--is-delivering`) before a CEO is declared stuck and killed (INV-DM-5) |
+| `CEO_LOOP_STUCK_MINUTES` | `10` | Minutes with no session-message traffic AND no healthy delivery (delivering marker + `--is-delivering`) before a CEO is declared stuck and killed (INV-DM-5) |
 | `CEO_RESUME_TOKEN_LIMIT` | `100000` | Resume the previous CEO session if its context (input+output+reasoning tokens) is under this limit; otherwise start fresh |
 | `CEO_LOOP_MAX_RESTARTS` | `10` | Max CEO kill+restart iterations before giving up |
+
+`CEO_LOOP_STALL_MINUTES` (default `10`) is the `pm-liveness.sh` probe threshold, not the loop knob: both wrappers export it aligned to their own stuck threshold when they invoke the probe.
 
 ### `deliver-ticket.sh`
 
@@ -727,13 +751,15 @@ The state-poll backoff is exponential and capped: at the default base of 2 s the
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| CEO keeps getting killed and restarted | Genuine stall (LLM hang) *or* `CEO_LOOP_STALL_MINUTES` too low for a legitimately long reasoning step | Check the session traffic in the log; raise the threshold if the step is legitimately long |
+| CEO keeps getting killed and restarted | Genuine stall (LLM hang) *or* `CEO_LOOP_STUCK_MINUTES` too low for a legitimately long reasoning step | Check the session traffic in the log; raise the threshold if the step is legitimately long |
 | `ceo-loop.sh` kills a CEO that was waiting on a healthy delivery | `--is-delivering` not reflecting the in-flight delivery (PID file stale/cleared) | Ensure `deliver-ticket.sh` writes/clears the PID file correctly; do not delete `.ai/local/delivery/` manually |
 | Orphaned `opencode` process after killing a delivery | Signal trap missing or not forwarded | All delivery scripts must propagate SIGTERM/SIGINT → SIGKILL to children (INV-DM-2) |
 | Two PMs spawned for the same ticket | JOIN probe failed (PID file race or stale PID reused by the OS) | `deliver-ticket.sh` must validate the PID is still `deliver-ticket.sh` for this repo before treating it as live |
 | Merge used a poor commit message | PR description not merge-ready | `@pr-manager` must always emit descriptions fit to be the squash commit message |
 | `clean-merged-branches` deleted a branch I needed | Misconfigured `--base` / `--protected`, or a branch that looked merged | It must never delete unmerged or protected branches; if it did, that is a bug |
 | On macOS, an owner/CEO is rejected as stale right after it starts | macOS `ps` lacks the Linux `-o etimes=` (elapsed **seconds**) column. The scripts fall back to parsing `-o etime=` (elapsed `[[dd-]hh:]mm:ss`) when `etimes=` is absent; this needs `ps` from a modern macOS build. If the fallback also fails the start-epoch guard degrades gracefully (treats the owner as live rather than wrongly killing it). | Ensure `ceo-loop.sh`/`deliver-ticket.sh` are current (they carry the `etime=` fallback); no action needed otherwise. |
+
+> **Known rough edge:** `ceo-loop.sh --help` still prints the stale name `CEO_LOOP_STALL_MINUTES` for the loop threshold — a bash-era usage-text inaccuracy to be fixed in a future shell-allowed change; the knob the loop actually reads is `CEO_LOOP_STUCK_MINUTES`.
 
 ## Process management via script API
 
