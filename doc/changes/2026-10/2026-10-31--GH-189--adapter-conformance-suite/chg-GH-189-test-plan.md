@@ -833,7 +833,7 @@ The exact reasons come from the shipped contracts: GitHub gaps all `adapter-not-
 3. Whitespace-only case: build an environment where the non-secret settings and the three token source keys are present with whitespace-only values (`" "`, `"\t"`); assert they are treated as MISSING, all three providers are `not-configured`, and the exit code is `0`.
 4. For cases A, B, and C, assert the artifact lists exactly the 15 missing names — GitHub 7, GitLab 5, Jira 3 — per provider, and never a value.
 5. Assert no credential was resolved and no provider request was attempted in any of the three not-configured shapes; the recording transport is empty and the recording credential port records zero lookups.
-6. Occupancy case: supply all 15 names with non-empty (non-whitespace) values; assert all three providers are classified configured and the run is no longer `not-configured`. Then blank a single GitHub setting and assert only GitHub returns to `not-configured` with exactly its 7 names, proving the decision is per provider and occupancy-based.
+6. Occupancy case: supply all 15 names with non-empty (non-whitespace) values; assert all three providers are classified configured and the run is no longer `not-configured`. Then blank a single GitHub setting and assert only GitHub returns to `not-configured` with only the actually-missing name (`CONFORMANCE_LIVE_GITHUB_OWNER`), proving the decision is per provider, occupancy-based, and reports missing names only.
 7. Spawn `bun run tests/conformance/live/run-live.ts --out "$TMPDIR/conformance-live.json"` with the documented names unset; assert process exit `0` and a valid artifact file at the output path.
 8. Assert the artifact is still uploaded by the workflow contract test (TC-CONF-026).
 
