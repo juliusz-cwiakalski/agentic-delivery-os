@@ -9,7 +9,7 @@ phases:
   test_planning: { started: "2026-10-31T19:06:00Z", completed: "2026-10-31T21:25:00Z", reopened: "2026-10-31T21:05:00Z" }
   delivery_planning: { started: "2026-10-31T19:25:00Z", completed: "2026-10-31T21:35:00Z", reopened: "2026-10-31T21:26:00Z" }
   dor_check: { started: "2026-10-31T19:57:00Z", completed: "2026-10-31T21:50:00Z", iteration: 3, verdict: "READY", iteration_1_verdict: "NOT_READY", iteration_2_verdict: "NOT_READY", iteration_3_started: "2026-10-31T21:36:00Z" }
-  delivery: { started: "2026-10-31T21:52:00Z", completed: null }
+  delivery: { started: "2026-10-31T21:52:00Z", completed: "2026-10-31T22:05:00Z" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -67,6 +67,12 @@ notes:
   - text: "DoR iteration 3: READY, all 10 facets PASS, 0 blocking / 2 advisory / 4 nit. Artifacts frozen at spec v1.2, test plan v1.2, plan v1.3. Accepted non-blocking items: A-1 (unify ticket-AC-3 evidence list to TC-CONF-010/011/016/017/032 in P8.5), A-2 (P8.3 must add .ai/rules/testing-strategy.md), NIT 3-6 (coder directives: use validateWorkflow(text)+validateWorkflowRoot(root); skipReason/skipKind null for executed/failed and skipKind mandatory only when skipped; readLiveConfig returns { settings, credentialReference, occupancy: present|missing, missingSettings }). Delivery starts at P1."
     type: "info"
     date: "2026-10-31"
-  - text: "DoR took 3 iterations: iteration 1 caught a real GitHub Actions empty-string mechanism defect and a Jira count contradiction; iteration 2 caught incomplete propagation of the fix into AC-F7-5/prose; iteration 3 passed. The adversarial gate did its job, but the authoring chain should have swept acceptance criteria and prose after changing a mechanism. Cost: three remediation passes of documentation-only churn; no code was written, so the cost stayed bounded."
+  - text: "Delivery complete: P1-P8 committed (51c7b70, 3c0b973, 7cf69db, adfa922, 2ab1712, 8083690, b5a72a5, ac7fc71). Verified independently: 20 commits ahead of main-tools; commitlint passes over the full range; ci.yml byte-unchanged; packages/core and packages/adapters production diff empty; secret-read allowlist exactly 4; tests/conformance 77 pass / 0 fail; pnpm check reported 1731 pass / 2 skip / 0 fail. Coder deviations accepted: changeset landed in P4 (privacy-release invariant requires it), GitLab tenant uses a single-segment project path (avoids the sanitization audit misreading %2F as an undeclared placeholder), not-configured providers report their full documented name list, and a test-only recordedRequests seam feeds the synthetic POST control. Known gap: live tenants not provisioned (OQ-1), so scheduled runs are not-configured/exit 0 until owner supplies vars/secrets."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Process deviation: the coder had no subagent tool in its session, so it created the eight phase commits directly instead of delegating each to @committer. Verified after the fact: all eight subjects are Conventional Commits, and `pnpm exec commitlint --from origin/main-tools --to HEAD` passes for all 20 commits. No action required beyond noting the delegation gap."
+    type: "risk"
+    date: "2026-10-31"
+  - text: "DoR took 3 iterations: iteration 1 caught a real GitHub Actions empty-string mechanism defect and a Jira count contradiction; iteration 2 caught incomplete propagation of the fix into AC-F7-5/prose; iteration 3 passed. The adversarial gate did its job, but the authoring chain should have swept acceptance criteria and prose after changing a mechanism. Cost: three documentation-only remediation passes; no code churn."
     type: "retro"
     date: "2026-10-31"
