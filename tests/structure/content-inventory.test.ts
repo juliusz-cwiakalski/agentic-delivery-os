@@ -118,6 +118,15 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "normalizeJiraSearch",
     "jiraNormalizationContext",
   ],
+  "adapters/src/gitlab/capabilities.ts": ["GITLAB_ADAPTER_CONTRACT"],
+  "adapters/src/gitlab/client.ts": ["createGitLabClient"],
+  "adapters/src/gitlab/index.ts": ["createGitLabClient", "GITLAB_ADAPTER_CONTRACT"],
+  "adapters/src/gitlab/merge-status.ts": [
+    "GITLAB_MERGE_STATUS_RULES",
+    "createGitLabReviewStateResolver",
+    "resolveGitLabReviewState",
+  ],
+  "adapters/src/gitlab/normalize.ts": ["normalizeMergeRequest", "normalizePipelines"],
   "adapters/src/jira/workflow-map.ts": [
     "JIRA_WORKFLOW_MAP",
     "validateWorkflowMap",

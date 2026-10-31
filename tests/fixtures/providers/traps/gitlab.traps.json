@@ -1,0 +1,24 @@
+{
+  "provider": "gitlab",
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "entries": [
+    {
+      "trapName": "GL-PIPELINE-MULTIPLICITY",
+      "providerBehavior": "GitLab can report more than one pipeline for one commit (a branch pipeline and a merge-request pipeline) instead of a single pipeline.",
+      "expectedNormalizedOutcome": "read-pipeline-run for the commit returns every reported pipeline, each with a distinct identity, closed-set job states, and trace evidence where the provider records a trace; no newest-wins singleton is selected.",
+      "fixtureReference": "tests/fixtures/providers/gitlab/pipelines-per-commit.json#/pipelines"
+    },
+    {
+      "trapName": "GL-MERGE-STATUS-ASYNC",
+      "providerBehavior": "GitLab merge status resolves asynchronously: values such as checking and unchecked mean the provider has not finished evaluating mergeability.",
+      "expectedNormalizedOutcome": "Asynchronous native values normalize to non-terminal delivery review states only; they never report merged or closed while the native value is still evaluating.",
+      "fixtureReference": "tests/fixtures/providers/gitlab/merge-status-async.json#/detailed_merge_status"
+    },
+    {
+      "trapName": "GL-MERGE-STATUS-MULTIVALUED",
+      "providerBehavior": "GitLab may report merge_status and detailed_merge_status simultaneously with different meanings.",
+      "expectedNormalizedOutcome": "detailed_merge_status is authoritative when present and merge_status is the fallback; an unknown native value fails visibly instead of silently flattening to a delivery state.",
+      "fixtureReference": "tests/fixtures/providers/gitlab/merge-status-multivalued.json"
+    }
+  ]
+}

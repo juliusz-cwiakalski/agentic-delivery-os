@@ -34,6 +34,12 @@ export const readJson = (relativePath: string): unknown => {
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+/** Require an object value, failing loudly with a label. */
+export const requireRecord = (value: unknown, label: string): Record<string, unknown> => {
+  if (!isRecord(value)) throw new Error(`${label}: expected an object`);
+  return value;
+};
+
 /** Read a required nested object field, failing loudly when the shape is wrong. */
 export const recordField = (value: unknown, key: string): Record<string, unknown> => {
   if (!isRecord(value)) throw new Error(`expected an object before field "${key}"`);
