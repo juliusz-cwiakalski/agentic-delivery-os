@@ -4,7 +4,7 @@ milestone: "M0: Trust substrate"
 story_code: M0-S11
 delivery_mode: autonomous
 phases:
-  clarify_scope: { started: "2026-10-31T13:52:00Z", completed: null, stopped: "2026-10-31T13:56:00Z (blocking open questions: prototype surface absent)" }
+  clarify_scope: { started: "2026-10-31T13:52:00Z", completed: "2026-10-31T18:50:00Z", stopped: "2026-10-31T13:56:00Z (blocking open questions: prototype surface absent)", resumed: "2026-10-31T18:32:00Z (CEO resume: merge origin/main-tools @ b31ec47, proceed on the documented fallback)" }
   specification: { started: null, completed: null }
   test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: null }
@@ -18,33 +18,37 @@ phases:
 decisions:
   - text: "State detected before acting: GH-180 open, no labels, no assignee; no branch, no PR (open or closed), no change folder, and no GH-180 commit in history. Fresh delivery, not a resume."
     date: "2026-10-31"
-  - text: "Branch plan: feat/GH-180/db-session-admin-port cut from origin/main-tools @ 7155074. The branch exists only to hold this durable intake record while blocked; no implementation has started."
+  - text: "Branch plan: feat/GH-180/db-session-admin-port cut from origin/main-tools @ 7155074; merged origin/main-tools @ b31ec47 before delivery (159 files, no conflicts). The merge brought status v1 (GH-175), license/release-shape (GH-187), decisions/measurement (GH-186), memory (GH-204), and the tree-invariant test generalization (d63eb2a)."
     date: "2026-10-31"
-  - text: "clarify_scope STOPPED: the ticket states the admin prototype's surface is inlined in the ticket, but the issue body contains only the backlog summary and comments are empty; an all-refs/all-history search found no session-database admin prototype. No spec/plan was delegated and no requirement was invented."
+  - text: "clarify_scope STOPPED at intake: the ticket states the admin prototype's surface is inlined in the ticket, but the issue body contains only the backlog summary and comments are empty; an all-refs/all-history search found no session-database admin prototype. The ticket was labelled human-input-needed and assigned to the owner."
     date: "2026-10-31"
-open_questions:
-  - text: "Where is the bash session-database admin prototype the ticket calls 'surface inlined in the ticket'? The issue body has no prototype. Please provide the prototype source (script or commit) or its exact command surface for size, list, prune, and reboot."
+  - text: "clarify_scope RESUMED under the CEO resume directive (2026-10-31): proceed from clarify_scope onward. The missing prototype is resolved by the fallback already offered on the ticket and now adopted as a PM decision (reversible; owner may amend at PR review): `--dry-run` default; prune only sessions older than a documented threshold and never a live one; `--apply` required to mutate; reboot guarded by the same live-session check."
     date: "2026-10-31"
-  - text: "DB access path: should `ados db` invoke the opencode CLI (`opencode db \"<SQL>\"`) the way pm-liveness.sh and ceo-loop.sh do, or open the opencode session SQLite file directly read-only? ADR-0003 defines SessionStore as a read-only metadata-only port, while prune/reboot mutate: which layer owns the mutation?"
+  - text: "PM-decided (unblock, reversible): the db surface is `size`, `list`, `prune`, `reboot`; DB access is the opencode CLI (`opencode db \"<SQL>\"`, `opencode session delete <id>`, `opencode db path`) as the existing scripts already use it, never a second direct-SQLite path. ADR-0003's `SessionStore` stays read-only/metadata-only; a separate `SessionAdminPort` owns the mutating operations."
     date: "2026-10-31"
-  - text: "Prune selection rule: what is prunable (age threshold, orphaned sessions, message rows, VACUUM) and what exactly is the 'live session lock'? How is liveness detected (session id, PID, lock file, recent session traffic)?"
+  - text: "PM-decided (unblock, reversible): 'live session lock' is defined for this change as (a) a session with activity inside the live window (15 minutes) and (b) the SQLite WAL/SHM sidecars. `prune` never touches DB files or WAL/SHM, only session rows through the official `opencode session delete`; `reboot --apply` performs a bounded WAL checkpoint only when no live session exists and never kills a process or deletes a sidecar file."
     date: "2026-10-31"
-  - text: "Reboot helper semantics: what should `ados db reboot` do (restart the opencode server/CLI, clear stale locks, something else), and under what safety guard?"
+  - text: "PM-decided (unblock, reversible): prune deletes leaf sessions only (a session with any child `parent_id` is skipped) because `session.parent_id` has no foreign key and the opencode schema does not cascade descendants; this prevents orphaned child sessions. `session_delete` cascades message/part/session_message/session_share/session_input/session_context_epoch/todo."
     date: "2026-10-31"
-  - text: "Bounded output contract: which fields and caps should `db size` and `db list` emit (and in which human/JSON shape)?"
+  - text: "PM-decided (unblock, reversible): ADR-0003 C-11 privacy sign-off is recorded as an explicit owner merge gate in the PR/spec, not a delivery blocker. The change is delivered with the PR left open; merge authority stays with the CEO/human. No merge is performed by the PM."
     date: "2026-10-31"
-  - text: "ADR-0003 C-11 requires an explicit privacy sign-off before the db administration engine that uses SessionStore ships. Is sign-off granted now, or should the PR land with sign-off recorded as an owner merge gate?"
+  - text: "PM-decided (baseline repair): the full gate exposed a pre-existing test-environment defect — `tests/checks/config-default-positions.test.ts` calls `mkdtempSync(join(ROOT, 'tmp', 'tmpdir', ...))` without creating the parent. The change may add the missing `mkdirSync(..., { recursive: true })` as a tree-invariant test-environment repair so the merge-blocking gate is deterministic. This is a test-only repair, not a behaviour change."
     date: "2026-10-31"
-blockers:
-  - text: "Missing prototype surface blocks specification: destructive prune/reboot behavior and the live-lock safety guarantee cannot be specified without inventing requirements. Ticket labelled human-input-needed and assigned to the owner; delivery stopped at clarify_scope. A fallback default is proposed in the ticket comment should the owner prefer to unblock without the prototype."
-    date: "2026-10-31"
+open_questions: []
+blockers: []
 notes:
-  - text: "Cross-check vs current system docs: ADR-0003 DEC-6/C-11 defines SessionStore as read-only, metadata-only access to foreign session databases for db administration and requires an explicit privacy sign-off before the db engine ships. The adapters ./session subpath is a types-only stub. The CLI composes command definitions through an injected program (no bin entry), so M0-S11 would add a db command definition plus edge wiring. The opencode session DB is currently read only through `opencode db` / `opencode session list` in scripts/pm-liveness.sh and scripts/ceo-loop.sh; no prune or reboot helper exists in repo history."
+  - text: "Cross-check vs current system docs: ADR-0003 DEC-6/C-11 defines SessionStore as read-only, metadata-only access to foreign session databases for db administration and requires an explicit privacy sign-off before the db engine ships. The adapters ./session subpath is a types-only stub. The CLI composes command definitions through an injected program (no bin entry), so M0-S11 adds a db command definition plus edge wiring. The opencode session DB is currently read only through `opencode db` / `opencode session list` in scripts/pm-liveness.sh and scripts/ceo-loop.sh; no prune or reboot helper exists in repo history."
     type: "info"
     date: "2026-10-31"
-  - text: "Ticket metadata gaps: the Dependencies line reads 'M0-S1, M0-S3..' with a trailing '..', the issue carries no `change` label, and the referenced prototype is missing. Only the prototype gap is blocking."
+  - text: "Live environment facts established read-only for the spec: opencode 1.19.3; DB `/home/juliusz/.local/share/opencode/opencode.db` (~120 GiB, WAL mode, 19.8 MB WAL); 6,882 sessions (6,431 child sessions, 0 archived); 209k messages; oldest session ~19 days (2026-10-12), newest 2026-10-31; 23 sessions active in the last 15 minutes; `session_input`, `session_context_epoch`, and `control_account` empty. `opencode session delete <id>` is the only deletion command; `PRAGMA foreign_keys=1`; no triggers; session.parent_id has no FK; event_sequence/event are not session-FK-cascaded. `opencode db` accepts multi-statement input but returns [] for multi-statement, so a typed single-query path is required."
     type: "info"
     date: "2026-10-31"
-  - text: "Documentation impacts anticipated once unblocked (for phase 7): new feature spec for the db administration surface; reconcile feature-adapter-ports.md (SessionStore and adapters ./session move from stub to implemented), the CLI command registry delivery row, glossary terms, and ADR-0003 C-11 sign-off evidence."
+  - text: "Ticket metadata gaps: the Dependencies line reads 'M0-S1, M0-S3..' with a trailing '..', the issue carried no `change` label (now added), and the referenced prototype is missing. The prototype gap is resolved by the recorded fallback, not by a discovered source."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Documentation impacts for phase 7: new `doc/spec/features/feature-session-database-admin.md` (first spec; always-resolve in-change); reconcile `feature-adapter-ports.md` (SessionStore implemented, SessionAdminPort added, adapters ./session no longer a stub), `feature-result-contract.md` (new `db` domain kind and rows, both-direction sync), `feature-monorepo-scaffold-toolchain.md` (implemented surface), `doc/overview/glossary.md` (live window, session admin, prune candidate), and the CLI command registry delivery row if the change-status convention allows."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Standing delivery rules for this resume: `.ai/rules/typescript.md` is binding; permanent tests assert the current tree (no moving-base diffs); the pushed branch must have green merge-blocking CI; stop after `pr_creation`. The PR base is `main-tools` and the PR is left open for CEO/human merge."
     type: "info"
     date: "2026-10-31"
