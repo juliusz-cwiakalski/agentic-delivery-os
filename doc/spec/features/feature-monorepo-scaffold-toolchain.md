@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, the typed adapter-port substrate and secret-read boundary invariant, the durable local state layer, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
 links:
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-181"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-179", "GH-181"]
   related_decisions: ["ADR-0003"]
 ---
 
@@ -16,7 +16,7 @@ links:
 
 ## Overview
 
-The repository hosts a six-package pnpm workspace under `packages/` for the TypeScript delivery tooling, alongside the existing bash delivery stack. The workspace is **structure over content** for the remaining engines, business logic, provider implementations, and drivers: every declared package, subpath, export, boundary rule, fixture, and quality gate is enforced. The configuration and state tiers, the result contract, and the adapter-era contracts are implemented and documented separately in [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), and [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); the remaining engines and provider implementations are scaffold placeholders.
+The repository hosts a six-package pnpm workspace under `packages/` for the TypeScript delivery tooling, alongside the existing bash delivery stack. The workspace is **structure over content** for the remaining engines, business logic, provider implementations, and drivers: every declared package, subpath, export, boundary rule, fixture, and quality gate is enforced. The configuration and state tiers, the result contract, the adapter-era contracts, and the pm-notes lint and phase-transition surface are implemented and documented separately in [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), and [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md); the remaining engines and provider implementations are scaffold placeholders.
 
 The scaffold provides the substrate every later tooling story lands in. Its package matrix, core tier matrix, adapter subpaths, and runtime-API confinement rules are mechanical gates rather than prose, and every forbidden edge is proven by a failing negative fixture.
 
@@ -200,7 +200,7 @@ No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scr
 | `packages/*/tsconfig.json` | Composite configs extending the strict base |
 | `packages/core/src/index.ts` | The `createRuntime` composition-root signature |
 | `packages/core/src/contracts/**` | Result, error-table, configuration, adapter-port, capability, credential, and envelope contracts (types and `as const` data only) |
-| `packages/*/src/**` | Internal tier directories; the configuration and state tiers, result contracts, adapter ports, the credential implementation, the envelope codec, file/repo/legacy adapters, and CLI inspection carry implemented code, while the remaining engines and providers are placeholders |
+| `packages/*/src/**` | Internal tier directories; the configuration and state tiers, result contracts, adapter ports, the credential implementation, the envelope codec, file/repo/legacy adapters, pm-notes parsing, delivery-registry records, and the CLI inspection, lint, and phase commands carry implemented code, while the remaining engines and providers are placeholders |
 | `packages/adapters/src/credentials/index.ts` | Environment-backed credential port implementation at the declared `./credentials` subpath |
 | `packages/adapters/src/io/envelope-codec.ts` | Pure adapter-internal metadata envelope codec |
 | `package.json` | Workspace root: pinned `packageManager`, five named scripts, aggregate `check`, dev toolchain |
@@ -211,7 +211,7 @@ No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scr
 | `tests/structure/**` | Inventory, subpath, exports, contract-surface, and `createRuntime` assertions |
 | `tests/types/**` | Compile-time contract probes chained into the root `typecheck` |
 | `tests/boundaries/**` | Negative fixtures, controls, and the fixture-coverage meta-check |
-| `tests/behaviour/**` | pnpm isolation, commit-msg hook, adapter-port, credential, and envelope behaviour |
+| `tests/behaviour/**` | pnpm isolation, commit-msg hook, adapter-port, credential, envelope, pm-notes lint, corpus, phase, and delivery-registry behaviour |
 | `tests/checks/**` | Mutation and contract tests for `scripts/checks/*.ts` |
 | `.changeset/config.json` | Lockstep fixed group and private-package policy |
 | `.github/workflows/ci.yml` | Untouched bash jobs plus the additive `ts-*` fast loop |
@@ -258,7 +258,7 @@ core              ──> no workspace dependencies
 | Fixture coverage | Rule-to-fixture completeness | `tests/boundaries/fixture-coverage.test.ts` |
 | Invariants | Manifests, pins, CI topology, bindingness, supply chain, exports, packed-exports parity, boundary build/cruise parity, licenses, result-contract table sync, exit literals, secret-read boundary | `bun run scripts/checks/*.ts`, the aggregate check, and mutation tests under `tests/checks/**` |
 | Type level | Contract typing probes outside the package graph | `tests/types/tsconfig.json` through the root `typecheck` |
-| Behaviour | pnpm isolation, commit-msg hook, adapter ports, credentials, envelope round-trip and degradation | `bun test tests/behaviour` |
+| Behaviour | pnpm isolation, commit-msg hook, adapter ports, credentials, envelope round-trip and degradation, pm-notes lint, corpus acceptance, phase transitions, and delivery-registry records | `bun test tests/behaviour` |
 | Aggregate | The whole workspace | `pnpm check` |
 
 ## Dependencies & Risks
@@ -278,5 +278,6 @@ core              ──> no workspace dependencies
 - **Result capability:** [Result Contract and Error Table](feature-result-contract.md).
 - **Adapter contract substrate:** [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
 - **State capability:** [State Layer](feature-state-layer.md).
+- **PM-notes and phase capability:** [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md).
 - **Glossary:** [doc/overview/glossary.md](../../overview/glossary.md) — scaffold terms.
 - **Change record:** `doc/changes/2026-10/2026-10-29--GH-170--monorepo-scaffold-toolchain/`.

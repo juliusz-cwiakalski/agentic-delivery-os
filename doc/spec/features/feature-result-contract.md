@@ -5,9 +5,9 @@ created: 2026-10-30
 last_updated: 2026-10-31
 owners: ["engineering"]
 service: delivery-os
-summary: "The command-surface result contract: the CommandResult envelope in core ./contracts, the machine-readable error table as the single source of failure identity, the domain-kind to app-error-code to projection classification chain, the standalone CLI {0, 1, 2} exit projection, the deterministic in-process runCli surface, the two-entry fallback containment, the serialization redaction chokepoint, the testkit conformance validator, and the binding docs/code sync and exit-literal invariants."
+summary: "The command-surface result contract: the CommandResult envelope in core ./contracts, the machine-readable error table as the single source of failure identity including the lint rows for pm-notes conformance, the domain-kind to app-error-code to projection classification chain, the standalone CLI {0, 1, 2} exit projection, the deterministic in-process runCli surface, the two-entry fallback containment, the serialization redaction chokepoint, the testkit conformance validator, and the binding docs/code sync and exit-literal invariants."
 links:
-  related_changes: ["GH-172", "GH-173", "GH-174", "GH-181"]
+  related_changes: ["GH-172", "GH-173", "GH-174", "GH-179", "GH-181"]
   related_decisions: ["ADR-0003"]
 ---
 
@@ -47,9 +47,9 @@ The authoritative design decision for package placement and tiers is [ADR-0003](
 ### Capabilities
 
 - **CommandResult envelope:** Every command returns `schemaVersion`, `runId`, `exitCode`, `timing`, and exactly one of `data` or `error`. A void success carries an explicit empty `data` object rather than an ambiguous both-absent shape.
-- **Machine-readable error table:** `ERROR_TABLE` in `core ./contracts` declares each failure entry once. `DOMAIN_KINDS` declares `provider`, `input`, `config`, and `state`; `fallback` is the reserved two-segment containment namespace. Codes are unique and the table is total over valid declared failure discriminants, not one row per kind.
+- **Machine-readable error table:** `ERROR_TABLE` in `core ./contracts` declares each failure entry once. `DOMAIN_KINDS` declares `provider`, `input`, `config`, `state`, and `lint`; `fallback` is the reserved two-segment containment namespace. The `lint` kind carries the five pm-notes conformance identities (`lint.notes.malformed`, `lint.keys.missing`, `lint.variant.unknown`, `lint.phases.incomplete`, `lint.target.missing`). Codes are unique and the table is total over valid declared failure discriminants, not one row per kind.
 - **Self-describing errors:** Every error object carries `code`, `category`, `retryable`, `consequence`, `remediationHint`, and an optional non-identifying `summary`. An entry's `summary` supplies the default; non-config handlers may supply a more specific summary without changing identity. Config summaries always come from the table.
-- **Classification chain:** A `(kind, code)` pair resolves only when the code belongs to that kind. Kind-only lookup requires exactly one matching entry (`provider`, `input`); `config` and `state` require a code. Missing, unknown, or wrong-kind config and state codes are contained by `fallback.internal`.
+- **Classification chain:** A `(kind, code)` pair resolves only when the code belongs to that kind. Kind-only lookup requires exactly one matching entry (`provider`, `input`); `config`, `state`, and `lint` require a code. Missing, unknown, or wrong-kind config, state, and lint codes are contained by `fallback.internal`.
 - **Exit-code projection:** The CLI projection module maps `success` to `0`, `user-validation` to `1`, and `platform-provider` to `2`. An unknown projection class is rejected, never defaulted. The numeric code is derived from the class, never read from a table row.
 - **Failure containment:** Broken invocations and unknown commands resolve through `fallback.invocation`; errors no entry classifies resolve through `fallback.internal`. Both containment entries are `consequence: unknown` and `retryable: false`, and their projection classes keep caller-fault and system-side failures on different exit codes.
 - **Deterministic in-process surface:** `runCli(argv, streams, deps)` takes arguments, injected output and error streams, and injected dependencies (brand, clock, run-id factory, secrets, command program). It returns the numeric exit code and never spawns a process, calls `process.exit`, or writes to real process streams.
@@ -244,6 +244,7 @@ The result surface itself adds no runtime dependency or new CI job. Configuratio
 - **Depends on** the monorepo scaffold ([feature-monorepo-scaffold-toolchain.md](feature-monorepo-scaffold-toolchain.md)) for package tiers, boundary enforcement, the ambient guard, and the aggregate check.
 - **Depends on** the branding seam ([feature-branding-seam.md](feature-branding-seam.md)) for `BrandIdentity` parameter discipline and the forbidden-literal scan.
 - **Consumed by** the configuration layer ([feature-config-layer.md](feature-config-layer.md)) for envelope, error identity and the sole redaction path.
+- **Consumed by** pm-notes lint and phase transitions ([feature-pm-notes-lint-and-phase-transitions.md](feature-pm-notes-lint-and-phase-transitions.md)) for the five `lint` identities, exit projection, and envelope rendering.
 - **Consumed by** the adapter port substrate ([feature-adapter-ports.md](feature-adapter-ports.md)) for the `config.credential.missing` credential-failure identity and the redaction boundary.
 - **Depends on** [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md) for runtime-neutral contract placement, package boundaries, and gate stability.
 - **Risk — contract cascade:** Every later command and surface consumes the envelope. Mitigation: the field set is fixed at v1, `schemaVersion` provides a breaking-change channel, and evolution is additive within a version.

@@ -355,6 +355,7 @@ High-level design, respecting the scaffold tier rules (contracts = types and as-
 | `packages/core/src/domain/pm-notes-lint.ts` | New | Pure conformance rules over parsed document values; returns classified lint findings; no I/O. |
 | `packages/core/src/state/registry.ts` | New | Registry record module composing the injected store port: append, read with key-set assertions, atomically replaced derived projection. |
 | `packages/core/src/state/` (`index.ts`, `ledger.ts`, `edge.ts`, `driver/strategy.ts`, `driver/runtime-edge.ts`) | Consumed, unchanged | The GH-174 substrate; the driver edge stays the only core runtime-API location. |
+| `packages/adapters/src/file/pm-notes-parser.ts` | New | pm-notes YAML document edge: parse to values, document-edit API for phase-entry staging (PIN-8); runtime I/O stays in the adapter edge per the tier rules. |
 | `packages/cli/src/commands/lint.ts` | New | `ados lint` command definition (named targets; read-only; `--json` via envelope). |
 | `packages/cli/src/commands/phase.ts` | New | `ados phase` family definition: `list`/`complete`/`reopen`; grammar validation before state inspection. |
 | `packages/cli/src/commands/index.ts` | Extends | Exposes both new command definitions for edge composition. |
