@@ -8,6 +8,8 @@ status: Accepted
 created: 2026-01-09
 owners: ["engineering"]
 summary: "Comprehensive guide to Opencode AI agents and commands for manual and autopilot workflows."
+links:
+  related_changes: ["GH-185"]
 ---
 
 # Opencode Agents & Commands Guide

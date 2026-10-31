@@ -16,7 +16,7 @@ references:
   - "Delivery vehicle: #142"
   - "Related change: GH-146"
 links:
-  related_changes: ["GH-146", "GH-148", "PDEV-514", "PDEV-516"]
+  related_changes: ["GH-146", "GH-148", "GH-185", "PDEV-514", "PDEV-516"]
   decisions: ["TDR-0002"]
 ---
 
@@ -357,7 +357,7 @@ stuck** — and recover it via kill+restart. It is *not* primarily about "parkin
 while a delivery is in progress"; that is handled by the CEO blocking on
 `deliver-ticket.sh` (INV-DM-1/2).
 
-A CEO session is **stuck** (kill+restart) when, for longer than the stall
+A CEO session is **stuck** (kill+restart) when, for at least the stuck
 threshold, **all** of these hold:
 
 - no new **opencode session message traffic** (the stream of assistant/tool

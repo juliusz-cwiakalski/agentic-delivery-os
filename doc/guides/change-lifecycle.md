@@ -8,6 +8,8 @@ status: Draft
 created: 2026-02-03
 owners: ["engineering"]
 summary: "End-to-end change delivery workflow (planning to PR) with PM-led gates and artifacts." 
+links:
+  related_changes: ["GH-185"]
 ---
 
 # Change Lifecycle
