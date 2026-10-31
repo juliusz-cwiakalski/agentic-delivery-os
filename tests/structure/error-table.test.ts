@@ -602,17 +602,134 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    const declaredKinds = "`provider`, `input`, `config`, `state`, `lint`, and `verify`";
+    const declaredKinds = "`provider`, `input`, `config`, `state`, `lint`, `verify`, and `db`";
     expect(doc).toContain(declaredKinds);
     expect(doc).toContain("`verify.ledger.incomplete`");
+    expect(doc).toContain("`db.opencode.unavailable`");
   });
 
-  test("existing kinds keep their rows and the provider and verify additions are present", () => {
+  test("existing kinds keep their rows and the provider, verify, and db additions are present", () => {
     expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(5);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(7);
     expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(5);
-    expect(entries).toHaveLength(31);
+    expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
+    expect(entries).toHaveLength(35);
+  });
+});
+
+const DB_ROWS = [
+  [
+    "db.opencode.unavailable",
+    "platform",
+    false,
+    "not_landed",
+    "Install or repair the opencode CLI so opencode db path resolves.",
+    "platform-provider",
+    "The opencode session database is unavailable.",
+  ],
+  [
+    "db.query.failed",
+    "platform",
+    true,
+    "not_landed",
+    "Retry the failed query and verify the session store is readable.",
+    "platform-provider",
+    "A session database query failed.",
+  ],
+  [
+    "db.delete.failed",
+    "transient",
+    true,
+    "not_landed",
+    "Retry the prune; failed rows remain and are selected again.",
+    "platform-provider",
+    "A session delete did not land.",
+  ],
+  [
+    "db.reboot.live",
+    "transient",
+    true,
+    "not_landed",
+    "Wait until the live window is empty or stop the opencode host, then retry.",
+    "platform-provider",
+    "A live session is using the database.",
+  ],
+] as const;
+
+describe("TC-DB-003 four db identities round-trip and contain", () => {
+  test("db is a declared multi-row kind with exactly the four pinned rows", () => {
+    expect(DOMAIN_KINDS).toContain("db");
+    const db = entries.filter((entry) => entry.domainKind === "db");
+    expect(db.map((entry) => entry.code)).toEqual(DB_ROWS.map(([code]) => code));
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of DB_ROWS) {
+      expect(classifyDomainKind("db", code)).toMatchObject({
+        code,
+        domainKind: "db",
+        category,
+        retryable,
+        consequence,
+        projectionClass,
+        remediationHint: hint,
+        summary,
+      });
+      expect(resolveAppErrorCode(code)).toEqual({
+        ok: true,
+        entry: classifyDomainKind("db", code),
+      });
+      expect(classifyThrown({ kind: "db", code })).toEqual(classifyDomainKind("db", code));
+      expect(classifyThrown({ kind: "db", code, summary: "UNTRUSTED-CANARY" })).toEqual(
+        classifyDomainKind("db", code),
+      );
+    }
+    expect(entries).toHaveLength(35);
+    expect(db).toHaveLength(4);
+  });
+
+  test("kind-only db is ambiguous and contains; it never selects the first row", () => {
+    expect(() => classifyDomainKind("db")).toThrow();
+    expect(classifyThrown({ kind: "db" }).code).toBe(FALLBACK_INTERNAL_CODE);
+    const firstRowClassifier = (kind: string) =>
+      (ERROR_TABLE as readonly ErrorTableEntry[]).find((entry) => entry.domainKind === kind);
+    expect(firstRowClassifier("db")?.code).toBe("db.opencode.unavailable");
+  });
+
+  test("wrong, unknown, missing, mismatched and non-string db codes contain", () => {
+    for (const failure of [
+      { kind: "db", code: "db.other.unknown" },
+      { kind: "db", code: "state.store.torn" },
+      { kind: "db" },
+      { kind: "db", code: 42 },
+      { kind: "db", code: null },
+      { kind: "state", code: "db.query.failed" },
+    ]) {
+      expect(classifyThrown(failure).code).toBe(FALLBACK_INTERNAL_CODE);
+    }
+    expect(() => classifyDomainKind("db", "input.value.rejected")).toThrow();
+  });
+
+  test("the documented db rows agree exactly once and match every column", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of DB_ROWS) {
+      const row = `| ${code} | db | ${category} | ${String(retryable)} | ${consequence} | ${hint} | ${projectionClass} | ${summary} |`;
+      expect(doc.split(row).length - 1, code).toBe(1);
+    }
   });
 });

@@ -12,6 +12,16 @@ export {
   type PmNotesLintLocation,
   type PmNotesLintVerdict,
 } from "./pm-notes-lint.js";
+export {
+  classifyPruneCandidate,
+  computeDbCutoffMs,
+  computeDbLiveBoundaryMs,
+  isLiveDbSession,
+  type PruneCandidateDecision,
+  type PruneCandidateFact,
+  renderSessionAdminHuman,
+  selectPruneCandidates,
+} from "./session-admin.js";
 export { aggregateStatus, renderStatusHuman } from "./status.js";
 export {
   classifyVerifyChange,

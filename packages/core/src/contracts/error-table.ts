@@ -10,7 +10,15 @@
 import type { AppErrorCode, ErrorCategory, ErrorConsequence, ProjectionClass } from "./result.js";
 
 /** The declared domain kinds: the first link of the classification chain. */
-export const DOMAIN_KINDS = ["provider", "input", "config", "state", "lint", "verify"] as const;
+export const DOMAIN_KINDS = [
+  "provider",
+  "input",
+  "config",
+  "state",
+  "lint",
+  "verify",
+  "db",
+] as const;
 
 /** Reserved containment code for broken invocations and unknown commands. */
 export const FALLBACK_INVOCATION_CODE = "fallback.invocation" as const;
@@ -356,5 +364,45 @@ export const ERROR_TABLE = [
       "Complete the named required phases of the declared variant through the phase command, or correct the declaration, then re-run verify.",
     projectionClass: "user-validation",
     summary: "The declared variant's required phases are not all completed.",
+  },
+  {
+    code: "db.opencode.unavailable",
+    domainKind: "db",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint: "Install or repair the opencode CLI so opencode db path resolves.",
+    projectionClass: "platform-provider",
+    summary: "The opencode session database is unavailable.",
+  },
+  {
+    code: "db.query.failed",
+    domainKind: "db",
+    category: "platform",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint: "Retry the failed query and verify the session store is readable.",
+    projectionClass: "platform-provider",
+    summary: "A session database query failed.",
+  },
+  {
+    code: "db.delete.failed",
+    domainKind: "db",
+    category: "transient",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint: "Retry the prune; failed rows remain and are selected again.",
+    projectionClass: "platform-provider",
+    summary: "A session delete did not land.",
+  },
+  {
+    code: "db.reboot.live",
+    domainKind: "db",
+    category: "transient",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint: "Wait until the live window is empty or stop the opencode host, then retry.",
+    projectionClass: "platform-provider",
+    summary: "A live session is using the database.",
   },
 ] as const satisfies readonly ErrorTableEntry[];

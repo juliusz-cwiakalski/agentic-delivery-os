@@ -75,6 +75,7 @@
     "doc/spec/features/feature-provider-client-seeds.md",
     "doc/spec/features/feature-provider-engine.md",
     "doc/spec/features/feature-result-contract.md",
+    "doc/spec/features/feature-session-database-admin.md",
     "doc/spec/features/feature-state-layer.md",
     "doc/spec/features/feature-status-digest.md",
     "doc/spec/features/feature-verify-change-and-exit-taxonomy.md"

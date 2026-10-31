@@ -1,0 +1,3 @@
+example-product db reboot  applied  live sessions 0 | checkpoint performed
+  wal 19800000 B -> 0 B
+  restart the opencode host manually; this command only prepares the database
