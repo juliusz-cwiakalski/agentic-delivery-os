@@ -8,7 +8,7 @@ phases:
   test_planning: { started: "2026-10-31T12:36:00Z", completed: "2026-10-31T13:46:00Z", reopened: "2026-10-31T13:15:00Z (delivery_planning found implementation_plan link null; corrected to ./chg-GH-204-plan.md); 2026-10-31T13:42:00Z (DoR iter-1 F-3/F-6/F-7/F-9/F-11/F-13/F-16/F-17/F-22; test plan v1.1 201 lines, TC-001..015)" }
   delivery_planning: { started: "2026-10-31T12:47:00Z", completed: "2026-10-31T13:52:00Z", reopened: "2026-10-31T13:48:00Z (DoR iter-1 F-3/F-4/F-5/F-10/F-11/F-14/F-15/F-20/F-21/F-23; plan v1.1 202 lines, 4 self-consistent phases, 15/15 TCs)" }
   dor_check: { started: "2026-10-31T13:25:00Z", completed: "2026-10-31T14:05:00Z", verdict: "READY iter-2 (0 blocker, 0 major, 3 minor, 4 nit; artifact readiness-review/readiness-iter-2.md; all 23 iter-1 findings resolved; advisory items folded into delivery notes) ", iterations: "iter-1 NOT_READY (3 blocker, 10 major, 7 minor, 3 nit; reopened specification, test_planning, delivery_planning); iter-2 READY after revisions" }
-  delivery: { started: null, completed: null }
+  delivery: { started: "2026-10-31T14:10:00Z", completed: "2026-10-31T14:45:00Z", commits: "d87a977(P1 kernel) a748f5b(P2 index/seeds/trees) e05789f(P3 skill/inventory) a10515e(P4 validation); HEAD a10515e; 4 phases, 4 Conventional Commits; worktree clean" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -58,6 +58,9 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Phase 6 delivery COMPLETE: @toolsmith refined the skill (135 lines, quoted 15-word description, PyYAML parse OK, disposable smoke test 9/9 scenarios). @coder executed plan phases 1..4 with commits d87a977, a748f5b, e05789f, a10515e. Worktree clean. Checks: kernel 26/26 assertions, one AGENTS.md hunk, 4 index rows for 4 folders, seeds 12..13 lines with zero fabricated lessons, parsers OK, dry-run PASS, pm-notes corpus 17/17, doc distribution OK, plugin drift clean, dash scan clean in authored surfaces, no forbidden paths."
+    type: "info"
+    date: "2026-10-31"
   - text: "DoR iter-2 READY: 0 blocker, 0 major, 3 minor, 4 nit. Artifact readiness-review/readiness-iter-2.md. Advisory items folded into delivery: keep the first-capture template present, describe the Skills section as added by this change, reference the tree created in the same or earlier phase, and note that PyYAML 1.1 is used only to parse quoted strings that are valid under YAML 1.2 core."
     type: "decision"
     date: "2026-10-31"
