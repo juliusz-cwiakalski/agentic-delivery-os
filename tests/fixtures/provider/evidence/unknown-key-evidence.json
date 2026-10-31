@@ -1,0 +1,14 @@
+{
+  "providerName": "x",
+  "chainName": "x",
+  "conditionKinds": "x",
+  "waitSeconds": "x",
+  "resetEpochMs": "x",
+  "httpStatus": "x",
+  "failureClass": "x",
+  "credentialRefName": "x",
+  "parkName": "x",
+  "parkExpiresAt": "x",
+  "announcementCode": "x",
+  "rawBody": "canary"
+}

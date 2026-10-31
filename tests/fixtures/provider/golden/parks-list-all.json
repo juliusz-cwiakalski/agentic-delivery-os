@@ -1,0 +1,8 @@
+{
+  "parks": [
+    {
+      "name": "provider:p0",
+      "state": "active"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "summary": "selected p0 (subscription)",
+  "decision": {
+    "kind": "selected",
+    "providerName": "p0",
+    "costClass": "subscription"
+  },
+  "skipped": []
+}
