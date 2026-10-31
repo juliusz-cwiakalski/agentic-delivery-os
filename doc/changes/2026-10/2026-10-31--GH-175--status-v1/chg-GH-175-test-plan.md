@@ -147,7 +147,7 @@ The specification declares no `API-#` or `EVT-#` identifiers and no HTTP endpoin
 | NFR-6 | Fixture corpus expected; default-CI live calls 0; opt-in live structural checks 100%, no volatile counts | TC-STATUS-030, TC-STATUS-031, TC-STATUS-032 | Covered |
 | NFR-7 | Boundaries/branding: 0 new runtime-API locations, 0 new secret-read entries, 0 product literals, gates green | TC-STATUS-026, TC-STATUS-027, TC-STATUS-028 | Covered |
 | NFR-8 | Error-table stability: 0 new rows/kinds, 0 documented drift, 0 existing-row changes; sync/classification green | TC-STATUS-029 | Covered |
-| NFR-9 | Performance: ≤50 ms pure aggregation, ≤3 network reads, ≤1 state read, ≤1 config resolve, 0 retries/loops | TC-STATUS-033 | Covered |
+| NFR-9 | Performance: ≤50 ms pure aggregation, ≤3 network reads, ≤1 logical park-fold read (`readProviderParkViews` invocation; internal verified reads not multiplied), ≤1 config resolve, 0 retries/loops | TC-STATUS-033 | Covered |
 | NFR-10 | Privacy: 0 secrets/raw payloads in digest/evidence/human; 0 ambient reads outside the allowlist; 0 canary escapes | TC-STATUS-005, TC-STATUS-006, TC-STATUS-027 | Covered |
 
 All ten NFRs are covered. No NFR is marked TODO or deferred.
@@ -1252,7 +1252,7 @@ All thirty-three TCs are automated except TC-STATUS-032, which is opt-in automat
 **Steps**:
 
 1. Run the full status once and assert exactly three network reads: one issues page, one PR page, and one check-runs read; assert no duplicate URL and no second page/retry request (a second request throws).
-2. Assert `<= 1` state read (park fold) and `<= 1` config resolve; assert zero provider-engine `resolve`/`quota` calls and zero quota HTTP requests.
+2. Assert exactly one logical park-fold invocation (`readProviderParkViews`; the fold's documented internal verified reads are not multiplied by status) and `<= 1` config resolve; assert zero provider-engine `resolve`/`quota` calls and zero quota HTTP requests.
 3. Assert no retry/loop: the transport recorder shows one attempt per read; an unfixtured second URL throws; assert no `while`/recursive pagination call site re-invokes a read (AST scan plus runtime call count).
 4. Measure the pure aggregator over the cap-sized facts: warm up once, then take the median of five runs and assert the median `<= 50 ms`; record the measured value in the test output.
 5. Assert the measurement is live: a deliberately expensive control (e.g., a full sort over an unbounded temporary list) exceeds the bound or is rejected by the cap scan, proving the timing assertion is not vacuous.
@@ -1261,7 +1261,7 @@ All thirty-three TCs are automated except TC-STATUS-032, which is opt-in automat
 
 **Expected Outcome**:
 
-- Status uses at most three network reads, one state read, and one config resolve; the pure aggregator completes within 50 ms on cap-sized inputs; there are no retry or pagination loops.
+- Status uses at most three network reads, one logical park-fold read (`readProviderParkViews` invocation; internal verified reads not multiplied), and one config resolve; the pure aggregator completes within 50 ms on cap-sized inputs; there are no retry or pagination loops.
 
 ## 6. Environments and Test Data
 
@@ -1482,6 +1482,7 @@ No AC and no NFR is left without a TC.
 |---|---|---|---|
 | 1.0 | 2026-10-31T14:30:00Z | Change Test Plan Writer | Initial plan: 33 TCs (TC-STATUS-001..033). All 24 ACs (AC-F1-1..AC-F16-1), all 10 NFRs, all 15 DMs, and all 12 spec risks mapped; six-section totality and the Appendix A matrix; tracker four families with ADR-0004/0006 absence discipline and GitHub blocked-dependency unavailability; changes/PRs unknown review signals; CI `none`-not-green and unresolved/failed reads; lanes always `not-delivered`; providers parked/unverified with zero engine/quota calls; parked work absent/malformed/empty/observed with no notes; origin HTTPS/SSH binding with credential stripping; bounded GitHub collection reads with unchanged capability and four new trap entries; the exhaustive AC-F9-1 matrix; zero writes/fences/mutations/network-writes/spawns; byte-identical replay; boundaries/tier/branding/secret-read gates; error-table stability; committed corpus + golden + opt-in structural live smoke; performance/read-cost bounds. Nine recorded gaps (plan absent, tracker cap interaction, non-tracker rank keys, providers precedence, `actionable` semantic, live-smoke literal, machine bound unit, delivery-bound spellings, source-at-limit with filtered PRs) with chosen readings and open questions; no coverage silently weakened. |
 | 1.1 | 2026-10-31T15:15:00Z | Change Test Plan Writer | Reconciliation with spec v1.1. §1.2 GAP-2..GAP-7 and GAP-9 marked resolved (pinned behavior prose retained); §8.3 OQ-T1..OQ-T7 closed as resolved by spec v1.1 with the canonical sections named (DM-1, DM-5, DM-9, DM-12, Appendix A/B/C/D/F, F-10, F-16, AC-F10-1, AC-F11-1, AC-F16-1, NFR-2, §8.3), while OQ-T8 (CI timing tolerance) remains the delivery-bound open question; §8.2 A-T5..A-T9 and the §8.3 recorded-gaps list now cite spec v1.1 as authority rather than a plan-local reading. TC-STATUS-007/TC-STATUS-027 references point at the pinned tables. No TC renumbered and no assertion, TC count, coverage, or behavior changed; the rank-key cross-check required no assertion update. |
+| 1.2 | 2026-10-31T15:50:00Z | PM (planning reconciliation) | NFR-9/TC-STATUS-033 read-cost clarification driven by the implementation plan: the metric counts one **logical park-fold read** (one `readProviderParkViews` invocation); the fold's documented internal verified reads are not multiplied by status. No other assertion, TC count, coverage, or behavior changed. |
 
 ## 10. Test Execution Log
 

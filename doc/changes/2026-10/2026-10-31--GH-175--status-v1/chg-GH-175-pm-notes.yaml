@@ -7,8 +7,8 @@ phases:
   clarify_scope: { started: "2026-10-31T13:50:00Z", completed: "2026-10-31T14:00:00Z" }
   specification: { started: "2026-10-31T14:00:00Z", completed: "2026-10-31T14:25:00Z", reopened: "2026-10-31T14:35:00Z (test-plan gaps GAP-2..GAP-7, GAP-9: tracker cap interaction, non-tracker rank keys, providers precedence, summary.actionable, live-smoke brand derivation, 64 KiB unit, raw-page truncation)", reopened_completed: "2026-10-31T15:20:00Z (spec v1.1 folded all seven pinned readings; no scope/AC/state/error posture change)" }
   test_planning: { started: "2026-10-31T14:25:00Z", completed: "2026-10-31T15:20:00Z" }
-  delivery_planning: { started: "2026-10-31T15:20:00Z", completed: null }
-  dor_check: { started: null, completed: null }
+  delivery_planning: { started: "2026-10-31T15:20:00Z", completed: "2026-10-31T15:50:00Z" }
+  dor_check: { started: "2026-10-31T15:50:00Z", completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -25,6 +25,9 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Delivery planning COMPLETE: chg-GH-175-plan.md, 7 phases / 40 tasks (35 @coder, 5 @doc-syncer handoff). 33/33 TCs, 24/24 ACs, 10/10 NFRs mapped; no behaviour inconsistency. Four delivery-bound resolutions are pinned by the plan (PM-context `change_folder` -> digest `changeFolder`; inline raw-page count preserving the five-name GitHub surface; provider-config validation -> `provider-chain-unresolved` vs config resolution -> `config-invalid`; NFR-9 logical park-fold accounting). PM applied a one-line NFR-9 clarification to spec v1.2 and test plan v1.2: the metric is one logical `readProviderParkViews` invocation, not a raw `store.read` count, so the state layer stays unchanged."
+    type: "info"
+    date: "2026-10-31"
   - text: "Test planning COMPLETE: chg-GH-175-test-plan.md with 33 TCs (TC-STATUS-001..033); 24/24 ACs, 10/10 NFRs, 15/15 DMs, 12/12 spec risks mapped; one opt-in live-smoke TC outside default CI. The test plan surfaced seven spec ambiguities; they were folded into spec v1.1 (tracker per-family cap, non-tracker rank keys, providers precedence, summary.actionable, brand-derived live switch, data-only 64 KiB bound, raw-page truncation) and the test plan was reconciled with no assertion changes. OQ-T8 (CI timing tolerance for the 50 ms bound) remains delivery-bound."
     type: "info"
     date: "2026-10-31"
