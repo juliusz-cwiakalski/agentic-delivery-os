@@ -57,6 +57,9 @@ open_questions:
 blockers: []
 
 notes:
+  - text: "Docs re-synced after remediation (commit 0ad062a) with zero residual gaps: feature-privacy-guard, adapter-ports, monorepo-scaffold, and glossary updated for value-segment marker anchoring, emitter no-suppression, construction-time validation, linear attribution, content-free diagnostics, audit scope, and archival review allowlist entries. result-contract still unchanged (26/26 sync)."
+    type: "info"
+    date: "2026-10-31"
   - text: "Remediation batch landed in e7dc4a9 (fix(GH-184)): F-1 marker anchoring now scopes to the protected value segment and fires for all three platform home forms plus credential/authorization shapes; F-2 emitter drops documentation-placeholder suppression; F-3 line attribution is linear via a newline-offset index; F-4 policy construction fails closed; F-5..F-9 and F-12 closed. Two rule-scoped exact-path entries were added for the review artifacts that quote the F-1 probe values; no rule or cap was weakened. Gates: 1136 tests, pnpm check, guard 1006 files/0 violations, all invariant checks green."
     type: "info"
     date: "2026-10-31"
