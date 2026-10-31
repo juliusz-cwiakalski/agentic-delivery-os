@@ -52,7 +52,10 @@ const PROJECTION_CLASSES = ["success", "user-validation", "platform-provider"];
 const CODE_PATTERN = /^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$/;
 
 const isValidCode = (code: string): boolean =>
-  code === FALLBACK_INVOCATION_CODE || code === FALLBACK_INTERNAL_CODE || CODE_PATTERN.test(code);
+  code === FALLBACK_INVOCATION_CODE ||
+  code === FALLBACK_INTERNAL_CODE ||
+  code === "provider.outage" ||
+  CODE_PATTERN.test(code);
 
 const contractsFiles = (): string[] =>
   readdirSync(join(ROOT, CONTRACTS_DIR))
@@ -468,11 +471,90 @@ describe("TC-SYNC-007 lint rows are exact and additive", () => {
   });
 
   test("existing provider, input, config and state rows are unchanged", () => {
-    expect(classifyDomainKind("provider").code).toBe("provider.quota.exceeded");
+    expect(classifyDomainKind("provider", "provider.quota.exceeded").code).toBe(
+      "provider.quota.exceeded",
+    );
+    expect(() => classifyDomainKind("provider")).toThrow();
     expect(classifyDomainKind("input").code).toBe("input.value.rejected");
     expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(7);
     expect(() => classifyDomainKind("config")).toThrow();
     expect(() => classifyDomainKind("state")).toThrow();
+  });
+});
+
+
+const PROVIDER_ROWS = [
+  [
+    "provider.quota.exceeded",
+    "transient",
+    true,
+    "not_landed",
+    "Wait for the quota window to reset, then retry the operation.",
+    "platform-provider",
+    "The provider quota was exceeded.",
+  ],
+  [
+    "provider.outage",
+    "transient",
+    true,
+    "not_landed",
+    "Retry after the provider becomes reachable; consult the announcement and park for the resume time.",
+    "platform-provider",
+    "The provider is unreachable.",
+  ],
+  [
+    "provider.auth.rejected",
+    "user",
+    false,
+    "not_landed",
+    "Correct or replace the declared credential and retry.",
+    "user-validation",
+    "The provider rejected the credential.",
+  ],
+  [
+    "provider.chain.empty",
+    "user",
+    false,
+    "not_landed",
+    "Declare a non-empty provider chain (or select one) and retry.",
+    "user-validation",
+    "No provider chain is declared.",
+  ],
+  [
+    "provider.chain.invalid",
+    "user",
+    false,
+    "not_landed",
+    "Correct the named chain entries, ordering, or references and retry.",
+    "user-validation",
+    "The provider chain is invalid.",
+  ],
+] as const;
+
+describe("TC-PROV-045 provider rows are exact and synced", () => {
+  test("the five provider rows carry their declared fields", () => {
+    const provider = entries.filter((entry) => entry.domainKind === "provider");
+    expect(provider.map((entry) => entry.code)).toEqual(PROVIDER_ROWS.map(([code]) => code));
+    for (const [code, category, retryable, consequence, hint, projectionClass, summary] of PROVIDER_ROWS) {
+      expect(classifyDomainKind("provider", code)).toMatchObject({
+        code,
+        domainKind: "provider",
+        category,
+        retryable,
+        consequence,
+        remediationHint: hint,
+        projectionClass,
+        summary,
+      });
+    }
+  });
+
+  test("the documented provider rows agree exactly once", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const [code, , , , hint, projectionClass, summary] of PROVIDER_ROWS) {
+      const row = `| ${code} | provider | ${PROVIDER_ROWS.find(([candidate]) => candidate === code)?.[1]} | ${String(PROVIDER_ROWS.find(([candidate]) => candidate === code)?.[2])} | not_landed | ${hint} | ${projectionClass} | ${summary} |`;
+      expect(doc.split(row).length - 1, code).toBe(1);
+    }
   });
 });

@@ -16,12 +16,14 @@
     "src/contracts/index.ts",
     "src/contracts/pm-notes.ts",
     "src/contracts/ports.ts",
+    "src/contracts/provider.ts",
     "src/contracts/registry.ts",
     "src/contracts/result.ts",
     "src/contracts/state.ts",
     "src/domain/index.ts",
     "src/domain/pm-notes-lint.ts",
     "src/index.ts",
+    "src/provider/validate.ts",
     "src/state/driver/runtime-edge.ts",
     "src/state/driver/strategy.ts",
     "src/state/edge.ts",
@@ -74,7 +76,18 @@
     "src/output/serialize.ts",
     "src/projection.ts"
   ],
-  "mcp": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
-  "opencode": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
-  "testkit": ["src/index.ts", "src/result-conformance.ts"]
+  "mcp": [
+    "src/commands/index.ts",
+    "src/index.ts",
+    "src/output/index.ts"
+  ],
+  "opencode": [
+    "src/commands/index.ts",
+    "src/index.ts",
+    "src/output/index.ts"
+  ],
+  "testkit": [
+    "src/index.ts",
+    "src/result-conformance.ts"
+  ]
 }

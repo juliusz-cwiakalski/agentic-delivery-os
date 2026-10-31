@@ -1,0 +1,37 @@
+provider:
+  defaultChain: default
+  credentials:
+    zai:
+      sourceKey:
+        style: literal
+        name: ZAI_API_KEY
+    alt:
+      sourceKey:
+        style: environment-prefixed
+        suffix: ALT_API_KEY
+  entries:
+    zai-coding-plan:
+      class: subscription
+      enabled: true
+      peak:
+        timezone: UTC
+        startSecondsOfDay: 21600
+        endSecondsOfDay: 36000
+        bufferSeconds: 7200
+      quota:
+        enabled: true
+        endpoint: https://api.z.ai/api/monitor/usage/quota/limit
+        credentialRef: zai
+    alt-plan:
+      class: subscription
+      enabled: true
+    paid-plan:
+      class: pay-per-token
+      enabled: true
+    disabled-plan:
+      class: subscription
+      enabled: false
+  chains:
+    default:
+      entries:
+        - zai-coding-plan\n        - alt-plan\n      allowPaidFallback: false

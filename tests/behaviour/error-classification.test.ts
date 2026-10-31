@@ -26,8 +26,11 @@ const CONTAINMENT = new Set([FALLBACK_INTERNAL_CODE, FALLBACK_INVOCATION_CODE]);
 
 describe("TC-CLASSIFY-001 declared domain kinds are total", () => {
   test("every declared kind resolves to exactly one non-containment entry and round-trips", () => {
-    for (const kind of ["provider", "input"] as const) {
-      const entry = classifyDomainKind(kind);
+    for (const [kind, code] of [
+      ["provider", "provider.quota.exceeded"],
+      ["input", "input.value.rejected"],
+    ] as const) {
+      const entry = classifyDomainKind(kind, code);
       expect(entry.domainKind).toBe(kind);
       expect(CONTAINMENT.has(entry.code)).toBe(false);
       const resolution = resolveAppErrorCode(entry.code);
@@ -37,8 +40,11 @@ describe("TC-CLASSIFY-001 declared domain kinds are total", () => {
   });
 
   test("resolved fields come from the entry with no per-call-site override", () => {
-    for (const kind of ["provider", "input"] as const) {
-      const entry = classifyDomainKind(kind);
+    for (const [kind, code] of [
+      ["provider", "provider.quota.exceeded"],
+      ["input", "input.value.rejected"],
+    ] as const) {
+      const entry = classifyDomainKind(kind, code);
       expect(entry.category).toBe(
         entries.find((candidate) => candidate.code === entry.code)?.category,
       );
@@ -55,8 +61,11 @@ describe("TC-CLASSIFY-001 declared domain kinds are total", () => {
   });
 
   test("identity is symbolic and hierarchical, not numeric or URI-shaped", () => {
-    for (const kind of ["provider", "input"] as const) {
-      const code = classifyDomainKind(kind).code;
+    for (const [kind, code] of [
+      ["provider", "provider.quota.exceeded"],
+      ["input", "input.value.rejected"],
+    ] as const) {
+      expect(classifyDomainKind(kind, code).code).toBe(code);
       expect(code).toMatch(/^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$/);
       expect(code).not.toMatch(/^\d/);
       expect(code).not.toContain("://");
@@ -65,10 +74,13 @@ describe("TC-CLASSIFY-001 declared domain kinds are total", () => {
   });
 
   test("resolution is deterministic across ten iterations", () => {
-    for (const kind of ["provider", "input"] as const) {
-      const first = JSON.stringify(classifyDomainKind(kind));
+    for (const [kind, code] of [
+      ["provider", "provider.quota.exceeded"],
+      ["input", "input.value.rejected"],
+    ] as const) {
+      const first = JSON.stringify(classifyDomainKind(kind, code));
       for (let index = 0; index < 10; index += 1) {
-        expect(JSON.stringify(classifyDomainKind(kind))).toBe(first);
+        expect(JSON.stringify(classifyDomainKind(kind, code))).toBe(first);
       }
     }
   });
@@ -150,7 +162,10 @@ describe("TC-CONFIG-020 exact discriminants and safe containment", () => {
     ]) {
       expect(classifyThrown(failure).code).toBe(FALLBACK_INTERNAL_CODE);
     }
-    expect(classifyDomainKind("provider").code).toBe("provider.quota.exceeded");
+    expect(classifyDomainKind("provider", "provider.quota.exceeded").code).toBe(
+      "provider.quota.exceeded",
+    );
+    expect(() => classifyDomainKind("provider")).toThrow();
     expect(classifyDomainKind("input").code).toBe("input.value.rejected");
   });
 
@@ -353,7 +368,10 @@ describe("TC-STATE-018 seven exact state identities and containment", () => {
   });
 
   test("existing provider and config behaviours are unchanged", () => {
-    expect(classifyDomainKind("provider").code).toBe("provider.quota.exceeded");
+    expect(classifyDomainKind("provider", "provider.quota.exceeded").code).toBe(
+      "provider.quota.exceeded",
+    );
+    expect(() => classifyDomainKind("provider")).toThrow();
     expect(classifyDomainKind("input").code).toBe("input.value.rejected");
     expect(classifyDomainKind("config", "config.value.invalid").domainKind).toBe("config");
     expect(() => classifyDomainKind("config")).toThrow();
@@ -411,5 +429,21 @@ describe("TC-SYNC-009 lint containment and multi-row-kind ambiguity", () => {
     expect(classifyDomainKind("state", "state.store.torn").domainKind).toBe("state");
     expect(() => classifyDomainKind("config")).toThrow();
     expect(() => classifyDomainKind("state")).toThrow();
+  });
+});
+
+describe("TC-PROV-046 exact-code provider classification", () => {
+  test("each declared provider code resolves exactly; no/unknown/wrong-kind contain", async () => {
+    const { CLASSIFICATION_CASES } = await import("../fixtures/provider/security/classification-cases");
+    for (const testCase of CLASSIFICATION_CASES) {
+      const row = classifyThrown(testCase.failure);
+      if (testCase.expect === "classified") {
+        expect(row.code, testCase.id).toBe(testCase.code);
+        expect(row.domainKind, testCase.id).toBe("provider");
+      } else {
+        expect(row.code, testCase.id).toBe(FALLBACK_INTERNAL_CODE);
+      }
+    }
+    expect(() => classifyDomainKind("provider")).toThrow();
   });
 });

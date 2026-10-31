@@ -18,7 +18,8 @@ describe("TC-CONFIG-017/025 deterministic packed config artifacts", () => {
       sourceHash: string;
       positions: Record<string, number>;
     };
-    expect(manifest).toMatchObject({ source: "core/src/config/defaults.ts", positions: {} });
+    expect(manifest).toMatchObject({ source: "core/src/config/defaults.ts" });
+    expect(manifest.positions.provider).toBeGreaterThan(0);
     expect(manifest.sourceHash).toMatch(/^[0-9a-f]{64}$/);
     const schema = JSON.parse(
       readFileSync(join(ROOT, "packages/core/dist/config/config.schema.json"), "utf8"),
@@ -32,7 +33,13 @@ describe("TC-CONFIG-017/025 deterministic packed config artifacts", () => {
       readFileSync(join(ROOT, "packages/core/dist/config/defaults-positions.json"), "utf8"),
     ) as DefaultPositionManifest;
     const effective = resolveConfig({ defaultPositions: shipped });
-    expect(effective).toMatchObject({ ok: true, value: { values: {}, origins: {} } });
+    expect(effective.ok).toBe(true);
+    if (effective.ok) {
+      expect(effective.value.values.provider).toMatchObject({
+        entries: { "zai-coding-plan": { class: "subscription" } },
+      });
+      expect(effective.value.origins.provider?.layer).toBe("defaults");
+    }
     // Deliberately out-of-contract negative input; production type stays literal.
     const missingIdentity = resolveConfig({
       defaultPositions: { ...shipped, source: "wrong" } as DefaultPositionManifest,

@@ -1,0 +1,13 @@
+provider:
+  entries:
+    custom:
+      class: subscription
+      peak:
+        timezone: UTC
+        startSecondsOfDay: 3600
+        endSecondsOfDay: 7200
+        bufferSeconds: 1800
+  chains:
+    default:
+      entries:
+        - custom

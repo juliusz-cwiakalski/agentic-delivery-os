@@ -531,3 +531,44 @@ describe("TC-SYNC-008 lint rows synchronize in both directions", () => {
     expect((await runSyncCheck({ root })).failures).toEqual([]);
   });
 });
+
+describe("TC-PROV-045 provider rows synchronize in both directions", () => {
+  const PROVIDER_CODES = [
+    "provider.quota.exceeded",
+    "provider.outage",
+    "provider.auth.rejected",
+    "provider.chain.empty",
+    "provider.chain.invalid",
+  ] as const;
+
+  test("every provider code is present exactly once on each side", async () => {
+    const result = await runSyncCheck({ root: ROOT });
+    expect(result.failures).toEqual([]);
+    const doc = readFile(ROOT, DOC);
+    for (const code of PROVIDER_CODES) {
+      expect(doc.split(`| ${code} |`).length - 1, code).toBe(1);
+    }
+  });
+
+  test("a provider doc-only row fails by name", async () => {
+    const root = makeTempRoot();
+    editFile(
+      root,
+      DOC,
+      insertDocRow(
+        "| provider.phantom.entry | provider | user | false | not_landed | Fix the value. | user-validation | Phantom. |",
+      ),
+    );
+    const result = await runSyncCheck({ root });
+    expect(messages(result.failures)).toContain(
+      "documented code provider.phantom.entry has no source entry",
+    );
+  });
+
+  test("a provider machine-only row fails by name", async () => {
+    const root = makeTempRoot();
+    editFile(root, TABLE, replaceTableCode("provider.chain.invalid", "provider.chain.changed"));
+    const result = await runSyncCheck({ root });
+    expect(messages(result.failures)).toContain("source entry provider.chain.changed is undocumented");
+  });
+});

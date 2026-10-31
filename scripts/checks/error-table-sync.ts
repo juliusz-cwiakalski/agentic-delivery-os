@@ -60,9 +60,14 @@ const REQUIRED_COLUMNS = [
   "Summary",
 ] as const;
 const FALLBACK_CODES = new Set(["fallback.invocation", "fallback.internal"]);
+// GH-182: the spec pins the two-segment `provider.outage` identity exactly; it
+// remains an exact declared code (not a pattern widening), and every other
+// failure identity keeps the three-segment minimum.
+const RESERVED_TWO_SEGMENT_CODES = new Set(["provider.outage"]);
 const CODE_PATTERN = /\b[a-z][a-z0-9]*(?:\.[a-z][a-z0-9]*){2,}\b/g;
 const FALLBACK_PATTERN = /\bfallback\.[a-z][a-z0-9]*\b/g;
 const CODE_FORMAT = /^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$/;
+const TABLE_ANNOUNCEMENT_VOCABULARY = "packages/core/src/contracts/provider.ts";
 
 type Reference = { readonly code: string; readonly line: number; readonly recognized: boolean };
 
@@ -143,7 +148,7 @@ const validateEntries = (
       if (entry.domainKind !== "fallback") {
         failures.push(`${label}: containment entries must use the reserved domain kind`);
       }
-    } else if (!CODE_FORMAT.test(entry.code)) {
+    } else if (!CODE_FORMAT.test(entry.code) && !RESERVED_TWO_SEGMENT_CODES.has(entry.code)) {
       failures.push(`${label}: invalid code format`);
     } else {
       const namespace = entry.code.split(".")[0] ?? "";
@@ -315,14 +320,15 @@ const validateScan = (
   codes: Set<string>,
   surface: "S1" | "S3",
   excludedPrefix?: string,
-  excludedFile?: string,
+  excludedFiles?: string | readonly string[],
 ): { failures: string[]; recognized: number; ignored: number } => {
   const failures: string[] = [];
   let recognizedCount = 0;
   let ignored = 0;
   for (const file of listFiles(root, relativeDir, [".ts", ".json", ".txt"])) {
     if (excludedPrefix !== undefined && file.startsWith(excludedPrefix)) continue;
-    if (excludedFile !== undefined && file === excludedFile) continue;
+    const excluded = excludedFiles === undefined ? [] : (typeof excludedFiles === "string" ? [excludedFiles] : excludedFiles);
+    if (excluded.includes(file)) continue;
     const text = readFileSync(join(root, file), "utf8");
     for (const reference of scanReferences(text, domainKinds)) {
       if (!reference.recognized) {
@@ -359,6 +365,9 @@ export const runSyncCheck = async (options: SyncOptions): Promise<SyncResult> =>
 
   const s1 = validateScan(options.root, "packages/cli/src", domainKinds, codes, "S1");
   failures.push(...s1.failures);
+  // Announcement codes are a separate closed vocabulary (GH-182 F-9), not
+  // failure identities; their declaration file and the table itself are outside
+  // the failure-code scan.
   const coreContracts = validateScan(
     options.root,
     "packages/core/src/contracts",
@@ -366,7 +375,7 @@ export const runSyncCheck = async (options: SyncOptions): Promise<SyncResult> =>
     codes,
     "S1",
     undefined,
-    TABLE_MODULE,
+    [TABLE_MODULE, TABLE_ANNOUNCEMENT_VOCABULARY],
   );
   failures.push(...coreContracts.failures);
 

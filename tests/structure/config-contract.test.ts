@@ -7,7 +7,8 @@ describe("TC-CONFIG-023 pure root API and unchanged composition declaration", ()
   test("root exports the one production resolver and canonical schema without a public config subpath", () => {
     expect(typeof resolveConfig).toBe("function");
     expect(typeof generateConfigSchema).toBe("function");
-    expect(PRODUCTION_CATALOG).toEqual({});
+    expect(Object.keys(PRODUCTION_CATALOG)).toEqual(["provider"]);
+    expect(PRODUCTION_CATALOG.provider.type).toBe("object");
     const manifest = JSON.parse(
       readFileSync(join(process.cwd(), "packages/core/package.json"), "utf8"),
     ) as { exports: Record<string, unknown> };

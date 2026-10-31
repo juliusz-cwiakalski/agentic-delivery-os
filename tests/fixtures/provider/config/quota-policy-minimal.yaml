@@ -1,0 +1,16 @@
+provider:
+  credentials:
+    zai:
+      sourceKey:
+        style: literal
+        name: ZAI_API_KEY
+  entries:
+    minimal-quota:
+      class: subscription
+      quota:
+        endpoint: https://example.test/quota
+        credentialRef: zai
+  chains:
+    default:
+      entries:
+        - minimal-quota

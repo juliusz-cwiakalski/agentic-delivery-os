@@ -18,7 +18,7 @@ import {
   fieldAt,
   PRODUCTION_CATALOG,
 } from "./catalog.js";
-import { defaultsFor } from "./defaults.js";
+import { defaultsFor, PRODUCTION_DEFAULTS } from "./defaults.js";
 import { copyOrigins, removeOrigins } from "./provenance.js";
 import { compileTrustedSchema, invalidKey } from "./schema.js";
 
@@ -326,6 +326,22 @@ export function resolveConfig(
   const warnings: ConfigWarning[] = [];
   const defaults = defaultsFor(catalog);
   const defaultFacts: Record<string, ConfigOrigin> = {};
+  const markDescendantOrigins = (
+    path: string,
+    value: unknown,
+    origin: ConfigOrigin,
+  ): void => {
+    defaultFacts[path] = origin;
+    if (Array.isArray(value)) {
+      value.forEach((child, index) => markDescendantOrigins(`${path}[${index}]`, child, origin));
+      return;
+    }
+    if (isRecord(value)) {
+      for (const [child, item] of Object.entries(value)) {
+        markDescendantOrigins(`${path}.${child}`, item, origin);
+      }
+    }
+  };
   for (const [path, field] of catalogPaths(catalog)) {
     if (!("default" in field) || field.default === undefined) continue;
     const line = manifest?.positions[path];
@@ -339,6 +355,16 @@ export function resolveConfig(
       return fail("config.value.invalid", "defaults", path);
     }
     defaultFacts[path] = origin;
+  }
+  if (catalog === PRODUCTION_CATALOG) {
+    for (const [path, value] of Object.entries(PRODUCTION_DEFAULTS)) {
+      const line = manifest?.positions[path] ?? 1;
+      markDescendantOrigins(path, value, {
+        layer: "defaults",
+        file: "core/src/config/defaults.ts",
+        line,
+      });
+    }
   }
   const defaultSource: ConfigSourceFacts = {
     layer: "defaults",

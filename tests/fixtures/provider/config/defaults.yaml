@@ -1,0 +1,2 @@
+# Shipped defaults are resolved from PRODUCTION_DEFAULTS.
+provider: {}

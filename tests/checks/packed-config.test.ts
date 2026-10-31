@@ -15,8 +15,15 @@ const PROBE = `import { PRODUCTION_SCHEMA, resolveConfig } from "@delivery-os/co
 import { parseConfigYaml } from "@delivery-os/adapters/file";
 
 const resolved = resolveConfig();
-if (!resolved.ok || JSON.stringify(resolved.value.values) !== "{}") {
-  throw new Error("empty production resolver mismatch");
+if (!resolved.ok) throw new Error("production resolver failed");
+const provider = resolved.value.values.provider;
+if (
+  typeof provider !== "object" ||
+  provider === null ||
+  !("entries" in provider) ||
+  !("zai-coding-plan" in (provider.entries ?? {}))
+) {
+  throw new Error("shipped provider defaults mismatch");
 }
 const parsed = parseConfigYaml("value: one", "system", "probe.yaml");
 if (!parsed.ok) throw new Error("packed parser failed");
