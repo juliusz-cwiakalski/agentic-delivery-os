@@ -476,6 +476,14 @@ This is a safety net, not a replacement for the adversarial `dor_check` gate. If
 
 ## PM Notes Structure (`chg-<workItemRef>-pm-notes.yaml`)
 
+### Who authors pm-notes
+
+The PM (`@pm`) is the **sole author** of `chg-<workItemRef>-pm-notes.yaml`.
+
+- **When:** at every phase transition — validate the phase outcome, then update the ledger before triggering `@committer` for that phase's commit. Reopening a phase also gets a retro note explaining why.
+- **Who must not:** delivery agents (for example `@coder`) and other delegates never author or hand-edit pm-notes. They report outcomes to the PM, who records them.
+- **Why:** the file is the delivery ledger. The artifact-first close-out keys `finished` (exit 0) versus `partial` (exit 1, "resume the SAME branch") on pm-notes completeness; the CEO's merge-not-yield verification reads PM finalization from it; and once the verify-change engine (M0-S8) lands it will consume the same ledger as input. Until `ados lint` / `ados phase` (M0-S10) land, ledger integrity is enforced by this discipline alone.
+
 The PM notes file is **mandatory** for every change. It serves as:
 - PM's long-term memory for the change
 - Status tracking across sessions
