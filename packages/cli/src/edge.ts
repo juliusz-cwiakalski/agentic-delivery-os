@@ -6,12 +6,8 @@
  * injection and the pure resolver are composed here; the command handler only
  * shapes the already-resolved snapshot.
  */
-import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
-import { PRODUCTION_CATALOG, catalogPaths, resolveConfig } from "@delivery-os/core";
-import type { ConfigFailure, Result } from "@delivery-os/core/contracts";
-import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
-import { resolveBrandIdentity } from "@delivery-os/core/branding";
-import type { BrandIdentity } from "@delivery-os/core/contracts";
+
+import { readFileSync } from "node:fs";
 import {
   acquireFileConfig,
   type FileSystemFacts,
@@ -27,11 +23,15 @@ import {
   type RepositoryIo,
   type RepositoryRootFacts,
 } from "@delivery-os/adapters/repo";
-import { readFileSync } from "node:fs";
+import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
+import { catalogPaths, PRODUCTION_CATALOG, resolveConfig } from "@delivery-os/core";
+import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
+import { resolveBrandIdentity } from "@delivery-os/core/branding";
+import type { BrandIdentity, ConfigFailure, Result } from "@delivery-os/core/contracts";
 import {
-  createConfigCommandDefinition,
   type ConfigCommandRuntime,
   type ConfigResolvedSnapshot,
+  createConfigCommandDefinition,
 } from "./commands/config.js";
 import type { CliDependencies, CommandFlags, CommandProgram } from "./index.js";
 

@@ -37,6 +37,7 @@ export const ADAPTER_SUBPATHS = [
   "host",
   "session",
   "legacy",
+  "credentials",
 ];
 
 export type Violation = { rule: string; from: string; to: string };

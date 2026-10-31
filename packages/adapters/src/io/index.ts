@@ -5,3 +5,18 @@
 
 /** Placeholder marker for the shared I/O alias module. */
 export type IoPlaceholder = { readonly __module: "io" };
+
+export {
+  ENVELOPE_FIELD_NAME,
+  type EnvelopeParseResult,
+  type EnvelopeSerialization,
+  type EnvelopeSerializationFailure,
+  isClosedV1Payload,
+  type ParseEnvelopeInput,
+  parseEnvelope,
+  readRawCarrier,
+  type SerializedCarrier,
+  type SerializeEnvelopeInput,
+  serializeEnvelope,
+  stripEnvelope,
+} from "./envelope-codec.js";

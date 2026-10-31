@@ -7,7 +7,7 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parse } from "yaml";
-import { PUBLISHABLE, evaluate } from "../../scripts/checks/publish-guard";
+import { evaluate, PUBLISHABLE } from "../../scripts/checks/publish-guard";
 
 const ROOT = process.cwd();
 const BRANDED = JSON.parse(

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { resolveConfig, type ConfigCatalog } from "../../packages/core/src/index";
+import { type ConfigCatalog, resolveConfig } from "../../packages/core/src/index";
 import { FIXTURE_CATALOG } from "../fixtures/config/catalog";
 import { fileFacts } from "../fixtures/config/facts";
 

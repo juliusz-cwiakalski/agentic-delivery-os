@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from "node:fs";
 import type {
   ConfigAcquisition,
   ConfigFailure,
@@ -5,7 +6,6 @@ import type {
   ConfigSkippedLayer,
   ConfigSourceFacts,
 } from "@delivery-os/core/contracts";
-import { existsSync, readFileSync } from "node:fs";
 import { parseConfigYaml } from "./yaml-parser.js";
 
 export type RuntimePlatform = "linux" | "darwin" | "win32";

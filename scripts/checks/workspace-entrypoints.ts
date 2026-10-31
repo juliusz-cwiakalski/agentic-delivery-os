@@ -2,7 +2,7 @@
  * TC-SCAFFOLD-007 — declared workspace entrypoints: allowed edges resolve, every
  * declaration is enforced, and no package imports an undeclared subpath.
  */
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 
@@ -18,6 +18,7 @@ const ADAPTER_SUBPATHS = [
   "./host",
   "./session",
   "./legacy",
+  "./credentials",
 ];
 
 export const EXPECTED_ENTRYPOINTS: Record<string, Record<string, string[]>> = {

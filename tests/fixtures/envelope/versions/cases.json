@@ -1,0 +1,14 @@
+{
+  "cases": [
+    {
+      "id": "older",
+      "version": "delivery.metadata.v0",
+      "expectedReason": "unknown-version"
+    },
+    {
+      "id": "newer",
+      "version": "delivery.metadata.v2",
+      "expectedReason": "unknown-version"
+    }
+  ]
+}

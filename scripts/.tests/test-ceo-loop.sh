@@ -126,9 +126,14 @@ _setup_ceo_state() {
   # .ai/local/ceo/ path (no side-effect leak; no false-positive JOIN).
   LOOP_PID_FILE="${CEO_STATE_DIR}/loop.pid"
   LOG_DIR="${_test_tmpdir}/logs"
+  # INV-DM-3: redirect DELIVERY_DIR to the per-test temp dir (same pattern as
+  # the marker tests below) so ceo_is_stuck's delivering-marker check never
+  # reads the ambient .ai/local/delivery marker — a live delivery would
+  # short-circuit stuck detection and false-fail the STUCK-expectation cases.
+  DELIVERY_DIR="${_test_tmpdir}/delivery"
   MOCK_SETSID_CALLS="${_test_tmpdir}/setsid-calls"
   MOCK_SPAWN_CALLS="${_test_tmpdir}/spawn-calls"
-  mkdir -p "${CEO_STATE_DIR}" "${LOG_DIR}"
+  mkdir -p "${CEO_STATE_DIR}" "${LOG_DIR}" "${DELIVERY_DIR}"
   CURRENT_CEO_PID=""
 }
 
@@ -938,7 +943,7 @@ printf 'ADOS_HOOK_ENV_V1\nset OC_ADOS_AGENT_CEO_MODEL=returned literal $()\n' >"
 HOOK
   chmod 700 "${hook}"
   ADOS_PRE_ITERATION_HOOK="${hook}" HOOK_MARKER="${marker}" OC_ADOS_MODEL_PROFILE=owner-profile OC_ADOS_AGENT_CEO_MODEL=owner-model bash -c '
-    source "$1"; CEO_PID_FILE="$2/pid"; LOG_DIR="$2/log"; mkdir -p "$LOG_DIR"; ceo_pid_if_live(){ return 1; }; last_session_id(){ :; }; capture_session_id_by_title(){ printf ses; }
+    source "$1"; CEO_STATE_DIR="$2/state"; CEO_PID_FILE="$2/pid"; LAST_SESSION_FILE="$2/last-session"; LOG_DIR="$2/log"; mkdir -p "$LOG_DIR"; ceo_pid_if_live(){ return 1; }; last_session_id(){ :; }; capture_session_id_by_title(){ printf ses; }
     _setsid(){ if [[ "$1" == opencode ]]; then printf "spawn:%s\n" "$OC_ADOS_AGENT_CEO_MODEL" >>"$HOOK_MARKER"; else "$@"; fi; }
     spawn_or_resume_ceo "$LOG_DIR/log"; spawn_or_resume_ceo "$LOG_DIR/log"
   ' _ "${SCRIPT_DIR}/ceo-loop.sh" "${work}" || return 1
@@ -962,7 +967,7 @@ printf 'ADOS_HOOK_ENV_V1\n' >"$ADOS_HOOK_ENV_OUTPUT"
 HOOK
   chmod 700 "${hook}"
   ADOS_PRE_ITERATION_HOOK="${hook}" HOOK_MARKER="${marker}" CEO_LOOP_KILL_GRACE_SECONDS=1 CEO_LOOP_MAX_RESTARTS=2 CEO_LOOP_MAX_ITERATIONS=2 bash -c '
-    source "$1"; CEO_STATE_DIR="$2/state"; CEO_PID_FILE="$2/state/pid"; LOOP_PID_FILE="$2/state/loop"; STOP_FILE="$2/state/stop"; LOG_DIR="$2/log"; POLL_SECONDS=0; LOOP_SLEEP_SECONDS=0; STUCK_SECONDS=0
+    source "$1"; CEO_STATE_DIR="$2/state"; CEO_PID_FILE="$2/state/pid"; LAST_SESSION_FILE="$2/state/last-session"; LOOP_PID_FILE="$2/state/loop"; STOP_FILE="$2/state/stop"; LOG_DIR="$2/log"; POLL_SECONDS=0; LOOP_SLEEP_SECONDS=0; STUCK_SECONDS=0
     source_opencode_env(){ :; }; _jq(){ if [[ "$1" == -n ]]; then printf "{}"; else printf ""; fi; }; ceo_pid_if_live(){ return 1; }; last_session_id(){ :; }; capture_session_id_by_title(){ printf ses; }; ceo_is_stuck(){ return 0; }
     _setsid(){ if [[ "$1" == opencode ]]; then printf "spawn\n" >>"$HOOK_MARKER"; sleep 30; else command setsid "$@"; fi; }
     run_loop
@@ -973,7 +978,7 @@ HOOK
 test_hook_ceo_absent_path_spawns_without_hook_work() {
   local missing="${_test_tmpdir}/missing-hook" marker="${_test_tmpdir}/marker"
   ADOS_PRE_ITERATION_HOOK="${missing}" HOOK_MARKER="${marker}" bash -c '
-    source "$1"; CEO_PID_FILE="$2/pid"; LOG_DIR="$2/log"; mkdir -p "$LOG_DIR"; ceo_pid_if_live(){ return 1; }; last_session_id(){ :; }; capture_session_id_by_title(){ printf ses; }; _setsid(){ [[ "$1" == opencode ]] && printf spawn >"$HOOK_MARKER" || return 99; }; spawn_or_resume_ceo "$LOG_DIR/log"; [[ -z "$CURRENT_HOOK_TMPDIR$CURRENT_HOOK_ENV_OUTPUT$CURRENT_HOOK_PID" ]]
+    source "$1"; CEO_STATE_DIR="$2/state"; CEO_PID_FILE="$2/pid"; LAST_SESSION_FILE="$2/last-session"; LOG_DIR="$2/log"; mkdir -p "$LOG_DIR"; ceo_pid_if_live(){ return 1; }; last_session_id(){ :; }; capture_session_id_by_title(){ printf ses; }; _setsid(){ [[ "$1" == opencode ]] && printf spawn >"$HOOK_MARKER" || return 99; }; spawn_or_resume_ceo "$LOG_DIR/log"; [[ -z "$CURRENT_HOOK_TMPDIR$CURRENT_HOOK_ENV_OUTPUT$CURRENT_HOOK_PID" ]]
   ' _ "${SCRIPT_DIR}/ceo-loop.sh" "${_test_tmpdir}" || return 1
   assert_eq "spawn" "$(<"${marker}")"
 }

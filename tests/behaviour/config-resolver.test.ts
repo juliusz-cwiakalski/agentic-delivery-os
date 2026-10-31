@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { resolveConfig, type ConfigCatalog } from "../../packages/core/src/index";
+import { type ConfigCatalog, resolveConfig } from "../../packages/core/src/index";
 import { fileFacts } from "../fixtures/config/facts";
 
 const winners = {

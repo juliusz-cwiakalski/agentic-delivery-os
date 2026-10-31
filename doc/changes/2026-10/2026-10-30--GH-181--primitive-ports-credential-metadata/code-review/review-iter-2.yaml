@@ -1,0 +1,103 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-181
+branch: feat/GH-181/primitive-ports-credential-metadata
+status: PASS
+summary: >-
+  Independent iteration-2 re-review after remediation of iteration-1 FAIL
+  (F-1 major, F-2/F-3 minor, F-4/F-5 informational). All three remediations
+  verified genuinely closed by re-executing the original reproductions:
+  computed-key/template-literal/computed-global ambient reads now fail closed
+  with the new rule detail (R-1, da1b00a; fixtures present, suite 15 PASS,
+  live scan 51 files clean, literal-key/property/aliased detection unchanged);
+  marker-dense hostile carriers (232 KB comment, 216 KB compact) scan in
+  bounded time and degrade as missing while a 1639-byte near-bound envelope
+  still parses (R-2, e45207e); nested-lookalike strip preserves trailing
+  content with exact identities at all placements (R-3, a12bbc5). No new
+  blockers/majors/minors in the 7121ee3..HEAD delta. Evidence records
+  accurate (306 targeted, pnpm check 610/610, git diff --check clean);
+  uncommitted doc-reconciliation edits match implemented behavior
+  clause-by-clause; standing checks green (protected paths, contracts purity,
+  no added headers). Two informational findings: a pre-existing require()
+  reach-through residual in the secret-read invariant (unreachable through
+  the typecheck gate; hardening opportunity only) and the host-agnostic
+  literal-key false-positive class (fail-closed direction).
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-6
+    severity: info
+    confidence: high
+    category: security
+    location: scripts/checks/secret-read-boundary.ts:126
+    message: >-
+      require("node:process").env (and import.meta.require) are silently
+      accepted by the secret-read invariant: the runtime-import rule covers
+      import declarations only. Pre-existing within this change's new
+      invariant (identical behavior verified at pre-fix 7121ee3) and outside
+      R-1's enumerated element-access scope — not a remediation regression.
+      The form is unreachable through the gate battery: tsconfig.base.json
+      pins types:["bun"], @types/bun declares no require, and no @types/node
+      is installed, so typecheck (binding in CI) rejects it before the
+      invariant is consulted.
+    suggestion: >-
+      Optional future hardening: flag require/import.meta.require call
+      expressions naming process or bun modules in the invariant, or document
+      them as an unsupported form with a negative control per task 4.1's
+      discipline. No action required for this change.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-7
+    severity: info
+    confidence: high
+    category: correctness
+    location: scripts/checks/secret-read-boundary.ts:148
+    message: >-
+      The literal-key element rule is host-agnostic: record["process"] or
+      record["env"] on an arbitrary non-ambient object is flagged as an
+      ambient element access (fail-closed false positive). Pre-existing
+      behavior, verified identical before and after the remediation;
+      conservative by design and harmless on the current tree (51 files
+      clean).
+    suggestion: >-
+      No action required; noted so future consumers of the rule understand
+      the false-positive class before widening scope.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-8
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-10/2026-10-30--GH-181--primitive-ports-credential-metadata/chg-GH-181-plan.md:409
+    message: >-
+      Wall-clock labels in the Phase 6 execution-log row continue to drift
+      from git history (date-only "2026-10-30"; remediation commits stamped
+      21:53-21:59Z). Same class as iteration-1 F-5, which was accepted with
+      no action; substantive remediation evidence in the row is accurate.
+    suggestion: Use git commit times when recording execution-log UTC stamps; no action required.
+    suppressed: true
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+iteration1_resolution:
+  F-1: closed by da1b00a (verified: all three computed-key forms flagged with new rule detail; fixtures computed-key-env/template-literal-key-env/computed-global-name present; suite 15 PASS; live scan 51 files clean)
+  F-2: closed by e45207e (verified: 232KB/216KB hostile carriers bounded <1000ms and degrade missing; near-bound 1639-byte envelope parses; 1000ms regression bound non-vacuous; scan bound documented in feature-adapter-ports.md)
+  F-3: closed by a12bbc5 (verified: TAIL preserved on nested-lookalike strip, was ""; strip identities at beginning/middle/end exact; malformed degradation with body intact)
+  F-4: closed by documentation in feature-adapter-ports.md (verified present; no code change, per R-3 record)
+  F-5: accepted, no action (wall-clock drift class continues as suppressed F-8)
+reviewed_at: 2026-10-30T22:13:34Z
+next_step: PROCEED

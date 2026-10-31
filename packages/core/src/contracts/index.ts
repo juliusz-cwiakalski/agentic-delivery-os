@@ -67,6 +67,95 @@ export type TelemetryEventSchemaName = "delivery.event.v1";
  */
 export type TelemetryMetricSchemaName = "delivery.metric.v1";
 
+export {
+  ADAPTER_OPERATIONS,
+  type AdapterCapabilityDeclaration,
+  type AdapterOperation,
+  CARRIER_KINDS,
+  type CapabilityGap,
+  type CapabilityGapReason,
+  type CarrierKind,
+  type CarrierSelectionInput,
+  type DeclaredCarrierWrite,
+} from "./adapter-capabilities.js";
+
+export type {
+  CredentialFailureCode,
+  CredentialPort,
+  CredentialReference,
+  CredentialResolution,
+  CredentialResolutionFailure,
+  CredentialSourceKey,
+  SecretMaterial,
+} from "./credentials.js";
+
+export {
+  type CommentReadView,
+  type CommentWriteRequest,
+  DEGRADATION_REASONS,
+  type DegradationReason,
+  ENVELOPE_KINDS,
+  ENVELOPE_MAX_BYTES,
+  ENVELOPE_SCHEMA_ID,
+  type EnvelopeCarrierKind,
+  type EnvelopeCommentProvenance,
+  type EnvelopeDeliveryLinkage,
+  type EnvelopeKind,
+  type EnvelopeV1Payload,
+  type HeuristicProvenance,
+  type MetadataDegradationEvidence,
+  type MetadataEnvelopeV1,
+} from "./envelope.js";
+// The error table is the single machine-readable source of failure identity.
+export {
+  DOMAIN_KINDS,
+  ERROR_TABLE,
+  type ErrorTableDomainKind,
+  type ErrorTableEntry,
+  FALLBACK_INTERNAL_CODE,
+  FALLBACK_INVOCATION_CODE,
+} from "./error-table.js";
+export type {
+  AdapterContract,
+  DeliveryRequest,
+  DeliveryRequestReviewState,
+  DeliveryStateAlias,
+  DeliveryThread,
+  ExternalSystemAuthMethod,
+  ExternalSystemInstance,
+  ExternalSystemKind,
+  IdempotencyKey,
+  PipelineJob,
+  PipelineJobState,
+  PipelineRun,
+  ProviderQualifiedIdentity,
+  RetryBackoff,
+  RetryPolicy,
+  TraceEvidenceRef,
+  WorkflowMap,
+  WorkflowStateMapping,
+  WorkflowTransitionMechanism,
+  WorkItem,
+  WorkItemComment,
+  WorkItemRelation,
+  WorkItemRelationKind,
+  WorkItemStatus,
+} from "./ports.js";
+// The command-surface envelope lives beside the generic `Result<T, E>` and does
+// not replace it (DEC-1). See `./result` for the full contract documentation.
+export {
+  type AppErrorCode,
+  type CommandResult,
+  type CommandResultError,
+  type CommandResultFailure,
+  type CommandResultSuccess,
+  type ErrorCategory,
+  type ErrorConsequence,
+  type ProjectionClass,
+  RESULT_SCHEMA_VERSION,
+  type RunTiming,
+  type VoidSuccessPayload,
+} from "./result.js";
 // The state layer's driver-neutral store vocabulary (GH-174 D1, DM-1..DM-5).
 // Runtime-neutral: types and the single `as const` schema-version home only.
 export {
@@ -75,8 +164,8 @@ export {
   STATE_SCHEMA_VERSION,
   type StateAppendOutcome,
   type StateAppendRequest,
-  type StateDocumentReport,
   type StateDocumentReplaceRequest,
+  type StateDocumentReport,
   type StateDriverKind,
   type StateFailure,
   type StateFailureCode,
@@ -102,28 +191,3 @@ export {
   type StateTornTailRepairReport,
   type StateVerificationClass,
 } from "./state.js";
-
-// The error table is the single machine-readable source of failure identity.
-export {
-  DOMAIN_KINDS,
-  ERROR_TABLE,
-  type ErrorTableDomainKind,
-  type ErrorTableEntry,
-  FALLBACK_INTERNAL_CODE,
-  FALLBACK_INVOCATION_CODE,
-} from "./error-table.js";
-// The command-surface envelope lives beside the generic `Result<T, E>` and does
-// not replace it (DEC-1). See `./result` for the full contract documentation.
-export {
-  type AppErrorCode,
-  type CommandResult,
-  type CommandResultError,
-  type CommandResultFailure,
-  type CommandResultSuccess,
-  type ErrorCategory,
-  type ErrorConsequence,
-  type ProjectionClass,
-  RESULT_SCHEMA_VERSION,
-  type RunTiming,
-  type VoidSuccessPayload,
-} from "./result.js";

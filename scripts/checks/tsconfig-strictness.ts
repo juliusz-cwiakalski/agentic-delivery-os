@@ -3,7 +3,7 @@
  * configs extend the base without weakening it, and the solution references all
  * six packages.
  */
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 

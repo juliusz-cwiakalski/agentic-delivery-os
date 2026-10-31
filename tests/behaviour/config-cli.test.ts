@@ -4,13 +4,13 @@
  */
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { assertEnvelopeContract } from "@delivery-os/testkit";
+import { createLegacyCompat } from "@delivery-os/adapters/legacy";
 import type { ConfigCatalog } from "@delivery-os/core";
-import type { BrandIdentity, Result } from "@delivery-os/core/contracts";
 import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
+import type { BrandIdentity, Result } from "@delivery-os/core/contracts";
+import { assertEnvelopeContract } from "@delivery-os/testkit";
 import { createConfigProgram } from "../../packages/cli/src/edge";
 import { type CliDependencies, runCli } from "../../packages/cli/src/index";
-import { createLegacyCompat } from "@delivery-os/adapters/legacy";
 import { FIXTURE_CATALOG } from "../fixtures/config/catalog";
 
 const ROOT = process.cwd();

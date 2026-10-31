@@ -1,0 +1,138 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-181
+branch: feat/GH-181/primitive-ports-credential-metadata
+status: FAIL
+summary: >-
+  Independent iteration-1 review of the GH-181 adapter-port substrate. All 17 ACs
+  and 19 TCs trace to passing evidence that this review re-ran and reproduced
+  (36 behaviour + 121 structure + 153 checks + 115 boundaries tests, ten
+  invariants, typecheck incl. tests/types, forbidden-literals, doc-distribution,
+  git diff --check). Contracts purity, branding neutrality, error-table lockstep,
+  bindingness, and all four DoR carry-forwards verified honored. FAIL on one
+  major: the new secret-read boundary invariant silently accepts computed-key
+  ambient environment reads (process[key], template-literal keys,
+  globalThis[computed].env — empirically proven), violating spec F-4 / plan task
+  4.1 "never silently accepted". Two minor codec findings (quadratic marker
+  scanning on adversarial input; stale-index strip corruption destroying human
+  content on nested marker lookalikes) and two informational notes. Remediation
+  tasks R-1..R-3 appended to plan Phase 6.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 2
+  low: 0
+  info: 2
+spec_compliance: FAIL
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: security
+    location: scripts/checks/secret-read-boundary.ts:138
+    message: >-
+      The secret-read boundary invariant silently accepts computed-key ambient
+      environment reads: `process[key]` (non-literal key), `process[`env`]`
+      (template literal), and `globalThis[computed].env` all produce zero
+      violations (empirically proven). Rule 3 only flags string-literal element
+      access and rule 4 skips ambient-global identifiers used as element-access
+      expressions, assuming rule 3 covered them. Spec F-4 / plan task 4.1 require
+      every form to be reported or rejected by a documented unsupported-form
+      negative control — never silently accepted; the change's central
+      "secret centralization is mechanical" claim (ticket AC-2) has a hole.
+    suggestion: >-
+      Fail closed: flag ElementAccessExpression over an ambient-global
+      identifier whenever the argument is not a string literal ("ambient element
+      access with non-literal key"), or document these as unsupported forms with
+      negative-control fixtures. Add computed-key and template-literal fixtures
+      to tests/fixtures/secret-boundary/cases.ts; keep the clean control green.
+      Remediation task R-1 in plan Phase 6.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: performance
+    location: packages/adapters/src/io/envelope-codec.ts:33
+    message: >-
+      The marker regexes (COMMENT_MARKER, COMPACT_MARKER) exhibit quadratic
+      runtime on marker-dense adversarial input: a single parseEnvelope call on
+      ~193KB of repeated `<!-- delivery.metadata.v1 {` prefixes took 1747ms
+      (measured); ~1MB extrapolates to tens of seconds on the event loop.
+      Provider comment text becomes external user-controlled content when M0-S13
+      adapters land, making this an algorithmic DoS vector on the future hot
+      path. No production consumer exists yet (NG-2).
+    suggestion: >-
+      Cap the scanned input length (documented maximum; over-cap input degrades
+      as `missing`) or adopt an equivalent non-quadratic scan; add a
+      pathological-input regression test with a time bound. Remediation task R-2
+      in plan Phase 6.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/io/envelope-codec.ts:149
+    message: >-
+      removeMarkers strips overlapping spans sequentially with stale indices:
+      when an envelope payload string contains a compact-marker lookalike and
+      trailing human content follows the comment marker, stripEnvelope returns
+      ""/truncated output (empirically proven) — silently destroying
+      human-readable content with no degradation evidence, violating AC-F5-2's
+      identity guarantee and DEC-5's visible-degradation philosophy.
+    suggestion: >-
+      Rebuild the string from non-overlapping spans in a single pass (or one
+      combined regex) so indices cannot go stale; add a regression fixture with
+      a nested lookalike plus trailing content. Remediation task R-3 in plan
+      Phase 6.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/io/envelope-codec.ts:180
+    message: >-
+      Marker-lookalike text inside plain human content is stripped as if it were
+      an envelope (`See docs [delivery.metadata.v1:{...}] for details` loses the
+      bracketed text). Inherent to text-marker carriers; AC-F5-2 does not apply
+      (no envelope present).
+    suggestion: >-
+      Document the limitation for M0-S13 adapter authors in
+      doc/spec/features/feature-adapter-ports.md; no code change required now.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-10/2026-10-30--GH-181--primitive-ports-credential-metadata/chg-GH-181-plan.md:397
+    message: >-
+      Change-artifact wall-clock labels drift from git history (e.g. execution
+      log records P1 completed 21:51Z while commit 2beeaf2 is stamped
+      20:51:31Z; P7 "23:45Z" vs ffd2a34 at 21:29:03Z; pm-notes phase windows
+      skew similarly). Substantive deviations (P5 skip, pending PR, attw
+      timeout) are all disclosed honestly; timestamps only are inaccurate.
+    suggestion: Use git commit times when recording execution-log UTC stamps; no action required for this change.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-10-30T21:48:32Z
+next_step: EXECUTE_REMEDIATION_PHASE

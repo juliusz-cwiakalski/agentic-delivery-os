@@ -8,12 +8,12 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   acquireFileConfig,
-  neutralEnvironmentFacts,
   type FileAcquisitionInput,
   type FileSystemFacts,
+  neutralEnvironmentFacts,
 } from "@delivery-os/adapters/file";
-import { findGitRoot, nodeRepositoryIo } from "@delivery-os/adapters/repo";
 import { createLegacyCompat } from "@delivery-os/adapters/legacy";
+import { findGitRoot, nodeRepositoryIo } from "@delivery-os/adapters/repo";
 
 const ROOT = process.cwd();
 const HOME = "/home/synthetic";

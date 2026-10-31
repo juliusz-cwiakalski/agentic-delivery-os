@@ -202,7 +202,8 @@ module.exports = {
     // Allowlist (ADR verbatim): the `core ./state` driver code, the adapter I/O
     // subpaths, the CLI build, and the OpenCode host integration. Nothing else.
     // The adapter I/O subpaths are ADR DEC-6's I/O modules
-    // (repo|file|host|session|legacy); provider/registry subpaths are not I/O.
+    // (repo|file|host|session|legacy) plus the credential implementation;
+    // provider/registry subpaths are not I/O.
     {
       name: "runtime-apis-confinement",
       severity: "error",
@@ -212,7 +213,7 @@ module.exports = {
         path: "^packages/",
         pathNot: [
           "^packages/core/src/state/driver/",
-          "^packages/adapters/src/(repo|file|host|session|legacy)/",
+          "^packages/adapters/src/(repo|file|host|session|legacy|credentials)/",
           "^packages/cli/",
           "^packages/opencode/",
         ],

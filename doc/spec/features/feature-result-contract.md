@@ -2,12 +2,12 @@
 id: SPEC-RESULT-CONTRACT
 status: Current
 created: 2026-10-30
-last_updated: 2026-10-30
+last_updated: 2026-10-31
 owners: ["engineering"]
 service: delivery-os
 summary: "The command-surface result contract: the CommandResult envelope in core ./contracts, the machine-readable error table as the single source of failure identity, the domain-kind to app-error-code to projection classification chain, the standalone CLI {0, 1, 2} exit projection, the deterministic in-process runCli surface, the two-entry fallback containment, the serialization redaction chokepoint, the testkit conformance validator, and the binding docs/code sync and exit-literal invariants."
 links:
-  related_changes: ["GH-172", "GH-173", "GH-174"]
+  related_changes: ["GH-172", "GH-173", "GH-174", "GH-181"]
   related_decisions: ["ADR-0003"]
 ---
 
@@ -117,6 +117,7 @@ A success envelope has exactly the keys `schemaVersion`, `runId`, `exitCode`, `t
 | config.path.forbidden | config | user | false | not_landed | Move the machine path to a system or user-global source and retry. | user-validation | A machine path was supplied from a forbidden source. |
 | config.reset.invalid | config | user | false | not_landed | Correct the reset paths and retry. | user-validation | A configuration reset is invalid. |
 | config.warning.strict | config | user | false | not_landed | Resolve the named warning and retry. | user-validation | Strict configuration validation rejected a warning. |
+| config.credential.missing | config | user | false | not_landed | Supply the credential through its declared environment source and retry. | user-validation | A required credential was not resolvable from its source. |
 | state.store.torn | state | platform | false | not_landed | Inspect or restore the named state store; never treat it as empty. | platform-provider | The state store is torn. |
 | state.schema.mismatch | state | platform | false | not_landed | Use a compatible tool version or migrate the store explicitly, then retry. | platform-provider | The state store schema version is not supported. |
 | state.keys.missing | state | platform | false | not_landed | Verify the writing operation completed and inspect the named store; never substitute defaults. | platform-provider | A state read key-set assertion failed. |
@@ -238,6 +239,7 @@ The result surface itself adds no runtime dependency or new CI job. Configuratio
 - **Depends on** the monorepo scaffold ([feature-monorepo-scaffold-toolchain.md](feature-monorepo-scaffold-toolchain.md)) for package tiers, boundary enforcement, the ambient guard, and the aggregate check.
 - **Depends on** the branding seam ([feature-branding-seam.md](feature-branding-seam.md)) for `BrandIdentity` parameter discipline and the forbidden-literal scan.
 - **Consumed by** the configuration layer ([feature-config-layer.md](feature-config-layer.md)) for envelope, error identity and the sole redaction path.
+- **Consumed by** the adapter port substrate ([feature-adapter-ports.md](feature-adapter-ports.md)) for the `config.credential.missing` credential-failure identity and the redaction boundary.
 - **Depends on** [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md) for runtime-neutral contract placement, package boundaries, and gate stability.
 - **Risk — contract cascade:** Every later command and surface consumes the envelope. Mitigation: the field set is fixed at v1, `schemaVersion` provides a breaking-change channel, and evolution is additive within a version.
 - **Risk — documentation drift:** The documented table can diverge from the source. Mitigation: the sync check fails closed in both directions and includes the fallback rows.

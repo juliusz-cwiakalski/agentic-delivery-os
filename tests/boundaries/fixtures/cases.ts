@@ -506,6 +506,14 @@ export const RULE_CASES: RuleCase[] = [
     "packages/adapters/src/registry/probe.ts",
     'import fs from "node:fs";\nexport const value = fs;\n',
   ),
+  dep(
+    "runtime-node-fs-adapter-io",
+    "TC-SCAFFOLD-014",
+    "runtime-apis-confinement",
+    ["adapters"],
+    "packages/adapters/src/io/probe.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
+  ),
 
   dep(
     "runtime-node-fs-state-facade",
@@ -527,6 +535,13 @@ export const RULE_CASES: RuleCase[] = [
     "TC-SCAFFOLD-014",
     ["adapters"],
     "packages/adapters/src/file/probe.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
+  ),
+  clean(
+    "runtime-control-adapter-credentials",
+    "TC-SCAFFOLD-014",
+    ["adapters"],
+    "packages/adapters/src/credentials/probe.ts",
     'import fs from "node:fs";\nexport const value = fs;\n',
   ),
 

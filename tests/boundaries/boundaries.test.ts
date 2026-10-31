@@ -6,8 +6,8 @@
  * and must stay clean.
  */
 import { describe, expect, test } from "bun:test";
-import { createRequire } from "node:module";
 import { mkdtempSync, rmSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AMBIENT_SCOPE, scan } from "../../scripts/checks/ambient-globals";
@@ -97,14 +97,15 @@ describe("ADR-verbatim scope and allowlist assertions", () => {
       expect(comment).toContain(location);
     }
     const pathNot = rule?.from?.pathNot ?? [];
-    // The adapter exemption is ADR-verbatim I/O subpaths only (DEC-6):
-    // provider (gitlab/jira/github/azure/ci) and registry subpaths are not I/O.
-    // GH-174 D8 tightens the state allowance from the whole state tree to the
-    // driver edge (no rule is weakened; the state facade and verifier stay
-    // runtime-neutral and the tightening ships with failing fixtures).
+    // The adapter exemption is ADR-verbatim I/O subpaths only (DEC-6) plus the
+    // credentials implementation (GH-181): provider (gitlab/jira/github/azure/ci)
+    // and registry subpaths are not I/O. The state allowance is GH-174 D8's
+    // tightened driver edge, not the whole state tree: the state facade and
+    // verifier stay runtime-neutral (no rule is weakened; the tightening ships
+    // with failing fixtures).
     expect([...pathNot]).toEqual([
       "^packages/core/src/state/driver/",
-      "^packages/adapters/src/(repo|file|host|session|legacy)/",
+      "^packages/adapters/src/(repo|file|host|session|legacy|credentials)/",
       "^packages/cli/",
       "^packages/opencode/",
     ]);

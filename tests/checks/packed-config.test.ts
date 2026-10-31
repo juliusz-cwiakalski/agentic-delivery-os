@@ -5,9 +5,9 @@
  * `--ignore-workspace`, so resolution cannot rely on the workspace dev hoist.
  */
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { PRODUCTION_SCHEMA, resolveConfig } from "@delivery-os/core";
 
 const ROOT = process.cwd();

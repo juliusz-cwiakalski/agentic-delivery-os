@@ -9,8 +9,8 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import ts from "typescript";
 import { serializeProductionSchema } from "@delivery-os/core";
+import ts from "typescript";
 import { PUBLISHABLE } from "./exports-discipline";
 
 const PROFILE = "esm-only";

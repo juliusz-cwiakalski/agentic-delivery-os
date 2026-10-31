@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PRODUCTION_CATALOG, generateConfigSchema, resolveConfig } from "@delivery-os/core";
+import { generateConfigSchema, PRODUCTION_CATALOG, resolveConfig } from "@delivery-os/core";
 
 describe("TC-CONFIG-023 pure root API and unchanged composition declaration", () => {
   test("root exports the one production resolver and canonical schema without a public config subpath", () => {

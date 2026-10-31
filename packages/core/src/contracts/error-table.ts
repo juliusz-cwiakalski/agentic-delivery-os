@@ -169,6 +169,16 @@ export const ERROR_TABLE = [
     summary: "Strict configuration validation rejected a warning.",
   },
   {
+    code: "config.credential.missing",
+    domainKind: "config",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint: "Supply the credential through its declared environment source and retry.",
+    projectionClass: "user-validation",
+    summary: "A required credential was not resolvable from its source.",
+  },
+  {
     code: "state.store.torn",
     domainKind: "state",
     category: "platform",

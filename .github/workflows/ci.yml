@@ -241,6 +241,7 @@ jobs:
           bun run scripts/checks/ci-supply-chain.ts
           bun run scripts/checks/error-table-sync.ts
           bun run scripts/checks/exit-code-literals.ts
+          bun run scripts/checks/secret-read-boundary.ts
           bun run scripts/checks/boundary-ci-parity.ts
 
   ts-typecheck:

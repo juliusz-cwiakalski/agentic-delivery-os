@@ -6,9 +6,11 @@
  * row) fails.
  */
 import { expect, test } from "bun:test";
-import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { join } from "node:path";
+import { validateFixtureCoverage } from "../../scripts/checks/secret-read-boundary";
+import { SECRET_READ_CASES } from "../fixtures/secret-boundary/cases";
 import {
   AMBIENT_CASES,
   AMBIENT_VIOLATION_CASES,
@@ -162,4 +164,15 @@ test("a rule at warn severity is treated as unenforced", () => {
   } finally {
     if (original) original.severity = "error";
   }
+});
+
+test("the secret-read rule registers a firing fixture and a clean control", () => {
+  expect(validateFixtureCoverage(SECRET_READ_CASES)).toEqual([]);
+});
+
+test("deleting the only secret-read negative fixture fails the meta-check", () => {
+  const failures = validateFixtureCoverage(
+    SECRET_READ_CASES.filter((entry) => entry.expect === "clean"),
+  );
+  expect(failures.some((message) => message.includes("negative fixture"))).toBe(true);
 });

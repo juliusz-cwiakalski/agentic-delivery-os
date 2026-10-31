@@ -36,6 +36,13 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "FALLBACK_INVOCATION_CODE",
   ],
   "core/src/contracts/result.ts": ["RESULT_SCHEMA_VERSION"],
+  "core/src/contracts/adapter-capabilities.ts": ["ADAPTER_OPERATIONS", "CARRIER_KINDS"],
+  "core/src/contracts/envelope.ts": [
+    "DEGRADATION_REASONS",
+    "ENVELOPE_KINDS",
+    "ENVELOPE_MAX_BYTES",
+    "ENVELOPE_SCHEMA_ID",
+  ],
   "core/src/contracts/state.ts": ["STATE_DRIVER_KINDS", "STATE_LEVELS", "STATE_SCHEMA_VERSION"],
   "core/src/state/index.ts": ["createStateStore"],
   "core/src/state/ledger.ts": [
@@ -81,6 +88,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "invalidKey",
     "serializeProductionSchema",
   ],
+  "adapters/src/credentials/index.ts": [
+    "createEnvironmentCredentialPort",
+    "createProcessCredentialPort",
+    "resolveCredentialSourceKey",
+  ],
   "adapters/src/file/config-source.ts": [
     "acquireFileConfig",
     "neutralEnvironmentFacts",
@@ -88,6 +100,14 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "runtimePlatform",
   ],
   "adapters/src/file/yaml-parser.ts": ["parseConfigYaml", "parserHostSwitchBlocked"],
+  "adapters/src/io/envelope-codec.ts": [
+    "ENVELOPE_FIELD_NAME",
+    "isClosedV1Payload",
+    "parseEnvelope",
+    "readRawCarrier",
+    "serializeEnvelope",
+    "stripEnvelope",
+  ],
   "adapters/src/repo/index.ts": ["findGitRoot", "resolveRepositoryRoot", "nodeRepositoryIo"],
   "adapters/src/legacy/index.ts": [
     "createLegacyCompat",

@@ -107,8 +107,8 @@ describe("TC-CLASSIFY-001 declared domain kinds are total", () => {
 
 describe("TC-CONFIG-020 exact discriminants and safe containment", () => {
   const codes = entries.filter((entry) => entry.domainKind === "config").map((entry) => entry.code);
-  test("all nine codes resolve individually with identical table fields", () => {
-    expect(codes).toHaveLength(9);
+  test("all ten codes resolve individually with identical table fields", () => {
+    expect(codes).toHaveLength(10);
     for (const code of codes) {
       const row = classifyDomainKind("config", code);
       expect(row).toMatchObject({
@@ -123,6 +123,21 @@ describe("TC-CONFIG-020 exact discriminants and safe containment", () => {
     }
     expect(() => classifyDomainKind("config")).toThrow();
     expect(() => classifyDomainKind("config", "input.value.rejected")).toThrow();
+  });
+
+  test("the credential-missing row carries the exact user/non-retryable identity", () => {
+    const row = classifyDomainKind("config", "config.credential.missing");
+    expect(row).toMatchObject({
+      code: "config.credential.missing",
+      domainKind: "config",
+      category: "user",
+      retryable: false,
+      consequence: "not_landed",
+      projectionClass: "user-validation",
+      summary: "A required credential was not resolvable from its source.",
+    });
+    expect(row).not.toMatchObject({ code: FALLBACK_INTERNAL_CODE });
+    expect(classifyThrown({ kind: "config", code: "config.credential.missing" })).toEqual(row);
   });
 
   test("malformed, missing, unknown and wrong-kind values contain", () => {

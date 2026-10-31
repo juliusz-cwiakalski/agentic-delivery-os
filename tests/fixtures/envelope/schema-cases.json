@@ -1,0 +1,84 @@
+{
+  "valid": {
+    "comment": {
+      "producingAgent": "claude-code",
+      "operatorAuthority": "operator:juliusz"
+    },
+    "delivery": {
+      "workItemRef": "GH-181",
+      "runId": "run-1"
+    }
+  },
+  "invalid": [
+    {
+      "id": "unknown-field",
+      "payload": {
+        "comment": {
+          "producingAgent": "claude-code",
+          "operatorAuthority": "operator:juliusz"
+        },
+        "delivery": {
+          "workItemRef": "GH-181",
+          "runId": "run-1"
+        },
+        "secret": "nope"
+      }
+    },
+    {
+      "id": "missing-required",
+      "payload": {
+        "comment": {
+          "producingAgent": "a"
+        },
+        "delivery": {
+          "workItemRef": "GH-1"
+        }
+      }
+    },
+    {
+      "id": "nested-unknown",
+      "payload": {
+        "comment": {
+          "producingAgent": "a",
+          "operatorAuthority": "o",
+          "token": "x"
+        },
+        "delivery": {
+          "workItemRef": "GH-1",
+          "runId": "r"
+        }
+      }
+    },
+    {
+      "id": "credential-field",
+      "payload": {
+        "comment": {
+          "producingAgent": "a",
+          "operatorAuthority": "o",
+          "credentialRef": "x"
+        },
+        "delivery": {
+          "workItemRef": "GH-1",
+          "runId": "r"
+        }
+      }
+    },
+    {
+      "id": "empty-value",
+      "payload": {
+        "comment": {
+          "producingAgent": "",
+          "operatorAuthority": "o"
+        },
+        "delivery": {
+          "workItemRef": "GH-1",
+          "runId": "r"
+        }
+      }
+    },
+    {
+      "id": "not-an-object",
+      "payload": "delivery.metadata.v1"
+    }
+  ]
+}

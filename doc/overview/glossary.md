@@ -2,14 +2,14 @@
 id: GLOSSARY
 status: Current
 created: 2026-10-29
-last_updated: 2026-10-30
+last_updated: 2026-10-31
 owners: ["engineering"]
 area: domain
 document_classification: current-truth
 links:
   related_decisions: ["ADR-0003"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174"]
-summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, and state-layer terms used across the repository."
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-181"]
+summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer, and adapter-port terms used across the repository."
 ---
 
 # Glossary
@@ -20,11 +20,15 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 
 | Term / acronym | Definition | Category | Related UL term |
 |---|---|---|---|
+| Adapter capability declaration | Typed data on the adapter contract naming the operations and metadata carrier kinds an adapter supports, plus explicit gap records for what it does not. An unlisted operation is unsupported; parity is never implied. | Adapter contracts | [feature-adapter-ports.md](../spec/features/feature-adapter-ports.md) |
 | Aggregate check | The single quality entry point `check` that chains `lint`, `format:check`, `typecheck`, `test`, and `check:boundaries` in that order. It exists at the workspace root and in every package; at the root it also appends the packed-exports parity check. No alternate aggregate or bypass flag exists. | Quality | — |
 | App error code | Stable symbolic hierarchical failure identity `domain.reason.detail` (for example `provider.quota.exceeded`) that resolves to exactly one error-table entry. Prose is never identity. | Result contract | — |
 | Brand-free glob | An ignore pattern that matches the project-local configuration path without naming any product, so it keeps matching after a rename. | Repository hygiene | — |
 | Branding seam | The single place where the working name enters and all name-derived values leave: the pure resolver in `core ./branding` plus its resolver-input contract. Every other component receives brand values as parameters. | Branding | — |
+| Carrier | The adapter-chosen, capability-flagged form the metadata envelope takes inside a provider artifact: an invisible comment block, a provider custom field, or a compact inline marker. | Adapter contracts | [feature-adapter-ports.md](../spec/features/feature-adapter-ports.md) |
 | Changesets fixed group | The changesets configuration that versions `core`, `adapters`, `cli`, `mcp`, and `opencode` on one shared version line. `testkit` is excluded from the group and from every published dependency graph. | Release | — |
+| Credential reference | A declared mapping from an external system's auth method to its source key: a literal key or an environment-prefixed key derived from the branding seam. Resolved to secret material only through the credential port. | Adapter contracts | [feature-adapter-ports.md](../spec/features/feature-adapter-ports.md) |
+| Credential port | The single `CredentialPort` in `core ./contracts`: `resolve(reference)` returns secret material or the classified `config.credential.missing` failure. It exposes no implementation mode, so the environment-backed implementation and a future sidecar share one interface. | Adapter contracts | [feature-adapter-ports.md](../spec/features/feature-adapter-ports.md) |
 | CI parity check | An invariant that binds a local gate to the way CI executes it instead of duplicating its logic. `boundary-ci-parity` requires `ts-boundaries` to build before cruising (the boundary rules resolve package names through built `dist`), and `exports-parity` runs `attw --pack` per publishable so declarations must resolve inside the packed artifact. | Quality | — |
 | Classification chain | The path from an engine failure to a table entry: domain kind -> app error code -> exit-code projection class. | Result contract | — |
 | CommandResult envelope | The one result contract of every command: `schemaVersion`, `runId`, `exitCode`, `timing`, and exactly one of `data` or `error`. The generic `Result<T, E>` remains the internal computation result; the envelope is the command-surface rendering. | Result contract | — |
@@ -33,7 +37,7 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Corpus baseline | The fixed commit SHA recorded in the forbidden-literal registry that anchors the user-facing-doc membership rule. A doc absent at the baseline must be registered; an unreachable baseline fails the scan closed. | Branding | — |
 | Declared entrypoint | A subpath a package lists in its exports map, and which an importer must declare in its `workspaceImports` manifest field before importing. | Boundaries | — |
 | Domain kind | The engine-level failure classification a domain engine attaches to an error; the first link of the classification chain. Declared kinds are `provider`, `input`, `config`, and `state`, beside the reserved `fallback` containment kind. | Result contract | — |
-| Empty-but-enforced | Scaffold content policy for the remaining engines, business logic, provider implementations, and drivers: structure, exports, rules, fixtures, and green tests exist. The configuration and state tiers carry implemented code. | Scaffold | [feature-config-layer.md](../spec/features/feature-config-layer.md) |
+| Empty-but-enforced | Scaffold content policy for the remaining engines, business logic, provider implementations, and drivers: structure, exports, rules, fixtures, and green tests exist. The configuration and state tiers, result contract, and adapter contract substrate carry implemented code. | Scaffold | [feature-monorepo-scaffold-toolchain.md](../spec/features/feature-monorepo-scaffold-toolchain.md) |
 | Error table | The internal, machine-readable, single-source set of failure entries from which error identity, structured fields, and exit-code projection are all derived. Declared once in `core ./contracts` as data and types. | Result contract | — |
 | Exit-code projection | The standalone CLI's mapping of table entries to `{0, 1, 2}`: `success` -> 0, `user-validation` -> 1, `platform-provider` -> 2. The only place exit codes exist. | Result contract | — |
 | Fail-closed audit | A check that fails when required evidence is missing or ambiguous rather than passing by default. The license audit fails on an unregistered direct/runtime/transitive use, an empty license, or a disallowed SPDX branch. | Quality | — |
@@ -42,18 +46,22 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Forbidden-literal scan | The CI-binding check (`ts-forbidden-literals`) that fails when a seed literal appears in a DEC-8 scope class outside the DEC-8 allowlist, naming the file and token. The registry is its authority. | Branding | — |
 | Four-copy pin check | The CI equality check across `.bun-version`, the root `engines.bun` field, the CI `env.BUN_VERSION`, and the release workflow. `.bun-version` is the source of truth. | Toolchain | — |
 | Golden test | A test asserting captured output against a recorded fixture. The result contract uses goldens for success, void success, classified failure, unknown failure, broken commands, and planted-secret envelopes. | Testing | — |
+| Graceful degradation | The metadata read path's response to unreadable metadata: the primitive view returns with account-based heuristic provenance and visible degradation evidence naming a mechanically detectable reason (`missing`, `malformed`, `wrong-kind`, or `unknown-version`), never a flow failure. | Adapter contracts | [feature-adapter-ports.md](../spec/features/feature-adapter-ports.md) |
 | Legacy compatibility adapter | The `adapters ./legacy` subpath: maps pre-freeze-prefixed environment facts and the pre-freeze config directory to current names received as parameters, warning once per process. It never imports branding. | Branding | — |
 | Lockstep versioning | One version line for the five publishable packages via the changesets fixed group; no package versions independently. | Release | — |
 | Machine output | The `--json` channel: always exactly one valid envelope on every outcome, with no diagnostics. Written to the injected output stream. | Result contract | — |
+| Metadata envelope | The versioned `delivery.metadata.v1` data contract embedded in provider artifacts: a schema identifier, a closed v1 payload carrying comment provenance and delivery linkage, and a 2048-byte serialized bound. Its pure codec is an adapter-internal module. | Adapter contracts | [feature-adapter-ports.md](../spec/features/feature-adapter-ports.md) |
 | Negative fixture | A test that deliberately introduces a forbidden edge and asserts the named boundary rule fails it. A rule without a negative fixture is unenforced and fails the meta-check. | Testing | — |
+| Primitive port | A typed, provider-agnostic contract in `core ./contracts` for one catalogue primitive, keyed by its globally unique PascalCase name; adapters implement behind it. | Adapter contracts | [feature-adapter-ports.md](../spec/features/feature-adapter-ports.md) |
 | Package matrix | The table of which packages may import which other packages. Forbidden edges are enforced by dependency-cruiser, one rule per importer row; declared edges are enforced by the workspace-entrypoints check. | Boundaries | — |
 | Publish guard | The release-job check that fails when an intended publishable package is still `private: true` or the branded scope has not been applied. The publish job cannot start unless the guard passes. | Release | — |
 | Redaction chokepoint | The single serialization-path control that replaces every edge-registered secret value with `[redacted]` before any byte reaches an output stream, on success and failure payloads and on human diagnostics alike. Values never registered at the edge are outside the guarantee. | Result contract | — |
 | Remediation hint | Action-first, secret-free guidance on what the caller should try next; prose, never identity. | Result contract | — |
 | Rename drill | The documented RD-1..RD-11 procedure that replaces branding values and the legacy mapping in a temporary copy, runs the full verification battery, and proves a rename is one seam swap. It runs before release and whenever branding changes. | Branding | — |
 | runId | Opaque per-invocation correlation identifier generated at the runtime-aware edge; present in every envelope. | Result contract | — |
-| Runtime-API confinement | The rule that runtime imports are permitted only in the `core ./state` driver code, the adapter I/O subpaths (`repo`, `file`, `host`, `session`, `legacy`), the `cli` build, and the `opencode` host integration. | Boundaries | — |
+| Runtime-API confinement | The rule that runtime imports are permitted only in the `core` state driver edge (`packages/core/src/state/driver/`), the adapter I/O subpaths (`repo`, `file`, `host`, `session`, `legacy`, `credentials`), the `cli` build, and the `opencode` host integration. The credential subpath is the only one that may resolve secret material. | Boundaries | — |
 | schemaVersion | The brand-neutral stable string identifying the envelope schema (`delivery.result.v1` at v1); changes only on a breaking shape change. | Result contract | — |
+| Secret-read boundary | The mechanically enforced property that ambient environment access in workspace package production sources occurs only in the enumerated allowlist: the credential implementation, the state driver runtime edge, and the two configuration environment readers. `secret-read-boundary.ts` enforces it in `check:boundaries` and CI. | Adapter contracts | [feature-adapter-ports.md](../spec/features/feature-adapter-ports.md) |
 | Seed literal set | The three legacy tokens already public in the repository — the lowercase product token, its uppercase environment-prefix form, and its home-directory config path. It is the scan's searched set and grows by one literal per frozen name. | Branding | — |
 | SPDX expression | A machine-readable license expression such as `MIT OR Apache-2.0`. The audit parses `AND`/`OR`/parentheses and fails closed on any disallowed branch. | Legal | — |
 | Subpath | A package entrypoint declared in its exports map (for example `core ./contracts`). Cross-package imports use the package name plus a declared subpath; deep `src`/`dist` imports are forbidden. | Boundaries | — |
@@ -94,5 +102,6 @@ _Expand every acronym at first use; keep the expanded list here._
 - [Branding Seam and Working Name](../spec/features/feature-branding-seam.md)
 - [Result Contract and Error Table](../spec/features/feature-result-contract.md)
 - [Configuration Layer and Inspection](../spec/features/feature-config-layer.md)
+- [Adapter Ports, Credential Resolution, and Embedded Metadata](../spec/features/feature-adapter-ports.md)
 - [State Layer](../spec/features/feature-state-layer.md)
 - [ADR-0003 — OSS Tooling Monorepo Structure](../decisions/ADR-0003-oss-monorepo-structure.md)

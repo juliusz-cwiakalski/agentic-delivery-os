@@ -1,0 +1,95 @@
+change_id: GH-181
+title: "M0-S12: Primitive ports, credential port, and embedded metadata"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-10-30T21:00:00Z", completed: "2026-10-30T21:05:00Z" }
+  specification: { started: "2026-10-30T21:06:00Z", completed: "2026-10-30T21:50:00Z", reopened: "2026-10-30T21:40:00Z", iterations: 2 }
+  test_planning: { started: "2026-10-30T21:30:00Z", completed: "2026-10-30T22:00:00Z" }
+  delivery_planning: { started: "2026-10-30T22:05:00Z", completed: "2026-10-30T22:20:00Z" }
+  dor_check: { started: "2026-10-30T22:25:00Z", completed: "2026-10-30T22:40:00Z" }
+  delivery: { started: "2026-10-30T22:45:00Z", completed: "2026-10-30T23:30:00Z" }
+  system_spec_update: { started: "2026-10-30T23:35:00Z", completed: "2026-10-30T23:50:00Z" }
+  review_fix: { started: "2026-10-30T23:55:00Z", completed: "2026-10-31T00:40:00Z", iterations: 2, last_verdict: "PASS", reopened_union: "2026-10-31T02:10:00Z" }
+  quality_gates: { started: "2026-10-31T00:45:00Z", completed: "2026-10-31T01:05:00Z" }
+  dod_check: { started: "2026-10-31T01:10:00Z", completed: "2026-10-31T01:15:00Z" }
+  pr_creation: { started: "2026-10-31T01:20:00Z", completed: "2026-10-31T01:35:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/196" }
+decisions:
+  - text: "DoR verdict READY at iteration 1 (10/10 facets PASS; 0 critical, 0 major, 1 minor, 3 nits — all advisory). Findings carried as recorded reconciliations rather than reopening artifact phases: (1) spec F-5/DEC-9 testkit-import clause wording is mechanically false — implementers follow the plan's root-test relative-import mechanism; (2) TC-ERR-001 remediation-hint exactness scoped at delivery; (3) plan task 4.5 reworded attribution (ci-topology wiring scan enforces local-chain presence); (4) allowlist entry kinds (file|directory) defined at delivery. Delivery may start."
+    date: "2026-10-30"
+  - text: "Spec selects v1 port set = exactly the nine catalogue adapter-interaction rows typed at M0 (ExternalSystemInstance, AdapterContract, WorkItem, WorkflowMap, WorkItemRelation, DeliveryRequest, PipelineRun, RetryPolicy, IdempotencyKey) + ticket-mandated credential port and metadata envelope; fail-closed inventory in both directions. Catalogue rows outside the set stay with owning stories."
+    date: "2026-10-30"
+  - text: "Env-backed credential implementation placement: adapters package I/O tier as new declared ./credentials subpath admitted to runtime-API confinement allowlist (contracts tier is ambient-neutral; core has no runtime home). Alternative (env-as-data at surface edges) recorded as spec OQ-1 with TDR path."
+    date: "2026-10-30"
+  - text: "Single new error code config.credential.missing (kind config, user, non-retryable, not_landed, user-validation) — chosen to avoid kind-only classification ripples. Malformed metadata gets no error code (degradation is a view state, not a failure)."
+    date: "2026-10-30"
+open_questions:
+  - text: "OQ-1 (spec): env-as-data vs ambient-read placement for the credential implementation — TDR via @decision-advisor if DEC-2 confinement is disputed during delivery; not a plan/test-plan blocker."
+    date: "2026-10-30"
+  - text: "OQ-2 (spec): catalogue bookkeeping for the two rowless contracts (credential port, metadata envelope) — now vs M0-S17 adapter-contract decision record."
+    date: "2026-10-30"
+  - text: "OQ-3 (spec): exact v1 constants (envelope schema identifier within delivery.*.v1 discipline; size bound <= 2048 bytes)."
+    date: "2026-10-30"
+blockers:
+  - text: "Review iteration 1 FAIL — remediation required before re-review. F-1 (major): secret-read invariant silently accepts computed-key ambient reads (process[key], process[`env`], globalThis[expr].env) at scripts/checks/secret-read-boundary.ts:138, violating spec F-4 'never silently accepted'. F-2 (minor): codec marker regexes quadratic on adversarial marker-dense input (1747ms @ 193KB), packages/adapters/src/io/envelope-codec.ts:33. F-3 (minor): stale-index strip corruption — nested marker lookalike + trailing content makes stripEnvelope return empty string, silently destroying human content (violates AC-F5-2), envelope-codec.ts:149. Remediation tasks R-1..R-3 appended to plan Phase 6 (activated); PASS at iteration 2 requires R-1 closed with fixtures, R-2/R-3 closed or PM-accepted with rationale. F-4/F-5 informational (lookalike prose stripping — document; wall-clock stamp drift — no action)."
+    date: "2026-10-30"
+notes:
+  - text: "RETRO: specification reopened at test_planning (iteration 2). @test-plan-writer found two spec gaps: (1) older-schema-version read window undefined — no AC covers it; (2) absent-vs-stripped metadata may be observationally indistinguishable but the degradation reason taxonomy did not say so. Plus codec placement left open (contracts tier forbids behavior; boundary matrix restricts adapters to core ./contracts). Caught here instead of at DoR — reopening upstream immediately was cheaper than a DoR NOT_READY iteration."
+    type: "retro"
+    date: "2026-10-30"
+  - text: "Specification iteration 2 completed: version window policy (DEC-7), closed reason taxonomy (DEC-8), codec placement in adapters internal module (DEC-9); AC-F5-6 added (17 ACs total). Test plan aligned to spec v1.1: 19 TCs, 17/17 AC coverage, no TODOs remaining (value-level secret scanning correctly deferred to M0-S15)."
+    type: "resolved"
+    date: "2026-10-30"
+  - text: "Delivery plan complete: 7 phases / 35 tasks, 17 ACs + 19 TCs mapped, per-phase commit signals. Plan resolved four artifact inconsistencies: codec at packages/adapters/src/io/envelope-codec.ts with root-test relative import (testkit package cannot reach adapter-internal module); fixture adapters at tests/fixtures/ports (root); new tests/types/ project chained into root typecheck for the AC-F2-2 type probe (vehicle for TC-PORT-004); invariant as ts-invariants step + check:boundaries append; schema id delivery.metadata.v1, bound 2048 bytes; absent/empty -> config.credential.missing."
+    type: "resolved"
+    date: "2026-10-30"
+  - text: "Delivery complete (plan phases P1-P4, P7; P5 skipped per no-review instruction, P6 not required): commits 2beeaf2, 806cbef, 2273b2b, f81ec70, ffd2a34, 94bccc0. Final aggregate pnpm check 604 pass / 0 fail; 554 tests across structure/behaviour/checks/boundaries; ten invariants green incl. new secret-read-boundary (3-entry allowlist); exports-parity/publint/attw green on all five publishables; 17/17 ACs + 19/19 TCs recorded in test-plan §10. All five DoR carry-forwards honored. One in-pass remediation: added 240s timeout to pre-existing exports-parity attw pack-mutation test (was exceeding 5s default; behavior already passing; no logic change). PR creation deferred to phase 11 (PM-owned)."
+    type: "info"
+    date: "2026-10-30"
+  - text: "RETRO: pre-existing exports-parity attw pack-mutation test had no per-test timeout and began exceeding Bun's 5s default — silent infra drift surfaced only when the suite grew. Lesson: new long-running pack-mutation tests should declare explicit timeouts at authoring time; consider a follow-up housekeeping pass across other pack-mutation tests (not created — PM ticket-creation rule)."
+    type: "retro"
+    date: "2026-10-30"
+  - text: "RETRO: review iteration 1 caught a real security hole the delivery-phase battery missed — the invariant's own tests covered only literal-key forms, so the computed-key gap was invisible to every green check (tests green, claim false). Lesson: for security invariants, the test matrix must enumerate AST form classes, not just instances; an invariant is only as strong as its form-class coverage. Also: codec quadratic-scan and strip-corruption issues were findable only by adversarial input testing (DoR/plan reviews check artifacts, not runtime hostility) — the reviewer's empirical probing earned its cost."
+    type: "retro"
+    date: "2026-10-30"
+  - text: "RESOLVED: Review iteration 1 blocker cleared — remediation R-1 (da1b00a), R-2 (e45207e), R-3 (a12bbc5) verified closed by reviewer's independent re-execution; iteration 2 PASS (0 critical/high/medium/low; 3 info, all pre-existing or accepted: F-6 require()-based env read unreachable through gate battery, F-7 fail-closed literal-key false-positive class, F-8 stamp drift dup). Plan task 6.3 satisfied by iter-2 PASS; remediation doc delta reconciled by doc-syncer addendum (2 specs patched, no residual gaps)."
+    type: "resolved"
+    date: "2026-10-31"
+  - text: "RETRO: test-ceo-loop.sh is not hermetic — it reads the ambient delivery marker and false-fails whenever any delivery is active, including its own. The suite passed in prior deliveries only because those ran outside the harness that writes the marker. Lesson: suites touching ambient state files must isolate them in setup; gates run from inside the harness expose this. Fix is 1-line test isolation, but it cost a gate iteration."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "Quality gates iteration 1: steps 1-4 green (pnpm check 610/610) but bash battery stopped at test-ceo-loop.sh — 2/54 fail, both cases expecting STUCK. Runner diagnosed environmental root cause with isolation proof: the tests read the live .ai/local/delivery/delivering marker (pointing at THIS delivery process, pid 1002659) instead of an isolated DELIVERY_DIR; not a GH-181 code regression. Remediation: fix test isolation (redirect DELIVERY_DIR in the suite's state setup) so the suite is hermetic during active deliveries, then re-run full battery."
+    type: "risk"
+    date: "2026-10-31"
+  - text: "PM-DECIDED: fixer delegation for the ceo-loop isolation fix was declined by the environment — scope discipline respected (GH-181 carries no unrelated bash test changes). The 2 ceo-loop failures are accepted as environmental: suite reads ambient .ai/local/delivery/delivering and can only pass outside an active delivery; GH-181 diff has zero bash lines; isolation proof recorded by runner; CI re-runs the suite without ambient state at PR time and remains the binding bash gate (merge gate precedent from GH-170/171/172/173). Remaining gate steps proceed."
+    type: "decision"
+    date: "2026-10-31"
+  - text: "RESOLVED: Quality gates complete — pnpm check 610/610; bash battery 21/21 suites plus test-ceo-loop 54/54 under the original failing condition (live ambient marker) with the hermeticity patch committed (3913f55); doc-distribution no drift; secret-read-boundary 51 files clean; git diff --check clean. Ambient delivering marker clobbered by a passing suite (test-deliver-ticket.sh writes into .ai/local/delivery) was restored byte-exact while pid 1002659 alive; residue TEST-*.last-message files left (ephemeral, git-ignored). Note for review: test-deliver-ticket.sh ambient-state writes are a separate hermeticity defect, out of GH-181 scope, not fixed."
+    type: "resolved"
+    date: "2026-10-31"
+  - text: "DoD check PASS: (1) all lifecycle phases completed with timestamps except pr_creation (phase 11, next); (2) plan tasks 5.1-5.3 re-annotated as fulfilled by the PM-level phase-8 review (review-iter-1/2 artifacts), 6.3 ticked with iter-2 PASS + gate evidence; only 7.5 + open-PR item remain, both owned by phase 11 by design; (3) all 17 ACs satisfied — reviewer iter-2 independently verified with truthful evidence, test-plan §10 records 19/19 TCs; (4) current-truth docs reconciled with no residual gaps; (5) single remaining spec §18 DoD predicate is the open unmerged PR targeting main-tools with CI green on pushed HEAD — delivered by phase 11."
+    type: "resolved"
+    date: "2026-10-31"
+  - text: "PR open: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/196 (feat(GH-181) -> main-tools, pushed HEAD bcc4184). Labels change+review, assigned juliusz-cwiakalski. Merge BLOCKED pending green CI on pushed HEAD; merge authority: CEO (Mode A) / owner via batch-deliver.sh (Mode B). PM stops here per stop condition — delivery complete, awaiting review/merge."
+    type: "info"
+    date: "2026-10-31"
+  - text: "UNION RECONCILIATION (CEO resume, 2026-10-31): GH-174 (state layer) merged to main-tools while PR #196 was open; CEO merged main-tools into the branch (992fcff) with seam fixes (42ae1f7: error-table boundary, fixture-registry duplicate keys, useIndexOf autofix) and pushed. Three invariant suites failed on the union; reconciled in fc472a6: (1) port-contract inventory fixture regenerated from live union surface (state.ts 31 exports + 31 index re-exports — purely additive staleness); (2) GENUINE rule conflict: this branch's pre-tightening broad state exemption (^packages/core/src/state/) silently re-weakened GH-174's tightened driver allowance and made the TC-STATE-022 negative fixture vacuous — runtime-apis-confinement pathNot reconciled to the 4-entry union (state/driver/, adapters incl. credentials, cli, opencode), ADR-verbatim assertion mirrored; (3) GH-174's state driver runtime-edge reads process.env.USERNAME??USER (icacls owner identity) — sanctioned env read added to the secret-read allowlist as entry 4 (file kind, configuration-environment-source, narrowest scope); (4) exports-parity stacked timeout closers from both parents merged to single 240_000. Both reviewed changes untouched; union bookkeeping + rule consistency only."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Union docs reconciled (doc-syncer addendum): 6 files — scaffold spec de-duplicated with union confinement statement; adapter-ports allowlist table 3->4 entries incl. state driver edge; state-layer spec records the USERNAME??USER env read; glossary merge-duplicate front matter repaired; result-contract related_changes union; .ai/rules/typescript.md section 4 now names state/driver/ + credentials edge + env readers (stale since GH-174, flagged by its review, doubly stale after union). ADR-0003 intentionally unchanged (decision record; subpath statements remain true)."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Post-union battery: GATES_ALL_GREEN — pnpm check 725 pass / 0 fail (3 known noTemplateCurlyInString warnings from GH-174 left per CEO instruction), bash 22/22 suites incl. hermetic ceo-loop, doc-distribution no drift, secret-read 56 files clean / 4 entries, error-table-sync 21/21, git diff --check clean."
+    type: "resolved"
+    date: "2026-10-31"
+  - text: "RETRO: the union conflict class to watch — a feature branched before a base-tightening change carries the older, coarser rule and silently re-weakens it on merge (here: broad state exemption vs driver-tightened allowance). The negative fixture caught it exactly as designed (vacuous fixture = failing test), but duplicate-key/superset dedup of rule arrays should be part of every merge-conflict resolution checklist for boundary configs, not discovered by test."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "Scope sources: issue body + backlog.md M0-S12 + concepts/primitive-catalogue.md + concepts/credential-sidecar.md + concepts/embedded-metadata.md. AC: (1) typed ports with capability flags, (2) CI boundary check fails on secret reads outside the credential port, (3) metadata envelope round-trips and degrades gracefully when a provider strips it. Dependencies M0-S1/S3/S4 verified merged (PRs 191/193/194)."
+    type: "info"
+    date: "2026-10-30"
+  - text: "System-spec cross-check: contracts tier (core ./contracts) is runtime-neutral (types + as const only; ambient-globals guard covers core/src/contracts/**) — the credential port contract is neutral but its env-backed implementation must live at a runtime-aware location; spec-writer must place it deliberately (TDR candidate). New error codes must satisfy error-table-sync. Boundary check follows scripts/checks/*.ts + CI binding patterns (ci-topology, boundary-ci-parity). Config layer precedent: environment-only secrets (feature-config-layer.md)."
+    type: "info"
+    date: "2026-10-30"
+  - text: "Doc impacts for phase 7: new feature spec for the adapter/credential ports (always-resolve first-spec rule); feature-monorepo-scaffold-toolchain.md contracts-placeholder wording; feature-result-contract.md error-table rows if codes added; glossary terms; possible primitive-catalogue status updates; AGENTS.md/CI notes if a new check job is added."
+    type: "risk"
+    date: "2026-10-30"

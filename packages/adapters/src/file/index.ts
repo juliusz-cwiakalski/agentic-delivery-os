@@ -4,15 +4,15 @@
  */
 export {
   acquireFileConfig,
-  neutralEnvironmentFacts,
-  nodeFileSystemFacts,
-  runtimePlatform,
   type FileAcquisitionInput,
   type FileSystemFacts,
+  neutralEnvironmentFacts,
+  nodeFileSystemFacts,
   type RuntimePlatform,
+  runtimePlatform,
 } from "./config-source.js";
 export {
+  type ParsedConfig,
   parseConfigYaml,
   parserHostSwitchBlocked,
-  type ParsedConfig,
 } from "./yaml-parser.js";

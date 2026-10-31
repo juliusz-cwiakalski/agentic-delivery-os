@@ -1,0 +1,40 @@
+{
+  "cases": [
+    {
+      "id": "absent",
+      "carrier": "invisible-comment-block",
+      "text": "Comment with no metadata at all.",
+      "expectedReason": "missing"
+    },
+    {
+      "id": "stripped",
+      "carrier": "invisible-comment-block",
+      "text": "Comment whose metadata was removed externally.",
+      "expectedReason": "missing"
+    },
+    {
+      "id": "malformed",
+      "carrier": "invisible-comment-block",
+      "text": "<!-- delivery.metadata.v1 {not-json} -->\nOriginal comment body",
+      "expectedReason": "malformed"
+    },
+    {
+      "id": "wrong-kind",
+      "carrier": "invisible-comment-block",
+      "text": "<!-- delivery.metadata.v1 {\"schema\":\"delivery.metadata.v1\",\"kind\":\"delivery-request\",\"payload\":{\"comment\":{\"producingAgent\":\"a\",\"operatorAuthority\":\"o\"},\"delivery\":{\"workItemRef\":\"GH-1\",\"runId\":\"r\"}}} -->\nOriginal comment body",
+      "expectedReason": "wrong-kind"
+    },
+    {
+      "id": "unknown-version",
+      "carrier": "invisible-comment-block",
+      "text": "<!-- delivery.metadata.v2 {\"schema\":\"delivery.metadata.v2\",\"kind\":\"work-item-comment\",\"payload\":{\"comment\":{\"producingAgent\":\"a\",\"operatorAuthority\":\"o\"},\"delivery\":{\"workItemRef\":\"GH-1\",\"runId\":\"r\"}}} -->\nOriginal comment body",
+      "expectedReason": "unknown-version"
+    },
+    {
+      "id": "human-edited",
+      "carrier": "invisible-comment-block",
+      "text": "<!-- delivery.metadata.v1 {\"schema\":\"delivery.metadata.v1\",\"kind\":\"work-item-comment\",\"payload\":{\"comment\":{\"producingAgent\":\"a\"},\"delivery\":{\"workItemRef\":\"GH-1\",\"runId\":\"r\"}}} -->\nOriginal comment body",
+      "expectedReason": "malformed"
+    }
+  ]
+}

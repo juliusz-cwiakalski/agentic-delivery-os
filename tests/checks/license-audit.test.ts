@@ -7,13 +7,13 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  type Dependency,
-  type Registry,
   auditRegistry,
+  type Dependency,
   directExternalDependencies,
   loadRegistry,
   lockedUses,
   parseSpdxExpression,
+  type Registry,
   validate,
 } from "../../scripts/checks/license-audit";
 

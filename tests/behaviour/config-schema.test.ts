@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
   BOOTSTRAP_DESCRIPTOR,
+  type ConfigCatalog,
+  generateConfigSchema,
   PRODUCTION_CATALOG,
   PRODUCTION_SCHEMA,
-  generateConfigSchema,
   resolveConfig,
-  type ConfigCatalog,
 } from "../../packages/core/src/index";
 import { FIXTURE_CATALOG } from "../fixtures/config/catalog";
 import { fileFacts } from "../fixtures/config/facts";

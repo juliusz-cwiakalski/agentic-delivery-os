@@ -7,7 +7,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, an empty production catalog with typed extensions, source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
 links:
-  related_changes: ["GH-173"]
+  related_changes: ["GH-173", "GH-181"]
   related_decisions: ["ADR-0003", "TDR-0003"]
 ---
 
@@ -108,7 +108,7 @@ With `--json`, the identical selected success payload is placed under `CommandRe
 
 Config failures carry `kind=config`, one exact code, and optional safe location metadata (`layer`, `key`, `file`, `line`); source text, values and exceptions never enter a failure. All are `category=user`, `retryable=false`, `consequence=not_landed`, and project to `user-validation`/exit 1:
 
-`config.file.malformed`, `config.key.unknown`, `config.environment.unmapped`, `config.value.invalid`, `config.interpolation.rejected`, `config.secret.forbidden`, `config.path.forbidden`, `config.reset.invalid`, and `config.warning.strict`.
+`config.file.malformed`, `config.key.unknown`, `config.environment.unmapped`, `config.value.invalid`, `config.interpolation.rejected`, `config.secret.forbidden`, `config.path.forbidden`, `config.reset.invalid`, and `config.warning.strict`. The credential port adds its own `config.credential.missing` row under the same domain kind; it is a credential-resolution failure, not a configuration-layer failure (see [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md)).
 
 The machine table in [Result Contract and Error Table](feature-result-contract.md) is the single identity source; the documented rows and machine rows are synchronized in both directions. Missing, unknown or wrong-kind config codes are safely contained as `fallback.internal`, never mapped to the first config row.
 
@@ -141,13 +141,13 @@ Core configuration imports only its contracts and the trusted validator; it does
 - The actual host `LOG_TOKENS` or `LOG_STREAM` switch causes a safe `config.value.invalid` before the YAML parser is constructed. The parser never forwards source text, snippets, stacks or raw summaries.
 - The edge registers non-empty catalog-designated environment secrets before inspection. Redaction runs at the single serialization chokepoint.
 - Disabled or selection-skipped sources are never read, including poisoned files present on disk.
-- No credential, keyring, sidecar, transport or remote-mediated operation is implemented here. M0-S12 owns one credential-resolution port (environment-backed initially); a later sidecar may supply another implementation. Later direct and mediated adapters implement the same unchanged primitive ports, with mediated operations forwarded locally rather than receiving local credentials; that adoption path is documentation-only in this feature.
+- No credential, keyring, sidecar, transport or remote-mediated operation is implemented in this feature. Credential resolution is the separate credential-resolution port in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md): one environment-backed implementation at the adapters `./credentials` subpath, with a later sidecar able to supply another implementation. Later direct and mediated adapters implement the same unchanged primitive ports, with mediated operations forwarded locally rather than receiving local credentials; that adoption path is documentation-only in this feature.
 
 ## Operational & Support
 
 ### Configuration and artifacts
 
-The core build emits `config.schema.json`, `defaults-positions.json` and `schema-sources.json` into `dist/config`. The existing exports-parity check validates that the shipped schema, defaults-position manifest and schema-source hashes stay synchronized with the typed source. Packed consumers import the built core `.` entry and core `./contracts`, plus the existing adapters `./file`, `./repo` and `./legacy` entries; no `./config` core subpath or new adapter subpath exists.
+The core build emits `config.schema.json`, `defaults-positions.json` and `schema-sources.json` into `dist/config`. The existing exports-parity check validates that the shipped schema, defaults-position manifest and schema-source hashes stay synchronized with the typed source. Packed consumers import the built core `.` entry and core `./contracts`, plus the existing adapters `./file`, `./repo` and `./legacy` entries; configuration adds no `./config` core subpath and no adapter subpath. Credential resolution ships separately as the adapters `./credentials` entry documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
 
 ### Inspection workflow
 
@@ -159,7 +159,7 @@ The core build emits `config.schema.json`, `defaults-positions.json` and `schema
 
 ### Cost and limitations
 
-Configuration adds the proposed Ajv and YAML runtime dependencies recorded in the dependency registry; owner license/TDR review gates merge/adoption. The ordinary catalog is intentionally empty, so no production setting or default is invented by this feature. File interpolation, credentials and sidecar behavior are not available.
+Configuration adds the proposed Ajv and YAML runtime dependencies recorded in the dependency registry; owner license/TDR review gates merge/adoption. The ordinary catalog is intentionally empty, so no production setting or default is invented by this feature. File interpolation, credential resolution through configuration, and sidecar behavior are not available here; credential resolution is the separate port documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
 
 ## Quality Assurance Strategy
 
@@ -181,7 +181,7 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 - **Risk — untraceable values:** mitigated by per-node origins, the shipped defaults manifest and origin replacement rules.
 - **Risk — parser diagnostics:** mitigated by safe constructed failures, host-switch guard and no parser text crossing the port.
 - **Risk — dependency compatibility:** Proposed TDR-0003 and the truthful runtime-closure license registry require owner acceptance before merge/adoption.
-- **Deferred:** M0-S12 owns credential resolution, keyring and sidecar; provider routing and state storage belong to later consumer stories.
+- **Separate capability:** credential resolution is the port documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); keyring sources, sidecar transport, provider routing and state storage belong to later consumer stories.
 
 ## Glossary & References
 
@@ -194,4 +194,4 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 | Origin | The winning source label for an effective leaf or collection. |
 | Selected file | The `--config`/environment/legacy file occupying project-committed priority. |
 
-See also: [Result Contract and Error Table](feature-result-contract.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0003](../../decisions/TDR-0003-config-parser-schema-and-acquisition.md), and the [repository glossary](../../overview/glossary.md).
+See also: [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0003](../../decisions/TDR-0003-config-parser-schema-and-acquisition.md), and the [repository glossary](../../overview/glossary.md).

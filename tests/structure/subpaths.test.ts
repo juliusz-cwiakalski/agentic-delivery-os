@@ -20,6 +20,7 @@ const ADAPTER_SUBPATHS = [
   "./host",
   "./session",
   "./legacy",
+  "./credentials",
 ];
 
 const EXPECTED: Record<string, Record<string, string>> = {

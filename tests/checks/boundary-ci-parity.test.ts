@@ -10,8 +10,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  BUILD_COMMAND,
   BOUNDARY_COMMAND,
+  BUILD_COMMAND,
   JOB_ID,
   validate,
 } from "../../scripts/checks/boundary-ci-parity";
