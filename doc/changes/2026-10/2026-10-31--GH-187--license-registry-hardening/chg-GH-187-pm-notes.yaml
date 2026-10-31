@@ -22,7 +22,7 @@ phases:
     completed: "2026-10-31T16:24:00Z"
   dor_check:
     started: "2026-10-31T15:28:00Z"
-    completed: null
+    completed: "2026-10-31T17:18:00Z"
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -79,5 +79,8 @@ notes:
     type: "info"
     date: "2026-10-31"
   - text: "Phase 5 DoR iteration 2 NOT_READY (artifact readiness-review/readiness-iter-2.md). Iteration-1 blockers all resolved. One residual blocking finding: plan task 2.1/Phase 2 acceptance still said floor 20 / 20/20 removals while the test plan requires 25 removal cases (20 single + 5 adversarial). Non-blocking: spec §18.1 gate battery wording, spec wrong-scope TC citation, test-plan TC-016 row and execution order/NFR-6 missing TC-031, plan RSK-P2 stale v1.1, TDR-0007 omitted non-asserted. Remediated: plan v1.3 (floor 25, RSK v1.3), spec v1.3 (battery + TC-031), test plan v1.4 (counts/order/NFR-6), TDR-0007 wording. Re-running DoR iteration 3."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Phase 5 DoR iteration 3 READY (artifact readiness-review/readiness-iter-3.md): all ten facets pass, 0 blocking findings, no override, 3-iteration cap not triggered. Four non-blocking cleanup items were then completed before locking the gate: spec v1.4 completes the §18.1 gate battery (script-surface/pin-equality/vulnerability-gate); test plan v1.5 refreshes stale spec-v1.2 citations; plan v1.4 refreshes citations and corrects TDR-0007 wording to 'created in this change as Proposed; no further delivery/doc-sync edits'. DoR gate locked. Proceeding to delivery."
     type: "info"
     date: "2026-10-31"

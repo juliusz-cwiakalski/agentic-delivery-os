@@ -2,7 +2,7 @@
 id: chg-GH-187-license-registry-hardening
 status: Updated
 created: 2026-10-31T14:45:00Z
-last_updated: 2026-10-31T16:45:00Z
+last_updated: 2026-10-31T17:05:00Z
 owners: [engineering]
 service: delivery-os repository license compliance gate
 labels: [change, planning]
@@ -24,7 +24,7 @@ version_impact: none
 
 ## Context and Goals
 
-GH-187 hardens the license registry seeded by GH-170. The change has exactly one behavioural centre: the committed registry under `doc/legal/` declares an authoritative `deny_list` at schema version 3, and `scripts/checks/license-audit.ts` enforces that policy before the allow list for every registry entry and every branch of a compound SPDX expression. The test plan (`chg-GH-187-test-plan.md` v1.3, 31 TCs, `TC-LICREG-001..031`) is the behavioural contract; the spec (`chg-GH-187-spec.md` v1.2) is the requirement source. This plan orders the work so the registry and the audit change atomically and every task maps to an AC and one or more TCs.
+GH-187 hardens the license registry seeded by GH-170. The change has exactly one behavioural centre: the committed registry under `doc/legal/` declares an authoritative `deny_list` at schema version 3, and `scripts/checks/license-audit.ts` enforces that policy before the allow list for every registry entry and every branch of a compound SPDX expression. The test plan (`chg-GH-187-test-plan.md` v1.5, 31 TCs, `TC-LICREG-001..031`) is the behavioural contract; the spec (`chg-GH-187-spec.md` v1.4) is the requirement source. This plan orders the work so the registry and the audit change atomically and every task maps to an AC and one or more TCs.
 
 The delivered end state:
 
@@ -40,13 +40,13 @@ The delivered end state:
 
 ### Open questions and resolved upstream flags
 
-No blocking open question remains. **OQ-T1 and OQ-T2 are resolved by spec v1.2** (C-2 wording preserved verbatim; deny-entry grammar `^[A-Za-z0-9.+-]+$` stated in DM-2/Appendix A). **OQ-T3 and OQ-T4 remain non-blocking** in test plan v1.3 and do not gate delivery: `NONE` fails closed and is accepted under either the non-asserted or not-allow-listed class, and the focused-suite layout is bound by A-T1. The three documentation inconsistencies previously flagged in this plan are **RESOLVED** by test plan v1.3 and spec v1.2:
+No blocking open question remains. **OQ-T1 and OQ-T2 are resolved by spec v1.4** (C-2 wording preserved verbatim; deny-entry grammar `^[A-Za-z0-9.+-]+$` stated in DM-2/Appendix A). **OQ-T3 and OQ-T4 remain non-blocking** in test plan v1.5 and do not gate delivery: `NONE` fails closed and is accepted under either the non-asserted or not-allow-listed class, and the focused-suite layout is bound by A-T1. The three documentation inconsistencies previously flagged in this plan are **RESOLVED** by test plan v1.5 and spec v1.4:
 
-- **TP-ISSUE-1 — RESOLVED (test plan v1.3):** the malformed-entry matrix is fixed at **18** cases (5 non-string + 3 empty + 3 whitespace-affixed + 1 duplicate + 3 compound + 3 operator-only). The mapping table, TC-LICREG-012, and TC-LICREG-024 agree.
-- **TP-ISSUE-2 — RESOLVED (test plan v1.3):** TC-LICREG-022 is fixed as **10 spawned cases** (1 live green + 9 explicit failure cases: denied single, denied branch, denied nested branch, deny-list absent, old schema, floor removal, allow/deny overlap, non-asserted, unregistered dependency). The unknown-reference, empty, non-allow-listed, and allow/verdict-drift classes remain proven **in process** by TC-LICREG-016, TC-LICREG-017, and the existing drift test. Phase 3 binds exactly these 10 spawns.
-- **TP-ISSUE-3 — RESOLVED (spec v1.2 and test plan v1.3):** the deny-entry grammar is `^[A-Za-z0-9.+-]+$` applied to a single token; whitespace padding, `AND`/`OR`/`WITH`, parentheses, and multi-token values are malformed policy.
+- **TP-ISSUE-1 — RESOLVED (test plan v1.5):** the malformed-entry matrix is fixed at **18** cases (5 non-string + 3 empty + 3 whitespace-affixed + 1 duplicate + 3 compound + 3 operator-only). The mapping table, TC-LICREG-012, and TC-LICREG-024 agree.
+- **TP-ISSUE-2 — RESOLVED (test plan v1.5):** TC-LICREG-022 is fixed as **10 spawned cases** (1 live green + 9 explicit failure cases: denied single, denied branch, denied nested branch, deny-list absent, old schema, floor removal, allow/deny overlap, non-asserted, unregistered dependency). The unknown-reference, empty, non-allow-listed, and allow/verdict-drift classes remain proven **in process** by TC-LICREG-016, TC-LICREG-017, and the existing drift test. Phase 3 binds exactly these 10 spawns.
+- **TP-ISSUE-3 — RESOLVED (spec v1.4 and test plan v1.5):** the deny-entry grammar is `^[A-Za-z0-9.+-]+$` applied to a single token; whitespace padding, `AND`/`OR`/`WITH`, parentheses, and multi-token values are malformed policy.
 
-Test plan v1.3 adds **TC-LICREG-031** (schema-v3 registry with a wrong `scope` fails closed and reports the observed scope), bringing the matrix to **31 TCs**. The total is 31/31: every TC is referenced in this plan's task mappings and Test Scenarios table.
+The current test plan v1.5 includes **TC-LICREG-031** (schema-v3 registry with a wrong `scope` fails closed and reports the observed scope), bringing the matrix to **31 TCs**. The total is 31/31: every TC is referenced in this plan's task mappings and Test Scenarios table.
 
 No specification or test-plan reopening is required; the binding outcomes above are final for delivery.
 
@@ -134,7 +134,7 @@ Additional identifiers may be present. Each deny entry is a single identifier ma
 | RSK-5 | Tests prove only the happy path | Mutation matrix plus spawned exit cases; TC-LICREG-022/024. |
 | RSK-6 | Recorded verdicts are legally inaccurate | Keep the proposed C-2 determination; owner confirms at PR review; gate enforces recorded policy. |
 | RSK-P1 | A partial ship exposes a v3 registry to a v2-only audit, or vice versa, and blocks every PR | Phase 1 ships registry and audit in one commit; never edit the registry alone; reversion is atomic (see Rollback). |
-| RSK-P2 | A future review or test edit drifts from the resolved test-plan v1.3 binding (18 malformed cases; 25 removal cases; 10 spawned cases = 1 green + 9 failures; four non-spawned classes proven in process) by over-adding spawns or weakening coverage | TC-LICREG-024's meta-check and the explicit count assertions in Phases 2 and 3 bind the resolved matrix; any deviation requires a new test-plan revision rather than a silent edit. |
+| RSK-P2 | A future review or test edit drifts from the resolved test-plan v1.5 binding (18 malformed cases; 25 removal cases; 10 spawned cases = 1 green + 9 failures; four non-spawned classes proven in process) by over-adding spawns or weakening coverage | TC-LICREG-024's meta-check and the explicit count assertions in Phases 2 and 3 bind the resolved matrix; any deviation requires a new test-plan revision rather than a silent edit. |
 | RSK-P3 | `origin/main-tools` is unavailable locally | `git fetch origin main-tools`; tests fail naming the ref instead of skipping (GAP-2). |
 | RSK-P4 | Spawned temp-tree cases are slow or flaky | One spawn per failure class, ~60 KB lockfile copy, cleanup in `finally`; exhaustive matrix stays in process. |
 | RSK-P5 | System spec drifts from the deny policy | Phase 6 reconciliation owned by `@doc-syncer`; no delivery commit edits `doc/spec/**`. |
@@ -383,31 +383,31 @@ Revert the entire change set (registry + audit + tests/fixtures) as one unit. Ne
 - [ ] **6.1** In `doc/spec/features/feature-monorepo-scaffold-toolchain.md`, update the license-registry section to document `schema_version: 3`, the required `deny_list`, the five mandated families with the Appendix A floor, deny-before-allow precedence, the allow/deny disjointness rule, the single-identifier grammar `^[A-Za-z0-9.+-]+$`, the preserved `scope: direct-and-runtime-closure` check (CON-10), and the per-branch compound interpretation from spec Appendix C. Cite **TDR-0007** as the decision record for that interpretation. Do not restate unrelated monorepo content.
 - [ ] **6.2** Confirm the policy still lives only in `doc/legal/dependency-licenses.yaml` (exactly one file in `doc/legal/`) and that no companion policy document, SBOM, notice, or checksum artifact was added.
 - [ ] **6.3** Verify the reconciled document mentions `deny_list`, deny precedence, the scope check, and `TDR-0007` (`rg -n 'deny_list|deny.*allow|deny.*over|scope|TDR-0007' doc/spec/features/feature-monorepo-scaffold-toolchain.md`) and record the doc-sync result in the delivery record. If the system spec is code-adjacent enough to require an edit during delivery, escalate to `@pm` rather than editing it in a delivery commit.
-- [ ] **6.4** Record TDR-0007's status and acceptance boundary in the system-spec update and doc-sync record: cite it by ID as **Proposed**; the owner accepts or rejects it at PR review. Do not write "accepted", do not mark it decided, and do not edit `doc/decisions/TDR-0007-license-gate-compound-spdx-expression-evaluation.md` during this change.
+- [ ] **6.4** Record TDR-0007's status and acceptance boundary in the system-spec update and doc-sync record: TDR-0007 is **created in this change** as **Proposed** (authored by `@decision-advisor`); delivery and doc-sync perform **no further edits** to it, and it remains Proposed until the owner accepts or rejects it at PR review. Do not write "accepted" or mark it decided. Do not edit `doc/decisions/TDR-0007-license-gate-compound-spdx-expression-evaluation.md` or `doc/decisions/ADR-0003-oss-monorepo-structure.md` during delivery/doc-sync; the ADR-0003 C-2 editorial cross-reference is a separate owner-authorized action (task 6.5).
 - [ ] **6.5** Note in the doc-sync record that an ADR-0003 C-2 editorial cross-reference (or amendment) is a **separate owner-authorized decision change**, not part of GH-187. If the owner requests it, raise it as its own change; do not bundle an ADR-0003 edit into this delivery or its doc-sync commit.
 
 **Acceptance Criteria**:
 
 - Must: the current system spec states the deny-list policy, precedence, floor, grammar, scope check, and compound interpretation, and references **TDR-0007 as Proposed** without claiming acceptance (spec §16, §18.1, GAP-5, OQ-T2).
-- Must: the doc-sync record notes that an ADR-0003 C-2 editorial cross-reference is a separate owner-authorized change; no TDR-0007 or ADR-0003 file is edited in this change.
+- Must: TDR-0007 is created in this change as **Proposed** and referenced by the system spec; delivery/doc-sync makes no further TDR-0007 or ADR-0003 edits; the ADR-0003 C-2 editorial cross-reference remains a separate owner-authorized action.
 - Must: no companion policy file and no out-of-scope release artifact (CON-1, CON-7).
 - Should: the wording does not contradict the tested behaviour.
 
 **Files and modules**:
 
 - `doc/spec/features/feature-monorepo-scaffold-toolchain.md` (updated by `@doc-syncer` in workflow phase 7)
-- `doc/decisions/TDR-0007-license-gate-compound-spdx-expression-evaluation.md` (unchanged; remains Proposed)
-- `doc/decisions/ADR-0003-oss-monorepo-structure.md` (unchanged; any editorial cross-reference is a separate change)
+- `doc/decisions/TDR-0007-license-gate-compound-spdx-expression-evaluation.md` (created in this change as Proposed; no further delivery/doc-sync edits)
+- `doc/decisions/ADR-0003-oss-monorepo-structure.md` (unchanged; any editorial cross-reference is a separate owner-authorized change)
 
 **System docs**:
 
 - `doc/spec/features/feature-monorepo-scaffold-toolchain.md` (updated)
-- `doc/decisions/TDR-0007-license-gate-compound-spdx-expression-evaluation.md` (referenced, not edited)
+- `doc/decisions/TDR-0007-license-gate-compound-spdx-expression-evaluation.md` (created in this change as Proposed; referenced with no further edits)
 
 **Tests**:
 
 - `rg -n 'deny_list|deny.*allow|deny.*over|scope|TDR-0007' doc/spec/features/feature-monorepo-scaffold-toolchain.md` → matches present
-- `git diff --exit-code -- doc/decisions/TDR-0007-license-gate-compound-spdx-expression-evaluation.md doc/decisions/ADR-0003-oss-monorepo-structure.md` → exit 0 (neither decision record edited)
+- `git diff --exit-code -- doc/decisions/ADR-0003-oss-monorepo-structure.md` → exit 0 (ADR-0003 not edited); confirm TDR-0007 still matches the authored Proposed record with no delivery/doc-sync edit (`rg -n '^status: Proposed' doc/decisions/TDR-0007-license-gate-compound-spdx-expression-evaluation.md`)
 - `ls doc/legal` → exactly `dependency-licenses.yaml`
 
 **Completion signal**: `docs(GH-187): reconcile license policy in system spec`
@@ -467,7 +467,7 @@ Revert the entire change set (registry + audit + tests/fixtures) as one unit. Ne
 
 - Must: no version bump, no changeset, no release artifact (version_impact none, NG-1, CON-7; release-time artifacts stay with M4-S2 and registry completeness/public materials with M4-S3).
 - Must: every spec §18.1 Definition of Done predicate is satisfied, including all 15 ACs' traceable passing evidence, the live registry at schema v3 with `scope: direct-and-runtime-closure`, AC-F1-3's wrong-scope extension (TC-LICREG-031), the 18-malformed and 10-spawned matrices, the preserved compound, the unchanged surface, and the atomic 31-TC change set.
-- Must: TDR-0007 remains Proposed, is referenced by the system spec, and the owner's acceptance decision is recorded at PR review; no ADR-0003 or TDR-0007 file is edited in this change.
+- Must: TDR-0007 is created in this change as **Proposed**, is referenced by the system spec, and remains Proposed until the owner's acceptance decision is recorded at PR review; delivery/doc-sync makes no further TDR-0007 or ADR-0003 edits, and an ADR-0003 editorial cross-reference remains a separate owner-authorized action.
 - Must: the PR targets `main-tools` and carries the required `ts-license-audit` check.
 - Should: the PR description states the no-change assertions (lockfile, manifests, CI job, gate bindingness).
 
@@ -584,7 +584,7 @@ Revert the entire change set (registry + audit + tests/fixtures) as one unit. Ne
 | CI topology/bindingness/supply-chain/script-surface checks | `scripts/checks/*.ts` | Unchanged |
 | Lockfile and manifests | `pnpm-lock.yaml`, `package.json`, `packages/*/package.json` | Unchanged |
 | System specification | `doc/spec/features/feature-monorepo-scaffold-toolchain.md` | Doc (Phase 6, `@doc-syncer`) |
-| TDR-0007 compound interpretation | `doc/decisions/TDR-0007-license-gate-compound-spdx-expression-evaluation.md` | Decision (reference; remains Proposed, not edited) |
+| TDR-0007 compound interpretation | `doc/decisions/TDR-0007-license-gate-compound-spdx-expression-evaluation.md` | Decision (created in this change as Proposed; no further edits) |
 | ADR-0003 C-2 | `doc/decisions/ADR-0003-oss-monorepo-structure.md` | Decision (reference; not edited) |
 
 ## Plan Revision Log
@@ -595,6 +595,7 @@ Revert the entire change set (registry + audit + tests/fixtures) as one unit. Ne
 | 1.1 | 2026-10-31 | @plan-writer | Corrected the live registry entry count from 15 to 16 (four-entry `allow_list` unchanged); recorded TP-ISSUE-1/2/3 as RESOLVED by test plan v1.1 and spec v1.1 (18 malformed cases, 10 spawned cases, in-process coverage for four classes, `^[A-Za-z0-9.+-]+$` grammar); updated RSK-P2 and task 3.2 to the resolved binding. No scope, phase, task-ID, or AC/TC mapping changes. |
 | 1.2 | 2026-10-31 | @plan-writer | DoR iteration 1 remediation (`readiness-review/readiness-iter-1.md`, findings 2, 3, 7, 8, 9, 10). (A) Pre-existing audit test count corrected from 12 to 13 in Phase 1/2 tasks and evidence, with TC-LICREG-029 step 1's dynamic base-branch title check named as the authority. (B) Phase 6 now reconciles the system spec and cites TDR-0007 as Proposed, records the TDR acceptance boundary, and notes that an ADR-0003 C-2 editorial cross-reference is a separate owner-authorized change (new tasks 6.4 and 6.5). (C) Preserved the schema-v3 `scope: direct-and-runtime-closure` fail-closed check in tasks 1.2/1.3 and Phase 1 acceptance; added TC-LICREG-031 to task mappings and the Test Scenarios/matrix (31/31 TCs). (D) Corrected SBOM/checksum/notice ownership to M4-S2 for release-time artifacts and M4-S3 for registry completeness/public materials, citing GH-187's supersession of GH-170 DEC-10. (E) Updated citations to test plan v1.3 and spec v1.2, recorded OQ-T1/OQ-T2 as resolved and OQ-T3/OQ-T4 as non-blocking. (F) Reworded task 1.1's deny-list requirement to at least the 20 baseline identifiers with additional valid identifiers permitted. (G) Phase 8 now references spec §18.1's Definition of Done predicates, AC-F1-3's wrong-scope extension, and the 31-TC matrix instead of an undefined checklist. Phases remain 8; existing task IDs are unchanged, tasks 6.4-6.5 are added (31→33 tasks). |
 | 1.3 | 2026-10-31 | @plan-writer | DoR iteration 2 remediation (`readiness-review/readiness-iter-2.md`, blocking finding 1 and nit 6). Aligned the removal-case matrix with test plan v1.3: task 2.1's fixture class is **floor 25 (20 single removals + 5 adversarial removals)**, task 2.2 states 25 removal cases, and Phase 2 acceptance requires **25/25 removal cases (20 single + 5 adversarial)** while the 20-identifier Appendix A baseline stays distinct. RSK-P2 now cites test plan **v1.3**. No phase, task-ID, or AC/TC mapping changes. |
+| 1.4 | 2026-10-31 | @plan-writer | DoR iteration 3 cleanup (`readiness-review/readiness-iter-3.md`, findings 1 and 3). Current-state citations now point at **spec v1.4** and **test plan v1.5** (Context L27, resolved/open-question section L43-49, TC-031 note L49, RSK-P2 L137); historical revision-log rows are unchanged. Reworded Phase 6 task 6.4, Phase 6 acceptance, Phase 6 files/system docs and tests, Phase 8 acceptance, and the Artifacts table so **TDR-0007 is recorded as created in this change as Proposed**, with no further delivery/doc-sync edits and owner acceptance at PR review; the ADR-0003 editorial cross-reference remains a separate owner-authorized action. No phase, task-ID, or AC/TC mapping changes. |
 
 ## Execution Log
 
