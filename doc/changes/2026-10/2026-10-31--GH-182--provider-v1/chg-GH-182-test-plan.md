@@ -80,17 +80,17 @@ Protect the provider engine contract before any spawn integration consumes it: a
 | F-4 | AC-F4-3 | TC-PROV-021 | Planned |
 | F-4, F-6, F-9 | AC-F4-4 | TC-PROV-022, TC-PROV-057 | Planned |
 | F-4, F-6, NFR-6 | AC-F4-5 | TC-PROV-023, TC-PROV-058, TC-PROV-061 | Planned |
-| F-4, F-6, F-9, NFR-9 | AC-F4-6 | TC-PROV-024, TC-PROV-025, TC-PROV-026, TC-PROV-027, TC-PROV-037, TC-PROV-052, TC-PROV-055, TC-PROV-056, TC-PROV-057, TC-PROV-059 | Planned |
+| F-4, F-6, F-9, NFR-9 | AC-F4-6 | TC-PROV-024, TC-PROV-025, TC-PROV-026, TC-PROV-027, TC-PROV-037, TC-PROV-052, TC-PROV-055, TC-PROV-056, TC-PROV-057 | Planned |
 | F-5, NFR-5 | AC-F5-1 | TC-PROV-001, TC-PROV-028 | Planned |
 | F-5, NFR-7 | AC-F5-2 | TC-PROV-029 | Planned |
 | F-5, F-6, NFR-6 | AC-F5-3 | TC-PROV-030 | Planned |
 | F-5 | AC-F5-4 | TC-PROV-031 | Planned |
-| F-5, F-8, NFR-6 | AC-F5-5 | TC-PROV-032, TC-PROV-043 | Planned |
+| F-5, F-8, NFR-6 | AC-F5-5 | TC-PROV-032 | Planned |
 | F-5, NFR-7 | AC-F5-6 | TC-PROV-009, TC-PROV-033 | Planned |
-| F-6, NFR-4, NFR-5 | AC-F6-1 | TC-PROV-034 | Planned |
+| F-6, NFR-4, NFR-5 | AC-F6-1 | TC-PROV-001, TC-PROV-034 | Planned |
 | F-2, F-6 | AC-F6-2 | TC-PROV-035 | Planned |
-| F-6, F-8 | AC-F6-3 | TC-PROV-036, TC-PROV-041, TC-PROV-042, TC-PROV-043, TC-PROV-053 | Planned |
-| F-6, NFR-9 | AC-F6-4 | TC-PROV-037, TC-PROV-052, TC-PROV-055, TC-PROV-056, TC-PROV-057, TC-PROV-059, TC-PROV-061 | Planned |
+| F-6, F-8 | AC-F6-3 | TC-PROV-036, TC-PROV-053 | Planned |
+| F-6, NFR-9 | AC-F6-4 | TC-PROV-037, TC-PROV-052, TC-PROV-055, TC-PROV-059, TC-PROV-061 | Planned |
 | F-7, NFR-3, NFR-4 | AC-F7-1 | TC-PROV-038 | Planned |
 | F-7, F-9 | AC-F7-2 | TC-PROV-039, TC-PROV-056 | Planned |
 | F-7, NFR-4 | AC-F7-3 | TC-PROV-040, TC-PROV-059 | Planned |
@@ -1818,7 +1818,7 @@ Every row must produce an announcement/park or a classified error. A "clear" out
 - **Network:** 0 live calls. The quota transport is an injected fake that returns committed `(status, body)` pairs; a throwing `fetch` guard fails any unfixtured request. The legacy bash battery is not executed as a live script.
 - **Config fixtures (`tests/fixtures/provider/config/`):** `valid-chain.yaml`, `valid-chain-multi.yaml`, `paid-before-subscription.yaml`, `duplicate-entries.yaml`, `unknown-reference.yaml`, `empty-chain.yaml`, `no-chain.yaml`, `missing-required.yaml`, `optional-omitted.yaml`, `defaults.yaml`, `quota-policy.yaml`, `quota-policy-minimal.yaml`, `quota-disabled.yaml`, `skip-matrix.yaml`, `subscription-first.yaml`, `peak-substitution.yaml`, `peak-zai.yaml`, `peak-custom.yaml`, `peak-invalid-timezone.yaml`, `peak-end-before-start.yaml`, `peak-out-of-range.yaml`, `all-parked.yaml`, `disabled-entry.yaml`, `allowed-paid-fallback.yaml`, `disallowed-paid-fallback.yaml`, `skipped-outage.yaml`.
 - **Quota fixtures (`tests/fixtures/provider/quota/`):** `clear-no-tokens.json`, `clear-below-threshold.json`, `exhausted-valid-reset.json`, `both-exhausted.json`, `time-limit-only.json`, `pct-99.json`, `pct-100.json`, `pct-105.json`, `past-reset.json`, `mixed-reset.json`, `non-exhausted-earlier.json`, `reset-absent.json`, `reset-malformed.json`, `reset-null.json`, `malformed-json.json`, `envelope-code.json`, `envelope-success.json`, `limits-absent.json`, `limits-nonarray.json`, `pct-non-numeric.json`, `transport-failure.ts`, `http-401.ts`, `http-403.ts`, `http-500.ts`, `http-429.ts`, `http-302.ts`, `peak-plus-quota.json`, `sequence-*.json`. All bodies are sanitized; no live tenant data, no real token, no raw account identifiers.
-- **Park/announcement fixtures (`tests/fixtures/provider/parks/`, `announcements/`):** `park-active.json`, `park-cleared.json`, `park-expired.json`, `park-cap.json`, `park-chain-exhausted.json`, `park-expiry-boundary.json`, `park-generations.json`, `park-vs-lane.json`, `provider-parks.json` (including a torn/missing variant), `list-matrix.json`, `announcement-matrix.json`, `severity-matrix.json`, `dedupe-cases.json`.
+- **Park/announcement fixtures (`tests/fixtures/provider/parks/`, `announcements/`):** `park-active.json`, `park-cleared.json`, `park-expired.json`, `park-cap.json`, `park-chain-exhausted.json`, `cap-and-chain.json` (cap park + chain-exhausted park fixtures), `park-expiry-boundary.json`, `park-generations.json`, `park-vs-lane.json`, `provider-parks.json` (including a torn/missing variant), `list-matrix.json`, `announcement-matrix.json`, `severity-matrix.json`, `dedupe-cases.json`.
 - **Evidence fixtures (`tests/fixtures/provider/evidence/`):** `max-evidence.json` at the 1024-byte/20-field boundary; `over-bound-evidence.json` one byte/one field over; `unknown-key-evidence.json` for the closed-allowlist rejection; `park-allowlist.json` with the eight park fields; `announcement-allowlist.json` with the eleven announcement fields; `raw-body-canary.json` for the no-raw-body assertion.
 - **Golden fixtures (`tests/fixtures/provider/golden/`):** `resolve-selected.json`, `resolve-parked.json`, `resolve-outage-skipped.json`, `quota-success.json`, `quota-failure.json`, `parks-list-active.json`, `parks-list-all.json`, and matching `.txt` human outputs. Volatile values (absolute paths, wall-clock) are normalized before comparison.
 - **Security fixtures (`tests/fixtures/provider/security/`):** `canary.ts`, `credential-port-recording.ts`, `credential-missing.ts`, `classification-cases.ts`, `planted-env-read.ts`, `runtime-confinement-cases.ts`. Planted violations and mutation copies live only under `tests/fixtures/**` or `mkdtemp` workspaces, never under `packages/**`; fixtures are never named `*.test.ts`.

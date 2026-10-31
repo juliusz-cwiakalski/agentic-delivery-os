@@ -608,7 +608,7 @@ Tied to spec §18's Definition of Done predicates, Appendix D's ticket acceptanc
 - [ ] An unmerged pull request targets `main-tools` with all required CI jobs green on the pushed HEAD, assigned to the human owner.
 - [ ] The owner-policy check for spec OQ-2/OQ-3 (paid-fallback default; shipped chain posture) is complete before any merge of the configuration surface (task 11.2).
 
-**Remaining blockers**: none. Delivery can start at Phase 2 immediately. The only pre-merge (not pre-delivery) gate is the OQ-2/OQ-3 owner-policy confirmation carried as task 11.2; until resolved, the fail-closed defaults (DEC-3/DEC-4) govern.
+**Remaining blockers**: none. Delivery can start at Phase 1 immediately. The only pre-merge (not pre-delivery) gate is the OQ-2/OQ-3 owner-policy confirmation carried as task 11.2; until resolved, the fail-closed defaults (DEC-3/DEC-4) govern.
 
 ## Test Scenarios
 
