@@ -8,7 +8,7 @@ phases:
   test_planning: { started: "2026-10-31T18:00:00Z", completed: "2026-10-31T18:30:00Z" }
   delivery_planning: { started: "2026-10-31T18:30:00Z", completed: "2026-10-31T19:15:00Z" }
   dor_check: { started: "2026-10-31T19:15:00Z", completed: "2026-10-31T19:30:00Z" }
-  delivery: { started: "2026-10-31T19:30:00Z", completed: null }
+  delivery: { started: "2026-10-31T19:30:00Z", completed: "2026-10-31T20:30:00Z" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -23,13 +23,7 @@ decisions:
     date: "2026-10-31"
   - text: "Provider engine splits pure policy (core, runtime-neutral) from I/O edges (clock and quota HTTP transport injectable in the adapters tier); parks persist through the state layer as records carrying cause and expiry."
     date: "2026-10-31"
-open_questions:
-  - text: "Exact v1 provider command surface under `ados provider` (registry names the family only): spec to define resolve/quota/parks subcommands against the documented purpose."
-    date: "2026-10-31"
-  - text: "Provider config catalog shape (chain entries, peak windows, quota policy) is unspecified beyond the story; spec to define keys consistent with the layered config schema."
-    date: "2026-10-31"
-  - text: "Any new provider error codes beyond the existing provider.quota.exceeded must be added to the error table in both directions (machine + documented) per the sync invariant."
-    date: "2026-10-31"
+open_questions: []
 blockers: []
 notes:
   - text: "Legacy resolver fail-open behavior conflicts with the GH-182 AC 'provider outage is announced, not silent'; the ported battery must assert an explicit announcement record instead of a silent return 0."
@@ -46,4 +40,10 @@ notes:
     date: "2026-10-31"
   - text: "DoR iteration 1 verdict READY (10/10 facets; 0 blockers, 0 major). Fixed 2 minor test-plan over-mapping/fixture-inventory findings and 1 plan nit before the delivery checkpoint. Residual risks: owner-policy OQ-2/OQ-3 pre-merge gate, ADR-0007 stays Proposed until owner acceptance, 50ms threshold environment-sensitive, naming lock may rename provider-quota."
     type: decision
+    date: "2026-10-31"
+  - text: "Open questions resolved in spec v1.2: provider CLI surface = resolve/quota/parks list; provider config shape = typed catalog branch with Appendix B field contract; provider error rows = provider.outage, provider.auth.rejected, provider.chain.empty, provider.chain.invalid plus retained provider.quota.exceeded, synchronized machine-to-doc."
+    type: resolved
+    date: "2026-10-31"
+  - text: "Delivery phases 1-9 + 11.1 completed across 11 commits; aggregate pnpm check green (1138 tests / 113 files), boundaries green, 49/49 legacy IDs mapped, 46/46 ACs and 62/62 TCs traceable. Coder reported @committer delegation was unavailable and created commits directly, bypassing the canonical commit agent; commit messages still follow the planned Conventional Commit sequence and the tree is clean. Process deviation noted for retro; no content correctness issue observed."
+    type: retro
     date: "2026-10-31"
