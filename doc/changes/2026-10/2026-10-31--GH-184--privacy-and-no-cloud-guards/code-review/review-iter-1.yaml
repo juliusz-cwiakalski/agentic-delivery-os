@@ -1,0 +1,207 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-184
+branch: feat/GH-184/privacy-no-cloud-guards
+status: FAIL
+summary: >-
+  Substantive, honest delivery: fail-closed registry validation (RV-01..30), no-echo
+  reporting, hash/window semantics, rule-scoped allowlist with a non-vacuous regression,
+  the required injected emitter policy with codec purity, binding ts-invariants wiring,
+  and a correct single five-package changeset are all delivered and re-verified green by
+  this review. One high-severity defect breaks privacy detection: bare-substring
+  suppression markers ("user" inside "/Users") silently disable private.absolute-user-path
+  for macOS/Windows home-path forms and suppress other real credential shapes
+  (postgres://user:..., "apikey =" assignments, marker-carrying bearer tokens) at both the
+  file scan and the emitter policy; the mutation corpus only exercises /home/ forms so
+  every suite stays green while the rule is vacuous for its canonical inputs. Three
+  medium findings (emitter-side placeholder suppression on machine payloads, quadratic
+  line attribution on match-dense files, fail-open distinct-length handling in the policy
+  builder) and six low / two info findings complete the set.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 3
+  low: 6
+  info: 2
+spec_compliance: FAIL
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/io/privacy-rules.ts:190
+    message: >-
+      Bare-substring suppression markers are matched against the whole rule match span;
+      "user" occurs inside the /Users/ and C:\Users\ prefixes, so every macOS/Windows
+      personal-home-path match is classified fabricated-sample and silently skipped at
+      the file scan (scripts/checks/privacy-literals.ts:547) and the emitter policy
+      (envelope-content-policy.ts:36). Runtime-proven: /Users/jsmith/secret-notes.txt is
+      suppressed; only /home/<markerless> fires. Also suppresses
+      postgres://user:<pw>@host, "apikey = <secret>", and Bearer test-... tokens.
+      Contradicts spec F-1 recognizer definition, the substance of AC-F1-1/NFR-4, and
+      feature-privacy-guard.md ("a markerless value still fires").
+    suggestion: >-
+      Scope marker evaluation to the opaque value portion (user segment / password /
+      assigned value / token tail) with bare words anchored to token boundaries, or drop
+      ambiguous bare words from whole-span matching; add /Users/, C:\Users\,
+      postgres://user:..., and "apikey =" regression positives to the corpus and
+      TC-POLICY-006 parity; add a marker-broadening mutant control; keep the live-tree
+      baseline green with the existing allowlist; disclose the scoping in
+      feature-privacy-guard.md.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/io/envelope-content-policy.ts:36
+    message: >-
+      The emitter policy skips placeholder-suppressed generic matches, so a payload value
+      carrying a marker substring (Bearer your-..., test-... tokens, /Users/ paths)
+      serializes successfully. Spec DM-5/F-6 define the emitter policy as generic rules
+      plus hashed entries with no suppression mention; suppression exists for the
+      documentation false-positive corpus, and machine-generated envelope JSON has no
+      documentation context — an undocumented AC-F6-1 bypass.
+    suggestion: >-
+      Pin the behavior: recommended that the emitter policy evaluate generic rules
+      without placeholder suppression, with a TC-POLICY case asserting a marker-carrying
+      guarded payload is denied at every field x carrier; if suppression at the emitter
+      is intended, record it as a decided pin (PM/@decision-advisor) and state it in
+      spec DM-5 and the feature spec.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: performance
+    location: packages/adapters/src/io/privacy-rules.ts:200
+    message: >-
+      lineAt is O(index) and is called per generic match, so a match-dense single-line
+      file costs O(matches x bytes) — quadratic behavior contrary to NFR-5 linearity and
+      the 60s/50MiB budget. The performance suite's corpora are all non-matching, so the
+      path is unmeasured.
+    suggestion: >-
+      Precompute newline offsets once per text and binary-search per match (or track the
+      line incrementally — regex exec order is monotonic under /g); add a match-dense
+      corpus case to TC-PRIVACY-021 under the N/2N slack.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/io/privacy-rules.ts:260
+    message: >-
+      findWindowMatches silently returns empty when distinct lengths exceed 32, and
+      buildEnvelopeContentPolicy does not validate injected entries — a caller injecting
+      more than 32 distinct lengths gets a policy that silently allows every hashed
+      literal (fail-open, against the change's fail-closed principle). Unreachable via
+      the check (RV-29), reachable via the builder's injected inputs.
+      privacy-performance.test.ts:96 currently pins the silent-empty behavior.
+    suggestion: >-
+      Validate inputs at buildEnvelopeContentPolicy construction (reject >32 distinct
+      lengths, out-of-range lengths, duplicate ids); keep the in-function guard as an
+      unreachable-after-validation assertion.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: low
+    confidence: high
+    category: performance
+    location: scripts/checks/privacy-literals.ts:614
+    message: Every file is read and binary-checked twice per scan (runPrivacyScan, then scanFileViolations).
+    suggestion: Pass the buffer/text from the enumeration loop into scanFileViolations and drop the second read and looksBinary call.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: low
+    confidence: high
+    category: correctness
+    location: scripts/checks/privacy-literals.ts:208
+    message: lengthsByClass is declared and populated in validateEntries but never read (dead code).
+    suggestion: Remove the dead map, or implement and test the per-class distinct-length cap it implies.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: low
+    confidence: medium
+    category: correctness
+    location: scripts/checks/privacy-literals.ts:625
+    message: >-
+      Violation ordering uses localeCompare with the runtime default locale; ordering of
+      mixed-case paths can differ across ICU builds/environments, and the program mixes
+      this with codepoint .sort() in listScanFiles.
+    suggestion: Use codepoint comparison or an explicit locale to match the file-list ordering.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: low
+    confidence: high
+    category: correctness
+    location: scripts/checks/privacy-literals.ts:741
+    message: Unknown positional arguments are silently ignored; a mistaken target path argument still scans the whole tree.
+    suggestion: Reject unexpected positionals with the usage-error exit (2).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-9
+    severity: low
+    confidence: medium
+    category: plan-compliance
+    location: tests/structure/envelope-contract.test.ts:288
+    message: >-
+      The single-serialization-point audit walks only packages/**, so a second envelope
+      serializer declared under scripts/** or tools/** would not be flagged, narrowing
+      the AC-F6-3 audit.
+    suggestion: Widen the audit walk to scripts/** and tools/**, keeping the seeded second-path control.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-10
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: tests/checks/privacy-support.ts:1
+    message: >-
+      Delivery drifts from the plan's file layout: temp-tree support landed in a new
+      privacy-support.ts instead of extending tests/checks/fixture-repo.ts (untouched),
+      and the corpus/echo-mutants directories were consolidated into rules.ts constants
+      and temp-generated mutants. Functionally equivalent; content commitments honored.
+    suggestion: Record the layout mapping in the evidence artifact or plan execution log; no code change required.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-11
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: doc/decisions/00-index.md:25
+    message: The index diff also adds the pre-existing TDR-0004 row (state-layer record) in this change's scope — benign, correct housekeeping.
+    suggestion: Keep; noted for scope transparency.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-12
+    severity: info
+    confidence: medium
+    category: security
+    location: scripts/checks/privacy-literals.ts:392
+    message: >-
+      JSON.parse failure messages can embed a short registry-file snippet; the registry
+      is committed digest-only data so no raw-literal channel exists today, but the
+      message string is not content-controlled under a maximal C-6 reading.
+    suggestion: Optionally reduce the failure line to a position/class-only message.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-10-31T21:30:00Z
+next_step: EXECUTE_REMEDIATION_PHASE

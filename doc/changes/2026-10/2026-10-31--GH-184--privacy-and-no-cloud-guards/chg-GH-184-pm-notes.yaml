@@ -29,7 +29,9 @@ phases:
   system_spec_update:
     started: "2026-10-31T08:50:00Z"
     completed: "2026-10-31T09:10:00Z"
-  review_fix: { started: null, completed: null }
+  review_fix:
+    started: "2026-10-31T09:12:00Z"
+    completed: null
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -55,6 +57,12 @@ open_questions:
 blockers: []
 
 notes:
+  - text: "Review iteration 1 verdict FAIL (12 findings: 0 critical, 1 high, 3 medium, 6 low, 2 info). High F-1: the bare 'user' suppression marker substring-matches the separator in platform home paths, silently disabling private.absolute-user-path for two platforms and suppressing real credential/authorization shapes. Mediums: emitter applies documentation-placeholder suppression to machine payloads; quadratic line attribution on match-dense files; policy builder fails open above the distinct-length cap. Remediation batch (tasks 9.4-9.15) added to the plan; re-review required (iteration 2)."
+    type: "blocker"
+    date: "2026-10-31"
+  - text: "Retro: a substring-based suppression marker silently disables a rule on a whole platform path class, and the test corpus only exercised one platform form, so the suite passed while the detection was dead. Caught by independent review before PR. Lesson: negative suppression paths need a breadth matrix across platform forms, and every suppression predicate needs a broadening mutant."
+    type: "retro"
+    date: "2026-10-31"
   - text: "Doc-syncer (commit 3a7635e) reports zero residual documentation gaps: new feature-privacy-guard.md, reconciled adapter-ports (required policy, failure kind, validation order, purity), branding-seam (hashed registry vs raw brand seeds), monorepo-scaffold check inventory, glossary terms, and registered the new spec in forbidden-literals.registry.json. result-contract deliberately unchanged (26/26 error-table sync). Guard, forbidden-literals, doc-distribution, bun test (1123) and pnpm check all green."
     type: "info"
     date: "2026-10-31"

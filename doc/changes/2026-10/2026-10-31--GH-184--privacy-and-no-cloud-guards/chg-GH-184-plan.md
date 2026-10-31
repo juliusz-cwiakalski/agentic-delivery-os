@@ -478,6 +478,21 @@ Execution risks carried from the test plan (§8.1) and spec (§11), anchored to 
 - [ ] **9.2** Fix code, fixtures, and registry data together; any accepted PD-pin change is recorded as a plan revision — never applied silently; the codec contract pair and call sites never split.
 - [ ] **9.3** Re-run the affected focused suites, the full `pnpm check` battery, `pnpm check:privacy-literals`, and the independent re-review until PASS; if no findings, record this phase not-required backed by the Phase 8 PASS.
 
+**Review-iteration-1 remediation batch** (source: `review/review-iter-1.md`; reproduce-then-fix, smallest change, no scope expansion):
+
+- [ ] **9.4** **[F-1, high]** Anchor suppression markers to the user/value segment instead of the whole match span. The bare `"user"` marker currently suppresses every platform home path because the separator itself contains `user`. Add regression positives for the three platform home forms plus the credential- and authorization-shaped forms named in F-1, and a marker-broadening mutant that fails if a marker again matches the separator. Keep the live-tree baseline green with the existing rule-scoped entries; disclose the anchoring semantics in `feature-privacy-guard.md`.
+- [ ] **9.5** **[F-2, medium]** The emitter policy must not apply documentation-placeholder suppression to machine-generated metadata payloads. Remove suppression from the emitter path (file-scan suppression stays) and pin the behaviour with an emitter TC: a placeholder-looking guarded payload is rejected.
+- [ ] **9.6** **[F-3, medium]** Replace per-match line rescans with a precomputed newline-offset index (or a single incremental cursor) so attribution stays linear on match-dense files; add a match-dense performance corpus case and record the measurement.
+- [ ] **9.7** **[F-4, medium]** Validate injected entries at policy-builder construction: enforce the distinct-length cap, algorithm, digest shape, and length consistency; fail closed on violation instead of silently allowing all hashed literals. Add construction-failure tests.
+- [ ] **9.8** **[F-5, low]** Read each scanned file once, combining binary detection and matching in a single pass; keep results byte-identical.
+- [ ] **9.9** **[F-6, low]** Remove the dead `lengthsByClass` code in registry validation.
+- [ ] **9.10** **[F-7, low]** Replace locale-dependent `localeCompare` ordering with deterministic code-unit comparison; add an ordering test with mixed-case and non-ASCII paths proving byte-identical repeat runs.
+- [ ] **9.11** **[F-8, low]** Unknown positional arguments must fail closed with a usage diagnostic naming the argument, not be silently ignored.
+- [ ] **9.12** **[F-9, low]** Extend the single-serialization-point audit beyond `packages/**` to the full scan scope; prove it detects a planted call site outside `packages`.
+- [ ] **9.13** **[F-10, low]** Reconcile the plan's stated file layout with the delivered layout (evidence note only; no code change).
+- [ ] **9.14** **[F-12, info]** Registry parse failures must emit content-free diagnostics (no file snippet echoing) to stay consistent with no-echo reporting.
+- [ ] **9.15** Re-run the focused privacy/policy suites, `pnpm check`, `pnpm check:privacy-literals`, the CI invariant checks, and re-review; confirm all previously green suites remain green and the live-tree baseline needs no rule weakening.
+
 **Acceptance Criteria**:
 
 - Must: all accepted findings closed with the affected ACs still traceable and previously green suites still green; no waived check.
