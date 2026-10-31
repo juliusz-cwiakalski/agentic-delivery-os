@@ -1,0 +1,237 @@
+{
+  "_comment": "Preserved fields of the dependency license registry. Regenerate deliberately (and review the diff) when entries, uses, verdicts, allow list, scope, or the C-2 determination legitimately change.",
+  "allow_list": ["Apache-2.0", "BSD-3-Clause", "ISC", "MIT"],
+  "c2_determination": "proposed at delivery; confirmed by the owner at PR review",
+  "entries": [
+    {
+      "license": "MIT",
+      "package": "@arethetypeswrong/cli",
+      "uses": [
+        {
+          "field": "devDependencies",
+          "owner": "package.json",
+          "version": "0.18.5"
+        }
+      ],
+      "verdict": "approved",
+      "version": "0.18.5"
+    },
+    {
+      "license": "MIT OR Apache-2.0",
+      "package": "@biomejs/biome",
+      "uses": [
+        {
+          "field": "devDependencies",
+          "owner": "package.json",
+          "version": "2.6.4"
+        }
+      ],
+      "verdict": "approved",
+      "version": "2.6.4"
+    },
+    {
+      "license": "MIT",
+      "package": "@changesets/cli",
+      "uses": [
+        {
+          "field": "devDependencies",
+          "owner": "package.json",
+          "version": "3.0.3"
+        }
+      ],
+      "verdict": "approved",
+      "version": "3.0.3"
+    },
+    {
+      "license": "MIT",
+      "package": "@commitlint/cli",
+      "uses": [
+        {
+          "field": "devDependencies",
+          "owner": "package.json",
+          "version": "21.2.4"
+        }
+      ],
+      "verdict": "approved",
+      "version": "21.2.4"
+    },
+    {
+      "license": "MIT",
+      "package": "@commitlint/config-conventional",
+      "uses": [
+        {
+          "field": "devDependencies",
+          "owner": "package.json",
+          "version": "21.2.4"
+        }
+      ],
+      "verdict": "approved",
+      "version": "21.2.4"
+    },
+    {
+      "license": "MIT",
+      "package": "@types/bun",
+      "uses": [
+        {
+          "field": "devDependencies",
+          "owner": "package.json",
+          "version": "1.4.4"
+        }
+      ],
+      "verdict": "approved",
+      "version": "1.4.4"
+    },
+    {
+      "license": "MIT",
+      "package": "dependency-cruiser",
+      "uses": [
+        {
+          "field": "devDependencies",
+          "owner": "package.json",
+          "version": "18.7.0"
+        }
+      ],
+      "verdict": "approved",
+      "version": "18.7.0"
+    },
+    {
+      "license": "MIT",
+      "package": "husky",
+      "uses": [
+        {
+          "field": "devDependencies",
+          "owner": "package.json",
+          "version": "9.1.7"
+        }
+      ],
+      "verdict": "approved",
+      "version": "9.1.7"
+    },
+    {
+      "license": "MIT",
+      "package": "publint",
+      "uses": [
+        {
+          "field": "devDependencies",
+          "owner": "package.json",
+          "version": "0.3.25"
+        }
+      ],
+      "verdict": "approved",
+      "version": "0.3.25"
+    },
+    {
+      "license": "Apache-2.0",
+      "package": "typescript",
+      "uses": [
+        {
+          "field": "devDependencies",
+          "owner": "package.json",
+          "version": "6.0.3"
+        }
+      ],
+      "verdict": "approved",
+      "version": "6.0.3"
+    },
+    {
+      "license": "ISC",
+      "package": "yaml",
+      "uses": [
+        {
+          "field": "devDependencies",
+          "owner": "package.json",
+          "version": "2.9.1"
+        },
+        {
+          "field": "dependencies",
+          "owner": "packages/adapters/package.json",
+          "version": "2.9.1"
+        },
+        {
+          "field": "dependencies",
+          "owner": "@changesets/parse@1.0.0",
+          "version": "2.9.1"
+        },
+        {
+          "field": "dependencies",
+          "owner": "@manypkg/tools@2.1.2",
+          "version": "2.9.1"
+        }
+      ],
+      "verdict": "approved",
+      "version": "2.9.1"
+    },
+    {
+      "license": "MIT",
+      "package": "ajv",
+      "uses": [
+        {
+          "field": "dependencies",
+          "owner": "packages/core/package.json",
+          "version": "8.20.0"
+        },
+        {
+          "field": "dependencies",
+          "owner": "@commitlint/config-validator@21.2.3",
+          "version": "8.20.0"
+        }
+      ],
+      "verdict": "approved",
+      "version": "8.20.0"
+    },
+    {
+      "license": "MIT",
+      "package": "fast-deep-equal",
+      "uses": [
+        {
+          "field": "dependencies",
+          "owner": "ajv@8.20.0",
+          "version": "3.1.3"
+        }
+      ],
+      "verdict": "approved",
+      "version": "3.1.3"
+    },
+    {
+      "license": "BSD-3-Clause",
+      "package": "fast-uri",
+      "uses": [
+        {
+          "field": "dependencies",
+          "owner": "ajv@8.20.0",
+          "version": "3.1.9"
+        }
+      ],
+      "verdict": "approved",
+      "version": "3.1.9"
+    },
+    {
+      "license": "MIT",
+      "package": "json-schema-traverse",
+      "uses": [
+        {
+          "field": "dependencies",
+          "owner": "ajv@8.20.0",
+          "version": "1.0.0"
+        }
+      ],
+      "verdict": "approved",
+      "version": "1.0.0"
+    },
+    {
+      "license": "MIT",
+      "package": "require-from-string",
+      "uses": [
+        {
+          "field": "dependencies",
+          "owner": "ajv@8.20.0",
+          "version": "2.0.2"
+        }
+      ],
+      "verdict": "approved",
+      "version": "2.0.2"
+    }
+  ],
+  "schema_version_preserved": true,
+  "scope": "direct-and-runtime-closure"
+}
