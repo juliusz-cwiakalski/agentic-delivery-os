@@ -5,7 +5,7 @@ milestone: "M0: Trust substrate"
 story_code: "M0-S20"
 phases:
   clarify_scope: { started: "2026-10-31T18:30:00Z", completed: "2026-10-31T18:45:00Z" }
-  specification: { started: "2026-10-31T18:46:00Z", completed: null, reopened: "2026-10-31T20:10:00Z" }
+  specification: { started: "2026-10-31T18:46:00Z", completed: "2026-10-31T20:20:00Z", reopened: "2026-10-31T20:10:00Z" }
   test_planning: { started: "2026-10-31T19:06:00Z", completed: null, reopened: "2026-10-31T20:10:00Z" }
   delivery_planning: { started: "2026-10-31T19:25:00Z", completed: null, reopened: "2026-10-31T20:10:00Z" }
   dor_check: { started: "2026-10-31T19:57:00Z", completed: null, iteration: 1, verdict: "NOT_READY" }
