@@ -5,7 +5,7 @@ change:
   tracker: github
   excluded_from_samples: true
 status: PARTIAL
-captured_at: '2026-10-31T18:55:00Z'
+captured_at: '2026-10-31T14:50:00Z'
 source_commit: 75b4e7602ad89bd26f96912ac06ed8bfcb72a5ae
 window:
   start: '2026-02-01T00:00:00Z'
