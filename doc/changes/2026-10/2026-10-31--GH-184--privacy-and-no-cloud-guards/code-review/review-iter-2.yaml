@@ -1,0 +1,81 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-184
+branch: feat/GH-184/privacy-no-cloud-guards
+status: PASS
+summary: >-
+  Re-review after remediation commit e7dc4a9 (plus docs re-sync 0ad062a and
+  ledger checkpoints). All twelve iteration-1 findings are independently
+  verified closed: reviewer-run runtime probe confirms the three platform home
+  forms, markerless credential/authorization forms, and key-name/separator
+  defeat attempts all fire unsuppressed while intended placeholders stay
+  suppressed; the emitter denies marker-carrying values; policy construction
+  fails closed on invalid injected entries; attribution is linear and correct.
+  Full battery re-run green (1136 tests via pnpm check, all CI invariant
+  checks, live guard green on 1006 files, wiring/changesets/lockfile
+  byte-untouched). Exactly two rule-scoped review-artifact allowlist entries
+  were added; no rule, threshold, marker, or cap was weakened. The one
+  consciously declined residual (marker inside the protected value stays
+  suppressed at the file scan, denied at the emitter) is accurately documented
+  and acceptable. Two informational observations, no action required.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+publication: ~
+findings:
+  - id: N-1
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/io/privacy-rules.ts:104
+    message: >-
+      Bare-word suppression markers (owner, user, someone) remain substring
+      matches inside the protected value segment, so an opaque real value
+      merely containing such a word mid-string is suppressed at the file scan
+      (the emitter denies it; hashed entries bypass suppression). Within the
+      documented residual class.
+    suggestion: >-
+      Accepted for this change (documented in feature-privacy-guard.md Known
+      Limitations). Future tuning change: anchor bare words to whole tokens in
+      the value segment, keeping hyphenated markers as substring matches.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: N-2
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: tests/structure/privacy-imports.test.ts:280
+    message: >-
+      The no-default-hash purity proxy narrowed from banning the literal
+      sha256 to banning node:crypto, required because the policy builder now
+      validates an algorithm field using the sha256 literal. Core purity bars
+      remain intact (import specifiers restricted, createHash banned, ambient
+      crypto identifier banned).
+    suggestion: >-
+      Acceptable as-is; a tighter future form would ban hash call expressions
+      rather than either literal.
+    suppressed: false
+    published_url: null
+    published_at: null
+iteration_1_closure:
+  F-1: CLOSED
+  F-2: CLOSED
+  F-3: CLOSED
+  F-4: CLOSED
+  F-5: CLOSED
+  F-6: CLOSED
+  F-7: CLOSED
+  F-8: CLOSED
+  F-9: CLOSED
+  F-10: CLOSED
+  F-11: CLOSED
+  F-12: CLOSED
+reviewed_at: 2026-10-31T23:59:00Z
+next_step: PROCEED
