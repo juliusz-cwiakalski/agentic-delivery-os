@@ -8,7 +8,7 @@ phases:
   specification: { started: "2026-10-31T18:46:00Z", completed: "2026-10-31T21:15:00Z", reopened: "2026-10-31T21:05:00Z" }
   test_planning: { started: "2026-10-31T19:06:00Z", completed: "2026-10-31T21:25:00Z", reopened: "2026-10-31T21:05:00Z" }
   delivery_planning: { started: "2026-10-31T19:25:00Z", completed: "2026-10-31T21:35:00Z", reopened: "2026-10-31T21:26:00Z" }
-  dor_check: { started: "2026-10-31T19:57:00Z", completed: null, iteration: 3, verdict: null, iteration_1_verdict: "NOT_READY", iteration_2_verdict: "NOT_READY", iteration_3_started: "2026-10-31T21:05:00Z" }
+  dor_check: { started: "2026-10-31T19:57:00Z", completed: "2026-10-31T21:50:00Z", iteration: 3, verdict: "READY", iteration_1_verdict: "NOT_READY", iteration_2_verdict: "NOT_READY", iteration_3_started: "2026-10-31T21:36:00Z" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -38,6 +38,7 @@ open_questions:
 blockers:
   - text: "DoR iteration 2 = NOT_READY (1 blocking): the B-1 behavior is correct in spec §22/DEC-12, plan D-6/P5.3/P5.8, and TC-CONF-021/024, but AC-F7-5 and three prose statements (§8.4, §21, §16 path map) plus test-plan §6 still say the live entrypoint never reads token values, which contradicts the required token-source-key occupancy inspection. Remediation: one wording pass in spec + test plan; no behavior change. Advisory items: flat steps[] provider/flowId vs spec §24, TC-CONF-013 handler assertion missing, TC-CONF-027 missing-file control non-mechanical, AC-F2-3 declared-gap vs capability-absent. Reopened specification and test_planning for the final pass; delivery_planning stays complete."
     date: "2026-10-31"
+    resolved_date: "2026-10-31"
 notes:
   - text: "State detection (clarify-scope snapshot): issue GH-189 was OPEN, no labels, milestone 'M0: Trust substrate', 0 comments; no GH-189 branch, no open or merged PR, worktree clean at origin/main-tools tip (b31ec47). Fresh delivery, not a resume. Current state: issue carries change+planning labels; branch feat/GH-189/adapter-conformance-suite holds spec, test plan, plan, DoR iter-1 verdict, and remediation commits."
     type: "info"
@@ -61,5 +62,11 @@ notes:
     type: "retro"
     date: "2026-10-31"
   - text: "DoR iteration 2: NOT_READY, 1 blocking / 4 advisory / 2 nit. The B-1 mechanism and B-2 count are resolved, but the fix did not propagate to AC-F7-5 and three prose statements that still say token values are never read while occupancy requires inspecting the token source key. Lesson: when a mechanism changes, sweep every acceptance criterion and prose boundary that mentions the old behavior, not just the primary section. Remaining advisories are cheap alignment items (flat steps provider/flowId, TC-CONF-013 handler, TC-CONF-027 static control, AC-F2-3 skip kind)."
+    type: "retro"
+    date: "2026-10-31"
+  - text: "DoR iteration 3: READY, all 10 facets PASS, 0 blocking / 2 advisory / 4 nit. Artifacts frozen at spec v1.2, test plan v1.2, plan v1.3. Accepted non-blocking items: A-1 (unify ticket-AC-3 evidence list to TC-CONF-010/011/016/017/032 in P8.5), A-2 (P8.3 must add .ai/rules/testing-strategy.md), NIT 3-6 (coder directives: use validateWorkflow(text)+validateWorkflowRoot(root); skipReason/skipKind null for executed/failed and skipKind mandatory only when skipped; readLiveConfig returns { settings, credentialReference, occupancy: present|missing, missingSettings }). Delivery starts at P1."
+    type: "info"
+    date: "2026-10-31"
+  - text: "DoR took 3 iterations: iteration 1 caught a real GitHub Actions empty-string mechanism defect and a Jira count contradiction; iteration 2 caught incomplete propagation of the fix into AC-F7-5/prose; iteration 3 passed. The adversarial gate did its job, but the authoring chain should have swept acceptance criteria and prose after changing a mechanism. Cost: three remediation passes of documentation-only churn; no code was written, so the cost stayed bounded."
     type: "retro"
     date: "2026-10-31"
