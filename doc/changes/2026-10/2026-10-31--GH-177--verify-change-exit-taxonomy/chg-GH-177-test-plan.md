@@ -10,7 +10,7 @@ version_impact: minor
 summary: "Verify M0-S8: a read-only `ados verify change <ref>` that checks the declared variant's phase ledger against the pm-notes declaration and the verified registry transition history, classifies the delivery result tuple in the eleven-token bash-era vocabulary, and projects every classified outcome through one total exit taxonomy. The plan proves: variant-aware missing-phase naming (full eleven, pinned LITE six); exact `result=…; variant=…; missing=…` summaries; classified malformed-note and registry-failure outcomes with zero crashes and zero exit-zero false success; the eleven-token enum/taxonomy bound to the bash usage enum and the spec table; overlay precedence with presence-tolerant reads and projection-not-evidence; read-only, network-free, spawn-free, deterministic behaviour; the new `verify` error kind/row with two-way table sync; and the real committed GH-179/GH-170/GH-171 corpus."
 links:
   change_spec: ./chg-GH-177-spec.md
-  implementation_plan: null
+  implementation_plan: ./chg-GH-177-plan.md
   testing_strategy: ../../../../.ai/rules/testing-strategy.md
 ---
 
@@ -53,7 +53,7 @@ The plan is built around two adversarial mechanisms the specification names. Fir
 
 ## 2. References
 
-- **Change specification**: [chg-GH-177-spec.md](./chg-GH-177-spec.md) — AC-V1..AC-V14, C-1..C-8, DEC-1..DEC-11, NFR-1..NFR-7, QA Strategy, C-4/C-5/C-6 tables, C-8 error identities, revision log v1.0.
+- **Change specification**: [chg-GH-177-spec.md](./chg-GH-177-spec.md) — AC-V1..AC-V14, C-1..C-8, DEC-1..DEC-11, NFR-1..NFR-7, QA Strategy, C-4/C-5/C-6 tables, C-8 error identities, revision log v1.1.
 - **Decision record**: [TDR-0005 — Delivery result enum and CLI exit taxonomy](../../../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md) — token parity, `state-unverified` → `platform-provider` → exit `2`, broken invocations → exit `1`, single enum home.
 - **Testing strategy**: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — `bun:test`, `tests/{structure,behaviour,checks,boundaries}`, `scripts/checks/*.ts` mutation tests, `pnpm check`.
 - **TypeScript rules**: [.ai/rules/typescript.md](../../../../.ai/rules/typescript.md) — strict typing, purity, runtime-API confinement, no ambient reads.
