@@ -2,7 +2,7 @@
 id: chg-GH-204-test-plan
 status: Proposed
 created: 2026-10-31T13:00:00Z
-last_updated: 2026-10-31T13:00:00Z
+last_updated: 2026-10-31T13:15:00Z
 owners: [engineering]
 service: repo operating documentation
 labels: [change, planning, documentation]
@@ -10,7 +10,7 @@ version_impact: minor
 summary: "Verify the committed agent memory layer: one AGENTS.md kernel section, the .ai/memory tree with four seeds, and the consolidate-memory skill, using static content assertions, a real YAML parser, a disposable consolidation dry-run, and existing repository gates."
 links:
   change_spec: ./chg-GH-204-spec.md
-  implementation_plan: null
+  implementation_plan: ./chg-GH-204-plan.md
   testing_strategy: ../../../../.ai/rules/testing-strategy.md
 ---
 

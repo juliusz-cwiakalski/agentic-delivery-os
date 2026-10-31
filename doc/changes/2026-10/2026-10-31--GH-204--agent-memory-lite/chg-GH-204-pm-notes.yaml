@@ -5,8 +5,8 @@ variant: full
 phases:
   clarify_scope: { started: "2026-10-31T12:23:47Z", completed: "2026-10-31T12:26:00Z" }
   specification: { started: "2026-10-31T12:27:00Z", completed: "2026-10-31T12:35:00Z" }
-  test_planning: { started: "2026-10-31T12:36:00Z", completed: "2026-10-31T12:46:00Z" }
-  delivery_planning: { started: null, completed: null }
+  test_planning: { started: "2026-10-31T12:36:00Z", completed: "2026-10-31T12:46:00Z", reopened: "2026-10-31T13:15:00Z (delivery_planning found implementation_plan link null; corrected to ./chg-GH-204-plan.md)" }
+  delivery_planning: { started: "2026-10-31T12:47:00Z", completed: "2026-10-31T13:18:00Z" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -46,6 +46,12 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Phase 4 delivery_planning COMPLETE: chg-GH-204-plan.md, 200 lines, 4 coder phases, 13/13 TCs mapped, lifecycle 5 and 7..11 marked PM-owned. Plan flagged the unquoted skill description, recency wording, missing kernel rules, and missing skills inventory section, all assigned to delivery phases."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Reopened test_planning briefly to fix the test plan implementation_plan link from null to ./chg-GH-204-plan.md. One-field upstream correction, no re-authoring."
+    type: "info"
+    date: "2026-10-31"
   - text: "Phase 3 test_planning COMPLETE: chg-GH-204-test-plan.md, 180 lines, TC-MEMORY-001..013 covering AC-1..AC-14 with non-vacuity controls. Dry-run uses disposable temp trees and hashes the real seeds before and after."
     type: "info"
     date: "2026-10-31"
