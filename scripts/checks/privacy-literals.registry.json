@@ -87,6 +87,55 @@
       "path": "doc/changes/2026-10/2026-10-31--GH-184--privacy-and-no-cloud-guards/readiness-review/readiness-iter-1.md",
       "rules": ["private.absolute-user-path"],
       "reason": "Archival DoR review record that quotes the verified owner paths as evidence; the review artifact is read-only to this delivery phase."
+    },
+    {
+      "id": "privacy-fixture-root",
+      "kind": "directory",
+      "path": "tests/fixtures/privacy-literals",
+      "rules": ["*"],
+      "reason": "The dedicated synthetic-fixture root; the only directory-style entry, so synthetic values cannot hide a real value elsewhere."
+    },
+    {
+      "id": "privacy-literals-suite",
+      "kind": "file",
+      "path": "tests/checks/privacy-literals.test.ts",
+      "rules": ["*"],
+      "reason": "The guard's own mutation and behaviour suite imports the synthetic fixtures and names rule ids."
+    },
+    {
+      "id": "privacy-registry-suite",
+      "kind": "file",
+      "path": "tests/checks/privacy-registry.test.ts",
+      "rules": ["*"],
+      "reason": "The guard's registry validation matrix names rule ids and synthetic registry shapes."
+    },
+    {
+      "id": "privacy-scope-suite",
+      "kind": "file",
+      "path": "tests/checks/privacy-scope.test.ts",
+      "rules": ["*"],
+      "reason": "The guard's scope suite plants synthetic values in temp repositories and names the rule ids under test."
+    },
+    {
+      "id": "privacy-reporting-suite",
+      "kind": "file",
+      "path": "tests/checks/privacy-reporting.test.ts",
+      "rules": ["*"],
+      "reason": "The guard's reporting suite imports synthetic fixtures and asserts content-free output."
+    },
+    {
+      "id": "privacy-authoring-suite",
+      "kind": "file",
+      "path": "tests/checks/privacy-authoring.test.ts",
+      "rules": ["*"],
+      "reason": "The guard's authoring suite spawns the helper with a fabricated literal imported from the fixture root."
+    },
+    {
+      "id": "privacy-performance-suite",
+      "kind": "file",
+      "path": "tests/checks/privacy-performance.test.ts",
+      "rules": ["*"],
+      "reason": "The guard's performance suite generates a synthetic corpus and names the registered lengths."
     }
   ],
   "exclusions": [

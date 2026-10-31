@@ -459,6 +459,22 @@ const isAllowlisted = (file: string, allowlist: readonly AllowlistEntry[]): bool
     entry.kind === "file" ? file === entry.path : file.startsWith(`${entry.path}/`),
   );
 
+/**
+ * Rule-scoped suppression: an entry suppresses only its named rule ids (or all
+ * rules when scoped to `*`). Every other rule still fires in that file.
+ */
+const isRuleSuppressed = (
+  file: string,
+  ruleId: string,
+  allowlist: readonly AllowlistEntry[],
+): boolean =>
+  allowlist.some((entry) => {
+    const matchesPath =
+      entry.kind === "file" ? file === entry.path : file.startsWith(`${entry.path}/`);
+    if (!matchesPath) return false;
+    return entry.rules.includes("*") || entry.rules.includes(ruleId);
+  });
+
 const looksBinary = (buffer: Buffer): boolean => {
   const window = buffer.subarray(0, 8192);
   if (window.includes(0)) return true;
@@ -521,6 +537,7 @@ const scanFileViolations = (
   digests: Map<string, HashedEntry>,
   lengths: readonly number[],
 ): PrivacyViolation[] => {
+  const allowlist = registry.allowlist;
   const buffer = readFileSync(join(root, file));
   if (looksBinary(buffer)) return [];
   const text = buffer.toString("utf8");
@@ -531,6 +548,7 @@ const scanFileViolations = (
     if (match.suppressionClass !== null) continue;
     const key = `rule:${match.id}:${match.line}:${match.start}`;
     if (seen.has(key)) continue;
+    if (isRuleSuppressed(file, match.id, allowlist)) continue;
     seen.add(key);
     violations.push({
       ruleOrEntryId: match.id,
@@ -547,6 +565,7 @@ const scanFileViolations = (
     if (entry === undefined) continue;
     const key = `entry:${entry.id}:${match.index}`;
     if (seen.has(key)) continue;
+    if (isRuleSuppressed(file, entry.id, allowlist)) continue;
     seen.add(key);
     violations.push({
       ruleOrEntryId: entry.id,
@@ -591,10 +610,7 @@ export const runPrivacyScan = (root: string): ScanOutcome => {
       excludedFiles += 1;
       continue;
     }
-    if (isAllowlisted(file, registry.allowlist)) {
-      allowlistedFiles += 1;
-      continue;
-    }
+    if (isAllowlisted(file, registry.allowlist)) allowlistedFiles += 1;
     const buffer = readFileSync(join(root, file));
     if (looksBinary(buffer)) {
       binarySkipped += 1;
@@ -745,7 +761,7 @@ export const parseArgs = (argv: readonly string[]): ParsedArgs => {
       className = value;
       continue;
     }
-    if (argument !== undefined && argument.startsWith("-")) {
+    if (argument?.startsWith("-")) {
       return { json, author, class: className, failure: `unknown flag: ${argument}` };
     }
   }
