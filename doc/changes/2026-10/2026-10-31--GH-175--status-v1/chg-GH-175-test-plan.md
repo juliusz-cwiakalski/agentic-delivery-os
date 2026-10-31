@@ -846,7 +846,7 @@ All thirty-three TCs are automated except TC-STATUS-032, which is opt-in automat
 
 **Preconditions**:
 
-- Origin URLs: `https://github.com/owner/name.git`; `https://github.com/owner/name`; `git@github.com:owner/name.git`; `ssh://git@github.com/owner/name.git`; `https://user:token@github.com/owner/name.git`; no origin; unparseable `not a url`; non-GitHub `https://gitlab.com/owner/name.git`; a linked-worktree `.git` file.
+- Origin URLs: `https://github.com/owner/name.git`; `https://github.com/owner/name`; `git@github.com:owner/name.git`; `ssh://git@github.com/owner/name.git`; an HTTPS origin carrying embedded userinfo (user plus token; constructed in memory by the test, never committed as a literal); no origin; unparseable `not a url`; non-GitHub `https://gitlab.com/owner/name.git`; a linked-worktree `.git` file.
 - A bounded repo reader with injected `RepositoryIo` over a temp `.git/config`/`HEAD` directory (no child process).
 - Downstream fixtures for tracker/changes/CI with an unavailable binding.
 
