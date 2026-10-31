@@ -23,7 +23,7 @@ change:
 
 ## 1. SUMMARY
 
-This change delivers three artifacts and one bounded cleanup. First, it makes the eight foundational M0-S17 topics inspectable by binding the five already-decided topics to their existing records (layout, config precedence, provider adapter contract, state schema, release-model direction) and authoring four new `Proposed` records for the topics that are new or need a lock (harness adapter contract; the release-model v1 lock that M4-S2 elaborates; CLI command naming and v1 surface lock; ID prefix scheme with the project customization model). Second, it locks command names prospectively — the v0 registry surface becomes the v1-locked surface, with no code renames — and promotes `cli-command-registry.md` from man page v0 to v1. Third, it captures the bash-era baseline (ceremony share, cycle time, CI failure rate, false-signal incidents) in a repository-local, schema-versioned measurement log whose every number is computed from committed evidence and cites its source, with non-reconstructable metrics recorded as UNAVAILABLE. The change is documentation-only: zero changes under `packages/**`, `scripts/**`, or `tools/**`.
+This change delivers three artifacts and one bounded cleanup. First, it makes the eight foundational M0-S17 topics inspectable by binding the five already-decided topics to their existing records (layout, config precedence, provider adapter contract, state schema, release-model direction) and authoring four new `Proposed` records for the topics that are new or need a lock (harness adapter contract; the release-model v1 lock that M4-S2 elaborates; CLI command naming and v1 surface lock; ID prefix scheme with the project customization model). Second, it locks command names prospectively — the v0 registry surface becomes the v1-locked surface, with no code renames — and promotes `cli-command-registry.md` from man page v0 to v1. Third, it captures the bash-era baseline (ceremony share, cycle time, CI failure rate, false-signal incidents) in a repository-local, schema-versioned measurement log whose every number is computed from committed evidence and cites its source, with non-reconstructable metrics recorded as UNAVAILABLE. The change is documentation-only: zero changes under `packages/**` and `tools/**`, and zero source-code, shell, test-logic, or check-logic changes; the only permitted non-doc edit is a data-only registration of the two new user-facing docs in `scripts/checks/forbidden-literals.registry.json` (DEC-13).
 
 "Decisions recorded" is satisfied in this change by authored `Proposed` records plus the binding register and index rows; owner acceptance at PR review is the acceptance gate, exactly as for ADR-0005/0007 and TDR-0003…0006. The AI does not self-accept.
 
@@ -44,7 +44,8 @@ This change delivers three artifacts and one bounded cleanup. First, it makes th
 - **No measurement baseline exists.** `roadmap.md` states "Baselines are captured in M0" and "numbers are re-baselined with native metrics once available", but no committed baseline log exists. The bash-era record is reconstructable in part from committed `chg-*-pm-notes.yaml` phase timestamps, `chg-*-evidence.md` files, and git history. There is no committed CI run log, so a per-run CI failure rate cannot be reconstructed.
 - **The decision index has two pre-existing defects.** `doc/decisions/00-index.md` labels the TDR-0005 row `TDR-0006` (its link points at the TDR-0005 file) and places it after TDR-0006; the PDR-0002 row carries the title "Mode-Aware Spec-Coverage Resolution for Autonomous Delivery" while the record heading is "Phase-7 Documentation Gap Closure (Always Resolve In-Change)".
 - **No measurement feature spec exists.** `doc/spec/features/` has no current-truth document for the baseline artifact or its schema; `feature-decision-records.md` is current truth for decision records but does not mention a register or the ID scheme.
-- **Delivery type is documentation.** The expected artifact set is new decision records, a register, index/registry/planning-doc updates, and the baseline log. No source-code or shell change is needed or permitted.
+- **New user-facing docs must pass the forbidden-literal check.** `scripts/checks/forbidden-literals.ts` treats every `doc/**` file except paths under `doc/changes/` and `doc/decisions/` as user-facing: a user-facing doc absent at `corpusBaseline` must be listed in `scripts/checks/forbidden-literals.registry.json` (`registered`), and registered docs are scanned for the three seed literals. Both new docs in this change (`measurement-baseline.yaml`, `feature-measurement-baseline.md`) therefore require a registry entry to pass CI.
+- **Delivery type is documentation.** The expected artifact set is new decision records, a register, index/registry/planning-doc updates, and the baseline log. No source-code, shell, test-logic, or check-logic change is needed or permitted; the only non-doc edit is the data-only registry registration named in DEC-13.
 
 ### 2.2 Pain Points / Gaps
 
@@ -66,7 +67,7 @@ Because the foundational M0 topics are scattered across existing records with fo
 - **G-3**: The ID prefix scheme is adopted, the base registry is referenced, and the project customization choice (per-type decision ranges, not a single sequence) is declared in a decision record and a project catalog.
 - **G-4**: The bash-era baseline is committed to a repository-local, schema-versioned log with defined formulas, a fixed window, per-number source citations, and explicit UNAVAILABLE states where committed evidence cannot reconstruct a metric.
 - **G-5**: The decision register and index are accurate and inspectable, including repair of the two pre-existing index defects, so the "decisions recorded" AC can be checked by file inspection.
-- **G-6**: The change is docs-only: zero changes under `packages/**`, `scripts/**`, and `tools/**`; existing decision-record bodies remain immutable.
+- **G-6**: The change is docs-only plus one data-only registry registration: zero changes under `packages/**` and `tools/**`, zero source-code/shell/test-logic/check-logic changes, and the only `scripts/**` edit is adding the two new user-facing doc paths to `scripts/checks/forbidden-literals.registry.json` (DEC-13); existing decision-record bodies remain immutable.
 
 ### 4.1 Success Metrics / KPIs
 
@@ -81,14 +82,20 @@ Because the foundational M0 topics are scattered across existing records with fo
 | Baseline numbers without a named source citation | 0 |
 | Ratios without an explicit numerator/denominator/sample | 0 |
 | Pre-existing index defects remaining after the change | 0 |
-| Changed paths under `packages/**`, `scripts/**`, `tools/**` | 0 |
+| Changed paths under `packages/**` and `tools/**` | 0 |
+| Source-code, shell, test-logic, and check-logic changes | 0 |
+| Changed paths under `scripts/**` | Exactly 1: data-only `registered` addition in `scripts/checks/forbidden-literals.registry.json` |
+| New user-facing docs registered for the forbidden-literal check | 2/2 (`measurement-baseline.yaml`, `feature-measurement-baseline.md`) |
+| Delimited seed-literal occurrences on non-allowlisted lines of the new user-facing docs | 0 |
 | Existing decision-record bodies modified | 0 |
 
 > Note: the register covers eight topics: layout, config precedence, provider adapter contract, harness adapter contract, state schema, release model, ID prefix scheme, and command naming. Four topics have existing bindings only (layout, config precedence, provider adapter contract, state schema); the release-model topic has an existing direction (ADR-0003 DEC-3) plus a new lock (ADR-0009); three topics are new-only (harness, ID prefix scheme, command naming). The four new records are therefore ADR-0008, ADR-0009, ODR-0002, and ODR-0003, while the five existing bindings are ADR-0003 DEC-1/2/7, DEC-4 + TDR-0003, DEC-6 + ADR-0005 + ADR-0007, DEC-5 + TDR-0004, and DEC-3.
 
+> Note: the single `scripts/**` path is a data-only registration, not a logic change. The forbidden-literal check code, seed set, allowlist, scope classes, and `corpusBaseline` are unchanged (DEC-13).
+
 ### 4.2 Non-Goals
 
-- **NG-1**: Any source-code, test, CI, or shell change; zero edits under `packages/**`, `scripts/**`, and `tools/**`.
+- **NG-1**: Any source-code, test, CI, or shell change; zero edits under `packages/**` and `tools/**`; zero changes to the forbidden-literal check code, seed set, allowlist, scope classes, or `corpusBaseline`. The only permitted `scripts/**` edit is the data-only `registered` addition named in DEC-13.
 - **NG-2**: Any command rename, option rename, package rename, or adapters-subpath rename. The lock is prospective and names the current surface.
 - **NG-3**: Accepting the four new decision records. They ship `Proposed`; the owner accepts or adjusts at PR review. The AI never sets `Accepted` or a `decision_date`.
 - **NG-4**: Duplicating already-decided content. Existing topics are bound by ID and anchor, not restated; existing record bodies are not edited.
@@ -149,7 +156,7 @@ Each record follows `doc/templates/decision-record-template.md` and `doc/guides/
 
 The lock scope is: command names and command-family names in the registry; the `provider` family; the `provider-quota` adapters subpath; and the `DeliveryRequest` primitive term (already the v1 adapter contract, so the concept's open PR/MR question is resolved by citing current truth, not by renaming). The lock does **not** freeze global option names, the product/brand name (M4-S1), or configuration key names. After M0, new commands join existing families; a rename requires a superseding decision record and a code change, never a documentation-only edit.
 
-**F-4 — Measurement baseline log.** Create `doc/planning/oss-tooling/measurement-baseline.yaml` as the repository-local, committed measurement baseline log (not `.ai/local/**`, which is git-ignored by design). The log is the canonical data artifact; the current-truth feature spec (§F-6) describes its contract, and M2-S6 consumes its metric IDs and values.
+**F-4 — Measurement baseline log.** Create `doc/planning/oss-tooling/measurement-baseline.yaml` as the repository-local, committed measurement baseline log (not `.ai/local/**`, which is git-ignored by design). The log is the canonical data artifact; the current-truth feature spec (§F-6) describes its contract, and M2-S6 consumes its metric IDs and values. The log is a user-facing doc: it is listed in `registered` in `scripts/checks/forbidden-literals.registry.json` and refers to the CLI generically (for example, "the CLI" or "the command registry") without the working-name literal on a non-allowlisted line (C-10).
 
 **Window and source commit.** The baseline window is `2026-02-01T00:00:00Z` through `2026-10-31T23:59:59Z` inclusive — the bash-era GH-* delivery record. The log records a full 40-hex `source_commit` against which all cited paths were read; every cited path must exist at that commit. The baseline change itself (GH-186) is excluded from all samples because its delivery is the capture act and would be self-referential and incomplete.
 
@@ -157,9 +164,9 @@ The lock scope is: command names and command-family names in the registry; the `
 
 | ID | Definition | Formula / unit | Window | Known limitation |
 |---|---|---|---|---|
-| `MET-CEREMONY-SHARE` | Share of recorded lifecycle phase time spent in planning/governance phases rather than delivery, review, and documentation work | `Σ ceremony_duration_h / Σ total_phase_duration_h` over included changes; ratio 0–1, reported as percent to 1 decimal. Ceremony phases: `clarify_scope`, `specification`, `test_planning`, `delivery_planning`, `dor_check`, `dod_check`, `pr_creation`. Work phases: `delivery`, `system_spec_update`, `review_fix`, `quality_gates`. Each duration is `Σ(completed − started)` over complete phase pairs; overlapping phases count in both numerator and denominator exactly as recorded (duration share, not wall-clock union). | Per change within the baseline window; aggregate over all included changes | Proxy for scheduled-ceremony share (scheduled ceremonies do not exist in the bash era); pm-notes timestamps are self-reported and may carry clock skew; duration share differs from wall-clock share when phases overlap |
-| `MET-CYCLE-TIME` | Elapsed time from the first lifecycle phase start to PR creation completion for one change | `pr_creation.completed − clarify_scope.started` in hours, 1 decimal. If `pr_creation.completed` is absent, use the latest completed phase and mark the sample right-censored. Report n, median, min, max; p90 only when n ≥ 10. | Per change whose `clarify_scope.started` falls in the baseline window | Self-reported timestamps; clock skew; measures elapsed time, not effort |
-| `MET-CI-FAILURE-RATE` | Share of change deliveries with at least one committed-record CI failure among deliveries with at least one committed-record CI observation | `numerator / denominator`; numerator = changes with `ci_outcome` red or mixed; denominator = changes with `ci_observed: true`; ratio 0–1 and percent. `measurement_kind: session_proxy`. | Per change within the baseline window | No committed CI run log exists; this is not a per-run or per-check rate; unobserved PRs are excluded, never assumed green; the count is a session-level floor |
+| `MET-CEREMONY-SHARE` | Share of recorded lifecycle phase time spent in planning/governance phases rather than delivery, review, and documentation work | `Σ ceremony_duration_h / Σ total_phase_duration_h` over included changes; canonical `value` is the ratio 0–1 (`unit: ratio`), and any percent form is derived as `value × 100` rounded to 1 decimal (never stored as a second measurement). Ceremony phases: `clarify_scope`, `specification`, `test_planning`, `delivery_planning`, `dor_check`, `dod_check`, `pr_creation`. Work phases: `delivery`, `system_spec_update`, `review_fix`, `quality_gates`. Each duration is `Σ(completed − started)` over complete phase pairs; overlapping phases count in both numerator and denominator exactly as recorded (duration share, not wall-clock union). | Per change within the baseline window; aggregate over all included changes | Proxy for scheduled-ceremony share (scheduled ceremonies do not exist in the bash era); pm-notes timestamps are self-reported and may carry clock skew; duration share differs from wall-clock share when phases overlap |
+| `MET-CYCLE-TIME` | Elapsed time from the first lifecycle phase start to PR creation completion for one change | `pr_creation.completed − clarify_scope.started` in hours, 1 decimal. If `pr_creation.completed` is absent, use the latest completed phase and mark the sample right-censored. Report n, median, min, max; p90 only when n ≥ 10, computed by nearest-rank: sort the samples ascending and take the `ceil(0.9 × n)`-th smallest value (1-indexed); no interpolation. | Per change whose `clarify_scope.started` falls in the baseline window | Self-reported timestamps; clock skew; measures elapsed time, not effort |
+| `MET-CI-FAILURE-RATE` | Share of change deliveries with at least one committed-record CI failure among deliveries with at least one committed-record CI observation | `numerator / denominator`; numerator = changes with `ci_outcome` red or mixed; denominator = changes with `ci_observed: true`; canonical `value` is the ratio 0–1 (`unit: ratio`), and any percent form is derived as `value × 100` rounded to 1 decimal (never stored as a second measurement). `measurement_kind: session_proxy`. | Per change within the baseline window | No committed CI run log exists; this is not a per-run or per-check rate; unobserved PRs are excluded, never assumed green; the count is a session-level floor |
 | `MET-FALSE-SIGNAL-INCIDENTS` | Count of distinct committed-record incidents where a delivery signal contradicted reality | Count of curated incident rows; report total and per class. Classes: `local-green-ci-red`, `false-success-exit-zero`, `skipped-read-as-green`, `green-gate-later-failed`, `lying-liveness`. | Per change within the baseline window | Curated from committed prose, not a signal ledger; unrecorded incidents are invisible; the count is a floor, not a census; GH-179's corpus-vs-rule defect is explicitly excluded because it is not a delivery-signal lie |
 
 **Inclusion and exclusion rules.**
@@ -172,7 +179,7 @@ The lock scope is: command names and command-family names in the registry; the `
 
 **UNAVAILABLE semantics.** A metric whose inputs are absent or insufficient is `status: UNAVAILABLE`, `value: null`, with `missing_source` naming the absent source and `limitation` explaining why. No estimate, interpolation, or invented denominator is recorded as a measurement. A metric computed over an incomplete sample is `status: PARTIAL`, with the sample counts and exclusions reported; it is not silently presented as complete. Only a metric with complete coverage for its definition is `status: MEASURED`.
 
-**Comparison protocol.** Later milestones compare against the same metric ID and definition over a window of equal length; a definition change allocates a new `MET-` ID and records a supersession note rather than mutating the baseline. Committed baseline values are immutable; a new baseline is appended, not edited. Comparisons state the metric ID and definition version so a proxy is never compared to a native measurement without that caveat.
+**Comparison protocol.** Later milestones compare against the same metric ID and definition over a window of equal length; a definition change allocates a new `MET-` ID and records a supersession note rather than mutating the baseline. Committed baseline values are immutable; a new baseline is appended, not edited. Comparisons state the metric ID and definition version so a proxy is never compared to a native measurement without that caveat. The protocol also pins the conventions a later comparison must reuse: ratio metrics store a 0–1 `value` and derive any percent form, `p90_h` uses the nearest-rank method defined above, and the top-level `change` field has the mapping shape defined in DM-2.
 
 **F-5 — Decision index integrity.** Update `doc/decisions/00-index.md`:
 - add linked rows for ADR-0008, ADR-0009, ODR-0002, and ODR-0003 with the correct type, title, status, date, and owners;
@@ -183,7 +190,7 @@ The lock scope is: command names and command-family names in the registry; the `
 
 **F-6 — Current-truth documentation sync.** Phase 7 reconciles current truth with the delivered artifacts, bounded to:
 - `doc/spec/features/feature-decision-records.md` — add the foundational register to the component map, add a short identifier-scheme/project-catalog pointer to ODR-0002 and the catalog concept, and update `links`;
-- a new `doc/spec/features/feature-measurement-baseline.md` (template-conformant per `doc/templates/feature-spec-template.md`) describing the baseline artifact: path, schema, metric IDs, status semantics, source-traceability rule, window, and comparison protocol; it points to the log as canonical data and does not restate values;
+- a new `doc/spec/features/feature-measurement-baseline.md` (template-conformant per `doc/templates/feature-spec-template.md`) describing the baseline artifact: path, schema, metric IDs, status semantics, source-traceability rule, window, and comparison protocol; it points to the log as canonical data and does not restate values; it is listed in `registered` in the forbidden-literal registry and refers to the CLI generically without the working-name literal (C-10);
 - `doc/overview/glossary.md` — add the new terms;
 - `doc/00-index.md` — add the measurement baseline spec to the current-truth index;
 - `doc/planning/oss-tooling/README.md` — add the measurement log to the Documents table;
@@ -241,13 +248,14 @@ Flow 5 — Decision index audit (F-5):
 - **Decision directory reference:** `doc/decisions/README.md` (register reference only).
 - **Command registry promotion:** `doc/planning/oss-tooling/cli-command-registry.md` (v0 → v1 annotation; no table-row changes).
 - **Measurement baseline log:** `doc/planning/oss-tooling/measurement-baseline.yaml`.
+- **Forbidden-literal registry data registration:** `scripts/checks/forbidden-literals.registry.json` — add the two new user-facing doc paths to `registered` (data only; no check logic, seed set, allowlist, scope class, or `corpusBaseline` change; DEC-13).
 - **Planning cross-links:** `doc/planning/oss-tooling/README.md` (measurement log row); `doc/planning/concepts/id-prefix-catalog.md` (status annotation + link); `doc/planning/concepts/agent-primitive-surface.md` (PR/MR term resolution pointer).
 - **Current-truth sync (phase 7):** `doc/spec/features/feature-decision-records.md`, new `doc/spec/features/feature-measurement-baseline.md`, `doc/overview/glossary.md`, `doc/00-index.md`, and a pointer in `doc/spec/features/feature-adapter-ports.md`.
 - **Change folder:** this change's spec, test plan, plan, pm-notes, and evidence artifacts under `doc/changes/2026-10/2026-10-31--GH-186--decision-records-measurement-baseline/`.
 
 ### 7.2 Out of Scope
 
-- [OUT] Any change under `packages/**`, `scripts/**`, or `tools/**`, including test fixture or CI edits.
+- [OUT] Any change under `packages/**` or `tools/**`, including test fixture or CI edits. Any `scripts/**` change other than the data-only `registered` addition in `scripts/checks/forbidden-literals.registry.json`: check logic, seed set, allowlist, scope classes, and `corpusBaseline` are out of scope (DEC-13).
 - [OUT] Any command, option, package, adapters-subpath, or product/brand rename.
 - [OUT] Accepting the new decision records or setting `decision_date`; owner PR review is the acceptance gate.
 - [OUT] New decision records that re-decide layout, config precedence, provider adapter contract, state schema, or the release-model direction; those are bound to existing records by the register (ADR-0009 only locks the already-decided release direction and delegates automation to M4-S2).
@@ -282,7 +290,7 @@ N/A — no events or messages are added or changed. The baseline is a static, co
 | ID | Element | Description |
 |----|---------|-------------|
 | DM-1 | Foundational decision register | `doc/decisions/00-register.md`: a table with columns `Topic`, `Binding record(s)`, `Anchor(s)`, `Status`, `Binding note`; eight topic rows; links to records/anchors; no decision text; an update rule for supersession; linked from the index and README. Front matter carries `ados_distribution: project-generated`, consistent with the decision index. |
-| DM-2 | Measurement baseline log schema | `doc/planning/oss-tooling/measurement-baseline.yaml`: top-level `schema_version` (integer), `artifact`, `change`, `status`, `captured_at` (ISO-8601 UTC), `source_commit` (40-hex), `window: {start, end, basis}`, `sources: [{id, kind, locator}]`, `changes: [change-row]`, `metrics: [metric-row]`, `comparison_protocol`. A `change-row` carries `ref`, `pm_notes`, `included`, `excluded_reason`, `phase_pairs_included`, `phase_pairs_excluded`, `date_only_pairs_excluded`, `ceremony_duration_h`, `total_phase_duration_h`, `cycle_time_h`, `cycle_time_censored`, `ci_observed`, `ci_outcome`, `ci_observations[]` (`artifact`, `anchor`, `outcome`, `checks_affected`), and `false_signal_incidents[]` (`class`, `artifact`, `anchor`, `signal`, `reality`, `checks_affected`). A `metric-row` carries `id`, `name`, `status` (`MEASURED`/`PARTIAL`/`UNAVAILABLE`), `measurement_kind`, `definition`, `formula`, `unit`, `window`, `sources`, `sample` (`changes_parsed`, `changes_included`, `changes_excluded`, `phase_pairs_included`, `phase_pairs_excluded`, `date_only_pairs_excluded`, `excluded_unobserved`), `numerator`, `denominator`, `value`, `aggregates` (`median_h`, `min_h`, `max_h`, `p90_h` when applicable), `limitation`, `direction`, `comparison_note`, and `missing_source` (required only when `UNAVAILABLE`). The `changes:` sequence is the traceability spine; the `metrics:` sequence is the baseline table. |
+| DM-2 | Measurement baseline log schema | `doc/planning/oss-tooling/measurement-baseline.yaml`: top-level `schema_version` (integer), `artifact`, `change` (a mapping `{ref, tracker, excluded_from_samples}` identifying the capture change, e.g. `{ref: GH-186, tracker: github, excluded_from_samples: true}` — never a bare string), `status`, `captured_at` (ISO-8601 UTC), `source_commit` (40-hex), `window: {start, end, basis}`, `sources: [{id, kind, locator}]`, `changes: [change-row]`, `metrics: [metric-row]`, `comparison_protocol`. A `change-row` carries `ref`, `pm_notes`, `included`, `excluded_reason`, `phase_pairs_included`, `phase_pairs_excluded`, `date_only_pairs_excluded`, `ceremony_duration_h`, `total_phase_duration_h`, `cycle_time_h`, `cycle_time_censored`, `ci_observed`, `ci_outcome`, `ci_observations[]` (`artifact`, `anchor`, `outcome`, `checks_affected`), and `false_signal_incidents[]` (`class`, `artifact`, `anchor`, `signal`, `reality`, `checks_affected`). A `metric-row` carries `id`, `name`, `status` (`MEASURED`/`PARTIAL`/`UNAVAILABLE`), `measurement_kind`, `definition`, `formula`, `unit`, `window`, `sources`, `sample` (`changes_parsed`, `changes_included`, `changes_excluded`, `phase_pairs_included`, `phase_pairs_excluded`, `date_only_pairs_excluded`, `excluded_unobserved`), `numerator`, `denominator`, `value` (canonical ratio 0–1 for ratio metrics; any percent form is derived, not stored), `aggregates` (`median_h`, `min_h`, `max_h`, `p90_h` when applicable, computed by nearest-rank per §5.1), `limitation`, `direction`, `comparison_note`, and `missing_source` (required only when `UNAVAILABLE`). The `changes:` sequence is the traceability spine; the `metrics:` sequence is the baseline table. |
 | DM-3 | Command-name lock surface | The v1-locked surface is the set of command names and command-family names in `cli-command-registry.md`, plus the `provider` family, the `provider-quota` adapters subpath, and the `DeliveryRequest` primitive term. Global option names, configuration keys, and the product/brand name are outside the lock. |
 | DM-4 | New decision-record front matter contract | Each new record carries `id`, `decision_type` (`adr`/`odr`), `status: Proposed`, `created`, `decision_date: null`, `last_updated`, `summary`, `owners`, `service`, `classification`, `governance` (with the owner as decider and acceptance pending at GH-186 PR review), and `links` (`related_changes: ["GH-186"]` and the relevant parent records). No new template is introduced. |
 
@@ -303,7 +311,7 @@ N/A — no external services, APIs, or vendors are added or changed. The baselin
 
 | ID | Constraint | Verification |
 |----|------------|--------------|
-| C-1 | Docs-only delivery: zero changed paths under `packages/**`, `scripts/**`, and `tools/**`; all changed files under `doc/**` | `git diff --name-only` review |
+| C-1 | Docs-only delivery plus one data-only registry registration: zero changed paths under `packages/**` and `tools/**`; zero source-code, shell, test-logic, or check-logic changes; the only `scripts/**` change is adding the two new user-facing doc paths to `registered` in `scripts/checks/forbidden-literals.registry.json`; all other changed files are under `doc/**` | `git diff --name-only` review; registry diff limited to `registered` array entries |
 | C-2 | Existing decision-record bodies are immutable; only the index, register, and README change in `doc/decisions/` (plus the four new records) | `git diff --name-only` against existing record files |
 | C-3 | New records ship `Proposed`, `decision_date: null`; the AI never sets `Accepted`; owner acceptance at PR review is the gate | Front-matter inspection |
 | C-4 | No command/option/package/subpath rename; registry command-table rows are unchanged | Registry diff + repo-wide rename check |
@@ -312,6 +320,7 @@ N/A — no external services, APIs, or vendors are added or changed. The baselin
 | C-7 | The measurement log is repository-local and committed under `doc/planning/oss-tooling/`, never under `.ai/local/**` | Path check |
 | C-8 | Durable ID prefixes used in delivered artifacts are registered (the base registry plus `MET-` as declared by ODR-0002); change-local spec IDs (G-, C-, NFR-, RSK-, AC-, DEC-, OQ-, F-, NG-, DM-) remain change-local per R7; decision IDs are the next free number at authoring time and are never reused | `rg`/`ls` check against `doc/decisions/` |
 | C-9 | Scope is bounded to the named docs and this change folder; no other change folder is edited | `git diff --name-only` review |
+| C-10 | Forbidden-literal compliance: each new user-facing doc (`doc/planning/oss-tooling/measurement-baseline.yaml`, `doc/spec/features/feature-measurement-baseline.md`) is listed in `registered` in `scripts/checks/forbidden-literals.registry.json` and contains no delimited occurrence of the three seed literals (`ados`, `ADOS_`, `~/.ados`) on non-allowlisted lines; allowlisted header lines are those containing `Copyright`, `source:`, `Apache-2.0`, or `ados_distribution:` | Forbidden-literal check exits 0; `rg` inspection of the two docs |
 
 ### 9.2 Non-Functional Requirements (NFR-#)
 
@@ -326,6 +335,7 @@ N/A — no external services, APIs, or vendors are added or changed. The baselin
 | NFR-7 | Reproducibility: recomputing each metric from its named sources reproduces the recorded value exactly | 0 tolerance |
 | NFR-8 | Register coverage: all eight M0-S17 topics resolve to at least one binding record and anchor | 8/8 |
 | NFR-9 | Index accuracy: the two named pre-existing defects are repaired and no other pre-existing row changes | 2/2 repaired; 0 unintended row changes |
+| NFR-10 | Forbidden-literal gate: the check passes on the change branch, both new user-facing docs are registered, and neither has a delimited seed-literal occurrence on a non-allowlisted line | Exit 0; 2/2 registered; 0 occurrences |
 
 ## 10. TELEMETRY & OBSERVABILITY REQUIREMENTS
 
@@ -344,6 +354,7 @@ N/A — this change adds no runtime telemetry, logging, metrics endpoint, or ale
 | RSK-7 | The baseline drifts from definitions when M2-S6 lands | M | M | `schema_version`, stable `MET-` IDs, immutable baseline values, and the supersession rule prevent silent mutation; M2-S6 extends, not forks | Low |
 | RSK-8 | A concurrent decision change consumes one of the proposed IDs | M | L | IDs are verified free at spec time; delivery re-checks the next-free rule before authoring and escalates rather than reusing a number; existing numbers are never renumbered | Low |
 | RSK-9 | The new measurement feature spec becomes a second source of truth for values | M | L | The feature spec describes the contract and points to the log as canonical data; it does not restate metric values (F-6) | Low |
+| RSK-10 | The registry data edit expands into a check-logic, allowlist, seed-set, or `corpusBaseline` change, eroding the docs-only boundary | M | L | C-1/C-10 bound the `scripts/**` diff to the `registered` array; delivery reviews the registry diff against the untouched check logic and seed/allowlist/baseline; DEC-13 records the narrow exemption | Low |
 
 ## 12. ASSUMPTIONS
 
@@ -365,7 +376,7 @@ N/A — this change adds no runtime telemetry, logging, metrics endpoint, or ale
 | Depends on | ADR-0005, ADR-0007, TDR-0003, TDR-0004 (Proposed) | Provider-adapter and config/state bindings; read-only |
 | Depends on | `doc/planning/concepts/id-prefix-catalog.md`, `harness-adapters.md`, `agent-primitive-surface.md`, `model-profiles.md` | Source concepts for ODR-0002/ODR-0003 and ADR-0008 |
 | Depends on | Committed pm-notes, evidence artifacts, and git history under/derived from `doc/changes/**` | The only measurement sources |
-| Depends on | `doc/decisions/00-index.md`, `doc/decisions/README.md`, `cli-command-registry.md` | Edit targets |
+| Depends on | `doc/decisions/00-index.md`, `doc/decisions/README.md`, `cli-command-registry.md`, `scripts/checks/forbidden-literals.registry.json` | Edit targets (the registry edit is data-only; DEC-13) |
 | Blocks | M4-S2 release automation | ADR-0009 is the release-model lock M4-S2 elaborates |
 | Blocks | M1-S11 harness adapters | ADR-0008 is the contract the implementation follows |
 | Blocks | M2-S6 metrics and spend | The baseline log is the comparison anchor |
@@ -375,7 +386,7 @@ N/A — this change adds no runtime telemetry, logging, metrics endpoint, or ale
 
 | ID | Question | Context | Status |
 |----|----------|---------|--------|
-| OQ-1 | None open at spec time | The measurement log interpretation, topic bindings, record types/IDs, names-lock scope, baseline method, index-repair decision, and doc-sync set are all decided here (DEC-1…DEC-12). Owner acceptance of the four records is a PR-review gate, not an open question. | Closed — no decision needed |
+| OQ-1 | None open at spec time | The measurement log interpretation, topic bindings, record types/IDs, names-lock scope, baseline method, index-repair decision, doc-sync set, and the forbidden-literal registration exemption are all decided here (DEC-1…DEC-13). Test-plan OQ-T2 (p90 method), OQ-T3 (canonical ratio representation), and OQ-T4 (`change` field shape) are pinned in §5.1 and DM-2; test-plan OQ-T1 (registry registration) is resolved by DEC-13. Owner acceptance of the four records is a PR-review gate, not an open question. | Closed — no decision needed |
 
 ## 15. DECISION LOG
 
@@ -393,6 +404,7 @@ N/A — this change adds no runtime telemetry, logging, metrics endpoint, or ale
 | DEC-10 | Adopt `MET-` as a project space with the measurement baseline log as allocator, via ODR-0002 | The baseline needs stable metric IDs for M2-S6; `MET-` is a catalogued pattern, the log is non-empty (four metrics), and adopting it inside the ID-scheme record keeps prefix registration in one place | 2026-10-31 |
 | DEC-11 | The baseline window is `2026-02-01T00:00:00Z`…`2026-10-31T23:59:59Z`; GH-186 itself is excluded; date-only timestamp pairs are excluded and counted | The GH-* record begins 2026-02-01 and the change captures on 2026-10-31; excluding the capture change avoids self-reference, and excluding date-only pairs avoids false precision | 2026-10-31 |
 | DEC-12 | Phase-7 doc sync creates `feature-measurement-baseline.md` and updates `feature-decision-records.md`, the glossary, `doc/00-index.md`, the planning README, the concept status, and the adapter-ports pointer | Current truth must describe the new durable artifacts; the feature spec describes the contract while the log remains canonical data | 2026-10-31 |
+| DEC-13 | Permit exactly one non-doc edit: add the two new user-facing doc paths to `registered` in `scripts/checks/forbidden-literals.registry.json`; the check code, seed set, allowlist, scope classes, and `corpusBaseline` remain unchanged | `scripts/checks/forbidden-literals.ts` treats every `doc/**` file except paths under `doc/changes/` and `doc/decisions/` as user-facing; a user-facing doc absent at `corpusBaseline` fails the check unless registered, and registered docs are scanned for the seed literals. Both new docs are outside the excluded prefixes, so a passing CI requires their registration. Precedent: GH-177 added a registry entry and GH-184 updated one. The exemption preserves the docs-only intent and changes no gate behavior. | 2026-10-31 |
 
 ## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
 
@@ -411,12 +423,13 @@ N/A — this change adds no runtime telemetry, logging, metrics endpoint, or ale
 | `doc/spec/features/feature-adapter-ports.md` | Updated — harness-contract pointer |
 | `doc/overview/glossary.md` | Updated — new terms |
 | `doc/00-index.md` | Updated — measurement baseline spec row |
-| `packages/**`, `scripts/**`, `tools/**` | Unchanged — hard constraint (C-1) |
+| `scripts/checks/forbidden-literals.registry.json` | Updated — data-only `registered` entries for the two new user-facing docs (DEC-13); check logic unchanged |
+| `packages/**`, `tools/**` | Unchanged — hard constraint (C-1) |
 | `.ai/local/**` | Unchanged — git-ignored runtime state; not a measurement source |
 
 ## 17. ACCEPTANCE CRITERIA
 
-> Each criterion references at least one F-/DM-/NFR- ID and is verifiable by file inspection, `git diff`, `rg`, or a YAML parse. The AC set is the delivery contract; no AC requires an estimated value.
+> Each criterion references at least one F-/DM-/NFR- ID and is verifiable by file inspection, `git diff`, `rg`, or a YAML parse. The AC set is the delivery contract and contains 21 criteria; no AC requires an estimated value.
 
 | ID | Criterion | Linked |
 |----|-----------|--------|
@@ -426,7 +439,7 @@ N/A — this change adds no runtime telemetry, logging, metrics endpoint, or ale
 | AC-F2-2 | **Given** each new record's Decision section, **when** it is checked against §5.1, **then** it states the required elements: ADR-0008's four harness capabilities, configuration selection, and no-engine-logic rule; ADR-0009's lockstep/fixed-group/one-tag/stable-install-source contract and M4-S2 boundary; ODR-0003's naming rules, `provider`/`provider-quota`/`DeliveryRequest` confirmations, no-rename rule, and freeze rule; ODR-0002's adoption by reference, per-type ranges, change-local allocations, `MET-` allocator, and no-empty-space rule. | F-2, DM-4, NFR-2 |
 | AC-F3-1 | **Given** the delivered registry, **when** the diff is inspected, **then** the title and man-page heading say v1, a lock banner names ODR-0003 and the date, and every command table row/name is byte-identical to the pre-change registry (0 table-row changes). | F-3, DM-3, C-4 |
 | AC-F3-2 | **Given** the delivered repo, **when** command names are compared before/after, **then** 0 command renames occurred; ODR-0003 states the freeze-after-M0/new-commands-join-families/superseding-record rule and confirms the `provider` family, `provider-quota` subpath, and `DeliveryRequest` term. | F-3, DM-3, NFR-5 |
-| AC-F4-1 | **Given** the delivered log, **when** it is parsed, **then** it exists at `doc/planning/oss-tooling/measurement-baseline.yaml`, parses as YAML, and contains `schema_version`, `captured_at`, `source_commit` (40-hex), `window`, `sources`, `changes`, `metrics`, and `comparison_protocol`, with all four required `MET-` IDs. | F-4, DM-2, NFR-4 |
+| AC-F4-1 | **Given** the delivered log, **when** it is parsed, **then** it exists at `doc/planning/oss-tooling/measurement-baseline.yaml`, parses as YAML, and contains `schema_version`, `captured_at`, `source_commit` (40-hex), `window`, `sources`, `changes`, `metrics`, and `comparison_protocol`, with all four required `MET-` IDs and a top-level `change` mapping of the DM-2 shape that identifies `GH-186`. | F-4, DM-2, NFR-4 |
 | AC-F4-2 | **Given** each metric row, **when** its fields are inspected, **then** it has a definition, formula, unit, window, `sources`, `status`, `value`, `sample` counts, and `direction`; every non-null number has a concrete citation; every `changes` row cites its pm-notes path; every incident row cites artifact and anchor; 0 uncited numbers remain. | F-4, NFR-1 |
 | AC-F4-3 | **Given** each ratio metric, **when** it is recomputed from the named sources, **then** the recorded `numerator`/`denominator`/`value` reproduce exactly (0 tolerance), and no denominator is asserted without a `sample` count or inclusion rule. | F-4, NFR-7 |
 | AC-F4-4 | **Given** any `UNAVAILABLE` metric, **when** it is inspected, **then** `value` is null and `missing_source` names the absent source; the CI metric carries `measurement_kind: session_proxy` and a `limitation` naming the absent committed run log; no estimate is presented as a measurement. | F-4, C-5 |
@@ -435,7 +448,8 @@ N/A — this change adds no runtime telemetry, logging, metrics endpoint, or ale
 | AC-F5-2 | **Given** the delivered index diff, **when** pre-existing rows are compared, **then** the TDR-0005 row's ID cell and link text are `TDR-0005` and it precedes TDR-0006; the PDR-0002 title matches its record heading; no other pre-existing row changed. | F-5, C-2, NFR-9 |
 | AC-F5-3 | **Given** every new or changed index/register link, **when** it is resolved, **then** 100% point at an existing file or anchor, and both the index and `doc/decisions/README.md` link to the new register. | F-5, NFR-3 |
 | AC-F6-1 | **Given** phase 7 completion, **when** the current-truth docs are inspected, **then** `feature-decision-records.md` mentions the register and ODR-0002 ID scheme; `feature-measurement-baseline.md` exists and states the log path, schema, metric IDs, status semantics, source rule, window, and comparison protocol without restating values; the glossary, `doc/00-index.md`, planning README, id-prefix-catalog status, primitive-term pointer, and adapter-ports harness pointer are updated. | F-6, DM-1, DM-2, DM-3 |
-| AC-C1-1 | **Given** this change's diff, **when** changed paths are enumerated, **then** 0 paths match `packages/**`, `scripts/**`, or `tools/**`, and 100% of changed files are under `doc/**`. | C-1, NFR-6 |
+| AC-C1-1 | **Given** this change's diff, **when** changed paths are enumerated, **then** 0 paths match `packages/**` or `tools/**`; no source-code, shell, test-logic, or check-logic change is present; the only `scripts/**` change is the addition of the two new user-facing doc paths to `registered` in `scripts/checks/forbidden-literals.registry.json`; and every other changed file is under `doc/**`. | C-1, NFR-6 |
+| AC-C10-1 | **Given** the delivered tree, **when** the forbidden-literal check runs, **then** both `doc/planning/oss-tooling/measurement-baseline.yaml` and `doc/spec/features/feature-measurement-baseline.md` are listed in `registered`, the check exits 0, and neither doc contains a delimited occurrence of the three seed literals on a non-allowlisted line (allowlisted header lines are those containing `Copyright`, `source:`, `Apache-2.0`, or `ados_distribution:`). | C-10, NFR-10 |
 | AC-C2-1 | **Given** this change's diff, **when** files are enumerated, **then** no existing decision-record file is modified and no change folder other than GH-186's is edited. | C-2, C-9, DM-4 |
 | AC-NFR6-1 | **Given** the change branch, **when** `bash scripts/.tests/test-doc-distribution.sh` runs, **then** it exits 0 with no drift. | NFR-6, C-1 |
 | AC-NFR2-1 | **Given** each new decision record, **when** it is checked against the template, **then** all required front-matter keys and required sections are present in order and the record renders as valid Markdown. | NFR-2, DM-4 |
@@ -443,8 +457,8 @@ N/A — this change adds no runtime telemetry, logging, metrics endpoint, or ale
 
 ## 18. ROLLOUT & CHANGE MANAGEMENT (HIGH-LEVEL)
 
-- Single PR on `feat/GH-186/decision-records-measurement-baseline` targeting `main-tools`, docs-only; no feature flag, migration, or runtime rollout.
-- Delivery order: (1) author the four records, (2) create the register, (3) update the index and README, (4) promote the registry to v1, (5) compute and commit the baseline log, (6) phase-7 doc sync, (7) review/quality gates.
+- Single PR on `feat/GH-186/decision-records-measurement-baseline` targeting `main-tools`, docs-only plus the data-only registry registration; no feature flag, migration, or runtime rollout.
+- Delivery order: (1) author the four records, (2) create the register, (3) update the index and README, (4) promote the registry to v1, (5) compute and commit the baseline log, (6) register both new user-facing docs in `scripts/checks/forbidden-literals.registry.json` and run the forbidden-literal check, (7) phase-7 doc sync, (8) review/quality gates.
 - Owner acceptance is explicit at PR review: the PR description lists the four `Proposed` records and the four baseline metrics, and states that merge does not auto-accept a record.
 - Consumers named in the PR: M4-S2 (ADR-0009), M1-S11 (ADR-0008), M2-S6 (the baseline log and its `MET-` IDs), and future decision audits (the register).
 - No communication or deprecation window is needed: no name, interface, or behavior changes.
@@ -457,7 +471,7 @@ N/A — no data is migrated. The measurement baseline log is a new seeded artifa
 
 - No personal data, credentials, private identifiers, or cloud references are introduced. The baseline cites committed repository paths, ticket/PR numbers already public in the repository, and short non-identifying facts from pm-notes/evidence.
 - Incident citations quote only the minimum signal/reality fact; they do not reproduce private literals or full log bodies.
-- The privacy/no-cloud guard battery remains green; no new guarded literal is introduced.
+- The privacy/no-cloud guard battery remains green; no new guarded literal is introduced. Both new user-facing docs are registered with the forbidden-literal check and introduce no seed-literal occurrence (C-10).
 
 ## 21. SECURITY REVIEW HIGHLIGHTS
 
@@ -517,6 +531,7 @@ Spec-time observations (not baseline values; all counts are re-derived at captur
 | `doc/decisions/README.md` | Updated |
 | `doc/planning/oss-tooling/cli-command-registry.md` | Updated (annotation only) |
 | `doc/planning/oss-tooling/measurement-baseline.yaml` | New |
+| `scripts/checks/forbidden-literals.registry.json` | Updated (data-only `registered` addition; DEC-13) |
 | `doc/planning/oss-tooling/README.md` | Updated |
 | `doc/planning/concepts/id-prefix-catalog.md` | Updated (status + link) |
 | `doc/planning/concepts/agent-primitive-surface.md` | Updated (term pointer) |
@@ -554,6 +569,7 @@ No `tmp/**`, `.ai/local/**`, uncommitted runner logs, or external URLs are measu
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-10-31 | @spec-writer | Initial specification from GH-186 + backlog M0-S17 + pm-notes clarify decisions; all source claims verified against the current repository at spec time |
+| 1.1 | 2026-10-31 | @spec-writer | Amend C-1/AC-C1-1 and the goals/KPI/non-goal/scope text for the data-only forbidden-literal registry registration (DEC-13); add C-10, NFR-10, AC-C10-1, and RSK-10; update §16 and Appendix B; pin the p90 nearest-rank method, the canonical ratio representation, and the `change` field shape (DM-2); AC set now 21 criteria |
 
 ---
 
@@ -564,7 +580,7 @@ No `tmp/**`, `.ai/local/**`, uncommitted runner logs, or external URLs are measu
 - **Prospective lock:** the names lock accepts the current surface and performs no renames (DEC-5); the product/brand freeze remains M4-S1. The three deferred naming items are resolved by citing current truth (`provider`, `provider-quota`, `DeliveryRequest`).
 - **Measurement honesty:** every metric is defined by formula, unit, window, and source; proxies are labeled; partial coverage is counted; missing evidence is `UNAVAILABLE` rather than estimated (DEC-7, DEC-8). Actual numbers are produced in delivery, not in this spec.
 - **Bounded index repair:** the two pre-existing defects are repaired in-change (DEC-9) because the index is the inspectability surface; no record body or filename changes.
-- **Docs-only:** no code-level instructions, no source paths under `packages/**`, `scripts/**`, or `tools/**`; those paths are named only as unchanged scope.
+- **Docs-only with one data exemption:** no code-level instructions; `packages/**` and `tools/**` are unchanged, and the only `scripts/**` edit is the data-only `registered` addition in the forbidden-literal registry (DEC-13); check logic, the seed set, the allowlist, the scope classes, and `corpusBaseline` remain out of scope.
 
 ## VALIDATION CHECKLIST
 
@@ -578,5 +594,6 @@ No `tmp/**`, `.ai/local/**`, uncommitted runner logs, or external URLs are measu
 - [x] Risks include Impact & Probability (H/M/L)
 - [x] No implementation details (no code-level instructions; doc paths are artifact names)
 - [x] Out-of-scope items prefixed `[OUT]`
-- [x] Negative constraint AC present (AC-C1-1: zero `packages/**`/`scripts/**`/`tools/**` changes)
+- [x] Negative constraint AC present (AC-C1-1: zero `packages/**`/`tools/**` changes and the only `scripts/**` change is the data-only registry registration; AC-C10-1 covers registry and seed-literal compliance)
+- [x] AC set explicit (21 criteria) and every AC references at least one F-/DM-/NFR- ID
 - [x] Front matter validates per front_matter_rules
