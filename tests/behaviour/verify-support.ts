@@ -20,6 +20,7 @@ import { join } from "node:path";
 import { parse } from "yaml";
 import type {
   PhaseTransitionOperation,
+  StateJsonValue,
   StateStorePort,
 } from "../../packages/core/src/contracts/index";
 import {
@@ -340,6 +341,7 @@ import {
 } from "../../packages/cli/src/commands/verify";
 import { type CliDependencies, runCli } from "../../packages/cli/src/index";
 import { readChangeTransitionsTolerant } from "../../packages/core/src/state/index";
+import { checksumOfPayload } from "../../packages/core/src/state/ledger";
 import { bufferSink, SYNTHETIC_BRAND } from "../golden/helpers";
 
 export type VerifyRun = {
@@ -471,4 +473,37 @@ const verifyFileSystemFacts = {
       return [];
     }
   },
+};
+
+export type LedgerRecord = Record<string, unknown>;
+
+export const ledgerRecords = (identity: ReturnType<typeof makeIdentity>): LedgerRecord[] =>
+  readFileSync(ledgerPath(identity), "utf8")
+    .split("\n")
+    .filter((line) => line !== "")
+    .map((line) => JSON.parse(line) as LedgerRecord);
+
+export const writeLedgerRecords = (
+  identity: ReturnType<typeof makeIdentity>,
+  records: readonly LedgerRecord[],
+): void => {
+  writeFileSync(
+    ledgerPath(identity),
+    `${records.map((record) => JSON.stringify(record)).join("\n")}\n`,
+  );
+};
+
+/** Recompute the record checksum after a payload mutation (keeps framing valid). */
+export const resealLedgerRecord = (record: LedgerRecord): void => {
+  record.checksum = checksumOfPayload(record.payload as StateJsonValue);
+};
+
+export const corruptHeaderVersion = (
+  identity: ReturnType<typeof makeIdentity>,
+  version = "delivery.state.v999",
+): void => {
+  writeFileSync(
+    `${identity.stateDirectory}/header.${encodeURIComponent(identity.workspaceId)}.json`,
+    `${JSON.stringify({ schemaVersion: version })}\n`,
+  );
 };
