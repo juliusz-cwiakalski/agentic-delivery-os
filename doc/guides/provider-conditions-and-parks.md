@@ -48,19 +48,24 @@ availability and always carries a resume time.
 A park has an absolute expiry strictly in the future at creation. Expiry is
 derived at read time: a park is active while `expiresAt > now` and inactive at
 `expiresAt <= now`. No timer, daemon, delete, or expiry write exists. An early
-clear appends one `cleared` record, and the next mutating resolve emits one
-informational `provider.resumed` announcement. Re-evaluating an unchanged park
-generation appends nothing; a changed cause or expiry appends one new record.
+clear — a park observed gone before its expiry — appends one `cleared` record; a
+park observed after expiry stays `expired` in `--all` views with no `cleared`
+record. The next mutating resolve emits one informational `provider.resumed`
+announcement in either case. Re-evaluating an unchanged park generation appends
+nothing; a changed cause or expiry appends one new record.
 
 ## Fail-loud rule
 
 An indeterminate availability verdict is never treated as clear. Every
 transport, HTTP, envelope, parse, auth, or credential failure produces a
 structured announcement plus a park or a classified error. The re-evaluation
-loop cap parks instead of proceeding. An exhausted quota with no honest reset
-fails loud as `provider.quota.exceeded` rather than fabricating a resume time. A
-skipped entry's outage stays announced and parked so it remains visible when
-another entry serves the chain.
+loop cap parks instead of proceeding. An exhausted quota entry with no honest
+reset is skipped as `quota-exhausted` and keeps its `provider.quota.reset_missing`
+announcement while a later eligible entry may serve; when no later entry is
+eligible and no honest park can supply an expiry, the resolve fails loud as
+`provider.quota.exceeded` rather than fabricating a resume time. A skipped
+entry's outage stays announced and parked so it remains visible when another
+entry serves the chain.
 
 ## Announcement vocabulary
 
@@ -71,8 +76,10 @@ Announcements use a closed code set: `provider.peak.parked`,
 `provider.credential.missing`, `provider.chain.exhausted`,
 `provider.reevaluation.cap`, and `provider.resumed`. The first two and the last
 are informational; the rest are warnings. Evidence is closed to the eight park
-fields plus `parkName`, `parkExpiresAt`, and `announcementCode`; no raw body,
-authorization header, credential value, or endpoint userinfo is retained.
+fields plus `parkName`, `parkExpiresAt`, and `announcementCode`; announcement
+evidence is projected at runtime through that closed eleven-field allowlist, so
+non-allowlisted keys are dropped. No raw body, authorization header, credential
+value, or endpoint userinfo is retained.
 
 ## Configuration
 

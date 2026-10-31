@@ -86,8 +86,9 @@ The shipped defaults provide one concrete subscription descriptor and its creden
 
 Configuration is parsed from the already-resolved tree and then semantically validated. Schema checks cover types, enums, integer ranges, and required fields. The pure provider validator enforces the relational rules the schema cannot express:
 
-- Every quota `credentialRef` must name a declared credential reference.
-- A quota endpoint must be HTTPS with a non-empty authority, no userinfo, and no whitespace.
+- Every quota `credentialRef` must name a declared credential reference when the quota policy is enabled.
+- An enabled quota endpoint must be HTTPS with a non-empty authority, no userinfo, and no whitespace.
+- A quota policy with `enabled: false` is inert for provider validation: the validator skips both the credential-reference and endpoint relational checks, so a disabled block never fails with a credential or endpoint error, and the provider-tree parser defaults an omitted `endpoint` and `credentialRef` to empty strings. The layered schema still requires the two fields whenever a quota block is present, and no quota evaluation or fetch occurs.
 - Every chain must have at least one entry.
 - Chain entries must name declared descriptors and must not repeat.
 - Every subscription entry must precede every pay-per-token entry.
@@ -106,7 +107,7 @@ Every non-selected entry is reported with exactly one reason from the closed eig
 |--------|---------|
 | `disabled` | The descriptor's `enabled` flag is false. |
 | `peak-window` | The entry is parked in its peak window. |
-| `quota-exhausted` | The entry is parked on an exhausted quota limit. |
+| `quota-exhausted` | The entry is parked on an exhausted quota limit with a future reset, or is skipped as a failed entry whose exhausted limit has no honest reset. |
 | `provider-outage` | The entry is parked on a transport, HTTP, envelope, or parse failure. |
 | `credential-missing` | The entry is parked because its credential reference could not resolve. |
 | `credential-rejected` | The entry is parked because the provider rejected the credential (HTTP 401/403). |
@@ -115,7 +116,7 @@ Every non-selected entry is reported with exactly one reason from the closed eig
 
 Precedence is deterministic: `disabled`, then the entry's own condition cause, then `paid-fallback-not-allowed`, then `shadowed`.
 
-When no entry is eligible but at least one enabled entry is parked, the decision is parked. The chain park is named `chain:<name>`, has cause `chain-exhausted`, carries the union of contributing condition kinds, and expires at the earliest contributing provider expiry. When no contributing park can supply a future expiry, resolution fails with a classified provider failure instead of fabricating one. If any evaluated entry cannot produce an honest resume time (an exhausted quota limit with no valid reset), resolution fails immediately with `provider.quota.exceeded` and persists no park or announcement for that attempt.
+When no entry is eligible but at least one enabled entry is parked, the decision is parked. The chain park is named `chain:<name>`, has cause `chain-exhausted`, carries the union of contributing condition kinds, and expires at the earliest contributing provider expiry. A failed entry (an exhausted quota limit with no honest reset) does not abort the walk: it is reported as skipped with reason `quota-exhausted`, creates no park, and its `provider.quota.reset_missing` announcement remains in the command-result announcements while resolution continues to a later eligible entry. Only parks with an honest future expiry contribute; a failed entry never contributes a park. When no later entry is eligible and no contributing provider park can supply an honest future expiry, resolution fails with the classified failure (`provider.quota.exceeded` for the quota-exhaustion case) instead of fabricating one. A missing or empty chain is a classified failure, never an empty success.
 
 ### Peak windows
 
@@ -125,7 +126,7 @@ A peak window is a UTC start second-of-day, end second-of-day, buffer, and timez
 
 A subscription descriptor with an enabled quota policy issues one bounded HTTPS `GET` through the injected quota transport. The sanitized response is normalized into a secret-free snapshot of limits: each limit carries a type, a non-negative integer percentage, and an optional reset epoch in milliseconds. Only `TOKENS_LIMIT` entries participate in exhaustion; `TIME_LIMIT` entries are ignored.
 
-A limit is exhausted when its percentage is at or above the configured threshold. The soonest future reset among exhausted limits determines the wait and the park expiry. A past or equal-to-now reset clamps to zero wait and leaves the condition clear. An exhausted limit with no valid reset is not given a fabricated expiry: resolution fails with `provider.quota.exceeded` and surfaces the `provider.quota.reset_missing` announcement code in the safe summary and diagnostic stream, with no state park or announcement record.
+A limit is exhausted when its percentage is at or above the configured threshold. A future reset on any exhausted limit wins as the soonest reset among exhausted limits and determines the wait and the park expiry. A past or equal-to-now reset clamps to zero wait and leaves the condition clear only when every exhausted limit carries a valid reset; the reset of a non-exhausted limit is ignored. If at least one exhausted limit has no valid reset and no exhausted limit yields a future reset, the verdict is indeterminate: the per-entry condition is failed with `provider.quota.exceeded` and a `provider.quota.reset_missing` announcement, and no expiry is fabricated. A failed entry is skipped with reason `quota-exhausted` and does not abort the walk; the command fails loud only when no later eligible entry exists and no honest contributing park can supply an expiry (see Chain resolution). A failed verdict writes no state park or state announcement record.
 
 Malformed JSON, an invalid envelope (`code` not `200` or `success` not `true`), absent or non-array limits, a non-object limit, a non-string limit type, and a non-numeric percentage are malformed-response failures. They are classified as outages and announced; they are never treated as clear.
 
@@ -135,7 +136,7 @@ Peak and quota are independent conditions on one entry. They are combined by the
 
 ### Parks
 
-Every non-clear provider condition becomes a named park. Provider parks are named `provider:<name>`; chain parks are named `chain:<name>`. A park carries:
+Every non-clear provider condition with an honest future expiry becomes a named park; a failed entry (quota exhausted with no honest reset) is not a park and is reported as a skipped entry instead. Provider parks are named `provider:<name>`; chain parks are named `chain:<name>`. A park carries:
 
 - a cause from the closed set `peak-window`, `quota-exhausted`, `provider-outage`, `credential-missing`, `credential-rejected`, `chain-exhausted`, or `reevaluation-cap`;
 - the active condition kinds;
@@ -144,19 +145,19 @@ Every non-clear provider condition becomes a named park. Provider parks are name
 
 A peak or quota park expires at the determining condition's end. An outage or credential-failure park uses its configured TTL. A `reevaluation-cap` park uses the configured cap TTL. A `chain-exhausted` park uses the earliest contributing provider expiry. A park is always a provider-availability pause with a guaranteed resume time; it is never a blocked lane, never a delivery failure, and never hides a lane's readiness condition.
 
-Expiry is derived at read time: a park is active while `expiresAt > now` and inactive at exactly `expiresAt <= now`. No timer, daemon, delete, or expiry write exists. An unchanged active generation (`cause:expiresAtMs`) appends nothing; a changed cause or expiry appends a new record and the latest record per park name wins. When a previously active park is observed with no current active record for its name, the next mutating resolve appends one `cleared` record and one `provider.resumed` announcement.
+Expiry is derived at read time: a park is active while `expiresAt > now` and inactive at exactly `expiresAt <= now`. No timer, daemon, delete, or expiry write exists. An unchanged active generation (`cause:expiresAtMs`) appends nothing; a changed cause or expiry appends a new record and the latest record per park name wins. When a previously active park is observed gone on the next mutating resolve, that resolve appends one `provider.resumed` announcement. It appends a `cleared` record only when the clear is observed before expiry (`expiresAt > now`); a park observed after expiry stays `expired` in `--all` views with no `cleared` record and no expiry write.
 
 ### Announcements
 
-Every non-clear condition that persists a park emits exactly one structured announcement for that park generation. An outage on an entry skipped in favour of another is still announced and parked, so the result remains truthful when the chain succeeds elsewhere. Announcement identity is deterministic from the subject kind, subject name, code, and park generation, so an unchanged condition never appends a duplicate.
+Every non-clear condition that persists a park emits exactly one structured announcement for that park generation. A failed entry that persists no park still contributes its `provider.quota.reset_missing` announcement to the command result. An outage on an entry skipped in favour of another is still announced and parked, so the result remains truthful when the chain succeeds elsewhere. Announcement identity is deterministic from the subject kind, subject name, code, and park generation, so an unchanged condition never appends a duplicate.
 
 Announcements use a closed code set:
 
 `provider.peak.parked`, `provider.quota.parked`, `provider.quota.reset_missing`, `provider.quota.unreachable`, `provider.quota.http_error`, `provider.quota.auth_rejected`, `provider.quota.malformed`, `provider.credential.missing`, `provider.chain.exhausted`, `provider.reevaluation.cap`, and `provider.resumed`.
 
-`provider.peak.parked`, `provider.quota.parked`, and `provider.resumed` are informational; every other code is a warning. An announcement carries a safe templated message and bounded evidence drawn from the eight base park fields plus `parkName`, `parkExpiresAt`, and `announcementCode`. No announcement carries a secret, authorization header, raw response body, or endpoint userinfo.
+`provider.peak.parked`, `provider.quota.parked`, and `provider.resumed` are informational; every other code is a warning. An announcement carries a safe templated message and bounded evidence projected at runtime through the closed eleven-field allowlist: `providerName`, `chainName`, `conditionKinds`, `waitSeconds`, `resetEpochMs`, `httpStatus`, `failureClass`, `credentialRefName`, `parkName`, `parkExpiresAt`, and `announcementCode`; non-allowlisted keys are dropped. No announcement carries a secret, authorization header, raw response body, or endpoint userinfo.
 
-Announcements surface in three places: inside `data.announcements` for `resolve` and a successful `quota`; in the classified error envelope plus the diagnostic stream for a failure that produces no park; and in the state ledger as `provider.announcement` records when a resolution persists park state. A failing `quota` carries the announcement code in the safe summary.
+Announcements surface in three places: inside `data.announcements` for `resolve` and a successful `quota`; in the classified error envelope plus the diagnostic stream for a failure that produces no park; and in the state ledger as `provider.announcement` records when a resolution persists park state. A failed entry's announcement appears in `data.announcements` but is not written to the state ledger because no park exists. A failing `quota` carries the announcement code in the safe summary.
 
 ### Credential authorization
 
@@ -196,13 +197,13 @@ The provider kind carries five error identities, classified by exact code:
 | `provider.chain.empty` | user | false | user-validation (exit 1) |
 | `provider.chain.invalid` | user | false | user-validation (exit 1) |
 
-`provider.outage` covers quota transport, non-auth HTTP, and malformed-response failures, a chain that cannot supply a future resume time, and a failed state write. A `quota` failure to resolve a credential uses the `config`-kind identity `config.credential.missing` (user, non-retryable, user-validation). Because the provider kind has more than one row, a provider failure must carry an exact declared code; an unclassified, undeclared, or wrong-kind provider failure is contained as `fallback.internal`, never mapped to the first provider row. Announcement codes are a separate closed vocabulary, not error-table rows. The machine and documented tables are synchronized in both directions.
+`provider.outage` covers quota transport, non-auth HTTP, and malformed-response failures, a chain that cannot supply a future resume time for a reason other than an indeterminate quota verdict, and a failed state write. A `quota` failure to resolve a credential uses the `config`-kind identity `config.credential.missing` (user, non-retryable, user-validation). Because the provider kind has more than one row, a provider failure must carry an exact declared code; an unclassified, undeclared, or wrong-kind provider failure is contained as `fallback.internal`, never mapped to the first provider row. Announcement codes are a separate closed vocabulary, not error-table rows. The machine and documented tables are synchronized in both directions.
 
 ## Technical Architecture & Codebase Map
 
 ### High-level design
 
-Pure provider policy lives in the runtime-neutral `@delivery-os/core/provider` subpath and imports only core contracts and its own modules. The quota HTTP transport is the one injected I/O edge, implemented in `@delivery-os/adapters/provider-quota`; the clock, sleep seam, credential port, quota transport, and state store are injected at the CLI composition edge. Parks and announcements persist through the delivered state layer as additive record kinds. The CLI surface validates grammar, delegates to the engine, and lets the edge own envelopes, streams, redaction, and exit projection.
+Pure provider policy lives in the runtime-neutral `@delivery-os/core/provider` subpath and imports only core contracts and its own modules. The quota HTTP transport is the one injected I/O edge, implemented in `@delivery-os/adapters/provider-quota`. The CLI composition edge accepts an injected provider composition — clock, sleep seam, credential port, quota transport, and state store — and wires it into the engine; the host/binary composition is where the production credential port and quota transport are injected, and tests inject fakes. Parks and announcements persist through the delivered state layer as additive record kinds. The CLI surface validates grammar, delegates to the engine, and lets the edge own envelopes, streams, redaction, and exit projection.
 
 ### Core components and directory structure
 
@@ -221,7 +222,7 @@ Pure provider policy lives in the runtime-neutral `@delivery-os/core/provider` s
 | `packages/core/src/provider/index.ts` | Public pure provider-engine surface. |
 | `packages/adapters/src/provider-quota/index.ts` | Injectable quota transport and native-fetch production wrapper: bounded GET, `redirect: manual`, in-memory bearer header, no storage. |
 | `packages/cli/src/commands/provider.ts` | Grammar and handlers for `resolve`, `quota`, and `parks list`. |
-| `packages/cli/src/edge.ts` | Composition of clock, credential port, quota transport, sleep seam, and state store for the provider command. |
+| `packages/cli/src/edge.ts` | Wires an injected provider composition (clock, credential port, quota transport, sleep seam, and state store) into the engine for the provider command. |
 | `packages/core/src/config/catalog.ts` / `defaults.ts` | Provider catalog branch and shipped overridable defaults. |
 | `packages/core/src/contracts/error-table.ts` | The five provider rows and exact-code provider classification. |
 
@@ -238,7 +239,7 @@ Persistence occurs only in a mutating `resolve` with a state store. It acquires 
 
 - The `provider` core subpath is part of the ambient neutral set: no runtime imports, ambient globals, clock, randomness, filesystem, network, or environment access. Policy receives facts through injected seams.
 - The `provider-quota` adapters subpath is the single admitted runtime-API edge for the quota request. It is an exact, reason-bearing entry in the runtime-API confinement rule; it is not a secret-read allowlist entry, and the secret-read allowlist remains at four entries.
-- The CLI composition edge is the only place that imports the production credential port and quota transport and wires them into the engine.
+- The host/binary composition injects the production credential port and quota transport; the CLI composition edge accepts the injected provider composition and wires its ports into the engine. Tests inject fakes. No production module imports the credential-port or quota-transport factories yet, and the CLI edge does not construct them.
 - The state layer owns ledger framing, fences, verified reads, and atomic document replacement; the provider engine only supplies record payloads and the fold.
 - Model-profile selection, harness spawn, non-UTC timezones, background timers, spend reporting, and MCP/OpenCode provider surfaces are outside this feature.
 
@@ -260,7 +261,7 @@ The quota transport contract is one `send` call receiving the endpoint, method `
 | Hermetic testing | Zero live network calls, zero live credential reads, and zero real sleeps; clock, sleep, credential port, and transport are injected. |
 | Runtime neutrality | Provider core imports only core contracts and its own modules; the ambient-globals guard covers the provider tier. |
 | Secret safety | No secret, authorization header, or raw response body appears in envelopes, diagnostics, park records, announcement records, or evidence; canary tests cover every captured surface. |
-| Bounded evidence | Park and announcement evidence is at most 1024 serialized bytes and 20 fields, drawn only from the closed allowlists (8 park fields; 8 base plus 3 announcement fields). |
+| Bounded evidence | Park and announcement evidence is at most 1024 serialized bytes and 20 fields, drawn only from the closed allowlists (8 park fields; 8 base plus 3 announcement fields); announcement evidence is projected through the 11-field allowlist at runtime, so non-allowlisted keys are dropped. |
 | Idempotence | Re-evaluating an unchanged park generation appends zero duplicate records; repeated `parks list` has zero side effects; repeated `quota` performs zero state writes. |
 | Expiry correctness | A park is inactive exactly at `expiresAt`; TTL and chain parks have an expiry strictly after creation; no park is created with a past or absent expiry. |
 | Error-table synchronization | The five provider rows agree between the machine table and the documented table in both directions; provider classification is exact-code and total with `fallback.internal` containment. |
