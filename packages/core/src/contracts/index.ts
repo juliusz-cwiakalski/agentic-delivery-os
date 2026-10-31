@@ -88,7 +88,18 @@ export type {
   CredentialSourceKey,
   SecretMaterial,
 } from "./credentials.js";
-
+// The eleven-token delivery result vocabulary and its total taxonomy (GH-177
+// C-4, TDR-0005): the single enum home, data and types only.
+export {
+  DELIVERY_RESULT_DERIVATION_CLASSES,
+  DELIVERY_RESULT_PROJECTION_CLASSES,
+  DELIVERY_RESULT_TAXONOMY,
+  DELIVERY_RESULT_TOKENS,
+  type DeliveryResultDerivationClass,
+  type DeliveryResultProjectionClass,
+  type DeliveryResultTaxonomyEntry,
+  type DeliveryResultToken,
+} from "./delivery-result.js";
 export {
   type CommentReadView,
   type CommentWriteRequest,

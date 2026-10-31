@@ -35,6 +35,12 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "FALLBACK_INTERNAL_CODE",
     "FALLBACK_INVOCATION_CODE",
   ],
+  "core/src/contracts/delivery-result.ts": [
+    "DELIVERY_RESULT_DERIVATION_CLASSES",
+    "DELIVERY_RESULT_PROJECTION_CLASSES",
+    "DELIVERY_RESULT_TAXONOMY",
+    "DELIVERY_RESULT_TOKENS",
+  ],
   "core/src/contracts/result.ts": ["RESULT_SCHEMA_VERSION"],
   "core/src/contracts/adapter-capabilities.ts": ["ADAPTER_OPERATIONS", "CARRIER_KINDS"],
   "core/src/contracts/envelope.ts": [

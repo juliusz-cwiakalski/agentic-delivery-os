@@ -11,6 +11,7 @@
     "src/contracts/adapter-capabilities.ts",
     "src/contracts/config.ts",
     "src/contracts/credentials.ts",
+    "src/contracts/delivery-result.ts",
     "src/contracts/envelope.ts",
     "src/contracts/error-table.ts",
     "src/contracts/index.ts",

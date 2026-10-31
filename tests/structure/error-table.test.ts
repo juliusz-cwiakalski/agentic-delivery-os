@@ -476,3 +476,54 @@ describe("TC-SYNC-007 lint rows are exact and additive", () => {
     expect(() => classifyDomainKind("state")).toThrow();
   });
 });
+
+const VERIFY_HINT =
+  "Complete the named required phases of the declared variant through the phase command, or correct the declaration, then re-run verify.";
+const VERIFY_SUMMARY = "The declared variant's required phases are not all completed.";
+
+describe("TC-VERIFY-019 verify kind and row", () => {
+  test("verify is a declared single-row kind with the exact C-8 fields", () => {
+    expect(DOMAIN_KINDS).toContain("verify");
+    const verify = entries.filter((entry) => entry.domainKind === "verify");
+    expect(verify).toHaveLength(1);
+    expect(verify[0]).toMatchObject({
+      code: "verify.ledger.incomplete",
+      domainKind: "verify",
+      category: "user",
+      retryable: false,
+      consequence: "not_landed",
+      projectionClass: "user-validation",
+      remediationHint: VERIFY_HINT,
+      summary: VERIFY_SUMMARY,
+    });
+  });
+
+  test("the verify row round-trips through returned, thrown, and exact-code selection", () => {
+    const row = classifyDomainKind("verify", "verify.ledger.incomplete");
+    expect(row.code).toBe("verify.ledger.incomplete");
+    expect(resolveAppErrorCode("verify.ledger.incomplete")).toEqual({ ok: true, entry: row });
+    expect(classifyThrown({ kind: "verify", code: "verify.ledger.incomplete" })).toEqual(row);
+    expect(
+      classifyThrown({ kind: "verify", code: "verify.ledger.incomplete", summary: "x" }),
+    ).toEqual(row);
+    expect(() => classifyDomainKind("verify", "lint.notes.malformed")).toThrow();
+  });
+
+  test("the documented row appears exactly once and matches column-for-column", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
+    expect(doc.split(row).length - 1).toBe(1);
+    const declaredKinds = "`provider`, `input`, `config`, `state`, `lint`, and `verify`";
+    expect(doc).toContain(declaredKinds);
+    expect(doc).toContain("`verify.ledger.incomplete`");
+  });
+
+  test("existing kinds remain untouched and the addition is the only new row", () => {
+    expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(1);
+    expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
+    expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
+    expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(7);
+    expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(5);
+    expect(entries).toHaveLength(27);
+  });
+});
