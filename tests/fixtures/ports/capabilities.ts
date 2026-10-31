@@ -17,9 +17,11 @@ import {
   type AdapterOperation,
   CARRIER_KINDS,
   type CapabilityGap,
+  type CapabilityGapReason,
   type CarrierKind,
   type CommentWriteRequest,
   ENVELOPE_SCHEMA_ID,
+  type ExternalSystemKind,
   type MetadataEnvelopeV1,
 } from "../../../packages/core/src/contracts/index";
 
@@ -189,3 +191,54 @@ export const writeMetadata = (
   }
   return { ok: true, serialized: serialized.carrier };
 };
+
+/**
+ * The exact GH-188 OQ-G postures. This is the expected data the delivered
+ * provider declarations are compared against — not a second source of truth:
+ * the test binds the production `AdapterContract` values to these rows.
+ */
+export type ExpectedSeedPosture = {
+  readonly adapterName: string;
+  readonly systemKind: ExternalSystemKind;
+  readonly supported: readonly AdapterOperation[];
+  readonly gapReasons: Readonly<Partial<Record<AdapterOperation, CapabilityGapReason>>>;
+};
+
+export const EXPECTED_SEED_POSTURES = {
+  jira: {
+    adapterName: "jira",
+    systemKind: "tracker",
+    supported: ["read-work-item"],
+    gapReasons: {
+      "write-work-item": "adapter-not-implemented",
+      "transition-work-item": "adapter-not-implemented",
+      "write-comment": "adapter-not-implemented",
+      "read-delivery-request": "provider-unsupported",
+      "write-delivery-request": "provider-unsupported",
+      "read-pipeline-run": "provider-unsupported",
+    },
+  },
+  gitlab: {
+    adapterName: "gitlab",
+    systemKind: "vcs",
+    supported: ["read-delivery-request", "read-pipeline-run"],
+    gapReasons: {
+      "write-delivery-request": "adapter-not-implemented",
+      "read-work-item": "adapter-not-implemented",
+      "write-work-item": "adapter-not-implemented",
+      "transition-work-item": "adapter-not-implemented",
+      "write-comment": "adapter-not-implemented",
+    },
+  },
+  github: {
+    adapterName: "github",
+    systemKind: "vcs",
+    supported: ["read-work-item", "read-delivery-request", "read-pipeline-run"],
+    gapReasons: {
+      "write-work-item": "adapter-not-implemented",
+      "write-delivery-request": "adapter-not-implemented",
+      "transition-work-item": "adapter-not-implemented",
+      "write-comment": "adapter-not-implemented",
+    },
+  },
+} as const satisfies Readonly<Record<"jira" | "gitlab" | "github", ExpectedSeedPosture>>;
