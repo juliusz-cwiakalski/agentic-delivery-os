@@ -10,8 +10,8 @@ phases:
   dor_check: { started: "2026-10-31T19:15:00Z", completed: "2026-10-31T19:30:00Z" }
   delivery: { started: "2026-10-31T19:30:00Z", completed: "2026-10-31T20:30:00Z" }
   system_spec_update: { started: "2026-10-31T20:30:00Z", completed: "2026-10-31T21:00:00Z" }
-  review_fix: { started: "2026-10-31T21:00:00Z", completed: null }
-  quality_gates: { started: null, completed: null }
+  review_fix: { started: "2026-10-31T21:00:00Z", completed: "2026-11-01T04:00:00Z" }
+  quality_gates: { started: "2026-11-01T04:00:00Z", completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
@@ -52,4 +52,7 @@ notes:
     date: "2026-11-01"
   - text: "Retro: the first review was run as two bounded passes because single-run @reviewer invocations exceeded the execution window twice. Splitting worked and produced high-signal findings, but it missed persisting a native reviewer artifact; PM consolidated the two reports into review/review-iter-1.md. Suggest reviewer prompts cap runtime and always write the verdict artifact early."
     type: retro
+    date: "2026-11-01"
+  - text: "Review iteration 2 PASS after remediation 7588b26 + docs a11def4: all R1-R7 closed, no new contradictions, tests strengthened. Phase 10 remediation complete; proceed to quality gates."
+    type: resolved
     date: "2026-11-01"
