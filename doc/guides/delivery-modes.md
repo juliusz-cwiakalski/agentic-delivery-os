@@ -494,7 +494,7 @@ The principle mirrors the exit-0-no-artifact rule: a result that requires a
 lane re-dispatch is never a clean exit 0.
 
 When pm-notes completeness decides `finished` versus `partial`, the canonical
-[pm-notes authoring rule](change-lifecycle.md#pm-notes-structure-chgworkitemref-pm-notesyaml)
+[pm-notes authoring rule](change-lifecycle.md#pm-notes-structure-chg-workitemref-pm-notesyaml)
 states who maintains the ledger, when, and why.
 
 ### Interim mitigations: permission denial and the JOIN warning

@@ -273,7 +273,7 @@ You review and merge manually.
   and settled.
 - **Tracker is Source of Truth**: The external tracker (Jira/GitHub) owns workflow status. `@pm` syncs status via MCP;
   Git artifacts support implementation and auditability but do not replace tracker state.
-- **PM Notes are Mandatory**: Every change must have a `chg-<ref>-pm-notes.yaml` file for tracking phases, decisions, and open questions. The canonical authoring rule (who/when/who-not/why) lives in [PM Notes Structure](change-lifecycle.md#pm-notes-structure-chgworkitemref-pm-notesyaml).
+- **PM Notes are Mandatory**: Every change must have a `chg-<ref>-pm-notes.yaml` file for tracking phases, decisions, and open questions. The canonical authoring rule (who/when/who-not/why) lives in [PM Notes Structure](change-lifecycle.md#pm-notes-structure-chg-workitemref-pm-notesyaml).
 
 ---
 
