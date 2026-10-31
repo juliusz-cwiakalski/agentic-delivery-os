@@ -13,6 +13,7 @@ import {
   type ProviderConditionKind,
   type ProviderParkEvidence,
   type ProviderParkRecord,
+  type ProviderParkView,
 } from "#contracts";
 
 const DAY_MS = 86_400_000;
@@ -218,4 +219,315 @@ export const createAnnouncementRecord = (
       announcementCode: input.code,
     }),
   };
+};
+
+/* ------------------------------------------------------------------------- *
+ * State-layer integration (Phase 5): fenced appends, verified reads, the
+ * `provider-parks.json` projection, and zero-write read-time views (PD-A).
+ * ------------------------------------------------------------------------- */
+
+import {
+  PROVIDER_ANNOUNCEMENT_RECORD_KEY,
+  PROVIDER_ANNOUNCEMENT_SCHEMA_ID,
+  PROVIDER_PARK_RECORD_KEY,
+  PROVIDER_PARKS_DOCUMENT_NAME,
+  PROVIDER_PARKS_PROJECTION_SCHEMA_ID,
+  type StateDocumentReport,
+  type StateFailure,
+  type StateJsonValue,
+  type StateReadEvidence,
+  type StateResult,
+  type StateStorePort,
+} from "#contracts";
+
+const isRecordValue = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const stateFailure = (code: StateFailure["code"], path: string): StateResult<never> => ({
+  ok: false,
+  error: { kind: "state", code, consequence: "not_landed", location: { path } },
+});
+
+const parkFromJson = (value: unknown): ProviderParkRecord | undefined => {
+  if (!isRecordValue(value)) return undefined;
+  if (value.schemaVersion !== PROVIDER_PARK_SCHEMA_ID) return undefined;
+  if (typeof value.name !== "string" || typeof value.subjectName !== "string") return undefined;
+  if (value.subjectKind !== "provider" && value.subjectKind !== "chain") return undefined;
+  if (typeof value.cause !== "string" || !Array.isArray(value.conditions)) return undefined;
+  if (value.state !== "active" && value.state !== "cleared") return undefined;
+  if (typeof value.createdAtMs !== "number" || typeof value.expiresAtMs !== "number")
+    return undefined;
+  if (typeof value.createdAt !== "string" || typeof value.expiresAt !== "string") return undefined;
+  return value as unknown as ProviderParkRecord;
+};
+
+const announcementFromJson = (value: unknown): ProviderAnnouncementRecord | undefined => {
+  if (!isRecordValue(value)) return undefined;
+  if (value.schemaVersion !== PROVIDER_ANNOUNCEMENT_SCHEMA_ID) return undefined;
+  if (typeof value.identity !== "string" || typeof value.code !== "string") return undefined;
+  if (
+    value.severity !== "info" &&
+    value.severity !== "warning"
+  )
+    return undefined;
+  return value as unknown as ProviderAnnouncementRecord;
+};
+
+export type ProviderLedgerState = {
+  readonly parks: readonly ProviderParkRecord[];
+  readonly announcements: readonly ProviderAnnouncementRecord[];
+  readonly evidence: StateReadEvidence | undefined;
+};
+
+const readKey = (
+  store: StateStorePort,
+  key: string,
+): StateResult<StateJsonValue | undefined> => {
+  const read = store.read({ requiredKeys: [key] });
+  if (read.ok) return { ok: true, value: read.value.values[key] };
+  if (read.error.code === "state.keys.missing") return { ok: true, value: undefined };
+  return read;
+};
+
+/** Read verified park/announcement truth; an absent or empty ledger is empty. */
+export const readProviderLedger = (store: StateStorePort): StateResult<ProviderLedgerState> => {
+  const probe = store.read({ requiredKeys: [] });
+  if (!probe.ok) return probe;
+  if (probe.value.evidence.verifiedEmpty) {
+    return { ok: true, value: { parks: [], announcements: [], evidence: probe.value.evidence } };
+  }
+  const parksValue = readKey(store, PROVIDER_PARK_RECORD_KEY);
+  if (!parksValue.ok) return parksValue;
+  const announcementsValue = readKey(store, PROVIDER_ANNOUNCEMENT_RECORD_KEY);
+  if (!announcementsValue.ok) return announcementsValue;
+
+  const parks: ProviderParkRecord[] = [];
+  const parksPayload = parksValue.value;
+  if (parksPayload !== undefined) {
+    if (!isRecordValue(parksPayload) || !Array.isArray(parksPayload.parks)) {
+      return stateFailure("state.store.torn", PROVIDER_PARK_RECORD_KEY);
+    }
+    for (const entry of parksPayload.parks) {
+      const parsed = parkFromJson(entry);
+      if (parsed === undefined) return stateFailure("state.store.torn", PROVIDER_PARK_RECORD_KEY);
+      parks.push(parsed);
+    }
+  }
+  const announcements: ProviderAnnouncementRecord[] = [];
+  const announcementsPayload = announcementsValue.value;
+  if (announcementsPayload !== undefined) {
+    if (
+      !isRecordValue(announcementsPayload) ||
+      !Array.isArray(announcementsPayload.announcements)
+    ) {
+      return stateFailure("state.store.torn", PROVIDER_ANNOUNCEMENT_RECORD_KEY);
+    }
+    for (const entry of announcementsPayload.announcements) {
+      const parsed = announcementFromJson(entry);
+      if (parsed === undefined) {
+        return stateFailure("state.store.torn", PROVIDER_ANNOUNCEMENT_RECORD_KEY);
+      }
+      announcements.push(parsed);
+    }
+  }
+  return {
+    ok: true,
+    value: { parks, announcements, evidence: probe.value.evidence },
+  };
+};
+
+const parksPayload = (parks: readonly ProviderParkRecord[]): StateJsonValue => ({
+  schemaVersion: PROVIDER_PARK_SCHEMA_ID,
+  parks: parks as unknown as StateJsonValue,
+});
+
+const announcementsPayload = (
+  announcements: readonly ProviderAnnouncementRecord[],
+): StateJsonValue => ({
+  schemaVersion: PROVIDER_ANNOUNCEMENT_SCHEMA_ID,
+  announcements: announcements as unknown as StateJsonValue,
+});
+
+/** The rebuildable projection content: latest record per park name (DM-12). */
+export const providerParksProjection = (
+  parks: readonly ProviderParkRecord[],
+): StateJsonValue => ({
+  schemaVersion: PROVIDER_PARKS_PROJECTION_SCHEMA_ID,
+  parks: foldParks(parks) as unknown as StateJsonValue,
+});
+
+export type PersistResolutionInput = {
+  readonly store: StateStorePort;
+  readonly fenceToken: string;
+  readonly nowMs: number;
+  readonly parks: readonly ProviderParkRecord[];
+  readonly announcements: readonly ProviderAnnouncementRecord[];
+};
+
+export type PersistResolutionOutcome = {
+  readonly parks: readonly ProviderParkRecord[];
+  readonly announcements: readonly ProviderAnnouncementRecord[];
+  readonly appendedParks: boolean;
+  readonly appendedAnnouncements: boolean;
+  readonly newParks: readonly ProviderParkRecord[];
+  readonly newAnnouncements: readonly ProviderAnnouncementRecord[];
+  readonly document: StateDocumentReport | undefined;
+};
+
+const latestByName = (
+  parks: readonly ProviderParkRecord[],
+): ReadonlyMap<string, ProviderParkRecord> => {
+  const latest = new Map<string, ProviderParkRecord>();
+  for (const park of parks) latest.set(park.name, park);
+  return latest;
+};
+
+/**
+ * Persist one mutating resolve: dedupe unchanged generations, append a
+ * `cleared` record and a `provider.resumed` announcement for observed clears,
+ * then replace the `provider-parks.json` projection only when truth changed.
+ */
+export const persistProviderResolution = (
+  input: PersistResolutionInput,
+): StateResult<PersistResolutionOutcome> => {
+  const acquired = input.store.acquireFence(input.fenceToken);
+  if (!acquired.ok) return acquired;
+  const handle = acquired.value.handle;
+  const release = (): void => {
+    input.store.releaseFence(handle);
+  };
+  const previous = readProviderLedger(input.store);
+  if (!previous.ok) {
+    release();
+    return previous;
+  }
+  const previousLatest = latestByName(previous.value.parks);
+  const currentLatest = latestByName(input.parks);
+  const appendedParks: ProviderParkRecord[] = [...previous.value.parks];
+  const appendedAnnouncements: ProviderAnnouncementRecord[] = [
+    ...previous.value.announcements,
+  ];
+  let parksChanged = false;
+  let announcementsChanged = false;
+  const newParks: ProviderParkRecord[] = [];
+  const newAnnouncements: ProviderAnnouncementRecord[] = [];
+
+  const knownAnnouncements = new Set(
+    previous.value.announcements.map((announcement) => announcement.identity),
+  );
+  const addAnnouncement = (announcement: ProviderAnnouncementRecord): void => {
+    if (knownAnnouncements.has(announcement.identity)) return;
+    knownAnnouncements.add(announcement.identity);
+    appendedAnnouncements.push(announcement);
+    newAnnouncements.push(announcement);
+    announcementsChanged = true;
+  };
+
+  for (const park of input.parks) {
+    const prior = previousLatest.get(park.name);
+    if (
+      prior !== undefined &&
+      prior.state === "active" &&
+      parkGeneration(prior) === parkGeneration(park)
+    ) {
+      continue;
+    }
+    appendedParks.push(park);
+    newParks.push(park);
+    parksChanged = true;
+  }
+
+  for (const [name, prior] of previousLatest) {
+    if (prior.state !== "active") continue;
+    const current = currentLatest.get(name);
+    if (current !== undefined && parkGeneration(current) === parkGeneration(prior)) continue;
+    if (current !== undefined) continue;
+    const cleared = clearParkRecord(prior, input.nowMs);
+    appendedParks.push(cleared);
+    newParks.push(cleared);
+    parksChanged = true;
+    addAnnouncement(
+      createAnnouncementRecord({
+        subjectKind: prior.subjectKind,
+        subjectName: prior.subjectName,
+        code: "provider.resumed",
+        severity: "info",
+        createdAtMs: input.nowMs,
+        message: `${prior.subjectKind} ${prior.subjectName} resumed`,
+        cause: prior.cause,
+        conditions: prior.conditions,
+        generation: parkGeneration(prior),
+        evidence: { announcementCode: "provider.resumed" },
+      }),
+    );
+  }
+
+  for (const announcement of input.announcements) addAnnouncement(announcement);
+
+  if (parksChanged) {
+    const appended = input.store.append(handle, {
+      kind: "provider.park",
+      recordKey: PROVIDER_PARK_RECORD_KEY,
+      payload: parksPayload(appendedParks),
+    });
+    if (!appended.ok) {
+      release();
+      return appended;
+    }
+  }
+  if (announcementsChanged) {
+    const appended = input.store.append(handle, {
+      kind: "provider.announcement",
+      recordKey: PROVIDER_ANNOUNCEMENT_RECORD_KEY,
+      payload: announcementsPayload(appendedAnnouncements),
+    });
+    if (!appended.ok) {
+      release();
+      return appended;
+    }
+  }
+  let document: StateDocumentReport | undefined;
+  if (parksChanged) {
+    const replaced = input.store.replaceDocument(handle, {
+      name: PROVIDER_PARKS_DOCUMENT_NAME,
+      content: providerParksProjection(appendedParks),
+    });
+    if (!replaced.ok) {
+      release();
+      return replaced;
+    }
+    document = replaced.value;
+  }
+  release();
+  return {
+    ok: true,
+    value: {
+      parks: appendedParks,
+      announcements: appendedAnnouncements,
+      appendedParks: parksChanged,
+      appendedAnnouncements: announcementsChanged,
+      newParks,
+      newAnnouncements,
+      document,
+    },
+  };
+};
+
+/** Read-only park views from verified ledger truth; never writes (PD-A). */
+export const readProviderParkViews = (
+  store: StateStorePort,
+  nowMs: number,
+  options: { readonly all?: boolean; readonly providerName?: string } = {},
+): StateResult<readonly ProviderParkView[]> => {
+  const ledger = readProviderLedger(store);
+  if (!ledger.ok) return ledger;
+  const views = foldParks(ledger.value.parks)
+    .map((park) => parkView(park, nowMs))
+    .filter((view) => {
+      if (options.providerName !== undefined && view.subjectName !== options.providerName) {
+        return false;
+      }
+      return options.all === true ? true : view.state === "active";
+    });
+  return { ok: true, value: views };
 };

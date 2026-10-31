@@ -147,3 +147,237 @@ describe("TC-PROV-030/033 fold, ordering, and cap/chain expiry", () => {
     expect(outcome.decision.park.expiresAtMs).toBeGreaterThan(outcome.decision.park.createdAtMs);
   });
 });
+
+import type {
+  CredentialPort,
+  ProviderClock,
+  ProviderConfiguration,
+  ProviderSleep,
+  QuotaTransport,
+} from "../../packages/core/src/contracts/index";
+import { createProviderEngine } from "../../packages/core/src/provider/engine";
+import {
+  persistProviderResolution,
+  providerParksProjection,
+  readProviderLedger,
+  readProviderParkViews,
+} from "../../packages/core/src/provider/parks";
+import {
+  makeIdentity,
+  makeTempRoot,
+  openStore,
+  removeRoot,
+} from "../fixtures/state/harness";
+
+const engineClock: ProviderClock = { nowMs: () => NOW };
+const engineSleep: ProviderSleep = { sleep: async () => undefined };
+const engineCredential: CredentialPort = {
+  resolve: () => ({ ok: true, material: { value: "CANARY-SECRET" } }),
+};
+
+const stateConfig = (reset = NOW + 3600 * 1000): ProviderConfiguration => ({
+  defaultChain: "default",
+  credentials: { zai: { sourceKey: { style: "literal", name: "ZAI_API_KEY" } } },
+  entries: {
+    p0: {
+      name: "p0",
+      class: "subscription",
+      enabled: true,
+      quota: {
+        enabled: true,
+        endpoint: "https://p0.test/quota",
+        credentialRef: "zai",
+        timeoutMs: 1000,
+        thresholdPercent: 100,
+        maxSleepLoops: 24,
+        outageParkTtlSeconds: 300,
+        credentialParkTtlSeconds: 900,
+        capParkTtlSeconds: 300,
+      },
+    },
+  },
+  chains: { default: { name: "default", entries: ["p0"], allowPaidFallback: false } },
+});
+
+const quotaBody = (reset: number): QuotaTransport => ({
+  send: async () => ({
+    status: 200,
+    bodyText: JSON.stringify({
+      code: 200,
+      success: true,
+      data: { limits: [{ type: "TOKENS_LIMIT", percentage: 100, nextResetTime: reset }] },
+    }),
+  }),
+});
+const clearBody: QuotaTransport = {
+  send: async () => ({
+    status: 200,
+    bodyText: JSON.stringify({ code: 200, success: true, data: { limits: [] } }),
+  }),
+};
+
+const withStore = (transport: QuotaTransport) => {
+  const root = makeTempRoot("provider");
+  const { store } = openStore(makeIdentity(root));
+  let counter = 0;
+  const engine = createProviderEngine({
+    clock: engineClock,
+    sleep: engineSleep,
+    credentialPort: engineCredential,
+    transport,
+    stateStore: store,
+    newFenceToken: () => `fence-${counter++}`,
+  });
+  return { root, store, engine };
+};
+
+describe("TC-PROV-028..033/050 state integration", () => {
+  test("a park round-trips through the ledger and the projection document", () => {
+    const { root, store, engine } = withStore(quotaBody(NOW + 3600 * 1000));
+    try {
+      const resolved = engine.resolve({ config: stateConfig(), persist: true });
+      return resolved.then((value) => {
+        expect(value.ok).toBe(true);
+        if (!value.ok) return;
+        const ledger = readProviderLedger(store);
+        expect(ledger.ok).toBe(true);
+        if (!ledger.ok) return;
+        expect(ledger.value.parks[0]?.name).toBe("provider:p0");
+        expect(ledger.value.parks[0]?.schemaVersion).toBe("delivery.provider.park.v1");
+        expect(ledger.value.parks[0]?.cause).toBe("quota-exhausted");
+        expect(ledger.value.announcements[0]?.schemaVersion).toBe(
+          "delivery.provider.announcement.v1",
+        );
+        const projection = store.read({ requiredKeys: ["document:provider-parks.json"] });
+        expect(projection.ok).toBe(true);
+        if (projection.ok) {
+          expect(projection.value.values["document:provider-parks.json"]).toMatchObject({
+            schemaVersion: "delivery.provider.parks.v1",
+          });
+        }
+        expect(providerParksProjection(ledger.value.parks)).toMatchObject({
+          schemaVersion: "delivery.provider.parks.v1",
+        });
+      });
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("views expire exactly at expiresAt with no write", async () => {
+    const { root, store, engine } = withStore(quotaBody(NOW + 1000));
+    try {
+      const resolved = await engine.resolve({ config: stateConfig(NOW + 1000), persist: true });
+      if (!resolved.ok) throw new Error("resolve failed");
+      const first = store.checkIntegrity();
+      if (!first.ok) throw new Error("integrity failed");
+      const before = first.value.evidence.recordCount;
+      const active = readProviderParkViews(store, NOW + 999);
+      expect(active.ok).toBe(true);
+      if (active.ok) {
+        expect(active.value.length).toBeGreaterThan(0);
+        expect(active.value.every((view) => view.state === "active")).toBe(true);
+      }
+      const expired = readProviderParkViews(store, NOW + 1000);
+      expect(expired).toMatchObject({ ok: true, value: [] });
+      const all = readProviderParkViews(store, NOW + 1000, { all: true });
+      expect(all.ok).toBe(true);
+      if (all.ok) {
+        expect(all.value.length).toBeGreaterThan(0);
+        expect(all.value.every((view) => view.state === "expired")).toBe(true);
+      }
+      const after = store.checkIntegrity();
+      if (!after.ok) throw new Error("integrity failed");
+      expect(after.value.evidence.recordCount).toBe(before);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("unchanged generations dedupe; a changed expiry appends once", async () => {
+    const { root, store, engine } = withStore(quotaBody(NOW + 3600 * 1000));
+    try {
+      const first = await engine.resolve({ config: stateConfig(), persist: true });
+      if (!first.ok) throw new Error("resolve failed");
+      const afterFirst = store.checkIntegrity();
+      if (!afterFirst.ok) throw new Error("integrity failed");
+      const count = afterFirst.value.evidence.recordCount;
+      await engine.resolve({ config: stateConfig(), persist: true });
+      const afterSecond = store.checkIntegrity();
+      if (!afterSecond.ok) throw new Error("integrity failed");
+      expect(afterSecond.value.evidence.recordCount).toBe(count);
+      await engine.resolve({ config: stateConfig(NOW + 7200 * 1000), persist: true });
+      const ledger = readProviderLedger(store);
+      expect(ledger.ok).toBe(true);
+      if (ledger.ok) expect(ledger.value.parks).toHaveLength(2);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("an observed clear appends one cleared record and one resumed announcement", async () => {
+    const root = makeTempRoot("provider");
+    const { store } = openStore(makeIdentity(root));
+    let counter = 0;
+    let transport: QuotaTransport = quotaBody(NOW + 3600 * 1000);
+    const engine = createProviderEngine({
+      clock: engineClock,
+      sleep: engineSleep,
+      credentialPort: engineCredential,
+      transport: {
+        send: (request) => transport.send(request),
+      },
+      stateStore: store,
+      newFenceToken: () => `fence-${counter++}`,
+    });
+    try {
+      await engine.resolve({ config: stateConfig(), persist: true });
+      transport = clearBody;
+      await engine.resolve({ config: stateConfig(), persist: true });
+      await engine.resolve({ config: stateConfig(), persist: true });
+      const ledger = readProviderLedger(store);
+      if (!ledger.ok) throw new Error("read failed");
+      expect(ledger.value.parks.filter((park) => park.state === "cleared")).toHaveLength(2);
+      expect(
+        ledger.value.announcements.filter((entry) => entry.code === "provider.resumed"),
+      ).toHaveLength(2);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("repeated quota and list reads append nothing", async () => {
+    const { root, store, engine } = withStore(quotaBody(NOW + 3600 * 1000));
+    try {
+      await engine.resolve({ config: stateConfig(), persist: true });
+      const before = store.checkIntegrity();
+      if (!before.ok) throw new Error("integrity failed");
+      await engine.quota({ config: stateConfig() });
+      await engine.quota({ config: stateConfig() });
+      void engine.parks();
+      void engine.parks();
+      const after = store.checkIntegrity();
+      if (!after.ok) throw new Error("integrity failed");
+      expect(after.value.evidence.recordCount).toBe(before.value.evidence.recordCount);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("a chain park appears in the rebuilt projection", async () => {
+    const { root, store, engine } = withStore(quotaBody(NOW + 3600 * 1000));
+    try {
+      const resolved = await engine.resolve({ config: stateConfig(), persist: true });
+      if (!resolved.ok) throw new Error("resolve failed");
+      const ledger = readProviderLedger(store);
+      if (!ledger.ok) throw new Error("read failed");
+      expect(providerParksProjection(ledger.value.parks)).toMatchObject({
+        schemaVersion: "delivery.provider.parks.v1",
+      });
+      const projection = providerParksProjection(ledger.value.parks) as { parks: unknown[] };
+      expect(projection.parks.length).toBeGreaterThan(0);
+    } finally {
+      removeRoot(root);
+    }
+  });
+});

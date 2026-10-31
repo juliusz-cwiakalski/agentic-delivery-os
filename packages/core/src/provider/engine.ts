@@ -22,15 +22,22 @@ import {
   type ProviderErrorCode,
   type ProviderParkEvidence,
   type ProviderParkRecord,
+  type ProviderParkView,
   type ProviderQuotaView,
   type ProviderResolveResult,
   type ProviderSleep,
+  type StateResult,
+  type StateStorePort,
   type QuotaTransport,
 } from "#contracts";
 import { createParkAnnouncement } from "./announcements.js";
 import { resolveProviderChain, type ChainEntryState } from "./chain.js";
 import { combineProviderConditions } from "./conditions.js";
-import { createParkRecord } from "./parks.js";
+import {
+  createParkRecord,
+  persistProviderResolution,
+  readProviderParkViews,
+} from "./parks.js";
 import { evaluatePeakWindow } from "./peak.js";
 import { evaluateQuotaResponse } from "./quota.js";
 import { selectProviderChain, validateProviderConfiguration } from "./validate.js";
@@ -40,11 +47,17 @@ export type ProviderEngineDependencies = {
   readonly credentialPort: CredentialPort;
   readonly transport: QuotaTransport;
   readonly sleep: ProviderSleep;
+  readonly stateStore?: StateStorePort;
+  readonly newFenceToken?: () => string;
 };
 
 export type ProviderEngine = {
   readonly resolve: (input: ProviderResolveInput) => Promise<ProviderResolveResult>;
   readonly quota: (input: ProviderQuotaInput) => Promise<ProviderEngineResult>;
+  readonly parks: (input?: {
+    readonly all?: boolean;
+    readonly providerName?: string;
+  }) => StateResult<readonly ProviderParkView[]>;
 };
 
 export type ProviderResolveInput = {
@@ -287,6 +300,32 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
         parks.push(decision.park);
         announcements.push(createParkAnnouncement(decision.park, nowMs));
       }
+      if (input.persist !== false && deps.stateStore !== undefined) {
+        const persisted = persistProviderResolution({
+          store: deps.stateStore,
+          fenceToken: deps.newFenceToken?.() ?? `provider-${nowMs}`,
+          nowMs,
+          parks,
+          announcements,
+        });
+        if (!persisted.ok) {
+          return failure(
+            "provider.outage",
+            `provider state write failed: ${persisted.error.code}`,
+          );
+        }
+        return {
+          ok: true,
+          chainName: chain.name,
+          decision,
+          skipped: outcome.skipped,
+          parks,
+          announcements: [...announcements, ...persisted.value.newAnnouncements].filter(
+            (entry, index, all) =>
+              all.findIndex((candidate) => candidate.identity === entry.identity) === index,
+          ),
+        };
+      }
       return {
         ok: true,
         chainName: chain.name,
@@ -345,6 +384,21 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
         if (evaluation.announcement !== undefined) announcements.push(evaluation.announcement);
       }
       return { ok: true, providers: views, announcements };
+    },
+
+    parks(input = {}) {
+      if (deps.stateStore === undefined) {
+        return {
+          ok: false,
+          error: {
+            kind: "state",
+            code: "state.write.failed",
+            consequence: "not_landed",
+            location: { path: "provider-parks.json" },
+          },
+        };
+      }
+      return readProviderParkViews(deps.stateStore, deps.clock.nowMs(), input);
     },
   };
 };
