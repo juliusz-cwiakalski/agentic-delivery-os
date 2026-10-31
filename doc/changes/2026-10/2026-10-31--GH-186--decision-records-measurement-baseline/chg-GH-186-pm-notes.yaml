@@ -5,7 +5,7 @@ phases:
   clarify_scope: { started: "2026-10-31T13:55:00Z", completed: "2026-10-31T14:05:00Z" }
   specification: { started: "2026-10-31T14:06:00Z", completed: "2026-10-31T15:25:00Z", reopened: "2026-10-31T15:05:00Z" }
   test_planning: { started: "2026-10-31T14:32:00Z", completed: "2026-10-31T15:25:00Z" }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: "2026-10-31T15:27:00Z", completed: "2026-10-31T15:50:00Z" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -50,4 +50,7 @@ notes:
     date: "2026-10-31"
   - text: "Spec reopened and amended to v1.1: C-1 narrowed to permit the data-only forbidden-literals registry registration (DEC-13, AC-C10-1, NFR-10); p90 nearest-rank, canonical 0-1 ratio, and the measurement-log change shape pinned (test-plan OQ-T2/T3/T4). Test plan revised to v1.1: 37 TCs, all 21 ACs traced, TC-GATE-005 converted from blocker to concrete registration/seed-literal checks; no open questions remain."
     type: "decision"
+    date: "2026-10-31"
+  - text: "Delivery plan complete (chg-GH-186-plan.md): 13 phases, 76 tasks, per-phase commit table, 21-AC coverage ledger, 37-TC to phase map, PD-1..PD-10 pins, measurement computation procedure, exact gate battery, rollback. Branch name (feat/GH-186/decision-records-and-measurement-baseline) differs slightly from the spec slug (decision-records-measurement-baseline); branch is authoritative and this is cosmetic, not a scope deviation."
+    type: "info"
     date: "2026-10-31"
