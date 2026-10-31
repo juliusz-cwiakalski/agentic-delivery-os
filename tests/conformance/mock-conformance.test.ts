@@ -613,3 +613,296 @@ describe("TC-CONF-015 exact-URL replay and the throwing-fetch guard", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// P4 provider matrices: TC-CONF-006/007/008/009/012
+// ---------------------------------------------------------------------------
+
+const registrationFor = (provider: string): ConformanceAdapterRegistration => {
+  const registration = CONFORMANCE_ADAPTERS.find((entry) => entry.provider === provider);
+  if (registration === undefined) throw new Error(`missing ${provider} registration`);
+  return registration;
+};
+
+const buildClientFor = (provider: string, tenant: MockTenant): ConformanceAdapterClient =>
+  registrationFor(provider).buildClient({
+    tenant,
+    instance: tenant.instance,
+    credentials: createCanaryCredentialPort(),
+    transport: createMockTenantTransport(tenant),
+  });
+
+const isRecordValue = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const withRouteBody = (
+  tenant: MockTenant,
+  predicate: (url: string) => boolean,
+  body: unknown,
+): MockTenant => ({
+  ...tenant,
+  routes: tenant.routes.map((route) => (predicate(route.url) ? { ...route, body } : route)),
+});
+
+const runSingle = async (
+  provider: string,
+  tenant: MockTenant,
+  runId: string,
+): Promise<ConformanceReport> =>
+  runConformance({
+    adapters: [registrationFor(provider)],
+    tenants: { [provider]: tenant },
+    credentials: createCanaryCredentialPort(),
+    transportFactory: () => createMockTenantTransport(tenant),
+    nowIso: CLOCK,
+    runId,
+    tier: "mock",
+  });
+
+describe("TC-CONF-006 mock suite green for all three adapters", () => {
+  test("each adapter produces three flows and twelve registry-ordered step results", async () => {
+    const report = await runProduction("matrix-run");
+    const expectedStepIds = CONFORMANCE_FLOWS.flatMap((flow) =>
+      flow.steps.map((step) => step.stepId),
+    );
+    expect(report.status).toBe("passed");
+    for (const provider of ["github", "gitlab", "jira"]) {
+      const flows = report.flows.filter((flow) => flow.provider === provider);
+      expect(flows.map((flow) => flow.flowId)).toEqual([
+        "change-lifecycle",
+        "comment-provenance",
+        "label-semantics",
+      ]);
+      const steps = report.steps.filter((step) => step.provider === provider);
+      expect(steps.map((step) => step.stepId)).toEqual(expectedStepIds);
+      expect(steps.some((step) => step.status === "executed")).toBe(true);
+      expect(steps.some((step) => step.skipKind === "declared-gap")).toBe(true);
+    }
+  });
+
+  test("a missing route fails naming provider, flow, step and the request URL", async () => {
+    const tenant = loadMockTenant("github");
+    const mutated: MockTenant = {
+      ...tenant,
+      routes: tenant.routes.filter((route) => !route.url.includes("/issues/")),
+    };
+    const transport = createMockTenantTransport(mutated);
+    const report = await runConformance({
+      adapters: [registrationFor("github")],
+      tenants: { github: mutated },
+      credentials: createCanaryCredentialPort(),
+      transportFactory: () => transport,
+      nowIso: CLOCK,
+      runId: "missing-route-run",
+      tier: "mock",
+    });
+    const failed = report.steps.find((step) => step.stepId === "change-lifecycle.read-work-item");
+    expect(failed?.status).toBe("failed");
+    expect(failed?.provider).toBe("github");
+    expect(failed?.flowId).toBe("change-lifecycle");
+    expect(transport.requests.some((request) => request.url.includes("/issues/"))).toBe(true);
+  });
+});
+
+describe("TC-CONF-007 GitHub operation matrix", () => {
+  test("all GitHub reads execute and all writes skip adapter-not-implemented", async () => {
+    const report = await runSingle("github", loadMockTenant("github"), "github-matrix");
+    const steps = report.steps;
+    for (const stepId of [
+      "change-lifecycle.read-work-item",
+      "change-lifecycle.read-delivery-request",
+      "change-lifecycle.read-pipeline-run",
+      "comment-provenance.read-comments",
+      "label-semantics.read-labels",
+    ]) {
+      expect(steps.find((step) => step.stepId === stepId)?.status, stepId).toBe("executed");
+    }
+    for (const step of steps.filter((entry) => entry.status === "skipped")) {
+      expect(step.skipKind).toBe("declared-gap");
+      expect(step.skipReason).toBe("adapter-not-implemented");
+    }
+    expect(report.steps.some((step) => step.failure?.assertion === "primitive-purity")).toBe(false);
+  });
+
+  test("a corrupted expected projection fails naming provider, flow, step and assertion", async () => {
+    const tenant = loadMockTenant("github");
+    const expected = tenant.expected["change-lifecycle.read-work-item"];
+    if (!isRecordValue(expected)) throw new Error("github expected projection is missing");
+    const mutated: MockTenant = {
+      ...tenant,
+      expected: {
+        ...tenant.expected,
+        "change-lifecycle.read-work-item": { ...expected, labels: ["corrupted"] },
+      },
+    };
+    const report = await runSingle("github", mutated, "github-corrupt");
+    const failed = report.steps.find((step) => step.stepId === "change-lifecycle.read-work-item");
+    expect(failed?.status).toBe("failed");
+    expect(failed?.failure?.assertion).toBe("expected-projection");
+    expect(failed?.provider).toBe("github");
+    expect(failed?.flowId).toBe("change-lifecycle");
+  });
+});
+
+describe("TC-CONF-008 GitLab operation matrix", () => {
+  test("GitLab executes MR and pipeline reads and skips work-item and write steps", async () => {
+    const tenant = loadMockTenant("gitlab");
+    const client = buildClientFor("gitlab", tenant);
+    const mr = await client.readDeliveryRequest?.();
+    expect(mr?.ok).toBe(true);
+    if (mr?.ok) {
+      expect(mr.value.reviewState).toBe("approved");
+      expect(mr.value.threads).toHaveLength(2);
+    }
+    const pipelines = await client.readPipelineRun?.();
+    expect(pipelines?.ok).toBe(true);
+    if (pipelines?.ok) expect(pipelines.value).toHaveLength(2);
+
+    const report = await runSingle("gitlab", tenant, "gitlab-matrix");
+    for (const step of report.steps.filter((entry) => entry.status === "skipped")) {
+      expect(step.skipReason).toBe("adapter-not-implemented");
+    }
+    const workItemSteps = report.steps.filter((step) => step.operation === "read-work-item");
+    expect(workItemSteps).toHaveLength(3);
+    expect(workItemSteps.every((step) => step.status === "skipped")).toBe(true);
+  });
+
+  test("a dropped pipeline fails the projection comparison", async () => {
+    const tenant = loadMockTenant("gitlab");
+    const expected = tenant.expected["change-lifecycle.read-pipeline-run"];
+    if (!Array.isArray(expected) || expected.length === 0) {
+      throw new Error("gitlab expected pipelines are missing");
+    }
+    const mutated: MockTenant = {
+      ...tenant,
+      expected: { ...tenant.expected, "change-lifecycle.read-pipeline-run": [expected[0]] },
+    };
+    const report = await runSingle("gitlab", mutated, "gitlab-dropped-pipeline");
+    const failed = report.steps.find(
+      (step) => step.stepId === "change-lifecycle.read-pipeline-run",
+    );
+    expect(failed?.status).toBe("failed");
+    expect(failed?.failure?.assertion).toBe("expected-projection");
+  });
+
+  test("an unknown merge status fails the read by name", async () => {
+    const tenant = loadMockTenant("gitlab");
+    const mutated = withRouteBody(tenant, (url) => url.includes("merge_requests"), {
+      iid: 42,
+      state: "opened",
+      draft: false,
+      approvals: 0,
+      source_branch: "feat/GH-189/control",
+      target_branch: "main-tools",
+      detailed_merge_status: "unknown_state",
+      merge_status: "unknown_state",
+    });
+    const report = await runSingle("gitlab", mutated, "gitlab-bad-state");
+    const failed = report.steps.find(
+      (step) => step.stepId === "change-lifecycle.read-delivery-request",
+    );
+    expect(failed?.status).toBe("failed");
+    expect(failed?.failure?.detail).toContain("unmapped");
+  });
+});
+
+describe("TC-CONF-009 Jira operation matrix", () => {
+  test("Jira executes all three work-item reads with comments and labels", async () => {
+    const tenant = loadMockTenant("jira");
+    const client = buildClientFor("jira", tenant);
+    const result = await client.readWorkItem?.();
+    expect(result?.ok).toBe(true);
+    if (result?.ok) {
+      expect(result.value.comments?.length).toBeGreaterThan(0);
+      for (const comment of result.value.comments ?? []) {
+        expect(comment.authorAccount.trim().length).toBeGreaterThan(0);
+        expect(comment.body.trim().length).toBeGreaterThan(0);
+      }
+      expect(Array.isArray(result.value.labels)).toBe(true);
+      expect("fields" in result.value).toBe(false);
+      expect("key" in result.value).toBe(false);
+    }
+    const report = await runSingle("jira", tenant, "jira-matrix");
+    const exec = (stepId: string) => report.steps.find((step) => step.stepId === stepId)?.status;
+    expect(exec("change-lifecycle.read-work-item")).toBe("executed");
+    expect(exec("comment-provenance.read-comments")).toBe("executed");
+    expect(exec("label-semantics.read-labels")).toBe("executed");
+  });
+
+  test("Jira gap reasons are exact per operation", async () => {
+    const report = await runSingle("jira", loadMockTenant("jira"), "jira-gaps");
+    const reasonFor = (operation: string): string | null | undefined =>
+      report.steps.find((step) => step.operation === operation && step.status === "skipped")
+        ?.skipReason;
+    expect(reasonFor("read-delivery-request")).toBe("provider-unsupported");
+    expect(reasonFor("read-pipeline-run")).toBe("provider-unsupported");
+    expect(reasonFor("write-delivery-request")).toBe("provider-unsupported");
+    expect(reasonFor("write-work-item")).toBe("adapter-not-implemented");
+    expect(reasonFor("transition-work-item")).toBe("adapter-not-implemented");
+    expect(reasonFor("write-comment")).toBe("adapter-not-implemented");
+  });
+
+  test("an omitted comment payload preserves absence and a present empty set fails", async () => {
+    const tenant = loadMockTenant("jira");
+    const route = tenant.routes[0];
+    if (route === undefined || !isRecordValue(route.body)) {
+      throw new Error("jira route body is missing");
+    }
+    const withoutComment = Object.fromEntries(
+      Object.entries(route.body).map(([key, value]) => [key, value]),
+    );
+    const fields = withoutComment.fields;
+    if (!isRecordValue(fields)) throw new Error("jira fields are missing");
+    const fieldsWithoutComment = Object.fromEntries(
+      Object.entries(fields).filter(([key]) => key !== "comment"),
+    );
+    const omittedBody = { ...withoutComment, fields: fieldsWithoutComment };
+    const omitted = withRouteBody(tenant, (url) => url.includes("/issue/"), omittedBody);
+    const omittedClient = buildClientFor("jira", omitted);
+    const omittedRead = await omittedClient.readWorkItem?.();
+    expect(omittedRead?.ok).toBe(true);
+    if (omittedRead?.ok) expect("comments" in omittedRead.value).toBe(false);
+
+    const emptyBody = {
+      ...withoutComment,
+      fields: { ...fieldsWithoutComment, comment: { comments: [], total: 0 } },
+    };
+    const empty = withRouteBody(tenant, (url) => url.includes("/issue/"), emptyBody);
+    const report = await runSingle("jira", empty, "jira-empty-comments");
+    expect(
+      report.steps.some(
+        (step) => step.stepId === "comment-provenance.read-comments" && step.status === "failed",
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("TC-CONF-012 comment provenance and shipped carrier skip", () => {
+  test("the flow is registered for every adapter and the carrier step always skips", async () => {
+    const report = await runProduction("comment-provenance-run");
+    for (const provider of ["github", "gitlab", "jira"]) {
+      expect(
+        report.flows.some(
+          (flow) => flow.provider === provider && flow.flowId === "comment-provenance",
+        ),
+      ).toBe(true);
+    }
+    const carrierSteps = report.steps.filter(
+      (step) => step.stepId === "comment-provenance.carrier-roundtrip",
+    );
+    expect(carrierSteps).toHaveLength(3);
+    for (const step of carrierSteps) {
+      expect(step.status).toBe("skipped");
+      expect(step.skipKind).toBe("declared-gap");
+      expect(step.skipReason).toBe("adapter-not-implemented");
+    }
+  });
+
+  test("Jira supplies a present comment set and omission stays absence", async () => {
+    const tenant = loadMockTenant("jira");
+    const client = buildClientFor("jira", tenant);
+    const result = await client.readWorkItem?.();
+    expect(result?.ok).toBe(true);
+    if (result?.ok) expect((result.value.comments ?? []).length).toBeGreaterThan(0);
+  });
+});
