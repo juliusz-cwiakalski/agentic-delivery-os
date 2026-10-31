@@ -17,7 +17,9 @@ phases:
   test_planning:
     started: "2026-10-31T06:27:00Z"
     completed: "2026-10-31T06:36:00Z"
-  delivery_planning: { started: null, completed: null }
+  delivery_planning:
+    started: "2026-10-31T06:39:00Z"
+    completed: "2026-10-31T06:52:00Z"
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -47,7 +49,10 @@ open_questions:
 blockers: []
 
 notes:
-  - text: "Test plan v1.1 authored: 34 test cases, 22/22 AC coverage, 30-cell fail-closed registry matrix, mutation triples with detection-disabled mutants, and a no-echo proof that pairs absence with a presence assertion."
+  - text: "Test plan v1.1 authored: 34 test cases, 22/22 AC coverage, 30-cell fail-closed registry matrix, mutation triples with detection-disabled mutants, and a no-echo proof that pairs absence with a presence assertion. Re-aligned to spec v1.1 for the corrected changeset criterion."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Delivery plan authored: 11 phases (7 coder phases, 4 PM lifecycle gates), 56 tasks, 34/34 TC traceability. Shared pure rule module placed at packages/adapters/src/io/privacy-rules.ts, imported by the check via relative source path so ts-invariants stays build-free; node:crypto confined to the check edge."
     type: "info"
     date: "2026-10-31"
   - text: "Retro: the spec shipped AC-F8-1 as a total-count claim ('exactly one changeset') that is unsatisfiable because five changesets are already pending. Caught by the test-plan author before delivery. Specification was reopened, corrected to 'exactly one new changeset added by this change; pre-existing untouched', and the test plan was re-aligned. Cost: one reopen cycle. Lesson: changeset/manifest ACs must be written relative to the change diff, not as absolute repository state."
