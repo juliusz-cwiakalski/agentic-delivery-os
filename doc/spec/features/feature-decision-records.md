@@ -10,7 +10,8 @@ last_updated: 2026-07-05
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
-  related_changes: ["GH-32", "GH-52", "GH-46", "GH-133"]
+  related_changes: ["GH-32", "GH-52", "GH-46", "GH-133", "GH-186"]
+  decisions: ["ODR-0002"]
   guides:
     - "doc/guides/decision-making.md"
     - "doc/guides/decision-records-management.md"
@@ -81,6 +82,14 @@ Borderline cases route to the type whose concern is the **primary driver**: **pr
 
 Examples: `ADR-0001-event-bus-selection.md`, `PDR-0001-free-tier-scope.md`
 
+### Foundational decision binding register
+
+`doc/decisions/00-register.md` is a projection, not a decision record. It maps a foundational topic to the record(s) and anchor(s) that decide it and carries no decision text. When a binding record is superseded, the register row is updated to the successor; it never renumbers or restates a decision. The register is linked from the index and from `doc/decisions/README.md`.
+
+### ID prefix scheme and project catalog
+
+Decision-record IDs follow the adopted ID prefix scheme: per-type numeric ranges (ADR, PDR, TDR, BDR, and ODR each own a sequence and an index), not one shared decision sequence. [ODR-0002](../../decisions/ODR-0002-id-prefix-scheme-and-project-catalog.md) adopts the base registry, grammar, and rules R1–R11 from the [ID prefix catalog](../../planning/concepts/id-prefix-catalog.md) by reference and declares the project catalog, including the `MET-` metric-definition space with the measurement baseline log as allocator.
+
 ### Lifecycle
 
 ```
@@ -119,6 +128,7 @@ Create a record when a decision is hard to reverse, has cross-component impact, 
 | `doc/decisions/` | Decision records directory | Flat directory containing all decision records, co-located by type prefix |
 | `doc/decisions/README.md` | Directory overview | Purpose, naming convention, lifecycle summary, and references |
 | `doc/decisions/00-index.md` | Index | Table of all decision records with ID, type, title, status, date, owners |
+| `doc/decisions/00-register.md` | Foundational decision binding register | A projection mapping each foundational topic to the record(s) and anchor(s) that decide it; it carries no decision text |
 | `doc/guides/decision-making.md` | Decision-making guide | Process-first guide: decision kernel (D0–D14), rigor levels (R0–R3 + emergency overlay), tiered-default section applicability, four-axis classification + domains-first + ADR/TDR tie-breaker, DACI rights, AI-authority model, bounded technical-selection evidence pack + security controls, three decision modes |
 | `doc/guides/decision-records-management.md` | Record-artifact reference | Record standard: types, ADR/TDR tie-breaker + overlap guidance, naming, lifecycle, front matter (`classification` contract), governance (thin redirect to decision-making.md for process) |
 | `doc/templates/decision-record-template.md` | Authoring template | Single source of truth for the record body: type-selection helper, front matter with `classification` as routing home, tiered-default applicability tags per section, Decision Rights, Evidence/Assumptions/Unknowns + Technical-Selection Evidence Pack, a single Decision section, eligibility-first alternatives, Rollback, Communication Plan, Structured Retrospective with iterative review, and worked R1/R2/R3 examples |
