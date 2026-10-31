@@ -108,6 +108,21 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "serializeEnvelope",
     "stripEnvelope",
   ],
+  "adapters/src/io/provider-transport.ts": ["providerPayloadFailure"],
+  "adapters/src/jira/capabilities.ts": ["JIRA_ADAPTER_CONTRACT"],
+  "adapters/src/jira/client.ts": ["createJiraClient"],
+  "adapters/src/jira/custom-fields.ts": ["JIRA_CUSTOM_FIELD_MAPPINGS", "applyJiraCustomFields"],
+  "adapters/src/jira/index.ts": ["createJiraClient", "JIRA_ADAPTER_CONTRACT"],
+  "adapters/src/jira/normalize.ts": [
+    "normalizeJiraIssue",
+    "normalizeJiraSearch",
+    "jiraNormalizationContext",
+  ],
+  "adapters/src/jira/workflow-map.ts": [
+    "JIRA_WORKFLOW_MAP",
+    "validateWorkflowMap",
+    "stateMappingFor",
+  ],
   "adapters/src/repo/index.ts": ["findGitRoot", "resolveRepositoryRoot", "nodeRepositoryIo"],
   "adapters/src/legacy/index.ts": [
     "createLegacyCompat",

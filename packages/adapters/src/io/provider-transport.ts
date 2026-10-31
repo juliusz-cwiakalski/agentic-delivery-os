@@ -1,0 +1,50 @@
+/**
+ * The injectable provider transport seam shared by the provider client seeds.
+ *
+ * Runtime-neutral by construction: types only. Clients accept a
+ * `ProviderTransport` as a construction input so trap suites replay committed
+ * fixtures offline; the production default wraps native `fetch` inside each
+ * provider subpath. No module-level transport or credential is cached.
+ */
+import type { CredentialResolutionFailure } from "@delivery-os/core/contracts";
+
+/** The only HTTP method the read slices issue. */
+export type ProviderHttpMethod = "GET";
+
+/** One provider request, fully shaped before it reaches the transport. */
+export type ProviderRequest = {
+  readonly url: string;
+  readonly method: ProviderHttpMethod;
+  readonly headers: Readonly<Record<string, string>>;
+};
+
+/** The raw provider response; the body stays untrusted until normalized. */
+export type ProviderResponse = {
+  readonly status: number;
+  readonly body: unknown;
+};
+
+/** The injectable provider transport (production wraps native `fetch`). */
+export type ProviderTransport = {
+  readonly send: (request: ProviderRequest) => Promise<ProviderResponse>;
+};
+
+/** A visibly classified payload/transport failure (never a silent flattening). */
+export type ProviderPayloadFailure = {
+  readonly ok: false;
+  readonly code: "provider.payload.invalid";
+  readonly detail: string;
+};
+
+/** A read failure: the classified credential identity or a payload failure. */
+export type ProviderReadFailure = CredentialResolutionFailure | ProviderPayloadFailure;
+
+/** A read result: a normalized primitive view or a classified failure. */
+export type ProviderReadResult<T> = { readonly ok: true; readonly value: T } | ProviderReadFailure;
+
+/** Construct the reified payload failure with one readable detail string. */
+export const providerPayloadFailure = (detail: string): ProviderPayloadFailure => ({
+  ok: false,
+  code: "provider.payload.invalid",
+  detail,
+});
