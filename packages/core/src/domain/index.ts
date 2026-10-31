@@ -5,3 +5,10 @@
 
 /** Placeholder marker for the pure domain tier. */
 export type DomainPlaceholder = { readonly __tier: "domain" };
+
+export {
+  lintPmNotes,
+  type PmNotesLintFinding,
+  type PmNotesLintLocation,
+  type PmNotesLintVerdict,
+} from "./pm-notes-lint.js";

@@ -1,0 +1,12 @@
+change_id: GH-179
+title: "pm-notes fixture: lite variant with the pinned six"
+delivery_mode: interactive
+variant: lite
+phases:
+  clarify_scope: { started: "2026-10-31T01:00:00Z", completed: "2026-10-31T01:10:00Z" }
+  specification: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+notes: []
