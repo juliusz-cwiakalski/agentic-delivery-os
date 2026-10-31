@@ -6,6 +6,11 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { stringify } from "yaml";
+import {
+  CANONICAL_PHASE_IDS,
+  PM_NOTES_REQUIRED_PHASES_BY_VARIANT,
+} from "../../packages/core/src/contracts/index";
 import {
   PHASE_REF,
   type PhaseHarness,
@@ -13,7 +18,7 @@ import {
   withoutPhase,
   withPhaseHarness,
 } from "./phase-support";
-import { documentOf, entryOf, parsePmNotes } from "./pm-notes-lint-support";
+import { documentOf, entryOf, parsePmNotes, phasesOf } from "./pm-notes-lint-support";
 
 const ROOT = process.cwd();
 const FULL = readFileSync(join(ROOT, "tests/fixtures/phase/full-open.yaml"), "utf8");
@@ -164,7 +169,9 @@ describe("TC-PHASE-004 row 9: absent canonical phase entry creation", () => {
         expect(run.exitCode).toBe(0);
         const data = dataOf(run);
         expect(data.outcome).toBe("landed");
-        expect(data.advisory).toBeUndefined();
+        // Row 9 asserts the outside-required-set shape is absent; earlier-open
+        // advisories (row 6) may still apply to this landing.
+        expect(data.advisory ?? {}).not.toMatchObject({ class: "outside-required-set" });
         const entry = entryOf(documentValue(harness.targetText()), "review_fix");
         expect(entry.started).toBe(data.timestamp);
         expect(entry.completed).toBe(data.timestamp);
@@ -211,6 +218,114 @@ describe("TC-PHASE-004 row 9: absent canonical phase entry creation", () => {
         expect(run.envelope?.data).toBeUndefined();
       },
       "row9-block",
+    );
+  });
+});
+
+const COMPLETED_ENTRY = {
+  started: "2026-10-31T02:00:00Z",
+  completed: "2026-10-31T02:05:00Z",
+};
+const OPEN_ENTRY = { started: null, completed: null };
+
+/**
+ * Complete every phase of the effective variant that precedes `dod_check`,
+ * except the explicitly open ones. `dod_check` stays open as the target.
+ */
+const outOfOrderFixture = (
+  base: string,
+  variant: "full" | "lite",
+  openEarlier: readonly string[],
+): string => {
+  const document = documentOf(parsePmNotes(base, "target"));
+  const phases: Record<string, unknown> = { ...phasesOf(document) };
+  const required: readonly string[] = PM_NOTES_REQUIRED_PHASES_BY_VARIANT[variant];
+  const ordered: readonly string[] = CANONICAL_PHASE_IDS.filter((candidate) =>
+    required.includes(candidate),
+  );
+  const targetIndex = ordered.indexOf("dod_check");
+  for (const phaseId of ordered.slice(0, targetIndex)) {
+    phases[phaseId] = openEarlier.includes(phaseId) ? { ...OPEN_ENTRY } : { ...COMPLETED_ENTRY };
+  }
+  phases.dod_check = { ...OPEN_ENTRY };
+  if (variant === "lite") {
+    // Canonical but outside the pinned LITE set: an open opaque phase that the
+    // advisory must never name.
+    phases.test_planning = { ...OPEN_ENTRY };
+  }
+  return stringify({ ...document, phases });
+};
+
+describe("TC-PHASE-003 row 6: out-of-order completion advisory", () => {
+  test("a later completion lands and names the earlier open phase of the full set", async () => {
+    await withPhaseHarness(
+      outOfOrderFixture(FULL, "full", ["quality_gates"]),
+      async (harness) => {
+        const run = await complete(harness, "dod_check");
+        expect(run.exitCode).toBe(0);
+        const data = dataOf(run);
+        expect(data).toMatchObject({
+          outcome: "landed",
+          operation: "complete",
+          phase: "dod_check",
+        });
+        expect(data.advisory).toEqual({ class: "earlier-open", phases: ["quality_gates"] });
+        expect(landingCount(harness)).toBe(1);
+      },
+      "row6-full",
+    );
+  });
+
+  test("the advisory follows current state: a reopened earlier phase is named again", async () => {
+    await withPhaseHarness(
+      outOfOrderFixture(FULL, "full", []),
+      async (harness) => {
+        const completed = await complete(harness, "quality_gates");
+        expect(completed.exitCode).toBe(0);
+        expect(dataOf(completed).advisory).toBeUndefined();
+        const reopened = await reopen(harness, "quality_gates", "gate reopened for a fix");
+        expect(reopened.exitCode).toBe(0);
+        const run = await complete(harness, "dod_check");
+        expect(run.exitCode).toBe(0);
+        expect(dataOf(run).advisory).toEqual({
+          class: "earlier-open",
+          phases: ["quality_gates"],
+        });
+        expect(landingCount(harness)).toBe(3);
+      },
+      "row6-reopened",
+    );
+  });
+
+  test("the ordered control lands with no advisory", async () => {
+    await withPhaseHarness(
+      outOfOrderFixture(FULL, "full", []),
+      async (harness) => {
+        const run = await complete(harness, "dod_check");
+        expect(run.exitCode).toBe(0);
+        const data = dataOf(run);
+        expect(data.outcome).toBe("landed");
+        expect(data.advisory).toBeUndefined();
+        expect(landingCount(harness)).toBe(1);
+      },
+      "row6-ordered",
+    );
+  });
+
+  test("a lite advisory names only earlier open phases of the pinned set", async () => {
+    await withPhaseHarness(
+      outOfOrderFixture(LITE, "lite", ["quality_gates"]),
+      async (harness) => {
+        const run = await complete(harness, "dod_check");
+        expect(run.exitCode).toBe(0);
+        const data = dataOf(run);
+        expect(data.variant).toBe("lite");
+        expect(data.advisory).toEqual({ class: "earlier-open", phases: ["quality_gates"] });
+        const phases = (data.advisory as { readonly phases: readonly string[] }).phases;
+        expect(phases).not.toContain("test_planning");
+        expect(landingCount(harness)).toBe(1);
+      },
+      "row6-lite",
     );
   });
 });

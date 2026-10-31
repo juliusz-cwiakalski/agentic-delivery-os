@@ -6,7 +6,7 @@
  * ledger access and the derived projection are exposed for three-way no-op and
  * append-only assertions.
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -18,6 +18,7 @@ import {
   createPhaseCommandDefinition,
   type PhaseCommandRuntime,
 } from "../../packages/cli/src/commands/phase";
+import type { CommandDefinition } from "../../packages/cli/src/index";
 import { type CliDependencies, runCli } from "../../packages/cli/src/index";
 import type { StateStoreIdentity, StateStorePort } from "../../packages/core/src/contracts/index";
 import {
@@ -71,6 +72,17 @@ export type PhaseRun = {
   readonly envelope?: Record<string, unknown>;
 };
 
+/** Records runtime seams touched by an invocation (ordering proofs, D4). */
+export type PhaseCallRecorder = { readonly calls: string[] };
+
+export const createPhaseCallRecorder = (): PhaseCallRecorder => ({ calls: [] });
+
+export type PhaseHarnessOptions = {
+  readonly recorder?: PhaseCallRecorder;
+  readonly omitTarget?: boolean;
+  readonly state?: { readonly identity: StateStoreIdentity; readonly store: StateStorePort };
+};
+
 export type PhaseHarness = {
   readonly root: string;
   readonly stateRoot: string;
@@ -78,7 +90,14 @@ export type PhaseHarness = {
   readonly identity: StateStoreIdentity;
   readonly store: StateStorePort;
   readonly clock: PhaseClock;
+  readonly runtime: PhaseCommandRuntime;
+  readonly recorder?: PhaseCallRecorder;
   run(args: readonly string[], options?: { readonly json?: boolean }): Promise<PhaseRun>;
+  runDefinition(
+    definition: CommandDefinition,
+    args: readonly string[],
+    options?: { readonly json?: boolean },
+  ): Promise<PhaseRun>;
   rawLedgerLines(): string[];
   rawLedgerText(): string;
   transitionPayloads(): Record<string, unknown>[];
@@ -111,24 +130,37 @@ export const createPhaseHarness = (
   fixtureText: string,
   label = "phase",
   relativeDirectory = `2026-10/2026-10-31--${PHASE_REF}--phase-fixture`,
+  options: PhaseHarnessOptions = {},
 ): PhaseHarness => {
   const root = makePhaseRoot(label);
-  const targetPath = writeTarget(root, fixtureText, relativeDirectory);
-  const stateRoot = join(root, "state");
-  const identity = makeIdentity(stateRoot, { workspaceId: "phase-fixture" });
-  const { store } = openStore(identity);
+  const targetPath = options.omitTarget
+    ? join(root, PHASE_CHANGE_DIRECTORY)
+    : writeTarget(root, fixtureText, relativeDirectory);
+  const stateRoot = options.state?.identity.stateDirectory ?? join(root, "state");
+  const identity =
+    options.state?.identity ?? makeIdentity(stateRoot, { workspaceId: "phase-fixture" });
+  const store = options.state?.store ?? openStore(identity).store;
   const clock = makePhaseClock();
   const facts = nodePmNotesFileSystemFacts();
   let fenceCounter = 0;
+  const note = (name: string): void => {
+    options.recorder?.calls.push(name);
+  };
   const runtime: PhaseCommandRuntime = {
-    readPmNotes: (changeRef) =>
-      readPmNotesText({
+    readPmNotes: (changeRef) => {
+      note("readPmNotes");
+      return readPmNotesText({
         changeRef,
         changesDirectory: join(root, PHASE_CHANGE_DIRECTORY),
         fs: facts,
-      }),
-    stageEntry: (text, edit) => stagePmNotesPhaseEntry(text, edit),
+      });
+    },
+    stageEntry: (text, edit) => {
+      note("stageEntry");
+      return stagePmNotesPhaseEntry(text, edit);
+    },
     readRegistry: (changeRef) => {
+      note("readRegistry");
       const read = readChangeTransitions(store, changeRef);
       if (!read.ok) return { ok: false, error: read.error };
       return {
@@ -138,9 +170,16 @@ export const createPhaseHarness = (
         evidence: read.value.evidence,
       };
     },
-    appendTransition: (request) => appendPhaseTransition(store, request),
-    replaceProjection: (request) => replacePhaseProjection(store, request),
+    appendTransition: (request) => {
+      note("appendTransition");
+      return appendPhaseTransition(store, request);
+    },
+    replaceProjection: (request) => {
+      note("replaceProjection");
+      return replacePhaseProjection(store, request);
+    },
     writePmNotes: (file, text) => {
+      note("writePmNotes");
       try {
         writeFileSync(file, text);
         return { ok: true };
@@ -148,16 +187,20 @@ export const createPhaseHarness = (
         return { ok: false, message: `failed to write ${file}` };
       }
     },
-    nowIso: () => clock.nextIso(),
+    nowIso: () => {
+      note("nowIso");
+      return clock.nextIso();
+    },
     newFenceToken: () => {
       fenceCounter += 1;
       return `phase-writer-${fenceCounter}`;
     },
   };
 
-  const run = async (
+  const runDefinition = async (
+    definition: CommandDefinition,
     args: readonly string[],
-    options: { readonly json?: boolean } = {},
+    runOptions: { readonly json?: boolean } = {},
   ): Promise<PhaseRun> => {
     const stdout = bufferSink();
     const stderr = bufferSink();
@@ -166,9 +209,9 @@ export const createPhaseHarness = (
       clock: { now: () => clock.nowMs() },
       newRunId: () => "run-phase-fixture",
       secrets: [],
-      program: { commands: { phase: createPhaseCommandDefinition(runtime) } },
+      program: { commands: { phase: definition } },
     };
-    const argv = options.json === false ? ["phase", ...args] : ["--json", "phase", ...args];
+    const argv = runOptions.json === false ? ["phase", ...args] : ["--json", "phase", ...args];
     const exitCode = await runCli(argv, { stdout, stderr }, deps);
     const text = stdout.value.trim();
     const envelope = text.length === 0 ? undefined : (JSON.parse(text) as Record<string, unknown>);
@@ -180,6 +223,8 @@ export const createPhaseHarness = (
     };
   };
 
+  const definition = createPhaseCommandDefinition(runtime);
+
   return {
     root,
     stateRoot,
@@ -187,7 +232,10 @@ export const createPhaseHarness = (
     identity,
     store,
     clock,
-    run,
+    runtime,
+    ...(options.recorder === undefined ? {} : { recorder: options.recorder }),
+    run: (args, runOptions) => runDefinition(definition, args, runOptions),
+    runDefinition,
     rawLedgerLines: () =>
       existsSync(ledgerPath(identity))
         ? ledgerLines(readFileSync(ledgerPath(identity), "utf8"))
@@ -217,8 +265,9 @@ export const withPhaseHarness = async (
   body: (harness: PhaseHarness) => Promise<void> | void,
   label = "phase",
   relativeDirectory?: string,
+  options: PhaseHarnessOptions = {},
 ): Promise<void> => {
-  const harness = createPhaseHarness(fixtureText, label, relativeDirectory);
+  const harness = createPhaseHarness(fixtureText, label, relativeDirectory, options);
   try {
     await body(harness);
   } finally {

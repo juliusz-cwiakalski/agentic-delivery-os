@@ -215,6 +215,36 @@ const targetFailure = (read: PhasePmNotesRead): TargetFailure | undefined => {
 const requiredPhasesFor = (variant: PmNotesVariant): readonly string[] =>
   PM_NOTES_REQUIRED_PHASES_BY_VARIANT[variant];
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** Whether the staged document declares the phase completed (timestamp present). */
+const stagedCompleted = (value: unknown, phaseId: string): boolean => {
+  if (!isRecord(value) || !isRecord(value.phases)) return false;
+  const entry = value.phases[phaseId];
+  return isRecord(entry) && typeof entry.completed === "string";
+};
+
+/**
+ * Matrix row 6: name the still-open phases that precede the target in the
+ * effective variant's required order (C-4, PIN-4). Completion is read from the
+ * post-transition document, so a reopened phase is open again; the advisory is
+ * never a one-time snapshot and never names a phase outside the effective set.
+ */
+const earlierOpenPhases = (
+  variant: PmNotesVariant,
+  phaseId: string,
+  value: unknown,
+): readonly string[] => {
+  const required = requiredPhasesFor(variant);
+  const ordered: readonly string[] = CANONICAL_PHASE_IDS.filter((candidate) =>
+    required.includes(candidate),
+  );
+  const targetIndex = ordered.indexOf(phaseId);
+  if (targetIndex <= 0) return [];
+  return ordered.slice(0, targetIndex).filter((candidate) => !stagedCompleted(value, candidate));
+};
+
 const listTarget = (
   runtime: PhaseCommandRuntime,
   changeRef: string,
@@ -305,10 +335,14 @@ const transitionTarget = (
   });
   if (!replaced.ok) return stateFailure(replaced.error);
 
+  const inRequiredSet = requiredPhasesFor(verdict.variant).includes(phaseId);
+  const earlierOpen = earlierOpenPhases(verdict.variant, phaseId, staged.value);
   const advisory =
-    kind === "complete" && !requiredPhasesFor(verdict.variant).includes(phaseId)
+    kind === "complete" && !inRequiredSet
       ? { class: "outside-required-set", phase: phaseId, variant: verdict.variant }
-      : undefined;
+      : kind === "complete" && earlierOpen.length > 0
+        ? { class: "earlier-open", phases: earlierOpen }
+        : undefined;
 
   return {
     ok: true,
