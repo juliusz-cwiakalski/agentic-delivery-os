@@ -10,7 +10,7 @@ phases:
   delivery_planning: { started: "2026-10-31T01:55:00Z", completed: "2026-10-31T02:40:00Z", reopened: "2026-10-31T03:05:00Z (dor iter-1 major fold-in: plan 1.2 must mirror the brand-neutral pinned hint and drop the contradictory clause)", reopened_completed: "2026-10-31T03:45:00Z (plan v1.1: task 1.2 byte-for-byte hint; version refs updated; phases/tasks/TCs unchanged)" }
   dor_check: { started: "2026-10-31T02:45:00Z", completed: "2026-10-31T04:05:00Z", verdict: "READY iter-2 (10/10 facets PASS; zero blockers/majors; 1 non-blocking nit: stale test-plan pointers, folded). iter-1 NOT_READY (9/10; 1 major/1 minor/3 nits) closed in one reopen cycle (spec/test-plan/plan v1.1). Artifacts readiness-review/readiness-iter-1.md, readiness-iter-2.md. Reviewer independently re-verified corpus, bash enum, 21 TC/14 AC/7 NFR, 10 phases/44 tasks, and the brand-neutral hint byte-match." }
   delivery: { started: "2026-10-31T04:10:00Z", completed: "2026-10-31T08:15:00Z", commits: "6141d00(P1) e77277d(P2) 6620ce9(P3) 4554207(P4) 62b8248(P5) e644d2e(P6); HEAD e644d2e; all 21 TCs green; pnpm check 1106/1106; message-only commitlint reword applied (trees unchanged); worktree clean; no push" }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: "2026-10-31T08:20:00Z", completed: "2026-10-31T08:35:00Z", reconciled: "NEW feature-verify-change-and-exit-taxonomy.md (first spec: surface, overlay precedence, variant sets, enum/taxonomy, exit taxonomy, identities, summary grammar, evidence, code map, NFRs); feature-result-contract (verify kind/row, chain, consumer); feature-pm-notes-lint-and-phase-transitions (verify consumer); feature-state-layer (presence-tolerant read, projection not evidence); feature-monorepo-scaffold-toolchain (delivered modules/tests); feature-delivery-lifecycle + definition-of-done/change-lifecycle guides (variant-aware finalization); glossary (+6 terms); doc/00-index; forbidden-literals registry allowlist for the new spec. Validation: error-table-sync 27/27, forbidden-literals 0, doc-distribution no drift, git diff --check clean. Residual gaps: NONE." }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -64,6 +64,9 @@ notes:
     date: "2026-10-31"
   - text: "Commit hygiene: CI commitlint checks the whole branch range and 7 commits had >100-char body lines. A PM-authorized message-only reword brought the range to commitlint exit 0 with identical trees; the first scripted reword wrapped git's COMMIT_EDITMSG comment block and was restored from the pre-run green HEAD. Current SHAs are recorded in the evidence artifact. Lesson: commit bodies authored inline must keep lines <=100 and avoid leading `Token:` lines; verify commitlint on the range before finishing delivery."
     type: "retro"
+    date: "2026-10-31"
+  - text: "Phase 7 system_spec_update COMPLETE: @doc-syncer authored feature-verify-change-and-exit-taxonomy.md (first spec) and reconciled result-contract, pm-notes-lint, state-layer, monorepo, delivery-lifecycle, DoD/lifecycle guides, glossary, index, and the forbidden-literals doc allowlist. Residual documentation gaps: NONE. Validations green: error-table-sync 27/27, forbidden-literals 5/5 classes 0 violations, doc-distribution no drift, git diff --check clean."
+    type: "info"
     date: "2026-10-31"
   - text: "Runtime learnings carried forward: pre-authorize inline committer discipline for @coder (one Conventional Commit per plan phase, explicit staging, never stage .ai/local/ or tmp/); PM owns @runner/@doc-syncer/@pr-manager. Prefer chunked authoring delegations for long artifacts (GH-179 retros)."
     type: "info"

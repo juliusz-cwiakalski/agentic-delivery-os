@@ -7,8 +7,8 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The implemented M0-S5 state layer: an injected store identity, an append-only schema-versioned JSONL ledger as durable truth, disposable JSONL-scan and SQLite-index driver kinds over the same ledger, classified torn-state detection with verified-empty evidence and terminal-tail repair, key-set assertions with no default substitution, single-writer fences with explicit reported recovery, atomic derived-document replace, and least-privilege permissions with a documented Windows ACL contract."
 links:
-  related_changes: ["GH-174", "GH-179", "GH-181"]
-  related_decisions: ["ADR-0003", "TDR-0004"]
+  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181"]
+  related_decisions: ["ADR-0003", "TDR-0004", "TDR-0005"]
 ---
 
 # Feature: State Layer
@@ -62,11 +62,19 @@ The delivery registry composes the public port without adding a runtime-API loca
 
 The per-change phase state is a derived document (`phase-state.<REF>.json`) produced by a pure fold: a completion records the first-completion start and the latest completion, and a reopen clears `completed` while keeping the start. The projection is replaced atomically through the derived-document kind and is rebuildable from verified ledger truth; a torn store never produces one. Registry behavior is specified in [pm-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md).
 
+### Verify-change consumer
+
+Verify change is a read-only consumer of the state layer. It reads the registry's per-change transition history through a presence-tolerant verified read: the store is verified first, an absent store or an absent per-change record is explicit no-evidence (`present: false`), and a torn, schema-mismatched, or corrupt-payload read remains the classified `state.*` failure. The read acquires no fence and writes nothing.
+
+The derived `phase-state.<REF>.json` projection is not evidence for verification: verify folds the verified ledger directly, so a stale or missing projection cannot change the verdict. Verification never mutates the ledger, the header, the index, or a derived document. Its consumer contract is in [verify change and exit taxonomy](feature-verify-change-and-exit-taxonomy.md).
+
 ## Technical Architecture & Codebase Map
 
 - `packages/core/src/contracts/state.ts` — driver-neutral vocabulary: identity, record envelope, fence handle, evidence, failure, and the single `STATE_SCHEMA_VERSION` home. Types and data only.
 - `packages/core/src/contracts/error-table.ts` — the `state` domain kind and seven exact-code rows.
 - `packages/core/src/state/index.ts` — the facade over injected identity and the injected runtime edge; the only public factory that accepts a driver kind.
+- `packages/core/src/state/registry.ts` — registry records over the state port, including the presence-tolerant verified transition read (`readChangeTransitionsTolerant`) and the pure fold; no runtime API.
+- `packages/core/src/domain/verify-change.ts` — pure verify classification over parsed documents and folded transition records; no state access itself.
 - `packages/core/src/state/ledger.ts` — framing, FNV-1a 64-bit payload checksum, terminal completeness, sequence continuity, and schema-version verification. Pure.
 - `packages/core/src/state/edge.ts` — the runtime-edge interface and the named fault points. Types only.
 - `packages/core/src/state/driver/runtime-edge.ts` — the only location of runtime APIs: filesystem, permissions, the Windows owner-identity environment read, injected clock, and the built-in SQLite binding.
@@ -109,6 +117,7 @@ The state tier imports `./contracts` and its own modules only; runtime APIs appe
 
 - [Result contract and error table](feature-result-contract.md) — the `state` and `lint` rows and the binding sync check.
 - [PM-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md) — the delivery registry consumer, its record vocabulary, and the derived projection.
+- [Verify change and exit taxonomy](feature-verify-change-and-exit-taxonomy.md) — the read-only verification consumer and the delivery-result exit taxonomy.
 - [Monorepo scaffold and toolchain](feature-monorepo-scaffold-toolchain.md) — tier and runtime-API boundaries.
 - [Branding seam](feature-branding-seam.md) — `stateDirectoryName` is consumed as an injected parameter, never imported here.
 - [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0004](../../decisions/TDR-0004-state-storage-engine.md).
