@@ -301,9 +301,9 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → 7 → (8 if findings) �
 
 **Tasks**:
 
-- [ ] **7.1** PM delegates the independent review to `@reviewer` (lifecycle phase 8) after the coder's handoff: trace all 11 ACs and 17 TCs to delivered content and recorded evidence; re-run the grounding greps personally (NFR-2 re-verification at review is the spec's explicit requirement), the guards, and the canonical-home judgment.
-- [ ] **7.2** Verify the review-dominant ACs per test-plan §3.1: AC-F1-1/F1-2/F2-2/F3-1/F4-1 semantic completeness against the TC checklists; AC-NFR2-1 grounding sign-off; AC-F5-1 rule-body-vs-cross-link judgment using the TC-MITIG-009 canonical-home table.
-- [ ] **7.3** Record the verdict through the review artifact workflow; route content findings to Phase 8 and decision-class findings (e.g., a challenged DEC-1/DEC-2/DEC-5 placement) to the PM and `@decision-advisor` — never a silent alternative.
+- [x] **7.1** PM delegates the independent review to `@reviewer` (lifecycle phase 8) after the coder's handoff: trace all 11 ACs and 17 TCs to delivered content and recorded evidence; re-run the grounding greps personally (NFR-2 re-verification at review is the spec's explicit requirement), the guards, and the canonical-home judgment. *(Done 2026-10-31 via lifecycle review_fix: local review executed at HEAD b4731e8; all 11 ACs traced, grounding greps + 5 guards re-run by reviewer.)*
+- [x] **7.2** Verify the review-dominant ACs per test-plan §3.1: AC-F1-1/F1-2/F2-2/F3-1/F4-1 semantic completeness against the TC checklists; AC-NFR2-1 grounding sign-off; AC-F5-1 rule-body-vs-cross-link judgment using the TC-MITIG-009 canonical-home table. *(Done: all review-dominant ACs verified PASS — see code-review/review-iter-1.yaml AC table.)*
+- [x] **7.3** Record the verdict through the review artifact workflow; route content findings to Phase 8 and decision-class findings (e.g., a challenged DEC-1/DEC-2/DEC-5 placement) to the PM and `@decision-advisor` — never a silent alternative. *(Done: verdict PASS iteration 1 recorded in code-review/review-iter-1.yaml; findings 1 low + 1 info, both informational — no Phase 8 activation, no decision-class findings.)*
 
 **Acceptance Criteria**:
 
@@ -330,9 +330,9 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → 7 → (8 if findings) �
 
 **Tasks**:
 
-- [ ] **8.1** If findings exist: reproduce each via the corresponding TC checklist step, then apply the smallest rewording/structural fix in the affected target doc; preserve the canonical-home rule (a fix must not restate a rule body elsewhere).
-- [ ] **8.2** Re-run the affected guards/greps (Phase 6 subset) and update the test-plan §10 evidence rows; commit fixes via `@committer` as `docs(GH-185): address review findings …`.
-- [ ] **8.3** PM delegates independent re-review until PASS. If no findings, record the phase as not required with the Phase 7 PASS as evidence.
+- [x] **8.1** If findings exist: reproduce each via the corresponding TC checklist step, then apply the smallest rewording/structural fix in the affected target doc; preserve the canonical-home rule (a fix must not restate a rule body elsewhere). *(Not required: review PASS iteration 1 with 0 critical/high/medium findings.)*
+- [x] **8.2** Re-run the affected guards/greps (Phase 6 subset) and update the test-plan §10 evidence rows; commit fixes via `@committer` as `docs(GH-185): address review findings …`. *(Not required: no findings. Guards were re-run at final HEAD 66d88a4 by the lifecycle quality_gates phase — 8/8 PASS.)*
+- [x] **8.3** PM delegates independent re-review until PASS. If no findings, record the phase as not required with the Phase 7 PASS as evidence. *(Recorded: Phase 8 not required; evidence = code-review/review-iter-1.yaml PASS iteration 1, no remediation phase.)*
 
 **Acceptance Criteria**:
 

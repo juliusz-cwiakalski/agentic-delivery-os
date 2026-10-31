@@ -11,7 +11,7 @@ phases:
   system_spec_update: { started: "2026-10-31T03:10:00Z", completed: "2026-10-31T03:20:00Z" }
   review_fix: { started: "2026-10-31T03:25:00Z", completed: "2026-10-31T03:40:00Z" }
   quality_gates: { started: "2026-10-31T03:45:00Z", completed: "2026-10-31T03:55:00Z" }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: "2026-10-31T04:00:00Z", completed: "2026-10-31T04:05:00Z" }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "DoR verdict READY (iteration 1, 10/10 facets PASS, 0 blocking); verdict artifact readiness-review/readiness-iter-1.md. Two advisory findings fixed in-place before delivery: (1) Should — test plan stale 'no implementation plan exists' references (frontmatter implementation_plan, §2 References, §8.2 assumption) updated to link chg-GH-185-plan.md; (2) Note — spec KPI row scoped to 'edited docs' matching AC-F2-1, historical doc/changes/** explicitly out of scope."
