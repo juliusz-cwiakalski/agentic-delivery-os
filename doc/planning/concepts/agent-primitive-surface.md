@@ -133,6 +133,9 @@ New story candidates (not yet in the backlog): adapter policy layer v1
 
 ## Open questions
 
-- The unified primitive term for PR/MR (keep `pr`, or a domain term such as
-  delivery request); lock with the command-name lock in M0-S17.
+- Resolved: the unified PR/MR primitive term is `DeliveryRequest`, confirmed
+  by [ODR-0003](../../decisions/ODR-0003-cli-command-naming-v1-lock.md) in the
+  M0-S17 command-name lock. See the
+  [adapter-ports spec](../../spec/features/feature-adapter-ports.md) for the
+  v1 contract.
 - Minimum capability floor an adapter must meet to be supported at all.

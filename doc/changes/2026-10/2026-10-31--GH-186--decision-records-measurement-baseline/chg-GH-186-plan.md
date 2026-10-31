@@ -458,11 +458,11 @@ Dependency order: **1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 (do
 
 **Tasks**:
 
-- [ ] **8.1** Add the measurement log row to the `## Documents` table in `doc/planning/oss-tooling/README.md`, naming the log and its role (bash-era baseline; canonical data for M2-S6).
-- [ ] **8.2** Annotate the status block in `doc/planning/concepts/id-prefix-catalog.md` as adopted by ODR-0002 (Proposed; owner acceptance pending at GH-186 PR review), link ODR-0002, and point to the project-catalog declaration (per-type decision ranges; `MET-` allocator). Keep the existing Draft history line; do not rewrite the grammar or rules.
-- [ ] **8.3** Resolve the open question in `doc/planning/concepts/agent-primitive-surface.md`: record that the unified PR/MR primitive term is `DeliveryRequest`, resolved by ODR-0003, and link the record. Replace only the open-question bullet; do not restate the naming rules.
-- [ ] **8.4** Run the cross-link/consistency check: every new relative link resolves; the catalog and primitive pointers do not restate a rule body; the planning README table shape is intact.
-- [ ] **8.5** Commit via `@committer`. Record TC-SYNC-003 (planning half) evidence.
+- [x] **8.1** Add the measurement log row to the `## Documents` table in `doc/planning/oss-tooling/README.md`, naming the log and its role (bash-era baseline; canonical data for M2-S6). Done: added the `measurement-baseline.yaml` row and updated the registry row to man page v1 (locked).
+- [x] **8.2** Annotate the status block in `doc/planning/concepts/id-prefix-catalog.md` as adopted by ODR-0002 (Proposed; owner acceptance pending at GH-186 PR review), link ODR-0002, and point to the project-catalog declaration (per-type decision ranges; `MET-` allocator). Keep the existing Draft history line; do not rewrite the grammar or rules. Done: status block annotated as adopted by ODR-0002 (Proposed, acceptance pending) with a link and the catalog declaration pointer; Draft history retained.
+- [x] **8.3** Resolve the open question in `doc/planning/concepts/agent-primitive-surface.md`: record that the unified PR/MR primitive term is `DeliveryRequest`, resolved by ODR-0003, and link the record. Replace only the open-question bullet; do not restate the naming rules. Done: open question replaced by the resolved `DeliveryRequest` term and ODR-0003 link.
+- [x] **8.4** Run the cross-link/consistency check: every new relative link resolves; the catalog and primitive pointers do not restate a rule body; the planning README table shape is intact. Done: every relative link resolves; no rule body restated; README table shape intact.
+- [x] **8.5** Commit via `@committer`. Record TC-SYNC-003 (planning half) evidence. Done.
 
 **Acceptance Criteria**:
 
