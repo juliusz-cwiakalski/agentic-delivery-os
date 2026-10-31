@@ -13,7 +13,7 @@ phases:
   review_fix: { started: "2026-10-31T21:00:00Z", completed: "2026-11-01T04:00:00Z" }
   quality_gates: { started: "2026-11-01T04:00:00Z", completed: "2026-11-01T04:15:00Z" }
   dod_check: { started: "2026-11-01T05:30:00Z", completed: "2026-11-01T05:45:00Z" }
-  pr_creation: { started: "2026-11-01T05:45:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-11-01T05:45:00Z", completed: "2026-11-01T06:00:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/202" }
 decisions:
   - text: "Scope is the M0-S13 provider engine family: chain resolution, quota and peak-window awareness, named self-expiring parks (cause + expiry), subscription-first ordering, and fail-loud announcements. Model-profiles selection heuristics stay out (M2 candidate); harness spawn stays out (M1-S11)."
     date: "2026-10-31"
