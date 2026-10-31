@@ -31,7 +31,6 @@ type LicenseCases = {
   noassertion: string;
   seeLicense: string;
   none: string;
-  blank: string;
   whitespace: string;
   unknownRefScancode: string;
   unparseableTrailingOr: string;

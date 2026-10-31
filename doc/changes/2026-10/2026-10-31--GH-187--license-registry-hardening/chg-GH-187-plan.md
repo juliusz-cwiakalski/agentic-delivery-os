@@ -390,11 +390,11 @@ Revert the entire change set (registry + audit + tests/fixtures) as one unit. Ne
 
 **Tasks**:
 
-- [ ] **6.1** In `doc/spec/features/feature-monorepo-scaffold-toolchain.md`, update the license-registry section to document `schema_version: 3`, the required `deny_list`, the five mandated families with the Appendix A floor, deny-before-allow precedence, the allow/deny disjointness rule, the single-identifier grammar `^[A-Za-z0-9.+-]+$`, the preserved `scope: direct-and-runtime-closure` check (CON-10), and the per-branch compound interpretation from spec Appendix C. Cite **TDR-0007** as the decision record for that interpretation. Do not restate unrelated monorepo content.
-- [ ] **6.2** Confirm the policy still lives only in `doc/legal/dependency-licenses.yaml` (exactly one file in `doc/legal/`) and that no companion policy document, SBOM, notice, or checksum artifact was added.
-- [ ] **6.3** Verify the reconciled document mentions `deny_list`, deny precedence, the scope check, and `TDR-0007` (`rg -n 'deny_list|deny.*allow|deny.*over|scope|TDR-0007' doc/spec/features/feature-monorepo-scaffold-toolchain.md`) and record the doc-sync result in the delivery record. If the system spec is code-adjacent enough to require an edit during delivery, escalate to `@pm` rather than editing it in a delivery commit.
-- [ ] **6.4** Record TDR-0007's status and acceptance boundary in the system-spec update and doc-sync record: TDR-0007 is **created in this change** as **Proposed** (authored by `@decision-advisor`); delivery and doc-sync perform **no further edits** to it, and it remains Proposed until the owner accepts or rejects it at PR review. Do not write "accepted" or mark it decided. Do not edit `doc/decisions/TDR-0007-license-gate-compound-spdx-expression-evaluation.md` or `doc/decisions/ADR-0003-oss-monorepo-structure.md` during delivery/doc-sync; the ADR-0003 C-2 editorial cross-reference is a separate owner-authorized action (task 6.5).
-- [ ] **6.5** Note in the doc-sync record that an ADR-0003 C-2 editorial cross-reference (or amendment) is a **separate owner-authorized decision change**, not part of GH-187. If the owner requests it, raise it as its own change; do not bundle an ADR-0003 edit into this delivery or its doc-sync commit.
+- [x] **6.1** In `doc/spec/features/feature-monorepo-scaffold-toolchain.md`, update the license-registry section to document `schema_version: 3`, the required `deny_list`, the five mandated families with the Appendix A floor, deny-before-allow precedence, the allow/deny disjointness rule, the single-identifier grammar `^[A-Za-z0-9.+-]+$`, the preserved `scope: direct-and-runtime-closure` check (CON-10), and the per-branch compound interpretation from spec Appendix C. Cite **TDR-0007** as the decision record for that interpretation. Do not restate unrelated monorepo content. (Done: commit 7819ea0; documented in doc-sync-report.md.)
+- [x] **6.2** Confirm the policy still lives only in `doc/legal/dependency-licenses.yaml` (exactly one file in `doc/legal/`) and that no companion policy document, SBOM, notice, or checksum artifact was added. (Done: commit 7819ea0; `doc/legal/` contains only the registry per doc-sync-report.md.)
+- [x] **6.3** Verify the reconciled document mentions `deny_list`, deny precedence, the scope check, and `TDR-0007` (`rg -n 'deny_list|deny.*allow|deny.*over|scope|TDR-0007' doc/spec/features/feature-monorepo-scaffold-toolchain.md`) and record the doc-sync result in the delivery record. If the system spec is code-adjacent enough to require an edit during delivery, escalate to `@pm` rather than editing it in a delivery commit. (Done: commit 7819ea0; doc-sync-report.md records the verified matches.)
+- [x] **6.4** Record TDR-0007's status and acceptance boundary in the system-spec update and doc-sync record: TDR-0007 is **created in this change** as **Proposed** (authored by `@decision-advisor`); delivery and doc-sync perform **no further edits** to it, and it remains Proposed until the owner accepts or rejects it at PR review. Do not write "accepted" or mark it decided. Do not edit `doc/decisions/TDR-0007-license-gate-compound-spdx-expression-evaluation.md` or `doc/decisions/ADR-0003-oss-monorepo-structure.md` during delivery/doc-sync; the ADR-0003 C-2 editorial cross-reference is a separate owner-authorized action (task 6.5). (Done: commit 7819ea0; TDR-0007 remains `status: Proposed` and ADR-0003 is unedited, per doc-sync-report.md.)
+- [x] **6.5** Note in the doc-sync record that an ADR-0003 C-2 editorial cross-reference (or amendment) is a **separate owner-authorized decision change**, not part of GH-187. If the owner requests it, raise it as its own change; do not bundle an ADR-0003 edit into this delivery or its doc-sync commit. (Done: commit 7819ea0; noted in doc-sync-report.md.)
 
 **Acceptance Criteria**:
 
@@ -616,9 +616,17 @@ Revert the entire change set (registry + audit + tests/fixtures) as one unit. Ne
 | 3 | Completed | 2026-10-31 | 2026-10-31 | 080fb37 | 10 spawns (1 green + 9 failures); determinism, diagnostics, and 30 s bound pass (80 ms). |
 | 4 | Completed | 2026-10-31 | 2026-10-31 | f718d68 | CI binding/topology/surface/dependency guards; workflow byte-unchanged. |
 | 5 | Completed | 2026-10-31 | 2026-10-31 | c423e42 | Full battery green after the base-relative repair of inherited GH-184 `privacy-release.test.ts` TC-RELEASE-001: `pnpm test` 1434/1434, `bun test tests/checks` 331/331, 22/22 CI-excluded bash suites, all invariant checks, and no dependency/lockfile/CI-job change. Evidence below. |
-| 6 | Pending | — | — | — | Workflow phase 7 (`@doc-syncer`), not delivery. |
+| 6 | Completed | 2026-10-31 | 2026-10-31 | 7819ea0 | Workflow phase 7 (`@doc-syncer`): system spec reconciled with the deny policy; `doc-sync-report.md` SUCCESS. |
 | 7 | Pending | — | — | — | — |
 | 8 | Pending | — | — | — | — |
+
+### Review remediation iteration 1 (2026-10-31)
+
+Addressed `review/review-iter-1.md` non-blocking findings before the DoD/PR phase:
+
+- **F-1 + F-3**: TC-LICREG-024 now drives every declared case in `deny-list-cases.json` through `failuresForCase`, asserts a non-empty failure set (and the fixture's `expectedReason` where present) for `failureExpected !== false` cases, asserts an empty failure set for the two `failureExpected: false` control extensions, and asserts executed count and unique-id count equal the declared count. The previously unused `failuresForCase` helper is now exercised.
+- **F-4**: removed the unused duplicate `blank` key from `tests/fixtures/license/cases.json`; TC-LICREG-024 now asserts every `deniedSingles` entry has a floor-removal case and every `unknownReferences` entry matches an audit-suite reference fixture.
+- **F-6 / F-7**: accepted as informational findings; no code change required.
 
 ### Phase 5 verification evidence (2026-10-31)
 

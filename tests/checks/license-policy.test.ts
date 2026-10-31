@@ -42,10 +42,13 @@ type PolicyCase = {
 type PolicyCases = { classes: string[]; groups: Record<string, number>; cases: PolicyCase[] };
 type LicenseCases = {
   unknownRef: string;
+  unknownRefScancode: string;
   nonAllowlisted: string;
   compoundOrDisallowed: string;
   compoundAndAllowed: string;
   empty: string;
+  deniedSingles: string[];
+  unknownReferences: string[];
 };
 
 const baseline = JSON.parse(
@@ -651,6 +654,7 @@ describe("license registry policy", () => {
     const auditSuite = readFileSync(join(ROOT, "tests/checks/license-audit.test.ts"), "utf8");
     for (const key of [
       "unknownRef",
+      "unknownRefScancode",
       "nonAllowlisted",
       "compoundOrDisallowed",
       "compoundAndAllowed",
@@ -659,6 +663,37 @@ describe("license registry policy", () => {
       expect(Object.keys(licenseCases)).toContain(key);
       expect(auditSuite).toContain(`FIXTURES.${key}`);
     }
+
+    const executed: string[] = [];
+    for (const definition of policyCases.cases) {
+      const failures = failuresForCase(definition);
+      if (definition.failureExpected === false) {
+        expect(failures, definition.id).toEqual([]);
+      } else {
+        expect(failures.length, definition.id).toBeGreaterThan(0);
+        const reason = definition.expectedReason;
+        if (reason !== undefined) {
+          expect(
+            failures.some((message) => message.includes(reason)),
+            `${definition.id} reports ${reason}`,
+          ).toBe(true);
+        }
+      }
+      executed.push(definition.id);
+    }
+    expect(executed.length).toBe(policyCases.cases.length);
+    expect(new Set(executed).size).toBe(policyCases.cases.length);
+
+    for (const identifier of licenseCases.deniedSingles) {
+      expect(removalIdentifiers.has(identifier), identifier).toBe(true);
+    }
+    const declaredUnknownReferences = new Set([
+      licenseCases.unknownRef,
+      licenseCases.unknownRefScancode,
+    ]);
+    expect([...licenseCases.unknownReferences].sort()).toEqual(
+      [...declaredUnknownReferences].sort(),
+    );
   });
 
   test("TC-LICREG-031 schema-v3 registry with a wrong scope fails closed", () => {
