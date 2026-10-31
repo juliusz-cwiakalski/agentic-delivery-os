@@ -14,7 +14,7 @@ phases:
   review_fix: { started: "2026-10-31T22:16:00Z", completed: "2026-10-31T22:55:00Z", iteration: 2, status: "PASS", iteration_1: "PASS_with_remediation (0 blocker / 0 major / 5 low / 4 info)", iteration_2: "PASS (0 blocker / 0 major / 1 low / 1 info; F-10 docs fixed, F-11 info accepted)" }
   quality_gates: { started: "2026-10-31T22:56:00Z", completed: "2026-10-31T23:05:00Z" }
   dod_check: { started: "2026-10-31T23:06:00Z", completed: "2026-10-31T23:10:00Z" }
-  pr_creation: { started: "2026-10-31T23:11:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-10-31T23:11:00Z", completed: "2026-10-31T23:20:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/211" }
 decisions:
   - text: "Scope of 'every shipped adapter' = the provider adapters that implement a real AdapterContract behind the primitive ports: github, gitlab, jira (M0-S19 read slices). Placeholder subpaths (azure, ci) and non-provider I/O subpaths (repo, file, host, session, legacy, credentials, provider-quota, registry) have no provider-primitive surface, so they are out of scope for provider flows; a structural coverage gate must fail when a new *_ADAPTER_CONTRACT source appears without conformance registration."
     date: "2026-10-31"
@@ -92,5 +92,8 @@ notes:
     type: "info"
     date: "2026-10-31"
   - text: "DoD check PASSED: all 9 pre-PR phases complete; plan has zero unchecked tasks (P1-P8 + P11); spec contains all 22 ACs; review iterations 1 and 2 record PASS with 3/3 ticket ACs; doc-syncer reports no unresolved gaps; quality gates green; secret-read allowlist exactly 4; ci.yml byte-unchanged; production packages untouched; changeset present. Remaining items are phase-11 by design: create the PR against main-tools, record its URL, transition the ticket to review, assign the human. Known accepted gap: live tenants not provisioned (OQ-1), so scheduled runs will be not-configured/exit 0 until vars/secrets are supplied."
+    type: "info"
+    date: "2026-10-31"
+  - text: "PR created: #211 https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/211, base main-tools, head feat/GH-189/adapter-conformance-suite, ready for review (not draft). The PR was created after pushing the branch; this final PM-notes commit is pushed as an additional PR-head commit. No merge performed; merge authority remains with the owner/CEO."
     type: "info"
     date: "2026-10-31"
