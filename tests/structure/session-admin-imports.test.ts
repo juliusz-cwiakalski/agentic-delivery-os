@@ -245,6 +245,28 @@ describe("TC-DB-002 contract and domain tier discipline", () => {
     expect(sqliteDriverFailures(newSourceFiles())).toEqual([]);
   });
 
+  test("node runtime APIs appear only in the admitted adapter session subpath", () => {
+    const adapterSpecifiers: string[] = [];
+    for (const file of newSourceFiles()) {
+      const source = parse(file, readFileSync(join(ROOT, file), "utf8"));
+      for (const specifier of specifiersOf(source)) {
+        if (!specifier.startsWith("node:") && !specifier.startsWith("bun:")) continue;
+        if (file !== ADAPTER) {
+          throw new Error(`${file}: runtime import ${specifier}`);
+        }
+        adapterSpecifiers.push(specifier);
+      }
+    }
+    expect(adapterSpecifiers.sort()).toEqual(["node:child_process", "node:fs"]);
+  });
+
+  test("the adapter references the three declared timeouts on its I/O classes", () => {
+    const source = readFileSync(join(ROOT, ADAPTER), "utf8");
+    expect(source).toContain("DB_QUERY_TIMEOUT_MS");
+    expect(source).toContain("DB_DELETE_TIMEOUT_MS");
+    expect(source).toContain("DB_CHECKPOINT_TIMEOUT_MS");
+  });
+
   test("the secret-read allowlist stays at four and names no session file", () => {
     expect(SECRET_READ_ALLOWLIST).toHaveLength(4);
     const paths = SECRET_READ_ALLOWLIST.map((entry) => entry.path);

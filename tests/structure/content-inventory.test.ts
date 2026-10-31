@@ -280,6 +280,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "invalidKey",
     "serializeProductionSchema",
   ],
+  "adapters/src/session/index.ts": [
+    "createOpencodeSessionIo",
+    "createSessionStore",
+    "createSessionAdmin",
+  ],
   "adapters/src/credentials/index.ts": [
     "createEnvironmentCredentialPort",
     "createProcessCredentialPort",
