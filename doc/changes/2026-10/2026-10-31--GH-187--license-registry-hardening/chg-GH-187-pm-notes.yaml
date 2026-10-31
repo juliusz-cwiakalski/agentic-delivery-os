@@ -13,13 +13,13 @@ phases:
     completed: "2026-10-31T13:56:00Z"
   specification:
     started: "2026-10-31T13:58:00Z"
-    completed: null
+    completed: "2026-10-31T16:12:00Z"
   test_planning:
     started: "2026-10-31T14:08:00Z"
-    completed: null
+    completed: "2026-10-31T16:18:00Z"
   delivery_planning:
     started: "2026-10-31T14:45:00Z"
-    completed: null
+    completed: "2026-10-31T16:24:00Z"
   dor_check:
     started: "2026-10-31T15:28:00Z"
     completed: null
@@ -74,4 +74,7 @@ notes:
     date: "2026-10-31"
   - text: "Retro: readiness review caught four real defects that the authoring chain missed, including an impossible test expectation and a binding ADR contradiction. Root cause: upstream artifacts were accepted after count corrections without a full cross-artifact consistency pass, and DEC-3 reinterpreted an ADR constraint without routing it to @decision-advisor. Lesson: any reinterpretation of a binding ADR must go through decision capture before the spec is frozen, and downstream authors must recount against live files."
     type: "retro"
+    date: "2026-10-31"
+  - text: "DoR iteration 1 remediation COMPLETE. (1) decision-advisor authored doc/decisions/TDR-0007 (Proposed; clarifies ADR-0003 C-2 per-branch compound evaluation) and indexed it. (2) Spec v1.2 adds §18.1 change-specific DoD, cites TDR-0007, corrects release-artifact ownership to M4-S2 vs registry completeness M4-S3 with explicit GH-170 DEC-10 supersession, and adds CON-10/AC-F1-3 wrong-scope preservation. (3) Test plan v1.3 corrects 12->13 pre-existing tests, TC-013 floor-only expectation and 25 removal cases, TC-026 13 representatives, schema/value/GAP count drift, adds TC-LICREG-031 wrong-scope (31 TCs), and aligns SBOM milestones. (4) Plan v1.2 corrects 12->13, adds TDR/ADR doc tasks (33 tasks), maps TC-031, preserves scope, fixes stale citations and deny-extension wording, and references spec §18.1 DoD. Re-running DoR."
+    type: "info"
     date: "2026-10-31"

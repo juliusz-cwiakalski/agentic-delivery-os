@@ -23,7 +23,7 @@ change:
 
 # CHANGE SPECIFICATION
 
-> **PURPOSE**: Turn the existing seed license registry into an explicit, machine-readable licensing policy with an authoritative denied-license list, prove that deny wins over allow, and make the binding CI license gate fail closed for denied and unknown licenses — without adding a CI job, weakening a gate, or reintroducing release-artifact obligations that belong to a later milestone.
+> **PURPOSE**: Turn the existing seed license registry into an explicit, machine-readable licensing policy with an authoritative denied-license list, prove that deny wins over allow, and make the binding CI license gate fail closed for denied and unknown licenses — without adding a CI job, weakening a gate, or reintroducing release-artifact obligations that belong to M4-S2.
 
 ## 1. SUMMARY
 
@@ -39,7 +39,7 @@ GH-187 hardens the license registry introduced by GH-170. The committed registry
 - The existing test suite already covers unknown references, non-allow-listed licenses, an OR expression with a disallowed branch, an AND expression with all branches allowed, a removed entry, an empty license, allow-list/verdict drift, an unparseable allow-list entry, and transitive use accounting.
 - The live registry contains a legitimate compound license, `@biomejs/biome` with `MIT OR Apache-2.0`, and the audit currently passes the live registry.
 - The current system specification describes the registry as a license verdict registry plus allow-list and describes the audit as parsing SPDX expressions and failing closed on non-allow-listed branches. It does not yet describe a deny list or deny precedence.
-- ADR-0003 C-2 requires an enforced dependency license policy that denies SSPL, BUSL, Elastic License, Commons Clause, and CC-BY-NC, and says the gate fails closed on unknown, `NOASSERTION`, `SEE LICENSE`, and compound expressions.
+- ADR-0003 C-2 requires an enforced dependency license policy that denies SSPL, BUSL, Elastic License, Commons Clause, and CC-BY-NC, and says the gate fails closed on unknown, `NOASSERTION`, `SEE LICENSE`, and compound expressions. TDR-0007 (Proposed; owner accepts at PR) records the per-branch clarification of the compound wording.
 
 ### 2.2 Pain Points / Gaps
 
@@ -61,7 +61,7 @@ Because the registry has no explicit denied-license policy and the audit derives
 - **G-3**: Make the deny policy tamper-evident by failing closed when the deny list is absent, empty, malformed, duplicated, overlaps the allow list, or omits a mandated denied family.
 - **G-4**: Preserve and prove fail-closed behaviour for unregistered licenses, unknown references, `NOASSERTION`, `SEE LICENSE`, empty licenses, and non-allow-listed branches.
 - **G-5**: Keep the existing `ts-license-audit` CI job as the sole binding gate, with no new job, no advisory downgrade, and unchanged CI invariants.
-- **G-6**: Preserve the current per-branch handling of compound SPDX expressions, including the live `MIT OR Apache-2.0` entry, and record the interpretation of ADR-0003 C-2 that makes this correct.
+- **G-6**: Preserve the current per-branch handling of compound SPDX expressions, including the live `MIT OR Apache-2.0` entry, and record the interpretation of ADR-0003 C-2 in TDR-0007 (Proposed; owner accepts at PR) as a clarification that does not amend or supersede ADR-0003.
 
 ### 4.1 Success Metrics / KPIs
 
@@ -80,10 +80,11 @@ Because the registry has no explicit denied-license policy and the audit derives
 | New CI jobs added by this change | 0 |
 | Gates weakened with `continue-on-error` or equivalent | 0 |
 | New package dependencies or lockfile changes | 0 |
+| Schema-v3 registry with a scope other than `direct-and-runtime-closure` accepted | 0 |
 
 ### 4.2 Non-Goals
 
-- **NG-1**: No SBOM generation, checksum manifest, signature, `THIRD-PARTY-NOTICES` file, or `licenses/` bundle. Those release-artifact obligations belong to M4-S3.
+- **NG-1**: No SBOM generation, checksum manifest, signature, `THIRD-PARTY-NOTICES` file, or `licenses/` bundle. Release-time SBOM, checksums, and provenance belong to M4-S2 (Publication and release automation); M4-S3 covers registry completeness and public materials.
 - **NG-2**: No per-entry review-date governance, approver tracking, or re-review campaign. The registry keeps its current entry and verdict model.
 - **NG-3**: No re-review of the existing license verdicts and no change to the existing allow list beyond what deny precedence requires.
 - **NG-4**: No rejection of all compound SPDX expressions. Compound expressions stay parsed with per-branch fail-closed evaluation.
@@ -105,7 +106,7 @@ Because the registry has no explicit denied-license policy and the audit derives
 
 ### 5.1 Capability Details
 
-- **F-1**: The policy lives in the existing committed YAML registry under `doc/legal/`. The registry gains a required `deny_list` of denied license identifiers and keeps the existing required `allow_list`, entries, approved verdicts, scope, and C-2 determination. The registry remains parseable by the audit without side files. Human-readable header comments state the policy: unregistered and unknown licenses fail closed; `NOASSERTION` and `SEE LICENSE` are never accepted; every branch of a compound expression is evaluated; the deny list overrides the allow list; and the allow list contains only identifiers backed by approved verdicts. The registry schema version advances from 2 to 3 because the deny list and its integrity rules are required. Each deny-list entry is exactly one license identifier, not an SPDX expression; a compound value in the deny list is malformed policy.
+- **F-1**: The policy lives in the existing committed YAML registry under `doc/legal/`. The registry gains a required `deny_list` of denied license identifiers and keeps the existing required `allow_list`, entries, approved verdicts, scope, and C-2 determination. The registry remains parseable by the audit without side files. Human-readable header comments state the policy: unregistered and unknown licenses fail closed; `NOASSERTION` and `SEE LICENSE` are never accepted; every branch of a compound expression is evaluated; the deny list overrides the allow list; and the allow list contains only identifiers backed by approved verdicts. The registry schema version advances from 2 to 3 because the deny list and its integrity rules are required. The registry's `scope` remains `direct-and-runtime-closure`; a schema-v3 registry with any other scope fails closed and reports the observed scope. Each deny-list entry is exactly one license identifier, not an SPDX expression; a compound value in the deny list is malformed policy.
 
 - **F-2**: For every registry entry, the audit evaluates the entry's parsed license identifiers against the deny list before evaluating them against the allow list. A denied identifier produces an explicit denial failure naming the package, the license, and the denied identifier, regardless of whether that identifier also appears in the allow list. The audit also treats an allow-list/deny-list overlap as a registry policy failure, so the two declarations cannot contradict each other silently. Denial is measured per branch: `MIT OR SSPL-1.0`, `MIT AND Elastic-2.0`, and a nested expression containing a denied identifier all fail even though another branch is allowed. The phrase "deny wins over allow" therefore has two enforced meanings: the entry-level check denies first, and the registry-level policy rejects contradictory lists.
 
@@ -115,7 +116,7 @@ Because the registry has no explicit denied-license policy and the audit derives
 
 - **F-5**: The existing `ts-license-audit` CI job remains the only license gate. The change does not add a job, does not change the job's binding status, and does not introduce a bypass construct. The test suite is extended with a mutation matrix covering the denied families, deny-before-allow precedence, deny-list integrity, unknown and non-asserted licenses, denied compound branches, and the preserved allowed compound case. The live registry must validate with zero failures, and the repository's CI topology and bindingness invariants must remain green. The gate's observable contract is unchanged: non-zero exit on any failure and zero exit only when the live registry and dependency closure are fully registered and allowed.
 
-- **F-6**: Compound SPDX expressions continue to be tokenized and parsed with AND/OR/parentheses. Every identifier branch must be known, not denied, and allow-listed. The live `@biomejs/biome` entry with `MIT OR Apache-2.0` continues to pass. The change records that ADR-0003 C-2's "fails closed on compound expressions" is interpreted as "no branch of a compound expression may be unknown, denied, or non-allow-listed", not as "all compound expressions are rejected". A future change to reject all compounds would require a new decision and would remove a legitimate live dependency, so it is explicitly out of scope.
+- **F-6**: Compound SPDX expressions continue to be tokenized and parsed with AND/OR/parentheses. Every identifier branch must be known, not denied, not non-asserted, and allow-listed. The live `@biomejs/biome` entry with `MIT OR Apache-2.0` continues to pass. The change records that ADR-0003 C-2's "fails closed on compound expressions" is interpreted as "no branch of a compound expression may be unknown, denied, non-asserted, or non-allow-listed", not as "all compound expressions are rejected"; TDR-0007 (Proposed; owner accepts at PR) records this clarification without amending or superseding ADR-0003. A future change to reject all compounds would require a new decision and would remove a legitimate live dependency, so it is explicitly out of scope.
 
 ## 6. USER & SYSTEM FLOWS
 
@@ -176,7 +177,7 @@ Flow 4: Compound expression contains a denied branch
 
 ### 7.2 Out of Scope
 
-- [OUT] SBOM generation, checksum manifests, signatures, `THIRD-PARTY-NOTICES`, or a `licenses/` bundle; these belong to M4-S3.
+- [OUT] SBOM generation, checksum manifests, signatures, `THIRD-PARTY-NOTICES`, or a `licenses/` bundle; release-time SBOM, checksums, and provenance belong to M4-S2, while M4-S3 covers registry completeness and public materials.
 - [OUT] Per-entry review dates, approver identity governance, or periodic re-review of existing verdicts.
 - [OUT] Re-reviewing or changing existing license verdicts and the existing allow list beyond deny precedence.
 - [OUT] Rejecting every compound SPDX expression; the current per-branch model is retained.
@@ -191,7 +192,8 @@ Flow 4: Compound expression contains a denied branch
 - A companion human-readable policy document under `doc/legal/` if the YAML header comments become insufficient for legal review; the YAML remains the machine-readable source of truth.
 - Automated validation of deny-list identifiers against the official SPDX license list.
 - Per-entry review-date and approver metadata if a later governance requirement introduces it.
-- Release-time artifact generation (SBOM, checksums, notices) in M4-S3.
+- Release-time artifact generation (SBOM, checksums, notices) in M4-S2; registry completeness and public materials in M4-S3.
+- The GH-187 ticket scope supersedes GH-170 DEC-10's assignment of SBOM/notices and per-entry review-date governance to M0-S18; release-time artifacts move to M4-S2, registry completeness to M4-S3, and review-date governance remains outside this change rather than being silently reassigned.
 - Broader development-transitive license coverage if the dependency graph or risk posture changes.
 
 ### 7.4 Constraints
@@ -200,13 +202,14 @@ Flow 4: Compound expression contains a denied branch
 |----|------------|
 | CON-1 | The policy lives in the existing committed YAML registry; no companion policy file is introduced by this change. |
 | CON-2 | The deny list is authoritative and wins over the allow list; an allow/deny overlap is a policy failure. |
-| CON-3 | Compound SPDX expressions remain parsed with per-branch fail-closed evaluation; ADR-0003 C-2 is interpreted as "no branch may be unknown, denied, or non-allow-listed". |
+| CON-3 | Compound SPDX expressions remain parsed with per-branch fail-closed evaluation; ADR-0003 C-2, as clarified by TDR-0007 (Proposed; owner accepts at PR), is interpreted as "no branch may be unknown, denied, non-asserted, or non-allow-listed", and blanket compound rejection is not the policy. |
 | CON-4 | The existing `ts-license-audit` job remains the only license gate; no new job is added, no advisory mode is introduced, and any CI workflow edit is additions-only and leaves existing gate definitions intact. |
 | CON-5 | No new package dependency and no lockfile change. |
 | CON-6 | Existing registry entries, uses, approved verdicts, allow list, scope, and C-2 determination are preserved; only the policy and integrity layers are added. |
-| CON-7 | SBOM, checksums, notices, and per-entry review-date governance remain out of scope and belong to M4-S3. |
+| CON-7 | SBOM, checksums, and notices are release-time artifacts owned by M4-S2; per-entry review-date governance remains out of scope. The GH-187 ticket scope supersedes GH-170 DEC-10's assignment of SBOM/notices and review-date governance to M0-S18; M4-S3 covers registry completeness and public materials. |
 | CON-8 | The audit stays offline and deterministic: no network call, external license service, clock-dependent decision, or random ordering. |
 | CON-9 | The registry remains a committed, machine-readable YAML artifact that the audit reads directly; failure output identifies the package, use, license, and reason. |
+| CON-10 | The existing fail-closed scope check is preserved: `registry.scope` must remain `direct-and-runtime-closure` for schema v3, and a schema-v3 registry with any other scope fails closed and reports the observed scope. The test plan adds a wrong-scope negative case for this contract. |
 
 ## 8. INTERFACES & INTEGRATION CONTRACTS
 
@@ -222,7 +225,7 @@ N/A. This change introduces no events, messages, or asynchronous contracts.
 
 | ID | Element | Description |
 |----|---------|-------------|
-| DM-1 | Registry schema version | Advances from 2 to 3 because the deny list and its integrity rules are required. Older registry versions are rejected by the audit rather than accepted with an implicit empty policy. |
+| DM-1 | Registry schema version | Advances from 2 to 3 because the deny list and its integrity rules are required. Older registry versions are rejected by the audit rather than accepted with an implicit empty policy. The registry's `scope` must remain `direct-and-runtime-closure`; a schema-v3 registry with any other scope fails closed and reports the observed scope. |
 | DM-2 | `deny_list` | Required, non-empty array of single denied license identifiers. Each entry must match the registry's identifier token syntax `^[A-Za-z0-9.+-]+$` and contain no whitespace, `AND`/`OR`/`WITH` operators, parentheses, or compound expression. Duplicate entries, malformed entries, and overlap with the allow list are invalid. |
 | DM-3 | `allow_list` | Existing required array of allowed license identifiers. Its contents remain backed by approved verdicts; deny-list identifiers must not appear in it. |
 | DM-4 | Registry entries and verdicts | Existing package/version/license/uses/verdict model is unchanged. Every audited use must still map to an approved entry. |
@@ -236,6 +239,7 @@ N/A. The gate reads committed repository data only. It performs no network call 
 
 - The registry schema version changes because `deny_list` becomes required. The audit and registry ship in the same change and are the only consumer, so there is no supported consumer that reads the old schema.
 - A registry that still declares the old schema version, or that omits the deny list, fails closed. This is intentional: accepting an old registry would mean accepting a registry without an explicit denial policy.
+- The existing fail-closed scope check is preserved for schema v3: a registry whose scope is not `direct-and-runtime-closure` fails closed and reports the observed scope.
 - The entry, use, verdict, allow-list, scope, and C-2 determination shapes remain compatible in meaning. Existing dependencies and the live allowed compound license remain valid.
 - No published package API, CLI command, or user-facing configuration changes.
 
@@ -254,7 +258,7 @@ N/A. The gate reads committed repository data only. It performs no network call 
 
 - The gate reports failures on standard error with a stable `FAIL license-audit:` prefix and reports success on standard output only when the registry and dependency closure pass.
 - The gate exits non-zero on any failure and zero only on a fully valid registry and dependency closure. No partial success is reported as a pass.
-- Failure messages distinguish at least these classes: denied license, unknown license reference, non-asserted or unparseable license, non-allow-listed branch, unregistered dependency or use, malformed registry policy, and allow-list/verdict drift.
+- Failure messages distinguish at least these classes: denied license, unknown license reference, non-asserted or unparseable license, non-allow-listed branch, unregistered dependency or use, malformed registry policy, schema/scope policy, and allow-list/verdict drift.
 - Failure output is visible in the existing CI job log. No new metrics backend, trace, alert, or telemetry sink is introduced.
 - Failure messages include only repository data needed for diagnosis; they do not print credentials, environment dumps, or unrelated file contents.
 
@@ -276,6 +280,7 @@ N/A. The gate reads committed repository data only. It performs no network call 
 - Denied identifiers are exact registry labels. SPDX identifiers are used where one exists; policy labels such as `Commons-Clause` and `BUSL-1.0` are accepted by the registry's identifier syntax.
 - Variants of a denied family that are not explicitly listed still fail closed because they are not allow-listed.
 - The owner confirms the C-2 license determination at PR review; this change does not perform legal analysis.
+- TDR-0007 is Proposed; its acceptance is pending at PR review, and this specification does not claim it is accepted.
 - The existing CI job remains available and binding; no workflow redesign is needed.
 - The current dependency closure can be validated with the existing YAML parser and repository tooling.
 
@@ -285,7 +290,7 @@ N/A. The gate reads committed repository data only. It performs no network call 
 |-----------|------|-------|
 | Depends on | M0-S1 monorepo scaffold and toolchain | Provides the workspace, the binding CI jobs, the registry seed, and the audit check. |
 | Depends on | GH-170 license registry seed | Supplies the existing entries, allow list, verdict model, audit logic, and test fixtures that this change hardens. |
-| Blocks | M4-S3 docs, license registry, and public materials | M4-S3 completes the public release artifacts and exhaustive registry; this change establishes the enforced policy it builds on. |
+| Blocks | M4-S3 docs, license registry, and public materials | M4-S3 completes registry completeness and public materials; release-time artifacts are M4-S2. This change establishes the enforced policy M4-S3 builds on. |
 | Internal | License audit check | Must gain deny-list parsing, validation, and deny-before-allow enforcement. |
 | Internal | License audit test suite and fixtures | Must gain the denied, integrity, and preserved-compound matrix. |
 | Internal | Current system specification | Must be reconciled with the deny-list policy during documentation sync. |
@@ -301,11 +306,11 @@ None. The PM decisions recorded in Section 15 resolve the policy location, deny 
 |----|----------|-----------|------|
 | DEC-1 | Keep the policy in the existing committed YAML registry via a required `deny_list`; do not add a companion policy document. | One committed artifact is both machine-readable for the gate and human-readable for reviewers, and avoids policy drift between two files. | 2026-10-31 |
 | DEC-2 | Deny wins over allow: the entry-level deny check runs first, and an allow-list/deny-list overlap is a registry failure. | A denied license must not become acceptable through an accidental allow-list edit. | 2026-10-31 |
-| DEC-3 | Compound SPDX expressions remain parsed with per-branch fail-closed evaluation. ADR-0003 C-2's "fails closed on compound expressions" is interpreted as "no branch may be unknown, denied, or non-allow-listed". | This matches the current system specification and preserves the live `MIT OR Apache-2.0` dependency; rejecting all compounds would contradict both. | 2026-10-31 |
+| DEC-3 | Compound SPDX expressions remain parsed with per-branch fail-closed evaluation. TDR-0007 (Proposed; owner accepts at PR) clarifies — without amending or superseding — ADR-0003 C-2: no branch may be unknown, denied, non-asserted, or non-allow-listed, and blanket compound rejection is not the policy. | This matches the current system specification and preserves the live `MIT OR Apache-2.0` dependency; the TDR records the interpretation durably and its acceptance remains pending at PR review. | 2026-10-31 |
 | DEC-4 | Keep the existing binding `ts-license-audit` job as the only gate; do not add a CI job and do not weaken any gate. | The gate already runs the audit; the change is policy hardening, not workflow expansion. | 2026-10-31 |
 | DEC-5 | Advance the registry schema from 2 to 3 and reject older versions. | The deny list is required policy; accepting an old schema would silently accept a registry without denial semantics. | 2026-10-31 |
 | DEC-6 | Enforce a mandatory denied-family floor in the audit, while allowing additional identifiers to be added through the registry. | Removing a mandated family from the registry must fail closed even if the allow list is edited in the same change. | 2026-10-31 |
-| DEC-7 | Defer SBOM, checksums, notices, and per-entry review-date governance to M4-S3. | These are release-artifact and public-material obligations, not registry-policy obligations, and the GH-187 ticket does not include them. | 2026-10-31 |
+| DEC-7 | Defer release-time SBOM, checksums, and notices to M4-S2 (Publication and release automation); keep per-entry review-date governance out of GH-187; M4-S3 covers registry completeness and public materials. The GH-187 ticket scope supersedes GH-170 DEC-10's assignment of SBOM/notices and per-entry review-date governance to M0-S18. | These are release-artifact and governance obligations, not the registry-policy hardening the GH-187 ticket scopes; citing the superseded assignment avoids a silent reassignment. | 2026-10-31 |
 
 ## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
 
@@ -317,6 +322,7 @@ None. The PM decisions recorded in Section 15 resolve the policy location, deny 
 | CI workflow | Unchanged in gate status; the existing `ts-license-audit` job remains binding and unmodified in behaviour. |
 | CI topology and bindingness invariants | Must remain green; no new job or bypass. |
 | Current system specification for the monorepo toolchain | Updated during documentation sync to describe the deny list and policy semantics. |
+| Decision record TDR-0007 | New: clarifies ADR-0003 C-2 per-branch compound evaluation; status Proposed, owner accepts at PR review. |
 | Change artifacts | This specification, plus the downstream test plan and delivery plan. |
 
 ## 17. ACCEPTANCE CRITERIA
@@ -325,7 +331,7 @@ None. The PM decisions recorded in Section 15 resolve the policy location, deny 
 |----|-----------|--------|
 | AC-F1-1 | **Given** the committed license registry, **when** it is parsed, **then** it declares schema version 3, the scope, the C-2 owner determination as preserved (proposed at delivery, confirmed by the owner at PR review), the allow list, and a required non-empty deny list, all in one committed YAML artifact. | F-1, DM-1, DM-2, DM-5 |
 | AC-F1-2 | **Given** the deny list, **when** its contents are inspected, **then** all five mandated families and every identifier in the Appendix A baseline are present. | F-1, F-3, DM-2 |
-| AC-F1-3 | **Given** a registry that declares the old schema version or omits the schema version, **when** the audit runs, **then** it fails closed with a schema-policy failure rather than accepting a registry without the deny-list contract. | F-1, DM-1 |
+| AC-F1-3 | **Given** a registry that declares the old schema version, omits the schema version, or declares schema version 3 with a scope other than `direct-and-runtime-closure`, **when** the audit runs, **then** it fails closed with a schema/scope-policy failure that reports the observed value rather than accepting a registry without the deny-list contract. | F-1, DM-1 |
 | AC-F1-4 | **Given** the registry file, **when** it is reviewed by a maintainer, **then** its human-readable policy notes state that unregistered and unknown licenses fail closed, `NOASSERTION` and `SEE LICENSE` are never accepted, compound branches are evaluated individually, and deny wins over allow. | F-1, DM-5 |
 | AC-F2-1 | **Given** a dependency entry whose license is a denied identifier, **when** the audit runs, **then** it fails with an explicit denial that names the package and the denied identifier. | F-2, NFR-1 |
 | AC-F2-2 | **Given** a denied identifier that also appears in the allow list, **when** the audit runs, **then** the registry overlap is reported and the denied entry still fails; the case never passes. | F-2, F-3, NFR-1 |
@@ -347,6 +353,21 @@ None. The PM decisions recorded in Section 15 resolve the policy location, deny 
 - No feature flag, staged rollout, or dual-run period is required. The change is repository-internal and does not affect published packages or user-facing behaviour.
 - Reconcile the system specification after delivery so the documented current truth includes the deny list and its semantics.
 - No release artifact, changeset, or public communication is part of this change.
+
+### 18.1 Definition of Done predicates
+
+The change is done only when all of the following are true, with evidence traceable to the test plan:
+
+- **All 15 ACs have passing evidence.** Every acceptance criterion in §17 maps to passing TCs in the test plan's AC traceability matrix; the automated suites (`bun test tests/checks`, the spawned-exit suite, and the repository invariant commands) pass, and the manual TC-LICREG-030 items are confirmed on the PR.
+- **Live registry is valid at schema v3.** `validate(ROOT)` returns zero failures; the delivered registry declares `schema_version: 3` and `scope: direct-and-runtime-closure`; the wrong-scope schema-v3 negative case added by the test plan (TC-LICREG-001/004 family) fails closed and reports the observed scope.
+- **Deny policy is complete and disjoint.** The deny list contains 20/20 Appendix A baseline identifiers, the allow list and deny list are disjoint, and removing any baseline identifier fails closed (TC-LICREG-002, TC-LICREG-007, TC-LICREG-008, TC-LICREG-013).
+- **Required matrices pass.** The 18 malformed deny-entry variants (TC-LICREG-012), the 10 spawned cases — 1 live green plus 9 failure (TC-LICREG-022) — and the preserved-compound cases (TC-LICREG-018, TC-LICREG-019) all pass.
+- **Full gate battery is green.** `pnpm check` passes, including the inherited bash suites and the `ts-license-audit` command; the existing `ts-license-audit` job remains required and green.
+- **Surface is unchanged.** No lockfile, manifest, dependency, workflow-job, or aggregate-chain change is present; TC-LICREG-020, TC-LICREG-021, TC-LICREG-028, and TC-LICREG-029 pass.
+- **No release artifacts were introduced.** No SBOM, notices, checksum, or review-date artifact exists in the change (TC-LICREG-028, TC-LICREG-030).
+- **C-2 remains proposed.** The C-2 owner determination is preserved verbatim from the seed and recorded for owner confirmation at PR review; no approval is fabricated (TC-LICREG-003, TC-LICREG-030).
+- **Decision capture is honest.** TDR-0007 is referenced by DEC-3 and Appendix C and remains Proposed; the owner accepts or rejects it at PR review, and no acceptance is claimed prematurely.
+- **PR is open.** A pull request is open against `main-tools` with `ts-license-audit` required and green, and the test execution evidence is recorded in the test plan §10 log.
 
 ## 19. DATA MIGRATION / SEEDING (IF APPLICABLE)
 
@@ -430,14 +451,15 @@ Notes:
 
 ### Appendix C — Compound-expression interpretation record
 
-ADR-0003 C-2 says the gate "fails closed on unknown, `NOASSERTION`, `SEE LICENSE`, and compound expressions." The live registry contains `MIT OR Apache-2.0` for `@biomejs/biome`, and the current system specification documents AND/OR/parentheses parsing. This change therefore applies C-2 as follows:
+ADR-0003 C-2 says the gate "fails closed on unknown, `NOASSERTION`, `SEE LICENSE`, and compound expressions." The live registry contains `MIT OR Apache-2.0` for `@biomejs/biome`, and the current system specification documents AND/OR/parentheses parsing. This change therefore applies C-2 as clarified by TDR-0007 (`doc/decisions/TDR-0007-license-gate-compound-spdx-expression-evaluation.md`, Proposed; owner accepts at PR), which clarifies — without amending or superseding — ADR-0003 C-2:
 
 - A compound expression is not accepted as a whole.
 - Each identifier branch is evaluated independently.
-- No branch may be unknown, denied, or non-allow-listed.
+- No branch may be unknown, denied, non-asserted, or non-allow-listed.
 - The expression passes only when every branch passes.
+- Blanket rejection of all compound expressions is not the policy.
 
-This interpretation preserves the live dependency and still fails closed on every denied or unknown branch.
+TDR-0007 remains Proposed; this specification does not claim it is accepted. The interpretation preserves the live dependency and still fails closed on every denied or unknown branch.
 
 ## 25. DOCUMENT HISTORY
 
@@ -445,6 +467,7 @@ This interpretation preserves the live dependency and still fails closed on ever
 |---------|------|--------|---------|
 | 1.0 | 2026-10-31 | @spec-writer | Initial specification for GH-187 license registry hardening. |
 | 1.1 | 2026-10-31 | @spec-writer | Corrected AC-F1-1 C-2 wording and added the deny-identifier grammar to DM-2 and Appendix A (OQ-T2). |
+| 1.2 | 2026-10-31 | @spec-writer | DoR iteration 1 remediation: added §18.1 Definition of Done predicates; cited TDR-0007 in DEC-3/Appendix C; corrected M4-S2/M4-S3 deferrals and GH-170 DEC-10 supersession; preserved and AC-linked the schema-v3 scope check (CON-10, AC-F1-3). |
 
 ---
 
@@ -454,7 +477,7 @@ This interpretation preserves the live dependency and still fails closed on ever
 - **Current-state sources:** the committed license registry seed, the existing license audit check, its test suite and fixtures, the current monorepo toolchain system specification, ADR-0003 C-2, and the M0-S18 backlog entry.
 - **Approach:** describe behavioural contracts and data invariants, not code-level steps. The specification deliberately keeps the existing CI job and dependency scope and narrows the change to explicit deny policy, deny precedence, deny-list integrity, and acceptance evidence.
 - **Key tension resolved:** ADR-0003 C-2's compound wording is interpreted per branch to preserve the live allowed compound dependency; this is recorded as a constraint and decision rather than left implicit.
-- **Scope discipline:** release artifacts, review-date governance, and public materials are explicitly deferred to M4-S3.
+- **Scope discipline:** release-time SBOM/checksums/notices are deferred to M4-S2, registry completeness and public materials to M4-S3, and per-entry review-date governance remains out of scope; GH-187 supersedes GH-170 DEC-10's assignment of those obligations to M0-S18.
 
 ## VALIDATION CHECKLIST
 
@@ -466,6 +489,7 @@ This interpretation preserves the live dependency and still fails closed on ever
 - [x] Acceptance criteria reference at least one F-/NFR-/DM- ID and use Given/When/Then
 - [x] NFRs include measurable values
 - [x] Risks include Impact & Probability
+- [x] Change-specific Definition of Done predicates are defined in §18.1
 - [x] No implementation details (no code-level tasks, no step-by-step plan)
 - [x] No content duplicated from linked docs beyond the minimum current-state summary
 - [x] Front matter validates per front_matter_rules

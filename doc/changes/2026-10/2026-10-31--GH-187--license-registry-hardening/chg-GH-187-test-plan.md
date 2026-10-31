@@ -2,7 +2,7 @@
 id: chg-GH-187-test-plan
 status: Updated
 created: 2026-10-31T14:30:00Z
-last_updated: 2026-10-31T15:25:00Z
+last_updated: 2026-10-31T16:05:00Z
 owners: [engineering]
 service: delivery-os repository license compliance gate
 labels: [change, planning]
@@ -25,7 +25,7 @@ The risk this plan exists to retire is RSK-5 from the spec: a suite that asserts
 
 - Registry policy artifact: schema version 3, scope, C-2 determination, preserved entries/uses/verdicts/allow list, required non-empty `deny_list`, single-artifact rule, and human-readable policy notes (F-1, AC-F1-1, AC-F1-4, DM-1, DM-2, DM-3, DM-5, CON-1, CON-6, NG-2, NG-3).
 - Mandatory denied families and the Appendix A floor: 5/5 families, 20/20 baseline identifiers, floor enforcement, and family-removal fail-closed (F-1, F-3, AC-F1-2, AC-F3-3, DEC-6).
-- Schema-policy enforcement: old, absent, unsupported, and non-numeric `schema_version` fail closed (F-1, AC-F1-3, DM-1, DEC-5).
+- Schema- and scope-policy enforcement: old, absent, unsupported, and non-numeric `schema_version`, and a schema-v3 registry whose `scope` is not `direct-and-runtime-closure`, fail closed and report the observed value (F-1, AC-F1-3, DM-1, CON-10, DEC-5).
 - Deny-before-allow enforcement for single identifiers across all five families (F-2, AC-F2-1).
 - Deny-over-allow: an allow-listed *and* approved denied identifier never passes; allow/deny overlap is itself a registry policy failure (F-2, F-3, AC-F2-2, CON-2, DEC-2).
 - Denied branches inside OR, AND, and nested compound expressions, plus per-branch attribution of the denial (F-2, F-6, AC-F2-3, AC-F2-1).
@@ -38,7 +38,7 @@ The risk this plan exists to retire is RSK-5 from the spec: a suite that asserts
 
 ### 1.2 Out of Scope & Known Gaps
 
-- [OUT] SBOM, checksum manifests, signatures, `THIRD-PARTY-NOTICES`, and a `licenses/` bundle — M4-S3 (NG-1, CON-7). Not tested, and not asserted absent.
+- [OUT] SBOM, checksum manifests, signatures, `THIRD-PARTY-NOTICES`, and a `licenses/` bundle. Release-time SBOM, checksums, and provenance belong to M4-S2 (Publication and release automation); registry completeness and public materials belong to M4-S3; GH-187 supersedes GH-170 DEC-10's assignment of these obligations to M0-S18 (NG-1, CON-7, DEC-7). Not tested, and not asserted absent.
 - [OUT] Per-entry review dates, approver identity governance, re-review campaigns, and any re-review or change of existing verdicts (NG-2, NG-3). TC-LICREG-003 asserts *preservation*, not governance.
 - [OUT] Rejecting all compound SPDX expressions (NG-4). TC-LICREG-019 asserts the opposite, deliberately.
 - [OUT] A new CI job, a workflow redesign, an advisory mode, or a separate license-policy service (NG-5, CON-4).
@@ -46,23 +46,24 @@ The risk this plan exists to retire is RSK-5 from the spec: a suite that asserts
 - [OUT] Automated legal compatibility analysis; the recorded verdicts and the C-2 determination remain a human confirmation (NG-8, RSK-6).
 - [OUT] Release notes, public documentation, and user-facing license disclosure.
 - [GAP-1] **AC-F1-4 is only partly automatable.** "Human-readable policy notes" is a judgement of readability and accuracy. TC-LICREG-005 automates *presence* of the five required claims through keyword groups (§4.3); wording quality is a manual review item (TC-LICREG-030). No requirement is dropped — the manual step is the residual.
-- [GAP-2] **Three TCs depend on `origin/main-tools`** (TC-LICREG-003, TC-LICREG-020, TC-LICREG-028) because they compare the delivered tree against the base branch. `tests/checks/ci-checks.test.ts` and `scripts/checks/ci-topology.ts` already depend on the same ref, so this adds no new environment contract; the precondition is stated in §6.1 and a missing ref fails loudly instead of skipping.
+- [GAP-2] **Four TCs depend on `origin/main-tools`** (TC-LICREG-003, TC-LICREG-020, TC-LICREG-028, TC-LICREG-029) because they compare the delivered tree against the base branch. `tests/checks/ci-checks.test.ts` and `scripts/checks/ci-topology.ts` already depend on the same ref, so this adds no new environment contract; the precondition is stated in §6.1 and a missing ref fails loudly instead of skipping.
 - [GAP-3] **NFR-2's "no clock-dependent check" is proven statically, not dynamically.** A top-level script exposes no clock to stub, so TC-LICREG-025 combines repeat-run equality and input-order independence (runtime) with a source scan for clock, randomness, network, and child-process constructs (static).
 - [GAP-4] **NFR-5's 30-second threshold is an upper bound only.** TC-LICREG-027 asserts the bound and records the measured value in §10 as evidence; it is not tuned as a regression budget.
 - [GAP-5] **Spec §16's system-specification reconciliation has no AC** and lands in phase 7 (doc-sync). It is verified by the doc-sync phase's content check (`deny_list` and deny-precedence wording present in `doc/spec/features/feature-monorepo-scaffold-toolchain.md`), not by an AC-bound TC in this plan.
-- [GAP-6] **The C-2 determination remains a human state.** AC-F1-1 (spec v1.1) requires the C-2 owner determination as preserved — proposed at delivery, confirmed by the owner at PR review. TC-LICREG-003 asserts presence and preservation; the confirmation itself is recorded on the PR by TC-LICREG-030. The test does not fabricate approval.
+- [GAP-6] **The C-2 determination remains a human state.** AC-F1-1 (spec v1.2) requires the C-2 owner determination as preserved — proposed at delivery, confirmed by the owner at PR review. TC-LICREG-003 asserts presence and preservation; the confirmation itself is recorded on the PR by TC-LICREG-030. The test does not fabricate approval.
 - [GAP-7] **AC-F5-1's "still binding" is a platform property.** TC-LICREG-020/021 prove the workflow definition is present, unmodified, and free of bypass constructs; the merge-blocking fact is corroborated by the required status of `ts-license-audit` on the delivery PR (recorded in §10).
 
 ## 2. References
 
-- **Change specification**: [chg-GH-187-spec.md](./chg-GH-187-spec.md) — spec v1.1 (v1.1 corrects the AC-F1-1 C-2 wording and defines the deny-identifier grammar in DM-2 and Appendix A); F-1..F-6, DM-1..DM-5, NFR-1..NFR-6, CON-1..CON-9, DEC-1..DEC-7, AC-F1-1..AC-F6-1, §10 telemetry, §12 assumptions, Appendix A (mandatory denied baseline, 20 identifiers), Appendix B (ticket-AC trace), Appendix C (compound-expression interpretation).
+- **Change specification**: [chg-GH-187-spec.md](./chg-GH-187-spec.md) — spec v1.2 (v1.1 corrected the AC-F1-1 C-2 wording and defined the deny-identifier grammar in DM-2 and Appendix A; v1.2 added §18.1 DoD predicates, the CON-10/AC-F1-3 scope preservation, the TDR-0007 citation, and the M4-S2/M4-S3 milestone split with GH-170 DEC-10 supersession); F-1..F-6, DM-1..DM-5, NFR-1..NFR-6, CON-1..CON-10, DEC-1..DEC-7, AC-F1-1..AC-F6-1, §10 telemetry, §12 assumptions, §18.1, Appendix A (mandatory denied baseline, 20 identifiers), Appendix B (ticket-AC trace), Appendix C (compound-expression interpretation).
 - **Implementation plan**: authored in delivery planning (phase 4) after this plan. TC IDs are behaviour-bound and must not depend on task numbering; plan phases map onto these TCs, not the reverse.
 - **Testing strategy**: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — canonical layers, module-to-test mapping (`scripts/checks/<check>.ts` → `bun run scripts/checks/<check>.ts` plus `tests/checks/**` mutation tests), `bun:test` convention, `pnpm check` aggregate, and the CI-file mapping (`ci-topology.ts`, `ci-bindingness.ts`, `ci-supply-chain.ts`).
 - **TypeScript/test authoring rules**: [.ai/rules/typescript.md](../../../../.ai/rules/typescript.md) — §9 `bun:test` authoring (injected fakes, determinism, fixtures never `*.test.ts`, no snapshot laundering) and §10 gates.
-- **Authoritative decision**: [ADR-0003 — OSS Tooling Monorepo Structure](../../../decisions/ADR-0003-oss-monorepo-structure.md) — C-2 (Apache-2.0 repository, enforced dependency license policy denying SSPL, BUSL, Elastic, Commons Clause, CC-BY-NC; fail-closed on unknown, `NOASSERTION`, `SEE LICENSE`, compound expressions) under the interpretation recorded in spec Appendix C.
+- **Authoritative decision**: [ADR-0003 — OSS Tooling Monorepo Structure](../../../decisions/ADR-0003-oss-monorepo-structure.md) — C-2 (Apache-2.0 repository, enforced dependency license policy denying SSPL, BUSL, Elastic, Commons Clause, CC-BY-NC; fail-closed on unknown, `NOASSERTION`, `SEE LICENSE`, compound expressions) under the interpretation recorded in spec Appendix C and TDR-0007.
+- **Decision record for the compound interpretation**: [TDR-0007 — License gate compound SPDX expression evaluation](../../../decisions/TDR-0007-license-gate-compound-spdx-expression-evaluation.md) (Proposed; owner accepts or rejects at PR review) — clarifies ADR-0003 C-2 as per-branch fail-closed evaluation without amending or superseding ADR-0003. This plan does not claim acceptance; TC-LICREG-019 asserts the behaviour and TC-LICREG-030 records the human acceptance step.
 - **Current system truth to reconcile in phase 7**: [feature-monorepo-scaffold-toolchain.md](../../../spec/features/feature-monorepo-scaffold-toolchain.md) — the "License registry" section currently documents the verdict registry, allow list, and SPDX parsing without a deny list, and NFR-10 records the dependency-risk metric.
 - **Code under test**: [scripts/checks/license-audit.ts](../../../../scripts/checks/license-audit.ts) — `directExternalDependencies`, `lockedUses`, `parseSpdxExpression`, `auditRegistry`, `loadRegistry`, `validate`, and the `import.meta.main` entry point that prints `FAIL license-audit: …` to stderr and exits 1, or prints `OK license-audit: …` to stdout.
-- **Existing tests and fixtures**: [tests/checks/license-audit.test.ts](../../../../tests/checks/license-audit.test.ts) (twelve cases: live registry green, SPDX AND/OR parsing, unknown reference, non-allow-listed, OR with disallowed branch, AND all allowed, removed entry, empty license, unbacked allow-list entry, unparseable allow-list entry, closure/use accounting, missing/duplicate/conflicting uses, duplicate package rows) and [tests/fixtures/license/cases.json](../../../../tests/fixtures/license/cases.json).
+- **Existing tests and fixtures**: [tests/checks/license-audit.test.ts](../../../../tests/checks/license-audit.test.ts) — thirteen pre-existing `test(...)` cases: live registry green, SPDX AND/OR parsing, unknown reference, non-allow-listed, OR with disallowed branch, AND all allowed, removed entry, empty license, unbacked allow-list entry, unparseable allow-list entry, closure/use accounting, missing/duplicate/conflicting uses, duplicate package rows. All thirteen are pre-existing and must remain and pass; TC-LICREG-029 step 1 reads their titles from the base branch and treats that dynamic check as the authority. Fixture data: [tests/fixtures/license/cases.json](../../../../tests/fixtures/license/cases.json).
 - **Registry artifact**: [dependency-licenses.yaml](../../../legal/dependency-licenses.yaml) — the only file in `doc/legal/`; schema v2, `scope: direct-and-runtime-closure`, proposed C-2 determination, 16 entries, four-entry allow list, no deny list.
 - **CI definitions and invariants**: [.github/workflows/ci.yml](../../../../.github/workflows/ci.yml) (`ts-license-audit` runs `bun run scripts/checks/license-audit.ts`), `scripts/checks/ci-topology.ts` (`TS_JOBS`, additions-only workflow diff, wiring rule), `scripts/checks/ci-bindingness.ts` (bypass scan over `ts-` jobs), `scripts/checks/ci-supply-chain.ts`, `scripts/checks/script-surface.ts`, and their mutation suite [tests/checks/ci-checks.test.ts](../../../../tests/checks/ci-checks.test.ts).
 - **Sibling format/rigor reference**: [chg-GH-170-test-plan.md](../2026-10-29--GH-170--monorepo-scaffold-toolchain/chg-GH-170-test-plan.md) — TC-SCAFFOLD-035/036 established the registry-plus-mutation pattern this plan hardens.
@@ -76,7 +77,7 @@ The risk this plan exists to retire is RSK-5 from the spec: a suite that asserts
 |-------|---------------------------|----------|--------|
 | AC-F1-1 | Registry declares schema 3, scope, C-2 determination, allow list, and a required non-empty deny list in one committed YAML artifact | TC-LICREG-001, TC-LICREG-003 | Covered |
 | AC-F1-2 | All five mandated families and every Appendix A identifier are present in the deny list | TC-LICREG-002, TC-LICREG-013, TC-LICREG-024 | Covered |
-| AC-F1-3 | Old or absent schema version fails closed with a schema-policy failure | TC-LICREG-004 | Covered |
+| AC-F1-3 | Old or absent schema version, or a schema-v3 registry with a scope other than `direct-and-runtime-closure`, fails closed with a schema/scope-policy failure that reports the observed value | TC-LICREG-004, TC-LICREG-031 | Covered |
 | AC-F1-4 | Human-readable notes state fail-closed unknowns, `NOASSERTION`/`SEE LICENSE` rejection, per-branch compound evaluation, and deny-over-allow | TC-LICREG-005, TC-LICREG-030 | Covered — presence automated (§4.3), wording quality manual (GAP-1) |
 | AC-F2-1 | A denied identifier fails with an explicit denial naming the package and the denied identifier | TC-LICREG-006, TC-LICREG-010, TC-LICREG-022, TC-LICREG-026 | Covered |
 | AC-F2-2 | A denied identifier also on the allow list never passes; the overlap is reported and the entry still fails | TC-LICREG-007, TC-LICREG-008 | Covered |
@@ -90,7 +91,7 @@ The risk this plan exists to retire is RSK-5 from the spec: a suite that asserts
 | AC-F5-2 | The extended suite covers every required class and the live registry validates with zero failures | TC-LICREG-023, TC-LICREG-024, TC-LICREG-029 | Covered |
 | AC-F6-1 | The live `@biomejs/biome` `MIT OR Apache-2.0` entry passes, proving per-branch evaluation was preserved | TC-LICREG-018, TC-LICREG-019, TC-LICREG-023 | Covered |
 
-**Capability coverage** (no capability left unlinked): F-1 → TC-LICREG-001, TC-LICREG-002, TC-LICREG-003, TC-LICREG-005, TC-LICREG-014; F-2 → TC-LICREG-006, TC-LICREG-007, TC-LICREG-008, TC-LICREG-009, TC-LICREG-010, TC-LICREG-014; F-3 → TC-LICREG-002, TC-LICREG-008, TC-LICREG-011, TC-LICREG-012, TC-LICREG-013; F-4 → TC-LICREG-015, TC-LICREG-016, TC-LICREG-017; F-5 → TC-LICREG-020, TC-LICREG-021, TC-LICREG-022, TC-LICREG-024, TC-LICREG-029; F-6 → TC-LICREG-009, TC-LICREG-018, TC-LICREG-019, TC-LICREG-023.
+**Capability coverage** (no capability left unlinked): F-1 → TC-LICREG-001, TC-LICREG-002, TC-LICREG-003, TC-LICREG-005, TC-LICREG-014, TC-LICREG-031; F-2 → TC-LICREG-006, TC-LICREG-007, TC-LICREG-008, TC-LICREG-009, TC-LICREG-010, TC-LICREG-014; F-3 → TC-LICREG-002, TC-LICREG-008, TC-LICREG-011, TC-LICREG-012, TC-LICREG-013; F-4 → TC-LICREG-015, TC-LICREG-016, TC-LICREG-017; F-5 → TC-LICREG-020, TC-LICREG-021, TC-LICREG-022, TC-LICREG-024, TC-LICREG-029; F-6 → TC-LICREG-009, TC-LICREG-018, TC-LICREG-019, TC-LICREG-023.
 
 **Ticket AC coverage** (spec Appendix B, all six ticket criteria):
 
@@ -109,7 +110,7 @@ No HTTP/REST surface and no events or messages exist in this change (spec §8.1,
 
 | Interface ID | Description | TC ID(s) | Status |
 |--------------|-------------|----------|--------|
-| DM-1 | Registry `schema_version` advances 2 → 3; any other value is rejected rather than accepted with an implicit empty policy | TC-LICREG-001, TC-LICREG-004 | Covered |
+| DM-1 | Registry `schema_version` advances 2 → 3 and `scope` stays `direct-and-runtime-closure`; any other version, or any other scope at schema 3, is rejected rather than accepted with an implicit empty policy | TC-LICREG-001, TC-LICREG-004, TC-LICREG-031 | Covered |
 | DM-2 | `deny_list`: required, non-empty array of single denied identifiers; duplicates, malformed entries, and allow-list overlap invalid | TC-LICREG-001, TC-LICREG-002, TC-LICREG-011, TC-LICREG-012, TC-LICREG-013 | Covered |
 | DM-3 | `allow_list`: required, contents still exactly backed by approved verdicts; no deny identifier appears in it | TC-LICREG-001, TC-LICREG-003, TC-LICREG-023 | Covered |
 | DM-4 | Existing entry/use/verdict model unchanged; every audited use still maps to an approved entry | TC-LICREG-003, TC-LICREG-015, TC-LICREG-023 | Covered |
@@ -148,17 +149,17 @@ All new suites live under `tests/checks/**`, which root `bun test` discovers (`b
 
 The audit's policy layer must satisfy the following, in this order, with these observable consequences:
 
-1. **Schema gate.** `schema_version` must be the number `3`. Anything else — `2`, absent, `"3"`, `4`, `null` — produces a schema-policy failure. Accepting a registry without the deny contract is a failure, not a warning (DM-1, DEC-5, spec §8.5).
+1. **Schema and scope gate.** `schema_version` must be the number `3`, and `scope` must be `direct-and-runtime-closure`. Anything else — `2`, absent, `"3"`, `4`, `null` for the version; any other value or an absent value for the scope on a schema-v3 registry — produces a schema/scope-policy failure that reports the observed value. Accepting a registry without the deny contract, or with an unsupported scope, is a failure, not a warning (DM-1, CON-10, AC-F1-3, DEC-5, spec §8.5).
 2. **`deny_list` integrity.** Required; must be an array; must be non-empty; every entry must be a single identifier; entries must be unique; the list must be disjoint from `allow_list`; and it must contain every Appendix A identifier.
-3. **Single-identifier grammar.** A deny entry is a single token matching the registry's identifier syntax (`^[A-Za-z0-9.+-]+$`, the base pattern `parseSpdxExpression` already applies). Operators (`AND`, `OR`, `WITH`), parentheses, whitespace (including leading or trailing padding), and any multi-token value are malformed policy. `Commons-Clause` and `BUSL-1.0` are therefore valid entries; `(SSPL-1.0)` and `MIT OR SSPL-1.0` are not. The grammar is spec-fixed: DM-2 and Appendix A of the change specification (spec v1.1) require each entry to match `^[A-Za-z0-9.+-]+$` and to contain no whitespace, `AND`/`OR`/`WITH` operator, parenthesis, or compound expression.
+3. **Single-identifier grammar.** A deny entry is a single token matching the registry's identifier syntax (`^[A-Za-z0-9.+-]+$`, the base pattern `parseSpdxExpression` already applies). Operators (`AND`, `OR`, `WITH`), parentheses, whitespace (including leading or trailing padding), and any multi-token value are malformed policy. `Commons-Clause` and `BUSL-1.0` are therefore valid entries; `(SSPL-1.0)` and `MIT OR SSPL-1.0` are not. The grammar is spec-fixed: DM-2 and Appendix A of the change specification (spec v1.2) require each entry to match `^[A-Za-z0-9.+-]+$` and to contain no whitespace, `AND`/`OR`/`WITH` operator, parenthesis, or compound expression.
 4. **Deny before allow, per identifier, per branch.** For every entry license, parse to identifier branches; for each branch check denial first, then `LicenseRef-`, then allow-list membership. A denied branch fails regardless of allow-list membership and regardless of the verdict.
 5. **Registry-level contradiction.** An allow/deny overlap is a policy failure independent of any entry. When an entry also uses the overlapping identifier, both the entry-level denial and the registry-level overlap appear.
 6. **Mandatory floor.** The Appendix A baseline is enforced from code, not from the registry file alone. The exported floor set and the baseline fixture must be identical (code↔fixture sync), the registry must contain the baseline, and removing any baseline identifier from a registry whose allow list and verdicts remain otherwise valid still fails.
-7. **Existing semantics preserved.** Entry/use/verdict shape, unregistered-use detection, duplicate and wrong-version detection, the allow-list-backed-by-approved-verdict bijection, and the empty-license failure keep their current behaviour and message vocabulary.
+7. **Existing semantics preserved.** Entry/use/verdict shape, unregistered-use detection, duplicate and wrong-version detection, the allow-list-backed-by-approved-verdict bijection, the empty-license failure, and the fail-closed `scope` check (CON-10) keep their current behaviour and message vocabulary. The scope check must not be dropped when the schema condition is rewritten: a schema-v3 registry with a wrong scope fails closed and names the observed scope.
 
 ### 4.2 Failure-class vocabulary (binding for NFR-6 and spec §10)
 
-Every failure today already names the package and the offending value, and the existing vocabulary covers most of §10's classes. The hardening adds the denied class and extends the malformed-policy class with schema policy, deny-list integrity, allow/deny overlap, and the mandatory floor, plus explicit non-asserted detection. Tests assert *semantic* markers, not full sentences: each class has required tokens that must all appear in at least one failure for the trigger, plus a "must not be only" guard that keeps classes distinguishable.
+Every failure today already names the package and the offending value, and the existing vocabulary covers most of §10's classes. The hardening adds the denied class and extends the malformed-policy class with schema/scope policy, deny-list integrity, allow/deny overlap, and the mandatory floor, plus explicit non-asserted detection. Tests assert *semantic* markers, not full sentences: each class has required tokens that must all appear in at least one failure for the trigger, plus a "must not be only" guard that keeps classes distinguishable.
 
 | Class | Trigger examples | Required tokens (all must appear) | Must not be reported *only* as |
 |-------|------------------|-----------------------------------|-------------------------------|
@@ -170,11 +171,11 @@ Every failure today already names the package and the offending value, and the e
 | Unregistered dependency or use | removed entry, removed use, synthetic use | package, owner, field, version, and `missing registry entry` / `missing registered use` / `unverified use` | — (existing wording) |
 | Malformed registry policy | deny list absent, empty, non-array, malformed, duplicate | `deny_list`, the offending value or its index, and the reason (`absent`, `not an array`, `empty`, `duplicate`, `not a single identifier`) | — |
 | Allow/deny overlap | `MIT` in `allow_list` and `deny_list` | `deny_list`, `allow_list`, the identifier | — |
-| Schema policy | `schema_version` not 3 | `schema`, the observed value or its absence | — |
+| Schema / scope policy | `schema_version` not 3; a schema-v3 registry whose `scope` is not `direct-and-runtime-closure` | `schema` or `scope`, the observed value or its absence | — |
 | Mandatory floor | one baseline identifier removed | `deny_list`, the missing identifier | — |
 | Allow-list/verdict drift | allow entry not backed by an approved verdict; approved identifier missing from the allow list | `allow_list`, identifier, `not backed by an approved verdict` / `missing` | — |
 
-Implementation note (evidence, not a new requirement): today `NOASSERTION` parses as an ordinary identifier and would surface as `not allow-listed`, while `SEE LICENSE` surfaces as `not a valid SPDX expression`. To satisfy §10's distinct-class requirement, delivery must add explicit non-asserted detection for `NOASSERTION`, `NONE`, and `SEE LICENSE`. Denial, deny-list integrity, overlap, schema, and floor classes do not exist in the current audit at all and are new by definition.
+Implementation note (evidence, not a new requirement): today `NOASSERTION` parses as an ordinary identifier and would surface as `not allow-listed`, while `SEE LICENSE` surfaces as `not a valid SPDX expression`. To satisfy §10's distinct-class requirement (spec v1.2 adds `schema/scope policy` to that list), delivery must add explicit non-asserted detection for `NOASSERTION`, `NONE`, and `SEE LICENSE`, and must keep the existing scope check when the schema condition is rewritten. Denial, deny-list integrity, overlap, schema/scope, and floor classes do not exist in the current audit at all and are new by definition.
 
 ### 4.3 Policy-note assertion contract (binding for AC-F1-4)
 
@@ -204,7 +205,7 @@ Two harness kinds, each with a fixed job:
 - The live spawned case asserts `status === 0`, `stdout` starting with `OK license-audit:`, and empty `stderr`.
 - The spawned cases are exactly the ten enumerated in TC-LICREG-022: one live green case plus nine failure cases — denied single identifier, denied branch, denied nested compound, deny-list absent, old schema, floor removal, allow/deny overlap, non-asserted license, and unregistered dependency.
 - The remaining §4.2 classes — unknown license reference, empty license, valid-but-non-allow-listed identifier, and allow-list/verdict drift — are asserted in-process against the cloned registry (TC-LICREG-016, TC-LICREG-017, TC-LICREG-023) and are deliberately not spawned. They share the same exit-code contract, which the nine spawned failure cases prove at the process boundary.
-- The exhaustive matrices stay in-memory: the 20-identifier denial matrix (TC-LICREG-006), the 20 floor-removal cases (TC-LICREG-013), and the 18 malformed-entry variants (TC-LICREG-012).
+- The exhaustive matrices stay in-memory: the 20-identifier denial matrix (TC-LICREG-006), the 25 removal cases — 20 single removals plus 5 adversarial removals (TC-LICREG-013) — the 18 malformed-entry variants (TC-LICREG-012), the 5 schema mutations (TC-LICREG-004), and the 5 wrong-scope mutations (TC-LICREG-031).
 - Cross-run comparisons of failure sets use sorted sets; repeat-run comparisons on identical input assert exact array equality.
 
 ### 4.5 Anti-vacuity and non-weakening controls
@@ -216,7 +217,7 @@ Each control exists so that a green run cannot mean "the assertion never fired":
 3. **Extension control** (TC-LICREG-013 step 6): baseline intact *plus* an extra identifier is accepted, proving the floor is a minimum and not an exact-match whitelist.
 4. **Compound control** (TC-LICREG-019): all-allowed compounds pass, proving the parser was not switched to blanket rejection.
 5. **Matrix-completeness control** (TC-LICREG-024): declared case ids, class tokens, family coverage, and baseline coverage are asserted, and an unknown class token fails the meta-check.
-6. **No-test-removal control** (TC-LICREG-029 step 1): the pre-change test titles, read from `git show origin/main-tools:tests/checks/license-audit.test.ts`, must still be present in the delivered file.
+6. **No-test-removal control** (TC-LICREG-029 step 1): the thirteen pre-change test titles, read from `git show origin/main-tools:tests/checks/license-audit.test.ts`, must all still be present and passing in the delivered file.
 7. **Isolation control** (TC-LICREG-029 step 7): `git status --porcelain` is empty after the suite; no test writes the live tree.
 
 ### 4.6 Pass/fail thresholds and CI vs local
@@ -224,7 +225,7 @@ Each control exists so that a green run cannot mean "the assertion never fired":
 | Suite | Command | Pass threshold | CI | Local |
 |-------|---------|----------------|----|-------|
 | Audit unit + mutation | `bun test tests/checks/license-audit.test.ts` | 100% pass; 0 skipped/todo/only; every enumerated case exercised; no case whose only assertion is a log substring | `ts-test`, `ts-aggregate` | Required before hand-off |
-| Registry policy | `bun test tests/checks/license-policy.test.ts` | 100% pass; 20/20 floor-removal cases; 5/5 families; all presence/type/emptiness/malformed variants | `ts-test`, `ts-aggregate` | Required |
+| Registry policy | `bun test tests/checks/license-policy.test.ts` | 100% pass; 25/25 removal cases (20 single + 5 adversarial); 5/5 families; 5 schema and 5 scope mutations; all presence/type/emptiness/malformed variants | `ts-test`, `ts-aggregate` | Required |
 | Spawned exit/stream | `bun test tests/checks/license-audit-exit.test.ts` | 1 live green case plus the nine enumerated spawned failure cases (TC-LICREG-022); every case asserts exit code, streams, and stack-trace absence; classes not spawned are covered in-process (TC-LICREG-016, TC-LICREG-017, TC-LICREG-023) | `ts-test`, `ts-aggregate` | Required |
 | CI binding + non-weakening | `bun test tests/checks/license-ci-binding.test.ts` | Job present, block byte-equal to base, no bypass token, job-id set unchanged, no lockfile/manifest diff | `ts-test`, `ts-aggregate` | Required |
 | Invariants | `bun run scripts/checks/license-audit.ts`; `ci-topology.ts`; `ci-bindingness.ts`; `ci-supply-chain.ts`; `script-surface.ts` | All exit 0 on the delivered tree | `ts-license-audit`, `ts-invariants`, `ts-aggregate` | Run before push |
@@ -235,7 +236,7 @@ Runtime budget: the matrix is in-process and touches only the committed lockfile
 
 ### 4.7 Test-case ID namespace
 
-This plan uses `TC-LICREG-###`. `TC-LICENSE-001` is already bound in the concurrent GH-188 change to a different regression scenario ("license registry stays complete under the chosen bases"), and the scenario-ID rules forbid reusing an ID for a different scenario. `LICREG` (license registry) keeps GH-187's thirty cases disjoint from GH-188 and from GH-170's `TC-SCAFFOLD-035/036`, which remain the provenance of the audit's original behaviour.
+This plan uses `TC-LICREG-###`. `TC-LICENSE-001` is already bound in the concurrent GH-188 change to a different regression scenario ("license registry stays complete under the chosen bases"), and the scenario-ID rules forbid reusing an ID for a different scenario. `LICREG` (license registry) keeps GH-187's thirty-one cases disjoint from GH-188 and from GH-170's `TC-SCAFFOLD-035/036`, which remain the provenance of the audit's original behaviour.
 
 ## 5. Test Scenarios
 
@@ -273,6 +274,7 @@ This plan uses `TC-LICREG-###`. `TC-LICENSE-001` is already bound in the concurr
 | TC-LICREG-028 | No new dependency and no lockfile or manifest change | Regression | check test | High | NFR-3, CON-5 |
 | TC-LICREG-029 | Pre-existing matrix and repository gate battery are unchanged and green | Regression | check test | Critical | AC-F5-1, AC-F5-2, NFR-3, NFR-4 |
 | TC-LICREG-030 | Manual policy and diagnostic review | Happy Path | manual | Medium | AC-F1-4, AC-F5-1 |
+| TC-LICREG-031 | Schema-v3 registry with a wrong scope fails closed and reports the observed scope | Negative | unit | High | AC-F1-3, DM-1, CON-10 |
 
 ### 5.2 Scenario Details
 
@@ -361,7 +363,7 @@ This plan uses `TC-LICREG-###`. `TC-LICENSE-001` is already bound in the concurr
 2. Assert the base declares `schema_version: 2` and the delivered registry declares `3` — the schema bump is the only structural change.
 3. Assert the delivered `entries` are equal, as a package-keyed set, to the base `entries`: same package set, and for each package the same `version`, `license`, `uses` (owner/field/version triples), and `verdict`.
 4. Assert `allow_list` is set-equal to the base `allow_list` (four identifiers, order-insensitive).
-5. Assert `scope` and `c2_determination` are preserved verbatim from the base (AC-F1-1 in spec v1.1 requires the determination as preserved: proposed at delivery, confirmed by the owner at PR review).
+5. Assert `scope` and `c2_determination` are preserved verbatim from the base (AC-F1-1 in spec v1.2 requires the determination as preserved: proposed at delivery, confirmed by the owner at PR review).
 6. Assert the top-level data-key difference between base and delivered is exactly `{deny_list}` — no entry, use, verdict, or allow-list value was edited to accommodate the new policy.
 7. If `origin/main-tools` is unavailable, fail with a message naming the missing ref rather than skipping (GAP-2).
 
@@ -388,7 +390,7 @@ This plan uses `TC-LICREG-###`. `TC-LICENSE-001` is already bound in the concurr
 
 **Steps**:
 
-1. Apply each schema mutation to a fresh clone, changing nothing else: `schema_version: 2` (the old contract), the key deleted, `schema_version: "3"` (string), `schema_version: 4` (future), `schema_version: null`, and the key removed while `deny_list` is present.
+1. Apply each of the five schema mutations to a fresh clone, changing nothing else: `schema_version: 2` (the old contract), the key deleted, `schema_version: "3"` (string), `schema_version: 4` (future), and `schema_version: null`. The duplicate "key removed while `deny_list` is present" variant is not a separate case: it is the deleted-key case, and the wrong-`scope` dimension of AC-F1-3 is TC-LICREG-031.
 2. For each, compute `auditRegistry(registry, dependencies())` and assert the failure set is non-empty.
 3. Assert at least one failure contains `schema` and names the observed value or its absence.
 4. Assert the schema failure is not merely dependency-driven: it must appear while entries, uses, verdicts, and the allow list are untouched.
@@ -398,6 +400,7 @@ This plan uses `TC-LICREG-###`. `TC-LICENSE-001` is already bound in the concurr
 
 - A registry that predates the deny-list contract is rejected, never accepted with an implicit empty policy (spec §8.5).
 - A future schema bump is also fail-closed until the audit is updated deliberately.
+- The scope half of AC-F1-3 (schema 3 with a wrong scope) is covered by TC-LICREG-031, so schema and scope failures stay separately attributable.
 - The control proves the assertion is caused by the schema field alone.
 
 #### TC-LICREG-005 - Human-readable policy notes state the five policy claims
@@ -667,14 +670,14 @@ This plan uses `TC-LICREG-###`. `TC-LICENSE-001` is already bound in the concurr
 2. For each of the 20 baseline identifiers, clone the registry, remove exactly that identifier from `deny_list`, and compute `validate(ROOT, registry)` with `allow_list`, entries, and verdicts untouched.
 3. Assert the failure set is non-empty and that at least one message contains `deny_list` and the removed identifier — the failure names what is missing rather than only that something is wrong.
 4. Assert the removal failure is independent of dependency data: also run `auditRegistry` with an empty dependency list and assert the floor failure is still reported.
-5. Repeat step 2 for one identifier per family in the adversarial DEC-6 combination: remove the identifier, add it to `allow_list`, and set the probe entry's license to it with `verdict: approved`. Assert the case still fails (floor failure plus overlap plus denial, in any combination) and never passes.
+5. Repeat step 2 for one identifier per family (five adversarial removals) in the DEC-6 combination: remove the identifier from `deny_list`, add it to `allow_list`, and set the probe entry's license to it with `verdict: approved`. Because the identifier is no longer in `deny_list`, neither an overlap nor an entry-level denial is reachable — the allow list and the approved verdict are then mutually consistent. Assert the case still fails, that the failure is the mandatory-floor failure naming the removed identifier, and that no overlap-class message and no denial-class message appear. The floor alone must carry the failure; that is what makes the floor load-bearing.
 6. Control: baseline intact plus an additional identifier (`AGPL-3.0-only`) produces no floor failure, proving the floor is a minimum and not an exact-match whitelist.
-7. Assert the count of removal cases is 20.
+7. Assert the removal-case count is 25: the 20 single removals from step 2 plus the 5 adversarial removals from step 5.
 
 **Expected Outcome**:
 
-- 20/20 removals fail closed, each naming the missing identifier.
-- Stripping a mandated family cannot turn the gate green even with a simultaneous allow-list edit (RSK-1).
+- 20/20 single removals and 5/5 adversarial removals (25 total) fail closed, each naming the missing identifier.
+- Stripping a mandated family cannot turn the gate green even with a simultaneous allow-list edit (RSK-1), and in the adversarial cases the mandatory floor — not a coincidental overlap or denial — is the reason the case fails.
 - Adding identifiers remains possible without a code change (DEC-6, F-3).
 
 #### TC-LICREG-014 - Extra deny identifiers work without a code change; no prefix or substring matching
@@ -752,7 +755,7 @@ This plan uses `TC-LICREG-###`. `TC-LICENSE-001` is already bound in the concurr
 
 **Steps**:
 
-1. For each case, set the probe license and assert a non-empty failure set naming the package and the raw license text: `""`, `"   "`, `LicenseRef-Proprietary`, `LicenseRef-scancode-unknown`, `NOASSERTION`, `SEE LICENSE`, `"MIT OR"`, `"AND MIT"`, `"MIT (ISC"`, `"()"`, `"MIT WITH Classpath-exception-2.0"`, `"MIT/Apache-2.0"`.
+1. For each of the twelve listed cases, set the probe license and assert a non-empty failure set naming the package and the raw license text: `""`, `"   "`, `LicenseRef-Proprietary`, `LicenseRef-scancode-unknown`, `NOASSERTION`, `SEE LICENSE`, `"MIT OR"`, `"AND MIT"`, `"MIT (ISC"`, `"()"`, `"MIT WITH Classpath-exception-2.0"`, `"MIT/Apache-2.0"`.
 2. Assert class attribution per §4.2: `LicenseRef-*` → `unknown license reference`; blank → `empty license`; `NOASSERTION` and `SEE LICENSE` → `non-asserted`; syntactically broken expressions → `not a valid SPDX expression`.
 3. For `NONE` (a non-asserted SPDX value not named literally in the spec), assert the case **fails** and accept either the non-asserted or the not-allow-listed class — closing the gap without inventing a requirement.
 4. Assert no case produces zero failures and no case is reported as accepted.
@@ -761,7 +764,7 @@ This plan uses `TC-LICREG-###`. `TC-LICENSE-001` is already bound in the concurr
 
 **Expected Outcome**:
 
-- 13/13 non-asserted, reference-only, empty, and unparseable values fail closed.
+- 12/12 listed non-asserted, reference-only, empty, and unparseable values fail closed, and `NONE` from step 3 fails as well — 13 cases in total.
 - `NOASSERTION` and `SEE LICENSE` are never treated as an implicit pass and are not silently folded into the generic non-allow-listed class (§10 distinct-class requirement; see the implementation note in §4.2).
 - Blank license values keep their existing failure text.
 
@@ -847,7 +850,7 @@ This plan uses `TC-LICREG-###`. `TC-LICENSE-001` is already bound in the concurr
 
 - Compounds are evaluated per branch: all-allowed passes, any disallowed branch fails.
 - Neither failure mode (blanket rejection, blanket acceptance) can hide behind the other's green path.
-- The recorded interpretation of ADR-0003 C-2 (spec Appendix C) is what the suite enforces.
+- The recorded interpretation of ADR-0003 C-2 (spec Appendix C, recorded in TDR-0007, Proposed) is what the suite enforces.
 
 #### TC-LICREG-020 - `ts-license-audit` is present, unmodified, binding, and not joined by a new job
 
@@ -993,7 +996,7 @@ This plan uses `TC-LICREG-###`. `TC-LICENSE-001` is already bound in the concurr
 **Steps**:
 
 1. Assert every declared case uses a class token from the §4.2 vocabulary; an unknown token fails the meta-check.
-2. Assert minimum case counts per class: schema 5 (old, absent, string, future, null), presence/type 7 (absent, `undefined`, `null`, string, object, empty array, absent-with-widened-allow-list), malformed entries 18 (5 non-string, 3 empty, 3 whitespace-affixed, 1 duplicate, 3 compound, 3 operator-only), floor 20, overlap 3, extension 2, unknown reference 2, empty 2, non-asserted 2, unparseable 6, non-allow-listed 7.
+2. Assert minimum case counts per class: schema 5 (old, absent, string, future, null), scope 5 (wrong name, near-miss name, empty, absent, `null`), presence/type 7 (absent, `undefined`, `null`, string, object, empty array, absent-with-widened-allow-list), malformed entries 18 (5 non-string, 3 empty, 3 whitespace-affixed, 1 duplicate, 3 compound, 3 operator-only), floor 25 (20 single removals + 5 adversarial removals), overlap 3, extension 2, unknown reference 2, empty 2, non-asserted 2, unparseable 6, non-allow-listed 7.
 3. Assert the union of classes covered by the fixtures includes all five mandated families (via the 20 baseline identifiers used by TC-LICREG-006) — no family is exercised only in prose.
 4. Assert the suite executes exactly the declared cases: for each case, one assertion outcome, and the executed count equals the declared count (no silent skip, no `test.skip`).
 5. Assert the anti-vacuity control: a case declaration with an unknown class token produces a meta-check failure.
@@ -1046,11 +1049,11 @@ This plan uses `TC-LICREG-###`. `TC-LICENSE-001` is already bound in the concurr
 
 **Preconditions**:
 
-- One representative trigger per class in §4.2 (denied single, denied branch, unknown reference, non-asserted, empty, unparseable, non-allow-listed, unregistered use, malformed policy, overlap, schema, floor, drift).
+- One representative trigger per class in §4.2 — thirteen representatives: denied single, denied branch, unknown reference, non-asserted, empty, unparseable, non-allow-listed, unregistered use, malformed policy, overlap, schema, floor, drift. The `schema` representative covers the §4.2 `Schema / scope policy` row; the wrong-scope message is asserted separately by TC-LICREG-031.
 
 **Steps**:
 
-1. For each representative, compute the failure set and assert every message is non-empty, names the package (or registry field for policy classes), contains the offending license text or identifier, and carries a reason clause.
+1. For each of the thirteen representatives, compute the failure set and assert every message is non-empty, names the package (or registry field for policy classes), contains the offending license text or identifier, and carries a reason clause; count the executed representatives and assert it equals 13.
 2. Assert the expected class token is present for each representative.
 3. Assert the forbidden tokens from §4.2 are absent: a denial case is not reported *only* as `not allow-listed`; a non-allow-listed case carries no `denied` marker; a non-asserted case is not folded into `not allow-listed`.
 4. Assert `validate` and `auditRegistry` never throw for any policy mutation: wrap each representative in a try/catch and fail the test on a thrown error (in-process proof of the "no uncaught stack trace" clause).
@@ -1135,7 +1138,7 @@ This plan uses `TC-LICREG-###`. `TC-LICENSE-001` is already bound in the concurr
 
 **Steps**:
 
-1. Read the pre-change test titles from `git show origin/main-tools:tests/checks/license-audit.test.ts` and assert each title still appears in the delivered test file (no test removed to make the suite green; the §4.5 control).
+1. Read the pre-change test titles from `git show origin/main-tools:tests/checks/license-audit.test.ts` — thirteen titles — and assert every one still appears in the delivered test file and passes (no test removed or merged to make the suite green; the §4.5 control). This dynamic check is the authority for the count; the plan's stated 13 is descriptive only.
 2. Run the extended suite: `bun test tests/checks/license-audit.test.ts` — green.
 3. Run the whole checks layer: `bun test tests/checks` — green.
 4. Run the aggregate: `pnpm check` — green (lint, format check, typecheck, tests, boundaries, exports parity).
@@ -1168,16 +1171,50 @@ This plan uses `TC-LICREG-###`. `TC-LICENSE-001` is already bound in the concurr
 **Steps**:
 
 1. Read the registry header comments as a maintainer and confirm the five claims in §4.3 are stated clearly and accurately, without contradicting the enforced behaviour.
-2. Confirm the C-2 determination is unchanged and that the owner still confirms it at PR review (spec §12, RSK-6); record the confirmation in the PR.
+2. Confirm the C-2 determination is unchanged, that the owner still confirms it at PR review (spec §12, RSK-6), and that TDR-0007 is accepted or rejected by the owner at PR review without any premature claim of acceptance (spec §18.1); record both in the PR.
 3. Confirm the deny list families match ADR-0003 C-2 exactly (SSPL, BUSL, Elastic, Commons Clause, CC-BY-NC) and that no extra family was added or removed without a recorded decision.
 4. Read the new failure messages from a failing run and confirm each names the package, the offending value, and an actionable reason, and that none prints credentials, environment dumps, or unrelated file contents (spec §20).
-5. Confirm the change introduces no SBOM, notice, checksum, or review-date artifact (NG-1, NG-2, CON-7).
+5. Confirm the change introduces no SBOM, notice, checksum, or review-date artifact, and that the deferral matches the corrected split — release-time SBOM/checksums/notices to M4-S2, registry completeness and public materials to M4-S3, review-date governance out of scope — with GH-187 superseding GH-170 DEC-10's M0-S18 assignment (NG-1, NG-2, CON-7, DEC-7).
 6. Confirm `ts-license-audit` appears as a required check on the delivery PR and that no gate changed status (GAP-7).
 
 **Expected Outcome**:
 
 - A human confirms the parts no test can judge: policy wording, legal-position preservation, diagnostic quality, and scope discipline.
 - The review record is the evidence for AC-F1-4's quality clause and for AC-F5-1's merge-blocking property.
+
+#### TC-LICREG-031 - Schema-v3 registry with a wrong scope fails closed and reports the observed scope
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-1, AC-F1-3, DM-1, CON-10, NFR-6
+**Test Type(s)**: Unit / Negative
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/checks/license-policy.test.ts`
+**Tags**: @license, @scope, @fail-closed
+
+**Preconditions**:
+
+- A clone of the delivered registry with `schema_version: 3` and a complete, valid deny list, allow list, and approved verdicts, so `scope` is the only mutated field.
+- AC-F1-3, DM-1, and CON-10 (spec v1.2) require the existing scope check to survive the schema rewrite; the current audit rejects schema and scope with one combined condition, which this case prevents from being reduced to a schema-only check.
+
+**Steps**:
+
+1. Baseline control: the delivered clone produces zero scope-class failures.
+2. Apply each of the five scope mutations separately to a fresh clone: `scope: "full-transitive"` (plausible but unsupported), `scope: "direct-and-runtime"` (near miss of the canonical value), `scope: ""`, the `scope` key deleted, and `scope: null`.
+3. For each mutation compute `validate(ROOT, registry)` and assert the failure set is non-empty.
+4. Assert at least one message contains `scope` and the observed value (or its absence) and names the supported value `direct-and-runtime-closure`.
+5. Assert the failure is not dependency-driven: it appears while `schema_version: 3`, `deny_list`, `allow_list`, entries, uses, and verdicts are untouched and otherwise valid.
+6. Assert the case never passes on policy completeness: the deny list may be complete and every verdict approved, and the wrong scope still fails.
+7. Control: restore `scope: "direct-and-runtime-closure"` on the same clone and assert zero failures, proving the scope field alone causes the failure.
+8. Assert this case adds no spawned process: the spawned suite stays at one live green plus nine failure cases (TC-LICREG-022 step 11).
+9. Assert the executed scope-mutation count is exactly 5 (no silent skip).
+
+**Expected Outcome**:
+
+- A schema-v3 registry with any scope other than `direct-and-runtime-closure` fails closed and names the observed scope (AC-F1-3, DM-1, CON-10).
+- Rewriting the audit's combined schema/scope condition into a schema-only gate is caught by a failing test rather than silently opening the scope hole.
+- The canonical scope control passes, so the failure is attributable to the scope mutation alone, and the spawned-case count is unchanged.
 
 ## 6. Environments and Test Data
 
@@ -1189,7 +1226,7 @@ This plan uses `TC-LICREG-###`. `TC-LICENSE-001` is already bound in the concurr
 | Local dev with base branch | `origin/main-tools` fetched | Required by TC-LICREG-003, TC-LICREG-020, TC-LICREG-028, TC-LICREG-029 and by `ci-topology.ts` (GAP-2) |
 | CI (GitHub Actions, `ubuntu-latest`) | `pnpm install --frozen-lockfile`, pinned Bun/pnpm, existing `ts-*` jobs | Authoritative for AC-F5-1, AC-F5-2 and every invariant suite; `ts-license-audit` runs the same command as TC-LICREG-022 step 1 |
 | Temp fixture trees | `mkdtemp` under the OS temp dir | Spawned cases (TC-LICREG-022, TC-LICREG-027) and mutation copies never write the live tree |
-| In-process test process | Bun runtime; the live registry and lockfile read-only | The exhaustive matrix (30 cases) runs here |
+| In-process test process | Bun runtime; the live registry and lockfile read-only | The exhaustive matrix (31 cases) runs here |
 
 ### 6.2 Test Data
 
@@ -1242,11 +1279,12 @@ All TCs are automated except TC-LICREG-030. Paths marked † are assumed locatio
 | TC-LICREG-023 | `tests/checks/license-audit.test.ts` (extend) | `bun test tests/checks/license-audit.test.ts` | none | Existing – Update |
 | TC-LICREG-024 | `tests/checks/license-policy.test.ts` (†) + `deny-list-cases.json` (†) | `bun test tests/checks/license-policy.test.ts` | unknown class token control | To Implement |
 | TC-LICREG-025 | `tests/checks/license-audit-exit.test.ts` (†) | `bun test tests/checks/license-audit-exit.test.ts` | reverse-entries / reverse-deny-list; source scan | To Implement |
-| TC-LICREG-026 | `tests/checks/license-audit-exit.test.ts` (†) | same | 7 class representatives; throw-vs-return guard | To Implement |
+| TC-LICREG-026 | `tests/checks/license-audit-exit.test.ts` (†) | same | 13 class representatives (denied single, denied branch, unknown reference, non-asserted, empty, unparseable, non-allow-listed, unregistered use, malformed policy, overlap, schema, floor, drift) with an executed-count assertion; throw-vs-return guard | To Implement |
 | TC-LICREG-027 | `tests/checks/license-audit-exit.test.ts` (†) | same | none; wall-clock measurement | To Implement |
 | TC-LICREG-028 | `tests/checks/license-ci-binding.test.ts` (†) | `bun test tests/checks/license-ci-binding.test.ts` | none; three scoped diffs | To Implement |
 | TC-LICREG-029 | `tests/checks/license-ci-binding.test.ts` (†) + repo root | `bun test tests/checks/license-audit.test.ts`; `bun test tests/checks`; `pnpm check`; `bash scripts/.tests/test-*.sh`; `bash tools/.tests/test-*.sh` | test-title preservation; clean-tree assertion | Existing – Update |
 | TC-LICREG-030 | PR review record | manual | none | Manual Only |
+| TC-LICREG-031 | `tests/checks/license-policy.test.ts` (†) | `bun test tests/checks/license-policy.test.ts` | 5 wrong-scope mutations + canonical-scope control (in-process only) | To Implement |
 
 **Wiring**: all new suites live under `tests/checks/**` and are discovered by root `bun test`, so `ts-test` and `ts-aggregate` run them with no workflow change. No new `scripts/checks/*.ts` is added, so `ci-topology.ts`'s "every check script is wired" rule and `TS_JOBS` stay untouched; `ci-bindingness.ts` stays green because no `ts-` job text changes. `tests/fixtures/license/*.json` are data, never `*.test.ts`, so discovery does not treat them as suites.
 
@@ -1293,7 +1331,7 @@ git status --porcelain
 | RSK-T3 | The floor is satisfied by the registry fixture rather than by code, so deleting a family passes | H | L | TC-LICREG-002 step 5 and TC-LICREG-013 step 1 assert code↔fixture equality; removals are rejected regardless of registry content |
 | RSK-T4 | Prefix or substring matching sneaks in and both denies variants and admits near-matches | H | L | TC-LICREG-014 traps `SSPL-1.0.1`, `BSD-3-Clause-Clear`, `MIT-0`, and a `SSPL` label |
 | RSK-T5 | `origin/main-tools` is unavailable locally, so preservation and CI-diff assertions are misread as failures | M | M | §6.1 states the precondition; the tests fail with a message naming the missing ref and never skip (GAP-2) |
-| RSK-T6 | Spawned temp-tree cases are slow or flaky under parallel `bun test` | M | L | Ten spawned cases in total (one live green plus the nine failure cases), each copying ~60 KB; the exhaustive 20/20 denial and floor-removal matrices and the 18 malformed-entry variants stay in-process |
+| RSK-T6 | Spawned temp-tree cases are slow or flaky under parallel `bun test` | M | L | Ten spawned cases in total (one live green plus the nine failure cases), each copying ~60 KB; the exhaustive 20/20 denial matrix, the 25 removal cases, the 18 malformed-entry variants, and the 5 schema plus 5 scope mutations stay in-process |
 | RSK-T7 | The keyword-group assertions for AC-F1-4 become brittle word-matching theatre | M | M | Groups are semantic, not sentence-exact; a claim cannot be satisfied by entry data; wording quality is explicitly deferred to manual review (GAP-1) |
 | RSK-T8 | A missing `node_modules` makes narrow runs fail for the wrong reason (`Cannot find package 'yaml'`) | M | M | §6.1 records the install prerequisite and the observed auto-install asymmetry between `bun run` and `bun test` |
 | RSK-T9 | The `NONE` and `NONE`-adjacent cases over-specify a class the spec does not name | L | L | TC-LICREG-016 step 3 requires only failure, accepting either the non-asserted or the not-allow-listed class |
@@ -1303,7 +1341,7 @@ git status --porcelain
 ### 8.2 Assumptions
 
 - **A-T1** — Behaviour is bound by TCs, not by exact symbol or file names. Daggers mark assumed paths and names (`license-policy.test.ts`, `license-audit-exit.test.ts`, `license-ci-binding.test.ts`, `license-fixture.ts`, the exported floor set, and the deny-list policy validator). Delivery planning may bind different names without changing an assertion. Spec-fixed and non-negotiable: `schema_version: 3`, the field name `deny_list`, the Appendix A identifiers, the `FAIL license-audit: ` / `OK license-audit: ` stream contract, and the `ts-license-audit` job id and command.
-- **A-T2** — The deny-entry identifier grammar is spec-fixed by DM-2 and Appendix A (spec v1.1): `^[A-Za-z0-9.+-]+$` applied to a single token. Parentheses, `AND`/`OR`/`WITH` operators, and whitespace (including padding) are malformed.
+- **A-T2** — The deny-entry identifier grammar is spec-fixed by DM-2 and Appendix A (spec v1.2): `^[A-Za-z0-9.+-]+$` applied to a single token. Parentheses, `AND`/`OR`/`WITH` operators, and whitespace (including padding) are malformed.
 - **A-T3** — The live deny list contains at least the 20 Appendix A identifiers; additional identifiers are permitted and are not asserted absent.
 - **A-T4** — The mutable probe entry for license mutations is `typescript` (present in the real closure, live license `Apache-2.0`, allow-listed). If delivery needs a different probe, the assertions are unchanged; only the package name in the messages changes.
 - **A-T5** — `validate(ROOT, registry)` accepts an injected registry for in-memory mutation, and `auditRegistry(registry, dependencies)` remains independently callable — both already true today.
@@ -1316,8 +1354,8 @@ git status --porcelain
 
 | ID | Question | Context | Status | Owner |
 |----|----------|---------|--------|-------|
-| OQ-T1 | Must the registry's `c2_determination` literally record "approved" after the owner confirms at PR review, or is the preserved "proposed at delivery; confirmed by the owner at PR review" wording sufficient? | AC-F1-1 as originally written said "the approved C-2 determination" while CON-6 and §19 require the existing determination preserved and §12 defers confirmation to PR review. TC-LICREG-003 asserts preservation; TC-LICREG-030 records the human confirmation. | **Resolved (spec v1.1)** — AC-F1-1 now requires the determination "as preserved (proposed at delivery, confirmed by the owner at PR review)", so no registry wording change is required and approval is recorded on the PR. | @pm / @spec-writer |
-| OQ-T2 | Is the deny-entry identifier grammar the existing `^[A-Za-z0-9.+-]+$` token pattern, and should that be stated in the spec or system spec? | DM-2 originally said only "single denied license identifiers" and Appendix A referred to "the registry's identifier syntax", so the grammar was not written down. | **Resolved (spec v1.1)** — DM-2 and Appendix A now require each entry to match `^[A-Za-z0-9.+-]+$` with no whitespace, operator, parenthesis, or compound expression; bound as A-T2 and asserted by TC-LICREG-002 and TC-LICREG-012. The phase-7 system-spec reconciliation restates the grammar. | @pm / @spec-writer / @doc-syncer |
+| OQ-T1 | Must the registry's `c2_determination` literally record "approved" after the owner confirms at PR review, or is the preserved "proposed at delivery; confirmed by the owner at PR review" wording sufficient? | AC-F1-1 as originally written said "the approved C-2 determination" while CON-6 and §19 require the existing determination preserved and §12 defers confirmation to PR review. TC-LICREG-003 asserts preservation; TC-LICREG-030 records the human confirmation. | **Resolved (spec v1.2)** — AC-F1-1 now requires the determination "as preserved (proposed at delivery, confirmed by the owner at PR review)", so no registry wording change is required and approval is recorded on the PR. | @pm / @spec-writer |
+| OQ-T2 | Is the deny-entry identifier grammar the existing `^[A-Za-z0-9.+-]+$` token pattern, and should that be stated in the spec or system spec? | DM-2 originally said only "single denied license identifiers" and Appendix A referred to "the registry's identifier syntax", so the grammar was not written down. | **Resolved (spec v1.2)** — DM-2 and Appendix A now require each entry to match `^[A-Za-z0-9.+-]+$` with no whitespace, operator, parenthesis, or compound expression; bound as A-T2 and asserted by TC-LICREG-002 and TC-LICREG-012. The phase-7 system-spec reconciliation restates the grammar. | @pm / @spec-writer / @doc-syncer |
 | OQ-T3 | Should `NONE` be treated as a non-asserted value (specifically), or is fail-closed through the allow list sufficient? | The spec names `NOASSERTION` and `SEE LICENSE` explicitly; `NONE` is a recognised SPDX non-license value and is implicitly covered by F-4's "never treats a missing or non-asserted license as an implicit pass". | **Non-blocking** — TC-LICREG-016 step 3 requires failure and accepts either class, so the case closes the gap without inventing a requirement. | Delivery planning |
 | OQ-T4 | Should the new suites live in the existing `tests/checks/license-audit.test.ts` or in focused sibling files? | The matrix is large enough that one file would exceed a reviewable size, but splitting risks hiding cases from a single-place review. | **Non-blocking** — this plan proposes four focused files plus a helper (†), with TC-LICREG-024 keeping completeness machine-checked regardless of layout. | Delivery planning |
 
@@ -1328,7 +1366,7 @@ git status --porcelain
 | 1.0 | 2026-10-31 | @test-plan-writer | Initial plan: 30 TCs across registry policy (LICREG-001..005), deny enforcement (006..010, 014), deny-list integrity (011..013), fail-closed unknowns (015..017), preserved compound (018..019), CI binding and process contract (020..022), live green (023), matrix completeness (024), and non-functional plus regression (025..029), with one manual review (030). All 15 spec ACs mapped and covered, all six ticket ACs traced, DM-1..DM-5 and NFR-1..NFR-6 traced; failure-class vocabulary fixed (§4.2); mutation harness and exit-code proof fixed (§4.4); seven anti-vacuity controls recorded (§4.5); GAP-1..GAP-7 and OQ-T1..OQ-T4 recorded rather than reinterpreted |
 | 1.1 | 2026-10-31 | @test-plan-writer | Documentation corrections only; no TC added, removed, or renumbered, and no requirement changed. (1) Reconciled the malformed-entry case count: the §7 automation row said 15 while TC-LICREG-012 and TC-LICREG-024 enumerate 18 (5 non-string, 3 empty, 3 whitespace-affixed, 1 duplicate, 3 compound, 3 operator-only); all three now state 18. (2) Corrected the spawned-case claim in §4.4 (and the matching §4.6 threshold row and RSK-T2 mitigation): TC-LICREG-022 spawns one live green case plus exactly nine failure cases — denied single, denied branch, denied nested compound, deny-list absent, old schema, floor removal, allow/deny overlap, non-asserted license, unregistered dependency — while unknown reference, empty license, non-allow-listed, and allow/verdict drift stay in-process (TC-LICREG-016, TC-LICREG-017, TC-LICREG-023); no spawn case added. (3) Removed the stale note that the deny-identifier grammar is absent from the spec: §4.1, A-T2, and OQ-T2 now cite spec v1.1 DM-2 and Appendix A (`^[A-Za-z0-9.+-]+$`, no whitespace, operator, parenthesis, or compound expression). OQ-T1 and GAP-6 were realigned to spec v1.1's corrected AC-F1-1 C-2 wording, which is the same spec revision now cited |
 | 1.2 | 2026-10-31 | @test-plan-writer | Factual correction only; no TC added, removed, or renumbered, no assertion changed. The live registry `doc/legal/dependency-licenses.yaml` carries 16 `package:` entries (verified by counting the committed file), not 15. Corrected both stale statements: the §2 "Registry artifact" bullet (15 → 16 entries) and the §6.2 "Live closure" row, which now reads 16 package entries across 20 registered uses so the closure's use-row count is not conflated with the entry count. The four-entry allow list and every other count (20 Appendix A identifiers, 18 malformed-entry cases, 10 spawned cases, 20 floor-removal cases) are unchanged; no other `15 entries` occurrence exists in the file |
-
+| 1.3 | 2026-10-31 | @test-plan-writer | DoR iteration 1 remediation (`readiness-review/readiness-iter-1.md`, findings 2, 4, 5, 6, 8, and the SBOM milestone note). (A) Pre-existing test count corrected from 12 to 13 in §2 and TC-LICREG-029 step 1: the live suite has 13 `test(...)` cases, all 13 titles must remain and pass, and the base-branch title check stays the authority. (B) TC-LICREG-013 step 5 now expects only the mandatory-floor failure — with the identifier removed from `deny_list`, neither overlap nor denial is reachable — and asserts that no overlap-class or denial-class message appears, so the floor itself is proven load-bearing; step 7 and the expected outcome reconcile the count at 25 (20 single removals + 5 adversarial removals), matched by TC-LICREG-024, §4.4, §4.6, and RSK-T6. (C) TC-LICREG-026 aligned to 13 class representatives in §7 (was 7), with the precondition and step 1 enumerating all thirteen and asserting the executed count. (D) Count drift reconciled: TC-LICREG-004 declares 5 schema mutations (the duplicate "key removed while deny_list present" variant dropped) to match TC-LICREG-024; TC-LICREG-016 states 12 listed values plus `NONE` = 13; GAP-2 now says four TCs depend on `origin/main-tools` (adding TC-LICREG-029), matching §6.1. (E) New TC-LICREG-031 (wrong-`scope` schema-v3 registry fails closed and reports the observed scope) added with index row, detail, §7 row, and AC-F1-3/DM-1/CON-10 traceability; §4.1 items 1 and 7 and the §4.2 class row now cover the preserved scope check, and the totals move from 30 to 31 TCs with counts 5 schema + 5 scope mutations. (F) SBOM/checksum/notice deferral corrected to the milestone split (release-time artifacts → M4-S2; registry completeness and public materials → M4-S3) with GH-187 superseding GH-170 DEC-10's M0-S18 assignment; spec and TDR-0007 citations updated to spec v1.2 and the TDR-0007 Proposed record, including TC-LICREG-019 and TC-LICREG-030. |
 ## 10. Test Execution Log
 
 | TC ID | Run Date | Result | Notes |
