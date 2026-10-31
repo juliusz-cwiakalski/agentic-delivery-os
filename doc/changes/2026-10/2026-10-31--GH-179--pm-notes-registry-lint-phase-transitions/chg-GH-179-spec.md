@@ -36,8 +36,8 @@ idempotent: repeating an already-applied transition is a no-op success with
 evidence, never an error and never a duplicate mutation. The pm-notes schema
 declares the change variant — full eleven-phase or a LITE compressed set
 pinned by this spec — and lint validates the declared variant's required
-phases while tolerating free-form extras, so the real corpus is accepted
-even as malformed documents are rejected.
+phases while treating extra phase keys as opaque, never-inspected values,
+so the real corpus is accepted even as malformed documents are rejected.
 
 The delivery registry becomes the first consumer of the GH-174 state layer:
 registry records are schema-versioned ledger records written through the
@@ -101,7 +101,7 @@ owner reviewing LITE-mode adoption at PR review.
   lint (M2-S8) — the record-kind set here is minimal and additive.
 - **NG-4**: A closed key set for pm-notes — free-form extra keys on phase
   entries (commits, verdict, url, evidence, extra phase keys) are legitimate
-  and lint-tolerated.
+  and opaque to lint: free-form values of any type, never schema-validated.
 - **NG-5**: Decision-record/frontmatter/deploy-checklist lint (M3-S4) and any
   lint policy beyond schema/format conformance.
 
@@ -109,10 +109,10 @@ owner reviewing LITE-mode adoption at PR review.
 
 - **AC-L1 — Malformed notes are rejected at write.**
   Given an injected malformed pm-notes fixture (unparseable document,
-  missing required key, or wrong-typed value), when any mutating `ados
-  phase` invocation targets that change, then it fails with the pinned lint
-  error identity and non-zero exit (machine-readable under `--json`), and
-  no mutation lands.
+  missing required key, or wrong-typed schema-declared value), when any
+  mutating `ados phase` invocation targets that change, then it fails with
+  the pinned lint error identity and non-zero exit (machine-readable under
+  `--json`), and no mutation lands.
   *DoD predicate*: every malformed-notes fixture class → classified error +
   exit 1 + zero new ledger records.
 
@@ -126,8 +126,9 @@ owner reviewing LITE-mode adoption at PR review.
 
 - **AC-L3 — A reopen without a reason is rejected.**
   Given `phase reopen <ref> <phase>` with a missing or empty reason, when it
-  runs, then it is rejected as an input-validation failure before any state
-  inspection or mutation, with a classified error and non-zero exit.
+  runs, then it is rejected with the classified `input.value.rejected`
+  identity (the existing input-domain row) before any state inspection or
+  mutation, with a non-zero exit.
   *DoD predicate*: reason-less reopen → classified rejection + exit ≠ 0 +
   ledger unchanged; the same invocation with a non-empty reason succeeds.
 
@@ -154,7 +155,7 @@ owner reviewing LITE-mode adoption at PR review.
   convention today, when lint runs over each with the effective-variant
   default, then each passes (parseable, required keys present and typed,
   required phases of the effective variant present, free-form extras
-  tolerated).
+  opaque — never schema-validated).
   *DoD predicate*: lint over the full committed pm-notes corpus → zero
   failures; "reject malformed" and "accept real files" both demonstrated.
 
@@ -167,14 +168,22 @@ GH-174 pm-notes): top-level `change_id` (string), `title` (string),
 `milestone` (string), `story_code` (string), `delivery_mode` (string),
 `variant` (optional enum, see C-2), `phases` (map of phase id → entry),
 and the collections `decisions[]`, `open_questions[]`, `blockers[]`,
-`notes[]`. A phase entry requires `started` and `completed`, each a
-timestamp string or `null`; any additional keys on a phase entry are
-free-form extras and lint-tolerated. Collection entries are objects with
+`notes[]`. The phase-entry rule — `started` and `completed` required, each
+a timestamp string or `null` — applies ONLY to the canonical 11 phase ids
+and, for a declared `lite` variant, to the variant's required set (a
+subset of the canonical 11, see C-2). Keys outside that applicable set —
+non-canonical phase ids in the `phases` map and any extra keys on a phase
+entry — are opaque: free-form values of any type, never schema-validated,
+never lint-inspected; this is what keeps the committed corpus (entries
+carrying extra keys with sequence or plain-string values) passing under
+AC-L6. Collection entries are objects with
 `text` (string, required) and `type`/`date` (string, typed when present).
-Lint asserts parseability, required-key presence, and types — never a
-closed key set. Required top-level keys: `change_id`, `title`,
-`delivery_mode`, `phases`; all other top-level keys are optional and
-typed-when-present.
+Lint asserts parseability, required-key presence, and value types of
+schema-declared keys only — never a closed key set. Required top-level
+keys: `change_id`, `title`, `delivery_mode`, `phases`; all other top-level
+keys are optional and typed-when-present. The parser dialect is pinned:
+YAML 1.2 core schema (the repository's yaml 2.x default) — unquoted date
+scalars are strings, and `date` fields accept those strings as-is.
 
 ### C-2 — Variant declaration and the pinned LITE phase set (D1)
 
@@ -184,7 +193,9 @@ values `full | lite`; when absent, the effective variant defaults to
 used the full lifecycle). LITE must be declared explicitly — omission
 never yields LITE. Lint validates the effective variant's required phase
 keys are present in the `phases` map (value may still have null
-timestamps); extra phase keys beyond the required set are always allowed.
+timestamps); phase-map keys beyond the effective required set —
+non-canonical phase ids included — are always allowed and opaque:
+free-form values of any type, never schema-validated (C-1).
 
 **Pinned LITE required phase set** (reversible schema constant; owner may
 amend at PR review):
@@ -204,13 +215,21 @@ variant remains the canonical 11 phases of the change-lifecycle guide.
 ### C-3 — Lint checks (`ados lint`)
 
 `ados lint` validates named targets: a change ref's pm-notes, the delivery
-registry, or both. Check families: (1) parseability — an unparseable
-document is a classified failure, never a crash; (2) required-key presence
-and (3) types per C-1; (4) variant/required-phase conformance per C-2. The
-same checking is invoked by the write path (`ados phase`) before any
-mutation lands; a lint failure blocks the mutation. Lint is read-only — it
-never mutates its targets. `--json` machine output rides the CommandResult
-envelope, always.
+registry, or both. Check families, each rejection class mapping to exactly
+one pinned code (C-6): (1) syntax, structure, and value-type conformance
+per C-1 — an unparseable document and wrong-typed values are
+`lint.notes.malformed` classified failures, never a crash; (2)
+required-key presence per C-1 — `lint.keys.missing`; (3)
+variant/required-phase conformance per C-2 — `lint.variant.unknown` and
+`lint.phases.incomplete`; (4) pm-notes target resolution —
+`lint.target.missing`. Target semantics: a missing pm-notes target for a
+named change ref fails with `lint.target.missing`; an absent
+delivery-registry target is NOT a failure — lint over it yields an
+explicit verified-empty PASS (the state layer's verified-empty semantics);
+`lint.target.missing` is pm-notes-specific. The same checking is invoked
+by the write path (`ados phase`) before any mutation lands; a lint failure
+blocks the mutation. Lint is read-only — it never mutates its targets.
+`--json` machine output rides the CommandResult envelope, always.
 
 ### C-4 — `ados phase` semantics and the idempotency matrix
 
@@ -218,21 +237,25 @@ envelope, always.
 `phase reopen <ref> <phase> <reason>` (mutate, reason required) are the
 ONLY write path for phase state. Phase arguments validate against the
 canonical 11-phase vocabulary; an unknown phase id is a classified
-input-validation rejection (extra phase keys in existing documents remain
-lint-tolerated but are not phase-command addressable — see OQ-1). The
-reason is validated as part of the command grammar, before state
-inspection. Idempotency matrix (phase P, change ref R):
+`input.value.rejected` rejection (extra phase keys in existing documents
+remain opaque to lint but are not phase-command addressable — see OQ-1).
+Completing a canonical phase absent from the document creates a valid
+entry (`started`, `completed`) and lands the transition; reopening an
+absent (never completed) phase is a no-op that creates no entry (rows 1,
+5, 9). The reason is validated as part of the command grammar, before
+state inspection. Idempotency matrix (phase P, change ref R):
 
 | # | Prior state of P | Command | Outcome |
 |---|------------------|---------|---------|
-| 1 | open (never completed, or reopened) | `complete R P` | Transition lands; ledger record appended; success. |
+| 1 | open (never completed) | `complete R P` | Transition lands; ledger record appended; success. |
 | 2 | completed | `complete R P` | No-op success (exit 0): no ledger record, evidence marks no-op citing the existing completion. |
 | 3 | reopened after completion | `complete R P` | Re-completion lands as a new transition record; success. |
 | 4 | completed | `reopen R P <reason>` | Transition lands; reopened with the recorded reason; success. |
-| 5 | open (not completed) | `reopen R P <reason>` | No-op success: no ledger record; evidence reports P was not completed; supplied reason echoed in evidence only. |
+| 5 | open (not completed), including absent from the document | `reopen R P <reason>` | No-op success: no ledger record, no entry created; evidence reports P was not completed; supplied reason echoed in evidence only. |
 | 6 | any | `complete R P` while earlier phases of the effective variant are incomplete | Allowed; success with advisory evidence naming the earlier phases still open (out-of-order completion is legitimate after reopens and for non-linear flows). |
-| 7 | any | `reopen R P` with missing/empty reason | Rejected before state inspection (AC-L3). |
-| 8 | any | phase id outside the canonical vocabulary | Rejected as input validation; no state inspection, no mutation. |
+| 7 | any | `reopen R P` with missing/empty reason | Rejected with the classified `input.value.rejected` identity before state inspection (AC-L3). |
+| 8 | any | phase id outside the canonical vocabulary | Rejected with the classified `input.value.rejected` identity; no state inspection, no mutation. |
+| 9 | absent from the document (canonical P) | `complete R P` | A valid entry (`started`, `completed`) is created and the transition lands; success — advisory evidence when P is outside the declared variant's required set. |
 
 ### C-5 — Delivery registry records (D3: the state-layer store)
 
@@ -264,16 +287,28 @@ first delivery phase. Existing rows are untouched.
 
 | Code | Kind | Category | Retryable | Consequence | Remediation hint | Projection class |
 |------|------|----------|-----------|-------------|------------------|------------------|
-| `lint.notes.malformed` | `lint` | user | false | not_landed | Correct the syntax at the named document location and retry. | user-validation |
+| `lint.notes.malformed` | `lint` | user | false | not_landed | Correct the document so it conforms to the pm-notes schema (syntax, structure, and value types) and retry. | user-validation |
 | `lint.keys.missing` | `lint` | user | false | not_landed | Add the named required key(s) with a conforming value and retry. | user-validation |
 | `lint.variant.unknown` | `lint` | user | false | not_landed | Set `variant` to `full` or `lite` and retry. | user-validation |
 | `lint.phases.incomplete` | `lint` | user | false | not_landed | Add the named missing required phase(s) of the declared variant or correct the declared variant. | user-validation |
-| `lint.target.missing` | `lint` | user | false | not_landed | Initialize pm-notes for the named change ref or correct the reference. | user-validation |
+| `lint.target.missing` | `lint` | user | false | not_landed | pm-notes target only: initialize pm-notes for the named change ref or correct the reference (an absent registry target is a verified-empty pass, C-3). | user-validation |
+
+Every rejection class maps to exactly one pinned code: unparseable
+document → `lint.notes.malformed`; wrong-typed top-level value →
+`lint.notes.malformed`; non-timestamp typed value →
+`lint.notes.malformed` (the code covers syntax, structure, and value-type
+conformance); missing required key, top-level or on a canonical phase
+entry → `lint.keys.missing`; unknown `variant` value →
+`lint.variant.unknown`; missing required phase of the declared variant →
+`lint.phases.incomplete`; missing pm-notes target → `lint.target.missing`.
+No rejection class maps to more than one code; the row count stays at five
+(NFR-5 unchanged at 5/5).
 
 Failure identities deliberately NOT new rows: reason-less reopen and
-unknown phase id ride the existing `input` domain (AC-L3; C-4 rows 7–8);
-registry storage failures ride the existing `state.*` rows (GH-174).
-Unclassified lint failures contain through `fallback.internal`.
+unknown phase id ride the existing `input` domain row
+`input.value.rejected` (AC-L3; C-4 rows 7–8); registry storage failures
+ride the existing `state.*` rows (GH-174). Unclassified lint failures
+contain through `fallback.internal`.
 
 ## Non-Functional Requirements
 
@@ -309,16 +344,16 @@ High-level design, respecting the scaffold tier rules (contracts = types and as-
 | `packages/cli/src/commands/index.ts` | Extends | Exposes both new command definitions for edge composition. |
 | `packages/cli/src/commands/config.ts` | Precedent, unchanged | The command-registration pattern both new commands follow. |
 | `packages/cli/src/edge.ts` | Extends | Composes the two new command definitions into the CLI edge. |
-| `packages/cli/src/classify.ts`, `packages/cli/src/projection.ts` | Extends | New `lint`/`input` identities ride the existing classification → `{0, 1, 2}` exit chain. |
+| `packages/cli/src/classify.ts`, `packages/cli/src/projection.ts` | Extends | The new `lint` identities ride the existing classification → `{0, 1, 2}` exit chain; grammar rejections reuse the existing `input.value.rejected` row. |
 | `packages/cli/src/output/` (`index.ts`, `serialize.ts`) | Consumed, unchanged | `--json` serialization through the single serializer. |
 
 ## QA Strategy
 
 | Approach | What it covers | Notable fixtures / controls |
 |----------|----------------|------------------------------|
-| Behaviour suites (in-process; no spawned processes) | Command semantics through the command definitions: every idempotency-matrix cell of C-4 (rows 1–8), each asserting exit code, ledger-record count delta, and evidence class; reason-less reopen (AC-L3); unknown phase id (row 8); write-path lint blocking a mutation (AC-L1) | No-op cells (rows 2, 5) assert zero appended records and no-op evidence; row 3 asserts a new transition record lands |
+| Behaviour suites (in-process; no spawned processes) | Command semantics through the command definitions: every idempotency-matrix cell of C-4 (rows 1–9), each asserting exit code, ledger-record count delta, and evidence class; reason-less reopen and unknown phase id each rejecting with `input.value.rejected` (AC-L3, row 8); write-path lint blocking a mutation (AC-L1) | No-op cells (rows 2, 5) assert zero appended records, no entry creation, and no-op evidence; row 3 asserts a new transition record lands; row 9 asserts entry creation for an absent canonical phase, with advisory evidence when outside the declared variant's required set |
 | Golden fixtures — corpus acceptance | The real corpus: every pm-notes document committed under the change-artifact convention lints clean with the effective-variant default (AC-L6) | Corpus pinned as a permanent CI fixture; schema-module changes re-assert it (NFR-4) |
-| Golden fixtures — rejection classes | Malformed-notes classes: unparseable document; each missing required top-level key; wrong-typed top-level value; phase entry missing `started`/`completed`; non-timestamp typed value; missing target for a change ref; unknown `variant` value — each mapping to its pinned `lint.*` identity with exit 1 and zero ledger records (AC-L1); LITE-missing-phase: for each pinned LITE phase, a fixture omitting exactly that phase, failing `lint.phases.incomplete` naming it, and passing once restored (AC-L4) | Negative controls are non-vacuous: detection asserted, never silent passes |
+| Golden fixtures — rejection classes | Malformed-notes classes, each mapping to exactly one pinned identity with exit 1 and zero ledger records (AC-L1): unparseable document → `lint.notes.malformed`; missing required top-level key → `lint.keys.missing`; wrong-typed top-level value → `lint.notes.malformed`; canonical phase entry missing `started`/`completed` → `lint.keys.missing`; non-timestamp typed value → `lint.notes.malformed`; missing pm-notes target for a change ref → `lint.target.missing`; unknown `variant` value → `lint.variant.unknown`; LITE-missing-phase: for each pinned LITE phase, a fixture omitting exactly that phase, failing `lint.phases.incomplete` naming it, and passing once restored (AC-L4) | Negative controls are non-vacuous: detection asserted, never silent passes; opaque-extra positive controls: extra phase keys carrying arbitrary value types (sequences, plain strings) pass (AC-L6) |
 | Structure & boundary suites | Tier rules per the architecture table (contracts data-only; domain pure; state imports `./contracts` only; runtime APIs only in the existing driver edge); zero product literals; envelope and `--json` validity for every invocation (NFR-1, NFR-2) | Existing boundary/ambient gates extended to the new paths |
 | Contract sync checks | Error-table round-trip of the five lint codes; two-directional documented-table drift; multi-row-kind ambiguity for `lint`; `fallback.internal` containment (NFR-5) | GH-174 sync-check machinery reused unchanged |
 
@@ -334,7 +369,18 @@ High-level design, respecting the scaffold tier rules (contracts = types and as-
 
 ## Open Questions
 
-- **OQ-1 (resolved by scope boundary; non-blocking):** Lint-tolerated extra phase keys observed in the real corpus (for example `ci_remediation`) are not addressable through the `ados phase` command vocabulary, which validates against the canonical 11 phases — such documents pass lint (AC-L6) while the command rejects those phase ids as input validation (C-4 row 8). Resolution: this is the intended scope boundary, not a defect — the phases map is a lint-validated declaration surface with free-form extras, and the command vocabulary is the canonical phase set. No decision needed; revisit only if a future story promotes a recurring extra phase into the canonical vocabulary (a schema-constant amendment, reviewed by the owner).
+- **OQ-1 (resolved by scope boundary; non-blocking):** Opaque extra phase
+  keys observed in the real corpus (for example `ci_remediation`) are not
+  addressable through the `ados phase` command vocabulary, which validates
+  against the canonical 11 phases — such documents pass lint (AC-L6) while
+  the command rejects those phase ids with the classified
+  `input.value.rejected` identity (C-4 row 8). Resolution: this is the
+  intended scope boundary, not a defect — the phases map is a
+  schema-validated declaration surface for canonical phase ids with opaque
+  free-form extras, and the command vocabulary is the canonical phase set.
+  No decision needed; revisit only if a future story promotes a recurring
+  extra phase into the canonical vocabulary (a schema-constant amendment,
+  reviewed by the owner).
 
 ## Related
 
@@ -345,3 +391,17 @@ High-level design, respecting the scaffold tier rules (contracts = types and as-
 - Result contract: `doc/spec/features/feature-result-contract.md` (envelope, error table, classification chain, binding documented-table sync).
 - Scaffold and toolchain: `doc/spec/features/feature-monorepo-scaffold-toolchain.md`; [ADR-0003 — OSS Tooling Monorepo Structure](../../decisions/ADR-0003-oss-monorepo-structure.md) (tier rules, runtime-API confinement).
 - Change lifecycle: `doc/guides/change-lifecycle.md` (the canonical 11 phases behind the `full` variant).
+
+## Revision Log
+
+- **v1.1 (2026-10-31)** — Reopened after test-planning findings; amendments
+  R1–R3e applied: `lint.notes.malformed` broadened to syntax, structure,
+  and value-type conformance with every rejection class pinned to exactly
+  one code (R1); extra phase keys opaque and never inspected, scoped to
+  canonical/required phase entries (R2); `input.value.rejected` pinned for
+  reason-less reopen and unknown phase id (R3a); absent registry target
+  lints as an explicit verified-empty PASS, `lint.target.missing`
+  pm-notes-specific (R3b); `phase complete` on an absent canonical phase
+  creates a valid entry, reopen-on-absent stays a no-op (R3c); matrix row 1
+  prior state narrowed to never-completed (R3d); YAML 1.2 core parser
+  dialect pinned, date scalars are strings (R3e).
