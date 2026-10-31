@@ -2,7 +2,7 @@
 id: chg-GH-180-test-plan
 status: Updated
 created: 2026-10-31T19:45:00Z
-last_updated: 2026-10-31T20:40:00Z
+last_updated: 2026-10-31T22:55:00Z
 owners: [engineering]
 service: delivery-os CLI session-database administration
 labels: [change, planning]
@@ -26,7 +26,7 @@ The plan is built around three binding mechanisms: an **injected fake `OpencodeS
 
 - Command grammar: the closed subcommand set, declared flag sets, value and range validation before any I/O, the boolean `--apply` forms, repeated-flag last-wins (the shared parser overwrites; `db` declares no conflict pairs), `--json` as a rendering-only global, and the two-class `input.value.rejected` / `fallback.invocation` split with exit `1` (F-D5, AC-D12).
 - `db size`: runtime path resolution, database/WAL/SHM bytes with explicit presence, session/message/part counts, oldest/newest ISO-8601 UTC timestamps or `null`, zero mutations (F-D1, DM-D1, AC-D1).
-- `db list`: bounded page, `updatedAt` descending then `id` ascending, default 20 / max 100, `total`/`omitted`/`truncated`, the exact nine-field item shape, `live` from the injected clock (F-D2, DM-D2, AC-D2).
+- `db list`: bounded page, `updatedAt` descending then `id` ascending, default 20 / max 100, `total`/`omitted`/`truncated`, the exact nine-field item shape with `dataBytes` as the summed UTF-8 **byte** length over the current `message` and `part` stores, `live` from the injected clock (F-D2, DM-D2, AC-D2).
 - `db prune`: dry-run zero mutation, the cold/live/leaf candidate rule at each boundary (with the selection-SQL predicates pinned textually), oldest-first ordering with `id` tiebreak, the cap, apply through one `deleteSession` per candidate, idempotent re-runs, the pre-delete re-check (gained child, vanished row), the already-absent row at delete, partial failure with the normative bounded summary and retry convergence, the pre-land abort identities (`db.opencode.unavailable`/`db.query.failed`) and the post-land partial-abort truth (`db.delete.failed` with landed/failed counts and first identity) (F-D3, DM-D3, AC-D3..AC-D9).
 - `db reboot`: dry-run plan, the live-session gate on `--apply`, exactly one checkpoint on success, WAL before/after, no process kill, no sidecar deletion, manual-restart guidance (F-D4, DM-D4, AC-D10, AC-D11).
 - Output: one `CommandResult` envelope per run in machine mode, the `delivery.session-admin.v1` payload shape, machine and human caps, `+N more` truncation, byte-identical replays, and the metadata-only whitelist with a canary secret (F-D6, DM-D1..DM-D5, AC-D14).
@@ -102,7 +102,7 @@ The spec declares no `API-#` or `EVT-#` (no HTTP surface, no event or telemetry 
 | DM | Element | TC ID(s) | Observable assertion |
 |----|---------|----------|----------------------|
 | DM-D1 | `SizeData` | TC-DB-006, TC-DB-007, TC-DB-028 | Exact key set, presence flags, bytes, counts, ISO timestamps or `null`, zero mutations |
-| DM-D2 | `ListData` / `SessionSummary` | TC-DB-008, TC-DB-009, TC-DB-010, TC-DB-028 | Exact page keys, exactly the nine item fields, ordering, caps, `live` from the injected clock |
+| DM-D2 | `ListData` / `SessionSummary` | TC-DB-008, TC-DB-009, TC-DB-010, TC-DB-028 | Exact page keys, exactly the nine item fields, ordering, caps, `live` from the injected clock, `dataBytes` as an exact summed UTF-8 byte length over `message`/`part` |
 | DM-D3 | `PruneData` | TC-DB-011, TC-DB-014, TC-DB-017, TC-DB-020 | Mode, threshold, limit, live window, cutoff, the five counts, bounded candidates |
 | DM-D4 | `RebootData` | TC-DB-031, TC-DB-032, TC-DB-033 | Mode, live window/count, blocked flag, checkpoint outcome, WAL before/after, presence |
 | DM-D5 | Vocabulary data | TC-DB-001, TC-DB-028 | `DB_SCHEMA_VERSION` and closed command/mode sets exactly as declared |
@@ -206,7 +206,7 @@ Legend: `x` = the suite asserts the requirement. Suite columns are the spec's §
 
 1. **No real process, file, database, home or network.** Every session-admin suite imports the production modules and injects fakes. No suite spawns `opencode`, `bun`, or any process; no suite opens a SQLite file; no suite reads `$HOME`, `os.homedir()` or an ambient environment where purity is asserted; no suite resolves a host or opens a socket. The only implicit process in the plan is the test runner itself; TC-DB-036 asserts the absence of spawns inside the suites.
 2. **One fake `OpencodeSessionIo`, two observation levels.**
-   - *IO-level* (`tests/behaviour/session-admin-{size-list,prune,reboot,sql-safety,privacy}.test.ts`): the fake implements `databasePath`, `query`, `deleteSession`, `checkpoint`, `now`, `stat` plus injected `command`/`environment` data. It records an ordered call log `{ kind, value }` and answers from a scripted per-call queue or a bound handler per query class. The fake never interprets SQL semantically; it pops the scripted response and the test asserts the recorded `sql` text separately. Because the fake is blind to SQL meaning, adapter SQL correctness is pinned **textually/structurally** over the recorded query text — the prune selection predicates (cold, not-live, `NOT EXISTS` child), `ORDER BY ... time_updated`, and `LIMIT`; the reboot live-count 15-minute comparison (or the injected live boundary value); and that the SQL carries the values returned by `computeDbCutoffMs`/`computeDbLiveBoundaryMs`. The exact SQL wording stays delivery-bound (GAP-T4/A-T1), but these predicates may not be dropped.
+   - *IO-level* (`tests/behaviour/session-admin-{size-list,prune,reboot,sql-safety,privacy}.test.ts`): the fake implements `databasePath`, `query`, `deleteSession`, `checkpoint`, `now`, `stat` plus injected `command`/`environment` data. It records an ordered call log `{ kind, value }` and answers from a scripted per-call queue or a bound handler per query class. The fake never interprets SQL semantically; it pops the scripted response and the test asserts the recorded `sql` text separately. Because the fake is blind to SQL meaning, adapter SQL correctness is pinned **textually/structurally** over the recorded query text — the prune selection predicates (cold, not-live, `NOT EXISTS` child), `ORDER BY ... time_updated`, and `LIMIT`; the reboot live-count 15-minute comparison (or the injected live boundary value); the list page aggregates over the current `message` and `part` stores, with `dataBytes` expressed as a **byte** length (`LENGTH(CAST(<column> AS BLOB))` or `OCTET_LENGTH(<column>)`, never a bare character `LENGTH(<column>)`); and that the SQL carries the values returned by `computeDbCutoffMs`/`computeDbLiveBoundaryMs`. The exact SQL wording stays delivery-bound (GAP-T4/A-T1), but these predicates may not be dropped.
    - *Runtime-level* (`tests/behaviour/session-admin-{grammar,output}.test.ts`): a fake `DbCommandRuntime` with one recording method per subcommand (the `tests/fixtures/status/harness.ts` precedent) returns scripted `Session*Read` results or classified failures. Grammar and output tests assert zero runtime calls for rejections and the exact data for successes.
 3. **Injected time, ids and brand.** `nowMs` is fixed (`NOW_MS = Date.UTC(2026, 9, 31, 12, 0, 0)`); `newRunId` is a fixed sequence; the brand is `SYNTHETIC_BRAND` from `tests/golden/helpers.ts`. No test depends on the wall clock, the developer home or file enumeration order.
 4. **Recorded arguments over inference.** Where the AC concerns what the seam receives (query text, delete id, checkpoint SQL, stat path), the test asserts the recorded argument, not a guessed side effect.
@@ -236,7 +236,7 @@ This table is binding: a TC is complete only when every column is satisfied. `Le
 | TC-DB-005 | AC-D15, NFR-D7 | Contract / ECL | `classifyDomainKind`, `classifyThrown`; existing kinds; first-row control | Kind-only `db`; wrong-kind; unknown/missing/non-string code; exact codes; existing kinds | Kind-only lookup throws and thrown kind-only contains via `fallback.internal`; exact codes resolve; existing kinds unchanged | `fallback.internal` at exit 2 | First-row-selecting control is caught |
 | TC-DB-006 | AC-D1, DM-D1 | Behaviour / SZL | IO fake + synthetic store (12 rows, mixed sidecars) | Run `db size`; assert data keys/values; assert call log | Path from `databasePath`; bytes and presence; counts; oldest/newest ISO; zero delete/checkpoint | Exit 0; one envelope; zero mutations | Paired absent/present sidecar fixture; a fabricating mutant fails |
 | TC-DB-007 | AC-D1, NFR-D10 | Behaviour / SZL | Empty store; absent sidecars; zero-byte sidecar | Run `db size` on empty and on a real zero-byte sidecar | `oldest/newest = null`; `walBytes 0` + `walPresent false`; a real zero-byte file reports `present true` | Exit 0 | Absent versus zero-byte pair; a conflating mutant fails |
-| TC-DB-008 | AC-D2, DM-D2 | Behaviour / SZL | 25 sessions; 100/101-session fixtures; tie row | Run `db list` default and with `--limit`; assert order, page keys, item key set | Default 20; max 100; `updatedAt` desc then `id`; `total/omitted/truncated`; exactly 9 item fields | Exit 0; item keys exactly the whitelist | Shuffled fake response still sorts; an added `title` fails |
+| TC-DB-008 | AC-D2, DM-D2 | Behaviour / SZL | 25 sessions; 100/101-session fixtures; tie row; multi-byte byte-length row; empty row set; archived/unarchived rows | Run `db list` default and with `--limit`; assert order, page keys, item key set, exact `dataBytes`, the field-source mapping and the aggregate SQL | Default 20; max 100; `updatedAt` desc then `id`; `total/omitted/truncated`; exactly 9 item fields; `dataBytes` = summed UTF-8 byte length over `message`+`part` (multi-byte case 11, not 6), `0` when no rows; `archived = time_archived IS NOT NULL`; `createdAt`/`updatedAt` from `time_created`/`time_updated`; page SQL uses `LENGTH(CAST(... AS BLOB))`/`OCTET_LENGTH` over `message`/`part` | Exit 0; item keys exactly the whitelist; bytes and field sources exact | Shuffled fake response still sorts; an added `title` fails; a character-`LENGTH` mutant reports 6 and fails; an `archived`-column selection mutant fails |
 | TC-DB-009 | AC-D2 | Behaviour / SZL | Boundary rows at 15 min, ±1 ms, 16 min; empty store | Run `db list`; assert `live` per row; run on empty store; shift the injected clock | `live` true at exactly 15 min and newer, false at 15 min + 1 ms; empty page `total 0`, `items []`, `truncated false` | Exit 0 | Paired boundary rows; a `<` mutant fails |
 | TC-DB-010 | AC-D14, AC-D16, NFR-D6 | Contract / PRV | Port type surface; fake IO conformance; canary constants | Assert the read port has no mutation member; conform the fake to both ports; assert the seam is adapter-local; run a metadata-only probe | Read port surface is exactly `size`/`list`; `prune`/`reboot` only on the admin port; seam exported from `@delivery-os/adapters/session` only | Type-level and runtime conformance green | A `prune` member added to the read port in a temp copy fails |
 | TC-DB-011 | AC-D3, NFR-D3 | Behaviour / PRU | 5 cold leaves; IO fake | Run `db prune` twice; snapshot the fake store; inspect the recorded selection SQL | `mode dry-run`; `selected 5`, `deleted/failed/skipped 0`; 5 candidates; zero `deleteSession`/`checkpoint`; two runs byte-identical; selection SQL carries the cold predicate, the not-live predicate, `NOT EXISTS` child, `ORDER BY ... time_updated`, and `LIMIT` | Exit 0; zero mutations; all five selection predicates present | A delete-in-dry-run mutant fails; a dropped-predicate selection mutant fails; row bytes unchanged |
@@ -355,6 +355,8 @@ Accepted values are asserted to be the exact values the seam receives (never sil
 | S-04 | Checkpoint SQL | Exactly `PRAGMA wal_checkpoint(TRUNCATE)` |
 | S-05 | Prune selection SQL | Contains the cold predicate, the not-live predicate, the `NOT EXISTS` child (leaf) predicate, `ORDER BY ... time_updated`, and `LIMIT`; its cold/live boundary values equal `computeDbCutoffMs`/`computeDbLiveBoundaryMs` |
 | S-06 | Reboot live-count SQL | Contains the 15-minute live-window comparison (or the injected `computeDbLiveBoundaryMs` value) |
+| S-07 | `list` page aggregate SQL | Derives `dataBytes` with a byte-length expression — `LENGTH(CAST(<data column> AS BLOB))` or `OCTET_LENGTH(<data column>)` — over `message.data` and `part.data`; no bare character `LENGTH(<data column>)`; the statement names `message` and `part` and never `session_message` |
+| S-08 | `list` page projection | Selects `time_created`, `time_updated` and `time_archived`; `createdAt`/`updatedAt` render from the first two and `archived` renders as `time_archived IS NOT NULL`; no `archived` column is selected |
 
 ### 4.8 Prohibited Test Dependencies (explicit)
 
@@ -379,7 +381,7 @@ Accepted values are asserted to be the exact values the seam receives (never sil
 | TC-DB-005 | Kind-only `db` containment and wrong-code classification | Regression | Critical | High | AC-D15, NFR-D7 |
 | TC-DB-006 | Size metadata from a fixture with zero mutations | Happy Path | Critical | High | AC-D1, DM-D1 |
 | TC-DB-007 | Size on an empty store and with absent or zero-byte sidecars | Edge Case | Critical | High | AC-D1, NFR-D10 |
-| TC-DB-008 | List page ordering, caps, totals and exact item shape | Happy Path | Critical | High | AC-D2, DM-D2 |
+| TC-DB-008 | List page ordering, caps, totals, exact item shape, byte-exact `dataBytes` and pinned field sources | Happy Path | Critical | High | AC-D2, DM-D2 |
 | TC-DB-009 | List live classification at the window boundary and the empty page | Edge Case | Critical | High | AC-D2 |
 | TC-DB-010 | Port surfaces, fake conformance and the read-only store surface | Contract | Critical | High | AC-D14, AC-D16, NFR-D6 |
 | TC-DB-011 | Prune dry-run performs zero mutations and repeats identically | Happy Path | Critical | High | AC-D3, NFR-D3 |
@@ -630,7 +632,7 @@ Accepted values are asserted to be the exact values the seam receives (never sil
 
 - An empty store yields explicit `null` timestamps; absence is never confused with a real zero-byte file; the three cases are distinguishable in data and human text.
 
-#### TC-DB-008 - List page ordering, caps, totals and exact item shape
+#### TC-DB-008 - List page ordering, caps, totals, exact item shape, byte-exact `dataBytes` and pinned field sources
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
@@ -645,6 +647,9 @@ Accepted values are asserted to be the exact values the seam receives (never sil
 
 - A store with 25 sessions whose `updatedAt` values are distinct except one deliberate tie broken by `id`.
 - A 100-session fixture and a request for 101.
+- A byte-length row (`ses_bytes`) scripted as `messageCount 2`, `partCount 1`, `dataBytes 11`: two message payloads of 2 and 3 UTF-8 bytes and one part payload of 6 UTF-8 bytes, whose character length is 6 — so a character count would under-report.
+- A session with no `message` or `part` rows at all.
+- One session with `time_archived` set and one with it null; every session has distinct `time_created`/`time_updated` values.
 - The IO fake returns the page rows in scrambled order to prove the adapter sorts.
 
 **Steps**:
@@ -654,15 +659,22 @@ Accepted values are asserted to be the exact values the seam receives (never sil
 3. Run `db list --limit 100` on the 100-session fixture; assert exactly 100 items.
 4. Assert the order is `updatedAt` descending then `id` ascending, including the tie.
 5. Assert every item's key set is exactly `{id, parentId?, createdAt, updatedAt, messageCount, partCount, dataBytes, archived, live}` and that `parentId` is absent (not `undefined`, not `null`) for a root session.
-6. Assert the page SQL carries a `LIMIT` and that exactly two queries are issued (total count + one page).
+6. Assert `ses_bytes` reports `messageCount 2`, `partCount 1` and `dataBytes 11` exactly; assert that a character count of the same rows would be `6`, so the byte semantics are observable.
+7. Assert the session with no `message` or `part` rows reports `dataBytes 0` (never `null`, absent or `undefined`).
+8. Assert the recorded page SQL derives `dataBytes` with a byte-length expression (`LENGTH(CAST(... AS BLOB))` or `OCTET_LENGTH(...)`) over `message` and `part`, contains no bare character `LENGTH(<data column>)`, and names `message` and `part` and never `session_message` (S-07).
+9. Assert the session whose `time_archived` is non-null reports `archived true` and the session whose `time_archived` is null reports `archived false`; assert `createdAt`/`updatedAt` equal the ISO-8601 renderings of the fixture's `time_created`/`time_updated`, and that the page SQL selects `time_created`, `time_updated` and `time_archived` (there is no `archived` column).
+10. Assert the page SQL carries a `LIMIT` and that exactly two queries are issued (total count + one page).
 
 **Expected Outcome**:
 
 - The page is bounded and deterministic, totals/omitted/truncated are exact, the tie is broken by `id`, and the item shape is closed.
+- `dataBytes` is the exact summed UTF-8 **byte** length over the current `message` and `part` stores, `0` when the session has no messages or parts; a character-length implementation under-reports and fails step 6.
+- `createdAt`/`updatedAt` come from `session.time_created`/`time_updated` and `archived` is `session.time_archived IS NOT NULL`; no `archived` column is selected.
 
 **Notes / Clarifications**:
 
-- `dataBytes` is asserted as an advisory length derived from the fixture counts, never as content. A mutant adding `title` to the item must fail step 5.
+- `dataBytes` is the summed stored payload **byte** length — `COALESCE(SUM(LENGTH(CAST(message.data AS BLOB))),0) + COALESCE(SUM(LENGTH(CAST(part.data AS BLOB))),0)`, equivalently with `OCTET_LENGTH` — over the current `message` and `part` stores; the legacy `session_message` store is never summed. It is asserted as an exact length, never as content.
+- The multi-byte fixture makes the byte/character distinction non-vacuous: a `LENGTH(text)` implementation returns `6` where the byte oracle requires `11`. A mutant adding `title` to the item must fail step 5.
 
 #### TC-DB-009 - List live classification at the window boundary and the empty page
 
@@ -862,19 +874,23 @@ Accepted values are asserted to be the exact values the seam receives (never sil
 **Preconditions**:
 
 - Three cold leaves; the IO fake records `deleteSession(id)` and every `query(sql)`.
-- The fake store removes a row only when its `deleteSession` is called.
+- The fake store removes a row, and cascades its dependent `message`/`part`/`session_message` rows, only when its `deleteSession` is called.
 
 **Steps**:
 
 1. Run `db prune --apply`.
 2. Assert exactly three `deleteSession` calls, one per selected id, in selection order, with no repeated id.
 3. Assert no recorded query text contains `DELETE`, `DROP` or `TRUNCATE`, and that `mode` is `applied` with `counts.deleted 3`.
-4. Assert the three rows are gone from the store and nothing else changed.
+4. Assert the three session rows are gone from the store, together with their dependent rows as cascaded by the harness on delete, and that no unrelated session row or file-state observable changed.
 5. Run a temp mutant that issues a bulk SQL delete and never calls `deleteSession`; assert the suite fails.
 
 **Expected Outcome**:
 
 - One official delete per candidate, zero raw SQL deletes, and a truthful applied count.
+
+**Notes / Clarifications**:
+
+- The cascade of the deleted session's `message`, `part` and legacy `session_message` rows happens inside opencode's own `session delete` implementation, never in `prune`: the fake removes the row and its dependent rows only when `deleteSession(id)` is called, and no recorded query carries a `DELETE` (step 3). Legacy `session_message` rows are never counted or summed by `size`/`list` (TC-DB-006, TC-DB-008); only the official delete path removes them.
 
 #### TC-DB-016 - No database, WAL or SHM file is touched
 
@@ -1580,7 +1596,8 @@ All session-admin fixtures live under `tests/fixtures/session-admin/` or are gen
 | Fixture / artefact | Shape | Lifecycle |
 |--------------------|-------|-----------|
 | `tests/fixtures/session-admin/harness.ts` | The fake `OpencodeSessionIo` and fake `DbCommandRuntime`, the ordered call recorder, `runDbCli`, the scripted-response queue, and the mutation hooks (`fakeSetChildren`, `fakeRemoveRow`, `fakeFailDelete`) | Read-only code; per-test instances |
-| `tests/fixtures/session-admin/store.ts` | `makeSession({...})` builder over synthetic ids, `parentId`, `updatedAtMs`, message/part counts, `dataBytes`, `archived`; no content fields | Read-only |
+| `tests/fixtures/session-admin/store.ts` | `makeSession({...})` builder over synthetic ids, `parentId`, `updatedAtMs`, message/part counts, `dataBytes` as an exact UTF-8 byte length, `archived`; no content fields | Read-only |
+| `store.ts` byte-length cases | Session `ses_bytes` scripted as `messageCount 2`, `partCount 1`, `dataBytes 11` — two message payloads of 2 + 3 UTF-8 bytes and one part payload of 6 UTF-8 bytes (character length 6, so the byte/character distinction is observable); a session with no rows reports `dataBytes 0` | Read-only; lengths only, never content |
 | `tests/fixtures/session-admin/boundaries.ts` | Boundary rows B-01..B-16 (§4.4) with their expected outcomes | Read-only |
 | `tests/fixtures/session-admin/malformed.ts` | Malformed query responses: truncated JSON, non-array JSON, non-zero outcome, absent result | Read-only |
 | `tests/fixtures/session-admin/ids.ts` | Id-shape matrix I-01..I-07 (§4.7) | Read-only |
@@ -1591,7 +1608,7 @@ All session-admin fixtures live under `tests/fixtures/session-admin/` or are gen
 | Performance fixtures | 10-row and 6,900-session / 209k-message / 400k-part fact sets (counts only; no payloads) | Generated in memory per test |
 | Baseline mechanism probe | `tmp/tmpdir` absent-parent and repaired-parent roots | `mkdtemp`; removed per test |
 
-**Fixture rules.** Ids are `ses_`/`msg_`-style synthetic strings matching `^[A-Za-z0-9_-]+$`. Paths use `/synthetic/...`. Timestamps are ISO-8601 UTC or epoch milliseconds derived from `NOW_MS`. Counts and byte sizes are small integers or documented maxima. The canary is a fabricated marker, not a credential, and exists only to prove the metadata-only boundary.
+**Fixture rules.** Ids are `ses_`/`msg_`-style synthetic strings matching `^[A-Za-z0-9_-]+$`. Paths use `/synthetic/...`. Timestamps are ISO-8601 UTC or epoch milliseconds derived from `NOW_MS`. Counts and byte sizes are small integers or documented maxima; `dataBytes` fixtures are exact UTF-8 **byte** lengths and include a multi-byte case whose byte length differs from its character length. The canary is a fabricated marker, not a credential, and exists only to prove the metadata-only boundary.
 
 ### 6.3 Determinism Contract
 
@@ -1641,7 +1658,7 @@ All TCs are automated except the PR-body half of TC-DB-038, the mandatory read-o
 | TC-DB-005 | `tests/behaviour/error-classification.test.ts`; `tests/structure/error-table.test.ts` | corresponding `bun test` | kind-only, bad-code, first-row control | Existing – Update |
 | TC-DB-006 | `tests/behaviour/session-admin-size-list.test.ts` | `bun test tests/behaviour/session-admin-size-list.test.ts` | fabricated-path/timestamp mutant | To Implement |
 | TC-DB-007 | same | same | absent vs zero-byte pair; conflating mutant | To Implement |
-| TC-DB-008 | same | same | scrambled response; extra-field mutant | To Implement |
+| TC-DB-008 | same | same | scrambled response; extra-field mutant; character-`LENGTH` aggregate mutant (reports 6, not 11); `archived`-column projection mutant | To Implement |
 | TC-DB-009 | same | same | boundary pair; shifted-clock replay; host-clock mutant | To Implement |
 | TC-DB-010 | `tests/behaviour/session-admin-privacy.test.ts` | `bun test tests/behaviour/session-admin-privacy.test.ts` | mutation member on the read port | To Implement |
 | TC-DB-011 | `tests/behaviour/session-admin-prune.test.ts` | `bun test tests/behaviour/session-admin-prune.test.ts` | delete-in-dry-run mutant; dropped-selection-predicate mutant; byte-identical replay | To Implement |
@@ -1753,7 +1770,7 @@ Notes on the battery:
 - The nine session-admin suites are also exercised in one pass by `bun test` (the CI command); the individual lines above localize a failure.
 - `git status --porcelain` is captured before and after the battery; the suites must not modify the worktree.
 
-**Open-PR Definition of Done evidence checklist.** All 18 ACs have a passing traceable TC; the cold/live/leaf boundary matrix is complete with both sides asserted; the selection and live-count SQL predicates are asserted textually (cold, not-live, `NOT EXISTS`, `ORDER BY`, `LIMIT`, 15-minute live comparison); dry-run mutates nothing and apply deletes only through the official command; the TOCTOU, vanished-row and absent-row cases are counted skips; partial failure and the post-land abort are never success, carry the normative landed/failed summary, and the retry converges; the reboot gate blocks, the success path checkpoints exactly once, clock shifts flip the gate, and no process or sidecar is touched; grammar and its parser carve-out both exit 1 with zero I/O, while repeated flags are last-wins; ids and numeric ranges are safe; the four error rows round-trip and sync both ways; the metadata-only whitelist and canary are proven by mutants; replays are byte-identical; contracts are data-only, the domain is pure, the single I/O location is the admitted subpath, no SQLite driver exists, the allowlist stays at four, and `db` is registered only with a composition; the repaired baseline suite is green; the mandatory read-only real-store smoke is recorded with a no-mutation check; the C-11 sign-off is recorded as an owner merge gate and the PR is left open. This plan claims no merge and no owner approval.
+**Open-PR Definition of Done evidence checklist.** All 18 ACs have a passing traceable TC; the cold/live/leaf boundary matrix is complete with both sides asserted; the selection and live-count SQL predicates are asserted textually (cold, not-live, `NOT EXISTS`, `ORDER BY`, `LIMIT`, 15-minute live comparison); dry-run mutates nothing and apply deletes only through the official command; the TOCTOU, vanished-row and absent-row cases are counted skips; partial failure and the post-land abort are never success, carry the normative landed/failed summary, and the retry converges; the reboot gate blocks, the success path checkpoints exactly once, clock shifts flip the gate, and no process or sidecar is touched; grammar and its parser carve-out both exit 1 with zero I/O, while repeated flags are last-wins; ids and numeric ranges are safe; the four error rows round-trip and sync both ways; the metadata-only whitelist and canary are proven by mutants; `list` `dataBytes` is byte-exact (`LENGTH(CAST(... AS BLOB))`/`OCTET_LENGTH` over `message`/`part`) including the multi-byte case, with `session_message` never counted; replays are byte-identical; contracts are data-only, the domain is pure, the single I/O location is the admitted subpath, no SQLite driver exists, the allowlist stays at four, and `db` is registered only with a composition; the repaired baseline suite is green; the mandatory read-only real-store smoke is recorded with a no-mutation check; the C-11 sign-off is recorded as an owner merge gate and the PR is left open. This plan claims no merge and no owner approval.
 
 ## 8. Risks, Assumptions, and Open Questions
 
@@ -1810,7 +1827,8 @@ Notes on the battery:
 | 1.0 | 2026-10-31T19:45:00Z | Change Test Plan Writer | Initial plan: 38 TCs (`TC-DB-001..TC-DB-038`, a new prefix). All 18 ACs (AC-D1..AC-D18) and all 10 NFRs mapped with no orphan TCs; a binding cold/live/leaf boundary matrix (B-01..B-16) with both sides asserted; grammar and parser-containment matrices; numeric-range and id-shape/SQL-discipline matrices; dry-run zero mutation, official-delete-only apply, idempotency, TOCTOU, vanished-row and already-absent handling, partial-failure truthfulness and retry convergence, reboot gate and single checkpoint, no process kill and no sidecar deletion; machine and human caps with `+N more`; metadata-only whitelist with a canary and mutation-sensitivity controls; four `db.*` rows with bidirectional sync and kind-only containment; tier/purity/no-SQLite/allowlist confinement and composition-absent non-registration; the scoped `config-default-positions` baseline repair; hermeticity and no-real-home-path scan; bounded-work NFR-D4 evidence with an explicitly non-CI reference measurement; and the C-11 sign-off gate. Recorded gaps: plan absent, NFR-D4 non-CI latency, AC-D18's PR-body half, delivery-bound spellings, four AC-less spec behaviours, and the single scoped repair. |
 | 1.1 | 2026-10-31T19:55:00Z | Change Test Plan Writer | Targeted amendment aligning the grammar oracle with spec v1.1: P-04 is now `size --x` (parser `fallback.invocation`); added G-13 `size -x` as an unexpected positional (`input.value.rejected`); AC-D12 wording, the exit oracle, TC-DB-023/TC-DB-024, §7 mapping and A-T3 now state the two-class rule. TC count unchanged at 38; exits, AC mappings and the zero-I/O oracle unchanged; privacy scan 0 matches. |
 | 1.2 | 2026-10-31T20:10:00Z | Change Test Plan Writer | Targeted amendment: renamed the reboot failure identity to `db.reboot.live`. The earlier spelling appended a hyphenated `session` segment, which the repo error-code format `^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$` rejects because a segment may contain only lowercase letters and digits; the gate was not widened. Updated every occurrence — AC-D10 in §3.1, TC-DB-031 in §5.1 and §5.2, the exit-code oracle row, and the TC-DB-031 step in §5.2. TC count unchanged at 38; all AC mappings, exits, categories and assertions unchanged. Post-edit scan for the retired spelling: 0 matches. |
-| 1.3 | 2026-10-31T20:40:00Z | Change Test Plan Writer | DoR iteration-1 remediation. **B5:** added textual/structural assertions over the recorded selection SQL (cold, not-live, `NOT EXISTS` child, `ORDER BY ... time_updated`, `LIMIT`) and the reboot live-count SQL (15-minute comparison or the injected `computeDbLiveBoundaryMs`), asserted the adapter uses `computeDbCutoffMs`/`computeDbLiveBoundaryMs`, and added a reboot clock-shift case; updated §4.1, §4.2, §4.3, §4.7 S-05/S-06, TC-DB-011..TC-DB-014, TC-DB-031, TC-DB-032 and §7. **M4:** added a mandatory non-CI read-only real-store smoke (`db size`, `db list --limit 5`, recorded with output/exit and a no-mutation check) before PR, kept the CI oracle as bounded work, and kept NFR-D4 as a target with the reference measurement recorded rather than gated; updated GAP-T2, §6.5, §7, TC-DB-037 and §10. **B4:** pre-land query/re-read failures stay `db.query.failed` (or `db.opencode.unavailable`) at exit 2, while any aborting failure after at least one delete lands returns `db.delete.failed` with the normative `"<failed> of <attempted> session deletes did not land (first: <id>); <landed> landed"` summary (`attempted = landed + failed`); added the post-land abort case to TC-DB-022 and updated the AC-D8 row, GAP-T5 mapping, exit-code oracle and §7; TC-DB-020/A-T4's partial-delete case is retained. **Message store:** corrected every count/aggregate reference from `session_message` to `message` (messages) and `part` (parts), kept `session_message` only as the legacy/not-counted/delete-cascade mention, and made TC-DB-006 assert the recorded SQL step names `message` and `part`. **m5:** marked GAP-T1 resolved and aligned `last_updated` with this revision. **m7:** made the TC-DB-006 table-name assertion an explicit step. **n1:** added NFR-D4 to TC-DB-037's AC column in §5.1. **m3:** G-12 is now a last-wins acceptance case (`--apply --apply` is apply; repeated `--limit` takes the last value) and §4.5/A-T3/§1.1 no longer assert repeated-flag rejection. **m4:** aligned the TC-DB-020 summary regex with the normative landed/failed format. TC count unchanged at 38; TC IDs unchanged; AC mappings unchanged. |
+| 1.3 | 2026-10-31T22:35:00Z | Change Test Plan Writer | DoR iteration-1 remediation. **B5:** added textual/structural assertions over the recorded selection SQL (cold, not-live, `NOT EXISTS` child, `ORDER BY ... time_updated`, `LIMIT`) and the reboot live-count SQL (15-minute comparison or the injected `computeDbLiveBoundaryMs`), asserted the adapter uses `computeDbCutoffMs`/`computeDbLiveBoundaryMs`, and added a reboot clock-shift case; updated §4.1, §4.2, §4.3, §4.7 S-05/S-06, TC-DB-011..TC-DB-014, TC-DB-031, TC-DB-032 and §7. **M4:** added a mandatory non-CI read-only real-store smoke (`db size`, `db list --limit 5`, recorded with output/exit and a no-mutation check) before PR, kept the CI oracle as bounded work, and kept NFR-D4 as a target with the reference measurement recorded rather than gated; updated GAP-T2, §6.5, §7, TC-DB-037 and §10. **B4:** pre-land query/re-read failures stay `db.query.failed` (or `db.opencode.unavailable`) at exit 2, while any aborting failure after at least one delete lands returns `db.delete.failed` with the normative `"<failed> of <attempted> session deletes did not land (first: <id>); <landed> landed"` summary (`attempted = landed + failed`); added the post-land abort case to TC-DB-022 and updated the AC-D8 row, GAP-T5 mapping, exit-code oracle and §7; TC-DB-020/A-T4's partial-delete case is retained. **Message store:** corrected every count/aggregate reference from `session_message` to `message` (messages) and `part` (parts), kept `session_message` only as the legacy/not-counted/delete-cascade mention, and made TC-DB-006 assert the recorded SQL step names `message` and `part`. **m5:** marked GAP-T1 resolved and aligned `last_updated` with this revision. **m7:** made the TC-DB-006 table-name assertion an explicit step. **n1:** added NFR-D4 to TC-DB-037's AC column in §5.1. **m3:** G-12 is now a last-wins acceptance case (`--apply --apply` is apply; repeated `--limit` takes the last value) and §4.5/A-T3/§1.1 no longer assert repeated-flag rejection. **m4:** aligned the TC-DB-020 summary regex with the normative landed/failed format. TC count unchanged at 38; TC IDs unchanged; AC mappings unchanged. |
+| 1.4 | 2026-10-31T22:55:00Z | Change Test Plan Writer | DoR iteration-2 remediation. **m9:** corrected the v1.3 revision row to its actual PM-recorded time (`2026-10-31T22:35:00Z`) and set `last_updated` to this row's time, so the front matter and the revision log agree. **m11:** aligned `dataBytes` with spec v1.5 byte semantics — it is the summed stored payload **byte** length (`COALESCE(SUM(LENGTH(CAST(message.data AS BLOB))),0) + COALESCE(SUM(LENGTH(CAST(part.data AS BLOB))),0)`, equivalently `OCTET_LENGTH`), not a character `LENGTH`; added the byte-length aggregate to the textual SQL oracle (§4.1, new §4.7 S-07), made TC-DB-008 assert exact byte values including a multi-byte case (11 bytes where a character count yields 6) and the `dataBytes 0` empty case, and updated §1.1, the TC-DB-008 title/row in §4.3 and §5.1, §6.2 and §7. **Spec v1.5 AC-D2 DoD alignment:** TC-DB-008 now also asserts the pinned field sources (`createdAt = time_created`, `updatedAt = time_updated`, `archived = time_archived IS NOT NULL`, no `archived` column) and the page projection oracle (new §4.7 S-08). **Store pin confirmed:** `message`/`part` are the current stores for counts and aggregates; `session_message` remains only the legacy, never-counted store, and TC-DB-015 now records that its rows are removed by the official delete's cascade, never by a `prune` SQL statement. TC count unchanged at 38; TC IDs, AC mappings and exits unchanged. |
 
 ## 10. Test Execution Log
 
