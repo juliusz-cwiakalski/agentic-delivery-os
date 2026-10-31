@@ -9,7 +9,8 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import ts from "typescript";
-import { STATUS_EVIDENCE_REASONS } from "../../packages/core/src/contracts/index";
+import { ERROR_TABLE, STATUS_EVIDENCE_REASONS } from "../../packages/core/src/contracts/index";
+import { SECRET_READ_ALLOWLIST } from "../../scripts/checks/secret-read-boundary";
 
 const ROOT = process.cwd();
 const CONTRACT = "packages/core/src/contracts/status.ts";
@@ -234,6 +235,31 @@ describe("TC-STATUS-026 contracts/domain tier discipline", () => {
   test("a Date.now call in the domain fails by name", () => {
     const mutated = `${readFileSync(join(ROOT, DOMAIN), "utf8")}\nexport const rogue = (): number => Date.now();\n`;
     expect(domainPure(mutated).some((line) => line.includes("Date.now"))).toBe(true);
+  });
+
+  test("the secret-read allowlist stays at four and names no status file", () => {
+    expect(SECRET_READ_ALLOWLIST).toHaveLength(4);
+    const paths = SECRET_READ_ALLOWLIST.map((entry) => entry.path);
+    for (const statusFile of [CONTRACT, DOMAIN, COMMAND]) {
+      expect(paths.some((path) => path.includes(statusFile.replace("packages/", "")))).toBe(false);
+    }
+  });
+
+  test("status evidence codes are existing error-table identities", () => {
+    const codes = new Set(ERROR_TABLE.map((entry) => entry.code));
+    for (const code of [
+      "config.credential.missing",
+      "config.value.invalid",
+      "config.file.malformed",
+      "state.store.torn",
+      "state.schema.mismatch",
+      "state.keys.missing",
+      "state.permission.denied",
+      "state.level.unsupported",
+    ]) {
+      expect(codes.has(code as never), code).toBe(true);
+    }
+    expect([...codes].some((code) => code.startsWith("status."))).toBe(false);
   });
 
   test("a product literal fails the brand scan", () => {

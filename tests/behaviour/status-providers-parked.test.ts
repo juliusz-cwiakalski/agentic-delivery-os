@@ -164,3 +164,265 @@ describe("TC-STATUS-019 parked work from the local PM context", () => {
     }
   });
 });
+
+// --- Phase 5: lanes and providers -----------------------------------------
+
+import { aggregateStatus } from "../../packages/core/src/domain/index";
+import {
+  createParkRecord,
+  persistProviderResolution,
+  readProviderParkViews,
+} from "../../packages/core/src/provider/index";
+import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
+import {
+  baseFacts,
+  parkView,
+  providerConfig,
+  providerConfigRead,
+  providers,
+  sectionById,
+} from "../fixtures/status/harness";
+
+const section = (facts: Parameters<typeof aggregateStatus>[0], id: string) =>
+  sectionById(aggregateStatus(facts).sections, id);
+
+const providerFacts = (overrides: {
+  readonly chain?: string;
+  readonly entries?: readonly string[];
+  readonly parks?: Parameters<typeof providers>[0]["parks"];
+  readonly config?: Parameters<typeof providers>[0]["config"];
+}) => {
+  const names = overrides.entries ?? ["primary"];
+  return providers({
+    config:
+      overrides.config ??
+      providerConfigRead(
+        providerConfig({
+          defaultChain: overrides.chain ?? "primary",
+          entries: Object.fromEntries(
+            names.map((name) => [name, { name, class: "subscription", enabled: true }]),
+          ),
+          chains: {
+            primary: { name: "primary", entries: [...names], allowPaidFallback: false },
+          },
+        }),
+      ),
+    ...(overrides.parks === undefined ? {} : { parks: overrides.parks }),
+  });
+};
+
+describe("TC-STATUS-016 lanes-or-queue is always a declared gap", () => {
+  test("every input yields not-delivered with zero items and no queue read", () => {
+    const fixtures = [
+      baseFacts(),
+      baseFacts({ providers: providers({ config: { ok: false, reason: "config-invalid" } }) }),
+      baseFacts({ localContext: { ok: false, reason: "missing", path: "/absent" } }),
+    ];
+    for (const facts of fixtures) {
+      const lanes = section(facts, "lanes-or-queue");
+      expect(lanes.state).toBe("not-delivered");
+      expect(lanes.capability).toBe("queue-lane-engine");
+      expect(lanes.expectedStory).toBe("M2-S1");
+      expect(lanes.items).toEqual([]);
+      expect(lanes.counts).toEqual({ observed: 0, unknown: 0, total: 0, omitted: 0 });
+      expect(lanes.evidence.reasons).toEqual(["engine-not-delivered"]);
+      expect(lanes.note).toContain("no queue or lane engine");
+      expect(lanes.state).not.toBe("observed");
+    }
+  });
+});
+
+describe("TC-STATUS-017 providers from config and the verified park fold", () => {
+  test("declared entries are unverified, never available", () => {
+    const providersSection = section(
+      baseFacts({ providers: providerFacts({ entries: ["primary", "secondary"] }) }),
+      "providers",
+    );
+    expect(providersSection.state).toBe("observed");
+    expect(providersSection.chain).toMatchObject({ state: "declared", name: "primary" });
+    for (const entry of providersSection.entries ?? []) {
+      expect(entry.availability).toBe("unverified");
+      expect(JSON.stringify(entry)).not.toContain('"available"');
+    }
+  });
+
+  test("an active provider park marks the entry parked", () => {
+    const providersSection = section(
+      baseFacts({
+        providers: providerFacts({
+          entries: ["primary", "secondary"],
+          parks: { ok: true, parks: [parkView({ subjectName: "primary" })] },
+        }),
+      }),
+      "providers",
+    );
+    expect(providersSection.state).toBe("observed");
+    expect(providersSection.entries?.find((entry) => entry.name === "primary")?.availability).toBe(
+      "parked",
+    );
+    expect(
+      providersSection.entries?.find((entry) => entry.name === "secondary")?.availability,
+    ).toBe("unverified");
+  });
+
+  test("a chain park marks the chain parked", () => {
+    const providersSection = section(
+      baseFacts({
+        providers: providerFacts({
+          parks: {
+            ok: true,
+            parks: [
+              parkView({
+                name: "chain:primary",
+                subjectKind: "chain",
+                subjectName: "primary",
+              }),
+            ],
+          },
+        }),
+      }),
+      "providers",
+    );
+    expect(providersSection.chain).toMatchObject({ state: "parked", name: "primary" });
+  });
+
+  test("no default chain is unavailable, never an empty observed chain", () => {
+    const providersSection = section(
+      baseFacts({
+        providers: providers({
+          config: providerConfigRead(
+            providerConfig({ defaultChain: undefined, chains: {}, entries: {} }),
+          ),
+        }),
+      }),
+      "providers",
+    );
+    expect(providersSection.state).toBe("unavailable");
+    expect(providersSection.evidence.reasons).toContain("provider-chain-not-declared");
+    expect(providersSection.entries).toEqual([]);
+    expect(providersSection.parks).toEqual([]);
+    expect(JSON.stringify(providersSection)).not.toContain('"available"');
+  });
+
+  test("an unresolved chain is unknown with the pinned identity and no failureClass", () => {
+    const providersSection = section(
+      baseFacts({
+        providers: providers({
+          config: {
+            ok: false,
+            reason: "provider-chain-unresolved",
+            failureCode: "config.value.invalid",
+          },
+        }),
+      }),
+      "providers",
+    );
+    expect(providersSection.state).toBe("unknown");
+    expect(providersSection.evidence.reasons).toContain("provider-chain-unresolved");
+    const source = providersSection.evidence.sources[0];
+    expect(source).toMatchObject({
+      source: "provider-config",
+      failureCode: "config.value.invalid",
+    });
+    expect(source?.failureClass).toBeUndefined();
+    expect(JSON.stringify(providersSection)).not.toContain("provider.chain.invalid");
+  });
+
+  test("a config-resolution failure is unknown with config-invalid and the config code", () => {
+    const providersSection = section(
+      baseFacts({
+        providers: providers({
+          config: { ok: false, reason: "config-invalid", failureCode: "config.value.invalid" },
+        }),
+      }),
+      "providers",
+    );
+    expect(providersSection.state).toBe("unknown");
+    expect(providersSection.evidence.reasons).toContain("config-invalid");
+    expect(providersSection.evidence.sources[0]).toMatchObject({
+      failureCode: "config.value.invalid",
+    });
+    expect(providersSection.evidence.sources[0]?.failureClass).toBeUndefined();
+  });
+
+  test("a park-fold failure degrades the section without claiming no parks", () => {
+    const providersSection = section(
+      baseFacts({
+        providers: providerFacts({
+          parks: { ok: false, reason: "state-unreadable", failureCode: "state.store.torn" },
+        }),
+      }),
+      "providers",
+    );
+    expect(providersSection.state).toBe("degraded");
+    expect(providersSection.evidence.reasons).toContain("state-unreadable");
+    expect(providersSection.evidence.reasons).toContain("partial-evidence");
+    expect(providersSection.parks).toEqual([]);
+    expect(JSON.stringify(providersSection)).not.toContain("no parks");
+  });
+
+  test("expiry is read-time: T-1 active, T expired, T+1 active only at T+1", () => {
+    const now = Date.parse("2026-10-31T00:00:00Z");
+    const root = makeTempRoot("gh175-parks");
+    try {
+      const { store } = openStore(makeIdentity(root));
+      const park = (name: string, expiresAtMs: number) =>
+        createParkRecord({
+          subjectKind: "provider",
+          subjectName: name,
+          cause: "quota-exhausted",
+          conditions: ["quota-exhausted"],
+          createdAtMs: now - 1000,
+          expiresAtMs,
+          evidence: {},
+        });
+      const persisted = persistProviderResolution({
+        store,
+        fenceToken: "gh175-provider-park",
+        nowMs: now,
+        parks: [park("before", now - 1), park("at", now), park("after", now + 1)],
+        announcements: [],
+      });
+      expect(persisted.ok).toBe(true);
+      const views = readProviderParkViews(store, now);
+      expect(views.ok).toBe(true);
+      if (views.ok) {
+        expect(views.value.map((view) => [view.subjectName, view.state])).toEqual([
+          ["after", "active"],
+        ]);
+      }
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("provider entries and parks are capped at eight", () => {
+    const names = Array.from({ length: 9 }, (_, index) => `p${index}`);
+    const parks = Array.from({ length: 9 }, (_, index) =>
+      parkView({
+        name: `provider:p${index}`,
+        subjectName: `p${index}`,
+        expiresAt: `2026-11-0${(index % 9) + 1}T00:00:00Z`,
+      }),
+    );
+    const providersSection = section(
+      baseFacts({ providers: providerFacts({ entries: names, parks: { ok: true, parks } }) }),
+      "providers",
+    );
+    expect(providersSection.entries).toHaveLength(8);
+    expect(providersSection.parks).toHaveLength(8);
+    expect(providersSection.counts.omitted).toBe(2);
+  });
+});
+
+describe("TC-STATUS-018 providers never run the engine or quota", () => {
+  test("the status command and domain reference no engine/quota call", () => {
+    const files = ["packages/core/src/domain/status.ts", "packages/cli/src/commands/status.ts"];
+    for (const file of files) {
+      const text = readFileSync(join(process.cwd(), file), "utf8");
+      expect(text).not.toContain("createProviderEngine");
+      expect(text).not.toContain("quota(");
+      expect(text).not.toContain("provider.resolve");
+    }
+  });
+});
