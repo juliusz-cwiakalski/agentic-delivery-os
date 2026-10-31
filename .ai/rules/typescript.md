@@ -70,9 +70,12 @@ This file states non-inferable policy only; it does not restate what
   import `cli`/`mcp`/`opencode`; `cli`, `mcp`, `opencode` are surfaces.
 - `core` tiers: `domain`, `config`, `branding`, and `state` import
   `./contracts` only; `app` composes `domain` and `config`.
-- Runtime and I/O access only in: `core/src/state/driver`, the `adapters` I/O
-  subpaths (`repo`, `file`, `host`, `session`, `legacy`), `cli`, and
-  `opencode`. Everything else stays pure.
+- Runtime and I/O access only in: `core/src/state/driver/`, the `adapters`
+  I/O subpaths (`repo`, `file`, `host`, `session`, `legacy`, `credentials`),
+  `cli`, and `opencode`. The two configuration environment readers
+  (`adapters/src/file/yaml-parser.ts`, `adapters/src/legacy/index.ts`) are
+  the only other ambient-env exceptions the secret-read boundary allows.
+  Everything else stays pure.
 - Inner code never imports or constructs a concrete adapter; composition
   roots (`cli` entry, MCP entry, OpenCode host) wire adapters in.
 - On a boundary violation: fix the dependency (move or invert the port),

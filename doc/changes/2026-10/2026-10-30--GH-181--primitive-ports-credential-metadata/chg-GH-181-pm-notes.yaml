@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-10-30T22:25:00Z", completed: "2026-10-30T22:40:00Z" }
   delivery: { started: "2026-10-30T22:45:00Z", completed: "2026-10-30T23:30:00Z" }
   system_spec_update: { started: "2026-10-30T23:35:00Z", completed: "2026-10-30T23:50:00Z" }
-  review_fix: { started: "2026-10-30T23:55:00Z", completed: "2026-10-31T00:40:00Z", iterations: 2, last_verdict: "PASS" }
+  review_fix: { started: "2026-10-30T23:55:00Z", completed: "2026-10-31T00:40:00Z", iterations: 2, last_verdict: "PASS", reopened_union: "2026-10-31T02:10:00Z" }
   quality_gates: { started: "2026-10-31T00:45:00Z", completed: "2026-10-31T01:05:00Z" }
   dod_check: { started: "2026-10-31T01:10:00Z", completed: "2026-10-31T01:15:00Z" }
   pr_creation: { started: "2026-10-31T01:20:00Z", completed: "2026-10-31T01:35:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/196" }
@@ -71,6 +71,18 @@ notes:
     date: "2026-10-31"
   - text: "PR open: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/196 (feat(GH-181) -> main-tools, pushed HEAD bcc4184). Labels change+review, assigned juliusz-cwiakalski. Merge BLOCKED pending green CI on pushed HEAD; merge authority: CEO (Mode A) / owner via batch-deliver.sh (Mode B). PM stops here per stop condition — delivery complete, awaiting review/merge."
     type: "info"
+    date: "2026-10-31"
+  - text: "UNION RECONCILIATION (CEO resume, 2026-10-31): GH-174 (state layer) merged to main-tools while PR #196 was open; CEO merged main-tools into the branch (992fcff) with seam fixes (42ae1f7: error-table boundary, fixture-registry duplicate keys, useIndexOf autofix) and pushed. Three invariant suites failed on the union; reconciled in fc472a6: (1) port-contract inventory fixture regenerated from live union surface (state.ts 31 exports + 31 index re-exports — purely additive staleness); (2) GENUINE rule conflict: this branch's pre-tightening broad state exemption (^packages/core/src/state/) silently re-weakened GH-174's tightened driver allowance and made the TC-STATE-022 negative fixture vacuous — runtime-apis-confinement pathNot reconciled to the 4-entry union (state/driver/, adapters incl. credentials, cli, opencode), ADR-verbatim assertion mirrored; (3) GH-174's state driver runtime-edge reads process.env.USERNAME??USER (icacls owner identity) — sanctioned env read added to the secret-read allowlist as entry 4 (file kind, configuration-environment-source, narrowest scope); (4) exports-parity stacked timeout closers from both parents merged to single 240_000. Both reviewed changes untouched; union bookkeeping + rule consistency only."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Union docs reconciled (doc-syncer addendum): 6 files — scaffold spec de-duplicated with union confinement statement; adapter-ports allowlist table 3->4 entries incl. state driver edge; state-layer spec records the USERNAME??USER env read; glossary merge-duplicate front matter repaired; result-contract related_changes union; .ai/rules/typescript.md section 4 now names state/driver/ + credentials edge + env readers (stale since GH-174, flagged by its review, doubly stale after union). ADR-0003 intentionally unchanged (decision record; subpath statements remain true)."
+    type: "info"
+    date: "2026-10-31"
+  - text: "Post-union battery: GATES_ALL_GREEN — pnpm check 725 pass / 0 fail (3 known noTemplateCurlyInString warnings from GH-174 left per CEO instruction), bash 22/22 suites incl. hermetic ceo-loop, doc-distribution no drift, secret-read 56 files clean / 4 entries, error-table-sync 21/21, git diff --check clean."
+    type: "resolved"
+    date: "2026-10-31"
+  - text: "RETRO: the union conflict class to watch — a feature branched before a base-tightening change carries the older, coarser rule and silently re-weakens it on merge (here: broad state exemption vs driver-tightened allowance). The negative fixture caught it exactly as designed (vacuous fixture = failing test), but duplicate-key/superset dedup of rule arrays should be part of every merge-conflict resolution checklist for boundary configs, not discovered by test."
+    type: "retro"
     date: "2026-10-31"
   - text: "Scope sources: issue body + backlog.md M0-S12 + concepts/primitive-catalogue.md + concepts/credential-sidecar.md + concepts/embedded-metadata.md. AC: (1) typed ports with capability flags, (2) CI boundary check fails on secret reads outside the credential port, (3) metadata envelope round-trips and degrades gracefully when a provider strips it. Dependencies M0-S1/S3/S4 verified merged (PRs 191/193/194)."
     type: "info"

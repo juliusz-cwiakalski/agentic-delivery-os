@@ -2,12 +2,12 @@
 id: SPEC-ADAPTER-PORTS
 status: Current
 created: 2026-10-30
-last_updated: 2026-10-30
+last_updated: 2026-10-31
 owners: ["engineering"]
 service: delivery-os
 summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the binding secret-read boundary invariant, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec and visible graceful degradation."
 links:
-  related_changes: ["GH-181"]
+  related_changes: ["GH-174", "GH-181"]
   related_decisions: ["ADR-0003"]
 ---
 
@@ -86,11 +86,12 @@ The environment-backed implementation is `createEnvironmentCredentialPort({ envi
 
 `scripts/checks/secret-read-boundary.ts` is an AST invariant over every workspace package production source (`packages/<pkg>/src/**` TypeScript, excluding `dist` and `node_modules`). It names the rule, file, and line for each ambient environment access outside an enumerated allowlist and is fail-closed and non-vacuous: an empty scope fails, and every allowlisted path must exist with a reason.
 
-The v1 allowlist has exactly three entries:
+The v1 allowlist has exactly four entries:
 
 | Kind | Path | Class | Why |
 |------|------|-------|-----|
 | directory | `packages/adapters/src/credentials` | `credential-material` | The single environment-backed credential-port implementation. |
+| file | `packages/core/src/state/driver/runtime-edge.ts` | `configuration-environment-source` | The state driver's Windows owner-identity resolution for icacls ACL verification. |
 | file | `packages/adapters/src/file/yaml-parser.ts` | `configuration-environment-source` | The file-tier parser host-switch guard. |
 | file | `packages/adapters/src/legacy/index.ts` | `configuration-environment-source` | The legacy-name adapter environment reader. |
 
@@ -201,7 +202,7 @@ Version policy: v1 is the only schema version, so any version string outside the
 ## Security and Boundaries
 
 - Secret material is reachable only through the credential port. The environment-backed implementation is the sole `credential-material` allowlist entry.
-- The secret-read boundary closes the ambient channel that runtime-API confinement does not cover. Runtime-API confinement admits the adapters I/O subpaths `repo`, `file`, `host`, `session`, `legacy`, and `credentials`; the credential subpath is the only one that may resolve secret material.
+- The secret-read boundary closes the ambient channel that runtime-API confinement does not cover. Runtime-API confinement admits the `core` state driver edge (`packages/core/src/state/driver/`) and the adapters I/O subpaths `repo`, `file`, `host`, `session`, `legacy`, and `credentials`; the credential subpath is the only one that may resolve secret material.
 - Resolved material never enters diagnostics, logs, error payloads, or metadata; the existing redaction chokepoint governs any surfaced payload.
 - The envelope payload is closed, compact, size-bounded, and secret-free; carrier markers and namespaces use brand-neutral constants with no committed product token.
 - Capability data is declarative; enforcement of undeclared operations belongs to adapter implementations consulting the flags.

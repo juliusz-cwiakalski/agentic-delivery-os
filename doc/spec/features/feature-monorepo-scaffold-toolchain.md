@@ -3,13 +3,12 @@ ados_distribution: internal
 id: SPEC-MONOREPO-SCAFFOLD-TOOLCHAIN
 status: Current
 created: 2026-10-29
-last_updated: 2026-10-30
+last_updated: 2026-10-31
 owners: ["engineering"]
 service: delivery-os
-summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, the typed adapter-port substrate and secret-read boundary invariant, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
+summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, the typed adapter-port substrate and secret-read boundary invariant, the durable local state layer, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
 links:
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-181"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-181"]
   related_decisions: ["ADR-0003"]
 ---
 
@@ -17,8 +16,7 @@ links:
 
 ## Overview
 
-The repository hosts a six-package pnpm workspace under `packages/` for the TypeScript delivery tooling, alongside the existing bash delivery stack. The workspace is **structure over content** for the remaining engines, business logic, provider implementations, and drivers: every declared package, subpath, export, boundary rule, fixture, and quality gate is enforced. The configuration tier, result contract, and adapter-era contracts are implemented and documented separately in [Configuration Layer and Inspection](feature-config-layer.md), [Result Contract and Error Table](feature-result-contract.md), and [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); the remaining engines and provider implementations are scaffold placeholders.
-The repository hosts a six-package pnpm workspace under `packages/` for the TypeScript delivery tooling, alongside the existing bash delivery stack. The workspace is **structure over content** for the remaining engines, business logic, provider implementations, and drivers: every declared package, subpath, export, boundary rule, fixture, and quality gate is enforced. The configuration and state tiers are implemented and documented separately in [Configuration Layer and Inspection](feature-config-layer.md) and [State Layer](feature-state-layer.md); the remaining runtime contracts are scaffold placeholders.
+The repository hosts a six-package pnpm workspace under `packages/` for the TypeScript delivery tooling, alongside the existing bash delivery stack. The workspace is **structure over content** for the remaining engines, business logic, provider implementations, and drivers: every declared package, subpath, export, boundary rule, fixture, and quality gate is enforced. The configuration and state tiers, the result contract, and the adapter-era contracts are implemented and documented separately in [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), and [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); the remaining engines and provider implementations are scaffold placeholders.
 
 The scaffold provides the substrate every later tooling story lands in. Its package matrix, core tier matrix, adapter subpaths, and runtime-API confinement rules are mechanical gates rather than prose, and every forbidden edge is proven by a failing negative fixture.
 
@@ -45,10 +43,8 @@ The authoritative design decision is [ADR-0003](../../decisions/ADR-0003-oss-mon
 
 | Package | Declared entrypoints | Role |
 |---------|----------------------|------|
-| `@delivery-os/core` | `.`, `./contracts`, `./state`, `./branding` | Runtime-neutral application services, contracts, state abstraction, branding seam |
-| `@delivery-os/adapters` | `./gitlab`, `./jira`, `./github`, `./azure`, `./ci`, `./registry`, `./repo`, `./file`, `./host`, `./session`, `./legacy`, `./credentials` | Tracker, VCS, CI, registry, per-I/O adapters, and the environment-backed credential port |
 | `@delivery-os/core` | `.`, `./contracts`, `./state`, `./branding` | Runtime-neutral application services, contracts, state layer, branding seam |
-| `@delivery-os/adapters` | `./gitlab`, `./jira`, `./github`, `./azure`, `./ci`, `./registry`, `./repo`, `./file`, `./host`, `./session`, `./legacy` | Tracker, VCS, CI, registry, and per-I/O adapters |
+| `@delivery-os/adapters` | `./gitlab`, `./jira`, `./github`, `./azure`, `./ci`, `./registry`, `./repo`, `./file`, `./host`, `./session`, `./legacy`, `./credentials` | Tracker, VCS, CI, registry, per-I/O adapters, and the environment-backed credential port |
 | `@delivery-os/cli` | `.` | Command-line surface |
 | `@delivery-os/mcp` | `.` | MCP surface |
 | `@delivery-os/opencode` | `.` | OpenCode host integration surface |
@@ -106,8 +102,7 @@ Deep imports into another package's `src/` or `dist/`, and relative paths escapi
 - **Deep and relative imports** — no `@delivery-os/<pkg>/(src|dist)/...` deep import and no relative import escaping the importer's package root.
 - **Core tier matrix** — `domain`, `config`, `branding`, and `state` may import `./contracts` only; `app` may import `domain`, `config`, and `./contracts`, but not `branding` or `state` at scaffold.
 - **Testkit dev edges** — production `src` never imports `testkit`; `testkit` imports `core` and `adapters`, never `cli`, `mcp`, or `opencode`.
-- **Runtime-API confinement** — runtime imports are permitted only in the `core ./state` driver code, the adapter I/O subpaths, the `cli` build, and the `opencode` host integration. The adapter exemption is exactly the ADR I/O subpaths — `repo`, `file`, `host`, `session`, and `legacy` — plus the credential implementation at `credentials`; provider, registry, and remaining adapter subpaths are not exempt.
-- **Runtime-API confinement** — runtime imports are permitted only in the `core ./state` driver code, the adapter I/O subpaths, the `cli` build, and the `opencode` host integration. The adapter exemption is exactly the ADR I/O subpaths — `repo`, `file`, `host`, `session`, and `legacy`; provider, registry, and remaining adapter subpaths are not exempt.
+- **Runtime-API confinement** — runtime imports are permitted only in the `core` state driver edge (`packages/core/src/state/driver/`), the adapter I/O subpaths, the `cli` build, and the `opencode` host integration. The adapter exemption is exactly the ADR I/O subpaths — `repo`, `file`, `host`, `session`, and `legacy` — plus the credential implementation at `credentials`; provider, registry, and remaining adapter subpaths are not exempt.
 - **State-tier structure** — `tests/structure/state-imports.test.ts` is an AST detector over `packages/core/src/state/**`: the tier imports `#contracts` and its own modules only, and runtime API use appears only inside the driver edge, proven by synthetic forbidden-import and runtime-API controls.
 
 Package-name specifiers resolve through each manifest's `exports` to built `dist` targets, so the cross-package rules match both forms: `packages/<pkg>/src/...` in-tree and `packages/<pkg>/dist/...` for package-name imports. A `couldNotResolve` catch-all fails any `@delivery-os/*` specifier that resolves to no declared package entrypoint, so an undeclared import fails by name even before a build exists.
@@ -121,7 +116,7 @@ The cruise runs against the built tree: package-name specifiers resolve through 
 - `ambient-globals-neutral-tiers` — the neutral set (`core` `.` entry, `core/src/contracts/**`, and `core/src/{domain,app,config,branding}/**`) must not use ambient globals (`process`, `Bun`, `Deno`, timers, `fetch`) or ambient clock/randomness (`Date.now`, `Math.random`).
 - `ambient-env-branding` — an environment read (`process.env` / `Bun.env`) inside the branding tier is classified under this rule.
 
-`bun run scripts/checks/secret-read-boundary.ts` is the AST guard for ambient secret acquisition across every workspace package production source (`packages/<pkg>/src/**` TypeScript, excluding `dist` and `node_modules`). Ambient environment access is permitted only in an enumerated allowlist. The v1 allowlist has three exact entries: the credential implementation directory (`packages/adapters/src/credentials`, class `credential-material`) and two pre-existing configuration environment readers (`packages/adapters/src/file/yaml-parser.ts` and `packages/adapters/src/legacy/index.ts`, class `configuration-environment-source`). Exactly one entry may be `credential-material`, and every entry carries a reason. Wildcards, prefixes, absolute paths, trailing separators, duplicate paths, and missing targets fail registry validation; an empty scan scope fails closed, so the gate cannot pass vacuously. The check detects `process.env`, `Bun.env`, and `Deno.env` property reads; element access to `env` or an ambient global by string-literal key; element access with a computed or template-literal key on `process`, `Bun`, `Deno`, or `globalThis`, which fails closed because a non-literal key cannot be checked statically; runtime imports of `process` or `bun`; and aliased ambient globals, while ignoring identifier positions such as property names, import specifiers, and type declarations. It runs in `check:boundaries` and as a binding step in the CI `ts-invariants` job; the behavior is documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
+`bun run scripts/checks/secret-read-boundary.ts` is the AST guard for ambient secret acquisition across every workspace package production source (`packages/<pkg>/src/**` TypeScript, excluding `dist` and `node_modules`). Ambient environment access is permitted only in an enumerated allowlist. The v1 allowlist has four exact entries: the credential implementation directory (`packages/adapters/src/credentials`, class `credential-material`), the state driver runtime edge (`packages/core/src/state/driver/runtime-edge.ts`, class `configuration-environment-source`, for Windows owner-identity resolution in icacls ACL verification), and two pre-existing configuration environment readers (`packages/adapters/src/file/yaml-parser.ts` and `packages/adapters/src/legacy/index.ts`, class `configuration-environment-source`). Exactly one entry may be `credential-material`, and every entry carries a reason. Wildcards, prefixes, absolute paths, trailing separators, duplicate paths, and missing targets fail registry validation; an empty scan scope fails closed, so the gate cannot pass vacuously. The check detects `process.env`, `Bun.env`, and `Deno.env` property reads; element access to `env` or an ambient global by string-literal key; element access with a computed or template-literal key on `process`, `Bun`, `Deno`, or `globalThis`, which fails closed because a non-literal key cannot be checked statically; runtime imports of `process` or `bun`; and aliased ambient globals, while ignoring identifier positions such as property names, import specifiers, and type declarations. It runs in `check:boundaries` and as a binding step in the CI `ts-invariants` job; the behavior is documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
 
 ### Negative fixtures and coverage
 
@@ -205,10 +200,9 @@ No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scr
 | `packages/*/tsconfig.json` | Composite configs extending the strict base |
 | `packages/core/src/index.ts` | The `createRuntime` composition-root signature |
 | `packages/core/src/contracts/**` | Result, error-table, configuration, adapter-port, capability, credential, and envelope contracts (types and `as const` data only) |
-| `packages/*/src/**` | Internal tier directories; configuration, result contracts, adapter ports, the credential implementation, the envelope codec, file/repo/legacy adapters, and CLI inspection carry implemented code, while the remaining engines and providers are placeholders |
+| `packages/*/src/**` | Internal tier directories; the configuration and state tiers, result contracts, adapter ports, the credential implementation, the envelope codec, file/repo/legacy adapters, and CLI inspection carry implemented code, while the remaining engines and providers are placeholders |
 | `packages/adapters/src/credentials/index.ts` | Environment-backed credential port implementation at the declared `./credentials` subpath |
 | `packages/adapters/src/io/envelope-codec.ts` | Pure adapter-internal metadata envelope codec |
-| `packages/*/src/**` | Internal tier directories; the configuration and state tiers, the file/repo/legacy adapters, and CLI inspection carry implemented code, while the remaining engines and providers are placeholders |
 | `package.json` | Workspace root: pinned `packageManager`, five named scripts, aggregate `check`, dev toolchain |
 | `pnpm-workspace.yaml` | Workspace globs (`packages/*`) |
 | `tsconfig.base.json` / `tsconfig.json` | Strict base flags / solution references |

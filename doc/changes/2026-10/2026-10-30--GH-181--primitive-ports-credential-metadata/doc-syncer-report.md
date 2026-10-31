@@ -105,3 +105,50 @@ Consistency checks:
 - No source code, change spec, plan, test plan, or pm-notes modified; the only change artifact touched is this addendum. No license headers added.
 
 Residual documentation gaps: none.
+
+## Addendum — State+Ports Union Reconciliation (2026-10-31)
+
+Scope: current-truth reconciliation after the GH-181 branch merged `main-tools` with GH-174 (state layer) and the fix commit `fc472a6` reconciled the union seams. Ground truth was read from the tree, not from this report's earlier prose.
+
+Union facts verified in the tree:
+
+- `.dependency-cruiser.cjs` `runtime-apis-confinement` `pathNot` has four entries: `packages/core/src/state/driver/`, `packages/adapters/src/(repo|file|host|session|legacy|credentials)/`, `packages/cli/`, and `packages/opencode/`; the whole-state exemption is absent.
+- `scripts/checks/secret-read-boundary.ts` declares four exact allowlist entries: the `credentials` directory (`credential-material`), `packages/core/src/state/driver/runtime-edge.ts` (`configuration-environment-source`, icacls owner identity), `packages/adapters/src/file/yaml-parser.ts`, and `packages/adapters/src/legacy/index.ts`.
+- `packages/core/src/state/driver/runtime-edge.ts` reads `process.env.USERNAME ?? process.env.USER`, the state-tier environment read admitted by the allowlist.
+- `packages/adapters/package.json` exports `./credentials`; `packages/core/package.json` exports `./state`.
+
+### Files patched
+
+| File | Union reconciliation |
+|------|----------------------|
+| `doc/spec/features/feature-monorepo-scaffold-toolchain.md` | Removed merge-duplicate front matter, overview paragraph, package-table rows, runtime-API-confinement bullet, and codebase-map rows. The single confinement statement now names both union sides: the `packages/core/src/state/driver/` edge and the adapter I/O subpaths including `credentials`. The secret-read description changed from three to four entries, naming the state driver runtime edge and its icacls owner-identity reason. Union `related_changes` now carries GH-174 and GH-181. |
+| `doc/spec/features/feature-adapter-ports.md` | Secret-read allowlist table corrected from three to four entries with the state driver runtime edge (`configuration-environment-source`, icacls reason). Security boundary now names the `core` state driver edge alongside the adapter I/O subpaths. Added GH-174 traceability for the state-driver entry. |
+| `doc/spec/features/feature-state-layer.md` | Runtime-edge description now includes the Windows owner-identity environment read; the Windows contract records the `USERNAME ?? USER` read as the only state-tier environment read and an allowlisted `configuration-environment-source`. Added GH-181 traceability. |
+| `doc/overview/glossary.md` | Repaired malformed duplicate front matter (two `related_changes` and `summary` keys), merged duplicate `Domain kind` and `Empty-but-enforced` rows into their union wording, updated `Secret-read boundary` to four entries including the state driver, and tightened `Runtime-API confinement` to the driver edge plus the six adapter I/O subpaths. |
+| `doc/spec/features/feature-result-contract.md` | Merged duplicate `related_changes` keys into `["GH-172", "GH-173", "GH-174", "GH-181"]`; no table or prose change was required. |
+| `.ai/rules/typescript.md` | Section 4 runtime/I/O allowlist now reads `core/src/state/driver/`, the adapter I/O subpaths including `credentials`, `cli`, and `opencode`, plus the two configuration environment readers allowed by the secret-read boundary. |
+
+### Verified without change
+
+| Area | Finding |
+|------|---------|
+| `doc/spec/features/feature-config-layer.md` | Credential wording already points to the adapter-ports feature and the `./credentials` subpath; no state-layer contradiction. |
+| `doc/spec/features/feature-branding-seam.md` | Branding-only traceability (GH-171, GH-173, GH-174) is accurate; GH-181 did not change the seam. |
+| `doc/decisions/**` | Decision records are historical. ADR-0003's subpath-level statement that `core ./state` is the only core subpath importing runtime APIs remains true; the implementation-level driver-edge tightening is enforced by `.dependency-cruiser.cjs` and documented in current-truth specs. No decision-record rewrite was made. |
+| Remaining `doc/**` current-truth prose (excluding `doc/changes/**` and `doc/inception/**`) | Grep found no remaining "three allowlist entries" claim, no subpath list missing `./credentials` or `./state`, and no statement that the whole state tier or the state layer is exempt from runtime-API confinement without the driver-edge nuance. |
+
+### Validation
+
+- `bash scripts/.tests/test-doc-distribution.sh` → `no drift — 80 in-scope docs; install set matches ados_distribution markers`.
+- `bun run scripts/checks/forbidden-literals.ts` → `OK forbidden-literals: 5/5 scope classes scanned, 0 violations`.
+- `bun run scripts/checks/secret-read-boundary.ts` → `OK secret-read-boundary: 56 production files clean (4 allowlisted entries, severity error)`.
+- Front matter in the patched docs parses as single-key mappings; no duplicate keys remain.
+- Traceability: GH-174 and GH-181 both appear in the union `related_changes` of the scaffold spec and glossary; the adapter-ports spec carries both; the state-layer spec carries both.
+
+### Residual documentation gaps
+
+None for the union. No source code, tests, configs, change spec, plan, test plan, or pm-notes were modified; the only change artifact touched is this addendum. No license headers were added.
+
+### Next Step
+
+Ready for Finalization.

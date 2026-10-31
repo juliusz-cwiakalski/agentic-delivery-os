@@ -2,12 +2,12 @@
 id: SPEC-STATE-LAYER
 status: Current
 created: 2026-10-30
-last_updated: 2026-10-30
+last_updated: 2026-10-31
 owners: ["engineering"]
 service: delivery-os
 summary: "The implemented M0-S5 state layer: an injected store identity, an append-only schema-versioned JSONL ledger as durable truth, disposable JSONL-scan and SQLite-index driver kinds over the same ledger, classified torn-state detection with verified-empty evidence and terminal-tail repair, key-set assertions with no default substitution, single-writer fences with explicit reported recovery, atomic derived-document replace, and least-privilege permissions with a documented Windows ACL contract."
 links:
-  related_changes: ["GH-174"]
+  related_changes: ["GH-174", "GH-181"]
   related_decisions: ["ADR-0003", "TDR-0004"]
 ---
 
@@ -63,7 +63,7 @@ One store per workspace inside the injected state directory:
 - `packages/core/src/state/index.ts` — the facade over injected identity and the injected runtime edge; the only public factory that accepts a driver kind.
 - `packages/core/src/state/ledger.ts` — framing, FNV-1a 64-bit payload checksum, terminal completeness, sequence continuity, and schema-version verification. Pure.
 - `packages/core/src/state/edge.ts` — the runtime-edge interface and the named fault points. Types only.
-- `packages/core/src/state/driver/runtime-edge.ts` — the only location of runtime APIs: filesystem, permissions, injected clock, and the built-in SQLite binding.
+- `packages/core/src/state/driver/runtime-edge.ts` — the only location of runtime APIs: filesystem, permissions, the Windows owner-identity environment read, injected clock, and the built-in SQLite binding.
 - `packages/core/src/state/driver/strategy.ts` — the two read strategies over verified records.
 
 ### Runtime support matrix (TDR-0004)
@@ -83,7 +83,7 @@ The permission contract is one port contract with two platform mechanisms:
 - On POSIX the exact bits `0700` (directory) and `0600` (file) are applied after creation and verified on open.
 - On Windows an equivalent ACL restricted to the current user is applied at creation (`icacls` with inheritance removed and an explicit current-user grant) and verified on open; a foreign grant or a failed application fails `state.permission.denied`.
 
-Linux CI cannot verify the Windows half. The task suite records an explicit platform conditional with the owner-environment dependency (spec OQ-2); no Linux run claims Windows verification. Both branches are selected by the injected platform value on `StateRuntimeEdge`, never by an ambient probe in the state tier.
+Linux CI cannot verify the Windows half. The task suite records an explicit platform conditional with the owner-environment dependency (spec OQ-2); no Linux run claims Windows verification. The current user is resolved at the driver edge from `USERNAME ?? USER`; this is the only state-tier environment read and is an allowlisted `configuration-environment-source` in the secret-read boundary. Both platform branches are selected by the injected platform value on `StateRuntimeEdge`, never by an ambient platform probe in the state tier.
 
 ### Evidence model
 
