@@ -6,12 +6,10 @@ created: 2026-10-29
 last_updated: 2026-10-31
 owners: ["engineering"]
 service: delivery-os
-summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, the typed adapter-port substrate and secret-read boundary invariant, the durable local state layer, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
+summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, the typed adapter-port substrate and secret-read boundary invariant, the binding privacy and no-cloud guard with its hashed-literal registry and envelope content policy, the durable local state layer, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
 links:
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-179", "GH-181"]
-  related_decisions: ["ADR-0003"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-181", "GH-188"]
-  related_decisions: ["ADR-0003", "ADR-0005"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-179", "GH-181", "GH-184", "GH-188"]
+  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005"]
 ---
 
 # Feature: Monorepo Scaffold and Toolchain
@@ -153,7 +151,7 @@ The five named scripts exist at the root and in all six packages:
 4. `test`
 5. `check:boundaries`
 
-Exactly one aggregate `check` chains them in that order: `lint → format:check → typecheck → test → check:boundaries`, then appends the packed-exports invariant `bun run scripts/checks/exports-parity.ts` at the workspace root. No alternate aggregate or bypass flag exists. `pnpm check` is the single green/red signal for the workspace.
+Exactly one aggregate `check` chains them in that order: `lint → format:check → typecheck → test → check:boundaries`, then appends the packed-exports invariant `bun run scripts/checks/exports-parity.ts` at the workspace root. No alternate aggregate or bypass flag exists. `pnpm check` is the single green/red signal for the workspace. The root also exposes `check:privacy-literals`, a standalone command that runs the privacy guard directly; it is deliberately not chained into the aggregate, so the aggregate contract stays exactly as pinned by the CI invariants. The guard itself is binding in the `ts-invariants` CI job.
 
 The root `typecheck` runs `pnpm -r typecheck` and then compiles the `tests/types/tsconfig.json` type-probe project, so compile-time contract probes outside the package graph fail the aggregate. The root `typecheck` and `test` scripts each declare a `pnpm build` prerequisite (`pretypecheck` and `pretest`). The aggregate therefore builds every package before it typechecks and tests, so package-name specifiers, emitted declarations, and conditional `imports` aliases resolve against built `dist` targets. `check:boundaries` runs after them, so the aggregate cruises the built tree it just produced; `exports-parity` then packs each publishable from the same `dist/`.
 
@@ -187,9 +185,9 @@ The existing bash jobs remain byte-unchanged and authoritative. Sixteen additive
 
 `ts-fresh-clone`, `ts-invariants`, `ts-typecheck`, `ts-lint`, `ts-format`, `ts-test`, `ts-boundaries`, `ts-build`, `ts-exports`, `ts-pins`, `ts-publish-guard`, `ts-license-audit`, `ts-vuln`, `ts-aggregate`, `ts-commitlint`, `ts-forbidden-literals`.
 
-`ts-boundaries` builds before it cruises, and `ts-invariants` runs `scripts/checks/boundary-ci-parity.ts`, `scripts/checks/secret-read-boundary.ts`, and the other static invariants, so the two CI jobs stay ordered the way the local gates are.
+`ts-boundaries` builds before it cruises, and `ts-invariants` runs `scripts/checks/boundary-ci-parity.ts`, `scripts/checks/secret-read-boundary.ts`, `scripts/checks/privacy-literals.ts`, and the other static invariants, so the two CI jobs stay ordered the way the local gates are.
 
-The `ts-forbidden-literals` brand scan is specified in [feature-branding-seam.md](feature-branding-seam.md).
+The `ts-forbidden-literals` brand scan is specified in [feature-branding-seam.md](feature-branding-seam.md). The binding privacy-literals invocation is specified in [Privacy and No-Cloud Guards](feature-privacy-guard.md).
 
 All `ts-*` jobs check out full history (`fetch-depth: 0`), so jobs that read a recorded commit SHA or a remote-tracking ref resolve it in CI.
 
@@ -206,17 +204,19 @@ No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scr
 | `packages/*/src/**` | Internal tier directories; the configuration and state tiers, result contracts, adapter ports, the credential implementation, the envelope codec, file/repo/legacy adapters, pm-notes parsing, delivery-registry records, and the CLI inspection, lint, and phase commands carry implemented code, while the remaining engines and providers are placeholders |
 | `packages/*/src/**` | Internal tier directories; the configuration and state tiers, result contracts, adapter ports, the credential implementation, the envelope codec, file/repo/legacy adapters, CLI inspection, and the three provider client read slices carry implemented code, while the remaining engines and the `azure` and `ci` provider subpaths are placeholders and provider write operations are declared gaps |
 | `packages/adapters/src/credentials/index.ts` | Environment-backed credential port implementation at the declared `./credentials` subpath |
-| `packages/adapters/src/io/envelope-codec.ts` | Pure adapter-internal metadata envelope codec |
-| `package.json` | Workspace root: pinned `packageManager`, five named scripts, aggregate `check`, dev toolchain |
+| `packages/adapters/src/io/envelope-codec.ts` | Pure adapter-internal metadata envelope codec with the required content policy |
+| `packages/adapters/src/io/privacy-rules.ts` | Pure, dependency-free privacy rule vocabulary shared by the file check and the envelope policy |
+| `packages/adapters/src/io/envelope-content-policy.ts` | Pure envelope content-policy builder over shared rules and injected hashed entries |
+| `package.json` | Workspace root: pinned `packageManager`, five named scripts, `check:privacy-literals`, aggregate `check`, dev toolchain |
 | `pnpm-workspace.yaml` | Workspace globs (`packages/*`) |
 | `tsconfig.base.json` / `tsconfig.json` | Strict base flags / solution references |
 | `.dependency-cruiser.cjs` | Package, subpath, tier, testkit, and runtime-API rules |
-| `scripts/checks/*.ts` | Repository invariant checks run with Bun |
+| `scripts/checks/*.ts` | Repository invariant checks run with Bun, including `privacy-literals.ts` and its committed `privacy-literals.registry.json` |
 | `tests/structure/**` | Inventory, subpath, exports, contract-surface, and `createRuntime` assertions |
 | `tests/types/**` | Compile-time contract probes chained into the root `typecheck` |
 | `tests/boundaries/**` | Negative fixtures, controls, and the fixture-coverage meta-check |
-| `tests/behaviour/**` | pnpm isolation, commit-msg hook, adapter-port, credential, envelope, pm-notes lint, corpus, phase, and delivery-registry behaviour |
-| `tests/checks/**` | Mutation and contract tests for `scripts/checks/*.ts` |
+| `tests/behaviour/**` | pnpm isolation, commit-msg hook, adapter-port, credential, envelope round-trip/degradation, envelope content policy, pm-notes lint, corpus, phase, and delivery-registry behaviour |
+| `tests/checks/**` | Mutation and contract tests for `scripts/checks/*.ts`, including the privacy guard suites |
 | `.changeset/config.json` | Lockstep fixed group and private-package policy |
 | `.github/workflows/ci.yml` | Untouched bash jobs plus the additive `ts-*` fast loop |
 | `.github/workflows/release.yml` | Manual pre-freeze publish guard and publish path |
@@ -252,6 +252,7 @@ core              ──> no workspace dependencies
 | NFR-8 | Bash stack | No regression; bash jobs remain authoritative |
 | NFR-9 | Local commit-msg hook | Offline, non-mutating, never blocks an agent commit |
 | NFR-10 | Dependency risk | 0 high/critical advisories; every direct development/runtime use and locked runtime closure entry licensed and registered |
+| NFR-11 | Privacy guard bindingness | `privacy-literals` is invoked by name in `ts-invariants`, stays green on the clean tree, and fails on a planted guarded value; every envelope serialization supplies a content policy. |
 
 ## Quality Assurance Strategy
 
@@ -260,7 +261,7 @@ core              ──> no workspace dependencies
 | Unit/structure | Package inventory, subpaths, exports, `createRuntime` | `bun test tests/structure` |
 | Boundary | Every forbidden rule, alias and relative form, on production resolution | `bun test tests/boundaries` with the `mkdtemp` harness; `check:boundaries` for the gate |
 | Fixture coverage | Rule-to-fixture completeness | `tests/boundaries/fixture-coverage.test.ts` |
-| Invariants | Manifests, pins, CI topology, bindingness, supply chain, exports, packed-exports parity, boundary build/cruise parity, licenses, result-contract table sync, exit literals, secret-read boundary | `bun run scripts/checks/*.ts`, the aggregate check, and mutation tests under `tests/checks/**` |
+| Invariants | Manifests, pins, CI topology, bindingness, supply chain, exports, packed-exports parity, boundary build/cruise parity, licenses, result-contract table sync, exit literals, secret-read boundary, privacy-literals | `bun run scripts/checks/*.ts`, the aggregate check, and mutation tests under `tests/checks/**` |
 | Type level | Contract typing probes outside the package graph | `tests/types/tsconfig.json` through the root `typecheck` |
 | Behaviour | pnpm isolation, commit-msg hook, adapter ports, credentials, envelope round-trip and degradation, pm-notes lint, corpus acceptance, phase transitions, and delivery-registry records | `bun test tests/behaviour` |
 | Aggregate | The whole workspace | `pnpm check` |
@@ -283,5 +284,6 @@ core              ──> no workspace dependencies
 - **Adapter contract substrate:** [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
 - **State capability:** [State Layer](feature-state-layer.md).
 - **PM-notes and phase capability:** [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md).
+- **Privacy and no-cloud capability:** [Privacy and No-Cloud Guards](feature-privacy-guard.md).
 - **Glossary:** [doc/overview/glossary.md](../../overview/glossary.md) — scaffold terms.
 - **Change record:** `doc/changes/2026-10/2026-10-29--GH-170--monorepo-scaffold-toolchain/`.

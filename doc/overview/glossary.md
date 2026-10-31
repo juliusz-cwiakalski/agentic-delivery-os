@@ -7,12 +7,9 @@ owners: ["engineering"]
 area: domain
 document_classification: current-truth
 links:
-  related_decisions: ["ADR-0003"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-179", "GH-181"]
-summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer, adapter-port, pm-notes, phase-transition, and delivery-registry terms used across the repository."
-  related_decisions: ["ADR-0003", "ADR-0005"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-181", "GH-188"]
-summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer, adapter-port, and provider-client-seed terms used across the repository."
+  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-179", "GH-181", "GH-184", "GH-188"]
+summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer, adapter-port, provider-client-seed, privacy-guard, and envelope-content-policy terms used across the repository."
 ---
 
 # Glossary
@@ -54,6 +51,20 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Fixture-coverage meta-check | The test that fails when any configured boundary rule lacks a registered failing fixture, when a mandatory importer rule is missing, or when the ambient-global rule set is not covered. | Testing | — |
 | Fixture provenance | The marker on a committed provider fixture or trap catalog naming its synthetic origin and date, distinguishing it from a live capture. | Testing | [feature-provider-client-seeds.md](../spec/features/feature-provider-client-seeds.md) |
 | Forbidden-literal scan | The CI-binding check (`ts-forbidden-literals`) that fails when a seed literal appears in a DEC-8 scope class outside the DEC-8 allowlist, naming the file and token. The registry is its authority. | Branding | — |
+| Candidate window | A fixed-length span of scanned text, normalized and digested for comparison with a registered hashed-literal length. | Privacy | [feature-privacy-guard.md](../spec/features/feature-privacy-guard.md) |
+| Content-free fingerprint | A short stable value derived only from a rule or entry id, reported in violations instead of content. | Privacy | [feature-privacy-guard.md](../spec/features/feature-privacy-guard.md) |
+| Content policy | The required, injected pure predicate at envelope serialization that scans the exact compact JSON to be embedded and returns allow or a denial carrying one rule or entry id. | Adapter contracts | [feature-adapter-ports.md](../spec/features/feature-adapter-ports.md) |
+| `content-policy-violation` | The fail-closed codec-local serialization failure produced when the content policy denies an envelope payload; it carries no content and produces no carrier. | Adapter contracts | [feature-adapter-ports.md](../spec/features/feature-adapter-ports.md) |
+| Generic rule | A committed code definition recognizing a class of secret-shaped or private-identifier-shaped content by id; patterns are code, never registry data. | Privacy | [feature-privacy-guard.md](../spec/features/feature-privacy-guard.md) |
+| Guarded content | A value the privacy guard is designed to detect: a project-private literal, a secret-shaped value, or a hosted-only term. | Privacy | [feature-privacy-guard.md](../spec/features/feature-privacy-guard.md) |
+| Hashed-literal registry | The schema-versioned registry that stores only domain-separated digests, classes, normalized lengths, ids, and reasons for protected literals; raw values, salt, and keys never appear. | Privacy | [feature-privacy-guard.md](../spec/features/feature-privacy-guard.md) |
+| Hashed literal entry | A registry record of `{ id, class, algorithm, hash, length, reason }`; the raw literal, digest input, salt, and key are absent. | Privacy | [feature-privacy-guard.md](../spec/features/feature-privacy-guard.md) |
+| `private-literal` | The hashed-entry class for project-private content that must never be committed. | Privacy | [feature-privacy-guard.md](../spec/features/feature-privacy-guard.md) |
+| `cloud-term` | The hashed-entry class for hosted-product or cloud terms that must never be committed raw. | Privacy | [feature-privacy-guard.md](../spec/features/feature-privacy-guard.md) |
+| Normalized literal | A literal after trimming and lowercasing, used identically for entry hashing and candidate-window comparison. | Privacy | [feature-privacy-guard.md](../spec/features/feature-privacy-guard.md) |
+| Privacy-literal guard | The binding working-tree invariant that combines seven generic rules with the hashed-literal registry and reports content-free violations. | Privacy | [feature-privacy-guard.md](../spec/features/feature-privacy-guard.md) |
+| Vacuous class | A declared hashed-entry class with no production entries, carrying an explicit reason and proven activatable by a synthetic test. | Privacy | [feature-privacy-guard.md](../spec/features/feature-privacy-guard.md) |
+| Working-tree scan | A scan of tracked plus untracked-but-not-ignored files at the current tip, with no history replay and no corpus baseline. | Privacy | [feature-privacy-guard.md](../spec/features/feature-privacy-guard.md) |
 | Four-copy pin check | The CI equality check across `.bun-version`, the root `engines.bun` field, the CI `env.BUN_VERSION`, and the release workflow. `.bun-version` is the source of truth. | Toolchain | — |
 | Golden test | A test asserting captured output against a recorded fixture. The result contract uses goldens for success, void success, classified failure, unknown failure, broken commands, and planted-secret envelopes. | Testing | — |
 | Graceful degradation | The metadata read path's response to unreadable metadata: the primitive view returns with account-based heuristic provenance and visible degradation evidence naming a mechanically detectable reason (`missing`, `malformed`, `wrong-kind`, or `unknown-version`), never a flow failure. | Adapter contracts | [feature-adapter-ports.md](../spec/features/feature-adapter-ports.md) |
@@ -121,6 +132,7 @@ _Expand every acronym at first use; keep the expanded list here._
 - [Result Contract and Error Table](../spec/features/feature-result-contract.md)
 - [Configuration Layer and Inspection](../spec/features/feature-config-layer.md)
 - [Adapter Ports, Credential Resolution, and Embedded Metadata](../spec/features/feature-adapter-ports.md)
+- [Privacy and No-Cloud Guards](../spec/features/feature-privacy-guard.md)
 - [Provider Client Seeds and Trap Catalogs](../spec/features/feature-provider-client-seeds.md)
 - [State Layer](../spec/features/feature-state-layer.md)
 - [PM-Notes Lint and Phase Transitions](../spec/features/feature-pm-notes-lint-and-phase-transitions.md)
