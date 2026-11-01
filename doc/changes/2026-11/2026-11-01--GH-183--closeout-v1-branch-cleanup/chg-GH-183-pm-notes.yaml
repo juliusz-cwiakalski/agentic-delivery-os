@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-11-01T06:15:00Z", completed: "2026-11-01T10:40:00Z" }
   delivery: { started: "2026-11-01T10:45:00Z", completed: "2026-11-01T12:35:00Z" }
   system_spec_update: { started: "2026-11-01T12:40:00Z", completed: "2026-11-01T13:05:00Z" }
-  review_fix: { started: "2026-11-01T13:10:00Z", completed: null }
+  review_fix: { started: "2026-11-01T13:10:00Z", completed: "2026-11-01T17:55:00Z" }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -128,6 +128,6 @@ notes:
   - text: "Review remediation complete (commits 3737d17, 546ec43, 261123b, ab29d9b, 549a39f): R1 production composition + planFacts over real provider/git/state runtimes; R2 explicit no-surface vs unavailable reverse-dependent observation; R3 real label/relation availability signals; R4 real JSONL ledger with torn-tail classification; R5 auth/5xx → invalid; R6 hardening (open-blocker evidence, delete-time head re-check, plan-mode ambiguity, unassign reason, UTF-8 bound, mutation-based non-vacuity, domain note). `pnpm check` 2243 pass / 3 skip / 0 fail; `pnpm typecheck` PASS; all checks green. Doc re-sync complete (7 specs/glossary) with doc-distribution/forbidden/privacy/error-table-sync green; no residual doc gaps."
     type: resolved
     date: "2026-11-01"
-  - text: "Re-review iteration 2 is the next gate; if PASS, proceed to quality gates. The source-owned ERROR_TABLE remediation hint for closeout.target.unobserved still retains pre-remediation wording; doc prose is current, and correcting the hint is an optional source polish, not a doc gap."
-    type: info
+  - text: "Re-review iteration 2: PASS (code-review/review-iter-2.yaml). All F-1..F-12 resolved with code+tests+docs; regression battery green (2243 pass / 3 skip / 0 fail); gates unweakened; iteration-1 sound areas intact. Non-blocking: N-1 spec DM-11 wording nuance (omitted signal modeled as observed + signals.*=unavailable; canonical doc/spec is correct), N-2 optional pins (labels:[] observed assertion; planFacts torn read-before-plan path), N-3 pre-existing dead `satisfied` counter lint warning. Quality gates and DoD may proceed."
+    type: resolved
     date: "2026-11-01"
