@@ -59,6 +59,11 @@ export function classifyDomainKind(kind: string, code?: string): ErrorTableEntry
  * its own `closeout` identity, and a malformed payload must never be confused
  * with it. It still needs a projection class, so this one narrow synthetic
  * entry is returned only for that exact (kind, code) pair.
+ *
+ * `domainKind: "provider"` here is the adapter-local provider-I/O identity used
+ * by the closeout read refinement. It is not the AI-model provider engine
+ * reserved by DEC-15/F-14, which has its own table entries; this entry adds no
+ * member to `DOMAIN_KINDS` and no error-table row.
  */
 const ADAPTER_LOCAL_PAYLOAD_ENTRY: ErrorTableEntry = {
   code: "provider.payload.invalid",

@@ -41,6 +41,29 @@ describe("TC-CLOSE-045/046/048/049 local branch operations", () => {
       repo.run(["worktree", "remove", `${repo.directory}-wt`]);
     }
   });
+
+  test("a head that moves after planning is refused at delete time", async () => {
+    repo = createTempRepo();
+    const seam = createGitBranchSeam({ cwd: repo.directory, timeoutMs: 5_000 });
+    const plannedHead = repo.deliveryHead;
+    repo.run(["commit", "--allow-empty", "-m", "moved after plan"]);
+    const movedHead = repo.run(["rev-parse", "HEAD"]);
+    expect(movedHead).not.toBe(plannedHead);
+    const result = await seam.deleteBranch({
+      branch: repo.deliveryBranch,
+      expectedHead: plannedHead,
+    });
+    expect(result.ok).toBe(false);
+    expect(await seam.readBranch({ branch: repo.deliveryBranch })).toBeDefined();
+  });
+
+  test("protected refs are rejected by the seam as defense in depth", async () => {
+    repo = createTempRepo();
+    const seam = createGitBranchSeam({ cwd: repo.directory, timeoutMs: 5_000 });
+    const result = await seam.deleteBranch({ branch: repo.baseRef });
+    expect(result.ok).toBe(false);
+    expect(await seam.readBranch({ branch: repo.baseRef })).toBeDefined();
+  });
 });
 
 describe("TC-CLOSE-047 protected refs and the safety matrix", () => {

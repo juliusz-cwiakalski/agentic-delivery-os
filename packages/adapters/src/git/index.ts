@@ -9,7 +9,7 @@
  * a spawn surface.
  */
 import { execFile } from "node:child_process";
-import { CLOSEOUT_OPERATION_TIMEOUT_MS } from "@delivery-os/core/contracts";
+import { CLOSEOUT_OPERATION_TIMEOUT_MS, PROTECTED_REF_NAMES } from "@delivery-os/core/contracts";
 
 /** One child-runner result; a non-zero exit is data, not a throw. */
 export type GitChildRunnerResult = {
@@ -89,7 +89,11 @@ export type GitBranchSeam = {
   readonly isClean: () => Promise<boolean>;
   readonly resolveRef: (input: { readonly ref: string }) => Promise<boolean>;
   readonly restoreCheckout: (input: { readonly baseRef: string }) => Promise<GitMutationResult>;
-  readonly deleteBranch: (input: { readonly branch: string }) => Promise<GitMutationResult>;
+  readonly deleteBranch: (input: {
+    readonly branch: string;
+    /** When supplied, the branch head is re-read and must still match. */
+    readonly expectedHead?: string;
+  }) => Promise<GitMutationResult>;
 };
 
 const REF_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
@@ -188,9 +192,33 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
     };
   };
 
-  const remove = async (branch: string): Promise<GitMutationResult> => {
+  const readBranchFact = async (branch: string): Promise<GitBranchFacts | undefined> => {
+    if (!isSafeRef(branch)) return undefined;
+    const result = await git(["rev-parse", "--verify", `refs/heads/${branch}`]);
+    if (result.status !== 0) return undefined;
+    return { name: branch, head: result.stdout.trim() };
+  };
+
+  const remove = async (branch: string, expectedHead?: string): Promise<GitMutationResult> => {
     if (!isSafeRef(branch)) {
       return { ok: false, code: "plan-restriction", detail: "unsafe branch name" };
+    }
+    // Defense in depth: the protected set is never deletable even if a caller
+    // bypasses the planner's predicate.
+    if ((PROTECTED_REF_NAMES as readonly string[]).includes(branch)) {
+      return { ok: false, code: "closeout.branch.unsafe", detail: "protected ref" };
+    }
+    // Re-read the local head immediately before the destructive command. A head
+    // that moved after planning must never be force-deleted.
+    if (expectedHead !== undefined) {
+      const current = await readBranchFact(branch);
+      if (current === undefined || current.head !== expectedHead) {
+        return {
+          ok: false,
+          code: "closeout.branch.unsafe",
+          detail: "branch head changed before deletion",
+        };
+      }
     }
     const result = await git(["branch", "-D", branch]);
     if (result.status === 0) return { ok: true };
@@ -239,12 +267,7 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
         })
         .sort((left, right) => left.name.localeCompare(right.name));
     },
-    readBranch: async (input) => {
-      if (!isSafeRef(input.branch)) return undefined;
-      const result = await git(["rev-parse", "--verify", `refs/heads/${input.branch}`]);
-      if (result.status !== 0) return undefined;
-      return { name: input.branch, head: result.stdout.trim() };
-    },
+    readBranch: (input) => readBranchFact(input.branch),
     isCheckedOutElsewhere: async (input) => {
       if (!isSafeRef(input.branch)) return false;
       const output = await stdoutOrThrow(["worktree", "list", "--porcelain"], "worktrees");
@@ -263,6 +286,7 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
       return result.status === 0;
     },
     restoreCheckout: (input) => restore(input.baseRef),
-    deleteBranch: (input) => remove(input.branch),
+    deleteBranch: (input) =>
+      remove(input.branch, input.expectedHead === undefined ? undefined : input.expectedHead),
   };
 };
