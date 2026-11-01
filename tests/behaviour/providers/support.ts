@@ -13,8 +13,9 @@ import type {
   ProviderTransport,
 } from "../../../packages/adapters/src/io/provider-transport";
 
-/** One exact-URL fixture route. */
+/** One exact method-and-URL fixture route; `method` defaults to `GET`. */
 export type FixtureRoute = {
+  readonly method?: ProviderRequest["method"];
   readonly url: string;
   readonly body: unknown;
   readonly status?: number;
@@ -70,7 +71,10 @@ export const createFixtureTransport = (routes: readonly FixtureRoute[]): Recordi
     requests,
     send: async (request) => {
       requests.push(request);
-      const route = routes.find((candidate) => candidate.url === request.url);
+      const route = routes.find(
+        (candidate) =>
+          candidate.url === request.url && (candidate.method ?? "GET") === request.method,
+      );
       if (route === undefined) {
         throw new Error(`unfixtured provider request ${request.method} ${request.url}`);
       }

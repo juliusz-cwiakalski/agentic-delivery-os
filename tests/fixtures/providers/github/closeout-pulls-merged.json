@@ -1,0 +1,32 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-01",
+  "pulls": [
+    {
+      "number": 42,
+      "state": "closed",
+      "merged": true,
+      "head": { "ref": "feat/GH-182/other-change", "sha": "9999999999999999999999999999999999999999" },
+      "base": { "ref": "main-tools" }
+    },
+    {
+      "number": 504,
+      "state": "closed",
+      "merged": true,
+      "head": {
+        "ref": "feat/GH-183/closeout-v1-branch-cleanup",
+        "sha": "2222222222222222222222222222222222222222"
+      },
+      "base": { "ref": "main-tools" }
+    },
+    {
+      "number": 505,
+      "state": "open",
+      "merged": false,
+      "head": {
+        "ref": "feat/GH-183/closeout-v1-branch-cleanup",
+        "sha": "2222222222222222222222222222222222222222"
+      },
+      "base": { "ref": "main-tools" }
+    }
+  ]
+}

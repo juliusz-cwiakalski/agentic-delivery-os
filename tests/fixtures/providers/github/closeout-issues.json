@@ -1,0 +1,21 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-01",
+  "issue": {
+    "number": 183,
+    "title": "Closeout v1 with branch cleanup",
+    "state": "open",
+    "labels": [
+      { "name": "change" },
+      { "name": "planning" },
+      { "name": "spec-ready" },
+      { "name": "readiness-passed" },
+      { "name": "in-progress" },
+      { "name": "review" },
+      { "name": "blocked" },
+      { "name": "vendor-label" }
+    ],
+    "assignee": { "login": "owner-placeholder" },
+    "updated_at": "2026-10-31T00:00:00Z",
+    "issue_links": []
+  }
+}

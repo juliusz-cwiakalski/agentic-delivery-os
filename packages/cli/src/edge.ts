@@ -20,7 +20,7 @@ import {
   runtimePlatform,
   stagePmNotesPhaseEntry,
 } from "@delivery-os/adapters/file";
-import { createGitHubClient } from "@delivery-os/adapters/github";
+import { createGitHubClient, type GithubClientOptions } from "@delivery-os/adapters/github";
 import { createLegacyCompat } from "@delivery-os/adapters/legacy";
 import {
   findGitRoot,
@@ -239,13 +239,7 @@ export type ProviderComposition = {
 };
 
 /** The injected provider transport shape used by the GitHub reads. */
-export type StatusTransport = {
-  readonly send: (request: {
-    readonly url: string;
-    readonly method: "GET";
-    readonly headers: Readonly<Record<string, string>>;
-  }) => Promise<{ readonly status: number; readonly body: unknown }>;
-};
+export type StatusTransport = NonNullable<GithubClientOptions["transport"]>;
 
 /** The status composition seams; the provider resolver is supplied by the edge. */
 export type StatusComposition = {

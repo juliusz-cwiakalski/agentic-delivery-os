@@ -259,7 +259,9 @@ describe("TC-CONF-020 live status matrix and writer", () => {
         if (tenant === undefined) throw new Error(`missing tenant ${provider}`);
         return createRecordingTransport({
           send: async (request) => {
-            const route = tenant.routes.find((candidate) => candidate.url === request.url);
+            const route = tenant.routes.find(
+              (candidate) => candidate.method === request.method && candidate.url === request.url,
+            );
             if (route === undefined) throw new Error(`unfixtured ${request.url}`);
             return { status: route.status, body: route.body };
           },
@@ -446,7 +448,7 @@ describe("TC-CONF-023 live read-only and no-mutation proof", () => {
   test("an unsupported non-read step records its declared gap and never dispatches", async () => {
     const { result } = await runOnce({ environment: githubOnlyEnvironment() });
     const declareGap = result.artifact.steps.find(
-      (step) => step.operation === "write-work-item" && step.provider === "github",
+      (step) => step.operation === "write-comment" && step.provider === "github",
     );
     expect(declareGap?.status).toBe("skipped");
     expect(declareGap?.skipKind).toBe("declared-gap");

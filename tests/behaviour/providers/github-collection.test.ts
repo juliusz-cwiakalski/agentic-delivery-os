@@ -130,7 +130,21 @@ describe("TC-STATUS-021 bounded GitHub collection reads", () => {
     const client = createGitHubClient({ instance, credentials, repository, transport });
     const issues = requireValue(await client.listWorkItems(100), "issues");
     const pulls = requireValue(await client.listDeliveryRequests(100), "pulls");
-    const serialized = JSON.stringify({ issues, pulls });
+    const serialized: unknown = JSON.parse(JSON.stringify({ issues, pulls }));
+    const keys = new Set<string>();
+    const collect = (value: unknown): void => {
+      if (Array.isArray(value)) {
+        for (const entry of value) collect(entry);
+        return;
+      }
+      if (typeof value === "object" && value !== null) {
+        for (const [key, entry] of Object.entries(value)) {
+          keys.add(key);
+          collect(entry);
+        }
+      }
+    };
+    collect(serialized);
     for (const native of [
       "reviewDecision",
       "head",
@@ -141,7 +155,7 @@ describe("TC-STATUS-021 bounded GitHub collection reads", () => {
       "check_runs",
       "updated_at",
     ]) {
-      expect(serialized).not.toContain(native);
+      expect(keys.has(native), native).toBe(false);
     }
   });
 

@@ -463,7 +463,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "normalizeGithubIssue",
     "normalizeGithubIssueList",
     "normalizeGithubPullList",
+    "normalizeIssueDependencies",
+    "normalizeMergedDeliveryRequestList",
     "normalizePullRequest",
+    "normalizeThreadResolution",
+    "normalizeWorkItemObservation",
   ],
   "adapters/src/github/review-state.ts": [
     "GITHUB_REVIEW_DECISION_STATES",

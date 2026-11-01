@@ -339,14 +339,15 @@ describe("TC-CONF-011 runtime coverage is non-vacuous", () => {
     const mutated: ConformanceReport = {
       ...report,
       steps: report.steps.map((step) =>
-        step.provider === "github" && step.operation === "write-work-item"
+        step.provider === "github" && step.operation === "write-delivery-request"
           ? { ...step, skipReason: "wrong-reason" }
           : step,
       ),
     };
     expect(
       runtimeCoverageViolations(mutated, CONFORMANCE_ADAPTERS, "mock").some(
-        (message) => message.includes("github") && message.includes("declared gap write-work-item"),
+        (message) =>
+          message.includes("github") && message.includes("declared gap write-delivery-request"),
       ),
     ).toBe(true);
   });
@@ -504,7 +505,7 @@ describe("TC-CONF-014 deterministic double replay", () => {
 });
 
 describe("TC-CONF-015 exact-URL replay and the throwing-fetch guard", () => {
-  test("the mock suite makes zero live fetch calls and only exact GET routes", async () => {
+  test("the mock suite makes zero live fetch calls and only exact fixture routes", async () => {
     const tenants = loadMockTenants();
     const transports: ReturnType<typeof createMockTenantTransport>[] = [];
     const guard = installThrowingFetchGuard();
@@ -531,7 +532,7 @@ describe("TC-CONF-015 exact-URL replay and the throwing-fetch guard", () => {
     }
     for (const transport of transports) {
       for (const request of transport.requests) {
-        expect(request.method).toBe("GET");
+        expect(["GET", "POST", "PATCH"]).toContain(request.method);
       }
     }
     const declared = new Set(
@@ -949,5 +950,43 @@ describe("TC-CONF-012 comment provenance and shipped carrier skip", () => {
     const result = await client.readWorkItem?.();
     expect(result?.ok).toBe(true);
     if (result?.ok) expect((result.value.comments ?? []).length).toBeGreaterThan(0);
+  });
+});
+
+describe("TC-CLOSE-065 closeout write execution and runtime coverage", () => {
+  test("every newly supported GitHub write executes in mock", async () => {
+    const report = await runProduction("closeout-coverage");
+    expect(runtimeCoverageViolations(report, CONFORMANCE_ADAPTERS, "mock")).toEqual([]);
+    for (const operation of [
+      "write-work-item",
+      "transition-work-item",
+      "resolve-delivery-thread",
+    ]) {
+      expect(
+        report.steps.some(
+          (step) =>
+            step.provider === "github" && step.operation === operation && step.status === "executed",
+        ),
+        operation,
+      ).toBe(true);
+    }
+  });
+
+  test("dropping an executed write step produces a named violation", async () => {
+    const report = await runProduction("closeout-coverage-mutant");
+    const mutated: ConformanceReport = {
+      ...report,
+      steps: report.steps.filter(
+        (step) =>
+          !(
+            step.provider === "github" &&
+            step.operation === "transition-work-item" &&
+            step.status === "executed"
+          ),
+      ),
+    };
+    expect(runtimeCoverageViolations(mutated, CONFORMANCE_ADAPTERS, "mock")).toContain(
+      "github: supported operation transition-work-item was not executed",
+    );
   });
 });

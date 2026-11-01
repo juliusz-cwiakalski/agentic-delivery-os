@@ -6,7 +6,12 @@
  * the injected `CredentialPort` on every request — the client never stores or
  * logs secret material and never reads the ambient environment.
  */
-import type { CredentialPort, ExternalSystemInstance, WorkItem } from "@delivery-os/core/contracts";
+import {
+  CLOSEOUT_OPERATION_TIMEOUT_MS,
+  type CredentialPort,
+  type ExternalSystemInstance,
+  type WorkItem,
+} from "@delivery-os/core/contracts";
 import type {
   ProviderReadResult,
   ProviderRequest,
@@ -41,6 +46,8 @@ const nativeFetchTransport = (): ProviderTransport => ({
     const response = await fetch(request.url, {
       method: request.method,
       headers: request.headers,
+      ...(request.body === undefined ? {} : { body: request.body }),
+      signal: AbortSignal.timeout(request.timeoutMs ?? CLOSEOUT_OPERATION_TIMEOUT_MS),
     });
     const body: unknown = await response.json();
     return { status: response.status, body };

@@ -125,6 +125,7 @@ export const normalizeMergeRequest = (
     return providerPayloadFailure(`GitLab MR ${entityId}: ${resolution.detail}`);
   }
 
+  const headSha = stringField(payload, "sha");
   const rawThreads = payload.review_threads;
   const threads = Array.isArray(rawThreads)
     ? rawThreads.flatMap((value) => {
@@ -141,6 +142,7 @@ export const normalizeMergeRequest = (
       targetRef,
       reviewState: resolution.reviewState,
       threads,
+      ...(headSha === undefined ? {} : { headSha }),
     },
   };
 };

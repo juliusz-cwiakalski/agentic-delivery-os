@@ -236,13 +236,17 @@ export const EXPECTED_SEED_POSTURES = {
   github: {
     adapterName: "github",
     systemKind: "vcs",
-    supported: ["read-work-item", "read-delivery-request", "read-pipeline-run"],
+    supported: [
+      "read-work-item",
+      "read-delivery-request",
+      "read-pipeline-run",
+      "write-work-item",
+      "transition-work-item",
+      "resolve-delivery-thread",
+    ],
     gapReasons: {
-      "write-work-item": "adapter-not-implemented",
-      "write-delivery-request": "adapter-not-implemented",
-      "transition-work-item": "adapter-not-implemented",
       "write-comment": "adapter-not-implemented",
-      "resolve-delivery-thread": "adapter-not-implemented",
+      "write-delivery-request": "adapter-not-implemented",
     },
   },
 } as const satisfies Readonly<Record<"jira" | "gitlab" | "github", ExpectedSeedPosture>>;

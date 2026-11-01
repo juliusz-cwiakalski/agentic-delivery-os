@@ -1,0 +1,12 @@
+{
+  "iid": 42,
+  "state": "merged",
+  "draft": false,
+  "approvals": 1,
+  "source_branch": "feat/GH-183/closeout-v1-branch-cleanup",
+  "target_branch": "main-tools",
+  "detailed_merge_status": "merged",
+  "merge_status": "can_be_merged",
+  "sha": "2222222222222222222222222222222222222222",
+  "review_threads": []
+}

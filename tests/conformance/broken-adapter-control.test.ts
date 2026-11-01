@@ -49,6 +49,13 @@ const corruptRegistration = (
         ...(client.readPipelineRun !== undefined
           ? { readPipelineRun: client.readPipelineRun }
           : {}),
+        ...(client.writeWorkItem !== undefined ? { writeWorkItem: client.writeWorkItem } : {}),
+        ...(client.transitionWorkItem !== undefined
+          ? { transitionWorkItem: client.transitionWorkItem }
+          : {}),
+        ...(client.resolveDeliveryThread !== undefined
+          ? { resolveDeliveryThread: client.resolveDeliveryThread }
+          : {}),
       };
     },
   };

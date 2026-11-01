@@ -18,6 +18,7 @@ import type {
   WorkItem,
 } from "../../../packages/core/src/contracts/index";
 import { fixtureBrand } from "../../fixtures/credentials/cases";
+import { makeGithubClient } from "../../fixtures/closeout/github-client";
 import {
   arrayField,
   createFixtureTransport,
@@ -144,9 +145,9 @@ const reviewStateCheck = async (
     { threadId: "PRRT_2", resolved: false, commentCount: 1 },
   ]);
   expect(approved.sourceRef).toBe("feat/GH-188/client-seeds-trap-catalogs");
-  const serialized = JSON.stringify(approved);
+  const serialized: unknown = JSON.parse(JSON.stringify(approved));
   for (const native of ["reviewDecision", "head", "base", "sha"]) {
-    expect(serialized).not.toContain(native);
+    expect(isRecord(serialized) && Object.hasOwn(serialized, native), native).toBe(false);
   }
 };
 
@@ -397,6 +398,44 @@ const trustedReviewPayload = async (): Promise<void> => {
 
 // --- The catalog ------------------------------------------------------------
 
+const closeoutMergedHead = async (): Promise<void> => {
+  const { client } = makeGithubClient();
+  const result = await client.findMergedDeliveryRequest({ workItemRef: "GH-183", limit: 20 });
+  expect(result.observation).toBe("observed");
+  if (result.observation === "observed") {
+    expect(result.value.identity.entityId).toBe("504");
+    expect(result.value.headSha).toBe("2222222222222222222222222222222222222222");
+  }
+};
+
+const closeoutLabelPreserve = async (): Promise<void> => {
+  const { client, transport } = makeGithubClient();
+  const result = await client.writeWorkItem({
+    entityId: "183",
+    remove: ["planning", "review"],
+    add: ["delivered"],
+  });
+  expect(result.ok).toBe(true);
+  const patch = transport.requests.find((request) => request.method === "PATCH");
+  const body: unknown = patch?.body === undefined ? undefined : JSON.parse(patch.body);
+  const labels = isRecord(body) && Array.isArray(body.labels) ? body.labels : [];
+  expect(labels).toContain("vendor-label");
+  expect(labels).not.toContain("planning");
+  expect(labels).toContain("delivered");
+};
+
+const closeoutThreadGraphql = async (): Promise<void> => {
+  const { client, transport } = makeGithubClient();
+  const result = await client.resolveDeliveryThread({
+    deliveryRequest: { systemName: "github", entityId: "504" },
+    threadId: "PRRT_2",
+  });
+  expect(result.ok).toBe(true);
+  expect(
+    transport.requests.some((request) => request.method === "POST" && request.url.endsWith("/graphql")),
+  ).toBe(true);
+};
+
 const defaultAssertions: TrapAssertions = {
   "GH-REVIEW-STATE": async () => {
     await reviewStateCheck(defaultPullReader);
@@ -408,6 +447,9 @@ const defaultAssertions: TrapAssertions = {
   "GITHUB-LIST-PAGE-LIMIT": listPageLimitCheck,
   "GITHUB-ISSUE-RELATIONS-ABSENT": issueRelationsAbsentCheck,
   "GITHUB-PR-LIST-REVIEW-DEFAULT": prListReviewDefaultCheck,
+  "GH-CLOSEOUT-MERGED-HEAD": closeoutMergedHead,
+  "GH-CLOSEOUT-LABEL-PRESERVE": closeoutLabelPreserve,
+  "GH-CLOSEOUT-THREAD-GRAPHQL": closeoutThreadGraphql,
 };
 
 const runWithGuard = async (options: Omit<TrapRunOptions, "provider">): Promise<TrapRun> => {
@@ -433,6 +475,9 @@ describe("TC-TRAP-002 GitHub trap catalog replays offline", () => {
       "GITHUB-LIST-PAGE-LIMIT",
       "GITHUB-ISSUE-RELATIONS-ABSENT",
       "GITHUB-PR-LIST-REVIEW-DEFAULT",
+      "GH-CLOSEOUT-MERGED-HEAD",
+      "GH-CLOSEOUT-LABEL-PRESERVE",
+      "GH-CLOSEOUT-THREAD-GRAPHQL",
     ]);
   });
 
