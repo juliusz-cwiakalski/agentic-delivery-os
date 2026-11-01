@@ -281,6 +281,11 @@
       "id": "runtime-node-testkit-conformance",
       "tc": "TC-CONF-029",
       "path": "packages/testkit/src/conformance/probe.ts"
+    },
+    {
+      "id": "runtime-node-fs-adapter-git-suffix",
+      "tc": "TC-CLOSE-008",
+      "path": "packages/adapters/src/git-probe/probe.ts"
     }
   ],
   "ambient-env-branding": [

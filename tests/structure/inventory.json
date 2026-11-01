@@ -62,6 +62,7 @@
     "src/file/pm-context.ts",
     "src/file/pm-notes-parser.ts",
     "src/file/yaml-parser.ts",
+    "src/git/index.ts",
     "src/github/capabilities.ts",
     "src/github/client.ts",
     "src/github/index.ts",

@@ -494,6 +494,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "validateWorkflowMap",
     "stateMappingFor",
   ],
+  "adapters/src/git/index.ts": ["createGitBranchSeam"],
   "adapters/src/repo/index.ts": [
     "findGitRoot",
     "nodeRepositoryIo",

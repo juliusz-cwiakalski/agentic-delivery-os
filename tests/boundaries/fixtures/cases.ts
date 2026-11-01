@@ -588,6 +588,21 @@ export const RULE_CASES: RuleCase[] = [
   // ADR-0005 (GH-188): the three provider client subpaths are admitted as exact,
   // reason-bearing runtime-I/O entries.
   clean(
+    "runtime-node-fs-adapter-git",
+    "TC-CLOSE-008",
+    ["adapters"],
+    "packages/adapters/src/git/probe.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
+  ),
+  dep(
+    "runtime-node-fs-adapter-git-suffix",
+    "TC-CLOSE-008",
+    "runtime-apis-confinement",
+    ["adapters"],
+    "packages/adapters/src/git-probe/probe.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
+  ),
+  clean(
     "runtime-control-provider-quota",
     "TC-PROV-006",
     ["adapters"],
