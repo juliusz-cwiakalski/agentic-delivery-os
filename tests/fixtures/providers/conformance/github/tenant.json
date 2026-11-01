@@ -58,6 +58,12 @@
     },
     {
       "method": "GET",
+      "url": "https://github.example.com/repos/owner-placeholder/project-placeholder/issues/601/dependencies/blocked_by?per_page=200",
+      "status": 200,
+      "body": []
+    },
+    {
+      "method": "GET",
       "url": "https://github.example.com/repos/owner-placeholder/project-placeholder/pulls/504",
       "status": 200,
       "body": {

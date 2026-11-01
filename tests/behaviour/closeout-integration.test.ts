@@ -7,12 +7,15 @@ import type { CliDependencies } from "../../packages/cli/src/index";
 import { runCli } from "../../packages/cli/src/index";
 import { CLOSEOUT_INTEGRATION_BASE } from "../../packages/core/src/contracts/index";
 import { readCloseoutHistory } from "../../packages/core/src/state/index";
-import { bufferSink } from "../golden/helpers";
 import { GITLAB_CLOSEOUT_CAPABILITIES } from "../fixtures/closeout/capabilities";
 import { closeoutData, errorOf, runCloseoutCli } from "../fixtures/closeout/cli";
 import {
+  blockersUrl,
   dependenciesUrl,
+  githubBlockersFixture,
   githubIssueFixture,
+  githubReviewThreadsFixture,
+  graphqlUrl,
   issueUrl,
   makeGithubClient,
   pullsUrl,
@@ -30,6 +33,8 @@ import {
 import { fakeInvalidPayload, fakeNotFound } from "../fixtures/closeout/read-observation";
 import { createTempRepo, type TempRepo } from "../fixtures/closeout/temp-git";
 import { makeIdentity, openStore, removeRoot } from "../fixtures/state/harness";
+import { bufferSink } from "../golden/helpers";
+import { readJson } from "./providers/support";
 
 describe("TC-CLOSE-010/011 dry-run and apply happy path", () => {
   test("plan performs no mutation and apply executes the seven-step order", async () => {
@@ -176,18 +181,30 @@ describe("TC-CLOSE-010/011 production composition over the real git seam", () =>
       const mergedPull = {
         number: 504,
         state: "closed",
-        merged: true,
+        merged_at: "2026-10-31T18:42:11Z",
         draft: false,
         reviewDecision: "APPROVED",
         head: { ref: repo.deliveryBranch, sha: repo.deliveryHead },
         base: { ref: repo.baseRef },
-        review_threads: [],
       };
       const { client } = makeGithubClient([
         { method: "GET", url: issueUrl(183), body: githubIssueFixture() },
         { method: "PATCH", url: issueUrl(183), body: { number: 183, state: "closed" } },
         { method: "GET", url: pullsUrl(20), body: [mergedPull] },
+        { method: "GET", url: blockersUrl(183, 200), body: githubBlockersFixture(183) },
         { method: "GET", url: dependenciesUrl(183, 200), body: [] },
+        {
+          method: "POST",
+          url: graphqlUrl,
+          requestBodyContains: "reviewThreads",
+          body: githubReviewThreadsFixture(),
+        },
+        {
+          method: "POST",
+          url: graphqlUrl,
+          requestBodyContains: "resolveReviewThread",
+          body: readJson("tests/fixtures/providers/github/graphql-resolve-thread.json"),
+        },
       ]);
       const composition = createCloseoutComposition({
         workspaceId: "workspace-a",

@@ -475,6 +475,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "normalizeIssueDependencies",
     "normalizeMergedDeliveryRequestList",
     "normalizePullRequest",
+    "normalizeReviewThreads",
     "normalizeThreadResolution",
     "normalizeWorkItemObservation",
   ],

@@ -1,0 +1,11 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-01",
+  "issues": [
+    {
+      "number": 401,
+      "title": "Open blocker",
+      "state": "open",
+      "labels": [{ "name": "change" }]
+    }
+  ]
+}

@@ -180,6 +180,8 @@ export type CloseoutObservedSignals = {
   readonly labels?: "observed" | "unavailable";
   readonly relations?: "observed" | "unavailable" | "unknown";
   readonly assignee?: "observed" | "unavailable";
+  /** Review-thread availability on a delivery request (GitHub GraphQL read). */
+  readonly threads?: "observed" | "unavailable";
 };
 
 export type CloseoutReadObservation<T> =
@@ -190,7 +192,12 @@ export type CloseoutReadObservation<T> =
     }
   | { readonly observation: "not-found" }
   | { readonly observation: "unavailable" }
-  | { readonly observation: "invalid"; readonly detail: string };
+  | {
+      readonly observation: "invalid";
+      readonly detail: string;
+      /** A preserved classified identity (e.g. a credential/config failure). */
+      readonly code?: string;
+    };
 
 /**
  * A reverse-dependent read result (F-7, AC-F7-6).

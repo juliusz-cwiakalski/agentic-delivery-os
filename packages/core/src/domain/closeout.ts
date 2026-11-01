@@ -628,6 +628,14 @@ const threadStep = (facts: CloseoutPlanFacts): CloseoutStep => {
       evidence: evidence(field("observation", merged.observation)),
     });
   }
+  if (merged.signals?.threads === "unavailable") {
+    // The merged PR was read from a list projection whose thread set is not
+    // observable. An unavailable thread read is never an observed empty set.
+    return planStep("comment-resolution", "skipped-noop", {
+      reason: "thread-signal-unavailable",
+      evidence: evidence(field("observation", "observed"), field("threads", "unavailable")),
+    });
+  }
   const unresolved = [...merged.value.threads]
     .filter((thread) => !thread.resolved)
     .sort((left, right) => left.threadId.localeCompare(right.threadId));

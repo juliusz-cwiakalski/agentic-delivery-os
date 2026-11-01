@@ -19,6 +19,8 @@ export type FixtureRoute = {
   readonly url: string;
   readonly body: unknown;
   readonly status?: number;
+  /** Optional request-body substring; distinguishes GraphQL operations on one URL. */
+  readonly requestBodyContains?: string;
 };
 
 /** A transport that records every request and throws on anything unfixtured. */
@@ -73,7 +75,10 @@ export const createFixtureTransport = (routes: readonly FixtureRoute[]): Recordi
       requests.push(request);
       const route = routes.find(
         (candidate) =>
-          candidate.url === request.url && (candidate.method ?? "GET") === request.method,
+          candidate.url === request.url &&
+          (candidate.method ?? "GET") === request.method &&
+          (candidate.requestBodyContains === undefined ||
+            (request.body ?? "").includes(candidate.requestBodyContains)),
       );
       if (route === undefined) {
         throw new Error(`unfixtured provider request ${request.method} ${request.url}`);

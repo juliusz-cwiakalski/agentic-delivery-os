@@ -113,7 +113,10 @@ export const normalizePullRequest = (
   const reviewDecision = stringField(payload, "reviewDecision");
   const reviewState = resolveGithubReviewState({
     state,
-    merged: payload.merged === true,
+    // The REST pull-request list exposes merge truth as the `merged_at`
+    // timestamp, while a single-PR read also carries `merged`. A non-null
+    // timestamp is merge truth on both shapes.
+    merged: payload.merged === true || stringField(payload, "merged_at") !== undefined,
     draft: payload.draft === true,
     ...(reviewDecision !== undefined ? { reviewDecision } : {}),
   });
@@ -343,7 +346,7 @@ export const normalizeIssueDependencies = (
 /** Normalize a GraphQL `resolveReviewThread` payload (F-8). */
 export const normalizeThreadResolution = (
   payload: unknown,
-): ProviderReadResult<{ readonly resolved: boolean }> => {
+): ProviderReadResult<{ readonly resolved: true }> => {
   if (!isRecord(payload)) {
     return providerPayloadFailure("GitHub GraphQL payload is not an object");
   }
@@ -356,21 +359,71 @@ export const normalizeThreadResolution = (
   if (thread === undefined || typeof thread.isResolved !== "boolean") {
     return providerPayloadFailure("GitHub GraphQL resolveReviewThread has no thread state");
   }
-  return { ok: true, value: { resolved: thread.isResolved } };
+  if (thread.isResolved !== true) {
+    // A successful mutation that leaves the thread unresolved is a failed
+    // write. Returning ok would persist `applied` and skip the thread forever.
+    return providerPayloadFailure("GitHub review thread remained unresolved");
+  }
+  return { ok: true, value: { resolved: true } };
+};
+
+/**
+ * Normalize a GraphQL `reviewThreads` read for one pull request.
+ *
+ * The payload shape mirrors `repository.pullRequest.reviewThreads.nodes`; each
+ * node carries the thread id, resolution flag, and a comment total. A missing
+ * container is a malformed read, never an observed empty set.
+ */
+export const normalizeReviewThreads = (
+  payload: unknown,
+): ProviderReadResult<readonly DeliveryThread[]> => {
+  if (!isRecord(payload)) {
+    return providerPayloadFailure("GitHub review-threads payload is not an object");
+  }
+  const data = recordField(payload, "data");
+  const repository = data === undefined ? undefined : recordField(data, "repository");
+  const pullRequest = repository === undefined ? undefined : recordField(repository, "pullRequest");
+  const reviewThreads =
+    pullRequest === undefined ? undefined : recordField(pullRequest, "reviewThreads");
+  const nodes = reviewThreads === undefined ? undefined : reviewThreads.nodes;
+  if (!Array.isArray(nodes)) {
+    return providerPayloadFailure("GitHub review-threads payload has no nodes array");
+  }
+  const threads: DeliveryThread[] = [];
+  for (const node of nodes) {
+    if (!isRecord(node)) return providerPayloadFailure("GitHub review thread is not an object");
+    const threadId = identityField(node, "id");
+    if (threadId === undefined) return providerPayloadFailure("GitHub review thread has no id");
+    if (typeof node.isResolved !== "boolean") {
+      return providerPayloadFailure(`GitHub review thread ${threadId} has no resolution flag`);
+    }
+    const comments = recordField(node, "comments");
+    const commentCount = comments === undefined ? undefined : identityField(comments, "totalCount");
+    if (commentCount === undefined) {
+      return providerPayloadFailure(`GitHub review thread ${threadId} has no comment count`);
+    }
+    threads.push({
+      threadId,
+      resolved: node.isResolved,
+      commentCount: Number(commentCount),
+    });
+  }
+  return { ok: true, value: threads };
 };
 
 /**
  * The provider-asserted label/relation availability signals.
  *
- * A present container (including an explicitly empty array) is `observed`; an
- * omitted container is `unavailable`. The normalized `WorkItem` cannot carry
- * the distinction, so the observation does.
+ * A present label container (including an explicitly empty array) is
+ * `observed`; an omitted container is `unavailable`. The REST issue payload
+ * has no dependency container, so relation availability is always decided by
+ * the dependency read in the client, never by an invented `issue_links` field.
  */
 const observationSignals = (
   payload: Readonly<Record<string, unknown>>,
 ): CloseoutObservedSignals => ({
   labels: Array.isArray(payload.labels) ? "observed" : "unavailable",
-  relations: Array.isArray(payload.issue_links) ? "observed" : "unavailable",
+  relations: "unavailable",
 });
 
 /**

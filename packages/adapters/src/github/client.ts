@@ -32,6 +32,7 @@ import {
   normalizeIssueDependencies,
   normalizeMergedDeliveryRequestList,
   normalizePullRequest,
+  normalizeReviewThreads,
   normalizeThreadResolution,
   normalizeWorkItemObservation,
 } from "./normalize.js";
@@ -117,6 +118,9 @@ const numericEntity = (entityId: string): number | undefined => {
   const value = Number(entityId);
   return Number.isSafeInteger(value) ? value : undefined;
 };
+
+const REVIEW_THREADS_QUERY =
+  "query ReviewThreads($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { pullRequest(number: $number) { reviewThreads(first: 100) { nodes { id isResolved comments { totalCount } } } } } }";
 
 const selectMerged = (requests: readonly DeliveryRequest[]): DeliveryRequest | undefined => {
   let selected: DeliveryRequest | undefined;
@@ -226,6 +230,51 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
     }
   };
 
+  const withDependencyRelations = async (
+    entityId: string,
+    normalized: CloseoutReadObservation<WorkItem>,
+    headers: Readonly<Record<string, string>>,
+  ): Promise<CloseoutReadObservation<WorkItem>> => {
+    if (normalized.observation !== "observed") return normalized;
+    try {
+      const response = await transport.send({
+        url: `${baseUrl}${repositoryPath}/issues/${encodeURIComponent(entityId)}/dependencies/blocked_by?per_page=${encodeURIComponent(String(CLOSEOUT_MAX_DEPENDENTS))}`,
+        method: "GET",
+        headers,
+        timeoutMs,
+      });
+      if (response.status < 200 || response.status >= 300) {
+        return {
+          ...normalized,
+          signals: { ...(normalized.signals ?? {}), relations: "unavailable" },
+        };
+      }
+      const dependencies = normalizeIssueDependencies(response.body, context);
+      if (dependencies.observation !== "observed") {
+        return {
+          ...normalized,
+          signals: { ...(normalized.signals ?? {}), relations: "unavailable" },
+        };
+      }
+      // The dependency read is authoritative: each returned issue is a blocker
+      // of this issue. The REST issue payload itself never carries links.
+      const relations = dependencies.value.map((blocker) => ({
+        relationKind: "blocked-by" as const,
+        target: blocker.identity,
+      }));
+      return {
+        ...normalized,
+        value: { ...normalized.value, relations },
+        signals: { ...(normalized.signals ?? {}), relations: "observed" },
+      };
+    } catch {
+      return {
+        ...normalized,
+        signals: { ...(normalized.signals ?? {}), relations: "unavailable" },
+      };
+    }
+  };
+
   const readObservation = async (entityId: string): Promise<CloseoutReadObservation<WorkItem>> => {
     const headers = authorizedHeaders();
     if (!headers.ok) {
@@ -238,7 +287,10 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
         headers: headers.value,
         timeoutMs,
       });
-      return normalizeWorkItemObservation(response.body, context, response.status);
+      const normalized = normalizeWorkItemObservation(response.body, context, response.status);
+      return normalized.observation === "observed"
+        ? withDependencyRelations(entityId, normalized, headers.value)
+        : normalized;
     } catch (error: unknown) {
       const name = error instanceof Error ? error.name : "unknown error";
       return { observation: "invalid", detail: `GitHub request failed (${name})` };
@@ -305,16 +357,52 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
         matchesWorkItemRef(request.sourceRef, input.workItemRef),
       );
       const selected = selectMerged(matching);
-      return selected === undefined
-        ? { observation: "unavailable" }
-        : { observation: "observed", value: selected };
+      if (selected === undefined) return { observation: "unavailable" };
+      // The REST pull-request list has no review threads, so the selected PR is
+      // re-read through GraphQL. A failed thread read keeps the request observed
+      // but marks the thread signal unavailable, never an observed empty set.
+      const pullNumber = numericEntity(selected.identity.entityId);
+      if (pullNumber === undefined) {
+        return {
+          observation: "observed",
+          value: { ...selected, threads: [] },
+          signals: { threads: "unavailable" },
+        };
+      }
+      const threadsResponse = await send("POST", "/graphql", {
+        query: REVIEW_THREADS_QUERY,
+        variables: {
+          owner: options.repository.owner,
+          name: options.repository.name,
+          number: pullNumber,
+        },
+      });
+      if (!threadsResponse.ok) {
+        return {
+          observation: "observed",
+          value: { ...selected, threads: [] },
+          signals: { threads: "unavailable" },
+        };
+      }
+      const threads = normalizeReviewThreads(threadsResponse.value);
+      return threads.ok
+        ? {
+            observation: "observed",
+            value: { ...selected, threads: threads.value },
+            signals: { threads: "observed" },
+          }
+        : {
+            observation: "observed",
+            value: { ...selected, threads: [] },
+            signals: { threads: "unavailable" },
+          };
     },
     listBlockedByDependents: async (input) => {
       const headers = authorizedHeaders();
       if (!headers.ok) return { observation: "invalid", detail: headers.code };
       try {
         const response = await transport.send({
-          url: `${baseUrl}${repositoryPath}/issues/${encodeURIComponent(input.entityId)}/dependencies?per_page=${encodeURIComponent(String(input.limit ?? CLOSEOUT_MAX_DEPENDENTS))}`,
+          url: `${baseUrl}${repositoryPath}/issues/${encodeURIComponent(input.entityId)}/dependencies/blocking?per_page=${encodeURIComponent(String(input.limit ?? CLOSEOUT_MAX_DEPENDENTS))}`,
           method: "GET",
           headers: headers.value,
           timeoutMs,

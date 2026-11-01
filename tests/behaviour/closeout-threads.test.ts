@@ -70,4 +70,19 @@ describe("TC-CLOSE-038/039 gaps and no merged request", () => {
     expect(step?.outcome).toBe("skipped-noop");
     expect(step?.reason).toBe("no-delivery-request");
   });
+
+  test("unavailable thread evidence is skipped-noop, never satisfied", () => {
+    const step = threadsStep(
+      makeFacts({
+        mergedRequest: {
+          observation: "observed",
+          value: makeMergedRequest({ threads: [] }),
+          signals: { threads: "unavailable" },
+        },
+      }),
+    );
+    expect(step?.outcome).toBe("skipped-noop");
+    expect(step?.reason).toBe("thread-signal-unavailable");
+    expect(step?.operations).toEqual([]);
+  });
 });

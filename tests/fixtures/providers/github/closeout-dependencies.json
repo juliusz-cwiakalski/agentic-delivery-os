@@ -5,15 +5,13 @@
       "number": 301,
       "title": "Dependent awaiting hand-back",
       "state": "open",
-      "labels": [{ "name": "change" }, { "name": "blocked" }],
-      "issue_links": []
+      "labels": [{ "name": "change" }, { "name": "blocked" }]
     },
     {
       "number": 302,
       "title": "Already closed dependent",
       "state": "closed",
-      "labels": [{ "name": "change" }],
-      "issue_links": []
+      "labels": [{ "name": "change" }]
     }
   ]
 }

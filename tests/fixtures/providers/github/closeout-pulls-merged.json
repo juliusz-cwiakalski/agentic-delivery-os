@@ -4,7 +4,7 @@
     {
       "number": 42,
       "state": "closed",
-      "merged": true,
+      "merged_at": "2026-10-20T09:15:00Z",
       "head": {
         "ref": "feat/GH-182/other-change",
         "sha": "9999999999999999999999999999999999999999"
@@ -14,7 +14,7 @@
     {
       "number": 504,
       "state": "closed",
-      "merged": true,
+      "merged_at": "2026-10-31T18:42:11Z",
       "head": {
         "ref": "feat/GH-183/closeout-v1-branch-cleanup",
         "sha": "2222222222222222222222222222222222222222"
@@ -24,7 +24,7 @@
     {
       "number": 505,
       "state": "open",
-      "merged": false,
+      "merged_at": null,
       "head": {
         "ref": "feat/GH-183/closeout-v1-branch-cleanup",
         "sha": "2222222222222222222222222222222222222222"

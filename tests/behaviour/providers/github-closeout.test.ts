@@ -4,10 +4,13 @@
  * GraphQL thread resolution — all over committed fixtures.
  */
 import { describe, expect, test } from "bun:test";
+import { normalizeMergedDeliveryRequestList } from "../../../packages/adapters/src/github/normalize";
 import {
-  defaultGithubRoutes,
+  blockersUrl,
   dependenciesUrl,
+  githubBlockersFixture,
   githubIssueFixture,
+  githubPullsFixture,
   graphqlUrl,
   issueUrl,
   makeGithubClient,
@@ -36,6 +39,36 @@ describe("TC-CLOSE-067 GitHub read observation", () => {
       expect(result.signals?.labels).toBe("observed");
       expect(result.signals?.relations).toBe("observed");
     }
+  });
+
+  test("blockers come from the dependency surface, not an invented issue_links field", async () => {
+    const { client, transport } = makeGithubClient([
+      {
+        method: "GET",
+        url: issueUrl(301),
+        body: {
+          number: 301,
+          title: "Dependent",
+          state: "open",
+          labels: [{ name: "change" }],
+          issue_links: [{ type: "blocks", number: 999 }],
+        },
+      },
+      {
+        method: "GET",
+        url: blockersUrl(301, 200),
+        body: githubBlockersFixture(301),
+      },
+    ]);
+    const result = await client.readWorkItemObservation("301");
+    expect(result.observation).toBe("observed");
+    if (result.observation === "observed") {
+      expect(result.signals?.relations).toBe("observed");
+      expect(result.value.relations).toEqual([
+        { relationKind: "blocked-by", target: { systemName: "github", entityId: "401" } },
+      ]);
+    }
+    expect(transport.requests.some((request) => request.url === blockersUrl(301, 200))).toBe(true);
   });
 
   test("an omitted label container is an unavailable signal, never an empty set", async () => {
@@ -96,6 +129,47 @@ describe("TC-CLOSE-057 merged-request selection", () => {
       expect(result.value.headSha).toBe("2222222222222222222222222222222222222222");
     }
     expect(transport.requests.some((request) => request.url === pullsUrl(20))).toBe(true);
+  });
+});
+
+describe("TC-CLOSE-057 merged_at list shape", () => {
+  test("a non-null merged_at is merged and a null merged_at is not", () => {
+    const normalized = normalizeMergedDeliveryRequestList(githubPullsFixture(), {
+      systemName: "github",
+    });
+    expect(normalized.ok).toBe(true);
+    if (normalized.ok) {
+      expect(normalized.value.map((request) => request.identity.entityId)).toEqual(["42", "504"]);
+    }
+  });
+
+  test("the selected merged request carries GraphQL review threads", async () => {
+    const { client, transport } = makeGithubClient();
+    const result = await client.findMergedDeliveryRequest({ workItemRef: "GH-183", limit: 20 });
+    expect(result.observation).toBe("observed");
+    if (result.observation === "observed") {
+      expect(result.signals?.threads).toBe("observed");
+      expect(result.value.threads).toEqual([
+        { threadId: "PRRT_1", resolved: true, commentCount: 2 },
+        { threadId: "PRRT_2", resolved: false, commentCount: 1 },
+      ]);
+    }
+    const graphql = transport.requests.find(
+      (request) => request.method === "POST" && request.url === graphqlUrl,
+    );
+    expect(graphql?.body).toContain("reviewThreads");
+  });
+
+  test("a failed thread read is an unavailable signal, never an observed empty set", async () => {
+    const { client } = makeGithubClient([
+      { method: "GET", url: pullsUrl(20), body: githubPullsFixture() },
+    ]);
+    const result = await client.findMergedDeliveryRequest({ workItemRef: "GH-183", limit: 20 });
+    expect(result.observation).toBe("observed");
+    if (result.observation === "observed") {
+      expect(result.signals?.threads).toBe("unavailable");
+      expect(result.value.threads).toEqual([]);
+    }
   });
 });
 
@@ -188,6 +262,23 @@ describe("TC-CLOSE-037 GitHub thread resolution", () => {
     const body = parsed(post?.body);
     expect(body.variables).toEqual({ threadId: "PRRT_2" });
     expect(String(body.query)).toContain("resolveReviewThread");
+  });
+
+  test("a mutation that leaves the thread unresolved is a classified failure", async () => {
+    const { client } = makeGithubClient([
+      {
+        method: "POST",
+        url: graphqlUrl,
+        requestBodyContains: "resolveReviewThread",
+        body: readJson("tests/fixtures/providers/github/graphql-resolve-thread-unresolved.json"),
+      },
+    ]);
+    const result = await client.resolveDeliveryThread({
+      deliveryRequest: { systemName: "github", entityId: "504" },
+      threadId: "PRRT_2",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("provider.payload.invalid");
   });
 });
 
