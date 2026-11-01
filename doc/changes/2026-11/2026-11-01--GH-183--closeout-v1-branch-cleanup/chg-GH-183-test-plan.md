@@ -2597,4 +2597,3 @@ Notes on the battery:
 | TC-CLOSE-065 — mock runtime coverage | — | Planned (automated) | Confirm `runtimeCoverageViolations(report, CONFORMANCE_ADAPTERS, "mock")` is empty and each new supported write executed. |
 | TC-CLOSE-066 — detached-HEAD restore | — | Planned (automated) | Confirm clean detached restore plus dirty/missing-base refusal with no deletion. |
 | TC-CLOSE-067 — read-observation discrimination | — | Planned (automated) | Confirm not-found, invalid payload, and unavailable read map to distinct identities with zero writes on failure. |
-
