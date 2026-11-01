@@ -1,0 +1,223 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-176
+branch: feat/GH-176/queue-ready
+status: FAIL
+summary: >-
+  The delivery is broad and high quality: the command grammar/reject-before-read
+  ordering, six tri-state conditions, identity bridge, close association,
+  deterministic tie-break, read-only posture, and the shared
+  collectStatusFacts extraction are all implemented and tested, and the full
+  queue-ready/status/invariant suites are green. Two contract-level defects
+  remain. First, top-level reason group 5 is emitted in the constant-array
+  order, while spec DM-1, the plan, the test plan (TC-QREADY-034 step 6), and
+  the current-truth feature doc require a QUEUE_READY_CONDITION_ORDER +
+  evidence-order walk; the `reasons-cap-7` corpus fixture encodes the array
+  order and masks the deviation. Second, the 65 536-byte machine bound is
+  measured with UTF-16 string length rather than UTF-8 bytes, so non-ASCII
+  provider data can produce a payload that exceeds the hard byte cap (verified:
+  115 887 bytes) without triggering the byte-budget reduction.
+severity_breakdown:
+  blocker: 0
+  major: 2
+  minor: 3
+  info: 3
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: major
+    confidence: medium
+    category: spec-compliance
+    location: packages/core/src/domain/queue-ready.ts:784
+    message: >-
+      `assembleReasons` emits group-5 (condition-source-failure) reasons by
+      iterating the fixed `QUEUE_READY_SOURCE_FAILURE_REASONS` array order, not
+      by walking `QUEUE_READY_CONDITION_ORDER` and each condition's evidence
+      array as spec DM-1, plan §"reasons" (plan lines 143 and 249), test-plan
+      TC-QREADY-034 step 6, and doc/spec/features/feature-queue-ready.md line
+      145 require. For the `reasons-cap-7` corpus row the walk order is
+      `local-context-missing` (repo-free, condition 2) then `signal-unavailable`
+      (tier-known, condition 3), but the implementation and the fixture both
+      emit `signal-unavailable` then `local-context-missing` (verified by
+      direct evaluation). The corpus expectation encodes the array order, so
+      the committed test suite masks the deviation rather than asserting the
+      documented behaviour.
+    suggestion: >-
+      Change `assembleReasons` to build group 5 by walking candidates (pin the
+      candidate traversal order) -> `QUEUE_READY_CONDITION_ORDER` -> each
+      condition's evidence, appending only `QUEUE_READY_SOURCE_FAILURE_REASONS`
+      at first occurrence, and update the `reasons-cap-7` corpus expectation
+      plus any affected goldens. Alternatively, if the constant-array order is
+      intended, amend spec DM-1, the plan, test-plan TC-QREADY-034 step 6, and
+      the feature doc together and record the decision; the artifacts must not
+      disagree.
+    suppressed: false
+    published_url: null
+  - id: F-2
+    severity: major
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/queue-ready.ts:900
+    message: >-
+      The machine byte bound uses `JSON.stringify(payload).length` (UTF-16 code
+      units) at lines 900 and 907 to decide whether the payload exceeds
+      `QUEUE_READY_MAX_MACHINE_BYTES` (65 536 bytes), and the byte-budget
+      reduction loop relies on the same `.length` check. `.length` is not a
+      UTF-8 byte count, so non-ASCII provider data (labels, relation-target
+      entityIds, owner/name, branch, PR refs) can produce a payload whose true
+      byte size exceeds 65 536 while `.length` stays under the cap and no
+      reduction runs. Reproduced with 8 candidates, 16 CJK labels and 16 CJK
+      relation targets each: emitted payload had UTF-16 length 50 351 but
+      115 887 bytes, a direct NFR-2 / AC-F12-1 violation. The tests/goldens use
+      ASCII only, so the bound is never exercised with multi-byte data; the
+      human digest is likewise only guaranteed for ASCII (its 4096-byte cap is
+      checked in tests but not enforced in the renderer).
+    suggestion: >-
+      Measure UTF-8 bytes (`new TextEncoder().encode(serialized).length` or
+      `Buffer.byteLength`) for the budget decision and every `fits()` recheck,
+      and drive the human digest bound from UTF-8 bytes as well; add a
+      non-ASCII cap-sized fixture (e.g. CJK/astral labels and relation targets)
+      asserting `Buffer.byteLength(JSON.stringify(data)) <= 65536` and the
+      4096-byte human bound.
+    suppressed: false
+    published_url: null
+  - id: F-3
+    severity: minor
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/queue-ready.ts:81
+    message: >-
+      Ranking tie-break `refNumber` parses the numeric suffix with `Number(...)`
+      and `compareCandidates` subtracts the two numbers. The spec says the
+      suffix is parsed "as a base-10 integer", but `Number` loses precision above
+      2^53, so refs with >=16-digit suffixes compare equal and fall through to
+      text order. Verified: candidates `GH-9999999999999999` and
+      `GH-10000000000000000` rank as `GH-10000000000000000` first, which is the
+      reverse of numeric order. `compareNumericAware` already uses `BigInt` for
+      PR `entityId`, so the two numeric comparisons are inconsistent.
+    suggestion: >-
+      Compare numeric suffixes with `BigInt` (or a length-then-lexicographic
+      big-integer comparator) in the candidate ranking path, and add a
+      large-suffix ordering case to the ranking fixtures.
+    suppressed: false
+    published_url: null
+  - id: F-4
+    severity: minor
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-10/2026-10-31--GH-176--queue-ready/chg-GH-176-plan.md:863
+    message: >-
+      Plan task audit gap (DONE_BUT_UNCHECKED): the phase-status table still
+      records phase 7 as "Not started (@doc-syncer)" and tasks 7.1–7.5
+      (plan lines 614–618) are unchecked, and chg-GH-176-evidence.md still says
+      the docs "remain for @doc-syncer" (evidence lines 3–5 and 169–174).
+      However commit be722b2 already added doc/spec/features/feature-queue-ready.md,
+      reconciled status/provider/state/config/result/monorepo/registry/glossary/index,
+      and registered the forbidden-literals entry, and pm-notes already records
+      `system_spec_update: COMPLETE`. The plan/evidence artifacts are therefore
+      stale and contradict the delivered docs.
+    suggestion: >-
+      Mark tasks 7.1–7.5 complete and update the phase-7 status row, and update
+      the evidence doc to record phase-7 completion; or, if the docs commit
+      belongs to another actor, record that clearly. Keep plan, evidence, and
+      pm-notes consistent.
+    suppressed: false
+    published_url: null
+  - id: F-5
+    severity: minor
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/queue-ready.ts:948
+    message: >-
+      String caps/segment shortening slice by UTF-16 code units
+      (`clampValue` at 99–103, `shortenSegment` at 948–951). Slicing at the cap
+      can split an astral surrogate pair, yielding a lone surrogate (invalid
+      text) in a projected provider field or the human digest. Tests measure the
+      human segment with `Array.from(segment).length` (code points) while the
+      renderer slices code units, so the two disagree for non-BMP input.
+    suggestion: >-
+      Slice by code point (`Array.from(value).slice(0, cap).join("")`) or use a
+      UTF-8-byte-aware truncation that never splits a surrogate pair, and
+      exercise an astral-character fixture.
+    suppressed: false
+    published_url: null
+  - id: F-6
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/queue-ready.ts:393
+    message: >-
+      `ciCondition` maps any `StatusReadFailure.reason` other than
+      `credential-unavailable`/`commit-unresolved` to `read-failed`, including
+      the declared `not-configured` reason. This is not reachable through the
+      composed command (the target is set when the binding is observed), but a
+      `not-configured` read would be mislabeled as an attempted `read-failed`
+      rather than a distinct evidence case.
+    suggestion: >-
+      Consider an explicit branch (or a defensive mapping) for `not-configured`
+      so the evidence vocabulary stays accurate if the composition changes.
+    suppressed: false
+    published_url: null
+  - id: F-7
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/queue-ready.ts:860
+    message: >-
+      The candidate-level `truncated`/evidence-cap-overflow branch is dead code
+      in the delivered design: `Draft.evidenceTruncated` is always `false` and
+      payload `truncated` never derives from a candidate evidence drop, because
+      the delivered conditions always emit one (or two, for provider) records.
+      This is acknowledged in chg-GH-176-evidence.md as a defensive branch; no
+      action is required, noted for completeness.
+    suggestion: >-
+      No change required unless a future condition can emit >2 records; then
+      wire the candidate flag and payload flag from the drop.
+    suppressed: false
+    published_url: null
+  - id: F-8
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-10/2026-10-31--GH-176--queue-ready/chg-GH-176-spec.md:601
+    message: >-
+      Appendix B depicts each projected relation as `{ target: { entityId } }`,
+      while the code and plan carry `relationKind: "blocked-by"` as well
+      (`QueueReadyWorkItemRelation`). The plan explicitly declares the
+      `relationKind` field, so code and plan agree; only the spec appendix
+      pseudo-shape is narrower.
+    suggestion: >-
+      Optionally reconcile Appendix B to show `{ relationKind: "blocked-by",
+      target: { entityId } }` (or state that all projected relations are
+      `blocked-by`).
+    suppressed: false
+    published_url: null
+test_evidence:
+  default_suite:
+    - "56 pass / 0 fail (queue-ready command, conditions, identity, deps, repo-tier-owner, ci)"
+    - "87 pass / 0 fail (provider, close, ranking, output, negative controls, readonly-determinism, corpus, performance, golden)"
+    - "46 pass / 1 skip / 0 fail (structure queue-ready contract/imports, cli-edge-seam, content-inventory, opt-in live smoke skipped)"
+    - "34 pass / 0 fail (status-command, status-changes-ci, status golden) — shared collectStatusFacts keeps status behaviour"
+    - "14 pass / 0 fail (port-contract-inventory, subpaths/exports parity)"
+  invariant_checks:
+    - "forbidden-literals: 5/5 scope classes, 0 violations (registered feature-queue-ready.md)"
+    - "error-table-sync: entries=31 documented=31, OK (no new error rows)"
+    - "ambient-globals: 40 neutral-set files clean"
+    - "exit-code-literals: 101 files scanned, OK"
+    - "doc-distribution: 81 in-scope docs, no drift"
+  quality_observations:
+    - "38 TCs mapped; 22-control AC-F14-1 matrix present with restored controls and a hand-planted forbidden-claim negative test"
+    - "identity fixtures cover bare-number bridge, wrong number, ambiguous suffix, leading-zero mismatch, preserved leading zero, exact 64-char, over-cap, canonical-observed-unrequested, exact-beats-ambiguity"
+    - "caps fixtures cover all nine provider caps, no systemName, blocked-by-only, byte budget (ASCII), value-clamped, deterministic relation-then-label reduction"
+    - "read-only proof: guarded store shows read-only calls, no append/fence/replace; PM-context bytes and mtime unchanged; no forbidden tokens in queue modules"
+    - "determinism: byte-identical JSON and human replay; caller order and API order do not affect ranking/selection"
+    - "performance: pure evaluation median ~0.22 ms (<=50 ms); exactly 3 GitHub reads, 1 config resolve, 1 park fold, 1 local-context read under a resolved binding"
+    - "opt-in live smoke (ADOS_QUEUE_READY_LIVE === \"1\" + token) skipped by default; structural-only assertions"
+  empirical_findings:
+    - "Confirmed group-5 emitted order for reasons-cap-7 equals the array order (signal-unavailable before local-context-missing), not the documented condition walk"
+    - "Confirmed a non-ASCII cap-sized payload serializes to 115887 bytes while UTF-16 length is 50351 and no byte reduction fires"
+    - "Confirmed ranking inverts GH-9999999999999999 / GH-10000000000000000 due to Number precision"
+reviewed_at: 2026-10-31T23:59:00Z
+next_step: CALL_CODER

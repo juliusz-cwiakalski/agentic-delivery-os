@@ -1,0 +1,6 @@
+active_change:
+  workItemRef: gh-176
+  branch: feat/GH-176/queue-ready
+  changeFolder: doc/changes/2026-10/2026-10-31--GH-176--queue-ready
+parked_changes: []
+notes: "planted-queue-ready-notes-canary"

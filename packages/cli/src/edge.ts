@@ -94,6 +94,7 @@ import {
   createProviderCommandDefinition,
   type ProviderCommandRuntime,
 } from "./commands/provider.js";
+import { createQueueReadyCommandDefinition } from "./commands/queue.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
 import { createVerifyCommandDefinition, type VerifyCommandRuntime } from "./commands/verify.js";
 import type { CliDependencies, CommandDefinition, CommandFlags, CommandProgram } from "./index.js";
@@ -430,6 +431,7 @@ export type ConfigProgramOptions = {
   readonly provider?: ProviderComposition;
   readonly verify?: VerifyCommandRuntime;
   readonly status?: StatusComposition;
+  readonly queueReady?: StatusComposition;
   readonly db?: DbComposition;
 };
 
@@ -656,23 +658,29 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
     };
     commands.provider = createProviderCommandDefinition(providerRuntime);
   }
+  const resolveProviderConfig = (): StatusProviderConfigRead => {
+    const snapshot = resolve({});
+    if (!snapshot.ok) {
+      return { ok: false, reason: "config-invalid", failureCode: snapshot.error.code };
+    }
+    const parsed = parseAndValidateProviderConfiguration(snapshot.value.config.values);
+    if (!parsed.ok) {
+      return {
+        ok: false,
+        reason: "provider-chain-unresolved",
+        failureCode: "config.value.invalid",
+      };
+    }
+    return { ok: true, config: parsed.config };
+  };
   if (options.status !== undefined) {
     commands.status = createStatusCommandDefinition(
-      createStatusCommandRuntime(options.status, () => {
-        const snapshot = resolve({});
-        if (!snapshot.ok) {
-          return { ok: false, reason: "config-invalid", failureCode: snapshot.error.code };
-        }
-        const parsed = parseAndValidateProviderConfiguration(snapshot.value.config.values);
-        if (!parsed.ok) {
-          return {
-            ok: false,
-            reason: "provider-chain-unresolved",
-            failureCode: "config.value.invalid",
-          };
-        }
-        return { ok: true, config: parsed.config };
-      }),
+      createStatusCommandRuntime(options.status, resolveProviderConfig),
+    );
+  }
+  if (options.queueReady !== undefined) {
+    commands.queue = createQueueReadyCommandDefinition(
+      createStatusCommandRuntime(options.queueReady, resolveProviderConfig),
     );
   }
   if (options.verify !== undefined) {

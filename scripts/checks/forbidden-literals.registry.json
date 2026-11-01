@@ -74,6 +74,7 @@
     "doc/spec/features/feature-privacy-guard.md",
     "doc/spec/features/feature-provider-client-seeds.md",
     "doc/spec/features/feature-provider-engine.md",
+    "doc/spec/features/feature-queue-ready.md",
     "doc/spec/features/feature-result-contract.md",
     "doc/spec/features/feature-session-database-admin.md",
     "doc/spec/features/feature-state-layer.md",

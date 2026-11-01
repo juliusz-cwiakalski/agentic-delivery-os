@@ -1,0 +1,46 @@
+{
+  "config": {
+    "defaultChain": "primary",
+    "credentials": {},
+    "entries": {
+      "primary": {
+        "name": "primary",
+        "class": "subscription",
+        "enabled": true
+      }
+    },
+    "chains": {
+      "primary": {
+        "name": "primary",
+        "entries": ["primary"],
+        "allowPaidFallback": false
+      }
+    }
+  },
+  "configFailure": null,
+  "parks": [
+    {
+      "name": "provider:other",
+      "subjectKind": "provider",
+      "subjectName": "other",
+      "cause": "quota-exhausted",
+      "conditions": ["quota-exhausted"],
+      "state": "active",
+      "createdAt": "2026-10-30T00:00:00Z",
+      "expiresAt": "2026-11-01T00:00:00Z",
+      "evidence": {}
+    },
+    {
+      "name": "chain:other",
+      "subjectKind": "chain",
+      "subjectName": "other",
+      "cause": "quota-exhausted",
+      "conditions": ["quota-exhausted"],
+      "state": "active",
+      "createdAt": "2026-10-30T00:00:00Z",
+      "expiresAt": "2026-11-01T00:00:00Z",
+      "evidence": {}
+    }
+  ],
+  "parkFailure": null
+}

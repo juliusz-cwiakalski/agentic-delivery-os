@@ -1,0 +1,9 @@
+{
+  "config": null,
+  "configFailure": {
+    "reason": "provider-chain-unresolved",
+    "failureCode": "config.value.invalid"
+  },
+  "parks": [],
+  "parkFailure": null
+}

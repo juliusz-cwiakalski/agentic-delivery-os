@@ -1,0 +1,248 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-176
+branch: feat/GH-176/queue-ready
+status: FAIL
+summary: >-
+  Iteration-2 re-review of the GH-176 remediation. F-1, F-3, F-4, F-5, F-6 and
+  F-8 are independently verified closed, and F-7 remains an accepted defensive
+  branch. The machine UTF-8 bound (F-2) is fixed and exercised by the CJK
+  fixture, but the human half of F-2 is not: a legal payload (8 candidates,
+  astral head branch at its 256-code-point cap, associated PR refs within their
+  128-code-point caps) renders to >4096 UTF-8 bytes, so `renderQueueReadyHuman`
+  throws and the command exits 2 with `fallback.internal` instead of producing
+  the bounded digest that spec DM-12/F-13/AC-F13-1 and the feature doc
+  promise. The spec's 400-byte-line/620-byte-header derivation is ASCII-only.
+  Three minor issues and one info issue are also recorded (golden fixture not a
+  valid DM-1/DM-2 payload, unasserted reduction order, an unplanned
+  `classifyPipelineRuns` public re-export, and stale spec-version references).
+  The full default suite (1786 pass / 3 skip / 0 fail) and all invariant checks
+  are green; the defects above are reachable only through contract-level
+  probes, not the current test corpus.
+severity_breakdown:
+  blocker: 0
+  major: 1
+  minor: 3
+  info: 1
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-9
+    severity: major
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/queue-ready.ts:1064
+    message: >-
+      The UTF-8 human-bound guard throws instead of producing a bounded digest
+      for a legal multi-byte payload. Verified empirically: with 8 candidates,
+      an astral (U+1F600) head branch of 256 code points, and associated PR
+      `entityId`/`sourceRef`/`targetRef` values inside their 128-code-point
+      caps, `evaluateQueueReady` returns a valid 24,606-byte payload (all
+      fields within their declared caps, payload <65 536 bytes), but
+      `renderQueueReadyHuman` computes a digest over 4 096 bytes and throws
+      `RangeError: queue-ready human digest exceeds its UTF-8 bound`. Through
+      `runQueueReadyCli` the command exits 2 with `fallback.internal` and no
+      stdout. Spec DM-12/F-13/AC-F13-1 (and doc/spec/features/feature-queue-ready.md
+      line 182) still claim the digest is at most 4 096 UTF-8 bytes for every
+      legal normalized view; DM-12's "candidate line at most 400 bytes / header
+      at most 620 bytes" derivation assumes one byte per character, but a
+      32-code-point provider segment is up to 128 UTF-8 bytes and the branch,
+      owner, and name caps are characters, not bytes. Iteration-1 F-2 is
+      therefore only half closed: the machine bound is fixed, the human bound
+      is not.
+    suggestion: >-
+      Either (a) make the human render byte-aware: cap the header
+      branch/owner/name and each provider segment by UTF-8 bytes, and add a
+      human byte-budget reduction, so every legal 8-candidate payload renders
+      at most 4 096 bytes and exits 0 (add an 8-candidate astral-branch fixture
+      asserting the bound and exit 0, exercising the worst case rather than the
+      current single-candidate astral fixture); or (b) amend spec
+      DM-12/F-13/AC-F13-1 and the feature doc to state that a legal multi-byte
+      payload may exceed 4 096 bytes or fail as a hard contract error, and
+      reconcile the plan's claim that the throw is "unreachable for a payload
+      produced by evaluateQueueReady". A legal command invocation must not fail
+      with `fallback.internal`.
+    suppressed: false
+    published_url: null
+  - id: F-10
+    severity: minor
+    confidence: high
+    category: plan-compliance
+    location: tests/fixtures/queue-ready/golden/canonical.ts:140
+    message: >-
+      The canonical golden is hand-constructed rather than evaluator-produced,
+      and the fixture is not a valid `delivery.queue-ready.v1` payload:
+      candidate GH-180 has `workItem: { state: "unknown", reason:
+      "work-item-unobserved" }` while all six conditions are `satisfied` and
+      `ready: true` (an unobserved item makes deps/tier/owner `unknown`, so
+      this shape is impossible), and top-level `reasons` is
+      `["value-clamped"]` (canonical.ts:182) even though the candidate's
+      `close.association` is `unknown`, so DM-1 group 6 requires
+      `pr-association-unknown` (and group 5 would carry `work-item-unobserved`).
+      tests/golden/queue-ready.test.ts asserts byte-for-byte equality to this
+      fixture but never validates it against DM-1/DM-2, so the canonical proof
+      encodes output the evaluator can never produce. The evidence's deviation
+      6 calls this "structurally valid", which is not accurate.
+    suggestion: >-
+      Generate the golden by evaluating a real canonical fact set (or split the
+      canonical case into multiple evaluator-produced goldens if all five close
+      classes cannot coexist in one command-level payload) and make the fixture
+      a valid payload: observe the work item and carry condition evidence
+      consistent with the conditions, and include `pr-association-unknown` in
+      `reasons` (group 6) whenever any association is `unknown`. Add a
+      DM-1/DM-2 validity assertion to the golden test.
+    suppressed: false
+    published_url: null
+  - id: F-11
+    severity: minor
+    confidence: high
+    category: testing
+    location: tests/behaviour/queue-ready-output.test.ts:185
+    message: >-
+      The new non-ASCII cap fixture is the first legal input that reaches the
+      deterministic byte-budget reduction, but the test only asserts
+      `remainingRelations < rawItems.length * QUEUE_READY_MAX_RELATIONS`. It
+      does not assert the pinned reduction order (trailing `workItem.relations`
+      before trailing `workItem.labels`, last-ranked candidate first, highest
+      index first), which DM-11/AC-F12-2 and plan R2.2 require. A regression
+      that dropped labels first, or reduced rank 1 before rank 8, would still
+      pass this test.
+    suggestion: >-
+      Assert the exact reduction order on the CJK fixture (no label dropped
+      before relations; relations removed highest-index/last-rank first; every
+      drop sets payload `truncated` + `value-clamped` with no verdict change),
+      or add a controlled fixture with rank/index sentinels that makes the drop
+      order observable.
+    suppressed: false
+    published_url: null
+  - id: F-12
+    severity: minor
+    confidence: high
+    category: plan-compliance
+    location: packages/core/src/domain/index.ts:9
+    message: >-
+      `classifyPipelineRuns` is re-exported from `packages/core/src/domain/index.ts`
+      (line 9) and `packages/core/src/index.ts` (line 49), but plan task 1.2
+      says "Export only the two functions from `domain/index.ts` and
+      `core/src/index.ts`" (`evaluateQueueReady`/`renderQueueReadyHuman`), and
+      the current-truth feature doc's `packages/core/src/domain/index.ts` row
+      says only those two are re-exported. `domain/status.ts` and
+      `domain/queue-ready.ts` import `./ci-result.js` directly and no consumer
+      imports `classifyPipelineRuns` from the package root, so the two extra
+      exports add public surface without a plan or doc basis.
+    suggestion: >-
+      Remove the two `classifyPipelineRuns` re-exports (keep the module-internal
+      import), or, if the public export is intentional, update plan task 1.2,
+      the feature doc's component table, and the API list to declare it
+      consistently.
+    suppressed: false
+    published_url: null
+  - id: F-13
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-10/2026-10-31--GH-176--queue-ready/chg-GH-176-evidence.md:8
+    message: >-
+      Artifact version references are stale after the F-8 spec reconciliation to
+      v1.7: evidence line 9 says "spec v1.6", plan lines 31 and 101 say "spec
+      v1.6", pm-notes line 8 says "v1.6", and the pm-notes `review_fix` entry
+      still says "Pending doc-syncer re-run" although b8809d6 is the doc-sync
+      commit. The spec revision log (v1.7) and the pm-notes F-8 note already
+      record v1.7.
+    suggestion: >-
+      Update the current-state version references in the evidence, plan, and
+      pm-notes to spec v1.7, and record the completed doc-syncer re-run
+      (b8809d6).
+    suppressed: false
+    published_url: null
+prior_findings_closure:
+  - id: F-1
+    status: RESOLVED
+    evidence: >-
+      `assembleReasons` now walks rank-ordered candidates then
+      `QUEUE_READY_CONDITION_ORDER` then each condition's evidence
+      (packages/core/src/domain/queue-ready.ts:834-851); the `reasons-cap-7`
+      corpus expectation is
+      `["source-truncated","value-clamped","config-invalid","state-unreadable","local-context-missing","signal-unavailable"]`
+      (tests/fixtures/queue-ready/corpus/cases.ts:207-214); a focused
+      walk-order-not-array-order test exists
+      (tests/behaviour/queue-ready-output.test.ts:613-648) and the corpus test
+      asserts the exact order (tests/behaviour/queue-ready-corpus.test.ts:121-140).
+  - id: F-2
+    status: PARTIAL
+    evidence: >-
+      Machine half verified: pure `utf8ByteLength`
+      (packages/core/src/domain/queue-ready.ts:86-96) drives `serializedBytes`
+      for the initial budget (line 972) and every `fits()` recheck (line 979);
+      the CJK fixture (tests/fixtures/queue-ready/caps/non-ascii-byte-budget.ts)
+      is under the UTF-16 cap but over the UTF-8 cap and is reduced to
+      <=65 536 bytes with `value-clamped` and no verdict change (output test
+      line 169-211; measured 31 265 units / 90 785 bytes raw). Human half NOT
+      closed: see F-9.
+  - id: F-3
+    status: RESOLVED
+    evidence: >-
+      Candidate ranking uses `compareNumericSuffix` with BigInt
+      (packages/core/src/domain/queue-ready.ts:113-123, 663-672); large-suffix
+      ordering and GH-007-before-GH-7 are covered
+      (tests/fixtures/queue-ready/ranking/cases.ts:5-22;
+      tests/behaviour/queue-ready-ranking.test.ts:52-79); test passes.
+  - id: F-4
+    status: RESOLVED
+    evidence: >-
+      Plan tasks 7.1-7.5 are checked
+      (chg-GH-176-plan.md:615-619), the phase-status row records Complete at
+      `be722b2` (line 1133), and the evidence doc records Phase 7 completion
+      (chg-GH-176-evidence.md:197-209).
+  - id: F-5
+    status: RESOLVED
+    evidence: >-
+      `clampValue`, `clampDetail`, and `shortenSegment` slice by code point
+      (packages/core/src/domain/queue-ready.ts:136-149, 1020-1025); the astral
+      fixture covers at/over-cap labels, relations, owner/name, branch,
+      timestamp and PR refs, with lone-surrogate and TextEncoder round-trip
+      checks (tests/fixtures/queue-ready/caps/astral.ts;
+      tests/behaviour/queue-ready-output.test.ts:272-345); test passes.
+  - id: F-6
+    status: RESOLVED
+    evidence: >-
+      A defensive `not-configured` CI read now maps to
+      `{ source: "ci", reason: "signal-unavailable" }`, never `read-failed`
+      (packages/core/src/domain/queue-ready.ts:432-442); the attempted
+      `read-failed` control is unchanged
+      (tests/behaviour/queue-ready-ci.test.ts:102-122); test passes.
+  - id: F-7
+    status: ACCEPTED_NO_ACTION
+    evidence: >-
+      The defensive candidate evidence-cap branch is retained (Draft
+      `evidenceTruncated` stays false at queue-ready.ts:917/932) and documented
+      in the evidence; no action required.
+  - id: F-8
+    status: RESOLVED
+    evidence: >-
+      Spec Appendix B now shows `{ relationKind: "blocked-by", target:
+      { entityId } }` (chg-GH-176-spec.md:601); spec revision log v1.7 records
+      the reconciliation.
+test_evidence:
+  environment: "Bun 1.4.4, linux/x64; branch feat/GH-176/queue-ready"
+  suites:
+    - "queue-ready behaviour/golden/structure (19 files): 191 pass / 1 skip / 0 fail"
+    - "queue-ready output/ranking/ci/corpus focused (4 files): 57 pass / 0 fail"
+    - "status behaviour + status golden (13 files): 146 pass / 2 skip / 0 fail"
+    - "queue-ready contract/imports/content-inventory/subpaths/port-contract-inventory: 41 pass / 0 fail"
+    - "full bun test: 1786 pass / 3 skip / 0 fail (167 files, 17 366 expect() calls)"
+  invariant_checks:
+    - "forbidden-literals: 5/5 scope classes, 0 violations"
+    - "error-table-sync: entries=31 documented=31, OK"
+    - "ambient-globals: 40 neutral-set files clean"
+    - "exit-code-literals: 101 files, OK"
+    - "workspace-entrypoints: OK"
+    - "doc-distribution: 81 in-scope docs, no drift"
+  empirical_findings:
+    - "Confirmed F-9: 8 candidates + astral 256-code-point head branch + in-cap astral PR entityId/sourceRef rendered a 24 606-byte legal payload whose human digest exceeded 4 096 bytes; renderQueueReadyHuman threw RangeError and runQueueReadyCli returned exit 2 with `fallback.internal`."
+    - "Confirmed F-10: golden/payload.json candidate GH-180 has workItem.state unknown with all six conditions satisfied/ready true, and reasons omits pr-association-unknown for an unknown association."
+    - "Confirmed F-2 machine half: the CJK raw projection is <=65 536 UTF-16 units but >65 536 UTF-8 bytes and is reduced to <=65 536 bytes with one value-clamped and identical verdicts."
+    - "Working tree clean after all runs (git status --porcelain empty)."
+reviewed_at: 2026-11-01T11:45:00Z
+next_step: CALL_CODER

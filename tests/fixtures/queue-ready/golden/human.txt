@@ -1,0 +1,6 @@
+example-product queue ready owner-placeholder/project-placeholder @ feat/GH-176/queue-ready b31ec47
+ready 3 | not-ready 1 | merge-ready 1 | review-pending 1 | unknown-close 0+more
+1. GH-175  merge-ready  PR #123456789012345678901234567+ feat/GH-175/aaaaaaaaaaaaaaaaaaa+  [repo:local-context; tier:priority-label]
+2. GH-179  review-pending  PR #209 feat/GH-179/pending  [repo:local-context; tier:priority-label]
+3. GH-170  new-start  all six readiness conditions satisfied  [repo:local-context; tier:priority-label]
+4. GH-181  not-ready  blocking: tier-known=unknown  [repo:local-context; tier:priority-label]

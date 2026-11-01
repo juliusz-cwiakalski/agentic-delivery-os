@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The provider v1 engine: the typed provider configuration branch and shipped defaults, deterministic subscription-first chain resolution with eight skip reasons, UTC peak and subscription-quota evaluation combined by MAX, named self-expiring parks persisted as provider.park ledger records and folded into provider-parks.json, fail-loud announcements, credential-port-only quota authorization, the resolve/quota/parks-list CLI surface, the five provider error identities, and the pure-core / provider-quota adapter boundaries."
 links:
-  related_changes: ["GH-182", "GH-175"]
+  related_changes: ["GH-182", "GH-175", "GH-176"]
   related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007"]
   contracts:
     - "packages/core/src/contracts/provider.ts"
@@ -191,6 +191,12 @@ The status digest consumes the provider vocabulary without running the provider 
 
 Consequently, status reports an entry with an active park as `parked` and every other declared entry as `unverified`, never `available`. A declared chain that does not resolve makes the providers section `unknown`; an absent default chain makes it `unavailable`; a park-fold failure makes it `degraded`. The section's config/state evidence reuses the engine's declared identities rather than adding new ones: an unresolved chain carries `failureCode: "config.value.invalid"` with reason `provider-chain-unresolved` and no `failureClass`, and a configuration resolution failure carries the relevant existing `config.*` code. The status contract is specified in [Status Digest](feature-status-digest.md).
 
+### Queue-ready consumer
+
+The `queue ready` ready-set (M0-S7) is a second read-only consumer of the same provider vocabulary. Its `provider-available` condition reads the declared `provider.defaultChain`, `provider.chains`, and `provider.entries` from the resolved configuration snapshot and the verified active park views from the state fold. It never calls `resolve`, `quota`, or `parks`, never fetches quota, never evaluates a peak or quota condition, and never writes a park or announcement.
+
+Consequently the condition reports an active chain park as `unsatisfied` with the bounded cause and expiry, an active provider park or all parked entries as `unsatisfied`, and an enabled unparked entry as `satisfied` with "no active park"; it never claims `available` and its evidence always carries the fixed `engine-not-run` companion. A provider-config read failure is mapped by the read's own reason (`config-invalid` or `provider-chain-unresolved`), and a park-fold failure is `state-unreadable`. The ready-set contract is specified in [Queue Ready](feature-queue-ready.md).
+
 ### Error taxonomy
 
 The provider kind carries five error identities, classified by exact code:
@@ -310,7 +316,8 @@ Adding a provider is a descriptor plus a credential reference, not a code branch
 - **Depends on** the state layer ([feature-state-layer.md](feature-state-layer.md)) for the append-only ledger, fences, verified reads, and atomic derived-document replacement.
 - **Depends on** the credential port and runtime confinement ([feature-adapter-ports.md](feature-adapter-ports.md), [feature-monorepo-scaffold-toolchain.md](feature-monorepo-scaffold-toolchain.md)).
 - **Consumed by** the status digest ([feature-status-digest.md](feature-status-digest.md)) for the declared configuration branch and verified park views only; status never runs the engine or fetches quota.
-- **Consumed by** later queue-readiness, doctor, spend, ceremony, and spawn surfaces for the park and announcement vocabulary.
+- **Consumed by** the queue-ready ready-set ([Queue Ready](feature-queue-ready.md)) for the declared chain and verified park vocabulary only; queue ready never runs the engine or fetches quota.
+- **Consumed by** later doctor, spend, ceremony, and spawn surfaces for the park and announcement vocabulary.
 - **Risk — fail-loud pauses change operator expectations:** each pause carries a cause and resume time, and a peak park never substitutes paid capacity.
 - **Risk — quota response drift:** every malformed class is announced and parked or classified, never treated as clear.
 - **Risk — ledger growth:** deterministic generation and identity dedupe plus bounded evidence limit record growth; the projection is rebuildable.

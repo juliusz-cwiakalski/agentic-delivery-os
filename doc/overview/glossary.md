@@ -8,8 +8,8 @@ area: domain
 document_classification: current-truth
 links:
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-180"]
-summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer, adapter-port, provider-client-seed, pm-notes, phase-transition, delivery-registry, verify-change, and session-database-admin terms used across the repository."
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189"]
+summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer, adapter-port, provider-client-seed, status-digest, queue-readiness, pm-notes, phase-transition, delivery-registry, verify-change, and session-database-admin terms used across the repository."
 ---
 
 # Glossary
@@ -164,6 +164,18 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Per-type decision ranges | Separate numeric sequences for ADR, PDR, TDR, BDR, and ODR, each with its own index, as opposed to one shared decision sequence. | Decision governance | [ODR-0002](../decisions/ODR-0002-id-prefix-scheme-and-project-catalog.md) |
 | Source traceability | The rule that every baseline number names the committed path/field/anchor or exact git command that produces it. | Measurement | [feature-measurement-baseline.md](../spec/features/feature-measurement-baseline.md) |
 | `UNAVAILABLE` | A metric state meaning the committed evidence cannot reconstruct the value; `value` is null and `missing_source` names the gap. | Measurement | [feature-measurement-baseline.md](../spec/features/feature-measurement-baseline.md) |
+| Ready set | The ranked set of caller-supplied candidate work items with their readiness and close classification, returned by the read-only `queue ready` command. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
+| Candidate (queue readiness) | One caller-supplied canonical work-item ref evaluated by `queue ready`; duplicates are rejected before any read. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
+| Readiness condition | One of the six closed predicates evaluated per candidate: `deps-satisfied`, `repo-free`, `tier-known`, `no-owner-gate`, `ci-healthy`, `provider-available`. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
+| Tri-state | The closed condition-state set `satisfied`, `unsatisfied`, `unknown`; `unknown` is never ready and never a clear zero. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
+| Ready | A candidate whose six readiness conditions are all `satisfied`; any unsatisfied or unknown condition makes it not-ready and is named. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
+| Blocking condition | A non-satisfied readiness condition, with its state, listed in a candidate's `blockingConditions`. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
+| Close class | One of the five `queue ready` classes `merge-ready`, `review-pending`, `new-start`, `unknown`, `not-ready`; close items rank above ready new starts. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
+| Merge-ready | An associated non-draft open pull request with an observed approved review state; the first close class. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
+| Review-pending | Any other associated open pull request, including draft and unknown review state; the second close class. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
+| Identity bridge | The provider-agnostic rule matching a canonical ref to an observed provider-native identity: exact canonical match first, then an unambiguous all-digit suffix bridge, never substring, prefix-only, or numeric coercion. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
+| value-clamped | The payload-level marker that a provider-derived payload value or collection was shortened or reduced to its declared cap; verdict-neutral and accompanied by payload `truncated`. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
+| Engine not run | The fixed `queue ready` evidence reason stating that configuration and parks were read but the provider engine was never executed. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
 
 ## Acronyms
 
@@ -216,6 +228,8 @@ _Expand every acronym at first use; keep the expanded list here._
 - [Provider Engine](../spec/features/feature-provider-engine.md)
 - [Provider Client Seeds and Trap Catalogs](../spec/features/feature-provider-client-seeds.md)
 - [State Layer](../spec/features/feature-state-layer.md)
+- [Status Digest](../spec/features/feature-status-digest.md)
+- [Queue Ready](../spec/features/feature-queue-ready.md)
 - [PM-Notes Lint and Phase Transitions](../spec/features/feature-pm-notes-lint-and-phase-transitions.md)
 - [Verify Change and Exit Taxonomy](../spec/features/feature-verify-change-and-exit-taxonomy.md)
 - [ADR-0003 — OSS Tooling Monorepo Structure](../decisions/ADR-0003-oss-monorepo-structure.md)

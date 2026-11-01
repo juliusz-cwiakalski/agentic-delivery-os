@@ -1,0 +1,26 @@
+{
+  "config": {
+    "defaultChain": "primary",
+    "credentials": {},
+    "entries": {
+      "primary": {
+        "name": "primary",
+        "class": "subscription",
+        "enabled": true
+      }
+    },
+    "chains": {
+      "primary": {
+        "name": "primary",
+        "entries": ["primary"],
+        "allowPaidFallback": false
+      }
+    }
+  },
+  "configFailure": null,
+  "parks": [],
+  "parkFailure": {
+    "reason": "state-unreadable",
+    "failureCode": "state.store.torn"
+  }
+}

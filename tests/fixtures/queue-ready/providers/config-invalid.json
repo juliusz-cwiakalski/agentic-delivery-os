@@ -1,0 +1,9 @@
+{
+  "config": null,
+  "configFailure": {
+    "reason": "config-invalid",
+    "failureCode": "config.value.invalid"
+  },
+  "parks": [],
+  "parkFailure": null
+}

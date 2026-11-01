@@ -1,0 +1,5 @@
+active_change:
+  workItemRef: GH-179
+  branch: feat/GH-179/other
+  changeFolder: doc/changes/2026-10/2026-10-31--GH-179--other
+parked_changes: []

@@ -295,6 +295,7 @@ const NEW_COMMAND_FILES = [
   `${CLI_DIR}/commands/db.ts`,
   `${CLI_DIR}/commands/lint.ts`,
   `${CLI_DIR}/commands/phase.ts`,
+  `${CLI_DIR}/commands/queue.ts`,
   `${CLI_DIR}/commands/status.ts`,
   `${CLI_DIR}/commands/verify.ts`,
 ];
@@ -363,6 +364,7 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(index).toContain('export { createLintCommandDefinition } from "./lint.js"');
     expect(index).toContain('export { createPhaseCommandDefinition } from "./phase.js"');
     expect(index).toContain('export { createStatusCommandDefinition } from "./status.js"');
+    expect(index).toContain('export { createQueueReadyCommandDefinition } from "./queue.js"');
     expect(index).toContain('export { createVerifyCommandDefinition } from "./verify.js"');
   });
 
@@ -374,6 +376,8 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(edge).toContain("commands.lint = createLintCommandDefinition(options.lint)");
     expect(edge).toContain("commands.phase = createPhaseCommandDefinition(options.phase)");
     expect(edge).toContain("commands.status = createStatusCommandDefinition");
+    expect(edge).toContain("commands.queue = createQueueReadyCommandDefinition");
+    expect(edge).toContain("options.queueReady");
     expect(edge).toContain("commands.verify = createVerifyCommandDefinition(options.verify)");
     expect(edge).toContain('from "./commands/db.js"');
     expect(edge).toContain("createDbCommandRuntime");
@@ -417,14 +421,22 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(exported(`${CLI_DIR}/commands/lint.ts`)).toEqual(["createLintCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/phase.ts`)).toEqual(["createPhaseCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/verify.ts`)).toEqual(["createVerifyCommandDefinition"]);
-    expect(exported(`${CLI_DIR}/commands/status.ts`)).toEqual(["createStatusCommandDefinition"]);
+    expect(exported(`${CLI_DIR}/commands/status.ts`)).toEqual([
+      "collectStatusFacts",
+      "createStatusCommandDefinition",
+    ]);
+    expect(exported(`${CLI_DIR}/commands/queue.ts`)).toEqual(["createQueueReadyCommandDefinition"]);
   });
 
-  test("only db and status declare the optional human-text renderer", () => {
+  test("only db, queue, and status declare the optional human-text renderer", () => {
     const declarers = listTypeScriptFiles(ROOT, `${CLI_DIR}/commands`).filter((file) =>
       readFileSync(join(ROOT, file), "utf8").includes("humanText"),
     );
-    expect(declarers).toEqual([`${CLI_DIR}/commands/db.ts`, `${CLI_DIR}/commands/status.ts`]);
+    expect(declarers).toEqual([
+      `${CLI_DIR}/commands/db.ts`,
+      `${CLI_DIR}/commands/queue.ts`,
+      `${CLI_DIR}/commands/status.ts`,
+    ]);
   });
 
   test("db is registered only when the composition is supplied", async () => {

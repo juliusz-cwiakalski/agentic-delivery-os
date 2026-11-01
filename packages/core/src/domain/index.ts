@@ -12,6 +12,7 @@ export {
   type PmNotesLintLocation,
   type PmNotesLintVerdict,
 } from "./pm-notes-lint.js";
+export { evaluateQueueReady, renderQueueReadyHuman } from "./queue-ready.js";
 export {
   classifyPruneCandidate,
   computeDbCutoffMs,

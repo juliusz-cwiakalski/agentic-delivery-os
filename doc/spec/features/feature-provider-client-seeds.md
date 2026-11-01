@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The first real provider clients behind the primitive ports: GitLab, Jira, and a minimal GitHub read slice in the adapters package's per-provider subpaths, with normalized primitive views, honest capability/gap declarations, offline trap catalogs proven against sanitized hand-authored synthetic fixtures, credential-port-exclusive auth, declared custom-field and merge-status mappings, uniform absence semantics, bounded GitHub collection reads under the existing operations, and the reviewed runtime-API confinement admission."
 links:
-  related_changes: ["GH-188", "GH-175", "GH-189"]
+  related_changes: ["GH-188", "GH-175", "GH-176", "GH-189"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006"]
 ---
 
@@ -228,6 +228,7 @@ Four surfaces grow deliberately: trap catalogs (new quirks join as four-field en
 - **Depends on** the adapter ports for the primitive contracts, capability/gap mechanism, credential port, and secret-read boundary.
 - **Depends on** the result contract for failure identity and the redaction chokepoint, and on the configuration and branding layers for injected environment facts and brand-neutral credential source keys.
 - **Consumed by** the status collector (including its bounded GitHub collection reads), verify-change gates, closeout, the [adapter conformance suite](feature-adapter-conformance.md), and the full GitHub adapter.
+- **Consumed by** the queue-ready ready-set ([Queue Ready](feature-queue-ready.md)) through the same bounded GitHub collection reads and normalized views; queue ready adds no adapter operation, page, or trap change.
 - **Risk — fixture drift:** hand-authored fixtures can diverge from live provider behavior. Mitigation: dated provenance, stable references, and the scheduled read-only live revalidation delivered by the [adapter conformance suite](feature-adapter-conformance.md).
 - **Risk — sanitization miss:** a committed fixture could leak a secret or personal data. Mitigation: declared placeholders, example-only hosts, a committed sanitization audit, and a planted-secret canary.
 - **Risk — catalog rot:** a catalog can look complete while its assertions stop firing. Mitigation: bidirectional entry↔assertion coverage, a negative control that names the failing entry, and per-provider minima.
