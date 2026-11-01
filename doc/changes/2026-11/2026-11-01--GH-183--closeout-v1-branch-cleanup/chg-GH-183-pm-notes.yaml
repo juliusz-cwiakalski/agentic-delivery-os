@@ -83,3 +83,6 @@ notes:
   - text: "Reopened for final remediation pass (iteration 3): test_planning (1,2,8,9-half), delivery_planning (3,7,10,11), specification (4,5,6,9). Retro: iteration 2 caught that fixing the plan did not automatically propagate to the test-plan oracles — cross-artifact synchronization must be explicit in remediation prompts."
     type: retro
     date: "2026-11-01"
+  - text: "Final remediation pass (DoR iteration 2 findings): spec v1.3 (ODR-0003 acceptance is GH-186 while TDR-0008 rides GH-183; identity = ADR-0003 inputs + additive capabilityContext refinement recorded in DEC-7; GitHub reverse-read surface is an implementation-confirmed assumption with absent-surface gap vs signal-level skip; multi-extra positional = parser fallback). Test plan v1.2 (TC-018 SHA-256 KAT/algorithm + node:crypto cross-check + capability sensitivity + FNV mutant; TC-063 behavioral never-resolving abort + structural removal control; complete §4.1 provider/git fake contract; BR-13/14 ownership; G-09). Plan v1.2 (conformance blast radius: broken-adapter-control + live-entrypoint method+URL; read-observation carrier pinned as additive readWorkItemObservation with existing shape unchanged; no new provider-subpath export; FixtureRoute.method optional default GET). All three phases re-completed for DoR iteration 3."
+    type: resolved
+    date: "2026-11-01"

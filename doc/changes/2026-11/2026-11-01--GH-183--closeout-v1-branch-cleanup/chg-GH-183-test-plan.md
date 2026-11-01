@@ -1,9 +1,9 @@
 ---
 id: chg-GH-183-test-plan
 status: Updated
-version: 1.1
+version: 1.2
 created: 2026-11-01T04:10:00Z
-last_updated: 2026-11-01T05:00:00Z
+last_updated: 2026-11-01T08:30:00Z
 owners: [engineering]
 service: delivery-os closeout transaction
 labels: [cli, providers, git, idempotency, state]
@@ -27,7 +27,7 @@ The plan is built on four binding mechanisms: an **injected provider and git run
 
 - The `closeout <workItemRef> [--apply] [--json]` command surface: one canonical ref, dry-run default, `--apply` as the only mutation switch, `--json` as a rendering-only global, and grammar rejection before any source read (F-1, §8.1, AC-F1-1..AC-F1-3).
 - The deterministic seven-step ordered plan and canonical operation expansion; label disposition order, dependents by provider entity identity, threads by thread identity; distinct operation identities (F-2, DM-1, DM-2, AC-F2-1..AC-F2-3).
-- Deterministic operation identity derivation (including the adapter capability context) and terminal-outcome reuse through the additive `closeout.operation` ledger record; restart, crash-between-effect-and-record, and failed-outcome retry convergence (F-3, EVT-1, DM-4, DM-9, AC-F3-1..AC-F3-4, AC-NFR8-1).
+- Deterministic operation identity derivation (the ADR-0003 inputs plus the additive `capabilityContext` refinement recorded in DEC-7) and terminal-outcome reuse through the additive `closeout.operation` ledger record; restart, crash-between-effect-and-record, and failed-outcome retry convergence (F-3, EVT-1, DM-4, DM-9, AC-F3-1..AC-F3-4, AC-NFR8-1).
 - Ticket-to-done through the declared workflow transition, the discriminated target read (explicit not-found versus malformed payload versus unavailable read), already-done convergence, and the missing-mapping gap (F-4, DM-11, AC-F4-1..AC-F4-4).
 - Lifecycle label sweep over the declared disposition table, absent-signal skip, idempotent re-run, and the Jira full-array label-replace preservation trap (F-5, DM-6, AC-F5-1..AC-F5-4).
 - Explicit unassign that never infers "already unassigned" from absence, plus a capability gap and a re-run-satisfied path (F-6, DM-5, AC-F6-1..AC-F6-4).
@@ -61,8 +61,8 @@ The plan is built on four binding mechanisms: an **injected provider and git run
 
 ## 2. References
 
-- **Change specification**: [chg-GH-183-spec.md](./chg-GH-183-spec.md) — v1.2; F-1..F-15, AC-F1-1..AC-NFR10-1 (61), NFR-1..NFR-13, DM-1..DM-11, EVT-1/EVT-2, DEC-1..DEC-16, RSK-1..RSK-13, §6 flows 1–7, §8 interfaces, Appendix A (ordered plan), B (capability matrix), C (label disposition), D (error rows), E (traceability).
-- **Decision record**: [TDR-0008-additive-adapter-contract-extensions-closeout-v1.md](../../../decisions/TDR-0008-additive-adapter-contract-extensions-closeout-v1.md) — additive optional `DeliveryRequest.headSha` and additive `resolve-delivery-thread`; no schema-version bump; Jira/GitLab gaps; the conformance flow registry must gain a step in the same change.
+- **Change specification**: [chg-GH-183-spec.md](./chg-GH-183-spec.md) — v1.3; F-1..F-15, AC-F1-1..AC-NFR10-1 (61), NFR-1..NFR-13, DM-1..DM-11, EVT-1/EVT-2, DEC-1..DEC-16, RSK-1..RSK-13, §6 flows 1–7, §8 interfaces, Appendix A (ordered plan), B (capability matrix), C (label disposition), D (error rows), E (traceability).
+- **Decision record**: [TDR-0008-additive-adapter-contract-extensions-closeout-v1.md](../../../decisions/TDR-0008-additive-adapter-contract-extensions-closeout-v1.md) — additive optional `DeliveryRequest.headSha` and additive `resolve-delivery-thread`; no schema-version bump; Jira/GitLab gaps; the conformance flow registry must gain a step in the same change. TDR-0008 owner acceptance is GH-183. ODR-0003 (command-name lock) is a separate decision whose owner acceptance is GH-186, not GH-183.
 - **PM record**: [chg-GH-183-pm-notes.yaml](./chg-GH-183-pm-notes.yaml) — scope decisions 1–8, OQ-1 resolved by TDR-0008, OQ-2 (no closure comment), and the conformance-registry obligation.
 - **Testing strategy**: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — `bun:test`, `tests/{structure,behaviour,checks,boundaries,golden,types}`, `scripts/checks/*.ts` mutation tests, the boundary fixture-coverage meta-check, `pnpm check` as the aggregate gate, permanent suites assert the current tree.
 - **TypeScript rules**: [.ai/rules/typescript.md](../../../../.ai/rules/typescript.md) — strict typing, purity, injected time/randomness/environment, the error contract, fake-based deterministic tests, no moving-base diff assertions.
@@ -72,7 +72,7 @@ The plan is built on four binding mechanisms: an **injected provider and git run
 - **Provider client seeds**: [feature-provider-client-seeds.md](../../../spec/features/feature-provider-client-seeds.md) — GitHub/Jira/GitLab read slices, trap catalogs, label-replace and transition traps, injected transports.
 - **Read-only commands**: [feature-queue-ready.md](../../../spec/features/feature-queue-ready.md), [feature-verify-change-and-exit-taxonomy.md](../../../spec/features/feature-verify-change-and-exit-taxonomy.md), [feature-status-digest.md](../../../spec/features/feature-status-digest.md) — the zero-write/zero-spawn guarantees this change must not regress.
 - **Architecture**: [ADR-0003](../../../decisions/ADR-0003-oss-monorepo-structure.md) (tiers, runtime confinement), [ADR-0004](../../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md)/[ADR-0006](../../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md) (absence semantics), [ADR-0005](../../../decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md) (provider-client confinement).
-- **Command registry and backlog**: `doc/planning/oss-tooling/cli-command-registry.md` (`ados closeout`, M0-S14; ODR-0003 name lock), `doc/planning/oss-tooling/backlog.md` M0-S14.
+- **Command registry and backlog**: `doc/planning/oss-tooling/cli-command-registry.md` (`ados closeout`, M0-S14; ODR-0003 is the proposed command-name lock, with owner acceptance at GH-186, not GH-183), `doc/planning/oss-tooling/backlog.md` M0-S14.
 - **Existing mechanisms reused (never re-implemented)**: `tests/fixtures/status/harness.ts` (runtime fake + envelope + human caps); `tests/golden/helpers.ts` (`SYNTHETIC_BRAND`, fixed run id/clock, buffer streams, mutant-module import) with `runCli` imported directly from `packages/cli/src/index.ts` (the helper module imports it and does not re-export it); `tests/fixtures/state/harness.ts` (temp store, injected edge, fence/fold helpers); `tests/behaviour/providers/support.ts` (`createFixtureTransport`, throwing fetch guard); `tests/behaviour/providers/trap-harness.ts`; `packages/testkit/src/conformance/coverage.ts` (`runtimeCoverageViolations`);
   `packages/testkit/src/result-conformance.ts` (`assertEnvelopeContract`); `tests/structure/{conformance-coverage,error-table,cli-edge-seam,port-neutrality,provider-surface,subpaths}.test.ts`; `tests/checks/{error-table-sync,fixture-sanitization,secret-read-boundary}.test.ts`; `scripts/checks/{error-table-sync,ambient-globals,secret-read-boundary,workspace-entrypoints,exit-code-literals,forbidden-literals,privacy-literals,license-audit,vulnerability-gate}.ts`.
 - **Change precedents for shape**: [chg-GH-180-test-plan.md](../../2026-10/2026-10-31--GH-180--db-session-admin-port/chg-GH-180-test-plan.md), [chg-GH-189-test-plan.md](../../2026-10/2026-10-31--GH-189--adapter-conformance-suite/chg-GH-189-test-plan.md), [chg-GH-175-test-plan.md](../../2026-10/2026-10-31--GH-175--status-v1/chg-GH-175-test-plan.md).
@@ -163,7 +163,7 @@ The spec declares no inbound HTTP/REST endpoint (API-#). The command surface and
 | DM-6 Lifecycle label disposition | TC-CLOSE-001, TC-CLOSE-023, TC-CLOSE-026 | Keep `change`; remove six lifecycle labels; add `delivered` |
 | DM-7 Base and protected-ref contract | TC-CLOSE-001, TC-CLOSE-041, TC-CLOSE-047 | Merged target ref else integration base; protected set always wins |
 | DM-8 `DeliveryRequest.headSha` | TC-CLOSE-002, TC-CLOSE-006, TC-CLOSE-051 | Optional, absent means unknown, copied verbatim, never fabricated |
-| DM-9 Operation identity | TC-CLOSE-014, TC-CLOSE-018 | Deterministic SHA-256 digest per ADR-0003 over workspace/ref/engine/adapter capability context/operation/canonical arguments/target; no clock/randomness |
+| DM-9 Operation identity | TC-CLOSE-014, TC-CLOSE-018 | Deterministic SHA-256 digest over the ADR-0003 inputs (workspace/ref/engine/operation/canonical arguments/target) **plus the additive `capabilityContext` refinement recorded in DEC-7**; no clock/randomness |
 | DM-10 `closeout` kind and rows | TC-CLOSE-003, TC-CLOSE-004, TC-CLOSE-061 | Additive kind; four documented rows; existing projection classes reused |
 | DM-11 Read observation discrimination | TC-CLOSE-034, TC-CLOSE-036, TC-CLOSE-067 | `observed`/`not-found`/`unavailable`/`invalid`; not-found → `closeout.target.unobserved`; invalid → `provider.payload.invalid`; unavailable relation → signal-level `skipped-noop`, never an empty blocker set |
 | EVT-1 `closeout.operation` (internal record) | TC-CLOSE-019 | One record per terminal outcome, first terminal per `operationId` authoritative |
@@ -224,8 +224,8 @@ The spec declares no inbound HTTP/REST endpoint (API-#). The command surface and
 ### 4.1 In-Process Closeout Harness Contract (binding for every closeout TC)
 
 1. **No live network, credentials, or host state.** Every closeout suite imports production modules and injects fakes. No suite resolves a host, opens a socket, reads a real credential, or spawns a real git process against the live repository. Provider behaviour comes from committed sanitized fixtures via the existing `createFixtureTransport` pattern; GraphQL thread resolution uses a committed `resolveReviewThread` fixture. TC-CLOSE-062 asserts the absence by scan.
-2. **One recording provider runtime.** A `CloseoutProviderRuntime` fake implements the closeout-relevant members (`readWorkItem`, `readDeliveryRequest`, the merged-request source-ref lookup, `writeWorkItem`, `transitionWorkItem`, `resolveDeliveryThread`) and records an ordered call log of `{ kind, target, args }`. It answers from the committed provider fixture corpus and can be scripted per call to fail or return unknown/absent signals by name (`fakeFailWrite`, `fakeUnknownHead`, `fakeAbsentLabels`).
-3. **One recording git seam.** A `CloseoutGitRuntime` fake implements the bounded plan queries and mutations (`readCheckout`, `readBranch`, `listBranches`, `isCheckedOutElsewhere`, `restoreCheckout`, `deleteBranch`) and records every call. A separate **temporary local git repository** harness (`mkdtemp` + `git init` + commits/branches/worktrees) exercises the production git seam end to end for TC-CLOSE-041..TC-CLOSE-052. The temp repo is created and removed per test; the live worktree is never mutated.
+2. **One recording provider runtime.** A `CloseoutProviderRuntime` fake implements the closeout-relevant members (`readWorkItem`, `readDeliveryRequest`, the merged-request source-ref lookup, `listBlockedByDependents`, `writeWorkItem`, `transitionWorkItem`, `resolveDeliveryThread`) and records an ordered call log of `{ kind, target, args }`. It answers from the committed provider fixture corpus and can be scripted per call to fail or return the discriminated observation/signal by name: `fakeFailWrite`, `fakeUnknownHead`, `fakeAbsentLabels`, `fakeNotFound` (explicit `not-found`), `fakeInvalidPayload` (malformed/unparsable `invalid`), `fakeUnavailableSurface` (no read surface), and `fakeUnavailableRelation` / `fakeUnknownRelation` (unavailable/unknown reverse-dependent or `blocked-by` signal). These hooks drive TC-CLOSE-034/TC-CLOSE-036 (relation signal) and TC-CLOSE-067 (not-found/invalid/unavailable); the git fake's `isClean`/`resolveRef` drive the in-process checkout predicate cases while TC-CLOSE-044/TC-CLOSE-066 exercise the same dirty/missing-base facts against a temporary local repository. This keeps the fake synchronized with plan PIN-14/PIN-15/PIN-16 and Phases 3.7/3.8/4.6/5.5/6.6.
+3. **One recording git seam.** A `CloseoutGitRuntime` fake implements the bounded plan queries and mutations (`readCheckout`, `readBranch`, `listBranches`, `isCheckedOutElsewhere`, `isClean`, `resolveRef`, `restoreCheckout`, `deleteBranch`) and records every call, keeping it synchronized with plan PIN-16 and Phases 6.6/3.8 (dirty-worktree and base-resolution cases). A separate **temporary local git repository** harness (`mkdtemp` + `git init` + commits/branches/worktrees) exercises the production git seam end to end for TC-CLOSE-041..TC-CLOSE-052 and TC-CLOSE-066. The temp repo is created and removed per test; the live worktree is never mutated.
 4. **Injected clock, run id, and brand.** `CLOSEOUT_NOW_MS` is fixed; `newRunId` is a fixed sequence; the brand is `SYNTHETIC_BRAND` from `tests/golden/helpers.ts`. No test reads `Date.now`, `Math.random`, `process.env`, `$HOME`, or a real path for a verdict.
 5. **Recording fenced state port.** The state harness records `append`, `fence` acquire/release, and verified reads; it can preload terminal outcomes, a `failed` outcome, a torn tail, or a malformed record by name. Plan-mode tests assert the call log is empty where NFR-4 requires it.
 6. **In-process CLI composition.** Grammar, plan, apply, output, and exit projection run through the existing `runCli`/`createProgram` composition with buffer streams, not a spawned binary.
@@ -236,7 +236,7 @@ The spec declares no inbound HTTP/REST endpoint (API-#). The command surface and
 
 1. **A planted positive is asserted present before the absence is asserted.** A lifecycle label, dependent id, thread id, protected ref, canary value, or terminal outcome is asserted to exist in the fixture (or the fake's raw response) before the test asserts it is absent from output, excluded from a write, or refused.
 2. **A paired live control runs in the same test.** A refusal runs beside an eligible sibling deletion; a gap runs beside a supported sibling; a cap-truncated sweep runs beside a within-cap sweep; an unknown head runs beside a matching head; a plan-mode zero-call assertion runs beside an apply-mode call assertion.
-3. **A deliberately broken expectation must fail the suite, naming the case.** For each guard that could pass vacuously (the label disposition, the unknown-blocker rule, the merged-head equality, the protected-ref set, the gap honesty rule, the no-leak projection, the terminal-reuse logic), `tests/checks/closeout-mutants.test.ts` imports a temp mutant through a file URL in which the named step is disabled, asserts the mutant produces the prohibited observable, and asserts the failure message names the case. If the real module also produced nothing, the meta-check fails.
+3. **A deliberately broken expectation must fail the suite, naming the case.** For each guard that could pass vacuously (the label disposition, the unknown-blocker rule, the unavailable-signal-as-empty rule, the merged-head equality, the protected-ref set, the gap honesty rule, the no-leak projection, the terminal-reuse logic, the SHA-256 identity algorithm/omitted capability context, and the detached-at-delivery-head classification), `tests/checks/closeout-mutants.test.ts` imports a temp mutant through a file URL in which the named step is disabled, asserts the mutant produces the prohibited observable, and asserts the failure message names the case. If the real module also produced nothing, the meta-check fails.
 4. **No assertion depends on a moving base.** Every assertion reads the current tree, a committed fixture, a temp copy, or a temporary git repository. No `git diff` against `origin/main-tools` appears in the permanent suite.
 5. **Caps are asserted at and above the threshold.** The 200-dependent and 100-thread caps are exercised with exactly-at, one-above, and larger fixtures; the truncated marker, the omitted count, and the re-run progress are asserted.
 6. **Scan scope is non-empty.** Import, spawn, mutation, secret-read, and no-leak scans assert a positive count of files/entries/calls before asserting zero violations.
@@ -258,13 +258,13 @@ This table is binding: a TC is complete only when every column is satisfied. `Le
 | TC-CLOSE-009 | AC-NFR10-1, NFR-10 | Checks / license | `package.json`, lockfile, license registry; license suite | Assert no dependency added; run license audit and vulnerability gate | 0 new deps; registry unchanged; fail-closed gate green | A synthetic added dependency fails the audit |
 | TC-CLOSE-010 | AC-F1-1, AC-F2-2, NFR-4 | Behaviour / plan | Provider + git + state fakes | Run `closeout GH-183 --json`; inspect data and call logs | Seven steps in order; plan outcomes; zero writes/git mutations/state appends/fences; exit 0 | Applying the same fixture reaches `applied`; a plan-write mutant fails |
 | TC-CLOSE-011 | AC-F1-2, AC-F2-2, NFR-4 | Behaviour / plan | Same fakes | Run `--apply`; compare the plan to dry-run | Same ordered steps/arguments/identities; apply outcomes present; per-op summary | Dry-run then apply diff is empty apart from mode/outcomes |
-| TC-CLOSE-012 | AC-F1-3 | Behaviour / plan | Runtime fake; grammar matrix §4.9 | Run malformed/missing/extra/unknown-flag/value-bearing cases | Exact `input.value.rejected`/`fallback.invocation`; exit 1; zero provider/git/state calls | A valid sibling invocation succeeds and calls the runtime |
+| TC-CLOSE-012 | AC-F1-3 | Behaviour / plan | Runtime fake; grammar matrix §4.9 | Run malformed/missing/one-extra/two-or-more-extra/unknown-flag/value-bearing cases | Exact `input.value.rejected` (handler) / `fallback.invocation` (parser); exit 1; zero provider/git/state calls | A valid sibling invocation succeeds and calls the runtime |
 | TC-CLOSE-013 | AC-F2-1, NFR-2 | Behaviour / plan | Fixed clock/run id; permuted provider arrays | Run the same plan three times; permute provider/thread/dependent order between runs | Byte-identical serialized plan; identical identities; order independent of input order | A `Date.now()`/map-order mutant drifts and fails |
 | TC-CLOSE-014 | AC-F2-3, AC-F2-1, AC-F3-4, DM-9 | Behaviour / plan | Multi-label/dependent/thread fixtures | Expand a step; assert order keys and distinct identities; change one identity input | Distinct `operationId`s; disposition/entity/thread order; one changed input changes exactly one identity | Duplicate-identity or unstable-order mutant fails |
 | TC-CLOSE-015 | AC-F3-1, NFR-1 | Behaviour / idempotency | Preloaded terminal outcomes; fresh-process composition | Apply, then re-run in a new composition; inspect writes and ledger | Zero duplicate writes/mutations; every terminal outcome reused; exit 0; identical summary | A re-executing mutant duplicates a call and fails |
 | TC-CLOSE-016 | AC-F3-2, NFR-1 | Behaviour / idempotency | Effect applied but no ledger record; provider returns satisfied | Re-run; inspect writes | `satisfied` recorded; zero duplicate effect; converged summary | A blind-retry mutant issues a second write and fails |
 | TC-CLOSE-017 | AC-F3-3 | Behaviour / idempotency | Preloaded `failed` outcome; provider then succeeds | Re-run; inspect ledger and writes | Failed record retained; operation re-observed/retried; terminal outcome appended; convergence | A "failed is terminal" mutant never retries and fails |
-| TC-CLOSE-018 | AC-F3-4, DM-9 | Behaviour / idempotency | Pure identity function | Derive identity repeatedly; vary workspace/ref/engine/op/args/target; change capability context | Stable for identical inputs; every input change changes it; gap→supported yields a new identity | A clock/random or omitted-input mutant drifts and fails |
+| TC-CLOSE-018 | AC-F3-4, DM-9 | Behaviour / idempotency | Pure identity function; `node:crypto` cross-check | Assert SHA-256 known-answer vectors (`""` → `e3b0c442...`, `"abc"` → `ba7816bf...`); derive a fixed canonical closeout tuple against a committed expected digest; cross-check against test-only `node:crypto`; derive repeatedly; vary workspace/ref/engine/op/args/target; change capability context | 64-lowercase-hex SHA-256; KAT and fixed-tuple digests match; stable for identical inputs; every input change changes it; gap→supported yields a new identity | FNV-1a, omitted-capability-context, clock/random, or omitted-input mutant fails the KAT/fixed-tuple/identity assertion, naming the case |
 | TC-CLOSE-019 | AC-NFR8-1, NFR-8, EVT-1 | Behaviour / idempotency | State harness; fenced port; torn/malformed fixtures | Apply; count records; verified read; simulate torn tail/malformed/schema mismatch | One record per terminal op; verified read returns all; classified `state.*` error, never zeros; no schema bump; fence held | A failure-to-zero mutant fails; schema bump fails |
 | TC-CLOSE-020 | AC-F4-1 | Behaviour / ticket | GitHub/Jira open-item fixtures | Apply; inspect transition call | Item done; `applied`; provider-specific transition recorded | Already-done sibling does no write (TC-021) |
 | TC-CLOSE-021 | AC-F4-2 | Behaviour / ticket | Already-done fixtures | Plan and apply; inspect writes | `satisfied`; zero write; exit 0 | A done-item write mutant fails |
@@ -280,7 +280,7 @@ This table is binding: a TC is complete only when every column is satisfied. `Le
 | TC-CLOSE-031 | AC-F7-1 | Behaviour / owed-flip | Eligible dependent fixture | Apply; inspect write and output | `hand-back` added; `blocked` removed when present; flip recorded | A still-blocked sibling is not flipped (TC-032) |
 | TC-CLOSE-032 | AC-F7-2 | Behaviour / owed-flip | Dependent with one open blocker | Apply | No flip; evidence names open count | The eligible sibling flips |
 | TC-CLOSE-033 | AC-F7-3 | Behaviour / owed-flip | Already `hand-back` without `blocked`; `hand-back`+`blocked` | Apply | First `satisfied` zero write; second removal operation | Both cases in one fixture |
-| TC-CLOSE-034 | AC-F7-4, AC-F7-6, AC-F7-7 | Behaviour / owed-flip | Unavailable/unasserted relation signal; provider-asserted empty `blocked-by`; known-done sibling | Apply each; inspect outcome and evidence | Unavailable → `skipped-noop` with `relation-signal-unavailable`, no flip; asserted empty → eligible; unknown never satisfied | An unasserted-`[]`-as-no-blockers mutant flips and fails; the known-done sibling flips |
+| TC-CLOSE-034 | AC-F7-4, AC-F7-6, AC-F7-7 | Behaviour / owed-flip | Unavailable/unasserted relation signal; provider-asserted empty `blocked-by`; known-done sibling | Apply each; inspect outcome and evidence | Unavailable → `skipped-noop` with `relation-signal-unavailable`, no flip; asserted empty → eligible; unknown never satisfied | An unasserted-`[]`-as-no-blockers / unavailable-signal-as-empty mutant flips and fails; the known-done sibling flips |
 | TC-CLOSE-035 | AC-F7-5, NFR-6 | Behaviour / owed-flip | 200, 201, and larger dependent fixtures | Apply twice; inspect truncation and exclusions | Deterministic first batch; `truncated` + omitted count; re-run excludes flipped and makes progress | At-cap and above-cap fixtures differ; a no-truncation mutant fails |
 | TC-CLOSE-036 | AC-F7-6, NFR-9 | Behaviour / owed-flip | Provider runtime with no bounded reverse-read surface (provider-level gap) | Plan and apply | `skipped-gap` with `provider-unsupported`; continues | A capable sibling flips; the existing-surface-but-unavailable case is asserted in TC-CLOSE-034 as `skipped-noop`, not here |
 | TC-CLOSE-037 | AC-F8-1, NFR-6 | Behaviour / threads | Merged request with unresolved/partly resolved threads; GraphQL fixture | Apply; inspect `resolve-delivery-thread` calls | One resolution per unresolved thread; already-resolved `satisfied`; cap 100; outcomes recorded | A second run is `satisfied` (TC-015/040 interaction) |
@@ -309,8 +309,8 @@ This table is binding: a TC is complete only when every column is satisfied. `Le
 | TC-CLOSE-060 | AC-F13-2, NFR-7 | Behaviour / output | Human goldens; fixed clock/run id | Render twice; count lines/bytes | Byte-identical; ≤ 200 lines; ≤ 16 KiB; no extra reads | A `Date.now()` renderer drifts and fails |
 | TC-CLOSE-061 | AC-F14-1, NFR-11 | Behaviour / output | Four trigger fixtures | Emit each identity; inspect envelope/exit | Documented code/category/retryable/consequence/projection; exit 1/2 by class | A wrong-projection or literal-in-command mutant fails |
 | TC-CLOSE-062 | AC-NFR3-1, NFR-3, NFR-12 | Static + Behaviour / hermetic | Fixture sanitization; canaries; path/network/spawn scanners | Scan suites and fixtures; run with network/credential guards | Zero live network/credentials/host-env reads; sanitized fixtures; canary zero occurrences | A planted live fetch/credential/secret-copy fails |
-| TC-CLOSE-063 | NFR-6 (AC-F7-5, AC-F8-1) | Behaviour / bounded work | Cap fixtures; call logs; declared timeouts; optional reference measurement | Assert invariant call counts, caps, timeouts; record optional non-CI reference | Counts bounded; timeouts 30 000 ms referenced; no unbounded wait; reference recorded or "not run" | A per-item-query unbounded mutant fails |
-| TC-CLOSE-064 | §4.2 (all ACs) | Meta-check / mutants | `tests/fixtures/closeout/mutants/**` | Run the mutant corpus; assert each broken guard fails naming its case | Every planted mutant fails the intended suite with the case name | A mutant that passes is the failure |
+| TC-CLOSE-063 | NFR-6 (AC-F7-5, AC-F8-1) | Behaviour / bounded work | Cap fixtures; call logs; declared timeouts; never-resolving provider transport; non-terminating git child; short injected timeout override; optional reference measurement | Assert invariant call counts and caps; structurally assert `CLOSEOUT_OPERATION_TIMEOUT_MS` is the production default on each I/O class (provider native-fetch and git `execFile`/`spawn`) with a removal control; behaviorally assert a short injected timeout aborts the never-resolving provider and non-terminating git child at the bound; record optional non-CI reference | Counts bounded; production default 30 000 ms structurally referenced; behavioral provider/git abort at the injected bound (no 30 s wall-clock wait); no unbounded wait; reference recorded or "not run" | A per-item-query unbounded mutant fails; the timeout-removal structural control fails on each I/O class; the never-resolving/non-terminating fixtures would hang without the bound |
+| TC-CLOSE-064 | §4.2 (all ACs) | Meta-check / mutants | `tests/fixtures/closeout/mutants/**` including the FNV-1a/omitted-capability identity, unavailable-signal-as-empty, and detached-as-unrelated mutants | Run the mutant corpus; assert each broken guard fails naming its case | Every planted mutant fails the intended suite with the case name, including the identity-algorithm, unavailable-signal, and detached-classification mutants | A mutant that passes is the failure |
 | TC-CLOSE-065 | AC-F11-1, AC-F11-2, AC-F11-4, NFR-9 | Conformance / runtime coverage | `CONFORMANCE_ADAPTERS`; mock run report; `runtimeCoverageViolations` | Run the mock conformance suite; assert no violations; assert each newly supported `write-work-item`/`transition-work-item`/`resolve-delivery-thread` executed for its declaring provider | `runtimeCoverageViolations(report, CONFORMANCE_ADAPTERS, "mock")` is empty; every supported write has an `executed` step | Dropping an executed write step or declaring an unexecuted op supported produces a named violation |
 | TC-CLOSE-066 | AC-F9-5, AC-F9-4, AC-F10-8 | Behaviour / checkout | Temp repo detached at the delivery head; clean/open base; dirty and missing-base cases | Apply the clean case; apply the dirty and missing-base cases | Clean → restored to resolved base, `applied`; dirty/missing base → `closeout.branch.unsafe` exit 1, no deletion | Attached-delivery-branch sibling restores; a "detached = unrelated/satisfied" mutant fails |
 | TC-CLOSE-067 | AC-F4-4, AC-F4-3, AC-F14-1, DM-11 | Behaviour / ticket | Explicit not-found fixture; malformed/unparsable payload fixture; no-work-item-read fixture | Run plan and apply for each; inspect envelope, exit, and writes | Not-found → `closeout.target.unobserved` exit 1, zero writes; invalid payload → `provider.payload.invalid`, never the not-found code; no read → dependent steps declared gap | A payload-invalid-as-not-found mutant fails; a not-found-as-gap mutant fails; a supported sibling transitions |
@@ -400,8 +400,9 @@ Plan-mode outcomes: `would-apply`, `satisfied`, `skipped-gap`, `skipped-noop`, `
 | G-06 | `GH-183 --apply false` (stray value) | `input.value.rejected` | 1 | 0 |
 | G-07 | `GH-183 --apply --json` | success path | 0 | ≥ 1 (proves global `--json`) |
 | G-08 | `GH-183 --apply --apply` (repeated boolean, last-wins) | success path | 0 | ≥ 1 |
+| G-09 | `GH-183 extra1 extra2` (two-or-more extra positionals) | `fallback.invocation` | 1 | 0 |
 
-The exact handler-versus-parser split follows the declared flag set; both classes exit 1 with zero I/O. The ref grammar is case-sensitive and performs no case folding: `gh-183` is rejected rather than canonicalized to `GH-183`, an extra positional is rejected by the handler as `input.value.rejected`, and an unknown flag is `fallback.invocation` before the handler (F-1, §8.1). A valid sibling invocation with no `--apply` must succeed and prove the rejection cases are not passing because the command is inert.
+The exact handler-versus-parser split follows the declared flag set; both classes exit 1 with zero I/O. The ref grammar is case-sensitive and performs no case folding: `gh-183` is rejected rather than canonicalized to `GH-183`. Exactly one extra positional passes the parser (`positionals: { max: 2 }`) and is rejected by the handler as `input.value.rejected`; two or more extra positionals exceed the parser bound and are rejected as `fallback.invocation` before the handler; an unknown flag is `fallback.invocation` before the handler (F-1, §8.1). A valid sibling invocation with no `--apply` must succeed and prove the rejection cases are not passing because the command is inert.
 
 ## 5. Test Scenarios
 
@@ -426,7 +427,7 @@ The exact handler-versus-parser split follows the declared flag set; both classe
 | TC-CLOSE-015 | Re-run after restart reuses terminal outcomes | Regression | Critical | High | AC-F3-1, NFR-1 |
 | TC-CLOSE-016 | Crash between effect and record converges as satisfied | Negative | Critical | High | AC-F3-2, NFR-1 |
 | TC-CLOSE-017 | Failed outcome is retained and retried safely | Negative | Critical | High | AC-F3-3 |
-| TC-CLOSE-018 | Operation identity stability and sensitivity | Contract | Critical | High | AC-F3-4, DM-9 |
+| TC-CLOSE-018 | Operation identity SHA-256 algorithm, stability, and sensitivity | Contract | Critical | High | AC-F3-4, DM-9 |
 | TC-CLOSE-019 | Ledger append/read, torn/malformed, fence, no schema bump | Regression | Critical | High | AC-NFR8-1, NFR-8, EVT-1 |
 | TC-CLOSE-020 | Ticket-to-done apply (GitHub/Jira) | Happy Path | Critical | High | AC-F4-1 |
 | TC-CLOSE-021 | Already-done ticket satisfied | Edge Case | Critical | High | AC-F4-2 |
@@ -812,8 +813,8 @@ The exact handler-versus-parser split follows the declared flag set; both classe
 
 **Steps**:
 
-1. Run every G-01..G-06 and G-08 rejection case.
-2. Assert the exact identity (`input.value.rejected` or `fallback.invocation`) and exit 1.
+1. Run every G-01..G-06 and G-09 rejection case, including the one-extra handler case (G-02) and the two-or-more-extra parser case (G-09).
+2. Assert the exact identity (`input.value.rejected` for G-02, `fallback.invocation` for G-05/G-09) and exit 1.
 3. Assert zero provider, git, and state calls for every rejection.
 4. Assert G-07 (`--apply --json`) and G-08 (`--apply --apply`) succeed and reach the runtime.
 5. Run a valid plan-mode sibling and assert it succeeds.
@@ -957,7 +958,7 @@ The exact handler-versus-parser split follows the declared flag set; both classe
 
 - Failed outcomes are evidence and retryable; the retry is safe and converges.
 
-#### TC-CLOSE-018 - Operation identity stability and sensitivity
+#### TC-CLOSE-018 - Operation identity SHA-256 algorithm, stability, and sensitivity
 
 **Scenario Type**: Contract
 **Impact Level**: Critical
@@ -965,24 +966,27 @@ The exact handler-versus-parser split follows the declared flag set; both classe
 **Related IDs**: F-3, DM-9, AC-F3-4
 **Test Type(s)**: Unit, Contract
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/closeout-idempotency.test.ts`; pure identity function
+**Target Layer / Location**: `tests/behaviour/closeout-idempotency.test.ts`; pure identity function (`packages/core/src/domain/sha256.ts`, `deriveCloseoutOperationId`)
 **Tags**: @backend
 
 **Preconditions**:
 
-- The pure identity derivation and a canonical input tuple.
+- The pure `sha256Hex` and `deriveCloseoutOperationId` functions; a fixed canonical closeout identity tuple; a committed expected digest.
 
 **Steps**:
 
-1. Derive the identity 1 000 times; assert one value.
-2. Change exactly one of workspace, ref, engine, operation, canonical arguments, and provider target per case; assert the identity changes each time.
-3. Assert independence from clock, process, host, random, and map iteration order.
-4. Assert a capability-context change (gap → supported) yields a new identity for the same operation.
-5. Run a mutant that omits the target or uses `Date.now()`; assert a collision/drift and the test fails.
+1. Assert the SHA-256 known-answer vectors: `sha256Hex("")` is `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` and `sha256Hex("abc")` is `ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad`.
+2. Derive `deriveCloseoutOperationId` for the fixed canonical closeout identity tuple; assert the committed 64-lowercase-hex expected digest.
+3. Cross-check the pure implementation against a test-only `node:crypto` `createHash("sha256")` over parameterized inputs; the production module imports no `node:crypto`/`node:*`/`bun:*`.
+4. Derive the identity 1 000 times; assert one value.
+5. Change exactly one of workspace, ref, engine, operation, canonical arguments, and provider target per case; assert the identity changes each time.
+6. Assert independence from clock, process, host, random, and map iteration order.
+7. Assert a capability-context change (gap → supported) yields a new identity for the same operation, and record that this additive `capabilityContext` input is the DEC-7 refinement over the ADR-0003 inputs.
+8. Run a FNV-1a mutant and an omitted-capability-context mutant; assert each fails the KAT/fixed-tuple/identity assertion and names the case. Also run a `Date.now()`/omitted-input mutant and assert it drifts or collides and fails.
 
 **Expected Outcome**:
 
-- The identity is stable for identical inputs and sensitive to every declared input.
+- The identity is a 64-lowercase-hex SHA-256 digest matching the KAT vectors and a fixed canonical closeout tuple; it is stable for identical inputs and sensitive to every declared input, including the capability context; FNV-1a, omitted-capability-context, clock/random, and omitted-input mutants fail.
 
 #### TC-CLOSE-019 - Ledger append/read, torn/malformed, fence, no schema bump
 
@@ -1440,18 +1444,19 @@ The exact handler-versus-parser split follows the declared flag set; both classe
 
 **Preconditions**:
 
-- A provider runtime with no reverse-dependent read surface (e.g. no work-item read or no bounded reverse query) — the provider-level gap case; a capable sibling.
+- A provider runtime with no reverse-dependent read surface (e.g. GitLab with no work-item read, or a provider whose bounded reverse query is not implemented) — the provider-level gap case; a capable sibling with an observed surface.
+- GitHub's reverse-dependent query (`listBlockedByDependents` / issue-dependencies) is treated as an **implementation-confirmed assumption** (A-T8), not verified current truth; its exact response shape is fixture-pinned.
 
 **Steps**:
 
 1. Plan and apply; assert `skipped-gap` with `provider-unsupported`.
 2. Assert the transaction continues and exits 0.
 3. Assert the capable sibling flips an eligible dependent.
-4. Assert this case is not conflated with the existing-surface-but-unavailable case: that case is `skipped-noop` with `relation-signal-unavailable` and is asserted by TC-CLOSE-034.
+4. Assert this case is not conflated with the existing-surface-but-unavailable case: when the surface exists (including GitHub, per A-T8) but the current read is unavailable, the step is `skipped-noop` with `relation-signal-unavailable` and is asserted by TC-CLOSE-034; only an absent surface is the provider-level gap.
 
 **Expected Outcome**:
 
-- A provider with no reverse-read surface is a declared provider-level gap, never a silent no-flip claim and never a signal-level skip.
+- A provider with no reverse-read surface is a declared provider-level gap, never a silent no-flip claim and never a signal-level skip; a present-but-unavailable GitHub read remains the signal-level `skipped-noop` case, not a provider-level gap.
 
 #### TC-CLOSE-037 - Unresolved review threads resolved once (GraphQL)
 
@@ -2156,18 +2161,21 @@ The exact handler-versus-parser split follows the declared flag set; both classe
 **Preconditions**:
 
 - Cap fixtures (200/201 dependents, 100/101 threads); recording call logs; the declared timeout constants.
+- A never-resolving provider transport and a non-terminating git child, each driven through the short injected timeout override (`request.timeoutMs` / `GitBranchSeamOptions.timeoutMs`), never the 30 000 ms production default.
 
 **Steps**:
 
-1. Assert every operation has a 30 000 ms timeout constant referenced on its I/O class (structural, with a removal control).
-2. Assert the dependent/thread call counts are bounded by the caps and independent of the larger population.
-3. Assert no operation waits unbounded and the plan/apply issues no per-item unbounded query loop.
-4. Optionally run the reference-fixture apply three times and record the median as **non-CI reference-only** in §10; a missing measurement is recorded "not run", never as passing.
-5. Run a per-item-query unbounded mutant; assert the bound assertion fails.
+1. Structural: assert `CLOSEOUT_OPERATION_TIMEOUT_MS` (30 000 ms) is the production default referenced on each I/O class — every provider native-fetch default passes `AbortSignal.timeout(request.timeoutMs ?? CLOSEOUT_OPERATION_TIMEOUT_MS)` and the git seam passes `{ timeout: options.timeoutMs ?? CLOSEOUT_OPERATION_TIMEOUT_MS, killSignal: "SIGKILL" }` to `execFile`/`spawn` (no literal `30 000` scattered off-constant). Run a structural removal control that deletes the default on each I/O class and assert the assertion fails naming the class.
+2. Behavioral provider: inject a short timeout override (tens of milliseconds, not 30 s) with a never-resolving provider transport; assert the request aborts at the bound, surfaces a classified timeout/failure, and blocks the affected mutation rather than hanging.
+3. Behavioral git: inject a short `timeoutMs` with a non-terminating git child; assert the child is killed at the bound, a classified failure is surfaced, and branch deletion is blocked.
+4. Assert the dependent/thread call counts are bounded by the caps and independent of the larger population.
+5. Assert no operation waits unbounded and the plan/apply issues no per-item unbounded query loop.
+6. Optionally run the reference-fixture apply three times and record the median as **non-CI reference-only** in §10; a missing measurement is recorded "not run", never as passing.
+7. Run a per-item-query unbounded mutant; assert the bound assertion fails.
 
 **Expected Outcome**:
 
-- CI proves bounded work, caps, and timeouts; the p95 reference is separately recorded, never a CI gate (GAP-T2).
+- CI proves bounded work and caps, structurally pins the 30 000 ms production default on each I/O class, and behaviorally aborts a never-resolving provider transport and a non-terminating git child at an injected short bound (no 30 s wall-clock wait); the p95 reference is separately recorded, never a CI gate (GAP-T2).
 
 #### TC-CLOSE-064 - Non-vacuity meta-check: broken guards fail naming the case
 
@@ -2182,7 +2190,7 @@ The exact handler-versus-parser split follows the declared flag set; both classe
 
 **Preconditions**:
 
-- A mutant corpus covering each guard named in §4.2: label disposition, unknown-blocker rule, merged-head equality, protected set, gap honesty, no-leak projection, terminal-outcome reuse, plan determinism, and the read-only isolation scan.
+- A mutant corpus covering each guard named in §4.2: label disposition, unknown-blocker rule, unavailable-signal-as-empty, merged-head equality, protected set, gap honesty, no-leak projection, terminal-outcome reuse, plan determinism, SHA-256 identity algorithm/omitted capability context (FNV-1a and omitted-capability-context), detached-as-unrelated, and the read-only isolation scan.
 
 **Steps**:
 
@@ -2307,17 +2315,17 @@ All closeout fixtures live under `tests/fixtures/closeout/` or are generated in 
 
 | Fixture / artefact | Shape | Lifecycle |
 |--------------------|-------|-----------|
-| `tests/fixtures/closeout/harness.ts` | `CloseoutProviderRuntime`, `CloseoutGitRuntime`, and the fenced state fake; ordered call recorder; scripted failure/unknown hooks; `runCloseoutCli` | Read-only code; per-test instances |
+| `tests/fixtures/closeout/harness.ts` | `CloseoutProviderRuntime` (incl. `listBlockedByDependents` and the `fakeNotFound`/`fakeInvalidPayload`/`fakeUnavailableSurface`/`fakeUnavailableRelation`/`fakeUnknownRelation` hooks), `CloseoutGitRuntime` (incl. `isClean`, `resolveRef`), and the fenced state fake; ordered call recorder; scripted failure/unknown hooks; `runCloseoutCli` | Read-only code; per-test instances |
 | `tests/fixtures/closeout/plan.ts` | Plan builders over synthetic refs/labels/dependents/threads; fixed clock/run id | Read-only |
 | `tests/fixtures/closeout/labels.ts` | Label sets: all six + `change` + vendor label; already-swept; absent signal; Jira replace-before/after | Read-only |
 | `tests/fixtures/closeout/dependents.ts` | Eligible, open-blocker, already-hand-back, hand-back+blocked, unknown-blocker, unavailable-relation, and 200/201/large cap sets | Read-only |
 | `tests/fixtures/closeout/threads.ts` | Merged request threads: unresolved, already-resolved, 100/101 cap; GraphQL `resolveReviewThread` fixture | Read-only |
 | `tests/fixtures/closeout/request.ts` | Merged requests with numeric/non-numeric identities, present/absent `headSha`, no-lookup case | Read-only |
 | `tests/fixtures/closeout/capabilities.ts` | GitHub/Jira/GitLab declaration snapshots and gap matrices; unsupported-op plan | Read-only |
-| `tests/fixtures/closeout/branch.ts` | Branch-safety cases BR-01..BR-12 with expected outcomes | Read-only |
+| `tests/fixtures/closeout/branch.ts` | Branch-safety cases BR-01..BR-12 with expected outcomes. BR-13/BR-14 (detached-at-delivery-head clean / dirty-or-missing-base) are owned by TC-CLOSE-066's temporary-repo harness, not this fixture file. | Read-only |
 | `tests/fixtures/closeout/canary.ts` | One fabricated canary constant, forbidden-shaped field names, and a fabricated environment value | Read-only; the only canary source |
 | `tests/fixtures/closeout/golden/**` | Normalized machine envelopes and human digests for plan/apply outcomes; no absolute paths, host timestamps, or real content | Read-only; regenerated only by an explicit command |
-| `tests/fixtures/closeout/mutants/**` | Temp-copied mutants: disposition bypass, unknown-as-done, missing-head equality, protected-set bypass, worktree-blind delete, gap-as-success, wide projection, terminal-reuse bypass, `Date.now()` plan, read-only import/spawn, success-on-partial | Temp-copied and imported through a file URL; never executed against the live tree |
+| `tests/fixtures/closeout/mutants/**` | Temp-copied mutants: disposition bypass, unknown-as-done, unavailable-signal-as-empty, missing-head equality, protected-set bypass, worktree-blind delete, detached-as-unrelated, gap-as-success, wide projection, terminal-reuse bypass, `Date.now()` plan, FNV-1a identity, omitted-capability-context identity, read-only import/spawn, success-on-partial | Temp-copied and imported through a file URL; never executed against the live tree |
 | `tests/fixtures/providers/{github,jira,gitlab,traps}` | Existing sanitized provider fixtures extended with write/trap cases and the GraphQL thread fixture | Read-only |
 | Temp local git repositories | `git init` + commits + branches + `git worktree add`; removed per test | Generated in temp |
 
@@ -2380,7 +2388,7 @@ All TCs are automated except the optional reference measurement of TC-CLOSE-063.
 | TC-CLOSE-015 | `tests/behaviour/closeout-idempotency.test.ts` | `bun test tests/behaviour/closeout-idempotency.test.ts` | re-executing mutant | To Implement |
 | TC-CLOSE-016 | same | same | blind-retry mutant | To Implement |
 | TC-CLOSE-017 | same | same | failed-is-terminal mutant | To Implement |
-| TC-CLOSE-018 | same | same | clock/random or omitted-input mutant | To Implement |
+| TC-CLOSE-018 | same + `packages/core/src/domain/sha256.ts` | `bun test tests/behaviour/closeout-idempotency.test.ts` | SHA-256 KAT + fixed canonical tuple + test-only `node:crypto` cross-check; FNV-1a and omitted-capability-context mutants; clock/random or omitted-input mutant | To Implement |
 | TC-CLOSE-019 | same + `tests/fixtures/state/harness.ts` | same | failure-to-zero; schema-bump mutant | To Implement |
 | TC-CLOSE-020 | `tests/behaviour/closeout-ticket-labels.test.ts` | `bun test tests/behaviour/closeout-ticket-labels.test.ts` | already-done write mutant | To Implement |
 | TC-CLOSE-021 | same | same | done-item write mutant | To Implement |
@@ -2396,7 +2404,7 @@ All TCs are automated except the optional reference measurement of TC-CLOSE-063.
 | TC-CLOSE-031 | `tests/behaviour/closeout-owed-flip.test.ts` | `bun test tests/behaviour/closeout-owed-flip.test.ts` | still-blocked control | To Implement |
 | TC-CLOSE-032 | same | same | eligible sibling control | To Implement |
 | TC-CLOSE-033 | same | same | re-add `hand-back` mutant | To Implement |
-| TC-CLOSE-034 | same | same | unasserted-`[]`-as-no-blockers and unknown-as-done mutants; known-done control | To Implement |
+| TC-CLOSE-034 | same | same | unasserted-`[]`-as-no-blockers, unavailable-signal-as-empty, and unknown-as-done mutants; known-done control | To Implement |
 | TC-CLOSE-035 | same | same | unbounded/no-truncation mutant | To Implement |
 | TC-CLOSE-036 | same | same | capable sibling control; explicit no-surface-versus-unavailable separation | To Implement |
 | TC-CLOSE-037 | `tests/behaviour/closeout-threads.test.ts` | `bun test tests/behaviour/closeout-threads.test.ts` | duplicate-resolution mutant; cap pair | To Implement |
@@ -2425,8 +2433,8 @@ All TCs are automated except the optional reference measurement of TC-CLOSE-063.
 | TC-CLOSE-060 | `tests/behaviour/closeout-output.test.ts`; `tests/golden/closeout-human.test.ts` | corresponding `bun test` | `Date.now()` and over-cap renderer mutants | To Implement |
 | TC-CLOSE-061 | `tests/behaviour/closeout-output.test.ts` | `bun test tests/behaviour/closeout-output.test.ts` | wrong-projection/literal mutant | To Implement |
 | TC-CLOSE-062 | `tests/behaviour/closeout-hermetic.test.ts`; `tests/checks/fixture-sanitization.test.ts` | corresponding `bun test` | planted fetch/credential/home path | To Implement |
-| TC-CLOSE-063 | owed-flip/threads suites + `tests/structure/closeout-contract.test.ts`; optional manual reference | corresponding `bun test`; manual reference | per-item-query mutant; timeout-removal control | To Implement |
-| TC-CLOSE-064 | `tests/checks/closeout-mutants.test.ts` + `tests/fixtures/closeout/mutants/**` | `bun test tests/checks/closeout-mutants.test.ts` | the mutant corpus itself | To Implement |
+| TC-CLOSE-063 | owed-flip/threads suites + `tests/structure/closeout-contract.test.ts`; provider transport + git seam fixtures; optional manual reference | corresponding `bun test`; manual reference | per-item-query unbounded mutant; structural timeout-removal control on each I/O class; never-resolving provider / non-terminating git child with short injected timeout | To Implement |
+| TC-CLOSE-064 | `tests/checks/closeout-mutants.test.ts` + `tests/fixtures/closeout/mutants/**` | `bun test tests/checks/closeout-mutants.test.ts` | the mutant corpus itself, incl. FNV-1a/omitted-capability identity, unavailable-signal-as-empty, and detached-as-unrelated | To Implement |
 | TC-CLOSE-065 | `tests/conformance/mock-conformance.test.ts`; `packages/testkit/src/conformance/coverage.ts` | `bun test tests/conformance` | drop an executed supported-write step; mark a gapped op supported without execution | Existing – Update |
 | TC-CLOSE-066 | `tests/behaviour/closeout-checkout.test.ts` + temp git harness | `bun test tests/behaviour/closeout-checkout.test.ts` | detached-as-unrelated mutant; dirty/missing-base refusal controls | To Implement |
 | TC-CLOSE-067 | `tests/behaviour/closeout-ticket-labels.test.ts`; `tests/behaviour/closeout-read-observation.test.ts` | corresponding `bun test` | invalid-as-not-found mutant; not-found-as-gap mutant; observed-item control | To Implement |
@@ -2548,6 +2556,7 @@ Notes on the battery:
 - **A-T5 — Existing suites are extended, not weakened.** `conformance-coverage`, `error-table`, `error-classification`, `error-table-sync`, and the read-only suites keep their assertions and add closeout cases.
 - **A-T6 — Plan-relative.** `chg-GH-183-plan.md` is present and under remediation (GAP-T1). Any plan change that alters a TC's behaviour, assertion, or AC mapping must reopen this test plan.
 - **A-T7 — Version impact.** `minor` is taken from the spec; this plan introduces no version or release metadata of its own.
+- **A-T8 — GitHub reverse-read surface is implementation-confirmed.** The GitHub reverse-dependent read (`listBlockedByDependents`, bounded issue-dependencies) is an implementation-confirmed assumption, not verified current truth; its exact response shape is fixture-pinned (like OQ-T2/OQ-T3). A provider with no surface (e.g. GitLab's declared work-item-read gap) yields the provider-level `skipped-gap`/`provider-unsupported` (TC-CLOSE-036); a present surface whose current read is unavailable is a signal-level `skipped-noop` with `relation-signal-unavailable` and no flip (TC-CLOSE-034). The adapter/runtime must distinguish absent-surface from present-but-unavailable.
 
 ### 8.3 Open Questions and Recorded Gaps
 
@@ -2557,6 +2566,7 @@ Notes on the battery:
 | OQ-T2 | Does the provider lookup expose merged heads on GitLab's read slice? | TDR-0008 records this as an assumption; absent stays truthful and branch cleanup refuses | Open — non-blocking; absent is a valid fixture | @coder |
 | OQ-T3 | What exact GitHub GraphQL response shape does `resolveReviewThread` use? | TDR-0008 records this as TO-CONFIRM; the fixture is authored at implementation | Open — non-blocking; degrade to a gap if unavailable | @coder |
 | OQ-T4 | Does a `tests/types/` compile-time probe add value beyond the runtime/contract checks? | TC-CLOSE-006/002 assert the type shape; a probe is a second line of defence | Open — optional, non-blocking | @plan-writer |
+| OQ-T5 | Does GitHub expose the bounded reverse-dependent (issue-dependencies) surface, and what is its response shape? | Treated as an implementation-confirmed assumption (A-T8); fixtures pin the shape. If absent at implementation, GitHub owed-flip becomes the provider-level gap, not a signal skip | Open — non-blocking; absent is a valid fixture | @coder |
 | GAP-T1 | Implementation-plan mapping is delivery-owned | The plan is present (v1.0, under DoR remediation); delivery planning must map phases onto these TCs without reshaping them | Recorded, non-blocking | @plan-writer |
 | GAP-T2 | NFR-6 p95 is not a CI gate | Bounded work is the CI oracle; the reference measurement is non-CI | Recorded, non-blocking | @pm / @runner |
 | GAP-T3 | The no-leak canary is a fixture obligation | Presence is asserted before absence | Recorded, non-blocking | @coder / @reviewer |
@@ -2569,6 +2579,7 @@ Notes on the battery:
 
 | Version | Date (UTC) | Author | Changes |
 |---|---|---|---|
+| 1.2 | 2026-11-01T08:30:00Z | Change Test Plan Writer | DoR iteration 2 remediation and spec v1.3 alignment (test-plan-owned findings only): (1) rewrote TC-CLOSE-018 to assert the SHA-256 algorithm — `""`/`"abc"` known-answer vectors, a fixed canonical closeout identity tuple digest, a test-only `node:crypto` cross-check, capability-context sensitivity, and an FNV-1a/omitted-capability-context mutant — and rewrote TC-CLOSE-063 to add the behavioral never-resolving provider transport and non-terminating git child with a short injected timeout override plus the structural `CLOSEOUT_OPERATION_TIMEOUT_MS` removal control on each I/O class; propagated the FNV-1a/omitted-capability identity, unavailable-signal-as-empty, and detached-as-unrelated mutants to §4.2/§4.3/§6.2/§7. (2) completed the §4.1 binding harness contract: `CloseoutProviderRuntime` now includes `listBlockedByDependents` and scripted `not-found`/`invalid`/`unavailable`/unavailable-or-unknown-relation hooks; `CloseoutGitRuntime` now includes `isClean` and `resolveRef`, synchronized with plan PIN-14/PIN-15/PIN-16 and Phases 3.7/3.8/4.6/5.5/6.6. (8) updated the §6.2 fixture table to state that `branch.ts` covers BR-01..BR-12 while TC-CLOSE-066's temporary-repo harness owns BR-13/BR-14. (9) added grammar case G-09 for two-or-more extra positionals (`fallback.invocation` at the parser) distinct from the one-extra handler `input.value.rejected` case, and updated TC-CLOSE-012. Spec v1.3 alignment: ODR-0003 owner acceptance is GH-186 (TDR-0008 is GH-183); operation identity is the ADR-0003 inputs plus the additive `capabilityContext` refinement recorded in DEC-7; the GitHub reverse-read surface is an implementation-confirmed assumption (A-T8, OQ-T5) with absent-surface → provider-level gap and present-but-unavailable → signal-level skip. TC count unchanged at 67; no ID reassigned; no orphan TCs. |
 | 1.1 | 2026-11-01T05:00:00Z | Change Test Plan Writer | DoR iteration 1 remediation and spec v1.2 alignment: 67 TCs (appended TC-CLOSE-065..067; no existing ID reassigned); coverage now 61/61 ACs. Added AC-F4-4 (target not-found vs malformed payload vs unavailable read), AC-F7-7 (provider-asserted empty vs unavailable relation signal), and AC-F9-5 (detached-HEAD restore/refusal). Added TC-CLOSE-065 for the existing `runtimeCoverageViolations` mock-conformance invariant over the new supported `write-work-item`/`transition-work-item`/`resolve-delivery-thread` writes; TC-CLOSE-066 for detached-HEAD restore; TC-CLOSE-067 for read-observation discrimination. Scoped TC-CLOSE-036 to the provider-level no-reverse-read gap and moved the signal-level `skipped-noop` case to TC-CLOSE-034. Fixed TC-CLOSE-047 to assert `HEAD` protection via resolved-base/current-checkout contract data rather than an impossible branch named `HEAD`. Corrected the §2 `runCli` reference (imported directly from `packages/cli/src/index.ts`, not re-exported by `tests/golden/helpers.ts`). Reflected the flat `write-work-item` args, case-sensitive no-fold grammar, pinned `main-tools` base, and capability-context identity; added DM-11 and RSK-T13..T15. |
 | 1.0 | 2026-11-01T04:10:00Z | Change Test Plan Writer | Initial plan: 64 TCs (`TC-CLOSE-001..TC-CLOSE-064`, a new prefix). All 58 ACs (AC-F1-1..AC-NFR10-1) and all 13 NFRs mapped with no orphan TCs. Covers the seven-step plan and byte-identical determinism; restart, crash-between-effect-and-record, failed-retry, and ledger integrity; ticket-to-done; the label disposition and Jira replace trap; explicit unassign; the bounded owed-flip sweep with the 200 cap; GraphQL thread resolution with the 100 cap; checkout restore refusals; the full squash-safety matrix; GitHub/Jira/GitLab capability parity and declared gaps; the additive `headSha` and `resolve-delivery-thread` plus the conformance flow-registry obligation; bounded machine/human output with a no-leak canary; the four closeout error identities and bidirectional sync; read-only command isolation; offline hermeticity; bounded work/timeouts; zero new dependencies; and a non-vacuity mutant meta-check. |
 
@@ -2578,6 +2589,8 @@ Notes on the battery:
 |---|---|---|---|
 | Not run | — | Planned | This writer ran no builds, tests, or commands and implemented no code. The executor records per-TC evidence, exact commands, HEAD, and the pushed-HEAD CI result for `ts-test`/`ts-typecheck`/`ts-boundaries`/`ts-invariants`/`ts-license-audit`/`ts-vulnerability-gate`/`ts-aggregate`. Unrun evidence must never be recorded as passing. |
 | TC-CLOSE-063 — optional reference measurement | — | Optional (non-CI, not a pass gate) | Record environment, date, and median apply time for the reference fixture, or record "not run". NFR-6 remains a bounded-work target. |
+| TC-CLOSE-018 — SHA-256 algorithm evidence | — | Planned (automated) | Assert `""`/`"abc"` KAT, the committed canonical-tuple digest, a test-only `node:crypto` cross-check, and capability-context sensitivity; the FNV-1a/omitted-capability-context mutants must fail. |
+| TC-CLOSE-063 — structural + behavioral timeout | — | Planned (automated) | Assert the `CLOSEOUT_OPERATION_TIMEOUT_MS` default on each provider/git I/O class with a removal control; assert a short injected timeout aborts the never-resolving provider transport and non-terminating git child at the bound. |
 | TC-CLOSE-059/062 — no-leak canary | — | Planned (automated) | Confirm the canary is present in the fixture before asserting zero output/ledger occurrences. |
 | TC-CLOSE-002 — conformance registry | — | Planned (automated) | Confirm the flow-registry operation set equals `ADAPTER_OPERATIONS` including `resolve-delivery-thread` and the new step. |
 | TC-CLOSE-065 — mock runtime coverage | — | Planned (automated) | Confirm `runtimeCoverageViolations(report, CONFORMANCE_ADAPTERS, "mock")` is empty and each new supported write executed. |
