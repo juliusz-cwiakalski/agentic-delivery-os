@@ -2563,7 +2563,7 @@ Notes on the battery:
 | GAP-T4 | Delivery-bound spellings | Semantics/identities/exits are pinned; names are not | Recorded, non-blocking | @coder |
 | GAP-T5 | NFR-6/NFR-12 have no dedicated AC | Mapped to the ACs they qualify in §3.3 | Recorded, non-blocking | @spec-writer |
 
-**No blocking gap was found.** The spec's 61 ACs are each testable with an observable oracle; the plan is offline and fixture-driven; the branch-safety predicate has a positive and negative case for every rule; idempotency has restart, crash, and failed-retry paths; capability honesty is a closed matrix; the read observations distinguish not-found, invalid, and unavailable; and the conformance-registry plus runtime-coverage obligations are explicit. The implementation plan is absent at this revision (GAP-T1); no spec, plan, pm-notes, or code file was modified by this author.
+**No blocking gap was found.** The spec's 61 ACs are each testable with an observable oracle; the plan is offline and fixture-driven; the branch-safety predicate has a positive and negative case for every rule; idempotency has restart, crash, and failed-retry paths; capability honesty is a closed matrix; the read observations distinguish not-found, invalid, and unavailable; and the conformance-registry plus runtime-coverage obligations are explicit. The implementation plan is present (`chg-GH-183-plan.md`) and is being remediated in the same DoR cycle (GAP-T1 mapping remains delivery-owned); no spec, pm-notes, or code file was modified by this author.
 
 ## 9. Plan Revision Log
 
