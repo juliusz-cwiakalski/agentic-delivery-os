@@ -123,6 +123,7 @@ export {
   type CloseoutOperationIdentityInputs,
   type CloseoutOperationName,
   type CloseoutOperationRecord,
+  type CloseoutObservedSignals,
   type CloseoutOutcome,
   type CloseoutPlan,
   type CloseoutPlanOutcome,

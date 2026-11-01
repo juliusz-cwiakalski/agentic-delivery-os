@@ -7,6 +7,27 @@
 export type DomainPlaceholder = { readonly __tier: "domain" };
 
 export {
+  boundCloseoutData,
+  buildCloseoutPlan,
+  canonicalCloseoutJson,
+  closeoutStepDefinitions,
+  deriveCloseoutOperationId,
+  evaluateBranchSafety,
+  foldCloseoutOutcomes,
+  isProtectedRef,
+  renderCloseoutHuman,
+  resolveCloseoutBaseRef,
+  selectMatchingBranch,
+  summarizeCloseout,
+  type CloseoutBranchSafetyInput,
+  type CloseoutBranchSafetyVerdict,
+  type CloseoutBranchSelection,
+  type CloseoutDependentFact,
+  type CloseoutPlanFacts,
+  type CloseoutPlanProvider,
+} from "./closeout.js";
+export { sha256Hex } from "./sha256.js";
+export {
   lintPmNotes,
   type PmNotesLintFinding,
   type PmNotesLintLocation,

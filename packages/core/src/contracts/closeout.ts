@@ -161,8 +161,18 @@ export type CloseoutCapabilityContext = "supported" | CapabilityGapReason;
  * `observed` carries the provider-asserted value (an empty collection means
  * "none"); `not-found`, `unavailable`, and `invalid` never collapse into it.
  */
+export type CloseoutObservedSignals = {
+  readonly labels?: "observed" | "unavailable";
+  readonly relations?: "observed" | "unavailable" | "unknown";
+  readonly assignee?: "observed" | "unavailable";
+};
+
 export type CloseoutReadObservation<T> =
-  | { readonly observation: "observed"; readonly value: T }
+  | {
+      readonly observation: "observed";
+      readonly value: T;
+      readonly signals?: CloseoutObservedSignals;
+    }
   | { readonly observation: "not-found" }
   | { readonly observation: "unavailable" }
   | { readonly observation: "invalid"; readonly detail: string };
