@@ -77,3 +77,9 @@ notes:
   - text: "Plan remediation (DoR findings 1,2,3,4,9,15,16 + spec v1.2 delivery halves): plan v1.1 replaces FNV-1a with the ADR-0003 SHA-256 identity via a pure `domain/sha256.ts` (known-answer vectors + test-only node:crypto cross-check + capability-context sensitivity), wires the 30 s timeout on provider and git I/O with structural/behavioral evidence, adds the exact-inventory/trap/provider-surface/workspace-entrypoints/mock-conformance updates per phase, splits TC-010/011 and TC-003 phase delivery, adds TC-065 runtime-coverage, makes the fixture transport method-aware, aligns owed-flip signal semantics and discriminated read observations, pins `main-tools`, reconciles identity inputs, and makes the Phase 11 registry update unconditional. Delivery planning re-completed for DoR iteration 2."
     type: resolved
     date: "2026-11-01"
+  - text: "DoR iteration 2 verdict: NOT_READY (readiness-review/readiness-iter-2.md). 3 blocking (all major) + 8 minor. Iteration-1 status: 15 fully resolved, 3 partial (findings 1,2,13). Blocking: (1) test plan TC-018/TC-063/TC-064 not updated to the plan's SHA-256 KAT, behavioral timeout abort, and new mutants; (2) test plan §4.1 fake runtimes missing listBlockedByDependents/isClean/resolveRef and not-found/invalid/unavailable hooks; (3) plan Phase 4/8 missing `tests/conformance/broken-adapter-control.test.ts` and `tests/conformance/live/live-entrypoint.test.ts` method+URL transport fixes."
+    type: blocker
+    date: "2026-11-01"
+  - text: "Reopened for final remediation pass (iteration 3): test_planning (1,2,8,9-half), delivery_planning (3,7,10,11), specification (4,5,6,9). Retro: iteration 2 caught that fixing the plan did not automatically propagate to the test-plan oracles — cross-artifact synchronization must be explicit in remediation prompts."
+    type: retro
+    date: "2026-11-01"
