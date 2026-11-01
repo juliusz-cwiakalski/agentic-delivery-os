@@ -92,3 +92,6 @@ notes:
   - text: "PM decision (recorded exception to the max-3 DoR guardrail): authorize one targeted plan-only iteration 4. Rationale: both blocking findings are mechanical plan-completeness amendments with exact file/line targets, introduce no new product or contract decision, and are bounded to the plan; the user directive is end-to-end delivery of GH-183 and the remaining work is precise. This is the final extension; if iteration 4 is NOT_READY on a substantive (non-mechanical) issue, the PM will stop and escalate to the human."
     type: decision
     date: "2026-11-01"
+  - text: "Plan remediation for DoR iteration 3 to plan v1.3: Phase 1 now updates mock-conformance/live-entrypoint/broken-adapter-control ALL_OPERATIONS+gapsExcept and keeps runner failClosed meaningful; per-phase EXECUTABLE_ALLOWANCES updates added for domain/closeout, github/normalize, jira/normalize+jira/workflow-map, cli/edge plus conditional new files; content-inventory runs at Phases 2/3/4/5/6/7; five minor nits resolved (readWorkItemObservation hook, conformance types wording, SHA-256 fixed-tuple regeneration note, GitChildRunner seam, DEC-7 governance note). Delivery planning re-completed for DoR iteration 4."
+    type: resolved
+    date: "2026-11-01"
