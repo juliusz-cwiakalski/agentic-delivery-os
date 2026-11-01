@@ -101,6 +101,8 @@ Neither extension bumps the schema version or requires a migration. The optional
 
 The shared injectable provider transport used by the client subpaths is widened additively to carry the closed methods `GET`, `POST`, `PATCH`, `PUT`, and `DELETE`, an optional serialized request body, and an optional per-request timeout (production default: the 30 s closeout operation timeout). This is an adapter-I/O refinement: it adds no new transport, credential path, network location, or closed operation.
 
+The closeout reads refine the discriminated observation without changing the adapter contract. A work-item observation may carry `signals` for label and relation availability: `observed` for a provider-supplied container (including an empty array) and `unavailable` when the container is omitted. The bounded reverse-dependent read uses `CloseoutReverseDependentObservation`, whose closed set adds `no-surface` so an absent surface is a provider-level gap distinct from a currently `unavailable` signal. Both are read-observation refinements: they add no closed operation, primitive-port field, or schema-version bump.
+
 ### Credential resolution
 
 `CredentialPort` exposes one operation, `resolve(reference)`, and no implementation-mode surface. A `CredentialReference` carries its own declarative source-key mapping:
@@ -204,7 +206,7 @@ An unresolvable credential carries the synchronized error-table row `config.cred
 |------|----------------|
 | `packages/core/src/contracts/ports.ts` | The nine v1 primitive port types and their supporting normalized value types. |
 | `packages/core/src/contracts/adapter-capabilities.ts` | `ADAPTER_OPERATIONS`, `CARRIER_KINDS`, capability/gap types, and declared-carrier selection types. |
-| `packages/core/src/contracts/closeout.ts` | The `delivery.closeout.v1` plan/operation/outcome/read-observation vocabulary and the closeout runtime contracts; types and `as const` data only. |
+| `packages/core/src/contracts/closeout.ts` | The `delivery.closeout.v1` plan/operation/outcome vocabulary, the work-item and reverse-dependent read observations (`CloseoutReadObservation`, `CloseoutReverseDependentObservation`, `CLOSEOUT_REVERSE_DEPENDENT_OBSERVATIONS`), and the closeout runtime contracts; types and `as const` data only. |
 | `packages/core/src/contracts/credentials.ts` | `CredentialPort`, `CredentialReference`, `CredentialSourceKey`, resolution result, and the reified missing-credential failure. |
 | `packages/core/src/contracts/envelope.ts` | Envelope schema id, size bound, kinds, closed payload types, degradation reasons, agent-facing comment views, and the `ContentPolicyVerdict` / `EnvelopeContentPolicy` contract types. |
 | `packages/core/src/contracts/session.ts` | `delivery.session-admin.v1` vocabulary, bounds, item/result shapes, read-only `SessionStorePort`, and mutating `SessionAdminPort`; types and `as const` data only. |

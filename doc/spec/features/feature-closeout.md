@@ -6,7 +6,7 @@ created: 2026-11-01
 last_updated: 2026-11-01
 owners: ["engineering"]
 service: delivery-os
-summary: "The delivered closeout transaction: a dry-run-by-default `closeout <workItemRef>` command, the deterministic seven-step plan, SHA-256 operation identities and the append-only `closeout.operation` ledger, GitHub and Jira writes with declared GitLab gaps, review-thread resolution, the owed-flip sweep, checkout restore, squash-safe local branch cleanup, the discriminated read observation, bounded output and evidence, and the four `closeout` error identities."
+summary: "The delivered closeout transaction: a dry-run-by-default `closeout <workItemRef>` command, the deterministic seven-step plan, SHA-256 operation identities and the append-only `closeout.operation` ledger over the real JSONL state driver, a production CLI composition over the real provider clients, git seam, and state store, GitHub and Jira writes with declared GitLab gaps, review-thread resolution, the owed-flip sweep, checkout restore, squash-safe local branch cleanup, the discriminated work-item read observation and the separate reverse-dependent no-surface vocabulary, provider-asserted label/relation availability signals, bounded output measured in UTF-8 bytes, and the four `closeout` error identities."
 links:
   related_changes: ["GH-183"]
   related_decisions: ["TDR-0008", "ODR-0003", "ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006"]
@@ -108,11 +108,11 @@ The sweep is bounded contract data, not an open-ended label rewrite:
 | `planning`, `spec-ready`, `readiness-passed`, `in-progress`, `review`, `blocked` | remove when present |
 | `delivered` | add when absent |
 
-Every label not named above is preserved. The observed label set must be provider-asserted; an absent or unavailable label signal makes the step `skipped-noop` with `label-signal-unavailable` evidence and performs no blind replacement. A present lifecycle label yields one removal operation; an absent one is satisfied. Adding `delivered` when it is present is satisfied. On Jira the adapter implements the provider's full-array replace mechanics: it computes the target set from provider-asserted labels at execution time, removes only the named labels, adds `delivered`, and preserves every other label.
+Every label not named above is preserved. The observed label set must be provider-asserted: the work-item normalizers emit `signals.labels` as `observed` for a present label container (including an explicitly empty array) and `unavailable` when the provider omits the container. An absent or unavailable label signal makes the step `skipped-noop` with `label-signal-unavailable` evidence and performs no blind replacement. A present lifecycle label yields one removal operation; an absent one is satisfied. Adding `delivered` when it is present is satisfied. On Jira the adapter implements the provider's full-array replace mechanics: it computes the target set from provider-asserted labels at execution time, removes only the named labels, adds `delivered`, and preserves every other label. Both GitHub and Jira label writes refuse an unavailable label signal instead of replacing from a collapsed empty set.
 
 #### Unassign
 
-Unassign issues an explicit clear operation and never infers "already unassigned" from an absent assignee field, because absence means the provider did not supply the signal. The canonical argument is `{ assignee: "none" }`, so re-runs share the identity. GitHub sets the issue assignee to null; Jira clears the assignee field. A provider without assignee-clear support declares a gap and skips with evidence. A prior terminal unassign outcome or a provider-confirmed absent assignee after a clear converges as satisfied.
+Unassign issues an explicit clear operation and never infers "already unassigned" from an absent assignee field, because absence means the provider did not supply the signal. The canonical argument is `{ assignee: "none" }`, so re-runs share the identity. GitHub sets the issue assignee to null; Jira clears the assignee field. When the work-item read is not `observed`, the step is `skipped-gap` with `provider-unsupported`, the same provider-level read gap `ticket-to-done` reports; a read that is not observed says nothing about write support and is never misattributed to a missing write capability. A provider without assignee-clear support declares a gap and skips with evidence. A prior terminal unassign outcome or a provider-confirmed absent assignee after a clear converges as satisfied.
 
 #### Owed-flip sweep
 
@@ -120,13 +120,13 @@ An owed-flip moves an open direct dependent to the declared owner-attention labe
 
 - Candidate dependents come from the closed item's `blocks` relation set and/or a bounded reverse query for open items that declare this item in their `blocked-by` relations, but only when the corresponding read observation is `observed`. An unavailable or unknown relation signal never yields candidates and is never treated as an empty set.
 - For each candidate the engine reads the candidate's full `blocked-by` relation set. The candidate is flipped only when it is still open, its relation signal is provider-asserted, every blocker is observed `done` or `canceled`, and the candidate is not already carrying `hand-back`.
-- A candidate with any open blocker is skipped with evidence naming the open count. A candidate whose blocker set is unknown or unavailable is skipped with `relation-signal-unavailable` evidence and is never flipped.
+- A candidate with any open blocker is skipped with evidence naming the open-blocker count. The bounded evidence carries the aggregate `openBlockers` count, the per-candidate maximum `maxOpenBlockers`, the `unavailableSignals` count, and the evaluated/flipped/skipped counts. A candidate whose blocker set is unknown or unavailable is skipped with `relation-signal-unavailable` evidence and is never flipped.
 - A candidate already carrying `hand-back` and not carrying `blocked` is satisfied with zero write. A candidate carrying both `hand-back` and `blocked` gets a `blocked` removal.
 - Every flip is one `write-work-item` operation with canonical `{ add: ["hand-back"], remove: ["blocked"] }`; every flip is recorded in the ledger and the output.
 
 The sweep is capped at 200 direct dependents per run, ordered by provider entity identity. A truncated run records `truncated: true` and the omitted count. Flipped candidates are excluded on later runs, so repeated runs re-evaluate the remaining bounded set and make progress as eligibility changes; a still-blocked candidate is re-evaluated and never flipped until its blockers clear.
 
-If the provider has no reverse-dependent read surface (including a provider whose work-item read is a gap), the step is `skipped-gap` with `provider-unsupported`. If the surface exists but the current reverse read is unavailable, the step is `skipped-noop` with `relation-signal-unavailable` evidence and performs no flip. If the reverse read is observed but an individual candidate's relation signal is unavailable, that candidate is skipped with `relation-signal-unavailable` evidence while other observed candidates are evaluated; no unavailable candidate is flipped. The bounded reverse query is a query-shaped form of `read-work-item`; it adds no closed adapter operation and no capability flag.
+The reverse-dependent read uses a distinct `CloseoutReverseDependentObservation` rather than the work-item observation, because an absent surface and a currently unavailable signal are different facts. `no-surface` means the adapter has no bounded reverse query surface: a missing provider endpoint (HTTP 404/410) or a provider whose work-item read is a gap. The step is then `skipped-gap` with `provider-unsupported`, never a signal-level skip. `unavailable` means the surface exists but the current read failed (authentication, transport, or server failure); the step is `skipped-noop` with `relation-signal-unavailable` evidence and performs no flip. If the reverse read is observed but an individual candidate's relation signal is unavailable, that candidate is skipped with `relation-signal-unavailable` evidence while other observed candidates are evaluated; no unavailable candidate is flipped. The bounded reverse query is a query-shaped form of `read-work-item`; it adds no closed adapter operation and no capability flag, and `CLOSEOUT_REVERSE_DEPENDENT_OBSERVATIONS` names the closed observation set.
 
 #### Review-thread resolution
 
@@ -147,7 +147,7 @@ The restore target is the merged delivery request's target ref; when no merged r
 
 Branch cleanup is local only. It never deletes a remote branch, pushes, force-updates a ref, or rewrites history.
 
-The engine identifies local branches matching the repository branch convention `<type>/<workItemRef>/<slug>`. No match is `satisfied` with `no-branch` evidence. More than one match selects the branch whose local head equals the merged request's `headSha`; if no unique match exists, apply returns `closeout.target.ambiguous` and deletes nothing.
+The engine identifies local branches matching the repository branch convention `<type>/<workItemRef>/<slug>`. No match is `satisfied` with `no-branch` evidence. More than one match selects the branch whose local head equals the merged request's `headSha`; if no unique match exists, plan mode renders a `would-refuse` branch step with `closeout.target.ambiguous` for inspection, and apply projects the `closeout.target.ambiguous` failure before any mutation and deletes nothing.
 
 Deletion is permitted only when the full predicate holds:
 
@@ -159,7 +159,7 @@ Deletion is permitted only when the full predicate holds:
 6. If checkout restore was required, it succeeded; a refused restore blocks deletion.
 7. No earlier transaction operation failed. Declared gaps and no-op outcomes do not block deletion; a non-gap failure does, so the branch remains available while the operator retries.
 
-A branch already deleted is `satisfied` with zero mutation. A branch whose head moved after the merged head is refused because it may contain new, unmerged work. A safety refusal returns `closeout.branch.unsafe` and preserves the branch. Force deletion (`git branch -D`) is used only after the predicate proves the work landed; the predicate, not git ancestry, is the proof, because a squash merge deliberately rewrites ancestry.
+A branch already deleted is `satisfied` with zero mutation. A branch whose head moved after the merged head is refused because it may contain new, unmerged work. The seam re-reads the local branch head immediately before `git branch -D` and refuses with `closeout.branch.unsafe` when it no longer equals the merged head, so a head that moves between planning and deletion is still safe. The seam also rejects `PROTECTED_REF_NAMES` directly as defense in depth, even when a caller bypasses the planner. A safety refusal returns `closeout.branch.unsafe` and preserves the branch. Force deletion (`git branch -D`) is used only after the predicate proves the work landed; the predicate, not git ancestry, is the proof, because a squash merge deliberately rewrites ancestry.
 
 #### Provider capability matrix
 
@@ -186,14 +186,16 @@ The merged delivery request is resolved by a bounded source-ref lookup that retu
 
 #### Read observation
 
-Closeout-relevant reads return a discriminated observation:
+Closeout-relevant work-item reads return a discriminated `CloseoutReadObservation`:
 
-- `observed` — the provider asserted the entity or signal; an empty collection means none.
-- `not-found` — the provider explicitly reports that the entity does not exist.
-- `unavailable` — the provider has no surface for the signal or omitted it.
-- `invalid` — the payload or parse failed.
+- `observed` — the provider asserted the entity or signal; an empty collection means none. The observation may carry `signals` with per-signal availability for labels and relations.
+- `not-found` — the provider explicitly reports that the entity does not exist (HTTP 404).
+- `unavailable` — the provider has no work-item read surface (for example GitLab) or the read cannot produce a value. An omitted label or relation container is not `unavailable`: it is an `observed` read whose `signals` mark that container unavailable.
+- `invalid` — the payload or parse failed, or the HTTP read failed with an authentication, transport, or server error (any non-404 non-2xx response). HTTP 401/403/500 are therefore `invalid`, never a false capability claim.
 
-A target work-item read maps `not-found` to `closeout.target.unobserved`, `unavailable` to a declared gap for ticket-dependent steps, and `invalid` to the adapter-local `provider.payload.invalid`. An observed read may carry per-signal availability for labels, relations, and assignee; an unavailable label signal is never treated as an empty label set, and an unasserted relation array is never treated as an empty blocker set. The observation is an adapter-I/O refinement: it adds no closed operation, no core primitive-port field, and no schema-version bump.
+The bounded reverse-dependent read uses the separate `CloseoutReverseDependentObservation` with the closed set `CLOSEOUT_REVERSE_DEPENDENT_OBSERVATIONS`: `observed`, `no-surface`, `not-found`, `unavailable`, and `invalid`. `no-surface` is an absent surface and maps to a provider-level gap; `unavailable` is an existing surface whose current read failed. The distinction keeps an absent dependency surface from being reported as a signal-level skip.
+
+A target work-item read maps `not-found` to `closeout.target.unobserved`, `unavailable` to a declared gap for ticket-dependent steps, and `invalid` to the adapter-local `provider.payload.invalid`. An observed read's availability signals make an unavailable label signal never an empty label set and an unasserted relation array never an empty blocker set. The observation is an adapter-I/O refinement: it adds no closed operation, no core primitive-port field, and no schema-version bump.
 
 #### Output and evidence
 
@@ -201,7 +203,7 @@ Machine mode returns one `CommandResult` envelope whose `data` is a bounded `del
 
 Plan mode uses `would-apply`, `satisfied`, `skipped-gap`, `skipped-noop`, and `would-refuse`. Apply mode uses `applied`, `satisfied`, `skipped-gap`, `skipped-noop`, `failed`, and `refused`. Human mode renders a deterministic digest from the same data without extra reads.
 
-Output is bounded at 64 KiB machine payload, 200 human lines, and 16 KiB human text, with deterministic truncation that drops trailing operations/evidence first and records the marker. Output never contains comment bodies, titles, raw provider payloads, credentials, environment values, command arguments, or free-form prose. Evidence names operations, provider targets, counts, refs, label names, outcomes, and classified reasons only. The single serialization redaction chokepoint covers machine and human output.
+Output is bounded at 64 KiB machine payload, 200 human lines, and 16 KiB human text, with every byte bound measured as UTF-8 bytes (multibyte characters count by encoded length, not UTF-16 code units), and deterministic truncation that drops trailing operations/evidence first and records the marker. Output never contains comment bodies, titles, raw provider payloads, credentials, environment values, command arguments, or free-form prose. Evidence names operations, provider targets, counts, refs, label names, outcomes, and classified reasons only. The single serialization redaction chokepoint covers machine and human output.
 
 #### Failure identities and exit projection
 
@@ -214,7 +216,7 @@ The feature adds one domain kind, `closeout`, and four rows to the existing erro
 | `closeout.write.failed` | transient | true | unknown | platform-provider | A closeout provider write did not land. |
 | `closeout.branch.unsafe` | user | false | not_landed | user-validation | Branch cleanup or checkout restore was refused for safety. |
 
-Declared gaps are data outcomes, never error rows. State, config, input, and credential failures reuse their delivered identities. The adapter-local `provider.payload.invalid` is a distinct recognized identity for a malformed payload; it is not an error-table row and is never used for an explicit provider not-found. In plan mode a checkout or branch safety refusal is rendered as `would-refuse` plan data; apply returns `closeout.branch.unsafe`. A target not-found or a malformed payload fails the command in both modes. Exit codes remain only in the CLI projection: `user-validation` → 1, `platform-provider` → 2, success → 0. The documented table and the machine table are bidirectionally synchronized.
+Declared gaps are data outcomes, never error rows. State, config, input, and credential-resolution failures reuse their delivered identities. The adapter-local `provider.payload.invalid` is a distinct recognized identity for a malformed payload or an authentication/transport/server failure on a non-404 read; it is not an error-table row and is never used for an explicit provider not-found. In plan mode a checkout or branch safety refusal is rendered as `would-refuse` plan data, and a branch ambiguity renders the `would-refuse` branch step for inspection; apply returns `closeout.branch.unsafe` or projects `closeout.target.ambiguous` before any mutation. A target not-found or an invalid target payload fails the command in both modes. Exit codes remain only in the CLI projection: `user-validation` → 1, `platform-provider` → 2, success → 0. The documented table and the machine table are bidirectionally synchronized.
 
 #### Read-only command isolation
 
@@ -232,9 +234,11 @@ The git branch/checkout seam is a dedicated adapter I/O subpath behind a port. I
 
 **Safety refusal.** Provider steps execute and persist; checkout restore refuses on a dirty worktree; branch cleanup is skipped and the branch retained; apply returns `closeout.branch.unsafe` with exit 1. After the operator cleans the worktree, a re-run reuses completed outcomes and finishes.
 
+**Ambiguous branch.** Plan mode renders the branch step as `would-refuse` with `closeout.target.ambiguous` so the operator can inspect the ambiguity; apply projects `closeout.target.ambiguous` before any mutation and deletes nothing.
+
 **Provider write failure.** Completed provider writes persist; the failed operation is recorded; remaining provider steps stop; a safe local checkout restore still runs; branch deletion is skipped because a transaction operation failed; apply returns `closeout.write.failed` with exit 2. A re-run re-observes and retries safely.
 
-**Target not observed.** An explicit provider not-found returns `closeout.target.unobserved` with exit 1 and zero writes; a malformed payload surfaces as `provider.payload.invalid`; a provider without the work-item read yields a declared gap for ticket-dependent steps.
+**Target not observed.** An explicit provider not-found returns `closeout.target.unobserved` with exit 1 and zero writes; a malformed payload or a non-404 authentication/transport/server failure surfaces as `provider.payload.invalid`; a provider without the work-item read yields a declared gap for ticket-dependent steps.
 
 ### 3.3 Edge Cases & Error Handling
 
@@ -242,35 +246,35 @@ The git branch/checkout seam is a dedicated adapter I/O subpath behind a port. I
 - A torn or malformed ledger is a classified `state.*` failure, never a zeroed history.
 - A state append failure stops execution and returns the classified state failure; the fence is still released.
 - An unsupported operation can never be reported as applied or satisfied.
-- An ambiguous local branch selection returns `closeout.target.ambiguous` and deletes nothing.
-- A protected ref is never deleted; the step records the protected state instead.
-- A dirty worktree, missing base ref, foreign worktree, moved branch head, unknown merged head, or earlier non-gap failure refuses deletion and preserves the branch.
+- An ambiguous local branch selection is a `would-refuse` plan step; apply returns `closeout.target.ambiguous` and deletes nothing.
+- A protected ref is never deleted; the step records the protected state instead, and the git seam rejects a protected ref directly as defense in depth.
+- A dirty worktree, missing base ref, foreign worktree, moved branch head (including one that moves after planning and is re-checked immediately before deletion), unknown merged head, or earlier non-gap failure refuses deletion and preserves the branch.
 - Output over the machine or human bounds is truncated deterministically with a marker; payload shape never changes.
 
 ## 4. Technical Architecture & Codebase Map
 
 ### 4.1 High-Level Design
 
-The closeout feature follows the delivered tier split. The runtime-neutral contracts tier declares the plan, step, operation, outcome, read-observation, ledger, and runtime types plus `as const` data. The pure domain tier computes plan step expansion, canonical operation arguments, SHA-256 identity, outcome folding, summary, output bounding, and the apply orchestration over injected runtimes. The state tier implements the `closeout.operation` ledger over the existing fenced state port. Provider adapters implement closeout-relevant reads and writes behind their existing subpaths. A dedicated `adapters ./git` subpath owns local checkout/branch I/O. The CLI command layer validates grammar, delegates to the closeout engine, and returns data or a classified failure; the edge owns composition, rendering, and exit projection. No runtime API, network, clock, or randomness enters the contracts or pure domain tier.
+The closeout feature follows the delivered tier split. The runtime-neutral contracts tier declares the plan, step, operation, outcome, work-item and reverse-dependent observations, ledger, and runtime types plus `as const` data. The pure domain tier computes plan step expansion, canonical operation arguments, SHA-256 identity, outcome folding, summary, output bounding, and the apply orchestration over injected runtimes. The state tier implements the `closeout.operation` ledger over the existing fenced state port. Provider adapters implement closeout-relevant reads and writes behind their existing subpaths. A dedicated `adapters ./git` subpath owns local checkout/branch I/O. The CLI command layer validates grammar, delegates to the closeout engine, and returns data or a classified failure; the edge owns composition, rendering, and exit projection. `createCloseoutComposition` performs the production read orchestration (`planFacts`) once from the injected provider client, git seam, and state store, bridges those raw ports to the closeout runtimes, and lets `createConfigProgram` register the command from the raw composition. The real ledger is consumed through `createCloseoutStateRuntime` over `readCloseoutHistory` and `appendCloseoutOutcome`. No runtime API, network, clock, or randomness enters the contracts or pure domain tier.
 
 ### 4.2 Core Components & Directory Structure
 
 | Path | Responsibility |
 |---|---|
-| `packages/core/src/contracts/closeout.ts` | `delivery.closeout.v1` vocabulary: step ids, outcomes, gap reasons, operation names, disposition and protected-ref data, bounds, plan/step/operation/data types, read observation, canonical argument unions, identity inputs, ledger payload type, provider/git/state runtime contracts. Types and `as const` data only. |
+| `packages/core/src/contracts/closeout.ts` | `delivery.closeout.v1` vocabulary: step ids, outcomes, gap reasons, operation names, disposition and protected-ref data, bounds, plan/step/operation/data types, work-item and reverse-dependent observations (`CLOSEOUT_REVERSE_DEPENDENT_OBSERVATIONS`), canonical argument unions, identity inputs, ledger payload type, provider/git/state runtime contracts. Types and `as const` data only. |
 | `packages/core/src/contracts/ports.ts` | The primitive ports; `DeliveryRequest` carries the additive optional `headSha`. |
 | `packages/core/src/contracts/adapter-capabilities.ts` | The closed `ADAPTER_OPERATIONS` set including `resolve-delivery-thread`, and capability/gap types. |
 | `packages/core/src/contracts/error-table.ts` | The `closeout` domain kind and the four documented rows. |
 | `packages/core/src/domain/closeout.ts` | Pure planner, canonical JSON and SHA-256 operation identity, branch selection and safety predicate, outcome fold, summary, output bounding, apply orchestrator, and human renderer. |
 | `packages/core/src/domain/sha256.ts` | Pure SHA-256 implementation used by the operation identity; no runtime import in the domain path. |
-| `packages/core/src/state/closeout.ts` | `closeout.operation` append, verified history read, store-scoped key, record validation, and first-terminal fold over the injected state port. |
-| `packages/adapters/src/github/{client,normalize}.ts` | Issue/PR reads, merged-request lookup, head normalization, bounded reverse-dependent read, label/assignee writes, issue close, GraphQL thread resolution, and discriminated work-item observation. |
-| `packages/adapters/src/jira/{client,normalize,workflow-map}.ts` | Issue reads, bounded reverse-dependent search, done transition, full-array label replace with preservation, assignee clear, and discriminated work-item observation. |
+| `packages/core/src/state/closeout.ts` | `closeout.operation` append with post-append coverage verification, verified history read, store-scoped key, record validation, and first-terminal fold over the injected state port. |
+| `packages/adapters/src/github/{client,normalize}.ts` | Issue/PR reads, merged-request lookup, head normalization, bounded reverse-dependent read with a `no-surface` observation, label/relation availability signals, label/assignee writes, issue close, GraphQL thread resolution, and discriminated work-item observation. |
+| `packages/adapters/src/jira/{client,normalize,workflow-map}.ts` | Issue reads, bounded reverse-dependent search with a `no-surface` observation, label/relation availability signals, done transition, full-array label replace with preservation, assignee clear, and discriminated work-item observation. |
 | `packages/adapters/src/gitlab/{client,normalize}.ts` | Merge-request and pipeline reads; merged-head normalization when present; no writes. |
-| `packages/adapters/src/git/index.ts` | The dedicated branch/checkout seam: fixed-argv, no-shell, local-only child processes with a 30 s default timeout and `SIGKILL`; checkout facts, branch listing, ref resolution, cleanliness and worktree checks, checkout restore, and local branch deletion. |
+| `packages/adapters/src/git/index.ts` | The dedicated branch/checkout seam: fixed-argv, no-shell, local-only child processes with a 30 s default timeout and `SIGKILL`; checkout facts, branch listing, ref resolution, cleanliness and worktree checks, checkout restore, local branch deletion with a delete-time head re-check, and direct protected-ref rejection. |
 | `packages/adapters/src/io/provider-transport.ts` | The shared injectable transport seam: `GET`, `POST`, `PATCH`, `PUT`, and `DELETE`, an optional serialized body, an optional per-request timeout, and the classified payload failure. |
 | `packages/cli/src/commands/closeout.ts` | Command definition: canonical ref validation, `--apply` flag, one-ref positional rule, plan/apply delegation, and human rendering hook. |
-| `packages/cli/src/edge.ts` | `CloseoutComposition` and `createCloseoutCommandRuntime`; composes plan facts, provider/git/state runtimes, injected clock and fence token. |
+| `packages/cli/src/edge.ts` | `CloseoutComposition`, `CloseoutCompositionOptions`, `createCloseoutComposition`, `createCloseoutStateRuntime`, and `createCloseoutCommandRuntime`; `createCloseoutComposition` bridges raw GitHub/Jira/GitLab clients, the real git seam, and the `StateStorePort`, implements the `planFacts` read orchestration, and supplies the injected clock, fence token, and real ledger runtime. |
 | `packages/cli/src/classify.ts` | Classification chain plus the adapter-local `provider.payload.invalid` projection used by closeout reads. |
 | `scripts/checks/error-table-sync.ts` | Enforces the documented/machine table sync and recognizes `provider.payload.invalid` as an adapter-local identity with no table row. |
 | `.dependency-cruiser.cjs` | Admits `packages/adapters/src/git/` as the exact runtime-API confinement entry for the git seam. |
@@ -289,6 +293,8 @@ readCloseoutHistory(store, workItemRef): StateResult<readonly CloseoutOperationR
 appendCloseoutOutcome(store, handle, record): StateResult<StateAppendOutcome>
 createGitBranchSeam(options?): GitBranchSeam
 createCloseoutCommandDefinition(runtime): CommandDefinition
+createCloseoutComposition(options: CloseoutCompositionOptions): CloseoutComposition
+createCloseoutStateRuntime(store: StateStorePort): CloseoutStateRuntime
 createCloseoutCommandRuntime(composition): CloseoutCommandRuntime
 ```
 
@@ -317,9 +323,11 @@ The plan and output are bounded contract data. The durable record is one append-
 - **`CloseoutPlan` / `CloseoutStep` / `CloseoutOperation`** — runtime-neutral plan data; each step carries an ordered outcome, reason, operations, evidence, and optional truncation; each operation carries an identity, name, engine, capability context, target, and canonical arguments.
 - **`CloseoutData`** — `delivery.closeout.v1` machine payload with plan/applied mode, base ref, optional delivery summary, ordered steps, summary counts, and ledger key.
 - **`CloseoutOperationRecord`** — append-only ledger payload described in §3.1 and §4.4.
-- **`CloseoutProviderRuntime`** — closeout-relevant provider reads and writes: work-item observation, optional merged-request lookup, optional bounded reverse-dependent read, label/assignee write, done transition, and thread resolution.
-- **`CloseoutGitRuntime`** — checkout facts, branch list/read, foreign-worktree and cleanliness checks, ref resolution, checkout restore, and branch deletion.
-- **`CloseoutStateRuntime`** — fence acquisition/release, append, and verified history read.
+- **`CloseoutProviderRuntime`** — closeout-relevant provider reads and writes: `CloseoutReadObservation` work-item read, optional merged-request lookup, optional bounded reverse-dependent read returning `CloseoutReverseDependentObservation`, label/assignee write, done transition, and thread resolution.
+- **`CloseoutGitRuntime`** — checkout facts, branch list/read, foreign-worktree and cleanliness checks, ref resolution, checkout restore, and branch deletion whose optional `expectedHead` is re-checked immediately before deletion.
+- **`CloseoutStateRuntime`** — fence acquisition/release, append, and verified history read over the real `StateStorePort` ledger.
+- **`createCloseoutComposition(options)`** — builds the production composition from a raw provider source (`github`, `jira`, `gitlab`, or `declared`), an existing or constructible `GitBranchSeam`, and a `StateStorePort`; its `planFacts` performs the read orchestration once, then the engine plans and applies over the bridge runtimes.
+- **`createCloseoutStateRuntime(store)`** — bridges the fenced store to `appendCloseoutOutcome` and `readCloseoutHistory`.
 - **`createCloseoutCommandRuntime(composition)`** — composes the pure plan and apply orchestrator over injected plan facts and runtimes.
 
 ## 5. Non-Functional Requirements
@@ -329,7 +337,7 @@ The plan and output are bounded contract data. The durable record is one append-
 - **Mutation is opt-in.** Dry-run is the default; `--apply` is the only mutation switch. Plan mode performs zero provider writes, git mutations, state appends, and fence acquisitions.
 - **Bounded write scope.** Writes target only the observed work item, its direct dependents, declared labels, the assignee clear, the merged request's named threads, and the matching local branch. There is no wildcard label rewrite, arbitrary comment write, or remote deletion.
 - **Credential discipline.** Every provider call resolves through the credential port. The secret-read boundary allowlist remains four entries; closeout adds none.
-- **Branch safety.** Deletion requires the full squash-safety predicate, merged-head equality, protected-ref checks, dirty-worktree and foreign-worktree checks, and a successful checkout restore when required. Unsafe states produce zero destructive action.
+- **Branch safety.** Deletion requires the full squash-safety predicate, merged-head equality re-checked at delete time, protected-ref checks with direct seam rejection, dirty-worktree and foreign-worktree checks, and a successful checkout restore when required. Unsafe states produce zero destructive action.
 - **Idempotency.** Deterministic identities and terminal-outcome reuse prevent duplicate writes; failed writes are safe to retry because every operation is idempotent by construction.
 - **Capability honesty.** Unsupported operations are declared gaps with valid reasons and can never be reported as success.
 - **Runtime confinement.** The git seam is one exact, reason-bearing adapter I/O entry; the read-only repository reader remains no-spawn.
@@ -354,10 +362,10 @@ No localization or accessibility surface is added. The human digest is determini
 | Level | Location | Scope |
 |---|---|---|
 | Structure | `tests/structure/closeout-contract.test.ts`, `closeout-imports.test.ts`, `conformance-coverage.test.ts`, `error-table.test.ts` | Contract vocabulary, step/operation order, additive extensions, conformance operation set, error rows, and read-only import isolation. |
-| Behaviour | `tests/behaviour/closeout-{plan,idempotency,request,branch,checkout,ticket-labels,unassign,owed-flip,threads,capabilities,output,read-observation,hermetic,integration,bounds}.test.ts` | Determinism, restart and retry, merged-request selection, branch safety, checkout restore, label sweep, unassign, owed-flip, thread resolution, capability gaps, bounds, output, read observations, and in-process CLI integration. |
-| Provider behaviour | `tests/behaviour/providers/{github,jira,gitlab}-closeout.test.ts` and shared support | Provider write normalization, merged head presence/absence, GraphQL thread resolution, Jira label replace and transition, and reverse-dependent reads. |
+| Behaviour | `tests/behaviour/closeout-{plan,idempotency,request,branch,checkout,ticket-labels,unassign,owed-flip,threads,capabilities,output,read-observation,hermetic,integration,bounds}.test.ts` | Determinism, restart and retry, merged-request selection, branch safety, checkout restore, label sweep, unassign, owed-flip, thread resolution, capability gaps, UTF-8 bounds, output, read observations, the real JSONL ledger, and in-process CLI integration through the production composition over the real git seam. |
+| Provider behaviour | `tests/behaviour/providers/{github,jira,gitlab}-closeout.test.ts` and shared support | Provider write normalization, label/relation availability signals, auth/5xx → `invalid` mapping, merged head presence/absence, GraphQL thread resolution, Jira label replace and transition, and reverse-dependent `no-surface` versus `unavailable` reads. |
 | Golden | `tests/golden/closeout-{envelope,human}.test.ts` | Recorded machine envelopes and human digests for plan/apply outcomes. |
-| Checks | `tests/checks/closeout-mutants.test.ts`, `error-table-sync.test.ts`, `fixture-sanitization.test.ts` | Non-vacuity mutant corpus, bidirectional table sync, and fixture hygiene. |
+| Checks | `tests/checks/closeout-mutants.test.ts`, `error-table-sync.test.ts`, `fixture-sanitization.test.ts` | Source-mutation non-vacuity controls, bidirectional table sync, and fixture hygiene. |
 | Types | `tests/types/closeout-headsha.type-test.ts` | Optional `headSha` shape and absence semantics through the root `typecheck`. |
 | Conformance | `tests/conformance/mock-conformance.test.ts`, `tests/conformance/broken-adapter-control.test.ts` | Production write execution in the mock tier, capability-gated skips, and runtime coverage over the eight operations. |
 | Aggregate | The whole workspace | `pnpm check`. |
@@ -409,7 +417,8 @@ Closeout adds no runtime dependency, service, daemon, or scheduled job. It reuse
 | Lifecycle label sweep | The bounded removal of stale lifecycle-state labels and the addition of `delivered`, while preserving type and non-lifecycle labels. |
 | Squash-safe | A deletion predicate that proves the branch's work landed through the merged delivery request's head identity, not through git ancestry. |
 | Merged head | The provider-resolved head commit identity of the merged delivery request; absent means unknown. |
-| Read observation | The explicit discriminator `observed`, `not-found`, `unavailable`, or `invalid` on a closeout-relevant read. |
+| Read observation | The explicit discriminator `observed`, `not-found`, `unavailable`, or `invalid` on a closeout-relevant work-item read; `invalid` covers a malformed payload and a non-404 authentication/transport/server failure. |
+| Reverse-dependent observation | The distinct discriminator for the bounded reverse-dependent read: `observed`, `no-surface`, `not-found`, `unavailable`, or `invalid`. `no-surface` is a provider-level gap; `unavailable` is a signal-level skip. |
 | Protected ref | A ref branch cleanup must never delete: `main`, `main-tools`, the resolved base, `HEAD`, and declared protected refs. |
 
 See also: [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Conformance Suite](feature-adapter-conformance.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), the [repository glossary](../../overview/glossary.md), [TDR-0008](../../decisions/TDR-0008-additive-adapter-contract-extensions-closeout-v1.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
