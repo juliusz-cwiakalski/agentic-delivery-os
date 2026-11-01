@@ -6,7 +6,7 @@ phases:
   specification: { started: "2026-11-01T03:32:00Z", completed: "2026-11-01T06:40:00Z" }
   test_planning: { started: "2026-11-01T03:50:00Z", completed: "2026-11-01T06:52:00Z" }
   delivery_planning: { started: "2026-11-01T04:15:00Z", completed: "2026-11-01T07:12:00Z" }
-  dor_check: { started: "2026-11-01T06:15:00Z", completed: null }
+  dor_check: { started: "2026-11-01T06:15:00Z", completed: "2026-11-01T10:40:00Z" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -100,4 +100,10 @@ notes:
     date: "2026-11-01"
   - text: "Final micro-amendments for DoR iteration 5: plan v1.4 adds `CLOSEOUT_OPERATION_RECORD_KEY_PREFIX` to the Phase 3.4 state/closeout.ts allowance and pins the resolve-delivery-thread step as the last change-lifecycle step (8th of 13); test plan v1.3 adds the `readWorkItemObservation` hook to §4.1. Only these mechanical items were changed."
     type: resolved
+    date: "2026-11-01"
+  - text: "DoR iteration 5 verdict: READY (readiness-review/readiness-iter-5.md). All 10 facets PASS; 0 blocking, 0 non-blocking findings; no accepted risks; no pause required. Gate cleared for delivery (phase 6)."
+    type: resolved
+    date: "2026-11-01"
+  - text: "Retro: the DoR gate required 5 iterations (9 -> 3 -> 2 -> 1 -> 0 blocking findings). The final two were mechanical plan-completeness gaps (conformance ALL_OPERATIONS helpers, executable-allowance cadence). Lesson: author the exact-inventory/allowance and conformance-control blast radius into the first plan revision; it would have saved two gate cycles."
+    type: retro
     date: "2026-11-01"
