@@ -102,3 +102,10 @@ export const stateMappingFor = (
   nativeStatus: string,
 ): WorkflowStateMapping | undefined =>
   map.states.find((state) => state.nativeStatus === nativeStatus);
+
+
+/** Resolve the native status the workflow map declares for a delivery alias. */
+export const nativeStatusForDeliveryState = (
+  map: WorkflowMap,
+  deliveryState: DeliveryStateAlias,
+): string | undefined => map.states.find((state) => state.deliveryState === deliveryState)?.nativeStatus;

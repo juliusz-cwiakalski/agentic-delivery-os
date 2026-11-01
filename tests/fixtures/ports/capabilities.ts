@@ -209,10 +209,8 @@ export const EXPECTED_SEED_POSTURES = {
   jira: {
     adapterName: "jira",
     systemKind: "tracker",
-    supported: ["read-work-item"],
+    supported: ["read-work-item", "write-work-item", "transition-work-item"],
     gapReasons: {
-      "write-work-item": "adapter-not-implemented",
-      "transition-work-item": "adapter-not-implemented",
       "write-comment": "adapter-not-implemented",
       "read-delivery-request": "provider-unsupported",
       "write-delivery-request": "provider-unsupported",

@@ -532,7 +532,7 @@ describe("TC-CONF-015 exact-URL replay and the throwing-fetch guard", () => {
     }
     for (const transport of transports) {
       for (const request of transport.requests) {
-        expect(["GET", "POST", "PATCH"]).toContain(request.method);
+        expect(["GET", "POST", "PATCH", "PUT"]).toContain(request.method);
       }
     }
     const declared = new Set(
@@ -883,9 +883,8 @@ describe("TC-CONF-009 Jira operation matrix", () => {
     expect(reasonFor("read-delivery-request")).toBe("provider-unsupported");
     expect(reasonFor("read-pipeline-run")).toBe("provider-unsupported");
     expect(reasonFor("write-delivery-request")).toBe("provider-unsupported");
-    expect(reasonFor("write-work-item")).toBe("adapter-not-implemented");
-    expect(reasonFor("transition-work-item")).toBe("adapter-not-implemented");
     expect(reasonFor("write-comment")).toBe("adapter-not-implemented");
+    expect(reasonFor("resolve-delivery-thread")).toBe("provider-unsupported");
   });
 
   test("an omitted comment payload preserves absence and a present empty set fails", async () => {
@@ -988,5 +987,31 @@ describe("TC-CLOSE-065 closeout write execution and runtime coverage", () => {
     expect(runtimeCoverageViolations(mutated, CONFORMANCE_ADAPTERS, "mock")).toContain(
       "github: supported operation transition-work-item was not executed",
     );
+  });
+});
+
+
+describe("TC-CLOSE-065 Jira closeout write execution", () => {
+  test("the newly supported Jira writes execute in mock and coverage is empty", async () => {
+    const report = await runProduction("jira-closeout-coverage");
+    expect(runtimeCoverageViolations(report, CONFORMANCE_ADAPTERS, "mock")).toEqual([]);
+    for (const operation of ["write-work-item", "transition-work-item"]) {
+      expect(
+        report.steps.some(
+          (step) =>
+            step.provider === "jira" && step.operation === operation && step.status === "executed",
+        ),
+        operation,
+      ).toBe(true);
+    }
+    expect(
+      report.steps.some(
+        (step) =>
+          step.provider === "jira" &&
+          step.operation === "resolve-delivery-thread" &&
+          step.status === "skipped" &&
+          step.skipReason === "provider-unsupported",
+      ),
+    ).toBe(true);
   });
 });

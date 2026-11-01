@@ -2,8 +2,48 @@
 import { describe, expect, test } from "bun:test";
 import { GITHUB_ADAPTER_CONTRACT } from "../../packages/adapters/src/github/capabilities";
 import { GITLAB_ADAPTER_CONTRACT } from "../../packages/adapters/src/gitlab/capabilities";
+import { JIRA_ADAPTER_CONTRACT } from "../../packages/adapters/src/jira/capabilities";
 import { buildCloseoutPlan } from "../../packages/core/src/domain/closeout";
 import { makeFacts, makeWorkItem, observed } from "../fixtures/closeout/harness";
+
+describe("TC-CLOSE-054 Jira posture", () => {
+  test("Jira supports writes and the done transition and gaps the rest", () => {
+    expect([...JIRA_ADAPTER_CONTRACT.capabilities.supportedOperations]).toEqual([
+      "read-work-item",
+      "write-work-item",
+      "transition-work-item",
+    ]);
+    expect(JIRA_ADAPTER_CONTRACT.capabilities.declaredGaps).toEqual([
+      { operation: "write-comment", reason: "adapter-not-implemented" },
+      { operation: "read-delivery-request", reason: "provider-unsupported" },
+      { operation: "write-delivery-request", reason: "provider-unsupported" },
+      { operation: "read-pipeline-run", reason: "provider-unsupported" },
+      { operation: "resolve-delivery-thread", reason: "provider-unsupported" },
+    ]);
+  });
+});
+
+describe("TC-CLOSE-054 Jira planner expansion", () => {
+  test("the Jira plan schedules the done transition, label sweep, and clear", () => {
+    const facts = makeFacts();
+    const plan = buildCloseoutPlan({
+      ...facts,
+      provider: { systemName: "jira", capabilities: JIRA_ADAPTER_CONTRACT.capabilities },
+      mergedRequest: { observation: "unavailable" },
+      checkout: { state: "delivery-branch", branch: "feat/GH-183/x", head: "x" },
+    });
+    expect(plan.steps.find((step) => step.stepId === "ticket-to-done")?.outcome).toBe(
+      "would-apply",
+    );
+    expect(plan.steps.find((step) => step.stepId === "lifecycle-label-sweep")?.outcome).toBe(
+      "would-apply",
+    );
+    expect(plan.steps.find((step) => step.stepId === "unassign")?.outcome).toBe("would-apply");
+    expect(plan.steps.find((step) => step.stepId === "comment-resolution")?.outcome).toBe(
+      "skipped-gap",
+    );
+  });
+});
 
 describe("TC-CLOSE-053/055 GitHub and GitLab postures", () => {
   test("GitHub supports the six closeout-relevant operations and gaps two writes", () => {

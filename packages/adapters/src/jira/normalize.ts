@@ -6,6 +6,7 @@
  * when the provider actually supplied the corresponding payload.
  */
 import type {
+  CloseoutReadObservation,
   WorkflowMap,
   WorkItem,
   WorkItemComment,
@@ -184,3 +185,55 @@ export const jiraNormalizationContext = (
   workflowMap,
   customFieldMappings: JIRA_CUSTOM_FIELD_MAPPINGS,
 });
+
+
+/**
+ * Compute the full label array for a Jira replace: remove only the named
+ * lifecycle labels, add the requested labels, and preserve every other label.
+ * Order is the provider-asserted order followed by newly added labels.
+ */
+export const computeJiraLabelTargetSet = (
+  current: readonly string[],
+  add: readonly string[],
+  remove: readonly string[],
+): string[] => {
+  const removed = new Set(remove);
+  const kept = current.filter((label) => !removed.has(label));
+  return [...kept, ...add.filter((label) => !kept.includes(label))];
+};
+
+/** Normalize the bounded reverse-dependent search response (F-7). */
+export const normalizeJiraDependentObservation = (
+  payload: unknown,
+  context: JiraNormalizationContext,
+): CloseoutReadObservation<readonly WorkItem[]> => {
+  const normalized = normalizeJiraSearch(payload, context);
+  return normalized.ok
+    ? { observation: "observed", value: normalized.value }
+    : {
+        observation: "invalid",
+        detail: "detail" in normalized ? normalized.detail : normalized.code,
+      };
+};
+
+/**
+ * Normalize one Jira work-item read into the discriminated observation (DM-11).
+ *
+ * An explicit 404 is `not-found`, a non-2xx response is `unavailable`, and a
+ * malformed 2xx payload is `invalid`.
+ */
+export const normalizeJiraWorkItemObservation = (
+  payload: unknown,
+  context: JiraNormalizationContext,
+  status: number,
+): CloseoutReadObservation<WorkItem> => {
+  if (status === 404) return { observation: "not-found" };
+  if (status < 200 || status >= 300) return { observation: "unavailable" };
+  const normalized = normalizeJiraIssue(payload, context);
+  return normalized.ok
+    ? { observation: "observed", value: normalized.value }
+    : {
+        observation: "invalid",
+        detail: "detail" in normalized ? normalized.detail : normalized.code,
+      };
+};

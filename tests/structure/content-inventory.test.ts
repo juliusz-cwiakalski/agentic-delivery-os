@@ -451,8 +451,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "adapters/src/jira/custom-fields.ts": ["JIRA_CUSTOM_FIELD_MAPPINGS", "applyJiraCustomFields"],
   "adapters/src/jira/index.ts": ["createJiraClient", "JIRA_ADAPTER_CONTRACT"],
   "adapters/src/jira/normalize.ts": [
+    "computeJiraLabelTargetSet",
+    "normalizeJiraDependentObservation",
     "normalizeJiraIssue",
     "normalizeJiraSearch",
+    "normalizeJiraWorkItemObservation",
     "jiraNormalizationContext",
   ],
   "adapters/src/github/capabilities.ts": ["GITHUB_ADAPTER_CONTRACT"],
@@ -487,6 +490,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "adapters/src/gitlab/normalize.ts": ["normalizeMergeRequest", "normalizePipelines"],
   "adapters/src/jira/workflow-map.ts": [
     "JIRA_WORKFLOW_MAP",
+    "nativeStatusForDeliveryState",
     "validateWorkflowMap",
     "stateMappingFor",
   ],

@@ -104,7 +104,20 @@ export const CONFORMANCE_ADAPTERS: readonly ConformanceAdapterRegistration[] = [
     buildClient: ({ tenant, instance, credentials, transport }): ConformanceAdapterClient => {
       const addressing = requireJiraAddressing(tenant);
       const client = createJiraClient({ instance, credentials, transport });
-      return { readWorkItem: () => client.readWorkItem(addressing.issueKey) };
+      return {
+        readWorkItem: () => client.readWorkItem(addressing.issueKey),
+        writeWorkItem: () =>
+          client.writeWorkItem({
+            issueKey: addressing.issueKey,
+            add: ["delivered"],
+            remove: ["planning"],
+          }),
+        transitionWorkItem: () =>
+          client.transitionWorkItem({
+            issueKey: addressing.issueKey,
+            deliveryState: "done",
+          }),
+      };
     },
   },
 ];
