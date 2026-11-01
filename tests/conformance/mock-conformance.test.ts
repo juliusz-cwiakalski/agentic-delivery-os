@@ -609,6 +609,65 @@ describe("TC-CONF-015 exact-URL replay and the throwing-fetch guard", () => {
     expect(transport.requests.some((request) => request.url.includes("per_page=20"))).toBe(true);
   });
 
+  test("replay matches an optional exact body and prefers a later body-specific route", async () => {
+    const base = loadMockTenant("github");
+    const url = `${base.instance.baseUrl}/graphql`;
+    const tenant: MockTenant = {
+      ...base,
+      routes: [
+        { method: "POST", url, status: 200, body: { route: "generic" } },
+        {
+          method: "POST",
+          url,
+          status: 200,
+          body: { route: "specific" },
+          requestBody: '{"variables":{"threadId":"PRRT_2"}}',
+        },
+      ],
+    };
+    const transport = createMockTenantTransport(tenant);
+    const generic = await transport.send({
+      url,
+      method: "POST",
+      headers: {},
+      body: '{"variables":{"other":true}}',
+    });
+    expect(generic.body).toEqual({ route: "generic" });
+    const specific = await transport.send({
+      url,
+      method: "POST",
+      headers: {},
+      body: '{"variables":{"threadId":"PRRT_2"}}',
+    });
+    expect(specific.body).toEqual({ route: "specific" });
+  });
+
+  test("a wrong body is rejected when the route declares an exact body", async () => {
+    const base = loadMockTenant("github");
+    const url = `${base.instance.baseUrl}/graphql`;
+    const tenant: MockTenant = {
+      ...base,
+      routes: [
+        {
+          method: "POST",
+          url,
+          status: 200,
+          body: { route: "specific" },
+          requestBody: '{"variables":{"threadId":"PRRT_2"}}',
+        },
+      ],
+    };
+    const transport = createMockTenantTransport(tenant);
+    await expect(
+      transport.send({
+        url,
+        method: "POST",
+        headers: {},
+        body: '{"variables":{"threadId":"PRRT_3"}}',
+      }),
+    ).rejects.toThrow(/unfixtured provider request/);
+  });
+
   test("restoring the guard removes the throwing fetch", () => {
     const original = globalThis.fetch;
     const guard = installThrowingFetchGuard();

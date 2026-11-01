@@ -226,9 +226,11 @@ const decodeSourceKey = (
 };
 
 /**
- * Build the exact-URL replay transport for a decoded tenant.
+ * Build the exact method/URL replay transport for a decoded tenant.
  *
- * Every request is recorded; an unfixtured method or URL throws naming both.
+ * When several routes share a method and URL, a route declaring an exact
+ * `requestBody` is preferred over a body-agnostic route, regardless of order.
+ * A request whose body matches no candidate is rejected.
  */
 export const createMockTenantTransport = (tenant: MockTenant): MockTenantTransport => {
   const requests: ConformanceTransportRequest[] = [];
@@ -236,9 +238,15 @@ export const createMockTenantTransport = (tenant: MockTenant): MockTenantTranspo
     requests,
     send: async (request) => {
       requests.push(request);
-      const route = tenant.routes.find(
+      const candidates = tenant.routes.filter(
         (candidate) => candidate.method === request.method && candidate.url === request.url,
       );
+      const bodySpecific = candidates.find(
+        (candidate) =>
+          candidate.requestBody !== undefined && candidate.requestBody === request.body,
+      );
+      const bodyAgnostic = candidates.find((candidate) => candidate.requestBody === undefined);
+      const route = bodySpecific ?? bodyAgnostic;
       if (route === undefined) {
         throw new Error(`unfixtured provider request ${request.method} ${request.url}`);
       }
