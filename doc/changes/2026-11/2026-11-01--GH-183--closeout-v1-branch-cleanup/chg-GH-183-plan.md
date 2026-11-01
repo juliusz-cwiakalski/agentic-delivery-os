@@ -967,3 +967,21 @@ Protected paths untouched by every phase: `scripts/*.sh`, `scripts/checks/secret
 | F-12 | `classify.ts` documents that the adapter-local `provider.payload.invalid` `domainKind: "provider"` is not the AI-model provider engine. | Header note in `packages/cli/src/classify.ts`; no contract change. |
 
 Boundary evidence: `pnpm build`; closeout integration/idempotency/read-observation/owed-flip/ticket-labels/branch/plan/unassign/bounds; `tests/behaviour/providers`; `tests/checks/closeout-mutants.test.ts`; `tests/structure/content-inventory.test.ts`; `pnpm typecheck`; `pnpm check` (2243 pass / 3 skip / 0 fail); `error-table-sync`, `exit-code-literals`, `ambient-globals`, `secret-read-boundary`, `workspace-entrypoints`, and `test-doc-distribution.sh` all green. No spec, test-plan, or review-artifact edit.
+
+### Phase 10 remediation evidence (PR #215 review threads)
+
+- [x] **R215-1 — PR list merge truth** (`PRRT_kwDORCEXJ86yYRX4`): `normalizePullRequest` treats a non-null `merged_at` as merged; the merged-list fixture now carries a timestamp and a null. Commit `87b1214`.
+- [x] **R215-2 — merged-PR review threads** (`PRRT_kwDORCEXJ86yYRYF`): `findMergedDeliveryRequest` re-reads the selected PR's threads through GraphQL and keeps `signals.threads: "unavailable"` on failure; the thread step is `skipped-noop` with `thread-signal-unavailable`, never satisfied. Commit `87b1214`.
+- [x] **R215-3 — thread resolution assertion** (`PRRT_kwDORCEXJ86yYRYH`): a mutation response with `isResolved: false` is a classified failure, never a successful write. Commit `87b1214`.
+- [x] **R215-4 — bodyless Jira 204** (`PRRT_kwDORCEXJ86yYRYM`): the native transport parses a body only when present and is covered by a native-`fetch` 204 test. Commit `601706c`.
+- [x] **R215-5 — Jira outgoing blocks only** (`PRRT_kwDORCEXJ86yYRYP`): the reverse-dependent JQL uses `linkedIssues(key, "blocks")` and keeps only candidates with an inward `blocked-by` relation to the source ticket; a multi-link fixture proves relates-to and blocker links are excluded. Commit `601706c`.
+- [x] **R215-6 — Jira raw labels only** (`PRRT_kwDORCEXJ86yYRYW`): the full-array PUT is computed from raw `fields.labels`; custom-field projections stay read-only and are proven absent from the write by a custom-field fixture. Commit `601706c`.
+- [x] **R215-7 — Jira transition id** (`PRRT_kwDORCEXJ86yYRYf`): the client reads available transitions and posts the unique id whose destination matches the workflow mapping (`31`, Close → Done); zero or multiple matches are refused. Commit `601706c`.
+- [x] **R215-8 — ledger record validation** (`PRRT_kwDORCEXJ86yYRYn`): each record validates operation identity, field types, closed vocabularies, canonical arguments, target, and evidence; malformed values surface as `state.store.torn`. Commit `53402b7`.
+- [x] **R215-9 — GitHub blocker relations** (`PRRT_kwDORCEXJ86yYRY0`): work-item observations read `/issues/{number}/dependencies/blocked_by` and derive relations availability from that response; an invented `issue_links` field is a negative control only. Commit `87b1214`.
+- [x] **R215-10 — Jira credential identity** (`PRRT_kwDORCEXJ86yYRY8`): pre-request credential-resolution failures preserve `config.credential.missing` through the invalid observation and exit 1; payload/HTTP/transport failures remain the invalid observation. Commit `601706c`.
+- [x] **R215-11 — linear ledger storage** (`PRRT_kwDORCEXJ86yYRZH`): each append stores only the new record; `readRecords` feeds the fold on read. A 300-append test proves 300 records and linear cumulative size. Commit `53402b7`.
+- [x] **R215-12 — mock tenant body matching** (`PRRT_kwDORCEXJ86yYRZR`): replay matches method + URL + optional exact body, prefers body-specific routes, and rejects a wrong body; controls added. Commit `8e201fc`.
+- [x] **R215-13 — GitHub dependency endpoint** (`PRRT_kwDORCEXJ86yYRZZ`): the client and all method/URL fixtures use `/issues/{number}/dependencies/blocking`. Commit `87b1214`.
+
+Boundary evidence: focused provider, closeout, state, structure, and conformance suites; `pnpm test` 2259 pass / 3 skip / 0 fail; `pnpm typecheck` PASS; `pnpm check` green (lint, format, typecheck, tests, boundaries, exports parity); `tests/checks/fixture-sanitization.test.ts` green. No push, no thread resolution, no merge.

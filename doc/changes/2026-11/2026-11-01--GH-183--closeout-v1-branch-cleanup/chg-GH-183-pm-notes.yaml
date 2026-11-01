@@ -155,3 +155,6 @@ notes:
   - text: "Hygiene remediation: the six over-length commit messages were reflowed in a message-only history rewrite so every body/footer line is <=100 chars for commitlint; the test-plan EOF blank line was removed separately. Earlier SHA references in the change artifacts are pre-rewrite and no longer identify the current commits, including the six reflowed messages (549a39f, ab29d9b, 261123b, 546ec43, 3737d17, 8555132) and their descendants (e.g. 5ef24ed)."
     type: resolved
     date: "2026-11-01"
+  - text: "PR #215 review-thread remediation complete (13/13). Commits: 87b1214 (GitHub merge truth/threads/dependency shapes: PRRT_kwDORCEXJ86yYRX4, PRRT_kwDORCEXJ86yYRYF, PRRT_kwDORCEXJ86yYRYH, PRRT_kwDORCEXJ86yYRY0, PRRT_kwDORCEXJ86yYRZZ), 601706c (Jira 204/link-type/raw labels/transition id/credential identity: PRRT_kwDORCEXJ86yYRYM, PRRT_kwDORCEXJ86yYRYP, PRRT_kwDORCEXJ86yYRYW, PRRT_kwDORCEXJ86yYRYf, PRRT_kwDORCEXJ86yYRY8), 53402b7 (ledger validation and linear storage: PRRT_kwDORCEXJ86yYRYn, PRRT_kwDORCEXJ86yYRZH), 8e201fc (mock tenant exact-body matching: PRRT_kwDORCEXJ86yYRZR). Focused suites, pnpm typecheck, and pnpm check all green (2259 pass / 3 skip / 0 fail). No push, no thread resolution, no merge."
+    type: resolved
+    date: "2026-11-01"
