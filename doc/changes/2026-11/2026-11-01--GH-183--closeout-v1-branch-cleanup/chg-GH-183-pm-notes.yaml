@@ -95,3 +95,6 @@ notes:
   - text: "Plan remediation for DoR iteration 3 to plan v1.3: Phase 1 now updates mock-conformance/live-entrypoint/broken-adapter-control ALL_OPERATIONS+gapsExcept and keeps runner failClosed meaningful; per-phase EXECUTABLE_ALLOWANCES updates added for domain/closeout, github/normalize, jira/normalize+jira/workflow-map, cli/edge plus conditional new files; content-inventory runs at Phases 2/3/4/5/6/7; five minor nits resolved (readWorkItemObservation hook, conformance types wording, SHA-256 fixed-tuple regeneration note, GitChildRunner seam, DEC-7 governance note). Delivery planning re-completed for DoR iteration 4."
     type: resolved
     date: "2026-11-01"
+  - text: "DoR iteration 4 verdict: NOT_READY (readiness-review/readiness-iter-4.md). Iteration-3 blocking findings 1 fully resolved, finding 2 partially resolved: one residual mechanical omission — Phase 3.4 does not list `CLOSEOUT_OPERATION_RECORD_KEY_PREFIX` in the state/closeout.ts EXECUTABLE_ALLOWANCES while PIN-13/Phase 3.1 export it, so the Phase 3 boundary would be red. The reviewer classifies this as mechanical and authorizes a one-line amendment and re-check without escalation. Non-blocking: test plan §4.1 still omits `readWorkItemObservation`; step insertion position unpinned (nit)."
+    type: blocker
+    date: "2026-11-01"
