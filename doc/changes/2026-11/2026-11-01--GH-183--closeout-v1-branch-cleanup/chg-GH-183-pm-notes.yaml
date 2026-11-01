@@ -134,3 +134,6 @@ notes:
   - text: "Quality gate run: 20/22 pass. All code/packaging/security gates green — pnpm build/typecheck/lint/format/test/check/boundaries, doc-distribution, error-table-sync (39/39), exit-code-literals, secret-read-boundary, forbidden-literals, privacy-literals, license-audit, vulnerability-gate, exports-parity, publint/attw; `bun test` 2243 pass / 3 skip / 0 fail. Failures: (a) `git diff --check` reports a trailing blank line at EOF in chg-GH-183-test-plan.md; (b) commitlint reports body/footer lines >100 chars on 6 commits (549a39f, ab29d9b, 261123b, 546ec43, 3737d17, 8555132). Both are hygiene-only; the branch is unpushed so a message-only history rewrite is safe."
     type: blocker
     date: "2026-11-01"
+  - text: "Hygiene remediation: the six over-length commit messages were reflowed in a message-only history rewrite so every body/footer line is <=100 chars for commitlint; the test-plan EOF blank line was removed separately. Earlier SHA references in the change artifacts are pre-rewrite and no longer identify the current commits, including the six reflowed messages (549a39f, ab29d9b, 261123b, 546ec43, 3737d17, 8555132) and their descendants (e.g. 5ef24ed)."
+    type: resolved
+    date: "2026-11-01"
