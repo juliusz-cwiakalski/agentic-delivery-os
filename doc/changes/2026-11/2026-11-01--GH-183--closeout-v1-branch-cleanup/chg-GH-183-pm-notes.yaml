@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-11-01T13:10:00Z", completed: "2026-11-01T17:55:00Z" }
   quality_gates: { started: "2026-11-01T18:00:00Z", completed: "2026-11-01T18:35:00Z" }
   dod_check: { started: "2026-11-01T18:40:00Z", completed: "2026-11-01T18:55:00Z" }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: "2026-11-01T19:00:00Z", completed: null, url: null }
 decisions:
   - text: "Scope: `ados closeout <workItemRef>` is one idempotent post-merge transaction covering the backlog steps — ticket-to-done, lifecycle label sweep, unassign, owed-flip sweep, comment resolution, checkout restore, and squash-safe local branch cleanup. Harness session telemetry is explicitly out of scope (backlog assigns it to M1-S11)."
     date: "2026-11-01"
