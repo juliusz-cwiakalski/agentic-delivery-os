@@ -8,7 +8,7 @@ phases:
   delivery_planning: { started: "2026-11-01T04:15:00Z", completed: "2026-11-01T07:12:00Z" }
   dor_check: { started: "2026-11-01T06:15:00Z", completed: "2026-11-01T10:40:00Z" }
   delivery: { started: "2026-11-01T10:45:00Z", completed: "2026-11-01T12:35:00Z" }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: "2026-11-01T12:40:00Z", completed: "2026-11-01T13:05:00Z" }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -112,4 +112,7 @@ notes:
     date: "2026-11-01"
   - text: "Delivery deviations for review scrutiny (all reported as additive): (1) GitBranchSeamOptions.cwd + GitChildRunner cwd test seam; (2) GithubClientOptions.timeoutMs short-override seam; (3) CloseoutReadObservation.observed.signals? additive availability carrier; (4) adapter-local `provider.payload.invalid` projection in cli/classify.ts plus a recognized-but-not-tabled exception in scripts/checks/error-table-sync.ts (spec forbids a closeout table row but TC-067 needs the identity at the CLI boundary); (5) `./git` added to workspaceImports of cli/mcp/opencode/testkit to satisfy workspace-entrypoints parity; (6) baseline test-only fix in tests/behaviour/pm-notes-corpus.test.ts (hardcoded 2026-10 month boundary). Reviewer must verify none weakens a gate or changes unrelated behavior."
     type: risk
+    date: "2026-11-01"
+  - text: "System spec update complete: authored `doc/spec/features/feature-closeout.md`; reconciled adapter-ports, provider-client-seeds, result-contract, state-layer, adapter-conformance, monorepo-scaffold, status/queue/verify (non-consumer notes); updated glossary, 00-index, cli-command-registry (removed stale harness-telemetry claim, noted M1-S11 deferral), and forbidden-literals registry. doc-distribution PASS (81 docs), forbidden-literals PASS, privacy-literals PASS (1537 files), error-table-sync PASS (39/39), spec-coverage snapshot 9/9, link check PASS. No residual documentation gaps."
+    type: info
     date: "2026-11-01"

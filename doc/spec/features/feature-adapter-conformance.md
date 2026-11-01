@@ -6,10 +6,10 @@ created: 2026-11-01
 last_updated: 2026-11-01
 owners: ["engineering"]
 service: delivery-os provider adapters
-summary: "The provider-agnostic adapter conformance suite: one three-flow registry over the closed adapter operations, capability-gated execution with explicit declared-gap skips, deterministic exact-URL mock tenants, structural and runtime coverage gates, the delivery.conformance.v1 artifact, and a scheduled read-only live evidence tier."
+summary: "The provider-agnostic adapter conformance suite: one three-flow registry over the eight closed adapter operations, capability-gated execution with explicit declared-gap skips, production write execution in the mock tier, deterministic exact-URL mock tenants, structural and runtime coverage gates, the delivery.conformance.v1 artifact, and a scheduled read-only live evidence tier."
 links:
-  related_changes: ["GH-189"]
-  related_decisions: ["ADR-0003", "ADR-0005"]
+  related_changes: ["GH-189", "GH-183"]
+  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0008"]
 ---
 
 # Feature: Adapter Conformance Suite
@@ -22,15 +22,15 @@ The suite has two tiers. The mock tier runs inside the existing `pnpm test` path
 
 ## Flow registry
 
-The registry is exactly three flows and twelve ordered steps. Flow and step ids are stable data used in failures and in the artifact.
+The registry is exactly three flows and thirteen ordered steps. Flow and step ids are stable data used in failures and in the artifact.
 
 | Flow | Steps | Operations |
 |---|---|---|
-| `change-lifecycle` | read-work-item, read-delivery-request, read-pipeline-run, open-change, transition, create-delivery-request, comment | `read-work-item`, `read-delivery-request`, `read-pipeline-run`, `write-work-item`, `transition-work-item`, `write-delivery-request`, `write-comment` |
+| `change-lifecycle` | read-work-item, read-delivery-request, read-pipeline-run, open-change, transition, create-delivery-request, comment, resolve-delivery-thread | `read-work-item`, `read-delivery-request`, `read-pipeline-run`, `write-work-item`, `transition-work-item`, `write-delivery-request`, `write-comment`, `resolve-delivery-thread` |
 | `comment-provenance` | read-comments, carrier-roundtrip | `read-work-item`, `write-comment` |
 | `label-semantics` | read-labels, replace, sweep | `read-work-item`, `write-work-item` |
 
-Together the registry represents all seven closed adapter operations. Merge, deploy-trace, pipeline-trace, and dedicated transition-mapping flows remain deferred.
+Together the registry represents all eight closed adapter operations. Merge, deploy-trace, pipeline-trace, and dedicated transition-mapping flows remain deferred.
 
 ## Adapter registry
 
@@ -42,15 +42,15 @@ Execution is capability-gated per adapter. A step whose operation is in the adap
 
 A supported operation with no executing step, or a declared gap whose operation is never encountered, fails the coverage gate. The comment-provenance carrier roundtrip executes only when the adapter declares both a writable and a readable carrier. A shipped adapter with no carrier records the `write-comment` declared-gap skip when that operation is unsupported, or a `no-declared-carrier` capability-absent skip when `write-comment` is supported with empty carrier arrays.
 
-Production registrations never carry a write handler. A supported non-read control step without a test-only handler fails closed naming the provider, flow, step, and operation; controls are injected only through the runner's adapter list.
+Production registrations execute supported writes through their adapter client's write members (`writeWorkItem`, `transitionWorkItem`, `resolveDeliveryThread`) against the mock tenant. A test-only `writeHandler` overrides execution for controls but is never set by a production registration. A supported non-read step with neither a client write member nor a test-only handler fails closed naming the provider, flow, step, and operation; controls are injected only through the runner's adapter list. An unsupported operation never dispatches, whether or not a handler exists.
 
 ## Coverage gates
 
-The structural gate proves the registry and every adapter declaration are complete: unique flow and step ids, membership in the closed operation set, all seven operations represented, per-adapter supported operations and declared gaps each backed by a step and together covering every closed operation, declared carriers backed by a carrier step, and no adapter that declares no operations. The runtime gate proves execution is non-vacuous: at least one executed step per adapter, every supported operation executed (or, in live mode only, recorded as a `live-read-only` deferral), every declared gap encountered with its exact reason, every declared carrier exercised, and no failed step counted as passed. Every violation names the registry, provider, flow, step, or operation at fault.
+The structural gate proves the registry and every adapter declaration are complete: unique flow and step ids, membership in the closed operation set, all eight operations represented, per-adapter supported operations and declared gaps each backed by a step and together covering every closed operation, declared carriers backed by a carrier step, and no adapter that declares no operations. The runtime gate proves execution is non-vacuous: at least one executed step per adapter, every supported operation executed (or, in live mode only, recorded as a `live-read-only` deferral), every declared gap encountered with its exact reason, every declared carrier exercised, and no failed step counted as passed. Every violation names the registry, provider, flow, step, or operation at fault.
 
 ## Mock tier
 
-Mock tenants are declarative data under `tests/fixtures/providers/conformance/{github,gitlab,jira}/tenant.json`. Each tenant carries a provenance marker, an example-only instance, a credential reference, provider addressing, an ordered exact-URL route table, and one expected normalized projection per executed read step. Replay goes through the production client factories with an injected transport; an unfixtured request throws naming the method and URL. The suite installs a throwing-`fetch` guard and asserts zero calls. The same tenant data replayed twice produces identical reports, step order, skip reasons, and diagnostics.
+Mock tenants are declarative data under `tests/fixtures/providers/conformance/{github,gitlab,jira}/tenant.json`. Each tenant carries a provenance marker, an example-only instance, a credential reference, provider addressing, an ordered route table (method plus exact URL, with `GET` as the default method), and one expected normalized projection per executed read step. Write routes cover the supported closeout writes on GitHub and Jira, including the GraphQL thread-resolution endpoint. Replay goes through the production client factories with an injected transport; an unfixtured request throws naming the method and URL. The suite installs a throwing-`fetch` guard and asserts zero calls. The same tenant data replayed twice produces identical reports, step order, skip reasons, and diagnostics.
 
 The mock suite performs zero live network calls. Fixture hosts use example-only domains and declared placeholders; the fixtures stay inside the committed sanitization audit.
 
@@ -103,6 +103,8 @@ The evidence lives in `tests/conformance/mock-conformance.test.ts`, `tests/confo
 
 - [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md)
 - [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md)
+- [Closeout Transaction](feature-closeout.md)
 - [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md)
 - [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md)
 - [ADR-0005](../../decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md)
+- [TDR-0008](../../decisions/TDR-0008-additive-adapter-contract-extensions-closeout-v1.md)
