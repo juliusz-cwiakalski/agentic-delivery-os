@@ -1,0 +1,235 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-183
+branch: feat/GH-183/closeout-v1-branch-cleanup
+head_sha: 67e6c3d841e39eddc5aacac5986e9024986aeff6
+scope: >-
+  Focused static re-review (per PM instruction) of commits 53402b7 (fix(state):
+  store one closeout record per append) and 8e201fc (fix(testkit): match mock
+  tenant routes by exact request body) against PR #215 review threads 8, 11,
+  and 12. Static only: commit diffs and the named files were read; no test
+  suite was executed by the reviewer. Named files: packages/core/src/contracts/
+  state.ts, packages/core/src/state/{closeout,index}.ts, tests/behaviour/
+  {closeout-idempotency,state-ledger,verify-support}.ts, packages/testkit/src/
+  conformance/mock-tenant.ts, tests/conformance/mock-conformance.test.ts.
+status: PASS
+summary: >-
+  All three audited PR #215 review threads are resolved in code and pinned by
+  behavioral, non-tautological tests. Thread 8 (PRRT_kwDORCEXJ86yYRYn): the
+  closeout ledger validator now checks operation id (64-lowercase-hex), field
+  types, closed vocabularies (capabilityContext/operation/outcome), canonical
+  per-operation arguments, target shape, and evidence entries; every failure is
+  a classified state.store.torn, never a silent drop. Thread 11
+  (PRRT_kwDORCEXJ86yYRZH): each append serializes exactly one record and the
+  history is folded on read via a new additive readRecords port view over the
+  same verified ledger path; a 300-append test proves 300 JSONL records and
+  linear byte growth. Thread 12 (PRRT_kwDORCEXJ86yYRZR): the mock tenant
+  transport matches method + URL + optional exact body, prefers a body-specific
+  route regardless of declaration order, falls back to a body-agnostic route,
+  and rejects a wrong body. No gate weakening (the exhaustive port-surface
+  assertion was updated, not loosened; no test was deleted or relaxed), no
+  tautological tests found, and no state error contract regression
+  (state.keys.missing remains store-read-level; payload malformation now maps
+  to state.store.torn, the semantically correct code, and the error table is
+  unchanged). Three non-blocking residual observations remain (1 low, 2 info);
+  none blocks the thread-resolution flow.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+publication:
+  state: draft
+  published_at: null
+  summary_url: null
+  published_count: 0
+  error_count: 0
+  errors: []
+thread_verdicts:
+  "8 PRRT_kwDORCEXJ86yYRYn (ledger validator)":
+    verdict: RESOLVED
+    evidence: >-
+      Code: packages/core/src/state/closeout.ts recordFrom now validates
+      schemaId (line 135), operationId as 64-lowercase-hex (line 138, matching
+      deriveCloseoutOperationId = sha256Hex at packages/core/src/domain/
+      closeout.ts:194-205), workItemRef/engine/timestamp as non-empty strings
+      (141-142, 166), capabilityContext in {"supported"} u CLOSEOUT_GAP_REASONS
+      (143-148, set built at 40), operation in CLOSEOUT_OPERATION_NAMES
+      (149-152), outcome in CLOSEOUT_APPLY_OUTCOMES (153-155), canonical
+      arguments per operation via validArguments (156; 64-98: transition
+      {deliveryState:"done"} only; write-work-item add/remove string arrays +
+      assignee literal "none" with at least one key; resolve-delivery-thread
+      {deliveryRequest:{systemName,entityId},threadId}; restore {baseRef};
+      delete {branch} — each cross-checked against every domain call site:
+      domain/closeout.ts:436, 471-477, 510, 644-647, 700, 768), target exact
+      keys + non-empty strings (157-164; ProviderQualifiedIdentity is exactly
+      {systemName,entityId}: contracts/ports.ts:45-48), evidence entries as
+      {name,value} with primitive values (165; 100-112; domain field() writes
+      string|number|boolean at domain/closeout.ts:143-146), and reason
+      string-if-present (167-169). The final cast (170) is now guarded by the
+      full chain, replacing the old partially-checked cast. Malformed/unknown
+      values return the classified {kind:"state", code:"state.store.torn",
+      consequence:"not_landed"} via fail() (58-61); readCloseoutHistory
+      propagates the first failure (closeout.ts:194) so a malformed record
+      fails the whole read and is never skipped. Admission: appendCloseoutOutcome
+      validates the entire prior history pre-append (206-207) and re-reads with
+      count coverage post-append (214-215), so it never returns ok for a record
+      the validator rejects. Tests: tests/behaviour/closeout-idempotency.test.ts
+      :424-469 appends five malformed payloads (unknown outcome, unknown
+      operation, bad operation id, bad canonical arguments {branch:7}, bad
+      evidence entry with a nested object value) through the real JSONL store
+      and asserts each readCloseoutHistory fails with state.store.torn
+      (461-463) — covering every field family the thread enumerates.
+  "11 PRRT_kwDORCEXJ86yYRZH (one record per append)":
+    verdict: RESOLVED
+    evidence: >-
+      Code: payloadFor serializes exactly one record (closeout.ts:115-128; the
+      old version serialized the whole cumulative array), appendCloseoutOutcome
+      appends payloadFor(record) only (208-212), and the history is folded on
+      read: readCloseoutHistory consumes the new readRecords port view
+      (contracts/state.ts:211-219; impl packages/core/src/state/index.ts:
+      361-369) which returns the same verifiedState() records (full
+      framing/sequence/checksum verification unchanged), filters by record key
+      (closeout.ts:183), guards the record kind (184-189), and preserves
+      sequence order; foldCloseoutHistory folds first-terminal-per-operationId
+      (235-253). Tests: closeout-idempotency.test.ts:391-422 performs 300
+      appends over the real JSONL driver and asserts exactly 150 then exactly
+      300 ledger lines read from the real file bytes (405, 411 — fixtures/
+      state/harness ledgerText reads the ledger with readFileSync), cumulative
+      byte growth of the second half below 1.5x the first half (414; the old
+      full-history scheme would serialize sum(1..300)=45,150 record copies and
+      grow ~3x), and a post-run history read returning 300 records (415-417).
+      Additivity: no schema bump (STATE_SCHEMA_VERSION asserted unchanged at
+      closeout-idempotency.test.ts:255-257); readRecords is a new port member
+      and the exhaustive port-surface assertion was updated to include it
+      (tests/behaviour/state-ledger.test.ts:96) while prune/delete/expire/
+      compact/clear remain forbidden; the verify-support guard store passes it
+      through (tests/behaviour/verify-support.ts:163-166).
+  "12 PRRT_kwDORCEXJ86yYRZR (mock tenant body matching)":
+    verdict: RESOLVED
+    evidence: >-
+      Code: packages/testkit/src/conformance/mock-tenant.ts:235-256 —
+      createMockTenantTransport filters candidates by method + URL (241-243),
+      prefers a route whose requestBody exactly equals the request body
+      regardless of declaration order (244-247), falls back to a body-agnostic
+      route (248), and throws "unfixtured provider request METHOD URL" when no
+      candidate matches (250-252). requestBody was already decoded and
+      duplicate-checked including the body (types.ts:101; decodeRoute 101-111;
+      dup key 178-180), so decoding is unchanged. Tests: tests/conformance/
+      mock-conformance.test.ts:612-636 declares the generic route FIRST and the
+      body-specific route SECOND, proving the later body-specific route wins
+      for the matching body and the generic route serves the non-matching body;
+      :638-659 proves a wrong body against a body-declaring route rejects with
+      /unfixtured provider request/. No conformance fixture uses requestBody
+      today (repo grep), so behavior for existing tenants is unchanged; the
+      change is purely additive.
+checks:
+  gate_weakening: >-
+    None. Both commits are additive in tests (no assertion deleted or relaxed);
+    the state-ledger port-surface exact-equality list gained "readRecords"
+    (state-ledger.test.ts:96) which keeps the exhaustive surface assertion
+    truthful rather than weakening it; verify-support guardStore routes the new
+    method through the same mutation recorder; no allowlist, error-table, or
+    invariant-check file was touched by 53402b7 or 8e201fc.
+  tautological_tests: >-
+    None found in the additions. The linearity test measures real JSONL file
+    bytes via the fixtures harness (not the store's own read), the malformed
+    test drives the real validator through the real store with hand-corrupted
+    payloads, and the mock tests exercise the real matcher with deliberate
+    near-miss bodies (PRRT_2 vs PRRT_3) and order-inverted route declarations.
+  state_error_contract: >-
+    No regression. The removed closeout path that returned state.keys.missing
+    for absent payload keys was semantically wrong reuse (state.keys.missing is
+    the store-level requiredKeys read error, still produced and tested at
+    packages/core/src/state/index.ts:343 and tests/behaviour/state-keys.test.ts;
+    the full code list in state-error-classification.test.ts is untouched);
+    payload-level malformation now maps to state.store.torn with
+    consequence not_landed, which is the record-integrity code. Both codes
+    remain in StateFailureCode and the error table; error-classification and
+    exit-code contracts are unchanged.
+  spec_plan_audit: >-
+    Plan: R215-8, R215-11, R215-12 (chg-GH-183-plan.md, "Phase 10 remediation
+    evidence (PR #215 review threads)") are checked with commit refs 53402b7 /
+    8e201fc matching the audited diffs; no OPEN_TASKS, DONE_BUT_UNCHECKED, or
+    CHECKED_BUT_MISSING in the audited scope. Specs re-synced in 67e6c3d:
+    feature-state-layer.md:75 describes the readRecords fold-on-read and
+    one-record payloads; feature-closeout.md tier/ledger sections match. Tests
+    were not executed by this reviewer (static-only instruction); suite
+    greenness is cited from the plan's boundary evidence (pnpm test 2259 pass /
+    3 skip / 0 fail; pnpm check green).
+findings:
+  - id: F-1
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/core/src/state/closeout.ts:130
+    message: >-
+      recordFrom validates presence, types, and vocabularies of every expected
+      field but does not reject unknown extra top-level keys (hasOnlyKeys is
+      applied to target, arguments, and evidence entries, not to the record
+      object itself), and timestamp is checked only as a non-empty string
+      rather than an ISO-8601 shape. A payload with a stray extra field or a
+      non-ISO timestamp validates; folding semantics are unaffected, so this is
+      a strictness residual, not a correctness bug.
+    suggestion: >-
+      Optionally enforce hasOnlyKeys on the record's allowed key set
+      (schemaId, operationId, workItemRef, engine, capabilityContext,
+      operation, arguments, target, outcome, reason?, evidence, timestamp) and
+      an ISO-8601 regex on timestamp. Non-blocking; forward-compatibility
+      leniency is a defensible choice if documented.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: info
+    confidence: high
+    category: design
+    location: packages/core/src/state/closeout.ts:201
+    message: >-
+      appendCloseoutOutcome admits-then-verifies: the new record is written
+      before the post-append readCoverage re-read, so a malformed record
+      (constructible only by defeating the CloseoutOperationRecord type)
+      physically lands in the JSONL and tears the ledger until repairTornTail,
+      even though the call returns the classified state.store.torn error. This
+      is consistent with the store's append-only/torn-tail design and satisfies
+      the thread's never-silent-drop requirement; noting the semantic
+      difference from literal pre-admission rejection.
+    suggestion: >-
+      If strict pre-admission rejection is wanted, run
+      recordFrom(payloadFor(record)) before store.append. No action required
+      for v1.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: info
+    confidence: high
+    category: performance
+    location: packages/core/src/state/closeout.ts:174
+    message: >-
+      readCloseoutHistory iterates and validates every closeout record for the
+      key on each read, and appendCloseoutOutcome performs two full history
+      passes (pre-read + coverage read) on top of the store's own whole-ledger
+      verification per operation — cost per closeout operation is linear in
+      total ledger size. This matches the pre-existing GH-174 full-verification
+      design and per-run operation counts are bounded by the CLOSEOUT_MAX_*
+      caps (<= ~311 ops/run), so storage is linear (thread 11's requirement)
+      while CPU is O(n^2) across a run; acceptable at v1 scale.
+    suggestion: >-
+      None now; if multi-work-item stores grow large, consider per-key
+      verification caching or an index at a future schema version.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-01T10:30:00Z
+next_step: PROCEED

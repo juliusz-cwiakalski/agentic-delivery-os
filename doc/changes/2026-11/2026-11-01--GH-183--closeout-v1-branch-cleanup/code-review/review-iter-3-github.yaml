@@ -1,0 +1,282 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-183
+branch: feat/GH-183/closeout-v1-branch-cleanup
+head_sha: 67e6c3d841e39eddc5aacac5986e9024986aeff6
+reviewed_commit: 87b1214742e62afed6bd79a655630d21457fdb1b
+scope: >-
+  Focused static review of the GitHub-provider remediation commit 87b1214 ("fix(github): read
+  merge truth, threads, and dependency shapes") against five PR #215 review threads. Per the
+  requester's constraint this is a static review: the commit diff and the named files were read;
+  no test suite was executed and no source file was modified.
+status: PASS
+summary: >-
+  All five in-scope PR #215 review threads (1, 2, 3, 9, 13) are resolved in commit 87b1214 with
+  both production code and committed tests. The REST PR list merge truth now reads `merged_at`
+  with realistic timestamp/null fixtures; the selected merged PR's review threads are re-read
+  through a GraphQL `reviewThreads` query whose failure preserves a `threads: "unavailable"`
+  signal that the domain maps to `skipped-noop/thread-signal-unavailable`, never an observed
+  empty set; thread resolution now requires the provider-asserted `isResolved: true` and treats
+  `false` as `provider.payload.invalid`; blocker relations come exclusively from the
+  `/issues/{n}/dependencies/blocked_by` surface with availability derived from that response;
+  and the reverse read uses the production `/issues/{n}/dependencies/blocking` endpoint where
+  404/410 is a declared `no-surface` gap, never an empty observed set. No gate weakening was
+  found: the content-inventory allowance adds exactly the one new export, no assertion was
+  loosened, several were strengthened, and the fixture transport still throws on any unfixtured
+  provider request. Five non-blocking findings remain (1 medium bounded-read honesty gap on
+  >100-thread PRs, 2 low, 2 info); none blocks PASS.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 1
+  low: 2
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+publication:
+  state: draft
+  published_at: null
+  summary_url: null
+  published_count: 0
+  error_count: 0
+  errors: []
+review_threads:
+  "1 PRRT_kwDORCEXJ86yYRX4 (REST merged_at as merge truth)":
+    verdict: resolved
+    evidence: >-
+      Code: packages/adapters/src/github/normalize.ts:119 computes
+      `merged: payload.merged === true || stringField(payload, "merged_at") !== undefined`; a
+      non-null timestamp string is merge truth, and `null` returns undefined from stringField
+      (typeof null !== "string") so an unmerged PR stays unmerged. The merged-only filter at
+      normalize.ts:319 (reviewState === "merged") is unchanged. Fixtures:
+      tests/fixtures/providers/github/closeout-pulls-merged.json now carries realistic REST list
+      shapes — PR 42 `merged_at: "2026-10-20T09:15:00Z"` (line 7), PR 504
+      `merged_at: "2026-10-31T18:42:11Z"` (line 17), open PR 505 `merged_at: null` (line 27) —
+      with the synthetic `merged: true/false` fields removed. Tests:
+      tests/behaviour/providers/github-closeout.test.ts:136-144 asserts exactly ["42", "504"]
+      survive the merged filter, and the production-composition test at
+      tests/behaviour/closeout-integration.test.ts:184-189 drives the real composition with a
+      `merged_at`-only PR (no `merged`, no synthetic `review_threads`).
+  "2 PRRT_kwDORCEXJ86yYRYF (GraphQL review threads for the selected merged PR)":
+    verdict: resolved
+    evidence: >-
+      Code: packages/adapters/src/github/client.ts:122-123 defines the REVIEW_THREADS_QUERY;
+      client.ts:361-398 re-reads the selected merged PR through `POST /graphql` after the REST
+      list selection. Every failure mode — non-numeric entity id (:365-371), non-OK GraphQL
+      response (:380-386), and a malformed payload via normalizeReviewThreads
+      (normalize.ts:377-412 rejects a missing data/repository/pullRequest/reviewThreads/nodes
+      chain as a payload failure, never an empty set) — returns `observation: "observed"` with
+      `signals: { threads: "unavailable" }`, per the comment at client.ts:361-363. Domain:
+      packages/core/src/domain/closeout.ts:631-637 maps `signals.threads === "unavailable"` to
+      `skipped-noop` with reason `thread-signal-unavailable` and evidence fields, producing zero
+      operations; the satisfied path at :639-666 is reachable only with an observed thread set.
+      Contract: packages/core/src/contracts/closeout.ts:184 adds the threads signal. Tests:
+      github-closeout.test.ts:146-161 asserts the selected request carries the GraphQL threads
+      (PRRT_1 resolved / PRRT_2 unresolved) with `signals.threads === "observed"` and the POST
+      body contains "reviewThreads"; :163-173 asserts a failed thread read yields
+      `threads: "unavailable"` with an empty thread list, never a claimed-satisfied empty set;
+      closeout-threads.test.ts:74-87 pins the domain outcome (skipped-noop,
+      thread-signal-unavailable, operations []); the integration test at
+      closeout-integration.test.ts:197-207 wires both GraphQL routes through the real CLI
+      composition, and the fixture transport's throw-on-unfixtured guarantees no silent thread
+      path exists.
+  "3 PRRT_kwDORCEXJ86yYRYH (provider-asserted isResolved:true required)":
+    verdict: resolved
+    evidence: >-
+      Code: packages/adapters/src/github/normalize.ts:347-368 — normalizeThreadResolution now
+      returns `ProviderReadResult<{ resolved: true }>` (type-level assertion only) and at
+      :362-366 a mutation that returns `isResolved: false` is
+      `providerPayloadFailure("GitHub review thread remained unresolved")`, with the comment
+      explaining that ok would persist `applied` and skip the thread forever. A 200-with-errors
+      GraphQL body has no `data.resolveReviewThread` and also fails (:353-357).
+      client.ts:456-465 propagates the failure unchanged. Tests:
+      github-closeout.test.ts:267-282 with the new fixture
+      tests/fixtures/providers/github/graphql-resolve-thread-unresolved.json (`isResolved:
+      false`) asserts ok:false and code `provider.payload.invalid`.
+  "9 PRRT_kwDORCEXJ86yYRY0 (blockers from the dependency surface, not issue_links)":
+    verdict: resolved
+    evidence: >-
+      Code: packages/adapters/src/github/client.ts:233-276 withDependencyRelations — after an
+      observed issue read it GETs
+      `/issues/{n}/dependencies/blocked_by?per_page=CLOSEOUT_MAX_DEPENDENTS` (:241); a non-2xx
+      response (:246-251), a non-observed dependency normalize (:253-258), or a transport throw
+      (:270-275) yields `signals.relations: "unavailable"`; only a successful dependency read
+      produces relations, all mapped `relationKind: "blocked-by"` (:259-269). readObservation
+      composes it at :291-293. normalize.ts:422-427 observationSignals no longer invents
+      relation availability from `issue_links` — the REST issue payload is declared never to
+      carry links, and relations default to unavailable until the dependency read decides.
+      Availability is derived from that response downstream: packages/cli/src/edge.ts:500-507
+      treats an undefined/unavailable/unknown relations signal as blockers `unavailable` (never
+      an empty blocker set), and domain closeout.ts:565-568,586-589 makes that a
+      `skipped-noop/relation-signal-unavailable`, never a satisfied sweep. Tests:
+      github-closeout.test.ts:44-72 is a true negative control — the issue payload contains an
+      invented `issue_links: [{type: "blocks", number: 999}]` yet the observed relations are
+      exactly the blocked_by result ([blocked-by 401]) and the blockers URL is asserted hit.
+      The synthetic `issue_links` field was removed from closeout-issues.json and
+      closeout-dependencies.json, and the conformance tenant gained the matching blocked_by
+      route (tests/fixtures/providers/conformance/github/tenant.json:59-64, per_page=200 equals
+      CLOSEOUT_MAX_DEPENDENTS at contracts/closeout.ts:132).
+  "13 PRRT_kwDORCEXJ86yYRZZ (production /dependencies/blocking endpoint; 404 is not a gap)":
+    verdict: resolved
+    evidence: >-
+      Code: packages/adapters/src/github/client.ts:405 now requests
+      `/issues/{n}/dependencies/blocking?per_page=...` (previously `/dependencies`), and
+      :412-414 maps 404/410 to `no-surface`, which the domain renders as a declared provider
+      gap `skipped-gap/provider-unsupported` (domain closeout.ts:528-535, AC-F7-6) — never an
+      empty observed set; other non-2xx and transport failures stay `unavailable` →
+      skipped-noop (:536-540). Fixtures match: tests/fixtures/closeout/github-client.ts:42-45
+      defines dependenciesUrl (blocking) and blockersUrl (blocked_by) as distinct production
+      URLs, and tests/behaviour/providers/github-closeout.test.ts:182-184 asserts the reverse
+      read actually hits the blocking URL, with 404→no-surface (:187-194) and 500→unavailable
+      (:196-203) both pinned. The production-composition route list at
+      closeout-integration.test.ts:194-195 uses both corrected URLs.
+cross_cutting_checks:
+  gate_weakening: >-
+    None. tests/structure/content-inventory.test.ts adds exactly one allowance for the one new
+    export (normalizeReviewThreads). No existing assertion was loosened; the merged-selection,
+    reverse-dependent, and write tests are unchanged and now additionally assert the blockers
+    URL, GraphQL thread content, and the unresolved-mutation failure. The fixture transport
+    still throws on any unfixtured request (tests/behaviour/providers/support.ts:75-88), and
+    the new requestBodyContains matcher is precise: "reviewThreads" does not substring-match
+    "resolveReviewThread(" (next char is "(", not "s") and vice versa, so the two /graphql
+    routes cannot satisfy each other.
+  synthetic_fixtures_hiding_production_gaps: >-
+    Largely addressed — the synthetic `merged: true` and `issue_links` fields are gone from the
+    closeout fixtures and the issue_links shape survives only as a negative control. Two
+    residuals are filed as findings: the un-paginated first:100 reviewThreads read (F-1) and
+    the conformance read-work-item expectation still pinning issue_links-derived relations
+    (F-3), plus a live-shape confirmation note (F-5).
+  read_only_isolation: >-
+    No regression. The commit adds one REST GET (blocked_by) and one GraphQL query POST (a
+    semantic read; GitHub GraphQL requires POST). No new mutating surface, no ambient I/O;
+    credential resolution still flows exclusively through the injected CredentialPort.
+  capability_honesty: >-
+    Preserved. The threadStep capability-gap branch (skipped-gap/provider-unsupported) still
+    precedes signal handling; the new threads-unavailable branch is a signal-level
+    skipped-noop consistent with the established label/relation signal pattern, and no-surface
+    vs unavailable remains discriminated for the reverse read.
+  contract_additions: >-
+    CloseoutObservedSignals.threads (contracts/closeout.ts:184) is produced by the GitHub
+    client and consumed by the domain threadStep. The optional invalid.code field (:199) is
+    forward-looking within 87b1214 but is consumed by the sibling Jira remediation commit
+    601706c (packages/adapters/src/jira/client.ts:200), so it is not dead contract surface on
+    the branch.
+findings:
+  - id: F-1
+    severity: medium
+    confidence: medium
+    category: correctness
+    location: packages/adapters/src/github/client.ts:123
+    message: >-
+      REVIEW_THREADS_QUERY fetches `reviewThreads(first: 100)` with no `pageInfo/hasNextPage`
+      follow-up. CLOSEOUT_MAX_THREADS is also 100, so resolution count is aligned, but a PR
+      with more than 100 unresolved threads has the overflow silently invisible: the signal
+      reports "observed", the domain's truncation evidence never fires (100 is not > 100), and
+      if GitHub returns threads in creation order a second closeout run would re-read the same
+      resolved first page and report the step satisfied while threads 101+ remain unresolved.
+      This is the same bounded-read-presented-as-full-truth class the PR review targeted.
+    suggestion: >-
+      Request `pageInfo { hasNextPage endCursor }` and either follow pages while below the
+      domain cap, or treat hasNextPage=true at the cut as a truncation/unavailable signal so
+      the plan never claims full thread truth from a partial page. Low likelihood (>100-thread
+      PRs are rare) but cheap to make honest.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: test-quality
+    location: tests/behaviour/providers/github-closeout.test.ts:44
+    message: >-
+      The blockers positive path and the issue_links negative control are covered, but there
+      is no client-level test that a failed blocked_by read (404/500/transport throw) yields
+      `signals.relations === "unavailable"` while the observation stays "observed". That
+      branch (client.ts:246-251, 253-258, 270-275) is currently exercised only indirectly via
+      the edge/domain unavailable mapping.
+    suggestion: >-
+      Add one adapter test with only the issue route fixtured (transport throws on the blocked_by
+      GET) asserting observation "observed" + relations "unavailable", mirroring the
+      failed-thread-read test at github-closeout.test.ts:163-173.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: low
+    confidence: medium
+    category: code-quality
+    location: packages/adapters/src/github/normalize.ts:197
+    message: >-
+      relationsFrom/issue_links parsing survives in normalizeGithubIssue, and the conformance
+      tenant expectation (tests/fixtures/providers/conformance/github/tenant.json:181-189)
+      still pins issue_links-derived relations for the GH-188 read-work-item slice even though
+      this commit declared the REST issue payload never carries links and removed the field
+      from the closeout fixtures. The surface-honesty posture is now inconsistent between
+      slices and the synthetic expectation keeps it alive.
+    suggestion: >-
+      Follow-up change: drop relationsFrom from normalizeGithubIssue (relations then come only
+      from the dependency surface) and update the tenant expectation, or document why the
+      status slice keeps a different relations projection. Not a v1 blocker.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: info
+    confidence: high
+    category: performance
+    location: packages/adapters/src/github/client.ts:278
+    message: >-
+      Every readWorkItemObservation now issues two HTTP requests (issue + blocked_by), and the
+      dependent sweep in edge.ts calls it per candidate and per blocker target, so the
+      pre-existing N+1 amplification roughly doubles. Behaviorally correct and bounded by
+      CLOSEOUT_MAX_DEPENDENTS; noted for awareness only.
+    suggestion: >-
+      Acceptable for v1. If it ever matters, batch or cache the blocked_by read per entity
+      within one plan pass.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: info
+    confidence: medium
+    category: verification
+    location: tests/fixtures/providers/github/closeout-blockers-301.json:1
+    message: >-
+      The blocked_by/blocking response shape is asserted (against hand-authored fixtures) to be
+      a bare JSON array of issue objects. The array assumption predates this commit for the old
+      URL and is applied consistently (normalize.ts:328, tenant.json:63, integration route
+      body []), but a static review cannot confirm the live GitHub response envelope.
+    suggestion: >-
+      Confirm the bare-array shape on the first live conformance run against a real GitHub
+      instance; if the envelope is wrapped (e.g. {issues: [...]}), the normalize would classify
+      it invalid → relations unavailable, which fails safe but disables the blocker gate.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+plan_task_audit:
+  scope_note: >-
+    Audit limited to the GitHub items of the plan's PR-215 remediation phase (R215-1, R215-2,
+    R215-3, R215-9, R215-13); the Jira/state/testkit items (R215-4..8, 10..12) belong to
+    commits 601706c/53402b7/8e201fc and are out of this review's scope.
+  OPEN_TASKS: none in scope — R215-1/2/3/9/13 are all checked and verified against 87b1214
+  DONE_BUT_UNCHECKED: none
+  CHECKED_BUT_MISSING: none — every checked GitHub item has matching code and committed tests
+deduplication:
+  prior_iterations: >-
+    review-iter-1.yaml (F-1..F-12) and review-iter-2.yaml (N-1..N-3) were loaded; none of the
+    current findings duplicates an earlier one. Iter-2 N-2 covered different coverage gaps
+    (present-empty labels, torn-ledger at composition level); F-2 here covers the blocked_by
+    failure path and is new. No findings suppressed.
+reviewed_at: 2026-11-01T12:00:00Z
+next_step: PROCEED

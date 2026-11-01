@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-11-01T06:15:00Z", completed: "2026-11-01T10:40:00Z" }
   delivery: { started: "2026-11-01T10:45:00Z", completed: "2026-11-01T12:35:00Z" }
   system_spec_update: { started: "2026-11-01T12:40:00Z", completed: "2026-11-01T13:05:00Z" }
-  review_fix: { started: "2026-11-01T20:00:00Z", completed: null }
+  review_fix: { started: "2026-11-01T20:00:00Z", completed: "2026-11-01T20:45:00Z" }
   quality_gates: { started: "2026-11-01T18:00:00Z", completed: "2026-11-01T18:35:00Z" }
   dod_check: { started: "2026-11-01T18:40:00Z", completed: "2026-11-01T18:55:00Z" }
   pr_creation: { started: "2026-11-01T19:00:00Z", completed: "2026-11-01T19:15:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/215" }
@@ -151,6 +151,12 @@ notes:
     date: "2026-11-01"
   - text: "Retro: iteration-2 PASS did not catch provider-contract realism gaps because fixtures encoded synthetic shapes (merged:true, {} 204, issue_links, synthetic label projection). Lesson: every adapter fixture must mirror the real REST/GraphQL payload; a fake-only green battery is not production evidence."
     type: retro
+    date: "2026-11-01"
+  - text: "PR #215 review-thread re-review PASS (3 focused reviewer passes: review-iter-3-github.yaml, review-iter-3-jira.yaml, review-iter-3-ledger-mock.yaml). All 13 threads resolved in code+tests: GitHub merged_at/GraphQL threads/isResolved:true/dependency-surface blockers/`/dependencies/blocking`; Jira bodyless 204/outgoing blocks/raw labels/transition.id/credential identity; ledger validation + one-record-per-append linear storage; mock-tenant exact-body matching. Zero blocking findings. Non-blocking residuals recorded for follow-up: GraphQL reviewThreads first:100 pagination truncation risk; Jira direct-consumer credential→unavailable mapping; ledger validator does not reject unknown extra top-level keys."
+    type: resolved
+    date: "2026-11-01"
+  - text: "Next: push the 6 remediation commits + review artifacts, wait for merge-blocking CI to go green on the pushed branch, then reply to and resolve each of the 13 review threads with its fix commit reference. Do not merge."
+    type: info
     date: "2026-11-01"
   - text: "Hygiene remediation: the six over-length commit messages were reflowed in a message-only history rewrite so every body/footer line is <=100 chars for commitlint; the test-plan EOF blank line was removed separately. Earlier SHA references in the change artifacts are pre-rewrite and no longer identify the current commits, including the six reflowed messages (549a39f, ab29d9b, 261123b, 546ec43, 3737d17, 8555132) and their descendants (e.g. 5ef24ed)."
     type: resolved
