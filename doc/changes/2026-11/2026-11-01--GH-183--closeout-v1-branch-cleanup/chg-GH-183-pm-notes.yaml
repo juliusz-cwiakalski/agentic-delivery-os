@@ -1,0 +1,55 @@
+change_id: GH-183
+title: "M0-S14: closeout v1 with branch cleanup"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-11-01T03:20:00Z", completed: "2026-11-01T03:30:00Z" }
+  specification: { started: "2026-11-01T03:32:00Z", completed: "2026-11-01T03:48:00Z" }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions:
+  - text: "Scope: `ados closeout <workItemRef>` is one idempotent post-merge transaction covering the backlog steps — ticket-to-done, lifecycle label sweep, unassign, owed-flip sweep, comment resolution, checkout restore, and squash-safe local branch cleanup. Harness session telemetry is explicitly out of scope (backlog assigns it to M1-S11)."
+    date: "2026-11-01"
+  - text: "Provider write coverage v1: GitHub write surface (this repo's dogfood host) and Jira write surface (GH-188 NG-5 explicitly defers ticket-to-done, label sweep, comment resolution, and owed-flip writes to M0-S14). GitLab writes stay declared capability gaps. Remote branch deletion is out of scope; branch cleanup is local and squash-safe."
+    date: "2026-11-01"
+  - text: "Safety model: closeout is dry-run by default and mutates only with `--apply`, matching the delivered `db` mutating-command precedent. Both plan and apply modes compute the same deterministic transaction plan and converge under re-run."
+    date: "2026-11-01"
+  - text: "`owed-flip` interpretation (backlog M0-S14 has no further definition): an open work item whose `blocked-by` relations become fully satisfied by this closeout is flipped to the declared owner-attention state `hand-back` (owner owes the next action) and has a `blocked` label removed when present. The sweep is bounded, deterministic, and records every flip."
+    date: "2026-11-01"
+  - text: "`comment resolution` interpretation: resolve unresolved review threads on the merged delivery request through the provider's thread-resolution surface (GitHub GraphQL `resolveReviewThread`, per .ai/agent/pr-instructions.md). Providers with no delivery-request surface (Jira) declare a capability gap and skip with evidence; do not fail."
+    date: "2026-11-01"
+  - text: "Idempotency: deterministic operationId from workspace, work item ref, engine, operation, canonical arguments, and provider target (ADR-0003). The first outcome is persisted in the append-only state ledger; a repeat with the same identity returns the persisted outcome instead of re-mutating. Already-satisfied provider state (issue closed, label absent, branch gone, thread resolved) converges as satisfied, never as failure."
+    date: "2026-11-01"
+  - text: "Git write path: a dedicated git branch-cleanup seam behind a port in the adapters I/O tier; the existing read-only `repo` adapter keeps its no-spawn guarantee so `status`/`queue` stay read-only."
+    date: "2026-11-01"
+  - text: "OQ-1 resolved by TDR-0008: the additive `DeliveryRequest.headSha` field and `resolve-delivery-thread` operation are decision-record governed and admissible additive-within-v1 extensions; no schema bump/migration; GitHub implements thread resolution, Jira/GitLab declare gaps; owner acceptance rides the GH-183 PR review. The conformance flow registry must gain a `resolve-delivery-thread` step in the same change."
+    date: "2026-11-01"
+  - text: "OQ-2 resolved (PM-decided): closeout v1 posts no closure comment; `write-comment` stays a declared gap on every provider. No decision record required."
+    date: "2026-11-01"
+open_questions: []
+blockers: []
+notes:
+  - text: "State detection: GH-183 OPEN, no labels, no assignees, no open PR, no GH-183 branch or change folder. Clean worktree at parity with origin/main-tools. Fresh delivery, not a resume."
+    type: info
+    date: "2026-11-01"
+  - text: "Dependency M0-S19 (GH-188, client seeds + trap catalogs) is delivered (2314e55). GH-188 spec NG-5 and OQ-2 explicitly leave tracker write operations (ticket-to-done, label sweep, comment resolution, owed-flip) for this story, including the recorded jira.js re-evaluation fallback trigger."
+    type: info
+    date: "2026-11-01"
+  - text: "Scope risk: this is a broad write-path change (two provider write surfaces + git branch writes + idempotency ledger + new CLI command). DoR must scrutinize whether provider coverage and idempotency are testable without live credentials; plan must keep gate battery offline/fixture-driven."
+    type: risk
+    date: "2026-11-01"
+  - text: "No existing closeout feature spec or code; phase 7 must author doc/spec/features/feature-closeout*.md (always-resolve)."
+    type: info
+    date: "2026-11-01"
+  - text: "Base-branch and label-set questions pinned in the spec as DEC-9 (merged target ref, else `main-tools`; protected refs include main/main-tools/resolved base/HEAD) and DEC-10 (keep `change`; remove planning/spec-ready/readiness-passed/in-progress/review/blocked; add `delivered`)."
+    type: resolved
+    date: "2026-11-01"
+  - text: "Specification phase: 58 ACs authored; validated for traceability and scope fit. Ready for test planning."
+    type: info
+    date: "2026-11-01"
