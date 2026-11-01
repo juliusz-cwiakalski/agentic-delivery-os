@@ -25,12 +25,19 @@ export const jiraInstance: ExternalSystemInstance = {
   },
 };
 
-const credentials = createEnvironmentCredentialPort({
+export const jiraCredentials = createEnvironmentCredentialPort({
   environment: { FIXTURE_JIRA_TOKEN: "canary-jira-token" },
   brand: fixtureBrand,
 });
 
 export const issueUrl = (key: string): string => `${jiraInstance.baseUrl}/rest/api/2/issue/${key}`;
+
+export const transitionsUrl = (key: string): string => `${issueUrl(key)}/transitions`;
+
+export const dependentsUrl = (key: string, limit: number): string =>
+  `${jiraInstance.baseUrl}/rest/api/2/search?jql=${encodeURIComponent(
+    `issue in linkedIssues("${key}", "blocks") AND statusCategory != Done ORDER BY key ASC`,
+  )}&maxResults=${limit}`;
 
 export const jiraIssueFixture = (): unknown =>
   requireRecord(readJson(`${JIRA_FIXTURES}/closeout-issue.json`), "jira issue").issue;
@@ -38,13 +45,16 @@ export const jiraIssueFixture = (): unknown =>
 export const jiraDependentsFixture = (): unknown =>
   requireRecord(readJson(`${JIRA_FIXTURES}/closeout-dependents.json`), "jira dependents").issues;
 
+export const jiraTransitionsFixture = (): unknown => readJson(`${JIRA_FIXTURES}/transitions.json`);
+
 export const defaultJiraRoutes = (): readonly FixtureRoute[] => [
   { method: "GET", url: issueUrl("TRACK-101"), body: jiraIssueFixture() },
   { method: "PUT", url: issueUrl("TRACK-101"), status: 204, body: {} },
-  { method: "POST", url: `${issueUrl("TRACK-101")}/transitions`, status: 204, body: {} },
+  { method: "GET", url: transitionsUrl("TRACK-101"), body: jiraTransitionsFixture() },
+  { method: "POST", url: transitionsUrl("TRACK-101"), status: 204, body: {} },
   {
     method: "GET",
-    url: `${jiraInstance.baseUrl}/rest/api/2/search?jql=${encodeURIComponent('issue in linkedIssues("TRACK-101") AND statusCategory != Done ORDER BY key ASC')}&maxResults=200`,
+    url: dependentsUrl("TRACK-101", 200),
     body: { issues: jiraDependentsFixture() },
   },
 ];
@@ -58,6 +68,10 @@ export const makeJiraClient = (
   routes: readonly FixtureRoute[] = defaultJiraRoutes(),
 ): JiraHarness => {
   const transport = createFixtureTransport(routes);
-  const client = createJiraClient({ instance: jiraInstance, credentials, transport });
+  const client = createJiraClient({
+    instance: jiraInstance,
+    credentials: jiraCredentials,
+    transport,
+  });
   return { client, transport };
 };

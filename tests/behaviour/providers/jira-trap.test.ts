@@ -284,7 +284,7 @@ const closeoutDoneTransition = async (): Promise<void> => {
   if (post?.body === undefined) throw new Error("missing transition body");
   const body: unknown = JSON.parse(post.body);
   if (typeof body !== "object" || body === null) throw new Error("invalid transition body");
-  expect((body as Record<string, unknown>).transition).toEqual({ name: "Done" });
+  expect((body as Record<string, unknown>).transition).toEqual({ id: "31" });
 };
 
 const closeoutLabelPreserve = async (): Promise<void> => {

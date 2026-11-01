@@ -15,6 +15,7 @@ import {
   type WorkItem,
 } from "@delivery-os/core/contracts";
 import type {
+  ProviderReadFailure,
   ProviderReadResult,
   ProviderRequest,
   ProviderTransport,
@@ -24,6 +25,7 @@ import { providerPayloadFailure } from "../io/provider-transport.js";
 import {
   computeJiraLabelTargetSet,
   type JiraNormalizationContext,
+  jiraNativeLabels,
   jiraNormalizationContext,
   normalizeJiraDependentObservation,
   normalizeJiraIssue,
@@ -67,6 +69,13 @@ export type JiraClient = {
   }) => Promise<ProviderWriteResult>;
 };
 
+/** Parse a response body only when one is present (Jira PUT/POST reply 204). */
+const responseBody = async (response: Response): Promise<unknown> => {
+  const text = await response.text();
+  if (text.trim().length === 0) return undefined;
+  return JSON.parse(text);
+};
+
 const nativeFetchTransport = (): ProviderTransport => ({
   send: async (request) => {
     const response = await fetch(request.url, {
@@ -75,12 +84,31 @@ const nativeFetchTransport = (): ProviderTransport => ({
       ...(request.body === undefined ? {} : { body: request.body }),
       signal: AbortSignal.timeout(request.timeoutMs ?? CLOSEOUT_OPERATION_TIMEOUT_MS),
     });
-    const body: unknown = await response.json();
-    return { status: response.status, body };
+    return { status: response.status, body: await responseBody(response) };
   },
 });
 
 const trimBaseUrl = (baseUrl: string): string => baseUrl.replace(/\/+$/, "");
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/**
+ * Select the transition id whose destination matches the workflow-mapped
+ * native status. Zero or multiple matches are ambiguous and never guessed.
+ */
+const unambiguousTransitionId = (payload: unknown, nativeStatus: string): string | undefined => {
+  if (!isRecord(payload) || !Array.isArray(payload.transitions)) return undefined;
+  const ids: string[] = [];
+  for (const transition of payload.transitions) {
+    if (!isRecord(transition)) continue;
+    const id = transition.id;
+    const to = transition.to;
+    if (typeof id !== "string" || !isRecord(to)) continue;
+    if (typeof to.name === "string" && to.name === nativeStatus) ids.push(id);
+  }
+  return ids.length === 1 ? ids[0] : undefined;
+};
 
 /**
  * Build the Jira read-slice client.
@@ -134,13 +162,10 @@ export const createJiraClient = (options: JiraClientOptions): JiraClient => {
     path: string,
     body?: unknown,
   ): Promise<
-    | { readonly ok: true; readonly status: number; readonly body: unknown }
-    | { readonly ok: false; readonly code: string; readonly detail: string }
+    { readonly ok: true; readonly status: number; readonly body: unknown } | ProviderReadFailure
   > => {
     const headers = authorizedHeaders();
-    if (!headers.ok) {
-      return { ok: false, code: headers.code, detail: headers.code };
-    }
+    if (!headers.ok) return headers;
     const serialized = body === undefined ? undefined : JSON.stringify(body);
     try {
       const response = await transport.send({
@@ -166,13 +191,21 @@ export const createJiraClient = (options: JiraClientOptions): JiraClient => {
 
   const readObservation = async (issueKey: string): Promise<CloseoutReadObservation<WorkItem>> => {
     const response = await request("GET", `/rest/api/2/issue/${encodeURIComponent(issueKey)}`);
-    if (!response.ok) return { observation: "invalid", detail: response.detail };
+    if (!response.ok) {
+      // A credential/config resolution failure keeps its own identity; only
+      // payload/HTTP/transport failures become the invalid observation.
+      return {
+        observation: "invalid",
+        detail: "detail" in response ? response.detail : response.code,
+        ...(response.code === "provider.payload.invalid" ? {} : { code: response.code }),
+      };
+    }
     return normalizeJiraWorkItemObservation(response.body, context, response.status);
   };
 
   const writer = (response: Awaited<ReturnType<typeof request>>): ProviderWriteResult =>
     !response.ok
-      ? { ok: false, code: "provider.payload.invalid", detail: response.detail }
+      ? response
       : response.status >= 200 && response.status < 300
         ? { ok: true, value: undefined }
         : providerPayloadFailure(`Jira returned HTTP ${response.status}`);
@@ -190,7 +223,12 @@ export const createJiraClient = (options: JiraClientOptions): JiraClient => {
     },
     readWorkItemObservation: (issueKey) => readObservation(issueKey),
     listBlockedByDependents: async (input) => {
-      const jql = `issue in linkedIssues("${input.issueKey}") AND statusCategory != Done ORDER BY key ASC`;
+      // The link-type argument restricts the search to the `blocks` link type;
+      // the second filter keeps only issues this ticket blocks (the dependent
+      // carries the inward `blocked-by` relation to this ticket), so a
+      // relates-to or a ticket that blocks this one is never treated as a
+      // dependent.
+      const jql = `issue in linkedIssues("${input.issueKey}", "blocks") AND statusCategory != Done ORDER BY key ASC`;
       const response = await request(
         "GET",
         `/rest/api/2/search?jql=${encodeURIComponent(jql)}&maxResults=${encodeURIComponent(String(input.limit))}`,
@@ -202,27 +240,42 @@ export const createJiraClient = (options: JiraClientOptions): JiraClient => {
         return { observation: "no-surface" };
       }
       if (response.status < 200 || response.status >= 300) return { observation: "unavailable" };
-      return normalizeJiraDependentObservation(response.body, context);
+      const normalized = normalizeJiraDependentObservation(response.body, context);
+      if (normalized.observation !== "observed") return normalized;
+      const dependents = normalized.value.filter((candidate) =>
+        candidate.relations.some(
+          (relation) =>
+            relation.relationKind === "blocked-by" && relation.target.entityId === input.issueKey,
+        ),
+      );
+      return { observation: "observed", value: dependents };
     },
     writeWorkItem: async (input) => {
-      const current = await readObservation(input.issueKey);
-      if (current.observation !== "observed") {
-        return providerPayloadFailure("Jira work-item labels are unavailable");
+      const current = await request(
+        "GET",
+        `/rest/api/2/issue/${encodeURIComponent(input.issueKey)}`,
+      );
+      if (!current.ok) return current;
+      if (current.status < 200 || current.status >= 300) {
+        return providerPayloadFailure(`Jira returned HTTP ${current.status}`);
       }
-      if (current.signals?.labels === "unavailable") {
+      // The replace input is the provider's native label array only. Custom
+      // fields (`team:*`, `story-points:*`) are read-only projections on the
+      // normalized view and must never be persisted as real labels.
+      const fields = isRecord(current.body) ? current.body.fields : undefined;
+      const nativeLabels = jiraNativeLabels(fields);
+      if (nativeLabels === undefined) {
         // A full-array replace computed from a collapsed empty set would erase
         // the provider's real labels; refuse instead.
         return providerPayloadFailure("Jira label signal is unavailable");
       }
-      const labels = computeJiraLabelTargetSet(
-        current.value.labels,
-        input.add ?? [],
-        input.remove ?? [],
-      );
-      const fields: Record<string, unknown> = { labels };
-      if (input.assignee === "none") fields.assignee = null;
+      const labels = computeJiraLabelTargetSet(nativeLabels, input.add ?? [], input.remove ?? []);
+      const updateFields: Record<string, unknown> = { labels };
+      if (input.assignee === "none") updateFields.assignee = null;
       return writer(
-        await request("PUT", `/rest/api/2/issue/${encodeURIComponent(input.issueKey)}`, { fields }),
+        await request("PUT", `/rest/api/2/issue/${encodeURIComponent(input.issueKey)}`, {
+          fields: updateFields,
+        }),
       );
     },
     transitionWorkItem: async (input) => {
@@ -230,11 +283,23 @@ export const createJiraClient = (options: JiraClientOptions): JiraClient => {
       if (nativeStatus === undefined) {
         return providerPayloadFailure("Jira has no declared done transition");
       }
+      const available = await request(
+        "GET",
+        `/rest/api/2/issue/${encodeURIComponent(input.issueKey)}/transitions`,
+      );
+      if (!available.ok) return available;
+      if (available.status < 200 || available.status >= 300) {
+        return providerPayloadFailure(`Jira returned HTTP ${available.status}`);
+      }
+      const transitionId = unambiguousTransitionId(available.body, nativeStatus);
+      if (transitionId === undefined) {
+        return providerPayloadFailure(`Jira has no unambiguous transition to "${nativeStatus}"`);
+      }
       return writer(
         await request(
           "POST",
           `/rest/api/2/issue/${encodeURIComponent(input.issueKey)}/transitions`,
-          { transition: { name: nativeStatus } },
+          { transition: { id: transitionId } },
         ),
       );
     },

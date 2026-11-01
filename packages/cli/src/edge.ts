@@ -108,6 +108,7 @@ import {
   readCloseoutHistory,
   replacePhaseProjection,
 } from "@delivery-os/core/state";
+import { resolveAppErrorCode } from "./classify.js";
 import {
   type CloseoutCommandRuntime,
   createCloseoutCommandDefinition,
@@ -555,6 +556,18 @@ export const createCloseoutComposition = (
   const planFacts = async (workItemRef: string): Promise<CloseoutPlanFacts> => {
     const entityId = entityIdFor(workItemRef, options.provider.kind);
     const observedWorkItem = await provider.readWorkItemObservation(entityId);
+    if (
+      observedWorkItem.observation === "invalid" &&
+      observedWorkItem.code !== undefined &&
+      observedWorkItem.code !== "provider.payload.invalid"
+    ) {
+      // A credential/config failure keeps its delivered identity at exit 1;
+      // only payload and HTTP/transport failures are the invalid observation.
+      const resolution = resolveAppErrorCode(observedWorkItem.code);
+      if (resolution.ok) {
+        throw { kind: resolution.entry.domainKind, code: observedWorkItem.code };
+      }
+    }
 
     const mergedRequest: CloseoutReadObservation<DeliveryRequest> =
       provider.findMergedDeliveryRequest === undefined

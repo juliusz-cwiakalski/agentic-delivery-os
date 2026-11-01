@@ -189,6 +189,18 @@ export const jiraNormalizationContext = (
 });
 
 /**
+ * Read the provider's native `fields.labels` array without custom-field
+ * projections. `undefined` means the provider omitted the label container, so
+ * a full-array replace must refuse rather than erase real labels.
+ */
+export const jiraNativeLabels = (fields: unknown): readonly string[] | undefined => {
+  if (!isRecord(fields)) return undefined;
+  const labels = fields.labels;
+  if (!Array.isArray(labels)) return undefined;
+  return labels.filter((label): label is string => typeof label === "string");
+};
+
+/**
  * Compute the full label array for a Jira replace: remove only the named
  * lifecycle labels, add the requested labels, and preserve every other label.
  * Order is the provider-asserted order followed by newly added labels.

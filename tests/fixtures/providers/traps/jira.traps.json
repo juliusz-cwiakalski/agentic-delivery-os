@@ -37,8 +37,8 @@
     },
     {
       "trapName": "JIRA-CLOSEOUT-DONE-TRANSITION",
-      "providerBehavior": "The done transition is resolved from the declared workflow map; a POST transitions call with the mapped native status is the write.",
-      "expectedNormalizedOutcome": "transition-work-item posts the map-declared done native status and succeeds only on a 2xx response.",
+      "providerBehavior": "The done transition is resolved from the declared workflow map; available transitions are read and the one whose destination matches the mapped native status is posted by id.",
+      "expectedNormalizedOutcome": "transition-work-item selects the unique transition id (31, Close -> Done) and succeeds only on a 2xx response.",
       "fixtureReference": "tests/fixtures/providers/jira/closeout-transitions-write.json"
     },
     {

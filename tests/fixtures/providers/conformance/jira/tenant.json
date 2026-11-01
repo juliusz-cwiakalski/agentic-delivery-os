@@ -77,6 +77,22 @@
       "body": {}
     },
     {
+      "method": "GET",
+      "url": "https://jira.example.com/rest/api/2/issue/TRACK-101/transitions",
+      "status": 200,
+      "body": {
+        "transitions": [
+          {
+            "id": "31",
+            "name": "Close",
+            "to": {
+              "name": "Done"
+            }
+          }
+        ]
+      }
+    },
+    {
       "method": "POST",
       "url": "https://jira.example.com/rest/api/2/issue/TRACK-101/transitions",
       "status": 204,

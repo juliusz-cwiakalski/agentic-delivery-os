@@ -458,6 +458,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "adapters/src/jira/index.ts": ["createJiraClient", "JIRA_ADAPTER_CONTRACT"],
   "adapters/src/jira/normalize.ts": [
     "computeJiraLabelTargetSet",
+    "jiraNativeLabels",
     "normalizeJiraDependentObservation",
     "normalizeJiraIssue",
     "normalizeJiraSearch",
