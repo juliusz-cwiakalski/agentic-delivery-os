@@ -8,7 +8,9 @@
  * slice does not fetch the comment set).
  */
 import type {
+  CloseoutObservedSignals,
   CloseoutReadObservation,
+  CloseoutReverseDependentObservation,
   DeliveryRequest,
   DeliveryThread,
   PipelineJobState,
@@ -319,7 +321,7 @@ export const normalizeMergedDeliveryRequestList = (
 export const normalizeIssueDependencies = (
   payload: unknown,
   context: GithubNormalizationContext,
-): CloseoutReadObservation<readonly WorkItem[]> => {
+): CloseoutReverseDependentObservation<readonly WorkItem[]> => {
   if (!Array.isArray(payload)) {
     return { observation: "invalid", detail: "GitHub issue-dependencies payload is not an array" };
   }
@@ -358,10 +360,26 @@ export const normalizeThreadResolution = (
 };
 
 /**
+ * The provider-asserted label/relation availability signals.
+ *
+ * A present container (including an explicitly empty array) is `observed`; an
+ * omitted container is `unavailable`. The normalized `WorkItem` cannot carry
+ * the distinction, so the observation does.
+ */
+const observationSignals = (
+  payload: Readonly<Record<string, unknown>>,
+): CloseoutObservedSignals => ({
+  labels: Array.isArray(payload.labels) ? "observed" : "unavailable",
+  relations: Array.isArray(payload.issue_links) ? "observed" : "unavailable",
+});
+
+/**
  * Normalize one work-item read into the discriminated observation (DM-11).
  *
- * An explicit HTTP 404 is `not-found`; a non-2xx response is `unavailable`; and
- * a malformed 2xx payload is `invalid`. None is collapsed into another.
+ * An explicit HTTP 404 is `not-found`; an authentication, transport, or server
+ * failure and a malformed 2xx payload are `invalid` (the adapter-local
+ * `provider.payload.invalid` identity); only a genuinely absent surface is
+ * `unavailable`. None is collapsed into another.
  */
 export const normalizeWorkItemObservation = (
   payload: unknown,
@@ -369,12 +387,21 @@ export const normalizeWorkItemObservation = (
   status: number,
 ): CloseoutReadObservation<WorkItem> => {
   if (status === 404) return { observation: "not-found" };
-  if (status < 200 || status >= 300) return { observation: "unavailable" };
+  if (status < 200 || status >= 300) {
+    return { observation: "invalid", detail: `GitHub returned HTTP ${status}` };
+  }
   const normalized = normalizeGithubIssue(payload, context);
-  return normalized.ok
-    ? { observation: "observed", value: normalized.value }
-    : {
-        observation: "invalid",
-        detail: "detail" in normalized ? normalized.detail : normalized.code,
-      };
+  if (!normalized.ok) {
+    return {
+      observation: "invalid",
+      detail: "detail" in normalized ? normalized.detail : normalized.code,
+    };
+  }
+  return isRecord(payload)
+    ? {
+        observation: "observed",
+        value: normalized.value,
+        signals: observationSignals(payload),
+      }
+    : { observation: "observed", value: normalized.value };
 };

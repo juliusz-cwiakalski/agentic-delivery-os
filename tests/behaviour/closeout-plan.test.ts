@@ -7,6 +7,7 @@ import { describe, expect, test } from "bun:test";
 import {
   CLOSEOUT_MAX_HUMAN_BYTES,
   CLOSEOUT_MAX_HUMAN_LINES,
+  CLOSEOUT_MAX_MACHINE_BYTES,
   type CloseoutData,
   type CloseoutStep,
 } from "../../packages/core/src/contracts/index";
@@ -19,6 +20,7 @@ import {
   closeoutStepDefinitions,
   deriveCloseoutOperationId,
   renderCloseoutHuman,
+  runCloseout,
   summarizeCloseout,
 } from "../../packages/core/src/domain/closeout";
 import { closeoutData, errorOf, runCloseoutCli } from "../fixtures/closeout/cli";
@@ -26,10 +28,14 @@ import { eligibleDependent, unavailableRelationDependent } from "../fixtures/clo
 import {
   CANARY_TEXT,
   CLOSEOUT_SCHEMA_ID,
+  CLOSEOUT_TIMESTAMP,
   DEFAULT_LABELS,
   makeDependent,
   makeFacts,
+  makeGit,
   makeMergedRequest,
+  makeProvider,
+  makeState,
   makeWorkItem,
   observed,
   THREAD_ID,
@@ -430,5 +436,46 @@ describe("TC-CLOSE-061/067 CLI failure projection", () => {
     });
     expect(run.exitCode).toBe(2);
     expect(errorOf(run.envelope).code).toBe("provider.payload.invalid");
+  });
+});
+
+describe("TC-CLOSE-067 plan-mode branch ambiguity renders would-refuse", () => {
+  const ambiguousBranches = [
+    { name: "feat/GH-183/one", head: "a".repeat(40) },
+    { name: "feat/GH-183/two", head: "b".repeat(40) },
+  ];
+
+  test("plan mode succeeds and renders the ambiguity for inspection", async () => {
+    const run = await runCloseoutCli(["closeout", "GH-183", "--json"], {
+      facts: makeFacts({ branches: ambiguousBranches }),
+    });
+    expect(run.exitCode).toBe(0);
+    const step = stepById(closeoutData(run.envelope).steps, "branch-cleanup");
+    expect(step.outcome).toBe("would-refuse");
+    expect(step.reason).toBe("closeout.target.ambiguous");
+    expect(run.git.calls).toEqual([]);
+  });
+
+  test("apply mode projects closeout.target.ambiguous before any mutation", async () => {
+    const run = await runCloseoutCli(["closeout", "GH-183", "--apply", "--json"], {
+      facts: makeFacts({ branches: ambiguousBranches }),
+    });
+    expect(run.exitCode).toBe(1);
+    expect(errorOf(run.envelope).code).toBe("closeout.target.ambiguous");
+    expect(run.git.calls).toEqual([]);
+  });
+});
+
+describe("TC-CLOSE-063/NFR-7 machine bound is measured in UTF-8 bytes", () => {
+  test("a multibyte payload under the UTF-16 length but over the byte bound truncates", () => {
+    const wide = "😀".repeat(22_000);
+    const data = dataFor(makeFacts({ dependents: observed([eligibleDependent(wide)]) }));
+    const unbounded = JSON.stringify(data);
+    expect(unbounded.length).toBeLessThanOrEqual(CLOSEOUT_MAX_MACHINE_BYTES);
+    expect(new TextEncoder().encode(unbounded).length).toBeGreaterThan(CLOSEOUT_MAX_MACHINE_BYTES);
+    const bounded = boundCloseoutData(data);
+    expect(new TextEncoder().encode(JSON.stringify(bounded)).length).toBeLessThanOrEqual(
+      CLOSEOUT_MAX_MACHINE_BYTES,
+    );
   });
 });

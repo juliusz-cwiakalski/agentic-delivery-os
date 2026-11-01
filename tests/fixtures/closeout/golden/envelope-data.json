@@ -193,6 +193,18 @@
         {
           "name": "skipped",
           "value": 0
+        },
+        {
+          "name": "openBlockers",
+          "value": 0
+        },
+        {
+          "name": "maxOpenBlockers",
+          "value": 0
+        },
+        {
+          "name": "unavailableSignals",
+          "value": 0
         }
       ]
     },

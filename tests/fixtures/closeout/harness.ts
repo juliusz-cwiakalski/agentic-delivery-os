@@ -20,6 +20,7 @@ import {
   type CloseoutPlanFacts,
   type CloseoutProviderRuntime,
   type CloseoutReadObservation,
+  type CloseoutReverseDependentObservation,
   type CloseoutStateRuntime,
   type CloseoutWriteOutcome,
   type DeliveryRequest,
@@ -62,7 +63,7 @@ export type FakeProviderOptions = {
   readonly gaps?: readonly CapabilityGap[];
   readonly workItem?: CloseoutReadObservation<WorkItem>;
   readonly merged?: CloseoutReadObservation<DeliveryRequest>;
-  readonly dependents?: CloseoutReadObservation<readonly WorkItem[]>;
+  readonly dependents?: CloseoutReverseDependentObservation<readonly WorkItem[]>;
   readonly writeWorkItem?: CloseoutWriteOutcome;
   readonly transitionWorkItem?: CloseoutWriteOutcome;
   readonly resolveDeliveryThread?: CloseoutWriteOutcome;

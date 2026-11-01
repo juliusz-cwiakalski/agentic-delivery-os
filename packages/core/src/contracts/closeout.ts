@@ -82,6 +82,22 @@ export const CLOSEOUT_READ_OBSERVATIONS = [
   "invalid",
 ] as const;
 
+/**
+ * The reverse-dependent surface vocabulary (F-7, AC-F7-6).
+ *
+ * This is deliberately separate from `CLOSEOUT_READ_OBSERVATIONS`: an absent
+ * bounded reverse query surface is a provider-level capability gap, not the
+ * same signal as a surface that exists but whose current read is unavailable.
+ * Collapsing the two is what made AC-F7-6 unreachable in production.
+ */
+export const CLOSEOUT_REVERSE_DEPENDENT_OBSERVATIONS = [
+  "observed",
+  "no-surface",
+  "not-found",
+  "unavailable",
+  "invalid",
+] as const;
+
 /** The bounded lifecycle-label disposition table in declared order (F-5, PIN-7). */
 export const LIFECYCLE_LABEL_DISPOSITIONS = [
   { label: "change", disposition: "keep" },
@@ -172,6 +188,25 @@ export type CloseoutReadObservation<T> =
       readonly value: T;
       readonly signals?: CloseoutObservedSignals;
     }
+  | { readonly observation: "not-found" }
+  | { readonly observation: "unavailable" }
+  | { readonly observation: "invalid"; readonly detail: string };
+
+/**
+ * A reverse-dependent read result (F-7, AC-F7-6).
+ *
+ * `no-surface` means the adapter/runtime has no bounded reverse query surface;
+ * it maps to a provider-level `skipped-gap` (`provider-unsupported`).
+ * `unavailable` means the surface exists but the current read is unavailable;
+ * it maps to a signal-level `skipped-noop` (`relation-signal-unavailable`).
+ */
+export type CloseoutReverseDependentObservation<T> =
+  | {
+      readonly observation: "observed";
+      readonly value: T;
+      readonly signals?: CloseoutObservedSignals;
+    }
+  | { readonly observation: "no-surface" }
   | { readonly observation: "not-found" }
   | { readonly observation: "unavailable" }
   | { readonly observation: "invalid"; readonly detail: string };
@@ -348,7 +383,7 @@ export type CloseoutProviderRuntime = {
   readonly listBlockedByDependents?: (input: {
     readonly entityId: string;
     readonly limit: number;
-  }) => Promise<CloseoutReadObservation<readonly WorkItem[]>>;
+  }) => Promise<CloseoutReverseDependentObservation<readonly WorkItem[]>>;
   readonly writeWorkItem: (
     input: CloseoutWriteArguments & { readonly entityId: string },
   ) => Promise<CloseoutWriteOutcome>;
@@ -400,7 +435,11 @@ export type CloseoutGitRuntime = {
   readonly isClean: () => Promise<boolean>;
   readonly resolveRef: (input: { readonly ref: string }) => Promise<boolean>;
   readonly restoreCheckout: (input: { readonly baseRef: string }) => Promise<CloseoutWriteOutcome>;
-  readonly deleteBranch: (input: { readonly branch: string }) => Promise<CloseoutWriteOutcome>;
+  readonly deleteBranch: (input: {
+    readonly branch: string;
+    /** Re-checked against the local branch head immediately before deletion. */
+    readonly expectedHead?: string;
+  }) => Promise<CloseoutWriteOutcome>;
 };
 
 /** The fenced state operations the closeout engine consumes (PIN-13, D6). */

@@ -47,6 +47,7 @@ import {
   type CloseoutProviderRuntime,
   type CloseoutReadObservation,
   type CloseoutRestoreArguments,
+  type CloseoutReverseDependentObservation,
   type CloseoutStateRuntime,
   type CloseoutStep,
   type CloseoutStepId,
@@ -91,7 +92,7 @@ export type CloseoutPlanFacts = {
   readonly provider: CloseoutPlanProvider;
   readonly observedWorkItem: CloseoutReadObservation<WorkItem>;
   readonly mergedRequest: CloseoutReadObservation<DeliveryRequest>;
-  readonly dependents: CloseoutReadObservation<readonly CloseoutDependentFact[]>;
+  readonly dependents: CloseoutReverseDependentObservation<readonly CloseoutDependentFact[]>;
   readonly checkout: CloseoutCheckoutFacts;
   readonly cleanWorktree: boolean;
   readonly baseRefExists: boolean;
@@ -491,9 +492,12 @@ const labelStep = (facts: CloseoutPlanFacts): CloseoutStep => {
 const unassignStep = (facts: CloseoutPlanFacts): CloseoutStep => {
   const observation = facts.observedWorkItem;
   if (observation.observation !== "observed") {
+    // A read that is not observed says nothing about write support. The gap is
+    // the provider-level read gap, exactly as `ticketStep` reports it; it is
+    // never misattributed to a write capability the adapter may actually have.
     return planStep("unassign", "skipped-gap", {
-      reason: gapReasonFor(facts.provider.capabilities, "write-work-item"),
-      evidence: evidence(field("operation", "write-work-item")),
+      reason: "provider-unsupported",
+      evidence: evidence(field("observation", observation.observation)),
     });
   }
   if (!supports(facts.provider.capabilities, "write-work-item")) {
@@ -521,6 +525,14 @@ const owedFlipStep = (facts: CloseoutPlanFacts): CloseoutStep => {
     });
   }
   const dependents = facts.dependents;
+  if (dependents.observation === "no-surface") {
+    // The provider has no bounded reverse-dependent surface. This is a
+    // provider-level capability gap, never a signal-level skip (AC-F7-6).
+    return planStep("owed-flip-sweep", "skipped-gap", {
+      reason: "provider-unsupported",
+      evidence: evidence(field("surface", "absent")),
+    });
+  }
   if (dependents.observation !== "observed") {
     return planStep("owed-flip-sweep", "skipped-noop", {
       reason: "relation-signal-unavailable",
@@ -541,6 +553,8 @@ const owedFlipStep = (facts: CloseoutPlanFacts): CloseoutStep => {
   let evaluated = 0;
   let skipped = 0;
   let unavailableSignals = 0;
+  let openBlockerTotal = 0;
+  let maxOpenBlockers = 0;
   for (const candidate of bounded) {
     evaluated += 1;
     if (!isOpen(candidate.item)) {
@@ -556,6 +570,8 @@ const owedFlipStep = (facts: CloseoutPlanFacts): CloseoutStep => {
     const openBlockers = blockers.value.filter(isOpen);
     if (openBlockers.length > 0) {
       skipped += 1;
+      openBlockerTotal += openBlockers.length;
+      maxOpenBlockers = Math.max(maxOpenBlockers, openBlockers.length);
       continue;
     }
     const hasHandBack = candidate.item.labels.includes(OWNER_ATTENTION_LABEL);
@@ -576,6 +592,9 @@ const owedFlipStep = (facts: CloseoutPlanFacts): CloseoutStep => {
       field("evaluated", evaluated),
       field("flipped", operations.length),
       field("skipped", skipped),
+      field("openBlockers", openBlockerTotal),
+      field("maxOpenBlockers", maxOpenBlockers),
+      field("unavailableSignals", unavailableSignals),
     ),
     ...(truncated
       ? {
@@ -783,15 +802,18 @@ const boundedOperations = (
   budget: number,
 ): readonly CloseoutOperation[] => operations.slice(0, Math.max(0, budget));
 
+/** UTF-8 byte length of a string (the bound is declared in bytes, not code units). */
+const utf8ByteLength = (text: string): number => new TextEncoder().encode(text).length;
+
 /**
  * Bound the machine payload deterministically (64 KiB). When the payload is
  * over the bound, trailing operations are dropped first and the affected step
  * records a truncation marker; the shape of the payload never changes.
  */
 export const boundCloseoutData = (data: CloseoutData): CloseoutData => {
-  if (JSON.stringify(data).length <= CLOSEOUT_MAX_MACHINE_BYTES) return data;
+  if (utf8ByteLength(JSON.stringify(data)) <= CLOSEOUT_MAX_MACHINE_BYTES) return data;
   let steps = [...data.steps];
-  while (JSON.stringify({ ...data, steps }).length > CLOSEOUT_MAX_MACHINE_BYTES) {
+  while (utf8ByteLength(JSON.stringify({ ...data, steps })) > CLOSEOUT_MAX_MACHINE_BYTES) {
     const last = steps[steps.length - 1];
     if (last === undefined) break;
     if (last.operations.length > 0) {
@@ -857,6 +879,7 @@ const executeOperation = async (
   operation: CloseoutOperation,
   provider: CloseoutProviderRuntime,
   git: CloseoutGitRuntime,
+  expectedHead?: string,
 ): Promise<CloseoutWriteOutcome> => {
   const args = operation.arguments;
   if (operation.name === "transition-work-item" && "deliveryState" in args) {
@@ -886,7 +909,10 @@ const executeOperation = async (
     return git.restoreCheckout({ baseRef: args.baseRef });
   }
   if (operation.name === "delete-branch" && "branch" in args) {
-    return git.deleteBranch({ branch: args.branch });
+    return git.deleteBranch({
+      branch: args.branch,
+      ...(expectedHead === undefined ? {} : { expectedHead }),
+    });
   }
   return {
     ok: false,
@@ -919,7 +945,7 @@ const recordFor = (
   timestamp,
 });
 
-const targetFailure = (plan: CloseoutPlan): CloseoutRunResult | undefined => {
+const targetFailure = (plan: CloseoutPlan, apply: boolean): CloseoutRunResult | undefined => {
   for (const step of plan.steps) {
     if (step.reason === "closeout.target.unobserved") {
       return {
@@ -927,7 +953,10 @@ const targetFailure = (plan: CloseoutPlan): CloseoutRunResult | undefined => {
         error: { kind: "closeout", code: "closeout.target.unobserved" },
       };
     }
-    if (step.reason === "closeout.target.ambiguous") {
+    // F-10 phrases branch ambiguity as an apply-time outcome. Plan mode renders
+    // the already-computed `would-refuse` step so the operator can inspect it;
+    // only apply projects the hard failure (and deletes nothing).
+    if (apply && step.reason === "closeout.target.ambiguous") {
       return {
         ok: false,
         error: { kind: "closeout", code: "closeout.target.ambiguous" },
@@ -953,7 +982,7 @@ const targetFailure = (plan: CloseoutPlan): CloseoutRunResult | undefined => {
  * local restore and skips branch deletion.
  */
 export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunResult> => {
-  const failure = targetFailure(input.plan);
+  const failure = targetFailure(input.plan, input.apply);
   if (failure !== undefined) return failure;
 
   if (!input.apply) {
@@ -986,6 +1015,7 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
   let earlierFailure = false;
   let stateFailure: { kind: string; code: string } | undefined;
   const steps: CloseoutStep[] = [];
+  const mergedHeadSha = input.plan.deliveryRequest?.headSha;
 
   const append = (record: CloseoutOperationRecord): boolean => {
     const appended = input.state.append(handle, record);
@@ -1035,7 +1065,7 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
           satisfied += 1;
           continue;
         }
-        const result = await executeOperation(operation, input.provider, input.git);
+        const result = await executeOperation(operation, input.provider, input.git, mergedHeadSha);
         if (!result.ok) {
           failed += 1;
           earlierFailure = true;
@@ -1124,7 +1154,7 @@ export const renderCloseoutHuman = (data: CloseoutData): string => {
   lines.push(`summary: ${summaryLine}`);
   const bounded = lines.slice(0, CLOSEOUT_MAX_HUMAN_LINES);
   let text = `${bounded.join("\n")}\n`;
-  while (text.length > CLOSEOUT_MAX_HUMAN_BYTES) {
+  while (utf8ByteLength(text) > CLOSEOUT_MAX_HUMAN_BYTES) {
     bounded.pop();
     text = `${bounded.join("\n")}\n`;
   }

@@ -26,13 +26,38 @@ const parsed = (body: string | undefined): Record<string, unknown> => {
 };
 
 describe("TC-CLOSE-067 GitHub read observation", () => {
-  test("an observed issue returns the discriminated observation", async () => {
+  test("an observed issue returns the discriminated observation and label signal", async () => {
     const { client } = makeGithubClient();
     const result = await client.readWorkItemObservation("183");
     expect(result.observation).toBe("observed");
     if (result.observation === "observed") {
       expect(result.value.identity.entityId).toBe("183");
       expect(result.value.labels).toContain("vendor-label");
+      expect(result.signals?.labels).toBe("observed");
+      expect(result.signals?.relations).toBe("observed");
+    }
+  });
+
+  test("an omitted label container is an unavailable signal, never an empty set", async () => {
+    const payload = { ...(githubIssueFixture() as Record<string, unknown>) };
+    delete payload.labels;
+    const { client } = makeGithubClient([{ method: "GET", url: issueUrl(183), body: payload }]);
+    const result = await client.readWorkItemObservation("183");
+    expect(result.observation).toBe("observed");
+    if (result.observation === "observed") {
+      expect(result.signals?.labels).toBe("unavailable");
+    }
+    const write = await client.writeWorkItem({ entityId: "183", add: ["delivered"] });
+    expect(write.ok).toBe(false);
+  });
+
+  test("401/403/500 are invalid, not an unavailable surface", async () => {
+    for (const status of [401, 403, 500]) {
+      const { client } = makeGithubClient([
+        { method: "GET", url: issueUrl(183), status, body: {} },
+      ]);
+      const result = await client.readWorkItemObservation("183");
+      expect(result.observation, String(status)).toBe("invalid");
     }
   });
 
@@ -85,9 +110,18 @@ describe("TC-CLOSE-031 GitHub reverse dependents", () => {
     );
   });
 
-  test("an absent surface is unavailable, never an empty observed set", async () => {
+  test("an absent surface is no-surface, never unavailable or an empty observed set", async () => {
     const { client } = makeGithubClient([
       { method: "GET", url: dependenciesUrl(183, 200), status: 404, body: {} },
+    ]);
+    expect(
+      (await client.listBlockedByDependents({ entityId: "183", limit: 200 })).observation,
+    ).toBe("no-surface");
+  });
+
+  test("an existing surface whose current read fails is unavailable, not a provider gap", async () => {
+    const { client } = makeGithubClient([
+      { method: "GET", url: dependenciesUrl(183, 200), status: 500, body: {} },
     ]);
     expect(
       (await client.listBlockedByDependents({ entityId: "183", limit: 200 })).observation,

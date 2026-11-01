@@ -1,7 +1,17 @@
 /** Jira closeout writes: done transition, label replace preservation, clear. */
 import { describe, expect, test } from "bun:test";
-import { issueUrl, jiraIssueFixture, makeJiraClient } from "../../fixtures/closeout/jira-client";
+import {
+  issueUrl,
+  jiraInstance,
+  jiraIssueFixture,
+  makeJiraClient,
+} from "../../fixtures/closeout/jira-client";
 import { readJson, requireRecord } from "./support";
+
+const dependentsUrl = (key: string, limit: number): string =>
+  `${jiraInstance.baseUrl}/rest/api/2/search?jql=${encodeURIComponent(
+    `issue in linkedIssues("${key}") AND statusCategory != Done ORDER BY key ASC`,
+  )}&maxResults=${limit}`;
 
 const parsed = (body: string | undefined): Record<string, unknown> => {
   if (body === undefined) throw new Error("expected a request body");
@@ -13,11 +23,44 @@ const parsed = (body: string | undefined): Record<string, unknown> => {
 };
 
 describe("TC-CLOSE-067 Jira read observation", () => {
-  test("an observed issue returns the discriminated observation", async () => {
+  test("an observed issue returns the discriminated observation and label signal", async () => {
     const { client } = makeJiraClient();
     const result = await client.readWorkItemObservation("TRACK-101");
     expect(result.observation).toBe("observed");
-    if (result.observation === "observed") expect(result.value.identity.entityId).toBe("TRACK-101");
+    if (result.observation === "observed") {
+      expect(result.value.identity.entityId).toBe("TRACK-101");
+      expect(result.signals?.labels).toBe("observed");
+      expect(result.signals?.relations).toBe("observed");
+    }
+  });
+
+  test("an omitted label container is unavailable and never a full-array replace", async () => {
+    const issue = JSON.parse(JSON.stringify(jiraIssueFixture())) as {
+      fields: Record<string, unknown>;
+    };
+    delete issue.fields.labels;
+    const { client } = makeJiraClient([{ method: "GET", url: issueUrl("TRACK-101"), body: issue }]);
+    const result = await client.readWorkItemObservation("TRACK-101");
+    expect(result.observation).toBe("observed");
+    if (result.observation === "observed") {
+      expect(result.signals?.labels).toBe("unavailable");
+    }
+    const write = await client.writeWorkItem({
+      issueKey: "TRACK-101",
+      add: ["delivered"],
+    });
+    expect(write.ok).toBe(false);
+  });
+
+  test("401/403/500 are invalid, not an unavailable surface", async () => {
+    for (const status of [401, 403, 500]) {
+      const { client } = makeJiraClient([
+        { method: "GET", url: issueUrl("TRACK-101"), status, body: {} },
+      ]);
+      expect((await client.readWorkItemObservation("TRACK-101")).observation, String(status)).toBe(
+        "invalid",
+      );
+    }
   });
 
   test("404 is not-found and a malformed 2xx is invalid", async () => {
@@ -110,7 +153,20 @@ describe("TC-CLOSE-031 Jira reverse dependents", () => {
     }
   });
 
-  test("a missing surface is unavailable, never an empty observed set", async () => {
+  test("an absent search surface is no-surface, never an empty observed set", async () => {
+    const { client } = makeJiraClient([
+      {
+        method: "GET",
+        url: dependentsUrl("TRACK-101", 200),
+        status: 404,
+        body: {},
+      },
+    ]);
+    const result = await client.listBlockedByDependents({ issueKey: "TRACK-101", limit: 200 });
+    expect(result.observation).toBe("no-surface");
+  });
+
+  test("a read failure on an existing surface is unavailable", async () => {
     const { client } = makeJiraClient([
       { method: "GET", url: issueUrl("TRACK-101"), body: jiraIssueFixture() },
     ]);

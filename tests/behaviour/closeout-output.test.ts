@@ -55,8 +55,8 @@ describe("TC-CLOSE-061 four closeout identities project exactly", () => {
     });
   });
 
-  test("ambiguous is user-validation exit 1", async () => {
-    const run = await runCloseoutCli(["closeout", WORK_ITEM_REF, "--json"], {
+  test("ambiguous on apply is user-validation exit 1", async () => {
+    const run = await runCloseoutCli(["closeout", WORK_ITEM_REF, "--apply", "--json"], {
       facts: makeFacts({
         mergedRequest: observed(makeMergedRequest({ headSha: "not-a-branch-head" })),
         branches: [

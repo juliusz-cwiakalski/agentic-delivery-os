@@ -11,6 +11,23 @@ const owed = (facts: Parameters<typeof buildCloseoutPlan>[0]) =>
   buildCloseoutPlan(facts).steps.find((step) => step.stepId === "owed-flip-sweep");
 
 describe("TC-CLOSE-036 no reverse-read surface is a provider-level gap", () => {
+  test("a GitHub-like provider with read-work-item and no reverse surface is provider-unsupported", () => {
+    const facts = makeFacts();
+    const step = owed({
+      ...facts,
+      dependents: { observation: "no-surface" },
+    });
+    expect(step?.outcome).toBe("skipped-gap");
+    expect(step?.reason).toBe("provider-unsupported");
+    expect(step?.evidence).toContainEqual({ name: "surface", value: "absent" });
+  });
+
+  test("a surface that exists but reads unavailable stays a signal-level skip", () => {
+    const step = owed(makeFacts({ dependents: { observation: "unavailable" } }));
+    expect(step?.outcome).toBe("skipped-noop");
+    expect(step?.reason).toBe("relation-signal-unavailable");
+  });
+
   test("a provider without read-work-item declares provider-unsupported", () => {
     const facts = makeFacts();
     const step = owed({
@@ -64,5 +81,7 @@ describe("TC-CLOSE-034 relation-signal split", () => {
     );
     expect(step?.operations.map((operation) => operation.target.entityId)).toEqual(["200"]);
     expect(step?.evidence.find((field) => field.name === "skipped")?.value).toBe(1);
+    expect(step?.evidence.find((field) => field.name === "openBlockers")?.value).toBe(1);
+    expect(step?.evidence.find((field) => field.name === "maxOpenBlockers")?.value).toBe(1);
   });
 });

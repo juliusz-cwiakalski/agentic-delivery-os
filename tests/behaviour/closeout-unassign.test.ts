@@ -23,6 +23,12 @@ describe("TC-CLOSE-027/028 explicit clear", () => {
 });
 
 describe("TC-CLOSE-029/030 gaps and re-runs", () => {
+  test("an unavailable read is a provider-level gap, not a write gap", () => {
+    const step = unassign(makeFacts({ observedWorkItem: { observation: "unavailable" } }));
+    expect(step?.outcome).toBe("skipped-gap");
+    expect(step?.reason).toBe("provider-unsupported");
+  });
+
   test("a provider without label writes declares a gap", () => {
     const facts = makeFacts();
     const step = unassign({

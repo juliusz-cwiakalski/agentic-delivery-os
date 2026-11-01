@@ -9,6 +9,7 @@
 import {
   CLOSEOUT_OPERATION_TIMEOUT_MS,
   type CloseoutReadObservation,
+  type CloseoutReverseDependentObservation,
   type CredentialPort,
   type ExternalSystemInstance,
   type WorkItem,
@@ -58,7 +59,7 @@ export type JiraClient = {
   readonly listBlockedByDependents: (input: {
     readonly issueKey: string;
     readonly limit: number;
-  }) => Promise<CloseoutReadObservation<readonly WorkItem[]>>;
+  }) => Promise<CloseoutReverseDependentObservation<readonly WorkItem[]>>;
   readonly writeWorkItem: (input: JiraWriteWorkItemInput) => Promise<ProviderWriteResult>;
   readonly transitionWorkItem: (input: {
     readonly issueKey: string;
@@ -195,7 +196,11 @@ export const createJiraClient = (options: JiraClientOptions): JiraClient => {
         `/rest/api/2/search?jql=${encodeURIComponent(jql)}&maxResults=${encodeURIComponent(String(input.limit))}`,
       );
       if (!response.ok) return { observation: "unavailable" };
-      if (response.status === 404 || response.status === 410) return { observation: "unavailable" };
+      // A missing search surface is a provider-level gap; an existing surface
+      // whose current read fails is a signal-level skip (AC-F7-6).
+      if (response.status === 404 || response.status === 410) {
+        return { observation: "no-surface" };
+      }
       if (response.status < 200 || response.status >= 300) return { observation: "unavailable" };
       return normalizeJiraDependentObservation(response.body, context);
     },
@@ -203,6 +208,11 @@ export const createJiraClient = (options: JiraClientOptions): JiraClient => {
       const current = await readObservation(input.issueKey);
       if (current.observation !== "observed") {
         return providerPayloadFailure("Jira work-item labels are unavailable");
+      }
+      if (current.signals?.labels === "unavailable") {
+        // A full-array replace computed from a collapsed empty set would erase
+        // the provider's real labels; refuse instead.
+        return providerPayloadFailure("Jira label signal is unavailable");
       }
       const labels = computeJiraLabelTargetSet(
         current.value.labels,

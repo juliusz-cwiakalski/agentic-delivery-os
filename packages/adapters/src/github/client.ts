@@ -9,6 +9,7 @@ import {
   CLOSEOUT_MAX_DEPENDENTS,
   CLOSEOUT_OPERATION_TIMEOUT_MS,
   type CloseoutReadObservation,
+  type CloseoutReverseDependentObservation,
   type CredentialPort,
   type DeliveryRequest,
   type ExternalSystemInstance,
@@ -93,7 +94,7 @@ export type GithubClient = {
   readonly listBlockedByDependents: (input: {
     readonly entityId: string;
     readonly limit: number;
-  }) => Promise<CloseoutReadObservation<readonly WorkItem[]>>;
+  }) => Promise<CloseoutReverseDependentObservation<readonly WorkItem[]>>;
   readonly writeWorkItem: (input: GithubWriteWorkItemInput) => Promise<ProviderWriteResult>;
   readonly transitionWorkItem: (input: {
     readonly entityId: string;
@@ -309,14 +310,29 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
         : { observation: "observed", value: selected };
     },
     listBlockedByDependents: async (input) => {
-      const response = await send(
-        "GET",
-        `${repositoryPath}/issues/${encodeURIComponent(input.entityId)}/dependencies?per_page=${encodeURIComponent(String(input.limit ?? CLOSEOUT_MAX_DEPENDENTS))}`,
-      );
-      if (!response.ok) {
+      const headers = authorizedHeaders();
+      if (!headers.ok) return { observation: "invalid", detail: headers.code };
+      try {
+        const response = await transport.send({
+          url: `${baseUrl}${repositoryPath}/issues/${encodeURIComponent(input.entityId)}/dependencies?per_page=${encodeURIComponent(String(input.limit ?? CLOSEOUT_MAX_DEPENDENTS))}`,
+          method: "GET",
+          headers: headers.value,
+          timeoutMs,
+        });
+        // A missing endpoint means the provider has no bounded reverse-read
+        // surface: that is a provider-level gap, never an empty observed set.
+        if (response.status === 404 || response.status === 410) {
+          return { observation: "no-surface" };
+        }
+        // An existing surface whose current read is unavailable (auth outage,
+        // server failure, transport error) is a signal-level skip.
+        if (response.status < 200 || response.status >= 300) {
+          return { observation: "unavailable" };
+        }
+        return normalizeIssueDependencies(response.body, context);
+      } catch {
         return { observation: "unavailable" };
       }
-      return normalizeIssueDependencies(response.value, context);
     },
     writeWorkItem: async (input) => {
       let labels: readonly string[] | undefined;
@@ -324,6 +340,10 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
         const current = await readObservation(input.entityId);
         if (current.observation !== "observed") {
           return providerPayloadFailure("GitHub work-item labels are unavailable");
+        }
+        if (current.signals?.labels === "unavailable") {
+          // Never synthesize a replacement from a collapsed empty set.
+          return providerPayloadFailure("GitHub label signal is unavailable");
         }
         const remove = new Set(input.remove ?? []);
         const add = input.add ?? [];
