@@ -11,7 +11,9 @@ import { createCloseoutStateRuntime } from "../../packages/cli/src/edge";
 import type {
   CloseoutOperationIdentityInputs,
   CloseoutOperationRecord,
+  StateJsonValue,
 } from "../../packages/core/src/contracts/index";
+import { CLOSEOUT_OPERATION_RECORD_KIND } from "../../packages/core/src/contracts/index";
 import { STATE_SCHEMA_VERSION } from "../../packages/core/src/contracts/state";
 import {
   buildCloseoutPlan,
@@ -21,7 +23,11 @@ import {
   runCloseout,
 } from "../../packages/core/src/domain/closeout";
 import { sha256Hex } from "../../packages/core/src/domain/sha256";
-import { readCloseoutHistory } from "../../packages/core/src/state/index";
+import {
+  appendCloseoutOutcome,
+  closeoutOperationRecordKey,
+  readCloseoutHistory,
+} from "../../packages/core/src/state/index";
 import {
   CLOSEOUT_TIMESTAMP,
   makeFacts,
@@ -363,6 +369,102 @@ describe("TC-CLOSE-019/NFR-8 real JSONL closeout ledger", () => {
       expect(readCloseoutHistory(store, WORK_ITEM_REF).ok).toBe(false);
     } finally {
       removeRoot(root);
+    }
+  });
+});
+
+const ledgerRecordAt = (index: number): CloseoutOperationRecord => ({
+  schemaId: "delivery.closeout.operation.v1",
+  operationId: index.toString(16).padStart(64, "0"),
+  workItemRef: WORK_ITEM_REF,
+  engine: "git",
+  capabilityContext: "supported",
+  operation: "delete-branch",
+  arguments: { branch: `branch-${index}` },
+  target: { systemName: "git", entityId: `branch-${index}` },
+  outcome: "applied",
+  evidence: [{ name: "operation", value: "delete-branch" }],
+  timestamp: "2026-11-01T00:00:00Z",
+});
+
+describe("TC-CLOSE-019 closeout ledger stores one record per append", () => {
+  test("300 appends store 300 records and cumulative size grows linearly", () => {
+    const root = makeRealStateRoot();
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      const acquired = store.acquireFence("fence-linear");
+      expect(acquired.ok).toBe(true);
+      if (!acquired.ok) return;
+      const half = 150;
+      for (let index = 0; index < half; index += 1) {
+        const appended = appendCloseoutOutcome(store, acquired.value.handle, ledgerRecordAt(index));
+        expect(appended.ok).toBe(true);
+      }
+      const firstHalf = ledgerText(identity);
+      expect(ledgerLines(firstHalf)).toHaveLength(half);
+      for (let index = half; index < half * 2; index += 1) {
+        const appended = appendCloseoutOutcome(store, acquired.value.handle, ledgerRecordAt(index));
+        expect(appended.ok).toBe(true);
+      }
+      const full = ledgerText(identity);
+      expect(ledgerLines(full)).toHaveLength(half * 2);
+      // A full-history payload would make the second half ~3x the first half;
+      // one-record payloads keep the two halves approximately equal.
+      expect(full.length - firstHalf.length).toBeLessThan(firstHalf.length * 1.5);
+      const history = readCloseoutHistory(store, WORK_ITEM_REF);
+      expect(history.ok).toBe(true);
+      if (history.ok) expect(history.value).toHaveLength(half * 2);
+      store.releaseFence(acquired.value.handle);
+    } finally {
+      removeRoot(root);
+    }
+  }, 30_000);
+
+  test("malformed ledger records are a classified state error, never dropped", () => {
+    const cases: ReadonlyArray<{ readonly label: string; readonly payload: StateJsonValue }> = [
+      {
+        label: "unknown outcome",
+        payload: { ...ledgerRecordAt(1), outcome: "not-a-real-outcome" },
+      },
+      {
+        label: "unknown operation",
+        payload: { ...ledgerRecordAt(2), operation: "not-a-real-operation" },
+      },
+      {
+        label: "bad operation id",
+        payload: { ...ledgerRecordAt(3), operationId: "not-a-sha" },
+      },
+      {
+        label: "bad canonical arguments",
+        payload: { ...ledgerRecordAt(4), arguments: { branch: 7 } },
+      },
+      {
+        label: "bad evidence entry",
+        payload: { ...ledgerRecordAt(5), evidence: [{ name: "x", value: { nested: true } }] },
+      },
+    ];
+    for (const entry of cases) {
+      const root = makeRealStateRoot();
+      try {
+        const identity = makeIdentity(root);
+        const { store } = openStore(identity);
+        const acquired = store.acquireFence(`fence-malformed-${entry.label}`);
+        expect(acquired.ok).toBe(true);
+        if (!acquired.ok) continue;
+        const appended = store.append(acquired.value.handle, {
+          kind: CLOSEOUT_OPERATION_RECORD_KIND,
+          recordKey: closeoutOperationRecordKey(WORK_ITEM_REF),
+          payload: entry.payload,
+        });
+        expect(appended.ok, entry.label).toBe(true);
+        const history = readCloseoutHistory(store, WORK_ITEM_REF);
+        expect(history.ok, entry.label).toBe(false);
+        if (!history.ok) expect(history.error.code, entry.label).toBe("state.store.torn");
+        store.releaseFence(acquired.value.handle);
+      } finally {
+        removeRoot(root);
+      }
     }
   });
 });

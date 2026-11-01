@@ -358,6 +358,16 @@ export const createStateStore = (
       return ok({ values: picked, evidence });
     },
 
+    readRecords(): StateResult<{
+      readonly records: readonly StateRecord[];
+      readonly evidence: StateReadEvidence;
+    }> {
+      if (failure !== undefined) return { ok: false, error: failure };
+      const verified = verifiedState();
+      if (!verified.ok) return verified;
+      return ok({ records: verified.value.records, evidence: verified.value.evidence });
+    },
+
     append(handle: StateFenceHandle, request: StateAppendRequest): StateResult<StateAppendOutcome> {
       if (failure !== undefined) return { ok: false, error: failure };
       const record = appendRecord(handle, request.kind, request.recordKey, request.payload);

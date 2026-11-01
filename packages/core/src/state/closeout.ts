@@ -4,9 +4,14 @@
  *
  * Additive inside `delivery.state.v1`: one append per terminal operation, a
  * verified read, and the first terminal outcome per operation id is
- * authoritative. No schema bump, no migration, no runtime API.
+ * authoritative. Each append carries only the new record; the event history is
+ * folded from the ledger's verified records on read. No schema bump, no
+ * migration, no runtime API.
  */
 import {
+  CLOSEOUT_APPLY_OUTCOMES,
+  CLOSEOUT_GAP_REASONS,
+  CLOSEOUT_OPERATION_NAMES,
   CLOSEOUT_OPERATION_PAYLOAD_SCHEMA,
   CLOSEOUT_OPERATION_RECORD_KIND,
   type CloseoutOperationRecord,
@@ -32,8 +37,21 @@ const TERMINAL: ReadonlySet<string> = new Set([
   "skipped-noop",
 ]);
 
+const CAPABILITY_CONTEXTS: ReadonlySet<string> = new Set(["supported", ...CLOSEOUT_GAP_REASONS]);
+const OPERATION_NAMES: ReadonlySet<string> = new Set(CLOSEOUT_OPERATION_NAMES);
+const APPLY_OUTCOMES: ReadonlySet<string> = new Set(CLOSEOUT_APPLY_OUTCOMES);
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === "string" && value.length > 0;
+
+const isStringArray = (value: unknown): value is readonly string[] =>
+  Array.isArray(value) && value.every((entry) => typeof entry === "string");
+
+const hasOnlyKeys = (value: Readonly<Record<string, unknown>>, allowed: readonly string[]) =>
+  Object.keys(value).every((key) => allowed.includes(key));
 
 const ok = <T>(value: T): StateResult<T> => ({ ok: true, value });
 
@@ -42,24 +60,71 @@ const fail = (code: "state.store.torn", location: StateSafeLocation): StateResul
   error: { kind: "state", code, consequence: "not_landed", location },
 });
 
-/** Serialize one operation record into the JSON payload value. */
-const payloadFor = (records: readonly CloseoutOperationRecord[]): StateJsonValue => ({
-  schemaId: CLOSEOUT_OPERATION_PAYLOAD_SCHEMA,
-  workItemRef: records[0]?.workItemRef ?? "",
-  records: records.map((record) => ({
-    schemaId: record.schemaId,
-    operationId: record.operationId,
-    workItemRef: record.workItemRef,
-    engine: record.engine,
-    capabilityContext: record.capabilityContext,
-    operation: record.operation,
-    arguments: record.arguments as unknown as StateJsonValue,
-    target: record.target,
-    outcome: record.outcome,
-    ...(record.reason === undefined ? {} : { reason: record.reason }),
-    evidence: record.evidence.map((field) => ({ name: field.name, value: field.value })),
-    timestamp: record.timestamp,
-  })),
+/** Validate the canonical arguments for the recorded operation. */
+const validArguments = (operation: string, value: unknown): boolean => {
+  if (!isRecord(value)) return false;
+  switch (operation) {
+    case "transition-work-item":
+      return hasOnlyKeys(value, ["deliveryState"]) && value.deliveryState === "done";
+    case "write-work-item": {
+      if (!hasOnlyKeys(value, ["add", "remove", "assignee"])) return false;
+      const hasAdd = Object.hasOwn(value, "add");
+      const hasRemove = Object.hasOwn(value, "remove");
+      const hasAssignee = Object.hasOwn(value, "assignee");
+      if (!hasAdd && !hasRemove && !hasAssignee) return false;
+      if (hasAdd && !isStringArray(value.add)) return false;
+      if (hasRemove && !isStringArray(value.remove)) return false;
+      if (hasAssignee && value.assignee !== "none") return false;
+      return true;
+    }
+    case "resolve-delivery-thread": {
+      if (!hasOnlyKeys(value, ["deliveryRequest", "threadId"])) return false;
+      if (!isNonEmptyString(value.threadId)) return false;
+      const request = value.deliveryRequest;
+      return (
+        isRecord(request) &&
+        hasOnlyKeys(request, ["systemName", "entityId"]) &&
+        isNonEmptyString(request.systemName) &&
+        isNonEmptyString(request.entityId)
+      );
+    }
+    case "restore-checkout":
+      return hasOnlyKeys(value, ["baseRef"]) && isNonEmptyString(value.baseRef);
+    case "delete-branch":
+      return hasOnlyKeys(value, ["branch"]) && isNonEmptyString(value.branch);
+    default:
+      return false;
+  }
+};
+
+const validEvidence = (value: unknown): boolean => {
+  if (!Array.isArray(value)) return false;
+  return value.every((field) => {
+    if (!isRecord(field) || !hasOnlyKeys(field, ["name", "value"])) return false;
+    if (!isNonEmptyString(field.name)) return false;
+    const fieldValue = field.value;
+    return (
+      typeof fieldValue === "string" ||
+      typeof fieldValue === "boolean" ||
+      (typeof fieldValue === "number" && Number.isFinite(fieldValue))
+    );
+  });
+};
+
+/** Serialize exactly one operation record into the JSON payload value. */
+const payloadFor = (record: CloseoutOperationRecord): StateJsonValue => ({
+  schemaId: record.schemaId,
+  operationId: record.operationId,
+  workItemRef: record.workItemRef,
+  engine: record.engine,
+  capabilityContext: record.capabilityContext,
+  operation: record.operation,
+  arguments: record.arguments as unknown as StateJsonValue,
+  target: record.target,
+  outcome: record.outcome,
+  ...(record.reason === undefined ? {} : { reason: record.reason }),
+  evidence: record.evidence.map((field) => ({ name: field.name, value: field.value })),
+  timestamp: record.timestamp,
 });
 
 const recordFrom = (
@@ -67,42 +132,41 @@ const recordFrom = (
   location: StateSafeLocation,
 ): StateResult<CloseoutOperationRecord> => {
   if (!isRecord(value)) return fail("state.store.torn", location);
-  const required = [
-    "schemaId",
-    "operationId",
-    "workItemRef",
-    "engine",
-    "capabilityContext",
-    "operation",
-    "arguments",
-    "target",
-    "outcome",
-    "evidence",
-    "timestamp",
-  ];
-  const missing = required.filter((key) => !Object.hasOwn(value, key));
-  if (missing.length > 0) {
-    return {
-      ok: false,
-      error: {
-        kind: "state",
-        code: "state.keys.missing",
-        consequence: "not_landed",
-        location: { ...location, missingKeys: missing },
-      },
-    };
-  }
   if (value.schemaId !== CLOSEOUT_OPERATION_PAYLOAD_SCHEMA) {
     return fail("state.store.torn", location);
   }
+  if (typeof value.operationId !== "string" || !/^[0-9a-f]{64}$/.test(value.operationId)) {
+    return fail("state.store.torn", location);
+  }
+  if (!isNonEmptyString(value.workItemRef)) return fail("state.store.torn", location);
+  if (!isNonEmptyString(value.engine)) return fail("state.store.torn", location);
   if (
-    !isRecord(value.target) ||
-    typeof value.target.entityId !== "string" ||
-    typeof value.target.systemName !== "string"
+    typeof value.capabilityContext !== "string" ||
+    !CAPABILITY_CONTEXTS.has(value.capabilityContext)
   ) {
     return fail("state.store.torn", location);
   }
-  if (!Array.isArray(value.evidence)) return fail("state.store.torn", location);
+  const operation = value.operation;
+  if (typeof operation !== "string" || !OPERATION_NAMES.has(operation)) {
+    return fail("state.store.torn", location);
+  }
+  if (typeof value.outcome !== "string" || !APPLY_OUTCOMES.has(value.outcome)) {
+    return fail("state.store.torn", location);
+  }
+  if (!validArguments(operation, value.arguments)) return fail("state.store.torn", location);
+  if (
+    !isRecord(value.target) ||
+    !hasOnlyKeys(value.target, ["systemName", "entityId"]) ||
+    !isNonEmptyString(value.target.systemName) ||
+    !isNonEmptyString(value.target.entityId)
+  ) {
+    return fail("state.store.torn", location);
+  }
+  if (!validEvidence(value.evidence)) return fail("state.store.torn", location);
+  if (!isNonEmptyString(value.timestamp)) return fail("state.store.torn", location);
+  if (Object.hasOwn(value, "reason") && typeof value.reason !== "string") {
+    return fail("state.store.torn", location);
+  }
   return ok(value as unknown as CloseoutOperationRecord);
 };
 
@@ -111,29 +175,21 @@ export const readCloseoutHistory = (
   store: StateStorePort,
   workItemRef: string,
 ): StateResult<readonly CloseoutOperationRecord[]> => {
-  const probe = store.read({ requiredKeys: [] });
-  if (!probe.ok) return probe;
-  if (probe.value.evidence.verifiedEmpty) return ok([]);
+  const verified = store.readRecords();
+  if (!verified.ok) return verified;
   const recordKey = closeoutOperationRecordKey(workItemRef);
-  const read = store.read({ requiredKeys: [recordKey] });
-  if (!read.ok) {
-    const absent =
-      read.error.code === "state.keys.missing" &&
-      (read.error.location.missingKeys ?? []).includes(recordKey);
-    return absent ? ok([]) : read;
-  }
-  const payload = read.value.values[recordKey];
-  if (!isRecord(payload) || !Array.isArray(payload.records)) {
-    return fail("state.store.torn", {
-      path: read.value.evidence.storePath,
-      record: read.value.evidence.recordCount,
-    });
-  }
   const records: CloseoutOperationRecord[] = [];
-  for (const entry of payload.records) {
-    const parsed = recordFrom(entry, {
-      path: read.value.evidence.storePath,
-      record: read.value.evidence.recordCount,
+  for (const ledgerRecord of verified.value.records) {
+    if (ledgerRecord.key !== recordKey) continue;
+    if (ledgerRecord.kind !== CLOSEOUT_OPERATION_RECORD_KIND) {
+      return fail("state.store.torn", {
+        path: verified.value.evidence.storePath,
+        record: ledgerRecord.sequence,
+      });
+    }
+    const parsed = recordFrom(ledgerRecord.payload, {
+      path: verified.value.evidence.storePath,
+      record: ledgerRecord.sequence,
     });
     if (!parsed.ok) return parsed;
     records.push(parsed.value);
@@ -149,14 +205,13 @@ export const appendCloseoutOutcome = (
 ): StateResult<StateAppendOutcome> => {
   const current = readCloseoutHistory(store, record.workItemRef);
   if (!current.ok) return current;
-  const records = [...current.value, record];
   const appended = store.append(handle, {
     kind: CLOSEOUT_OPERATION_RECORD_KIND,
     recordKey: closeoutOperationRecordKey(record.workItemRef),
-    payload: payloadFor(records),
+    payload: payloadFor(record),
   });
   if (!appended.ok) return appended;
-  const verification = readCoverage(store, record.workItemRef, records.length);
+  const verification = readCoverage(store, record.workItemRef, current.value.length + 1);
   return verification.ok ? appended : verification;
 };
 

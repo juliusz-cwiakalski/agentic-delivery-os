@@ -160,6 +160,10 @@ export const guardStore = (
       recorder.calls.push("read");
       return inner.read(request);
     },
+    readRecords: () => {
+      recorder.calls.push("readRecords");
+      return inner.readRecords();
+    },
     append: (handle, request) => {
       mutation("append");
       return inner.append(handle, request);

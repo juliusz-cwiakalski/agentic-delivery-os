@@ -208,6 +208,15 @@ export type StateRepairOutcome = {
 export type StateStorePort = {
   readonly identity: StateStoreIdentity;
   read(request: StateReadRequest): StateResult<StateReadOutcome>;
+  /**
+   * Read every verified ledger record in sequence order. Consumer ledgers that
+   * append one event per record fold their history from this view; the
+   * latest-value `read` remains the projection for single-value keys.
+   */
+  readRecords(): StateResult<{
+    readonly records: readonly StateRecord[];
+    readonly evidence: StateReadEvidence;
+  }>;
   append(handle: StateFenceHandle, request: StateAppendRequest): StateResult<StateAppendOutcome>;
   replaceDocument(
     handle: StateFenceHandle,
