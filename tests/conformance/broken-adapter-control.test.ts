@@ -194,6 +194,7 @@ describe("TC-CONF-017 failure diagnostics and redaction", () => {
             { operation: "read-delivery-request", reason: "adapter-not-implemented" },
             { operation: "write-delivery-request", reason: "adapter-not-implemented" },
             { operation: "read-pipeline-run", reason: "adapter-not-implemented" },
+            { operation: "resolve-delivery-thread", reason: "adapter-not-implemented" },
           ],
         },
       },

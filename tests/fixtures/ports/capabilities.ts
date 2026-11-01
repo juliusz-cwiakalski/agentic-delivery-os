@@ -217,6 +217,7 @@ export const EXPECTED_SEED_POSTURES = {
       "read-delivery-request": "provider-unsupported",
       "write-delivery-request": "provider-unsupported",
       "read-pipeline-run": "provider-unsupported",
+      "resolve-delivery-thread": "provider-unsupported",
     },
   },
   gitlab: {
@@ -229,6 +230,7 @@ export const EXPECTED_SEED_POSTURES = {
       "write-work-item": "adapter-not-implemented",
       "transition-work-item": "adapter-not-implemented",
       "write-comment": "adapter-not-implemented",
+      "resolve-delivery-thread": "adapter-not-implemented",
     },
   },
   github: {
@@ -240,6 +242,7 @@ export const EXPECTED_SEED_POSTURES = {
       "write-delivery-request": "adapter-not-implemented",
       "transition-work-item": "adapter-not-implemented",
       "write-comment": "adapter-not-implemented",
+      "resolve-delivery-thread": "adapter-not-implemented",
     },
   },
 } as const satisfies Readonly<Record<"jira" | "gitlab" | "github", ExpectedSeedPosture>>;

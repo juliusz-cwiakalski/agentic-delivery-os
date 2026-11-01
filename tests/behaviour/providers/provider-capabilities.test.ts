@@ -91,6 +91,7 @@ const WRITE_METHODS: Readonly<Partial<Record<AdapterOperation, string>>> = {
   "write-delivery-request": "writeDeliveryRequest",
   "transition-work-item": "transitionWorkItem",
   "write-comment": "writeComment",
+  "resolve-delivery-thread": "resolveDeliveryThread",
 };
 
 /** Validate a declaration read from untrusted data (also used for mutations). */

@@ -23,6 +23,7 @@ export const JIRA_ADAPTER_CONTRACT: AdapterContract = {
       { operation: "read-delivery-request", reason: "provider-unsupported" },
       { operation: "write-delivery-request", reason: "provider-unsupported" },
       { operation: "read-pipeline-run", reason: "provider-unsupported" },
+      { operation: "resolve-delivery-thread", reason: "provider-unsupported" },
     ],
     writableCarriers: [],
     readableCarriers: [],

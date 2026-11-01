@@ -17,6 +17,7 @@ export const GITHUB_ADAPTER_CONTRACT: AdapterContract = {
       { operation: "write-delivery-request", reason: "adapter-not-implemented" },
       { operation: "transition-work-item", reason: "adapter-not-implemented" },
       { operation: "write-comment", reason: "adapter-not-implemented" },
+      { operation: "resolve-delivery-thread", reason: "adapter-not-implemented" },
     ],
     writableCarriers: [],
     readableCarriers: [],

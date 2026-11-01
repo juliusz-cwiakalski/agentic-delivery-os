@@ -124,10 +124,10 @@ const withoutOperation = (operation: string): unknown => ({
 });
 
 describe("TC-CONF-001 flow registry shape", () => {
-  test("exactly three flows and twelve ordered steps with unique ids", () => {
+  test("exactly three flows and thirteen ordered steps with unique ids", () => {
     expect(flowRegistryViolations(CONFORMANCE_FLOWS)).toEqual([]);
     expect(CONFORMANCE_FLOWS.map((flow) => flow.flowId)).toEqual([...EXPECTED_FLOW_IDS]);
-    expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)).toHaveLength(12);
+    expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)).toHaveLength(13);
   });
 
   test("every closed operation is represented exactly by the registry data", () => {

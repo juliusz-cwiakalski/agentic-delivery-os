@@ -18,6 +18,7 @@ export const DOMAIN_KINDS = [
   "lint",
   "verify",
   "db",
+  "closeout",
 ] as const;
 
 /** Reserved containment code for broken invocations and unknown commands. */
@@ -404,5 +405,48 @@ export const ERROR_TABLE = [
     remediationHint: "Wait until the live window is empty or stop the opencode host, then retry.",
     projectionClass: "platform-provider",
     summary: "A live session is using the database.",
+  },
+  {
+    code: "closeout.target.unobserved",
+    domainKind: "closeout",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Verify the work item ref; a provider not-found means the item does not exist. A payload/parse failure is `provider.payload.invalid`, and access or credential failures keep their own identities.",
+    projectionClass: "user-validation",
+    summary: "The closeout target work item was not observed (provider not-found).",
+  },
+  {
+    code: "closeout.target.ambiguous",
+    domainKind: "closeout",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint: "Disambiguate the delivery request or local branch for the work item, then retry.",
+    projectionClass: "user-validation",
+    summary: "More than one closeout target matched.",
+  },
+  {
+    code: "closeout.write.failed",
+    domainKind: "closeout",
+    category: "transient",
+    retryable: true,
+    consequence: "unknown",
+    remediationHint:
+      "Inspect the failed operation evidence and retry; completed operations are persisted and idempotent.",
+    projectionClass: "platform-provider",
+    summary: "A closeout provider write did not land.",
+  },
+  {
+    code: "closeout.branch.unsafe",
+    domainKind: "closeout",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Resolve the named checkout, worktree, protected-ref, or merged-head condition, then retry.",
+    projectionClass: "user-validation",
+    summary: "Branch cleanup or checkout restore was refused for safety.",
   },
 ] as const satisfies readonly ErrorTableEntry[];

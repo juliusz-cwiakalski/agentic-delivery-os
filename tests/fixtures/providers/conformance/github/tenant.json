@@ -24,7 +24,8 @@
     "repo": "project-placeholder",
     "issueNumber": 601,
     "pullNumber": 504,
-    "commitSha": "1111111111111111111111111111111111111111"
+    "commitSha": "1111111111111111111111111111111111111111",
+    "threadId": "PRRT_2"
   },
   "routes": [
     {
@@ -146,7 +147,10 @@
         "nativeStatus": "open",
         "deliveryState": "ready"
       },
-      "labels": ["tracker", "hand-back"],
+      "labels": [
+        "tracker",
+        "hand-back"
+      ],
       "assignee": "owner-placeholder",
       "relations": [
         {
@@ -263,7 +267,10 @@
         "nativeStatus": "open",
         "deliveryState": "ready"
       },
-      "labels": ["tracker", "hand-back"],
+      "labels": [
+        "tracker",
+        "hand-back"
+      ],
       "assignee": "owner-placeholder",
       "relations": [
         {
@@ -286,7 +293,10 @@
         "nativeStatus": "open",
         "deliveryState": "ready"
       },
-      "labels": ["tracker", "hand-back"],
+      "labels": [
+        "tracker",
+        "hand-back"
+      ],
       "assignee": "owner-placeholder",
       "relations": [
         {

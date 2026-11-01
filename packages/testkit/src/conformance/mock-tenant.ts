@@ -48,18 +48,20 @@ const decodeAddressing = (
     const issueNumber = numberField(value, "issueNumber");
     const pullNumber = numberField(value, "pullNumber");
     const commitSha = stringField(value, "commitSha");
+    const threadId = stringField(value, "threadId");
     if (
       owner === undefined ||
       repo === undefined ||
       issueNumber === undefined ||
       pullNumber === undefined ||
-      commitSha === undefined
+      commitSha === undefined ||
+      threadId === undefined
     ) {
       return { ok: false, detail: "github addressing is incomplete" };
     }
     return {
       ok: true,
-      value: { provider: "github", owner, repo, issueNumber, pullNumber, commitSha },
+      value: { provider: "github", owner, repo, issueNumber, pullNumber, commitSha, threadId },
     };
   }
   if (provider === "gitlab") {
@@ -79,10 +81,20 @@ const decodeAddressing = (
   return { ok: false, detail: `unsupported provider ${provider}` };
 };
 
+const ROUTE_METHODS: ReadonlySet<string> = new Set([
+  "GET",
+  "POST",
+  "PATCH",
+  "PUT",
+  "DELETE",
+]);
+
 const decodeRoute = (value: unknown, index: number): ConformanceDecodeResult<MockTenantRoute> => {
   if (!isRecord(value)) return { ok: false, detail: `route ${index} is not an object` };
   const method = value.method;
-  if (method !== "GET") return { ok: false, detail: `route ${index} method must be GET` };
+  if (typeof method !== "string" || !ROUTE_METHODS.has(method)) {
+    return { ok: false, detail: `route ${index} method must be one of GET/POST/PATCH/PUT/DELETE` };
+  }
   const url = stringField(value, "url");
   if (url === undefined) return { ok: false, detail: `route ${index} has no url` };
   const status = numberField(value, "status");
@@ -92,7 +104,17 @@ const decodeRoute = (value: unknown, index: number): ConformanceDecodeResult<Moc
   if (!Object.hasOwn(value, "body")) {
     return { ok: false, detail: `route ${index} has no body` };
   }
-  return { ok: true, value: { method: "GET", url, status, body: value.body } };
+  const requestBody = stringField(value, "requestBody");
+  return {
+    ok: true,
+    value: {
+      method: method as MockTenantRoute["method"],
+      url,
+      status,
+      body: value.body,
+      ...(requestBody === undefined ? {} : { requestBody }),
+    },
+  };
 };
 
 /**
@@ -159,7 +181,9 @@ export const decodeMockTenant = (value: unknown): ConformanceDecodeResult<MockTe
   for (const [index, rawRoute] of value.routes.entries()) {
     const decoded = decodeRoute(rawRoute, index);
     if (!decoded.ok) return decoded;
-    const key = `${decoded.value.method} ${decoded.value.url}`;
+    const key = `${decoded.value.method} ${decoded.value.url}${
+      decoded.value.requestBody === undefined ? "" : ` body=${decoded.value.requestBody}`
+    }`;
     if (seen.has(key)) return fail(`duplicate route ${key}`);
     seen.add(key);
     routes.push(decoded.value);
@@ -219,7 +243,8 @@ export const createMockTenantTransport = (tenant: MockTenant): MockTenantTranspo
     send: async (request) => {
       requests.push(request);
       const route = tenant.routes.find(
-        (candidate) => candidate.method === request.method && candidate.url === request.url,
+        (candidate) =>
+          candidate.method === request.method && candidate.url === request.url,
       );
       if (route === undefined) {
         throw new Error(`unfixtured provider request ${request.method} ${request.url}`);

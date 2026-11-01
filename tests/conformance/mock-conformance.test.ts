@@ -91,6 +91,7 @@ const controlTenant = (): MockTenant => ({
     issueNumber: 601,
     pullNumber: 504,
     commitSha: CONTROL_SHA,
+    threadId: "PRRT_2",
   },
   routes: [],
   expected: {
@@ -139,6 +140,7 @@ const ALL_OPERATIONS: readonly AdapterOperation[] = [
   "write-delivery-request",
   "read-pipeline-run",
   "write-comment",
+  "resolve-delivery-thread",
 ];
 
 const gapsExcept = (supported: readonly AdapterOperation[]): CapabilityGap[] => {
