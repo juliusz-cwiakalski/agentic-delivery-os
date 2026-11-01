@@ -2,7 +2,7 @@
 id: chg-GH-183-closeout-v1-branch-cleanup
 status: Updated
 created: 2026-11-01T05:15:00Z
-last_updated: 2026-11-01T10:20:00Z
+last_updated: 2026-11-01T13:20:00Z
 owners: [engineering]
 service: delivery-os
 labels: [cli, providers, git, idempotency, state]
@@ -716,30 +716,73 @@ Execution order is strict Phase 1 → Phase 12. Each delivery phase (1–8) ends
 
 ---
 
-### Phase 10: Post-Code Review Fixes (conditional)
+### Phase 10: Post-Code Review Fixes (activated: review iteration 1 FAIL)
 
-**Goal**: Close accepted review findings without scope expansion or regression loss.
+**Goal**: Close the four blocking findings (F-1..F-4) and the eight non-blocking findings (F-5..F-12) recorded in [review-iter-1.yaml](./code-review/review-iter-1.yaml) without scope expansion or regression loss. This phase is active: iteration 1 returned FAIL (`spec_compliance: FAIL`, `plan_compliance: FAIL`) with `next_step: CALL_CODER`; the reviewer's remediation sequence is R1 → R2/R3 → R4 → R5 → R6.
 
 **Tasks**:
 
-- [ ] **10.1** If findings exist: reproduce each via the relevant TC/negative fixture, add the missing regression first, then apply the smallest fix; preserve behavior outside the accepted slice. Fix code, catalogs, fixtures, and registries together; a contract-shape dispute routes through `@decision-advisor`, never a silent reshape. (Affected TCs)
-- [ ] **10.2** Re-run the affected suites and the Phase 8 battery; PM delegates `@runner` repetition and independent re-review until PASS. If no findings, record the phase as not required with the Phase 9 PASS as evidence. (All TCs)
+- [ ] **10.1 — Reproduce before fixing, re-review after.** For every R-task, add or extend the named regression first so it fails against the current tree, then apply the smallest fix. Keep the reviewer's independent probes as the baseline: GitHub-like capabilities with `dependents: unavailable` must not yield `skipped-noop`; an issue with omitted labels must not normalize to `observed` + `[]`; 401/403/500 must not normalize to `unavailable`; `appendCloseoutOutcome`/`readCloseoutHistory` must not remain reachable only from the allowance list. Fix code, fixtures, and registries together; any requirement change routes through `@pm`/`@decision-advisor` and reopens the owning phase — never a silent spec or test-plan edit. (F-1..F-12)
+- [ ] **R1 — Production closeout composition and read orchestration.** (F-1; restores Plan 7.2, D11, G-1)
+  - **Files**: `packages/cli/src/edge.ts` (preferred) or a new `packages/cli/src/closeout-composition.ts`; `tests/behaviour/closeout-integration.test.ts`; `tests/structure/inventory.json` + `tests/structure/content-inventory.test.ts` if a new module is created (D13).
+  - **Work**: construct `CloseoutComposition.planFacts` from raw ports — `readWorkItemObservation`, `findMergedDeliveryRequest`, `listBlockedByDependents` plus per-candidate relation reads, `git.readCheckout`/`listBranches`/`isCheckedOutElsewhere`/`isClean`/`resolveRef`, and `readCloseoutHistory`. Adapt `GithubClient`/`JiraClient`/GitLab reads to `CloseoutProviderRuntime` (including the `readWorkItem(number)` → `CloseoutReadObservation<WorkItem>` impedance mismatch), `createGitBranchSeam` to `CloseoutGitRuntime`, and `StateStorePort` to `CloseoutStateRuntime`. Register `commands.closeout` from a raw composition in `createConfigProgram`.
+  - **Test**: integration drives `runCloseout`/the CLI through the real git seam on a temp repository and the real composition — no fixture `CloseoutComposition`.
+- [ ] **R2 — Absent reverse-dependent surface is a provider-level no-surface signal.** (F-2; restores AC-F7-6, D7, D17)
+  - **Files**: `packages/core/src/domain/closeout.ts` (`owedFlipStep`/relation-signal mapping); `packages/adapters/src/github/{normalize,client}.ts` and `packages/adapters/src/jira/{normalize,client}.ts` (`listBlockedByDependents`); `tests/behaviour/closeout-owed-flip.test.ts`, `tests/behaviour/closeout-read-observation.test.ts`.
+  - **Work**: distinguish "surface absent" from "signal currently unavailable" one level below the planner — an explicit no-surface observation/capability that maps to `skipped-gap`/`provider-unsupported`. `unavailable` stays signal-level `skipped-noop` with `relation-signal-unavailable` and no flip.
+  - **Test**: drive the provider-level gap with `read-work-item` still supported; the current TC-036 removes `read-work-item`, so it cannot catch F-2.
+- [ ] **R3 — Real work-item normalizers emit availability signals.** (F-3; restores AC-F5-3)
+  - **Files**: `packages/adapters/src/github/normalize.ts` (`normalizeGithubIssue`/`normalizeWorkItemObservation`); `packages/adapters/src/jira/normalize.ts` (`normalizeJiraIssue`/`normalizeJiraWorkItemObservation`); adapter tests in `tests/behaviour/closeout-ticket-labels.test.ts` and/or `tests/behaviour/providers/{github-closeout,jira-closeout}.test.ts`.
+  - **Work**: set `signals.labels = "observed"` when the label container is present (including `[]`) and `"unavailable"` when omitted; emit relation availability signals; keep the existing `readWorkItem` return shape unchanged. On Jira, never recompute a full-array replace from a collapsed empty set.
+  - **Test**: assert the signal originates from the real normalizer, not a hand-built fake.
+- [ ] **R4 — Wire and test the real `closeout.operation` ledger.** (F-4; restores NFR-8, AC-NFR8-1, Plan 3.1/3.5)
+  - **Files**: `packages/cli/src/edge.ts` or `packages/cli/src/closeout-composition.ts` (bridge `StateStorePort` → `CloseoutStateRuntime` via `readCloseoutHistory`/`appendCloseoutOutcome`/`foldCloseoutHistory`); `packages/core/src/state/closeout.ts` (bridge the runtime `append(handle, record)` shape to `appendCloseoutOutcome(store, handle, record)`); `tests/behaviour/closeout-idempotency.test.ts` over the real JSONL driver (`createStateStore` + `createNodeStateEdge` from `packages/core/src/state/index.ts`, temp root from `tests/fixtures/state/harness.ts`).
+  - **Test**: one record per terminal operation, verified re-read, torn/malformed tail classified as `state.*` (never zeros), and re-run reuse. Remove or justify the module otherwise — dead code is a spec gap because F-3/NFR-8 depend on it.
+- [ ] **R5 — Map auth/5xx to `invalid`, not `unavailable`.** (F-5; restores NFR-9, AC-F4-4, D17)
+  - **Files**: `packages/adapters/src/github/normalize.ts` (`normalizeWorkItemObservation`); `packages/adapters/src/jira/normalize.ts` (`normalizeJiraWorkItemObservation`); `tests/behaviour/closeout-read-observation.test.ts` and/or provider suites.
+  - **Work**: 401/403/500 → `invalid` with the adapter-local `provider.payload.invalid` (or preserved credential/access identity); reserve `unavailable` for a genuinely absent surface; 404 remains `not-found`.
+  - **Test**: pin each status to its observation in an adapter test.
+- [ ] **R6 — Hardening for the non-blocking findings.** (F-6..F-12)
+  - [ ] **R6a (F-6; restores AC-F7-2)**: record the per-candidate open-blocker count in the bounded owed-flip evidence (aggregate or bounded per candidate) and assert it in the AC-F7-2 test (`packages/core/src/domain/closeout.ts`, `tests/behaviour/closeout-owed-flip.test.ts`).
+  - [ ] **R6b (F-7; restores AC-F10-1/AC-F10-2, NFR-13)**: re-read the branch head immediately before `git branch -D` and refuse when it no longer equals the merged head; add `PROTECTED_REF_NAMES` rejection as defense-in-depth and a moved-head-at-delete fixture (`packages/adapters/src/git/index.ts`, `tests/behaviour/closeout-branch.test.ts`).
+  - [ ] **R6c (F-8; restores AC-F10-6)**: align plan-mode ambiguity behavior with F-10 — either document ambiguity as a plan-time failure or render the `would-refuse` step in plan and project the failure only on apply; pin it with a plan-mode ambiguity test (`packages/core/src/domain/closeout.ts`, `tests/behaviour/closeout-plan.test.ts`).
+  - [ ] **R6d (F-9; restores AC-F6-3, D17)**: give `unassignStep` the same "read unavailable → `provider-unsupported`" gap reason as `ticketStep` (`packages/core/src/domain/closeout.ts`, `tests/behaviour/closeout-unassign.test.ts`).
+  - [ ] **R6e (F-10; restores NFR-7)**: measure UTF-8 byte length (TextEncoder) against the 64 KiB machine bound instead of UTF-16 code units (`packages/core/src/domain/closeout.ts`, `tests/behaviour/closeout-bounds.test.ts`).
+  - [ ] **R6f (F-11; restores TC-064, §4.2)**: drive non-vacuity by mutating a temp copy of the real guard and asserting the intended suite fails naming the case, keeping one unchanged passing control (`tests/checks/closeout-mutants.test.ts`, `tests/fixtures/closeout/mutants/**`).
+  - [ ] **R6g (F-12; documentation-only, no contract change)**: keep the synthetic `provider.payload.invalid` domain note accurate and document its adapter-local intent in `packages/cli/src/classify.ts`; no functional change (`tests/behaviour/error-classification.test.ts` if it pins the entry).
+- [ ] **10.2 — Re-run, re-review, and re-sync.** Re-run the affected suites and the full Phase 8 battery, then `pnpm check`; hand the corrected tree to independent re-review (`@reviewer`, iteration 2) and reopen Phase 11 for any spec claim the remediated behavior changes. Record every finding → fix → evidence mapping in the Execution Log. (All TCs; F-1..F-12)
 
 **Acceptance Criteria**:
 
-- Must: all accepted findings closed; affected ACs remain traceable; previously green controls stay green.
-- Must: no waived check, no undocumented scope expansion, no unresolved blocker; `pnpm check` green.
+- Must: F-1..F-4 are closed with production code, not test doubles — `createCloseoutCommandRuntime` is reachable from `createConfigProgram` over a real `CloseoutComposition`; an absent reverse surface yields `skipped-gap`/`provider-unsupported` with `read-work-item` supported; real normalizers emit label/relation availability signals; the real ledger is exercised over the JSONL driver with verified reads and `state.*` torn classification.
+- Must: F-5..F-12 are closed or explicitly recorded as accepted with evidence; no finding is silently waived.
+- Must: previously green controls stay green; `pnpm check` is green; the closeout integration, state-ledger, and provider-observation suites pass after remediation.
+- Must: no spec, test-plan, or review-artifact edit in this phase; a requirement change reopens the owning phase.
+- Should: each fix names the TC/AC it restores and the reviewer finding it closes in the Execution Log.
 
 **Files and modules**:
 
-- Code areas: only affected Phase 1–8 files and their regressions; no blanket cleanup.
-- System docs: only if a review finding is documentation-class and belongs to Phase 11.
+- Code areas: `packages/cli/src/edge.ts` or new `packages/cli/src/closeout-composition.ts` (R1/R4); `packages/core/src/domain/closeout.ts` (R2/R6a/R6c/R6d/R6e); `packages/core/src/state/closeout.ts` (R4 bridge only); `packages/adapters/src/github/{normalize,client}.ts` and `packages/adapters/src/jira/{normalize,client}.ts` (R2/R3/R5); `packages/adapters/src/git/index.ts` (R6b); `packages/cli/src/classify.ts` (R6g); `tests/structure/{inventory.json,content-inventory.test.ts}` if R1 adds a module (D13).
+- Test areas: `tests/behaviour/closeout-{integration,idempotency,owed-flip,ticket-labels,read-observation,branch,plan,unassign,bounds}.test.ts`, `tests/behaviour/providers/{github-closeout,jira-closeout}.test.ts`, `tests/checks/closeout-mutants.test.ts`, `tests/fixtures/closeout/**`, `tests/fixtures/state/harness.ts`.
+- System docs: none here; Phase 11 re-syncs any changed claim.
 
-**Tests**:
+**Tests** (phase boundary):
 
-- Reproduce failing TC cases; re-run affected suites, then the Phase 8 battery.
+- `pnpm build`
+- `bun test tests/behaviour/closeout-integration.test.ts` (real composition + real git seam)
+- `bun test tests/behaviour/closeout-idempotency.test.ts` (real JSONL state ledger)
+- `bun test tests/behaviour/closeout-read-observation.test.ts` (provider observation: not-found/invalid/unavailable, auth/5xx, label/relation signals)
+- `bun test tests/behaviour/closeout-owed-flip.test.ts`
+- `bun test tests/behaviour/closeout-ticket-labels.test.ts`
+- `bun test tests/behaviour/closeout-branch.test.ts tests/behaviour/closeout-plan.test.ts tests/behaviour/closeout-unassign.test.ts tests/behaviour/closeout-bounds.test.ts`
+- `bun test tests/behaviour/providers`
+- `bun test tests/checks/closeout-mutants.test.ts`
+- `bun test tests/structure/content-inventory.test.ts`
+- `pnpm typecheck`
+- `pnpm check`
+- Re-run the Phase 8 battery (8.7) after the narrow suites.
 
-**Completion signal**: `fix(GH-183): close review findings` or explicit not-required state backed by Phase 9 PASS.
+**Completion signal**: `fix(GH-183): close review iteration 1 findings` and a PASS re-review.
 
 ---
 
@@ -873,6 +916,7 @@ Protected paths untouched by every phase: `scripts/*.sh`, `scripts/checks/secret
 | 1.2 | 2026-11-01T09:30:00Z | Implementation Plan Writer | Remediated DoR iteration 2 plan-owned findings and aligned to spec v1.3 / test plan v1.2. Finding 3 (blocking blast radius): added `tests/conformance/broken-adapter-control.test.ts` and `tests/conformance/live/live-entrypoint.test.ts` to the Phase 4 code areas/tasks and Phase 8.6, and to the Phase 4 boundary commands; pinned that `corruptRegistration` preserves the base client's write members (or supplies a `writeHandler`) so the runner reaches the corrupted read after the GitHub write flip, and that the live-entrypoint inline transport matches `method + URL` (or routes through `createFixtureTransport`); `bun test tests/conformance` remains the Phase 4 boundary command. Finding 7: PIN-14/Phase 4.3 pin the additive closeout-specific `readWorkItemObservation` carrier (mirrored in PIN-15/Phase 5.1); the existing `readWorkItem` return shape and `tests/types/provider-views.type-test.ts`, `tests/behaviour/providers/*`, and `packages/testkit/src/conformance/types.ts` are stated unchanged, with those files added only if the shape ever changes. Finding 10: Phase 4.4 now unambiguously disallows a new provider-subpath export (types stay internal or in core contracts; `EXPECTED_SURFACE` unchanged; only the capability array and `Object.keys(client)` list update). Finding 11: PIN-19 pins `FixtureRoute.method` as optional defaulting to `GET`, so existing route fixtures need no edits; method + URL matching and the mismatch control are explicit. Spec v1.3/test-plan v1.2 alignment: ODR-0003 owner acceptance is GH-186 while TDR-0008 rides GH-183; operation identity is ADR-0003's inputs plus the additive `capabilityContext` refinement recorded in DEC-7; the GitHub bounded reverse-read surface is an implementation-confirmed assumption with absent-surface → provider-level `skipped-gap` and present-but-unavailable → signal-level `skipped-noop`/`relation-signal-unavailable`; traceability rows reference TC-018 SHA-256 KAT/algorithm evidence, TC-063 structural + behavioral timeout evidence, the completed §4.1 harness contract, BR-13/BR-14 fixture ownership, and the G-09 two-or-more-extra grammar case. No new dependency, schema, or closed operation; phases remain independently committable. |
 | 1.3 | 2026-11-01T10:00:00Z | Implementation Plan Writer | Targeted PM-authorized DoR iteration 3 remediation (plan-only; spec and test plan untouched). Finding 1 (blocking, Phase 1 conformance blast radius): Phase 1.6 now updates the hardcoded seven-operation control helpers in the same commit — `ALL_OPERATIONS`/`gapsExcept` in `tests/conformance/mock-conformance.test.ts` and `tests/conformance/live/live-entrypoint.test.ts` (so `liveControl` declares `resolve-delivery-thread`), and the `withoutHandler` explicit `declaredGaps` list in `tests/conformance/broken-adapter-control.test.ts` — while `packages/testkit/src/conformance/runner.ts` keeps `failClosed` unchanged and meaningful; added all three files to Phase 1 code areas/tests and stated `bun test tests/conformance` is green at the Phase 1 boundary. Finding 2 (blocking, executable-allowance cadence): added same-commit `EXECUTABLE_ALLOWANCES` updates for `core/src/domain/closeout.ts` (`runCloseout`), `adapters/src/github/normalize.ts`, `adapters/src/jira/normalize.ts`/`workflow-map.ts`, and `cli/src/edge.ts` (`createCloseoutCommandRuntime`); added `bun test tests/structure/content-inventory.test.ts` to Phases 2/3/4/5/7 (and 6 for the git file); added inventory/allowance tasks for the conditional `domain/closeout-run.ts`, `github/closeout.ts`, and `jira/closeout.ts`; stated every phase boundary keeps content-inventory green. Nits: Phase 2.7 harness now names `readWorkItemObservation`; PIN-14/PIN-15/Phase 4.3/5.1/assumption/layout scope "need no edits" to the unchanged `readWorkItem` return shape and name the Phase 1.6 additive `ConformanceAdapterClient` edit; PIN-12/Phase 2.8 make the fixed-tuple SHA-256 digest self-consistent with a regeneration and `node:crypto` verification note; PIN-16/Phase 6.1/6.7/8.4 pin the test-only `GitChildRunner` seam; Context/PIN-12 record that the `capabilityContext` refinement is change-level DEC-7, needs no ADR-0003 addendum for v1, and carries a revisit note. No new dependency, schema, or closed operation; phases remain independently committable. |
 | 1.4 | 2026-11-01T10:20:00Z | Implementation Plan Writer | Targeted PM-authorized DoR iteration 4 remediation (plan-only; spec and test plan untouched). Finding 1 (blocking, executable allowance): Phase 3.4's `EXECUTABLE_ALLOWANCES` entry for `core/src/state/closeout.ts` now lists every PIN-13/3.1 export, constant first per the `state/registry.ts` precedent — `CLOSEOUT_OPERATION_RECORD_KEY_PREFIX` (the previously omitted exported constant), `appendCloseoutOutcome`, `closeoutOperationRecordKey`, `foldCloseoutHistory`, `readCloseoutHistory` — so `bun test tests/structure/content-inventory.test.ts` is green at the Phase 3 boundary. Finding 3 (nit, determinism): PIN-18 and Phase 1.6 pin the insertion position of the `change-lifecycle.resolve-delivery-thread` step as the last step of the `change-lifecycle` flow, immediately after `change-lifecycle.comment` and before `comment-provenance.read-comments` (8th and last `change-lifecycle` step; 8th of 13 registry steps), never before or between the existing delivery-request steps; tests continue to assert presence/count only. Iteration-4 finding 2 (`readWorkItemObservation` vs test plan §4.1) is a `test_planning` item outside this plan-only write scope and is not restated here; it is non-blocking and affects no test, and PIN-14/PIN-15/Phase 2.7 already name the carrier. No new dependency, schema, or closed operation; phases remain independently committable. |
+| 1.5 | 2026-11-01T13:20:00Z | Implementation Plan Writer | Activated Phase 10 from review iteration 1 (`code-review/review-iter-1.yaml`, FAIL) and replaced its conditional placeholder with the remediation sequence R1..R6 plus hardening. R1 restores the production `CloseoutComposition`/`planFacts` read orchestration and runtime bridges in `cli/src/edge.ts` (or `closeout-composition.ts`) with a real-git-seam integration test (F-1; Plan 7.2/D11/G-1). R2 adds the explicit absent-surface signal mapped to `skipped-gap`/`provider-unsupported` while `unavailable` stays `skipped-noop` (F-2; AC-F7-6/D7/D17). R3 makes the real GitHub/Jira normalizers emit `signals.labels` and relation availability (F-3; AC-F5-3). R4 wires and tests the real `core/src/state/closeout.ts` ledger over the JSONL driver (F-4; NFR-8/AC-NFR8-1/Plan 3.1/3.5). R5 maps auth/5xx to `invalid` and reserves `unavailable` for a genuine absent surface (F-5). R6a..R6g close F-6..F-12 (open-blocker evidence, delete-time head re-check, plan-mode ambiguity, unassign gap reason, UTF-8 bound, mutation-based non-vacuity, `provider.payload.invalid` domain note). Phase 10 boundary now requires `pnpm check` plus the closeout integration, state-ledger, and provider-observation suites. No spec, test-plan, code, or review-artifact edit in this pass. |
 
 ## Execution Log
 

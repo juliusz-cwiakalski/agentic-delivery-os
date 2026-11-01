@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-11-01T06:15:00Z", completed: "2026-11-01T10:40:00Z" }
   delivery: { started: "2026-11-01T10:45:00Z", completed: "2026-11-01T12:35:00Z" }
   system_spec_update: { started: "2026-11-01T12:40:00Z", completed: "2026-11-01T13:05:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-11-01T13:10:00Z", completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -115,4 +115,13 @@ notes:
     date: "2026-11-01"
   - text: "System spec update complete: authored `doc/spec/features/feature-closeout.md`; reconciled adapter-ports, provider-client-seeds, result-contract, state-layer, adapter-conformance, monorepo-scaffold, status/queue/verify (non-consumer notes); updated glossary, 00-index, cli-command-registry (removed stale harness-telemetry claim, noted M1-S11 deferral), and forbidden-literals registry. doc-distribution PASS (81 docs), forbidden-literals PASS, privacy-literals PASS (1537 files), error-table-sync PASS (39/39), spec-coverage snapshot 9/9, link check PASS. No residual documentation gaps."
     type: info
+    date: "2026-11-01"
+  - text: "Review iteration 1: FAIL (code-review/review-iter-1.yaml). 4 high blocking findings: F-1 no production closeout composition in `cli/src/edge.ts` (runtime only used by test fixtures; provider/git/state/read orchestration not bridged); F-2 AC-F7-6 violated (GitHub/Jira absent reverse surface reported as unavailable → skipped-noop instead of skipped-gap/provider-unsupported); F-3 AC-F5-3 violated (normalizers collapse absent labels to observed-empty and never set signals, so label-signal-unavailable is unreachable in production); F-4 NFR-8/AC-NFR8-1 unproven (real `state/closeout.ts` ledger never wired; torn-ledger test only against a fake). Plus 8 non-blocking (auth/5xx mapping, owed-flip open-blocker evidence, delete-time head re-check, plan-mode ambiguity, unassign gap reason, UTF-8 bound, mutant realism, synthetic provider.payload.invalid domain kink). Pure kernel, safety predicate, bounds, offline battery, and the reported deviations are otherwise sound."
+    type: blocker
+    date: "2026-11-01"
+  - text: "Remediation reopened delivery (Phase 10): R1 wire production composition (provider/git/state/read orchestration + planFacts + integration test through the real git seam); R2 fix absent-surface vs unavailable semantics (explicit no-surface signal → skipped-gap); R3 emit labels/relations availability signals from real normalizers; R4 wire and test the real state ledger (append/verified read/torn-tail classified); R5 map auth/5xx to invalid/credential identity; R6 hardening (open-blocker evidence, delete-time head re-check, plan-mode ambiguity, unassign reason, UTF-8 bound, mutant realism). Re-run doc-syncer after code changes, then re-review."
+    type: info
+    date: "2026-11-01"
+  - text: "Retro: the delivery's green `pnpm check` did not prove production wiring — tests injected fakes that modeled behaviors the real adapters could not emit. Review caught 3 end-to-end gaps plus an unwired ledger. Lesson: for a new command, require at least one integration test that composes the real production runtime (not only fakes) and an explicit production-composition task in the plan."
+    type: retro
     date: "2026-11-01"
