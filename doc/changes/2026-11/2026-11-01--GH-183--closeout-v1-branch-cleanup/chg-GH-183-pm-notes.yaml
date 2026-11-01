@@ -7,7 +7,7 @@ phases:
   test_planning: { started: "2026-11-01T03:50:00Z", completed: "2026-11-01T06:52:00Z" }
   delivery_planning: { started: "2026-11-01T04:15:00Z", completed: "2026-11-01T07:12:00Z" }
   dor_check: { started: "2026-11-01T06:15:00Z", completed: "2026-11-01T10:40:00Z" }
-  delivery: { started: null, completed: null }
+  delivery: { started: "2026-11-01T10:45:00Z", completed: "2026-11-01T12:35:00Z" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -106,4 +106,10 @@ notes:
     date: "2026-11-01"
   - text: "Retro: the DoR gate required 5 iterations (9 -> 3 -> 2 -> 1 -> 0 blocking findings). The final two were mechanical plan-completeness gaps (conformance ALL_OPERATIONS helpers, executable-allowance cadence). Lesson: author the exact-inventory/allowance and conformance-control blast radius into the first plan revision; it would have saved two gate cycles."
     type: retro
+    date: "2026-11-01"
+  - text: "Delivery phases 1-8 completed (commits ee94f6b, 48fa63a, d15493e, 5131833, 277d318, 7c2fee8, 66f50de, d9a112d; HEAD d9a112d; 146 files, +13506/-211). Gates: `pnpm check` 2224 pass / 3 skip / 0 fail; structure+behaviour 1590 pass / 0 fail; checks 346; boundaries 135; golden 74; conformance 82; error-table-sync, exit-code-literals, ambient-globals, secret-read-boundary, workspace-entrypoints, license-audit, vulnerability-gate all green; doc-distribution and git diff --check green."
+    type: info
+    date: "2026-11-01"
+  - text: "Delivery deviations for review scrutiny (all reported as additive): (1) GitBranchSeamOptions.cwd + GitChildRunner cwd test seam; (2) GithubClientOptions.timeoutMs short-override seam; (3) CloseoutReadObservation.observed.signals? additive availability carrier; (4) adapter-local `provider.payload.invalid` projection in cli/classify.ts plus a recognized-but-not-tabled exception in scripts/checks/error-table-sync.ts (spec forbids a closeout table row but TC-067 needs the identity at the CLI boundary); (5) `./git` added to workspaceImports of cli/mcp/opencode/testkit to satisfy workspace-entrypoints parity; (6) baseline test-only fix in tests/behaviour/pm-notes-corpus.test.ts (hardcoded 2026-10 month boundary). Reviewer must verify none weakens a gate or changes unrelated behavior."
+    type: risk
     date: "2026-11-01"
