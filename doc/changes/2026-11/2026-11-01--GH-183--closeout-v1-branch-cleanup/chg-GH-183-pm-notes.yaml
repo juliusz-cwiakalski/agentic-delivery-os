@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-11-01T13:10:00Z", completed: "2026-11-01T17:55:00Z" }
   quality_gates: { started: "2026-11-01T18:00:00Z", completed: "2026-11-01T18:35:00Z" }
   dod_check: { started: "2026-11-01T18:40:00Z", completed: "2026-11-01T18:55:00Z" }
-  pr_creation: { started: "2026-11-01T19:00:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-11-01T19:00:00Z", completed: "2026-11-01T19:15:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/215" }
 decisions:
   - text: "Scope: `ados closeout <workItemRef>` is one idempotent post-merge transaction covering the backlog steps — ticket-to-done, lifecycle label sweep, unassign, owed-flip sweep, comment resolution, checkout restore, and squash-safe local branch cleanup. Harness session telemetry is explicitly out of scope (backlog assigns it to M1-S11)."
     date: "2026-11-01"
@@ -138,6 +138,9 @@ notes:
     type: resolved
     date: "2026-11-01"
   - text: "DoD check PASS. All lifecycle phases through quality_gates complete; plan v1.6 Phase 9-12 tasks checked with evidence (only 12.5 PR handoff remains, owned by pr_creation). 61 ACs with PASS review evidence (review-iter-2), 67 TCs, 24 library test files + 204-file battery green. Current-truth docs reconciled (feature-closeout + adapter-ports/provider-seeds/result-contract/state-layer/conformance/monorepo + glossary/index/registry) with no residual gaps. Changeset `.changeset/gh-183-closeout-minor.md` present. 35 commits ahead of main-tools; gates green (pnpm check 2243/3/0, commitlint 35/35, diff-check clean). Plan v1.6 records the current phase-commit SHAs; the message-only reflow changed SHAs, so SHAs quoted in earlier notes/review artifacts are pre-reflow."
+    type: resolved
+    date: "2026-11-01"
+  - text: "PR creation complete: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/215, base `main-tools`, head `feat/GH-183/closeout-v1-branch-cleanup`. Branch pushed with upstream; PR left open for review. Merge authority belongs to the CEO (Mode A) or the human via batch-deliver.sh (Mode B); the PM does not merge."
     type: resolved
     date: "2026-11-01"
   - text: "Hygiene remediation: the six over-length commit messages were reflowed in a message-only history rewrite so every body/footer line is <=100 chars for commitlint; the test-plan EOF blank line was removed separately. Earlier SHA references in the change artifacts are pre-rewrite and no longer identify the current commits, including the six reflowed messages (549a39f, ab29d9b, 261123b, 546ec43, 3737d17, 8555132) and their descendants (e.g. 5ef24ed)."
