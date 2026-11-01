@@ -5,6 +5,9 @@
  */
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
+import { appendFileSync, mkdirSync, mkdtempSync } from "node:fs";
+import { join } from "node:path";
+import { createCloseoutStateRuntime } from "../../packages/cli/src/edge";
 import type {
   CloseoutOperationIdentityInputs,
   CloseoutOperationRecord,
@@ -18,14 +21,24 @@ import {
   runCloseout,
 } from "../../packages/core/src/domain/closeout";
 import { sha256Hex } from "../../packages/core/src/domain/sha256";
+import { readCloseoutHistory } from "../../packages/core/src/state/index";
 import {
   CLOSEOUT_TIMESTAMP,
   makeFacts,
   makeGit,
   makeProvider,
   makeState,
+  WORK_ITEM_REF,
 } from "../fixtures/closeout/harness";
 import { fakeInvalidPayload, fakeNotFound } from "../fixtures/closeout/read-observation";
+import {
+  ledgerLines,
+  ledgerPath,
+  ledgerText,
+  makeIdentity,
+  openStore,
+  removeRoot,
+} from "../fixtures/state/harness";
 
 /** The committed fixed canonical identity tuple (regeneration note in the plan). */
 const FIXED_INPUTS: CloseoutOperationIdentityInputs = {
@@ -265,5 +278,91 @@ describe("TC-CLOSE-067 engine target discrimination writes nothing", () => {
     );
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe("provider.payload.invalid");
+  });
+});
+
+const applyWithState = (
+  facts: ReturnType<typeof makeFacts>,
+  provider: ReturnType<typeof makeProvider>,
+  git: ReturnType<typeof makeGit>,
+  state: ReturnType<typeof createCloseoutStateRuntime>,
+) =>
+  runCloseout({
+    plan: buildCloseoutPlan(facts),
+    provider: provider.runtime,
+    git: git.runtime,
+    state,
+    timestamp: CLOSEOUT_TIMESTAMP,
+    fenceToken: "fence-real",
+    apply: true,
+  });
+
+const makeRealStateRoot = (): string => {
+  const base = join(process.cwd(), "tmp", "tmpdir");
+  mkdirSync(base, { recursive: true });
+  return mkdtempSync(join(base, "gh183-ledger-"));
+};
+
+describe("TC-CLOSE-019/NFR-8 real JSONL closeout ledger", () => {
+  test("one record per terminal operation, verified re-read, and re-run reuse", async () => {
+    const root = makeRealStateRoot();
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      const state = createCloseoutStateRuntime(store);
+
+      const first = await applyWithState(makeFacts(), makeProvider(), makeGit(), state);
+      expect(first.ok).toBe(true);
+      const total = first.ok ? first.data.summary.totalOperations : -1;
+      expect(total).toBeGreaterThan(0);
+
+      const history = readCloseoutHistory(store, WORK_ITEM_REF);
+      expect(history.ok).toBe(true);
+      if (history.ok) {
+        expect(history.value).toHaveLength(total);
+        expect(new Set(history.value.map((record) => record.operationId)).size).toBe(total);
+      }
+      expect(ledgerLines(ledgerText(identity))).toHaveLength(total);
+
+      const secondProvider = makeProvider();
+      const secondGit = makeGit();
+      const second = await applyWithState(makeFacts(), secondProvider, secondGit, state);
+      expect(second.ok).toBe(true);
+      expect(secondProvider.calls).toEqual([]);
+      expect(secondGit.calls).toEqual([]);
+      const again = readCloseoutHistory(store, WORK_ITEM_REF);
+      expect(again.ok).toBe(true);
+      if (again.ok) expect(again.value).toHaveLength(total);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("a torn ledger tail is a classified state error, never zeros", async () => {
+    const root = makeRealStateRoot();
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      const state = createCloseoutStateRuntime(store);
+
+      const first = await applyWithState(makeFacts(), makeProvider(), makeGit(), state);
+      expect(first.ok).toBe(true);
+
+      appendFileSync(ledgerPath(identity), "{not-json}\n");
+
+      const provider = makeProvider();
+      const git = makeGit();
+      const second = await applyWithState(makeFacts(), provider, git, state);
+      expect(second.ok).toBe(false);
+      if (!second.ok) {
+        expect(second.error.kind).toBe("state");
+        expect(second.error.code).toBe("state.store.torn");
+      }
+      expect(provider.calls).toEqual([]);
+      expect(git.calls).toEqual([]);
+      expect(readCloseoutHistory(store, WORK_ITEM_REF).ok).toBe(false);
+    } finally {
+      removeRoot(root);
+    }
   });
 });
