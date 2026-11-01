@@ -1,9 +1,24 @@
 /** TC-CLOSE-010/011/015/016/040/052/056/067 — end-to-end transaction flows. */
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync } from "node:fs";
+import { join } from "node:path";
+import { createCloseoutComposition, createConfigProgram } from "../../packages/cli/src/edge";
+import type { CliDependencies } from "../../packages/cli/src/index";
+import { runCli } from "../../packages/cli/src/index";
 import { CLOSEOUT_INTEGRATION_BASE } from "../../packages/core/src/contracts/index";
+import { readCloseoutHistory } from "../../packages/core/src/state/index";
+import { bufferSink } from "../golden/helpers";
 import { GITLAB_CLOSEOUT_CAPABILITIES } from "../fixtures/closeout/capabilities";
 import { closeoutData, errorOf, runCloseoutCli } from "../fixtures/closeout/cli";
 import {
+  dependenciesUrl,
+  githubIssueFixture,
+  issueUrl,
+  makeGithubClient,
+  pullsUrl,
+} from "../fixtures/closeout/github-client";
+import {
+  CLOSEOUT_TIMESTAMP,
   makeFacts,
   makeMergedRequest,
   makeProvider,
@@ -13,6 +28,8 @@ import {
   WORK_ITEM_REF,
 } from "../fixtures/closeout/harness";
 import { fakeInvalidPayload, fakeNotFound } from "../fixtures/closeout/read-observation";
+import { createTempRepo, type TempRepo } from "../fixtures/closeout/temp-git";
+import { makeIdentity, openStore, removeRoot } from "../fixtures/state/harness";
 
 describe("TC-CLOSE-010/011 dry-run and apply happy path", () => {
   test("plan performs no mutation and apply executes the seven-step order", async () => {
@@ -142,5 +159,92 @@ describe("TC-CLOSE-006 absent merged head refuses deletion", () => {
     expect(run.exitCode).toBe(1);
     expect(errorOf(run.envelope).code).toBe("closeout.branch.unsafe");
     expect(run.git.calls.map((call) => call.kind)).not.toContain("deleteBranch");
+  });
+});
+
+describe("TC-CLOSE-010/011 production composition over the real git seam", () => {
+  test("the registered closeout command drives plan and apply end to end", async () => {
+    const repo: TempRepo = createTempRepo();
+    const stateRoot = (() => {
+      const base = join(process.cwd(), "tmp", "tmpdir");
+      mkdirSync(base, { recursive: true });
+      return mkdtempSync(join(base, "gh183-composition-"));
+    })();
+    try {
+      const identity = makeIdentity(stateRoot);
+      const { store } = openStore(identity);
+      const mergedPull = {
+        number: 504,
+        state: "closed",
+        merged: true,
+        draft: false,
+        reviewDecision: "APPROVED",
+        head: { ref: repo.deliveryBranch, sha: repo.deliveryHead },
+        base: { ref: repo.baseRef },
+        review_threads: [],
+      };
+      const { client } = makeGithubClient([
+        { method: "GET", url: issueUrl(183), body: githubIssueFixture() },
+        { method: "PATCH", url: issueUrl(183), body: { number: 183, state: "closed" } },
+        { method: "GET", url: pullsUrl(20), body: [mergedPull] },
+        { method: "GET", url: dependenciesUrl(183, 200), body: [] },
+      ]);
+      const composition = createCloseoutComposition({
+        workspaceId: "workspace-a",
+        provider: { kind: "github", client },
+        git: { cwd: repo.directory, timeoutMs: 10_000 },
+        store,
+        nowIso: () => CLOSEOUT_TIMESTAMP,
+        newFenceToken: () => "fence-production",
+      });
+      const built = createConfigProgram({
+        workingName: "synthetic",
+        environment: {},
+        cwd: repo.directory,
+        homeDirectory: repo.directory,
+        platform: "linux",
+        fs: { exists: () => false, readText: () => "" },
+        repositoryIo: { exists: () => false, isFile: () => false, readText: () => "" },
+        closeout: composition,
+      });
+      expect(built.ok).toBe(true);
+      if (!built.ok) return;
+      const deps: CliDependencies = {
+        brand: built.brand,
+        clock: { now: () => 1 },
+        newRunId: () => "run-production-closeout",
+        secrets: [],
+        program: built.program,
+      };
+
+      const planOut = bufferSink();
+      const planErr = bufferSink();
+      const planExit = await runCli(
+        ["closeout", "GH-183", "--json"],
+        { stdout: planOut, stderr: planErr },
+        deps,
+      );
+      expect(planExit).toBe(0);
+      expect(repo.run(["branch", "--list", repo.deliveryBranch])).not.toBe("");
+
+      const applyOut = bufferSink();
+      const applyErr = bufferSink();
+      const applyExit = await runCli(
+        ["closeout", "GH-183", "--apply", "--json"],
+        { stdout: applyOut, stderr: applyErr },
+        deps,
+      );
+      expect(applyExit).toBe(0);
+      const envelope = JSON.parse(applyOut.value) as Record<string, unknown>;
+      expect(closeoutData(envelope).mode).toBe("applied");
+      expect(closeoutData(envelope).steps.some((step) => step.outcome === "applied")).toBe(true);
+      expect(repo.run(["branch", "--list", repo.deliveryBranch])).toBe("");
+      const history = readCloseoutHistory(store, WORK_ITEM_REF);
+      expect(history.ok).toBe(true);
+      if (history.ok) expect(history.value.length).toBeGreaterThan(0);
+    } finally {
+      repo.remove();
+      removeRoot(stateRoot);
+    }
   });
 });
