@@ -31,6 +31,7 @@ import {
   type GithubClient,
   type GithubClientOptions,
 } from "@delivery-os/adapters/github";
+import { GITLAB_ADAPTER_CONTRACT, type GitLabClient } from "@delivery-os/adapters/gitlab";
 import { JIRA_ADAPTER_CONTRACT, type JiraClient } from "@delivery-os/adapters/jira";
 import { createLegacyCompat } from "@delivery-os/adapters/legacy";
 import {
@@ -313,6 +314,12 @@ export type CloseoutProviderSource =
       readonly capabilities?: AdapterCapabilityDeclaration;
     }
   | {
+      readonly kind: "gitlab";
+      readonly client: GitLabClient;
+      readonly systemName?: string;
+      readonly capabilities?: AdapterCapabilityDeclaration;
+    }
+  | {
       readonly kind: "declared";
       readonly systemName: string;
       readonly capabilities: AdapterCapabilityDeclaration;
@@ -410,6 +417,37 @@ const bridgeCloseoutProvider = (source: CloseoutProviderSource): CloseoutProvide
         ok: false,
         code: "provider.payload.invalid",
         detail: "Jira has no delivery-thread surface",
+      }),
+    };
+  }
+  if (source.kind === "gitlab") {
+    const client = source.client;
+    return {
+      systemName: source.systemName ?? GITLAB_ADAPTER_CONTRACT.adapterName,
+      capabilities: source.capabilities ?? GITLAB_ADAPTER_CONTRACT.capabilities,
+      readWorkItem: async () => ({ observation: "unavailable" }),
+      readWorkItemObservation: async () => ({ observation: "unavailable" }),
+      readDeliveryRequest: async (entityId) => {
+        if (!/^\d+$/.test(entityId)) {
+          return { observation: "invalid", detail: "GitLab merge request iid is not numeric" };
+        }
+        return closeoutReadOutcome(await client.readDeliveryRequest(Number(entityId)));
+      },
+      listBlockedByDependents: async () => ({ observation: "no-surface" }),
+      writeWorkItem: async () => ({
+        ok: false,
+        code: "provider.payload.invalid",
+        detail: "GitLab has no closeout write surface",
+      }),
+      transitionWorkItem: async () => ({
+        ok: false,
+        code: "provider.payload.invalid",
+        detail: "GitLab has no closeout transition surface",
+      }),
+      resolveDeliveryThread: async () => ({
+        ok: false,
+        code: "provider.payload.invalid",
+        detail: "GitLab has no delivery-thread surface",
       }),
     };
   }
