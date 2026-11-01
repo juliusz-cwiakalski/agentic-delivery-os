@@ -3,7 +3,7 @@ title: "M0-S14: closeout v1 with branch cleanup"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-01T03:20:00Z", completed: "2026-11-01T03:30:00Z" }
-  specification: { started: "2026-11-01T03:32:00Z", completed: "2026-11-01T03:48:00Z" }
+  specification: { started: "2026-11-01T03:32:00Z", completed: "2026-11-01T06:40:00Z" }
   test_planning: { started: "2026-11-01T03:50:00Z", completed: "2026-11-01T04:12:00Z" }
   delivery_planning: { started: "2026-11-01T04:15:00Z", completed: "2026-11-01T05:18:00Z" }
   dor_check: { started: "2026-11-01T06:15:00Z", completed: null }
@@ -67,4 +67,7 @@ notes:
     date: "2026-11-01"
   - text: "Retro: DoR caught a critical ADR-0003 contradiction (plan pinned FNV-1a operation ids vs the accepted SHA-256 requirement), missing operation-timeout wiring, and missing exact-inventory/trap/conformance fixture updates before any implementation — preventing a large delivery-time rework. The gate is functioning as intended; no process change needed."
     type: retro
+    date: "2026-11-01"
+  - text: "Specification remediation (DoR findings 5,6,7,8,11,12,13,14,17): spec v1.2 adds a discriminated read outcome (observed/not-found/unavailable/invalid), conditional provider-asserted owed-flip semantics, flat write-work-item canonical args, case-sensitive ref grammar with input.value.rejected for extra positionals, AC-F4-4 (not-found), AC-F7-7 (unavailable relation signal), AC-F9-5 (detached-HEAD restore), a pinned v1 integration-base constant, accurate ODR-0003/TDR-0008 authority wording, and capability context in the operation identity. Spec re-completed for DoR iteration 2."
+    type: resolved
     date: "2026-11-01"
