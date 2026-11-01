@@ -1,26 +1,23 @@
 /** In-process CLI harness for the closeout command (test-plan §4.1 item 6). */
-import type { CloseoutData } from "../../../packages/core/src/contracts/index";
-import {
-  type CliDependencies,
-  type CommandProgram,
-  runCli,
-} from "../../../packages/cli/src/index";
-import {
-  createCloseoutCommandRuntime,
-  type CloseoutComposition,
-} from "../../../packages/cli/src/edge";
+
 import { createCloseoutCommandDefinition } from "../../../packages/cli/src/commands/closeout";
+import {
+  type CloseoutComposition,
+  createCloseoutCommandRuntime,
+} from "../../../packages/cli/src/edge";
+import { type CliDependencies, type CommandProgram, runCli } from "../../../packages/cli/src/index";
+import type { CloseoutData } from "../../../packages/core/src/contracts/index";
 import { bufferSink, SYNTHETIC_BRAND } from "../../golden/helpers";
 import {
   CLOSEOUT_NOW_MS,
   CLOSEOUT_TIMESTAMP,
+  type FakeGit,
+  type FakeProvider,
+  type FakeState,
   makeFacts,
   makeGit,
   makeProvider,
   makeState,
-  type FakeGit,
-  type FakeProvider,
-  type FakeState,
 } from "./harness";
 
 export type CliCloseoutHarness = {

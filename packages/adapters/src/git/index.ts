@@ -15,7 +15,7 @@ import { CLOSEOUT_OPERATION_TIMEOUT_MS } from "@delivery-os/core/contracts";
 export type GitChildRunnerResult = {
   readonly stdout: string;
   readonly stderr: string;
-  readonly exitCode: number;
+  readonly status: number;
   readonly timedOut: boolean;
 };
 
@@ -32,7 +32,12 @@ export type GitChildRunner = (
 
 /** The checkout classification (F-9). */
 export type GitCheckoutFacts = {
-  readonly state: "delivery-branch" | "detached-at-delivery-head" | "base" | "unrelated" | "missing";
+  readonly state:
+    | "delivery-branch"
+    | "detached-at-delivery-head"
+    | "base"
+    | "unrelated"
+    | "missing";
   readonly branch?: string;
   readonly head?: string;
 };
@@ -53,7 +58,11 @@ export type GitSafetyFacts = {
 /** A local mutation outcome (never a throw across the port). */
 export type GitMutationResult =
   | { readonly ok: true }
-  | { readonly ok: false; readonly code: "plan-restriction" | "closeout.branch.unsafe"; readonly detail: string };
+  | {
+      readonly ok: false;
+      readonly code: "plan-restriction" | "closeout.branch.unsafe";
+      readonly detail: string;
+    };
 
 /** Construction input for the git seam. */
 export type GitBranchSeamOptions = {
@@ -75,20 +84,12 @@ export type GitBranchSeam = {
   readonly listBranches: (input: {
     readonly workItemRef: string;
   }) => Promise<readonly GitBranchFacts[]>;
-  readonly readBranch: (input: {
-    readonly branch: string;
-  }) => Promise<GitBranchFacts | undefined>;
-  readonly isCheckedOutElsewhere: (input: {
-    readonly branch: string;
-  }) => Promise<boolean>;
+  readonly readBranch: (input: { readonly branch: string }) => Promise<GitBranchFacts | undefined>;
+  readonly isCheckedOutElsewhere: (input: { readonly branch: string }) => Promise<boolean>;
   readonly isClean: () => Promise<boolean>;
   readonly resolveRef: (input: { readonly ref: string }) => Promise<boolean>;
-  readonly restoreCheckout: (input: {
-    readonly baseRef: string;
-  }) => Promise<GitMutationResult>;
-  readonly deleteBranch: (input: {
-    readonly branch: string;
-  }) => Promise<GitMutationResult>;
+  readonly restoreCheckout: (input: { readonly baseRef: string }) => Promise<GitMutationResult>;
+  readonly deleteBranch: (input: { readonly branch: string }) => Promise<GitMutationResult>;
 };
 
 const REF_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
@@ -109,16 +110,16 @@ const execFileRunner: GitChildRunner = (file, args, options) =>
         ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
       },
       (error, stdout, stderr) => {
-        const exitCode =
+        const status =
           error === null
             ? 0
             : typeof (error as { readonly code?: unknown }).code === "number"
-              ? ((error as { readonly code: number }).code)
+              ? (error as { readonly code: number }).code
               : 1;
         resolve({
           stdout,
           stderr,
-          exitCode,
+          status,
           timedOut: error !== null && (error as { readonly killed?: boolean }).killed === true,
         });
       },
@@ -128,7 +129,7 @@ const execFileRunner: GitChildRunner = (file, args, options) =>
 const timeoutFailure = (): GitChildRunnerResult => ({
   stdout: "",
   stderr: "git operation timed out",
-  exitCode: 124,
+  status: 124,
   timedOut: true,
 });
 
@@ -168,8 +169,8 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
 
   const stdoutOrThrow = async (args: readonly string[], operation: string): Promise<string> => {
     const result = await git(args);
-    if (result.exitCode !== 0) {
-      throw new Error(`git ${operation} failed (${result.timedOut ? "timeout" : result.exitCode})`);
+    if (result.status !== 0) {
+      throw new Error(`git ${operation} failed (${result.timedOut ? "timeout" : result.status})`);
     }
     return result.stdout;
   };
@@ -179,11 +180,11 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
       return { ok: false, code: "plan-restriction", detail: "unsafe base ref" };
     }
     const result = await git(["checkout", value]);
-    if (result.exitCode === 0) return { ok: true };
+    if (result.status === 0) return { ok: true };
     return {
       ok: false,
       code: result.timedOut ? "closeout.branch.unsafe" : "plan-restriction",
-      detail: result.timedOut ? "checkout timed out" : `checkout failed (${result.exitCode})`,
+      detail: result.timedOut ? "checkout timed out" : `checkout failed (${result.status})`,
     };
   };
 
@@ -192,18 +193,22 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
       return { ok: false, code: "plan-restriction", detail: "unsafe branch name" };
     }
     const result = await git(["branch", "-D", branch]);
-    if (result.exitCode === 0) return { ok: true };
+    if (result.status === 0) return { ok: true };
     return {
       ok: false,
       code: result.timedOut ? "closeout.branch.unsafe" : "plan-restriction",
-      detail: result.timedOut ? "branch delete timed out" : `branch delete failed (${result.exitCode})`,
+      detail: result.timedOut
+        ? "branch delete timed out"
+        : `branch delete failed (${result.status})`,
     };
   };
 
   return {
     readCheckout: async (input) => {
       try {
-        const branch = (await stdoutOrThrow(["rev-parse", "--abbrev-ref", "HEAD"], "read-checkout")).trim();
+        const branch = (
+          await stdoutOrThrow(["rev-parse", "--abbrev-ref", "HEAD"], "read-checkout")
+        ).trim();
         const head = (await stdoutOrThrow(["rev-parse", "HEAD"], "read-head")).trim();
         if (branch === input.baseRef) return { state: "base", head };
         if (branch === input.deliveryBranch) {
@@ -237,14 +242,16 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
     readBranch: async (input) => {
       if (!isSafeRef(input.branch)) return undefined;
       const result = await git(["rev-parse", "--verify", `refs/heads/${input.branch}`]);
-      if (result.exitCode !== 0) return undefined;
+      if (result.status !== 0) return undefined;
       return { name: input.branch, head: result.stdout.trim() };
     },
     isCheckedOutElsewhere: async (input) => {
       if (!isSafeRef(input.branch)) return false;
       const output = await stdoutOrThrow(["worktree", "list", "--porcelain"], "worktrees");
       const worktrees = output.split("\n\n");
-      return worktrees.slice(1).some((block) => block.includes(`branch refs/heads/${input.branch}`));
+      return worktrees
+        .slice(1)
+        .some((block) => block.includes(`branch refs/heads/${input.branch}`));
     },
     isClean: async () => {
       const output = await stdoutOrThrow(["status", "--porcelain"], "status");
@@ -253,7 +260,7 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
     resolveRef: async (input) => {
       if (!isSafeRef(input.ref)) return false;
       const result = await git(["rev-parse", "--verify", input.ref]);
-      return result.exitCode === 0;
+      return result.status === 0;
     },
     restoreCheckout: (input) => restore(input.baseRef),
     deleteBranch: (input) => remove(input.branch),

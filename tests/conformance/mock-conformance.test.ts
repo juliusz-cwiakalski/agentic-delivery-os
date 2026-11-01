@@ -964,7 +964,9 @@ describe("TC-CLOSE-065 closeout write execution and runtime coverage", () => {
       expect(
         report.steps.some(
           (step) =>
-            step.provider === "github" && step.operation === operation && step.status === "executed",
+            step.provider === "github" &&
+            step.operation === operation &&
+            step.status === "executed",
         ),
         operation,
       ).toBe(true);
@@ -989,7 +991,6 @@ describe("TC-CLOSE-065 closeout write execution and runtime coverage", () => {
     );
   });
 });
-
 
 describe("TC-CLOSE-065 Jira closeout write execution", () => {
   test("the newly supported Jira writes execute in mock and coverage is empty", async () => {

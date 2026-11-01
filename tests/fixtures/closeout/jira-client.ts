@@ -2,13 +2,13 @@
 import { createEnvironmentCredentialPort } from "../../../packages/adapters/src/credentials/index";
 import { createJiraClient, type JiraClient } from "../../../packages/adapters/src/jira/client";
 import type { ExternalSystemInstance } from "../../../packages/core/src/contracts/index";
-import { fixtureBrand } from "../credentials/cases";
 import {
   createFixtureTransport,
   type FixtureRoute,
   readJson,
   requireRecord,
 } from "../../behaviour/providers/support";
+import { fixtureBrand } from "../credentials/cases";
 
 export const JIRA_FIXTURES = "tests/fixtures/providers/jira";
 
@@ -30,8 +30,7 @@ const credentials = createEnvironmentCredentialPort({
   brand: fixtureBrand,
 });
 
-export const issueUrl = (key: string): string =>
-  `${jiraInstance.baseUrl}/rest/api/2/issue/${key}`;
+export const issueUrl = (key: string): string => `${jiraInstance.baseUrl}/rest/api/2/issue/${key}`;
 
 export const jiraIssueFixture = (): unknown =>
   requireRecord(readJson(`${JIRA_FIXTURES}/closeout-issue.json`), "jira issue").issue;
@@ -55,7 +54,9 @@ export type JiraHarness = {
   readonly transport: ReturnType<typeof createFixtureTransport>;
 };
 
-export const makeJiraClient = (routes: readonly FixtureRoute[] = defaultJiraRoutes()): JiraHarness => {
+export const makeJiraClient = (
+  routes: readonly FixtureRoute[] = defaultJiraRoutes(),
+): JiraHarness => {
   const transport = createFixtureTransport(routes);
   const client = createJiraClient({ instance: jiraInstance, credentials, transport });
   return { client, transport };

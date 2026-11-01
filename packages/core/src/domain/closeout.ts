@@ -6,9 +6,25 @@
  * environment, or I/O enters this tier; the apply orchestrator takes injected
  * runtimes as parameters (Phase 3).
  */
+
+import type {
+  AdapterCapabilityDeclaration,
+  CapabilityGapReason,
+  DeliveryRequest,
+  ProviderQualifiedIdentity,
+  WorkItem,
+} from "#contracts";
 import {
   BLOCKED_LABEL,
   CHANGE_LABEL,
+  CLOSEOUT_INTEGRATION_BASE,
+  CLOSEOUT_MAX_DEPENDENTS,
+  CLOSEOUT_MAX_HUMAN_BYTES,
+  CLOSEOUT_MAX_HUMAN_LINES,
+  CLOSEOUT_MAX_MACHINE_BYTES,
+  CLOSEOUT_MAX_THREADS,
+  CLOSEOUT_SCHEMA_ID,
+  type CloseoutApplyOutcome,
   type CloseoutBranchFact,
   type CloseoutCanonicalArguments,
   type CloseoutCapabilityContext,
@@ -19,44 +35,29 @@ import {
   type CloseoutEvidence,
   type CloseoutEvidenceField,
   type CloseoutGapReason,
+  type CloseoutGitRuntime,
   type CloseoutLabelArguments,
   type CloseoutOperation,
   type CloseoutOperationIdentityInputs,
   type CloseoutOperationName,
   type CloseoutOperationRecord,
-  type CloseoutApplyOutcome,
   type CloseoutOutcome,
-  type CloseoutProviderRuntime,
-  type CloseoutGitRuntime,
-  type CloseoutStateRuntime,
-  type CloseoutWriteOutcome,
   type CloseoutPlan,
   type CloseoutPlanOutcome,
+  type CloseoutProviderRuntime,
   type CloseoutReadObservation,
   type CloseoutRestoreArguments,
+  type CloseoutStateRuntime,
   type CloseoutStep,
   type CloseoutStepId,
   type CloseoutSummary,
   type CloseoutThreadArguments,
   type CloseoutTransitionArguments,
-  CLOSEOUT_INTEGRATION_BASE,
-  CLOSEOUT_MAX_DEPENDENTS,
-  CLOSEOUT_MAX_HUMAN_BYTES,
-  CLOSEOUT_MAX_HUMAN_LINES,
-  CLOSEOUT_MAX_MACHINE_BYTES,
-  CLOSEOUT_MAX_THREADS,
-  CLOSEOUT_SCHEMA_ID,
+  type CloseoutWriteOutcome,
   DELIVERED_LABEL,
   LIFECYCLE_LABEL_DISPOSITIONS,
   OWNER_ATTENTION_LABEL,
   PROTECTED_REF_NAMES,
-} from "#contracts";
-import type {
-  AdapterCapabilityDeclaration,
-  CapabilityGapReason,
-  DeliveryRequest,
-  ProviderQualifiedIdentity,
-  WorkItem,
 } from "#contracts";
 import { sha256Hex } from "./sha256.js";
 
@@ -327,7 +328,11 @@ const capabilityContextFor = (
 
 const supports = (
   capabilities: AdapterCapabilityDeclaration,
-  operation: "read-work-item" | "write-work-item" | "transition-work-item" | "resolve-delivery-thread",
+  operation:
+    | "read-work-item"
+    | "write-work-item"
+    | "transition-work-item"
+    | "resolve-delivery-thread",
 ): boolean => capabilities.supportedOperations.includes(operation);
 
 const gapReasonFor = (
@@ -459,18 +464,20 @@ const labelStep = (facts: CloseoutPlanFacts): CloseoutStep => {
   for (const disposition of LIFECYCLE_LABEL_DISPOSITIONS) {
     if (disposition.disposition === "remove" && labels.includes(disposition.label)) {
       const args: CloseoutLabelArguments = { remove: [disposition.label] };
-      operations.push(
-        operationFor(facts, "write-work-item", observation.value.identity, args),
-      );
+      operations.push(operationFor(facts, "write-work-item", observation.value.identity, args));
     }
   }
   if (!labels.includes(DELIVERED_LABEL)) {
     const args: CloseoutLabelArguments = { add: [DELIVERED_LABEL] };
     operations.push(operationFor(facts, "write-work-item", observation.value.identity, args));
   }
-  const kept = labels.filter((label) => label === CHANGE_LABEL || !LIFECYCLE_LABEL_DISPOSITIONS.some(
-    (entry) => entry.disposition === "remove" && entry.label === label,
-  ));
+  const kept = labels.filter(
+    (label) =>
+      label === CHANGE_LABEL ||
+      !LIFECYCLE_LABEL_DISPOSITIONS.some(
+        (entry) => entry.disposition === "remove" && entry.label === label,
+      ),
+  );
   return planStep("lifecycle-label-sweep", outcomeFor(facts.persisted, operations, "satisfied"), {
     operations,
     evidence: evidence(
@@ -557,15 +564,11 @@ const owedFlipStep = (facts: CloseoutPlanFacts): CloseoutStep => {
     const args: CloseoutLabelArguments = hasHandBack
       ? { remove: [BLOCKED_LABEL] }
       : { add: [OWNER_ATTENTION_LABEL], remove: [BLOCKED_LABEL] };
-    operations.push(
-      operationFor(facts, "write-work-item", candidate.item.identity, args),
-    );
+    operations.push(operationFor(facts, "write-work-item", candidate.item.identity, args));
   }
   const truncated = candidates.length > CLOSEOUT_MAX_DEPENDENTS;
   const fallback: CloseoutPlanOutcome =
-    operations.length === 0 && unavailableSignals > 0
-      ? "skipped-noop"
-      : "satisfied";
+    operations.length === 0 && unavailableSignals > 0 ? "skipped-noop" : "satisfied";
   return planStep("owed-flip-sweep", outcomeFor(facts.persisted, operations, fallback), {
     ...(fallback === "skipped-noop" ? { reason: "relation-signal-unavailable" } : {}),
     operations,
@@ -668,13 +671,15 @@ const checkoutStep = (facts: CloseoutPlanFacts, baseRef: string): CloseoutStep =
     });
   }
   const args: CloseoutRestoreArguments = { baseRef };
-  const operation = operationFor(facts, "restore-checkout", { systemName: "git", entityId: baseRef }, args);
+  const operation = operationFor(
+    facts,
+    "restore-checkout",
+    { systemName: "git", entityId: baseRef },
+    args,
+  );
   return planStep("checkout-restore", outcomeFor(facts.persisted, [operation], "satisfied"), {
     operations: [operation],
-    evidence: evidence(
-      field("checkout", checkout.state),
-      field("baseRef", baseRef),
-    ),
+    evidence: evidence(field("checkout", checkout.state), field("baseRef", baseRef)),
   });
 };
 
@@ -729,10 +734,7 @@ const branchStep = (
   if (!verdict.safe) {
     return planStep("branch-cleanup", "would-refuse", {
       reason: "closeout.branch.unsafe",
-      evidence: evidence(
-        field("branch", branch.name),
-        field("reason", verdict.reason ?? "unsafe"),
-      ),
+      evidence: evidence(field("branch", branch.name), field("reason", verdict.reason ?? "unsafe")),
     });
   }
   const args: CloseoutDeleteArguments = { branch: branch.name };
@@ -997,7 +999,11 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
   try {
     for (const step of input.plan.steps) {
       if (stateFailure !== undefined) break;
-      if (earlierFailure && step.stepId !== "checkout-restore" && step.stepId !== "branch-cleanup") {
+      if (
+        earlierFailure &&
+        step.stepId !== "checkout-restore" &&
+        step.stepId !== "branch-cleanup"
+      ) {
         steps.push({
           ...step,
           outcome: "skipped-noop",
@@ -1033,7 +1039,11 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
         if (!result.ok) {
           failed += 1;
           earlierFailure = true;
-          if (!append(recordFor(operation, input.plan.workItemRef, "failed", input.timestamp, result.code))) {
+          if (
+            !append(
+              recordFor(operation, input.plan.workItemRef, "failed", input.timestamp, result.code),
+            )
+          ) {
             break;
           }
           break;
@@ -1096,7 +1106,9 @@ export const renderCloseoutHuman = (data: CloseoutData): string => {
     const reason = step.reason === undefined ? "" : ` ${step.reason}`;
     lines.push(`${index + 1}. ${step.stepId}: ${step.outcome}${reason}`);
     for (const operation of step.operations) {
-      lines.push(`   - ${operation.name} ${operation.target.entityId} ${operation.operationId.slice(0, 12)}`);
+      lines.push(
+        `   - ${operation.name} ${operation.target.entityId} ${operation.operationId.slice(0, 12)}`,
+      );
     }
     if (step.truncation?.truncated === true) {
       lines.push(`   - truncated (omitted ${step.truncation.omitted})`);
@@ -1118,4 +1130,3 @@ export const renderCloseoutHuman = (data: CloseoutData): string => {
   }
   return text;
 };
-

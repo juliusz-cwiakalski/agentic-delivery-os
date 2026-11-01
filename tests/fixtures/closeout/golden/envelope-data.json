@@ -53,9 +53,7 @@
             "entityId": "183"
           },
           "arguments": {
-            "remove": [
-              "planning"
-            ]
+            "remove": ["planning"]
           }
         },
         {
@@ -68,9 +66,7 @@
             "entityId": "183"
           },
           "arguments": {
-            "remove": [
-              "spec-ready"
-            ]
+            "remove": ["spec-ready"]
           }
         },
         {
@@ -83,9 +79,7 @@
             "entityId": "183"
           },
           "arguments": {
-            "remove": [
-              "readiness-passed"
-            ]
+            "remove": ["readiness-passed"]
           }
         },
         {
@@ -98,9 +92,7 @@
             "entityId": "183"
           },
           "arguments": {
-            "remove": [
-              "in-progress"
-            ]
+            "remove": ["in-progress"]
           }
         },
         {
@@ -113,9 +105,7 @@
             "entityId": "183"
           },
           "arguments": {
-            "remove": [
-              "review"
-            ]
+            "remove": ["review"]
           }
         },
         {
@@ -128,9 +118,7 @@
             "entityId": "183"
           },
           "arguments": {
-            "remove": [
-              "blocked"
-            ]
+            "remove": ["blocked"]
           }
         },
         {
@@ -143,9 +131,7 @@
             "entityId": "183"
           },
           "arguments": {
-            "add": [
-              "delivered"
-            ]
+            "add": ["delivered"]
           }
         }
       ],

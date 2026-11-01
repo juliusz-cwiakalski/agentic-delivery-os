@@ -26,6 +26,8 @@ import {
   validateConformanceArtifact,
 } from "@delivery-os/testkit";
 import { SECRET_READ_ALLOWLIST } from "../../../scripts/checks/secret-read-boundary";
+import { createCanaryCredentialPort, loadMockTenants } from "../support/fixtures";
+import { scanSourceMap, scanTestkitSource } from "../support/testkit-source-scan";
 import {
   isConfigured,
   PROVIDER_LIVE_SETTINGS,
@@ -34,8 +36,6 @@ import {
 } from "./config";
 import { createRecordingTransport, type RecordedRequest } from "./recording-transport";
 import { type LiveRunInput, runLive } from "./run-live";
-import { createCanaryCredentialPort, loadMockTenants } from "../support/fixtures";
-import { scanSourceMap, scanTestkitSource } from "../support/testkit-source-scan";
 
 const ROOT = process.cwd();
 const CLOCK = "2026-10-31T00:00:00Z";

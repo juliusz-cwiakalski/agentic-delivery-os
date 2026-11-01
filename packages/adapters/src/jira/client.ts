@@ -133,8 +133,8 @@ export const createJiraClient = (options: JiraClientOptions): JiraClient => {
     path: string,
     body?: unknown,
   ): Promise<
-    { readonly ok: true; readonly status: number; readonly body: unknown } |
-    { readonly ok: false; readonly code: string; readonly detail: string }
+    | { readonly ok: true; readonly status: number; readonly body: unknown }
+    | { readonly ok: false; readonly code: string; readonly detail: string }
   > => {
     const headers = authorizedHeaders();
     if (!headers.ok) {
@@ -155,7 +155,11 @@ export const createJiraClient = (options: JiraClientOptions): JiraClient => {
       return { ok: true, status: response.status, body: response.body };
     } catch (error: unknown) {
       const name = error instanceof Error ? error.name : "unknown error";
-      return { ok: false, code: "provider.payload.invalid", detail: `Jira request failed (${name})` };
+      return {
+        ok: false,
+        code: "provider.payload.invalid",
+        detail: `Jira request failed (${name})`,
+      };
     }
   };
 
@@ -165,9 +169,7 @@ export const createJiraClient = (options: JiraClientOptions): JiraClient => {
     return normalizeJiraWorkItemObservation(response.body, context, response.status);
   };
 
-  const writer = (
-    response: Awaited<ReturnType<typeof request>>,
-  ): ProviderWriteResult =>
+  const writer = (response: Awaited<ReturnType<typeof request>>): ProviderWriteResult =>
     !response.ok
       ? { ok: false, code: "provider.payload.invalid", detail: response.detail }
       : response.status >= 200 && response.status < 300

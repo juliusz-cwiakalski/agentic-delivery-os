@@ -13,31 +13,31 @@ import {
 import {
   boundCloseoutData,
   buildCloseoutPlan,
+  type CloseoutDependentFact,
+  type CloseoutPlanFacts,
   canonicalCloseoutJson,
   closeoutStepDefinitions,
   deriveCloseoutOperationId,
   renderCloseoutHuman,
   summarizeCloseout,
-  type CloseoutDependentFact,
-  type CloseoutPlanFacts,
 } from "../../packages/core/src/domain/closeout";
-import { EXPECTED_STEP_IDS } from "../fixtures/closeout/plan";
+import { closeoutData, errorOf, runCloseoutCli } from "../fixtures/closeout/cli";
+import { eligibleDependent, unavailableRelationDependent } from "../fixtures/closeout/dependents";
 import {
   CANARY_TEXT,
   CLOSEOUT_SCHEMA_ID,
   DEFAULT_LABELS,
-  THREAD_ID,
-  WORK_ITEM_REF,
   makeDependent,
   makeFacts,
   makeMergedRequest,
   makeWorkItem,
   observed,
+  THREAD_ID,
   testDependent,
+  WORK_ITEM_REF,
 } from "../fixtures/closeout/harness";
-import { eligibleDependent, unavailableRelationDependent } from "../fixtures/closeout/dependents";
+import { EXPECTED_STEP_IDS } from "../fixtures/closeout/plan";
 import { fakeInvalidPayload, fakeNotFound } from "../fixtures/closeout/read-observation";
-import { closeoutData, errorOf, runCloseoutCli } from "../fixtures/closeout/cli";
 
 const stepById = (steps: readonly CloseoutStep[], stepId: string): CloseoutStep => {
   const step = steps.find((entry) => entry.stepId === stepId);
@@ -89,7 +89,8 @@ describe("TC-CLOSE-010/011 dry-run plan shape and determinism", () => {
     ]);
     expect(
       labels.operations.some(
-        (operation) => "add" in operation.arguments && operation.arguments.add?.includes("delivered"),
+        (operation) =>
+          "add" in operation.arguments && operation.arguments.add?.includes("delivered"),
       ),
     ).toBe(true);
     const unassign = stepById(plan.steps, "unassign");
@@ -124,7 +125,11 @@ describe("TC-CLOSE-010/011 dry-run plan shape and determinism", () => {
 
 describe("TC-CLOSE-013 determinism under permuted inputs", () => {
   test("permuting labels, dependents, and threads does not change the plan", () => {
-    const dependents = [eligibleDependent("203"), eligibleDependent("200"), eligibleDependent("202")];
+    const dependents = [
+      eligibleDependent("203"),
+      eligibleDependent("200"),
+      eligibleDependent("202"),
+    ];
     const threads = [
       { threadId: "PRRT_3", resolved: false, commentCount: 1 },
       { threadId: "PRRT_1", resolved: false, commentCount: 1 },
@@ -249,9 +254,7 @@ describe("TC-CLOSE-067 planner read-observation mapping", () => {
 
   test("an unavailable surface yields a declared gap, not an unobserved target", () => {
     const step = stepById(
-      buildCloseoutPlan(
-        makeFacts({ observedWorkItem: { observation: "unavailable" } }),
-      ).steps,
+      buildCloseoutPlan(makeFacts({ observedWorkItem: { observation: "unavailable" } })).steps,
       "ticket-to-done",
     );
     expect(step.outcome).toBe("skipped-gap");
@@ -260,9 +263,8 @@ describe("TC-CLOSE-067 planner read-observation mapping", () => {
 
   test("an unavailable relation signal is skipped-noop and never flips", () => {
     const step = stepById(
-      buildCloseoutPlan(
-        makeFacts({ dependents: observed([unavailableRelationDependent()]) }),
-      ).steps,
+      buildCloseoutPlan(makeFacts({ dependents: observed([unavailableRelationDependent()]) }))
+        .steps,
       "owed-flip-sweep",
     );
     expect(step.outcome).toBe("skipped-noop");
@@ -272,9 +274,7 @@ describe("TC-CLOSE-067 planner read-observation mapping", () => {
 
   test("an asserted empty blocker set is eligible and an open blocker is not", () => {
     const eligible = stepById(
-      buildCloseoutPlan(
-        makeFacts({ dependents: observed([eligibleDependent("200")]) }),
-      ).steps,
+      buildCloseoutPlan(makeFacts({ dependents: observed([eligibleDependent("200")]) })).steps,
       "owed-flip-sweep",
     );
     expect(eligible.operations).toHaveLength(1);
@@ -327,7 +327,9 @@ describe("TC-CLOSE-059/060 bounded machine and human output", () => {
     expect(JSON.stringify(bounded).length).toBeLessThanOrEqual(65_536);
     const summary = summarizeCloseout(bounded.steps);
     expect(summary.counts["would-apply"]).toBeGreaterThan(0);
-    expect(summary.totalOperations).toBe(bounded.steps.reduce((n, s) => n + s.operations.length, 0));
+    expect(summary.totalOperations).toBe(
+      bounded.steps.reduce((n, s) => n + s.operations.length, 0),
+    );
   });
 
   test("a large payload truncates deterministically with a marker", () => {
@@ -350,7 +352,6 @@ describe("TC-CLOSE-059/060 bounded machine and human output", () => {
     expect(first.includes(CANARY_TEXT)).toBe(false);
   });
 });
-
 
 describe("TC-CLOSE-010/011 in-process CLI plan and apply", () => {
   test("plan mode renders one envelope with the seven ordered steps and zero writes", async () => {

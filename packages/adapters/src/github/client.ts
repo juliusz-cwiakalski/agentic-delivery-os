@@ -48,6 +48,8 @@ export type GithubClientOptions = {
   readonly repository: GithubRepositoryRef;
   /** The injected provider transport; defaults to native `fetch`. */
   readonly transport?: ProviderTransport;
+  /** A short test override for the per-operation timeout; production omits it. */
+  readonly timeoutMs?: number;
 };
 
 /** One flat closeout work-item write input (DM-5). */
@@ -153,6 +155,7 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
   const baseUrl = trimBaseUrl(options.instance.baseUrl);
   const repositoryPath = `/repos/${encodeURIComponent(options.repository.owner)}/${encodeURIComponent(options.repository.name)}`;
   const transport = options.transport ?? nativeFetchTransport();
+  const timeoutMs = options.timeoutMs ?? CLOSEOUT_OPERATION_TIMEOUT_MS;
   const context = { systemName: options.instance.instanceName };
 
   const authorizedHeaders = (): ProviderReadResult<Readonly<Record<string, string>>> => {
@@ -178,6 +181,7 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
       url: `${baseUrl}${path}`,
       method: "GET",
       headers: headers.value,
+      timeoutMs,
     };
     try {
       const response = await transport.send(request);
@@ -207,7 +211,7 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
           ? headers.value
           : { ...headers.value, "Content-Type": "application/json" },
       ...(serialized === undefined ? {} : { body: serialized }),
-      timeoutMs: CLOSEOUT_OPERATION_TIMEOUT_MS,
+      timeoutMs,
     };
     try {
       const response = await transport.send(request);
@@ -231,7 +235,7 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
         url: `${baseUrl}${repositoryPath}/issues/${encodeURIComponent(entityId)}`,
         method: "GET",
         headers: headers.value,
-        timeoutMs: CLOSEOUT_OPERATION_TIMEOUT_MS,
+        timeoutMs,
       });
       return normalizeWorkItemObservation(response.body, context, response.status);
     } catch (error: unknown) {

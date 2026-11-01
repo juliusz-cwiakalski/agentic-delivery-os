@@ -9,17 +9,6 @@ export type DomainPlaceholder = { readonly __tier: "domain" };
 export {
   boundCloseoutData,
   buildCloseoutPlan,
-  canonicalCloseoutJson,
-  closeoutStepDefinitions,
-  deriveCloseoutOperationId,
-  evaluateBranchSafety,
-  runCloseout,
-  foldCloseoutOutcomes,
-  isProtectedRef,
-  renderCloseoutHuman,
-  resolveCloseoutBaseRef,
-  selectMatchingBranch,
-  summarizeCloseout,
   type CloseoutBranchSafetyInput,
   type CloseoutBranchSafetyVerdict,
   type CloseoutBranchSelection,
@@ -28,8 +17,18 @@ export {
   type CloseoutPlanProvider,
   type CloseoutRunInput,
   type CloseoutRunResult,
+  canonicalCloseoutJson,
+  closeoutStepDefinitions,
+  deriveCloseoutOperationId,
+  evaluateBranchSafety,
+  foldCloseoutOutcomes,
+  isProtectedRef,
+  renderCloseoutHuman,
+  resolveCloseoutBaseRef,
+  runCloseout,
+  selectMatchingBranch,
+  summarizeCloseout,
 } from "./closeout.js";
-export { sha256Hex } from "./sha256.js";
 export {
   lintPmNotes,
   type PmNotesLintFinding,
@@ -47,6 +46,7 @@ export {
   renderSessionAdminHuman,
   selectPruneCandidates,
 } from "./session-admin.js";
+export { sha256Hex } from "./sha256.js";
 export { aggregateStatus, renderStatusHuman } from "./status.js";
 export {
   classifyVerifyChange,

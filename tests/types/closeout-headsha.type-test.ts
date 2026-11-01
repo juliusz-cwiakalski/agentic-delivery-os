@@ -12,7 +12,9 @@ type Equal<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 type Expect<T extends true> = T;
 
 /** The field is optional: an empty object satisfies its Pick. */
-type HeadShaIsOptional = Expect<Equal<{} extends Pick<DeliveryRequest, "headSha"> ? true : false, true>>;
+type HeadShaIsOptional = Expect<
+  Equal<{} extends Pick<DeliveryRequest, "headSha"> ? true : false, true>
+>;
 
 /** When present, the value is a string. */
 type HeadShaIsString = Expect<Equal<NonNullable<DeliveryRequest["headSha"]>, string>>;

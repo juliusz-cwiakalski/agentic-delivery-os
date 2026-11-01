@@ -1,7 +1,7 @@
 /** Jira closeout writes: done transition, label replace preservation, clear. */
 import { describe, expect, test } from "bun:test";
-import { readJson, requireRecord } from "./support";
 import { issueUrl, jiraIssueFixture, makeJiraClient } from "../../fixtures/closeout/jira-client";
+import { readJson, requireRecord } from "./support";
 
 const parsed = (body: string | undefined): Record<string, unknown> => {
   if (body === undefined) throw new Error("expected a request body");

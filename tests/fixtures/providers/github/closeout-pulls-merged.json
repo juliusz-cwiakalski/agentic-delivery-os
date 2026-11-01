@@ -5,7 +5,10 @@
       "number": 42,
       "state": "closed",
       "merged": true,
-      "head": { "ref": "feat/GH-182/other-change", "sha": "9999999999999999999999999999999999999999" },
+      "head": {
+        "ref": "feat/GH-182/other-change",
+        "sha": "9999999999999999999999999999999999999999"
+      },
       "base": { "ref": "main-tools" }
     },
     {

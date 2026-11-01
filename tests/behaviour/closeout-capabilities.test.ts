@@ -62,7 +62,9 @@ describe("TC-CLOSE-053/055 GitHub and GitLab postures", () => {
   });
 
   test("GitLab declares every write including thread resolution as a gap", () => {
-    const gaps = new Set(GITLAB_ADAPTER_CONTRACT.capabilities.declaredGaps.map((gap) => gap.operation));
+    const gaps = new Set(
+      GITLAB_ADAPTER_CONTRACT.capabilities.declaredGaps.map((gap) => gap.operation),
+    );
     for (const operation of [
       "read-work-item",
       "write-work-item",

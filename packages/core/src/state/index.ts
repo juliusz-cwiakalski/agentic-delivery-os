@@ -45,6 +45,13 @@ export {
   STATE_SCHEMA_VERSION,
   type StateDriverKind,
 } from "#contracts";
+export {
+  appendCloseoutOutcome,
+  CLOSEOUT_OPERATION_RECORD_KEY_PREFIX,
+  closeoutOperationRecordKey,
+  foldCloseoutHistory,
+  readCloseoutHistory,
+} from "./closeout.js";
 export { createNodeStateEdge } from "./driver/runtime-edge.js";
 export type {
   StateEdgeFaultPoint,
@@ -53,13 +60,6 @@ export type {
   StatePlatform,
   StateRuntimeEdge,
 } from "./edge.js";
-export {
-  appendCloseoutOutcome,
-  CLOSEOUT_OPERATION_RECORD_KEY_PREFIX,
-  closeoutOperationRecordKey,
-  foldCloseoutHistory,
-  readCloseoutHistory,
-} from "./closeout.js";
 export {
   appendPhaseTransition,
   foldPhaseState,

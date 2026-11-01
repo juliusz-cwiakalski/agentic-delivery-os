@@ -1,11 +1,7 @@
 /** TC-CLOSE-020..025 — ticket-to-done and lifecycle label disposition. */
 import { describe, expect, test } from "bun:test";
 import { buildCloseoutPlan } from "../../packages/core/src/domain/closeout";
-import {
-  makeFacts,
-  makeWorkItem,
-  observed,
-} from "../fixtures/closeout/harness";
+import { makeFacts, makeWorkItem, observed } from "../fixtures/closeout/harness";
 import { FULL_LABEL_SET, SWEPT_LABEL_SET } from "../fixtures/closeout/labels";
 
 const step = (facts: Parameters<typeof buildCloseoutPlan>[0], stepId: string) =>
@@ -41,9 +37,7 @@ describe("TC-CLOSE-020/021 ticket-to-done", () => {
           ...facts.provider,
           capabilities: {
             supportedOperations: ["read-work-item"],
-            declaredGaps: [
-              { operation: "transition-work-item", reason: "provider-unsupported" },
-            ],
+            declaredGaps: [{ operation: "transition-work-item", reason: "provider-unsupported" }],
             writableCarriers: [],
             readableCarriers: [],
           },

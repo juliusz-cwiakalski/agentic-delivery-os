@@ -81,13 +81,7 @@ const decodeAddressing = (
   return { ok: false, detail: `unsupported provider ${provider}` };
 };
 
-const ROUTE_METHODS: ReadonlySet<string> = new Set([
-  "GET",
-  "POST",
-  "PATCH",
-  "PUT",
-  "DELETE",
-]);
+const ROUTE_METHODS: ReadonlySet<string> = new Set(["GET", "POST", "PATCH", "PUT", "DELETE"]);
 
 const decodeRoute = (value: unknown, index: number): ConformanceDecodeResult<MockTenantRoute> => {
   if (!isRecord(value)) return { ok: false, detail: `route ${index} is not an object` };
@@ -243,8 +237,7 @@ export const createMockTenantTransport = (tenant: MockTenant): MockTenantTranspo
     send: async (request) => {
       requests.push(request);
       const route = tenant.routes.find(
-        (candidate) =>
-          candidate.method === request.method && candidate.url === request.url,
+        (candidate) => candidate.method === request.method && candidate.url === request.url,
       );
       if (route === undefined) {
         throw new Error(`unfixtured provider request ${request.method} ${request.url}`);

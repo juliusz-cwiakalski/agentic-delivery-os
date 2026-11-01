@@ -11,6 +11,7 @@ import { GITLAB_ADAPTER_CONTRACT } from "../../packages/adapters/src/gitlab/capa
 import { JIRA_ADAPTER_CONTRACT } from "../../packages/adapters/src/jira/capabilities";
 import {
   ADAPTER_OPERATIONS,
+  type AdapterCapabilityDeclaration,
   BLOCKED_LABEL,
   CHANGE_LABEL,
   CLOSEOUT_APPLY_OUTCOMES,
@@ -33,7 +34,6 @@ import {
   LIFECYCLE_LABEL_DISPOSITIONS,
   OWNER_ATTENTION_LABEL,
   PROTECTED_REF_NAMES,
-  type AdapterCapabilityDeclaration,
 } from "../../packages/core/src/contracts/index";
 import { CONFORMANCE_FLOWS } from "../../packages/testkit/src/conformance/flows";
 import { scan } from "../../scripts/checks/ambient-globals";
@@ -108,7 +108,10 @@ const operationsInFlows = new Set<string>(
   CONFORMANCE_FLOWS.flatMap((flow) => flow.steps.map((step) => step.operation)),
 );
 
-const partitionViolations = (name: string, capabilities: AdapterCapabilityDeclaration): string[] => {
+const partitionViolations = (
+  name: string,
+  capabilities: AdapterCapabilityDeclaration,
+): string[] => {
   const failures: string[] = [];
   const supported = capabilities.supportedOperations;
   const gaps = capabilities.declaredGaps.map((gap) => gap.operation);
@@ -240,10 +243,7 @@ describe("TC-CLOSE-002 additive adapter extensions and conformance registry", ()
   });
 
   test("headSha is declared optional on DeliveryRequest", () => {
-    const source = readFileSync(
-      join(ROOT, "packages/core/src/contracts/ports.ts"),
-      "utf8",
-    );
+    const source = readFileSync(join(ROOT, "packages/core/src/contracts/ports.ts"), "utf8");
     expect(source).toContain("readonly headSha?: string;");
   });
 });

@@ -1,7 +1,7 @@
 /** TC-CLOSE-037/038/039 — thread resolution expansion, gaps, and no-request. */
 import { describe, expect, test } from "bun:test";
-import { buildCloseoutPlan } from "../../packages/core/src/domain/closeout";
 import { CLOSEOUT_MAX_THREADS } from "../../packages/core/src/contracts/index";
+import { buildCloseoutPlan } from "../../packages/core/src/domain/closeout";
 import { makeFacts, makeMergedRequest, observed } from "../fixtures/closeout/harness";
 import { manyThreads } from "../fixtures/closeout/threads";
 
@@ -23,16 +23,19 @@ describe("TC-CLOSE-037 unresolved threads resolve once", () => {
         ),
       }),
     );
-    expect(step?.operations.map((operation) => ("threadId" in operation.arguments ? operation.arguments.threadId : ""))).toEqual([
-      "PRRT_2",
-      "PRRT_3",
-    ]);
+    expect(
+      step?.operations.map((operation) =>
+        "threadId" in operation.arguments ? operation.arguments.threadId : "",
+      ),
+    ).toEqual(["PRRT_2", "PRRT_3"]);
   });
 
   test("the 100 cap truncates deterministically", () => {
     const step = threadsStep(
       makeFacts({
-        mergedRequest: observed(makeMergedRequest({ threads: manyThreads(CLOSEOUT_MAX_THREADS + 1) })),
+        mergedRequest: observed(
+          makeMergedRequest({ threads: manyThreads(CLOSEOUT_MAX_THREADS + 1) }),
+        ),
       }),
     );
     expect(step?.operations).toHaveLength(CLOSEOUT_MAX_THREADS);

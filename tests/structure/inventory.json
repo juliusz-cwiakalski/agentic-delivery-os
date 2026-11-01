@@ -109,16 +109,8 @@
     "src/output/serialize.ts",
     "src/projection.ts"
   ],
-  "mcp": [
-    "src/commands/index.ts",
-    "src/index.ts",
-    "src/output/index.ts"
-  ],
-  "opencode": [
-    "src/commands/index.ts",
-    "src/index.ts",
-    "src/output/index.ts"
-  ],
+  "mcp": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
+  "opencode": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
   "testkit": [
     "src/conformance/adapters.ts",
     "src/conformance/artifact.ts",

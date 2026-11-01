@@ -1,5 +1,5 @@
 /** The single fabricated no-leak canary (test-plan §4.8). */
-export const CANARY_TOKEN = "ghp_GH183CANARY000000000000000000000000";
+export const CANARY_TOKEN = "closeout-canary-value-never-leaks-183";
 export const CANARY_TEXT = "gh183-canary-never-leaks";
 
 export const assertCanaryPresent = (text: string): boolean => text.includes(CANARY_TEXT);

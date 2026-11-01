@@ -4,8 +4,8 @@
 import { describe, expect, test } from "bun:test";
 import { normalizeMergeRequest } from "../../packages/adapters/src/gitlab/normalize";
 import { buildCloseoutPlan } from "../../packages/core/src/domain/closeout";
-import { readJson, requireRecord } from "./providers/support";
 import { makeFacts } from "../fixtures/closeout/harness";
+import { readJson, requireRecord } from "./providers/support";
 
 const context = { systemName: "gitlab" };
 

@@ -13,12 +13,7 @@ const READ_ONLY_COMMANDS = [
   "packages/cli/src/commands/queue.ts",
   "packages/cli/src/commands/verify.ts",
 ];
-const FORBIDDEN = [
-  "domain/closeout",
-  "closeout-run",
-  "adapters/git",
-  "createGitBranchSeam",
-];
+const FORBIDDEN = ["domain/closeout", "closeout-run", "adapters/git", "createGitBranchSeam"];
 const REPO_READER = "packages/adapters/src/repo/index.ts";
 const SPAWN_MARKERS = ["node:child_process", "Bun.spawn", "Deno.Command", "execFile", "spawn("];
 
@@ -69,7 +64,10 @@ describe("TC-CLOSE-008 repository reader stays no-spawn", () => {
     const root = mkdtempSync(join(tmpdir(), "repo-reader-"));
     const file = join(root, REPO_READER);
     mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, `${readFileSync(join(ROOT, REPO_READER), "utf8")}\nimport "node:child_process";\n`);
+    writeFileSync(
+      file,
+      `${readFileSync(join(ROOT, REPO_READER), "utf8")}\nimport "node:child_process";\n`,
+    );
     try {
       const failures = spawnViolations(root, REPO_READER);
       expect(failures.some((message) => message.includes("node:child_process"))).toBe(true);

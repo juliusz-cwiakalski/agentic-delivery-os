@@ -417,7 +417,9 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
       }
       return names;
     };
-    expect(exported(`${CLI_DIR}/commands/closeout.ts`)).toEqual(["createCloseoutCommandDefinition"]);
+    expect(exported(`${CLI_DIR}/commands/closeout.ts`)).toEqual([
+      "createCloseoutCommandDefinition",
+    ]);
     expect(exported(`${CLI_DIR}/commands/db.ts`)).toEqual(["createDbCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/lint.ts`)).toEqual(["createLintCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/phase.ts`)).toEqual(["createPhaseCommandDefinition"]);

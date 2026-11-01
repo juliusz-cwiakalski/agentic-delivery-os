@@ -44,7 +44,8 @@ describe("TC-CLOSE-067 target read discrimination", () => {
   test("explicit not-found fails closeout.target.unobserved with zero writes", async () => {
     const { result, state, provider, git } = await run(fakeNotFound());
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatchObject({ kind: "closeout", code: "closeout.target.unobserved" });
+    if (!result.ok)
+      expect(result.error).toMatchObject({ kind: "closeout", code: "closeout.target.unobserved" });
     expect(state.fence.acquired).toBe(0);
     expect(provider.calls).toEqual([]);
     expect(git.calls).toEqual([]);

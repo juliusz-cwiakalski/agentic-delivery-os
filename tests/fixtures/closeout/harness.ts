@@ -6,6 +6,8 @@
  * tree. Time and ids are fixed constants.
  */
 import {
+  type AdapterOperation,
+  type CapabilityGap,
   CLOSEOUT_INTEGRATION_BASE,
   CLOSEOUT_MAX_DEPENDENTS,
   type CloseoutBranchFact,
@@ -19,20 +21,18 @@ import {
   type CloseoutProviderRuntime,
   type CloseoutReadObservation,
   type CloseoutStateRuntime,
-  type AdapterOperation,
-  type CapabilityGap,
-  type StateFailureCode,
   type CloseoutWriteOutcome,
   type DeliveryRequest,
   type ProviderQualifiedIdentity,
+  type StateFailureCode,
   type StateFenceHandle,
   type WorkItem,
 } from "../../../packages/core/src/contracts/index";
 import { bufferSink, SYNTHETIC_BRAND } from "../../golden/helpers";
 
-export { SYNTHETIC_BRAND };
-export { CANARY_TEXT } from "./canary";
 export { CLOSEOUT_SCHEMA_ID } from "../../../packages/core/src/contracts/index";
+export { CANARY_TEXT } from "./canary";
+export { SYNTHETIC_BRAND };
 
 export const CLOSEOUT_NOW_MS = 1_800_000_000_000;
 export const CLOSEOUT_TIMESTAMP = "2026-11-01T00:00:00Z";
@@ -45,13 +45,7 @@ export const BRANCH_NAME = "feat/GH-183/closeout-v1-branch-cleanup";
 export const BASE_REF = "main-tools";
 export const THREAD_ID = "PRRT_2";
 
-export const FIXED_RUN_IDS = [
-  "run-0001",
-  "run-0002",
-  "run-0003",
-  "run-0004",
-  "run-0005",
-] as const;
+export const FIXED_RUN_IDS = ["run-0001", "run-0002", "run-0003", "run-0004", "run-0005"] as const;
 
 export const fixedRunId = (index = 0): string =>
   FIXED_RUN_IDS[index % FIXED_RUN_IDS.length] as string;
@@ -110,10 +104,7 @@ export const makeWorkItem = (overrides: Partial<WorkItem> = {}): WorkItem => ({
   ...overrides,
 });
 
-export const makeDependent = (
-  entityId: string,
-  overrides: Partial<WorkItem> = {},
-): WorkItem => ({
+export const makeDependent = (entityId: string, overrides: Partial<WorkItem> = {}): WorkItem => ({
   identity: { systemName: SYSTEM_NAME, entityId },
   title: `Dependent ${entityId}`,
   status: { nativeStatus: "open", deliveryState: "ready" },
@@ -122,9 +113,7 @@ export const makeDependent = (
   ...overrides,
 });
 
-export const makeMergedRequest = (
-  overrides: Partial<DeliveryRequest> = {},
-): DeliveryRequest => ({
+export const makeMergedRequest = (overrides: Partial<DeliveryRequest> = {}): DeliveryRequest => ({
   identity: { systemName: SYSTEM_NAME, entityId: "504" },
   sourceRef: BRANCH_NAME,
   targetRef: BASE_REF,
@@ -137,12 +126,18 @@ export const makeMergedRequest = (
   ...overrides,
 });
 
-export const observed = <T>(value: T, signals?: Parameters<typeof withSignals>[1]): CloseoutReadObservation<T> =>
-  withSignals(value, signals);
+export const observed = <T>(
+  value: T,
+  signals?: Parameters<typeof withSignals>[1],
+): CloseoutReadObservation<T> => withSignals(value, signals);
 
 const withSignals = <T>(
   value: T,
-  signals?: { readonly labels?: "observed" | "unavailable"; readonly relations?: "observed" | "unavailable" | "unknown"; readonly assignee?: "observed" | "unavailable" },
+  signals?: {
+    readonly labels?: "observed" | "unavailable";
+    readonly relations?: "observed" | "unavailable" | "unknown";
+    readonly assignee?: "observed" | "unavailable";
+  },
 ): CloseoutReadObservation<T> =>
   signals === undefined
     ? { observation: "observed", value }
@@ -380,7 +375,10 @@ export const operationById = (
 };
 
 export const bufferStreams = (): {
-  readonly streams: { readonly stdout: ReturnType<typeof bufferSink>; readonly stderr: ReturnType<typeof bufferSink> };
+  readonly streams: {
+    readonly stdout: ReturnType<typeof bufferSink>;
+    readonly stderr: ReturnType<typeof bufferSink>;
+  };
 } => ({ streams: { stdout: bufferSink(), stderr: bufferSink() } });
 
 export const MAX_DEPENDENTS = CLOSEOUT_MAX_DEPENDENTS;

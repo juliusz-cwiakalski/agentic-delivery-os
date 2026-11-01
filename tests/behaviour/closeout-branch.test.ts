@@ -51,9 +51,7 @@ describe("TC-CLOSE-047 protected refs and the safety matrix", () => {
         ...(testCase.sourceRef === undefined ? {} : { sourceRef: testCase.sourceRef }),
         branchName: testCase.branchName,
         localHead: testCase.localHead,
-        ...(testCase.mergedHeadSha === undefined
-          ? {}
-          : { mergedHeadSha: testCase.mergedHeadSha }),
+        ...(testCase.mergedHeadSha === undefined ? {} : { mergedHeadSha: testCase.mergedHeadSha }),
         protectedRefs: ["main-tools"],
         checkedOutElsewhere: testCase.checkedOutElsewhere,
         currentCheckout: "base",

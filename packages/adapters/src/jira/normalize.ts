@@ -186,7 +186,6 @@ export const jiraNormalizationContext = (
   customFieldMappings: JIRA_CUSTOM_FIELD_MAPPINGS,
 });
 
-
 /**
  * Compute the full label array for a Jira replace: remove only the named
  * lifecycle labels, add the requested labels, and preserve every other label.

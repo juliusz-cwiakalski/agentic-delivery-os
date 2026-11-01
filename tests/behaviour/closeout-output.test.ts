@@ -30,9 +30,7 @@ describe("TC-CLOSE-059 machine output is one bounded leak-free envelope", () => 
         observedWorkItem: observed(
           makeWorkItem({
             title: `Title ${CANARY_TEXT}`,
-            comments: [
-              { commentId: "c-1", authorAccount: "a", body: `Body ${CANARY_TEXT}` },
-            ],
+            comments: [{ commentId: "c-1", authorAccount: "a", body: `Body ${CANARY_TEXT}` }],
           }),
         ),
       }),

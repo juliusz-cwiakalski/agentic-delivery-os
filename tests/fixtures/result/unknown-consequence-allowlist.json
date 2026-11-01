@@ -1,9 +1,4 @@
 {
-  "baseline": [
-    "fallback.invocation",
-    "fallback.internal"
-  ],
-  "allowed": [
-    "closeout.write.failed"
-  ]
+  "baseline": ["fallback.invocation", "fallback.internal"],
+  "allowed": ["closeout.write.failed"]
 }

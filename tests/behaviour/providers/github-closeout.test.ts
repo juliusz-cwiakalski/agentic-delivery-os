@@ -4,7 +4,6 @@
  * GraphQL thread resolution — all over committed fixtures.
  */
 import { describe, expect, test } from "bun:test";
-import { methodAwareMismatch } from "./github-closeout-support";
 import {
   defaultGithubRoutes,
   dependenciesUrl,
@@ -14,6 +13,7 @@ import {
   makeGithubClient,
   pullsUrl,
 } from "../../fixtures/closeout/github-client";
+import { methodAwareMismatch } from "./github-closeout-support";
 import { readJson } from "./support";
 
 const parsed = (body: string | undefined): Record<string, unknown> => {
@@ -89,9 +89,9 @@ describe("TC-CLOSE-031 GitHub reverse dependents", () => {
     const { client } = makeGithubClient([
       { method: "GET", url: dependenciesUrl(183, 200), status: 404, body: {} },
     ]);
-    expect((await client.listBlockedByDependents({ entityId: "183", limit: 200 })).observation).toBe(
-      "unavailable",
-    );
+    expect(
+      (await client.listBlockedByDependents({ entityId: "183", limit: 200 })).observation,
+    ).toBe("unavailable");
   });
 });
 

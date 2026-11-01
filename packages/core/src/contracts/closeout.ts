@@ -335,7 +335,9 @@ export type CloseoutProviderRuntime = {
   readonly systemName: string;
   readonly capabilities: AdapterCapabilityDeclaration;
   readonly readWorkItem: (entityId: string) => Promise<CloseoutReadObservation<WorkItem>>;
-  readonly readWorkItemObservation: (entityId: string) => Promise<CloseoutReadObservation<WorkItem>>;
+  readonly readWorkItemObservation: (
+    entityId: string,
+  ) => Promise<CloseoutReadObservation<WorkItem>>;
   readonly readDeliveryRequest?: (
     entityId: string,
   ) => Promise<CloseoutReadObservation<DeliveryRequest>>;
@@ -394,17 +396,11 @@ export type CloseoutGitRuntime = {
   readonly readBranch: (input: {
     readonly branch: string;
   }) => Promise<CloseoutBranchFact | undefined>;
-  readonly isCheckedOutElsewhere: (input: {
-    readonly branch: string;
-  }) => Promise<boolean>;
+  readonly isCheckedOutElsewhere: (input: { readonly branch: string }) => Promise<boolean>;
   readonly isClean: () => Promise<boolean>;
   readonly resolveRef: (input: { readonly ref: string }) => Promise<boolean>;
-  readonly restoreCheckout: (input: {
-    readonly baseRef: string;
-  }) => Promise<CloseoutWriteOutcome>;
-  readonly deleteBranch: (input: {
-    readonly branch: string;
-  }) => Promise<CloseoutWriteOutcome>;
+  readonly restoreCheckout: (input: { readonly baseRef: string }) => Promise<CloseoutWriteOutcome>;
+  readonly deleteBranch: (input: { readonly branch: string }) => Promise<CloseoutWriteOutcome>;
 };
 
 /** The fenced state operations the closeout engine consumes (PIN-13, D6). */
@@ -415,7 +411,5 @@ export type CloseoutStateRuntime = {
     record: CloseoutOperationRecord,
   ) => StateResult<StateAppendOutcome>;
   readonly releaseFence: (handle: StateFenceHandle) => StateResult<StateFenceReleaseReport>;
-  readonly readHistory: (
-    workItemRef: string,
-  ) => StateResult<readonly CloseoutOperationRecord[]>;
+  readonly readHistory: (workItemRef: string) => StateResult<readonly CloseoutOperationRecord[]>;
 };

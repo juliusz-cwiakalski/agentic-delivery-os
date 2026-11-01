@@ -82,12 +82,24 @@ const recordFrom = (
   ];
   const missing = required.filter((key) => !Object.hasOwn(value, key));
   if (missing.length > 0) {
-    return { ok: false, error: { kind: "state", code: "state.keys.missing", consequence: "not_landed", location: { ...location, missingKeys: missing } } };
+    return {
+      ok: false,
+      error: {
+        kind: "state",
+        code: "state.keys.missing",
+        consequence: "not_landed",
+        location: { ...location, missingKeys: missing },
+      },
+    };
   }
   if (value.schemaId !== CLOSEOUT_OPERATION_PAYLOAD_SCHEMA) {
     return fail("state.store.torn", location);
   }
-  if (!isRecord(value.target) || typeof value.target.entityId !== "string" || typeof value.target.systemName !== "string") {
+  if (
+    !isRecord(value.target) ||
+    typeof value.target.entityId !== "string" ||
+    typeof value.target.systemName !== "string"
+  ) {
     return fail("state.store.torn", location);
   }
   if (!Array.isArray(value.evidence)) return fail("state.store.torn", location);
@@ -156,7 +168,10 @@ const readCoverage = (
   const read = readCloseoutHistory(store, workItemRef);
   if (!read.ok) return read;
   if (read.value.length !== expected) {
-    return fail("state.store.torn", { path: closeoutOperationRecordKey(workItemRef), record: expected });
+    return fail("state.store.torn", {
+      path: closeoutOperationRecordKey(workItemRef),
+      record: expected,
+    });
   }
   return ok(undefined);
 };

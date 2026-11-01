@@ -170,10 +170,7 @@
         "nativeStatus": "open",
         "deliveryState": "ready"
       },
-      "labels": [
-        "tracker",
-        "hand-back"
-      ],
+      "labels": ["tracker", "hand-back"],
       "assignee": "owner-placeholder",
       "relations": [
         {
@@ -291,10 +288,7 @@
         "nativeStatus": "open",
         "deliveryState": "ready"
       },
-      "labels": [
-        "tracker",
-        "hand-back"
-      ],
+      "labels": ["tracker", "hand-back"],
       "assignee": "owner-placeholder",
       "relations": [
         {
@@ -317,10 +311,7 @@
         "nativeStatus": "open",
         "deliveryState": "ready"
       },
-      "labels": [
-        "tracker",
-        "hand-back"
-      ],
+      "labels": ["tracker", "hand-back"],
       "assignee": "owner-placeholder",
       "relations": [
         {

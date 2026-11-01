@@ -38,6 +38,7 @@ import {
 import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import {
   buildCloseoutPlan,
+  type CloseoutPlanFacts,
   catalogPaths,
   classifyPruneCandidate,
   computeDbCutoffMs,
@@ -47,7 +48,6 @@ import {
   resolveConfig,
   runCloseout,
   selectPruneCandidates,
-  type CloseoutPlanFacts,
 } from "@delivery-os/core";
 import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";

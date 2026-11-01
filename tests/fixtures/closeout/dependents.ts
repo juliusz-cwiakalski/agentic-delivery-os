@@ -8,14 +8,13 @@ export const eligibleDependent = (entityId = "200"): CloseoutDependentFact =>
 export const blockedDependent = (entityId = "201"): CloseoutDependentFact =>
   testDependent(
     makeDependent(entityId),
-    observed([makeDependent("202", { status: { nativeStatus: "open", deliveryState: "in-progress" } })]),
+    observed([
+      makeDependent("202", { status: { nativeStatus: "open", deliveryState: "in-progress" } }),
+    ]),
   );
 
 export const unavailableRelationDependent = (entityId = "203"): CloseoutDependentFact =>
   testDependent(makeDependent(entityId), { observation: "unavailable" });
 
 export const alreadyHandBackDependent = (entityId = "204"): CloseoutDependentFact =>
-  testDependent(
-    makeDependent(entityId, { labels: ["change", "hand-back"] }),
-    observed([]),
-  );
+  testDependent(makeDependent(entityId, { labels: ["change", "hand-back"] }), observed([]));

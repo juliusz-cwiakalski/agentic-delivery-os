@@ -4,16 +4,8 @@
  */
 import { describe, expect, test } from "bun:test";
 import { buildCloseoutPlan } from "../../packages/core/src/domain/closeout";
-import {
-  makeFacts,
-  makeDependent,
-  observed,
-  testDependent,
-} from "../fixtures/closeout/harness";
-import {
-  eligibleDependent,
-  unavailableRelationDependent,
-} from "../fixtures/closeout/dependents";
+import { eligibleDependent, unavailableRelationDependent } from "../fixtures/closeout/dependents";
+import { makeDependent, makeFacts, observed, testDependent } from "../fixtures/closeout/harness";
 
 const owed = (facts: Parameters<typeof buildCloseoutPlan>[0]) =>
   buildCloseoutPlan(facts).steps.find((step) => step.stepId === "owed-flip-sweep");

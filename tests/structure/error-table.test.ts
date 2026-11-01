@@ -602,7 +602,8 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    const declaredKinds = "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, and `closeout`";
+    const declaredKinds =
+      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, and `closeout`";
     expect(doc).toContain(declaredKinds);
     expect(doc).toContain("`verify.ledger.incomplete`");
     expect(doc).toContain("`db.opencode.unavailable`");

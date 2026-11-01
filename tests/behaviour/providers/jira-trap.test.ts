@@ -23,8 +23,8 @@ import {
   validateWorkflowMap,
 } from "../../../packages/adapters/src/jira/workflow-map";
 import type { ExternalSystemInstance, WorkItem } from "../../../packages/core/src/contracts/index";
-import { fixtureBrand } from "../../fixtures/credentials/cases";
 import { makeJiraClient } from "../../fixtures/closeout/jira-client";
+import { fixtureBrand } from "../../fixtures/credentials/cases";
 import {
   arrayField,
   createFixtureTransport,

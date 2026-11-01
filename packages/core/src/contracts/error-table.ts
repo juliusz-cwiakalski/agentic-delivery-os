@@ -423,7 +423,8 @@ export const ERROR_TABLE = [
     category: "user",
     retryable: false,
     consequence: "not_landed",
-    remediationHint: "Disambiguate the delivery request or local branch for the work item, then retry.",
+    remediationHint:
+      "Disambiguate the delivery request or local branch for the work item, then retry.",
     projectionClass: "user-validation",
     summary: "More than one closeout target matched.",
   },

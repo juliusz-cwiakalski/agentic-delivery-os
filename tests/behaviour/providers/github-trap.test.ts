@@ -17,8 +17,8 @@ import type {
   PipelineRun,
   WorkItem,
 } from "../../../packages/core/src/contracts/index";
-import { fixtureBrand } from "../../fixtures/credentials/cases";
 import { makeGithubClient } from "../../fixtures/closeout/github-client";
+import { fixtureBrand } from "../../fixtures/credentials/cases";
 import {
   arrayField,
   createFixtureTransport,
@@ -432,7 +432,9 @@ const closeoutThreadGraphql = async (): Promise<void> => {
   });
   expect(result.ok).toBe(true);
   expect(
-    transport.requests.some((request) => request.method === "POST" && request.url.endsWith("/graphql")),
+    transport.requests.some(
+      (request) => request.method === "POST" && request.url.endsWith("/graphql"),
+    ),
   ).toBe(true);
 };
 

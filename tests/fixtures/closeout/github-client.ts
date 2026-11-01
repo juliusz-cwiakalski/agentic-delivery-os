@@ -1,14 +1,17 @@
 /** A fully offline GitHub client over committed synthetic fixtures. */
 import { createEnvironmentCredentialPort } from "../../../packages/adapters/src/credentials/index";
-import { createGitHubClient, type GithubClient } from "../../../packages/adapters/src/github/client";
+import {
+  createGitHubClient,
+  type GithubClient,
+} from "../../../packages/adapters/src/github/client";
 import type { ExternalSystemInstance } from "../../../packages/core/src/contracts/index";
-import { fixtureBrand } from "../credentials/cases";
 import {
   createFixtureTransport,
   type FixtureRoute,
   readJson,
   requireRecord,
 } from "../../behaviour/providers/support";
+import { fixtureBrand } from "../credentials/cases";
 
 export const GITHUB_FIXTURES = "tests/fixtures/providers/github";
 const REPO = { owner: "group-placeholder", name: "project-placeholder" } as const;
@@ -47,10 +50,8 @@ export const githubPullsFixture = (): unknown =>
   requireRecord(readJson(`${GITHUB_FIXTURES}/closeout-pulls-merged.json`), "pulls fixture").pulls;
 
 export const githubDependenciesFixture = (): unknown =>
-  requireRecord(
-    readJson(`${GITHUB_FIXTURES}/closeout-dependencies.json`),
-    "dependencies fixture",
-  ).issues;
+  requireRecord(readJson(`${GITHUB_FIXTURES}/closeout-dependencies.json`), "dependencies fixture")
+    .issues;
 
 export const defaultGithubRoutes = (): readonly FixtureRoute[] => [
   { method: "GET", url: issueUrl(183), body: githubIssueFixture() },
@@ -69,7 +70,9 @@ export type GithubHarness = {
   readonly transport: ReturnType<typeof createFixtureTransport>;
 };
 
-export const makeGithubClient = (routes: readonly FixtureRoute[] = defaultGithubRoutes()): GithubHarness => {
+export const makeGithubClient = (
+  routes: readonly FixtureRoute[] = defaultGithubRoutes(),
+): GithubHarness => {
   const transport = createFixtureTransport(routes);
   const client = createGitHubClient({
     instance: githubInstance,

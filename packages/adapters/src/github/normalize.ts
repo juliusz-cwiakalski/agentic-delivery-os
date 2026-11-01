@@ -302,7 +302,6 @@ export const normalizeGithubPullList = (
   return { ok: true, value: { items, pageItemCount: payload.length } };
 };
 
-
 /** Normalize a bounded merged-PR page, keeping only merged requests (F-12). */
 export const normalizeMergedDeliveryRequestList = (
   payload: unknown,

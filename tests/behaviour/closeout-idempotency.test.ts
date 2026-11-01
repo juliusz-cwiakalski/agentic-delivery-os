@@ -5,16 +5,16 @@
  */
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import {
-  type CloseoutOperationIdentityInputs,
-  type CloseoutOperationRecord,
+import type {
+  CloseoutOperationIdentityInputs,
+  CloseoutOperationRecord,
 } from "../../packages/core/src/contracts/index";
 import { STATE_SCHEMA_VERSION } from "../../packages/core/src/contracts/state";
 import {
+  buildCloseoutPlan,
   canonicalCloseoutJson,
   deriveCloseoutOperationId,
   foldCloseoutOutcomes,
-  buildCloseoutPlan,
   runCloseout,
 } from "../../packages/core/src/domain/closeout";
 import { sha256Hex } from "../../packages/core/src/domain/sha256";
@@ -73,9 +73,7 @@ describe("TC-CLOSE-018 SHA-256 algorithm evidence", () => {
   test("the fixed canonical tuple matches the committed digest and node:crypto", () => {
     expect(canonicalCloseoutJson(FIXED_INPUTS)).toBe(FIXED_CANONICAL_JSON);
     expect(deriveCloseoutOperationId(FIXED_INPUTS)).toBe(FIXED_DIGEST);
-    expect(
-      createHash("sha256").update(FIXED_CANONICAL_JSON).digest("hex"),
-    ).toBe(FIXED_DIGEST);
+    expect(createHash("sha256").update(FIXED_CANONICAL_JSON).digest("hex")).toBe(FIXED_DIGEST);
   });
 
   test("randomized inputs agree with node:crypto", () => {
@@ -120,7 +118,6 @@ describe("TC-CLOSE-018 first-terminal folding", () => {
     expect(folded[failed.operationId]?.outcome).toBe("applied");
   });
 });
-
 
 const apply = (
   facts: ReturnType<typeof makeFacts>,
