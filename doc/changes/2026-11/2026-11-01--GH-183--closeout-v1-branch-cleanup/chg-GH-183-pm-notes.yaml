@@ -10,7 +10,7 @@ phases:
   delivery: { started: "2026-11-01T10:45:00Z", completed: "2026-11-01T12:35:00Z" }
   system_spec_update: { started: "2026-11-01T12:40:00Z", completed: "2026-11-01T13:05:00Z" }
   review_fix: { started: "2026-11-01T13:10:00Z", completed: "2026-11-01T17:55:00Z" }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: "2026-11-01T18:00:00Z", completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
@@ -130,4 +130,7 @@ notes:
     date: "2026-11-01"
   - text: "Re-review iteration 2: PASS (code-review/review-iter-2.yaml). All F-1..F-12 resolved with code+tests+docs; regression battery green (2243 pass / 3 skip / 0 fail); gates unweakened; iteration-1 sound areas intact. Non-blocking: N-1 spec DM-11 wording nuance (omitted signal modeled as observed + signals.*=unavailable; canonical doc/spec is correct), N-2 optional pins (labels:[] observed assertion; planFacts torn read-before-plan path), N-3 pre-existing dead `satisfied` counter lint warning. Quality gates and DoD may proceed."
     type: resolved
+    date: "2026-11-01"
+  - text: "Quality gate run: 20/22 pass. All code/packaging/security gates green — pnpm build/typecheck/lint/format/test/check/boundaries, doc-distribution, error-table-sync (39/39), exit-code-literals, secret-read-boundary, forbidden-literals, privacy-literals, license-audit, vulnerability-gate, exports-parity, publint/attw; `bun test` 2243 pass / 3 skip / 0 fail. Failures: (a) `git diff --check` reports a trailing blank line at EOF in chg-GH-183-test-plan.md; (b) commitlint reports body/footer lines >100 chars on 6 commits (549a39f, ab29d9b, 261123b, 546ec43, 3737d17, 8555132). Both are hygiene-only; the branch is unpushed so a message-only history rewrite is safe."
+    type: blocker
     date: "2026-11-01"
