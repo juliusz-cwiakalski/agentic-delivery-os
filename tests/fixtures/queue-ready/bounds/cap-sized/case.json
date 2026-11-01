@@ -1,0 +1,7 @@
+{
+  "name": "cap-sized",
+  "description": "8 candidates, six conditions each, maximal labels and blocked-by relations, no title field.",
+  "candidates": 8,
+  "conditionsPerCandidate": 6,
+  "maxEvidencePerCondition": 2
+}

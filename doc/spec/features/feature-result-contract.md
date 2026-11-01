@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The command-surface result contract: the CommandResult envelope in core ./contracts, the machine-readable error table as the single source of failure identity including the five provider-engine rows, the lint rows for pm-notes conformance, the verify delivery-verdict row, and the four db session-administration rows, the domain-kind to app-error-code to projection classification chain with exact-code provider and db classification, the standalone CLI {0, 1, 2} exit projection, the deterministic in-process runCli surface, the two-entry fallback containment, the serialization redaction chokepoint, the testkit conformance validator, and the binding docs/code sync and exit-literal invariants."
 links:
-  related_changes: ["GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-180"]
+  related_changes: ["GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-180"]
   related_decisions: ["ADR-0003", "TDR-0005"]
 ---
 
@@ -259,6 +259,7 @@ The result surface itself adds no runtime dependency or new CI job. Configuratio
 - **Consumed by** pm-notes lint and phase transitions ([feature-pm-notes-lint-and-phase-transitions.md](feature-pm-notes-lint-and-phase-transitions.md)) for the five `lint` identities, exit projection, and envelope rendering.
 - **Consumed by** the adapter port substrate ([feature-adapter-ports.md](feature-adapter-ports.md)) for the `config.credential.missing` credential-failure identity and the redaction boundary.
 - **Consumed by** the status digest ([Status Digest](feature-status-digest.md)) for the envelope, the redaction path, and the rule that section failures are digest data reusing existing identities rather than new rows.
+- **Consumed by** the queue-ready ready-set ([Queue Ready](feature-queue-ready.md)) for the envelope, the redaction path, and error-identity reuse: grammar rejection uses the existing `input.value.rejected`, containment uses `fallback.internal`, and source read failures are condition evidence rather than new rows. Queue ready adds no error-table row or domain kind.
 - **Consumed by** session database administration ([Session Database Administration](feature-session-database-admin.md)) for the `db` domain kind, the four `db.*` rows, exact-code classification, the envelope, and the redaction path.
 - **Consumed by** verify change and exit taxonomy ([feature-verify-change-and-exit-taxonomy.md](feature-verify-change-and-exit-taxonomy.md)) for the `verify` domain kind and row, the delivery-result token projection, and the non-zero exit guarantee.
 - **Depends on** [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md) for runtime-neutral contract placement, package boundaries, and gate stability.

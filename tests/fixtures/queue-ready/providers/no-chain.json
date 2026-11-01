@@ -1,0 +1,22 @@
+{
+  "config": {
+    "credentials": {},
+    "entries": {
+      "primary": {
+        "name": "primary",
+        "class": "subscription",
+        "enabled": true
+      }
+    },
+    "chains": {
+      "primary": {
+        "name": "primary",
+        "entries": ["primary"],
+        "allowPaidFallback": false
+      }
+    }
+  },
+  "configFailure": null,
+  "parks": [],
+  "parkFailure": null
+}

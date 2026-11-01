@@ -1,0 +1,218 @@
+version: 1
+iteration: 4
+mode: local
+work_item_ref: GH-176
+branch: feat/GH-176/queue-ready
+status: PASS
+summary: >-
+  Iteration-4 final re-review of GH-176 after the iteration-3 F-14 citation fix
+  (bb65de8) on the merged tree (origin/main-tools merged at 7741a5d; reviewed
+  diff origin/main-tools...HEAD; HEAD 3cc5d00). F-14 is independently verified
+  resolved: chg-GH-176-evidence.md:158 now cites the R3 doc-sync as `58319b1`
+  and keeps `b8809d6` only as the earlier R2 doc-sync, and the plan's R3.5 task
+  (line 1117), task instruction (line 1121), and execution row (line 1426) do
+  the same; the later `git log` verification command (line 1135) now matches
+  `58319b1`. The stale-reference grep returns zero R3-misattribution hits (the
+  only remaining `b8809d6`/`v1.6` hits are historical revision-log rows and the
+  PM-owned pm-notes journal, both explicitly exempt). The delta since the
+  iteration-3 review HEAD (58319b1) is docs-only (evidence, plan, pm-notes,
+  review-iter-3.yaml) — no production code, test, config, or boundary file
+  changed — so no code regression is possible from the citation fix. The full
+  adversarial pass on the merged tree re-confirms the previously closed
+  findings: the human renderer (F-9) is byte-aware and total (astral-8 payload
+  22 108 bytes renders 2 891 bytes over 10 lines, all eight candidate lines
+  exactly 283 bytes, header tail plus summary 603 bytes, 16 provider segments
+  all ≤32 bytes ending in `+` with no lone surrogate; the over-budget brand
+  renders 3 989 bytes over 5 lines, keeps ranks 1-3, drops 5 trailing lines in
+  reverse rank order, marks `+more`, leaves the payload byte-identical); the
+  canonical golden (F-10) is evaluator-produced and DM-1/DM-2 valid with
+  corrupted-twin controls; the CJK fixture reduction (F-11) asserts the exact
+  relations-before-labels/reverse-rank/highest-index survivor order with
+  failing mutations; and `classifyPipelineRuns` (F-12) stays module-internal
+  (not on either barrel). Status behaviour is preserved (the `collectStatusFacts`
+  extraction is verbatim: two independent read gates, status output byte-identical),
+  boundaries, error rows, config keys, state schema, and public surface are
+  unchanged, and the current-truth feature doc matches the delivered 32-byte /
+  128-256 / 400 / 620 / 4 096-byte / 65 536-byte / reverse-rank-drop behaviour.
+  `pnpm check` is 2 065 pass / 3 skip / 0 fail and every invariant gate is green.
+  F-15 (PM-owned `review_fix` completion marker) and F-16 (accepted defensive
+  synthetic line-drop trigger) remain informational and require no coder action.
+  No open blocker, major, or minor finding remains: PASS.
+severity_breakdown:
+  blocker: 0
+  major: 0
+  minor: 0
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-15
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-10/2026-10-31--GH-176--queue-ready/chg-GH-176-pm-notes.yaml:14
+    message: >-
+      Carried from iteration 3, still open but PM-owned. The `review_fix` entry
+      records `completed: null` and the journal notes end at "Review iter-4
+      pending". The review loop has now passed, so this is a PM progress marker
+      to close at `dod_check`, not a coder remediation; it does not reopen any
+      finding and does not fail the review.
+    suggestion: >-
+      PM to set `review_fix.completed` and record the iter-4 PASS at `dod_check`.
+      No coder action.
+    suppressed: true
+    published_url: null
+  - id: F-16
+    severity: info
+    confidence: high
+    category: testing
+    location: tests/behaviour/queue-ready-output.test.ts:718
+    message: >-
+      Carried from iteration 3, accepted, no action. The reverse-rank human
+      line-drop fallback is exercised only by the synthetic over-long injected
+      brand in `tests/fixtures/queue-ready/caps/human-over-budget/facts.ts`
+      (`binaryName` 3 500 bytes), which is outside the documented "short token"
+      brand assumption; a legal payload cannot exceed the bound after the
+      verified 32-byte segment, 128/256-byte header, 400-byte candidate-line,
+      and 620-byte header-plus-summary caps. The drop is a genuinely defensive
+      branch and the evidence records it as synthetic.
+    suggestion: >-
+      No change required. If a legal-payload trigger is ever desired, drive it
+      from a test-only budget override rather than raising the production bound.
+    suppressed: true
+    published_url: null
+prior_findings_closure:
+  - id: F-1
+    status: RESOLVED
+    evidence: >-
+      `assembleReasons` builds group-5 from the rank-ordered candidate walk ->
+      `QUEUE_READY_CONDITION_ORDER` -> evidence order
+      (packages/core/src/domain/queue-ready.ts:834-851);
+      `QUEUE_READY_SOURCE_FAILURE_REASONS` is a membership set only (line 837);
+      the `reasons-cap-7` corpus expectation and a walk-order-not-array-order
+      test pin the documented order. Unchanged since iteration 3.
+  - id: F-2
+    status: RESOLVED
+    evidence: >-
+      `utf8ByteLength` (queue-ready.ts:86-96) is runtime-neutral and drives
+      `serializedBytes` for the initial budget (line 972) and every `fits()`
+      recheck (line 979); the CJK fixture reduces to 65 376 UTF-8 bytes with one
+      `value-clamped`. Human half closed by F-9. Unchanged since iteration 3.
+  - id: F-3
+    status: RESOLVED
+    evidence: >-
+      `compareNumericSuffix` uses BigInt (queue-ready.ts:113-123); large-suffix
+      and GH-007-before-GH-7 cases pass.
+  - id: F-4
+    status: RESOLVED
+    evidence: >-
+      Plan tasks 7.1-7.5 are checked, the phase-7 row records Complete at
+      `be722b2`, and the evidence records phase-7 completion; plan task audit is
+      52 checked / 0 unchecked.
+  - id: F-5
+    status: RESOLVED
+    evidence: >-
+      `clampValue`/`clampDetail` iterate code points (queue-ready.ts:136-149);
+      `truncateToBytes` iterates code points and never splits a surrogate pair
+      (queue-ready.ts:1025-1038); the astral fixture asserts valid text and no
+      lone surrogate; the independent astral-8 probe shows no lone surrogate.
+  - id: F-6
+    status: RESOLVED
+    evidence: >-
+      A defensive `not-configured` CI read maps to `signal-unavailable`, never
+      `read-failed` (queue-ready.ts:432-442); the CI control tests pass.
+  - id: F-7
+    status: ACCEPTED_NO_ACTION
+    evidence: >-
+      The defensive candidate evidence-cap branch is retained and documented; no
+      action required.
+  - id: F-8
+    status: RESOLVED
+    evidence: >-
+      Spec DM-2/Appendix B show `{ relationKind: "blocked-by", target:
+      { entityId } }`; verified closed in iteration 2 and unchanged.
+  - id: F-9
+    status: RESOLVED
+    evidence: >-
+      `.renderQueueReadyHuman` (queue-ready.ts:1093-1132) is byte-aware and
+      total. Independent iter-4 probe: `humanAstral8Facts()` evaluates a legal
+      22 108-byte payload (`truncated:false`, reasons
+      `["work-item-unobserved"]`) that renders 2 891 UTF-8 bytes over 10 lines;
+      all eight candidate lines are exactly 283 bytes; header tail plus summary
+      is 603 bytes; 16 provider segments are all ≤32 bytes ending in `+` with no
+      lone surrogate; no throw and no `fallback.internal`. Over-budget probe
+      (`HUMAN_OVER_BUDGET_BRAND`): 3 989 bytes / 5 lines, survivors ranks 1-3,
+      summary ends `+more`, payload byte-identical (`truncated:false`,
+      reasons `[]`). The renderer has no `throw`; the machine 65 536-byte UTF-8
+      bound is unchanged.
+  - id: F-10
+    status: RESOLVED
+    evidence: >-
+      `tests/fixtures/queue-ready/golden/canonical.ts` derives `canonicalPayload()`
+      from `evaluateQueueReady(canonicalFacts())`; the golden test asserts
+      byte-for-byte equality and `validatePayload()` pins DM-1/DM-2;
+      `canonicalUnknownClosePayload()` is a second evaluator-produced payload
+      with observed/ready candidates and `pr-association-unknown` in `reasons`,
+      and eight corrupted twins fail by name. Focused golden test passes.
+  - id: F-11
+    status: RESOLVED
+    evidence: >-
+      `tests/behaviour/queue-ready-corpus.test.ts:441-717` pins the exact CJK
+      survivor order (relations-before-labels, last-ranked first, highest index
+      first, stop at first fit), asserts survivors are prefixes, and proves the
+      labels-first/rank-ascending/index-ascending mutations fail by name.
+      Focused corpus test passes.
+  - id: F-12
+    status: RESOLVED
+    evidence: >-
+      `classifyPipelineRuns` is not exported from
+      `packages/core/src/domain/index.ts` or `packages/core/src/index.ts`; it is
+      imported directly from `./ci-result.js` by `status.ts` and `queue-ready.ts`.
+      `tests/structure/queue-ready-contract.test.ts:289-304` pins the two-function
+      public surface and the classifier's barrel absence.
+  - id: F-13
+    status: RESOLVED
+    evidence: >-
+      Version references are current (spec v1.8 / test plan v1.8 / plan v1.7);
+      no stale "Pending doc-syncer re-run" R3 marker remains; the R3 doc-sync is
+      now correctly attributed to `58319b1` with `b8809d6` only as the R2
+      doc-sync (closed via F-14).
+  - id: F-14
+    status: RESOLVED
+    evidence: >-
+      `chg-GH-176-evidence.md:158` reads "The R3 doc-sync handoff is complete at
+      `58319b1` (R2 doc-sync `b8809d6`)". The plan R3.5 task (line 1117), task
+      instruction (line 1121), and execution row (line 1426) all cite
+      `58319b1` as the R3 doc-sync and retain `b8809d6` only as the R2 doc-sync;
+      the plan's `git log` verification command (line 1135) matches `58319b1`.
+      `git show 58319b1` confirms it is "docs(GH-176): reconcile queue-ready spec
+      with byte-aware renderer" (introducing the 32-byte segments, 400/620
+      budgets, reverse-rank drop, never-throw rule), and `git show b8809d6`
+      confirms it is the earlier R2 reconciliation. The stale-reference grep
+      (`b8809d6` misattributed as the R3 doc-sync) returns zero hits outside the
+      exempt historical rows and PM-owned pm-notes. Fixed by bb65de8.
+test_evidence:
+  environment: "Bun 1.4.4, linux/x64, node v24.11.1; branch feat/GH-176/queue-ready; HEAD 3cc5d00; base origin/main-tools (merge 7741a5d); reviewed diff origin/main-tools...HEAD; post-iter-3 delta 58319b1..HEAD is docs-only (evidence, plan, pm-notes, review-iter-3.yaml)"
+  suites:
+    - "focused queue-ready output/corpus/golden/imports/contract (5 files): 80 pass / 0 fail (1 464 expect calls)"
+    - "full pnpm check (lint + format:check + typecheck/build + bun test + check:boundaries + exports-parity): 2 065 pass / 3 skip / 0 fail (182 files, 20 007 expect calls)"
+  gates:
+    - "pnpm lint / format:check / typecheck / build: exit 0"
+    - "depcruise packages: no dependency violations (133 modules, 273 dependencies)"
+    - "ambient-globals: 42 neutral-set files clean"
+    - "workspace-entrypoints: OK"
+    - "secret-read-boundary: 113 production files clean (4 allowlisted entries)"
+    - "exports-parity: 5 publishables pass"
+    - "forbidden-literals: 5/5 scope classes, 0 violations (feature-queue-ready.md registered)"
+    - "error-table-sync: entries=35 documented=35, OK (no queue error rows)"
+    - "exit-code-literals: 104 files, no call-site exit literals outside the projection module"
+    - "doc-distribution: 81 in-scope docs, no drift"
+  empirical_findings:
+    - "F-9 astral-8: payload 22 108 bytes / truncated false / reasons [\"work-item-unobserved\"]; human 2 891 bytes / 10 lines; all eight candidate lines 283 bytes; header line 543 bytes, summary 74 bytes (header tail + summary 603 bytes); 16 provider segments all ≤32 bytes ending in `+`; no lone surrogate."
+    - "F-9 over-budget: human 3 989 bytes / 5 lines; survivors ranks 1,2,3; summary ends `+more`; payload byte-identical (truncated false, reasons [])."
+    - "F-12/F-10/F-11 re-confirmed by the passing focused suites; public surface is evaluateQueueReady/renderQueueReadyHuman only; canonical golden DM-1/DM-2 valid; CJK reduction order exact with failing mutations."
+    - "Status behaviour preserved: the `collectStatusFacts` extraction moves the handler body verbatim (two independent read gates; issues/pulls on observed binding, check-runs additionally on resolved HEAD SHA) and `ciResultOf` is replaced by the identical `classifyPipelineRuns`; full status suites are green."
+    - "Scope: the only change after the iteration-3 review HEAD (58319b1) is docs-only (bb65de8 citation fix, 3cc5d00 iter-3 record); no production code, test, config, or boundary file changed."
+    - "Working tree clean after all runs (git status --porcelain empty; git diff --check clean)."
+reviewed_at: 2026-11-01T18:00:00Z
+next_step: PROCEED

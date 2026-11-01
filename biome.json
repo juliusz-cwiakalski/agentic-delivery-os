@@ -72,6 +72,12 @@
       "linter": {
         "enabled": false
       }
+    },
+    {
+      "includes": ["tests/fixtures/queue-ready/golden/**"],
+      "formatter": {
+        "enabled": false
+      }
     }
   ]
 }

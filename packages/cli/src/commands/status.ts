@@ -47,6 +47,48 @@ const unavailableRead = {
   reason: "not-configured",
 } as const;
 
+/**
+ * Collect the delivered status facts once. Two independent read gates:
+ * issues/pulls read whenever the binding is observed; check-runs read only when
+ * the binding is observed and the checkout HEAD SHA is resolved.
+ */
+export const collectStatusFacts = async (runtime: StatusCommandRuntime): Promise<StatusFacts> => {
+  const repository = runtime.readRepository();
+  let tracker: StatusWorkItemRead;
+  let changes: StatusDeliveryRequestRead;
+  let ci: StatusPipelineRunRead;
+  if (repository.binding.state !== "observed") {
+    tracker = unavailableRead;
+    changes = unavailableRead;
+    ci = unavailableRead;
+  } else {
+    const target: StatusRepositoryTarget = {
+      owner: repository.binding.owner,
+      name: repository.binding.name,
+    };
+    tracker = await runtime.readWorkItems(target, STATUS_SOURCE_ITEM_LIMIT);
+    changes = await runtime.readDeliveryRequests(target, STATUS_SOURCE_ITEM_LIMIT);
+    ci =
+      repository.head.sha === undefined
+        ? { ok: false, reason: "commit-unresolved" }
+        : await runtime.readPipelineRuns(repository.head.sha, STATUS_SOURCE_PIPELINE_LIMIT);
+  }
+  const nowMs = runtime.nowMs();
+  return {
+    nowIso: runtime.nowIso(),
+    nowMs,
+    repository,
+    tracker,
+    changes,
+    ci,
+    providers: {
+      config: runtime.readProviderConfig(),
+      parks: runtime.readProviderParks(nowMs),
+    },
+    localContext: runtime.readLocalContext(),
+  };
+};
+
 /** Build the `status` command definition over injected readers. */
 export const createStatusCommandDefinition = (
   runtime: StatusCommandRuntime,
@@ -55,41 +97,5 @@ export const createStatusCommandDefinition = (
   positionals: { max: 0 },
   humanText: (data: unknown, brand: BrandIdentity): string =>
     renderStatusHuman(data as StatusDigest, brand),
-  handler: async () => {
-    const repository = runtime.readRepository();
-    let tracker: StatusWorkItemRead;
-    let changes: StatusDeliveryRequestRead;
-    let ci: StatusPipelineRunRead;
-    if (repository.binding.state !== "observed") {
-      tracker = unavailableRead;
-      changes = unavailableRead;
-      ci = unavailableRead;
-    } else {
-      const target: StatusRepositoryTarget = {
-        owner: repository.binding.owner,
-        name: repository.binding.name,
-      };
-      tracker = await runtime.readWorkItems(target, STATUS_SOURCE_ITEM_LIMIT);
-      changes = await runtime.readDeliveryRequests(target, STATUS_SOURCE_ITEM_LIMIT);
-      ci =
-        repository.head.sha === undefined
-          ? { ok: false, reason: "commit-unresolved" }
-          : await runtime.readPipelineRuns(repository.head.sha, STATUS_SOURCE_PIPELINE_LIMIT);
-    }
-    const nowMs = runtime.nowMs();
-    const facts: StatusFacts = {
-      nowIso: runtime.nowIso(),
-      nowMs,
-      repository,
-      tracker,
-      changes,
-      ci,
-      providers: {
-        config: runtime.readProviderConfig(),
-        parks: runtime.readProviderParks(nowMs),
-      },
-      localContext: runtime.readLocalContext(),
-    };
-    return { data: aggregateStatus(facts) };
-  },
+  handler: async () => ({ data: aggregateStatus(await collectStatusFacts(runtime)) }),
 });

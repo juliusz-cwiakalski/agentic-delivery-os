@@ -1,0 +1,22 @@
+{
+  "name": "source-failures-degraded",
+  "mode": "command",
+  "candidates": ["GH-176"],
+  "facts": {
+    "binding": "unavailable:addressing-unresolved",
+    "tracker": "skipped",
+    "changes": "skipped",
+    "ci": "skipped",
+    "providerConfig": "invalid:config-invalid",
+    "parks": "failed:state-unreadable",
+    "localContext": "observed:no-active-change"
+  },
+  "expected": {
+    "conditions": ["unknown", "satisfied", "unknown", "unknown", "unknown", "unknown"],
+    "ready": false,
+    "closeClass": "not-ready",
+    "rank": 1,
+    "candidateTruncated": false,
+    "payloadTruncated": false
+  }
+}

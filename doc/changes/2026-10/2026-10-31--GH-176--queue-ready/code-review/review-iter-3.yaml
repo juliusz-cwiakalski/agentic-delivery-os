@@ -1,0 +1,240 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-176
+branch: feat/GH-176/queue-ready
+status: FAIL
+summary: >-
+  Iteration-3 re-review of the GH-176 R3.1–R3.6 remediation on the merged tree
+  (origin/main-tools merged at 7741a5d). F-9, F-10, F-11 and F-12 are
+  independently verified closed: the human renderer is byte-aware and total
+  (the astral-8 worst case renders 2 891 UTF-8 bytes over 10 lines, every
+  candidate line 283 bytes, header plus summary 603 bytes, 16 provider segments
+  all 29 bytes with no lone surrogate, exit 0 and no fallback.internal), an
+  over-budget render drops 5 trailing lines in reverse rank order with `+more`
+  and leaves the payload byte-identical, the canonical golden is
+  evaluator-produced and DM-1/DM-2 valid with corrupted-twin controls, the CJK
+  reduction asserts the exact relations-before-labels/reverse-rank/highest-index
+  order with failing mutations, and `classifyPipelineRuns` is module-internal
+  (not on the domain barrel or core root). F-13 is only partially closed: the
+  stale version strings and "Pending doc-syncer" text are gone, but the
+  evidence and plan cite `b8809d6` as the completed R3 doc-sync when the R3
+  feature-doc reconciliation is `58319b1` (`b8809d6` is the earlier R2 doc-sync,
+  whose feature doc still says "32 code points" and "over-cap render is a hard
+  contract failure with no reduction"). The code, tests, current-truth docs,
+  boundaries, and status behaviour are otherwise sound; the full suite is
+  2 065 pass / 3 skip / 0 fail and every invariant gate is green. The only
+  required fix is the stale R3 doc-sync commit citation.
+severity_breakdown:
+  blocker: 0
+  major: 0
+  minor: 1
+  info: 2
+spec_compliance: PASS
+plan_compliance: FAIL
+findings:
+  - id: F-14
+    severity: minor
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-10/2026-10-31--GH-176--queue-ready/chg-GH-176-evidence.md:158
+    message: >-
+      The R3 remediation record says "The doc-sync handoff is complete at
+      `b8809d6`", and the plan repeats it (R3.5 task line 1117, R3.5 task
+      instruction line 1121, and R3.5 execution row line 1426). `b8809d6` is the
+      review-iteration-1 (R2) feature-doc reconciliation; its
+      `doc/spec/features/feature-queue-ready.md` still describes
+      `QUEUE_READY_MAX_HUMAN_SEGMENT_CHARS` (32 code points) and "an over-cap
+      render is a hard contract failure with no reduction". The R3 doc-sync is
+      `58319b1` ("reconcile queue-ready spec with byte-aware renderer"), which
+      introduced the 32-UTF-8-byte segments, the 400/620 budgets, the
+      reverse-rank line drop, and the never-throw rule. F-13 is therefore only
+      partially closed: the current-state version references are correct and no
+      "Pending doc-syncer re-run" text remains, but the R3 doc-sync commit
+      citation is stale and misattributes the R3 documentation reconciliation to
+      the R2 commit.
+    suggestion: >-
+      Update the R3 doc-sync citation to `58319b1` in
+      `chg-GH-176-evidence.md:158`, the plan R3.5 task (line 1117), task
+      instruction (line 1121), and execution row (line 1426); optionally keep
+      `b8809d6` as the earlier R2 doc-sync reference. Re-run the
+      stale-reference grep and keep the evidence/plan version references at spec
+      v1.8 / test plan v1.8 / plan v1.7.
+    suppressed: false
+    published_url: null
+  - id: F-15
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-10/2026-10-31--GH-176--queue-ready/chg-GH-176-pm-notes.yaml:14
+    message: >-
+      The PM-owned `review_fix` entry still records `completed: null` and
+      "Doc-syncer re-run and review iter-3 pending". The R3 doc-sync (`58319b1`)
+      has landed and this is review iteration 3, so this is a PM progress marker
+      to close at `dod_check`; it is not a coder remediation and does not reopen
+      F-13, which is scoped to the evidence/plan artifacts.
+    suggestion: >-
+      PM to set `review_fix.completed` and replace the "pending" wording when the
+      review loop passes. No coder action.
+    suppressed: false
+    published_url: null
+  - id: F-16
+    severity: info
+    confidence: high
+    category: testing
+    location: tests/behaviour/queue-ready-output.test.ts:718
+    message: >-
+      Design note, no action. The reverse-rank human line-drop fallback is
+      exercised only by the over-long injected brand in
+      `tests/fixtures/queue-ready/caps/human-over-budget/facts.ts`
+      (`binaryName` 3 500 bytes), which is outside the documented "short token"
+      brand assumption. A legal payload cannot exceed 4 096 bytes after the
+      verified 400-byte candidate-line and 620-byte header-plus-summary caps
+      (8 x 400 + 617 + 10 newlines = 3 827 plus a bounded brand), so the drop is
+      a genuinely defensive branch and the test is a synthetic trigger; the
+      evidence records it as synthetic. The production guarantee for legal
+      payloads rests on the byte caps, which are verified.
+    suggestion: >-
+      No change required. If a legal-payload trigger is ever desired, drive it
+      from a test-only budget override rather than raising the production bound.
+    suppressed: false
+    published_url: null
+prior_findings_closure:
+  - id: F-1
+    status: RESOLVED
+    evidence: >-
+      `assembleReasons` builds group-5 from the rank-ordered candidate walk ->
+      `QUEUE_READY_CONDITION_ORDER` -> evidence order
+      (packages/core/src/domain/queue-ready.ts:834-851); `QUEUE_READY_SOURCE_FAILURE_REASONS`
+      is a membership set only (line 837); the `reasons-cap-7` corpus expectation
+      and a walk-order-not-array-order test pin the documented order.
+  - id: F-2
+    status: RESOLVED
+    evidence: >-
+      Machine half: `utf8ByteLength` (queue-ready.ts:86-96) drives
+      `serializedBytes` for the initial budget (line 972), every `fits()`
+      recheck (line 979), and the CJK fixture reduces to 65 376 UTF-8 bytes with
+      one `value-clamped` and unchanged verdicts (probe confirmed ranks 8->3
+      lose all 16 relations, rank 2 loses 5, rank 1 and all labels survive).
+      Human half: closed by F-9 (below). The old character-based constant is gone.
+  - id: F-3
+    status: RESOLVED
+    evidence: >-
+      `compareNumericSuffix` uses BigInt (queue-ready.ts:113-123);
+      large-suffix and GH-007-before-GH-7 cases pass.
+  - id: F-4
+    status: RESOLVED
+    evidence: >-
+      Plan tasks 7.1-7.5 are checked, the phase-7 row records Complete, and the
+      evidence records phase-7 completion; plan task audit is 52 checked / 0
+      unchecked.
+  - id: F-5
+    status: RESOLVED
+    evidence: >-
+      `clampValue`/`clampDetail`/`truncateToBytes` iterate code points
+      (queue-ready.ts:136-149, 1025-1038); the astral fixture asserts valid text
+      and no lone surrogate; independent probe of the astral-8 render confirms
+      full TextDecoder round-trip and no lone surrogate.
+  - id: F-6
+    status: RESOLVED
+    evidence: >-
+      A defensive `not-configured` CI read maps to `signal-unavailable`, never
+      `read-failed` (queue-ready.ts:432-442); the CI control tests pass.
+  - id: F-7
+    status: ACCEPTED_NO_ACTION
+    evidence: >-
+      The defensive candidate evidence-cap branch is retained and documented; no
+      action required.
+  - id: F-8
+    status: RESOLVED
+    evidence: >-
+      Spec Appendix B shows `{ relationKind: "blocked-by", target: { entityId } }`;
+      verified closed in iteration 2 and unchanged.
+  - id: F-9
+    status: RESOLVED
+    evidence: >-
+      `renderQueueReadyHuman` (queue-ready.ts:1093-1132) is byte-aware and total.
+      `QUEUE_READY_MAX_HUMAN_SEGMENT_BYTES = 32` incl. `+`
+      (truncateToBytes, lines 1025-1038); header owner/name <=128 and branch
+      <=256 UTF-8 bytes (lines 1070-1076, 1043-1046); candidate line <=400
+      (line 1109); total <=4096 and <=16 lines (lines 1104-1119); a
+      reverse-rank line drop marked `+more` with no throw (lines 1112-1131).
+      Independent probe: `humanAstral8Facts()` evaluates a legal 22 108-byte
+      payload (`truncated: false`, reasons `["work-item-unobserved"]`) and
+      renders 2 891 UTF-8 bytes over 10 lines, max candidate line 283 bytes,
+      header+summary 603 bytes, 16 provider segments all 29 bytes ending in `+`,
+      owner/name 125 bytes and branch 253 bytes, no lone surrogate, CLI exit 0
+      and no `fallback.internal`. Over-budget probe
+      (`HUMAN_OVER_BUDGET_BRAND`): 3 989 bytes / 5 lines, 3 highest-ranked
+      survivors, 5 trailing lines dropped in reverse rank order, summary ends
+      `+more`, payload byte-identical (`truncated: false`, reasons `[]`), CLI
+      exit 0. The renderer has no `throw`; the machine 65 536 UTF-8-byte bound
+      is unchanged.
+  - id: F-10
+    status: RESOLVED
+    evidence: >-
+      `tests/fixtures/queue-ready/golden/canonical.ts` derives
+      `canonicalPayload()` from `evaluateQueueReady(canonicalFacts())`; the
+      static golden asserts byte-for-byte and `validatePayload()` pin
+      DM-1/DM-2. `payload.json` is a valid payload (GH-175 merge-ready /
+      GH-179 review-pending / GH-170 new-start / GH-181 observed not-ready with
+      `tier-known: unknown`; `truncated: true`, `reasons: ["value-clamped"]`; no
+      title/systemName). `canonicalUnknownClosePayload()` is a second
+      evaluator-produced payload with observed, ready candidates, `unknown`
+      close, and `pr-association-unknown` last in `reasons`; eight corrupted
+      twins fail by name.
+  - id: F-11
+    status: RESOLVED
+    evidence: >-
+      `tests/behaviour/queue-ready-corpus.test.ts:441-717` encodes rank/index
+      sentinels in the CJK fixture, compares the production survivor set to a
+      pinned oracle (relations-before-labels, last-ranked candidate first,
+      highest index first, stop at first fit), and proves the labels-first,
+      rank-ascending, and index-ascending mutations fail by name. Independent
+      probe matches the evidence (payload 65 376 bytes; ranks 8->3 lose all 16
+      relations, rank 2 loses 5, rank 1 and every label survive).
+  - id: F-12
+    status: RESOLVED
+    evidence: >-
+      `classifyPipelineRuns` is not exported from
+      `packages/core/src/domain/index.ts` or `packages/core/src/index.ts`; it is
+      imported directly from `./ci-result.js` by `status.ts` and
+      `queue-ready.ts`. `tests/structure/queue-ready-contract.test.ts:289-304`
+      pins the two-function queue-ready public surface and the classifier's
+      absence from both barrels.
+  - id: F-13
+    status: PARTIAL
+    evidence: >-
+      Version references are current (spec v1.8 / test plan v1.8 / plan v1.7)
+      and no "Pending doc-syncer re-run" text remains in the evidence. However
+      the R3 doc-sync is misattributed to `b8809d6` (the R2 doc-sync) in
+      `chg-GH-176-evidence.md:158` and `chg-GH-176-plan.md:1117/1121/1426`;
+      the R3 doc-sync is `58319b1`. See F-14.
+test_evidence:
+  environment: "Bun 1.4.4, linux/x64; branch feat/GH-176/queue-ready; HEAD 58319b1; reviewed diff origin/main-tools...HEAD"
+  suites:
+    - "focused queue-ready output/corpus/golden/imports/contract (5 files): 80 pass / 0 fail (1 464 expect calls)"
+    - "full bun test: 2 065 pass / 3 skip / 0 fail (182 files, 20 007 expect calls)"
+    - "status behaviour + golden: covered by the full run, green (collectStatusFacts extraction is behaviour-preserving)"
+  gates:
+    - "pnpm lint: exit 0 (26 warnings / 5 infos, none in queue-ready production files; non-blocking)"
+    - "pnpm format:check: clean (628 files)"
+    - "pnpm typecheck: clean (build + all six packages + tests/types)"
+    - "depcruise packages: no dependency violations (133 modules, 273 dependencies)"
+    - "forbidden-literals: 5/5 scope classes, 0 violations (feature-queue-ready.md registered)"
+    - "error-table-sync: entries=35 documented=35, OK (no queue error rows; GH-180 db rows explain the 31->35 change)"
+    - "ambient-globals: 42 neutral-set files clean"
+    - "workspace-entrypoints: OK"
+    - "secret-read-boundary: 113 production files clean, 4 allowlisted entries"
+    - "exit-code-literals: 104 files, no call-site exit literals outside the projection module"
+    - "doc-distribution: 81 in-scope docs, no drift"
+    - "exports-parity: 5 publishables pass"
+  empirical_findings:
+    - "F-9 astral-8: payload 22 108 bytes / truncated false; human 2 891 bytes / 10 lines; candidate lines all 283 bytes; header+summary 603 bytes; provider segments all 29 bytes; owner/name 125 and branch 253 bytes; no lone surrogate and valid TextDecoder round-trip; CLI exit 0, no fallback.internal."
+    - "F-9 over-budget: human 3 989 bytes / 5 lines; 3 survivors (ranks 1-3), 5 dropped in reverse rank order; summary ends +more; payload byte-identical; CLI exit 0."
+    - "F-9 first-fit: restoring the next (actual, 107-byte) candidate line yields 4 097 bytes (>4 096), so the renderer stops at the first fit."
+    - "F-11 CJK reduction: 65 376 UTF-8 bytes; rank 1 relations 16, rank 2 relations 11, ranks 3-8 relations 0; all labels 16 (128 total); one value-clamped; verdicts unchanged."
+    - "Boundaries: no new package/subpath/runtime-API/secret-read/error-row/config-key/state-schema change; status reads are the reused collectStatusFacts (two independent gates preserved)."
+    - "Working tree clean after all runs (git status --porcelain empty; dist/ is ignored build output)."
+reviewed_at: 2026-11-01T16:30:00Z
+next_step: CALL_CODER

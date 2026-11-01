@@ -1,0 +1,35 @@
+{
+  "config": {
+    "defaultChain": "primary",
+    "credentials": {},
+    "entries": {
+      "primary": {
+        "name": "primary",
+        "class": "subscription",
+        "enabled": true
+      }
+    },
+    "chains": {
+      "primary": {
+        "name": "primary",
+        "entries": ["primary"],
+        "allowPaidFallback": false
+      }
+    }
+  },
+  "configFailure": null,
+  "parks": [
+    {
+      "name": "chain:primary",
+      "subjectKind": "chain",
+      "subjectName": "primary",
+      "cause": "peak-window",
+      "conditions": ["quota-exhausted"],
+      "state": "expired",
+      "createdAt": "2026-10-30T00:00:00Z",
+      "expiresAt": "2026-10-30T23:00:00Z",
+      "evidence": {}
+    }
+  ],
+  "parkFailure": null
+}

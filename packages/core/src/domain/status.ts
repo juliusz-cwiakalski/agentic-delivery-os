@@ -55,6 +55,7 @@ import {
   type StatusWorkItemRead,
   type WorkItem,
 } from "#contracts";
+import { classifyPipelineRuns } from "./ci-result.js";
 
 const DAY_MS = 86_400_000;
 
@@ -769,19 +770,6 @@ const compareRuns = (left: PipelineRun, right: PipelineRun): number => {
   return compareText(left.pipelineName, right.pipelineName);
 };
 
-const ciResultOf = (runs: readonly PipelineRun[]): StatusCiResult => {
-  const states = runs.flatMap((run) => run.jobs.map((job) => job.jobState));
-  if (states.includes("failed")) return "failed";
-  if (states.includes("running") || states.includes("queued")) return "pending";
-  if (states.includes("canceled")) return "canceled";
-  if (states.includes("succeeded")) {
-    return states.every((state) => state === "succeeded" || state === "skipped")
-      ? "succeeded"
-      : "none";
-  }
-  return "none";
-};
-
 const ciSection = (facts: StatusFacts): StatusSection => {
   const bindingFailure = bindingReason(facts.repository.binding);
   const head = facts.repository.head;
@@ -839,7 +827,7 @@ const ciSection = (facts: StatusFacts): StatusSection => {
   const rendered = capped(ranked, STATUS_MAX_PIPELINE_RUNS);
   const omitted = read.items.length - rendered.length;
   const truncated = omitted > 0 || read.pageItemCount >= STATUS_SOURCE_PIPELINE_LIMIT;
-  const result = ciResultOf(read.items);
+  const result = classifyPipelineRuns(read.items);
   const reasons: StatusEvidenceReason[] = [result === "none" ? "observed-empty" : "observed"];
   if (truncated) reasons.push("source-truncated");
   return {

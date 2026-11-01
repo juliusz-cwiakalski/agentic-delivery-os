@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The read-only status command and its bounded delivery.status.v1 digest: six fixed sections in order, a closed five-value section state, bounded evidence and counts, deterministic rank keys and truncation, the four tracker families, changes and pull requests, bounded check-runs CI classification, the declared lanes-or-queue gap, providers read from configuration and the verified park fold, parked work from the git-ignored local PM context, origin-derived repository binding under a credential-reference-only composition guard, the machine envelope and human digest grammar, error-identity reuse, and the fixture plus opt-in live-smoke evidence model."
 links:
-  related_changes: ["GH-175"]
+  related_changes: ["GH-175", "GH-176"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006"]
   contracts:
     - "packages/core/src/contracts/status.ts"
@@ -24,7 +24,7 @@ Each section carries one state from the closed set `observed`, `degraded`, `unkn
 
 The machine mode is the standard `CommandResult` envelope whose `data` is the full digest. Human mode is a deterministic, bounded digest rendered from the same data. Status performs zero writes, fences, state mutations, network writes, or child processes. It adds no error-table row, no configuration key, and no state-schema change; it introduces no new package, subpath, or runtime-API location.
 
-The surrounding contracts are described in [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Provider Engine](feature-provider-engine.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), and [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md). Package tiers and runtime confinement follow [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); tracker absence semantics follow [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md) and [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md).
+The separate read-only ready-set command that consumes these inputs is specified in [Queue Ready](feature-queue-ready.md); it is a distinct command and does not change the status digest. The surrounding contracts are described in [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Provider Engine](feature-provider-engine.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), and [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md). Package tiers and runtime confinement follow [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); tracker absence semantics follow [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md) and [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md).
 
 ## Business Context
 
@@ -155,7 +155,7 @@ The collector resolves the commit under observation from the current checkout HE
 
 ### Lanes or queue
 
-The section is always `not-delivered` with capability `queue-lane-engine`, expected delivering story `M2-S1`, reason `engine-not-delivered`, source `queue-engine`, zero items, zero counts, and an explicit note that no queue or lane engine exists in this release. It is never an observed empty queue, never a fabricated queue, and never a duplicate of `queue ready` (M0-S7).
+The section is always `not-delivered` with capability `queue-lane-engine`, expected delivering story `M2-S1`, reason `engine-not-delivered`, source `queue-engine`, zero items, zero counts, and an explicit note that no queue or lane engine exists in this release. It is never an observed empty queue, never a fabricated queue, and never a duplicate of `queue ready` (M0-S7). The `queue ready` command is the separate read-only ready-set specified in [Queue Ready](feature-queue-ready.md); it consumes the same tracker, pull-request, CI, provider, and local PM-context inputs, adds no status behavior, and does not fill or change this section.
 
 ### Providers
 
@@ -322,7 +322,7 @@ One invocation performs at most three outbound read-only GitHub requests, one lo
 - **Depends on** the configuration layer ([feature-config-layer.md](feature-config-layer.md)) for the resolved provider branch; status adds no keys.
 - **Depends on** the result contract ([feature-result-contract.md](feature-result-contract.md)) for the envelope, existing failure identities, exact-code classification, and the sole redaction path; status adds no rows.
 - **Depends on** the monorepo scaffold ([feature-monorepo-scaffold-toolchain.md](feature-monorepo-scaffold-toolchain.md)) for tiers, boundaries, and runtime-API confinement.
-- **Blocks** `queue ready` (M0-S7), which consumes the provider availability vocabulary established here; **precedes** M1-S10 collector expansion and M2-S4 shared board state.
+- **Enables** `queue ready` (M0-S7) ([Queue Ready](feature-queue-ready.md)), which consumes the read seams, normalized views, CI classification, and provider availability vocabulary established here without changing the digest; **precedes** M1-S10 collector expansion and M2-S4 shared board state.
 - **Risk — degraded evidence read as an all-clear:** mitigated by the explicit five-state vocabulary, evidence reasons, and an exhaustive negative-control matrix.
 - **Risk — provider park shown as available capacity:** mitigated by `parked`/`unverified` availability and by never running the provider engine.
 - **Risk — queue gap mistaken for an empty queue:** mitigated by the always-`not-delivered` section and its explicit note.

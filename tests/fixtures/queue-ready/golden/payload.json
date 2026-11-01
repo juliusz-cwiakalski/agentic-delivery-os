@@ -1,0 +1,409 @@
+{
+  "schemaVersion": "delivery.queue-ready.v1",
+  "generatedAt": "2026-10-31T00:00:00Z",
+  "repository": {
+    "state": "observed",
+    "host": "github.com",
+    "owner": "owner-placeholder",
+    "name": "project-placeholder",
+    "remoteName": "origin"
+  },
+  "head": {
+    "branch": "feat/GH-176/queue-ready",
+    "sha": "b31ec47111111111111111111111111111111111"
+  },
+  "candidates": [
+    {
+      "workItemRef": "GH-175",
+      "rank": 1,
+      "ready": true,
+      "closeClass": "merge-ready",
+      "workItem": {
+        "state": "observed",
+        "itemState": "ready",
+        "labels": [
+          "priority:high"
+        ]
+      },
+      "close": {
+        "association": "associated",
+        "associatedCount": 1,
+        "pullRequest": {
+          "entityId": "1234567890123456789012345678901234567890",
+          "sourceRef": "feat/GH-175/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "targetRef": "main-tools",
+          "draft": false,
+          "reviewStateObserved": true,
+          "reviewState": "approved"
+        },
+        "reason": "pr-associated"
+      },
+      "conditions": [
+        {
+          "id": "deps-satisfied",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "tracker",
+              "reason": "no-blocked-dependencies"
+            }
+          ]
+        },
+        {
+          "id": "repo-free",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "local-context",
+              "reason": "no-active-change",
+              "detail": "repo:local-context"
+            }
+          ]
+        },
+        {
+          "id": "tier-known",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "tracker",
+              "reason": "tier-label",
+              "detail": "tier:priority-label; label:priority:high"
+            }
+          ]
+        },
+        {
+          "id": "no-owner-gate",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "tracker",
+              "reason": "no-owner-labels"
+            }
+          ]
+        },
+        {
+          "id": "ci-healthy",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "ci",
+              "reason": "ci-succeeded",
+              "detail": "result:succeeded"
+            }
+          ]
+        },
+        {
+          "id": "provider-available",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "provider-parks",
+              "reason": "no-active-park",
+              "detail": "chain:primary"
+            },
+            {
+              "source": "provider-config",
+              "reason": "engine-not-run"
+            }
+          ]
+        }
+      ],
+      "blockingConditions": [],
+      "truncated": false
+    },
+    {
+      "workItemRef": "GH-179",
+      "rank": 2,
+      "ready": true,
+      "closeClass": "review-pending",
+      "workItem": {
+        "state": "observed",
+        "itemState": "ready",
+        "labels": [
+          "priority:high"
+        ]
+      },
+      "close": {
+        "association": "associated",
+        "associatedCount": 1,
+        "pullRequest": {
+          "entityId": "209",
+          "sourceRef": "feat/GH-179/pending",
+          "targetRef": "main-tools",
+          "draft": false,
+          "reviewStateObserved": true,
+          "reviewState": "open"
+        },
+        "reason": "pr-associated"
+      },
+      "conditions": [
+        {
+          "id": "deps-satisfied",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "tracker",
+              "reason": "no-blocked-dependencies"
+            }
+          ]
+        },
+        {
+          "id": "repo-free",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "local-context",
+              "reason": "no-active-change",
+              "detail": "repo:local-context"
+            }
+          ]
+        },
+        {
+          "id": "tier-known",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "tracker",
+              "reason": "tier-label",
+              "detail": "tier:priority-label; label:priority:high"
+            }
+          ]
+        },
+        {
+          "id": "no-owner-gate",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "tracker",
+              "reason": "no-owner-labels"
+            }
+          ]
+        },
+        {
+          "id": "ci-healthy",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "ci",
+              "reason": "ci-succeeded",
+              "detail": "result:succeeded"
+            }
+          ]
+        },
+        {
+          "id": "provider-available",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "provider-parks",
+              "reason": "no-active-park",
+              "detail": "chain:primary"
+            },
+            {
+              "source": "provider-config",
+              "reason": "engine-not-run"
+            }
+          ]
+        }
+      ],
+      "blockingConditions": [],
+      "truncated": false
+    },
+    {
+      "workItemRef": "GH-170",
+      "rank": 3,
+      "ready": true,
+      "closeClass": "new-start",
+      "workItem": {
+        "state": "observed",
+        "itemState": "ready",
+        "labels": [
+          "priority:high"
+        ]
+      },
+      "close": {
+        "association": "not-associated",
+        "associatedCount": 0,
+        "reason": "pr-not-associated"
+      },
+      "conditions": [
+        {
+          "id": "deps-satisfied",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "tracker",
+              "reason": "no-blocked-dependencies"
+            }
+          ]
+        },
+        {
+          "id": "repo-free",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "local-context",
+              "reason": "no-active-change",
+              "detail": "repo:local-context"
+            }
+          ]
+        },
+        {
+          "id": "tier-known",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "tracker",
+              "reason": "tier-label",
+              "detail": "tier:priority-label; label:priority:high"
+            }
+          ]
+        },
+        {
+          "id": "no-owner-gate",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "tracker",
+              "reason": "no-owner-labels"
+            }
+          ]
+        },
+        {
+          "id": "ci-healthy",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "ci",
+              "reason": "ci-succeeded",
+              "detail": "result:succeeded"
+            }
+          ]
+        },
+        {
+          "id": "provider-available",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "provider-parks",
+              "reason": "no-active-park",
+              "detail": "chain:primary"
+            },
+            {
+              "source": "provider-config",
+              "reason": "engine-not-run"
+            }
+          ]
+        }
+      ],
+      "blockingConditions": [],
+      "truncated": false
+    },
+    {
+      "workItemRef": "GH-181",
+      "rank": 4,
+      "ready": false,
+      "closeClass": "not-ready",
+      "workItem": {
+        "state": "observed",
+        "itemState": "ready",
+        "labels": []
+      },
+      "close": {
+        "association": "not-associated",
+        "associatedCount": 0,
+        "reason": "pr-not-associated"
+      },
+      "conditions": [
+        {
+          "id": "deps-satisfied",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "tracker",
+              "reason": "no-blocked-dependencies"
+            }
+          ]
+        },
+        {
+          "id": "repo-free",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "local-context",
+              "reason": "no-active-change",
+              "detail": "repo:local-context"
+            }
+          ]
+        },
+        {
+          "id": "tier-known",
+          "state": "unknown",
+          "evidence": [
+            {
+              "source": "tracker",
+              "reason": "tier-absent",
+              "detail": "tier:priority-label; none"
+            }
+          ]
+        },
+        {
+          "id": "no-owner-gate",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "tracker",
+              "reason": "no-owner-labels"
+            }
+          ]
+        },
+        {
+          "id": "ci-healthy",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "ci",
+              "reason": "ci-succeeded",
+              "detail": "result:succeeded"
+            }
+          ]
+        },
+        {
+          "id": "provider-available",
+          "state": "satisfied",
+          "evidence": [
+            {
+              "source": "provider-parks",
+              "reason": "no-active-park",
+              "detail": "chain:primary"
+            },
+            {
+              "source": "provider-config",
+              "reason": "engine-not-run"
+            }
+          ]
+        }
+      ],
+      "blockingConditions": [
+        {
+          "id": "tier-known",
+          "state": "unknown"
+        }
+      ],
+      "truncated": false
+    }
+  ],
+  "summary": {
+    "candidates": 4,
+    "ready": 3,
+    "notReady": 1,
+    "mergeReady": 1,
+    "reviewPending": 1,
+    "newStart": 1,
+    "unknownClose": 0
+  },
+  "reasons": [
+    "value-clamped"
+  ],
+  "truncated": true
+}

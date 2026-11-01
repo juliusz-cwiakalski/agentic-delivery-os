@@ -22,6 +22,8 @@ export type {
 export { createPhaseCommandDefinition } from "./phase.js";
 export type { ProviderCommandRuntime } from "./provider.js";
 export { createProviderCommandDefinition } from "./provider.js";
+export type { QueueReadyCommandRuntime } from "./queue.js";
+export { createQueueReadyCommandDefinition } from "./queue.js";
 export type { StatusCommandRuntime } from "./status.js";
 export { createStatusCommandDefinition } from "./status.js";
 export type {

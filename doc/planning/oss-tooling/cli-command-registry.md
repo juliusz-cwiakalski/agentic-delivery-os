@@ -127,7 +127,7 @@ grow it later.
 |---|---|---|---|---|
 | `ados config` | Two modes. Basic: print the merged configuration evaluated for the current context as a plain JSON object. Debug (`config debug` or `--debug`): per-key provenance (which layer, file, line) as extended JSON, or annotated JSONC with the source as a per-key comment | all users | M0-S4 | - |
 | `ados status` | One bounded, ranked digest of the delivery world: six fixed sections — tracker, changes and PRs, CI, lanes or queue, providers, parked work — each with an observed/degraded/unknown/unavailable/not-delivered state and bounded evidence. The lanes-or-queue section reports a declared `not-delivered` gap until M2-S1 establishes the queue/lane engine; it never presents an empty queue and never duplicates `ados queue ready` (M0-S7) | coordinator, operator | M0-S6 | M1-S10 (collector expansion), M2-S4 (shared board state source) |
-| `ados queue ready` | Read-only ready-set computation for one ticket: deps, repo free, tier known, owner gate, CI healthy, provider available; ranks close items (merge-ready, review-pending) above new starts | coordinator | M0-S7 | M2-S1 (full queue, lanes, dispatch) |
+| `ados queue ready` | Read-only ready-set for one or more candidate refs (1..8): six fixed tri-state conditions — deps satisfied, repo free, tier known, no owner gate, CI healthy, provider available — with bounded evidence and every non-satisfied condition named; associates open pull requests by the repository branch convention and ranks close items (merge-ready, review-pending) above new starts. Reuses the status reads and never runs the provider engine or writes. Specified in [Queue Ready](../../spec/features/feature-queue-ready.md) | coordinator | M0-S7 | M2-S1 (full queue, lanes, dispatch) |
 | `ados verify change` | Verify a delivered change against the 11-phase ledger and classify the delivery result tuple; malformed notes are classified, never a crash | coordinator | M0-S8 | M1-S9 (dual-run evidence consumer) |
 | `ados verify gates` | One command evaluating all merge gates for a change, each gate cited in the result | coordinator | M0-S9 | M2-S7 (suite-to-job mapping) |
 | `ados lint` | Schema and format conformance for pm-notes and the delivery registry at write time; lands bundled with verify change (M0-S8) | lifecycle agents, coordinator | M0-S10 | M3-S4 (decision records, frontmatter, deploy checklist) |
@@ -298,7 +298,8 @@ M3-S7 or M4-S5 without a replacement.
 - Hosted-only commands (inbox, relay admin, fleet supervision): proprietary,
   never committed in this repository.
 - `ados queue ready` ships in M0 before its parent `ados queue` exists in
-  M2. The M0 `--help` notes this so it does not read as a bug.
+  M2. This registry note records the partial family so it does not read as
+  a defect; no rendered command-help surface exists or is added in M0.
 - Concept-parked surfaces (no commands in M0-M4; see
   [../concepts/README.md](../concepts/README.md)): an agent messaging
   family beyond steer (typed inbox surface; steer M2-S5 is the first
