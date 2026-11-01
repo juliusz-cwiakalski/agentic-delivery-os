@@ -11,7 +11,7 @@ phases:
   system_spec_update: { started: "2026-11-01T12:40:00Z", completed: "2026-11-01T13:05:00Z" }
   review_fix: { started: "2026-11-01T13:10:00Z", completed: "2026-11-01T17:55:00Z" }
   quality_gates: { started: "2026-11-01T18:00:00Z", completed: "2026-11-01T18:35:00Z" }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: "2026-11-01T18:40:00Z", completed: "2026-11-01T18:55:00Z" }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "Scope: `ados closeout <workItemRef>` is one idempotent post-merge transaction covering the backlog steps — ticket-to-done, lifecycle label sweep, unassign, owed-flip sweep, comment resolution, checkout restore, and squash-safe local branch cleanup. Harness session telemetry is explicitly out of scope (backlog assigns it to M1-S11)."
@@ -135,6 +135,9 @@ notes:
     type: blocker
     date: "2026-11-01"
   - text: "Quality-gate hygiene remediation complete: EOF blank line removed (commit 85ba5cd); the 6 over-length commit messages reworded with identical tree hashes (549a39f→31f687f, ab29d9b→edfdaae, 261123b→88cf94b, 546ec43→9d2bdf6, 3737d17→50ad2b3, 8555132→95efcaf), so earlier SHA references in the change artifacts are pre-reflow. Re-ran gates: `git diff --check` clean, `npx commitlint --from origin/main-tools --to HEAD` clean (35 commits), `pnpm check` 2243 pass / 3 skip / 0 fail, doc-distribution 81 docs no drift. Branch tip before the final PM-notes commit: 758774f. Quality gates complete."
+    type: resolved
+    date: "2026-11-01"
+  - text: "DoD check PASS. All lifecycle phases through quality_gates complete; plan v1.6 Phase 9-12 tasks checked with evidence (only 12.5 PR handoff remains, owned by pr_creation). 61 ACs with PASS review evidence (review-iter-2), 67 TCs, 24 library test files + 204-file battery green. Current-truth docs reconciled (feature-closeout + adapter-ports/provider-seeds/result-contract/state-layer/conformance/monorepo + glossary/index/registry) with no residual gaps. Changeset `.changeset/gh-183-closeout-minor.md` present. 35 commits ahead of main-tools; gates green (pnpm check 2243/3/0, commitlint 35/35, diff-check clean). Plan v1.6 records the current phase-commit SHAs; the message-only reflow changed SHAs, so SHAs quoted in earlier notes/review artifacts are pre-reflow."
     type: resolved
     date: "2026-11-01"
   - text: "Hygiene remediation: the six over-length commit messages were reflowed in a message-only history rewrite so every body/footer line is <=100 chars for commitlint; the test-plan EOF blank line was removed separately. Earlier SHA references in the change artifacts are pre-rewrite and no longer identify the current commits, including the six reflowed messages (549a39f, ab29d9b, 261123b, 546ec43, 3737d17, 8555132) and their descendants (e.g. 5ef24ed)."
