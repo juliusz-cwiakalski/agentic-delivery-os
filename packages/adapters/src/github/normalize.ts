@@ -8,6 +8,9 @@
  * slice does not fetch the comment set).
  */
 import type {
+  CloseoutObservedSignals,
+  CloseoutReadObservation,
+  CloseoutReverseDependentObservation,
   DeliveryRequest,
   DeliveryThread,
   PipelineJobState,
@@ -103,13 +106,17 @@ export const normalizePullRequest = (
   if (sourceRef === undefined || targetRef === undefined) {
     return providerPayloadFailure(`GitHub PR ${entityId} has no head/base ref`);
   }
+  const headSha = head !== undefined ? stringField(head, "sha") : undefined;
   const state = stringField(payload, "state");
   if (state === undefined) return providerPayloadFailure(`GitHub PR ${entityId} has no state`);
 
   const reviewDecision = stringField(payload, "reviewDecision");
   const reviewState = resolveGithubReviewState({
     state,
-    merged: payload.merged === true,
+    // The REST pull-request list exposes merge truth as the `merged_at`
+    // timestamp, while a single-PR read also carries `merged`. A non-null
+    // timestamp is merge truth on both shapes.
+    merged: payload.merged === true || stringField(payload, "merged_at") !== undefined,
     draft: payload.draft === true,
     ...(reviewDecision !== undefined ? { reviewDecision } : {}),
   });
@@ -130,6 +137,7 @@ export const normalizePullRequest = (
       targetRef,
       reviewState,
       threads,
+      ...(headSha === undefined ? {} : { headSha }),
     },
   };
 };
@@ -297,4 +305,156 @@ export const normalizeGithubPullList = (
     items.push(normalized.value);
   }
   return { ok: true, value: { items, pageItemCount: payload.length } };
+};
+
+/** Normalize a bounded merged-PR page, keeping only merged requests (F-12). */
+export const normalizeMergedDeliveryRequestList = (
+  payload: unknown,
+  context: GithubNormalizationContext,
+): ProviderReadResult<readonly DeliveryRequest[]> => {
+  const list = normalizeGithubPullList(payload, context);
+  if (!list.ok) return list;
+  return {
+    ok: true,
+    value: list.value.items.filter((request) => request.reviewState === "merged"),
+  };
+};
+
+/** Normalize the bounded reverse-dependent issue page (F-7). */
+export const normalizeIssueDependencies = (
+  payload: unknown,
+  context: GithubNormalizationContext,
+): CloseoutReverseDependentObservation<readonly WorkItem[]> => {
+  if (!Array.isArray(payload)) {
+    return { observation: "invalid", detail: "GitHub issue-dependencies payload is not an array" };
+  }
+  const items: WorkItem[] = [];
+  for (const entry of payload) {
+    if (isRecord(entry) && Object.hasOwn(entry, "pull_request")) continue;
+    const normalized = normalizeGithubIssue(entry, context);
+    if (!normalized.ok) {
+      return {
+        observation: "invalid",
+        detail: "detail" in normalized ? normalized.detail : normalized.code,
+      };
+    }
+    items.push(normalized.value);
+  }
+  return { observation: "observed", value: items };
+};
+
+/** Normalize a GraphQL `resolveReviewThread` payload (F-8). */
+export const normalizeThreadResolution = (
+  payload: unknown,
+): ProviderReadResult<{ readonly resolved: true }> => {
+  if (!isRecord(payload)) {
+    return providerPayloadFailure("GitHub GraphQL payload is not an object");
+  }
+  const data = recordField(payload, "data");
+  const mutation = data === undefined ? undefined : recordField(data, "resolveReviewThread");
+  if (mutation === undefined) {
+    return providerPayloadFailure("GitHub GraphQL payload has no resolveReviewThread");
+  }
+  const thread = recordField(mutation, "thread");
+  if (thread === undefined || typeof thread.isResolved !== "boolean") {
+    return providerPayloadFailure("GitHub GraphQL resolveReviewThread has no thread state");
+  }
+  if (thread.isResolved !== true) {
+    // A successful mutation that leaves the thread unresolved is a failed
+    // write. Returning ok would persist `applied` and skip the thread forever.
+    return providerPayloadFailure("GitHub review thread remained unresolved");
+  }
+  return { ok: true, value: { resolved: true } };
+};
+
+/**
+ * Normalize a GraphQL `reviewThreads` read for one pull request.
+ *
+ * The payload shape mirrors `repository.pullRequest.reviewThreads.nodes`; each
+ * node carries the thread id, resolution flag, and a comment total. A missing
+ * container is a malformed read, never an observed empty set.
+ */
+export const normalizeReviewThreads = (
+  payload: unknown,
+): ProviderReadResult<readonly DeliveryThread[]> => {
+  if (!isRecord(payload)) {
+    return providerPayloadFailure("GitHub review-threads payload is not an object");
+  }
+  const data = recordField(payload, "data");
+  const repository = data === undefined ? undefined : recordField(data, "repository");
+  const pullRequest = repository === undefined ? undefined : recordField(repository, "pullRequest");
+  const reviewThreads =
+    pullRequest === undefined ? undefined : recordField(pullRequest, "reviewThreads");
+  const nodes = reviewThreads === undefined ? undefined : reviewThreads.nodes;
+  if (!Array.isArray(nodes)) {
+    return providerPayloadFailure("GitHub review-threads payload has no nodes array");
+  }
+  const threads: DeliveryThread[] = [];
+  for (const node of nodes) {
+    if (!isRecord(node)) return providerPayloadFailure("GitHub review thread is not an object");
+    const threadId = identityField(node, "id");
+    if (threadId === undefined) return providerPayloadFailure("GitHub review thread has no id");
+    if (typeof node.isResolved !== "boolean") {
+      return providerPayloadFailure(`GitHub review thread ${threadId} has no resolution flag`);
+    }
+    const comments = recordField(node, "comments");
+    const commentCount = comments === undefined ? undefined : identityField(comments, "totalCount");
+    if (commentCount === undefined) {
+      return providerPayloadFailure(`GitHub review thread ${threadId} has no comment count`);
+    }
+    threads.push({
+      threadId,
+      resolved: node.isResolved,
+      commentCount: Number(commentCount),
+    });
+  }
+  return { ok: true, value: threads };
+};
+
+/**
+ * The provider-asserted label/relation availability signals.
+ *
+ * A present label container (including an explicitly empty array) is
+ * `observed`; an omitted container is `unavailable`. The REST issue payload
+ * has no dependency container, so relation availability is always decided by
+ * the dependency read in the client, never by an invented `issue_links` field.
+ */
+const observationSignals = (
+  payload: Readonly<Record<string, unknown>>,
+): CloseoutObservedSignals => ({
+  labels: Array.isArray(payload.labels) ? "observed" : "unavailable",
+  relations: "unavailable",
+});
+
+/**
+ * Normalize one work-item read into the discriminated observation (DM-11).
+ *
+ * An explicit HTTP 404 is `not-found`; an authentication, transport, or server
+ * failure and a malformed 2xx payload are `invalid` (the adapter-local
+ * `provider.payload.invalid` identity); only a genuinely absent surface is
+ * `unavailable`. None is collapsed into another.
+ */
+export const normalizeWorkItemObservation = (
+  payload: unknown,
+  context: GithubNormalizationContext,
+  status: number,
+): CloseoutReadObservation<WorkItem> => {
+  if (status === 404) return { observation: "not-found" };
+  if (status < 200 || status >= 300) {
+    return { observation: "invalid", detail: `GitHub returned HTTP ${status}` };
+  }
+  const normalized = normalizeGithubIssue(payload, context);
+  if (!normalized.ok) {
+    return {
+      observation: "invalid",
+      detail: "detail" in normalized ? normalized.detail : normalized.code,
+    };
+  }
+  return isRecord(payload)
+    ? {
+        observation: "observed",
+        value: normalized.value,
+        signals: observationSignals(payload),
+      }
+    : { observation: "observed", value: normalized.value };
 };

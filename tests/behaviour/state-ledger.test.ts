@@ -96,6 +96,7 @@ describe("TC-STATE-005 append envelope and append-only order", () => {
         "fenceStatus",
         "identity",
         "read",
+        "readRecords",
         "recoverFence",
         "releaseFence",
         "repairTornTail",

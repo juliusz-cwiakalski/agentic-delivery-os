@@ -5,11 +5,12 @@
  * supplies the native-`fetch` transport. Credentials resolve exclusively through
  * the injected `CredentialPort` on every request.
  */
-import type {
-  CredentialPort,
-  DeliveryRequest,
-  ExternalSystemInstance,
-  PipelineRun,
+import {
+  CLOSEOUT_OPERATION_TIMEOUT_MS,
+  type CredentialPort,
+  type DeliveryRequest,
+  type ExternalSystemInstance,
+  type PipelineRun,
 } from "@delivery-os/core/contracts";
 import type {
   ProviderReadResult,
@@ -44,6 +45,8 @@ const nativeFetchTransport = (): ProviderTransport => ({
     const response = await fetch(request.url, {
       method: request.method,
       headers: request.headers,
+      ...(request.body === undefined ? {} : { body: request.body }),
+      signal: AbortSignal.timeout(request.timeoutMs ?? CLOSEOUT_OPERATION_TIMEOUT_MS),
     });
     const body: unknown = await response.json();
     return { status: response.status, body };

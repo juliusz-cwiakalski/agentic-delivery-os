@@ -1,0 +1,377 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-183
+branch: feat/GH-183/closeout-v1-branch-cleanup
+status: FAIL
+summary: >-
+  First review iteration of the GH-183 closeout v1 delivery (24 commits, ~14.1k/-0.3k,
+  base origin/main-tools). The pure kernel is strong: SHA-256 identity verified
+  against node:crypto, deterministic planning, windowed branch-safety predicate,
+  bounded output, offline fixtures, and a green battery (structure 97, behaviour
+  closeout 110, conformance 82, checks 346, golden 4, providers 78; doc-distribution,
+  forbidden/privacy/exit-literal/secret-read/error-table-sync all green). Three
+  headline gaps block PASS. (1) There is no production composition: CloseoutComposition.planFacts
+  and the provider/git/state runtime bridging exist only in tests/fixtures/closeout/cli.ts,
+  so the command has no end-to-end path and the real git seam/state ledger/provider clients
+  are never wired to the engine (plan 7.2 / D11, G-1, F-1, §6 Flow 1, §18 dogfood). (2) The
+  real `packages/core/src/state/closeout.ts` ledger module is dead code — never invoked by
+  production or tests — so NFR-8/AC-NFR8-1 (verified read, torn/malformed classification,
+  one-append-per-terminal) is proven only against an in-memory fake. (3) The discriminated
+  read observation is not produced by the adapters: an absent GitHub reverse-dependent
+  surface collapses to `skipped-noop` (AC-F7-6 wants `skipped-gap` provider-unsupported),
+  and an absent label signal collapses to an empty array so AC-F5-3's
+  `label-signal-unavailable` skip is unreachable (the `signals` carrier is test-only).
+  Tests are green because they inject fakes that model behaviors production cannot emit.
+  Spec deviation analysis and per-deviation verdicts are below.
+severity_breakdown:
+  critical: 0
+  high: 4
+  medium: 3
+  low: 3
+  info: 1
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: plan-compliance
+    location: packages/cli/src/edge.ts:279
+    message: >-
+      The closeout command has no production composition. `createCloseoutCommandRuntime`
+      only wraps an already-assembled `CloseoutComposition` (planFacts + provider + git +
+      state); no non-test code constructs a `CloseoutComposition`, implements `planFacts`,
+      bridges `createGitHubClient`/`createJiraClient` to `CloseoutProviderRuntime`, wraps
+      `createGitBranchSeam` as `CloseoutGitRuntime`, or wraps `StateStorePort` as
+      `CloseoutStateRuntime`. `createCloseoutCommandRuntime` is referenced only by
+      `tests/fixtures/closeout/cli.ts`; `createGitBranchSeam` only by behaviour tests.
+      So `ados closeout` has no end-to-end path: the read orchestration (work item,
+      merged requirement, reverse-dependent read, checkout/branches, persisted history)
+      and all real provider/git/state effects happen only through hand-built fakes.
+      Contradicts plan 7.2 ("composing the provider runtimes (GitHub/Jira/GitLab), the git
+      seam, the state store, the injected clock, and the fence-token factory"), D11, G-1,
+      F-1, §6 Flow 1, and §18 dogfood; the sibling `createStatusCommandRuntime` in the same
+      file does compose its reads from raw ports. Note the runtime type is also
+      impedance-mismatched: `CloseoutProviderRuntime.readWorkItem` returns
+      `CloseoutReadObservation<WorkItem>` while `GithubClient.readWorkItem(number)` returns
+      `ProviderReadResult<WorkItem>`, so the seam cannot be satisfied by naive spread.
+    suggestion: >-
+      Implement the composition over raw ports in `packages/cli/src/edge.ts` (or a
+      dedicated `closeout-composition.ts`): take the injected transport/credentials/
+      repository/git-cwd/state store, build `planFacts` (calling readWorkItemObservation,
+      findMergedDeliveryRequest, listBlockedByDependents + per-candidate relation reads,
+      git.readCheckout/listBranches/isCheckedOutElsewhere/isClean/resolveRef, and
+      readCloseoutHistory), adapt the clients/seam to the runtime types, and register the
+      runtime in `createConfigProgram` from a raw `CloseoutComposition`. Add an integration
+      test that drives `runCloseout` through the real git seam against a temp repo. If the
+      composition is intentionally host-owned, record that in the spec/plan and ship a
+      reference implementation + test, because G-1/F-1 and §18 dogfood require a runnable command.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/closeout.ts:517
+    message: >-
+      A provider reverse-dependent surface that is absent degrades to a signal-level skip
+      instead of a provider-level gap, violating AC-F7-6, D7, D17 and the explicit
+      "an absent surface never degrades to a signal-level skip" rule (spec §12, §5.1 F-7).
+      `owedFlipStep` only yields provider-unsupported when `read-work-item` itself is
+      unsupported; GitHub/Jira support `read-work-item`, and the adapters report an absent
+      `issue-dependencies`/JQL surface as `{observation:"unavailable"}`
+      (github/client.ts listBlockedByDependents; jira/client.ts same). Any non-observed
+      `dependents` then maps to `skipped-noop`/`relation-signal-unavailable`. Empirically
+      verified: GitHub-like capabilities (read-work-item + write-work-item supported) with
+      `dependents:{observation:"unavailable"}` yields owed-flip outcome `skipped-noop`.
+    suggestion: >-
+      Distinguish "surface absent" from "signal currently unavailable" one level below the
+      planner — e.g., add an explicit "no-surface" observation/capability signal for the
+      reverse read, or have the adapter report the absent surface distinctly and map that to
+      `skipped-gap`/`provider-unsupported`. Add a test that drives the provider-level gap with
+      `read-work-item` still supported (the current TC-036 only removes read-work-item, so it
+      cannot catch this).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/adapters/src/github/normalize.ts:230
+    message: >-
+      An absent (unknown) label signal is collapsed to an empty observed array, so AC-F5-3
+      ("absent label signal → skipped-noop with label-signal-unavailable, no blind
+      replacement") is unreachable in production. `normalizeGithubIssue` and
+      `normalizeJiraIssue` set `labels: []` when the provider omits `labels` and never set
+      `signals.labels`; no non-test code sets `signals` at all (grep: only
+      domain/closeout.ts:450 reads it). Verified: `normalizeWorkItemObservation` on an issue
+      with no `labels` returns `{observation:"observed", labels:[], signals:undefined}`, which
+      schedules an add-`delivered` write. On Jira, the write path recomputes the full-array
+      replace from the collapsed empty set, so a provider that omits labels would have its
+      real labels replaced with just `delivered`.
+    suggestion: >-
+      Have the work-item normalizers set `signals.labels` = "unavailable" when the provider
+      omits the label container (and "observed" when present, including an empty array), and
+      add adapter-level tests asserting the observation carries the signal. Alternatively
+      return an `unavailable` observation when the label signal cannot be asserted. Update the
+      tests to originate the signal from the real normalizer, not a hand-built fake.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/state/closeout.ts:110
+    message: >-
+      The real idempotency ledger module is unwired and untested. `appendCloseoutOutcome`,
+      `readCloseoutHistory`, `foldCloseoutHistory` and `closeoutOperationRecordKey` are only
+      referenced by `tests/structure/content-inventory.test.ts` (the allowance list); no
+      production or behaviour test invokes them. `runCloseout` consumes an injected
+      `CloseoutStateRuntime` whose only implementation is the in-memory `makeState` fake, so
+      the actual JSONL append, verified read, payload serialization, and torn/malformed
+      classification (NFR-8, AC-NFR8-1, EVT-1, DM-4) are never executed. The "torn ledger"
+      test simply makes the fake return a `state.store.torn` error; it does not exercise
+      `readCloseoutHistory`'s parse. The runtime `append(handle, record)` shape also does not
+      match `appendCloseoutOutcome(store, handle, record)`'s whole-array rewrite, so a bridge
+      is missing.
+    suggestion: >-
+      Wire `CloseoutStateRuntime` to `StateStorePort` via `readCloseoutHistory`/
+      `appendCloseoutOutcome` in the composition, and add behaviour tests over the real JSONL
+      store driver: one record per terminal operation, verified re-read, torn/malformed tail
+      classified as `state.*` (never zeros), and re-run reuse. Remove or justify the unused
+      module otherwise (dead code is a spec gap because F-3/NFR-8 depend on it).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/github/normalize.ts:371
+    message: >-
+      Authentication and server failures are collapsed into the `unavailable` observation.
+      `normalizeWorkItemObservation`/`normalizeJiraWorkItemObservation` map every non-404
+      non-2xx status (401/403/500) to `unavailable`, so a rejected token or provider outage
+      surfaces as `skipped-gap`/`provider-unsupported` for ticket-dependent steps (a false
+      capability claim, NFR-9). Spec §8.4 requires an authentication/transport failure to be
+      `invalid` (adapter-local `provider.payload.invalid`), and F-14 requires access/credential
+      failures to keep their own identities. Meanwhile a credential-port resolution failure in
+      the same client returns `invalid`. Verified: status 401/403/500 → "unavailable".
+    suggestion: >-
+      Map a transport/authentication failure to `invalid` (or preserve the credential/access
+      identity) and reserve `unavailable` for a genuinely absent surface. Add an adapter test
+      pinning 401/403/500 → invalid and only a true missing-surface case → unavailable.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/closeout.ts:557
+    message: >-
+      AC-F7-2 requires a skipped dependent's evidence to name the open-blocker count ("no flip
+      occurs and the evidence names the open-blocker count"). `owedFlipStep` records only an
+      aggregate `skipped` count (plus evaluated/flipped); it never records the per-candidate
+      open-blocker count, so the required evidence is absent.
+    suggestion: >-
+      Include the open-blocker count in the bounded evidence for a dependent skipped because
+      it still has open blockers (aggregate or bounded per-candidate), and assert it in the
+      AC-F7-2 test.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: medium
+    confidence: high
+    category: security
+    location: packages/adapters/src/git/index.ts:191
+    message: >-
+      Branch deletion force-deletes (`git branch -D`) the branch name recorded at plan time
+      without re-reading the local head immediately before deletion. The squash-safety
+      predicate compares the branch head to the merged head from the facts read earlier in the
+      invocation; if the branch head moves between facts read and execution (a `git branch -f`
+      / reset in another process; a concurrent checkout is caught by isCheckedOutElsewhere),
+      `-D` still deletes. The window is small and the branch is normally not checked out, so
+      probability is low, but the spec frames branch deletion as never losing unmerged work.
+    suggestion: >-
+      Re-read the branch head inside `deleteBranch` (or immediately before it) and refuse if
+      it no longer equals the merged head, and/or reject `PROTECTED_REF_NAMES` in the seam as
+      defense-in-depth. Add a fixture proving a moved head at delete time refuses.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: low
+    confidence: medium
+    category: spec-compliance
+    location: packages/core/src/domain/closeout.ts:955
+    message: >-
+      `targetFailure` runs in both plan and apply mode, so an ambiguous branch selection
+      returns a hard `closeout.target.ambiguous` error in plan mode as well. Spec F-10
+      phrases ambiguity as an apply-time outcome ("apply returns closeout.target.ambiguous"),
+      and the planner already models it as a `would-refuse` step that is therefore never
+      rendered in plan mode.
+    suggestion: >-
+      Either document that ambiguity is a plan-time failure too (and align F-10), or let plan
+      mode render the `would-refuse` step and project the failure only on apply. Whichever is
+      chosen, pin it with a plan-mode ambiguity test.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-9
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/closeout.ts:494
+    message: >-
+      When the work-item observation is not `observed`, `unassignStep` reports a gap using
+      `gapReasonFor(write-work-item)`, which defaults to `adapter-not-implemented` when
+      write-work-item is supported. If a provider supported write-work-item but its read was
+      unavailable, the unassign gap reason would be misattributed; the ticket step uses
+      `provider-unsupported` for the same condition.
+    suggestion: >-
+      Use the same "read unavailable → provider-unsupported gap" reason in `unassignStep` as
+      `ticketStep`, or explicitly declare the reason for the unavailable-read case.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-10
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/closeout.ts:792
+    message: >-
+      `boundCloseoutData` measures size with `JSON.stringify(data).length`, which counts UTF-16
+      code units rather than UTF-8 bytes, so a payload with multibyte characters could exceed
+      the 64 KiB bound. Current evidence is ASCII (refs/labels/counts), so exposure is low.
+    suggestion: >-
+      Measure UTF-8 byte length (e.g., a TextEncoder/length check) to match the declared
+      64 KiB bound.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-11
+    severity: low
+    confidence: medium
+    category: test-quality
+    location: tests/checks/closeout-mutants.test.ts:13
+    message: >-
+      The non-vacuity meta-check uses hand-written synthetic "mutants" and shape predicates
+      rather than applying a mutation to the real guard and asserting the real suite fails
+      naming the case. It does catch a regression for the guards whose `real()` draws from the
+      live module, but most of the corpus (fnv1a-identity, detached-as-unrelated,
+      gap-as-success, etc.) verifies a hand-built alternative rather than the production
+      guard's failure mode, so several named mutants are effectively tautological.
+    suggestion: >-
+      Drive each mutant by mutating a temp copy of the relevant module (as TC-065 does with a
+      temp-copy mutation) and assert the intended suite fails naming the case, keeping one
+      unchanged control that passes.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-12
+    severity: info
+    confidence: medium
+    category: documentation
+    location: packages/cli/src/classify.ts:63
+    message: >-
+      The synthetic `provider.payload.invalid` classification entry reuses `domainKind:
+      "provider"`, which DEC-15/F-14 reserve for the AI-model provider engine. It is not added
+      to `DOMAIN_KINDS` and is not an error-table row, so this is a semantic-labeling tension,
+      not a contract change.
+    suggestion: >-
+      Note the intended meaning in the header comment or use a clearly adapter-local domain
+      kind label if one becomes available; no functional change required for v1.
+    suppressed: false
+    published_url: null
+    published_at: null
+deviation_verdicts:
+  D1_git_seam_cwd: >-
+    SOUND. `GitBranchSeamOptions.cwd` and the `GitChildRunner` cwd argument are additive,
+    production omits cwd (process cwd), and the fixed-argv allowlist is unchanged. They are
+    what let the real seam run against temp repositories.
+  D2_github_client_timeout: >-
+    SOUND. `GithubClientOptions.timeoutMs` is an additive short override; production defaults
+    to CLOSEOUT_OPERATION_TIMEOUT_MS and the structural + behavioral tests pin the default.
+  D3_observed_signals_carrier: >-
+    ADDITIVE TYPE OK, BUT UNWIRED. `CloseoutReadObservation.observed.signals?` is additive and
+    harmless, but no production normalizer ever populates it, so the label-signal-unavailable
+    behavior it enables is unreachable (see F-3) and `signals.relations` is entirely unused.
+    The deviation is not sound end-to-end until the adapters emit the signal.
+  D4_provider_payload_invalid_projection: >-
+    SOUND AS A GATE DESIGN. Adding `provider.payload.invalid` to the error-table-sync scan as a
+    recognized-but-not-tabled code does NOT weaken the bidirectional machine↔documented sync:
+    validateEntries, validateDocumentedTable (both directions) and validateCorpus are
+    unchanged; only the S1/S3 "recognized reference has no table entry" scan exempts the exact
+    literal. The spec forbids giving it a closeout row, so this is the minimal compliant way to
+    reference it; the CLI synthetic entry gives it projection/exit without adding a
+    DOMAIN_KIND. Residual nit F-12 (domainKind label). It is the right design.
+  D5_workspace_imports_git: >-
+    SOUND. `./git` added to cli/mcp/opencode/testkit workspaceImports is required by the
+    workspace-entrypoints parity check once `./git` joins ADAPTER_SUBPATHS.
+  D6_pm_notes_corpus_fix: >-
+    JUSTIFIED. Adding the 2026-11 change folder broke the hardcoded
+    `startsWith("doc/changes/2026-10/")` assertion; `entry.month >= "2026-10"` is the correct
+    general boundary and still excludes the 2026-03/2026-07 legacy eras. Out-of-scope but
+    necessary and minimal; no gate weakened.
+assertion_meaningfulness:
+  owed_flip_absent_surface: >-
+    VACUOUS FOR THE REAL CASE. TC-036 models "no reverse surface" by removing read-work-item
+    from the supported set, which does not exercise the GitHub/Jira case (read-work-item
+    supported, reverse surface absent). A probe with GitHub-like capabilities and
+    `dependents: unavailable` yields `skipped-noop` — the production behavior the test never
+    checks.
+  label_signal_unavailable: >-
+    VACUOUS FOR THE REAL CASE. The planner test injects `signals.labels = "unavailable"` by
+    hand; the real normalizer never sets it, so the AC-F5-3 path is proven only against an
+    input production cannot produce.
+  state_ledger: >-
+    FAKE-ONLY. All idempotency/torn-ledger tests use the in-memory `makeState`; the real
+    `packages/core/src/state/closeout.ts` (`appendCloseoutOutcome`/`readCloseoutHistory`) is
+    never invoked, so NFR-8's verified-read/torn-classification is unproven.
+  sha256_identity: >-
+    REAL AND INDEPENDENT. Reviewer re-derived the pure sha256Hex against node:crypto on "",
+    "abc", a struct, an empty object, a unicode emoji string, and a 1000-char input — all
+    matched; the committed KATs and capability-context sensitivity are genuine.
+verification_evidence:
+  suites_run_by_reviewer:
+    - "bun test closeout-{plan,owed-flip,read-observation,idempotency} -> 53 pass / 0 fail"
+    - "bun test closeout-{branch,checkout,ticket-labels,unassign,threads,capabilities,request,integration,hermetic,bounds,output} -> 57 pass / 0 fail"
+    - "bun test tests/structure/{closeout-contract,closeout-imports,error-table,conformance-coverage,provider-surface,content-inventory,subpaths} -> 97 pass / 0 fail"
+    - "bun test tests/behaviour/providers -> 78 pass / 0 fail"
+    - "bun test tests/conformance -> 82 pass / 0 fail; tests/golden/closeout-* -> 4 pass; tests/checks -> 346 pass"
+    - "bun run scripts/checks/error-table-sync.ts -> entries=39 documented=39 S1=56 S3=16 corpus=13 ignored=87 OK (both directions)"
+    - "bash scripts/.tests/test-doc-distribution.sh -> no drift, 81 in-scope docs"
+    - "bun run scripts/checks/{forbidden-literals,privacy-literals,exit-code-literals,secret-read-boundary}.ts -> all OK (no exit literals outside projection; 4 secret-read allowlist entries)"
+  independent_probes:
+    - "sha256Hex vs node:crypto over 6 inputs (incl. unicode + 1KB) -> all match"
+    - "buildCloseoutPlan with GitHub-like caps (read-work-item supported) + dependents unavailable -> owed-flip 'skipped-noop' / 'relation-signal-unavailable' (expects skipped-gap)"
+    - "normalizeWorkItemObservation(issue without labels, status 200) -> {observation:'observed', labels:[], signals:undefined} (AC-F5-3 unreachable)"
+    - "normalizeWorkItemObservation status 404/401/403/500/200 -> not-found/unavailable/unavailable/unavailable/observed (auth/5xx should be invalid)"
+    - "grep: appendCloseoutOutcome/readCloseoutHistory only referenced in content-inventory allowance; createCloseoutCommandRuntime only in tests/fixtures/closeout/cli.ts; createGitBranchSeam only in behaviour tests"
+plan_task_audit:
+  OPEN_TASKS: "Phases 9-12 (review/gates/DoD/PR) are open by design for the lifecycle; not counted as delivery gaps."
+  DONE_BUT_UNCHECKED: none
+  CHECKED_BUT_MISSING: >-
+    7.2 (compose provider runtimes/git seam/state store in edge.ts) is checked but only the
+    wrapper exists — the composition and facts-gathering are missing (F-1). 3.1/3.5 (state
+    ledger + idempotency tests) are checked but the real state module is unwired and untested
+    (F-4).
+  AC_not_satisfied:
+    - "AC-F7-6: absent reverse surface must be skipped-gap provider-unsupported; production degrades to skipped-noop (F-2)."
+    - "AC-F5-3: absent label signal must be skipped-noop label-signal-unavailable; production collapses to observed empty (F-3)."
+    - "AC-F7-2: skipped-dependent evidence must name the open-blocker count; only an aggregate skip count is recorded (F-6)."
+    - "AC-NFR8-1 / NFR-8: verified-read and torn/malformed classification proven only against the in-memory fake; the real ledger module is untested (F-4)."
+test_coverage_gaps:
+  - "No test drives the owed-flip provider-level gap with read-work-item supported (only the read-work-item-unsupported path)."
+  - "No test origins the label-signal-unavailable case from a real adapter normalizer."
+  - "No test exercises packages/core/src/state/closeout.ts over a real StateStorePort/JSONL driver (verified read, torn/malformed)."
+  - "No end-to-end test wires the real git seam into runCloseout (branch matrix tests the seam and the predicate separately)."
+  - "CloseoutComposition/planFacts has no production implementation, so no test or evidence covers the read orchestration."
+reviewed_at: 2026-11-01T07:05:00Z
+next_step: CALL_CODER

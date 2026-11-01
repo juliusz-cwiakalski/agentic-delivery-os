@@ -3,6 +3,8 @@
  * Exposes the config command definition for edge composition.
  */
 
+export type { CloseoutCommandRuntime } from "./closeout.js";
+export { createCloseoutCommandDefinition } from "./closeout.js";
 export type { ConfigCommandRuntime } from "./config.js";
 export { createConfigCommandDefinition } from "./config.js";
 export type { DbCommandRuntime } from "./db.js";

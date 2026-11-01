@@ -227,6 +227,9 @@ module.exports = {
           // ADR-0005 (GH-182): the provider quota transport is the one declared
           // network-I/O edge for the quota-aware routing engine. Exact path only.
           "^packages/adapters/src/provider-quota/",
+          // ADR-0005 (GH-183): the dedicated git branch/checkout seam is the
+          // only spawn surface for closeout local branch operations. Exact path.
+          "^packages/adapters/src/git/",
           "^packages/cli/",
           "^packages/opencode/",
         ],

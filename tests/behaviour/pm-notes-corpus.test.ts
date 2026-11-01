@@ -132,7 +132,7 @@ describe("TC-LINT-007 variant-era corpus membership", () => {
   test("legacy-era folders are outside the derived set", () => {
     expect(CORPUS_MANIFEST_PATH).toBe("tests/fixtures/pm-notes/corpus-exclusions.json");
     for (const entry of enumerateCorpus(ROOT, MANIFEST)) {
-      expect(entry.path.startsWith("doc/changes/2026-10/")).toBe(true);
+      expect(entry.month >= "2026-10").toBe(true);
       expect(entry.path).not.toContain("2026-03/");
       expect(entry.path).not.toContain("2026-07/");
     }

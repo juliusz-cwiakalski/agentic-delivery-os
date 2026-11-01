@@ -49,6 +49,13 @@ const corruptRegistration = (
         ...(client.readPipelineRun !== undefined
           ? { readPipelineRun: client.readPipelineRun }
           : {}),
+        ...(client.writeWorkItem !== undefined ? { writeWorkItem: client.writeWorkItem } : {}),
+        ...(client.transitionWorkItem !== undefined
+          ? { transitionWorkItem: client.transitionWorkItem }
+          : {}),
+        ...(client.resolveDeliveryThread !== undefined
+          ? { resolveDeliveryThread: client.resolveDeliveryThread }
+          : {}),
       };
     },
   };
@@ -194,6 +201,7 @@ describe("TC-CONF-017 failure diagnostics and redaction", () => {
             { operation: "read-delivery-request", reason: "adapter-not-implemented" },
             { operation: "write-delivery-request", reason: "adapter-not-implemented" },
             { operation: "read-pipeline-run", reason: "adapter-not-implemented" },
+            { operation: "resolve-delivery-thread", reason: "adapter-not-implemented" },
           ],
         },
       },

@@ -19,6 +19,7 @@ ados_distribution: redistributable
 | [Status Digest](spec/features/feature-status-digest.md) | The read-only six-section delivery digest, its evidence states, bounds, and declared gaps |
 | [Queue Ready](spec/features/feature-queue-ready.md) | The read-only ready set: six tri-state readiness conditions, close classification and ranking, identity resolution, bounds, and evidence model |
 | [Verify Change and Exit Taxonomy](spec/features/feature-verify-change-and-exit-taxonomy.md) | Read-only ledger verification, the delivery-result enum, and the CLI exit taxonomy |
+| [Closeout Transaction](spec/features/feature-closeout.md) | The dry-run-by-default seven-step post-merge transaction, idempotency ledger, provider writes and gaps, review-thread resolution, and squash-safe local branch cleanup |
 | [Measurement Baseline](spec/features/feature-measurement-baseline.md) | The committed bash-era measurement baseline: schema, `MET-` metrics, status semantics, source traceability, window, and comparison protocol |
 | [Documentation Handbook](documentation-handbook.md) | How docs work — structure, conventions, workflow |
 

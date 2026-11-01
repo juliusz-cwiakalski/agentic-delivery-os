@@ -19,6 +19,7 @@ const NEW_MODULES = [
   "adapter-capabilities.ts",
   "credentials.ts",
   "envelope.ts",
+  "closeout.ts",
 ] as const;
 
 const isAsConst = (node: ts.Expression | undefined): boolean => {

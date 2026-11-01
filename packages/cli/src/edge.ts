@@ -20,7 +20,19 @@ import {
   runtimePlatform,
   stagePmNotesPhaseEntry,
 } from "@delivery-os/adapters/file";
-import { createGitHubClient } from "@delivery-os/adapters/github";
+import {
+  createGitBranchSeam,
+  type GitBranchSeam,
+  type GitBranchSeamOptions,
+} from "@delivery-os/adapters/git";
+import {
+  createGitHubClient,
+  GITHUB_ADAPTER_CONTRACT,
+  type GithubClient,
+  type GithubClientOptions,
+} from "@delivery-os/adapters/github";
+import { GITLAB_ADAPTER_CONTRACT, type GitLabClient } from "@delivery-os/adapters/gitlab";
+import { JIRA_ADAPTER_CONTRACT, type JiraClient } from "@delivery-os/adapters/jira";
 import { createLegacyCompat } from "@delivery-os/adapters/legacy";
 import {
   findGitRoot,
@@ -37,21 +49,35 @@ import {
 } from "@delivery-os/adapters/session";
 import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import {
+  buildCloseoutPlan,
+  type CloseoutDependentFact,
+  type CloseoutPlanFacts,
   catalogPaths,
   classifyPruneCandidate,
   computeDbCutoffMs,
   computeDbLiveBoundaryMs,
   isLiveDbSession,
   PRODUCTION_CATALOG,
+  resolveCloseoutBaseRef,
   resolveConfig,
+  runCloseout,
   selectPruneCandidates,
 } from "@delivery-os/core";
 import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
+  type AdapterCapabilityDeclaration,
   type BrandIdentity,
+  CLOSEOUT_MAX_DEPENDENTS,
+  type CloseoutGitRuntime,
+  type CloseoutProviderRuntime,
+  type CloseoutReadObservation,
+  type CloseoutReverseDependentObservation,
+  type CloseoutStateRuntime,
+  type CloseoutWriteOutcome,
   type ConfigFailure,
   type CredentialPort,
+  type DeliveryRequest,
   type ExternalSystemInstance,
   PHASE_STATE_DOCUMENT_PREFIX,
   PHASE_STATE_DOCUMENT_SUFFIX,
@@ -66,6 +92,7 @@ import {
   type StatusReadFailure,
   type StatusRepositoryFacts,
   type StatusRepositoryTarget,
+  type WorkItem,
 } from "@delivery-os/core/contracts";
 import {
   createProviderEngine,
@@ -73,11 +100,19 @@ import {
   readProviderParkViews,
 } from "@delivery-os/core/provider";
 import {
+  appendCloseoutOutcome,
   appendPhaseTransition,
+  foldCloseoutHistory,
   readChangeTransitions,
   readChangeTransitionsTolerant,
+  readCloseoutHistory,
   replacePhaseProjection,
 } from "@delivery-os/core/state";
+import { resolveAppErrorCode } from "./classify.js";
+import {
+  type CloseoutCommandRuntime,
+  createCloseoutCommandDefinition,
+} from "./commands/closeout.js";
 import {
   type ConfigCommandRuntime,
   type ConfigResolvedSnapshot,
@@ -239,13 +274,7 @@ export type ProviderComposition = {
 };
 
 /** The injected provider transport shape used by the GitHub reads. */
-export type StatusTransport = {
-  readonly send: (request: {
-    readonly url: string;
-    readonly method: "GET";
-    readonly headers: Readonly<Record<string, string>>;
-  }) => Promise<{ readonly status: number; readonly body: unknown }>;
-};
+export type StatusTransport = NonNullable<GithubClientOptions["transport"]>;
 
 /** The status composition seams; the provider resolver is supplied by the edge. */
 export type StatusComposition = {
@@ -256,6 +285,385 @@ export type StatusComposition = {
   readonly localContext: { readonly path: string; readonly fs: FileSystemFacts };
   readonly clock: { readonly nowMs: () => number; readonly nowIso: () => string };
   readonly github: { readonly instance: ExternalSystemInstance };
+};
+
+/**
+ * The closeout composition seams (GH-183 D11): pure facts, the provider and git
+ * runtimes, the fenced state runtime, and injected time/id factories.
+ */
+export type CloseoutComposition = {
+  readonly planFacts: (workItemRef: string) => Promise<CloseoutPlanFacts>;
+  readonly provider: CloseoutProviderRuntime;
+  readonly git: CloseoutGitRuntime;
+  readonly state: CloseoutStateRuntime;
+  readonly nowIso: () => string;
+  readonly newFenceToken: () => string;
+};
+
+/** The raw provider source the closeout composition bridges to a runtime. */
+export type CloseoutProviderSource =
+  | {
+      readonly kind: "github";
+      readonly client: GithubClient;
+      readonly systemName?: string;
+      readonly capabilities?: AdapterCapabilityDeclaration;
+    }
+  | {
+      readonly kind: "jira";
+      readonly client: JiraClient;
+      readonly systemName?: string;
+      readonly capabilities?: AdapterCapabilityDeclaration;
+    }
+  | {
+      readonly kind: "gitlab";
+      readonly client: GitLabClient;
+      readonly systemName?: string;
+      readonly capabilities?: AdapterCapabilityDeclaration;
+    }
+  | {
+      readonly kind: "declared";
+      readonly systemName: string;
+      readonly capabilities: AdapterCapabilityDeclaration;
+    };
+
+/** The raw ports the production closeout composition consumes. */
+export type CloseoutCompositionOptions = {
+  readonly workspaceId: string;
+  readonly provider: CloseoutProviderSource;
+  /** An already-built seam, or the construction options for the real seam. */
+  readonly git: GitBranchSeam | GitBranchSeamOptions;
+  readonly store: StateStorePort;
+  readonly nowIso: () => string;
+  readonly newFenceToken: () => string;
+  readonly dependentsLimit?: number;
+  readonly mergedRequestLimit?: number;
+  readonly entityIdFor?: (workItemRef: string, kind: CloseoutProviderSource["kind"]) => string;
+};
+
+type ReadResult<T> =
+  | { readonly ok: true; readonly value: T }
+  | { readonly ok: false; readonly code: string; readonly detail?: string };
+
+const closeoutReadOutcome = <T>(result: ReadResult<T>): CloseoutReadObservation<T> =>
+  result.ok
+    ? { observation: "observed", value: result.value }
+    : { observation: "invalid", detail: result.detail ?? result.code };
+
+type WriteResult =
+  | { readonly ok: true; readonly alreadyApplied?: boolean }
+  | { readonly ok: false; readonly code: string; readonly detail?: string };
+
+const closeoutWriteOutcome = (result: WriteResult): CloseoutWriteOutcome =>
+  result.ok
+    ? { ok: true, ...(result.alreadyApplied === true ? { alreadyApplied: true } : {}) }
+    : { ok: false, code: result.code, detail: result.detail ?? result.code };
+
+const bridgeCloseoutProvider = (source: CloseoutProviderSource): CloseoutProviderRuntime => {
+  if (source.kind === "github") {
+    const client = source.client;
+    return {
+      systemName: source.systemName ?? GITHUB_ADAPTER_CONTRACT.adapterName,
+      capabilities: source.capabilities ?? GITHUB_ADAPTER_CONTRACT.capabilities,
+      readWorkItem: (entityId) => client.readWorkItemObservation(entityId),
+      readWorkItemObservation: (entityId) => client.readWorkItemObservation(entityId),
+      readDeliveryRequest: async (entityId) => {
+        if (!/^\d+$/.test(entityId)) {
+          return { observation: "invalid", detail: "GitHub delivery request id is not numeric" };
+        }
+        return closeoutReadOutcome(await client.readDeliveryRequest(Number(entityId)));
+      },
+      findMergedDeliveryRequest: (input) => client.findMergedDeliveryRequest(input),
+      listBlockedByDependents: (input) => client.listBlockedByDependents(input),
+      writeWorkItem: async (input) =>
+        closeoutWriteOutcome(
+          await client.writeWorkItem({
+            entityId: input.entityId,
+            ...(input.add === undefined ? {} : { add: input.add }),
+            ...(input.remove === undefined ? {} : { remove: input.remove }),
+            ...(input.assignee === undefined ? {} : { assignee: input.assignee }),
+          }),
+        ),
+      transitionWorkItem: async (input) =>
+        closeoutWriteOutcome(await client.transitionWorkItem(input)),
+      resolveDeliveryThread: async (input) =>
+        closeoutWriteOutcome(await client.resolveDeliveryThread(input)),
+    };
+  }
+  if (source.kind === "jira") {
+    const client = source.client;
+    return {
+      systemName: source.systemName ?? JIRA_ADAPTER_CONTRACT.adapterName,
+      capabilities: source.capabilities ?? JIRA_ADAPTER_CONTRACT.capabilities,
+      readWorkItem: (entityId) => client.readWorkItemObservation(entityId),
+      readWorkItemObservation: (entityId) => client.readWorkItemObservation(entityId),
+      listBlockedByDependents: async (input) =>
+        client.listBlockedByDependents({ issueKey: input.entityId, limit: input.limit }),
+      writeWorkItem: async (input) =>
+        closeoutWriteOutcome(
+          await client.writeWorkItem({
+            issueKey: input.entityId,
+            ...(input.add === undefined ? {} : { add: input.add }),
+            ...(input.remove === undefined ? {} : { remove: input.remove }),
+            ...(input.assignee === undefined ? {} : { assignee: input.assignee }),
+          }),
+        ),
+      transitionWorkItem: async (input) =>
+        closeoutWriteOutcome(
+          await client.transitionWorkItem({
+            issueKey: input.entityId,
+            deliveryState: input.deliveryState,
+          }),
+        ),
+      resolveDeliveryThread: async () => ({
+        ok: false,
+        code: "provider.payload.invalid",
+        detail: "Jira has no delivery-thread surface",
+      }),
+    };
+  }
+  if (source.kind === "gitlab") {
+    const client = source.client;
+    return {
+      systemName: source.systemName ?? GITLAB_ADAPTER_CONTRACT.adapterName,
+      capabilities: source.capabilities ?? GITLAB_ADAPTER_CONTRACT.capabilities,
+      readWorkItem: async () => ({ observation: "unavailable" }),
+      readWorkItemObservation: async () => ({ observation: "unavailable" }),
+      readDeliveryRequest: async (entityId) => {
+        if (!/^\d+$/.test(entityId)) {
+          return { observation: "invalid", detail: "GitLab merge request iid is not numeric" };
+        }
+        return closeoutReadOutcome(await client.readDeliveryRequest(Number(entityId)));
+      },
+      listBlockedByDependents: async () => ({ observation: "no-surface" }),
+      writeWorkItem: async () => ({
+        ok: false,
+        code: "provider.payload.invalid",
+        detail: "GitLab has no closeout write surface",
+      }),
+      transitionWorkItem: async () => ({
+        ok: false,
+        code: "provider.payload.invalid",
+        detail: "GitLab has no closeout transition surface",
+      }),
+      resolveDeliveryThread: async () => ({
+        ok: false,
+        code: "provider.payload.invalid",
+        detail: "GitLab has no delivery-thread surface",
+      }),
+    };
+  }
+  return {
+    systemName: source.systemName,
+    capabilities: source.capabilities,
+    readWorkItem: async () => ({ observation: "unavailable" }),
+    readWorkItemObservation: async () => ({ observation: "unavailable" }),
+    listBlockedByDependents: async () => ({ observation: "no-surface" }),
+    writeWorkItem: async () => ({
+      ok: false,
+      code: "provider.payload.invalid",
+      detail: "declared provider has no closeout write surface",
+    }),
+    transitionWorkItem: async () => ({
+      ok: false,
+      code: "provider.payload.invalid",
+      detail: "declared provider has no closeout transition surface",
+    }),
+    resolveDeliveryThread: async () => ({
+      ok: false,
+      code: "provider.payload.invalid",
+      detail: "declared provider has no delivery-thread surface",
+    }),
+  };
+};
+
+const defaultCloseoutEntityId = (
+  workItemRef: string,
+  kind: CloseoutProviderSource["kind"],
+): string => {
+  if (kind !== "github") return workItemRef;
+  const match = /^[A-Z][A-Z0-9]*-(\d+)$/.exec(workItemRef);
+  return match?.[1] ?? workItemRef;
+};
+
+const planCloseoutDependentFacts = async (
+  provider: CloseoutProviderRuntime,
+  candidates: readonly WorkItem[],
+  limit: number,
+): Promise<readonly CloseoutDependentFact[]> => {
+  const bounded = candidates.slice(0, limit);
+  return Promise.all(
+    bounded.map(async (candidate): Promise<CloseoutDependentFact> => {
+      const current = await provider.readWorkItemObservation(candidate.identity.entityId);
+      if (current.observation !== "observed") {
+        return { item: candidate, blockers: { observation: "unavailable" } };
+      }
+      const relationsSignal = current.signals?.relations;
+      if (
+        relationsSignal === undefined ||
+        relationsSignal === "unavailable" ||
+        relationsSignal === "unknown"
+      ) {
+        return { item: current.value, blockers: { observation: "unavailable" } };
+      }
+      const blockedBy = current.value.relations.filter(
+        (relation) => relation.relationKind === "blocked-by",
+      );
+      const blockerReads = await Promise.all(
+        blockedBy.map((relation) => provider.readWorkItemObservation(relation.target.entityId)),
+      );
+      const blockers: WorkItem[] = [];
+      for (const read of blockerReads) {
+        if (read.observation !== "observed") {
+          return { item: current.value, blockers: { observation: "unavailable" } };
+        }
+        blockers.push(read.value);
+      }
+      return { item: current.value, blockers: { observation: "observed", value: blockers } };
+    }),
+  );
+};
+
+const isGitBranchSeam = (value: GitBranchSeam | GitBranchSeamOptions): value is GitBranchSeam =>
+  "readCheckout" in value && typeof value.readCheckout === "function";
+
+const gitSeamFor = (value: GitBranchSeam | GitBranchSeamOptions): GitBranchSeam =>
+  isGitBranchSeam(value) ? value : createGitBranchSeam(value);
+
+/** Bridge the fenced state port to the closeout state runtime (NFR-8). */
+export const createCloseoutStateRuntime = (store: StateStorePort): CloseoutStateRuntime => ({
+  acquireFence: (token) => store.acquireFence(token),
+  append: (handle, record) => appendCloseoutOutcome(store, handle, record),
+  releaseFence: (handle) => store.releaseFence(handle),
+  readHistory: (workItemRef) => readCloseoutHistory(store, workItemRef),
+});
+
+/**
+ * Compose the production closeout reads and runtimes from raw ports.
+ *
+ * `planFacts` performs the read orchestration (work item, merged request,
+ * reverse dependents with per-candidate relation reads, git facts, persisted
+ * ledger) exactly once; the engine then plans/applies over those facts.
+ */
+export const createCloseoutComposition = (
+  options: CloseoutCompositionOptions,
+): CloseoutComposition => {
+  const provider = bridgeCloseoutProvider(options.provider);
+  const git = gitSeamFor(options.git);
+  const dependentsLimit = options.dependentsLimit ?? CLOSEOUT_MAX_DEPENDENTS;
+  const mergedRequestLimit = options.mergedRequestLimit ?? 20;
+  const entityIdFor = options.entityIdFor ?? defaultCloseoutEntityId;
+
+  const planFacts = async (workItemRef: string): Promise<CloseoutPlanFacts> => {
+    const entityId = entityIdFor(workItemRef, options.provider.kind);
+    const observedWorkItem = await provider.readWorkItemObservation(entityId);
+    if (
+      observedWorkItem.observation === "invalid" &&
+      observedWorkItem.code !== undefined &&
+      observedWorkItem.code !== "provider.payload.invalid"
+    ) {
+      // A credential/config failure keeps its delivered identity at exit 1;
+      // only payload and HTTP/transport failures are the invalid observation.
+      const resolution = resolveAppErrorCode(observedWorkItem.code);
+      if (resolution.ok) {
+        throw { kind: resolution.entry.domainKind, code: observedWorkItem.code };
+      }
+    }
+
+    const mergedRequest: CloseoutReadObservation<DeliveryRequest> =
+      provider.findMergedDeliveryRequest === undefined
+        ? { observation: "unavailable" }
+        : await provider.findMergedDeliveryRequest({ workItemRef, limit: mergedRequestLimit });
+
+    const dependentsRaw: CloseoutReverseDependentObservation<readonly WorkItem[]> =
+      provider.listBlockedByDependents === undefined
+        ? { observation: "no-surface" }
+        : await provider.listBlockedByDependents({ entityId, limit: dependentsLimit });
+    const dependents: CloseoutReverseDependentObservation<readonly CloseoutDependentFact[]> =
+      dependentsRaw.observation === "observed"
+        ? {
+            observation: "observed",
+            value: await planCloseoutDependentFacts(provider, dependentsRaw.value, dependentsLimit),
+          }
+        : dependentsRaw;
+
+    const baseRef = resolveCloseoutBaseRef(mergedRequest);
+    const mergedHeadSha =
+      mergedRequest.observation === "observed" ? mergedRequest.value.headSha : undefined;
+    const deliveryBranch =
+      mergedRequest.observation === "observed" ? mergedRequest.value.sourceRef : "";
+
+    const checkout = await git.readCheckout({
+      deliveryBranch,
+      baseRef,
+      ...(mergedHeadSha === undefined ? {} : { deliveryHead: mergedHeadSha }),
+    });
+    const cleanWorktree = await git.isClean();
+    const baseRefExists = await git.resolveRef({ ref: baseRef });
+    const branches = await git.listBranches({ workItemRef });
+    const checkedOutElsewhere = (
+      await Promise.all(
+        branches.map(async (branch) => ({
+          name: branch.name,
+          elsewhere: await git.isCheckedOutElsewhere({ branch: branch.name }),
+        })),
+      )
+    )
+      .filter((entry) => entry.elsewhere)
+      .map((entry) => entry.name);
+
+    const history = readCloseoutHistory(options.store, workItemRef);
+    if (!history.ok) {
+      // A torn/malformed ledger is a classified state failure, never zeros.
+      throw { kind: "state", code: history.error.code };
+    }
+
+    return {
+      workspaceId: options.workspaceId,
+      workItemRef,
+      provider: { systemName: provider.systemName, capabilities: provider.capabilities },
+      observedWorkItem,
+      mergedRequest,
+      dependents,
+      checkout,
+      cleanWorktree,
+      baseRefExists,
+      branches,
+      checkedOutElsewhere,
+      persisted: foldCloseoutHistory(history.value),
+    };
+  };
+
+  return {
+    planFacts,
+    provider,
+    git,
+    state: createCloseoutStateRuntime(options.store),
+    nowIso: options.nowIso,
+    newFenceToken: options.newFenceToken,
+  };
+};
+
+/** Compose the closeout command runtime over injected facts and runtimes. */
+export const createCloseoutCommandRuntime = (
+  composition: CloseoutComposition,
+): CloseoutCommandRuntime => {
+  const run = async (workItemRef: string, apply: boolean) => {
+    const facts = await composition.planFacts(workItemRef);
+    const plan = buildCloseoutPlan(facts);
+    return runCloseout({
+      plan,
+      provider: composition.provider,
+      git: composition.git,
+      state: composition.state,
+      timestamp: composition.nowIso(),
+      fenceToken: composition.newFenceToken(),
+      apply,
+    });
+  };
+  return {
+    plan: (input) => run(input.workItemRef, false),
+    apply: (input) => run(input.workItemRef, true),
+  };
 };
 
 /** Injected I/O and clock for the db command family (GH-180 PIN-6). */
@@ -433,6 +841,7 @@ export type ConfigProgramOptions = {
   readonly status?: StatusComposition;
   readonly queueReady?: StatusComposition;
   readonly db?: DbComposition;
+  readonly closeout?: CloseoutComposition;
 };
 
 export type ConfigProgramResult =
@@ -688,6 +1097,11 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   }
   if (options.db !== undefined) {
     commands.db = createDbCommandDefinition(createDbCommandRuntime(options.db));
+  }
+  if (options.closeout !== undefined) {
+    commands.closeout = createCloseoutCommandDefinition(
+      createCloseoutCommandRuntime(options.closeout),
+    );
   }
   return {
     ok: true,
