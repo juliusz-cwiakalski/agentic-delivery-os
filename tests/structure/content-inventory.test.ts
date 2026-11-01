@@ -224,8 +224,10 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "core/src/state/driver/strategy.ts": ["createJsonlStrategy", "createSqliteStrategy"],
   "cli/src/classify.ts": ["classifyDomainKind", "classifyThrown", "resolveAppErrorCode"],
   "cli/src/commands/config.ts": ["createConfigCommandDefinition"],
+  "cli/src/commands/closeout.ts": ["createCloseoutCommandDefinition"],
   "cli/src/commands/db.ts": ["createDbCommandDefinition"],
   "cli/src/commands/index.ts": [
+    "createCloseoutCommandDefinition",
     "createConfigCommandDefinition",
     "createDbCommandDefinition",
     "createLintCommandDefinition",
@@ -244,6 +246,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "registerEdgeSecrets",
     "readShippedDefaultsManifest",
     "createConfigProgram",
+    "createCloseoutCommandRuntime",
     "createDbCommandRuntime",
     "createPhaseCommandRuntime",
     "createRegistryLintReader",

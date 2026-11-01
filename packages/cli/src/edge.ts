@@ -37,6 +37,7 @@ import {
 } from "@delivery-os/adapters/session";
 import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import {
+  buildCloseoutPlan,
   catalogPaths,
   classifyPruneCandidate,
   computeDbCutoffMs,
@@ -44,12 +45,17 @@ import {
   isLiveDbSession,
   PRODUCTION_CATALOG,
   resolveConfig,
+  runCloseout,
   selectPruneCandidates,
+  type CloseoutPlanFacts,
 } from "@delivery-os/core";
 import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
   type BrandIdentity,
+  type CloseoutGitRuntime,
+  type CloseoutProviderRuntime,
+  type CloseoutStateRuntime,
   type ConfigFailure,
   type CredentialPort,
   type ExternalSystemInstance,
@@ -78,6 +84,10 @@ import {
   readChangeTransitionsTolerant,
   replacePhaseProjection,
 } from "@delivery-os/core/state";
+import {
+  type CloseoutCommandRuntime,
+  createCloseoutCommandDefinition,
+} from "./commands/closeout.js";
 import {
   type ConfigCommandRuntime,
   type ConfigResolvedSnapshot,
@@ -250,6 +260,42 @@ export type StatusComposition = {
   readonly localContext: { readonly path: string; readonly fs: FileSystemFacts };
   readonly clock: { readonly nowMs: () => number; readonly nowIso: () => string };
   readonly github: { readonly instance: ExternalSystemInstance };
+};
+
+/**
+ * The closeout composition seams (GH-183 D11): pure facts, the provider and git
+ * runtimes, the fenced state runtime, and injected time/id factories.
+ */
+export type CloseoutComposition = {
+  readonly planFacts: (workItemRef: string) => Promise<CloseoutPlanFacts>;
+  readonly provider: CloseoutProviderRuntime;
+  readonly git: CloseoutGitRuntime;
+  readonly state: CloseoutStateRuntime;
+  readonly nowIso: () => string;
+  readonly newFenceToken: () => string;
+};
+
+/** Compose the closeout command runtime over injected facts and runtimes. */
+export const createCloseoutCommandRuntime = (
+  composition: CloseoutComposition,
+): CloseoutCommandRuntime => {
+  const run = async (workItemRef: string, apply: boolean) => {
+    const facts = await composition.planFacts(workItemRef);
+    const plan = buildCloseoutPlan(facts);
+    return runCloseout({
+      plan,
+      provider: composition.provider,
+      git: composition.git,
+      state: composition.state,
+      timestamp: composition.nowIso(),
+      fenceToken: composition.newFenceToken(),
+      apply,
+    });
+  };
+  return {
+    plan: (input) => run(input.workItemRef, false),
+    apply: (input) => run(input.workItemRef, true),
+  };
 };
 
 /** Injected I/O and clock for the db command family (GH-180 PIN-6). */
@@ -427,6 +473,7 @@ export type ConfigProgramOptions = {
   readonly status?: StatusComposition;
   readonly queueReady?: StatusComposition;
   readonly db?: DbComposition;
+  readonly closeout?: CloseoutCommandRuntime;
 };
 
 export type ConfigProgramResult =
@@ -682,6 +729,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   }
   if (options.db !== undefined) {
     commands.db = createDbCommandDefinition(createDbCommandRuntime(options.db));
+  }
+  if (options.closeout !== undefined) {
+    commands.closeout = createCloseoutCommandDefinition(options.closeout);
   }
   return {
     ok: true,

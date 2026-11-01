@@ -93,6 +93,7 @@
   ],
   "cli": [
     "src/classify.ts",
+    "src/commands/closeout.ts",
     "src/commands/config.ts",
     "src/commands/db.ts",
     "src/commands/index.ts",

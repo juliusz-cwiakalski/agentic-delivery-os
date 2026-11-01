@@ -37,6 +37,7 @@ import {
 } from "../fixtures/closeout/harness";
 import { eligibleDependent, unavailableRelationDependent } from "../fixtures/closeout/dependents";
 import { fakeInvalidPayload, fakeNotFound } from "../fixtures/closeout/read-observation";
+import { closeoutData, errorOf, runCloseoutCli } from "../fixtures/closeout/cli";
 
 const stepById = (steps: readonly CloseoutStep[], stepId: string): CloseoutStep => {
   const step = steps.find((entry) => entry.stepId === stepId);
@@ -347,5 +348,86 @@ describe("TC-CLOSE-059/060 bounded machine and human output", () => {
     expect(first.split("\n").length).toBeLessThanOrEqual(CLOSEOUT_MAX_HUMAN_LINES + 1);
     expect(first.length).toBeLessThanOrEqual(CLOSEOUT_MAX_HUMAN_BYTES);
     expect(first.includes(CANARY_TEXT)).toBe(false);
+  });
+});
+
+
+describe("TC-CLOSE-010/011 in-process CLI plan and apply", () => {
+  test("plan mode renders one envelope with the seven ordered steps and zero writes", async () => {
+    const run = await runCloseoutCli(["closeout", WORK_ITEM_REF, "--json"]);
+    expect(run.exitCode).toBe(0);
+    expect(run.envelope.schemaVersion).toBe("delivery.result.v1");
+    const data = closeoutData(run.envelope);
+    expect(data.mode).toBe("plan");
+    expect(data.steps.map((step) => step.stepId)).toEqual(EXPECTED_STEP_IDS);
+    expect(run.provider.calls).toEqual([]);
+    expect(run.git.calls).toEqual([]);
+    expect(run.state.fence.acquired).toBe(0);
+    expect(run.state.fence.appends).toBe(0);
+  });
+
+  test("apply mode executes the same ordered plan with apply outcomes", async () => {
+    const run = await runCloseoutCli(["closeout", WORK_ITEM_REF, "--apply", "--json"]);
+    expect(run.exitCode).toBe(0);
+    const data = closeoutData(run.envelope);
+    expect(data.mode).toBe("applied");
+    expect(data.steps.map((step) => step.stepId)).toEqual(EXPECTED_STEP_IDS);
+    expect(data.steps.some((step) => step.outcome === "applied")).toBe(true);
+    expect(run.state.fence.acquired).toBe(1);
+    expect(run.state.fence.released).toBe(1);
+  });
+});
+
+describe("TC-CLOSE-012 CLI grammar rejection matrix", () => {
+  const rejections: Array<{ id: string; argv: readonly string[]; code: string }> = [
+    { id: "G-01", argv: ["closeout"], code: "input.value.rejected" },
+    { id: "G-02", argv: ["closeout", "GH-183", "extra"], code: "input.value.rejected" },
+    { id: "G-03", argv: ["closeout", "not-a-ref"], code: "input.value.rejected" },
+    { id: "G-04", argv: ["closeout", "gh-183"], code: "input.value.rejected" },
+    { id: "G-05", argv: ["closeout", "GH-183", "--bogus"], code: "fallback.invocation" },
+    { id: "G-06", argv: ["closeout", "GH-183", "--apply", "false"], code: "input.value.rejected" },
+    { id: "G-09", argv: ["closeout", "GH-183", "extra1", "extra2"], code: "fallback.invocation" },
+  ];
+
+  for (const testCase of rejections) {
+    test(`${testCase.id} rejects with ${testCase.code} and zero source calls`, async () => {
+      const run = await runCloseoutCli([...testCase.argv, "--json"]);
+      expect(run.exitCode).toBe(1);
+      expect(errorOf(run.envelope).code).toBe(testCase.code);
+      expect(run.provider.calls).toEqual([]);
+      expect(run.git.calls).toEqual([]);
+      expect(run.state.fence.acquired).toBe(0);
+    });
+  }
+
+  test("G-07 and G-08 are the valid sibling controls and reach the runtime", async () => {
+    for (const argv of [
+      ["closeout", "GH-183", "--apply", "--json"],
+      ["closeout", "GH-183", "--apply", "--apply", "--json"],
+    ] as const) {
+      const run = await runCloseoutCli(argv);
+      expect(run.exitCode).toBe(0);
+      expect(run.provider.calls.length + run.git.calls.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("TC-CLOSE-061/067 CLI failure projection", () => {
+  test("an explicit not-found exits 1 with zero writes", async () => {
+    const run = await runCloseoutCli(["closeout", "GH-183", "--apply", "--json"], {
+      facts: makeFacts({ observedWorkItem: fakeNotFound() }),
+    });
+    expect(run.exitCode).toBe(1);
+    expect(errorOf(run.envelope).code).toBe("closeout.target.unobserved");
+    expect(run.provider.calls).toEqual([]);
+    expect(run.state.fence.acquired).toBe(0);
+  });
+
+  test("a malformed payload projects provider.payload.invalid at exit 2", async () => {
+    const run = await runCloseoutCli(["closeout", "GH-183", "--json"], {
+      facts: makeFacts({ observedWorkItem: fakeInvalidPayload() }),
+    });
+    expect(run.exitCode).toBe(2);
+    expect(errorOf(run.envelope).code).toBe("provider.payload.invalid");
   });
 });

@@ -52,6 +52,31 @@ export function classifyDomainKind(kind: string, code?: string): ErrorTableEntry
   return matches[0] as ErrorTableEntry;
 }
 
+/**
+ * The adapter-local `provider.payload.invalid` identity (GH-183 DM-11).
+ *
+ * It is deliberately not an error-table row: an explicit provider not-found has
+ * its own `closeout` identity, and a malformed payload must never be confused
+ * with it. It still needs a projection class, so this one narrow synthetic
+ * entry is returned only for that exact (kind, code) pair.
+ */
+const ADAPTER_LOCAL_PAYLOAD_ENTRY: ErrorTableEntry = {
+  code: "provider.payload.invalid",
+  domainKind: "provider",
+  category: "platform",
+  retryable: false,
+  consequence: "unknown",
+  remediationHint:
+    "Correct the malformed provider payload or fix the adapter normalization, then retry.",
+  projectionClass: "platform-provider",
+  summary: "A provider payload was malformed or unparsable.",
+};
+
+const adapterLocalEntry = (kind: string, code: unknown): ErrorTableEntry | undefined =>
+  kind === "provider" && code === "provider.payload.invalid"
+    ? ADAPTER_LOCAL_PAYLOAD_ENTRY
+    : undefined;
+
 const containedInternalEntry = (): ErrorTableEntry => {
   const resolution = resolveAppErrorCode(FALLBACK_INTERNAL_CODE);
   if (!resolution.ok) throw new Error(`${FALLBACK_INTERNAL_CODE} is not declared`);
@@ -72,6 +97,8 @@ export function classifyThrown(value: unknown): ErrorTableEntry {
       const code = (value as { readonly code?: unknown }).code;
       try {
         if (code !== undefined && typeof code !== "string") return containedInternalEntry();
+        const adapterLocal = adapterLocalEntry(kind, code);
+        if (adapterLocal !== undefined) return adapterLocal;
         return classifyDomainKind(kind, code);
       } catch {
         return containedInternalEntry();
