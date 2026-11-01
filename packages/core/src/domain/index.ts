@@ -13,6 +13,7 @@ export {
   closeoutStepDefinitions,
   deriveCloseoutOperationId,
   evaluateBranchSafety,
+  runCloseout,
   foldCloseoutOutcomes,
   isProtectedRef,
   renderCloseoutHuman,
@@ -25,6 +26,8 @@ export {
   type CloseoutDependentFact,
   type CloseoutPlanFacts,
   type CloseoutPlanProvider,
+  type CloseoutRunInput,
+  type CloseoutRunResult,
 } from "./closeout.js";
 export { sha256Hex } from "./sha256.js";
 export {

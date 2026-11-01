@@ -9,12 +9,23 @@ import {
   type CloseoutOperationIdentityInputs,
   type CloseoutOperationRecord,
 } from "../../packages/core/src/contracts/index";
+import { STATE_SCHEMA_VERSION } from "../../packages/core/src/contracts/state";
 import {
   canonicalCloseoutJson,
   deriveCloseoutOperationId,
   foldCloseoutOutcomes,
+  buildCloseoutPlan,
+  runCloseout,
 } from "../../packages/core/src/domain/closeout";
 import { sha256Hex } from "../../packages/core/src/domain/sha256";
+import {
+  CLOSEOUT_TIMESTAMP,
+  makeFacts,
+  makeGit,
+  makeProvider,
+  makeState,
+} from "../fixtures/closeout/harness";
+import { fakeInvalidPayload, fakeNotFound } from "../fixtures/closeout/read-observation";
 
 /** The committed fixed canonical identity tuple (regeneration note in the plan). */
 const FIXED_INPUTS: CloseoutOperationIdentityInputs = {
@@ -107,5 +118,155 @@ describe("TC-CLOSE-018 first-terminal folding", () => {
     const applied = recordFor(FIXED_INPUTS, "applied");
     const folded = foldCloseoutOutcomes([failed, applied]);
     expect(folded[failed.operationId]?.outcome).toBe("applied");
+  });
+});
+
+
+const apply = (
+  facts: ReturnType<typeof makeFacts>,
+  provider: ReturnType<typeof makeProvider>,
+  git: ReturnType<typeof makeGit>,
+  state: ReturnType<typeof makeState>,
+) =>
+  runCloseout({
+    plan: buildCloseoutPlan(facts),
+    provider: provider.runtime,
+    git: git.runtime,
+    state: state.runtime,
+    timestamp: CLOSEOUT_TIMESTAMP,
+    fenceToken: "fence-1",
+    apply: true,
+  });
+
+describe("TC-CLOSE-015 restart reuses every terminal outcome", () => {
+  test("a fresh composition performs zero duplicate provider and git calls", async () => {
+    const state = makeState();
+    const firstProvider = makeProvider();
+    const firstGit = makeGit();
+    const first = await apply(makeFacts(), firstProvider, firstGit, state);
+    expect(first.ok).toBe(true);
+    const recorded = state.records.length;
+    expect(recorded).toBeGreaterThan(0);
+    expect(state.fence.acquired).toBe(1);
+    expect(state.fence.released).toBe(1);
+    expect(state.fence.appends).toBe(recorded);
+
+    const secondProvider = makeProvider();
+    const secondGit = makeGit();
+    const second = await apply(makeFacts(), secondProvider, secondGit, state);
+    expect(second.ok).toBe(true);
+    expect(secondProvider.calls).toEqual([]);
+    expect(secondGit.calls).toEqual([]);
+    expect(state.records.length).toBe(recorded);
+    if (second.ok) {
+      expect(second.data.steps.every((step) => step.outcome !== "applied")).toBe(true);
+    }
+  });
+});
+
+describe("TC-CLOSE-016 crash between effect and record converges as satisfied", () => {
+  test("an already-applied provider effect records satisfied with no duplicate effect", async () => {
+    const state = makeState();
+    const provider = makeProvider({
+      writeWorkItem: { ok: true, alreadyApplied: true },
+      transitionWorkItem: { ok: true, alreadyApplied: true },
+      resolveDeliveryThread: { ok: true, alreadyApplied: true },
+    });
+    const result = await apply(makeFacts(), provider, makeGit(), state);
+    expect(result.ok).toBe(true);
+    const providerRecords = state.records.filter(
+      (record) =>
+        record.operation === "write-work-item" ||
+        record.operation === "transition-work-item" ||
+        record.operation === "resolve-delivery-thread",
+    );
+    expect(providerRecords.length).toBeGreaterThan(0);
+    expect(providerRecords.every((record) => record.outcome === "satisfied")).toBe(true);
+  });
+});
+
+describe("TC-CLOSE-017 a failed outcome is retained and retried safely", () => {
+  test("the failed record is evidence and a later run converges", async () => {
+    const state = makeState();
+    const failing = makeProvider({
+      writeWorkItem: { ok: false, code: "closeout.write.failed", detail: "synthetic failure" },
+    });
+    const first = await apply(makeFacts(), failing, makeGit(), state);
+    expect(first.ok).toBe(false);
+    if (!first.ok) expect(first.error.code).toBe("closeout.write.failed");
+    const failed = state.records.filter((record) => record.outcome === "failed");
+    expect(failed.length).toBeGreaterThan(0);
+
+    const healed = makeProvider();
+    const second = await apply(makeFacts(), healed, makeGit(), state);
+    expect(second.ok).toBe(true);
+    expect(healed.calls.some((call) => call.kind === "writeWorkItem")).toBe(true);
+    const terminal = state.records.filter(
+      (record) => record.outcome === "applied" || record.outcome === "satisfied",
+    );
+    expect(terminal.length).toBeGreaterThan(failed.length);
+  });
+});
+
+describe("TC-CLOSE-019 ledger via the fenced state port", () => {
+  test("plan mode acquires no fence and appends nothing", async () => {
+    const state = makeState();
+    const provider = makeProvider();
+    const git = makeGit();
+    const result = await runCloseout({
+      plan: buildCloseoutPlan(makeFacts()),
+      provider: provider.runtime,
+      git: git.runtime,
+      state: state.runtime,
+      timestamp: CLOSEOUT_TIMESTAMP,
+      fenceToken: "fence-1",
+      apply: false,
+    });
+    expect(result.ok).toBe(true);
+    expect(state.fence.acquired).toBe(0);
+    expect(state.fence.appends).toBe(0);
+    expect(provider.calls).toEqual([]);
+    expect(git.calls).toEqual([]);
+  });
+
+  test("a torn ledger is a classified state error, never zeros", async () => {
+    const state = makeState({ torn: true });
+    const result = await apply(makeFacts(), makeProvider(), makeGit(), state);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("state.store.torn");
+  });
+
+  test("the state schema version is unchanged and no migration exists", () => {
+    expect(STATE_SCHEMA_VERSION).toBe("delivery.state.v1");
+  });
+});
+
+describe("TC-CLOSE-067 engine target discrimination writes nothing", () => {
+  test("not-found returns closeout.target.unobserved with zero calls", async () => {
+    const state = makeState();
+    const provider = makeProvider();
+    const git = makeGit();
+    const result = await apply(
+      makeFacts({ observedWorkItem: fakeNotFound() }),
+      provider,
+      git,
+      state,
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("closeout.target.unobserved");
+    expect(state.fence.acquired).toBe(0);
+    expect(provider.calls).toEqual([]);
+    expect(git.calls).toEqual([]);
+  });
+
+  test("a malformed payload stays provider.payload.invalid", async () => {
+    const result = await apply(
+      makeFacts({ observedWorkItem: fakeInvalidPayload() }),
+      makeProvider(),
+      makeGit(),
+      makeState(),
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("provider.payload.invalid");
   });
 });

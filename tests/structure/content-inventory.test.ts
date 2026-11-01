@@ -130,6 +130,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "isProtectedRef",
     "renderCloseoutHuman",
     "resolveCloseoutBaseRef",
+    "runCloseout",
     "selectMatchingBranch",
     "summarizeCloseout",
   ],
@@ -190,6 +191,13 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "core/src/domain/queue-ready.ts": ["evaluateQueueReady", "renderQueueReadyHuman"],
   "core/src/domain/status.ts": ["aggregateStatus", "renderStatusHuman"],
   "core/src/state/index.ts": ["createStateStore"],
+  "core/src/state/closeout.ts": [
+    "CLOSEOUT_OPERATION_RECORD_KEY_PREFIX",
+    "appendCloseoutOutcome",
+    "closeoutOperationRecordKey",
+    "foldCloseoutHistory",
+    "readCloseoutHistory",
+  ],
   "core/src/state/registry.ts": [
     "PHASE_TRANSITION_RECORD_KEY_PREFIX",
     "appendPhaseTransition",

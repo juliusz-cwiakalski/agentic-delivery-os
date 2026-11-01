@@ -45,6 +45,7 @@
     "src/provider/peak.ts",
     "src/provider/quota.ts",
     "src/provider/validate.ts",
+    "src/state/closeout.ts",
     "src/state/driver/runtime-edge.ts",
     "src/state/driver/strategy.ts",
     "src/state/edge.ts",

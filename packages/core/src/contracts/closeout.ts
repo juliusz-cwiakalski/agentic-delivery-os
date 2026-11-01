@@ -13,7 +13,6 @@ import type { AdapterCapabilityDeclaration, CapabilityGapReason } from "./adapte
 import type { DeliveryRequest, ProviderQualifiedIdentity, WorkItem } from "./ports.js";
 import type {
   StateAppendOutcome,
-  StateAppendRequest,
   StateFenceAcquisition,
   StateFenceHandle,
   StateFenceReleaseReport,
@@ -328,7 +327,7 @@ export type CloseoutOperationRecord = {
 
 /** A provider write outcome: success or a classified adapter-local failure. */
 export type CloseoutWriteOutcome =
-  | { readonly ok: true }
+  | { readonly ok: true; readonly alreadyApplied?: boolean }
   | { readonly ok: false; readonly code: string; readonly detail: string };
 
 /** The closeout-relevant provider operations (DM-5, PIN-14/PIN-15). */
@@ -413,7 +412,7 @@ export type CloseoutStateRuntime = {
   readonly acquireFence: (token: string) => StateResult<StateFenceAcquisition>;
   readonly append: (
     handle: StateFenceHandle,
-    request: StateAppendRequest,
+    record: CloseoutOperationRecord,
   ) => StateResult<StateAppendOutcome>;
   readonly releaseFence: (handle: StateFenceHandle) => StateResult<StateFenceReleaseReport>;
   readonly readHistory: (

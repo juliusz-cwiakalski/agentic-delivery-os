@@ -54,6 +54,13 @@ export type {
   StateRuntimeEdge,
 } from "./edge.js";
 export {
+  appendCloseoutOutcome,
+  CLOSEOUT_OPERATION_RECORD_KEY_PREFIX,
+  closeoutOperationRecordKey,
+  foldCloseoutHistory,
+  readCloseoutHistory,
+} from "./closeout.js";
+export {
   appendPhaseTransition,
   foldPhaseState,
   PHASE_TRANSITION_RECORD_KEY_PREFIX,

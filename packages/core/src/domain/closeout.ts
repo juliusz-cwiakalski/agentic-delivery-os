@@ -24,7 +24,12 @@ import {
   type CloseoutOperationIdentityInputs,
   type CloseoutOperationName,
   type CloseoutOperationRecord,
+  type CloseoutApplyOutcome,
   type CloseoutOutcome,
+  type CloseoutProviderRuntime,
+  type CloseoutGitRuntime,
+  type CloseoutStateRuntime,
+  type CloseoutWriteOutcome,
   type CloseoutPlan,
   type CloseoutPlanOutcome,
   type CloseoutReadObservation,
@@ -810,6 +815,271 @@ export const boundCloseoutData = (data: CloseoutData): CloseoutData => {
     steps = steps.slice(0, -1);
   }
   return { ...data, steps, summary: summarizeCloseout(steps) };
+};
+
+/** The apply-orchestrator input (Phase 3, F-3, D6). */
+export type CloseoutRunInput = {
+  readonly plan: CloseoutPlan;
+  readonly provider: CloseoutProviderRuntime;
+  readonly git: CloseoutGitRuntime;
+  readonly state: CloseoutStateRuntime;
+  readonly timestamp: string;
+  readonly fenceToken: string;
+  readonly apply: boolean;
+};
+
+/** The apply-orchestrator result: bounded data or a classified identity. */
+export type CloseoutRunResult =
+  | { readonly ok: true; readonly data: CloseoutData }
+  | {
+      readonly ok: false;
+      readonly error: {
+        readonly kind: string;
+        readonly code: string;
+        readonly summary?: string;
+      };
+    };
+
+const PLAN_TO_APPLY: Readonly<Record<string, CloseoutOutcome>> = {
+  "would-apply": "applied",
+  satisfied: "satisfied",
+  "skipped-gap": "skipped-gap",
+  "skipped-noop": "skipped-noop",
+  "would-refuse": "refused",
+};
+
+const operationOutcome = (result: CloseoutWriteOutcome): "applied" | "satisfied" =>
+  result.ok && result.alreadyApplied === true ? "satisfied" : "applied";
+
+const executeOperation = async (
+  operation: CloseoutOperation,
+  provider: CloseoutProviderRuntime,
+  git: CloseoutGitRuntime,
+): Promise<CloseoutWriteOutcome> => {
+  const args = operation.arguments;
+  if (operation.name === "transition-work-item" && "deliveryState" in args) {
+    return provider.transitionWorkItem({
+      entityId: operation.target.entityId,
+      deliveryState: "done",
+    });
+  }
+  if (
+    operation.name === "write-work-item" &&
+    ("add" in args || "remove" in args || "assignee" in args)
+  ) {
+    return provider.writeWorkItem({
+      entityId: operation.target.entityId,
+      ...(args.add === undefined ? {} : { add: args.add }),
+      ...(args.remove === undefined ? {} : { remove: args.remove }),
+      ...(args.assignee === undefined ? {} : { assignee: args.assignee }),
+    });
+  }
+  if (operation.name === "resolve-delivery-thread" && "threadId" in args) {
+    return provider.resolveDeliveryThread({
+      deliveryRequest: args.deliveryRequest,
+      threadId: args.threadId,
+    });
+  }
+  if (operation.name === "restore-checkout" && "baseRef" in args) {
+    return git.restoreCheckout({ baseRef: args.baseRef });
+  }
+  if (operation.name === "delete-branch" && "branch" in args) {
+    return git.deleteBranch({ branch: args.branch });
+  }
+  return {
+    ok: false,
+    code: "provider.payload.invalid",
+    detail: `unknown operation ${operation.name}`,
+  };
+};
+
+const recordFor = (
+  operation: CloseoutOperation,
+  workItemRef: string,
+  outcome: CloseoutApplyOutcome,
+  timestamp: string,
+  reason?: string,
+): CloseoutOperationRecord => ({
+  schemaId: "delivery.closeout.operation.v1",
+  operationId: operation.operationId,
+  workItemRef,
+  engine: operation.engine,
+  capabilityContext: operation.capabilityContext,
+  operation: operation.name,
+  arguments: operation.arguments,
+  target: operation.target,
+  outcome,
+  ...(reason === undefined ? {} : { reason }),
+  evidence: [
+    { name: "operation", value: operation.name },
+    { name: "target", value: operation.target.entityId },
+  ],
+  timestamp,
+});
+
+const targetFailure = (plan: CloseoutPlan): CloseoutRunResult | undefined => {
+  for (const step of plan.steps) {
+    if (step.reason === "closeout.target.unobserved") {
+      return {
+        ok: false,
+        error: { kind: "closeout", code: "closeout.target.unobserved" },
+      };
+    }
+    if (step.reason === "closeout.target.ambiguous") {
+      return {
+        ok: false,
+        error: { kind: "closeout", code: "closeout.target.ambiguous" },
+      };
+    }
+    if (step.reason === "provider.payload.invalid") {
+      return {
+        ok: false,
+        error: { kind: "provider", code: "provider.payload.invalid" },
+      };
+    }
+  }
+  return undefined;
+};
+
+/**
+ * Execute (apply) or render (plan) the deterministic transaction.
+ *
+ * Plan mode performs zero fences, zero appends, and zero provider/git writes.
+ * Apply mode acquires one fence, reuses terminal outcomes, retries a failed
+ * outcome, appends one record per terminal operation, and releases the fence in
+ * a `finally`. A provider failure stops provider steps but still runs a safe
+ * local restore and skips branch deletion.
+ */
+export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunResult> => {
+  const failure = targetFailure(input.plan);
+  if (failure !== undefined) return failure;
+
+  if (!input.apply) {
+    const data: CloseoutData = {
+      schemaId: CLOSEOUT_SCHEMA_ID,
+      command: "closeout",
+      workItemRef: input.plan.workItemRef,
+      mode: "plan",
+      baseRef: input.plan.baseRef,
+      ...(input.plan.deliveryRequest === undefined
+        ? {}
+        : { deliveryRequest: input.plan.deliveryRequest }),
+      steps: input.plan.steps,
+      summary: input.plan.summary,
+      ledgerKey: `closeout.operations:${input.plan.workItemRef}`,
+    };
+    return { ok: true, data: boundCloseoutData(data) };
+  }
+
+  const history = input.state.readHistory(input.plan.workItemRef);
+  if (!history.ok) {
+    return { ok: false, error: { kind: "state", code: history.error.code } };
+  }
+  const persisted = foldCloseoutOutcomes(history.value);
+  const acquired = input.state.acquireFence(input.fenceToken);
+  if (!acquired.ok) {
+    return { ok: false, error: { kind: "state", code: acquired.error.code } };
+  }
+  const handle = acquired.value.handle;
+  let earlierFailure = false;
+  let stateFailure: { kind: string; code: string } | undefined;
+  const steps: CloseoutStep[] = [];
+
+  const append = (record: CloseoutOperationRecord): boolean => {
+    const appended = input.state.append(handle, record);
+    if (!appended.ok) {
+      stateFailure = { kind: "state", code: appended.error.code };
+      return false;
+    }
+    return true;
+  };
+
+  try {
+    for (const step of input.plan.steps) {
+      if (stateFailure !== undefined) break;
+      if (earlierFailure && step.stepId !== "checkout-restore" && step.stepId !== "branch-cleanup") {
+        steps.push({
+          ...step,
+          outcome: "skipped-noop",
+          reason: "earlier-failure",
+          operations: [],
+        });
+        continue;
+      }
+      if (earlierFailure && step.stepId === "branch-cleanup") {
+        steps.push({
+          ...step,
+          outcome: "skipped-noop",
+          reason: "earlier-failure",
+          operations: [],
+        });
+        continue;
+      }
+      if (step.outcome !== "would-apply") {
+        steps.push({ ...step, outcome: PLAN_TO_APPLY[step.outcome] ?? step.outcome });
+        continue;
+      }
+      let applied = 0;
+      let satisfied = 0;
+      let failed = 0;
+      for (const operation of step.operations) {
+        if (stateFailure !== undefined) break;
+        const existing = persisted[operation.operationId];
+        if (existing !== undefined && TERMINAL_OUTCOMES.has(existing.outcome)) {
+          satisfied += 1;
+          continue;
+        }
+        const result = await executeOperation(operation, input.provider, input.git);
+        if (!result.ok) {
+          failed += 1;
+          earlierFailure = true;
+          if (!append(recordFor(operation, input.plan.workItemRef, "failed", input.timestamp, result.code))) {
+            break;
+          }
+          break;
+        }
+        const outcome = operationOutcome(result);
+        if (outcome === "applied") applied += 1;
+        else satisfied += 1;
+        if (!append(recordFor(operation, input.plan.workItemRef, outcome, input.timestamp))) break;
+      }
+      const outcome: CloseoutOutcome =
+        failed > 0 ? "failed" : applied > 0 ? "applied" : "satisfied";
+      steps.push({ ...step, outcome });
+    }
+  } finally {
+    input.state.releaseFence(handle);
+  }
+
+  if (stateFailure !== undefined) {
+    return { ok: false, error: stateFailure };
+  }
+  const data: CloseoutData = {
+    schemaId: CLOSEOUT_SCHEMA_ID,
+    command: "closeout",
+    workItemRef: input.plan.workItemRef,
+    mode: "applied",
+    baseRef: input.plan.baseRef,
+    ...(input.plan.deliveryRequest === undefined
+      ? {}
+      : { deliveryRequest: input.plan.deliveryRequest }),
+    steps,
+    summary: summarizeCloseout(steps),
+    ledgerKey: `closeout.operations:${input.plan.workItemRef}`,
+  };
+  if (steps.some((step) => step.outcome === "failed")) {
+    return {
+      ok: false,
+      error: { kind: "closeout", code: "closeout.write.failed" },
+    };
+  }
+  if (steps.some((step) => step.outcome === "refused")) {
+    return {
+      ok: false,
+      error: { kind: "closeout", code: "closeout.branch.unsafe" },
+    };
+  }
+  return { ok: true, data: boundCloseoutData(data) };
 };
 
 /** Render the deterministic human digest within 200 lines and 16 KiB. */

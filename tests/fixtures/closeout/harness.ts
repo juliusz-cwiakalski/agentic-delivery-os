@@ -286,9 +286,8 @@ export const makeState = (options: FakeStateOptions = {}): FakeState => {
       fence.acquired += 1;
       return { ok: true, value: { handle: handleFor(token), token } };
     },
-    append: (handle, request) => {
+    append: (handle, record) => {
       fence.appends += 1;
-      const record = request.payload as unknown as CloseoutOperationRecord;
       records.push(record);
       return {
         ok: true,
