@@ -219,31 +219,102 @@ const foldTransitions = (
   return phases;
 };
 
-const stateFailureOf = (variant: PmNotesVariant, error: StateFailure): VerifyFailure => {
-  const row = rowFor(error.code);
-  const token = row?.category === "platform" ? "state-unverified" : "failed";
-  const detail = row?.summary === undefined ? undefined : collapse(row.summary);
-  return {
-    ok: false,
-    kind: "state",
-    code: error.code,
-    summary: formatVerifySummary(token, variant, [], detail),
+/** The structured ledger evaluation (GH-178 DM-15). */
+export type VerifyLedgerEvaluation = {
+  readonly variant: "full" | "lite" | "unknown";
+  readonly outcome: "finished" | "partial" | "failed" | "state-unverified";
+  readonly requiredPhases: readonly string[];
+  readonly completedPhases: readonly string[];
+  readonly missingPhases: readonly string[];
+  readonly declaration: {
+    readonly requiredCount: number;
+    readonly completedCount: number;
   };
+  readonly registry: {
+    readonly present: boolean;
+    readonly verifiedEmpty: boolean;
+    readonly recordCount: number;
+    readonly transitionCount: number;
+    readonly overlaidPhases: readonly string[];
+  };
+  readonly kind?: VerifyFailureKind;
+  readonly code?: string;
 };
 
+const EMPTY_REGISTRY = {
+  present: false,
+  verifiedEmpty: false,
+  recordCount: 0,
+  transitionCount: 0,
+  overlaidPhases: [] as readonly string[],
+} as const;
+
 /**
- * Stage 2 — final classification over registry facts. Registry evidence
- * overrides the declaration for every phase it mentioned; absent evidence is
- * never negative evidence; absence precedence selects `lint.phases.incomplete`
- * before `verify.ledger.incomplete` (C-3, C-7).
+ * Evaluate one ledger outcome structurally (DM-15).
+ *
+ * The document stage is the already-classified document: a terminal document
+ * failure yields the empty/zero shape plus its identity, and a classified
+ * document is merged with the registry exactly as `classifyVerifyChange` always
+ * did. Registry failure keeps the declaration-derived arrays/counts and the
+ * failed registry evidence, so a failure path never loses its counts.
  */
-export const classifyVerifyChange = (input: {
+export const EvaluateVerifyChange = (input: {
   readonly changeRef: string;
-  readonly document: VerifyDocumentReady;
-  readonly registry: VerifyRegistryEvidence;
-}): VerifyChangeVerdict => {
+  readonly document: VerifyDocumentClassification;
+  readonly registry?: VerifyRegistryEvidence;
+}): VerifyLedgerEvaluation => {
   const { document } = input;
-  if (!input.registry.ok) return stateFailureOf(document.variant, input.registry.error);
+  if (!document.ok) {
+    return {
+      variant: "unknown",
+      outcome: "failed",
+      requiredPhases: [],
+      completedPhases: [],
+      missingPhases: [],
+      declaration: { requiredCount: 0, completedCount: 0 },
+      registry: EMPTY_REGISTRY,
+      kind: document.kind,
+      code: document.code,
+    };
+  }
+
+  if (input.registry === undefined) {
+    return {
+      variant: document.variant,
+      outcome: "state-unverified",
+      requiredPhases: [...document.requiredPhases],
+      completedPhases: [...document.declaredCompleted],
+      missingPhases: document.requiredPhases.filter(
+        (phaseId) => !document.declaredCompleted.includes(phaseId),
+      ),
+      declaration: {
+        requiredCount: document.requiredPhases.length,
+        completedCount: document.declaredCompleted.length,
+      },
+      registry: EMPTY_REGISTRY,
+      kind: "state",
+      code: "state.store.torn",
+    };
+  }
+
+  if (!input.registry.ok) {
+    return {
+      variant: document.variant,
+      outcome: "state-unverified",
+      requiredPhases: [...document.requiredPhases],
+      completedPhases: [...document.declaredCompleted],
+      missingPhases: document.requiredPhases.filter(
+        (phaseId) => !document.declaredCompleted.includes(phaseId),
+      ),
+      declaration: {
+        requiredCount: document.requiredPhases.length,
+        completedCount: document.declaredCompleted.length,
+      },
+      registry: EMPTY_REGISTRY,
+      kind: "state",
+      code: input.registry.error.code,
+    };
+  }
 
   const folded = foldTransitions(input.registry.transitions);
   const overlaidPhases = document.requiredPhases.filter((phaseId) => folded.has(phaseId));
@@ -255,11 +326,22 @@ export const classifyVerifyChange = (input: {
   const completed = new Set(completedPhases);
   const missingPhases = document.requiredPhases.filter((phaseId) => !completed.has(phaseId));
   const stillAbsent = document.absentRequired.filter((phaseId) => !folded.has(phaseId));
+  const code =
+    missingPhases.length === 0
+      ? undefined
+      : stillAbsent.length > 0
+        ? "lint.phases.incomplete"
+        : "verify.ledger.incomplete";
 
-  const evidence: VerifyEvidence = {
+  return {
+    variant: document.variant,
+    outcome: missingPhases.length === 0 ? "finished" : "partial",
+    requiredPhases: [...document.requiredPhases],
+    completedPhases,
+    missingPhases,
     declaration: {
-      completedCount: document.declaredCompleted.length,
       requiredCount: document.requiredPhases.length,
+      completedCount: document.declaredCompleted.length,
     },
     registry: {
       present: input.registry.present,
@@ -268,30 +350,86 @@ export const classifyVerifyChange = (input: {
       transitionCount: input.registry.transitions.length,
       overlaidPhases,
     },
+    ...(code === undefined ? {} : { kind: code.startsWith("verify.") ? "verify" : "lint", code }),
   };
+};
 
-  if (missingPhases.length === 0) {
+/**
+ * Stage 2 — final classification over registry facts, retained as the
+ * byte-preserving wrapper over `EvaluateVerifyChange` (GH-177 C-3, C-7).
+ */
+export const classifyVerifyChange = (input: {
+  readonly changeRef: string;
+  readonly document: VerifyDocumentReady;
+  readonly registry: VerifyRegistryEvidence;
+}): VerifyChangeVerdict => {
+  const evaluation = EvaluateVerifyChange({
+    changeRef: input.changeRef,
+    document: input.document,
+    registry: input.registry,
+  });
+
+  if (evaluation.outcome === "finished") {
     return {
       ok: true,
       data: {
         changeRef: input.changeRef,
         target: "change",
         result: "finished",
-        variant: document.variant,
-        requiredPhases: [...document.requiredPhases],
-        completedPhases,
+        variant: evaluation.variant === "unknown" ? input.document.variant : evaluation.variant,
+        requiredPhases: evaluation.requiredPhases,
+        completedPhases: evaluation.completedPhases,
         missingPhases: [],
-        evidence,
+        evidence: {
+          declaration: {
+            completedCount: evaluation.declaration.completedCount,
+            requiredCount: evaluation.declaration.requiredCount,
+          },
+          registry: evaluation.registry,
+        },
       },
     };
   }
 
-  const code = stillAbsent.length > 0 ? "lint.phases.incomplete" : "verify.ledger.incomplete";
+  if (evaluation.outcome === "partial") {
+    const code = evaluation.code ?? "verify.ledger.incomplete";
+    return {
+      ok: false,
+      kind: code.startsWith("verify.") ? "verify" : "lint",
+      code,
+      summary: formatVerifySummary(
+        "partial",
+        evaluation.variant === "unknown" ? input.document.variant : evaluation.variant,
+        evaluation.missingPhases,
+      ),
+    };
+  }
+
+  const code = evaluation.code ?? "state.store.torn";
+  if (evaluation.outcome === "state-unverified") {
+    const row = rowFor(code);
+    const token = row?.category === "platform" ? "state-unverified" : "failed";
+    const detail = row?.summary === undefined ? undefined : collapse(row.summary);
+    return {
+      ok: false,
+      kind: "state",
+      code,
+      summary: formatVerifySummary(
+        token,
+        evaluation.variant === "unknown" ? input.document.variant : evaluation.variant,
+        [],
+        detail,
+      ),
+    };
+  }
+
+  const row = rowFor(code);
+  const detail = row?.summary === undefined ? undefined : collapse(row.summary);
   return {
     ok: false,
-    kind: code.startsWith("verify.") ? "verify" : "lint",
+    kind: evaluation.kind ?? "lint",
     code,
-    summary: formatVerifySummary("partial", document.variant, missingPhases),
+    summary: formatVerifySummary("failed", "unknown", [], detail),
   };
 };
 

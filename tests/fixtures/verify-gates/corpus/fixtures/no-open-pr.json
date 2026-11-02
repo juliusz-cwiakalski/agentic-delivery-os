@@ -1,0 +1,5 @@
+{
+  "id": "no-open-pr",
+  "builder": "no-open-pr",
+  "canary": "corpus-canary-no-open-pr"
+}

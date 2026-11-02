@@ -1,0 +1,5 @@
+{
+  "id": "bad-squash",
+  "builder": "bad-squash",
+  "canary": "corpus-canary-bad-squash"
+}

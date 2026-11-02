@@ -1,0 +1,5 @@
+{
+  "id": "ambiguous-open-pr",
+  "builder": "ambiguous-open-pr",
+  "canary": "corpus-canary-ambiguous-open-pr"
+}

@@ -1,0 +1,5 @@
+{
+  "id": "ticket-red-pipeline",
+  "builder": "red-pipeline",
+  "canary": "corpus-canary-ticket-red-pipeline"
+}

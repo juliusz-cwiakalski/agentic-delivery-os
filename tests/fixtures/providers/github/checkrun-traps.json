@@ -1,0 +1,11 @@
+{
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "empty": { "check_runs": [] },
+  "allSkipped": {
+    "check_runs": [
+      { "id": 1, "name": "build", "status": "completed", "conclusion": "skipped" },
+      { "id": 2, "name": "test", "status": "completed", "conclusion": "skipped" }
+    ]
+  },
+  "pageLimit": { "check_runs": [] }
+}

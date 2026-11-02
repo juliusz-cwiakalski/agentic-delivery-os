@@ -2,6 +2,7 @@
  * `@delivery-os/adapters/file` — file I/O adapter subpath.
  * Supplies line-preserving configuration facts and platform file acquisition.
  */
+export { readCiWorkflowJobNames, type CiWorkflowJobNamesRead } from "./ci-workflow.js";
 export {
   acquireFileConfig,
   type FileAcquisitionInput,

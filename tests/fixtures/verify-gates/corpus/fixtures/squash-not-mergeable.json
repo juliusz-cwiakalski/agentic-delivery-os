@@ -1,0 +1,5 @@
+{
+  "id": "squash-not-mergeable",
+  "builder": "squash-not-mergeable",
+  "canary": "corpus-canary-squash-not-mergeable"
+}

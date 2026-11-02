@@ -61,6 +61,90 @@
       "providerBehavior": "Review-thread resolution is a GraphQL mutation behind the existing injected transport, not a REST write.",
       "expectedNormalizedOutcome": "resolve-delivery-thread posts one GraphQL mutation with the thread id and succeeds on a resolved thread payload.",
       "fixtureReference": "tests/fixtures/providers/github/graphql-resolve-thread.json"
+    },
+    {
+      "trapName": "GITHUB-PR-MERGEABLE-NULL",
+      "providerBehavior": "Null mergeability means unknown, never mergeable.",
+      "expectedNormalizedOutcome": "Null mergeability means unknown, never mergeable.",
+      "fixtureReference": "tests/fixtures/providers/github/pr-gate-facts.json#/pulls/nullMergeable"
+    },
+    {
+      "trapName": "GITHUB-PR-MERGEABLE-DIRTY",
+      "providerBehavior": "A false/dirty mergeability is conflicting.",
+      "expectedNormalizedOutcome": "A false/dirty mergeability is conflicting.",
+      "fixtureReference": "tests/fixtures/providers/github/pr-gate-facts.json#/pulls/dirty"
+    },
+    {
+      "trapName": "GITHUB-PR-MERGEABLE-BLOCKED",
+      "providerBehavior": "A blocked state is not-mergeable even when mergeable is true.",
+      "expectedNormalizedOutcome": "A blocked state is not-mergeable even when mergeable is true.",
+      "fixtureReference": "tests/fixtures/providers/github/pr-gate-facts.json#/pulls/blockedTrue"
+    },
+    {
+      "trapName": "GITHUB-PR-HEAD-SHA-ABSENT",
+      "providerBehavior": "An absent head SHA stays absent.",
+      "expectedNormalizedOutcome": "An absent head SHA stays absent.",
+      "fixtureReference": "tests/fixtures/providers/github/pr-gate-facts.json#/pulls/headAbsent"
+    },
+    {
+      "trapName": "GITHUB-PR-COMMIT-SURFACE-ABSENT",
+      "providerBehavior": "Absent commits/changed_files stay absent.",
+      "expectedNormalizedOutcome": "Absent commits/changed_files stay absent.",
+      "fixtureReference": "tests/fixtures/providers/github/pr-gate-facts.json#/pulls/surfaceAbsent"
+    },
+    {
+      "trapName": "GITHUB-PR-ZERO-COMMITS",
+      "providerBehavior": "Zero commits is not a non-vacuous surface.",
+      "expectedNormalizedOutcome": "Zero commits is not a non-vacuous surface.",
+      "fixtureReference": "tests/fixtures/providers/github/pr-gate-facts.json#/pulls/zeroCommits"
+    },
+    {
+      "trapName": "GITHUB-CHECKRUN-EMPTY",
+      "providerBehavior": "Zero check runs is not green.",
+      "expectedNormalizedOutcome": "Zero check runs is not green.",
+      "fixtureReference": "tests/fixtures/providers/github/checkrun-traps.json#/empty"
+    },
+    {
+      "trapName": "GITHUB-CHECKRUN-ALL-SKIPPED",
+      "providerBehavior": "All-skipped check runs are not green.",
+      "expectedNormalizedOutcome": "All-skipped check runs are not green.",
+      "fixtureReference": "tests/fixtures/providers/github/checkrun-traps.json#/allSkipped"
+    },
+    {
+      "trapName": "GITHUB-CHECKRUN-PAGE-LIMIT",
+      "providerBehavior": "A page at 100 runs is truncated.",
+      "expectedNormalizedOutcome": "A page at 100 runs is truncated.",
+      "fixtureReference": "tests/fixtures/providers/github/checkrun-page-limit.json#/check_runs"
+    },
+    {
+      "trapName": "GITHUB-ISSUE-COMMENTS-ABSENT",
+      "providerBehavior": "An issue without comments exposes labels only.",
+      "expectedNormalizedOutcome": "An issue without comments exposes labels only.",
+      "fixtureReference": "tests/fixtures/providers/github/issue-comments-absent.json#/issue"
+    },
+    {
+      "trapName": "GITHUB-PR-LIST-404",
+      "providerBehavior": "A PR-list HTTP 404 is definitive absence.",
+      "expectedNormalizedOutcome": "A PR-list HTTP 404 is definitive absence.",
+      "fixtureReference": "tests/fixtures/providers/github/absence-404.json#/prList"
+    },
+    {
+      "trapName": "GITHUB-PR-DETAIL-404",
+      "providerBehavior": "A matched PR-detail HTTP 404 is head-unresolved for detail-consuming gates.",
+      "expectedNormalizedOutcome": "A matched PR-detail HTTP 404 is head-unresolved for detail-consuming gates.",
+      "fixtureReference": "tests/fixtures/providers/github/absence-404.json#/prDetail"
+    },
+    {
+      "trapName": "GITHUB-CHECKRUN-404",
+      "providerBehavior": "A check-run HTTP 404 is unknown read-failed with source absent.",
+      "expectedNormalizedOutcome": "A check-run HTTP 404 is unknown read-failed with source absent.",
+      "fixtureReference": "tests/fixtures/providers/github/absence-404.json#/checkRun"
+    },
+    {
+      "trapName": "GITHUB-ISSUE-404",
+      "providerBehavior": "A work-item HTTP 404 is ticket-unresolved with source absent.",
+      "expectedNormalizedOutcome": "A work-item HTTP 404 is ticket-unresolved with source absent.",
+      "fixtureReference": "tests/fixtures/providers/github/absence-404.json#/issue"
     }
   ]
 }

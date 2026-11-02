@@ -1,0 +1,73 @@
+{
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "pulls": {
+    "nullMergeable": {
+      "number": 801,
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "head": { "ref": "feat/null", "sha": "1111111111111111111111111111111111111111" },
+      "base": { "ref": "main-tools" },
+      "mergeable": null,
+      "mergeable_state": null,
+      "commits": 0,
+      "changed_files": 0
+    },
+    "dirty": {
+      "number": 802,
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "head": { "ref": "feat/dirty", "sha": "1111111111111111111111111111111111111111" },
+      "base": { "ref": "main-tools" },
+      "mergeable": false,
+      "mergeable_state": "dirty",
+      "commits": 1,
+      "changed_files": 2
+    },
+    "blockedTrue": {
+      "number": 803,
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "head": { "ref": "feat/blocked", "sha": "1111111111111111111111111111111111111111" },
+      "base": { "ref": "main-tools" },
+      "mergeable": true,
+      "mergeable_state": "blocked",
+      "commits": 1,
+      "changed_files": 2
+    },
+    "headAbsent": {
+      "number": 804,
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "head": { "ref": "feat/no-head" },
+      "base": { "ref": "main-tools" },
+      "mergeable": true,
+      "mergeable_state": "clean"
+    },
+    "surfaceAbsent": {
+      "number": 805,
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "head": { "ref": "feat/no-surface", "sha": "1111111111111111111111111111111111111111" },
+      "base": { "ref": "main-tools" },
+      "mergeable": true,
+      "mergeable_state": "clean"
+    },
+    "zeroCommits": {
+      "number": 806,
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "head": { "ref": "feat/zero", "sha": "1111111111111111111111111111111111111111" },
+      "base": { "ref": "main-tools" },
+      "mergeable": true,
+      "mergeable_state": "clean",
+      "commits": 0,
+      "changed_files": 2
+    }
+  }
+}

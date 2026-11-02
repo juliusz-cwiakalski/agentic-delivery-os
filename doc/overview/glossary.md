@@ -8,8 +8,8 @@ area: domain
 document_classification: current-truth
 links:
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007", "TDR-0008"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183"]
-summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer, adapter-port, provider-client-seed, status-digest, queue-readiness, pm-notes, phase-transition, delivery-registry, verify-change, session-database-admin, and closeout terms used across the repository."
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178"]
+summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer, adapter-port, provider-client-seed, status-digest, queue-readiness, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, and closeout terms used across the repository."
 ---
 
 # Glossary
@@ -66,7 +66,7 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Delivery result tuple | The classified verification outcome: result token, effective variant, ordered missing phases, and evidence. Success carries it as structured `data`; failure carries the token, variant, and missing set in the deterministic summary. | Verification | [feature-verify-change-and-exit-taxonomy.md](../spec/features/feature-verify-change-and-exit-taxonomy.md) |
 | Delivery result enum | The eleven bash-era delivery-summary tokens adopted as the single typed CLI vocabulary: `merged`, `blocked`, `pr-open`, `pr-open-unverified`, `failed`, `finished`, `max-restarts`, `state-unverified`, `partial`, `noop-lane-permission`, and `noop-lane-nothing-to-do`. | Verification | [feature-verify-change-and-exit-taxonomy.md](../spec/features/feature-verify-change-and-exit-taxonomy.md) |
 | Domain kind | The engine-level failure classification a domain engine attaches to an error; the first link of the classification chain. Declared kinds are `provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, and `closeout`, beside the reserved `fallback` containment kind. | Result contract | — |
-| Empty-but-enforced | Scaffold content policy for the remaining engines, business logic, and drivers: structure, exports, rules, fixtures, and green tests exist. The configuration and state tiers, result contract, adapter contract substrate, provider engine, the three provider client slices (GitHub and Jira with closeout writes, GitLab reads only), the closeout planner, ledger, and git branch/checkout seam, the pm-notes lint and phase-transition surface, the verify-change surface, the status digest, and the session-database admin surface carry implemented code. | Scaffold | [feature-monorepo-scaffold-toolchain.md](../spec/features/feature-monorepo-scaffold-toolchain.md) |
+| Empty-but-enforced | Scaffold content policy for the remaining engines, business logic, and drivers: structure, exports, rules, fixtures, and green tests exist. The configuration and state tiers, result contract, adapter contract substrate, provider engine, the three provider client slices (GitHub and Jira with closeout writes, GitLab reads only), the closeout planner, ledger, and git branch/checkout seam, the pm-notes lint and phase-transition surface, the verify-change and verify-gates surfaces, the status digest, and the session-database admin surface carry implemented code. | Scaffold | [feature-monorepo-scaffold-toolchain.md](../spec/features/feature-monorepo-scaffold-toolchain.md) |
 | Error table | The internal, machine-readable, single-source set of failure entries from which error identity, structured fields, and exit-code projection are all derived. Declared once in `core ./contracts` as data and types. | Result contract | — |
 | Exit-code projection | The standalone CLI's mapping of table entries to `{0, 1, 2}`: `success` -> 0, `user-validation` -> 1, `platform-provider` -> 2. The only place exit codes exist. | Result contract | — |
 | Exit taxonomy | The total mapping from every delivery-result token to exactly one projection class and therefore one CLI exit in `{0, 1, 2}`. Only `finished` yields exit `0`; `state-unverified` projects `platform-provider` (exit `2`) where bash exits `1`, a deliberate divergence recorded in TDR-0005. | Verification | [feature-verify-change-and-exit-taxonomy.md](../spec/features/feature-verify-change-and-exit-taxonomy.md) |
@@ -191,22 +191,6 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Identity bridge | The provider-agnostic rule matching a canonical ref to an observed provider-native identity: exact canonical match first, then an unambiguous all-digit suffix bridge, never substring, prefix-only, or numeric coercion. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
 | value-clamped | The payload-level marker that a provider-derived payload value or collection was shortened or reduced to its declared cap; verdict-neutral and accompanied by payload `truncated`. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
 | Engine not run | The fixed `queue ready` evidence reason stating that configuration and parks were read but the provider engine was never executed. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
-
-## Acronyms
-
-_Expand every acronym at first use; keep the expanded list here._
-
-| Acronym | Expansion | First-use location |
-|---|---|---|
-| ADR | Architecture Decision Record | `doc/decisions/` |
-| AST | Abstract Syntax Tree | `scripts/checks/ambient-globals.ts` |
-| attw | `@arethetypeswrong/cli` | `scripts/checks/exports-parity.ts` |
-| CI | Continuous Integration | `.github/workflows/ci.yml` |
-| CLI | Command-Line Interface | `packages/cli/` |
-| ESM | ECMAScript Modules | `packages/*/package.json` |
-| MCP | Model Context Protocol | `packages/mcp/` |
-| SPDX | Software Package Data Exchange | `doc/legal/dependency-licenses.yaml` |
-| Empty-but-enforced | Scaffold content policy for the remaining engines, business logic, and drivers: structure, exports, rules, fixtures, and green tests exist. The configuration and state tiers, result contract, adapter contract substrate, provider engine, the three provider client slices (GitHub and Jira with closeout writes, GitLab reads only), the closeout planner, ledger, and git branch/checkout seam, the pm-notes lint and phase-transition surface, the verify-change surface, the status digest, and the session-database admin surface carry implemented code. | Scaffold | [feature-monorepo-scaffold-toolchain.md](../spec/features/feature-monorepo-scaffold-toolchain.md) |
 | Status digest | The bounded `delivery.status.v1` payload returned by the read-only status command: six fixed sections, states, evidence, counts, ranked items, and truncation markers. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
 | Section state | One of `observed`, `degraded`, `unknown`, `unavailable`, `not-delivered`; describes the quality and availability of a section's evidence, never a global all-clear. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
 | Evidence record | The bounded sources, outcomes, reasons, and failure codes or classes that justify a section or item state; never raw provider payloads. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
@@ -228,6 +212,34 @@ _Expand every acronym at first use; keep the expanded list here._
 | Repository binding | The `origin`-derived GitHub owner, name, and host used for read-only tracker, pull-request, and CI reads; no credentials or userinfo. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
 | Source truncation | The explicit status marker that output items were dropped by a cap or that the source returned its declared read limit, so more may exist. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
 | Live smoke | The opt-in, credentialed structural status test against a real repository; not a default-CI network test and never pinning volatile item counts. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Merge gate | One condition that must hold before a delivery is merged. The M0 battery has five: lifecycle finalization, CI green, push parity, owner gate, and squash preflight. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
+| Gate verdict | `pass`, `fail`, or `unknown`; a pass requires complete, readable, non-vacuous evidence, and unknown is never a pass. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
+| Citation | The bounded evidence attached to a gate verdict: ordered sources/outcomes, identity/refs/SHAs, counts, bounded names, and closed reasons. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
+| Push parity | Equality between the local checkout HEAD SHA and the delivery request's source head SHA for the same branch. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
+| Owner gate | The absence of owner-attention labels (`hand-back`, `human-input-needed`); the declared v1 signal is labels, not comments. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
+| Squash preflight | The pre-merge check that the request targets `main-tools`, is open/non-draft, is mergeable, and has a non-vacuous commit/change surface. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
+| Expected job set | The repository CI workflow's job display names, read at the edge, used to detect a missing job; an unreadable/empty set is a gate failure, never green. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
+| Vacuous green | A pipeline with zero jobs, zero runs, or only skipped runs that appears green but never performed effective work; explicitly not a pass. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
+| Non-vacuous surface | At least one commit and at least one changed file reported by the delivery request; absent counts are unknown, never non-empty. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
+| `branch-mismatch` | A definitive failure in which the open-PR page contains one or more open requests but none has a `sourceRef` equal to the checkout branch. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
+| `provider.not-found` | An additive adapter-local read-result code for HTTP 404; it is not an error-table code. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
+| Structured ledger evaluation | `EvaluateVerifyChange` → `VerifyLedgerEvaluation`, the pure evaluation that returns variant, outcome, required/completed/missing phases, declaration counts, and registry evidence on every outcome. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
+| Open-PR resolution | The one deterministic rule that selects the target delivery request from one bounded open-PR page. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
+
+## Acronyms
+
+_Expand every acronym at first use; keep the expanded list here._
+
+| Acronym | Expansion | First-use location |
+|---|---|---|
+| ADR | Architecture Decision Record | `doc/decisions/` |
+| AST | Abstract Syntax Tree | `scripts/checks/ambient-globals.ts` |
+| attw | `@arethetypeswrong/cli` | `scripts/checks/exports-parity.ts` |
+| CI | Continuous Integration | `.github/workflows/ci.yml` |
+| CLI | Command-Line Interface | `packages/cli/` |
+| ESM | ECMAScript Modules | `packages/*/package.json` |
+| MCP | Model Context Protocol | `packages/mcp/` |
+| SPDX | Software Package Data Exchange | `doc/legal/dependency-licenses.yaml` |
 
 ## See also
 
@@ -247,5 +259,6 @@ _Expand every acronym at first use; keep the expanded list here._
 - [Queue Ready](../spec/features/feature-queue-ready.md)
 - [PM-Notes Lint and Phase Transitions](../spec/features/feature-pm-notes-lint-and-phase-transitions.md)
 - [Verify Change and Exit Taxonomy](../spec/features/feature-verify-change-and-exit-taxonomy.md)
+- [Verify Gates](../spec/features/feature-verify-gates.md)
 - [ADR-0003 — OSS Tooling Monorepo Structure](../decisions/ADR-0003-oss-monorepo-structure.md)
 - [TDR-0005 — Delivery Result Enum and CLI Exit Taxonomy](../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md)

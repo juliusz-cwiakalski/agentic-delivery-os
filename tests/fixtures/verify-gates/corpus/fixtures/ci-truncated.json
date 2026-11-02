@@ -1,0 +1,5 @@
+{
+  "id": "ci-truncated",
+  "builder": "ci-truncated",
+  "canary": "corpus-canary-ci-truncated"
+}

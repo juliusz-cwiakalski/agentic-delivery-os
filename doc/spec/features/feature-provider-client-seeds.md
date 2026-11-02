@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The delivered provider clients behind the primitive ports: GitLab, Jira, and GitHub clients in the adapters package's per-provider subpaths, with normalized primitive views, honest capability/gap declarations, the GitHub and Jira closeout write slices, GitLab merged-head reads with writes still gapped, offline trap catalogs proven against sanitized hand-authored synthetic fixtures, credential-port-exclusive auth, declared custom-field and merge-status mappings, uniform absence semantics, bounded collection and reverse-dependent reads, and the reviewed runtime-API confinement admission."
 links:
-  related_changes: ["GH-188", "GH-175", "GH-176", "GH-183", "GH-189"]
+  related_changes: ["GH-188", "GH-175", "GH-176", "GH-183", "GH-189", "GH-178"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "TDR-0008"]
 ---
 
@@ -31,7 +31,7 @@ The port substrate is described in [Adapter Ports, Credential Resolution, and Em
 ### Problem Statement
 
 - **Problem:** No provider client can read a tracker or VCS system behind the primitive ports, so status, verify, closeout, and conformance stories have no provider facts to consume. When clients arrive without trap discipline, provider quirks — label replacement, custom-field typing, data-driven transitions, comment omission, pipeline multiplicity, and asynchronous merge status — leak into higher layers as silent misinterpretations of provider state.
-- **Affected Users:** The status collector, verify-change gates, closeout, conformance suite, and full GitHub adapter authors; operators and agents consuming provider facts; security reviewers responsible for credential centralization and the I/O boundary.
+- **Affected Users:** The status collector, verify-change and verify-gates surfaces, closeout, conformance suite, and full GitHub adapter authors; operators and agents consuming provider facts; security reviewers responsible for credential centralization and the I/O boundary.
 - **Business Impact:** The seeds are the first real consumers of the adapter contracts. A seed that overclaims capability, flattens a quirk, or reads a secret outside the credential port converts the whole adapter layer into untrustworthy input for every downstream engine.
 
 ### Goals
@@ -89,6 +89,8 @@ Every gap `{ operation, reason }` uses one of the closed reasons (`provider-unsu
 
 **Closeout writes.** GitHub `writeWorkItem` reads the current observed labels, removes only the named labels, adds the named labels, and clears the assignee when asked; `transitionWorkItem` closes the issue; `resolveDeliveryThread` posts the GraphQL `resolveReviewThread` mutation and validates the returned resolved thread. Jira `writeWorkItem` reads the current observed labels and performs a full-array replace that preserves unnamed labels, and clears the assignee when asked; `transitionWorkItem` resolves the declared done state through the workflow map and posts the named transition. Both label-writing adapters refuse an unavailable label signal instead of computing a replacement from a collapsed empty set. Write failures surface as the adapter-local `provider.payload.invalid` result with a readable detail, never a silent flattening.
 
+**GitHub pull-request gate facts.** Detail normalization additively populates `sourceHeadSha` from `head.sha`, `commitCount` from `commits`, `changedFileCount` from `changed_files`, and `mergeableState` from the fixed precedence: `mergeable === false` with `clean`/`dirty`, or any `dirty`, is `conflicting`; `blocked`, `behind`, `unstable`, or `draft` is `not-mergeable`; `mergeable === true` with absent or `clean` state is `mergeable`; every other case is `unknown`. Mergeability never defaults to mergeable, and a non-finite or negative count is absent. The list read may populate `sourceHeadSha` only; it does not supply mergeability or the commit/change surface. See [Verify Gates](feature-verify-gates.md).
+
 ### Absence semantics
 
 Optional `WorkItem` fields follow one rule: absence means the provider did not supply the signal, so the value is unknown — never derived, fabricated, or collapsed into an empty value.
@@ -98,12 +100,13 @@ Optional `WorkItem` fields follow one rule: absence means the provider did not s
 - `relations` is the provider-asserted relation set. The GitHub issue list does not supply structured issue links, so list-read issues carry `relations: []` only as the normalized value of an absent provider signal; consumers that need GitHub dependency truth read the closeout observation, whose `signals.relations` comes from the `/issues/{number}/dependencies/blocked_by` surface and is never inferred from an `issue_links` field. The same rule applies to review state and review threads on the GitHub pull-request list: the list payload carries no review decision or thread data, so those item signals are unknown, never open or zero; the merged-request lookup re-reads the selected pull request's threads through GraphQL and marks them unavailable if that read fails.
 - `headSha` is the provider-resolved merged-head commit copied verbatim. Absent means the provider did not supply the signal (unknown), never an empty or derived value. A consumer comparing it for exact equality must refuse a destructive action when it is absent.
 - Closeout-relevant reads return a discriminated observation rather than only the normalized value: `observed` (provider-asserted value; an empty collection means none), `not-found` (explicit provider 404), `unavailable` (a genuinely absent surface or a read that cannot produce a value), and `invalid` (malformed or unparsable payload, or an authentication/transport/server failure on a non-404 read). An observed read carries per-signal availability for labels and relations; an omitted container is an `observed` read with an `unavailable` signal, so an unavailable label signal is never collapsed into an empty label set and an unavailable relation signal is never collapsed into an empty blocker set. The bounded reverse-dependent read uses the separate `CloseoutReverseDependentObservation`, which adds `no-surface` for an absent surface so it is distinct from a currently `unavailable` signal.
+- The four GitHub gate facts follow the same rule: an absent `sourceHeadSha`, `mergeableState`, `commitCount`, or `changedFileCount` is unknown, never a fabricated SHA, never mergeable, and never a zero or non-empty surface. The list read may omit them; the detail read populates them when the provider reports them.
 
 ### Credential resolution and error integration
 
 Each client resolves the instance's declared credential reference through the injected `CredentialPort` on every request. An anonymous auth method sends unauthenticated headers; a credential-bearing method resolves the reference and attaches the material to the request headers. Resolved material is never stored on the client, logged, or returned in a normalized view.
 
-An unresolvable credential surfaces the synchronized `config.credential.missing` failure (domain kind `config`, category `user`, retryable `false`, consequence `not_landed`, projection class `user-validation`). Provider payload and transport failures surface as the adapter-local `provider.payload.invalid` read failure with a detail string, never as a silent flattening or a raw provider error; these failures are not new error-table rows.
+An unresolvable credential surfaces the synchronized `config.credential.missing` failure (domain kind `config`, category `user`, retryable `false`, consequence `not_landed`, projection class `user-validation`). Provider payload and transport failures surface as the adapter-local `provider.payload.invalid` read failure with a detail string, never as a silent flattening or a raw provider error; these failures are not new error-table rows. An HTTP 404 instead surfaces as the additive adapter-local `provider.not-found` read failure with a detail string and no error-table row; the verify gates map that definitive absence per read rather than treating it as a generic read failure.
 
 ### Flows
 
@@ -136,7 +139,7 @@ An unresolvable credential surfaces the synchronized `config.credential.missing`
 | `packages/adapters/src/github/normalize.ts` | Pull-request (including optional `headSha`), check-run, issue, merged-list, dependency, thread-resolution, and discriminated work-item observation normalization. |
 | `packages/adapters/src/github/review-state.ts` | Declared review-decision and issue-status tables. |
 | `packages/adapters/src/github/capabilities.ts` | The GitHub `AdapterContract` capability declaration. |
-| `packages/adapters/src/io/provider-transport.ts` | The shared injectable transport seam: request/response types (`GET`, `POST`, `PATCH`, `PUT`, `DELETE`, optional serialized body, optional timeout), read/write result types, and the reified payload failure. Imported by the seeds through their relative `../io/` path; not a public subpath. |
+| `packages/adapters/src/io/provider-transport.ts` | The shared injectable transport seam: request/response types (`GET`, `POST`, `PATCH`, `PUT`, `DELETE`, optional serialized body, optional timeout), read/write result types, and the reified payload and 404 failures. Imported by the seeds through their relative `../io/` path; not a public subpath. |
 | `tests/fixtures/providers/traps/{jira,gitlab,github}.traps.json` | The trap catalogs as four-field data entries with provenance. |
 | `tests/fixtures/providers/{jira,gitlab,github}/**` | The sanitized hand-authored synthetic fixtures referenced by trap entries. |
 | `tests/behaviour/providers/trap-harness.ts` | Catalog loading, schema validation, bidirectional coverage, and replay keyed by trap name. |
@@ -147,12 +150,15 @@ An unresolvable credential surfaces the synchronized `config.credential.missing`
 | Element | Value / rule |
 |---------|--------------|
 | Trap-catalog entry | Exactly four fields: `trapName`, `providerBehavior`, `expectedNormalizedOutcome`, `fixtureReference` (one reference or a non-empty list). |
-| Trap-catalog coverage | GitLab 3 entries, Jira 5 entries, GitHub 7 entries; every entry has a matching assertion and every assertion has an entry. |
+| Trap-catalog coverage | GitLab 3 entries, Jira 5 entries, GitHub 21 entries; every entry has a matching assertion and every assertion has an entry. |
 | Fixture reference | A repository-relative `path` or `path#/json-pointer`, so references survive fixture re-authoring. |
 | Fixture provenance | Every fixture and catalog carries a `provenance` marker naming its synthetic origin and date. |
-| Fixture set | 21 committed JSON fixtures under the provider fixture area, including four GitHub list fixtures. |
+| Fixture set | 25 committed JSON fixtures under the provider fixture area, including four GitHub list fixtures. |
 | GitHub collection reads | One bounded page per read: `state=open`, the declared `per_page` limit, and updated-descending sort. Issue-list pull-request objects are filtered before normalization while the raw page size is preserved; the pull-request list reports refs, draft, and state only. |
-| Check-runs page limit | One bounded page at `per_page=STATUS_SOURCE_PIPELINE_LIMIT` (20), no pagination; the client returns the raw page size with the normalized runs. |
+| Check-runs page limit | One bounded page at the caller's limit, no pagination; status reads at `per_page=STATUS_SOURCE_PIPELINE_LIMIT` (20) and verify gates at `VERIFY_GATES_CI_RUN_LIMIT` (100). The client returns the raw page size with the normalized runs. |
+| GitHub gate facts | `sourceHeadSha` from `head.sha`; `commitCount` from `commits`; `changedFileCount` from `changed_files`; `mergeableState` by fixed precedence with `unknown` as the fallback. Absence is unknown, never mergeable or non-empty. |
+| GitHub 404 read result | HTTP 404 is the additive adapter-local `provider.not-found`; every other non-2xx stays `provider.payload.invalid`. No error-table row is added. |
+| GitHub gate and absence traps | `GITHUB-PR-LIST-REVIEW-DEFAULT`, `GITHUB-PR-MERGEABLE-NULL`, `GITHUB-PR-MERGEABLE-DIRTY`, `GITHUB-PR-MERGEABLE-BLOCKED`, `GITHUB-PR-HEAD-SHA-ABSENT`, `GITHUB-PR-COMMIT-SURFACE-ABSENT`, `GITHUB-PR-ZERO-COMMITS`, `GITHUB-CHECKRUN-EMPTY`, `GITHUB-CHECKRUN-ALL-SKIPPED`, `GITHUB-CHECKRUN-PAGE-LIMIT`, `GITHUB-ISSUE-COMMENTS-ABSENT`, `GITHUB-PR-LIST-404`, `GITHUB-PR-DETAIL-404`, `GITHUB-CHECKRUN-404`, and `GITHUB-ISSUE-404`; each has a catalog entry, a payload, and a replay assertion. |
 | Jira custom-field mappings | `customfield_10020` (`select`, `team:` prefix) and `customfield_10021` (`number`, `story-points:` prefix). |
 | Jira workflow states | Six native statuses mapped to the closed delivery-alias set. |
 | GitLab merge-status rules | A declared table over the observed native values, with a terminal flag and an open-state review mapping per row. |
@@ -174,6 +180,7 @@ An unresolvable credential surfaces the synchronized `config.credential.missing`
 - **`ProviderTransport.send(request)`** sends a request with `url`, a closed method, headers, an optional serialized body, and an optional timeout, and returns a provider response with a status and an untrusted body; tests inject a fixture transport, and production defaults to native `fetch` inside each provider subpath.
 - **`ProviderReadResult<T>`** is either `{ ok: true, value }` or a `CredentialResolutionFailure` or `ProviderPayloadFailure` (`provider.payload.invalid` with a detail). **`ProviderWriteResult<T>`** has the same success/failure shape for writes.
 - **`CloseoutReadObservation<T>` / `CloseoutReverseDependentObservation<T>`** — the closeout read discriminators. The work-item observation is `observed` (with optional `signals`) / `not-found` / `unavailable` / `invalid`; the reverse-dependent observation adds `no-surface`. They refine reads only and change neither `ProviderReadResult` nor the closed operation set.
+- **`ProviderReadResult<T>`** is either `{ ok: true, value }` or a `CredentialResolutionFailure`, a `ProviderPayloadFailure` (`provider.payload.invalid` with a detail), or a `ProviderNotFoundFailure` (`provider.not-found` with a detail).
 
 All three subpath surfaces export only the client factory, its core-built input/return types, and the adapter contract. The GitHub subpath exports five names: `createGitHubClient`, `GithubClient`, `GithubClientOptions`, `GithubRepositoryRef`, and `GITHUB_ADAPTER_CONTRACT`. The shared transport module is internal, imported relatively; the package's `#io/*` alias remains an internal import map, not a published export.
 
@@ -208,7 +215,7 @@ Shared adapter support modules under `src/io/` are imported by the provider seed
 | Fixture hygiene | 0 secrets, tokens, private identifiers, personal data, or non-example provider hosts in committed fixtures; placeholders and references are stable. |
 | Credential centralization | Exactly 4 secret-read allowlist entries; 0 ambient environment reads in client code; planted violations still fire. |
 | Confinement exactness | Only `github`, `gitlab`, and `jira` are admitted as provider I/O subpaths; `registry`, `azure`, and `ci` remain non-I/O and fail runtime-import negative controls. |
-| Error visibility | Credential failures carry `config.credential.missing`; payload failures carry `provider.payload.invalid` with a detail; no failure is silently flattened. |
+| Error visibility | Credential failures carry `config.credential.missing`; payload failures carry `provider.payload.invalid` with a detail; an HTTP 404 carries `provider.not-found` with a detail; no failure is silently flattened. |
 
 ## Quality Assurance Strategy
 
@@ -232,7 +239,7 @@ Each client is constructed with a configured `ExternalSystemInstance` (instance 
 
 ### Observability
 
-Capability declarations and gap records are inspectable data. Trap failures name the trap entry and its fixture reference, so a normalization regression is diagnosable without reading test code. Credential failures carry classified identity; payload failures carry a readable detail. Resolved secret material is never observable through a diagnostic path.
+Capability declarations and gap records are inspectable data. Trap failures name the trap entry and its fixture reference, so a normalization regression is diagnosable without reading test code. Credential failures carry classified identity; payload and absence failures carry a readable detail. Resolved secret material is never observable through a diagnostic path.
 
 ### Maintenance
 
@@ -244,8 +251,8 @@ Four surfaces grow deliberately: trap catalogs (new quirks join as four-field en
 - **Depends on** the adapter ports for the primitive contracts, capability/gap mechanism, credential port, and secret-read boundary.
 - **Depends on** the result contract for failure identity and the redaction chokepoint, and on the configuration and branding layers for injected environment facts and brand-neutral credential source keys.
 - **Consumed by** the status collector (including its bounded GitHub collection reads), verify-change gates, the [closeout transaction](feature-closeout.md) (including closeout reads and writes), the [adapter conformance suite](feature-adapter-conformance.md), and the full GitHub adapter.
-- **Consumed by** the queue-ready ready-set ([Queue Ready](feature-queue-ready.md)) through the same bounded GitHub collection reads and normalized views; queue ready adds no adapter operation, page, or trap change.
 - **Risk — fixture drift:** hand-authored fixtures can diverge from live provider behavior. Mitigation: dated provenance, stable references, and the scheduled read-only live revalidation delivered by the [adapter conformance suite](feature-adapter-conformance.md).
+- **Risk — fixture drift:** hand-authored fixtures can diverge from live provider behavior. Mitigation: dated provenance, stable references, and scheduled live revalidation in the conformance suite.
 - **Risk — sanitization miss:** a committed fixture could leak a secret or personal data. Mitigation: declared placeholders, example-only hosts, a committed sanitization audit, and a planted-secret canary.
 - **Risk — catalog rot:** a catalog can look complete while its assertions stop firing. Mitigation: bidirectional entry↔assertion coverage, a negative control that names the failing entry, and per-provider minima.
 - **Risk — allowlist creep:** provider I/O could widen beyond the admitted subpaths. Mitigation: exact reason-bearing entries, registry/`azure`/`ci` negative controls, and a guard that rejects pattern widening.
@@ -273,4 +280,4 @@ Four surfaces grow deliberately: trap catalogs (new quirks join as four-field en
 
 See also: [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Adapter Conformance Suite](feature-adapter-conformance.md), [Closeout Transaction](feature-closeout.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Result Contract and Error Table](feature-result-contract.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md), [ADR-0005](../../decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md), [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md), [TDR-0008](../../decisions/TDR-0008-additive-adapter-contract-extensions-closeout-v1.md).
 
-**Change records:** `doc/changes/2026-10/2026-10-31--GH-188--client-seeds-trap-catalogs/` (the client seeds), `doc/changes/2026-10/2026-10-31--GH-175--status-v1/` (the bounded collection reads and trap-catalog extension), and `doc/changes/2026-11/2026-11-01--GH-183--closeout-v1-branch-cleanup/` (the closeout write slices, merged head, reverse-dependent reads, and discriminated read observations).
+**Change records:** `doc/changes/2026-10/2026-10-31--GH-188--client-seeds-trap-catalogs/` (the client seeds), `doc/changes/2026-10/2026-10-31--GH-175--status-v1/` (the bounded collection reads and trap-catalog extension), and `doc/changes/2026-11/2026-11-01--GH-183--closeout-v1-branch-cleanup/` (the closeout write slices, merged head, reverse-dependent reads, and discriminated read observations), and `doc/changes/2026-10/2026-10-31--GH-178--verify-gates-v1/` (GitHub gate facts and 404 absence traps).

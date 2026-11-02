@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The read-only `verify change <ref>` surface: ledger-only verification against a change's declared full or LITE phase set, a declaration-plus-registry overlay with per-phase precedence, the eleven-token delivery result vocabulary and its total projection/derivation taxonomy, one total exit taxonomy with the documented state-unverified divergence, the additive verify.ledger.incomplete identity beside reused lint.* and state.* identities, a deterministic classification summary, and the non-zero guarantee for incomplete or unverifiable deliveries."
 links:
-  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183"]
+  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178"]
   related_decisions: ["ADR-0003", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/delivery-result.ts"
@@ -22,6 +22,8 @@ links:
 `verify change <ref>` answers one question without mutating anything: is the declared phase ledger for this change complete, and if not, which result does the delivery classify into? It reads the change's committed pm-notes declaration (which supplies the effective variant and declared phase state), reads the delivery registry's verified `phase.transition` history when one exists, merges the two evidence sources per phase, and classifies the outcome through the eleven-token delivery-result vocabulary.
 
 The command is ledger-only and read-only. It performs no mutation, acquires no fence, calls no tracker, PR, CI, or network provider, and spawns no process. An incomplete or unverifiable ledger is a failure: only a fully completed declared variant produces a success envelope and exit `0`; every other outcome is a single error-only envelope with a non-zero exit. Closeout is a separate mutating surface: verify change does not import or compose the closeout engine, the git branch/checkout seam, or provider write operations, and its read-only guarantees are unchanged.
+
+The pure evaluation is `EvaluateVerifyChange` → `VerifyLedgerEvaluation`, which returns the variant, outcome, required/completed/missing phases, declaration counts, and registry evidence on every outcome. The delivered `classifyVerifyChange` remains a behavior-preserving wrapper that maps that structured evaluation to the delivery-result tuple and summary, so `verify change` output is unchanged. The verify-gates lifecycle gate consumes `VerifyLedgerEvaluation` directly rather than parsing a summary.
 
 The delivery-result vocabulary is `as const` data in `core ./contracts`. Each of the eleven tokens carries exactly one projection class and one derivation class, so the typed CLI and the bash-era delivery summary can be compared token-for-token. Seven tokens whose derivation needs tracker, PR, or dispatch/session evidence are declared and reserved; this surface reaches `finished`, `partial`, `failed`, and `state-unverified`.
 
@@ -44,13 +46,14 @@ The surface consumes the [pm-notes lint and phase-transition](feature-pm-notes-l
 
 ### Command surface
 
-`verify` is a top-level command with exactly one subcommand, `change`, followed by exactly one change ref. There are no command-specific flags; `--json` is the existing global machine-output flag and gains no new behavior.
+`verify` is a top-level command with exactly two subcommands, `change` and `gates`, each followed by exactly one change ref. There are no command-specific flags; `--json` is the existing global machine-output flag and gains no new behavior. `verify change` remains ledger-only and network-free; `verify gates` consumes the structured `VerifyLedgerEvaluation` and performs read-only provider reads ([Verify Gates](feature-verify-gates.md)).
 
 | Invocation | Outcome |
 |---|---|
 | `verify change GH-177` | Verify that change; human diagnostics on failure. |
 | `verify change GH-177 --json` | Verify that change; exactly one machine envelope on stdout. |
 | `verify` / `verify change` / `verify other GH-177` | Handler grammar rejection: `input.value.rejected`, exit `1`, no reads. |
+| `verify gates GH-178` | Evaluate the five M0 merge gates read-only; see [Verify Gates](feature-verify-gates.md). |
 | `verify change GH-177 extra` / unknown flag | Parser rejection before the handler: `fallback.invocation`, exit `1`, no reads. |
 
 The handler owns no stream writes and no exit codes: it returns `data` or `error`, and the CLI edge renders the envelope and projects the exit. The command reads, in order, the pm-notes target, the pure lint rules, and the registry evidence; it never mutates a target. A ref that does not resolve to a pm-notes document, including one outside the `<PREFIX>-<digits>` shape, is `lint.target.missing`.
@@ -112,7 +115,7 @@ The eleven tokens are the bash-era delivery summary vocabulary, adopted verbatim
 
 Pinned derivation mapping: `verify` derives `finished`, `partial`, `failed`, and `state-unverified`; `tracker-pr` derives `merged`, `blocked`, `pr-open`, and `pr-open-unverified`; `dispatch-session` derives `max-restarts`, `noop-lane-permission`, and `noop-lane-nothing-to-do`. Reserving a token never makes it reachable, so a tracker-derived success cannot leak into a ledger-only verdict.
 
-`finished` means the declared variant's ledger is complete. It is a necessary, not sufficient, condition for merge: commit, CI, push-parity, and owner-gate evidence remain lifecycle-finalization responsibilities, so a complete ledger never substitutes for merge gates.
+`finished` means the declared variant's ledger is complete. It is a necessary, not sufficient, condition for merge: commit, CI, push-parity, owner-gate, and squash-preflight evidence are the separate responsibilities of [Verify Gates](feature-verify-gates.md), so a complete ledger never substitutes for merge gates.
 
 ### Exit taxonomy
 
@@ -140,7 +143,7 @@ Envelope exclusivity is preserved: `finished` is the only token rendered as succ
 
 ### Error identities
 
-One additive row joins the error table under the `verify` domain kind. `verify` is a declared domain kind beside `provider`, `input`, `config`, `state`, and `lint`; the reserved `fallback` namespace is unchanged.
+One additive row joins the error table under the `verify` domain kind. `verify` is a declared domain kind beside `provider`, `input`, `config`, `state`, and `lint`; the reserved `fallback` namespace is unchanged. The same kind also carries the two verify-gates rows, `verify.gates.failed` and `verify.gates.unavailable`, documented in [Verify Gates](feature-verify-gates.md) and the [result contract](feature-result-contract.md).
 
 | Code | Domain kind | Category | Retryable | Consequence | Projection class | Token | Summary |
 |---|---|---|---|---|---|---|---|
@@ -231,7 +234,7 @@ The change follows the established tier split:
 | `packages/core/src/contracts/pm-notes.ts` | Canonical phases, default variant, per-variant required sets, and lint identities consumed unchanged. |
 | `packages/core/src/contracts/registry.ts` | Transition record and projection vocabulary consumed unchanged. |
 | `packages/core/src/domain/pm-notes-lint.ts` | The fixed-order conformance rules reused unchanged. |
-| `packages/core/src/domain/verify-change.ts` | Pure classification: effective variant, declaration/registry merge, ordered missing set, identity and token selection, summary tuple. |
+| `packages/core/src/domain/verify-change.ts` | Pure classification: `EvaluateVerifyChange` returns the structured `VerifyLedgerEvaluation` (variant, outcome, required/completed/missing phases, declaration counts, registry evidence) on every outcome; `classifyVerifyChange` is the behavior-preserving wrapper that maps it to the delivery-result tuple and summary. |
 | `packages/core/src/state/registry.ts` | Presence-tolerant verified transition read (`readChangeTransitionsTolerant`) plus reuse of `foldPhaseState`. |
 | `packages/adapters/src/file/pm-notes-parser.ts` | Target location, bounded YAML 1.2 core parse, and safe parse failure, consumed unchanged. |
 | `packages/cli/src/commands/verify.ts` | `verify change` definition, grammar, injected runtime types, and data/error shaping. |
@@ -294,7 +297,7 @@ The success envelope's structured tuple and the failure summary are the observab
 - **Depends on** pm-notes lint and phase transitions ([feature-pm-notes-lint-and-phase-transitions.md](feature-pm-notes-lint-and-phase-transitions.md)) for the schema, pinned variant sets, lint rules and identities, registry records, fold semantics, and write-time ledger authority.
 - **Depends on** the state layer ([feature-state-layer.md](feature-state-layer.md)) for verified reads, tear detection, evidence classes, and the append-only ledger substrate.
 - **Depends on** [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md) for package tiers and runtime-API confinement.
-- **Consumed by** lifecycle finalization, dual-run evidence, and later verify surfaces that interpret the result token.
+- **Consumed by** lifecycle finalization, dual-run evidence, the verify-gates lifecycle gate, and later verify surfaces that interpret the result token or the structured `VerifyLedgerEvaluation`.
 - **Risk — stale declaration masks a reopen:** registry evidence overrides the declaration for every mentioned phase, so a hand edit cannot manufacture a false `finished`.
 - **Risk — declaration-only changes read as incomplete:** absent registry evidence is no evidence, so a change that never used the write path still verifies from its declaration.
 - **Risk — numeric dual-run comparison:** `state-unverified` exits `2` where bash exits `1`; the divergence is declared by TDR-0005, and dual-run consumers compare tokens, not digits.

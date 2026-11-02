@@ -1,0 +1,6 @@
+result=fail; gates=4/5 passed, 1 failed, 0 unknown
+lifecycle-finalization pass reason=lifecycle-complete source=pm-notes:read+delivery-registry:read ref=GH-178 counts=required=11,completed=11,missing=0,registryRecords=12,registryTransitions=0,overlaid=0 names=-
+ci-green fail reason=ci-failed source=repository-ci-workflow:read+github-delivery-request-detail:read+github-check-runs:read ref=1111111111111111111111111111111111111111 counts=expected=23,runs=23,succeeded=22,failed=1,pending=0,skipped=0,canceled=0,missing=0 names=failed-jobs=["job-01"]
+push-parity pass reason=parity-matched source=repository-head:read+github-delivery-request-list:read+github-delivery-request-detail:read ref=178 counts=compared=1,matched=1 names=-
+owner-gate pass reason=owner-gate-absent source=github-work-item:read ref=GH-178 counts=labels=3,ownerLabels=0 names=-
+squash-preflight pass reason=squash-ready source=github-delivery-request-list:read+github-delivery-request-detail:read ref=178 counts=commits=3,changedFiles=7 names=squash-signals=["draft=false","mergeable=mergeable"]

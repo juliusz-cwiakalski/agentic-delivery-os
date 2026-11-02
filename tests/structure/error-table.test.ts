@@ -574,7 +574,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
   test("verify is a declared single-row kind with the exact C-8 fields", () => {
     expect(DOMAIN_KINDS).toContain("verify");
     const verify = entries.filter((entry) => entry.domainKind === "verify");
-    expect(verify).toHaveLength(1);
+    expect(verify).toHaveLength(3);
     expect(verify[0]).toMatchObject({
       code: "verify.ledger.incomplete",
       domainKind: "verify",
@@ -585,6 +585,37 @@ describe("TC-VERIFY-019 verify kind and row", () => {
       remediationHint: VERIFY_HINT,
       summary: VERIFY_SUMMARY,
     });
+    expect(verify[1]).toMatchObject({
+      code: "verify.gates.failed",
+      domainKind: "verify",
+      category: "user",
+      retryable: false,
+      consequence: "not_landed",
+      projectionClass: "user-validation",
+      remediationHint:
+        "Resolve the named failing gate evidence (lifecycle, CI, push parity, owner gate, or squash preflight) and re-run the gates.",
+      summary: "One or more merge gates did not pass.",
+    });
+    expect(verify[2]).toMatchObject({
+      code: "verify.gates.unavailable",
+      domainKind: "verify",
+      category: "platform",
+      retryable: false,
+      consequence: "not_landed",
+      projectionClass: "platform-provider",
+      remediationHint:
+        "Restore access to the named gate-evidence source and re-run the gates; the gates were not fully evaluated.",
+      summary: "Merge-gate evidence could not be read.",
+    });
+  });
+
+  test("both gate identities classify exactly and the ledger row is unchanged", () => {
+    expect(resolveAppErrorCode("verify.gates.failed").ok).toBe(true);
+    expect(resolveAppErrorCode("verify.gates.unavailable").ok).toBe(true);
+    expect(() => classifyDomainKind("verify", "verify.gates.unknown")).toThrow();
+    const ledger = entries.find((entry) => entry.code === "verify.ledger.incomplete");
+    expect(ledger?.projectionClass).toBe("user-validation");
+    expect(ledger?.remediationHint).toBe(VERIFY_HINT);
   });
 
   test("the verify row round-trips through returned, thrown, and exact-code selection", () => {
@@ -616,7 +647,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(7);
     expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(5);
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
-    expect(entries).toHaveLength(39);
+    expect(entries).toHaveLength(41);
   });
 });
 
@@ -692,7 +723,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(39);
+    expect(entries).toHaveLength(41);
     expect(db).toHaveLength(4);
   });
 

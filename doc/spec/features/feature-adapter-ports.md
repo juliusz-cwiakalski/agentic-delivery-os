@@ -6,9 +6,9 @@ created: 2026-10-30
 last_updated: 2026-11-01
 owners: ["engineering"]
 service: delivery-os
-summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, the additive optional DeliveryRequest.headSha merged-head identity and resolve-delivery-thread operation, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, the read-only SessionStorePort and mutating SessionAdminPort implemented over the opencode-CLI-backed adapters ./session subpath, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec, required injected content policy, fail-closed content-policy failure, and visible graceful degradation."
+summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, the additive optional DeliveryRequest.headSha merged-head identity, the four optional verify-gates facts, and resolve-delivery-thread operation, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, the read-only SessionStorePort and mutating SessionAdminPort implemented over the opencode-CLI-backed adapters ./session subpath, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec, required injected content policy, fail-closed content-policy failure, and visible graceful degradation."
 links:
-  related_changes: ["GH-174", "GH-179", "GH-180", "GH-181", "GH-182", "GH-183", "GH-184", "GH-188", "GH-189"]
+  related_changes: ["GH-174", "GH-179", "GH-180", "GH-181", "GH-182", "GH-183", "GH-184", "GH-188", "GH-189", "GH-178"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0010", "TDR-0005", "TDR-0008"]
   contracts:
     - "packages/core/src/contracts/envelope.ts"
@@ -60,7 +60,7 @@ The v1 port set is bounded to the catalogue's adapter-interaction rows typed at 
 | `WorkItem` | Normalized ticket: provider-qualified identity, title, native and delivery status, labels, optional assignee, typed relations, optional comments, and optional activity timestamp. Optional fields share one absence rule: absent = the provider did not supply the signal, so the value is unknown — never derived, fabricated, or collapsed into an empty value. `comments` absent = the comment set is unknown (omitted or not fetched); present — including an explicitly empty array — = the provider-asserted set. `updatedAt` is the provider-native last-modified timestamp copied verbatim as an ISO-8601 UTC string; absent = activity unknown. |
 | `WorkflowMap` | Native status to delivery-state alias mappings, each naming its transition mechanism. |
 | `WorkItemRelation` | Closed relation kinds — `parent`, `child`, `blocks`, `blocked-by`, `relates-to` — targeting a provider-qualified identity. |
-| `DeliveryRequest` | Delivery request (PR/MR) view: identity, source and target refs, review state, review threads, and an optional provider-resolved merged head commit (`headSha`). `headSha` absent means the provider did not supply the merged-head signal (unknown); it is never guessed or derived. |
+| `DeliveryRequest` | Delivery request (PR/MR) view: identity, source and target refs, review state, review threads, and an optional provider-resolved merged head commit (`headSha`). `headSha` absent means the provider did not supply the merged-head signal (unknown); it is never guessed or derived. Four optional gate facts — `sourceHeadSha`, `mergeableState`, `commitCount`, `changedFileCount` — are unknown when absent, never presumed mergeable or non-empty. |
 | `PipelineRun` | Pipeline, job states, and trace-evidence references — never a bare status colour. |
 | `RetryPolicy` | Bounded attempts and backoff for known-safe operations. Unsafe writes carry no retry policy rather than an empty or permissive one. |
 | `IdempotencyKey` | Key value plus scope, making an external write safely retryable. |
@@ -343,3 +343,6 @@ See also: [Session Database Administration](feature-session-database-admin.md), 
 **Closeout contract-extension change record:** `doc/changes/2026-11/2026-11-01--GH-183--closeout-v1-branch-cleanup/`.
 **Provider engine change record:** `doc/changes/2026-10/2026-10-31--GH-182--provider-v1/`.
 **Session-admin change record:** `doc/changes/2026-10/2026-10-31--GH-180--db-session-admin-port/`.
+
+## Related
+- [Verify Gates](feature-verify-gates.md) consumes the optional `DeliveryRequest` gate facts; absence is unknown.

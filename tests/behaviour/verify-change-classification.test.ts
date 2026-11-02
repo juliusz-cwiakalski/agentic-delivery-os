@@ -6,13 +6,18 @@
 import { describe, expect, test } from "bun:test";
 import {
   CANONICAL_PHASE_IDS,
+  ERROR_TABLE,
   LITE_REQUIRED_PHASES,
   type PhaseTransitionRecord,
 } from "../../packages/core/src/contracts/index";
 import {
   classifyVerifyChange,
   classifyVerifyDocument,
+  EvaluateVerifyChange,
+  formatVerifySummary,
   type VerifyChangeVerdict,
+  type VerifyDocumentClassification,
+  type VerifyLedgerEvaluation,
   type VerifyRegistryEvidence,
 } from "../../packages/core/src/domain/index";
 import {
@@ -969,5 +974,197 @@ describe("TC-VERIFY-005 overlay precedence and presence tolerance (command)", ()
     } finally {
       other.cleanup();
     }
+  });
+});
+
+describe("TC-VGATES-013/015/062 structured EvaluateVerifyChange (DM-15)", () => {
+  const documentOf = (value: unknown): VerifyDocumentClassification =>
+    classifyVerifyDocument({ ok: true, value });
+
+  const evaluate = (
+    document: VerifyDocumentClassification,
+    registry?: VerifyRegistryEvidence,
+  ): VerifyLedgerEvaluation =>
+    registry === undefined
+      ? EvaluateVerifyChange({ changeRef: REF, document })
+      : EvaluateVerifyChange({ changeRef: REF, document, registry });
+
+  const expectTerminalFailure = (evaluation: VerifyLedgerEvaluation, code: string): void => {
+    expect(evaluation.variant).toBe("unknown");
+    expect(evaluation.outcome).toBe("failed");
+    expect(evaluation.requiredPhases).toEqual([]);
+    expect(evaluation.completedPhases).toEqual([]);
+    expect(evaluation.missingPhases).toEqual([]);
+    expect(evaluation.declaration).toEqual({ requiredCount: 0, completedCount: 0 });
+    expect(evaluation.registry).toEqual({
+      present: false,
+      verifiedEmpty: false,
+      recordCount: 0,
+      transitionCount: 0,
+      overlaidPhases: [],
+    });
+    expect(evaluation.kind).toBe("lint");
+    expect(evaluation.code).toBe(code);
+  };
+
+  test("a malformed document is a terminal DM-15 failure even with registry evidence", () => {
+    const malformed = classifyVerifyDocument({
+      ok: false,
+      parseFailure: { class: "syntax", location: "line 1" },
+    });
+    expect(malformed.ok).toBe(false);
+    const evaluation = EvaluateVerifyChange({
+      changeRef: REF,
+      document: malformed,
+      registry: registryWith([landed("delivery", "complete", "2026-10-31T05:00:00Z")]),
+    });
+    expectTerminalFailure(evaluation, "lint.notes.malformed");
+  });
+
+  test("a missing pm-notes target is a terminal DM-15 failure", () => {
+    const missingTarget: VerifyDocumentClassification = {
+      ok: false,
+      kind: "lint",
+      code: "lint.target.missing",
+      summary: formatVerifySummary("failed", "unknown", []),
+    };
+    const evaluation = EvaluateVerifyChange({
+      changeRef: REF,
+      document: missingTarget,
+      registry: registryWith([]),
+    });
+    expectTerminalFailure(evaluation, "lint.target.missing");
+  });
+
+  test("a full incomplete ledger carries ordered arrays and declaration-derived counts", () => {
+    const document = documentOf(withOpenPhase("quality_gates"));
+    const evaluation = evaluate(document, registryWith([]));
+    expect(evaluation.variant).toBe("full");
+    expect(evaluation.outcome).toBe("partial");
+    expect(evaluation.requiredPhases).toEqual([...CANONICAL_PHASE_IDS]);
+    expect(evaluation.missingPhases).toEqual(["quality_gates"]);
+    expect(evaluation.completedPhases).toEqual(
+      CANONICAL_PHASE_IDS.filter((phaseId) => phaseId !== "quality_gates"),
+    );
+    expect(evaluation.declaration).toEqual({ requiredCount: 11, completedCount: 10 });
+    expect(evaluation.registry.present).toBe(false);
+    expect(evaluation.kind).toBe("verify");
+    expect(evaluation.code).toBe("verify.ledger.incomplete");
+  });
+
+  test("a LITE incomplete ledger uses only the LITE required set", () => {
+    const document = documentOf(withOpenPhase("delivery", liteCompleteAbsent()));
+    const evaluation = evaluate(document, registryWith([]));
+    expect(evaluation.variant).toBe("lite");
+    expect(evaluation.outcome).toBe("partial");
+    expect(evaluation.requiredPhases).toEqual([...LITE_REQUIRED_PHASES]);
+    expect(evaluation.missingPhases).toEqual(["delivery"]);
+    expect(evaluation.declaration).toEqual({ requiredCount: 6, completedCount: 5 });
+  });
+
+  test("missing phases retain the required-set order", () => {
+    const document = withOpenPhase("quality_gates");
+    const phases = document.phases as Record<string, unknown>;
+    phases.test_planning = { ...(phases.test_planning as object), completed: null };
+    phases.dor_check = { ...(phases.dor_check as object), completed: null };
+    const evaluation = evaluate(documentOf(document), registryWith([]));
+    expect(evaluation.missingPhases).toEqual(["test_planning", "dor_check", "quality_gates"]);
+    expect(evaluation.declaration.completedCount).toBe(8);
+  });
+
+  test("the absent-registry branch is state-unverified and keeps declaration evidence", () => {
+    const evaluation = evaluate(documentOf(fullBase()));
+    expect(evaluation.variant).toBe("full");
+    expect(evaluation.outcome).toBe("state-unverified");
+    expect(evaluation.requiredPhases).toEqual([...CANONICAL_PHASE_IDS]);
+    expect(evaluation.completedPhases).toEqual([...CANONICAL_PHASE_IDS]);
+    expect(evaluation.missingPhases).toEqual([]);
+    expect(evaluation.declaration).toEqual({ requiredCount: 11, completedCount: 11 });
+    expect(evaluation.registry).toEqual({
+      present: false,
+      verifiedEmpty: false,
+      recordCount: 0,
+      transitionCount: 0,
+      overlaidPhases: [],
+    });
+    expect(evaluation.kind).toBe("state");
+    expect(evaluation.code).toBe("state.store.torn");
+  });
+
+  test("platform and user state failures keep their own identity category", () => {
+    const cases = [
+      ["state.store.torn", "state-unverified", "platform"],
+      ["state.permission.denied", "failed", "user"],
+    ] as const;
+    for (const [code, token, category] of cases) {
+      const document = documentOf(fullBase());
+      const registryError: VerifyRegistryEvidence = {
+        ok: false,
+        error: { kind: "state", code, summary: "state failure" },
+      };
+      const evaluation = EvaluateVerifyChange({
+        changeRef: REF,
+        document,
+        registry: registryError,
+      });
+      expect(evaluation.outcome).toBe("state-unverified");
+      expect(evaluation.variant).toBe("full");
+      expect(evaluation.requiredPhases).toEqual([...CANONICAL_PHASE_IDS]);
+      expect(evaluation.declaration).toEqual({ requiredCount: 11, completedCount: 11 });
+      expect(evaluation.registry.present).toBe(false);
+      expect(evaluation.kind).toBe("state");
+      expect(evaluation.code).toBe(code);
+      const verdict = classifyVerifyChange({ changeRef: REF, document, registry: registryError });
+      expect(verdict.ok).toBe(false);
+      if (verdict.ok) throw new Error("expected a failure verdict");
+      expect(verdict.kind).toBe("state");
+      expect(verdict.code).toBe(code);
+      const row = ERROR_TABLE.find((entry) => entry.code === code);
+      expect(row?.category).toBe(category);
+      expect(verdict.summary).toBe(
+        row?.summary === undefined
+          ? formatVerifySummary(token, "full", [])
+          : formatVerifySummary(token, "full", [], row.summary),
+      );
+    }
+  });
+
+  test("the classifyVerifyChange wrapper preserves the evaluator's shape and bytes", () => {
+    const finishedDocument = documentOf(fullBase());
+    if (!finishedDocument.ok) throw new Error("expected a ready document");
+    const finishedEvaluation = evaluate(finishedDocument, registryWith([]));
+    const finishedVerdict = classifyVerifyChange({
+      changeRef: REF,
+      document: finishedDocument,
+      registry: registryWith([]),
+    });
+    expect(finishedEvaluation.outcome).toBe("finished");
+    expect(finishedVerdict.ok).toBe(true);
+    if (!finishedVerdict.ok) throw new Error("expected finished");
+    expect(finishedVerdict.data.requiredPhases).toEqual(finishedEvaluation.requiredPhases);
+    expect(finishedVerdict.data.completedPhases).toEqual(finishedEvaluation.completedPhases);
+    expect(finishedVerdict.data.missingPhases).toEqual(finishedEvaluation.missingPhases);
+    expect(finishedVerdict.data.evidence).toEqual({
+      declaration: finishedEvaluation.declaration,
+      registry: finishedEvaluation.registry,
+    });
+
+    const partialDocument = documentOf(withOpenPhase("dor_check"));
+    if (!partialDocument.ok) throw new Error("expected a ready document");
+    const partialRegistry = registryWith([]);
+    const partialEvaluation = evaluate(partialDocument, partialRegistry);
+    const partialVerdict = classifyVerifyChange({
+      changeRef: REF,
+      document: partialDocument,
+      registry: partialRegistry,
+    });
+    expect(partialEvaluation.outcome).toBe("partial");
+    expect(partialVerdict.ok).toBe(false);
+    if (partialVerdict.ok) throw new Error("expected partial");
+    expect(partialVerdict.code).toBe(partialEvaluation.code);
+    expect(partialVerdict.summary).toBe(
+      formatVerifySummary("partial", "full", partialEvaluation.missingPhases),
+    );
+    expect(Object.keys(partialVerdict).sort()).toEqual(["code", "kind", "ok", "summary"]);
   });
 });

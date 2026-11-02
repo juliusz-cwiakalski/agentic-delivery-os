@@ -1,0 +1,5 @@
+{
+  "id": "read-failed",
+  "builder": "read-failed",
+  "canary": "corpus-canary-read-failed"
+}

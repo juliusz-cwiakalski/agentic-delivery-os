@@ -1,0 +1,6 @@
+example-product verify gates GH-178  pass  5/5
+lifecycle-finalization  pass  [pm-notes+delivery-registry]  variant=full required=11 completed=11 missing=-
+ci-green  pass  [repository-ci-workflow+github-delivery-request-detail+github-check-runs]  sha=1111111 expected=23 runs=23 failed=0 missing=-
+push-parity  pass  [repository-head+github-delivery-request-list+github-delivery-request-detail]  branch=feat/GH-178/verify-gates-v1 local=1111111 remote=1111111
+owner-gate  pass  [github-work-item]  work-item=GH-178 owner-labels=-
+squash-preflight  pass  [github-delivery-request-list+github-delivery-request-detail]  pr=178 base=main-tools draft=no mergeable=mergeable commits=3 files=7
