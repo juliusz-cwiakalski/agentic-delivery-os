@@ -91,22 +91,25 @@ describe("TC-PRIVACY-021 performance and linearity", () => {
   test("a match-dense single-line file stays within the N/2N linearity slack", () => {
     const registry = registryWith([]);
     const small = createPrivacyRepo(
-      { "scanned/dense.txt": generateMatchDense(1000) },
+      { "scanned/dense.txt": generateMatchDense(4000) },
       { registry },
     );
     const large = createPrivacyRepo(
-      { "scanned/dense.txt": generateMatchDense(2000) },
+      { "scanned/dense.txt": generateMatchDense(8000) },
       { registry },
     );
     try {
       measure(small.root);
       measure(large.root);
-      const smallMedian = median([measure(small.root), measure(small.root)]);
-      const largeMedian = median([measure(large.root), measure(large.root)]);
-      const ratio = largeMedian / Math.max(smallMedian, 1);
+      measure(small.root);
+      measure(large.root);
+      // Best-of-five rejects preempted samples without hiding a quadratic 2N/ N slope.
+      const best = (root: string): number =>
+        Math.min(measure(root), measure(root), measure(root), measure(root), measure(root));
+      const ratio = best(large.root) / Math.max(best(small.root), 1);
       expect(ratio).toBeLessThanOrEqual(3);
-      expect(scan(small.root).violations.length).toBe(1000);
-      expect(scan(large.root).violations.length).toBe(2000);
+      expect(scan(small.root).violations.length).toBe(4000);
+      expect(scan(large.root).violations.length).toBe(8000);
     } finally {
       small.cleanup();
       large.cleanup();
