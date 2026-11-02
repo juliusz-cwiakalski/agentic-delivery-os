@@ -155,9 +155,12 @@ notes:
   - text: "PR #215 review-thread re-review PASS (3 focused reviewer passes: review-iter-3-github.yaml, review-iter-3-jira.yaml, review-iter-3-ledger-mock.yaml). All 13 threads resolved in code+tests: GitHub merged_at/GraphQL threads/isResolved:true/dependency-surface blockers/`/dependencies/blocking`; Jira bodyless 204/outgoing blocks/raw labels/transition.id/credential identity; ledger validation + one-record-per-append linear storage; mock-tenant exact-body matching. Zero blocking findings. Non-blocking residuals recorded for follow-up: GraphQL reviewThreads first:100 pagination truncation risk; Jira direct-consumer credential→unavailable mapping; ledger validator does not reject unknown extra top-level keys."
     type: resolved
     date: "2026-11-01"
-  - text: "Next: push the 6 remediation commits + review artifacts, wait for merge-blocking CI to go green on the pushed branch, then reply to and resolve each of the 13 review threads with its fix commit reference. Do not merge."
-    type: info
-    date: "2026-11-01"
+  - text: "PR #215 merge-blocking CI went green on head b3e8b64: 40/40 checks passed, 0 pending, 0 failed (including TS tests, TS aggregate check, Bash test suites, commitlint, boundaries, security/license/vuln, doc distribution). The only CI failure in the cycle was a flaky privacy-linearity test (TC-PRIVACY-021 dense corpus), fixed in b3e8b64 by amortizing fixed overhead with 4000/8000-match corpora, two warmups, and best-of-five samples while keeping the 2x linearity bound at 3 (20/20 stable runs, max ratio 2.014)."
+    type: resolved
+    date: "2026-11-02"
+  - text: "All 13 PR #215 review threads replied to and resolved with their fix commit references: 87b1214 (GitHub merged_at/threads/isResolved/dependency surface/endpoint), 601706c (Jira 204/outgoing blocks/raw labels/transition.id/credential identity), 53402b7 (ledger validation + linear storage), 8e201fc (mock tenant exact-body). GraphQL confirms 13/13 isResolved:true. PR remains open; merge authority stays with the CEO."
+    type: resolved
+    date: "2026-11-02"
   - text: "Hygiene remediation: the six over-length commit messages were reflowed in a message-only history rewrite so every body/footer line is <=100 chars for commitlint; the test-plan EOF blank line was removed separately. Earlier SHA references in the change artifacts are pre-rewrite and no longer identify the current commits, including the six reflowed messages (549a39f, ab29d9b, 261123b, 546ec43, 3737d17, 8555132) and their descendants (e.g. 5ef24ed)."
     type: resolved
     date: "2026-11-01"
