@@ -45,7 +45,7 @@ export type CommandDefinition = {
   readonly conflicts?: readonly (readonly [string, string])[];
   readonly positionals?: { readonly max: number };
   readonly humanSuccess?: boolean;
-  readonly humanText?: (data: unknown, brand: BrandIdentity) => string;
+  readonly humanText?: (data: unknown, brand: BrandIdentity) => string | undefined;
 };
 
 /** The injected command program. */

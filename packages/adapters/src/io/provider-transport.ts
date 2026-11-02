@@ -48,8 +48,18 @@ export type ProviderPayloadFailure = {
   readonly detail: string;
 };
 
-/** A read failure: the classified credential identity or a payload failure. */
-export type ProviderReadFailure = CredentialResolutionFailure | ProviderPayloadFailure;
+/** A definitive HTTP 404 absence, distinct from a payload/transport failure. */
+export type ProviderNotFoundFailure = {
+  readonly ok: false;
+  readonly code: "provider.not-found";
+  readonly detail: string;
+};
+
+/** A read failure: the classified credential identity, absence, or a payload failure. */
+export type ProviderReadFailure =
+  | CredentialResolutionFailure
+  | ProviderPayloadFailure
+  | ProviderNotFoundFailure;
 
 /** A read result: a normalized primitive view or a classified failure. */
 export type ProviderReadResult<T> = { readonly ok: true; readonly value: T } | ProviderReadFailure;
@@ -63,5 +73,12 @@ export type ProviderWriteResult<T = void> =
 export const providerPayloadFailure = (detail: string): ProviderPayloadFailure => ({
   ok: false,
   code: "provider.payload.invalid",
+  detail,
+});
+
+/** Construct the reified HTTP 404 absence with one readable detail string. */
+export const providerNotFoundFailure = (detail: string): ProviderNotFoundFailure => ({
+  ok: false,
+  code: "provider.not-found",
   detail,
 });

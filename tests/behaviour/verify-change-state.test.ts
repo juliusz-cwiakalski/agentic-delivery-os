@@ -7,6 +7,11 @@ import { describe, expect, test } from "bun:test";
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ERROR_TABLE, type ErrorTableEntry } from "../../packages/core/src/contracts/index";
+import {
+  classifyVerifyChange,
+  classifyVerifyDocument,
+  EvaluateVerifyChange,
+} from "../../packages/core/src/domain/index";
 import { phaseStateDocumentName } from "../../packages/core/src/state/index";
 import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
 import { ledgerPath, ledgerText, openStore } from "../fixtures/state/harness";
@@ -15,6 +20,7 @@ import {
   corruptHeaderVersion,
   createVerifyHarness,
   createVerifyState,
+  fullBase,
   ledgerRecords,
   readFixture,
   resealLedgerRecord,
@@ -268,6 +274,45 @@ describe("TC-VERIFY-010 registry failures are classified", () => {
       } finally {
         state.cleanup();
       }
+    }
+  });
+});
+
+describe("TC-VGATES-016/017/062 structured state failures (DM-15)", () => {
+  test("torn and permission failures keep platform/user categories and declaration fields", () => {
+    const document = classifyVerifyDocument({ ok: true, value: fullBase() });
+    if (!document.ok) throw new Error("expected a ready document");
+    const cases = [
+      ["state.store.torn", "state-unverified"],
+      ["state.permission.denied", "failed"],
+    ] as const;
+    for (const [code, token] of cases) {
+      const registry = {
+        ok: false as const,
+        error: { kind: "state" as const, code, summary: "state failure" },
+      };
+      const evaluation = EvaluateVerifyChange({ changeRef: REF, document, registry });
+      expect(evaluation.outcome).toBe("state-unverified");
+      expect(evaluation.variant).toBe("full");
+      expect(evaluation.requiredPhases).toHaveLength(11);
+      expect(evaluation.completedPhases).toHaveLength(11);
+      expect(evaluation.missingPhases).toEqual([]);
+      expect(evaluation.declaration).toEqual({ requiredCount: 11, completedCount: 11 });
+      expect(evaluation.registry).toEqual({
+        present: false,
+        verifiedEmpty: false,
+        recordCount: 0,
+        transitionCount: 0,
+        overlaidPhases: [],
+      });
+      expect(evaluation.kind).toBe("state");
+      expect(evaluation.code).toBe(code);
+      const verdict = classifyVerifyChange({ changeRef: REF, document, registry });
+      expect(verdict.ok).toBe(false);
+      if (verdict.ok) throw new Error("expected a state failure verdict");
+      expect(verdict.kind).toBe("state");
+      expect(verdict.code).toBe(code);
+      expect(verdict.summary.startsWith(`result=${token}; variant=full; missing=-`)).toBe(true);
     }
   });
 });

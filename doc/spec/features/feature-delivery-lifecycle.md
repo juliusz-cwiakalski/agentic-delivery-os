@@ -11,7 +11,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The deterministic 11-phase spec→plan→deliver→review→PR change delivery workflow with PM-led orchestration, Definition of Ready / Definition of Done gating, phase reopening, the per-change artifact set, variant-aware read-only ledger verification at finalization, and phase-7 documentation reconciliation that closes documentation gaps in-change across current-truth docs (including feature-spec first-authoring when needed)."
 links:
-  related_changes: ["GH-79", "GH-108", "GH-151", "GH-177"]
+  related_changes: ["GH-79", "GH-108", "GH-151", "GH-177", "GH-178"]
   guides:
     - "doc/guides/change-lifecycle.md"
     - "doc/guides/definition-of-ready.md"
@@ -151,3 +151,7 @@ Manual:      /plan-change → /write-spec → /write-test-plan → /write-plan
 - **System bootstrap:** [AGENTS.md](../../../AGENTS.md) — the 11-phase owner/agent table ("Delivery process").
 - **Sibling spec:** [feature-quality-gates-and-pr.md](feature-quality-gates-and-pr.md) — phases 8–11 (review_fix, quality_gates, dod_check, pr_creation) are that spec's scope.
 - **Finalization verification:** [feature-verify-change-and-exit-taxonomy.md](feature-verify-change-and-exit-taxonomy.md) — the read-only ledger verdict and delivery-result exit taxonomy used at `dod_check`.
+
+## Merge-gate stage
+
+`dod_check` verifies ledger and acceptance completeness; `verify change` verifies the ledger only; [`verify gates`](feature-verify-gates.md) evaluates the five M0 merge gates read-only. Human review/approval and the actual merge remain external.

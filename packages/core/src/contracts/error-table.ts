@@ -450,4 +450,26 @@ export const ERROR_TABLE = [
     projectionClass: "user-validation",
     summary: "Branch cleanup or checkout restore was refused for safety.",
   },
+  {
+    code: "verify.gates.failed",
+    domainKind: "verify",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Resolve the named failing gate evidence (lifecycle, CI, push parity, owner gate, or squash preflight) and re-run the gates.",
+    projectionClass: "user-validation",
+    summary: "One or more merge gates did not pass.",
+  },
+  {
+    code: "verify.gates.unavailable",
+    domainKind: "verify",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Restore access to the named gate-evidence source and re-run the gates; the gates were not fully evaluated.",
+    projectionClass: "platform-provider",
+    summary: "Merge-gate evidence could not be read.",
+  },
 ] as const satisfies readonly ErrorTableEntry[];

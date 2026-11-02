@@ -34,3 +34,4 @@ export type {
   VerifyRegistryRead,
 } from "./verify.js";
 export { createVerifyCommandDefinition } from "./verify.js";
+export type { VerifyGatesCommandRuntime } from "./verify-gates.js";

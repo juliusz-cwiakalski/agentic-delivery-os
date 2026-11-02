@@ -1,0 +1,5 @@
+{
+  "id": "squash-conflicting",
+  "builder": "squash-conflicting",
+  "canary": "corpus-canary-squash-conflicting"
+}

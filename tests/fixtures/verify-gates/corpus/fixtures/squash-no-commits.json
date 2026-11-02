@@ -1,0 +1,5 @@
+{
+  "id": "squash-no-commits",
+  "builder": "squash-no-commits",
+  "canary": "corpus-canary-squash-no-commits"
+}

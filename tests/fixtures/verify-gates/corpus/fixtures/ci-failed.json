@@ -1,0 +1,5 @@
+{
+  "id": "ci-failed",
+  "builder": "ci-failed",
+  "canary": "corpus-canary-ci-failed"
+}

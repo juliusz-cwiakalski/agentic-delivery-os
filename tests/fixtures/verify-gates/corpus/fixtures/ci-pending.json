@@ -1,0 +1,5 @@
+{
+  "id": "ci-pending",
+  "builder": "ci-pending",
+  "canary": "corpus-canary-ci-pending"
+}

@@ -209,7 +209,9 @@
           "commentCount": 1
         }
       ],
-      "headSha": "1111111111111111111111111111111111111111"
+      "headSha": "1111111111111111111111111111111111111111",
+      "sourceHeadSha": "1111111111111111111111111111111111111111",
+      "mergeableState": "unknown"
     },
     "change-lifecycle.read-pipeline-run": [
       {

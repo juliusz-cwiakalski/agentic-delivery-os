@@ -45,6 +45,10 @@ const MIXED_LIST = `${FIXTURES}/issues-list-mixed.json`;
 const LIMIT_LIST = `${FIXTURES}/issues-list-limit.json`;
 const RELATIONS_ABSENT = `${FIXTURES}/issues-list-relations-absent.json`;
 const PULLS_LIST = `${FIXTURES}/pulls-list-review-default.json`;
+const PR_GATE_FACTS = `${FIXTURES}/pr-gate-facts.json`;
+const CHECKRUN_TRAPS = `${FIXTURES}/checkrun-traps.json`;
+const CHECKRUN_PAGE_LIMIT = `${FIXTURES}/checkrun-page-limit.json`;
+const ISSUE_COMMENTS_ABSENT = `${FIXTURES}/issue-comments-absent.json`;
 const SHA_A = "1111111111111111111111111111111111111111";
 const SHA_B = "2222222222222222222222222222222222222222";
 
@@ -438,6 +442,67 @@ const closeoutThreadGraphql = async (): Promise<void> => {
   ).toBe(true);
 };
 
+const gatePullPayload = (key: string): Record<string, unknown> =>
+  recordField(recordField(readJson(PR_GATE_FACTS), "pulls"), key);
+
+const readGatePull = async (key: string): Promise<DeliveryRequest> => {
+  const payload = gatePullPayload(key);
+  const number = payload.number;
+  if (typeof number !== "number") throw new Error(`${key} has no number`);
+  const client = clientFor([{ url: pullUrl(number), body: payload }]);
+  return requireValue(await client.readDeliveryRequest(number), key);
+};
+
+const checkRunTrapPayload = (key: string): unknown => recordField(readJson(CHECKRUN_TRAPS), key);
+
+const checkRunTrapCheck = async (key: string): Promise<void> => {
+  const client = clientFor([{ url: checkRunsUrl(SHA_A), body: checkRunTrapPayload(key) }]);
+  const result = requireValue(await client.readPipelineRun(SHA_A), key);
+  const expected = key === "allSkipped" ? 2 : 0;
+  expect(result.pageItemCount).toBe(expected);
+  expect(result.items).toHaveLength(expected);
+  if (key === "allSkipped") {
+    expect(result.items.flatMap((run) => run.jobs).every((job) => job.jobState === "skipped")).toBe(
+      true,
+    );
+  }
+};
+
+const pageLimitCheck = async (): Promise<void> => {
+  const body = readJson(CHECKRUN_PAGE_LIMIT);
+  const client = clientFor([
+    {
+      url: `${instance.baseUrl}${repoPath}/commits/${encodeURIComponent(SHA_A)}/check-runs?per_page=100`,
+      body,
+    },
+  ]);
+  const result = requireValue(await client.readPipelineRun(SHA_A, 100), "page-limit");
+  expect(result.pageItemCount).toBe(100);
+  expect(result.items).toHaveLength(100);
+};
+
+const issueCommentsAbsentCheck = async (): Promise<void> => {
+  const body = recordField(readJson(ISSUE_COMMENTS_ABSENT), "issue");
+  const client = clientFor([{ url: issueUrl(601), body }]);
+  const item = requireValue(await client.readWorkItem(601), "issue-comments-absent");
+  expect(item.labels).toEqual(["change"]);
+  expect(item.comments).toBeUndefined();
+};
+
+const absenceCheck = async (
+  read: (client: GithubClient) => Promise<{ readonly ok: boolean }>,
+): Promise<void> => {
+  const client = clientFor([
+    { url: pullUrl(178), body: {}, status: 404 },
+    { url: pullsListUrl(100), body: {}, status: 404 },
+    { url: issueUrl(178), body: {}, status: 404 },
+    { url: checkRunsUrl(SHA_A), body: {}, status: 404 },
+  ]);
+  const result = await read(client);
+  expect(result.ok).toBe(false);
+  if (!result.ok) expect((result as { code?: string }).code).toBe("provider.not-found");
+};
+
 const defaultAssertions: TrapAssertions = {
   "GH-REVIEW-STATE": async () => {
     await reviewStateCheck(defaultPullReader);
@@ -452,6 +517,34 @@ const defaultAssertions: TrapAssertions = {
   "GH-CLOSEOUT-MERGED-HEAD": closeoutMergedHead,
   "GH-CLOSEOUT-LABEL-PRESERVE": closeoutLabelPreserve,
   "GH-CLOSEOUT-THREAD-GRAPHQL": closeoutThreadGraphql,
+  "GITHUB-PR-MERGEABLE-NULL": async () => {
+    expect((await readGatePull("nullMergeable")).mergeableState).toBe("unknown");
+  },
+  "GITHUB-PR-MERGEABLE-DIRTY": async () => {
+    expect((await readGatePull("dirty")).mergeableState).toBe("conflicting");
+  },
+  "GITHUB-PR-MERGEABLE-BLOCKED": async () => {
+    expect((await readGatePull("blockedTrue")).mergeableState).toBe("not-mergeable");
+  },
+  "GITHUB-PR-HEAD-SHA-ABSENT": async () => {
+    expect((await readGatePull("headAbsent")).sourceHeadSha).toBeUndefined();
+  },
+  "GITHUB-PR-COMMIT-SURFACE-ABSENT": async () => {
+    const view = await readGatePull("surfaceAbsent");
+    expect(view.commitCount).toBeUndefined();
+    expect(view.changedFileCount).toBeUndefined();
+  },
+  "GITHUB-PR-ZERO-COMMITS": async () => {
+    expect((await readGatePull("zeroCommits")).commitCount).toBe(0);
+  },
+  "GITHUB-CHECKRUN-EMPTY": () => checkRunTrapCheck("empty"),
+  "GITHUB-CHECKRUN-ALL-SKIPPED": () => checkRunTrapCheck("allSkipped"),
+  "GITHUB-CHECKRUN-PAGE-LIMIT": pageLimitCheck,
+  "GITHUB-ISSUE-COMMENTS-ABSENT": issueCommentsAbsentCheck,
+  "GITHUB-PR-LIST-404": () => absenceCheck((client) => client.listDeliveryRequests(100)),
+  "GITHUB-PR-DETAIL-404": () => absenceCheck((client) => client.readDeliveryRequest(178)),
+  "GITHUB-CHECKRUN-404": () => absenceCheck((client) => client.readPipelineRun(SHA_A)),
+  "GITHUB-ISSUE-404": () => absenceCheck((client) => client.readWorkItem(178)),
 };
 
 const runWithGuard = async (options: Omit<TrapRunOptions, "provider">): Promise<TrapRun> => {
@@ -480,6 +573,20 @@ describe("TC-TRAP-002 GitHub trap catalog replays offline", () => {
       "GH-CLOSEOUT-MERGED-HEAD",
       "GH-CLOSEOUT-LABEL-PRESERVE",
       "GH-CLOSEOUT-THREAD-GRAPHQL",
+      "GITHUB-PR-MERGEABLE-NULL",
+      "GITHUB-PR-MERGEABLE-DIRTY",
+      "GITHUB-PR-MERGEABLE-BLOCKED",
+      "GITHUB-PR-HEAD-SHA-ABSENT",
+      "GITHUB-PR-COMMIT-SURFACE-ABSENT",
+      "GITHUB-PR-ZERO-COMMITS",
+      "GITHUB-CHECKRUN-EMPTY",
+      "GITHUB-CHECKRUN-ALL-SKIPPED",
+      "GITHUB-CHECKRUN-PAGE-LIMIT",
+      "GITHUB-ISSUE-COMMENTS-ABSENT",
+      "GITHUB-PR-LIST-404",
+      "GITHUB-PR-DETAIL-404",
+      "GITHUB-CHECKRUN-404",
+      "GITHUB-ISSUE-404",
     ]);
   });
 

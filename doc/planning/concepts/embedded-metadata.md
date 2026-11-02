@@ -66,8 +66,7 @@ primitive view and never the raw carrier.
 
 - M0-S12: metadata envelope v1 (comments and provenance) plus capability
   flags for carriers.
-- M0-S9: verify gates consumes provenance from metadata with heuristic
-  fallback.
+- M0-S9: verify gates uses direct repository/provider evidence; embedded-metadata provenance is explicitly out of scope (DEC-14/OQ-6), and provenance-aware citations are deferred.
 - M0-S15: privacy guard extension: no secrets and no private identifiers in
   embedded metadata.
 

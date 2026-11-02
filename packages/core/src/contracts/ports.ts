@@ -144,7 +144,19 @@ export type DeliveryThread = {
   readonly commentCount: number;
 };
 
-/** A delivery request (PR/MR) view (DM-6). */
+/** A delivery request's deterministic mergeability state (GH-178 DM-7). */
+export type DeliveryRequestMergeableState =
+  | "mergeable"
+  | "conflicting"
+  | "not-mergeable"
+  | "unknown";
+
+/**
+ * A delivery request (PR/MR) view (DM-6).
+ *
+ * The four gate facts are additive and optional. Absence means unknown: it is
+ * never mergeable, never zero, and never a non-empty change surface.
+ */
 export type DeliveryRequest = {
   readonly identity: ProviderQualifiedIdentity;
   readonly sourceRef: string;
@@ -157,6 +169,15 @@ export type DeliveryRequest = {
    * value (DM-8, ADR-0004).
    */
   readonly headSha?: string;
+  /** The full source-ref commit SHA at read time; absent means unknown. */
+  /** The full source-ref commit SHA at read time; absent means unknown. */
+  readonly sourceHeadSha?: string;
+  /** The provider-asserted mergeability; absent/null means unknown. */
+  readonly mergeableState?: DeliveryRequestMergeableState;
+  /** The provider-asserted commit count; absent/non-finite/negative means unknown. */
+  readonly commitCount?: number;
+  /** The provider-asserted changed-file count; absent/non-finite/negative means unknown. */
+  readonly changedFileCount?: number;
 };
 
 /** A pipeline job state (DM-7). */

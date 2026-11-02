@@ -8,13 +8,19 @@
  * and returns data or a classified error. It never writes a stream, never
  * chooses an exit code, and never mutates a target.
  */
-import { classifyVerifyChange, classifyVerifyDocument } from "@delivery-os/core";
+import {
+  classifyVerifyChange,
+  classifyVerifyDocument,
+  renderVerifyGatesHuman,
+} from "@delivery-os/core";
 import type {
   PhaseTransitionRecord,
   PmNotesParseFailure,
   StateFailure,
+  VerifyGatesReport,
 } from "@delivery-os/core/contracts";
-import type { CommandDefinition } from "../index.js";
+import type { CommandDefinition, CommandHandler } from "../index.js";
+import { createVerifyGatesHandler, type VerifyGatesCommandRuntime } from "./verify-gates.js";
 
 /** A pm-notes target read at the edge: values, absence, or a safe parse failure. */
 export type VerifyPmNotesRead =
@@ -42,6 +48,8 @@ export type VerifyRegistryRead =
 export type VerifyCommandRuntime = {
   readonly readPmNotes: (changeRef: string) => VerifyPmNotesRead;
   readonly readRegistry: (changeRef: string) => VerifyRegistryRead;
+  /** The gates reads; absent means the `gates` subcommand is not composed. */
+  readonly gates?: VerifyGatesCommandRuntime;
 };
 
 type VerifyFailure = { readonly ok: false; readonly error: Record<string, unknown> };
@@ -55,25 +63,31 @@ const failure = (
   summary: string,
 ): VerifyFailure => ({ ok: false, error: { kind, code, summary } });
 
-/** Grammar runs before any runtime call (D4, AC-V14). */
-const grammarRef = (positionals: readonly string[]): string | VerifyFailure => {
-  if (positionals.length !== 2 || positionals[0] !== "change") {
-    return failure("input", "input.value.rejected", GRAMMAR_SUMMARY);
-  }
-  const changeRef = positionals[1];
-  if (changeRef === undefined || changeRef.length === 0) {
-    return failure("input", "input.value.rejected", GRAMMAR_SUMMARY);
-  }
-  return changeRef;
+type VerifySubcommand = "change" | "gates";
+
+type ParsedVerifyGrammar = {
+  readonly subcommand: VerifySubcommand;
+  readonly changeRef: string;
 };
 
-const handlerFor =
-  (runtime: VerifyCommandRuntime) =>
-  ({ positionals }: { readonly positionals: readonly string[] }): VerifySuccess | VerifyFailure => {
-    const grammar = grammarRef(positionals);
-    if (typeof grammar !== "string") return grammar;
-    const changeRef = grammar;
+/** Grammar runs before any runtime call (D4, AC-V14, GH-178 AC-F1-1). */
+const parseGrammar = (positionals: readonly string[]): ParsedVerifyGrammar | VerifyFailure => {
+  const subcommand = positionals[0];
+  const changeRef = positionals[1];
+  if (
+    positionals.length !== 2 ||
+    (subcommand !== "change" && subcommand !== "gates") ||
+    changeRef === undefined ||
+    changeRef.length === 0
+  ) {
+    return failure("input", "input.value.rejected", GRAMMAR_SUMMARY);
+  }
+  return { subcommand, changeRef };
+};
 
+const changeHandler =
+  (runtime: VerifyCommandRuntime) =>
+  (changeRef: string): VerifySuccess | VerifyFailure => {
     const read = runtime.readPmNotes(changeRef);
     if (!read.ok && read.reason === "missing") {
       return failure("lint", "lint.target.missing", GRAMMAR_SUMMARY);
@@ -90,19 +104,42 @@ const handlerFor =
     return { ok: true, data: verdict.data };
   };
 
+const gatesHandlerFor = (runtime: VerifyCommandRuntime): CommandHandler | undefined =>
+  runtime.gates === undefined ? undefined : createVerifyGatesHandler(runtime.gates);
+
+const isGatesReport = (data: unknown): data is VerifyGatesReport =>
+  typeof data === "object" &&
+  data !== null &&
+  !Array.isArray(data) &&
+  (data as { readonly target?: unknown }).target === "gates";
+
 /**
- * Build the verify command definition. `positionals.max` is two so a third
+ * Build the one verify command definition. `positionals.max` is two so a third
  * positional is rejected by the parser (`fallback.invocation`) before the
- * handler; there are no command-specific flags.
+ * handler; there are no command-specific flags. The first positional dispatches
+ * `change` or `gates` after grammar validation.
  */
-export const createVerifyCommandDefinition = (
-  runtime: VerifyCommandRuntime,
-): CommandDefinition => ({
-  flags: [],
-  positionals: { max: 2 },
-  humanSuccess: true,
-  handler: (invocation) => {
-    const result = handlerFor(runtime)(invocation);
-    return result.ok ? { data: result.data } : { error: result.error };
-  },
-});
+export const createVerifyCommandDefinition = (runtime: VerifyCommandRuntime): CommandDefinition => {
+  const gatesHandler = gatesHandlerFor(runtime);
+  return {
+    flags: [],
+    positionals: { max: 2 },
+    humanSuccess: true,
+    humanText: (data, brand) =>
+      isGatesReport(data) ? renderVerifyGatesHuman(data, brand) : undefined,
+    handler: (invocation) => {
+      const grammar = parseGrammar(invocation.positionals);
+      if ("ok" in grammar && grammar.ok === false) {
+        return { error: grammar.error };
+      }
+      if (!("changeRef" in grammar)) return grammar;
+      if (grammar.subcommand === "gates") {
+        return gatesHandler === undefined
+          ? { error: failure("input", "input.value.rejected", GRAMMAR_SUMMARY).error }
+          : gatesHandler(invocation);
+      }
+      const result = changeHandler(runtime)(grammar.changeRef);
+      return result.ok ? { data: result.data } : { error: result.error };
+    },
+  };
+};

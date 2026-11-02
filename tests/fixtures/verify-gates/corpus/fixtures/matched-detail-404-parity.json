@@ -1,0 +1,5 @@
+{
+  "id": "matched-detail-404-parity",
+  "builder": "matched-detail-404-parity",
+  "canary": "corpus-canary-matched-detail-404-parity"
+}

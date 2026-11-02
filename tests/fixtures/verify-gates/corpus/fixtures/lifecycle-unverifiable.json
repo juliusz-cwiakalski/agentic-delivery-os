@@ -1,0 +1,5 @@
+{
+  "id": "lifecycle-unverifiable",
+  "builder": "lifecycle-unverifiable",
+  "canary": "corpus-canary-lifecycle-unverifiable"
+}

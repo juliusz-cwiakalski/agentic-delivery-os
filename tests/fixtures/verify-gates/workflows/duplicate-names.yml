@@ -1,0 +1,4 @@
+name: CI
+jobs:
+  one: { name: duplicated }
+  two: { name: duplicated }

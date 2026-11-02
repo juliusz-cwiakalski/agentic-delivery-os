@@ -1,0 +1,5 @@
+{
+  "id": "ci-canceled",
+  "builder": "ci-canceled",
+  "canary": "corpus-canary-ci-canceled"
+}

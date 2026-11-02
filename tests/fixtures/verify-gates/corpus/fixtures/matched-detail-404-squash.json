@@ -1,0 +1,5 @@
+{
+  "id": "matched-detail-404-squash",
+  "builder": "matched-detail-404-squash",
+  "canary": "corpus-canary-matched-detail-404-squash"
+}

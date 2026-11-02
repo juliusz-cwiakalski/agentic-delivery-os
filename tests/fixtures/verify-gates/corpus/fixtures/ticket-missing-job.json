@@ -1,0 +1,5 @@
+{
+  "id": "ticket-missing-job",
+  "builder": "missing-job",
+  "canary": "corpus-canary-ticket-missing-job"
+}

@@ -23,7 +23,7 @@ import type {
   ProviderTransport,
   ProviderWriteResult,
 } from "../io/provider-transport.js";
-import { providerPayloadFailure } from "../io/provider-transport.js";
+import { providerNotFoundFailure, providerPayloadFailure } from "../io/provider-transport.js";
 import {
   normalizeCheckRuns,
   normalizeGithubIssue,
@@ -190,6 +190,9 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
     };
     try {
       const response = await transport.send(request);
+      if (response.status === 404) {
+        return providerNotFoundFailure("GitHub returned HTTP 404");
+      }
       if (response.status < 200 || response.status >= 300) {
         return providerPayloadFailure(`GitHub returned HTTP ${response.status}`);
       }

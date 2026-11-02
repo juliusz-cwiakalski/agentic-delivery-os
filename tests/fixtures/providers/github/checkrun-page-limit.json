@@ -1,0 +1,605 @@
+{
+  "provenance": "hand-authored-synthetic 2026-10-31",
+  "check_runs": [
+    {
+      "id": 1000,
+      "name": "run-0",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1001,
+      "name": "run-1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1002,
+      "name": "run-2",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1003,
+      "name": "run-3",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1004,
+      "name": "run-4",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1005,
+      "name": "run-5",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1006,
+      "name": "run-6",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1007,
+      "name": "run-7",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1008,
+      "name": "run-8",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1009,
+      "name": "run-9",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1010,
+      "name": "run-10",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1011,
+      "name": "run-11",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1012,
+      "name": "run-12",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1013,
+      "name": "run-13",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1014,
+      "name": "run-14",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1015,
+      "name": "run-15",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1016,
+      "name": "run-16",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1017,
+      "name": "run-17",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1018,
+      "name": "run-18",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1019,
+      "name": "run-19",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1020,
+      "name": "run-20",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1021,
+      "name": "run-21",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1022,
+      "name": "run-22",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1023,
+      "name": "run-23",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1024,
+      "name": "run-24",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1025,
+      "name": "run-25",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1026,
+      "name": "run-26",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1027,
+      "name": "run-27",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1028,
+      "name": "run-28",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1029,
+      "name": "run-29",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1030,
+      "name": "run-30",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1031,
+      "name": "run-31",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1032,
+      "name": "run-32",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1033,
+      "name": "run-33",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1034,
+      "name": "run-34",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1035,
+      "name": "run-35",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1036,
+      "name": "run-36",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1037,
+      "name": "run-37",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1038,
+      "name": "run-38",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1039,
+      "name": "run-39",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1040,
+      "name": "run-40",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1041,
+      "name": "run-41",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1042,
+      "name": "run-42",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1043,
+      "name": "run-43",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1044,
+      "name": "run-44",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1045,
+      "name": "run-45",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1046,
+      "name": "run-46",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1047,
+      "name": "run-47",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1048,
+      "name": "run-48",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1049,
+      "name": "run-49",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1050,
+      "name": "run-50",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1051,
+      "name": "run-51",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1052,
+      "name": "run-52",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1053,
+      "name": "run-53",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1054,
+      "name": "run-54",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1055,
+      "name": "run-55",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1056,
+      "name": "run-56",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1057,
+      "name": "run-57",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1058,
+      "name": "run-58",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1059,
+      "name": "run-59",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1060,
+      "name": "run-60",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1061,
+      "name": "run-61",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1062,
+      "name": "run-62",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1063,
+      "name": "run-63",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1064,
+      "name": "run-64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1065,
+      "name": "run-65",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1066,
+      "name": "run-66",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1067,
+      "name": "run-67",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1068,
+      "name": "run-68",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1069,
+      "name": "run-69",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1070,
+      "name": "run-70",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1071,
+      "name": "run-71",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1072,
+      "name": "run-72",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1073,
+      "name": "run-73",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1074,
+      "name": "run-74",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1075,
+      "name": "run-75",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1076,
+      "name": "run-76",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1077,
+      "name": "run-77",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1078,
+      "name": "run-78",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1079,
+      "name": "run-79",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1080,
+      "name": "run-80",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1081,
+      "name": "run-81",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1082,
+      "name": "run-82",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1083,
+      "name": "run-83",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1084,
+      "name": "run-84",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1085,
+      "name": "run-85",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1086,
+      "name": "run-86",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1087,
+      "name": "run-87",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1088,
+      "name": "run-88",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1089,
+      "name": "run-89",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1090,
+      "name": "run-90",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1091,
+      "name": "run-91",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1092,
+      "name": "run-92",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1093,
+      "name": "run-93",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1094,
+      "name": "run-94",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1095,
+      "name": "run-95",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1096,
+      "name": "run-96",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1097,
+      "name": "run-97",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1098,
+      "name": "run-98",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 1099,
+      "name": "run-99",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ]
+}

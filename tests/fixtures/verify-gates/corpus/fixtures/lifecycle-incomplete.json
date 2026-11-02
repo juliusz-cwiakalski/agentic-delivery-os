@@ -1,0 +1,5 @@
+{
+  "id": "lifecycle-incomplete",
+  "builder": "lifecycle-incomplete",
+  "canary": "corpus-canary-lifecycle-incomplete"
+}

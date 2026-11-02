@@ -15,6 +15,7 @@ import {
   nodeFileSystemFacts,
   type PmNotesFileSystemFacts,
   type RuntimePlatform,
+  readCiWorkflowJobNames,
   readLocalPmContext,
   readPmNotesText,
   runtimePlatform,
@@ -62,6 +63,13 @@ import {
   resolveConfig,
   runCloseout,
   selectPruneCandidates,
+  type VerifyGatesCheckRunPage,
+  type VerifyGatesDetail,
+  type VerifyGatesOpenPrPage,
+  type VerifyGatesReadResult,
+  type VerifyGatesRepositoryFacts,
+  type VerifyGatesWorkItem,
+  type VerifyGatesWorkflowFacts,
 } from "@delivery-os/core";
 import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
@@ -93,6 +101,7 @@ import {
   type StatusRepositoryFacts,
   type StatusRepositoryTarget,
   type WorkItem,
+  VERIFY_GATES_FAILURE_CLASSES,
 } from "@delivery-os/core/contracts";
 import {
   createProviderEngine,
@@ -132,6 +141,7 @@ import {
 import { createQueueReadyCommandDefinition } from "./commands/queue.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
 import { createVerifyCommandDefinition, type VerifyCommandRuntime } from "./commands/verify.js";
+import type { VerifyGatesCommandRuntime } from "./commands/verify-gates.js";
 import type { CliDependencies, CommandDefinition, CommandFlags, CommandProgram } from "./index.js";
 
 const NEUTRAL_OVERRIDE_NAME = "DELIVERY_OS_WORKING_NAME";
@@ -244,6 +254,150 @@ export const createVerifyCommandRuntime = (
     };
   },
 });
+
+/** The injected I/O and provider seams for the gates runtime (GH-178). */
+export type VerifyGatesRuntimeOptions = {
+  readonly store: StateStorePort;
+  readonly changesDirectory: string;
+  readonly fs: PmNotesFileSystemFacts;
+  readonly repository: { readonly cwd: string; readonly io: RepositoryIo };
+  readonly workflow: { readonly baseDirectory: string; readonly fs: FileSystemFacts };
+  readonly github: {
+    readonly instance: ExternalSystemInstance;
+    readonly credentials: CredentialPort;
+    readonly transport: StatusTransport;
+  };
+};
+
+type ProviderFailureLike = { readonly ok: false; readonly code: string };
+
+const providerReadFailure = <T>(failure: ProviderFailureLike): VerifyGatesReadResult<T> => {
+  if (failure.code === "config.credential.missing") {
+    return {
+      ok: false,
+      reason: "credential-unavailable",
+      failureCode: "config.credential.missing",
+    };
+  }
+  if (failure.code === "provider.not-found") {
+    return { ok: false, reason: "not-found", failureClass: VERIFY_GATES_FAILURE_CLASSES[1] };
+  }
+  return { ok: false, reason: "read-failed", failureClass: VERIFY_GATES_FAILURE_CLASSES[0] };
+};
+
+const unaddressed = <T>(): VerifyGatesReadResult<T> => ({
+  ok: false,
+  reason: "address-unresolved",
+});
+
+const credentialRefusal = <T>(): VerifyGatesReadResult<T> => ({
+  ok: false,
+  reason: "credential-unavailable",
+  failureCode: "config.credential.missing",
+});
+
+/** Compose the gates reads at the runtime-aware edge. */
+export const createVerifyGatesCommandRuntime = (
+  options: VerifyGatesRuntimeOptions,
+): VerifyGatesCommandRuntime => {
+  const instance = options.github.instance;
+  const admitted =
+    instance.systemKind === "vcs" && instance.authMethod.mechanism === "credential-reference";
+  let target: StatusRepositoryTarget | undefined;
+
+  const clientFor = (repository: StatusRepositoryTarget) =>
+    createGitHubClient({
+      instance,
+      credentials: options.github.credentials,
+      repository,
+      transport: options.github.transport,
+    });
+
+  const readRepository = (): VerifyGatesRepositoryFacts => {
+    const facts = readRepositoryFacts({
+      cwd: options.repository.cwd,
+      io: options.repository.io,
+    });
+    const parsed = parseGitHubRemote(facts.originUrl);
+    if (parsed.ok) {
+      target = { owner: parsed.owner, name: parsed.name };
+      return { binding: "resolved", head: facts.head };
+    }
+    target = undefined;
+    return {
+      binding: parsed.reason === "remote-unsupported" ? "remote-unsupported" : "address-unresolved",
+      head: facts.head,
+    };
+  };
+
+  return {
+    readLifecycle: (changeRef) => ({
+      document: readPmNotesText({
+        changeRef,
+        changesDirectory: options.changesDirectory,
+        fs: options.fs,
+      }),
+      registry: (() => {
+        const read = readChangeTransitionsTolerant(options.store, changeRef);
+        if (!read.ok) return { ok: false as const, error: read.error };
+        return {
+          ok: true as const,
+          present: read.value.present,
+          verifiedEmpty: read.value.verifiedEmpty,
+          transitions: read.value.transitions,
+          recordCount: read.value.evidence.recordCount,
+        };
+      })(),
+    }),
+    readRepository,
+    readWorkflow: (): VerifyGatesWorkflowFacts => {
+      const read = readCiWorkflowJobNames({
+        baseDirectory: options.workflow.baseDirectory,
+        fs: options.workflow.fs,
+      });
+      return { outcome: read.outcome, names: read.names };
+    },
+    readOpenPullRequests: async (limit): Promise<VerifyGatesReadResult<VerifyGatesOpenPrPage>> => {
+      if (!admitted) return credentialRefusal();
+      if (target === undefined) return unaddressed();
+      const result = await clientFor(target).listDeliveryRequests(limit);
+      if (!result.ok) return providerReadFailure(result);
+      return {
+        ok: true,
+        value: { items: result.value.items, pageItemCount: result.value.pageItemCount },
+      };
+    },
+    readDeliveryRequestDetail: async (
+      pullNumber,
+    ): Promise<VerifyGatesReadResult<VerifyGatesDetail>> => {
+      if (!admitted) return credentialRefusal();
+      if (target === undefined) return unaddressed();
+      const result = await clientFor(target).readDeliveryRequest(Number(pullNumber));
+      if (!result.ok) return providerReadFailure(result);
+      return { ok: true, value: { request: result.value } };
+    },
+    readCheckRuns: async (sha, limit): Promise<VerifyGatesReadResult<VerifyGatesCheckRunPage>> => {
+      if (!admitted) return credentialRefusal();
+      if (target === undefined) return unaddressed();
+      const result = await clientFor(target).readPipelineRun(sha, limit);
+      if (!result.ok) return providerReadFailure(result);
+      return {
+        ok: true,
+        value: { items: result.value.items, pageItemCount: result.value.pageItemCount },
+      };
+    },
+    readWorkItem: async (changeRef): Promise<VerifyGatesReadResult<VerifyGatesWorkItem>> => {
+      const match = /^[A-Za-z]+-([0-9]+)$/.exec(changeRef);
+      const issueNumber = match?.[1];
+      if (issueNumber === undefined) return { ok: false, reason: "unresolved" };
+      if (!admitted) return credentialRefusal();
+      if (target === undefined) return unaddressed();
+      const result = await clientFor(target).readWorkItem(Number(issueNumber));
+      if (!result.ok) return providerReadFailure(result);
+      return { ok: true, value: { item: result.value } };
+    },
+  };
+};
 
 export type EdgeOptions = {
   readonly brand: BrandIdentity;

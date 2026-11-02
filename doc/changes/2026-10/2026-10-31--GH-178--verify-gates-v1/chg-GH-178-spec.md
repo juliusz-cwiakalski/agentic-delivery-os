@@ -950,4 +950,3 @@ This specification was authored from the verified GH-178 intake context (the Git
 - [x] The new feature doc is registered in the forbidden-literal registry
 - [x] `ados_distribution: internal` is declared
 - [x] No product or binary name literal is used in the spec
-

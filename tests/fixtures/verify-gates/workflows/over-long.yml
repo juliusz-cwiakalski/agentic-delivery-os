@@ -1,0 +1,7 @@
+name: CI
+jobs:
+  long:
+    {
+      name: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx,
+      runs-on: ubuntu-latest,
+    }

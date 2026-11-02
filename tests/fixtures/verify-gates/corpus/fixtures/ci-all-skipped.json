@@ -1,0 +1,5 @@
+{
+  "id": "ci-all-skipped",
+  "builder": "ci-all-skipped",
+  "canary": "corpus-canary-ci-all-skipped"
+}

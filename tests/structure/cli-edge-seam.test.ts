@@ -298,6 +298,7 @@ const NEW_COMMAND_FILES = [
   `${CLI_DIR}/commands/queue.ts`,
   `${CLI_DIR}/commands/status.ts`,
   `${CLI_DIR}/commands/verify.ts`,
+  `${CLI_DIR}/commands/verify-gates.ts`,
 ];
 
 const moduleSpecifiers = (root: string, relative: string): string[] => {
@@ -424,6 +425,7 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(exported(`${CLI_DIR}/commands/lint.ts`)).toEqual(["createLintCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/phase.ts`)).toEqual(["createPhaseCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/verify.ts`)).toEqual(["createVerifyCommandDefinition"]);
+    expect(exported(`${CLI_DIR}/commands/verify-gates.ts`)).toEqual(["createVerifyGatesHandler"]);
     expect(exported(`${CLI_DIR}/commands/status.ts`)).toEqual([
       "collectStatusFacts",
       "createStatusCommandDefinition",
@@ -431,7 +433,7 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(exported(`${CLI_DIR}/commands/queue.ts`)).toEqual(["createQueueReadyCommandDefinition"]);
   });
 
-  test("only closeout, db, queue, and status declare the optional human-text renderer", () => {
+  test("only closeout, db, queue, status, and verify declare the optional human-text renderer", () => {
     const declarers = listTypeScriptFiles(ROOT, `${CLI_DIR}/commands`).filter((file) =>
       readFileSync(join(ROOT, file), "utf8").includes("humanText"),
     );
@@ -440,6 +442,7 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
       `${CLI_DIR}/commands/db.ts`,
       `${CLI_DIR}/commands/queue.ts`,
       `${CLI_DIR}/commands/status.ts`,
+      `${CLI_DIR}/commands/verify.ts`,
     ]);
   });
 

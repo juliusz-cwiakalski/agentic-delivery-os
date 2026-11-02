@@ -1,0 +1,5 @@
+{
+  "id": "ci-no-runs",
+  "builder": "ci-no-runs",
+  "canary": "corpus-canary-ci-no-runs"
+}

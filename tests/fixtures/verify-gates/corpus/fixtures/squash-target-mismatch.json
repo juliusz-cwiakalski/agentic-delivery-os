@@ -1,0 +1,5 @@
+{
+  "id": "squash-target-mismatch",
+  "builder": "squash-target-mismatch",
+  "canary": "corpus-canary-squash-target-mismatch"
+}

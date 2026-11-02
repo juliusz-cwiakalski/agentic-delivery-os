@@ -1,0 +1,5 @@
+{
+  "id": "ci-expected-jobs-invalid",
+  "builder": "ci-expected-jobs-invalid",
+  "canary": "corpus-canary-ci-expected-jobs-invalid"
+}

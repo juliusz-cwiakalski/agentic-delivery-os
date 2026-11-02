@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The read-only status command and its bounded delivery.status.v1 digest: six fixed sections in order, a closed five-value section state, bounded evidence and counts, deterministic rank keys and truncation, the four tracker families, changes and pull requests, bounded check-runs CI classification, the declared lanes-or-queue gap, providers read from configuration and the verified park fold, parked work from the git-ignored local PM context, origin-derived repository binding under a credential-reference-only composition guard, the machine envelope and human digest grammar, error-identity reuse, and the fixture plus opt-in live-smoke evidence model."
 links:
-  related_changes: ["GH-175", "GH-176", "GH-183"]
+  related_changes: ["GH-175", "GH-176", "GH-183", "GH-178"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006"]
   contracts:
     - "packages/core/src/contracts/status.ts"
@@ -107,6 +107,7 @@ Declared bounds:
 | `STATUS_MAX_MACHINE_BYTES` | 65536 | Byte cap on the serialized `data` digest; the envelope total is recorded but not separately capped |
 | `STATUS_STALL_THRESHOLD_DAYS` | 14 | Declared stall threshold |
 | `STATUS_OWNER_ATTENTION_LABELS` | `hand-back`, `human-input-needed` | Declared owner-attention labels |
+| `STATUS_CI_RESULTS` | `failed`, `pending`, `succeeded`, `canceled`, `none`, `unknown` | Declared closed CI result vocabulary; `none` and `unknown` are never green |
 | `STATUS_SCHEMA_VERSION` | `delivery.status.v1` | Digest schema version |
 
 ### Section state derivation
@@ -143,7 +144,7 @@ Open pull requests carry identity, source and target refs, delivery state, and d
 
 ### CI
 
-The collector resolves the commit under observation from the current checkout HEAD: the branch name when attached and the full SHA. It reads exactly one bounded check-runs page for that SHA at `per_page=STATUS_SOURCE_PIPELINE_LIMIT` (20) with no pagination, and classifies every run on that page:
+The collector resolves the commit under observation from the current checkout HEAD: the branch name when attached and the full SHA. It reads exactly one bounded check-runs page for that SHA at `per_page=STATUS_SOURCE_PIPELINE_LIMIT` (20) with no pagination, and classifies every run on that page over the closed `STATUS_CI_RESULTS` vocabulary:
 
 - `failed` when any run failed;
 - `pending` when any run is running or queued and none failed;
@@ -151,7 +152,7 @@ The collector resolves the commit under observation from the current checkout HE
 - `succeeded` when at least one run succeeded and every run is succeeded or skipped;
 - `none` when the read succeeded but no run was reported, or every reported run was skipped.
 
-`none` is explicitly not green, and an all-skipped set is never `succeeded`. The client reports the raw page size alongside the runs; a raw page of exactly 20 runs drives the `source-truncated` signal even when fewer runs are rendered. An unresolved SHA or a failed read makes the section `unknown` with the reason and failure class, never green. Only the current checkout HEAD is observed; open-pull-request-head CI is deferred. Runs are capped at eight and ranked by severity, then descending numeric run identity when both identities are numeric (otherwise ascending identity text), then pipeline name ascending.
+`none` is explicitly not green, and an all-skipped set is never `succeeded`; `unknown` is also never green. The client reports the raw page size alongside the runs; a raw page of exactly 20 runs drives the `source-truncated` signal even when fewer runs are rendered. An unresolved SHA or a failed read makes the section `unknown` with the reason and failure class, never green. Only the current checkout HEAD is observed; open-pull-request-head CI is deferred. Runs are capped at eight and ranked by severity, then descending numeric run identity when both identities are numeric (otherwise ascending identity text), then pipeline name ascending.
 
 ### Lanes or queue
 
@@ -357,6 +358,6 @@ One invocation performs at most three outbound read-only GitHub requests, one lo
 | Source truncation | The explicit marker that output items were dropped by a cap or that the source returned its declared read limit, so more may exist. |
 | Live smoke | The opt-in, credentialed structural test against a real repository; not a default-CI network test. |
 
-See also: [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [State Layer](feature-state-layer.md), [Provider Engine](feature-provider-engine.md), [Configuration Layer and Inspection](feature-config-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md), [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md).
+See also: [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [State Layer](feature-state-layer.md), [Provider Engine](feature-provider-engine.md), [Configuration Layer and Inspection](feature-config-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Verify Gates](feature-verify-gates.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md), [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md). Verify Gates reuses `STATUS_OWNER_ATTENTION_LABELS`, `STATUS_CI_RESULTS` (including `unknown`), and `STATUS_SOURCE_PIPELINE_LIMIT` by reference; status remains a digest, not a merge-gate verdict.
 
 **Change record:** `doc/changes/2026-10/2026-10-31--GH-175--status-v1/`.

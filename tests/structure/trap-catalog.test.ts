@@ -19,7 +19,7 @@ const REQUIRED_KEYS = [
   "trapName",
 ];
 
-const MINIMA: Readonly<Record<string, number>> = { gitlab: 3, jira: 4, github: 7 };
+const MINIMA: Readonly<Record<string, number>> = { gitlab: 3, jira: 4, github: 21 };
 
 const EXPECTED_TRAPS: Readonly<Record<string, readonly string[]>> = {
   jira: [
@@ -43,6 +43,20 @@ const EXPECTED_TRAPS: Readonly<Record<string, readonly string[]>> = {
     "GH-CLOSEOUT-MERGED-HEAD",
     "GH-CLOSEOUT-LABEL-PRESERVE",
     "GH-CLOSEOUT-THREAD-GRAPHQL",
+    "GITHUB-PR-MERGEABLE-NULL",
+    "GITHUB-PR-MERGEABLE-DIRTY",
+    "GITHUB-PR-MERGEABLE-BLOCKED",
+    "GITHUB-PR-HEAD-SHA-ABSENT",
+    "GITHUB-PR-COMMIT-SURFACE-ABSENT",
+    "GITHUB-PR-ZERO-COMMITS",
+    "GITHUB-CHECKRUN-EMPTY",
+    "GITHUB-CHECKRUN-ALL-SKIPPED",
+    "GITHUB-CHECKRUN-PAGE-LIMIT",
+    "GITHUB-ISSUE-COMMENTS-ABSENT",
+    "GITHUB-PR-LIST-404",
+    "GITHUB-PR-DETAIL-404",
+    "GITHUB-CHECKRUN-404",
+    "GITHUB-ISSUE-404",
   ],
 };
 

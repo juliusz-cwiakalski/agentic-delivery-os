@@ -7,7 +7,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The implemented M0-S10 surface: pm-notes schema and variant conformance through a read-only lint command with named targets, the phase command family as the only schema-validated write path for phase state with a nine-row idempotency matrix, delivery-registry transition records and a derived phase-state projection over the state layer, the pinned evidence vocabulary, the five lint error rows, and the variant-era corpus boundary with an explicit exclusion manifest."
 links:
-  related_changes: ["GH-177", "GH-179"]
+  related_changes: ["GH-177", "GH-178", "GH-179"]
   related_decisions: ["ADR-0003", "TDR-0005"]
 ---
 
@@ -117,3 +117,7 @@ Corpus acceptance derives its member set at run time from change folders dated 2
 - [Branding seam](feature-branding-seam.md) — the injected identity behind the CLI surface.
 - [Change lifecycle guide](../../guides/change-lifecycle.md) — the canonical eleven phases behind the `full` variant.
 - [Glossary](../../overview/glossary.md) — pm-notes, variant, ledger, and registry terms.
+
+## Read-only consumers
+
+`verify change` and the lifecycle gate of [Verify Gates](feature-verify-gates.md) consume the same declaration, registry, and fold read-only; neither writes or rebuilds the projection. The shared read yields the structured `VerifyLedgerEvaluation`, which `verify change` wraps for its delivery-result tuple and the lifecycle gate consumes directly.

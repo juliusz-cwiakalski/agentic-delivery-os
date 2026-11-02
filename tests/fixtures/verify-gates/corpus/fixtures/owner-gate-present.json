@@ -1,0 +1,5 @@
+{
+  "id": "owner-gate-present",
+  "builder": "owner-gate-present",
+  "canary": "corpus-canary-owner-gate-present"
+}

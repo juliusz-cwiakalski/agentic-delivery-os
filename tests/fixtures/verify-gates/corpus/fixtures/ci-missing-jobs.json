@@ -1,0 +1,5 @@
+{
+  "id": "ci-missing-jobs",
+  "builder": "ci-missing-jobs",
+  "canary": "corpus-canary-ci-missing-jobs"
+}

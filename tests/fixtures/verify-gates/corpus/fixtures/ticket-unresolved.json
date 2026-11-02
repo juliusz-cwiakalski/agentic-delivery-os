@@ -1,0 +1,5 @@
+{
+  "id": "ticket-unresolved",
+  "builder": "ticket-unresolved",
+  "canary": "corpus-canary-ticket-unresolved"
+}

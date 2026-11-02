@@ -1,0 +1,5 @@
+{
+  "id": "owner-gate-absent",
+  "builder": "owner-gate-absent",
+  "canary": "corpus-canary-owner-gate-absent"
+}

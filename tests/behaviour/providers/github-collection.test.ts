@@ -246,3 +246,13 @@ describe("TC-STATUS-021 bounded GitHub collection reads", () => {
     expect(failing.ok).toBe(false);
   });
 });
+describe("GH-178 collection 404 absence", () => {
+  test("a 404 list read returns provider.not-found", async () => {
+    const transport = createFixtureTransport([{ url: pullsUrl(100), body: {}, status: 404 }]);
+    const client = createGitHubClient({ instance, credentials, repository, transport });
+    const result = await client.listDeliveryRequests(100);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("provider.not-found");
+    expect(transport.requests).toHaveLength(1);
+  });
+});

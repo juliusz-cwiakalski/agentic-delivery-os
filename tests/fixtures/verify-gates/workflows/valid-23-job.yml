@@ -1,0 +1,27 @@
+name: CI
+on:
+  pull_request:
+jobs:
+  job-01: { name: job-01, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-02: { name: job-02, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-03: { name: job-03, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-04: { name: job-04, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-05: { name: job-05, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-06: { name: job-06, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-07: { name: job-07, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-08: { name: job-08, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-09: { name: job-09, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-10: { name: job-10, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-11: { name: job-11, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-12: { name: job-12, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-13: { name: job-13, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-14: { name: job-14, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-15: { name: job-15, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-16: { name: job-16, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-17: { name: job-17, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-18: { name: job-18, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-19: { name: job-19, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-20: { name: job-20, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-21: { name: job-21, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-22: { name: job-22, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }
+  job-23: { name: job-23, runs-on: ubuntu-latest, steps: [{ run: echo ok }] }

@@ -12,6 +12,7 @@ import type {
   CloseoutReadObservation,
   CloseoutReverseDependentObservation,
   DeliveryRequest,
+  DeliveryRequestMergeableState,
   DeliveryThread,
   PipelineJobState,
   PipelineRun,
@@ -91,10 +92,34 @@ const jobStateFor = (
   }
 };
 
+const countField = (record: Readonly<Record<string, unknown>>, key: string): number | undefined => {
+  const value = record[key];
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+};
+
+/**
+ * The fixed mergeability precedence (GH-178 F-12): never defaults to mergeable.
+ */
+const mergeableStateOf = (
+  record: Readonly<Record<string, unknown>>,
+): DeliveryRequestMergeableState => {
+  const mergeable = record.mergeable;
+  const state = stringField(record, "mergeable_state");
+  if (mergeable === false && (state === "clean" || state === "dirty")) return "conflicting";
+  if (state === "dirty") return "conflicting";
+  if (state === "blocked" || state === "behind" || state === "unstable" || state === "draft") {
+    return "not-mergeable";
+  }
+  if (mergeable === true && (state === undefined || state === "clean")) return "mergeable";
+  if (mergeable !== true) return "unknown";
+  return "unknown";
+};
+
 /** Normalize one GitHub pull request. */
 export const normalizePullRequest = (
   payload: unknown,
   context: GithubNormalizationContext,
+  options: { readonly includeGateFacts?: boolean } = {},
 ): ProviderReadResult<DeliveryRequest> => {
   if (!isRecord(payload)) return providerPayloadFailure("GitHub PR payload is not an object");
   const entityId = identityField(payload, "number");
@@ -129,6 +154,20 @@ export const normalizePullRequest = (
       })
     : [];
 
+  const sourceHeadSha = head === undefined ? undefined : stringField(head, "sha");
+  const gateFacts =
+    options.includeGateFacts === false
+      ? {}
+      : {
+          ...(countField(payload, "commits") === undefined
+            ? {}
+            : { commitCount: countField(payload, "commits") as number }),
+          ...(countField(payload, "changed_files") === undefined
+            ? {}
+            : { changedFileCount: countField(payload, "changed_files") as number }),
+          mergeableState: mergeableStateOf(payload),
+        };
+
   return {
     ok: true,
     value: {
@@ -138,6 +177,8 @@ export const normalizePullRequest = (
       reviewState,
       threads,
       ...(headSha === undefined ? {} : { headSha }),
+      ...(sourceHeadSha === undefined ? {} : { sourceHeadSha }),
+      ...gateFacts,
     },
   };
 };
@@ -300,7 +341,7 @@ export const normalizeGithubPullList = (
   }
   const items: DeliveryRequest[] = [];
   for (const entry of payload) {
-    const normalized = normalizePullRequest(entry, context);
+    const normalized = normalizePullRequest(entry, context, { includeGateFacts: false });
     if (!normalized.ok) return normalized;
     items.push(normalized.value);
   }

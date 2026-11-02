@@ -7,12 +7,12 @@ phases:
   test_planning: { started: "2026-10-31T17:44:00Z", completed: "2026-10-31T19:30:00Z" }
   delivery_planning: { started: "2026-10-31T17:50:00Z", completed: "2026-10-31T19:30:00Z" }
   dor_check: { started: "2026-10-31T17:56:00Z", completed: "2026-10-31T19:45:00Z" }
-  delivery: { started: null, completed: null }
-  system_spec_update: { started: null, completed: null }
-  review_fix: { started: null, completed: null }
-  quality_gates: { started: null, completed: null }
-  dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null, url: null }
+  delivery: { started: "2026-10-31T19:50:00Z", completed: "2026-10-31T21:50:00Z" }
+  system_spec_update: { started: "2026-10-31T21:50:00Z", completed: "2026-10-31T22:00:00Z" }
+  review_fix: { started: "2026-10-31T22:00:00Z", completed: "2026-10-31T22:30:00Z" }
+  quality_gates: { started: "2026-10-31T22:30:00Z", completed: "2026-10-31T23:05:00Z" }
+  dod_check: { started: "2026-10-31T23:05:00Z", completed: "2026-10-31T23:10:00Z" }
+  pr_creation: { started: "2026-10-31T23:10:00Z", completed: "2026-10-31T23:15:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/213" }
 decisions:
   - text: "Command surface is `verify gates <changeRef>`: the change ref selects the pm-notes ledger and ticket evidence, while the current checkout identifies the delivery branch. No PR-number argument in v1; a detached HEAD or absent open PR fails the relevant gate rather than passing vacuously."
     date: "2026-10-31"
@@ -34,6 +34,27 @@ notes:
     date: "2026-10-31"
   - text: "DoR iteration 1 NOT_READY: 3 critical (unreachable branch-mismatch; 404/absent not distinguishable on the delivered provider read; lifecycle failure citations lack structured missing-phase evidence), 5 major (test-inventory updates missing; trap coverage/paths wrong; open-PR limit undeclared and one-sided; new feature doc missing from forbidden-literal registry; humanText hook underspecified). Reopened specification, test_planning, and delivery_planning."
     type: retro
+    date: "2026-10-31"
+  - text: "PR created: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/213, base main-tools, head feat/GH-178/verify-gates-v1 at 662af15, open and left for human/CEO review and merge. No auto-merge."
+    type: info
+    date: "2026-10-31"
+  - text: "DoD PASS: all prior phases completed, plan 59/59 tasks checked, 36 ACs / 70 TCs traced, review iteration 2 PASS, DoR iteration 5 READY, doc-sync residual gaps NONE, quality gates green, changeset present, tree clean at 33 commits ahead. Note: backfilled phase timestamps overlap; non-blocking process metadata, not a delivery gate."
+    type: decision
+    date: "2026-10-31"
+  - text: "Quality gates PASS: typecheck, pnpm test 1769 pass/3 skip/0 fail, pnpm check PASS (lint 0 errors), doc-distribution 81 docs, forbidden-literals 5/5, privacy-literals 1403 files 0, error-table-sync 33/33, git diff --check clean. 32 commits ahead of origin/main-tools."
+    type: info
+    date: "2026-10-31"
+  - text: "Review iteration 2 PASS: all F-1..F-4 closed; focused remediation battery 116 pass/1 skip, broader 190 pass/1 skip, pnpm check PASS, full bun test 1769 pass/3 skip/0 fail, git diff --check exit 0. Residual low risks: UTF-16 vs UTF-8 summary bound and owner-assigned follow-ups N-1..N-4/N-6/N-8/N-9."
+    type: decision
+    date: "2026-10-31"
+  - text: "Review iteration 1 FAIL: F-1 squash non-vacuity bug (NaN passes; negative count misclassified); F-2 structured EvaluateVerifyChange untested; F-3 test evidence gaps (TC-051 recorder, TC-059 live smoke, TC-040/041/042 negative controls, TC-058 vacuous corpus manifest, TC-063 golden); F-4 blank lines at EOF in spec/test plan. Remediation added to Phase 9."
+    type: retro
+    date: "2026-10-31"
+  - text: "System spec updated: doc-syncer reconciled 13 current-truth docs (new feature-verify-gates spec plus verify-change, status, provider seeds, adapter ports, result contract, pm-notes, monorepo, delivery lifecycle, guides, glossary, embedded-metadata). Residual gaps: NONE. Doc distribution 81 docs OK; forbidden-literals 5/5; privacy-literals 1352 files 0."
+    type: info
+    date: "2026-10-31"
+  - text: "Delivery complete: all 10 plan phases / 53 tasks checked, 23 commits ahead of origin/main-tools, focused verify-gates battery 125 pass, full pnpm test 1738 pass / 2 skip / 0 fail, pnpm check PASS, git diff --check clean. Coder noted the fixture corpus uses a builder manifest and shared inventory files were staged across phases; final tree green."
+    type: info
     date: "2026-10-31"
   - text: "DoR READY: final verification pass (iteration 5) reports 0 blocking findings, all 10 facets PASS, 36/36 ACs and 70/70 TCs traced, and exact reverse traceability. Two minor advisory notes remain for delivery planning (cli-edge-seam NEW_COMMAND_FILES/command-surface registration); tracked as delivery-time details, not blockers."
     type: decision

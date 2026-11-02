@@ -91,7 +91,16 @@ describe("TC-GITHUB-004 complete status/verify input set", () => {
       const workItem = requireValue(await client.readWorkItem(ISSUE_NUMBER), "work item");
 
       expect(Object.keys(request).sort()).toEqual(
-        ["headSha", "identity", "reviewState", "sourceRef", "targetRef", "threads"].sort(),
+        [
+          "headSha",
+          "identity",
+          "mergeableState",
+          "reviewState",
+          "sourceHeadSha",
+          "sourceRef",
+          "targetRef",
+          "threads",
+        ].sort(),
       );
       expect(Array.isArray(runs)).toBe(true);
       expect(Object.keys(workItem)).toContain("identity");
@@ -129,5 +138,23 @@ describe("TC-GITHUB-004 complete status/verify input set", () => {
     } finally {
       guard.restore();
     }
+  });
+});
+describe("GH-178 HTTP 404 is definitive absence, not a payload failure", () => {
+  test("a 404 detail read returns provider.not-found", async () => {
+    const transport = createFixtureTransport([{ url: pullUrl, body: {}, status: 404 }]);
+    const client = createGitHubClient({ instance, credentials, repository, transport });
+    const result = await client.readDeliveryRequest(PULL_NUMBER);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("provider.not-found");
+    expect(transport.requests).toHaveLength(1);
+  });
+
+  test("a non-404 failure stays provider.payload.invalid", async () => {
+    const transport = createFixtureTransport([{ url: pullUrl, body: {}, status: 500 }]);
+    const client = createGitHubClient({ instance, credentials, repository, transport });
+    const result = await client.readDeliveryRequest(PULL_NUMBER);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("provider.payload.invalid");
   });
 });
