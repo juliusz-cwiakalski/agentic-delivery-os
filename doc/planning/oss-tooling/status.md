@@ -1,0 +1,87 @@
+# OSS tooling status: M0 stories delivered, milestone exit pending
+
+Date: 2026-11-01. Owner-of-record: CEO agent under user-delegated autonomous
+authority. Source of truth for scope and order: [backlog.md](backlog.md) and
+[backlog-ranking.md](backlog-ranking.md). This file is a status snapshot; the
+backlog remains canonical.
+
+## Story delivery: 20/20 complete
+
+All twenty M0 stories were delivered through the full 11-phase lifecycle and
+squash-merged to `main-tools` (PRs #191-#199, #201-#203, #207-#209,
+#211-#215, plus maintenance PR #210). Story delivery is not milestone exit.
+
+## Milestone exit: pending
+
+The roadmap's M0 exit criteria (roadmap.md, Milestone 0 section) are:
+1. Dual-run pilot: the pilot repository runs status, verify change, provider,
+   and closeout beside the bash stack (shell stays authoritative), with zero
+   false-success incidents on pilot paths over two weeks.
+2. This repository adopts the scaffold (met: all M0 work landed in it).
+3. Decision acceptance recorded: ADR-0003 is Accepted; ADR-0005, ADR-0007,
+   TDR-0003, TDR-0004, ADR-0008, ADR-0009, ODR-0002, and ODR-0003 are
+   Proposed, and the GH-186 register explicitly leaves owner acceptance
+   pending (merge does not auto-accept). CEO-agent ratifications recorded at
+   PR review (ADR-0007, TDR-0005, TDR-0006) do not substitute for recorded
+   owner acceptance of the Proposed set.
+
+Per backlog-ranking.md, M1 delivery starts after the M0 exit criteria; the
+dual-run pilot is the critical path and can start now that the M0 surfaces
+exist.
+
+| Story | Delivery | Story | Delivery |
+|---|---|---|---|
+| S1 scaffold | PR #191 | S11 session-admin port | PR #212 |
+| S2 branding seam | PR #192 | S12 primitive/credential ports | PR #196 |
+| S3 result contract | PR #193 | S13 provider v1 | PR #202 |
+| S4 config layer | PR #194 | S14 closeout v1 | PR #215 |
+| S5 state layer | PR #195 | S15 privacy/no-cloud guards | PR #203 |
+| S6 status v1 | PR #209 | S16 interim mitigations | PR #197 |
+| S7 queue ready | PR #214 | S17 decisions + measurement baseline | PR #207 |
+| S8 verify change | PR #201 | S18 license registry | PR #208 |
+| S9 verify gates v1 | PR #213 | S19 client seeds + traps | PR #198 |
+| S10 lint + phases | PR #199 | S20 conformance suite | PR #211 |
+
+(S9 landed after S19/S10 in ranking order; the table lists story numbers,
+delivery order is in the ranking file.)
+
+Key ratified decisions along the way: ADR-0007 provider engine (R2,
+fail-closed defaults, owner-confirmed OQ-2/OQ-3), TDR-0005 exit taxonomy
+(state-unverified to exit 2; token-level dual-run parity binding), TDR-0006
+privacy guard mechanics, TDR-0007 license-gate compound SPDX evaluation.
+
+Delivery process state: parallel worktree protocol proven to four concurrent
+deliveries; coding rules in force ([.ai/rules/typescript.md] binding for
+packages/tests/scripts-checks, loaded by coder and fixer before editing;
+review guidance aligned mechanical-first); permanent test suites assert tree
+invariants, never moving-base diffs.
+
+## Proposed next steps (decision for the owner)
+
+1. **Start the dual-run pilot now** (critical path for M0 exit): run
+   status, verify change, provider, and closeout beside the bash stack on
+   the pilot paths, accruing the two-week zero-false-success evidence. The
+   M0 surfaces exist; every day of delay moves M1.
+2. **Owner acceptance pass** (required for exit): record acceptance or
+   change requests for the Proposed records (ADR-0005, ADR-0007, TDR-0003,
+   TDR-0004, ADR-0008, ADR-0009, ODR-0002, ODR-0003) in the decisions
+   register. Short review; the register links every record.
+3. **M1 preparation, gated delivery**: create the M1 milestone and its 12
+   issues from the backlog in ranking order so the queue is ready, but hold
+   M1 dispatch until the exit criteria are met or the owner explicitly
+   approves starting M1 delivery before exit (recorded as a gate change).
+4. **Memory consolidation pass** (housekeeping): run the consolidation
+   curator over `.ai/memory` to promote the CEO's M0 captures into
+   `lessons/` with proper ids and rebuild the index.
+5. **Parked owner-gated follow-ups** (from M0 PRs): privacy hashed-literal
+   population via the stdin authoring mode; `test-` marker residual
+   confirmation; pnpm 12.x bump retry; business decisions D11-D14 at M4.
+6. **M3-S4 follow-up pool** (fold into that ticket at creation): anchored
+   header-exemption patterns; named failure on git listing failures;
+   exit-literal scan Bun/Deno blind spots; AppErrorCode branded type;
+   cyclic-payload fixture; decision-index validator (new from the TDR
+   collision class).
+7. **Delivery-infra hardening tickets** (small, schedule freely):
+   tracker-poll retry/backoff tuning in deliver-ticket; review-thread
+   resolution helper; perf-test noise pattern (best-of-n) applied to the
+   remaining timing-sensitive suites.
