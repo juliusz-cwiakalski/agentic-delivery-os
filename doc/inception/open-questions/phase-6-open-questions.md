@@ -87,6 +87,15 @@ committed files.
 
 ## Carried questions, not newly allocated
 
+### Human Gate 6 approval, 2026-11-02
+
+The owner explicitly approved Phase 6 readiness, carrying the separate
+owner-gated matters forward, and authorized Phase 7. This approves the readiness
+report only. Proposed records, license determination, session-admin privacy
+sign-off, NFR targets and pilot outcomes retain their separate approval/evidence
+requirements. The technical rerun below is the basis of that approval; its
+pending-human-gate wording is a historical observation, not the current status.
+
 ### Current rerun exit, 2026-11-02
 
 CEO disposition `dde826a` resolves the eleven newly exposed literal sites without
