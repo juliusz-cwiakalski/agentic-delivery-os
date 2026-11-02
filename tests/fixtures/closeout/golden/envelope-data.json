@@ -1,0 +1,324 @@
+{
+  "schemaId": "delivery.closeout.v1",
+  "command": "closeout",
+  "workItemRef": "GH-183",
+  "mode": "plan",
+  "baseRef": "main-tools",
+  "deliveryRequest": {
+    "systemName": "github",
+    "entityId": "504",
+    "sourceRef": "feat/GH-183/closeout-v1-branch-cleanup",
+    "targetRef": "main-tools",
+    "headSha": "2222222222222222222222222222222222222222"
+  },
+  "steps": [
+    {
+      "stepId": "ticket-to-done",
+      "label": "ticket to done",
+      "outcome": "would-apply",
+      "operations": [
+        {
+          "operationId": "83d12e196b00271373033c4c7bcdc3731c4c9c039de7623b8a1869b4748c996d",
+          "name": "transition-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "183"
+          },
+          "arguments": {
+            "deliveryState": "done"
+          }
+        }
+      ],
+      "evidence": [
+        {
+          "name": "operation",
+          "value": "transition-work-item"
+        }
+      ]
+    },
+    {
+      "stepId": "lifecycle-label-sweep",
+      "label": "lifecycle label sweep",
+      "outcome": "would-apply",
+      "operations": [
+        {
+          "operationId": "0b25e9f3df959a0474ae59ff254854619c709d202676442cd628f50359237b8f",
+          "name": "write-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "183"
+          },
+          "arguments": {
+            "remove": ["planning"]
+          }
+        },
+        {
+          "operationId": "4dcd18b488fb49fc08908a727aa269faa6a5edb1b98c012317413c5f9e3ec1e7",
+          "name": "write-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "183"
+          },
+          "arguments": {
+            "remove": ["spec-ready"]
+          }
+        },
+        {
+          "operationId": "6682c4e56ad32aebafd27f2263e0591d860e7b889c59c6c5d12db5acb67e3549",
+          "name": "write-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "183"
+          },
+          "arguments": {
+            "remove": ["readiness-passed"]
+          }
+        },
+        {
+          "operationId": "8fb5719b4d6a7bdf0691d7f110652318ced4a5c5f0389423dc335581917485d1",
+          "name": "write-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "183"
+          },
+          "arguments": {
+            "remove": ["in-progress"]
+          }
+        },
+        {
+          "operationId": "b083a24b42d0ed3caec6c08de37de8e384923b1671884657d65c6ab0e4583c5c",
+          "name": "write-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "183"
+          },
+          "arguments": {
+            "remove": ["review"]
+          }
+        },
+        {
+          "operationId": "59319ddda99b481cee0ac8aa2110a7013e103134416fe47a64a7f1b6e821d057",
+          "name": "write-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "183"
+          },
+          "arguments": {
+            "remove": ["blocked"]
+          }
+        },
+        {
+          "operationId": "cf914e3a077d61ae936467baaa5a59fa26b41d5370928d8c8ff2cedf80dc00b7",
+          "name": "write-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "183"
+          },
+          "arguments": {
+            "add": ["delivered"]
+          }
+        }
+      ],
+      "evidence": [
+        {
+          "name": "present",
+          "value": 8
+        },
+        {
+          "name": "kept",
+          "value": 2
+        },
+        {
+          "name": "removed",
+          "value": 6
+        }
+      ]
+    },
+    {
+      "stepId": "unassign",
+      "label": "unassign",
+      "outcome": "would-apply",
+      "operations": [
+        {
+          "operationId": "f27c63c32360be48cf34e4c09f95e08b536554cd8069e6e4c3d9dc1269dfc933",
+          "name": "write-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "183"
+          },
+          "arguments": {
+            "assignee": "none"
+          }
+        }
+      ],
+      "evidence": [
+        {
+          "name": "operation",
+          "value": "write-work-item"
+        }
+      ]
+    },
+    {
+      "stepId": "owed-flip-sweep",
+      "label": "owed-flip sweep",
+      "outcome": "satisfied",
+      "operations": [],
+      "evidence": [
+        {
+          "name": "evaluated",
+          "value": 0
+        },
+        {
+          "name": "flipped",
+          "value": 0
+        },
+        {
+          "name": "skipped",
+          "value": 0
+        },
+        {
+          "name": "openBlockers",
+          "value": 0
+        },
+        {
+          "name": "maxOpenBlockers",
+          "value": 0
+        },
+        {
+          "name": "unavailableSignals",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "stepId": "comment-resolution",
+      "label": "comment resolution",
+      "outcome": "would-apply",
+      "operations": [
+        {
+          "operationId": "0eea6e915f448545fe99a7ce4938a0a1dd54dc2bea07bb40381cfe0404f28584",
+          "name": "resolve-delivery-thread",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "504"
+          },
+          "arguments": {
+            "deliveryRequest": {
+              "systemName": "github",
+              "entityId": "504"
+            },
+            "threadId": "PRRT_2"
+          }
+        }
+      ],
+      "evidence": [
+        {
+          "name": "unresolved",
+          "value": 1
+        },
+        {
+          "name": "resolved",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "stepId": "checkout-restore",
+      "label": "checkout restore",
+      "outcome": "would-apply",
+      "operations": [
+        {
+          "operationId": "df75e6f6076c8ce40560cca93969c9a24d33572d2624e185fe4622f6b1ef608c",
+          "name": "restore-checkout",
+          "engine": "git",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "git",
+            "entityId": "main-tools"
+          },
+          "arguments": {
+            "baseRef": "main-tools"
+          }
+        }
+      ],
+      "evidence": [
+        {
+          "name": "checkout",
+          "value": "delivery-branch"
+        },
+        {
+          "name": "baseRef",
+          "value": "main-tools"
+        }
+      ]
+    },
+    {
+      "stepId": "branch-cleanup",
+      "label": "squash-safe local branch cleanup",
+      "outcome": "would-apply",
+      "operations": [
+        {
+          "operationId": "f29b39c9f0e1fe7eba0099f89f539620a339b509e7ba03d55dcd34d22f4a1afe",
+          "name": "delete-branch",
+          "engine": "git",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "git",
+            "entityId": "feat/GH-183/closeout-v1-branch-cleanup"
+          },
+          "arguments": {
+            "branch": "feat/GH-183/closeout-v1-branch-cleanup"
+          }
+        }
+      ],
+      "evidence": [
+        {
+          "name": "branch",
+          "value": "feat/GH-183/closeout-v1-branch-cleanup"
+        },
+        {
+          "name": "head",
+          "value": "2222222222222222222222222222222222222222"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "totalOperations": 12,
+    "counts": {
+      "would-apply": 6,
+      "satisfied": 1,
+      "skipped-gap": 0,
+      "skipped-noop": 0,
+      "would-refuse": 0,
+      "applied": 0,
+      "failed": 0,
+      "refused": 0
+    },
+    "gaps": 0,
+    "noops": 0,
+    "failures": 0,
+    "refusals": 0
+  },
+  "ledgerKey": "closeout.operations:GH-183"
+}

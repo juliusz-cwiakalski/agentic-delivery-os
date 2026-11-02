@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-ADAPTER-PORTS
 status: Current
 created: 2026-10-30
-last_updated: 2026-10-31
+last_updated: 2026-11-01
 owners: ["engineering"]
 service: delivery-os
-summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, the read-only SessionStorePort and mutating SessionAdminPort implemented over the opencode-CLI-backed adapters ./session subpath, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec, required injected content policy, fail-closed content-policy failure, and visible graceful degradation."
+summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, the additive optional DeliveryRequest.headSha merged-head identity and resolve-delivery-thread operation, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, the read-only SessionStorePort and mutating SessionAdminPort implemented over the opencode-CLI-backed adapters ./session subpath, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec, required injected content policy, fail-closed content-policy failure, and visible graceful degradation."
 links:
-  related_changes: ["GH-174", "GH-179", "GH-180", "GH-181", "GH-182", "GH-184", "GH-188", "GH-189"]
-  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0010", "TDR-0005"]
+  related_changes: ["GH-174", "GH-179", "GH-180", "GH-181", "GH-182", "GH-183", "GH-184", "GH-188", "GH-189"]
+  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0010", "TDR-0005", "TDR-0008"]
   contracts:
     - "packages/core/src/contracts/envelope.ts"
     - "packages/core/src/contracts/session.ts"
@@ -29,8 +29,7 @@ The embedded metadata envelope v1 is a versioned data contract in core `./contra
 
 The session-administration ports are implemented. `SessionStorePort` in core `./contracts` carries the read-only `size` and `list` surface that preserves ADR-0003's `SessionStore` semantics. `SessionAdminPort` extends that read surface with the mutating `prune` and `reboot` operations. Both are implemented in the adapters `./session` subpath over an injected `OpencodeSessionIo` seam that reaches the opencode session database only through the opencode CLI; the subpath is a production I/O home. The metadata-only guarantee and the ADR-0003 C-11 privacy sign-off gate remain binding for every field the ports surface. The delivered `db` command family is documented in [Session Database Administration](feature-session-database-admin.md).
 
-The surrounding workspace is described in [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md); the provider engine that consumes the credential port for quota authorization in [Provider Engine](feature-provider-engine.md); the client seeds that consume this substrate in [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md); the failure identity and redaction boundary in [Result Contract and Error Table](feature-result-contract.md); environment-only secrets and configuration acquisition in [Configuration Layer and Inspection](feature-config-layer.md); brand-derived values in [Branding Seam and Working Name](feature-branding-seam.md). Package placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md). The harness adapter contract is recorded in [ADR-0008](../../decisions/ADR-0008-harness-adapter-contract.md) and implemented in M1-S11.
-The surrounding workspace is described in [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md); the provider engine that consumes the credential port for quota authorization in [Provider Engine](feature-provider-engine.md); the client seeds that consume this substrate in [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md); the provider-agnostic flow suite that proves them in [Adapter Conformance Suite](feature-adapter-conformance.md); the failure identity and redaction boundary in [Result Contract and Error Table](feature-result-contract.md); environment-only secrets and configuration acquisition in [Configuration Layer and Inspection](feature-config-layer.md); brand-derived values in [Branding Seam and Working Name](feature-branding-seam.md). Package placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md). The harness adapter contract is recorded in [ADR-0008](../../decisions/ADR-0008-harness-adapter-contract.md) and implemented in M1-S11.
+The surrounding workspace is described in [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md); the provider engine that consumes the credential port for quota authorization in [Provider Engine](feature-provider-engine.md); the client seeds that consume this substrate in [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md); the provider-agnostic flow suite that proves them in [Adapter Conformance Suite](feature-adapter-conformance.md); the closeout transaction that consumes the write path in [Closeout Transaction](feature-closeout.md); the failure identity and redaction boundary in [Result Contract and Error Table](feature-result-contract.md); environment-only secrets and configuration acquisition in [Configuration Layer and Inspection](feature-config-layer.md); brand-derived values in [Branding Seam and Working Name](feature-branding-seam.md). Package placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md). The harness adapter contract is recorded in [ADR-0008](../../decisions/ADR-0008-harness-adapter-contract.md) and implemented in M1-S11.
 
 ## Business Context
 
@@ -61,7 +60,7 @@ The v1 port set is bounded to the catalogue's adapter-interaction rows typed at 
 | `WorkItem` | Normalized ticket: provider-qualified identity, title, native and delivery status, labels, optional assignee, typed relations, optional comments, and optional activity timestamp. Optional fields share one absence rule: absent = the provider did not supply the signal, so the value is unknown — never derived, fabricated, or collapsed into an empty value. `comments` absent = the comment set is unknown (omitted or not fetched); present — including an explicitly empty array — = the provider-asserted set. `updatedAt` is the provider-native last-modified timestamp copied verbatim as an ISO-8601 UTC string; absent = activity unknown. |
 | `WorkflowMap` | Native status to delivery-state alias mappings, each naming its transition mechanism. |
 | `WorkItemRelation` | Closed relation kinds — `parent`, `child`, `blocks`, `blocked-by`, `relates-to` — targeting a provider-qualified identity. |
-| `DeliveryRequest` | Delivery request (PR/MR) view: identity, source and target refs, review state, review threads. |
+| `DeliveryRequest` | Delivery request (PR/MR) view: identity, source and target refs, review state, review threads, and an optional provider-resolved merged head commit (`headSha`). `headSha` absent means the provider did not supply the merged-head signal (unknown); it is never guessed or derived. |
 | `PipelineRun` | Pipeline, job states, and trace-evidence references — never a bare status colour. |
 | `RetryPolicy` | Bounded attempts and backoff for known-safe operations. Unsafe writes carry no retry policy rather than an empty or permissive one. |
 | `IdempotencyKey` | Key value plus scope, making an external write safely retryable. |
@@ -85,11 +84,24 @@ The public, semver-visible mutating `SessionAdminPort` is recorded in [ADR-0010]
 
 `AdapterCapabilityDeclaration` declares four typed collections:
 
-- `supportedOperations` — the operations the adapter supports, drawn from the closed `ADAPTER_OPERATIONS` set (`read-work-item`, `write-work-item`, `transition-work-item`, `read-delivery-request`, `write-delivery-request`, `read-pipeline-run`, `write-comment`).
+- `supportedOperations` — the operations the adapter supports, drawn from the closed `ADAPTER_OPERATIONS` set (`read-work-item`, `write-work-item`, `transition-work-item`, `read-delivery-request`, `write-delivery-request`, `read-pipeline-run`, `write-comment`, `resolve-delivery-thread`).
 - `declaredGaps` — explicit `{ operation, reason }` records. Reasons are `provider-unsupported`, `adapter-not-implemented`, or `plan-restriction`.
 - `writableCarriers` and `readableCarriers` — the metadata carrier kinds the adapter can write and read.
 
 An operation absent from `supportedOperations` is unsupported. Declared gaps add the explicit reason for known limitations; they never turn an undeclared operation into a success. Parity beyond the flags is not representable. Carrier selection is typed against the adapter's declared set: `CarrierSelectionInput<Declared>` admits only `Declared[number]`, so an undeclared carrier literal or a widened `string[]` set is rejected at compile time. The closed carrier kinds are `invisible-comment-block`, `provider-custom-field`, and `compact-marker`.
+
+### Additive v1 contract extensions
+
+The contract evolves additively within v1, and a decision record governs each adapter-contract change. Two closeout extensions are delivered under [TDR-0008](../../decisions/TDR-0008-additive-adapter-contract-extensions-closeout-v1.md):
+
+- **`DeliveryRequest.headSha`** — an optional provider-resolved merged-head commit copied verbatim. Absent means unknown. Consumers may compare it for exact equality with a local branch head; when it is absent, a destructive branch action refuses rather than guesses.
+- **`resolve-delivery-thread`** — one member of the closed operation set, meaning "resolve one review thread on a delivery request" with canonical arguments `{ deliveryRequest, threadId }`. GitHub implements it through the existing injected transport; Jira declares `provider-unsupported`; GitLab declares `adapter-not-implemented`.
+
+Neither extension bumps the schema version or requires a migration. The optional field is producer-compatible; the operation addition widens a closed compile-time union, so exhaustive consumers and the conformance flow registry update in the same change. An operation's presence in the enum never implies adapter support.
+
+The shared injectable provider transport used by the client subpaths is widened additively to carry the closed methods `GET`, `POST`, `PATCH`, `PUT`, and `DELETE`, an optional serialized request body, and an optional per-request timeout (production default: the 30 s closeout operation timeout). This is an adapter-I/O refinement: it adds no new transport, credential path, network location, or closed operation.
+
+The closeout reads refine the discriminated observation without changing the adapter contract. A work-item observation may carry `signals` for label and relation availability: `observed` for a provider-supplied container (including an empty array) and `unavailable` when the container is omitted. The bounded reverse-dependent read uses `CloseoutReverseDependentObservation`, whose closed set adds `no-surface` so an absent surface is a provider-level gap distinct from a currently `unavailable` signal. Both are read-observation refinements: they add no closed operation, primitive-port field, or schema-version bump.
 
 ### Credential resolution
 
@@ -194,12 +206,14 @@ An unresolvable credential carries the synchronized error-table row `config.cred
 |------|----------------|
 | `packages/core/src/contracts/ports.ts` | The nine v1 primitive port types and their supporting normalized value types. |
 | `packages/core/src/contracts/adapter-capabilities.ts` | `ADAPTER_OPERATIONS`, `CARRIER_KINDS`, capability/gap types, and declared-carrier selection types. |
+| `packages/core/src/contracts/closeout.ts` | The `delivery.closeout.v1` plan/operation/outcome vocabulary, the work-item and reverse-dependent read observations (`CloseoutReadObservation`, `CloseoutReverseDependentObservation`, `CLOSEOUT_REVERSE_DEPENDENT_OBSERVATIONS`), and the closeout runtime contracts; types and `as const` data only. |
 | `packages/core/src/contracts/credentials.ts` | `CredentialPort`, `CredentialReference`, `CredentialSourceKey`, resolution result, and the reified missing-credential failure. |
 | `packages/core/src/contracts/envelope.ts` | Envelope schema id, size bound, kinds, closed payload types, degradation reasons, agent-facing comment views, and the `ContentPolicyVerdict` / `EnvelopeContentPolicy` contract types. |
 | `packages/core/src/contracts/session.ts` | `delivery.session-admin.v1` vocabulary, bounds, item/result shapes, read-only `SessionStorePort`, and mutating `SessionAdminPort`; types and `as const` data only. |
 | `packages/core/src/domain/session-admin.ts` | Pure session-admin policy: cutoff, live boundary, cold/live/leaf predicate, ordering, capping, and deterministic human rendering. |
 | `packages/adapters/src/session/index.ts` | Production `OpencodeSessionIo` and the `SessionStorePort` / `SessionAdminPort` implementations over the opencode CLI. |
-| `packages/core/src/contracts/index.ts` | The `core ./contracts` export surface for the ports, capability, credential, envelope, and session-admin contracts. |
+| `packages/adapters/src/git/index.ts` | The dedicated branch/checkout seam: fixed-argv, no-shell, local-only child processes with a bounded timeout; checkout facts, branch reads, worktree and cleanliness checks, checkout restore, and local branch deletion. It is separate from the read-only repository metadata reader. |
+| `packages/core/src/contracts/index.ts` | The `core ./contracts` export surface for the ports, capability, closeout, credential, envelope, and session-admin contracts. |
 | `packages/adapters/src/credentials/index.ts` | Environment-backed credential port, injected-environment factory, production process-environment wrapper, and source-key derivation. |
 | `packages/adapters/src/io/envelope-codec.ts` | Pure envelope codec: serialize, parse, strip, closed-payload validation, required content-policy evaluation, raw-carrier escape hatch, and carrier constants. |
 | `packages/adapters/src/io/privacy-rules.ts` | Pure, dependency-free privacy rule definitions, suppression classes, normalization, matchers, caps, and identifier fingerprint. |
@@ -224,7 +238,7 @@ An unresolvable credential carries the synchronized error-table row `config.cred
 | `ENVELOPE_KINDS` | `work-item-comment` | Closed v1 kind set. |
 | `DEGRADATION_REASONS` | `missing`, `malformed`, `wrong-kind`, `unknown-version` | Closed, mechanically detectable reason set. |
 | `CARRIER_KINDS` | `invisible-comment-block`, `provider-custom-field`, `compact-marker` | Closed carrier-kind set. |
-| `ADAPTER_OPERATIONS` | seven operations | Closed adapter operation set. |
+| `ADAPTER_OPERATIONS` | eight operations | Closed adapter operation set, including `resolve-delivery-thread`. |
 
 Version policy: v1 is the only schema version, so any version string outside the known set binds to the `unknown-version` degradation path. The standing read window is current-plus-all-older; narrowing it or retiring a version requires a future specification change.
 
@@ -243,7 +257,7 @@ Version policy: v1 is the only schema version, so any version string outside the
 - Secret material is reachable only through the credential port. The environment-backed implementation is the sole `credential-material` allowlist entry.
 - The session-database ports remain metadata-only: identifiers, counts, byte sizes, timestamps, booleans, and the runtime-resolved store path; no titles, prompts, message bodies, part data, credentials, environment values, or command arguments. The ADR-0003 C-11 privacy sign-off is required before the `db` administration engine ships and remains an owner merge gate.
 - The session adapter adds no secret-read allowlist entry and reads no ambient environment; the executable and environment are injected through the composition.
-- The secret-read boundary closes the ambient channel that runtime-API confinement does not cover. Runtime-API confinement admits the `core` state driver edge (`packages/core/src/state/driver/`), the adapters I/O subpaths `repo`, `file`, `host`, `session`, `legacy`, and `credentials`, the provider client subpaths `github`, `gitlab`, and `jira`, and the provider quota transport `provider-quota`, all as exact, reason-bearing entries per the ADR-0005 reviewed-allowance precedent; it also admits the `cli` build and `opencode` host integration. The provider core tier is runtime-neutral, the provider registry subpath and the remaining adapter subpaths stay non-I/O, and the credential subpath is the only one that may resolve secret material.
+- The secret-read boundary closes the ambient channel that runtime-API confinement does not cover. Runtime-API confinement admits the `core` state driver edge (`packages/core/src/state/driver/`), the adapters I/O subpaths `repo`, `file`, `host`, `session`, `legacy`, and `credentials`, the provider client subpaths `github`, `gitlab`, and `jira`, the provider quota transport `provider-quota`, and the dedicated git branch/checkout seam `git`, all as exact, reason-bearing entries per the ADR-0005 reviewed-allowance precedent; it also admits the `cli` build and `opencode` host integration. The provider core tier is runtime-neutral, the provider registry subpath and the remaining adapter subpaths stay non-I/O, the git seam is local-process-only and contacts no network, and the credential subpath is the only one that may resolve secret material.
 - Resolved material never enters diagnostics, logs, error payloads, or metadata; the existing redaction chokepoint governs any surfaced payload.
 - The envelope payload is closed, compact, size-bounded, and secret-free; carrier markers and namespaces use brand-neutral constants with no committed product token.
 - Every serialized envelope is scanned by the required content policy over the exact embedded JSON. The policy and hash are injected pure inputs; a denial fails closed with a rule or entry id only and produces no carrier. The shared rule definitions and the hashed-literal registry are documented in [Privacy and No-Cloud Guards](feature-privacy-guard.md).
@@ -311,6 +325,8 @@ Capability flags and gap records are inspectable data. Degradation evidence name
 | Session I/O seam | The adapter-local `OpencodeSessionIo` seam: path resolution, single-statement queries, official delete, one checkpoint, injected clock, and bounded file metadata. |
 | Capability declaration | Typed flags naming supported operations and carrier kinds, with explicit gap records. |
 | Gap record | An adapter's explicit declaration that it does not support a capability; parity is never implied. |
+| `headSha` | The optional provider-resolved merged-head commit on `DeliveryRequest`; absent means unknown and a destructive branch action refuses. |
+| `resolve-delivery-thread` | The additive closed adapter operation that resolves one review thread on a delivery request with canonical arguments `{ deliveryRequest, threadId }`. |
 | Credential reference | A declared mapping from an external system's auth method to its source key; resolved only through the credential port. |
 | Secret-read boundary | The mechanically enforced property that ambient secret acquisition occurs only in the enumerated allowlist. |
 | Quota transport | The injectable provider quota request edge at `adapters ./provider-quota`: one bounded GET, in-memory authorization header, no credential storage. |
@@ -320,9 +336,10 @@ Capability flags and gap records are inspectable data. Degradation evidence name
 | `content-policy-violation` | The fail-closed codec-local serialization failure produced when the content policy denies a payload; it carries no content and no carrier. |
 | Graceful degradation | Heuristic fallback with visible degradation evidence, never a flow failure. |
 
-See also: [Session Database Administration](feature-session-database-admin.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [Branding Seam and Working Name](feature-branding-seam.md), [Privacy and No-Cloud Guards](feature-privacy-guard.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
+See also: [Session Database Administration](feature-session-database-admin.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [Adapter Conformance Suite](feature-adapter-conformance.md), [Closeout Transaction](feature-closeout.md), [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [Branding Seam and Working Name](feature-branding-seam.md), [Privacy and No-Cloud Guards](feature-privacy-guard.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 
 **Change record:** `doc/changes/2026-10/2026-10-30--GH-181--primitive-ports-credential-metadata/`.
 **Contract-extension change record:** `doc/changes/2026-10/2026-10-31--GH-188--client-seeds-trap-catalogs/`.
+**Closeout contract-extension change record:** `doc/changes/2026-11/2026-11-01--GH-183--closeout-v1-branch-cleanup/`.
 **Provider engine change record:** `doc/changes/2026-10/2026-10-31--GH-182--provider-v1/`.
 **Session-admin change record:** `doc/changes/2026-10/2026-10-31--GH-180--db-session-admin-port/`.

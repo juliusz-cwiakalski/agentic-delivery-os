@@ -209,14 +209,13 @@ export const EXPECTED_SEED_POSTURES = {
   jira: {
     adapterName: "jira",
     systemKind: "tracker",
-    supported: ["read-work-item"],
+    supported: ["read-work-item", "write-work-item", "transition-work-item"],
     gapReasons: {
-      "write-work-item": "adapter-not-implemented",
-      "transition-work-item": "adapter-not-implemented",
       "write-comment": "adapter-not-implemented",
       "read-delivery-request": "provider-unsupported",
       "write-delivery-request": "provider-unsupported",
       "read-pipeline-run": "provider-unsupported",
+      "resolve-delivery-thread": "provider-unsupported",
     },
   },
   gitlab: {
@@ -229,17 +228,23 @@ export const EXPECTED_SEED_POSTURES = {
       "write-work-item": "adapter-not-implemented",
       "transition-work-item": "adapter-not-implemented",
       "write-comment": "adapter-not-implemented",
+      "resolve-delivery-thread": "adapter-not-implemented",
     },
   },
   github: {
     adapterName: "github",
     systemKind: "vcs",
-    supported: ["read-work-item", "read-delivery-request", "read-pipeline-run"],
+    supported: [
+      "read-work-item",
+      "read-delivery-request",
+      "read-pipeline-run",
+      "write-work-item",
+      "transition-work-item",
+      "resolve-delivery-thread",
+    ],
     gapReasons: {
-      "write-work-item": "adapter-not-implemented",
-      "write-delivery-request": "adapter-not-implemented",
-      "transition-work-item": "adapter-not-implemented",
       "write-comment": "adapter-not-implemented",
+      "write-delivery-request": "adapter-not-implemented",
     },
   },
 } as const satisfies Readonly<Record<"jira" | "gitlab" | "github", ExpectedSeedPosture>>;

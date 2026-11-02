@@ -151,6 +151,12 @@ export type DeliveryRequest = {
   readonly targetRef: string;
   readonly reviewState: DeliveryRequestReviewState;
   readonly threads: readonly DeliveryThread[];
+  /**
+   * The provider-resolved merged head commit, copied verbatim. Absent = the
+   * provider did not supply the signal (unknown), never an empty or derived
+   * value (DM-8, ADR-0004).
+   */
+  readonly headSha?: string;
 };
 
 /** A pipeline job state (DM-7). */

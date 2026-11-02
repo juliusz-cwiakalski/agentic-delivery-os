@@ -531,6 +531,16 @@ const readValue = async (
   return client.readPipelineRun();
 };
 
+const writeMemberFor = (
+  client: ConformanceAdapterClient,
+  operation: AdapterOperation,
+): (() => Promise<{ readonly ok: true } | { readonly ok: false }>) | undefined => {
+  if (operation === "write-work-item") return client.writeWorkItem;
+  if (operation === "transition-work-item") return client.transitionWorkItem;
+  if (operation === "resolve-delivery-thread") return client.resolveDeliveryThread;
+  return undefined;
+};
+
 const gapFor = (
   registration: ConformanceAdapterRegistration,
   operation: AdapterOperation,
@@ -764,46 +774,76 @@ export const runConformance = async (input: RunConformanceInput): Promise<Confor
         }
 
         const handler = registration.writeHandler;
-        if (handler === undefined) {
-          return failClosed(
-            "supported non-read conformance step has no handler",
+        if (handler !== undefined) {
+          const outcome = await handler({
             provider,
-            flow.flowId,
-            step.stepId,
-            step.operation,
-          );
-        }
-        const outcome = await handler({
-          provider,
-          flowId: flow.flowId,
-          stepId: step.stepId,
-          operation: step.operation,
-          tenant,
-        });
-        if (!outcome.ok) {
+            flowId: flow.flowId,
+            stepId: step.stepId,
+            operation: step.operation,
+            tenant,
+          });
+          if (!outcome.ok) {
+            flowSteps.push({
+              ...base,
+              status: "failed",
+              skipReason: null,
+              skipKind: null,
+              assertionCount: 0,
+              failure: failureFor(
+                "control-write",
+                "successful control write",
+                "control write failure",
+                `tenant:${provider}:${step.stepId}`,
+                outcome.detail,
+              ),
+            });
+            continue;
+          }
           flowSteps.push({
             ...base,
-            status: "failed",
+            status: "executed",
             skipReason: null,
             skipKind: null,
-            assertionCount: 0,
-            failure: failureFor(
-              "control-write",
-              "successful control write",
-              "control write failure",
-              `tenant:${provider}:${step.stepId}`,
-              outcome.detail,
-            ),
+            assertionCount: outcome.assertionCount,
           });
           continue;
         }
-        flowSteps.push({
-          ...base,
-          status: "executed",
-          skipReason: null,
-          skipKind: null,
-          assertionCount: outcome.assertionCount,
-        });
+        const writeMember = writeMemberFor(client, step.operation);
+        if (writeMember !== undefined) {
+          const outcome = await writeMember();
+          if (!outcome.ok) {
+            flowSteps.push({
+              ...base,
+              status: "failed",
+              skipReason: null,
+              skipKind: null,
+              assertionCount: 0,
+              failure: failureFor(
+                "client-write",
+                "successful provider write",
+                "classified failure",
+                `tenant:${provider}:${step.stepId}`,
+                "provider write did not land",
+              ),
+            });
+            continue;
+          }
+          flowSteps.push({
+            ...base,
+            status: "executed",
+            skipReason: null,
+            skipKind: null,
+            assertionCount: 1,
+          });
+          continue;
+        }
+        return failClosed(
+          "supported non-read conformance step has no handler",
+          provider,
+          flow.flowId,
+          step.stepId,
+          step.operation,
+        );
       }
       const flowStatus = flowStatusFor(flowSteps);
       flows.push({

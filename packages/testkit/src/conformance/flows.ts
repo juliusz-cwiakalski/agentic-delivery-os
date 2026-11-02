@@ -1,12 +1,12 @@
 /**
- * The three-flow, twelve-step conformance registry (GH-189 F-1, DEC-9).
+ * The three-flow, thirteen-step conformance registry (GH-189 F-1, DEC-9).
  *
  * Data only. Flow ids, step ids, operations, and assertion families are stable
  * across providers; capability gating is applied by the runner.
  */
 import type { ConformanceFlow } from "./types.js";
 
-/** The v1 registry: exactly three flows covering all seven operations. */
+/** The v1 registry: exactly three flows covering all eight operations. */
 export const CONFORMANCE_FLOWS: readonly ConformanceFlow[] = [
   {
     flowId: "change-lifecycle",
@@ -46,6 +46,11 @@ export const CONFORMANCE_FLOWS: readonly ConformanceFlow[] = [
         stepId: "change-lifecycle.comment",
         operation: "write-comment",
         assertionFamily: "comment-provenance",
+      },
+      {
+        stepId: "change-lifecycle.resolve-delivery-thread",
+        operation: "resolve-delivery-thread",
+        assertionFamily: "delivery-thread",
       },
     ],
   },

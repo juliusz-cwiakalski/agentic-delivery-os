@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-VERIFY-CHANGE-AND-EXIT-TAXONOMY
 status: Current
 created: 2026-10-31
-last_updated: 2026-10-31
+last_updated: 2026-11-01
 owners: ["engineering"]
 service: delivery-os
 summary: "The read-only `verify change <ref>` surface: ledger-only verification against a change's declared full or LITE phase set, a declaration-plus-registry overlay with per-phase precedence, the eleven-token delivery result vocabulary and its total projection/derivation taxonomy, one total exit taxonomy with the documented state-unverified divergence, the additive verify.ledger.incomplete identity beside reused lint.* and state.* identities, a deterministic classification summary, and the non-zero guarantee for incomplete or unverifiable deliveries."
 links:
-  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179"]
+  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183"]
   related_decisions: ["ADR-0003", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/delivery-result.ts"
@@ -21,7 +21,7 @@ links:
 
 `verify change <ref>` answers one question without mutating anything: is the declared phase ledger for this change complete, and if not, which result does the delivery classify into? It reads the change's committed pm-notes declaration (which supplies the effective variant and declared phase state), reads the delivery registry's verified `phase.transition` history when one exists, merges the two evidence sources per phase, and classifies the outcome through the eleven-token delivery-result vocabulary.
 
-The command is ledger-only and read-only. It performs no mutation, acquires no fence, calls no tracker, PR, CI, or network provider, and spawns no process. An incomplete or unverifiable ledger is a failure: only a fully completed declared variant produces a success envelope and exit `0`; every other outcome is a single error-only envelope with a non-zero exit.
+The command is ledger-only and read-only. It performs no mutation, acquires no fence, calls no tracker, PR, CI, or network provider, and spawns no process. An incomplete or unverifiable ledger is a failure: only a fully completed declared variant produces a success envelope and exit `0`; every other outcome is a single error-only envelope with a non-zero exit. Closeout is a separate mutating surface: verify change does not import or compose the closeout engine, the git branch/checkout seam, or provider write operations, and its read-only guarantees are unchanged.
 
 The delivery-result vocabulary is `as const` data in `core ./contracts`. Each of the eleven tokens carries exactly one projection class and one derivation class, so the typed CLI and the bash-era delivery summary can be compared token-for-token. Seven tokens whose derivation needs tracker, PR, or dispatch/session evidence are declared and reserved; this surface reaches `finished`, `partial`, `failed`, and `state-unverified`.
 

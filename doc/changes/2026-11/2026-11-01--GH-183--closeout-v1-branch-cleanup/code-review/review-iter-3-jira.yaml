@@ -1,0 +1,205 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-183
+branch: feat/GH-183/closeout-v1-branch-cleanup
+head_sha: 601706c05fd58639ddf977aa42580632661ba296
+status: PASS
+summary: >-
+  Iteration-3 focused static verification of the five Jira-provider review threads from PR #215
+  (R215-4, R215-5, R215-6, R215-7, R215-10) against commit 601706c only; no test suite was run and
+  no files outside the named diff and its direct dependencies were examined. All five threads are
+  RESOLVED in both production code and tests: the native fetch transport parses bodyless 204s
+  without response.json(), reverse dependents are restricted to outgoing blocks by JQL link-type
+  plus an inward blocked-by relation filter proven by a multi-link fixture, the label replace is
+  computed from raw fields.labels only (custom-field projections proven absent from the PUT),
+  transitions are posted by the unique id whose destination matches the workflow map with
+  none/ambiguous refusing, and credential failures keep config.credential.missing at exit 1
+  end-to-end through runCli. No gate weakening, no synthetic fixture hiding a production gap on
+  the reviewed threads, and no regression found in the static scope. Three non-blocking advisory
+  findings remain (2 low, 1 info); none warrants a remediation phase.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 2
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: test-quality
+    location: tests/behaviour/providers/jira-closeout.test.ts:111
+    message: >-
+      The native-transport 204 test hand-rolls a globalThis.fetch replacement with an afterEach
+      restore instead of reusing the established fetch-guard seam in
+      tests/behaviour/providers/support.ts:98-122. The existing guard is throwing-only so a serving
+      stub is understandable, but the ambient-global mutation pattern now lives inline in a test
+      file rather than centralized in support.ts. Bun runs tests within a file sequentially, so the
+      restore is adequate; this is containment/consistency only.
+    suggestion: >-
+      Extract a serving fetch guard (canned responses + restore) into tests/behaviour/providers/support.ts
+      beside installThrowingFetchGuard and use it for the TC-CLOSE-004 native-transport test.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: low
+    confidence: medium
+    category: robustness
+    location: packages/adapters/src/jira/client.ts:236
+    message: >-
+      listBlockedByDependents maps every request() failure — including a preserved
+      credential/config failure code — to the plain observation "unavailable", which the domain
+      treats as a signal-level skipped-noop. In the composed closeout flow this is unreachable
+      because planFacts reads the work item first and throws on a non-payload code
+      (packages/cli/src/edge.ts:558-570), but a future direct consumer of the Jira client would
+      silently downgrade a config failure to a skip.
+    suggestion: >-
+      When !response.ok carries a code other than provider.payload.invalid, either surface a
+      distinct observation or document the composition precondition (credential identity is
+      fail-fast only at the work-item read) on the client contract.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: info
+    confidence: high
+    category: observability
+    location: packages/adapters/src/jira/client.ts:294
+    message: >-
+      unambiguousTransitionId reports zero-match and multi-match through one shared refusal detail
+      ("Jira has no unambiguous transition to X"), so an operator cannot distinguish a workflow
+      without the destination from two transitions reaching it. Behaviorally correct per thread 7
+      (both refuse, never guess); informational only.
+    suggestion: >-
+      Optionally split the refusal detail into "no transition" vs "ambiguous transition" counts for
+      easier triage. No action required for v1.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+thread_verdicts:
+  PRRT_kwDORCEXJ86yYRYM:
+    thread: "4 (R215-4) — bodyless HTTP 204 on the native Jira transport"
+    verdict: RESOLVED
+    evidence: >-
+      packages/adapters/src/jira/client.ts:72-77 responseBody() reads response.text() and returns
+      undefined for an empty/whitespace body, JSON.parse otherwise — no response.json() call
+      remains; wired into the native transport at client.ts:87. Test
+      tests/behaviour/providers/jira-closeout.test.ts "TC-CLOSE-004 native Jira transport handles
+      bodyless 204" stubs globalThis.fetch to return new Response(null, { status: 204 }) for PUT and
+      builds createJiraClient WITHOUT an injected transport, so nativeFetchTransport()
+      (client.ts:79-89, selected at :125) is the code under test; asserts write.ok === true and the
+      issue URL was requested. The {} bodies on fixture-transport 204 routes no longer hide the
+      gap because the production parse path is exercised directly.
+  PRRT_kwDORCEXJ86yYRYP:
+    thread: "5 (R215-5) — linkedIssues restricted to outgoing blocks"
+    verdict: RESOLVED
+    evidence: >-
+      client.ts:231 JQL now passes the link-type argument — issue in linkedIssues("<key>",
+      "blocks") — and client.ts:243-251 adds a second defense: after normalization only candidates
+      carrying a blocked-by relation whose target.entityId equals the source ticket are kept.
+      Direction semantics verified in packages/adapters/src/jira/normalize.ts:44-54 (Blocks+inward
+      -> blocked-by, Blocks+outward -> blocks, Relates/Cloners/Duplicate -> relates-to) and :69-92
+      (relationsFrom walks outwardIssue/inwardIssue). Tests: jira-closeout.test.ts "the bounded JQL
+      read returns observed dependents" asserts the search URL contains
+      encodeURIComponent('linkedIssues("TRACK-101", "blocks")'); "relates-to and blocking links are
+      not treated as dependents" uses tests/fixtures/providers/jira/closeout-dependents-multi-link.json
+      (TRACK-102 inward blocked-by kept; TRACK-104 Relates dropped; TRACK-105 Blocks-outward blocker
+      dropped) and asserts the result is exactly ["TRACK-102"]. The default dependents fixture was
+      upgraded from issuelinks: [] to a real inward link, which the new filter requires — proving
+      the filter actually fires rather than passing vacuously.
+  PRRT_kwDORCEXJ86yYRYW:
+    thread: "6 (R215-6) — label replacement from raw fields.labels only"
+    verdict: RESOLVED
+    evidence: >-
+      client.ts:253-279 writeWorkItem performs its own GET, reads raw current.body.fields, and
+      computes the replace set from jiraNativeLabels(fields) (normalize.ts:196-201 — fields.labels
+      array-of-strings only, undefined when omitted/non-array); the collapsed-empty-set refusal is
+      preserved at client.ts:267-271. Custom-field projections (custom-fields.ts:66-78, prefixes
+      team: and story-points:) are appended only onto the normalized view (normalize.ts:131) and
+      have no path into the PUT body. Test jira-closeout.test.ts "custom-field projections are
+      never persisted as real labels": custom-fields.json issue (native labels ["hygiene"],
+      customfield_10020 {value:"platform"} -> team:platform, customfield_10021 "008" ->
+      story-points:8), remove planning / add delivered -> PUT labels exactly ["hygiene",
+      "delivered"], with explicit not.toContain("team:platform") and not.toContain("story-points:8")
+      — non-vacuous because the assertions name the exact synthesized strings and the pre-fix code
+      (normalized view) would have failed them. Trap JIRA-LABEL-REPLACE / closeoutLabelPreserve
+      (jira-trap.test.ts:290-309) still pins unnamed-label preservation.
+  PRRT_kwDORCEXJ86yYRYf:
+    thread: "7 (R215-7) — transitions selected by id with destination match"
+    verdict: RESOLVED
+    evidence: >-
+      client.ts:100-111 unambiguousTransitionId accepts a transition only when to.name equals the
+      workflow-mapped native status AND exactly one id matches; zero or multiple -> undefined ->
+      classified refusal "Jira has no unambiguous transition" (client.ts:294-297).
+      transitionWorkItem (client.ts:281-305) maps done -> "Done" via workflow-map.ts:32, GETs
+      /rest/api/2/issue/<key>/transitions, selects the id, and POSTs { transition: { id } } — a
+      name is never posted. Tests: jira-closeout.test.ts "the transition id is selected from the
+      available transitions" asserts the GET happened and the POST body is { id: "31" } against the
+      real Jira shape fixture tests/fixtures/providers/jira/transitions.json ({ transitions: [{ id,
+      name, to: { name } }] }, 31 Close -> Done); "no unambiguous destination is a classified
+      failure and posts nothing" supplies two transitions (11, 12) both to.name Done and asserts
+      failure with zero POSTs. jira-trap.test.ts:287 and traps/jira.traps.json pin the id contract;
+      conformance tenant.json gained the GET transitions route (id 31, Close -> Done).
+  PRRT_kwDORCEXJ86yYRY8:
+    thread: "10 (R215-10) — credential/config failures preserved at exit 1"
+    verdict: RESOLVED
+    evidence: >-
+      request() returns the credential-resolution failure as-is (client.ts:167-168);
+      readObservation preserves the code on the invalid observation and strips only
+      provider.payload.invalid (client.ts:192-204); writer returns failures unchanged instead of
+      re-wrapping as provider.payload.invalid (client.ts:206-211). Composition:
+      packages/cli/src/edge.ts:556-570 — planFacts, the first provider read of every closeout run,
+      throws { kind, code } for a resolvable non-payload code; classify.ts:98-114 classifyThrown ->
+      classifyDomainKind resolves the error-table entry (error-table.ts:222-229:
+      config.credential.missing -> domainKind config, projectionClass user-validation);
+      projection.ts:10-14 projects user-validation -> exit 1 (platform-provider would be 2). The
+      invalid-observation contract allows the preserved code (contracts/closeout.ts:195-200).
+      Tests: adapter-level jira-closeout.test.ts "a credential-resolution failure keeps its config
+      identity" uses a throwing transport as a tripwire proving the failure is pre-request;
+      end-to-end tests/behaviour/closeout-credential.test.ts drives runCli through the real
+      createCloseoutComposition/createConfigProgram and asserts exit 1 with envelope code
+      config.credential.missing.
+regression_check:
+  gate_weakening: >-
+    None. tests/structure/content-inventory.test.ts adds one allowance for the real new export
+    jiraNativeLabels (used at client.ts:266); tenant.json only ADDS a route (an unfixtured GET
+    would throw, so conformance got stricter); traps/jira.traps.json still validates the full
+    write with its expected outcome updated to the new id contract; closeout-dependents.json was
+    strengthened with real links; no test, assertion, or gate was deleted, skipped, or relaxed.
+  synthetic_fixture_gaps: >-
+    The one identified risk (thread 4 — {} fixture bodies masking a bodyless-204 parse crash) is
+    closed by the native-fetch stub test running the production transport. Multi-link and
+    transitions fixtures use provider-real shapes (inward/outward issue-link semantics;
+    {transitions:[{id,name,to:{name}}]}). Remaining synthetic {} bodies exist only on
+    fixture-transport 204 routes, which is harmless because the native parse path is separately
+    covered.
+  regressions: >-
+    None found in static scope. writeWorkItem's refusal-on-omitted-label-container semantics are
+    preserved (jiraNativeLabels undefined replaces the old signals.labels check); trap
+    label-preserve and conformance expectations were updated consistently with the new contracts;
+    the planFacts credential throw fires on the first provider read, so downstream
+    listBlockedByDependents error mapping (client.ts:236) cannot swallow a credential failure in
+    the composed flow. GitHub and state/testkit threads (87b1214, 53402b7, 8e201fc) are outside
+    this iteration's scope.
+plan_task_audit:
+  reviewed_scope: "Phase 10 'PR #215 review threads' items R215-4, R215-5, R215-6, R215-7, R215-10 (all checked, all citing commit 601706c)."
+  OPEN_TASKS: none in reviewed scope
+  DONE_BUT_UNCHECKED: none in reviewed scope
+  CHECKED_BUT_MISSING: none — every checked R215 item has matching code and test evidence
+verification_evidence:
+  commands_run:
+    - "git show 601706c --format=fuller (full diff read; named files verified identical between 601706c and HEAD)"
+    - "static reads: packages/adapters/src/jira/{client,normalize,workflow-map,custom-fields}.ts, packages/cli/src/{edge,classify,projection}.ts, packages/core/src/contracts/{closeout,error-table,result}.ts, named tests and fixtures"
+  independent_probes: none — static-only review per invocation; no test suite executed
+reviewed_at: 2026-11-01T09:06:34Z
+next_step: PROCEED

@@ -1,0 +1,23 @@
+closeout GH-183 (plan)
+base: main-tools
+delivery: 504 feat/GH-183/closeout-v1-branch-cleanup -> main-tools
+1. ticket-to-done: would-apply
+   - transition-work-item 183 83d12e196b00
+2. lifecycle-label-sweep: would-apply
+   - write-work-item 183 0b25e9f3df95
+   - write-work-item 183 4dcd18b488fb
+   - write-work-item 183 6682c4e56ad3
+   - write-work-item 183 8fb5719b4d6a
+   - write-work-item 183 b083a24b42d0
+   - write-work-item 183 59319ddda99b
+   - write-work-item 183 cf914e3a077d
+3. unassign: would-apply
+   - write-work-item 183 f27c63c32360
+4. owed-flip-sweep: satisfied
+5. comment-resolution: would-apply
+   - resolve-delivery-thread 504 0eea6e915f44
+6. checkout-restore: would-apply
+   - restore-checkout main-tools df75e6f6076c
+7. branch-cleanup: would-apply
+   - delete-branch feat/GH-183/closeout-v1-branch-cleanup f29b39c9f0e1
+summary: satisfied=1 would-apply=6

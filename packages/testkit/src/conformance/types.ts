@@ -69,7 +69,8 @@ export type ConformanceAssertionFamily =
   | "delivery-request"
   | "pipeline-run"
   | "comment-provenance"
-  | "label-semantics";
+  | "label-semantics"
+  | "delivery-thread";
 
 /** One ordered flow step (DM-2). */
 export type ConformanceFlowStep = {
@@ -87,12 +88,17 @@ export type ConformanceFlow = {
   readonly steps: readonly ConformanceFlowStep[];
 };
 
-/** One exact-URL mock route. */
+/** The closed transport method set the mock tenant can address. */
+export type ConformanceHttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
+
+/** One exact method-plus-URL mock route. */
 export type MockTenantRoute = {
-  readonly method: "GET";
+  readonly method: ConformanceHttpMethod;
   readonly url: string;
   readonly status: number;
   readonly body: unknown;
+  /** Optional exact request body; when present, a mismatch does not match. */
+  readonly requestBody?: string;
 };
 
 /** GitHub addressing the flows consume. */
@@ -103,6 +109,7 @@ export type GithubMockAddressing = {
   readonly issueNumber: number;
   readonly pullNumber: number;
   readonly commitSha: string;
+  readonly threadId: string;
 };
 
 /** GitLab addressing the flows consume. */
@@ -148,10 +155,15 @@ export type ConformanceClientBuildInput = {
 };
 
 /** One provider-agnostic conformance client; the builder closes over addressing. */
+export type ConformanceAdapterWrite = ConformanceAdapterRead<void>;
+
 export type ConformanceAdapterClient = {
   readonly readWorkItem?: () => Promise<ConformanceAdapterRead<WorkItem>>;
   readonly readDeliveryRequest?: () => Promise<ConformanceAdapterRead<DeliveryRequest>>;
   readonly readPipelineRun?: () => Promise<ConformanceAdapterRead<readonly PipelineRun[]>>;
+  readonly writeWorkItem?: () => Promise<ConformanceAdapterWrite>;
+  readonly transitionWorkItem?: () => Promise<ConformanceAdapterWrite>;
+  readonly resolveDeliveryThread?: () => Promise<ConformanceAdapterWrite>;
 };
 
 /** Input passed to a test-only control write handler. */

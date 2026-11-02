@@ -23,6 +23,7 @@ import {
   validateWorkflowMap,
 } from "../../../packages/adapters/src/jira/workflow-map";
 import type { ExternalSystemInstance, WorkItem } from "../../../packages/core/src/contracts/index";
+import { makeJiraClient } from "../../fixtures/closeout/jira-client";
 import { fixtureBrand } from "../../fixtures/credentials/cases";
 import {
   arrayField,
@@ -185,9 +186,7 @@ const transitionsAsDataCheck = (validator: (map: unknown) => string[], mapLike: 
     expect(JIRA_WORKFLOW_MAP.states.some((state) => state.nativeStatus === target)).toBe(true);
   }
   expect(
-    JIRA_ADAPTER_CONTRACT.capabilities.declaredGaps.some(
-      (gap) => gap.operation === "transition-work-item",
-    ),
+    JIRA_ADAPTER_CONTRACT.capabilities.supportedOperations.includes("transition-work-item"),
   ).toBe(true);
 };
 
@@ -275,6 +274,40 @@ const updatedAbsentCheck = async (
 
 // --- The catalog ------------------------------------------------------------
 
+const closeoutDoneTransition = async (): Promise<void> => {
+  const { client, transport } = makeJiraClient();
+  const result = await client.transitionWorkItem({ issueKey: "TRACK-101", deliveryState: "done" });
+  expect(result.ok).toBe(true);
+  const post = transport.requests.find(
+    (request) => request.method === "POST" && request.url.endsWith("/transitions"),
+  );
+  if (post?.body === undefined) throw new Error("missing transition body");
+  const body: unknown = JSON.parse(post.body);
+  if (typeof body !== "object" || body === null) throw new Error("invalid transition body");
+  expect((body as Record<string, unknown>).transition).toEqual({ id: "31" });
+};
+
+const closeoutLabelPreserve = async (): Promise<void> => {
+  const { client, transport } = makeJiraClient();
+  const result = await client.writeWorkItem({
+    issueKey: "TRACK-101",
+    remove: ["planning", "spec-ready", "in-progress", "review", "blocked"],
+    add: ["delivered"],
+  });
+  expect(result.ok).toBe(true);
+  const put = transport.requests.find((request) => request.method === "PUT");
+  if (put?.body === undefined) throw new Error("missing label body");
+  const body: unknown = JSON.parse(put.body);
+  if (typeof body !== "object" || body === null) throw new Error("invalid label body");
+  const fields = (body as Record<string, unknown>).fields;
+  if (typeof fields !== "object" || fields === null) throw new Error("invalid fields");
+  expect((fields as Record<string, unknown>).labels).toEqual([
+    "change",
+    "vendor-label",
+    "delivered",
+  ]);
+};
+
 const defaultAssertions: TrapAssertions = {
   "JIRA-LABEL-REPLACE": () => labelReplaceCheck(defaultLabels),
   "JIRA-CUSTOM-FIELD-TYPING": async () => {
@@ -285,6 +318,8 @@ const defaultAssertions: TrapAssertions = {
   },
   "JIRA-COMMENT-OMISSION": () => commentOmissionCheck(normalize),
   "JIRA-UPDATED-ABSENT": () => updatedAbsentCheck(normalize),
+  "JIRA-CLOSEOUT-DONE-TRANSITION": closeoutDoneTransition,
+  "JIRA-CLOSEOUT-LABEL-PRESERVE": closeoutLabelPreserve,
 };
 
 const runWithGuard = async (options: Omit<TrapRunOptions, "provider">): Promise<TrapRun> => {
@@ -311,6 +346,8 @@ describe("TC-TRAP-002 Jira trap catalog replays offline", () => {
       "JIRA-TRANSITIONS-AS-DATA",
       "JIRA-COMMENT-OMISSION",
       "JIRA-UPDATED-ABSENT",
+      "JIRA-CLOSEOUT-DONE-TRANSITION",
+      "JIRA-CLOSEOUT-LABEL-PRESERVE",
     ]);
   });
 

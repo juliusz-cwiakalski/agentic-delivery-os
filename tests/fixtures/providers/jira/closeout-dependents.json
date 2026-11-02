@@ -1,0 +1,35 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-01",
+  "issues": [
+    {
+      "id": "10002",
+      "key": "TRACK-102",
+      "fields": {
+        "summary": "Dependent awaiting hand-back",
+        "status": { "name": "To Do" },
+        "labels": ["change", "blocked"],
+        "issuelinks": [
+          {
+            "type": { "name": "Blocks", "inward": "is blocked by", "outward": "blocks" },
+            "inwardIssue": { "key": "TRACK-101" }
+          }
+        ]
+      }
+    },
+    {
+      "id": "10003",
+      "key": "TRACK-103",
+      "fields": {
+        "summary": "Already done dependent",
+        "status": { "name": "Done" },
+        "labels": ["change"],
+        "issuelinks": [
+          {
+            "type": { "name": "Blocks", "inward": "is blocked by", "outward": "blocks" },
+            "inwardIssue": { "key": "TRACK-101" }
+          }
+        ]
+      }
+    }
+  ]
+}

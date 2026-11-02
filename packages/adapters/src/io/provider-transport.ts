@@ -16,14 +16,18 @@
  */
 import type { CredentialResolutionFailure } from "@delivery-os/core/contracts";
 
-/** The only HTTP method the read slices issue. */
-export type ProviderHttpMethod = "GET";
+/** The closed set of request methods the provider transports can issue. */
+export type ProviderHttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
 /** One provider request, fully shaped before it reaches the transport. */
 export type ProviderRequest = {
   readonly url: string;
   readonly method: ProviderHttpMethod;
   readonly headers: Readonly<Record<string, string>>;
+  /** An optional serialized request body for write operations. */
+  readonly body?: string;
+  /** An optional per-request timeout override; production defaults to 30 s. */
+  readonly timeoutMs?: number;
 };
 
 /** The raw provider response; the body stays untrusted until normalized. */
@@ -49,6 +53,11 @@ export type ProviderReadFailure = CredentialResolutionFailure | ProviderPayloadF
 
 /** A read result: a normalized primitive view or a classified failure. */
 export type ProviderReadResult<T> = { readonly ok: true; readonly value: T } | ProviderReadFailure;
+
+/** A write result: a landed write or a classified failure. */
+export type ProviderWriteResult<T = void> =
+  | { readonly ok: true; readonly value: T }
+  | ProviderReadFailure;
 
 /** Construct the reified payload failure with one readable detail string. */
 export const providerPayloadFailure = (detail: string): ProviderPayloadFailure => ({

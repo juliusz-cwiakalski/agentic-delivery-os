@@ -602,7 +602,8 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    const declaredKinds = "`provider`, `input`, `config`, `state`, `lint`, `verify`, and `db`";
+    const declaredKinds =
+      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, and `closeout`";
     expect(doc).toContain(declaredKinds);
     expect(doc).toContain("`verify.ledger.incomplete`");
     expect(doc).toContain("`db.opencode.unavailable`");
@@ -615,7 +616,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(7);
     expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(5);
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
-    expect(entries).toHaveLength(35);
+    expect(entries).toHaveLength(39);
   });
 });
 
@@ -691,7 +692,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(35);
+    expect(entries).toHaveLength(39);
     expect(db).toHaveLength(4);
   });
 
@@ -729,6 +730,122 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
       summary,
     ] of DB_ROWS) {
       const row = `| ${code} | db | ${category} | ${String(retryable)} | ${consequence} | ${hint} | ${projectionClass} | ${summary} |`;
+      expect(doc.split(row).length - 1, code).toBe(1);
+    }
+  });
+});
+
+const CLOSEOUT_ROWS = [
+  [
+    "closeout.target.unobserved",
+    "user",
+    false,
+    "not_landed",
+    "Verify the work item ref; a provider not-found means the item does not exist. A payload/parse failure is `provider.payload.invalid`, and access or credential failures keep their own identities.",
+    "user-validation",
+    "The closeout target work item was not observed (provider not-found).",
+  ],
+  [
+    "closeout.target.ambiguous",
+    "user",
+    false,
+    "not_landed",
+    "Disambiguate the delivery request or local branch for the work item, then retry.",
+    "user-validation",
+    "More than one closeout target matched.",
+  ],
+  [
+    "closeout.write.failed",
+    "transient",
+    true,
+    "unknown",
+    "Inspect the failed operation evidence and retry; completed operations are persisted and idempotent.",
+    "platform-provider",
+    "A closeout provider write did not land.",
+  ],
+  [
+    "closeout.branch.unsafe",
+    "user",
+    false,
+    "not_landed",
+    "Resolve the named checkout, worktree, protected-ref, or merged-head condition, then retry.",
+    "user-validation",
+    "Branch cleanup or checkout restore was refused for safety.",
+  ],
+] as const;
+
+describe("TC-CLOSE-003 four closeout identities round-trip and contain", () => {
+  test("closeout is a declared multi-row kind with exactly the four pinned rows", () => {
+    expect(DOMAIN_KINDS).toContain("closeout");
+    const closeout = entries.filter((entry) => entry.domainKind === "closeout");
+    expect(closeout.map((entry) => entry.code)).toEqual(CLOSEOUT_ROWS.map(([code]) => code));
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of CLOSEOUT_ROWS) {
+      expect(classifyDomainKind("closeout", code)).toMatchObject({
+        code,
+        domainKind: "closeout",
+        category,
+        retryable,
+        consequence,
+        projectionClass,
+        remediationHint: hint,
+        summary,
+      });
+      expect(resolveAppErrorCode(code)).toEqual({
+        ok: true,
+        entry: classifyDomainKind("closeout", code),
+      });
+      expect(classifyThrown({ kind: "closeout", code })).toEqual(
+        classifyDomainKind("closeout", code),
+      );
+      expect(classifyThrown({ kind: "closeout", code, summary: "UNTRUSTED-CANARY" })).toEqual(
+        classifyDomainKind("closeout", code),
+      );
+    }
+    expect(closeout).toHaveLength(4);
+  });
+
+  test("kind-only closeout is ambiguous and contains; it never selects the first row", () => {
+    expect(() => classifyDomainKind("closeout")).toThrow();
+    expect(classifyThrown({ kind: "closeout" }).code).toBe(FALLBACK_INTERNAL_CODE);
+    const firstRowClassifier = (kind: string) =>
+      (ERROR_TABLE as readonly ErrorTableEntry[]).find((entry) => entry.domainKind === kind);
+    expect(firstRowClassifier("closeout")?.code).toBe("closeout.target.unobserved");
+  });
+
+  test("wrong, unknown, missing, mismatched and non-string closeout codes contain", () => {
+    for (const failure of [
+      { kind: "closeout", code: "closeout.other.unknown" },
+      { kind: "closeout", code: "state.store.torn" },
+      { kind: "closeout" },
+      { kind: "closeout", code: 42 },
+      { kind: "closeout", code: null },
+      { kind: "state", code: "closeout.write.failed" },
+    ]) {
+      expect(classifyThrown(failure).code).toBe(FALLBACK_INTERNAL_CODE);
+    }
+    expect(() => classifyDomainKind("closeout", "input.value.rejected")).toThrow();
+  });
+
+  test("the documented closeout rows agree exactly once and match every column", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of CLOSEOUT_ROWS) {
+      const row = `| ${code} | closeout | ${category} | ${String(retryable)} | ${consequence} | ${hint} | ${projectionClass} | ${summary} |`;
       expect(doc.split(row).length - 1, code).toBe(1);
     }
   });

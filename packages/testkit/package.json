@@ -27,7 +27,8 @@
       "./session",
       "./legacy",
       "./credentials",
-      "./provider-quota"
+      "./provider-quota",
+      "./git"
     ]
   },
   "scripts": {

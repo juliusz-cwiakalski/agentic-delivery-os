@@ -7,6 +7,10 @@
     "dist"
   ],
   "exports": {
+    "./git": {
+      "types": "./dist/git/index.d.ts",
+      "default": "./dist/git/index.js"
+    },
     "./gitlab": {
       "types": "./dist/gitlab/index.d.ts",
       "default": "./dist/gitlab/index.js"
@@ -61,6 +65,7 @@
     }
   },
   "imports": {
+    "#git/*": "./src/git/*.ts",
     "#gitlab/*": "./src/gitlab/*.ts",
     "#jira/*": "./src/jira/*.ts",
     "#github/*": "./src/github/*.ts",

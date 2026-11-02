@@ -91,6 +91,7 @@ const controlTenant = (): MockTenant => ({
     issueNumber: 601,
     pullNumber: 504,
     commitSha: CONTROL_SHA,
+    threadId: "PRRT_2",
   },
   routes: [],
   expected: {
@@ -139,6 +140,7 @@ const ALL_OPERATIONS: readonly AdapterOperation[] = [
   "write-delivery-request",
   "read-pipeline-run",
   "write-comment",
+  "resolve-delivery-thread",
 ];
 
 const gapsExcept = (supported: readonly AdapterOperation[]): CapabilityGap[] => {
@@ -337,14 +339,15 @@ describe("TC-CONF-011 runtime coverage is non-vacuous", () => {
     const mutated: ConformanceReport = {
       ...report,
       steps: report.steps.map((step) =>
-        step.provider === "github" && step.operation === "write-work-item"
+        step.provider === "github" && step.operation === "write-delivery-request"
           ? { ...step, skipReason: "wrong-reason" }
           : step,
       ),
     };
     expect(
       runtimeCoverageViolations(mutated, CONFORMANCE_ADAPTERS, "mock").some(
-        (message) => message.includes("github") && message.includes("declared gap write-work-item"),
+        (message) =>
+          message.includes("github") && message.includes("declared gap write-delivery-request"),
       ),
     ).toBe(true);
   });
@@ -502,7 +505,7 @@ describe("TC-CONF-014 deterministic double replay", () => {
 });
 
 describe("TC-CONF-015 exact-URL replay and the throwing-fetch guard", () => {
-  test("the mock suite makes zero live fetch calls and only exact GET routes", async () => {
+  test("the mock suite makes zero live fetch calls and only exact fixture routes", async () => {
     const tenants = loadMockTenants();
     const transports: ReturnType<typeof createMockTenantTransport>[] = [];
     const guard = installThrowingFetchGuard();
@@ -529,7 +532,7 @@ describe("TC-CONF-015 exact-URL replay and the throwing-fetch guard", () => {
     }
     for (const transport of transports) {
       for (const request of transport.requests) {
-        expect(request.method).toBe("GET");
+        expect(["GET", "POST", "PATCH", "PUT"]).toContain(request.method);
       }
     }
     const declared = new Set(
@@ -604,6 +607,65 @@ describe("TC-CONF-015 exact-URL replay and the throwing-fetch guard", () => {
       report.steps.find((step) => step.stepId === "change-lifecycle.read-pipeline-run")?.status,
     ).toBe("failed");
     expect(transport.requests.some((request) => request.url.includes("per_page=20"))).toBe(true);
+  });
+
+  test("replay matches an optional exact body and prefers a later body-specific route", async () => {
+    const base = loadMockTenant("github");
+    const url = `${base.instance.baseUrl}/graphql`;
+    const tenant: MockTenant = {
+      ...base,
+      routes: [
+        { method: "POST", url, status: 200, body: { route: "generic" } },
+        {
+          method: "POST",
+          url,
+          status: 200,
+          body: { route: "specific" },
+          requestBody: '{"variables":{"threadId":"PRRT_2"}}',
+        },
+      ],
+    };
+    const transport = createMockTenantTransport(tenant);
+    const generic = await transport.send({
+      url,
+      method: "POST",
+      headers: {},
+      body: '{"variables":{"other":true}}',
+    });
+    expect(generic.body).toEqual({ route: "generic" });
+    const specific = await transport.send({
+      url,
+      method: "POST",
+      headers: {},
+      body: '{"variables":{"threadId":"PRRT_2"}}',
+    });
+    expect(specific.body).toEqual({ route: "specific" });
+  });
+
+  test("a wrong body is rejected when the route declares an exact body", async () => {
+    const base = loadMockTenant("github");
+    const url = `${base.instance.baseUrl}/graphql`;
+    const tenant: MockTenant = {
+      ...base,
+      routes: [
+        {
+          method: "POST",
+          url,
+          status: 200,
+          body: { route: "specific" },
+          requestBody: '{"variables":{"threadId":"PRRT_2"}}',
+        },
+      ],
+    };
+    const transport = createMockTenantTransport(tenant);
+    await expect(
+      transport.send({
+        url,
+        method: "POST",
+        headers: {},
+        body: '{"variables":{"threadId":"PRRT_3"}}',
+      }),
+    ).rejects.toThrow(/unfixtured provider request/);
   });
 
   test("restoring the guard removes the throwing fetch", () => {
@@ -880,9 +942,8 @@ describe("TC-CONF-009 Jira operation matrix", () => {
     expect(reasonFor("read-delivery-request")).toBe("provider-unsupported");
     expect(reasonFor("read-pipeline-run")).toBe("provider-unsupported");
     expect(reasonFor("write-delivery-request")).toBe("provider-unsupported");
-    expect(reasonFor("write-work-item")).toBe("adapter-not-implemented");
-    expect(reasonFor("transition-work-item")).toBe("adapter-not-implemented");
     expect(reasonFor("write-comment")).toBe("adapter-not-implemented");
+    expect(reasonFor("resolve-delivery-thread")).toBe("provider-unsupported");
   });
 
   test("an omitted comment payload preserves absence and a present empty set fails", async () => {
@@ -947,5 +1008,70 @@ describe("TC-CONF-012 comment provenance and shipped carrier skip", () => {
     const result = await client.readWorkItem?.();
     expect(result?.ok).toBe(true);
     if (result?.ok) expect((result.value.comments ?? []).length).toBeGreaterThan(0);
+  });
+});
+
+describe("TC-CLOSE-065 closeout write execution and runtime coverage", () => {
+  test("every newly supported GitHub write executes in mock", async () => {
+    const report = await runProduction("closeout-coverage");
+    expect(runtimeCoverageViolations(report, CONFORMANCE_ADAPTERS, "mock")).toEqual([]);
+    for (const operation of [
+      "write-work-item",
+      "transition-work-item",
+      "resolve-delivery-thread",
+    ]) {
+      expect(
+        report.steps.some(
+          (step) =>
+            step.provider === "github" &&
+            step.operation === operation &&
+            step.status === "executed",
+        ),
+        operation,
+      ).toBe(true);
+    }
+  });
+
+  test("dropping an executed write step produces a named violation", async () => {
+    const report = await runProduction("closeout-coverage-mutant");
+    const mutated: ConformanceReport = {
+      ...report,
+      steps: report.steps.filter(
+        (step) =>
+          !(
+            step.provider === "github" &&
+            step.operation === "transition-work-item" &&
+            step.status === "executed"
+          ),
+      ),
+    };
+    expect(runtimeCoverageViolations(mutated, CONFORMANCE_ADAPTERS, "mock")).toContain(
+      "github: supported operation transition-work-item was not executed",
+    );
+  });
+});
+
+describe("TC-CLOSE-065 Jira closeout write execution", () => {
+  test("the newly supported Jira writes execute in mock and coverage is empty", async () => {
+    const report = await runProduction("jira-closeout-coverage");
+    expect(runtimeCoverageViolations(report, CONFORMANCE_ADAPTERS, "mock")).toEqual([]);
+    for (const operation of ["write-work-item", "transition-work-item"]) {
+      expect(
+        report.steps.some(
+          (step) =>
+            step.provider === "jira" && step.operation === operation && step.status === "executed",
+        ),
+        operation,
+      ).toBe(true);
+    }
+    expect(
+      report.steps.some(
+        (step) =>
+          step.provider === "jira" &&
+          step.operation === "resolve-delivery-thread" &&
+          step.status === "skipped" &&
+          step.skipReason === "provider-unsupported",
+      ),
+    ).toBe(true);
   });
 });

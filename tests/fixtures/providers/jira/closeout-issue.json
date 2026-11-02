@@ -1,0 +1,24 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-01",
+  "issue": {
+    "id": "10001",
+    "key": "TRACK-101",
+    "fields": {
+      "summary": "Closeout v1 with branch cleanup",
+      "status": { "name": "In Progress" },
+      "labels": [
+        "change",
+        "planning",
+        "spec-ready",
+        "in-progress",
+        "review",
+        "blocked",
+        "vendor-label"
+      ],
+      "assignee": { "displayName": "owner-placeholder", "accountId": "acct-0001" },
+      "updated": "2026-10-31T00:00:00.000+0000",
+      "comment": { "comments": [] },
+      "issuelinks": []
+    }
+  }
+}

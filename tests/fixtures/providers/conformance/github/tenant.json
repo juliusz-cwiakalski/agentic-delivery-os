@@ -24,7 +24,8 @@
     "repo": "project-placeholder",
     "issueNumber": 601,
     "pullNumber": 504,
-    "commitSha": "1111111111111111111111111111111111111111"
+    "commitSha": "1111111111111111111111111111111111111111",
+    "threadId": "PRRT_2"
   },
   "routes": [
     {
@@ -54,6 +55,12 @@
           }
         ]
       }
+    },
+    {
+      "method": "GET",
+      "url": "https://github.example.com/repos/owner-placeholder/project-placeholder/issues/601/dependencies/blocked_by?per_page=200",
+      "status": 200,
+      "body": []
     },
     {
       "method": "GET",
@@ -133,6 +140,29 @@
           }
         ]
       }
+    },
+    {
+      "method": "POST",
+      "url": "https://github.example.com/graphql",
+      "status": 200,
+      "body": {
+        "data": {
+          "resolveReviewThread": {
+            "thread": {
+              "isResolved": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "PATCH",
+      "url": "https://github.example.com/repos/owner-placeholder/project-placeholder/issues/601",
+      "status": 200,
+      "body": {
+        "number": 601,
+        "state": "closed"
+      }
     }
   ],
   "expected": {
@@ -178,7 +208,8 @@
           "resolved": false,
           "commentCount": 1
         }
-      ]
+      ],
+      "headSha": "1111111111111111111111111111111111111111"
     },
     "change-lifecycle.read-pipeline-run": [
       {

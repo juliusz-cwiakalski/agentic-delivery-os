@@ -6,6 +6,9 @@
  * when the provider actually supplied the corresponding payload.
  */
 import type {
+  CloseoutObservedSignals,
+  CloseoutReadObservation,
+  CloseoutReverseDependentObservation,
   WorkflowMap,
   WorkItem,
   WorkItemComment,
@@ -184,3 +187,91 @@ export const jiraNormalizationContext = (
   workflowMap,
   customFieldMappings: JIRA_CUSTOM_FIELD_MAPPINGS,
 });
+
+/**
+ * Read the provider's native `fields.labels` array without custom-field
+ * projections. `undefined` means the provider omitted the label container, so
+ * a full-array replace must refuse rather than erase real labels.
+ */
+export const jiraNativeLabels = (fields: unknown): readonly string[] | undefined => {
+  if (!isRecord(fields)) return undefined;
+  const labels = fields.labels;
+  if (!Array.isArray(labels)) return undefined;
+  return labels.filter((label): label is string => typeof label === "string");
+};
+
+/**
+ * Compute the full label array for a Jira replace: remove only the named
+ * lifecycle labels, add the requested labels, and preserve every other label.
+ * Order is the provider-asserted order followed by newly added labels.
+ */
+export const computeJiraLabelTargetSet = (
+  current: readonly string[],
+  add: readonly string[],
+  remove: readonly string[],
+): string[] => {
+  const removed = new Set(remove);
+  const kept = current.filter((label) => !removed.has(label));
+  return [...kept, ...add.filter((label) => !kept.includes(label))];
+};
+
+/** Normalize the bounded reverse-dependent search response (F-7). */
+export const normalizeJiraDependentObservation = (
+  payload: unknown,
+  context: JiraNormalizationContext,
+): CloseoutReverseDependentObservation<readonly WorkItem[]> => {
+  const normalized = normalizeJiraSearch(payload, context);
+  return normalized.ok
+    ? { observation: "observed", value: normalized.value }
+    : {
+        observation: "invalid",
+        detail: "detail" in normalized ? normalized.detail : normalized.code,
+      };
+};
+
+/**
+ * The provider-asserted label/relation availability signals.
+ *
+ * A present container (including an explicitly empty array) is `observed`; an
+ * omitted container is `unavailable`.
+ */
+const observationSignals = (
+  fields: Readonly<Record<string, unknown>>,
+): CloseoutObservedSignals => ({
+  labels: Array.isArray(fields.labels) ? "observed" : "unavailable",
+  relations: Array.isArray(fields.issuelinks) ? "observed" : "unavailable",
+});
+
+/**
+ * Normalize one Jira work-item read into the discriminated observation (DM-11).
+ *
+ * An explicit 404 is `not-found`; an authentication, transport, or server
+ * failure and a malformed 2xx payload are `invalid` (the adapter-local
+ * `provider.payload.invalid` identity); only a genuinely absent surface is
+ * `unavailable`.
+ */
+export const normalizeJiraWorkItemObservation = (
+  payload: unknown,
+  context: JiraNormalizationContext,
+  status: number,
+): CloseoutReadObservation<WorkItem> => {
+  if (status === 404) return { observation: "not-found" };
+  if (status < 200 || status >= 300) {
+    return { observation: "invalid", detail: `Jira returned HTTP ${status}` };
+  }
+  const normalized = normalizeJiraIssue(payload, context);
+  if (!normalized.ok) {
+    return {
+      observation: "invalid",
+      detail: "detail" in normalized ? normalized.detail : normalized.code,
+    };
+  }
+  const fields = isRecord(payload) && isRecord(payload.fields) ? payload.fields : undefined;
+  return fields === undefined
+    ? { observation: "observed", value: normalized.value }
+    : {
+        observation: "observed",
+        value: normalized.value,
+        signals: observationSignals(fields),
+      };
+};

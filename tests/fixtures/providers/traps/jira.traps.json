@@ -34,6 +34,21 @@
       "providerBehavior": "Jira may omit the native updated timestamp on some issue shapes.",
       "expectedNormalizedOutcome": "WorkItem.updatedAt is absent when the provider omits updated (activity unknown) and is never derived from comments, ordering, or a clock; a fresh/stale classification is not fabricated for absence.",
       "fixtureReference": "tests/fixtures/providers/jira/stalls.json#/issues/1"
+    },
+    {
+      "trapName": "JIRA-CLOSEOUT-DONE-TRANSITION",
+      "providerBehavior": "The done transition is resolved from the declared workflow map; available transitions are read and the one whose destination matches the mapped native status is posted by id.",
+      "expectedNormalizedOutcome": "transition-work-item selects the unique transition id (31, Close -> Done) and succeeds only on a 2xx response.",
+      "fixtureReference": "tests/fixtures/providers/jira/closeout-transitions-write.json"
+    },
+    {
+      "trapName": "JIRA-CLOSEOUT-LABEL-PRESERVE",
+      "providerBehavior": "Jira labels are replaced as a full array, so a named lifecycle sweep must preserve unnamed labels.",
+      "expectedNormalizedOutcome": "write-work-item computes the target set from provider-asserted labels, removes only named labels, adds delivered, and preserves vendor labels.",
+      "fixtureReference": [
+        "tests/fixtures/providers/jira/closeout-labels-replace-write-before.json",
+        "tests/fixtures/providers/jira/closeout-labels-replace-write-after.json"
+      ]
     }
   ]
 }

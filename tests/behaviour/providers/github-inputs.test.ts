@@ -91,7 +91,7 @@ describe("TC-GITHUB-004 complete status/verify input set", () => {
       const workItem = requireValue(await client.readWorkItem(ISSUE_NUMBER), "work item");
 
       expect(Object.keys(request).sort()).toEqual(
-        ["identity", "reviewState", "sourceRef", "targetRef", "threads"].sort(),
+        ["headSha", "identity", "reviewState", "sourceRef", "targetRef", "threads"].sort(),
       );
       expect(Array.isArray(runs)).toBe(true);
       expect(Object.keys(workItem)).toContain("identity");

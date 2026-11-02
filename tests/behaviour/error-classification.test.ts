@@ -507,3 +507,37 @@ describe("TC-PROV-046 exact-code provider classification", () => {
     expect(() => classifyDomainKind("provider")).toThrow();
   });
 });
+
+describe("TC-CLOSE-005 closeout kind classification and containment", () => {
+  const codes = [
+    "closeout.target.unobserved",
+    "closeout.target.ambiguous",
+    "closeout.write.failed",
+    "closeout.branch.unsafe",
+  ] as const;
+
+  test("each closeout code resolves exactly and kind-only contains", () => {
+    for (const code of codes) {
+      const row = classifyDomainKind("closeout", code);
+      expect(row.domainKind).toBe("closeout");
+      expect(resolveAppErrorCode(code)).toEqual({ ok: true, entry: row });
+      expect(classifyThrown({ kind: "closeout", code })).toEqual(row);
+      expect(classifyThrown({ kind: "closeout", code, summary: "UNTRUSTED-CANARY" })).toEqual(row);
+    }
+    expect(() => classifyDomainKind("closeout")).toThrow();
+    expect(classifyThrown({ kind: "closeout" }).code).toBe(FALLBACK_INTERNAL_CODE);
+  });
+
+  test("wrong, unknown and mismatched closeout codes contain; existing kinds are unchanged", () => {
+    for (const failure of [
+      { kind: "closeout", code: "closeout.other.unknown" },
+      { kind: "closeout", code: "state.store.torn" },
+      { kind: "state", code: "closeout.write.failed" },
+    ]) {
+      expect(classifyThrown(failure).code).toBe(FALLBACK_INTERNAL_CODE);
+    }
+    expect(classifyDomainKind("provider", "provider.quota.exceeded").domainKind).toBe("provider");
+    expect(classifyDomainKind("db", "db.query.failed").domainKind).toBe("db");
+    expect(classifyDomainKind("state", "state.store.torn").domainKind).toBe("state");
+  });
+});

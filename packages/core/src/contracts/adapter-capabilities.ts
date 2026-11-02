@@ -24,6 +24,7 @@ export const ADAPTER_OPERATIONS = [
   "write-delivery-request",
   "read-pipeline-run",
   "write-comment",
+  "resolve-delivery-thread",
 ] as const;
 
 /** One adapter operation an adapter may or may not support. */

@@ -45,6 +45,13 @@ export {
   STATE_SCHEMA_VERSION,
   type StateDriverKind,
 } from "#contracts";
+export {
+  appendCloseoutOutcome,
+  CLOSEOUT_OPERATION_RECORD_KEY_PREFIX,
+  closeoutOperationRecordKey,
+  foldCloseoutHistory,
+  readCloseoutHistory,
+} from "./closeout.js";
 export { createNodeStateEdge } from "./driver/runtime-edge.js";
 export type {
   StateEdgeFaultPoint,
@@ -349,6 +356,16 @@ export const createStateStore = (
         ...(outcome.value.rebuild !== undefined ? { rebuild: outcome.value.rebuild } : {}),
       };
       return ok({ values: picked, evidence });
+    },
+
+    readRecords(): StateResult<{
+      readonly records: readonly StateRecord[];
+      readonly evidence: StateReadEvidence;
+    }> {
+      if (failure !== undefined) return { ok: false, error: failure };
+      const verified = verifiedState();
+      if (!verified.ok) return verified;
+      return ok({ records: verified.value.records, evidence: verified.value.evidence });
     },
 
     append(handle: StateFenceHandle, request: StateAppendRequest): StateResult<StateAppendOutcome> {

@@ -124,10 +124,10 @@ const withoutOperation = (operation: string): unknown => ({
 });
 
 describe("TC-CONF-001 flow registry shape", () => {
-  test("exactly three flows and twelve ordered steps with unique ids", () => {
+  test("exactly three flows and thirteen ordered steps with unique ids", () => {
     expect(flowRegistryViolations(CONFORMANCE_FLOWS)).toEqual([]);
     expect(CONFORMANCE_FLOWS.map((flow) => flow.flowId)).toEqual([...EXPECTED_FLOW_IDS]);
-    expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)).toHaveLength(12);
+    expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)).toHaveLength(13);
   });
 
   test("every closed operation is represented exactly by the registry data", () => {
@@ -599,12 +599,12 @@ describe("TC-CONF-004 structural step and carrier coverage", () => {
 
   test("removing the only step for a declared gap fails by provider and operation", () => {
     const violations = structuralCoverageViolations({
-      flows: flowsWithout((operation) => operation === "write-work-item"),
+      flows: flowsWithout((operation) => operation === "write-comment"),
       adapters: CONFORMANCE_ADAPTERS,
     });
     expect(
       violations.some((message) =>
-        message.includes("github: declared gap write-work-item has no step"),
+        message.includes("github: declared gap write-comment has no step"),
       ),
     ).toBe(true);
   });

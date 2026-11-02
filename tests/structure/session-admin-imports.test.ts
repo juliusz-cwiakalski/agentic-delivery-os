@@ -331,6 +331,7 @@ describe("TC-DB-002 contract and domain tier discipline", () => {
         "./ci",
         "./credentials",
         "./file",
+        "./git",
         "./github",
         "./gitlab",
         "./host",

@@ -59,6 +59,25 @@ export const CONFORMANCE_ADAPTERS: readonly ConformanceAdapterRegistration[] = [
           const result = await client.readPipelineRun(addressing.commitSha);
           return result.ok ? { ok: true, value: result.value.items } : result;
         },
+        writeWorkItem: () =>
+          client.writeWorkItem({
+            entityId: String(addressing.issueNumber),
+            add: ["delivered"],
+            remove: ["planning"],
+          }),
+        transitionWorkItem: () =>
+          client.transitionWorkItem({
+            entityId: String(addressing.issueNumber),
+            deliveryState: "done",
+          }),
+        resolveDeliveryThread: () =>
+          client.resolveDeliveryThread({
+            deliveryRequest: {
+              systemName: tenant.instance.instanceName,
+              entityId: String(addressing.pullNumber),
+            },
+            threadId: addressing.threadId,
+          }),
       };
     },
   },
@@ -85,7 +104,20 @@ export const CONFORMANCE_ADAPTERS: readonly ConformanceAdapterRegistration[] = [
     buildClient: ({ tenant, instance, credentials, transport }): ConformanceAdapterClient => {
       const addressing = requireJiraAddressing(tenant);
       const client = createJiraClient({ instance, credentials, transport });
-      return { readWorkItem: () => client.readWorkItem(addressing.issueKey) };
+      return {
+        readWorkItem: () => client.readWorkItem(addressing.issueKey),
+        writeWorkItem: () =>
+          client.writeWorkItem({
+            issueKey: addressing.issueKey,
+            add: ["delivered"],
+            remove: ["planning"],
+          }),
+        transitionWorkItem: () =>
+          client.transitionWorkItem({
+            issueKey: addressing.issueKey,
+            deliveryState: "done",
+          }),
+      };
     },
   },
 ];

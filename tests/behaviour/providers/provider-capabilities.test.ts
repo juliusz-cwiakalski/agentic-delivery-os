@@ -91,6 +91,7 @@ const WRITE_METHODS: Readonly<Partial<Record<AdapterOperation, string>>> = {
   "write-delivery-request": "writeDeliveryRequest",
   "transition-work-item": "transitionWorkItem",
   "write-comment": "writeComment",
+  "resolve-delivery-thread": "resolveDeliveryThread",
 };
 
 /** Validate a declaration read from untrusted data (also used for mutations). */
@@ -211,18 +212,18 @@ describe("TC-CAP-001 capability declarations", () => {
     }
   });
 
-  test("removing a Jira write gap fails the declaration check", () => {
+  test("removing a Jira gap fails the declaration check", () => {
     const mutated = {
       ...JIRA_ADAPTER_CONTRACT,
       capabilities: {
         ...JIRA_ADAPTER_CONTRACT.capabilities,
         declaredGaps: JIRA_ADAPTER_CONTRACT.capabilities.declaredGaps.filter(
-          (gap) => gap.operation !== "write-work-item",
+          (gap) => gap.operation !== "resolve-delivery-thread",
         ),
       },
     };
     const failures = declarationFailures(mutated, EXPECTED_SEED_POSTURES.jira);
-    expect(failures.some((message) => message.includes("write-work-item"))).toBe(true);
+    expect(failures.some((message) => message.includes("resolve-delivery-thread"))).toBe(true);
   });
 
   test("adding a non-operation string fails the declaration check", () => {

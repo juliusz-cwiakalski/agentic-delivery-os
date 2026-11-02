@@ -1,0 +1,23 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-01",
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "reviewThreads": {
+          "nodes": [
+            {
+              "id": "PRRT_1",
+              "isResolved": true,
+              "comments": { "totalCount": 2 }
+            },
+            {
+              "id": "PRRT_2",
+              "isResolved": false,
+              "comments": { "totalCount": 1 }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

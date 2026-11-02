@@ -43,6 +43,24 @@
       "providerBehavior": "The GitHub pull-request list payload carries state/draft/head/base but no review decision or review threads.",
       "expectedNormalizedOutcome": "The list read normalizes refs/draft/state and leaves the absent review decision and threads untrusted, so status reports those item signals unknown instead of open or zero.",
       "fixtureReference": "tests/fixtures/providers/github/pulls-list-review-default.json#/pulls/0"
+    },
+    {
+      "trapName": "GH-CLOSEOUT-MERGED-HEAD",
+      "providerBehavior": "A work item can have several closed PRs; only merged PRs whose source ref follows the branch convention are candidates, and the merged head is copied verbatim or stays absent.",
+      "expectedNormalizedOutcome": "Lookup selects the highest numeric matching merged entity deterministically and copies head.sha; an absent head never fabricates a value.",
+      "fixtureReference": "tests/fixtures/providers/github/closeout-pulls-merged.json"
+    },
+    {
+      "trapName": "GH-CLOSEOUT-LABEL-PRESERVE",
+      "providerBehavior": "GitHub label updates are a full-array replace, so a named remove/add must preserve every unnamed label.",
+      "expectedNormalizedOutcome": "write-work-item removes only named lifecycle labels, adds delivered, and preserves change and vendor labels.",
+      "fixtureReference": "tests/fixtures/providers/github/closeout-issues.json"
+    },
+    {
+      "trapName": "GH-CLOSEOUT-THREAD-GRAPHQL",
+      "providerBehavior": "Review-thread resolution is a GraphQL mutation behind the existing injected transport, not a REST write.",
+      "expectedNormalizedOutcome": "resolve-delivery-thread posts one GraphQL mutation with the thread id and succeeds on a resolved thread payload.",
+      "fixtureReference": "tests/fixtures/providers/github/graphql-resolve-thread.json"
     }
   ]
 }
