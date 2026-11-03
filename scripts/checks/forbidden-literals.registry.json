@@ -104,6 +104,7 @@
     "doc/overview/architecture-overview.md",
     "doc/overview/tech-stack.md",
     "doc/overview/ubiquitous-language.md",
+    "doc/planning/concepts/automated-commit.md",
     "doc/planning/oss-tooling/measurement-baseline.yaml",
     "doc/planning/oss-tooling/milestones/README.md",
     "doc/planning/oss-tooling/milestones/m0/architecture.md",

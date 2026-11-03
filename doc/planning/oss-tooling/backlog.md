@@ -613,7 +613,12 @@ the M1 redefinition).
   emitter); phase-transition integration: `ados phase complete` performs
   the record plus commit as one atomic operation for the completed
   phase's pending work; idempotent re-run; respects the repository
-  commitlint configuration.
+  commitlint configuration. The design follows
+  concepts/automated-commit.md (owner decisions recorded there):
+  deterministic skeleton plus one constrained model call for the
+  language parts (subject; body only when it earns its place), inference
+  transports behind a seam, marked template fallback when no model is
+  available, and the commit never runs inside a delivery session.
 - AC: a commit message derives from tree state plus context without agent
   authorship; phase complete plus commit is atomic (both land or
   neither); stray untracked files are never staged; a re-run after
