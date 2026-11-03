@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-11-03", completed: "2026-11-03" }
   quality_gates: { started: "2026-11-03", completed: "2026-11-03" }
   dod_check: { started: "2026-11-03", completed: "2026-11-03" }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: "2026-11-03", completed: "2026-11-03", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/220" }
 decisions:
   - { text: "Use all four binding owner decisions in GH-219; no new story tickets, tooling implementation, decision acceptance, or merge in this change.", date: "2026-11-03" }
   - { text: "Owner redirected delivery mode mid-change: GH-219 is planned and delivered as an interactive CEO-driven session in the CEO conversation (deliver-ticket dispatch aborted before phase 2; branch and pm-notes reclaimed), with small parts delegated as needed. Same 11-phase ledger discipline; phases recorded here as they complete. PR stays open for owner review; merge only after owner accepts the milestone plan. Story tickets are created in a follow-up change after merge.", date: "2026-11-03" }
