@@ -116,7 +116,9 @@ first; the scheduling engine and daemon land behind them (constraint 1);
 the dispatch handover happens per repository only after that repository's
 two clean weeks of dual-run evidence (constraint 6). The merge transaction
 stays an explicit coordinator action throughout: the daemon may prepare,
-verify, and queue merges; it never fires them.
+verify, and queue merges; it never fires them. The reviewable end-state
+pack (architecture, journeys, man page, contracts) lives in
+[milestones/](milestones/README.md).
 
 Exit criteria: the four bash scripts' functions run end to end on the new
 stack on pilot repositories and the new stack is authoritative there, with

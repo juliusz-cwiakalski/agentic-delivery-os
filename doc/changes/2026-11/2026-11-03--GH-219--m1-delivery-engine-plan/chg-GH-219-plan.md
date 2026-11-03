@@ -97,6 +97,34 @@ and retained). The remaining phases execute in the interactive session.
 - [x] Attribute M1-S13 plan lint and M1-S14 phase completion in registry Extended columns (F-5).
 - [x] Reconcile the 13 Proposed records count and the status next-steps subset (F-6).
 
+## Phase 7: Milestone outcome packs (owner-requested scope addition)
+
+- [x] milestones/README.md: pack conventions (contents per milestone,
+  binary-name placeholder, planned-vs-delivered semantics, C4 levels as
+  flowcharts, no-private-content rule) and the index.
+- [x] milestones/m0/architecture.md: M0 backfill (C4 context and
+  containers of the delivered trust substrate; engines beside the
+  authoritative bash stack; what M0 deliberately is not).
+- [x] milestones/m1/architecture.md: M1 planned end state (C4 context,
+  containers, components grouped into attention, truth and transaction,
+  planning, scheduling, execution, and learning planes; coordinator
+  iteration, parallel-planning, and blocker round-trip flows; boundary
+  invariants).
+- [x] milestones/m1/journeys.md: journeys delivered at M1 end (J1
+  coordinator iteration, J2 batch planning, J3 lane under the daemon, J4
+  owner day, J5 blocker round-trip, J6 degraded and fallback regimes, J7
+  learning at the change boundary) each with no-token guarantees and
+  story maps; explicit what-does-not-change list.
+- [x] milestones/m1/man-page.md: the command surface available after M1
+  (families, usage lines, delivery attribution, global options, exit
+  status).
+- [x] milestones/m1/contracts.md: shared contracts (envelope, exit codes,
+  key=value continuity, tri-state evidence, finding codes) plus per-
+  command proposed contracts: inputs, outputs, error codes, examples,
+  test scenarios.
+- [x] Registration and links: forbidden-literals registry entries for the
+  six new docs; planning README index row; roadmap pointer.
+
 ## Revision log
 
 - 2026-11-03: Added Phase 6 for code review iteration 1 remediation.

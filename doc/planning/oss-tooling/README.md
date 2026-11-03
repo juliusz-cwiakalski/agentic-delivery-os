@@ -21,6 +21,7 @@ name-derived comes from the single branding constant.
 | [backlog-ranking.md](backlog-ranking.md) | Stories top to bottom in suggested delivery order, with dependencies and ranking rationale |
 | [cli-command-registry.md](cli-command-registry.md) | The `ados(1)` man page v1 (locked) and the command registry with delivery and extension stories |
 | [operator-requirements-2026-11.md](operator-requirements-2026-11.md) | Recorded production-operator input behind the M1 delivery-engine redefinition (sanitized; R1-R12, hard constraints, acceptance criteria, evidence appendix) |
+| [milestones/](milestones/README.md) | Per-milestone outcome packs for review: architecture (C4), journeys, command man page, and command contracts as they will exist at milestone end (M0 backfill: architecture only) |
 | [measurement-baseline.yaml](measurement-baseline.yaml) | Committed bash-era measurement baseline log: the canonical data for M2-S6 comparison (schema version 1; four `MET-` metric IDs) |
 | [user-journeys.md](user-journeys.md) | How the CEO agent and other agents use the commands: the change lifecycle and multi-repository coordination |
 | [status.md](status.md) | Milestone status snapshots: story delivery state, exit-criteria progress, recorded amendments |

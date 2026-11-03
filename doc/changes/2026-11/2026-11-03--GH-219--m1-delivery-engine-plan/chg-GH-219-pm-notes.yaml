@@ -17,6 +17,7 @@ decisions:
   - { text: "Use all four binding owner decisions in GH-219; no new story tickets, tooling implementation, decision acceptance, or merge in this change.", date: "2026-11-03" }
   - { text: "Owner redirected delivery mode mid-change: GH-219 is planned and delivered as an interactive CEO-driven session in the CEO conversation (deliver-ticket dispatch aborted before phase 2; branch and pm-notes reclaimed), with small parts delegated as needed. Same 11-phase ledger discipline; phases recorded here as they complete. PR stays open for owner review; merge only after owner accepts the milestone plan. Story tickets are created in a follow-up change after merge.", date: "2026-11-03" }
   - { text: "Spec and test plan authored by the interrupted dispatch run were reviewed by the CEO session and retained: they match the four binding owner decisions and the implemented deliverables; the plan artifact and all planning-document edits come from the interactive session.", date: "2026-11-03" }
+  - { text: "Owner-requested scope addition at the owner gate (PR open, pre-merge): per-milestone outcome packs added (milestones/ README + M0 architecture backfill + M1 architecture, journeys, man page, contracts) so the owner can review planned outcomes and refine contracts before delivery starts. Packs are review surfaces; the backlog stays canonical. New docs use a binary-name placeholder because registered user-facing docs cannot carry the working-name literal (guard discipline; no allowlist change).", date: "2026-11-03" }
 open_questions: []
 blockers: []
 notes:
